@@ -1,0 +1,72 @@
+@use '@angular/material' as mat;
+
+// Importar variables de diseño del sistema
+@use 'app/shared/basics/table/dialogs/design-tokens.scss';
+
+// Include material core styles
+@include mat.core();
+
+// Define the color palettes
+$primary-palette: mat.m2-define-palette(mat.$m2-indigo-palette, A400, A100, A700);
+$accent-palette: mat.m2-define-palette(mat.$m2-indigo-palette);
+$warn-palette: mat.m2-define-palette(mat.$m2-red-palette);
+
+// Create the theme object
+$theme: mat.m2-define-light-theme((
+  color: (
+    primary: $primary-palette,
+    accent: $accent-palette,
+    warn: $warn-palette
+  ),
+  typography: mat.m2-define-typography-config(
+    $font-family: 'Roboto',
+    $headline-1: mat.m2-define-typography-level(96px, 96px, 300),
+    $headline-2: mat.m2-define-typography-level(60px, 60px, 300),
+    $headline-3: mat.m2-define-typography-level(48px, 48px, 400),
+    $headline-4: mat.m2-define-typography-level(34px, 40px, 400),
+    $headline-5: mat.m2-define-typography-level(24px, 32px, 400),
+    $headline-6: mat.m2-define-typography-level(20px, 32px, 500),
+    $body-1: mat.m2-define-typography-level(16px, 24px, 400),
+    $body-2: mat.m2-define-typography-level(14px, 20px, 400),
+    $subtitle-1: mat.m2-define-typography-level(16px, 28px, 400),
+    $subtitle-2: mat.m2-define-typography-level(14px, 22px, 500),
+    $caption: mat.m2-define-typography-level(12px, 20px, 400),
+    $button: mat.m2-define-typography-level(14px, 14px, 500)
+  ),
+  density: 0
+));
+
+// Apply the theme to all Angular Material components
+@include mat.all-component-themes($theme);
+
+// Global styles
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  overflow: hidden; // Elimina scroll global
+}
+
+body {
+  color-scheme: light;
+  font-family: Roboto, "Helvetica Neue", sans-serif;
+  background-color: var(--mat-background-color);
+  color: var(--mat-text-color);
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden; // Previene scroll del body
+}
+
+// Asegurar que app-root use toda la pantalla
+app-root {
+  display: block;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+// Espacio para el footer en el body
+body {
+  padding-bottom: 35px !important; // Espacio reservado para el footer fijo
+}

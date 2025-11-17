@@ -1,0 +1,33 @@
+<header class="header-topbar">
+  <span class="header-title">{{ screenTitle || 'S.A.A' }}</span>
+  <div style="display: flex; align-items: center; gap: 1rem; margin-left: auto;">
+    @if (showBackButton) {
+      <button class="header-back" (click)="onBack()" style="margin-right: .5rem;">
+        <span class="material-icons" style="font-size:1.2em;vertical-align:middle;">arrow_back</span>
+        Regresar
+      </button>
+    }
+
+    <div class="user-block" style="display:flex; align-items:center; gap:.5rem;">
+      <span class="header-usuario">{{ usuarioNombre }}</span>
+      <button mat-icon-button [matMenuTriggerFor]="userMenu" matTooltip="Opciones de usuario">
+        <mat-icon>settings</mat-icon>
+      </button>
+      <mat-menu #userMenu="matMenu">
+        <button mat-menu-item (click)="cambiarContrasena()">
+          <mat-icon>lock_reset</mat-icon>
+          <span>Cambiar Contraseña</span>
+        </button>
+        <button mat-menu-item (click)="restablecerContrasena()">
+          <mat-icon>password</mat-icon>
+          <span>Restablecer Contraseña</span>
+        </button>
+      </mat-menu>
+    </div>
+
+    <button class="header-exit" (click)="onSalir()">
+      <span class="material-icons" style="font-size:1.2em;vertical-align:middle;">logout</span>
+      Salir
+    </button>
+  </div>
+</header>

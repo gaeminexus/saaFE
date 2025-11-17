@@ -1,0 +1,279 @@
+// Colores de estado
+$color-info: #1976d2;
+$color-success: #43a047;
+$color-fail: #dc3545;
+
+
+.login-container {
+  width: 100vw;
+  $color-warning: #ffa726;
+  $color-neutral: #607d8b;
+  $color-dark: #212121;
+  $color-light: #f5f5f5;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.parallax-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.login-card {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  padding: 2rem;
+  width: 90%;
+  max-width: 400px;
+  min-width: 280px;
+  box-sizing: border-box;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  z-index: 1;
+  animation: fadeIn 0.5s ease;
+  overflow: hidden;
+}
+
+.login-header {
+  text-align: center;
+  margin-bottom: 2rem;
+
+  h1 {
+    color: #333333;
+    font-size: 2rem;
+    margin: 0 0 0.5rem;
+  }
+
+  p {
+    color: #666666;
+    margin: 0;
+  }
+}
+
+.login-form {
+  .form-group {
+    margin-bottom: 1.5rem;
+
+    label {
+  .info-message {
+    color: $color-info;
+    background: rgba($color-info, 0.12);
+    border-radius: 6px;
+    padding: 0.3rem 0.7rem;
+    font-weight: 600;
+    border: 1px solid $color-info;
+    margin-top: 0.25rem;
+    display: inline-block;
+  }
+  .success-message {
+    color: $color-success;
+    background: rgba($color-success, 0.12);
+    border-radius: 6px;
+    padding: 0.3rem 0.7rem;
+    font-weight: 600;
+    border: 1px solid $color-success;
+    margin-top: 0.25rem;
+    display: inline-block;
+  }
+  .warning-message {
+    color: #fff;
+    background: $color-warning;
+    border-radius: 6px;
+    padding: 0.3rem 0.7rem;
+    font-weight: 600;
+    border: 1px solid darken($color-warning, 10%);
+    margin-top: 0.25rem;
+    display: inline-block;
+    box-shadow: 0 2px 8px rgba($color-warning, 0.12);
+    letter-spacing: 0.5px;
+  }
+  .neutral-message {
+    color: #fff;
+    background: $color-neutral;
+    border-radius: 6px;
+    padding: 0.3rem 0.7rem;
+    font-weight: 600;
+    border: 1px solid darken($color-neutral, 10%);
+    margin-top: 0.25rem;
+    display: inline-block;
+  }
+  .dark-message {
+    color: #fff;
+    background: $color-dark;
+    border-radius: 6px;
+    padding: 0.3rem 0.7rem;
+    font-weight: 600;
+    border: 1px solid lighten($color-dark, 10%);
+    margin-top: 0.25rem;
+    display: inline-block;
+  }
+  .light-message {
+    color: $color-dark;
+    background: $color-light;
+    border-radius: 6px;
+    padding: 0.3rem 0.7rem;
+    font-weight: 600;
+    border: 1px solid $color-neutral;
+    margin-top: 0.25rem;
+    display: inline-block;
+  }
+      display: block;
+      color: #666666;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border: 2px solid transparent;
+      border-radius: 8px;
+      font-size: 1rem;
+      transition: border-color 0.3s ease;
+      box-sizing: border-box;
+      max-width: 100%;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+
+      &:focus {
+        outline: none;
+        border-color: #667eea;
+      }
+
+      &::placeholder {
+        color: #666666;
+        opacity: 0.7;
+      }
+    }
+  }
+
+  .error-message {
+    color: #dc3545;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+  }
+}
+
+.login-button {
+  width: 100%;
+      .error-message {
+        color: $color-fail;
+        font-size: 0.95rem;
+        margin-top: 0.25rem;
+        background: rgba($color-fail, 0.12);
+        border-radius: 6px;
+        padding: 0.3rem 0.7rem;
+        font-weight: 600;
+        box-shadow: 0 2px 8px rgba($color-fail, 0.08);
+        letter-spacing: 0.5px;
+        border: 1px solid $color-fail;
+        display: inline-block;
+      }
+      .info-message {
+        color: $color-info;
+        background: rgba($color-info, 0.12);
+        border-radius: 6px;
+        padding: 0.3rem 0.7rem;
+        font-weight: 600;
+        border: 1px solid $color-info;
+        margin-top: 0.25rem;
+        display: inline-block;
+      }
+      .success-message {
+        color: $color-success;
+        background: rgba($color-success, 0.12);
+        border-radius: 6px;
+        padding: 0.3rem 0.7rem;
+        font-weight: 600;
+        border: 1px solid $color-success;
+        margin-top: 0.25rem;
+        display: inline-block;
+      }
+  cursor: pointer;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #ffffff;
+  margin-top: 1.5rem;
+  transition: transform 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 3.5rem;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+  }
+
+  &:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+
+  mat-spinner {
+    ::ng-deep circle {
+      stroke: #ffffff;
+    }
+  }
+
+  span {
+    line-height: 24px;
+  }
+}
+
+.login-footer {
+  text-align: center;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(102, 102, 102, 0.1);
+
+  p {
+    color: #666666;
+    font-size: 0.9rem;
+    margin: 0;
+  }
+
+  a {
+    color: #667eea;
+    text-decoration: none;
+    transition: color 0.2s ease;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

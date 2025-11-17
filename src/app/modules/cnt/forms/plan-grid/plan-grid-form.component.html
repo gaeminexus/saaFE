@@ -1,0 +1,125 @@
+<h2 mat-dialog-title>{{ dialogTitle }}</h2>
+
+<mat-dialog-content>
+  <form [formGroup]="form" (ngSubmit)="onSubmit()">
+    <div class="form-container">
+
+      <!-- Información de cuenta padre si aplica -->
+      <div *ngIf="parentAccount" class="parent-info">
+        <mat-icon>account_tree</mat-icon>
+        <span>Subcuenta de: {{ parentAccount.nombre }} ({{ parentAccount.cuentaContable }})</span>
+      </div>
+
+      <!-- Nombre de la cuenta -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Nombre de la cuenta</mat-label>
+        <input matInput formControlName="nombre" placeholder="Ej: Caja General, Bancos, etc.">
+        <mat-icon matSuffix>drive_file_rename_outline</mat-icon>
+        <mat-error *ngIf="form.get('nombre')?.hasError('required')">
+          El nombre es requerido
+        </mat-error>
+        <mat-error *ngIf="form.get('nombre')?.hasError('maxlength')">
+          El nombre no puede exceder 100 caracteres
+        </mat-error>
+      </mat-form-field>
+
+      <!-- Información de solo lectura -->
+      <div class="readonly-info">
+        <div class="info-section">
+          <h3>Información de la Cuenta</h3>
+
+          <div class="info-row">
+            <span class="label">
+              <mat-icon>tag</mat-icon>
+              Número de cuenta:
+            </span>
+            <span class="value">{{ form.get('cuentaContable')?.value || '-' }}</span>
+          </div>
+
+          <div class="info-row">
+            <span class="label">
+              <mat-icon>code</mat-icon>
+              Código interno:
+            </span>
+            <span class="value">{{ form.get('codigo')?.value || '-' }}</span>
+          </div>
+
+          <div class="info-row">
+            <span class="label">
+              <mat-icon>layers</mat-icon>
+              Nivel:
+            </span>
+            <span class="value">{{ form.get('nivel')?.value || '-' }}</span>
+          </div>
+
+          <div class="info-row">
+            <span class="label">
+              <mat-icon>label</mat-icon>
+              Tipo de cuenta:
+            </span>
+            <span class="value">{{ getTipoLabel(form.get('tipo')?.value) }}</span>
+          </div>
+
+          <div class="info-row">
+            <span class="label">
+              <mat-icon>schedule</mat-icon>
+              Fecha de creación:
+            </span>
+            <span class="value">{{ formatDate(form.get('fechaUpdate')?.value) }}</span>
+          </div>
+
+          <div class="info-row" *ngIf="form.get('fechaInactivo')?.value">
+            <span class="label">
+              <mat-icon>event_busy</mat-icon>
+              Fecha de desactivación:
+            </span>
+            <span class="value fecha-inactiva">{{ formatDate(form.get('fechaInactivo')?.value) }}</span>
+          </div>
+
+          <div class="info-row">
+            <span class="label">
+              <mat-icon>toggle_on</mat-icon>
+              Estado:
+            </span>
+            <span class="value" [class.estado-activo]="form.get('estado')?.value === 1"
+                  [class.estado-inactivo]="form.get('estado')?.value !== 1">
+              {{ getEstadoLabel(form.get('estado')?.value) }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+
+
+    </div>
+  </form>
+
+  <!-- Error message -->
+  <div *ngIf="error" class="error-message">
+    <mat-icon>error</mat-icon>
+    <span>{{ error }}</span>
+  </div>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button type="button" (click)="onCancel()" [disabled]="loading">
+    <mat-icon>close</mat-icon>
+    Cancelar
+  </button>
+
+  <button *ngIf="isEdit"
+          mat-raised-button
+          color="primary"
+          type="submit"
+          (click)="onSubmit()"
+          [disabled]="loading || form.invalid">
+    <mat-icon>save</mat-icon>
+    <span *ngIf="!loading">Guardar Nombre</span>
+    <mat-spinner *ngIf="loading" diameter="20"></mat-spinner>
+  </button>
+
+  <div *ngIf="!isEdit" class="info-message">
+    <mat-icon>info</mat-icon>
+    <span>Solo se puede editar el nombre de cuentas existentes</span>
+  </div>
+</mat-dialog-actions>

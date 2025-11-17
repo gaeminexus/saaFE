@@ -1,0 +1,262 @@
+<div class="plan-cuentas-container">
+  <!-- Header con controles -->
+  <div class="header-section">
+    <div class="title-section">
+      <h2>PlanArbol</h2>
+      <p class="subtitle">Gestión jerárquica del catálogo de cuentas contables</p>
+    </div>
+
+    <div class="actions-section">
+      <button mat-flat-button color="primary" (click)="onAdd()" class="add-button">
+        <mat-icon>add</mat-icon>
+        Nueva Cuenta
+      </button>
+
+      <button mat-stroked-button (click)="toggleViewMode()" class="view-toggle">
+        <mat-icon>{{ viewMode === 'tree' ? 'list' : 'account_tree' }}</mat-icon>
+        {{ viewMode === 'tree' ? 'Vista Lista' : 'Vista Árbol' }}
+      </button>
+
+      <button mat-button (click)="exportToCSV()" class="export-button">
+        <mat-icon>file_download</mat-icon>
+        CSV
+      </button>
+
+      <button mat-button (click)="exportToPDF()" class="export-button">
+        <mat-icon>picture_as_pdf</mat-icon>
+        PDF
+      </button>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="filters-section">
+    <mat-form-field appearance="outline" class="filter-field">
+      <mat-label>Naturaleza</mat-label>
+      <mat-select [(value)]="selectedNaturaleza" (selectionChange)="onFilterChange()">
+        <mat-option [value]="null">Todas</mat-option>
+        @for (naturaleza of naturalezas; track naturaleza.codigo) {
+          <mat-option [value]="naturaleza.codigo">{{ naturaleza.nombre }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="filter-field">
+      <mat-label>Estado</mat-label>
+      <mat-select [(value)]="selectedEstado" (selectionChange)="onFilterChange()">
+        <mat-option [value]="null">Todos</mat-option>
+        <mat-option [value]="1">Activo</mat-option>
+        <mat-option [value]="0">Inactivo</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <button mat-button (click)="clearFilters()" class="clear-filters">
+      <mat-icon>clear</mat-icon>
+      Limpiar
+    </button>
+  </div>
+
+  <!-- Indicadores -->
+  <div class="stats-section">
+    <div class="stat-card">
+      <span class="stat-number">{{ planCuentas.length }}</span>
+      <span class="stat-label">Total Cuentas</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-number">{{ filteredData.length }}</span>
+      <span class="stat-label">Filtradas</span>
+    </div>
+    <div class="stat-card">
+          <span class="stat-number">{{ getActiveCuentasCount() }}</span>
+      <span class="stat-label">Activas</span>
+    </div>
+  </div>
+
+  <!-- Loading y Error -->
+  @if (loading) {
+    <div class="loading-container">
+      <mat-spinner diameter="50"></mat-spinner>
+      <p>Cargando PlanArbol...</p>
+    </div>
+  }
+
+  @if (error) {
+    <div class="error-container">
+      <mat-icon>error</mat-icon>
+      <p>{{ error }}</p>
+      <button mat-button (click)="loadData()">Reintentar</button>
+    </div>
+  }
+
+  <!-- Vista Árbol -->
+  @if (viewMode === 'tree' && !loading && !error) {
+    <div class="tree-container">
+      <div class="tree-header">
+        <div class="tree-title">
+          <mat-icon>account_tree</mat-icon>
+          <span>ÁRBOL</span>
+        </div>
+      </div>
+
+      <mat-tree [dataSource]="dataSource" [treeControl]="treeControl" class="plan-tree">
+
+        <!-- Nodo hoja -->
+        <mat-tree-node *matTreeNodeDef="let node" matTreeNodeToggle
+                       [style.padding-left]="(getLevel(node) * 20) + 'px'"
+                       class="tree-node leaf-node">
+          <div class="node-content">
+            <div class="node-spacer"></div>
+            <span class="node-icon">📄</span>
+
+            <div class="node-info">
+              <div class="account-header">
+                <span class="account-number">{{ node.cuentaContable }}</span>
+                <span class="account-name">{{ node.nombre }}</span>
+              </div>
+            </div>
+
+            <div class="node-actions">
+              <button mat-icon-button (click)="onAdd(node)"
+                      matTooltip="Agregar cuenta hija"
+                      class="action-button add-child">
+                <mat-icon>add</mat-icon>
+              </button>
+              <button mat-icon-button (click)="onEdit(node)"
+                      matTooltip="Editar cuenta"
+                      class="action-button edit">
+                <mat-icon>edit</mat-icon>
+              </button>
+            </div>
+          </div>
+        </mat-tree-node>
+
+        <!-- Nodo expandible -->
+        <mat-tree-node *matTreeNodeDef="let node; when: hasChild" matTreeNodeToggle
+                       [style.padding-left]="(getLevel(node) * 20) + 'px'"
+                       class="tree-node expandable-node">
+          <div class="node-content">
+            <button mat-icon-button matTreeNodeToggle
+                    [attr.aria-label]="'Toggle ' + node.nombre"
+                    class="expand-button">
+              <mat-icon>{{ treeControl.isExpanded(node) ? 'expand_more' : 'chevron_right' }}</mat-icon>
+            </button>
+
+            <span class="node-icon">
+              {{ treeControl.isExpanded(node) ? '📂' : '📁' }}
+            </span>
+
+            <div class="node-info">
+              <div class="account-header">
+                <span class="account-number">{{ node.cuentaContable }}</span>
+                <span class="account-name">{{ node.nombre }}</span>
+              </div>
+            </div>
+
+            <div class="node-actions">
+              <button mat-icon-button (click)="onAdd(node)"
+                      matTooltip="Agregar cuenta hija"
+                      class="action-button add-child">
+                <mat-icon>add</mat-icon>
+              </button>
+              <button mat-icon-button (click)="onEdit(node)"
+                      matTooltip="Editar cuenta"
+                      class="action-button edit">
+                <mat-icon>edit</mat-icon>
+              </button>
+            </div>
+          </div>
+        </mat-tree-node>
+      </mat-tree>
+    </div>
+  }
+
+  <!-- Vista Lista -->
+  @if (viewMode === 'list' && !loading && !error) {
+    <div class="table-container">
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th (click)="onSort('cuentaContable')" class="sortable-header">
+                Número
+                <mat-icon>{{ getSortIcon('cuentaContable') }}</mat-icon>
+              </th>
+              <th (click)="onSort('nombre')" class="sortable-header">
+                Nombre
+                <mat-icon>{{ getSortIcon('nombre') }}</mat-icon>
+              </th>
+              <th>Naturaleza</th>
+              <th>Nivel</th>
+              <th>Estado</th>
+              <th class="actions-header">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of pagedData; track trackByCodigo($index, item)) {
+              <tr>
+                <td>
+                  <span class="account-number">{{ item.cuentaContable }}</span>
+                </td>
+                <td>
+                  <span class="account-name"
+                        [style.margin-left]="((item.level || 1) - 1) * 16 + 'px'">
+                    {{ item.nombre }}
+                  </span>
+                </td>
+                <td>
+                  <span class="badge naturaleza">{{ getNaturalezaName(item.naturalezaCuenta.codigo) }}</span>
+                </td>
+                <td>
+                  <span class="level-badge">{{ item.level }}</span>
+                </td>
+                <td>
+                  <span class="badge" [class.estado-activo]="item.estado === 1"
+                                    [class.estado-inactivo]="item.estado !== 1">
+                    {{ estadoLabel(item.estado) }}
+                  </span>
+                </td>
+                <td class="actions-cell">
+                  <button mat-icon-button (click)="onAdd(item)"
+                          matTooltip="Agregar cuenta hija"
+                          class="action-button add-child">
+                    <mat-icon>add_circle_outline</mat-icon>
+                  </button>
+                  <button mat-icon-button (click)="onEdit(item)"
+                          matTooltip="Editar cuenta"
+                          class="action-button edit">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Paginación -->
+      @if (totalElements > pageSize) {
+        <mat-paginator
+          [length]="totalElements"
+          [pageSize]="pageSize"
+          [pageIndex]="pageIndex"
+          [pageSizeOptions]="pageSizeOptions"
+          [showFirstLastButtons]="true"
+          (page)="onPageChange($event)"
+          class="paginator">
+        </mat-paginator>
+      }
+    </div>
+  }
+
+  <!-- Mensaje cuando no hay datos -->
+  @if (!loading && !error && filteredData.length === 0) {
+    <div class="no-data-container">
+      <mat-icon>account_tree</mat-icon>
+      <h3>No se encontraron cuentas</h3>
+      <p>No hay cuentas que coincidan con los filtros aplicados</p>
+      <button mat-flat-button color="primary" (click)="clearFilters()">
+        Limpiar filtros
+      </button>
+    </div>
+  }
+</div>

@@ -1,0 +1,224 @@
+<div class="saa-table-container">
+  @if (configTable) {
+    <!-- Header de la tabla con filtros y acciones -->
+    <div class="saa-table-header">
+    <div class="table-info">
+      <h3 class="table-title">
+        <span class="material-icons">table_view</span>
+        {{ configTable.titulo || 'Tabla de Datos' }}
+      </h3>
+      <span class="record-count">{{ registros.length || 0 }} registros</span>
+    </div>
+
+    <!-- Filtro de búsqueda -->
+    @if (configTable.filter) {
+      <div class="search-container">
+      <mat-form-field appearance="outline" class="search-field">
+        <mat-label>Buscar</mat-label>
+        <input matInput
+               (keyup)="applyFilter($event)"
+               placeholder="Filtrar registros..."
+               [(ngModel)]="textoFiltro">
+        <mat-icon matPrefix>search</mat-icon>
+        <button *ngIf="textoFiltro" matSuffix mat-icon-button (click)="clearFilter()">
+          <mat-icon>clear</mat-icon>
+        </button>
+      </mat-form-field>
+      </div>
+    }
+
+    <!-- Botón de agregar principal -->
+    @if (configTable.add) {
+      <div class="header-actions">
+      <button mat-raised-button
+              color="primary"
+              class="add-button"
+              (click)="add()"
+              matTooltip="Agregar nuevo registro">
+        <mat-icon>add</mat-icon>
+        Nuevo
+      </button>
+      </div>
+    }
+  </div>
+
+  <!-- Contenedor de tabla mejorado -->
+  <div class="saa-table-wrapper">
+    <table mat-table
+      [dataSource]="dataSource"
+      matSort
+      multiTemplateDataRows
+      class="saa-data-table"
+      [class.compact-table]="configTable.fSize === 'small'"
+      [class.large-table]="configTable.fSize === 'large'"
+    >
+      <!-- Columna de Acciones Unificadas -->
+      <ng-container matColumnDef="acciones_unificadas">
+        <th mat-header-cell *matHeaderCellDef class="saa-actions-header unified-actions">
+          <div class="header-content">
+            <span class="action-header-text">Acciones</span>
+          </div>
+        </th>
+        <td mat-cell *matCellDef="let row; let i=index;" class="saa-actions-cell unified-actions">
+          <div class="unified-actions-container">
+            @if (configTable.tiene_hijos) {
+              <button mat-icon-button
+                      [ngClass]="darFormatoBotones(configTable.row_size || '')"
+                      class="action-btn hijos-btn"
+                      matTooltip="Ver Detalle"
+                      (click)="expandedElement = expandedElement === row ? null : row; recuperaDetalle(row)">
+                <mat-icon>list_alt</mat-icon>
+              </button>
+            }
+            @if (configTable.edit) {
+              <button mat-icon-button
+                      class="action-btn edit-btn"
+                      matTooltip="Editar registro"
+                      (click)="edit(row)">
+                <mat-icon>edit</mat-icon>
+              </button>
+            }
+            @if (configTable.remove) {
+              <button mat-icon-button
+                      class="action-btn delete-btn"
+                      matTooltip="Eliminar registro"
+                      (click)="delete(row)">
+                <mat-icon>delete</mat-icon>
+              </button>
+            }
+            @if (configTable.buttonExtra) {
+              <button mat-icon-button
+                      [ngClass]="darFormatoBotones(configTable.row_size || '')"
+                      class="action-btn extra-btn"
+                      [matTooltip]="tootTipExtra"
+                      color="accent"
+                      (click)="emitirButtonExtra(row)">
+                <mat-icon>{{configTable.iconButtonExtra}}</mat-icon>
+              </button>
+            }
+          </div>
+        </td>
+        <td mat-footer-cell *matFooterCellDef class="saa-footer-cell"></td>
+      </ng-container>
+
+      <!-- Columnas de datos -->
+      <ng-container *ngFor="let reg of fields; let j=index;" matColumnDef="{{reg.column}}">
+        @if (reg.fSort) {
+          <th mat-header-cell
+              *matHeaderCellDef
+              [ngClass]="darFormatoHeader(reg, configTable.fSize || '')"
+              mat-sort-header
+              class="saa-header-cell sortable-header">
+            <div class="header-content">
+              <span class="field-header-text">{{ reg.header }}</span>
+            </div>
+          </th>
+          <td mat-cell
+              [ngClass]="darFormatoColumn(reg, configTable.fSize || '')"
+              *matCellDef="let row"
+              class="saa-data-cell">
+            <div class="cell-content">{{ procesaCampo(row, reg) }}</div>
+          </td>
+          <td mat-footer-cell
+              [ngClass]="darFormatoColumn(reg, configTable.fSize || '')"
+              *matFooterCellDef
+              class="saa-footer-cell">
+            <div class="footer-content">
+              <strong>{{ darFormatoFooterCell(reg, j) }}</strong>
+            </div>
+          </td>
+        }
+        @if (!reg.fSort) {
+          <th mat-header-cell
+              *matHeaderCellDef
+              [ngClass]="darFormatoHeader(reg, configTable.fSize || '')"
+              class="saa-header-cell">
+            <div class="header-content">
+              <span class="field-header-text">{{ reg.header }}</span>
+            </div>
+          </th>
+          <td mat-cell
+              [ngClass]="darFormatoColumn(reg, configTable.fSize || '')"
+              *matCellDef="let row"
+              class="saa-data-cell">
+            <div class="cell-content">{{ procesaCampo(row, reg) }}</div>
+          </td>
+          <td mat-footer-cell
+              [ngClass]="darFormatoColumn(reg, configTable.fSize || '')"
+              *matFooterCellDef
+              class="saa-footer-cell">
+            <div class="footer-content">
+              <strong>{{ darFormatoFooterCell(reg, j) }}</strong>
+            </div>
+          </td>
+        }
+      </ng-container>
+
+
+
+	<!-- Detalle -->
+  <ng-container matColumnDef="expandedDetail">
+    <td mat-cell *matCellDef="let row" [attr.colspan]="displayedColumnsActions.length">
+      @if (configTable.tiene_hijos) {
+        <div class="example-element-detail"
+          [@detailExpand]="row == expandedElement ? 'expanded' : 'collapsed'"
+        >
+        <mat-accordion style="width: 100%;">
+          <mat-expansion-panel *ngFor="let tablaHija of hijos">
+            <mat-expansion-panel-header>
+              <mat-panel-title>
+                <strong>{{tablaHija.titulo}}</strong>
+              </mat-panel-title>
+              <mat-panel-description>
+                {{tablaHija.descripcion}}
+              </mat-panel-description>
+            </mat-expansion-panel-header>
+            <ng-template matExpansionPanelContent>
+              <!-- Recursive component temporarily disabled for compilation -->
+              <!-- <app-table-basic-hijos [configTable]="tablaHija" [tableHijosConfig]="tableHijosConfig"></app-table-basic-hijos> -->
+              <div>Detalle de tabla hija (funcionalidad recursiva temporalmente deshabilitada)</div>
+	          </ng-template>
+          </mat-expansion-panel>
+        </mat-accordion>
+        </div>
+      }
+    </td>
+  </ng-container>
+
+	<tr mat-header-row *matHeaderRowDef="displayedColumnsActions; sticky: true"></tr>
+	<tr mat-row *matRowDef="let i = dataIndex; let row; columns: displayedColumnsActions;"
+    class="example-element-row"
+    [ngClass]="darFormatoFila(selectedRowIndex, row.codigo, configTable.row_size || '', i)"
+    [class.example-expanded-row]="expandedElement === row"
+    (click)="emitirRegistro(row)"
+	>
+	</tr>
+	<tr mat-row
+		*matRowDef="let row; columns: ['expandedDetail']"
+		class="example-detail-row"
+	>
+	</tr>
+
+    <!-- Row shown when there is no matching data. -->
+    <tr class="mat-row" *matNoDataRow>
+      <td class="mat-cell" colspan="4">No existen registros "{{textoFiltro}}"</td>
+    </tr>
+    @if (configTable.footer) {
+      <tr mat-footer-row *matFooterRowDef="displayedColumnsActions; sticky: true"></tr>
+    }
+  </table>
+
+    <mat-paginator
+      [ngStyle]="{display: configTable.paginator ? 'block' : 'none'}"
+      [pageSizeOptions]="[tamPag, tamPag + (salto * 1), tamPag + (salto * 2), tamPag + (salto * 3)]"
+      showFirstLastButtons
+      class="saa-paginator">
+    </mat-paginator>
+  </div>
+  } @else {
+    <div class="saa-no-config">
+      <mat-icon class="info-icon">info</mat-icon>
+      <p>No se ha proporcionado configuración de tabla</p>
+    </div>
+  }
+</div>

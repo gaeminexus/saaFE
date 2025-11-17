@@ -1,0 +1,36 @@
+<div class="saa-dialog-container">
+  <!-- Header del diálogo -->
+  <div class="saa-dialog-header">
+    <span class="material-icons icon">edit</span>
+    <div>
+      <h2 class="title">Editar Registro</h2>
+      <p class="subtitle">Modifica la información del registro seleccionado</p>
+    </div>
+  </div>
+
+  <!-- Contenido del formulario -->
+  <div class="saa-dialog-content form-content">
+    <app-dynamic-form [fields]="data.regConfig" [accion]="data.accion"></app-dynamic-form>
+  </div>
+
+  <!-- Acciones del diálogo -->
+  <div class="saa-dialog-actions">
+    <button
+      mat-raised-button
+      class="btn-secondary"
+      aria-label="Cancelar edición"
+      (click)="onSalirClick()">
+      <span class="material-icons" style="margin-right: 8px; font-size: 18px;">close</span>
+      Cancelar
+    </button>
+
+    <button
+      mat-raised-button
+      class="btn-primary"
+      aria-label="Actualizar registro"
+      (click)="grabar()">
+      <span class="material-icons" style="margin-right: 8px; font-size: 18px;">update</span>
+      Actualizar
+    </button>
+  </div>
+</div>

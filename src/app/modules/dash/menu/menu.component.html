@@ -1,0 +1,61 @@
+<div class="menu-shell">
+  <!-- Header con info del usuario -->
+
+  <!-- Contenido principal -->
+  <main class="menu-content">
+    <div class="menu-grid">
+      <!-- Todos los módulos -->
+      <section class="menu-section">
+        <div class="menu-buttons">
+          <button
+            class="menu-btn finance"
+            (click)="navigate('menucontabilidad')"
+            aria-label="Ir a Contabilidad">
+            <span class="material-icons" aria-hidden="true">calculate</span>
+            <span class="btn-text">Contabilidad</span>
+          </button>
+
+          <button
+            class="menu-btn treasury"
+            (click)="navigate('menutesoreria')"
+            aria-label="Ir a Tesorería">
+            <span class="material-icons" aria-hidden="true">account_balance_wallet</span>
+            <span class="btn-text">Tesorería</span>
+          </button>
+
+          <button
+            class="menu-btn payables"
+            (click)="navigate('menucuentaxpagar')"
+            aria-label="Ir a Cuentas por Pagar">
+            <span class="material-icons" aria-hidden="true">receipt_long</span>
+            <span class="btn-text">Cuentas por Pagar</span>
+          </button>
+
+          <button
+            class="menu-btn receivables"
+            (click)="navigate('menucuentasxcobrar')"
+            aria-label="Ir a Cuentas por Cobrar">
+            <span class="material-icons" aria-hidden="true">attach_money</span>
+            <span class="btn-text">Cuentas por Cobrar</span>
+          </button>
+
+          <button
+            class="menu-btn credit"
+            (click)="navigate('menucreditos')"
+            aria-label="Ir a Créditos">
+            <span class="material-icons" aria-hidden="true">credit_score</span>
+            <span class="btn-text">Créditos</span>
+          </button>
+
+          <button
+            class="menu-btn reports"
+            (click)="navigate('reportes')"
+            aria-label="Ir a Reportes">
+            <span class="material-icons" aria-hidden="true">insights</span>
+            <span class="btn-text">Reportes</span>
+          </button>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>

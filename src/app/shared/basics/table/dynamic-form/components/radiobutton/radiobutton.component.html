@@ -1,0 +1,24 @@
+<div class="demo-full-width margin-top" [formGroup]="group">
+  @if (field['name']) {
+    <div class="radio-group-container">
+      <label class="radio-label-padding">{{field['label'] || ''}}:</label>
+      <mat-radio-group [formControlName]="field['name']">
+        @for (option of field['options']; track option.value) {
+          <mat-radio-button [value]="option.value">
+            {{option.label}}
+          </mat-radio-button>
+        }
+      </mat-radio-group>
+    </div>
+
+    @if (field['validations']) {
+      @for (validation of field['validations']; track validation['name']) {
+        @if (group.get(field['name'])?.hasError(validation['name'])) {
+          <mat-error class="validation-error">
+            {{validation['message'] || ''}}
+          </mat-error>
+        }
+      }
+    }
+  }
+</div>

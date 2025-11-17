@@ -1,0 +1,19 @@
+<mat-form-field class="demo-full-width" [formGroup]="group">
+  @if (field['name']) {
+    <ng-container matLabel>
+      {{field['label'] || ''}}
+    </ng-container>
+    <input class="uppercase-input"
+           matInput
+           [formControlName]="field['name']"
+           [placeholder]="field['label'] || ''"
+           [type]="field['inputType'] || 'text'">
+    @for (validation of field['validations'] || []; track validation['name']) {
+      @if (group.get(field['name'])?.hasError(validation['name'])) {
+        <mat-error>
+          {{validation['message'] || ''}}
+        </mat-error>
+      }
+    }
+  }
+</mat-form-field>

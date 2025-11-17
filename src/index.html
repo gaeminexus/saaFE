@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
+  <meta charset="utf-8">
+  <title>S.A.A</title>
+  <base href="/">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+  <!-- jsPDF para exportación a PDF - Carga asíncrona mejorada -->
+  <script>
+    // Función para cargar jsPDF dinámicamente
+    function loadJsPDF() {
+      return new Promise((resolve, reject) => {
+        // Verificar si ya está cargado
+        if (window.jsPDF) {
+          console.log('jsPDF ya está disponible');
+          resolve(window.jsPDF);
+          return;
+        }
+
+        // Cargar jsPDF principal
+        const jsPDFScript = document.createElement('script');
+        jsPDFScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+        jsPDFScript.onload = function() {
+          // Verificar diferentes formas de acceso
+          if (typeof jsPDF !== 'undefined') {
+            window.jsPDF = jsPDF;
+          } else if (window.jspdf && window.jspdf.jsPDF) {
+            window.jsPDF = window.jspdf.jsPDF;
+          }
+
+          if (window.jsPDF) {
+            console.log('jsPDF cargado exitosamente');
+
+            // Cargar plugin autoTable
+            const autoTableScript = document.createElement('script');
+            autoTableScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js';
+            autoTableScript.onload = function() {
+              console.log('jsPDF autoTable plugin cargado');
+              resolve(window.jsPDF);
+            };
+            autoTableScript.onerror = function() {
+              console.warn('Plugin autoTable no se pudo cargar, usando funcionalidad básica');
+              resolve(window.jsPDF);
+            };
+            document.head.appendChild(autoTableScript);
+          } else {
+            reject('jsPDF no se pudo inicializar');
+          }
+        };
+
+        jsPDFScript.onerror = function() {
+          console.error('Error al cargar jsPDF desde CDN principal, intentando alternativo...');
+
+          // Fallback a JSDelivr
+          const fallbackScript = document.createElement('script');
+          fallbackScript.src = 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js';
+          fallbackScript.onload = function() {
+            if (typeof jsPDF !== 'undefined') {
+              window.jsPDF = jsPDF;
+              console.log('jsPDF cargado desde CDN alternativo');
+              resolve(window.jsPDF);
+            } else {
+              reject('jsPDF no se pudo cargar desde ningún CDN');
+            }
+          };
+          fallbackScript.onerror = function() {
+            reject('jsPDF no se pudo cargar desde ningún CDN');
+          };
+          document.head.appendChild(fallbackScript);
+        };
+
+        document.head.appendChild(jsPDFScript);
+      });
+    }
+
+    // Cargar jsPDF cuando el DOM esté listo
+    document.addEventListener('DOMContentLoaded', function() {
+      loadJsPDF().catch(function(error) {
+        console.error('jsPDF no se pudo cargar:', error);
+        console.log('La funcionalidad de exportación PDF usará método alternativo (window.print)');
+      });
+    });
+
+    // Hacer disponible la función de carga globalmente
+    window.loadJsPDF = loadJsPDF;
+  </script>
+</head>
+<body>
+  <app-root></app-root>
+</body>
+</html>

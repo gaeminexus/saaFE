@@ -1,0 +1,112 @@
+@use '../abstracts/colors' as *;
+@use '../abstracts/variables' as *;
+
+// Flex Utilities
+@mixin flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@mixin flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+@mixin flex-column {
+  display: flex;
+  flex-direction: column;
+}
+
+// Typography
+@mixin text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// Glass Effect
+@mixin glass-effect {
+  background: $overlay-light;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px $shadow-color-light;
+}
+
+// Responsive
+@mixin responsive($breakpoint) {
+  @if $breakpoint == sm {
+    @media (min-width: $breakpoint-sm) { @content; }
+  } @else if $breakpoint == md {
+    @media (min-width: $breakpoint-md) { @content; }
+  } @else if $breakpoint == lg {
+    @media (min-width: $breakpoint-lg) { @content; }
+  } @else if $breakpoint == xl {
+    @media (min-width: $breakpoint-xl) { @content; }
+  } @else if $breakpoint == 2xl {
+    @media (min-width: $breakpoint-2xl) { @content; }
+  }
+}
+
+// Inputs
+@mixin input-base {
+  width: 100%;
+  padding: $spacing-md;
+  border: $border-width-md solid transparent;
+  border-radius: $border-radius-md;
+  font-size: $font-size-base;
+  transition: border-color $transition-normal;
+
+  &:focus {
+    outline: none;
+    border-color: $primary-color;
+  }
+
+  &::placeholder {
+    color: $text-muted;
+  }
+}
+
+// Buttons
+@mixin button-base {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-md $spacing-lg;
+  border: none;
+  border-radius: $border-radius-md;
+  font-weight: $font-weight-semibold;
+  font-size: $font-size-base;
+  line-height: $line-height-normal;
+  text-align: center;
+  cursor: pointer;
+  transition: all $transition-quick;
+
+  &:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+}
+
+// Cards
+@mixin card-base {
+  background: $background-primary;
+  border-radius: $border-radius-lg;
+  box-shadow: 0 1px 3px $shadow-color-light;
+  padding: $spacing-lg;
+}
+
+// Animations
+@mixin fade-in {
+  animation: fadeIn $transition-normal;
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY($spacing-md);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}

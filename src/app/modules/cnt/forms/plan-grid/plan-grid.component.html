@@ -1,0 +1,305 @@
+<div class="plan-grid-container">
+  <!-- Header con controles -->
+  <div class="header-section">
+    <div class="title-section">
+      <h2>Plan Grid</h2>
+      <p class="subtitle">Vista tabular del catálogo de cuentas contables</p>
+    </div>
+
+    <div class="actions-section">
+      <button mat-flat-button color="primary" (click)="onAddInternal()" class="add-button">
+        <mat-icon>add</mat-icon>
+        Nueva Cuenta
+      </button>
+
+      <button mat-stroked-button
+              [disabled]="selection.selected.length === 0"
+              (click)="onDeleteSelected()"
+              class="delete-button">
+        <mat-icon>delete</mat-icon>
+        Eliminar ({{ selection.selected.length }})
+      </button>
+
+      <button mat-button [matMenuTriggerFor]="exportMenu" class="export-button">
+        <mat-icon>file_download</mat-icon>
+        Exportar
+        <mat-icon>arrow_drop_down</mat-icon>
+      </button>
+
+      <mat-menu #exportMenu="matMenu">
+        <button mat-menu-item (click)="exportToCSV()">
+          <mat-icon>text_snippet</mat-icon>
+          <span>Exportar a CSV</span>
+        </button>
+        <button mat-menu-item (click)="exportToPDF()">
+          <mat-icon>picture_as_pdf</mat-icon>
+          <span>Exportar a PDF</span>
+        </button>
+        <button mat-menu-item
+                [disabled]="selection.selected.length === 0"
+                (click)="exportSelected()">
+          <mat-icon>check_box</mat-icon>
+          <span>Exportar Seleccionados</span>
+        </button>
+      </mat-menu>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="filters-section">
+    <mat-form-field appearance="outline" class="filter-field">
+      <mat-label>Naturaleza</mat-label>
+      <mat-select [(value)]="selectedNaturaleza" (selectionChange)="onFilterChange()">
+        <mat-option [value]="null">Todas</mat-option>
+        @for (naturaleza of naturalezas; track naturaleza.codigo) {
+          <mat-option [value]="naturaleza.codigo">{{ naturaleza.nombre }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="filter-field">
+      <mat-label>Estado</mat-label>
+      <mat-select [(value)]="selectedEstado" (selectionChange)="onFilterChange()">
+        <mat-option [value]="null">Todos</mat-option>
+        <mat-option [value]="1">Activo</mat-option>
+        <mat-option [value]="0">Inactivo</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="filter-field">
+      <mat-label>Nivel</mat-label>
+      <mat-select [(value)]="selectedNivel" (selectionChange)="onFilterChange()">
+        <mat-option [value]="null">Todos</mat-option>
+        @for (nivel of getNivelesUnicos(); track nivel) {
+          <mat-option [value]="nivel">Nivel {{ nivel }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <button mat-button (click)="clearFilters()" class="clear-filters">
+      <mat-icon>clear</mat-icon>
+      Limpiar
+    </button>
+  </div>
+
+  <!-- Loading y Error -->
+  @if (loading) {
+    <div class="loading-container">
+      <mat-spinner diameter="50"></mat-spinner>
+      <p>Cargando datos del grid...</p>
+    </div>
+  }
+
+  @if (error) {
+    <div class="error-container">
+      <mat-icon>error</mat-icon>
+      <p>{{ error }}</p>
+      <button mat-button (click)="loadData()">Reintentar</button>
+    </div>
+  }
+
+  <!-- Tabla de datos -->
+  @if (!loading && !error) {
+    <div class="table-container">
+      <table mat-table [dataSource]="dataSource" matSort class="data-table">
+
+        <!-- Columna de selección -->
+        <ng-container matColumnDef="select">
+          <th mat-header-cell *matHeaderCellDef class="select-column">
+            <mat-checkbox
+              (change)="$event ? toggleAllRows() : null"
+              [checked]="selection.hasValue() && isAllSelected()"
+              [indeterminate]="selection.hasValue() && !isAllSelected()"
+              [aria-label]="checkboxLabel()">
+            </mat-checkbox>
+          </th>
+          <td mat-cell *matCellDef="let row" class="select-column">
+            <mat-checkbox
+              (click)="$event.stopPropagation()"
+              (change)="$event ? selection.toggle(row) : null"
+              [checked]="selection.isSelected(row)"
+              [aria-label]="checkboxLabel(row)">
+            </mat-checkbox>
+          </td>
+        </ng-container>
+
+        <!-- Columna Número de Cuenta -->
+        <ng-container matColumnDef="cuentaContable">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header class="number-column">
+            <div class="header-content">
+              <mat-icon>account_balance</mat-icon>
+              <span>Número</span>
+            </div>
+          </th>
+          <td mat-cell *matCellDef="let element" class="number-column">
+            <span class="account-number">{{ element.cuentaContable }}</span>
+          </td>
+        </ng-container>
+
+        <!-- Columna Nombre -->
+        <ng-container matColumnDef="nombre">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header class="name-column">
+            <div class="header-content">
+              <mat-icon>description</mat-icon>
+              <span>Nombre</span>
+            </div>
+          </th>
+          <td mat-cell *matCellDef="let element" class="name-column">
+            <div class="account-info" [style.padding-left.px]="getIndentPx(element)">
+              <div class="name-row">
+                <mat-icon class="hier-icon" [ngClass]="{folder: hasChildren(element), leaf: !hasChildren(element)}">
+                  {{ hasChildren(element) ? 'folder' : 'description' }}
+                </mat-icon>
+                <span class="account-name">{{ element.nombre }}</span>
+                <span class="desc-badge" *ngIf="getDescendantCount(element) as dc">
+                  <mat-icon class="mini">account_tree</mat-icon>{{ dc }}
+                </span>
+              </div>
+            </div>
+          </td>
+        </ng-container>
+
+        <!-- Columna Empresa oculta (conservada por si se requiere reactivar) -->
+        <!--
+        <ng-container matColumnDef="empresa">
+          ...
+        </ng-container>
+        -->
+
+        <!-- Columna Tipo -->
+        <ng-container matColumnDef="tipo">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header class="tipo-column">
+            <div class="header-content">
+              <mat-icon>label</mat-icon>
+              <span>Tipo</span>
+            </div>
+          </th>
+          <td mat-cell *matCellDef="let element" class="tipo-column">
+            <span class="badge tipo-badge tipo-{{ element.tipo }}">
+              {{ getTipoLabel(element.tipo) }}
+            </span>
+          </td>
+        </ng-container>
+
+        <!-- Columna Fecha Creación -->
+        <ng-container matColumnDef="fechaUpdate">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header class="fecha-column">
+            <div class="header-content">
+              <mat-icon>schedule</mat-icon>
+              <span>Fecha Creación</span>
+            </div>
+          </th>
+          <td mat-cell *matCellDef="let element" class="fecha-column">
+            <div class="fecha-info">
+              <span class="fecha-valor">{{ formatDate(element.fechaUpdate) }}</span>
+            </div>
+          </td>
+        </ng-container>
+
+        <!-- Columna Fecha Desactivación -->
+        <ng-container matColumnDef="fechaInactivo">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header class="fecha-column">
+            <div class="header-content">
+              <mat-icon>event_busy</mat-icon>
+              <span>Fecha Desactivación</span>
+            </div>
+          </th>
+          <td mat-cell *matCellDef="let element" class="fecha-column">
+            <div class="fecha-info">
+              <span class="fecha-valor" [class.fecha-inactiva]="element.estado !== 1">
+                {{ formatDate(element.fechaInactivo) }}
+              </span>
+            </div>
+          </td>
+        </ng-container>
+
+        <!-- Columna Estado -->
+        <ng-container matColumnDef="estado">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header class="estado-column">
+            <div class="header-content">
+              <mat-icon>toggle_on</mat-icon>
+              <span>Estado</span>
+            </div>
+          </th>
+          <td mat-cell *matCellDef="let element" class="estado-column">
+            <span class="badge estado-badge"
+                  [class.estado-activo]="element.estado === 1"
+                  [class.estado-inactivo]="element.estado !== 1">
+              {{ estadoLabel(element.estado) }}
+            </span>
+          </td>
+        </ng-container>
+
+        <!-- Columna Acciones -->
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef class="actions-column">
+            <div class="header-content">
+              <mat-icon>settings</mat-icon>
+              <span>Acciones</span>
+            </div>
+          </th>
+          <td mat-cell *matCellDef="let element" class="actions-column">
+            <div class="action-buttons">
+              <button mat-icon-button
+                      (click)="onEdit(element)"
+                      matTooltip="Editar cuenta"
+                      class="action-button edit-button">
+                <mat-icon>edit</mat-icon>
+              </button>
+
+              <button mat-icon-button
+                      [matMenuTriggerFor]="actionMenu"
+                      matTooltip="Más acciones"
+                      class="action-button menu-button">
+                <mat-icon>more_vert</mat-icon>
+              </button>
+
+              <mat-menu #actionMenu="matMenu">
+                <button mat-menu-item (click)="onEdit(element)">
+                  <mat-icon>edit</mat-icon>
+                  <span>Editar</span>
+                </button>
+                <button mat-menu-item (click)="onAddInternal(element)">
+                  <mat-icon>add</mat-icon>
+                  <span>Agregar Subcuenta</span>
+                </button>
+                <mat-divider></mat-divider>
+                <button mat-menu-item (click)="onDelete(element)" class="delete-menu-item">
+                  <mat-icon>delete</mat-icon>
+                  <span>Eliminar</span>
+                </button>
+              </mat-menu>
+            </div>
+          </td>
+        </ng-container>
+
+        <!-- Header y filas de la tabla -->
+        <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;"
+            [class.selected-row]="selection.isSelected(row)"
+            (click)="selection.toggle(row)"></tr>
+
+      </table>
+
+      <!-- Paginador -->
+      <mat-paginator
+        [pageSizeOptions]="pageSizeOptions"
+        [pageSize]="pageSize"
+        [showFirstLastButtons]="true"
+        class="table-paginator">
+      </mat-paginator>
+    </div>
+  }
+
+  <!-- Mensaje cuando no hay datos -->
+  @if (!loading && !error && dataSource.data.length === 0) {
+    <div class="no-data-container">
+      <mat-icon>grid_view</mat-icon>
+      <h3>No se encontraron cuentas</h3>
+      <p>No hay cuentas que coincidan con los filtros aplicados</p>
+      <button mat-flat-button color="primary" (click)="clearFilters()">
+        Limpiar filtros
+      </button>
+    </div>
+  }
+</div>

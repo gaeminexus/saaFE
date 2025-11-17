@@ -1,0 +1,152 @@
+<div class="naturaleza-cuentas-grid">
+  <div class="header-row">
+    <h2>Naturaleza de Cuentas</h2>
+    <div class="header-actions">
+      <div class="export-buttons">
+        <button mat-stroked-button (click)="exportToCSV()" [disabled]="loading || totalElements === 0" aria-label="Exportar a CSV">
+          <mat-icon>description</mat-icon>
+          <span>CSV</span>
+        </button>
+        <button mat-stroked-button (click)="exportToPDF()" [disabled]="loading || totalElements === 0" aria-label="Exportar a PDF">
+          <mat-icon>picture_as_pdf</mat-icon>
+          <span>PDF</span>
+        </button>
+      </div>
+      <div class="action-buttons">
+        <button mat-flat-button color="primary" (click)="onAdd()" [disabled]="loading">
+          <mat-icon>add</mat-icon>
+          <span>Nuevo</span>
+        </button>
+        <button mat-icon-button (click)="loadData()" [disabled]="loading" aria-label="Recargar">
+          <mat-icon>refresh</mat-icon>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filtro de búsqueda -->
+  <div class="search-row">
+    <mat-form-field appearance="outline" class="search-field">
+      <mat-label>Buscar en registros</mat-label>
+      <input matInput
+             [(ngModel)]="searchTerm"
+             (input)="onSearch()"
+             placeholder="Nombre, tipo, número..."
+             autocomplete="off">
+      <mat-icon matSuffix>search</mat-icon>
+      @if (searchTerm) {
+        <button matSuffix mat-icon-button (click)="clearSearch()" aria-label="Limpiar búsqueda">
+          <mat-icon>clear</mat-icon>
+        </button>
+      }
+    </mat-form-field>
+  </div>
+
+  @if (loading) {
+    <div class="loading-state">
+      <mat-spinner [diameter]="24"></mat-spinner>
+      <span>Cargando datos...</span>
+    </div>
+  }
+
+  @if (error) {
+    <div class="error-state">
+      <mat-icon>error_outline</mat-icon>
+      <span>{{ error }}</span>
+    </div>
+  }
+
+  @if (!loading && !error) {
+    <div class="info-row">
+      <div class="record-count">
+        <mat-icon>format_list_numbered</mat-icon>
+        <span><strong>{{ totalElements }}</strong> de {{ naturalezaCuentas.length }} registros</span>
+        @if (searchTerm) {
+          <span class="filter-indicator"> (filtrados)</span>
+        }
+      </div>
+    </div>
+
+    @if (totalElements > 0) {
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th class="sortable-header" (click)="onSort('nombre')">
+                <span>Nombre</span>
+                <mat-icon>{{ getSortIcon('nombre') }}</mat-icon>
+              </th>
+              <th class="sortable-header" (click)="onSort('tipo')">
+                <span>Tipo de Naturaleza</span>
+                <mat-icon>{{ getSortIcon('tipo') }}</mat-icon>
+              </th>
+              <th class="sortable-header" (click)="onSort('numero')">
+                <span>Número de Cuenta</span>
+                <mat-icon>{{ getSortIcon('numero') }}</mat-icon>
+              </th>
+              <th class="sortable-header" (click)="onSort('manejaCentroCosto')">
+                <span>Centro de Costos</span>
+                <mat-icon>{{ getSortIcon('manejaCentroCosto') }}</mat-icon>
+              </th>
+              <th class="sortable-header" (click)="onSort('estado')">
+                <span>Estado</span>
+                <mat-icon>{{ getSortIcon('estado') }}</mat-icon>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of pagedData; track trackByCodigo($index, item)) {
+              <tr>
+                <td>
+                  <div class="cell-content">
+                    <span>{{ item.nombre }}</span>
+                    <button mat-icon-button (click)="onEdit(item)" aria-label="Editar">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                  </div>
+                </td>
+                <td>
+                  <span class="badge tipo">{{ tipoLabel(item.tipo) }}</span>
+                </td>
+                <td>{{ item.numero }}</td>
+                <td>
+                  <span class="badge centro-costo">{{ manejaCentroCostoLabel(item.manejaCentroCosto) }}</span>
+                </td>
+                <td>
+                  <span class="badge" [class.estado-activo]="item.estado === 1"
+                                    [class.estado-inactivo]="item.estado !== 1">
+                    {{ estadoLabel(item.estado) }}
+                  </span>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Paginación -->
+      <div class="pagination-container">
+        <mat-paginator
+          [length]="totalElements"
+          [pageIndex]="pageIndex"
+          [pageSize]="pageSize"
+          [pageSizeOptions]="pageSizeOptions"
+          [showFirstLastButtons]="true"
+          (page)="onPageChange($event)"
+          aria-label="Seleccionar página">
+        </mat-paginator>
+      </div>
+    } @else {
+      <div class="empty-state">
+        <mat-icon>{{ searchTerm ? 'search_off' : 'playlist_remove' }}</mat-icon>
+        <span>{{ searchTerm ? 'No se encontraron resultados para "' + searchTerm + '"' : 'No hay datos disponibles' }}</span>
+        @if (searchTerm) {
+          <button mat-flat-button color="primary" (click)="clearSearch()">
+            <mat-icon>clear</mat-icon>
+            <span>Limpiar filtro</span>
+          </button>
+        }
+      </div>
+    }
+  }
+</div>

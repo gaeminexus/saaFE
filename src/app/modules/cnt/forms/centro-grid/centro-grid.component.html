@@ -1,0 +1,198 @@
+<div class="centro-grid-container">
+  <!-- Header Section -->
+  <div class="header-section">
+    <div class="title-section">
+      <h2>Centros de Costo</h2>
+      <p class="subtitle">Vista tabular de centros de costo</p>
+    </div>
+    <div class="actions-section">
+      <button mat-raised-button class="add-button" (click)="onAdd()">
+        <mat-icon>add</mat-icon>
+        Agregar Centro
+      </button>
+      <button mat-icon-button class="refresh-button" (click)="refreshData()" [disabled]="loading" matTooltip="Actualizar">
+        <mat-icon>refresh</mat-icon>
+      </button>
+      <button mat-icon-button class="export-button" (click)="exportData()" matTooltip="Exportar">
+        <mat-icon>download</mat-icon>
+      </button>
+    </div>
+  </div>
+
+  <!-- Filters Section -->
+  <div class="filters-section">
+    <!-- Búsqueda por texto -->
+    <mat-form-field class="search-field" appearance="outline">
+      <mat-label>Buscar centro</mat-label>
+      <input matInput [formControl]="searchControl" placeholder="Nombre o código...">
+      <mat-icon matSuffix>search</mat-icon>
+    </mat-form-field>
+
+    <!-- Filtro por tipo -->
+    <mat-form-field class="filter-field" appearance="outline">
+      <mat-label>Tipo</mat-label>
+      <mat-select [formControl]="selectedTipo">
+        <mat-option *ngFor="let option of tipoOptions" [value]="option.value">
+          {{ option.label }}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <!-- Filtro por estado -->
+    <mat-form-field class="filter-field" appearance="outline">
+      <mat-label>Estado</mat-label>
+      <mat-select [formControl]="selectedEstado">
+        <mat-option *ngFor="let option of estadoOptions" [value]="option.value">
+          {{ option.label }}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <button mat-icon-button class="clear-filters" (click)="clearFilters()" matTooltip="Limpiar filtros">
+      <mat-icon>clear</mat-icon>
+    </button>
+  </div>
+
+  <!-- Loading spinner -->
+  <div *ngIf="loading" class="loading-container">
+    <mat-spinner diameter="50"></mat-spinner>
+    <p>Cargando centros de costo...</p>
+  </div>
+
+  <!-- Error message -->
+  <div *ngIf="error && !loading" class="error-container">
+    <mat-icon color="warn">error</mat-icon>
+    <p>{{ error }}</p>
+    <button mat-button color="primary" (click)="loadData()">
+      <mat-icon>refresh</mat-icon>
+      Reintentar
+    </button>
+  </div>
+
+  <!-- Table -->
+  <div *ngIf="!loading && !error" class="table-container">
+    <table mat-table [dataSource]="dataSource" matSort class="data-table">
+
+      <!-- Número Column -->
+      <ng-container matColumnDef="numero">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header class="codigo-column">
+          <div class="header-content">
+            <mat-icon>tag</mat-icon>
+            <span>Número</span>
+          </div>
+        </th>
+        <td mat-cell *matCellDef="let centro" class="codigo-column">
+          <span class="code-value">{{ centro.numero || '-' }}</span>
+        </td>
+      </ng-container>
+
+      <!-- Descripción Column -->
+      <ng-container matColumnDef="nombre">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header class="nombre-column">
+          <div class="header-content">
+            <mat-icon>drive_file_rename_outline</mat-icon>
+            <span>Descripción</span>
+          </div>
+        </th>
+        <td mat-cell *matCellDef="let centro" class="nombre-column">
+          <div class="centro-info">
+            <span class="centro-name">{{ centro.nombre }}</span>
+          </div>
+        </td>
+      </ng-container>
+
+      <!-- Tipo Column -->
+      <ng-container matColumnDef="tipo">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header class="tipo-column">
+          <div class="header-content">
+            <mat-icon>label</mat-icon>
+            <span>Tipo</span>
+          </div>
+        </th>
+        <td mat-cell *matCellDef="let centro" class="tipo-column">
+          <span class="badge tipo-badge" [class]="'tipo-' + getTipoClass(centro.tipo)">
+            {{ getTipoLabel(centro.tipo) }}
+          </span>
+        </td>
+      </ng-container>
+
+
+
+      <!-- F.ingreso Column -->
+      <ng-container matColumnDef="fechaIngreso">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header class="fecha-column">
+          <div class="header-content">
+            <mat-icon>schedule</mat-icon>
+            <span>F.ingreso</span>
+          </div>
+        </th>
+        <td mat-cell *matCellDef="let centro" class="fecha-column">
+          <div class="fecha-info">
+            <span class="fecha-valor">{{ formatDate(centro.fechaIngreso) }}</span>
+          </div>
+        </td>
+      </ng-container>
+
+      <!-- F.desactivación Column -->
+      <ng-container matColumnDef="fechaInactivo">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header class="fecha-column">
+          <div class="header-content">
+            <mat-icon>event_busy</mat-icon>
+            <span>F.desactivación</span>
+          </div>
+        </th>
+        <td mat-cell *matCellDef="let centro" class="fecha-column">
+          <div class="fecha-info" *ngIf="centro.fechaInactivo">
+            <span class="fecha-valor fecha-inactiva">{{ formatDate(centro.fechaInactivo) }}</span>
+          </div>
+          <span *ngIf="!centro.fechaInactivo" class="no-date">-</span>
+        </td>
+      </ng-container>
+
+
+
+      <!-- Actions Column -->
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef class="actions-column">
+          <div class="header-content">
+            <mat-icon>settings</mat-icon>
+            <span>Acciones</span>
+          </div>
+        </th>
+        <td mat-cell *matCellDef="let centro" class="actions-column">
+          <div class="action-buttons">
+            <button mat-icon-button class="action-button edit-button" (click)="onEdit(centro)" matTooltip="Editar nombre">
+              <mat-icon>edit</mat-icon>
+            </button>
+            <button mat-icon-button class="action-button delete-button" (click)="onDelete(centro)" matTooltip="Eliminar">
+              <mat-icon>delete_outline</mat-icon>
+            </button>
+          </div>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns;"
+          [class.inactive-row]="row.estado !== 1"></tr>
+    </table>
+
+    <!-- Paginator -->
+    <mat-paginator
+      [pageSizeOptions]="[10, 25, 50, 100]"
+      [pageSize]="25"
+      showFirstLastButtons
+      class="table-paginator">
+    </mat-paginator>
+  </div>
+
+  <!-- No Data -->
+  <div *ngIf="!loading && !error && dataSource.data.length === 0" class="no-data-container">
+    <mat-icon>view_list</mat-icon>
+    <h3>No se encontraron centros de costo</h3>
+    <p>No hay centros de costo que coincidan con los filtros aplicados.</p>
+    <button mat-raised-button color="primary" (click)="clearFilters()">
+      <mat-icon>clear</mat-icon>
+      Limpiar Filtros
+    </button>
+  </div>
+</div>

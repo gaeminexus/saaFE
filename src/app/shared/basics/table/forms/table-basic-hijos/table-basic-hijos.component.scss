@@ -1,0 +1,944 @@
+/* ========================================
+   DISEÑO MODERNO PARA TABLA SAA
+========================================= */
+
+@use 'sass:color';
+
+// Variables de diseño - Colores del sistema SAA
+$saa-primary: #667eea;          // Color primario del sistema
+$saa-secondary: #764ba2;        // Color secundario del sistema
+$saa-accent: #f6ad55;           // Color accent del sistema
+$saa-success: #28a745;          // Verde para éxito
+$saa-error: #dc3545;            // Rojo para errores
+$saa-warning: #ffc107;          // Amarillo para advertencias
+$saa-info: #17a2b8;             // Azul para información
+
+// Backgrounds del sistema
+$saa-background: #f7fafc;       // Background secundario
+$saa-surface: #ffffff;          // Background primario
+$saa-tertiary: #edf2f7;         // Background terciario
+
+// Textos del sistema
+$saa-text-primary: #333333;     // Texto principal
+$saa-text-secondary: #666666;   // Texto secundario
+$saa-text-muted: #718096;       // Texto deshabilitado
+
+// Borders del sistema
+$saa-border-light: #e2e8f0;
+$saa-border-medium: #cbd5e0;
+$saa-border-dark: #a0aec0;
+
+// Sombras del sistema
+$saa-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+$saa-shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.15);
+
+// Gradient del sistema
+$saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
+
+// Colores modernos para botones de acción
+$edit-color-1: #4facfe;          // Azul claro
+$edit-color-2: #00f2fe;          // Turquesa
+$delete-color-1: #ff758c;        // Rosa coral
+$delete-color-2: #ff7eb3;        // Rosa más claro
+
+// Contenedor principal estilo naturalezadecuentas
+.saa-table-container {
+  max-width: 1100px;
+  margin: 1rem auto;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 1rem;
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.1);
+  padding: 1.5rem;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(118, 75, 162, 0.1);
+
+  // Header de la tabla estilo naturalezadecuentas
+  .saa-table-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(118, 75, 162, 0.1);
+    flex-wrap: wrap;
+
+    @media (max-width: 768px) {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .table-info {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+
+      .table-title {
+        margin: 0;
+        font-family: 'Montserrat', Arial, sans-serif;
+        font-size: 1.5rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+
+        .material-icons {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          -webkit-background-clip: text;
+          background-clip: text;
+          color: transparent;
+          font-size: 1.5rem;
+        }
+      }
+
+      .record-count {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #4b5563;
+        font-size: 0.9rem;
+
+        .material-icons {
+          color: #667eea;
+          font-size: 1.2rem;
+          width: 1.2rem;
+          height: 1.2rem;
+        }
+
+        strong {
+          color: #764ba2;
+        }
+      }
+    }
+
+    .search-container {
+      flex: 1;
+      max-width: 300px;
+      min-width: 250px;
+
+      .search-field {
+        width: 100%;
+
+        ::ng-deep .mat-mdc-form-field-wrapper {
+          padding-bottom: 0;
+        }
+      }
+    }
+
+    .header-actions {
+      .add-button {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white !important;
+        padding: 0.75rem 1.5rem;
+        font-weight: 500;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+
+        &:hover {
+          box-shadow: 0 4px 6px -1px rgba(102, 126, 234, 0.2), 0 2px 4px -1px rgba(102, 126, 234, 0.1);
+        }
+
+        &:disabled {
+          opacity: 0.7;
+        }
+
+        mat-icon {
+          font-size: 1.2rem;
+          width: 1.2rem;
+          height: 1.2rem;
+          color: white !important;
+        }
+
+        span {
+          color: white !important;
+        }
+      }
+    }
+  }
+
+  // Wrapper de la tabla estilo naturalezadecuentas
+  .saa-table-wrapper {
+    overflow-x: auto;
+    margin: 0 -0.5rem;
+    padding: 0 0.5rem;
+
+    // Tabla principal estilo naturalezadecuentas
+    .saa-data-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      margin-bottom: 1rem;
+
+      // Headers con gradiente estilo naturalezadecuentas
+      .saa-header-cell {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white !important;
+        font-weight: 600;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        padding: 1rem;
+        border-bottom: none;
+        position: relative;
+        text-align: center;
+
+        // Esquinas redondeadas para primera y última columna
+        &:first-child {
+          border-top-left-radius: 8px;
+        }
+
+        &:last-child {
+          border-top-right-radius: 8px;
+        }
+
+        .header-content {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.5rem;
+
+          .field-header-text,
+          .action-header-text {
+            color: white !important;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            // Sin fondo adicional ya que el header tiene el gradiente
+          }
+        }
+
+        &.sortable-header {
+          cursor: pointer;
+          user-select: none;
+          transition: all 0.3s ease;
+
+          &:hover {
+            background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%) !important;
+          }
+        }
+      }
+
+      // Columnas de acciones
+      .saa-actions-header {
+        @extend .saa-header-cell;
+        text-align: center;
+        width: 120px;
+        min-width: 120px;
+
+        .actions-header-text {
+          font-size: 0.75rem;
+          color: $saa-text-muted;
+        }
+
+        // Columna unificada más ancha
+        &.unified-actions {
+          width: 160px;
+          min-width: 160px;
+        }
+      }
+
+      // Celdas de datos estilo naturalezadecuentas
+      .saa-data-cell {
+        padding: 1rem;
+        border-bottom: 1px solid rgba(118, 75, 162, 0.1);
+        transition: background-color 0.3s ease;
+        text-align: center;
+
+        .cell-content {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 1rem;
+          text-align: center;
+          width: 100%;
+        }
+
+        // Efectos hover estilo naturalezadecuentas
+        ::ng-deep .mat-mdc-row:hover & {
+          background-color: rgba(102, 126, 234, 0.05);
+        }
+      }
+
+      // Celdas de acciones
+      .saa-actions-cell {
+        @extend .saa-data-cell;
+        text-align: center;
+        padding: 0.5rem 0.5rem;
+
+        .action-buttons {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          gap: 0.375rem;
+        }
+
+        // Contenedor de acciones unificadas
+        .unified-actions-container {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 2px; // Mínima separación entre botones
+          padding: 0;
+
+          .action-btn {
+            // Quitar bordes redondeados para efecto concatenado
+            border-radius: 0 !important;
+            margin: 0 !important;
+
+            // Primer botón: esquina izquierda redondeada
+            &:first-child {
+              border-radius: 4px 0 0 4px !important;
+            }
+
+            // Último botón: esquina derecha redondeada
+            &:last-child {
+              border-radius: 0 4px 4px 0 !important;
+            }
+
+            // Si solo hay un botón: completamente redondeado
+            &:only-child {
+              border-radius: 4px !important;
+            }
+
+            // Botones del medio: sin bordes redondeados
+            &:not(:first-child):not(:last-child) {
+              border-radius: 0 !important;
+            }
+
+            // Estilos específicos por tipo de botón
+            &.hijos-btn {
+              background: linear-gradient(135deg, $saa-info, color.mix(white, $saa-info, 20%)) !important;
+              color: white !important;
+
+              &:hover {
+                background: color.mix(black, $saa-info, 15%) !important;
+              }
+            }
+
+            &.edit-btn {
+              background: $edit-color-1 !important;
+              color: white !important;
+
+              &:hover {
+                background: color.mix(black, $edit-color-1, 15%) !important;
+              }
+            }
+
+            &.delete-btn {
+              background: $delete-color-1 !important;
+              color: white !important;
+
+              &:hover {
+                background: color.mix(black, $delete-color-1, 15%) !important;
+              }
+            }
+
+            &.extra-btn {
+              background: linear-gradient(135deg, $saa-accent, color.mix(white, $saa-accent, 20%)) !important;
+              color: white !important;
+
+              &:hover {
+                background: color.mix(black, $saa-accent, 15%) !important;
+              }
+            }
+          }
+        }
+
+        .action-btn {
+          // Botones minimalistas más pequeños
+          min-width: 28px !important;
+          width: 28px !important;
+          height: 28px !important;
+          border-radius: 6px !important;
+          transition: all 0.2s ease;
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+          border: none;
+          cursor: pointer;
+
+          &:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+          }
+
+          &.edit-btn {
+            // Estilo minimalista azul para editar
+            background: $edit-color-1;
+            color: white;
+
+            &:hover {
+              background: color.mix(black, $edit-color-1, 15%);
+              box-shadow: 0 2px 6px rgba($edit-color-1, 0.3);
+            }
+          }
+
+          &.delete-btn {
+            // Estilo minimalista rosa para eliminar
+            background: $delete-color-1;
+            color: white;
+
+            &:hover {
+              background: color.mix(black, $delete-color-1, 15%);
+              box-shadow: 0 2px 6px rgba($delete-color-1, 0.3);
+            }
+          }
+
+          mat-icon {
+            font-size: 14px !important;
+            line-height: 14px;
+            width: 14px;
+            height: 14px;
+          }
+        }
+      }
+
+      // Footer
+      .saa-footer-cell {
+        background: $saa-background;
+        color: $saa-text-primary;
+        font-weight: 600;
+        padding: 0.75rem;
+        border-top: 2px solid $saa-border-light;
+        text-align: center;
+
+        .footer-content {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          text-align: center;
+        }
+      }
+
+      // Bordes redondeados para la última fila
+      ::ng-deep .mat-mdc-row:last-child .saa-data-cell {
+        border-bottom: none;
+
+        &:first-child {
+          border-bottom-left-radius: 8px;
+        }
+
+        &:last-child {
+          border-bottom-right-radius: 8px;
+        }
+      }
+
+      // Estado sin datos
+      ::ng-deep .mat-mdc-no-data-row {
+        .mat-mdc-cell {
+          text-align: center;
+          padding: 3rem 1rem;
+          color: $saa-text-muted;
+          font-style: italic;
+          background: $saa-background;
+        }
+      }
+
+      // Estilos fundamentales para Material Table Grid
+      ::ng-deep .mat-mdc-table {
+        display: table !important;
+        width: 100% !important;
+      }
+
+      ::ng-deep .mat-mdc-header-row {
+        display: table-row !important;
+      }
+
+      ::ng-deep .mat-mdc-row {
+        display: table-row !important;
+      }
+
+      ::ng-deep .mat-mdc-footer-row {
+        display: table-row !important;
+      }
+
+      // Centrado en celdas de datos
+      ::ng-deep .mat-mdc-cell {
+        display: table-cell !important;
+        text-align: center !important;
+        vertical-align: middle !important;
+        border-right: 1px solid rgba(0, 0, 0, 0.06);
+        padding: 0.5rem 0.5rem !important;
+
+        &:last-child {
+          border-right: none;
+        }
+
+        .cell-content {
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          width: 100% !important;
+          text-align: center !important;
+        }
+      }
+
+      // Centrado en headers
+      ::ng-deep .mat-mdc-header-cell {
+        display: table-cell !important;
+        text-align: center !important;
+        vertical-align: middle !important;
+        border-right: 1px solid rgba(0, 0, 0, 0.06);
+        padding: 0.5rem 0.5rem !important;
+
+        &:last-child {
+          border-right: none;
+        }
+
+        .header-content {
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          width: 100% !important;
+        }
+
+        .field-header-text,
+        .action-header-text {
+          margin: 0 auto !important;
+        }
+
+        // Iconos de ordenamiento centrados
+        .mat-sort-header-container {
+          justify-content: center !important;
+          cursor: pointer !important;
+          display: flex !important;
+          align-items: center !important;
+
+          .mat-sort-header-content {
+            text-align: center !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+          }
+
+          .mat-sort-header-arrow {
+            opacity: 1 !important;
+            color: $saa-primary !important;
+            margin-left: 4px !important;
+          }
+
+          // Asegurar que el click event funcione
+          &:hover {
+            background: rgba($saa-primary, 0.05) !important;
+          }
+        }
+
+        // Estado activo del sort
+        &.mat-sort-header-sorted {
+          color: $saa-primary !important;
+
+          .field-header-text {
+            background: linear-gradient(135deg, rgba($saa-primary, 0.2), rgba($saa-secondary, 0.25)) !important;
+            color: $saa-primary !important;
+          }
+        }
+
+        // Hover en headers ordenables
+        &.sortable-header:hover {
+          .field-header-text {
+            background: linear-gradient(135deg, rgba($saa-primary, 0.15), rgba($saa-secondary, 0.2)) !important;
+          }
+        }
+
+        // Asegurar que los headers ordenables sean clickeables
+        &.sortable-header {
+          cursor: pointer !important;
+          pointer-events: auto !important;
+          user-select: none !important;
+
+          .mat-sort-header-container {
+            pointer-events: auto !important;
+          }
+        }
+      }
+
+      // Estilo para elementos no ordenables (como la columna de acciones)
+      ::ng-deep .mat-mdc-header-cell:not(.sortable-header) {
+        .header-content {
+          cursor: default !important;
+        }
+      }
+
+      // Asegurar que mat-sort funcione correctamente
+      ::ng-deep .mat-sort-header-button {
+        border: none !important;
+        background: transparent !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 100% !important;
+        padding: 0 !important;
+        cursor: pointer !important;
+      }
+
+      // Centrado en footer
+      ::ng-deep .mat-mdc-footer-cell {
+        display: table-cell !important;
+        text-align: center !important;
+        vertical-align: middle !important;
+        border-right: 1px solid rgba(0, 0, 0, 0.06);
+        padding: 0.75rem !important;
+
+        &:last-child {
+          border-right: none;
+        }
+
+        .footer-content {
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          width: 100% !important;
+          text-align: center !important;
+        }
+      }
+    }
+
+    // Tamaños de tabla
+    &.compact-table {
+      .saa-header-cell,
+      .saa-data-cell {
+        padding: 0.5rem;
+        font-size: 0.75rem;
+      }
+
+      .action-btn {
+        min-width: 24px !important;
+        width: 24px !important;
+        height: 24px !important;
+
+        mat-icon {
+          font-size: 12px !important;
+          width: 12px;
+          height: 12px;
+        }
+      }
+    }
+
+    &.large-table {
+      .saa-header-cell,
+      .saa-data-cell {
+        padding: 1.25rem;
+        font-size: 1rem;
+      }
+
+      .action-btn {
+        min-width: 32px !important;
+        width: 32px !important;
+        height: 32px !important;
+
+        mat-icon {
+          font-size: 16px !important;
+          width: 16px;
+          height: 16px;
+        }
+      }
+    }
+  }
+
+  // Paginador estilo naturalezadecuentas
+  .saa-paginator {
+    display: flex;
+    justify-content: center;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(118, 75, 162, 0.1);
+    background: transparent;
+
+    ::ng-deep {
+      .mat-mdc-paginator {
+        background: transparent;
+
+        .mat-mdc-paginator-range-actions {
+          align-items: center;
+          gap: 1rem;
+        }
+
+        .mat-mdc-icon-button {
+          color: #667eea;
+
+          &:hover {
+            background-color: rgba(102, 126, 234, 0.1);
+          }
+
+          &[disabled] {
+            color: rgba(102, 126, 234, 0.3);
+          }
+        }
+
+        .mat-mdc-paginator-range-label {
+          color: #4b5563;
+          font-size: 0.9rem;
+        }
+      }
+
+      .mat-mdc-select {
+        color: #667eea;
+
+        .mat-mdc-select-trigger {
+          border: 1px solid rgba(102, 126, 234, 0.2);
+          border-radius: 4px;
+          padding: 0 8px;
+        }
+      }
+    }
+  }
+
+  // Estado sin configuración
+  .saa-no-config {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 2rem;
+    text-align: center;
+    background: $saa-surface;
+    border-radius: 8px;
+    border: 2px dashed $saa-border-medium;
+    color: $saa-text-muted;
+
+    .info-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      color: $saa-info;
+    }
+
+    p {
+      font-size: 1rem;
+      margin: 0;
+      color: $saa-text-secondary;
+    }
+  }
+}
+
+/* ========================================
+   RESPONSIVE DESIGN
+========================================= */
+@media (max-width: 1024px) {
+  .saa-table-container {
+    margin: 0.5rem;
+    padding: 1rem;
+
+    .saa-table-header {
+      padding: 0.75rem;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .saa-table-container {
+    margin: 0.25rem;
+    padding: 0.75rem;
+    border-radius: 8px;
+
+    .saa-table-header {
+      padding: 0.5rem;
+      gap: 0.75rem;
+
+      .table-info .table-title {
+        font-size: 1.125rem;
+      }
+
+      .search-container {
+        max-width: none;
+        min-width: auto;
+      }
+    }
+
+    .saa-table-wrapper {
+      overflow-x: auto;
+
+      .saa-data-table {
+        min-width: 600px;
+      }
+    }
+
+    .action-btn {
+      transform: scale(0.9);
+    }
+  }
+}
+
+/* ========================================
+   ESTILOS LEGACY COMPATIBILIDAD
+========================================= */
+
+// Tabla base
+table {
+  width: 100%;
+}
+
+// Efectos hover en filas
+tr:hover td {
+  cursor: pointer;
+}
+
+// Tamaños de fuente
+.em-08 { font-size: 0.8em; }
+.em-07 { font-size: 0.7em; }
+.em-06 { font-size: 0.6em; }
+.em-1 { font-size: 1em; }
+.em-12 { font-size: 1.2em; }
+.em-14 { font-size: 1.4em; }
+
+// Form field
+.mat-form-field {
+  font-size: 14px;
+  width: 100%;
+}
+
+// Filas expandibles
+.par {
+  background-color: rgba(227, 238, 255, 0.5);
+}
+
+tr.example-detail-row {
+  height: 0;
+}
+
+tr.example-element-row:not(.example-expanded-row):hover {
+  background: whitesmoke;
+}
+
+tr.example-element-row:not(.example-expanded-row):active {
+  background: #efefef;
+}
+
+.example-element-row td {
+  border-bottom-width: 0;
+}
+
+.example-element-detail {
+  overflow: hidden;
+  display: flex;
+}
+
+.highlight {
+  background-color: rgba(0,0,0,.12);
+}
+
+// Botones
+td.test {
+  width: 20px;
+}
+
+.mat-icon-button {
+  width: 30px;
+  font-size: 24px;
+}
+
+// Anchos de columna
+.w80 {
+  width: 80px;
+  padding: 0 15px;
+}
+
+.w120 {
+  width: 120px;
+  padding: 0 15px;
+}
+
+.w160 {
+  width: 160px;
+  padding: 0 15px;
+}
+
+// Formato de texto
+.bold {
+  font-weight: bold;
+}
+
+// Alineación
+.aR {
+  text-align: right;
+  justify-content: flex-end;
+}
+
+.aC {
+  text-align: center;
+  justify-content: center;
+}
+
+.aL {
+  text-align: left;
+  justify-content: flex-start;
+}
+
+// Colores
+.red {
+  color: red;
+}
+
+.darkcyan {
+  color: darkcyan;
+}
+
+// Tamaños de fila específicos
+tr.s08 {
+  height: 8px;
+}
+
+.mat-icon-button.s08 {
+  width: 13px;
+  height: 8px;
+  font-size: 7px;
+  line-height: 8px;
+}
+
+tr.s10 {
+  height: 10px;
+}
+
+.mat-icon-button.s10 {
+  width: 15px;
+  height: 10px;
+  font-size: 9px;
+  line-height: 10px;
+}
+
+tr.s16 {
+  height: 16px;
+}
+
+.mat-icon-button.s16 {
+  width: 20px;
+  height: 16px;
+  font-size: 15px;
+  line-height: 16px;
+}
+
+/* ========================================
+   UTILIDADES MODERNAS
+========================================= */
+.text-center { text-align: center !important; }
+.text-left { text-align: left !important; }
+.text-right { text-align: right !important; }
+.w-10 { width: 10% !important; }
+.w-20 { width: 20% !important; }
+.w-30 { width: 30% !important; }
+.w-40 { width: 40% !important; }
+.w-50 { width: 50% !important; }
+.w-60 { width: 60% !important; }
+.w-70 { width: 70% !important; }
+.w-80 { width: 80% !important; }
+.w-90 { width: 90% !important; }
+.w-100 { width: 100% !important; }
+.flex { display: flex !important; }
+.items-center { align-items: center !important; }
+.justify-center { justify-content: center !important; }
+.gap-1 { gap: 0.25rem !important; }
+.gap-2 { gap: 0.5rem !important; }
+.p-1 { padding: 0.25rem !important; }
+.p-2 { padding: 0.5rem !important; }
+.p-4 { padding: 1rem !important; }
+

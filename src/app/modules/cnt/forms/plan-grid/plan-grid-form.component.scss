@@ -1,0 +1,264 @@
+:host {
+  display: block;
+  min-width: 500px;
+  max-width: 600px;
+}
+
+.form-container {
+  padding: 16px 0;
+}
+
+.parent-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  border-left: 4px solid #2196f3;
+
+  mat-icon {
+    color: #2196f3;
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+
+  span {
+    font-weight: 500;
+    color: #333;
+  }
+}
+
+.full-width {
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.readonly-info {
+  margin-bottom: 20px;
+
+  .info-section {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 16px;
+
+    h3 {
+      margin: 0 0 16px 0;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #334155;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      &:before {
+        content: '';
+        width: 3px;
+        height: 20px;
+        background: #3b82f6;
+        border-radius: 2px;
+      }
+    }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid #e2e8f0;
+
+      &:last-child {
+        border-bottom: none;
+      }
+
+      .label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 500;
+        color: #64748b;
+        font-size: 0.9rem;
+
+        mat-icon {
+          font-size: 18px;
+          width: 18px;
+          height: 18px;
+          color: #64748b;
+        }
+      }
+
+      .value {
+        font-weight: 600;
+        color: #1e293b;
+
+        &.estado-activo {
+          color: #10b981;
+        }
+
+        &.estado-inactivo {
+          color: #ef4444;
+        }
+
+        &.fecha-inactiva {
+          color: #dc2626;
+          font-weight: 700;
+        }
+      }
+    }
+  }
+}
+
+.info-message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background-color: #f0f9ff;
+  border: 1px solid #0ea5e9;
+  border-radius: 6px;
+  color: #0369a1;
+  font-weight: 500;
+  margin: 16px 24px;
+
+  mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    color: #0ea5e9;
+  }
+}
+
+.row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+
+  .half-width {
+    flex: 1;
+    margin-bottom: 0;
+  }
+}
+
+.naturaleza-info {
+  background-color: #fafafa;
+  border-radius: 6px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  border: 1px solid #e0e0e0;
+
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    .label {
+      font-weight: 500;
+      color: #666;
+    }
+
+    .value {
+      color: #333;
+      font-weight: 600;
+    }
+  }
+}
+
+.error-message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  margin-top: 16px;
+  background-color: #ffebee;
+  border-radius: 6px;
+  color: #c62828;
+
+  mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+}
+
+// Material form field customizations
+::ng-deep {
+  .mat-mdc-form-field {
+    .mat-mdc-text-field-wrapper {
+      .mat-mdc-form-field-flex {
+        .mat-mdc-form-field-icon-suffix {
+          padding-left: 8px;
+        }
+      }
+    }
+
+    &.mat-form-field-appearance-outline {
+      .mat-mdc-form-field-subscript-wrapper {
+        margin-top: 4px;
+      }
+    }
+  }
+
+  .mat-mdc-select-panel {
+    max-height: 300px;
+  }
+}
+
+// Dialog actions styling
+mat-dialog-actions {
+  padding: 16px 24px;
+  margin: 0 -24px -24px;
+  border-top: 1px solid #e0e0e0;
+
+  button {
+    margin-left: 8px;
+
+    &:first-child {
+      margin-left: 0;
+    }
+
+    mat-icon {
+      margin-right: 8px;
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+  }
+
+  .mat-mdc-raised-button {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+    &:disabled {
+      background-color: #f5f5f5 !important;
+      color: #999 !important;
+    }
+  }
+}
+
+// Spinner in button
+mat-spinner {
+  margin-right: 8px !important;
+}
+
+// Responsive adjustments
+@media (max-width: 600px) {
+  :host {
+    min-width: 300px;
+    max-width: 95vw;
+  }
+
+  .row {
+    flex-direction: column;
+    gap: 0;
+
+    .half-width {
+      margin-bottom: 16px;
+    }
+  }
+}

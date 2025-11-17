@@ -1,0 +1,251 @@
+@use '../../../../../styles/abstracts/colors' as *;
+@use '../../../../../styles/abstracts/variables' as *;
+
+ .exters-shell {
+  padding: $spacing-md;
+  background: $background-primary;
+ }
+ .toolbar {
+  display: flex;
+  gap: $spacing-md;
+  margin-bottom: $spacing-md;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-md;
+  background: $background-secondary;
+  border-radius: $border-radius-md;
+  border: $border-width solid $border-light;
+  box-shadow: 0 2px 4px $shadow-color-light;
+ }
+
+ .filter-field {
+   width: 280px;
+
+   .mat-mdc-form-field {
+     background: $background-primary;
+   }
+ }
+ .table-wrapper {
+   position: relative;
+   border: $border-width solid $border-light;
+   border-radius: $border-radius-md;
+   background: $background-primary;
+   box-shadow: 0 4px 8px $shadow-color-light;
+   overflow: hidden;
+ }
+
+ .table-container {
+   max-height: 600px;
+   overflow: auto;
+   position: relative;
+
+   /* Scrollbars personalizadas */
+   scrollbar-width: thin;
+   scrollbar-color: $border-medium $background-tertiary;
+
+   &::-webkit-scrollbar {
+     width: 12px;
+     height: 12px;
+   }
+
+   &::-webkit-scrollbar-track {
+     background: $background-tertiary;
+     border-radius: 6px;
+   }
+
+   &::-webkit-scrollbar-thumb {
+     background: $border-medium;
+     border-radius: 6px;
+     border: 2px solid $background-tertiary;
+
+     &:hover {
+       background: $primary-color;
+     }
+   }
+
+   &::-webkit-scrollbar-corner {
+     background: $background-tertiary;
+   }
+ }
+
+ table {
+   width: 100%;
+   font-size: 12px;
+   min-width: 1400px; /* Ancho mínimo para scroll horizontal */
+ }
+
+ th.mat-header-cell {
+   white-space: nowrap;
+   background: linear-gradient(135deg, $background-secondary 0%, $background-tertiary 100%);
+   color: $text-primary;
+   font-weight: $font-weight-semibold;
+   padding: $spacing-md $spacing-sm;
+   border-bottom: $border-width-md solid $border-medium;
+   text-transform: uppercase;
+   letter-spacing: 0.5px;
+   font-size: $font-size-xs;
+ }
+
+ td.mat-cell {
+   white-space: nowrap;
+   padding: $spacing-sm;
+   border-bottom: $border-width solid $border-light;
+   color: $text-secondary;
+   font-size: $font-size-sm;
+
+   &:hover {
+     background-color: rgba($primary-color, 0.05);
+     color: $text-primary;
+   }
+ }
+ .loading-center {
+   display: flex;
+   justify-content: center;
+   align-items: center;
+   height: 240px;
+   background: $background-secondary;
+
+   .loading-content {
+     text-align: center;
+
+     p {
+       margin-top: $spacing-md;
+       color: $text-secondary;
+       font-size: $font-size-sm;
+       font-weight: $font-weight-medium;
+     }
+   }
+ }
+
+ .error {
+   display: flex;
+   align-items: center;
+   gap: $spacing-sm;
+   color: $error-color;
+   margin-top: $spacing-sm;
+   padding: $spacing-sm $spacing-md;
+   background: rgba($error-color, 0.1);
+   border-radius: $border-radius-sm;
+   border-left: 4px solid $error-color;
+
+   mat-icon {
+     color: $error-color;
+   }
+ }
+
+ .total-info {
+   display: flex;
+   align-items: center;
+   gap: $spacing-sm;
+   font-size: $font-size-sm;
+   color: $text-primary;
+   font-weight: $font-weight-semibold;
+   padding: $spacing-sm $spacing-md;
+   background: rgba($info-color, 0.1);
+   border-radius: $border-radius-sm;
+   border-left: 4px solid $info-color;
+
+   mat-icon {
+     color: $info-color;
+   }
+ }
+
+ /* Filas alternas para mejor legibilidad */
+ tr.mat-row:nth-child(even) {
+   background-color: rgba($background-tertiary, 0.3);
+ }
+
+ tr.mat-row:hover {
+   background-color: rgba($primary-color, 0.08) !important;
+   cursor: pointer;
+   transform: translateY(-1px);
+   transition: all $transition-quick;
+   box-shadow: 0 2px 4px $shadow-color-light;
+ }
+
+ /* Mejorar el paginador */
+ mat-paginator {
+   border-top: $border-width solid $border-light;
+   background: $background-secondary;
+   color: $text-secondary;
+
+   .mat-mdc-paginator-range-label {
+     color: $text-primary;
+     font-weight: $font-weight-medium;
+   }
+ }
+
+ /* Indicador visual de scroll */
+ .table-container::before {
+   content: '';
+   position: sticky;
+   top: 0;
+   left: 0;
+   right: 0;
+   height: 3px;
+   background: $background-gradient;
+   z-index: 10;
+   opacity: 0;
+   transition: opacity $transition-normal;
+ }
+
+ .table-container.scrolled::before {
+   opacity: 1;
+ }
+
+ /* Controles de scroll flotantes */
+ .scroll-controls {
+   position: absolute;
+   bottom: 80px;
+   right: $spacing-md;
+   z-index: $z-index-dropdown;
+   display: flex;
+   flex-direction: column;
+   gap: $spacing-sm;
+
+   button {
+     background: $background-gradient !important;
+     color: $text-light !important;
+     box-shadow: 0 4px 12px $shadow-color-medium;
+     border: none;
+
+     &:hover {
+       transform: scale(1.1) translateY(-2px);
+       transition: all $transition-quick;
+       box-shadow: 0 6px 16px $shadow-color-dark;
+     }
+
+     mat-icon {
+       color: $text-light;
+     }
+   }
+ }
+
+ /* Mejorar indicadores de scroll */
+ .table-container {
+   /* Sombra lateral para indicar scroll horizontal */
+   &.scrolled {
+     box-shadow:
+       inset 10px 0 15px -10px $shadow-color-medium,
+       inset 0 10px 15px -10px $shadow-color-light;
+   }
+ }
+
+ /* Título mejorado */
+ h2 {
+   display: flex;
+   align-items: center;
+   gap: $spacing-sm;
+   color: $text-primary;
+   font-weight: $font-weight-bold;
+   font-size: $font-size-2xl;
+   margin-bottom: $spacing-lg;
+
+   mat-icon {
+     background: $background-gradient;
+     color: $text-light;
+     padding: $spacing-sm;
+     border-radius: 50%;
+     box-shadow: 0 2px 8px $shadow-color-medium;
+   }
+ }

@@ -1,0 +1,36 @@
+// Brand Colors
+$primary-color: #667eea;
+$secondary-color: #764ba2;
+$accent-color: #f6ad55;
+
+// Background Colors
+$background-primary: #ffffff;
+$background-secondary: #f7fafc;
+$background-tertiary: #edf2f7;
+$background-gradient: linear-gradient(135deg, $primary-color 0%, $secondary-color 100%);
+
+// Text Colors
+$text-primary: #333333;
+$text-secondary: #666666;
+$text-muted: #718096;
+$text-light: #ffffff;
+
+// Status Colors
+$success-color: #28a745;
+$error-color: #dc3545;
+$warning-color: #ffc107;
+$info-color: #17a2b8;
+
+// Border Colors
+$border-light: #e2e8f0;
+$border-medium: #cbd5e0;
+$border-dark: #a0aec0;
+
+// Shadow Colors
+$shadow-color-light: rgba(0, 0, 0, 0.1);
+$shadow-color-medium: rgba(0, 0, 0, 0.15);
+$shadow-color-dark: rgba(0, 0, 0, 0.2);
+
+// Overlay Colors
+$overlay-light: rgba(255, 255, 255, 0.9);
+$overlay-dark: rgba(0, 0, 0, 0.5);

@@ -1,0 +1,279 @@
+@use '../../../../../styles/abstracts/variables' as *;
+@use '../../../../../styles/abstracts/colors' as *;
+
+.form-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 500px;
+  max-width: 600px;
+}
+
+.full-width {
+  width: 100%;
+}
+
+// Información de solo lectura
+.readonly-info {
+  border: 1px solid var(--mat-divider-color);
+  border-radius: 8px;
+  background-color: var(--mat-surface-variant);
+  overflow: hidden;
+
+  .info-section {
+    padding: 20px;
+
+    h3 {
+      margin: 0 0 16px 0;
+      color: var(--mat-primary-700);
+      font-size: 16px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      &::before {
+        content: '';
+        width: 3px;
+        height: 16px;
+        background-color: var(--mat-primary-500);
+        border-radius: 2px;
+      }
+    }
+
+    .info-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--mat-divider-color-light);
+
+      &:last-child {
+        border-bottom: none;
+      }
+
+      .label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 500;
+        color: var(--mat-secondary-600);
+        min-width: 180px;
+
+        mat-icon {
+          font-size: 18px;
+          width: 18px;
+          height: 18px;
+          color: var(--mat-secondary-500);
+        }
+      }
+
+      .value {
+        color: var(--mat-primary-700);
+        font-weight: 500;
+        text-align: right;
+        flex: 1;
+
+        &.fecha-inactiva {
+          color: var(--mat-warn-600);
+          font-weight: 600;
+        }
+
+        &.estado-activo {
+          color: var(--success-600);
+          font-weight: 600;
+        }
+
+        &.estado-inactivo {
+          color: var(--warn-600);
+          font-weight: 600;
+        }
+      }
+
+      @media (max-width: 500px) {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+
+        .label {
+          min-width: auto;
+        }
+
+        .value {
+          text-align: left;
+        }
+      }
+    }
+  }
+}
+
+// Mensaje de error
+.error-message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background-color: var(--mat-warn-50);
+  border-left: 4px solid var(--mat-warn-500);
+  border-radius: 4px;
+  margin-top: 16px;
+
+  mat-icon {
+    color: var(--mat-warn-600);
+    font-size: 20px;
+  }
+
+  span {
+    color: var(--mat-warn-700);
+    font-weight: 500;
+  }
+}
+
+// Estilos de campos de formulario
+mat-form-field {
+  .mat-mdc-form-field-subscript-wrapper {
+    margin-top: 4px;
+  }
+
+  &.mat-form-field-appearance-outline {
+    .mat-mdc-form-field-outline {
+      border-radius: 6px;
+    }
+
+    &.mat-focused {
+      .mat-mdc-form-field-outline-thick {
+        border-color: var(--mat-primary-500);
+      }
+    }
+  }
+
+  mat-icon[matSuffix] {
+    color: var(--mat-secondary-400);
+  }
+}
+
+// Acciones del diálogo
+mat-dialog-actions {
+  padding: 16px 24px 24px;
+  gap: 12px;
+
+  button {
+    mat-icon {
+      margin-right: 8px;
+      font-size: 18px;
+    }
+
+    &[mat-raised-button] {
+      padding: 0 24px;
+      height: 44px;
+      font-weight: 600;
+
+      mat-spinner {
+        margin-right: 8px;
+      }
+    }
+
+    &[mat-button] {
+      padding: 0 16px;
+      height: 40px;
+    }
+  }
+
+  @media (max-width: 500px) {
+    flex-direction: column-reverse;
+    gap: 8px;
+
+    button {
+      width: 100%;
+    }
+  }
+}
+
+// Título del diálogo
+h2[mat-dialog-title] {
+  color: var(--mat-primary-700);
+  font-weight: 600;
+  margin-bottom: 0;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--mat-divider-color);
+}
+
+// Contenido del diálogo
+mat-dialog-content {
+  padding: 20px 24px 8px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+// Responsive
+@media (max-width: 600px) {
+  .form-container {
+    min-width: auto;
+    width: 100%;
+  }
+
+  mat-dialog-content {
+    padding: 16px 20px 8px;
+  }
+
+  mat-dialog-actions {
+    padding: 12px 20px 20px;
+  }
+}
+
+// Modo oscuro
+@media (prefers-color-scheme: dark) {
+  .readonly-info {
+    background-color: var(--mat-surface);
+    border-color: var(--mat-divider-color);
+
+    .info-section {
+      h3 {
+        color: var(--mat-primary-300);
+
+        &::before {
+          background-color: var(--mat-primary-400);
+        }
+      }
+
+      .info-row {
+        .label {
+          color: var(--mat-secondary-300);
+
+          mat-icon {
+            color: var(--mat-secondary-400);
+          }
+        }
+
+        .value {
+          color: var(--mat-primary-200);
+
+          &.fecha-inactiva {
+            color: var(--mat-warn-300);
+          }
+
+          &.estado-activo {
+            color: var(--success-300);
+          }
+
+          &.estado-inactivo {
+            color: var(--warn-300);
+          }
+        }
+      }
+    }
+  }
+
+  .error-message {
+    background-color: var(--mat-warn-900);
+    border-left-color: var(--mat-warn-400);
+
+    mat-icon {
+      color: var(--mat-warn-400);
+    }
+
+    span {
+      color: var(--mat-warn-200);
+    }
+  }
+}

@@ -1,0 +1,143 @@
+<div class="menutesoreria-layout">
+  <aside class="menutesoreria-sidenav" [class.collapsed]="isCollapsed">
+    <button class="menutesoreria-toggle" (click)="isCollapsed = !isCollapsed">
+      <span class="material-icons">{{ isCollapsed ? 'chevron_right' : 'chevron_left' }}</span>
+    </button>
+
+    <div class="sidenav-header">
+      @if (!isCollapsed) {
+        <span>Tesorería</span>
+      }
+    </div>
+
+    <mat-accordion>
+      <!-- Parametrización -->
+      <mat-expansion-panel>
+        <mat-expansion-panel-header>
+          <mat-panel-title>
+            @if (!isCollapsed) { <span>Parametrización</span> }
+          </mat-panel-title>
+        </mat-expansion-panel-header>
+
+        <mat-nav-list>
+          <mat-expansion-panel>
+            <mat-expansion-panel-header>
+              <mat-panel-title>
+                @if (!isCollapsed) { <span>Bancos</span> }
+              </mat-panel-title>
+            </mat-expansion-panel-header>
+
+            <mat-nav-list>
+              <a mat-list-item [routerLink]="['/bancos-nacionales']" routerLinkActive="active"
+                 [attr.title]="isCollapsed ? 'Nacionales y Extranjeros' : null">
+                Nacionales y Extranjeros
+              </a>
+
+              <mat-expansion-panel>
+                <mat-expansion-panel-header>
+                  <mat-panel-title>
+                    @if (!isCollapsed) { <span>Mis Bancos</span> }
+                  </mat-panel-title>
+                </mat-expansion-panel-header>
+
+                <mat-nav-list>
+                  <a mat-list-item [routerLink]="['/mis-bancos']" routerLinkActive="active"
+                     [attr.title]="isCollapsed ? 'Bancos' : null">
+                    Bancos
+                  </a>
+                  <a mat-list-item [routerLink]="['/cuentas-bancarias']" routerLinkActive="active"
+                     [attr.title]="isCollapsed ? 'Cuentas Bancarias' : null">
+                    Cuentas Bancarias
+                  </a>
+
+                  <mat-expansion-panel>
+                    <mat-expansion-panel-header>
+                      <mat-panel-title>
+                        @if (!isCollapsed) { <span>Cheques</span> }
+                      </mat-panel-title>
+                    </mat-expansion-panel-header>
+
+                    <mat-nav-list>
+                      <a mat-list-item [routerLink]="['/solicitud-chequera']" routerLinkActive="active"
+                         [attr.title]="isCollapsed ? 'Solicitud Chequera' : null">
+                        Solicitud Chequera
+                      </a>
+                      <a mat-list-item [routerLink]="['/recepcion-chequera']" routerLinkActive="active"
+                         [attr.title]="isCollapsed ? 'Recepción Chequera' : null">
+                        Recepción Chequera
+                      </a>
+                      <a mat-list-item [routerLink]="['/cheques']" routerLinkActive="active"
+                         [attr.title]="isCollapsed ? 'Cheques' : null">
+                        Cheques
+                      </a>
+                    </mat-nav-list>
+                  </mat-expansion-panel>
+                </mat-nav-list>
+              </mat-expansion-panel>
+            </mat-nav-list>
+          </mat-expansion-panel>
+
+          <a mat-list-item [routerLink]="['/personas']" routerLinkActive="active"
+             [attr.title]="isCollapsed ? 'Personas' : null">
+            Personas
+          </a>
+        </mat-nav-list>
+      </mat-expansion-panel>
+
+      <!-- Procesos -->
+      <mat-expansion-panel>
+        <mat-expansion-panel-header>
+          <mat-panel-title>
+            @if (!isCollapsed) { <span>Procesos</span> }
+          </mat-panel-title>
+        </mat-expansion-panel-header>
+
+        <mat-nav-list>
+          <mat-expansion-panel>
+            <mat-expansion-panel-header>
+              <mat-panel-title>
+                @if (!isCollapsed) { <span>Cobros</span> }
+              </mat-panel-title>
+            </mat-expansion-panel-header>
+
+            <mat-nav-list>
+              <a mat-list-item [routerLink]="['/cobros-ingresar']" routerLinkActive="active"
+                 [attr.title]="isCollapsed ? 'Ingresar' : null">
+                Ingresar
+              </a>
+              <a mat-list-item [routerLink]="['/cobros-cierre-caja']" routerLinkActive="active"
+                 [attr.title]="isCollapsed ? 'Cierre Caja' : null">
+                Cierre Caja
+              </a>
+            </mat-nav-list>
+          </mat-expansion-panel>
+
+          <mat-expansion-panel>
+            <mat-expansion-panel-header>
+              <mat-panel-title>
+                @if (!isCollapsed) { <span>Pagos</span> }
+              </mat-panel-title>
+            </mat-expansion-panel-header>
+
+            <mat-nav-list>
+              <a mat-list-item [routerLink]="['/pagos-ingreso']" routerLinkActive="active"
+                 [attr.title]="isCollapsed ? 'Ingreso' : null">
+                Ingreso
+              </a>
+              <a mat-list-item [routerLink]="['/pagos-consulta']" routerLinkActive="active"
+                 [attr.title]="isCollapsed ? 'Consulta Pagos' : null">
+                Consulta Pagos
+              </a>
+            </mat-nav-list>
+          </mat-expansion-panel>
+        </mat-nav-list>
+      </mat-expansion-panel>
+    </mat-accordion>
+  </aside>
+
+  <div class="menutesoreria-body">
+    <main class="menutesoreria-main">
+      <router-outlet></router-outlet>
+    </main>
+  </div>
+</div>

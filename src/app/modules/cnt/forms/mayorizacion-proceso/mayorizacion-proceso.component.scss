@@ -1,0 +1,217 @@
+@use '../../../../../styles/abstracts/variables' as *;
+@use '../../../../../styles/abstracts/colors' as *;
+
+.container-mayorizacion {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1rem;
+  max-width: 1200px;
+  margin: 0 auto;
+
+  .proceso-card {
+    .tab-content {
+      padding: 1.5rem 0;
+    }
+
+    .proceso-form {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+
+      .form-row {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+
+        .form-field {
+          flex: 1;
+          min-width: 250px;
+        }
+
+        @media (max-width: 768px) {
+          flex-direction: column;
+
+          .form-field {
+            min-width: unset;
+          }
+        }
+      }
+
+      .action-buttons {
+        display: flex;
+        gap: 1rem;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+        margin-top: 1rem;
+
+        button {
+          min-width: 160px;
+
+          mat-progress-spinner {
+            display: inline-block;
+            margin-right: 0.5rem;
+          }
+
+          mat-icon {
+            margin-right: 0.5rem;
+          }
+        }
+
+        @media (max-width: 768px) {
+          flex-direction: column;
+
+          button {
+            min-width: unset;
+            width: 100%;
+          }
+        }
+      }
+    }
+  }
+
+  .table-container {
+    overflow-x: auto;
+    margin-top: 1rem;
+
+    .mayorizaciones-table {
+      width: 100%;
+      min-width: 600px;
+
+      mat-header-cell {
+        font-weight: 600;
+        color: $primary-color;
+      }
+
+      mat-cell {
+        padding: 0.75rem 0.5rem;
+
+        button {
+          margin: 0 0.25rem;
+        }
+      }
+
+      mat-row:hover {
+        background-color: $background-secondary;
+      }
+    }
+  }
+
+  .no-data {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1rem;
+    text-align: center;
+    color: $text-muted;
+
+    .no-data-icon {
+      font-size: 4rem;
+      width: 4rem;
+      height: 4rem;
+      margin-bottom: 1rem;
+      opacity: 0.5;
+    }
+
+    h3 {
+      margin: 1rem 0 0.5rem 0;
+      color: $text-primary;
+    }
+
+    p {
+      margin-bottom: 1.5rem;
+      max-width: 400px;
+      line-height: 1.5;
+    }
+
+    button {
+      mat-icon {
+        margin-right: 0.5rem;
+      }
+    }
+  }
+
+  .info-card {
+    .info-content {
+      h4 {
+        color: $primary-color;
+        margin: 1rem 0 0.5rem 0;
+
+        &:first-child {
+          margin-top: 0;
+        }
+      }
+
+      p {
+        margin-bottom: 1rem;
+        line-height: 1.6;
+        color: $text-secondary;
+      }
+
+      ul {
+        margin: 0.5rem 0 1rem 1.5rem;
+
+        li {
+          margin-bottom: 0.5rem;
+          line-height: 1.5;
+          color: $text-secondary;
+
+          strong {
+            color: $text-primary;
+          }
+        }
+      }
+    }
+  }
+
+  // Estados del formulario
+  .mat-mdc-form-field.mat-form-field-invalid {
+    .mat-mdc-text-field-wrapper {
+      .mat-mdc-form-field-flex {
+        .mat-mdc-form-field-outline {
+          .mat-mdc-form-field-outline-thick {
+            border-color: $error-color;
+          }
+        }
+      }
+    }
+  }
+
+  // Botones en estado de procesamiento
+  button[disabled] {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  // Responsive
+  @media (max-width: 768px) {
+    padding: 0.5rem;
+    gap: 1rem;
+
+    .proceso-card,
+    .info-card {
+      margin: 0;
+    }
+
+    .tab-content {
+      padding: 1rem 0 !important;
+    }
+  }
+}
+
+// Snackbar personalizado
+.snackbar-success {
+  background-color: $success-color;
+  color: white;
+}
+
+.snackbar-error {
+  background-color: $error-color;
+  color: white;
+}
+
+.snackbar-warn {
+  background-color: $warning-color;
+  color: white;
+}

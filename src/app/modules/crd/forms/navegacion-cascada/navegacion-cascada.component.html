@@ -1,0 +1,421 @@
+<div class="navegacion-cascada">
+  <!-- Header principal -->
+  <div class="header">
+    <h1>
+      <mat-icon>account_tree</mat-icon>
+      Navegación en Cascada
+    </h1>
+    <p class="subtitle">Explora la información por niveles: Entidades → Productos → Préstamos → Pagos</p>
+  </div>
+
+  <!-- Breadcrumb navigation -->
+  <div class="breadcrumb-container">
+    <mat-chip-set class="breadcrumb-chips">
+      <ng-container *ngFor="let crumb of breadcrumbs(); let i = index; let last = last">
+        <mat-chip
+          [class.active]="crumb.activo"
+          [class.clickable]="!crumb.activo"
+          (click)="!crumb.activo ? navegarA(crumb.nivel) : null"
+          [matTooltip]="crumb.subtitulo || ''">
+
+          <mat-icon [ngSwitch]="crumb.nivel">
+            <ng-container *ngSwitchCase="1">business</ng-container>
+            <ng-container *ngSwitchCase="2">inventory_2</ng-container>
+            <ng-container *ngSwitchCase="3">account_balance</ng-container>
+            <ng-container *ngSwitchCase="4">payment</ng-container>
+          </mat-icon>
+
+          {{ crumb.titulo }}
+
+          <span class="breadcrumb-subtitle" *ngIf="crumb.subtitulo">
+            {{ crumb.subtitulo }}
+          </span>
+        </mat-chip>
+        <mat-icon class="breadcrumb-separator" *ngIf="!last">
+          chevron_right
+        </mat-icon>
+      </ng-container>
+    </mat-chip-set>
+  </div>
+
+  <!-- Área de contenido principal -->
+  <mat-card class="content-card">
+
+    <!-- Loading spinner -->
+    <div class="loading-overlay" *ngIf="loading()">
+      <mat-spinner diameter="48"></mat-spinner>
+      <p>Cargando datos...</p>
+    </div>
+
+    <!-- Error message -->
+    <div class="error-message" *ngIf="errorMsg()">
+      <mat-icon>error</mat-icon>
+      {{ errorMsg() }}
+    </div>
+
+    <!-- NIVEL 1: ENTIDADES -->
+    <div class="nivel-entidades" *ngIf="mostrandoEntidades && !loading()">
+      <div class="nivel-header">
+        <div class="titulo-seccion">
+          <mat-icon>business</mat-icon>
+          <h2>Entidades</h2>
+          <span class="contador">({{ dataSourceEntidades.data.length }} registros)</span>
+        </div>
+
+        <!-- Filtro de búsqueda -->
+        <mat-form-field appearance="outline" class="filtro-campo">
+          <mat-label>Buscar entidades</mat-label>
+          <mat-icon matPrefix>search</mat-icon>
+          <input
+            matInput
+            (keyup)="aplicarFiltroEntidades($any($event.target).value)"
+            placeholder="Buscar por razón social, identificación..."
+          />
+        </mat-form-field>
+      </div>
+
+      <!-- Info de estado -->
+      <div class="info-estado" style="padding: 12px; margin: 10px 0; border-radius: 4px; border-left: 4px solid #1976d2;"
+           [ngStyle]="dataSourceEntidades.data.length > 0 ?
+             {'background': '#e8f5e8', 'border-left-color': '#4caf50'} :
+             {'background': '#fff3e0', 'border-left-color': '#ff9800'}">
+
+        <div *ngIf="dataSourceEntidades.data.length > 0">
+          <mat-icon style="vertical-align: middle; color: #4caf50; margin-right: 8px;">check_circle</mat-icon>
+          <strong>{{ dataSourceEntidades.data.length }} entidades cargadas</strong>
+          <div style="margin-top: 8px;">
+            <small style="color: #666;">
+              📊 Total: {{ totalEntidades() }} registros
+              <span *ngIf="filtroEntidades"> | Filtrados: {{ totalEntidades() }}</span>
+              <span *ngIf="totalEntidades() > pageSizeEnt"> | Páginas: {{ getTotalPages() }}</span>
+            </small>
+            <small *ngIf="dataSourceEntidades.data.length > 1000"
+                   style="display: block; color: #4caf50; font-weight: 500;">
+              ✅ Paginación activa - Navegue por páginas o use filtros
+            </small>
+          </div>
+        </div>
+
+        <div *ngIf="dataSourceEntidades.data.length === 0">
+          <mat-icon style="vertical-align: middle; color: #ff9800; margin-right: 8px;">warning</mat-icon>
+          <strong>Sin datos disponibles</strong>
+          <small style="display: block; margin-top: 4px; color: #666;">
+            Verificar que el backend esté ejecutándose en puerto 8080
+          </small>
+        </div>
+      </div>
+
+      <!-- Tabla de entidades -->
+      <div class="tabla-container">
+        <table mat-table [dataSource]="dataSourceEntidades" [trackBy]="trackEntidad" matSort class="mat-elevation-z2">
+
+          <!-- Código -->
+          <ng-container matColumnDef="codigo">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Código</th>
+            <td mat-cell *matCellDef="let entidad">
+              <span class="codigo-badge">{{ entidad.codigo }}</span>
+            </td>
+          </ng-container>
+
+          <!-- Razón Social -->
+          <ng-container matColumnDef="razonSocial">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Razón Social</th>
+            <td mat-cell *matCellDef="let entidad">
+              <div class="entidad-info">
+                <span class="razon-social">{{ entidad.razonSocial || 'N/A' }}</span>
+                <span class="nombre-comercial" *ngIf="entidad.nombreComercial">
+                  {{ entidad.nombreComercial }}
+                </span>
+              </div>
+            </td>
+          </ng-container>
+
+          <!-- Identificación -->
+          <ng-container matColumnDef="numeroIdentificacion">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Identificación</th>
+            <td mat-cell *matCellDef="let entidad">
+              <span class="identificacion">{{ entidad.numeroIdentificacion || 'N/A' }}</span>
+            </td>
+          </ng-container>
+
+          <!-- Correo -->
+          <ng-container matColumnDef="correoPersonal">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Correo</th>
+            <td mat-cell *matCellDef="let entidad">
+              <span class="correo">{{ entidad.correoPersonal || entidad.correoInstitucional || 'N/A' }}</span>
+            </td>
+          </ng-container>
+
+          <!-- Móvil -->
+          <ng-container matColumnDef="movil">
+            <th mat-header-cell *matHeaderCellDef>Móvil</th>
+            <td mat-cell *matCellDef="let entidad">
+              <span class="telefono">{{ entidad.movil || entidad.telefono || 'N/A' }}</span>
+            </td>
+          </ng-container>
+
+          <!-- Acciones -->
+          <ng-container matColumnDef="acciones">
+            <th mat-header-cell *matHeaderCellDef>Acciones</th>
+            <td mat-cell *matCellDef="let entidad">
+              <button
+                mat-raised-button
+                color="primary"
+                (click)="seleccionarEntidad(entidad)"
+                matTooltip="Ver préstamos de esta entidad">
+                <mat-icon>arrow_forward</mat-icon>
+                Ver Préstamos
+              </button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="columnasEntidades"></tr>
+          <tr
+            mat-row
+            *matRowDef="let row; columns: columnasEntidades;"
+            class="fila-entidad"
+            (click)="seleccionarEntidad(row)">
+          </tr>
+        </table>
+
+        <!-- Paginador -->
+        <mat-paginator
+          *ngIf="totalEntidades() > 0"
+          [length]="totalEntidades()"
+          [pageSizeOptions]="[10, 20, 50, 100]"
+          [pageSize]="pageSizeEnt"
+          [pageIndex]="pageIndexEnt"
+          (page)="pageChangedEntidades($event)"
+          showFirstLastButtons
+          class="paginator-entidades">
+        </mat-paginator>
+
+        <!-- Mensaje cuando no hay datos -->
+        <div class="no-datos" *ngIf="dataSourceEntidades.data.length === 0 && !loading()">
+          <mat-icon>business_center</mat-icon>
+          <p>No se encontraron entidades</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- NIVEL 2: PRODUCTOS -->
+    <div class="nivel-productos" *ngIf="mostrandoProductos && !loading()">
+      <div class="nivel-header">
+        <div class="titulo-seccion">
+          <mat-icon>inventory_2</mat-icon>
+          <h2>Productos</h2>
+          <span class="contador">({{ dataSourceProductos.data.length }} registros)</span>
+        </div>
+
+        <!-- Filtro de búsqueda -->
+        <mat-form-field appearance="outline" class="filtro-campo">
+          <mat-label>Buscar productos</mat-label>
+          <mat-icon matPrefix>search</mat-icon>
+          <input
+            matInput
+            (keyup)="aplicarFiltroProductos($any($event.target).value)"
+            placeholder="Buscar por nombre, código SBS..."
+          />
+        </mat-form-field>
+      </div>
+
+      <!-- Información de la entidad seleccionada -->
+      <div class="info-seleccion" *ngIf="entidadSeleccionada()">
+        <mat-icon>info</mat-icon>
+        <span>Productos de: <strong>{{ entidadSeleccionada()!.razonSocial }}</strong></span>
+      </div>
+
+      <!-- Tabla de productos -->
+      <div class="tabla-container">
+        <table mat-table [dataSource]="dataSourceProductos" [trackBy]="trackProducto" matSort class="mat-elevation-z2">
+
+          <!-- Código -->
+          <ng-container matColumnDef="codigo">
+            <th mat-header-cell *matHeaderCellDef>Código</th>
+            <td mat-cell *matCellDef="let producto">
+              <span class="codigo-badge">{{ producto.codigo }}</span>
+            </td>
+          </ng-container>
+
+          <!-- Nombre -->
+          <ng-container matColumnDef="nombre">
+            <th mat-header-cell *matHeaderCellDef>Nombre</th>
+            <td mat-cell *matCellDef="let producto">
+              <span class="nombre-producto">{{ producto.nombre || 'N/A' }}</span>
+            </td>
+          </ng-container>
+
+          <!-- Código SBS -->
+          <ng-container matColumnDef="codigoSBS">
+            <th mat-header-cell *matHeaderCellDef>Código SBS</th>
+            <td mat-cell *matCellDef="let producto">
+              <span class="codigo-sbs">{{ producto.codigoSBS || 'N/A' }}</span>
+            </td>
+          </ng-container>
+
+          <!-- Tipo Préstamo -->
+          <ng-container matColumnDef="tipoPrestamo">
+            <th mat-header-cell *matHeaderCellDef>Tipo</th>
+            <td mat-cell *matCellDef="let producto">
+              <span class="tipo-prestamo">{{ producto.tipoPrestamo?.nombre || 'N/A' }}</span>
+            </td>
+          </ng-container>
+
+          <!-- Estado -->
+          <ng-container matColumnDef="estado">
+            <th mat-header-cell *matHeaderCellDef>Estado</th>
+            <td mat-cell *matCellDef="let producto">
+              <mat-chip
+                [class]="'estado-' + producto.estado"
+                [matTooltip]="producto.estado === 1 ? 'Activo' : 'Inactivo'">
+                {{ producto.estado === 1 ? 'Activo' : 'Inactivo' }}
+              </mat-chip>
+            </td>
+          </ng-container>
+
+          <!-- Acciones -->
+          <ng-container matColumnDef="acciones">
+            <th mat-header-cell *matHeaderCellDef>Acciones</th>
+            <td mat-cell *matCellDef="let producto">
+              <button
+                mat-raised-button
+                color="primary"
+                (click)="seleccionarProducto(producto)"
+                matTooltip="Ver préstamos de este producto">
+                <mat-icon>arrow_forward</mat-icon>
+                Ver Préstamos
+              </button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="columnasProductos"></tr>
+          <tr
+            mat-row
+            *matRowDef="let row; columns: columnasProductos;"
+            class="fila-producto">
+          </tr>
+        </table>
+
+        <!-- Paginador productos -->
+        <mat-paginator
+          *ngIf="totalProductos() > 0"
+          [length]="totalProductos()"
+          [pageSizeOptions]="[10, 20, 50, 100]"
+          [pageSize]="pageSizeProd"
+          [pageIndex]="pageIndexProd"
+          (page)="pageChangedProductos($event)"
+          showFirstLastButtons
+          class="paginator-entidades">
+        </mat-paginator>
+
+        <!-- Mensaje cuando no hay datos -->
+        <div class="no-datos" *ngIf="dataSourceProductos.data.length === 0 && !loading()">
+          <mat-icon>inventory_2</mat-icon>
+          <p>No se encontraron productos para esta entidad</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- NIVEL 3: PRÉSTAMOS -->
+    <div class="nivel-prestamos" *ngIf="mostrandoPrestamos && !loading()">
+      <div class="nivel-header">
+        <div class="titulo-seccion">
+          <mat-icon>account_balance</mat-icon>
+          <h2>Préstamos</h2>
+          <span class="contador">({{ totalPrestamos() }} registros)</span>
+        </div>
+
+        <!-- Filtro de búsqueda -->
+        <mat-form-field appearance="outline" class="filtro-campo">
+          <mat-label>Buscar préstamos</mat-label>
+          <mat-icon matPrefix>search</mat-icon>
+          <input
+            matInput
+            (keyup)="currentFilterPrest = $any($event.target).value?.trim().toLowerCase(); pageIndexPrest = 0; updatePagePrestamos()"
+            placeholder="Buscar por código, entidad, producto..."
+          />
+        </mat-form-field>
+      </div>
+
+      <div class="info-seleccion" *ngIf="entidadSeleccionada()">
+        <mat-icon>info</mat-icon>
+        <span>Préstamos de la entidad: <strong>{{ entidadSeleccionada()!.razonSocial }}</strong></span>
+      </div>
+
+      <div class="tabla-container">
+        <table mat-table [dataSource]="dataSourcePrestamos" matSort class="mat-elevation-z2">
+
+          <!-- Código -->
+          <ng-container matColumnDef="codigo">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Código</th>
+            <td mat-cell *matCellDef="let p">{{ p.codigo }}</td>
+          </ng-container>
+
+          <!-- Fecha -->
+          <ng-container matColumnDef="fecha">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Fecha</th>
+            <td mat-cell *matCellDef="let p">{{ p.fecha | date:'yyyy-MM-dd' }}</td>
+          </ng-container>
+
+          <!-- Monto -->
+          <ng-container matColumnDef="montoSolicitado">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Monto</th>
+            <td mat-cell *matCellDef="let p">{{ p.montoSolicitado | number:'1.2-2' }}</td>
+          </ng-container>
+
+          <!-- Plazo -->
+          <ng-container matColumnDef="plazo">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Plazo</th>
+            <td mat-cell *matCellDef="let p">{{ p.plazo }}</td>
+          </ng-container>
+
+          <!-- Tasa -->
+          <ng-container matColumnDef="tasa">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Tasa</th>
+            <td mat-cell *matCellDef="let p">{{ p.tasa | number:'1.2-2' }}%</td>
+          </ng-container>
+
+          <!-- Estado -->
+          <ng-container matColumnDef="estado">
+            <th mat-header-cell *matHeaderCellDef>Estado</th>
+            <td mat-cell *matCellDef="let p">
+              <mat-chip>{{ $any(p).EstadoPrestamo?.nombre || 'N/A' }}</mat-chip>
+            </td>
+          </ng-container>
+
+          <!-- Acciones -->
+          <ng-container matColumnDef="acciones">
+            <th mat-header-cell *matHeaderCellDef>Acciones</th>
+            <td mat-cell *matCellDef="let p">
+              <button mat-raised-button color="primary" matTooltip="Ver pagos del préstamo" disabled>
+                <mat-icon>payment</mat-icon>
+                Ver Pagos
+              </button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="columnasPrestamos"></tr>
+          <tr mat-row *matRowDef="let row; columns: columnasPrestamos;"></tr>
+        </table>
+
+        <!-- Paginador préstamos -->
+        <mat-paginator
+          *ngIf="totalPrestamos() > 0"
+          [length]="totalPrestamos()"
+          [pageSizeOptions]="[10, 20, 50, 100]"
+          [pageSize]="pageSizePrest"
+          [pageIndex]="pageIndexPrest"
+          (page)="pageChangedPrestamos($event)"
+          showFirstLastButtons
+          class="paginator-entidades">
+        </mat-paginator>
+
+        <div class="no-datos" *ngIf="dataSourcePrestamos.data.length === 0 && !loading()">
+          <mat-icon>account_balance</mat-icon>
+          <p>No se encontraron préstamos para este producto</p>
+        </div>
+      </div>
+    </div>
+
+  </mat-card>
+</div>

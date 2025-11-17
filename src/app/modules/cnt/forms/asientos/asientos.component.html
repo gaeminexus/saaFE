@@ -1,0 +1,479 @@
+<div class="asientos-container">
+  <!-- Toolbar principal -->
+  <mat-toolbar class="toolbar-principal">
+    <mat-toolbar-row>
+      <span class="toolbar-title">
+        <mat-icon>receipt_long</mat-icon>
+        Asientos Contables
+      </span>
+      <span class="spacer"></span>
+      <button mat-raised-button color="primary" (click)="nuevoAsiento()" [disabled]="cargando">
+        <mat-icon>add</mat-icon>
+        Nuevo Asiento
+      </button>
+    </mat-toolbar-row>
+  </mat-toolbar>
+
+  <!-- Tabs principales -->
+  <mat-tab-group [(selectedIndex)]="tabIndex" class="tabs-container">
+
+    <!-- Tab de Consulta -->
+    <mat-tab label="Consulta">
+      <!-- Panel de filtros -->
+      <mat-card class="filtros-card">
+        <mat-card-header>
+          <mat-card-title>
+            <mat-icon>filter_list</mat-icon>
+            Filtros de Búsqueda
+          </mat-card-title>
+        </mat-card-header>
+
+        <mat-card-content>
+          <form [formGroup]="filtroForm" class="filtros-form">
+            <div class="filtros-row">
+              <!-- Fecha Desde -->
+              <mat-form-field appearance="outline" class="filtro-field">
+                <mat-label>Fecha Desde</mat-label>
+                <input matInput [matDatepicker]="fechaDesde" formControlName="fechaDesde">
+                <mat-datepicker-toggle matSuffix [for]="fechaDesde"></mat-datepicker-toggle>
+                <mat-datepicker #fechaDesde></mat-datepicker>
+              </mat-form-field>
+
+              <!-- Fecha Hasta -->
+              <mat-form-field appearance="outline" class="filtro-field">
+                <mat-label>Fecha Hasta</mat-label>
+                <input matInput [matDatepicker]="fechaHasta" formControlName="fechaHasta">
+                <mat-datepicker-toggle matSuffix [for]="fechaHasta"></mat-datepicker-toggle>
+                <mat-datepicker #fechaHasta></mat-datepicker>
+              </mat-form-field>
+
+              <!-- Tipo de Asiento -->
+              <mat-form-field appearance="outline" class="filtro-field">
+                <mat-label>Tipo de Asiento</mat-label>
+                <mat-select formControlName="tipoAsiento">
+                  <mat-option [value]="null">Todos</mat-option>
+                  <mat-option *ngFor="let tipo of tiposAsiento" [value]="tipo.codigo">
+                    {{ tipo.nombre }}
+                  </mat-option>
+                </mat-select>
+              </mat-form-field>
+
+              <!-- Estado -->
+              <mat-form-field appearance="outline" class="filtro-field">
+                <mat-label>Estado</mat-label>
+                <mat-select formControlName="estado">
+                  <mat-option [value]="null">Todos</mat-option>
+                  <mat-option *ngFor="let estado of estados" [value]="estado.valor">
+                    {{ estado.nombre }}
+                  </mat-option>
+                </mat-select>
+              </mat-form-field>
+
+              <!-- Número -->
+              <mat-form-field appearance="outline" class="filtro-field-small">
+                <mat-label>Número</mat-label>
+                <input matInput type="number" formControlName="numero">
+              </mat-form-field>
+
+              <!-- Búsqueda rápida -->
+              <mat-form-field appearance="outline" class="busqueda-field">
+                <mat-label>Búsqueda rápida</mat-label>
+                <input matInput (keyup)="aplicarFiltroRapido($event)" placeholder="Buscar...">
+                <mat-icon matSuffix>search</mat-icon>
+              </mat-form-field>
+
+              <!-- Botón limpiar -->
+              <button mat-raised-button type="button" (click)="limpiarFiltros()" class="btn-limpiar">
+                <mat-icon>clear</mat-icon>
+                Limpiar
+              </button>
+            </div>
+          </form>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Tabla de asientos -->
+      <mat-card class="tabla-card">
+        <mat-card-content>
+          <div class="tabla-container">
+            <!-- Indicador de carga -->
+            <div *ngIf="cargando" class="loading-indicator">
+              <mat-spinner diameter="40"></mat-spinner>
+              <span>Cargando asientos...</span>
+            </div>
+
+            <!-- Tabla de datos -->
+            <table mat-table [dataSource]="dataSource" matSort class="asientos-table" *ngIf="!cargando">
+
+              <!-- Columna Número -->
+              <ng-container matColumnDef="numero">
+                <th mat-header-cell *matHeaderCellDef mat-sort-header>Número</th>
+                <td mat-cell *matCellDef="let asiento">{{ asiento.numero }}</td>
+              </ng-container>
+
+              <!-- Columna Fecha -->
+              <ng-container matColumnDef="fechaAsiento">
+                <th mat-header-cell *matHeaderCellDef mat-sort-header>Fecha</th>
+                <td mat-cell *matCellDef="let asiento">
+                  {{ asiento.fechaAsiento | date:'dd/MM/yyyy' }}
+                </td>
+              </ng-container>
+
+              <!-- Columna Tipo de Asiento -->
+              <ng-container matColumnDef="tipoAsiento">
+                <th mat-header-cell *matHeaderCellDef>Tipo</th>
+                <td mat-cell *matCellDef="let asiento">
+                  {{ asiento.tipoAsiento.nombre }}
+                </td>
+              </ng-container>
+
+              <!-- Columna Observaciones -->
+              <ng-container matColumnDef="observaciones">
+                <th mat-header-cell *matHeaderCellDef>Observaciones</th>
+                <td mat-cell *matCellDef="let asiento" class="observaciones-cell">
+                  {{ asiento.observaciones }}
+                </td>
+              </ng-container>
+
+              <!-- Columna Estado -->
+              <ng-container matColumnDef="estado">
+                <th mat-header-cell *matHeaderCellDef>Estado</th>
+                <td mat-cell *matCellDef="let asiento">
+                  <mat-chip [class]="getEstadoBadgeClass(asiento.estado)">
+                    {{ getEstadoTexto(asiento.estado) }}
+                  </mat-chip>
+                </td>
+              </ng-container>
+
+              <!-- Columna Total Debe -->
+              <ng-container matColumnDef="totalDebe">
+                <th mat-header-cell *matHeaderCellDef>Total Debe</th>
+                <td mat-cell *matCellDef="let asiento" class="amount-cell">
+                  {{ calcularTotalDebe(asiento) | currency:'USD':'symbol':'1.2-2' }}
+                </td>
+              </ng-container>
+
+              <!-- Columna Total Haber -->
+              <ng-container matColumnDef="totalHaber">
+                <th mat-header-cell *matHeaderCellDef>Total Haber</th>
+                <td mat-cell *matCellDef="let asiento" class="amount-cell">
+                  {{ calcularTotalHaber(asiento) | currency:'USD':'symbol':'1.2-2' }}
+                </td>
+              </ng-container>
+
+              <!-- Columna Acciones -->
+              <ng-container matColumnDef="acciones">
+                <th mat-header-cell *matHeaderCellDef class="acciones-header">Acciones</th>
+                <td mat-cell *matCellDef="let asiento" class="acciones-cell">
+                  <button mat-icon-button [matMenuTriggerFor]="accionesMenu"
+                          [disabled]="cargando" color="primary">
+                    <mat-icon>more_vert</mat-icon>
+                  </button>
+
+                  <mat-menu #accionesMenu="matMenu">
+                    <!-- Ver/Editar -->
+                    <button mat-menu-item (click)="editarAsiento(asiento)" *ngIf="puedeEditar(asiento)">
+                      <mat-icon>edit</mat-icon>
+                      <span>Editar</span>
+                    </button>
+
+                    <button mat-menu-item (click)="editarAsiento(asiento)" *ngIf="!puedeEditar(asiento)">
+                      <mat-icon>visibility</mat-icon>
+                      <span>Ver</span>
+                    </button>
+
+                    <!-- Anular -->
+                    <button mat-menu-item (click)="anularAsiento(asiento)"
+                            [disabled]="!puedeAnular(asiento)" *ngIf="puedeAnular(asiento)">
+                      <mat-icon>block</mat-icon>
+                      <span>Anular</span>
+                    </button>
+
+                    <!-- Reversar -->
+                    <button mat-menu-item (click)="reversarAsiento(asiento)"
+                            [disabled]="!puedeReversar(asiento)" *ngIf="puedeReversar(asiento)">
+                      <mat-icon>undo</mat-icon>
+                      <span>Reversar</span>
+                    </button>
+
+                    <mat-divider *ngIf="puedeEliminar(asiento)"></mat-divider>
+
+                    <!-- Eliminar -->
+                    <button mat-menu-item (click)="eliminarAsiento(asiento)"
+                            [disabled]="!puedeEliminar(asiento)" *ngIf="puedeEliminar(asiento)"
+                            class="menu-item-delete">
+                      <mat-icon>delete</mat-icon>
+                      <span>Eliminar</span>
+                    </button>
+                  </mat-menu>
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+              <tr mat-row *matRowDef="let row; columns: displayedColumns;"
+                  class="tabla-row" [class.row-selected]="asientoSeleccionado?.codigo === row.codigo"></tr>
+            </table>
+
+            <!-- Mensaje cuando no hay datos -->
+            <div *ngIf="!cargando && dataSource.data.length === 0" class="no-data">
+              <mat-icon>cloud_off</mat-icon>
+              <h3>No hay asientos disponibles</h3>
+              <p>No se pudieron cargar los asientos desde el servidor.</p>
+              <p class="text-muted">Verifique que el servidor backend esté funcionando y que tenga permisos de acceso.</p>
+              <div class="action-buttons">
+                <button mat-raised-button color="primary" (click)="cargarDatos()">
+                  <mat-icon>refresh</mat-icon>
+                  Reintentar Carga
+                </button>
+                <button mat-stroked-button color="accent" (click)="nuevoAsiento()" [disabled]="tiposAsiento.length === 0">
+                  <mat-icon>add</mat-icon>
+                  Crear Nuevo Asiento
+                </button>
+              </div>
+            </div>
+
+            <!-- Paginador -->
+            <mat-paginator *ngIf="!cargando && dataSource.data.length > 0"
+              [pageSizeOptions]="[10, 25, 50, 100]"
+              [pageSize]="25"
+              showFirstLastButtons>
+            </mat-paginator>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </mat-tab>
+
+    <!-- Tab de Formulario -->
+    <mat-tab label="Asiento" [disabled]="!mostrarFormulario">
+      <div class="formulario-container" *ngIf="mostrarFormulario">
+        <!-- Encabezado del asiento -->
+        <mat-card class="encabezado-card">
+          <mat-card-header>
+            <mat-card-title>
+              <mat-icon>{{ editandoAsiento ? 'edit' : 'add' }}</mat-icon>
+              {{ editandoAsiento ? 'Editar Asiento' : 'Nuevo Asiento' }}
+            </mat-card-title>
+          </mat-card-header>
+
+          <mat-card-content>
+            <form [formGroup]="asientoForm" class="encabezado-form">
+              <div class="form-row">
+                <!-- Tipo de Asiento -->
+                <mat-form-field appearance="outline" class="form-field">
+                  <mat-label>Tipo de Asiento *</mat-label>
+                  <mat-select formControlName="tipoAsiento">
+                    <mat-option *ngFor="let tipo of tiposAsiento" [value]="tipo">
+                      {{ tipo.nombre }}
+                    </mat-option>
+                  </mat-select>
+                  <mat-error *ngIf="asientoForm.get('tipoAsiento')?.hasError('required')">
+                    El tipo de asiento es requerido
+                  </mat-error>
+                </mat-form-field>
+
+                <!-- Fecha del Asiento -->
+                <mat-form-field appearance="outline" class="form-field">
+                  <mat-label>Fecha del Asiento *</mat-label>
+                  <input matInput [matDatepicker]="fechaAsiento" formControlName="fechaAsiento">
+                  <mat-datepicker-toggle matSuffix [for]="fechaAsiento"></mat-datepicker-toggle>
+                  <mat-datepicker #fechaAsiento></mat-datepicker>
+                  <mat-error *ngIf="asientoForm.get('fechaAsiento')?.hasError('required')">
+                    La fecha es requerida
+                  </mat-error>
+                </mat-form-field>
+
+                <!-- Período -->
+                <mat-form-field appearance="outline" class="form-field">
+                  <mat-label>Período *</mat-label>
+                  <mat-select formControlName="periodo">
+                    <mat-option *ngFor="let periodo of periodos" [value]="periodo">
+                      {{ periodo.nombre }}
+                    </mat-option>
+                  </mat-select>
+                  <mat-error *ngIf="asientoForm.get('periodo')?.hasError('required')">
+                    El período es requerido
+                  </mat-error>
+                </mat-form-field>
+              </div>
+
+              <div class="form-row">
+                <!-- Observaciones -->
+                <mat-form-field appearance="outline" class="observaciones-field">
+                  <mat-label>Observaciones *</mat-label>
+                  <textarea matInput rows="3" formControlName="observaciones"
+                            maxlength="200" placeholder="Descripción del asiento contable"></textarea>
+                  <mat-hint align="end">{{ asientoForm.get('observaciones')?.value?.length || 0 }}/200</mat-hint>
+                  <mat-error *ngIf="asientoForm.get('observaciones')?.hasError('required')">
+                    Las observaciones son requeridas
+                  </mat-error>
+                  <mat-error *ngIf="asientoForm.get('observaciones')?.hasError('maxlength')">
+                    Máximo 200 caracteres
+                  </mat-error>
+                </mat-form-field>
+              </div>
+            </form>
+          </mat-card-content>
+        </mat-card>
+
+        <!-- Detalles del asiento -->
+        <mat-card class="detalles-card">
+          <mat-card-header>
+            <mat-card-title>
+              <mat-icon>list</mat-icon>
+              Detalles del Asiento
+            </mat-card-title>
+            <div class="spacer"></div>
+            <button mat-raised-button color="accent" (click)="agregarDetalle()" type="button">
+              <mat-icon>add</mat-icon>
+              Agregar Línea
+            </button>
+          </mat-card-header>
+
+          <mat-card-content>
+            <!-- Tabla de detalles -->
+            <div class="detalles-container" *ngIf="detalles.length > 0">
+              <table mat-table [dataSource]="dataSourceDetalles" class="detalles-table">
+
+                <!-- Columna Cuenta -->
+                <ng-container matColumnDef="cuenta">
+                  <th mat-header-cell *matHeaderCellDef>Cuenta *</th>
+                  <td mat-cell *matCellDef="let detalle; let i = index" class="cuenta-cell">
+                    <mat-form-field appearance="outline" class="cell-field">
+                      <mat-label>Cuenta</mat-label>
+                      <input type="text" matInput [formControl]="$any(detalles.at(i).get('planCuenta'))"
+                             [matAutocomplete]="autocomplete" (input)="onDetalleChange(i)">
+                      <mat-autocomplete #autocomplete="matAutocomplete" [displayWith]="mostrarCuenta">
+                        <mat-option *ngFor="let cuenta of cuentasFiltradas[i]" [value]="cuenta">
+                          {{ mostrarCuenta(cuenta) }}
+                        </mat-option>
+                      </mat-autocomplete>
+                      <mat-error>Cuenta requerida</mat-error>
+                    </mat-form-field>
+                  </td>
+                </ng-container>
+
+                <!-- Columna Descripción -->
+                <ng-container matColumnDef="descripcion">
+                  <th mat-header-cell *matHeaderCellDef>Descripción *</th>
+                  <td mat-cell *matCellDef="let detalle; let i = index">
+                    <mat-form-field appearance="outline" class="cell-field">
+                      <mat-label>Descripción</mat-label>
+                      <input matInput [formControl]="$any(detalles.at(i).get('descripcion'))"
+                             (input)="onDetalleChange(i)" maxlength="200">
+                      <mat-error>Descripción requerida</mat-error>
+                    </mat-form-field>
+                  </td>
+                </ng-container>
+
+                <!-- Columna Debe -->
+                <ng-container matColumnDef="debe">
+                  <th mat-header-cell *matHeaderCellDef>Debe</th>
+                  <td mat-cell *matCellDef="let detalle; let i = index">
+                    <mat-form-field appearance="outline" class="cell-field amount-field">
+                      <mat-label>Debe</mat-label>
+                      <input matInput type="number" step="0.01" min="0"
+                             [formControl]="$any(detalles.at(i).get('valorDebe'))"
+                             (input)="onDetalleChange(i)">
+                      <span matPrefix>$</span>
+                    </mat-form-field>
+                  </td>
+                </ng-container>
+
+                <!-- Columna Haber -->
+                <ng-container matColumnDef="haber">
+                  <th mat-header-cell *matHeaderCellDef>Haber</th>
+                  <td mat-cell *matCellDef="let detalle; let i = index">
+                    <mat-form-field appearance="outline" class="cell-field amount-field">
+                      <mat-label>Haber</mat-label>
+                      <input matInput type="number" step="0.01" min="0"
+                             [formControl]="$any(detalles.at(i).get('valorHaber'))"
+                             (input)="onDetalleChange(i)">
+                      <span matPrefix>$</span>
+                    </mat-form-field>
+                  </td>
+                </ng-container>
+
+                <!-- Columna Centro de Costo -->
+                <ng-container matColumnDef="centroCosto">
+                  <th mat-header-cell *matHeaderCellDef>Centro de Costo</th>
+                  <td mat-cell *matCellDef="let detalle; let i = index">
+                    <mat-form-field appearance="outline" class="cell-field">
+                      <mat-label>Centro de Costo</mat-label>
+                      <input type="text" matInput [formControl]="$any(detalles.at(i).get('centroCosto'))"
+                             [matAutocomplete]="autocompleteCentro" (input)="onDetalleChange(i)">
+                      <mat-autocomplete #autocompleteCentro="matAutocomplete" [displayWith]="mostrarCentroCosto">
+                        <mat-option *ngFor="let centro of centrosCostoFiltrados[i]" [value]="centro">
+                          {{ mostrarCentroCosto(centro) }}
+                        </mat-option>
+                      </mat-autocomplete>
+                    </mat-form-field>
+                  </td>
+                </ng-container>
+
+                <!-- Columna Acciones -->
+                <ng-container matColumnDef="acciones">
+                  <th mat-header-cell *matHeaderCellDef class="acciones-header">Acciones</th>
+                  <td mat-cell *matCellDef="let detalle; let i = index" class="acciones-cell">
+                    <button mat-icon-button color="warn" (click)="eliminarDetalle(i)"
+                            [disabled]="detalles.length <= 1" type="button">
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </td>
+                </ng-container>
+
+                <tr mat-header-row *matHeaderRowDef="displayedColumnsDetalles"></tr>
+                <tr mat-row *matRowDef="let row; columns: displayedColumnsDetalles;" class="detalle-row"></tr>
+              </table>
+            </div>
+
+            <!-- Totales -->
+            <div class="totales-container">
+              <div class="totales-grid">
+                <div class="total-item">
+                  <strong>Total Debe: </strong>
+                  <span class="amount">{{ totalDebe | currency:'USD':'symbol':'1.2-2' }}</span>
+                </div>
+                <div class="total-item">
+                  <strong>Total Haber: </strong>
+                  <span class="amount">{{ totalHaber | currency:'USD':'symbol':'1.2-2' }}</span>
+                </div>
+                <div class="total-item" [class.diferencia-error]="!estaBalanceado()">
+                  <strong>Diferencia: </strong>
+                  <span class="amount" [class.text-error]="!estaBalanceado()">
+                    {{ diferencia | currency:'USD':'symbol':'1.2-2' }}
+                  </span>
+                </div>
+              </div>
+
+              <div class="balance-status" *ngIf="!estaBalanceado()" class="balance-warning">
+                <mat-icon>warning</mat-icon>
+                <span>El asiento debe estar balanceado (Debe = Haber)</span>
+              </div>
+
+              <div class="balance-status" *ngIf="estaBalanceado()" class="balance-ok">
+                <mat-icon>check_circle</mat-icon>
+                <span>Asiento balanceado correctamente</span>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <!-- Botones de acción -->
+        <div class="acciones-container">
+          <button mat-button (click)="cancelarFormulario()" [disabled]="cargando" class="btn-cancelar">
+            <mat-icon>cancel</mat-icon>
+            Cancelar
+          </button>
+
+          <div class="spacer"></div>
+
+          <button mat-raised-button color="primary" (click)="guardarAsiento()"
+                  [disabled]="cargando || !estaBalanceado()" class="btn-guardar">
+            <mat-icon>save</mat-icon>
+            {{ editandoAsiento ? 'Actualizar' : 'Guardar' }} Asiento
+          </button>
+        </div>
+      </div>
+    </mat-tab>
+  </mat-tab-group>
+</div>

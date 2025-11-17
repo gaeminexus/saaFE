@@ -1,0 +1,40 @@
+<mat-form-field class="demo-full-width margin-top" [formGroup]="group">
+  <ng-container matLabel>
+    {{field.label || ''}}
+  </ng-container>
+
+  @if (field.autocompleteType === 1) {
+    <mat-select [formControlName]="field.name"
+                [placeholder]="field.label || ''"
+                (selectionChange)="seleccion($event.value)">
+      @if (field.collections) {
+        @for (item of field.collections; track item.codigo) {
+          <mat-option [value]="item">
+            {{concatNombre(field, item)}}
+          </mat-option>
+        }
+      }
+    </mat-select>
+  }
+
+  @if (field.autocompleteType === 2) {
+    <mat-select [formControlName]="field.name"
+                [placeholder]="field.label || ''">
+      @if (escogeHijos(); as items) {
+        @for (item of items; track item.codigo) {
+          <mat-option [value]="item">
+            {{concatNombre(field, item)}}
+          </mat-option>
+        }
+      }
+    </mat-select>
+  }
+
+  @if (field.validations) {
+    @for (validation of field.validations; track validation.name) {
+      @if (group.get(field.name)?.hasError(validation.name)) {
+        <mat-error>{{validation.message || ''}}</mat-error>
+      }
+    }
+  }
+</mat-form-field>

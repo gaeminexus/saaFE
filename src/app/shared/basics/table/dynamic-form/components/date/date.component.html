@@ -1,0 +1,36 @@
+<mat-form-field class="demo-full-width margin-top" [formGroup]="group">
+  @if (field['name']) {
+    <ng-container matLabel>
+      {{field['label'] || ''}}
+    </ng-container>
+  }
+
+  @if (field['name']) {
+    <input matInput 
+           [matDatepicker]="picker" 
+           [formControlName]="field['name']"
+           [placeholder]="field['label'] || ''">
+  }
+
+  <mat-datepicker #picker></mat-datepicker>
+  
+  @if (field['name']) {
+    <ng-container matSuffix>
+      <mat-datepicker-toggle [for]="picker"></mat-datepicker-toggle>
+    </ng-container>
+  }
+
+  @if (field['name']) {
+    <ng-container>
+      <mat-hint></mat-hint>
+    </ng-container>
+  }
+
+  @if (field['name'] && field['validations']) {
+    @for (validation of field['validations']; track validation['name']) {
+      @if (group.get(field['name'])?.hasError(validation['name'])) {
+        <mat-error>{{validation['message'] || ''}}</mat-error>
+      }
+    }
+  }
+</mat-form-field>

@@ -1,0 +1,38 @@
+<div class="saa-dialog-container">
+  <!-- Header del diálogo -->
+  <div class="saa-dialog-header">
+    <span class="material-icons icon">delete_forever</span>
+    <div>
+      <h2 class="title">Eliminar Registro</h2>
+      <p class="subtitle">Confirma la eliminación del registro</p>
+    </div>
+  </div>
+
+  <!-- Contenido de confirmación -->
+  <div class="saa-dialog-content confirmation-content">
+    <span class="material-icons warning-icon">warning</span>
+    <p class="message">¿Estás seguro que deseas eliminar este registro?</p>
+    <p class="submessage">Esta acción no se puede deshacer</p>
+  </div>
+
+  <!-- Acciones del diálogo -->
+  <div class="saa-dialog-actions center">
+    <button
+      mat-raised-button
+      class="btn-secondary"
+      aria-label="Cancelar eliminación"
+      (click)="onSalirClick()">
+      <span class="material-icons" style="margin-right: 8px; font-size: 18px;">close</span>
+      Cancelar
+    </button>
+
+    <button
+      mat-raised-button
+      class="btn-primary danger"
+      aria-label="Confirmar eliminación"
+      (click)="grabar()">
+      <span class="material-icons" style="margin-right: 8px; font-size: 18px;">delete</span>
+      Eliminar
+    </button>
+  </div>
+</div>

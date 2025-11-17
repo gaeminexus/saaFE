@@ -1,0 +1,5 @@
+<form class="dynamic-form" [formGroup]="form" (submit)="onSubmit($event)">
+  @for (field of fields; track field['name']) {
+    <div appDynamicField [field]="field" [accion]="accion" [group]="form"></div>
+  }
+</form>

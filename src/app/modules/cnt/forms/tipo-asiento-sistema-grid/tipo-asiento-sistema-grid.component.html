@@ -1,0 +1,145 @@
+<div class="grid-container">
+  <!-- Header Section -->
+  <div class="grid-header">
+    <div class="header-content">
+      <h2 class="grid-title">
+        <mat-icon>settings</mat-icon>
+        Tipos de Asientos del Sistema
+      </h2>
+      <div class="header-actions">
+        <button mat-raised-button color="primary"
+                class="action-button primary"
+                (click)="nuevo()"
+                matTooltip="Crear nuevo tipo de asiento del sistema">
+          <mat-icon>add</mat-icon>
+          Nuevo
+        </button>
+        <button mat-icon-button
+                class="action-button secondary"
+                (click)="refresh()"
+                matTooltip="Actualizar datos">
+          <mat-icon>refresh</mat-icon>
+        </button>
+      </div>
+    </div>
+
+    <!-- Filter Section -->
+    <div class="filter-section">
+      <mat-form-field appearance="outline" class="filter-field">
+        <mat-label>Buscar tipos de asientos del sistema</mat-label>
+        <input matInput
+               [(ngModel)]="filterValue"
+               (keyup)="applyFilter()"
+               placeholder="Buscar por nombre o código..."
+               autocomplete="off">
+        <mat-icon matSuffix>search</mat-icon>
+      </mat-form-field>
+      <button mat-icon-button
+              *ngIf="filterValue"
+              (click)="clearFilter()"
+              matTooltip="Limpiar filtro"
+              class="clear-filter-btn">
+        <mat-icon>clear</mat-icon>
+      </button>
+    </div>
+  </div>
+
+  <!-- Data Table -->
+  <div class="table-container">
+    <table mat-table [dataSource]="dataSource"
+           matSort
+           class="data-table"
+           multiTemplateDataRows>
+
+      <!-- Nombre Column -->
+      <ng-container matColumnDef="nombre">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header class="header-cell nombre-col">
+          Nombre
+        </th>
+        <td mat-cell *matCellDef="let element" class="data-cell nombre-col">
+          <div class="nombre-content">
+            <span class="nombre-text">{{ element.nombre }}</span>
+          </div>
+        </td>
+      </ng-container>
+
+      <!-- Código Alterno Column -->
+      <ng-container matColumnDef="codigoAlterno">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header class="header-cell codigo-col">
+          Código Alterno
+        </th>
+        <td mat-cell *matCellDef="let element" class="data-cell codigo-col">
+          <div class="codigo-content">
+            <span class="codigo-text">{{ element.codigoAlterno }}</span>
+          </div>
+        </td>
+      </ng-container>
+
+      <!-- Estado Column -->
+      <ng-container matColumnDef="estado">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header class="header-cell estado-col">
+          Estado
+        </th>
+        <td mat-cell *matCellDef="let element" class="data-cell estado-col">
+          <mat-chip-set>
+            <mat-chip [class]="getEstadoBadgeClass(element.estado)">
+              {{ getEstadoText(element.estado) }}
+            </mat-chip>
+          </mat-chip-set>
+        </td>
+      </ng-container>
+
+      <!-- Acciones Column -->
+      <ng-container matColumnDef="acciones">
+        <th mat-header-cell *matHeaderCellDef class="header-cell acciones-col">
+          Acciones
+        </th>
+        <td mat-cell *matCellDef="let element" class="data-cell acciones-col">
+          <div class="action-buttons">
+            <button mat-icon-button
+                    class="action-btn edit-btn"
+                    (click)="editar(element)"
+                    matTooltip="Editar tipo de asiento del sistema">
+              <mat-icon>edit</mat-icon>
+            </button>
+
+            <button mat-icon-button
+                    [class]="element.estado === 'ACTIVO' ? 'action-btn deactivate-btn' : 'action-btn activate-btn'"
+                    (click)="cambiarEstado(element)"
+                    [matTooltip]="element.estado === 'ACTIVO' ? 'Desactivar' : 'Activar'">
+              <mat-icon>{{ element.estado === 'ACTIVO' ? 'block' : 'check_circle' }}</mat-icon>
+            </button>
+
+            <button mat-icon-button
+                    class="action-btn delete-btn"
+                    (click)="eliminar(element)"
+                    matTooltip="Eliminar tipo de asiento del sistema">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </div>
+        </td>
+      </ng-container>
+
+      <!-- Header and Row Definitions -->
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns;" class="table-row"></tr>
+    </table>
+
+    <!-- Empty State -->
+    <div class="empty-state" *ngIf="dataSource.data.length === 0">
+      <mat-icon class="empty-icon">settings</mat-icon>
+      <h3>No hay tipos de asientos del sistema</h3>
+      <p>Comience creando un nuevo tipo de asiento del sistema</p>
+      <button mat-raised-button color="primary" (click)="nuevo()">
+        <mat-icon>add</mat-icon>
+        Crear Primer Tipo de Asiento del Sistema
+      </button>
+    </div>
+  </div>
+
+  <!-- Paginator -->
+  <mat-paginator [pageSizeOptions]="[5, 10, 20, 50]"
+                 showFirstLastButtons
+                 class="table-paginator">
+  </mat-paginator>
+</div>

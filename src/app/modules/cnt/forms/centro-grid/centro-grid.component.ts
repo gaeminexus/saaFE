@@ -1,0 +1,300 @@
+import { Component, OnInit, ViewChild } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { ReactiveFormsModule, FormControl } from '@angular/forms';
+import { MatTableModule, MatTableDataSource } from '@angular/material/table';
+import { MatPaginatorModule, MatPaginator } from '@angular/material/paginator';
+import { MatSortModule, MatSort } from '@angular/material/sort';
+import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
+import { MatDialogModule, MatDialog } from '@angular/material/dialog';
+import { MatTooltipModule } from '@angular/material/tooltip';
+
+import { CentroCosto } from '../../model/centro-costo';
+import { CentroCostoService } from '../../service/centro-costo.service';
+import { CentroGridFormComponent } from './centro-grid-form.component';
+
+@Component({
+  selector: 'app-centro-grid',
+  standalone: true,
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    MatTableModule,
+    MatPaginatorModule,
+    MatSortModule,
+    MatIconModule,
+    MatButtonModule,
+    MatCardModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSelectModule,
+    MatChipsModule,
+    MatProgressSpinnerModule,
+    MatSnackBarModule,
+    MatDialogModule,
+    MatTooltipModule
+  ],
+  templateUrl: './centro-grid.component.html',
+  styleUrls: ['./centro-grid.component.scss']
+})
+export class CentroGridComponent implements OnInit {
+  @ViewChild(MatPaginator) paginator!: MatPaginator;
+  @ViewChild(MatSort) sort!: MatSort;
+
+  // Data source
+  dataSource = new MatTableDataSource<CentroCosto>();
+  originalData: CentroCosto[] = [];
+
+  // Table configuration
+  displayedColumns: string[] = [
+    'numero',
+    'nombre',
+    'tipo',
+    'fechaIngreso',
+    'fechaInactivo',
+    'actions'
+  ];
+
+  // Filters
+  searchControl = new FormControl('');
+  selectedTipo = new FormControl('');
+  selectedEstado = new FormControl('');
+
+  // UI State
+  loading = false;
+  error: string | null = null;
+
+  // Opciones de filtro
+  tipoOptions = [
+    { value: '', label: 'Todos los tipos' },
+    { value: 1, label: 'Movimiento' },
+    { value: 2, label: 'Acumulación' }
+  ];
+
+  estadoOptions = [
+    { value: '', label: 'Todos los estados' },
+    { value: 1, label: 'Activo' },
+    { value: 0, label: 'Inactivo' }
+  ];
+
+  constructor(
+    private centroCostoService: CentroCostoService,
+    private dialog: MatDialog,
+    private snackBar: MatSnackBar
+  ) {}
+
+  ngOnInit(): void {
+    this.loadData();
+    this.setupFilters();
+  }
+
+  ngAfterViewInit(): void {
+    this.dataSource.paginator = this.paginator;
+    this.dataSource.sort = this.sort;
+
+    // Configurar ordenamiento personalizado para códigos jerárquicos
+    this.dataSource.sortingDataAccessor = (data: CentroCosto, sortHeaderId: string) => {
+      switch (sortHeaderId) {
+        case 'numero':
+          return data.numero;
+        case 'nombre':
+          return data.nombre.toLowerCase();
+        case 'tipo':
+          return data.tipo;
+        case 'fechaIngreso':
+          return data.fechaIngreso ? new Date(data.fechaIngreso).getTime() : 0;
+        case 'fechaInactivo':
+          return data.fechaInactivo ? new Date(data.fechaInactivo).getTime() : 0;
+        default:
+          return '';
+      }
+    };
+  }
+
+  private getHierarchicalSortKey(codigo: string | undefined | null): string {
+    // Manejo defensivo: si no hay código, devolver clave mínima
+    if (!codigo) return '';
+    // Convertir "1.1.01" a "0001.0001.0001" para ordenamiento correcto
+    return codigo.split('.')
+      .filter(part => part.length > 0)
+      .map(part => part.padStart(4, '0'))
+      .join('.');
+  }
+
+  loadData(): void {
+    this.loading = true;
+    this.error = null;
+
+    this.centroCostoService.getAll().subscribe({
+      next: (centros: CentroCosto[] | null) => {
+        const lista = centros || [];
+        const filtrados = lista.filter(c => c.empresa?.codigo === 280);
+        console.log('[CentroGridComponent] Centros cargados (empresa 280):', filtrados.length);
+        this.originalData = filtrados;
+        this.applyFilters();
+        this.loading = false;
+      },
+      error: (error) => {
+        console.error('[CentroGridComponent] Error loading centros:', error);
+        this.error = 'Error al cargar los centros de costo';
+        this.loading = false;
+
+        this.snackBar.open('Error al cargar los centros de costo', 'Cerrar', {
+          duration: 5000,
+          panelClass: ['error-snackbar']
+        });
+      }
+    });
+  }
+
+  setupFilters(): void {
+    const combineFilters = () => {
+      this.applyFilters();
+    };
+
+    this.searchControl.valueChanges.subscribe(combineFilters);
+    this.selectedTipo.valueChanges.subscribe(combineFilters);
+    this.selectedEstado.valueChanges.subscribe(combineFilters);
+  }
+
+  applyFilters(): void {
+    let filtered = [...this.originalData];
+
+    // Filtro de búsqueda por texto
+    const searchTerm = this.searchControl.value?.toLowerCase() || '';
+    if (searchTerm) {
+      filtered = filtered.filter(centro =>
+        centro.nombre.toLowerCase().includes(searchTerm) ||
+        centro.numero.toString().toLowerCase().includes(searchTerm)
+      );
+    }
+
+    // Filtro por tipo
+    const tipoValue = this.selectedTipo.value;
+    if (tipoValue !== '' && tipoValue !== null) {
+      filtered = filtered.filter(centro => centro.tipo === Number(tipoValue));
+    }
+
+    // Filtro por estado
+    const estadoValue = this.selectedEstado.value;
+    if (estadoValue !== '' && estadoValue !== null) {
+      filtered = filtered.filter(centro => centro.estado === Number(estadoValue));
+    }
+
+    this.dataSource.data = filtered;
+  }
+
+  // CRUD Operations
+  onAdd(): void {
+    this.snackBar.open(
+      'Para crear nuevos centros de costo, utiliza la vista de árbol donde puedes gestionar la jerarquía completa.',
+      'Entendido',
+      {
+        duration: 5000,
+        panelClass: ['info-snackbar']
+      }
+    );
+  }
+
+  onEdit(centroCosto: CentroCosto): void {
+    const dialogRef = this.dialog.open(CentroGridFormComponent, {
+      width: '600px',
+      data: { item: centroCosto }
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.loadData();
+        this.snackBar.open('Centro de costo actualizado exitosamente', 'Cerrar', {
+          duration: 3000,
+          panelClass: ['success-snackbar']
+        });
+      }
+    });
+  }
+
+  onDelete(centroCosto: CentroCosto): void {
+    if (confirm(`¿Está seguro de eliminar el centro de costo "${centroCosto.nombre}"?`)) {
+      this.centroCostoService.delete(centroCosto.codigo).subscribe({
+        next: (success) => {
+          if (success) {
+            this.loadData();
+            this.snackBar.open('Centro de costo eliminado', 'Cerrar', {
+              duration: 3000,
+              panelClass: ['success-snackbar']
+            });
+          }
+        },
+        error: (error) => {
+          console.error('Error deleting centro:', error);
+          this.snackBar.open('Error al eliminar el centro de costo', 'Cerrar', {
+            duration: 5000,
+            panelClass: ['error-snackbar']
+          });
+        }
+      });
+    }
+  }
+
+  // Utility methods
+  getTipoLabel(tipo: number): string {
+    switch (tipo) {
+      case 1: return 'Movimiento';
+      case 2: return 'Acumulación';
+      default: return 'Desconocido';
+    }
+  }
+
+  getTipoClass(tipo: number): string {
+    switch (tipo) {
+      case 1: return 'movimiento';
+      case 2: return 'acumulacion';
+      default: return 'desconocido';
+    }
+  }
+
+  getEstadoLabel(estado: number): string {
+    return estado === 1 ? 'Activo' : 'Inactivo';
+  }
+
+  formatDate(date?: Date): string {
+    if (!date) return '-';
+    try {
+      const dateObj = date instanceof Date ? date : new Date(date);
+      if (isNaN(dateObj.getTime())) return '-';
+
+      return dateObj.toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+    } catch {
+      return '-';
+    }
+  }
+
+  // Actions
+  clearFilters(): void {
+    this.searchControl.setValue('');
+    this.selectedTipo.setValue('');
+    this.selectedEstado.setValue('');
+  }
+
+  exportData(): void {
+    // Implementar exportación
+    this.snackBar.open('Funcionalidad de exportación en desarrollo', 'Cerrar', {
+      duration: 3000
+    });
+  }
+
+  refreshData(): void {
+    this.loadData();
+  }
+}

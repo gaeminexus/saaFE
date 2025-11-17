@@ -1,0 +1,342 @@
+.form-container {
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+  overflow: hidden;
+}
+
+// Header del diálogo
+.form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 1.5rem 1.5rem 0 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
+
+  .title-section {
+    flex: 1;
+
+    h2 {
+      margin: 0 0 0.5rem 0;
+      font-size: 1.5rem;
+      font-weight: 600;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .parent-info {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: #64748b;
+      font-size: 0.875rem;
+      margin-top: 0.25rem;
+
+      mat-icon {
+        font-size: 1rem;
+        width: 1rem;
+        height: 1rem;
+      }
+    }
+  }
+
+  .close-button {
+    color: #64748b;
+
+    &:hover {
+      color: #475569;
+      background: rgba(100, 116, 139, 0.1);
+    }
+  }
+}
+
+// Cuerpo del formulario
+.form-body {
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+// Banner de error
+.error-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  color: #dc2626;
+  margin-bottom: 1.5rem;
+
+  mat-icon {
+    font-size: 1.25rem;
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+}
+
+// Grid del formulario
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+
+  .full-width {
+    grid-column: 1 / -1;
+  }
+
+  mat-form-field {
+    width: 100%;
+
+    .naturaleza-details {
+      color: #64748b;
+      font-size: 0.875rem;
+      margin-left: 0.5rem;
+    }
+  }
+}
+
+// Sección de información
+.info-section {
+  margin-bottom: 2rem;
+
+  .info-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 1.25rem;
+
+    h4 {
+      margin: 0 0 1rem 0;
+      color: #1e293b;
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1rem;
+
+      .info-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+
+        .label {
+          font-weight: 500;
+          color: #475569;
+          min-width: 140px;
+        }
+      }
+    }
+  }
+}
+
+// Sección de jerarquía
+.hierarchy-section {
+  margin-bottom: 2rem;
+
+  h4 {
+    margin: 0 0 1rem 0;
+    color: #1e293b;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .hierarchy-tree {
+    background: white;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 1.25rem;
+
+    .hierarchy-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem;
+      border-radius: 6px;
+
+      &.parent {
+        background: #f1f5f9;
+        border: 1px solid #cbd5e1;
+        color: #475569;
+        font-weight: 600;
+
+        mat-icon {
+          color: #667eea;
+        }
+      }
+
+      &.child {
+        background: #fef3c7;
+        border: 1px solid #fcd34d;
+        color: #92400e;
+        font-weight: 500;
+        margin-left: 2rem;
+
+        mat-icon {
+          color: #d97706;
+        }
+      }
+    }
+
+    .hierarchy-connector {
+      display: flex;
+      align-items: center;
+      margin-left: 2rem;
+      color: #94a3b8;
+
+      mat-icon {
+        font-size: 1.25rem;
+        width: 1.25rem;
+        height: 1.25rem;
+      }
+    }
+  }
+}
+
+// Badges
+.badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+
+  &.tipo {
+    background: #dbeafe;
+    color: #1e40af;
+  }
+
+  &.centro-costo {
+    background: #dcfce7;
+    color: #166534;
+  }
+}
+
+// Acciones del formulario
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e2e8f0;
+  margin-top: auto;
+
+  .cancel-button {
+    color: #64748b;
+
+    &:hover {
+      color: #475569;
+      background: rgba(100, 116, 139, 0.1);
+    }
+  }
+
+  .submit-button {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    min-width: 140px;
+
+    &:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .inline-spinner {
+      margin-right: 0.5rem;
+    }
+
+    mat-icon {
+      margin-right: 0.5rem;
+    }
+  }
+}
+
+// Panel personalizado para selects
+:global(.custom-select-panel) {
+  .mat-mdc-option {
+    .naturaleza-details {
+      color: #64748b !important;
+    }
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .form-container {
+    max-height: 95vh;
+  }
+
+  .form-header {
+    padding: 1rem 1rem 0 1rem;
+
+    .title-section h2 {
+      font-size: 1.25rem;
+    }
+  }
+
+  .form-body {
+    padding: 1rem;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .info-section .info-card .info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hierarchy-section .hierarchy-tree {
+    padding: 1rem;
+
+    .hierarchy-item.child {
+      margin-left: 1rem;
+    }
+
+    .hierarchy-connector {
+      margin-left: 1rem;
+    }
+  }
+
+  .form-actions {
+    flex-direction: column-reverse;
+    gap: 0.75rem;
+
+    .submit-button,
+    .cancel-button {
+      width: 100%;
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .form-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+
+    .close-button {
+      align-self: flex-end;
+      position: absolute;
+      right: 1rem;
+      top: 1rem;
+    }
+  }
+}

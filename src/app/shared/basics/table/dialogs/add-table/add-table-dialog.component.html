@@ -1,0 +1,36 @@
+<div class="saa-dialog-container">
+  <!-- Header del diálogo -->
+  <div class="saa-dialog-header">
+    <span class="material-icons icon">add_circle</span>
+    <div>
+      <h2 class="title">Agregar Registro</h2>
+      <p class="subtitle">Completa la información del nuevo registro</p>
+    </div>
+  </div>
+
+  <!-- Contenido del formulario -->
+  <div class="saa-dialog-content form-content">
+    <app-dynamic-form [fields]="data.regConfig" [accion]="data.accion"></app-dynamic-form>
+  </div>
+
+  <!-- Acciones del diálogo -->
+  <div class="saa-dialog-actions">
+    <button
+      mat-raised-button
+      class="btn-secondary"
+      aria-label="Cancelar"
+      (click)="onSalirClick()">
+      <span class="material-icons" style="margin-right: 8px; font-size: 18px;">close</span>
+      Cancelar
+    </button>
+
+    <button
+      mat-raised-button
+      class="btn-primary success"
+      aria-label="Guardar registro"
+      (click)="grabar()">
+      <span class="material-icons" style="margin-right: 8px; font-size: 18px;">save</span>
+      Guardar
+    </button>
+  </div>
+</div>

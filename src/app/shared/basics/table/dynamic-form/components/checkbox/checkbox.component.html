@@ -1,0 +1,5 @@
+<div class="demo-full-width margin-top" [formGroup]="group">
+  @if (field['name']) {
+    <mat-checkbox [formControlName]="field['name']">{{field['label']}}</mat-checkbox>
+  }
+</div>

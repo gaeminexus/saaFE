@@ -1,0 +1,558 @@
+@use '../../../../../styles/abstracts/variables' as *;
+@use '../../../../../styles/abstracts/colors' as *;
+
+.asientos-container {
+  padding: 0;
+  background-color: #f5f5f5;
+  min-height: calc(100vh - 64px);
+
+  .toolbar-principal {
+    background-color: $primary-color;
+    color: white;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+    .toolbar-title {
+      font-size: 1.2rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+
+      mat-icon {
+        font-size: 1.4rem;
+        height: 1.4rem;
+        width: 1.4rem;
+      }
+    }
+
+    .spacer {
+      flex: 1 1 auto;
+    }
+
+    button {
+      mat-icon {
+        margin-right: 0.25rem;
+      }
+    }
+  }
+
+  .tabs-container {
+    margin: 0 1rem;
+
+    .mat-mdc-tab-body-content {
+      padding: 1rem 0;
+    }
+
+    // Tab de Consulta
+    .filtros-card {
+      margin-bottom: 1rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+
+      mat-card-header {
+        padding-bottom: 0.5rem;
+
+        mat-card-title {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          color: $primary-color;
+          font-size: 1rem;
+        }
+      }
+
+      .filtros-form {
+        .filtros-row {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 1rem;
+          align-items: flex-end;
+          margin-top: 1rem;
+
+          .filtro-field {
+            flex: 1;
+            min-width: 180px;
+            max-width: 220px;
+          }
+
+          .filtro-field-small {
+            flex: 0 0 120px;
+          }
+
+          .busqueda-field {
+            flex: 1;
+            min-width: 250px;
+          }
+
+          .btn-limpiar {
+            height: 40px;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+          }
+        }
+      }
+    }
+
+    .tabla-card {
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+
+      .tabla-container {
+        position: relative;
+        min-height: 400px;
+
+        .loading-indicator {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 2rem;
+          gap: 1rem;
+          color: #666;
+
+          span {
+            font-size: 0.9rem;
+          }
+        }
+
+        .asientos-table {
+          width: 100%;
+          background-color: white;
+
+          .mat-mdc-header-cell {
+            background-color: #fafafa;
+            font-weight: 600;
+            color: $primary-color;
+            border-bottom: 2px solid $primary-color;
+          }
+
+          .mat-mdc-cell {
+            border-bottom: 1px solid #e0e0e0;
+            padding: 0.75rem 0.5rem;
+          }
+
+          .tabla-row {
+            transition: background-color 0.2s ease;
+
+            &:hover {
+              background-color: #f5f5f5;
+            }
+
+            &.row-selected {
+              background-color: #e3f2fd !important;
+            }
+          }
+
+          .observaciones-cell {
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+
+          .amount-cell {
+            text-align: right;
+            font-family: monospace;
+            font-weight: 500;
+          }
+
+          .acciones-header {
+            text-align: center;
+            width: 80px;
+          }
+
+          .acciones-cell {
+            text-align: center;
+            width: 80px;
+          }
+
+          .menu-item-delete {
+            color: #f44336;
+          }
+        }
+
+        .no-data {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 3rem 2rem;
+          text-align: center;
+          color: #666;
+
+          mat-icon {
+            font-size: 4rem;
+            width: 4rem;
+            height: 4rem;
+            color: #ff9800;
+            margin-bottom: 1rem;
+          }
+
+          .text-muted {
+            font-size: 0.875rem;
+            color: #999;
+            margin-bottom: 1.5rem;
+          }
+
+          .action-buttons {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            justify-content: center;
+
+            button {
+              min-width: 160px;
+            }
+          }
+
+          h3 {
+            margin: 0 0 0.5rem 0;
+            font-weight: 400;
+          }
+
+          p {
+            margin: 0 0 1.5rem 0;
+            font-size: 0.9rem;
+          }
+        }
+      }
+    }
+
+    // Tab de Formulario
+    .formulario-container {
+      .encabezado-card {
+        margin-bottom: 1rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+        border-left: 4px solid $primary-color;
+
+        mat-card-header {
+          mat-card-title {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: $primary-color;
+          }
+        }
+
+        .encabezado-form {
+          .form-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-top: 1rem;
+
+            .form-field {
+              flex: 1;
+              min-width: 200px;
+            }
+
+            .observaciones-field {
+              flex: 1;
+              min-width: 100%;
+            }
+          }
+        }
+      }
+
+      .detalles-card {
+        margin-bottom: 1rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+
+        mat-card-header {
+          display: flex;
+          align-items: center;
+
+          mat-card-title {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: $primary-color;
+          }
+
+          .spacer {
+            flex: 1 1 auto;
+          }
+        }
+
+        .detalles-container {
+          overflow-x: auto;
+          margin-bottom: 1rem;
+
+          .detalles-table {
+            width: 100%;
+            min-width: 800px;
+
+            .mat-mdc-header-cell {
+              background-color: #fafafa;
+              font-weight: 600;
+              color: $primary-color;
+              padding: 0.5rem;
+            }
+
+            .mat-mdc-cell {
+              padding: 0.25rem;
+              border-bottom: 1px solid #e0e0e0;
+            }
+
+            .cell-field {
+              width: 100%;
+              min-width: 120px;
+
+              .mat-mdc-form-field-subscript-wrapper {
+                display: none;
+              }
+            }
+
+            .amount-field {
+              min-width: 100px;
+              text-align: right;
+            }
+
+            .cuenta-cell {
+              min-width: 250px;
+            }
+
+            .acciones-header {
+              text-align: center;
+              width: 60px;
+            }
+
+            .acciones-cell {
+              text-align: center;
+              width: 60px;
+            }
+
+            .detalle-row {
+              &:hover {
+                background-color: #f9f9f9;
+              }
+            }
+          }
+        }
+
+        .totales-container {
+          background-color: #f8f9fa;
+          padding: 1rem;
+          border-radius: 4px;
+          border-left: 4px solid $primary-color;
+
+          .totales-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+
+            .total-item {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              padding: 0.5rem;
+              background-color: white;
+              border-radius: 4px;
+              border: 1px solid #e0e0e0;
+
+              &.diferencia-error {
+                background-color: #ffebee;
+                border-color: #f44336;
+              }
+
+              .amount {
+                font-family: monospace;
+                font-weight: 600;
+                font-size: 1.1rem;
+
+                &.text-error {
+                  color: #f44336;
+                }
+              }
+            }
+          }
+
+          .balance-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem;
+            border-radius: 4px;
+            font-weight: 500;
+
+            &.balance-warning {
+              background-color: #fff3e0;
+              color: #f57c00;
+              border: 1px solid #ffb74d;
+
+              mat-icon {
+                color: #f57c00;
+              }
+            }
+
+            &.balance-ok {
+              background-color: #e8f5e8;
+              color: #2e7d32;
+              border: 1px solid #81c784;
+
+              mat-icon {
+                color: #2e7d32;
+              }
+            }
+          }
+        }
+      }
+
+      .acciones-container {
+        display: flex;
+        align-items: center;
+        padding: 1rem;
+        background-color: white;
+        border-radius: 4px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+
+        .spacer {
+          flex: 1 1 auto;
+        }
+
+        .btn-cancelar {
+          margin-right: 1rem;
+        }
+
+        .btn-guardar {
+          mat-icon {
+            margin-right: 0.25rem;
+          }
+        }
+      }
+    }
+  }
+}
+
+// Estilos para chips de estado
+.badge-activo {
+  background-color: #4caf50 !important;
+  color: white !important;
+}
+
+.badge-anulado {
+  background-color: #f44336 !important;
+  color: white !important;
+}
+
+.badge-reversado {
+  background-color: #ff9800 !important;
+  color: white !important;
+}
+
+.badge-incompleto {
+  background-color: #9e9e9e !important;
+  color: white !important;
+}
+
+.badge-desconocido {
+  background-color: #607d8b !important;
+  color: white !important;
+}
+
+// Estilos para snackbar
+.snackbar-success {
+  background-color: #4caf50;
+  color: white;
+}
+
+.snackbar-error {
+  background-color: #f44336;
+  color: white;
+}
+
+.snackbar-warning {
+  background-color: #ff9800;
+  color: white;
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .asientos-container {
+    .tabs-container {
+      margin: 0 0.5rem;
+
+      .filtros-card {
+        .filtros-form .filtros-row {
+          flex-direction: column;
+          align-items: stretch;
+
+          .filtro-field,
+          .filtro-field-small,
+          .busqueda-field {
+            max-width: none;
+            min-width: auto;
+          }
+
+          .btn-limpiar {
+            margin-top: 0.5rem;
+          }
+        }
+      }
+
+      .formulario-container {
+        .encabezado-card {
+          .encabezado-form .form-row {
+            flex-direction: column;
+
+            .form-field {
+              min-width: auto;
+            }
+          }
+        }
+
+        .detalles-card {
+          .detalles-container {
+            .detalles-table {
+              .cell-field {
+                min-width: 80px;
+              }
+
+              .cuenta-cell {
+                min-width: 200px;
+              }
+            }
+          }
+
+          .totales-container {
+            .totales-grid {
+              grid-template-columns: 1fr;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+@media (max-width: 600px) {
+  .asientos-container {
+    .toolbar-principal {
+      .toolbar-title {
+        font-size: 1rem;
+      }
+
+      button {
+        mat-icon {
+          margin-right: 0;
+        }
+
+        .mat-button-wrapper span {
+          display: none;
+        }
+      }
+    }
+
+    .tabs-container {
+      // Ocultar algunas columnas en móviles
+      .asientos-table {
+        .mat-column-tipoAsiento,
+        .mat-column-totalDebe,
+        .mat-column-totalHaber {
+          display: none;
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,48 @@
+<mat-form-field class="demo-full-width margin-top" [formGroup]="group">
+  <mat-label>{{field.label || ''}}</mat-label>
+
+  @if (field.autocompleteType === 1) {
+    <ng-container>
+      <input type="text"
+        [placeholder]="field.label || ''"
+        [attr.aria-label]="field.label || ''"
+        class="uppercase-input"
+        matInput
+        [formControl]="myControl"
+        [matAutocomplete]="auto">
+      <mat-autocomplete autoActiveFirstOption #auto="matAutocomplete" (optionSelected)="seleccion($event)">
+        @for (item of filteredOptions | async; track item.codigo) {
+          <mat-option [value]="item">
+            {{concatNombre(field, item)}}
+          </mat-option>
+        }
+      </mat-autocomplete>
+    </ng-container>
+  }
+
+  @if (field.autocompleteType === 2) {
+    <ng-container>
+      <input type="text"
+        [placeholder]="field.label || ''"
+        [attr.aria-label]="field.label || ''"
+        class="uppercase-input"
+        (focus)="onFocus()"
+        matInput
+        [formControl]="myControlHijo"
+        [matAutocomplete]="autoHijo">
+      <mat-autocomplete autoActiveFirstOption #autoHijo="matAutocomplete" (optionSelected)="seleccionHijo($event)">
+        @for (item of filteredOptionsHijo | async; track item.codigo) {
+          <mat-option [value]="item">
+            {{concatNombre(field, item)}}
+          </mat-option>
+        }
+      </mat-autocomplete>
+    </ng-container>
+  }
+
+  <ng-container *ngFor="let v of field.validations || []">
+    <mat-error *ngIf="getControl(field.name)?.hasError(v.name)">
+      {{v.message}}
+    </mat-error>
+  </ng-container>
+</mat-form-field>

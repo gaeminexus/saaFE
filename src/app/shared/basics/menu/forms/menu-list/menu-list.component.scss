@@ -1,0 +1,141 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  outline: none;
+  width: 100%;
+}
+
+// Forzar layout horizontal para todos los elementos del menú
+a.menu-list-item {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  width: 100% !important;
+  position: relative !important; // Para posicionamiento absoluto de la flecha
+
+  mat-icon.routeIcon {
+    flex-shrink: 0 !important;
+    margin-right: 20px !important; // Separación específica del ícono
+    font-size: 24px !important; // Ícono más grande
+    width: 24px !important;
+    height: 24px !important;
+  }
+
+  .menu-text {
+    flex: 1 !important; // Toma todo el espacio disponible
+    text-align: left;
+    line-height: 1.2;
+    margin: 0 !important;
+    padding: 0 !important;
+    padding-right: 40px !important; // Espacio reservado para la flecha
+    white-space: nowrap; // Evita que el texto se parta
+    overflow: hidden; // Oculta texto que se desborde
+    text-overflow: ellipsis; // Muestra ... si el texto es muy largo
+  }
+
+  .spacer {
+    display: none !important; // Ya no necesitamos el spacer
+  }
+
+  // Flecha de expansión - posicionada absolutamente a la derecha
+  .expand-icon {
+    position: absolute !important;
+    right: 16px !important; // Siempre a 16px del borde derecho
+    top: 50% !important; // Centrada verticalmente
+    transform: translateY(-50%) !important; // Ajuste de centrado perfecto
+    font-size: 20px !important;
+    width: 20px !important;
+    height: 20px !important;
+    z-index: 10 !important; // Encima del texto si es necesario
+  }
+}
+
+.mat-list-item.active {
+    background-color: mat-color(app-primary, 50);
+}
+
+.menu-list-item.mat-list-item {
+	display: flex !important;
+	flex-direction: row !important;
+	align-items: center !important;
+	justify-content: flex-start !important;
+	padding: 12px 50px 12px 8px !important; // Más padding a la derecha para la flecha absoluta
+	min-height: 48px !important; // Altura mínima para mejor interacción
+	width: 100% !important;
+	box-sizing: border-box !important;
+	position: relative !important; // Para que la flecha absoluta funcione
+}
+
+.mat-list-item-content {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    width: 100% !important;
+    flex: 1 !important;
+}
+
+.mat-list-item.active.hover.focus.mat-list-item:not(.expanded) {
+    background-color: mat-color(app-primary, 100) !important;
+}
+
+.mat-list-item {
+  padding: 12px 8px !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  width: 100% !important;
+  min-height: 48px !important;
+  box-sizing: border-box !important;
+}
+
+.routeIcon {
+  padding: 0; // Eliminar padding para mejor alineación
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 24px !important; // Ancho fijo para íconos más grandes
+  height: 24px !important; // Altura fija para íconos más grandes
+  margin-right: 0; // Eliminar margin-right, usar gap en el contenedor
+  flex-shrink: 0; // El ícono no se encoge
+  font-size: 24px !important; // Ícono más grande
+}
+
+// Estilos adicionales para mejor control
+.menu-text {
+  display: inline-block !important;
+  vertical-align: middle;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 14px;
+  line-height: 1.3;
+  padding-left: 0 !important; // Asegurar que no haya padding adicional
+  margin-left: 0 !important; // Asegurar que no haya margin adicional
+}
+
+// Espaciador - ya no es necesario con posicionamiento absoluto
+.spacer {
+  display: none !important; // Ocultamos el spacer
+}
+
+// Estilos generales para mat-icon
+.menu-list-item mat-icon {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  vertical-align: middle !important;
+}
+
+// Asegurar que todos los elementos estén alineados horizontalmente
+.menu-list-item > * {
+  display: inline-flex !important;
+  align-items: center !important;
+  vertical-align: middle !important;
+}
+
+// Regla específica adicional para la flecha de expansión
+.menu-list-item .expand-icon {
+  margin: 0 !important; // Sin márgenes, posicionamiento absoluto
+  flex: none !important; // No participa en flexbox
+}

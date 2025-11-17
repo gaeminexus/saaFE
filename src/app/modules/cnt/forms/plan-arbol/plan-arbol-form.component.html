@@ -1,0 +1,170 @@
+<div class="form-container">
+  <!-- Header del diálogo -->
+  <div class="form-header">
+    <div class="title-section">
+      <h2>{{ dialogTitle }}</h2>
+      @if (parentAccount) {
+        <div class="parent-info">
+          <mat-icon>account_tree</mat-icon>
+          <span>{{ parentAccount.cuentaContable }} - {{ parentAccount.nombre }}</span>
+        </div>
+      }
+    </div>
+    <button mat-icon-button (click)="onCancel()" class="close-button">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <!-- Formulario -->
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="form-body">
+
+    <!-- Error general -->
+    @if (error) {
+      <div class="error-banner">
+        <mat-icon>error</mat-icon>
+        <span>{{ error }}</span>
+      </div>
+    }
+
+    <!-- Grid de campos -->
+    <div class="form-grid">
+
+      <!-- Nombre de la cuenta -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Nombre de la Cuenta</mat-label>
+        <input matInput formControlName="nombre" placeholder="Ingrese el nombre de la cuenta">
+        @if (form.get('nombre')?.errors?.['required'] && form.get('nombre')?.touched) {
+          <mat-error>El nombre de la cuenta es requerido</mat-error>
+        }
+        @if (form.get('nombre')?.errors?.['minlength']) {
+          <mat-error>El nombre debe tener al menos 3 caracteres</mat-error>
+        }
+        @if (form.get('nombre')?.errors?.['maxlength']) {
+          <mat-error>El nombre no puede exceder 200 caracteres</mat-error>
+        }
+      </mat-form-field>
+
+      <!-- Número de cuenta contable -->
+      <mat-form-field appearance="outline">
+        <mat-label>Número de Cuenta</mat-label>
+        <input matInput formControlName="cuentaContable" placeholder="Ej: 1101">
+        <mat-hint>{{ numeroHelperText }}</mat-hint>
+        @if (form.get('cuentaContable')?.errors?.['required'] && form.get('cuentaContable')?.touched) {
+          <mat-error>El número de cuenta es requerido</mat-error>
+        }
+        @if (form.get('cuentaContable')?.errors?.['pattern']) {
+          <mat-error>Solo se permiten números</mat-error>
+        }
+      </mat-form-field>
+
+      <!-- Nivel (solo lectura) -->
+      <mat-form-field appearance="outline">
+        <mat-label>Nivel</mat-label>
+        <input matInput formControlName="nivel" readonly>
+        <mat-hint>Calculado automáticamente</mat-hint>
+      </mat-form-field>
+
+      <!-- Naturaleza de cuenta -->
+      <mat-form-field appearance="outline">
+        <mat-label>Naturaleza de Cuenta</mat-label>
+        <mat-select formControlName="naturalezaCuenta" panelClass="custom-select-panel">
+          @for (naturaleza of naturalezas; track naturaleza.codigo) {
+            <mat-option [value]="naturaleza">
+              {{ naturaleza.nombre }}
+              <span class="naturaleza-details">
+                ({{ naturaleza.tipo === 1 ? 'Deudora' : 'Acreedora' }})
+              </span>
+            </mat-option>
+          }
+        </mat-select>
+        @if (form.get('naturalezaCuenta')?.errors?.['required'] && form.get('naturalezaCuenta')?.touched) {
+          <mat-error>La naturaleza de cuenta es requerida</mat-error>
+        }
+      </mat-form-field>
+
+      <!-- Tipo de cuenta -->
+      <mat-form-field appearance="outline">
+        <mat-label>Tipo de Cuenta</mat-label>
+        <mat-select formControlName="tipo">
+          <mat-option [value]="1">Movimiento</mat-option>
+          <mat-option [value]="2">Acumulación</mat-option>
+          <mat-option [value]="3">Orden</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <!-- Estado -->
+      <mat-form-field appearance="outline">
+        <mat-label>Estado</mat-label>
+        <mat-select formControlName="estado">
+          <mat-option [value]="1">Activo</mat-option>
+          <mat-option [value]="0">Inactivo</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+    </div>
+
+    <!-- Información adicional -->
+    @if (form.get('naturalezaCuenta')?.value) {
+      <div class="info-section">
+        <div class="info-card">
+          <h4>Información de la Naturaleza</h4>
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="label">Tipo:</span>
+              <span class="badge tipo">
+                {{ getTipoNaturaleza() }}
+              </span>
+            </div>
+            <div class="info-item">
+              <span class="label">Maneja Centro de Costo:</span>
+              <span class="badge centro-costo">
+                {{ getManejaCentroCosto() }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Jerarquía visual -->
+    @if (parentAccount) {
+      <div class="hierarchy-section">
+        <h4>Jerarquía</h4>
+        <div class="hierarchy-tree">
+          <div class="hierarchy-item parent">
+            <mat-icon>folder</mat-icon>
+            <span>{{ parentAccount.cuentaContable }} - {{ parentAccount.nombre }}</span>
+          </div>
+          <div class="hierarchy-connector">
+            <mat-icon>subdirectory_arrow_right</mat-icon>
+          </div>
+          <div class="hierarchy-item child">
+            <mat-icon>description</mat-icon>
+            <span>
+              {{ form.get('cuentaContable')?.value || '[Número]' }} -
+              {{ form.get('nombre')?.value || '[Nombre de la cuenta]' }}
+            </span>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Acciones del formulario -->
+    <div class="form-actions">
+      <button mat-button type="button" (click)="onCancel()" class="cancel-button">
+        Cancelar
+      </button>
+      <button mat-flat-button color="primary" type="submit"
+              [disabled]="form.invalid || loading"
+              class="submit-button">
+        @if (loading) {
+          <mat-spinner diameter="20" class="inline-spinner"></mat-spinner>
+        } @else {
+          <mat-icon>{{ isEditMode ? 'save' : 'add' }}</mat-icon>
+        }
+        {{ isEditMode ? 'Actualizar' : 'Crear' }} Cuenta
+      </button>
+    </div>
+
+  </form>
+</div>

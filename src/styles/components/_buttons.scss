@@ -1,0 +1,75 @@
+@use '../abstracts/colors' as *;
+@use 'sass:color';
+@use '../abstracts/variables' as *;
+@use '../abstracts/mixins' as *;
+
+.btn {
+  @include button-base;
+
+  // Variants
+  &-primary {
+    background: $primary-color;
+    color: $text-light;
+
+    &:hover:not(:disabled) {
+  background: color.adjust($primary-color, $lightness: -5%);
+      transform: translateY(-2px);
+    }
+  }
+
+  &-secondary {
+    background: $secondary-color;
+    color: $text-light;
+
+    &:hover:not(:disabled) {
+  background: color.adjust($secondary-color, $lightness: -5%);
+      transform: translateY(-2px);
+    }
+  }
+
+  &-outline {
+    background: transparent;
+    border: $border-width-md solid $primary-color;
+    color: $primary-color;
+
+    &:hover:not(:disabled) {
+      background: $primary-color;
+      color: $text-light;
+      transform: translateY(-2px);
+    }
+  }
+
+  // Sizes
+  &-sm {
+    padding: $spacing-sm $spacing-md;
+    font-size: $font-size-sm;
+  }
+
+  &-lg {
+    padding: $spacing-lg $spacing-xl;
+    font-size: $font-size-lg;
+  }
+
+  // States
+  &-loading {
+    position: relative;
+    pointer-events: none;
+
+    &::after {
+      content: "";
+      position: absolute;
+      width: 1em;
+      height: 1em;
+      border: 2px solid transparent;
+      border-radius: 50%;
+      border-top-color: currentColor;
+      animation: spin 0.6s linear infinite;
+    }
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

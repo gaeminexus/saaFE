@@ -1,0 +1,170 @@
+# Compiled class files
+*.class
+
+# Log files
+*.log
+
+# BlueJ files
+*.ctxt
+
+# Mobile Tools for Java (J2ME)
+.mtj.tmp/
+
+# Package Files
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# Virtual machine crash logs
+hs_err_pid*
+replay_pid*
+
+# Eclipse Core
+.project
+.classpath
+.settings/
+.metadata/
+.recommenders/
+
+# Eclipse JDT
+.apt_generated/
+.factorypath
+
+# Eclipse CDT
+.cproject
+.autotools
+
+# Eclipse Web Tools Platform (WTP)
+.buildpath
+.externalToolBuilders/
+
+# Eclipse PDT
+.buildpath
+
+# STS (Spring Tool Suite)
+.springBeans
+
+# Code Recommenders
+.recommenders/
+
+# Annotation Processing
+.apt_generated/
+.apt_generated_test/
+
+# Scala IDE specific
+.cache-main
+.scala_dependencies
+.worksheet
+
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# IntelliJ IDEA (por si cambias de IDE)
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+# NetBeans (por si cambias de IDE)
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# Mac OS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# JRebel
+rebel.xml
+rebel-remote.xml
+
+# SonarLint plugin
+.sonarlint
+
+# JProfiler
+*.jmx
+
+# BTrace
+*.btrace
+
+# JEnv
+.java-version
+
+# Crashlytics plugin (for Android Studio and IntelliJ)
+com_crashlytics_export_strings.xml
+crashlytics.properties
+crashlytics-build.properties
+fabric.properties
+
+# Database
+*.db
+*.sqlite
+*.sql
+
+# Logs and databases
+logs/
+*.log
+*.sql
+*.sqlite
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+.#*
+
+# Application specific
+/bin/
+/tmp/
+*.tmp
+*.bak
+*.swp
+*~.nib
+local.properties
