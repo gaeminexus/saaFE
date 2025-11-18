@@ -649,7 +649,7 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
       // Enriquecer cada préstamo con la información completa del producto
       const prestamosEnriquecidos = prestamos.map(prestamo => {
         // Acceder al campo producto (minúscula) o Producto (mayúscula) según el backend real
-        const codigoProducto = (prestamo as any).producto?.codigo || prestamo.Producto?.codigo;
+        const codigoProducto = (prestamo as any).producto?.codigo || prestamo.producto?.codigo;
         if (codigoProducto) {
           const productoCompleto = mapaProductos.get(codigoProducto);
           if (productoCompleto) {
@@ -684,14 +684,14 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
       filtered = filtered.filter(p => {
         return (
           p.codigo?.toString().includes(f) ||
-          p.Entidad?.codigo?.toString().includes(f) ||
-          p.Entidad?.razonSocial?.toLowerCase().includes(f) ||
-          p.Entidad?.numeroIdentificacion?.toLowerCase().includes(f) ||
+          p.entidad?.codigo?.toString().includes(f) ||
+          p.entidad?.razonSocial?.toLowerCase().includes(f) ||
+          p.entidad?.numeroIdentificacion?.toLowerCase().includes(f) ||
           // Buscar tanto en 'producto' (minúscula) como en 'Producto' (mayúscula)
           (p as any).producto?.nombre?.toLowerCase().includes(f) ||
           (p as any).producto?.codigoSBS?.toLowerCase().includes(f) ||
-          p.Producto?.nombre?.toLowerCase().includes(f) ||
-          p.Producto?.codigoSBS?.toLowerCase().includes(f) ||
+          p.producto?.nombre?.toLowerCase().includes(f) ||
+          p.producto?.codigoSBS?.toLowerCase().includes(f) ||
           p.montoSolicitado?.toString().includes(f) ||
           p.plazo?.toString().includes(f) ||
           p.estadoPrestamo?.nombre?.toLowerCase().includes(f) ||
