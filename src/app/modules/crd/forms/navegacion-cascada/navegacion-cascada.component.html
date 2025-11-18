@@ -198,131 +198,13 @@
       </div>
     </div>
 
-    <!-- NIVEL 2: PRODUCTOS -->
-    <div class="nivel-productos" *ngIf="mostrandoProductos && !loading()">
-      <div class="nivel-header">
-        <div class="titulo-seccion">
-          <mat-icon>inventory_2</mat-icon>
-          <h2>Productos</h2>
-          <span class="contador">({{ dataSourceProductos.data.length }} registros)</span>
-        </div>
-
-        <!-- Filtro de búsqueda -->
-        <mat-form-field appearance="outline" class="filtro-campo">
-          <mat-label>Buscar productos</mat-label>
-          <mat-icon matPrefix>search</mat-icon>
-          <input
-            matInput
-            (keyup)="aplicarFiltroProductos($any($event.target).value)"
-            placeholder="Buscar por nombre, código SBS..."
-          />
-        </mat-form-field>
-      </div>
-
-      <!-- Información de la entidad seleccionada -->
-      <div class="info-seleccion" *ngIf="entidadSeleccionada()">
-        <mat-icon>info</mat-icon>
-        <span>Productos de: <strong>{{ entidadSeleccionada()!.razonSocial }}</strong></span>
-      </div>
-
-      <!-- Tabla de productos -->
-      <div class="tabla-container">
-        <table mat-table [dataSource]="dataSourceProductos" [trackBy]="trackProducto" matSort class="mat-elevation-z2">
-
-          <!-- Código -->
-          <ng-container matColumnDef="codigo">
-            <th mat-header-cell *matHeaderCellDef>Código</th>
-            <td mat-cell *matCellDef="let producto">
-              <span class="codigo-badge">{{ producto.codigo }}</span>
-            </td>
-          </ng-container>
-
-          <!-- Nombre -->
-          <ng-container matColumnDef="nombre">
-            <th mat-header-cell *matHeaderCellDef>Nombre</th>
-            <td mat-cell *matCellDef="let producto">
-              <span class="nombre-producto">{{ producto.nombre || 'N/A' }}</span>
-            </td>
-          </ng-container>
-
-          <!-- Código SBS -->
-          <ng-container matColumnDef="codigoSBS">
-            <th mat-header-cell *matHeaderCellDef>Código SBS</th>
-            <td mat-cell *matCellDef="let producto">
-              <span class="codigo-sbs">{{ producto.codigoSBS || 'N/A' }}</span>
-            </td>
-          </ng-container>
-
-          <!-- Tipo Préstamo -->
-          <ng-container matColumnDef="tipoPrestamo">
-            <th mat-header-cell *matHeaderCellDef>Tipo</th>
-            <td mat-cell *matCellDef="let producto">
-              <span class="tipo-prestamo">{{ producto.tipoPrestamo?.nombre || 'N/A' }}</span>
-            </td>
-          </ng-container>
-
-          <!-- Estado -->
-          <ng-container matColumnDef="estado">
-            <th mat-header-cell *matHeaderCellDef>Estado</th>
-            <td mat-cell *matCellDef="let producto">
-              <mat-chip
-                [class]="'estado-' + producto.estado"
-                [matTooltip]="producto.estado === 1 ? 'Activo' : 'Inactivo'">
-                {{ producto.estado === 1 ? 'Activo' : 'Inactivo' }}
-              </mat-chip>
-            </td>
-          </ng-container>
-
-          <!-- Acciones -->
-          <ng-container matColumnDef="acciones">
-            <th mat-header-cell *matHeaderCellDef>Acciones</th>
-            <td mat-cell *matCellDef="let producto">
-              <button
-                mat-raised-button
-                color="primary"
-                (click)="seleccionarProducto(producto)"
-                matTooltip="Ver préstamos de este producto">
-                <mat-icon>arrow_forward</mat-icon>
-                Ver Préstamos
-              </button>
-            </td>
-          </ng-container>
-
-          <tr mat-header-row *matHeaderRowDef="columnasProductos"></tr>
-          <tr
-            mat-row
-            *matRowDef="let row; columns: columnasProductos;"
-            class="fila-producto">
-          </tr>
-        </table>
-
-        <!-- Paginador productos -->
-        <mat-paginator
-          *ngIf="totalProductos() > 0"
-          [length]="totalProductos()"
-          [pageSizeOptions]="[10, 20, 50, 100]"
-          [pageSize]="pageSizeProd"
-          [pageIndex]="pageIndexProd"
-          (page)="pageChangedProductos($event)"
-          showFirstLastButtons
-          class="paginator-entidades">
-        </mat-paginator>
-
-        <!-- Mensaje cuando no hay datos -->
-        <div class="no-datos" *ngIf="dataSourceProductos.data.length === 0 && !loading()">
-          <mat-icon>inventory_2</mat-icon>
-          <p>No se encontraron productos para esta entidad</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- NIVEL 3: PRÉSTAMOS -->
-    <div class="nivel-prestamos" *ngIf="mostrandoPrestamos && !loading()">
+    <!-- NIVEL 2: PRÉSTAMOS -->
+    <div class="nivel-prestamos-lista" *ngIf="mostrandoPrestamos && !loading()">
       <div class="nivel-header">
         <div class="titulo-seccion">
           <mat-icon>account_balance</mat-icon>
           <h2>Préstamos</h2>
-          <span class="contador">({{ totalPrestamos() }} registros)</span>
+          <span class="contador">({{ dataSourceProductos.data.length }} registros)</span>
         </div>
 
         <!-- Filtro de búsqueda -->
@@ -337,9 +219,108 @@
         </mat-form-field>
       </div>
 
+      <!-- Información de la entidad seleccionada -->
       <div class="info-seleccion" *ngIf="entidadSeleccionada()">
         <mat-icon>info</mat-icon>
-        <span>Préstamos de la entidad: <strong>{{ entidadSeleccionada()!.razonSocial }}</strong></span>
+        <span>Préstamos de: <strong>{{ entidadSeleccionada()!.razonSocial }}</strong></span>
+      </div>
+
+      <!-- Tabla de préstamos -->
+      <div class="tabla-container">
+        <table mat-table [dataSource]="dataSourcePrestamos" matSort class="mat-elevation-z2">
+
+          <!-- Código -->
+          <ng-container matColumnDef="codigo">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Código</th>
+            <td mat-cell *matCellDef="let p">{{ p.codigo }}</td>
+          </ng-container>
+
+          <!-- Producto -->
+          <ng-container matColumnDef="producto">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Producto</th>
+            <td mat-cell *matCellDef="let p">
+              <div class="producto-info">
+                <span class="nombre-producto">{{ (p.producto?.nombre || p.Producto?.nombre) || 'N/A' }}</span>
+                <small class="codigo-sbs" *ngIf="p.producto?.codigoSBS || p.Producto?.codigoSBS">
+                  SBS: {{ p.producto?.codigoSBS || p.Producto?.codigoSBS }}
+                </small>
+              </div>
+            </td>
+          </ng-container>
+
+          <!-- Monto -->
+          <ng-container matColumnDef="montoSolicitado">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Monto</th>
+            <td mat-cell *matCellDef="let p">{{ p.montoSolicitado | number:'1.2-2' }}</td>
+          </ng-container>
+
+          <!-- Estado -->
+          <ng-container matColumnDef="estado">
+            <th mat-header-cell *matHeaderCellDef>Estado</th>
+            <td mat-cell *matCellDef="let p">
+              <mat-chip>{{ getEstadoNombre(p) || 'N/A' }}</mat-chip>
+            </td>
+          </ng-container>
+
+          <!-- Acciones -->
+          <ng-container matColumnDef="acciones">
+            <th mat-header-cell *matHeaderCellDef>Acciones</th>
+            <td mat-cell *matCellDef="let p">
+              <button mat-raised-button color="primary" matTooltip="Ver detalle del préstamo">
+                <mat-icon>arrow_forward</mat-icon>
+                Ver Detalle
+              </button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="columnasPrestamosResumen"></tr>
+          <tr mat-row *matRowDef="let row; columns: columnasPrestamosResumen;"></tr>
+        </table>
+
+        <!-- Paginador préstamos -->
+        <mat-paginator
+          *ngIf="totalPrestamos() > 0"
+          [length]="totalPrestamos()"
+          [pageSizeOptions]="[10, 20, 50, 100]"
+          [pageSize]="pageSizePrest"
+          [pageIndex]="pageIndexPrest"
+          (page)="pageChangedPrestamos($event)"
+          showFirstLastButtons
+          class="paginator-entidades">
+        </mat-paginator>
+
+        <!-- Mensaje cuando no hay datos -->
+        <div class="no-datos" *ngIf="dataSourcePrestamos.data.length === 0 && !loading()">
+          <mat-icon>account_balance</mat-icon>
+          <p>No se encontraron préstamos para esta entidad</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- NIVEL 3: DETALLE PRÉSTAMOS -->
+    <div class="nivel-detalle-prestamos" *ngIf="mostrandoDetallePrestamos && !loading()">
+      <div class="nivel-header">
+        <div class="titulo-seccion">
+          <mat-icon>description</mat-icon>
+          <h2>Detalle de Préstamos</h2>
+          <span class="contador">({{ totalPrestamos() }} registros)</span>
+        </div>
+
+        <!-- Filtro de búsqueda -->
+        <mat-form-field appearance="outline" class="filtro-campo">
+          <mat-label>Buscar en detalle</mat-label>
+          <mat-icon matPrefix>search</mat-icon>
+          <input
+            matInput
+            (keyup)="currentFilterPrest = $any($event.target).value?.trim().toLowerCase(); pageIndexPrest = 0; updatePagePrestamos()"
+            placeholder="Buscar por código, amortización, fecha..."
+          />
+        </mat-form-field>
+      </div>
+
+      <div class="info-seleccion" *ngIf="productoSeleccionado()">
+        <mat-icon>info</mat-icon>
+        <span>Detalle del producto: <strong>{{ productoSeleccionado()!.nombre }}</strong></span>
       </div>
 
       <div class="tabla-container">
@@ -351,6 +332,34 @@
             <td mat-cell *matCellDef="let p">{{ p.codigo }}</td>
           </ng-container>
 
+          <!-- Producto -->
+          <ng-container matColumnDef="producto">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Producto</th>
+            <td mat-cell *matCellDef="let p">
+              <div class="producto-info">
+                <span class="nombre-producto">{{ (p.producto?.nombre || p.Producto?.nombre) || 'N/A' }}</span>
+                <small class="codigo-sbs" *ngIf="p.producto?.codigoSBS || p.Producto?.codigoSBS">
+                  SBS: {{ p.producto?.codigoSBS || p.Producto?.codigoSBS }}
+                </small>
+              </div>
+            </td>
+          </ng-container>
+|          <!-- Amortización -->
+          <ng-container matColumnDef="amortizacion">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Amortización</th>
+            <td mat-cell *matCellDef="let p">
+              <mat-chip color="accent" class="tipo-amortizacion">
+                {{ p.amortizacion || 'N/A' }}
+              </mat-chip>
+            </td>
+          </ng-container>
+          <!-- Estado Préstamo -->
+          <ng-container matColumnDef="estado">
+            <th mat-header-cell *matHeaderCellDef>Estado</th>
+            <td mat-cell *matCellDef="let p">
+              <mat-chip>{{ getEstadoNombre(p) || 'N/A' }}</mat-chip>
+            </td>
+          </ng-container>
           <!-- Fecha -->
           <ng-container matColumnDef="fecha">
             <th mat-header-cell *matHeaderCellDef mat-sort-header>Fecha</th>
@@ -375,13 +384,7 @@
             <td mat-cell *matCellDef="let p">{{ p.tasa | number:'1.2-2' }}%</td>
           </ng-container>
 
-          <!-- Estado -->
-          <ng-container matColumnDef="estado">
-            <th mat-header-cell *matHeaderCellDef>Estado</th>
-            <td mat-cell *matCellDef="let p">
-              <mat-chip>{{ $any(p).EstadoPrestamo?.nombre || 'N/A' }}</mat-chip>
-            </td>
-          </ng-container>
+
 
           <!-- Acciones -->
           <ng-container matColumnDef="acciones">

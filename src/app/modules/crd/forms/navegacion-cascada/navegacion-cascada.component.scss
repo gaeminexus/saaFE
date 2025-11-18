@@ -1,5 +1,6 @@
 @use '../../../../../styles/abstracts/colors' as *;
 @use '../../../../../styles/abstracts/variables' as *;
+@use 'sass:color';
 
 .navegacion-cascada {
   padding: $spacing-lg;
@@ -248,19 +249,53 @@
             color: $text-primary;
           }
 
-          .nombre-comercial {
-            font-size: $font-size-xs;
-            color: $text-muted;
-            font-style: italic;
-          }
-        }
-
-        .identificacion, .correo, .telefono {
-          font-family: monospace;
+        .nombre-comercial {
           font-size: $font-size-xs;
+          color: $text-muted;
+          font-style: italic;
         }
+      }
+
+      .producto-info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
 
         .nombre-producto {
+          font-weight: $font-weight-semibold;
+          color: $text-primary;
+          font-size: $font-size-sm;
+        }
+
+        .codigo-sbs {
+          font-family: monospace;
+          font-size: $font-size-xs;
+          color: $text-muted;
+          background: rgba($secondary-color, 0.1);
+          padding: 2px $spacing-xs;
+          border-radius: $border-radius-sm;
+          display: inline-block;
+          width: fit-content;
+        }
+      }
+
+      .tipo-amortizacion {
+        font-size: $font-size-xs !important;
+        font-weight: $font-weight-medium;
+        padding: $spacing-xs $spacing-sm;
+        border-radius: $border-radius-md;
+
+        &.mat-mdc-chip {
+          background: rgba($accent-color, 0.15);
+          color: color.adjust($accent-color, $lightness: -10%);
+          border: 1px solid rgba($accent-color, 0.3);
+        }
+      }
+
+      .identificacion, .correo, .telefono {
+        font-family: monospace;
+        font-size: $font-size-xs;
+      }        .nombre-producto {
           font-weight: $font-weight-medium;
           color: $text-primary;
         }
