@@ -942,3 +942,39 @@ tr.s16 {
 .p-2 { padding: 0.5rem !important; }
 .p-4 { padding: 1rem !important; }
 
+/* ========================================
+   ELIMINAR BORDE DEL SELECT DEL PAGINADOR
+========================================= */
+::ng-deep .saa-table-container .mat-mdc-paginator {
+  .mat-mdc-form-field {
+    border: none !important;
+  }
+
+  .mat-mdc-text-field-wrapper {
+    border: none !important;
+  }
+
+  .mdc-notched-outline__leading,
+  .mdc-notched-outline__notch,
+  .mdc-notched-outline__trailing {
+    border: none !important;
+    border-color: transparent !important;
+  }
+
+  .mdc-notched-outline {
+    border: none !important;
+    border-color: transparent !important;
+  }
+
+  .mat-mdc-form-field-infix {
+    border: none !important;
+    border-top: none !important;
+  }
+
+  .mat-mdc-form-field-type-mat-select .mdc-notched-outline__leading,
+  .mat-mdc-form-field-type-mat-select .mdc-notched-outline__notch,
+  .mat-mdc-form-field-type-mat-select .mdc-notched-outline__trailing {
+    border: none !important;
+    border-color: transparent !important;
+  }
+}

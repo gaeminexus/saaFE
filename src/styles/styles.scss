@@ -60,3 +60,64 @@ mat-icon,
   background-color: #ffffff !important;
   color: #333333 !important;
 }
+
+// Global MatSelect (Paginator options) styles - Fondo blanco sólido
+.mat-mdc-select-panel {
+  background-color: #ffffff !important;
+  backdrop-filter: none !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15) !important;
+  border-radius: 8px !important;
+}
+
+.mat-mdc-option {
+  background-color: transparent !important;
+
+  &:hover {
+    background-color: rgba(102, 126, 234, 0.08) !important;
+  }
+
+  &.mat-mdc-option-active,
+  &.mdc-list-item--selected {
+    background-color: rgba(102, 126, 234, 0.12) !important;
+  }
+}
+
+// Eliminar borde del contenedor de items por página en MatPaginator
+.mat-mdc-paginator-page-size {
+  border: none !important;
+}
+
+.mat-mdc-paginator-page-size .mat-mdc-form-field {
+  border: none !important;
+}
+
+.mat-mdc-paginator .mat-mdc-form-field-infix {
+  border: none !important;
+}
+
+.mat-mdc-text-field-wrapper {
+  border: none !important;
+}
+
+// Eliminar borde de TODOS los mat-select en el sistema
+.mat-mdc-select {
+  border: none !important;
+}
+
+.mat-mdc-select .mdc-notched-outline {
+  border: none !important;
+}
+
+.mat-mdc-select .mdc-notched-outline__leading,
+.mat-mdc-select .mdc-notched-outline__notch,
+.mat-mdc-select .mdc-notched-outline__trailing {
+  border: none !important;
+}
+
+.mat-mdc-form-field-type-mat-select .mdc-notched-outline {
+  border: none !important;
+}
+
+.mat-mdc-form-field-type-mat-select .mat-mdc-text-field-wrapper {
+  border: none !important;
+}
