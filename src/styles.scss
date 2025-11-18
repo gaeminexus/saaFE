@@ -39,6 +39,13 @@ $theme: mat.m2-define-light-theme((
 // Apply the theme to all Angular Material components
 @include mat.all-component-themes($theme);
 
+// Global icon style - Apply Material Symbols to all icon elements
+mat-icon,
+.material-icons,
+.material-icons-outlined {
+  font-family: 'Material Symbols Outlined' !important;
+}
+
 // Global styles
 html, body {
   height: 100%;

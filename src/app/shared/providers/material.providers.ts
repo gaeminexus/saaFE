@@ -1,4 +1,4 @@
-import { importProvidersFrom } from '@angular/core';
+import { importProvidersFrom, APP_INITIALIZER } from '@angular/core';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { MatCommonModule } from '@angular/material/core';
 import { MatButtonModule } from '@angular/material/button';
@@ -7,7 +7,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule, MAT_FORM_FIELD_DEFAULT_OPTIONS } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
+import { MatIconModule, MatIconRegistry } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatListModule } from '@angular/material/list';
 import { MatMenuModule } from '@angular/material/menu';
@@ -32,6 +32,17 @@ export function provideMaterial() {
         appearance: 'outline',
         floatLabel: 'always'
       }
+    },
+    // Configurar Material Symbols como fuente de iconos predeterminada
+    {
+      provide: APP_INITIALIZER,
+      useFactory: (iconRegistry: MatIconRegistry) => {
+        return () => {
+          iconRegistry.setDefaultFontSetClass('material-symbols-outlined');
+        };
+      },
+      deps: [MatIconRegistry],
+      multi: true
     },
     importProvidersFrom(
       MatCommonModule,
