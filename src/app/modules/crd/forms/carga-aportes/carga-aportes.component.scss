@@ -158,18 +158,192 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
       }
     }
 
-    // Resumen de filtros
-    .filters-summary {
+    // Contenedor combinado de filtros y carga
+    .filters-upload-container {
+      display: flex;
+      gap: 2rem;
       margin-bottom: 2rem;
 
+      > * {
+        flex: 1;
+      }
+    }
+
+    // Resumen de filtros
+    .filters-summary {
       .summary-card {
         border-radius: 1rem;
         box-shadow: $saa-shadow;
         overflow: hidden;
+        height: 100%;
+
+        mat-card-header {
+          background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+          padding: 0.75rem 1rem;
+
+          .avatar-icon {
+            background: $saa-gradient;
+            color: white;
+            font-size: 1.25rem;
+            width: 1.75rem;
+            height: 1.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+          }
+
+          mat-card-title {
+            color: $saa-primary;
+            font-weight: 600;
+            font-size: 0.95rem;
+          }
+        }
+
+        mat-card-content {
+          padding: 1.5rem;
+
+          .summary-items-row {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            justify-content: space-around;
+            flex-wrap: wrap;
+          }
+
+          .summary-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1rem;
+            background: $saa-background;
+            border-radius: 0.5rem;
+            border-left: 3px solid $saa-primary;
+            transition: all 0.3s ease;
+            flex: 0 1 auto;
+
+            &:hover {
+              background: lighten($saa-primary, 45%);
+              transform: translateY(-2px);
+              box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            }
+
+            mat-icon {
+              color: $saa-primary;
+              font-size: 1.25rem;
+              width: 1.25rem;
+              height: 1.25rem;
+            }
+
+            .label {
+              font-weight: 600;
+              color: $saa-text-secondary;
+              font-size: 0.9rem;
+            }
+
+            .value {
+              color: $saa-text-primary;
+              font-weight: 600;
+              font-size: 1rem;
+            }
+          }
+        }
+      }
+    }
+
+    // Área de carga de archivo
+    .upload-area {
+      .upload-card {
+        border-radius: 1rem;
+        box-shadow: $saa-shadow;
+        overflow: hidden;
+        height: 100%;
+
+        mat-card-header {
+          background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+          padding: 0.75rem 1rem;
+
+          .avatar-icon {
+            background: $saa-gradient;
+            color: white;
+            font-size: 1.25rem;
+            width: 1.75rem;
+            height: 1.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+          }
+
+          mat-card-title {
+            color: $saa-primary;
+            font-weight: 600;
+            font-size: 0.95rem;
+          }
+        }
+
+        mat-card-content {
+          padding: 1.5rem;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 1.5rem;
+
+          .upload-button {
+            font-size: 1rem;
+            padding: 1.25rem 2.5rem;
+            height: auto;
+            border-radius: 2rem;
+            box-shadow: $saa-shadow;
+            transition: all 0.3s ease;
+
+            mat-icon {
+              margin-right: 0.75rem;
+              font-size: 1.5rem;
+              width: 1.5rem;
+              height: 1.5rem;
+            }
+
+            &:hover {
+              transform: translateY(-2px);
+              box-shadow: $saa-shadow-hover;
+            }
+          }
+
+          .file-info {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1rem 1.5rem;
+            background: $saa-background;
+            border-radius: 0.75rem;
+            border: 1px solid $saa-border-light;
+
+            mat-icon {
+              color: $saa-primary;
+            }
+
+            span {
+              color: $saa-text-primary;
+              font-weight: 500;
+            }
+          }
+        }
+      }
+    }
+
+    // Sección de resultados
+    .results-section {
+      margin-top: 2rem;
+
+      mat-card {
+        border-radius: 1rem;
+        box-shadow: $saa-shadow;
 
         mat-card-header {
           background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
           padding: 1.25rem;
+          margin-bottom: 1rem;
 
           .avatar-icon {
             background: $saa-gradient;
@@ -186,50 +360,301 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
           mat-card-title {
             color: $saa-primary;
             font-weight: 600;
-            font-size: 1.2rem;
+            font-size: 1.3rem;
+          }
+
+          mat-card-subtitle {
+            color: $saa-text-secondary;
+            font-size: 0.95rem;
+            margin-top: 0.25rem;
           }
         }
 
         mat-card-content {
-          padding: 1.5rem;
+          padding: 0 1.5rem 1.5rem;
 
-          .summary-item {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            padding: 1rem;
-            margin-bottom: 0.75rem;
-            background: $saa-background;
-            border-radius: 0.5rem;
-            border-left: 3px solid $saa-primary;
-            transition: all 0.3s ease;
+          mat-accordion {
+            .mat-expansion-panel {
+              margin-bottom: 1rem;
+              border-radius: 0.75rem;
+              box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
 
-            &:last-child {
-              margin-bottom: 0;
+              &:last-child {
+                margin-bottom: 0;
+              }
+
+              .mat-expansion-panel-header {
+                padding: 1rem 1.5rem;
+
+                &:hover {
+                  background: lighten($saa-primary, 48%);
+                }
+
+                .mat-expansion-panel-header-title {
+                  flex: 1;
+                  margin-right: 0 !important;
+
+                  &.custom-panel-title {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    width: 100%;
+
+                    .title-left {
+                      display: flex;
+                      align-items: center;
+                      gap: 1rem;
+                      flex: 0 0 auto;
+
+                      .aporte-icon {
+                        color: $saa-primary;
+                        font-size: 1.5rem;
+                        width: 1.5rem;
+                        height: 1.5rem;
+                      }
+
+                      .aporte-codigo {
+                        font-weight: 700;
+                        color: $saa-primary;
+                        font-size: 1.1rem;
+                      }
+
+                      .separator {
+                        color: $saa-text-secondary;
+                        font-weight: 300;
+                      }
+
+                      .aporte-descripcion {
+                        color: $saa-text-primary;
+                        font-weight: 500;
+                      }
+                    }
+
+                    .title-center {
+                      flex: 0 0 auto;
+                      display: flex;
+                      justify-content: center;
+
+                      .total-descontado-badge {
+                        display: flex;
+                        align-items: center;
+                        gap: 0.5rem;
+                        padding: 0.4rem 0.75rem;
+                        background: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
+                        color: white;
+                        border-radius: 1rem;
+                        font-weight: 700;
+                        font-size: 0.85rem;
+                        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+
+                        mat-icon {
+                          font-size: 1rem;
+                          width: 1rem;
+                          height: 1rem;
+                        }
+                      }
+                    }
+
+                    .title-right {
+                      flex: 0 0 auto;
+                      display: flex;
+                      justify-content: flex-end;
+                      margin-right: 2rem;
+
+                      .registro-count {
+                        color: $saa-text-secondary;
+                        font-size: 0.9rem;
+                        font-weight: 500;
+                      }
+                    }
+                  }
+                }
+
+                .mat-expansion-panel-header-description {
+                  display: none;
+                }
+              }
+
+              .mat-expansion-panel-body {
+                padding: 0;
+              }
+            }
+          }
+
+          // Sección de totales
+          .totales-section {
+            padding: 1.5rem;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+            border-bottom: 2px solid $saa-border-light;
+
+            .totales-grid {
+              display: grid;
+              grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+              gap: 1rem;
+
+              .total-item {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 0.75rem 1rem;
+                background: white;
+                border-radius: 0.5rem;
+                border-left: 3px solid $saa-primary;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+                transition: all 0.3s ease;
+
+                &:hover {
+                  transform: translateX(3px);
+                  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+                }
+
+                .total-label {
+                  font-weight: 600;
+                  color: $saa-text-secondary;
+                  font-size: 0.9rem;
+                }
+
+                .total-valor {
+                  font-weight: 700;
+                  color: $saa-primary;
+                  font-size: 1rem;
+                  font-family: 'Courier New', monospace;
+                }
+
+                // Estilo especial para campos "No Descontado"
+                &.no-descontado {
+                  background: rgba(220, 53, 69, 0.05);
+                  border-left-color: rgba(220, 53, 69, 0.6);
+
+                  .total-valor {
+                    color: rgba(220, 53, 69, 0.85);
+                  }
+                }
+              }
+            }
+          }
+
+          .table-container {
+            overflow-x: auto;
+            border-radius: 0 0 0.75rem 0.75rem;
+
+            .data-table {
+              width: 100%;
+              background: white;
+
+              th {
+                background: $saa-background;
+                color: $saa-text-primary;
+                font-weight: 600;
+                font-size: 0.75rem;
+                padding: 0.5rem 0.5rem;
+                white-space: nowrap;
+                border-bottom: 2px solid $saa-primary;
+              }
+
+              td {
+                padding: 0.4rem 0.5rem;
+                color: $saa-text-primary;
+                font-size: 0.75rem;
+                border-bottom: 1px solid $saa-border-light;
+              }
+
+              // Columna de nombre más ancha
+              .mat-column-nombre {
+                min-width: 300px;
+                max-width: 400px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+              }
+
+              tr:hover {
+                background: lighten($saa-primary, 48%);
+              }
+
+              tr:last-child td {
+                border-bottom: none;
+              }
+            }
+          }
+
+          // Totales Generales
+          .totales-generales-section {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: linear-gradient(135deg, lighten($saa-primary, 45%) 0%, lighten($saa-secondary, 45%) 100%);
+            border-radius: 0.75rem;
+            border: 2px solid $saa-primary;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+
+            .totales-generales-header {
+              display: flex;
+              align-items: center;
+              gap: 0.75rem;
+              margin-bottom: 1.5rem;
+              padding-bottom: 1rem;
+              border-bottom: 2px solid $saa-primary;
+
+              mat-icon {
+                font-size: 2rem;
+                width: 2rem;
+                height: 2rem;
+                color: $saa-primary;
+              }
+
+              h3 {
+                margin: 0;
+                font-size: 1.4rem;
+                font-weight: 700;
+                color: $saa-primary;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+              }
             }
 
-            &:hover {
-              background: lighten($saa-primary, 45%);
-              transform: translateX(5px);
-            }
+            .totales-grid {
+              display: grid;
+              grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+              gap: 1rem;
 
-            mat-icon {
-              color: $saa-primary;
-              font-size: 1.5rem;
-              width: 1.5rem;
-              height: 1.5rem;
-            }
+              .total-item {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 1rem 1.25rem;
+                background: white;
+                border-radius: 0.5rem;
+                border-left: 4px solid $saa-primary;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+                transition: all 0.3s ease;
 
-            .label {
-              font-weight: 600;
-              color: $saa-text-secondary;
-              min-width: 80px;
-            }
+                &:hover {
+                  transform: translateY(-2px);
+                  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                }
 
-            .value {
-              color: $saa-text-primary;
-              font-weight: 600;
-              font-size: 1.05rem;
+                .total-label {
+                  font-weight: 700;
+                  color: $saa-text-secondary;
+                  font-size: 0.95rem;
+                }
+
+                .total-valor {
+                  font-weight: 800;
+                  color: $saa-primary;
+                  font-size: 1.15rem;
+                  font-family: 'Courier New', monospace;
+                }
+
+                &.no-descontado {
+                  background: rgba(220, 53, 69, 0.08);
+                  border-left-color: rgba(220, 53, 69, 0.7);
+
+                  .total-valor {
+                    color: rgba(220, 53, 69, 0.9);
+                  }
+                }
+              }
             }
           }
         }
