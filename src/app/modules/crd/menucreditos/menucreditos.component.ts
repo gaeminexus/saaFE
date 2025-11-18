@@ -65,7 +65,7 @@ export class MenucreditosComponent {
         {
           displayName: 'Dash',
           iconName: 'person_play',
-          route: '/menucreditos/extr'
+          route: '/menucreditos/participe-dash'
         },
       ]
     },
