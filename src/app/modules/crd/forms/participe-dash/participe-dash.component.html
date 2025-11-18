@@ -1,1 +1,328 @@
-<p>participe-dash.component works!</p>
+<div class="participe-dash-container">
+  <!-- Header con búsqueda -->
+  <div class="search-header">
+    <div class="header-title">
+      <mat-icon class="header-icon">account_circle</mat-icon>
+      <h1>Búsqueda de Partícipe</h1>
+    </div>
+
+    <div class="search-box">
+      <mat-form-field appearance="outline" class="search-field">
+        <mat-label>Buscar por Cédula, Razón Social o Nombre Comercial</mat-label>
+        <input matInput
+               [(ngModel)]="searchText"
+               (keyup.enter)="buscarEntidad()"
+               placeholder="Ej: 1234567890, EMPRESA S.A., Mi Negocio">
+        <mat-icon matPrefix>search</mat-icon>
+        @if (searchText) {
+          <button matSuffix mat-icon-button (click)="limpiarBusqueda()">
+            <mat-icon>clear</mat-icon>
+          </button>
+        }
+      </mat-form-field>
+      <button mat-raised-button
+              color="primary"
+              (click)="buscarEntidad()"
+              [disabled]="isSearching"
+              class="search-button">
+        @if (isSearching) {
+          <mat-spinner diameter="20"></mat-spinner>
+        } @else {
+          <mat-icon>search</mat-icon>
+          Buscar
+        }
+      </button>
+    </div>
+  </div>
+
+  <!-- Información de la entidad encontrada -->
+  @if (entidadEncontrada) {
+    <mat-card class="entidad-card">
+      <mat-card-header>
+        <mat-icon mat-card-avatar class="avatar-icon">business</mat-icon>
+        <mat-card-title>{{ entidadEncontrada.razonSocial || entidadEncontrada.nombreComercial }}</mat-card-title>
+        <mat-card-subtitle>
+          <span class="info-item">
+            <mat-icon>badge</mat-icon>
+            {{ entidadEncontrada.numeroIdentificacion }}
+          </span>
+          @if (entidadEncontrada.nombreComercial && entidadEncontrada.razonSocial !== entidadEncontrada.nombreComercial) {
+            <span class="info-item">
+              <mat-icon>store</mat-icon>
+              {{ entidadEncontrada.nombreComercial }}
+            </span>
+          }
+        </mat-card-subtitle>
+      </mat-card-header>
+    </mat-card>
+
+    <!-- Dashboard Principal -->
+    @if (vistaActual === 'dashboard') {
+      <div class="dashboard-grid">
+        <!-- Tarjetas de Préstamos por Tipo -->
+        @for (prestamoPorTipo of prestamosPorTipo; track prestamoPorTipo.tipoPrestamo.codigo) {
+          <mat-card class="dashboard-card prestamos-card" (click)="verDetallePrestamos(prestamoPorTipo)">
+            <mat-card-header>
+              <mat-icon mat-card-avatar class="card-icon">credit_card</mat-icon>
+              <mat-card-title>{{ prestamoPorTipo.tipoPrestamo.nombre }}</mat-card-title>
+            </mat-card-header>
+            <mat-card-content>
+              <div class="stat-grid">
+                <div class="stat-item">
+                  <mat-icon>numbers</mat-icon>
+                  <div class="stat-value">{{ prestamoPorTipo.totalPrestamos }}</div>
+                  <div class="stat-label">Préstamos</div>
+                </div>
+                <div class="stat-item">
+                  <mat-icon>attach_money</mat-icon>
+                  <div class="stat-value">{{ prestamoPorTipo.montoTotal | number:'1.2-2' }}</div>
+                  <div class="stat-label">Monto Total</div>
+                </div>
+                <div class="stat-item">
+                  <mat-icon>account_balance</mat-icon>
+                  <div class="stat-value">{{ prestamoPorTipo.saldoTotal | number:'1.2-2' }}</div>
+                  <div class="stat-label">Saldo Total</div>
+                </div>
+              </div>
+            </mat-card-content>
+            <mat-card-actions>
+              <button mat-button color="primary">
+                Ver Detalles
+                <mat-icon>chevron_right</mat-icon>
+              </button>
+            </mat-card-actions>
+          </mat-card>
+        }
+
+        <!-- Tarjeta de Aportes (placeholder) -->
+        <mat-card class="dashboard-card aportes-card" (click)="verDetalleAportes()">
+          <mat-card-header>
+            <mat-icon mat-card-avatar class="card-icon">savings</mat-icon>
+            <mat-card-title>Total Aportes</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="stat-grid">
+              <div class="stat-item">
+                <mat-icon>account_balance_wallet</mat-icon>
+                <div class="stat-value">{{ totalAportes | number:'1.2-2' }}</div>
+                <div class="stat-label">Total Acumulado</div>
+              </div>
+            </div>
+          </mat-card-content>
+          <mat-card-actions>
+            <button mat-button color="accent">
+              Ver Detalles
+              <mat-icon>chevron_right</mat-icon>
+            </button>
+          </mat-card-actions>
+        </mat-card>
+      </div>
+    }
+
+    <!-- Detalle de Préstamos por Tipo -->
+    @if (vistaActual === 'detallePrestamos' && tipoPrestamoSeleccionado) {
+      <div class="detalle-container">
+        <div class="detalle-header">
+          <button mat-icon-button (click)="volverDashboard()">
+            <mat-icon>arrow_back</mat-icon>
+          </button>
+          <h2>
+            <mat-icon>credit_card</mat-icon>
+            {{ tipoPrestamoSeleccionado.tipoPrestamo.nombre }}
+          </h2>
+        </div>
+
+        <div class="prestamos-list">
+          @for (prestamo of tipoPrestamoSeleccionado.prestamos; track prestamo.codigo) {
+            <mat-card class="prestamo-card">
+              <mat-card-header (click)="togglePrestamo(prestamo)" class="clickable">
+                <mat-icon mat-card-avatar>receipt_long</mat-icon>
+                <mat-card-title>Préstamo #{{ prestamo.codigo }}</mat-card-title>
+                <mat-card-subtitle>
+                  <span class="info-chip">
+                    <mat-icon>event</mat-icon>
+                    {{ prestamo.fecha | date:'dd/MM/yyyy' }}
+                  </span>
+                  <span class="info-chip">
+                    <mat-icon>schedule</mat-icon>
+                    {{ prestamo.plazo }} meses
+                  </span>
+                  <span class="info-chip" [class.estado-activo]="prestamo.EstadoPrestamo?.codigo === 1">
+                    <mat-icon>info</mat-icon>
+                    {{ prestamo.EstadoPrestamo?.nombre }}
+                  </span>
+                </mat-card-subtitle>
+                <button mat-icon-button class="expand-icon">
+                  <mat-icon>{{ prestamoExpandido === prestamo.codigo ? 'expand_less' : 'expand_more' }}</mat-icon>
+                </button>
+              </mat-card-header>
+
+              <mat-card-content>
+                <div class="prestamo-summary">
+                  <div class="summary-item">
+                    <span class="label">Monto Solicitado:</span>
+                    <span class="value">${{ prestamo.montoSolicitado | number:'1.2-2' }}</span>
+                  </div>
+                  <div class="summary-item">
+                    <span class="label">Total Préstamo:</span>
+                    <span class="value">${{ prestamo.totalPrestamo | number:'1.2-2' }}</span>
+                  </div>
+                  <div class="summary-item">
+                    <span class="label">Saldo Total:</span>
+                    <span class="value saldo">${{ prestamo.saldoTotal | number:'1.2-2' }}</span>
+                  </div>
+                  <div class="summary-item">
+                    <span class="label">Total Pagado:</span>
+                    <span class="value pagado">${{ prestamo.totalPagado | number:'1.2-2' }}</span>
+                  </div>
+                </div>
+
+                <!-- Detalles de Cuotas -->
+                @if (prestamoExpandido === prestamo.codigo) {
+                  <div class="cuotas-section">
+                    @if (isLoadingDetalles) {
+                      <div class="loading-container">
+                        <mat-spinner diameter="40"></mat-spinner>
+                        <p>Cargando cuotas...</p>
+                      </div>
+                    } @else if (detallesPrestamo.has(prestamo.codigo)) {
+                      <div class="cuotas-header">
+                        <h3>
+                          <mat-icon>list_alt</mat-icon>
+                          Detalle de Cuotas
+                        </h3>
+                        @if (detallesPrestamo.get(prestamo.codigo)!.length > 0) {
+                          <div class="totales-cuotas">
+                            <div class="total-item">
+                              <span class="label">Total Capital:</span>
+                              <span class="value">${{ calcularTotales(prestamo.codigo).capital | number:'1.2-2' }}</span>
+                            </div>
+                            <div class="total-item">
+                              <span class="label">Total Interés:</span>
+                              <span class="value">${{ calcularTotales(prestamo.codigo).interes | number:'1.2-2' }}</span>
+                            </div>
+                            <div class="total-item">
+                              <span class="label">Total Cuota:</span>
+                              <span class="value">${{ calcularTotales(prestamo.codigo).cuota | number:'1.2-2' }}</span>
+                            </div>
+                          </div>
+                        }
+                      </div>
+
+                      <div class="cuotas-table">
+                        @for (detalleConPagos of detallesPrestamo.get(prestamo.codigo)!; track detalleConPagos.detalle.codigo; let idx = $index) {
+                          <div class="cuota-item">
+                            <div class="cuota-header" (click)="togglePagosDetalle(prestamo.codigo, idx)">
+                              <div class="cuota-numero">
+                                <mat-icon>receipt</mat-icon>
+                                Cuota {{ detalleConPagos.detalle.numeroCuota }}
+                              </div>
+                              <div class="cuota-info">
+                                <span class="info-item">
+                                  <mat-icon>event</mat-icon>
+                                  {{ detalleConPagos.detalle.fechaVencimiento | date:'dd/MM/yyyy' }}
+                                </span>
+                                <span class="info-item">
+                                  <mat-icon>account_balance</mat-icon>
+                                  Capital: ${{ detalleConPagos.detalle.capital | number:'1.2-2' }}
+                                </span>
+                                <span class="info-item">
+                                  <mat-icon>percent</mat-icon>
+                                  Interés: ${{ detalleConPagos.detalle.interes | number:'1.2-2' }}
+                                </span>
+                                <span class="info-item total">
+                                  <mat-icon>attach_money</mat-icon>
+                                  Cuota: ${{ detalleConPagos.detalle.cuota | number:'1.2-2' }}
+                                </span>
+                              </div>
+                              <button mat-icon-button>
+                                <mat-icon>{{ detalleConPagos.mostrarPagos ? 'expand_less' : 'expand_more' }}</mat-icon>
+                              </button>
+                            </div>
+
+                            <!-- Pagos de la cuota -->
+                            @if (detalleConPagos.mostrarPagos) {
+                              <div class="pagos-container">
+                                @if (isLoadingPagos) {
+                                  <div class="loading-container-small">
+                                    <mat-spinner diameter="30"></mat-spinner>
+                                    <span>Cargando pagos...</span>
+                                  </div>
+                                } @else if (detalleConPagos.pagos.length > 0) {
+                                  <div class="pagos-list">
+                                    <div class="pagos-header">
+                                      <mat-icon>payment</mat-icon>
+                                      <h4>Pagos Realizados</h4>
+                                    </div>
+                                    @for (pago of detalleConPagos.pagos; track pago.codigo) {
+                                      <div class="pago-item">
+                                        <div class="pago-fecha">
+                                          <mat-icon>event</mat-icon>
+                                          {{ pago.fecha | date:'dd/MM/yyyy HH:mm' }}
+                                        </div>
+                                        <div class="pago-detalles">
+                                          <span>Capital: ${{ pago.capitalPagado | number:'1.2-2' }}</span>
+                                          <span>Interés: ${{ pago.interesPagado | number:'1.2-2' }}</span>
+                                          @if (pago.moraPagada > 0) {
+                                            <span>Mora: ${{ pago.moraPagada | number:'1.2-2' }}</span>
+                                          }
+                                          <span class="total">Total: ${{ pago.valor | number:'1.2-2' }}</span>
+                                        </div>
+                                      </div>
+                                    }
+                                  </div>
+                                } @else {
+                                  <div class="no-pagos">
+                                    <mat-icon>info</mat-icon>
+                                    <p>No hay pagos registrados para esta cuota</p>
+                                  </div>
+                                }
+                              </div>
+                            }
+                          </div>
+                        }
+                      </div>
+                    }
+                  </div>
+                }
+              </mat-card-content>
+            </mat-card>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- Detalle de Aportes (placeholder) -->
+    @if (vistaActual === 'detalleAportes') {
+      <div class="detalle-container">
+        <div class="detalle-header">
+          <button mat-icon-button (click)="volverDashboard()">
+            <mat-icon>arrow_back</mat-icon>
+          </button>
+          <h2>
+            <mat-icon>savings</mat-icon>
+            Detalle de Aportes
+          </h2>
+        </div>
+
+        <mat-card class="info-card">
+          <mat-card-content>
+            <div class="placeholder-content">
+              <mat-icon class="placeholder-icon">construction</mat-icon>
+              <p>La funcionalidad de aportes estará disponible próximamente.</p>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    }
+  }
+
+  <!-- Estado vacío -->
+  @if (!entidadEncontrada && !isSearching) {
+    <div class="empty-state">
+      <mat-icon class="empty-icon">person_search</mat-icon>
+      <h2>Busque un Partícipe</h2>
+      <p>Ingrese el número de identificación, razón social o nombre comercial para comenzar</p>
+    </div>
+  }
+</div>
