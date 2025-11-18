@@ -14,6 +14,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { SelectionModel } from '@angular/cdk/collections';
+import { catchError } from 'rxjs/operators';
 
 import { PlanCuentaService } from '../../service/plan-cuenta.service';
 import { NaturalezaCuentaService } from '../../service/naturaleza-cuenta.service';
@@ -142,9 +143,15 @@ export class PlanGridComponent implements OnInit {
   public loadData(): void {
     this.loading = true;
     this.error = null;
-    console.log('🔍 PlanGrid: usando getAll + filtro empresa 280 (omitimos selectByCriteria por 405/500)');
+    console.log('🔍 PlanGrid: priorizando selectByCriteria con fallback a getAll');
 
-    this.planCuentaService.getAll().subscribe({
+    // Priorizar selectByCriteria con fallback a getAll
+    this.planCuentaService.selectByCriteria({}).pipe(
+      catchError(err => {
+        console.warn('selectByCriteria falló, intentando getAll como fallback:', err);
+        return this.planCuentaService.getAll();
+      })
+    ).subscribe({
       next: (data) => {
         console.log('📡 PlanGrid getAll respuesta cruda:', data);
         const list = Array.isArray(data) ? data : (data as any)?.data ?? [];

@@ -19,6 +19,7 @@ import { Entidad } from '../../model/entidad';
 import { Producto } from '../../model/producto';
 import { Prestamo } from '../../model/prestamo';
 import { DetallePrestamo } from '../../model/detalle-prestamo';
+import { ServiciosCrd } from '../../service/ws-crd';
 import { PagoPrestamo } from '../../model/pago-prestamo';
 
 import { EntidadService } from '../../service/entidad.service';
@@ -83,6 +84,7 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
   entidadSeleccionada = signal<Entidad | null>(null);
   productoSeleccionado = signal<Producto | null>(null);
   prestamoSeleccionado = signal<Prestamo | null>(null);
+  detallePrestamoSeleccionado = signal<DetallePrestamo | null>(null);
 
   // Fuentes de datos para las tablas
   dataSourceEntidades = new MatTableDataSource<Entidad>([]);
@@ -95,8 +97,8 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
   columnasEntidades: string[] = ['codigo', 'razonSocial', 'numeroIdentificacion', 'correoPersonal', 'movil', 'acciones'];
   columnasProductos: string[] = ['codigo', 'nombre', 'codigoSBS', 'tipoPrestamo', 'estado', 'acciones'];
   columnasPrestamosResumen: string[] = ['codigo', 'producto', 'amortizacion', 'montoSolicitado', 'estado', 'acciones'];
-  columnasDetallePrestamos: string[] = ['numeroCuota', 'fechaVencimiento', 'capital', 'interes', 'mora', 'interesVencido', 'saldoCapital', 'saldoInteres', 'saldoMora', 'saldoInteresVencido', 'fechaPagado'];
-  columnasPagos: string[] = ['numero', 'fechaPago', 'monto', 'capital', 'interes', 'mora', 'estado'];
+  columnasDetallePrestamos: string[] = ['numeroCuota', 'fechaVencimiento', 'capital', 'interes', 'mora', 'interesVencido', 'saldoCapital', 'fechaPagado', 'acciones'];
+  columnasPagos: string[] = ['fecha', 'valor', 'numeroCuota', 'capitalPagado', 'interesPagado', 'moraPagada', 'idEstado'];
 
   // Filtros
   filtroEntidades = '';
@@ -204,7 +206,12 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
     this.loading.set(true);
     this.errorMsg.set('');
 
-    this.entidadService.getAll().pipe(
+    // Priorizar selectByCriteria con fallback a getAll
+    this.entidadService.selectByCriteria([]).pipe(
+      catchError(err => {
+        console.warn('selectByCriteria falló, intentando getAll como fallback:', err);
+        return this.entidadService.getAll();
+      })).pipe(
       catchError(err => {
         console.error('Error cargando entidades:', err);
         let errorMessage = 'Error al cargar entidades';
@@ -286,7 +293,21 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
   cargarProductos(codigoEntidad: number): void {
     this.loading.set(true);
     this.errorMsg.set('');
-    this.productoService.getAll().pipe(
+
+    // Construir criterios de búsqueda para productos por entidad
+    const criterios: Array<DatosBusqueda> = [];
+
+    // Si se requiere filtrar por entidad, descomentar:
+    // const criterioEntidad = new DatosBusqueda();
+    // criterioEntidad.asigna3(TipoDatosBusqueda.LONG, 'entidadId', codigoEntidad.toString(), TipoComandosBusqueda.IGUAL);
+    // criterios.push(criterioEntidad);
+
+    // Priorizar selectByCriteria con fallback a getAll
+    this.productoService.selectByCriteria(criterios).pipe(
+      catchError(err => {
+        console.warn('selectByCriteria falló para productos, intentando getAll como fallback:', err);
+        return this.productoService.getAll();
+      }),
       catchError(err => {
         this.errorMsg.set('Error al cargar productos: ' + (typeof err === 'string' ? err : err?.message || ''));
         return of([]);
@@ -440,6 +461,26 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
 
     // Cargar el detalle específico del préstamo
     this.cargarDetallePrestamo(prestamo.codigo);
+  }
+
+  // Navegar al nivel 4 cuando se selecciona un detalle préstamo
+  seleccionarDetallePrestamo(detallePrestamo: DetallePrestamo): void {
+    console.log('🎯 Seleccionando detalle préstamo para ver pagos:', detallePrestamo.codigo);
+    this.detallePrestamoSeleccionado.set(detallePrestamo);
+    this.nivelActual.set(NivelNavegacion.PAGO_PRESTAMO);
+
+    // Actualizar breadcrumbs
+    const entidad = this.entidadSeleccionada();
+    const prestamo = this.prestamoSeleccionado();
+    this.breadcrumbs.set([
+      { nivel: NivelNavegacion.ENTIDADES, titulo: 'Entidades', subtitulo: entidad?.razonSocial, activo: false },
+      { nivel: NivelNavegacion.PRESTAMOS, titulo: 'Préstamos', subtitulo: 'Listado', activo: false },
+      { nivel: NivelNavegacion.DETALLE_PRESTAMOS, titulo: 'Detalle Préstamo', subtitulo: `Código: ${prestamo?.codigo}`, activo: false },
+      { nivel: NivelNavegacion.PAGO_PRESTAMO, titulo: 'Pagos', subtitulo: `Cuota: ${detallePrestamo.numeroCuota}`, activo: true }
+    ]);
+
+    // Cargar los pagos del detalle préstamo seleccionado
+    this.cargarPagoPrestamo(detallePrestamo.codigo);
   }
 
   cargarPrestamos(): void {
@@ -607,8 +648,8 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
 
       // Enriquecer cada préstamo con la información completa del producto
       const prestamosEnriquecidos = prestamos.map(prestamo => {
-        // Acceder al campo producto (minúscula)
-        const codigoProducto = prestamo.producto?.codigo;
+        // Acceder al campo producto (minúscula) o Producto (mayúscula) según el backend real
+        const codigoProducto = (prestamo as any).producto?.codigo || prestamo.Producto?.codigo;
         if (codigoProducto) {
           const productoCompleto = mapaProductos.get(codigoProducto);
           if (productoCompleto) {
@@ -643,12 +684,14 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
       filtered = filtered.filter(p => {
         return (
           p.codigo?.toString().includes(f) ||
-          p.entidad?.codigo?.toString().includes(f) ||
-          p.entidad?.razonSocial?.toLowerCase().includes(f) ||
-          p.entidad?.numeroIdentificacion?.toLowerCase().includes(f) ||
-          // Buscar en producto (minúscula)
-          p.producto?.nombre?.toLowerCase().includes(f) ||
-          p.producto?.codigoSBS?.toLowerCase().includes(f) ||
+          p.Entidad?.codigo?.toString().includes(f) ||
+          p.Entidad?.razonSocial?.toLowerCase().includes(f) ||
+          p.Entidad?.numeroIdentificacion?.toLowerCase().includes(f) ||
+          // Buscar tanto en 'producto' (minúscula) como en 'Producto' (mayúscula)
+          (p as any).producto?.nombre?.toLowerCase().includes(f) ||
+          (p as any).producto?.codigoSBS?.toLowerCase().includes(f) ||
+          p.Producto?.nombre?.toLowerCase().includes(f) ||
+          p.Producto?.codigoSBS?.toLowerCase().includes(f) ||
           p.montoSolicitado?.toString().includes(f) ||
           p.plazo?.toString().includes(f) ||
           p.estadoPrestamo?.nombre?.toLowerCase().includes(f) ||
@@ -871,12 +914,6 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
   cargarDetallePrestamo(codigoPrestamo: number): void {
     this.loading.set(true);
     this.errorMsg.set('');
-    console.log('🔍 INICIO: Cargando cuotas del préstamo ID:', codigoPrestamo);
-    console.log('🔍 Tipo de dato recibido:', typeof codigoPrestamo, 'Valor:', codigoPrestamo);
-
-    // Verificar URL del servicio
-    console.log('🌍 Endpoint base DTPR:', (this.detallePrestamoService as any).constructor.name);
-    console.log('🌍 URL base esperada: http://localhost:8080/saa-backend/rest/dtpr');
 
     // Construir criterio con relación padre-hijo: Prestamo (padre) -> codigo (hijo)
     this.criterioConsultaArray = [];
@@ -897,61 +934,19 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
     criterioOrden.orderBy('numeroCuota');
     this.criterioConsultaArray.push(criterioOrden);
 
-    console.log('📋 Criterio construido - Padre: prestamo, Campo: codigo, Valor:', codigoPrestamo);
-    console.log('📋 Array completo de criterios:', JSON.stringify(this.criterioConsultaArray, null, 2));
 
-    // Probar primero una consulta directa simple para verificar conectividad
-    console.log('🧪 PRUEBA 1: Verificando endpoint básico con getAll...');
-    this.detallePrestamoService.getAll().pipe(
-      catchError(err => {
-        console.log('❌ ERROR en getAll básico:', err);
-        return of(null);
-      })
-    ).subscribe(testResult => {
-      console.log('🧪 Resultado de prueba getAll:', testResult?.length || 0, 'registros totales');
-      if (testResult && testResult.length > 0) {
-        console.log('🧪 Muestra de registro para análisis:', testResult[0]);
-        console.log('🧪 Campos en primer registro:', Object.keys(testResult[0]));
-
-        // Buscar registros que coincidan con nuestro préstamo
-        const coincidencias = testResult.filter((r: any) =>
-          r.codigoPrestamo === codigoPrestamo ||
-          r.prestamo?.codigo === codigoPrestamo ||
-          (r as any).prestamoCodigo === codigoPrestamo
-        );
-        console.log('🧪 Registros que coinciden con préstamo', codigoPrestamo + ':', coincidencias.length);
-        if (coincidencias.length > 0) {
-          console.log('🧪 Primera coincidencia:', coincidencias[0]);
-        }
-      }
-    });
-
-    // Ahora probar selectByCriteria
-    console.log('🌐 PRUEBA 2: Enviando selectByCriteria al backend...');
     this.detallePrestamoService.selectByCriteria(this.criterioConsultaArray).pipe(
       catchError(err => {
-        console.log('❌ ERROR en selectByCriteria:', err);
-        console.log('❌ Tipo de error:', typeof err, 'Status:', err?.status);
-        console.log('❌ Mensaje completo del error:', JSON.stringify(err, null, 2));
-
-        console.log('🔄 FALLBACK: Intentando getAll() para obtener todos los registros...');
         return this.detallePrestamoService.getAll().pipe(
           catchError(err2 => {
-            console.log('❌ ERROR también en getAll():', err2);
             return of([] as DetallePrestamo[]);
           })
         );
       }),
       finalize(() => {
         this.loading.set(false);
-        console.log('⏹️ Finalizó la carga (loading = false)');
       })
     ).subscribe((resultado: any) => {
-      console.log('📦 RESPUESTA del backend recibida');
-      console.log('📦 Tipo de resultado:', typeof resultado);
-      console.log('📦 Es array?:', Array.isArray(resultado));
-      console.log('📦 Longitud/valor:', Array.isArray(resultado) ? resultado.length : resultado);
-      console.log('📦 Resultado completo:', resultado);
 
       let cuotas: DetallePrestamo[] = [];
       if (Array.isArray(resultado)) {
@@ -983,7 +978,11 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
           }
         });
 
-        // Verificar si alguna cuota ya tiene el codigoPrestamo correcto
+        // Si tenemos cuotas, mostrar algunas muestras para debug
+        if (cuotas.length > 0) {
+          console.log('📝 Muestra de la primera cuota:', cuotas[0]);
+          console.log('📝 Total cuotas cargadas:', cuotas.length);
+        }        // Verificar si alguna cuota ya tiene el codigoPrestamo correcto
         const cuotasConCodigo = cuotas.filter(c => c.codigoPrestamo === codigoPrestamo);
         console.log('🎯 Cuotas que YA tienen codigoPrestamo=' + codigoPrestamo + ':', cuotasConCodigo.length);
 
@@ -1071,7 +1070,7 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
       // Ordenar por número de cuota
       cuotas.sort((a, b) => (a.numeroCuota || 0) - (b.numeroCuota || 0));
 
-      console.log('📋 FINAL: Asignando', cuotas.length, 'cuotas al dataSource');
+
       this.allDetallePrestamos = cuotas;
       this.totalDetallePrestamos.set(this.allDetallePrestamos.length);
       this.pageIndexDet = 0;
@@ -1212,17 +1211,218 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
    */
   formatearMoneda(valor: any): string {
     if (valor === null || valor === undefined || valor === '') {
-      return '0.00';
+      return '0,00';
     }
 
     const numero = Number(valor);
     if (isNaN(numero)) {
-      return '0.00';
+      return '0,00';
+    }
+
+    // Mostrar decimales reales con toFixed
+    const resultado = numero.toFixed(2).replace('.', ',');
+    return resultado;
+  }  /**
+   * Función de formateo decimal simplificada
+   */
+  formatearDecimal(valor: any): string {
+    if (valor === null || valor === undefined || valor === '') {
+      return '0,00';
+    }
+
+    const numero = Number(valor);
+    if (isNaN(numero)) {
+      return '0,00';
     }
 
     return numero.toLocaleString('es-ES', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
+    });
+  }
+
+  // Métodos de paginación para pagos (NIVEL 4)
+  updatePagePagos(): void {
+    this.totalPagos.set(this.allPagos.length);
+
+    const start = this.pageIndexPag * this.pageSizePag;
+    const end = start + this.pageSizePag;
+    const paginatedData = this.allPagos.slice(start, end);
+
+    this.dataSourcePagos.data = paginatedData;
+  }
+
+  pageChangedPagos(event: PageEvent): void {
+    this.pageIndexPag = event.pageIndex;
+    this.pageSizePag = event.pageSize;
+    this.updatePagePagos();
+  }
+
+  // Cargar pagos del detalle préstamo seleccionado (NIVEL 4)
+  cargarPagoPrestamo(codigoDetallePrestamo: number): void {
+    this.loading.set(true);
+    this.errorMsg.set('');
+
+    console.log('🔍 CARGANDO PAGOS para codigoDetalle:', codigoDetallePrestamo);
+
+    const detallePrestamo = this.detallePrestamoSeleccionado();
+    console.log('📋 DETALLE PRÉSTAMO SELECCIONADO:', {
+      codigo: detallePrestamo?.codigo,
+      numeroCuota: detallePrestamo?.numeroCuota,
+      codigoPrestamo: detallePrestamo?.codigoPrestamo,
+      fechaVencimiento: detallePrestamo?.fechaVencimiento
+    });
+
+    // Crear criterio de búsqueda
+    this.criterioConsultaArray = [];
+
+    if (!detallePrestamo?.numeroCuota) {
+      console.error('❌ No se puede crear criterio: DetallePrestamo no seleccionado o sin numeroCuota');
+      this.errorMsg.set('Error: No hay detalle de préstamo seleccionado');
+      this.loading.set(false);
+      return;
+    }
+
+    // Filtrado con lógica AND: codigoPrestamo AND codigoDetalle
+    const codigoPrestamo = detallePrestamo.codigoPrestamo || detallePrestamo.prestamoId;
+    const codigoDetalle = detallePrestamo.codigo; // código del detalle préstamo
+
+    // 1. Filtrar por codigoPrestamo
+    if (codigoPrestamo) {
+      const criterioPrestamo = new DatosBusqueda();
+      criterioPrestamo.asigna3(
+        TipoDatosBusqueda.LONG,
+        'codigoPrestamo',
+        codigoPrestamo?.toString() || '',
+        TipoComandosBusqueda.IGUAL
+      );
+      this.criterioConsultaArray.push(criterioPrestamo);
+    }
+
+    // 2. AND - Filtrar por codigoDetalle
+    if (codigoDetalle) {
+      const criterioCodigoDetalle = new DatosBusqueda();
+      criterioCodigoDetalle.asigna3(
+        TipoDatosBusqueda.LONG,
+        'codigoDetalle',
+        codigoDetalle.toString(),
+        TipoComandosBusqueda.IGUAL
+      );
+      criterioCodigoDetalle.setTipoOperadorLogico(TipoComandosBusqueda.AND);
+      this.criterioConsultaArray.push(criterioCodigoDetalle);
+    }
+
+    console.log('🔍 CRITERIOS AND ENVIADOS:', {
+      criterios: [
+        codigoPrestamo ? 'codigoPrestamo = ' + codigoPrestamo : 'Sin codigoPrestamo',
+        codigoDetalle ? 'AND codigoDetalle = ' + codigoDetalle : 'Sin codigoDetalle'
+      ],
+      totalCriterios: this.criterioConsultaArray.length,
+      criterioArray: this.criterioConsultaArray
+    });    this.pagoPrestamoService.selectByCriteria(this.criterioConsultaArray).pipe(
+      catchError(err => {
+        console.error('❌ selectByCriteria falló:', err.message || err);
+        console.log('🔄 Probando con getAll() y filtro en frontend...');
+        // Si selectByCriteria falla, usar getAll() y filtrar en frontend
+        return this.pagoPrestamoService.getAll();
+      }),
+      catchError(err => {
+        console.error('❌ getAll() también falló:', err);
+        return of([]);
+      }),
+      finalize(() => {
+        this.loading.set(false);
+      })
+    ).subscribe((resultado: any) => {
+      let pagos: PagoPrestamo[] = [];
+
+      // Manejar diferentes tipos de respuesta
+      if (Array.isArray(resultado)) {
+        pagos = resultado;
+      } else if (resultado && !Array.isArray(resultado)) {
+        pagos = [resultado];
+      }
+
+      console.log('📝 PAGOS RECIBIDOS DEL BACKEND:', {
+        total: pagos.length,
+        tipoRespuesta: Array.isArray(resultado) ? 'array' : 'objeto',
+        respuestaOriginal: resultado
+      });
+
+      if (pagos.length > 0) {
+        console.log('📝 MUESTRA PRIMER PAGO COMPLETO:', pagos[0]);
+        console.log('📝 CAMPOS DISPONIBLES EN PAGO:', Object.keys(pagos[0]));
+      } else {
+        console.log('⚠️ NO SE RECIBIERON PAGOS DEL BACKEND');
+      }
+
+      console.log('🎯 INICIANDO FILTRADO AND:', {
+        codigoPrestamoBuscado: detallePrestamo?.codigoPrestamo || detallePrestamo?.prestamoId,
+        codigoDetalleBuscado: detallePrestamo?.codigo,
+        totalPagosParaFiltrar: pagos.length
+      });
+
+      const pagosFiltrados = pagos.filter(p => {
+        const pago = p as any; // Usar any para evitar problemas de tipos temporalmente
+
+        // Filtrado con lógica AND: codigoPrestamo AND codigoDetalle
+        const codigoPrestamoDetalle = detallePrestamo?.codigoPrestamo || detallePrestamo?.prestamoId;
+        const codigoDetalleDetalle = detallePrestamo?.codigo;
+
+        // 1. Debe coincidir codigoPrestamo
+        const matchPrestamo = pago.codigoPrestamo === codigoPrestamoDetalle;
+
+        // 2. AND debe coincidir codigoDetalle
+        const matchCodigoDetalle = pago.codigoDetalle === codigoDetalleDetalle;
+
+        // Ambos criterios deben coincidir (AND lógico)
+        const match = matchPrestamo && matchCodigoDetalle;
+
+        // Log solo para los primeros 10 pagos o los que coinciden
+        const shouldLog = pagos.indexOf(p) < 10 || match;
+        if (shouldLog) {
+          console.log(`🔍 PAGO ${pago.codigo}:`, {
+            codigoDetalle: pago.codigoDetalle,
+            codigoPrestamo: pago.codigoPrestamo,
+            buscado: {
+              codigoPrestamo: codigoPrestamoDetalle,
+              codigoDetalle: codigoDetalleDetalle
+            },
+            matches: {
+              prestamo: matchPrestamo,
+              codigoDetalle: matchCodigoDetalle
+            },
+            coincide: match
+          });
+        }
+
+        if (match) {
+          console.log('✅ PAGO COINCIDE (AND):', {
+            codigo: pago.codigo,
+            codigoDetalle: pago.codigoDetalle,
+            codigoPrestamo: pago.codigoPrestamo,
+            fecha: pago.fecha,
+            criterios: 'codigoPrestamo AND codigoDetalle'
+          });
+        }
+        return match;
+      });      console.log(`🎯 PAGOS FILTRADOS: ${pagosFiltrados.length} de ${pagos.length} total`);
+
+      if (pagosFiltrados.length > 0) {
+        // Ordenar por fecha (más reciente primero)
+        pagosFiltrados.sort((a, b) => {
+          const fechaA = new Date(a.fecha || 0).getTime();
+          const fechaB = new Date(b.fecha || 0).getTime();
+          return fechaB - fechaA;
+        });
+
+        this.allPagos = pagosFiltrados;
+      } else {
+        this.errorMsg.set(`No se encontraron pagos para el préstamo ${detallePrestamo?.codigoPrestamo} detalle ${detallePrestamo?.codigo}`);
+        this.allPagos = [];
+      }
+
+      this.updatePagePagos();
     });
   }
 }

@@ -23,6 +23,7 @@ import { MatNativeDateModule } from '@angular/material/core';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
+import { catchError } from 'rxjs/operators';
 
 import { Asiento, EstadoAsiento, FiltrosAsiento, CrearAsiento } from '../../model/asiento';
 import { DetalleAsiento } from '../../model/detalle-asiento';
@@ -213,7 +214,14 @@ export class AsientosComponent implements OnInit {
    */
   cargarDatos(): void {
     this.cargando = true;
-    this.asientoService.getAll().subscribe({
+
+    // Priorizar selectByCriteria con fallback a getAll
+    this.asientoService.selectByCriteria({}).pipe(
+      catchError(err => {
+        console.warn('selectByCriteria falló, intentando getAll como fallback:', err);
+        return this.asientoService.getAll();
+      })
+    ).subscribe({
       next: (asientos) => {
         // Filtrar por empresa 280
         this.dataSource.data = (asientos || []).filter(a => a.empresa?.codigo === this.EMPRESA_CODIGO);

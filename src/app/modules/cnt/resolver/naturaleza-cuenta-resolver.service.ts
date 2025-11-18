@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Resolve, Router, ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
-import { Observable, mergeMap, of, EMPTY } from 'rxjs';
+import { Observable, mergeMap, of, EMPTY, catchError } from 'rxjs';
 import { NaturalezaCuentaService } from '../service/naturaleza-cuenta.service';
 
 @Injectable({
@@ -15,7 +15,12 @@ export class NaturalezaCuentaResolverService implements Resolve<any>  {
 
   resolve(route: ActivatedRouteSnapshot, state: RouterStateSnapshot): Observable<any> {
 
-    return this.naturalezaCuentaService.getAll().pipe(
+    // Priorizar selectByCriteria con fallback a getAll
+    return this.naturalezaCuentaService.selectByCriteria({}).pipe(
+      catchError(err => {
+        console.warn('selectByCriteria falló, intentando getAll como fallback:', err);
+        return this.naturalezaCuentaService.getAll();
+      }),
       mergeMap(result => {
         if (result) {
           // console.log(certificados.length);
