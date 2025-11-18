@@ -1,5 +1,8 @@
 .dialog-container {
   padding: 0;
+  min-width: 700px;
+  max-width: 800px;
+  overflow-x: hidden;
 
   h2 {
     display: flex;
@@ -20,21 +23,108 @@
   }
 
   mat-dialog-content {
-    padding: 2rem 1.5rem;
+    padding: 2rem 2rem;
     margin: 0;
+    overflow-x: hidden;
 
-    p {
+    .mensaje {
       font-size: 1rem;
       color: #4a5568;
-      margin: 0;
+      margin: 0 0 2rem 0;
       text-align: center;
+      font-weight: 500;
+    }
+
+    .opciones-container {
+      display: flex;
+      gap: 2rem;
+      justify-content: center;
+      align-items: stretch;
+      width: 100%;
+
+      .opcion-card {
+        flex: 1;
+        max-width: 280px;
+        padding: 2rem 1.5rem;
+        border-radius: 12px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+        background: white;
+
+        .icono-grande {
+          font-size: 4rem;
+          width: 4rem;
+          height: 4rem;
+          margin: 0 auto 1rem auto;
+          display: block;
+        }
+
+        h3 {
+          margin: 0 0 0.5rem 0;
+          font-size: 1.1rem;
+          font-weight: 600;
+        }
+
+        p {
+          margin: 0;
+          font-size: 0.875rem;
+          color: #718096;
+          line-height: 1.4;
+        }
+
+        &.sin-detalle {
+          background: linear-gradient(135deg, rgba(246, 173, 85, 0.1) 0%, rgba(246, 173, 85, 0.05) 100%);
+          border-color: rgba(246, 173, 85, 0.3);
+
+          .icono-grande {
+            color: #f6ad55;
+          }
+
+          h3 {
+            color: #dd6b20;
+          }
+
+          &:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(246, 173, 85, 0.3);
+            border-color: #f6ad55;
+            background: linear-gradient(135deg, rgba(246, 173, 85, 0.15) 0%, rgba(246, 173, 85, 0.08) 100%);
+          }
+        }
+
+        &.con-detalle {
+          background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.05) 100%);
+          border-color: rgba(102, 126, 234, 0.3);
+
+          .icono-grande {
+            color: #667eea;
+          }
+
+          h3 {
+            color: #5a67d8;
+          }
+
+          &:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+            border-color: #667eea;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.08) 100%);
+          }
+        }
+
+        &:active {
+          transform: translateY(-2px);
+        }
+      }
     }
   }
 
   mat-dialog-actions {
     padding: 1rem 1.5rem 1.5rem;
     margin: 0;
-    gap: 0.75rem;
+    justify-content: center;
 
     button {
       mat-icon {
@@ -42,6 +132,23 @@
         font-size: 1.25rem;
         width: 1.25rem;
         height: 1.25rem;
+      }
+    }
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .dialog-container {
+    min-width: auto;
+
+    mat-dialog-content {
+      .opciones-container {
+        flex-direction: column;
+
+        .opcion-card {
+          max-width: 100%;
+        }
       }
     }
   }

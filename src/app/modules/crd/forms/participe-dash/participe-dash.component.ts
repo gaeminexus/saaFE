@@ -124,7 +124,8 @@ export class ParticipeDashComponent implements OnInit {
 
     // Abrir diálogo para seleccionar tipo de reporte
     const dialogRef = this.dialog.open(PdfParticipeDetalleDialogComponent, {
-      width: '400px',
+      width: '800px',
+      maxWidth: '90vw',
       disableClose: false
     });
 

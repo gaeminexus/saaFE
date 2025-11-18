@@ -4,20 +4,26 @@
     Generar Reporte PDF
   </h2>
   <mat-dialog-content>
-    <p>¿Qué tipo de reporte desea generar?</p>
+    <p class="mensaje">¿Qué tipo de reporte desea generar?</p>
+
+    <div class="opciones-container">
+      <div class="opcion-card sin-detalle" (click)="seleccionar('sinDetalles')">
+        <mat-icon class="icono-grande">description</mat-icon>
+        <h3>Sin Detalles</h3>
+        <p>Reporte resumido con información general</p>
+      </div>
+
+      <div class="opcion-card con-detalle" (click)="seleccionar('conDetalles')">
+        <mat-icon class="icono-grande">article</mat-icon>
+        <h3>Con Detalles</h3>
+        <p>Reporte completo con toda la información</p>
+      </div>
+    </div>
   </mat-dialog-content>
-  <mat-dialog-actions align="end">
+  <mat-dialog-actions align="center">
     <button mat-button (click)="cerrar()">
       <mat-icon>close</mat-icon>
       Cancelar
-    </button>
-    <button mat-raised-button color="accent" (click)="seleccionar('sinDetalles')">
-      <mat-icon>description</mat-icon>
-      Sin Detalles
-    </button>
-    <button mat-raised-button color="primary" (click)="seleccionar('conDetalles')">
-      <mat-icon>article</mat-icon>
-      Con Detalles
     </button>
   </mat-dialog-actions>
 </div>
