@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, Inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -12,7 +12,8 @@ import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { PagosDialogComponent } from './pagos-dialog.component';
+import { PrestamoPagosDialogComponent } from '../../dialog/prestamo-pagos-dialog/prestamo-pagos-dialog.component';
+import { PdfParticipeDetalleDialogComponent } from '../../dialog/pdf-participe-detalle-dialog/pdf-participe-detalle-dialog.component';
 
 import { Entidad } from '../../model/entidad';
 import { Prestamo } from '../../model/prestamo';
@@ -26,6 +27,7 @@ import { PrestamoService } from '../../service/prestamo.service';
 import { DetallePrestamoService } from '../../service/detalle-prestamo.service';
 import { PagoPrestamoService } from '../../service/pago-prestamo.service';
 import { AporteService } from '../../service/aporte.service';
+import { ExportService } from '../../../../shared/services/export.service';
 import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
@@ -104,11 +106,519 @@ export class ParticipeDashComponent implements OnInit {
     private detallePrestamoService: DetallePrestamoService,
     private pagoPrestamoService: PagoPrestamoService,
     private aporteService: AporteService,
+    private exportService: ExportService,
     private snackBar: MatSnackBar,
     private dialog: MatDialog
   ) {}
 
   ngOnInit(): void {}
+
+  /**
+   * Genera un PDF con la información de la entidad
+   */
+  generarPDF(): void {
+    if (!this.entidadEncontrada) {
+      this.snackBar.open('No hay información de entidad para generar el PDF', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    // Abrir diálogo para seleccionar tipo de reporte
+    const dialogRef = this.dialog.open(PdfParticipeDetalleDialogComponent, {
+      width: '400px',
+      disableClose: false
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.generarPDFConDetalles(result === 'conDetalles');
+      }
+    });
+  }
+
+  /**
+   * Genera el PDF según la opción seleccionada
+   */
+  private generarPDFConDetalles(conDetalles: boolean): void {
+    if (conDetalles) {
+      this.generarPDFConDetalle();
+    } else {
+      this.generarPDFResumido();
+    }
+  }
+
+  /**
+   * Genera PDF resumido con información del dashboard sin detalles
+   */
+  private generarPDFResumido(): void {
+    if (!this.entidadEncontrada) return;
+
+    const entidad = this.entidadEncontrada; // Guardar referencia para evitar errores de null
+
+    try {
+      // Cargar jsPDF dinámicamente
+      this.cargarJsPDF().then((jsPDF: any) => {
+        const doc = new jsPDF();
+        let yPosition = 20;
+
+        // Título principal
+        doc.setFontSize(18);
+        doc.setFont(undefined, 'bold');
+        doc.text('Reporte Financiero de Partícipe', 105, yPosition, { align: 'center' });
+
+        yPosition += 15;
+
+        // Información de la entidad
+        doc.setFontSize(14);
+        doc.setTextColor(102, 126, 234);
+        doc.text('Información del Partícipe', 14, yPosition);
+
+        yPosition += 8;
+        doc.setFontSize(10);
+        doc.setTextColor(0, 0, 0);
+        doc.setFont(undefined, 'normal');
+
+        doc.text(`Razón Social: ${entidad.razonSocial || 'N/A'}`, 14, yPosition);
+        yPosition += 6;
+        doc.text(`Identificación: ${entidad.numeroIdentificacion || 'N/A'}`, 14, yPosition);
+        yPosition += 6;
+        if (entidad.nombreComercial && entidad.razonSocial !== entidad.nombreComercial) {
+          doc.text(`Nombre Comercial: ${entidad.nombreComercial}`, 14, yPosition);
+          yPosition += 6;
+        }
+
+        yPosition += 10;
+
+        // Resumen de Aportes
+        doc.setFontSize(14);
+        doc.setTextColor(246, 173, 85);
+        doc.setFont(undefined, 'bold');
+        doc.text('Resumen de Aportes', 14, yPosition);
+
+        yPosition += 8;
+        doc.setFontSize(11);
+        doc.setTextColor(0, 0, 0);
+        doc.text(`Total Acumulado: $${this.totalAportes.toFixed(2)}`, 14, yPosition);
+
+        yPosition += 8;
+
+        // Tabla de aportes por tipo
+        if (this.aportesPorTipo.length > 0) {
+          const aportesData = this.aportesPorTipo.map(tipo => [
+            tipo.tipoAporte,
+            `$${tipo.totalValor.toFixed(2)}`
+          ]);
+
+          if (doc.autoTable) {
+            doc.autoTable({
+              startY: yPosition,
+              head: [['Tipo de Aporte', 'Total']],
+              body: aportesData,
+              theme: 'grid',
+              styles: { fontSize: 9, cellPadding: 3 },
+              headStyles: {
+                fillColor: [246, 173, 85],
+                textColor: 255,
+                fontSize: 10,
+                fontStyle: 'bold'
+              },
+              alternateRowStyles: { fillColor: [255, 250, 240] },
+              margin: { left: 14, right: 14 }
+            });
+            yPosition = (doc as any).lastAutoTable.finalY + 10;
+          } else {
+            yPosition += 5;
+            doc.setFontSize(9);
+            doc.setFont(undefined, 'bold');
+            doc.text('Tipo de Aporte', 14, yPosition);
+            doc.text('Total', 150, yPosition);
+            yPosition += 5;
+            doc.setFont(undefined, 'normal');
+            aportesData.forEach(([tipo, total]) => {
+              doc.text(tipo, 14, yPosition);
+              doc.text(total, 150, yPosition);
+              yPosition += 5;
+            });
+            yPosition += 5;
+          }
+        }
+
+        // Resumen de Préstamos
+        if (this.prestamos.length > 0) {
+          doc.setFontSize(14);
+          doc.setTextColor(102, 126, 234);
+          doc.setFont(undefined, 'bold');
+          doc.text('Resumen de Préstamos', 14, yPosition);
+
+          yPosition += 8;
+
+          const prestamosData = this.prestamos.map(prestamo => [
+            prestamo.producto?.nombre || 'N/A',
+            `#${prestamo.codigo}`,
+            `$${prestamo.totalPrestamo.toFixed(2)}`,
+            `$${prestamo.saldoTotal.toFixed(2)}`,
+            `$${this.calcularTotalPagado(prestamo).toFixed(2)}`,
+            prestamo.estadoPrestamo?.nombre || 'N/A'
+          ]);
+
+          if (doc.autoTable) {
+            doc.autoTable({
+              startY: yPosition,
+              head: [['Producto', 'Código', 'Monto Total', 'Saldo', 'Total Pagado', 'Estado']],
+              body: prestamosData,
+              theme: 'grid',
+              styles: { fontSize: 8, cellPadding: 2 },
+              headStyles: {
+                fillColor: [102, 126, 234],
+                textColor: 255,
+                fontSize: 9,
+                fontStyle: 'bold'
+              },
+              alternateRowStyles: { fillColor: [248, 250, 252] },
+              margin: { left: 14, right: 14 },
+              columnStyles: {
+                0: { cellWidth: 40 },
+                1: { cellWidth: 20 },
+                2: { cellWidth: 30 },
+                3: { cellWidth: 30 },
+                4: { cellWidth: 30 },
+                5: { cellWidth: 30 }
+              }
+            });
+          }
+        } else {
+          doc.setFontSize(10);
+          doc.setTextColor(128, 128, 128);
+          doc.setFont(undefined, 'italic');
+          doc.text('No hay préstamos registrados', 14, yPosition);
+        }
+
+        // Footer con fecha de generación
+        const pageCount = (doc as any).internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+          doc.setPage(i);
+          doc.setFontSize(8);
+          doc.setTextColor(128, 128, 128);
+          doc.text(
+            `Generado el: ${new Date().toLocaleDateString('es-ES')} ${new Date().toLocaleTimeString('es-ES')}`,
+            14,
+            doc.internal.pageSize.height - 10
+          );
+          doc.text(
+            `Página ${i} de ${pageCount}`,
+            doc.internal.pageSize.width - 30,
+            doc.internal.pageSize.height - 10
+          );
+        }
+
+        // Guardar el PDF
+        const filename = `Reporte_${entidad.numeroIdentificacion}_${new Date().getTime()}.pdf`;
+        doc.save(filename);
+
+        this.snackBar.open('PDF generado exitosamente', 'Cerrar', { duration: 3000 });
+      }).catch(error => {
+        console.error('Error al cargar jsPDF:', error);
+        this.snackBar.open('Error al generar el PDF. Por favor, intente nuevamente.', 'Cerrar', { duration: 5000 });
+      });
+    } catch (error) {
+      console.error('Error al generar PDF:', error);
+      this.snackBar.open('Error al generar el PDF', 'Cerrar', { duration: 3000 });
+    }
+  }
+
+  /**
+   * Genera PDF detallado con información de aportes por tipo y préstamos con cuotas
+   */
+  private async generarPDFConDetalle(): Promise<void> {
+    if (!this.entidadEncontrada) return;
+
+    const entidad = this.entidadEncontrada;
+
+    // Mostrar mensaje de carga
+    this.snackBar.open('Cargando información detallada...', '', { duration: 2000 });
+
+    try {
+      // Cargar detalles de todos los préstamos primero
+      const promesasCarga = this.prestamos.map(prestamo =>
+        this.cargarDetallesPrestamoAsync(prestamo.codigo)
+      );
+
+      await Promise.all(promesasCarga);
+
+      // Ahora generar el PDF con los datos cargados
+      this.cargarJsPDF().then((jsPDF: any) => {
+        const doc = new jsPDF();
+        let yPosition = 20;
+
+        // Función auxiliar para verificar espacio y agregar página si es necesario
+        const checkPageBreak = (requiredSpace: number = 20) => {
+          if (yPosition + requiredSpace > doc.internal.pageSize.height - 20) {
+            doc.addPage();
+            yPosition = 20;
+            return true;
+          }
+          return false;
+        };
+
+        // Título principal
+        doc.setFontSize(18);
+        doc.setFont(undefined, 'bold');
+        doc.text('Reporte Financiero Detallado de Partícipe', 105, yPosition, { align: 'center' });
+
+        yPosition += 15;
+
+        // Información de la entidad
+        doc.setFontSize(14);
+        doc.setTextColor(102, 126, 234);
+        doc.text('Información del Partícipe', 14, yPosition);
+
+        yPosition += 8;
+        doc.setFontSize(10);
+        doc.setTextColor(0, 0, 0);
+        doc.setFont(undefined, 'normal');
+
+        doc.text(`Razón Social: ${entidad.razonSocial || 'N/A'}`, 14, yPosition);
+        yPosition += 6;
+        doc.text(`Identificación: ${entidad.numeroIdentificacion || 'N/A'}`, 14, yPosition);
+        yPosition += 6;
+        if (entidad.nombreComercial && entidad.razonSocial !== entidad.nombreComercial) {
+          doc.text(`Nombre Comercial: ${entidad.nombreComercial}`, 14, yPosition);
+          yPosition += 6;
+        }
+
+        yPosition += 10;
+        checkPageBreak(30);
+
+        // SECCIÓN DE APORTES DETALLADOS
+        doc.setFontSize(16);
+        doc.setTextColor(246, 173, 85);
+        doc.setFont(undefined, 'bold');
+        doc.text('Detalle de Aportes', 14, yPosition);
+
+        yPosition += 8;
+        doc.setFontSize(11);
+        doc.setTextColor(0, 0, 0);
+        doc.text(`Total Acumulado: $${this.totalAportes.toFixed(2)}`, 14, yPosition);
+        yPosition += 10;
+
+        // Iterar por cada tipo de aporte
+        if (this.aportesPorTipo.length > 0) {
+          this.aportesPorTipo.forEach((tipoAporte, index) => {
+            checkPageBreak(40);
+
+            // Encabezado del tipo de aporte
+            doc.setFontSize(12);
+            doc.setTextColor(246, 173, 85);
+            doc.setFont(undefined, 'bold');
+            doc.text(`${index + 1}. ${tipoAporte.tipoAporte}`, 14, yPosition);
+
+            yPosition += 6;
+            doc.setFontSize(9);
+            doc.setTextColor(0, 0, 0);
+            doc.setFont(undefined, 'normal');
+            doc.text(`Total: $${tipoAporte.totalValor.toFixed(2)} | Cantidad: ${tipoAporte.aportes.length}`, 20, yPosition);
+            yPosition += 8;
+
+            // Tabla de aportes del tipo
+            const aportesData = tipoAporte.aportes.map(aporte => {
+              const fecha = this.convertirFecha(aporte.fechaTransaccion);
+              return [
+                fecha ? fecha.toLocaleDateString('es-ES') : 'N/A',
+                aporte.glosa || 'N/A',
+                `$${(aporte.valor || 0).toFixed(2)}`,
+                `$${(aporte.valorPagado || 0).toFixed(2)}`,
+                `$${(aporte.saldo || 0).toFixed(2)}`
+              ];
+            });
+
+            if (doc.autoTable) {
+              doc.autoTable({
+                startY: yPosition,
+                head: [['Fecha', 'Glosa', 'Valor', 'Pagado', 'Saldo']],
+                body: aportesData,
+                theme: 'striped',
+                styles: { fontSize: 8, cellPadding: 2 },
+                headStyles: {
+                  fillColor: [246, 173, 85],
+                  textColor: 255,
+                  fontSize: 8,
+                  fontStyle: 'bold'
+                },
+                margin: { left: 20, right: 14 },
+                columnStyles: {
+                  0: { cellWidth: 25 },
+                  1: { cellWidth: 80 },
+                  2: { cellWidth: 25 },
+                  3: { cellWidth: 25 },
+                  4: { cellWidth: 25 }
+                }
+              });
+              yPosition = (doc as any).lastAutoTable.finalY + 8;
+            } else {
+              // Fallback sin autoTable
+              yPosition += 5;
+              aportesData.forEach(row => {
+                checkPageBreak();
+                doc.setFontSize(7);
+                doc.text(row.join(' | '), 20, yPosition);
+                yPosition += 5;
+              });
+              yPosition += 5;
+            }
+          });
+        } else {
+          doc.setFontSize(10);
+          doc.setTextColor(128, 128, 128);
+          doc.setFont(undefined, 'italic');
+          doc.text('No hay aportes registrados', 14, yPosition);
+          yPosition += 10;
+        }
+
+        checkPageBreak(30);
+
+        // SECCIÓN DE PRÉSTAMOS DETALLADOS
+        doc.setFontSize(16);
+        doc.setTextColor(102, 126, 234);
+        doc.setFont(undefined, 'bold');
+        doc.text('Detalle de Préstamos', 14, yPosition);
+        yPosition += 10;
+
+        if (this.prestamos.length > 0) {
+          for (const prestamo of this.prestamos) {
+            checkPageBreak(50);
+
+            // Encabezado del préstamo
+            doc.setFontSize(12);
+            doc.setTextColor(102, 126, 234);
+            doc.setFont(undefined, 'bold');
+            doc.text(`Préstamo #${prestamo.codigo} - ${prestamo.producto?.nombre || 'N/A'}`, 14, yPosition);
+
+            yPosition += 6;
+            doc.setFontSize(9);
+            doc.setTextColor(0, 0, 0);
+            doc.setFont(undefined, 'normal');
+
+            const fechaPrestamo = this.convertirFecha(prestamo.fecha);
+            const fechaStr = fechaPrestamo ? fechaPrestamo.toLocaleDateString('es-ES') : 'N/A';
+
+            doc.text(`Fecha: ${fechaStr} | Estado: ${prestamo.estadoPrestamo?.nombre || 'N/A'}`, 20, yPosition);
+            yPosition += 5;
+            doc.text(`Monto Total: $${prestamo.totalPrestamo.toFixed(2)} | Saldo: $${prestamo.saldoTotal.toFixed(2)} | Pagado: $${this.calcularTotalPagado(prestamo).toFixed(2)}`, 20, yPosition);
+            yPosition += 8;
+
+            // Cargar detalles del préstamo si no están cargados
+            const detalles = this.detallesPrestamo.get(prestamo.codigo);
+
+            if (detalles && detalles.length > 0) {
+              // Tabla de cuotas
+              const cuotasData = detalles.map(dc => {
+                const fechaVenc = this.convertirFecha(dc.detalle.fechaVencimiento);
+                return [
+                  dc.detalle.numeroCuota?.toString() || 'N/A',
+                  fechaVenc ? fechaVenc.toLocaleDateString('es-ES') : 'N/A',
+                  `$${(dc.detalle.capital || 0).toFixed(2)}`,
+                  `$${(dc.detalle.interes || 0).toFixed(2)}`,
+                  `$${(dc.detalle.cuota || 0).toFixed(2)}`,
+                  `$${(dc.detalle.saldo || 0).toFixed(2)}`
+                ];
+              });
+
+              if (doc.autoTable) {
+                doc.autoTable({
+                  startY: yPosition,
+                  head: [['Cuota', 'Vencimiento', 'Capital', 'Interés', 'Cuota', 'Saldo']],
+                  body: cuotasData,
+                  theme: 'striped',
+                  styles: { fontSize: 7, cellPadding: 2 },
+                  headStyles: {
+                    fillColor: [102, 126, 234],
+                    textColor: 255,
+                    fontSize: 7,
+                    fontStyle: 'bold'
+                  },
+                  margin: { left: 20, right: 14 },
+                  columnStyles: {
+                    0: { cellWidth: 15 },
+                    1: { cellWidth: 25 },
+                    2: { cellWidth: 28 },
+                    3: { cellWidth: 28 },
+                    4: { cellWidth: 28 },
+                    5: { cellWidth: 28 }
+                  }
+                });
+                yPosition = (doc as any).lastAutoTable.finalY + 10;
+              } else {
+                // Fallback
+                yPosition += 5;
+                cuotasData.forEach(row => {
+                  checkPageBreak();
+                  doc.setFontSize(7);
+                  doc.text(row.join(' | '), 20, yPosition);
+                  yPosition += 5;
+                });
+                yPosition += 8;
+              }
+            } else {
+              doc.setFontSize(9);
+              doc.setTextColor(128, 128, 128);
+              doc.setFont(undefined, 'italic');
+              doc.text('Sin detalles de cuotas disponibles', 20, yPosition);
+              yPosition += 10;
+            }
+          }
+        } else {
+          doc.setFontSize(10);
+          doc.setTextColor(128, 128, 128);
+          doc.setFont(undefined, 'italic');
+          doc.text('No hay préstamos registrados', 14, yPosition);
+        }
+
+        // Footer con fecha de generación en todas las páginas
+        const pageCount = (doc as any).internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+          doc.setPage(i);
+          doc.setFontSize(8);
+          doc.setTextColor(128, 128, 128);
+          doc.text(
+            `Generado el: ${new Date().toLocaleDateString('es-ES')} ${new Date().toLocaleTimeString('es-ES')}`,
+            14,
+            doc.internal.pageSize.height - 10
+          );
+          doc.text(
+            `Página ${i} de ${pageCount}`,
+            doc.internal.pageSize.width - 30,
+            doc.internal.pageSize.height - 10
+          );
+        }
+
+        // Guardar el PDF
+        const filename = `Reporte_Detallado_${entidad.numeroIdentificacion}_${new Date().getTime()}.pdf`;
+        doc.save(filename);
+
+        this.snackBar.open('PDF detallado generado exitosamente', 'Cerrar', { duration: 3000 });
+      }).catch(error => {
+        console.error('Error al cargar jsPDF:', error);
+        this.snackBar.open('Error al generar el PDF. Por favor, intente nuevamente.', 'Cerrar', { duration: 5000 });
+      });
+    } catch (error) {
+      console.error('Error al generar PDF:', error);
+      this.snackBar.open('Error al generar el PDF', 'Cerrar', { duration: 3000 });
+    }
+  }
+
+  /**
+   * Carga jsPDF dinámicamente
+   */
+  private cargarJsPDF(): Promise<any> {
+    return new Promise((resolve, reject) => {
+      if ((window as any).jspdf && (window as any).jspdf.jsPDF) {
+        resolve((window as any).jspdf.jsPDF);
+      } else if ((window as any).jsPDF) {
+        resolve((window as any).jsPDF);
+      } else {
+        reject('jsPDF no está disponible');
+      }
+    });
+  }
 
   /**
    * Convierte una fecha de forma segura manejando diferentes formatos
@@ -133,7 +643,6 @@ export class ParticipeDashComponent implements OnInit {
       return new Date(fecha);
     }
 
-    console.warn('No se pudo convertir la fecha:', fecha);
     return null;
   }
 
@@ -197,7 +706,6 @@ export class ParticipeDashComponent implements OnInit {
 
   cargarPrestamos(): void {
     if (!this.entidadEncontrada || !this.entidadEncontrada.codigo) {
-      console.warn('No hay entidad encontrada o no tiene código');
       return;
     }
 
@@ -219,21 +727,14 @@ export class ParticipeDashComponent implements OnInit {
 
     this.prestamoService.selectByCriteria(criterioConsultaArray).subscribe({
       next: (prestamos: any) => {
-        console.log('Respuesta del backend - préstamos:', prestamos);
-        console.log('Tipo de respuesta:', typeof prestamos);
-        console.log('Es array?', Array.isArray(prestamos));
-
         if (!prestamos) {
-          console.warn('La respuesta de préstamos es null o undefined');
           this.prestamos = [];
           return;
         }
 
         if (Array.isArray(prestamos)) {
-          console.log('Total préstamos recibidos:', prestamos.length);
           this.procesarPrestamosPorTipo(prestamos as Prestamo[]);
         } else {
-          console.error('La respuesta no es un array:', prestamos);
           this.prestamos = [];
         }
       },
@@ -246,7 +747,6 @@ export class ParticipeDashComponent implements OnInit {
 
   cargarAportes(): void {
     if (!this.entidadEncontrada || !this.entidadEncontrada.codigo) {
-      console.warn('No hay entidad encontrada o no tiene código');
       return;
     }
 
@@ -270,10 +770,7 @@ export class ParticipeDashComponent implements OnInit {
 
     this.aporteService.selectByCriteria(criterioConsultaArray).subscribe({
       next: (aportes: any) => {
-        console.log('Respuesta del backend - aportes:', aportes);
-
         if (!aportes) {
-          console.warn('La respuesta de aportes es null o undefined');
           this.aportes = [];
           this.totalAportes = 0;
           this.isLoadingAportes = false;
@@ -299,11 +796,7 @@ export class ParticipeDashComponent implements OnInit {
           this.agruparAportesPorTipo();
 
           this.totalAportes = this.aportes.reduce((sum, aporte) => sum + (aporte.valor || 0), 0);
-          console.log('Total aportes calculado:', this.totalAportes);
-          console.log('Aportes cargados:', this.aportes.length);
-          console.log('Tipos de aportes:', this.aportesPorTipo.length);
         } else {
-          console.warn('La respuesta de aportes no es un array:', aportes);
           this.aportes = [];
           this.aportesPorTipo = [];
           this.totalAportes = 0;
@@ -348,7 +841,6 @@ export class ParticipeDashComponent implements OnInit {
     });
 
     this.aportesPorTipo = Array.from(tiposMap.values());
-    console.log('Aportes agrupados por tipo:', this.aportesPorTipo);
   }
 
   toggleTipoAporte(tipo: AportesPorTipo): void {
@@ -356,22 +848,13 @@ export class ParticipeDashComponent implements OnInit {
   }
 
   procesarPrestamosPorTipo(prestamos: Prestamo[]): void {
-    console.log('=== INICIANDO procesarPrestamosPorTipo ===');
-    console.log('Procesando préstamos:', prestamos);
-    console.log('Cantidad de préstamos:', prestamos.length);
-
     if (!prestamos || prestamos.length === 0) {
-      console.warn('No hay préstamos para procesar');
       this.prestamos = [];
       return;
     }
 
     // Asignar directamente los préstamos sin agrupar
     this.prestamos = prestamos;
-
-    console.log('=== RESULTADO FINAL ===');
-    console.log('Préstamos asignados:', this.prestamos);
-    console.log('Cantidad de préstamos:', this.prestamos.length);
   }
 
   verDetallePrestamo(prestamo: Prestamo): void {
@@ -428,10 +911,7 @@ export class ParticipeDashComponent implements OnInit {
 
     this.detallePrestamoService.selectByCriteria(criterioConsultaArray).subscribe({
       next: (detalles: any) => {
-        console.log('Respuesta del backend - detalles:', detalles);
-
         if (!detalles || !Array.isArray(detalles)) {
-          console.warn('La respuesta de detalles no es un array válido:', detalles);
           this.detallesPrestamo.set(codigoPrestamo, []);
           this.isLoadingDetalles = false;
           return;
@@ -465,11 +945,69 @@ export class ParticipeDashComponent implements OnInit {
     });
   }
 
-  togglePagosDetalle(detalleConPagos: DetalleConPagos): void {
-    console.log('togglePagosDetalle llamado');
-    console.log('Detalle actual:', detalleConPagos);
-    console.log('Código del detalle:', detalleConPagos.detalle.codigo);
+  /**
+   * Carga los detalles de un préstamo y retorna una Promise
+   */
+  private cargarDetallesPrestamoAsync(codigoPrestamo: number): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (this.detallesPrestamo.has(codigoPrestamo)) {
+        resolve(); // Ya está cargado
+        return;
+      }
 
+      const criterioConsultaArray: DatosBusqueda[] = [];
+
+      let criterio = new DatosBusqueda();
+      criterio.asignaValorConCampoPadre(
+        TipoDatosBusqueda.LONG,
+        'prestamo',
+        'codigo',
+        codigoPrestamo.toString(),
+        TipoComandosBusqueda.IGUAL
+      );
+      criterioConsultaArray.push(criterio);
+
+      criterio = new DatosBusqueda();
+      criterio.orderBy('numeroCuota');
+      criterioConsultaArray.push(criterio);
+
+      this.detallePrestamoService.selectByCriteria(criterioConsultaArray).subscribe({
+        next: (detalles: any) => {
+          if (!detalles || !Array.isArray(detalles)) {
+            this.detallesPrestamo.set(codigoPrestamo, []);
+            resolve();
+            return;
+          }
+
+          const detallesConPagos: DetalleConPagos[] = (detalles as DetallePrestamo[]).map(det => {
+            // Convertir fechas de string a Date de forma segura
+            const fechaVencimiento = this.convertirFecha(det.fechaVencimiento);
+            const fechaPagado = this.convertirFecha(det.fechaPagado);
+            const fechaRegistro = this.convertirFecha(det.fechaRegistro);
+
+            return {
+              detalle: {
+                ...det,
+                fechaVencimiento: fechaVencimiento || det.fechaVencimiento,
+                fechaPagado: fechaPagado || det.fechaPagado,
+                fechaRegistro: fechaRegistro || det.fechaRegistro
+              },
+              pagos: [],
+              mostrarPagos: false
+            };
+          });
+          this.detallesPrestamo.set(codigoPrestamo, detallesConPagos);
+          resolve();
+        },
+        error: (error) => {
+          console.error('Error al cargar detalles del préstamo:', error);
+          reject(error);
+        }
+      });
+    });
+  }
+
+  togglePagosDetalle(detalleConPagos: DetalleConPagos): void {
     // Si ya tiene pagos cargados, mostrar directamente el diálogo
     if (detalleConPagos.pagos.length > 0) {
       this.abrirDialogPagos(detalleConPagos);
@@ -483,7 +1021,7 @@ export class ParticipeDashComponent implements OnInit {
   }
 
   abrirDialogPagos(detalleConPagos: DetalleConPagos): void {
-    this.dialog.open(PagosDialogComponent, {
+    this.dialog.open(PrestamoPagosDialogComponent, {
       width: '900px',
       maxHeight: '80vh',
       data: {
@@ -515,10 +1053,7 @@ export class ParticipeDashComponent implements OnInit {
 
       this.pagoPrestamoService.selectByCriteria(criterioConsultaArray).subscribe({
         next: (pagos: any) => {
-          console.log('Respuesta del backend - pagos:', pagos);
-
           if (!pagos || !Array.isArray(pagos)) {
-            console.warn('La respuesta de pagos no es un array válido:', pagos);
             detalleConPagos.pagos = [];
             detalleConPagos.mostrarPagos = true;
             this.isLoadingPagos = false;
