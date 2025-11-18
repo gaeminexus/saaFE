@@ -21,3 +21,42 @@ mat-icon,
 .material-symbols-outlined {
   font-family: 'Material Symbols Outlined' !important;
 }
+
+// Global MatMenu styles - Fondo blanco sólido para todos los menús
+.mat-mdc-menu-panel {
+  background-color: #ffffff !important;
+  backdrop-filter: none !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15) !important;
+  border-radius: 8px !important;
+  min-width: 220px !important;
+}
+
+.mat-mdc-menu-content {
+  background-color: #ffffff !important;
+  padding: 0.5rem 0 !important;
+}
+
+.mat-mdc-menu-item {
+  background-color: transparent !important;
+
+  &:hover {
+    background-color: rgba(102, 126, 234, 0.08) !important;
+  }
+}
+
+// Global MatTooltip styles - Fondo blanco sólido para todos los tooltips
+.mat-mdc-tooltip {
+  background-color: #ffffff !important;
+  color: #333333 !important;
+  border: 1px solid rgba(0, 0, 0, 0.12) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+  font-size: 0.875rem !important;
+  padding: 0.5rem 0.75rem !important;
+  border-radius: 6px !important;
+  backdrop-filter: none !important;
+}
+
+.mat-mdc-tooltip .mdc-tooltip__surface {
+  background-color: #ffffff !important;
+  color: #333333 !important;
+}
