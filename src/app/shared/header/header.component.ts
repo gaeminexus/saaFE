@@ -1,18 +1,15 @@
 import { Location } from '@angular/common';
 import { Component, Input } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { MatMenuModule } from '@angular/material/menu';
-import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
-import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
+import { MatSnackBar } from '@angular/material/snack-bar';
+
+import { MaterialFormModule } from '../modules/material-form.module';
 import { UsuarioService } from '../services/usuario.service';
 
 @Component({
   selector: 'app-header',
   standalone: true,
-  imports: [CommonModule, MatMenuModule, MatIconModule, MatButtonModule, MatTooltipModule, MatSnackBarModule],
+  imports: [MaterialFormModule],
   templateUrl: './header.component.html',
   styleUrls: ['./header.component.scss']
 })

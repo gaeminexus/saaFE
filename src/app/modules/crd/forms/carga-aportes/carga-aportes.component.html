@@ -1,0 +1,94 @@
+<div class="carga-aportes-container">
+  <!-- Header con título y filtros -->
+  <div class="search-header">
+    <div class="header-title">
+      <mat-icon class="header-icon">upload_file</mat-icon>
+      <h1>Carga de Archivos de Filiales</h1>
+    </div>
+
+    <div class="filters-box">
+      <mat-form-field appearance="fill" class="filter-field">
+        <mat-label>Año</mat-label>
+        <mat-select [(ngModel)]="anioSeleccionado">
+          <mat-option [value]="null">-- Seleccione un año --</mat-option>
+          @for (anio of anios; track anio) {
+            <mat-option [value]="anio">{{ anio }}</mat-option>
+          }
+        </mat-select>
+        <mat-icon matPrefix>calendar_today</mat-icon>
+      </mat-form-field>
+
+      <mat-form-field appearance="fill" class="filter-field">
+        <mat-label>Mes</mat-label>
+        <mat-select [(ngModel)]="mesSeleccionado">
+          <mat-option [value]="null">-- Seleccione un mes --</mat-option>
+          @for (mes of meses; track mes.valor) {
+            <mat-option [value]="mes.valor">{{ mes.nombre }}</mat-option>
+          }
+        </mat-select>
+        <mat-icon matPrefix>event</mat-icon>
+      </mat-form-field>
+
+      <mat-form-field appearance="fill" class="filter-field">
+        <mat-label>Filial</mat-label>
+        <mat-select [(ngModel)]="filialSeleccionada" [disabled]="isLoadingFiliales">
+          <mat-option [value]="null">-- Seleccione una filial --</mat-option>
+          @if (isLoadingFiliales) {
+            <mat-option disabled>
+              <mat-spinner diameter="20"></mat-spinner>
+              Cargando...
+            </mat-option>
+          } @else {
+            @for (filial of filiales; track filial.codigo) {
+              <mat-option [value]="filial.codigo">{{ filial.nombre }}</mat-option>
+            }
+          }
+        </mat-select>
+        <mat-icon matPrefix>business</mat-icon>
+      </mat-form-field>
+
+      @if (anioSeleccionado || mesSeleccionado || filialSeleccionada) {
+        <button mat-icon-button (click)="limpiarFiltros()" class="clear-button" matTooltip="Limpiar filtros">
+          <mat-icon>clear</mat-icon>
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- Área de contenido (placeholder) -->
+  <div class="content-area">
+    @if (!anioSeleccionado || !mesSeleccionado || !filialSeleccionada) {
+      <div class="empty-state">
+        <mat-icon class="empty-icon">filter_list</mat-icon>
+        <h2>Seleccione los filtros</h2>
+        <p>Seleccione año, mes y filial para continuar con la carga de archivos</p>
+      </div>
+    } @else {
+      <div class="filters-summary">
+        <mat-card class="summary-card">
+          <mat-card-header>
+            <mat-icon mat-card-avatar class="avatar-icon">info</mat-icon>
+            <mat-card-title>Filtros Seleccionados</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="summary-item">
+              <mat-icon>calendar_today</mat-icon>
+              <span class="label">Año:</span>
+              <span class="value">{{ anioSeleccionado }}</span>
+            </div>
+            <div class="summary-item">
+              <mat-icon>event</mat-icon>
+              <span class="label">Mes:</span>
+              <span class="value">{{ meses[mesSeleccionado! - 1].nombre }}</span>
+            </div>
+            <div class="summary-item">
+              <mat-icon>business</mat-icon>
+              <span class="label">Filial:</span>
+              <span class="value">{{ getFilialNombre(filialSeleccionada) }}</span>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    }
+  </div>
+</div>

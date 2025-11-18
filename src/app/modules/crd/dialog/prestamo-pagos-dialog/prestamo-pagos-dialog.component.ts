@@ -1,9 +1,7 @@
 import { Component, Inject, ViewEncapsulation } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatTableModule } from '@angular/material/table';
+import { MAT_DIALOG_DATA } from '@angular/material/dialog';
+
+import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
 import { DetallePrestamo } from '../../model/detalle-prestamo';
 import { PagoPrestamo } from '../../model/pago-prestamo';
 
@@ -16,11 +14,7 @@ export interface PrestamoPagosDialogData {
   selector: 'app-prestamo-pagos-dialog',
   standalone: true,
   imports: [
-    CommonModule,
-    MatDialogModule,
-    MatButtonModule,
-    MatIconModule,
-    MatTableModule
+    MaterialFormModule
   ],
   templateUrl: './prestamo-pagos-dialog.component.html',
   styleUrls: ['./prestamo-pagos-dialog.component.scss'],

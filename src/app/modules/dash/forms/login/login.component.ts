@@ -4,12 +4,12 @@ import { EntidadService } from './../../../crd/service/entidad.service';
 import { Component, AfterViewInit, OnDestroy, ElementRef, ViewChild, NgZone, Inject, PLATFORM_ID } from '@angular/core';
 import { AppConfig } from '../../../../app.config';
 import { DatePipe, isPlatformBrowser } from '@angular/common';
-import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { MatSnackBar } from '@angular/material/snack-bar';
+
+import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
 import { UsuarioService } from '../../../../shared/services/usuario.service';
-import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
-import { MatProgressSpinnerModule, MatProgressSpinner } from '@angular/material/progress-spinner';
 import { NaturalezaCuentaService } from '../../../cnt/service/naturaleza-cuenta.service';
 import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
@@ -25,7 +25,7 @@ const EMPRESA = 280;
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatSnackBarModule, MatProgressSpinnerModule],
+  imports: [FormsModule, MaterialFormModule],
   templateUrl: './login.html',
   styleUrls: ['../../../../../styles/pages/_login.scss']
 })

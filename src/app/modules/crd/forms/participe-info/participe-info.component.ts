@@ -1,33 +1,17 @@
 import { Component, OnInit, Input, inject, signal, computed, OnChanges, SimpleChanges } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
-import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatNativeDateModule } from '@angular/material/core';
-import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
-import { MatChipsModule } from '@angular/material/chips';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { MatDividerModule } from '@angular/material/divider';
-import { MatStepperModule } from '@angular/material/stepper';
-import { MatTooltipModule } from '@angular/material/tooltip';
 import { Location } from '@angular/common';
 import { catchError } from 'rxjs/operators';
 import { of } from 'rxjs';
 
+import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
 import { Entidad } from '../../model/entidad';
 import { Filial } from '../../model/filial';
-
 import { TipoIdentificacion } from '../../model/tipo-identificacion';
 import { EntidadService } from '../../service/entidad.service';
 import { FilialService } from '../../service/filial.service';
-
 import { TipoIdentificacionService } from '../../service/tipo-identificacion.service';
 
 /**
@@ -67,23 +51,8 @@ import { TipoIdentificacionService } from '../../service/tipo-identificacion.ser
   selector: 'app-participe-info',
   standalone: true,
   imports: [
-    CommonModule,
     ReactiveFormsModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatSelectModule,
-    MatDatepickerModule,
-    MatNativeDateModule,
-    MatCheckboxModule,
-    MatIconModule,
-    MatButtonModule,
-    MatCardModule,
-    MatChipsModule,
-    MatProgressSpinnerModule,
-
-    MatDividerModule,
-    MatStepperModule,
-    MatTooltipModule
+    MaterialFormModule
   ],
   templateUrl: './participe-info.component.html',
   styleUrl: './participe-info.component.scss'

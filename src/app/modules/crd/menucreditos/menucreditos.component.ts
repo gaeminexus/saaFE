@@ -1,11 +1,7 @@
 import { Component, inject, signal, effect } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { RouterModule, Router, RouterOutlet } from '@angular/router';
-import { MatSidenavModule } from '@angular/material/sidenav';
-import { MatListModule } from '@angular/material/list';
-import { MatIconModule } from '@angular/material/icon';
-import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatButtonModule } from '@angular/material/button';
+
+import { MaterialFormModule } from '../../../shared/modules/material-form.module';
 import { NavItem } from '../../../shared/basics/menu/model/nav-item';
 import { MenuListComponent } from '../../../shared/basics/menu/forms/menu-list/menu-list.component';
 
@@ -13,9 +9,10 @@ import { MenuListComponent } from '../../../shared/basics/menu/forms/menu-list/m
   selector: 'app-menucreditos',
   standalone: true,
   imports: [
-    CommonModule, RouterModule, RouterOutlet,
-    MatSidenavModule, MatListModule,
-    MatIconModule, MatTooltipModule, MatButtonModule, MenuListComponent
+    RouterModule,
+    RouterOutlet,
+    MaterialFormModule,
+    MenuListComponent
   ],
   templateUrl: './menucreditos.component.html',
   styleUrls: ['./menucreditos.component.scss']
@@ -65,6 +62,28 @@ export class MenucreditosComponent {
         {
           displayName: 'Listado General',
           iconName: 'list',
+          route: '/menucreditos/navegacion-cascada'
+        },
+        {
+          displayName: 'Dash',
+          iconName: 'person_play',
+          route: '/menucreditos/participe-dash'
+        },
+      ]
+    },
+    {
+      displayName: 'Gestión Archivos',
+      iconName: 'library_books',
+      route: '/menucreditos/parametrizacion',
+      children: [
+        {
+          displayName: 'Cargar Aportes',
+          iconName: 'drive_folder_upload',
+          route: '/menucreditos/carga-aportes'
+        },
+        {
+          displayName: 'Generar Descuentos',
+          iconName: 'system_update_alt',
           route: '/menucreditos/navegacion-cascada'
         },
         {

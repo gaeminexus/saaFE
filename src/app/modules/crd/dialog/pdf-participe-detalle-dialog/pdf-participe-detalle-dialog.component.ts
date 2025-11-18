@@ -1,17 +1,13 @@
 import { Component } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
+import { MatDialogRef } from '@angular/material/dialog';
+
+import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
 
 @Component({
   selector: 'app-pdf-participe-detalle-dialog',
   standalone: true,
   imports: [
-    CommonModule,
-    MatDialogModule,
-    MatButtonModule,
-    MatIconModule
+    MaterialFormModule
   ],
   templateUrl: './pdf-participe-detalle-dialog.component.html',
   styleUrl: './pdf-participe-detalle-dialog.component.scss'

@@ -1,18 +1,10 @@
 import { Component, OnInit, Inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatCardModule } from '@angular/material/card';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatExpansionModule } from '@angular/material/expansion';
-import { MatTableModule } from '@angular/material/table';
-import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatDialog } from '@angular/material/dialog';
+
+import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
 import { PrestamoPagosDialogComponent } from '../../dialog/prestamo-pagos-dialog/prestamo-pagos-dialog.component';
 import { PdfParticipeDetalleDialogComponent } from '../../dialog/pdf-participe-detalle-dialog/pdf-participe-detalle-dialog.component';
 
@@ -57,19 +49,8 @@ interface AportesPorTipo {
   selector: 'app-participe-dash',
   standalone: true,
   imports: [
-    CommonModule,
     FormsModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatButtonModule,
-    MatIconModule,
-    MatCardModule,
-    MatProgressSpinnerModule,
-    MatExpansionModule,
-    MatTableModule,
-    MatTooltipModule,
-    MatSnackBarModule,
-    MatDialogModule
+    MaterialFormModule
   ],
   templateUrl: './participe-dash.component.html',
   styleUrl: './participe-dash.component.scss'

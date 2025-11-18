@@ -26,6 +26,7 @@ import { EntidadCreditosComponent } from './modules/crd/menucreditos/entidad-cre
 import { NavegacionCascadaComponent } from './modules/crd/forms/navegacion-cascada/navegacion-cascada.component';
 import { ParticipeDashComponent } from './modules/crd/forms/participe-dash/participe-dash.component';
 import { ParticipeInfoComponent } from './modules/crd/forms/participe-info/participe-info.component';
+import { CargaAportesComponent } from './modules/crd/forms/carga-aportes/carga-aportes.component';
 
 
 
@@ -68,6 +69,7 @@ export const routes: Routes = [
         { path: 'navegacion-cascada', component: NavegacionCascadaComponent },
         { path: 'participe-dash', component: ParticipeDashComponent },
         { path: 'participe-info', component: ParticipeInfoComponent },
+        { path: 'carga-aportes', component: CargaAportesComponent },
       ]
     },
     { path: '**', redirectTo: '' }
