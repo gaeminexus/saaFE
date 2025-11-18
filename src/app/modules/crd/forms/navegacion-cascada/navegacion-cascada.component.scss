@@ -429,4 +429,16 @@
       }
     }
   }
+
+  // Estilos para botones de acción
+  .action-button {
+    min-width: auto;
+    padding: $spacing-xs $spacing-sm;
+    font-size: $font-size-sm;
+
+    mat-icon {
+      margin-right: $spacing-xs;
+      font-size: $font-size-base;
+    }
+  }
 }

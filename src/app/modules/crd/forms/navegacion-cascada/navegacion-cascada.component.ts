@@ -19,6 +19,7 @@ import { Entidad } from '../../model/entidad';
 import { Producto } from '../../model/producto';
 import { Prestamo } from '../../model/prestamo';
 import { DetallePrestamo } from '../../model/detalle-prestamo';
+import { ServiciosCrd } from '../../service/ws-crd';
 import { PagoPrestamo } from '../../model/pago-prestamo';
 
 import { EntidadService } from '../../service/entidad.service';
@@ -83,6 +84,7 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
   entidadSeleccionada = signal<Entidad | null>(null);
   productoSeleccionado = signal<Producto | null>(null);
   prestamoSeleccionado = signal<Prestamo | null>(null);
+  detallePrestamoSeleccionado = signal<DetallePrestamo | null>(null);
 
   // Fuentes de datos para las tablas
   dataSourceEntidades = new MatTableDataSource<Entidad>([]);
@@ -95,8 +97,8 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
   columnasEntidades: string[] = ['codigo', 'razonSocial', 'numeroIdentificacion', 'correoPersonal', 'movil', 'acciones'];
   columnasProductos: string[] = ['codigo', 'nombre', 'codigoSBS', 'tipoPrestamo', 'estado', 'acciones'];
   columnasPrestamosResumen: string[] = ['codigo', 'producto', 'amortizacion', 'montoSolicitado', 'estado', 'acciones'];
-  columnasDetallePrestamos: string[] = ['numeroCuota', 'fechaVencimiento', 'capital', 'interes', 'mora', 'interesVencido', 'saldoCapital', 'fechaPagado'];
-  columnasPagos: string[] = ['numero', 'fechaPago', 'monto', 'capital', 'interes', 'mora', 'estado'];
+  columnasDetallePrestamos: string[] = ['numeroCuota', 'fechaVencimiento', 'capital', 'interes', 'mora', 'interesVencido', 'saldoCapital', 'fechaPagado', 'acciones'];
+  columnasPagos: string[] = ['fecha', 'valor', 'numeroCuota', 'capitalPagado', 'interesPagado', 'moraPagada', 'idEstado'];
 
   // Filtros
   filtroEntidades = '';
@@ -459,6 +461,26 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
 
     // Cargar el detalle específico del préstamo
     this.cargarDetallePrestamo(prestamo.codigo);
+  }
+
+  // Navegar al nivel 4 cuando se selecciona un detalle préstamo
+  seleccionarDetallePrestamo(detallePrestamo: DetallePrestamo): void {
+    console.log('🎯 Seleccionando detalle préstamo para ver pagos:', detallePrestamo.codigo);
+    this.detallePrestamoSeleccionado.set(detallePrestamo);
+    this.nivelActual.set(NivelNavegacion.PAGO_PRESTAMO);
+
+    // Actualizar breadcrumbs
+    const entidad = this.entidadSeleccionada();
+    const prestamo = this.prestamoSeleccionado();
+    this.breadcrumbs.set([
+      { nivel: NivelNavegacion.ENTIDADES, titulo: 'Entidades', subtitulo: entidad?.razonSocial, activo: false },
+      { nivel: NivelNavegacion.PRESTAMOS, titulo: 'Préstamos', subtitulo: 'Listado', activo: false },
+      { nivel: NivelNavegacion.DETALLE_PRESTAMOS, titulo: 'Detalle Préstamo', subtitulo: `Código: ${prestamo?.codigo}`, activo: false },
+      { nivel: NivelNavegacion.PAGO_PRESTAMO, titulo: 'Pagos', subtitulo: `Cuota: ${detallePrestamo.numeroCuota}`, activo: true }
+    ]);
+
+    // Cargar los pagos del detalle préstamo seleccionado
+    this.cargarPagoPrestamo(detallePrestamo.codigo);
   }
 
   cargarPrestamos(): void {
@@ -1220,6 +1242,191 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
     return numero.toLocaleString('es-ES', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
+    });
+  }
+
+  // Métodos de paginación para pagos (NIVEL 4)
+  updatePagePagos(): void {
+    this.totalPagos.set(this.allPagos.length);
+
+    const start = this.pageIndexPag * this.pageSizePag;
+    const end = start + this.pageSizePag;
+    const paginatedData = this.allPagos.slice(start, end);
+
+    this.dataSourcePagos.data = paginatedData;
+  }
+
+  pageChangedPagos(event: PageEvent): void {
+    this.pageIndexPag = event.pageIndex;
+    this.pageSizePag = event.pageSize;
+    this.updatePagePagos();
+  }
+
+  // Cargar pagos del detalle préstamo seleccionado (NIVEL 4)
+  cargarPagoPrestamo(codigoDetallePrestamo: number): void {
+    this.loading.set(true);
+    this.errorMsg.set('');
+
+    console.log('🔍 CARGANDO PAGOS para codigoDetalle:', codigoDetallePrestamo);
+
+    const detallePrestamo = this.detallePrestamoSeleccionado();
+    console.log('📋 DETALLE PRÉSTAMO SELECCIONADO:', {
+      codigo: detallePrestamo?.codigo,
+      numeroCuota: detallePrestamo?.numeroCuota,
+      codigoPrestamo: detallePrestamo?.codigoPrestamo,
+      fechaVencimiento: detallePrestamo?.fechaVencimiento
+    });
+
+    // Crear criterio de búsqueda
+    this.criterioConsultaArray = [];
+
+    if (!detallePrestamo?.numeroCuota) {
+      console.error('❌ No se puede crear criterio: DetallePrestamo no seleccionado o sin numeroCuota');
+      this.errorMsg.set('Error: No hay detalle de préstamo seleccionado');
+      this.loading.set(false);
+      return;
+    }
+
+    // Filtrado con lógica AND: codigoPrestamo AND codigoDetalle
+    const codigoPrestamo = detallePrestamo.codigoPrestamo || detallePrestamo.prestamoId;
+    const codigoDetalle = detallePrestamo.codigo; // código del detalle préstamo
+
+    // 1. Filtrar por codigoPrestamo
+    if (codigoPrestamo) {
+      const criterioPrestamo = new DatosBusqueda();
+      criterioPrestamo.asigna3(
+        TipoDatosBusqueda.LONG,
+        'codigoPrestamo',
+        codigoPrestamo?.toString() || '',
+        TipoComandosBusqueda.IGUAL
+      );
+      this.criterioConsultaArray.push(criterioPrestamo);
+    }
+
+    // 2. AND - Filtrar por codigoDetalle
+    if (codigoDetalle) {
+      const criterioCodigoDetalle = new DatosBusqueda();
+      criterioCodigoDetalle.asigna3(
+        TipoDatosBusqueda.LONG,
+        'codigoDetalle',
+        codigoDetalle.toString(),
+        TipoComandosBusqueda.IGUAL
+      );
+      criterioCodigoDetalle.setTipoOperadorLogico(TipoComandosBusqueda.AND);
+      this.criterioConsultaArray.push(criterioCodigoDetalle);
+    }
+
+    console.log('🔍 CRITERIOS AND ENVIADOS:', {
+      criterios: [
+        codigoPrestamo ? 'codigoPrestamo = ' + codigoPrestamo : 'Sin codigoPrestamo',
+        codigoDetalle ? 'AND codigoDetalle = ' + codigoDetalle : 'Sin codigoDetalle'
+      ],
+      totalCriterios: this.criterioConsultaArray.length,
+      criterioArray: this.criterioConsultaArray
+    });    this.pagoPrestamoService.selectByCriteria(this.criterioConsultaArray).pipe(
+      catchError(err => {
+        console.error('❌ selectByCriteria falló:', err.message || err);
+        console.log('🔄 Probando con getAll() y filtro en frontend...');
+        // Si selectByCriteria falla, usar getAll() y filtrar en frontend
+        return this.pagoPrestamoService.getAll();
+      }),
+      catchError(err => {
+        console.error('❌ getAll() también falló:', err);
+        return of([]);
+      }),
+      finalize(() => {
+        this.loading.set(false);
+      })
+    ).subscribe((resultado: any) => {
+      let pagos: PagoPrestamo[] = [];
+
+      // Manejar diferentes tipos de respuesta
+      if (Array.isArray(resultado)) {
+        pagos = resultado;
+      } else if (resultado && !Array.isArray(resultado)) {
+        pagos = [resultado];
+      }
+
+      console.log('📝 PAGOS RECIBIDOS DEL BACKEND:', {
+        total: pagos.length,
+        tipoRespuesta: Array.isArray(resultado) ? 'array' : 'objeto',
+        respuestaOriginal: resultado
+      });
+
+      if (pagos.length > 0) {
+        console.log('📝 MUESTRA PRIMER PAGO COMPLETO:', pagos[0]);
+        console.log('📝 CAMPOS DISPONIBLES EN PAGO:', Object.keys(pagos[0]));
+      } else {
+        console.log('⚠️ NO SE RECIBIERON PAGOS DEL BACKEND');
+      }
+
+      console.log('🎯 INICIANDO FILTRADO AND:', {
+        codigoPrestamoBuscado: detallePrestamo?.codigoPrestamo || detallePrestamo?.prestamoId,
+        codigoDetalleBuscado: detallePrestamo?.codigo,
+        totalPagosParaFiltrar: pagos.length
+      });
+
+      const pagosFiltrados = pagos.filter(p => {
+        const pago = p as any; // Usar any para evitar problemas de tipos temporalmente
+
+        // Filtrado con lógica AND: codigoPrestamo AND codigoDetalle
+        const codigoPrestamoDetalle = detallePrestamo?.codigoPrestamo || detallePrestamo?.prestamoId;
+        const codigoDetalleDetalle = detallePrestamo?.codigo;
+
+        // 1. Debe coincidir codigoPrestamo
+        const matchPrestamo = pago.codigoPrestamo === codigoPrestamoDetalle;
+
+        // 2. AND debe coincidir codigoDetalle
+        const matchCodigoDetalle = pago.codigoDetalle === codigoDetalleDetalle;
+
+        // Ambos criterios deben coincidir (AND lógico)
+        const match = matchPrestamo && matchCodigoDetalle;
+
+        // Log solo para los primeros 10 pagos o los que coinciden
+        const shouldLog = pagos.indexOf(p) < 10 || match;
+        if (shouldLog) {
+          console.log(`🔍 PAGO ${pago.codigo}:`, {
+            codigoDetalle: pago.codigoDetalle,
+            codigoPrestamo: pago.codigoPrestamo,
+            buscado: {
+              codigoPrestamo: codigoPrestamoDetalle,
+              codigoDetalle: codigoDetalleDetalle
+            },
+            matches: {
+              prestamo: matchPrestamo,
+              codigoDetalle: matchCodigoDetalle
+            },
+            coincide: match
+          });
+        }
+
+        if (match) {
+          console.log('✅ PAGO COINCIDE (AND):', {
+            codigo: pago.codigo,
+            codigoDetalle: pago.codigoDetalle,
+            codigoPrestamo: pago.codigoPrestamo,
+            fecha: pago.fecha,
+            criterios: 'codigoPrestamo AND codigoDetalle'
+          });
+        }
+        return match;
+      });      console.log(`🎯 PAGOS FILTRADOS: ${pagosFiltrados.length} de ${pagos.length} total`);
+
+      if (pagosFiltrados.length > 0) {
+        // Ordenar por fecha (más reciente primero)
+        pagosFiltrados.sort((a, b) => {
+          const fechaA = new Date(a.fecha || 0).getTime();
+          const fechaB = new Date(b.fecha || 0).getTime();
+          return fechaB - fechaA;
+        });
+
+        this.allPagos = pagosFiltrados;
+      } else {
+        this.errorMsg.set(`No se encontraron pagos para el préstamo ${detallePrestamo?.codigoPrestamo} detalle ${detallePrestamo?.codigo}`);
+        this.allPagos = [];
+      }
+
+      this.updatePagePagos();
     });
   }
 }
