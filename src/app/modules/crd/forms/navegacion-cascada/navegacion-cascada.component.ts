@@ -18,11 +18,13 @@ import { of } from 'rxjs';
 import { Entidad } from '../../model/entidad';
 import { Producto } from '../../model/producto';
 import { Prestamo } from '../../model/prestamo';
+import { DetallePrestamo } from '../../model/detalle-prestamo';
 import { PagoPrestamo } from '../../model/pago-prestamo';
 
 import { EntidadService } from '../../service/entidad.service';
 import { ProductoService } from '../../service/producto.service';
 import { PrestamoService } from '../../service/prestamo.service';
+import { DetallePrestamoService } from '../../service/detalle-prestamo.service';
 import { PagoPrestamoService } from '../../service/pago-prestamo.service';
 import { EstadoPrestamoService } from '../../service/estado-prestamo.service';
 import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
@@ -86,13 +88,14 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
   dataSourceEntidades = new MatTableDataSource<Entidad>([]);
   dataSourceProductos = new MatTableDataSource<Producto>([]);
   dataSourcePrestamos = new MatTableDataSource<Prestamo>([]);
+  dataSourceDetallePrestamos = new MatTableDataSource<DetallePrestamo>([]);
   dataSourcePagos = new MatTableDataSource<PagoPrestamo>([]);
 
   // Columnas para cada tabla
   columnasEntidades: string[] = ['codigo', 'razonSocial', 'numeroIdentificacion', 'correoPersonal', 'movil', 'acciones'];
   columnasProductos: string[] = ['codigo', 'nombre', 'codigoSBS', 'tipoPrestamo', 'estado', 'acciones'];
-  columnasPrestamosResumen: string[] = ['codigo', 'producto', 'montoSolicitado', 'estado', 'acciones'];
-  columnasPrestamos: string[] = ['codigo', 'producto', 'amortizacion', 'fecha', 'montoSolicitado', 'plazo', 'tasa', 'estado', 'acciones'];
+  columnasPrestamosResumen: string[] = ['codigo', 'producto', 'amortizacion', 'montoSolicitado', 'estado', 'acciones'];
+  columnasDetallePrestamos: string[] = ['numeroCuota', 'fechaVencimiento', 'capital', 'interes', 'mora', 'interesVencido', 'saldoCapital', 'saldoInteres', 'saldoMora', 'saldoInteresVencido', 'fechaPagado'];
   columnasPagos: string[] = ['numero', 'fechaPago', 'monto', 'capital', 'interes', 'mora', 'estado'];
 
   // Filtros
@@ -122,6 +125,13 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
   allPrestamos: Prestamo[] = [];
   currentFilterPrest = '';
 
+  // Paginación DetallePrestamo
+  pageSizeDet = 20;
+  pageIndexDet = 0;
+  totalDetallePrestamos = signal<number>(0);
+  allDetallePrestamos: DetallePrestamo[] = [];
+  currentFilterDet = '';
+
   // Paginación Pagos
   pageSizePag = 20;
   pageIndexPag = 0;
@@ -137,6 +147,7 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
     private entidadService: EntidadService,
     private productoService: ProductoService,
     private prestamoService: PrestamoService,
+    private detallePrestamoService: DetallePrestamoService,
     private pagoPrestamoService: PagoPrestamoService,
     private estadoPrestamoService: EstadoPrestamoService,
     private cd: ChangeDetectorRef
@@ -302,8 +313,16 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
         }
         break;
       case NivelNavegacion.DETALLE_PRESTAMOS:
-        if (this.productoSeleccionado()) {
-          this.seleccionarProducto(this.productoSeleccionado()!);
+        // Si estamos en el detalle de un préstamo específico, volver al listado de préstamos
+        if (this.prestamoSeleccionado()) {
+          this.prestamoSeleccionado.set(null);
+          this.nivelActual.set(NivelNavegacion.PRESTAMOS);
+          const entidad = this.entidadSeleccionada();
+          this.breadcrumbs.set([
+            { nivel: NivelNavegacion.ENTIDADES, titulo: 'Entidades', subtitulo: entidad?.razonSocial, activo: false },
+            { nivel: NivelNavegacion.PRESTAMOS, titulo: 'Préstamos', subtitulo: 'Listado', activo: true }
+          ]);
+          this.cargarPrestamos();
         }
         break;
     }
@@ -361,6 +380,10 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
     return item.codigo;
   }
 
+  trackDetallePrestamo(index: number, item: DetallePrestamo): number {
+    return item.codigo;
+  }
+
   // Productos - paginación manual
   updatePageProductos(): void {
     let filtered = this.allProductos;
@@ -399,6 +422,24 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
 
     // Filtrar préstamos por entidad (no por producto)
     this.cargarPrestamos();
+  }
+
+  // Nueva función para seleccionar un préstamo específico y navegar al detalle
+  seleccionarPrestamo(prestamo: Prestamo): void {
+    console.log('🎯 Seleccionando préstamo para ver detalle:', prestamo.codigo);
+    this.prestamoSeleccionado.set(prestamo);
+    this.nivelActual.set(NivelNavegacion.DETALLE_PRESTAMOS);
+
+    // Actualizar breadcrumbs
+    const entidad = this.entidadSeleccionada();
+    this.breadcrumbs.set([
+      { nivel: NivelNavegacion.ENTIDADES, titulo: 'Entidades', subtitulo: entidad?.razonSocial, activo: false },
+      { nivel: NivelNavegacion.PRESTAMOS, titulo: 'Préstamos', subtitulo: 'Listado', activo: false },
+      { nivel: NivelNavegacion.DETALLE_PRESTAMOS, titulo: 'Detalle Préstamo', subtitulo: `Código: ${prestamo.codigo}`, activo: true }
+    ]);
+
+    // Cargar el detalle específico del préstamo
+    this.cargarDetallePrestamo(prestamo.codigo);
   }
 
   cargarPrestamos(): void {
@@ -632,6 +673,58 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
     this.updatePagePrestamos();
   }
 
+  // DetallePrestamo - paginación manual
+  updatePageDetallePrestamos(): void {
+    console.log('🔄 INICIANDO updatePageDetallePrestamos()');
+    console.log('🔄 allDetallePrestamos.length:', this.allDetallePrestamos?.length || 0);
+    console.log('🔄 Muestra de datos en allDetallePrestamos:', this.allDetallePrestamos?.[0]);
+
+    let filtered = this.allDetallePrestamos;
+    console.log('📊 Total cuotas en allDetallePrestamos:', this.allDetallePrestamos.length);
+
+    // Filtro de búsqueda adicional
+    if (this.currentFilterDet) {
+      const f = this.currentFilterDet.toLowerCase();
+      console.log('🔍 Aplicando filtro de búsqueda:', f);
+      filtered = filtered.filter(d => {
+        return (
+          d.numeroCuota?.toString().includes(f) ||
+          d.capital?.toString().includes(f) ||
+          d.interes?.toString().includes(f) ||
+          d.saldoCapital?.toString().includes(f) ||
+          (d.fechaVencimiento && new Date(d.fechaVencimiento).toLocaleDateString().includes(f)) ||
+          (d.fechaPagado && new Date(d.fechaPagado).toLocaleDateString().includes(f))
+        );
+      });
+      console.log('🔍 Después del filtro quedan:', filtered.length, 'cuotas');
+    }
+
+    const start = this.pageIndexDet * this.pageSizeDet;
+    const end = start + this.pageSizeDet;
+    console.log('📄 Paginación - start:', start, 'end:', end, 'pageSize:', this.pageSizeDet, 'pageIndex:', this.pageIndexDet);
+
+    const paginatedData = filtered.slice(start, end);
+    console.log('📄 Datos paginados (slice):', paginatedData.length, 'elementos');
+    console.log('📄 Primera cuota de la página:', paginatedData[0]);
+
+    this.dataSourceDetallePrestamos.data = paginatedData;
+    this.totalDetallePrestamos.set(filtered.length);
+
+    console.log('✅ DataSource.data asignado con', this.dataSourceDetallePrestamos.data.length, 'elementos');
+    console.log('✅ totalDetallePrestamos signal actualizado a:', this.totalDetallePrestamos());
+    console.log('✅ Estado final del dataSource:', {
+      dataLength: this.dataSourceDetallePrestamos.data.length,
+      firstItem: this.dataSourceDetallePrestamos.data[0],
+      totalSignal: this.totalDetallePrestamos()
+    });
+  }
+
+  pageChangedDetallePrestamos(e: PageEvent): void {
+    this.pageSizeDet = e.pageSize;
+    this.pageIndexDet = e.pageIndex;
+    this.updatePageDetallePrestamos();
+  }
+
   // Método para calcular total de página
   getTotalPages(): number {
     return this.pageSizeEnt > 0 ? Math.ceil(this.totalEntidades() / this.pageSizeEnt) : 0;
@@ -776,9 +869,222 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
     }
   }
 
-
-
   /**
+   * Cargar el detalle específico de un préstamo (las cuotas) usando selectByCriteria con relación padre-hijo
+   */
+  cargarDetallePrestamo(codigoPrestamo: number): void {
+    this.loading.set(true);
+    this.errorMsg.set('');
+    console.log('🔍 INICIO: Cargando cuotas del préstamo ID:', codigoPrestamo);
+    console.log('🔍 Tipo de dato recibido:', typeof codigoPrestamo, 'Valor:', codigoPrestamo);
+
+    // Verificar URL del servicio
+    console.log('🌍 Endpoint base DTPR:', (this.detallePrestamoService as any).constructor.name);
+    console.log('🌍 URL base esperada: http://localhost:8080/saa-backend/rest/dtpr');
+
+    // Construir criterio con relación padre-hijo: Prestamo (padre) -> codigo (hijo)
+    this.criterioConsultaArray = [];
+    const criterio = new DatosBusqueda();
+
+    // Usar asignaValorConCampoPadre: padre=Prestamo, hijo=codigo, valor=codigoPrestamo
+    criterio.asignaValorConCampoPadre(
+      TipoDatosBusqueda.LONG,    // tipoDato
+      'prestamo',                // campo (entidad padre)
+      'codigo',                  // campo1 (campo del padre)
+      codigoPrestamo.toString(), // valor
+      TipoComandosBusqueda.IGUAL // tipoComparacion
+    );
+    this.criterioConsultaArray.push(criterio);
+
+    // Orden por número de cuota
+    const criterioOrden = new DatosBusqueda();
+    criterioOrden.orderBy('numeroCuota');
+    this.criterioConsultaArray.push(criterioOrden);
+
+    console.log('📋 Criterio construido - Padre: prestamo, Campo: codigo, Valor:', codigoPrestamo);
+    console.log('📋 Array completo de criterios:', JSON.stringify(this.criterioConsultaArray, null, 2));
+
+    // Probar primero una consulta directa simple para verificar conectividad
+    console.log('🧪 PRUEBA 1: Verificando endpoint básico con getAll...');
+    this.detallePrestamoService.getAll().pipe(
+      catchError(err => {
+        console.log('❌ ERROR en getAll básico:', err);
+        return of(null);
+      })
+    ).subscribe(testResult => {
+      console.log('🧪 Resultado de prueba getAll:', testResult?.length || 0, 'registros totales');
+      if (testResult && testResult.length > 0) {
+        console.log('🧪 Muestra de registro para análisis:', testResult[0]);
+        console.log('🧪 Campos en primer registro:', Object.keys(testResult[0]));
+
+        // Buscar registros que coincidan con nuestro préstamo
+        const coincidencias = testResult.filter((r: any) =>
+          r.codigoPrestamo === codigoPrestamo ||
+          r.prestamo?.codigo === codigoPrestamo ||
+          (r as any).prestamoCodigo === codigoPrestamo
+        );
+        console.log('🧪 Registros que coinciden con préstamo', codigoPrestamo + ':', coincidencias.length);
+        if (coincidencias.length > 0) {
+          console.log('🧪 Primera coincidencia:', coincidencias[0]);
+        }
+      }
+    });
+
+    // Ahora probar selectByCriteria
+    console.log('🌐 PRUEBA 2: Enviando selectByCriteria al backend...');
+    this.detallePrestamoService.selectByCriteria(this.criterioConsultaArray).pipe(
+      catchError(err => {
+        console.log('❌ ERROR en selectByCriteria:', err);
+        console.log('❌ Tipo de error:', typeof err, 'Status:', err?.status);
+        console.log('❌ Mensaje completo del error:', JSON.stringify(err, null, 2));
+
+        console.log('🔄 FALLBACK: Intentando getAll() para obtener todos los registros...');
+        return this.detallePrestamoService.getAll().pipe(
+          catchError(err2 => {
+            console.log('❌ ERROR también en getAll():', err2);
+            return of([] as DetallePrestamo[]);
+          })
+        );
+      }),
+      finalize(() => {
+        this.loading.set(false);
+        console.log('⏹️ Finalizó la carga (loading = false)');
+      })
+    ).subscribe((resultado: any) => {
+      console.log('📦 RESPUESTA del backend recibida');
+      console.log('📦 Tipo de resultado:', typeof resultado);
+      console.log('📦 Es array?:', Array.isArray(resultado));
+      console.log('📦 Longitud/valor:', Array.isArray(resultado) ? resultado.length : resultado);
+      console.log('📦 Resultado completo:', resultado);
+
+      let cuotas: DetallePrestamo[] = [];
+      if (Array.isArray(resultado)) {
+        cuotas = resultado;
+        console.log('✅ Procesado como array, elementos:', cuotas.length);
+      } else if (resultado && !Array.isArray(resultado)) {
+        cuotas = [resultado];
+        console.log('✅ Procesado como objeto único, convertido a array');
+      } else {
+        console.log('❌ Resultado vacío o nulo');
+      }
+
+      console.log('🔍 Total cuotas antes del filtro:', cuotas.length);
+
+      // Si tenemos cuotas, mostrar algunas muestras para debug
+      if (cuotas.length > 0) {
+        console.log('📝 Muestra de la primera cuota:', cuotas[0]);
+        console.log('📝 Campos disponibles en primera cuota:', Object.keys(cuotas[0]));
+        console.log('🔢 VALORES NUMERICOS de la primera cuota:', {
+          capital: cuotas[0].capital,
+          interes: cuotas[0].interes,
+          mora: cuotas[0].mora,
+          saldoCapital: cuotas[0].saldoCapital,
+          tipos: {
+            capital: typeof cuotas[0].capital,
+            interes: typeof cuotas[0].interes,
+            mora: typeof cuotas[0].mora,
+            saldoCapital: typeof cuotas[0].saldoCapital
+          }
+        });
+
+        // Verificar si alguna cuota ya tiene el codigoPrestamo correcto
+        const cuotasConCodigo = cuotas.filter(c => c.codigoPrestamo === codigoPrestamo);
+        console.log('🎯 Cuotas que YA tienen codigoPrestamo=' + codigoPrestamo + ':', cuotasConCodigo.length);
+
+        // VERIFICAR EL CAMPO REAL: prestamoId (detectado en los logs)
+        console.log('🔍 DEBUGGING: Valores reales de prestamoId en las primeras 5 cuotas:');
+        cuotas.slice(0, 5).forEach((c, idx) => {
+          const prestamoObj = (c as any).prestamoId;
+          console.log(`   Cuota ${idx + 1}: prestamoId es objeto:`, prestamoObj);
+          console.log(`   Cuota ${idx + 1}: prestamoId.codigo=${prestamoObj?.codigo}, prestamoId.id=${prestamoObj?.id}`);
+          console.log(`   Cuota ${idx + 1}: codigo=${c.codigo}, numeroCuota=${c.numeroCuota}`);
+        });
+
+        // Mostrar todos los códigos de préstamo únicos para diagnóstico
+        const codigosPrestamosUnicos = [...new Set(cuotas.map(c => (c as any).prestamoId?.codigo).filter(c => c != null))];
+        console.log('🔍 DEBUGGING: Todos los códigos de préstamo únicos disponibles:', codigosPrestamosUnicos);        console.log('🔍 DEBUGGING: Buscando préstamo ID:', codigoPrestamo, 'tipo:', typeof codigoPrestamo);
+
+        const cuotasConPrestamoId = cuotas.filter(c => (c as any).prestamoId === codigoPrestamo);
+        console.log('🎯 Cuotas que tienen prestamoId=' + codigoPrestamo + ':', cuotasConPrestamoId.length);
+
+        // NUEVO: Buscar por prestamoId.codigo (ya que prestamoId es un objeto)
+        const cuotasConPrestamoIdCodigo = cuotas.filter(c => (c as any).prestamoId?.codigo === codigoPrestamo);
+        console.log('🎯 Cuotas que tienen prestamoId.codigo=' + codigoPrestamo + ':', cuotasConPrestamoIdCodigo.length);
+
+        // También verificar como string por si hay diferencia de tipo
+        const cuotasConPrestamoIdString = cuotas.filter(c => (c as any).prestamoId?.toString() === codigoPrestamo.toString());
+        console.log('🎯 Cuotas que tienen prestamoId (como string)=' + codigoPrestamo + ':', cuotasConPrestamoIdString.length);        if (cuotasConPrestamoIdCodigo.length > 0) {
+          console.log('✅ ENCONTRADAS por prestamoId.codigo! Usando esas cuotas');
+          cuotas = cuotasConPrestamoIdCodigo;
+        } else if (cuotasConPrestamoId.length > 0) {
+          console.log('✅ ENCONTRADAS por prestamoId (número exacto)! Usando esas cuotas');
+          cuotas = cuotasConPrestamoId;
+        } else if (cuotasConPrestamoIdString.length > 0) {
+          console.log('✅ ENCONTRADAS por prestamoId (string match)! Usando esas cuotas');
+          cuotas = cuotasConPrestamoIdString;
+        } else if (cuotasConCodigo.length === 0) {
+          console.log('🔍 FILTRADO LOCAL: Buscando cuotas por diferentes campos...');
+
+          // Intentar diferentes campos que podrían representar el código del préstamo
+          const cuotasFiltradas = cuotas.filter(c => {
+            const coincide = (
+              c.codigoPrestamo === codigoPrestamo ||
+              (c as any).prestamoId === codigoPrestamo ||
+              (c as any).prestamoId?.codigo === codigoPrestamo ||  // NUEVO: objeto prestamo con codigo
+              (c as any).prestamoId?.id === codigoPrestamo ||      // NUEVO: objeto prestamo con id
+              (c as any).prestamoCodigo === codigoPrestamo ||
+              (c as any).codigoPrestamoFK === codigoPrestamo ||
+              (c as any).prestamo?.codigo === codigoPrestamo ||
+              (c as any).prestamo?.id === codigoPrestamo
+            );
+
+            if (coincide) {
+              console.log('✅ Cuota coincidente encontrada:', {
+                codigo: c.codigo,
+                prestamoIdObjeto: (c as any).prestamoId,
+                prestamoIdCodigo: (c as any).prestamoId?.codigo,
+                codigoPrestamo: c.codigoPrestamo,
+                numeroCuota: c.numeroCuota,
+                prestamo: (c as any).prestamo
+              });
+            }
+
+            return coincide;
+          });
+
+          console.log('🔍 Resultado del filtro local:', cuotasFiltradas.length, 'cuotas encontradas');
+          cuotas = cuotasFiltradas;          if (cuotas.length === 0) {
+            console.log('❌ NO SE ENCONTRARON cuotas para el préstamo:', codigoPrestamo);
+            console.log('❌ Revisando estructura de datos...');
+            if (cuotas.length > 0) {
+              console.log('❌ Ejemplo de estructura recibida:', {
+                codigoPrestamo: cuotas[0].codigoPrestamo,
+                campos: Object.keys(cuotas[0]),
+                prestamo: (cuotas[0] as any).prestamo
+              });
+            }
+          }
+        } else {
+          cuotas = cuotasConCodigo;
+          console.log('✅ Usando cuotas que ya tenían el código correcto');
+        }
+      } else {
+        console.log('❌ NO HAY CUOTAS para procesar');
+      }
+
+      // Ordenar por número de cuota
+      cuotas.sort((a, b) => (a.numeroCuota || 0) - (b.numeroCuota || 0));
+
+      console.log('📋 FINAL: Asignando', cuotas.length, 'cuotas al dataSource');
+      this.allDetallePrestamos = cuotas;
+      this.totalDetallePrestamos.set(this.allDetallePrestamos.length);
+      this.pageIndexDet = 0;
+      this.updatePageDetallePrestamos();
+
+      console.log('✅ COMPLETADO: Cuotas cargadas y ordenadas:', cuotas.length);
+      console.log('✅ DataSource actualizado, total items:', this.totalDetallePrestamos());
+    });
+  }  /**
    * Obtiene el nombre del Estado del préstamo intentando múltiples formas que puede traer el backend
    */
   getEstadoNombre(p: any): string {
@@ -797,5 +1103,132 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
     ];
     const val = cand.find((x) => typeof x === 'string' && x.trim().length > 0);
     return (val || '').toString();
+  }
+
+  /**
+   * Obtiene el nombre del Producto del préstamo de forma segura
+   */
+  getProductoNombre(p: any): string {
+    if (!p) return 'N/A';
+    // Intentar múltiples formas que puede traer el backend
+    const cand = [
+      p?.Producto?.nombre,
+      p?.producto?.nombre,
+      p?.ProductoNombre,
+      p?.productoNombre,
+      'Producto no disponible'
+    ];
+    const val = cand.find((x) => typeof x === 'string' && x.trim().length > 0);
+    return (val || 'N/A').toString();
+  }
+
+  /**
+   * Obtiene el código SBS del producto de forma segura
+   */
+  getProductoCodigoSBS(p: any): string {
+    if (!p) return '';
+    const cand = [
+      p?.Producto?.codigoSBS,
+      p?.producto?.codigoSBS,
+      p?.ProductoCodigoSBS,
+      p?.productoCodigoSBS
+    ];
+    const val = cand.find((x) => typeof x === 'string' && x.trim().length > 0);
+    return (val || '').toString();
+  }
+
+  /**
+   * Verifica si el préstamo tiene código SBS disponible
+   */
+  tieneCodigoSBS(p: any): boolean {
+    return this.getProductoCodigoSBS(p).length > 0;
+  }
+
+  /**
+   * Convierte una fecha string del backend a formato Date válido para Angular
+   */
+  formatearFecha(fechaString: any): Date | null {
+    if (!fechaString) return null;
+
+    try {
+      // Si ya es un objeto Date, devolverlo
+      if (fechaString instanceof Date) return fechaString;
+
+      // Si es string, intentar parsear
+      if (typeof fechaString === 'string') {
+        // Manejar formato "2016-02-29T05:00:00Z[UTC]"
+        let fechaLimpia = fechaString;
+
+        // Remover la parte "[UTC]" si existe
+        if (fechaLimpia.includes('[UTC]')) {
+          fechaLimpia = fechaLimpia.replace('[UTC]', '');
+        }
+
+        // Crear objeto Date
+        const fecha = new Date(fechaLimpia);
+
+        // Verificar si es válida
+        if (!isNaN(fecha.getTime())) {
+          return fecha;
+        }
+      }
+
+      return null;
+    } catch (error) {
+      console.warn('Error parseando fecha:', fechaString, error);
+      return null;
+    }
+  }
+
+  /**
+   * Obtiene fecha formateada como string YYYY-MM-DD
+   */
+  getFechaFormateada(fechaString: any): string {
+    const fecha = this.formatearFecha(fechaString);
+    if (!fecha) return '';
+
+    return fecha.toISOString().split('T')[0]; // YYYY-MM-DD
+  }
+
+  /**
+   * Verifica si una fecha existe y es válida
+   */
+  tieneFechaValida(fechaString: any): boolean {
+    return this.formatearFecha(fechaString) !== null;
+  }
+
+  /**
+   * Formatea un número para mostrar siempre con 2 decimales
+   */
+  formatearNumero(valor: any): string {
+    if (valor === null || valor === undefined || valor === '') {
+      return '0.00';
+    }
+
+    const numero = Number(valor);
+    if (isNaN(numero)) {
+      return '0.00';
+    }
+
+    return numero.toFixed(2);
+  }
+
+  /**
+   * Formatea un número como moneda con separadores de miles
+   */
+  formatearMoneda(valor: any): string {
+    if (valor === null || valor === undefined || valor === '') {
+      return '0.00';
+    }
+
+    const numero = Number(valor);
+    if (isNaN(numero)) {
+      return '0.00';
+    }
+
+    return numero.toLocaleString('es-ES', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
   }
 }

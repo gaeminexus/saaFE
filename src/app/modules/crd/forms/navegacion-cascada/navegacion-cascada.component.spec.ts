@@ -22,7 +22,6 @@ describe('NavegacionCascadaComponent', () => {
 
   it('should initialize with entidades level', () => {
     expect(component.mostrandoEntidades).toBeTruthy();
-    expect(component.mostrandoProductos).toBeFalsy();
   });
 
   it('should load entidades on init', () => {

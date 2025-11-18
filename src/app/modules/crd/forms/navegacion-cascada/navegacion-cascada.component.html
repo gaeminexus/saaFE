@@ -213,7 +213,7 @@
           <mat-icon matPrefix>search</mat-icon>
           <input
             matInput
-            (keyup)="currentFilterPrest = $any($event.target).value?.trim().toLowerCase(); pageIndexPrest = 0; updatePagePrestamos()"
+            (keyup)="currentFilterPrest = $any($event.target).value.trim().toLowerCase(); pageIndexPrest = 0; updatePagePrestamos()"
             placeholder="Buscar por código, entidad, producto..."
           />
         </mat-form-field>
@@ -240,17 +240,25 @@
             <th mat-header-cell *matHeaderCellDef mat-sort-header>Producto</th>
             <td mat-cell *matCellDef="let p">
               <div class="producto-info">
-                <span class="nombre-producto">{{ (p.producto?.nombre || p.Producto?.nombre) || 'N/A' }}</span>
-                <small class="codigo-sbs" *ngIf="p.producto?.codigoSBS || p.Producto?.codigoSBS">
-                  SBS: {{ p.producto?.codigoSBS || p.Producto?.codigoSBS }}
+                <span class="nombre-producto">{{ getProductoNombre(p) }}</span>
+                <small class="codigo-sbs" *ngIf="tieneCodigoSBS(p)">
+                  SBS: {{ getProductoCodigoSBS(p) }}
                 </small>
               </div>
             </td>
           </ng-container>
 
-          <!-- Monto -->
+          <!-- Amortización -->
+          <ng-container matColumnDef="amortizacion">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Amortización</th>
+            <td mat-cell *matCellDef="let p">
+              <mat-chip color="accent">{{ p.amortizacion || 'N/A' }}</mat-chip>
+            </td>
+          </ng-container>
+
+          <!-- Monto Solicitado -->
           <ng-container matColumnDef="montoSolicitado">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>Monto</th>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Monto Solicitado</th>
             <td mat-cell *matCellDef="let p">{{ p.montoSolicitado | number:'1.2-2' }}</td>
           </ng-container>
 
@@ -266,7 +274,8 @@
           <ng-container matColumnDef="acciones">
             <th mat-header-cell *matHeaderCellDef>Acciones</th>
             <td mat-cell *matCellDef="let p">
-              <button mat-raised-button color="primary" matTooltip="Ver detalle del préstamo">
+              <button mat-raised-button color="primary" matTooltip="Ver detalle del préstamo"
+                      (click)="seleccionarPrestamo(p)">
                 <mat-icon>arrow_forward</mat-icon>
                 Ver Detalle
               </button>
@@ -301,9 +310,9 @@
     <div class="nivel-detalle-prestamos" *ngIf="mostrandoDetallePrestamos && !loading()">
       <div class="nivel-header">
         <div class="titulo-seccion">
-          <mat-icon>description</mat-icon>
-          <h2>Detalle de Préstamos</h2>
-          <span class="contador">({{ totalPrestamos() }} registros)</span>
+          <mat-icon>receipt</mat-icon>
+          <h2>Cuotas del Préstamo</h2>
+          <span class="contador">({{ totalDetallePrestamos() }} cuotas)</span>
         </div>
 
         <!-- Filtro de búsqueda -->
@@ -312,93 +321,94 @@
           <mat-icon matPrefix>search</mat-icon>
           <input
             matInput
-            (keyup)="currentFilterPrest = $any($event.target).value?.trim().toLowerCase(); pageIndexPrest = 0; updatePagePrestamos()"
-            placeholder="Buscar por código, amortización, fecha..."
+            (keyup)="currentFilterPrest = $any($event.target).value.trim().toLowerCase(); pageIndexPrest = 0; updatePagePrestamos()"
+            placeholder="Buscar por cuota, fecha, capital..."
           />
         </mat-form-field>
       </div>
 
-      <div class="info-seleccion" *ngIf="productoSeleccionado()">
+      <div class="info-seleccion" *ngIf="prestamoSeleccionado()">
         <mat-icon>info</mat-icon>
-        <span>Detalle del producto: <strong>{{ productoSeleccionado()!.nombre }}</strong></span>
+        <span>Detalle del préstamo: <strong>Código {{ prestamoSeleccionado()!.codigo }}</strong> -
+          {{ getProductoNombre(prestamoSeleccionado()!) }}
+        </span>
       </div>
 
       <div class="tabla-container">
-        <table mat-table [dataSource]="dataSourcePrestamos" matSort class="mat-elevation-z2">
+        <table mat-table [dataSource]="dataSourceDetallePrestamos" matSort class="mat-elevation-z2">
 
-          <!-- Código -->
-          <ng-container matColumnDef="codigo">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>Código</th>
-            <td mat-cell *matCellDef="let p">{{ p.codigo }}</td>
+          <!-- Número de Cuota -->
+          <ng-container matColumnDef="numeroCuota">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Cuota #</th>
+            <td mat-cell *matCellDef="let d">{{ d.numeroCuota }}</td>
           </ng-container>
 
-          <!-- Producto -->
-          <ng-container matColumnDef="producto">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>Producto</th>
-            <td mat-cell *matCellDef="let p">
-              <div class="producto-info">
-                <span class="nombre-producto">{{ (p.producto?.nombre || p.Producto?.nombre) || 'N/A' }}</span>
-                <small class="codigo-sbs" *ngIf="p.producto?.codigoSBS || p.Producto?.codigoSBS">
-                  SBS: {{ p.producto?.codigoSBS || p.Producto?.codigoSBS }}
-                </small>
-              </div>
-            </td>
+          <!-- Fecha Vencimiento -->
+          <ng-container matColumnDef="fechaVencimiento">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Vencimiento</th>
+            <td mat-cell *matCellDef="let d">{{ getFechaFormateada(d.fechaVencimiento) || 'Sin fecha' }}</td>
           </ng-container>
-|          <!-- Amortización -->
-          <ng-container matColumnDef="amortizacion">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>Amortización</th>
-            <td mat-cell *matCellDef="let p">
-              <mat-chip color="accent" class="tipo-amortizacion">
-                {{ p.amortizacion || 'N/A' }}
+
+          <!-- Capital -->
+          <ng-container matColumnDef="capital">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Capital</th>
+            <td mat-cell *matCellDef="let d">{{ formatearMoneda(d.capital) }}</td>
+          </ng-container>
+
+          <!-- Interés -->
+          <ng-container matColumnDef="interes">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Interés</th>
+            <td mat-cell *matCellDef="let d">{{ formatearMoneda(d.interes) }}</td>
+          </ng-container>
+
+          <!-- Mora -->
+          <ng-container matColumnDef="mora">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Mora</th>
+            <td mat-cell *matCellDef="let d">{{ formatearMoneda(d.mora) }}</td>
+          </ng-container>
+
+          <!-- Interés Vencido -->
+          <ng-container matColumnDef="interesVencido">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Int. Vencido</th>
+            <td mat-cell *matCellDef="let d">{{ formatearMoneda(d.interesVencido) }}</td>
+          </ng-container>
+
+          <!-- Saldo Capital -->
+          <ng-container matColumnDef="saldoCapital">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Saldo Capital</th>
+            <td mat-cell *matCellDef="let d">{{ formatearMoneda(d.saldoCapital) }}</td>
+          </ng-container>
+
+          <!-- Saldo Interés -->
+          <ng-container matColumnDef="saldoInteres">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Saldo Interés</th>
+            <td mat-cell *matCellDef="let d">{{ formatearMoneda(d.saldoInteres) }}</td>
+          </ng-container>
+
+          <!-- Saldo Mora -->
+          <ng-container matColumnDef="saldoMora">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Saldo Mora</th>
+            <td mat-cell *matCellDef="let d">{{ formatearMoneda(d.saldoMora) }}</td>
+          </ng-container>
+
+          <!-- Saldo Interés Vencido -->
+          <ng-container matColumnDef="saldoInteresVencido">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Saldo Int. Vencido</th>
+            <td mat-cell *matCellDef="let d">{{ formatearMoneda(d.saldoInteresVencido) }}</td>
+          </ng-container>
+
+          <!-- Fecha Pagado -->
+          <ng-container matColumnDef="fechaPagado">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Fecha Pagado</th>
+            <td mat-cell *matCellDef="let d">
+              <mat-chip [color]="tieneFechaValida(d.fechaPagado) ? 'primary' : 'warn'">
+                {{ tieneFechaValida(d.fechaPagado) ? getFechaFormateada(d.fechaPagado) : 'Pendiente' }}
               </mat-chip>
             </td>
           </ng-container>
-          <!-- Estado Préstamo -->
-          <ng-container matColumnDef="estado">
-            <th mat-header-cell *matHeaderCellDef>Estado</th>
-            <td mat-cell *matCellDef="let p">
-              <mat-chip>{{ getEstadoNombre(p) || 'N/A' }}</mat-chip>
-            </td>
-          </ng-container>
-          <!-- Fecha -->
-          <ng-container matColumnDef="fecha">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>Fecha</th>
-            <td mat-cell *matCellDef="let p">{{ p.fecha | date:'yyyy-MM-dd' }}</td>
-          </ng-container>
 
-          <!-- Monto -->
-          <ng-container matColumnDef="montoSolicitado">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>Monto</th>
-            <td mat-cell *matCellDef="let p">{{ p.montoSolicitado | number:'1.2-2' }}</td>
-          </ng-container>
-
-          <!-- Plazo -->
-          <ng-container matColumnDef="plazo">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>Plazo</th>
-            <td mat-cell *matCellDef="let p">{{ p.plazo }}</td>
-          </ng-container>
-
-          <!-- Tasa -->
-          <ng-container matColumnDef="tasa">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>Tasa</th>
-            <td mat-cell *matCellDef="let p">{{ p.tasa | number:'1.2-2' }}%</td>
-          </ng-container>
-
-
-
-          <!-- Acciones -->
-          <ng-container matColumnDef="acciones">
-            <th mat-header-cell *matHeaderCellDef>Acciones</th>
-            <td mat-cell *matCellDef="let p">
-              <button mat-raised-button color="primary" matTooltip="Ver pagos del préstamo" disabled>
-                <mat-icon>payment</mat-icon>
-                Ver Pagos
-              </button>
-            </td>
-          </ng-container>
-
-          <tr mat-header-row *matHeaderRowDef="columnasPrestamos"></tr>
-          <tr mat-row *matRowDef="let row; columns: columnasPrestamos;"></tr>
+          <tr mat-header-row *matHeaderRowDef="columnasDetallePrestamos"></tr>
+          <tr mat-row *matRowDef="let row; columns: columnasDetallePrestamos;"></tr>
         </table>
 
         <!-- Paginador préstamos -->
@@ -413,9 +423,9 @@
           class="paginator-entidades">
         </mat-paginator>
 
-        <div class="no-datos" *ngIf="dataSourcePrestamos.data.length === 0 && !loading()">
-          <mat-icon>account_balance</mat-icon>
-          <p>No se encontraron préstamos para este producto</p>
+        <div class="no-datos" *ngIf="dataSourceDetallePrestamos.data.length === 0 && !loading()">
+          <mat-icon>receipt</mat-icon>
+          <p>No se encontraron cuotas para este préstamo</p>
         </div>
       </div>
     </div>
