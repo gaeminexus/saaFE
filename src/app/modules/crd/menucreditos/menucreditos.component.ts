@@ -64,7 +64,8 @@ export class MenucreditosComponent {
         },
         {
           displayName: 'Entidades',
-          iconName: 'domain'
+          iconName: 'domain',
+          route: '/menucreditos/participe-info'
         },
         {
           displayName: 'Dash',

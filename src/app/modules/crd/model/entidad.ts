@@ -3,6 +3,9 @@ import { TipoHidrocarburifica } from "./tipo-hidrocarburifica";
 import { TipoIdentificacion } from "./tipo-identificacion";
 import { TipoVivienda } from "./tipo-vivienda";
 
+// Nota: Los campos con tipos personalizados son opcionales y pueden ser null/undefined
+// en respuestas del backend si no están incluidos en las consultas
+
 // Interfaz para la tabla Entidad (ENTD)
 export interface Entidad {
     codigo: number;              // ENTDCDGO - Código
