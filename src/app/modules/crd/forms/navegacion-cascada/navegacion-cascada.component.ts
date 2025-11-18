@@ -205,7 +205,7 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
     this.errorMsg.set('');
 
     // Priorizar selectByCriteria con fallback a getAll
-    this.entidadService.selectByCriteria({}).pipe(
+    this.entidadService.selectByCriteria([]).pipe(
       catchError(err => {
         console.warn('selectByCriteria falló, intentando getAll como fallback:', err);
         return this.entidadService.getAll();
@@ -292,8 +292,16 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
     this.loading.set(true);
     this.errorMsg.set('');
 
+    // Construir criterios de búsqueda para productos por entidad
+    const criterios: Array<DatosBusqueda> = [];
+
+    // Si se requiere filtrar por entidad, descomentar:
+    // const criterioEntidad = new DatosBusqueda();
+    // criterioEntidad.asigna3(TipoDatosBusqueda.LONG, 'entidadId', codigoEntidad.toString(), TipoComandosBusqueda.IGUAL);
+    // criterios.push(criterioEntidad);
+
     // Priorizar selectByCriteria con fallback a getAll
-    this.productoService.selectByCriteria({ codigoEntidad }).pipe(
+    this.productoService.selectByCriteria(criterios).pipe(
       catchError(err => {
         console.warn('selectByCriteria falló para productos, intentando getAll como fallback:', err);
         return this.productoService.getAll();
@@ -1195,8 +1203,6 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
 
     // Mostrar decimales reales con toFixed
     const resultado = numero.toFixed(2).replace('.', ',');
-
-    console.log('💰 [formatearMoneda] VALOR ORIGINAL:', valor, '→ NUMERO:', numero, '→ RESULTADO:', resultado);
     return resultado;
   }  /**
    * Función de formateo decimal simplificada
