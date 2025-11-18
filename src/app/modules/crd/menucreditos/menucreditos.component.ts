@@ -58,14 +58,14 @@ export class MenucreditosComponent {
       route: '/menucreditos/parametrizacion',
       children: [
         {
+          displayName: 'Administrar',
+          iconName: 'domain',
+          route: '/menucreditos/participe-info'
+        },
+        {
           displayName: 'Listado General',
           iconName: 'list',
           route: '/menucreditos/navegacion-cascada'
-        },
-        {
-          displayName: 'Entidades',
-          iconName: 'domain',
-          route: '/menucreditos/participe-info'
         },
         {
           displayName: 'Dash',

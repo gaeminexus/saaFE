@@ -37,29 +37,130 @@
     </div>
   </div>
 
-  <!-- Información de la entidad encontrada -->
-  @if (entidadEncontrada) {
-    <mat-card class="entidad-card">
-      <mat-card-header>
-        <mat-icon mat-card-avatar class="avatar-icon">business</mat-icon>
-        <mat-card-title>{{ entidadEncontrada.razonSocial || entidadEncontrada.nombreComercial }}</mat-card-title>
-        <mat-card-subtitle>
-          <span class="info-item">
-            <mat-icon>badge</mat-icon>
-            {{ entidadEncontrada.numeroIdentificacion }}
-          </span>
-          @if (entidadEncontrada.nombreComercial && entidadEncontrada.razonSocial !== entidadEncontrada.nombreComercial) {
+  <!-- Spinner de carga del dashboard -->
+  @if (isLoadingDashboard) {
+    <div class="loading-spinner-container">
+      <mat-spinner diameter="60"></mat-spinner>
+      <p class="loading-text">Cargando información...</p>
+    </div>
+  }
+
+  <!-- Contenido del dashboard -->
+  @if (!isLoadingDashboard && entidadEncontrada) {
+    <div class="info-cards-container">
+      <!-- Tarjeta de Entidad -->
+      <mat-card class="entidad-card">
+        <mat-card-header>
+          <mat-icon mat-card-avatar class="avatar-icon">business</mat-icon>
+          <mat-card-title>{{ entidadEncontrada.razonSocial || entidadEncontrada.nombreComercial }}</mat-card-title>
+          <mat-card-subtitle>
             <span class="info-item">
-              <mat-icon>store</mat-icon>
-              {{ entidadEncontrada.nombreComercial }}
+              <mat-icon>badge</mat-icon>
+              {{ entidadEncontrada.numeroIdentificacion }}
             </span>
-          }
-        </mat-card-subtitle>
-        <button mat-icon-button class="pdf-button" (click)="generarPDF()" matTooltip="Generar PDF">
-          <mat-icon>picture_as_pdf</mat-icon>
-        </button>
-      </mat-card-header>
-    </mat-card>
+            @if (entidadEncontrada.nombreComercial && entidadEncontrada.razonSocial !== entidadEncontrada.nombreComercial) {
+              <span class="info-item">
+                <mat-icon>store</mat-icon>
+                {{ entidadEncontrada.nombreComercial }}
+              </span>
+            }
+          </mat-card-subtitle>
+          <button mat-icon-button class="edit-button" (click)="editarParticipe()" matTooltip="Editar Partícipe">
+            <mat-icon>edit</mat-icon>
+          </button>
+          <button mat-icon-button class="pdf-button" (click)="generarPDF()" matTooltip="Generar PDF">
+            <mat-icon>picture_as_pdf</mat-icon>
+          </button>
+        </mat-card-header>
+
+        <!-- Información del Partícipe -->
+        @if (participeEncontrado) {
+          <mat-card-content>
+            <div class="participe-info-grid">
+              <div class="participe-item">
+                <mat-icon>work</mat-icon>
+                <div class="item-content">
+                  <span class="item-label">Cargo Actual</span>
+                  <span class="item-value">{{ participeEncontrado.cargoActual || 'N/A' }}</span>
+                </div>
+              </div>
+
+              <div class="participe-item total-ingresos">
+                <mat-icon>account_balance_wallet</mat-icon>
+                <div class="item-content">
+                  <span class="item-label">Total de Ingresos</span>
+                  <span class="item-value highlight">${{ totalIngresos | number:'1.2-2' }}</span>
+                </div>
+              </div>
+            </div>
+          </mat-card-content>
+        }
+      </mat-card>
+
+      <!-- Tarjeta de Contrato -->
+      @if (contratoEncontrado) {
+        <mat-card class="contrato-card">
+          <mat-card-header>
+            <mat-icon mat-card-avatar class="avatar-icon">description</mat-icon>
+            <mat-card-title>Información del Contrato</mat-card-title>
+            <mat-card-subtitle>{{ contratoEncontrado.tipoContrato?.nombre || 'Sin tipo de contrato' }}</mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="contrato-grid">
+              <div class="contrato-item">
+                <mat-icon>event</mat-icon>
+                <div class="item-content">
+                  <span class="item-label">Fecha Inicio</span>
+                  <span class="item-value">{{ contratoEncontrado.fechaInicio | date: 'dd/MM/yyyy' }}</span>
+                </div>
+              </div>
+
+              <div class="contrato-item">
+                <mat-icon>person</mat-icon>
+                <div class="item-content">
+                  <span class="item-label">% Aporte Individual</span>
+                  <span class="item-value">{{ contratoEncontrado.porcentajeAporteIndividual }}%</span>
+                </div>
+              </div>
+
+              <div class="contrato-item">
+                <mat-icon>elderly</mat-icon>
+                <div class="item-content">
+                  <span class="item-label">% Aporte Jubilación</span>
+                  <span class="item-value">{{ contratoEncontrado.porcentajeAporteJubilacion }}%</span>
+                </div>
+              </div>
+
+              <div class="contrato-item">
+                <mat-icon>attach_money</mat-icon>
+                <div class="item-content">
+                  <span class="item-label">Monto Aporte Adicional</span>
+                  <span class="item-value">${{ contratoEncontrado.montoAporteAdicional | number:'1.2-2' }}</span>
+                </div>
+              </div>
+
+              <div class="contrato-item">
+                <mat-icon>schedule</mat-icon>
+                <div class="item-content">
+                  <span class="item-label">Fecha Registro</span>
+                  <span class="item-value">{{ contratoEncontrado.fechaRegistro | date: 'dd/MM/yyyy' }}</span>
+                </div>
+              </div>
+
+              @if (contratoEncontrado.observacion) {
+                <div class="contrato-item full-width">
+                  <mat-icon>note</mat-icon>
+                  <div class="item-content">
+                    <span class="item-label">Observación</span>
+                    <span class="item-value observacion">{{ contratoEncontrado.observacion }}</span>
+                  </div>
+                </div>
+              }
+            </div>
+          </mat-card-content>
+        </mat-card>
+      }
+    </div>
 
     <!-- Dashboard Principal -->
     @if (vistaActual === 'dashboard') {
@@ -112,25 +213,28 @@
             <mat-card-header>
               <mat-icon mat-card-avatar class="card-icon">credit_card</mat-icon>
               <mat-card-title>{{ prestamo.producto?.nombre || 'Préstamo' }} #{{ prestamo.codigo }}</mat-card-title>
-              <mat-card-subtitle>
-                <span class="info-chip">
-                  <mat-icon>event</mat-icon>
-                  {{ prestamo.fecha | date:'dd/MM/yyyy' }}
-                </span>
-                <span class="info-chip">
-                  <mat-icon>schedule</mat-icon>
-                  {{ prestamo.plazo }} meses
-                </span>
-                @if (prestamo.estadoPrestamo) {
+              @if (prestamo.estadoPrestamo) {
+                <mat-card-subtitle>
                   <span class="info-chip" [class.estado-activo]="prestamo.estadoPrestamo.codigo === 1">
                     <mat-icon>info</mat-icon>
                     {{ prestamo.estadoPrestamo.nombre || 'N/A' }}
                   </span>
-                }
-              </mat-card-subtitle>
+                </mat-card-subtitle>
+              }
             </mat-card-header>
 
             <mat-card-content>
+              <div class="prestamo-info-row">
+                <div class="info-item-inline">
+                  <mat-icon>event</mat-icon>
+                  <span>{{ prestamo.fecha | date:'dd/MM/yyyy' }}</span>
+                </div>
+                <div class="info-item-inline">
+                  <mat-icon>schedule</mat-icon>
+                  <span>{{ prestamo.plazo }} meses</span>
+                </div>
+              </div>
+
               <div class="stat-grid">
                 <div class="stat-item">
                   <mat-icon>attach_money</mat-icon>
@@ -407,6 +511,7 @@
       </div>
     }
   }
+  <!-- End of dashboard content -->
 
   <!-- Estado vacío -->
   @if (!entidadEncontrada && !isSearching) {

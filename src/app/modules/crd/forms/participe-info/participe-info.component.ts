@@ -1,5 +1,6 @@
 import { Component, OnInit, Input, inject, signal, computed, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ActivatedRoute, Router } from '@angular/router';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -16,6 +17,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatStepperModule } from '@angular/material/stepper';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { Location } from '@angular/common';
 import { catchError } from 'rxjs/operators';
 import { of } from 'rxjs';
 
@@ -98,7 +100,9 @@ export class ParticipeInfoComponent implements OnInit, OnChanges {
   private fb = inject(FormBuilder);
   private entidadService = inject(EntidadService);
   private filialService = inject(FilialService);
-
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private location = inject(Location);
   private tipoIdentificacionService = inject(TipoIdentificacionService);
   private snackBar = inject(MatSnackBar);
 
@@ -134,16 +138,25 @@ export class ParticipeInfoComponent implements OnInit, OnChanges {
   // Computed signals
   hasError = computed(() => this.errorMsg() !== '');
   isFormValid = computed(() => this.entidadForm?.valid || false);
-  formTitle = computed(() => this.modoEdicion() ? 'Editar Entidad' : 'Nueva Entidad');
+  formTitle = computed(() => this.modoEdicion() ? 'Editar Partícipe' : 'Nuevo Partícipe');
 
   ngOnInit(): void {
     this.inicializarFormulario();
     this.cargarDatosSelect();
 
-    // Si hay código de entidad, cargar la entidad específica
-    if (this.modoFiltrado && this.codigoEntidad) {
-      this.cargarEntidadPorCodigo(this.codigoEntidad);
-    }
+    // Verificar si hay código de entidad en los query params
+    this.route.queryParams.subscribe(params => {
+      const codigoEntidadParam = params['codigoEntidad'];
+      if (codigoEntidadParam) {
+        const codigo = Number(codigoEntidadParam);
+        this.modoFiltrado = true;
+        this.codigoEntidad = codigo;
+        this.cargarEntidadPorCodigo(codigo);
+      } else if (this.modoFiltrado && this.codigoEntidad) {
+        // Si hay código de entidad por Input, cargar la entidad específica
+        this.cargarEntidadPorCodigo(this.codigoEntidad);
+      }
+    });
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -246,6 +259,27 @@ export class ParticipeInfoComponent implements OnInit, OnChanges {
       ipIngreso: [{ value: '', disabled: true }],
       ipModificacion: [{ value: '', disabled: true }]
     });
+  }
+
+  /**
+   * Regresa a la pantalla anterior con el código de entidad como query param
+   */
+  regresar(): void {
+    // Obtener el returnUrl y codigoEntidad de los query params
+    this.route.queryParams.subscribe((params: any) => {
+      const returnUrl = params['returnUrl'];
+      const codigoEntidad = params['codigoEntidad'];
+
+      if (returnUrl && codigoEntidad) {
+        // Navegar de regreso con el código de entidad
+        this.router.navigate([returnUrl], {
+          queryParams: { codigoEntidad: codigoEntidad }
+        });
+      } else {
+        // Si no hay returnUrl, usar location.back()
+        this.location.back();
+      }
+    }).unsubscribe();
   }
 
   limpiarFormulario(): void {
@@ -371,16 +405,11 @@ export class ParticipeInfoComponent implements OnInit, OnChanges {
     this.loading.set(true);
     this.errorMsg.set('');
 
-    // Usar selectByCriteria para filtrar por código
-    const criterio = {
-      codigo: codigo
-    };
-
-    this.entidadService.selectByCriteria(criterio).subscribe({
-      next: (entidades) => {
+    // Usar getById enviando el código como string
+    this.entidadService.getById(codigo.toString()).subscribe({
+      next: (entidad) => {
         this.loading.set(false);
-        if (entidades && entidades.length > 0) {
-          const entidad = entidades[0]; // Tomar la primera (debería ser única por código)
+        if (entidad) {
           this.entidadActual.set(entidad);
           this.modoEdicion.set(true);
           this.llenarFormulario(entidad);

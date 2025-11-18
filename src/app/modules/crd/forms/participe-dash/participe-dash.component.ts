@@ -1,5 +1,6 @@
 import { Component, OnInit, Inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -21,12 +22,16 @@ import { DetallePrestamo } from '../../model/detalle-prestamo';
 import { PagoPrestamo } from '../../model/pago-prestamo';
 import { Producto } from '../../model/producto';
 import { Aporte } from '../../model/aporte';
+import { Contrato } from '../../model/contrato';
+import { Participe } from '../../model/participe';
 
 import { EntidadService } from '../../service/entidad.service';
 import { PrestamoService } from '../../service/prestamo.service';
 import { DetallePrestamoService } from '../../service/detalle-prestamo.service';
 import { PagoPrestamoService } from '../../service/pago-prestamo.service';
 import { AporteService } from '../../service/aporte.service';
+import { ContratoService } from '../../service/contrato.service';
+import { ParticipeService } from '../../service/participe.service';
 import { ExportService } from '../../../../shared/services/export.service';
 import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
@@ -76,6 +81,8 @@ export class ParticipeDashComponent implements OnInit {
 
   // Entidad encontrada
   entidadEncontrada: Entidad | null = null;
+  contratoEncontrado: Contrato | null = null;
+  participeEncontrado: Participe | null = null;
 
   // Dashboard
   prestamos: Prestamo[] = [];
@@ -99,6 +106,7 @@ export class ParticipeDashComponent implements OnInit {
   isLoadingDetalles: boolean = false;
   isLoadingPagos: boolean = false;
   isLoadingAportes: boolean = false;
+  isLoadingDashboard: boolean = false;
 
   constructor(
     private entidadService: EntidadService,
@@ -106,12 +114,25 @@ export class ParticipeDashComponent implements OnInit {
     private detallePrestamoService: DetallePrestamoService,
     private pagoPrestamoService: PagoPrestamoService,
     private aporteService: AporteService,
+    private contratoService: ContratoService,
+    private participeService: ParticipeService,
     private exportService: ExportService,
     private snackBar: MatSnackBar,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private router: Router,
+    private route: ActivatedRoute
   ) {}
 
-  ngOnInit(): void {}
+  ngOnInit(): void {
+    // Verificar si hay código de entidad en los query params (cuando regresa de participe-info)
+    this.route.queryParams.subscribe((params: any) => {
+      const codigoEntidadParam = params['codigoEntidad'];
+      if (codigoEntidadParam) {
+        const codigo = Number(codigoEntidadParam);
+        this.cargarEntidadPorCodigo(codigo);
+      }
+    });
+  }
 
   /**
    * Genera un PDF con la información de la entidad
@@ -132,6 +153,25 @@ export class ParticipeDashComponent implements OnInit {
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
         this.generarPDFConDetalles(result === 'conDetalles');
+      }
+    });
+  }
+
+  /**
+   * Navega al formulario de edición de partícipe
+   */
+  editarParticipe(): void {
+    if (!this.entidadEncontrada || !this.entidadEncontrada.codigo) {
+      this.snackBar.open('No hay información de entidad para editar', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    // Navegar a participe-info con el código de la entidad
+    // Mantener el query param para poder regresar a la misma entidad
+    this.router.navigate(['/menucreditos/participe-info'], {
+      queryParams: {
+        codigoEntidad: this.entidadEncontrada.codigo,
+        returnUrl: `/menucreditos/participe-dash`
       }
     });
   }
@@ -695,18 +735,166 @@ export class ParticipeDashComponent implements OnInit {
     });
   }
 
+  cargarEntidadPorCodigo(codigo: number): void {
+    if (!codigo) return;
+
+    this.isSearching = true;
+    this.entidadEncontrada = null;
+    this.vistaActual = 'dashboard';
+
+    this.entidadService.getById(codigo.toString()).subscribe({
+      next: (entidad: any) => {
+        this.isSearching = false;
+        if (entidad) {
+          this.entidadEncontrada = entidad as Entidad;
+          this.searchText = entidad.numeroIdentificacion || entidad.razonSocial || '';
+          this.cargarDashboard();
+        } else {
+          this.snackBar.open('No se encontró la entidad', 'Cerrar', { duration: 3000 });
+        }
+      },
+      error: (error) => {
+        this.isSearching = false;
+        console.error('Error al cargar entidad:', error);
+        this.snackBar.open('Error al cargar entidad', 'Cerrar', { duration: 3000 });
+      }
+    });
+  }
+
   cargarDashboard(): void {
     if (!this.entidadEncontrada) return;
 
+    this.isLoadingDashboard = true;
+
+    // Contador para saber cuándo terminan todas las cargas
+    let loadedCount = 0;
+    const totalToLoad = 4; // contrato, partícipe, préstamos, aportes
+
+    const checkAllLoaded = () => {
+      loadedCount++;
+      if (loadedCount === totalToLoad) {
+        this.isLoadingDashboard = false;
+      }
+    };
+
+    // Cargar contrato
+    this.cargarContrato(checkAllLoaded);
+
+    // Cargar partícipe
+    this.cargarParticipe(checkAllLoaded);
+
     // Cargar préstamos
-    this.cargarPrestamos();
+    this.cargarPrestamos(checkAllLoaded);
 
     // Cargar aportes
-    this.cargarAportes();
+    this.cargarAportes(checkAllLoaded);
   }
 
-  cargarPrestamos(): void {
+  cargarContrato(onComplete?: () => void): void {
     if (!this.entidadEncontrada || !this.entidadEncontrada.codigo) {
+      if (onComplete) onComplete();
+      return;
+    }
+
+    const criterioConsultaArray: DatosBusqueda[] = [];
+
+    let criterio = new DatosBusqueda();
+    criterio.asignaValorConCampoPadre(
+      TipoDatosBusqueda.LONG,
+      'entidad',
+      'codigo',
+      this.entidadEncontrada.codigo.toString(),
+      TipoComandosBusqueda.IGUAL
+    );
+    criterioConsultaArray.push(criterio);
+
+    this.contratoService.selectByCriteria(criterioConsultaArray).subscribe({
+      next: (contratos: any) => {
+        if (contratos && contratos.length > 0) {
+          const contrato = contratos[0] as Contrato;
+
+          // Convertir fechas
+          const fechaInicio = this.convertirFecha(contrato.fechaInicio);
+          const fechaRegistro = this.convertirFecha(contrato.fechaRegistro);
+          const fechaTerminacion = this.convertirFecha(contrato.fechaTerminacion);
+          const fechaAprobacion = this.convertirFecha(contrato.fechaAprobacion);
+          const fechaReporte = this.convertirFecha(contrato.fechaReporte);
+
+          this.contratoEncontrado = {
+            ...contrato,
+            fechaInicio: fechaInicio || contrato.fechaInicio,
+            fechaRegistro: fechaRegistro || contrato.fechaRegistro,
+            fechaTerminacion: fechaTerminacion || contrato.fechaTerminacion,
+            fechaAprobacion: fechaAprobacion || contrato.fechaAprobacion,
+            fechaReporte: fechaReporte || contrato.fechaReporte
+          };
+        } else {
+          this.contratoEncontrado = null;
+        }
+        if (onComplete) onComplete();
+      },
+      error: (error) => {
+        console.error('Error al cargar contrato:', error);
+        this.contratoEncontrado = null;
+        if (onComplete) onComplete();
+      }
+    });
+  }
+
+  cargarParticipe(onComplete?: () => void): void {
+    if (!this.entidadEncontrada || !this.entidadEncontrada.codigo) {
+      if (onComplete) onComplete();
+      return;
+    }
+
+    const criterioConsultaArray: DatosBusqueda[] = [];
+
+    let criterio = new DatosBusqueda();
+    criterio.asignaValorConCampoPadre(
+      TipoDatosBusqueda.LONG,
+      'entidad',
+      'codigo',
+      this.entidadEncontrada.codigo.toString(),
+      TipoComandosBusqueda.IGUAL
+    );
+    criterioConsultaArray.push(criterio);
+
+    this.participeService.selectByCriteria(criterioConsultaArray).subscribe({
+      next: (participes: any) => {
+        if (participes && Array.isArray(participes) && participes.length > 0) {
+          const participe = participes[0] as Participe;
+
+          // Convertir fechas que puedan tener formato [UTC]
+          const fechaIngresoTrabajo = this.convertirFecha(participe.fechaIngresoTrabajo);
+          const fechaIngresoFondo = this.convertirFecha(participe.fechaIngresoFondo);
+          const fechaFallecimiento = this.convertirFecha(participe.fechaFallecimiento);
+          const fechaSalida = this.convertirFecha(participe.fechaSalida);
+          const fechaIngreso = this.convertirFecha(participe.fechaIngreso);
+
+          this.participeEncontrado = {
+            ...participe,
+            fechaIngresoTrabajo: fechaIngresoTrabajo || participe.fechaIngresoTrabajo,
+            fechaIngresoFondo: fechaIngresoFondo || participe.fechaIngresoFondo,
+            fechaFallecimiento: fechaFallecimiento || participe.fechaFallecimiento,
+            fechaSalida: fechaSalida || participe.fechaSalida,
+            fechaIngreso: fechaIngreso || participe.fechaIngreso
+          };
+        } else {
+          this.participeEncontrado = null;
+        }
+        if (onComplete) onComplete();
+      },
+      error: (error) => {
+        console.error('Error al cargar partícipe:', error);
+        this.participeEncontrado = null;
+        if (onComplete) onComplete();
+      }
+    });
+  }
+
+  cargarPrestamos(onComplete?: () => void): void {
+    if (!this.entidadEncontrada || !this.entidadEncontrada.codigo) {
+      if (onComplete) onComplete();
       return;
     }
 
@@ -738,16 +926,19 @@ export class ParticipeDashComponent implements OnInit {
         } else {
           this.prestamos = [];
         }
+        if (onComplete) onComplete();
       },
       error: (error) => {
         console.error('Error al cargar préstamos:', error);
         this.snackBar.open('Error al cargar préstamos', 'Cerrar', { duration: 3000 });
+        if (onComplete) onComplete();
       }
     });
   }
 
-  cargarAportes(): void {
+  cargarAportes(onComplete?: () => void): void {
     if (!this.entidadEncontrada || !this.entidadEncontrada.codigo) {
+      if (onComplete) onComplete();
       return;
     }
 
@@ -804,6 +995,7 @@ export class ParticipeDashComponent implements OnInit {
         }
 
         this.isLoadingAportes = false;
+        if (onComplete) onComplete();
       },
       error: (error) => {
         console.error('Error al cargar aportes:', error);
@@ -811,6 +1003,7 @@ export class ParticipeDashComponent implements OnInit {
         this.totalAportes = 0;
         this.isLoadingAportes = false;
         this.snackBar.open('Error al cargar aportes', 'Cerrar', { duration: 3000 });
+        if (onComplete) onComplete();
       }
     });
   }
@@ -1107,9 +1300,18 @@ export class ParticipeDashComponent implements OnInit {
     return totalPrestamo - saldoTotal;
   }
 
+  get totalIngresos(): number {
+    if (!this.participeEncontrado) return 0;
+    const remuneracion = this.participeEncontrado.remuneracionUnificada || 0;
+    const ingresoAdicional = this.participeEncontrado.ingresoAdicionalMensual || 0;
+    return remuneracion + ingresoAdicional;
+  }
+
   limpiarBusqueda(): void {
     this.searchText = '';
     this.entidadEncontrada = null;
+    this.contratoEncontrado = null;
+    this.participeEncontrado = null;
     this.prestamos = [];
     this.totalAportes = 0;
     this.vistaActual = 'dashboard';

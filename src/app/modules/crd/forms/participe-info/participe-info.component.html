@@ -8,7 +8,7 @@
       </h2>
       <p class="subtitle">
         @if (modoFiltrado && codigoEntidad) {
-          Visualizando entidad con código: {{ codigoEntidad }}
+          Visualizando partícipe con código: {{ codigoEntidad }}
           @if (soloLectura) { (Solo lectura) }
         } @else {
           Complete todos los campos requeridos para gestionar la entidad
@@ -31,7 +31,12 @@
 
     @if (!ocultarBotones && !soloLectura) {
       <div class="actions">
-      <button mat-stroked-button (click)="limpiarFormulario()" [disabled]="loading() || saving()">
+      <button mat-raised-button color="primary" (click)="regresar()" [disabled]="loading() || saving()">
+        <mat-icon>arrow_back</mat-icon>
+        Regresar
+      </button>
+
+      <button mat-raised-button color="primary" (click)="limpiarFormulario()" [disabled]="loading() || saving()">
         <mat-icon>clear_all</mat-icon>
         Limpiar
       </button>
@@ -85,7 +90,7 @@
 
             <mat-card-content>
               <div class="form-row">
-                <mat-form-field appearance="outline" class="full-width">
+                <mat-form-field appearance="fill" class="full-width">
                   <mat-label>Código</mat-label>
                   <input matInput formControlName="codigo" readonly>
                   <mat-icon matSuffix>tag</mat-icon>
@@ -94,7 +99,7 @@
               </div>
 
               <div class="form-row">
-                <mat-form-field appearance="outline" class="half-width">
+                <mat-form-field appearance="fill" class="half-width">
                   <mat-label>Filial</mat-label>
                   <mat-select formControlName="filial">
                     @if (loadingFiliales()) {
@@ -112,7 +117,7 @@
                   <mat-icon matSuffix>business</mat-icon>
                 </mat-form-field>
 
-                <mat-form-field appearance="outline" class="half-width">
+                <mat-form-field appearance="fill" class="half-width">
                   <mat-label>Tipo Identificación</mat-label>
                   <mat-select formControlName="TipoIdentificacion">
                     @if (loadingTiposId()) {
@@ -132,7 +137,7 @@
               </div>
 
               <div class="form-row">
-                <mat-form-field appearance="outline" class="full-width">
+                <mat-form-field appearance="fill" class="full-width">
                   <mat-label>Número de Identificación *</mat-label>
                   <input matInput formControlName="numeroIdentificacion" maxlength="20">
                   <mat-icon matSuffix>badge</mat-icon>
@@ -143,7 +148,7 @@
               </div>
 
               <div class="form-row">
-                <mat-form-field appearance="outline" class="full-width">
+                <mat-form-field appearance="fill" class="full-width">
                   <mat-label>Razón Social *</mat-label>
                   <input matInput formControlName="razonSocial" maxlength="200">
                   <mat-icon matSuffix>business</mat-icon>
@@ -154,7 +159,7 @@
               </div>
 
               <div class="form-row">
-                <mat-form-field appearance="outline" class="full-width">
+                <mat-form-field appearance="fill" class="full-width">
                   <mat-label>Nombre Comercial</mat-label>
                   <input matInput formControlName="nombreComercial" maxlength="200">
                   <mat-icon matSuffix>store</mat-icon>
@@ -162,7 +167,7 @@
               </div>
 
               <div class="form-row">
-                <mat-form-field appearance="outline" class="full-width">
+                <mat-form-field appearance="fill" class="full-width">
                   <mat-label>Fecha de Nacimiento</mat-label>
                   <input matInput [matDatepicker]="picker" formControlName="fechaNacimiento">
                   <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
@@ -184,7 +189,7 @@
 
             <mat-card-content>
               <div class="form-row">
-                <mat-form-field appearance="outline" class="half-width">
+                <mat-form-field appearance="fill" class="half-width">
                   <mat-label>Correo Personal</mat-label>
                   <input matInput formControlName="correoPersonal" maxlength="100" type="email">
                   <mat-icon matSuffix>email</mat-icon>
@@ -193,7 +198,7 @@
                   }
                 </mat-form-field>
 
-                <mat-form-field appearance="outline" class="half-width">
+                <mat-form-field appearance="fill" class="half-width">
                   <mat-label>Correo Institucional</mat-label>
                   <input matInput formControlName="correoInstitucional" maxlength="100" type="email">
                   <mat-icon matSuffix>business_center</mat-icon>
@@ -204,13 +209,13 @@
               </div>
 
               <div class="form-row">
-                <mat-form-field appearance="outline" class="half-width">
+                <mat-form-field appearance="fill" class="half-width">
                   <mat-label>Teléfono</mat-label>
                   <input matInput formControlName="telefono" maxlength="20">
                   <mat-icon matSuffix>phone</mat-icon>
                 </mat-form-field>
 
-                <mat-form-field appearance="outline" class="half-width">
+                <mat-form-field appearance="fill" class="half-width">
                   <mat-label>Móvil</mat-label>
                   <input matInput formControlName="movil" maxlength="20">
                   <mat-icon matSuffix>smartphone</mat-icon>
@@ -239,13 +244,13 @@
 
             <mat-card-content>
               <div class="form-row">
-                <mat-form-field appearance="outline" class="third-width">
+                <mat-form-field appearance="fill" class="third-width">
                   <mat-label>Número de Cargas Familiares</mat-label>
                   <input matInput formControlName="numeroCargasFamiliares" type="number" min="0">
                   <mat-icon matSuffix>family_restroom</mat-icon>
                 </mat-form-field>
 
-                <mat-form-field appearance="outline" class="third-width">
+                <mat-form-field appearance="fill" class="third-width">
                   <mat-label>Sector Público</mat-label>
                   <mat-select formControlName="sectorPublico">
                     @for (opcion of sectorPublicoOptions; track opcion.value) {
@@ -255,7 +260,7 @@
                   <mat-icon matSuffix>domain</mat-icon>
                 </mat-form-field>
 
-                <mat-form-field appearance="outline" class="third-width">
+                <mat-form-field appearance="fill" class="third-width">
                   <mat-label>ID Ciudad</mat-label>
                   <input matInput formControlName="idCiudad">
                   <mat-icon matSuffix>location_city</mat-icon>
@@ -263,14 +268,14 @@
               </div>
 
               <div class="form-row">
-                <mat-form-field appearance="outline" class="half-width">
+                <mat-form-field appearance="fill" class="half-width">
                   <mat-label>Porcentaje de Similitud</mat-label>
                   <input matInput formControlName="porcentajeSimilitud" type="number" min="0" max="100">
                   <mat-icon matSuffix>percent</mat-icon>
                   <mat-hint>Valor entre 0 y 100</mat-hint>
                 </mat-form-field>
 
-                <mat-form-field appearance="outline" class="half-width">
+                <mat-form-field appearance="fill" class="half-width">
                   <mat-label>Términos de Búsqueda</mat-label>
                   <input matInput formControlName="busqueda">
                   <mat-icon matSuffix>search</mat-icon>
@@ -278,7 +283,7 @@
               </div>
 
               <div class="form-row">
-                <mat-form-field appearance="outline" class="full-width">
+                <mat-form-field appearance="fill" class="full-width">
                   <mat-label>URL Foto/Logo</mat-label>
                   <input matInput formControlName="urlFotoLogo">
                   <mat-icon matSuffix>image</mat-icon>
@@ -299,7 +304,7 @@
 
             <mat-card-content>
               <div class="form-row">
-                <mat-form-field appearance="outline" class="half-width">
+                <mat-form-field appearance="fill" class="half-width">
                   <mat-label>Estado *</mat-label>
                   <mat-select formControlName="idEstado">
                     @for (estado of estadosOptions; track estado.value) {
@@ -331,13 +336,13 @@
 
             <mat-card-content>
               <div class="form-row">
-                <mat-form-field appearance="outline" class="half-width">
+                <mat-form-field appearance="fill" class="half-width">
                   <mat-label>Usuario de Ingreso</mat-label>
                   <input matInput formControlName="usuarioIngreso" readonly>
                   <mat-icon matSuffix>person_add</mat-icon>
                 </mat-form-field>
 
-                <mat-form-field appearance="outline" class="half-width">
+                <mat-form-field appearance="fill" class="half-width">
                   <mat-label>Fecha de Ingreso</mat-label>
                   <input matInput formControlName="fechaIngreso" readonly>
                   <mat-icon matSuffix>schedule</mat-icon>
@@ -345,13 +350,13 @@
               </div>
 
               <div class="form-row">
-                <mat-form-field appearance="outline" class="half-width">
+                <mat-form-field appearance="fill" class="half-width">
                   <mat-label>Usuario de Modificación</mat-label>
                   <input matInput formControlName="usuarioModificacion" readonly>
                   <mat-icon matSuffix>edit</mat-icon>
                 </mat-form-field>
 
-                <mat-form-field appearance="outline" class="half-width">
+                <mat-form-field appearance="fill" class="half-width">
                   <mat-label>Fecha de Modificación</mat-label>
                   <input matInput formControlName="fechaModificacion" readonly>
                   <mat-icon matSuffix>update</mat-icon>
@@ -359,13 +364,13 @@
               </div>
 
               <div class="form-row">
-                <mat-form-field appearance="outline" class="half-width">
+                <mat-form-field appearance="fill" class="half-width">
                   <mat-label>IP de Ingreso</mat-label>
                   <input matInput formControlName="ipIngreso" readonly>
                   <mat-icon matSuffix>computer</mat-icon>
                 </mat-form-field>
 
-                <mat-form-field appearance="outline" class="half-width">
+                <mat-form-field appearance="fill" class="half-width">
                   <mat-label>IP de Modificación</mat-label>
                   <input matInput formControlName="ipModificacion" readonly>
                   <mat-icon matSuffix>computer</mat-icon>
@@ -388,7 +393,7 @@
 
             <button mat-raised-button color="primary" type="submit" [disabled]="entidadForm.invalid">
               <mat-icon>save</mat-icon>
-              {{ modoEdicion() ? 'Actualizar' : 'Guardar' }} Entidad
+              {{ modoEdicion() ? 'Actualizar' : 'Guardar' }} Partícipe
             </button>
           } @else {
             <div class="info-message">

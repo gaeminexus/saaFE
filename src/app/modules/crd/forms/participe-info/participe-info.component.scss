@@ -497,8 +497,8 @@
 
   .form-row {
     display: flex;
-    gap: 20px;
-    margin-bottom: 20px;
+    gap: 24px;
+    margin-bottom: 24px;
     align-items: flex-start;
     flex-wrap: wrap;
 
@@ -571,18 +571,72 @@
       transform: translateY(-1px);
     }
 
+    // Estilos para appearance="fill" con fondo claro
+    .mdc-text-field--filled {
+      background-color: #f7fafc !important;
+      border-radius: 12px 12px 0 0 !important;
+      padding: 4px 0 !important;
+
+      &:hover {
+        background-color: #edf2f7 !important;
+      }
+
+      &.mdc-text-field--focused {
+        background-color: #e6f2ff !important;
+      }
+
+      // Quitar la línea de fondo por defecto
+      &::before {
+        border-bottom-color: rgba(102, 126, 234, 0.15) !important;
+        border-bottom-width: 1px !important;
+      }
+
+      &:hover::before {
+        border-bottom-color: rgba(102, 126, 234, 0.3) !important;
+      }
+
+      &::after {
+        border-bottom-color: #667eea !important;
+        border-bottom-width: 2px !important;
+      }
+    }
+
+    // Padding interno para que el texto no esté pegado
+    .mat-mdc-input-element {
+      padding: 12px 16px 8px 16px !important;
+      font-size: 0.95rem !important;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+    }
+
+    .mat-mdc-select {
+      padding: 12px 16px 8px 16px !important;
+      font-size: 0.95rem !important;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+    }
+
+    // Altura del campo
+    .mat-mdc-text-field-wrapper {
+      padding-bottom: 0 !important;
+    }
+
+    .mdc-text-field {
+      padding: 0 !important;
+    }
+
+    // Estilos para outline (por si algunos campos lo usan)
     .mdc-text-field--outlined {
       .mdc-notched-outline__leading,
       .mdc-notched-outline__notch,
       .mdc-notched-outline__trailing {
-        border-color: rgba(102, 126, 234, 0.3) !important;
+        border-color: rgba(102, 126, 234, 0.2) !important;
+        border-width: 1px !important;
       }
 
       &:hover {
         .mdc-notched-outline__leading,
         .mdc-notched-outline__notch,
         .mdc-notched-outline__trailing {
-          border-color: rgba(102, 126, 234, 0.6) !important;
+          border-color: rgba(102, 126, 234, 0.4) !important;
         }
       }
 
@@ -598,6 +652,8 @@
 
     .mdc-floating-label {
       color: #718096 !important;
+      font-weight: 500 !important;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
 
       &.mdc-floating-label--float-above {
         color: #667eea !important;
@@ -608,6 +664,7 @@
       color: #667eea;
       font-size: 20px;
       transition: all 0.2s ease;
+      margin: 0 8px !important;
 
       &:hover {
         color: #764ba2;
@@ -625,6 +682,7 @@
       .mat-mdc-select-trigger {
         .mat-mdc-select-value {
           color: #333333;
+          font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
         }
       }
 
