@@ -224,7 +224,7 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
       }),
       finalize(() => this.loading.set(false))
     ).subscribe(entidades => {
-      console.log('📊 Total entidades recibidas del backend:', entidades.length);
+      console.log('📊 Total entidades recibidas del backend:', entidades?.length || 0);
       this.allEntidades = entidades || [];
       this.totalEntidades.set(this.allEntidades.length);
       this.pageIndexEnt = 0;
