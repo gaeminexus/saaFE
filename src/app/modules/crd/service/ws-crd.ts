@@ -19,10 +19,16 @@
   public static RS_TPVV = 'http://localhost:8080/saa-backend/rest/tpvv';
   public static RS_TPHD = 'http://localhost:8080/saa-backend/rest/tphd';
   public static RS_TPDN = 'http://localhost:8080/saa-backend/rest/tpdn';
+  public static RS_APRT = 'http://localhost:8080/saa-backend/rest/aprt';
+  public static RS_CNTR = 'http://localhost:8080/saa-backend/rest/cntr';
+  public static RS_PRTC = 'http://localhost:8080/saa-backend/rest/prtc';
+  public static RS_TPPC = 'http://localhost:8080/saa-backend/rest/tppc';
+  public static RS_TPCN = 'http://localhost:8080/saa-backend/rest/tpcn';
+  public static RS_TPAP = 'http://localhost:8080/saa-backend/rest/tpap';
 
 }*/
 
-export class ServiciosCrd {  
+export class ServiciosCrd {
 
   // RESTFULL SERVICES (usar proxy http://localhost:8080 para dev)
   public static RS_NTRL = 'http://localhost:8080/saa-backend/rest/ntrl';
@@ -44,5 +50,12 @@ export class ServiciosCrd {
   public static RS_TPVV = 'http://localhost:8080/saa-backend/rest/tpvv';
   public static RS_TPHD = 'http://localhost:8080/saa-backend/rest/tphd';
   public static RS_TPDN = 'http://localhost:8080/saa-backend/rest/tpdn';
+  public static RS_APRT = 'http://localhost:8080/saa-backend/rest/aprt';
+  public static RS_CNTR = 'http://localhost:8080/saa-backend/rest/cntr';
+  public static RS_PRTC = 'http://localhost:8080/saa-backend/rest/prtc';
+  public static RS_TPPC = 'http://localhost:8080/saa-backend/rest/tppc';
+  public static RS_TPCN = 'http://localhost:8080/saa-backend/rest/tpcn';
+  public static RS_TPAP = 'http://localhost:8080/saa-backend/rest/tpap';
 
 }
+

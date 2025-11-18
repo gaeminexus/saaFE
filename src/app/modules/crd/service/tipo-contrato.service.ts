@@ -1,13 +1,13 @@
 import { HttpHeaders, HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, catchError, of, throwError } from 'rxjs';
-import { Entidad } from '../model/entidad';
+import { TipoContrato } from '../model/tipo-contrato';
 import { ServiciosCrd } from './ws-crd';
 
 @Injectable({
   providedIn: 'root'
 })
-export class EntidadService {
+export class TipoContratoService {
 
   httpOptions = {
     headers: new HttpHeaders({ 'Content-Type': 'application/json' })
@@ -17,49 +17,49 @@ export class EntidadService {
     private http: HttpClient
   ) { }
 
-  getAll(): Observable<Entidad[] | null> {
+  getAll(): Observable<TipoContrato[] | null> {
     const wsGetById = '/getAll';
-    const url = `${ServiciosCrd.RS_ENTD}${wsGetById}`;
-    return this.http.get<Entidad[]>(url).pipe(
+    const url = `${ServiciosCrd.RS_TPCN}${wsGetById}`;
+    return this.http.get<TipoContrato[]>(url).pipe(
       catchError(this.handleError)
     );
   }
 
-  getById(id: string): Observable<Entidad | null> {
+  getById(id: string): Observable<TipoContrato | null> {
     const wsGetById = '/getId/';
-    const url = `${ServiciosCrd.RS_ENTD}${wsGetById}${id}`;
-    return this.http.get<Entidad>(url).pipe(
+    const url = `${ServiciosCrd.RS_TPCN}${wsGetById}${id}`;
+    return this.http.get<TipoContrato>(url).pipe(
       catchError(this.handleError)
     );
   }
 
   /** POST: add new record */
-  add(datos: any): Observable<Entidad | null> {
-    return this.http.post<Entidad>(ServiciosCrd.RS_ENTD, datos, this.httpOptions).pipe(
+  add(datos: any): Observable<TipoContrato | null> {
+    return this.http.post<TipoContrato>(ServiciosCrd.RS_TPCN, datos, this.httpOptions).pipe(
       catchError(this.handleError)
     );
   }
 
   /** PUT: update record */
-  update(datos: any): Observable<Entidad | null> {
-    return this.http.put<Entidad>(ServiciosCrd.RS_ENTD, datos, this.httpOptions).pipe(
+  update(datos: any): Observable<TipoContrato | null> {
+    return this.http.put<TipoContrato>(ServiciosCrd.RS_TPCN, datos, this.httpOptions).pipe(
       catchError(this.handleError)
     );
   }
 
-  selectByCriteria(datos: any): Observable<Entidad[] | null> {
+  selectByCriteria(datos: any): Observable<TipoContrato[] | null> {
     const wsEndpoint = '/selectByCriteria/';
-    const url = `${ServiciosCrd.RS_ENTD}${wsEndpoint}`;
+    const url = `${ServiciosCrd.RS_TPCN}${wsEndpoint}`;
     return this.http.post<any>(url, datos, this.httpOptions).pipe(
       catchError(this.handleError)
     );
   }
 
   /** DELETE */
-  delete(id: any): Observable<Entidad | null> {
+  delete(id: any): Observable<TipoContrato | null> {
     const wsEndpoint = '/' + id;
-    const url = `${ServiciosCrd.RS_ENTD}${wsEndpoint}`;
-    return this.http.delete<Entidad>(url, this.httpOptions).pipe(
+    const url = `${ServiciosCrd.RS_TPCN}${wsEndpoint}`;
+    return this.http.delete<TipoContrato>(url, this.httpOptions).pipe(
       catchError(this.handleError)
     );
   }
