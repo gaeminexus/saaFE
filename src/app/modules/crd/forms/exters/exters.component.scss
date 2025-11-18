@@ -4,6 +4,14 @@
  .exters-shell {
   padding: $spacing-md;
   background: $background-primary;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+
+  h2 {
+    flex: 0 0 auto;
+  }
  }
  .toolbar {
   display: flex;
@@ -16,6 +24,7 @@
   border-radius: $border-radius-md;
   border: $border-width solid $border-light;
   box-shadow: 0 2px 4px $shadow-color-light;
+  flex: 0 0 auto;
  }
 
  .filter-field {
@@ -32,12 +41,17 @@
    background: $background-primary;
    box-shadow: 0 4px 8px $shadow-color-light;
    overflow: hidden;
+   flex: 1 1 auto;
+   display: flex;
+   flex-direction: column;
+   min-height: 0;
  }
 
  .table-container {
-   max-height: 600px;
+   flex: 1 1 auto;
    overflow: auto;
    position: relative;
+   min-height: 0;
 
    /* Scrollbars personalizadas */
    scrollbar-width: thin;
@@ -70,7 +84,7 @@
 
  table {
    width: 100%;
-   font-size: 12px;
+   font-size: 8px;
    min-width: 1400px; /* Ancho mínimo para scroll horizontal */
  }
 
@@ -79,30 +93,78 @@
    background: linear-gradient(135deg, $background-secondary 0%, $background-tertiary 100%);
    color: $text-primary;
    font-weight: $font-weight-semibold;
-   padding: $spacing-md $spacing-sm;
+   padding: 0.15rem 0.3rem;
    border-bottom: $border-width-md solid $border-medium;
    text-transform: uppercase;
-   letter-spacing: 0.5px;
-   font-size: $font-size-xs;
+   letter-spacing: 0.3px;
+   font-size: 0.55rem;
+   line-height: 1;
+   height: 1.8rem;
  }
 
  td.mat-cell {
    white-space: nowrap;
-   padding: $spacing-sm;
+   padding: 0.15rem 0.3rem;
    border-bottom: $border-width solid $border-light;
    color: $text-secondary;
-   font-size: $font-size-sm;
+   font-size: 0.3rem !important;
+   line-height: 1;
+   overflow: hidden;
+   text-overflow: ellipsis;
+   max-width: 200px;
+   height: 1rem !important;
 
    &:hover {
      background-color: rgba($primary-color, 0.05);
      color: $text-primary;
    }
  }
+
+ // Columna nombre más ancha
+ .mat-column-nombre,
+ .mat-column-NOMBRE,
+ .mat-column-Nombre {
+   min-width: 400px;
+   max-width: 700px;
+ }
+
+ // Columna fechaNacimiento más ancha
+ .mat-column-fechaNacimiento,
+ .mat-column-FECHANACIMIENTO,
+ .mat-column-FechaNacimiento {
+   min-width: 210px;
+   max-width: 510px;
+ }
+
+ // Columna profesion más ancha
+ .mat-column-profesion,
+ .mat-column-PROFESION,
+ .mat-column-Profesion {
+   min-width: 200px;
+   max-width: 250px;
+ }
+
+ // Columna canton más ancha
+ .mat-column-canton,
+ .mat-column-CANTON,
+ .mat-column-Canton {
+   min-width: 150px;
+   max-width: 200px;
+ }
+
+ // Columna estadoCivil más ancha
+ .mat-column-estadoCivil,
+ .mat-column-ESTADOCIVIL,
+ .mat-column-EstadoCivil {
+   min-width: 200px;
+   max-width: 250px;
+ }
+
  .loading-center {
    display: flex;
    justify-content: center;
    align-items: center;
-   height: 240px;
+   flex: 1 1 auto;
    background: $background-secondary;
 
    .loading-content {
@@ -168,6 +230,7 @@
    border-top: $border-width solid $border-light;
    background: $background-secondary;
    color: $text-secondary;
+   flex: 0 0 auto;
 
    .mat-mdc-paginator-range-label {
      color: $text-primary;
