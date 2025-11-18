@@ -28,8 +28,10 @@
         @if (isSearching) {
           <mat-spinner diameter="20"></mat-spinner>
         } @else {
-          <mat-icon>search</mat-icon>
-          Buscar
+          <ng-container>
+            <mat-icon>search</mat-icon>
+            Buscar
+          </ng-container>
         }
       </button>
     </div>
@@ -147,9 +149,9 @@
                     <mat-icon>schedule</mat-icon>
                     {{ prestamo.plazo }} meses
                   </span>
-                  <span class="info-chip" [class.estado-activo]="prestamo.EstadoPrestamo?.codigo === 1">
+                  <span class="info-chip" [class.estado-activo]="prestamo.EstadoPrestamo.codigo === 1">
                     <mat-icon>info</mat-icon>
-                    {{ prestamo.EstadoPrestamo?.nombre }}
+                    {{ prestamo.EstadoPrestamo.nombre }}
                   </span>
                 </mat-card-subtitle>
                 <button mat-icon-button class="expand-icon">
