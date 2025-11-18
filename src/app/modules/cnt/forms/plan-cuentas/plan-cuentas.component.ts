@@ -24,6 +24,7 @@ import { PlanCuentasFormComponent } from './plan-cuentas-form.component';
 import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
+import { catchError } from 'rxjs/operators';
 
 interface PlanCuentaNode extends PlanCuenta {
   children?: PlanCuentaNode[];
@@ -163,10 +164,16 @@ export class PlanCuentasComponent implements OnInit {
 
   // Método de fallback usando getAll
   private loadDataFallback(): void {
-    console.log('🔍 Cargando datos sin filtro de empresa (fallback)...');
-    console.log('🔗 URL del servicio fallback:', '/api/saa-backend/rest/plnn/getAll');
+    console.log('🔍 Priorizando selectByCriteria con fallback a getAll...');
+    console.log('🔗 URL del servicio:', '/api/saa-backend/rest/plnn/');
 
-    this.planCuentaService.getAll().subscribe({
+    // Priorizar selectByCriteria con fallback a getAll
+    this.planCuentaService.selectByCriteria({}).pipe(
+      catchError(err => {
+        console.warn('selectByCriteria falló, intentando getAll como fallback:', err);
+        return this.planCuentaService.getAll();
+      })
+    ).subscribe({
       next: (data) => {
         console.log('📡 Respuesta del backend (fallback getAll):', data);
         const list = Array.isArray(data) ? data : (data as any)?.data ?? [];

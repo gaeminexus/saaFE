@@ -97,7 +97,12 @@ export class ExtersComponent implements OnInit, AfterViewInit {
     this.loading.set(true);
     this.errorMsg.set('');
 
-    this.exterService.getAll().pipe(
+    // Priorizar selectByCriteria con fallback a getAll
+    this.exterService.selectByCriteria({}).pipe(
+      catchError(err => {
+        console.warn('selectByCriteria falló, intentando getAll como fallback:', err);
+        return this.exterService.getAll();
+      }),
       catchError(err => {
         this.errorMsg.set(typeof err === 'string' ? err : 'Error al cargar datos');
         return of([]);

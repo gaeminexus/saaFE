@@ -376,25 +376,7 @@
           <!-- Saldo Capital -->
           <ng-container matColumnDef="saldoCapital">
             <th mat-header-cell *matHeaderCellDef mat-sort-header>Saldo Capital</th>
-            <td mat-cell *matCellDef="let d">{{ formatearMoneda(d.saldoCapital) }}</td>
-          </ng-container>
-
-          <!-- Saldo Interés -->
-          <ng-container matColumnDef="saldoInteres">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>Saldo Interés</th>
-            <td mat-cell *matCellDef="let d">{{ formatearMoneda(d.saldoInteres) }}</td>
-          </ng-container>
-
-          <!-- Saldo Mora -->
-          <ng-container matColumnDef="saldoMora">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>Saldo Mora</th>
-            <td mat-cell *matCellDef="let d">{{ formatearMoneda(d.saldoMora) }}</td>
-          </ng-container>
-
-          <!-- Saldo Interés Vencido -->
-          <ng-container matColumnDef="saldoInteresVencido">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>Saldo Int. Vencido</th>
-            <td mat-cell *matCellDef="let d">{{ formatearMoneda(d.saldoInteresVencido) }}</td>
+            <td mat-cell *matCellDef="let d">{{ formatearDecimal(d.saldoCapital) }}</td>
           </ng-container>
 
           <!-- Fecha Pagado -->
@@ -411,14 +393,14 @@
           <tr mat-row *matRowDef="let row; columns: columnasDetallePrestamos;"></tr>
         </table>
 
-        <!-- Paginador préstamos -->
+        <!-- Paginador detalle préstamos -->
         <mat-paginator
-          *ngIf="totalPrestamos() > 0"
-          [length]="totalPrestamos()"
+          *ngIf="totalDetallePrestamos() > 0"
+          [length]="totalDetallePrestamos()"
           [pageSizeOptions]="[10, 20, 50, 100]"
-          [pageSize]="pageSizePrest"
-          [pageIndex]="pageIndexPrest"
-          (page)="pageChangedPrestamos($event)"
+          [pageSize]="pageSizeDet"
+          [pageIndex]="pageIndexDet"
+          (page)="pageChangedDetallePrestamos($event)"
           showFirstLastButtons
           class="paginator-entidades">
         </mat-paginator>

@@ -95,7 +95,7 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
   columnasEntidades: string[] = ['codigo', 'razonSocial', 'numeroIdentificacion', 'correoPersonal', 'movil', 'acciones'];
   columnasProductos: string[] = ['codigo', 'nombre', 'codigoSBS', 'tipoPrestamo', 'estado', 'acciones'];
   columnasPrestamosResumen: string[] = ['codigo', 'producto', 'amortizacion', 'montoSolicitado', 'estado', 'acciones'];
-  columnasDetallePrestamos: string[] = ['numeroCuota', 'fechaVencimiento', 'capital', 'interes', 'mora', 'interesVencido', 'saldoCapital', 'saldoInteres', 'saldoMora', 'saldoInteresVencido', 'fechaPagado'];
+  columnasDetallePrestamos: string[] = ['numeroCuota', 'fechaVencimiento', 'capital', 'interes', 'mora', 'interesVencido', 'saldoCapital', 'fechaPagado'];
   columnasPagos: string[] = ['numero', 'fechaPago', 'monto', 'capital', 'interes', 'mora', 'estado'];
 
   // Filtros
@@ -204,7 +204,12 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
     this.loading.set(true);
     this.errorMsg.set('');
 
-    this.entidadService.getAll().pipe(
+    // Priorizar selectByCriteria con fallback a getAll
+    this.entidadService.selectByCriteria({}).pipe(
+      catchError(err => {
+        console.warn('selectByCriteria falló, intentando getAll como fallback:', err);
+        return this.entidadService.getAll();
+      })).pipe(
       catchError(err => {
         console.error('Error cargando entidades:', err);
         let errorMessage = 'Error al cargar entidades';
@@ -286,7 +291,13 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
   cargarProductos(codigoEntidad: number): void {
     this.loading.set(true);
     this.errorMsg.set('');
-    this.productoService.getAll().pipe(
+
+    // Priorizar selectByCriteria con fallback a getAll
+    this.productoService.selectByCriteria({ codigoEntidad }).pipe(
+      catchError(err => {
+        console.warn('selectByCriteria falló para productos, intentando getAll como fallback:', err);
+        return this.productoService.getAll();
+      }),
       catchError(err => {
         this.errorMsg.set('Error al cargar productos: ' + (typeof err === 'string' ? err : err?.message || ''));
         return of([]);
@@ -875,12 +886,6 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
   cargarDetallePrestamo(codigoPrestamo: number): void {
     this.loading.set(true);
     this.errorMsg.set('');
-    console.log('🔍 INICIO: Cargando cuotas del préstamo ID:', codigoPrestamo);
-    console.log('🔍 Tipo de dato recibido:', typeof codigoPrestamo, 'Valor:', codigoPrestamo);
-
-    // Verificar URL del servicio
-    console.log('🌍 Endpoint base DTPR:', (this.detallePrestamoService as any).constructor.name);
-    console.log('🌍 URL base esperada: http://localhost:8080/saa-backend/rest/dtpr');
 
     // Construir criterio con relación padre-hijo: Prestamo (padre) -> codigo (hijo)
     this.criterioConsultaArray = [];
@@ -901,61 +906,19 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
     criterioOrden.orderBy('numeroCuota');
     this.criterioConsultaArray.push(criterioOrden);
 
-    console.log('📋 Criterio construido - Padre: prestamo, Campo: codigo, Valor:', codigoPrestamo);
-    console.log('📋 Array completo de criterios:', JSON.stringify(this.criterioConsultaArray, null, 2));
 
-    // Probar primero una consulta directa simple para verificar conectividad
-    console.log('🧪 PRUEBA 1: Verificando endpoint básico con getAll...');
-    this.detallePrestamoService.getAll().pipe(
-      catchError(err => {
-        console.log('❌ ERROR en getAll básico:', err);
-        return of(null);
-      })
-    ).subscribe(testResult => {
-      console.log('🧪 Resultado de prueba getAll:', testResult?.length || 0, 'registros totales');
-      if (testResult && testResult.length > 0) {
-        console.log('🧪 Muestra de registro para análisis:', testResult[0]);
-        console.log('🧪 Campos en primer registro:', Object.keys(testResult[0]));
-
-        // Buscar registros que coincidan con nuestro préstamo
-        const coincidencias = testResult.filter((r: any) =>
-          r.codigoPrestamo === codigoPrestamo ||
-          r.prestamo?.codigo === codigoPrestamo ||
-          (r as any).prestamoCodigo === codigoPrestamo
-        );
-        console.log('🧪 Registros que coinciden con préstamo', codigoPrestamo + ':', coincidencias.length);
-        if (coincidencias.length > 0) {
-          console.log('🧪 Primera coincidencia:', coincidencias[0]);
-        }
-      }
-    });
-
-    // Ahora probar selectByCriteria
-    console.log('🌐 PRUEBA 2: Enviando selectByCriteria al backend...');
     this.detallePrestamoService.selectByCriteria(this.criterioConsultaArray).pipe(
       catchError(err => {
-        console.log('❌ ERROR en selectByCriteria:', err);
-        console.log('❌ Tipo de error:', typeof err, 'Status:', err?.status);
-        console.log('❌ Mensaje completo del error:', JSON.stringify(err, null, 2));
-
-        console.log('🔄 FALLBACK: Intentando getAll() para obtener todos los registros...');
         return this.detallePrestamoService.getAll().pipe(
           catchError(err2 => {
-            console.log('❌ ERROR también en getAll():', err2);
             return of([] as DetallePrestamo[]);
           })
         );
       }),
       finalize(() => {
         this.loading.set(false);
-        console.log('⏹️ Finalizó la carga (loading = false)');
       })
     ).subscribe((resultado: any) => {
-      console.log('📦 RESPUESTA del backend recibida');
-      console.log('📦 Tipo de resultado:', typeof resultado);
-      console.log('📦 Es array?:', Array.isArray(resultado));
-      console.log('📦 Longitud/valor:', Array.isArray(resultado) ? resultado.length : resultado);
-      console.log('📦 Resultado completo:', resultado);
 
       let cuotas: DetallePrestamo[] = [];
       if (Array.isArray(resultado)) {
@@ -987,7 +950,11 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
           }
         });
 
-        // Verificar si alguna cuota ya tiene el codigoPrestamo correcto
+        // Si tenemos cuotas, mostrar algunas muestras para debug
+        if (cuotas.length > 0) {
+          console.log('📝 Muestra de la primera cuota:', cuotas[0]);
+          console.log('📝 Total cuotas cargadas:', cuotas.length);
+        }        // Verificar si alguna cuota ya tiene el codigoPrestamo correcto
         const cuotasConCodigo = cuotas.filter(c => c.codigoPrestamo === codigoPrestamo);
         console.log('🎯 Cuotas que YA tienen codigoPrestamo=' + codigoPrestamo + ':', cuotasConCodigo.length);
 
@@ -1075,7 +1042,7 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
       // Ordenar por número de cuota
       cuotas.sort((a, b) => (a.numeroCuota || 0) - (b.numeroCuota || 0));
 
-      console.log('📋 FINAL: Asignando', cuotas.length, 'cuotas al dataSource');
+
       this.allDetallePrestamos = cuotas;
       this.totalDetallePrestamos.set(this.allDetallePrestamos.length);
       this.pageIndexDet = 0;
@@ -1218,12 +1185,30 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
    */
   formatearMoneda(valor: any): string {
     if (valor === null || valor === undefined || valor === '') {
-      return '0.00';
+      return '0,00';
     }
 
     const numero = Number(valor);
     if (isNaN(numero)) {
-      return '0.00';
+      return '0,00';
+    }
+
+    // Mostrar decimales reales con toFixed
+    const resultado = numero.toFixed(2).replace('.', ',');
+
+    console.log('💰 [formatearMoneda] VALOR ORIGINAL:', valor, '→ NUMERO:', numero, '→ RESULTADO:', resultado);
+    return resultado;
+  }  /**
+   * Función de formateo decimal simplificada
+   */
+  formatearDecimal(valor: any): string {
+    if (valor === null || valor === undefined || valor === '') {
+      return '0,00';
+    }
+
+    const numero = Number(valor);
+    if (isNaN(numero)) {
+      return '0,00';
     }
 
     return numero.toLocaleString('es-ES', {
