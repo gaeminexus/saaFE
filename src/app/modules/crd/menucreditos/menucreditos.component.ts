@@ -59,8 +59,12 @@ export class MenucreditosComponent {
       children: [
         {
           displayName: 'Listado General',
-          iconName: 'article_person',
-          route: '/menucreditos/entidad'
+          iconName: 'list',
+          route: '/menucreditos/navegacion-cascada'
+        },
+        {
+          displayName: 'Entidades',
+          iconName: 'domain'
         },
         {
           displayName: 'Dash',
