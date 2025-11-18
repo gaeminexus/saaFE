@@ -354,7 +354,7 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
     this.updatePageProductos();
   }
 
-  // Getters para templates aaa
+  // Getters para templates
   get mostrandoEntidades(): boolean {
     return this.nivelActual() === NivelNavegacion.ENTIDADES;
   }
