@@ -1,3 +1,4 @@
+import { AporteService } from './../../../crd/service/aporte.service';
 import { PrestamoService } from './../../../crd/service/prestamo.service';
 import { EntidadService } from './../../../crd/service/entidad.service';
 import { Component, AfterViewInit, OnDestroy, ElementRef, ViewChild, NgZone, Inject, PLATFORM_ID } from '@angular/core';
@@ -74,6 +75,7 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
     private naturalezaCuentaService: NaturalezaCuentaService,
     private entidadService: EntidadService,
     private prestamoService: PrestamoService,
+    private aporteService: AporteService,
     private router: Router,
     private snackBar: MatSnackBar,
     @Inject(PLATFORM_ID) private platformId: Object
@@ -247,7 +249,7 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
 
   testServicios() {
     const pipe = new DatePipe('en-US');
-    this.criterioConsultaArray = [];
+    /*this.criterioConsultaArray = [];
 
     this.criterioConsulta = new DatosBusqueda();
     this.criterioConsulta.asignaValorConCampoPadre(TipoDatosBusqueda.LONG, 'empresa', 'codigo',
@@ -256,7 +258,7 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
 
     this.criterioConsulta = new DatosBusqueda();
     this.criterioConsulta.orderBy('nombre');
-    this.criterioConsultaArray.push(this.criterioConsulta);
+    this.criterioConsultaArray.push(this.criterioConsulta);*/
 
     /*this.naturalezaCuentaService.getAll().subscribe({
       next: (data) => {
@@ -285,14 +287,14 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
       }
     });*/
 
-    this.naturalezaCuentaService.selectByCriteria(this.criterioConsultaArray).subscribe({
+    /*this.naturalezaCuentaService.selectByCriteria(this.criterioConsultaArray).subscribe({
       next: (data) => {
         console.log('Datos de NaturalezaCuenta:', data);
       },
       error: (error) => {
         console.error('Error al obtener NaturalezaCuenta:', error);
       }
-    });
+    });*/
 
     this.criterioConsultaArray = [];
 
@@ -305,7 +307,7 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
     this.criterioConsulta.orderBy('codigo');
     this.criterioConsultaArray.push(this.criterioConsulta);
 
-    this.prestamoService.selectByCriteria(this.criterioConsultaArray).subscribe({
+    this.aporteService.selectByCriteria(this.criterioConsultaArray).subscribe({
       next: (data) => {
         console.log('Datos de Prestamo:', data);
       },

@@ -28,8 +28,10 @@
         @if (isSearching) {
           <mat-spinner diameter="20"></mat-spinner>
         } @else {
-          <mat-icon>search</mat-icon>
-          Buscar
+          <ng-container>
+            <mat-icon>search</mat-icon>
+            Buscar
+          </ng-container>
         }
       </button>
     </div>
@@ -59,12 +61,12 @@
     <!-- Dashboard Principal -->
     @if (vistaActual === 'dashboard') {
       <div class="dashboard-grid">
-        <!-- Tarjetas de Préstamos por Tipo -->
-        @for (prestamoPorTipo of prestamosPorTipo; track prestamoPorTipo.tipoPrestamo.codigo) {
+        <!-- Tarjetas de Préstamos por Producto -->
+        @for (prestamoPorTipo of prestamosPorTipo; track prestamoPorTipo.producto.codigo) {
           <mat-card class="dashboard-card prestamos-card" (click)="verDetallePrestamos(prestamoPorTipo)">
             <mat-card-header>
               <mat-icon mat-card-avatar class="card-icon">credit_card</mat-icon>
-              <mat-card-title>{{ prestamoPorTipo.tipoPrestamo.nombre }}</mat-card-title>
+              <mat-card-title>{{ prestamoPorTipo.producto.nombre }}</mat-card-title>
             </mat-card-header>
             <mat-card-content>
               <div class="stat-grid">
@@ -119,7 +121,7 @@
       </div>
     }
 
-    <!-- Detalle de Préstamos por Tipo -->
+    <!-- Detalle de Préstamos por Producto -->
     @if (vistaActual === 'detallePrestamos' && tipoPrestamoSeleccionado) {
       <div class="detalle-container">
         <div class="detalle-header">
@@ -128,7 +130,7 @@
           </button>
           <h2>
             <mat-icon>credit_card</mat-icon>
-            {{ tipoPrestamoSeleccionado.tipoPrestamo.nombre }}
+            {{ tipoPrestamoSeleccionado.producto.nombre }}
           </h2>
         </div>
 
@@ -147,9 +149,9 @@
                     <mat-icon>schedule</mat-icon>
                     {{ prestamo.plazo }} meses
                   </span>
-                  <span class="info-chip" [class.estado-activo]="prestamo.EstadoPrestamo?.codigo === 1">
+                  <span class="info-chip" [class.estado-activo]="prestamo.estadoPrestamo.codigo === 1">
                     <mat-icon>info</mat-icon>
-                    {{ prestamo.EstadoPrestamo?.nombre }}
+                    {{ prestamo.estadoPrestamo.nombre }}
                   </span>
                 </mat-card-subtitle>
                 <button mat-icon-button class="expand-icon">

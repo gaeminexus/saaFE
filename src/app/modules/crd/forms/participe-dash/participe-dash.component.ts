@@ -16,18 +16,20 @@ import { Entidad } from '../../model/entidad';
 import { Prestamo } from '../../model/prestamo';
 import { DetallePrestamo } from '../../model/detalle-prestamo';
 import { PagoPrestamo } from '../../model/pago-prestamo';
-import { TipoPrestamo } from '../../model/tipo-prestamo';
+import { Producto } from '../../model/producto';
+import { Aporte } from '../../model/aporte';
 
 import { EntidadService } from '../../service/entidad.service';
 import { PrestamoService } from '../../service/prestamo.service';
 import { DetallePrestamoService } from '../../service/detalle-prestamo.service';
 import { PagoPrestamoService } from '../../service/pago-prestamo.service';
+import { AporteService } from '../../service/aporte.service';
 import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 
-interface PrestamosPorTipo {
-  tipoPrestamo: TipoPrestamo;
+interface PrestamosPorProducto {
+  producto: Producto;
   prestamos: Prestamo[];
   totalPrestamos: number;
   montoTotal: number;
@@ -69,12 +71,12 @@ export class ParticipeDashComponent implements OnInit {
   entidadEncontrada: Entidad | null = null;
 
   // Dashboard
-  prestamosPorTipo: PrestamosPorTipo[] = [];
+  prestamosPorTipo: PrestamosPorProducto[] = [];
   totalAportes: number = 0;
 
   // Vista de detalle
   vistaActual: 'dashboard' | 'detallePrestamos' | 'detalleAportes' = 'dashboard';
-  tipoPrestamoSeleccionado: PrestamosPorTipo | null = null;
+  tipoPrestamoSeleccionado: PrestamosPorProducto | null = null;
 
   // Detalles de préstamos
   detallesPrestamo: Map<number, DetalleConPagos[]> = new Map();
@@ -89,6 +91,7 @@ export class ParticipeDashComponent implements OnInit {
     private prestamoService: PrestamoService,
     private detallePrestamoService: DetallePrestamoService,
     private pagoPrestamoService: PagoPrestamoService,
+    private aporteService: AporteService,
     private snackBar: MatSnackBar
   ) {}
 
@@ -148,12 +151,15 @@ export class ParticipeDashComponent implements OnInit {
     // Cargar préstamos
     this.cargarPrestamos();
 
-    // Cargar aportes (simulado por ahora ya que no existe el modelo)
-    this.totalAportes = 0; // Aquí irá la lógica real cuando exista el modelo Aporte
+    // Cargar aportes
+    this.cargarAportes();
   }
 
   cargarPrestamos(): void {
-    if (!this.entidadEncontrada) return;
+    if (!this.entidadEncontrada || !this.entidadEncontrada.codigo) {
+      console.warn('No hay entidad encontrada o no tiene código');
+      return;
+    }
 
     const criterioConsultaArray: DatosBusqueda[] = [];
 
@@ -173,7 +179,23 @@ export class ParticipeDashComponent implements OnInit {
 
     this.prestamoService.selectByCriteria(criterioConsultaArray).subscribe({
       next: (prestamos: any) => {
-        this.procesarPrestamosPorTipo(prestamos as Prestamo[]);
+        console.log('Respuesta del backend - préstamos:', prestamos);
+        console.log('Tipo de respuesta:', typeof prestamos);
+        console.log('Es array?', Array.isArray(prestamos));
+
+        if (!prestamos) {
+          console.warn('La respuesta de préstamos es null o undefined');
+          this.prestamosPorTipo = [];
+          return;
+        }
+
+        if (Array.isArray(prestamos)) {
+          console.log('Total préstamos recibidos:', prestamos.length);
+          this.procesarPrestamosPorTipo(prestamos as Prestamo[]);
+        } else {
+          console.error('La respuesta no es un array:', prestamos);
+          this.prestamosPorTipo = [];
+        }
       },
       error: (error) => {
         console.error('Error al cargar préstamos:', error);
@@ -182,33 +204,135 @@ export class ParticipeDashComponent implements OnInit {
     });
   }
 
-  procesarPrestamosPorTipo(prestamos: Prestamo[]): void {
-    const mapaPrestamosPorTipo = new Map<number, Prestamo[]>();
+  cargarAportes(): void {
+    if (!this.entidadEncontrada || !this.entidadEncontrada.codigo) {
+      console.warn('No hay entidad encontrada o no tiene código');
+      return;
+    }
 
-    prestamos.forEach(prestamo => {
-      const codigoTipo = prestamo.Producto?.codigo || 0;
-      if (!mapaPrestamosPorTipo.has(codigoTipo)) {
-        mapaPrestamosPorTipo.set(codigoTipo, []);
+    const criterioConsultaArray: DatosBusqueda[] = [];
+
+    let criterio = new DatosBusqueda();
+    criterio.asignaValorConCampoPadre(
+      TipoDatosBusqueda.LONG,
+      'entidad',
+      'codigo',
+      this.entidadEncontrada.codigo.toString(),
+      TipoComandosBusqueda.IGUAL
+    );
+    criterioConsultaArray.push(criterio);
+
+    this.aporteService.selectByCriteria(criterioConsultaArray).subscribe({
+      next: (aportes: any) => {
+        console.log('Respuesta del backend - aportes:', aportes);
+
+        if (!aportes) {
+          console.warn('La respuesta de aportes es null o undefined');
+          this.totalAportes = 0;
+          return;
+        }
+
+        if (Array.isArray(aportes)) {
+          const aportesArray = aportes as Aporte[];
+          this.totalAportes = aportesArray.reduce((sum, aporte) => sum + (aporte.valor || 0), 0);
+          console.log('Total aportes calculado:', this.totalAportes);
+        } else {
+          console.warn('La respuesta de aportes no es un array:', aportes);
+          this.totalAportes = 0;
+        }
+      },
+      error: (error) => {
+        console.error('Error al cargar aportes:', error);
+        this.totalAportes = 0;
       }
-      mapaPrestamosPorTipo.get(codigoTipo)!.push(prestamo);
-    });
-
-    this.prestamosPorTipo = Array.from(mapaPrestamosPorTipo.entries()).map(([codigo, prestamos]) => {
-      const montoTotal = prestamos.reduce((sum, p) => sum + (p.totalPrestamo || 0), 0);
-      const saldoTotal = prestamos.reduce((sum, p) => sum + (p.saldoTotal || 0), 0);
-
-      return {
-        tipoPrestamo: prestamos[0].Producto as any, // Asumiendo que Producto contiene info similar a TipoPrestamo
-        prestamos: prestamos,
-        totalPrestamos: prestamos.length,
-        montoTotal: montoTotal,
-        saldoTotal: saldoTotal
-      };
     });
   }
 
-  verDetallePrestamos(prestamoTipo: PrestamosPorTipo): void {
-    this.tipoPrestamoSeleccionado = prestamoTipo;
+  procesarPrestamosPorTipo(prestamos: Prestamo[]): void {
+    console.log('=== INICIANDO procesarPrestamosPorTipo ===');
+    console.log('Procesando préstamos:', prestamos);
+    console.log('Cantidad de préstamos:', prestamos.length);
+
+    if (!prestamos || prestamos.length === 0) {
+      console.warn('No hay préstamos para procesar');
+      this.prestamosPorTipo = [];
+      return;
+    }
+
+    const mapaPrestamosPorProducto = new Map<number, Prestamo[]>();
+
+    prestamos.forEach((prestamo, index) => {
+      console.log(`--- Préstamo ${index + 1} ---`);
+      console.log('Préstamo completo:', prestamo);
+      console.log('Tiene producto?', !!prestamo.producto);
+      if (prestamo.producto) {
+        console.log('Producto:', prestamo.producto);
+        console.log('producto.codigo:', prestamo.producto.codigo);
+        console.log('producto.nombre:', prestamo.producto.nombre);
+      }
+
+      // Validar que producto exista antes de acceder a codigo
+      if (!prestamo.producto) {
+        console.warn('Préstamo sin producto:', prestamo);
+        // Agrupar préstamos sin producto bajo el código 0
+        const codigoProducto = 0;
+        if (!mapaPrestamosPorProducto.has(codigoProducto)) {
+          mapaPrestamosPorProducto.set(codigoProducto, []);
+        }
+        mapaPrestamosPorProducto.get(codigoProducto)!.push(prestamo);
+        return;
+      }
+
+      const codigoProducto = prestamo.producto.codigo;
+      console.log('Agrupando bajo código producto:', codigoProducto);
+      if (!mapaPrestamosPorProducto.has(codigoProducto)) {
+        mapaPrestamosPorProducto.set(codigoProducto, []);
+      }
+      mapaPrestamosPorProducto.get(codigoProducto)!.push(prestamo);
+    });
+
+    console.log('Mapa de préstamos por producto:', mapaPrestamosPorProducto);
+    console.log('Tamaño del mapa:', mapaPrestamosPorProducto.size);
+
+    const arrayAntesFiltro = Array.from(mapaPrestamosPorProducto.entries());
+    console.log('Array antes de filtro:', arrayAntesFiltro);
+
+    this.prestamosPorTipo = arrayAntesFiltro
+      .filter(([codigo, prestamos]) => {
+        const tieneProducto = prestamos.length > 0 && prestamos[0].producto;
+        console.log(`Filtrando código ${codigo}: tiene producto?`, tieneProducto);
+        return tieneProducto;
+      })
+      .map(([codigo, prestamos]) => {
+        const montoTotal = prestamos.reduce((sum, p) => sum + (p.totalPrestamo || 0), 0);
+        const saldoTotal = prestamos.reduce((sum, p) => sum + (p.saldoTotal || 0), 0);
+
+        // Obtener el producto del primer préstamo (ya validado en el filter)
+        const producto = prestamos[0].producto!;
+
+        console.log(`Creando grupo para producto ${producto.codigo}:`, {
+          nombre: producto.nombre,
+          totalPrestamos: prestamos.length,
+          montoTotal,
+          saldoTotal
+        });
+
+        return {
+          producto: producto,
+          prestamos: prestamos,
+          totalPrestamos: prestamos.length,
+          montoTotal: montoTotal,
+          saldoTotal: saldoTotal
+        };
+      });
+
+    console.log('=== RESULTADO FINAL ===');
+    console.log('PrestamosPorProducto final:', this.prestamosPorTipo);
+    console.log('Cantidad de grupos:', this.prestamosPorTipo.length);
+  }
+
+  verDetallePrestamos(prestamoProducto: PrestamosPorProducto): void {
+    this.tipoPrestamoSeleccionado = prestamoProducto;
     this.vistaActual = 'detallePrestamos';
   }
 

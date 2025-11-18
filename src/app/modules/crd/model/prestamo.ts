@@ -7,8 +7,8 @@ import { Producto } from "./producto";
 export interface Prestamo {
     codigo: number;             // PRSTCDGO - Código
     idAsoprep: number;         // PRSTIDAS - Id prestamo del sistema de ASOPREP
-    Entidad: Entidad;     // ENTDCDGO - ID de la Entidad
-    Producto: Producto;    // PRDCCDGO - FK - Código Producto
+    entidad: Entidad;     // ENTDCDGO - ID de la Entidad
+    producto: Producto;    // PRDCCDGO - FK - Código Producto
     tipoAmortizacion: number;  // PRSTTPAM - Tipo Amortización
     amortizacion: string;      // PRSTAMRT - Amortización
     fecha: Date;               // PRSTFCHA - Fecha
@@ -19,8 +19,8 @@ export interface Prestamo {
     valorCuota: number;        // PRSTVLCT - Valor Cuota
     plazo: number;              // PRSTPLZO - Plazo (no nulo)
     montoLiquidacion: number;  // PRSTMNLD - Monto Liquidacion deuda
-    Filial: Filial;      // FLLLCDGO - Filial codigo
-    EstadoPrestamo: EstadoPrestamo; // ESPSCDGO - FK - Código Estado Préstamo
+    filial: Filial;      // FLLLCDGO - Filial codigo
+    estadoPrestamo: EstadoPrestamo; // ESPSCDGO - FK - Código Estado Préstamo
     tasa: number;              // PRSTTSAA - Tasa
     totalPagado: number;       // PRSTTTPG - Total Pagado
     totalCapital: number;      // PRSTTTCP - Total Capital
