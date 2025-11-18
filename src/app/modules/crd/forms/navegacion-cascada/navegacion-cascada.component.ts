@@ -493,9 +493,9 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
       console.log('📦 Préstamos recibidos del backend:', prestamos);
       let lista: Prestamo[] = Array.isArray(prestamos) ? prestamos : [];
 
-      // Filtro por entidad si fue fallback y el objeto tiene Entidad
-      if (lista.length && lista[0] && (lista[0] as any).Entidad) {
-        lista = lista.filter(p => (p as any).Entidad?.codigo === codigoEntidad);
+      // Filtro por entidad si fue fallback y el objeto tiene entidad
+      if (lista.length && lista[0] && (lista[0] as any).entidad) {
+        lista = lista.filter(p => (p as any).entidad?.codigo === codigoEntidad);
         console.log('🔍 Préstamos filtrados por entidad:', lista.length);
       }
 
@@ -526,10 +526,9 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
 
     try {
       // Obtener códigos únicos SOLO de productos incompletos (sin nombre o sin códigoSBS)
-      // Soporta tanto 'producto' (minúscula) como 'Producto' (mayúscula)
       const codigosProductos = [...new Set(prestamos
         .map(p => {
-          const prod: any = (p as any).producto || (p as any).Producto;
+          const prod: any = p.producto;
           // Si ya trae nombre y códigoSBS, no hace falta enriquecer
           if (prod && (prod.nombre || prod.codigoSBS)) {
             return null;
@@ -608,16 +607,15 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
 
       // Enriquecer cada préstamo con la información completa del producto
       const prestamosEnriquecidos = prestamos.map(prestamo => {
-        // Acceder al campo producto (minúscula) o Producto (mayúscula) según el backend real
-        const codigoProducto = (prestamo as any).producto?.codigo || prestamo.Producto?.codigo;
+        // Acceder al campo producto (minúscula)
+        const codigoProducto = prestamo.producto?.codigo;
         if (codigoProducto) {
           const productoCompleto = mapaProductos.get(codigoProducto);
           if (productoCompleto) {
             return {
               ...prestamo,
-              // Asignar tanto en producto (minúscula) como en Producto (mayúscula) para compatibilidad
-              producto: productoCompleto,
-              Producto: productoCompleto
+              // Asignar el producto completo
+              producto: productoCompleto
             };
           }
         }
@@ -645,17 +643,15 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
       filtered = filtered.filter(p => {
         return (
           p.codigo?.toString().includes(f) ||
-          p.Entidad?.codigo?.toString().includes(f) ||
-          p.Entidad?.razonSocial?.toLowerCase().includes(f) ||
-          p.Entidad?.numeroIdentificacion?.toLowerCase().includes(f) ||
-          // Buscar tanto en 'producto' (minúscula) como en 'Producto' (mayúscula)
-          (p as any).producto?.nombre?.toLowerCase().includes(f) ||
-          (p as any).producto?.codigoSBS?.toLowerCase().includes(f) ||
-          p.Producto?.nombre?.toLowerCase().includes(f) ||
-          p.Producto?.codigoSBS?.toLowerCase().includes(f) ||
+          p.entidad?.codigo?.toString().includes(f) ||
+          p.entidad?.razonSocial?.toLowerCase().includes(f) ||
+          p.entidad?.numeroIdentificacion?.toLowerCase().includes(f) ||
+          // Buscar en producto (minúscula)
+          p.producto?.nombre?.toLowerCase().includes(f) ||
+          p.producto?.codigoSBS?.toLowerCase().includes(f) ||
           p.montoSolicitado?.toString().includes(f) ||
           p.plazo?.toString().includes(f) ||
-          p.EstadoPrestamo?.nombre?.toLowerCase().includes(f) ||
+          p.estadoPrestamo?.nombre?.toLowerCase().includes(f) ||
           this.getEstadoNombre(p).toLowerCase().includes(f)
         );
       });
@@ -740,7 +736,7 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
     try {
       // Helper para obtener código de estado desde distintas formas del backend
       const getCodigoEstado = (p: any): number | null => {
-        const est = p?.EstadoPrestamo || p?.estadoPrestamo;
+        const est = p?.estadoPrestamo;
 
         // 1) si viene como número directo (p.ej. FK cruda)
         if (typeof est === 'number') return Number(est);
@@ -758,7 +754,7 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
         ...new Set(
           prestamos
             .map((p: any) => {
-              const est = p.EstadoPrestamo || p.estadoPrestamo;
+              const est = p.estadoPrestamo;
               if (est && est.nombre) return null; // ya tiene nombre
               return getCodigoEstado(p);
             })
@@ -817,7 +813,7 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
         if (e.codigoExterno != null) mapaExterno.set(Number(e.codigoExterno), e);
       });      // Asignar EstadoPrestamo completo con nombre
       const resultado = prestamos.map((p: any, index: number) => {
-        const est = p.EstadoPrestamo || p.estadoPrestamo;
+        const est = p.estadoPrestamo;
         const codigo = typeof est === 'number' ? est as number : (est?.codigo as number | undefined);
         const id = (p?.idEstado ?? p?.estadoPrestamoCodigo) as number | undefined;
         const codExt = (typeof est === 'object' && est?.codigoExterno != null) ? Number(est.codigoExterno) : undefined;
@@ -1091,7 +1087,6 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
     if (!p) return '';
     // Si el backend ya trae el nombre como string en alguna variante
     const cand = [
-      p?.EstadoPrestamo?.nombre,
       p?.estadoPrestamo?.nombre,
       p?.estadoPrestamoNombre,
       p?.EstadoPrestamoNombre,
@@ -1112,7 +1107,6 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
     if (!p) return 'N/A';
     // Intentar múltiples formas que puede traer el backend
     const cand = [
-      p?.Producto?.nombre,
       p?.producto?.nombre,
       p?.ProductoNombre,
       p?.productoNombre,

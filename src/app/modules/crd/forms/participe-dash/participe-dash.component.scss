@@ -58,11 +58,50 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
 
         ::ng-deep .mat-mdc-form-field {
           background: white;
-          border-radius: 0.5rem;
+          border-radius: 1.5rem;
         }
 
         ::ng-deep .mat-mdc-text-field-wrapper {
           background: white;
+          border-radius: 1.5rem;
+        }
+
+        ::ng-deep .mdc-notched-outline {
+          border-radius: 1.5rem;
+        }
+
+        ::ng-deep .mdc-notched-outline__leading,
+        ::ng-deep .mdc-notched-outline__notch,
+        ::ng-deep .mdc-notched-outline__trailing {
+          border-radius: 1.5rem;
+          border-color: transparent !important;
+        }
+
+        ::ng-deep .mdc-notched-outline .mdc-notched-outline__leading,
+        ::ng-deep .mdc-notched-outline .mdc-notched-outline__notch,
+        ::ng-deep .mdc-notched-outline .mdc-notched-outline__trailing {
+          border-color: transparent !important;
+        }
+
+        ::ng-deep .mat-mdc-floating-label {
+          font-size: 1rem;
+          font-weight: 600;
+          color: white !important;
+          transform: translateY(calc(-3.5rem + 4px)) !important;
+        }
+
+        ::ng-deep .mat-mdc-floating-label.mdc-floating-label--float-above {
+          color: white !important;
+        }
+
+        ::ng-deep .mat-mdc-input-element {
+          font-size: 1rem;
+          font-weight: 600;
+        }
+
+        ::ng-deep .mat-mdc-input-element::placeholder {
+          font-size: 1rem;
+          font-weight: 500;
         }
       }
 
@@ -70,14 +109,45 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
         height: 56px;
         padding: 0 2rem;
         font-size: 1rem;
-        font-weight: 500;
+        font-weight: 600;
+        border-radius: 28px !important;
+        background: white !important;
+        color: $saa-primary !important;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+
+        &:hover:not(:disabled) {
+          background: rgba(255, 255, 255, 0.95) !important;
+          box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+          transform: translateY(-2px);
+          color: $saa-secondary !important;
+        }
+
+        &:active:not(:disabled) {
+          transform: translateY(0);
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        &:disabled {
+          background: rgba(255, 255, 255, 0.7) !important;
+          color: rgba(102, 126, 234, 0.5) !important;
+          box-shadow: none;
+        }
 
         mat-icon {
           margin-right: 0.5rem;
+          vertical-align: middle;
+          display: inline-flex;
+          align-items: center;
         }
 
         mat-spinner {
           margin-right: 0.5rem;
+          vertical-align: middle;
         }
       }
     }
@@ -217,6 +287,131 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
 
           .card-icon {
             color: $saa-accent;
+          }
+        }
+
+        .stat-grid-aportes {
+          display: flex;
+          flex-direction: column;
+          gap: 1rem;
+
+          .tipos-resumen {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+
+            .tipos-header {
+              display: flex;
+              align-items: center;
+              gap: 0.5rem;
+              padding-bottom: 0.75rem;
+              border-bottom: 2px solid $saa-border-light;
+              color: $saa-text-primary;
+              font-weight: 600;
+              font-size: 0.95rem;
+
+              mat-icon {
+                font-size: 1.2rem;
+                width: 1.2rem;
+                height: 1.2rem;
+                color: $saa-accent;
+              }
+            }
+
+            .tipos-lista {
+              display: flex;
+              flex-direction: column;
+              gap: 0.5rem;
+              max-height: 200px;
+              overflow-y: auto;
+              padding-right: 0.5rem;
+
+              &::-webkit-scrollbar {
+                width: 6px;
+              }
+
+              &::-webkit-scrollbar-track {
+                background: rgba(246, 173, 85, 0.05);
+                border-radius: 3px;
+              }
+
+              &::-webkit-scrollbar-thumb {
+                background: rgba(246, 173, 85, 0.3);
+                border-radius: 3px;
+
+                &:hover {
+                  background: rgba(246, 173, 85, 0.5);
+                }
+              }
+            }
+
+            .tipo-item {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              padding: 0.5rem 0.75rem;
+              background: rgba(246, 173, 85, 0.05);
+              border-radius: 0.5rem;
+              transition: all 0.2s ease;
+              gap: 0.75rem;
+
+              &:hover {
+                background: rgba(246, 173, 85, 0.1);
+                transform: translateX(4px);
+              }
+
+              .tipo-nombre {
+                font-size: 0.85rem;
+                color: $saa-text-secondary;
+                font-weight: 500;
+                flex: 1;
+                min-width: 0;
+                word-wrap: break-word;
+                overflow-wrap: break-word;
+                hyphens: auto;
+              }
+
+              .tipo-valor {
+                font-size: 0.95rem;
+                font-weight: 700;
+                color: $saa-accent;
+                white-space: nowrap;
+                flex-shrink: 0;
+              }
+            }
+          }
+
+          .total-horizontal {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1rem 1.25rem;
+            background: linear-gradient(135deg, rgba(246, 173, 85, 0.12) 0%, rgba(255, 193, 7, 0.12) 100%);
+            border-radius: 0.75rem;
+            border: 2px solid rgba(246, 173, 85, 0.2);
+
+            mat-icon {
+              font-size: 1.5rem;
+              width: 1.5rem;
+              height: 1.5rem;
+              color: $saa-accent;
+              flex-shrink: 0;
+            }
+
+            .total-label {
+              font-size: 0.95rem;
+              font-weight: 600;
+              color: $saa-text-primary;
+              flex-shrink: 0;
+            }
+
+            .total-valor {
+              font-size: 1.3rem;
+              font-weight: 700;
+              color: $saa-accent;
+              margin-left: auto;
+              font-variant-numeric: tabular-nums;
+            }
           }
         }
       }
@@ -596,6 +791,39 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
       border-radius: 1rem;
       box-shadow: $saa-shadow;
 
+      .aportes-resumen {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 2rem;
+        padding: 0.5rem;
+
+        .resumen-item {
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+
+          .label {
+            font-size: 0.95rem;
+            color: $saa-text-secondary;
+            font-weight: 500;
+          }
+
+          .value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: $saa-primary;
+
+            &.total-highlight {
+              font-size: 2rem;
+              background: $saa-gradient;
+              -webkit-background-clip: text;
+              -webkit-text-fill-color: transparent;
+              background-clip: text;
+            }
+          }
+        }
+      }
+
       .placeholder-content {
         display: flex;
         flex-direction: column;
@@ -614,6 +842,124 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
           color: $saa-text-secondary;
           font-size: 1.1rem;
           margin: 0;
+        }
+      }
+    }
+
+    // Tarjetas de tipo de aporte
+    .tipo-aporte-card {
+      margin-bottom: 1.5rem;
+      border-radius: 1rem;
+      box-shadow: $saa-shadow;
+      transition: all 0.3s ease;
+
+      &:hover {
+        box-shadow: $saa-shadow-hover;
+      }
+
+      .tipo-header {
+        cursor: pointer;
+        padding: 1.5rem;
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+        position: relative;
+        transition: background 0.3s ease;
+
+        &:hover {
+          background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+        }
+
+        .tipo-icon {
+          font-size: 2rem;
+          width: 2rem;
+          height: 2rem;
+          color: $saa-accent;
+        }
+
+        mat-card-title {
+          font-size: 1.2rem;
+          font-weight: 600;
+          color: $saa-text-primary;
+        }
+
+        mat-card-subtitle {
+          margin-top: 0.5rem;
+
+          .tipo-stats {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+
+            .stat-chip {
+              display: flex;
+              align-items: center;
+              gap: 0.25rem;
+              padding: 0.25rem 0.75rem;
+              background: rgba(255, 255, 255, 0.9);
+              border-radius: 1rem;
+              font-size: 0.875rem;
+              color: $saa-text-secondary;
+              font-weight: 500;
+
+              mat-icon {
+                font-size: 1rem;
+                width: 1rem;
+                height: 1rem;
+                color: $saa-primary;
+              }
+            }
+          }
+        }
+
+        .expand-button {
+          position: absolute;
+          right: 1rem;
+          top: 50%;
+          transform: translateY(-50%);
+          color: $saa-primary;
+        }
+      }
+
+      mat-card-content {
+        padding: 1.5rem;
+
+        .tipo-resumen {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+          gap: 1rem;
+          padding: 1rem;
+          background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
+          border-radius: 0.5rem;
+          margin-bottom: 1.5rem;
+
+          .resumen-stat {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+
+            .label {
+              font-size: 0.85rem;
+              color: $saa-text-secondary;
+              font-weight: 500;
+            }
+
+            .value {
+              font-size: 1.1rem;
+              font-weight: 700;
+              color: $saa-primary;
+
+              &.pagado {
+                color: $saa-success;
+              }
+
+              &.saldo {
+                color: $saa-accent;
+              }
+            }
+          }
+        }
+
+        .tipo-table {
+          margin-top: 1rem;
         }
       }
     }
@@ -710,6 +1056,119 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
           }
         }
       }
+    }
+  }
+}
+
+// Estilos para la tabla de detalles
+.detalle-table {
+  width: 100%;
+
+  .number-column {
+    font-weight: 600;
+    text-align: right !important;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .saldo-column {
+    color: $saa-primary;
+    font-weight: 700;
+  }
+
+  .mat-mdc-row {
+    &.expanded-row {
+      border-bottom: none;
+    }
+  }
+
+  .detail-row {
+    height: 0;
+    overflow: visible;
+
+    .mat-mdc-cell {
+      padding: 0 !important;
+      border-bottom: none;
+    }
+  }
+}
+
+// Contenedor de pagos expandidos
+.pagos-expandidos {
+  padding: 1.5rem 2rem;
+  background: linear-gradient(to bottom, #f8f9fa 0%, #ffffff 100%);
+  border-left: 4px solid $saa-primary;
+  margin: 0.5rem 0;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.05);
+
+  h4 {
+    margin: 0 0 1rem 0;
+    color: $saa-primary;
+    font-size: 1rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    &::before {
+      content: '💳';
+      font-size: 1.2rem;
+    }
+  }
+
+  .loading-pagos {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 2rem;
+    justify-content: center;
+    color: $saa-text-secondary;
+  }
+
+  .no-pagos-message {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1.5rem;
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: 0.5rem;
+    color: #856404;
+    margin: 0;
+
+    mat-icon {
+      color: #ffc107;
+    }
+  }
+}
+
+// Tabla de pagos anidada
+.pagos-table {
+  width: 100%;
+  background: white;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+
+  .mat-mdc-header-row {
+    background: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
+
+    .mat-mdc-header-cell {
+      color: white;
+      font-weight: 600;
+      font-size: 0.9rem;
+      border-bottom: none;
+    }
+  }
+
+  .mat-mdc-row {
+    &:hover {
+      background: #f8f9fa;
+    }
+
+    .mat-mdc-cell {
+      font-size: 0.9rem;
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid $saa-border-light;
     }
   }
 }

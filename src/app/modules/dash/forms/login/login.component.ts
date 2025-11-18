@@ -16,6 +16,7 @@ import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-
 import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { Usuario } from '../../../../shared/model/usuario';
 import { Empresa } from '../../../../shared/model/empresa';
+import { DetallePrestamoService } from '../../../crd/service/detalle-prestamo.service';
 
 // Importa tu AuthService según tu estructura
 const FORMATO_FECHA_JAVA = 'yyyy-MM-dd HH:mm';
@@ -75,6 +76,7 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
     private naturalezaCuentaService: NaturalezaCuentaService,
     private entidadService: EntidadService,
     private prestamoService: PrestamoService,
+    private detallePrestamoService: DetallePrestamoService,
     private aporteService: AporteService,
     private router: Router,
     private snackBar: MatSnackBar,
@@ -299,15 +301,15 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
     this.criterioConsultaArray = [];
 
     this.criterioConsulta = new DatosBusqueda();
-    this.criterioConsulta.asignaValorConCampoPadre(TipoDatosBusqueda.LONG, 'entidad', 'codigo',
-                                                   '3433', TipoComandosBusqueda.IGUAL);
+    this.criterioConsulta.asignaValorConCampoPadre(TipoDatosBusqueda.LONG, 'prestamo', 'codigo',
+                                                   '2739', TipoComandosBusqueda.IGUAL);
     this.criterioConsultaArray.push(this.criterioConsulta);
 
     this.criterioConsulta = new DatosBusqueda();
     this.criterioConsulta.orderBy('codigo');
     this.criterioConsultaArray.push(this.criterioConsulta);
 
-    this.aporteService.selectByCriteria(this.criterioConsultaArray).subscribe({
+    this.detallePrestamoService.selectByCriteria(this.criterioConsultaArray).subscribe({
       next: (data) => {
         console.log('Datos de Prestamo:', data);
       },
