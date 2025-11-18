@@ -648,7 +648,7 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
       // Helper para obtener código de estado desde distintas formas del backend
       const getCodigoEstado = (p: any): number | null => {
         const est = p?.EstadoPrestamo || p?.estadoPrestamo;
-        
+
         // 1) si viene como número directo (p.ej. FK cruda)
         if (typeof est === 'number') return Number(est);
         // 2) objeto con codigo
@@ -658,7 +658,7 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
         // 4) variantes posibles
         if (p?.estadoPrestamoCodigo != null) return Number(p.estadoPrestamoCodigo);
         if (p?.estadoCodigo != null) return Number(p.estadoCodigo);
-        
+
         return null;
       };      // Extraer códigos únicos de estado que no tengan nombre cargado
       const codigosEstados = [
@@ -705,7 +705,7 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
         .toPromise();
 
       estados = estados || [];
-      
+
       if (codigosEstados.length && estados.length) {
         estados = estados.filter((e: any) =>
           codigosEstados.includes(Number(e.codigo)) ||
