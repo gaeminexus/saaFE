@@ -1,0 +1,23 @@
+<div class="dialog-container">
+  <h2 mat-dialog-title>
+    <mat-icon>picture_as_pdf</mat-icon>
+    Generar Reporte PDF
+  </h2>
+  <mat-dialog-content>
+    <p>¿Qué tipo de reporte desea generar?</p>
+  </mat-dialog-content>
+  <mat-dialog-actions align="end">
+    <button mat-button (click)="cerrar()">
+      <mat-icon>close</mat-icon>
+      Cancelar
+    </button>
+    <button mat-raised-button color="accent" (click)="seleccionar('sinDetalles')">
+      <mat-icon>description</mat-icon>
+      Sin Detalles
+    </button>
+    <button mat-raised-button color="primary" (click)="seleccionar('conDetalles')">
+      <mat-icon>article</mat-icon>
+      Con Detalles
+    </button>
+  </mat-dialog-actions>
+</div>
