@@ -10,6 +10,32 @@ import { EstadoParticipe } from '../../../modules/crd/model/estado-participe';
 import { EstadoPrestamo } from '../../../modules/crd/model/estado-prestamo';
 import { EstadoCesantia } from '../../../modules/crd/model/estado-cesantia';
 import { EstadoCivil } from '../../../modules/crd/model/estado-civil';
+// Servicios de Tipos
+import { TipoContratoService } from '../../../modules/crd/service/tipo-contrato.service';
+import { TipoParticipeService } from '../../../modules/crd/service/tipo-participe.service';
+import { TipoPrestamoService } from '../../../modules/crd/service/tipo-prestamo.service';
+import { TipoRequisitoPrestamoService } from '../../../modules/crd/service/tipo-requisito-prestamo.service';
+import { TipoCesantiaService } from '../../../modules/crd/service/tipo-cesantia.service';
+import { TipoCalificacionCreditoService } from '../../../modules/crd/service/tipo-calificacion-credito.service';
+import { TipoAporteService } from '../../../modules/crd/service/tipo-aporte.service';
+import { TipoAdjuntoService } from '../../../modules/crd/service/tipo-adjunto.service';
+import { TipoGeneroService } from '../../../modules/crd/service/tipo-genero.service';
+import { TipoHidrocarburificaService } from '../../../modules/crd/service/tipo-hidrocarburifica.service';
+import { TipoIdentificacionService } from '../../../modules/crd/service/tipo-identificacion.service';
+import { TipoViviendaService } from '../../../modules/crd/service/tipo-vivienda.service';
+// Modelos de Tipos
+import { TipoContrato } from '../../../modules/crd/model/tipo-contrato';
+import { TipoParticipe } from '../../../modules/crd/model/tipo-participe';
+import { TipoPrestamo } from '../../../modules/crd/model/tipo-prestamo';
+import { TipoRequisitoPrestamo } from '../../../modules/crd/model/tipo-requisito-prestamo';
+import { TipoCesantia } from '../../../modules/crd/model/tipo-cesantia';
+import { TipoCalificacionCredito } from '../../../modules/crd/model/tipo-calificacion-credito';
+import { TipoAporte } from '../../../modules/crd/model/tipo-aporte';
+import { TipoAdjunto } from '../../../modules/crd/model/tipo-adjunto';
+import { TipoGenero } from '../../../modules/crd/model/tipo-genero';
+import { TipoHidrocarburifica } from '../../../modules/crd/model/tipo-hidrocarburifica';
+import { TipoIdentificacion } from '../../../modules/crd/model/tipo-identificacion';
+import { TipoVivienda } from '../../../modules/crd/model/tipo-vivienda';
 
 @Injectable({
   providedIn: 'root'
@@ -23,6 +49,19 @@ export class ServiceLocatorCrdService {
     public estadoPrestamoService: EstadoPrestamoService,
     public estadoCesantiaService: EstadoCesantiaService,
     public estadoCivilService: EstadoCivilService,
+    // Servicios de Tipos
+    public tipoContratoService: TipoContratoService,
+    public tipoParticipeService: TipoParticipeService,
+    public tipoPrestamoService: TipoPrestamoService,
+    public tipoRequisitoPrestamoService: TipoRequisitoPrestamoService,
+    public tipoCesantiaService: TipoCesantiaService,
+    public tipoCalificacionCreditoService: TipoCalificacionCreditoService,
+    public tipoAporteService: TipoAporteService,
+    public tipoAdjuntoService: TipoAdjuntoService,
+    public tipoGeneroService: TipoGeneroService,
+    public tipoHidrocarburificaService: TipoHidrocarburificaService,
+    public tipoIdentificacionService: TipoIdentificacionService,
+    public tipoViviendaService: TipoViviendaService,
   ) { }
 
   ejecutaServicio(entidad: number, value: any, proceso: number): Promise<any> {
@@ -99,6 +138,223 @@ export class ServiceLocatorCrdService {
             return Promise.resolve(undefined);
         }
       }
+      // ========== TIPOS ==========
+      case EntidadesCrd.TIPO_CONTRATO: {
+        switch (proceso) {
+          case AccionesGrid.ADD: {
+            this.reg = value as TipoContrato;
+            this.reg.idEstado = 1;
+            return firstValueFrom(this.tipoContratoService.add(this.reg as TipoContrato));
+          }
+          case AccionesGrid.EDIT: {
+            this.reg = value as TipoContrato;
+            return firstValueFrom(this.tipoContratoService.update(this.reg as TipoContrato));
+          }
+          case AccionesGrid.REMOVE: {
+            return firstValueFrom(this.tipoContratoService.delete(value));
+          }
+          default:
+            return Promise.resolve(undefined);
+        }
+      }
+      case EntidadesCrd.TIPO_PARTICIPE: {
+        switch (proceso) {
+          case AccionesGrid.ADD: {
+            this.reg = value as TipoParticipe;
+            this.reg.idEstado = 1;
+            return firstValueFrom(this.tipoParticipeService.add(this.reg as TipoParticipe));
+          }
+          case AccionesGrid.EDIT: {
+            this.reg = value as TipoParticipe;
+            return firstValueFrom(this.tipoParticipeService.update(this.reg as TipoParticipe));
+          }
+          case AccionesGrid.REMOVE: {
+            return firstValueFrom(this.tipoParticipeService.delete(value));
+          }
+          default:
+            return Promise.resolve(undefined);
+        }
+      }
+      case EntidadesCrd.TIPO_PRESTAMO: {
+        switch (proceso) {
+          case AccionesGrid.ADD: {
+            this.reg = value as TipoPrestamo;
+            this.reg.idEstado = 1;
+            return firstValueFrom(this.tipoPrestamoService.add(this.reg as TipoPrestamo));
+          }
+          case AccionesGrid.EDIT: {
+            this.reg = value as TipoPrestamo;
+            return firstValueFrom(this.tipoPrestamoService.update(this.reg as TipoPrestamo));
+          }
+          case AccionesGrid.REMOVE: {
+            return firstValueFrom(this.tipoPrestamoService.delete(value));
+          }
+          default:
+            return Promise.resolve(undefined);
+        }
+      }
+      case EntidadesCrd.TIPO_REQUISITO_PRESTAMO: {
+        switch (proceso) {
+          case AccionesGrid.ADD: {
+            this.reg = value as TipoRequisitoPrestamo;
+            this.reg.idEstado = 1;
+            return firstValueFrom(this.tipoRequisitoPrestamoService.add(this.reg as TipoRequisitoPrestamo));
+          }
+          case AccionesGrid.EDIT: {
+            this.reg = value as TipoRequisitoPrestamo;
+            return firstValueFrom(this.tipoRequisitoPrestamoService.update(this.reg as TipoRequisitoPrestamo));
+          }
+          case AccionesGrid.REMOVE: {
+            return firstValueFrom(this.tipoRequisitoPrestamoService.delete(value));
+          }
+          default:
+            return Promise.resolve(undefined);
+        }
+      }
+      case EntidadesCrd.TIPO_CESANTIA: {
+        switch (proceso) {
+          case AccionesGrid.ADD: {
+            this.reg = value as TipoCesantia;
+            this.reg.idEstado = 1;
+            return firstValueFrom(this.tipoCesantiaService.add(this.reg as TipoCesantia));
+          }
+          case AccionesGrid.EDIT: {
+            this.reg = value as TipoCesantia;
+            return firstValueFrom(this.tipoCesantiaService.update(this.reg as TipoCesantia));
+          }
+          case AccionesGrid.REMOVE: {
+            return firstValueFrom(this.tipoCesantiaService.delete(value));
+          }
+          default:
+            return Promise.resolve(undefined);
+        }
+      }
+      case EntidadesCrd.TIPO_CALIFICACION_CREDITO: {
+        switch (proceso) {
+          case AccionesGrid.ADD: {
+            this.reg = value as TipoCalificacionCredito;
+            this.reg.idEstado = 1;
+            return firstValueFrom(this.tipoCalificacionCreditoService.add(this.reg as TipoCalificacionCredito));
+          }
+          case AccionesGrid.EDIT: {
+            this.reg = value as TipoCalificacionCredito;
+            return firstValueFrom(this.tipoCalificacionCreditoService.update(this.reg as TipoCalificacionCredito));
+          }
+          case AccionesGrid.REMOVE: {
+            return firstValueFrom(this.tipoCalificacionCreditoService.delete(value));
+          }
+          default:
+            return Promise.resolve(undefined);
+        }
+      }
+      case EntidadesCrd.TIPO_APORTE: {
+        switch (proceso) {
+          case AccionesGrid.ADD: {
+            this.reg = value as TipoAporte;
+            this.reg.idEstado = 1;
+            return firstValueFrom(this.tipoAporteService.add(this.reg as TipoAporte));
+          }
+          case AccionesGrid.EDIT: {
+            this.reg = value as TipoAporte;
+            return firstValueFrom(this.tipoAporteService.update(this.reg as TipoAporte));
+          }
+          case AccionesGrid.REMOVE: {
+            return firstValueFrom(this.tipoAporteService.delete(value));
+          }
+          default:
+            return Promise.resolve(undefined);
+        }
+      }
+      case EntidadesCrd.TIPO_ADJUNTO: {
+        switch (proceso) {
+          case AccionesGrid.ADD: {
+            this.reg = value as TipoAdjunto;
+            this.reg.idEstado = 1;
+            return firstValueFrom(this.tipoAdjuntoService.add(this.reg as TipoAdjunto));
+          }
+          case AccionesGrid.EDIT: {
+            this.reg = value as TipoAdjunto;
+            return firstValueFrom(this.tipoAdjuntoService.update(this.reg as TipoAdjunto));
+          }
+          case AccionesGrid.REMOVE: {
+            return firstValueFrom(this.tipoAdjuntoService.delete(value));
+          }
+          default:
+            return Promise.resolve(undefined);
+        }
+      }
+      case EntidadesCrd.TIPO_GENERO: {
+        switch (proceso) {
+          case AccionesGrid.ADD: {
+            this.reg = value as TipoGenero;
+            this.reg.idEstado = 1;
+            return firstValueFrom(this.tipoGeneroService.add(this.reg as TipoGenero));
+          }
+          case AccionesGrid.EDIT: {
+            this.reg = value as TipoGenero;
+            return firstValueFrom(this.tipoGeneroService.update(this.reg as TipoGenero));
+          }
+          case AccionesGrid.REMOVE: {
+            return firstValueFrom(this.tipoGeneroService.delete(value));
+          }
+          default:
+            return Promise.resolve(undefined);
+        }
+      }
+      case EntidadesCrd.TIPO_HIDROCARBURIFICA: {
+        switch (proceso) {
+          case AccionesGrid.ADD: {
+            this.reg = value as TipoHidrocarburifica;
+            this.reg.idEstado = 1;
+            return firstValueFrom(this.tipoHidrocarburificaService.add(this.reg as TipoHidrocarburifica));
+          }
+          case AccionesGrid.EDIT: {
+            this.reg = value as TipoHidrocarburifica;
+            return firstValueFrom(this.tipoHidrocarburificaService.update(this.reg as TipoHidrocarburifica));
+          }
+          case AccionesGrid.REMOVE: {
+            return firstValueFrom(this.tipoHidrocarburificaService.delete(value));
+          }
+          default:
+            return Promise.resolve(undefined);
+        }
+      }
+      case EntidadesCrd.TIPO_IDENTIFICACION: {
+        switch (proceso) {
+          case AccionesGrid.ADD: {
+            this.reg = value as TipoIdentificacion;
+            this.reg.idEstado = 1;
+            return firstValueFrom(this.tipoIdentificacionService.add(this.reg as TipoIdentificacion));
+          }
+          case AccionesGrid.EDIT: {
+            this.reg = value as TipoIdentificacion;
+            return firstValueFrom(this.tipoIdentificacionService.update(this.reg as TipoIdentificacion));
+          }
+          case AccionesGrid.REMOVE: {
+            return firstValueFrom(this.tipoIdentificacionService.delete(value));
+          }
+          default:
+            return Promise.resolve(undefined);
+        }
+      }
+      case EntidadesCrd.TIPO_VIVIENDA: {
+        switch (proceso) {
+          case AccionesGrid.ADD: {
+            this.reg = value as TipoVivienda;
+            this.reg.idEstado = 1;
+            return firstValueFrom(this.tipoViviendaService.add(this.reg as TipoVivienda));
+          }
+          case AccionesGrid.EDIT: {
+            this.reg = value as TipoVivienda;
+            return firstValueFrom(this.tipoViviendaService.update(this.reg as TipoVivienda));
+          }
+          case AccionesGrid.REMOVE: {
+            return firstValueFrom(this.tipoViviendaService.delete(value));
+          }
+          default:
+            return Promise.resolve(undefined);
+        }
+      }
       default: {
         console.log('NO SE ENCONTRO EL SERVICIO');
         return Promise.resolve(undefined);
@@ -119,6 +375,43 @@ export class ServiceLocatorCrdService {
       }
       case EntidadesCrd.ESTADO_CIVIL: {
         return firstValueFrom(this.estadoCivilService.getAll());
+      }
+      // ========== TIPOS ==========
+      case EntidadesCrd.TIPO_CONTRATO: {
+        return firstValueFrom(this.tipoContratoService.getAll());
+      }
+      case EntidadesCrd.TIPO_PARTICIPE: {
+        return firstValueFrom(this.tipoParticipeService.getAll());
+      }
+      case EntidadesCrd.TIPO_PRESTAMO: {
+        return firstValueFrom(this.tipoPrestamoService.getAll());
+      }
+      case EntidadesCrd.TIPO_REQUISITO_PRESTAMO: {
+        return firstValueFrom(this.tipoRequisitoPrestamoService.getAll());
+      }
+      case EntidadesCrd.TIPO_CESANTIA: {
+        return firstValueFrom(this.tipoCesantiaService.getAll());
+      }
+      case EntidadesCrd.TIPO_CALIFICACION_CREDITO: {
+        return firstValueFrom(this.tipoCalificacionCreditoService.getAll());
+      }
+      case EntidadesCrd.TIPO_APORTE: {
+        return firstValueFrom(this.tipoAporteService.getAll());
+      }
+      case EntidadesCrd.TIPO_ADJUNTO: {
+        return firstValueFrom(this.tipoAdjuntoService.getAll());
+      }
+      case EntidadesCrd.TIPO_GENERO: {
+        return firstValueFrom(this.tipoGeneroService.getAll());
+      }
+      case EntidadesCrd.TIPO_HIDROCARBURIFICA: {
+        return firstValueFrom(this.tipoHidrocarburificaService.getAll());
+      }
+      case EntidadesCrd.TIPO_IDENTIFICACION: {
+        return firstValueFrom(this.tipoIdentificacionService.getAll());
+      }
+      case EntidadesCrd.TIPO_VIVIENDA: {
+        return firstValueFrom(this.tipoViviendaService.getAll());
       }
       default: {
         console.log('NO SE ENCONTRO EL SERVICIO');

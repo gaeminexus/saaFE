@@ -1,0 +1,238 @@
+<div class="tipos-container">
+  <!-- Header moderno con gradiente -->
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-icon">
+        <mat-icon>category</mat-icon>
+      </div>
+      <div class="header-text">
+        <h1>Administración de Tipos</h1>
+        <p class="subtitle">Gestiona los tipos parametrizados del sistema en el módulo de créditos</p>
+      </div>
+    </div>
+
+    <!-- Grid de tipos navegables: 3 columnas x 4 filas -->
+    <div class="tipos-grid">
+      <div
+        *ngFor="let tipo of tiposEntidades"
+        class="tipo-item"
+        [class.active]="selectedTabIndex === tipo.index"
+        (click)="navigateToTab(tipo.index)">
+        <mat-icon class="tipo-icon">{{ tipo.icono }}</mat-icon>
+        <span class="tipo-nombre">{{ tipo.nombre }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabs modernos con iconos -->
+  <mat-tab-group
+    class="modern-tabs"
+    animationDuration="300ms"
+    [(selectedIndex)]="selectedTabIndex">
+
+    <!-- Tab: Tipo Contrato -->
+    <mat-tab label="">
+      <ng-template mat-tab-label>
+        <div class="tab-label">
+          <mat-icon class="tab-icon">description</mat-icon>
+          <span class="tab-text">Contrato</span>
+          <span class="tab-badge">{{ tiposContrato.length }}</span>
+        </div>
+      </ng-template>
+      <div class="tab-content">
+        <app-table-basic-hijos
+          *ngIf="tableConfigContrato"
+          [configTable]="tableConfigContrato">
+        </app-table-basic-hijos>
+      </div>
+    </mat-tab>
+
+    <!-- Tab: Tipo Partícipe -->
+    <mat-tab label="">
+      <ng-template mat-tab-label>
+        <div class="tab-label">
+          <mat-icon class="tab-icon">person</mat-icon>
+          <span class="tab-text">Partícipe</span>
+          <span class="tab-badge">{{ tiposParticipe.length }}</span>
+        </div>
+      </ng-template>
+      <div class="tab-content">
+        <app-table-basic-hijos
+          *ngIf="tableConfigParticipe"
+          [configTable]="tableConfigParticipe">
+        </app-table-basic-hijos>
+      </div>
+    </mat-tab>
+
+    <!-- Tab: Tipo Préstamo -->
+    <mat-tab label="">
+      <ng-template mat-tab-label>
+        <div class="tab-label">
+          <mat-icon class="tab-icon">account_balance_wallet</mat-icon>
+          <span class="tab-text">Préstamo</span>
+          <span class="tab-badge">{{ tiposPrestamo.length }}</span>
+        </div>
+      </ng-template>
+      <div class="tab-content">
+        <app-table-basic-hijos
+          *ngIf="tableConfigPrestamo"
+          [configTable]="tableConfigPrestamo">
+        </app-table-basic-hijos>
+      </div>
+    </mat-tab>
+
+    <!-- Tab: Tipo Requisito Préstamo -->
+    <mat-tab label="">
+      <ng-template mat-tab-label>
+        <div class="tab-label">
+          <mat-icon class="tab-icon">checklist</mat-icon>
+          <span class="tab-text">Requisito</span>
+          <span class="tab-badge">{{ tiposRequisitoPrestamo.length }}</span>
+        </div>
+      </ng-template>
+      <div class="tab-content">
+        <app-table-basic-hijos
+          *ngIf="tableConfigRequisitoPrestamo"
+          [configTable]="tableConfigRequisitoPrestamo">
+        </app-table-basic-hijos>
+      </div>
+    </mat-tab>
+
+    <!-- Tab: Tipo Cesantía -->
+    <mat-tab label="">
+      <ng-template mat-tab-label>
+        <div class="tab-label">
+          <mat-icon class="tab-icon">assignment</mat-icon>
+          <span class="tab-text">Cesantía</span>
+          <span class="tab-badge">{{ tiposCesantia.length }}</span>
+        </div>
+      </ng-template>
+      <div class="tab-content">
+        <app-table-basic-hijos
+          *ngIf="tableConfigCesantia"
+          [configTable]="tableConfigCesantia">
+        </app-table-basic-hijos>
+      </div>
+    </mat-tab>
+
+    <!-- Tab: Tipo Calificación Crédito -->
+    <mat-tab label="">
+      <ng-template mat-tab-label>
+        <div class="tab-label">
+          <mat-icon class="tab-icon">grade</mat-icon>
+          <span class="tab-text">Calificación</span>
+          <span class="tab-badge">{{ tiposCalificacionCredito.length }}</span>
+        </div>
+      </ng-template>
+      <div class="tab-content">
+        <app-table-basic-hijos
+          *ngIf="tableConfigCalificacionCredito"
+          [configTable]="tableConfigCalificacionCredito">
+        </app-table-basic-hijos>
+      </div>
+    </mat-tab>
+
+    <!-- Tab: Tipo Aporte -->
+    <mat-tab label="">
+      <ng-template mat-tab-label>
+        <div class="tab-label">
+          <mat-icon class="tab-icon">savings</mat-icon>
+          <span class="tab-text">Aporte</span>
+          <span class="tab-badge">{{ tiposAporte.length }}</span>
+        </div>
+      </ng-template>
+      <div class="tab-content">
+        <app-table-basic-hijos
+          *ngIf="tableConfigAporte"
+          [configTable]="tableConfigAporte">
+        </app-table-basic-hijos>
+      </div>
+    </mat-tab>
+
+    <!-- Tab: Tipo Adjunto -->
+    <mat-tab label="">
+      <ng-template mat-tab-label>
+        <div class="tab-label">
+          <mat-icon class="tab-icon">attach_file</mat-icon>
+          <span class="tab-text">Adjunto</span>
+          <span class="tab-badge">{{ tiposAdjunto.length }}</span>
+        </div>
+      </ng-template>
+      <div class="tab-content">
+        <app-table-basic-hijos
+          *ngIf="tableConfigAdjunto"
+          [configTable]="tableConfigAdjunto">
+        </app-table-basic-hijos>
+      </div>
+    </mat-tab>
+
+    <!-- Tab: Tipo Género -->
+    <mat-tab label="">
+      <ng-template mat-tab-label>
+        <div class="tab-label">
+          <mat-icon class="tab-icon">wc</mat-icon>
+          <span class="tab-text">Género</span>
+          <span class="tab-badge">{{ tiposGenero.length }}</span>
+        </div>
+      </ng-template>
+      <div class="tab-content">
+        <app-table-basic-hijos
+          *ngIf="tableConfigGenero"
+          [configTable]="tableConfigGenero">
+        </app-table-basic-hijos>
+      </div>
+    </mat-tab>
+
+    <!-- Tab: Tipo Hidrocarburífica -->
+    <mat-tab label="">
+      <ng-template mat-tab-label>
+        <div class="tab-label">
+          <mat-icon class="tab-icon">local_gas_station</mat-icon>
+          <span class="tab-text">Hidrocarburífica</span>
+          <span class="tab-badge">{{ tiposHidrocarburifica.length }}</span>
+        </div>
+      </ng-template>
+      <div class="tab-content">
+        <app-table-basic-hijos
+          *ngIf="tableConfigHidrocarburifica"
+          [configTable]="tableConfigHidrocarburifica">
+        </app-table-basic-hijos>
+      </div>
+    </mat-tab>
+
+    <!-- Tab: Tipo Identificación -->
+    <mat-tab label="">
+      <ng-template mat-tab-label>
+        <div class="tab-label">
+          <mat-icon class="tab-icon">badge</mat-icon>
+          <span class="tab-text">Identificación</span>
+          <span class="tab-badge">{{ tiposIdentificacion.length }}</span>
+        </div>
+      </ng-template>
+      <div class="tab-content">
+        <app-table-basic-hijos
+          *ngIf="tableConfigIdentificacion"
+          [configTable]="tableConfigIdentificacion">
+        </app-table-basic-hijos>
+      </div>
+    </mat-tab>
+
+    <!-- Tab: Tipo Vivienda -->
+    <mat-tab label="">
+      <ng-template mat-tab-label>
+        <div class="tab-label">
+          <mat-icon class="tab-icon">home</mat-icon>
+          <span class="tab-text">Vivienda</span>
+          <span class="tab-badge">{{ tiposVivienda.length }}</span>
+        </div>
+      </ng-template>
+      <div class="tab-content">
+        <app-table-basic-hijos
+          *ngIf="tableConfigVivienda"
+          [configTable]="tableConfigVivienda">
+        </app-table-basic-hijos>
+      </div>
+    </mat-tab>
+
+  </mat-tab-group>
+</div>

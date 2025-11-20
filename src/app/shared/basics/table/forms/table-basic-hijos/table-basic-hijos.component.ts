@@ -2,7 +2,7 @@ import { animate, state, style, transition, trigger } from '@angular/animations'
 import { AfterViewInit, ChangeDetectorRef, Component, EventEmitter, forwardRef, Input, OnInit, OnChanges, SimpleChanges, Output, ViewChild, CUSTOM_ELEMENTS_SCHEMA, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
-import { MatPaginator } from '@angular/material/paginator';
+import { MatPaginator, MatPaginatorIntl } from '@angular/material/paginator';
 import { MatSort } from '@angular/material/sort';
 import { MatTableDataSource } from '@angular/material/table';
 import { AccionesGrid } from '../../../constantes';
@@ -16,6 +16,29 @@ import { FieldFormat } from '../../model/field-format-interface';
 import { FooterOperations } from '../../model/fields-constants';
 import { TableConfig } from '../../model/table-interface';
 import { MaterialFormModule } from '../../../../modules/material-form.module';
+import { Injectable } from '@angular/core';
+
+// Clase para internacionalización del paginador en español
+@Injectable()
+export class MatPaginatorIntlEs extends MatPaginatorIntl {
+  override itemsPerPageLabel = 'Items por página:';
+  override nextPageLabel = 'Siguiente';
+  override previousPageLabel = 'Anterior';
+  override firstPageLabel = 'Primera página';
+  override lastPageLabel = 'Última página';
+
+  override getRangeLabel = (page: number, pageSize: number, length: number): string => {
+    if (length === 0 || pageSize === 0) {
+      return `0 de ${length}`;
+    }
+    length = Math.max(length, 0);
+    const startIndex = page * pageSize;
+    const endIndex = startIndex < length ?
+      Math.min(startIndex + pageSize, length) :
+      startIndex + pageSize;
+    return `${startIndex + 1} - ${endIndex} de ${length}`;
+  };
+}
 
 @Component({
   selector: 'app-table-basic-hijos',
@@ -23,6 +46,9 @@ import { MaterialFormModule } from '../../../../modules/material-form.module';
   imports: [
     MaterialFormModule,
     FormsModule,
+  ],
+  providers: [
+    { provide: MatPaginatorIntl, useClass: MatPaginatorIntlEs }
   ],
   templateUrl: './table-basic-hijos.component.html',
   styleUrl: './table-basic-hijos.component.scss',
@@ -94,6 +120,9 @@ export class TableBasicHijosComponent implements OnInit, OnChanges, AfterViewIni
 
         // Reconfigurar el sort después de actualizar los datos
         this.configurarSort();
+
+        // Forzar actualización del paginador
+        this.actualizarPaginador();
       }
 
       // Regenerar la configuración cuando cambien los datos
@@ -103,6 +132,7 @@ export class TableBasicHijosComponent implements OnInit, OnChanges, AfterViewIni
       // Reinicializar sort después de cambios en la configuración
       setTimeout(() => {
         this.configurarSort();
+        this.actualizarPaginador();
       }, 0);
     }
   }
@@ -327,7 +357,30 @@ export class TableBasicHijosComponent implements OnInit, OnChanges, AfterViewIni
     // Reconfigurar el sort después de actualizar los datos
     this.configurarSort();
 
+    // Forzar actualización del paginador
+    this.actualizarPaginador();
+
     this.changeDetectorRefs.detectChanges();
+  }
+
+  private actualizarPaginador(): void {
+    if (this.paginator && this.dataSource) {
+      // Desconectar y reconectar el paginador para forzar actualización
+      const currentPage = this.paginator.pageIndex;
+      this.dataSource.paginator = null;
+
+      setTimeout(() => {
+        if (this.paginator) {
+          this.dataSource.paginator = this.paginator;
+          // Restaurar la página si es válida
+          if (currentPage < this.paginator.getNumberOfPages()) {
+            this.paginator.pageIndex = currentPage;
+          } else {
+            this.paginator.firstPage();
+          }
+        }
+      }, 0);
+    }
   }
 
   private configurarSort(): void {

@@ -29,6 +29,8 @@ import { ParticipeInfoComponent } from './modules/crd/forms/participe-info/parti
 import { CargaAportesComponent } from './modules/crd/forms/carga-aportes/carga-aportes.component';
 import { EstadosCrdComponent } from './modules/crd/forms/estados-crd/estados-crd.component';
 import { EstadosResolverService } from './modules/crd/resolver/estados-resolver.service';
+import { TiposCrdComponent } from './modules/crd/forms/tipos-crd/tipos-crd.component';
+import { TiposCrdResolverService } from './modules/crd/resolver/tipos-crd-resolver.service';
 
 
 
@@ -73,6 +75,7 @@ export const routes: Routes = [
         { path: 'participe-info', component: ParticipeInfoComponent },
         { path: 'carga-aportes', component: CargaAportesComponent },
         { path: 'estados', component: EstadosCrdComponent, resolve: { estados: EstadosResolverService } },
+        { path: 'tipos', component: TiposCrdComponent, resolve: { tipos: TiposCrdResolverService } },
       ]
     },
     { path: '**', redirectTo: '' }

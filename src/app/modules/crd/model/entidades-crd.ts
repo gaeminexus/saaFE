@@ -18,7 +18,13 @@ export class EntidadesCrd {
   public static readonly TIPO_VIVIENDA = 16;
   public static readonly TIPO_HIDROCARBURIFICA = 17;
   public static readonly TIPO_IDENTIFICACION = 18;
-
-
+  public static readonly TIPO_CONTRATO = 19;
+  public static readonly TIPO_PARTICIPE = 20;
+  public static readonly TIPO_REQUISITO_PRESTAMO = 21;
+  public static readonly TIPO_CESANTIA = 22;
+  public static readonly TIPO_CALIFICACION_CREDITO = 23;
+  public static readonly TIPO_APORTE = 24;
+  public static readonly TIPO_ADJUNTO = 25;
+  public static readonly TIPO_GENERO = 26;
 
 }

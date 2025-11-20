@@ -10,34 +10,16 @@
         <p class="subtitle">Gestiona los estados que usa el sistema en el módulo de créditos</p>
       </div>
     </div>
-    <div class="header-stats">
-      <div class="stat-card">
-        <mat-icon>person</mat-icon>
-        <div class="stat-info">
-          <span class="stat-value">{{ estadosParticipe.length }}</span>
-          <span class="stat-label">Partícipe</span>
-        </div>
-      </div>
-      <div class="stat-card">
-        <mat-icon>account_balance_wallet</mat-icon>
-        <div class="stat-info">
-          <span class="stat-value">{{ estadosPrestamo.length }}</span>
-          <span class="stat-label">Préstamo</span>
-        </div>
-      </div>
-      <div class="stat-card">
-        <mat-icon>assignment</mat-icon>
-        <div class="stat-info">
-          <span class="stat-value">{{ estadosCesantia.length }}</span>
-          <span class="stat-label">Cesantía</span>
-        </div>
-      </div>
-      <div class="stat-card">
-        <mat-icon>family_restroom</mat-icon>
-        <div class="stat-info">
-          <span class="stat-value">{{ estadosCivil.length }}</span>
-          <span class="stat-label">Civil</span>
-        </div>
+
+    <!-- Grid de estados navegables: 2 columnas x 2 filas -->
+    <div class="estados-grid">
+      <div
+        *ngFor="let estado of estadosEntidades"
+        class="estado-item"
+        [class.active]="selectedTabIndex === estado.index"
+        (click)="navigateToTab(estado.index)">
+        <mat-icon class="estado-icon">{{ estado.icono }}</mat-icon>
+        <span class="estado-nombre">{{ estado.nombre }}</span>
       </div>
     </div>
   </div>
@@ -46,7 +28,7 @@
   <mat-tab-group
     class="modern-tabs"
     animationDuration="300ms"
-    [selectedIndex]="0">
+    [(selectedIndex)]="selectedTabIndex">
 
     <mat-tab label="">
       <ng-template mat-tab-label>

@@ -827,6 +827,11 @@ $delete-color-2: #ff7eb3;        // Rosa más claro
     ::ng-deep {
       .mat-mdc-paginator {
         background: transparent;
+        font-family: 'Montserrat', Arial, sans-serif;
+
+        .mat-mdc-paginator-container {
+          font-family: 'Montserrat', Arial, sans-serif;
+        }
 
         .mat-mdc-paginator-range-actions {
           align-items: center;
@@ -848,17 +853,44 @@ $delete-color-2: #ff7eb3;        // Rosa más claro
         .mat-mdc-paginator-range-label {
           color: #4b5563;
           font-size: 0.9rem;
+          font-family: 'Montserrat', Arial, sans-serif;
+          font-weight: 500;
+        }
+
+        // Estilo para el label "Items por página:"
+        .mat-mdc-paginator-page-size-label {
+          color: #4b5563;
+          font-size: 0.9rem;
+          font-family: 'Montserrat', Arial, sans-serif;
+          font-weight: 500;
+          margin-right: 0.5rem;
         }
       }
 
       .mat-mdc-select {
         color: #667eea;
+        font-family: 'Montserrat', Arial, sans-serif;
 
         .mat-mdc-select-trigger {
           border: 1px solid rgba(102, 126, 234, 0.2);
           border-radius: 4px;
           padding: 0 8px;
+          font-family: 'Montserrat', Arial, sans-serif;
         }
+
+        .mat-mdc-select-value {
+          font-family: 'Montserrat', Arial, sans-serif;
+          font-weight: 500;
+        }
+      }
+
+      // Estilos para el menú dropdown del select
+      .mat-mdc-select-panel {
+        font-family: 'Montserrat', Arial, sans-serif;
+      }
+
+      .mat-mdc-option {
+        font-family: 'Montserrat', Arial, sans-serif;
       }
     }
   }

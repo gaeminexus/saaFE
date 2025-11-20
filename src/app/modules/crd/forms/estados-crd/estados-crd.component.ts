@@ -41,7 +41,23 @@ export class EstadosCrdComponent implements OnInit {
   tableConfigCesantia!: TableConfig;
   tableConfigCivil!: TableConfig;
 
+  // Índice del tab seleccionado
+  selectedTabIndex: number = 0;
+
+  // Lista de estados para el header navegable
+  estadosEntidades = [
+    { nombre: 'Estado Partícipe', icono: 'person', index: 0 },
+    { nombre: 'Estado Préstamo', icono: 'account_balance_wallet', index: 1 },
+    { nombre: 'Estado Cesantía', icono: 'assignment', index: 2 },
+    { nombre: 'Estado Civil', icono: 'family_restroom', index: 3 }
+  ];
+
   constructor(private route: ActivatedRoute) { }
+
+  // Método para navegar al tab correspondiente
+  navigateToTab(index: number): void {
+    this.selectedTabIndex = index;
+  }
 
   ngOnInit(): void {
     // Obtener datos del resolver
@@ -68,7 +84,7 @@ export class EstadosCrdComponent implements OnInit {
       remove: false,
       paginator: true,
       filter: true,
-      fSize: 'em-08',
+      fSize: 'em-1',
       row_size: 's08'
     };
 
@@ -84,7 +100,7 @@ export class EstadosCrdComponent implements OnInit {
       remove: false,
       paginator: true,
       filter: true,
-      fSize: 'em-08',
+      fSize: 'em-1',
       row_size: 's08'
     };
 
@@ -100,7 +116,7 @@ export class EstadosCrdComponent implements OnInit {
       remove: false,
       paginator: true,
       filter: true,
-      fSize: 'em-08',
+      fSize: 'em-1',
       row_size: 's08'
     };
 
@@ -116,7 +132,7 @@ export class EstadosCrdComponent implements OnInit {
       remove: false,
       paginator: true,
       filter: true,
-      fSize: 'em-08',
+      fSize: 'em-1',
       row_size: 's08'
     };
   }

@@ -40,7 +40,7 @@ export class MenucreditosComponent {
         {
           displayName: 'Tipos',
           iconName: 'dataset',
-          route: '/menucreditos/extr'
+          route: '/menucreditos/tipos'
         },
         {
           displayName: 'Estados',
