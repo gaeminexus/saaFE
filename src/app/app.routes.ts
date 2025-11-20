@@ -27,6 +27,8 @@ import { NavegacionCascadaComponent } from './modules/crd/forms/navegacion-casca
 import { ParticipeDashComponent } from './modules/crd/forms/participe-dash/participe-dash.component';
 import { ParticipeInfoComponent } from './modules/crd/forms/participe-info/participe-info.component';
 import { CargaAportesComponent } from './modules/crd/forms/carga-aportes/carga-aportes.component';
+import { EstadosCrdComponent } from './modules/crd/forms/estados-crd/estados-crd.component';
+import { EstadosResolverService } from './modules/crd/resolver/estados-resolver.service';
 
 
 
@@ -70,6 +72,7 @@ export const routes: Routes = [
         { path: 'participe-dash', component: ParticipeDashComponent },
         { path: 'participe-info', component: ParticipeInfoComponent },
         { path: 'carga-aportes', component: CargaAportesComponent },
+        { path: 'estados', component: EstadosCrdComponent, resolve: { estados: EstadosResolverService } },
       ]
     },
     { path: '**', redirectTo: '' }

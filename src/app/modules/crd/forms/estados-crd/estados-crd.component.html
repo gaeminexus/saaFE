@@ -1,0 +1,118 @@
+<div class="estados-container">
+  <!-- Header moderno con gradiente -->
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-icon">
+        <mat-icon>settings</mat-icon>
+      </div>
+      <div class="header-text">
+        <h1>Administración de Estados</h1>
+        <p class="subtitle">Gestiona los estados que usa el sistema en el módulo de créditos</p>
+      </div>
+    </div>
+    <div class="header-stats">
+      <div class="stat-card">
+        <mat-icon>person</mat-icon>
+        <div class="stat-info">
+          <span class="stat-value">{{ estadosParticipe.length }}</span>
+          <span class="stat-label">Partícipe</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <mat-icon>account_balance_wallet</mat-icon>
+        <div class="stat-info">
+          <span class="stat-value">{{ estadosPrestamo.length }}</span>
+          <span class="stat-label">Préstamo</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <mat-icon>assignment</mat-icon>
+        <div class="stat-info">
+          <span class="stat-value">{{ estadosCesantia.length }}</span>
+          <span class="stat-label">Cesantía</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <mat-icon>family_restroom</mat-icon>
+        <div class="stat-info">
+          <span class="stat-value">{{ estadosCivil.length }}</span>
+          <span class="stat-label">Civil</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabs modernos con iconos -->
+  <mat-tab-group
+    class="modern-tabs"
+    animationDuration="300ms"
+    [selectedIndex]="0">
+
+    <mat-tab label="">
+      <ng-template mat-tab-label>
+        <div class="tab-label">
+          <mat-icon class="tab-icon">person</mat-icon>
+          <span class="tab-text">Estados Partícipe</span>
+          <span class="tab-badge">{{ estadosParticipe.length }}</span>
+        </div>
+      </ng-template>
+      <div class="tab-content">
+        <app-table-basic-hijos
+          *ngIf="tableConfigParticipe"
+          [configTable]="tableConfigParticipe">
+        </app-table-basic-hijos>
+      </div>
+    </mat-tab>
+
+    <mat-tab label="">
+      <ng-template mat-tab-label>
+        <div class="tab-label">
+          <mat-icon class="tab-icon">account_balance_wallet</mat-icon>
+          <span class="tab-text">Estados Préstamo</span>
+          <span class="tab-badge">{{ estadosPrestamo.length }}</span>
+        </div>
+      </ng-template>
+      <div class="tab-content">
+        <app-table-basic-hijos
+          *ngIf="tableConfigPrestamo"
+          [configTable]="tableConfigPrestamo">
+        </app-table-basic-hijos>
+      </div>
+    </mat-tab>
+
+    <mat-tab label="">
+      <ng-template mat-tab-label>
+        <div class="tab-label">
+          <mat-icon class="tab-icon">assignment</mat-icon>
+          <span class="tab-text">Estados Cesantía</span>
+          <span class="tab-badge">{{ estadosCesantia.length }}</span>
+        </div>
+      </ng-template>
+      <div class="tab-content">
+        <app-table-basic-hijos
+          *ngIf="tableConfigCesantia"
+          [configTable]="tableConfigCesantia">
+        </app-table-basic-hijos>
+      </div>
+    </mat-tab>
+
+    <mat-tab label="">
+      <ng-template mat-tab-label>
+        <div class="tab-label">
+          <mat-icon class="tab-icon">family_restroom</mat-icon>
+          <span class="tab-text">Estados Civil</span>
+          <span class="tab-badge">{{ estadosCivil.length }}</span>
+        </div>
+      </ng-template>
+      <div class="tab-content">
+        <app-table-basic-hijos
+          *ngIf="tableConfigCivil"
+          [configTable]="tableConfigCivil">
+        </app-table-basic-hijos>
+      </div>
+    </mat-tab>
+
+  </mat-tab-group>
+</div>
+
+

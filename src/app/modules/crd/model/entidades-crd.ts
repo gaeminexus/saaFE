@@ -1,4 +1,4 @@
-export class EntidadesCreditoCnt {
+export class EntidadesCrd {
   // Entidades del módulo Crédito
   public static readonly BOT_OPCION = 1;
   public static readonly CANTON = 2;

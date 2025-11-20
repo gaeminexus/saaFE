@@ -45,7 +45,7 @@ export class MenucreditosComponent {
         {
           displayName: 'Estados',
           iconName: 'event_list',
-          route: '/menucreditos/extr'
+          route: '/menucreditos/estados'
         },
       ]
     },
@@ -72,23 +72,77 @@ export class MenucreditosComponent {
       ]
     },
     {
-      displayName: 'Gestión Archivos',
+      displayName: 'Contratos',
       iconName: 'library_books',
       route: '/menucreditos/parametrizacion',
       children: [
+        {
+          displayName: 'Ingreso',
+          iconName: 'contract',
+          route: '/menucreditos/carga-aportes'
+        },
+        {
+          displayName: 'Administrar',
+          iconName: 'developer_guide',
+          route: '/menucreditos/navegacion-cascada'
+        },
+        {
+          displayName: 'Dash',
+          iconName: 'widget_width',
+          route: '/menucreditos/participe-dash'
+        },
+      ]
+    },
+    {
+      displayName: 'Prestamos',
+      iconName: 'account_balance',
+      route: '/menucreditos/parametrizacion',
+      children: [
+        {
+          displayName: 'Ingreso',
+          iconName: 'credit_score',
+          route: '/menucreditos/carga-aportes'
+        },
+        {
+          displayName: 'Administrar',
+          iconName: 'app_registration',
+          route: '/menucreditos/navegacion-cascada'
+        },
+        {
+          displayName: 'Dash',
+          iconName: 'money_bag',
+          route: '/menucreditos/participe-dash'
+        },
+      ]
+    },
+    {
+      displayName: 'Cobros',
+      iconName: 'currency_exchange',
+      route: '/menucreditos/parametrizacion',
+      children: [
+        {
+          displayName: 'Archivos Descuentos',
+          iconName: 'system_update_alt',
+          route: '/menucreditos/navegacion-cascada'
+        },
         {
           displayName: 'Cargar Aportes',
           iconName: 'drive_folder_upload',
           route: '/menucreditos/carga-aportes'
         },
         {
-          displayName: 'Generar Descuentos',
-          iconName: 'system_update_alt',
-          route: '/menucreditos/navegacion-cascada'
+          displayName: 'Pago Cuota',
+          iconName: 'price_check',
+          route: '/menucreditos/carga-aportes'
+        },
+        {
+          displayName: 'Cruce Valores',
+          iconName: 'repeat_on',
+          route: '/menucreditos/carga-aportes'
         },
         {
           displayName: 'Dash',
-          iconName: 'person_play',
+          iconName: 'finance',
           route: '/menucreditos/participe-dash'
         },
       ]

@@ -77,11 +77,12 @@ export class TableBasicHijosComponent implements OnInit, OnChanges, AfterViewIni
 
   constructor() { }
 
+  shouldShowExpandedDetail = (): boolean => {
+    return this.configTable?.tiene_hijos || false;
+  };
+
   ngOnChanges(changes: SimpleChanges): void {
-    console.log('TableBasicHijosComponent - ngOnChanges detectó cambios:', changes);
     if (changes['configTable'] && this.configTable) {
-      console.log('Configuración de tabla actualizada:', this.configTable);
-      console.log('Nuevos registros:', this.configTable.registros);
 
       this.fields = this.configTable.fields || [];
       this.registros = this.configTable.registros || [];
@@ -90,7 +91,6 @@ export class TableBasicHijosComponent implements OnInit, OnChanges, AfterViewIni
 
       if (this.dataSource) {
         this.dataSource.data = this.registros || [];
-        console.log('DataSource actualizado con', this.registros.length || 0, 'registros');
 
         // Reconfigurar el sort después de actualizar los datos
         this.configurarSort();
@@ -158,7 +158,6 @@ export class TableBasicHijosComponent implements OnInit, OnChanges, AfterViewIni
   ngOnInit(): void {
     // Validación inicial para evitar errores cuando configTable es undefined
     if (!this.configTable) {
-      console.log('configTable no está definido, esperando cambios...');
       this.fields = [];
       this.registros = [];
       this.regConfig = [];
@@ -199,15 +198,9 @@ export class TableBasicHijosComponent implements OnInit, OnChanges, AfterViewIni
         this.displayedColumnsActions.push(r.column);
       }
     });
-
-    console.log('Columnas configuradas:', this.displayedColumnsActions);
-    console.log('Campos con sort:', this.fields.filter(f => f.fSort).map(f => f.column));
   }
 
   ngAfterViewInit(): void {
-    console.log('ngAfterViewInit - sort:', this.sort, 'paginator:', this.paginator);
-    console.log('Columnas configuradas en AfterViewInit:', this.displayedColumnsActions);
-    console.log('Fields con sort:', this.fields?.filter(f => f.fSort));
 
     // Configurar paginator
     if (this.configTable?.paginator && this.paginator) {
@@ -219,11 +212,9 @@ export class TableBasicHijosComponent implements OnInit, OnChanges, AfterViewIni
     // Configurar sort
     if (this.sort) {
       this.dataSource.sort = this.sort;
-      console.log('Sort configurado correctamente con columnas:', this.sort.sortables);
 
       // Configurar sortingDataAccessor para campos anidados si es necesario
       this.dataSource.sortingDataAccessor = (item: any, property: string) => {
-        console.log('Sorting by property:', property, 'value:', item?.[property]);
         if (property && item) {
           // Manejo de propiedades anidadas (ej: "campo.subcampo")
           if (property.includes('.')) {
@@ -238,10 +229,8 @@ export class TableBasicHijosComponent implements OnInit, OnChanges, AfterViewIni
 
       // Verificar que el sort tenga las columnas correctas
       setTimeout(() => {
-        console.log('Sort headers después de timeout:', this.sort.sortables.keys());
       }, 100);
     } else {
-      console.warn('Sort no está disponible en ngAfterViewInit');
     }
 
     // Forzar detección de cambios
@@ -313,7 +302,6 @@ export class TableBasicHijosComponent implements OnInit, OnChanges, AfterViewIni
           );
           this.asignaYRefresca(re);
         } catch (error) {
-          console.error('Error al obtener datos por padre:', error);
           // Opcional: mostrar mensaje al usuario
           // this.mostrarMensajeError('Error al cargar los datos relacionados');
         }
@@ -322,13 +310,11 @@ export class TableBasicHijosComponent implements OnInit, OnChanges, AfterViewIni
           const re = await this.serviceLocatorService.recargarValores(this.entidad);
           this.asignaYRefresca(re);
         } catch (error) {
-          console.error('Error al recargar valores:', error);
           // Opcional: mostrar mensaje al usuario
           // this.mostrarMensajeError('Error al recargar los datos');
         }
       }
     } catch (error) {
-      console.error('Error al ejecutar servicio:', error);
       // Opcional: mostrar mensaje al usuario
       // this.mostrarMensajeError('Error al procesar la operación');
     }
@@ -353,8 +339,6 @@ export class TableBasicHijosComponent implements OnInit, OnChanges, AfterViewIni
       setTimeout(() => {
         if (this.sort) {
           this.dataSource.sort = this.sort;
-          console.log('Sort reconfigurado con', this.dataSource.data.length, 'registros');
-          console.log('Columnas ordenables disponibles:', Array.from(this.sort.sortables.keys()));
         }
       }, 0);
     }

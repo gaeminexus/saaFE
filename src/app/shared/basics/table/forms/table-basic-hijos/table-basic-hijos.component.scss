@@ -43,14 +43,17 @@ $delete-color-2: #ff7eb3;        // Rosa más claro
 
 // Contenedor principal estilo naturalezadecuentas
 .saa-table-container {
-  max-width: 1100px;
-  margin: 1rem auto;
+  max-width: 100%;
+  width: 100%;
+  margin: 0 auto;
   background: rgba(255, 255, 255, 0.95);
   border-radius: 1rem;
   box-shadow: 0 4px 16px rgba(102, 126, 234, 0.1);
   padding: 1.5rem;
   backdrop-filter: blur(10px);
   border: 1px solid rgba(118, 75, 162, 0.1);
+  box-sizing: border-box;
+  overflow: hidden;
 
   // Header de la tabla estilo naturalezadecuentas
   .saa-table-header {
@@ -118,14 +121,131 @@ $delete-color-2: #ff7eb3;        // Rosa más claro
 
     .search-container {
       flex: 1;
-      max-width: 300px;
-      min-width: 250px;
+      max-width: 500px;
+      min-width: 350px;
 
       .search-field {
         width: 100%;
 
-        ::ng-deep .mat-mdc-form-field-wrapper {
-          padding-bottom: 0;
+        ::ng-deep {
+          .mat-mdc-form-field-wrapper {
+            padding-bottom: 0;
+            margin-bottom: 0;
+          }
+
+          // Ocultar el outline por defecto
+          .mat-mdc-text-field-wrapper {
+            background: rgba(102, 126, 234, 0.05);
+            border-radius: 20px;
+            padding: 0.15rem 1rem;
+            height: 42px;
+            transition: all 0.3s ease;
+
+            &:hover {
+              background: rgba(102, 126, 234, 0.08);
+            }
+
+            .mat-mdc-form-field-flex {
+              align-items: center;
+              height: 100%;
+            }
+
+            // Ocultar el notch (borde outline)
+            .mdc-notched-outline {
+              display: none;
+            }
+          }
+
+          // Estilos del label
+          .mat-mdc-form-field-label {
+            color: rgba(102, 126, 234, 0.7) !important;
+            font-weight: 500;
+            font-size: 0.9rem;
+            top: 50% !important;
+            transform: translateY(-50%) !important;
+          }
+
+          // Label cuando está flotando
+          .mat-mdc-form-field-label.mdc-floating-label--float-above {
+            transform: translateY(-130%) scale(0.75) !important;
+          }
+
+          // Input field
+          .mat-mdc-input-element {
+            color: #333;
+            font-size: 0.9rem;
+            padding: 0 !important;
+            height: 100%;
+            line-height: normal;
+
+            &::placeholder {
+              color: rgba(102, 126, 234, 0.5);
+              font-style: italic;
+            }
+          }
+
+          // Icono de búsqueda
+          .mat-icon[matprefix] {
+            color: rgba(102, 126, 234, 0.7);
+            margin-right: 0.5rem;
+            font-size: 1.2rem;
+            width: 1.2rem;
+            height: 1.2rem;
+          }
+
+          // Botón de limpiar
+          .mat-icon-button[matsuffix] {
+            width: 32px;
+            height: 32px;
+            line-height: 32px;
+
+            .mat-icon {
+              color: rgba(102, 126, 234, 0.7);
+              font-size: 1rem;
+              width: 1rem;
+              height: 1rem;
+              transition: all 0.2s ease;
+
+              &:hover {
+                color: #dc3545;
+                transform: scale(1.1);
+              }
+            }
+          }
+
+          // Estado focused
+          &.mat-focused {
+            .mat-mdc-text-field-wrapper {
+              background: rgba(102, 126, 234, 0.1);
+              box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            }
+
+            .mat-mdc-form-field-label {
+              color: #667eea !important;
+            }
+
+            .mat-icon[matprefix] {
+              color: #667eea;
+            }
+          }
+
+          // Eliminar el underline
+          .mdc-line-ripple {
+            display: none;
+          }
+
+          // Ajustar subscript wrapper (área de hints/errores)
+          .mat-mdc-form-field-subscript-wrapper {
+            display: none;
+          }
+
+          // Ajustar el infix para centrado vertical
+          .mat-mdc-form-field-infix {
+            padding: 0;
+            min-height: auto;
+            display: flex;
+            align-items: center;
+          }
         }
       }
     }
@@ -167,8 +287,11 @@ $delete-color-2: #ff7eb3;        // Rosa más claro
   // Wrapper de la tabla estilo naturalezadecuentas
   .saa-table-wrapper {
     overflow-x: auto;
-    margin: 0 -0.5rem;
-    padding: 0 0.5rem;
+    overflow-y: hidden;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    box-sizing: border-box;
 
     // Tabla principal estilo naturalezadecuentas
     .saa-data-table {
@@ -252,7 +375,7 @@ $delete-color-2: #ff7eb3;        // Rosa más claro
       // Celdas de datos estilo naturalezadecuentas
       .saa-data-cell {
         padding: 1rem;
-        border-bottom: 1px solid rgba(118, 75, 162, 0.1);
+        border-bottom: none; // Eliminar bordes entre filas
         transition: background-color 0.3s ease;
         text-align: center;
 
@@ -267,7 +390,7 @@ $delete-color-2: #ff7eb3;        // Rosa más claro
 
         // Efectos hover estilo naturalezadecuentas
         ::ng-deep .mat-mdc-row:hover & {
-          background-color: rgba(102, 126, 234, 0.05);
+          background-color: rgba(102, 126, 234, 0.08);
         }
       }
 
@@ -319,86 +442,131 @@ $delete-color-2: #ff7eb3;        // Rosa más claro
 
             // Estilos específicos por tipo de botón
             &.hijos-btn {
-              background: linear-gradient(135deg, $saa-info, color.mix(white, $saa-info, 20%)) !important;
-              color: white !important;
+              background: transparent !important;
+              color: $saa-info !important;
+
+              mat-icon {
+                color: $saa-info !important;
+                font-size: 24px !important;
+                width: 24px !important;
+                height: 24px !important;
+              }
 
               &:hover {
-                background: color.mix(black, $saa-info, 15%) !important;
+                background: rgba(23, 162, 184, 0.1) !important;
               }
             }
 
             &.edit-btn {
-              background: $edit-color-1 !important;
-              color: white !important;
+              background: transparent !important;
+              color: $edit-color-1 !important;
+
+              mat-icon {
+                color: $edit-color-1 !important;
+                font-size: 24px !important;
+                width: 24px !important;
+                height: 24px !important;
+              }
 
               &:hover {
-                background: color.mix(black, $edit-color-1, 15%) !important;
+                background: rgba(79, 172, 254, 0.1) !important;
               }
             }
 
             &.delete-btn {
-              background: $delete-color-1 !important;
-              color: white !important;
+              background: transparent !important;
+              color: $delete-color-1 !important;
+
+              mat-icon {
+                color: $delete-color-1 !important;
+                font-size: 24px !important;
+                width: 24px !important;
+                height: 24px !important;
+              }
 
               &:hover {
-                background: color.mix(black, $delete-color-1, 15%) !important;
+                background: rgba(255, 117, 140, 0.1) !important;
               }
             }
 
             &.extra-btn {
-              background: linear-gradient(135deg, $saa-accent, color.mix(white, $saa-accent, 20%)) !important;
-              color: white !important;
+              background: transparent !important;
+              color: $saa-accent !important;
+
+              mat-icon {
+                color: $saa-accent !important;
+                font-size: 24px !important;
+                width: 24px !important;
+                height: 24px !important;
+              }
 
               &:hover {
-                background: color.mix(black, $saa-accent, 15%) !important;
+                background: rgba(246, 173, 85, 0.1) !important;
               }
             }
           }
         }
 
         .action-btn {
-          // Botones minimalistas más pequeños
-          min-width: 28px !important;
-          width: 28px !important;
-          height: 28px !important;
+          // Botones completamente transparentes con iconos grandes
+          min-width: 32px !important;
+          width: 32px !important;
+          height: 32px !important;
           border-radius: 6px !important;
           transition: all 0.2s ease;
-          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+          box-shadow: none;
           border: none;
           cursor: pointer;
+          background: transparent !important;
+          padding: 0 !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
 
           &:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transform: scale(1.1);
+            box-shadow: none;
           }
 
           &.edit-btn {
-            // Estilo minimalista azul para editar
-            background: $edit-color-1;
-            color: white;
+            // Fondo transparente con icono azul
+            background: transparent !important;
+            color: $edit-color-1;
+
+            mat-icon {
+              color: $edit-color-1 !important;
+              font-size: 24px !important;
+              width: 24px !important;
+              height: 24px !important;
+            }
 
             &:hover {
-              background: color.mix(black, $edit-color-1, 15%);
-              box-shadow: 0 2px 6px rgba($edit-color-1, 0.3);
+              background: rgba(79, 172, 254, 0.1) !important;
             }
           }
 
           &.delete-btn {
-            // Estilo minimalista rosa para eliminar
-            background: $delete-color-1;
-            color: white;
+            // Fondo transparente con icono rojo/rosa
+            background: transparent !important;
+            color: $delete-color-1;
+
+            mat-icon {
+              color: $delete-color-1 !important;
+              font-size: 24px !important;
+              width: 24px !important;
+              height: 24px !important;
+            }
 
             &:hover {
-              background: color.mix(black, $delete-color-1, 15%);
-              box-shadow: 0 2px 6px rgba($delete-color-1, 0.3);
+              background: rgba(255, 117, 140, 0.1) !important;
             }
           }
 
           mat-icon {
-            font-size: 14px !important;
-            line-height: 14px;
-            width: 14px;
-            height: 14px;
+            font-size: 24px !important;
+            line-height: 24px !important;
+            width: 24px !important;
+            height: 24px !important;
           }
         }
       }
@@ -468,7 +636,8 @@ $delete-color-2: #ff7eb3;        // Rosa más claro
         display: table-cell !important;
         text-align: center !important;
         vertical-align: middle !important;
-        border-right: 1px solid rgba(0, 0, 0, 0.06);
+        border-right: none; // Eliminar bordes verticales entre celdas
+        border-bottom: none; // Eliminar bordes horizontales
         padding: 0.5rem 0.5rem !important;
 
         &:last-child {
@@ -489,7 +658,7 @@ $delete-color-2: #ff7eb3;        // Rosa más claro
         display: table-cell !important;
         text-align: center !important;
         vertical-align: middle !important;
-        border-right: 1px solid rgba(0, 0, 0, 0.06);
+        border-right: none; // Eliminar bordes verticales en headers
         padding: 0.5rem 0.5rem !important;
 
         &:last-child {
@@ -797,34 +966,65 @@ tr:hover td {
   width: 100%;
 }
 
-// Filas expandibles
+// Filas expandibles y zebra striping
 .par {
   background-color: rgba(227, 238, 255, 0.5);
 }
 
+// Zebra striping: Filas alternadas con colores diferentes
+tr.example-element-row {
+  border: none !important;
+
+  // Usar nth-of-type para contar solo las filas de tipo example-element-row
+  &:nth-of-type(odd) { // Filas impares (1, 3, 5, 7...)
+    background-color: #ffffff;
+  }
+
+  &:nth-of-type(even) { // Filas pares (2, 4, 6, 8...)
+    background-color: rgba(102, 126, 234, 0.04);
+  }
+
+  &:not(.example-expanded-row):hover {
+    background-color: rgba(102, 126, 234, 0.12) !important;
+    transition: background-color 0.2s ease;
+  }
+
+  &:not(.example-expanded-row):active {
+    background-color: rgba(102, 126, 234, 0.18) !important;
+  }
+
+  td {
+    border-bottom-width: 0; // Sin bordes en las celdas
+    border: none;
+  }
+}
+
 tr.example-detail-row {
   height: 0;
-}
-
-tr.example-element-row:not(.example-expanded-row):hover {
-  background: whitesmoke;
-}
-
-tr.example-element-row:not(.example-expanded-row):active {
-  background: #efefef;
-}
-
-.example-element-row td {
-  border-bottom-width: 0;
+  background-color: transparent;
 }
 
 .example-element-detail {
   overflow: hidden;
-  display: flex;
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 1rem 0;
+
+  mat-accordion {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  mat-expansion-panel {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
 }
 
 .highlight {
-  background-color: rgba(0,0,0,.12);
+  background-color: rgba(102, 126, 234, 0.15);
 }
 
 // Botones
