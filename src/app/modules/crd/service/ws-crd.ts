@@ -25,6 +25,17 @@
   public static RS_TPPC = 'http://localhost:8080/saa-backend/rest/tppc';
   public static RS_TPCN = 'http://localhost:8080/saa-backend/rest/tpcn';
   public static RS_TPAP = 'http://localhost:8080/saa-backend/rest/tpap';
+  public static RS_MTDP = "http://localhost:8080/saa-backend/rest/mtdp";
+  public static RS_MTVP = "http://localhost:8080/saa-backend/rest/mtvp";
+  public static RS_NVLS = "http://localhost:8080/saa-backend/rest/nvls";
+  public static RS_PSSS = "http://localhost:8080/saa-backend/rest/psss";
+  public static RS_PRFS = "http://localhost:8080/saa-backend/rest/prfs";
+  public static RS_TPDJ = "http://localhost:8080/saa-backend/rest/tpdj";
+  public static RS_TPCL = "http://localhost:8080/saa-backend/rest/tpcl";
+  public static RS_TPCS = "http://localhost:8080/saa-backend/rest/tpcs";
+  public static RS_TPGN = "http://localhost:8080/saa-backend/rest/tpgn";
+  public static RS_TPPG = "http://localhost:8080/saa-backend/rest/tppg";
+  public static RS_TPRQ = "http://localhost:8080/saa-backend/rest/tprq";
 
 }*/
 
@@ -56,6 +67,17 @@ export class ServiciosCrd {
   public static RS_TPCN = 'http://localhost:8080/saa-backend/rest/tpcn';
   public static RS_TPAP = 'http://localhost:8080/saa-backend/rest/tpap';
   public static RS_APRT = 'http://localhost:8080/saa-backend/rest/aprt';
+  public static RS_MTDP = "http://localhost:8080/saa-backend/rest/mtdp";
+  public static RS_MTVP = "http://localhost:8080/saa-backend/rest/mtvp";
+  public static RS_NVLS = "http://localhost:8080/saa-backend/rest/nvls";
+  public static RS_PSSS = "http://localhost:8080/saa-backend/rest/psss";
+  public static RS_PRFS = "http://localhost:8080/saa-backend/rest/prfs";
+  public static RS_TPDJ = "http://localhost:8080/saa-backend/rest/tpdj";
+  public static RS_TPCL = "http://localhost:8080/saa-backend/rest/tpcl";
+  public static RS_TPCS = "http://localhost:8080/saa-backend/rest/tpcs";
+  public static RS_TPGN = "http://localhost:8080/saa-backend/rest/tpgn";
+  public static RS_TPPG = "http://localhost:8080/saa-backend/rest/tppg";
+  public static RS_TPRQ = "http://localhost:8080/saa-backend/rest/tprq";
 
 }
 
