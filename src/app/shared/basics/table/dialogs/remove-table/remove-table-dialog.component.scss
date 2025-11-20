@@ -1,4 +1,10 @@
 /* Estilos completos para el diálogo de eliminar */
+/* Borde rojo para el contenedor de Material Dialog */
+::ng-deep .mat-mdc-dialog-container .mdc-dialog__surface {
+  border: 2px solid #f44336 !important;
+  border-radius: 8px !important;
+}
+
 .saa-dialog-container {
   padding: 24px;
   min-width: 400px;

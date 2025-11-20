@@ -75,18 +75,57 @@ export class UsuarioService {
 
   setUsuarioLog(usuario: Usuario): void {
     this.usuarioLog = usuario;
+    // Guardar en localStorage para persistencia
+    if (usuario) {
+      localStorage.setItem('usuarioLog', JSON.stringify(usuario));
+    }
   }
 
   getUsuarioLog(): Usuario {
+    // Si no está en memoria, intentar recuperar de localStorage
+    if (!this.usuarioLog) {
+      const usuarioStr = localStorage.getItem('usuarioLog');
+      if (usuarioStr) {
+        try {
+          this.usuarioLog = JSON.parse(usuarioStr);
+        } catch (e) {
+          console.error('Error parseando usuario del localStorage:', e);
+        }
+      }
+    }
     return this.usuarioLog;
   }
 
   setEmpresaLog(empresa: Empresa): void {
     this.empresaLog = empresa;
+    // Guardar en localStorage para persistencia
+    if (empresa) {
+      localStorage.setItem('empresaLog', JSON.stringify(empresa));
+    }
   }
 
   getEmpresaLog(): Empresa {
+    // Si no está en memoria, intentar recuperar de localStorage
+    if (!this.empresaLog) {
+      const empresaStr = localStorage.getItem('empresaLog');
+      if (empresaStr) {
+        try {
+          this.empresaLog = JSON.parse(empresaStr);
+        } catch (e) {
+          console.error('Error parseando empresa del localStorage:', e);
+        }
+      }
+    }
     return this.empresaLog;
+  }
+
+  // Método para limpiar la sesión al hacer logout
+  clearSession(): void {
+    this.usuarioLog = null as any;
+    this.empresaLog = null as any;
+    this.usuarios = [];
+    localStorage.removeItem('usuarioLog');
+    localStorage.removeItem('empresaLog');
   }
 
   // tslint:disable-next-line: typedef

@@ -1,0 +1,98 @@
+<div class="listados-container">
+  <!-- Header moderno con gradiente -->
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-icon">
+        <mat-icon>list_alt</mat-icon>
+      </div>
+      <div class="header-text">
+        <h1>Administración de Listados</h1>
+        <p class="subtitle">Gestiona los listados que usa el sistema en el módulo de créditos</p>
+      </div>
+    </div>
+
+    <!-- Grid de listados navegables: 2 columnas x 2 filas -->
+    <div class="listados-grid">
+      <div
+        *ngFor="let listado of listadosEntidades"
+        class="listado-item"
+        [class.active]="selectedTabIndex === listado.index"
+        (click)="navigateToTab(listado.index)">
+        <mat-icon class="listado-icon">{{ listado.icono }}</mat-icon>
+        <span class="listado-nombre">{{ listado.nombre }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabs modernos con iconos -->
+  <mat-tab-group
+    class="modern-tabs"
+    animationDuration="300ms"
+    [(selectedIndex)]="selectedTabIndex">
+
+    <mat-tab label="">
+      <ng-template mat-tab-label>
+        <div class="tab-label">
+          <mat-icon class="tab-icon">comment</mat-icon>
+          <span class="tab-text">Motivo Préstamo</span>
+          <span class="tab-badge">{{ motivosPrestamo.length }}</span>
+        </div>
+      </ng-template>
+      <div class="tab-content">
+        <app-table-basic-hijos
+          *ngIf="tableConfigMotivoPrestamo"
+          [configTable]="tableConfigMotivoPrestamo">
+        </app-table-basic-hijos>
+      </div>
+    </mat-tab>
+
+    <mat-tab label="">
+      <ng-template mat-tab-label>
+        <div class="tab-label">
+          <mat-icon class="tab-icon">payment</mat-icon>
+          <span class="tab-text">Método Pago</span>
+          <span class="tab-badge">{{ metodosPago.length }}</span>
+        </div>
+      </ng-template>
+      <div class="tab-content">
+        <app-table-basic-hijos
+          *ngIf="tableConfigMetodoPago"
+          [configTable]="tableConfigMetodoPago">
+        </app-table-basic-hijos>
+      </div>
+    </mat-tab>
+
+    <mat-tab label="">
+      <ng-template mat-tab-label>
+        <div class="tab-label">
+          <mat-icon class="tab-icon">school</mat-icon>
+          <span class="tab-text">Nivel Estudio</span>
+          <span class="tab-badge">{{ nivelesEstudio.length }}</span>
+        </div>
+      </ng-template>
+      <div class="tab-content">
+        <app-table-basic-hijos
+          *ngIf="tableConfigNivelEstudio"
+          [configTable]="tableConfigNivelEstudio">
+        </app-table-basic-hijos>
+      </div>
+    </mat-tab>
+
+    <mat-tab label="">
+      <ng-template mat-tab-label>
+        <div class="tab-label">
+          <mat-icon class="tab-icon">work</mat-icon>
+          <span class="tab-text">Profesión</span>
+          <span class="tab-badge">{{ profesiones.length }}</span>
+        </div>
+      </ng-template>
+      <div class="tab-content">
+        <app-table-basic-hijos
+          *ngIf="tableConfigProfesion"
+          [configTable]="tableConfigProfesion">
+        </app-table-basic-hijos>
+      </div>
+    </mat-tab>
+
+  </mat-tab-group>
+</div>

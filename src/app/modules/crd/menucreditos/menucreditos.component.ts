@@ -40,12 +40,17 @@ export class MenucreditosComponent {
         {
           displayName: 'Tipos',
           iconName: 'dataset',
-          route: '/menucreditos/tipos'
+          route: '/menucreditos/tiposCrd'
         },
         {
           displayName: 'Estados',
           iconName: 'event_list',
-          route: '/menucreditos/estados'
+          route: '/menucreditos/estadosCrd'
+        },
+        {
+          displayName: 'Listados',
+          iconName: 'list_alt',
+          route: '/menucreditos/listadosCrd'
         },
       ]
     },
@@ -84,12 +89,12 @@ export class MenucreditosComponent {
         {
           displayName: 'Administrar',
           iconName: 'developer_guide',
-          route: '/menucreditos/navegacion-cascada'
+          // route: '/menucreditos/navegacion-cascada'
         },
         {
           displayName: 'Dash',
           iconName: 'widget_width',
-          route: '/menucreditos/participe-dash'
+          // route: '/menucreditos/participe-dash'
         },
       ]
     },
@@ -106,12 +111,12 @@ export class MenucreditosComponent {
         {
           displayName: 'Administrar',
           iconName: 'app_registration',
-          route: '/menucreditos/navegacion-cascada'
+          // route: '/menucreditos/navegacion-cascada'
         },
         {
           displayName: 'Dash',
           iconName: 'money_bag',
-          route: '/menucreditos/participe-dash'
+          // route: '/menucreditos/participe-dash'
         },
       ]
     },
@@ -123,7 +128,7 @@ export class MenucreditosComponent {
         {
           displayName: 'Archivos Descuentos',
           iconName: 'system_update_alt',
-          route: '/menucreditos/navegacion-cascada'
+          // route: '/menucreditos/navegacion-cascada'
         },
         {
           displayName: 'Cargar Aportes',
@@ -143,7 +148,7 @@ export class MenucreditosComponent {
         {
           displayName: 'Dash',
           iconName: 'finance',
-          route: '/menucreditos/participe-dash'
+          // route: '/menucreditos/participe-dash'
         },
       ]
     },

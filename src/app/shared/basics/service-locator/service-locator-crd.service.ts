@@ -34,6 +34,16 @@ import { TipoAdjunto } from '../../../modules/crd/model/tipo-adjunto';
 import { TipoGenero } from '../../../modules/crd/model/tipo-genero';
 import { TipoIdentificacion } from '../../../modules/crd/model/tipo-identificacion';
 import { TipoVivienda } from '../../../modules/crd/model/tipo-vivienda';
+// Servicios de Listados
+import { MotivoPrestamoService } from '../../../modules/crd/service/motivo-prestamo.service';
+import { MetodoPagoService } from '../../../modules/crd/service/metodo-pago.service';
+import { NivelEstudioService } from '../../../modules/crd/service/nivel-estudio.service';
+import { ProfesionService } from '../../../modules/crd/service/profesion.service';
+// Modelos de Listados
+import { MotivoPrestamo } from '../../../modules/crd/model/motivo-prestamo';
+import { MetodoPago } from '../../../modules/crd/model/metodo-pago';
+import { NivelEstudio } from '../../../modules/crd/model/nivel-estudio';
+import { Profesion } from '../../../modules/crd/model/profesion';
 
 @Injectable({
   providedIn: 'root'
@@ -59,6 +69,11 @@ export class ServiceLocatorCrdService {
     public tipoGeneroService: TipoGeneroService,
     public tipoIdentificacionService: TipoIdentificacionService,
     public tipoViviendaService: TipoViviendaService,
+    // Servicios de Listados
+    public motivoPrestamoService: MotivoPrestamoService,
+    public metodoPagoService: MetodoPagoService,
+    public nivelEstudioService: NivelEstudioService,
+    public profesionService: ProfesionService,
   ) { }
 
   ejecutaServicio(entidad: number, value: any, proceso: number): Promise<any> {
@@ -334,6 +349,79 @@ export class ServiceLocatorCrdService {
             return Promise.resolve(undefined);
         }
       }
+      // ========== LISTADOS ==========
+      case EntidadesCrd.MOTIVO_PRESTAMO: {
+        switch (proceso) {
+          case AccionesGrid.ADD: {
+            this.reg = value as MotivoPrestamo;
+            this.reg.idEstado = 1;
+            return firstValueFrom(this.motivoPrestamoService.add(this.reg as MotivoPrestamo));
+          }
+          case AccionesGrid.EDIT: {
+            this.reg = value as MotivoPrestamo;
+            return firstValueFrom(this.motivoPrestamoService.update(this.reg as MotivoPrestamo));
+          }
+          case AccionesGrid.REMOVE: {
+            return firstValueFrom(this.motivoPrestamoService.delete(value));
+          }
+          default:
+            return Promise.resolve(undefined);
+        }
+      }
+      case EntidadesCrd.METODO_PAGO: {
+        switch (proceso) {
+          case AccionesGrid.ADD: {
+            this.reg = value as MetodoPago;
+            this.reg.idEstado = 1;
+            return firstValueFrom(this.metodoPagoService.add(this.reg as MetodoPago));
+          }
+          case AccionesGrid.EDIT: {
+            this.reg = value as MetodoPago;
+            return firstValueFrom(this.metodoPagoService.update(this.reg as MetodoPago));
+          }
+          case AccionesGrid.REMOVE: {
+            return firstValueFrom(this.metodoPagoService.delete(value));
+          }
+          default:
+            return Promise.resolve(undefined);
+        }
+      }
+      case EntidadesCrd.NIVEL_ESTUDIO: {
+        switch (proceso) {
+          case AccionesGrid.ADD: {
+            this.reg = value as NivelEstudio;
+            this.reg.idEstado = 1;
+            return firstValueFrom(this.nivelEstudioService.add(this.reg as NivelEstudio));
+          }
+          case AccionesGrid.EDIT: {
+            this.reg = value as NivelEstudio;
+            return firstValueFrom(this.nivelEstudioService.update(this.reg as NivelEstudio));
+          }
+          case AccionesGrid.REMOVE: {
+            return firstValueFrom(this.nivelEstudioService.delete(value));
+          }
+          default:
+            return Promise.resolve(undefined);
+        }
+      }
+      case EntidadesCrd.PROFESION: {
+        switch (proceso) {
+          case AccionesGrid.ADD: {
+            this.reg = value as Profesion;
+            this.reg.idEstado = 1;
+            return firstValueFrom(this.profesionService.add(this.reg as Profesion));
+          }
+          case AccionesGrid.EDIT: {
+            this.reg = value as Profesion;
+            return firstValueFrom(this.profesionService.update(this.reg as Profesion));
+          }
+          case AccionesGrid.REMOVE: {
+            return firstValueFrom(this.profesionService.delete(value));
+          }
+          default:
+            return Promise.resolve(undefined);
+        }
+      }
       default: {
         console.log('NO SE ENCONTRO EL SERVICIO');
         return Promise.resolve(undefined);
@@ -388,6 +476,19 @@ export class ServiceLocatorCrdService {
       }
       case EntidadesCrd.TIPO_VIVIENDA: {
         return firstValueFrom(this.tipoViviendaService.getAll());
+      }
+      // ========== LISTADOS ==========
+      case EntidadesCrd.MOTIVO_PRESTAMO: {
+        return firstValueFrom(this.motivoPrestamoService.getAll());
+      }
+      case EntidadesCrd.METODO_PAGO: {
+        return firstValueFrom(this.metodoPagoService.getAll());
+      }
+      case EntidadesCrd.NIVEL_ESTUDIO: {
+        return firstValueFrom(this.nivelEstudioService.getAll());
+      }
+      case EntidadesCrd.PROFESION: {
+        return firstValueFrom(this.profesionService.getAll());
       }
       default: {
         console.log('NO SE ENCONTRO EL SERVICIO');

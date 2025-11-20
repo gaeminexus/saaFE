@@ -12,6 +12,15 @@
     border-radius: 8px;
     box-shadow: 0 4px 20px rgba(0,0,0,0.15);
   }
+}
+
+/* Borde azul para el contenedor de Material Dialog */
+::ng-deep .mat-mdc-dialog-container .mdc-dialog__surface {
+  border: 2px solid #1976d2 !important;
+  border-radius: 8px !important;
+}
+
+:host {
 
   .loading-overlay {
     position: absolute;

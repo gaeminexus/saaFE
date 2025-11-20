@@ -190,7 +190,8 @@ export class CargaAportesComponent implements OnInit {
       this.snackBar.open('Error al leer el archivo', 'Cerrar', { duration: 3000 });
     };
 
-    reader.readAsText(file);
+    // Intentar leer como ISO-8859-1 (Latin1) que es común en archivos Windows antiguos
+    reader.readAsText(file, 'ISO-8859-1');
   }
 
   procesarArchivo(contenido: string): void {

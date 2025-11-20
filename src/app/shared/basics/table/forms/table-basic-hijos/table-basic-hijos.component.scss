@@ -302,7 +302,7 @@ $delete-color-2: #ff7eb3;        // Rosa más claro
 
       // Headers con gradiente estilo naturalezadecuentas
       .saa-header-cell {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.8) 0%, rgba(118, 75, 162, 0.8) 100%);
         color: white !important;
         font-weight: 600;
         font-size: 0.9rem;
@@ -693,7 +693,7 @@ $delete-color-2: #ff7eb3;        // Rosa más claro
 
           .mat-sort-header-arrow {
             opacity: 1 !important;
-            color: $saa-primary !important;
+            color: white !important;
             margin-left: 4px !important;
           }
 

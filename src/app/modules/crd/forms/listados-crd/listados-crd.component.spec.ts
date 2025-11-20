@@ -1,18 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { TableFormPanelComponent } from './table-form-panel.component';
+import { ListadosCrdComponent } from './listados-crd.component';
 
-describe('TableFormPanelComponent', () => {
-  let component: TableFormPanelComponent;
-  let fixture: ComponentFixture<TableFormPanelComponent>;
+describe('ListadosCrdComponent', () => {
+  let component: ListadosCrdComponent;
+  let fixture: ComponentFixture<ListadosCrdComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [TableFormPanelComponent]
+      imports: [ListadosCrdComponent]
     })
     .compileComponents();
 
-    fixture = TestBed.createComponent(TableFormPanelComponent);
+    fixture = TestBed.createComponent(ListadosCrdComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

@@ -25,5 +25,9 @@ export class EntidadesCrd {
   public static readonly TIPO_APORTE = 24;
   public static readonly TIPO_ADJUNTO = 25;
   public static readonly TIPO_GENERO = 26;
+  public static readonly MOTIVO_PRESTAMO = 27;
+  public static readonly METODO_PAGO = 28;
+  public static readonly NIVEL_ESTUDIO = 29;
+  public static readonly PROFESION = 30;
 
 }

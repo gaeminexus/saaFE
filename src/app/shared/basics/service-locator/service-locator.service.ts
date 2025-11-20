@@ -92,6 +92,10 @@ export class ServiceLocatorService {
       EntidadesCrd.FILIAL,
       EntidadesCrd.TIPO_VIVIENDA,
       EntidadesCrd.TIPO_IDENTIFICACION,
+      EntidadesCrd.MOTIVO_PRESTAMO,
+      EntidadesCrd.METODO_PAGO,
+      EntidadesCrd.NIVEL_ESTUDIO,
+      EntidadesCrd.PROFESION,
     ];
     return entidadesCrd.includes(entidad);
   }

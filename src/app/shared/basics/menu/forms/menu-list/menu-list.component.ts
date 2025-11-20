@@ -54,7 +54,16 @@ export class MenuListComponent implements OnInit {
 
     this.navService.currentUrl.subscribe((url: string) => {
       if (this.item.route && url) {
-        this.expanded = url.indexOf(`/${this.item.route}`) === 0;
+        // Verificar si la URL coincide con la ruta del item padre
+        const matchesParent = url.indexOf(`/${this.item.route}`) === 0;
+
+        // Verificar si algún hijo tiene la URL activa
+        const hasActiveChild = this.item.children?.some(child =>
+          child.route && url.includes(child.route)
+        ) ?? false;
+
+        // Expandir si coincide el padre O tiene un hijo activo
+        this.expanded = matchesParent || hasActiveChild;
         this.ariaExpanded = this.expanded;
       }
     });
