@@ -121,3 +121,28 @@ mat-icon,
 .mat-mdc-form-field-type-mat-select .mat-mdc-text-field-wrapper {
   border: none !important;
 }
+
+// Global Progress Bar styles - Forzar color naranja suave
+.header-progress {
+  &.mat-mdc-progress-bar {
+    --mdc-linear-progress-active-indicator-color: #f6ad55 !important;
+    --mdc-linear-progress-track-color: rgba(0, 0, 0, 0.2) !important;
+  }
+
+  .mdc-linear-progress__bar {
+    background-color: #f6ad55 !important;
+  }
+
+  .mdc-linear-progress__bar-inner {
+    border-color: #f6ad55 !important;
+    background-color: #f6ad55 !important;
+  }
+
+  .mdc-linear-progress__primary-bar {
+    background-color: #f6ad55 !important;
+  }
+
+  .mdc-linear-progress__buffer-bar {
+    background-color: rgba(0, 0, 0, 0.2) !important;
+  }
+}

@@ -275,16 +275,13 @@ export class TableBasicHijosComponent implements OnInit, OnChanges, AfterViewIni
       data: {
         regConfig: this.regConfig,
         entidad: this.entidad,
-        accion: AccionesGrid.ADD
-      }
-    });
-
-    dialogRef.afterClosed().subscribe(result => {
-      if (result){
-        if (this.configTable.es_hijo && this.configTable.campo_padre) {
-          result[this.configTable.campo_padre] = this.configTable.reg_padre;
+        accion: AccionesGrid.ADD,
+        onSave: async (datos: any) => {
+          if (this.configTable.es_hijo && this.configTable.campo_padre) {
+            datos[this.configTable.campo_padre] = this.configTable.reg_padre;
+          }
+          await this.ejecuta(AccionesGrid.ADD, datos);
         }
-        this.ejecuta(AccionesGrid.ADD, result);
       }
     });
   }
@@ -296,13 +293,10 @@ export class TableBasicHijosComponent implements OnInit, OnChanges, AfterViewIni
         regConfig: this.regConfig,
         entidad: this.entidad,
         accion: AccionesGrid.EDIT,
-        registro
-      }
-    });
-
-    dialogRef.afterClosed().subscribe(result => {
-      if (result){
-        this.ejecuta(AccionesGrid.EDIT, result);
+        registro,
+        onSave: async (datos: any) => {
+          await this.ejecuta(AccionesGrid.EDIT, datos);
+        }
       }
     });
   }

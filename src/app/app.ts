@@ -1,18 +1,14 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterOutlet, Router, NavigationStart, NavigationEnd, NavigationCancel, NavigationError } from '@angular/router';
+import { RouterOutlet, Router } from '@angular/router';
 import { HeaderComponent } from './shared/header/header.component';
 import { FooterComponent } from './shared/footer/footer.component';
-import { LoadingSpinnerComponent } from './shared/basics/loading-spinner/loading-spinner.component';
-import { SpinnerService } from './shared/basics/service/spinner.service';
-import { filter } from 'rxjs/operators';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, HeaderComponent, FooterComponent, LoadingSpinnerComponent],
+  imports: [CommonModule, RouterOutlet, HeaderComponent, FooterComponent],
   template: `
-    <app-loading-spinner></app-loading-spinner>
     <ng-container *ngIf="!isLoginPage()">
       <app-header [screenTitle]="getScreenTitle()"></app-header>
     </ng-container>
@@ -24,26 +20,6 @@ import { filter } from 'rxjs/operators';
 })
 export class App {
   router = inject(Router);
-  private spinnerService = inject(SpinnerService);
-
-  constructor() {
-    // Mostrar spinner durante la navegación (especialmente cuando hay resolvers)
-    this.router.events.pipe(
-      filter(event =>
-        event instanceof NavigationStart ||
-        event instanceof NavigationEnd ||
-        event instanceof NavigationCancel ||
-        event instanceof NavigationError
-      )
-    ).subscribe(event => {
-      if (event instanceof NavigationStart) {
-        this.spinnerService.show();
-      } else {
-        // Pequeño delay para que se note la carga
-        setTimeout(() => this.spinnerService.hide(), 300);
-      }
-    });
-  }
 
   isLoginPage() {
     return this.router.url === '/' || this.router.url === '/login';

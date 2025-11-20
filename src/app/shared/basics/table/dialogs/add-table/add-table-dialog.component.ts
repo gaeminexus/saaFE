@@ -28,9 +28,20 @@ export class AddTableDialogComponent implements OnInit  {
     this.dialogRef.close();
   }
 
-  grabar(): void {
+  async grabar(): Promise<void> {
     if (this.form.control.valid) {
-      this.dialogRef.close(this.form.value);
+      try {
+        // Si hay un callback onSave, ejecutarlo
+        if (this.data.onSave) {
+          await this.data.onSave(this.form.value);
+        }
+
+        // Cerrar el diálogo después de guardar exitosamente
+        this.dialogRef.close(true);
+      } catch (error) {
+        console.error('Error al guardar:', error);
+        // Aquí podrías mostrar un mensaje de error al usuario
+      }
     }
   }
 

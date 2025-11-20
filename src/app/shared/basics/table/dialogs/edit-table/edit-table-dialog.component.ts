@@ -33,21 +33,34 @@ export class EditTableDialogComponent implements OnInit {
     });
   }
 
-  asignaValoresaRegistro(): void {
+  asignaValoresaRegistro(): any {
+    const registroActualizado = {...this.data.registro};
     this.data.regConfig.forEach((val: FieldConfig) => {
-      this.data.registro[val.name] = this.form.value[val.name];
-      this.dialogRef.close(this.data.registro);
+      registroActualizado[val.name] = this.form.value[val.name];
     });
+    return registroActualizado;
   }
 
   onSalirClick(): void {
     this.dialogRef.close();
   }
 
-  grabar(): void {
+  async grabar(): Promise<void> {
     if (this.form.control.valid) {
-      this.asignaValoresaRegistro();
+      try {
+        const registroActualizado = this.asignaValoresaRegistro();
+
+        // Si hay un callback onSave, ejecutarlo
+        if (this.data.onSave) {
+          await this.data.onSave(registroActualizado);
+        }
+
+        // Cerrar el diálogo después de guardar exitosamente
+        this.dialogRef.close(true);
+      } catch (error) {
+        console.error('Error al guardar:', error);
+        // Aquí podrías mostrar un mensaje de error al usuario
+      }
     }
   }
-
 }

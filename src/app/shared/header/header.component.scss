@@ -9,14 +9,17 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.8rem 1.6rem 0.8rem 2rem;
+  padding: 0.8rem 1.6rem 0rem 2rem; // Padding inferior 0 para progress bar
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: #fff;
   font-size: 0.95rem;
   z-index: 30;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-bottom: none !important; // Sin borde para que progress bar quede pegado
   flex-shrink: 0; // El header no se encoge
+  flex-wrap: wrap; // Permite que la progress bar vaya abajo
+  position: relative; // Para posicionamiento absoluto del progress bar
+  overflow: hidden; // Para evitar que el progress bar se salga
 }
 
 .header-title {
@@ -119,5 +122,49 @@
     content: '👤';
     font-size: 1.1rem;
     opacity: 0.9;
+  }
+}
+
+.header-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 5px;
+  z-index: 1000;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+
+  // Sobrescribir estilos de Material Design Progress Bar
+  ::ng-deep .mat-mdc-progress-bar {
+    --mdc-linear-progress-active-indicator-color: #f6ad55 !important;
+    --mdc-linear-progress-track-color: rgba(0, 0, 0, 0.2) !important;
+    height: 5px !important;
+    position: absolute;
+    bottom: 0;
+    margin: 0 !important;
+    padding: 0 !important;
+
+    .mdc-linear-progress__bar-inner {
+      border-top-width: 5px !important;
+      border-color: #f6ad55 !important;
+    }
+
+    .mdc-linear-progress__buffer-bar {
+      background-color: rgba(0, 0, 0, 0.2) !important;
+    }
+  }
+
+  ::ng-deep .mdc-linear-progress__primary-bar {
+    background-color: #f6ad55 !important;
+
+    .mdc-linear-progress__bar-inner {
+      border-color: #f6ad55 !important;
+    }
+  }
+
+  ::ng-deep .mdc-linear-progress__buffer-dots {
+    background-color: rgba(246, 173, 85, 0.3) !important;
   }
 }

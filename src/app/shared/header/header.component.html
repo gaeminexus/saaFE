@@ -30,4 +30,9 @@
       Salir
     </button>
   </div>
+
+  <!-- Progress bar en la parte inferior del header -->
+  @if (loading$ | async) {
+    <mat-progress-bar mode="indeterminate" class="header-progress" color="accent"></mat-progress-bar>
+  }
 </header>

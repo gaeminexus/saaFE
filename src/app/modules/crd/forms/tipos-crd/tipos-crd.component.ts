@@ -148,7 +148,7 @@ export class TiposCrdComponent implements OnInit {
       regConfig: this.getRegConfigPrestamo(),
       add: true,
       edit: true,
-      remove: false,
+      remove: true,
       paginator: true,
       filter: true,
       fSize: 'em-1',
