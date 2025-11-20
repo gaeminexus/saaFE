@@ -1,24 +1,29 @@
-import { Component, OnInit } from '@angular/core';
-import { FormGroup } from '@angular/forms';
-import { MaterialFormModule } from '../../../../../modules/material-form.module';
+import { Component, Input, OnInit } from '@angular/core';
+import { FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { CommonModule } from '@angular/common';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatSelectModule } from '@angular/material/select';
 import { MessageVarService } from '../../service/message-var.service';
 import { SelectFieldConfig, SelectOption } from '../../model/select.interface';
 import { DynamicFormComponent } from '../dynamic-field/dynamic-field.directive';
 
 @Component({
-  selector: 'app-select.component',
+  selector: 'app-select',
   standalone: true,
   imports: [
-    MaterialFormModule
+    CommonModule,
+    ReactiveFormsModule,
+    MatFormFieldModule,
+    MatSelectModule
   ],
   templateUrl: './select.component.html',
   styleUrl: './select.component.scss'
 })
 export class SelectComponent implements OnInit, DynamicFormComponent  {
 
-  field!: SelectFieldConfig;
-  group!: FormGroup;
-  accion!: number;
+  @Input() field!: SelectFieldConfig;
+  @Input() group!: FormGroup;
+  @Input() accion!: number;
 
   constructor(
     private messageVarService: MessageVarService

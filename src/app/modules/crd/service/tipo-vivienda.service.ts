@@ -31,6 +31,7 @@ export class TipoViviendaService {
   }
 
   add(datos: any): Observable<TipoVivienda | null> {
+    console.log(datos.codigo);
     return this.http.post<TipoVivienda>(ServiciosCrd.RS_TPVV, datos, this.httpOptions).pipe(
       catchError(this.handleError)
     );

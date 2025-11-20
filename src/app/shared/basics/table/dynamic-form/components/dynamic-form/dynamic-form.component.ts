@@ -2,8 +2,14 @@ import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { FormGroup, FormBuilder, Validators, ValidatorFn, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { FieldConfig } from '../../model/field.interface';
-import { DynamicFieldDirective } from '../dynamic-field/dynamic-field.directive';
 import { MaterialFormModule } from '../../../../../modules/material-form.module';
+import { InputComponent } from '../input/input.component';
+import { SelectComponent } from '../select/select.component';
+import { DateComponent } from '../date/date.component';
+import { AutocompleteComponent } from '../autocomplete/autocomplete.component';
+import { CheckboxComponent } from '../checkbox/checkbox.component';
+import { RadiobuttonComponent } from '../radiobutton/radiobutton.component';
+import { ButtonComponent } from '../button/button.component';
 
 @Component({
   selector: 'app-dynamic-form',
@@ -12,7 +18,13 @@ import { MaterialFormModule } from '../../../../../modules/material-form.module'
     CommonModule,
     ReactiveFormsModule,
     MaterialFormModule,
-    DynamicFieldDirective
+    InputComponent,
+    SelectComponent,
+    DateComponent,
+    AutocompleteComponent,
+    CheckboxComponent,
+    RadiobuttonComponent,
+    ButtonComponent
   ],
   templateUrl: './dynamic-form.component.html',
   styleUrl: './dynamic-form.component.scss'

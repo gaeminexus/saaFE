@@ -183,23 +183,6 @@
       </div>
     </mat-tab>
 
-    <!-- Tab: Tipo Hidrocarburífica -->
-    <mat-tab label="">
-      <ng-template mat-tab-label>
-        <div class="tab-label">
-          <mat-icon class="tab-icon">local_gas_station</mat-icon>
-          <span class="tab-text">Hidrocarburífica</span>
-          <span class="tab-badge">{{ tiposHidrocarburifica.length }}</span>
-        </div>
-      </ng-template>
-      <div class="tab-content">
-        <app-table-basic-hijos
-          *ngIf="tableConfigHidrocarburifica"
-          [configTable]="tableConfigHidrocarburifica">
-        </app-table-basic-hijos>
-      </div>
-    </mat-tab>
-
     <!-- Tab: Tipo Identificación -->
     <mat-tab label="">
       <ng-template mat-tab-label>

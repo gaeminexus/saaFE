@@ -1,11 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, Input, OnInit } from '@angular/core';
 import { FormGroup } from '@angular/forms';
-import { MaterialFormModule } from '../../../../../modules/material-form.module';
 import { DynamicFormComponent } from '../dynamic-field/dynamic-field.directive';
 import { InputFieldConfig } from '../../model/input.interface';
+import { MaterialFormModule } from '../../../../../modules/material-form.module';
 
 @Component({
-  selector: 'app-input.component',
+  selector: 'app-input',
   standalone: true,
   imports: [
     MaterialFormModule
@@ -15,9 +15,9 @@ import { InputFieldConfig } from '../../model/input.interface';
 })
 export class InputComponent implements OnInit, DynamicFormComponent {
 
-  field!: InputFieldConfig;
-  group!: FormGroup;
-  accion!: number;
+  @Input() field!: InputFieldConfig;
+  @Input() group!: FormGroup;
+  @Input() accion!: number;
 
   constructor() { }
 

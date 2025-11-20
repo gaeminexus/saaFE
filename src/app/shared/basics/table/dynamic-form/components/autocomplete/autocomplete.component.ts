@@ -1,7 +1,10 @@
-import { Component, OnInit } from '@angular/core';
-import { MaterialFormModule } from '../../../../../modules/material-form.module';
-import { FormGroup, FormControl } from '@angular/forms';
+import { Component, Input, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormGroup, FormControl, ReactiveFormsModule } from '@angular/forms';
 import { Observable, startWith, map } from 'rxjs';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
+import { MatInputModule } from '@angular/material/input';
 import { AutocompleteField, AutocompleteCollection, AutocompleteOption } from '../../model/autocomplete.interface';
 import { MessageVarService } from '../../service/message-var.service';
 import { AccionesGrid } from '../../../../constantes';
@@ -10,18 +13,22 @@ import { DynamicFormComponent } from '../dynamic-field/dynamic-field.directive';
 import { Validator } from '../../model/field.interface';
 
 @Component({
-  selector: 'app-autocomplete.component',
+  selector: 'app-autocomplete',
   standalone: true,
   imports: [
-    MaterialFormModule
+    CommonModule,
+    ReactiveFormsModule,
+    MatFormFieldModule,
+    MatAutocompleteModule,
+    MatInputModule
   ],
   templateUrl: './autocomplete.component.html',
   styleUrl: './autocomplete.component.scss'
 })
 export class AutocompleteComponent implements OnInit, DynamicFormComponent {
-  field!: AutocompleteField;
-  group!: FormGroup;
-  accion: number = 0;
+  @Input() field!: AutocompleteField;
+  @Input() group!: FormGroup;
+  @Input() accion: number = 0;
   filteredOptions!: Observable<AutocompleteCollection[]>;
   filteredOptionsHijo!: Observable<AutocompleteCollection[]>;
   myControl = new FormControl<string>('');

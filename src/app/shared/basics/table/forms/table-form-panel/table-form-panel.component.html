@@ -1,0 +1,40 @@
+<div class="form-panel-container">
+  <!-- Header del formulario -->
+  <div class="form-panel-header">
+    <mat-icon class="header-icon">{{ iconoFormulario }}</mat-icon>
+    <div class="header-text">
+      <h2 class="title">{{ tituloFormulario }}</h2>
+      <p class="subtitle">Completa la información requerida</p>
+    </div>
+  </div>
+
+  <!-- Contenido del formulario -->
+  <div class="form-panel-content">
+    <app-dynamic-form
+      [fields]="fields"
+      [accion]="accion">
+    </app-dynamic-form>
+  </div>
+
+  <!-- Acciones del formulario -->
+  <div class="form-panel-actions">
+    <button
+      mat-raised-button
+      class="btn-secondary"
+      type="button"
+      (click)="cancelar()">
+      <mat-icon>close</mat-icon>
+      Cancelar
+    </button>
+
+    <button
+      mat-raised-button
+      color="primary"
+      class="btn-primary"
+      type="button"
+      (click)="guardar()">
+      <mat-icon>save</mat-icon>
+      Guardar
+    </button>
+  </div>
+</div>

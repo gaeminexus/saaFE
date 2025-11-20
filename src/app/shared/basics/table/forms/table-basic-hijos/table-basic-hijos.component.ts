@@ -17,6 +17,7 @@ import { FooterOperations } from '../../model/fields-constants';
 import { TableConfig } from '../../model/table-interface';
 import { MaterialFormModule } from '../../../../modules/material-form.module';
 import { Injectable } from '@angular/core';
+import { CommonModule } from '@angular/common';
 
 // Clase para internacionalización del paginador en español
 @Injectable()
@@ -44,8 +45,9 @@ export class MatPaginatorIntlEs extends MatPaginatorIntl {
   selector: 'app-table-basic-hijos',
   standalone: true,
   imports: [
+    CommonModule,
     MaterialFormModule,
-    FormsModule,
+    FormsModule
   ],
   providers: [
     { provide: MatPaginatorIntl, useClass: MatPaginatorIntlEs }
@@ -265,15 +267,17 @@ export class TableBasicHijosComponent implements OnInit, OnChanges, AfterViewIni
 
     // Forzar detección de cambios
     this.changeDetectorRefs.detectChanges();
-  }  add(): void {
+  }
+
+  add(): void {
     const dialogRef = this.dialog.open(AddTableDialogComponent, {
-          disableClose: true,
-          data: {
-            regConfig: this.regConfig,
-            entidad: this.entidad,
-            accion: AccionesGrid.ADD
-          }
-        });
+      disableClose: true,
+      data: {
+        regConfig: this.regConfig,
+        entidad: this.entidad,
+        accion: AccionesGrid.ADD
+      }
+    });
 
     dialogRef.afterClosed().subscribe(result => {
       if (result){
@@ -287,14 +291,14 @@ export class TableBasicHijosComponent implements OnInit, OnChanges, AfterViewIni
 
   edit(registro: any): void {
     const dialogRef = this.dialog.open(EditTableDialogComponent, {
-          disableClose: true,
-          data: {
-            regConfig: this.regConfig,
-            entidad: this.entidad,
-            accion: AccionesGrid.EDIT,
-            registro
-          }
-        });
+      disableClose: true,
+      data: {
+        regConfig: this.regConfig,
+        entidad: this.entidad,
+        accion: AccionesGrid.EDIT,
+        registro
+      }
+    });
 
     dialogRef.afterClosed().subscribe(result => {
       if (result){

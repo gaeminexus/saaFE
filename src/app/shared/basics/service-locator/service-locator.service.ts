@@ -91,7 +91,6 @@ export class ServiceLocatorService {
       EntidadesCrd.TIPO_PRESTAMO,
       EntidadesCrd.FILIAL,
       EntidadesCrd.TIPO_VIVIENDA,
-      EntidadesCrd.TIPO_HIDROCARBURIFICA,
       EntidadesCrd.TIPO_IDENTIFICACION,
     ];
     return entidadesCrd.includes(entidad);

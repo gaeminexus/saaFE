@@ -1,5 +1,29 @@
 <form class="dynamic-form" [formGroup]="form" (submit)="onSubmit($event)">
   @for (field of fields; track field['name']) {
-    <div appDynamicField [field]="field" [accion]="accion" [group]="form"></div>
+    <div class="field-container">
+      @switch (field.type) {
+        @case ('input') {
+          <app-input [field]="$any(field)" [group]="form" [accion]="accion"></app-input>
+        }
+        @case ('select') {
+          <app-select [field]="$any(field)" [group]="form" [accion]="accion"></app-select>
+        }
+        @case ('date') {
+          <app-date [field]="$any(field)" [group]="form" [accion]="accion"></app-date>
+        }
+        @case ('autocomplete') {
+          <app-autocomplete [field]="$any(field)" [group]="form" [accion]="accion"></app-autocomplete>
+        }
+        @case ('checkbox') {
+          <app-checkbox [field]="$any(field)" [group]="form" [accion]="accion"></app-checkbox>
+        }
+        @case ('radiobutton') {
+          <app-radiobutton [field]="$any(field)" [group]="form" [accion]="accion"></app-radiobutton>
+        }
+        @case ('button') {
+          <app-button [field]="$any(field)" [group]="form" [accion]="accion"></app-button>
+        }
+      }
+    </div>
   }
 </form>

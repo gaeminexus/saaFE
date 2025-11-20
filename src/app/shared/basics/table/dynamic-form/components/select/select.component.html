@@ -1,9 +1,8 @@
-<mat-form-field class="demo-full-width margin-top" [formGroup]="group">
-  <ng-container matLabel>
-    {{field.label || ''}}
-  </ng-container>
+<div [formGroup]="group">
+  <mat-form-field class="demo-full-width margin-top" appearance="outline">
+    <mat-label>{{field.label || ''}}</mat-label>
 
-  @if (field.autocompleteType === 1) {
+    @if (field.autocompleteType === 1) {
     <mat-select [formControlName]="field.name"
                 [placeholder]="field.label || ''"
                 (selectionChange)="seleccion($event.value)">
@@ -37,4 +36,5 @@
       }
     }
   }
-</mat-form-field>
+  </mat-form-field>
+</div>
