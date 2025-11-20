@@ -74,10 +74,17 @@ export class DetallePlantillaService {
 
   // tslint:disable-next-line: typedef
   private handleError(error: HttpErrorResponse): Observable<null> {
+    console.error('=== ERROR EN DETALLE PLANTILLA SERVICE ===');
+    console.error('Status:', error.status);
+    console.error('StatusText:', error.statusText);
+    console.error('URL:', error.url);
+    console.error('Body:', error.error);
+    
     if (+error.status === 200) {
       return of(null);
     } else {
-      return throwError(() => error.error);
+      // Pasar todo el error HttpErrorResponse en lugar de solo error.error
+      return throwError(() => error);
     }
   }
 

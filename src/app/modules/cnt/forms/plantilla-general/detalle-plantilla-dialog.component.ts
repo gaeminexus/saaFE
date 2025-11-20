@@ -34,13 +34,18 @@ export interface DetalleDialogData {
     MatTooltipModule
   ],
   template: `
-  <h2 mat-dialog-title>{{ data.detalle ? 'Editar Detalle' : 'Nuevo Detalle' }}</h2>
+  <h2 mat-dialog-title>
+    <mat-icon style="vertical-align: middle; margin-right: 8px;">{{ data.detalle ? 'edit' : 'add_circle' }}</mat-icon>
+    {{ data.detalle ? 'Editar Detalle de Plantilla' : 'Nuevo Detalle de Plantilla' }}
+  </h2>
   <div mat-dialog-content [formGroup]="form" class="dialog-content">
     <div class="row">
       <mat-form-field appearance="outline" class="field">
         <mat-label>Plan de Cuenta *</mat-label>
         <mat-select formControlName="planCuenta" required>
-          <mat-option *ngFor="let pc of data.planCuentas" [value]="pc">{{ pc.cuentaContable }} - {{ pc.nombre }}</mat-option>
+          <mat-option *ngFor="let pc of data.planCuentas" [value]="pc">
+            {{ pc.cuentaContable }} - {{ pc.nombre }}
+          </mat-option>
         </mat-select>
         <mat-error *ngIf="form.get('planCuenta')?.hasError('required')">Requerido</mat-error>
       </mat-form-field>
@@ -83,40 +88,53 @@ export interface DetalleDialogData {
         <mat-datepicker #fh></mat-datepicker>
       </mat-form-field>
     </div>
-    <div class="row auxiliares">
-      <mat-form-field appearance="outline" class="field mini">
-        <mat-label>A1</mat-label>
-        <input matInput type="number" formControlName="auxiliar1">
-      </mat-form-field>
-      <mat-form-field appearance="outline" class="field mini">
-        <mat-label>A2</mat-label>
-        <input matInput type="number" formControlName="auxiliar2">
-      </mat-form-field>
-      <mat-form-field appearance="outline" class="field mini">
-        <mat-label>A3</mat-label>
-        <input matInput type="number" formControlName="auxiliar3">
-      </mat-form-field>
-      <mat-form-field appearance="outline" class="field mini">
-        <mat-label>A4</mat-label>
-        <input matInput type="number" formControlName="auxiliar4">
-      </mat-form-field>
-      <mat-form-field appearance="outline" class="field mini">
-        <mat-label>A5</mat-label>
-        <input matInput type="number" formControlName="auxiliar5">
-      </mat-form-field>
-    </div>
+
   </div>
   <div mat-dialog-actions class="dialog-actions">
-    <button mat-button (click)="cancel()">Cancelar</button>
-    <button mat-raised-button color="primary" (click)="save()" [disabled]="form.invalid">{{ data.detalle ? 'Actualizar' : 'Agregar' }}</button>
+    <button mat-button (click)="cancel()" type="button">
+      <mat-icon>cancel</mat-icon>
+      Cancelar
+    </button>
+    <button mat-raised-button color="primary" (click)="save()" [disabled]="form.invalid" type="button">
+      <mat-icon>{{ data.detalle ? 'save' : 'add' }}</mat-icon>
+      {{ data.detalle ? 'Actualizar' : 'Agregar' }}
+    </button>
   </div>
   `,
   styles: [`
-    .dialog-content { display:flex; flex-direction:column; gap:12px; }
-    .row { display:flex; gap:12px; }
-    .field { flex:1; }
-    .auxiliares .mini { max-width:70px; }
-    .dialog-actions { display:flex; justify-content:flex-end; gap:12px; }
+    .dialog-content {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      padding: 20px 0;
+      min-width: 500px;
+    }
+    .row {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+    .field {
+      flex: 1;
+      min-width: 200px;
+    }
+    .dialog-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      padding-top: 16px;
+      border-top: 1px solid #e0e0e0;
+      margin-top: 10px;
+    }
+    h2[mat-dialog-title] {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      font-weight: 600;
+      font-size: 1.4rem;
+      margin-bottom: 0;
+    }
   `]
 })
 export class DetallePlantillaDialogComponent {
@@ -134,12 +152,7 @@ export class DetallePlantillaDialogComponent {
       movimiento: [data.detalle?.movimiento || TipoMovimiento.DEBE, Validators.required],
       fechaDesde: [data.detalle?.fechaDesde || null],
       fechaHasta: [data.detalle?.fechaHasta || null],
-      estado: [data.detalle?.estado || 1, Validators.required],
-      auxiliar1: [data.detalle?.auxiliar1 || null],
-      auxiliar2: [data.detalle?.auxiliar2 || null],
-      auxiliar3: [data.detalle?.auxiliar3 || null],
-      auxiliar4: [data.detalle?.auxiliar4 || null],
-      auxiliar5: [data.detalle?.auxiliar5 || null]
+      estado: [data.detalle?.estado || 1, Validators.required]
     });
   }
 
