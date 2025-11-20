@@ -5,6 +5,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
 import { Filial } from '../../model/filial';
 import { FilialService } from '../../service/filial.service';
+import { FileService } from '../../../../shared/services/file.service';
 
 interface Mes {
   valor: number;
@@ -86,6 +87,7 @@ export class CargaAportesComponent implements OnInit {
 
   // Carga de archivos
   nombreArchivo: string = '';
+  archivoSeleccionado: File | null = null;
   registrosProcesados: RegistroAporte[] = [];
   aporteAgrupados: AporteAgrupado[] = [];
   totalRegistros: number = 0;
@@ -123,9 +125,11 @@ export class CargaAportesComponent implements OnInit {
 
   // Loading states
   isLoadingFiliales: boolean = false;
+  isUploadingFile: boolean = false;
 
   constructor(
     private filialService: FilialService,
+    private fileService: FileService,
     private snackBar: MatSnackBar
   ) {
     // Generar años del 2025 al 2035
@@ -179,6 +183,7 @@ export class CargaAportesComponent implements OnInit {
 
     const file = input.files[0];
     this.nombreArchivo = file.name;
+    this.archivoSeleccionado = file; // Guardar referencia al archivo
 
     const reader = new FileReader();
     reader.onload = (e: ProgressEvent<FileReader>) => {
@@ -416,4 +421,61 @@ export class CargaAportesComponent implements OnInit {
     const lineaCompleta = linea.padEnd(fin, ' ');
     return lineaCompleta.substring(inicio, fin);
   }
+
+  /**
+   * Procesa el archivo y lo sube al servidor
+   */
+  procesarYSubirArchivo(): void {
+    if (!this.archivoSeleccionado) {
+      this.snackBar.open('No hay archivo seleccionado', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    if (!this.anioSeleccionado || !this.mesSeleccionado || !this.filialSeleccionada) {
+      this.snackBar.open('Debe seleccionar año, mes y filial', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    // Validar el archivo antes de subirlo
+    const validation = this.fileService.validateFile(this.archivoSeleccionado);
+    if (!validation.valid) {
+      this.snackBar.open(validation.message, 'Cerrar', { duration: 4000 });
+      return;
+    }
+
+    // Construir ruta personalizada con año/mes/filial
+    const uploadPath = `aportes/${this.anioSeleccionado}/${this.mesSeleccionado}/${this.filialSeleccionada}`;
+
+    this.isUploadingFile = true;
+
+    this.fileService.uploadFileCustomPath(this.archivoSeleccionado, uploadPath).subscribe({
+      next: (response) => {
+        this.isUploadingFile = false;
+        if (response.success) {
+          this.snackBar.open(
+            `Archivo subido exitosamente: ${response.filePath}`,
+            'Cerrar',
+            { duration: 5000 }
+          );
+          console.log('Archivo subido en:', response.filePath);
+        } else {
+          this.snackBar.open(
+            `Error: ${response.message}`,
+            'Cerrar',
+            { duration: 4000 }
+          );
+        }
+      },
+      error: (error) => {
+        this.isUploadingFile = false;
+        this.snackBar.open(
+          `Error al subir archivo: ${error.message}`,
+          'Cerrar',
+          { duration: 4000 }
+        );
+        console.error('Error al subir archivo:', error);
+      }
+    });
+  }
 }
+

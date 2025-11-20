@@ -4,6 +4,7 @@
   public static RS_ANIO = '/api/saa-backend/rest/anio';
   public static RS_USRO = '/api/saa-backend/rest/usro';
   public static RS_PDTR = '/api/saa-backend/rest/pdtr';
+  public static RS_FILE = '/api/saa-backend/rest/file';
 
 }*/
 
@@ -13,6 +14,7 @@ export class ServiciosShare {
   public static RS_ANIO = 'http://localhost:8080/saa-backend/rest/anio';
   public static RS_USRO = 'http://localhost:8080/saa-backend/rest/usro';
   public static RS_PDTR = 'http://localhost:8080/saa-backend/rest/pdtr';
+  public static RS_FILE = 'http://localhost:8080/saa-backend/rest/file';
 
 
 }

@@ -47,7 +47,8 @@ export class MatPaginatorIntlEs extends MatPaginatorIntl {
   imports: [
     CommonModule,
     MaterialFormModule,
-    FormsModule
+    FormsModule,
+    forwardRef(() => TableBasicHijosComponent) // Referencia recursiva al mismo componente
   ],
   providers: [
     { provide: MatPaginatorIntl, useClass: MatPaginatorIntlEs }

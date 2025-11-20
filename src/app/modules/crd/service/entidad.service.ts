@@ -28,6 +28,7 @@ export class EntidadService {
   getById(id: string): Observable<Entidad | null> {
     const wsGetById = '/getId/';
     const url = `${ServiciosCrd.RS_ENTD}${wsGetById}${id}`;
+    console.log('EntidadService - getById - URL: ' + url);
     return this.http.get<Entidad>(url).pipe(
       catchError(this.handleError)
     );

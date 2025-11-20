@@ -1,3 +1,4 @@
+import { FileService } from './../../../../shared/services/file.service';
 import { AporteService } from './../../../crd/service/aporte.service';
 import { PrestamoService } from './../../../crd/service/prestamo.service';
 import { EntidadService } from './../../../crd/service/entidad.service';
@@ -77,6 +78,7 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
     private entidadService: EntidadService,
     private prestamoService: PrestamoService,
     private detallePrestamoService: DetallePrestamoService,
+    private fileService: FileService,
     private aporteService: AporteService,
     private router: Router,
     private snackBar: MatSnackBar,
@@ -280,14 +282,14 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
       }
     });*/
 
-    /*this.entidadService.getById('4851').subscribe({
+    this.entidadService.getById('4851').subscribe({
       next: (data) => {
         console.log('GetById - Registro específico:', data);
       },
       error: (error) => {
         console.error('Error al obtener NaturalezaCuenta:', error);
       }
-    });*/
+    });
 
     /*this.naturalezaCuentaService.selectByCriteria(this.criterioConsultaArray).subscribe({
       next: (data) => {
@@ -298,7 +300,7 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
       }
     });*/
 
-    this.criterioConsultaArray = [];
+    /*this.criterioConsultaArray = [];
 
     this.criterioConsulta = new DatosBusqueda();
     this.criterioConsulta.asignaValorConCampoPadre(TipoDatosBusqueda.LONG, 'prestamo', 'codigo',
@@ -309,12 +311,21 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
     this.criterioConsulta.orderBy('codigo');
     this.criterioConsultaArray.push(this.criterioConsulta);
 
-    this.detallePrestamoService.selectByCriteria(this.criterioConsultaArray).subscribe({
+    this.fileService.selectByCriteria(this.criterioConsultaArray).subscribe({
       next: (data) => {
         console.log('Datos de Prestamo:', data);
       },
       error: (error) => {
         console.error('Error al obtener Prestamo:', error);
+      }
+    });*/
+
+    this.fileService.getById('247855').subscribe({
+      next: (data) => {
+        console.log('GetById - Registro específico:', data);
+      },
+      error: (error) => {
+        console.error('Error al obtener NaturalezaCuenta:', error);
       }
     });
   }

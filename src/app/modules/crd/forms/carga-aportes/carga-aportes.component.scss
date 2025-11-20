@@ -660,6 +660,121 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
         }
       }
     }
+
+    // Sección de procesamiento de archivo
+    .process-file-section {
+      margin-top: 1.5rem;
+
+      .process-card {
+        background: white;
+        border-radius: 0.75rem;
+        box-shadow: $saa-shadow;
+        transition: box-shadow 0.3s ease;
+
+        &:hover {
+          box-shadow: $saa-shadow-hover;
+        }
+
+        mat-card-header {
+          margin-bottom: 1rem;
+
+          .avatar-icon {
+            background: $saa-gradient;
+            color: white;
+
+            &.process-icon {
+              font-size: 1.5rem;
+            }
+          }
+
+          mat-card-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: $saa-text-primary;
+          }
+
+          mat-card-subtitle {
+            color: $saa-text-secondary;
+            margin-top: 0.25rem;
+          }
+        }
+
+        mat-card-content {
+          padding: 1.5rem;
+
+          .process-content {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+
+            .process-info {
+              display: flex;
+              align-items: flex-start;
+              gap: 1rem;
+              padding: 1rem;
+              background: rgba($saa-primary, 0.05);
+              border-radius: 0.5rem;
+              border-left: 4px solid $saa-primary;
+
+              mat-icon {
+                color: $saa-primary;
+                font-size: 1.5rem;
+                width: 1.5rem;
+                height: 1.5rem;
+                flex-shrink: 0;
+              }
+
+              p {
+                margin: 0;
+                color: $saa-text-primary;
+                font-size: 0.95rem;
+                line-height: 1.6;
+
+                strong {
+                  color: $saa-primary;
+                  font-weight: 600;
+                }
+              }
+            }
+
+            .process-button {
+              align-self: center;
+              min-width: 250px;
+              height: 48px;
+              font-size: 1rem;
+              font-weight: 600;
+              border-radius: 24px;
+              box-shadow: 0 4px 12px rgba($saa-accent, 0.3);
+              transition: all 0.3s ease;
+
+              &:not(:disabled) {
+                &:hover {
+                  transform: translateY(-2px);
+                  box-shadow: 0 6px 20px rgba($saa-accent, 0.4);
+                }
+
+                &:active {
+                  transform: translateY(0);
+                }
+              }
+
+              &:disabled {
+                opacity: 0.6;
+                cursor: not-allowed;
+              }
+
+              mat-icon {
+                margin-right: 0.5rem;
+              }
+
+              mat-spinner {
+                margin-right: 0.5rem;
+              }
+            }
+          }
+        }
+      }
+    }
   }
 }
 

@@ -177,9 +177,13 @@
                 </mat-panel-description>
               </mat-expansion-panel-header>
               <ng-template matExpansionPanelContent>
-                <!-- Recursive component temporarily disabled for compilation -->
-                <!-- <app-table-basic-hijos [configTable]="tablaHija" [tableHijosConfig]="tableHijosConfig"></app-table-basic-hijos> -->
-                <div>Detalle de tabla hija (funcionalidad recursiva temporalmente deshabilitada)</div>
+                <!-- Componente recursivo para tablas anidadas -->
+                <app-table-basic-hijos
+                  [configTable]="tablaHija"
+                  [tableHijosConfig]="tableHijosConfig"
+                  (emiteRegistro)="emitirRegistro($event)"
+                  (emiteButtonExtra)="emiteButtonExtra.emit($event)">
+                </app-table-basic-hijos>
               </ng-template>
             </mat-expansion-panel>
           }

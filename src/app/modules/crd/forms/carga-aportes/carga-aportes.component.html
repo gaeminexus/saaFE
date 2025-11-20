@@ -368,6 +368,45 @@
             </mat-card-content>
           </mat-card>
         </div>
+
+        <!-- Tarjeta para procesar archivo -->
+        <div class="process-file-section">
+          <mat-card class="process-card">
+            <mat-card-header>
+              <mat-icon mat-card-avatar class="avatar-icon process-icon">cloud_upload</mat-icon>
+              <mat-card-title>Procesar Archivo</mat-card-title>
+              <mat-card-subtitle>Sube el archivo al servidor para su procesamiento</mat-card-subtitle>
+            </mat-card-header>
+            <mat-card-content>
+              <div class="process-content">
+                <div class="process-info">
+                  <mat-icon>info_outline</mat-icon>
+                  <p>
+                    El archivo será enviado al servidor y almacenado en la ruta:<br>
+                    <strong>aportes/{{ anioSeleccionado }}/{{ mesSeleccionado }}/{{ filialSeleccionada }}</strong>
+                  </p>
+                </div>
+
+                <button
+                  mat-raised-button
+                  color="accent"
+                  class="process-button"
+                  [disabled]="isUploadingFile || !archivoSeleccionado"
+                  (click)="procesarYSubirArchivo()">
+                  @if (isUploadingFile) {
+                    <mat-spinner diameter="20" style="display: inline-block; margin-right: 8px;"></mat-spinner>
+                    <span>Subiendo archivo...</span>
+                  } @else {
+                    <ng-container>
+                      <mat-icon>send</mat-icon>
+                      <span>Procesar Archivo</span>
+                    </ng-container>
+                  }
+                </button>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        </div>
       }
     }
   </div>

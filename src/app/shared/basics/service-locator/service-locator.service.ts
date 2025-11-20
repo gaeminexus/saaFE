@@ -91,12 +91,20 @@ export class ServiceLocatorService {
       EntidadesCrd.TIPO_PRESTAMO,
       EntidadesCrd.FILIAL,
       EntidadesCrd.TIPO_VIVIENDA,
-      EntidadesCrd.TIPO_IDENTIFICACION,
+      EntidadesCrd.TIPO_CONTRATO,
+      EntidadesCrd.TIPO_PARTICIPE,
+      EntidadesCrd.TIPO_REQUISITO_PRESTAMO,
+      EntidadesCrd.TIPO_CESANTIA,
+      EntidadesCrd.TIPO_CALIFICACION_CREDITO,
+      EntidadesCrd.TIPO_APORTE,
+      EntidadesCrd.TIPO_ADJUNTO,
+      EntidadesCrd.TIPO_GENERO,
       EntidadesCrd.MOTIVO_PRESTAMO,
       EntidadesCrd.METODO_PAGO,
       EntidadesCrd.NIVEL_ESTUDIO,
       EntidadesCrd.PROFESION,
     ];
+
     return entidadesCrd.includes(entidad);
   }
 
