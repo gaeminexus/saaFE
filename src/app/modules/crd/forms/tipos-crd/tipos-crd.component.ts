@@ -18,7 +18,6 @@ import { TipoCalificacionCredito } from '../../model/tipo-calificacion-credito';
 import { TipoAporte } from '../../model/tipo-aporte';
 import { TipoAdjunto } from '../../model/tipo-adjunto';
 import { TipoGenero } from '../../model/tipo-genero';
-import { TipoHidrocarburifica } from '../../model/tipo-hidrocarburifica';
 import { TipoIdentificacion } from '../../model/tipo-identificacion';
 import { TipoVivienda } from '../../model/tipo-vivienda';
 import { Validators } from '@angular/forms';
@@ -47,7 +46,6 @@ export class TiposCrdComponent implements OnInit {
   tiposAporte: TipoAporte[] = [];
   tiposAdjunto: TipoAdjunto[] = [];
   tiposGenero: TipoGenero[] = [];
-  tiposHidrocarburifica: TipoHidrocarburifica[] = [];
   tiposIdentificacion: TipoIdentificacion[] = [];
   tiposVivienda: TipoVivienda[] = [];
 
@@ -61,7 +59,6 @@ export class TiposCrdComponent implements OnInit {
   tableConfigAporte!: TableConfig;
   tableConfigAdjunto!: TableConfig;
   tableConfigGenero!: TableConfig;
-  tableConfigHidrocarburifica!: TableConfig;
   tableConfigIdentificacion!: TableConfig;
   tableConfigVivienda!: TableConfig;
 
@@ -79,9 +76,8 @@ export class TiposCrdComponent implements OnInit {
     { nombre: 'Tipo Aporte', icono: 'payments', index: 6 },
     { nombre: 'Tipo Adjunto', icono: 'attach_file', index: 7 },
     { nombre: 'Tipo Género', icono: 'wc', index: 8 },
-    { nombre: 'Tipo Hidrocarburo', icono: 'local_gas_station', index: 9 },
-    { nombre: 'Tipo Identificación', icono: 'badge', index: 10 },
-    { nombre: 'Tipo Vivienda', icono: 'home', index: 11 }
+    { nombre: 'Tipo Identificación', icono: 'badge', index: 9 },
+    { nombre: 'Tipo Vivienda', icono: 'home', index: 10 }
   ];
 
   constructor(private route: ActivatedRoute) { }
@@ -103,10 +99,9 @@ export class TiposCrdComponent implements OnInit {
     this.tiposAporte = data.tiposAporte || [];
     this.tiposAdjunto = data.tiposAdjunto || [];
     this.tiposGenero = data.tiposGenero || [];
-    this.tiposHidrocarburifica = data.tiposHidrocarburifica || [];
     this.tiposIdentificacion = data.tiposIdentificacion || [];
     this.tiposVivienda = data.tiposVivienda || [];
-
+    console.log(this.tiposContrato);
     // Configurar tablas
     this.setupTableConfigs();
   }
@@ -256,22 +251,6 @@ export class TiposCrdComponent implements OnInit {
       row_size: 's08'
     };
 
-    // Tipo Hidrocarburífica
-    this.tableConfigHidrocarburifica = {
-      entidad: EntidadesCrd.TIPO_HIDROCARBURIFICA,
-      titulo: 'Tipos Hidrocarburífica',
-      registros: this.tiposHidrocarburifica,
-      fields: this.getFieldsHidrocarburifica(),
-      regConfig: this.getRegConfigHidrocarburifica(),
-      add: true,
-      edit: true,
-      remove: false,
-      paginator: true,
-      filter: true,
-      fSize: 'em-1',
-      row_size: 's08'
-    };
-
     // Tipo Identificación
     this.tableConfigIdentificacion = {
       entidad: EntidadesCrd.TIPO_IDENTIFICACION,
@@ -309,7 +288,7 @@ export class TiposCrdComponent implements OnInit {
   private getFieldsContrato(): FieldFormat[] {
     return [
       { column: 'nombre', header: 'Nombre', fWidth: '70%' },
-      { column: 'codigoSbs', header: 'Código SBS', fWidth: '30%' },
+      { column: 'codigoSBS', header: 'Código SBS', fWidth: '30%' },
     ];
   }
 
@@ -328,7 +307,7 @@ export class TiposCrdComponent implements OnInit {
       {
         type: 'input',
         label: 'Código SBS',
-        name: 'codigoSbs',
+        name: 'codigoSBS',
         inputType: 'text',
         validations: [
           { name: 'required', validator: Validators.required, message: 'El código SBS es requerido' },
@@ -374,7 +353,10 @@ export class TiposCrdComponent implements OnInit {
   // ========== Tipo Préstamo ==========
   private getFieldsPrestamo(): FieldFormat[] {
     return [
-      { column: 'nombre', header: 'Nombre', fWidth: '100%' },
+      { column: 'nombre', header: 'Nombre', fWidth: '40%' },
+      { column: 'codigoSBS', header: 'Código SBS', fWidth: '20%' },
+      { column: 'tipo', header: 'Tipo', fWidth: '20%' },
+      { column: 'tasa', header: 'Tasa', fWidth: '20%' },
     ];
   }
 
@@ -388,6 +370,34 @@ export class TiposCrdComponent implements OnInit {
         validations: [
           { name: 'required', validator: Validators.required, message: 'El nombre es requerido' },
           { name: 'maxlength', validator: Validators.maxLength(100), message: 'Máximo 100 caracteres' }
+        ]
+      },
+      {
+        type: 'input',
+        label: 'Código SBS',
+        name: 'codigoSBS',
+        inputType: 'text',
+        validations: [
+          { name: 'required', validator: Validators.required, message: 'El código SBS es requerido' },
+          { name: 'maxlength', validator: Validators.maxLength(10), message: 'Máximo 10 caracteres' }
+        ]
+      },
+      {
+        type: 'input',
+        label: 'Tipo',
+        name: 'tipo',
+        inputType: 'text',
+        validations: [
+          { name: 'maxlength', validator: Validators.maxLength(50), message: 'Máximo 50 caracteres' }
+        ]
+      },
+      {
+        type: 'input',
+        label: 'Tasa',
+        name: 'tasa',
+        inputType: 'number',
+        validations: [
+          { name: 'min', validator: Validators.min(0), message: 'La tasa debe ser mayor o igual a 0' }
         ]
       }
     ];
@@ -428,7 +438,8 @@ export class TiposCrdComponent implements OnInit {
   // ========== Tipo Cesantía ==========
   private getFieldsCesantia(): FieldFormat[] {
     return [
-      { column: 'nombre', header: 'Nombre', fWidth: '100%' },
+      { column: 'nombre', header: 'Nombre', fWidth: '80%' },
+      { column: 'codigoSBS', header: 'Código SBS', fWidth: '20%' },
     ];
   }
 
@@ -443,6 +454,16 @@ export class TiposCrdComponent implements OnInit {
           { name: 'required', validator: Validators.required, message: 'El nombre es requerido' },
           { name: 'maxlength', validator: Validators.maxLength(100), message: 'Máximo 100 caracteres' }
         ]
+      },
+      {
+        type: 'input',
+        label: 'Código SBS',
+        name: 'codigoSBS',
+        inputType: 'text',
+        validations: [
+          { name: 'required', validator: Validators.required, message: 'El código SBS es requerido' },
+          { name: 'maxlength', validator: Validators.maxLength(10), message: 'Máximo 10 caracteres' }
+        ]
       }
     ];
   }
@@ -450,12 +471,25 @@ export class TiposCrdComponent implements OnInit {
   // ========== Tipo Calificación Crédito ==========
   private getFieldsCalificacionCredito(): FieldFormat[] {
     return [
-      { column: 'nombre', header: 'Nombre', fWidth: '100%' },
+      { column: 'nombre', header: 'Nombre', fWidth: '25%' },
+      { column: 'codigoSBS', header: 'Código SBS', fWidth: '25%' },
+      { column: 'categoria', header: 'Categoría', fWidth: '25%' },
+      { column: 'provision', header: 'Provisión', fWidth: '25%' },
     ];
   }
 
   private getRegConfigCalificacionCredito(): FieldConfig[] {
     return [
+      {
+        type: 'input',
+        label: 'Código SBS',
+        name: 'codigoSBS',
+        inputType: 'text',
+        validations: [
+          { name: 'required', validator: Validators.required, message: 'El código SBS es requerido' },
+          { name: 'maxlength', validator: Validators.maxLength(10), message: 'Máximo 10 caracteres' }
+        ]
+      },
       {
         type: 'input',
         label: 'Nombre',
@@ -465,6 +499,26 @@ export class TiposCrdComponent implements OnInit {
           { name: 'required', validator: Validators.required, message: 'El nombre es requerido' },
           { name: 'maxlength', validator: Validators.maxLength(100), message: 'Máximo 100 caracteres' }
         ]
+      },
+      {
+        type: 'input',
+        label: 'Categoría',
+        name: 'categoria',
+        inputType: 'text',
+        validations: [
+          { name: 'required', validator: Validators.required, message: 'La categoría es requerida' },
+          { name: 'maxlength', validator: Validators.maxLength(50), message: 'Máximo 50 caracteres' }
+        ]
+      },
+      {
+        type: 'input',
+        label: 'Provisión',
+        name: 'provision',
+        inputType: 'number',
+        validations: [
+          { name: 'required', validator: Validators.required, message: 'La provisión es requerida' },
+          { name: 'min', validator: Validators.min(0), message: 'La provisión debe ser mayor o igual a 0' }
+        ]
       }
     ];
   }
@@ -472,7 +526,8 @@ export class TiposCrdComponent implements OnInit {
   // ========== Tipo Aporte ==========
   private getFieldsAporte(): FieldFormat[] {
     return [
-      { column: 'nombre', header: 'Nombre', fWidth: '100%' },
+      { column: 'nombre', header: 'Nombre', fWidth: '75%' },
+      { column: 'codigoSBS', header: 'Código SBS', fWidth: '25%' },
     ];
   }
 
@@ -487,7 +542,17 @@ export class TiposCrdComponent implements OnInit {
           { name: 'required', validator: Validators.required, message: 'El nombre es requerido' },
           { name: 'maxlength', validator: Validators.maxLength(100), message: 'Máximo 100 caracteres' }
         ]
-      }
+      },
+      {
+        type: 'input',
+        label: 'Código SBS',
+        name: 'codigoSBS',
+        inputType: 'text',
+        validations: [
+          { name: 'required', validator: Validators.required, message: 'El código SBS es requerido' },
+          { name: 'maxlength', validator: Validators.maxLength(10), message: 'Máximo 10 caracteres' }
+        ]
+      },
     ];
   }
 
@@ -530,28 +595,6 @@ export class TiposCrdComponent implements OnInit {
         validations: [
           { name: 'required', validator: Validators.required, message: 'El nombre es requerido' },
           { name: 'maxlength', validator: Validators.maxLength(50), message: 'Máximo 50 caracteres' }
-        ]
-      }
-    ];
-  }
-
-  // ========== Tipo Hidrocarburífica ==========
-  private getFieldsHidrocarburifica(): FieldFormat[] {
-    return [
-      { column: 'nombre', header: 'Nombre', fWidth: '100%' },
-    ];
-  }
-
-  private getRegConfigHidrocarburifica(): FieldConfig[] {
-    return [
-      {
-        type: 'input',
-        label: 'Nombre',
-        name: 'nombre',
-        inputType: 'text',
-        validations: [
-          { name: 'required', validator: Validators.required, message: 'El nombre es requerido' },
-          { name: 'maxlength', validator: Validators.maxLength(100), message: 'Máximo 100 caracteres' }
         ]
       }
     ];

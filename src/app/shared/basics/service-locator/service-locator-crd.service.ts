@@ -20,7 +20,6 @@ import { TipoCalificacionCreditoService } from '../../../modules/crd/service/tip
 import { TipoAporteService } from '../../../modules/crd/service/tipo-aporte.service';
 import { TipoAdjuntoService } from '../../../modules/crd/service/tipo-adjunto.service';
 import { TipoGeneroService } from '../../../modules/crd/service/tipo-genero.service';
-import { TipoHidrocarburificaService } from '../../../modules/crd/service/tipo-hidrocarburifica.service';
 import { TipoIdentificacionService } from '../../../modules/crd/service/tipo-identificacion.service';
 import { TipoViviendaService } from '../../../modules/crd/service/tipo-vivienda.service';
 // Modelos de Tipos
@@ -33,7 +32,6 @@ import { TipoCalificacionCredito } from '../../../modules/crd/model/tipo-calific
 import { TipoAporte } from '../../../modules/crd/model/tipo-aporte';
 import { TipoAdjunto } from '../../../modules/crd/model/tipo-adjunto';
 import { TipoGenero } from '../../../modules/crd/model/tipo-genero';
-import { TipoHidrocarburifica } from '../../../modules/crd/model/tipo-hidrocarburifica';
 import { TipoIdentificacion } from '../../../modules/crd/model/tipo-identificacion';
 import { TipoVivienda } from '../../../modules/crd/model/tipo-vivienda';
 
@@ -59,7 +57,6 @@ export class ServiceLocatorCrdService {
     public tipoAporteService: TipoAporteService,
     public tipoAdjuntoService: TipoAdjuntoService,
     public tipoGeneroService: TipoGeneroService,
-    public tipoHidrocarburificaService: TipoHidrocarburificaService,
     public tipoIdentificacionService: TipoIdentificacionService,
     public tipoViviendaService: TipoViviendaService,
   ) { }
@@ -301,24 +298,6 @@ export class ServiceLocatorCrdService {
             return Promise.resolve(undefined);
         }
       }
-      case EntidadesCrd.TIPO_HIDROCARBURIFICA: {
-        switch (proceso) {
-          case AccionesGrid.ADD: {
-            this.reg = value as TipoHidrocarburifica;
-            this.reg.idEstado = 1;
-            return firstValueFrom(this.tipoHidrocarburificaService.add(this.reg as TipoHidrocarburifica));
-          }
-          case AccionesGrid.EDIT: {
-            this.reg = value as TipoHidrocarburifica;
-            return firstValueFrom(this.tipoHidrocarburificaService.update(this.reg as TipoHidrocarburifica));
-          }
-          case AccionesGrid.REMOVE: {
-            return firstValueFrom(this.tipoHidrocarburificaService.delete(value));
-          }
-          default:
-            return Promise.resolve(undefined);
-        }
-      }
       case EntidadesCrd.TIPO_IDENTIFICACION: {
         switch (proceso) {
           case AccionesGrid.ADD: {
@@ -403,9 +382,6 @@ export class ServiceLocatorCrdService {
       }
       case EntidadesCrd.TIPO_GENERO: {
         return firstValueFrom(this.tipoGeneroService.getAll());
-      }
-      case EntidadesCrd.TIPO_HIDROCARBURIFICA: {
-        return firstValueFrom(this.tipoHidrocarburificaService.getAll());
       }
       case EntidadesCrd.TIPO_IDENTIFICACION: {
         return firstValueFrom(this.tipoIdentificacionService.getAll());

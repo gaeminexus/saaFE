@@ -11,7 +11,6 @@ import { TipoCalificacionCreditoService } from '../service/tipo-calificacion-cre
 import { TipoAporteService } from '../service/tipo-aporte.service';
 import { TipoAdjuntoService } from '../service/tipo-adjunto.service';
 import { TipoGeneroService } from '../service/tipo-genero.service';
-import { TipoHidrocarburificaService } from '../service/tipo-hidrocarburifica.service';
 import { TipoIdentificacionService } from '../service/tipo-identificacion.service';
 import { TipoViviendaService } from '../service/tipo-vivienda.service';
 import { TipoContrato } from '../model/tipo-contrato';
@@ -23,7 +22,6 @@ import { TipoCalificacionCredito } from '../model/tipo-calificacion-credito';
 import { TipoAporte } from '../model/tipo-aporte';
 import { TipoAdjunto } from '../model/tipo-adjunto';
 import { TipoGenero } from '../model/tipo-genero';
-import { TipoHidrocarburifica } from '../model/tipo-hidrocarburifica';
 import { TipoIdentificacion } from '../model/tipo-identificacion';
 import { TipoVivienda } from '../model/tipo-vivienda';
 
@@ -37,7 +35,6 @@ export interface TiposData {
   tiposAporte: TipoAporte[] | null;
   tiposAdjunto: TipoAdjunto[] | null;
   tiposGenero: TipoGenero[] | null;
-  tiposHidrocarburifica: TipoHidrocarburifica[] | null;
   tiposIdentificacion: TipoIdentificacion[] | null;
   tiposVivienda: TipoVivienda[] | null;
 }
@@ -57,7 +54,6 @@ export class TiposCrdResolverService implements Resolve<TiposData> {
     private tipoAporteService: TipoAporteService,
     private tipoAdjuntoService: TipoAdjuntoService,
     private tipoGeneroService: TipoGeneroService,
-    private tipoHidrocarburificaService: TipoHidrocarburificaService,
     private tipoIdentificacionService: TipoIdentificacionService,
     private tipoViviendaService: TipoViviendaService,
   ) { }
@@ -115,12 +111,6 @@ export class TiposCrdResolverService implements Resolve<TiposData> {
       tiposGenero: this.tipoGeneroService.getAll().pipe(
         catchError(error => {
           console.error('Error al cargar tipos género:', error);
-          return of(null);
-        })
-      ),
-      tiposHidrocarburifica: this.tipoHidrocarburificaService.getAll().pipe(
-        catchError(error => {
-          console.error('Error al cargar tipos hidrocarburifica:', error);
           return of(null);
         })
       ),

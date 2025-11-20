@@ -1,23 +1,28 @@
-import { Component, OnInit } from '@angular/core';
-import { FormGroup } from '@angular/forms';
-import { MaterialFormModule } from '../../../../../modules/material-form.module';
+import { Component, Input, OnInit } from '@angular/core';
+import { FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { CommonModule } from '@angular/common';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
 import { DynamicFormComponent } from '../dynamic-field/dynamic-field.directive';
 import { ButtonFieldConfig } from '../../model/button.interface';
 
 @Component({
-  selector: 'app-button.component',
+  selector: 'app-button',
   standalone: true,
   imports: [
-    MaterialFormModule
+    CommonModule,
+    ReactiveFormsModule,
+    MatButtonModule,
+    MatIconModule
   ],
   templateUrl: './button.component.html',
   styleUrl: './button.component.scss'
 })
 export class ButtonComponent implements OnInit, DynamicFormComponent {
 
-  field!: ButtonFieldConfig;
-  group!: FormGroup;
-  accion!: number;
+  @Input() field!: ButtonFieldConfig;
+  @Input() group!: FormGroup;
+  @Input() accion!: number;
 
   constructor() { }
 
