@@ -411,6 +411,45 @@ mat-chip {
   }
 }
 
+/* Inline safe badges (sin mat-chip) */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.70rem;
+  font-weight: 600;
+  letter-spacing: .5px;
+  padding: 4px 10px;
+  border-radius: 14px;
+  line-height: 1;
+  min-width: 64px;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.06), 0 2px 3px -1px rgba(0,0,0,0.12);
+  user-select: none;
+}
+
+.badge-mov.mov-debe {
+  background: linear-gradient(135deg,#2196F3,#1976D2);
+  color:#fff;
+}
+.badge-mov.mov-haber {
+  background: linear-gradient(135deg,#FF9800,#F57C00);
+  color:#fff;
+}
+
+.badge-estado.est-activo {
+  background: linear-gradient(135deg,#4CAF50,#45a049);
+  color:#fff;
+}
+.badge-estado.est-inactivo {
+  background: linear-gradient(135deg,#f44336,#d32f2f);
+  color:#fff;
+}
+
+/* Asegurar que celdas no oculten el contenido */
+.movimiento-cell, .estado-cell {
+  overflow: visible !important;
+}
+
 /* Botones de Acción */
 .action-buttons {
   display: flex;

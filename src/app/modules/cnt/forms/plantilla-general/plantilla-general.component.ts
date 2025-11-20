@@ -26,6 +26,7 @@ import { PlantillaService } from '../../service/plantilla-general.service';
 import { DetallePlantillaService } from '../../service/detalle-plantilla.service';
 import { PlanCuentaService } from '../../service/plan-cuenta.service';
 import { DetallePlantillaDialogComponent } from './detalle-plantilla-dialog.component';
+import { ConfirmDeleteDetalleDialogComponent } from './confirm-delete-detalle-dialog.component';
 
 @Component({
   selector: 'app-plantilla-general',
@@ -82,6 +83,7 @@ export class PlantillaGeneralComponent implements OnInit {
   @ViewChild('maestroPaginator') maestroPaginator!: MatPaginator;
   @ViewChild('detallesPaginator') detallesPaginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
+  // ViewChild para paginación y ordenamiento únicamente
 
   constructor(
     private fb: FormBuilder,
@@ -108,6 +110,7 @@ export class PlantillaGeneralComponent implements OnInit {
     if (this.sort) {
       this.dataSourceDetalles.sort = this.sort;
     }
+    // No se requiere lógica adicional tras la vista
   }
 
   /**
@@ -220,43 +223,49 @@ export class PlantillaGeneralComponent implements OnInit {
    * Carga los detalles de una plantilla desde el servidor
    */
   cargarDetalles(plantillaCodigo: number): void {
-    console.log(`🔍 Cargando detalles para plantilla ${plantillaCodigo}...`);
-    console.log('📊 Columnas antes de cargar detalles:', this.displayedColumnsDetalles);
-
     this.detallePlantillaService.getByParent(plantillaCodigo).subscribe({
       next: (detalles: DetallePlantilla[] | null) => {
-        const detallesArray = detalles || [];
-        console.log('📋 Detalles recibidos del servidor:', detallesArray);
-        console.log('📊 Estructura de primer detalle:', detallesArray[0]);
-
-        this.dataSourceDetalles.data = detallesArray;
-
-        console.log('📊 Columnas después de asignar datos:', this.displayedColumnsDetalles);
+        this.dataSourceDetalles.data = (detalles || []).sort((a, b) => a.codigo - b.codigo);
       },
-      error: (error: any) => {
-        console.error('Error al cargar detalles desde servidor, usando fallback:', error);
-        // Fallback: usar el servicio de plantillas para datos demo
+      error: () => {
+        // Fallback a datos demo
         this.plantillaService.getDetallesByPlantillaCodigo(plantillaCodigo).subscribe({
           next: (detalles: DetallePlantilla[] | null) => {
-            const detallesArray = detalles || [];
-            console.log('📋 Detalles recibidos del fallback (demo):', detallesArray);
-            console.log('📊 Estructura de primer detalle (demo):', detallesArray[0]);
-
-            this.dataSourceDetalles.data = detallesArray;
-
-            console.log('📊 Columnas después del fallback:', this.displayedColumnsDetalles);
+            this.dataSourceDetalles.data = (detalles || []).sort((a, b) => a.codigo - b.codigo);
           },
-          error: (fallbackError: any) => {
-            console.error('Error en fallback:', fallbackError);
-
-            this.dataSourceDetalles.data = [];
-
-            console.log('📊 Columnas después del error:', this.displayedColumnsDetalles);
-          }
+          error: () => { this.dataSourceDetalles.data = []; }
         });
       }
     });
   }
+
+  /**
+   * Asegura que las columnas 'movimiento' y 'estado' estén presentes y visibles
+   * y fuerza un re-render de la tabla si fuera necesario.
+   */
+  // Eliminado: lógica de refuerzo e instrumentación (ya no necesaria)
+
+  /**
+   * Instrumenta la tabla listando las clases de columnas reales presentes en el DOM
+   * y añade estilos de refuerzo si faltan las columnas movimiento/estado.
+   */
+  // (Depurado) instrumentarTabla eliminado
+
+  /** Inserta estilos forzados para mostrar las columnas ocultas */
+  // (Depurado) inyectarEstilosRefuerzo eliminado
+
+  /** Extiende los métodos de carga para ejecutar instrumentación */
+  // (Depurado) postCargaDetallesHook eliminado
+
+  /**
+   * Verifica las MatColumnDef realmente registradas y si faltan 'movimiento' o 'estado'
+   */
+  // (Depurado) verificarColumnDefs eliminado
+
+  /**
+   * Intenta parchear dinámicamente agregando columnas faltantes mediante recreación manual
+   */
+  // (Depurado) parcheDinamicoColumnDefs eliminado
 
   /**
    * Guarda la plantilla (maestro y detalle)
@@ -770,10 +779,31 @@ export class PlantillaGeneralComponent implements OnInit {
   }
 
   eliminarDetalle(detalle: DetallePlantilla): void {
-    if (confirm(`¿Está seguro de eliminar el detalle "${detalle.descripcion}"?`)) {
-      const detalles = this.dataSourceDetalles.data.filter(d => d.codigo !== detalle.codigo);
-      this.dataSourceDetalles.data = detalles;
-    }
+    const dialogRef = this.dialog.open(ConfirmDeleteDetalleDialogComponent, {
+      width: '380px',
+      data: { descripcion: detalle.descripcion }
+    });
+
+    dialogRef.afterClosed().subscribe(confirmado => {
+      if (!confirmado) return;
+
+      const original = this.dataSourceDetalles.data;
+      this.dataSourceDetalles.data = original.filter(d => d.codigo !== detalle.codigo);
+
+      const esPersistente = typeof detalle.codigo === 'number' && detalle.codigo > 0 && detalle.codigo < 9_000_000_000_000;
+      if (!esPersistente) {
+        this.showMessage('Detalle eliminado (no persistido aún)', 'info');
+        return;
+      }
+
+      this.detallePlantillaService.delete(detalle.codigo).subscribe({
+        next: () => this.showMessage('Detalle eliminado', 'success'),
+        error: () => {
+          this.dataSourceDetalles.data = original; // rollback
+          this.showMessage('Error al eliminar. Se revierte el cambio.', 'error');
+        }
+      });
+    });
   }
 
   duplicarDetalle(detalle: DetallePlantilla): void {
