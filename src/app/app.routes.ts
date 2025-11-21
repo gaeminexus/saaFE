@@ -15,6 +15,8 @@ import { CentroGridComponent } from './modules/cnt/forms/centro-grid/centro-grid
 import { TipoAsientoGeneralGridComponent } from './modules/cnt/forms/tipo-asiento-general-grid/tipo-asiento-general-grid.component';
 import { TipoAsientoSistemaGridComponent } from './modules/cnt/forms/tipo-asiento-sistema-grid/tipo-asiento-sistema-grid.component';
 import { PlantillaGeneralComponent } from './modules/cnt/forms/plantilla-general/plantilla-general.component';
+import { PlantillaSistemaComponent } from './modules/cnt/forms/plantilla-sistema/plantilla-sistema.component';
+import { PeriodoContableComponent } from './modules/cnt/forms/periodo-contable/periodo-contable.component';
 import { PeriodosComponent } from './modules/cnt/forms/periodos/periodos.component';
 import { AsientosComponent } from './modules/cnt/forms/asientos/asientos.component';
 import { MayorizacionProcesoComponent } from './modules/cnt/forms/mayorizacion-proceso/mayorizacion-proceso.component';
@@ -58,6 +60,8 @@ export const routes: Routes = [
             { path: 'tipos-asientos/general', component: TipoAsientoGeneralGridComponent },
             { path: 'tipos-asientos/sistema', component: TipoAsientoSistemaGridComponent },
             { path: 'plantillas/general', component: PlantillaGeneralComponent },
+            { path: 'plantillas/sistema', component: PlantillaSistemaComponent },
+            { path: 'periodo-contable', component: PeriodoContableComponent },
             { path: 'periodos', component: PeriodosComponent },
             { path: 'asientos', component: AsientosComponent },
             { path: 'mayorizacion-proceso', component: MayorizacionProcesoComponent },

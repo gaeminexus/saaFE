@@ -115,7 +115,7 @@ export class MenuContabilidadComponent {
           displayName: 'Períodos Contables',
           iconName: 'calendar_month',
           idPermiso: 830,
-          route: '/menucontabilidad/periodos',
+          route: '/menucontabilidad/periodo-contable',
         },
       ]
     },

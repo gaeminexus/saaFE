@@ -1,6 +1,6 @@
 import { HttpHeaders, HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable, catchError, of, throwError } from 'rxjs';
+import { Observable, catchError, of, throwError, map } from 'rxjs';
 import { DetallePlantilla} from '../model/detalle-plantilla';
 import { ServiciosCnt } from './ws-cnt';
 
@@ -8,6 +8,7 @@ import { ServiciosCnt } from './ws-cnt';
   providedIn: 'root'
 })
 export class DetallePlantillaService {
+  private static readonly EMPRESA_CODIGO = 280;
 
   httpOptions = {
     headers: new HttpHeaders({ 'Content-Type': 'application/json' })
@@ -21,6 +22,9 @@ export class DetallePlantillaService {
     const wsGetById = '/getAll';
     const url = `${ServiciosCnt.RS_DTPL}${wsGetById}`;
     return this.http.get<DetallePlantilla[]>(url).pipe(
+      map((items: DetallePlantilla[]) =>
+        (items || []).filter(d => d?.plantilla?.empresa?.codigo === DetallePlantillaService.EMPRESA_CODIGO)
+      ),
       catchError(this.handleError)
     );
   }
@@ -37,20 +41,47 @@ export class DetallePlantillaService {
     const wsGetById = '/getByParent/';
     const url = `${ServiciosCnt.RS_DTPL}${wsGetById}${idParent}`;
     return this.http.get<DetallePlantilla[]>(url).pipe(
+      map((items: DetallePlantilla[]) =>
+        (items || []).filter(d => d?.plantilla?.empresa?.codigo === DetallePlantillaService.EMPRESA_CODIGO)
+      ),
       catchError(this.handleError)
     );
   }
 
   /** POST: add a new sesion to the server */
   add(datos: any): Observable<DetallePlantilla| null> {
-    return this.http.post<DetallePlantilla>(ServiciosCnt.RS_DTPL, datos, this.httpOptions).pipe(
+    // Asegurar empresa 280 en la plantilla padre
+    const datosConEmpresa = {
+      ...datos,
+      plantilla: {
+        ...datos.plantilla,
+        empresa: { codigo: DetallePlantillaService.EMPRESA_CODIGO }
+      }
+    };
+    console.log('📤 [DetallePlantillaService.add] Enviando POST:', {
+      url: ServiciosCnt.RS_DTPL,
+      payload: datosConEmpresa
+    });
+    return this.http.post<DetallePlantilla>(ServiciosCnt.RS_DTPL, datosConEmpresa, this.httpOptions).pipe(
       catchError(this.handleError)
     );
   }
 
   /** POST: add a new sesion to the server */
   update(datos: any): Observable<DetallePlantilla| null> {
-    return this.http.put<DetallePlantilla>(ServiciosCnt.RS_DTPL, datos, this.httpOptions).pipe(
+    // Asegurar empresa 280 en la plantilla padre
+    const datosConEmpresa = {
+      ...datos,
+      plantilla: {
+        ...datos.plantilla,
+        empresa: { codigo: DetallePlantillaService.EMPRESA_CODIGO }
+      }
+    };
+    console.log('📤 [DetallePlantillaService.update] Enviando PUT:', {
+      url: ServiciosCnt.RS_DTPL,
+      payload: datosConEmpresa
+    });
+    return this.http.put<DetallePlantilla>(ServiciosCnt.RS_DTPL, datosConEmpresa, this.httpOptions).pipe(
       catchError(this.handleError)
     );
   }
@@ -58,7 +89,18 @@ export class DetallePlantillaService {
   selectByCriteria(datos: any): Observable<DetallePlantilla[] | null> {
     const wsGetById = '/selectByCriteria/';
     const url = `${ServiciosCnt.RS_DTPL}${wsGetById}`;
-    return this.http.post<any>(url, datos, this.httpOptions).pipe(
+    // Forzar filtro de empresa en el request
+    const criteriosConEmpresa = {
+      ...datos,
+      plantilla: {
+        ...datos.plantilla,
+        empresa: { codigo: DetallePlantillaService.EMPRESA_CODIGO }
+      }
+    };
+    return this.http.post<any>(url, criteriosConEmpresa, this.httpOptions).pipe(
+      map((items: DetallePlantilla[]) =>
+        (items || []).filter(d => d?.plantilla?.empresa?.codigo === DetallePlantillaService.EMPRESA_CODIGO)
+      ),
       catchError(this.handleError)
     );
   }
@@ -79,7 +121,7 @@ export class DetallePlantillaService {
     console.error('StatusText:', error.statusText);
     console.error('URL:', error.url);
     console.error('Body:', error.error);
-    
+
     if (+error.status === 200) {
       return of(null);
     } else {

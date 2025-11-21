@@ -1,0 +1,348 @@
+<div class="periodo-contable-container">
+  <!-- Banner de modo demo -->
+  <div class="demo-banner" *ngIf="mostrarBannerDemo">
+    <mat-icon class="warning-icon">warning</mat-icon>
+    <span>Funcionando en modo demo - Backend no disponible</span>
+  </div>
+
+  <!-- Header con título y acciones -->
+  <div class="page-header">
+    <div class="header-content">
+      <h1 class="page-title">
+        <mat-icon class="title-icon">calendar_month</mat-icon>
+        Períodos Contables
+      </h1>
+      <p class="page-subtitle">Gestión de períodos contables para empresa 280</p>
+    </div>
+    <div class="header-actions">
+      <button mat-raised-button
+              color="primary"
+              class="btn-nuevo"
+              (click)="nuevoPeriodo()"
+              matTooltip="Crear nuevo período">
+        <mat-icon>add</mat-icon>
+        Nuevo Período
+      </button>
+    </div>
+  </div>
+
+  <!-- Panel de filtros -->
+  <mat-card class="filtros-card">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>filter_list</mat-icon>
+        Filtros de búsqueda
+      </mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="filtros-grid">
+        <mat-form-field appearance="outline">
+          <mat-label>Año</mat-label>
+          <mat-select [(ngModel)]="filtroAnio" (selectionChange)="aplicarFiltros()">
+            <mat-option [value]="null">Todos</mat-option>
+            <mat-option *ngFor="let anio of aniosDisponibles" [value]="anio">
+              {{anio}}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Mes</mat-label>
+          <mat-select [(ngModel)]="filtroMes" (selectionChange)="aplicarFiltros()">
+            <mat-option [value]="null">Todos</mat-option>
+            <mat-option *ngFor="let mes of mesesDisponibles" [value]="mes.valor">
+              {{mes.nombre}}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Estado</mat-label>
+          <mat-select [(ngModel)]="filtroEstado" (selectionChange)="aplicarFiltros()">
+            <mat-option [value]="null">Todos</mat-option>
+            <mat-option *ngFor="let estado of estadosDisponibles" [value]="estado.valor">
+              {{estado.nombre}}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Búsqueda general</mat-label>
+          <mat-icon matPrefix>search</mat-icon>
+          <input matInput
+                 [(ngModel)]="filtroTexto"
+                 (input)="aplicarFiltros()"
+                 placeholder="Buscar por nombre, año o mes...">
+          <button mat-icon-button
+                  matSuffix
+                  *ngIf="filtroTexto"
+                  (click)="filtroTexto=''; aplicarFiltros()"
+                  matTooltip="Limpiar búsqueda">
+            <mat-icon>clear</mat-icon>
+          </button>
+        </mat-form-field>
+      </div>
+
+      <div class="filtros-actions">
+        <button mat-stroked-button
+                (click)="limpiarFiltros()"
+                matTooltip="Limpiar todos los filtros">
+          <mat-icon>clear_all</mat-icon>
+          Limpiar Filtros
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Formulario de edición -->
+  <mat-card class="form-card" *ngIf="isEditing">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>{{ isNewRecord ? 'add_circle' : 'edit' }}</mat-icon>
+        {{ isNewRecord ? 'Nuevo' : 'Editar' }} Período Contable
+      </mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <form [formGroup]="periodoForm" class="form-grid">
+        <mat-form-field appearance="outline">
+          <mat-label>Año</mat-label>
+          <mat-select formControlName="anio" required>
+            <mat-option *ngFor="let anio of aniosDisponibles" [value]="anio">
+              {{anio}}
+            </mat-option>
+          </mat-select>
+          <mat-error *ngIf="periodoForm.get('anio')?.hasError('required')">
+            El año es requerido
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Mes</mat-label>
+          <mat-select formControlName="mes" required>
+            <mat-option *ngFor="let mes of mesesDisponibles" [value]="mes.valor">
+              {{mes.nombre}}
+            </mat-option>
+          </mat-select>
+          <mat-error *ngIf="periodoForm.get('mes')?.hasError('required')">
+            El mes es requerido
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Nombre del período</mat-label>
+          <input matInput
+                 formControlName="nombre"
+                 placeholder="Se generará automáticamente si se deja vacío">
+          <mat-hint>Opcional - se generará con formato "Mes Año"</mat-hint>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Estado</mat-label>
+          <mat-select formControlName="estado" required>
+            <mat-option *ngFor="let estado of estadosDisponibles" [value]="estado.valor">
+              {{estado.nombre}}
+            </mat-option>
+          </mat-select>
+          <mat-error *ngIf="periodoForm.get('estado')?.hasError('required')">
+            El estado es requerido
+          </mat-error>
+        </mat-form-field>
+
+        <div class="checkbox-field">
+          <mat-checkbox formControlName="periodoCierre">
+            Período de Cierre
+          </mat-checkbox>
+          <mat-hint>Marque si este período corresponde a un cierre contable</mat-hint>
+        </div>
+      </form>
+    </mat-card-content>
+    <mat-card-actions class="form-actions">
+      <button mat-raised-button
+              color="primary"
+              (click)="guardarPeriodo()"
+              [disabled]="periodoForm.invalid">
+        <mat-icon>save</mat-icon>
+        {{ isNewRecord ? 'Crear' : 'Actualizar' }}
+      </button>
+      <button mat-stroked-button
+              (click)="cancelarEdicion()">
+        <mat-icon>cancel</mat-icon>
+        Cancelar
+      </button>
+    </mat-card-actions>
+  </mat-card>
+
+  <!-- Tabla de períodos -->
+  <mat-card class="table-card">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>view_list</mat-icon>
+        Lista de Períodos
+        <span class="record-count" *ngIf="dataSource.data.length > 0">
+          ({{ dataSource.data.length }} registro{{ dataSource.data.length === 1 ? '' : 's' }})
+        </span>
+      </mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <!-- Spinner de carga -->
+      <div class="loading-container" *ngIf="loading">
+        <mat-spinner diameter="50"></mat-spinner>
+        <p>Cargando períodos contables...</p>
+      </div>
+
+      <!-- Tabla -->
+      <div class="table-container" *ngIf="!loading">
+        <table mat-table [dataSource]="dataSource" matSort class="periodos-table">
+          <!-- Columna Código -->
+          <ng-container matColumnDef="codigo">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header class="header-codigo">
+              Código
+            </th>
+            <td mat-cell *matCellDef="let periodo" class="cell-codigo">
+              {{ periodo.codigo }}
+            </td>
+          </ng-container>
+
+          <!-- Columna Año -->
+          <ng-container matColumnDef="anio">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header class="header-anio">
+              Año
+            </th>
+            <td mat-cell *matCellDef="let periodo" class="cell-anio">
+              <span class="badge-anio">{{ periodo.anio }}</span>
+            </td>
+          </ng-container>
+
+          <!-- Columna Mes -->
+          <ng-container matColumnDef="mes">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header class="header-mes">
+              Mes
+            </th>
+            <td mat-cell *matCellDef="let periodo" class="cell-mes">
+              <div class="mes-info">
+                <span class="mes-numero">{{ periodo.mes.toString().padStart(2, '0') }}</span>
+                <span class="mes-nombre">{{ getNombreMes(periodo.mes) }}</span>
+              </div>
+            </td>
+          </ng-container>
+
+          <!-- Columna Nombre -->
+          <ng-container matColumnDef="nombre">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header class="header-nombre">
+              Período
+            </th>
+            <td mat-cell *matCellDef="let periodo" class="cell-nombre">
+              <div class="periodo-info">
+                <span class="periodo-nombre">{{ periodo.nombre }}</span>
+                <small class="periodo-fechas" *ngIf="periodo.primerDia && periodo.ultimoDia">
+                  {{ formatFecha(periodo.primerDia, 'dd/MM') }} - {{ formatFecha(periodo.ultimoDia, 'dd/MM/yyyy') }}
+                </small>
+              </div>
+            </td>
+          </ng-container>
+
+          <!-- Columna Período Cierre -->
+          <ng-container matColumnDef="periodoCierre">
+            <th mat-header-cell *matHeaderCellDef class="header-cierre">
+              Cierre
+            </th>
+            <td mat-cell *matCellDef="let periodo" class="cell-cierre">
+              <mat-icon class="cierre-icon"
+                        [class.cierre-activo]="periodo.periodoCierre">
+                {{ periodo.periodoCierre ? 'check_circle' : 'radio_button_unchecked' }}
+              </mat-icon>
+            </td>
+          </ng-container>
+
+          <!-- Columna Estado -->
+          <ng-container matColumnDef="estado">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header class="header-estado">
+              Estado
+            </th>
+            <td mat-cell *matCellDef="let periodo" class="cell-estado">
+              <span class="estado-badge"
+                    [ngClass]="getEstadoBadgeClass(periodo.estado)">
+                <mat-icon class="estado-icon">
+                  {{ periodo.estado === 0 ? 'lock_open' :
+                     periodo.estado === 1 ? 'lock' : 'unlock' }}
+                </mat-icon>
+                {{ getEstadoTexto(periodo.estado) }}
+              </span>
+            </td>
+          </ng-container>
+
+          <!-- Columna Acciones -->
+          <ng-container matColumnDef="acciones">
+            <th mat-header-cell *matHeaderCellDef class="header-acciones">
+              Acciones
+            </th>
+            <td mat-cell *matCellDef="let periodo" class="cell-acciones">
+              <div class="actions-container">
+                <!-- Editar -->
+                <button mat-icon-button
+                        color="primary"
+                        (click)="editarPeriodo(periodo)"
+                        [disabled]="!puedeEditar(periodo)"
+                        matTooltip="Editar período">
+                  <mat-icon>edit</mat-icon>
+                </button>
+
+                <!-- Mayorizar -->
+                <button mat-icon-button
+                        color="accent"
+                        (click)="mayorizar(periodo)"
+                        [disabled]="!puedeMayorizar(periodo)"
+                        matTooltip="Mayorizar período">
+                  <mat-icon>play_arrow</mat-icon>
+                </button>
+
+                <!-- Desmayorizar -->
+                <button mat-icon-button
+                        color="warn"
+                        (click)="desmayorizar(periodo)"
+                        [disabled]="!puedeDesmayorizar(periodo)"
+                        matTooltip="Desmayorizar período">
+                  <mat-icon>stop</mat-icon>
+                </button>
+
+                <!-- Eliminar -->
+                <button mat-icon-button
+                        color="warn"
+                        (click)="eliminarPeriodo(periodo)"
+                        [disabled]="!puedeEliminar(periodo)"
+                        matTooltip="Eliminar período">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </div>
+            </td>
+          </ng-container>
+
+          <!-- Definición de filas -->
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;"
+              class="table-row"
+              [class.row-selected]="periodoSeleccionado?.codigo === row.codigo"></tr>
+        </table>
+
+        <!-- Mensaje cuando no hay datos -->
+        <div class="no-data-container" *ngIf="dataSource.data.length === 0">
+          <mat-icon class="no-data-icon">calendar_month</mat-icon>
+          <h3>No hay períodos contables</h3>
+          <p>No se encontraron períodos que coincidan con los filtros aplicados.</p>
+          <button mat-raised-button color="primary" (click)="limpiarFiltros()">
+            <mat-icon>refresh</mat-icon>
+            Limpiar filtros
+          </button>
+        </div>
+
+        <!-- Paginador -->
+        <mat-paginator
+          *ngIf="dataSource.data.length > 0"
+          [pageSizeOptions]="[5, 10, 20, 50]"
+          showFirstLastButtons
+          [pageSize]="10">
+        </mat-paginator>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

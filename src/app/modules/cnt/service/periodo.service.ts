@@ -11,6 +11,7 @@ import { Jerarquia } from '../../../shared/model/jerarquia';
   providedIn: 'root'
 })
 export class PeriodoService {
+  private static readonly EMPRESA_CODIGO = 280;
 
   private httpOptions = {
     headers: new HttpHeaders({ 'Content-Type': 'application/json' })
@@ -111,11 +112,18 @@ export class PeriodoService {
   getAll(): Observable<Periodo[]> {
     const wsGetAll = '/getAll';
     const url = `${ServiciosCnt.RS_PRDO}${wsGetAll}`;
+    console.log('🔍 [PeriodoService.getAll] Cargando períodos para empresa 280...');
 
     return this.http.get<Periodo[]>(url).pipe(
+      map((items: Periodo[]) => {
+        const filtrados = (items || []).filter(p => p?.empresa?.codigo === PeriodoService.EMPRESA_CODIGO);
+        console.log(`✅ Períodos filtrados para empresa 280: ${filtrados.length}`);
+        return filtrados;
+      }),
       catchError(() => {
         console.log('[PeriodoService] Usando datos mock para períodos');
-        return of(this.mockPeriodos);
+        const filtrados = this.mockPeriodos.filter(p => p?.empresa?.codigo === PeriodoService.EMPRESA_CODIGO);
+        return of(filtrados);
       })
     );
   }

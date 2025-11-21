@@ -1,6 +1,6 @@
 import { HttpHeaders, HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable, catchError, of, throwError } from 'rxjs';
+import { Observable, catchError, of, throwError, map } from 'rxjs';
 import { Plantilla } from '../model/plantilla';
 import { ServiciosCnt } from './ws-cnt';
 
@@ -8,6 +8,7 @@ import { ServiciosCnt } from './ws-cnt';
   providedIn: 'root'
 })
 export class PlantillaService {
+  private static readonly EMPRESA_CODIGO = 280;
 
   httpOptions = {
     headers: new HttpHeaders({ 'Content-Type': 'application/json' })
@@ -21,6 +22,9 @@ export class PlantillaService {
     const wsGetById = '/getAll';
     const url = `${ServiciosCnt.RS_PLNS}${wsGetById}`;
     return this.http.get<Plantilla[]>(url).pipe(
+      map((items: Plantilla[]) =>
+        (items || []).filter(p => p?.empresa?.codigo === PlantillaService.EMPRESA_CODIGO)
+      ),
       catchError(this.handleError)
     );
   }
@@ -50,7 +54,12 @@ export class PlantillaService {
   selectByCriteria(datos: any): Observable<Plantilla[] | null> {
     const wsGetById = '/selectByCriteria/';
     const url = `${ServiciosCnt.RS_PLNS}${wsGetById}`;
-    return this.http.post<any>(url, datos, this.httpOptions).pipe(
+    // Forzar filtro de empresa en el request
+    const criteriosConEmpresa = { ...datos, empresa: { codigo: PlantillaService.EMPRESA_CODIGO } };
+    return this.http.post<any>(url, criteriosConEmpresa, this.httpOptions).pipe(
+      map((items: Plantilla[]) =>
+        (items || []).filter(p => p?.empresa?.codigo === PlantillaService.EMPRESA_CODIGO)
+      ),
       catchError(this.handleError)
     );
   }

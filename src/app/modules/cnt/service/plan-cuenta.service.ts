@@ -1,6 +1,6 @@
 import { HttpHeaders, HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable, catchError, of, throwError, tap, switchMap } from 'rxjs';
+import { Observable, catchError, of, throwError, tap, switchMap, map } from 'rxjs';
 import { PlanCuenta } from '../model/plan-cuenta';
 import { ServiciosCnt } from './ws-cnt';
 
@@ -8,6 +8,7 @@ import { ServiciosCnt } from './ws-cnt';
   providedIn: 'root'
 })
 export class PlanCuentaService {
+  private static readonly EMPRESA_CODIGO = 280;
 
   httpOptions = {
     headers: new HttpHeaders({ 'Content-Type': 'application/json' })
@@ -21,6 +22,9 @@ export class PlanCuentaService {
     const wsGetById = '/getAll';
     const url = `${ServiciosCnt.RS_PLNN}${wsGetById}`;
     return this.http.get<PlanCuenta[]>(url).pipe(
+      map((items: PlanCuenta[]) =>
+        (items || []).filter(p => p?.empresa?.codigo === PlanCuentaService.EMPRESA_CODIGO)
+      ),
       catchError(this.handleError)
     );
   }
@@ -35,17 +39,23 @@ export class PlanCuentaService {
 
   /** POST: add a new sesion to the server */
   add(datos: any): Observable<PlanCuenta | null> {
+    // Asegurar empresa 280 en el plan de cuenta
+    const datosConEmpresa = {
+      ...datos,
+      empresa: { codigo: PlanCuentaService.EMPRESA_CODIGO }
+    };
+
     // 📌 DEBUG: Registro antes de enviar creación
     console.log('[PlanCuentaService.add] Enviando POST /plnn', {
       url: ServiciosCnt.RS_PLNN,
-      payload: datos
+      payload: datosConEmpresa
     });
     const base = ServiciosCnt.RS_PLNN;
     const attempts = [
-      () => this.http.post<PlanCuenta>(base, datos, this.httpOptions),
-      () => this.http.post<PlanCuenta>(base + '/add', datos, this.httpOptions),
-      () => this.http.post<PlanCuenta>(base + '/create', datos, this.httpOptions),
-      () => this.http.post<PlanCuenta>(base + '/save', datos, this.httpOptions)
+      () => this.http.post<PlanCuenta>(base, datosConEmpresa, this.httpOptions),
+      () => this.http.post<PlanCuenta>(base + '/add', datosConEmpresa, this.httpOptions),
+      () => this.http.post<PlanCuenta>(base + '/create', datosConEmpresa, this.httpOptions),
+      () => this.http.post<PlanCuenta>(base + '/save', datosConEmpresa, this.httpOptions)
     ];
 
     let idx = 0;
@@ -72,12 +82,18 @@ export class PlanCuentaService {
 
   /** POST: add a new sesion to the server */
   update(datos: any): Observable<PlanCuenta | null> {
+    // Asegurar empresa 280 en el plan de cuenta
+    const datosConEmpresa = {
+      ...datos,
+      empresa: { codigo: PlanCuentaService.EMPRESA_CODIGO }
+    };
+
     // 📌 DEBUG: Registro antes de enviar actualización
     console.log('[PlanCuentaService.update] Enviando PUT /plnn', {
       url: ServiciosCnt.RS_PLNN,
-      payload: datos
+      payload: datosConEmpresa
     });
-    return this.http.put<PlanCuenta>(ServiciosCnt.RS_PLNN, datos, this.httpOptions).pipe(
+    return this.http.put<PlanCuenta>(ServiciosCnt.RS_PLNN, datosConEmpresa, this.httpOptions).pipe(
       // tap(resp => console.log('[PlanCuentaService.update] Respuesta OK', resp)),
       catchError(err => {
         console.error('[PlanCuentaService.update] Error en PUT', err);
@@ -93,11 +109,17 @@ export class PlanCuentaService {
     const try3 = `${base}/criteria`;
     const try4 = `${base}/getAll`;
 
-    return this.http.post<PlanCuenta[]>(try1, datos, this.httpOptions).pipe(
+    // Forzar filtro de empresa en el request
+    const criteriosConEmpresa = { ...datos, empresa: { codigo: PlanCuentaService.EMPRESA_CODIGO } };
+
+    return this.http.post<PlanCuenta[]>(try1, criteriosConEmpresa, this.httpOptions).pipe(
       // Fallbacks de ruta/método comunes en este backend
-      catchError(() => this.http.post<PlanCuenta[]>(try2, datos, this.httpOptions)),
-      catchError(() => this.http.post<PlanCuenta[]>(try3, datos, this.httpOptions)),
+      catchError(() => this.http.post<PlanCuenta[]>(try2, criteriosConEmpresa, this.httpOptions)),
+      catchError(() => this.http.post<PlanCuenta[]>(try3, criteriosConEmpresa, this.httpOptions)),
       catchError(() => this.http.get<PlanCuenta[]>(try4, this.httpOptions)),
+      map((items: PlanCuenta[]) =>
+        (items || []).filter(p => p?.empresa?.codigo === PlanCuentaService.EMPRESA_CODIGO)
+      ),
       catchError(this.handleError)
     );
   }
