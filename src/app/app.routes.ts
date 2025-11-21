@@ -35,6 +35,7 @@ import { TiposCrdComponent } from './modules/crd/forms/tipos-crd/tipos-crd.compo
 import { TiposCrdResolverService } from './modules/crd/resolver/tipos-crd-resolver.service';
 import { ListadosCrdComponent } from './modules/crd/forms/listados-crd/listados-crd.component';
 import { ListadosCrdResolverService } from './modules/crd/resolver/listados-crd-resolver.service';
+import { EntidadParticipeInfoComponent } from './modules/crd/forms/entidad-participe-info/entidad-participe-info.component';
 
 
 
@@ -80,6 +81,7 @@ export const routes: Routes = [
         { path: 'participe-dash', component: ParticipeDashComponent },
         { path: 'participe-info', component: ParticipeInfoComponent },
         { path: 'carga-aportes', component: CargaAportesComponent },
+        { path: 'entidad-participe-info', component: EntidadParticipeInfoComponent },
         { path: 'estadosCrd', component: EstadosCrdComponent, resolve: { estados: EstadosResolverService } },
         { path: 'tiposCrd', component: TiposCrdComponent, resolve: { tipos: TiposCrdResolverService } },
         { path: 'listadosCrd', component: ListadosCrdComponent, resolve: { listados: ListadosCrdResolverService } },

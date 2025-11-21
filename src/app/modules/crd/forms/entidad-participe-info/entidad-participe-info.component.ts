@@ -64,6 +64,10 @@ export class EntidadParticipeInfoComponent implements OnInit {
   loadingTiposId = signal<boolean>(false);
   loadingTiposParticipe = signal<boolean>(false);
 
+  // Signals para validez de formularios
+  entidadFormValid = signal<boolean>(false);
+  participeFormValid = signal<boolean>(false);
+
   // Formularios
   entidadForm!: FormGroup;
   participeForm!: FormGroup;
@@ -74,7 +78,10 @@ export class EntidadParticipeInfoComponent implements OnInit {
 
   // Validación combinada de ambos formularios
   isFormValid = computed(() => {
-    return this.entidadForm?.valid && this.participeForm?.valid;
+    const entidadValid = this.entidadFormValid();
+    const participeValid = this.participeFormValid();
+    console.log('🔍 isFormValid computed:', { entidadValid, participeValid });
+    return entidadValid && participeValid;
   });
 
   // Opciones estáticas
@@ -153,6 +160,22 @@ export class EntidadParticipeInfoComponent implements OnInit {
       fechaIngreso: [{ value: null, disabled: true }],
       idEstado: [1, Validators.required]
     });
+
+    // Suscribirse a cambios de validación de entidadForm
+    this.entidadForm.statusChanges.subscribe(() => {
+      this.entidadFormValid.set(this.entidadForm.valid);
+      console.log('📝 Entidad Form Valid:', this.entidadForm.valid);
+    });
+
+    // Suscribirse a cambios de validación de participeForm
+    this.participeForm.statusChanges.subscribe(() => {
+      this.participeFormValid.set(this.participeForm.valid);
+      console.log('📝 Partícipe Form Valid:', this.participeForm.valid);
+    });
+
+    // Inicializar estados de validación
+    this.entidadFormValid.set(this.entidadForm.valid);
+    this.participeFormValid.set(this.participeForm.valid);
   }
 
   private cargarDatosIniciales(): void {
@@ -222,11 +245,13 @@ export class EntidadParticipeInfoComponent implements OnInit {
     }).subscribe({
       next: (data) => {
         if (data.entidad) {
+          console.log('Cargando datos de entidad en formulario:', data.entidad);
           this.entidadActual.set(data.entidad);
           this.cargarDatosEnFormularioEntidad(data.entidad);
         }
 
         if (data.participe) {
+          console.log('Cargando datos de partícipe en formulario:', data.participe);
           this.participeActual.set(data.participe);
           this.cargarDatosEnFormularioParticipe(data.participe);
         }
@@ -264,14 +289,14 @@ export class EntidadParticipeInfoComponent implements OnInit {
       sectorPublico: entidad.sectorPublico || 0,
       porcentajeSimilitud: entidad.porcentajeSimilitud || 0,
       busqueda: entidad.busqueda || '',
-      fechaNacimiento: entidad.fechaNacimiento,
+      fechaNacimiento: entidad.fechaNacimiento ? new Date(entidad.fechaNacimiento) : null,
       urlFotoLogo: entidad.urlFotoLogo || '',
       idEstado: entidad.idEstado || 1,
       migrado: entidad.migrado || 0,
       usuarioIngreso: entidad.usuarioIngreso || '',
-      fechaIngreso: entidad.fechaIngreso,
+      fechaIngreso: entidad.fechaIngreso ? new Date(entidad.fechaIngreso) : null,
       usuarioModificacion: entidad.usuarioModificacion || '',
-      fechaModificacion: entidad.fechaModificacion,
+      fechaModificacion: entidad.fechaModificacion ? new Date(entidad.fechaModificacion) : null,
       ipIngreso: entidad.ipIngreso || '',
       ipModificacion: entidad.ipModificacion || ''
     });
@@ -284,7 +309,7 @@ export class EntidadParticipeInfoComponent implements OnInit {
       codigoAlterno: participe.codigoAlterno || 0,
       tipoParticipe: participe.tipoParticipe,
       remuneracionUnificada: participe.remuneracionUnificada || 0,
-      fechaIngresoTrabajo: participe.fechaIngresoTrabajo,
+      fechaIngresoTrabajo: participe.fechaIngresoTrabajo ? new Date(participe.fechaIngresoTrabajo) : null,
       lugarTrabajo: participe.lugarTrabajo || '',
       unidadAdministrativa: participe.unidadAdministrativa || '',
       cargoActual: participe.cargoActual || '',
@@ -292,14 +317,14 @@ export class EntidadParticipeInfoComponent implements OnInit {
       ingresoAdicionalMensual: participe.ingresoAdicionalMensual || 0,
       ingresoAdicionalActividad: participe.ingresoAdicionalActividad || '',
       codigoTipoCalificacion: participe.codigoTipoCalificacion || 0,
-      fechaIngresoFondo: participe.fechaIngresoFondo,
+      fechaIngresoFondo: participe.fechaIngresoFondo ? new Date(participe.fechaIngresoFondo) : null,
       estadoActual: participe.estadoActual || 1,
-      fechaFallecimiento: participe.fechaFallecimiento,
+      fechaFallecimiento: participe.fechaFallecimiento ? new Date(participe.fechaFallecimiento) : null,
       causaFallecimiento: participe.causaFallecimiento || '',
       motivoSalida: participe.motivoSalida || '',
-      fechaSalida: participe.fechaSalida,
+      fechaSalida: participe.fechaSalida ? new Date(participe.fechaSalida) : null,
       estadoCesante: participe.estadoCesante || 0,
-      fechaIngreso: participe.fechaIngreso,
+      fechaIngreso: participe.fechaIngreso ? new Date(participe.fechaIngreso) : null,
       idEstado: participe.idEstado || 1
     });
   }

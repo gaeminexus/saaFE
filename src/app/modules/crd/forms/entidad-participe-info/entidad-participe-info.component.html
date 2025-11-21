@@ -22,6 +22,8 @@
         Limpiar
       </button>
 
+      <button mat-button (click)="debugFormErrors()">Debug Form</button>
+
       <button mat-raised-button color="accent" (click)="guardar()"
               [disabled]="!isFormValid() || loading() || saving()">
         @if (saving()) {
