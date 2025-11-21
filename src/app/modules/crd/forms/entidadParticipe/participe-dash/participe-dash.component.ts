@@ -4,30 +4,30 @@ import { FormsModule } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
 
-import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
-import { PrestamoPagosDialogComponent } from '../../dialog/prestamo-pagos-dialog/prestamo-pagos-dialog.component';
-import { PdfParticipeDetalleDialogComponent } from '../../dialog/pdf-participe-detalle-dialog/pdf-participe-detalle-dialog.component';
+import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { PrestamoPagosDialogComponent } from '../../../dialog/prestamo-pagos-dialog/prestamo-pagos-dialog.component';
+import { PdfParticipeDetalleDialogComponent } from '../../../dialog/pdf-participe-detalle-dialog/pdf-participe-detalle-dialog.component';
 
-import { Entidad } from '../../model/entidad';
-import { Prestamo } from '../../model/prestamo';
-import { DetallePrestamo } from '../../model/detalle-prestamo';
-import { PagoPrestamo } from '../../model/pago-prestamo';
-import { Producto } from '../../model/producto';
-import { Aporte } from '../../model/aporte';
-import { Contrato } from '../../model/contrato';
-import { Participe } from '../../model/participe';
+import { Entidad } from '../../../model/entidad';
+import { Prestamo } from '../../../model/prestamo';
+import { DetallePrestamo } from '../../../model/detalle-prestamo';
+import { PagoPrestamo } from '../../../model/pago-prestamo';
+import { Producto } from '../../../model/producto';
+import { Aporte } from '../../../model/aporte';
+import { Contrato } from '../../../model/contrato';
+import { Participe } from '../../../model/participe';
 
-import { EntidadService } from '../../service/entidad.service';
-import { PrestamoService } from '../../service/prestamo.service';
-import { DetallePrestamoService } from '../../service/detalle-prestamo.service';
-import { PagoPrestamoService } from '../../service/pago-prestamo.service';
-import { AporteService } from '../../service/aporte.service';
-import { ContratoService } from '../../service/contrato.service';
-import { ParticipeService } from '../../service/participe.service';
-import { ExportService } from '../../../../shared/services/export.service';
-import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
-import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
-import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
+import { EntidadService } from '../../../service/entidad.service';
+import { PrestamoService } from '../../../service/prestamo.service';
+import { DetallePrestamoService } from '../../../service/detalle-prestamo.service';
+import { PagoPrestamoService } from '../../../service/pago-prestamo.service';
+import { AporteService } from '../../../service/aporte.service';
+import { ContratoService } from '../../../service/contrato.service';
+import { ParticipeService } from '../../../service/participe.service';
+import { ExportService } from '../../../../../shared/services/export.service';
+import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
+import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
+import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 
 interface DetalleConPagos {
   detalle: DetallePrestamo;

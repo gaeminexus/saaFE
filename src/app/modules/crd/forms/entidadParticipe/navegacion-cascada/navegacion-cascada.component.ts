@@ -15,22 +15,22 @@ import { MatDividerModule } from '@angular/material/divider';
 import { catchError, finalize } from 'rxjs/operators';
 import { of } from 'rxjs';
 
-import { Entidad } from '../../model/entidad';
-import { Producto } from '../../model/producto';
-import { Prestamo } from '../../model/prestamo';
-import { DetallePrestamo } from '../../model/detalle-prestamo';
-import { ServiciosCrd } from '../../service/ws-crd';
-import { PagoPrestamo } from '../../model/pago-prestamo';
+import { Entidad } from '../../../model/entidad';
+import { Producto } from '../../../model/producto';
+import { Prestamo } from '../../../model/prestamo';
+import { DetallePrestamo } from '../../../model/detalle-prestamo';
+import { ServiciosCrd } from '../../../service/ws-crd';
+import { PagoPrestamo } from '../../../model/pago-prestamo';
 
-import { EntidadService } from '../../service/entidad.service';
-import { ProductoService } from '../../service/producto.service';
-import { PrestamoService } from '../../service/prestamo.service';
-import { DetallePrestamoService } from '../../service/detalle-prestamo.service';
-import { PagoPrestamoService } from '../../service/pago-prestamo.service';
-import { EstadoPrestamoService } from '../../service/estado-prestamo.service';
-import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
-import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
-import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
+import { EntidadService } from '../../../service/entidad.service';
+import { ProductoService } from '../../../service/producto.service';
+import { PrestamoService } from '../../../service/prestamo.service';
+import { DetallePrestamoService } from '../../../service/detalle-prestamo.service';
+import { PagoPrestamoService } from '../../../service/pago-prestamo.service';
+import { EstadoPrestamoService } from '../../../service/estado-prestamo.service';
+import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
+import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
+import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 
 // Enum para los niveles de navegación
 enum NivelNavegacion {

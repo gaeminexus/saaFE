@@ -2,23 +2,23 @@ import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
+import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { forkJoin } from 'rxjs';
 
-import { Entidad } from '../../model/entidad';
-import { Participe } from '../../model/participe';
-import { Filial } from '../../model/filial';
-import { TipoIdentificacion } from '../../model/tipo-identificacion';
-import { TipoHidrocarburifica } from '../../model/tipo-hidrocarburifica';
-import { TipoVivienda } from '../../model/tipo-vivienda';
-import { TipoParticipe } from '../../model/tipo-participe';
+import { Entidad } from '../../../model/entidad';
+import { Participe } from '../../../model/participe';
+import { Filial } from '../../../model/filial';
+import { TipoIdentificacion } from '../../../model/tipo-identificacion';
+import { TipoHidrocarburifica } from '../../../model/tipo-hidrocarburifica';
+import { TipoVivienda } from '../../../model/tipo-vivienda';
+import { TipoParticipe } from '../../../model/tipo-participe';
 
-import { EntidadService } from '../../service/entidad.service';
-import { ParticipeService } from '../../service/participe.service';
-import { FilialService } from '../../service/filial.service';
-import { TipoIdentificacionService } from '../../service/tipo-identificacion.service';
-import { TipoParticipeService } from '../../service/tipo-participe.service';
-import { FuncionesDatosService, TipoFormatoFechaBackend } from '../../../../shared/services/funciones-datos.service';
+import { EntidadService } from '../../../service/entidad.service';
+import { ParticipeService } from '../../../service/participe.service';
+import { FilialService } from '../../../service/filial.service';
+import { TipoIdentificacionService } from '../../../service/tipo-identificacion.service';
+import { TipoParticipeService } from '../../../service/tipo-participe.service';
+import { FuncionesDatosService, TipoFormatoFechaBackend } from '../../../../../shared/services/funciones-datos.service';
 
 @Component({
   selector: 'app-entidad-participe-info',

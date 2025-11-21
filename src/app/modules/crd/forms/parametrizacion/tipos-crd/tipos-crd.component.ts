@@ -3,23 +3,23 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatIconModule } from '@angular/material/icon';
-import { TableBasicHijosComponent } from '../../../../shared/basics/table/forms/table-basic-hijos/table-basic-hijos.component';
-import { TableConfig } from '../../../../shared/basics/table/model/table-interface';
-import { FieldConfig } from '../../../../shared/basics/table/dynamic-form/model/field.interface';
-import { FieldFormat } from '../../../../shared/basics/table/model/field-format-interface';
-import { EntidadesCrd } from '../../model/entidades-crd';
-import { TiposData } from '../../resolver/tipos-crd-resolver.service';
-import { TipoContrato } from '../../model/tipo-contrato';
-import { TipoParticipe } from '../../model/tipo-participe';
-import { TipoPrestamo } from '../../model/tipo-prestamo';
-import { TipoRequisitoPrestamo } from '../../model/tipo-requisito-prestamo';
-import { TipoCesantia } from '../../model/tipo-cesantia';
-import { TipoCalificacionCredito } from '../../model/tipo-calificacion-credito';
-import { TipoAporte } from '../../model/tipo-aporte';
-import { TipoAdjunto } from '../../model/tipo-adjunto';
-import { TipoGenero } from '../../model/tipo-genero';
-import { TipoIdentificacion } from '../../model/tipo-identificacion';
-import { TipoVivienda } from '../../model/tipo-vivienda';
+import { TableBasicHijosComponent } from '../../../../../shared/basics/table/forms/table-basic-hijos/table-basic-hijos.component';
+import { TableConfig } from '../../../../../shared/basics/table/model/table-interface';
+import { FieldConfig } from '../../../../../shared/basics/table/dynamic-form/model/field.interface';
+import { FieldFormat } from '../../../../../shared/basics/table/model/field-format-interface';
+import { EntidadesCrd } from '../../../model/entidades-crd';
+import { TiposData } from '../../../resolver/tipos-crd-resolver.service';
+import { TipoContrato } from '../../../model/tipo-contrato';
+import { TipoParticipe } from '../../../model/tipo-participe';
+import { TipoPrestamo } from '../../../model/tipo-prestamo';
+import { TipoRequisitoPrestamo } from '../../../model/tipo-requisito-prestamo';
+import { TipoCesantia } from '../../../model/tipo-cesantia';
+import { TipoCalificacionCredito } from '../../../model/tipo-calificacion-credito';
+import { TipoAporte } from '../../../model/tipo-aporte';
+import { TipoAdjunto } from '../../../model/tipo-adjunto';
+import { TipoGenero } from '../../../model/tipo-genero';
+import { TipoIdentificacion } from '../../../model/tipo-identificacion';
+import { TipoVivienda } from '../../../model/tipo-vivienda';
 import { Validators } from '@angular/forms';
 
 @Component({
@@ -116,7 +116,7 @@ export class TiposCrdComponent implements OnInit {
       regConfig: this.getRegConfigContrato(),
       add: true,
       edit: true,
-      remove: false,
+      remove: true,
       paginator: true,
       filter: true,
       fSize: 'em-1',

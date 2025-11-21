@@ -6,16 +6,16 @@ import { Location } from '@angular/common';
 import { catchError } from 'rxjs/operators';
 import { of } from 'rxjs';
 
-import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
-import { Entidad } from '../../model/entidad';
-import { Filial } from '../../model/filial';
-import { TipoIdentificacion } from '../../model/tipo-identificacion';
-import { TipoHidrocarburifica } from '../../model/tipo-hidrocarburifica';
-import { TipoVivienda } from '../../model/tipo-vivienda';
-import { EntidadService } from '../../service/entidad.service';
-import { FilialService } from '../../service/filial.service';
-import { TipoIdentificacionService } from '../../service/tipo-identificacion.service';
-import { FuncionesDatosService } from '../../../../shared/services/funciones-datos.service';
+import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { Entidad } from '../../../model/entidad';
+import { Filial } from '../../../model/filial';
+import { TipoIdentificacion } from '../../../model/tipo-identificacion';
+import { TipoHidrocarburifica } from '../../../model/tipo-hidrocarburifica';
+import { TipoVivienda } from '../../../model/tipo-vivienda';
+import { EntidadService } from '../../../service/entidad.service';
+import { FilialService } from '../../../service/filial.service';
+import { TipoIdentificacionService } from '../../../service/tipo-identificacion.service';
+import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 
 /**
  * Componente reutilizable para gestión de entidades.

@@ -3,16 +3,16 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatIconModule } from '@angular/material/icon';
-import { TableBasicHijosComponent } from '../../../../shared/basics/table/forms/table-basic-hijos/table-basic-hijos.component';
-import { TableConfig } from '../../../../shared/basics/table/model/table-interface';
-import { FieldConfig } from '../../../../shared/basics/table/dynamic-form/model/field.interface';
-import { FieldFormat } from '../../../../shared/basics/table/model/field-format-interface';
-import { EntidadesCrd } from '../../model/entidades-crd';
-import { EstadosData } from '../../resolver/estados-resolver.service';
-import { EstadoParticipe } from '../../model/estado-participe';
-import { EstadoPrestamo } from '../../model/estado-prestamo';
-import { EstadoCesantia } from '../../model/estado-cesantia';
-import { EstadoCivil } from '../../model/estado-civil';
+import { TableBasicHijosComponent } from '../../../../../shared/basics/table/forms/table-basic-hijos/table-basic-hijos.component';
+import { TableConfig } from '../../../../../shared/basics/table/model/table-interface';
+import { FieldConfig } from '../../../../../shared/basics/table/dynamic-form/model/field.interface';
+import { FieldFormat } from '../../../../../shared/basics/table/model/field-format-interface';
+import { EntidadesCrd } from '../../../model/entidades-crd';
+import { EstadosData } from '../../../resolver/estados-resolver.service';
+import { EstadoParticipe } from '../../../model/estado-participe';
+import { EstadoPrestamo } from '../../../model/estado-prestamo';
+import { EstadoCesantia } from '../../../model/estado-cesantia';
+import { EstadoCivil } from '../../../model/estado-civil';
 import { Validators } from '@angular/forms';
 
 @Component({
