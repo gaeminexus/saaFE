@@ -25,9 +25,9 @@ import { ParametrizacionCreditosComponent } from './modules/crd/menucreditos/par
 // Reemplazamos placeholder EXTR por componente grid paginado
 import { ExtersComponent } from './modules/crd/forms/exters/exters.component';
 import { EntidadCreditosComponent } from './modules/crd/menucreditos/entidad-creditos.component';
-import { NavegacionCascadaComponent } from './modules/crd/forms/entidadParticipe/navegacion-cascada/navegacion-cascada.component';
-import { ParticipeDashComponent } from './modules/crd/forms/entidadParticipe/participe-dash/participe-dash.component';
-import { ParticipeInfoComponent } from './modules/crd/forms/entidadParticipe/participe-info/participe-info.component';
+import { NavegacionCascadaComponent } from './modules/crd/forms/entidad-participe/navegacion-cascada/navegacion-cascada.component';
+import { ParticipeDashComponent } from './modules/crd/forms/entidad-participe/participe-dash/participe-dash.component';
+import { ParticipeInfoComponent } from './modules/crd/forms/entidad-participe/participe-info/participe-info.component';
 import { CargaAportesComponent } from './modules/crd/forms/carga-aportes/carga-aportes.component';
 import { EstadosCrdComponent } from './modules/crd/forms/parametrizacion/estados-crd/estados-crd.component';
 import { EstadosResolverService } from './modules/crd/resolver/estados-resolver.service';
@@ -35,7 +35,7 @@ import { TiposCrdComponent } from './modules/crd/forms/parametrizacion/tipos-crd
 import { TiposCrdResolverService } from './modules/crd/resolver/tipos-crd-resolver.service';
 import { ListadosCrdComponent } from './modules/crd/forms/parametrizacion/listados-crd/listados-crd.component';
 import { ListadosCrdResolverService } from './modules/crd/resolver/listados-crd-resolver.service';
-import { EntidadParticipeInfoComponent } from './modules/crd/forms/entidadParticipe/entidad-participe-info/entidad-participe-info.component';
+import { EntidadParticipeInfoComponent } from './modules/crd/forms/entidad-participe/entidad-participe-info/entidad-participe-info.component';
 
 
 

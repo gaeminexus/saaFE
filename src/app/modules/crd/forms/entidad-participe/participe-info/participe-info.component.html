@@ -1,0 +1,414 @@
+<div class="participe-form-container">
+  <!-- Header -->
+  <div class="header">
+    <div class="header-content">
+      <h2>
+        <mat-icon>{{ modoFiltrado ? 'search' : 'person_add' }}</mat-icon>
+        {{ formTitle() }}
+      </h2>
+      <p class="subtitle">
+        @if (modoFiltrado && codigoEntidad) {
+          Visualizando partícipe con código: {{ codigoEntidad }}
+          @if (soloLectura) { (Solo lectura) }
+        } @else {
+          Complete todos los campos requeridos para gestionar la entidad
+        }
+      </p>
+
+      <!-- Barra de estado para filtrado -->
+      @if (modoFiltrado) {
+        <div class="filter-status">
+          <mat-icon>filter_list</mat-icon>
+          <span>Modo filtrado activo</span>
+          @if (!ocultarBotones && !soloLectura) {
+            <button mat-icon-button (click)="limpiarFiltro()" matTooltip="Limpiar filtro">
+              <mat-icon>close</mat-icon>
+            </button>
+          }
+        </div>
+      }
+    </div>
+
+    @if (!ocultarBotones && !soloLectura) {
+      <div class="actions">
+      <button mat-raised-button color="primary" (click)="regresar()" [disabled]="loading() || saving()">
+        <mat-icon>arrow_back</mat-icon>
+        Regresar
+      </button>
+
+      <button mat-raised-button color="primary" (click)="limpiarFormulario()" [disabled]="loading() || saving()">
+        <mat-icon>clear_all</mat-icon>
+        Limpiar
+      </button>
+
+      <button mat-button (click)="debugFormErrors()">Debug Form</button>
+
+      <button mat-raised-button color="primary" (click)="guardar()"
+              [disabled]="!isFormValid() || loading() || saving()">
+        @if (saving()) {
+          <mat-spinner diameter="20"></mat-spinner>
+        } @else {
+          <mat-icon>save</mat-icon>
+        }
+        {{ modoEdicion() ? 'Actualizar' : 'Guardar' }}
+      </button>
+
+      </div>
+    }
+  </div>
+
+  <!-- Loading -->
+  @if (loading()) {
+    <div class="loading-container">
+      <mat-spinner></mat-spinner>
+      <p>Cargando datos...</p>
+    </div>
+  }
+
+  <!-- Error Global -->
+  @if (hasError()) {
+    <mat-card class="error-card">
+      <mat-icon color="warn">error</mat-icon>
+      <div>
+        <h3>Error</h3>
+        <p>{{ errorMsg() }}</p>
+      </div>
+    </mat-card>
+  }
+
+  <!-- Formulario -->
+  @if (!loading()) {
+    <form [formGroup]="entidadForm" class="entidad-form">
+
+      <mat-stepper orientation="vertical" linear="false" #stepper>
+
+        <!-- Paso 1: Datos Básicos -->
+        <mat-step label="Datos Básicos" [completed]="true">
+          <mat-card class="step-card">
+            <mat-card-header>
+              <mat-icon mat-card-avatar>person</mat-icon>
+              <mat-card-title>Información Básica</mat-card-title>
+              <mat-card-subtitle>Datos de identificación y nombres</mat-card-subtitle>
+            </mat-card-header>
+
+            <mat-card-content>
+              <div class="form-row">
+                <mat-form-field appearance="fill" class="full-width">
+                  <mat-label>Código</mat-label>
+                  <input matInput formControlName="codigo" readonly>
+                  <mat-icon matSuffix>tag</mat-icon>
+                  <mat-hint>Generado automáticamente</mat-hint>
+                </mat-form-field>
+              </div>
+
+              <div class="form-row">
+                <mat-form-field appearance="fill" class="half-width">
+                  <mat-label>Filial</mat-label>
+                  <mat-select formControlName="filial" [compareWith]="compararPorCodigo">
+                    @if (loadingFiliales()) {
+                      <mat-option disabled>
+                        <mat-spinner diameter="20"></mat-spinner>
+                        Cargando...
+                      </mat-option>
+                    } @else {
+                      <mat-option [value]="null">-- Seleccionar --</mat-option>
+                      @for (filial of filialesOptions; track filial.codigo) {
+                        <mat-option [value]="filial">{{ filial.nombre }}</mat-option>
+                      }
+                    }
+                  </mat-select>
+                  <mat-icon matSuffix>business</mat-icon>
+                </mat-form-field>
+
+                <mat-form-field appearance="fill" class="half-width">
+                  <mat-label>Tipo Identificación</mat-label>
+                  <mat-select formControlName="tipoIdentificacion" [compareWith]="compararPorCodigo">
+                    @if (loadingTiposId()) {
+                      <mat-option disabled>
+                        <mat-spinner diameter="20"></mat-spinner>
+                        Cargando...
+                      </mat-option>
+                    } @else {
+                      <mat-option [value]="null">-- Seleccionar --</mat-option>
+                      @for (tipo of tiposIdentificacionOptions; track tipo.codigo) {
+                        <mat-option [value]="tipo">{{ tipo.nombre }}</mat-option>
+                      }
+                    }
+                  </mat-select>
+                  <mat-icon matSuffix>card_membership</mat-icon>
+                </mat-form-field>
+              </div>
+
+              <div class="form-row">
+                <mat-form-field appearance="fill" class="full-width">
+                  <mat-label>Número de Identificación *</mat-label>
+                  <input matInput formControlName="numeroIdentificacion" maxlength="20">
+                  <mat-icon matSuffix>badge</mat-icon>
+                  @if (esCampoInvalido('numeroIdentificacion')) {
+                    <mat-error>{{ obtenerErrorCampo('numeroIdentificacion') }}</mat-error>
+                  }
+                </mat-form-field>
+              </div>
+
+              <div class="form-row">
+                <mat-form-field appearance="fill" class="full-width">
+                  <mat-label>Razón Social *</mat-label>
+                  <input matInput formControlName="razonSocial" maxlength="200">
+                  <mat-icon matSuffix>business</mat-icon>
+                  @if (esCampoInvalido('razonSocial')) {
+                    <mat-error>{{ obtenerErrorCampo('razonSocial') }}</mat-error>
+                  }
+                </mat-form-field>
+              </div>
+
+              <div class="form-row">
+                <mat-form-field appearance="fill" class="full-width">
+                  <mat-label>Nombre Comercial</mat-label>
+                  <input matInput formControlName="nombreComercial" maxlength="200">
+                  <mat-icon matSuffix>store</mat-icon>
+                </mat-form-field>
+              </div>
+
+              <div class="form-row">
+                <mat-form-field appearance="fill" class="full-width">
+                  <mat-label>Fecha de Nacimiento</mat-label>
+                  <input matInput [matDatepicker]="picker" formControlName="fechaNacimiento">
+                  <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+                  <mat-datepicker #picker></mat-datepicker>
+                </mat-form-field>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        </mat-step>
+
+        <!-- Paso 2: Información de Contacto -->
+        <mat-step label="Contacto" [completed]="true">
+          <mat-card class="step-card">
+            <mat-card-header>
+              <mat-icon mat-card-avatar>contact_mail</mat-icon>
+              <mat-card-title>Información de Contacto</mat-card-title>
+              <mat-card-subtitle>Correos y teléfonos</mat-card-subtitle>
+            </mat-card-header>
+
+            <mat-card-content>
+              <div class="form-row">
+                <mat-form-field appearance="fill" class="half-width">
+                  <mat-label>Correo Personal</mat-label>
+                  <input matInput formControlName="correoPersonal" maxlength="100" type="email">
+                  <mat-icon matSuffix>email</mat-icon>
+                  @if (esCampoInvalido('correoPersonal')) {
+                    <mat-error>{{ obtenerErrorCampo('correoPersonal') }}</mat-error>
+                  }
+                </mat-form-field>
+
+                <mat-form-field appearance="fill" class="half-width">
+                  <mat-label>Correo Institucional</mat-label>
+                  <input matInput formControlName="correoInstitucional" maxlength="100" type="email">
+                  <mat-icon matSuffix>business_center</mat-icon>
+                  @if (esCampoInvalido('correoInstitucional')) {
+                    <mat-error>{{ obtenerErrorCampo('correoInstitucional') }}</mat-error>
+                  }
+                </mat-form-field>
+              </div>
+
+              <div class="form-row">
+                <mat-form-field appearance="fill" class="half-width">
+                  <mat-label>Teléfono</mat-label>
+                  <input matInput formControlName="telefono" maxlength="20">
+                  <mat-icon matSuffix>phone</mat-icon>
+                </mat-form-field>
+
+                <mat-form-field appearance="fill" class="half-width">
+                  <mat-label>Móvil</mat-label>
+                  <input matInput formControlName="movil" maxlength="20">
+                  <mat-icon matSuffix>smartphone</mat-icon>
+                </mat-form-field>
+              </div>
+
+              <div class="form-row">
+                <div class="checkbox-group">
+                  <mat-checkbox formControlName="tieneCorreoPersonal">Tiene correo personal verificado</mat-checkbox>
+                  <mat-checkbox formControlName="tieneCorreoTrabajo">Tiene correo de trabajo verificado</mat-checkbox>
+                  <mat-checkbox formControlName="tieneTelefono">Tiene teléfono verificado</mat-checkbox>
+                </div>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        </mat-step>
+
+        <!-- Paso 3: Información Adicional -->
+        <mat-step label="Información Adicional" [completed]="true">
+          <mat-card class="step-card">
+            <mat-card-header>
+              <mat-icon mat-card-avatar>info</mat-icon>
+              <mat-card-title>Información Adicional</mat-card-title>
+              <mat-card-subtitle>Datos complementarios</mat-card-subtitle>
+            </mat-card-header>
+
+            <mat-card-content>
+              <div class="form-row">
+                <mat-form-field appearance="fill" class="third-width">
+                  <mat-label>Número de Cargas Familiares</mat-label>
+                  <input matInput formControlName="numeroCargasFamiliares" type="number" min="0">
+                  <mat-icon matSuffix>family_restroom</mat-icon>
+                </mat-form-field>
+
+                <mat-form-field appearance="fill" class="third-width">
+                  <mat-label>Sector Público</mat-label>
+                  <mat-select formControlName="sectorPublico">
+                    @for (opcion of sectorPublicoOptions; track opcion.value) {
+                      <mat-option [value]="opcion.value">{{ opcion.label }}</mat-option>
+                    }
+                  </mat-select>
+                  <mat-icon matSuffix>domain</mat-icon>
+                </mat-form-field>
+
+                <mat-form-field appearance="fill" class="third-width">
+                  <mat-label>ID Ciudad</mat-label>
+                  <input matInput formControlName="idCiudad">
+                  <mat-icon matSuffix>location_city</mat-icon>
+                </mat-form-field>
+              </div>
+
+              <div class="form-row">
+                <mat-form-field appearance="fill" class="half-width">
+                  <mat-label>Porcentaje de Similitud</mat-label>
+                  <input matInput formControlName="porcentajeSimilitud" type="number" min="0" max="100">
+                  <mat-icon matSuffix>percent</mat-icon>
+                  <mat-hint>Valor entre 0 y 100</mat-hint>
+                </mat-form-field>
+
+                <mat-form-field appearance="fill" class="half-width">
+                  <mat-label>Términos de Búsqueda</mat-label>
+                  <input matInput formControlName="busqueda">
+                  <mat-icon matSuffix>search</mat-icon>
+                </mat-form-field>
+              </div>
+
+              <div class="form-row">
+                <mat-form-field appearance="fill" class="full-width">
+                  <mat-label>URL Foto/Logo</mat-label>
+                  <input matInput formControlName="urlFotoLogo">
+                  <mat-icon matSuffix>image</mat-icon>
+                </mat-form-field>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        </mat-step>
+
+        <!-- Paso 4: Estado y Configuración -->
+        <mat-step label="Estado" [completed]="true">
+          <mat-card class="step-card">
+            <mat-card-header>
+              <mat-icon mat-card-avatar>settings</mat-icon>
+              <mat-card-title>Estado y Configuración</mat-card-title>
+              <mat-card-subtitle>Estado del registro y opciones</mat-card-subtitle>
+            </mat-card-header>
+
+            <mat-card-content>
+              <div class="form-row">
+                <mat-form-field appearance="fill" class="half-width">
+                  <mat-label>Estado *</mat-label>
+                  <mat-select formControlName="idEstado">
+                    @for (estado of estadosOptions; track estado.value) {
+                      <mat-option [value]="estado.value">{{ estado.label }}</mat-option>
+                    }
+                  </mat-select>
+                  <mat-icon matSuffix>flag</mat-icon>
+                  @if (esCampoInvalido('idEstado')) {
+                    <mat-error>{{ obtenerErrorCampo('idEstado') }}</mat-error>
+                  }
+                </mat-form-field>
+
+                <div class="checkbox-group half-width">
+                  <mat-checkbox formControlName="migrado">Registro migrado</mat-checkbox>
+                </div>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        </mat-step>
+
+        <!-- Paso 5: Metadata (Solo lectura) -->
+        <mat-step label="Metadata" [completed]="true">
+          <mat-card class="step-card">
+            <mat-card-header>
+              <mat-icon mat-card-avatar>history</mat-icon>
+              <mat-card-title>Información del Sistema</mat-card-title>
+              <mat-card-subtitle>Datos de auditoría (solo lectura)</mat-card-subtitle>
+            </mat-card-header>
+
+            <mat-card-content>
+              <div class="form-row">
+                <mat-form-field appearance="fill" class="half-width">
+                  <mat-label>Usuario de Ingreso</mat-label>
+                  <input matInput formControlName="usuarioIngreso" readonly>
+                  <mat-icon matSuffix>person_add</mat-icon>
+                </mat-form-field>
+
+                <mat-form-field appearance="fill" class="half-width">
+                  <mat-label>Fecha de Ingreso</mat-label>
+                  <input matInput formControlName="fechaIngreso" readonly>
+                  <mat-icon matSuffix>schedule</mat-icon>
+                </mat-form-field>
+              </div>
+
+              <div class="form-row">
+                <mat-form-field appearance="fill" class="half-width">
+                  <mat-label>Usuario de Modificación</mat-label>
+                  <input matInput formControlName="usuarioModificacion" readonly>
+                  <mat-icon matSuffix>edit</mat-icon>
+                </mat-form-field>
+
+                <mat-form-field appearance="fill" class="half-width">
+                  <mat-label>Fecha de Modificación</mat-label>
+                  <input matInput formControlName="fechaModificacion" readonly>
+                  <mat-icon matSuffix>update</mat-icon>
+                </mat-form-field>
+              </div>
+
+              <div class="form-row">
+                <mat-form-field appearance="fill" class="half-width">
+                  <mat-label>IP de Ingreso</mat-label>
+                  <input matInput formControlName="ipIngreso" readonly>
+                  <mat-icon matSuffix>computer</mat-icon>
+                </mat-form-field>
+
+                <mat-form-field appearance="fill" class="half-width">
+                  <mat-label>IP de Modificación</mat-label>
+                  <input matInput formControlName="ipModificacion" readonly>
+                  <mat-icon matSuffix>computer</mat-icon>
+                </mat-form-field>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        </mat-step>
+
+      </mat-stepper>
+
+      <!-- Botones de acción -->
+      @if (!ocultarBotones) {
+        <div class="form-actions">
+          @if (!soloLectura) {
+            <button mat-raised-button type="button" (click)="limpiarFormulario()">
+              <mat-icon>clear</mat-icon>
+              Limpiar
+            </button>
+
+            <button mat-raised-button color="primary" type="submit" [disabled]="!isFormValid() || saving()">
+              @if (saving()) {
+                <mat-spinner diameter="20"></mat-spinner>
+              } @else {
+                <mat-icon>save</mat-icon>
+              }
+              {{ modoEdicion() ? 'Actualizar' : 'Guardar' }} Partícipe
+            </button>
+          } @else {
+            <div class="info-message">
+              <mat-icon>info</mat-icon>
+              <span>Visualizando en modo solo lectura</span>
+            </div>
+          }
+        </div>
+      }    </form>
+  }
+</div>
