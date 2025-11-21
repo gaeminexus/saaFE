@@ -1,12 +1,12 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { Prestamo } from './prestamo';
 
 // Interfaz DetallePrestamo
 export interface DetallePrestamo {
   codigo: number;               // DTPRCDGO - Código del detalle
-  codigoPrestamo?: number;      // PRSTCDGO - ID Préstamo (legacy)
-  prestamoId?: number;          // ID del préstamo (campo real del backend)
+  prestamo?: Prestamo;          // ID del préstamo (campo real del backend)
   numeroCuota: number;          // DTPRNMCT - Número de cuota
   fechaVencimiento: Date;       // DTPRFCVN - Fecha vencimiento
   capital: number;              // DTPRCPTL - Capital

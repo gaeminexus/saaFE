@@ -1,0 +1,23 @@
+div[formGroup] {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  // Cuando se muestra la hora, ajustar el layout
+  &:has(.hora-field) {
+    .demo-full-width {
+      width: 100%;
+
+      &.hora-field {
+        max-width: 200px;
+        margin-top: 0;
+      }
+    }
+  }
+}
+
+.hora-field {
+  mat-icon {
+    color: rgba(0, 0, 0, 0.54);
+  }
+}

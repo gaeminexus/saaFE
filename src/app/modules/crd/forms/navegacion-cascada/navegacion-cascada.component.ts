@@ -982,9 +982,9 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
         if (cuotas.length > 0) {
           console.log('📝 Muestra de la primera cuota:', cuotas[0]);
           console.log('📝 Total cuotas cargadas:', cuotas.length);
-        }        // Verificar si alguna cuota ya tiene el codigoPrestamo correcto
-        const cuotasConCodigo = cuotas.filter(c => c.codigoPrestamo === codigoPrestamo);
-        console.log('🎯 Cuotas que YA tienen codigoPrestamo=' + codigoPrestamo + ':', cuotasConCodigo.length);
+        }        // Verificar si alguna cuota ya tiene el prestamo.codigo correcto
+        const cuotasConCodigo = cuotas.filter(c => c.prestamo?.codigo === codigoPrestamo);
+        console.log('🎯 Cuotas que YA tienen prestamo.codigo=' + codigoPrestamo + ':', cuotasConCodigo.length);
 
         // VERIFICAR EL CAMPO REAL: prestamoId (detectado en los logs)
         console.log('🔍 DEBUGGING: Valores reales de prestamoId en las primeras 5 cuotas:');
@@ -1023,7 +1023,7 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
           // Intentar diferentes campos que podrían representar el código del préstamo
           const cuotasFiltradas = cuotas.filter(c => {
             const coincide = (
-              c.codigoPrestamo === codigoPrestamo ||
+              c.prestamo?.codigo === codigoPrestamo ||
               (c as any).prestamoId === codigoPrestamo ||
               (c as any).prestamoId?.codigo === codigoPrestamo ||  // NUEVO: objeto prestamo con codigo
               (c as any).prestamoId?.id === codigoPrestamo ||      // NUEVO: objeto prestamo con id
@@ -1038,7 +1038,7 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
                 codigo: c.codigo,
                 prestamoIdObjeto: (c as any).prestamoId,
                 prestamoIdCodigo: (c as any).prestamoId?.codigo,
-                codigoPrestamo: c.codigoPrestamo,
+                prestamoCodigo: c.prestamo?.codigo,
                 numeroCuota: c.numeroCuota,
                 prestamo: (c as any).prestamo
               });
@@ -1053,7 +1053,7 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
             console.log('❌ Revisando estructura de datos...');
             if (cuotas.length > 0) {
               console.log('❌ Ejemplo de estructura recibida:', {
-                codigoPrestamo: cuotas[0].codigoPrestamo,
+                prestamoCodigo: cuotas[0].prestamo?.codigo,
                 campos: Object.keys(cuotas[0]),
                 prestamo: (cuotas[0] as any).prestamo
               });
@@ -1269,7 +1269,7 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
     console.log('📋 DETALLE PRÉSTAMO SELECCIONADO:', {
       codigo: detallePrestamo?.codigo,
       numeroCuota: detallePrestamo?.numeroCuota,
-      codigoPrestamo: detallePrestamo?.codigoPrestamo,
+      prestamoCodigo: detallePrestamo?.prestamo?.codigo,
       fechaVencimiento: detallePrestamo?.fechaVencimiento
     });
 
@@ -1283,28 +1283,30 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
       return;
     }
 
-    // Filtrado con lógica AND: codigoPrestamo AND codigoDetalle
-    const codigoPrestamo = detallePrestamo.codigoPrestamo || detallePrestamo.prestamoId;
+    // Filtrado con lógica AND: prestamo.codigo AND codigoDetalle
+    const codigoPrestamo = detallePrestamo.prestamo?.codigo;
     const codigoDetalle = detallePrestamo.codigo; // código del detalle préstamo
 
-    // 1. Filtrar por codigoPrestamo
+    // 1. Filtrar por prestamo.codigo
     if (codigoPrestamo) {
       const criterioPrestamo = new DatosBusqueda();
-      criterioPrestamo.asigna3(
+      criterioPrestamo.asignaValorConCampoPadre(
         TipoDatosBusqueda.LONG,
-        'codigoPrestamo',
+        'prestamo',
+        'codigo',
         codigoPrestamo?.toString() || '',
         TipoComandosBusqueda.IGUAL
       );
       this.criterioConsultaArray.push(criterioPrestamo);
     }
 
-    // 2. AND - Filtrar por codigoDetalle
+    // 2. AND - Filtrar por detallePrestamo.codigo
     if (codigoDetalle) {
       const criterioCodigoDetalle = new DatosBusqueda();
-      criterioCodigoDetalle.asigna3(
+      criterioCodigoDetalle.asignaValorConCampoPadre(
         TipoDatosBusqueda.LONG,
-        'codigoDetalle',
+        'detallePrestamo',
+        'codigo',
         codigoDetalle.toString(),
         TipoComandosBusqueda.IGUAL
       );
@@ -1314,8 +1316,8 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
 
     console.log('🔍 CRITERIOS AND ENVIADOS:', {
       criterios: [
-        codigoPrestamo ? 'codigoPrestamo = ' + codigoPrestamo : 'Sin codigoPrestamo',
-        codigoDetalle ? 'AND codigoDetalle = ' + codigoDetalle : 'Sin codigoDetalle'
+        codigoPrestamo ? 'prestamo.codigo = ' + codigoPrestamo : 'Sin prestamo.codigo',
+        codigoDetalle ? 'AND detallePrestamo.codigo = ' + codigoDetalle : 'Sin detallePrestamo.codigo'
       ],
       totalCriterios: this.criterioConsultaArray.length,
       criterioArray: this.criterioConsultaArray
@@ -1357,7 +1359,7 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
       }
 
       console.log('🎯 INICIANDO FILTRADO AND:', {
-        codigoPrestamoBuscado: detallePrestamo?.codigoPrestamo || detallePrestamo?.prestamoId,
+        codigoPrestamoBuscado: detallePrestamo?.prestamo?.codigo,
         codigoDetalleBuscado: detallePrestamo?.codigo,
         totalPagosParaFiltrar: pagos.length
       });
@@ -1365,15 +1367,15 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
       const pagosFiltrados = pagos.filter(p => {
         const pago = p as any; // Usar any para evitar problemas de tipos temporalmente
 
-        // Filtrado con lógica AND: codigoPrestamo AND codigoDetalle
-        const codigoPrestamoDetalle = detallePrestamo?.codigoPrestamo || detallePrestamo?.prestamoId;
+        // Filtrado con lógica AND: prestamo.codigo AND detallePrestamo.codigo
+        const codigoPrestamoDetalle = detallePrestamo?.prestamo?.codigo;
         const codigoDetalleDetalle = detallePrestamo?.codigo;
 
-        // 1. Debe coincidir codigoPrestamo
-        const matchPrestamo = pago.codigoPrestamo === codigoPrestamoDetalle;
+        // 1. Debe coincidir prestamo.codigo
+        const matchPrestamo = pago.prestamo?.codigo === codigoPrestamoDetalle;
 
-        // 2. AND debe coincidir codigoDetalle
-        const matchCodigoDetalle = pago.codigoDetalle === codigoDetalleDetalle;
+        // 2. AND debe coincidir detallePrestamo.codigo
+        const matchCodigoDetalle = pago.detallePrestamo?.codigo === codigoDetalleDetalle;
 
         // Ambos criterios deben coincidir (AND lógico)
         const match = matchPrestamo && matchCodigoDetalle;
@@ -1382,15 +1384,17 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
         const shouldLog = pagos.indexOf(p) < 10 || match;
         if (shouldLog) {
           console.log(`🔍 PAGO ${pago.codigo}:`, {
-            codigoDetalle: pago.codigoDetalle,
-            codigoPrestamo: pago.codigoPrestamo,
+            detallePrestamoObjeto: pago.detallePrestamo,
+            detallePrestamoCodig: pago.detallePrestamo?.codigo,
+            prestamoObjeto: pago.prestamo,
+            prestamoCodigo: pago.prestamo?.codigo,
             buscado: {
-              codigoPrestamo: codigoPrestamoDetalle,
-              codigoDetalle: codigoDetalleDetalle
+              prestamoCodigo: codigoPrestamoDetalle,
+              detalleCodig: codigoDetalleDetalle
             },
             matches: {
               prestamo: matchPrestamo,
-              codigoDetalle: matchCodigoDetalle
+              detallePrestamo: matchCodigoDetalle
             },
             coincide: match
           });
@@ -1399,10 +1403,10 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
         if (match) {
           console.log('✅ PAGO COINCIDE (AND):', {
             codigo: pago.codigo,
-            codigoDetalle: pago.codigoDetalle,
-            codigoPrestamo: pago.codigoPrestamo,
+            detallePrestamoCodig: pago.detallePrestamo?.codigo,
+            prestamoCodigo: pago.prestamo?.codigo,
             fecha: pago.fecha,
-            criterios: 'codigoPrestamo AND codigoDetalle'
+            criterios: 'prestamo.codigo AND detallePrestamo.codigo'
           });
         }
         return match;
@@ -1418,7 +1422,7 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
 
         this.allPagos = pagosFiltrados;
       } else {
-        this.errorMsg.set(`No se encontraron pagos para el préstamo ${detallePrestamo?.codigoPrestamo} detalle ${detallePrestamo?.codigo}`);
+        this.errorMsg.set(`No se encontraron pagos para el préstamo ${detallePrestamo?.prestamo?.codigo} detalle ${detallePrestamo?.codigo}`);
         this.allPagos = [];
       }
 

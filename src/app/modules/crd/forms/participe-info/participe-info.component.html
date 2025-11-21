@@ -41,6 +41,8 @@
         Limpiar
       </button>
 
+      <button mat-button (click)="debugFormErrors()">Debug Form</button>
+
       <button mat-raised-button color="primary" (click)="guardar()"
               [disabled]="!isFormValid() || loading() || saving()">
         @if (saving()) {
@@ -50,6 +52,7 @@
         }
         {{ modoEdicion() ? 'Actualizar' : 'Guardar' }}
       </button>
+
       </div>
     }
   </div>
@@ -101,7 +104,7 @@
               <div class="form-row">
                 <mat-form-field appearance="fill" class="half-width">
                   <mat-label>Filial</mat-label>
-                  <mat-select formControlName="filial">
+                  <mat-select formControlName="filial" [compareWith]="compararPorCodigo">
                     @if (loadingFiliales()) {
                       <mat-option disabled>
                         <mat-spinner diameter="20"></mat-spinner>
@@ -110,7 +113,7 @@
                     } @else {
                       <mat-option [value]="null">-- Seleccionar --</mat-option>
                       @for (filial of filialesOptions; track filial.codigo) {
-                        <mat-option [value]="filial.codigo">{{ filial.nombre }}</mat-option>
+                        <mat-option [value]="filial">{{ filial.nombre }}</mat-option>
                       }
                     }
                   </mat-select>
@@ -119,7 +122,7 @@
 
                 <mat-form-field appearance="fill" class="half-width">
                   <mat-label>Tipo Identificación</mat-label>
-                  <mat-select formControlName="TipoIdentificacion">
+                  <mat-select formControlName="tipoIdentificacion" [compareWith]="compararPorCodigo">
                     @if (loadingTiposId()) {
                       <mat-option disabled>
                         <mat-spinner diameter="20"></mat-spinner>
@@ -128,7 +131,7 @@
                     } @else {
                       <mat-option [value]="null">-- Seleccionar --</mat-option>
                       @for (tipo of tiposIdentificacionOptions; track tipo.codigo) {
-                        <mat-option [value]="tipo.codigo">{{ tipo.nombre }}</mat-option>
+                        <mat-option [value]="tipo">{{ tipo.nombre }}</mat-option>
                       }
                     }
                   </mat-select>
@@ -391,8 +394,12 @@
               Limpiar
             </button>
 
-            <button mat-raised-button color="primary" type="submit" [disabled]="entidadForm.invalid">
-              <mat-icon>save</mat-icon>
+            <button mat-raised-button color="primary" type="submit" [disabled]="!isFormValid() || saving()">
+              @if (saving()) {
+                <mat-spinner diameter="20"></mat-spinner>
+              } @else {
+                <mat-icon>save</mat-icon>
+              }
               {{ modoEdicion() ? 'Actualizar' : 'Guardar' }} Partícipe
             </button>
           } @else {

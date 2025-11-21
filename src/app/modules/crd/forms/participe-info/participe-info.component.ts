@@ -10,9 +10,12 @@ import { MaterialFormModule } from '../../../../shared/modules/material-form.mod
 import { Entidad } from '../../model/entidad';
 import { Filial } from '../../model/filial';
 import { TipoIdentificacion } from '../../model/tipo-identificacion';
+import { TipoHidrocarburifica } from '../../model/tipo-hidrocarburifica';
+import { TipoVivienda } from '../../model/tipo-vivienda';
 import { EntidadService } from '../../service/entidad.service';
 import { FilialService } from '../../service/filial.service';
 import { TipoIdentificacionService } from '../../service/tipo-identificacion.service';
+import { FuncionesDatosService } from '../../../../shared/services/funciones-datos.service';
 
 /**
  * Componente reutilizable para gestión de entidades.
@@ -74,6 +77,7 @@ export class ParticipeInfoComponent implements OnInit, OnChanges {
   private location = inject(Location);
   private tipoIdentificacionService = inject(TipoIdentificacionService);
   private snackBar = inject(MatSnackBar);
+  private funcionesDatosService = inject(FuncionesDatosService);
 
   // Señales para estado reactivo
   loading = signal<boolean>(false);
@@ -81,6 +85,7 @@ export class ParticipeInfoComponent implements OnInit, OnChanges {
   errorMsg = signal<string>('');
   modoEdicion = signal<boolean>(false);
   entidadActual = signal<Entidad | null>(null);
+  formValid = signal<boolean>(false); // Nueva señal para validez del formulario
 
   // Formularios reactivos
   entidadForm!: FormGroup;
@@ -106,7 +111,7 @@ export class ParticipeInfoComponent implements OnInit, OnChanges {
 
   // Computed signals
   hasError = computed(() => this.errorMsg() !== '');
-  isFormValid = computed(() => this.entidadForm?.valid || false);
+  isFormValid = computed(() => this.formValid()); // Ahora usa la señal reactiva
   formTitle = computed(() => this.modoEdicion() ? 'Editar Partícipe' : 'Nuevo Partícipe');
 
   ngOnInit(): void {
@@ -187,11 +192,16 @@ export class ParticipeInfoComponent implements OnInit, OnChanges {
 
   inicializarFormulario(): void {
     this.entidadForm = this.fb.group({
-      // Datos básicos
-      codigo: [{ value: '', disabled: true }],
-      filial: [null],
+      // Básicos
+      codigo: [{ value: null, disabled: true }],
+      filial: [null as Filial | null],
 
-      TipoIdentificacion: [null],
+      // Tipos (objetos relacionados)
+      tipoHidrocarburifica: [null as TipoHidrocarburifica | null],
+      tipoIdentificacion: [null as TipoIdentificacion | null],
+      tipoVivienda: [null as TipoVivienda | null],
+
+      // Identificación
       numeroIdentificacion: ['', [Validators.required, Validators.maxLength(20)]],
       razonSocial: ['', [Validators.required, Validators.maxLength(200)]],
       nombreComercial: ['', [Validators.maxLength(200)]],
@@ -228,7 +238,27 @@ export class ParticipeInfoComponent implements OnInit, OnChanges {
       ipIngreso: [{ value: '', disabled: true }],
       ipModificacion: [{ value: '', disabled: true }]
     });
+
+    // Suscribirse a cambios del formulario para actualizar la señal
+    this.entidadForm.statusChanges.subscribe(() => {
+      this.formValid.set(this.entidadForm.valid);
+    });
+
+    // Inicializar el estado del formulario
+    this.formValid.set(this.entidadForm.valid);
   }
+
+  debugFormErrors(): void {
+  console.log('🔍 Estado del formulario:', this.entidadForm.valid);
+  console.log('📋 Errores por campo:');
+
+  Object.keys(this.entidadForm.controls).forEach(key => {
+    const control = this.entidadForm.get(key);
+    if (control?.invalid) {
+      console.log(`❌ ${key}:`, control.errors);
+    }
+  });
+}
 
   /**
    * Regresa a la pantalla anterior con el código de entidad como query param
@@ -257,7 +287,7 @@ export class ParticipeInfoComponent implements OnInit, OnChanges {
       codigo: '',
       filial: null,
 
-      TipoIdentificacion: null,
+      tipoIdentificacion: null,
       numeroCargasFamiliares: 0,
       sectorPublico: 0,
       tieneCorreoPersonal: 0,
@@ -297,13 +327,14 @@ export class ParticipeInfoComponent implements OnInit, OnChanges {
   llenarFormulario(entidad: Entidad): void {
     this.entidadForm.patchValue({
       codigo: entidad.codigo,
-      filial: entidad.filial?.codigo || null,
-
-      TipoIdentificacion: entidad.TipoIdentificacion?.codigo || null,
+      filial: entidad.filial || null,
+      tipoHidrocarburifica: entidad.tipoHidrocarburifica || null,
+      tipoIdentificacion: entidad.tipoIdentificacion || null,
+      tipoVivienda: entidad.tipoVivienda || null,
       numeroIdentificacion: entidad.numeroIdentificacion,
       razonSocial: entidad.razonSocial,
       nombreComercial: entidad.nombreComercial,
-      fechaNacimiento: entidad.fechaNacimiento,
+      fechaNacimiento: entidad.fechaNacimiento ? new Date(entidad.fechaNacimiento) : null,
       correoPersonal: entidad.correoPersonal,
       correoInstitucional: entidad.correoInstitucional,
       telefono: entidad.telefono,
@@ -333,14 +364,18 @@ export class ParticipeInfoComponent implements OnInit, OnChanges {
       this.saving.set(true);
       this.errorMsg.set('');
 
+      console.log('💾 Guardando entidad...');
+
       const formValue = this.entidadForm.getRawValue();
       const entidadData = this.prepararDatos(formValue);
+
+      console.log(entidadData);
 
       const operacion = this.modoEdicion() ?
         this.entidadService.update(entidadData) :
         this.entidadService.add(entidadData);
 
-      operacion.subscribe({
+        operacion.subscribe({
         next: (resultado) => {
           this.saving.set(false);
           if (resultado) {
@@ -428,8 +463,15 @@ export class ParticipeInfoComponent implements OnInit, OnChanges {
   }
 
   prepararDatos(formValue: any): Partial<Entidad> {
-    return {
+    const datos: Partial<Entidad> = {
       ...formValue,
+      // Los objetos ya vienen completos del formulario, no necesitamos reconstruirlos
+      filial: formValue.filial || undefined,
+      tipoHidrocarburifica: formValue.tipoHidrocarburifica || undefined,
+      TipoIdentificacion: formValue.TipoIdentificacion || undefined,
+      TipoVivienda: formValue.TipoVivienda || undefined,
+      // Convertir fechas al formato yyyy-MM-dd HH:mm:ss usando el servicio centralizado
+      fechaNacimiento: this.funcionesDatosService.formatearFechaParaBackend(formValue.fechaNacimiento) as any,
       // Convertir checkboxes a números
       tieneCorreoPersonal: formValue.tieneCorreoPersonal ? 1 : 0,
       tieneCorreoTrabajo: formValue.tieneCorreoTrabajo ? 1 : 0,
@@ -437,6 +479,16 @@ export class ParticipeInfoComponent implements OnInit, OnChanges {
       sectorPublico: formValue.sectorPublico ? 1 : 0,
       migrado: formValue.migrado ? 1 : 0
     };
+
+    // No enviar campos de metadata disabled al backend (los maneja automáticamente)
+    delete (datos as any).usuarioIngreso;
+    delete (datos as any).fechaIngreso;
+    delete (datos as any).usuarioModificacion;
+    delete (datos as any).fechaModificacion;
+    delete (datos as any).ipIngreso;
+    delete (datos as any).ipModificacion;
+
+    return datos;
   }
 
   marcarCamposInvalidos(): void {
@@ -484,5 +536,10 @@ export class ParticipeInfoComponent implements OnInit, OnChanges {
   esCampoInvalido(nombreCampo: string): boolean {
     const control = this.entidadForm.get(nombreCampo);
     return (control?.invalid && control?.touched) || false;
+  }
+
+  // Función de comparación para mat-select con objetos
+  compararPorCodigo(obj1: any, obj2: any): boolean {
+    return obj1 && obj2 && obj1.codigo === obj2.codigo;
   }
 }

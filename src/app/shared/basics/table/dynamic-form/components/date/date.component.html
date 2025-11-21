@@ -1,5 +1,6 @@
 @if (field['name']) {
   <div [formGroup]="group">
+    <!-- Campo de fecha -->
     <mat-form-field class="demo-full-width margin-top" appearance="outline">
       <mat-label>{{field['label'] || ''}}</mat-label>
       <input matInput
@@ -17,5 +18,18 @@
         }
       }
     </mat-form-field>
+
+    <!-- Campo de hora (solo si mostrarHora es true) -->
+    @if (field['mostrarHora']) {
+      <mat-form-field class="demo-full-width margin-top hora-field" appearance="outline">
+        <mat-label>Hora</mat-label>
+        <input matInput
+               type="time"
+               [value]="getHoraActual()"
+               (change)="actualizarHora($event)"
+               placeholder="HH:mm:ss">
+        <mat-icon matSuffix>schedule</mat-icon>
+      </mat-form-field>
+    }
   </div>
 }

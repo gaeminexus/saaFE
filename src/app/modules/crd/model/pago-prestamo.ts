@@ -1,7 +1,10 @@
+import { DetallePrestamo } from "./detalle-prestamo";
+import { Prestamo } from "./prestamo";
+
 export interface PagoPrestamo {
   codigo: number;           // Código del pago
-  codigoPrestamo: number;   // FK - Código Préstamo
-  codigoDetalle: number;    // FK - Código Detalle Préstamo (Cuota)
+  prestamo?: Prestamo;   // FK - Código Préstamo
+  detallePrestamo?: DetallePrestamo;    // FK - Código Detalle Préstamo (Cuota)
   fecha: Date;              // Fecha del pago
   valor: number;            // Valor
   numeroCuota: number;      // Número de cuota
