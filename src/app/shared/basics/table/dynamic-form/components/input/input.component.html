@@ -1,7 +1,7 @@
 <div [formGroup]="group">
   <mat-form-field class="demo-full-width" appearance="outline">
     <mat-label>{{field.label || ''}}</mat-label>
-    <input class="uppercase-input"
+    <input
            matInput
            [formControlName]="field.name"
            [placeholder]="field.label || ''"

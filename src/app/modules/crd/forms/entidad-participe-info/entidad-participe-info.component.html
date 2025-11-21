@@ -1,0 +1,508 @@
+<div class="entidad-participe-container">
+  <!-- Header -->
+  <div class="header-section">
+    <div>
+      <h2>
+        <mat-icon>{{ modoEdicion() ? 'edit' : 'person_add' }}</mat-icon>
+        {{ titulo() }}
+      </h2>
+      <p class="subtitle">
+        Complete la información tanto de la entidad como del partícipe
+      </p>
+    </div>
+
+    <div class="actions">
+      <button mat-raised-button (click)="regresar()" [disabled]="loading() || saving()">
+        <mat-icon>arrow_back</mat-icon>
+        Regresar
+      </button>
+
+      <button mat-raised-button color="primary" (click)="limpiarFormulario()" [disabled]="loading() || saving()">
+        <mat-icon>clear_all</mat-icon>
+        Limpiar
+      </button>
+
+      <button mat-raised-button color="accent" (click)="guardar()"
+              [disabled]="!isFormValid() || loading() || saving()">
+        @if (saving()) {
+          <mat-spinner diameter="20"></mat-spinner>
+        } @else {
+          <mat-icon>save</mat-icon>
+        }
+        {{ modoEdicion() ? 'Actualizar' : 'Guardar' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  @if (loading()) {
+    <div class="loading-container">
+      <mat-spinner></mat-spinner>
+      <p>Cargando datos...</p>
+    </div>
+  }
+
+  <!-- Error -->
+  @if (hasError()) {
+    <mat-card class="error-card">
+      <mat-icon color="warn">error</mat-icon>
+      <div>
+        <h3>Error</h3>
+        <p>{{ errorMsg() }}</p>
+      </div>
+    </mat-card>
+  }
+
+  <!-- Formularios con Tabs -->
+  @if (!loading()) {
+    <mat-tab-group class="modern-tabs" animationDuration="300ms">
+
+      <!-- TAB 1: INFORMACIÓN DE LA ENTIDAD -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <div class="tab-label">
+            <mat-icon class="tab-icon">person</mat-icon>
+            <span class="tab-text">Datos de la Entidad</span>
+          </div>
+        </ng-template>
+
+        <div class="tab-content">
+          <form [formGroup]="entidadForm">
+
+            <!-- Card: Identificación -->
+            <mat-card class="form-section">
+              <mat-card-header>
+                <mat-icon mat-card-avatar>badge</mat-icon>
+                <mat-card-title>Identificación</mat-card-title>
+              </mat-card-header>
+              <mat-card-content>
+                <div class="form-row">
+                  <mat-form-field appearance="outline" class="full-width">
+                    <mat-label>Código</mat-label>
+                    <input matInput formControlName="codigo" readonly>
+                    <mat-icon matSuffix>tag</mat-icon>
+                    <mat-hint>Generado automáticamente</mat-hint>
+                  </mat-form-field>
+                </div>
+
+                <div class="form-row">
+                  <mat-form-field appearance="outline" class="half-width">
+                    <mat-label>Filial *</mat-label>
+                    <mat-select formControlName="filial" [compareWith]="compararPorCodigo">
+                      @if (loadingFiliales()) {
+                        <mat-option disabled><mat-spinner diameter="20"></mat-spinner> Cargando...</mat-option>
+                      } @else {
+                        <mat-option [value]="null">-- Seleccionar --</mat-option>
+                        @for (filial of filialesOptions(); track filial.codigo) {
+                          <mat-option [value]="filial">{{ filial.nombre }}</mat-option>
+                        }
+                      }
+                    </mat-select>
+                    <mat-icon matSuffix>business</mat-icon>
+                    @if (esCampoInvalido('filial')) {
+                      <mat-error>{{ obtenerErrorCampo('filial') }}</mat-error>
+                    }
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline" class="half-width">
+                    <mat-label>Tipo Identificación *</mat-label>
+                    <mat-select formControlName="tipoIdentificacion" [compareWith]="compararPorCodigo">
+                      @if (loadingTiposId()) {
+                        <mat-option disabled><mat-spinner diameter="20"></mat-spinner> Cargando...</mat-option>
+                      } @else {
+                        <mat-option [value]="null">-- Seleccionar --</mat-option>
+                        @for (tipo of tiposIdentificacionOptions(); track tipo.codigo) {
+                          <mat-option [value]="tipo">{{ tipo.nombre }}</mat-option>
+                        }
+                      }
+                    </mat-select>
+                    <mat-icon matSuffix>card_membership</mat-icon>
+                    @if (esCampoInvalido('tipoIdentificacion')) {
+                      <mat-error>{{ obtenerErrorCampo('tipoIdentificacion') }}</mat-error>
+                    }
+                  </mat-form-field>
+                </div>
+
+                <div class="form-row">
+                  <mat-form-field appearance="outline" class="full-width">
+                    <mat-label>Número de Identificación *</mat-label>
+                    <input matInput formControlName="numeroIdentificacion" maxlength="20">
+                    <mat-icon matSuffix>fingerprint</mat-icon>
+                    @if (esCampoInvalido('numeroIdentificacion')) {
+                      <mat-error>{{ obtenerErrorCampo('numeroIdentificacion') }}</mat-error>
+                    }
+                  </mat-form-field>
+                </div>
+              </mat-card-content>
+            </mat-card>
+
+            <!-- Card: Nombres -->
+            <mat-card class="form-section">
+              <mat-card-header>
+                <mat-icon mat-card-avatar>account_circle</mat-icon>
+                <mat-card-title>Nombres y Razón Social</mat-card-title>
+              </mat-card-header>
+              <mat-card-content>
+                <div class="form-row">
+                  <mat-form-field appearance="outline" class="full-width">
+                    <mat-label>Razón Social *</mat-label>
+                    <input matInput formControlName="razonSocial" maxlength="200">
+                    <mat-icon matSuffix>business</mat-icon>
+                    @if (esCampoInvalido('razonSocial')) {
+                      <mat-error>{{ obtenerErrorCampo('razonSocial') }}</mat-error>
+                    }
+                  </mat-form-field>
+                </div>
+
+                <div class="form-row">
+                  <mat-form-field appearance="outline" class="full-width">
+                    <mat-label>Nombre Comercial</mat-label>
+                    <input matInput formControlName="nombreComercial" maxlength="200">
+                    <mat-icon matSuffix>store</mat-icon>
+                  </mat-form-field>
+                </div>
+
+                <div class="form-row">
+                  <mat-form-field appearance="outline" class="full-width">
+                    <mat-label>Fecha de Nacimiento</mat-label>
+                    <input matInput [matDatepicker]="pickerNacimiento" formControlName="fechaNacimiento">
+                    <mat-datepicker-toggle matIconSuffix [for]="pickerNacimiento"></mat-datepicker-toggle>
+                    <mat-datepicker #pickerNacimiento></mat-datepicker>
+                  </mat-form-field>
+                </div>
+              </mat-card-content>
+            </mat-card>
+
+            <!-- Card: Contacto -->
+            <mat-card class="form-section">
+              <mat-card-header>
+                <mat-icon mat-card-avatar>contact_mail</mat-icon>
+                <mat-card-title>Información de Contacto</mat-card-title>
+              </mat-card-header>
+              <mat-card-content>
+                <div class="form-row">
+                  <mat-form-field appearance="outline" class="half-width">
+                    <mat-label>Correo Personal</mat-label>
+                    <input matInput formControlName="correoPersonal" maxlength="100" type="email">
+                    <mat-icon matSuffix>email</mat-icon>
+                    @if (esCampoInvalido('correoPersonal')) {
+                      <mat-error>{{ obtenerErrorCampo('correoPersonal') }}</mat-error>
+                    }
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline" class="half-width">
+                    <mat-label>Correo Institucional</mat-label>
+                    <input matInput formControlName="correoInstitucional" maxlength="100" type="email">
+                    <mat-icon matSuffix>business_center</mat-icon>
+                    @if (esCampoInvalido('correoInstitucional')) {
+                      <mat-error>{{ obtenerErrorCampo('correoInstitucional') }}</mat-error>
+                    }
+                  </mat-form-field>
+                </div>
+
+                <div class="form-row">
+                  <mat-form-field appearance="outline" class="half-width">
+                    <mat-label>Teléfono</mat-label>
+                    <input matInput formControlName="telefono" maxlength="20">
+                    <mat-icon matSuffix>phone</mat-icon>
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline" class="half-width">
+                    <mat-label>Móvil</mat-label>
+                    <input matInput formControlName="movil" maxlength="20">
+                    <mat-icon matSuffix>smartphone</mat-icon>
+                  </mat-form-field>
+                </div>
+
+                <div class="form-row">
+                  <div class="checkbox-group">
+                    <mat-checkbox formControlName="tieneCorreoPersonal">Correo personal verificado</mat-checkbox>
+                    <mat-checkbox formControlName="tieneCorreoTrabajo">Correo institucional verificado</mat-checkbox>
+                    <mat-checkbox formControlName="tieneTelefono">Teléfono verificado</mat-checkbox>
+                  </div>
+                </div>
+              </mat-card-content>
+            </mat-card>
+
+            <!-- Card: Información Adicional -->
+            <mat-card class="form-section">
+              <mat-card-header>
+                <mat-icon mat-card-avatar>info</mat-icon>
+                <mat-card-title>Información Adicional</mat-card-title>
+              </mat-card-header>
+              <mat-card-content>
+                <div class="form-row">
+                  <mat-form-field appearance="outline" class="third-width">
+                    <mat-label>Cargas Familiares</mat-label>
+                    <input matInput formControlName="numeroCargasFamiliares" type="number" min="0">
+                    <mat-icon matSuffix>family_restroom</mat-icon>
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline" class="third-width">
+                    <mat-label>Sector Público</mat-label>
+                    <mat-select formControlName="sectorPublico">
+                      @for (opcion of sectorPublicoOptions; track opcion.value) {
+                        <mat-option [value]="opcion.value">{{ opcion.label }}</mat-option>
+                      }
+                    </mat-select>
+                    <mat-icon matSuffix>domain</mat-icon>
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline" class="third-width">
+                    <mat-label>ID Ciudad</mat-label>
+                    <input matInput formControlName="idCiudad">
+                    <mat-icon matSuffix>location_city</mat-icon>
+                  </mat-form-field>
+                </div>
+
+                <div class="form-row">
+                  <mat-form-field appearance="outline" class="half-width">
+                    <mat-label>% Similitud</mat-label>
+                    <input matInput formControlName="porcentajeSimilitud" type="number" min="0" max="100">
+                    <mat-icon matSuffix>percent</mat-icon>
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline" class="half-width">
+                    <mat-label>URL Foto/Logo</mat-label>
+                    <input matInput formControlName="urlFotoLogo">
+                    <mat-icon matSuffix>image</mat-icon>
+                  </mat-form-field>
+                </div>
+
+                <div class="form-row">
+                  <mat-form-field appearance="outline" class="half-width">
+                    <mat-label>Estado *</mat-label>
+                    <mat-select formControlName="idEstado">
+                      @for (estado of estadosOptions; track estado.value) {
+                        <mat-option [value]="estado.value">{{ estado.label }}</mat-option>
+                      }
+                    </mat-select>
+                    <mat-icon matSuffix>flag</mat-icon>
+                  </mat-form-field>
+
+                  <div class="checkbox-group half-width">
+                    <mat-checkbox formControlName="migrado">Registro migrado</mat-checkbox>
+                  </div>
+                </div>
+              </mat-card-content>
+            </mat-card>
+
+          </form>
+        </div>
+      </mat-tab>
+
+      <!-- TAB 2: INFORMACIÓN DEL PARTÍCIPE -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <div class="tab-label">
+            <mat-icon class="tab-icon">work</mat-icon>
+            <span class="tab-text">Datos del Partícipe</span>
+          </div>
+        </ng-template>
+
+        <div class="tab-content">
+          <form [formGroup]="participeForm">
+
+            <!-- Card: Datos Básicos del Partícipe -->
+            <mat-card class="form-section">
+              <mat-card-header>
+                <mat-icon mat-card-avatar>assignment_ind</mat-icon>
+                <mat-card-title>Datos Básicos del Partícipe</mat-card-title>
+              </mat-card-header>
+              <mat-card-content>
+                <div class="form-row">
+                  <mat-form-field appearance="outline" class="half-width">
+                    <mat-label>Código</mat-label>
+                    <input matInput formControlName="codigo" readonly>
+                    <mat-icon matSuffix>tag</mat-icon>
+                    <mat-hint>Generado automáticamente</mat-hint>
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline" class="half-width">
+                    <mat-label>Código Alterno</mat-label>
+                    <input matInput formControlName="codigoAlterno" type="number">
+                    <mat-icon matSuffix>qr_code</mat-icon>
+                  </mat-form-field>
+                </div>
+
+                <div class="form-row">
+                  <mat-form-field appearance="outline" class="full-width">
+                    <mat-label>Tipo Partícipe *</mat-label>
+                    <mat-select formControlName="tipoParticipe" [compareWith]="compararPorCodigo">
+                      @if (loadingTiposParticipe()) {
+                        <mat-option disabled><mat-spinner diameter="20"></mat-spinner> Cargando...</mat-option>
+                      } @else {
+                        <mat-option [value]="null">-- Seleccionar --</mat-option>
+                        @for (tipo of tiposParticipeOptions(); track tipo.codigo) {
+                          <mat-option [value]="tipo">{{ tipo.nombre }}</mat-option>
+                        }
+                      }
+                    </mat-select>
+                    <mat-icon matSuffix>category</mat-icon>
+                    @if (esCampoInvalido('tipoParticipe', 'participe')) {
+                      <mat-error>{{ obtenerErrorCampo('tipoParticipe', 'participe') }}</mat-error>
+                    }
+                  </mat-form-field>
+                </div>
+
+                <div class="form-row">
+                  <mat-form-field appearance="outline" class="half-width">
+                    <mat-label>Remuneración Unificada *</mat-label>
+                    <input matInput formControlName="remuneracionUnificada" type="number" min="0">
+                    <mat-icon matSuffix>attach_money</mat-icon>
+                    @if (esCampoInvalido('remuneracionUnificada', 'participe')) {
+                      <mat-error>{{ obtenerErrorCampo('remuneracionUnificada', 'participe') }}</mat-error>
+                    }
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline" class="half-width">
+                    <mat-label>Fecha Ingreso al Fondo *</mat-label>
+                    <input matInput [matDatepicker]="pickerFondo" formControlName="fechaIngresoFondo">
+                    <mat-datepicker-toggle matIconSuffix [for]="pickerFondo"></mat-datepicker-toggle>
+                    <mat-datepicker #pickerFondo></mat-datepicker>
+                    @if (esCampoInvalido('fechaIngresoFondo', 'participe')) {
+                      <mat-error>{{ obtenerErrorCampo('fechaIngresoFondo', 'participe') }}</mat-error>
+                    }
+                  </mat-form-field>
+                </div>
+              </mat-card-content>
+            </mat-card>
+
+            <!-- Card: Información Laboral -->
+            <mat-card class="form-section">
+              <mat-card-header>
+                <mat-icon mat-card-avatar>business_center</mat-icon>
+                <mat-card-title>Información Laboral</mat-card-title>
+              </mat-card-header>
+              <mat-card-content>
+                <div class="form-row">
+                  <mat-form-field appearance="outline" class="half-width">
+                    <mat-label>Fecha Ingreso Trabajo</mat-label>
+                    <input matInput [matDatepicker]="pickerTrabajo" formControlName="fechaIngresoTrabajo">
+                    <mat-datepicker-toggle matIconSuffix [for]="pickerTrabajo"></mat-datepicker-toggle>
+                    <mat-datepicker #pickerTrabajo></mat-datepicker>
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline" class="half-width">
+                    <mat-label>Cargo Actual</mat-label>
+                    <input matInput formControlName="cargoActual" maxlength="200">
+                    <mat-icon matSuffix>work</mat-icon>
+                  </mat-form-field>
+                </div>
+
+                <div class="form-row">
+                  <mat-form-field appearance="outline" class="half-width">
+                    <mat-label>Lugar de Trabajo</mat-label>
+                    <input matInput formControlName="lugarTrabajo" maxlength="200">
+                    <mat-icon matSuffix>location_on</mat-icon>
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline" class="half-width">
+                    <mat-label>Unidad Administrativa</mat-label>
+                    <input matInput formControlName="unidadAdministrativa" maxlength="200">
+                    <mat-icon matSuffix>domain</mat-icon>
+                  </mat-form-field>
+                </div>
+
+                <div class="form-row">
+                  <mat-form-field appearance="outline" class="half-width">
+                    <mat-label>Nivel de Estudios</mat-label>
+                    <input matInput formControlName="nivelEstudios" maxlength="100">
+                    <mat-icon matSuffix>school</mat-icon>
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline" class="half-width">
+                    <mat-label>Ingreso Adicional Mensual</mat-label>
+                    <input matInput formControlName="ingresoAdicionalMensual" type="number" min="0">
+                    <mat-icon matSuffix>trending_up</mat-icon>
+                  </mat-form-field>
+                </div>
+
+                <div class="form-row">
+                  <mat-form-field appearance="outline" class="full-width">
+                    <mat-label>Actividad Ingreso Adicional</mat-label>
+                    <input matInput formControlName="ingresoAdicionalActividad" maxlength="200">
+                    <mat-icon matSuffix>description</mat-icon>
+                  </mat-form-field>
+                </div>
+              </mat-card-content>
+            </mat-card>
+
+            <!-- Card: Estado y Salida -->
+            <mat-card class="form-section">
+              <mat-card-header>
+                <mat-icon mat-card-avatar>event</mat-icon>
+                <mat-card-title>Estado y Salida</mat-card-title>
+              </mat-card-header>
+              <mat-card-content>
+                <div class="form-row">
+                  <mat-form-field appearance="outline" class="third-width">
+                    <mat-label>Estado Actual</mat-label>
+                    <mat-select formControlName="estadoActual">
+                      @for (estado of estadosOptions; track estado.value) {
+                        <mat-option [value]="estado.value">{{ estado.label }}</mat-option>
+                      }
+                    </mat-select>
+                    <mat-icon matSuffix>toggle_on</mat-icon>
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline" class="third-width">
+                    <mat-label>Estado Cesante</mat-label>
+                    <mat-select formControlName="estadoCesante">
+                      @for (estado of estadosOptions; track estado.value) {
+                        <mat-option [value]="estado.value">{{ estado.label }}</mat-option>
+                      }
+                    </mat-select>
+                    <mat-icon matSuffix>person_off</mat-icon>
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline" class="third-width">
+                    <mat-label>Estado *</mat-label>
+                    <mat-select formControlName="idEstado">
+                      @for (estado of estadosOptions; track estado.value) {
+                        <mat-option [value]="estado.value">{{ estado.label }}</mat-option>
+                      }
+                    </mat-select>
+                    <mat-icon matSuffix>flag</mat-icon>
+                  </mat-form-field>
+                </div>
+
+                <div class="form-row">
+                  <mat-form-field appearance="outline" class="half-width">
+                    <mat-label>Fecha de Salida</mat-label>
+                    <input matInput [matDatepicker]="pickerSalida" formControlName="fechaSalida">
+                    <mat-datepicker-toggle matIconSuffix [for]="pickerSalida"></mat-datepicker-toggle>
+                    <mat-datepicker #pickerSalida></mat-datepicker>
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline" class="half-width">
+                    <mat-label>Motivo de Salida</mat-label>
+                    <input matInput formControlName="motivoSalida" maxlength="200">
+                    <mat-icon matSuffix>exit_to_app</mat-icon>
+                  </mat-form-field>
+                </div>
+
+                <div class="form-row">
+                  <mat-form-field appearance="outline" class="half-width">
+                    <mat-label>Fecha de Fallecimiento</mat-label>
+                    <input matInput [matDatepicker]="pickerFallecimiento" formControlName="fechaFallecimiento">
+                    <mat-datepicker-toggle matIconSuffix [for]="pickerFallecimiento"></mat-datepicker-toggle>
+                    <mat-datepicker #pickerFallecimiento></mat-datepicker>
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline" class="half-width">
+                    <mat-label>Causa de Fallecimiento</mat-label>
+                    <input matInput formControlName="causaFallecimiento" maxlength="200">
+                    <mat-icon matSuffix>local_hospital</mat-icon>
+                  </mat-form-field>
+                </div>
+              </mat-card-content>
+            </mat-card>
+
+          </form>
+        </div>
+      </mat-tab>
+
+    </mat-tab-group>
+  }
+</div>

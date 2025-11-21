@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { Injectable } from '@angular/core';
 import { DetalleRubroService } from './detalle-rubro.service';
 
@@ -36,7 +35,6 @@ export class FuncionesDatosService {
   public static SOLO_FECHA = 2;
 
   constructor(
-    private datePipe: DatePipe,
     public detalleRubroService: DetalleRubroService,
   ) { }
 

@@ -1,0 +1,634 @@
+// ========================================
+// Entidad-Partícipe Info Component Styles
+// Estilo visual similar a participe-info
+// ========================================
+
+.entidad-participe-container {
+  padding: 32px;
+  max-width: 1400px;
+  margin: 0 auto;
+  background: linear-gradient(135deg, #f8fafc 0%, rgba(102, 126, 234, 0.02) 50%, rgba(118, 75, 162, 0.02) 100%);
+  min-height: 100vh;
+
+  // ========================================
+  // Header Section
+  // ========================================
+  .header-section {
+    margin-bottom: 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 20px;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+    padding: 24px;
+    border-radius: 12px;
+    border: 1px solid rgba(102, 126, 234, 0.1);
+
+    h2 {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin: 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background-clip: text;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      font-size: 2rem;
+      font-weight: 700;
+
+      mat-icon {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background-clip: text;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-size: 2.2rem;
+        width: 2.2rem;
+        height: 2.2rem;
+      }
+    }
+
+    .subtitle {
+      color: #718096;
+      font-size: 1.1rem;
+      margin: 6px 0 0 0;
+      font-weight: 500;
+    }
+
+    .actions {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      flex-wrap: wrap;
+
+      .mat-mdc-raised-button {
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-weight: 600;
+        text-transform: none;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+        transition: all 0.3s ease;
+
+        &.mat-primary, &.mat-accent {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+          color: white;
+
+          &:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
+          }
+        }
+
+        &:not(.mat-primary):not(.mat-accent) {
+          background: white;
+          color: #667eea;
+          border: 2px solid rgba(102, 126, 234, 0.2);
+
+          &:hover {
+            background: rgba(102, 126, 234, 0.05);
+            border-color: rgba(102, 126, 234, 0.4);
+          }
+        }
+
+        mat-icon {
+          font-size: 1.25rem;
+          width: 1.25rem;
+          height: 1.25rem;
+        }
+
+        mat-spinner {
+          margin: 0;
+        }
+
+        &:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+      }
+    }
+  }
+
+  // ========================================
+  // Loading State
+  // ========================================
+  .loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px;
+    gap: 16px;
+
+    mat-spinner {
+      margin-bottom: 1rem;
+    }
+
+    p {
+      color: #666;
+      margin: 0;
+    }
+  }
+
+  // ========================================
+  // Error State
+  // ========================================
+  .error-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 24px !important;
+    text-align: left;
+
+    mat-icon {
+      font-size: 48px;
+      width: 48px;
+      height: 48px;
+      color: #f44336;
+    }
+
+    h3 {
+      margin: 0 0 8px 0;
+      color: #333;
+    }
+
+    p {
+      margin: 0;
+      color: #666;
+    }
+  }
+
+  // ========================================
+  // Tabs
+  // ========================================
+  .modern-tabs {
+    margin-top: 1rem;
+  }
+
+  ::ng-deep .mat-mdc-tab-group {
+    .mat-mdc-tab-labels {
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+      border-radius: 12px 12px 0 0;
+      border: 1px solid rgba(102, 126, 234, 0.1);
+      border-bottom: none;
+    }
+
+    .mat-mdc-tab-label {
+      height: 64px;
+      padding: 0 32px;
+      transition: all 0.3s ease;
+
+      .tab-label {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+
+        .tab-icon {
+          font-size: 1.5rem;
+          width: 1.5rem;
+          height: 1.5rem;
+          transition: all 0.3s ease;
+        }
+
+        .tab-text {
+          font-size: 1rem;
+          font-weight: 600;
+        }
+      }
+
+      &:hover {
+        background: rgba(102, 126, 234, 0.08);
+      }
+
+      &.mdc-tab--active {
+        .tab-label {
+          color: #667eea;
+
+          .tab-icon {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+          }
+        }
+      }
+    }
+
+    .mat-mdc-tab-body-wrapper {
+      padding: 24px;
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.01) 0%, rgba(118, 75, 162, 0.01) 100%);
+      border: 1px solid rgba(102, 126, 234, 0.1);
+      border-top: none;
+      border-radius: 0 0 12px 12px;
+    }
+  }
+
+  .tab-content {
+    padding: 0;
+  }
+
+  // ========================================
+  // Form Sections (Cards)
+  // ========================================
+  .form-section {
+    margin-bottom: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(102, 126, 234, 0.08);
+    border: 1px solid rgba(102, 126, 234, 0.1);
+    overflow: hidden;
+
+    mat-card-header {
+      margin-bottom: 20px;
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+      padding: 20px 24px;
+      margin: -16px -16px 20px -16px;
+
+      ::ng-deep .mat-mdc-card-header-text {
+        margin: 0;
+        width: 100%;
+      }
+
+      mat-icon[mat-card-avatar] {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        font-size: 1.75rem;
+        width: 2.5rem;
+        height: 2.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        margin-right: 1rem;
+      }
+
+      mat-card-title {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background-clip: text;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-weight: 600;
+        font-size: 1.3rem;
+        margin: 0;
+      }
+    }
+
+    mat-card-content {
+      padding: 0 24px 24px 24px;
+    }
+  }
+
+  // ========================================
+  // Form Rows & Layout
+  // ========================================
+  .form-row {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 24px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  .full-width {
+    flex: 1;
+    min-width: 320px;
+  }
+
+  .half-width {
+    flex: 1;
+    min-width: 280px;
+  }
+
+  .third-width {
+    flex: 1;
+    min-width: 220px;
+  }
+
+  // ========================================
+  // Checkbox Groups
+  // ========================================
+  .checkbox-group {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.02) 0%, rgba(118, 75, 162, 0.02) 100%);
+    border-radius: 8px;
+    padding: 16px;
+    border: 1px solid rgba(102, 126, 234, 0.1);
+
+    mat-checkbox {
+      transition: all 0.2s ease;
+
+      &:hover {
+        transform: translateX(4px);
+      }
+
+      ::ng-deep {
+        // Color del borde cuando no está marcado
+        .mdc-checkbox__native-control:enabled ~ .mdc-checkbox__background {
+          border-color: #667eea !important;
+        }
+
+        // Color del checkmark
+        .mdc-checkbox__checkmark {
+          color: white !important;
+        }
+
+        .mdc-checkbox__checkmark-path {
+          stroke: white !important;
+        }
+
+        // Color cuando está marcado
+        .mdc-checkbox__native-control:enabled:checked ~ .mdc-checkbox__background,
+        .mdc-checkbox__native-control:enabled:indeterminate ~ .mdc-checkbox__background {
+          background-color: #667eea !important;
+          border-color: #667eea !important;
+        }
+
+        // Efecto ripple
+        .mdc-checkbox__ripple {
+          background-color: #667eea !important;
+        }
+
+        // Label color
+        .mdc-form-field label {
+          color: #4a5568;
+          font-weight: 500;
+        }
+      }
+    }
+
+    &.half-width {
+      justify-content: center;
+    }
+  }
+
+  // ========================================
+  // Form Fields
+  // ========================================
+  mat-form-field {
+    transition: all 0.3s ease;
+
+    &:hover {
+      transform: translateY(-1px);
+    }
+
+    // Estilos para appearance="outline"
+    ::ng-deep {
+      .mdc-text-field--outlined {
+        .mdc-notched-outline__leading,
+        .mdc-notched-outline__notch,
+        .mdc-notched-outline__trailing {
+          border-color: rgba(102, 126, 234, 0.2) !important;
+          border-width: 1px !important;
+        }
+
+        &:hover {
+          .mdc-notched-outline__leading,
+          .mdc-notched-outline__notch,
+          .mdc-notched-outline__trailing {
+            border-color: rgba(102, 126, 234, 0.4) !important;
+          }
+        }
+
+        &.mdc-text-field--focused {
+          .mdc-notched-outline__leading,
+          .mdc-notched-outline__notch,
+          .mdc-notched-outline__trailing {
+            border-color: #667eea !important;
+            border-width: 2px !important;
+          }
+        }
+      }
+
+      // Padding interno
+      .mat-mdc-input-element {
+        font-size: 0.95rem !important;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+      }
+
+      .mat-mdc-select {
+        font-size: 0.95rem !important;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+      }
+
+      // Label color
+      .mat-mdc-form-field-focus-overlay {
+        background-color: rgba(102, 126, 234, 0.02);
+      }
+
+      .mdc-floating-label {
+        color: #667eea !important;
+      }
+
+      // Hint color
+      .mat-mdc-form-field-hint {
+        color: #718096;
+      }
+
+      // Error color
+      .mat-mdc-form-field-error {
+        color: #f44336;
+      }
+    }
+  }
+
+  // ========================================
+  // Icons in Fields
+  // ========================================
+  mat-icon[matSuffix] {
+    color: #667eea;
+    transition: all 0.3s ease;
+  }
+
+  mat-form-field:hover mat-icon[matSuffix] {
+    color: #764ba2;
+  }
+
+  // ========================================
+  // Responsive Design
+  // ========================================
+  @media (max-width: 1200px) {
+    .third-width {
+      flex: 1 1 calc(50% - 12px);
+      min-width: 220px;
+    }
+  }
+
+  @media (max-width: 768px) {
+    padding: 16px;
+
+    .header-section {
+      padding: 16px;
+      gap: 16px;
+
+      h2 {
+        font-size: 1.6rem;
+
+        mat-icon {
+          font-size: 1.8rem;
+          width: 1.8rem;
+          height: 1.8rem;
+        }
+      }
+
+      .subtitle {
+        font-size: 1rem;
+      }
+
+      .actions {
+        gap: 12px;
+        width: 100%;
+        justify-content: center;
+
+        .mat-mdc-raised-button {
+          padding: 10px 20px;
+          font-size: 0.9rem;
+        }
+      }
+    }
+
+    ::ng-deep .mat-mdc-tab-group {
+      .mat-mdc-tab-label {
+        padding: 0 16px;
+        min-width: 120px;
+
+        .tab-label {
+          flex-direction: column;
+          gap: 0.25rem;
+
+          .tab-text {
+            font-size: 0.875rem;
+          }
+        }
+      }
+
+      .mat-mdc-tab-body-wrapper {
+        padding: 16px;
+      }
+    }
+
+    .form-section {
+      mat-card-header {
+        padding: 16px 20px;
+        margin: -16px -16px 16px -16px;
+
+        mat-card-title {
+          font-size: 1.1rem;
+        }
+      }
+
+      mat-card-content {
+        padding: 0 20px 20px 20px;
+      }
+    }
+
+    .form-row {
+      gap: 16px;
+      margin-bottom: 16px;
+
+      .full-width,
+      .half-width,
+      .third-width {
+        min-width: 100%;
+        flex: 1 1 100%;
+      }
+    }
+
+    .checkbox-group {
+      padding: 12px;
+      gap: 10px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    padding: 12px;
+
+    .header-section {
+      padding: 12px;
+
+      h2 {
+        font-size: 1.4rem;
+
+        mat-icon {
+          font-size: 1.6rem;
+          width: 1.6rem;
+          height: 1.6rem;
+        }
+      }
+
+      .subtitle {
+        font-size: 0.95rem;
+      }
+
+      .actions {
+        .mat-mdc-raised-button {
+          flex: 1 1 100%;
+          font-size: 0.875rem;
+        }
+      }
+    }
+
+    ::ng-deep .mat-mdc-tab-group {
+      .mat-mdc-tab-label {
+        padding: 0 8px;
+        min-width: 100px;
+
+        .tab-label {
+          .tab-icon {
+            font-size: 1.25rem;
+            width: 1.25rem;
+            height: 1.25rem;
+          }
+
+          .tab-text {
+            font-size: 0.75rem;
+          }
+        }
+      }
+
+      .mat-mdc-tab-body-wrapper {
+        padding: 12px;
+      }
+    }
+
+    .form-section {
+      margin-bottom: 16px;
+
+      mat-card-header {
+        padding: 12px 16px;
+        margin: -16px -16px 12px -16px;
+
+        mat-icon[mat-card-avatar] {
+          font-size: 1.5rem;
+          width: 2rem;
+          height: 2rem;
+          margin-right: 0.75rem;
+        }
+
+        mat-card-title {
+          font-size: 1rem;
+        }
+      }
+
+      mat-card-content {
+        padding: 0 16px 16px 16px;
+      }
+    }
+
+    .form-row {
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .checkbox-group {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 12px;
+    }
+  }
+}

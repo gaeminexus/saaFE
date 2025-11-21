@@ -19,18 +19,8 @@ export class MenuComponent implements OnInit {
   }
 
   ngOnInit() {
-  // Debug para identificar el problema
-  console.log('Menu component initialized');
-
-  // Verificar si hay listeners problemáticos
-  const originalAddEventListener = window.addEventListener;
-  window.addEventListener = function(type: string, listener: any, options: any) {
-    if (type === 'resize') {
-      console.warn('Resize listener agregado desde:', new Error().stack);
-    }
-    return originalAddEventListener.call(this, type, listener, options);
-  };
-}
+    // Componente inicializado
+  }
 
   onSalir() {
     this.router.navigate(['/login']);

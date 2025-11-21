@@ -13,7 +13,13 @@ import { MotivoPrestamo } from '../../model/motivo-prestamo';
 import { MetodoPago } from '../../model/metodo-pago';
 import { NivelEstudio } from '../../model/nivel-estudio';
 import { Profesion } from '../../model/profesion';
+import { Producto } from '../../model/producto';
+import { Filial } from '../../model/filial';
+import { TipoPrestamo } from '../../model/tipo-prestamo';
+import { FilialService } from '../../service/filial.service';
+import { TipoPrestamoService } from '../../service/tipo-prestamo.service';
 import { Validators } from '@angular/forms';
+import { SelectFieldConfig } from '../../../../shared/basics/table/dynamic-form/model/select.interface';
 
 @Component({
   selector: 'app-listados-crd.component',
@@ -34,12 +40,18 @@ export class ListadosCrdComponent implements OnInit {
   metodosPago: MetodoPago[] = [];
   nivelesEstudio: NivelEstudio[] = [];
   profesiones: Profesion[] = [];
+  productos: Producto[] = [];
+
+  // Datos para selects
+  filiales: Filial[] = [];
+  tiposPrestamo: TipoPrestamo[] = [];
 
   // Configuraciones de tabla para cada entidad
   tableConfigMotivoPrestamo!: TableConfig;
   tableConfigMetodoPago!: TableConfig;
   tableConfigNivelEstudio!: TableConfig;
   tableConfigProfesion!: TableConfig;
+  tableConfigProducto!: TableConfig;
 
   // Índice del tab seleccionado
   selectedTabIndex: number = 0;
@@ -49,10 +61,15 @@ export class ListadosCrdComponent implements OnInit {
     { nombre: 'Motivo Préstamo', icono: 'comment', index: 0 },
     { nombre: 'Método Pago', icono: 'payment', index: 1 },
     { nombre: 'Nivel Estudio', icono: 'school', index: 2 },
-    { nombre: 'Profesión', icono: 'work', index: 3 }
+    { nombre: 'Profesión', icono: 'work', index: 3 },
+    { nombre: 'Productos', icono: 'category', index: 4 }
   ];
 
-  constructor(private route: ActivatedRoute) { }
+  constructor(
+    private route: ActivatedRoute,
+    private filialService: FilialService,
+    private tipoPrestamoService: TipoPrestamoService
+  ) { }
 
   // Método para navegar al tab correspondiente
   navigateToTab(index: number): void {
@@ -66,9 +83,25 @@ export class ListadosCrdComponent implements OnInit {
     this.metodosPago = data.metodosPago || [];
     this.nivelesEstudio = data.nivelesEstudio || [];
     this.profesiones = data.profesiones || [];
+    this.productos = data.productos || [];
+
+    // Cargar datos para los selects de Producto
+    this.cargarDatosSelects();
 
     // Configurar tablas
     this.setupTableConfigs();
+  }
+
+  private cargarDatosSelects(): void {
+    this.filialService.getAll().subscribe({
+      next: (data) => this.filiales = data || [],
+      error: (err) => console.error('Error al cargar filiales:', err)
+    });
+
+    this.tipoPrestamoService.getAll().subscribe({
+      next: (data) => this.tiposPrestamo = data || [],
+      error: (err) => console.error('Error al cargar tipos de préstamo:', err)
+    });
   }
 
   private setupTableConfigs(): void {
@@ -127,6 +160,22 @@ export class ListadosCrdComponent implements OnInit {
       registros: this.profesiones,
       fields: this.getFieldsProfesion(),
       regConfig: this.getRegConfigProfesion(),
+      add: true,
+      edit: true,
+      remove: false,
+      paginator: true,
+      filter: true,
+      fSize: 'em-1',
+      row_size: 's08'
+    };
+
+    // Producto
+    this.tableConfigProducto = {
+      entidad: EntidadesCrd.PRODUCTO,
+      titulo: 'Productos',
+      registros: this.productos,
+      fields: this.getFieldsProducto(),
+      regConfig: this.getRegConfigProducto(),
       add: true,
       edit: true,
       remove: false,
@@ -244,6 +293,61 @@ export class ListadosCrdComponent implements OnInit {
           { name: 'required', validator: Validators.required, message: 'El código SBS es requerido' }
         ]
       },
+    ];
+  }
+
+  // ========== Producto ==========
+  private getFieldsProducto(): FieldFormat[] {
+    return [
+      { column: 'nombre', header: 'Nombre', fWidth: '30%' },
+      { column: 'codigoSBS', header: 'Código SBS', fWidth: '15%' },
+      { column: 'filial.nombre', header: 'Filial', fWidth: '20%' },
+      { column: 'tipoPrestamo.nombre', header: 'Tipo Préstamo', fWidth: '20%' },
+    ];
+  }
+
+  private getRegConfigProducto(): FieldConfig[] {
+    return [
+      {
+        type: 'input',
+        label: 'Nombre',
+        name: 'nombre',
+        inputType: 'text',
+        value: '',
+        validations: [
+          { name: 'required', validator: Validators.required, message: 'El nombre es requerido' }
+        ]
+      },
+      {
+        type: 'input',
+        label: 'Código SBS',
+        name: 'codigoSBS',
+        inputType: 'text',
+        value: '',
+        validations: [
+          { name: 'required', validator: Validators.required, message: 'El código SBS es requerido' }
+        ]
+      },
+      {
+        type: 'select',
+        label: 'Filial',
+        name: 'filial',
+        value: null,
+        options: this.filiales,
+        validations: [
+          { name: 'required', validator: Validators.required, message: 'La filial es requerida' }
+        ]
+      } as SelectFieldConfig,
+      {
+        type: 'select',
+        label: 'Tipo Préstamo',
+        name: 'tipoPrestamo',
+        value: null,
+        options: this.tiposPrestamo,
+        validations: [
+          { name: 'required', validator: Validators.required, message: 'El tipo de préstamo es requerido' }
+        ]
+      } as SelectFieldConfig,
     ];
   }
 

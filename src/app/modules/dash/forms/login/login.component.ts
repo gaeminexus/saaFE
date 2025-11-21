@@ -1,3 +1,4 @@
+import { EstadoCivil } from './../../../crd/model/estado-civil';
 import { FileService } from './../../../../shared/services/file.service';
 import { AporteService } from './../../../crd/service/aporte.service';
 import { PrestamoService } from './../../../crd/service/prestamo.service';
@@ -18,6 +19,7 @@ import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/ti
 import { Usuario } from '../../../../shared/model/usuario';
 import { Empresa } from '../../../../shared/model/empresa';
 import { DetallePrestamoService } from '../../../crd/service/detalle-prestamo.service';
+import { EstadoCivilService } from '../../../crd/service/estado-civil.service';
 
 // Importa tu AuthService según tu estructura
 const FORMATO_FECHA_JAVA = 'yyyy-MM-dd HH:mm';
@@ -76,10 +78,8 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
     private usuarioService: UsuarioService,
     private naturalezaCuentaService: NaturalezaCuentaService,
     private entidadService: EntidadService,
+    private estadoCivilService: EstadoCivilService,
     private prestamoService: PrestamoService,
-    private detallePrestamoService: DetallePrestamoService,
-    private fileService: FileService,
-    private aporteService: AporteService,
     private router: Router,
     private snackBar: MatSnackBar,
     @Inject(PLATFORM_ID) private platformId: Object
@@ -253,18 +253,17 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
 
   testServicios() {
     const pipe = new DatePipe('en-US');
-    /*this.criterioConsultaArray = [];
+    this.criterioConsultaArray = [];
 
     this.criterioConsulta = new DatosBusqueda();
-    this.criterioConsulta.asignaValorConCampoPadre(TipoDatosBusqueda.LONG, 'empresa', 'codigo',
-                                                   '280', TipoComandosBusqueda.IGUAL);
+    this.criterioConsulta.asigna3(TipoDatosBusqueda.LONG, 'codigo', '10', TipoComandosBusqueda.IGUAL);
     this.criterioConsultaArray.push(this.criterioConsulta);
 
     this.criterioConsulta = new DatosBusqueda();
-    this.criterioConsulta.orderBy('nombre');
-    this.criterioConsultaArray.push(this.criterioConsulta);*/
+    this.criterioConsulta.orderBy('codigo');
+    this.criterioConsultaArray.push(this.criterioConsulta);
 
-    /*this.naturalezaCuentaService.getAll().subscribe({
+    this.estadoCivilService.selectByCriteria(this.criterioConsultaArray).subscribe({
       next: (data) => {
         console.log('Datos de NaturalezaCuenta:', data);
       },
@@ -273,7 +272,7 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
       }
     });
 
-    this.naturalezaCuentaService.getById('2588').subscribe({
+    /*this.naturalezaCuentaService.getById('2588').subscribe({
       next: (data) => {
         console.log('GetById - Registro específico:', data);
       },
@@ -320,13 +319,5 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
       }
     });*/
 
-    this.fileService.getById('247855').subscribe({
-      next: (data) => {
-        console.log('GetById - Registro específico:', data);
-      },
-      error: (error) => {
-        console.error('Error al obtener NaturalezaCuenta:', error);
-      }
-    });
   }
 }

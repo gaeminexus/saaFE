@@ -105,7 +105,7 @@ export class ParticipeDashComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    // Verificar si hay código de entidad en los query params (cuando regresa de participe-info)
+    // Verificar si hay código de entidad en los query params (cuando regresa de entidad-participe-info)
     this.route.queryParams.subscribe((params: any) => {
       const codigoEntidadParam = params['codigoEntidad'];
       if (codigoEntidadParam) {
@@ -147,11 +147,17 @@ export class ParticipeDashComponent implements OnInit {
       return;
     }
 
-    // Navegar a participe-info con el código de la entidad
+    if (!this.participeEncontrado || !this.participeEncontrado.codigo) {
+      this.snackBar.open('No hay información de partícipe para editar', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    // Navegar a entidad-participe-info con los códigos de entidad y partícipe
     // Mantener el query param para poder regresar a la misma entidad
-    this.router.navigate(['/menucreditos/participe-info'], {
+    this.router.navigate(['/menucreditos/entidad-participe-info'], {
       queryParams: {
         codigoEntidad: this.entidadEncontrada.codigo,
+        codigoParticipe: this.participeEncontrado.codigo,
         returnUrl: `/menucreditos/participe-dash`
       }
     });
