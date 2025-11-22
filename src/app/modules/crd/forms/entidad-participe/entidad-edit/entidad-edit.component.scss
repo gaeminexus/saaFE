@@ -1,9 +1,9 @@
 .participe-form-container {
-  padding: 32px;
-  max-width: 1400px;
-  margin: 0 auto;
+  width: 100%;
+  min-height: calc(100vh - 105px);
+  padding: 2rem;
+  box-sizing: border-box;
   background: linear-gradient(135deg, #f8fafc 0%, rgba(102, 126, 234, 0.02) 50%, rgba(118, 75, 162, 0.02) 100%);
-  min-height: 100vh;
 }
 
   .header {

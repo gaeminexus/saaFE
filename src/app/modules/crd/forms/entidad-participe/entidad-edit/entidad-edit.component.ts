@@ -265,21 +265,19 @@ export class EntidadEditComponent implements OnInit, OnChanges {
    * Regresa a la pantalla anterior con el código de entidad como query param
    */
   regresar(): void {
-    // Obtener el returnUrl y codigoEntidad de los query params
-    this.route.queryParams.subscribe((params: any) => {
-      const returnUrl = params['returnUrl'];
-      const codigoEntidad = params['codigoEntidad'];
+    // Obtener el returnUrl y codigoEntidad de los query params de forma síncrona
+    const params = this.route.snapshot.queryParams;
+    const returnUrl = params['returnUrl'];
+    const codigoEntidad = params['codigoEntidad'];
 
-      if (returnUrl && codigoEntidad) {
-        // Navegar de regreso con el código de entidad
-        this.router.navigate([returnUrl], {
-          queryParams: { codigoEntidad: codigoEntidad }
-        });
-      } else {
-        // Si no hay returnUrl, usar location.back()
-        this.location.back();
-      }
-    }).unsubscribe();
+    if (returnUrl) {
+      // Navegar de regreso con el código de entidad si existe
+      const queryParams = codigoEntidad ? { codigoEntidad: codigoEntidad } : {};
+      this.router.navigate([returnUrl], { queryParams });
+    } else {
+      // Si no hay returnUrl, navegar a entidad-consulta por defecto
+      this.router.navigate(['/menucreditos/entidad-consulta']);
+    }
   }
 
   limpiarFormulario(): void {
@@ -301,6 +299,10 @@ export class EntidadEditComponent implements OnInit, OnChanges {
     this.modoEdicion.set(false);
     this.entidadActual.set(null);
     this.errorMsg.set('');
+
+    // Limpiar también el código de entidad y modo filtrado
+    this.codigoEntidad = undefined;
+    this.modoFiltrado = false;
   }
 
   cargarEntidad(id: number): void {
