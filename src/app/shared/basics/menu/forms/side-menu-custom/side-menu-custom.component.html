@@ -1,5 +1,10 @@
-<mat-sidenav-container class="shell">
-  <mat-sidenav class="sidebar" [mode]="'side'" [opened]="true" [class.collapsed]="isCollapsedFn()">
+<mat-sidenav-container class="shell" autosize>
+  <mat-sidenav
+    class="sidebar"
+    [mode]="'side'"
+    [opened]="true"
+    [class.collapsed]="isCollapsedFn()"
+    [style.width.px]="isCollapsedFn() ? 90 : 300">
     <div class="sidebar-content">
       <div class="brand">
         <button mat-icon-button (click)="toggle()" class="toggle">

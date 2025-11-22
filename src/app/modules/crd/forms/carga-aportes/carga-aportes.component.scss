@@ -15,9 +15,10 @@ $saa-shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.15);
 $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
 
 .carga-aportes-container {
-  max-width: 1400px;
-  margin: 1.5rem auto;
-  padding: 0 1rem;
+  width: 100%;
+  min-height: calc(100vh - 105px);
+  padding: 1.5rem;
+  box-sizing: border-box;
 
   // Header con filtros
   .search-header {

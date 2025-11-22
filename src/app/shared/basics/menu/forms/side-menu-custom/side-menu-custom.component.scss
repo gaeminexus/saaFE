@@ -6,16 +6,13 @@
 }
 
 .sidebar {
-  width: 300px;
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(10px);
   border-right: 1px solid rgba(118, 75, 162, 0.1);
   box-shadow: 4px 0 15px rgba(0, 0, 0, 0.05);
-  transition: all 0.3s ease;
   z-index: 10; // Debajo del header del sistema pero sobre el contenido
 
   &.collapsed {
-    width: 90px; // Aumentado de 72px a 90px para mejor visualización de iconos
     .title {
       display: none;
     }
@@ -130,6 +127,7 @@
   overflow-y: auto;
   overflow-x: hidden;
   background: transparent;
+  transition: margin-left 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
 }
 
 .page {

@@ -1,41 +1,53 @@
 <div class="participe-dash-container">
-  <!-- Header con búsqueda -->
-  <div class="search-header">
-    <div class="header-title">
-      <mat-icon class="header-icon">account_circle</mat-icon>
-      <h1>Búsqueda de Partícipe</h1>
-    </div>
-
-    <div class="search-box">
-      <mat-form-field appearance="outline" class="search-field">
-        <mat-label>Buscar por Cédula, Razón Social o Nombre Comercial</mat-label>
-        <input matInput
-               [(ngModel)]="searchText"
-               (keyup.enter)="buscarEntidad()"
-               placeholder="Ej: 1234567890, EMPRESA S.A., Mi Negocio">
-        <mat-icon matPrefix>search</mat-icon>
-        @if (searchText) {
-          <button matSuffix mat-icon-button (click)="limpiarBusqueda()">
-            <mat-icon>clear</mat-icon>
-          </button>
-        }
-      </mat-form-field>
-      <button mat-raised-button
-              color="primary"
-              (click)="buscarEntidad()"
-              [disabled]="isSearching"
-              class="search-button">
-        @if (isSearching) {
-          <mat-spinner diameter="20"></mat-spinner>
-        } @else {
-          <ng-container>
-            <mat-icon>search</mat-icon>
-            Buscar
-          </ng-container>
-        }
+  <!-- Botón Regresar (solo visible cuando NO se muestra búsqueda) -->
+  @if (!mostrarBusqueda) {
+    <div class="back-button-container">
+      <button mat-raised-button color="primary" (click)="regresarAPantallaAnterior()" class="back-button">
+        <mat-icon>arrow_back</mat-icon>
+        Regresar a Consulta
       </button>
     </div>
-  </div>
+  }
+
+  <!-- Header con búsqueda (solo visible si mostrarBusqueda es true) -->
+  @if (mostrarBusqueda) {
+    <div class="search-header">
+      <div class="header-title">
+        <mat-icon class="header-icon">account_circle</mat-icon>
+        <h1>Búsqueda de Partícipe</h1>
+      </div>
+
+      <div class="search-box">
+        <mat-form-field appearance="outline" class="search-field">
+          <mat-label>Buscar por Cédula, Razón Social o Nombre Comercial</mat-label>
+          <input matInput
+                 [(ngModel)]="searchText"
+                 (keyup.enter)="buscarEntidad()"
+                 placeholder="Ej: 1234567890, EMPRESA S.A., Mi Negocio">
+          <mat-icon matPrefix>search</mat-icon>
+          @if (searchText) {
+            <button matSuffix mat-icon-button (click)="limpiarBusqueda()">
+              <mat-icon>clear</mat-icon>
+            </button>
+          }
+        </mat-form-field>
+        <button mat-raised-button
+                color="primary"
+                (click)="buscarEntidad()"
+                [disabled]="isSearching"
+                class="search-button">
+          @if (isSearching) {
+            <mat-spinner diameter="20"></mat-spinner>
+          } @else {
+            <ng-container>
+              <mat-icon>search</mat-icon>
+              Buscar
+            </ng-container>
+          }
+        </button>
+      </div>
+    </div>
+  }
 
   <!-- Spinner de carga del dashboard -->
   @if (isLoadingDashboard) {

@@ -439,16 +439,40 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
   }
 
   nuevaEntidad(): void {
-    this.router.navigate(['/creditos/entidad-edit']);
+    this.router.navigate(['/menucreditos/entidad-edit'], {
+      queryParams: {
+        returnUrl: '/menucreditos/entidad-consulta'
+      }
+    });
   }
 
   editarEntidad(entidad: Entidad): void {
-    this.router.navigate(['/creditos/entidad-edit', entidad.codigo]);
+    if (!entidad || !entidad.codigo) {
+      this.snackBar.open('No hay información de entidad para editar', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    this.router.navigate(['/menucreditos/entidad-edit'], {
+      queryParams: {
+        codigoEntidad: entidad.codigo,
+        returnUrl: '/menucreditos/entidad-consulta'
+      }
+    });
   }
 
   verComoParticipe(entidad: Entidad): void {
-    this.snackBar.open('Funcionalidad próxima: Ver como partícipe', 'Cerrar', { duration: 3000 });
-    // Futura navegación: this.router.navigate(['/creditos/participe-dash', entidad.id]);
+    if (!entidad || !entidad.codigo) {
+      this.snackBar.open('No hay información de entidad para ver', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    // Navegar a participe-dash con el código de entidad precargado
+    this.router.navigate(['/menucreditos/participe-dash'], {
+      queryParams: {
+        codigoEntidad: entidad.codigo,
+        from: 'entidad-consulta' // Indicador de origen para ocultar búsqueda
+      }
+    });
   }
 
   exportarCSV(): void {

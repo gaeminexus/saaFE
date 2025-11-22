@@ -15,9 +15,37 @@ $saa-shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.15);
 $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
 
 .participe-dash-container {
-  max-width: 1400px;
-  margin: 1.5rem auto;
-  padding: 0 1rem;
+  width: 100%;
+  min-height: calc(100vh - 105px);
+  padding: 1.5rem;
+  box-sizing: border-box;
+
+  // Botón regresar (cuando viene desde otra pantalla)
+  .back-button-container {
+    margin-bottom: 1.5rem;
+    display: flex;
+    justify-content: flex-start;
+
+    .back-button {
+      background: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%) !important;
+      color: white !important;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+      transition: all 0.3s ease;
+      padding: 0 1.5rem;
+      border-radius: 24px;
+
+      &:hover {
+        background: linear-gradient(135deg, darken($saa-primary, 5%) 0%, darken($saa-secondary, 5%) 100%) !important;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        transform: translateY(-2px);
+      }
+
+      mat-icon {
+        margin-right: 0.5rem;
+      }
+    }
+  }
 
   // Spinner de carga del dashboard
   .loading-spinner-container {

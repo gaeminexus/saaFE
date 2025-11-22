@@ -32,6 +32,8 @@ export class SideMenuCustomComponent {
 
   toggle(): void {
     this.isCollapsed.update(value => !value);
+    // Opcional: guardar estado en localStorage
+    localStorage.setItem('sidenavCollapsed', JSON.stringify(this.isCollapsed()));
   }
 
   isCollapsedFn(): boolean {

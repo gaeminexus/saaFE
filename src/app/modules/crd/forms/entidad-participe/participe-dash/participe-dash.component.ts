@@ -59,6 +59,7 @@ export class ParticipeDashComponent implements OnInit {
   // Búsqueda
   searchText: string = '';
   isSearching: boolean = false;
+  mostrarBusqueda: boolean = true; // Controla si se muestra el campo de búsqueda
 
   // Entidad encontrada
   entidadEncontrada: Entidad | null = null;
@@ -105,14 +106,29 @@ export class ParticipeDashComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    // Verificar si hay código de entidad en los query params (cuando regresa de entidad-participe-info)
+    // Verificar si hay código de entidad en los query params
     this.route.queryParams.subscribe((params: any) => {
       const codigoEntidadParam = params['codigoEntidad'];
+      const from = params['from'];
+
       if (codigoEntidadParam) {
         const codigo = Number(codigoEntidadParam);
+
+        // Si viene desde entidad-consulta, ocultar el campo de búsqueda
+        if (from === 'entidad-consulta') {
+          this.mostrarBusqueda = false;
+        }
+
         this.cargarEntidadPorCodigo(codigo);
       }
     });
+  }
+
+  /**
+   * Regresa a la pantalla anterior (entidad-consulta)
+   */
+  regresarAPantallaAnterior(): void {
+    this.router.navigate(['/menucreditos/entidad-consulta']);
   }
 
   /**
