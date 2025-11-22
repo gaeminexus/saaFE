@@ -14,7 +14,7 @@ import { TipoComandosBusqueda } from "./tipo-comandos-busqueda";
  * @example
  * // Búsqueda con rango de fechas (BETWEEN)
  * const db = new DatosBusqueda();
- * db.asigna7('fechaNacimiento', TipoDatos.DATE, '2000-01-01', TipoComandosBusqueda.BETWEEN, '2000-12-31');
+ * db.asignaUnCampoConBetween('fechaNacimiento', TipoDatos.DATE, '2000-01-01', TipoComandosBusqueda.BETWEEN, '2000-12-31');
  *
  * @example
  * // Búsqueda en campo padre (JOIN)
@@ -282,15 +282,15 @@ export class DatosBusqueda {
      *
      * @example
      * // Búsqueda de fechas entre dos valores
-     * db.asigna7('fechaNacimiento', TipoDatos.DATE, '2000-01-01',
+     * db.asignaUnCampoConBetween('fechaNacimiento', TipoDatos.DATE, '2000-01-01',
      *           TipoComandosBusqueda.BETWEEN, '2000-12-31');
      *
      * @example
      * // Búsqueda de edad entre rangos
-     * db.asigna7('edad', TipoDatos.INTEGER, '18',
+     * db.asignaUnCampoConBetween('edad', TipoDatos.INTEGER, '18',
      *           TipoComandosBusqueda.BETWEEN, '65');
      */
-    asigna7(campo: string, tipoDato: number, valor: string,
+    asignaUnCampoConBetween(campo: string, tipoDato: number, valor: string,
             tipoComparacion: number, valor1: string): void
     {
         this.tipoDato = tipoDato;
@@ -303,7 +303,7 @@ export class DatosBusqueda {
     /**
      * Asigna búsqueda con dos valores y opción de truncado.
      *
-     * Combina la funcionalidad de asigna7 con la capacidad de truncar valores.
+     * Combina la funcionalidad de asignaUnCampoConBetween con la capacidad de truncar valores.
      *
      * @param campo Nombre del campo a buscar
      * @param tipoDato Tipo de dato del campo
@@ -313,10 +313,10 @@ export class DatosBusqueda {
      * @param truncado Si se debe truncar los valores
      *
      * @example
-     * db.asigna8('monto', TipoDatos.DECIMAL, '100.00',
+     * db.asignaUnCampoTruncadoConBetween('monto', TipoDatos.DECIMAL, '100.00',
      *           TipoComandosBusqueda.BETWEEN, '500.00', DatosBusqueda.TRUNCADO);
      */
-    asigna8(campo: string, tipoDato: number, valor: string,
+    asignaUnCampoTruncadoConBetween(campo: string, tipoDato: number, valor: string,
             tipoComparacion: number, valor1: string, truncado: number): void
     {
         this.tipoDato = tipoDato;

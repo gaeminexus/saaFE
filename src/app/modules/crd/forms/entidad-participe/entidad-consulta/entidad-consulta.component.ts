@@ -339,7 +339,7 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
 
       if (fechaDesdeFormateada && fechaHastaFormateada) {
         const db = new DatosBusqueda();
-        db.asigna7(
+        db.asignaUnCampoConBetween(
           'fechaNacimiento',
           TipoDatos.DATE,
           fechaDesdeFormateada,
