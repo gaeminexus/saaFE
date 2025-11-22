@@ -36,6 +36,9 @@
   public static RS_TPGN = "http://localhost:8080/saa-backend/rest/tpgn";
   public static RS_TPPG = "http://localhost:8080/saa-backend/rest/tppg";
   public static RS_TPRQ = "http://localhost:8080/saa-backend/rest/tprq";
+  public static RS_CRAR = "http://localhost:8080/saa-backend/rest/crar";
+  public static RS_DTCA = "http://localhost:8080/saa-backend/rest/dtca";
+  public static RS_PXCA = "http://localhost:8080/saa-backend/rest/pxca";
 
 }*/
 
@@ -78,6 +81,9 @@ export class ServiciosCrd {
   public static RS_TPGN = "http://localhost:8080/saa-backend/rest/tpgn";
   public static RS_TPPG = "http://localhost:8080/saa-backend/rest/tppg";
   public static RS_TPRQ = "http://localhost:8080/saa-backend/rest/tprq";
+  public static RS_CRAR = "http://localhost:8080/saa-backend/rest/crar";
+  public static RS_DTCA = "http://localhost:8080/saa-backend/rest/dtca";
+  public static RS_PXCA = "http://localhost:8080/saa-backend/rest/pxca";
 
 }
 
