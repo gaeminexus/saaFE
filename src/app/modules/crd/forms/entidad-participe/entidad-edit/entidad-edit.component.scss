@@ -4,6 +4,10 @@
   padding: 2rem;
   box-sizing: border-box;
   background: linear-gradient(135deg, #f8fafc 0%, rgba(102, 126, 234, 0.02) 50%, rgba(118, 75, 162, 0.02) 100%);
+
+  // GPU acceleration
+  will-change: auto;
+  transform: translateZ(0);
 }
 
   .header {
@@ -787,7 +791,7 @@ mat-spinner {
   }
 }
 
-// Animaciones
+// Animaciones restauradas - versión original con cascada
 @keyframes slideInUp {
   from {
     opacity: 0;
@@ -801,6 +805,15 @@ mat-spinner {
 
 .entidad-form .step-card {
   animation: slideInUp 0.4s ease-out;
+  // GPU acceleration
+  will-change: transform, opacity;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+
+  // Efecto de cascada en los cards
+  &:nth-child(1) {
+    animation-delay: 0s;
+  }
 
   &:nth-child(2) {
     animation-delay: 0.1s;

@@ -1,10 +1,10 @@
-import { Component, OnInit, Input, inject, signal, computed, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, OnInit, Input, inject, signal, computed, OnChanges, SimpleChanges, OnDestroy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Location } from '@angular/common';
 import { catchError } from 'rxjs/operators';
-import { of } from 'rxjs';
+import { of, Subscription } from 'rxjs';
 
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { Entidad } from '../../../model/entidad';
@@ -61,13 +61,16 @@ import { FuncionesDatosService } from '../../../../../shared/services/funciones-
   templateUrl: './entidad-edit.component.html',
   styleUrl: './entidad-edit.component.scss'
 })
-export class EntidadEditComponent implements OnInit, OnChanges {
+export class EntidadEditComponent implements OnInit, OnChanges, OnDestroy {
 
   // Inputs para filtrado y configuración
   @Input() codigoEntidad?: number; // Código específico de entidad a filtrar
   @Input() modoFiltrado: boolean = false; // Si true, carga entidad específica
   @Input() soloLectura: boolean = false; // Si true, formulario en modo solo lectura
   @Input() ocultarBotones: boolean = false; // Si true, oculta botones de acción
+
+  // Subscriptions para cleanup
+  private subscriptions = new Subscription();
 
   // Servicios
   private fb = inject(FormBuilder);
@@ -117,21 +120,30 @@ export class EntidadEditComponent implements OnInit, OnChanges {
 
   ngOnInit(): void {
     this.inicializarFormulario();
-    this.cargarDatosSelect();
 
-    // Verificar si hay código de entidad en los query params
-    this.route.queryParams.subscribe(params => {
-      const codigoEntidadParam = params['codigoEntidad'];
-      if (codigoEntidadParam) {
-        const codigo = Number(codigoEntidadParam);
-        this.modoFiltrado = true;
-        this.codigoEntidad = codigo;
-        this.cargarEntidadPorCodigo(codigo);
-      } else if (this.modoFiltrado && this.codigoEntidad) {
-        // Si hay código de entidad por Input, cargar la entidad específica
-        this.cargarEntidadPorCodigo(this.codigoEntidad);
-      }
-    });
+    // Obtener datos pre-cargados del resolver
+    const resolvedData = this.route.snapshot.data['data'];
+    if (resolvedData) {
+      this.filialesOptions = resolvedData.filiales || [];
+      this.tiposIdentificacionOptions = resolvedData.tiposIdentificacion || [];
+    } else {
+      // Fallback: cargar datos si no hay resolver (modo standalone)
+      this.cargarDatosSelect();
+    }
+
+    // Verificar si hay código de entidad en los query params (versión síncrona)
+    const params = this.route.snapshot.queryParams;
+    const codigoEntidadParam = params['codigoEntidad'];
+
+    if (codigoEntidadParam) {
+      const codigo = Number(codigoEntidadParam);
+      this.modoFiltrado = true;
+      this.codigoEntidad = codigo;
+      this.cargarEntidadPorCodigo(codigo);
+    } else if (this.modoFiltrado && this.codigoEntidad) {
+      // Si hay código de entidad por Input, cargar la entidad específica
+      this.cargarEntidadPorCodigo(this.codigoEntidad);
+    }
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -158,37 +170,35 @@ export class EntidadEditComponent implements OnInit, OnChanges {
   cargarDatosSelect(): void {
     // Cargar filiales
     this.loadingFiliales.set(true);
-    this.filialService.getAll().subscribe({
+    const filialSub = this.filialService.getAll().subscribe({
       next: (filiales) => {
         this.loadingFiliales.set(false);
         if (filiales && filiales.length > 0) {
           this.filialesOptions = filiales;
-          console.log(`✅ ${filiales.length} filiales cargadas`);
         }
       },
       error: (error) => {
         this.loadingFiliales.set(false);
-        console.error('❌ Error cargando filiales:', error);
       }
     });
+    this.subscriptions.add(filialSub);
 
 
 
     // Cargar tipos identificación
     this.loadingTiposId.set(true);
-    this.tipoIdentificacionService.getAll().subscribe({
+    const tipoIdSub = this.tipoIdentificacionService.getAll().subscribe({
       next: (tipos) => {
         this.loadingTiposId.set(false);
         if (tipos && tipos.length > 0) {
           this.tiposIdentificacionOptions = tipos;
-          console.log(`✅ ${tipos.length} tipos identificación cargados`);
         }
       },
       error: (error) => {
         this.loadingTiposId.set(false);
-        console.error('❌ Error cargando tipos identificación:', error);
       }
     });
+    this.subscriptions.add(tipoIdSub);
   }
 
   inicializarFormulario(): void {
@@ -241,25 +251,23 @@ export class EntidadEditComponent implements OnInit, OnChanges {
     });
 
     // Suscribirse a cambios del formulario para actualizar la señal
-    this.entidadForm.statusChanges.subscribe(() => {
+    const formStatusSub = this.entidadForm.statusChanges.subscribe(() => {
       this.formValid.set(this.entidadForm.valid);
     });
+    this.subscriptions.add(formStatusSub);
 
     // Inicializar el estado del formulario
     this.formValid.set(this.entidadForm.valid);
   }
 
   debugFormErrors(): void {
-  console.log('🔍 Estado del formulario:', this.entidadForm.valid);
-  console.log('📋 Errores por campo:');
-
-  Object.keys(this.entidadForm.controls).forEach(key => {
-    const control = this.entidadForm.get(key);
-    if (control?.invalid) {
-      console.log(`❌ ${key}:`, control.errors);
-    }
-  });
-}
+    Object.keys(this.entidadForm.controls).forEach(key => {
+      const control = this.entidadForm.get(key);
+      if (control?.invalid) {
+        // Errores de formulario (mantenido para depuración manual si es necesario)
+      }
+    });
+  }
 
   /**
    * Regresa a la pantalla anterior con el código de entidad como query param
@@ -367,12 +375,8 @@ export class EntidadEditComponent implements OnInit, OnChanges {
       this.saving.set(true);
       this.errorMsg.set('');
 
-      console.log('💾 Guardando entidad...');
-
       const formValue = this.entidadForm.getRawValue();
       const entidadData = this.prepararDatos(formValue);
-
-      console.log(entidadData);
 
       const operacion = this.modoEdicion() ?
         this.entidadService.update(entidadData) :
@@ -421,8 +425,6 @@ export class EntidadEditComponent implements OnInit, OnChanges {
           this.modoEdicion.set(true);
           this.llenarFormulario(entidad);
 
-          console.log(`✅ Entidad cargada - Código: ${entidad.codigo}, Razón Social: ${entidad.razonSocial}`);
-
           // Si está en modo solo lectura, deshabilitar formulario
           if (this.soloLectura) {
             this.entidadForm.disable();
@@ -430,13 +432,11 @@ export class EntidadEditComponent implements OnInit, OnChanges {
         } else {
           this.errorMsg.set(`No se encontró entidad con código: ${codigo}`);
           this.limpiarFormulario();
-          console.warn(`⚠️ No se encontró entidad con código: ${codigo}`);
         }
       },
       error: (error) => {
         this.loading.set(false);
         this.errorMsg.set('Error al cargar la entidad');
-        console.error('❌ Error cargando entidad por código:', error);
 
         this.snackBar.open('Error al cargar la entidad', 'Cerrar', {
           duration: 3000,
@@ -544,6 +544,11 @@ export class EntidadEditComponent implements OnInit, OnChanges {
   // Función de comparación para mat-select con objetos
   compararPorCodigo(obj1: any, obj2: any): boolean {
     return obj1 && obj2 && obj1.codigo === obj2.codigo;
+  }
+
+  ngOnDestroy(): void {
+    // Cancelar todas las suscripciones activas para evitar memory leaks
+    this.subscriptions.unsubscribe();
   }
 
 }
