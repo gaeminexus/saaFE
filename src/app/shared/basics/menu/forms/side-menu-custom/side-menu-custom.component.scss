@@ -1,0 +1,138 @@
+/* Layout base - Ajustado al espacio entre header(70px) y footer(35px) del sistema */
+.shell {
+  height: calc(100vh - 105px); // 100vh - header(70px) - footer(35px)
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+  overflow: hidden; // Evitar scroll en el contenedor principal
+}
+
+.sidebar {
+  width: 300px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-right: 1px solid rgba(118, 75, 162, 0.1);
+  box-shadow: 4px 0 15px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+  z-index: 10; // Debajo del header del sistema pero sobre el contenido
+
+  &.collapsed {
+    width: 90px; // Aumentado de 72px a 90px para mejor visualización de iconos
+    .title {
+      display: none;
+    }
+  }
+}
+
+.sidebar-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  margin-bottom: 0;
+  position: sticky; // Sticky para que siempre esté visible
+  top: 0; // Pegado al top del sidebar
+  z-index: 11; // Por encima del contenido del sidebar
+  flex-shrink: 0; // No se encoge
+
+  .toggle {
+    color: white;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    transition: all 0.3s ease;
+
+    &:hover { background: rgba(255, 255, 255, 0.2); transform: translateX(2px); }
+  }
+
+  .title {
+    font-weight: 600;
+    font-size: 1.2rem;
+    letter-spacing: 0.5px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+}
+
+.nav {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto; // Solo scroll vertical en el contenido del menú
+  overflow-x: hidden;
+  padding: 0.5rem;
+  padding-top: 0.5rem; // Espacio superior para separar del brand
+
+  mat-nav-list { padding: 0; }
+
+  ::ng-deep app-menu-list .menu-list-item {
+    border-radius: 8px;
+    margin: 2px 0;
+    transition: all 0.3s ease;
+    border-left: 3px solid transparent;
+
+    &:hover {
+      background: rgba(102,126,234,0.08);
+      transform: translateX(2px);
+      border-left-color: rgba(102,126,234,0.3);
+    }
+
+    &.active {
+      background: rgba(102,126,234,0.12)!important;
+      border-left-color:#667eea;
+      color:#667eea;
+      font-weight:600;
+    }
+
+    mat-icon {
+      color:#667eea!important;
+      margin-right:12px;
+    }
+  }
+}
+
+.footer {
+  flex-shrink: 0; // No se encoge
+  margin-top: auto; // Empuja el footer al fondo del flex container
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 0.75rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  z-index: 11;
+
+  .btn-regresar {
+    width: 100%;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    transition: all 0.3s ease;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+      transform: translateY(-2px);
+    }
+
+    mat-icon {
+      color: white !important;
+    }
+  }
+}
+
+.content {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: transparent;
+}
+
+.page {
+  min-height: 100%;
+  padding: 1rem;
+}

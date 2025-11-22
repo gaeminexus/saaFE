@@ -1,22 +1,4 @@
-<mat-sidenav-container class="shell">
-  <mat-sidenav class="sidebar" [mode]="'side'" [opened]="true" [class.collapsed]="isCollapsedFn()">
-    <div class="brand">
-      <button mat-icon-button (click)="toggle()" class="toggle">
-        <mat-icon>{{ isCollapsedFn() ? 'chevron_right' : 'chevron_left' }}</mat-icon>
-      </button>
-      @if (!isCollapsedFn()) { <span class="title">Créditos</span> }
-    </div>
-    <div class="nav">
-      <mat-nav-list>
-        @for (item of navItems; track item.displayName) {
-          <app-menu-list [item]="item" [depth]="0"></app-menu-list>
-        }
-      </mat-nav-list>
-    </div>
-  </mat-sidenav>
-  <mat-sidenav-content class="content">
-    <div class="page">
-      <router-outlet></router-outlet>
-    </div>
-  </mat-sidenav-content>
-</mat-sidenav-container>
+<app-side-menu-custom
+  [title]="'Créditos'"
+  [navItems]="navItems">
+</app-side-menu-custom>

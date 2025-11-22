@@ -1,18 +1,12 @@
-import { Component, inject, signal, effect } from '@angular/core';
-import { RouterModule, Router, RouterOutlet } from '@angular/router';
-
-import { MaterialFormModule } from '../../../shared/modules/material-form.module';
+import { Component } from '@angular/core';
 import { NavItem } from '../../../shared/basics/menu/model/nav-item';
-import { MenuListComponent } from '../../../shared/basics/menu/forms/menu-list/menu-list.component';
+import { SideMenuCustomComponent } from '../../../shared/basics/menu/forms/side-menu-custom/side-menu-custom.component';
 
 @Component({
   selector: 'app-menucreditos',
   standalone: true,
   imports: [
-    RouterModule,
-    RouterOutlet,
-    MaterialFormModule,
-    MenuListComponent
+    SideMenuCustomComponent
   ],
   templateUrl: './menucreditos.component.html',
   styleUrls: ['./menucreditos.component.scss']
@@ -63,6 +57,11 @@ export class MenucreditosComponent {
           displayName: 'Administrar',
           iconName: 'domain',
           route: '/menucreditos/participe-info'
+        },
+        {
+          displayName: 'Consulta',
+          iconName: 'group_search',
+          route: '/menucreditos/entidad-consulta'
         },
         {
           displayName: 'Listado General',
@@ -158,18 +157,4 @@ export class MenucreditosComponent {
       route: '/menu'
     }
   ];
-
-  router = inject(Router);
-  isCollapsed = signal<boolean>(JSON.parse(localStorage.getItem('cred_sidebar_collapsed') ?? 'false'));
-
-  constructor() {
-    effect(() => {
-      localStorage.setItem('cred_sidebar_collapsed', JSON.stringify(this.isCollapsed()));
-    });
-  }
-
-  toggle() {
-    this.isCollapsed.update(v => !v);
-  }
-  isCollapsedFn() { return this.isCollapsed(); }
 }

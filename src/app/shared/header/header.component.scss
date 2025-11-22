@@ -13,12 +13,11 @@
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: #fff;
   font-size: 0.95rem;
-  z-index: 30;
+  z-index: 9999 !important; // Máxima prioridad - siempre visible
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
   border-bottom: none !important; // Sin borde para que progress bar quede pegado
   flex-shrink: 0; // El header no se encoge
   flex-wrap: wrap; // Permite que la progress bar vaya abajo
-  position: relative; // Para posicionamiento absoluto del progress bar
   overflow: hidden; // Para evitar que el progress bar se salga
 }
 
