@@ -202,7 +202,7 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
     // numeroIdentificacion (LIKE)
     if (numeroIdentificacion) {
       const db = new DatosBusqueda();
-      db.asigna3(
+      db.asignaUnCampoSinTrunc(
         TipoDatos.STRING,
         'numeroIdentificacion',
         numeroIdentificacion,
@@ -214,7 +214,7 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
     // razonSocial (LIKE)
     if (razonSocial) {
       const db = new DatosBusqueda();
-      db.asigna3(
+      db.asignaUnCampoSinTrunc(
         TipoDatos.STRING,
         'razonSocial',
         razonSocial,
@@ -230,7 +230,7 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
       criterios.push(dbParenOpen1);
 
       const dbCorreoPersonal = new DatosBusqueda();
-      dbCorreoPersonal.asigna3(
+      dbCorreoPersonal.asignaUnCampoSinTrunc(
         TipoDatos.STRING,
         'correoPersonal',
         email,
@@ -240,7 +240,7 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
       criterios.push(dbCorreoPersonal);
 
       const dbCorreoInstitucional = new DatosBusqueda();
-      dbCorreoInstitucional.asigna3(
+      dbCorreoInstitucional.asignaUnCampoSinTrunc(
         TipoDatos.STRING,
         'correoInstitucional',
         email,
@@ -262,7 +262,7 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
       criterios.push(dbParenOpen2);
 
       const dbTelefono = new DatosBusqueda();
-      dbTelefono.asigna3(
+      dbTelefono.asignaUnCampoSinTrunc(
         TipoDatos.STRING,
         'telefono',
         telefono,
@@ -272,7 +272,7 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
       criterios.push(dbTelefono);
 
       const dbMovil = new DatosBusqueda();
-      dbMovil.asigna3(
+      dbMovil.asignaUnCampoSinTrunc(
         TipoDatos.STRING,
         'movil',
         telefono,
@@ -290,7 +290,7 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
     // sectorPublico
     if (sectorPublico !== null && sectorPublico !== undefined) {
       const db = new DatosBusqueda();
-      db.asigna3(
+      db.asignaUnCampoSinTrunc(
         TipoDatos.INTEGER,
         'sectorPublico',
         sectorPublico,
@@ -302,7 +302,7 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
     // idEstado
     if (idEstado !== null && idEstado !== undefined) {
       const db = new DatosBusqueda();
-      db.asigna3(
+      db.asignaUnCampoSinTrunc(
         TipoDatos.INTEGER,
         'idEstado',
         idEstado,
@@ -314,7 +314,7 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
     // migrado
     if (migrado !== null && migrado !== undefined) {
       const db = new DatosBusqueda();
-      db.asigna3(
+      db.asignaUnCampoSinTrunc(
         TipoDatos.INTEGER,
         'migrado',
         migrado,
@@ -356,7 +356,7 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
 
       if (fechaDesdeFormateada) {
         const db = new DatosBusqueda();
-        db.asigna3(
+        db.asignaUnCampoSinTrunc(
           TipoDatos.DATE,
           'fechaNacimiento',
           fechaDesdeFormateada,
@@ -372,7 +372,7 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
 
       if (fechaHastaFormateada) {
         const db = new DatosBusqueda();
-        db.asigna3(
+        db.asignaUnCampoSinTrunc(
           TipoDatos.DATE,
           'fechaNacimiento',
           fechaHastaFormateada,
@@ -394,10 +394,6 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
         this.entidades.set(result || []);
         this.dataSource.data = result || [];
 
-        console.log('Datos recibidos:', result?.length);
-        console.log('Paginator existe:', !!this.paginator);
-        console.log('DataSource paginator:', !!this.dataSource.paginator);
-
         // Resetear el paginador a la primera página
         if (this.paginator) {
           this.paginator.firstPage();
@@ -408,8 +404,10 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
         }
       },
       error: (error) => {
+        this.entidades.set([]);
+        this.dataSource.data = [];
         console.error('Error en la búsqueda:', error);
-        this.snackBar.open('Error al buscar entidades', 'Cerrar', { duration: 3000 });
+        this.snackBar.open('Error al buscar entidades: ' + error, 'Cerrar', { duration: 3000 });
       }
     });
   }

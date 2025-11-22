@@ -256,7 +256,7 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
     this.criterioConsultaArray = [];
 
     this.criterioConsulta = new DatosBusqueda();
-    this.criterioConsulta.asigna3(TipoDatosBusqueda.LONG, 'codigo', '10', TipoComandosBusqueda.IGUAL);
+    this.criterioConsulta.asignaUnCampoSinTrunc(TipoDatosBusqueda.STRING, 'nombre', 'sol', TipoComandosBusqueda.LIKE);
     this.criterioConsultaArray.push(this.criterioConsulta);
 
     this.criterioConsulta = new DatosBusqueda();

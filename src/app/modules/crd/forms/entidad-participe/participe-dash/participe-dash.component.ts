@@ -704,18 +704,18 @@ export class ParticipeDashComponent implements OnInit {
 
     // Búsqueda por número de identificación, razón social o nombre comercial
     let criterio = new DatosBusqueda();
-    criterio.asigna3(TipoDatosBusqueda.STRING, 'numeroIdentificacion',
+    criterio.asignaUnCampoSinTrunc(TipoDatosBusqueda.STRING, 'numeroIdentificacion',
       this.searchText.trim(), TipoComandosBusqueda.LIKE);
     criterioConsultaArray.push(criterio);
 
     criterio = new DatosBusqueda();
-    criterio.asigna3(TipoDatosBusqueda.STRING, 'razonSocial',
+    criterio.asignaUnCampoSinTrunc(TipoDatosBusqueda.STRING, 'razonSocial',
       this.searchText.trim(), TipoComandosBusqueda.LIKE);
     criterio.setTipoOperadorLogico(TipoComandosBusqueda.OR);
     criterioConsultaArray.push(criterio);
 
     criterio = new DatosBusqueda();
-    criterio.asigna3(TipoDatosBusqueda.STRING, 'nombreComercial',
+    criterio.asignaUnCampoSinTrunc(TipoDatosBusqueda.STRING, 'nombreComercial',
       this.searchText.trim(), TipoComandosBusqueda.LIKE);
     criterio.setTipoOperadorLogico(TipoComandosBusqueda.OR);
     criterioConsultaArray.push(criterio);

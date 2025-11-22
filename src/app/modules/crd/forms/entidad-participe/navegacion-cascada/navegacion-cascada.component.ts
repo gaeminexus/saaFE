@@ -502,14 +502,14 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
     this.criterioConsultaArray = [];
 
     this.criterioConsulta = new DatosBusqueda();
-    this.criterioConsulta.asigna3(TipoDatosBusqueda.LONG, 'entidad.codigo', codigoEntidad.toString(), TipoComandosBusqueda.IGUAL);
+    this.criterioConsulta.asignaUnCampoSinTrunc(TipoDatosBusqueda.LONG, 'entidad.codigo', codigoEntidad.toString(), TipoComandosBusqueda.IGUAL);
     this.criterioConsultaArray.push(this.criterioConsulta);
 
     // También agregar criterio por número de identificación de la entidad para mayor precisión
     const entidadSeleccionada = this.entidadSeleccionada();
     if (entidadSeleccionada?.numeroIdentificacion) {
       const criterioIdentificacion = new DatosBusqueda();
-      criterioIdentificacion.asigna3(TipoDatosBusqueda.STRING, 'entidad.numeroIdentificacion',
+      criterioIdentificacion.asignaUnCampoSinTrunc(TipoDatosBusqueda.STRING, 'entidad.numeroIdentificacion',
                                     entidadSeleccionada.numeroIdentificacion, TipoComandosBusqueda.IGUAL);
       criterioIdentificacion.setTipoOperadorLogico(TipoComandosBusqueda.OR);
       this.criterioConsultaArray.push(criterioIdentificacion);
@@ -592,7 +592,7 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
       // Agregar criterio para cada código de producto
       codigosProductos.forEach(codigo => {
         const criterio = new DatosBusqueda();
-        criterio.asigna3(TipoDatosBusqueda.LONG, 'codigo', codigo.toString(), TipoComandosBusqueda.IGUAL);
+        criterio.asignaUnCampoSinTrunc(TipoDatosBusqueda.LONG, 'codigo', codigo.toString(), TipoComandosBusqueda.IGUAL);
         criteriosProductos.push(criterio);
       });
 
@@ -813,17 +813,17 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
       const criterios: any[] = [];
       codigosEstados.forEach((codigo, idx) => {
         const c1 = new DatosBusqueda();
-        c1.asigna3(TipoDatosBusqueda.LONG, 'codigo', String(codigo), TipoComandosBusqueda.IGUAL);
+        c1.asignaUnCampoSinTrunc(TipoDatosBusqueda.LONG, 'codigo', String(codigo), TipoComandosBusqueda.IGUAL);
         if (idx > 0) c1.setTipoOperadorLogico(TipoComandosBusqueda.OR);
         criterios.push(c1);
 
         const c2 = new DatosBusqueda();
-        c2.asigna3(TipoDatosBusqueda.LONG, 'idEstado', String(codigo), TipoComandosBusqueda.IGUAL);
+        c2.asignaUnCampoSinTrunc(TipoDatosBusqueda.LONG, 'idEstado', String(codigo), TipoComandosBusqueda.IGUAL);
         c2.setTipoOperadorLogico(TipoComandosBusqueda.OR);
         criterios.push(c2);
 
         const c3 = new DatosBusqueda();
-        c3.asigna3(TipoDatosBusqueda.LONG, 'codigoExterno', String(codigo), TipoComandosBusqueda.IGUAL);
+        c3.asignaUnCampoSinTrunc(TipoDatosBusqueda.LONG, 'codigoExterno', String(codigo), TipoComandosBusqueda.IGUAL);
         c3.setTipoOperadorLogico(TipoComandosBusqueda.OR);
         criterios.push(c3);
       });
