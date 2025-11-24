@@ -122,14 +122,7 @@ export class PlanArbolFormComponent implements OnInit {
   }
 
   onSubmit(): void {
-    // 📌 DEBUG: Inicio de onSubmit
-    console.log('[PlanArbolFormComponent.onSubmit] Disparado', {
-      isEdit: this.isEdit,
-      rawForm: this.form.getRawValue(),
-      valid: this.form.valid
-    });
     if (this.form.invalid) {
-      console.warn('[PlanArbolFormComponent.onSubmit] Formulario inválido, marcando campos');
       this.form.markAllAsTouched();
       return;
     }
@@ -140,13 +133,11 @@ export class PlanArbolFormComponent implements OnInit {
     let cuenta: PlanCuenta;
 
     if (this.isEdit) {
-      // En modo edición, actualizar nombre y fechaUpdate
       cuenta = {
         ...this.data.item!,
         nombre: String(this.form.get('nombre')?.value || '').trim().toUpperCase(),
         fechaUpdate: new Date()
       } as PlanCuenta;
-      console.log('[PlanArbolFormComponent.onSubmit] Preparando UPDATE', cuenta);
     } else {
       // En modo creación: normalizar tipos, asignar empresa 280 e idPadre si aplica
       const formValue = this.form.getRawValue();
@@ -155,7 +146,6 @@ export class PlanArbolFormComponent implements OnInit {
       if (this.data.maxDepth && nivelNuevo > this.data.maxDepth) {
         this.loading = false;
         this.error = `La profundidad máxima permitida es ${this.data.maxDepth}.`;
-        console.error('[PlanArbolFormComponent.onSubmit] Exceso de profundidad', { nivelNuevo, max: this.data.maxDepth });
         return;
       }
 
@@ -164,6 +154,7 @@ export class PlanArbolFormComponent implements OnInit {
 
       // Tomar empresa completa preferentemente desde la naturaleza o desde el padre si existe
       const empresaOrigen = naturaleza?.empresa || this.parentAccount?.empresa || { codigo: 280 } as any;
+      
       cuenta = {
         codigo: 0, // id nuevo
         nombre: String(formValue.nombre || '').trim().toUpperCase(),
@@ -177,28 +168,24 @@ export class PlanArbolFormComponent implements OnInit {
         fechaInactivo: new Date(),
         fechaUpdate: new Date()
       } as PlanCuenta;
-      // Eliminar código si está vacío para forzar POST a generar id
-      // Mantener codigo=0; si backend acepta null, podría adaptarse luego.
-      console.log('[PlanArbolFormComponent.onSubmit] Preparando CREATE', cuenta);
+      
+      if (!cuenta.naturalezaCuenta || !cuenta.naturalezaCuenta.codigo) {
+        this.loading = false;
+        this.error = 'Debe seleccionar una Naturaleza de Cuenta válida';
+        return;
+      }
     }
 
     const request$ = this.isEdit
       ? this.planCuentaService.update(cuenta)
       : this.planCuentaService.add(cuenta);
 
-    console.log('[PlanArbolFormComponent.onSubmit] Ejecutando request', {
-      mode: this.isEdit ? 'UPDATE' : 'CREATE',
-      cuenta
-    });
-
     request$.subscribe({
       next: (result: PlanCuenta | null) => {
-        console.log('[PlanArbolFormComponent.onSubmit] Respuesta OK', result);
         this.loading = false;
         this.dialogRef.close(result);
       },
       error: (error: any) => {
-        console.error('[PlanArbolFormComponent.onSubmit] Error en request', error);
         this.loading = false;
         this.error = error.message || 'Error al guardar la cuenta';
       }

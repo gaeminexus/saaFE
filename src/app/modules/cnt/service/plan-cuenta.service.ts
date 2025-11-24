@@ -1,8 +1,9 @@
 import { HttpHeaders, HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable, catchError, of, throwError, tap, switchMap, map } from 'rxjs';
+import { Observable, catchError, of, throwError, map } from 'rxjs';
 import { PlanCuenta } from '../model/plan-cuenta';
 import { ServiciosCnt } from './ws-cnt';
+import { DatosBusqueda } from '../../../shared/model/datos-busqueda/datos-busqueda';
 
 @Injectable({
   providedIn: 'root'
@@ -37,86 +38,73 @@ export class PlanCuentaService {
     );
   }
 
-  /** POST: add a new sesion to the server */
+  /** POST: add a new plan cuenta to the server */
   add(datos: any): Observable<PlanCuenta | null> {
-    // Asegurar empresa 280 en el plan de cuenta
-    const datosConEmpresa = {
-      ...datos,
-      empresa: { codigo: PlanCuentaService.EMPRESA_CODIGO }
+    // Preparar datos para creación - NO enviar codigo si es 0
+    const payload: any = {
+      nombre: datos.nombre,
+      cuentaContable: datos.cuentaContable,
+      tipo: datos.tipo,
+      nivel: datos.nivel,
+      estado: datos.estado,
+      idPadre: datos.idPadre,
+      naturalezaCuenta: datos.naturalezaCuenta,
+      empresa: { codigo: PlanCuentaService.EMPRESA_CODIGO },
+      fechaUpdate: new Date()
     };
 
-    // 📌 DEBUG: Registro antes de enviar creación
-    console.log('[PlanCuentaService.add] Enviando POST /plnn', {
-      url: ServiciosCnt.RS_PLNN,
-      payload: datosConEmpresa
-    });
-    const base = ServiciosCnt.RS_PLNN;
-    const attempts = [
-      () => this.http.post<PlanCuenta>(base, datosConEmpresa, this.httpOptions),
-      () => this.http.post<PlanCuenta>(base + '/add', datosConEmpresa, this.httpOptions),
-      () => this.http.post<PlanCuenta>(base + '/create', datosConEmpresa, this.httpOptions),
-      () => this.http.post<PlanCuenta>(base + '/save', datosConEmpresa, this.httpOptions)
-    ];
+    // Agregar fechaInactivo solo si el estado es inactivo (0)
+    if (datos.estado === 0) {
+      payload.fechaInactivo = new Date();
+    }
 
-    let idx = 0;
-    const tryNext = (): Observable<PlanCuenta> => {
-      const fn = attempts[idx];
-      return fn().pipe(
-        tap(resp => console.log(`[PlanCuentaService.add] Éxito endpoint intento ${idx+1}`, resp)),
-        catchError(err => {
-          console.warn(`[PlanCuentaService.add] Falló intento ${idx+1}`, err);
-          idx++;
-            if (idx < attempts.length) {
-              return tryNext();
-            }
-            console.error('[PlanCuentaService.add] Todos los intentos de creación fallaron');
-            return throwError(() => err);
-        })
-      );
-    };
+    // Solo incluir codigo si existe y no es 0
+    if (datos.codigo && datos.codigo !== 0) {
+      payload.codigo = datos.codigo;
+    }
 
-    return tryNext().pipe(
-      catchError(err => this.handleError(err))
+    return this.http.post<PlanCuenta>(ServiciosCnt.RS_PLNN, payload, this.httpOptions).pipe(
+      catchError(this.handleError)
     );
   }
 
-  /** POST: add a new sesion to the server */
+  /** PUT: update an existing plan cuenta */
   update(datos: any): Observable<PlanCuenta | null> {
-    // Asegurar empresa 280 en el plan de cuenta
-    const datosConEmpresa = {
-      ...datos,
-      empresa: { codigo: PlanCuentaService.EMPRESA_CODIGO }
+    // Preparar payload para actualización - DEBE incluir codigo
+    const payload: any = {
+      codigo: datos.codigo,
+      nombre: datos.nombre,
+      cuentaContable: datos.cuentaContable,
+      tipo: datos.tipo,
+      nivel: datos.nivel,
+      estado: datos.estado,
+      idPadre: datos.idPadre,
+      naturalezaCuenta: datos.naturalezaCuenta,
+      empresa: { codigo: PlanCuentaService.EMPRESA_CODIGO },
+      fechaUpdate: new Date()
     };
 
-    // 📌 DEBUG: Registro antes de enviar actualización
-    console.log('[PlanCuentaService.update] Enviando PUT /plnn', {
-      url: ServiciosCnt.RS_PLNN,
-      payload: datosConEmpresa
-    });
-    return this.http.put<PlanCuenta>(ServiciosCnt.RS_PLNN, datosConEmpresa, this.httpOptions).pipe(
-      // tap(resp => console.log('[PlanCuentaService.update] Respuesta OK', resp)),
+    // Agregar fechaInactivo solo si el estado es inactivo (0)
+    if (datos.estado === 0) {
+      payload.fechaInactivo = new Date();
+    }
+
+    console.log('[PlanCuentaService.update] Payload enviado:', JSON.stringify(payload, null, 2));
+
+    return this.http.put<PlanCuenta>(ServiciosCnt.RS_PLNN, payload, this.httpOptions).pipe(
       catchError(err => {
-        console.error('[PlanCuentaService.update] Error en PUT', err);
+        console.error('[PlanCuentaService.update] Error:', err);
+        console.error('[PlanCuentaService.update] Payload que causó error:', payload);
         return this.handleError(err);
       })
     );
   }
 
-  selectByCriteria(datos: any): Observable<PlanCuenta[] | null> {
-    const base = ServiciosCnt.RS_PLNN;
-    const try1 = `${base}/selectByCriteria`;
-    const try2 = `${base}/selectByCriteria/`;
-    const try3 = `${base}/criteria`;
-    const try4 = `${base}/getAll`;
-
-    // Forzar filtro de empresa en el request
-    const criteriosConEmpresa = { ...datos, empresa: { codigo: PlanCuentaService.EMPRESA_CODIGO } };
-
-    return this.http.post<PlanCuenta[]>(try1, criteriosConEmpresa, this.httpOptions).pipe(
-      // Fallbacks de ruta/método comunes en este backend
-      catchError(() => this.http.post<PlanCuenta[]>(try2, criteriosConEmpresa, this.httpOptions)),
-      catchError(() => this.http.post<PlanCuenta[]>(try3, criteriosConEmpresa, this.httpOptions)),
-      catchError(() => this.http.get<PlanCuenta[]>(try4, this.httpOptions)),
+  /** POST: search by criteria using DatosBusqueda[] */
+  selectByCriteria(criterios: DatosBusqueda[]): Observable<PlanCuenta[] | null> {
+    const url = `${ServiciosCnt.RS_PLNN}/selectByCriteria`;
+    
+    return this.http.post<PlanCuenta[]>(url, criterios, this.httpOptions).pipe(
       map((items: PlanCuenta[]) =>
         (items || []).filter(p => p?.empresa?.codigo === PlanCuentaService.EMPRESA_CODIGO)
       ),

@@ -1,0 +1,230 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  # Job 1: Lint y Quality Check
+  lint:
+    runs-on: ubuntu-latest
+    name: 🔍 Code Quality & Linting
+
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🟢 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: 📦 Install dependencies
+      run: npm ci
+
+    - name: 🔍 Run ESLint
+      run: npm run lint
+
+    - name: 🎨 Check code formatting
+      run: npm run format:check
+
+    - name: 📊 TypeScript compilation check
+      run: npx tsc --noEmit
+
+  # Job 2: Unit Tests
+  test:
+    runs-on: ubuntu-latest
+    name: 🧪 Unit Tests
+
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🟢 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: 📦 Install dependencies
+      run: npm ci
+
+    - name: 🧪 Run tests
+      run: npm run test:ci
+
+    - name: 📊 Upload coverage reports
+      uses: codecov/codecov-action@v3
+      if: success()
+      with:
+        file: ./coverage/lcov.info
+        name: saaFE-coverage
+
+    - name: 📋 Test Summary
+      uses: test-summary/action@v2
+      if: always()
+      with:
+        paths: "test-results.xml"
+
+  # Job 3: Build Verification
+  build:
+    runs-on: ubuntu-latest
+    name: 🏗️ Build Verification
+    needs: [lint, test]
+
+    strategy:
+      matrix:
+        build-type: [development, production]
+
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🟢 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: 📦 Install dependencies
+      run: npm ci
+
+    - name: 🏗️ Build application (${{ matrix.build-type }})
+      run: |
+        if [ "${{ matrix.build-type }}" = "production" ]; then
+          npm run build --prod
+        else
+          npm run build
+        fi
+
+    - name: 📊 Bundle analyzer (production only)
+      if: matrix.build-type == 'production'
+      run: npm run analyze
+
+    - name: 📦 Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: build-${{ matrix.build-type }}
+        path: dist/
+        retention-days: 7
+
+  # Job 4: E2E Tests (solo en PR a main)
+  e2e:
+    runs-on: ubuntu-latest
+    name: 🔄 E2E Tests
+    needs: [build]
+    if: github.event_name == 'pull_request' && github.base_ref == 'main'
+
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🟢 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: 📦 Install dependencies
+      run: npm ci
+
+    - name: 🔄 Run E2E tests
+      run: npm run e2e
+      env:
+        # Variables para E2E testing
+        BASE_URL: http://localhost:4200
+
+    - name: 📊 Upload E2E screenshots
+      uses: actions/upload-artifact@v3
+      if: failure()
+      with:
+        name: e2e-screenshots
+        path: cypress/screenshots/
+        retention-days: 7
+
+  # Job 5: Security Audit
+  security:
+    runs-on: ubuntu-latest
+    name: 🔐 Security Audit
+
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🟢 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: 📦 Install dependencies
+      run: npm ci
+
+    - name: 🔐 Run security audit
+      run: npm audit --audit-level=moderate
+
+    - name: 🔍 Run Snyk security scan
+      uses: snyk/actions/node@master
+      continue-on-error: true
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+  # Job 6: Deployment (solo en main)
+  deploy:
+    runs-on: ubuntu-latest
+    name: 🚀 Deploy to Staging
+    needs: [lint, test, build, security]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    environment:
+      name: staging
+      url: ${{ steps.deploy.outputs.url }}
+
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 📦 Download build artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: build-production
+        path: dist/
+
+    - name: 🚀 Deploy to staging
+      id: deploy
+      run: |
+        # Script de deployment aquí
+        echo "url=https://saa-frontend-staging.herokuapp.com" >> $GITHUB_OUTPUT
+
+    - name: 🧪 Smoke tests post-deployment
+      run: |
+        curl -f ${{ steps.deploy.outputs.url }}/health || exit 1
+
+    - name: 💬 Notify deployment
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ job.status }}
+        channel: '#deployments'
+        webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+      if: always()
+
+  # Job 7: Release Notes (solo en tags)
+  release:
+    runs-on: ubuntu-latest
+    name: 📝 Generate Release
+    if: startsWith(github.ref, 'refs/tags/')
+
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: 📝 Generate Release Notes
+      uses: release-drafter/release-drafter@v5
+      with:
+        config-name: release-drafter.yml
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -38,24 +38,37 @@
 
 
   <!-- Loading y Error -->
-  @if (loading) {
+  @if (loading()) {
     <div class="loading-container">
       <mat-spinner diameter="50"></mat-spinner>
       <p>Cargando PlanArbol...</p>
     </div>
   }
 
-  @if (error) {
+  @if (error()) {
     <div class="error-container">
       <mat-icon>error</mat-icon>
-      <p>{{ error }}</p>
+      <p>{{ error() }}</p>
       <button mat-button (click)="loadData()">Reintentar</button>
     </div>
   }
 
   <!-- Vista Árbol -->
-  @if (viewMode === 'tree' && !loading && !error) {
-    <div class="tree-container">
+  @if (viewMode === 'tree' && !loading() && !error()) {
+    <div class="tree-wrapper">
+      <!-- Botones de navegación scroll -->
+      @if (isScrolled()) {
+        <div class="scroll-controls">
+          <button mat-mini-fab color="primary" (click)="scrollToTop()" matTooltip="Ir arriba">
+            <mat-icon>keyboard_arrow_up</mat-icon>
+          </button>
+          <button mat-mini-fab color="primary" (click)="scrollToLeft()" matTooltip="Ir al inicio">
+            <mat-icon>keyboard_arrow_left</mat-icon>
+          </button>
+        </div>
+      }
+
+      <div class="tree-container" #treeContainer>
       <div class="tree-header">
         <div class="tree-title">
           <mat-icon>account_tree</mat-icon>
@@ -151,10 +164,11 @@
         </mat-nested-tree-node>
       </mat-tree>
     </div>
+    </div>
   }
 
   <!-- Vista Lista -->
-  @if (viewMode === 'list' && !loading && !error) {
+  @if (viewMode === 'list' && !loading() && !error()) {
     <div class="table-container">
       <div class="table-wrapper">
         <table class="data-table">
@@ -232,7 +246,7 @@
   }
 
   <!-- Mensaje cuando no hay datos -->
-  @if (!loading && !error && filteredData.length === 0) {
+  @if (!loading() && !error() && filteredData.length === 0) {
     <div class="no-data-container">
       <mat-icon>account_tree</mat-icon>
       <h3>No se encontraron cuentas</h3>

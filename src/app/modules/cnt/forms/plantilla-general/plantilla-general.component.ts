@@ -1414,7 +1414,7 @@ export class PlantillaGeneralComponent implements OnInit {
    */
   verificarPlanesCuenta(): void {
     // Obtener planes de cuenta reales del servidor
-    this.planCuentaService.selectByCriteria({}).subscribe({
+    this.planCuentaService.selectByCriteria([]).subscribe({
       next: (planes) => {
         this.mostrarDiagnosticoPlanes(planes || []);
       },

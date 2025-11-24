@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
+import { Component, OnInit, AfterViewInit, ViewChild, ElementRef, CUSTOM_ELEMENTS_SCHEMA, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -50,9 +50,10 @@ import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/ti
   templateUrl: './plan-grid.component.html',
   styleUrls: ['./plan-grid.component.scss']
 })
-export class PlanGridComponent implements OnInit {
+export class PlanGridComponent implements OnInit, AfterViewInit {
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
+  @ViewChild('tableContainer') tableContainer!: ElementRef;
 
   // Datos
   planCuentas: PlanCuenta[] = [];
@@ -60,8 +61,11 @@ export class PlanGridComponent implements OnInit {
   dataSource = new MatTableDataSource<PlanCuenta>([]);
   selection = new SelectionModel<PlanCuenta>(true, []);
 
-  loading = false;
-  error: string | null = null;
+  // Signals para estado reactivo
+  loading = signal<boolean>(false);
+  error = signal<string>('');
+  totalRegistros = signal<number>(0);
+  isScrolled = signal<boolean>(false);
 
   // Filtros
   selectedNaturaleza: number | null = null;
@@ -103,6 +107,11 @@ export class PlanGridComponent implements OnInit {
     this.dataSource.paginator = this.paginator;
     this.dataSource.sort = this.sort;
 
+    // Configurar scroll detection
+    if (this.tableContainer) {
+      this.setupScrollDetection();
+    }
+
     // Configurar comparador personalizado para ordenamiento
     this.dataSource.sortingDataAccessor = (data: PlanCuenta, sortHeaderId: string) => {
       switch (sortHeaderId) {
@@ -140,41 +149,54 @@ export class PlanGridComponent implements OnInit {
     };
   }
 
+  setupScrollDetection(): void {
+    const container = this.tableContainer.nativeElement;
+    container.addEventListener('scroll', () => {
+      const scrollTop = container.scrollTop;
+      const scrollLeft = container.scrollLeft;
+      this.isScrolled.set(scrollTop > 100 || scrollLeft > 50);
+    });
+  }
+
+  scrollToTop(): void {
+    if (this.tableContainer) {
+      this.tableContainer.nativeElement.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }
+
+  scrollToLeft(): void {
+    if (this.tableContainer) {
+      this.tableContainer.nativeElement.scrollTo({ left: 0, behavior: 'smooth' });
+    }
+  }
+
   public loadData(): void {
-    this.loading = true;
-    this.error = null;
-    console.log('🔍 PlanGrid: priorizando selectByCriteria con fallback a getAll');
+    this.loading.set(true);
+    this.error.set('');
 
-    // Priorizar selectByCriteria con fallback a getAll
-    this.planCuentaService.selectByCriteria({}).pipe(
-      catchError(err => {
-        console.warn('selectByCriteria falló, intentando getAll como fallback:', err);
-        return this.planCuentaService.getAll();
-      })
-    ).subscribe({
+    // Usar getAll directamente (igual que plan-arbol)
+    this.planCuentaService.getAll().subscribe({
       next: (data) => {
-        console.log('📡 PlanGrid getAll respuesta cruda:', data);
-        const list = Array.isArray(data) ? data : (data as any)?.data ?? [];
-        const filtered = list.filter((it: any) => it?.empresa?.codigo === 280);
-        console.log(`📋 PlanGrid total=${list.length} empresa280=${filtered.length}`);
-
-        if (filtered.length === 0) {
-          this.error = 'No se encontraron cuentas para la empresa 280.';
-          console.warn('⚠️ PlanGrid: sin datos empresa 280, cargando mock para visualización.');
-          this.loadMockData();
+        const list = Array.isArray(data) ? data : [];
+        
+        if (list.length === 0) {
+          this.error.set('No se encontraron cuentas.');
+          this.planCuentas = [];
+          this.totalRegistros.set(0);
         } else {
-          this.error = null;
-          this.planCuentas = filtered;
+          this.error.set('');
+          this.planCuentas = list;
+          this.totalRegistros.set(list.length);
           this.updateDataSource();
         }
-        this.loading = false;
+        this.loading.set(false);
       },
       error: (err) => {
         console.error('❌ PlanGrid getAll error:', err);
         this.handleLoadError(err);
         console.log('📝 PlanGrid: cargando datos mock por error en backend');
         this.loadMockData();
-        this.loading = false;
+        this.loading.set(false);
       }
     });
   }
@@ -218,8 +240,9 @@ export class PlanGridComponent implements OnInit {
 
     console.log('📝 Cargando datos mock para PlanGrid:', mockData);
     this.planCuentas = mockData;
+    this.totalRegistros.set(mockData.length);
     this.updateDataSource();
-    this.error = 'Usando datos de ejemplo - Backend no disponible';
+    this.error.set('Usando datos de ejemplo - Backend no disponible');
   }
 
   private loadNaturalezas(): void {
@@ -269,11 +292,11 @@ export class PlanGridComponent implements OnInit {
 
   private handleLoadError(err: any): void {
     if (err.error?.message?.includes('ORA-00942')) {
-      this.error = 'Error de Base de Datos: Tabla CNT.PLNN no existe. Contactar administrador.';
+      this.error.set('Error de Base de Datos: Tabla CNT.PLNN no existe. Contactar administrador.');
     } else if (err.status === 0) {
-      this.error = 'Backend no disponible. Verificar que esté ejecutándose en localhost:8080';
+      this.error.set('Backend no disponible. Verificar que esté ejecutándose en localhost:8080');
     } else {
-      this.error = `Error del servidor: ${err.status} - ${err.message || 'Error desconocido'}`;
+      this.error.set(`Error del servidor: ${err.status} - ${err.message || 'Error desconocido'}`);
     }
   }
 
@@ -287,6 +310,7 @@ export class PlanGridComponent implements OnInit {
     });
 
     this.dataSource.data = sortedData;
+    this.totalRegistros.set(sortedData.length);
     this.recomputeDescendantCounts(sortedData);
     this.applyFilters();
 
@@ -599,22 +623,32 @@ export class PlanGridComponent implements OnInit {
   }
 
   /**
-   * Formatea una fecha para mostrarla en la tabla
+   * Formatea una fecha para mostrarla en la tabla usando función personalizada segura
    */
   public formatDate(date?: Date): string {
-    if (!date) return '-';
+    return this.formatFecha(date);
+  }
 
+  // Función personalizada para formateo seguro de fechas
+  formatFecha(fecha: string | Date | null | undefined): string {
+    if (!fecha) return '-';
+    
     try {
-      const dateObj = date instanceof Date ? date : new Date(date);
-      if (isNaN(dateObj.getTime())) return '-';
-
-      return dateObj.toLocaleDateString('es-ES', {
+      const fechaStr = typeof fecha === 'string' ? fecha : fecha.toISOString();
+      // Remover zona horaria problemática: "2024-01-15T05:00:00Z[UTC]"
+      const fechaLimpia = fechaStr.split('[')[0].replace('Z', '');
+      const fechaObj = new Date(fechaLimpia);
+      
+      if (isNaN(fechaObj.getTime())) return 'Fecha inválida';
+      
+      return fechaObj.toLocaleDateString('es-EC', {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric'
       });
-    } catch {
-      return '-';
+    } catch (err) {
+      console.error('Error formateando fecha:', err);
+      return 'Error de formato';
     }
   }
 

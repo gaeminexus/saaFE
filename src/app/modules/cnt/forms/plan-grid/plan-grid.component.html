@@ -83,24 +83,37 @@
   </div>
 
   <!-- Loading y Error -->
-  @if (loading) {
+  @if (loading()) {
     <div class="loading-container">
       <mat-spinner diameter="50"></mat-spinner>
       <p>Cargando datos del grid...</p>
     </div>
   }
 
-  @if (error) {
+  @if (error()) {
     <div class="error-container">
       <mat-icon>error</mat-icon>
-      <p>{{ error }}</p>
+      <p>{{ error() }}</p>
       <button mat-button (click)="loadData()">Reintentar</button>
     </div>
   }
 
   <!-- Tabla de datos -->
-  @if (!loading && !error) {
-    <div class="table-container">
+  @if (!loading() && !error()) {
+    <div class="table-wrapper">
+      <!-- Botones de navegación scroll -->
+      @if (isScrolled()) {
+        <div class="scroll-controls">
+          <button mat-mini-fab color="primary" (click)="scrollToTop()" matTooltip="Ir arriba">
+            <mat-icon>keyboard_arrow_up</mat-icon>
+          </button>
+          <button mat-mini-fab color="primary" (click)="scrollToLeft()" matTooltip="Ir al inicio">
+            <mat-icon>keyboard_arrow_left</mat-icon>
+          </button>
+        </div>
+      }
+
+      <div class="table-container" #tableContainer>
       <table mat-table [dataSource]="dataSource" matSort class="data-table">
 
         <!-- Columna de selección -->
@@ -289,10 +302,11 @@
         class="table-paginator">
       </mat-paginator>
     </div>
+    </div>
   }
 
   <!-- Mensaje cuando no hay datos -->
-  @if (!loading && !error && dataSource.data.length === 0) {
+  @if (!loading() && !error() && dataSource.data.length === 0) {
     <div class="no-data-container">
       <mat-icon>grid_view</mat-icon>
       <h3>No se encontraron cuentas</h3>

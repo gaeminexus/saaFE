@@ -1,0 +1,129 @@
+name: Bug Report
+description: Reportar un error o comportamiento inesperado
+title: "[BUG]: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Gracias por tomarte el tiempo de reportar un bug. Por favor, completa la siguiente información para ayudarnos a resolver el problema.
+
+  - type: textarea
+    id: bug-description
+    attributes:
+      label: Descripción del Bug
+      description: Una descripción clara y concisa del problema
+      placeholder: Describe qué está mal...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction-steps
+    attributes:
+      label: Pasos para Reproducir
+      description: Pasos detallados para reproducir el comportamiento
+      placeholder: |
+        1. Ir a '...'
+        2. Hacer clic en '....'
+        3. Ver error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Comportamiento Esperado
+      description: Una descripción clara de lo que esperabas que pasara
+      placeholder: Describe el comportamiento esperado...
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual-behavior
+    attributes:
+      label: Comportamiento Actual
+      description: Una descripción clara de lo que realmente está pasando
+      placeholder: Describe qué está pasando en su lugar...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: module
+    attributes:
+      label: Módulo Afectado
+      description: ¿Qué módulo del sistema está experimentando el problema?
+      options:
+        - CNT (Contabilidad)
+        - CRD (Créditos)
+        - CXC (Cuentas por Cobrar)
+        - CXP (Cuentas por Pagar)
+        - TSR (Tesorería)
+        - DASH (Dashboard)
+        - SHARED (Componentes compartidos)
+        - Otro
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severidad
+      description: ¿Qué tan crítico es este bug?
+      options:
+        - Crítico (Bloquea funcionalidad principal)
+        - Alto (Funcionalidad importante afectada)
+        - Medio (Funcionalidad menor afectada)
+        - Bajo (Problema cosmético o de UX)
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Entorno
+      description: Información sobre tu entorno de desarrollo/ejecución
+      placeholder: |
+        - OS: [ej. Windows 11, macOS 12, Ubuntu 20.04]
+        - Browser: [ej. Chrome 96, Firefox 95, Safari 15]
+        - Angular Version: [ej. 20.3.10]
+        - Node Version: [ej. 18.17.0]
+        - NPM Version: [ej. 9.6.7]
+    validations:
+      required: true
+
+  - type: textarea
+    id: console-errors
+    attributes:
+      label: Errores de Consola
+      description: Si hay errores en la consola del navegador, por favor inclúyelos aquí
+      render: shell
+      placeholder: Pega aquí los errores de la consola...
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: Si aplica, agrega screenshots para ayudar a explicar el problema
+      placeholder: Arrastra y suelta imágenes aquí...
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Contexto Adicional
+      description: Agrega cualquier otra información sobre el problema aquí
+      placeholder: Cualquier información adicional que pueda ser útil...
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      description: Por favor confirma que has hecho lo siguiente
+      options:
+        - label: He buscado en issues existentes para ver si este bug ya fue reportado
+          required: true
+        - label: He probado en la última versión disponible
+          required: true
+        - label: He incluido toda la información relevante arriba
+          required: true
+        - label: Este bug es reproducible
+          required: true

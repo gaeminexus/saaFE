@@ -1,0 +1,144 @@
+name: Feature Request
+description: Solicitar una nueva funcionalidad o mejora
+title: "[FEATURE]: "
+labels: ["enhancement", "needs-review"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ¡Gracias por sugerir una nueva funcionalidad! Tu feedback es muy valioso para mejorar saaFE.
+
+  - type: textarea
+    id: problem-description
+    attributes:
+      label: ¿Tu solicitud está relacionada con un problema?
+      description: Una descripción clara de cuál es el problema
+      placeholder: "Estoy frustrado cuando... / Sería útil si... / Los usuarios necesitan..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution-description
+    attributes:
+      label: Describe la solución que te gustaría
+      description: Una descripción clara y concisa de lo que quieres que pase
+      placeholder: "Me gustaría que el sistema pueda..."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: module
+    attributes:
+      label: Módulo de Destino
+      description: ¿En qué módulo del sistema debería implementarse esta funcionalidad?
+      options:
+        - CNT (Contabilidad)
+        - CRD (Créditos)
+        - CXC (Cuentas por Cobrar)
+        - CXP (Cuentas por Pagar)
+        - TSR (Tesorería)
+        - DASH (Dashboard)
+        - SHARED (Componentes compartidos)
+        - Nuevo módulo
+        - Sistema completo
+    validations:
+      required: true
+
+  - type: dropdown
+    id: feature-type
+    attributes:
+      label: Tipo de Funcionalidad
+      description: ¿Qué tipo de funcionalidad estás solicitando?
+      options:
+        - Nueva pantalla/componente
+        - Mejora a funcionalidad existente
+        - Nueva API/servicio
+        - Mejora de UX/UI
+        - Integración con sistema externo
+        - Optimización de performance
+        - Funcionalidad de reportes
+        - Otro
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Prioridad
+      description: ¿Qué tan importante es esta funcionalidad?
+      options:
+        - Crítica (Bloquea operaciones importantes)
+        - Alta (Mejora significativa de eficiencia)
+        - Media (Funcionalidad útil pero no urgente)
+        - Baja (Nice to have)
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternativas Consideradas
+      description: Describe cualquier solución alternativa o funcionalidad que hayas considerado
+      placeholder: "También consideré... / Una alternativa podría ser..."
+
+  - type: textarea
+    id: user-stories
+    attributes:
+      label: Historias de Usuario
+      description: Describe cómo diferentes tipos de usuarios interactuarían con esta funcionalidad
+      placeholder: |
+        - Como [tipo de usuario], quiero [funcionalidad] para [beneficio]
+        - Como contador, quiero poder filtrar asientos por fecha para revisar movimientos específicos
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Criterios de Aceptación
+      description: Define qué debe cumplir esta funcionalidad para considerarse completa
+      placeholder: |
+        - [ ] Criterio 1
+        - [ ] Criterio 2
+        - [ ] Criterio 3
+
+  - type: textarea
+    id: business-value
+    attributes:
+      label: Valor de Negocio
+      description: Explica el impacto positivo que esta funcionalidad tendría
+      placeholder: "Esta funcionalidad permitirá... / Los usuarios podrán ahorrar tiempo en... / Mejorará la precisión de..."
+
+  - type: textarea
+    id: technical-considerations
+    attributes:
+      label: Consideraciones Técnicas
+      description: ¿Hay algún aspecto técnico específico a considerar?
+      placeholder: "Esta funcionalidad podría requerir... / Debería integrarse con... / Consideraciones de performance..."
+
+  - type: textarea
+    id: mockups
+    attributes:
+      label: Mockups o Referencias
+      description: Si tienes mockups, wireframes o ejemplos de otros sistemas, inclúyelos aquí
+      placeholder: "Arrastra y suelta imágenes aquí o describe la interfaz deseada..."
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Contexto Adicional
+      description: Agrega cualquier otra información sobre la solicitud de funcionalidad
+      placeholder: "Referencias a sistemas similares, documentación relevante, etc..."
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      description: Por favor confirma que has hecho lo siguiente
+      options:
+        - label: He buscado en issues existentes para ver si esta funcionalidad ya fue solicitada
+          required: true
+        - label: He considerado si esta funcionalidad encaja con los objetivos del proyecto
+          required: true
+        - label: He proporcionado suficiente detalle para que el equipo pueda entender y evaluar la solicitud
+          required: true
+        - label: Esta funcionalidad beneficiaría a múltiples usuarios del sistema
+          required: true

@@ -1,4 +1,4 @@
-import { Component, OnInit, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
+import { Component, OnInit, AfterViewInit, ViewChild, ElementRef, CUSTOM_ELEMENTS_SCHEMA, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -58,7 +58,10 @@ interface SortConfig {
   templateUrl: './plan-arbol.component.html',
   styleUrls: ['./plan-arbol.component.scss']
 })
-export class PlanArbolComponent implements OnInit {
+export class PlanArbolComponent implements OnInit, AfterViewInit {
+
+  // ViewChild para scroll detection
+  @ViewChild('treeContainer') treeContainer!: ElementRef;
 
   // Datos
   planCuentas: PlanCuenta[] = [];
@@ -67,8 +70,11 @@ export class PlanArbolComponent implements OnInit {
   filteredData: PlanCuentaNode[] = [];
   pagedData: PlanCuentaNode[] = [];
 
-  loading = false;
-  error: string | null = null;
+  // Signals para estado reactivo
+  loading = signal<boolean>(false);
+  error = signal<string>('');
+  totalRegistros = signal<number>(0);
+  isScrolled = signal<boolean>(false);
 
   // Vista: árbol o lista
   viewMode: 'tree' | 'list' = 'tree';
@@ -112,10 +118,37 @@ export class PlanArbolComponent implements OnInit {
     this.loadNaturalezas();
   }
 
+  ngAfterViewInit(): void {
+    if (this.treeContainer) {
+      this.setupScrollDetection();
+    }
+  }
+
+  setupScrollDetection(): void {
+    const container = this.treeContainer.nativeElement;
+    container.addEventListener('scroll', () => {
+      const scrollTop = container.scrollTop;
+      const scrollLeft = container.scrollLeft;
+      this.isScrolled.set(scrollTop > 100 || scrollLeft > 50);
+    });
+  }
+
+  scrollToTop(): void {
+    if (this.treeContainer) {
+      this.treeContainer.nativeElement.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }
+
+  scrollToLeft(): void {
+    if (this.treeContainer) {
+      this.treeContainer.nativeElement.scrollTo({ left: 0, behavior: 'smooth' });
+    }
+  }
+
   // ⚠️ Debe ser público para que el template pueda llamarlo
   public loadData(): void {
-    this.loading = true;
-    this.error = null;
+    this.loading.set(true);
+    this.error.set('');
 
     console.log('🔍 Cargando PlanArbol con getAll y filtrando por empresa 280...');
 
@@ -130,31 +163,32 @@ export class PlanArbolComponent implements OnInit {
 
         if (filtered.length === 0) {
           console.log('⚠️ No se encontraron cuentas para empresa 280');
-          this.error = 'No se encontraron cuentas para la empresa 280.';
+          this.error.set('No se encontraron cuentas para la empresa 280.');
           // Opcional: usar mock para visualizar estructura
           this.loadMockData();
         } else {
           console.log(`✅ Se cargaron ${filtered.length} cuentas para empresa 280`);
-          this.error = null;
+          this.error.set('');
           this.planCuentas = filtered;
+          this.totalRegistros.set(filtered.length);
           this.setDefaultSort();
           this.buildTree();
           this.applyFiltersAndPagination();
         }
-        this.loading = false;
+        this.loading.set(false);
       },
       error: (err) => {
         console.error('❌ Error al cargar datos (getAll):', err);
         if (err?.error?.message?.includes('ORA-00942')) {
-          this.error = 'Error de Base de Datos: Tabla CNT.PLNN no existe. Contactar administrador.';
+          this.error.set('Error de Base de Datos: Tabla CNT.PLNN no existe. Contactar administrador.');
         } else if (err?.status === 0) {
-          this.error = 'Backend no disponible. Verificar que esté ejecutándose en localhost:8080';
+          this.error.set('Backend no disponible. Verificar que esté ejecutándose en localhost:8080');
         } else {
-          this.error = `Error del servidor: ${err?.status} - ${err?.message || 'Error desconocido'}`;
+          this.error.set(`Error del servidor: ${err?.status} - ${err?.message || 'Error desconocido'}`);
         }
         // Mostrar mock para poder validar la UI
         this.loadMockData();
-        this.loading = false;
+        this.loading.set(false);
       }
     });
   }
@@ -172,31 +206,32 @@ export class PlanArbolComponent implements OnInit {
 
         if (list.length === 0) {
           console.log('⚠️ No se encontraron datos en la base de datos');
-          this.error = 'No se encontraron cuentas en la base de datos. Verificar que las tablas CNT.PLNN existan.';
+          this.error.set('No se encontraron cuentas en la base de datos. Verificar que las tablas CNT.PLNN existan.');
         } else {
           console.log(`✅ Se cargaron ${list.length} cuentas exitosamente (fallback)`);
-          this.error = null; // Limpiar error si se cargaron datos
+          this.error.set(''); // Limpiar error si se cargaron datos
         }
 
         this.planCuentas = list;
+        this.totalRegistros.set(list.length);
         this.setDefaultSort();
         this.buildTree();
         this.applyFiltersAndPagination();
-        this.loading = false;
+        this.loading.set(false);
       },
       error: (err) => {
         console.error('❌ Error al cargar datos del backend (fallback):', err);
 
         // Proporcionar información específica del error
         if (err.error?.message?.includes('ORA-00942')) {
-          this.error = 'Error BD: Las tablas CNT.PLNN/CNT.NTRL no existen. Ejecutar scripts de creación de BD.';
+          this.error.set('Error BD: Las tablas CNT.PLNN/CNT.NTRL no existen. Ejecutar scripts de creación de BD.');
         } else if (err.status === 0) {
-          this.error = 'Backend no disponible en localhost:8080. Verificar que WildFly esté ejecutándose.';
+          this.error.set('Backend no disponible en localhost:8080. Verificar que WildFly esté ejecutándose.');
         } else {
-          this.error = `Error del servidor: ${err.status} - ${err.message || 'Error desconocido'}`;
+          this.error.set(`Error del servidor: ${err.status} - ${err.message || 'Error desconocido'}`);
         }
 
-        this.loading = false;
+        this.loading.set(false);
 
         // En caso de error, mostrar datos de ejemplo para desarrollo
         console.log('📝 Cargando datos de ejemplo para desarrollo...');
@@ -260,12 +295,13 @@ export class PlanArbolComponent implements OnInit {
 
     setTimeout(() => {
       this.planCuentas = mockData;
+      this.totalRegistros.set(mockData.length);
       console.log('🔄 Datos asignados, construyendo árbol...');
       this.setDefaultSort();
       this.buildTree();
       this.applyFiltersAndPagination();
-      this.error = 'Usando datos de ejemplo - Backend no disponible';
-      this.loading = false;
+      this.error.set('Usando datos de ejemplo - Backend no disponible');
+      this.loading.set(false);
     }, 300);
   }
 
@@ -575,6 +611,29 @@ export class PlanArbolComponent implements OnInit {
 
   public estadoLabel(valor: any): string {
     return Number(valor) === 1 ? 'Activo' : 'Inactivo';
+  }
+
+  // Función personalizada para formateo seguro de fechas
+  formatFecha(fecha: string | Date | null | undefined): string {
+    if (!fecha) return 'N/A';
+    
+    try {
+      const fechaStr = typeof fecha === 'string' ? fecha : fecha.toISOString();
+      // Remover zona horaria problemática: "2024-01-15T05:00:00Z[UTC]"
+      const fechaLimpia = fechaStr.split('[')[0].replace('Z', '');
+      const fechaObj = new Date(fechaLimpia);
+      
+      if (isNaN(fechaObj.getTime())) return 'Fecha inválida';
+      
+      return fechaObj.toLocaleDateString('es-EC', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+    } catch (err) {
+      console.error('Error formateando fecha:', err);
+      return 'Error de formato';
+    }
   }
 
   public trackByCodigo = (_: number, item: PlanCuentaNode) =>

@@ -168,7 +168,7 @@ export class PlanCuentasComponent implements OnInit {
     console.log('🔗 URL del servicio:', '/api/saa-backend/rest/plnn/');
 
     // Priorizar selectByCriteria con fallback a getAll
-    this.planCuentaService.selectByCriteria({}).pipe(
+    this.planCuentaService.selectByCriteria([]).pipe(
       catchError(err => {
         console.warn('selectByCriteria falló, intentando getAll como fallback:', err);
         return this.planCuentaService.getAll();
