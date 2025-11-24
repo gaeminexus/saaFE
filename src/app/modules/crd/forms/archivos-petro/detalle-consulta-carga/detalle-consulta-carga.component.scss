@@ -1,0 +1,657 @@
+// Variables del sistema
+$saa-primary: #667eea;
+$saa-secondary: #764ba2;
+$saa-accent: #f6ad55;
+$saa-success: #28a745;
+$saa-error: #dc3545;
+$saa-warning: #ffc107;
+$saa-background: #f7fafc;
+$saa-surface: #ffffff;
+$saa-text-primary: #333333;
+$saa-text-secondary: #666666;
+$saa-border-light: #e2e8f0;
+$saa-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+$saa-shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.15);
+$saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
+
+.detalle-consulta-container {
+  width: 100%;
+  min-height: calc(100vh - 105px);
+  padding: 1.5rem;
+  box-sizing: border-box;
+
+  // GPU acceleration para performance
+  will-change: width;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+
+  // Header con filtros (solo lectura)
+  .search-header {
+    background: $saa-gradient;
+    border-radius: 1rem;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: $saa-shadow;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+
+    .header-title {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      color: white;
+
+      .header-icon {
+        font-size: 2.5rem;
+        width: 2.5rem;
+        height: 2.5rem;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 1.8rem;
+        font-weight: 600;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        flex: 1;
+      }
+
+      .back-button {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        transition: all 0.3s ease;
+
+        &:hover {
+          background: rgba(255, 255, 255, 0.3);
+          transform: scale(1.1);
+        }
+      }
+    }
+
+    .filters-box {
+      display: flex;
+      gap: 1rem;
+      align-items: flex-start;
+      flex-wrap: wrap;
+
+      .filter-field {
+        flex: 1;
+        min-width: 250px;
+
+        ::ng-deep {
+          // Fondo blanco para los campos
+          .mat-mdc-text-field-wrapper {
+            background: white;
+            border-radius: 0.75rem 0.75rem 0 0;
+          }
+
+          .mdc-text-field--filled {
+            background-color: white !important;
+            border-radius: 0.75rem 0.75rem 0 0;
+
+            &::before {
+              background-color: transparent !important;
+            }
+
+            &:hover::before {
+              background-color: transparent !important;
+            }
+
+            &::after {
+              background-color: transparent !important;
+            }
+          }
+
+          .mat-mdc-form-field-focus-overlay {
+            background-color: transparent !important;
+          }
+
+          // Label en gris
+          .mdc-floating-label {
+            color: #666666 !important;
+          }
+
+          // Iconos en azul
+          mat-icon {
+            color: #667eea;
+          }
+
+          // Input text oscuro (readonly)
+          .mat-mdc-input-element {
+            color: rgba(0, 0, 0, 0.87) !important;
+            cursor: default;
+          }
+        }
+      }
+    }
+  }
+
+  // Loading state
+  .loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+    padding: 3rem;
+
+    mat-spinner {
+      margin-bottom: 1.5rem;
+    }
+
+    p {
+      color: $saa-text-secondary;
+      font-size: 1.1rem;
+    }
+  }
+
+  // Área de contenido
+  .content-area {
+    min-height: 400px;
+
+    // Sección de información del archivo
+    .file-info-section {
+      margin-bottom: 2rem;
+
+      .file-info-card {
+        border-radius: 1rem;
+        box-shadow: $saa-shadow;
+        overflow: hidden;
+        transform: translateZ(0);
+        backface-visibility: hidden;
+
+        mat-card-header {
+          background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+          padding: 0.75rem 1rem;
+
+          .avatar-icon {
+            background: $saa-gradient;
+            color: white;
+            font-size: 1.25rem;
+            width: 1.75rem;
+            height: 1.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+          }
+
+          mat-card-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: $saa-text-primary;
+          }
+        }
+
+        mat-card-content {
+          padding: 1.5rem;
+
+          .file-details {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+
+            .file-detail-item {
+              display: flex;
+              align-items: center;
+              gap: 0.75rem;
+              padding: 0.5rem;
+              border-radius: 0.5rem;
+              background: $saa-background;
+
+              mat-icon {
+                color: $saa-primary;
+                font-size: 1.5rem;
+                width: 1.5rem;
+                height: 1.5rem;
+              }
+
+              .label {
+                font-weight: 600;
+                color: $saa-text-secondary;
+                min-width: 150px;
+              }
+
+              .value {
+                color: $saa-text-primary;
+                flex: 1;
+                word-break: break-word;
+              }
+            }
+          }
+
+          .download-button {
+            width: 100%;
+            padding: 0.75rem;
+            font-size: 1rem;
+
+            mat-icon {
+              margin-right: 0.5rem;
+            }
+          }
+        }
+      }
+    }
+
+    // Sección de resultados
+    .results-section {
+      mat-card {
+        border-radius: 1rem;
+        box-shadow: $saa-shadow;
+
+        mat-card-header {
+          background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+          padding: 1.25rem;
+          margin-bottom: 1rem;
+
+          .avatar-icon {
+            background: $saa-gradient;
+            color: white;
+            font-size: 1.5rem;
+            width: 2rem;
+            height: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+          }
+
+          mat-card-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: $saa-text-primary;
+          }
+
+          mat-card-subtitle {
+            color: $saa-text-secondary;
+            font-size: 0.95rem;
+          }
+        }
+
+        mat-card-content {
+          padding: 0 1.5rem 1.5rem;
+
+          mat-accordion {
+            .mat-expansion-panel {
+              margin-bottom: 1rem;
+              border-radius: 0.75rem;
+              box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+
+              &:last-child {
+                margin-bottom: 0;
+              }
+
+              .mat-expansion-panel-header {
+                padding: 1rem 1.5rem;
+
+                &:hover {
+                  background: lighten($saa-primary, 48%);
+                }
+
+                .mat-expansion-panel-header-title {
+                  flex: 1;
+                  margin-right: 0 !important;
+
+                  &.custom-panel-title {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    width: 100%;
+
+                    .title-left {
+                      display: flex;
+                      align-items: center;
+                      gap: 1rem;
+                      flex: 0 0 auto;
+
+                      .aporte-icon {
+                        color: $saa-primary;
+                        font-size: 1.5rem;
+                        width: 1.5rem;
+                        height: 1.5rem;
+                      }
+
+                      .aporte-codigo {
+                        font-weight: 700;
+                        color: $saa-primary;
+                        font-size: 1.1rem;
+                      }
+
+                      .separator {
+                        color: $saa-text-secondary;
+                        font-weight: 300;
+                      }
+
+                      .aporte-descripcion {
+                        color: $saa-text-primary;
+                        font-weight: 500;
+                      }
+                    }
+
+                    .title-center {
+                      flex: 0 0 auto;
+                      display: flex;
+                      justify-content: center;
+
+                      .total-descontado-badge {
+                        display: flex;
+                        align-items: center;
+                        gap: 0.5rem;
+                        padding: 0.4rem 0.75rem;
+                        background: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
+                        color: white;
+                        border-radius: 1rem;
+                        font-weight: 700;
+                        font-size: 0.85rem;
+                        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+
+                        mat-icon {
+                          font-size: 1rem;
+                          width: 1rem;
+                          height: 1rem;
+                        }
+                      }
+                    }
+
+                    .title-right {
+                      flex: 0 0 auto;
+                      display: flex;
+                      justify-content: flex-end;
+                      margin-right: 2rem;
+
+                      .registro-count {
+                        color: $saa-text-secondary;
+                        font-size: 0.9rem;
+                        font-weight: 500;
+                      }
+                    }
+                  }
+                }
+
+                .mat-expansion-panel-header-description {
+                  display: none;
+                }
+              }
+
+              .mat-expansion-panel-body {
+                padding: 0;
+              }
+            }
+
+
+            // Sección de totales
+            .totales-section {
+              padding: 1.5rem;
+              background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+              border-bottom: 2px solid $saa-border-light;
+
+              h4 {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                margin: 0 0 1rem 0;
+                color: $saa-text-primary;
+                font-size: 1.1rem;
+                font-weight: 600;
+
+                mat-icon {
+                  color: $saa-primary;
+                }
+              }
+
+              .totales-grid {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 1rem;
+
+                @media (max-width: 1200px) {
+                  grid-template-columns: repeat(2, 1fr);
+                }
+
+                @media (max-width: 768px) {
+                  grid-template-columns: 1fr;
+                }
+
+                .total-item {
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                  padding: 0.75rem 1rem;
+                  background: white;
+                  border-radius: 0.5rem;
+                  border-left: 3px solid $saa-primary;
+                  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+                  transition: all 0.3s ease;
+
+                  &:hover {
+                    transform: translateX(3px);
+                    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+                  }
+
+                  .total-label {
+                    font-weight: 600;
+                    color: $saa-text-secondary;
+                    font-size: 0.9rem;
+                  }
+
+                  .total-valor {
+                    font-weight: 700;
+                    color: $saa-primary;
+                    font-size: 1rem;
+                    font-family: 'Courier New', monospace;
+                  }
+
+                  &.no-descontado {
+                    background: rgba(220, 53, 69, 0.05);
+                    border-left-color: rgba(220, 53, 69, 0.6);
+
+                    .total-valor {
+                      color: rgba(220, 53, 69, 0.85);
+                    }
+                  }
+                }
+              }
+            }
+
+            .table-container {
+              overflow-x: auto;
+              border-radius: 0 0 0.75rem 0.75rem;
+
+              .participes-table {
+                width: 100%;
+                background: white;
+              }
+
+              th.mat-header-cell {
+                background: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
+                color: white;
+                font-weight: 600;
+                font-size: 0.85rem;
+                padding: 1rem 0.75rem;
+                border: none;
+              }
+
+              td.mat-cell {
+                padding: 0.75rem;
+                font-size: 0.9rem;
+                border-bottom: 1px solid $saa-border-light;
+
+                &.destacado {
+                  font-weight: 700;
+                  color: $saa-primary;
+                }
+
+                &.no-descontado {
+                  color: rgba(220, 53, 69, 0.85);
+                  font-weight: 600;
+                }
+              }
+
+              // Columna de nombre más ancha y en una sola línea
+              .mat-column-nombre {
+                min-width: 300px;
+                max-width: 400px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+              }
+
+              tr.mat-row {
+                &:hover {
+                  background: rgba(102, 126, 234, 0.02);
+                }
+              }
+            }
+          }
+
+          // Totales Generales
+          .totales-generales-section {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: linear-gradient(135deg, lighten($saa-primary, 45%) 0%, lighten($saa-secondary, 45%) 100%);
+            border-radius: 0.75rem;
+            border: 2px solid $saa-primary;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+
+            .totales-generales-header {
+              display: flex;
+              align-items: center;
+              gap: 0.75rem;
+              margin-bottom: 1.5rem;
+              padding-bottom: 1rem;
+              border-bottom: 2px solid $saa-primary;
+
+              mat-icon {
+                font-size: 2rem;
+                width: 2rem;
+                height: 2rem;
+                color: $saa-primary;
+              }
+
+              h3 {
+                margin: 0;
+                font-size: 1.4rem;
+                font-weight: 700;
+                color: $saa-primary;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+              }
+            }
+
+            .totales-grid {
+              display: grid;
+              grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+              gap: 1rem;
+
+              .total-item {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 1rem 1.25rem;
+                background: white;
+                border-radius: 0.5rem;
+                border-left: 4px solid $saa-primary;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+                transition: all 0.3s ease;
+
+                &:hover {
+                  transform: translateY(-2px);
+                  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                }
+
+                .total-label {
+                  font-weight: 700;
+                  color: $saa-text-secondary;
+                  font-size: 0.95rem;
+                }
+
+                .total-valor {
+                  font-weight: 800;
+                  color: $saa-primary;
+                  font-size: 1.15rem;
+                  font-family: 'Courier New', monospace;
+                }
+
+                &.no-descontado {
+                  background: rgba(220, 53, 69, 0.08);
+                  border-left-color: rgba(220, 53, 69, 0.7);
+
+                  .total-valor {
+                    color: rgba(220, 53, 69, 0.9);
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+// Responsive
+@media (max-width: 768px) {
+  .detalle-consulta-container {
+    padding: 0 0.5rem;
+
+    .search-header {
+      padding: 1rem;
+
+      .header-title {
+        h1 {
+          font-size: 1.4rem;
+        }
+
+        .header-icon {
+          font-size: 2rem;
+          width: 2rem;
+          height: 2rem;
+        }
+      }
+
+      .filters-box {
+        .filter-field {
+          min-width: 100%;
+        }
+      }
+    }
+
+    .content-area {
+      .file-info-section {
+        .file-info-card {
+          mat-card-content {
+            .file-details {
+              .file-detail-item {
+                flex-direction: column;
+                align-items: flex-start;
+
+                .label {
+                  min-width: auto;
+                }
+              }
+            }
+          }
+        }
+      }
+
+      .results-section {
+        mat-card-content {
+          .totales-section {
+            .totales-grid {
+              grid-template-columns: 1fr;
+            }
+          }
+
+          .totales-generales-section {
+            padding: 1rem;
+
+            .totales-grid {
+              grid-template-columns: 1fr;
+            }
+          }
+        }
+      }
+    }
+  }
+}

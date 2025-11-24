@@ -41,10 +41,10 @@ export class ServiciosAsoprepService {
     formData.append('detallesCargaArchivos', JSON.stringify(detallesCargaArchivos));
     formData.append('participesXCargaArchivo', JSON.stringify(participesXCargaArchivo));
 
-    console.log('URL de la solicitud:', url);
+    /*console.log('URL de la solicitud:', url);
     console.log('Archivo:', archivo.name);
-    console.log('Detalles a enviar:', detallesCargaArchivos.length);
-    console.log('Partícipes a enviar:', participesXCargaArchivo.length);
+    console.log('Detalles a enviar:', detallesCargaArchivos.length);*/
+    console.log('Partícipes a enviar:', participesXCargaArchivo);
 
     // Para FormData NO usar httpOptions (el navegador establece Content-Type automáticamente)
     return this.http.post<any>(url, formData).pipe(

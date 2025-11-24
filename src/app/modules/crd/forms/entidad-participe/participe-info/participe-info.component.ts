@@ -342,7 +342,7 @@ export class ParticipeInfoComponent implements OnInit, OnChanges {
       tieneCorreoPersonal: entidad.tieneCorreoPersonal || 0,
       tieneCorreoTrabajo: entidad.tieneCorreoTrabajo || 0,
       tieneTelefono: entidad.tieneTelefono || 0,
-      numeroCargasFamiliares: entidad.numeroCargasFamiliares || 0,
+      numeroCargasFamiliares: entidad.cargasFamiliares || 0,
       sectorPublico: entidad.sectorPublico || 0,
       idCiudad: entidad.idCiudad,
       porcentajeSimilitud: entidad.porcentajeSimilitud || 0,
@@ -353,7 +353,6 @@ export class ParticipeInfoComponent implements OnInit, OnChanges {
       usuarioIngreso: entidad.usuarioIngreso,
       fechaIngreso: entidad.fechaIngreso,
       usuarioModificacion: entidad.usuarioModificacion,
-      fechaModificacion: entidad.fechaModificacion,
       ipIngreso: entidad.ipIngreso,
       ipModificacion: entidad.ipModificacion
     });

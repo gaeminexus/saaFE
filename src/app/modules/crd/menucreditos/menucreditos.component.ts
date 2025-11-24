@@ -130,9 +130,21 @@ export class MenucreditosComponent {
           // route: '/menucreditos/navegacion-cascada'
         },
         {
-          displayName: 'Cargar Aportes',
-          iconName: 'drive_folder_upload',
-          route: '/menucreditos/carga-aportes'
+          displayName: 'Archivos Petro',
+          iconName: 'cards_stack',
+          route: '/menucreditos/parametrizacion',
+          children: [
+            {
+              displayName: 'Carga Aportes',
+              iconName: 'drive_folder_upload',
+              route: '/menucreditos/carga-aportes'
+            },
+            {
+              displayName: 'Consulta',
+              iconName: 'manage_search',
+              route: '/menucreditos/consulta-archivos-petro'
+            },
+          ]
         },
         {
           displayName: 'Pago Cuota',
@@ -151,10 +163,5 @@ export class MenucreditosComponent {
         },
       ]
     },
-    {
-      displayName: 'Regresar',
-      iconName: 'arrow_back',
-      route: '/menu'
-    }
   ];
 }

@@ -2,14 +2,18 @@ import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
-import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
-import { Filial } from '../../model/filial';
-import { CargaArchivo } from '../../model/carga-archivo';
-import { FilialService } from '../../service/filial.service';
-import { ServiciosAsoprepService } from '../../../asoprep/service/servicios-asoprep.service';
-import { Usuario } from '../../../../shared/model/usuario';
-import { FuncionesDatosService, TipoFormatoFechaBackend } from '../../../../shared/services/funciones-datos.service';
-import { ArchivoPetroService, AporteAgrupado } from '../../../asoprep/service/archivo-petro.service';
+import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { Filial } from '../../../model/filial';
+import { CargaArchivo } from '../../../model/carga-archivo';
+import { FilialService } from '../../../service/filial.service';
+import { CargaArchivoService } from '../../../service/carga-archivo.service';
+import { ServiciosAsoprepService } from '../../../../asoprep/service/servicios-asoprep.service';
+import { Usuario } from '../../../../../shared/model/usuario';
+import { FuncionesDatosService, TipoFormatoFechaBackend } from '../../../../../shared/services/funciones-datos.service';
+import { ArchivoPetroService, AporteAgrupado } from '../../../../asoprep/service/archivo-petro.service';
+import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
+import { TipoDatosBusqueda as TipoDatos } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
+import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 
 
 interface Mes {
@@ -33,6 +37,10 @@ export class CargaAportesComponent implements OnInit {
   mesSeleccionado: number | null = null;
   filialSeleccionada: number | null = null;
 
+  // Estados de habilitación
+  anioDeshabilitado: boolean = true;
+  mesDeshabilitado: boolean = true;
+
   // Datos para los combos
   anios: number[] = [];
   meses: Mes[] = [
@@ -49,6 +57,7 @@ export class CargaAportesComponent implements OnInit {
     { valor: 11, nombre: 'Noviembre' },
     { valor: 12, nombre: 'Diciembre' }
   ];
+  mesesDeshabilitados: number[] = []; // Meses que ya tienen carga
   filiales: Filial[] = [];
 
   // Carga de archivos
@@ -96,8 +105,8 @@ export class CargaAportesComponent implements OnInit {
     private filialService: FilialService,
     private serviciosAsoprep: ServiciosAsoprepService,
     private snackBar: MatSnackBar,
-    private funcionesDatos: FuncionesDatosService,
-    private archivoPetroService: ArchivoPetroService
+    private archivoPetroService: ArchivoPetroService,
+    private cargaArchivoService: CargaArchivoService
   ) {
     // Generar años del 2025 al 2035
     for (let anio = 2025; anio <= 2035; anio++) {
@@ -160,6 +169,110 @@ export class CargaAportesComponent implements OnInit {
     this.anioSeleccionado = null;
     this.mesSeleccionado = null;
     this.filialSeleccionada = null;
+
+    // Deshabilitar año y mes, pero dejar filial habilitada
+    this.anioDeshabilitado = true;
+    this.mesDeshabilitado = true;
+    this.mesesDeshabilitados = [];
+
+    // Limpiar resultados
+    this.aporteAgrupados = [];
+    this.nombreArchivo = '';
+    this.archivoSeleccionado = null;
+  }
+
+  onFilialChange(): void {
+    // Limpiar año y mes cuando cambie la filial
+    this.anioSeleccionado = null;
+    this.mesSeleccionado = null;
+    this.mesesDeshabilitados = [];
+
+    // Habilitar año solo si hay filial seleccionada
+    if (this.filialSeleccionada) {
+      this.anioDeshabilitado = false;
+    } else {
+      this.anioDeshabilitado = true;
+      this.mesDeshabilitado = true;
+    }
+
+    // Limpiar resultados
+    this.aporteAgrupados = [];
+    this.nombreArchivo = '';
+    this.archivoSeleccionado = null;
+  }
+
+  onAnioChange(): void {
+    // Limpiar mes cuando cambie el año
+    this.mesSeleccionado = null;
+    this.mesesDeshabilitados = [];
+    console.log('Año cambiado:', this.anioSeleccionado);
+    if (this.anioSeleccionado && this.filialSeleccionada) {
+      // Buscar meses ya cargados para esta filial/año
+      this.buscarMesesCargados();
+    } else {
+      this.mesDeshabilitado = true;
+    }
+
+    // Limpiar resultados
+    this.aporteAgrupados = [];
+    this.nombreArchivo = '';
+    this.archivoSeleccionado = null;
+  }
+
+  buscarMesesCargados(): void {
+    if (!this.filialSeleccionada || !this.anioSeleccionado) {
+      return;
+    }
+
+    console.log('llegaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
+    console.log(this.anioSeleccionado.toString());
+
+    const criterios: DatosBusqueda[] = [];
+
+    // Filtro por filial
+    const dbFilial = new DatosBusqueda();
+    dbFilial.asignaValorConCampoPadre(
+      TipoDatos.LONG,
+      'filial',
+      'codigo',
+      this.filialSeleccionada.toString(),
+      TipoComandosBusqueda.IGUAL
+    );
+    criterios.push(dbFilial);
+
+    // Filtro por año
+    const dbAnio = new DatosBusqueda();
+    dbAnio.asignaUnCampoSinTrunc(
+      TipoDatos.INTEGER,
+      'anioAfectacion',
+      this.anioSeleccionado.toString(),
+      TipoComandosBusqueda.IGUAL
+    );
+    criterios.push(dbAnio);
+
+    this.cargaArchivoService.selectByCriteria(criterios).subscribe({
+      next: (cargas: CargaArchivo[] | null) => {
+        // Extraer los meses que ya tienen carga
+        if (cargas && Array.isArray(cargas)) {
+          this.mesesDeshabilitados = cargas.map(c => c.mesAfectacion).filter((mes): mes is number => mes !== undefined && mes !== null);
+        } else {
+          this.mesesDeshabilitados = [];
+        }
+
+        // Habilitar el combo de meses
+        this.mesDeshabilitado = false;
+      },
+      error: (error) => {
+        console.error('Error al buscar meses cargados:', error);
+        this.mesesDeshabilitados = [];
+        // Habilitar el combo de meses aunque haya error
+        this.mesDeshabilitado = false;
+      }
+    });
+  }
+
+  isMesDeshabilitado(mesValor: number): boolean {
+    return this.mesesDeshabilitados.includes(mesValor);
   }
 
   getFilialNombre(codigo: number | null): string {
@@ -330,7 +443,7 @@ export class CargaAportesComponent implements OnInit {
     }
 
     // Enviar al servicio (construye FormData internamente)
-    /*this.serviciosAsoprep.almacenaDatosArchivoPetro(
+    this.serviciosAsoprep.almacenaDatosArchivoPetro(
       this.archivoSeleccionado,
       cargaArchivo,
       detallesCargaArchivos,
@@ -370,7 +483,7 @@ export class CargaAportesComponent implements OnInit {
         );
         console.error('Error al procesar carga:', error);
       }
-    });*/
+    });
   }
 
   private obtenerUsuarioActual(): Usuario | null {

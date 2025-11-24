@@ -8,30 +8,8 @@
 
     <div class="filters-box">
       <mat-form-field appearance="fill" class="filter-field">
-        <mat-label>Año</mat-label>
-        <mat-select [(ngModel)]="anioSeleccionado">
-          <mat-option [value]="null">-- Seleccione un año --</mat-option>
-          @for (anio of anios; track anio) {
-            <mat-option [value]="anio">{{ anio }}</mat-option>
-          }
-        </mat-select>
-        <mat-icon matPrefix>calendar_today</mat-icon>
-      </mat-form-field>
-
-      <mat-form-field appearance="fill" class="filter-field">
-        <mat-label>Mes</mat-label>
-        <mat-select [(ngModel)]="mesSeleccionado">
-          <mat-option [value]="null">-- Seleccione un mes --</mat-option>
-          @for (mes of meses; track mes.valor) {
-            <mat-option [value]="mes.valor">{{ mes.nombre }}</mat-option>
-          }
-        </mat-select>
-        <mat-icon matPrefix>event</mat-icon>
-      </mat-form-field>
-
-      <mat-form-field appearance="fill" class="filter-field">
         <mat-label>Filial</mat-label>
-        <mat-select [(ngModel)]="filialSeleccionada" [disabled]="isLoadingFiliales">
+        <mat-select [(ngModel)]="filialSeleccionada" (selectionChange)="onFilialChange()" [disabled]="isLoadingFiliales">
           <mat-option [value]="null">-- Seleccione una filial --</mat-option>
           @if (isLoadingFiliales) {
             <mat-option disabled>
@@ -45,6 +23,33 @@
           }
         </mat-select>
         <mat-icon matPrefix>business</mat-icon>
+      </mat-form-field>
+
+      <mat-form-field appearance="fill" class="filter-field">
+        <mat-label>Año</mat-label>
+        <mat-select [(ngModel)]="anioSeleccionado" (selectionChange)="onAnioChange()" [disabled]="anioDeshabilitado">
+          <mat-option [value]="null">-- Seleccione un año --</mat-option>
+          @for (anio of anios; track anio) {
+            <mat-option [value]="anio">{{ anio }}</mat-option>
+          }
+        </mat-select>
+        <mat-icon matPrefix>calendar_today</mat-icon>
+      </mat-form-field>
+
+      <mat-form-field appearance="fill" class="filter-field">
+        <mat-label>Mes</mat-label>
+        <mat-select [(ngModel)]="mesSeleccionado" [disabled]="mesDeshabilitado">
+          <mat-option [value]="null">-- Seleccione un mes --</mat-option>
+          @for (mes of meses; track mes.valor) {
+            <mat-option [value]="mes.valor" [disabled]="isMesDeshabilitado(mes.valor)">
+              {{ mes.nombre }}
+              @if (isMesDeshabilitado(mes.valor)) {
+                <span style="color: #999;"> (Ya cargado)</span>
+              }
+            </mat-option>
+          }
+        </mat-select>
+        <mat-icon matPrefix>event</mat-icon>
       </mat-form-field>
 
       @if (anioSeleccionado || mesSeleccionado || filialSeleccionada) {

@@ -1,0 +1,124 @@
+<div class="consulta-archivos-container">
+  <!-- Cabecera de filtros -->
+  <div class="filtros-header">
+    <h2 class="titulo-consulta">Consulta de Archivos Petro</h2>
+
+    <!-- Selector de año -->
+    <div class="selector-anio">
+      <mat-form-field appearance="outline">
+        <mat-label>Seleccionar Año</mat-label>
+        <mat-select [(ngModel)]="anioSeleccionado" (selectionChange)="onAnioSeleccionado()">
+          <mat-option *ngFor="let anio of aniosDisponibles" [value]="anio">
+            {{ anio }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+    </div>
+
+    <!-- Círculos de meses -->
+    <div class="meses-container">
+      <div
+        *ngFor="let mes of meses"
+        class="mes-circulo"
+        [class.tiene-carga]="mes.tieneCarga"
+        [class.activo]="mes.activo"
+        [class.deshabilitado]="!mes.tieneCarga"
+        (click)="onMesClick(mes)"
+        [title]="mes.nombre">
+        <span class="mes-nombre">{{ mes.nombre }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mensaje si no hay resultados -->
+  <div *ngIf="cargasFiltradas.length === 0" class="sin-resultados">
+    <mat-icon>folder_open</mat-icon>
+    <p>No se encontraron cargas para los filtros seleccionados</p>
+  </div>
+
+  <!-- Tarjetas de resultados -->
+  <div class="tarjetas-container" *ngIf="cargasFiltradas.length > 0">
+    <mat-card *ngFor="let carga of cargasFiltradas" class="tarjeta-carga">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>insert_drive_file</mat-icon>
+          {{ carga.nombre }}
+        </mat-card-title>
+        <mat-card-subtitle>
+          {{ getFilialNombre(carga) }} - {{ getMesNombre(carga.mesAfectacion) }} {{ carga.anioAfectacion }}
+        </mat-card-subtitle>
+      </mat-card-header>
+
+      <mat-card-content>
+        <div class="info-general">
+          <div class="info-row">
+            <mat-icon>person</mat-icon>
+            <span class="label">Usuario:</span>
+            <span class="valor">{{ getUsuarioCarga(carga) }}</span>
+          </div>
+
+          <div class="info-row">
+            <mat-icon>event</mat-icon>
+            <span class="label">Fecha de Carga:</span>
+            <span class="valor">{{ formatearFechaCarga(carga) }}</span>
+          </div>
+        </div>
+
+        <mat-divider></mat-divider>
+
+        <div class="totales-grid">
+          <div class="total-item">
+            <span class="total-label">Saldo Actual</span>
+            <span class="total-valor">{{ carga.totalSaldoActual | number:'1.2-2' }}</span>
+          </div>
+
+          <div class="total-item">
+            <span class="total-label">Interés Anual</span>
+            <span class="total-valor">{{ carga.totalInteresAnual | number:'1.2-2' }}</span>
+          </div>
+
+          <div class="total-item">
+            <span class="total-label">Valor Seguro</span>
+            <span class="total-valor">{{ carga.totalValorSeguro | number:'1.2-2' }}</span>
+          </div>
+
+          <div class="total-item">
+            <span class="total-label">Total a Descontar</span>
+            <span class="total-valor destacado">{{ carga.totalDescontar | number:'1.2-2' }}</span>
+          </div>
+
+          <div class="total-item">
+            <span class="total-label">Capital Descontado</span>
+            <span class="total-valor">{{ carga.totalCapitalDescontado | number:'1.2-2' }}</span>
+          </div>
+
+          <div class="total-item">
+            <span class="total-label">Interés Descontado</span>
+            <span class="total-valor">{{ carga.totalInteresDescontado | number:'1.2-2' }}</span>
+          </div>
+
+          <div class="total-item">
+            <span class="total-label">Seguro Descontado</span>
+            <span class="total-valor">{{ carga.totalSeguroDescontado | number:'1.2-2' }}</span>
+          </div>
+
+          <div class="total-item">
+            <span class="total-label">Total Descontado</span>
+            <span class="total-valor destacado">{{ carga.totalDescontado | number:'1.2-2' }}</span>
+          </div>
+        </div>
+      </mat-card-content>
+
+      <mat-card-actions align="end">
+        <button mat-button color="primary" (click)="verDetalle(carga)">
+          <mat-icon>visibility</mat-icon>
+          Ver Detalles
+        </button>
+        <button mat-button color="accent">
+          <mat-icon>download</mat-icon>
+          Descargar
+        </button>
+      </mat-card-actions>
+    </mat-card>
+  </div>
+</div>

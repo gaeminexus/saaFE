@@ -28,7 +28,7 @@ import { EntidadCreditosComponent } from './modules/crd/menucreditos/entidad-cre
 import { NavegacionCascadaComponent } from './modules/crd/forms/entidad-participe/navegacion-cascada/navegacion-cascada.component';
 import { ParticipeDashComponent } from './modules/crd/forms/entidad-participe/participe-dash/participe-dash.component';
 import { ParticipeInfoComponent } from './modules/crd/forms/entidad-participe/participe-info/participe-info.component';
-import { CargaAportesComponent } from './modules/crd/forms/carga-aportes/carga-aportes.component';
+import { CargaAportesComponent } from './modules/crd/forms/archivos-petro/carga-aportes/carga-aportes.component';
 import { EstadosCrdComponent } from './modules/crd/forms/parametrizacion/estados-crd/estados-crd.component';
 import { EstadosResolverService } from './modules/crd/resolver/estados-resolver.service';
 import { TiposCrdComponent } from './modules/crd/forms/parametrizacion/tipos-crd/tipos-crd.component';
@@ -39,6 +39,9 @@ import { EntidadParticipeInfoComponent } from './modules/crd/forms/entidad-parti
 import { EntidadEditComponent } from './modules/crd/forms/entidad-participe/entidad-edit/entidad-edit.component';
 import { EntidadConsultaComponent } from './modules/crd/forms/entidad-participe/entidad-consulta/entidad-consulta.component';
 import { entidadEditResolver } from './modules/crd/resolver/entidad-edit.resolver';
+import { ConsultaArchivosPetroComponent } from './modules/crd/forms/archivos-petro/consulta-archivos-petro/consulta-archivos-petro.component';
+import { ConsultaCargaArchivoResolverService } from './modules/crd/resolver/consulta-carga-archivo-resolver.service';
+import { DetalleConsultaCargaComponent } from './modules/crd/forms/archivos-petro/detalle-consulta-carga/detalle-consulta-carga.component';
 
 export const routes: Routes = [
     { path: '', component: LoginComponent },
@@ -84,6 +87,8 @@ export const routes: Routes = [
         { path: 'entidad-edit', component: EntidadEditComponent, resolve: { data: entidadEditResolver } },
         { path: 'entidad-consulta', component: EntidadConsultaComponent },
         { path: 'carga-aportes', component: CargaAportesComponent },
+        { path: 'consulta-archivos-petro', component: ConsultaArchivosPetroComponent, resolve: { cargas: ConsultaCargaArchivoResolverService } },
+        { path: 'detalle-consulta-carga/:id', component: DetalleConsultaCargaComponent },
         { path: 'entidad-participe-info', component: EntidadParticipeInfoComponent },
         { path: 'estadosCrd', component: EstadosCrdComponent, resolve: { estados: EstadosResolverService } },
         { path: 'tiposCrd', component: TiposCrdComponent, resolve: { tipos: TiposCrdResolverService } },

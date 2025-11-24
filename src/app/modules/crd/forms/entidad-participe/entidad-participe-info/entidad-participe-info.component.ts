@@ -285,7 +285,7 @@ export class EntidadParticipeInfoComponent implements OnInit {
       idCiudad: entidad.idCiudad || '',
       tipoHidrocarburifica: entidad.tipoHidrocarburifica,
       tipoVivienda: entidad.tipoVivienda,
-      numeroCargasFamiliares: entidad.numeroCargasFamiliares || 0,
+      numeroCargasFamiliares: entidad.cargasFamiliares || 0,
       sectorPublico: entidad.sectorPublico || 0,
       porcentajeSimilitud: entidad.porcentajeSimilitud || 0,
       busqueda: entidad.busqueda || '',
@@ -296,7 +296,6 @@ export class EntidadParticipeInfoComponent implements OnInit {
       usuarioIngreso: entidad.usuarioIngreso || '',
       fechaIngreso: entidad.fechaIngreso ? new Date(entidad.fechaIngreso) : null,
       usuarioModificacion: entidad.usuarioModificacion || '',
-      fechaModificacion: entidad.fechaModificacion ? new Date(entidad.fechaModificacion) : null,
       ipIngreso: entidad.ipIngreso || '',
       ipModificacion: entidad.ipModificacion || ''
     });
@@ -316,7 +315,7 @@ export class EntidadParticipeInfoComponent implements OnInit {
       nivelEstudios: participe.nivelEstudios || '',
       ingresoAdicionalMensual: participe.ingresoAdicionalMensual || 0,
       ingresoAdicionalActividad: participe.ingresoAdicionalActividad || '',
-      codigoTipoCalificacion: participe.codigoTipoCalificacion || 0,
+      tipoCalificacion: participe.tipoCalificacion || 0,
       fechaIngresoFondo: participe.fechaIngresoFondo ? new Date(participe.fechaIngresoFondo) : null,
       estadoActual: participe.estadoActual || 1,
       fechaFallecimiento: participe.fechaFallecimiento ? new Date(participe.fechaFallecimiento) : null,
