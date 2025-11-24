@@ -31,6 +31,14 @@ export class CargaArchivoService {
     );
   }
 
+  getByAnio(anio: string): Observable<CargaArchivo | null> {
+    const ws = '/getByAnio/';
+    const url = `${ServiciosCrd.RS_CRAR}${ws}${anio}`;
+    return this.http.get<CargaArchivo>(url).pipe(
+      catchError(this.handleError)
+    );
+  }
+
   add(datos: any): Observable<CargaArchivo | null> {
     return this.http.post<CargaArchivo>(ServiciosCrd.RS_CRAR, datos, this.httpOptions).pipe(
       catchError(this.handleError)
