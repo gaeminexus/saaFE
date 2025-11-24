@@ -2,6 +2,51 @@
 
 Guía breve para que agentes de IA trabajen con esta app Angular 20.
 
+## ⚠️ REGLA CRÍTICA: MINIMIZAR LECTURAS DE ARCHIVOS ⚠️
+
+**PROHIBIDO usar read_file si el archivo ya está en `<editorContext>` o `<conversation-summary>`.**
+
+**PROHIBIDO leer un archivo más de UNA vez durante una misma tarea.**
+
+### Proceso OBLIGATORIO antes de cualquier acción:
+1. **VERIFICAR SIEMPRE PRIMERO**:
+   - ¿Está el archivo en `<editorContext>`? → **USAR ESE CONTENIDO. NO LEER.**
+   - ¿Está en `<conversation-summary>`? → **USAR ESE CONTENIDO. NO LEER.**
+   - ¿Está en mensajes previos? → **USAR ESE CONTENIDO. NO LEER.**
+
+2. **SI NO ESTÁ EN NINGÚN CONTEXTO**: 
+   - Leer UNA sola vez con rango AMPLIO (ej: líneas 1-500 o 1-1000)
+
+3. **PLANIFICAR**: Todas las ediciones necesarias basándote en el contenido del contexto o de esa única lectura
+
+4. **EJECUTAR**: Todas las ediciones en secuencia SIN más lecturas
+
+5. **SI FALLA replace_string_in_file**: Ajustar el string usando el contexto que YA TIENES, NO leer otra vez
+
+### Penalización:
+- Si lees un archivo más de 1 vez → **ERROR CRÍTICO - DETENTE inmediatamente**
+- Cada lectura adicional desperdicia requests premium del usuario
+- Máximo 1 lectura por archivo por tarea
+- **Esta regla NO tiene excepciones. Punto.**
+
+### Ejemplo CORRECTO:
+```
+Usuario tiene archivo abierto en editor → YA está en <editorContext> → 0 lecturas
+Archivo mencionado en conversación previa → Buscar en contexto → 0 lecturas  
+Archivo desconocido → read_file(1-500) → Planificar 3 edits → Ejecutar 3 edits → 1 lectura total ✓
+```
+
+### Ejemplo INCORRECTO (PROHIBIDO):
+```
+read_file(1-400)    ← Lectura 1
+read_file(115-135)  ← ERROR: Lectura 2 innecesaria
+read_file(160-180)  ← ERROR: Lectura 3 innecesaria
+read_file(290-315)  ← ERROR: Lectura 4 innecesaria
+[...]               ← INACEPTABLE
+```
+
+---
+
 ## Resumen del Proyecto
 - Framework: Angular CLI 20 con componentes standalone y Angular Material.
 - Entrada: `src/main.ts` inicia `App` usando proveedores de `src/app/app.config.ts`.

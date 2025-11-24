@@ -4,51 +4,17 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
 import { Filial } from '../../model/filial';
+import { CargaArchivo } from '../../model/carga-archivo';
 import { FilialService } from '../../service/filial.service';
-import { FileService } from '../../../../shared/services/file.service';
+import { ServiciosAsoprepService } from '../../../asoprep/service/servicios-asoprep.service';
+import { Usuario } from '../../../../shared/model/usuario';
+import { FuncionesDatosService, TipoFormatoFechaBackend } from '../../../../shared/services/funciones-datos.service';
+import { ArchivoPetroService, AporteAgrupado } from '../../../asoprep/service/archivo-petro.service';
+
 
 interface Mes {
   valor: number;
   nombre: string;
-}
-
-interface RegistroAporte {
-  codigoAporte: string;
-  descripcionAporte: string;
-  codigo: string;
-  nombre: string;
-  plazoInicial: string;
-  saldoActual: string;
-  mesesPlazo: string;
-  interesAnual: string;
-  valorSeguro: string;
-  totalDescontar: string;
-  capitalDescontado: string;
-  interesDescontado: string;
-  seguroDescontado: string;
-  totalDescontado: string;
-  capitalNoDescontado: string;
-  interesNoDescontado: string;
-  desgravamenNoDescontado: string;
-}
-
-interface AporteAgrupado {
-  codigoAporte: string;
-  descripcionAporte: string;
-  registros: RegistroAporte[];
-  totales: {
-    saldoActual: number;
-    interesAnual: number;
-    valorSeguro: number;
-    totalDescontar: number;
-    capitalDescontado: number;
-    interesDescontado: number;
-    seguroDescontado: number;
-    totalDescontado: number;
-    capitalNoDescontado: number;
-    interesNoDescontado: number;
-    desgravamenNoDescontado: number;
-  };
 }
 
 @Component({
@@ -88,7 +54,6 @@ export class CargaAportesComponent implements OnInit {
   // Carga de archivos
   nombreArchivo: string = '';
   archivoSeleccionado: File | null = null;
-  registrosProcesados: RegistroAporte[] = [];
   aporteAgrupados: AporteAgrupado[] = [];
   totalRegistros: number = 0;
   totalesGenerales: {
@@ -129,8 +94,10 @@ export class CargaAportesComponent implements OnInit {
 
   constructor(
     private filialService: FilialService,
-    private fileService: FileService,
-    private snackBar: MatSnackBar
+    private serviciosAsoprep: ServiciosAsoprepService,
+    private snackBar: MatSnackBar,
+    private funcionesDatos: FuncionesDatosService,
+    private archivoPetroService: ArchivoPetroService
   ) {
     // Generar años del 2025 al 2035
     for (let anio = 2025; anio <= 2035; anio++) {
@@ -140,6 +107,32 @@ export class CargaAportesComponent implements OnInit {
 
   ngOnInit(): void {
     this.cargarFiliales();
+  }
+
+  /**
+   * Convierte texto Unicode a bytes ISO-8859-1 como string
+   * Cuando el backend recibe el JSON como UTF-8 pero lo interpreta como ISO-8859-1,
+   * necesitamos enviar los caracteres en formato que coincida con esa interpretación.
+   *
+   * Ejemplo: Ñ (U+00D1, char code 209) se envía tal cual,
+   * para que el backend al interpretar el byte 0xD1 lo vea como Ñ en ISO-8859-1
+   */
+  private convertirUnicodeAISO88591(texto: string): string {
+    if (!texto) return texto;
+
+    // Convertir cada carácter a su byte ISO-8859-1 equivalente
+    let resultado = '';
+    for (let i = 0; i < texto.length; i++) {
+      const charCode = texto.charCodeAt(i);
+      // Si el char code está en rango ISO-8859-1 (0-255), usar directamente
+      if (charCode <= 255) {
+        resultado += String.fromCharCode(charCode);
+      } else {
+        // Si está fuera del rango, reemplazar con ?
+        resultado += '?';
+      }
+    }
+    return resultado;
   }
 
   cargarFiliales(): void {
@@ -175,7 +168,7 @@ export class CargaAportesComponent implements OnInit {
     return filial?.nombre || 'N/A';
   }
 
-  onFileSelected(event: Event): void {
+  async onFileSelected(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
     if (!input.files || input.files.length === 0) {
       return;
@@ -183,173 +176,223 @@ export class CargaAportesComponent implements OnInit {
 
     const file = input.files[0];
     this.nombreArchivo = file.name;
-    this.archivoSeleccionado = file; // Guardar referencia al archivo
 
-    const reader = new FileReader();
-    reader.onload = (e: ProgressEvent<FileReader>) => {
-      const contenido = e.target?.result as string;
-      this.procesarArchivo(contenido);
-    };
-
-    reader.onerror = () => {
-      this.snackBar.open('Error al leer el archivo', 'Cerrar', { duration: 3000 });
-    };
-
-    // Intentar leer como ISO-8859-1 (Latin1) que es común en archivos Windows antiguos
-    reader.readAsText(file, 'ISO-8859-1');
-  }
-
-  procesarArchivo(contenido: string): void {
     try {
-      const lineas = contenido.split('\n');
-      this.registrosProcesados = [];
+      // Leer archivo como ArrayBuffer
+      const arrayBuffer = await file.arrayBuffer();
 
-      let i = 0;
+      // Leer como ISO-8859-1 para que los substring funcionen con posiciones correctas
+      const decoder = new TextDecoder('iso-8859-1');
+      const contenidoIso = decoder.decode(new Uint8Array(arrayBuffer));
 
-      while (i < lineas.length) {
-        const lineaActual = lineas[i];
+      // Procesar con ISO-8859-1
+      const resultado = await this.archivoPetroService.procesarArchivoPetro(file, this.nombreArchivo);
 
-        // Verificar si la línea empieza con "EP"
-        if (lineaActual && lineaActual.trim().startsWith('EP')) {
-          // Saltar 8 líneas
-          i += 8;
+      // Actualizar estado del componente con los resultados
+      this.aporteAgrupados = resultado.aporteAgrupados;
+      this.totalRegistros = resultado.totalRegistros;
+      this.totalesGenerales = resultado.totalesGenerales;
 
-          if (i >= lineas.length) break;
-
-          // Línea con código y descripción del aporte
-          const lineaAporte = lineas[i];
-          const codigoAporte = lineaAporte.substring(0, 4).trim();
-          const descripcionAporte = lineaAporte.substring(4).trim();
-
-          i++; // Siguiente línea
-
-          // Ignorar la siguiente línea
-          i++;
-
-          if (i >= lineas.length) break;
-
-          // Procesar líneas de datos hasta encontrar otra línea "EP" o fin de archivo
-          while (i < lineas.length) {
-            const lineaRegistro = lineas[i];
-
-            // Si encontramos otra línea "EP", salimos del bucle interno
-            if (lineaRegistro && lineaRegistro.trim().startsWith('EP')) {
-              break;
-            }
-
-            // Procesar la línea de datos si no está vacía
-            if (lineaRegistro && lineaRegistro.trim().length > 0) {
-              const registro: RegistroAporte = {
-                codigoAporte: codigoAporte,
-                descripcionAporte: descripcionAporte,
-                codigo: this.extraerCampo(lineaRegistro, 0, 7).trim(),
-                nombre: this.extraerCampo(lineaRegistro, 7, 44).trim(),
-                plazoInicial: this.extraerCampo(lineaRegistro, 44, 50).trim(),
-                saldoActual: this.extraerCampo(lineaRegistro, 50, 61).trim(),
-                mesesPlazo: this.extraerCampo(lineaRegistro, 61, 65).trim(),
-                interesAnual: this.extraerCampo(lineaRegistro, 65, 70).trim(),
-                valorSeguro: this.extraerCampo(lineaRegistro, 70, 80).trim(),
-                totalDescontar: this.extraerCampo(lineaRegistro, 80, 95).trim(),
-                capitalDescontado: this.extraerCampo(lineaRegistro, 95, 110).trim(),
-                interesDescontado: this.extraerCampo(lineaRegistro, 110, 125).trim(),
-                seguroDescontado: this.extraerCampo(lineaRegistro, 125, 140).trim(),
-                totalDescontado: this.extraerCampo(lineaRegistro, 140, 155).trim(),
-                capitalNoDescontado: this.extraerCampo(lineaRegistro, 155, 170).trim(),
-                interesNoDescontado: this.extraerCampo(lineaRegistro, 170, 184).trim(),
-                desgravamenNoDescontado: this.extraerCampo(lineaRegistro, 184, 198).trim()
-              };
-
-              // Solo agregar si tiene código válido
-              if (registro.codigo) {
-                this.registrosProcesados.push(registro);
-              }
-            }
-
-            i++; // Avanzar a la siguiente línea
-          }
-
-          // No incrementar i aquí porque ya apunta a la línea "EP" o al final
-          continue;
-        }
-
-        i++; // Avanzar a la siguiente línea
-      }
-
-      // Agrupar registros por código de aporte
-      this.agruparPorAporte();
+      // Mantener el archivo original (sin conversión a UTF-8)
+      this.archivoSeleccionado = file;
 
       this.snackBar.open(
-        `Archivo procesado: ${this.totalRegistros} registros en ${this.aporteAgrupados.length} aportes`,
+        `Archivo procesado: ${this.totalRegistros} registros encontrados`,
         'Cerrar',
-        { duration: 4000 }
+        { duration: 5000 }
       );
-
     } catch (error) {
-      console.error('Error al procesar el archivo:', error);
+      console.error('Error al procesar archivo:', error);
       this.snackBar.open('Error al procesar el archivo', 'Cerrar', { duration: 3000 });
-      this.registrosProcesados = [];
-      this.aporteAgrupados = [];
+      this.limpiarTodo();
     }
   }
 
   /**
-   * Agrupa los registros procesados por código de aporte
+   * Guarda los datos en BD y luego sube el archivo físico
+   * Envía todo en un solo request: archivo + datos JSON
    */
-  private agruparPorAporte(): void {
-    const mapaAportes = new Map<string, AporteAgrupado>();
+  procesarYSubirArchivo(): void {
+    if (!this.archivoSeleccionado) {
+      this.snackBar.open('No hay archivo seleccionado', 'Cerrar', { duration: 3000 });
+      return;
+    }
 
-    this.registrosProcesados.forEach(registro => {
-      const key = registro.codigoAporte;
+    if (!this.anioSeleccionado || !this.mesSeleccionado || !this.filialSeleccionada) {
+      this.snackBar.open('Debe seleccionar año, mes y filial', 'Cerrar', { duration: 3000 });
+      return;
+    }
 
-      if (!mapaAportes.has(key)) {
-        mapaAportes.set(key, {
-          codigoAporte: registro.codigoAporte,
-          descripcionAporte: registro.descripcionAporte,
-          registros: [],
-          totales: {
-            saldoActual: 0,
-            interesAnual: 0,
-            valorSeguro: 0,
-            totalDescontar: 0,
-            capitalDescontado: 0,
-            interesDescontado: 0,
-            seguroDescontado: 0,
-            totalDescontado: 0,
-            capitalNoDescontado: 0,
-            interesNoDescontado: 0,
-            desgravamenNoDescontado: 0
-          }
-        });
-      }
+    if (this.aporteAgrupados.length === 0) {
+      this.snackBar.open('No hay datos procesados para guardar', 'Cerrar', { duration: 3000 });
+      return;
+    }
 
-      const aporte = mapaAportes.get(key)!;
-      aporte.registros.push(registro);
+    this.isUploadingFile = true;
 
-      // Calcular totales
-      aporte.totales.saldoActual += this.parseNumber(registro.saldoActual);
-      aporte.totales.interesAnual += this.parseNumber(registro.interesAnual);
-      aporte.totales.valorSeguro += this.parseNumber(registro.valorSeguro);
-      aporte.totales.totalDescontar += this.parseNumber(registro.totalDescontar);
-      aporte.totales.capitalDescontado += this.parseNumber(registro.capitalDescontado);
-      aporte.totales.interesDescontado += this.parseNumber(registro.interesDescontado);
-      aporte.totales.seguroDescontado += this.parseNumber(registro.seguroDescontado);
-      aporte.totales.totalDescontado += this.parseNumber(registro.totalDescontado);
-      aporte.totales.capitalNoDescontado += this.parseNumber(registro.capitalNoDescontado);
-      aporte.totales.interesNoDescontado += this.parseNumber(registro.interesNoDescontado);
-      aporte.totales.desgravamenNoDescontado += this.parseNumber(registro.desgravamenNoDescontado);
+    // Construir el objeto CargaArchivo
+    const filialObj = this.filiales.find(f => f.codigo === this.filialSeleccionada);
+    if (!filialObj) {
+      this.isUploadingFile = false;
+      this.snackBar.open('Error: Filial no encontrada', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    const usuarioActual = this.obtenerUsuarioActual();
+    if (!usuarioActual) {
+      this.isUploadingFile = false;
+      this.snackBar.open('Error: No se pudo obtener el usuario actual', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    const cargaArchivo: Partial<CargaArchivo> = {
+      nombre: this.nombreArchivo,
+      usuarioCarga: usuarioActual,
+      filial: filialObj,
+      rutaArchivo: '',
+      mesAfectacion: this.mesSeleccionado,
+      anioAfectacion: this.anioSeleccionado,
+      totalSaldoActual: this.totalesGenerales.saldoActual,
+      totalInteresAnual: this.totalesGenerales.interesAnual,
+      totalValorSeguro: this.totalesGenerales.valorSeguro,
+      totalDescontar: this.totalesGenerales.totalDescontar,
+      totalCapitalDescontado: this.totalesGenerales.capitalDescontado,
+      totalInteresDescontado: this.totalesGenerales.interesDescontado,
+      totalSeguroDescontado: this.totalesGenerales.seguroDescontado,
+      totalDescontado: this.totalesGenerales.totalDescontado,
+      totalCapitalNoDescontado: this.totalesGenerales.capitalNoDescontado,
+      totalInteresNoDescontado: this.totalesGenerales.interesNoDescontado,
+      totalDesgravamenNoDescontado: this.totalesGenerales.desgravamenNoDescontado,
+      estado: 1
+    };
+
+    // Construir arreglos de detalles y partícipes
+    const detallesCargaArchivos: any[] = [];
+    const participesXCargaArchivo: any[] = [];
+
+    let codigoDetalleSecuencial = 1;
+
+    this.aporteAgrupados.forEach(aporte => {
+      const detalle: any = {
+        codigo: codigoDetalleSecuencial++, // Asignar código secuencial temporal
+        codigoPetroProducto: aporte.codigoAporte,
+        nombreProductoPetro: aporte.descripcionAporte, // Sin conversión - el TextDecoder ya lo hizo correctamente
+        totalParticipes: aporte.registros.length,
+        totalSaldoActual: aporte.totales.saldoActual,
+        totalInteresAnual: aporte.totales.interesAnual,
+        totalValorSeguro: aporte.totales.valorSeguro,
+        totalDescontar: aporte.totales.totalDescontar,
+        totalCapitalDescontado: aporte.totales.capitalDescontado,
+        totalInteresDescontado: aporte.totales.interesDescontado,
+        totalSeguroDescontado: aporte.totales.seguroDescontado,
+        totalDescontado: aporte.totales.totalDescontado,
+        totalCapitalNoDescontado: aporte.totales.capitalNoDescontado,
+        totalInteresNoDescontado: aporte.totales.interesNoDescontado,
+        totalDesgravamenNoDescontado: aporte.totales.desgravamenNoDescontado,
+        estado: 1
+      };
+      detallesCargaArchivos.push(detalle);
+
+      // Guardar los partícipes de este detalle con la referencia completa al detalle
+      aporte.registros.forEach(registro => {
+        const participe: any = {
+          detalleCargaArchivo: detalle, // Enviar el objeto completo del detalle
+          codigoPetro: parseInt(registro.codigo) || 0,
+          nombre: registro.nombre, // Sin conversión - el TextDecoder ya lo hizo correctamente
+          plazoInicial: this.archivoPetroService.parseNumber(registro.plazoInicial),
+          mesesPlazo: parseInt(registro.mesesPlazo) || 0,
+          saldoActual: this.archivoPetroService.parseNumber(registro.saldoActual),
+          interesAnual: this.archivoPetroService.parseNumber(registro.interesAnual),
+          valorSeguro: this.archivoPetroService.parseNumber(registro.valorSeguro),
+          montoDescontar: this.archivoPetroService.parseNumber(registro.totalDescontar),
+          capitalDescontado: this.archivoPetroService.parseNumber(registro.capitalDescontado),
+          interesDescontado: this.archivoPetroService.parseNumber(registro.interesDescontado),
+          seguroDescontado: this.archivoPetroService.parseNumber(registro.seguroDescontado),
+          totalDescontado: this.archivoPetroService.parseNumber(registro.totalDescontado),
+          capitalNoDescontado: this.archivoPetroService.parseNumber(registro.capitalNoDescontado),
+          interesNoDescontado: this.archivoPetroService.parseNumber(registro.interesNoDescontado),
+          desgravamenNoDescontado: this.archivoPetroService.parseNumber(registro.desgravamenNoDescontado),
+          estado: 1
+        };
+        participesXCargaArchivo.push(participe);
+      });
     });
 
-    this.aporteAgrupados = Array.from(mapaAportes.values());
-    this.totalRegistros = this.registrosProcesados.length;
+    // Debug: Verificar encoding de nombres antes de enviar
+    const primerParticipeConEnie = participesXCargaArchivo.find(p =>
+      p.nombre && (p.nombre.includes('ñ') || p.nombre.includes('Ñ'))
+    );
+    if (primerParticipeConEnie) {
+      console.log('🔍 Nombre con Ñ a enviar al backend:');
+      console.log('  Nombre:', primerParticipeConEnie.nombre);
+      console.log('  Char code de Ñ:', primerParticipeConEnie.nombre.charCodeAt(primerParticipeConEnie.nombre.indexOf('Ñ')));
+      console.log('  Debe ser 209 para estar correcto ✓');
+    }
 
-    // Calcular totales generales
-    this.calcularTotalesGenerales();
+    // Enviar al servicio (construye FormData internamente)
+    /*this.serviciosAsoprep.almacenaDatosArchivoPetro(
+      this.archivoSeleccionado,
+      cargaArchivo,
+      detallesCargaArchivos,
+      participesXCargaArchivo
+    ).subscribe({
+      next: (response: any) => {
+        console.log('Respuesta del servidor:', response);
+        this.isUploadingFile = false;
+
+        if (response && response.success) {
+          this.snackBar.open(
+            `✅ Carga completada exitosamente!\n` +
+            `Código: ${response.codigoCarga}\n` +
+            `Archivo: ${response.rutaArchivo}\n` +
+            `${this.totalRegistros} partícipes en ${this.aporteAgrupados.length} productos`,
+            'Cerrar',
+            { duration: 8000 }
+          );
+          console.log('Carga completa:', response);
+
+          // Limpiar formulario
+          this.limpiarTodo();
+        } else {
+          this.snackBar.open(
+            `⚠️ Error en la carga: ${response?.message || 'Respuesta inesperada del servidor'}`,
+            'Cerrar',
+            { duration: 6000 }
+          );
+        }
+      },
+      error: (error: any) => {
+        this.isUploadingFile = false;
+        this.snackBar.open(
+          `Error al procesar la carga: ${error.message || error}`,
+          'Cerrar',
+          { duration: 6000 }
+        );
+        console.error('Error al procesar carga:', error);
+      }
+    });*/
   }
 
-  /**
-   * Calcula los totales generales sumando todos los totales de cada aporte
-   */
-  private calcularTotalesGenerales(): void {
+  private obtenerUsuarioActual(): Usuario | null {
+    // Obtener usuario completo desde localStorage
+    const usuarioStr = localStorage.getItem('usuario');
+    if (usuarioStr) {
+      try {
+        return JSON.parse(usuarioStr) as Usuario;
+      } catch (error) {
+        console.error('Error al parsear usuario desde localStorage:', error);
+        return null;
+      }
+    }
+    return null;
+  }
+
+  private limpiarTodo(): void {
+    this.limpiarFiltros();
+    this.nombreArchivo = '';
+    this.archivoSeleccionado = null;
+    this.aporteAgrupados = [];
+    this.totalRegistros = 0;
     this.totalesGenerales = {
       saldoActual: 0,
       interesAnual: 0,
@@ -364,118 +407,11 @@ export class CargaAportesComponent implements OnInit {
       desgravamenNoDescontado: 0
     };
 
-    this.aporteAgrupados.forEach(aporte => {
-      this.totalesGenerales.saldoActual += aporte.totales.saldoActual;
-      this.totalesGenerales.interesAnual += aporte.totales.interesAnual;
-      this.totalesGenerales.valorSeguro += aporte.totales.valorSeguro;
-      this.totalesGenerales.totalDescontar += aporte.totales.totalDescontar;
-      this.totalesGenerales.capitalDescontado += aporte.totales.capitalDescontado;
-      this.totalesGenerales.interesDescontado += aporte.totales.interesDescontado;
-      this.totalesGenerales.seguroDescontado += aporte.totales.seguroDescontado;
-      this.totalesGenerales.totalDescontado += aporte.totales.totalDescontado;
-      this.totalesGenerales.capitalNoDescontado += aporte.totales.capitalNoDescontado;
-      this.totalesGenerales.interesNoDescontado += aporte.totales.interesNoDescontado;
-      this.totalesGenerales.desgravamenNoDescontado += aporte.totales.desgravamenNoDescontado;
-    });
-  }
-
-  /**
-   * Convierte un string a número, manejando espacios y formatos
-   * Asume formato con punto como separador de miles y coma como separador decimal
-   * Ejemplos: "1.234,56" -> 1234.56, "1234,56" -> 1234.56, "1234.56" -> 1234.56
-   */
-  private parseNumber(valor: string): number {
-    if (!valor || valor.trim() === '') return 0;
-
-    let valorLimpio = valor.trim();
-
-    // Remover espacios en blanco
-    valorLimpio = valorLimpio.replace(/\s/g, '');
-
-    // Detectar si usa coma como decimal o punto como decimal
-    const tieneComa = valorLimpio.includes(',');
-    const tienePunto = valorLimpio.includes('.');
-
-    if (tieneComa && tienePunto) {
-      // Formato: 1.234,56 (europeo) - punto es separador de miles, coma es decimal
-      valorLimpio = valorLimpio.replace(/\./g, '').replace(',', '.');
-    } else if (tieneComa) {
-      // Formato: 1234,56 (europeo) - coma es decimal
-      valorLimpio = valorLimpio.replace(',', '.');
+    // Resetear el input file
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    if (fileInput) {
+      fileInput.value = '';
     }
-    // Si solo tiene punto, asumimos que ya está en formato correcto (1234.56)
-
-    const numero = parseFloat(valorLimpio);
-    return isNaN(numero) ? 0 : numero;
-  }
-
-  /**
-   * Extrae un campo de una línea desde la columna inicio hasta la columna fin
-   * @param linea La línea completa del archivo
-   * @param inicio Índice de inicio (base 0)
-   * @param fin Índice de fin (exclusivo)
-   */
-  private extraerCampo(linea: string, inicio: number, fin: number): string {
-    if (!linea) return '';
-    // Asegurar que la línea tenga suficiente longitud
-    const lineaCompleta = linea.padEnd(fin, ' ');
-    return lineaCompleta.substring(inicio, fin);
-  }
-
-  /**
-   * Procesa el archivo y lo sube al servidor
-   */
-  procesarYSubirArchivo(): void {
-    if (!this.archivoSeleccionado) {
-      this.snackBar.open('No hay archivo seleccionado', 'Cerrar', { duration: 3000 });
-      return;
-    }
-
-    if (!this.anioSeleccionado || !this.mesSeleccionado || !this.filialSeleccionada) {
-      this.snackBar.open('Debe seleccionar año, mes y filial', 'Cerrar', { duration: 3000 });
-      return;
-    }
-
-    // Validar el archivo antes de subirlo
-    const validation = this.fileService.validateFile(this.archivoSeleccionado);
-    if (!validation.valid) {
-      this.snackBar.open(validation.message, 'Cerrar', { duration: 4000 });
-      return;
-    }
-
-    // Construir ruta personalizada con año/mes/filial
-    const uploadPath = `aportes/${this.anioSeleccionado}/${this.mesSeleccionado}/${this.filialSeleccionada}`;
-
-    this.isUploadingFile = true;
-
-    this.fileService.uploadFileCustomPath(this.archivoSeleccionado, uploadPath).subscribe({
-      next: (response) => {
-        this.isUploadingFile = false;
-        if (response.success) {
-          this.snackBar.open(
-            `Archivo subido exitosamente: ${response.filePath}`,
-            'Cerrar',
-            { duration: 5000 }
-          );
-          console.log('Archivo subido en:', response.filePath);
-        } else {
-          this.snackBar.open(
-            `Error: ${response.message}`,
-            'Cerrar',
-            { duration: 4000 }
-          );
-        }
-      },
-      error: (error) => {
-        this.isUploadingFile = false;
-        this.snackBar.open(
-          `Error al subir archivo: ${error.message}`,
-          'Cerrar',
-          { duration: 4000 }
-        );
-        console.error('Error al subir archivo:', error);
-      }
-    });
   }
 }
 

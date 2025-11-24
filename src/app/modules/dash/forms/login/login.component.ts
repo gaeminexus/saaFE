@@ -1,3 +1,5 @@
+import { CargaArchivoService } from './../../../crd/service/carga-archivo.service';
+import { ServiciosAsoprep } from './../../../asoprep/service/ws-asgn';
 import { EstadoCivil } from './../../../crd/model/estado-civil';
 import { FileService } from './../../../../shared/services/file.service';
 import { AporteService } from './../../../crd/service/aporte.service';
@@ -20,6 +22,7 @@ import { Usuario } from '../../../../shared/model/usuario';
 import { Empresa } from '../../../../shared/model/empresa';
 import { DetallePrestamoService } from '../../../crd/service/detalle-prestamo.service';
 import { EstadoCivilService } from '../../../crd/service/estado-civil.service';
+import { ServiciosAsoprepService } from '../../../asoprep/service/servicios-asoprep.service';
 
 // Importa tu AuthService según tu estructura
 const FORMATO_FECHA_JAVA = 'yyyy-MM-dd HH:mm';
@@ -80,6 +83,7 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
     private entidadService: EntidadService,
     private estadoCivilService: EstadoCivilService,
     private prestamoService: PrestamoService,
+    private serviciosAsoprep: ServiciosAsoprepService,
     private router: Router,
     private snackBar: MatSnackBar,
     @Inject(PLATFORM_ID) private platformId: Object
@@ -263,7 +267,7 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
     this.criterioConsulta.orderBy('codigo');
     this.criterioConsultaArray.push(this.criterioConsulta);
 
-    this.estadoCivilService.selectByCriteria(this.criterioConsultaArray).subscribe({
+    this.serviciosAsoprep.selectByCriteria(this.criterioConsultaArray).subscribe({
       next: (data) => {
         console.log('Datos de NaturalezaCuenta:', data);
       },

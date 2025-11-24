@@ -3,9 +3,9 @@ import { Filial } from "./filial";
 
 export interface CargaArchivo {
     codigo: number;                     // Código
-    nombre: Usuario;                     // Nombre del archivo cargado
+    nombre: string;                     // Nombre del archivo cargado
     fechaCarga: string;                 // Fecha de carga (Timestamp)
-    codigoUsuario: number;              // Usuario que cargó
+    usuarioCarga: Usuario;              // Usuario que cargó
     filial: Filial;                        // Filial (objeto)
     rutaArchivo: string;                // Ruta del archivo en el servidor
     mesAfectacion: number;              // Mes de afectación

@@ -59,6 +59,26 @@ export class CargaArchivoService {
     );
   }
 
+  /**
+   * Sube el archivo físico al servidor después de guardar en BD
+   * El backend guarda el archivo y actualiza la ruta en la BD
+   */
+  subirArchivoFisico(archivo: File, codigoCarga: number, anio: number, mes: number, filial: number): Observable<any> {
+    const ws = '/subirArchivo';
+    const url = `${ServiciosCrd.RS_CRAR}${ws}`;
+
+    const formData = new FormData();
+    formData.append('archivo', archivo, archivo.name);
+    formData.append('codigoCarga', codigoCarga.toString());
+    formData.append('anio', anio.toString());
+    formData.append('mes', mes.toString());
+    formData.append('filial', filial.toString());
+
+    return this.http.post<any>(url, formData).pipe(
+      catchError((error) => throwError(() => error.error || error))
+    );
+  }
+
   private handleError(error: HttpErrorResponse): Observable<null> {
     if (+error.status === 200) {
       return of(null);
