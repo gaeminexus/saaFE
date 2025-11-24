@@ -1,3 +1,4 @@
+import { MotivoPrestamo } from './motivo-prestamo';
 import { Entidad } from "./entidad";
 import { EstadoPrestamo } from "./estado-prestamo";
 import { Filial } from "./filial";
@@ -37,14 +38,14 @@ export interface Prestamo {
     fechaModificacion: Date;   // PRSTFCMD - Fecha modificación
     usuarioModificacion: string; // PRSTUSMD - Usuario modificación
     observacion: string;       // PRSTOBSR - Observación
-    idMotivoPrestamo: number;  // MTVPCDGO - Id Motivo Prestamo
+    motivoPrestamo: MotivoPrestamo;  // MTVPCDGO - Id Motivo Prestamo
     estadoOperacion: number;   // PRSTESOP - Estado operacion
     tasaNominal: number;       // PRSTTSNM - Tasa Nominal
     tasaEfectiva: number;      // PRSTTSEF - Tasa Efectiva
     esNovacion: number;        // PRSTESNV - Indica si el prestamo es una novacion
-    fueReprocesado: number;    // PRSTRPRC - Indica si el prestamo fue reprocesado
-    fueReestructurado: number; // PRSTRSTR - Indica si el prestamo fue reestructurado
-    fueRefinanciado: number;   // PRSTRFNN - Indica si el prestamo fue Refinanciado
+    reprocesado: number;    // PRSTRPRC - Indica si el prestamo fue reprocesado
+    reestructurado: number; // PRSTRSTR - Indica si el prestamo fue reestructurado
+    refinanciado: number;   // PRSTRFNN - Indica si el prestamo fue Refinanciado
     saldoCapital: number;      // PRSTSLCP - Saldo Capital
     saldoOtros: number;        // PRSTSLOT - Saldo Otros
     saldoInteres: number;      // PRSTSLIN - Saldo Interes
@@ -61,8 +62,8 @@ export interface Prestamo {
     fechaLegalizacion: Date;   // PRSTFCLG - Fecha de legalización
     usuarioAcreditacion: string; // PRSTUSAC - Usuario Acreditacion
     fechaAcreditacion: Date;   // PRSTFCAC - Fecha de Acreditacion
-    huboAjusteAportes: number; // PRSTAJAP - Indica si hubo Ajuste aportes
+    ajusteAportes: number; // PRSTAJAP - Indica si hubo Ajuste aportes
     mesesACobrar: number;      // PRSTMSCB - Meses a cobrar
-    idEstado: number;          // PRSTIDST - ID Estado
+    estado: number;          // PRSTIDST - ID Estado
     firmadoTitular: number;    // PRSTFRTT - Indica si fue Firmado Titular
 }

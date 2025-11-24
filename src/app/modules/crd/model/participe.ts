@@ -14,7 +14,7 @@ export interface Participe {
     nivelEstudios: string;          // PRTCNVES - Nivel de estudios
     ingresoAdicionalMensual: number; // PRTCIAMM - Ingreso adicional monto mensual
     ingresoAdicionalActividad: string; // PRTCIAAC - Ingreso adicional actividad
-    codigoTipoCalificacion: number;   // TPCLCDGO - FK Código Tipo Calificación
+    tipoCalificacion: number;   // TPCLCDGO - FK Código Tipo Calificación
     fechaIngresoFondo: Date;          // PRTCFCIF - Fecha ingreso al fondo
     estadoActual: number;             // PRTCESAC - Estado actual
     fechaFallecimiento: Date;         // PRTCFCHF - Fecha fallecimiento

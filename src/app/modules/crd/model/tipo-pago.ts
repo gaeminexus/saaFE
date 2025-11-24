@@ -4,5 +4,5 @@ export interface TipoPago {
     codigoSbs: string;     // TPPGCSPB - Código Superintendencia de bancos SBS
     tipo: string;         // TPPGTPOO - Tipo
     observacion: string;  // TPPGOBSR - Observación
-    idEstado: number;      // TPPGIDST - ID Estado
+    estado: number;      // TPPGIDST - ID Estado
 }

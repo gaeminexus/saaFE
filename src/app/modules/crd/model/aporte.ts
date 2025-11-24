@@ -14,8 +14,8 @@ export interface Aporte {
     valor: number;                // APRTVLRR - Valor
     valorPagado: number;          // APRTVLPG - Valor pagado
     saldo: number;                // APRTSLDO - Saldo
-    idSistemaAsoprep: number;     // APRTIDAS - ID Sistema ASOPREP
+    idAsoprep: number;     // APRTIDAS - ID Sistema ASOPREP
     fechaRegistro: Date;          // APRTFCRG - Fecha de registro
     usuarioRegistro: string;      // APRTUSRG - Usuario registro
-    idEstado: number;             // APRTIDST - ID Estado
+    estado: number;             // APRTIDST - ID Estado
 }

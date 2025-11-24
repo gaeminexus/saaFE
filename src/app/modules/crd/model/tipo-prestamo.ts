@@ -4,5 +4,5 @@ export interface TipoPrestamo {
     codigoSBS: string;       // TPPRCSPB - Código Superintendencia de Bancos SBS
     tipo: string;           // TPPRTPOO - Tipo (opcional)
     tasa: number;           // TPPRTSAA - Tasa (opcional)
-    idEstado: number;        // TPPRIDST - ID Estado
+    estado: number;        // TPPRIDST - ID Estado
 }

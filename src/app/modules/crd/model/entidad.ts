@@ -14,7 +14,7 @@ export interface Entidad {
     tipoIdentificacion: TipoIdentificacion;    // TPDNCDGO - FK Código Tipo Identificación (opcional)
     numeroIdentificacion: string; // ENTDNMID - Número de identificación (opcional)
     razonSocial: string;        // ENTDRZNS - Razón social (opcional)
-    numeroCargasFamiliares: number; // ENTDNMCF - Número de cargas familiares (opcional)
+    cargasFamiliares: number; // ENTDNMCF - Número de cargas familiares (opcional)
     nombreComercial: string;    // ENTDNMCM - Nombre comercial (opcional)
     fechaNacimiento: Date;      // ENTDFCNC - Fecha Nacimiento (opcional)
     tipoVivienda: TipoVivienda; // TPVVCDGO - FK Código Tipo Vivienda (opcional)
@@ -35,7 +35,6 @@ export interface Entidad {
     fechaIngreso: Date;         // ENTDFCIN - Fecha Ingreso (opcional)
     ipModificacion: string;     // ENTDIPMD - IP modificación (opcional)
     usuarioModificacion: string;// ENTDUSMD - Usuario modificación (opcional)
-    fechaModificacion: Date;    // ENTDFCMD - Fecha modificación (opcional)
     idEstado: number;            // ENTDIDST - ID Estado
     urlFotoLogo: string;        // ENTDURFL - URL Foto Logo (opcional)
 }

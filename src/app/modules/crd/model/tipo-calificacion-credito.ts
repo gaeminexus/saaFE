@@ -4,5 +4,5 @@ export interface TipoCalificacionCredito {
     nombre: string;          // TPCLNMBR - Nombre
     categoria: string;      // TPCLCTGR - Categoría
     provision: number;      // TPCLPRVS - Provisión
-    idEstado: number;        // TPCLIDST - ID Estado
+    estado: number;        // TPCLIDST - ID Estado
 }
