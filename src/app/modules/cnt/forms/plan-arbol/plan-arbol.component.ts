@@ -99,6 +99,9 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
   treeControl = new NestedTreeControl<PlanCuentaNode>((node: PlanCuentaNode) => node.children);
   dataSource = new MatTreeNestedDataSource<PlanCuentaNode>();
 
+  // Almacenar estado de expansión
+  private expandedNodesCodes = new Set<number>();
+
   // Solo visualización por ahora
   showActions = true;
 
@@ -152,6 +155,9 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
 
   // ⚠️ Debe ser público para que el template pueda llamarlo
   public loadData(): void {
+    // Guardar estado de expansión actual
+    this.saveExpandedState();
+    
     this.loading.set(true);
     this.error.set('');
 
@@ -362,6 +368,9 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
 
     // Asignar datos al dataSource
     this.dataSource.data = this.treeData;
+
+    // Restaurar estado de expansión
+    this.restoreExpandedState();
 
     console.log('🌲 Árbol construido:', {
       totalCuentas: this.planCuentas.length,
@@ -786,5 +795,45 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
       this.planCuentas.map(p => p.cuentaContable || '')
     );
     return this.planUtils.getNextRootSequentialCuenta(rootNumbers);
+  }
+
+  /**
+   * Guarda el estado de expansión actual de todos los nodos
+   */
+  private saveExpandedState(): void {
+    this.expandedNodesCodes.clear();
+    
+    const saveNodeState = (node: PlanCuentaNode) => {
+      if (this.treeControl.isExpanded(node) && node.codigo) {
+        this.expandedNodesCodes.add(node.codigo);
+      }
+      if (node.children) {
+        node.children.forEach(child => saveNodeState(child));
+      }
+    };
+    
+    this.treeData.forEach(node => saveNodeState(node));
+    console.log('💾 Estado guardado. Nodos expandidos:', Array.from(this.expandedNodesCodes));
+  }
+
+  /**
+   * Restaura el estado de expansión de los nodos que estaban expandidos
+   */
+  private restoreExpandedState(): void {
+    if (this.expandedNodesCodes.size === 0) {
+      return;
+    }
+    
+    const restoreNodeState = (node: PlanCuentaNode) => {
+      if (node.codigo && this.expandedNodesCodes.has(node.codigo)) {
+        this.treeControl.expand(node);
+      }
+      if (node.children) {
+        node.children.forEach(child => restoreNodeState(child));
+      }
+    };
+    
+    this.treeData.forEach(node => restoreNodeState(node));
+    console.log('♻️ Estado restaurado. Nodos re-expandidos:', Array.from(this.expandedNodesCodes));
   }
 }
