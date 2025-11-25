@@ -37,7 +37,6 @@ const EMPRESA = 1236;
 })
 export class LoginComponent implements AfterViewInit, OnDestroy {
 
-  sucursal: number = 0;
   username = '';
   password = '';
   isLoading = false;
@@ -137,7 +136,7 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
       this.usuarioService.setUsuarioLog(usuarioLog);
       localStorage.setItem('userName', this.username);
       localStorage.setItem('usuario', JSON.stringify(usuarioLog));
-      localStorage.setItem('idSucursal', this.sucursal.toString());
+      localStorage.setItem('idSucursal', EMPRESA.toString());
       localStorage.setItem('idUsuario', usuarioLog.codigo.toString());
       this.router.navigate(['/menu']);
     });
