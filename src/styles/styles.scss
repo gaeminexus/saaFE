@@ -146,3 +146,73 @@ mat-icon,
     background-color: rgba(0, 0, 0, 0.2) !important;
   }
 }
+
+// ===== Custom Snackbar Styles =====
+.success-snackbar {
+  --mdc-snackbar-container-color: #10b981 !important;
+  
+  .mdc-snackbar__surface {
+    background-color: #10b981 !important;
+  }
+  
+  .mat-mdc-snack-bar-label {
+    color: white !important;
+    font-weight: 500 !important;
+  }
+  
+  .mat-mdc-button {
+    color: white !important;
+  }
+}
+
+.error-snackbar {
+  --mdc-snackbar-container-color: #ef4444 !important;
+  
+  .mdc-snackbar__surface {
+    background-color: #ef4444 !important;
+  }
+  
+  .mat-mdc-snack-bar-label {
+    color: white !important;
+    font-weight: 500 !important;
+  }
+  
+  .mat-mdc-button {
+    color: white !important;
+  }
+}
+
+.warning-snackbar {
+  --mdc-snackbar-container-color: #f59e0b !important;
+  
+  .mdc-snackbar__surface {
+    background-color: #f59e0b !important;
+  }
+  
+  .mat-mdc-snack-bar-label {
+    color: white !important;
+    font-weight: 500 !important;
+  }
+  
+  .mat-mdc-button {
+    color: white !important;
+  }
+}
+
+.info-snackbar {
+  --mdc-snackbar-container-color: #3b82f6 !important;
+  
+  .mdc-snackbar__surface {
+    background-color: #3b82f6 !important;
+  }
+  
+  .mat-mdc-snack-bar-label {
+    color: white !important;
+    font-weight: 500 !important;
+  }
+  
+  .mat-mdc-button {
+    color: white !important;
+  }
+}
+

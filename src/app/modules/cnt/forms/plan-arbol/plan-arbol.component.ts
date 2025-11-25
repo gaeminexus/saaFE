@@ -23,6 +23,7 @@ import { NaturalezaCuenta } from '../../model/naturaleza-cuenta';
 import { ExportService } from '../../../../shared/services/export.service';
 import { PlanCuentaUtilsService } from '../../../../shared/services/plan-cuenta-utils.service';
 import { PlanArbolFormComponent } from './plan-arbol-form.component';
+import { ConfirmDialogComponent, ConfirmDialogData } from '../../../../shared/basics/confirm-dialog/confirm-dialog.component';
 import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
@@ -630,58 +631,74 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
   onDelete(node: PlanCuentaNode) {
     // Validar que tenga código válido
     if (!node.codigo || node.codigo === 0) {
-      this.snackBar.open('No se puede eliminar: código inválido', 'Cerrar', {
+      this.snackBar.open('⚠️ No se puede eliminar: código inválido', 'Cerrar', {
         duration: 3000,
         horizontalPosition: 'center',
-        verticalPosition: 'top'
+        verticalPosition: 'top',
+        panelClass: ['warning-snackbar']
       });
       return;
     }
 
     // Verificar si tiene hijos
     if (node.children && node.children.length > 0) {
-      this.snackBar.open('No se puede eliminar: la cuenta tiene subcuentas', 'Cerrar', {
+      this.snackBar.open('⚠️ No se puede eliminar: la cuenta tiene subcuentas', 'Cerrar', {
         duration: 4000,
         horizontalPosition: 'center',
-        verticalPosition: 'top'
+        verticalPosition: 'top',
+        panelClass: ['warning-snackbar']
       });
       return;
     }
 
-    // Confirmar eliminación
-    const confirmacion = confirm(
-      `¿Está seguro de eliminar la cuenta?\n\n` +
-      `Código: ${node.codigo}\n` +
-      `Cuenta: ${node.cuentaContable}\n` +
-      `Nombre: ${node.nombre}\n\n` +
-      `Esta acción no se puede deshacer.`
-    );
+    // Abrir diálogo de confirmación moderno
+    const dialogData: ConfirmDialogData = {
+      title: '¿Eliminar cuenta?',
+      message: 'Esta acción no se puede deshacer. Se eliminará permanentemente la cuenta del sistema.',
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      type: 'danger',
+      details: [
+        `Código: ${node.codigo}`,
+        `Cuenta: ${node.cuentaContable}`,
+        `Nombre: ${node.nombre}`
+      ]
+    };
 
-    if (!confirmacion) {
-      return;
-    }
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      width: '500px',
+      data: dialogData,
+      disableClose: false,
+      autoFocus: true
+    });
 
-    // Ejecutar eliminación
-    this.planCuentaService.delete(node.codigo).subscribe({
-      next: () => {
-        this.snackBar.open('Cuenta eliminada exitosamente', 'Cerrar', {
-          duration: 3000,
-          horizontalPosition: 'center',
-          verticalPosition: 'top',
-          panelClass: ['success-snackbar']
-        });
-        this.loadData();
-      },
-      error: (err) => {
-        console.error('Error al eliminar cuenta:', err);
-        const mensaje = err?.error?.message || err?.message || 'Error al eliminar la cuenta';
-        this.snackBar.open(`Error: ${mensaje}`, 'Cerrar', {
-          duration: 5000,
-          horizontalPosition: 'center',
-          verticalPosition: 'top',
-          panelClass: ['error-snackbar']
-        });
+    dialogRef.afterClosed().subscribe(confirmed => {
+      if (!confirmed) {
+        return;
       }
+
+      // Ejecutar eliminación
+      this.planCuentaService.delete(node.codigo).subscribe({
+        next: () => {
+          this.snackBar.open('✓ Cuenta eliminada exitosamente', 'Cerrar', {
+            duration: 3000,
+            horizontalPosition: 'center',
+            verticalPosition: 'top',
+            panelClass: ['success-snackbar']
+          });
+          this.loadData();
+        },
+        error: (err) => {
+          console.error('Error al eliminar cuenta:', err);
+          const mensaje = err?.error?.message || err?.message || 'Error al eliminar la cuenta';
+          this.snackBar.open(`✗ Error: ${mensaje}`, 'Cerrar', {
+            duration: 5000,
+            horizontalPosition: 'center',
+            verticalPosition: 'top',
+            panelClass: ['error-snackbar']
+          });
+        }
+      });
     });
   }
 
