@@ -1,8 +1,8 @@
 import { HttpHeaders, HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, catchError, of, throwError } from 'rxjs';
-import { CxcKardexParticipe } from '../model/Cxc-kardex-participe';
 import { ServiciosCrd } from './ws-crd';
+import { CxcKardexParticipe } from '../model/cxc-kardex-participe';
 
 @Injectable({
   providedIn: 'root'
