@@ -20,10 +20,12 @@ import { NaturalezaCuentaService } from '../../service/naturaleza-cuenta.service
 import { PlanCuenta } from '../../model/plan-cuenta';
 import { NaturalezaCuenta } from '../../model/naturaleza-cuenta';
 import { ExportService } from '../../../../shared/services/export.service';
+import { PlanCuentaUtilsService } from '../../../../shared/services/plan-cuenta-utils.service';
 import { PlanArbolFormComponent } from './plan-arbol-form.component';
 import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
+import { getMockPlanCuentas, getMockNaturalezas } from '../../../../shared/mocks/plan-cuenta.mock';
 
 interface PlanCuentaNode extends PlanCuenta {
   children?: PlanCuentaNode[];
@@ -110,7 +112,8 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
     private planCuentaService: PlanCuentaService,
     private naturalezaCuentaService: NaturalezaCuentaService,
     private dialog: MatDialog,
-    private exportService: ExportService
+    private exportService: ExportService,
+    private planUtils: PlanCuentaUtilsService
   ) {}
 
   ngOnInit(): void {
@@ -241,57 +244,9 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
   }
 
   private loadMockData(): void {
-    // Mantener datos de ejemplo como fallback
-    const mockJerarquia = {
-      codigo: 1, nombre: 'Jerarquía Demo', nivel: 1, codigoPadre: 0, descripcion: 'Jerarquía de prueba',
-      ultimoNivel: 1, rubroTipoEstructuraP: 1, rubroTipoEstructuraH: 1, codigoAlterno: 1,
-      rubroNivelCaracteristicaP: 1, rubroNivelCaracteristicaH: 1
-    };
+    console.log('📝 Cargando datos mock desde servicio centralizado');
 
-    const mockEmpresa = {
-      codigo: 280, jerarquia: mockJerarquia, nombre: 'Empresa Demo', nivel: 1, codigoPadre: 0, ingresado: 1
-    };
-
-    const mockNaturalezaDeudora: NaturalezaCuenta = {
-      codigo: 1, nombre: 'Deudora', tipo: 1, numero: 1, estado: 1, empresa: mockEmpresa, manejaCentroCosto: 0
-    };
-
-    const mockNaturalezaAcreedora: NaturalezaCuenta = {
-      codigo: 2, nombre: 'Acreedora', tipo: 2, numero: 2, estado: 1, empresa: mockEmpresa, manejaCentroCosto: 0
-    };
-
-    const mockData: PlanCuenta[] = [
-      // Cuenta Raíz
-      { codigo: 1, cuentaContable: '0', nombre: 'PLANARBOL', tipo: 1, nivel: 0, idPadre: 0, estado: 1, fechaInactivo: new Date(), empresa: mockEmpresa, fechaUpdate: new Date(), naturalezaCuenta: mockNaturalezaDeudora },
-
-      // Nivel 1 - Cuentas principales
-      { codigo: 2, cuentaContable: '1', nombre: 'ACTIVOS', tipo: 1, nivel: 1, idPadre: 1, estado: 1, fechaInactivo: new Date(), empresa: mockEmpresa, fechaUpdate: new Date(), naturalezaCuenta: mockNaturalezaDeudora },
-      { codigo: 3, cuentaContable: '2', nombre: 'PASIVOS', tipo: 1, nivel: 1, idPadre: 1, estado: 1, fechaInactivo: new Date(), empresa: mockEmpresa, fechaUpdate: new Date(), naturalezaCuenta: mockNaturalezaAcreedora },
-      { codigo: 4, cuentaContable: '3', nombre: 'CAPITAL', tipo: 1, nivel: 1, idPadre: 1, estado: 1, fechaInactivo: new Date(), empresa: mockEmpresa, fechaUpdate: new Date(), naturalezaCuenta: mockNaturalezaAcreedora },
-      { codigo: 5, cuentaContable: '4', nombre: 'INGRESOS', tipo: 1, nivel: 1, idPadre: 1, estado: 1, fechaInactivo: new Date(), empresa: mockEmpresa, fechaUpdate: new Date(), naturalezaCuenta: mockNaturalezaAcreedora },
-      { codigo: 6, cuentaContable: '5', nombre: 'EGRESOS', tipo: 1, nivel: 1, idPadre: 1, estado: 1, fechaInactivo: new Date(), empresa: mockEmpresa, fechaUpdate: new Date(), naturalezaCuenta: mockNaturalezaDeudora },
-
-      // Nivel 2 - Subcuentas de ACTIVOS
-      { codigo: 7, cuentaContable: '1.1', nombre: 'ACTIVOS CORRIENTES', tipo: 1, nivel: 2, idPadre: 2, estado: 1, fechaInactivo: new Date(), empresa: mockEmpresa, fechaUpdate: new Date(), naturalezaCuenta: mockNaturalezaDeudora },
-      { codigo: 8, cuentaContable: '1.2', nombre: 'ACTIVOS FIJOS', tipo: 1, nivel: 2, idPadre: 2, estado: 1, fechaInactivo: new Date(), empresa: mockEmpresa, fechaUpdate: new Date(), naturalezaCuenta: mockNaturalezaDeudora },
-      { codigo: 9, cuentaContable: '1.3', nombre: 'OTROS ACTIVOS', tipo: 1, nivel: 2, idPadre: 2, estado: 1, fechaInactivo: new Date(), empresa: mockEmpresa, fechaUpdate: new Date(), naturalezaCuenta: mockNaturalezaDeudora },
-      { codigo: 10, cuentaContable: '1.4', nombre: 'ACTIVO A LARGO PLAZO', tipo: 1, nivel: 2, idPadre: 2, estado: 1, fechaInactivo: new Date(), empresa: mockEmpresa, fechaUpdate: new Date(), naturalezaCuenta: mockNaturalezaDeudora },
-
-      // Nivel 3 - Subcuentas de ACTIVOS CORRIENTES (ejemplos)
-      { codigo: 11, cuentaContable: '1.1.01', nombre: 'CAJA', tipo: 2, nivel: 3, idPadre: 7, estado: 1, fechaInactivo: new Date(), empresa: mockEmpresa, fechaUpdate: new Date(), naturalezaCuenta: mockNaturalezaDeudora },
-      { codigo: 12, cuentaContable: '1.1.02', nombre: 'BANCOS', tipo: 2, nivel: 3, idPadre: 7, estado: 1, fechaInactivo: new Date(), empresa: mockEmpresa, fechaUpdate: new Date(), naturalezaCuenta: mockNaturalezaDeudora },
-      { codigo: 13, cuentaContable: '1.1.03', nombre: 'CUENTAS POR COBRAR', tipo: 2, nivel: 3, idPadre: 7, estado: 1, fechaInactivo: new Date(), empresa: mockEmpresa, fechaUpdate: new Date(), naturalezaCuenta: mockNaturalezaDeudora },
-
-      // Nivel 3 - Subcuentas de ACTIVOS FIJOS (ejemplos)
-      { codigo: 14, cuentaContable: '1.2.01', nombre: 'MUEBLES Y ENSERES', tipo: 2, nivel: 3, idPadre: 8, estado: 1, fechaInactivo: new Date(), empresa: mockEmpresa, fechaUpdate: new Date(), naturalezaCuenta: mockNaturalezaDeudora },
-      { codigo: 15, cuentaContable: '1.2.02', nombre: 'EQUIPOS DE COMPUTACION', tipo: 2, nivel: 3, idPadre: 8, estado: 1, fechaInactivo: new Date(), empresa: mockEmpresa, fechaUpdate: new Date(), naturalezaCuenta: mockNaturalezaDeudora },
-
-      // Nivel 2 - Subcuentas de PASIVOS (ejemplos)
-      { codigo: 16, cuentaContable: '2.1', nombre: 'PASIVOS CORRIENTES', tipo: 1, nivel: 2, idPadre: 3, estado: 1, fechaInactivo: new Date(), empresa: mockEmpresa, fechaUpdate: new Date(), naturalezaCuenta: mockNaturalezaAcreedora },
-      { codigo: 17, cuentaContable: '2.1.01', nombre: 'CUENTAS POR PAGAR', tipo: 2, nivel: 3, idPadre: 16, estado: 1, fechaInactivo: new Date(), empresa: mockEmpresa, fechaUpdate: new Date(), naturalezaCuenta: mockNaturalezaAcreedora }
-    ];
-
-    console.log('📝 Cargando datos mock:', mockData);
+    const mockData = getMockPlanCuentas();
 
     setTimeout(() => {
       this.planCuentas = mockData;
@@ -370,21 +325,8 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
   }
 
   private loadMockNaturalezas(): void {
-    // Datos de naturaleza de ejemplo como fallback
-    const mockJerarquia = {
-      codigo: 1, nombre: 'Jerarquía Demo', nivel: 1, codigoPadre: 0, descripcion: 'Jerarquía de prueba',
-      ultimoNivel: 1, rubroTipoEstructuraP: 1, rubroTipoEstructuraH: 1, codigoAlterno: 1,
-      rubroNivelCaracteristicaP: 1, rubroNivelCaracteristicaH: 1
-    };
-
-    const mockEmpresa = {
-      codigo: 280, jerarquia: mockJerarquia, nombre: 'Empresa Demo', nivel: 1, codigoPadre: 0, ingresado: 1
-    };
-
-    this.naturalezas = [
-      { codigo: 1, nombre: 'Deudora', tipo: 1, numero: 1, estado: 1, empresa: mockEmpresa, manejaCentroCosto: 0 },
-      { codigo: 2, nombre: 'Acreedora', tipo: 2, numero: 2, estado: 1, empresa: mockEmpresa, manejaCentroCosto: 0 }
-    ];
+    console.log('📝 Cargando naturalezas mock desde servicio centralizado');
+    this.naturalezas = getMockNaturalezas();
   }
 
   private buildTree(): void {
@@ -396,7 +338,7 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
       const node: PlanCuentaNode = {
         ...cuenta,
         children: [],
-        level: this.calculateLevel(cuenta.cuentaContable || ''),
+        level: this.planUtils.calculateLevel(cuenta.cuentaContable || ''),
         expandable: false,
         isExpanded: false
       };
@@ -426,8 +368,8 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
     // Ordenar nodos por número de cuenta
     const sortNodes = (nodes: PlanCuentaNode[]) => {
       nodes.sort((a, b) => {
-        const aNumber = this.getAccountNumberForSorting(a.cuentaContable || '');
-        const bNumber = this.getAccountNumberForSorting(b.cuentaContable || '');
+        const aNumber = this.planUtils.getAccountNumberForSorting(a.cuentaContable || '');
+        const bNumber = this.planUtils.getAccountNumberForSorting(b.cuentaContable || '');
         return aNumber.localeCompare(bNumber);
       });
       nodes.forEach(node => {
@@ -471,20 +413,7 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
   }
 
   private calculateLevel(cuentaContable: string): number {
-    // Calcular nivel basado en los puntos en la cuenta
-    // Ejemplos:
-    // "0" = nivel 0 (raíz)
-    // "1" = nivel 1
-    // "1.1" = nivel 2
-    // "1.1.01" = nivel 3
-    if (!cuentaContable) return 0;
-
-    // Cuenta especial raíz
-    if (cuentaContable === '0') return 0;
-
-    // Contar puntos para determinar el nivel
-    const dots = (cuentaContable.match(/\./g) || []).length;
-    return dots + 1;
+    return this.planUtils.calculateLevel(cuentaContable);
   }
 
   public toggleViewMode(): void {
@@ -561,15 +490,15 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
     });
 
     // 3. Ordenar
-    if (this.sortConfig.column && this.sortConfig.direction) {
+      if (this.sortConfig.column && this.sortConfig.direction) {
       this.filteredData.sort((a, b) => {
         let aVal: any;
         let bVal: any;
 
         // Manejo especial para ordenamiento por número de cuenta
         if (this.sortConfig.column === 'cuentaContable') {
-          aVal = this.getAccountNumberForSorting(a.cuentaContable || '');
-          bVal = this.getAccountNumberForSorting(b.cuentaContable || '');
+          aVal = this.planUtils.getAccountNumberForSorting(a.cuentaContable || '');
+          bVal = this.planUtils.getAccountNumberForSorting(b.cuentaContable || '');
         } else if (this.sortConfig.column === 'naturalezaCuenta') {
           aVal = this.getNaturalezaName(a.naturalezaCuenta?.codigo).toLowerCase();
           bVal = this.getNaturalezaName(b.naturalezaCuenta?.codigo).toLowerCase();
@@ -610,30 +539,13 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
   }
 
   public estadoLabel(valor: any): string {
-    return Number(valor) === 1 ? 'Activo' : 'Inactivo';
+    return this.planUtils.getEstadoLabel(valor);
   }
 
   // Función personalizada para formateo seguro de fechas
   formatFecha(fecha: string | Date | null | undefined): string {
-    if (!fecha) return 'N/A';
-    
-    try {
-      const fechaStr = typeof fecha === 'string' ? fecha : fecha.toISOString();
-      // Remover zona horaria problemática: "2024-01-15T05:00:00Z[UTC]"
-      const fechaLimpia = fechaStr.split('[')[0].replace('Z', '');
-      const fechaObj = new Date(fechaLimpia);
-      
-      if (isNaN(fechaObj.getTime())) return 'Fecha inválida';
-      
-      return fechaObj.toLocaleDateString('es-EC', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-      });
-    } catch (err) {
-      console.error('Error formateando fecha:', err);
-      return 'Error de formato';
-    }
+    const formatted = this.planUtils.formatFecha(fecha);
+    return formatted === '-' ? 'N/A' : formatted;
   }
 
   public trackByCodigo = (_: number, item: PlanCuentaNode) =>
@@ -650,7 +562,7 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
   public canAddChild(node: PlanCuentaNode): boolean {
     const lvl = this.getLevel(node);
     const maxDepth = this.getMaxDepthAllowed();
-    return lvl < maxDepth;
+    return this.planUtils.canAddChild(lvl, maxDepth);
   }
 
   public canEdit(_node: PlanCuentaNode): boolean {
@@ -766,35 +678,6 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
   }
 
   /**
-   * Convierte un número de cuenta jerárquico a un formato que se puede ordenar correctamente
-   * Ejemplos:
-   * "1" -> "0001"
-   * "1.1" -> "0001.0001"
-   * "1.1.01" -> "0001.0001.0001"
-   * "2.15.123" -> "0002.0015.0123"
-   */
-  private getAccountNumberForSorting(accountNumber: string): string {
-    if (!accountNumber) return '0000';
-
-    // Si no tiene puntos, es un número simple
-    if (!accountNumber.includes('.')) {
-      const numPart = parseInt(accountNumber.trim()) || 0;
-      return numPart.toString().padStart(4, '0');
-    }
-
-    // Dividir por puntos y convertir cada parte a número con padding
-    const parts = accountNumber.split('.');
-    const paddedParts = parts.map(part => {
-      // Remover espacios y convertir a número
-      const numPart = parseInt(part.trim()) || 0;
-      // Agregar padding de 4 dígitos para ordenamiento correcto
-      return numPart.toString().padStart(4, '0');
-    });
-
-    return paddedParts.join('.');
-  }
-
-  /**
    * Establece el ordenamiento por defecto por número de cuenta
    */
   private setDefaultSort(): void {
@@ -804,44 +687,22 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
 
   // --- Nueva lógica de numeración y límites ---
   private getMaxDepthAllowed(): number {
-    // Permitimos como mínimo la profundidad actual existente para no bloquear datos existentes
     const existingMax = Math.max(0, ...this.planCuentas.map(c => c.nivel || 0));
     const naturalezaCount = this.naturalezas.length || 1;
-    // Si hay pocas naturalezas, igual permitimos llegar al máximo existente + 1
-    return Math.max(existingMax + 1, naturalezaCount); // flexible para datos ya cargados
+    return this.planUtils.getMaxDepthAllowed(existingMax, naturalezaCount);
   }
 
   private generateNewCuentaContable(parent?: PlanCuentaNode): string {
-    // Para raíz ya delegamos la lógica fuera (no se llama aquí sin parent)
     if (!parent) return '1';
-    // Caso especial: padre raíz '0' => hijos son cuentas de primer nivel sin prefijo '0.'
-    if (parent.cuentaContable === '0') {
-      const rootChildren = this.planCuentas
-        .filter(p => p.cuentaContable && !p.cuentaContable.includes('.') && p.cuentaContable !== '0')
-        .map(p => parseInt(p.cuentaContable || '0', 10))
-        .filter(n => !isNaN(n));
-      const next = rootChildren.length === 0 ? 1 : Math.max(...rootChildren) + 1;
-      return String(next);
-    }
-
-    const parentNumber = parent.cuentaContable || '';
-    // Buscar hijos directos del padre
-    const children = this.planCuentas.filter(p => {
-      if (!p.cuentaContable) return false;
-      // Para hijos normales exigir prefijo parentNumber.
-      if (!p.cuentaContable.startsWith(parentNumber + '.')) return false;
-      // Validar que sea hijo directo (misma cantidad de puntos +1)
-      const parentDots = (parentNumber.match(/\./g) || []).length;
-      const childDots = (p.cuentaContable.match(/\./g) || []).length;
-      return childDots === parentDots + 1;
-    });
-
-    const lastSegments = children.map(c => {
-      const parts = (c.cuentaContable || '').split('.');
-      return parseInt(parts[parts.length - 1], 10) || 0;
-    });
-    const nextSegment = (Math.max(0, ...lastSegments) + 1);
-    return parentNumber + '.' + nextSegment;
+    
+    const existingAccounts = this.planCuentas
+      .map(p => p.cuentaContable || '')
+      .filter(c => c);
+    
+    return this.planUtils.generateNewCuentaContable(
+      parent.cuentaContable || '',
+      existingAccounts
+    );
   }
 
   private findRootNodeByNumber(levelStr: string): PlanCuentaNode | undefined {
@@ -871,31 +732,24 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
 
   // Obtener siguiente código de naturaleza sin cuenta raíz
   private getNextAvailableRootNaturalezaCodigo(): number | null {
-    const existingRoots = new Set(
-      this.planCuentas
-        .filter(p => p.cuentaContable && !p.cuentaContable.includes('.') && p.cuentaContable !== '0')
-        .map(p => parseInt(p.cuentaContable || '0', 10))
+    const existingRoots = this.planUtils.extractRootNumbers(
+      this.planCuentas.map(p => p.cuentaContable || '')
     );
-    const orderedNaturalezas = [...this.naturalezas].sort((a,b) => a.codigo - b.codigo);
-    for (const nat of orderedNaturalezas) {
-      if (!existingRoots.has(nat.codigo)) {
-        return nat.codigo;
-      }
-    }
-    return null;
+    const orderedCodigos = this.naturalezas
+      .map(n => n.codigo)
+      .sort((a, b) => a - b);
+    
+    return this.planUtils.getNextAvailableRootNaturalezaCodigo(
+      existingRoots,
+      orderedCodigos
+    );
   }
 
   // Nuevo método: calcula el siguiente número de cuenta raíz secuencial (máx + 1)
-  // Considera únicamente cuentas raíz (sin puntos, distinto de '0') ya filtradas por empresa 280.
   private getNextRootSequentialCuenta(): number | null {
-    const rootNumbers = this.planCuentas
-      .filter(p => p.cuentaContable && !p.cuentaContable.includes('.') && p.cuentaContable !== '0')
-      .map(p => parseInt(p.cuentaContable || '0', 10))
-      .filter(n => !isNaN(n));
-
-    if (rootNumbers.length === 0) {
-      return 1; // Primer raíz (ignora '0')
-    }
-    return Math.max(...rootNumbers) + 1;
+    const rootNumbers = this.planUtils.extractRootNumbers(
+      this.planCuentas.map(p => p.cuentaContable || '')
+    );
+    return this.planUtils.getNextRootSequentialCuenta(rootNumbers);
   }
 }
