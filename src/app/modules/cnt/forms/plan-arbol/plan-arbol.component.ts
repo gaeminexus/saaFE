@@ -271,7 +271,8 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
           this.loadNaturalezasFallback();
         } else {
           console.log(`✅ Se cargaron ${list.length} naturalezas para empresa 280 exitosamente`);
-          this.naturalezas = list;
+          // Ordenar por número de cuenta de menor a mayor
+          this.naturalezas = list.sort((a: any, b: any) => (a.numero || 0) - (b.numero || 0));
         }
       },
       error: (err) => {
@@ -292,12 +293,17 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
         const list = Array.isArray(data) ? data : (data as any)?.data ?? [];
         console.log('📋 Lista de naturalezas procesada (fallback):', list);
 
-        if (list.length === 0) {
-          console.log('⚠️ No se encontraron naturalezas en la base de datos');
+        // Filtrar por empresa 280 en frontend
+        const filtered = list.filter((nat: any) => nat?.empresa?.codigo === 280);
+        console.log(`🔍 Filtrado frontend: ${list.length} total → ${filtered.length} empresa 280`);
+
+        if (filtered.length === 0) {
+          console.log('⚠️ No se encontraron naturalezas para empresa 280 en la base de datos');
           this.loadMockNaturalezas();
         } else {
-          console.log(`✅ Se cargaron ${list.length} naturalezas exitosamente (fallback)`);
-          this.naturalezas = list;
+          console.log(`✅ Se cargaron ${filtered.length} naturalezas para empresa 280 exitosamente (fallback)`);
+          // Ordenar por número de cuenta de menor a mayor
+          this.naturalezas = filtered.sort((a: any, b: any) => (a.numero || 0) - (b.numero || 0));
         }
       },
       error: (err) => {

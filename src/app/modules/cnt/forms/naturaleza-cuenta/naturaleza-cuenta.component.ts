@@ -25,6 +25,20 @@ export class NaturalezaCuentaComponent implements OnInit  {
   regConfig: FieldConfig[] = [
     {
       type: 'input',
+      label: 'Número',
+      inputType: 'number',
+      name: 'numero',
+      value: null,
+      validations: [
+        {
+          name: 'required',
+          validator: Validators.required,
+          message: 'Número requerido'
+        },
+      ]
+    },
+    {
+      type: 'input',
       label: 'Nombre',
       inputType: 'text',
       name: 'nombre',
@@ -42,7 +56,11 @@ export class NaturalezaCuentaComponent implements OnInit  {
   fieldsAnios: FieldFormat[] = [
     {
       column: 'codigo',
-      header: 'C\u00D3DIGO',
+      header: 'CÓDIGO',
+    },
+    {
+      column: 'numero',
+      header: 'NÚMERO DE CUENTA',
     },
     {
       column: 'nombre',
@@ -79,7 +97,10 @@ export class NaturalezaCuentaComponent implements OnInit  {
   ngOnInit(): void {
     // Obtener datos del resolver
     this.route.data.subscribe(data => {
-      this.tableConfig.registros = data['naturalezaCuentas'];
+      let registros = data['naturalezaCuentas'] || [];
+      // Ordenar por número de manera descendente (mayor a menor)
+      registros = registros.sort((a: any, b: any) => (b.numero || 0) - (a.numero || 0));
+      this.tableConfig.registros = registros;
     });
   }
 
