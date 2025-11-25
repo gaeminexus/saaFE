@@ -26,7 +26,7 @@ import { ServiciosAsoprepService } from '../../../asoprep/service/servicios-asop
 
 // Importa tu AuthService según tu estructura
 const FORMATO_FECHA_JAVA = 'yyyy-MM-dd HH:mm';
-const EMPRESA = 280;
+const EMPRESA = 1236;
 
 @Component({
   selector: 'app-login',
