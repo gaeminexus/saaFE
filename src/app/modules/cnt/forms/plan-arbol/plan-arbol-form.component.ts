@@ -92,10 +92,15 @@ export class PlanArbolFormComponent implements OnInit {
   }
 
   get cuentaPlaceholder(): string {
-    if (this.parentAccount) {
+    if (this.requiredPrefix) {
       return `${this.requiredPrefix}01`;
     }
     return '1';
+  }
+
+  get canEditCuentaContable(): boolean {
+    // Siempre editable si no es modo edición, o si es edición y tiene prefijo bloqueado
+    return !this.isEdit || (this.isEdit && this.requiredPrefix !== '');
   }
 
   get isEditMode(): boolean {
@@ -119,10 +124,20 @@ export class PlanArbolFormComponent implements OnInit {
 
     // En modo edición, solo permitir cambiar el nombre
     if (this.isEdit) {
+      // Establecer prefijo bloqueado basado en la cuenta actual
+      const cuentaActual = data.item?.cuentaContable || '';
+      const partes = cuentaActual.split('.');
+      if (partes.length > 1) {
+        // Si tiene múltiples niveles, bloquear todos excepto el último
+        partes.pop(); // Quitar el último nivel
+        this.requiredPrefix = partes.join('.') + '.';
+      }
+      // Si solo tiene un nivel (ej: "1"), no hay prefijo y puede editarse libremente
+      
       this.form = this.fb.group({
         codigo: [{value: data.item?.codigo || '', disabled: true}],
         nombre: [data.item?.nombre || '', [Validators.required, Validators.maxLength(100)]],
-        cuentaContable: [{value: data.item?.cuentaContable || '', disabled: true}],
+        cuentaContable: [data.item?.cuentaContable || '', [Validators.required, this.cuentaContableValidator.bind(this)]],
         nivel: [{value: data.item?.nivel || 1, disabled: true}],
         tipo: [{value: data.item?.tipo || 1, disabled: true}],
         naturalezaCuenta: [{value: data.item?.naturalezaCuenta || null, disabled: true}],
@@ -174,15 +189,16 @@ export class PlanArbolFormComponent implements OnInit {
       }
     });
 
-    // Forzar prefijo si hay padre (proteger niveles superiores)
-    if (this.requiredPrefix && !this.isEdit) {
+    // Forzar prefijo si hay padre o si está en edición con múltiples niveles
+    if (this.requiredPrefix) {
       this.form.get('cuentaContable')?.valueChanges.subscribe(val => {
         const valStr = String(val || '');
         
         // Si no tiene el prefijo o está vacío, restaurarlo
         if (!valStr.startsWith(this.requiredPrefix)) {
           // Solo restaurar si el usuario está escribiendo, no en el init
-          if (valStr.length > 0 && valStr !== this.data.presetCuenta) {
+          const initialValue = this.isEdit ? this.data.item?.cuentaContable : this.data.presetCuenta;
+          if (valStr.length > 0 && valStr !== initialValue) {
             this.form.get('cuentaContable')?.setValue(
               this.requiredPrefix, 
               { emitEvent: false }
@@ -324,7 +340,7 @@ export class PlanArbolFormComponent implements OnInit {
    * Validador personalizado para cuentaContable
    * Verifica que:
    * - Solo contenga números y puntos
-   * - Si hay padre, debe comenzar con el número del padre (prefijo protegido)
+   * - Si hay padre o está en edición, debe comenzar con el prefijo (niveles superiores protegidos)
    * - El último nivel sea válido
    * - El formato sea válido
    */
@@ -349,19 +365,17 @@ export class PlanArbolFormComponent implements OnInit {
       return { invalidFormat: 'No se permiten puntos consecutivos' };
     }
 
-    // Si hay padre, validar el prefijo (niveles superiores protegidos)
-    if (this.parentAccount && this.parentAccount.cuentaContable) {
-      const parentNumber = this.parentAccount.cuentaContable;
-      const requiredPrefix = parentNumber + '.';
+    // Si hay prefijo requerido (padre o edición multi-nivel), validarlo
+    if (this.requiredPrefix) {
       
-      if (!valueStr.startsWith(requiredPrefix)) {
+      if (!valueStr.startsWith(this.requiredPrefix)) {
         return { 
-          invalidHierarchy: `Debe comenzar con "${requiredPrefix}" (niveles superiores protegidos)` 
+          invalidHierarchy: `Debe comenzar con "${this.requiredPrefix}" (niveles superiores protegidos)` 
         };
       }
 
       // Validar que haya agregado algo después del prefijo
-      const lastLevel = valueStr.substring(requiredPrefix.length);
+      const lastLevel = valueStr.substring(this.requiredPrefix.length);
       if (!lastLevel || lastLevel.trim() === '') {
         return { 
           missingLastLevel: 'Debe agregar el último nivel después del prefijo' 
