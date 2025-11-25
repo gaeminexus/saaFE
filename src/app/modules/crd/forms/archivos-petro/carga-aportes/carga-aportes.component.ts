@@ -100,6 +100,7 @@ export class CargaAportesComponent implements OnInit {
   // Loading states
   isLoadingFiliales: boolean = false;
   isUploadingFile: boolean = false;
+  cargaExitosa: boolean = false;
 
   constructor(
     private filialService: FilialService,
@@ -179,6 +180,7 @@ export class CargaAportesComponent implements OnInit {
     this.aporteAgrupados = [];
     this.nombreArchivo = '';
     this.archivoSeleccionado = null;
+    this.cargaExitosa = false;
   }
 
   onFilialChange(): void {
@@ -202,15 +204,21 @@ export class CargaAportesComponent implements OnInit {
   }
 
   onAnioChange(): void {
+    console.log('🔵🔵🔵 onAnioChange EJECUTADO 🔵🔵🔵');
+    console.log('Año seleccionado:', this.anioSeleccionado);
+    console.log('Filial seleccionada:', this.filialSeleccionada);
+
     // Limpiar mes cuando cambie el año
     this.mesSeleccionado = null;
     this.mesesDeshabilitados = [];
-    console.log('Año cambiado:', this.anioSeleccionado);
+
     if (this.anioSeleccionado && this.filialSeleccionada) {
       // Buscar meses ya cargados para esta filial/año
+      console.log('✅ Condiciones cumplidas, llamando a buscarMesesCargados()');
       this.buscarMesesCargados();
     } else {
       this.mesDeshabilitado = true;
+      console.log('❌ Mes deshabilitado porque falta año o filial');
     }
 
     // Limpiar resultados
@@ -220,12 +228,17 @@ export class CargaAportesComponent implements OnInit {
   }
 
   buscarMesesCargados(): void {
+    console.log('======================================================');
+    console.log('INICIO buscarMesesCargados() - Filial:', this.filialSeleccionada, 'Año:', this.anioSeleccionado);
+    console.log('======================================================');
+
     if (!this.filialSeleccionada || !this.anioSeleccionado) {
+      console.error('❌ Saliendo de buscarMesesCargados porque falta filial o año');
+      this.mesDeshabilitado = true;
       return;
     }
 
-    console.log('llegaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
-    console.log(this.anioSeleccionado.toString());
+    console.log('✅ Construyendo criterios de búsqueda...');
 
     const criterios: DatosBusqueda[] = [];
 
@@ -239,31 +252,45 @@ export class CargaAportesComponent implements OnInit {
       TipoComandosBusqueda.IGUAL
     );
     criterios.push(dbFilial);
+    console.log('Criterio filial agregado:', this.filialSeleccionada);
 
-    // Filtro por año
+    // Filtro por año - VALIDACIÓN EXTRA
+    const anioValor = this.anioSeleccionado?.toString();
+    if (!anioValor) {
+      console.error('ERROR: anioSeleccionado es null/undefined al construir criterio');
+      return;
+    }
+
     const dbAnio = new DatosBusqueda();
     dbAnio.asignaUnCampoSinTrunc(
-      TipoDatos.INTEGER,
+      TipoDatos.LONG,
       'anioAfectacion',
-      this.anioSeleccionado.toString(),
+      anioValor,
       TipoComandosBusqueda.IGUAL
     );
     criterios.push(dbAnio);
+    console.log('Criterio año agregado:', anioValor);
+    console.log('Ejecutando selectByCriteria con', criterios.length, 'criterios');
 
     this.cargaArchivoService.selectByCriteria(criterios).subscribe({
       next: (cargas: CargaArchivo[] | null) => {
+        console.log('Respuesta del servidor:', cargas);
         // Extraer los meses que ya tienen carga
         if (cargas && Array.isArray(cargas)) {
           this.mesesDeshabilitados = cargas.map(c => c.mesAfectacion).filter((mes): mes is number => mes !== undefined && mes !== null);
+          console.log('Meses deshabilitados:', this.mesesDeshabilitados);
         } else {
           this.mesesDeshabilitados = [];
+          console.log('No hay cargas, todos los meses disponibles');
         }
 
         // Habilitar el combo de meses
         this.mesDeshabilitado = false;
+        console.log('Combo de meses habilitado');
       },
       error: (error) => {
         console.error('Error al buscar meses cargados:', error);
+        console.error('Error completo:', JSON.stringify(error, null, 2));
         this.mesesDeshabilitados = [];
         // Habilitar el combo de meses aunque haya error
         this.mesDeshabilitado = false;
@@ -464,8 +491,11 @@ export class CargaAportesComponent implements OnInit {
           );
           console.log('Carga completa:', response);
 
-          // Limpiar formulario
-          this.limpiarTodo();
+          // Mostrar mensaje de éxito
+          this.cargaExitosa = true;
+
+          // NO limpiar inmediatamente - dejar que el usuario vea el mensaje
+          // y use el botón "Nueva Carga"
         } else {
           this.snackBar.open(
             `⚠️ Error en la carga: ${response?.message || 'Respuesta inesperada del servidor'}`,

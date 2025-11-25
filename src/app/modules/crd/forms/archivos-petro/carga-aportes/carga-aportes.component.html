@@ -27,7 +27,7 @@
 
       <mat-form-field appearance="fill" class="filter-field">
         <mat-label>Año</mat-label>
-        <mat-select [(ngModel)]="anioSeleccionado" (selectionChange)="onAnioChange()" [disabled]="anioDeshabilitado">
+        <mat-select [(ngModel)]="anioSeleccionado" (ngModelChange)="onAnioChange()" [disabled]="anioDeshabilitado">
           <mat-option [value]="null">-- Seleccione un año --</mat-option>
           @for (anio of anios; track anio) {
             <mat-option [value]="anio">{{ anio }}</mat-option>
@@ -41,10 +41,10 @@
         <mat-select [(ngModel)]="mesSeleccionado" [disabled]="mesDeshabilitado">
           <mat-option [value]="null">-- Seleccione un mes --</mat-option>
           @for (mes of meses; track mes.valor) {
-            <mat-option [value]="mes.valor" [disabled]="isMesDeshabilitado(mes.valor)">
+            <mat-option [value]="mes.valor" [disabled]="isMesDeshabilitado(mes.valor)" [ngClass]="{'mes-cargado': isMesDeshabilitado(mes.valor)}">
               {{ mes.nombre }}
               @if (isMesDeshabilitado(mes.valor)) {
-                <span style="color: #999;"> (Ya cargado)</span>
+                <span style="font-weight: 500;"> (Ya cargado)</span>
               }
             </mat-option>
           }
@@ -62,7 +62,18 @@
 
   <!-- Área de contenido (placeholder) -->
   <div class="content-area">
-    @if (!anioSeleccionado || !mesSeleccionado || !filialSeleccionada) {
+    @if (cargaExitosa) {
+      <!-- Mensaje de éxito -->
+      <div class="success-state">
+        <mat-icon class="success-icon">check_circle</mat-icon>
+        <h2>¡Carga de Archivo Exitosa!</h2>
+        <p>El archivo se procesó y almacenó correctamente</p>
+        <button mat-raised-button color="primary" (click)="limpiarFiltros()" class="new-load-button">
+          <mat-icon>add</mat-icon>
+          Nueva Carga
+        </button>
+      </div>
+    } @else if (!anioSeleccionado || !mesSeleccionado || !filialSeleccionada) {
       <div class="empty-state">
         <mat-icon class="empty-icon">filter_list</mat-icon>
         <h2>Seleccione los filtros</h2>
@@ -387,8 +398,8 @@
                 <div class="process-info">
                   <mat-icon>info_outline</mat-icon>
                   <p>
-                    El archivo será enviado al servidor y almacenado en la ruta:<br>
-                    <strong>aportes/{{ anioSeleccionado }}/{{ mesSeleccionado }}/{{ filialSeleccionada }}</strong>
+                    El archivo será enviado al servidor y almacenado<br>
+                    <strong>Para respaldo y auditoría</strong>
                   </p>
                 </div>
 

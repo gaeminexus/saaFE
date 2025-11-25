@@ -5,7 +5,7 @@
 
     <!-- Selector de año -->
     <div class="selector-anio">
-      <mat-form-field appearance="outline">
+      <mat-form-field appearance="fill">
         <mat-label>Seleccionar Año</mat-label>
         <mat-select [(ngModel)]="anioSeleccionado" (selectionChange)="onAnioSeleccionado()">
           <mat-option *ngFor="let anio of aniosDisponibles" [value]="anio">
@@ -42,10 +42,10 @@
       <mat-card-header>
         <mat-card-title>
           <mat-icon>insert_drive_file</mat-icon>
-          {{ carga.nombre }}
+            {{ getFilialNombre(carga) }} - {{ getMesNombre(carga.mesAfectacion) }} {{ carga.anioAfectacion }}
         </mat-card-title>
         <mat-card-subtitle>
-          {{ getFilialNombre(carga) }} - {{ getMesNombre(carga.mesAfectacion) }} {{ carga.anioAfectacion }}
+          {{ carga.nombre }}
         </mat-card-subtitle>
       </mat-card-header>
 

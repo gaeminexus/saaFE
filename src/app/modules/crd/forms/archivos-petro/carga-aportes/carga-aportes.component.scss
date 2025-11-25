@@ -182,6 +182,85 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
       }
     }
 
+    // Estado de éxito
+    .success-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 400px;
+      padding: 3rem;
+      text-align: center;
+      animation: fadeInScale 0.5s ease-out;
+      background: linear-gradient(135deg, rgba(246, 173, 85, 0.1) 0%, rgba(246, 173, 85, 0.05) 100%);
+      border-radius: 1rem;
+
+      .success-icon {
+        font-size: 8rem;
+        width: 8rem;
+        height: 8rem;
+        color: $saa-accent;
+        margin-bottom: 1.5rem;
+        animation: successPulse 0.6s ease-out;
+      }
+
+      h2 {
+        color: $saa-accent;
+        font-size: 2rem;
+        margin-bottom: 0.75rem;
+        font-weight: 700;
+      }
+
+      p {
+        color: $saa-text-secondary;
+        font-size: 1.2rem;
+        max-width: 500px;
+        margin-bottom: 2rem;
+      }
+
+      .new-load-button {
+        font-size: 1rem;
+        padding: 0.75rem 2rem;
+        border-radius: 2rem;
+        box-shadow: $saa-shadow;
+        transition: all 0.3s ease;
+
+        &:hover {
+          transform: translateY(-2px);
+          box-shadow: $saa-shadow-hover;
+        }
+
+        mat-icon {
+          margin-right: 0.5rem;
+        }
+      }
+    }
+
+    @keyframes fadeInScale {
+      from {
+        opacity: 0;
+        transform: scale(0.9);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    @keyframes successPulse {
+      0% {
+        transform: scale(0.5);
+        opacity: 0;
+      }
+      50% {
+        transform: scale(1.1);
+      }
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
     // Contenedor combinado de filtros y carga
     .filters-upload-container {
       display: flex;
@@ -325,11 +404,21 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
             box-shadow: $saa-shadow;
             transition: all 0.3s ease;
 
+            ::ng-deep .mat-mdc-button-touch-target {
+              height: 100%;
+            }
+
+            ::ng-deep .mdc-button__label {
+              display: inline-flex;
+              align-items: center;
+              gap: 0.75rem;
+            }
+
             mat-icon {
-              margin-right: 0.75rem;
               font-size: 1.5rem;
               width: 1.5rem;
               height: 1.5rem;
+              vertical-align: middle;
             }
 
             &:hover {
@@ -423,16 +512,17 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
                   margin-right: 0 !important;
 
                   &.custom-panel-title {
-                    display: flex;
+                    display: grid;
+                    grid-template-columns: minmax(500px, 1fr) auto auto;
+                    gap: 2rem;
                     align-items: center;
-                    justify-content: space-between;
                     width: 100%;
 
                     .title-left {
+                      grid-column: 1;
                       display: flex;
                       align-items: center;
                       gap: 1rem;
-                      flex: 0 0 auto;
 
                       .aporte-icon {
                         color: $saa-primary;
@@ -459,9 +549,8 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
                     }
 
                     .title-center {
-                      flex: 0 0 auto;
-                      display: flex;
-                      justify-content: center;
+                      grid-column: 2;
+                      justify-self: start;
 
                       .total-descontado-badge {
                         display: flex;
@@ -484,9 +573,8 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
                     }
 
                     .title-right {
-                      flex: 0 0 auto;
-                      display: flex;
-                      justify-content: flex-end;
+                      grid-column: 3;
+                      justify-self: end;
                       margin-right: 2rem;
 
                       .registro-count {
@@ -860,5 +948,18 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
         }
       }
     }
+  }
+}
+
+// Estilo para meses ya cargados
+::ng-deep .mes-cargado {
+  background-color: rgba(220, 53, 69, 0.08) !important;
+
+  .mdc-list-item__primary-text {
+    color: rgba(220, 53, 69, 0.7) !important;
+  }
+
+  &:hover {
+    background-color: rgba(220, 53, 69, 0.12) !important;
   }
 }
