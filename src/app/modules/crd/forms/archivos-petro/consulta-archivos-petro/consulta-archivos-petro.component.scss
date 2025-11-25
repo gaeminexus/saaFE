@@ -1,7 +1,13 @@
 .consulta-archivos-container {
-  padding: 24px;
-  max-width: 1400px;
-  margin: 0 auto;
+  width: 100%;
+  min-height: calc(100vh - 105px);
+  padding: 1.5rem;
+  box-sizing: border-box;
+
+  // GPU acceleration para performance
+  will-change: width;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 // Cabecera de filtros
