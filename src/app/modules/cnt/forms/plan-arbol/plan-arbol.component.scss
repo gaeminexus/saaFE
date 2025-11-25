@@ -417,6 +417,19 @@
                 background: rgba(102, 126, 234, 0.1);
               }
             }
+
+            &.delete {
+              color: #ef4444;
+
+              &:hover {
+                background: rgba(239, 68, 68, 0.1);
+              }
+
+              &:disabled {
+                color: #cbd5e1;
+                cursor: not-allowed;
+              }
+            }
           }
         }
       }
@@ -681,6 +694,19 @@
 
                 &:hover {
                   background: rgba(102, 126, 234, 0.1);
+                }
+              }
+
+              &.delete {
+                color: #ef4444;
+
+                &:hover {
+                  background: rgba(239, 68, 68, 0.1);
+                }
+
+                &:disabled {
+                  color: #cbd5e1;
+                  cursor: not-allowed;
                 }
               }
             }

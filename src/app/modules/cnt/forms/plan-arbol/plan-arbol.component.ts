@@ -14,6 +14,7 @@ import { MatNestedTreeNode } from '@angular/material/tree';
 import { MatTreeNestedDataSource } from '@angular/material/tree';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { PageEvent, MatPaginatorModule } from '@angular/material/paginator';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 
 import { PlanCuentaService } from '../../service/plan-cuenta.service';
 import { NaturalezaCuentaService } from '../../service/naturaleza-cuenta.service';
@@ -54,6 +55,7 @@ interface SortConfig {
     MatTreeModule,
     MatExpansionModule,
     MatPaginatorModule,
+    MatSnackBarModule,
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './plan-arbol.component.html',
@@ -112,7 +114,8 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
     private naturalezaCuentaService: NaturalezaCuentaService,
     private dialog: MatDialog,
     private exportService: ExportService,
-    private planUtils: PlanCuentaUtilsService
+    private planUtils: PlanCuentaUtilsService,
+    private snackBar: MatSnackBar
   ) {}
 
   ngOnInit(): void {
@@ -611,6 +614,64 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
         this.loadData();
+      }
+    });
+  }
+
+  onDelete(node: PlanCuentaNode) {
+    // Validar que tenga código válido
+    if (!node.codigo || node.codigo === 0) {
+      this.snackBar.open('No se puede eliminar: código inválido', 'Cerrar', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'top'
+      });
+      return;
+    }
+
+    // Verificar si tiene hijos
+    if (node.children && node.children.length > 0) {
+      this.snackBar.open('No se puede eliminar: la cuenta tiene subcuentas', 'Cerrar', {
+        duration: 4000,
+        horizontalPosition: 'center',
+        verticalPosition: 'top'
+      });
+      return;
+    }
+
+    // Confirmar eliminación
+    const confirmacion = confirm(
+      `¿Está seguro de eliminar la cuenta?\n\n` +
+      `Código: ${node.codigo}\n` +
+      `Cuenta: ${node.cuentaContable}\n` +
+      `Nombre: ${node.nombre}\n\n` +
+      `Esta acción no se puede deshacer.`
+    );
+
+    if (!confirmacion) {
+      return;
+    }
+
+    // Ejecutar eliminación
+    this.planCuentaService.delete(node.codigo).subscribe({
+      next: () => {
+        this.snackBar.open('Cuenta eliminada exitosamente', 'Cerrar', {
+          duration: 3000,
+          horizontalPosition: 'center',
+          verticalPosition: 'top',
+          panelClass: ['success-snackbar']
+        });
+        this.loadData();
+      },
+      error: (err) => {
+        console.error('Error al eliminar cuenta:', err);
+        const mensaje = err?.error?.message || err?.message || 'Error al eliminar la cuenta';
+        this.snackBar.open(`Error: ${mensaje}`, 'Cerrar', {
+          duration: 5000,
+          horizontalPosition: 'center',
+          verticalPosition: 'top',
+          panelClass: ['error-snackbar']
+        });
       }
     });
   }
