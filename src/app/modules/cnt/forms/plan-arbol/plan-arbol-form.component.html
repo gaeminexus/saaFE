@@ -47,13 +47,13 @@
       <!-- Número de cuenta contable -->
       <mat-form-field appearance="outline">
         <mat-label>Número de Cuenta</mat-label>
-        <input matInput formControlName="cuentaContable" placeholder="Ej: 1101">
-        <mat-hint>{{ numeroHelperText }}</mat-hint>
-        @if (form.get('cuentaContable')?.errors?.['required'] && form.get('cuentaContable')?.touched) {
-          <mat-error>El número de cuenta es requerido</mat-error>
-        }
-        @if (form.get('cuentaContable')?.errors?.['pattern']) {
-          <mat-error>Solo se permiten números</mat-error>
+        <span matPrefix *ngIf="requiredPrefix" class="prefix-locked">
+          <mat-icon class="lock-icon">lock</mat-icon>
+          {{ requiredPrefix }}
+        </span>
+        <input matInput formControlName="cuentaContable" [placeholder]="cuentaPlaceholder">
+        @if (form.get('cuentaContable')?.invalid && form.get('cuentaContable')?.touched) {
+          <mat-error>{{ cuentaContableError }}</mat-error>
         }
       </mat-form-field>
 
@@ -61,14 +61,19 @@
       <mat-form-field appearance="outline">
         <mat-label>Nivel</mat-label>
         <input matInput formControlName="nivel" readonly>
-        <mat-hint>Calculado automáticamente</mat-hint>
+        <mat-icon matSuffix color="primary">layers</mat-icon>
       </mat-form-field>
 
       <!-- Naturaleza de cuenta -->
       <mat-form-field appearance="outline">
         <mat-label>Naturaleza de Cuenta</mat-label>
         <mat-select formControlName="naturalezaCuenta" panelClass="custom-select-panel">
-          @for (naturaleza of naturalezas; track naturaleza.codigo) {
+          @if (naturalezasFiltradas.length === 0) {
+            <mat-option [value]="null" disabled>
+              No hay naturalezas disponibles
+            </mat-option>
+          }
+          @for (naturaleza of naturalezasFiltradas; track naturaleza.codigo) {
             <mat-option [value]="naturaleza">
               {{ naturaleza.nombre }}
               <span class="naturaleza-details">
@@ -86,8 +91,8 @@
       <mat-form-field appearance="outline">
         <mat-label>Tipo de Cuenta</mat-label>
         <mat-select formControlName="tipo">
-          <mat-option [value]="1">Movimiento</mat-option>
-          <mat-option [value]="2">Acumulación</mat-option>
+          <mat-option [value]="1">Acumulación</mat-option>
+          <mat-option [value]="2">Movimiento</mat-option>
           <mat-option [value]="3">Orden</mat-option>
         </mat-select>
       </mat-form-field>

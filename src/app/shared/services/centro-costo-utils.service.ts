@@ -156,8 +156,8 @@ export class CentroCostoUtilsService {
    */
   getTipoLabel(tipo?: number): string {
     switch (tipo) {
-      case 1: return 'Movimiento';
-      case 2: return 'Acumulación';
+      case 1: return 'Acumulación';
+      case 2: return 'Movimiento';
       default: return 'Desconocido';
     }
   }

@@ -37,8 +37,8 @@ export class CentroArbolFormComponent implements OnInit {
   parentAccount: CentroCosto | null = null;
 
   tipoOptions = [
-    { value: 1, label: 'Movimiento' },
-    { value: 2, label: 'Acumulación' }
+    { value: 1, label: 'Acumulación' },
+    { value: 2, label: 'Movimiento' }
   ];
 
   constructor(
@@ -80,7 +80,7 @@ export class CentroArbolFormComponent implements OnInit {
       const presetNumero = this.data.presetNumero || 0;
       const presetNivel = this.data.presetNivel || (this.parentAccount ? this.parentAccount.nivel + 1 : 1);
       this.form = this.fb.group({
-        numero: [{ value: presetNumero, disabled: true }, [Validators.required]],
+        numero: [presetNumero, [Validators.required, this.numeroValidator.bind(this)]],
         nombre: ['', [Validators.required, Validators.maxLength(100)]],
         tipo: [1, Validators.required],
         nivel: [presetNivel],
@@ -180,10 +180,39 @@ export class CentroArbolFormComponent implements OnInit {
 
   getTipoLabel(tipo?: number): string {
     switch (tipo) {
-      case 1: return 'Movimiento';
-      case 2: return 'Acumulación';
+      case 1: return 'Acumulación';
+      case 2: return 'Movimiento';
       default: return 'Desconocido';
     }
+  }
+
+  /**
+   * Validador personalizado para numero
+   * Verifica que sea un número válido mayor a 0
+   */
+  private numeroValidator(control: any): { [key: string]: any } | null {
+    const value = control.value;
+    if (value === null || value === undefined) return null;
+
+    const num = Number(value);
+    if (isNaN(num) || num <= 0) {
+      return { invalidNumber: 'El número debe ser mayor a 0' };
+    }
+
+    return null;
+  }
+
+  /**
+   * Obtiene el mensaje de error para el campo numero
+   */
+  get numeroError(): string {
+    const control = this.form.get('numero');
+    if (!control || !control.errors) return '';
+
+    if (control.errors['required']) return 'El número es requerido';
+    if (control.errors['invalidNumber']) return control.errors['invalidNumber'];
+
+    return 'Número inválido';
   }
 
   getEstadoLabel(estado?: number): string {
