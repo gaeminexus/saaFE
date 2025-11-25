@@ -1,22 +1,12 @@
-import { Component, inject, signal, effect } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { RouterModule, Router, RouterOutlet } from '@angular/router';
-import { MatSidenavModule } from '@angular/material/sidenav';
-import { MatListModule } from '@angular/material/list';
-import { MatIconModule } from '@angular/material/icon';
-import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatButtonModule } from '@angular/material/button';
+import { Component } from '@angular/core';
 import { NavItem } from '../../../../shared/basics/menu/model/nav-item';
-import { MenuListComponent } from '../../../../shared/basics/menu/forms/menu-list/menu-list.component';
+import { SideMenuCustomComponent } from '../../../../shared/basics/menu/forms/side-menu-custom/side-menu-custom.component';
 
 @Component({
   selector: 'app-menucontabilidad',
   standalone: true,
   imports: [
-    CommonModule, RouterModule, RouterOutlet,
-    MatSidenavModule, MatListModule,
-    MatIconModule,
-    MatTooltipModule, MatButtonModule, MenuListComponent
+    SideMenuCustomComponent
   ],
   templateUrl: './menucontabilidad.component.html',
   styleUrls: ['./menucontabilidad.component.scss'],
@@ -186,17 +176,4 @@ export class MenuContabilidadComponent {
       route: '/menu'
     }
   ];
-
-  router = inject(Router);
-  isCollapsed = signal<boolean>(JSON.parse(localStorage.getItem('cnt_sidebar_collapsed') ?? 'false'));
-
-  constructor() {
-    effect(() => {
-      localStorage.setItem('cnt_sidebar_collapsed', JSON.stringify(this.isCollapsed()));
-    });
-  }
-
-  toggle() {
-    this.isCollapsed.update(v => !v);
-  }
 }

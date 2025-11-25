@@ -1,35 +1,4 @@
-<mat-sidenav-container class="shell">
-  <!-- SIDEBAR -->
-  <mat-sidenav
-    class="sidebar"
-    [mode]="'side'"
-    [opened]="true"
-    [class.collapsed]="isCollapsed()">
-
-    <!-- Cabecera del menú -->
-    <div class="brand">
-      <button mat-icon-button (click)="toggle()" class="toggle">
-        <mat-icon>{{ isCollapsed() ? 'chevron_right' : 'chevron_left' }}</mat-icon>
-      </button>
-      @if (!isCollapsed()) {
-        <span class="title">Contabilidad</span>
-      }
-    </div>
-
-    <!-- Menú usando MenuListComponent -->
-    <div class="nav">
-      <mat-nav-list>
-        @for (item of navItems; track item.displayName) {
-          <app-menu-list [item]="item" [depth]="0"></app-menu-list>
-        }
-      </mat-nav-list>
-    </div>
-  </mat-sidenav>
-
-  <!-- CONTENIDO PRINCIPAL -->
-  <mat-sidenav-content class="content">
-    <div class="page">
-      <router-outlet></router-outlet>
-    </div>
-  </mat-sidenav-content>
-</mat-sidenav-container>
+<app-side-menu-custom
+  [title]="'Contabilidad'"
+  [navItems]="navItems">
+</app-side-menu-custom>

@@ -2,39 +2,45 @@
   <!-- Header con controles -->
   <div class="header-section">
     <div class="title-section">
-      <h2>PlanArbol</h2>
+      <h2>Plan de Cuentas</h2>
       <p class="subtitle">Gestión jerárquica del catálogo de cuentas contables</p>
     </div>
 
     <div class="actions-section">
-      <!-- Indicador de cuenta destino (solo lectura, se actualiza al seleccionar nodo) -->
-      <mat-form-field appearance="outline" class="level-selector" *ngIf="viewMode === 'tree'">
-        <mat-label>Cuenta destino</mat-label>
-        <input matInput type="text" [value]="previewCuentaDestino" readonly>
-      </mat-form-field>
-
       <button mat-flat-button color="primary" (click)="onAdd()" class="add-button">
         <mat-icon>add</mat-icon>
         Nueva Cuenta
       </button>
 
       <button mat-stroked-button (click)="toggleViewMode()" class="view-toggle">
-        <mat-icon>{{ viewMode === 'tree' ? 'list' : 'account_tree' }}</mat-icon>
+        <mat-icon>{{ viewMode === 'tree' ? 'view_list' : 'account_tree' }}</mat-icon>
         {{ viewMode === 'tree' ? 'Vista Lista' : 'Vista Árbol' }}
       </button>
 
-      <button mat-button (click)="exportToCSV()" class="export-button">
-        <mat-icon>file_download</mat-icon>
-        CSV
-      </button>
+      <div class="export-buttons">
+        <button mat-button (click)="exportToCSV()" class="export-button">
+          <mat-icon>file_download</mat-icon>
+          CSV
+        </button>
 
-      <button mat-button (click)="exportToPDF()" class="export-button">
-        <mat-icon>picture_as_pdf</mat-icon>
-        PDF
-      </button>
+        <button mat-button (click)="exportToPDF()" class="export-button">
+          <mat-icon>picture_as_pdf</mat-icon>
+          PDF
+        </button>
+      </div>
     </div>
   </div>
 
+  <!-- Filtros y cuenta destino -->
+  @if (viewMode === 'tree') {
+    <div class="filters-bar">
+      <mat-form-field appearance="outline" class="cuenta-destino-field">
+        <mat-label>Cuenta destino</mat-label>
+        <input matInput type="text" [value]="previewCuentaDestino" readonly>
+        <mat-icon matPrefix>account_balance</mat-icon>
+      </mat-form-field>
+    </div>
+  }
 
 
   <!-- Loading y Error -->
