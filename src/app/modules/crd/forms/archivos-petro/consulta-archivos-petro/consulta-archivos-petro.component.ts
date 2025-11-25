@@ -213,4 +213,20 @@ export class ConsultaArchivosPetroComponent implements OnInit {
       this.router.navigate(['/menucreditos/detalle-consulta-carga', carga.codigo]);
     }
   }
+
+  /**
+   * Aprueba la carga para contabilidad
+   */
+  aprobarContabilidad(carga: CargaArchivo): void {
+    console.log('Aprobar contabilidad para carga:', carga.codigo);
+    // TODO: Implementar lógica de aprobación contable
+  }
+
+  /**
+   * Procesa la carga
+   */
+  procesarCarga(carga: CargaArchivo): void {
+    console.log('Procesar carga:', carga.codigo);
+    // TODO: Implementar lógica de procesamiento
+  }
 }

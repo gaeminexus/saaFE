@@ -1,0 +1,1430 @@
+<?xml version="1.0"?>
+<testsuite name="Chrome 142.0.0.0 (Windows 10)" package="saaFE Unit Tests" timestamp="2025-11-25T14:49:46" id="0" hostname="GN-LIDE01" tests="237" errors="1" failures="83" time="1.804">
+  <properties>
+    <property name="browser.fullName" value="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"/>
+  </properties>
+  <testcase name="MotivoPagoService should be created" time="0.3" classname=".MotivoPagoService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: MotivoPagoService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'MotivoPagoService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: MotivoPagoService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.MotivoPagoService2_Factory [as factory] (ng:///MotivoPagoService2/ɵfac.js:4:62)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="MenuListComponent should create" time="0.035" classname=".MenuListComponent">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: Standalone[MenuListComponent2]. Path: UsuarioService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'UsuarioService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: Standalone[MenuListComponent2]. Path: UsuarioService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.UsuarioService2_Factory [as factory] (ng:///UsuarioService2/ɵfac.js:4:59)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="MayorizacionProcesoComponent should initialize form with default values" time="0.847" classname=".MayorizacionProcesoComponent"/>
+  <testcase name="MayorizacionProcesoComponent should create" time="0.023" classname=".MayorizacionProcesoComponent"/>
+  <testcase name="MayorizacionProcesoComponent should validate required fields" time="0.032" classname=".MayorizacionProcesoComponent"/>
+  <testcase name="MotivoCobroService should be created" time="0.004" classname=".MotivoCobroService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: MotivoCobroService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'MotivoCobroService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: MotivoCobroService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.MotivoCobroService2_Factory [as factory] (ng:///MotivoCobroService2/ɵfac.js:4:63)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="PagoService should be created" time="0.004" classname=".PagoService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: PagoService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'PagoService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: PagoService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.PagoService2_Factory [as factory] (ng:///PagoService2/ɵfac.js:4:56)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="MayorizacionService should be created" time="0.002" classname=".MayorizacionService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: MayorizacionService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'MayorizacionService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: MayorizacionService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.MayorizacionService2_Factory [as factory] (ng:///MayorizacionService2/ɵfac.js:4:64)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="MenuComponent should create" time="0.003" classname=".MenuComponent"/>
+  <testcase name="PaisService should be created" time="0.003" classname=".PaisService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: PaisService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'PaisService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: PaisService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.PaisService2_Factory [as factory] (ng:///PaisService2/ɵfac.js:4:56)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="MayorAnaliticoServicio should be created" time="0.003" classname=".MayorAnaliticoServicio">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: MayorAnaliticoServicio2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'MayorAnaliticoServicio2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: MayorAnaliticoServicio2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.MayorAnaliticoServicio2_Factory [as factory] (ng:///MayorAnaliticoServicio2/ɵfac.js:4:67)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="MessageVarService should be created" time="0.001" classname=".MessageVarService"/>
+  <testcase name="DetalleConsultaCargaComponent should create" time="0.023" classname=".DetalleConsultaCargaComponent">
+    <failure type="">ɵNotFound: NG0201: No provider found for `ActivatedRoute`. Source: Standalone[DetalleConsultaCargaComponent2]. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `ActivatedRoute`.', ngTokenPath: [ 'ActivatedRoute' ] })
+ɵNotFound: NG0201: No provider found for `ActivatedRoute`. Source: Standalone[DetalleConsultaCargaComponent2]. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at ChainedInjector.get (node_modules/@angular/core/fesm2022/debug_node.mjs:13404:36)
+    at lookupTokenUsingModuleInjector (node_modules/@angular/core/fesm2022/debug_node.mjs:1718:39)
+    at getOrCreateInjectable (node_modules/@angular/core/fesm2022/debug_node.mjs:1766:12)
+    at ɵɵdirectiveInject (node_modules/@angular/core/fesm2022/debug_node.mjs:13455:19)
+    at NodeInjectorFactory.DetalleConsultaCargaComponent2_Factory [as factory] (ng:///DetalleConsultaCargaComponent2/ɵfac.js:4:74)
+</failure>
+  </testcase>
+  <testcase name="MayorAnaliticoServicio should be created" time="0.004" classname=".MayorAnaliticoServicio">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: MayorizacionCCService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'MayorizacionCCService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: MayorizacionCCService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.MayorizacionCCService2_Factory [as factory] (ng:///MayorizacionCCService2/ɵfac.js:4:66)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="DetalleMayorizacionCcService should be created" time="0.004" classname=".DetalleMayorizacionCcService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: DetalleMayorizacionCcService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'DetalleMayorizacionCcService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: DetalleMayorizacionCcService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.DetalleMayorizacionCcService2_Factory [as factory] (ng:///DetalleMayorizacionCcService2/ɵfac.js:4:73)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="ParticipeInfoComponent should create" time="0.023" classname=".ParticipeInfoComponent">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: Standalone[ParticipeInfoComponent2]. Path: EntidadService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'EntidadService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: Standalone[ParticipeInfoComponent2]. Path: EntidadService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.EntidadService2_Factory [as factory] (ng:///EntidadService2/ɵfac.js:4:59)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="PersonaService should be created" time="0.003" classname=".PersonaService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: PersonaService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'PersonaService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: PersonaService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.PersonaService2_Factory [as factory] (ng:///PersonaService2/ɵfac.js:4:59)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="ParticipeXCargaArchivoService should be created" time="0.003" classname=".ParticipeXCargaArchivoService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: ParticipeXCargaArchivoService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'ParticipeXCargaArchivoService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: ParticipeXCargaArchivoService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.ParticipeXCargaArchivoService2_Factory [as factory] (ng:///ParticipeXCargaArchivoService2/ɵfac.js:4:74)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="BancoService should be created" time="0.003" classname=".BancoService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: BancoService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'BancoService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: BancoService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.BancoService2_Factory [as factory] (ng:///BancoService2/ɵfac.js:4:57)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="DatosPrestamoService should be created" time="0.003" classname=".DatosPrestamoService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: DatosPrestamoService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'DatosPrestamoService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: DatosPrestamoService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.DatosPrestamoService2_Factory [as factory] (ng:///DatosPrestamoService2/ɵfac.js:4:65)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="CantonService should be created" time="0.002" classname=".CantonService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: CantonService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'CantonService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: CantonService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.CantonService2_Factory [as factory] (ng:///CantonService2/ɵfac.js:4:58)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="ConciliacionService should be created" time="0.003" classname=".ConciliacionService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: ConciliacionService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'ConciliacionService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: ConciliacionService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.ConciliacionService2_Factory [as factory] (ng:///ConciliacionService2/ɵfac.js:4:64)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="BancoExternoService should be created" time="0.002" classname=".BancoExternoService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: BancoExternoService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'BancoExternoService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: BancoExternoService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.BancoExternoService2_Factory [as factory] (ng:///BancoExternoService2/ɵfac.js:4:64)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="DateComponent should create" time="0.006" classname=".DateComponent">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: Standalone[DateComponent2]. Path: FuncionesDatosService2 -&gt; DetalleRubroService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'FuncionesDatosService2', 'DetalleRubroService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: Standalone[DateComponent2]. Path: FuncionesDatosService2 -&gt; DetalleRubroService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.DetalleRubroService2_Factory [as factory] (ng:///DetalleRubroService2/ɵfac.js:4:64)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="TempCobroRetencionService should be created" time="0.004" classname=".TempCobroRetencionService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: TempCobroRetencionService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'TempCobroRetencionService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: TempCobroRetencionService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.TempCobroRetencionService2_Factory [as factory] (ng:///TempCobroRetencionService2/ɵfac.js:4:70)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="SideMenuCustomComponent should create" time="0.02" classname=".SideMenuCustomComponent"/>
+  <testcase name="BotOpcionService should be created" time="0.002" classname=".BotOpcionService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: BotOpcionService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'BotOpcionService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: BotOpcionService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.BotOpcionService2_Factory [as factory] (ng:///BotOpcionService2/ɵfac.js:4:61)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="ComentarioService should be created" time="0.002" classname=".ComentarioService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: ComentarioService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'ComentarioService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: ComentarioService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.ComentarioService2_Factory [as factory] (ng:///ComentarioService2/ɵfac.js:4:62)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="TipoAdjuntoService should be created" time="0.003" classname=".TipoAdjuntoService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: TipoAdjuntoService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'TipoAdjuntoService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: TipoAdjuntoService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.TipoAdjuntoService2_Factory [as factory] (ng:///TipoAdjuntoService2/ɵfac.js:4:63)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="DireccionTrabajoService should be created" time="0.003" classname=".DireccionTrabajoService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: DireccionTrabajoService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'DireccionTrabajoService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: DireccionTrabajoService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.DireccionTrabajoService2_Factory [as factory] (ng:///DireccionTrabajoService2/ɵfac.js:4:68)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="ContratoService should be created" time="0.002" classname=".ContratoService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: ContratoService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'ContratoService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: ContratoService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.ContratoService2_Factory [as factory] (ng:///ContratoService2/ɵfac.js:4:60)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="PrestamoDashComponent should create" time="0.002" classname=".PrestamoDashComponent"/>
+  <testcase name="RemoveTableDialogComponent should create" time="0.008" classname=".RemoveTableDialogComponent">
+    <failure type="">ɵNotFound: NG0201: No provider found for `MatDialogRef`. Source: Standalone[RemoveTableDialogComponent2]. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `MatDialogRef`.', ngTokenPath: [ 'MatDialogRef' ] })
+ɵNotFound: NG0201: No provider found for `MatDialogRef`. Source: Standalone[RemoveTableDialogComponent2]. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at ChainedInjector.get (node_modules/@angular/core/fesm2022/debug_node.mjs:13404:36)
+    at lookupTokenUsingModuleInjector (node_modules/@angular/core/fesm2022/debug_node.mjs:1718:39)
+    at getOrCreateInjectable (node_modules/@angular/core/fesm2022/debug_node.mjs:1766:12)
+    at ɵɵdirectiveInject (node_modules/@angular/core/fesm2022/debug_node.mjs:13455:19)
+    at NodeInjectorFactory.RemoveTableDialogComponent2_Factory [as factory] (ng:///RemoveTableDialogComponent2/ɵfac.js:4:71)
+</failure>
+  </testcase>
+  <testcase name="ButtonComponent should create" time="0.038" classname=".ButtonComponent">
+    <failure type="">Error: NG01052: formGroup expects a FormGroup instance. Please pass one in.
+
+      Example:
+
+      
+  &lt;div [formGroup]="myGroup"&gt;
+    &lt;input formControlName="firstName"&gt;
+  &lt;/div&gt;
+
+  In your class:
+
+  this.myGroup = new FormGroup({
+      firstName: new FormControl()
+  });
+error properties: Object({ code: 1052 })
+Error: NG01052: formGroup expects a FormGroup instance. Please pass one in.
+      Example:
+      
+  &lt;div [formGroup]="myGroup"&gt;
+    &lt;input formControlName="firstName"&gt;
+  &lt;/div&gt;
+  In your class:
+  this.myGroup = new FormGroup({
+      firstName: new FormControl()
+  });
+    at missingFormException (node_modules/@angular/forms/fesm2022/forms.mjs:1499:12)
+    at _FormGroupDirective.ngOnChanges (node_modules/@angular/forms/fesm2022/forms.mjs:5125:19)
+    at _FormGroupDirective.rememberChangeHistoryAndInvokeOnChangesHook (node_modules/@angular/core/fesm2022/debug_node.mjs:594:14)
+    at callHookInternal (node_modules/@angular/core/fesm2022/debug_node.mjs:860:14)
+    at callHook (node_modules/@angular/core/fesm2022/debug_node.mjs:891:9)
+    at callHooks (node_modules/@angular/core/fesm2022/debug_node.mjs:841:17)
+    at executeInitAndCheckHooks (node_modules/@angular/core/fesm2022/debug_node.mjs:791:9)
+    at selectIndexInternal (node_modules/@angular/core/fesm2022/debug_node.mjs:7115:17)
+    at ɵɵadvance (node_modules/@angular/core/fesm2022/debug_node.mjs:7098:5)
+    at ButtonComponent2_Template (ng:///ButtonComponent2.js:14:9)
+</failure>
+  </testcase>
+  <testcase name="PerfilEconomicoService should be created" time="0.003" classname=".PerfilEconomicoService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: PerfilEconomicoService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'PerfilEconomicoService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: PerfilEconomicoService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.PerfilEconomicoService2_Factory [as factory] (ng:///PerfilEconomicoService2/ɵfac.js:4:67)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="DynamicFieldDirective should create component based on field type" time="0.001" classname=".DynamicFieldDirective">
+    <failure type="">Error: Unexpected "TestComponent" found in the "declarations" array of the "TestBed.configureTestingModule" call, "TestComponent" is marked as standalone and can't be declared in any NgModule - did you intend to import it instead (by adding it to the "imports" array)?
+    at node_modules/@angular/core/fesm2022/testing.mjs:774:23
+    at Array.forEach (&lt;anonymous&gt;)
+    at assertNoStandaloneComponents (node_modules/@angular/core/fesm2022/testing.mjs:770:11)
+    at TestBedCompiler.configureTestingModule (node_modules/@angular/core/fesm2022/testing.mjs:850:13)
+    at _TestBedImpl.configureTestingModule (node_modules/@angular/core/fesm2022/testing.mjs:1993:23)
+    at _TestBedImpl.configureTestingModule (node_modules/@angular/core/fesm2022/testing.mjs:1805:37)
+    at src/app/shared/basics/table/dynamic-form/components/dynamic-field/dynamic-field.directive.spec.ts:25:19
+    at Generator.next (&lt;anonymous&gt;)
+    at chunk-57YG5PHF.js:61:61
+    at new ZoneAwarePromise (node_modules/zone.js/fesm2015/zone.js:2701:25)
+</failure>
+  </testcase>
+  <testcase name="DynamicFieldDirective should create an instance" time="0.001" classname=".DynamicFieldDirective">
+    <failure type="">Error: Unexpected "TestComponent" found in the "declarations" array of the "TestBed.configureTestingModule" call, "TestComponent" is marked as standalone and can't be declared in any NgModule - did you intend to import it instead (by adding it to the "imports" array)?
+    at node_modules/@angular/core/fesm2022/testing.mjs:774:23
+    at Array.forEach (&lt;anonymous&gt;)
+    at assertNoStandaloneComponents (node_modules/@angular/core/fesm2022/testing.mjs:770:11)
+    at TestBedCompiler.configureTestingModule (node_modules/@angular/core/fesm2022/testing.mjs:850:13)
+    at _TestBedImpl.configureTestingModule (node_modules/@angular/core/fesm2022/testing.mjs:1993:23)
+    at _TestBedImpl.configureTestingModule (node_modules/@angular/core/fesm2022/testing.mjs:1805:37)
+    at src/app/shared/basics/table/dynamic-form/components/dynamic-field/dynamic-field.directive.spec.ts:25:19
+    at Generator.next (&lt;anonymous&gt;)
+    at chunk-57YG5PHF.js:61:61
+    at new ZoneAwarePromise (node_modules/zone.js/fesm2015/zone.js:2701:25)
+</failure>
+  </testcase>
+  <testcase name="HistDetalleAsientoService should be created" time="0.003" classname=".HistDetalleAsientoService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: HistDetalleAsientoService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'HistDetalleAsientoService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: HistDetalleAsientoService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.HistDetalleAsientoService2_Factory [as factory] (ng:///HistDetalleAsientoService2/ɵfac.js:4:70)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="TiposCrdResolverService should be created" time="0.003" classname=".TiposCrdResolverService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: TiposCrdResolverService2 -&gt; TipoContratoService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'TiposCrdResolverService2', 'TipoContratoService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: TiposCrdResolverService2 -&gt; TipoContratoService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.TipoContratoService2_Factory [as factory] (ng:///TipoContratoService2/ɵfac.js:4:64)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="TableBasicHijosComponent should create" time="0.018" classname=".TableBasicHijosComponent">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: Standalone[TableBasicHijosComponent2]. Path: ServiceLocatorService2 -&gt; NaturalezaCuentaService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'ServiceLocatorService2', 'NaturalezaCuentaService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: Standalone[TableBasicHijosComponent2]. Path: ServiceLocatorService2 -&gt; NaturalezaCuentaService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.NaturalezaCuentaService2_Factory [as factory] (ng:///NaturalezaCuentaService2/ɵfac.js:4:68)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="TempCobroTarjetaService should be created" time="0.004" classname=".TempCobroTarjetaService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: TempCobroTarjetaService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'TempCobroTarjetaService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: TempCobroTarjetaService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.TempCobroTarjetaService2_Factory [as factory] (ng:///TempCobroTarjetaService2/ɵfac.js:4:68)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="TempCobroService should be created" time="0.002" classname=".TempCobroService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: TempCobroService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'TempCobroService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: TempCobroService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.TempCobroService2_Factory [as factory] (ng:///TempCobroService2/ɵfac.js:4:61)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="TipoAporteService should be created" time="0.007" classname=".TipoAporteService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: TipoAporteService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'TipoAporteService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: TipoAporteService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.TipoAporteService2_Factory [as factory] (ng:///TipoAporteService2/ɵfac.js:4:62)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="PrestamoEditComponent should create" time="0.003" classname=".PrestamoEditComponent"/>
+  <testcase name="CargaAportesComponent should create" time="0.023" classname=".CargaAportesComponent">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: Standalone[CargaAportesComponent2]. Path: FilialService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'FilialService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: Standalone[CargaAportesComponent2]. Path: FilialService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.FilialService2_Factory [as factory] (ng:///FilialService2/ɵfac.js:4:58)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="ContratoEditComponent should create" time="0.002" classname=".ContratoEditComponent"/>
+  <testcase name="TasaPrestamoService should be created" time="0.002" classname=".TasaPrestamoService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: TasaPrestamoService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'TasaPrestamoService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: TasaPrestamoService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.TasaPrestamoService2_Factory [as factory] (ng:///TasaPrestamoService2/ɵfac.js:4:64)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="CajaFisicaService should be created" time="0.002" classname=".CajaFisicaService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: CajaFisicaService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'CajaFisicaService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: CajaFisicaService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.CajaFisicaService2_Factory [as factory] (ng:///CajaFisicaService2/ɵfac.js:4:62)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="TempDebitoCreditoService should be created" time="0.003" classname=".TempDebitoCreditoService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: TempDebitoCreditoService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'TempDebitoCreditoService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: TempDebitoCreditoService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.TempDebitoCreditoService2_Factory [as factory] (ng:///TempDebitoCreditoService2/ɵfac.js:4:69)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="PeriodoService should be created" time="0.002" classname=".PeriodoService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: _a -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ '_a', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: _a -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object._a_Factory [as factory] (ng:///_a/ɵfac.js:4:46)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="DynamicFormComponent should create" time="0.018" classname=".DynamicFormComponent"/>
+  <testcase name="CobroChequeService should be created" time="0.003" classname=".CobroChequeService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: CobroChequeService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'CobroChequeService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: CobroChequeService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.CobroChequeService2_Factory [as factory] (ng:///CobroChequeService2/ɵfac.js:4:63)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="PlanCuentaService should be created" time="0.002" classname=".PlanCuentaService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: _a -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ '_a', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: _a -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object._a_Factory [as factory] (ng:///_a/ɵfac.js:4:46)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="PlantillaService should be created" time="0.001" classname=".PlantillaService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: _a -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ '_a', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: _a -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object._a_Factory [as factory] (ng:///_a/ɵfac.js:4:46)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="RadiobuttonComponent should create" time="0.003" classname=".RadiobuttonComponent">
+    <failure type="">Error: NG01052: formGroup expects a FormGroup instance. Please pass one in.
+
+      Example:
+
+      
+  &lt;div [formGroup]="myGroup"&gt;
+    &lt;input formControlName="firstName"&gt;
+  &lt;/div&gt;
+
+  In your class:
+
+  this.myGroup = new FormGroup({
+      firstName: new FormControl()
+  });
+error properties: Object({ code: 1052 })
+Error: NG01052: formGroup expects a FormGroup instance. Please pass one in.
+      Example:
+      
+  &lt;div [formGroup]="myGroup"&gt;
+    &lt;input formControlName="firstName"&gt;
+  &lt;/div&gt;
+  In your class:
+  this.myGroup = new FormGroup({
+      firstName: new FormControl()
+  });
+    at missingFormException (node_modules/@angular/forms/fesm2022/forms.mjs:1499:12)
+    at _FormGroupDirective.ngOnChanges (node_modules/@angular/forms/fesm2022/forms.mjs:5125:19)
+    at _FormGroupDirective.rememberChangeHistoryAndInvokeOnChangesHook (node_modules/@angular/core/fesm2022/debug_node.mjs:594:14)
+    at callHookInternal (node_modules/@angular/core/fesm2022/debug_node.mjs:860:14)
+    at callHook (node_modules/@angular/core/fesm2022/debug_node.mjs:891:9)
+    at callHooks (node_modules/@angular/core/fesm2022/debug_node.mjs:841:17)
+    at executeInitAndCheckHooks (node_modules/@angular/core/fesm2022/debug_node.mjs:791:9)
+    at selectIndexInternal (node_modules/@angular/core/fesm2022/debug_node.mjs:7115:17)
+    at ɵɵadvance (node_modules/@angular/core/fesm2022/debug_node.mjs:7098:5)
+    at RadiobuttonComponent2_Template (ng:///RadiobuttonComponent2.js:86:9)
+</failure>
+  </testcase>
+  <testcase name="CajaLogicaPorCajaFisicaService should be created" time="0.003" classname=".CajaLogicaPorCajaFisicaService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: CajaLogicaPorCajaFisicaService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'CajaLogicaPorCajaFisicaService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: CajaLogicaPorCajaFisicaService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.CajaLogicaPorCajaFisicaService2_Factory [as factory] (ng:///CajaLogicaPorCajaFisicaService2/ɵfac.js:4:75)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="ParticipeService should be created" time="0.003" classname=".ParticipeService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: ParticipeService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'ParticipeService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: ParticipeService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.ParticipeService2_Factory [as factory] (ng:///ParticipeService2/ɵfac.js:4:61)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="TelefonoDireccionService should be created" time="0.003" classname=".TelefonoDireccionService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: TelefonoDireccionService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'TelefonoDireccionService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: TelefonoDireccionService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.TelefonoDireccionService2_Factory [as factory] (ng:///TelefonoDireccionService2/ɵfac.js:4:69)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="EstadosResolverService should be created" time="0.002" classname=".EstadosResolverService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: EstadosResolverService2 -&gt; EstadoParticipeService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'EstadosResolverService2', 'EstadoParticipeService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: EstadosResolverService2 -&gt; EstadoParticipeService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.EstadoParticipeService2_Factory [as factory] (ng:///EstadoParticipeService2/ɵfac.js:4:67)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="TempMotivoCobroService should be created" time="0.003" classname=".TempMotivoCobroService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: TempMotivoCobroService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'TempMotivoCobroService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: TempMotivoCobroService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.TempMotivoCobroService2_Factory [as factory] (ng:///TempMotivoCobroService2/ɵfac.js:4:67)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="PrestamoConsultaComponent should create" time="0.002" classname=".PrestamoConsultaComponent"/>
+  <testcase name="NavService should be created" time="0.001" classname=".NavService"/>
+  <testcase name="FileService should be created" time="0.003" classname=".FileService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: FileService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'FileService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: FileService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.FileService2_Factory [as factory] (ng:///FileService2/ɵfac.js:4:56)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="EstadosCrdComponent should create" time="0.009" classname=".EstadosCrdComponent">
+    <failure type="">ɵNotFound: NG0201: No provider found for `ActivatedRoute`. Source: Standalone[EstadosCrdComponent2]. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `ActivatedRoute`.', ngTokenPath: [ 'ActivatedRoute' ] })
+ɵNotFound: NG0201: No provider found for `ActivatedRoute`. Source: Standalone[EstadosCrdComponent2]. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at ChainedInjector.get (node_modules/@angular/core/fesm2022/debug_node.mjs:13404:36)
+    at lookupTokenUsingModuleInjector (node_modules/@angular/core/fesm2022/debug_node.mjs:1718:39)
+    at getOrCreateInjectable (node_modules/@angular/core/fesm2022/debug_node.mjs:1766:12)
+    at ɵɵdirectiveInject (node_modules/@angular/core/fesm2022/debug_node.mjs:13455:19)
+    at NodeInjectorFactory.EstadosCrdComponent2_Factory [as factory] (ng:///EstadosCrdComponent2/ɵfac.js:4:64)
+</failure>
+  </testcase>
+  <testcase name="RelacionPrestamoService should be created" time="0.003" classname=".RelacionPrestamoService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: RelacionPrestamoService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'RelacionPrestamoService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: RelacionPrestamoService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.RelacionPrestamoService2_Factory [as factory] (ng:///RelacionPrestamoService2/ɵfac.js:4:68)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="PdfParticipeDetalleDialogComponent should create" time="0.006" classname=".PdfParticipeDetalleDialogComponent">
+    <failure type="">ɵNotFound: NG0201: No provider found for `MatDialogRef`. Source: Standalone[PdfParticipeDetalleDialogComponent2]. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `MatDialogRef`.', ngTokenPath: [ 'MatDialogRef' ] })
+ɵNotFound: NG0201: No provider found for `MatDialogRef`. Source: Standalone[PdfParticipeDetalleDialogComponent2]. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at ChainedInjector.get (node_modules/@angular/core/fesm2022/debug_node.mjs:13404:36)
+    at lookupTokenUsingModuleInjector (node_modules/@angular/core/fesm2022/debug_node.mjs:1718:39)
+    at getOrCreateInjectable (node_modules/@angular/core/fesm2022/debug_node.mjs:1766:12)
+    at ɵɵdirectiveInject (node_modules/@angular/core/fesm2022/debug_node.mjs:13455:19)
+    at NodeInjectorFactory.PdfParticipeDetalleDialogComponent2_Factory [as factory] (ng:///PdfParticipeDetalleDialogComponent2/ɵfac.js:4:79)
+</failure>
+  </testcase>
+  <testcase name="DetalleReporteCuentaCcService should be created" time="0.003" classname=".DetalleReporteCuentaCcService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: DetalleReporteCuentaCcService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'DetalleReporteCuentaCcService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: DetalleReporteCuentaCcService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.DetalleReporteCuentaCcService2_Factory [as factory] (ng:///DetalleReporteCuentaCcService2/ɵfac.js:4:74)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="MovimientoBancoService should be created" time="0.002" classname=".MovimientoBancoService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: MovimientoBancoService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'MovimientoBancoService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: MovimientoBancoService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.MovimientoBancoService2_Factory [as factory] (ng:///MovimientoBancoService2/ɵfac.js:4:67)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="AporteService should be created" time="0.002" classname=".AporteService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: AporteService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'AporteService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: AporteService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.AporteService2_Factory [as factory] (ng:///AporteService2/ɵfac.js:4:58)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="ProfesionService should be created" time="0.002" classname=".ProfesionService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: ProfesionService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'ProfesionService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: ProfesionService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.ProfesionService2_Factory [as factory] (ng:///ProfesionService2/ɵfac.js:4:61)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="AutocompleteComponent should create" time="0.004" classname=".AutocompleteComponent">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: Standalone[AutocompleteComponent2]. Path: DetalleRubroService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'DetalleRubroService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: Standalone[AutocompleteComponent2]. Path: DetalleRubroService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.DetalleRubroService2_Factory [as factory] (ng:///DetalleRubroService2/ɵfac.js:4:64)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="SaldoBancoService should be created" time="0.003" classname=".SaldoBancoService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: SaldoBancoService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'SaldoBancoService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: SaldoBancoService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.SaldoBancoService2_Factory [as factory] (ng:///SaldoBancoService2/ɵfac.js:4:62)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="PersonaNaturalService should be created" time="0.002" classname=".PersonaNaturalService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: PersonaNaturalService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'PersonaNaturalService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: PersonaNaturalService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.PersonaNaturalService2_Factory [as factory] (ng:///PersonaNaturalService2/ɵfac.js:4:66)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="ChequeraService should be created" time="0.003" classname=".ChequeraService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: ChequeraService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'ChequeraService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: ChequeraService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.ChequeraService2_Factory [as factory] (ng:///ChequeraService2/ɵfac.js:4:60)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="ConsultaCargaArchivoResolverService should be created" time="0.003" classname=".ConsultaCargaArchivoResolverService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: ConsultaCargaArchivoResolverService2 -&gt; CargaArchivoService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'ConsultaCargaArchivoResolverService2', 'CargaArchivoService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: ConsultaCargaArchivoResolverService2 -&gt; CargaArchivoService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.CargaArchivoService2_Factory [as factory] (ng:///CargaArchivoService2/ɵfac.js:4:64)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="CxcParticipeService should be created" time="0.003" classname=".CxcParticipeService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: CxcParticipeService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'CxcParticipeService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: CxcParticipeService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.CxcParticipeService2_Factory [as factory] (ng:///CxcParticipeService2/ɵfac.js:4:64)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="PagoAporteService should be created" time="0.003" classname=".PagoAporteService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: PagoAporteService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'PagoAporteService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: PagoAporteService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.PagoAporteService2_Factory [as factory] (ng:///PagoAporteService2/ɵfac.js:4:62)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="MotivoPrestamoService should be created" time="0.002" classname=".MotivoPrestamoService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: MotivoPrestamoService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'MotivoPrestamoService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: MotivoPrestamoService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.MotivoPrestamoService2_Factory [as factory] (ng:///MotivoPrestamoService2/ɵfac.js:4:66)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="DetalleRubroService should be created" time="0.001" classname=".DetalleRubroService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: DetalleRubroService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'DetalleRubroService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: DetalleRubroService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.DetalleRubroService2_Factory [as factory] (ng:///DetalleRubroService2/ɵfac.js:4:64)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="CobroService should be created" time="0.002" classname=".CobroService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: CobroService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'CobroService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: CobroService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.CobroService2_Factory [as factory] (ng:///CobroService2/ɵfac.js:4:57)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="App should render title" time="0.01" classname=".App">
+    <failure type="">Expected undefined to contain 'Hello, saa-frontend'.
+    at &lt;Jasmine&gt;
+    at UserContext.&lt;anonymous&gt; (src/app/app.spec.ts:21:55)
+    at _ZoneDelegate.invoke (node_modules/zone.js/fesm2015/zone.js:398:28)
+    at _ProxyZoneSpec.onInvoke (node_modules/zone.js/fesm2015/zone-testing.js:2132:39)
+    at _ZoneDelegate.invoke (node_modules/zone.js/fesm2015/zone.js:397:34)
+</failure>
+  </testcase>
+  <testcase name="App should create the app" time="0.003" classname=".App"/>
+  <testcase name="EstadoPrestamoService should be created" time="0.002" classname=".EstadoPrestamoService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: EstadoPrestamoService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'EstadoPrestamoService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: EstadoPrestamoService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.EstadoPrestamoService2_Factory [as factory] (ng:///EstadoPrestamoService2/ɵfac.js:4:66)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="AuxDepositoBancoService should be created" time="0.002" classname=".AuxDepositoBancoService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: AuxDepositoBancoService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'AuxDepositoBancoService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: AuxDepositoBancoService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.AuxDepositoBancoService2_Factory [as factory] (ng:///AuxDepositoBancoService2/ɵfac.js:4:68)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="ChequeService should be created" time="0.003" classname=".ChequeService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: ChequeService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'ChequeService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: ChequeService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.ChequeService2_Factory [as factory] (ng:///ChequeService2/ɵfac.js:4:58)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="DetalleDebitoCreditoService should be created" time="0.003" classname=".DetalleDebitoCreditoService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: DetalleDebitoCreditoService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'DetalleDebitoCreditoService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: DetalleDebitoCreditoService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.DetalleDebitoCreditoService2_Factory [as factory] (ng:///DetalleDebitoCreditoService2/ɵfac.js:4:72)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="DepositoService should be created" time="0.002" classname=".DepositoService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: DepositoService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'DepositoService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: DepositoService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.DepositoService2_Factory [as factory] (ng:///DepositoService2/ɵfac.js:4:60)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="PersonaRolService should be created" time="0.002" classname=".PersonaRolService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: PersonaRolService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'PersonaRolService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: PersonaRolService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.PersonaRolService2_Factory [as factory] (ng:///PersonaRolService2/ɵfac.js:4:62)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="ConsultaArchivosPetroComponent should create" time="0.009" classname=".ConsultaArchivosPetroComponent">
+    <failure type="">ɵNotFound: NG0201: No provider found for `ActivatedRoute`. Source: Standalone[ConsultaArchivosPetroComponent2]. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `ActivatedRoute`.', ngTokenPath: [ 'ActivatedRoute' ] })
+ɵNotFound: NG0201: No provider found for `ActivatedRoute`. Source: Standalone[ConsultaArchivosPetroComponent2]. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at ChainedInjector.get (node_modules/@angular/core/fesm2022/debug_node.mjs:13404:36)
+    at lookupTokenUsingModuleInjector (node_modules/@angular/core/fesm2022/debug_node.mjs:1718:39)
+    at getOrCreateInjectable (node_modules/@angular/core/fesm2022/debug_node.mjs:1766:12)
+    at ɵɵdirectiveInject (node_modules/@angular/core/fesm2022/debug_node.mjs:13455:19)
+    at NodeInjectorFactory.ConsultaArchivosPetroComponent2_Factory [as factory] (ng:///ConsultaArchivosPetroComponent2/ɵfac.js:4:75)
+</failure>
+  </testcase>
+  <testcase name="DireccionPersonaService should be created" time="0.002" classname=".DireccionPersonaService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: DireccionPersonaService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'DireccionPersonaService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: DireccionPersonaService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.DireccionPersonaService2_Factory [as factory] (ng:///DireccionPersonaService2/ɵfac.js:4:68)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="NaturalezaCuentaComponent should create" time="0.003" classname=".NaturalezaCuentaComponent">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: Standalone[NaturalezaCuentaComponent2]. Path: NaturalezaCuentaService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'NaturalezaCuentaService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: Standalone[NaturalezaCuentaComponent2]. Path: NaturalezaCuentaService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.NaturalezaCuentaService2_Factory [as factory] (ng:///NaturalezaCuentaService2/ɵfac.js:4:68)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="PagoPrestamoService should be created" time="0.002" classname=".PagoPrestamoService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: PagoPrestamoService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'PagoPrestamoService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: PagoPrestamoService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.PagoPrestamoService2_Factory [as factory] (ng:///PagoPrestamoService2/ɵfac.js:4:64)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="CobroTransferenciaService should be created" time="0.002" classname=".CobroTransferenciaService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: CobroTransferenciaService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'CobroTransferenciaService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: CobroTransferenciaService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.CobroTransferenciaService2_Factory [as factory] (ng:///CobroTransferenciaService2/ɵfac.js:4:70)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="PrestamoService should be created" time="0.003" classname=".PrestamoService">
+    <failure type="">ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: PrestamoService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `_HttpClient`.', ngTokenPath: [ 'PrestamoService2', '_HttpClient' ] })
+ɵNotFound: NG0201: No provider found for `_HttpClient`. Source: DynamicTestModule. Path: PrestamoService2 -&gt; _HttpClient. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.retrieve (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1929:25)
+    at injectInjectorOnly (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1046:39)
+    at ɵɵinject (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1058:42)
+    at Object.PrestamoService2_Factory [as factory] (ng:///PrestamoService2/ɵfac.js:4:60)
+    at node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2187:47
+    at runInInjectorProfilerContext (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:746:9)
+</failure>
+  </testcase>
+  <testcase name="ArchivoPetroService should be created" time="0.002" classname=".ArchivoPetroService"/>
+  <testcase name="AddTableDialogComponent should create" time="0.005" classname=".AddTableDialogComponent">
+    <failure type="">ɵNotFound: NG0201: No provider found for `MatDialogRef`. Source: Standalone[AddTableDialogComponent2]. Find more at https://v20.angular.dev/errors/NG0201
+error properties: Object({ code: -201, ngErrorCode: -201, ngErrorMessage: 'No provider found for `MatDialogRef`.', ngTokenPath: [ 'MatDialogRef' ] })
+ɵNotFound: NG0201: No provider found for `MatDialogRef`. Source: Standalone[AddTableDialogComponent2]. Find more at https://v20.angular.dev/errors/NG0201
+    at createRuntimeError (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:921:19)
+    at NullInjector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:1489:27)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at R3Injector.get (node_modules/@angular/core/fesm2022/root_effect_scheduler.mjs:2045:33)
+    at ChainedInjector.get (node_modules/@angular/core/fesm2022/debug_node.mjs:13404:36)
+    at lookupTokenUsingModuleInjector (node_modules/@angular/core/fesm2022/debug_node.mjs:1718:39)
+    at getOrCreateInjectable (node_modules/@angular/core/fesm2022/debug_node.mjs:1766:12)
+    at ɵɵdirectiveInject (node_modules/@angular/core/fesm2022/debug_node.mjs:13455:19)
+    at NodeInjectorFactory.AddTableDialogComponent2_Factory [as factory] (ng:///AddTableDialogComponent2/ɵfac.js:4:68)
+</failure>
+  </testcase>
+  <testcase name="PeriodosComponent should initialize forms correctly" time="0.026" classname=".PeriodosComponent"/>
+  <testcase name="PeriodosComponent should mayorizar periodo when estado is ABIERTO" time="0.01" classname=".PeriodosComponent"/>
+  <testcase name="PeriodosComponent should load available years on init" time="0.007" classname=".PeriodosComponent"/>
+  <testcase name="PeriodosComponent should create" time="0.011" classname=".PeriodosComponent"/>
+  <testcase name="PeriodosComponent should check if periodo can be desmayorizado" time="0.006" classname=".PeriodosComponent"/>
+  <testcase name="PeriodosComponent should cancel form and reset state" time="0.007" classname=".PeriodosComponent"/>
+  <testcase name="PeriodosComponent should check if periodo can be deleted" time="0.006" classname=".PeriodosComponent"/>
+  <testcase name="PeriodosComponent should clear filters and reload data" time="0.007" classname=".PeriodosComponent"/>
+  <testcase name="PeriodosComponent should validate form before saving periodo" time="0.007" classname=".PeriodosComponent"/>
+  <testcase name="PeriodosComponent should check if periodo can be mayorizado" time="0.006" classname=".PeriodosComponent"/>
+  <testcase name="PeriodosComponent should create periodo with valid form" time="0.007" classname=".PeriodosComponent"/>
+  <testcase name="PeriodosComponent should desmayorizar periodo when estado is MAYORIZADO" time="0.007" classname=".PeriodosComponent"/>
+  <testcase name="PeriodosComponent should generate automatic name when mes and anio change" time="0.007" classname=".PeriodosComponent"/>
+  <testcase name="PeriodosComponent should show edit form when editarPeriodo is called" time="0.006" classname=".PeriodosComponent"/>
+  <testcase name="PeriodosComponent should apply filters when form changes" time="0.007" classname=".PeriodosComponent">
+    <failure type="">Expected spy PeriodoService.selectByCriteria to have been called with:
+  [ Object({ anio: 2024, mes: 1, estado: undefined, nombre: '' }) ]
+but actual calls were:
+  [ Object({ anio: 2024, mes: 1, estado: null, nombre: '' }) ].
+
+Call 0:
+  Expected $[0].estado = null to equal undefined.
+Error: Expected spy PeriodoService.selectByCriteria to have been called with:
+  [ Object({ anio: 2024, mes: 1, estado: undefined, nombre: '' }) ]
+but actual calls were:
+  [ Object({ anio: 2024, mes: 1, estado: null, nombre: '' }) ].
+Call 0:
+  Expected $[0].estado = null to equal undefined.
+    at &lt;Jasmine&gt;
+    at UserContext.&lt;anonymous&gt; (src/app/modules/cnt/forms/periodos/periodos.component.spec.ts:182:45)
+    at _ZoneDelegate.invoke (node_modules/zone.js/fesm2015/zone.js:398:28)
+    at _ProxyZoneSpec.onInvoke (node_modules/zone.js/fesm2015/zone-testing.js:2132:39)
+    at _ZoneDelegate.invoke (node_modules/zone.js/fesm2015/zone.js:397:34)
+</failure>
+  </testcase>
+  <testcase name="PeriodosComponent should load periodos on init" time="0.011" classname=".PeriodosComponent"/>
+  <testcase name="PeriodosComponent should show create form when nuevoPeriodo is called" time="0.006" classname=".PeriodosComponent"/>
+  <testcase name="PeriodosComponent should not mayorizar periodo when estado is not ABIERTO" time="0.006" classname=".PeriodosComponent"/>
+  <system-out>
+    <![CDATA[Chrome 142.0.0.0 (Windows 10) ERROR
+  Disconnected , because no message in 30000 ms.
+,Chrome 142.0.0.0 (Windows 10) ERROR
+  Some of your tests did a full page reload!
+,Chrome 142.0.0.0 (Windows 10) ERROR
+  Disconnected Client disconnected from CONNECTED state (transport close)
+,Chrome 142.0.0.0 (Windows 10) LOG: '🔍 [PeriodoService.getAll] Cargando períodos para empresa 280...'
+,Chrome 142.0.0.0 (Windows 10) LOG: '🔍 [PeriodoService.getAll] Cargando períodos para empresa 280...'
+,Chrome 142.0.0.0 (Windows 10) LOG: '🔍 [PeriodoService.getAll] Cargando períodos para empresa 280...'
+,Chrome 142.0.0.0 (Windows 10) ERROR
+  An error was thrown in afterAll
+  TypeError: Cannot read properties of undefined (reading 'subscribe')
+      at PeriodosComponent2.aplicarFiltros (src/app/modules/cnt/forms/periodos/periodos.component.ts:190:49)
+      at Object.next (src/app/modules/cnt/forms/periodos/periodos.component.ts:142:12)
+      at ConsumerObserver.next (node_modules/rxjs/dist/esm/internal/Subscriber.js:91:33)
+      at SafeSubscriber._next (node_modules/rxjs/dist/esm/internal/Subscriber.js:60:26)
+      at SafeSubscriber.next (node_modules/rxjs/dist/esm/internal/Subscriber.js:31:18)
+      at node_modules/rxjs/dist/esm/internal/Subject.js:34:30
+      at errorContext (node_modules/rxjs/dist/esm/internal/util/errorContext.js:19:9)
+      at EventEmitter_.next (node_modules/rxjs/dist/esm/internal/Subject.js:27:9)
+      at EventEmitter_.emit (node_modules/@angular/core/fesm2022/debug_node.mjs:7384:19)
+      at FormGroup.updateValueAndValidity (node_modules/@angular/forms/fesm2022/forms.mjs:2400:31)
+
+]]>
+  </system-out>
+  <system-err/>
+</testsuite>

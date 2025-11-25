@@ -110,15 +110,19 @@
       </mat-card-content>
 
       <mat-card-actions align="end">
+        <button mat-button color="primary" (click)="aprobarContabilidad(carga)">
+          <mat-icon>check_circle</mat-icon>
+          Aprobación Contabilidad
+        </button>
         <button mat-button color="primary" (click)="verDetalle(carga)">
           <mat-icon>visibility</mat-icon>
-          Ver Detalles
-        </button>
-        <button mat-button color="accent">
-          <mat-icon>download</mat-icon>
-          Descargar
-        </button>
-      </mat-card-actions>
-    </mat-card>
-  </div>
+            Ver Detalle
+          </button>
+        <button mat-button color="accent" (click)="procesarCarga(carga)">
+          <mat-icon>play_arrow</mat-icon>
+            Procesar
+          </button>
+        </mat-card-actions>
+      </mat-card>
+    </div>
 </div>
