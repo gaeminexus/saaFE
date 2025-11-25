@@ -74,7 +74,7 @@
                 <button mat-icon-button (click)="onEdit(node)" matTooltip="Editar centro" class="action-button edit">
                   <mat-icon>edit</mat-icon>
                 </button>
-                <button mat-icon-button (click)="onDelete(node)" matTooltip="Eliminar" class="action-button delete">
+                <button mat-icon-button (click)="onDelete(node)" matTooltip="Eliminar" class="action-button delete" [disabled]="!node.codigo || node.codigo === 0">
                   <mat-icon>delete_outline</mat-icon>
                 </button>
               </div>
@@ -111,7 +111,7 @@
                 <button mat-icon-button (click)="onEdit(node)" matTooltip="Editar centro" class="action-button edit">
                   <mat-icon>edit</mat-icon>
                 </button>
-                <button mat-icon-button (click)="onDelete(node)" matTooltip="Eliminar" class="action-button delete">
+                <button mat-icon-button (click)="onDelete(node)" matTooltip="Eliminar" class="action-button delete" [disabled]="!node.codigo || node.codigo === 0">
                   <mat-icon>delete_outline</mat-icon>
                 </button>
               </div>

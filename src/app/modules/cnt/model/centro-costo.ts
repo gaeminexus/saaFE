@@ -9,6 +9,6 @@ export interface CentroCosto{
   idPadre: number;
   estado: number;
   empresa: Empresa;
-  fechaInactivo: Date;
+  fechaInactivo: Date | null;
   fechaIngreso: Date;
 }

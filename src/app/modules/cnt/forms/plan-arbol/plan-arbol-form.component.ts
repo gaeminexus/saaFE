@@ -48,6 +48,36 @@ export class PlanArbolFormComponent implements OnInit {
   isEdit: boolean;
   naturalezas: NaturalezaCuenta[] = [];
   parentAccount?: PlanCuenta;
+  
+  // Prefijo para validación (niveles superiores bloqueados)
+  requiredPrefix: string = '';
+  
+  // Naturalezas filtradas por nivel
+  get naturalezasFiltradas(): NaturalezaCuenta[] {
+    const nivel = this.form?.get('nivel')?.value;
+    if (!nivel) return this.naturalezas;
+    
+    // Obtener el primer número de la cuenta para determinar la naturaleza
+    const cuentaContable = this.form?.get('cuentaContable')?.value;
+    const primerNivel = this.getPrimerNivel(cuentaContable);
+    
+    // Filtrar naturalezas cuyo campo 'numero' coincida con el primer nivel
+    return this.naturalezas.filter(nat => nat.numero === primerNivel);
+  }
+  
+  /**
+   * Obtiene el primer nivel de una cuenta contable
+   * Ejemplo: "1.1.1.1.5" -> 1, "2.3.01" -> 2
+   */
+  private getPrimerNivel(cuentaContable: string): number {
+    if (!cuentaContable) return 0;
+    
+    const partes = String(cuentaContable).split('.');
+    if (partes.length === 0) return 0;
+    
+    const primerNumero = parseInt(partes[0], 10);
+    return isNaN(primerNumero) ? 0 : primerNumero;
+  }
 
   get dialogTitle(): string {
     return this.isEdit ? 'Editar Cuenta' : 'Nueva Cuenta';
@@ -56,9 +86,21 @@ export class PlanArbolFormComponent implements OnInit {
   get numeroHelperText(): string {
     if (this.parentAccount) {
       const parentNumber = this.parentAccount.cuentaContable || '';
-      return `Debe comenzar con "${parentNumber}" y ser más específico`;
+      return `El prefijo "${parentNumber}." es fijo. Solo modifique el último nivel`;
     }
-    return 'Ingrese el número de cuenta contable (solo números)';
+    return 'Ingrese el número de cuenta contable (ej: 1, 2, 3)';
+  }
+
+  get cuentaPlaceholder(): string {
+    if (this.requiredPrefix) {
+      return `${this.requiredPrefix}01`;
+    }
+    return '1';
+  }
+
+  get canEditCuentaContable(): boolean {
+    // Siempre editable si no es modo edición, o si es edición y tiene prefijo bloqueado
+    return !this.isEdit || (this.isEdit && this.requiredPrefix !== '');
   }
 
   get isEditMode(): boolean {
@@ -74,13 +116,28 @@ export class PlanArbolFormComponent implements OnInit {
     this.isEdit = !!data.item;
     this.naturalezas = data.naturalezas;
     this.parentAccount = data.parent;
+    
+    // Establecer prefijo requerido si hay padre
+    if (this.parentAccount && this.parentAccount.cuentaContable) {
+      this.requiredPrefix = this.parentAccount.cuentaContable + '.';
+    }
 
     // En modo edición, solo permitir cambiar el nombre
     if (this.isEdit) {
+      // Establecer prefijo bloqueado basado en la cuenta actual
+      const cuentaActual = data.item?.cuentaContable || '';
+      const partes = cuentaActual.split('.');
+      if (partes.length > 1) {
+        // Si tiene múltiples niveles, bloquear todos excepto el último
+        partes.pop(); // Quitar el último nivel
+        this.requiredPrefix = partes.join('.') + '.';
+      }
+      // Si solo tiene un nivel (ej: "1"), no hay prefijo y puede editarse libremente
+      
       this.form = this.fb.group({
         codigo: [{value: data.item?.codigo || '', disabled: true}],
         nombre: [data.item?.nombre || '', [Validators.required, Validators.maxLength(100)]],
-        cuentaContable: [{value: data.item?.cuentaContable || '', disabled: true}],
+        cuentaContable: [data.item?.cuentaContable || '', [Validators.required, this.cuentaContableValidator.bind(this)]],
         nivel: [{value: data.item?.nivel || 1, disabled: true}],
         tipo: [{value: data.item?.tipo || 1, disabled: true}],
         naturalezaCuenta: [{value: data.item?.naturalezaCuenta || null, disabled: true}],
@@ -91,7 +148,7 @@ export class PlanArbolFormComponent implements OnInit {
       this.form = this.fb.group({
         codigo: [{value: '', disabled: true}],
         nombre: [data.item?.nombre || '', [Validators.required, Validators.maxLength(100)]],
-        cuentaContable: [{value: data.presetCuenta || data.item?.cuentaContable || '', disabled: true,}, [Validators.required]],
+        cuentaContable: [data.presetCuenta || data.item?.cuentaContable || '', [Validators.required, this.cuentaContableValidator.bind(this)]],
         nivel: [{value: data.presetNivel || data.item?.nivel || 1, disabled: true}],
         tipo: [{value: data.item?.tipo || 1, disabled: true}],
         naturalezaCuenta: [data.item?.naturalezaCuenta || null, [Validators.required]],
@@ -115,10 +172,69 @@ export class PlanArbolFormComponent implements OnInit {
       }
     });
 
-    // Calcular nivel inicial
+    // Actualizar nivel automáticamente cuando cambie cuentaContable
+    this.form.get('cuentaContable')?.valueChanges.subscribe(val => {
+      if (val) {
+        const nivel = this.calculateLevel(String(val));
+        const nivelAnterior = this.form.get('nivel')?.value;
+        const primerNivel = this.getPrimerNivel(String(val));
+        
+        // Solo actualizar si cambió el nivel
+        if (nivel !== nivelAnterior) {
+          this.form.patchValue({ nivel }, { emitEvent: false });
+        }
+        
+        // Autoseleccionar naturaleza según el primer nivel
+        this.autoSelectNaturaleza(primerNivel);
+      }
+    });
+
+    // Forzar prefijo si hay padre o si está en edición con múltiples niveles
+    if (this.requiredPrefix) {
+      this.form.get('cuentaContable')?.valueChanges.subscribe(val => {
+        const valStr = String(val || '');
+        
+        // Si no tiene el prefijo o está vacío, restaurarlo
+        if (!valStr.startsWith(this.requiredPrefix)) {
+          // Solo restaurar si el usuario está escribiendo, no en el init
+          const initialValue = this.isEdit ? this.data.item?.cuentaContable : this.data.presetCuenta;
+          if (valStr.length > 0 && valStr !== initialValue) {
+            this.form.get('cuentaContable')?.setValue(
+              this.requiredPrefix, 
+              { emitEvent: false }
+            );
+          }
+        }
+      });
+    }
+
+    // Calcular nivel inicial y autoseleccionar naturaleza
     const initialCuentaContable = this.form.get('cuentaContable')?.value || '';
     const initialNivel = this.calculateLevel(initialCuentaContable);
+    const initialPrimerNivel = this.getPrimerNivel(initialCuentaContable);
     this.form.patchValue({ nivel: initialNivel }, { emitEvent: false });
+    
+    // Autoseleccionar naturaleza inicial si no está en modo edición
+    if (!this.isEdit) {
+      this.autoSelectNaturaleza(initialPrimerNivel);
+    }
+  }
+
+  /**
+   * Autoselecciona la naturaleza de cuenta según el primer nivel
+   * @param primerNivel - El primer número de la cuenta (ej: 1 en "1.1.01")
+   */
+  private autoSelectNaturaleza(primerNivel: number): void {
+    const naturalezasDelPrimerNivel = this.naturalezas.filter(nat => nat.numero === primerNivel);
+    
+    if (naturalezasDelPrimerNivel.length === 1) {
+      // Si hay exactamente una naturaleza para este primer nivel, seleccionarla automáticamente
+      this.form.patchValue({ naturalezaCuenta: naturalezasDelPrimerNivel[0] }, { emitEvent: true });
+    } else if (naturalezasDelPrimerNivel.length === 0) {
+      // Si no hay naturalezas para este primer nivel, limpiar la selección
+      this.form.patchValue({ naturalezaCuenta: null }, { emitEvent: false });
+    }
+    // Si hay múltiples naturalezas para el primer nivel, dejar que el usuario elija
   }
 
   onSubmit(): void {
@@ -130,7 +246,7 @@ export class PlanArbolFormComponent implements OnInit {
     this.loading = true;
     this.error = null;
 
-    let cuenta: PlanCuenta;
+    let cuenta: Partial<PlanCuenta> | PlanCuenta;
 
     if (this.isEdit) {
       cuenta = {
@@ -156,7 +272,7 @@ export class PlanArbolFormComponent implements OnInit {
       const empresaOrigen = naturaleza?.empresa || this.parentAccount?.empresa || { codigo: 280 } as any;
       
       cuenta = {
-        codigo: 0, // id nuevo
+        // NO enviar codigo - el backend lo genera automáticamente
         nombre: String(formValue.nombre || '').trim().toUpperCase(),
         cuentaContable: String(formValue.cuentaContable || '').trim(),
         tipo: Number(tipoHeradado),
@@ -167,7 +283,7 @@ export class PlanArbolFormComponent implements OnInit {
         empresa: empresaOrigen,
         fechaInactivo: new Date(),
         fechaUpdate: new Date()
-      } as PlanCuenta;
+      } as Partial<PlanCuenta>;
       
       if (!cuenta.naturalezaCuenta || !cuenta.naturalezaCuenta.codigo) {
         this.loading = false;
@@ -218,5 +334,86 @@ export class PlanArbolFormComponent implements OnInit {
     if (cuentaContable === '0') return 0;
     const dots = (cuentaContable.match(/\./g) || []).length;
     return dots + 1;
+  }
+
+  /**
+   * Validador personalizado para cuentaContable
+   * Verifica que:
+   * - Solo contenga números y puntos
+   * - Si hay padre o está en edición, debe comenzar con el prefijo (niveles superiores protegidos)
+   * - El último nivel sea válido
+   * - El formato sea válido
+   */
+  private cuentaContableValidator(control: any): { [key: string]: any } | null {
+    const value = control.value;
+    if (!value) return null;
+
+    const valueStr = String(value).trim();
+
+    // Validar formato: solo números y puntos
+    if (!/^[0-9.]+$/.test(valueStr)) {
+      return { invalidFormat: 'Solo se permiten números y puntos' };
+    }
+
+    // Validar que no termine en punto
+    if (valueStr.endsWith('.')) {
+      return { invalidFormat: 'No puede terminar en punto' };
+    }
+
+    // Validar que no tenga puntos consecutivos
+    if (valueStr.includes('..')) {
+      return { invalidFormat: 'No se permiten puntos consecutivos' };
+    }
+
+    // Si hay prefijo requerido (padre o edición multi-nivel), validarlo
+    if (this.requiredPrefix) {
+      
+      if (!valueStr.startsWith(this.requiredPrefix)) {
+        return { 
+          invalidHierarchy: `Debe comenzar con "${this.requiredPrefix}" (niveles superiores protegidos)` 
+        };
+      }
+
+      // Validar que haya agregado algo después del prefijo
+      const lastLevel = valueStr.substring(this.requiredPrefix.length);
+      if (!lastLevel || lastLevel.trim() === '') {
+        return { 
+          missingLastLevel: 'Debe agregar el último nivel después del prefijo' 
+        };
+      }
+
+      // Validar que el último nivel no contenga puntos (solo un nivel adicional)
+      if (lastLevel.includes('.')) {
+        return { 
+          multipleNewLevels: 'Solo puede agregar un nivel a la vez. Use números sin puntos para el último nivel' 
+        };
+      }
+
+      // Validar que el último nivel sea numérico
+      if (!/^\d+$/.test(lastLevel)) {
+        return { 
+          invalidLastLevel: 'El último nivel debe ser solo números' 
+        };
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Obtiene el mensaje de error para el campo cuentaContable
+   */
+  get cuentaContableError(): string {
+    const control = this.form.get('cuentaContable');
+    if (!control || !control.errors) return '';
+
+    if (control.errors['required']) return 'El número de cuenta es requerido';
+    if (control.errors['invalidFormat']) return control.errors['invalidFormat'];
+    if (control.errors['invalidHierarchy']) return control.errors['invalidHierarchy'];
+    if (control.errors['missingLastLevel']) return control.errors['missingLastLevel'];
+    if (control.errors['multipleNewLevels']) return control.errors['multipleNewLevels'];
+    if (control.errors['invalidLastLevel']) return control.errors['invalidLastLevel'];
+
+    return 'Número de cuenta inválido';
   }
 }

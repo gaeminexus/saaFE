@@ -115,6 +115,12 @@
                   <mat-icon>edit</mat-icon>
                 </button>
               }
+              <button mat-icon-button (click)="onDelete(node)"
+                      matTooltip="Eliminar cuenta"
+                      class="action-button delete"
+                      [disabled]="!node.codigo || node.codigo === 0 || (node.children && node.children.length > 0)">
+                <mat-icon>delete_outline</mat-icon>
+              </button>
             </div>
             }
           </div>
@@ -159,6 +165,12 @@
                   <mat-icon>edit</mat-icon>
                 </button>
               }
+              <button mat-icon-button (click)="onDelete(node)"
+                      matTooltip="Eliminar cuenta"
+                      class="action-button delete"
+                      [disabled]="!node.codigo || node.codigo === 0 || (node.children && node.children.length > 0)">
+                <mat-icon>delete_outline</mat-icon>
+              </button>
             </div>
             }
           </div>
@@ -228,6 +240,12 @@
                           matTooltip="Editar cuenta"
                           class="action-button edit">
                     <mat-icon>edit</mat-icon>
+                  </button>
+                  <button mat-icon-button (click)="onDelete(item)"
+                          matTooltip="Eliminar cuenta"
+                          class="action-button delete"
+                          [disabled]="!item.codigo || item.codigo === 0 || (item.children && item.children.length > 0)">
+                    <mat-icon>delete_outline</mat-icon>
                   </button>
                 </td>
               </tr>

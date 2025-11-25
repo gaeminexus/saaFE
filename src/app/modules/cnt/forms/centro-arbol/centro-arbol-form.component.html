@@ -98,8 +98,12 @@
           <!-- Código del centro -->
           <mat-form-field appearance="outline" class="half-width">
             <mat-label>Número asignado</mat-label>
-            <input matInput formControlName="numero" placeholder="Auto" [disabled]="true">
+            <input matInput formControlName="numero" type="number" placeholder="Ej: 1001">
             <mat-icon matSuffix>tag</mat-icon>
+            <mat-hint>Puede modificar el número sugerido</mat-hint>
+            <mat-error *ngIf="form.get('numero')?.invalid && form.get('numero')?.touched">
+              {{ numeroError }}
+            </mat-error>
           </mat-form-field>
 
           <!-- Tipo -->

@@ -16,8 +16,9 @@ import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
-import { CentroCosto } from '../../model/centro-costo';
+import { CentroCosto} from '../../model/centro-costo';
 import { CentroCostoService } from '../../service/centro-costo.service';
+import { CentroCostoUtilsService } from '../../../../shared/services/centro-costo-utils.service';
 import { CentroGridFormComponent } from './centro-grid-form.component';
 
 @Component({
@@ -87,7 +88,8 @@ export class CentroGridComponent implements OnInit {
   constructor(
     private centroCostoService: CentroCostoService,
     private dialog: MatDialog,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private centroUtils: CentroCostoUtilsService
   ) {}
 
   ngOnInit(): void {
@@ -118,16 +120,6 @@ export class CentroGridComponent implements OnInit {
     };
   }
 
-  private getHierarchicalSortKey(codigo: string | undefined | null): string {
-    // Manejo defensivo: si no hay código, devolver clave mínima
-    if (!codigo) return '';
-    // Convertir "1.1.01" a "0001.0001.0001" para ordenamiento correcto
-    return codigo.split('.')
-      .filter(part => part.length > 0)
-      .map(part => part.padStart(4, '0'))
-      .join('.');
-  }
-
   loadData(): void {
     this.loading = true;
     this.error = null;
@@ -137,19 +129,16 @@ export class CentroGridComponent implements OnInit {
         const lista = centros || [];
         const filtrados = lista.filter(c => c.empresa?.codigo === 280);
         console.log('[CentroGridComponent] Centros cargados (empresa 280):', filtrados.length);
+        
         this.originalData = filtrados;
         this.applyFilters();
         this.loading = false;
       },
       error: (error) => {
         console.error('[CentroGridComponent] Error loading centros:', error);
-        this.error = 'Error al cargar los centros de costo';
+        this.error = 'Error al cargar los centros de costo desde el backend';
+        this.originalData = [];
         this.loading = false;
-
-        this.snackBar.open('Error al cargar los centros de costo', 'Cerrar', {
-          duration: 5000,
-          panelClass: ['error-snackbar']
-        });
       }
     });
   }
@@ -221,6 +210,15 @@ export class CentroGridComponent implements OnInit {
   }
 
   onDelete(centroCosto: CentroCosto): void {
+    // Validar que el centro tenga un código válido del backend
+    if (!centroCosto.codigo || centroCosto.codigo === 0) {
+      this.snackBar.open('No se puede eliminar un centro sin código válido', 'Cerrar', {
+        duration: 3000,
+        panelClass: ['error-snackbar']
+      });
+      return;
+    }
+
     if (confirm(`¿Está seguro de eliminar el centro de costo "${centroCosto.nombre}"?`)) {
       this.centroCostoService.delete(centroCosto.codigo).subscribe({
         next: (success) => {
@@ -243,41 +241,21 @@ export class CentroGridComponent implements OnInit {
     }
   }
 
-  // Utility methods
+  // Utility methods delegados a utils
   getTipoLabel(tipo: number): string {
-    switch (tipo) {
-      case 1: return 'Movimiento';
-      case 2: return 'Acumulación';
-      default: return 'Desconocido';
-    }
+    return this.centroUtils.getTipoLabel(tipo);
   }
 
   getTipoClass(tipo: number): string {
-    switch (tipo) {
-      case 1: return 'movimiento';
-      case 2: return 'acumulacion';
-      default: return 'desconocido';
-    }
+    return this.centroUtils.getTipoClass(tipo);
   }
 
   getEstadoLabel(estado: number): string {
-    return estado === 1 ? 'Activo' : 'Inactivo';
+    return this.centroUtils.getEstadoLabel(estado);
   }
 
   formatDate(date?: Date): string {
-    if (!date) return '-';
-    try {
-      const dateObj = date instanceof Date ? date : new Date(date);
-      if (isNaN(dateObj.getTime())) return '-';
-
-      return dateObj.toLocaleDateString('es-ES', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-      });
-    } catch {
-      return '-';
-    }
+    return this.centroUtils.formatFecha(date);
   }
 
   // Actions

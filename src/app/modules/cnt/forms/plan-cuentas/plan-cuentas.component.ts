@@ -204,76 +204,10 @@ export class PlanCuentasComponent implements OnInit {
           this.error = `Error del servidor: ${err.status} - ${err.message || 'Error desconocido'}`;
         }
 
+        this.planCuentas = [];
         this.loading = false;
-
-        // En caso de error, mostrar datos de ejemplo para desarrollo
-        console.log('📝 Cargando datos de ejemplo para desarrollo...');
-        this.loadMockData();
       }
     });
-  }
-
-  private loadMockData(): void {
-    // Mantener datos de ejemplo como fallback
-    const mockJerarquia = {
-      codigo: 1, nombre: 'Jerarquía Demo', nivel: 1, codigoPadre: 0, descripcion: 'Jerarquía de prueba',
-      ultimoNivel: 1, rubroTipoEstructuraP: 1, rubroTipoEstructuraH: 1, codigoAlterno: 1,
-      rubroNivelCaracteristicaP: 1, rubroNivelCaracteristicaH: 1
-    };
-
-    const mockEmpresa = {
-      codigo: 1, jerarquia: mockJerarquia, nombre: 'Empresa Demo', nivel: 1, codigoPadre: 0, ingresado: 1
-    };
-
-    const mockNaturalezaDeudora: NaturalezaCuenta = {
-      codigo: 1, nombre: 'Deudora', tipo: 1, numero: 1, estado: 1, empresa: mockEmpresa, manejaCentroCosto: 0
-    };
-
-    const mockNaturalezaAcreedora: NaturalezaCuenta = {
-      codigo: 2, nombre: 'Acreedora', tipo: 2, numero: 2, estado: 1, empresa: mockEmpresa, manejaCentroCosto: 0
-    };
-
-    const mockData: PlanCuenta[] = [
-      // Cuenta Raíz
-      { codigo: 1, cuentaContable: '0', nombre: 'PLANARBOL', tipo: 1, nivel: 0, idPadre: 0, estado: 1, fechaInactivo: new Date(), empresa: mockEmpresa, fechaUpdate: new Date(), naturalezaCuenta: mockNaturalezaDeudora },
-
-      // Nivel 1 - Cuentas principales
-      { codigo: 2, cuentaContable: '1', nombre: 'ACTIVOS', tipo: 1, nivel: 1, idPadre: 1, estado: 1, fechaInactivo: new Date(), empresa: mockEmpresa, fechaUpdate: new Date(), naturalezaCuenta: mockNaturalezaDeudora },
-      { codigo: 3, cuentaContable: '2', nombre: 'PASIVOS', tipo: 1, nivel: 1, idPadre: 1, estado: 1, fechaInactivo: new Date(), empresa: mockEmpresa, fechaUpdate: new Date(), naturalezaCuenta: mockNaturalezaAcreedora },
-      { codigo: 4, cuentaContable: '3', nombre: 'CAPITAL', tipo: 1, nivel: 1, idPadre: 1, estado: 1, fechaInactivo: new Date(), empresa: mockEmpresa, fechaUpdate: new Date(), naturalezaCuenta: mockNaturalezaAcreedora },
-      { codigo: 5, cuentaContable: '4', nombre: 'INGRESOS', tipo: 1, nivel: 1, idPadre: 1, estado: 1, fechaInactivo: new Date(), empresa: mockEmpresa, fechaUpdate: new Date(), naturalezaCuenta: mockNaturalezaAcreedora },
-      { codigo: 6, cuentaContable: '5', nombre: 'EGRESOS', tipo: 1, nivel: 1, idPadre: 1, estado: 1, fechaInactivo: new Date(), empresa: mockEmpresa, fechaUpdate: new Date(), naturalezaCuenta: mockNaturalezaDeudora },
-
-      // Nivel 2 - Subcuentas de ACTIVOS
-      { codigo: 7, cuentaContable: '1.1', nombre: 'ACTIVOS CORRIENTES', tipo: 1, nivel: 2, idPadre: 2, estado: 1, fechaInactivo: new Date(), empresa: mockEmpresa, fechaUpdate: new Date(), naturalezaCuenta: mockNaturalezaDeudora },
-      { codigo: 8, cuentaContable: '1.2', nombre: 'ACTIVOS FIJOS', tipo: 1, nivel: 2, idPadre: 2, estado: 1, fechaInactivo: new Date(), empresa: mockEmpresa, fechaUpdate: new Date(), naturalezaCuenta: mockNaturalezaDeudora },
-      { codigo: 9, cuentaContable: '1.3', nombre: 'OTROS ACTIVOS', tipo: 1, nivel: 2, idPadre: 2, estado: 1, fechaInactivo: new Date(), empresa: mockEmpresa, fechaUpdate: new Date(), naturalezaCuenta: mockNaturalezaDeudora },
-      { codigo: 10, cuentaContable: '1.4', nombre: 'ACTIVO A LARGO PLAZO', tipo: 1, nivel: 2, idPadre: 2, estado: 1, fechaInactivo: new Date(), empresa: mockEmpresa, fechaUpdate: new Date(), naturalezaCuenta: mockNaturalezaDeudora },
-
-      // Nivel 3 - Subcuentas de ACTIVOS CORRIENTES (ejemplos)
-      { codigo: 11, cuentaContable: '1.1.01', nombre: 'CAJA', tipo: 2, nivel: 3, idPadre: 7, estado: 1, fechaInactivo: new Date(), empresa: mockEmpresa, fechaUpdate: new Date(), naturalezaCuenta: mockNaturalezaDeudora },
-      { codigo: 12, cuentaContable: '1.1.02', nombre: 'BANCOS', tipo: 2, nivel: 3, idPadre: 7, estado: 1, fechaInactivo: new Date(), empresa: mockEmpresa, fechaUpdate: new Date(), naturalezaCuenta: mockNaturalezaDeudora },
-      { codigo: 13, cuentaContable: '1.1.03', nombre: 'CUENTAS POR COBRAR', tipo: 2, nivel: 3, idPadre: 7, estado: 1, fechaInactivo: new Date(), empresa: mockEmpresa, fechaUpdate: new Date(), naturalezaCuenta: mockNaturalezaDeudora },
-
-      // Nivel 3 - Subcuentas de ACTIVOS FIJOS (ejemplos)
-      { codigo: 14, cuentaContable: '1.2.01', nombre: 'MUEBLES Y ENSERES', tipo: 2, nivel: 3, idPadre: 8, estado: 1, fechaInactivo: new Date(), empresa: mockEmpresa, fechaUpdate: new Date(), naturalezaCuenta: mockNaturalezaDeudora },
-      { codigo: 15, cuentaContable: '1.2.02', nombre: 'EQUIPOS DE COMPUTACION', tipo: 2, nivel: 3, idPadre: 8, estado: 1, fechaInactivo: new Date(), empresa: mockEmpresa, fechaUpdate: new Date(), naturalezaCuenta: mockNaturalezaDeudora },
-
-      // Nivel 2 - Subcuentas de PASIVOS (ejemplos)
-      { codigo: 16, cuentaContable: '2.1', nombre: 'PASIVOS CORRIENTES', tipo: 1, nivel: 2, idPadre: 3, estado: 1, fechaInactivo: new Date(), empresa: mockEmpresa, fechaUpdate: new Date(), naturalezaCuenta: mockNaturalezaAcreedora },
-      { codigo: 17, cuentaContable: '2.1.01', nombre: 'CUENTAS POR PAGAR', tipo: 2, nivel: 3, idPadre: 16, estado: 1, fechaInactivo: new Date(), empresa: mockEmpresa, fechaUpdate: new Date(), naturalezaCuenta: mockNaturalezaAcreedora }
-    ];
-
-    console.log('📝 Cargando datos mock:', mockData);
-
-    setTimeout(() => {
-      this.planCuentas = mockData;
-      console.log('🔄 Datos asignados, construyendo árbol...');
-      this.buildTree();
-      this.applyFiltersAndPagination();
-      this.error = 'Usando datos de ejemplo - Backend no disponible';
-      this.loading = false;
-    }, 300);
   }
 
   private loadNaturalezas(): void {
