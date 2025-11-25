@@ -1,17 +1,23 @@
+import { Canton } from "./canton";
+import { EstadoCivil } from "./estado-civil";
+import { NivelEstudio } from "./nivel-estudio";
+import { Profesion } from "./profesion";
+import { Provincia } from "./provincia";
+
 export interface Exter {
     cedula: string;               // Cédula
     nombre: string;               // Nombre
     estado: string;               // Estado
     fechaNacimiento: string;      // Fecha de nacimiento (Timestamp)
-    estadoCivil: string;          // Estado civil
-    nivelEstudios: string;        // Nivel de estudios
+    estadoCivil: EstadoCivil;          // Estado civil
+    nivelEstudios: NivelEstudio;        // Nivel de estudios
     edad: string;                 // Edad
-    profesion: string;            // Profesión
+    profesion: Profesion;            // Profesión
     genero: string;               // Género
-    fechaDesde: string;           // Fecha desde (Timestamp)
+    fechaDefuncion: string;           // Fecha desde (Timestamp)
     nacionalidad: string;         // Nacionalidad
-    provincia: string;            // Provincia
-    canton: string;               // Cantón
+    provincia: Provincia;            // Provincia
+    canton: Canton;               // Cantón
     movil: string;                // Móvil
     telefono: string;             // Teléfono
     correoPrincipal: string;      // Correo principal

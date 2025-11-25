@@ -39,6 +39,28 @@
   public static RS_CRAR = "http://localhost:8080/saa-backend/rest/crar";
   public static RS_DTCA = "http://localhost:8080/saa-backend/rest/dtca";
   public static RS_PXCA = "http://localhost:8080/saa-backend/rest/pxca";
+  public static RS_ADJN = "http://localhost:8080/saa-backend/rest/adjn";
+  public static RS_CXCP = "http://localhost:8080/saa-backend/rest/cxcp";
+  public static RS_BPRF = "http://localhost:8080/saa-backend/rest/bprf";
+  public static RS_CMBP = "http://localhost:8080/saa-backend/rest/cmbp";
+  public static RS_CSNT = "http://localhost:8080/saa-backend/rest/csnt";
+  public static RS_CDDD = "http://localhost:8080/saa-backend/rest/cddd";
+  public static RS_CMNT = "http://localhost:8080/saa-backend/rest/cmnt";
+  public static RS_CXCK = "http://localhost:8080/saa-backend/rest/cxck";
+  public static RS_DTSP = "http://localhost:8080/saa-backend/rest/dtsp";
+  public static RS_DRTR = "http://localhost:8080/saa-backend/rest/drtr";
+  public static RS_DRCC = "http://localhost:8080/saa-backend/rest/drcc";
+  public static RS_DCMN = "http://localhost:8080/saa-backend/rest/dcmn";
+  public static RS_HSTR = "http://localhost:8080/saa-backend/rest/hstr";
+  public static RS_MRPR = "http://localhost:8080/saa-backend/rest/mrpr";
+  public static RS_PGAP = "http://localhost:8080/saa-backend/rest/pgap";
+  public static RS_PRRQ = "http://localhost:8080/saa-backend/rest/prrq";
+  public static RS_PREC = "http://localhost:8080/saa-backend/rest/prec";
+  public static RS_PRSN = "http://localhost:8080/saa-backend/rest/prsn";
+  public static RS_PRVN = "http://localhost:8080/saa-backend/rest/prvn";
+  public static RS_RLPR = "http://localhost:8080/saa-backend/rest/rlpr";
+  public static RS_RQPR = "http://localhost:8080/saa-backend/rest/rqpr";
+  public static RS_TSPR = "http://localhost:8080/saa-backend/rest/tspr";
 
 }*/
 
@@ -84,6 +106,28 @@ export class ServiciosCrd {
   public static RS_CRAR = "http://localhost:8080/saa-backend/rest/crar";
   public static RS_DTCA = "http://localhost:8080/saa-backend/rest/dtca";
   public static RS_PXCA = "http://localhost:8080/saa-backend/rest/pxca";
+  public static RS_ADJN = "http://localhost:8080/saa-backend/rest/adjn";
+  public static RS_CXCP = "http://localhost:8080/saa-backend/rest/cxcp";
+  public static RS_BPRF = "http://localhost:8080/saa-backend/rest/bprf";
+  public static RS_CMBP = "http://localhost:8080/saa-backend/rest/cmbp";
+  public static RS_CSNT = "http://localhost:8080/saa-backend/rest/csnt";
+  public static RS_CDDD = "http://localhost:8080/saa-backend/rest/cddd";
+  public static RS_CMNT = "http://localhost:8080/saa-backend/rest/cmnt";
+  public static RS_CXCK = "http://localhost:8080/saa-backend/rest/cxck";
+  public static RS_DTSP = "http://localhost:8080/saa-backend/rest/dtsp";
+  public static RS_DRTR = "http://localhost:8080/saa-backend/rest/drtr";
+  public static RS_DRCC = "http://localhost:8080/saa-backend/rest/drcc";
+  public static RS_DCMN = "http://localhost:8080/saa-backend/rest/dcmn";
+  public static RS_HSTR = "http://localhost:8080/saa-backend/rest/hstr";
+  public static RS_MRPR = "http://localhost:8080/saa-backend/rest/mrpr";
+  public static RS_PGAP = "http://localhost:8080/saa-backend/rest/pgap";
+  public static RS_PRRQ = "http://localhost:8080/saa-backend/rest/prrq";
+  public static RS_PREC = "http://localhost:8080/saa-backend/rest/prec";
+  public static RS_PRSN = "http://localhost:8080/saa-backend/rest/prsn";
+  public static RS_PRVN = "http://localhost:8080/saa-backend/rest/prvn";
+  public static RS_RLPR = "http://localhost:8080/saa-backend/rest/rlpr";
+  public static RS_RQPR = "http://localhost:8080/saa-backend/rest/rqpr";
+  public static RS_TSPR = "http://localhost:8080/saa-backend/rest/tspr";
 
 }
 
