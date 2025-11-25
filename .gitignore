@@ -39,7 +39,6 @@ coverage/
 .npm
 .yarn-integrity
 yarn.lock
-package-lock.json
 
 
 
