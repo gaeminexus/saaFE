@@ -164,7 +164,7 @@
             <button mat-icon-button class="action-button edit-button" (click)="onEdit(centro)" matTooltip="Editar nombre">
               <mat-icon>edit</mat-icon>
             </button>
-            <button mat-icon-button class="action-button delete-button" (click)="onDelete(centro)" matTooltip="Eliminar">
+            <button mat-icon-button class="action-button delete-button" (click)="onDelete(centro)" matTooltip="Eliminar" [disabled]="!centro.codigo || centro.codigo === 0">
               <mat-icon>delete_outline</mat-icon>
             </button>
           </div>

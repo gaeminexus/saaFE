@@ -202,6 +202,11 @@ export class PlantillaSistemaComponent implements OnInit {
       empresa: { codigo: 280, nombre: 'GAEMI NEXUS' } as any
     };
 
+    // Eliminar codigo si es nuevo registro (el backend lo genera)
+    if (this.isNewRecord && formValue.codigo === 0) {
+      delete formValue.codigo;
+    }
+
     if (formValue.estado === 2 && !formValue.fechaInactivo) {
       this.plantillaForm.patchValue({
         fechaInactivo: new Date()

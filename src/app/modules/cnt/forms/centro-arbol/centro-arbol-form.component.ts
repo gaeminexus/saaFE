@@ -128,8 +128,8 @@ export class CentroArbolFormComponent implements OnInit {
     } else {
       // Crear nuevo centro
       const raw = this.form.getRawValue();
-      const centroCosto: CentroCosto = {
-        codigo: 0,
+      const centroCosto: Partial<CentroCosto> = {
+        // NO enviar codigo - el backend lo genera automáticamente
         numero: raw.numero,
         nombre: raw.nombre,
         tipo: raw.tipo,

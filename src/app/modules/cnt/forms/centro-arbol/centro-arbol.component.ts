@@ -13,7 +13,9 @@ import { ReactiveFormsModule } from '@angular/forms';
 
 import { CentroCosto } from '../../model/centro-costo';
 import { CentroCostoService } from '../../service/centro-costo.service';
+import { CentroCostoUtilsService } from '../../../../shared/services/centro-costo-utils.service';
 import { CentroArbolFormComponent } from './centro-arbol-form.component';
+
 
 interface CentroCostoNode extends CentroCosto {
   children?: CentroCostoNode[];
@@ -59,7 +61,8 @@ export class CentroArbolComponent implements OnInit {
   constructor(
     private centroCostoService: CentroCostoService,
     private dialog: MatDialog,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private centroUtils: CentroCostoUtilsService
   ) {}
 
   ngOnInit(): void {
@@ -75,6 +78,7 @@ export class CentroArbolComponent implements OnInit {
         const lista = centros || [];
         const filtrados = lista.filter(c => c.empresa?.codigo === 280);
         console.log(`[CentroArbolComponent] Total: ${lista.length} | Empresa 280: ${filtrados.length}`);
+        
         this.centros = filtrados;
         this.buildTree();
         this.updatePreviewCodigoDestino();
@@ -82,9 +86,9 @@ export class CentroArbolComponent implements OnInit {
       },
       (err: any) => {
         console.error('[CentroArbolComponent] Error cargando centros:', err);
-        this.error = 'Error al cargar centros de costo';
+        this.error = 'Error al cargar los centros de costo desde el backend';
+        this.centros = [];
         this.loading = false;
-        this.snackBar.open('Error al cargar centros de costo', 'Cerrar', { duration: 4000, panelClass: ['error-snackbar'] });
       }
     );
   }
@@ -112,7 +116,7 @@ export class CentroArbolComponent implements OnInit {
 
     // Orden jerárquico por código
     const sortNodes = (nodes: CentroCostoNode[]) => {
-      nodes.sort((a,b) => this.sortCodigo(a.codigoStr || '', b.codigoStr || ''));
+      nodes.sort((a,b) => this.centroUtils.sortCodigos(a.codigoStr || '', b.codigoStr || ''));
       nodes.forEach(n => n.children && n.children.length > 0 && sortNodes(n.children));
     };
     sortNodes(roots);
@@ -121,45 +125,34 @@ export class CentroArbolComponent implements OnInit {
     console.log('[CentroArbolComponent] Árbol construido:', { roots: roots.length, total: this.centros.length });
   }
 
-  // ---- Numeración y helpers similares a PlanArbol ----
-  private sortCodigo(a: string, b: string): number {
-    // Manejo defensivo si faltan códigos
-    if (!a && !b) return 0;
-    if (!a) return -1;
-    if (!b) return 1;
-    const aParts = a.split('.')
-      .filter(p => p.length > 0)
-      .map(p => p.padStart(4,'0'));
-    const bParts = b.split('.')
-      .filter(p => p.length > 0)
-      .map(p => p.padStart(4,'0'));
-    const max = Math.max(aParts.length, bParts.length);
-    for (let i=0;i<max;i++) {
-      const av = aParts[i] || '0000';
-      const bv = bParts[i] || '0000';
-      if (av !== bv) return av.localeCompare(bv);
-    }
-    return 0;
-  }
-
+  // ---- Numeración y helpers delegados a utils ----
   private getMaxDepthAllowed(): number {
-    return Math.max(3, Math.max(0, ...this.centros.map(c => c.nivel || 0)) + 1);
+    const existingMax = Math.max(0, ...this.centros.map(c => c.nivel || 0));
+    return this.centroUtils.getMaxDepthAllowed(existingMax);
   }
 
   private generateNuevoCodigo(parent?: CentroCostoNode): string {
-    if (!parent) {
-      const rootNums = this.treeData.map(r => parseInt(r.codigoStr || r.numero.toString(), 10)).filter(n => !isNaN(n));
-      const next = rootNums.length === 0 ? 1 : Math.max(...rootNums) + 1;
-      return String(next);
+    const existingCodigos = this.centros
+      .map(c => this.buildCodigoStrForCentro(c))
+      .filter(c => c);
+    
+    return this.centroUtils.generateNuevoCodigo(
+      parent?.codigoStr || null,
+      existingCodigos
+    );
+  }
+
+  private buildCodigoStrForCentro(centro: CentroCosto): string {
+    // Reconstruir código jerárquico desde el centro
+    if (!centro.idPadre) {
+      return String(centro.numero);
     }
-    const children = parent.children || [];
-    const segs = children.map(ch => {
-      const parts = (ch.codigoStr || '').split('.');
-      const last = parts[parts.length - 1] || ch.numero.toString();
-      return parseInt(last, 10) || 0;
-    });
-    const nextSeg = Math.max(0, ...segs) + 1;
-    return `${parent.codigoStr}.${nextSeg}`;
+    const parent = this.centros.find(c => c.codigo === centro.idPadre);
+    if (!parent) {
+      return String(centro.numero);
+    }
+    const parentCodigo = this.buildCodigoStrForCentro(parent);
+    return `${parentCodigo}.${centro.numero}`;
   }
 
   private updatePreviewCodigoDestino(): void {
@@ -219,6 +212,15 @@ export class CentroArbolComponent implements OnInit {
   }
 
   onDelete(node: CentroCostoNode): void {
+    // Validar que el nodo tenga un código válido del backend
+    if (!node.codigo || node.codigo === 0) {
+      this.snackBar.open('No se puede eliminar un centro sin código válido', 'Cerrar', {
+        duration: 3000,
+        panelClass: ['error-snackbar']
+      });
+      return;
+    }
+
     if (confirm('¿Está seguro de eliminar este centro de costo?')) {
       this.centroCostoService.delete(node.codigo).subscribe({
         next: (success) => {
@@ -245,35 +247,21 @@ export class CentroArbolComponent implements OnInit {
     return this.centros.find(c => c.codigo === node.codigo) || null;
   }
 
-  // Utility methods
+  // Utility methods delegados a utils
   getTipoLabel(tipo: number): string {
-    switch (tipo) {
-      case 1: return 'Movimiento';
-      case 2: return 'Acumulación';
-      default: return 'Desconocido';
-    }
+    return this.centroUtils.getTipoLabel(tipo);
   }
 
   getTipoClass(tipo: number): string {
-    switch (tipo) {
-      case 1: return 'movimiento';
-      case 2: return 'acumulacion';
-      default: return 'desconocido';
-    }
+    return this.centroUtils.getTipoClass(tipo);
   }
 
   getEstadoLabel(estado: number): string {
-    return estado === 1 ? 'Activo' : 'Inactivo';
+    return this.centroUtils.getEstadoLabel(estado);
   }
 
   formatDate(date?: Date): string {
-    if (!date) return '-';
-    try {
-      const dateObj = date instanceof Date ? date : new Date(date);
-      return dateObj.toLocaleDateString('es-ES');
-    } catch {
-      return '-';
-    }
+    return this.centroUtils.formatFecha(date);
   }
 
   // Actions

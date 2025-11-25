@@ -130,7 +130,7 @@ export class PlanArbolFormComponent implements OnInit {
     this.loading = true;
     this.error = null;
 
-    let cuenta: PlanCuenta;
+    let cuenta: Partial<PlanCuenta> | PlanCuenta;
 
     if (this.isEdit) {
       cuenta = {
@@ -156,7 +156,7 @@ export class PlanArbolFormComponent implements OnInit {
       const empresaOrigen = naturaleza?.empresa || this.parentAccount?.empresa || { codigo: 280 } as any;
       
       cuenta = {
-        codigo: 0, // id nuevo
+        // NO enviar codigo - el backend lo genera automáticamente
         nombre: String(formValue.nombre || '').trim().toUpperCase(),
         cuentaContable: String(formValue.cuentaContable || '').trim(),
         tipo: Number(tipoHeradado),
@@ -167,7 +167,7 @@ export class PlanArbolFormComponent implements OnInit {
         empresa: empresaOrigen,
         fechaInactivo: new Date(),
         fechaUpdate: new Date()
-      } as PlanCuenta;
+      } as Partial<PlanCuenta>;
       
       if (!cuenta.naturalezaCuenta || !cuenta.naturalezaCuenta.codigo) {
         this.loading = false;

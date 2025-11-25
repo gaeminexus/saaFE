@@ -298,6 +298,11 @@ export class PlantillaGeneralComponent implements OnInit {
       empresa: { codigo: 280, nombre: 'GAEMI NEXUS' } as any
     };
 
+    // Eliminar codigo si es nuevo registro (el backend lo genera)
+    if (this.isNewRecord && (plantillaData as any).codigo === 0) {
+      delete (plantillaData as any).codigo;
+    }
+
     if (this.isNewRecord) {
       plantillaData.fechaCreacion = new Date();
       plantillaData.usuarioCreacion = 'current-user';

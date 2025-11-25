@@ -25,7 +25,6 @@ import { PlanArbolFormComponent } from './plan-arbol-form.component';
 import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
-import { getMockPlanCuentas, getMockNaturalezas } from '../../../../shared/mocks/plan-cuenta.mock';
 
 interface PlanCuentaNode extends PlanCuenta {
   children?: PlanCuentaNode[];
@@ -164,20 +163,13 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
         const filtered = list.filter((it: any) => it?.empresa?.codigo === 280);
         console.log(`📋 Total: ${list.length} | Empresa 280: ${filtered.length}`);
 
-        if (filtered.length === 0) {
-          console.log('⚠️ No se encontraron cuentas para empresa 280');
-          this.error.set('No se encontraron cuentas para la empresa 280.');
-          // Opcional: usar mock para visualizar estructura
-          this.loadMockData();
-        } else {
-          console.log(`✅ Se cargaron ${filtered.length} cuentas para empresa 280`);
-          this.error.set('');
-          this.planCuentas = filtered;
-          this.totalRegistros.set(filtered.length);
-          this.setDefaultSort();
-          this.buildTree();
-          this.applyFiltersAndPagination();
-        }
+        console.log(`✅ Se cargaron ${filtered.length} cuentas para empresa 280`);
+        this.error.set('');
+        this.planCuentas = filtered;
+        this.totalRegistros.set(filtered.length);
+        this.setDefaultSort();
+        this.buildTree();
+        this.applyFiltersAndPagination();
         this.loading.set(false);
       },
       error: (err) => {
@@ -189,8 +181,7 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
         } else {
           this.error.set(`Error del servidor: ${err?.status} - ${err?.message || 'Error desconocido'}`);
         }
-        // Mostrar mock para poder validar la UI
-        this.loadMockData();
+        this.planCuentas = [];
         this.loading.set(false);
       }
     });
@@ -236,28 +227,11 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
 
         this.loading.set(false);
 
-        // En caso de error, mostrar datos de ejemplo para desarrollo
-        console.log('📝 Cargando datos de ejemplo para desarrollo...');
-        this.loadMockData();
+        // En caso de error
+        console.log('Error al cargar datos del backend');
+        this.planCuentas = [];
       }
     });
-  }
-
-  private loadMockData(): void {
-    console.log('📝 Cargando datos mock desde servicio centralizado');
-
-    const mockData = getMockPlanCuentas();
-
-    setTimeout(() => {
-      this.planCuentas = mockData;
-      this.totalRegistros.set(mockData.length);
-      console.log('🔄 Datos asignados, construyendo árbol...');
-      this.setDefaultSort();
-      this.buildTree();
-      this.applyFiltersAndPagination();
-      this.error.set('Usando datos de ejemplo - Backend no disponible');
-      this.loading.set(false);
-    }, 300);
   }
 
   private loadNaturalezas(): void {
@@ -326,7 +300,7 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
 
   private loadMockNaturalezas(): void {
     console.log('📝 Cargando naturalezas mock desde servicio centralizado');
-    this.naturalezas = getMockNaturalezas();
+    this.naturalezas = [];
   }
 
   private buildTree(): void {

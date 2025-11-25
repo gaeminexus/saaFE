@@ -244,6 +244,11 @@ export class PeriodoContableComponent implements OnInit {
       empresa: { codigo: 280, nombre: 'GAEMI NEXUS' } // Forzar empresa 280
     };
 
+    // Eliminar codigo si es nuevo registro (el backend lo genera)
+    if (this.isNewRecord && formValue.codigo === 0) {
+      delete formValue.codigo;
+    }
+
     // Generar nombre automático si no se especifica
     if (!formValue.nombre) {
       const nombreMes = this.mesesDisponibles.find(m => m.valor === formValue.mes)?.nombre || '';

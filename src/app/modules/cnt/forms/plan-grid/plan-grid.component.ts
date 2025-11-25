@@ -27,7 +27,6 @@ import { PlanArbolFormComponent } from '../plan-arbol/plan-arbol-form.component'
 import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
-import { getMockPlanCuentas, getMockNaturalezas } from '../../../../shared/mocks/plan-cuenta.mock';
 
 @Component({
   selector: 'app-plan-grid',
@@ -196,8 +195,7 @@ export class PlanGridComponent implements OnInit, AfterViewInit {
       error: (err) => {
         console.error('❌ PlanGrid getAll error:', err);
         this.handleLoadError(err);
-        console.log('📝 PlanGrid: cargando datos mock por error en backend');
-        this.loadMockData();
+        this.planCuentas = [];
         this.loading.set(false);
       }
     });
@@ -207,15 +205,6 @@ export class PlanGridComponent implements OnInit, AfterViewInit {
     // Ya no usamos fallback separado; loadData hace directamente getAll.
     // Este método se mantiene por compatibilidad de llamadas previas.
     this.loadData();
-  }
-
-  private loadMockData(): void {
-    console.log('📝 Cargando datos mock desde servicio centralizado');
-    const mockData = getMockPlanCuentas();
-    this.planCuentas = mockData;
-    this.totalRegistros.set(mockData.length);
-    this.updateDataSource();
-    this.error.set('Usando datos de ejemplo - Backend no disponible');
   }
 
   private loadNaturalezas(): void {
@@ -246,17 +235,13 @@ export class PlanGridComponent implements OnInit, AfterViewInit {
     this.naturalezaCuentaService.getAll().subscribe({
       next: (data) => {
         const list = Array.isArray(data) ? data : (data as any)?.data ?? [];
-        this.naturalezas = list.length > 0 ? list : this.getMockNaturalezas();
+        this.naturalezas = list;
       },
-      error: (err) => {
-        console.error('❌ Error al cargar naturalezas (fallback):', err);
-        this.naturalezas = this.getMockNaturalezas();
+      error: (error) => {
+        console.error('Error al cargar naturalezas:', error);
+        this.naturalezas = [];
       }
     });
-  }
-
-  private getMockNaturalezas(): NaturalezaCuenta[] {
-    return getMockNaturalezas();
   }
 
   private handleLoadError(err: any): void {
