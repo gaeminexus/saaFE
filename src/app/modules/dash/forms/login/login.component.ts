@@ -1,10 +1,3 @@
-import { CargaArchivoService } from './../../../crd/service/carga-archivo.service';
-import { ServiciosAsoprep } from './../../../asoprep/service/ws-asgn';
-import { EstadoCivil } from './../../../crd/model/estado-civil';
-import { FileService } from './../../../../shared/services/file.service';
-import { AporteService } from './../../../crd/service/aporte.service';
-import { PrestamoService } from './../../../crd/service/prestamo.service';
-import { EntidadService } from './../../../crd/service/entidad.service';
 import { Component, AfterViewInit, OnDestroy, ElementRef, ViewChild, NgZone, Inject, PLATFORM_ID } from '@angular/core';
 import { AppConfig } from '../../../../app.config';
 import { DatePipe, isPlatformBrowser } from '@angular/common';
@@ -14,18 +7,15 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
 import { UsuarioService } from '../../../../shared/services/usuario.service';
+import { AppStateService } from '../../../../shared/services/app-state.service';
 import { NaturalezaCuentaService } from '../../../cnt/service/naturaleza-cuenta.service';
 import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
-import { Usuario } from '../../../../shared/model/usuario';
-import { Empresa } from '../../../../shared/model/empresa';
-import { DetallePrestamoService } from '../../../crd/service/detalle-prestamo.service';
-import { EstadoCivilService } from '../../../crd/service/estado-civil.service';
+import { EntidadService } from '../../../crd/service/entidad.service';
 import { ServiciosAsoprepService } from '../../../asoprep/service/servicios-asoprep.service';
 
 // Importa tu AuthService según tu estructura
-const FORMATO_FECHA_JAVA = 'yyyy-MM-dd HH:mm';
 const EMPRESA = 1236;
 
 @Component({
@@ -78,13 +68,9 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
   constructor(
     private ngZone: NgZone,
     private usuarioService: UsuarioService,
+    private appStateService: AppStateService,
     private naturalezaCuentaService: NaturalezaCuentaService,
-    private entidadService: EntidadService,
-    private estadoCivilService: EstadoCivilService,
-    private prestamoService: PrestamoService,
-    private serviciosAsoprep: ServiciosAsoprepService,
     private router: Router,
-    private snackBar: MatSnackBar,
     @Inject(PLATFORM_ID) private platformId: Object
   ) {}
 
@@ -124,21 +110,20 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
 
   ingresaSistema(): void {
     localStorage.setItem('logged', 'true');
-    this.usuarioService.getEmpresaById(EMPRESA).subscribe(result => {
-      let empresa = result as Empresa;
-      this.usuarioService.setEmpresaLog(empresa);
-      localStorage.setItem('empresa', JSON.stringify(empresa));
-      localStorage.setItem('empresaName', empresa.nombre);
-    });
+    localStorage.setItem('idSucursal', EMPRESA.toString());
 
-    this.usuarioService.getByNombre(this.username.toUpperCase()).subscribe(result => {
-      let usuarioLog = result as Usuario;
-      this.usuarioService.setUsuarioLog(usuarioLog);
-      localStorage.setItem('userName', this.username);
-      localStorage.setItem('usuario', JSON.stringify(usuarioLog));
-      localStorage.setItem('idSucursal', EMPRESA.toString());
-      localStorage.setItem('idUsuario', usuarioLog.codigo.toString());
-      this.router.navigate(['/menu']);
+    // Usar AppStateService para cargar datos globales
+    this.appStateService.inicializarApp(EMPRESA, this.username).subscribe({
+      next: (appData) => {
+        console.log('Datos globales cargados:', appData);
+        this.router.navigate(['/menu']);
+      },
+      error: (error) => {
+        console.error('Error al cargar datos globales:', error);
+        this.loginMessage = 'Error al cargar datos del sistema';
+        this.loginMessageType = 'error';
+        this.isLoading = false;
+      }
     });
   }
 
@@ -266,11 +251,11 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
     this.criterioConsulta.orderBy('codigo');
     this.criterioConsultaArray.push(this.criterioConsulta);
 
-    this.serviciosAsoprep.selectByCriteria(this.criterioConsultaArray).subscribe({
-      next: (data) => {
+    this.naturalezaCuentaService.selectByCriteria(this.criterioConsultaArray).subscribe({
+      next: (data: any) => {
         console.log('Datos de NaturalezaCuenta:', data);
       },
-      error: (error) => {
+      error: (error: any) => {
         console.error('Error al obtener NaturalezaCuenta:', error);
       }
     });
@@ -284,11 +269,11 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
       }
     });*/
 
-    this.entidadService.getById('4851').subscribe({
-      next: (data) => {
+    this.naturalezaCuentaService.getById('4851').subscribe({
+      next: (data: any) => {
         console.log('GetById - Registro específico:', data);
       },
-      error: (error) => {
+      error: (error: any) => {
         console.error('Error al obtener NaturalezaCuenta:', error);
       }
     });

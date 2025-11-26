@@ -9,13 +9,15 @@ import { FooterComponent } from './shared/footer/footer.component';
   standalone: true,
   imports: [CommonModule, RouterOutlet, HeaderComponent, FooterComponent],
   template: `
-    <ng-container *ngIf="!isLoginPage()">
+    @if (!isLoginPage()) {
       <app-header [screenTitle]="getScreenTitle()"></app-header>
-    </ng-container>
+    }
+
     <router-outlet></router-outlet>
-    <ng-container *ngIf="!isLoginPage()">
+
+    @if (!isLoginPage()) {
       <app-footer></app-footer>
-    </ng-container>
+    }
   `,
 })
 export class App {

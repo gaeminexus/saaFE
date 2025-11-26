@@ -22,4 +22,10 @@ export interface CargaArchivo {
     totalInteresNoDescontado: number;   // Total Interés No Descontado
     totalDesgravamenNoDescontado: number; // Total Desgravamen No Descontado
     estado: number;                     // Estado del registro
+    numeroTransferencia: number;        // Número de Transferencia
+    usuarioContabilidadConfirma: Usuario; // Usuario Contabilidad que Confirma
+    fechaAutorizacionContabilidad: string; // Fecha de Autorización Contabilidad (Timestamp)
+    usuarioAnulacion: Usuario;          // Usuario de Anulación
+    motivoAnulacion: string;            // Motivo de Anulación
+    fechaAnulacion: string;             // Fecha de Anulación (Timestamp)
 }

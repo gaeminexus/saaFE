@@ -6,6 +6,7 @@ import { CommonModule } from '@angular/common';
 
 import { MaterialFormModule } from '../modules/material-form.module';
 import { UsuarioService } from '../services/usuario.service';
+import { AppStateService } from '../services/app-state.service';
 import { LoadingService } from '../services/loading.service';
 
 @Component({
@@ -33,6 +34,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
   constructor(
     private router: Router,
     private usuarioService: UsuarioService,
+    private appStateService: AppStateService,
     private snackBar: MatSnackBar,
     private loadingService: LoadingService,
     private cdr: ChangeDetectorRef
@@ -83,8 +85,11 @@ export class HeaderComponent implements OnInit, OnDestroy {
   }
 
   onSalir() {
-    // Limpiar sesión antes de redirigir al login
+    // Limpiar TODA la sesión (localStorage, caché de rubros, estado global)
+    this.appStateService.limpiarDatos();
     this.usuarioService.clearSession();
+
+    console.log('HeaderComponent: Logout completo - redirigiendo a login');
     this.router.navigate(['/login']);
   }
 
