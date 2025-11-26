@@ -124,8 +124,19 @@ export class UsuarioService {
     this.usuarioLog = null as any;
     this.empresaLog = null as any;
     this.usuarios = [];
+
+    // Limpiar TODOS los datos de sesión (crítico para authGuard)
+    localStorage.removeItem('logged');  // ← Crítico: permite que authGuard bloquee acceso
     localStorage.removeItem('usuarioLog');
     localStorage.removeItem('empresaLog');
+    localStorage.removeItem('empresa');
+    localStorage.removeItem('empresaName');
+    localStorage.removeItem('usuario');
+    localStorage.removeItem('userName');
+    localStorage.removeItem('idUsuario');
+    localStorage.removeItem('token');
+
+    console.log('UsuarioService: Sesión limpiada completamente');
   }
 
   // tslint:disable-next-line: typedef

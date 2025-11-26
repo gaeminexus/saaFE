@@ -1,6 +1,6 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Injectable } from '@angular/core';
-import { Observable, catchError, of, throwError } from 'rxjs';
+import { Injectable, signal, computed } from '@angular/core';
+import { Observable, catchError, of, throwError, tap } from 'rxjs';
 import { DetalleRubro } from '../model/detalle-rubro';
 import { ServiciosShare } from './ws-share';
 
@@ -8,13 +8,42 @@ import { ServiciosShare } from './ws-share';
   providedIn: 'root'
 })
 export class DetalleRubroService {
+  // Signal para datos reactivos
+  private detallesSignal = signal<DetalleRubro[]>([]);
+  private cargaCompletada = signal<boolean>(false);
+  
+  // Computed para verificar si hay datos
+  private hayDatos = computed(() => this.detallesSignal().length > 0);
 
-  private detalleRub!: DetalleRubro[];
+  constructor(private http: HttpClient) {}
 
-  constructor(
-    private http: HttpClient
-  ) { }
+  /**
+   * Inicializa los detalles de rubro (llamar desde AppStateService)
+   * Solo carga una vez, luego usa caché
+   */
+  inicializar(): Observable<DetalleRubro[]> {
+    // Si ya están cargados, retornar inmediatamente
+    if (this.cargaCompletada()) {
+      console.log('DetalleRubroService: Usando datos en caché');
+      return of(this.detallesSignal());
+    }
 
+    console.log('DetalleRubroService: Cargando datos desde backend...');
+    const url = `${ServiciosShare.RS_PDTR}/getAll`;
+    
+    return this.http.get<DetalleRubro[]>(url).pipe(
+      tap(detalles => {
+        this.detallesSignal.set(detalles || []);
+        this.cargaCompletada.set(true);
+        console.log(`DetalleRubroService: ${detalles?.length || 0} registros cargados`);
+      }),
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * @deprecated Usar inicializar() desde AppStateService en login
+   */
   getAll(): Observable<DetalleRubro[] | null> {
     const wsGetById = '/getAll';
     const url = `${ServiciosShare.RS_PDTR}${wsGetById}`;
@@ -23,6 +52,10 @@ export class DetalleRubroService {
     );
   }
 
+  /**
+   * Obtiene detalles de un rubro específico desde el backend
+   * (Útil para refrescar datos de un rubro sin recargar todos)
+   */
   getRubros(idRubro: number): Observable<DetalleRubro[] | null> {
     const wsGetById = '/getRubros/' + idRubro;
     const url = `${ServiciosShare.RS_PDTR}${wsGetById}`;
@@ -31,53 +64,85 @@ export class DetalleRubroService {
     );
   }
 
+  /**
+   * @deprecated Usar inicializar() en AppStateService. Mantenido por compatibilidad.
+   */
   setDetalles(detalle: DetalleRubro[]): void {
-    this.detalleRub = detalle;
+    this.detallesSignal.set(detalle || []);
+    this.cargaCompletada.set(true);
   }
 
+  /**
+   * Obtiene todos los detalles (síncrono, usa caché)
+   */
   getDetalles(): DetalleRubro[] {
-    return this.detalleRub;
+    if (!this.hayDatos()) {
+      console.warn('DetalleRubroService: Datos no cargados. Llama a inicializar() primero.');
+      return [];
+    }
+    return this.detallesSignal();
   }
 
-  getDetallesByParent(idPadre: number): any {
-    return this.detalleRub.filter(this.filtraRubros(idPadre));
+  /**
+   * Filtra detalles por ID de rubro padre
+   */
+  getDetallesByParent(idPadre: number): DetalleRubro[] {
+    return this.detallesSignal().filter(
+      detalle => detalle.rubro.codigoAlterno === idPadre
+    );
   }
 
+  /**
+   * Obtiene descripción por padre y código alterno
+   */
   getDescripcionByParentAndAlterno(idPadre: number, alterno: number): string {
-    let result = '';
-    this.getDetallesByParent(idPadre).forEach((res: { codigoAlterno: number; descripcion: string; }) => {
-      if (alterno === res.codigoAlterno) {
-        result = res.descripcion;
-      }
-    });
-    return result;
+    const detalle = this.detallesSignal().find(
+      d => d.rubro.codigoAlterno === idPadre && d.codigoAlterno === alterno
+    );
+    return detalle?.descripcion || '';
   }
 
+  /**
+   * Obtiene valor numérico por padre y código alterno
+   */
   getNumeroByParentAndAlterno(idPadre: number, alterno: number): number {
-    let result = 0;
-    this.getDetallesByParent(idPadre).forEach((res: { codigoAlterno: number; valorNumerico: number; }) => {
-      if (alterno === res.codigoAlterno) {
-        result = res.valorNumerico;
-      }
-    });
-    return result;
+    const detalle = this.detallesSignal().find(
+      d => d.rubro.codigoAlterno === idPadre && d.codigoAlterno === alterno
+    );
+    return detalle?.valorNumerico || 0;
   }
 
+  /**
+   * Verifica si los datos están cargados
+   */
+  estanDatosCargados(): boolean {
+    return this.cargaCompletada();
+  }
+
+  /**
+   * Limpia la caché (útil para logout o refresh forzado)
+   */
+  limpiarCache(): void {
+    this.detallesSignal.set([]);
+    this.cargaCompletada.set(false);
+    console.log('DetalleRubroService: Caché limpiada');
+  }
+
+  /**
+   * @deprecated Método interno, usar filtrado directo
+   */
   filtraRubros(idPadre: number): any {
-    // tslint:disable-next-line: only-arrow-functions
     return function (element: any): any {
       return (element.rubro.codigoAlterno === idPadre);
     };
   }
 
-  // tslint:disable-next-line: typedef
   private handleError(error: HttpErrorResponse) {
     if (+error.status === 200) {
-      return of(null);
-    } else {
-      return throwError(
-        error.error);
+      return of([]);
     }
+    console.error('DetalleRubroService: Error HTTP', error);
+    return throwError(() => error.error);
   }
 
 }

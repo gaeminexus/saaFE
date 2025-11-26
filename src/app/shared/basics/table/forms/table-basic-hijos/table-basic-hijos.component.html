@@ -104,57 +104,59 @@
       </ng-container>
 
       <!-- Columnas de datos -->
-      <ng-container *ngFor="let reg of fields; let j=index;" matColumnDef="{{reg.column}}">
-        @if (reg.fSort) {
-          <th mat-header-cell
-              *matHeaderCellDef
-              [ngClass]="darFormatoHeader(reg, configTable.fSize || '')"
-              mat-sort-header
-              class="saa-header-cell sortable-header">
-            <div class="header-content">
-              <span class="field-header-text">{{ reg.header }}</span>
-            </div>
-          </th>
-          <td mat-cell
-              [ngClass]="darFormatoColumn(reg, configTable.fSize || '')"
-              *matCellDef="let row"
-              class="saa-data-cell">
-            <div class="cell-content">{{ procesaCampo(row, reg) }}</div>
-          </td>
-          <td mat-footer-cell
-              [ngClass]="darFormatoColumn(reg, configTable.fSize || '')"
-              *matFooterCellDef
-              class="saa-footer-cell">
-            <div class="footer-content">
-              <strong>{{ darFormatoFooterCell(reg, j) }}</strong>
-            </div>
-          </td>
-        }
-        @if (!reg.fSort) {
-          <th mat-header-cell
-              *matHeaderCellDef
-              [ngClass]="darFormatoHeader(reg, configTable.fSize || '')"
-              class="saa-header-cell">
-            <div class="header-content">
-              <span class="field-header-text">{{ reg.header }}</span>
-            </div>
-          </th>
-          <td mat-cell
-              [ngClass]="darFormatoColumn(reg, configTable.fSize || '')"
-              *matCellDef="let row"
-              class="saa-data-cell">
-            <div class="cell-content">{{ procesaCampo(row, reg) }}</div>
-          </td>
-          <td mat-footer-cell
-              [ngClass]="darFormatoColumn(reg, configTable.fSize || '')"
-              *matFooterCellDef
-              class="saa-footer-cell">
-            <div class="footer-content">
-              <strong>{{ darFormatoFooterCell(reg, j) }}</strong>
-            </div>
-          </td>
-        }
-      </ng-container>
+      @for (reg of fields; track reg.column; let j = $index) {
+        <ng-container matColumnDef="{{reg.column}}">
+          @if (reg.fSort) {
+            <th mat-header-cell
+                *matHeaderCellDef
+                [ngClass]="darFormatoHeader(reg, configTable.fSize || '')"
+                mat-sort-header
+                class="saa-header-cell sortable-header">
+              <div class="header-content">
+                <span class="field-header-text">{{ reg.header }}</span>
+              </div>
+            </th>
+            <td mat-cell
+                [ngClass]="darFormatoColumn(reg, configTable.fSize || '')"
+                *matCellDef="let row"
+                class="saa-data-cell">
+              <div class="cell-content">{{ procesaCampo(row, reg) }}</div>
+            </td>
+            <td mat-footer-cell
+                [ngClass]="darFormatoColumn(reg, configTable.fSize || '')"
+                *matFooterCellDef
+                class="saa-footer-cell">
+              <div class="footer-content">
+                <strong>{{ darFormatoFooterCell(reg, j) }}</strong>
+              </div>
+            </td>
+          }
+          @if (!reg.fSort) {
+            <th mat-header-cell
+                *matHeaderCellDef
+                [ngClass]="darFormatoHeader(reg, configTable.fSize || '')"
+                class="saa-header-cell">
+              <div class="header-content">
+                <span class="field-header-text">{{ reg.header }}</span>
+              </div>
+            </th>
+            <td mat-cell
+                [ngClass]="darFormatoColumn(reg, configTable.fSize || '')"
+                *matCellDef="let row"
+                class="saa-data-cell">
+              <div class="cell-content">{{ procesaCampo(row, reg) }}</div>
+            </td>
+            <td mat-footer-cell
+                [ngClass]="darFormatoColumn(reg, configTable.fSize || '')"
+                *matFooterCellDef
+                class="saa-footer-cell">
+              <div class="footer-content">
+                <strong>{{ darFormatoFooterCell(reg, j) }}</strong>
+              </div>
+            </td>
+          }
+        </ng-container>
+      }
 
 
 

@@ -1,12 +1,12 @@
 export interface AutocompleteOption {
   codigo?: string | number;
-  codigoAlterno?: string;
+  codigoAlterno?: string | number;  // ← Acepta number para rubros
   [key: string]: any;
 }
 
 export interface AutocompleteCollection {
   codigo?: string | number;
-  codigoAlterno?: string;
+  codigoAlterno?: string | number;  // ← Acepta number para rubros
   [key: string]: any;
 }
 

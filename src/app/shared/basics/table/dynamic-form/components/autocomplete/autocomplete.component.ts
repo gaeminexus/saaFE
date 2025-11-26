@@ -40,19 +40,24 @@ export class AutocompleteComponent implements OnInit, DynamicFormComponent {
 
   constructor(
     private messageVarService: MessageVarService,
-    public detalleRubroService: DetalleRubroService,
+    private detalleRubroService: DetalleRubroService
   ) { }
 
   ngOnInit(): void {
-
-    // CARGA COLLECCION EN CASO DE SER RUBRO
+    // CARGA COLLECCION EN CASO DE SER RUBRO (acceso síncrono desde caché)
     if (this.field.rubroAlterno) {
       this.field.collections = this.detalleRubroService.getDetallesByParent(Number(this.field.rubroAlterno));
+
+      // Verificar si los datos están cargados
+      if (this.field.collections.length === 0 && !this.detalleRubroService.estanDatosCargados()) {
+        console.warn('AutocompleteComponent: Rubros no cargados aún. Asegúrate de llamar AppStateService.inicializarApp() en el login.');
+      }
     }
 
     if (this.field.autocompleteType === 1) {
       if (this.accion === AccionesGrid.EDIT) {
         if (this.field.rubroAlterno) {
+          // Acceso síncrono optimizado
           this.myControl.setValue(
             this.detalleRubroService.getDescripcionByParentAndAlterno(Number(this.field.rubroAlterno), this.field.value));
         } else {

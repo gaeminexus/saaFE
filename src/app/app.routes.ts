@@ -1,4 +1,6 @@
 import { Routes } from '@angular/router';
+import { authGuard } from './shared/guard/auth.guard';
+import { canDeactivateGuard } from './shared/guard/can-deactivate.guard';
 import { LoginComponent } from './modules/dash/forms/login/login.component';
 import { MenuComponent } from './modules/dash/menu/menu.component';
 import { MenuContabilidadComponent } from './modules/cnt/menu/menucontabilidad/menucontabilidad.component';
@@ -45,38 +47,112 @@ import { DetalleConsultaCargaComponent } from './modules/crd/forms/archivos-petr
 
 export const routes: Routes = [
     { path: '', component: LoginComponent },
-    { path: 'menu', component: MenuComponent },
+    { path: 'login', component: LoginComponent },
+    {
+      path: 'menu',
+      component: MenuComponent,
+      canActivate: [authGuard]
+    },
     {
         path: 'menucontabilidad',
         component: MenuContabilidadComponent,
+        canActivate: [authGuard],
         children: [
-            { path: 'naturaleza-cuentas', component: NaturalezaDeCuentasComponent },
+            {
+              path: 'naturaleza-cuentas',
+              component: NaturalezaDeCuentasComponent,
+              canDeactivate: [canDeactivateGuard]
+            },
             {
                 path: 'naturaleza-cuentas1',
                 component: NaturalezaCuentaComponent,
+                canDeactivate: [canDeactivateGuard],
                 resolve: {
                     naturalezaCuentas: NaturalezaCuentaResolverService
                 }
             },
-            { path: 'plan-cuentas', component: PlanArbolComponent },
-            { path: 'plan-grid', component: PlanGridComponent },
-            { path: 'centro-costos/arbol', component: CentroArbolComponent },
-            { path: 'centro-costos/grid', component: CentroGridComponent },
-            { path: 'tipos-asientos/general', component: TipoAsientoGeneralGridComponent },
-            { path: 'tipos-asientos/sistema', component: TipoAsientoSistemaGridComponent },
-            { path: 'plantillas/general', component: PlantillaGeneralComponent },
-            { path: 'plantillas/sistema', component: PlantillaSistemaComponent },
-            { path: 'periodo-contable', component: PeriodoContableComponent },
-            { path: 'periodos', component: PeriodosComponent },
-            { path: 'asientos', component: AsientosComponent },
-            { path: 'mayorizacion-proceso', component: MayorizacionProcesoComponent },
+            {
+              path: 'plan-cuentas',
+              component: PlanArbolComponent,
+              canDeactivate: [canDeactivateGuard]
+            },
+            {
+              path: 'plan-grid',
+              component: PlanGridComponent,
+              canDeactivate: [canDeactivateGuard]
+            },
+            {
+              path: 'centro-costos/arbol',
+              component: CentroArbolComponent,
+              canDeactivate: [canDeactivateGuard]
+            },
+            {
+              path: 'centro-costos/grid',
+              component: CentroGridComponent,
+              canDeactivate: [canDeactivateGuard]
+            },
+            {
+              path: 'tipos-asientos/general',
+              component: TipoAsientoGeneralGridComponent,
+              canDeactivate: [canDeactivateGuard]
+            },
+            {
+              path: 'tipos-asientos/sistema',
+              component: TipoAsientoSistemaGridComponent,
+              canDeactivate: [canDeactivateGuard]
+            },
+            {
+              path: 'plantillas/general',
+              component: PlantillaGeneralComponent,
+              canDeactivate: [canDeactivateGuard]
+            },
+            {
+              path: 'plantillas/sistema',
+              component: PlantillaSistemaComponent,
+              canDeactivate: [canDeactivateGuard]
+            },
+            {
+              path: 'periodo-contable',
+              component: PeriodoContableComponent,
+              canDeactivate: [canDeactivateGuard]
+            },
+            {
+              path: 'periodos',
+              component: PeriodosComponent,
+              canDeactivate: [canDeactivateGuard]
+            },
+            {
+              path: 'asientos',
+              component: AsientosComponent,
+              canDeactivate: [canDeactivateGuard]
+            },
+            {
+              path: 'mayorizacion-proceso',
+              component: MayorizacionProcesoComponent,
+              canDeactivate: [canDeactivateGuard]
+            },
             // Puedes agregar más rutas hijas aquí
         ]
     },
-    { path: 'menutesoreria', component: MenutesoreriaComponent },
-    { path: 'menucuentasxcobrar', component: MenucuentasxcobrarComponent },
-    { path: 'menucuentaxpagar', component: MenucuentaxpagarComponent },
-    { path: 'menucreditos', component: MenucreditosComponent,
+    {
+      path: 'menutesoreria',
+      component: MenutesoreriaComponent,
+      canActivate: [authGuard]
+    },
+    {
+      path: 'menucuentasxcobrar',
+      component: MenucuentasxcobrarComponent,
+      canActivate: [authGuard]
+    },
+    {
+      path: 'menucuentaxpagar',
+      component: MenucuentaxpagarComponent,
+      canActivate: [authGuard]
+    },
+    {
+      path: 'menucreditos',
+      component: MenucreditosComponent,
+      canActivate: [authGuard],
       children: [
         { path: 'parametrizacion', component: ParametrizacionCreditosComponent },
         { path: 'extr', component: ExtersComponent },
@@ -84,15 +160,46 @@ export const routes: Routes = [
         { path: 'navegacion-cascada', component: NavegacionCascadaComponent },
         { path: 'participe-dash', component: ParticipeDashComponent },
         { path: 'participe-info', component: ParticipeInfoComponent },
-        { path: 'entidad-edit', component: EntidadEditComponent, resolve: { data: entidadEditResolver } },
+        {
+          path: 'entidad-edit',
+          component: EntidadEditComponent,
+          canDeactivate: [canDeactivateGuard],
+          resolve: { data: entidadEditResolver }
+        },
         { path: 'entidad-consulta', component: EntidadConsultaComponent },
-        { path: 'carga-aportes', component: CargaAportesComponent },
-        { path: 'consulta-archivos-petro', component: ConsultaArchivosPetroComponent, resolve: { cargas: ConsultaCargaArchivoResolverService } },
-        { path: 'detalle-consulta-carga/:id', component: DetalleConsultaCargaComponent },
+        {
+          path: 'carga-aportes',
+          component: CargaAportesComponent,
+          canDeactivate: [canDeactivateGuard]
+        },
+        {
+          path: 'consulta-archivos-petro',
+          component: ConsultaArchivosPetroComponent,
+          resolve: { cargas: ConsultaCargaArchivoResolverService }
+        },
+        {
+          path: 'detalle-consulta-carga/:id',
+          component: DetalleConsultaCargaComponent
+        },
         { path: 'entidad-participe-info', component: EntidadParticipeInfoComponent },
-        { path: 'estadosCrd', component: EstadosCrdComponent, resolve: { estados: EstadosResolverService } },
-        { path: 'tiposCrd', component: TiposCrdComponent, resolve: { tipos: TiposCrdResolverService } },
-        { path: 'listadosCrd', component: ListadosCrdComponent, resolve: { listados: ListadosCrdResolverService } },
+        {
+          path: 'estadosCrd',
+          component: EstadosCrdComponent,
+          canDeactivate: [canDeactivateGuard],
+          resolve: { estados: EstadosResolverService }
+        },
+        {
+          path: 'tiposCrd',
+          component: TiposCrdComponent,
+          canDeactivate: [canDeactivateGuard],
+          resolve: { tipos: TiposCrdResolverService }
+        },
+        {
+          path: 'listadosCrd',
+          component: ListadosCrdComponent,
+          canDeactivate: [canDeactivateGuard],
+          resolve: { listados: ListadosCrdResolverService }
+        },
       ]
     },
     { path: '**', redirectTo: '' }
