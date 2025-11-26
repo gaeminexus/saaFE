@@ -7,8 +7,8 @@ import { MenuContabilidadComponent } from './modules/cnt/menu/menucontabilidad/m
 import { MenutesoreriaComponent } from './modules/tsr/menu/menutesoreria/menutesoreria.component';
 import { MenucuentasxcobrarComponent } from './modules/cxc/menu/menucuentasxcobrar/menucuentasxcobrar.component';
 import { MenucuentaxpagarComponent } from './modules/cxp/menu/menucuentasxpagar/menucuentasxpagar.component';
-import { NaturalezaDeCuentasComponent } from './modules/cnt/forms/naturaleza-cuentas/naturaleza-cuentas.component';
-
+import { NaturalezaDeCuentasComponent } from './modules/cnt/forms/naturalezadecuentas/naturalezadecuentas.component';
+import { NaturalezaCuentaComponent } from './modules/cnt/forms/naturaleza-cuenta/naturaleza-cuenta.component';
 import { NaturalezaCuentaResolverService } from './modules/cnt/resolver/naturaleza-cuenta-resolver.service';
 import { PlanArbolComponent } from './modules/cnt/forms/plan-arbol/plan-arbol.component';
 import { PlanGridComponent } from './modules/cnt/forms/plan-grid/plan-grid.component';
@@ -23,6 +23,10 @@ import { PeriodosComponent } from './modules/cnt/forms/periodos/periodos.compone
 import { AsientosComponent } from './modules/cnt/forms/asientos/asientos.component';
 import { MayorizacionProcesoComponent } from './modules/cnt/forms/mayorizacion-proceso/mayorizacion-proceso.component';
 import { MenucreditosComponent } from './modules/crd/menucreditos/menucreditos.component';
+import { ContratoDashComponent } from './modules/crd/forms/contrato/contrato-dash/contrato-dash.component';
+import { AportesDashComponent } from './modules/crd/forms/contrato/aportes-dash/aportes-dash.component';
+import { ContratoConsultaComponent } from './modules/crd/forms/contrato/contrato-consulta/contrato-consulta.component';
+import { ContratoEditComponent } from './modules/crd/forms/contrato/contrato-edit/contrato-edit.component';
 import { ParametrizacionCreditosComponent } from './modules/crd/menucreditos/parametrizacion-creditos.component';
 // Reemplazamos placeholder EXTR por componente grid paginado
 import { ExtersComponent } from './modules/crd/forms/exters/exters.component';
@@ -65,7 +69,8 @@ export const routes: Routes = [
             },
             {
                 path: 'naturaleza-cuentas1',
-                component: NaturalezaDeCuentasComponent,
+                component: NaturalezaCuentaComponent,
+                canDeactivate: [canDeactivateGuard],
                 resolve: {
                     naturalezaCuentas: NaturalezaCuentaResolverService
                 }
@@ -198,6 +203,34 @@ export const routes: Routes = [
           component: ListadosCrdComponent,
           canDeactivate: [canDeactivateGuard],
           resolve: { listados: ListadosCrdResolverService }
+        },
+        // Rutas de Contratos
+        {
+          path: 'contrato-dash',
+          component: ContratoDashComponent,
+          canActivate: [authGuard]
+        },
+        {
+          path: 'aportes-dash/:codigoEntidad',
+          component: AportesDashComponent,
+          canActivate: [authGuard]
+        },
+        {
+          path: 'contrato-consulta',
+          component: ContratoConsultaComponent,
+          canActivate: [authGuard]
+        },
+        {
+          path: 'contrato-edit',
+          component: ContratoEditComponent,
+          canActivate: [authGuard],
+          canDeactivate: [canDeactivateGuard]
+        },
+        {
+          path: 'contrato-edit/:id',
+          component: ContratoEditComponent,
+          canActivate: [authGuard],
+          canDeactivate: [canDeactivateGuard]
         },
       ]
     },
