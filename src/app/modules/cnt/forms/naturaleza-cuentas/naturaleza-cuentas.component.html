@@ -1,0 +1,36 @@
+<div class="naturaleza-cuentas-container">
+  <!-- Header con título y acciones -->
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-icon">
+        <mat-icon>account_balance</mat-icon>
+      </div>
+      <div class="header-text">
+        <h1>Naturaleza de Cuentas</h1>
+        <p class="subtitle">Gestión de naturalezas contables para clasificación de cuentas</p>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <button mat-stroked-button (click)="exportToCSV()" [disabled]="loading || totalElements === 0">
+        <mat-icon>description</mat-icon>
+        CSV
+      </button>
+      <button mat-stroked-button (click)="exportToPDF()" [disabled]="loading || totalElements === 0">
+        <mat-icon>picture_as_pdf</mat-icon>
+        PDF
+      </button>
+      <button mat-icon-button (click)="loadData()" [disabled]="loading" matTooltip="Recargar">
+        <mat-icon>refresh</mat-icon>
+      </button>
+    </div>
+  </div>
+
+  <!-- Tabla dinámica -->
+  <div class="table-content">
+    <app-table-basic-hijos
+      *ngIf="tableConfig"
+      [configTable]="tableConfig">
+    </app-table-basic-hijos>
+  </div>
+</div>

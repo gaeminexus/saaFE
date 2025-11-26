@@ -9,7 +9,10 @@ import { DatosBusqueda } from '../../../shared/model/datos-busqueda/datos-busque
   providedIn: 'root'
 })
 export class PlanCuentaService {
-  private static readonly EMPRESA_CODIGO = 280;
+  // Obtener empresa desde localStorage
+  private get idSucursal(): number {
+    return parseInt(localStorage.getItem('idSucursal') || '280', 10);
+  }
 
   httpOptions = {
     headers: new HttpHeaders({ 'Content-Type': 'application/json' })
@@ -24,7 +27,7 @@ export class PlanCuentaService {
     const url = `${ServiciosCnt.RS_PLNN}${wsGetById}`;
     return this.http.get<PlanCuenta[]>(url).pipe(
       map((items: PlanCuenta[]) =>
-        (items || []).filter(p => p?.empresa?.codigo === PlanCuentaService.EMPRESA_CODIGO)
+        (items || []).filter(p => p?.empresa?.codigo === this.idSucursal)
       ),
       catchError(this.handleError)
     );
@@ -49,7 +52,7 @@ export class PlanCuentaService {
       estado: datos.estado,
       idPadre: datos.idPadre,
       naturalezaCuenta: datos.naturalezaCuenta,
-      empresa: { codigo: PlanCuentaService.EMPRESA_CODIGO },
+      empresa: { codigo: this.idSucursal },
       fechaUpdate: new Date()
     };
 
@@ -80,7 +83,7 @@ export class PlanCuentaService {
       estado: datos.estado,
       idPadre: datos.idPadre,
       naturalezaCuenta: datos.naturalezaCuenta,
-      empresa: { codigo: PlanCuentaService.EMPRESA_CODIGO },
+      empresa: { codigo: this.idSucursal },
       fechaUpdate: new Date()
     };
 
@@ -106,7 +109,7 @@ export class PlanCuentaService {
     
     return this.http.post<PlanCuenta[]>(url, criterios, this.httpOptions).pipe(
       map((items: PlanCuenta[]) =>
-        (items || []).filter(p => p?.empresa?.codigo === PlanCuentaService.EMPRESA_CODIGO)
+        (items || []).filter(p => p?.empresa?.codigo === this.idSucursal)
       ),
       catchError(this.handleError)
     );

@@ -35,8 +35,8 @@ import { TableBasicHijosComponent } from '../../../../shared/basics/table/forms/
     MatProgressSpinnerModule,
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
-  templateUrl: './naturalezadecuentas-form.component.html',
-  styleUrls: ['./naturalezadecuentas-form.component.scss'],
+  templateUrl: './naturaleza-cuentas-form.component.html',
+  styleUrls: ['./naturaleza-cuentas-form.component.scss'],
   encapsulation: ViewEncapsulation.None   // 👈 permite que el SCSS alcance el overlay
 })
 export class NaturalezaDeCuentasFormComponent implements OnInit {
@@ -94,6 +94,7 @@ export class NaturalezaDeCuentasFormComponent implements OnInit {
     this.error = null;
 
     const formValue = this.form.value;
+    const idSucursal = parseInt(localStorage.getItem('idSucursal') || '280', 10);
     const formData: any = {
       codigo: formValue.codigo ?? null,
       nombre: String(formValue.nombre).trim(),
@@ -101,7 +102,7 @@ export class NaturalezaDeCuentasFormComponent implements OnInit {
       numero: Number(formValue.numero),
       manejaCentroCosto: formValue.manejaCentroCosto ? 1 : 0,
       estado: Number(formValue.estado ?? 1),
-      empresa: { codigo: 280 }
+      empresa: { codigo: idSucursal }
     };
 
     const request = this.isEditMode

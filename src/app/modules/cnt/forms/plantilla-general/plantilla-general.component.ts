@@ -75,6 +75,7 @@ export class PlantillaGeneralComponent implements OnInit {
   loading = false;
   filterValue = '';
   mostrarBannerDemo = false;
+  idSucursal = 280; // ID de empresa GAEMI NEXUS
 
   // Enums
   EstadoPlantilla = EstadoPlantilla;
@@ -1269,11 +1270,11 @@ export class PlantillaGeneralComponent implements OnInit {
           this.abrirDialogoConPlanes(planesMock, detalleExistente);
         } else {
           console.log(`✅ Se cargaron ${planes.length} planes de cuenta del servidor`);
-          // Filtrar solo los planes de la empresa 280
+          // Filtrar solo los planes de la empresa dinámica
           const planesFiltrados = planes.filter(plan =>
-            plan.empresa && plan.empresa.codigo === 280
+            plan.empresa && plan.empresa.codigo === this.idSucursal
           );
-          console.log(`🔍 Planes filtrados para empresa 280: ${planesFiltrados.length}`);
+          console.log(`🔍 Planes filtrados para empresa ${this.idSucursal}: ${planesFiltrados.length}`);
 
           // Ordenar jerárquicamente como en plan-grid
           const planesOrdenados = this.ordenarPlanesCuentaJerarquicamente(planesFiltrados);

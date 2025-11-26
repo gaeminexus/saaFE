@@ -5,8 +5,8 @@ import { MenuContabilidadComponent } from './modules/cnt/menu/menucontabilidad/m
 import { MenutesoreriaComponent } from './modules/tsr/menu/menutesoreria/menutesoreria.component';
 import { MenucuentasxcobrarComponent } from './modules/cxc/menu/menucuentasxcobrar/menucuentasxcobrar.component';
 import { MenucuentaxpagarComponent } from './modules/cxp/menu/menucuentasxpagar/menucuentasxpagar.component';
-import { NaturalezaDeCuentasComponent } from './modules/cnt/forms/naturalezadecuentas/naturalezadecuentas.component';
-import { NaturalezaCuentaComponent } from './modules/cnt/forms/naturaleza-cuenta/naturaleza-cuenta.component';
+import { NaturalezaDeCuentasComponent } from './modules/cnt/forms/naturaleza-cuentas/naturaleza-cuentas.component';
+
 import { NaturalezaCuentaResolverService } from './modules/cnt/resolver/naturaleza-cuenta-resolver.service';
 import { PlanArbolComponent } from './modules/cnt/forms/plan-arbol/plan-arbol.component';
 import { PlanGridComponent } from './modules/cnt/forms/plan-grid/plan-grid.component';
@@ -53,7 +53,7 @@ export const routes: Routes = [
             { path: 'naturaleza-cuentas', component: NaturalezaDeCuentasComponent },
             {
                 path: 'naturaleza-cuentas1',
-                component: NaturalezaCuentaComponent,
+                component: NaturalezaDeCuentasComponent,
                 resolve: {
                     naturalezaCuentas: NaturalezaCuentaResolverService
                 }

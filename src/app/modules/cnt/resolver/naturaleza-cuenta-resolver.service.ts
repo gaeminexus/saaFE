@@ -18,12 +18,15 @@ export class NaturalezaCuentaResolverService implements Resolve<any>  {
 
   resolve(route: ActivatedRouteSnapshot, state: RouterStateSnapshot): Observable<any> {
 
-    // Crear criterios de búsqueda para empresa 280
+    // Obtener empresa desde localStorage
+    const idSucursal = parseInt(localStorage.getItem('idSucursal') || '280', 10);
+
+    // Crear criterios de búsqueda para empresa dinámica
     const criterioConsultaArray: Array<DatosBusqueda> = [];
 
-    // Filtro por empresa (código 280)
+    // Filtro por empresa desde localStorage
     const criterioEmpresa = new DatosBusqueda();
-    criterioEmpresa.asignaValorConCampoPadre(TipoDatosBusqueda.LONG, 'empresa', 'codigo', '280', TipoComandosBusqueda.IGUAL);
+    criterioEmpresa.asignaValorConCampoPadre(TipoDatosBusqueda.LONG, 'empresa', 'codigo', String(idSucursal), TipoComandosBusqueda.IGUAL);
     criterioConsultaArray.push(criterioEmpresa);
 
     // Priorizar selectByCriteria con filtro de empresa, con fallback a getAll
@@ -32,9 +35,9 @@ export class NaturalezaCuentaResolverService implements Resolve<any>  {
         console.warn('selectByCriteria con empresa falló, intentando getAll como fallback:', err);
         return this.naturalezaCuentaService.getAll().pipe(
           map(result => {
-            // Filtrar por empresa 280 en frontend
+            // Filtrar por empresa desde localStorage
             const list = Array.isArray(result) ? result : (result as any)?.data ?? [];
-            return list.filter((nat: any) => nat?.empresa?.codigo === 280);
+            return list.filter((nat: any) => nat?.empresa?.codigo === idSucursal);
           })
         );
       }),
