@@ -65,7 +65,7 @@ export const routes: Routes = [
             },
             {
                 path: 'naturaleza-cuentas1',
-                component: NaturalezaCuentaComponent,
+                component: NaturalezaDeCuentasComponent,
                 resolve: {
                     naturalezaCuentas: NaturalezaCuentaResolverService
                 }
