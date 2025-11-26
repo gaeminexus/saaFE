@@ -1,0 +1,177 @@
+<div #dashContainer class="aportes-dash-container">
+  <!-- Header con Info de Entidad -->
+  <div class="header-section">
+    <button mat-icon-button (click)="volver()" class="back-btn" matTooltip="Volver">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+    <div class="header-content">
+      <h1>
+        <mat-icon>account_balance_wallet</mat-icon>
+        Dashboard de Aportes
+      </h1>
+      @if (entidad()) {
+        <p class="subtitle">
+          <strong>{{ entidad()?.razonSocial }}</strong> (Código: {{ entidad()?.codigo }})
+        </p>
+      }
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="filters-section">
+    <h3><mat-icon>filter_list</mat-icon> Filtros</h3>
+    <form [formGroup]="filtrosForm" class="filters-form">
+      <mat-form-field appearance="outline">
+        <mat-label>Año</mat-label>
+        <mat-select formControlName="anio">
+          <mat-option [value]="null">Todos</mat-option>
+          @for (anio of anios; track anio) {
+            <mat-option [value]="anio">{{ anio }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Mes</mat-label>
+        <mat-select formControlName="mes">
+          <mat-option [value]="null">Todos</mat-option>
+          @for (mes of meses; track mes.value) {
+            <mat-option [value]="mes.value">{{ mes.nombre }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Tipo Aporte</mat-label>
+        <mat-select formControlName="tipoAporte">
+          <mat-option [value]="null">Todos</mat-option>
+          @for (tipo of tiposAporte(); track tipo.codigo) {
+            <mat-option [value]="tipo.codigo">{{ tipo.nombre }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <div class="filter-actions">
+        <button mat-raised-button color="primary" (click)="aplicarFiltros()" [disabled]="loading()">
+          <mat-icon>search</mat-icon> Aplicar
+        </button>
+        <button mat-stroked-button (click)="limpiarFiltros()" [disabled]="loading()">
+          <mat-icon>clear</mat-icon> Limpiar
+        </button>
+      </div>
+    </form>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-container">
+      <mat-spinner diameter="60"></mat-spinner>
+      <p>Cargando aportes...</p>
+    </div>
+  }
+
+  @if (error() && !loading()) {
+    <div class="error-container">
+      <mat-icon>error_outline</mat-icon>
+      <p>{{ error() }}</p>
+      <button mat-raised-button color="primary" (click)="cargarAportes()">
+        <mat-icon>refresh</mat-icon> Reintentar
+      </button>
+    </div>
+  }
+
+  @if (!loading() && !error()) {
+    <!-- Totales Generales -->
+    <div class="totals-section">
+      <mat-card class="total-card">
+        <mat-icon>receipt_long</mat-icon>
+        <div class="total-value">{{ totalAportes() }}</div>
+        <div class="total-label">Total Aportes</div>
+      </mat-card>
+      <mat-card class="total-card">
+        <mat-icon>payments</mat-icon>
+        <div class="total-value">{{ totalMonto() | currency }}</div>
+        <div class="total-label">Monto Total</div>
+      </mat-card>
+    </div>
+
+    <!-- Aportes por Tipo -->
+    <div class="tipos-section">
+      <h3><mat-icon>category</mat-icon> Clasificación por Tipo de Aporte</h3>
+      <div class="tipos-grid">
+        @for (tipo of aportesPorTipo(); track tipo.tipo.codigo) {
+          <mat-card class="tipo-card">
+            <mat-card-header>
+              <mat-card-title>{{ tipo.tipo.nombre }}</mat-card-title>
+              <mat-card-subtitle>Código: {{ tipo.tipo.codigo }}</mat-card-subtitle>
+            </mat-card-header>
+            <mat-card-content>
+              <div class="tipo-stats">
+                <div class="stat">
+                  <span class="stat-label">Cantidad</span>
+                  <span class="stat-value">{{ tipo.total }}</span>
+                </div>
+                <div class="stat">
+                  <span class="stat-label">Monto Total</span>
+                  <span class="stat-value">{{ tipo.totalMonto | currency }}</span>
+                </div>
+                <div class="stat">
+                  <span class="stat-label">% del Total</span>
+                  <span class="stat-value">{{ getTipoPorcentaje(tipo.total) | number:'1.1-1' }}%</span>
+                </div>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        }
+      </div>
+    </div>
+
+    <!-- Tabla Detallada -->
+    <div class="table-section">
+      <div class="table-header">
+        <h3><mat-icon>table_chart</mat-icon> Detalle de Aportes</h3>
+        <div class="export-actions">
+          <button mat-stroked-button (click)="exportarCSV()">
+            <mat-icon>file_download</mat-icon> CSV
+          </button>
+          <button mat-stroked-button (click)="exportarPDF()">
+            <mat-icon>picture_as_pdf</mat-icon> PDF
+          </button>
+        </div>
+      </div>
+      <div class="table-container">
+        <table mat-table [dataSource]="aportes()" class="aportes-table">
+          <ng-container matColumnDef="codigo">
+            <th mat-header-cell *matHeaderCellDef>Código</th>
+            <td mat-cell *matCellDef="let aporte">{{ aporte.codigo }}</td>
+          </ng-container>
+          <ng-container matColumnDef="fecha">
+            <th mat-header-cell *matHeaderCellDef>Fecha</th>
+            <td mat-cell *matCellDef="let aporte">{{ aporte.fechaTransaccion }}</td>
+          </ng-container>
+          <ng-container matColumnDef="monto">
+            <th mat-header-cell *matHeaderCellDef>Monto</th>
+            <td mat-cell *matCellDef="let aporte">{{ aporte.valor | currency }}</td>
+          </ng-container>
+          <ng-container matColumnDef="tipo">
+            <th mat-header-cell *matHeaderCellDef>Tipo Aporte</th>
+            <td mat-cell *matCellDef="let aporte">{{ aporte.tipoAporte.codigo }}</td>
+          </ng-container>
+          <ng-container matColumnDef="estado">
+            <th mat-header-cell *matHeaderCellDef>Estado</th>
+            <td mat-cell *matCellDef="let aporte">
+              <span class="badge">{{ aporte.estado || 'Activo' }}</span>
+            </td>
+          </ng-container>
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+        </table>
+      </div>
+    </div>
+  }
+
+  @if (isScrolled()) {
+    <button mat-fab class="scroll-top-btn" (click)="scrollToTop()" matTooltip="Volver arriba">
+      <mat-icon>arrow_upward</mat-icon>
+    </button>
+  }
+</div>

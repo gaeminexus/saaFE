@@ -1,1 +1,328 @@
-<p>contrato-dash.component works!</p>
+<div #dashContainer class="contrato-dash-container">
+  <!-- Header -->
+  <div class="header-section">
+    <h1>
+      <mat-icon>dashboard</mat-icon>
+      Dashboard de Contratos
+    </h1>
+    <p class="subtitle">Resumen corporativo de contratos por tipo de aporte</p>
+  </div>
+
+  <!-- Filtros de Fecha -->
+  <div class="filters-section">
+    <h3>
+      <mat-icon>filter_list</mat-icon>
+      Filtros por Rango de Fechas
+    </h3>
+    <form [formGroup]="rangoFechas" class="filters-form">
+      <mat-form-field appearance="outline">
+        <mat-label>Fecha Inicio</mat-label>
+        <input matInput [matDatepicker]="pickerInicio" formControlName="inicio">
+        <mat-datepicker-toggle matIconSuffix [for]="pickerInicio"></mat-datepicker-toggle>
+        <mat-datepicker #pickerInicio></mat-datepicker>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Fecha Fin</mat-label>
+        <input matInput [matDatepicker]="pickerFin" formControlName="fin">
+        <mat-datepicker-toggle matIconSuffix [for]="pickerFin"></mat-datepicker-toggle>
+        <mat-datepicker #pickerFin></mat-datepicker>
+      </mat-form-field>
+
+      <div class="filter-actions">
+        <button mat-raised-button color="primary" (click)="aplicarFiltros()" [disabled]="loading()">
+          <mat-icon>search</mat-icon>
+          Aplicar
+        </button>
+        <button mat-stroked-button (click)="limpiarFiltros()" [disabled]="loading()">
+          <mat-icon>clear</mat-icon>
+          Limpiar
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Loading State -->
+  @if (loading()) {
+    <div class="loading-container">
+      <mat-spinner diameter="60"></mat-spinner>
+      <p>Cargando contratos...</p>
+    </div>
+  }
+
+  <!-- Error State -->
+  @if (error() && !loading()) {
+    <div class="error-container">
+      <mat-icon>error_outline</mat-icon>
+      <p>{{ error() }}</p>
+      <button mat-raised-button color="primary" (click)="cargarDatos()">
+        <mat-icon>refresh</mat-icon>
+        Reintentar
+      </button>
+    </div>
+  }
+
+  <!-- Metrics Cards -->
+  @if (!loading() && !error()) {
+    <div class="metrics-grid">
+      <!-- Card: Solo Aporte Individual -->
+      <mat-card class="metric-card individual">
+        <mat-card-header>
+          <mat-icon mat-card-avatar>person</mat-icon>
+          <mat-card-title>Solo Aporte Individual</mat-card-title>
+          <mat-card-subtitle>Contratos con únicamente aporte individual</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="metric-value">{{ metrics().soloIndividual }}</div>
+          <div class="metric-label">contratos</div>
+
+          @if (metrics().soloIndividual > 0) {
+            <button mat-raised-button color="primary" (click)="toggleExpand('soloIndividual')" class="expand-btn">
+              <mat-icon>{{ soloIndividualData().expanded ? 'expand_less' : 'expand_more' }}</mat-icon>
+              {{ soloIndividualData().expanded ? 'Ocultar' : 'Ver' }} Detalles
+            </button>
+          }
+        </mat-card-content>
+        <mat-card-actions>
+          <button mat-icon-button matTooltip="Exportar CSV" (click)="exportarCSV('soloIndividual')" [disabled]="metrics().soloIndividual === 0">
+            <mat-icon>file_download</mat-icon>
+          </button>
+          <button mat-icon-button matTooltip="Exportar PDF" (click)="exportarPDF('soloIndividual')" [disabled]="metrics().soloIndividual === 0">
+            <mat-icon>picture_as_pdf</mat-icon>
+          </button>
+        </mat-card-actions>
+      </mat-card>
+
+      <!-- Card: Solo Aporte Jubilación -->
+      <mat-card class="metric-card jubilacion">
+        <mat-card-header>
+          <mat-icon mat-card-avatar>elderly</mat-icon>
+          <mat-card-title>Solo Aporte Jubilación</mat-card-title>
+          <mat-card-subtitle>Contratos con únicamente aporte de jubilación</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="metric-value">{{ metrics().soloJubilacion }}</div>
+          <div class="metric-label">contratos</div>
+
+          @if (metrics().soloJubilacion > 0) {
+            <button mat-raised-button color="accent" (click)="toggleExpand('soloJubilacion')" class="expand-btn">
+              <mat-icon>{{ soloJubilacionData().expanded ? 'expand_less' : 'expand_more' }}</mat-icon>
+              {{ soloJubilacionData().expanded ? 'Ocultar' : 'Ver' }} Detalles
+            </button>
+          }
+        </mat-card-content>
+        <mat-card-actions>
+          <button mat-icon-button matTooltip="Exportar CSV" (click)="exportarCSV('soloJubilacion')" [disabled]="metrics().soloJubilacion === 0">
+            <mat-icon>file_download</mat-icon>
+          </button>
+          <button mat-icon-button matTooltip="Exportar PDF" (click)="exportarPDF('soloJubilacion')" [disabled]="metrics().soloJubilacion === 0">
+            <mat-icon>picture_as_pdf</mat-icon>
+          </button>
+        </mat-card-actions>
+      </mat-card>
+
+      <!-- Card: Ambos Aportes -->
+      <mat-card class="metric-card ambos">
+        <mat-card-header>
+          <mat-icon mat-card-avatar>people</mat-icon>
+          <mat-card-title>Ambos Aportes</mat-card-title>
+          <mat-card-subtitle>Contratos con aporte individual y jubilación</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="metric-value">{{ metrics().ambos }}</div>
+          <div class="metric-label">contratos</div>
+
+          @if (metrics().ambos > 0) {
+            <button mat-raised-button color="warn" (click)="toggleExpand('ambos')" class="expand-btn">
+              <mat-icon>{{ ambosData().expanded ? 'expand_less' : 'expand_more' }}</mat-icon>
+              {{ ambosData().expanded ? 'Ocultar' : 'Ver' }} Detalles
+            </button>
+          }
+        </mat-card-content>
+        <mat-card-actions>
+          <button mat-icon-button matTooltip="Exportar CSV" (click)="exportarCSV('ambos')" [disabled]="metrics().ambos === 0">
+            <mat-icon>file_download</mat-icon>
+          </button>
+          <button mat-icon-button matTooltip="Exportar PDF" (click)="exportarPDF('ambos')" [disabled]="metrics().ambos === 0">
+            <mat-icon>picture_as_pdf</mat-icon>
+          </button>
+        </mat-card-actions>
+      </mat-card>
+    </div>
+
+    <!-- Expandable Details: Solo Individual -->
+    @if (soloIndividualData().expanded) {
+      <div class="details-section">
+        <h3>
+          <mat-icon>person</mat-icon>
+          Entidades con Solo Aporte Individual ({{ soloIndividualData().entidades.length }})
+        </h3>
+
+        @for (entidadData of soloIndividualData().entidades; track entidadData.entidad.codigo; let i = $index) {
+          <mat-card class="entidad-card">
+            <mat-card-header (click)="toggleEntidadExpand('soloIndividual', i)" class="clickable">
+              <mat-icon mat-card-avatar>{{ entidadData.expanded ? 'expand_less' : 'expand_more' }}</mat-icon>
+              <mat-card-title>{{ entidadData.entidad.razonSocial }}</mat-card-title>
+              <mat-card-subtitle>
+                Código: {{ entidadData.entidad.codigo }} |
+                Total Aportes: {{ entidadData.totalAportes }}
+              </mat-card-subtitle>
+            </mat-card-header>
+
+            @if (entidadData.expanded) {
+              <mat-card-content>
+                <div class="aportes-table-container">
+                  <table class="aportes-table">
+                    <thead>
+                      <tr>
+                        <th>Código</th>
+                        <th>Tipo Aporte</th>
+                        <th>Monto</th>
+                        <th>Fecha</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (aporte of entidadData.aportes; track aporte.codigo) {
+                        <tr>
+                          <td>{{ aporte.codigo }}</td>
+                          <td>{{ aporte.tipoAporte?.codigo || 'N/A' }}</td>
+                          <td>{{ aporte.valor | currency }}</td>
+                          <td>{{ aporte.fechaTransaccion }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+                <div class="card-actions">
+                  <button mat-raised-button color="primary" (click)="verAportes(entidadData.entidad.codigo)">
+                    <mat-icon>visibility</mat-icon>
+                    Ver Dashboard Aportes
+                  </button>
+                </div>
+              </mat-card-content>
+            }
+          </mat-card>
+        }
+      </div>
+    }
+
+    <!-- Expandable Details: Solo Jubilación -->
+    @if (soloJubilacionData().expanded) {
+      <div class="details-section">
+        <h3>
+          <mat-icon>elderly</mat-icon>
+          Entidades con Solo Aporte Jubilación ({{ soloJubilacionData().entidades.length }})
+        </h3>
+
+        @for (entidadData of soloJubilacionData().entidades; track entidadData.entidad.codigo; let i = $index) {
+          <mat-card class="entidad-card">
+            <mat-card-header (click)="toggleEntidadExpand('soloJubilacion', i)" class="clickable">
+              <mat-icon mat-card-avatar>{{ entidadData.expanded ? 'expand_less' : 'expand_more' }}</mat-icon>
+              <mat-card-title>{{ entidadData.entidad.razonSocial }}</mat-card-title>
+              <mat-card-subtitle>
+                Código: {{ entidadData.entidad.codigo }} |
+                Total Aportes: {{ entidadData.totalAportes }}
+              </mat-card-subtitle>
+            </mat-card-header>
+
+            @if (entidadData.expanded) {
+              <mat-card-content>
+                <div class="aportes-table-container">
+                  <table class="aportes-table">
+                    <thead>
+                      <tr>
+                        <th>Código</th>
+                        <th>Tipo Aporte</th>
+                        <th>Monto</th>
+                        <th>Fecha</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (aporte of entidadData.aportes; track aporte.codigo) {
+                        <tr>
+                          <td>{{ aporte.codigo }}</td>
+                          <td>{{ aporte.tipoAporte?.codigo || 'N/A' }}</td>
+                          <td>{{ aporte.valor | currency }}</td>
+                          <td>{{ aporte.fechaTransaccion }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+                <div class="card-actions">
+                  <button mat-raised-button color="accent" (click)="verAportes(entidadData.entidad.codigo)">
+                    <mat-icon>visibility</mat-icon>
+                    Ver Dashboard Aportes
+                  </button>
+                </div>
+              </mat-card-content>
+            }
+          </mat-card>
+        }
+      </div>
+    }
+
+    <!-- Expandable Details: Ambos -->
+    @if (ambosData().expanded) {
+      <div class="details-section">
+        <h3>
+          <mat-icon>people</mat-icon>
+          Entidades con Ambos Aportes ({{ ambosData().entidades.length }})
+        </h3>
+
+        @for (entidadData of ambosData().entidades; track entidadData.entidad.codigo; let i = $index) {
+          <mat-card class="entidad-card">
+            <mat-card-header (click)="toggleEntidadExpand('ambos', i)" class="clickable">
+              <mat-icon mat-card-avatar>{{ entidadData.expanded ? 'expand_less' : 'expand_more' }}</mat-icon>
+              <mat-card-title>{{ entidadData.entidad.razonSocial }}</mat-card-title>
+              <mat-card-subtitle>
+                Código: {{ entidadData.entidad.codigo }} |
+                Total Aportes: {{ entidadData.totalAportes }}
+              </mat-card-subtitle>
+            </mat-card-header>
+
+            @if (entidadData.expanded) {
+              <mat-card-content>
+                <div class="aportes-table-container">
+                  <table class="aportes-table">
+                    <thead>
+                      <tr>
+                        <th>Código</th>
+                        <th>Tipo Aporte</th>
+                        <th>Monto</th>
+                        <th>Fecha</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (aporte of entidadData.aportes; track aporte.codigo) {
+                        <tr>
+                          <td>{{ aporte.codigo }}</td>
+                          <td>{{ aporte.tipoAporte?.codigo || 'N/A' }}</td>
+                          <td>{{ aporte.valor | currency }}</td>
+                          <td>{{ aporte.fechaTransaccion }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+                <div class="card-actions">
+                  <button mat-raised-button color="warn" (click)="verAportes(entidadData.entidad.codigo)">
+                    <mat-icon>visibility</mat-icon>
+                    Ver Dashboard Aportes
+                  </button>
+                </div>
+              </mat-card-content>
+            }
+          </mat-card>
+        }
+      </div>
+    }
+  }
+
+  <!-- Scroll to Top Button -->
+  @if (isScrolled()) {
+    <button mat-fab class="scroll-top-btn" (click)="scrollToTop()" matTooltip="Volver arriba">
+      <mat-icon>arrow_upward</mat-icon>
+    </button>
+  }
+</div>

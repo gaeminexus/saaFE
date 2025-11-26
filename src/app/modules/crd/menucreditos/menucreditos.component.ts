@@ -83,17 +83,17 @@ export class MenucreditosComponent {
         {
           displayName: 'Ingreso',
           iconName: 'contract',
-          route: '/menucreditos/carga-aportes'
+          route: '/menucreditos/contrato-edit'
         },
         {
           displayName: 'Administrar',
           iconName: 'developer_guide',
-          // route: '/menucreditos/navegacion-cascada'
+          route: '/menucreditos/contrato-consulta'
         },
         {
           displayName: 'Dash',
           iconName: 'widget_width',
-          // route: '/menucreditos/participe-dash'
+          route: '/menucreditos/contrato-dash'
         },
       ]
     },
