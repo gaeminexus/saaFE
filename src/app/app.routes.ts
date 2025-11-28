@@ -7,8 +7,6 @@ import { MenuContabilidadComponent } from './modules/cnt/menu/menucontabilidad/m
 import { MenutesoreriaComponent } from './modules/tsr/menu/menutesoreria/menutesoreria.component';
 import { MenucuentasxcobrarComponent } from './modules/cxc/menu/menucuentasxcobrar/menucuentasxcobrar.component';
 import { MenucuentaxpagarComponent } from './modules/cxp/menu/menucuentasxpagar/menucuentasxpagar.component';
-import { NaturalezaDeCuentasComponent } from './modules/cnt/forms/naturalezadecuentas/naturalezadecuentas.component';
-import { NaturalezaCuentaComponent } from './modules/cnt/forms/naturaleza-cuenta/naturaleza-cuenta.component';
 import { NaturalezaCuentaResolverService } from './modules/cnt/resolver/naturaleza-cuenta-resolver.service';
 import { PlanArbolComponent } from './modules/cnt/forms/plan-arbol/plan-arbol.component';
 import { PlanGridComponent } from './modules/cnt/forms/plan-grid/plan-grid.component';
@@ -48,6 +46,7 @@ import { entidadEditResolver } from './modules/crd/resolver/entidad-edit.resolve
 import { ConsultaArchivosPetroComponent } from './modules/crd/forms/archivos-petro/consulta-archivos-petro/consulta-archivos-petro.component';
 import { ConsultaCargaArchivoResolverService } from './modules/crd/resolver/consulta-carga-archivo-resolver.service';
 import { DetalleConsultaCargaComponent } from './modules/crd/forms/archivos-petro/detalle-consulta-carga/detalle-consulta-carga.component';
+import { NaturalezaDeCuentasComponent } from './modules/cnt/forms/naturaleza-cuentas/naturaleza-cuentas.component';
 
 export const routes: Routes = [
     { path: '', component: LoginComponent },
@@ -69,7 +68,7 @@ export const routes: Routes = [
             },
             {
                 path: 'naturaleza-cuentas1',
-                component: NaturalezaCuentaComponent,
+                component: NaturalezaDeCuentasComponent,
                 canDeactivate: [canDeactivateGuard],
                 resolve: {
                     naturalezaCuentas: NaturalezaCuentaResolverService
