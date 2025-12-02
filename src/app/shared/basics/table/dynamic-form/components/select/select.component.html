@@ -1,40 +1,28 @@
 <div [formGroup]="group">
   <mat-form-field class="demo-full-width margin-top" appearance="outline">
-    <mat-label>{{field.label || ''}}</mat-label>
+    <mat-label>{{ field.label || '' }}</mat-label>
 
-    @if (field.autocompleteType === 1) {
-    <mat-select [formControlName]="field.name"
-                [placeholder]="field.label || ''"
-                (selectionChange)="seleccion($event.value)">
-      @if (field.collections) {
-        @for (item of field.collections; track item.codigo) {
-          <mat-option [value]="item">
-            {{concatNombre(field, item)}}
-          </mat-option>
-        }
-      }
+    <mat-select
+      [formControlName]="field.name"
+      [placeholder]="field.label || ''"
+      (selectionChange)="seleccion($event.value)"
+    >
+      @if (field.autocompleteType === 1) { @if (field.collections) { @for (item of
+      field.collections; track item.codigo) {
+      <mat-option [value]="item">
+        {{ concatNombre(field, item) }}
+      </mat-option>
+      } } } @if (field.autocompleteType === 2) { @if (escogeHijos(); as items) { @for (item of
+      items; track item.codigo) {
+      <mat-option [value]="item">
+        {{ concatNombre(field, item) }}
+      </mat-option>
+      } } }
     </mat-select>
-  }
 
-  @if (field.autocompleteType === 2) {
-    <mat-select [formControlName]="field.name"
-                [placeholder]="field.label || ''">
-      @if (escogeHijos(); as items) {
-        @for (item of items; track item.codigo) {
-          <mat-option [value]="item">
-            {{concatNombre(field, item)}}
-          </mat-option>
-        }
-      }
-    </mat-select>
-  }
-
-  @if (field.validations) {
-    @for (validation of field.validations; track validation.name) {
-      @if (group.get(field.name)?.hasError(validation.name)) {
-        <mat-error>{{validation.message || ''}}</mat-error>
-      }
-    }
-  }
+    @if (field.validations) { @for (validation of field.validations; track validation.name) { @if
+    (group.get(field.name)?.hasError(validation.name)) {
+    <mat-error>{{ validation.message || '' }}</mat-error>
+    } } }
   </mat-form-field>
 </div>

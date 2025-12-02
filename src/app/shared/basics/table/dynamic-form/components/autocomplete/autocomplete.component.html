@@ -1,46 +1,53 @@
 <div [formGroup]="group">
   <mat-form-field class="demo-full-width margin-top" appearance="outline">
-    <mat-label>{{field.label || ''}}</mat-label>
+    <mat-label>{{ field.label || '' }}</mat-label>
 
-  @if (field.autocompleteType === 1) {
-    <input type="text"
+    @if (field.autocompleteType === 1) {
+    <input
+      type="text"
       [placeholder]="field.label || ''"
       [attr.aria-label]="field.label || ''"
       class="uppercase-input"
       matInput
       [formControl]="myControl"
-      [matAutocomplete]="auto">
-    <mat-autocomplete autoActiveFirstOption #auto="matAutocomplete" (optionSelected)="seleccion($event)">
+      [matAutocomplete]="auto"
+    />
+    <mat-autocomplete
+      autoActiveFirstOption
+      #auto="matAutocomplete"
+      (optionSelected)="seleccion($event)"
+    >
       @for (item of filteredOptions | async; track item.codigo) {
-        <mat-option [value]="item">
-          {{concatNombre(field, item)}}
-        </mat-option>
+      <mat-option [value]="item">
+        {{ concatNombre(field, item) }}
+      </mat-option>
       }
     </mat-autocomplete>
-  }
-
-  @if (field.autocompleteType === 2) {
-    <input type="text"
+    } @else if (field.autocompleteType === 2) {
+    <input
+      type="text"
       [placeholder]="field.label || ''"
       [attr.aria-label]="field.label || ''"
       class="uppercase-input"
       (focus)="onFocus()"
       matInput
       [formControl]="myControlHijo"
-      [matAutocomplete]="autoHijo">
-    <mat-autocomplete autoActiveFirstOption #autoHijo="matAutocomplete" (optionSelected)="seleccionHijo($event)">
+      [matAutocomplete]="autoHijo"
+    />
+    <mat-autocomplete
+      autoActiveFirstOption
+      #autoHijo="matAutocomplete"
+      (optionSelected)="seleccionHijo($event)"
+    >
       @for (item of filteredOptionsHijo | async; track item.codigo) {
-        <mat-option [value]="item">
-          {{concatNombre(field, item)}}
-        </mat-option>
+      <mat-option [value]="item">
+        {{ concatNombre(field, item) }}
+      </mat-option>
       }
     </mat-autocomplete>
-  }
-
-  @for (v of field.validations || []; track v.name) {
-    @if (getControl(field.name)?.hasError(v.name)) {
-      <mat-error>{{v.message}}</mat-error>
-    }
-  }
+    } @for (v of field.validations || []; track v.name) { @if
+    (getControl(field.name)?.hasError(v.name)) {
+    <mat-error>{{ v.message }}</mat-error>
+    } }
   </mat-form-field>
 </div>

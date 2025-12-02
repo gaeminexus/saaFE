@@ -1,22 +1,25 @@
-import { Component, OnInit, ViewEncapsulation, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { Component, CUSTOM_ELEMENTS_SCHEMA, OnInit, ViewEncapsulation } from '@angular/core';
+import {
+  FormBuilder,
+  FormGroup,
+  FormsModule,
+  ReactiveFormsModule,
+  Validators,
+} from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatOptionModule } from '@angular/material/core';
+import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
-import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
-import { NaturalezaCuentaService } from '../../service/naturaleza-cuenta.service';
 import { NaturalezaCuenta } from '../../model/naturaleza-cuenta';
-import { EntidadesContabilidad } from '../../model/entidades-cnt';
-import { FieldConfig } from '../../../../shared/basics/table/dynamic-form/model/field.interface';
-import { FieldFormat } from '../../../../shared/basics/table/model/field-format-interface';
-import { TableConfig } from '../../../../shared/basics/table/model/table-interface';
-import { TableBasicHijosComponent } from '../../../../shared/basics/table/forms/table-basic-hijos/table-basic-hijos.component';
+import { NaturalezaCuentaService } from '../../service/naturaleza-cuenta.service';
 
 @Component({
   selector: 'app-naturalezadecuentas-form',
@@ -30,6 +33,8 @@ import { TableBasicHijosComponent } from '../../../../shared/basics/table/forms/
     MatFormFieldModule,
     MatInputModule,
     MatSelectModule,
+    MatOptionModule,
+    MatCheckboxModule,
     MatSlideToggleModule,
     MatDialogModule,
     MatProgressSpinnerModule,
@@ -37,19 +42,17 @@ import { TableBasicHijosComponent } from '../../../../shared/basics/table/forms/
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './naturaleza-cuentas-form.component.html',
   styleUrls: ['./naturaleza-cuentas-form.component.scss'],
-  encapsulation: ViewEncapsulation.None   // 👈 permite que el SCSS alcance el overlay
+  encapsulation: ViewEncapsulation.None, // 👈 permite que el SCSS alcance el overlay
 })
 export class NaturalezaDeCuentasFormComponent implements OnInit {
-
-
-  form: FormGroup;
+  form!: FormGroup;
   loading = false;
   error: string | null = null;
   isEditMode = false;
 
   tiposNaturaleza = [
     { value: 1, label: 'Deudora' },
-    { value: 2, label: 'Acreedora' }
+    { value: 2, label: 'Acreedora' },
   ];
 
   constructor(
@@ -57,25 +60,32 @@ export class NaturalezaDeCuentasFormComponent implements OnInit {
     private naturalezaCuentaService: NaturalezaCuentaService,
     private dialogRef: MatDialogRef<NaturalezaDeCuentasFormComponent>
   ) {
+    this.initializeForm();
+  }
+
+  private initializeForm(): void {
     this.form = this.fb.group({
       codigo: [null],
       nombre: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(100)]],
       tipo: [1, [Validators.required]],
       numero: ['', [Validators.required, Validators.pattern(/^[0-9]+$/)]],
       manejaCentroCosto: [false],
-      estado: [1]
+      estado: [1],
     });
   }
 
   ngOnInit(): void {
     // Transformar automáticamente a mayúsculas los campos de texto
     const upperControls = ['nombre'];
-    upperControls.forEach(ctrl => {
-      this.form.get(ctrl)?.valueChanges.subscribe(val => {
-        if (typeof val === 'string' && val !== val.toUpperCase()) {
-          this.form.get(ctrl)?.setValue(val.toUpperCase(), { emitEvent: false });
-        }
-      });
+    upperControls.forEach((ctrl) => {
+      const control = this.form.get(ctrl);
+      if (control) {
+        control.valueChanges.subscribe((val) => {
+          if (typeof val === 'string' && val !== val.toUpperCase()) {
+            control.setValue(val.toUpperCase(), { emitEvent: false });
+          }
+        });
+      }
     });
   }
 
@@ -83,7 +93,7 @@ export class NaturalezaDeCuentasFormComponent implements OnInit {
     this.isEditMode = true;
     this.form.patchValue({
       ...data,
-      manejaCentroCosto: data.manejaCentroCosto === 1
+      manejaCentroCosto: data.manejaCentroCosto === 1,
     });
   }
 
@@ -102,7 +112,7 @@ export class NaturalezaDeCuentasFormComponent implements OnInit {
       numero: Number(formValue.numero),
       manejaCentroCosto: formValue.manejaCentroCosto ? 1 : 0,
       estado: Number(formValue.estado ?? 1),
-      empresa: { codigo: idSucursal }
+      empresa: { codigo: idSucursal },
     };
 
     const request = this.isEditMode
@@ -116,7 +126,7 @@ export class NaturalezaDeCuentasFormComponent implements OnInit {
       error: (err) => {
         this.error = err?.message || 'Error al guardar los datos';
         this.loading = false;
-      }
+      },
     });
   }
 

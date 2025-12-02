@@ -1,21 +1,22 @@
-import { Component, OnInit, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, CUSTOM_ELEMENTS_SCHEMA, OnInit } from '@angular/core';
 import { Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
-import { NaturalezaCuentaService } from '../../service/naturaleza-cuenta.service';
-import { NaturalezaCuenta } from '../../model/naturaleza-cuenta';
-import { ExportService } from '../../../../shared/services/export.service';
-import { TableConfig } from '../../../../shared/basics/table/model/table-interface';
-import { FieldFormat } from '../../../../shared/basics/table/model/field-format-interface';
 import { FieldConfig } from '../../../../shared/basics/table/dynamic-form/model/field.interface';
-import { EntidadesContabilidad } from '../../model/entidades-cnt';
-import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
-import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
-import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TableBasicHijosComponent } from '../../../../shared/basics/table/forms/table-basic-hijos/table-basic-hijos.component';
+import { FieldFormat } from '../../../../shared/basics/table/model/field-format-interface';
+import { TableConfig } from '../../../../shared/basics/table/model/table-interface';
+import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
+import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
+import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
+import { DetalleRubroService } from '../../../../shared/services/detalle-rubro.service';
+import { ExportService } from '../../../../shared/services/export.service';
+import { EntidadesContabilidad } from '../../model/entidades-cnt';
+import { NaturalezaCuenta } from '../../model/naturaleza-cuenta';
+import { NaturalezaCuentaService } from '../../service/naturaleza-cuenta.service';
 
 @Component({
   selector: 'app-naturalezadecuentas',
@@ -25,14 +26,13 @@ import { TableBasicHijosComponent } from '../../../../shared/basics/table/forms/
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
-    TableBasicHijosComponent
+    TableBasicHijosComponent,
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './naturaleza-cuentas.component.html',
-  styleUrls: ['./naturaleza-cuentas.component.scss']
+  styleUrls: ['./naturaleza-cuentas.component.scss'],
 })
 export class NaturalezaDeCuentasComponent implements OnInit {
-
   naturalezaCuentas: NaturalezaCuenta[] = [];
   loading = false;
   error: string | null = null;
@@ -40,12 +40,23 @@ export class NaturalezaDeCuentasComponent implements OnInit {
 
   tableConfig!: TableConfig;
 
+  // 🔑 Rubro para filtrar tipos de naturaleza (el valor seleccionado se almacena en el campo 'tipo' del formulario)
+  private readonly rubro = 13;
+
   constructor(
     private naturalezaCuentaService: NaturalezaCuentaService,
+    private detalleRubroService: DetalleRubroService,
     private exportService: ExportService
   ) {}
 
   ngOnInit(): void {
+    // Debug: Verificar detalles de rubro cargados
+    console.log(`📚 DetalleRubros cargados: ${this.detalleRubroService.estanDatosCargados()}`);
+    if (this.detalleRubroService.estanDatosCargados()) {
+      const tiposDisponibles = this.detalleRubroService.getDetallesByParent(this.rubro);
+      console.log(`📝 Tipos de Naturaleza disponibles (rubro ${this.rubro}):`, tiposDisponibles);
+    }
+
     this.loadData();
   }
 
@@ -62,7 +73,7 @@ export class NaturalezaDeCuentasComponent implements OnInit {
       paginator: true,
       filter: true,
       fSize: 'em-1',
-      row_size: 's08'
+      row_size: 's08',
     };
   }
 
@@ -72,11 +83,34 @@ export class NaturalezaDeCuentasComponent implements OnInit {
       { column: 'nombre', header: 'Nombre', fWidth: '35%', fSort: true },
       { column: 'tipo', header: 'Tipo', fWidth: '20%', fSort: true },
       { column: 'manejaCentroCosto', header: 'Centro de Costos', fWidth: '20%', fSort: true },
-      { column: 'estado', header: 'Estado', fWidth: '10%', fSort: true }
+      { column: 'estado', header: 'Estado', fWidth: '10%', fSort: true },
     ];
   }
 
   private getRegConfig(): FieldConfig[] {
+    // Filtrar los tipos de naturaleza desde el rubro 13 del master
+    const tiposNaturaleza = this.detalleRubroService.getDetallesByParent(this.rubro);
+
+    // DEBUG: Verificar qué datos se recuperan
+    console.log(`🔍 Datos del rubro ${this.rubro}:`, tiposNaturaleza);
+    console.log(`📊 Total de opciones disponibles: ${tiposNaturaleza.length}`);
+
+    // Si no hay datos, mostrar todos los detalles disponibles para debugging
+    if (tiposNaturaleza.length === 0) {
+      const todosLosDetalles = this.detalleRubroService.getDetalles();
+      console.warn(`⚠️ No se encontraron detalles para rubro ${this.rubro}`);
+      console.log(`📋 Todos los detalles disponibles:`, todosLosDetalles);
+    }
+
+    // Transformar DetalleRubro a formato de opciones para el select
+    // El valor seleccionado (codigoAlterno) se almacenará en el campo 'tipo'
+    const tiposOptions = tiposNaturaleza.map((detalle) => ({
+      key: detalle.codigoAlterno,
+      value: detalle.descripcion,
+    }));
+
+    console.log(`✅ Opciones transformadas para select:`, tiposOptions);
+
     return [
       {
         type: 'input',
@@ -86,20 +120,27 @@ export class NaturalezaDeCuentasComponent implements OnInit {
         validations: [
           { name: 'required', validator: Validators.required, message: 'El nombre es requerido' },
           { name: 'minlength', validator: Validators.minLength(3), message: 'Mínimo 3 caracteres' },
-          { name: 'maxlength', validator: Validators.maxLength(100), message: 'Máximo 100 caracteres' }
-        ]
+          {
+            name: 'maxlength',
+            validator: Validators.maxLength(100),
+            message: 'Máximo 100 caracteres',
+          },
+        ],
       },
       {
         type: 'select',
         label: 'Tipo de Naturaleza',
         name: 'tipo',
-        options: [
-          { key: 1, value: 'Deudora' },
-          { key: 2, value: 'Acreedora' }
-        ],
+        options:
+          tiposOptions.length > 0
+            ? tiposOptions
+            : [
+                { key: 1, value: 'Deudora' },
+                { key: 2, value: 'Acreedora' },
+              ],
         validations: [
-          { name: 'required', validator: Validators.required, message: 'El tipo es requerido' }
-        ]
+          { name: 'required', validator: Validators.required, message: 'El tipo es requerido' },
+        ],
       },
       {
         type: 'input',
@@ -108,15 +149,19 @@ export class NaturalezaDeCuentasComponent implements OnInit {
         inputType: 'text',
         validations: [
           { name: 'required', validator: Validators.required, message: 'El número es requerido' },
-          { name: 'pattern', validator: Validators.pattern(/^[0-9]+$/), message: 'Solo números permitidos' }
-        ]
+          {
+            name: 'pattern',
+            validator: Validators.pattern(/^[0-9]+$/),
+            message: 'Solo números permitidos',
+          },
+        ],
       },
       {
         type: 'checkbox',
         label: 'Maneja Centro de Costo',
         name: 'manejaCentroCosto',
-        value: false
-      }
+        value: false,
+      },
     ];
   }
 
@@ -133,7 +178,13 @@ export class NaturalezaDeCuentasComponent implements OnInit {
 
     // Filtro por empresa (código dinámico)
     const criterioEmpresa = new DatosBusqueda();
-    criterioEmpresa.asignaValorConCampoPadre(TipoDatosBusqueda.LONG, 'empresa', 'codigo', String(idSucursal), TipoComandosBusqueda.IGUAL);
+    criterioEmpresa.asignaValorConCampoPadre(
+      TipoDatosBusqueda.LONG,
+      'empresa',
+      'codigo',
+      String(idSucursal),
+      TipoComandosBusqueda.IGUAL
+    );
     criterioConsultaArray.push(criterioEmpresa);
 
     // Ordenar por nombre
@@ -154,7 +205,9 @@ export class NaturalezaDeCuentasComponent implements OnInit {
         // Configurar la tabla con los datos cargados
         this.setupTableConfig();
 
-        console.log(`✅ Se cargaron ${list.length} naturalezas para empresa ${idSucursal} exitosamente`);
+        console.log(
+          `✅ Se cargaron ${list.length} naturalezas para empresa ${idSucursal} exitosamente`
+        );
       },
       error: (err) => {
         console.error(`❌ Error al cargar naturalezas con empresa ${idSucursal}:`, err);
@@ -166,7 +219,9 @@ export class NaturalezaDeCuentasComponent implements OnInit {
             console.log('📡 Respuesta fallback getAll:', data);
             const list = Array.isArray(data) ? data : (data as any)?.data ?? [];
             const filtered = list.filter((nat: any) => nat?.empresa?.codigo === idSucursal);
-            this.naturalezaCuentas = filtered.sort((a: any, b: any) => (b.numero || 0) - (a.numero || 0));
+            this.naturalezaCuentas = filtered.sort(
+              (a: any, b: any) => (b.numero || 0) - (a.numero || 0)
+            );
             this.totalElements = this.naturalezaCuentas.length;
             this.loading = false;
             this.setupTableConfig();
@@ -174,9 +229,9 @@ export class NaturalezaDeCuentasComponent implements OnInit {
           error: () => {
             this.error = 'Error al recuperar datos de naturaleza de cuentas';
             this.loading = false;
-          }
+          },
         });
-      }
+      },
     });
   }
 
@@ -195,12 +250,12 @@ export class NaturalezaDeCuentasComponent implements OnInit {
     const title = 'Reporte de Naturaleza de Cuentas';
 
     // Transformar los datos para el PDF con labels formateados
-    const transformedData = this.naturalezaCuentas.map(item => ({
+    const transformedData = this.naturalezaCuentas.map((item) => ({
       numero: item.numero || '',
       nombre: item.nombre || '',
       tipo: this.tipoLabel(item.tipo),
       manejaCentroCosto: this.manejaCentroCostoLabel(item.manejaCentroCosto),
-      estado: this.estadoLabel(item.estado)
+      estado: this.estadoLabel(item.estado),
     }));
 
     this.exportService.exportToPDF(transformedData, filename, title, headers, dataKeys);
