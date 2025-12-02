@@ -13,6 +13,7 @@ export interface CanComponentDeactivate {
  * Guard de desactivación
  * Pregunta al usuario si realmente desea abandonar la página
  * cuando hay cambios sin guardar o al hacer refresh
+ * SOLO funciona si el componente implementa CanComponentDeactivate
  */
 export const canDeactivateGuard: CanDeactivateFn<CanComponentDeactivate> = (
   component,
@@ -25,6 +26,7 @@ export const canDeactivateGuard: CanDeactivateFn<CanComponentDeactivate> = (
     return component.canDeactivate();
   }
 
-  // Por defecto, preguntar si quiere abandonar la página
-  return confirm('¿Está seguro de que desea abandonar esta página? Los cambios no guardados se perderán.');
+  // Si no implementa la interfaz, permitir navegación sin preguntar
+  // Solo los componentes que realmente lo necesiten deben implementar CanComponentDeactivate
+  return true;
 };

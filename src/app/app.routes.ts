@@ -63,8 +63,7 @@ export const routes: Routes = [
         children: [
             {
               path: 'naturaleza-cuentas',
-              component: NaturalezaDeCuentasComponent,
-              canDeactivate: [canDeactivateGuard]
+              component: NaturalezaDeCuentasComponent
             },
             {
                 path: 'naturaleza-cuentas1',
@@ -76,33 +75,27 @@ export const routes: Routes = [
             },
             {
               path: 'plan-cuentas',
-              component: PlanArbolComponent,
-              canDeactivate: [canDeactivateGuard]
+              component: PlanArbolComponent
             },
             {
               path: 'plan-grid',
-              component: PlanGridComponent,
-              canDeactivate: [canDeactivateGuard]
+              component: PlanGridComponent
             },
             {
               path: 'centro-costos/arbol',
-              component: CentroArbolComponent,
-              canDeactivate: [canDeactivateGuard]
+              component: CentroArbolComponent
             },
             {
               path: 'centro-costos/grid',
-              component: CentroGridComponent,
-              canDeactivate: [canDeactivateGuard]
+              component: CentroGridComponent
             },
             {
               path: 'tipos-asientos/general',
-              component: TipoAsientoGeneralGridComponent,
-              canDeactivate: [canDeactivateGuard]
+              component: TipoAsientoGeneralGridComponent
             },
             {
               path: 'tipos-asientos/sistema',
-              component: TipoAsientoSistemaGridComponent,
-              canDeactivate: [canDeactivateGuard]
+              component: TipoAsientoSistemaGridComponent
             },
             {
               path: 'plantillas/general',
@@ -121,8 +114,7 @@ export const routes: Routes = [
             },
             {
               path: 'periodos',
-              component: PeriodosComponent,
-              canDeactivate: [canDeactivateGuard]
+              component: PeriodosComponent
             },
             {
               path: 'asientos',
