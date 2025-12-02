@@ -2,11 +2,6 @@ import { Empresa } from "../../../shared/model/empresa";
 import { Asiento } from "../../cnt/model/asiento";
 import { Periodo } from "../../cnt/model/periodo";
 import { Persona } from "../../tsr/model/persona";
-import { DetalleDocumentoCobro } from "./detalle-documento-cobro";
-import { FinanciacionXDocumentoCobro } from "./financiacion-x-documento-cobro";
-import { ResumenValorDocumentoCobro } from "./resumen-valor-documento-cobro";
-import { ValorImpuestoDocumentoCobro } from "./Valor-impuesto-documento-cobro";
-
 
 export interface DocumentoCobro {
     codigo: number;                                                  // Código de la entidad
@@ -35,8 +30,4 @@ export interface DocumentoCobro {
     numeroDocumentoNumber: number;                                   // Número de documento. Contiene el valor numérico del número de documento
     rubroEstadoP: number;                                            // Rubro para estado de documento de cobro. Tomado del rubro 78
     rubroEstadoH: number;                                            // Detalle de Rubro para estado de documento de cobro. Tomado del rubro 78
-    detalleDocumentoCobro: DetalleDocumentoCobro;                 // Listado de detalle de documentos de cobro que tiene el documento
-    valorImpuestoDocumentoCobro: ValorImpuestoDocumentoCobro;     // Listado de los valores de impuesto que se aplicaron al documento
-    resumenValorDocumentoCobro: ResumenValorDocumentoCobro;       // Listado del resumen de valores del documento
-    financiacionXDocumentoCobro: FinanciacionXDocumentoCobro;     // Listado de financiaciones relacionadas con el documento
 }
