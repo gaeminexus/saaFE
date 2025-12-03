@@ -18,6 +18,9 @@ import { EntidadesContabilidad } from '../../model/entidades-cnt';
 import { NaturalezaCuenta } from '../../model/naturaleza-cuenta';
 import { NaturalezaCuentaService } from '../../service/naturaleza-cuenta.service';
 
+// 🔑 Rubro para filtrar tipos de naturaleza (el valor seleccionado se almacena en el campo 'tipo' del formulario)
+ const RUBRO_TIPO_GRUPO = 12;
+
 @Component({
   selector: 'app-naturalezadecuentas',
   standalone: true,
@@ -40,8 +43,7 @@ export class NaturalezaDeCuentasComponent implements OnInit {
 
   tableConfig!: TableConfig;
 
-  // 🔑 Rubro para filtrar tipos de naturaleza (el valor seleccionado se almacena en el campo 'tipo' del formulario)
-  private readonly rubro = 13;
+
 
   constructor(
     private naturalezaCuentaService: NaturalezaCuentaService,
@@ -53,8 +55,7 @@ export class NaturalezaDeCuentasComponent implements OnInit {
     // Debug: Verificar detalles de rubro cargados
     console.log(`📚 DetalleRubros cargados: ${this.detalleRubroService.estanDatosCargados()}`);
     if (this.detalleRubroService.estanDatosCargados()) {
-      const tiposDisponibles = this.detalleRubroService.getDetallesByParent(this.rubro);
-      console.log(`📝 Tipos de Naturaleza disponibles (rubro ${this.rubro}):`, tiposDisponibles);
+      const tiposDisponibles = this.detalleRubroService.getDetallesByParent(RUBRO_TIPO_GRUPO);
     }
 
     this.loadData();
@@ -81,7 +82,7 @@ export class NaturalezaDeCuentasComponent implements OnInit {
     return [
       { column: 'numero', header: 'Número', fWidth: '15%', fSort: true },
       { column: 'nombre', header: 'Nombre', fWidth: '35%', fSort: true },
-      { column: 'tipo', header: 'Tipo', fWidth: '20%', fSort: true },
+      { column: 'rubro_13_tipo', header: 'Tipo', fWidth: '20%', fSort: true },
       { column: 'manejaCentroCosto', header: 'Centro de Costos', fWidth: '20%', fSort: true },
       { column: 'estado', header: 'Estado', fWidth: '10%', fSort: true },
     ];
@@ -89,17 +90,11 @@ export class NaturalezaDeCuentasComponent implements OnInit {
 
   private getRegConfig(): FieldConfig[] {
     // Filtrar los tipos de naturaleza desde el rubro 13 del master
-    const tiposNaturaleza = this.detalleRubroService.getDetallesByParent(this.rubro);
-
-    // DEBUG: Verificar qué datos se recuperan
-    console.log(`🔍 Datos del rubro ${this.rubro}:`, tiposNaturaleza);
-    console.log(`📊 Total de opciones disponibles: ${tiposNaturaleza.length}`);
+    const tiposNaturaleza = this.detalleRubroService.getDetallesByParent(RUBRO_TIPO_GRUPO);
 
     // Si no hay datos, mostrar todos los detalles disponibles para debugging
     if (tiposNaturaleza.length === 0) {
       const todosLosDetalles = this.detalleRubroService.getDetalles();
-      console.warn(`⚠️ No se encontraron detalles para rubro ${this.rubro}`);
-      console.log(`📋 Todos los detalles disponibles:`, todosLosDetalles);
     }
 
     // Transformar DetalleRubro a formato de opciones para el select
@@ -128,16 +123,12 @@ export class NaturalezaDeCuentasComponent implements OnInit {
         ],
       },
       {
-        type: 'select',
+        type: 'autocomplete',
         label: 'Tipo de Naturaleza',
         name: 'tipo',
-        options:
-          tiposOptions.length > 0
-            ? tiposOptions
-            : [
-                { key: 1, value: 'Deudora' },
-                { key: 2, value: 'Acreedora' },
-              ],
+        collections: tiposNaturaleza,
+        autocompleteType: 1,
+        selectField: ['descripcion'],
         validations: [
           { name: 'required', validator: Validators.required, message: 'El tipo es requerido' },
         ],
