@@ -1,30 +1,35 @@
 import { Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import { NaturalezaCuentaService } from '../../../modules/cnt/service/naturaleza-cuenta.service';
-import { AccionesGrid } from '../constantes';
 import { EntidadesContabilidad } from '../../../modules/cnt/model/entidades-cnt';
 import { NaturalezaCuenta } from '../../../modules/cnt/model/naturaleza-cuenta';
-import { ServiceLocatorCrdService } from './service-locator-crd.service';
+import { NaturalezaCuentaService } from '../../../modules/cnt/service/naturaleza-cuenta.service';
 import { EntidadesCrd } from '../../../modules/crd/model/entidades-crd';
+import { AccionesGrid } from '../constantes';
+import { ServiceLocatorCrdService } from './service-locator-crd.service';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class ServiceLocatorService {
-
   reg: any;
 
   constructor(
     public naturalezaCuentaService: NaturalezaCuentaService,
-    private serviceLocatorCrd: ServiceLocatorCrdService,
-  ) { }
+    private serviceLocatorCrd: ServiceLocatorCrdService
+  ) {}
 
   ejecutaServicio(entidad: number, value: any, proceso: number): Promise<any> {
-    console.log(`[ServiceLocatorService] ejecutaServicio - entidad: ${entidad}, proceso: ${proceso}, isEntidadCrd: ${this.isEntidadCrd(entidad)}`);
-    
+    console.log(
+      `[ServiceLocatorService] ejecutaServicio - entidad: ${entidad}, proceso: ${proceso}, isEntidadCrd: ${this.isEntidadCrd(
+        entidad
+      )}`
+    );
+
     // Delegar a ServiceLocatorCrdService si es una entidad de CRD
     if (this.isEntidadCrd(entidad)) {
-      console.log(`[ServiceLocatorService] Delegando a ServiceLocatorCrdService para entidad ${entidad}`);
+      console.log(
+        `[ServiceLocatorService] Delegando a ServiceLocatorCrdService para entidad ${entidad}`
+      );
       return this.serviceLocatorCrd.ejecutaServicio(entidad, value, proceso);
     }
 
@@ -42,7 +47,9 @@ export class ServiceLocatorService {
           case AccionesGrid.EDIT: {
             this.reg = value as NaturalezaCuenta;
             console.log(`[ServiceLocatorService] EDIT - Datos:`, this.reg);
-            return firstValueFrom(this.naturalezaCuentaService.update(this.reg as NaturalezaCuenta));
+            return firstValueFrom(
+              this.naturalezaCuentaService.update(this.reg as NaturalezaCuenta)
+            );
           }
           case AccionesGrid.REMOVE: {
             console.log(`[ServiceLocatorService] REMOVE - ID:`, value);
@@ -54,7 +61,9 @@ export class ServiceLocatorService {
         }
       }
       default: {
-        console.error(`❌ [ServiceLocatorService] NO SE ENCONTRO EL SERVICIO para entidad: ${entidad}`);
+        console.error(
+          `❌ [ServiceLocatorService] NO SE ENCONTRO EL SERVICIO para entidad: ${entidad}`
+        );
         return Promise.resolve(undefined);
       }
     }
@@ -115,5 +124,4 @@ export class ServiceLocatorService {
 
     return entidadesCrd.includes(entidad);
   }
-
 }
