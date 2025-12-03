@@ -128,6 +128,7 @@ export class NaturalezaDeCuentasComponent implements OnInit {
         name: 'tipo',
         collections: tiposNaturaleza,
         autocompleteType: 1,
+        rubroAlterno: RUBRO_TIPO_GRUPO,
         selectField: ['descripcion'],
         validations: [
           { name: 'required', validator: Validators.required, message: 'El tipo es requerido' },

@@ -32,10 +32,12 @@ export class ServiceLocatorService {
           case AccionesGrid.ADD: {
             this.reg = value as NaturalezaCuenta;
             this.reg.estado = 1;
+            this.reg.empresa = localStorage.getItem('empresa') ? JSON.parse(localStorage.getItem('empresa') as string) : null;
             return firstValueFrom(this.naturalezaCuentaService.add(this.reg as NaturalezaCuenta));
           }
           case AccionesGrid.EDIT: {
             this.reg = value as NaturalezaCuenta;
+            console.log('Actualizando Naturaleza de Cuenta:', this.reg);
             return firstValueFrom(this.naturalezaCuentaService.update(this.reg as NaturalezaCuenta));
           }
           case AccionesGrid.REMOVE: {
@@ -61,7 +63,7 @@ export class ServiceLocatorService {
     // Manejar entidades de Contabilidad
     switch (entidad) {
       case EntidadesContabilidad.NATURALEZA_CUENTA: {
-        return firstValueFrom(this.naturalezaCuentaService.getAll());
+        return firstValueFrom(this.naturalezaCuentaService.getByEmpresa(Number(localStorage.getItem('idEmpresa')) ?? 0));
       }
       default: {
         console.log('NO SE ENCONTRO EL SERVICIO');
