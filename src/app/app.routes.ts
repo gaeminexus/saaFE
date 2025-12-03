@@ -32,6 +32,7 @@ import { NaturalezaDeCuentasComponent } from './modules/cnt/forms/naturaleza-cue
 import { CargaAportesComponent } from './modules/crd/forms/archivos-petro/carga-aportes/carga-aportes.component';
 import { ConsultaArchivosPetroComponent } from './modules/crd/forms/archivos-petro/consulta-archivos-petro/consulta-archivos-petro.component';
 import { DetalleConsultaCargaComponent } from './modules/crd/forms/archivos-petro/detalle-consulta-carga/detalle-consulta-carga.component';
+import { CruceValoresComponent } from './modules/crd/forms/cruce-valores/cruce-valores.component';
 import { EntidadConsultaComponent } from './modules/crd/forms/entidad-participe/entidad-consulta/entidad-consulta.component';
 import { EntidadEditComponent } from './modules/crd/forms/entidad-participe/entidad-edit/entidad-edit.component';
 import { EntidadParticipeInfoComponent } from './modules/crd/forms/entidad-participe/entidad-participe-info/entidad-participe-info.component';
@@ -161,6 +162,7 @@ export const routes: Routes = [
       { path: 'navegacion-cascada', component: NavegacionCascadaComponent },
       { path: 'participe-dash', component: ParticipeDashComponent },
       { path: 'participe-info', component: ParticipeInfoComponent },
+      { path: 'cruce-valores', component: CruceValoresComponent },
       {
         path: 'entidad-edit',
         component: EntidadEditComponent,

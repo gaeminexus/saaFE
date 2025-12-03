@@ -1,18 +1,15 @@
 import { Component } from '@angular/core';
-import { NavItem } from '../../../shared/basics/menu/model/nav-item';
 import { SideMenuCustomComponent } from '../../../shared/basics/menu/forms/side-menu-custom/side-menu-custom.component';
+import { NavItem } from '../../../shared/basics/menu/model/nav-item';
 
 @Component({
   selector: 'app-menucreditos',
   standalone: true,
-  imports: [
-    SideMenuCustomComponent
-  ],
+  imports: [SideMenuCustomComponent],
   templateUrl: './menucreditos.component.html',
-  styleUrls: ['./menucreditos.component.scss']
+  styleUrls: ['./menucreditos.component.scss'],
 })
 export class MenucreditosComponent {
-
   navItems: NavItem[] = [
     {
       displayName: 'Historicos',
@@ -22,9 +19,9 @@ export class MenucreditosComponent {
         {
           displayName: 'DELTA21',
           iconName: 'hard_drive_2',
-          route: '/menucreditos/extr'
+          route: '/menucreditos/extr',
         },
-      ]
+      ],
     },
     {
       displayName: 'Parametrización',
@@ -34,19 +31,19 @@ export class MenucreditosComponent {
         {
           displayName: 'Tipos',
           iconName: 'dataset',
-          route: '/menucreditos/tiposCrd'
+          route: '/menucreditos/tiposCrd',
         },
         {
           displayName: 'Estados',
           iconName: 'event_list',
-          route: '/menucreditos/estadosCrd'
+          route: '/menucreditos/estadosCrd',
         },
         {
           displayName: 'Listados',
           iconName: 'list_alt',
-          route: '/menucreditos/listadosCrd'
+          route: '/menucreditos/listadosCrd',
         },
-      ]
+      ],
     },
     {
       displayName: 'Participes',
@@ -56,24 +53,24 @@ export class MenucreditosComponent {
         {
           displayName: 'Administrar',
           iconName: 'domain',
-          route: '/menucreditos/participe-info'
+          route: '/menucreditos/participe-info',
         },
         {
           displayName: 'Consulta',
           iconName: 'group_search',
-          route: '/menucreditos/entidad-consulta'
+          route: '/menucreditos/entidad-consulta',
         },
         {
           displayName: 'Listado General',
           iconName: 'list',
-          route: '/menucreditos/navegacion-cascada'
+          route: '/menucreditos/navegacion-cascada',
         },
         {
           displayName: 'Dash',
           iconName: 'person_play',
-          route: '/menucreditos/participe-dash'
+          route: '/menucreditos/participe-dash',
         },
-      ]
+      ],
     },
     {
       displayName: 'Contratos',
@@ -83,19 +80,19 @@ export class MenucreditosComponent {
         {
           displayName: 'Ingreso',
           iconName: 'contract',
-          route: '/menucreditos/contrato-edit'
+          route: '/menucreditos/contrato-edit',
         },
         {
           displayName: 'Administrar',
           iconName: 'developer_guide',
-          route: '/menucreditos/contrato-consulta'
+          route: '/menucreditos/contrato-consulta',
         },
         {
           displayName: 'Dash',
           iconName: 'widget_width',
-          route: '/menucreditos/contrato-dash'
+          route: '/menucreditos/contrato-dash',
         },
-      ]
+      ],
     },
     {
       displayName: 'Prestamos',
@@ -105,7 +102,7 @@ export class MenucreditosComponent {
         {
           displayName: 'Ingreso',
           iconName: 'credit_score',
-          route: '/menucreditos/carga-aportes'
+          route: '/menucreditos/carga-aportes',
         },
         {
           displayName: 'Administrar',
@@ -117,7 +114,7 @@ export class MenucreditosComponent {
           iconName: 'money_bag',
           // route: '/menucreditos/participe-dash'
         },
-      ]
+      ],
     },
     {
       displayName: 'Cobros',
@@ -137,31 +134,31 @@ export class MenucreditosComponent {
             {
               displayName: 'Carga Aportes',
               iconName: 'drive_folder_upload',
-              route: '/menucreditos/carga-aportes'
+              route: '/menucreditos/carga-aportes',
             },
             {
               displayName: 'Consulta',
               iconName: 'manage_search',
-              route: '/menucreditos/consulta-archivos-petro'
+              route: '/menucreditos/consulta-archivos-petro',
             },
-          ]
+          ],
         },
         {
           displayName: 'Pago Cuota',
           iconName: 'price_check',
-          route: '/menucreditos/carga-aportes'
+          route: '/menucreditos/carga-aportes',
         },
         {
           displayName: 'Cruce Valores',
           iconName: 'repeat_on',
-          route: '/menucreditos/carga-aportes'
+          route: '/menucreditos/cruce-valores',
         },
         {
           displayName: 'Dash',
           iconName: 'finance',
           // route: '/menucreditos/participe-dash'
         },
-      ]
+      ],
     },
   ];
 }
