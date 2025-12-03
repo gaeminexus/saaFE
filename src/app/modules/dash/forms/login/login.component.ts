@@ -1,3 +1,5 @@
+import { CentroCosto } from './../../../cnt/model/centro-costo';
+import { CentroCostoService } from './../../../cnt/service/centro-costo.service';
 import { Component, AfterViewInit, OnDestroy, ElementRef, ViewChild, NgZone, Inject, PLATFORM_ID } from '@angular/core';
 import { AppConfig } from '../../../../app.config';
 import { DatePipe, isPlatformBrowser } from '@angular/common';
@@ -70,6 +72,7 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
     private usuarioService: UsuarioService,
     private appStateService: AppStateService,
     private naturalezaCuentaService: NaturalezaCuentaService,
+    private CentroCostoService: CentroCostoService,
     private router: Router,
     @Inject(PLATFORM_ID) private platformId: Object
   ) {}
@@ -269,7 +272,7 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
       }
     });*/
 
-    this.naturalezaCuentaService.getById('4851').subscribe({
+    this.CentroCostoService.validaExistenAsientos(1684).subscribe({
       next: (data: any) => {
         console.log('GetById - Registro específico:', data);
       },

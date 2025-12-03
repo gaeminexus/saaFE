@@ -32,6 +32,14 @@ export class CentroCostoService {
     );
   }
 
+validaExistenAsientos(idCentroCosto: number): Observable<number | null> {
+    const wsvalidaExistenAsientos = '/validaExistenAsientos/';
+    const url = `${ServiciosCnt.RS_CNCS}${wsvalidaExistenAsientos}${idCentroCosto}`;
+    return this.http.get<number>(url).pipe(
+      catchError(this.handleError)
+    );
+  }
+
   /** POST: add a new sesion to the server */
   add(datos: any): Observable<CentroCosto | null> {
     return this.http.post<CentroCosto>(ServiciosCnt.RS_CNCS, datos, this.httpOptions).pipe(
