@@ -1,0 +1,245 @@
+<div class="pago-cuota-dialog">
+  <!-- Header -->
+  <div class="dialog-header">
+    <div class="header-icon">
+      <mat-icon>payment</mat-icon>
+    </div>
+    <div class="header-content">
+      <h2 mat-dialog-title>Pagar Cuota</h2>
+      <p class="subtitle">Préstamo #{{ data.prestamo.codigo }}</p>
+    </div>
+  </div>
+
+  <!-- Información del Préstamo -->
+  <div class="prestamo-info">
+    <div class="info-row">
+      <span class="label">Producto:</span>
+      <span class="value">{{ data.prestamo.producto?.nombre || 'N/A' }}</span>
+    </div>
+    <div class="info-row">
+      <span class="label">Saldo Total:</span>
+      <span class="value saldo">{{
+        data.prestamo.saldoTotal | currency : 'USD' : 'symbol' : '1.2-2'
+      }}</span>
+    </div>
+    <div class="info-row">
+      <span class="label">Fecha Préstamo:</span>
+      <span class="value">{{ data.prestamo.fecha | date : 'dd/MM/yyyy' }}</span>
+    </div>
+  </div>
+
+  <!-- Formulario -->
+  <form [formGroup]="pagoForm" (ngSubmit)="onSubmit()">
+    <mat-dialog-content class="dialog-content">
+      <!-- Tipo de Pago -->
+      <div class="form-section">
+        <label class="section-label">Forma de Pago</label>
+        <mat-radio-group formControlName="tipoPago" class="radio-group">
+          <mat-radio-button value="TRANSFERENCIA">
+            <mat-icon>swap_horiz</mat-icon>
+            Transferencia
+          </mat-radio-button>
+          <mat-radio-button value="DEPOSITO">
+            <mat-icon>receipt</mat-icon>
+            Depósito
+          </mat-radio-button>
+        </mat-radio-group>
+      </div>
+
+      <!-- Campos Dinámicos según Tipo de Pago -->
+      <div class="form-section campos-dinamicos">
+        <!-- Campos de TRANSFERENCIA -->
+        @if (esTransferencia) {
+        <div class="campos-grupo" [@slideIn]>
+          <h4 class="grupo-titulo">
+            <mat-icon>account_balance</mat-icon>
+            Datos de Transferencia
+          </h4>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Banco</mat-label>
+            <mat-select formControlName="codigoBanco" required>
+              <mat-option [value]="null" disabled>Seleccione un banco</mat-option>
+              @for (banco of data.bancos; track banco.codigo) {
+              <mat-option [value]="banco.codigo">
+                {{ banco.nombre }}
+              </mat-option>
+              }
+            </mat-select>
+            <mat-icon matPrefix>account_balance</mat-icon>
+            @if (pagoForm.get('codigoBanco')?.invalid && pagoForm.get('codigoBanco')?.touched) {
+            <mat-error>Seleccione el banco</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Número de Referencia Bancaria</mat-label>
+            <input
+              matInput
+              formControlName="numeroReferencia"
+              required
+              placeholder="Ej: REF123456789"
+            />
+            <mat-icon matPrefix>tag</mat-icon>
+            @if (pagoForm.get('numeroReferencia')?.invalid &&
+            pagoForm.get('numeroReferencia')?.touched) {
+            <mat-error>Referencia requerida (mínimo 6 caracteres)</mat-error>
+            }
+          </mat-form-field>
+
+          <div class="form-row">
+            <mat-form-field appearance="outline" class="half-width">
+              <mat-label>Fecha</mat-label>
+              <input matInput [matDatepicker]="pickerTransf" formControlName="fecha" required />
+              <mat-datepicker-toggle matSuffix [for]="pickerTransf"></mat-datepicker-toggle>
+              <mat-datepicker #pickerTransf></mat-datepicker>
+              @if (pagoForm.get('fecha')?.invalid && pagoForm.get('fecha')?.touched) {
+              <mat-error>Fecha requerida</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="half-width">
+              <mat-label>Valor</mat-label>
+              <input
+                matInput
+                type="number"
+                formControlName="monto"
+                required
+                [min]="montoMinimo"
+                [max]="montoMaximo"
+                step="0.01"
+              />
+              <span matPrefix>$&nbsp;</span>
+              <mat-icon matSuffix color="primary">attach_money</mat-icon>
+              @if (!montoValido && pagoForm.get('monto')?.touched) {
+              <mat-error>{{ errorMonto }}</mat-error>
+              }
+            </mat-form-field>
+          </div>
+        </div>
+        }
+
+        <!-- Campos de DEPÓSITO -->
+        @if (esDeposito) {
+        <div class="campos-grupo" [@slideIn]>
+          <h4 class="grupo-titulo">
+            <mat-icon>receipt_long</mat-icon>
+            Datos de Depósito
+          </h4>
+
+          <div class="form-row">
+            <mat-form-field appearance="outline" class="half-width">
+              <mat-label>Fecha</mat-label>
+              <input matInput [matDatepicker]="pickerDep" formControlName="fecha" required />
+              <mat-datepicker-toggle matSuffix [for]="pickerDep"></mat-datepicker-toggle>
+              <mat-datepicker #pickerDep></mat-datepicker>
+              @if (pagoForm.get('fecha')?.invalid && pagoForm.get('fecha')?.touched) {
+              <mat-error>Fecha requerida</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="half-width">
+              <mat-label>Número Papeleta</mat-label>
+              <input
+                matInput
+                formControlName="numeroPapeleta"
+                required
+                placeholder="Ej: 12345678"
+              />
+              <mat-icon matPrefix>confirmation_number</mat-icon>
+              @if (pagoForm.get('numeroPapeleta')?.invalid &&
+              pagoForm.get('numeroPapeleta')?.touched) {
+              <mat-error>Papeleta requerida (mínimo 5 caracteres)</mat-error>
+              }
+            </mat-form-field>
+          </div>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Valor</mat-label>
+            <input
+              matInput
+              type="number"
+              formControlName="monto"
+              required
+              [min]="montoMinimo"
+              [max]="montoMaximo"
+              step="0.01"
+            />
+            <span matPrefix>$&nbsp;</span>
+            <mat-icon matSuffix color="primary">attach_money</mat-icon>
+            @if (!montoValido && pagoForm.get('monto')?.touched) {
+            <mat-error>{{ errorMonto }}</mat-error>
+            }
+          </mat-form-field>
+        </div>
+        }
+      </div>
+
+      <!-- Cuenta Destino ASOPREP -->
+      <div class="form-section">
+        <label class="section-label">Cuenta Destino ASOPREP</label>
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Seleccione cuenta</mat-label>
+          <mat-select formControlName="codigoCuentaAsoprep" required>
+            <mat-option [value]="null" disabled>Seleccione una cuenta</mat-option>
+            @for (cuenta of data.cuentasAsoprep; track cuenta.codigo) {
+            <mat-option [value]="cuenta.codigo">
+              {{ getCuentaLabel(cuenta) }}
+            </mat-option>
+            }
+          </mat-select>
+          <mat-icon matPrefix>account_balance_wallet</mat-icon>
+          @if (pagoForm.get('codigoCuentaAsoprep')?.invalid &&
+          pagoForm.get('codigoCuentaAsoprep')?.touched) {
+          <mat-error>Seleccione la cuenta destino</mat-error>
+          }
+        </mat-form-field>
+      </div>
+
+      <!-- Resumen -->
+      @if (pagoForm.get('monto')?.value > 0) {
+      <div class="resumen">
+        <mat-icon>info</mat-icon>
+        <div class="resumen-content">
+          <p class="resumen-titulo">Resumen del Pago</p>
+          <p class="resumen-monto">
+            Monto:
+            <strong>{{
+              pagoForm.get('monto')?.value | currency : 'USD' : 'symbol' : '1.2-2'
+            }}</strong>
+          </p>
+          <p class="resumen-nuevo-saldo">
+            Nuevo saldo:
+            <strong>{{
+              data.prestamo.saldoTotal - pagoForm.get('monto')?.value
+                | currency : 'USD' : 'symbol' : '1.2-2'
+            }}</strong>
+          </p>
+        </div>
+      </div>
+      }
+    </mat-dialog-content>
+
+    <!-- Acciones -->
+    <mat-dialog-actions align="end" class="dialog-actions">
+      <button mat-button type="button" (click)="onCancel()" [disabled]="loading">
+        <mat-icon>close</mat-icon>
+        Cancelar
+      </button>
+      <button
+        mat-raised-button
+        color="accent"
+        type="submit"
+        [disabled]="pagoForm.invalid || loading"
+      >
+        @if (loading) {
+        <mat-spinner diameter="20" class="spinner-inline"></mat-spinner>
+        <span>Procesando...</span>
+        } @else {
+        <mat-icon>check_circle</mat-icon>
+        <span>Pagar Cuota</span>
+        }
+      </button>
+    </mat-dialog-actions>
+  </form>
+</div>

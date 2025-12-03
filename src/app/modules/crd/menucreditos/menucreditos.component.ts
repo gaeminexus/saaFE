@@ -145,8 +145,8 @@ export class MenucreditosComponent {
         },
         {
           displayName: 'Pago Cuota',
-          iconName: 'price_check',
-          route: '/menucreditos/carga-aportes',
+          iconName: 'payment',
+          route: '/menucreditos/pago-cuotas',
         },
         {
           displayName: 'Cruce Valores',

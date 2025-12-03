@@ -40,6 +40,7 @@ import { NavegacionCascadaComponent } from './modules/crd/forms/entidad-particip
 import { ParticipeDashComponent } from './modules/crd/forms/entidad-participe/participe-dash/participe-dash.component';
 import { ParticipeInfoComponent } from './modules/crd/forms/entidad-participe/participe-info/participe-info.component';
 import { ExtersComponent } from './modules/crd/forms/exters/exters.component';
+import { PagoCuotasComponent } from './modules/crd/forms/pago-cuotas/pago-cuotas.component';
 import { EstadosCrdComponent } from './modules/crd/forms/parametrizacion/estados-crd/estados-crd.component';
 import { ListadosCrdComponent } from './modules/crd/forms/parametrizacion/listados-crd/listados-crd.component';
 import { TiposCrdComponent } from './modules/crd/forms/parametrizacion/tipos-crd/tipos-crd.component';
@@ -163,6 +164,7 @@ export const routes: Routes = [
       { path: 'participe-dash', component: ParticipeDashComponent },
       { path: 'participe-info', component: ParticipeInfoComponent },
       { path: 'cruce-valores', component: CruceValoresComponent },
+      { path: 'pago-cuotas', component: PagoCuotasComponent },
       {
         path: 'entidad-edit',
         component: EntidadEditComponent,
