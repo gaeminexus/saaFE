@@ -1,103 +1,174 @@
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 
-import { Asiento, EstadoAsiento, CrearAsiento, FiltrosAsiento } from '../model/asiento';
+import { Asiento, CrearAsiento, EstadoAsiento, FiltrosAsiento } from '../model/asiento';
 import { ServiciosCnt } from '../service/ws-cnt';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class AsientoService {
   private baseUrl = ServiciosCnt.RS_ASNT;
-
-  constructor(private http: HttpClient) { }
+  private httpOptions = { headers: { 'Content-Type': 'application/json' } };
 
   /**
-   * Obtener todos los asientos
+   * IMPORTANTE: Backend requiere POST para búsquedas
+   * - GET /asnt → 405 Method Not Allowed
+   * - GET /asnt/criteria?params → 405 Method Not Allowed
+   * - POST /asnt/criteria (body) → ✅ Correcto
+   *
+   * Este patrón se usa en otros servicios:
+   * @see PeriodoService.selectByCriteria()
+   * @see PlanCuentaService.selectByCriteria()
+   * @see DetalleMayorAnaliticoService.selectByCriteria()
+   */
+
+  constructor(private http: HttpClient) {}
+
+  /**
+   * Obtener todos los asientos - usa POST ya que GET retorna 405
    */
   getAll(): Observable<Asiento[]> {
-    return this.http.get<Asiento[]>(this.baseUrl);
+    // Usar selectByCriteria vacío para obtener todos
+    return this.selectByCriteria({}).pipe(
+      catchError((err) => {
+        console.warn('[AsientoService] getAll falló, retornando array vacío:', err);
+        return of([]);
+      })
+    );
   }
 
   /**
    * Obtener asiento por ID
    */
   getById(id: number): Observable<Asiento> {
-    return this.http.get<Asiento>(`${this.baseUrl}/${id}`);
+    return this.http
+      .get<Asiento>(`${this.baseUrl}/${id}`, this.httpOptions)
+      .pipe(catchError(this.handleError));
   }
 
   /**
-   * Buscar asientos por criterios
+   * Buscar asientos por criterios - IMPORTANTE: usa POST, no GET
+   * Backend requiere POST incluso para búsquedas
    */
   selectByCriteria(filtros: FiltrosAsiento): Observable<Asiento[]> {
-    const params: any = {};
+    const wsEndpoint = '/criteria';
+    const url = `${this.baseUrl}${wsEndpoint}`;
+
+    // Construir objeto de criterios para enviar en el body
+    const criteriosBody: any = {};
 
     if (filtros.fechaDesde) {
-      params.fechaDesde = filtros.fechaDesde.toISOString().split('T')[0];
+      criteriosBody.fechaDesde =
+        filtros.fechaDesde instanceof Date
+          ? filtros.fechaDesde.toISOString().split('T')[0]
+          : filtros.fechaDesde;
     }
 
     if (filtros.fechaHasta) {
-      params.fechaHasta = filtros.fechaHasta.toISOString().split('T')[0];
+      criteriosBody.fechaHasta =
+        filtros.fechaHasta instanceof Date
+          ? filtros.fechaHasta.toISOString().split('T')[0]
+          : filtros.fechaHasta;
     }
 
     if (filtros.tipoAsiento) {
-      params.tipoAsiento = filtros.tipoAsiento;
+      criteriosBody.tipoAsiento = filtros.tipoAsiento;
     }
 
     if (filtros.estado !== undefined && filtros.estado !== null) {
-      params.estado = filtros.estado;
+      criteriosBody.estado = filtros.estado;
     }
 
     if (filtros.numero) {
-      params.numero = filtros.numero;
+      criteriosBody.numero = filtros.numero;
     }
 
-    return this.http.get<Asiento[]>(`${this.baseUrl}/criteria`, { params });
+    if (filtros.observaciones) {
+      criteriosBody.observaciones = filtros.observaciones;
+    }
+
+    if (filtros.periodo) {
+      criteriosBody.periodo = filtros.periodo;
+    }
+
+    // POST con el body de criterios
+    return this.http.post<Asiento[]>(url, criteriosBody, this.httpOptions).pipe(
+      catchError((err: HttpErrorResponse) => {
+        console.error('[AsientoService] Error en selectByCriteria:', err);
+        // Si también falla POST, retornar array vacío en desarrollo
+        return of([]);
+      })
+    );
   }
 
   /**
    * Crear nuevo asiento
    */
   crearAsiento(datosAsiento: CrearAsiento): Observable<Asiento> {
-    return this.http.post<Asiento>(this.baseUrl, datosAsiento);
+    return this.http
+      .post<Asiento>(this.baseUrl, datosAsiento, this.httpOptions)
+      .pipe(catchError(this.handleError));
   }
 
   /**
    * Actualizar asiento existente
    */
   actualizarAsiento(id: number, datosAsiento: CrearAsiento): Observable<Asiento> {
-    return this.http.put<Asiento>(`${this.baseUrl}/${id}`, datosAsiento);
+    return this.http
+      .put<Asiento>(`${this.baseUrl}/${id}`, datosAsiento, this.httpOptions)
+      .pipe(catchError(this.handleError));
   }
 
   /**
    * Eliminar asiento
    */
   eliminarAsiento(id: number): Observable<boolean> {
-    return this.http.delete<boolean>(`${this.baseUrl}/${id}`);
+    return this.http
+      .delete<boolean>(`${this.baseUrl}/${id}`, this.httpOptions)
+      .pipe(catchError(this.handleError));
   }
 
   /**
    * Anular asiento
    */
   anularAsiento(id: number, razonAnulacion: string): Observable<boolean> {
-    const params = { razonAnulacion };
-    return this.http.put<boolean>(`${this.baseUrl}/${id}/anular`, null, { params });
+    const body = { razonAnulacion };
+    return this.http
+      .put<boolean>(`${this.baseUrl}/${id}/anular`, body, this.httpOptions)
+      .pipe(catchError(this.handleError));
   }
 
   /**
    * Reversar asiento
    */
   reversarAsiento(id: number, razonReverso: string): Observable<boolean> {
-    const params = { razonReverso };
-    return this.http.put<boolean>(`${this.baseUrl}/${id}/reversar`, null, { params });
+    const body = { razonReverso };
+    return this.http
+      .put<boolean>(`${this.baseUrl}/${id}/reversar`, body, this.httpOptions)
+      .pipe(catchError(this.handleError));
   }
 
   /**
    * Obtener siguiente número de asiento
    */
   getSiguienteNumero(): Observable<number> {
-    return this.http.get<number>(`${this.baseUrl}/siguiente-numero`);
+    return this.http
+      .get<number>(`${this.baseUrl}/siguiente-numero`, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
+
+  /**
+   * Manejo de errores
+   */
+  private handleError(error: HttpErrorResponse): Observable<any> {
+    console.error('[AsientoService] Error HTTP:', error);
+    if (error.status === 200) {
+      return of(null);
+    }
+    return throwError(() => error);
   }
 
   /**

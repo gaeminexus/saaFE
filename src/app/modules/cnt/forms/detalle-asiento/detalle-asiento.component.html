@@ -1,0 +1,254 @@
+<div class="detalle-asiento-container">
+  <!-- Toolbar con botones de acción -->
+  <mat-toolbar class="action-toolbar">
+    <div class="toolbar-buttons">
+      <button
+        mat-raised-button
+        color="primary"
+        (click)="onInsertar()"
+        [disabled]="formDetalle.invalid || editingIndex !== null"
+      >
+        <mat-icon>add_circle</mat-icon>
+        Insertar
+      </button>
+      <button mat-raised-button color="accent" (click)="onRecalcular()">
+        <mat-icon>calculate</mat-icon>
+        Recalcular
+      </button>
+      @if (editingIndex !== null) {
+      <button mat-raised-button color="warn" (click)="onCancelar()">
+        <mat-icon>close</mat-icon>
+        Cancelar
+      </button>
+      }
+    </div>
+  </mat-toolbar>
+
+  <!-- Mensaje de error -->
+  @if (error) {
+  <div class="error-message">
+    <mat-icon>error</mat-icon>
+    {{ error }}
+  </div>
+  }
+
+  <!-- Formulario de entrada -->
+  <mat-card class="form-card">
+    <mat-card-header>
+      <mat-card-title>Agregar Línea de Asiento</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <form [formGroup]="formDetalle" class="form-grid">
+        <!-- Fila 1: Cuenta y Detalle -->
+        <div class="form-row-full">
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Cuenta</mat-label>
+            <mat-select
+              formControlName="planCuenta"
+              [disabled]="editingIndex !== null && editingIndex !== -1"
+            >
+              <mat-option value="">Seleccione una cuenta...</mat-option>
+              @for (cuenta of planCuentas; track cuenta.codigo) {
+              <mat-option [value]="cuenta.codigo">
+                {{ cuenta.codigo }} - {{ cuenta.nombre }}
+              </mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Detalle</mat-label>
+            <input
+              matInput
+              formControlName="descripcion"
+              placeholder="Descripción del movimiento"
+            />
+            @if (formDetalle.get('descripcion')?.hasError('required')) {
+            <mat-error>El detalle es requerido</mat-error>
+            } @if (formDetalle.get('descripcion')?.hasError('minlength')) {
+            <mat-error>Mínimo 3 caracteres</mat-error>
+            }
+          </mat-form-field>
+        </div>
+
+        <!-- Fila 2: Tipo y Valor -->
+        <div class="form-row-full tipo-valor-row">
+          <!-- Selector de Tipo (Debe/Haber) -->
+          <div class="tipo-selector">
+            <label class="tipo-label">Tipo de Movimiento</label>
+            <div class="radio-group">
+              <mat-radio-button value="debe" formControlName="tipo" matTooltip="Movimiento al Debe">
+                <span class="radio-label">Debe</span>
+              </mat-radio-button>
+              <mat-radio-button
+                value="haber"
+                formControlName="tipo"
+                matTooltip="Movimiento al Haber"
+              >
+                <span class="radio-label">Haber</span>
+              </mat-radio-button>
+            </div>
+          </div>
+
+          <!-- Campo de Valor único -->
+          <mat-form-field appearance="outline" class="form-field valor-field">
+            <mat-label>Valor</mat-label>
+            <span matPrefix class="valor-prefix">
+              {{ formDetalle.get('tipo')?.value === 'debe' ? 'D: ' : 'H: ' }}
+            </span>
+            <input matInput formControlName="valor" type="number" placeholder="0.00" step="0.01" />
+            @if (formDetalle.get('valor')?.hasError('required')) {
+            <mat-error>El valor es requerido</mat-error>
+            } @if (formDetalle.get('valor')?.hasError('min')) {
+            <mat-error>El valor debe ser mayor a 0</mat-error>
+            }
+          </mat-form-field>
+
+          <!-- Preview Visual -->
+          <div
+            class="preview-box"
+            [class.debe]="formDetalle.get('tipo')?.value === 'debe'"
+            [class.haber]="formDetalle.get('tipo')?.value === 'haber'"
+          >
+            <div class="preview-label">
+              {{ formDetalle.get('tipo')?.value === 'debe' ? 'DEBE' : 'HABER' }}
+            </div>
+            <div class="preview-value">
+              {{ formDetalle.get('valor')?.value | number : '1.2-2' }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Fila 3: Centro de Costos (opcional) -->
+        <div class="form-row-full">
+          <mat-form-field appearance="outline" class="form-field full-width">
+            <mat-label>Centro de Costos (Opcional)</mat-label>
+            <mat-select formControlName="centroCosto">
+              <mat-option value="">Sin centro de costos</mat-option>
+              @for (cc of centrosCosto; track cc.codigo) {
+              <mat-option [value]="cc.codigo"> {{ cc.codigo }} - {{ cc.nombre }} </mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Tabla de detalles -->
+  <mat-card class="table-card">
+    <mat-card-header>
+      <mat-card-title>Detalles del Asiento</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      @if (loading) {
+      <div class="loading-container">
+        <mat-spinner diameter="40"></mat-spinner>
+        <p>Cargando datos...</p>
+      </div>
+      } @else {
+      <div class="table-wrapper">
+        <table mat-table [dataSource]="dataSource" class="detail-table">
+          <!-- Cuenta Column -->
+          <ng-container matColumnDef="cuenta">
+            <th mat-header-cell>CUENTA</th>
+            <td mat-cell *matRowDef="let element">
+              <span class="cuenta-cell">
+                {{ element.planCuenta?.codigo }} - {{ element.planCuenta?.nombre }}
+              </span>
+            </td>
+          </ng-container>
+
+          <!-- Detalle Column -->
+          <ng-container matColumnDef="detalle">
+            <th mat-header-cell>DETALLE</th>
+            <td mat-cell *matRowDef="let element">
+              {{ element.descripcion }}
+            </td>
+          </ng-container>
+
+          <!-- Debe Column -->
+          <ng-container matColumnDef="debe">
+            <th mat-header-cell class="text-right">DEBE</th>
+            <td mat-cell *matRowDef="let element" class="text-right">
+              <span class="amount" [class.has-value]="element.valorDebe > 0">
+                {{ element.valorDebe | number : '1.2-2' }}
+              </span>
+            </td>
+          </ng-container>
+
+          <!-- Haber Column -->
+          <ng-container matColumnDef="haber">
+            <th mat-header-cell class="text-right">HABER</th>
+            <td mat-cell *matRowDef="let element" class="text-right">
+              <span class="amount" [class.has-value]="element.valorHaber > 0">
+                {{ element.valorHaber | number : '1.2-2' }}
+              </span>
+            </td>
+          </ng-container>
+
+          <!-- Centro Costos Column -->
+          <ng-container matColumnDef="centroCostos">
+            <th mat-header-cell>CENTRO COSTOS</th>
+            <td mat-cell *matRowDef="let element">
+              {{ element.centroCosto?.nombre || '-' }}
+            </td>
+          </ng-container>
+
+          <!-- Acciones Column -->
+          <ng-container matColumnDef="acciones">
+            <th mat-header-cell>ACCIONES</th>
+            <td mat-cell *matRowDef="let element; let i = index">
+              <div class="action-buttons">
+                <button
+                  mat-icon-button
+                  color="primary"
+                  (click)="onModificar(i)"
+                  [disabled]="editingIndex !== null && editingIndex !== i"
+                  matTooltip="Modificar"
+                >
+                  <mat-icon>{{ editingIndex === i ? 'save' : 'edit' }}</mat-icon>
+                </button>
+                <button
+                  mat-icon-button
+                  color="warn"
+                  (click)="onEliminar(i)"
+                  [disabled]="editingIndex !== null"
+                  matTooltip="Eliminar"
+                >
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </div>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+        </table>
+      </div>
+
+      <!-- Totales -->
+      <div class="totals-section">
+        <div class="total-row">
+          <span class="total-label">Total Debe:</span>
+          <span class="total-amount" [class.highlight]="totalDebe > 0">
+            {{ totalDebe | number : '1.2-2' }}
+          </span>
+        </div>
+        <div class="total-row">
+          <span class="total-label">Total Haber:</span>
+          <span class="total-amount" [class.highlight]="totalHaber > 0">
+            {{ totalHaber | number : '1.2-2' }}
+          </span>
+        </div>
+        <div class="total-row diferencia" [class.error]="diferencia !== 0">
+          <span class="total-label">Diferencia:</span>
+          <span class="total-amount" [class.error]="diferencia !== 0">
+            {{ diferencia | number : '1.2-2' }}
+          </span>
+        </div>
+      </div>
+      }
+    </mat-card-content>
+  </mat-card>
+</div>

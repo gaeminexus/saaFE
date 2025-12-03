@@ -1,42 +1,47 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormArray, FormControl } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
-import { MatTableModule, MatTableDataSource } from '@angular/material/table';
-import { MatPaginatorModule, MatPaginator } from '@angular/material/paginator';
-import { MatSortModule, MatSort } from '@angular/material/sort';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatDialogModule, MatDialog } from '@angular/material/dialog';
-import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
-import { MatCardModule } from '@angular/material/card';
-import { MatToolbarModule } from '@angular/material/toolbar';
-import { MatChipsModule } from '@angular/material/chips';
-import { MatMenuModule } from '@angular/material/menu';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatDividerModule } from '@angular/material/divider';
-import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatNativeDateModule } from '@angular/material/core';
-import { MatTabsModule } from '@angular/material/tabs';
-import { MatExpansionModule } from '@angular/material/expansion';
+import { Component, OnInit, ViewChild } from '@angular/core';
+import {
+  FormArray,
+  FormBuilder,
+  FormGroup,
+  FormsModule,
+  ReactiveFormsModule,
+  Validators,
+} from '@angular/forms';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
-import { catchError } from 'rxjs/operators';
+import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatNativeDateModule } from '@angular/material/core';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatDividerModule } from '@angular/material/divider';
+import { MatExpansionModule } from '@angular/material/expansion';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSelectModule } from '@angular/material/select';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatSort, MatSortModule } from '@angular/material/sort';
+import { MatTableDataSource, MatTableModule } from '@angular/material/table';
+import { MatTabsModule } from '@angular/material/tabs';
+import { MatToolbarModule } from '@angular/material/toolbar';
+import { ActivatedRoute } from '@angular/router';
 
-import { Asiento, EstadoAsiento, FiltrosAsiento, CrearAsiento } from '../../model/asiento';
-import { DetalleAsiento } from '../../model/detalle-asiento';
-import { TipoAsiento } from '../../model/tipo-asiento';
+import { Asiento, CrearAsiento, EstadoAsiento, FiltrosAsiento } from '../../model/asiento';
+import { CentroCosto } from '../../model/centro-costo';
 import { Periodo } from '../../model/periodo';
 import { PlanCuenta } from '../../model/plan-cuenta';
-import { CentroCosto } from '../../model/centro-costo';
+import { TipoAsiento } from '../../model/tipo-asiento';
 
 import { AsientoService } from '../../service/asiento.service';
-import { TipoAsientoService } from '../../service/tipo-asiento.service';
+import { CentroCostoService } from '../../service/centro-costo.service';
 import { PeriodoService } from '../../service/periodo.service';
 import { PlanCuentaService } from '../../service/plan-cuenta.service';
-import { CentroCostoService } from '../../service/centro-costo.service';
+import { TipoAsientoService } from '../../service/tipo-asiento.service';
 
 @Component({
   selector: 'app-asientos',
@@ -65,13 +70,12 @@ import { CentroCostoService } from '../../service/centro-costo.service';
     MatNativeDateModule,
     MatTabsModule,
     MatExpansionModule,
-    MatAutocompleteModule
+    MatAutocompleteModule,
   ],
   templateUrl: './asientos.component.html',
-  styleUrls: ['./asientos.component.scss']
+  styleUrls: ['./asientos.component.scss'],
 })
 export class AsientosComponent implements OnInit {
-
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
 
@@ -79,8 +83,24 @@ export class AsientosComponent implements OnInit {
   dataSource = new MatTableDataSource<Asiento>([]);
   dataSourceDetalles = new MatTableDataSource<any>([]);
 
-  displayedColumns: string[] = ['numero', 'fechaAsiento', 'tipoAsiento', 'observaciones', 'estado', 'totalDebe', 'totalHaber', 'acciones'];
-  displayedColumnsDetalles: string[] = ['cuenta', 'descripcion', 'debe', 'haber', 'centroCosto', 'acciones'];
+  displayedColumns: string[] = [
+    'numero',
+    'fechaAsiento',
+    'tipoAsiento',
+    'observaciones',
+    'estado',
+    'totalDebe',
+    'totalHaber',
+    'acciones',
+  ];
+  displayedColumnsDetalles: string[] = [
+    'cuenta',
+    'descripcion',
+    'debe',
+    'haber',
+    'centroCosto',
+    'acciones',
+  ];
 
   // Formularios
   filtroForm!: FormGroup;
@@ -108,7 +128,7 @@ export class AsientosComponent implements OnInit {
     { valor: EstadoAsiento.ACTIVO, nombre: 'Activo' },
     { valor: EstadoAsiento.ANULADO, nombre: 'Anulado' },
     { valor: EstadoAsiento.REVERSADO, nombre: 'Reversado' },
-    { valor: EstadoAsiento.INCOMPLETO, nombre: 'Incompleto' }
+    { valor: EstadoAsiento.INCOMPLETO, nombre: 'Incompleto' },
   ];
 
   // Totales
@@ -150,10 +170,12 @@ export class AsientosComponent implements OnInit {
     // Configurar filtro personalizado
     this.dataSource.filterPredicate = (data: Asiento, filter: string) => {
       const searchString = filter.toLowerCase();
-      return data.numero.toString().includes(searchString) ||
-             data.observaciones.toLowerCase().includes(searchString) ||
-             data.tipoAsiento.nombre.toLowerCase().includes(searchString) ||
-             this.asientoService.getEstadoTexto(data.estado).toLowerCase().includes(searchString);
+      return (
+        data.numero.toString().includes(searchString) ||
+        data.observaciones.toLowerCase().includes(searchString) ||
+        data.tipoAsiento.nombre.toLowerCase().includes(searchString) ||
+        this.asientoService.getEstadoTexto(data.estado).toLowerCase().includes(searchString)
+      );
     };
   }
 
@@ -169,7 +191,7 @@ export class AsientosComponent implements OnInit {
       estado: [null],
       numero: [null],
       periodo: [null],
-      observaciones: ['']
+      observaciones: [''],
     });
 
     // Formulario principal de asiento
@@ -179,7 +201,7 @@ export class AsientosComponent implements OnInit {
       fechaAsiento: [new Date(), [Validators.required]],
       periodo: [null, [Validators.required]],
       observaciones: ['', [Validators.required, Validators.maxLength(200)]],
-      detalles: this.fb.array([])
+      detalles: this.fb.array([]),
     });
 
     // Suscribirse a cambios en filtros
@@ -205,7 +227,7 @@ export class AsientosComponent implements OnInit {
       descripcion: ['', [Validators.required]],
       valorDebe: [0, [Validators.min(0)]],
       valorHaber: [0, [Validators.min(0)]],
-      centroCosto: [null]
+      centroCosto: [null],
     });
   }
 
@@ -215,23 +237,24 @@ export class AsientosComponent implements OnInit {
   cargarDatos(): void {
     this.cargando = true;
 
-    // Priorizar selectByCriteria con fallback a getAll
-    this.asientoService.selectByCriteria({}).pipe(
-      catchError(err => {
-        console.warn('selectByCriteria falló, intentando getAll como fallback:', err);
-        return this.asientoService.getAll();
-      })
-    ).subscribe({
+    // Usar selectByCriteria con criterios vacíos para obtener todos
+    // El backend retorna 405 en GET, así que POST es obligatorio
+    this.asientoService.selectByCriteria({}).subscribe({
       next: (asientos) => {
+        console.log('[AsientosComponent] Asientos cargados:', asientos?.length || 0);
         // Filtrar por empresa 280
-        this.dataSource.data = (asientos || []).filter(a => a.empresa?.codigo === this.EMPRESA_CODIGO);
+        this.dataSource.data = (asientos || []).filter(
+          (a) => a.empresa?.codigo === this.EMPRESA_CODIGO
+        );
         this.cargando = false;
       },
       error: (error) => {
-        console.error('Error al cargar asientos:', error);
-        this.mostrarMensaje('Error al cargar los asientos', 'error');
+        console.error('[AsientosComponent] Error al cargar asientos:', error);
+        // En desarrollo, mostrar array vacío en lugar de error
+        this.dataSource.data = [];
         this.cargando = false;
-      }
+        this.mostrarMensaje('No hay asientos disponibles', 'warning');
+      },
     });
   }
 
@@ -242,13 +265,16 @@ export class AsientosComponent implements OnInit {
     this.tipoAsientoService.getAll().subscribe({
       next: (tipos) => {
         // Filtrar por empresa 280
-        this.tiposAsiento = (tipos || []).filter(t => t.empresa?.codigo === this.EMPRESA_CODIGO);
+        this.tiposAsiento = (tipos || []).filter((t) => t.empresa?.codigo === this.EMPRESA_CODIGO);
       },
       error: (error) => {
         console.error('Error al cargar tipos de asiento:', error);
-        this.mostrarMensaje('Error al cargar tipos de asiento. Verifique la conexión con el servidor.', 'error');
+        this.mostrarMensaje(
+          'Error al cargar tipos de asiento. Verifique la conexión con el servidor.',
+          'error'
+        );
         this.tiposAsiento = [];
-      }
+      },
     });
   }
 
@@ -265,14 +291,17 @@ export class AsientosComponent implements OnInit {
             if (actual) {
               this.asientoForm.patchValue({ periodo: actual });
             }
-          }
+          },
         });
       },
       error: (error) => {
         console.error('Error al cargar períodos:', error);
-        this.mostrarMensaje('Error al cargar períodos contables. Verifique la conexión con el servidor.', 'error');
+        this.mostrarMensaje(
+          'Error al cargar períodos contables. Verifique la conexión con el servidor.',
+          'error'
+        );
         this.periodos = [];
-      }
+      },
     });
   }
 
@@ -286,9 +315,12 @@ export class AsientosComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error al cargar cuentas:', error);
-        this.mostrarMensaje('Error al cargar plan de cuentas. Verifique la conexión con el servidor.', 'error');
+        this.mostrarMensaje(
+          'Error al cargar plan de cuentas. Verifique la conexión con el servidor.',
+          'error'
+        );
         this.cuentas = [];
-      }
+      },
     });
   }
 
@@ -299,13 +331,18 @@ export class AsientosComponent implements OnInit {
     this.centroCostoService.getAll().subscribe({
       next: (centros) => {
         // Filtrar por empresa 280
-        this.centrosCosto = (centros || []).filter(c => c.empresa?.codigo === this.EMPRESA_CODIGO);
+        this.centrosCosto = (centros || []).filter(
+          (c) => c.empresa?.codigo === this.EMPRESA_CODIGO
+        );
       },
       error: (error) => {
         console.error('Error al cargar centros de costo:', error);
-        this.mostrarMensaje('Error al cargar centros de costo. Verifique la conexión con el servidor.', 'error');
+        this.mostrarMensaje(
+          'Error al cargar centros de costo. Verifique la conexión con el servidor.',
+          'error'
+        );
         this.centrosCosto = [];
-      }
+      },
     });
   }
 
@@ -324,14 +361,16 @@ export class AsientosComponent implements OnInit {
     this.asientoService.selectByCriteria(filtros).subscribe({
       next: (asientos) => {
         // Filtrar por empresa 280 también en búsqueda
-        this.dataSource.data = (asientos || []).filter(a => a.empresa?.codigo === this.EMPRESA_CODIGO);
+        this.dataSource.data = (asientos || []).filter(
+          (a) => a.empresa?.codigo === this.EMPRESA_CODIGO
+        );
         this.cargando = false;
       },
       error: (error) => {
         console.error('Error al filtrar asientos:', error);
         this.mostrarMensaje('Error al filtrar los asientos', 'error');
         this.cargando = false;
-      }
+      },
     });
   }
 
@@ -339,8 +378,15 @@ export class AsientosComponent implements OnInit {
    * Verifica si todos los filtros están vacíos
    */
   todosFiltrosVacios(filtros: FiltrosAsiento): boolean {
-    return !filtros.fechaDesde && !filtros.fechaHasta && !filtros.tipoAsiento &&
-           filtros.estado === null && !filtros.numero && !filtros.periodo && !filtros.observaciones;
+    return (
+      !filtros.fechaDesde &&
+      !filtros.fechaHasta &&
+      !filtros.tipoAsiento &&
+      filtros.estado === null &&
+      !filtros.numero &&
+      !filtros.periodo &&
+      !filtros.observaciones
+    );
   }
 
   /**
@@ -359,7 +405,7 @@ export class AsientosComponent implements OnInit {
     this.editandoAsiento = false;
     this.asientoSeleccionado = null;
     this.asientoForm.reset({
-      fechaAsiento: new Date()
+      fechaAsiento: new Date(),
     });
 
     // Limpiar detalles
@@ -393,7 +439,7 @@ export class AsientosComponent implements OnInit {
       tipoAsiento: asiento.tipoAsiento,
       fechaAsiento: asiento.fechaAsiento,
       periodo: asiento.periodo,
-      observaciones: asiento.observaciones
+      observaciones: asiento.observaciones,
     });
 
     // Limpiar y cargar detalles
@@ -402,7 +448,7 @@ export class AsientosComponent implements OnInit {
     }
 
     if (asiento.detalles) {
-      asiento.detalles.forEach(detalle => {
+      asiento.detalles.forEach((detalle) => {
         const detalleForm = this.crearDetalleForm();
         detalleForm.patchValue({
           codigo: detalle.codigo,
@@ -410,7 +456,7 @@ export class AsientosComponent implements OnInit {
           descripcion: detalle.descripcion,
           valorDebe: detalle.valorDebe,
           valorHaber: detalle.valorHaber,
-          centroCosto: detalle.centroCosto
+          centroCosto: detalle.centroCosto,
         });
         this.detalles.push(detalleForm);
       });
@@ -455,7 +501,7 @@ export class AsientosComponent implements OnInit {
   actualizarDataSourceDetalles(): void {
     this.dataSourceDetalles.data = this.detalles.controls.map((control, index) => ({
       ...control.value,
-      index
+      index,
     }));
   }
 
@@ -463,11 +509,15 @@ export class AsientosComponent implements OnInit {
    * Calcula los totales debe y haber
    */
   calcularTotales(): void {
-    this.totalDebe = this.detalles.controls.reduce((sum, control) =>
-      sum + (control.get('valorDebe')?.value || 0), 0);
+    this.totalDebe = this.detalles.controls.reduce(
+      (sum, control) => sum + (control.get('valorDebe')?.value || 0),
+      0
+    );
 
-    this.totalHaber = this.detalles.controls.reduce((sum, control) =>
-      sum + (control.get('valorHaber')?.value || 0), 0);
+    this.totalHaber = this.detalles.controls.reduce(
+      (sum, control) => sum + (control.get('valorHaber')?.value || 0),
+      0
+    );
 
     this.diferencia = this.totalDebe - this.totalHaber;
   }
@@ -482,11 +532,12 @@ export class AsientosComponent implements OnInit {
 
     const control = this.detalles.at(index).get('planCuenta');
     if (control) {
-      control.valueChanges.subscribe(value => {
+      control.valueChanges.subscribe((value) => {
         if (typeof value === 'string') {
-          this.cuentasFiltradas[index] = this.cuentas.filter(cuenta =>
-            cuenta.nombre.toLowerCase().includes(value.toLowerCase()) ||
-            cuenta.cuentaContable.includes(value)
+          this.cuentasFiltradas[index] = this.cuentas.filter(
+            (cuenta) =>
+              cuenta.nombre.toLowerCase().includes(value.toLowerCase()) ||
+              cuenta.cuentaContable.includes(value)
           );
         }
       });
@@ -503,11 +554,12 @@ export class AsientosComponent implements OnInit {
 
     const control = this.detalles.at(index).get('centroCosto');
     if (control) {
-      control.valueChanges.subscribe(value => {
+      control.valueChanges.subscribe((value) => {
         if (typeof value === 'string') {
-          this.centrosCostoFiltrados[index] = this.centrosCosto.filter(centro =>
-            centro.nombre.toLowerCase().includes(value.toLowerCase()) ||
-            centro.numero.toString().includes(value)
+          this.centrosCostoFiltrados[index] = this.centrosCosto.filter(
+            (centro) =>
+              centro.nombre.toLowerCase().includes(value.toLowerCase()) ||
+              centro.numero.toString().includes(value)
           );
         }
       });
@@ -561,31 +613,34 @@ export class AsientosComponent implements OnInit {
         descripcion: d.descripcion,
         valorDebe: d.valorDebe || 0,
         valorHaber: d.valorHaber || 0,
-        centroCosto: d.centroCosto?.codigo
-      }))
+        centroCosto: d.centroCosto?.codigo,
+      })),
     };
 
     this.cargando = true;
 
     if (this.editandoAsiento) {
       // Actualizar asiento existente
-      this.asientoService.actualizarAsiento(this.asientoSeleccionado!.codigo, datosAsiento).subscribe({
-        next: (resultado) => {
-          if (resultado) {
-            this.mostrarMensaje('Asiento actualizado exitosamente', 'success');
-            this.cancelarFormulario();
-            this.cargarDatos();
-          }
-        },
-        error: (error) => {
-          console.error('Error al actualizar asiento:', error);
-          this.mostrarMensaje(
-            error?.error?.message || 'Error al actualizar el asiento. Verifique la conexión con el servidor.',
-            'error'
-          );
-          this.cargando = false;
-        }
-      });
+      this.asientoService
+        .actualizarAsiento(this.asientoSeleccionado!.codigo, datosAsiento)
+        .subscribe({
+          next: (resultado) => {
+            if (resultado) {
+              this.mostrarMensaje('Asiento actualizado exitosamente', 'success');
+              this.cancelarFormulario();
+              this.cargarDatos();
+            }
+          },
+          error: (error) => {
+            console.error('Error al actualizar asiento:', error);
+            this.mostrarMensaje(
+              error?.error?.message ||
+                'Error al actualizar el asiento. Verifique la conexión con el servidor.',
+              'error'
+            );
+            this.cargando = false;
+          },
+        });
     } else {
       // Crear nuevo asiento
       this.asientoService.crearAsiento(datosAsiento).subscribe({
@@ -599,11 +654,12 @@ export class AsientosComponent implements OnInit {
         error: (error) => {
           console.error('Error al crear asiento:', error);
           this.mostrarMensaje(
-            error?.error?.message || 'Error al crear el asiento. Verifique la conexión con el servidor.',
+            error?.error?.message ||
+              'Error al crear el asiento. Verifique la conexión con el servidor.',
             'error'
           );
           this.cargando = false;
-        }
+        },
       });
     }
   }
@@ -635,7 +691,7 @@ export class AsientosComponent implements OnInit {
         console.error('Error al anular asiento:', error);
         this.mostrarMensaje('Error al anular el asiento', 'error');
         this.cargando = false;
-      }
+      },
     });
   }
 
@@ -666,7 +722,7 @@ export class AsientosComponent implements OnInit {
         console.error('Error al reversar asiento:', error);
         this.mostrarMensaje('Error al reversar el asiento', 'error');
         this.cargando = false;
-      }
+      },
     });
   }
 
@@ -695,7 +751,7 @@ export class AsientosComponent implements OnInit {
           console.error('Error al eliminar asiento:', error);
           this.mostrarMensaje('Error al eliminar el asiento', 'error');
           this.cargando = false;
-        }
+        },
       });
     }
   }
@@ -728,7 +784,7 @@ export class AsientosComponent implements OnInit {
     this.asientoForm.markAllAsTouched();
 
     // Marcar también los detalles
-    this.detalles.controls.forEach(control => {
+    this.detalles.controls.forEach((control) => {
       control.markAllAsTouched();
     });
   }
@@ -804,7 +860,7 @@ export class AsientosComponent implements OnInit {
       duration: 5000,
       panelClass: `snackbar-${tipo}`,
       horizontalPosition: 'end',
-      verticalPosition: 'top'
+      verticalPosition: 'top',
     });
   }
 
@@ -833,7 +889,7 @@ export class AsientosComponent implements OnInit {
    */
   verificarPlantilla(): void {
     // Verificar query params
-    this.route.queryParams.subscribe(params => {
+    this.route.queryParams.subscribe((params) => {
       const plantillaCodigo = params['plantilla'];
 
       if (plantillaCodigo) {
@@ -860,7 +916,10 @@ export class AsientosComponent implements OnInit {
    * Crea un asiento basado en una plantilla
    */
   private crearAsientoDesdeTemplate(plantillaData: any): void {
-    this.mostrarMensaje(`Creando asiento desde plantilla: ${plantillaData.plantillaNombre}`, 'success');
+    this.mostrarMensaje(
+      `Creando asiento desde plantilla: ${plantillaData.plantillaNombre}`,
+      'success'
+    );
 
     // Cambiar a la pestaña de formulario
     this.tabIndex = 1;
@@ -871,7 +930,7 @@ export class AsientosComponent implements OnInit {
     // Pre-llenar el formulario con datos básicos
     this.asientoForm.patchValue({
       observaciones: `Asiento creado desde plantilla: ${plantillaData.plantillaNombre}`,
-      fechaAsiento: new Date()
+      fechaAsiento: new Date(),
     });
 
     // Cargar detalles de la plantilla
@@ -899,7 +958,7 @@ export class AsientosComponent implements OnInit {
         descripcion: detalle.descripcion || '',
         valorDebe: detalle.movimiento === 1 ? 0 : 0,
         valorHaber: detalle.movimiento === 2 ? 0 : 0,
-        centroCosto: null
+        centroCosto: null,
       });
 
       detallesArray.push(detalleForm);
@@ -912,6 +971,9 @@ export class AsientosComponent implements OnInit {
     this.actualizarDataSourceDetalles();
     this.calcularTotales();
 
-    this.mostrarMensaje(`Se cargaron ${detallesTemplate.length} detalles desde la plantilla. Complete los valores.`, 'success');
+    this.mostrarMensaje(
+      `Se cargaron ${detallesTemplate.length} detalles desde la plantilla. Complete los valores.`,
+      'success'
+    );
   }
 }

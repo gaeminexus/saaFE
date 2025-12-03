@@ -1,0 +1,153 @@
+<div class="asientos-container">
+  <!-- Encabezado -->
+  <div class="header">
+    <h1>ASIENTOS CONTABLES - INGRESO</h1>
+  </div>
+
+  <!-- Mensaje de error -->
+  @if (error) {
+  <div class="error-message">
+    <mat-icon>error</mat-icon>
+    {{ error }}
+  </div>
+  }
+
+  <!-- Formulario Principal -->
+  <div class="form-wrapper">
+    <form [formGroup]="form" (ngSubmit)="onGuardar()">
+      <div class="form-content">
+        <!-- Panel Izquierdo: Información General -->
+        <mat-card class="info-card">
+          <mat-card-header>
+            <mat-card-title>Información General</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="form-grid">
+              <!-- Tipo -->
+              <div class="form-field">
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Tipo</mat-label>
+                  <mat-select formControlName="tipo">
+                    <mat-option value="">Seleccione ...</mat-option>
+                    @for (tipo of tiposAsientos; track tipo.id) {
+                    <mat-option [value]="tipo.id">{{ tipo.nombre }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+              </div>
+
+              <!-- Módulo Origen -->
+              <div class="form-field">
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Módulo Origen</mat-label>
+                  <mat-select formControlName="moduloOrigen">
+                    <mat-option value="">Seleccione ...</mat-option>
+                    @for (modulo of modulosOrigen; track modulo.id) {
+                    <mat-option [value]="modulo.id">{{ modulo.nombre }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+              </div>
+
+              <!-- Observaciones (Ancho completo) -->
+              <div class="form-field full-row">
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Observaciones</mat-label>
+                  <textarea
+                    matInput
+                    formControlName="observaciones"
+                    rows="4"
+                    placeholder="Ingrese observaciones (máximo 500 caracteres)"
+                  ></textarea>
+                </mat-form-field>
+              </div>
+
+              <!-- Número -->
+              <div class="form-field">
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Número</mat-label>
+                  <input matInput formControlName="numero" [disabled]="true" />
+                </mat-form-field>
+              </div>
+
+              <!-- Fecha -->
+              <div class="form-field">
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Fecha</mat-label>
+                  <input matInput [matDatepicker]="pickerFecha" formControlName="fecha" />
+                  <mat-datepicker-toggle matSuffix [for]="pickerFecha"></mat-datepicker-toggle>
+                  <mat-datepicker #pickerFecha></mat-datepicker>
+                </mat-form-field>
+              </div>
+
+              <!-- Estado -->
+              <div class="form-field">
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Estado</mat-label>
+                  <input matInput formControlName="estado" [disabled]="true" />
+                </mat-form-field>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+
+      <!-- Panel Derecho: Valores -->
+      <div class="values-panel">
+        <mat-card class="values-card">
+          <mat-card-header>
+            <mat-card-title>Valores</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="value-row">
+              <span class="value-label">Debe:</span>
+              <span class="value-amount">$ {{ totalDebe | number : '1.2-2' }}</span>
+            </div>
+            <mat-divider></mat-divider>
+
+            <div class="value-row">
+              <span class="value-label">Haber:</span>
+              <span class="value-amount">$ {{ totalHaber | number : '1.2-2' }}</span>
+            </div>
+            <mat-divider></mat-divider>
+
+            <div class="value-row diferencia" [class.error]="diferencia !== 0">
+              <span class="value-label">Diferencia:</span>
+              <span class="value-amount">$ {{ diferencia | number : '1.2-2' }}</span>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </form>
+
+    <!-- Detalle de Asiento -->
+    <app-detalle-asiento
+      [asientoId]="1"
+      (detallesChanged)="onDetallesChanged($event)"
+    ></app-detalle-asiento>
+
+    <!-- Botones de Acción -->
+    <div class="button-group">
+      <button mat-raised-button color="warn" (click)="onCancelar()">
+        <mat-icon>close</mat-icon>
+        Cancelar
+      </button>
+      <button mat-raised-button color="accent" (click)="onLimpiar()">
+        <mat-icon>clear</mat-icon>
+        Limpiar
+      </button>
+      <button
+        mat-raised-button
+        color="primary"
+        (click)="onGuardar()"
+        [disabled]="form.invalid || loading"
+      >
+        @if (loading) {
+        <mat-spinner diameter="20"></mat-spinner>
+        Guardando... } @else {
+        <mat-icon>save</mat-icon>
+        Guardar }
+      </button>
+    </div>
+  </div>
+</div>
