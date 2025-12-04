@@ -3,7 +3,6 @@ import { environment } from '../../../../environments/environment';
 const API_URL = environment.apiUrl;
 
 export class ServiciosCrd {
-
   // RESTFULL SERVICES - Configuración dinámica según ambiente
   public static RS_BTPC = `${API_URL}/btpc`;
   public static RS_CNTN = `${API_URL}/btpc`;
@@ -14,7 +13,7 @@ export class ServiciosCrd {
   public static RS_ESPS = `${API_URL}/esps`;
   public static RS_EXTR = `${API_URL}/extr`;
   public static RS_TPPR = `${API_URL}/tppr`;
-  public static RS_FLLL = `${API_URL}/extr`;
+  public static RS_FLLL = `${API_URL}/flll`;
   public static RS_ENTD = `${API_URL}/entd`;
   public static RS_PRDC = `${API_URL}/prdc`;
   public static RS_PRST = `${API_URL}/prst`;
