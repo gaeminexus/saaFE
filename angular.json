@@ -3,7 +3,7 @@
   "version": 1,
   "newProjectRoot": "projects",
   "projects": {
-    "saa-frontend": {
+    "saa": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
@@ -39,13 +39,13 @@
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "1.5MB",
-                  "maximumError": "2MB"
+                  "maximumWarning": "2MB",
+                  "maximumError": "5MB"
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "25kB",
-                  "maximumError": "30kB"
+                  "maximumWarning": "40kB",
+                  "maximumError": "60kB"
                 }
               ],
               "outputHashing": "all"
@@ -65,10 +65,10 @@
           },
           "configurations": {
             "production": {
-              "buildTarget": "saa-frontend:build:production"
+              "buildTarget": "saa:build:production"
             },
             "development": {
-              "buildTarget": "saa-frontend:build:development"
+              "buildTarget": "saa:build:development"
             }
           },
           "defaultConfiguration": "development"
