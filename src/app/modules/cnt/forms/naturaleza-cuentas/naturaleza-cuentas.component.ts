@@ -17,7 +17,6 @@ import { ExportService } from '../../../../shared/services/export.service';
 import { EntidadesContabilidad } from '../../model/entidades-cnt';
 import { NaturalezaCuenta } from '../../model/naturaleza-cuenta';
 import { NaturalezaCuentaService } from '../../service/naturaleza-cuenta.service';
-import { DetalleRubro } from '../../../../shared/model/detalle-rubro';
 
 // 🔑 Rubro para filtrar tipos de naturaleza (el valor seleccionado se almacena en el campo 'tipo' del formulario)
  const RUBRO_TIPO_GRUPO = 12;
@@ -44,8 +43,6 @@ export class NaturalezaDeCuentasComponent implements OnInit {
 
   tableConfig!: TableConfig;
 
-  tipoNaturaleza: DetalleRubro[] = [];
-
 
 
   constructor(
@@ -56,8 +53,9 @@ export class NaturalezaDeCuentasComponent implements OnInit {
 
   ngOnInit(): void {
     // Debug: Verificar detalles de rubro cargados
+    console.log(`📚 DetalleRubros cargados: ${this.detalleRubroService.estanDatosCargados()}`);
     if (this.detalleRubroService.estanDatosCargados()) {
-      this.tipoNaturaleza = this.detalleRubroService.getDetallesByParent(RUBRO_TIPO_GRUPO);
+      const tiposDisponibles = this.detalleRubroService.getDetallesByParent(RUBRO_TIPO_GRUPO);
     }
 
     this.loadData();
@@ -91,10 +89,17 @@ export class NaturalezaDeCuentasComponent implements OnInit {
   }
 
   private getRegConfig(): FieldConfig[] {
+    // Filtrar los tipos de naturaleza desde el rubro 13 del master
+    const tiposNaturaleza = this.detalleRubroService.getDetallesByParent(RUBRO_TIPO_GRUPO);
+
+    // Si no hay datos, mostrar todos los detalles disponibles para debugging
+    if (tiposNaturaleza.length === 0) {
+      const todosLosDetalles = this.detalleRubroService.getDetalles();
+    }
 
     // Transformar DetalleRubro a formato de opciones para el select
     // El valor seleccionado (codigoAlterno) se almacenará en el campo 'tipo'
-    const tiposOptions = this.tipoNaturaleza.map((detalle) => ({
+    const tiposOptions = tiposNaturaleza.map((detalle) => ({
       key: detalle.codigoAlterno,
       value: detalle.descripcion,
     }));
@@ -121,9 +126,8 @@ export class NaturalezaDeCuentasComponent implements OnInit {
         type: 'autocomplete',
         label: 'Tipo de Naturaleza',
         name: 'tipo',
-        collections: this.tipoNaturaleza,
+        collections: tiposNaturaleza,
         autocompleteType: 1,
-        rubroAlterno: RUBRO_TIPO_GRUPO,
         selectField: ['descripcion'],
         validations: [
           { name: 'required', validator: Validators.required, message: 'El tipo es requerido' },

@@ -1,18 +1,15 @@
 import { Component } from '@angular/core';
-import { NavItem } from '../../../../shared/basics/menu/model/nav-item';
 import { SideMenuCustomComponent } from '../../../../shared/basics/menu/forms/side-menu-custom/side-menu-custom.component';
+import { NavItem } from '../../../../shared/basics/menu/model/nav-item';
 
 @Component({
   selector: 'app-menucontabilidad',
   standalone: true,
-  imports: [
-    SideMenuCustomComponent
-  ],
+  imports: [SideMenuCustomComponent],
   templateUrl: './menucontabilidad.component.html',
   styleUrls: ['./menucontabilidad.component.scss'],
 })
 export class MenuContabilidadComponent {
-
   navItems: NavItem[] = [
     {
       displayName: 'Parametrización',
@@ -42,7 +39,7 @@ export class MenuContabilidadComponent {
               idPermiso: 830,
               route: '/menucontabilidad/plan-grid',
             },
-          ]
+          ],
         },
         {
           displayName: 'Centro de Costos',
@@ -61,7 +58,7 @@ export class MenuContabilidadComponent {
               idPermiso: 830,
               route: '/menucontabilidad/centro-costos/grid',
             },
-          ]
+          ],
         },
         {
           displayName: 'Tipos de Asientos',
@@ -80,7 +77,7 @@ export class MenuContabilidadComponent {
               idPermiso: 830,
               route: '/menucontabilidad/tipos-asientos/sistema',
             },
-          ]
+          ],
         },
         {
           displayName: 'Plantillas',
@@ -99,7 +96,7 @@ export class MenuContabilidadComponent {
               idPermiso: 830,
               route: '/menucontabilidad/plantillas/sistema',
             },
-          ]
+          ],
         },
         {
           displayName: 'Períodos Contables',
@@ -107,7 +104,7 @@ export class MenuContabilidadComponent {
           idPermiso: 830,
           route: '/menucontabilidad/periodo-contable',
         },
-      ]
+      ],
     },
     {
       displayName: 'Procesos',
@@ -121,12 +118,18 @@ export class MenuContabilidadComponent {
           route: '/menucontabilidad/asientos',
         },
         {
+          displayName: 'Asientos Contables - Ingreso',
+          iconName: 'add_circle_outline',
+          idPermiso: 830,
+          route: '/menucontabilidad/asientos-contables',
+        },
+        {
           displayName: 'Mayorización - Proceso',
           iconName: 'account_balance',
           idPermiso: 830,
           route: '/menucontabilidad/mayorizacion-proceso',
         },
-      ]
+      ],
     },
     {
       displayName: 'Reportes',
@@ -163,17 +166,17 @@ export class MenuContabilidadComponent {
           idPermiso: 830,
           route: '/menucontabilidad/reportes/balance-prueba',
         },
-      ]
+      ],
     },
     {
       displayName: 'Créditos',
       iconName: 'credit_score',
-      route: '/menucreditos'
+      route: '/menucreditos',
     },
     {
       displayName: 'Regresar',
       iconName: 'arrow_back',
-      route: '/menu'
-    }
+      route: '/menu',
+    },
   ];
 }

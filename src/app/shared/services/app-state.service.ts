@@ -125,7 +125,6 @@ export class AppStateService {
 
         // Guardar en localStorage (mantener compatibilidad con código existente)
         localStorage.setItem('empresa', JSON.stringify(appData.empresa));
-        localStorage.setItem('idEmpresa', appData.empresa.codigo.toString());
         localStorage.setItem('empresaName', appData.empresa.nombre);
         localStorage.setItem('usuario', JSON.stringify(appData.usuario));
         localStorage.setItem('userName', username);
@@ -205,7 +204,6 @@ export class AppStateService {
     localStorage.removeItem('usuario');
     localStorage.removeItem('userName');
     localStorage.removeItem('idUsuario');
-    localStorage.removeItem('idEmpresa');
     localStorage.removeItem('logged');
     localStorage.removeItem('token');
     console.log('AppStateService: Datos globales limpiados');

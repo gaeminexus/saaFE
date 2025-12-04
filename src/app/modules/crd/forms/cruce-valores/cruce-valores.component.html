@@ -1,0 +1,478 @@
+<div class="cruce-valores-container">
+  <!-- Header con búsqueda (solo visible si mostrarBusqueda es true) -->
+  @if (mostrarBusqueda) {
+  <div class="search-header">
+    <div class="header-title">
+      <mat-icon class="header-icon">account_circle</mat-icon>
+      <h1>Cruce de Valores</h1>
+    </div>
+
+    <div class="search-box">
+      <mat-form-field appearance="fill" class="search-field">
+        <mat-label>Buscar por Cédula, Razón Social o Nombre Comercial</mat-label>
+        <input
+          matInput
+          [(ngModel)]="searchText"
+          (keyup.enter)="buscarEntidad()"
+          placeholder="Ej: 1234567890, EMPRESA S.A., Mi Negocio"
+        />
+        <mat-icon matPrefix>search</mat-icon>
+        @if (searchText) {
+        <button matSuffix mat-icon-button (click)="limpiarBusqueda()">
+          <mat-icon>clear</mat-icon>
+        </button>
+        }
+      </mat-form-field>
+      <button
+        mat-raised-button
+        color="primary"
+        (click)="buscarEntidad()"
+        [disabled]="isSearching"
+        class="search-button"
+      >
+        @if (isSearching) {
+        <mat-spinner diameter="20"></mat-spinner>
+        } @else {
+        <ng-container>
+          <mat-icon>search</mat-icon>
+          Buscar
+        </ng-container>
+        }
+      </button>
+    </div>
+  </div>
+  }
+
+  <!-- Spinner de carga -->
+  @if (isLoadingBusqueda || isLoadingDatos) {
+  <div class="loading-spinner-container">
+    <mat-spinner diameter="60" color="primary"></mat-spinner>
+    <p class="loading-text">Cargando información...</p>
+  </div>
+  }
+
+  <!-- Contenido principal -->
+  @if (!isLoadingBusqueda && !isLoadingDatos && entidadEncontrada) {
+  <div class="cruce-content">
+    <!-- Tarjeta de información de entidad -->
+    <mat-card class="entidad-card">
+      <mat-card-header>
+        <mat-icon mat-card-avatar class="avatar-icon">business</mat-icon>
+        <div class="header-content">
+          <mat-card-title>
+            {{ entidadEncontrada.razonSocial || entidadEncontrada.nombreComercial }}
+          </mat-card-title>
+          <mat-card-subtitle>
+            <span class="info-item">
+              <mat-icon>badge</mat-icon>
+              <strong>{{ entidadEncontrada.numeroIdentificacion }}</strong>
+            </span>
+            @if (entidadEncontrada.nombreComercial && entidadEncontrada.razonSocial !==
+            entidadEncontrada.nombreComercial) {
+            <span class="info-item">
+              <mat-icon>store</mat-icon>
+              {{ entidadEncontrada.nombreComercial }}
+            </span>
+            }
+          </mat-card-subtitle>
+        </div>
+      </mat-card-header>
+
+      <!-- Información del Partícipe -->
+      @if (participeEncontrado) {
+      <mat-card-content>
+        <h3 class="section-title">Información del Partícipe</h3>
+        <div class="participe-info-grid">
+          <div class="participe-item">
+            <mat-icon>work</mat-icon>
+            <div class="item-content">
+              <span class="item-label">Cargo Actual</span>
+              <span class="item-value">{{ participeEncontrado.cargoActual || 'N/A' }}</span>
+            </div>
+          </div>
+
+          <div class="participe-item">
+            <mat-icon>calendar_today</mat-icon>
+            <div class="item-content">
+              <span class="item-label">Fecha de Ingreso al Fondo</span>
+              <span class="item-value">
+                {{
+                  participeEncontrado.fechaIngresoFondo
+                    ? (participeEncontrado.fechaIngresoFondo | date : 'dd/MM/yyyy')
+                    : 'N/A'
+                }}
+              </span>
+            </div>
+          </div>
+
+          <div class="participe-item">
+            <mat-icon>business_center</mat-icon>
+            <div class="item-content">
+              <span class="item-label">Unidad Administrativa</span>
+              <span class="item-value">{{
+                participeEncontrado.unidadAdministrativa || 'N/A'
+              }}</span>
+            </div>
+          </div>
+
+          <div class="participe-item">
+            <mat-icon>location_on</mat-icon>
+            <div class="item-content">
+              <span class="item-label">Lugar de Trabajo</span>
+              <span class="item-value">{{ participeEncontrado.lugarTrabajo || 'N/A' }}</span>
+            </div>
+          </div>
+        </div>
+      </mat-card-content>
+      }
+    </mat-card>
+
+    <!-- Botones de acción -->
+    <div class="action-buttons">
+      <button
+        mat-raised-button
+        color="primary"
+        (click)="exportarCSV()"
+        [disabled]="cruceValores.length === 0"
+        matTooltip="Descargar datos en formato CSV"
+      >
+        <mat-icon>download</mat-icon>
+        <span>Descargar CSV</span>
+      </button>
+      <button
+        mat-raised-button
+        color="accent"
+        (click)="exportarPDF()"
+        [disabled]="cruceValores.length === 0"
+        matTooltip="Descargar datos en formato PDF"
+      >
+        <mat-icon>picture_as_pdf</mat-icon>
+        <span>Descargar PDF</span>
+      </button>
+      <button
+        mat-raised-button
+        (click)="regresarAPantallaAnterior()"
+        matTooltip="Volver al menú anterior"
+      >
+        <mat-icon>arrow_back</mat-icon>
+        <span>Regresar</span>
+      </button>
+    </div>
+
+    <!-- Contenedor con dos columnas para aportes y préstamos -->
+    <div class="tables-grid">
+      <!-- Tabla de cruce de valores (Aportes) -->
+      <mat-card class="datos-card">
+        <mat-card-header>
+          <div class="card-header-content">
+            <mat-icon>compare_arrows</mat-icon>
+            <mat-card-title>Cruce de Valores</mat-card-title>
+          </div>
+        </mat-card-header>
+
+        <mat-card-content>
+          @if (cruceValores && cruceValores.length > 0) {
+
+          <!-- Tabla resumen agrupada por tipo de aporte -->
+          <div class="table-wrapper">
+            <div class="table-container">
+              <table mat-table [dataSource]="tiposAporte" class="resumen-table">
+                <!-- Columna Tipo de Aporte -->
+                <ng-container matColumnDef="tipoAporte">
+                  <th mat-header-cell *matHeaderCellDef class="col-tipo">Tipo de Aporte</th>
+                  <td mat-cell *matCellDef="let tipo" class="col-tipo">
+                    <div class="tipo-cell">
+                      <mat-icon>category</mat-icon>
+                      <span>{{ tipo }}</span>
+                    </div>
+                  </td>
+                </ng-container>
+
+                <!-- Columna Cantidad de Registros -->
+                <ng-container matColumnDef="cantidad">
+                  <th mat-header-cell *matHeaderCellDef class="col-numero">Cantidad</th>
+                  <td mat-cell *matCellDef="let tipo" class="col-numero">
+                    <span class="cantidad-badge">
+                      {{ getAportesPorTipo(tipo).length }}
+                    </span>
+                  </td>
+                </ng-container>
+
+                <!-- Columna Valor -->
+                <ng-container matColumnDef="debe">
+                  <th mat-header-cell *matHeaderCellDef class="col-numero">Valor</th>
+                  <td mat-cell *matCellDef="let tipo" class="col-numero">
+                    <span class="currency-value debe">
+                      {{ getTotalDebePorTipo(tipo) | currency }}
+                    </span>
+                  </td>
+                </ng-container>
+
+                <!-- Columna Valor Pagado -->
+                <ng-container matColumnDef="haber">
+                  <th mat-header-cell *matHeaderCellDef class="col-numero">Valor Pagado</th>
+                  <td mat-cell *matCellDef="let tipo" class="col-numero">
+                    <span class="currency-value haber">
+                      {{ getTotalHaberPorTipo(tipo) | currency }}
+                    </span>
+                  </td>
+                </ng-container>
+
+                <!-- Columna Saldo -->
+                <ng-container matColumnDef="saldo">
+                  <th mat-header-cell *matHeaderCellDef class="col-numero">Saldo</th>
+                  <td mat-cell *matCellDef="let tipo" class="col-numero">
+                    <span
+                      class="currency-value saldo-value"
+                      [class.saldo-positivo]="getSaldoPorTipo(tipo) > 0"
+                      [class.saldo-negativo]="getSaldoPorTipo(tipo) < 0"
+                    >
+                      {{ getSaldoPorTipo(tipo) | currency }}
+                    </span>
+                  </td>
+                </ng-container>
+
+                <!-- Columna Acciones -->
+                <ng-container matColumnDef="acciones">
+                  <th mat-header-cell *matHeaderCellDef class="col-acciones">Acciones</th>
+                  <td mat-cell *matCellDef="let tipo" class="col-acciones">
+                    <button
+                      mat-icon-button
+                      color="primary"
+                      matTooltip="Ver detalle de aportes"
+                      (click)="verDetalleAportes(tipo)"
+                    >
+                      <mat-icon>visibility</mat-icon>
+                    </button>
+                    <button
+                      mat-icon-button
+                      color="accent"
+                      matTooltip="Realizar pago"
+                      [disabled]="getSaldoPorTipo(tipo) <= 0"
+                    >
+                      <mat-icon>payment</mat-icon>
+                    </button>
+                  </td>
+                </ng-container>
+
+                <tr
+                  mat-header-row
+                  *matHeaderRowDef="[
+                    'tipoAporte',
+                    'cantidad',
+                    'debe',
+                    'haber',
+                    'saldo',
+                    'acciones'
+                  ]"
+                ></tr>
+                <tr
+                  mat-row
+                  *matRowDef="
+                    let row;
+                    columns: ['tipoAporte', 'cantidad', 'debe', 'haber', 'saldo', 'acciones']
+                  "
+                  class="table-row draggable-row"
+                  draggable="true"
+                  (dragstart)="onDragStart($event, row)"
+                  (dragend)="onDragEnd($event)"
+                  [class.dragging]="tipoAporteDragging === row"
+                ></tr>
+              </table>
+            </div>
+          </div>
+
+          <!-- Total General -->
+          <div class="table-summary">
+            <div class="summary-item">
+              <span class="summary-label">Total Valor:</span>
+              <span class="summary-value debe">
+                {{ getTotalDebe() | currency }}
+              </span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Total Valor Pagado:</span>
+              <span class="summary-value haber">
+                {{ getTotalHaber() | currency }}
+              </span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Saldo Neto:</span>
+              <span class="summary-value neto">
+                {{ totalCruce | currency }}
+              </span>
+            </div>
+          </div>
+          } @else {
+          <div class="no-data">
+            <mat-icon>info</mat-icon>
+            <p>No hay datos de cruce de valores disponibles</p>
+          </div>
+          }
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Tabla de préstamos -->
+      <mat-card class="datos-card">
+        <mat-card-header>
+          <div class="card-header-content">
+            <mat-icon>credit_card</mat-icon>
+            <mat-card-title>Préstamos</mat-card-title>
+          </div>
+        </mat-card-header>
+
+        <mat-card-content>
+          @if (prestamos && prestamos.length > 0) {
+
+          <!-- Tabla de préstamos individual -->
+          <div class="table-wrapper">
+            <div class="table-container">
+              <table mat-table [dataSource]="prestamos" class="resumen-table">
+                <!-- Columna Código -->
+                <ng-container matColumnDef="codigo">
+                  <th mat-header-cell *matHeaderCellDef class="col-numero">Código</th>
+                  <td mat-cell *matCellDef="let prestamo" class="col-numero">
+                    <span class="cantidad-badge">
+                      {{ prestamo.codigo }}
+                    </span>
+                  </td>
+                </ng-container>
+
+                <!-- Columna Producto -->
+                <ng-container matColumnDef="producto">
+                  <th mat-header-cell *matHeaderCellDef class="col-tipo">Producto</th>
+                  <td mat-cell *matCellDef="let prestamo" class="col-tipo">
+                    <div class="tipo-cell">
+                      <mat-icon>account_balance</mat-icon>
+                      <span>{{ prestamo.producto?.nombre || 'Sin Producto' }}</span>
+                    </div>
+                  </td>
+                </ng-container>
+
+                <!-- Columna Fecha -->
+                <ng-container matColumnDef="fecha">
+                  <th mat-header-cell *matHeaderCellDef class="col-fecha">Fecha</th>
+                  <td mat-cell *matCellDef="let prestamo" class="col-fecha">
+                    {{ prestamo.fecha | date : 'dd/MM/yyyy' }}
+                  </td>
+                </ng-container>
+
+                <!-- Columna Monto Solicitado -->
+                <ng-container matColumnDef="montoSolicitado">
+                  <th mat-header-cell *matHeaderCellDef class="col-numero">Monto Solicitado</th>
+                  <td mat-cell *matCellDef="let prestamo" class="col-numero">
+                    <span class="currency-value debe">
+                      {{ prestamo.montoSolicitado | currency }}
+                    </span>
+                  </td>
+                </ng-container>
+
+                <!-- Columna Total Pagado -->
+                <ng-container matColumnDef="totalPagado">
+                  <th mat-header-cell *matHeaderCellDef class="col-numero">Total Pagado</th>
+                  <td mat-cell *matCellDef="let prestamo" class="col-numero">
+                    <span class="currency-value haber">
+                      {{ prestamo.totalPagado | currency }}
+                    </span>
+                  </td>
+                </ng-container>
+
+                <!-- Columna Saldo Total -->
+                <ng-container matColumnDef="saldoTotal">
+                  <th mat-header-cell *matHeaderCellDef class="col-numero">Saldo Total</th>
+                  <td mat-cell *matCellDef="let prestamo" class="col-numero">
+                    <span
+                      class="currency-value saldo-value"
+                      [class.saldo-positivo]="prestamo.saldoTotal > 0"
+                      [class.saldo-negativo]="prestamo.saldoTotal < 0"
+                    >
+                      {{ prestamo.saldoTotal | currency }}
+                    </span>
+                  </td>
+                </ng-container>
+
+                <!-- Columna Estado -->
+                <ng-container matColumnDef="estado">
+                  <th mat-header-cell *matHeaderCellDef class="col-estado">Estado</th>
+                  <td mat-cell *matCellDef="let prestamo" class="col-estado">
+                    <span class="estado-badge">
+                      {{ prestamo.estadoPrestamo?.nombre || 'Sin Estado' }}
+                    </span>
+                  </td>
+                </ng-container>
+
+                <!-- Columna Acciones -->
+                <ng-container matColumnDef="acciones">
+                  <th mat-header-cell *matHeaderCellDef class="col-acciones">Acciones</th>
+                  <td mat-cell *matCellDef="let prestamo" class="col-acciones">
+                    <button mat-icon-button color="primary" matTooltip="Ver detalle del préstamo">
+                      <mat-icon>visibility</mat-icon>
+                    </button>
+                    <button
+                      mat-icon-button
+                      color="accent"
+                      matTooltip="Realizar abono"
+                      [disabled]="prestamo.saldoTotal <= 0"
+                    >
+                      <mat-icon>payments</mat-icon>
+                    </button>
+                  </td>
+                </ng-container>
+
+                <tr
+                  mat-header-row
+                  *matHeaderRowDef="[
+                    'codigo',
+                    'producto',
+                    'fecha',
+                    'montoSolicitado',
+                    'totalPagado',
+                    'saldoTotal',
+                    'estado',
+                    'acciones'
+                  ]"
+                ></tr>
+                <tr
+                  mat-row
+                  *matRowDef="
+                    let row;
+                    columns: [
+                      'codigo',
+                      'producto',
+                      'fecha',
+                      'montoSolicitado',
+                      'totalPagado',
+                      'saldoTotal',
+                      'estado',
+                      'acciones'
+                    ]
+                  "
+                  class="table-row droppable-row"
+                  (dragover)="onDragOver($event, row)"
+                  (dragleave)="onDragLeave($event)"
+                  (drop)="onDrop($event, row)"
+                  [class.drag-over]="prestamoHovering === row.codigo"
+                ></tr>
+              </table>
+            </div>
+          </div>
+          } @else {
+          <div class="no-data">
+            <mat-icon>info</mat-icon>
+            <p>No hay préstamos disponibles para esta entidad</p>
+          </div>
+          }
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+  }
+
+  <!-- Mensaje inicial -->
+  @if (!entidadEncontrada && !isLoadingBusqueda) {
+  <div class="initial-message">
+    <mat-icon class="message-icon">info</mat-icon>
+    <p>Ingrese los datos de búsqueda para consultar el cruce de valores</p>
+  </div>
+  }
+</div>

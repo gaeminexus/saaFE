@@ -33,23 +33,6 @@ export class NaturalezaCuentaService {
     );
   }
 
-  getByEmpresa(idEmpresa: number): Observable<NaturalezaCuenta[] | null> {
-    const wsGetById = '/getByEmpresa/';
-    const url = `${ServiciosCnt.RS_NTRL}${wsGetById}${idEmpresa}`;
-    return this.http.get<NaturalezaCuenta[]>(url).pipe(
-      catchError(this.handleError)
-    );
-  }
-
-
-  validaTieneCuentas(idNaturaleza: number): Observable<number | null> {
-    const wsvalidaTieneCuentas = '/validaTieneCuentas/';
-    const url = `${ServiciosCnt.RS_NTRL}${wsvalidaTieneCuentas}${idNaturaleza}`;
-    return this.http.get<number>(url).pipe(
-      catchError(this.handleError)
-    );
-  }
-
   /** POST: crear Naturaleza de Cuenta (con fallback de endpoints) */
   add(datos: any): Observable<NaturalezaCuenta | null> {
     const base = ServiciosCnt.RS_NTRL;

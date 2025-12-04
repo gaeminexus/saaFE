@@ -1,0 +1,340 @@
+.pago-cuota-dialog {
+  min-width: 550px;
+  max-width: 700px;
+  font-family: 'Roboto', sans-serif;
+
+  .dialog-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    margin: -24px -24px 1.5rem -24px;
+    border-radius: 4px 4px 0 0;
+
+    .header-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 48px;
+      height: 48px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+
+      mat-icon {
+        font-size: 28px;
+        width: 28px;
+        height: 28px;
+      }
+    }
+
+    .header-content {
+      flex: 1;
+
+      h2 {
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 500;
+      }
+
+      .subtitle {
+        margin: 0.25rem 0 0 0;
+        font-size: 0.9rem;
+        opacity: 0.9;
+      }
+    }
+  }
+
+  .prestamo-info {
+    background: #f8f9fa;
+    border-left: 4px solid #667eea;
+    border-radius: 4px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.5rem 0;
+
+      &:not(:last-child) {
+        border-bottom: 1px solid #e0e0e0;
+      }
+
+      .label {
+        font-weight: 500;
+        color: #666;
+      }
+
+      .value {
+        color: #333;
+
+        &.saldo {
+          font-size: 1.1rem;
+          font-weight: 600;
+          color: #667eea;
+        }
+      }
+    }
+  }
+
+  .dialog-content {
+    padding: 0 1.5rem;
+  }
+
+  .form-section {
+    margin-bottom: 1.5rem;
+
+    .section-label {
+      display: block;
+      font-size: 0.95rem;
+      font-weight: 500;
+      color: #555;
+      margin-bottom: 0.75rem;
+    }
+
+    .radio-group {
+      display: flex;
+      gap: 1.5rem;
+
+      mat-radio-button {
+        flex: 1;
+
+        ::ng-deep .mdc-form-field {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.75rem 1rem;
+          border: 2px solid #e0e0e0;
+          border-radius: 8px;
+          transition: all 0.3s ease;
+          cursor: pointer;
+
+          &:hover {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.05);
+          }
+        }
+
+        &.mat-mdc-radio-checked ::ng-deep .mdc-form-field {
+          border-color: #667eea;
+          background: rgba(102, 126, 234, 0.1);
+        }
+
+        mat-icon {
+          font-size: 20px;
+          width: 20px;
+          height: 20px;
+          margin-right: 0.25rem;
+        }
+      }
+    }
+  }
+
+  .campos-dinamicos {
+    .campos-grupo {
+      background: #fafbfc;
+      border-radius: 8px;
+      padding: 1.25rem;
+      border: 1px solid #e8e8e8;
+
+      .grupo-titulo {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin: 0 0 1rem 0;
+        font-size: 1rem;
+        font-weight: 500;
+        color: #444;
+
+        mat-icon {
+          font-size: 20px;
+          width: 20px;
+          height: 20px;
+          color: #667eea;
+        }
+      }
+    }
+  }
+
+  .form-row {
+    display: flex;
+    gap: 1rem;
+
+    .half-width {
+      flex: 1;
+    }
+  }
+
+  .full-width {
+    width: 100%;
+  }
+
+  mat-form-field {
+    ::ng-deep {
+      .mat-mdc-text-field-wrapper {
+        background-color: white;
+      }
+
+      .mdc-notched-outline__leading,
+      .mdc-notched-outline__notch,
+      .mdc-notched-outline__trailing {
+        border-color: #d0d0d0 !important;
+      }
+
+      &.mat-focused {
+        .mdc-notched-outline__leading,
+        .mdc-notched-outline__notch,
+        .mdc-notched-outline__trailing {
+          border-color: #667eea !important;
+        }
+      }
+    }
+  }
+
+  .resumen {
+    display: flex;
+    gap: 1rem;
+    background: linear-gradient(135deg, #e0f2f7 0%, #e8eaf6 100%);
+    border-left: 4px solid #667eea;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 1.5rem;
+
+    mat-icon {
+      color: #667eea;
+      font-size: 24px;
+      width: 24px;
+      height: 24px;
+    }
+
+    .resumen-content {
+      flex: 1;
+
+      .resumen-titulo {
+        margin: 0 0 0.5rem 0;
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: #555;
+      }
+
+      .resumen-monto,
+      .resumen-nuevo-saldo {
+        margin: 0.25rem 0;
+        font-size: 0.95rem;
+        color: #333;
+
+        strong {
+          color: #667eea;
+          font-size: 1.05rem;
+        }
+      }
+    }
+  }
+
+  .dialog-actions {
+    padding: 1rem 1.5rem;
+    margin-top: 1.5rem;
+    border-top: 1px solid #e8e8e8;
+
+    button {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      min-width: 120px;
+
+      mat-icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+
+      &[mat-button] {
+        color: #666;
+
+        &:hover:not([disabled]) {
+          background: rgba(0, 0, 0, 0.05);
+        }
+      }
+
+      &[mat-raised-button] {
+        &:hover:not([disabled]) {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+      }
+    }
+
+    .spinner-inline {
+      display: inline-block;
+      margin-right: 0.5rem;
+
+      ::ng-deep circle {
+        stroke: white;
+      }
+    }
+  }
+
+  @media (max-width: 600px) {
+    min-width: auto;
+    width: 100%;
+
+    .dialog-header {
+      padding: 1rem;
+
+      .header-icon {
+        width: 40px;
+        height: 40px;
+
+        mat-icon {
+          font-size: 24px;
+          width: 24px;
+          height: 24px;
+        }
+      }
+
+      .header-content h2 {
+        font-size: 1.25rem;
+      }
+    }
+
+    .form-row {
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .form-section .radio-group {
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .dialog-actions {
+      flex-direction: column-reverse;
+
+      button {
+        width: 100%;
+      }
+    }
+  }
+}
+
+// Animación para campos dinámicos
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+:host ::ng-deep {
+  @media (prefers-reduced-motion: no-preference) {
+    .campos-grupo {
+      animation: slideIn 0.3s ease;
+    }
+  }
+}
