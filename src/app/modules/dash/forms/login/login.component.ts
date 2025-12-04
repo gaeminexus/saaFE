@@ -125,7 +125,6 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
     // Usar AppStateService para cargar datos globales
     this.appStateService.inicializarApp(EMPRESA, this.username).subscribe({
       next: (appData) => {
-        console.log('Datos globales cargados:', appData);
         this.router.navigate(['/menu']);
       },
       error: (error) => {
@@ -170,8 +169,6 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
     if (this.animationFrame) {
       cancelAnimationFrame(this.animationFrame);
     }
-
-    console.log('LoginComponent: Listeners y animaciones limpiados');
   }
 
   resizeCanvas() {

@@ -41,7 +41,6 @@ export class AppStateService {
 
     // Solo restaurar si hay sesión activa
     if (logged !== 'true' || !empresaStr || !usuarioStr) {
-      console.log('AppStateService: No hay sesión activa para restaurar');
       return;
     }
 
@@ -53,23 +52,12 @@ export class AppStateService {
       this.usuarioService.setEmpresaLog(empresa);
       this.usuarioService.setUsuarioLog(usuario);
 
-      console.log('AppStateService: Restaurando sesión desde localStorage...', {
-        empresa: empresa.nombre,
-        usuario: usuario.nombre,
-      });
-
       // Recargar rubros en segundo plano (asíncrono)
       this.detalleRubroService.inicializar().subscribe({
         next: (detallesRubro) => {
           const appData: AppData = { empresa, usuario, detallesRubro };
           this.datosGlobales$.next(appData);
           this.cargaIniciada = true;
-
-          console.log('✅ AppStateService: Sesión restaurada completamente', {
-            empresa: empresa.nombre,
-            usuario: usuario.nombre,
-            rubros: detallesRubro.length,
-          });
         },
         error: (err) => {
           console.error(
@@ -104,7 +92,6 @@ export class AppStateService {
   inicializarApp(empresaId: number, username: string): Observable<AppData> {
     // Si ya se cargaron los datos (por login o restauración), retornarlos
     if (this.cargaIniciada && this.datosGlobales$.value) {
-      console.log('AppStateService: Datos ya inicializados, retornando desde caché');
       return of(this.datosGlobales$.value);
     }
 
@@ -136,12 +123,6 @@ export class AppStateService {
         // Guardar en el servicio de usuario (mantener compatibilidad)
         this.usuarioService.setEmpresaLog(appData.empresa);
         this.usuarioService.setUsuarioLog(appData.usuario);
-
-        console.log('AppStateService: Datos globales inicializados', {
-          empresa: appData.empresa.nombre,
-          usuario: appData.usuario.nombre,
-          detallesRubro: appData.detallesRubro.length,
-        });
       }),
       catchError((error) => {
         console.error('Error al inicializar datos globales:', error);
@@ -208,7 +189,6 @@ export class AppStateService {
     localStorage.removeItem('idEmpresa');
     localStorage.removeItem('logged');
     localStorage.removeItem('token');
-    console.log('AppStateService: Datos globales limpiados');
   }
 
   /**

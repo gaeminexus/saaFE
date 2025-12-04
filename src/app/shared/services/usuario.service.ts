@@ -46,10 +46,8 @@ export class UsuarioService {
   }
 
   validaUsuario(idUsuario: string, clave: string): any {
-    console.log('UsuarioService - validaUsuario - idUsuario: ' + idUsuario + ' clave: ' + clave );
     const wsGetById = '/validaUsuario/' + idUsuario + '/';
     const url = `${ServiciosShare.RS_USRO}${wsGetById}${clave}`;
-    console.log('Validating user with URL: ' + url);
     return this.http.get(url, { responseType: 'text' });
   }
 
@@ -135,8 +133,6 @@ export class UsuarioService {
     localStorage.removeItem('userName');
     localStorage.removeItem('idUsuario');
     localStorage.removeItem('token');
-
-    console.log('UsuarioService: Sesión limpiada completamente');
   }
 
   // tslint:disable-next-line: typedef

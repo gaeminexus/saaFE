@@ -29,7 +29,6 @@ export function initializeApp(appStateService: AppStateService) {
   return (): Promise<void> => {
     // AppStateService ya ejecuta restaurarDesdeSesion() en su constructor
     // Solo necesitamos forzar su construcción mediante inyección
-    console.log('🚀 APP_INITIALIZER: AppStateService inicializado');
     return Promise.resolve();
   };
 }

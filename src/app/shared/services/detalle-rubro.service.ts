@@ -11,7 +11,7 @@ export class DetalleRubroService {
   // Signal para datos reactivos
   private detallesSignal = signal<DetalleRubro[]>([]);
   private cargaCompletada = signal<boolean>(false);
-  
+
   // Computed para verificar si hay datos
   private hayDatos = computed(() => this.detallesSignal().length > 0);
 
@@ -24,18 +24,15 @@ export class DetalleRubroService {
   inicializar(): Observable<DetalleRubro[]> {
     // Si ya están cargados, retornar inmediatamente
     if (this.cargaCompletada()) {
-      console.log('DetalleRubroService: Usando datos en caché');
       return of(this.detallesSignal());
     }
 
-    console.log('DetalleRubroService: Cargando datos desde backend...');
     const url = `${ServiciosShare.RS_PDTR}/getAll`;
-    
+
     return this.http.get<DetalleRubro[]>(url).pipe(
       tap(detalles => {
         this.detallesSignal.set(detalles || []);
         this.cargaCompletada.set(true);
-        console.log(`DetalleRubroService: ${detalles?.length || 0} registros cargados`);
       }),
       catchError(this.handleError)
     );
@@ -125,7 +122,6 @@ export class DetalleRubroService {
   limpiarCache(): void {
     this.detallesSignal.set([]);
     this.cargaCompletada.set(false);
-    console.log('DetalleRubroService: Caché limpiada');
   }
 
   /**
