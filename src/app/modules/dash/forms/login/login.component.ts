@@ -1,19 +1,27 @@
-import { Component, AfterViewInit, OnDestroy, ElementRef, ViewChild, NgZone, Inject, PLATFORM_ID } from '@angular/core';
-import { AppConfig } from '../../../../app.config';
 import { DatePipe, isPlatformBrowser } from '@angular/common';
-import { Router } from '@angular/router';
+import {
+  AfterViewInit,
+  Component,
+  ElementRef,
+  Inject,
+  NgZone,
+  OnDestroy,
+  PLATFORM_ID,
+  ViewChild,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatDialog } from '@angular/material/dialog';
+import { Router } from '@angular/router';
+import { AppConfig } from '../../../../app.config';
 
-import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
-import { UsuarioService } from '../../../../shared/services/usuario.service';
-import { AppStateService } from '../../../../shared/services/app-state.service';
-import { NaturalezaCuentaService } from '../../../cnt/service/naturaleza-cuenta.service';
 import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
-import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
-import { EntidadService } from '../../../crd/service/entidad.service';
-import { ServiciosAsoprepService } from '../../../asoprep/service/servicios-asoprep.service';
+import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
+import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
+import { AppStateService } from '../../../../shared/services/app-state.service';
+import { UsuarioService } from '../../../../shared/services/usuario.service';
+import { NaturalezaCuentaService } from '../../../cnt/service/naturaleza-cuenta.service';
+import { CambioClaveDialogComponent } from './cambio-clave-dialog/cambio-clave-dialog.component';
 
 // Importa tu AuthService según tu estructura
 const EMPRESA = 1236;
@@ -23,10 +31,9 @@ const EMPRESA = 1236;
   standalone: true,
   imports: [FormsModule, MaterialFormModule],
   templateUrl: './login.html',
-  styleUrls: ['../../../../../styles/pages/_login.scss']
+  styleUrls: ['../../../../../styles/pages/_login.scss'],
 })
 export class LoginComponent implements AfterViewInit, OnDestroy {
-
   username = '';
   password = '';
   isLoading = false;
@@ -41,7 +48,8 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
 
   // Mensaje de respuesta y tipo
   loginMessage: string = '';
-  loginMessageType: 'success' | 'error' | 'info' | 'warning' | 'neutral' | 'dark' | 'light' = 'info';
+  loginMessageType: 'success' | 'error' | 'info' | 'warning' | 'neutral' | 'dark' | 'light' =
+    'info';
 
   @ViewChild('parallaxCanvas') parallaxCanvas!: ElementRef<HTMLCanvasElement>;
   @ViewChild('container') container!: ElementRef<HTMLDivElement>;
@@ -59,7 +67,7 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
   private readonly animationLayers = [
     { color: 'rgba(102,126,234,0.18)', amplitude: 18, speed: 0.08, offset: 0 },
     { color: 'rgba(118,75,162,0.13)', amplitude: 32, speed: 0.13, offset: 60 },
-    { color: 'rgba(255,255,255,0.10)', amplitude: 12, speed: 0.18, offset: 120 }
+    { color: 'rgba(255,255,255,0.10)', amplitude: 12, speed: 0.18, offset: 120 },
   ];
   private readonly pointsCount = 32;
   private lastFrameTime = 0;
@@ -71,6 +79,7 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
     private appStateService: AppStateService,
     private naturalezaCuentaService: NaturalezaCuentaService,
     private router: Router,
+    private dialog: MatDialog,
     @Inject(PLATFORM_ID) private platformId: Object
   ) {}
 
@@ -90,7 +99,7 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
           this.ingresaSistema();
           this.loginMessage = 'Bienvenido';
           this.loginMessageType = 'success';
-       } else if (result === 'WARN') {
+        } else if (result === 'WARN') {
           this.loginMessage = 'Advertencia: revise sus datos.';
           this.loginMessageType = 'warning';
         } else {
@@ -104,7 +113,7 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
         this.loginMessage = errorMessage;
         this.loginMessageType = 'error';
         console.error('Error al validar usuario:', error);
-      }
+      },
     });
   }
 
@@ -123,7 +132,7 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
         this.loginMessage = 'Error al cargar datos del sistema';
         this.loginMessageType = 'error';
         this.isLoading = false;
-      }
+      },
     });
   }
 
@@ -186,7 +195,8 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
 
     // Throttle para reducir FPS en caso de problemas de rendimiento
     const currentTime = performance.now();
-    if (currentTime - this.lastFrameTime < 16.67) { // ~60 FPS
+    if (currentTime - this.lastFrameTime < 16.67) {
+      // ~60 FPS
       this.animationFrame = requestAnimationFrame(() => this.animateParallax());
       return;
     }
@@ -210,7 +220,13 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
     });
   }
 
-  drawWaveLayer(ctx: CanvasRenderingContext2D, width: number, height: number, layer: any, layerIndex: number) {
+  drawWaveLayer(
+    ctx: CanvasRenderingContext2D,
+    width: number,
+    height: number,
+    layer: any,
+    layerIndex: number
+  ) {
     ctx.save();
     ctx.beginPath();
 
@@ -219,7 +235,7 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
     const mouseXRatio = this.mouseX / width;
     const mouseYOffset = (this.mouseY - height / 2) * 0.03 * (layerIndex + 1);
     const baseY = height * 0.7 + layerIndex * 18 + mouseYOffset;
-    const currentTime = performance.now() * layer.speed / 1000;
+    const currentTime = (performance.now() * layer.speed) / 1000;
 
     for (let i = 0; i <= this.pointsCount; i++) {
       const x = i * widthRatio;
@@ -244,7 +260,12 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
     this.criterioConsultaArray = [];
 
     this.criterioConsulta = new DatosBusqueda();
-    this.criterioConsulta.asignaUnCampoSinTrunc(TipoDatosBusqueda.STRING, 'nombre', 'sol', TipoComandosBusqueda.LIKE);
+    this.criterioConsulta.asignaUnCampoSinTrunc(
+      TipoDatosBusqueda.STRING,
+      'nombre',
+      'sol',
+      TipoComandosBusqueda.LIKE
+    );
     this.criterioConsultaArray.push(this.criterioConsulta);
 
     this.criterioConsulta = new DatosBusqueda();
@@ -257,7 +278,7 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
       },
       error: (error: any) => {
         console.error('Error al obtener NaturalezaCuenta:', error);
-      }
+      },
     });
 
     /*this.naturalezaCuentaService.getById('2588').subscribe({
@@ -275,7 +296,7 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
       },
       error: (error: any) => {
         console.error('Error al obtener NaturalezaCuenta:', error);
-      }
+      },
     });
 
     /*this.naturalezaCuentaService.selectByCriteria(this.criterioConsultaArray).subscribe({
@@ -306,6 +327,31 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
         console.error('Error al obtener Prestamo:', error);
       }
     });*/
+  }
 
+  abrirCambioClaveDialog(): void {
+    if (!this.username) {
+      this.loginMessage = 'Por favor ingrese su nombre de usuario primero';
+      this.loginMessageType = 'warning';
+      return;
+    }
+
+    const dialogRef = this.dialog.open(CambioClaveDialogComponent, {
+      width: '520px',
+      disableClose: false,
+      data: {
+        idUsuario: this.username.toUpperCase(),
+        esDesdeLogin: true,
+      },
+    });
+
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result?.success) {
+        this.loginMessage =
+          'Contraseña cambiada exitosamente. Por favor inicie sesión con su nueva contraseña.';
+        this.loginMessageType = 'success';
+        this.password = ''; // Limpiar campo de contraseña
+      }
+    });
   }
 }

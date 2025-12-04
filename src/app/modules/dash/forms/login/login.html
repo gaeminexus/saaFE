@@ -7,7 +7,7 @@
       <p>Ingresa tus credenciales para continuar</p>
     </div>
 
-  <form class="login-form" #loginForm="ngForm" (keydown.enter)="validaUsuario()">
+    <form class="login-form" #loginForm="ngForm" (keydown.enter)="validaUsuario()">
       <div class="form-group">
         <label for="username">Usuario</label>
         <input
@@ -18,11 +18,10 @@
           [(ngModel)]="username"
           required
           #usernameInput="ngModel"
-          placeholder="Ingresa tu nombre de usuario">
+          placeholder="Ingresa tu nombre de usuario"
+        />
         @if (usernameInput.invalid && usernameInput.touched) {
-          <div class="error-message">
-            El usuario es requerido
-          </div>
+        <div class="error-message">El usuario es requerido</div>
         }
       </div>
 
@@ -36,11 +35,10 @@
           [(ngModel)]="password"
           required
           #passwordInput="ngModel"
-          placeholder="Ingresa tu contraseña">
+          placeholder="Ingresa tu contraseña"
+        />
         @if (passwordInput.invalid && passwordInput.touched) {
-          <div class="error-message">
-            La contraseña es requerida
-          </div>
+        <div class="error-message">La contraseña es requerida</div>
         }
       </div>
 
@@ -48,27 +46,34 @@
         type="button"
         (click)="validaUsuario()"
         class="login-button"
-        [disabled]="loginForm.invalid || isLoading">
+        [disabled]="loginForm.invalid || isLoading"
+      >
         @if (isLoading) {
-          <mat-spinner [diameter]="24" [style.marginRight.px]="8"></mat-spinner>
+        <mat-spinner [diameter]="24" [style.marginRight.px]="8"></mat-spinner>
         }
         <span>{{ isLoading ? 'Iniciando sesión...' : 'Iniciar sesión' }}</span>
       </button>
 
       <button
         type="button"
-        (click)="testServicios()"
-        class="login-button">
+        (click)="abrirCambioClaveDialog()"
+        class="login-button secondary-button"
+        [disabled]="isLoading"
+      >
+        <span>Cambiar Contraseña</span>
+      </button>
+
+      <button type="button" (click)="testServicios()" class="login-button">
         @if (isLoading) {
-          <mat-spinner [diameter]="24" [style.marginRight.px]="8"></mat-spinner>
+        <mat-spinner [diameter]="24" [style.marginRight.px]="8"></mat-spinner>
         }
         <span>{{ isLoading ? 'Recuperando Datos...' : 'PRUEBA SERVICIOS' }}</span>
       </button>
 
       @if (loginMessage) {
-        <div [ngClass]="loginMessageType + '-message'" style="margin-top:1rem;">
-          {{ loginMessage }}
-        </div>
+      <div [ngClass]="loginMessageType + '-message'" style="margin-top: 1rem">
+        {{ loginMessage }}
+      </div>
       }
     </form>
 
