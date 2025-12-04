@@ -36,6 +36,7 @@ const EMPRESA = 1236;
 export class LoginComponent implements AfterViewInit, OnDestroy {
   username = '';
   password = '';
+  hidePassword = true;
   isLoading = false;
   systemName = AppConfig.systemName;
   currentYear = new Date().getFullYear();

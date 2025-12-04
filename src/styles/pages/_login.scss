@@ -53,6 +53,41 @@
     margin-bottom: $spacing-lg;
   }
 
+  .password-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+
+    .form-input {
+      padding-right: 48px; // Espacio para el botón del ojo
+    }
+
+    .password-toggle-btn {
+      position: absolute;
+      right: 8px;
+      background: none;
+      border: none;
+      color: #333333;
+      cursor: pointer;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.3s ease;
+      z-index: 1;
+
+      &:hover {
+        color: #000000;
+      }
+
+      mat-icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+    }
+  }
+
   .form-input {
     @include input-base;
   }
