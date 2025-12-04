@@ -1,36 +1,41 @@
-import { HttpHeaders, HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, catchError, of, throwError } from 'rxjs';
 import { NaturalezaCuenta } from '../model/naturaleza-cuenta';
 import { ServiciosCnt } from './ws-cnt';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class NaturalezaCuentaService {
-
   httpOptions = {
-    headers: new HttpHeaders({ 'Content-Type': 'application/json' })
+    headers: new HttpHeaders({ 'Content-Type': 'application/json' }),
   };
 
-  constructor(
-    private http: HttpClient
-  ) { }
+  constructor(private http: HttpClient) {}
 
   getAll(): Observable<NaturalezaCuenta[] | null> {
     const wsGetById = '/getAll';
     const url = `${ServiciosCnt.RS_NTRL}${wsGetById}`;
-    return this.http.get<NaturalezaCuenta[]>(url).pipe(
-      catchError(this.handleError)
-    );
+    return this.http.get<NaturalezaCuenta[]>(url).pipe(catchError(this.handleError));
   }
 
   getById(id: string): Observable<NaturalezaCuenta | null> {
     const wsGetById = '/getId/';
     const url = `${ServiciosCnt.RS_NTRL}${wsGetById}${id}`;
-    return this.http.get<NaturalezaCuenta>(url).pipe(
-      catchError(this.handleError)
-    );
+    return this.http.get<NaturalezaCuenta>(url).pipe(catchError(this.handleError));
+  }
+
+  getByEmpresa(idEmpresa: number): Observable<NaturalezaCuenta[] | null> {
+    const wsGetById = '/getByEmpresa/';
+    const url = `${ServiciosCnt.RS_NTRL}${wsGetById}${idEmpresa}`;
+    return this.http.get<NaturalezaCuenta[]>(url).pipe(catchError(this.handleError));
+  }
+
+  validaTieneCuentas(idNaturaleza: number): Observable<number | null> {
+    const wsvalidaTieneCuentas = '/validaTieneCuentas/';
+    const url = `${ServiciosCnt.RS_NTRL}${wsvalidaTieneCuentas}${idNaturaleza}`;
+    return this.http.get<number>(url).pipe(catchError(this.handleError));
   }
 
   /** POST: crear Naturaleza de Cuenta (con fallback de endpoints) */
@@ -60,18 +65,16 @@ export class NaturalezaCuentaService {
   selectByCriteria(datos: any): Observable<NaturalezaCuenta[] | null> {
     const wsGetById = '/selectByCriteria';
     const url = `${ServiciosCnt.RS_NTRL}${wsGetById}`;
-    return this.http.post<any>(url, datos, this.httpOptions).pipe(
-      catchError(this.handleError)
-    );
+    return this.http.post<any>(url, datos, this.httpOptions).pipe(catchError(this.handleError));
   }
 
   /** DELETE: add a new sesion to the server */
   delete(datos: any): Observable<NaturalezaCuenta | null> {
     const wsGetById = '/' + datos;
     const url = `${ServiciosCnt.RS_NTRL}${wsGetById}`;
-    return this.http.delete<NaturalezaCuenta>(url, this.httpOptions).pipe(
-      catchError(this.handleError)
-    );
+    return this.http
+      .delete<NaturalezaCuenta>(url, this.httpOptions)
+      .pipe(catchError(this.handleError));
   }
 
   // tslint:disable-next-line: typedef
@@ -81,6 +84,4 @@ export class NaturalezaCuentaService {
     }
     return throwError(() => error?.error ?? error);
   }
-
-
 }

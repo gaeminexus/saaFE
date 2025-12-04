@@ -1,11 +1,11 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, forkJoin, of } from 'rxjs';
-import { filter, tap, catchError } from 'rxjs/operators';
-import { UsuarioService } from './usuario.service';
-import { DetalleRubroService } from './detalle-rubro.service';
-import { Usuario } from '../model/usuario';
-import { Empresa } from '../model/empresa';
+import { catchError, filter, tap } from 'rxjs/operators';
 import { DetalleRubro } from '../model/detalle-rubro';
+import { Empresa } from '../model/empresa';
+import { Usuario } from '../model/usuario';
+import { DetalleRubroService } from './detalle-rubro.service';
+import { UsuarioService } from './usuario.service';
 
 export interface AppData {
   empresa: Empresa;
@@ -14,7 +14,7 @@ export interface AppData {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class AppStateService {
   private datosGlobales$ = new BehaviorSubject<AppData | null>(null);
@@ -55,7 +55,7 @@ export class AppStateService {
 
       console.log('AppStateService: Restaurando sesión desde localStorage...', {
         empresa: empresa.nombre,
-        usuario: usuario.nombre
+        usuario: usuario.nombre,
       });
 
       // Recargar rubros en segundo plano (asíncrono)
@@ -68,23 +68,25 @@ export class AppStateService {
           console.log('✅ AppStateService: Sesión restaurada completamente', {
             empresa: empresa.nombre,
             usuario: usuario.nombre,
-            rubros: detallesRubro.length
+            rubros: detallesRubro.length,
           });
         },
         error: (err) => {
-          console.error('⚠️ AppStateService: Error al restaurar rubros, continuando sin ellos', err);
+          console.error(
+            '⚠️ AppStateService: Error al restaurar rubros, continuando sin ellos',
+            err
+          );
 
           // Aún así restaurar empresa y usuario (sin rubros)
           const appData: AppData = {
             empresa,
             usuario,
-            detallesRubro: []
+            detallesRubro: [],
           };
           this.datosGlobales$.next(appData);
           this.cargaIniciada = true;
-        }
+        },
       });
-
     } catch (error) {
       console.error('❌ AppStateService: Error al parsear datos de localStorage', error);
       this.limpiarDatos(); // Limpiar sesión corrupta
@@ -111,13 +113,13 @@ export class AppStateService {
     return forkJoin({
       empresa: this.usuarioService.getEmpresaById(empresaId),
       usuario: this.usuarioService.getByNombre(username.toUpperCase()),
-      detallesRubro: this.detalleRubroService.inicializar()
+      detallesRubro: this.detalleRubroService.inicializar(),
     }).pipe(
       tap((datos: any) => {
         const appData: AppData = {
           empresa: datos.empresa as Empresa,
           usuario: datos.usuario as Usuario,
-          detallesRubro: datos.detallesRubro as DetalleRubro[]
+          detallesRubro: datos.detallesRubro as DetalleRubro[],
         };
 
         // Guardar en el BehaviorSubject
@@ -125,6 +127,7 @@ export class AppStateService {
 
         // Guardar en localStorage (mantener compatibilidad con código existente)
         localStorage.setItem('empresa', JSON.stringify(appData.empresa));
+        localStorage.setItem('idEmpresa', appData.empresa.codigo.toString());
         localStorage.setItem('empresaName', appData.empresa.nombre);
         localStorage.setItem('usuario', JSON.stringify(appData.usuario));
         localStorage.setItem('userName', username);
@@ -137,7 +140,7 @@ export class AppStateService {
         console.log('AppStateService: Datos globales inicializados', {
           empresa: appData.empresa.nombre,
           usuario: appData.usuario.nombre,
-          detallesRubro: appData.detallesRubro.length
+          detallesRubro: appData.detallesRubro.length,
         });
       }),
       catchError((error) => {
@@ -162,9 +165,7 @@ export class AppStateService {
    * @returns Observable con los datos (espera hasta que estén cargados)
    */
   getDatosGlobalesReady(): Observable<AppData> {
-    return this.datosGlobales$.pipe(
-      filter(datos => datos !== null)
-    ) as Observable<AppData>;
+    return this.datosGlobales$.pipe(filter((datos) => datos !== null)) as Observable<AppData>;
   }
 
   /**
@@ -204,6 +205,7 @@ export class AppStateService {
     localStorage.removeItem('usuario');
     localStorage.removeItem('userName');
     localStorage.removeItem('idUsuario');
+    localStorage.removeItem('idEmpresa');
     localStorage.removeItem('logged');
     localStorage.removeItem('token');
     console.log('AppStateService: Datos globales limpiados');

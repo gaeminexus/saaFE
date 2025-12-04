@@ -19,51 +19,39 @@ export class ServiceLocatorService {
   ) {}
 
   ejecutaServicio(entidad: number, value: any, proceso: number): Promise<any> {
-    console.log(
-      `[ServiceLocatorService] ejecutaServicio - entidad: ${entidad}, proceso: ${proceso}, isEntidadCrd: ${this.isEntidadCrd(
-        entidad
-      )}`
-    );
-
     // Delegar a ServiceLocatorCrdService si es una entidad de CRD
     if (this.isEntidadCrd(entidad)) {
-      console.log(
-        `[ServiceLocatorService] Delegando a ServiceLocatorCrdService para entidad ${entidad}`
-      );
       return this.serviceLocatorCrd.ejecutaServicio(entidad, value, proceso);
     }
 
     // Manejar entidades de Contabilidad
     switch (entidad) {
       case EntidadesContabilidad.NATURALEZA_CUENTA: {
-        console.log(`[ServiceLocatorService] Manejando NATURALEZA_CUENTA (8)`);
         switch (proceso) {
           case AccionesGrid.ADD: {
             this.reg = value as NaturalezaCuenta;
             this.reg.estado = 1;
-            console.log(`[ServiceLocatorService] ADD - Datos:`, this.reg);
+            this.reg.empresa = localStorage.getItem('empresa')
+              ? JSON.parse(localStorage.getItem('empresa') as string)
+              : null;
             return firstValueFrom(this.naturalezaCuentaService.add(this.reg as NaturalezaCuenta));
           }
           case AccionesGrid.EDIT: {
             this.reg = value as NaturalezaCuenta;
-            console.log(`[ServiceLocatorService] EDIT - Datos:`, this.reg);
+            console.log('Actualizando Naturaleza de Cuenta:', this.reg);
             return firstValueFrom(
               this.naturalezaCuentaService.update(this.reg as NaturalezaCuenta)
             );
           }
           case AccionesGrid.REMOVE: {
-            console.log(`[ServiceLocatorService] REMOVE - ID:`, value);
             return firstValueFrom(this.naturalezaCuentaService.delete(value));
           }
           default:
-            console.log(`[ServiceLocatorService] Acción desconocida: ${proceso}`);
             return Promise.resolve(undefined);
         }
       }
       default: {
-        console.error(
-          `❌ [ServiceLocatorService] NO SE ENCONTRO EL SERVICIO para entidad: ${entidad}`
-        );
+        console.log('NO SE ENCONTRO EL SERVICIO');
         return Promise.resolve(undefined);
       }
     }
@@ -78,7 +66,9 @@ export class ServiceLocatorService {
     // Manejar entidades de Contabilidad
     switch (entidad) {
       case EntidadesContabilidad.NATURALEZA_CUENTA: {
-        return firstValueFrom(this.naturalezaCuentaService.getAll());
+        return firstValueFrom(
+          this.naturalezaCuentaService.getByEmpresa(Number(localStorage.getItem('idEmpresa')) ?? 0)
+        );
       }
       default: {
         console.log('NO SE ENCONTRO EL SERVICIO');
