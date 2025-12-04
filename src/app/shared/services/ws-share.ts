@@ -1,3 +1,5 @@
+import { environment } from '../../../environments/environment';
+
 /*export class ServiciosShare {
 
   // RESTFULL SERVICES
@@ -8,13 +10,15 @@
 
 }*/
 
+const API_URL = environment.apiUrl;
+
 export class ServiciosShare {
 
-  // RESTFULL SERVICES
-  public static RS_ANIO = 'http://localhost:8080/saa-backend/rest/anio';
-  public static RS_USRO = 'http://localhost:8080/saa-backend/rest/usro';
-  public static RS_PDTR = 'http://localhost:8080/saa-backend/rest/pdtr';
-  public static RS_FILE = 'http://localhost:8080/saa-backend/rest/file';
+  // RESTFULL SERVICES - Configuración dinámica según ambiente
+  public static RS_ANIO = `${API_URL}/anio`;
+  public static RS_USRO = `${API_URL}/usro`;
+  public static RS_PDTR = `${API_URL}/pdtr`;
+  public static RS_FILE = `${API_URL}/file`;
 
 
 }

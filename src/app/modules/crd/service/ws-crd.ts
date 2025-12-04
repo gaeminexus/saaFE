@@ -1,68 +1,72 @@
-/*export class ServiciosCrd {
+import { environment } from '../../../../environments/environment';
 
-  // RESTFULL SERVICES
-  public static RS_BTPC = '/api/saa-backend/rest/btpc';
-  public static RS_CNTN = '/api/saa-backend/rest/btpc';
-  public static RS_CRDT = '/api/saa-backend/rest/crdt';
-  public static RS_ESCS = '/api/saa-backend/rest/escs';
-  public static RS_ESCV = '/api/saa-backend/rest/escv';
-  public static RS_ESPR = '/api/saa-backend/rest/espr';
-  public static RS_ESPS = '/api/saa-backend/rest/esps';
-  public static RS_EXTR = '/api/saa-backend/rest/extr';
-  public static RS_TPPR = '/api/saa-backend/rest/tppr';
-  public static RS_FLLL = '/api/saa-backend/rest/extr';
-  public static RS_ENTD = '/api/saa-backend/rest/entd';
-  public static RS_PRDC = '/api/saa-backend/rest/prdc';
-  public static RS_PRST = '/api/saa-backend/rest/prst';
-  public static RS_DTPR = '/api/saa-backend/rest/dtpr';
-  public static RS_PGPR = '/api/saa-backend/rest/pgpr';
-  public static RS_TPVV = '/api/saa-backend/rest/tpvv';
-  public static RS_TPHD = '/api/saa-backend/rest/tphd';
-  public static RS_TPDN = '/api/saa-backend/rest/tpdn';
-  public static RS_APRT = '/api/saa-backend/rest/aprt';
-  public static RS_CNTR = '/api/saa-backend/rest/cntr';
-  public static RS_PRTC = '/api/saa-backend/rest/prtc';
-  public static RS_TPPC = '/api/saa-backend/rest/tppc';
-  public static RS_TPCN = '/api/saa-backend/rest/tpcn';
-  public static RS_TPAP = '/api/saa-backend/rest/tpap';
-  public static RS_MTDP = "/api/saa-backend/rest/mtdp";
-  public static RS_MTVP = "/api/saa-backend/rest/mtvp";
-  public static RS_NVLS = "/api/saa-backend/rest/nvls";
-  public static RS_PSSS = "/api/saa-backend/rest/psss";
-  public static RS_PRFS = "/api/saa-backend/rest/prfs";
-  public static RS_TPDJ = "/api/saa-backend/rest/tpdj";
-  public static RS_TPCL = "/api/saa-backend/rest/tpcl";
-  public static RS_TPCS = "/api/saa-backend/rest/tpcs";
-  public static RS_TPGN = "/api/saa-backend/rest/tpgn";
-  public static RS_TPPG = "/api/saa-backend/rest/tppg";
-  public static RS_TPRQ = "/api/saa-backend/rest/tprq";
-  public static RS_CRAR = "/api/saa-backend/rest/crar";
-  public static RS_DTCA = "/api/saa-backend/rest/dtca";
-  public static RS_PXCA = "/api/saa-backend/rest/pxca";
-  public static RS_ADJN = "/api/saa-backend/rest/adjn";
-  public static RS_CXCP = "/api/saa-backend/rest/cxcp";
-  public static RS_BPRF = "/api/saa-backend/rest/bprf";
-  public static RS_CMBP = "/api/saa-backend/rest/cmbp";
-  public static RS_CSNT = "/api/saa-backend/rest/csnt";
-  public static RS_CDDD = "/api/saa-backend/rest/cddd";
-  public static RS_CMNT = "/api/saa-backend/rest/cmnt";
-  public static RS_CXCK = "/api/saa-backend/rest/cxck";
-  public static RS_DTSP = "/api/saa-backend/rest/dtsp";
-  public static RS_DRTR = "/api/saa-backend/rest/drtr";
-  public static RS_DRCC = "/api/saa-backend/rest/drcc";
-  public static RS_DCMN = "/api/saa-backend/rest/dcmn";
-  public static RS_HSTR = "/api/saa-backend/rest/hstr";
-  public static RS_MRPR = "/api/saa-backend/rest/mrpr";
-  public static RS_PGAP = "/api/saa-backend/rest/pgap";
-  public static RS_PRRQ = "/api/saa-backend/rest/prrq";
-  public static RS_PREC = "/api/saa-backend/rest/prec";
-  public static RS_PRSN = "/api/saa-backend/rest/prsn";
-  public static RS_PRVN = "/api/saa-backend/rest/prvn";
-  public static RS_RLPR = "/api/saa-backend/rest/rlpr";
-  public static RS_RQPR = "/api/saa-backend/rest/rqpr";
-  public static RS_TSPR = "/api/saa-backend/rest/tspr";
-}*/
+const API_URL = environment.apiUrl;
 
+export class ServiciosCrd {
+
+  // RESTFULL SERVICES - Configuración dinámica según ambiente
+  public static RS_BTPC = `${API_URL}/btpc`;
+  public static RS_CNTN = `${API_URL}/btpc`;
+  public static RS_CRDT = `${API_URL}/crdt`;
+  public static RS_ESCS = `${API_URL}/escs`;
+  public static RS_ESCV = `${API_URL}/escv`;
+  public static RS_ESPR = `${API_URL}/espr`;
+  public static RS_ESPS = `${API_URL}/esps`;
+  public static RS_EXTR = `${API_URL}/extr`;
+  public static RS_TPPR = `${API_URL}/tppr`;
+  public static RS_FLLL = `${API_URL}/extr`;
+  public static RS_ENTD = `${API_URL}/entd`;
+  public static RS_PRDC = `${API_URL}/prdc`;
+  public static RS_PRST = `${API_URL}/prst`;
+  public static RS_DTPR = `${API_URL}/dtpr`;
+  public static RS_PGPR = `${API_URL}/pgpr`;
+  public static RS_TPVV = `${API_URL}/tpvv`;
+  public static RS_TPHD = `${API_URL}/tphd`;
+  public static RS_TPDN = `${API_URL}/tpdn`;
+  public static RS_APRT = `${API_URL}/aprt`;
+  public static RS_CNTR = `${API_URL}/cntr`;
+  public static RS_PRTC = `${API_URL}/prtc`;
+  public static RS_TPPC = `${API_URL}/tppc`;
+  public static RS_TPCN = `${API_URL}/tpcn`;
+  public static RS_TPAP = `${API_URL}/tpap`;
+  public static RS_MTDP = `${API_URL}/mtdp`;
+  public static RS_MTVP = `${API_URL}/mtvp`;
+  public static RS_NVLS = `${API_URL}/nvls`;
+  public static RS_PSSS = `${API_URL}/psss`;
+  public static RS_PRFS = `${API_URL}/prfs`;
+  public static RS_TPDJ = `${API_URL}/tpdj`;
+  public static RS_TPCL = `${API_URL}/tpcl`;
+  public static RS_TPCS = `${API_URL}/tpcs`;
+  public static RS_TPGN = `${API_URL}/tpgn`;
+  public static RS_TPPG = `${API_URL}/tppg`;
+  public static RS_TPRQ = `${API_URL}/tprq`;
+  public static RS_CRAR = `${API_URL}/crar`;
+  public static RS_DTCA = `${API_URL}/dtca`;
+  public static RS_PXCA = `${API_URL}/pxca`;
+  public static RS_ADJN = `${API_URL}/adjn`;
+  public static RS_CXCP = `${API_URL}/cxcp`;
+  public static RS_BPRF = `${API_URL}/bprf`;
+  public static RS_CMBP = `${API_URL}/cmbp`;
+  public static RS_CSNT = `${API_URL}/csnt`;
+  public static RS_CDDD = `${API_URL}/cddd`;
+  public static RS_CMNT = `${API_URL}/cmnt`;
+  public static RS_CXCK = `${API_URL}/cxck`;
+  public static RS_DTSP = `${API_URL}/dtsp`;
+  public static RS_DRTR = `${API_URL}/drtr`;
+  public static RS_DRCC = `${API_URL}/drcc`;
+  public static RS_DCMN = `${API_URL}/dcmn`;
+  public static RS_HSTR = `${API_URL}/hstr`;
+  public static RS_MRPR = `${API_URL}/mrpr`;
+  public static RS_PGAP = `${API_URL}/pgap`;
+  public static RS_PRRQ = `${API_URL}/prrq`;
+  public static RS_PREC = `${API_URL}/prec`;
+  public static RS_PRSN = `${API_URL}/prsn`;
+  public static RS_PRVN = `${API_URL}/prvn`;
+  public static RS_RLPR = `${API_URL}/rlpr`;
+  public static RS_RQPR = `${API_URL}/rqpr`;
+  public static RS_TSPR = `${API_URL}/tspr`;
+}
+/*
 export class ServiciosCrd {
 
   // RESTFULL SERVICES (usar proxy http://localhost:8080 para dev)
@@ -129,4 +133,4 @@ export class ServiciosCrd {
   public static RS_TSPR = "http://localhost:8080/saa-backend/rest/tspr";
 
 }
-
+*/
