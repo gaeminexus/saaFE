@@ -17,7 +17,6 @@
       return new Promise((resolve, reject) => {
         // Verificar si ya está cargado
         if (window.jsPDF) {
-          console.log('jsPDF ya está disponible');
           resolve(window.jsPDF);
           return;
         }
@@ -34,17 +33,13 @@
           }
 
           if (window.jsPDF) {
-            console.log('jsPDF cargado exitosamente');
-
             // Cargar plugin autoTable
             const autoTableScript = document.createElement('script');
             autoTableScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js';
             autoTableScript.onload = function() {
-              console.log('jsPDF autoTable plugin cargado');
               resolve(window.jsPDF);
             };
             autoTableScript.onerror = function() {
-              console.warn('Plugin autoTable no se pudo cargar, usando funcionalidad básica');
               resolve(window.jsPDF);
             };
             document.head.appendChild(autoTableScript);
@@ -62,7 +57,6 @@
           fallbackScript.onload = function() {
             if (typeof jsPDF !== 'undefined') {
               window.jsPDF = jsPDF;
-              console.log('jsPDF cargado desde CDN alternativo');
               resolve(window.jsPDF);
             } else {
               reject('jsPDF no se pudo cargar desde ningún CDN');
@@ -82,7 +76,6 @@
     document.addEventListener('DOMContentLoaded', function() {
       loadJsPDF().catch(function(error) {
         console.error('jsPDF no se pudo cargar:', error);
-        console.log('La funcionalidad de exportación PDF usará método alternativo (window.print)');
       });
     });
 
