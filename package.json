@@ -5,6 +5,7 @@
     "ng": "ng",
     "start": "ng serve --proxy-config proxy.conf.json",
     "build": "ng build",
+    "build:prod": "powershell -ExecutionPolicy Bypass -File ./build-production.ps1",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
   },
