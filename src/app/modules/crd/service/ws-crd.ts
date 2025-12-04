@@ -1,4 +1,4 @@
-export class ServiciosCrd {
+/*export class ServiciosCrd {
 
   // RESTFULL SERVICES
   public static RS_BTPC = '/api/saa-backend/rest/btpc';
@@ -61,8 +61,8 @@ export class ServiciosCrd {
   public static RS_RLPR = "/api/saa-backend/rest/rlpr";
   public static RS_RQPR = "/api/saa-backend/rest/rqpr";
   public static RS_TSPR = "/api/saa-backend/rest/tspr";
-}
-/*
+}*/
+
 export class ServiciosCrd {
 
   // RESTFULL SERVICES (usar proxy http://localhost:8080 para dev)
@@ -129,4 +129,4 @@ export class ServiciosCrd {
   public static RS_TSPR = "http://localhost:8080/saa-backend/rest/tspr";
 
 }
-*/
+
