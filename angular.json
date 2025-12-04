@@ -58,7 +58,7 @@
               "outputHashing": "all",
               "extractLicenses": true,
               "prerender": false,
-              "baseHref": "/SaaFE/"
+              "baseHref": "/Saa/",
             },
             "development": {
               "optimization": false,
