@@ -1,0 +1,110 @@
+<div class="dialog-container">
+  <h2 mat-dialog-title>Cambiar Contraseña</h2>
+
+  <mat-dialog-content>
+    <form [formGroup]="claveForm" class="clave-form">
+      <!-- Contraseña Actual -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Contraseña Actual</mat-label>
+        <input
+          matInput
+          [type]="hideClaveActual() ? 'password' : 'text'"
+          formControlName="claveActual"
+          placeholder="Ingrese su contraseña actual"
+          autocomplete="current-password"
+        />
+        <button
+          mat-icon-button
+          matSuffix
+          type="button"
+          (click)="hideClaveActual.set(!hideClaveActual())"
+          [attr.aria-label]="'Mostrar contraseña'"
+          [attr.aria-pressed]="!hideClaveActual()"
+        >
+          <mat-icon>{{ hideClaveActual() ? 'visibility_off' : 'visibility' }}</mat-icon>
+        </button>
+        @if (claveActualControl?.hasError('required') && claveActualControl?.touched) {
+        <mat-error>La contraseña actual es requerida</mat-error>
+        }
+      </mat-form-field>
+
+      <!-- Nueva Contraseña -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Nueva Contraseña</mat-label>
+        <input
+          matInput
+          [type]="hideClaveNueva() ? 'password' : 'text'"
+          formControlName="claveNueva"
+          placeholder="Ingrese su nueva contraseña"
+          autocomplete="new-password"
+        />
+        <button
+          mat-icon-button
+          matSuffix
+          type="button"
+          (click)="hideClaveNueva.set(!hideClaveNueva())"
+          [attr.aria-label]="'Mostrar contraseña'"
+          [attr.aria-pressed]="!hideClaveNueva()"
+        >
+          <mat-icon>{{ hideClaveNueva() ? 'visibility_off' : 'visibility' }}</mat-icon>
+        </button>
+        @if (claveNuevaControl?.hasError('required') && claveNuevaControl?.touched) {
+        <mat-error>La nueva contraseña es requerida</mat-error>
+        } @if (passwordsSame) {
+        <mat-error>La nueva contraseña debe ser diferente a la actual</mat-error>
+        }
+      </mat-form-field>
+
+      <!-- Confirmar Nueva Contraseña -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Confirmar Nueva Contraseña</mat-label>
+        <input
+          matInput
+          [type]="hideClaveConfirmar() ? 'password' : 'text'"
+          formControlName="claveConfirmar"
+          placeholder="Confirme su nueva contraseña"
+          autocomplete="new-password"
+        />
+        <button
+          mat-icon-button
+          matSuffix
+          type="button"
+          (click)="hideClaveConfirmar.set(!hideClaveConfirmar())"
+          [attr.aria-label]="'Mostrar contraseña'"
+          [attr.aria-pressed]="!hideClaveConfirmar()"
+        >
+          <mat-icon>{{ hideClaveConfirmar() ? 'visibility_off' : 'visibility' }}</mat-icon>
+        </button>
+        @if (claveConfirmarControl?.hasError('required') && claveConfirmarControl?.touched) {
+        <mat-error>Debe confirmar la nueva contraseña</mat-error>
+        } @if (passwordsMismatch) {
+        <mat-error>Las contraseñas no coinciden</mat-error>
+        }
+      </mat-form-field>
+
+      <!-- Mensaje de Error -->
+      @if (errorMsg()) {
+      <div class="error-alert">
+        <mat-icon>error_outline</mat-icon>
+        <span>{{ errorMsg() }}</span>
+      </div>
+      }
+    </form>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button type="button" (click)="onCancelar()" [disabled]="loading()">Cancelar</button>
+    <button
+      mat-raised-button
+      color="primary"
+      type="button"
+      (click)="onCambiarClave()"
+      [disabled]="claveForm.invalid || loading()"
+    >
+      @if (loading()) {
+      <mat-spinner [diameter]="20" style="display: inline-block; margin-right: 8px"></mat-spinner>
+      }
+      <span>{{ loading() ? 'Cambiando...' : 'Cambiar Contraseña' }}</span>
+    </button>
+  </mat-dialog-actions>
+</div>

@@ -1,13 +1,21 @@
-import { Location } from '@angular/common';
-import { Component, Input, OnInit, OnDestroy, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
-import { Router } from '@angular/router';
-import { MatSnackBar } from '@angular/material/snack-bar';
 import { CommonModule } from '@angular/common';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  Input,
+  OnDestroy,
+  OnInit,
+} from '@angular/core';
+import { MatDialog } from '@angular/material/dialog';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { Router } from '@angular/router';
 
+import { CambioClaveDialogComponent } from '../../modules/dash/forms/login/cambio-clave-dialog/cambio-clave-dialog.component';
 import { MaterialFormModule } from '../modules/material-form.module';
-import { UsuarioService } from '../services/usuario.service';
 import { AppStateService } from '../services/app-state.service';
 import { LoadingService } from '../services/loading.service';
+import { UsuarioService } from '../services/usuario.service';
 
 @Component({
   selector: 'app-header',
@@ -15,7 +23,7 @@ import { LoadingService } from '../services/loading.service';
   imports: [MaterialFormModule, CommonModule],
   templateUrl: './header.component.html',
   styleUrls: ['./header.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HeaderComponent implements OnInit, OnDestroy {
   @Input() screenTitle: string = '';
@@ -37,7 +45,8 @@ export class HeaderComponent implements OnInit, OnDestroy {
     private appStateService: AppStateService,
     private snackBar: MatSnackBar,
     private loadingService: LoadingService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private dialog: MatDialog
   ) {
     this.loading$ = this.loadingService.loading$;
   }
@@ -94,10 +103,51 @@ export class HeaderComponent implements OnInit, OnDestroy {
   }
 
   cambiarContrasena() {
-    this.snackBar.open('Cambiar Contraseña — próximamente', 'Cerrar', {
-      duration: 4000,
-      horizontalPosition: 'end',
-      verticalPosition: 'top'
+    const usuario = this.usuarioService.getUsuarioLog();
+
+    // Intentar obtener el username desde localStorage (usado en el login)
+    const username = localStorage.getItem('userName') || localStorage.getItem('usuario');
+
+    if (!username) {
+      this.snackBar.open(
+        'No se pudo obtener el nombre de usuario. Por favor inicie sesión nuevamente.',
+        'Cerrar',
+        {
+          duration: 3000,
+          horizontalPosition: 'end',
+          verticalPosition: 'top',
+          panelClass: ['error-snackbar'],
+        }
+      );
+      return;
+    }
+
+    const dialogRef = this.dialog.open(CambioClaveDialogComponent, {
+      width: '520px',
+      disableClose: false,
+      data: {
+        idUsuario: username.toString().toUpperCase(),
+        esDesdeLogin: false,
+      },
+    });
+
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result?.success) {
+        this.snackBar.open('Contraseña cambiada exitosamente. Cerrando sesión...', 'Cerrar', {
+          duration: 3000,
+          horizontalPosition: 'end',
+          verticalPosition: 'top',
+          panelClass: ['success-snackbar'],
+        });
+
+        // Cerrar sesión después de 2 segundos
+        setTimeout(() => {
+          this.appStateService.limpiarDatos();
+          this.usuarioService.clearSession();
+          console.log('HeaderComponent: Sesión cerrada después de cambio de contraseña');
+          this.router.navigate(['/login']);
+        }, 2000);
+      }
     });
   }
 
@@ -105,7 +155,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
     this.snackBar.open('Restablecer Contraseña — próximamente', 'Cerrar', {
       duration: 4000,
       horizontalPosition: 'end',
-      verticalPosition: 'top'
+      verticalPosition: 'top',
     });
   }
 }
