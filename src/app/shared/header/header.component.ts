@@ -134,19 +134,14 @@ export class HeaderComponent implements OnInit, OnDestroy {
     dialogRef.afterClosed().subscribe((result) => {
       if (result?.success) {
         this.snackBar.open('Contraseña cambiada exitosamente. Cerrando sesión...', 'Cerrar', {
-          duration: 3000,
+          duration: 2000,
           horizontalPosition: 'end',
           verticalPosition: 'top',
           panelClass: ['success-snackbar'],
         });
 
-        // Cerrar sesión después de 2 segundos
-        setTimeout(() => {
-          this.appStateService.limpiarDatos();
-          this.usuarioService.clearSession();
-          console.log('HeaderComponent: Sesión cerrada después de cambio de contraseña');
-          this.router.navigate(['/login']);
-        }, 2000);
+        // Nota: El diálogo ahora maneja el cierre de sesión automáticamente
+        // No es necesario duplicar la lógica aquí
       }
     });
   }

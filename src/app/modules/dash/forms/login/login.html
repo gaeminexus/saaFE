@@ -63,13 +63,6 @@
         <span>Cambiar Contraseña</span>
       </button>
 
-      <button type="button" (click)="testServicios()" class="login-button">
-        @if (isLoading) {
-        <mat-spinner [diameter]="24" [style.marginRight.px]="8"></mat-spinner>
-        }
-        <span>{{ isLoading ? 'Recuperando Datos...' : 'PRUEBA SERVICIOS' }}</span>
-      </button>
-
       @if (loginMessage) {
       <div [ngClass]="loginMessageType + '-message'" style="margin-top: 1rem">
         {{ loginMessage }}

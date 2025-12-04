@@ -10,8 +10,12 @@
         <p class="subtitle">Gestiona y consulta la información de entidades del sistema</p>
       </div>
       <div class="header-actions">
-        <button mat-icon-button (click)="toggleFiltrosPrincipales()" class="toggle-filtros-btn"
-                matTooltip="{{ filtrosPrincipalesExpandidos ? 'Ocultar filtros' : 'Mostrar filtros' }}">
+        <button
+          mat-icon-button
+          (click)="toggleFiltrosPrincipales()"
+          class="toggle-filtros-btn"
+          matTooltip="{{ filtrosPrincipalesExpandidos ? 'Ocultar filtros' : 'Mostrar filtros' }}"
+        >
           <mat-icon>{{ filtrosPrincipalesExpandidos ? 'expand_less' : 'expand_more' }}</mat-icon>
         </button>
       </div>
@@ -19,236 +23,273 @@
 
     <!-- Filtros integrados en el header -->
     @if (filtrosPrincipalesExpandidos) {
-      <div class="filtros-container" @fadeIn>
-        <form [formGroup]="filtrosForm">
-          <!-- Filtros Principales -->
-          <div class="filtros-principales">
-            <div class="filtros-grid">
-              <mat-form-field appearance="fill" class="filter-field">
-                <mat-label>Filial</mat-label>
-                <mat-icon matPrefix>business</mat-icon>
-                <mat-select formControlName="filial">
-                  <mat-option [value]="null">Todas</mat-option>
-                  @for (filial of filialesOptions(); track filial.codigo) {
-                    <mat-option [value]="filial.codigo">{{ filial.nombre }}</mat-option>
-                  }
-                </mat-select>
-              </mat-form-field>
+    <div class="filtros-container" @fadeIn>
+      <form [formGroup]="filtrosForm">
+        <!-- Filtros Principales -->
+        <div class="filtros-principales">
+          <div class="filtros-grid">
+            <mat-form-field appearance="fill" class="filter-field">
+              <mat-label>Filial</mat-label>
+              <mat-icon matPrefix>business</mat-icon>
+              <mat-select formControlName="filial">
+                <mat-option [value]="null">Todas</mat-option>
+                @for (filial of filialesOptions(); track $index) {
+                <mat-option [value]="filial.codigo">{{ filial.nombre }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
 
-              <mat-form-field appearance="fill" class="filter-field">
-                <mat-label>Tipo Identificación</mat-label>
-                <mat-icon matPrefix>badge</mat-icon>
-                <mat-select formControlName="tipoIdentificacion">
-                  <mat-option [value]="null">Todos</mat-option>
-                  @for (tipo of tiposIdentificacionOptions(); track tipo.codigo) {
-                    <mat-option [value]="tipo.codigo">{{ tipo.nombre }}</mat-option>
-                  }
-                </mat-select>
-              </mat-form-field>
+            <mat-form-field appearance="fill" class="filter-field">
+              <mat-label>Tipo Identificación</mat-label>
+              <mat-icon matPrefix>badge</mat-icon>
+              <mat-select formControlName="tipoIdentificacion">
+                <mat-option [value]="null">Todos</mat-option>
+                @for (tipo of tiposIdentificacionOptions(); track $index) {
+                <mat-option [value]="tipo.codigo">{{ tipo.nombre }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
 
-              <mat-form-field appearance="fill" class="filter-field">
-                <mat-label>Número Identificación</mat-label>
-                <mat-icon matPrefix>fingerprint</mat-icon>
-                <input matInput formControlName="numeroIdentificacion" placeholder="Ingrese número">
-              </mat-form-field>
+            <mat-form-field appearance="fill" class="filter-field">
+              <mat-label>Número Identificación</mat-label>
+              <mat-icon matPrefix>fingerprint</mat-icon>
+              <input matInput formControlName="numeroIdentificacion" placeholder="Ingrese número" />
+            </mat-form-field>
 
-              <mat-form-field appearance="fill" class="filter-field">
-                <mat-label>Razón Social</mat-label>
-                <mat-icon matPrefix>person</mat-icon>
-                <input matInput formControlName="razonSocial" placeholder="Ingrese razón social">
-              </mat-form-field>
-            </div>
+            <mat-form-field appearance="fill" class="filter-field">
+              <mat-label>Razón Social</mat-label>
+              <mat-icon matPrefix>person</mat-icon>
+              <input matInput formControlName="razonSocial" placeholder="Ingrese razón social" />
+            </mat-form-field>
           </div>
+        </div>
 
-          <!-- Botón para expandir filtros avanzados -->
-          <div class="toggle-filtros">
-            <button mat-button type="button" (click)="toggleFiltrosAvanzados()" class="btn-toggle">
-              <mat-icon>{{ filtrosAvanzadosExpandidos ? 'expand_less' : 'expand_more' }}</mat-icon>
-              {{ filtrosAvanzadosExpandidos ? 'Ocultar' : 'Mostrar' }} Filtros Avanzados
-            </button>
+        <!-- Botón para expandir filtros avanzados -->
+        <div class="toggle-filtros">
+          <button mat-button type="button" (click)="toggleFiltrosAvanzados()" class="btn-toggle">
+            <mat-icon>{{ filtrosAvanzadosExpandidos ? 'expand_less' : 'expand_more' }}</mat-icon>
+            {{ filtrosAvanzadosExpandidos ? 'Ocultar' : 'Mostrar' }} Filtros Avanzados
+          </button>
+        </div>
+
+        <!-- Filtros Avanzados (colapsables) -->
+        @if (filtrosAvanzadosExpandidos) {
+        <div class="filtros-avanzados" @fadeIn>
+          <div class="filtros-grid">
+            <mat-form-field appearance="fill" class="filter-field">
+              <mat-label>Email</mat-label>
+              <mat-icon matPrefix>email</mat-icon>
+              <input matInput formControlName="email" placeholder="Personal o institucional" />
+            </mat-form-field>
+
+            <mat-form-field appearance="fill" class="filter-field">
+              <mat-label>Teléfono</mat-label>
+              <mat-icon matPrefix>phone</mat-icon>
+              <input matInput formControlName="telefono" placeholder="Fijo o móvil" />
+            </mat-form-field>
+
+            <mat-form-field appearance="fill" class="filter-field">
+              <mat-label>Sector Público</mat-label>
+              <mat-icon matPrefix>account_balance</mat-icon>
+              <mat-select formControlName="sectorPublico">
+                @for (opt of sectorPublicoOptions; track $index) {
+                <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="fill" class="filter-field">
+              <mat-label>Estado</mat-label>
+              <mat-icon matPrefix>toggle_on</mat-icon>
+              <mat-select formControlName="idEstado">
+                @for (opt of estadosOptions; track $index) {
+                <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="fill" class="filter-field">
+              <mat-label>Migrado</mat-label>
+              <mat-icon matPrefix>sync</mat-icon>
+              <mat-select formControlName="migrado">
+                @for (opt of migradoOptions; track $index) {
+                <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="fill" class="filter-field">
+              <mat-label>Fecha Nacimiento Desde</mat-label>
+              <mat-icon matPrefix>event</mat-icon>
+              <input
+                matInput
+                [matDatepicker]="pickerDesde"
+                formControlName="fechaNacimientoDesde"
+              />
+              <mat-datepicker-toggle matSuffix [for]="pickerDesde"></mat-datepicker-toggle>
+              <mat-datepicker #pickerDesde></mat-datepicker>
+            </mat-form-field>
+
+            <mat-form-field appearance="fill" class="filter-field">
+              <mat-label>Fecha Nacimiento Hasta</mat-label>
+              <mat-icon matPrefix>event</mat-icon>
+              <input
+                matInput
+                [matDatepicker]="pickerHasta"
+                formControlName="fechaNacimientoHasta"
+              />
+              <mat-datepicker-toggle matSuffix [for]="pickerHasta"></mat-datepicker-toggle>
+              <mat-datepicker #pickerHasta></mat-datepicker>
+            </mat-form-field>
           </div>
+        </div>
+        }
 
-          <!-- Filtros Avanzados (colapsables) -->
-          @if (filtrosAvanzadosExpandidos) {
-            <div class="filtros-avanzados" @fadeIn>
-              <div class="filtros-grid">
-                <mat-form-field appearance="fill" class="filter-field">
-                  <mat-label>Email</mat-label>
-                  <mat-icon matPrefix>email</mat-icon>
-                  <input matInput formControlName="email" placeholder="Personal o institucional">
-                </mat-form-field>
-
-                <mat-form-field appearance="fill" class="filter-field">
-                  <mat-label>Teléfono</mat-label>
-                  <mat-icon matPrefix>phone</mat-icon>
-                  <input matInput formControlName="telefono" placeholder="Fijo o móvil">
-                </mat-form-field>
-
-                <mat-form-field appearance="fill" class="filter-field">
-                  <mat-label>Sector Público</mat-label>
-                  <mat-icon matPrefix>account_balance</mat-icon>
-                  <mat-select formControlName="sectorPublico">
-                    @for (opt of sectorPublicoOptions; track opt.value) {
-                      <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
-                    }
-                  </mat-select>
-                </mat-form-field>
-
-                <mat-form-field appearance="fill" class="filter-field">
-                  <mat-label>Estado</mat-label>
-                  <mat-icon matPrefix>toggle_on</mat-icon>
-                  <mat-select formControlName="idEstado">
-                    @for (opt of estadosOptions; track opt.value) {
-                      <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
-                    }
-                  </mat-select>
-                </mat-form-field>
-
-                <mat-form-field appearance="fill" class="filter-field">
-                  <mat-label>Migrado</mat-label>
-                  <mat-icon matPrefix>sync</mat-icon>
-                  <mat-select formControlName="migrado">
-                    @for (opt of migradoOptions; track opt.value) {
-                      <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
-                    }
-                  </mat-select>
-                </mat-form-field>
-
-                <mat-form-field appearance="fill" class="filter-field">
-                  <mat-label>Fecha Nacimiento Desde</mat-label>
-                  <mat-icon matPrefix>event</mat-icon>
-                  <input matInput [matDatepicker]="pickerDesde" formControlName="fechaNacimientoDesde">
-                  <mat-datepicker-toggle matSuffix [for]="pickerDesde"></mat-datepicker-toggle>
-                  <mat-datepicker #pickerDesde></mat-datepicker>
-                </mat-form-field>
-
-                <mat-form-field appearance="fill" class="filter-field">
-                  <mat-label>Fecha Nacimiento Hasta</mat-label>
-                  <mat-icon matPrefix>event</mat-icon>
-                  <input matInput [matDatepicker]="pickerHasta" formControlName="fechaNacimientoHasta">
-                  <mat-datepicker-toggle matSuffix [for]="pickerHasta"></mat-datepicker-toggle>
-                  <mat-datepicker #pickerHasta></mat-datepicker>
-                </mat-form-field>
-              </div>
-            </div>
-          }
-
-          <!-- Acciones de filtros -->
-          <div class="acciones-filtros">
-            <button mat-raised-button (click)="buscar()" class="btn-action btn-buscar">
-              <mat-icon>search</mat-icon>
-              Buscar
-            </button>
-            <button mat-raised-button (click)="limpiarFiltros()" class="btn-action btn-limpiar">
-              <mat-icon>clear</mat-icon>
-              Limpiar
-            </button>
-            <button mat-raised-button (click)="nuevaEntidad()" class="btn-action btn-nueva">
-              <mat-icon>add</mat-icon>
-              Nueva Entidad
-            </button>
-            <button mat-raised-button (click)="exportarCSV()" [disabled]="entidades().length === 0" class="btn-action btn-exportar">
-              <mat-icon>download</mat-icon>
-              Exportar CSV
-            </button>
-          </div>
-        </form>
-      </div>
+        <!-- Acciones de filtros -->
+        <div class="acciones-filtros">
+          <button mat-raised-button (click)="buscar()" class="btn-action btn-buscar">
+            <mat-icon>search</mat-icon>
+            Buscar
+          </button>
+          <button mat-raised-button (click)="limpiarFiltros()" class="btn-action btn-limpiar">
+            <mat-icon>clear</mat-icon>
+            Limpiar
+          </button>
+          <button mat-raised-button (click)="nuevaEntidad()" class="btn-action btn-nueva">
+            <mat-icon>add</mat-icon>
+            Nueva Entidad
+          </button>
+          <button
+            mat-raised-button
+            (click)="exportarCSV()"
+            [disabled]="entidades().length === 0"
+            class="btn-action btn-exportar"
+          >
+            <mat-icon>download</mat-icon>
+            Exportar CSV
+          </button>
+        </div>
+      </form>
+    </div>
     }
   </div>
 
   <!-- Tabla de Resultados (siempre renderizada para que el ViewChild funcione) -->
   <mat-card class="resultados-card" @fadeIn>
     @if (entidades().length > 0) {
-      <mat-card-header>
-        <mat-card-title>Resultados ({{ entidades().length }})</mat-card-title>
-      </mat-card-header>
+    <mat-card-header>
+      <mat-card-title>Resultados ({{ entidades().length }})</mat-card-title>
+    </mat-card-header>
     }
 
     <mat-card-content>
       @if (entidades().length > 0) {
-        <div class="table-container">
-          <table mat-table [dataSource]="dataSource" matSort class="resultados-table">
-            <!-- Columna Código -->
-            <ng-container matColumnDef="codigo">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header>Código</th>
-              <td mat-cell *matCellDef="let entidad">{{ entidad.codigo }}</td>
-            </ng-container>
+      <div class="table-container">
+        <table mat-table [dataSource]="dataSource" matSort class="resultados-table">
+          <!-- Columna Código -->
+          <ng-container matColumnDef="codigo">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Código</th>
+            <td mat-cell *matCellDef="let entidad">{{ entidad.codigo }}</td>
+          </ng-container>
 
-            <!-- Columna Tipo Identificación -->
-            <ng-container matColumnDef="tipoIdentificacion">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header>Tipo ID</th>
-              <td mat-cell *matCellDef="let entidad">{{ entidad.tipoIdentificacion?.nombre || '-' }}</td>
-            </ng-container>
+          <!-- Columna Tipo Identificación -->
+          <ng-container matColumnDef="tipoIdentificacion">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Tipo ID</th>
+            <td mat-cell *matCellDef="let entidad">
+              {{ entidad.tipoIdentificacion?.nombre || '-' }}
+            </td>
+          </ng-container>
 
-            <!-- Columna Número Identificación -->
-            <ng-container matColumnDef="numeroIdentificacion">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header>Número ID</th>
-              <td mat-cell *matCellDef="let entidad">{{ entidad.numeroIdentificacion || '-' }}</td>
-            </ng-container>
+          <!-- Columna Número Identificación -->
+          <ng-container matColumnDef="numeroIdentificacion">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Número ID</th>
+            <td mat-cell *matCellDef="let entidad">{{ entidad.numeroIdentificacion || '-' }}</td>
+          </ng-container>
 
-            <!-- Columna Razón Social -->
-            <ng-container matColumnDef="razonSocial">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header>Razón Social</th>
-              <td mat-cell *matCellDef="let entidad" class="razon-social-cell">
-                {{ entidad.razonSocial || '-' }}
-              </td>
-            </ng-container>
+          <!-- Columna Razón Social -->
+          <ng-container matColumnDef="razonSocial">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Razón Social</th>
+            <td mat-cell *matCellDef="let entidad" class="razon-social-cell">
+              {{ entidad.razonSocial || '-' }}
+            </td>
+          </ng-container>
 
-            <!-- Columna Filial -->
-            <ng-container matColumnDef="filial">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header>Filial</th>
-              <td mat-cell *matCellDef="let entidad">{{ entidad.filial?.nombre || '-' }}</td>
-            </ng-container>
+          <!-- Columna Filial -->
+          <ng-container matColumnDef="filial">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Filial</th>
+            <td mat-cell *matCellDef="let entidad">{{ entidad.filial?.nombre || '-' }}</td>
+          </ng-container>
 
-            <!-- Columna Correo (combinado, sin sort) -->
-            <ng-container matColumnDef="correo">
-              <th mat-header-cell *matHeaderCellDef>Correo</th>
-              <td mat-cell *matCellDef="let entidad" class="correo-cell">
-                {{ entidad.correoPersonal || entidad.correoInstitucional || '-' }}
-              </td>
-            </ng-container>
+          <!-- Columna Correo (combinado, sin sort) -->
+          <ng-container matColumnDef="correo">
+            <th mat-header-cell *matHeaderCellDef>Correo</th>
+            <td mat-cell *matCellDef="let entidad" class="correo-cell">
+              {{ entidad.correoPersonal || entidad.correoInstitucional || '-' }}
+            </td>
+          </ng-container>
 
-            <!-- Columna Teléfono (combinado, sin sort) -->
-            <ng-container matColumnDef="telefono">
-              <th mat-header-cell *matHeaderCellDef>Teléfono</th>
-              <td mat-cell *matCellDef="let entidad">
-                {{ entidad.telefono || entidad.movil || '-' }}
-              </td>
-            </ng-container>
+          <!-- Columna Teléfono (combinado, sin sort) -->
+          <ng-container matColumnDef="telefono">
+            <th mat-header-cell *matHeaderCellDef>Teléfono</th>
+            <td mat-cell *matCellDef="let entidad">
+              {{ entidad.telefono || entidad.movil || '-' }}
+            </td>
+          </ng-container>
 
-            <!-- Columna Estado -->
-            <ng-container matColumnDef="estado">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header>Estado</th>
-              <td mat-cell *matCellDef="let entidad">
-                <span class="estado-badge" [class.activo]="entidad.idEstado === 1" [class.inactivo]="entidad.idEstado === 0">
-                  {{ entidad.idEstado === 1 ? 'Activo' : 'Inactivo' }}
-                </span>
-              </td>
-            </ng-container>
+          <!-- Columna Estado -->
+          <ng-container matColumnDef="estado">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Estado</th>
+            <td mat-cell *matCellDef="let entidad">
+              <span class="estado-badge" [ngClass]="obtenerClaseEstado(entidad.idEstado)">
+                {{ obtenerNombreEstado(entidad.idEstado) }}
+              </span>
+            </td>
+          </ng-container>
 
-            <!-- Columna Acciones (siempre visible, sticky) -->
-            <ng-container matColumnDef="acciones">
-              <th mat-header-cell *matHeaderCellDef class="acciones-header">Acciones</th>
-              <td mat-cell *matCellDef="let entidad" class="acciones-cell">
-                <button mat-icon-button color="primary" (click)="editarEntidad(entidad)" matTooltip="Editar">
-                  <mat-icon>edit</mat-icon>
-                </button>
-                <button mat-icon-button color="accent" (click)="verComoParticipe(entidad)" matTooltip="Dashboard de Partícipe">
-                  <mat-icon>person_play</mat-icon>
-                </button>
-              </td>
-            </ng-container>
+          <!-- Columna Acciones (siempre visible, sticky) -->
+          <ng-container matColumnDef="acciones">
+            <th mat-header-cell *matHeaderCellDef class="acciones-header">Acciones</th>
+            <td mat-cell *matCellDef="let entidad" class="acciones-cell">
+              <button
+                mat-icon-button
+                color="primary"
+                (click)="editarEntidad(entidad)"
+                matTooltip="Editar"
+              >
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button
+                mat-icon-button
+                color="accent"
+                (click)="verComoParticipe(entidad)"
+                matTooltip="Dashboard de Partícipe"
+              >
+                <mat-icon>person_play</mat-icon>
+              </button>
+              <button
+                mat-icon-button
+                [color]="entidad.idEstado === 1 ? 'warn' : 'primary'"
+                (click)="cambiarEstado(entidad)"
+                [matTooltip]="
+                  'Cambiar estado (Actual: ' +
+                  (entidad.idEstado === 1 ? 'Activo' : 'Inactivo') +
+                  ')'
+                "
+              >
+                <mat-icon>{{ entidad.idEstado === 1 ? 'toggle_on' : 'toggle_off' }}</mat-icon>
+              </button>
+            </td>
+          </ng-container>
 
-            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-            <tr mat-row *matRowDef="let row; columns: displayedColumns;" class="tabla-row"></tr>
-          </table>
-        </div>
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns" class="tabla-row"></tr>
+        </table>
+      </div>
       } @else {
-        <div class="empty-state-inline">
-          <mat-icon class="empty-icon">search_off</mat-icon>
-          <p>No se encontraron resultados. Utilice los filtros para buscar entidades.</p>
-        </div>
+      <div class="empty-state-inline">
+        <mat-icon class="empty-icon">search_off</mat-icon>
+        <p>No se encontraron resultados. Utilice los filtros para buscar entidades.</p>
+      </div>
       }
 
       <!-- Paginador renderizado pero oculto hasta que se realice una búsqueda -->
@@ -256,7 +297,8 @@
         [pageSizeOptions]="[10, 25, 50, 100]"
         [pageSize]="25"
         showFirstLastButtons
-        [style.display]="busquedaRealizada() ? 'block' : 'none'">
+        [style.display]="busquedaRealizada() ? 'block' : 'none'"
+      >
       </mat-paginator>
     </mat-card-content>
   </mat-card>

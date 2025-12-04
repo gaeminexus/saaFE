@@ -10,8 +10,10 @@ import {
 } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { Router } from '@angular/router';
 
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { AppStateService } from '../../../../../shared/services/app-state.service';
 import { UsuarioService } from '../../../../../shared/services/usuario.service';
 
 export interface CambioClaveData {
@@ -39,6 +41,8 @@ export class CambioClaveDialogComponent implements OnInit {
     private dialogRef: MatDialogRef<CambioClaveDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: CambioClaveData,
     private usuarioService: UsuarioService,
+    private appStateService: AppStateService,
+    private router: Router,
     private snackBar: MatSnackBar
   ) {}
 
@@ -129,13 +133,20 @@ export class CambioClaveDialogComponent implements OnInit {
           response.includes('exitosa') ||
           response.includes('correctamente')
         ) {
-          this.snackBar.open('Contraseña cambiada exitosamente', 'Cerrar', {
-            duration: 4000,
+          this.snackBar.open('Contraseña cambiada exitosamente. Cerrando sesión...', 'Cerrar', {
+            duration: 2000,
             horizontalPosition: 'end',
             verticalPosition: 'top',
             panelClass: ['success-snackbar'],
           });
+
+          // Cerrar el diálogo
           this.dialogRef.close({ success: true });
+
+          // Si no es desde login, cerrar sesión automáticamente (mismo comportamiento del header)
+          if (!this.data.esDesdeLogin) {
+            this.cerrarSesion();
+          }
         } else {
           this.errorMsg.set(response || 'Error al cambiar la contraseña');
         }
@@ -154,5 +165,19 @@ export class CambioClaveDialogComponent implements OnInit {
 
   onCancelar(): void {
     this.dialogRef.close({ success: false });
+  }
+
+  /**
+   * Cierra la sesión del usuario (mismo comportamiento que el botón Salir del header)
+   */
+  private cerrarSesion(): void {
+    // Limpiar TODA la sesión (localStorage, caché de rubros, estado global)
+    this.appStateService.limpiarDatos();
+    this.usuarioService.clearSession();
+
+    console.log(
+      'CambioClaveDialog: Logout completo después de cambio de contraseña - redirigiendo a login'
+    );
+    this.router.navigate(['/login']);
   }
 }
