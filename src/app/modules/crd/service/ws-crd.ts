@@ -70,7 +70,7 @@ export class ServiciosCrd {
   public static RS_NTRL = 'http://localhost:8080/saa-backend/rest/ntrl';
   public static RS_BTPC = 'http://localhost:8080/saa-backend/rest/btpc';
   public static RS_CNTN = 'http://localhost:8080/saa-backend/rest/cntn';
-  public static RS_CRDT = 'http://localhost:8080/saa-backend/rest/crdt';  /*CreditoMontoAprobacionRest*/
+  public static RS_CRDT = 'http://localhost:8080/saa-backend/rest/crdt';  /*CreditoMontoAprobacionRest  */
   public static RS_ESCS = 'http://localhost:8080/saa-backend/rest/escs';
   public static RS_ESCV = 'http://localhost:8080/saa-backend/rest/escv';
   public static RS_ESPR = 'http://localhost:8080/saa-backend/rest/espr';
