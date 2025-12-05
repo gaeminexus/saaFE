@@ -16,4 +16,5 @@ export interface Producto {
     usuarioModificacion: string;// PRDCUSMD - Usuario modificación (opcional)
     ipModificacion: string;     // PRDCIPMD - IP modificación (opcional)
     estado: number;              // PRDCESTD - Estado
+    codigoPetro: string;        // PRDCCDPTR - Código Petro
 }
