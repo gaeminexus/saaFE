@@ -37,4 +37,6 @@ export interface Entidad {
     usuarioModificacion: string;// ENTDUSMD - Usuario modificación (opcional)
     idEstado: number;            // ENTDIDST - ID Estado
     urlFotoLogo: string;        // ENTDURFL - URL Foto Logo (opcional)
+    rolPetroComercial: number; // ENTDRLPC - Rol Petro Comercial
+
 }

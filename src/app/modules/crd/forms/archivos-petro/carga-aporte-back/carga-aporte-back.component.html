@@ -1,0 +1,454 @@
+<div class="carga-aportes-container">
+  <!-- Header con título y filtros -->
+  <div class="search-header">
+    <div class="header-title">
+      <mat-icon class="header-icon">cloud_upload</mat-icon>
+      <h1>Carga de Archivos al Servidor</h1>
+    </div>
+
+    <div class="filters-box">
+      <mat-form-field appearance="fill" class="filter-field">
+        <mat-label>Filial</mat-label>
+        <mat-select [(ngModel)]="filialSeleccionada" (selectionChange)="onFilialChange()" [disabled]="isLoadingFiliales()">
+          <mat-option [value]="null">-- Seleccione una filial --</mat-option>
+          @if (isLoadingFiliales()) {
+            <mat-option disabled>
+              <mat-spinner diameter="20"></mat-spinner>
+              Cargando...
+            </mat-option>
+          } @else {
+            @for (filial of filiales; track filial.codigo) {
+              <mat-option [value]="filial.codigo">{{ filial.nombre }}</mat-option>
+            }
+          }
+        </mat-select>
+        <mat-icon matPrefix>business</mat-icon>
+      </mat-form-field>
+
+      <mat-form-field appearance="fill" class="filter-field">
+        <mat-label>Año</mat-label>
+        <mat-select [(ngModel)]="anioSeleccionado" (ngModelChange)="onAnioChange()" [disabled]="anioDeshabilitado()">
+          <mat-option [value]="null">-- Seleccione un año --</mat-option>
+          @for (anio of anios; track anio) {
+            <mat-option [value]="anio">{{ anio }}</mat-option>
+          }
+        </mat-select>
+        <mat-icon matPrefix>calendar_today</mat-icon>
+      </mat-form-field>
+
+      <mat-form-field appearance="fill" class="filter-field">
+        <mat-label>Mes</mat-label>
+        <mat-select [(ngModel)]="mesSeleccionado" [disabled]="mesDeshabilitado()">
+          <mat-option [value]="null">-- Seleccione un mes --</mat-option>
+          @for (mes of meses; track mes.valor) {
+            <mat-option [value]="mes.valor" [disabled]="isMesDeshabilitado(mes.valor)" [ngClass]="{'mes-cargado': isMesDeshabilitado(mes.valor)}">
+              {{ mes.nombre }}
+              @if (isMesDeshabilitado(mes.valor)) {
+                <span style="font-weight: 500;"> (Ya cargado)</span>
+              }
+            </mat-option>
+          }
+        </mat-select>
+        <mat-icon matPrefix>event</mat-icon>
+      </mat-form-field>
+
+      @if (anioSeleccionado() || mesSeleccionado() || filialSeleccionada()) {
+        <button mat-icon-button (click)="limpiarFiltros()" class="clear-button" matTooltip="Limpiar filtros">
+          <mat-icon>clear</mat-icon>
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- Área de contenido -->
+  <div class="content-area">
+    @if (cargaExitosa()) {
+      <!-- Mensaje de éxito final -->
+      <div class="success-state">
+        <mat-icon class="success-icon">check_circle</mat-icon>
+        <h2>¡Carga de Archivo Exitosa!</h2>
+        <p>El archivo se procesó y almacenó correctamente en el servidor</p>
+        <button mat-raised-button color="primary" (click)="limpiarFiltros()" class="new-load-button">
+          <mat-icon>add</mat-icon>
+          Nueva Carga
+        </button>
+      </div>
+    } @else if (!anioSeleccionado() || !mesSeleccionado() || !filialSeleccionada()) {
+      <div class="empty-state">
+        <mat-icon class="empty-icon">filter_list</mat-icon>
+        <h2>Seleccione los filtros</h2>
+        <p>Seleccione año, mes y filial para continuar con la carga de archivos</p>
+      </div>
+    } @else {
+      <!-- Sección combinada: Filtros y Carga de Archivo -->
+      <div class="filters-upload-container">
+        <div class="filters-summary">
+          <mat-card class="summary-card">
+            <mat-card-header>
+              <mat-icon mat-card-avatar class="avatar-icon">info</mat-icon>
+              <mat-card-title>Filtros Seleccionados</mat-card-title>
+            </mat-card-header>
+            <mat-card-content>
+              <div class="summary-items-row">
+                <div class="summary-item">
+                  <mat-icon>calendar_today</mat-icon>
+                  <span class="label">Año:</span>
+                  <span class="value">{{ anioSeleccionado() }}</span>
+                </div>
+                <div class="summary-item">
+                  <mat-icon>event</mat-icon>
+                  <span class="label">Mes:</span>
+                  <span class="value">{{ meses[mesSeleccionado()! - 1].nombre }}</span>
+                </div>
+                <div class="summary-item">
+                  <mat-icon>business</mat-icon>
+                  <span class="label">Filial:</span>
+                  <span class="value">{{ getFilialNombre(filialSeleccionada()) }}</span>
+                </div>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        </div>
+
+        <!-- Área de carga de archivo -->
+        @if (!isLoadingData()) {
+          <div class="upload-area">
+            <mat-card class="upload-card">
+              <mat-card-header>
+                <mat-icon mat-card-avatar class="avatar-icon">cloud_upload</mat-icon>
+                <mat-card-title>Cargar Archivo al Servidor</mat-card-title>
+              </mat-card-header>
+              <mat-card-content>
+                <input
+                  type="file"
+                  #fileInput
+                  accept=".txt"
+                  (change)="onFileSelected($event)"
+                  style="display: none;">
+
+                <button
+                  mat-raised-button
+                  color="primary"
+                  class="upload-button"
+                  [disabled]="isUploadingFile()"
+                  (click)="fileInput.click()">
+                  @if (isUploadingFile()) {
+                    <mat-spinner diameter="20" style="margin-right: 8px;"></mat-spinner>
+                    <span>Guardando en servidor...</span>
+                  } @else {
+                    <mat-icon>upload_file</mat-icon>
+                    <span>Seleccionar Archivo TXT</span>
+                  }
+                </button>
+
+                @if (nombreArchivo && !isUploadingFile()) {
+                  <div class="file-info">
+                    <mat-icon>description</mat-icon>
+                    <span>{{ nombreArchivo }}</span>
+                  </div>
+                }
+              </mat-card-content>
+            </mat-card>
+          </div>
+        }
+      </div>
+
+      <!-- Loading de datos -->
+      @if (isLoadingData()) {
+        <div class="loading-state">
+          <mat-spinner diameter="60"></mat-spinner>
+          <h3>Cargando datos del servidor...</h3>
+          <p>Por favor espere mientras se recuperan los datos</p>
+        </div>
+      }
+
+      <!-- Paneles de resultados agrupados por aporte -->
+      @if (aporteAgrupados.length > 0 && !isLoadingData()) {
+        <div class="results-section">
+          <mat-card>
+            <mat-card-header>
+              <mat-icon mat-card-avatar class="avatar-icon">table_chart</mat-icon>
+              <mat-card-title>Datos Recuperados del Servidor</mat-card-title>
+              <mat-card-subtitle>{{ totalRegistros }} registros en {{ aporteAgrupados.length }} aportes</mat-card-subtitle>
+            </mat-card-header>
+            <mat-card-content>
+              <mat-accordion multi>
+                @for (aporte of aporteAgrupados; track aporte.codigoAporte) {
+                  <mat-expansion-panel>
+                    <mat-expansion-panel-header>
+                      <mat-panel-title class="custom-panel-title">
+                        <div class="title-left">
+                          <mat-icon class="aporte-icon">receipt_long</mat-icon>
+                          <span class="aporte-codigo">{{ aporte.codigoAporte }}</span>
+                          <span class="separator">-</span>
+                          <span class="aporte-descripcion">{{ aporte.descripcionAporte }}</span>
+                        </div>
+                        <div class="title-center">
+                          <span class="total-descontado-badge">
+                            <mat-icon>payments</mat-icon>
+                            Total: {{ aporte.totales.totalDescontado | number:'1.2-2' }}
+                          </span>
+                        </div>
+                        <div class="title-right">
+                          <span class="registro-count">{{ aporte.registros.length }} registros</span>
+                        </div>
+                      </mat-panel-title>
+                    </mat-expansion-panel-header>
+
+                    <!-- Sección de totales -->
+                    <div class="totales-section">
+                      <div class="totales-grid">
+                        <div class="total-item">
+                          <span class="total-label">Saldo Actual:</span>
+                          <span class="total-valor">{{ aporte.totales.saldoActual | number:'1.2-2' }}</span>
+                        </div>
+                        <div class="total-item">
+                          <span class="total-label">Interés Anual:</span>
+                          <span class="total-valor">{{ aporte.totales.interesAnual | number:'1.2-2' }}</span>
+                        </div>
+                        <div class="total-item">
+                          <span class="total-label">Valor Seguro:</span>
+                          <span class="total-valor">{{ aporte.totales.valorSeguro | number:'1.2-2' }}</span>
+                        </div>
+                        <div class="total-item">
+                          <span class="total-label">Total a Descontar:</span>
+                          <span class="total-valor">{{ aporte.totales.totalDescontar | number:'1.2-2' }}</span>
+                        </div>
+                        <div class="total-item">
+                          <span class="total-label">Capital Descontado:</span>
+                          <span class="total-valor">{{ aporte.totales.capitalDescontado | number:'1.2-2' }}</span>
+                        </div>
+                        <div class="total-item">
+                          <span class="total-label">Interés Descontado:</span>
+                          <span class="total-valor">{{ aporte.totales.interesDescontado | number:'1.2-2' }}</span>
+                        </div>
+                        <div class="total-item">
+                          <span class="total-label">Seguro Descontado:</span>
+                          <span class="total-valor">{{ aporte.totales.seguroDescontado | number:'1.2-2' }}</span>
+                        </div>
+                        <div class="total-item">
+                          <span class="total-label">Total Descontado:</span>
+                          <span class="total-valor">{{ aporte.totales.totalDescontado | number:'1.2-2' }}</span>
+                        </div>
+                        <div class="total-item no-descontado">
+                          <span class="total-label">Capital No Descontado:</span>
+                          <span class="total-valor">{{ aporte.totales.capitalNoDescontado | number:'1.2-2' }}</span>
+                        </div>
+                        <div class="total-item no-descontado">
+                          <span class="total-label">Interés No Descontado:</span>
+                          <span class="total-valor">{{ aporte.totales.interesNoDescontado | number:'1.2-2' }}</span>
+                        </div>
+                        <div class="total-item no-descontado">
+                          <span class="total-label">Desgravamen No Descontado:</span>
+                          <span class="total-valor">{{ aporte.totales.desgravamenNoDescontado | number:'1.2-2' }}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="table-container">
+                      <table mat-table [dataSource]="aporte.registros" class="data-table">
+                        <!-- Código -->
+                        <ng-container matColumnDef="codigo">
+                          <th mat-header-cell *matHeaderCellDef>Código</th>
+                          <td mat-cell *matCellDef="let row">{{ row.codigoPetro }}</td>
+                        </ng-container>
+
+                        <!-- Nombre -->
+                        <ng-container matColumnDef="nombre">
+                          <th mat-header-cell *matHeaderCellDef>Nombre</th>
+                          <td mat-cell *matCellDef="let row">{{ row.nombre }}</td>
+                        </ng-container>
+
+                        <!-- Plazo Inicial -->
+                        <ng-container matColumnDef="plazoInicial">
+                          <th mat-header-cell *matHeaderCellDef>Plazo Inicial</th>
+                          <td mat-cell *matCellDef="let row">{{ row.plazoInicial }}</td>
+                        </ng-container>
+
+                        <!-- Saldo Actual -->
+                        <ng-container matColumnDef="saldoActual">
+                          <th mat-header-cell *matHeaderCellDef>Saldo Actual</th>
+                          <td mat-cell *matCellDef="let row">{{ row.saldoActual | number:'1.2-2' }}</td>
+                        </ng-container>
+
+                        <!-- Meses Plazo -->
+                        <ng-container matColumnDef="mesesPlazo">
+                          <th mat-header-cell *matHeaderCellDef>Meses Plazo</th>
+                          <td mat-cell *matCellDef="let row">{{ row.mesesPlazo }}</td>
+                        </ng-container>
+
+                        <!-- Interés Anual -->
+                        <ng-container matColumnDef="interesAnual">
+                          <th mat-header-cell *matHeaderCellDef>Interés Anual</th>
+                          <td mat-cell *matCellDef="let row">{{ row.interesAnual | number:'1.2-2' }}</td>
+                        </ng-container>
+
+                        <!-- Valor Seguro -->
+                        <ng-container matColumnDef="valorSeguro">
+                          <th mat-header-cell *matHeaderCellDef>Valor Seguro</th>
+                          <td mat-cell *matCellDef="let row">{{ row.valorSeguro | number:'1.2-2' }}</td>
+                        </ng-container>
+
+                        <!-- Total a Descontar -->
+                        <ng-container matColumnDef="totalDescontar">
+                          <th mat-header-cell *matHeaderCellDef>Total a Descontar</th>
+                          <td mat-cell *matCellDef="let row">{{ row.montoDescontar | number:'1.2-2' }}</td>
+                        </ng-container>
+
+                        <!-- Capital Descontado -->
+                        <ng-container matColumnDef="capitalDescontado">
+                          <th mat-header-cell *matHeaderCellDef>Capital Descontado</th>
+                          <td mat-cell *matCellDef="let row">{{ row.capitalDescontado | number:'1.2-2' }}</td>
+                        </ng-container>
+
+                        <!-- Interés Descontado -->
+                        <ng-container matColumnDef="interesDescontado">
+                          <th mat-header-cell *matHeaderCellDef>Interés Descontado</th>
+                          <td mat-cell *matCellDef="let row">{{ row.interesDescontado | number:'1.2-2' }}</td>
+                        </ng-container>
+
+                        <!-- Seguro Descontado -->
+                        <ng-container matColumnDef="seguroDescontado">
+                          <th mat-header-cell *matHeaderCellDef>Seguro Descontado</th>
+                          <td mat-cell *matCellDef="let row">{{ row.seguroDescontado | number:'1.2-2' }}</td>
+                        </ng-container>
+
+                        <!-- Total Descontado -->
+                        <ng-container matColumnDef="totalDescontado">
+                          <th mat-header-cell *matHeaderCellDef>Total Descontado</th>
+                          <td mat-cell *matCellDef="let row">{{ row.totalDescontado | number:'1.2-2' }}</td>
+                        </ng-container>
+
+                        <!-- Capital No Descontado -->
+                        <ng-container matColumnDef="capitalNoDescontado">
+                          <th mat-header-cell *matHeaderCellDef>Capital No Descontado</th>
+                          <td mat-cell *matCellDef="let row">{{ row.capitalNoDescontado | number:'1.2-2' }}</td>
+                        </ng-container>
+
+                        <!-- Interés No Descontado -->
+                        <ng-container matColumnDef="interesNoDescontado">
+                          <th mat-header-cell *matHeaderCellDef>Interés No Descontado</th>
+                          <td mat-cell *matCellDef="let row">{{ row.interesNoDescontado | number:'1.2-2' }}</td>
+                        </ng-container>
+
+                        <!-- Desgravamen No Descontado -->
+                        <ng-container matColumnDef="desgravamenNoDescontado">
+                          <th mat-header-cell *matHeaderCellDef>Desgravamen No Descontado</th>
+                          <td mat-cell *matCellDef="let row">{{ row.desgravamenNoDescontado | number:'1.2-2' }}</td>
+                        </ng-container>
+
+                        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+                        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+                      </table>
+                    </div>
+                  </mat-expansion-panel>
+                }
+              </mat-accordion>
+
+              <!-- Totales Generales -->
+              <div class="totales-generales-section">
+                <div class="totales-generales-header">
+                  <mat-icon>summarize</mat-icon>
+                  <h3>Totales Generales de la Carga</h3>
+                </div>
+                <div class="totales-grid">
+                  <div class="total-item">
+                    <span class="total-label">Saldo Actual</span>
+                    <span class="total-valor">{{ totalesGenerales.saldoActual | number:'1.2-2' }}</span>
+                  </div>
+                  <div class="total-item">
+                    <span class="total-label">Interés Anual</span>
+                    <span class="total-valor">{{ totalesGenerales.interesAnual | number:'1.2-2' }}</span>
+                  </div>
+                  <div class="total-item">
+                    <span class="total-label">Valor Seguro</span>
+                    <span class="total-valor">{{ totalesGenerales.valorSeguro | number:'1.2-2' }}</span>
+                  </div>
+                  <div class="total-item">
+                    <span class="total-label">Total a Descontar</span>
+                    <span class="total-valor">{{ totalesGenerales.totalDescontar | number:'1.2-2' }}</span>
+                  </div>
+                  <div class="total-item">
+                    <span class="total-label">Capital Descontado</span>
+                    <span class="total-valor">{{ totalesGenerales.capitalDescontado | number:'1.2-2' }}</span>
+                  </div>
+                  <div class="total-item">
+                    <span class="total-label">Interés Descontado</span>
+                    <span class="total-valor">{{ totalesGenerales.interesDescontado | number:'1.2-2' }}</span>
+                  </div>
+                  <div class="total-item">
+                    <span class="total-label">Seguro Descontado</span>
+                    <span class="total-valor">{{ totalesGenerales.seguroDescontado | number:'1.2-2' }}</span>
+                  </div>
+                  <div class="total-item">
+                    <span class="total-label">Total Descontado</span>
+                    <span class="total-valor">{{ totalesGenerales.totalDescontado | number:'1.2-2' }}</span>
+                  </div>
+                  <div class="total-item no-descontado">
+                    <span class="total-label">Capital No Descontado</span>
+                    <span class="total-valor">{{ totalesGenerales.capitalNoDescontado | number:'1.2-2' }}</span>
+                  </div>
+                  <div class="total-item no-descontado">
+                    <span class="total-label">Interés No Descontado</span>
+                    <span class="total-valor">{{ totalesGenerales.interesNoDescontado | number:'1.2-2' }}</span>
+                  </div>
+                  <div class="total-item no-descontado">
+                    <span class="total-label">Desgravamen No Descontado</span>
+                    <span class="total-valor">{{ totalesGenerales.desgravamenNoDescontado | number:'1.2-2' }}</span>
+                  </div>
+                </div>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        </div>
+
+        <!-- Tarjeta para procesar archivo -->
+        <div class="process-file-section">
+          <mat-card class="process-card">
+            <mat-card-header>
+              <mat-icon mat-card-avatar class="avatar-icon process-icon">settings</mat-icon>
+              <mat-card-title>Procesar Archivo</mat-card-title>
+              <mat-card-subtitle>Ejecutar proceso de validación y carga final</mat-card-subtitle>
+            </mat-card-header>
+            <mat-card-content>
+              @if (archivoProcesado()) {
+                <!-- Mensaje de archivo procesado -->
+                <div class="file-processed-state">
+                  <mat-icon class="success-icon">check_circle</mat-icon>
+                  <h3>¡Archivo Procesado Exitosamente!</h3>
+                  <p>El archivo ha sido procesado y está listo para su uso</p>
+
+                  <!-- Aquí irá la sección de novedades en el futuro -->
+                  <div class="novedades-placeholder">
+                    <mat-icon>info</mat-icon>
+                    <p style="color: #666;">Sección de novedades (próximamente)</p>
+                  </div>
+                </div>
+              } @else {
+                <div class="process-content">
+                  <div class="process-info">
+                    <mat-icon>info_outline</mat-icon>
+                    <p>
+                      El proceso validará y procesará los datos cargados<br>
+                      <strong>Este proceso será programado por el equipo de backend</strong>
+                    </p>
+                  </div>
+
+                  <button
+                    mat-raised-button
+                    color="accent"
+                    class="process-button"
+                    [disabled]="aporteAgrupados.length === 0"
+                    (click)="procesarArchivo()">
+                    <mat-icon>send</mat-icon>
+                    <span>Procesar Archivo</span>
+                  </button>
+                </div>
+              }
+            </mat-card-content>
+          </mat-card>
+        </div>
+      }
+    }
+  </div>
+</div>

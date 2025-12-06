@@ -137,6 +137,11 @@ export class MenucreditosComponent {
               route: '/menucreditos/carga-aportes',
             },
             {
+              displayName: 'Carga Aportes Opcion 1',
+              iconName: 'drive_folder_upload',
+              route: '/menucreditos/carga-aportes-back',
+            },
+            {
               displayName: 'Consulta',
               iconName: 'manage_search',
               route: '/menucreditos/consulta-archivos-petro',

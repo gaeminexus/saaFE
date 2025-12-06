@@ -50,6 +50,7 @@ import { entidadEditResolver } from './modules/crd/resolver/entidad-edit.resolve
 import { EstadosResolverService } from './modules/crd/resolver/estados-resolver.service';
 import { ListadosCrdResolverService } from './modules/crd/resolver/listados-crd-resolver.service';
 import { TiposCrdResolverService } from './modules/crd/resolver/tipos-crd-resolver.service';
+import { CargaAporteBackComponent } from './modules/crd/forms/archivos-petro/carga-aporte-back/carga-aporte-back.component';
 
 export const routes: Routes = [
   { path: '', component: LoginComponent },
@@ -175,6 +176,11 @@ export const routes: Routes = [
       {
         path: 'carga-aportes',
         component: CargaAportesComponent,
+        canDeactivate: [canDeactivateGuard],
+      },
+      {
+        path: 'carga-aportes-back',
+        component: CargaAporteBackComponent,
         canDeactivate: [canDeactivateGuard],
       },
       {
