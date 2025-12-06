@@ -8,6 +8,7 @@ import {
   OnDestroy,
   PLATFORM_ID,
   ViewChild,
+  inject,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
@@ -21,6 +22,7 @@ import { MaterialFormModule } from '../../../../shared/modules/material-form.mod
 import { AppStateService } from '../../../../shared/services/app-state.service';
 import { UsuarioService } from '../../../../shared/services/usuario.service';
 import { NaturalezaCuentaService } from '../../../cnt/service/naturaleza-cuenta.service';
+import { SessionTimeoutService } from '../session-timeout/session-timeout.service';
 import { CambioClaveDialogComponent } from './cambio-clave-dialog/cambio-clave-dialog.component';
 
 // Importa tu AuthService según tu estructura
@@ -74,6 +76,8 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
   private lastFrameTime = 0;
   private frameCount = 0;
 
+  private sessionTimeout = inject(SessionTimeoutService);
+
   constructor(
     private ngZone: NgZone,
     private usuarioService: UsuarioService,
@@ -121,6 +125,10 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
   ingresaSistema(): void {
     localStorage.setItem('logged', 'true');
     localStorage.setItem('idSucursal', EMPRESA.toString());
+
+    // Inicializar session timeout después de logueo exitoso
+    this.sessionTimeout.initializeSessionTimeout();
+    console.log('✅ Session timeout inicializado en login');
 
     // Usar AppStateService para cargar datos globales
     this.appStateService.inicializarApp(EMPRESA, this.username).subscribe({
