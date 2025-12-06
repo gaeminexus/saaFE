@@ -3,6 +3,7 @@ import { Injectable } from '@angular/core';
 import { Observable, catchError, of, throwError } from 'rxjs';
 import { EstadoCivil } from '../../crd/model/estado-civil';
 import { ServiciosAsoprep } from './ws-asgn';
+import { consumerPollProducersForChange } from '@angular/core/primitives/signals';
 
 @Injectable({
   providedIn: 'root'
@@ -25,6 +26,7 @@ export class ServiciosAsoprepService {
     detallesCargaArchivos: any[],
     participesXCargaArchivo: any[]
   ): Observable<any | null> {
+    console.log('Entrando a almacenaDatosArchivoPetro del servicio Asoprep');
     const wsEndpoint = '/procesarArchivoPetro';
     const url = `${ServiciosAsoprep.RS_ASGN}${wsEndpoint}`;
 
@@ -45,6 +47,35 @@ export class ServiciosAsoprepService {
     console.log('Archivo:', archivo.name);
     console.log('Detalles a enviar:', detallesCargaArchivos.length);*/
     console.log('Partícipes a enviar:', participesXCargaArchivo);
+
+    // Para FormData NO usar httpOptions (el navegador establece Content-Type automáticamente)
+    return this.http.post<any>(url, formData).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * Almacena datos completos del archivo Petro con archivo físico
+   * POST application/x-www-form-urlencoded: Envía archivo + 3 variables JSON
+   */
+  validaDatosArchivoPetro(
+    archivo: File,
+    cargaArchivo: any,
+  ): Observable<any | null> {
+    console.log('Entrando a validaDatosArchivoPetro del servicio Asoprep');
+    const wsEndpoint = '/validarArchivoPetro';
+    const url = `${ServiciosAsoprep.RS_ASGN}${wsEndpoint}`;
+
+    const formData = new FormData();
+
+    // Archivo físico
+    formData.append('archivo', archivo);
+
+    // Nombre del archivo
+    formData.append('archivoNombre', archivo.name);
+
+    // Variables JSON como strings en FormData
+    formData.append('cargaArchivo', JSON.stringify(cargaArchivo));
 
     // Para FormData NO usar httpOptions (el navegador establece Content-Type automáticamente)
     return this.http.post<any>(url, formData).pipe(

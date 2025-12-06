@@ -19,6 +19,7 @@ export interface ParticipeXCargaArchivo {
     interesNoDescontado: number;       // Interés no descontado
     desgravamenNoDescontado: number;   // Desgravamen no descontado
     estadoRevision: number;            // Estado de revisión
+    novedadesCarga: number;            // Novedades de la carga
     estado: number;                    // Estado del registro
 
 }

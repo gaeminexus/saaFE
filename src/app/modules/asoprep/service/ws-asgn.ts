@@ -6,10 +6,15 @@
 
 }*/
 
+import { environment } from '../../../../environments/environment';
+
+const API_URL = environment.apiUrl;
+
 export class ServiciosAsoprep {
 
   // RESTFULL SERVICES (usar proxy http://localhost:8080 para dev)
-  public static RS_ASGN = 'http://localhost:8080/saa-backend/rest/asgn';
+  // public static RS_ASGN = 'http://localhost:8080/saa-backend/rest/asgn';
+  public static RS_ASGN = `${API_URL}/asgn`;
 
 
 }

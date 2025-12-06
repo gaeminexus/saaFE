@@ -468,7 +468,7 @@ export class CargaAportesComponent implements OnInit {
       console.log('  Char code de Ñ:', primerParticipeConEnie.nombre.charCodeAt(primerParticipeConEnie.nombre.indexOf('Ñ')));
       console.log('  Debe ser 209 para estar correcto ✓');
     }
-
+    
     // Enviar al servicio (construye FormData internamente)
     this.serviciosAsoprep.almacenaDatosArchivoPetro(
       this.archivoSeleccionado,
