@@ -25,6 +25,7 @@ import {
   FuncionesDatosService,
   TipoFormatoFechaBackend,
 } from '../../../../../shared/services/funciones-datos.service';
+import { AuditoriaService } from '../../../service/auditoria.service';
 import { EntidadService } from '../../../service/entidad.service';
 import { EstadoParticipeService } from '../../../service/estado-participe.service';
 import { FilialService } from '../../../service/filial.service';
@@ -68,6 +69,7 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
   private estadoParticipeService = inject(EstadoParticipeService);
   private exportService = inject(ExportService);
   private funcionesDatos = inject(FuncionesDatosService);
+  private auditoriaService = inject(AuditoriaService);
 
   // Signals
   entidades = signal<Entidad[]>([]);
@@ -536,8 +538,8 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
     });
 
     dialogRef.afterClosed().subscribe((result) => {
-      if (result && result.nuevoEstado !== undefined) {
-        this.ejecutarCambioEstado(entidad, result.nuevoEstado);
+      if (result && result.nuevoEstado !== undefined && result.motivo) {
+        this.ejecutarCambioEstado(entidad, result.nuevoEstado, result.motivo);
       }
     });
   }
@@ -545,11 +547,13 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
   /**
    * Ejecuta el cambio de estado recuperando el registro completo,
    * modificando solo el estado y enviando todo el registro con update().
+   * 🆕 Ahora registra el cambio en el sistema de auditoría.
    *
    * @param entidad Entidad original (puede tener lazy-loaded nulls)
    * @param nuevoEstado Código del nuevo estado
+   * @param motivo Motivo del cambio de estado (obligatorio)
    */
-  private ejecutarCambioEstado(entidad: Entidad, nuevoEstado: number): void {
+  private ejecutarCambioEstado(entidad: Entidad, nuevoEstado: number, motivo: string): void {
     // Paso 1: Recuperar el registro completo desde el backend
     this.entidadService.getById(entidad.codigo!.toString()).subscribe({
       next: (entidadCompleta) => {
@@ -557,6 +561,12 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
           this.snackBar.open('No se pudo recuperar la entidad', 'Cerrar', { duration: 5000 });
           return;
         }
+
+        // 🆕 Guardar estado anterior para auditoría
+        const estadoAnterior = {
+          codigo: entidadCompleta.idEstado || 0,
+          nombre: this.obtenerNombreEstado(entidadCompleta.idEstado),
+        };
 
         // Paso 2: Modificar SOLO el campo idEstado
         entidadCompleta.idEstado = nuevoEstado;
@@ -584,6 +594,9 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
               }
             }
 
+            // 🆕 AUDITORÍA: Registrar el cambio de estado
+            this.registrarCambioEstadoEnAuditoria(entidad, estadoAnterior, nuevoEstado, motivo);
+
             // Obtener el nombre del estado para el mensaje
             const estadoObj = this.estadosParticipesOptions().find((e) => e.codigo === nuevoEstado);
             const estadoTexto = estadoObj?.nombre || 'Estado ' + nuevoEstado;
@@ -603,6 +616,58 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
         console.error('Error al recuperar entidad:', error);
         const mensaje = error?.mensaje || 'Error al recuperar la entidad';
         this.snackBar.open(mensaje, 'Cerrar', { duration: 5000 });
+      },
+    });
+  }
+
+  /**
+   * 🆕 Registra el cambio de estado en el sistema de auditoría.
+   * Se ejecuta de forma no bloqueante para no afectar la experiencia del usuario.
+   *
+   * @param entidad Entidad modificada
+   * @param estadoAnterior Estado anterior (código + nombre)
+   * @param nuevoEstadoCodigo Código del nuevo estado
+   * @param motivo Motivo del cambio proporcionado por el usuario
+   */
+  private registrarCambioEstadoEnAuditoria(
+    entidad: Entidad,
+    estadoAnterior: { codigo: number; nombre: string },
+    nuevoEstadoCodigo: number,
+    motivo: string
+  ): void {
+    const estadoNuevo = {
+      codigo: nuevoEstadoCodigo,
+      nombre: this.obtenerNombreEstado(nuevoEstadoCodigo),
+    };
+
+    // Construir el registro de auditoría
+    const registroAuditoria = this.auditoriaService.construirRegistroCambioEstado({
+      entidad: 'ENTIDAD',
+      idEntidad: entidad.codigo!,
+      estadoAnterior: estadoAnterior,
+      estadoNuevo: estadoNuevo,
+      motivo: motivo,
+      usuario: localStorage.getItem('username') || 'Unknown',
+      rollUsuario: localStorage.getItem('userRole') || 'Unknown',
+      ip: localStorage.getItem('clientIP') || 'Unknown',
+      agente: navigator.userAgent,
+    });
+
+    // Enviar registro de auditoría (no bloqueante)
+    this.auditoriaService.add(registroAuditoria).subscribe({
+      next: () => {
+        console.log('✅ Cambio de estado registrado en auditoría:', {
+          entidad: 'ENTIDAD',
+          id: entidad.codigo,
+          razonSocial: entidad.razonSocial,
+          estadoAnterior: estadoAnterior.nombre,
+          estadoNuevo: estadoNuevo.nombre,
+          fecha: new Date().toISOString(),
+        });
+      },
+      error: (err) => {
+        console.error('❌ Error al registrar auditoría (no crítico):', err);
+        // No mostramos error al usuario, la auditoría falla silenciosamente
       },
     });
   }

@@ -1,8 +1,9 @@
-import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterOutlet, Router } from '@angular/router';
-import { HeaderComponent } from './shared/header/header.component';
+import { Component, inject, OnDestroy, OnInit } from '@angular/core';
+import { Router, RouterOutlet } from '@angular/router';
+import { SessionTimeoutService } from './modules/dash/forms/session-timeout/session-timeout.service';
 import { FooterComponent } from './shared/footer/footer.component';
+import { HeaderComponent } from './shared/header/header.component';
 
 @Component({
   selector: 'app-root',
@@ -10,18 +11,31 @@ import { FooterComponent } from './shared/footer/footer.component';
   imports: [CommonModule, RouterOutlet, HeaderComponent, FooterComponent],
   template: `
     @if (!isLoginPage()) {
-      <app-header [screenTitle]="getScreenTitle()"></app-header>
+    <app-header [screenTitle]="getScreenTitle()"></app-header>
     }
 
     <router-outlet></router-outlet>
 
     @if (!isLoginPage()) {
-      <app-footer></app-footer>
+    <app-footer></app-footer>
     }
   `,
 })
-export class App {
+export class App implements OnInit, OnDestroy {
   router = inject(Router);
+  private sessionTimeout = inject(SessionTimeoutService);
+
+  ngOnInit(): void {
+    // Inicializar session timeout si el usuario está autenticado
+    const isLoggedIn = localStorage.getItem('logged') === 'true';
+    if (isLoggedIn) {
+      this.sessionTimeout.initializeSessionTimeout();
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.sessionTimeout.destroySessionTimeout();
+  }
 
   isLoginPage() {
     return this.router.url === '/' || this.router.url === '/login';

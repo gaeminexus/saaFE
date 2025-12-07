@@ -43,6 +43,7 @@ export class ServiciosCrd {
   public static RS_DTCA = `${API_URL}/dtca`;
   public static RS_PXCA = `${API_URL}/pxca`;
   public static RS_ADJN = `${API_URL}/adjn`;
+  public static RS_ADTR = `${API_URL}/adtr`;
   public static RS_CXCP = `${API_URL}/cxcp`;
   public static RS_BPRF = `${API_URL}/bprf`;
   public static RS_CMBP = `${API_URL}/cmbp`;
