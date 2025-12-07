@@ -4,6 +4,7 @@ import { Observable, catchError, of, throwError } from 'rxjs';
 import { EstadoCivil } from '../../crd/model/estado-civil';
 import { ServiciosAsoprep } from './ws-asgn';
 import { consumerPollProducersForChange } from '@angular/core/primitives/signals';
+import { CargaArchivo } from '../../crd/model/carga-archivo';
 
 @Injectable({
   providedIn: 'root'
@@ -61,7 +62,7 @@ export class ServiciosAsoprepService {
   validaDatosArchivoPetro(
     archivo: File,
     cargaArchivo: any,
-  ): Observable<any | null> {
+  ): Observable<CargaArchivo | null> {
     console.log('Entrando a validaDatosArchivoPetro del servicio Asoprep');
     const wsEndpoint = '/validarArchivoPetro';
     const url = `${ServiciosAsoprep.RS_ASGN}${wsEndpoint}`;
@@ -78,7 +79,7 @@ export class ServiciosAsoprepService {
     formData.append('cargaArchivo', JSON.stringify(cargaArchivo));
 
     // Para FormData NO usar httpOptions (el navegador establece Content-Type automáticamente)
-    return this.http.post<any>(url, formData).pipe(
+    return this.http.post<CargaArchivo>(url, formData).pipe(
       catchError(this.handleError)
     );
   }
