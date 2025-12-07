@@ -177,10 +177,11 @@ import { takeUntil } from 'rxjs/operators';
 })
 export class SessionTimeoutWarningComponent implements OnInit, OnDestroy {
   private dialogRef = inject(MatDialogRef<SessionTimeoutWarningComponent>);
-  @Inject(MAT_DIALOG_DATA) data: any;
 
   remainingTime = '2:00';
   private destroy$ = new Subject<void>();
+
+  constructor(@Inject(MAT_DIALOG_DATA) public data: { remainingTime: number }) {}
 
   ngOnInit(): void {
     let seconds = this.data.remainingTime;
