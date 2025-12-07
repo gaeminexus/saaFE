@@ -63,35 +63,38 @@ export class AuditoriaService {
    * @returns Objeto Auditoria completo listo para enviar con add()
    */
   construirRegistroCambioEstado(params: {
-    entidad: string;
+    accion: 'UPDATE' | 'INSERT' | 'DELETE'; // ← Acción dinámica
+    nombreComponente: string; // ← Nombre del componente (ej: 'EntidadConsulta')
+    entidadLogica: string; // ← Entidad de negocio (ej: 'ENTIDAD', 'PRESTAMO')
     idEntidad: number;
     estadoAnterior: { codigo: number; nombre: string };
     estadoNuevo: { codigo: number; nombre: string };
     motivo: string;
-    usuario: string;
-    rollUsuario: string;
-    ip: string;
-    agente: string;
+    rollUsuario?: string;
+    ip?: string;
+    agente?: string;
   }): Auditoria {
     const ahora = new Date();
+    // Obtener usuario del localStorage (guardado en login)
+    const usuario = localStorage.getItem('username') || 'SYSTEM';
 
     const registro: Auditoria = {
       fechaEvento: ahora,
       sistema: 'SAA',
-      modelo: 'CREDITO',
-      accion: 'CAMBIO_ESTADO',
-      entidadLogica: params.entidad,
-      registroAfectado: params.idEntidad.toString(),
-      usuario: params.usuario,
-      rollUsuario: params.rollUsuario,
-      ip: params.ip,
-      agente: params.agente,
-      razon: params.motivo,
-      nombreAnterior: params.estadoAnterior.nombre,
+      modulo: 'CREDITO',
+      accion: params.accion, // ← UPDATE, INSERT o DELETE
+      entidad: params.nombreComponente, // ← Componente que ejecuta la acción
+      idEntidad: `${params.entidadLogica}:${params.idEntidad}`, // ← "ENTIDAD:7144"
+      usuario: usuario,
+      rol: params.rollUsuario || localStorage.getItem('userRole') || 'USER',
+      ipCliente: params.ip || localStorage.getItem('clientIP') || 'Unknown',
+      userAgent: params.agente || navigator.userAgent,
+      motivo: params.motivo,
+      nombreCampoAnterior: params.estadoAnterior.nombre,
       valorAnterior: params.estadoAnterior.codigo,
-      nombreNuevo: params.estadoNuevo.nombre,
+      nombreCampoNuevo: params.estadoNuevo.nombre,
       valorNuevo: params.estadoNuevo.codigo,
-      fechaRegistro: ahora,
+      fechaCreacion: ahora,
     };
 
     return registro;

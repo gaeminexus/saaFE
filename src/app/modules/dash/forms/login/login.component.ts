@@ -125,6 +125,7 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
   ingresaSistema(): void {
     localStorage.setItem('logged', 'true');
     localStorage.setItem('idSucursal', EMPRESA.toString());
+    localStorage.setItem('username', this.username.toUpperCase()); // ← Guardar usuario para auditoría
 
     // Inicializar session timeout después de logueo exitoso
     this.sessionTimeout.initializeSessionTimeout();

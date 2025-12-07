@@ -642,27 +642,30 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
 
     // Construir el registro de auditoría
     const registroAuditoria = this.auditoriaService.construirRegistroCambioEstado({
-      entidad: 'ENTIDAD',
+      accion: 'UPDATE', // ← Cambio de estado es una actualización
+      nombreComponente: 'EntidadConsulta', // ← Nombre del componente
+      entidadLogica: 'ENTIDAD', // ← Entidad de negocio
       idEntidad: entidad.codigo!,
       estadoAnterior: estadoAnterior,
       estadoNuevo: estadoNuevo,
       motivo: motivo,
-      usuario: localStorage.getItem('username') || 'Unknown',
-      rollUsuario: localStorage.getItem('userRole') || 'Unknown',
-      ip: localStorage.getItem('clientIP') || 'Unknown',
-      agente: navigator.userAgent,
+      // Los campos opcionales se toman de localStorage automáticamente
     });
+
+    // 🔍 DEBUG: Verificar objeto antes de enviar
+    console.log('📤 Enviando a auditoría:', JSON.stringify(registroAuditoria, null, 2));
 
     // Enviar registro de auditoría (no bloqueante)
     this.auditoriaService.add(registroAuditoria).subscribe({
       next: () => {
-        console.log('✅ Cambio de estado registrado en auditoría:', {
-          entidad: 'ENTIDAD',
-          id: entidad.codigo,
+        console.log('✅ Auditoría registrada:', {
+          componente: 'EntidadConsulta',
+          accion: 'UPDATE',
+          entidad: `ENTIDAD:${entidad.codigo}`,
           razonSocial: entidad.razonSocial,
-          estadoAnterior: estadoAnterior.nombre,
-          estadoNuevo: estadoNuevo.nombre,
-          fecha: new Date().toISOString(),
+          cambio: `${estadoAnterior.nombre} → ${estadoNuevo.nombre}`,
+          usuario: localStorage.getItem('username') || 'SYSTEM',
+          timestamp: new Date().toISOString(),
         });
       },
       error: (err) => {
