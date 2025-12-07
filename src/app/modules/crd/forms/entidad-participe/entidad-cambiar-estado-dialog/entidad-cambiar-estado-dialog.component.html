@@ -1,0 +1,76 @@
+<h2 mat-dialog-title class="dialog-title">
+  <mat-icon>swap_horiz</mat-icon>
+  Cambiar Estado de Entidad
+</h2>
+
+<mat-dialog-content class="dialog-content">
+  <div class="entidad-info">
+    <div class="info-row">
+      <span class="label">Código:</span>
+      <span class="value">{{ data.entidad.codigo }}</span>
+    </div>
+    <div class="info-row">
+      <span class="label">Identificación:</span>
+      <span class="value">{{ data.entidad.numeroIdentificacion }}</span>
+    </div>
+    <div class="info-row">
+      <span class="label">Razón Social:</span>
+      <span class="value">{{ data.entidad.razonSocial }}</span>
+    </div>
+    <div class="info-row estado-actual">
+      <span class="label">Estado Actual:</span>
+      <span class="estado-badge">{{ getNombreEstadoActual() }}</span>
+    </div>
+  </div>
+
+  <form [formGroup]="form" class="estado-form">
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Nuevo Estado</mat-label>
+      <mat-select formControlName="nuevoEstado" required>
+        @for (estado of data.estadosDisponibles; track estado.codigo) {
+        <mat-option [value]="estado.codigo">
+          {{ estado.nombre }}
+        </mat-option>
+        }
+      </mat-select>
+      @if (form.get('nuevoEstado')?.hasError('required')) {
+      <mat-error>Debe seleccionar un estado</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Motivo del Cambio</mat-label>
+      <textarea
+        matInput
+        formControlName="motivo"
+        rows="3"
+        placeholder="Ingrese el motivo del cambio de estado..."
+        required
+      ></textarea>
+      @if (form.get('motivo')?.hasError('required')) {
+      <mat-error>El motivo es obligatorio</mat-error>
+      } @if (form.get('motivo')?.hasError('minlength')) {
+      <mat-error>El motivo debe tener al menos 10 caracteres</mat-error>
+      }
+    </mat-form-field>
+  </form>
+
+  <div class="warning-message">
+    <mat-icon>info_outline</mat-icon>
+    <p>
+      Este cambio solo afectará el estado de la entidad. Todos los demás datos permanecerán sin
+      cambios.
+    </p>
+  </div>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end" class="dialog-actions">
+  <button mat-stroked-button (click)="onCancel()">
+    <mat-icon>close</mat-icon>
+    Cancelar
+  </button>
+  <button mat-raised-button color="primary" (click)="onConfirm()" [disabled]="form.invalid">
+    <mat-icon>check</mat-icon>
+    Confirmar Cambio
+  </button>
+</mat-dialog-actions>

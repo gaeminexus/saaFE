@@ -55,6 +55,48 @@ export class AuditoriaService {
     return this.http.delete<Auditoria>(url, this.httpOptions).pipe(catchError(this.handleError));
   }
 
+  /**
+   * 🆕 Método helper para construir un registro de auditoría de cambio de estado.
+   * Facilita la creación de objetos Auditoria con valores por defecto.
+   *
+   * @param params Parámetros del cambio de estado
+   * @returns Objeto Auditoria completo listo para enviar con add()
+   */
+  construirRegistroCambioEstado(params: {
+    entidad: string;
+    idEntidad: number;
+    estadoAnterior: { codigo: number; nombre: string };
+    estadoNuevo: { codigo: number; nombre: string };
+    motivo: string;
+    usuario: string;
+    rollUsuario: string;
+    ip: string;
+    agente: string;
+  }): Auditoria {
+    const ahora = new Date();
+
+    const registro: Auditoria = {
+      fechaEvento: ahora,
+      sistema: 'SAA',
+      modelo: 'CREDITO',
+      accion: 'CAMBIO_ESTADO',
+      entidadLogica: params.entidad,
+      registroAfectado: params.idEntidad.toString(),
+      usuario: params.usuario,
+      rollUsuario: params.rollUsuario,
+      ip: params.ip,
+      agente: params.agente,
+      razon: params.motivo,
+      nombreAnterior: params.estadoAnterior.nombre,
+      valorAnterior: params.estadoAnterior.codigo,
+      nombreNuevo: params.estadoNuevo.nombre,
+      valorNuevo: params.estadoNuevo.codigo,
+      fechaRegistro: ahora,
+    };
+
+    return registro;
+  }
+
   private handleError(error: HttpErrorResponse): Observable<null> {
     if (+error.status === 200) {
       return of(null);
