@@ -65,6 +65,7 @@ export class CargaAporteBackComponent implements OnInit {
   isLoadingData = signal<boolean>(false);
   cargaExitosa = signal<boolean>(false);
   archivoProcesado = signal<boolean>(false);
+  isDragging = signal<boolean>(false);
 
   // Datos
   anios: number[] = [];
@@ -300,16 +301,56 @@ export class CargaAporteBackComponent implements OnInit {
     }
 
     const file = input.files[0];
+    this.setSelectedFile(file);
+  }
+
+  onDragOver(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragging.set(true);
+  }
+
+  onDragLeave(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragging.set(false);
+  }
+
+  onDrop(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragging.set(false);
+
+    const files = event.dataTransfer?.files;
+    if (files && files.length > 0) {
+      const file = files[0];
+      this.setSelectedFile(file);
+    }
+  }
+
+  private setSelectedFile(file: File): void {
     this.nombreArchivo = file.name;
     this.archivoSeleccionado = file;
+    this.snackBar.open(
+      `Archivo seleccionado: ${file.name}`,
+      'Cerrar',
+      { duration: 3000 }
+    );
+  }
 
-    // Solicitar confirmación para guardar en el servidor
+  validarArchivo(): void {
+    if (!this.archivoSeleccionado) {
+      this.snackBar.open('No hay archivo seleccionado', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    // Solicitar confirmación para validar y guardar en el servidor
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
       width: '400px',
       data: {
-        title: 'Confirmar Carga de Archivo',
-        message: `¿Desea cargar el archivo "${file.name}" al servidor?`,
-        confirmText: 'Cargar',
+        title: 'Confirmar Validación de Archivo',
+        message: `¿Desea validar y cargar el archivo "${this.nombreArchivo}" al servidor?`,
+        confirmText: 'Validar',
         cancelText: 'Cancelar'
       }
     });
@@ -317,8 +358,6 @@ export class CargaAporteBackComponent implements OnInit {
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
         this.guardarArchivoEnServidor();
-      } else {
-        this.limpiarDatos();
       }
     });
   }
@@ -366,22 +405,29 @@ export class CargaAporteBackComponent implements OnInit {
       this.archivoSeleccionado,
       cargaArchivo as CargaArchivo
     ).subscribe({
-      next: (response: any) => {
+      next: (cargaArchivo: CargaArchivo | null) => {
         this.isUploadingFile.set(false);
+        console.log('📥 CargaArchivo recibido del backend:', cargaArchivo);
 
-        if (response && response.success && response.codigoCarga) {
-          this.codigoCargaArchivo = response.codigoCarga;
+        if (cargaArchivo && cargaArchivo.codigo) {
+          this.codigoCargaArchivo = cargaArchivo.codigo;
+          console.log('✅ Código de carga:', cargaArchivo.codigo);
+          console.log('📁 Ruta archivo en servidor:', cargaArchivo.rutaArchivo);
+
           this.snackBar.open(
-            `✅ Archivo validado y guardado exitosamente. Código: ${response.codigoCarga}`,
+            `✅ Validación completada exitosamente!\n` +
+            `Código: ${cargaArchivo.codigo}\n` +
+            `Archivo: ${cargaArchivo.rutaArchivo || this.nombreArchivo}`,
             'Cerrar',
-            { duration: 5000 }
+            { duration: 8000 }
           );
 
           // Cargar los datos desde el backend
-          this.cargarDatosDesdeBackend(response.codigoCarga);
+          this.cargarDatosDesdeBackend(cargaArchivo.codigo);
         } else {
+          console.warn('⚠️ Respuesta no contiene CargaArchivo válido:', cargaArchivo);
           this.snackBar.open(
-            `⚠️ Error al guardar: ${response?.message || 'Respuesta inesperada'}`,
+            `⚠️ Error al guardar: No se recibió el objeto CargaArchivo`,
             'Cerrar',
             { duration: 6000 }
           );
@@ -400,11 +446,13 @@ export class CargaAporteBackComponent implements OnInit {
   }
 
   private cargarDatosDesdeBackend(codigoCarga: number): void {
+    console.log('🔍 Iniciando cargarDatosDesdeBackend con código:', codigoCarga);
     this.isLoadingData.set(true);
 
     // 1. Obtener CargaArchivo
     this.cargaArchivoService.getById(codigoCarga.toString()).subscribe({
       next: (cargaArchivo: CargaArchivo | null) => {
+        console.log('📦 CargaArchivo recibido:', cargaArchivo);
         if (!cargaArchivo) {
           this.isLoadingData.set(false);
           this.snackBar.open('No se encontró la carga de archivo', 'Cerrar', { duration: 3000 });
@@ -438,6 +486,7 @@ export class CargaAporteBackComponent implements OnInit {
   }
 
   private cargarDetallesCargaArchivo(codigoCarga: number): void {
+    console.log('🔍 Cargando detalles para código:', codigoCarga);
     const criterios: DatosBusqueda[] = [];
     const dbCarga = new DatosBusqueda();
     dbCarga.asignaValorConCampoPadre(
@@ -451,6 +500,7 @@ export class CargaAporteBackComponent implements OnInit {
 
     this.detalleCargaArchivoService.selectByCriteria(criterios).subscribe({
       next: (detalles: DetalleCargaArchivo[] | null) => {
+        console.log('📋 Detalles recibidos:', detalles);
         if (!detalles || detalles.length === 0) {
           this.isLoadingData.set(false);
           this.snackBar.open('No se encontraron detalles de carga', 'Cerrar', { duration: 3000 });
