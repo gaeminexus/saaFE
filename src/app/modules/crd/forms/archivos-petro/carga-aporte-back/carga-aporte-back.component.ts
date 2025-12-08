@@ -18,6 +18,11 @@ import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-
 import { TipoDatosBusqueda as TipoDatos } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { ConfirmDialogComponent } from '../../../../../shared/basics/confirm-dialog/confirm-dialog.component';
+import { DetalleRubroService } from '../../../../../shared/services/detalle-rubro.service';
+import { NovedadCargaService } from '../../../service/novedad-carga.service';
+import { NovedadCarga, NovedadAgrupada } from '../../../model/novedad-carga';
+
+const RUBRO_NOVEDAES_CARGA = 169;
 
 interface Mes {
   valor: number;
@@ -128,6 +133,12 @@ export class CargaAporteBackComponent implements OnInit {
     'capitalNoDescontado', 'interesNoDescontado', 'desgravamenNoDescontado'
   ];
 
+  // Signals para módulo de novedades
+  catalogoNovedades = signal<NovedadCarga[]>([]);
+  novedadesAgrupadas = signal<NovedadAgrupada[]>([]);
+  tabNovedadSeleccionado = signal<number>(0); // 0=Partícipes, 1=Descuentos
+  expandedNovedad = signal<number | null>(null);
+
   constructor(
     private filialService: FilialService,
     private cargaArchivoService: CargaArchivoService,
@@ -135,7 +146,9 @@ export class CargaAporteBackComponent implements OnInit {
     private participeXCargaArchivoService: ParticipeXCargaArchivoService,
     private serviciosAsoprep: ServiciosAsoprepService,
     private snackBar: MatSnackBar,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private detalleRubroService: DetalleRubroService,
+    private novedadCargaService: NovedadCargaService
   ) {
     // Generar años del 2025 al 2035
     for (let anio = 2025; anio <= 2035; anio++) {
@@ -145,6 +158,7 @@ export class CargaAporteBackComponent implements OnInit {
 
   ngOnInit(): void {
     this.cargarFiliales();
+    this.cargarCatalogoNovedades();
   }
 
   cargarFiliales(): void {
@@ -562,6 +576,11 @@ export class CargaAporteBackComponent implements OnInit {
     Promise.all(aportePromises).then(aportes => {
       this.aporteAgrupados = aportes;
       this.totalRegistros = aportes.reduce((sum, a) => sum + a.registros.length, 0);
+
+      // Procesar novedades con todos los registros
+      const todosLosRegistros = aportes.flatMap(a => a.registros);
+      this.procesarNovedades(todosLosRegistros);
+
       this.isLoadingData.set(false);
       this.snackBar.open(
         `✅ Datos cargados: ${this.totalRegistros} registros en ${aportes.length} productos`,
@@ -597,5 +616,205 @@ export class CargaAporteBackComponent implements OnInit {
       }
     }
     return null;
+  }
+
+  // ==================== MÓDULO DE NOVEDADES ====================
+
+  /**
+   * Cargar catálogo de novedades desde DetalleRubro con código padre 169
+   */
+  private cargarCatalogoNovedades(): void {
+    const detalles = this.detalleRubroService.getDetallesByParent(RUBRO_NOVEDAES_CARGA);
+
+    console.log('📋 DetalleRubros recuperados para código padre 169:', detalles);
+
+    if (!detalles || detalles.length === 0) {
+      console.warn('⚠ No se encontraron detalles de rubro con código padre 169');
+      return;
+    }
+
+    const catalogo: NovedadCarga[] = detalles.map(detalle => ({
+      codigo: detalle.codigoAlterno,
+      descripcion: detalle.descripcion || `Novedad ${detalle.codigoAlterno}`,
+      tipo: detalle.codigoAlterno <= 3 ? 'PARTICIPE' : 'DESCUENTO',
+      severidad: this.mapearSeveridad(detalle.codigoAlterno),
+      icono: this.mapearIcono(detalle.codigoAlterno),
+      colorChip: this.mapearColor(detalle.codigoAlterno)
+    }));
+
+    this.catalogoNovedades.set(catalogo);
+    console.log('✅ Catálogo de novedades cargado:', catalogo);
+  }  /**
+   * Procesar novedades después de cargar datos desde backend
+   */
+  private procesarNovedades(todosLosRegistros: ParticipeXCargaArchivo[]): void {
+    console.log('📊 Procesando novedades de carga...');
+    console.log('📊 Total de registros a procesar:', todosLosRegistros.length);
+
+    const catalogo = this.catalogoNovedades();
+    console.log('📋 Catálogo de novedades:', catalogo);
+
+    if (catalogo.length === 0) {
+      console.warn('⚠ Catálogo de novedades no cargado aún');
+      return;
+    }
+
+    const agrupadas = this.novedadCargaService.agruparPorNovedad(
+      todosLosRegistros,
+      catalogo
+    );
+
+    console.log('📊 Novedades agrupadas:', agrupadas);
+    this.novedadesAgrupadas.set(agrupadas);
+    console.log('✅ Signal novedadesAgrupadas actualizado. Valor actual:', this.novedadesAgrupadas());
+  }
+
+  /**
+   * Catálogo de novedades fallback
+   */
+  private getCatalogoFallback(): NovedadCarga[] {
+    return [
+      {
+        codigo: 0,
+        descripcion: 'Sin problemas',
+        tipo: 'PARTICIPE',
+        severidad: 'success',
+        icono: 'check_circle',
+        colorChip: 'primary'
+      },
+      {
+        codigo: 1,
+        descripcion: 'Partícipe no encontrado',
+        tipo: 'PARTICIPE',
+        severidad: 'warning',
+        icono: 'person_search',
+        colorChip: 'accent'
+      }
+    ];
+  }
+
+  /**
+   * Toggle expansión de novedad
+   */
+  toggleExpansion(codigo: number): void {
+    this.expandedNovedad.update(current =>
+      current === codigo ? null : codigo
+    );
+  }
+
+  /**
+   * Cambiar tab de novedades
+   */
+  onTabNovedadChange(index: number): void {
+    this.tabNovedadSeleccionado.set(index);
+  }
+
+  /**
+   * Contar novedades por tipo
+   */
+  contarNovedades(tipo: 'PARTICIPE' | 'DESCUENTO'): number {
+    return this.novedadesAgrupadas()
+      .filter(n => n.novedad.tipo === tipo)
+      .reduce((sum, n) => sum + n.total, 0);
+  }
+
+  /**
+   * Obtener novedades filtradas por tab
+   */
+  get novedadesFiltradas(): NovedadAgrupada[] {
+    const tipo = this.tabNovedadSeleccionado() === 0 ? 'PARTICIPE' : 'DESCUENTO';
+    return this.novedadesAgrupadas().filter(n => n.novedad.tipo === tipo);
+  }
+
+  /**
+   * Corregir registro según tipo de novedad
+   */
+  corregirRegistro(registro: ParticipeXCargaArchivo): void {
+    const novedad = registro.novedadesCarga;
+
+    if (novedad === 1) {
+      this.corregirParticipeNoEncontrado(registro);
+    } else if (novedad === 2) {
+      this.corregirDuplicado(registro);
+    } else {
+      this.snackBar.open(
+        `⚠ Corrección para novedad ${novedad} no implementada aún`,
+        'Cerrar',
+        { duration: 3000 }
+      );
+    }
+  }
+
+  /**
+   * Corregir partícipe no encontrado (Novedad 1)
+   */
+  private corregirParticipeNoEncontrado(registro: ParticipeXCargaArchivo): void {
+    this.novedadCargaService.buscarParticipesSimilares(
+      registro.nombre,
+      registro.codigoPetro
+    ).subscribe({
+      next: (similares) => {
+        console.log('🔍 Partícipes similares encontrados:', similares);
+
+        // TODO: Abrir dialog de selección
+        this.snackBar.open(
+          `✓ Encontrados ${similares.length} partícipes similares`,
+          'Cerrar',
+          { duration: 3000 }
+        );
+      },
+      error: (error) => {
+        console.error('❌ Error al buscar similares:', error);
+        this.snackBar.open(
+          '❌ Error al buscar partícipes similares',
+          'Cerrar',
+          { duration: 3000 }
+        );
+      }
+    });
+  }
+
+  /**
+   * Corregir duplicado (Novedad 2)
+   */
+  private corregirDuplicado(registro: ParticipeXCargaArchivo): void {
+    // TODO: Implementar lógica de duplicados
+    console.log('📝 Corrigiendo duplicado:', registro);
+  }
+
+  /**
+   * Mapear código de novedad a severidad
+   */
+  private mapearSeveridad(codigo: number): 'success' | 'warning' | 'error' {
+    if (codigo === 0) return 'success';
+    if (codigo <= 2) return 'warning';
+    return 'error';
+  }
+
+  /**
+   * Mapear código de novedad a icono Material
+   */
+  private mapearIcono(codigo: number): string {
+    const iconos: Record<number, string> = {
+      0: 'check_circle',
+      1: 'person_search',
+      2: 'content_copy',
+      3: 'error',
+      4: 'payments',
+      5: 'account_balance',
+      6: 'receipt',
+      7: 'warning',
+      8: 'priority_high'
+    };
+    return iconos[codigo] || 'help';
+  }
+
+  /**
+   * Mapear código de novedad a color de chip
+   */
+  private mapearColor(codigo: number): string {
+    if (codigo === 0) return 'primary';
+    if (codigo <= 2) return 'accent';
+    return 'warn';
   }
 }
