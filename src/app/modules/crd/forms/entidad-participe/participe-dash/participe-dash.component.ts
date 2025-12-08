@@ -1531,6 +1531,175 @@ export class ParticipeDashComponent implements OnInit {
   }
 
   /**
+   * Obtiene el nombre y estilo del estado de un aporte
+   */
+  obtenerEstadoAporte(aporte: Aporte): { texto: string; clase: string } {
+    const estadoId = aporte.estado || 0;
+
+    const estadoEncontrado = this.estadosPrestamo.find((e) => e.codigo === estadoId);
+
+    if (estadoEncontrado) {
+      const nombreEstado = estadoEncontrado.nombre.toUpperCase();
+
+      let clase = 'estado-desconocido';
+
+      if (nombreEstado.includes('PAGADO') || nombreEstado.includes('CANCELAD')) {
+        clase = 'estado-pagado';
+      } else if (nombreEstado.includes('VENCIDO') || nombreEstado.includes('MORA')) {
+        clase = 'estado-vencido';
+      } else if (
+        nombreEstado.includes('PENDIENTE') ||
+        nombreEstado.includes('VIGENTE') ||
+        nombreEstado.includes('ACTIVO')
+      ) {
+        clase = 'estado-pendiente';
+      } else if (nombreEstado.includes('REVISADO') || nombreEstado.includes('APROBADO')) {
+        clase = 'estado-aprobado';
+      } else if (nombreEstado.includes('LEGALIZADO') || nombreEstado.includes('DESEMBOLSADO')) {
+        clase = 'estado-legalizado';
+      }
+
+      return { texto: nombreEstado, clase };
+    }
+
+    return { texto: 'SIN ESTADO', clase: 'estado-desconocido' };
+  }
+
+  /**
+   * Abre el diálogo para cambiar el estado de un aporte
+   */
+  cambiarEstadoAporte(aporte: Aporte, event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+
+    const dialogRef = this.dialog.open(AuditoriaDialogComponent, {
+      width: '500px',
+      data: {
+        entidad: aporte,
+        estadosDisponibles: this.estadosPrestamo,
+        titulo: 'Cambiar Estado de Aporte',
+        entidadTipo: 'Aporte',
+        campoNombre: 'glosa',
+        campoIdentificacion: 'codigo',
+        campoEstadoActual: 'estado',
+      } as CambiarEstadoDialogData,
+    });
+
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result) {
+        this.ejecutarCambioEstadoAporte(aporte, result.nuevoEstado, result.motivo);
+      }
+    });
+  }
+
+  /**
+   * Ejecuta el cambio de estado del aporte
+   */
+  private ejecutarCambioEstadoAporte(
+    aporte: Aporte,
+    nuevoEstadoCodigo: number,
+    motivo: string
+  ): void {
+    this.aporteService.getById(aporte.codigo!.toString()).subscribe({
+      next: (aporteCompleto) => {
+        if (!aporteCompleto) {
+          this.snackBar.open('No se pudo recuperar el aporte', 'Cerrar', { duration: 5000 });
+          return;
+        }
+
+        const estadoAnteriorCodigo = aporteCompleto.estado || 0;
+        const estadoAnterior = {
+          codigo: estadoAnteriorCodigo,
+          nombre: this.obtenerNombreEstadoPrestamo(estadoAnteriorCodigo),
+        };
+
+        const aporteParaBackend: any = {
+          ...aporteCompleto,
+          estado: nuevoEstadoCodigo,
+        };
+
+        this.aporteService.update(aporteParaBackend).subscribe({
+          next: (respuesta) => {
+            const index = this.aportes.findIndex((a) => a.codigo === aporte.codigo);
+            if (index !== -1) {
+              this.aportes[index].estado = nuevoEstadoCodigo;
+              this.agruparAportesPorTipo();
+              this.cdr.detectChanges();
+            }
+
+            this.registrarCambioEstadoAporteEnAuditoria(
+              aporte,
+              estadoAnterior,
+              nuevoEstadoCodigo,
+              motivo
+            );
+
+            const estadoTexto = this.obtenerNombreEstadoPrestamo(nuevoEstadoCodigo);
+            this.snackBar.open(`Estado del aporte cambiado a ${estadoTexto}`, 'Cerrar', {
+              duration: 3000,
+            });
+          },
+          error: (error) => {
+            console.error('Error al actualizar aporte:', error);
+            const mensaje = error?.mensaje || 'Error al cambiar el estado del aporte';
+            this.snackBar.open(mensaje, 'Cerrar', { duration: 5000 });
+          },
+        });
+      },
+      error: (error) => {
+        console.error('Error al recuperar aporte:', error);
+        this.snackBar.open('Error al recuperar el aporte', 'Cerrar', { duration: 5000 });
+      },
+    });
+  }
+
+  /**
+   * Abre el diálogo para cambiar el estado de un tipo de aporte
+   */
+  cambiarEstadoTipoAporte(tipoAporte: AportesPorTipo, event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+
+    this.snackBar.open('Funcionalidad de cambio de estado del tipo de aporte', 'Cerrar', {
+      duration: 3000,
+    });
+  }
+
+  /**
+   * Registra el cambio de estado del aporte en auditoría
+   */
+  private registrarCambioEstadoAporteEnAuditoria(
+    aporte: Aporte,
+    estadoAnterior: { codigo: number; nombre: string },
+    nuevoEstadoCodigo: number,
+    motivo: string
+  ): void {
+    const estadoNuevo = {
+      codigo: nuevoEstadoCodigo,
+      nombre: this.obtenerNombreEstadoPrestamo(nuevoEstadoCodigo),
+    };
+
+    const registroAuditoria = this.auditoriaService.construirRegistroCambioEstado({
+      accion: 'UPDATE',
+      nombreComponente: 'ParticipeDash',
+      entidadLogica: 'APORTE',
+      idEntidad: aporte.codigo!,
+      estadoAnterior: estadoAnterior,
+      estadoNuevo: estadoNuevo,
+      motivo: motivo,
+    });
+
+    this.auditoriaService.add(registroAuditoria).subscribe({
+      next: () => {},
+      error: (err) => {
+        console.error('Error al registrar auditoría de aporte (no crítico):', err);
+      },
+    });
+  }
+
+  /**
    * Registra el cambio de estado del préstamo en el sistema de auditoría
    * @param prestamo Préstamo modificado
    * @param estadoAnterior Estado anterior (código + nombre)
