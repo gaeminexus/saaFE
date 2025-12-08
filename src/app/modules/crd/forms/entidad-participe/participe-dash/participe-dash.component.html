@@ -1,536 +1,624 @@
 <div class="participe-dash-container">
   <!-- Botón Regresar (solo visible cuando NO se muestra búsqueda) -->
   @if (!mostrarBusqueda) {
-    <div class="back-button-container">
-      <button mat-raised-button color="primary" (click)="regresarAPantallaAnterior()" class="back-button">
-        <mat-icon>arrow_back</mat-icon>
-        Regresar a Consulta
-      </button>
-    </div>
+  <div class="back-button-container">
+    <button
+      mat-raised-button
+      color="primary"
+      (click)="regresarAPantallaAnterior()"
+      class="back-button"
+    >
+      <mat-icon>arrow_back</mat-icon>
+      Regresar a Consulta
+    </button>
+  </div>
   }
 
   <!-- Header con búsqueda (solo visible si mostrarBusqueda es true) -->
   @if (mostrarBusqueda) {
-    <div class="search-header">
-      <div class="header-title">
-        <mat-icon class="header-icon">account_circle</mat-icon>
-        <h1>Búsqueda de Partícipe</h1>
-      </div>
-
-      <div class="search-box">
-        <mat-form-field appearance="fill" class="search-field">
-          <mat-label>Buscar por Cédula, Razón Social o Nombre Comercial</mat-label>
-          <input matInput
-                 [(ngModel)]="searchText"
-                 (keyup.enter)="buscarEntidad()"
-                 placeholder="Ej: 1234567890, EMPRESA S.A., Mi Negocio">
-          <mat-icon matPrefix>search</mat-icon>
-          @if (searchText) {
-            <button matSuffix mat-icon-button (click)="limpiarBusqueda()">
-              <mat-icon>clear</mat-icon>
-            </button>
-          }
-        </mat-form-field>
-        <button mat-raised-button
-                color="primary"
-                (click)="buscarEntidad()"
-                [disabled]="isSearching"
-                class="search-button">
-          @if (isSearching) {
-            <mat-spinner diameter="20"></mat-spinner>
-          } @else {
-            <ng-container>
-              <mat-icon>search</mat-icon>
-              Buscar
-            </ng-container>
-          }
-        </button>
-      </div>
+  <div class="search-header">
+    <div class="header-title">
+      <mat-icon class="header-icon">account_circle</mat-icon>
+      <h1>Búsqueda de Partícipe</h1>
     </div>
+
+    <div class="search-box">
+      <mat-form-field appearance="fill" class="search-field">
+        <mat-label>Buscar por Cédula, Razón Social o Nombre Comercial</mat-label>
+        <input
+          matInput
+          [(ngModel)]="searchText"
+          (keyup.enter)="buscarEntidad()"
+          placeholder="Ej: 1234567890, EMPRESA S.A., Mi Negocio"
+        />
+        <mat-icon matPrefix>search</mat-icon>
+        @if (searchText) {
+        <button matSuffix mat-icon-button (click)="limpiarBusqueda()">
+          <mat-icon>clear</mat-icon>
+        </button>
+        }
+      </mat-form-field>
+      <button
+        mat-raised-button
+        color="primary"
+        (click)="buscarEntidad()"
+        [disabled]="isSearching"
+        class="search-button"
+      >
+        @if (isSearching) {
+        <mat-spinner diameter="20"></mat-spinner>
+        } @else {
+        <ng-container>
+          <mat-icon>search</mat-icon>
+          Buscar
+        </ng-container>
+        }
+      </button>
+    </div>
+  </div>
   }
 
   <!-- Spinner de carga del dashboard -->
   @if (isLoadingDashboard) {
-    <div class="loading-spinner-container">
-      <mat-spinner diameter="60"></mat-spinner>
-      <p class="loading-text">Cargando información...</p>
-    </div>
+  <div class="loading-spinner-container">
+    <mat-spinner diameter="60"></mat-spinner>
+    <p class="loading-text">Cargando información...</p>
+  </div>
   }
 
   <!-- Contenido del dashboard -->
   @if (!isLoadingDashboard && entidadEncontrada) {
-    <div class="info-cards-container">
-      <!-- Tarjeta de Entidad -->
-      <mat-card class="entidad-card">
-        <mat-card-header>
-          <mat-icon mat-card-avatar class="avatar-icon">business</mat-icon>
-          <mat-card-title>{{ entidadEncontrada.razonSocial || entidadEncontrada.nombreComercial }}</mat-card-title>
-          <mat-card-subtitle>
-            <span class="info-item">
-              <mat-icon>badge</mat-icon>
-              {{ entidadEncontrada.numeroIdentificacion }}
-            </span>
-            @if (entidadEncontrada.nombreComercial && entidadEncontrada.razonSocial !== entidadEncontrada.nombreComercial) {
-              <span class="info-item">
-                <mat-icon>store</mat-icon>
-                {{ entidadEncontrada.nombreComercial }}
-              </span>
-            }
-          </mat-card-subtitle>
-          <button mat-icon-button class="edit-button" (click)="editarParticipe()" matTooltip="Editar Partícipe">
-            <mat-icon>edit</mat-icon>
-          </button>
-          <button mat-icon-button class="pdf-button" (click)="generarPDF()" matTooltip="Generar PDF">
-            <mat-icon>picture_as_pdf</mat-icon>
-          </button>
-        </mat-card-header>
+  <div class="info-cards-container">
+    <!-- Tarjeta de Entidad -->
+    <mat-card class="entidad-card">
+      <mat-card-header>
+        <mat-icon mat-card-avatar class="avatar-icon">business</mat-icon>
+        <mat-card-title>{{
+          entidadEncontrada.razonSocial || entidadEncontrada.nombreComercial
+        }}</mat-card-title>
+        <mat-card-subtitle>
+          <span class="info-item">
+            <mat-icon>badge</mat-icon>
+            {{ entidadEncontrada.numeroIdentificacion }}
+          </span>
+          @if (entidadEncontrada.nombreComercial && entidadEncontrada.razonSocial !==
+          entidadEncontrada.nombreComercial) {
+          <span class="info-item">
+            <mat-icon>store</mat-icon>
+            {{ entidadEncontrada.nombreComercial }}
+          </span>
+          }
+        </mat-card-subtitle>
+        <button
+          mat-icon-button
+          class="edit-button"
+          (click)="editarParticipe()"
+          matTooltip="Editar Partícipe"
+        >
+          <mat-icon>edit</mat-icon>
+        </button>
+        <button mat-icon-button class="pdf-button" (click)="generarPDF()" matTooltip="Generar PDF">
+          <mat-icon>picture_as_pdf</mat-icon>
+        </button>
+      </mat-card-header>
 
-        <!-- Información del Partícipe -->
-        @if (participeEncontrado) {
-          <mat-card-content>
-            <div class="participe-info-grid">
-              <div class="participe-item">
-                <mat-icon>work</mat-icon>
-                <div class="item-content">
-                  <span class="item-label">Cargo Actual</span>
-                  <span class="item-value">{{ participeEncontrado.cargoActual || 'N/A' }}</span>
-                </div>
-              </div>
-
-              <div class="participe-item total-ingresos">
-                <mat-icon>account_balance_wallet</mat-icon>
-                <div class="item-content">
-                  <span class="item-label">Total de Ingresos</span>
-                  <span class="item-value highlight">${{ totalIngresos | number:'1.2-2' }}</span>
-                </div>
-              </div>
+      <!-- Información del Partícipe -->
+      @if (participeEncontrado) {
+      <mat-card-content>
+        <div class="participe-info-grid">
+          <div class="participe-item">
+            <mat-icon>work</mat-icon>
+            <div class="item-content">
+              <span class="item-label">Cargo Actual</span>
+              <span class="item-value">{{ participeEncontrado.cargoActual || 'N/A' }}</span>
             </div>
-          </mat-card-content>
-        }
-      </mat-card>
+          </div>
 
-      <!-- Tarjeta de Contrato -->
-      @if (contratoEncontrado) {
-        <mat-card class="contrato-card">
-          <mat-card-header>
-            <mat-icon mat-card-avatar class="avatar-icon">description</mat-icon>
-            <mat-card-title>Información del Contrato</mat-card-title>
-            <mat-card-subtitle>{{ contratoEncontrado.tipoContrato?.nombre || 'Sin tipo de contrato' }}</mat-card-subtitle>
-          </mat-card-header>
-          <mat-card-content>
-            <div class="contrato-grid">
-              <div class="contrato-item">
-                <mat-icon>event</mat-icon>
-                <div class="item-content">
-                  <span class="item-label">Fecha Inicio</span>
-                  <span class="item-value">{{ contratoEncontrado.fechaInicio | date: 'dd/MM/yyyy' }}</span>
-                </div>
+          <div class="participe-item total-ingresos">
+            <mat-icon>account_balance_wallet</mat-icon>
+            <div class="item-content">
+              <span class="item-label">Total de Ingresos</span>
+              <span class="item-value highlight">${{ totalIngresos | number : '1.2-2' }}</span>
+            </div>
+          </div>
+        </div>
+      </mat-card-content>
+      }
+    </mat-card>
+
+    <!-- Tarjeta de Contrato -->
+    @if (contratoEncontrado) {
+    <mat-card class="contrato-card">
+      <mat-card-header>
+        <mat-icon mat-card-avatar class="avatar-icon">description</mat-icon>
+        <mat-card-title>Información del Contrato</mat-card-title>
+        <mat-card-subtitle>{{
+          contratoEncontrado.tipoContrato?.nombre || 'Sin tipo de contrato'
+        }}</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="contrato-grid">
+          <div class="contrato-item">
+            <mat-icon>event</mat-icon>
+            <div class="item-content">
+              <span class="item-label">Fecha Inicio</span>
+              <span class="item-value">{{
+                contratoEncontrado.fechaInicio | date : 'dd/MM/yyyy'
+              }}</span>
+            </div>
+          </div>
+
+          <div class="contrato-item">
+            <mat-icon>person</mat-icon>
+            <div class="item-content">
+              <span class="item-label">% Aporte Individual</span>
+              <span class="item-value">{{ contratoEncontrado.porcentajeAporteIndividual }}%</span>
+            </div>
+          </div>
+
+          <div class="contrato-item">
+            <mat-icon>elderly</mat-icon>
+            <div class="item-content">
+              <span class="item-label">% Aporte Jubilación</span>
+              <span class="item-value">{{ contratoEncontrado.porcentajeAporteJubilacion }}%</span>
+            </div>
+          </div>
+
+          <div class="contrato-item">
+            <mat-icon>attach_money</mat-icon>
+            <div class="item-content">
+              <span class="item-label">Monto Aporte Adicional</span>
+              <span class="item-value"
+                >${{ contratoEncontrado.montoAporteAdicional | number : '1.2-2' }}</span
+              >
+            </div>
+          </div>
+
+          <div class="contrato-item">
+            <mat-icon>schedule</mat-icon>
+            <div class="item-content">
+              <span class="item-label">Fecha Registro</span>
+              <span class="item-value">{{
+                contratoEncontrado.fechaRegistro | date : 'dd/MM/yyyy'
+              }}</span>
+            </div>
+          </div>
+
+          @if (contratoEncontrado.observacion) {
+          <div class="contrato-item full-width">
+            <mat-icon>note</mat-icon>
+            <div class="item-content">
+              <span class="item-label">Observación</span>
+              <span class="item-value observacion">{{ contratoEncontrado.observacion }}</span>
+            </div>
+          </div>
+          }
+        </div>
+      </mat-card-content>
+    </mat-card>
+    }
+  </div>
+
+  <!-- Dashboard Principal -->
+  @if (vistaActual === 'dashboard') {
+  <div class="dashboard-grid">
+    <!-- Tarjeta de Aportes -->
+    <mat-card class="dashboard-card aportes-card" (click)="verDetalleAportes()">
+      <mat-card-header>
+        <mat-icon mat-card-avatar class="card-icon">savings</mat-icon>
+        <mat-card-title>Total Aportes</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="stat-grid-aportes">
+          <!-- Totales por tipo -->
+          @if (aportesPorTipo.length > 0) {
+          <div class="tipos-resumen">
+            <div class="tipos-header">
+              <mat-icon>category</mat-icon>
+              <span>Por Tipo</span>
+            </div>
+            <div class="tipos-lista">
+              @for (tipo of aportesPorTipo; track tipo.codigoTipo) {
+              <div class="tipo-item">
+                <span class="tipo-nombre">{{ tipo.tipoAporte }}</span>
+                <span class="tipo-valor">${{ tipo.totalValor | number : '1.2-2' }}</span>
               </div>
-
-              <div class="contrato-item">
-                <mat-icon>person</mat-icon>
-                <div class="item-content">
-                  <span class="item-label">% Aporte Individual</span>
-                  <span class="item-value">{{ contratoEncontrado.porcentajeAporteIndividual }}%</span>
-                </div>
-              </div>
-
-              <div class="contrato-item">
-                <mat-icon>elderly</mat-icon>
-                <div class="item-content">
-                  <span class="item-label">% Aporte Jubilación</span>
-                  <span class="item-value">{{ contratoEncontrado.porcentajeAporteJubilacion }}%</span>
-                </div>
-              </div>
-
-              <div class="contrato-item">
-                <mat-icon>attach_money</mat-icon>
-                <div class="item-content">
-                  <span class="item-label">Monto Aporte Adicional</span>
-                  <span class="item-value">${{ contratoEncontrado.montoAporteAdicional | number:'1.2-2' }}</span>
-                </div>
-              </div>
-
-              <div class="contrato-item">
-                <mat-icon>schedule</mat-icon>
-                <div class="item-content">
-                  <span class="item-label">Fecha Registro</span>
-                  <span class="item-value">{{ contratoEncontrado.fechaRegistro | date: 'dd/MM/yyyy' }}</span>
-                </div>
-              </div>
-
-              @if (contratoEncontrado.observacion) {
-                <div class="contrato-item full-width">
-                  <mat-icon>note</mat-icon>
-                  <div class="item-content">
-                    <span class="item-label">Observación</span>
-                    <span class="item-value observacion">{{ contratoEncontrado.observacion }}</span>
-                  </div>
-                </div>
               }
             </div>
-          </mat-card-content>
-        </mat-card>
-      }
+          </div>
+          }
+
+          <!-- Total Acumulado como línea horizontal -->
+          <div class="total-horizontal">
+            <mat-icon>account_balance_wallet</mat-icon>
+            <span class="total-label">Total Acumulado:</span>
+            <span class="total-valor">${{ totalAportes | number : '1.2-2' }}</span>
+          </div>
+        </div>
+      </mat-card-content>
+      <mat-card-actions>
+        <button mat-button color="primary">
+          Ver Detalles
+          <mat-icon>chevron_right</mat-icon>
+        </button>
+      </mat-card-actions>
+    </mat-card>
+
+    <!-- Tarjetas de Préstamos individuales -->
+    @for (prestamo of prestamos; track prestamo.codigo) {
+    <mat-card class="dashboard-card prestamos-card" (click)="verDetallePrestamo(prestamo)">
+      <mat-card-header>
+        <mat-icon mat-card-avatar class="card-icon">credit_card</mat-icon>
+        <mat-card-title
+          >{{ prestamo.producto?.nombre || 'Préstamo' }} #{{ prestamo.codigo }}</mat-card-title
+        >
+        <mat-card-subtitle>
+          @if (prestamo.estadoPrestamo) {
+          <span class="info-chip" [class.estado-activo]="prestamo.estadoPrestamo.codigo === 1">
+            <mat-icon>info</mat-icon>
+            {{ prestamo.estadoPrestamo.nombre || 'N/A' }}
+          </span>
+          } @else {
+          <span class="info-chip estado-no-disponible">
+            <mat-icon>help_outline</mat-icon>
+            Estado no disponible
+          </span>
+          }
+        </mat-card-subtitle>
+      </mat-card-header>
+
+      <mat-card-content>
+        <div class="prestamo-info-row">
+          <div class="info-item-inline">
+            <mat-icon>event</mat-icon>
+            <span>{{ prestamo.fecha | date : 'dd/MM/yyyy' }}</span>
+          </div>
+          <div class="info-item-inline">
+            <mat-icon>schedule</mat-icon>
+            <span>{{ prestamo.plazo }} meses</span>
+          </div>
+        </div>
+
+        <div class="stat-grid">
+          <div class="stat-item">
+            <mat-icon>attach_money</mat-icon>
+            <div class="stat-value">${{ prestamo.totalPrestamo | number : '1.2-2' }}</div>
+            <div class="stat-label">Monto Total</div>
+          </div>
+          <div class="stat-item">
+            <mat-icon>account_balance</mat-icon>
+            <div class="stat-value">${{ prestamo.saldoTotal | number : '1.2-2' }}</div>
+            <div class="stat-label">Saldo</div>
+          </div>
+          <div class="stat-item">
+            <mat-icon>paid</mat-icon>
+            <div class="stat-value">${{ calcularTotalPagado(prestamo) | number : '1.2-2' }}</div>
+            <div class="stat-label">Total Pagado</div>
+          </div>
+        </div>
+      </mat-card-content>
+      <mat-card-actions>
+        <button mat-button color="primary">
+          Ver Detalles
+          <mat-icon>chevron_right</mat-icon>
+        </button>
+        <button
+          mat-icon-button
+          color="accent"
+          (click)="cambiarEstadoPrestamo(prestamo, $event)"
+          matTooltip="Cambiar Estado"
+          class="estado-action-button"
+        >
+          <mat-icon>swap_horiz</mat-icon>
+        </button>
+      </mat-card-actions>
+    </mat-card>
+    }
+  </div>
+  }
+
+  <!-- Detalle del Préstamo con tabla de detalles y pagos -->
+  @if (vistaActual === 'detallePrestamos' && prestamoSeleccionado) {
+  <div class="detalle-container">
+    <div class="detalle-header">
+      <button mat-icon-button (click)="volverDashboard()">
+        <mat-icon>arrow_back</mat-icon>
+      </button>
+      <h2>
+        <mat-icon>credit_card</mat-icon>
+        {{ prestamoSeleccionado.producto?.nombre || 'Préstamo' }} #{{ prestamoSeleccionado.codigo }}
+      </h2>
     </div>
 
-    <!-- Dashboard Principal -->
-    @if (vistaActual === 'dashboard') {
-      <div class="dashboard-grid">
-        <!-- Tarjeta de Aportes -->
-        <mat-card class="dashboard-card aportes-card" (click)="verDetalleAportes()">
-          <mat-card-header>
-            <mat-icon mat-card-avatar class="card-icon">savings</mat-icon>
-            <mat-card-title>Total Aportes</mat-card-title>
-          </mat-card-header>
-          <mat-card-content>
-            <div class="stat-grid-aportes">
-              <!-- Totales por tipo -->
-              @if (aportesPorTipo.length > 0) {
-                <div class="tipos-resumen">
-                  <div class="tipos-header">
-                    <mat-icon>category</mat-icon>
-                    <span>Por Tipo</span>
-                  </div>
-                  <div class="tipos-lista">
-                    @for (tipo of aportesPorTipo; track tipo.codigoTipo) {
-                      <div class="tipo-item">
-                        <span class="tipo-nombre">{{ tipo.tipoAporte }}</span>
-                        <span class="tipo-valor">${{ tipo.totalValor | number:'1.2-2' }}</span>
-                      </div>
-                    }
-                  </div>
-                </div>
-              }
+    <!-- Resumen del Préstamo -->
+    <mat-card class="info-card">
+      <mat-card-content>
+        <div class="prestamo-resumen">
+          <div class="resumen-item">
+            <span class="label">Monto Total:</span>
+            <span class="value">${{ prestamoSeleccionado.totalPrestamo | number : '1.2-2' }}</span>
+          </div>
+          <div class="resumen-item">
+            <span class="label">Saldo:</span>
+            <span class="value">${{ prestamoSeleccionado.saldoTotal | number : '1.2-2' }}</span>
+          </div>
+          <div class="resumen-item">
+            <span class="label">Total Pagado:</span>
+            <span class="value"
+              >${{ calcularTotalPagado(prestamoSeleccionado) | number : '1.2-2' }}</span
+            >
+          </div>
+          <div class="resumen-item">
+            <span class="label">Estado:</span>
+            <span class="value">{{ prestamoSeleccionado.estadoPrestamo?.nombre || 'N/A' }}</span>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
 
-              <!-- Total Acumulado como línea horizontal -->
-              <div class="total-horizontal">
-                <mat-icon>account_balance_wallet</mat-icon>
-                <span class="total-label">Total Acumulado:</span>
-                <span class="total-valor">${{ totalAportes | number:'1.2-2' }}</span>
-              </div>
-            </div>
-          </mat-card-content>
-          <mat-card-actions>
-            <button mat-button color="primary">
-              Ver Detalles
-              <mat-icon>chevron_right</mat-icon>
-            </button>
-          </mat-card-actions>
-        </mat-card>
+    <!-- Tabla de Detalles de Préstamo -->
+    @if (isLoadingDetalles) {
+    <div class="loading-container">
+      <mat-spinner diameter="50"></mat-spinner>
+      <p>Cargando detalles del préstamo...</p>
+    </div>
+    } @else if (detallesPrestamo.has(prestamoSeleccionado.codigo)) {
+    <mat-card class="tabla-card">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>list_alt</mat-icon>
+          Cuotas del Préstamo
+        </mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <table
+          mat-table
+          [dataSource]="detallesPrestamo.get(prestamoSeleccionado.codigo)!"
+          class="detalle-table"
+        >
+          <!-- Columna Cuota -->
+          <ng-container matColumnDef="numeroCuota">
+            <th mat-header-cell *matHeaderCellDef>Cuota</th>
+            <td mat-cell *matCellDef="let detalle">{{ detalle.detalle.numeroCuota }}</td>
+          </ng-container>
 
-        <!-- Tarjetas de Préstamos individuales -->
-        @for (prestamo of prestamos; track prestamo.codigo) {
-          <mat-card class="dashboard-card prestamos-card" (click)="verDetallePrestamo(prestamo)">
-            <mat-card-header>
-              <mat-icon mat-card-avatar class="card-icon">credit_card</mat-icon>
-              <mat-card-title>{{ prestamo.producto?.nombre || 'Préstamo' }} #{{ prestamo.codigo }}</mat-card-title>
-              @if (prestamo.estadoPrestamo) {
-                <mat-card-subtitle>
-                  <span class="info-chip" [class.estado-activo]="prestamo.estadoPrestamo.codigo === 1">
-                    <mat-icon>info</mat-icon>
-                    {{ prestamo.estadoPrestamo.nombre || 'N/A' }}
-                  </span>
-                </mat-card-subtitle>
-              }
-            </mat-card-header>
+          <!-- Columna Fecha Vencimiento -->
+          <ng-container matColumnDef="fechaVencimiento">
+            <th mat-header-cell *matHeaderCellDef>Vencimiento</th>
+            <td mat-cell *matCellDef="let detalle">
+              {{ detalle.detalle.fechaVencimiento | date : 'dd/MM/yyyy' }}
+            </td>
+          </ng-container>
 
-            <mat-card-content>
-              <div class="prestamo-info-row">
-                <div class="info-item-inline">
-                  <mat-icon>event</mat-icon>
-                  <span>{{ prestamo.fecha | date:'dd/MM/yyyy' }}</span>
-                </div>
-                <div class="info-item-inline">
-                  <mat-icon>schedule</mat-icon>
-                  <span>{{ prestamo.plazo }} meses</span>
-                </div>
-              </div>
+          <!-- Columna Capital -->
+          <ng-container matColumnDef="capital">
+            <th mat-header-cell *matHeaderCellDef>Capital</th>
+            <td mat-cell *matCellDef="let detalle">
+              ${{ detalle.detalle.capital | number : '1.2-2' }}
+            </td>
+          </ng-container>
 
-              <div class="stat-grid">
-                <div class="stat-item">
-                  <mat-icon>attach_money</mat-icon>
-                  <div class="stat-value">${{ prestamo.totalPrestamo | number:'1.2-2' }}</div>
-                  <div class="stat-label">Monto Total</div>
-                </div>
-                <div class="stat-item">
-                  <mat-icon>account_balance</mat-icon>
-                  <div class="stat-value">${{ prestamo.saldoTotal | number:'1.2-2' }}</div>
-                  <div class="stat-label">Saldo</div>
-                </div>
-                <div class="stat-item">
-                  <mat-icon>paid</mat-icon>
-                  <div class="stat-value">${{ calcularTotalPagado(prestamo) | number:'1.2-2' }}</div>
-                  <div class="stat-label">Total Pagado</div>
-                </div>
-              </div>
-            </mat-card-content>
-            <mat-card-actions>
-              <button mat-button color="primary">
-                Ver Detalles
-                <mat-icon>chevron_right</mat-icon>
+          <!-- Columna Interés -->
+          <ng-container matColumnDef="interes">
+            <th mat-header-cell *matHeaderCellDef>Interés</th>
+            <td mat-cell *matCellDef="let detalle">
+              ${{ detalle.detalle.interes | number : '1.2-2' }}
+            </td>
+          </ng-container>
+
+          <!-- Columna Cuota Total -->
+          <ng-container matColumnDef="cuota">
+            <th mat-header-cell *matHeaderCellDef>Cuota Total</th>
+            <td mat-cell *matCellDef="let detalle">
+              ${{ detalle.detalle.cuota | number : '1.2-2' }}
+            </td>
+          </ng-container>
+
+          <!-- Columna Saldo -->
+          <ng-container matColumnDef="saldo">
+            <th mat-header-cell *matHeaderCellDef>Saldo</th>
+            <td mat-cell *matCellDef="let detalle">
+              ${{ detalle.detalle.saldo | number : '1.2-2' }}
+            </td>
+          </ng-container>
+
+          <!-- Columna Estado -->
+          <ng-container matColumnDef="estado">
+            <th mat-header-cell *matHeaderCellDef>Estado</th>
+            <td mat-cell *matCellDef="let detalle">
+              <span class="estado-badge" [ngClass]="obtenerEstadoCuota(detalle.detalle).clase">
+                {{ obtenerEstadoCuota(detalle.detalle).texto }}
+              </span>
+            </td>
+          </ng-container>
+
+          <!-- Columna Acciones -->
+          <ng-container matColumnDef="acciones">
+            <th mat-header-cell *matHeaderCellDef>Acciones</th>
+            <td mat-cell *matCellDef="let detalle">
+              <button
+                mat-icon-button
+                (click)="togglePagosDetalle(detalle)"
+                matTooltip="Ver pagos de esta cuota"
+                color="primary"
+              >
+                <mat-icon>visibility</mat-icon>
               </button>
-            </mat-card-actions>
-          </mat-card>
-        }
-      </div>
+              <button
+                mat-icon-button
+                (click)="cambiarEstadoCuota(detalle.detalle, $event)"
+                matTooltip="Cambiar Estado"
+                color="accent"
+              >
+                <mat-icon>swap_horiz</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+        </table>
+      </mat-card-content>
+    </mat-card>
     }
-
-    <!-- Detalle del Préstamo con tabla de detalles y pagos -->
-    @if (vistaActual === 'detallePrestamos' && prestamoSeleccionado) {
-      <div class="detalle-container">
-        <div class="detalle-header">
-          <button mat-icon-button (click)="volverDashboard()">
-            <mat-icon>arrow_back</mat-icon>
-          </button>
-          <h2>
-            <mat-icon>credit_card</mat-icon>
-            {{ prestamoSeleccionado.producto?.nombre || 'Préstamo' }} #{{ prestamoSeleccionado.codigo }}
-          </h2>
-        </div>
-
-        <!-- Resumen del Préstamo -->
-        <mat-card class="info-card">
-          <mat-card-content>
-            <div class="prestamo-resumen">
-              <div class="resumen-item">
-                <span class="label">Monto Total:</span>
-                <span class="value">${{ prestamoSeleccionado.totalPrestamo | number:'1.2-2' }}</span>
-              </div>
-              <div class="resumen-item">
-                <span class="label">Saldo:</span>
-                <span class="value">${{ prestamoSeleccionado.saldoTotal | number:'1.2-2' }}</span>
-              </div>
-              <div class="resumen-item">
-                <span class="label">Total Pagado:</span>
-                <span class="value">${{ calcularTotalPagado(prestamoSeleccionado) | number:'1.2-2' }}</span>
-              </div>
-              <div class="resumen-item">
-                <span class="label">Estado:</span>
-                <span class="value">{{ prestamoSeleccionado.estadoPrestamo?.nombre || 'N/A' }}</span>
-              </div>
-            </div>
-          </mat-card-content>
-        </mat-card>
-
-        <!-- Tabla de Detalles de Préstamo -->
-        @if (isLoadingDetalles) {
-          <div class="loading-container">
-            <mat-spinner diameter="50"></mat-spinner>
-            <p>Cargando detalles del préstamo...</p>
-          </div>
-        } @else if (detallesPrestamo.has(prestamoSeleccionado.codigo)) {
-          <mat-card class="tabla-card">
-            <mat-card-header>
-              <mat-card-title>
-                <mat-icon>list_alt</mat-icon>
-                Cuotas del Préstamo
-              </mat-card-title>
-            </mat-card-header>
-            <mat-card-content>
-              <table mat-table [dataSource]="detallesPrestamo.get(prestamoSeleccionado.codigo)!"
-                     class="detalle-table">
-
-                <!-- Columna Cuota -->
-                <ng-container matColumnDef="numeroCuota">
-                  <th mat-header-cell *matHeaderCellDef>Cuota</th>
-                  <td mat-cell *matCellDef="let detalle">{{ detalle.detalle.numeroCuota }}</td>
-                </ng-container>
-
-                <!-- Columna Fecha Vencimiento -->
-                <ng-container matColumnDef="fechaVencimiento">
-                  <th mat-header-cell *matHeaderCellDef>Vencimiento</th>
-                  <td mat-cell *matCellDef="let detalle">{{ detalle.detalle.fechaVencimiento | date:'dd/MM/yyyy' }}</td>
-                </ng-container>
-
-                <!-- Columna Capital -->
-                <ng-container matColumnDef="capital">
-                  <th mat-header-cell *matHeaderCellDef>Capital</th>
-                  <td mat-cell *matCellDef="let detalle">${{ detalle.detalle.capital | number:'1.2-2' }}</td>
-                </ng-container>
-
-                <!-- Columna Interés -->
-                <ng-container matColumnDef="interes">
-                  <th mat-header-cell *matHeaderCellDef>Interés</th>
-                  <td mat-cell *matCellDef="let detalle">${{ detalle.detalle.interes | number:'1.2-2' }}</td>
-                </ng-container>
-
-                <!-- Columna Cuota Total -->
-                <ng-container matColumnDef="cuota">
-                  <th mat-header-cell *matHeaderCellDef>Cuota Total</th>
-                  <td mat-cell *matCellDef="let detalle">${{ detalle.detalle.cuota | number:'1.2-2' }}</td>
-                </ng-container>
-
-                <!-- Columna Saldo -->
-                <ng-container matColumnDef="saldo">
-                  <th mat-header-cell *matHeaderCellDef>Saldo</th>
-                  <td mat-cell *matCellDef="let detalle">${{ detalle.detalle.saldo | number:'1.2-2' }}</td>
-                </ng-container>
-
-                <!-- Columna Acciones -->
-                <ng-container matColumnDef="acciones">
-                  <th mat-header-cell *matHeaderCellDef>Pagos</th>
-                  <td mat-cell *matCellDef="let detalle">
-                    <button mat-icon-button (click)="togglePagosDetalle(detalle)"
-                            matTooltip="Ver pagos de esta cuota"
-                            color="primary">
-                      <mat-icon>visibility</mat-icon>
-                    </button>
-                  </td>
-                </ng-container>
-
-                <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-                <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-              </table>
-            </mat-card-content>
-          </mat-card>
-        }
-      </div>
-    }
-
-    <!-- Detalle de Aportes (placeholder) -->
-    @if (vistaActual === 'detalleAportes') {
-      <div class="detalle-container">
-        <div class="detalle-header">
-          <button mat-icon-button (click)="volverDashboard()">
-            <mat-icon>arrow_back</mat-icon>
-          </button>
-          <h2>
-            <mat-icon>savings</mat-icon>
-            Detalle de Aportes
-          </h2>
-        </div>
-
-        <!-- Resumen de Aportes -->
-        <mat-card class="info-card">
-          <mat-card-content>
-            <div class="aportes-resumen">
-              <div class="resumen-item">
-                <span class="label">Total Aportes:</span>
-                <span class="value total-highlight">${{ totalAportes | number:'1.2-2' }}</span>
-              </div>
-              <div class="resumen-item">
-                <span class="label">Tipos de Aportes:</span>
-                <span class="value">{{ aportesPorTipo.length }}</span>
-              </div>
-              <div class="resumen-item">
-                <span class="label">Total Registros:</span>
-                <span class="value">{{ aportes.length }}</span>
-              </div>
-            </div>
-          </mat-card-content>
-        </mat-card>
-
-        <!-- Aportes agrupados por tipo -->
-        @if (isLoadingAportes) {
-          <div class="loading-container">
-            <mat-spinner diameter="50"></mat-spinner>
-            <p>Cargando aportes...</p>
-          </div>
-        } @else if (aportesPorTipo.length > 0) {
-          @for (tipoAporte of aportesPorTipo; track tipoAporte.codigoTipo) {
-            <mat-card class="tipo-aporte-card">
-              <mat-card-header (click)="toggleTipoAporte(tipoAporte)" class="tipo-header">
-                <mat-icon mat-card-avatar class="tipo-icon">category</mat-icon>
-                <mat-card-title>{{ tipoAporte.tipoAporte }}</mat-card-title>
-                <mat-card-subtitle>
-                  <div class="tipo-stats">
-                    <span class="stat-chip">
-                      <mat-icon>payments</mat-icon>
-                      {{ tipoAporte.aportes.length }} registros
-                    </span>
-                    <span class="stat-chip">
-                      <mat-icon>account_balance_wallet</mat-icon>
-                      ${{ tipoAporte.totalValor | number:'1.2-2' }}
-                    </span>
-                  </div>
-                </mat-card-subtitle>
-                <button mat-icon-button class="expand-button">
-                  <mat-icon>{{ tipoAporte.expandido ? 'expand_less' : 'expand_more' }}</mat-icon>
-                </button>
-              </mat-card-header>
-
-              @if (tipoAporte.expandido) {
-                <mat-card-content>
-                  <!-- Resumen del tipo -->
-                  <div class="tipo-resumen">
-                    <div class="resumen-stat">
-                      <span class="label">Total Valor:</span>
-                      <span class="value">${{ tipoAporte.totalValor | number:'1.2-2' }}</span>
-                    </div>
-                    <div class="resumen-stat">
-                      <span class="label">Total Pagado:</span>
-                      <span class="value pagado">${{ tipoAporte.totalPagado | number:'1.2-2' }}</span>
-                    </div>
-                    <div class="resumen-stat">
-                      <span class="label">Saldo:</span>
-                      <span class="value saldo">${{ tipoAporte.totalSaldo | number:'1.2-2' }}</span>
-                    </div>
-                  </div>
-
-                  <!-- Tabla de aportes del tipo -->
-                  <table mat-table [dataSource]="tipoAporte.aportes" class="detalle-table tipo-table">
-
-                    <!-- Columna Fecha Transacción -->
-                    <ng-container matColumnDef="fechaTransaccion">
-                      <th mat-header-cell *matHeaderCellDef>Fecha</th>
-                      <td mat-cell *matCellDef="let aporte">{{ aporte.fechaTransaccion | date:'dd/MM/yyyy' }}</td>
-                    </ng-container>
-
-                    <!-- Columna Glosa -->
-                    <ng-container matColumnDef="glosa">
-                      <th mat-header-cell *matHeaderCellDef>Glosa</th>
-                      <td mat-cell *matCellDef="let aporte">{{ aporte.glosa || '-' }}</td>
-                    </ng-container>
-
-                    <!-- Columna Valor -->
-                    <ng-container matColumnDef="valor">
-                      <th mat-header-cell *matHeaderCellDef>Valor</th>
-                      <td mat-cell *matCellDef="let aporte" class="number-column">${{ aporte.valor | number:'1.2-2' }}</td>
-                    </ng-container>
-
-                    <!-- Columna Valor Pagado -->
-                    <ng-container matColumnDef="valorPagado">
-                      <th mat-header-cell *matHeaderCellDef>Pagado</th>
-                      <td mat-cell *matCellDef="let aporte" class="number-column">${{ aporte.valorPagado | number:'1.2-2' }}</td>
-                    </ng-container>
-
-                    <!-- Columna Saldo -->
-                    <ng-container matColumnDef="saldo">
-                      <th mat-header-cell *matHeaderCellDef>Saldo</th>
-                      <td mat-cell *matCellDef="let aporte" class="number-column saldo-column">
-                        ${{ aporte.saldo | number:'1.2-2' }}
-                      </td>
-                    </ng-container>
-
-                    <tr mat-header-row *matHeaderRowDef="['fechaTransaccion', 'glosa', 'valor', 'valorPagado', 'saldo']"></tr>
-                    <tr mat-row *matRowDef="let row; columns: ['fechaTransaccion', 'glosa', 'valor', 'valorPagado', 'saldo'];"></tr>
-                  </table>
-                </mat-card-content>
-              }
-            </mat-card>
-          }
-        } @else {
-          <mat-card class="info-card">
-            <mat-card-content>
-              <div class="placeholder-content">
-                <mat-icon class="placeholder-icon">info</mat-icon>
-                <p>No se encontraron aportes para esta entidad.</p>
-              </div>
-            </mat-card-content>
-          </mat-card>
-        }
-      </div>
-    }
+  </div>
   }
+
+  <!-- Detalle de Aportes (placeholder) -->
+  @if (vistaActual === 'detalleAportes') {
+  <div class="detalle-container">
+    <div class="detalle-header">
+      <button mat-icon-button (click)="volverDashboard()">
+        <mat-icon>arrow_back</mat-icon>
+      </button>
+      <h2>
+        <mat-icon>savings</mat-icon>
+        Detalle de Aportes
+      </h2>
+    </div>
+
+    <!-- Resumen de Aportes -->
+    <mat-card class="info-card">
+      <mat-card-content>
+        <div class="aportes-resumen">
+          <div class="resumen-item">
+            <span class="label">Total Aportes:</span>
+            <span class="value total-highlight">${{ totalAportes | number : '1.2-2' }}</span>
+          </div>
+          <div class="resumen-item">
+            <span class="label">Tipos de Aportes:</span>
+            <span class="value">{{ aportesPorTipo.length }}</span>
+          </div>
+          <div class="resumen-item">
+            <span class="label">Total Registros:</span>
+            <span class="value">{{ aportes.length }}</span>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Aportes agrupados por tipo -->
+    @if (isLoadingAportes) {
+    <div class="loading-container">
+      <mat-spinner diameter="50"></mat-spinner>
+      <p>Cargando aportes...</p>
+    </div>
+    } @else if (aportesPorTipo.length > 0) { @for (tipoAporte of aportesPorTipo; track
+    tipoAporte.codigoTipo) {
+    <mat-card class="tipo-aporte-card">
+      <mat-card-header (click)="toggleTipoAporte(tipoAporte)" class="tipo-header">
+        <mat-icon mat-card-avatar class="tipo-icon">category</mat-icon>
+        <mat-card-title>{{ tipoAporte.tipoAporte }}</mat-card-title>
+        <mat-card-subtitle>
+          <div class="tipo-stats">
+            <span class="stat-chip">
+              <mat-icon>payments</mat-icon>
+              {{ tipoAporte.aportes.length }} registros
+            </span>
+            <span class="stat-chip">
+              <mat-icon>account_balance_wallet</mat-icon>
+              ${{ tipoAporte.totalValor | number : '1.2-2' }}
+            </span>
+          </div>
+        </mat-card-subtitle>
+        <button mat-icon-button class="expand-button">
+          <mat-icon>{{ tipoAporte.expandido ? 'expand_less' : 'expand_more' }}</mat-icon>
+        </button>
+      </mat-card-header>
+
+      @if (tipoAporte.expandido) {
+      <mat-card-content>
+        <!-- Resumen del tipo -->
+        <div class="tipo-resumen">
+          <div class="resumen-stat">
+            <span class="label">Total Valor:</span>
+            <span class="value">${{ tipoAporte.totalValor | number : '1.2-2' }}</span>
+          </div>
+          <div class="resumen-stat">
+            <span class="label">Total Pagado:</span>
+            <span class="value pagado">${{ tipoAporte.totalPagado | number : '1.2-2' }}</span>
+          </div>
+          <div class="resumen-stat">
+            <span class="label">Saldo:</span>
+            <span class="value saldo">${{ tipoAporte.totalSaldo | number : '1.2-2' }}</span>
+          </div>
+        </div>
+
+        <!-- Tabla de aportes del tipo -->
+        <table mat-table [dataSource]="tipoAporte.aportes" class="detalle-table tipo-table">
+          <!-- Columna Fecha Transacción -->
+          <ng-container matColumnDef="fechaTransaccion">
+            <th mat-header-cell *matHeaderCellDef>Fecha</th>
+            <td mat-cell *matCellDef="let aporte">
+              {{ aporte.fechaTransaccion | date : 'dd/MM/yyyy' }}
+            </td>
+          </ng-container>
+
+          <!-- Columna Glosa -->
+          <ng-container matColumnDef="glosa">
+            <th mat-header-cell *matHeaderCellDef>Glosa</th>
+            <td mat-cell *matCellDef="let aporte">{{ aporte.glosa || '-' }}</td>
+          </ng-container>
+
+          <!-- Columna Valor -->
+          <ng-container matColumnDef="valor">
+            <th mat-header-cell *matHeaderCellDef>Valor</th>
+            <td mat-cell *matCellDef="let aporte" class="number-column">
+              ${{ aporte.valor | number : '1.2-2' }}
+            </td>
+          </ng-container>
+
+          <!-- Columna Valor Pagado -->
+          <ng-container matColumnDef="valorPagado">
+            <th mat-header-cell *matHeaderCellDef>Pagado</th>
+            <td mat-cell *matCellDef="let aporte" class="number-column">
+              ${{ aporte.valorPagado | number : '1.2-2' }}
+            </td>
+          </ng-container>
+
+          <!-- Columna Saldo -->
+          <ng-container matColumnDef="saldo">
+            <th mat-header-cell *matHeaderCellDef>Saldo</th>
+            <td mat-cell *matCellDef="let aporte" class="number-column saldo-column">
+              ${{ aporte.saldo | number : '1.2-2' }}
+            </td>
+          </ng-container>
+
+          <tr
+            mat-header-row
+            *matHeaderRowDef="['fechaTransaccion', 'glosa', 'valor', 'valorPagado', 'saldo']"
+          ></tr>
+          <tr
+            mat-row
+            *matRowDef="
+              let row;
+              columns: ['fechaTransaccion', 'glosa', 'valor', 'valorPagado', 'saldo']
+            "
+          ></tr>
+        </table>
+      </mat-card-content>
+      }
+    </mat-card>
+    } } @else {
+    <mat-card class="info-card">
+      <mat-card-content>
+        <div class="placeholder-content">
+          <mat-icon class="placeholder-icon">info</mat-icon>
+          <p>No se encontraron aportes para esta entidad.</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+    }
+  </div>
+  } }
   <!-- End of dashboard content -->
 
   <!-- Estado vacío -->
   @if (!entidadEncontrada && !isSearching) {
-    <div class="empty-state">
-      <mat-icon class="empty-icon">person_search</mat-icon>
-      <h2>Busque un Partícipe</h2>
-      <p>Ingrese el número de identificación, razón social o nombre comercial para comenzar</p>
-    </div>
+  <div class="empty-state">
+    <mat-icon class="empty-icon">person_search</mat-icon>
+    <h2>Busque un Partícipe</h2>
+    <p>Ingrese el número de identificación, razón social o nombre comercial para comenzar</p>
+  </div>
   }
 </div>

@@ -36,7 +36,11 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
       border-radius: 24px;
 
       &:hover {
-        background: linear-gradient(135deg, darken($saa-primary, 5%) 0%, darken($saa-secondary, 5%) 100%) !important;
+        background: linear-gradient(
+          135deg,
+          darken($saa-primary, 5%) 0%,
+          darken($saa-secondary, 5%) 100%
+        ) !important;
         box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
         transform: translateY(-2px);
       }
@@ -88,7 +92,7 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
         margin: 0;
         font-size: 1.8rem;
         font-weight: 600;
-        text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
       }
     }
 
@@ -223,7 +227,11 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
     box-shadow: $saa-shadow;
 
     mat-card-header {
-      background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+      background: linear-gradient(
+        135deg,
+        rgba(102, 126, 234, 0.1) 0%,
+        rgba(118, 75, 162, 0.1) 100%
+      );
       padding: 1rem 1.25rem;
       border-radius: 1rem 1rem 0 0;
       position: relative;
@@ -338,10 +346,18 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
           &.total-ingresos {
             grid-column: 1 / -1;
             border-left-color: $saa-accent;
-            background: linear-gradient(135deg, lighten($saa-accent, 35%) 0%, lighten($saa-accent, 40%) 100%);
+            background: linear-gradient(
+              135deg,
+              lighten($saa-accent, 35%) 0%,
+              lighten($saa-accent, 40%) 100%
+            );
 
             &:hover {
-              background: linear-gradient(135deg, lighten($saa-accent, 30%) 0%, lighten($saa-accent, 35%) 100%);
+              background: linear-gradient(
+                135deg,
+                lighten($saa-accent, 30%) 0%,
+                lighten($saa-accent, 35%) 100%
+              );
             }
 
             .item-value.highlight {
@@ -390,7 +406,11 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
     box-shadow: $saa-shadow;
 
     mat-card-header {
-      background: linear-gradient(135deg, rgba(246, 173, 85, 0.1) 0%, rgba(246, 173, 85, 0.05) 100%);
+      background: linear-gradient(
+        135deg,
+        rgba(246, 173, 85, 0.1) 0%,
+        rgba(246, 173, 85, 0.05) 100%
+      );
       padding: 1rem 1.25rem;
       border-radius: 1rem 1rem 0 0;
 
@@ -497,7 +517,11 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
 
       mat-card-header {
         padding: 0.45rem 0.85rem;
-        background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+        background: linear-gradient(
+          135deg,
+          rgba(102, 126, 234, 0.05) 0%,
+          rgba(118, 75, 162, 0.05) 100%
+        );
 
         .card-icon {
           font-size: 1.5rem;
@@ -584,6 +608,9 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
       mat-card-actions {
         padding: 0.5rem 0.85rem;
         border-top: 1px solid $saa-border-light;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
 
         button {
           display: flex;
@@ -592,11 +619,26 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
           margin: 0;
           font-size: 0.8rem;
         }
+
+        .estado-action-button {
+          mat-icon {
+            color: $saa-accent;
+            transition: transform 0.2s ease;
+          }
+
+          &:hover mat-icon {
+            transform: rotate(180deg);
+          }
+        }
       }
 
       &.aportes-card {
         mat-card-header {
-          background: linear-gradient(135deg, rgba(246, 173, 85, 0.05) 0%, rgba(255, 193, 7, 0.05) 100%);
+          background: linear-gradient(
+            135deg,
+            rgba(246, 173, 85, 0.05) 0%,
+            rgba(255, 193, 7, 0.05) 100%
+          );
 
           .card-icon {
             color: $saa-accent;
@@ -699,7 +741,11 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
             align-items: center;
             gap: 0.5rem;
             padding: 0.55rem 0.75rem;
-            background: linear-gradient(135deg, rgba(246, 173, 85, 0.12) 0%, rgba(255, 193, 7, 0.12) 100%);
+            background: linear-gradient(
+              135deg,
+              rgba(246, 173, 85, 0.12) 0%,
+              rgba(255, 193, 7, 0.12) 100%
+            );
             border-radius: 0.5rem;
             border: 2px solid rgba(246, 173, 85, 0.2);
 
@@ -775,7 +821,11 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
 
         mat-card-header {
           padding: 1.5rem;
-          background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+          background: linear-gradient(
+            135deg,
+            rgba(102, 126, 234, 0.05) 0%,
+            rgba(118, 75, 162, 0.05) 100%
+          );
           position: relative;
 
           &.clickable {
@@ -783,7 +833,11 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
             transition: background 0.3s ease;
 
             &:hover {
-              background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+              background: linear-gradient(
+                135deg,
+                rgba(102, 126, 234, 0.1) 0%,
+                rgba(118, 75, 162, 0.1) 100%
+              );
             }
           }
 
@@ -824,6 +878,16 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
               &.estado-activo {
                 background: rgba(40, 167, 69, 0.1);
                 color: $saa-success;
+              }
+
+              &.estado-no-disponible {
+                background: rgba(255, 193, 7, 0.1);
+                color: #f57c00;
+                border: 1px dashed rgba(255, 193, 7, 0.4);
+
+                mat-icon {
+                  color: #f57c00;
+                }
               }
             }
           }
@@ -910,7 +974,11 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
                 grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
                 gap: 1rem;
                 padding: 1rem;
-                background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
+                background: linear-gradient(
+                  135deg,
+                  rgba(102, 126, 234, 0.08) 0%,
+                  rgba(118, 75, 162, 0.08) 100%
+                );
                 border-radius: 0.5rem;
 
                 .total-item {
@@ -1173,12 +1241,20 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
       .tipo-header {
         cursor: pointer;
         padding: 1.5rem;
-        background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+        background: linear-gradient(
+          135deg,
+          rgba(102, 126, 234, 0.05) 0%,
+          rgba(118, 75, 162, 0.05) 100%
+        );
         position: relative;
         transition: background 0.3s ease;
 
         &:hover {
-          background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+          background: linear-gradient(
+            135deg,
+            rgba(102, 126, 234, 0.1) 0%,
+            rgba(118, 75, 162, 0.1) 100%
+          );
         }
 
         .tipo-icon {
@@ -1240,7 +1316,11 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
           grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
           gap: 1rem;
           padding: 1rem;
-          background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
+          background: linear-gradient(
+            135deg,
+            rgba(102, 126, 234, 0.08) 0%,
+            rgba(118, 75, 162, 0.08) 100%
+          );
           border-radius: 0.5rem;
           margin-bottom: 1.5rem;
 
@@ -1401,6 +1481,73 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
     .mat-mdc-cell {
       padding: 0 !important;
       border-bottom: none;
+    }
+  }
+
+  // Badges de estado de cuota
+  .estado-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+
+    &.estado-pagado {
+      background: rgba(40, 167, 69, 0.15);
+      color: $saa-success;
+      border: 1px solid rgba(40, 167, 69, 0.3);
+    }
+
+    &.estado-pendiente {
+      background: rgba(255, 193, 7, 0.15);
+      color: #f57c00;
+      border: 1px solid rgba(255, 193, 7, 0.3);
+    }
+
+    &.estado-vencido {
+      background: rgba(220, 53, 69, 0.15);
+      color: $saa-error;
+      border: 1px solid rgba(220, 53, 69, 0.3);
+    }
+
+    &.estado-desconocido {
+      background: rgba(108, 117, 125, 0.15);
+      color: #6c757d;
+      border: 1px solid rgba(108, 117, 125, 0.3);
+    }
+
+    &.estado-aprobado,
+    &.estado-revisado {
+      background: rgba(102, 126, 234, 0.15);
+      color: $saa-primary;
+      border: 1px solid rgba(102, 126, 234, 0.3);
+    }
+
+    &.estado-legalizado,
+    &.estado-desembolsado {
+      background: rgba(23, 162, 184, 0.15);
+      color: #17a2b8;
+      border: 1px solid rgba(23, 162, 184, 0.3);
+    }
+  }
+
+  // Botones de acción en la tabla
+  button[mat-icon-button] {
+    transition: all 0.2s ease;
+
+    &:hover {
+      transform: scale(1.1);
+    }
+
+    mat-icon {
+      transition: transform 0.3s ease;
+    }
+
+    &:hover mat-icon {
+      transform: rotate(180deg);
     }
   }
 }
