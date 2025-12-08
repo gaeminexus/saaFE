@@ -16,6 +16,7 @@ import { EstadoPrestamo } from '../../../model/estado-prestamo';
 import { PagoPrestamo } from '../../../model/pago-prestamo';
 import { Participe } from '../../../model/participe';
 import { Prestamo } from '../../../model/prestamo';
+import { TipoAporte } from '../../../model/tipo-aporte';
 
 import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
@@ -34,6 +35,7 @@ import { EstadoPrestamoService } from '../../../service/estado-prestamo.service'
 import { PagoPrestamoService } from '../../../service/pago-prestamo.service';
 import { ParticipeService } from '../../../service/participe.service';
 import { PrestamoService } from '../../../service/prestamo.service';
+import { TipoAporteService } from '../../../service/tipo-aporte.service';
 
 interface DetalleConPagos {
   detalle: DetallePrestamo;
@@ -44,6 +46,7 @@ interface DetalleConPagos {
 interface AportesPorTipo {
   tipoAporte: string;
   codigoTipo: number;
+  estadoTipo: number; // Estado del TipoAporte
   aportes: Aporte[];
   totalValor: number;
   totalPagado: number;
@@ -116,6 +119,7 @@ export class ParticipeDashComponent implements OnInit {
     private detallePrestamoService: DetallePrestamoService,
     private pagoPrestamoService: PagoPrestamoService,
     private aporteService: AporteService,
+    private tipoAporteService: TipoAporteService,
     private contratoService: ContratoService,
     private participeService: ParticipeService,
     private estadoPrestamoService: EstadoPrestamoService,
@@ -1110,11 +1114,13 @@ export class ParticipeDashComponent implements OnInit {
     this.aportes.forEach((aporte) => {
       const codigoTipo = aporte.tipoAporte?.codigo || 0;
       const nombreTipo = aporte.tipoAporte?.nombre || 'Sin tipo';
+      const estadoTipo = aporte.tipoAporte?.estado || 0;
 
       if (!tiposMap.has(codigoTipo)) {
         tiposMap.set(codigoTipo, {
           tipoAporte: nombreTipo,
           codigoTipo: codigoTipo,
+          estadoTipo: estadoTipo,
           aportes: [],
           totalValor: 0,
           totalPagado: 0,
@@ -1655,15 +1661,160 @@ export class ParticipeDashComponent implements OnInit {
   }
 
   /**
-   * Abre el diálogo para cambiar el estado de un tipo de aporte
+   * Obtiene el estado del tipo de aporte (no de los aportes individuales)
+   */
+  obtenerEstadoPreferenteTipo(tipoAporte: AportesPorTipo): {
+    texto: string;
+    clase: string;
+    icono: string;
+  } | null {
+    const estadoId = tipoAporte.estadoTipo || 0;
+
+    // Obtener info del estado
+    const estadoInfo = this.obtenerEstadoAporte({ estado: estadoId } as Aporte);
+
+    let icono = 'check_circle';
+    if (estadoInfo.clase.includes('vencido')) {
+      icono = 'error';
+    } else if (estadoInfo.clase.includes('pendiente')) {
+      icono = 'schedule';
+    } else if (estadoInfo.clase.includes('aprobado') || estadoInfo.clase.includes('revisado')) {
+      icono = 'verified';
+    } else if (estadoInfo.clase.includes('legalizado')) {
+      icono = 'gavel';
+    }
+
+    return {
+      texto: estadoInfo.texto,
+      clase: estadoInfo.clase,
+      icono: icono,
+    };
+  }
+
+  /**
+   * Abre el diálogo para cambiar el estado del tipo de aporte
    */
   cambiarEstadoTipoAporte(tipoAporte: AportesPorTipo, event?: Event): void {
     if (event) {
       event.stopPropagation();
     }
 
-    this.snackBar.open('Funcionalidad de cambio de estado del tipo de aporte', 'Cerrar', {
-      duration: 3000,
+    // Obtener el estado actual
+    const estadoActual = this.obtenerEstadoPreferenteTipo(tipoAporte);
+
+    const dialogRef = this.dialog.open(AuditoriaDialogComponent, {
+      width: '500px',
+      data: {
+        entidad: {
+          codigo: tipoAporte.codigoTipo,
+          nombre: tipoAporte.tipoAporte,
+          estadoActual: estadoActual?.texto || 'N/A',
+        },
+        estadosDisponibles: this.estadosPrestamo,
+        titulo: 'Cambiar Estado del Tipo de Aporte',
+        entidadTipo: 'Tipo de Aporte',
+        campoNombre: 'nombre',
+        campoIdentificacion: 'codigo',
+        campoEstadoActual: 'estadoActual',
+      } as CambiarEstadoDialogData,
+    });
+
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result) {
+        this.ejecutarCambioEstadoTipoAporte(tipoAporte, result.nuevoEstado, result.motivo);
+      }
+    });
+  }
+
+  /**
+   * Ejecuta el cambio de estado del tipo de aporte
+   */
+  private ejecutarCambioEstadoTipoAporte(
+    tipoAporte: AportesPorTipo,
+    nuevoEstadoCodigo: number,
+    motivo: string
+  ): void {
+    this.tipoAporteService.getById(tipoAporte.codigoTipo.toString()).subscribe({
+      next: (tipoAporteCompleto) => {
+        if (!tipoAporteCompleto) {
+          this.snackBar.open('Error: No se encontró el tipo de aporte', 'Cerrar', {
+            duration: 5000,
+          });
+          return;
+        }
+
+        const estadoAnteriorCodigo = tipoAporteCompleto.estado || 0;
+        const estadoAnterior = {
+          codigo: estadoAnteriorCodigo,
+          nombre: this.obtenerNombreEstadoPrestamo(estadoAnteriorCodigo),
+        };
+
+        // Actualizar el tipo de aporte
+        const tipoAporteParaBackend: any = {
+          ...tipoAporteCompleto,
+          estado: nuevoEstadoCodigo,
+        };
+
+        this.tipoAporteService.update(tipoAporteParaBackend).subscribe({
+          next: () => {
+            // Registrar auditoría
+            this.registrarCambioEstadoTipoAporteEnAuditoria(
+              tipoAporteCompleto,
+              estadoAnterior,
+              nuevoEstadoCodigo,
+              motivo
+            );
+
+            // Recargar aportes para actualizar la visualización
+            this.cargarAportes();
+
+            this.snackBar.open('✅ Estado del tipo de aporte actualizado exitosamente', 'Cerrar', {
+              duration: 5000,
+            });
+          },
+          error: (error) => {
+            console.error('Error al actualizar tipo de aporte:', error);
+            const mensaje = error?.mensaje || 'Error al cambiar el estado del tipo de aporte';
+            this.snackBar.open(mensaje, 'Cerrar', { duration: 5000 });
+          },
+        });
+      },
+      error: (error) => {
+        console.error('Error al recuperar tipo de aporte:', error);
+        this.snackBar.open('Error al recuperar el tipo de aporte', 'Cerrar', { duration: 5000 });
+      },
+    });
+  }
+
+  /**
+   * Registra el cambio de estado del tipo de aporte en auditoría
+   */
+  private registrarCambioEstadoTipoAporteEnAuditoria(
+    tipoAporte: TipoAporte,
+    estadoAnterior: { codigo: number; nombre: string },
+    nuevoEstadoCodigo: number,
+    motivo: string
+  ): void {
+    const estadoNuevo = {
+      codigo: nuevoEstadoCodigo,
+      nombre: this.obtenerNombreEstadoPrestamo(nuevoEstadoCodigo),
+    };
+
+    const registroAuditoria = this.auditoriaService.construirRegistroCambioEstado({
+      accion: 'UPDATE',
+      nombreComponente: 'ParticipeDash',
+      entidadLogica: 'TIPO_APORTE',
+      idEntidad: tipoAporte.codigo!,
+      estadoAnterior: estadoAnterior,
+      estadoNuevo: estadoNuevo,
+      motivo: motivo,
+    });
+
+    this.auditoriaService.add(registroAuditoria).subscribe({
+      next: () => {},
+      error: (err) => {
+        console.error('Error al registrar auditoría de tipo aporte (no crítico):', err);
+      },
     });
   }
 

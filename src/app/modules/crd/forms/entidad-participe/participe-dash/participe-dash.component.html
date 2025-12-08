@@ -519,6 +519,13 @@
               <mat-icon>account_balance_wallet</mat-icon>
               ${{ tipoAporte.totalValor | number : '1.2-2' }}
             </span>
+            <!-- Estado del aporte -->
+            @if (obtenerEstadoPreferenteTipo(tipoAporte); as estadoInfo) {
+            <span class="estado-badge" [ngClass]="estadoInfo.clase">
+              <mat-icon>{{ estadoInfo.icono }}</mat-icon>
+              {{ estadoInfo.texto }}
+            </span>
+            }
           </div>
         </mat-card-subtitle>
         <button
