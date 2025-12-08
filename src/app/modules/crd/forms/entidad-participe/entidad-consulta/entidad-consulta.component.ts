@@ -25,15 +25,15 @@ import {
   FuncionesDatosService,
   TipoFormatoFechaBackend,
 } from '../../../../../shared/services/funciones-datos.service';
+import {
+  AuditoriaDialogComponent,
+  CambiarEstadoDialogData,
+} from '../../../dialog/auditoria-dialog/auditoria-dialog.component';
 import { AuditoriaService } from '../../../service/auditoria.service';
 import { EntidadService } from '../../../service/entidad.service';
 import { EstadoParticipeService } from '../../../service/estado-participe.service';
 import { FilialService } from '../../../service/filial.service';
 import { TipoIdentificacionService } from '../../../service/tipo-identificacion.service';
-import {
-  CambiarEstadoDialogData,
-  EntidadCambiarEstadoDialogComponent,
-} from '../entidad-cambiar-estado-dialog/entidad-cambiar-estado-dialog.component';
 
 @Component({
   selector: 'app-entidad-consulta',
@@ -525,10 +525,15 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
     const dialogData: CambiarEstadoDialogData = {
       entidad,
       estadosDisponibles,
+      titulo: 'Cambiar Estado de Partícipe',
+      entidadTipo: 'Partícipe',
+      campoNombre: 'razonSocial',
+      campoIdentificacion: 'numeroIdentificacion',
+      campoEstadoActual: 'idEstado',
     };
 
-    const dialogRef = this.dialog.open(EntidadCambiarEstadoDialogComponent, {
-      width: '550px',
+    const dialogRef = this.dialog.open(AuditoriaDialogComponent, {
+      width: '600px',
       maxWidth: '90vw',
       autoFocus: 'first-tabbable',
       restoreFocus: true,
