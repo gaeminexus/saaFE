@@ -1,16 +1,19 @@
-import { Component, Input, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormGroup, FormControl, ReactiveFormsModule } from '@angular/forms';
-import { Observable, startWith, map } from 'rxjs';
-import { MatFormFieldModule } from '@angular/material/form-field';
+import { Component, Input, OnInit } from '@angular/core';
+import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
+import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { AutocompleteField, AutocompleteCollection, AutocompleteOption } from '../../model/autocomplete.interface';
-import { MessageVarService } from '../../service/message-var.service';
-import { AccionesGrid } from '../../../../constantes';
+import { map, Observable, startWith } from 'rxjs';
 import { DetalleRubroService } from '../../../../../services/detalle-rubro.service';
+import { AccionesGrid } from '../../../../constantes';
+import {
+  AutocompleteCollection,
+  AutocompleteField,
+  AutocompleteOption,
+} from '../../model/autocomplete.interface';
+import { MessageVarService } from '../../service/message-var.service';
 import { DynamicFormComponent } from '../dynamic-field/dynamic-field.directive';
-import { Validator } from '../../model/field.interface';
 
 @Component({
   selector: 'app-autocomplete',
@@ -20,10 +23,10 @@ import { Validator } from '../../model/field.interface';
     ReactiveFormsModule,
     MatFormFieldModule,
     MatAutocompleteModule,
-    MatInputModule
+    MatInputModule,
   ],
   templateUrl: './autocomplete.component.html',
-  styleUrl: './autocomplete.component.scss'
+  styleUrl: './autocomplete.component.scss',
 })
 export class AutocompleteComponent implements OnInit, DynamicFormComponent {
   @Input() field!: AutocompleteField;
@@ -41,17 +44,35 @@ export class AutocompleteComponent implements OnInit, DynamicFormComponent {
   constructor(
     private messageVarService: MessageVarService,
     private detalleRubroService: DetalleRubroService
-  ) { }
+  ) {}
 
   ngOnInit(): void {
+    console.log(
+      '🔍 AutocompleteComponent init - field:',
+      this.field.name,
+      'rubroAlterno:',
+      this.field.rubroAlterno
+    );
+
     // CARGA COLLECCION EN CASO DE SER RUBRO (acceso síncrono desde caché)
     if (this.field.rubroAlterno) {
-      this.field.collections = this.detalleRubroService.getDetallesByParent(Number(this.field.rubroAlterno));
+      this.field.collections = this.detalleRubroService.getDetallesByParent(
+        Number(this.field.rubroAlterno)
+      );
+      console.log('📦 Collections cargadas para', this.field.name, ':', this.field.collections);
 
       // Verificar si los datos están cargados
       if (this.field.collections.length === 0 && !this.detalleRubroService.estanDatosCargados()) {
-        console.warn('AutocompleteComponent: Rubros no cargados aún. Asegúrate de llamar AppStateService.inicializarApp() en el login.');
+        console.warn('⚠️ AutocompleteComponent: Rubros no cargados aún para', this.field.name);
+        console.warn('⚠️ Asegúrate de llamar AppStateService.inicializarApp() en el login.');
       }
+    } else {
+      console.log(
+        '📦 Collections pasadas directamente para',
+        this.field.name,
+        ':',
+        this.field.collections
+      );
     }
 
     if (this.field.autocompleteType === 1) {
@@ -59,7 +80,11 @@ export class AutocompleteComponent implements OnInit, DynamicFormComponent {
         if (this.field.rubroAlterno) {
           // Acceso síncrono optimizado
           this.myControl.setValue(
-            this.detalleRubroService.getDescripcionByParentAndAlterno(Number(this.field.rubroAlterno), this.field.value));
+            this.detalleRubroService.getDescripcionByParentAndAlterno(
+              Number(this.field.rubroAlterno),
+              this.field.value
+            )
+          );
         } else {
           this.myControl.setValue(this.concatNombre(this.field, this.field.selected));
           this.messageVarService.setParent(this.field.value?.codigo);
@@ -67,7 +92,7 @@ export class AutocompleteComponent implements OnInit, DynamicFormComponent {
       }
       this.filteredOptions = this.myControl.valueChanges.pipe(
         startWith(''),
-        map(value => {
+        map((value) => {
           if (value) {
             return this._filter(value);
           } else {
@@ -84,7 +109,6 @@ export class AutocompleteComponent implements OnInit, DynamicFormComponent {
     }
 
     if (this.field.autocompleteType === 2) {
-
       if (this.accion === AccionesGrid.EDIT) {
         this.myControlHijo.setValue(this.concatNombre(this.field, this.field.selected));
       }
@@ -99,11 +123,12 @@ export class AutocompleteComponent implements OnInit, DynamicFormComponent {
 
       this.filteredOptionsHijo = this.myControlHijo.valueChanges.pipe(
         startWith(''),
-        map(value => {
+        map((value) => {
           if (value) {
             return this._filterHijo(value) || [];
           } else {
-            if (!this.myControlHijo.value) { // PARA QUE NO BORRE EL VALOR CUANDO EDITA
+            if (!this.myControlHijo.value) {
+              // PARA QUE NO BORRE EL VALOR CUANDO EDITA
               const control = this.group.get(this.field['name'] || '');
               if (control) {
                 control.setValue(null);
@@ -114,7 +139,6 @@ export class AutocompleteComponent implements OnInit, DynamicFormComponent {
         })
       );
     }
-
   }
 
   private _filter(value: any): any {
@@ -129,7 +153,7 @@ export class AutocompleteComponent implements OnInit, DynamicFormComponent {
     }
   }
 
-  onFocus(): any{
+  onFocus(): any {
     // SIRVE PARA RESETEAR EL COMBO CUANDO NO HAY VALORES
     this.myControlHijo.setValue('');
   }
@@ -205,7 +229,7 @@ export class AutocompleteComponent implements OnInit, DynamicFormComponent {
     }
   }
 
-   seleccionHijo(item: any): void {
+  seleccionHijo(item: any): void {
     /* console.log(item);
     console.log(item.option.value);*/
     const control = this.group.get(this.field['name'] || '');
@@ -220,10 +244,14 @@ export class AutocompleteComponent implements OnInit, DynamicFormComponent {
       const parentValue = this.messageVarService.getParent();
       const filterFather = this.field.filterFather;
       if (parentValue && filterFather && this.field.collections) {
-        return this.field.collections.filter(item => {
+        return this.field.collections.filter((item) => {
           const parentField = item[filterFather];
-          return parentField && typeof parentField === 'object' && 'codigo' in parentField &&
-                 parentField.codigo === parentValue;
+          return (
+            parentField &&
+            typeof parentField === 'object' &&
+            'codigo' in parentField &&
+            parentField.codigo === parentValue
+          );
         });
       }
     }
@@ -232,8 +260,8 @@ export class AutocompleteComponent implements OnInit, DynamicFormComponent {
 
   filtraHijos(idParent: number, nombrePadre: string): any {
     // tslint:disable-next-line: only-arrow-functions
-    return function(element: any): any {
-      return (element[nombrePadre].codigo === idParent);
+    return function (element: any): any {
+      return element[nombrePadre].codigo === idParent;
     };
   }
 
@@ -244,9 +272,12 @@ export class AutocompleteComponent implements OnInit, DynamicFormComponent {
     };
   }*/
 
-  private filtraCombo(selectField: string[], nombreCampo: string): (item: AutocompleteCollection) => boolean {
+  private filtraCombo(
+    selectField: string[],
+    nombreCampo: string
+  ): (item: AutocompleteCollection) => boolean {
     const self = this;
-    return function(element: AutocompleteCollection): boolean {
+    return function (element: AutocompleteCollection): boolean {
       let result = '';
       if (selectField && selectField.length > 0) {
         let tmp = '';
@@ -287,5 +318,4 @@ export class AutocompleteComponent implements OnInit, DynamicFormComponent {
       this.messageVarService.setParent(null);
     }
   }
-
 }

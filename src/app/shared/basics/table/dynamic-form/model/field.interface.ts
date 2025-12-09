@@ -19,4 +19,6 @@ export interface FieldConfig {
   filterFather?: string; // Nombre del campo del padre por el que se filtra el combo
   rubroAlterno?: number; // Codigo alterno del rubro en caso de que el combo lea de uno
   validations?: Validator[];
+  inputClass?: string; // Clase CSS personalizada para el input
+  transformToUppercase?: boolean; // Transformar valor a mayúsculas
 }

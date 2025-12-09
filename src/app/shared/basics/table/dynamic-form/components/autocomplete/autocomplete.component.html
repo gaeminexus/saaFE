@@ -1,6 +1,6 @@
 <div [formGroup]="group">
   <mat-form-field class="demo-full-width margin-top" appearance="outline">
-    <mat-label>{{ field.label || '' }}</mat-label>
+    <mat-label>{{ field.label || 'Sin etiqueta' }}</mat-label>
 
     @if (field.autocompleteType === 1) {
     <input
@@ -21,6 +21,8 @@
       <mat-option [value]="item">
         {{ concatNombre(field, item) }}
       </mat-option>
+      } @empty {
+      <mat-option disabled>No hay opciones disponibles</mat-option>
       }
     </mat-autocomplete>
     } @else if (field.autocompleteType === 2) {

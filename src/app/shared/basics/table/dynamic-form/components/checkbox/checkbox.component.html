@@ -1,5 +1,9 @@
 <div class="demo-full-width margin-top" [formGroup]="group">
-  @if (field['name']) {
-    <mat-checkbox [formControlName]="field['name']">{{field['label']}}</mat-checkbox>
+  @if (field && field.name) {
+  <mat-checkbox [formControlName]="field.name">{{ field.label || 'Sin etiqueta' }}</mat-checkbox>
+  } @else {
+  <div style="color: red; padding: 10px; border: 1px solid red">
+    ⚠️ ERROR: Checkbox sin nombre configurado
+  </div>
   }
 </div>

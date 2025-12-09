@@ -56,6 +56,24 @@ export class NaturalezaDeCuentasComponent implements OnInit {
     // Debug: Verificar detalles de rubro cargados
     if (this.detalleRubroService.estanDatosCargados()) {
       this.tipoNaturaleza = this.detalleRubroService.getDetallesByParent(RUBRO_TIPO_GRUPO);
+      console.log('📦 Tipos de naturaleza cargados:', this.tipoNaturaleza);
+      console.log('📦 Cantidad de tipos:', this.tipoNaturaleza.length);
+    } else {
+      console.warn(
+        '⚠️ DetalleRubroService no está cargado. Los tipos de naturaleza no estarán disponibles.'
+      );
+      console.warn('⚠️ Verifica que AppStateService.inicializarApp() se ejecute en el login.');
+      // Intentar cargar después
+      setTimeout(() => {
+        if (this.detalleRubroService.estanDatosCargados()) {
+          this.tipoNaturaleza = this.detalleRubroService.getDetallesByParent(RUBRO_TIPO_GRUPO);
+          console.log('📦 Tipos de naturaleza cargados (retry):', this.tipoNaturaleza);
+          // Reconfigurar tabla con datos actualizados
+          if (this.naturalezaCuentas.length > 0) {
+            this.setupTableConfig();
+          }
+        }
+      }, 1000);
     }
 
     this.loadData();
@@ -82,13 +100,15 @@ export class NaturalezaDeCuentasComponent implements OnInit {
     return [
       { column: 'numero', header: 'Número', fWidth: '15%', fSort: true },
       { column: 'nombre', header: 'Nombre', fWidth: '35%', fSort: true },
-      { column: 'rubro_13_tipo', header: 'Tipo', fWidth: '20%', fSort: true },
-      { column: 'manejaCentroCosto', header: 'Centro de Costos', fWidth: '20%', fSort: true },
-      { column: 'estado', header: 'Estado', fWidth: '10%', fSort: true },
+      { column: 'tipoFormateado', header: 'Tipo', fWidth: '20%', fSort: true },
+      { column: 'centroCostoFormateado', header: 'Centro de Costos', fWidth: '20%', fSort: true },
+      { column: 'estadoFormateado', header: 'Estado', fWidth: '10%', fSort: true },
     ];
   }
 
   private getRegConfig(): FieldConfig[] {
+    console.log('🔧 getRegConfig() - tipoNaturaleza:', this.tipoNaturaleza);
+
     // Transformar DetalleRubro a formato de opciones para el select
     // El valor seleccionado (codigoAlterno) se almacenará en el campo 'tipo'
     const tiposOptions = this.tipoNaturaleza.map((detalle) => ({
@@ -98,12 +118,13 @@ export class NaturalezaDeCuentasComponent implements OnInit {
 
     console.log(`✅ Opciones transformadas para select:`, tiposOptions);
 
-    return [
+    const config: FieldConfig[] = [
       {
-        type: 'input',
+        type: 'input' as const,
         label: 'Nombre',
         name: 'nombre',
         inputType: 'text',
+        transformToUppercase: true,
         validations: [
           { name: 'required', validator: Validators.required, message: 'El nombre es requerido' },
           { name: 'minlength', validator: Validators.minLength(3), message: 'Mínimo 3 caracteres' },
@@ -115,7 +136,7 @@ export class NaturalezaDeCuentasComponent implements OnInit {
         ],
       },
       {
-        type: 'autocomplete',
+        type: 'autocomplete' as const,
         label: 'Tipo de Naturaleza',
         name: 'tipo',
         collections: this.tipoNaturaleza,
@@ -127,7 +148,7 @@ export class NaturalezaDeCuentasComponent implements OnInit {
         ],
       },
       {
-        type: 'input',
+        type: 'input' as const,
         label: 'Número de Cuenta',
         name: 'numero',
         inputType: 'text',
@@ -141,12 +162,15 @@ export class NaturalezaDeCuentasComponent implements OnInit {
         ],
       },
       {
-        type: 'checkbox',
+        type: 'checkbox' as const,
         label: 'Maneja Centro de Costo',
         name: 'manejaCentroCosto',
         value: false,
       },
     ];
+
+    console.log('📋 Configuración final de campos del formulario:', config);
+    return config;
   }
 
   // ⚠️ Debe ser público para que el template pueda llamarlo
@@ -182,7 +206,16 @@ export class NaturalezaDeCuentasComponent implements OnInit {
         const list = Array.isArray(data) ? data : (data as any)?.data ?? [];
         console.log(`📋 Lista de naturalezas procesada para empresa ${idSucursal}:`, list);
 
-        this.naturalezaCuentas = list.sort((a: any, b: any) => (b.numero || 0) - (a.numero || 0));
+        // Transformar datos numéricos a texto legible para el grid
+        this.naturalezaCuentas = list
+          .map((item: any) => ({
+            ...item,
+            tipoFormateado: this.tipoLabel(item.tipo),
+            centroCostoFormateado: this.manejaCentroCostoLabel(item.manejaCentroCosto),
+            estadoFormateado: this.estadoLabel(item.estado)
+          }))
+          .sort((a: any, b: any) => (b.numero || 0) - (a.numero || 0));
+
         this.totalElements = this.naturalezaCuentas.length;
         this.loading = false;
 
@@ -203,9 +236,17 @@ export class NaturalezaDeCuentasComponent implements OnInit {
             console.log('📡 Respuesta fallback getAll:', data);
             const list = Array.isArray(data) ? data : (data as any)?.data ?? [];
             const filtered = list.filter((nat: any) => nat?.empresa?.codigo === idSucursal);
-            this.naturalezaCuentas = filtered.sort(
-              (a: any, b: any) => (b.numero || 0) - (a.numero || 0)
-            );
+
+            // Transformar datos numéricos a texto legible para el grid
+            this.naturalezaCuentas = filtered
+              .map((item: any) => ({
+                ...item,
+                tipoFormateado: this.tipoLabel(item.tipo),
+                centroCostoFormateado: this.manejaCentroCostoLabel(item.manejaCentroCosto),
+                estadoFormateado: this.estadoLabel(item.estado)
+              }))
+              .sort((a: any, b: any) => (b.numero || 0) - (a.numero || 0));
+
             this.totalElements = this.naturalezaCuentas.length;
             this.loading = false;
             this.setupTableConfig();
