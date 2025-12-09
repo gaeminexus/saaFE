@@ -212,7 +212,7 @@ export class NaturalezaDeCuentasComponent implements OnInit {
             ...item,
             tipoFormateado: this.tipoLabel(item.tipo),
             centroCostoFormateado: this.manejaCentroCostoLabel(item.manejaCentroCosto),
-            estadoFormateado: this.estadoLabel(item.estado)
+            estadoFormateado: this.estadoLabel(item.estado),
           }))
           .sort((a: any, b: any) => (b.numero || 0) - (a.numero || 0));
 
@@ -243,7 +243,7 @@ export class NaturalezaDeCuentasComponent implements OnInit {
                 ...item,
                 tipoFormateado: this.tipoLabel(item.tipo),
                 centroCostoFormateado: this.manejaCentroCostoLabel(item.manejaCentroCosto),
-                estadoFormateado: this.estadoLabel(item.estado)
+                estadoFormateado: this.estadoLabel(item.estado),
               }))
               .sort((a: any, b: any) => (b.numero || 0) - (a.numero || 0));
 
