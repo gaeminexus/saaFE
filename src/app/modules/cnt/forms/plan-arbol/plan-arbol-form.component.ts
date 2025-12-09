@@ -1,17 +1,17 @@
-import { Component, OnInit, Inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
+import { Component, Inject, OnInit } from '@angular/core';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatIconModule } from '@angular/material/icon';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSelectModule } from '@angular/material/select';
 
-import { PlanCuenta } from '../../model/plan-cuenta';
 import { NaturalezaCuenta } from '../../model/naturaleza-cuenta';
+import { PlanCuenta } from '../../model/plan-cuenta';
 import { PlanCuentaService } from '../../service/plan-cuenta.service';
 
 export interface PlanArbolFormData {
@@ -36,10 +36,10 @@ export interface PlanArbolFormData {
     MatSelectModule,
     MatProgressSpinnerModule,
     MatIconModule,
-    MatCheckboxModule
+    MatCheckboxModule,
   ],
   templateUrl: './plan-arbol-form.component.html',
-  styleUrls: ['./plan-arbol-form.component.scss']
+  styleUrls: ['./plan-arbol-form.component.scss'],
 })
 export class PlanArbolFormComponent implements OnInit {
   form: FormGroup;
@@ -48,33 +48,33 @@ export class PlanArbolFormComponent implements OnInit {
   isEdit: boolean;
   naturalezas: NaturalezaCuenta[] = [];
   parentAccount?: PlanCuenta;
-  
+
   // Prefijo para validación (niveles superiores bloqueados)
   requiredPrefix: string = '';
-  
+
   // Naturalezas filtradas por nivel
   get naturalezasFiltradas(): NaturalezaCuenta[] {
     const nivel = this.form?.get('nivel')?.value;
     if (!nivel) return this.naturalezas;
-    
+
     // Obtener el primer número de la cuenta para determinar la naturaleza
     const cuentaContable = this.form?.get('cuentaContable')?.value;
     const primerNivel = this.getPrimerNivel(cuentaContable);
-    
+
     // Filtrar naturalezas cuyo campo 'numero' coincida con el primer nivel
-    return this.naturalezas.filter(nat => nat.numero === primerNivel);
+    return this.naturalezas.filter((nat) => nat.numero === primerNivel);
   }
-  
+
   /**
    * Obtiene el primer nivel de una cuenta contable
    * Ejemplo: "1.1.1.1.5" -> 1, "2.3.01" -> 2
    */
   private getPrimerNivel(cuentaContable: string): number {
     if (!cuentaContable) return 0;
-    
+
     const partes = String(cuentaContable).split('.');
     if (partes.length === 0) return 0;
-    
+
     const primerNumero = parseInt(partes[0], 10);
     return isNaN(primerNumero) ? 0 : primerNumero;
   }
@@ -116,7 +116,7 @@ export class PlanArbolFormComponent implements OnInit {
     this.isEdit = !!data.item;
     this.naturalezas = data.naturalezas;
     this.parentAccount = data.parent;
-    
+
     // Establecer prefijo requerido si hay padre
     if (this.parentAccount && this.parentAccount.cuentaContable) {
       this.requiredPrefix = this.parentAccount.cuentaContable + '.';
@@ -133,57 +133,63 @@ export class PlanArbolFormComponent implements OnInit {
         this.requiredPrefix = partes.join('.') + '.';
       }
       // Si solo tiene un nivel (ej: "1"), no hay prefijo y puede editarse libremente
-      
+
       this.form = this.fb.group({
-        codigo: [{value: data.item?.codigo || '', disabled: true}],
+        codigo: [{ value: data.item?.codigo || '', disabled: true }],
         nombre: [data.item?.nombre || '', [Validators.required, Validators.maxLength(100)]],
-        cuentaContable: [data.item?.cuentaContable || '', [Validators.required, this.cuentaContableValidator.bind(this)]],
-        nivel: [{value: data.item?.nivel || 1, disabled: true}],
-        tipo: [{value: data.item?.tipo || 1, disabled: true}],
-        naturalezaCuenta: [{value: data.item?.naturalezaCuenta || null, disabled: true}],
-        estado: [{value: data.item?.estado ?? 1, disabled: true}]
+        cuentaContable: [
+          data.item?.cuentaContable || '',
+          [Validators.required, this.cuentaContableValidator.bind(this)],
+        ],
+        nivel: [{ value: data.item?.nivel || 1, disabled: true }],
+        tipo: [{ value: data.item?.tipo || 1, disabled: true }],
+        naturalezaCuenta: [{ value: data.item?.naturalezaCuenta || null, disabled: true }],
+        estado: [{ value: data.item?.estado ?? 1, disabled: true }],
       });
     } else {
       // En modo creación, permitir todos los campos
       this.form = this.fb.group({
-        codigo: [{value: '', disabled: true}],
+        codigo: [{ value: '', disabled: true }],
         nombre: [data.item?.nombre || '', [Validators.required, Validators.maxLength(100)]],
-        cuentaContable: [data.presetCuenta || data.item?.cuentaContable || '', [Validators.required, this.cuentaContableValidator.bind(this)]],
-        nivel: [{value: data.presetNivel || data.item?.nivel || 1, disabled: true}],
-        tipo: [{value: data.item?.tipo || 1, disabled: true}],
+        cuentaContable: [
+          data.presetCuenta || data.item?.cuentaContable || '',
+          [Validators.required, this.cuentaContableValidator.bind(this)],
+        ],
+        nivel: [{ value: data.presetNivel || data.item?.nivel || 1, disabled: true }],
+        tipo: [{ value: data.item?.tipo || 1, disabled: true }],
         naturalezaCuenta: [data.item?.naturalezaCuenta || null, [Validators.required]],
-        estado: [data.item?.estado ?? 1, [Validators.required]]
+        estado: [data.item?.estado ?? 1, [Validators.required]],
       });
     }
   }
 
   ngOnInit(): void {
     // Heredar tipo desde naturaleza seleccionada
-    this.form.get('naturalezaCuenta')?.valueChanges.subscribe(nat => {
+    this.form.get('naturalezaCuenta')?.valueChanges.subscribe((nat) => {
       if (nat && nat.tipo != null) {
         this.form.patchValue({ tipo: nat.tipo }, { emitEvent: false });
       }
     });
 
     // Forzar mayúsculas en el nombre mientras se escribe
-    this.form.get('nombre')?.valueChanges.subscribe(val => {
+    this.form.get('nombre')?.valueChanges.subscribe((val) => {
       if (typeof val === 'string' && val !== val.toUpperCase()) {
         this.form.get('nombre')?.setValue(val.toUpperCase(), { emitEvent: false });
       }
     });
 
     // Actualizar nivel automáticamente cuando cambie cuentaContable
-    this.form.get('cuentaContable')?.valueChanges.subscribe(val => {
+    this.form.get('cuentaContable')?.valueChanges.subscribe((val) => {
       if (val) {
         const nivel = this.calculateLevel(String(val));
         const nivelAnterior = this.form.get('nivel')?.value;
         const primerNivel = this.getPrimerNivel(String(val));
-        
+
         // Solo actualizar si cambió el nivel
         if (nivel !== nivelAnterior) {
           this.form.patchValue({ nivel }, { emitEvent: false });
         }
-        
+
         // Autoseleccionar naturaleza según el primer nivel
         this.autoSelectNaturaleza(primerNivel);
       }
@@ -191,18 +197,17 @@ export class PlanArbolFormComponent implements OnInit {
 
     // Forzar prefijo si hay padre o si está en edición con múltiples niveles
     if (this.requiredPrefix) {
-      this.form.get('cuentaContable')?.valueChanges.subscribe(val => {
+      this.form.get('cuentaContable')?.valueChanges.subscribe((val) => {
         const valStr = String(val || '');
-        
+
         // Si no tiene el prefijo o está vacío, restaurarlo
         if (!valStr.startsWith(this.requiredPrefix)) {
           // Solo restaurar si el usuario está escribiendo, no en el init
-          const initialValue = this.isEdit ? this.data.item?.cuentaContable : this.data.presetCuenta;
+          const initialValue = this.isEdit
+            ? this.data.item?.cuentaContable
+            : this.data.presetCuenta;
           if (valStr.length > 0 && valStr !== initialValue) {
-            this.form.get('cuentaContable')?.setValue(
-              this.requiredPrefix, 
-              { emitEvent: false }
-            );
+            this.form.get('cuentaContable')?.setValue(this.requiredPrefix, { emitEvent: false });
           }
         }
       });
@@ -213,7 +218,7 @@ export class PlanArbolFormComponent implements OnInit {
     const initialNivel = this.calculateLevel(initialCuentaContable);
     const initialPrimerNivel = this.getPrimerNivel(initialCuentaContable);
     this.form.patchValue({ nivel: initialNivel }, { emitEvent: false });
-    
+
     // Autoseleccionar naturaleza inicial si no está en modo edición
     if (!this.isEdit) {
       this.autoSelectNaturaleza(initialPrimerNivel);
@@ -225,8 +230,8 @@ export class PlanArbolFormComponent implements OnInit {
    * @param primerNivel - El primer número de la cuenta (ej: 1 en "1.1.01")
    */
   private autoSelectNaturaleza(primerNivel: number): void {
-    const naturalezasDelPrimerNivel = this.naturalezas.filter(nat => nat.numero === primerNivel);
-    
+    const naturalezasDelPrimerNivel = this.naturalezas.filter((nat) => nat.numero === primerNivel);
+
     if (naturalezasDelPrimerNivel.length === 1) {
       // Si hay exactamente una naturaleza para este primer nivel, seleccionarla automáticamente
       this.form.patchValue({ naturalezaCuenta: naturalezasDelPrimerNivel[0] }, { emitEvent: true });
@@ -251,8 +256,10 @@ export class PlanArbolFormComponent implements OnInit {
     if (this.isEdit) {
       cuenta = {
         ...this.data.item!,
-        nombre: String(this.form.get('nombre')?.value || '').trim().toUpperCase(),
-        fechaUpdate: new Date()
+        nombre: String(this.form.get('nombre')?.value || '')
+          .trim()
+          .toUpperCase(),
+        fechaUpdate: this.formatDateToLocalDate(new Date()),
       } as PlanCuenta;
     } else {
       // En modo creación: normalizar tipos, asignar empresa 280 e idPadre si aplica
@@ -269,11 +276,14 @@ export class PlanArbolFormComponent implements OnInit {
       const tipoHeradado = naturaleza?.tipo ?? 1;
 
       // Tomar empresa completa preferentemente desde la naturaleza o desde el padre si existe
-      const empresaOrigen = naturaleza?.empresa || this.parentAccount?.empresa || { codigo: 280 } as any;
-      
+      const empresaOrigen =
+        naturaleza?.empresa || this.parentAccount?.empresa || ({ codigo: 280 } as any);
+
       cuenta = {
         // NO enviar codigo - el backend lo genera automáticamente
-        nombre: String(formValue.nombre || '').trim().toUpperCase(),
+        nombre: String(formValue.nombre || '')
+          .trim()
+          .toUpperCase(),
         cuentaContable: String(formValue.cuentaContable || '').trim(),
         tipo: Number(tipoHeradado),
         nivel: nivelNuevo,
@@ -281,10 +291,10 @@ export class PlanArbolFormComponent implements OnInit {
         estado: Number(formValue.estado ?? 1),
         idPadre: this.parentAccount?.codigo ?? 0,
         empresa: empresaOrigen,
-        fechaInactivo: new Date(),
-        fechaUpdate: new Date()
+        fechaInactivo: this.formatDateToLocalDate(new Date()),
+        fechaUpdate: this.formatDateToLocalDate(new Date()),
       } as Partial<PlanCuenta>;
-      
+
       if (!cuenta.naturalezaCuenta || !cuenta.naturalezaCuenta.codigo) {
         this.loading = false;
         this.error = 'Debe seleccionar una Naturaleza de Cuenta válida';
@@ -304,7 +314,7 @@ export class PlanArbolFormComponent implements OnInit {
       error: (error: any) => {
         this.loading = false;
         this.error = error.message || 'Error al guardar la cuenta';
-      }
+      },
     });
   }
 
@@ -313,7 +323,7 @@ export class PlanArbolFormComponent implements OnInit {
   }
 
   getNaturalezaName(id: number): string {
-    const naturaleza = this.naturalezas.find(n => n.codigo === id);
+    const naturaleza = this.naturalezas.find((n) => n.codigo === id);
     return naturaleza?.nombre || '';
   }
 
@@ -367,32 +377,32 @@ export class PlanArbolFormComponent implements OnInit {
 
     // Si hay prefijo requerido (padre o edición multi-nivel), validarlo
     if (this.requiredPrefix) {
-      
       if (!valueStr.startsWith(this.requiredPrefix)) {
-        return { 
-          invalidHierarchy: `Debe comenzar con "${this.requiredPrefix}" (niveles superiores protegidos)` 
+        return {
+          invalidHierarchy: `Debe comenzar con "${this.requiredPrefix}" (niveles superiores protegidos)`,
         };
       }
 
       // Validar que haya agregado algo después del prefijo
       const lastLevel = valueStr.substring(this.requiredPrefix.length);
       if (!lastLevel || lastLevel.trim() === '') {
-        return { 
-          missingLastLevel: 'Debe agregar el último nivel después del prefijo' 
+        return {
+          missingLastLevel: 'Debe agregar el último nivel después del prefijo',
         };
       }
 
       // Validar que el último nivel no contenga puntos (solo un nivel adicional)
       if (lastLevel.includes('.')) {
-        return { 
-          multipleNewLevels: 'Solo puede agregar un nivel a la vez. Use números sin puntos para el último nivel' 
+        return {
+          multipleNewLevels:
+            'Solo puede agregar un nivel a la vez. Use números sin puntos para el último nivel',
         };
       }
 
       // Validar que el último nivel sea numérico
       if (!/^\d+$/.test(lastLevel)) {
-        return { 
-          invalidLastLevel: 'El último nivel debe ser solo números' 
+        return {
+          invalidLastLevel: 'El último nivel debe ser solo números',
         };
       }
     }
@@ -415,5 +425,15 @@ export class PlanArbolFormComponent implements OnInit {
     if (control.errors['invalidLastLevel']) return control.errors['invalidLastLevel'];
 
     return 'Número de cuenta inválido';
+  }
+
+  /**
+   * Convierte Date a formato YYYY-MM-DD para compatibilidad con LocalDate del backend
+   */
+  private formatDateToLocalDate(date: Date): any {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 }

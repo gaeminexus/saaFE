@@ -53,12 +53,12 @@ export class PlanCuentaService {
       idPadre: datos.idPadre,
       naturalezaCuenta: datos.naturalezaCuenta,
       empresa: { codigo: this.idSucursal },
-      fechaUpdate: new Date()
+      fechaUpdate: this.formatDateToLocalDate(new Date())
     };
 
     // Agregar fechaInactivo solo si el estado es inactivo (0)
     if (datos.estado === 0) {
-      payload.fechaInactivo = new Date();
+      payload.fechaInactivo = this.formatDateToLocalDate(new Date());
     }
 
     // Solo incluir codigo si existe y no es 0
@@ -84,12 +84,12 @@ export class PlanCuentaService {
       idPadre: datos.idPadre,
       naturalezaCuenta: datos.naturalezaCuenta,
       empresa: { codigo: this.idSucursal },
-      fechaUpdate: new Date()
+      fechaUpdate: this.formatDateToLocalDate(new Date())
     };
 
     // Agregar fechaInactivo solo si el estado es inactivo (0)
     if (datos.estado === 0) {
-      payload.fechaInactivo = new Date();
+      payload.fechaInactivo = this.formatDateToLocalDate(new Date());
     }
 
     console.log('[PlanCuentaService.update] Payload enviado:', JSON.stringify(payload, null, 2));
@@ -130,6 +130,16 @@ export class PlanCuentaService {
       return of(null);
     }
     return throwError(() => error ?? { message: 'Error desconocido' });
+  }
+
+  /**
+   * Convierte Date a formato YYYY-MM-DD para compatibilidad con LocalDate del backend
+   */
+  private formatDateToLocalDate(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
 }
