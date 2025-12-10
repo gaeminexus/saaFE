@@ -435,6 +435,260 @@ export class PagoCuotasComponent implements OnInit {
   }
 
   /**
+   * Calcula el total solicitado de todos los préstamos
+   */
+  calcularTotalSolicitado(): number {
+    return this.prestamos.reduce((sum, p) => sum + (p.montoSolicitado || 0), 0);
+  }
+
+  /**
+   * Calcula el total pagado de todos los préstamos
+   */
+  calcularTotalPagado(): number {
+    return this.prestamos.reduce((sum, p) => sum + (p.totalPagado || 0), 0);
+  }
+
+  /**
+   * Calcula el saldo pendiente total de todos los préstamos
+   */
+  calcularSaldoPendiente(): number {
+    return this.prestamos.reduce((sum, p) => sum + (p.saldoTotal || 0), 0);
+  }
+
+  /**
+   * Genera PDF con el resumen de préstamos
+   */
+  generarPDFResumen(): void {
+    if (!this.prestamos || this.prestamos.length === 0) {
+      this.snackBar.open('No hay préstamos para generar el resumen', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    if (!this.entidadEncontrada) {
+      this.snackBar.open('No hay información de entidad disponible', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    try {
+      this.snackBar.open('Generando PDF resumen de préstamos...', '', { duration: 2000 });
+
+      this.cargarJsPDF()
+        .then((jsPDF: any) => {
+          const doc = new jsPDF();
+          let yPosition = 20;
+
+          // Función auxiliar para verificar espacio
+          const checkPageBreak = (requiredSpace: number = 20) => {
+            if (yPosition + requiredSpace > doc.internal.pageSize.height - 20) {
+              doc.addPage();
+              yPosition = 20;
+              return true;
+            }
+            return false;
+          };
+
+          // Título principal
+          doc.setFontSize(18);
+          doc.setFont(undefined, 'bold');
+          doc.text('Resumen de Préstamos', 105, yPosition, { align: 'center' });
+
+          yPosition += 15;
+
+          // Información de la entidad
+          doc.setFontSize(12);
+          doc.setTextColor(102, 126, 234);
+          doc.text('Información del Partícipe', 14, yPosition);
+
+          yPosition += 8;
+          doc.setFontSize(10);
+          doc.setTextColor(0, 0, 0);
+          doc.setFont(undefined, 'normal');
+
+          const entidad = this.entidadEncontrada!;
+          doc.text(`Razón Social: ${entidad.razonSocial || 'N/A'}`, 14, yPosition);
+          yPosition += 6;
+          doc.text(`Identificación: ${entidad.numeroIdentificacion || 'N/A'}`, 14, yPosition);
+          yPosition += 6;
+          if (entidad.nombreComercial && entidad.razonSocial !== entidad.nombreComercial) {
+            doc.text(`Nombre Comercial: ${entidad.nombreComercial}`, 14, yPosition);
+            yPosition += 6;
+          }
+
+          yPosition += 10;
+          checkPageBreak(40);
+
+          // Totales generales
+          doc.setFontSize(14);
+          doc.setTextColor(102, 126, 234);
+          doc.setFont(undefined, 'bold');
+          doc.text('Totales Generales', 14, yPosition);
+
+          yPosition += 8;
+          doc.setFontSize(11);
+          doc.setTextColor(0, 0, 0);
+          doc.setFont(undefined, 'normal');
+
+          const totalPrestamos = this.prestamos.length;
+          const totalSolicitado = this.calcularTotalSolicitado();
+          const totalPagado = this.calcularTotalPagado();
+          const saldoPendiente = this.calcularSaldoPendiente();
+
+          doc.text(`Total de Préstamos: ${totalPrestamos}`, 14, yPosition);
+          yPosition += 6;
+          doc.text(`Monto Total Solicitado: $${totalSolicitado.toFixed(2)}`, 14, yPosition);
+          yPosition += 6;
+          doc.text(`Total Pagado: $${totalPagado.toFixed(2)}`, 14, yPosition);
+          yPosition += 6;
+          doc.text(`Saldo Pendiente: $${saldoPendiente.toFixed(2)}`, 14, yPosition);
+          yPosition += 6;
+
+          // Calcular porcentaje de pago
+          const porcentajePagado = totalSolicitado > 0 ? (totalPagado / totalSolicitado) * 100 : 0;
+          doc.text(`Porcentaje Pagado: ${porcentajePagado.toFixed(1)}%`, 14, yPosition);
+          yPosition += 12;
+
+          checkPageBreak(40);
+
+          // Tabla resumen por préstamo
+          doc.setFontSize(12);
+          doc.setTextColor(102, 126, 234);
+          doc.setFont(undefined, 'bold');
+          doc.text('Detalle de Préstamos', 14, yPosition);
+          yPosition += 8;
+
+          const prestamosData = this.prestamos.map((p) => {
+            return [
+              p.codigo?.toString() || 'N/A',
+              p.producto?.nombre || 'Sin Producto',
+              new Date(p.fecha).toLocaleDateString('es-ES'),
+              `$${(p.montoSolicitado || 0).toFixed(2)}`,
+              `$${(p.totalPagado || 0).toFixed(2)}`,
+              `$${(p.saldoTotal || 0).toFixed(2)}`,
+              p.estadoPrestamo?.nombre || 'N/A',
+            ];
+          });
+
+          if (doc.autoTable) {
+            doc.autoTable({
+              startY: yPosition,
+              head: [
+                [
+                  'Código',
+                  'Producto',
+                  'Fecha',
+                  'Monto Solicitado',
+                  'Total Pagado',
+                  'Saldo',
+                  'Estado',
+                ],
+              ],
+              body: prestamosData,
+              theme: 'striped',
+              styles: { fontSize: 8, cellPadding: 2 },
+              headStyles: {
+                fillColor: [102, 126, 234],
+                textColor: 255,
+                fontSize: 9,
+                fontStyle: 'bold',
+              },
+              columnStyles: {
+                0: { cellWidth: 20, halign: 'center' },
+                1: { cellWidth: 40 },
+                2: { cellWidth: 25, halign: 'center' },
+                3: { cellWidth: 30, halign: 'right' },
+                4: { cellWidth: 30, halign: 'right' },
+                5: { cellWidth: 25, halign: 'right' },
+                6: { cellWidth: 25, halign: 'center' },
+              },
+              footStyles: {
+                fillColor: [102, 126, 234],
+                textColor: 255,
+                fontStyle: 'bold',
+              },
+              foot: [
+                [
+                  'TOTALES',
+                  '',
+                  '',
+                  `$${totalSolicitado.toFixed(2)}`,
+                  `$${totalPagado.toFixed(2)}`,
+                  `$${saldoPendiente.toFixed(2)}`,
+                  '',
+                ],
+              ],
+            });
+            yPosition = (doc as any).lastAutoTable.finalY + 15;
+          }
+
+          // Footer
+          const pageCount = (doc as any).internal.getNumberOfPages();
+          for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.setFontSize(8);
+            doc.setTextColor(128, 128, 128);
+            doc.setFont(undefined, 'normal');
+            doc.text(
+              `Generado: ${new Date().toLocaleString('es-ES')} - Página ${i} de ${pageCount}`,
+              105,
+              doc.internal.pageSize.height - 10,
+              { align: 'center' }
+            );
+          }
+
+          // Guardar el PDF
+          const filename = `Resumen_Prestamos_${
+            entidad.numeroIdentificacion
+          }_${new Date().getTime()}.pdf`;
+          doc.save(filename);
+
+          this.snackBar.open('PDF resumen generado exitosamente', 'Cerrar', { duration: 3000 });
+        })
+        .catch((error) => {
+          console.error('Error al cargar jsPDF:', error);
+          this.snackBar.open('Error al generar el PDF. Por favor, intente nuevamente.', 'Cerrar', {
+            duration: 5000,
+          });
+        });
+    } catch (error) {
+      console.error('Error al generar PDF resumen:', error);
+      this.snackBar.open('Error al generar el PDF', 'Cerrar', { duration: 3000 });
+    }
+  }
+
+  /**
+   * Carga jsPDF dinámicamente
+   */
+  private cargarJsPDF(): Promise<any> {
+    return new Promise((resolve, reject) => {
+      if ((window as any).jspdf && (window as any).jspdf.jsPDF) {
+        resolve((window as any).jspdf.jsPDF);
+      } else if ((window as any).jsPDF) {
+        resolve((window as any).jsPDF);
+      } else {
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+        script.onload = () => {
+          if ((window as any).jspdf && (window as any).jspdf.jsPDF) {
+            resolve((window as any).jspdf.jsPDF);
+          } else if ((window as any).jsPDF) {
+            resolve((window as any).jsPDF);
+          } else {
+            reject(new Error('jsPDF no se cargó correctamente'));
+          }
+        };
+        script.onerror = () => reject(new Error('Error al cargar jsPDF'));
+        document.head.appendChild(script);
+
+        // Cargar también autoTable
+        const autoTableScript = document.createElement('script');
+        autoTableScript.src =
+          'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js';
+        document.head.appendChild(autoTableScript);
+      }
+    });
+  }
+
+  /**
    * Regresa a la pantalla anterior
    */
   regresarAPantallaAnterior(): void {

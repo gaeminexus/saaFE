@@ -32,11 +32,33 @@
       }
     }
 
-    .close-button {
-      color: white;
+    .header-actions {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
 
-      &:hover {
-        background-color: rgba(255, 255, 255, 0.1);
+      .pdf-button {
+        color: white;
+
+        mat-icon {
+          transition: all 0.2s ease;
+        }
+
+        &:hover {
+          background-color: rgba(255, 255, 255, 0.1);
+
+          mat-icon {
+            transform: scale(1.1);
+          }
+        }
+      }
+
+      .close-button {
+        color: white;
+
+        &:hover {
+          background-color: rgba(255, 255, 255, 0.1);
+        }
       }
     }
   }
@@ -73,7 +95,11 @@
       gap: 1rem;
       margin-bottom: 1.5rem;
       padding: 1.25rem;
-      background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+      background: linear-gradient(
+        135deg,
+        rgba(102, 126, 234, 0.05) 0%,
+        rgba(118, 75, 162, 0.05) 100%
+      );
       border-radius: 8px;
       border: 1px solid rgba(102, 126, 234, 0.2);
 
@@ -209,7 +235,8 @@
     .pagos-table {
       font-size: 0.875rem;
 
-      th, td {
+      th,
+      td {
         padding: 0.75rem 0.5rem;
       }
     }
