@@ -1,17 +1,17 @@
-import { Component, OnInit, Inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
+import { Component, Inject, OnInit } from '@angular/core';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatIconModule } from '@angular/material/icon';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSelectModule } from '@angular/material/select';
 
-import { PlanCuenta } from '../../model/plan-cuenta';
 import { NaturalezaCuenta } from '../../model/naturaleza-cuenta';
+import { PlanCuenta } from '../../model/plan-cuenta';
 import { PlanCuentaService } from '../../service/plan-cuenta.service';
 
 export interface PlanCuentasFormData {
@@ -33,10 +33,10 @@ export interface PlanCuentasFormData {
     MatSelectModule,
     MatProgressSpinnerModule,
     MatIconModule,
-    MatCheckboxModule
+    MatCheckboxModule,
   ],
   templateUrl: './plan-cuentas-form.component.html',
-  styleUrls: ['./plan-cuentas-form.component.scss']
+  styleUrls: ['./plan-cuentas-form.component.scss'],
 })
 export class PlanCuentasFormComponent implements OnInit {
   form: FormGroup;
@@ -72,17 +72,21 @@ export class PlanCuentasFormComponent implements OnInit {
     this.naturalezas = data.naturalezas;
     this.parentAccount = data.parent;
 
+    // Calcular tipo inicial según nivel
+    const nivelInicial = data.item?.nivel || 1;
+    const tipoInicial = nivelInicial === 1 ? 1 : 2;
+
     this.form = this.fb.group({
       codigo: [data.item?.codigo || '', [Validators.required]],
       nombre: [data.item?.nombre || '', [Validators.required, Validators.maxLength(100)]],
       cuentaContable: [
         data.item?.cuentaContable || '',
-        [Validators.required, this.accountNumberValidator]
+        [Validators.required, this.accountNumberValidator],
       ],
-      nivel: [{value: data.item?.nivel || 1, disabled: true}],
-      tipo: [data.item?.tipo || 1, [Validators.required]],
+      nivel: [{ value: nivelInicial, disabled: true }],
+      tipo: [data.item?.tipo || tipoInicial, [Validators.required]],
       naturalezaCuenta: [data.item?.naturalezaCuenta || null, [Validators.required]],
-      estado: [data.item?.estado ?? 1, [Validators.required]]
+      estado: [data.item?.estado ?? 1, [Validators.required]],
     });
   }
 
@@ -90,20 +94,22 @@ export class PlanCuentasFormComponent implements OnInit {
     if (this.parentAccount && !this.isEdit) {
       const parentNumber = this.parentAccount.cuentaContable || '';
       this.form.patchValue({
-        cuentaContable: parentNumber
+        cuentaContable: parentNumber,
       });
     }
 
-    // Actualizar el nivel automáticamente cuando cambie el número de cuenta
-    this.form.get('cuentaContable')?.valueChanges.subscribe(value => {
+    // Actualizar el nivel y tipo automáticamente cuando cambie el número de cuenta
+    this.form.get('cuentaContable')?.valueChanges.subscribe((value) => {
       const nivel = this.calculateLevel(value || '');
-      this.form.patchValue({ nivel }, { emitEvent: false });
+      const tipo = nivel === 1 ? 1 : 2;
+      this.form.patchValue({ nivel, tipo }, { emitEvent: false });
     });
 
-    // Calcular nivel inicial
+    // Calcular nivel y tipo inicial
     const initialCuentaContable = this.form.get('cuentaContable')?.value || '';
     const initialNivel = this.calculateLevel(initialCuentaContable);
-    this.form.patchValue({ nivel: initialNivel }, { emitEvent: false });
+    const initialTipo = initialNivel === 1 ? 1 : 2;
+    this.form.patchValue({ nivel: initialNivel, tipo: initialTipo }, { emitEvent: false });
   }
 
   onSubmit(): void {
@@ -118,7 +124,7 @@ export class PlanCuentasFormComponent implements OnInit {
     const formValue = this.form.value;
     const cuenta: PlanCuenta = {
       ...formValue,
-      codigo: this.data.item?.codigo
+      codigo: this.data.item?.codigo,
     };
 
     const request$ = this.isEdit
@@ -133,7 +139,7 @@ export class PlanCuentasFormComponent implements OnInit {
       error: (error: any) => {
         this.loading = false;
         this.error = error.message || 'Error al guardar la cuenta';
-      }
+      },
     });
   }
 
@@ -142,7 +148,7 @@ export class PlanCuentasFormComponent implements OnInit {
   }
 
   getNaturalezaName(id: number): string {
-    const naturaleza = this.naturalezas.find(n => n.codigo === id);
+    const naturaleza = this.naturalezas.find((n) => n.codigo === id);
     return naturaleza?.nombre || '';
   }
 
@@ -168,15 +174,19 @@ export class PlanCuentasFormComponent implements OnInit {
       const parentNumber = this.parentAccount.cuentaContable || '';
 
       if (!value.startsWith(parentNumber)) {
-        return { invalidHierarchy: {
-          message: `Debe comenzar con "${parentNumber}"`
-        }};
+        return {
+          invalidHierarchy: {
+            message: `Debe comenzar con "${parentNumber}"`,
+          },
+        };
       }
 
       if (value.length <= parentNumber.length) {
-        return { invalidHierarchy: {
-          message: `Debe ser más específico que "${parentNumber}"`
-        }};
+        return {
+          invalidHierarchy: {
+            message: `Debe ser más específico que "${parentNumber}"`,
+          },
+        };
       }
     }
 

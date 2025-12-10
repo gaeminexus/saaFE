@@ -124,6 +124,12 @@ export class MenuContabilidadComponent {
           route: '/menucontabilidad/asientos-contables',
         },
         {
+          displayName: 'Asientos Dinámico',
+          iconName: 'dynamic_form',
+          idPermiso: 830,
+          route: '/menucontabilidad/procesos/asientos-dinamico',
+        },
+        {
           displayName: 'Mayorización - Proceso',
           iconName: 'account_balance',
           idPermiso: 830,

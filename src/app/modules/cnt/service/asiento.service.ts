@@ -115,10 +115,17 @@ export class AsientoService {
 
   /**
    * Actualizar asiento existente
+   * IMPORTANTE: El backend espera PUT /asnt con el código en el body, no en la URL
    */
-  actualizarAsiento(id: number, datosAsiento: CrearAsiento): Observable<Asiento> {
+  actualizarAsiento(id: number, datosAsiento: any): Observable<Asiento> {
+    // Asegurar que el código esté en el body
+    const asientoConCodigo = {
+      ...datosAsiento,
+      codigo: id,
+    };
+
     return this.http
-      .put<Asiento>(`${this.baseUrl}/${id}`, datosAsiento, this.httpOptions)
+      .put<Asiento>(this.baseUrl, asientoConCodigo, this.httpOptions)
       .pipe(catchError(this.handleError));
   }
 

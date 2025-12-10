@@ -148,6 +148,10 @@ export class PlanArbolFormComponent implements OnInit {
       });
     } else {
       // En modo creación, permitir todos los campos
+      // Calcular tipo inicial según nivel preset: nivel 1 = Acumulación (1), nivel > 1 = Movimiento (2)
+      const nivelInicial = data.presetNivel || data.item?.nivel || 1;
+      const tipoInicial = nivelInicial === 1 ? 1 : 2;
+
       this.form = this.fb.group({
         codigo: [{ value: '', disabled: true }],
         nombre: [data.item?.nombre || '', [Validators.required, Validators.maxLength(100)]],
@@ -155,8 +159,8 @@ export class PlanArbolFormComponent implements OnInit {
           data.presetCuenta || data.item?.cuentaContable || '',
           [Validators.required, this.cuentaContableValidator.bind(this)],
         ],
-        nivel: [{ value: data.presetNivel || data.item?.nivel || 1, disabled: true }],
-        tipo: [{ value: data.item?.tipo || 1, disabled: true }],
+        nivel: [{ value: nivelInicial, disabled: true }],
+        tipo: [{ value: tipoInicial, disabled: true }],
         naturalezaCuenta: [data.item?.naturalezaCuenta || null, [Validators.required]],
         estado: [data.item?.estado ?? 1, [Validators.required]],
       });
@@ -164,12 +168,8 @@ export class PlanArbolFormComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    // Heredar tipo desde naturaleza seleccionada
-    this.form.get('naturalezaCuenta')?.valueChanges.subscribe((nat) => {
-      if (nat && nat.tipo != null) {
-        this.form.patchValue({ tipo: nat.tipo }, { emitEvent: false });
-      }
-    });
+    // Remover la lógica de heredar tipo desde naturaleza
+    // El tipo ahora se determina automáticamente por el nivel
 
     // Forzar mayúsculas en el nombre mientras se escribe
     this.form.get('nombre')?.valueChanges.subscribe((val) => {
@@ -178,16 +178,17 @@ export class PlanArbolFormComponent implements OnInit {
       }
     });
 
-    // Actualizar nivel automáticamente cuando cambie cuentaContable
+    // Actualizar nivel y tipo automáticamente cuando cambie cuentaContable
     this.form.get('cuentaContable')?.valueChanges.subscribe((val) => {
       if (val) {
         const nivel = this.calculateLevel(String(val));
         const nivelAnterior = this.form.get('nivel')?.value;
         const primerNivel = this.getPrimerNivel(String(val));
 
-        // Solo actualizar si cambió el nivel
+        // Actualizar nivel y tipo si cambió el nivel
         if (nivel !== nivelAnterior) {
-          this.form.patchValue({ nivel }, { emitEvent: false });
+          const tipoAutomatico = nivel === 1 ? 1 : 2;
+          this.form.patchValue({ nivel, tipo: tipoAutomatico }, { emitEvent: false });
         }
 
         // Autoseleccionar naturaleza según el primer nivel
@@ -273,7 +274,11 @@ export class PlanArbolFormComponent implements OnInit {
       }
 
       const naturaleza = formValue.naturalezaCuenta;
-      const tipoHeradado = naturaleza?.tipo ?? 1;
+
+      // Asignar tipo según nivel:
+      // Nivel 1 = Acumulación (1)
+      // Nivel > 1 = Movimiento (2)
+      const tipoAutomatico = nivelNuevo === 1 ? 1 : 2;
 
       // Tomar empresa completa preferentemente desde la naturaleza o desde el padre si existe
       const empresaOrigen =
@@ -285,7 +290,7 @@ export class PlanArbolFormComponent implements OnInit {
           .trim()
           .toUpperCase(),
         cuentaContable: String(formValue.cuentaContable || '').trim(),
-        tipo: Number(tipoHeradado),
+        tipo: tipoAutomatico,
         nivel: nivelNuevo,
         naturalezaCuenta: naturaleza,
         estado: Number(formValue.estado ?? 1),

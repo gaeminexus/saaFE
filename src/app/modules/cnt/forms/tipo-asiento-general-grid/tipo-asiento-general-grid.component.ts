@@ -1,18 +1,24 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MatTableModule, MatTableDataSource } from '@angular/material/table';
-import { MatPaginatorModule, MatPaginator } from '@angular/material/paginator';
-import { MatSortModule, MatSort } from '@angular/material/sort';
-import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
-import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatInputModule } from '@angular/material/input';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatChipsModule } from '@angular/material/chips';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { MatButtonModule } from '@angular/material/button';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatDialog } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
+import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatSort, MatSortModule } from '@angular/material/sort';
+import { MatTableDataSource, MatTableModule } from '@angular/material/table';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
-import { TipoAsientoGeneral, EstadoTipoAsiento } from '../../model/tipo-asiento';
+import { EstadoTipoAsiento, TipoAsientoGeneral } from '../../model/tipo-asiento';
 import { TipoAsientoGeneralService } from '../../service/tipo-asiento-general.service';
+import {
+  TipoAsientoDialog,
+  TipoAsientoDialogData,
+} from './tipo-asiento-dialog/tipo-asiento-dialog';
 
 @Component({
   selector: 'app-tipo-asiento-general-grid',
@@ -28,10 +34,11 @@ import { TipoAsientoGeneralService } from '../../service/tipo-asiento-general.se
     MatInputModule,
     MatFormFieldModule,
     MatChipsModule,
-    FormsModule
+    FormsModule,
+    TipoAsientoDialog,
   ],
   templateUrl: './tipo-asiento-general-grid.component.html',
-  styleUrls: ['./tipo-asiento-general-grid.component.scss']
+  styleUrls: ['./tipo-asiento-general-grid.component.scss'],
 })
 export class TipoAsientoGeneralGridComponent implements OnInit {
   dataSource = new MatTableDataSource<TipoAsientoGeneral>();
@@ -42,7 +49,9 @@ export class TipoAsientoGeneralGridComponent implements OnInit {
   @ViewChild(MatSort) sort!: MatSort;
 
   constructor(
-    private tipoAsientoGeneralService: TipoAsientoGeneralService
+    private tipoAsientoGeneralService: TipoAsientoGeneralService,
+    private dialog: MatDialog,
+    private snackBar: MatSnackBar
   ) {}
 
   ngOnInit(): void {
@@ -64,7 +73,7 @@ export class TipoAsientoGeneralGridComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error al cargar tipos de asientos generales:', error);
-      }
+      },
     });
   }
 
@@ -115,9 +124,10 @@ export class TipoAsientoGeneralGridComponent implements OnInit {
    * Cambia el estado de un tipo de asiento
    */
   cambiarEstado(tipoAsiento: TipoAsientoGeneral): void {
-    const nuevoEstado = tipoAsiento.estado === EstadoTipoAsiento.ACTIVO
-      ? EstadoTipoAsiento.INACTIVO
-      : EstadoTipoAsiento.ACTIVO;
+    const nuevoEstado =
+      tipoAsiento.estado === EstadoTipoAsiento.ACTIVO
+        ? EstadoTipoAsiento.INACTIVO
+        : EstadoTipoAsiento.ACTIVO;
 
     this.tipoAsientoGeneralService.cambiarEstado(tipoAsiento.id, nuevoEstado).subscribe({
       next: (success) => {
@@ -129,7 +139,7 @@ export class TipoAsientoGeneralGridComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error al cambiar el estado:', error);
-      }
+      },
     });
   }
 
@@ -137,8 +147,46 @@ export class TipoAsientoGeneralGridComponent implements OnInit {
    * Edita un tipo de asiento
    */
   editar(tipoAsiento: TipoAsientoGeneral): void {
-    // TODO: Implementar navegación al formulario de edición
-    console.log('Editar tipo de asiento:', tipoAsiento);
+    const dialogData: TipoAsientoDialogData = {
+      tipoAsiento: { ...tipoAsiento },
+      isEdit: true,
+    };
+
+    const dialogRef = this.dialog.open(TipoAsientoDialog, {
+      width: '500px',
+      data: dialogData,
+      disableClose: true,
+    });
+
+    dialogRef.afterClosed().subscribe((result: Partial<TipoAsientoGeneral> | undefined) => {
+      if (result && result.id) {
+        const updateData: Partial<TipoAsientoGeneral> = {
+          ...result,
+          fechaUpdate: new Date(),
+          usuarioUpdate: localStorage.getItem('username') || 'sistema',
+        };
+
+        this.tipoAsientoGeneralService.update(result.id, updateData).subscribe({
+          next: (updatedItem: TipoAsientoGeneral) => {
+            this.snackBar.open('Tipo de asiento actualizado exitosamente', 'Cerrar', {
+              duration: 3000,
+              horizontalPosition: 'center',
+              verticalPosition: 'top',
+            });
+            this.loadData();
+          },
+          error: (error: any) => {
+            console.error('Error al actualizar el tipo de asiento:', error);
+            this.snackBar.open('Error al actualizar el tipo de asiento', 'Cerrar', {
+              duration: 3000,
+              horizontalPosition: 'center',
+              verticalPosition: 'top',
+              panelClass: ['error-snackbar'],
+            });
+          },
+        });
+      }
+    });
   }
 
   /**
@@ -147,16 +195,32 @@ export class TipoAsientoGeneralGridComponent implements OnInit {
   eliminar(tipoAsiento: TipoAsientoGeneral): void {
     if (confirm(`¿Está seguro de eliminar el tipo de asiento "${tipoAsiento.nombre}"?`)) {
       this.tipoAsientoGeneralService.delete(tipoAsiento.id).subscribe({
-        next: (success) => {
+        next: (success: boolean) => {
           if (success) {
+            this.snackBar.open('Tipo de asiento eliminado exitosamente', 'Cerrar', {
+              duration: 3000,
+              horizontalPosition: 'center',
+              verticalPosition: 'top',
+            });
             this.loadData();
           } else {
-            console.error('Error al eliminar el tipo de asiento');
+            this.snackBar.open('Error al eliminar el tipo de asiento', 'Cerrar', {
+              duration: 3000,
+              horizontalPosition: 'center',
+              verticalPosition: 'top',
+              panelClass: ['error-snackbar'],
+            });
           }
         },
-        error: (error) => {
+        error: (error: any) => {
           console.error('Error al eliminar el tipo de asiento:', error);
-        }
+          this.snackBar.open('Error al eliminar el tipo de asiento', 'Cerrar', {
+            duration: 3000,
+            horizontalPosition: 'center',
+            verticalPosition: 'top',
+            panelClass: ['error-snackbar'],
+          });
+        },
       });
     }
   }
@@ -165,8 +229,46 @@ export class TipoAsientoGeneralGridComponent implements OnInit {
    * Crea un nuevo tipo de asiento
    */
   nuevo(): void {
-    // TODO: Implementar navegación al formulario de creación
-    console.log('Crear nuevo tipo de asiento general');
+    const dialogData: TipoAsientoDialogData = {
+      isEdit: false,
+    };
+
+    const dialogRef = this.dialog.open(TipoAsientoDialog, {
+      width: '500px',
+      data: dialogData,
+      disableClose: true,
+    });
+
+    dialogRef.afterClosed().subscribe((result: Partial<TipoAsientoGeneral> | undefined) => {
+      if (result) {
+        // Agregar campos adicionales requeridos por el backend
+        const nuevoTipoAsiento: Partial<TipoAsientoGeneral> = {
+          ...result,
+          fechaCreacion: new Date(),
+          usuarioCreacion: localStorage.getItem('username') || 'sistema',
+        };
+
+        this.tipoAsientoGeneralService.create(nuevoTipoAsiento).subscribe({
+          next: (createdItem: TipoAsientoGeneral) => {
+            this.snackBar.open('Tipo de asiento creado exitosamente', 'Cerrar', {
+              duration: 3000,
+              horizontalPosition: 'center',
+              verticalPosition: 'top',
+            });
+            this.loadData();
+          },
+          error: (error: any) => {
+            console.error('Error al crear el tipo de asiento:', error);
+            this.snackBar.open('Error al crear el tipo de asiento', 'Cerrar', {
+              duration: 3000,
+              horizontalPosition: 'center',
+              verticalPosition: 'top',
+              panelClass: ['error-snackbar'],
+            });
+          },
+        });
+      }
+    });
   }
 
   /**
