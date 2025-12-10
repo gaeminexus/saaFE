@@ -245,12 +245,12 @@
     </mat-card>
 
     <!-- Tarjetas de Préstamos individuales -->
-    @for (prestamo of prestamos; track prestamo.codigo) {
+    @for (prestamo of prestamos; track prestamo.idAsoprep) {
     <mat-card class="dashboard-card prestamos-card" (click)="verDetallePrestamo(prestamo)">
       <mat-card-header>
         <mat-icon mat-card-avatar class="card-icon">credit_card</mat-icon>
         <mat-card-title
-          >{{ prestamo.producto?.nombre || 'Préstamo' }} #{{ prestamo.codigo }}</mat-card-title
+          >{{ prestamo.producto?.nombre || 'Préstamo' }} #{{ prestamo.idAsoprep || prestamo.codigo }}</mat-card-title
         >
         <mat-card-subtitle>
           @if (prestamo.estadoPrestamo) {
@@ -326,7 +326,7 @@
       </button>
       <h2>
         <mat-icon>credit_card</mat-icon>
-        {{ prestamoSeleccionado.producto?.nombre || 'Préstamo' }} #{{ prestamoSeleccionado.codigo }}
+        {{ prestamoSeleccionado.producto?.nombre || 'Préstamo' }} #{{ prestamoSeleccionado.idAsoprep || prestamoSeleccionado.codigo }}
       </h2>
     </div>
 
@@ -406,11 +406,19 @@
             </td>
           </ng-container>
 
+          <!-- Columna Desgravamen -->
+          <ng-container matColumnDef="desgravamen">
+            <th mat-header-cell *matHeaderCellDef>Desgravamen</th>
+            <td mat-cell *matCellDef="let detalle">
+              ${{ detalle.detalle.desgravamen | number : '1.2-2' }}
+            </td>
+          </ng-container>
+
           <!-- Columna Cuota Total -->
           <ng-container matColumnDef="cuota">
             <th mat-header-cell *matHeaderCellDef>Cuota Total</th>
             <td mat-cell *matCellDef="let detalle">
-              ${{ detalle.detalle.cuota | number : '1.2-2' }}
+              ${{ detalle.detalle.total | number : '1.2-2' }}
             </td>
           </ng-container>
 

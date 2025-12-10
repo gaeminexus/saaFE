@@ -1,14 +1,17 @@
 <div class="detalle-consulta-container">
-  <!-- Header con título y filtros (solo lectura) -->
-  <div class="search-header">
-    <div class="header-title">
-      <mat-icon class="header-icon">description</mat-icon>
-      <h1>Detalle de Carga de Archivo</h1>
-      <button mat-icon-button (click)="volverAtras()" class="back-button" matTooltip="Volver">
-        <mat-icon>arrow_back</mat-icon>
-      </button>
-    </div>
+  <!-- Header con bot\u00f3n volver y t\u00edtulo -->
+  <div class="page-header">
+    <button mat-icon-button (click)="volverAtras()" class="back-button" matTooltip="Volver">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+    <h1 class="page-title">
+      <mat-icon class="title-icon">description</mat-icon>
+      Detalle de Archivo
+    </h1>
+  </div>
 
+  <!-- Header con filtros (solo lectura) -->
+  <div class="search-header">
     <div class="filters-box">
       <mat-form-field appearance="fill" class="filter-field">
         <mat-label>Año</mat-label>
@@ -26,6 +29,12 @@
         <mat-label>Filial</mat-label>
         <input matInput [value]="getFilialNombre()" readonly>
         <mat-icon matPrefix>business</mat-icon>
+      </mat-form-field>
+
+      <mat-form-field appearance="fill" class="filter-field">
+        <mat-label>Archivo</mat-label>
+        <input matInput [value]="nombreArchivo" readonly>
+        <mat-icon matPrefix>insert_drive_file</mat-icon>
       </mat-form-field>
     </div>
   </div>
@@ -326,6 +335,244 @@
           </div>
         </mat-card-content>
       </mat-card>
+
+      <!-- Sección de Novedades -->
+      @if (mostrarNovedades() && novedadesAgrupadas().length > 0) {
+        <mat-card class="novedades-card">
+          <mat-card-header>
+            <mat-icon mat-card-avatar class="avatar-icon">report_problem</mat-icon>
+            <mat-card-title>Gestión de Novedades</mat-card-title>
+            <mat-card-subtitle>Registros que requieren atención o corrección</mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="novedades-section">
+              <mat-tab-group
+                class="novedades-tabs"
+                [(selectedIndex)]="tabNovedadSeleccionado"
+                (selectedIndexChange)="onTabNovedadChange($event)">
+
+                <!-- Tab Partícipes -->
+                <mat-tab>
+                  <ng-template mat-tab-label>
+                    <mat-icon class="tab-icon">person</mat-icon>
+                    Partícipes
+                    @if (contarNovedades('PARTICIPE') > 0) {
+                      <span class="tab-count badge-warning">
+                        {{ contarNovedades('PARTICIPE') }}
+                      </span>
+                    }
+                  </ng-template>
+
+                  <div class="tab-content">
+                    @for (novedad of novedadesFiltradas; track novedad.novedad.codigo) {
+                      <mat-card class="novedad-card" [class.expanded]="expandedNovedad() === novedad.novedad.codigo">
+                        <div class="custom-header" (click)="toggleExpansion(novedad.novedad.codigo)"
+                             style="display: flex; flex-direction: row; align-items: center; padding: 1rem; cursor: pointer;">
+                          <mat-icon class="novedad-icon" [style.color]="novedad.novedad.colorChip"
+                                    style="margin-right: 1rem; font-size: 24px; width: 24px; height: 24px;">{{ novedad.novedad.icono }}</mat-icon>
+                          <span class="novedad-title" style="flex: 1; margin: 0; padding: 0; font-size: 1rem; font-weight: 500;">{{ novedad.novedad.descripcion }}</span>
+                          <div class="header-actions" style="display: flex; align-items: center; gap: 0.5rem;">
+                            <span class="badge" [style.background-color]="novedad.novedad.colorChip"
+                                  style="padding: 4px 12px; border-radius: 16px; font-size: 13px; font-weight: 600; color: white; min-width: 28px; text-align: center;">{{ novedad.total }}</span>
+                            <mat-icon class="expand-icon">{{ expandedNovedad() === novedad.novedad.codigo ? 'expand_less' : 'expand_more' }}</mat-icon>
+                          </div>
+                        </div>
+
+                        @if (loadingNovedad() === novedad.novedad.codigo) {
+                          <mat-card-content>
+                            <div style="display: flex; justify-content: center; align-items: center; padding: 2rem;">
+                              <mat-spinner diameter="40"></mat-spinner>
+                              <span style="margin-left: 1rem; color: #666;">Cargando registros...</span>
+                            </div>
+                          </mat-card-content>
+                        }
+
+                        @if (expandedNovedad() === novedad.novedad.codigo) {
+                          <mat-card-content>
+                            <table mat-table [dataSource]="getPagedRegistros(novedad.registros, novedad.novedad.codigo)" class="novedad-table">
+                              <!-- Código Petroamazonas -->
+                              <ng-container matColumnDef="codigoPetro">
+                                <th mat-header-cell *matHeaderCellDef>Código Petro</th>
+                                <td mat-cell *matCellDef="let element">{{ element.codigoPetro }}</td>
+                              </ng-container>
+
+                              <!-- Nombre -->
+                              <ng-container matColumnDef="nombre">
+                                <th mat-header-cell *matHeaderCellDef>Nombre</th>
+                                <td mat-cell *matCellDef="let element">{{ element.nombre }}</td>
+                              </ng-container>
+
+                              <!-- Acciones -->
+                              <ng-container matColumnDef="acciones">
+                                <th mat-header-cell *matHeaderCellDef>Acciones</th>
+                                <td mat-cell *matCellDef="let element">
+                                  <button
+                                    mat-raised-button
+                                    color="primary"
+                                    (click)="corregirRegistro(element)"
+                                    class="btn-corregir">
+                                    <mat-icon>{{ novedad.novedad.codigo === 1 ? 'search' : 'build' }}</mat-icon>
+                                    {{ novedad.novedad.codigo === 1 ? 'Coincidencias' : 'Corregir' }}
+                                  </button>
+                                </td>
+                              </ng-container>
+
+                              <tr mat-header-row *matHeaderRowDef="['codigoPetro', 'nombre', 'acciones']"></tr>
+                              <tr mat-row *matRowDef="let row; columns: ['codigoPetro', 'nombre', 'acciones'];"></tr>
+                            </table>
+
+                            <mat-paginator
+                              [length]="novedad.registros.length"
+                              [pageSize]="pageSize"
+                              [pageIndex]="getPageIndex(novedad.novedad.codigo)"
+                              [pageSizeOptions]="pageSizeOptions"
+                              (page)="onPageChange($event, novedad.novedad.codigo)"
+                              showFirstLastButtons>
+                            </mat-paginator>
+                          </mat-card-content>
+                        }
+                      </mat-card>
+                    } @empty {
+                      <div class="empty-state">
+                        <mat-icon>check_circle</mat-icon>
+                        <p>No hay novedades de partícipes</p>
+                      </div>
+                    }
+                  </div>
+                </mat-tab>
+
+                <!-- Tab Descuentos -->
+                <mat-tab>
+                  <ng-template mat-tab-label>
+                    <mat-icon class="tab-icon">attach_money</mat-icon>
+                    Descuentos
+                    @if (contarNovedades('DESCUENTO') > 0) {
+                      <span class="tab-count badge-warning">
+                        {{ contarNovedades('DESCUENTO') }}
+                      </span>
+                    }
+                  </ng-template>
+
+                  <div class="tab-content">
+                    @for (novedad of novedadesFiltradas; track novedad.novedad.codigo) {
+                      <mat-card class="novedad-card" [class.expanded]="expandedNovedad() === novedad.novedad.codigo">
+                        <mat-card-header (click)="toggleExpansion(novedad.novedad.codigo)">
+                          <mat-icon class="novedad-icon" [style.color]="novedad.novedad.colorChip">
+                            {{ novedad.novedad.icono }}
+                          </mat-icon>
+                          <mat-card-title>{{ novedad.novedad.descripcion }}</mat-card-title>
+                          <div class="header-actions">
+                            <span class="badge" [class]="'badge-' + novedad.novedad.severidad">
+                              {{ novedad.total }}
+                            </span>
+                            <mat-icon class="expand-icon">
+                              {{ expandedNovedad() === novedad.novedad.codigo ? 'expand_less' : 'expand_more' }}
+                            </mat-icon>
+                          </div>
+                        </mat-card-header>
+
+                        @if (expandedNovedad() === novedad.novedad.codigo) {
+                          <mat-card-content>
+                            <table mat-table [dataSource]="novedad.registros" class="novedad-table">
+                              <!-- Código Petroamazonas -->
+                              <ng-container matColumnDef="codigoPetro">
+                                <th mat-header-cell *matHeaderCellDef>Código Petro</th>
+                                <td mat-cell *matCellDef="let element">{{ element.codigoPetro }}</td>
+                              </ng-container>
+
+                              <!-- Nombre -->
+                              <ng-container matColumnDef="nombre">
+                                <th mat-header-cell *matHeaderCellDef>Nombre</th>
+                                <td mat-cell *matCellDef="let element">{{ element.nombre }}</td>
+                              </ng-container>
+
+                              <!-- Acciones -->
+                              <ng-container matColumnDef="acciones">
+                                <th mat-header-cell *matHeaderCellDef>Acciones</th>
+                                <td mat-cell *matCellDef="let element">
+                                  <button
+                                    mat-raised-button
+                                    color="primary"
+                                    (click)="corregirRegistro(element)"
+                                    class="btn-corregir">
+                                    <mat-icon>{{ novedad.novedad.codigo === 1 ? 'search' : 'build' }}</mat-icon>
+                                    {{ novedad.novedad.codigo === 1 ? 'Coincidencias' : 'Corregir' }}
+                                  </button>
+                                </td>
+                              </ng-container>
+
+                              <tr mat-header-row *matHeaderRowDef="['codigoPetro', 'nombre', 'acciones']"></tr>
+                              <tr mat-row *matRowDef="let row; columns: ['codigoPetro', 'nombre', 'acciones'];"></tr>
+                            </table>
+
+                            <mat-paginator
+                              [length]="novedad.registros.length"
+                              [pageSize]="pageSize"
+                              [pageIndex]="getPageIndex(novedad.novedad.codigo)"
+                              [pageSizeOptions]="pageSizeOptions"
+                              (page)="onPageChange($event, novedad.novedad.codigo)"
+                              showFirstLastButtons>
+                            </mat-paginator>
+                          </mat-card-content>
+                        }
+                      </mat-card>
+                    } @empty {
+                      <div class="empty-state">
+                        <mat-icon>check_circle</mat-icon>
+                        <p>No hay novedades de descuentos</p>
+                      </div>
+                    }
+                  </div>
+                </mat-tab>
+
+              </mat-tab-group>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      }
+
+      <!-- Tarjeta para procesar archivo -->
+      @if (mostrarProcesar()) {
+        <div class="process-file-section">
+          <mat-card class="process-card">
+            <mat-card-header>
+              <mat-icon mat-card-avatar class="avatar-icon process-icon">settings</mat-icon>
+              <mat-card-title>Procesar Archivo</mat-card-title>
+              <mat-card-subtitle>Ejecutar proceso de validación y carga final</mat-card-subtitle>
+            </mat-card-header>
+            <mat-card-content>
+              @if (archivoYaProcesado()) {
+                <!-- Mensaje de archivo procesado -->
+                <div class="file-processed-state">
+                  <mat-icon class="success-icon">check_circle</mat-icon>
+                  <h3>¡Archivo Procesado Exitosamente!</h3>
+                  <p>El archivo ha sido procesado y está listo para su uso</p>
+                </div>
+              } @else {
+                <div class="process-content">
+                  <div class="process-info">
+                    <mat-icon>info_outline</mat-icon>
+                    <p>
+                      El proceso validará y procesará los datos cargados<br>
+                      <strong>Este proceso será programado por el equipo de backend</strong>
+                    </p>
+                  </div>
+
+                  <button
+                    mat-raised-button
+                    color="accent"
+                    class="process-button"
+                    [disabled]="aporteAgrupados.length === 0"
+                    (click)="procesarArchivo()">
+                    <mat-icon>send</mat-icon>
+                    <span>Procesar Archivo</span>
+                  </button>
+                </div>
+              }
+            </mat-card-content>
+          </mat-card>
+        </div>
+      }
         </div>
       }
     </div>

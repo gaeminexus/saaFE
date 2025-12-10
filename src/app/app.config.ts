@@ -27,9 +27,9 @@ import { AppStateService } from './shared/services/app-state.service';
  */
 export function initializeApp(appStateService: AppStateService) {
   return (): Promise<void> => {
-    // AppStateService ya ejecuta restaurarDesdeSesion() en su constructor
-    // Solo necesitamos forzar su construcción mediante inyección
-    return Promise.resolve();
+    // Esperar a que AppStateService complete la restauración de sesión
+    // incluyendo la carga de DetalleRubros
+    return appStateService.esperarInicializacion();
   };
 }
 
