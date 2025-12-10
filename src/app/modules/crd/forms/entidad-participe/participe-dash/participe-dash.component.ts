@@ -722,6 +722,634 @@ export class ParticipeDashComponent implements OnInit {
   }
 
   /**
+   * Genera PDF para un préstamo individual con sus detalles
+   */
+  async generarPDFPrestamo(prestamo: Prestamo, event?: Event): Promise<void> {
+    // Prevenir propagación del evento para evitar abrir el detalle
+    if (event) {
+      event.stopPropagation();
+    }
+
+    if (!this.entidadEncontrada) {
+      this.snackBar.open('No hay información de entidad', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    try {
+      // Mostrar mensaje de carga
+      this.snackBar.open('Generando PDF del préstamo...', '', { duration: 2000 });
+
+      // Cargar detalles del préstamo si no están cargados
+      if (!this.detallesPrestamo.has(prestamo.codigo)) {
+        await this.cargarDetallesPrestamoAsync(prestamo.codigo);
+      }
+
+      const detalles = this.detallesPrestamo.get(prestamo.codigo) || [];
+      const entidad = this.entidadEncontrada;
+
+      this.cargarJsPDF()
+        .then((jsPDF: any) => {
+          const doc = new jsPDF();
+          let yPosition = 20;
+
+          // Función auxiliar para verificar espacio
+          const checkPageBreak = (requiredSpace: number = 20) => {
+            if (yPosition + requiredSpace > doc.internal.pageSize.height - 20) {
+              doc.addPage();
+              yPosition = 20;
+              return true;
+            }
+            return false;
+          };
+
+          // Título principal
+          doc.setFontSize(18);
+          doc.setFont(undefined, 'bold');
+          doc.text('Detalle de Préstamo', 105, yPosition, { align: 'center' });
+
+          yPosition += 15;
+
+          // Información de la entidad
+          doc.setFontSize(12);
+          doc.setTextColor(102, 126, 234);
+          doc.text('Información del Partícipe', 14, yPosition);
+
+          yPosition += 8;
+          doc.setFontSize(10);
+          doc.setTextColor(0, 0, 0);
+          doc.setFont(undefined, 'normal');
+
+          doc.text(`Razón Social: ${entidad.razonSocial || 'N/A'}`, 14, yPosition);
+          yPosition += 6;
+          doc.text(`Identificación: ${entidad.numeroIdentificacion || 'N/A'}`, 14, yPosition);
+          yPosition += 6;
+          if (entidad.nombreComercial && entidad.razonSocial !== entidad.nombreComercial) {
+            doc.text(`Nombre Comercial: ${entidad.nombreComercial}`, 14, yPosition);
+            yPosition += 6;
+          }
+
+          yPosition += 10;
+          checkPageBreak(40);
+
+          // Información del préstamo
+          doc.setFontSize(14);
+          doc.setTextColor(102, 126, 234);
+          doc.setFont(undefined, 'bold');
+          doc.text(
+            `Préstamo #${prestamo.codigo} - ${prestamo.producto?.nombre || 'N/A'}`,
+            14,
+            yPosition
+          );
+
+          yPosition += 8;
+          doc.setFontSize(10);
+          doc.setTextColor(0, 0, 0);
+          doc.setFont(undefined, 'normal');
+
+          const fechaPrestamo = this.convertirFecha(prestamo.fecha);
+          const fechaStr = fechaPrestamo ? fechaPrestamo.toLocaleDateString('es-ES') : 'N/A';
+
+          doc.text(`Fecha: ${fechaStr}`, 14, yPosition);
+          yPosition += 6;
+          doc.text(`Plazo: ${prestamo.plazo} meses`, 14, yPosition);
+          yPosition += 6;
+          doc.text(`Estado: ${prestamo.estadoPrestamo?.nombre || 'N/A'}`, 14, yPosition);
+          yPosition += 6;
+          doc.text(`Monto Total: $${(prestamo.totalPrestamo || 0).toFixed(2)}`, 14, yPosition);
+          yPosition += 6;
+          doc.text(`Saldo Total: $${(prestamo.saldoTotal || 0).toFixed(2)}`, 14, yPosition);
+          yPosition += 6;
+          const totalPagado = this.calcularTotalPagado(prestamo);
+          doc.text(`Total Pagado: $${totalPagado.toFixed(2)}`, 14, yPosition);
+          yPosition += 12;
+
+          checkPageBreak(40);
+
+          // Tabla de cuotas
+          if (detalles.length > 0) {
+            doc.setFontSize(12);
+            doc.setTextColor(102, 126, 234);
+            doc.setFont(undefined, 'bold');
+            doc.text('Detalle de Cuotas', 14, yPosition);
+            yPosition += 8;
+
+            const cuotasData = detalles.map((detalleConPagos) => {
+              const detalle = detalleConPagos.detalle;
+              const fechaVenc = this.convertirFecha(detalle.fechaVencimiento);
+              const fechaVencStr = fechaVenc ? fechaVenc.toLocaleDateString('es-ES') : 'N/A';
+
+              return [
+                detalle.numeroCuota?.toString() || 'N/A',
+                fechaVencStr,
+                `$${(detalle.capital || 0).toFixed(2)}`,
+                `$${(detalle.interes || 0).toFixed(2)}`,
+                `$${(detalle.cuota || 0).toFixed(2)}`,
+                `$${(detalle.saldo || 0).toFixed(2)}`,
+                detalle.estado === 1 ? 'Pagada' : 'Pendiente',
+              ];
+            });
+
+            if (doc.autoTable) {
+              doc.autoTable({
+                startY: yPosition,
+                head: [['Cuota', 'Vencimiento', 'Capital', 'Interés', 'Cuota', 'Saldo', 'Estado']],
+                body: cuotasData,
+                theme: 'striped',
+                styles: { fontSize: 8, cellPadding: 2 },
+                headStyles: {
+                  fillColor: [102, 126, 234],
+                  textColor: 255,
+                  fontSize: 8,
+                  fontStyle: 'bold',
+                },
+                columnStyles: {
+                  0: { cellWidth: 15, halign: 'center' },
+                  1: { cellWidth: 25 },
+                  2: { cellWidth: 25, halign: 'right' },
+                  3: { cellWidth: 25, halign: 'right' },
+                  4: { cellWidth: 25, halign: 'right' },
+                  5: { cellWidth: 25, halign: 'right' },
+                  6: { cellWidth: 25, halign: 'center' },
+                },
+              });
+              yPosition = (doc as any).lastAutoTable.finalY + 10;
+            }
+
+            // Totales al final
+            checkPageBreak(30);
+            doc.setFontSize(11);
+            doc.setFont(undefined, 'bold');
+            doc.text('Resumen:', 14, yPosition);
+            yPosition += 6;
+
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'normal');
+
+            const totalCapital = detalles.reduce((sum, d) => sum + (d.detalle.capital || 0), 0);
+            const totalInteres = detalles.reduce((sum, d) => sum + (d.detalle.interes || 0), 0);
+            const totalCuotas = detalles.reduce((sum, d) => sum + (d.detalle.cuota || 0), 0);
+
+            doc.text(`Total Capital: $${totalCapital.toFixed(2)}`, 14, yPosition);
+            yPosition += 6;
+            doc.text(`Total Interés: $${totalInteres.toFixed(2)}`, 14, yPosition);
+            yPosition += 6;
+            doc.text(`Total Cuotas: $${totalCuotas.toFixed(2)}`, 14, yPosition);
+          } else {
+            doc.setFontSize(10);
+            doc.setTextColor(128, 128, 128);
+            doc.setFont(undefined, 'italic');
+            doc.text('No hay cuotas registradas para este préstamo', 14, yPosition);
+          }
+
+          // Footer
+          const pageCount = (doc as any).internal.getNumberOfPages();
+          for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.setFontSize(8);
+            doc.setTextColor(128, 128, 128);
+            doc.setFont(undefined, 'normal');
+            doc.text(
+              `Generado: ${new Date().toLocaleString('es-ES')} - Página ${i} de ${pageCount}`,
+              105,
+              doc.internal.pageSize.height - 10,
+              { align: 'center' }
+            );
+          }
+
+          // Guardar el PDF
+          const filename = `Prestamo_${prestamo.codigo}_${
+            entidad.numeroIdentificacion
+          }_${new Date().getTime()}.pdf`;
+          doc.save(filename);
+
+          this.snackBar.open('PDF del préstamo generado exitosamente', 'Cerrar', {
+            duration: 3000,
+          });
+        })
+        .catch((error) => {
+          console.error('Error al cargar jsPDF:', error);
+          this.snackBar.open('Error al generar el PDF. Por favor, intente nuevamente.', 'Cerrar', {
+            duration: 5000,
+          });
+        });
+    } catch (error) {
+      console.error('Error al generar PDF del préstamo:', error);
+      this.snackBar.open('Error al generar el PDF', 'Cerrar', { duration: 3000 });
+    }
+  }
+
+  /**
+   * Genera PDF para un tipo de aporte específico con sus detalles
+   */
+  generarPDFAporte(tipoAporte: AportesPorTipo, event?: Event): void {
+    // Prevenir propagación del evento para evitar abrir el detalle
+    if (event) {
+      event.stopPropagation();
+    }
+
+    if (!this.entidadEncontrada) {
+      this.snackBar.open('No hay información de entidad', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    try {
+      // Mostrar mensaje de carga
+      this.snackBar.open('Generando PDF de aportes...', '', { duration: 2000 });
+
+      const entidad = this.entidadEncontrada;
+
+      this.cargarJsPDF()
+        .then((jsPDF: any) => {
+          const doc = new jsPDF();
+          let yPosition = 20;
+
+          // Función auxiliar para verificar espacio
+          const checkPageBreak = (requiredSpace: number = 20) => {
+            if (yPosition + requiredSpace > doc.internal.pageSize.height - 20) {
+              doc.addPage();
+              yPosition = 20;
+              return true;
+            }
+            return false;
+          };
+
+          // Título principal
+          doc.setFontSize(18);
+          doc.setFont(undefined, 'bold');
+          doc.text('Detalle de Aportes', 105, yPosition, { align: 'center' });
+
+          yPosition += 15;
+
+          // Información de la entidad
+          doc.setFontSize(12);
+          doc.setTextColor(246, 173, 85);
+          doc.text('Información del Partícipe', 14, yPosition);
+
+          yPosition += 8;
+          doc.setFontSize(10);
+          doc.setTextColor(0, 0, 0);
+          doc.setFont(undefined, 'normal');
+
+          doc.text(`Razón Social: ${entidad.razonSocial || 'N/A'}`, 14, yPosition);
+          yPosition += 6;
+          doc.text(`Identificación: ${entidad.numeroIdentificacion || 'N/A'}`, 14, yPosition);
+          yPosition += 6;
+          if (entidad.nombreComercial && entidad.razonSocial !== entidad.nombreComercial) {
+            doc.text(`Nombre Comercial: ${entidad.nombreComercial}`, 14, yPosition);
+            yPosition += 6;
+          }
+
+          yPosition += 10;
+          checkPageBreak(40);
+
+          // Información del tipo de aporte
+          doc.setFontSize(14);
+          doc.setTextColor(246, 173, 85);
+          doc.setFont(undefined, 'bold');
+          doc.text(`Tipo de Aporte: ${tipoAporte.tipoAporte}`, 14, yPosition);
+
+          yPosition += 8;
+          doc.setFontSize(10);
+          doc.setTextColor(0, 0, 0);
+          doc.setFont(undefined, 'normal');
+
+          doc.text(`Total Valor: $${tipoAporte.totalValor.toFixed(2)}`, 14, yPosition);
+          yPosition += 6;
+          doc.text(`Total Pagado: $${tipoAporte.totalPagado.toFixed(2)}`, 14, yPosition);
+          yPosition += 6;
+          doc.text(`Total Saldo: $${tipoAporte.totalSaldo.toFixed(2)}`, 14, yPosition);
+          yPosition += 6;
+          doc.text(`Cantidad de Aportes: ${tipoAporte.aportes.length}`, 14, yPosition);
+          yPosition += 12;
+
+          checkPageBreak(40);
+
+          // Tabla de aportes
+          if (tipoAporte.aportes.length > 0) {
+            doc.setFontSize(12);
+            doc.setTextColor(246, 173, 85);
+            doc.setFont(undefined, 'bold');
+            doc.text('Detalle de Aportes', 14, yPosition);
+            yPosition += 8;
+
+            const aportesData = tipoAporte.aportes.map((aporte) => {
+              const fecha = this.convertirFecha(aporte.fechaTransaccion);
+              const fechaStr = fecha ? fecha.toLocaleDateString('es-ES') : 'N/A';
+
+              return [
+                fechaStr,
+                aporte.glosa || 'N/A',
+                `$${(aporte.valor || 0).toFixed(2)}`,
+                `$${(aporte.valorPagado || 0).toFixed(2)}`,
+                `$${(aporte.saldo || 0).toFixed(2)}`,
+              ];
+            });
+
+            if (doc.autoTable) {
+              doc.autoTable({
+                startY: yPosition,
+                head: [['Fecha', 'Glosa', 'Valor', 'Pagado', 'Saldo']],
+                body: aportesData,
+                theme: 'striped',
+                styles: { fontSize: 8, cellPadding: 2 },
+                headStyles: {
+                  fillColor: [246, 173, 85],
+                  textColor: 255,
+                  fontSize: 8,
+                  fontStyle: 'bold',
+                },
+                columnStyles: {
+                  0: { cellWidth: 30 },
+                  1: { cellWidth: 85 },
+                  2: { cellWidth: 25, halign: 'right' },
+                  3: { cellWidth: 25, halign: 'right' },
+                  4: { cellWidth: 25, halign: 'right' },
+                },
+              });
+              yPosition = (doc as any).lastAutoTable.finalY + 10;
+            }
+
+            // Totales al final
+            checkPageBreak(30);
+            doc.setFontSize(11);
+            doc.setFont(undefined, 'bold');
+            doc.text('Resumen:', 14, yPosition);
+            yPosition += 6;
+
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'normal');
+
+            const totalValor = tipoAporte.aportes.reduce((sum, a) => sum + (a.valor || 0), 0);
+            const totalPagado = tipoAporte.aportes.reduce(
+              (sum, a) => sum + (a.valorPagado || 0),
+              0
+            );
+            const totalSaldo = tipoAporte.aportes.reduce((sum, a) => sum + (a.saldo || 0), 0);
+
+            doc.text(`Total Valor: $${totalValor.toFixed(2)}`, 14, yPosition);
+            yPosition += 6;
+            doc.text(`Total Pagado: $${totalPagado.toFixed(2)}`, 14, yPosition);
+            yPosition += 6;
+            doc.text(`Total Saldo: $${totalSaldo.toFixed(2)}`, 14, yPosition);
+          } else {
+            doc.setFontSize(10);
+            doc.setTextColor(128, 128, 128);
+            doc.setFont(undefined, 'italic');
+            doc.text('No hay aportes registrados para este tipo', 14, yPosition);
+          }
+
+          // Footer
+          const pageCount = (doc as any).internal.getNumberOfPages();
+          for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.setFontSize(8);
+            doc.setTextColor(128, 128, 128);
+            doc.setFont(undefined, 'normal');
+            doc.text(
+              `Generado: ${new Date().toLocaleString('es-ES')} - Página ${i} de ${pageCount}`,
+              105,
+              doc.internal.pageSize.height - 10,
+              { align: 'center' }
+            );
+          }
+
+          // Guardar el PDF
+          const tipoNombre = tipoAporte.tipoAporte.replace(/\s+/g, '_');
+          const filename = `Aportes_${tipoNombre}_${
+            entidad.numeroIdentificacion
+          }_${new Date().getTime()}.pdf`;
+          doc.save(filename);
+
+          this.snackBar.open('PDF de aportes generado exitosamente', 'Cerrar', {
+            duration: 3000,
+          });
+        })
+        .catch((error) => {
+          console.error('Error al cargar jsPDF:', error);
+          this.snackBar.open('Error al generar el PDF. Por favor, intente nuevamente.', 'Cerrar', {
+            duration: 5000,
+          });
+        });
+    } catch (error) {
+      console.error('Error al generar PDF de aportes:', error);
+      this.snackBar.open('Error al generar el PDF', 'Cerrar', { duration: 3000 });
+    }
+  }
+
+  /**
+   * Genera PDF resumen de todos los aportes agrupados por tipo
+   */
+  generarPDFResumenAportes(event?: Event): void {
+    // Prevenir propagación del evento para evitar abrir el detalle
+    if (event) {
+      event.stopPropagation();
+    }
+
+    if (!this.entidadEncontrada) {
+      this.snackBar.open('No hay información de entidad', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    if (this.aportesPorTipo.length === 0) {
+      this.snackBar.open('No hay aportes para generar el PDF', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    try {
+      // Mostrar mensaje de carga
+      this.snackBar.open('Generando PDF resumen de aportes...', '', { duration: 2000 });
+
+      const entidad = this.entidadEncontrada;
+
+      this.cargarJsPDF()
+        .then((jsPDF: any) => {
+          const doc = new jsPDF();
+          let yPosition = 20;
+
+          // Función auxiliar para verificar espacio
+          const checkPageBreak = (requiredSpace: number = 20) => {
+            if (yPosition + requiredSpace > doc.internal.pageSize.height - 20) {
+              doc.addPage();
+              yPosition = 20;
+              return true;
+            }
+            return false;
+          };
+
+          // Título principal
+          doc.setFontSize(18);
+          doc.setFont(undefined, 'bold');
+          doc.text('Resumen de Aportes por Tipo', 105, yPosition, { align: 'center' });
+
+          yPosition += 15;
+
+          // Información de la entidad
+          doc.setFontSize(12);
+          doc.setTextColor(246, 173, 85);
+          doc.text('Información del Partícipe', 14, yPosition);
+
+          yPosition += 8;
+          doc.setFontSize(10);
+          doc.setTextColor(0, 0, 0);
+          doc.setFont(undefined, 'normal');
+
+          doc.text(`Razón Social: ${entidad.razonSocial || 'N/A'}`, 14, yPosition);
+          yPosition += 6;
+          doc.text(`Identificación: ${entidad.numeroIdentificacion || 'N/A'}`, 14, yPosition);
+          yPosition += 6;
+          if (entidad.nombreComercial && entidad.razonSocial !== entidad.nombreComercial) {
+            doc.text(`Nombre Comercial: ${entidad.nombreComercial}`, 14, yPosition);
+            yPosition += 6;
+          }
+
+          yPosition += 10;
+          checkPageBreak(40);
+
+          // Totales generales
+          doc.setFontSize(14);
+          doc.setTextColor(246, 173, 85);
+          doc.setFont(undefined, 'bold');
+          doc.text('Totales Generales', 14, yPosition);
+
+          yPosition += 8;
+          doc.setFontSize(11);
+          doc.setTextColor(0, 0, 0);
+          doc.setFont(undefined, 'normal');
+
+          const totalTipos = this.aportesPorTipo.length;
+          const totalAportes = this.aportesPorTipo.reduce(
+            (sum, tipo) => sum + tipo.aportes.length,
+            0
+          );
+
+          doc.text(`Tipos de Aportes: ${totalTipos}`, 14, yPosition);
+          yPosition += 6;
+          doc.text(`Total de Registros: ${totalAportes}`, 14, yPosition);
+          yPosition += 6;
+          doc.text(`Total Acumulado: $${this.totalAportes.toFixed(2)}`, 14, yPosition);
+          yPosition += 12;
+
+          checkPageBreak(40);
+
+          // Tabla resumen por tipo
+          doc.setFontSize(12);
+          doc.setTextColor(246, 173, 85);
+          doc.setFont(undefined, 'bold');
+          doc.text('Resumen por Tipo de Aporte', 14, yPosition);
+          yPosition += 8;
+
+          const tiposData = this.aportesPorTipo.map((tipo) => {
+            return [
+              tipo.tipoAporte,
+              tipo.aportes.length.toString(),
+              `$${tipo.totalValor.toFixed(2)}`,
+              `$${tipo.totalPagado.toFixed(2)}`,
+              `$${tipo.totalSaldo.toFixed(2)}`,
+            ];
+          });
+
+          if (doc.autoTable) {
+            doc.autoTable({
+              startY: yPosition,
+              head: [['Tipo de Aporte', 'Cantidad', 'Total Valor', 'Total Pagado', 'Total Saldo']],
+              body: tiposData,
+              theme: 'striped',
+              styles: { fontSize: 9, cellPadding: 3 },
+              headStyles: {
+                fillColor: [246, 173, 85],
+                textColor: 255,
+                fontSize: 9,
+                fontStyle: 'bold',
+              },
+              columnStyles: {
+                0: { cellWidth: 70 },
+                1: { cellWidth: 25, halign: 'center' },
+                2: { cellWidth: 30, halign: 'right' },
+                3: { cellWidth: 30, halign: 'right' },
+                4: { cellWidth: 30, halign: 'right' },
+              },
+              footStyles: {
+                fillColor: [246, 173, 85],
+                textColor: 255,
+                fontStyle: 'bold',
+              },
+              foot: [
+                [
+                  'TOTALES',
+                  totalAportes.toString(),
+                  `$${this.aportesPorTipo.reduce((sum, t) => sum + t.totalValor, 0).toFixed(2)}`,
+                  `$${this.aportesPorTipo.reduce((sum, t) => sum + t.totalPagado, 0).toFixed(2)}`,
+                  `$${this.aportesPorTipo.reduce((sum, t) => sum + t.totalSaldo, 0).toFixed(2)}`,
+                ],
+              ],
+            });
+            yPosition = (doc as any).lastAutoTable.finalY + 15;
+          }
+
+          // Gráfico de distribución (opcional - texto)
+          checkPageBreak(60);
+          doc.setFontSize(12);
+          doc.setTextColor(246, 173, 85);
+          doc.setFont(undefined, 'bold');
+          doc.text('Distribución Porcentual', 14, yPosition);
+          yPosition += 8;
+
+          doc.setFontSize(9);
+          doc.setTextColor(0, 0, 0);
+          doc.setFont(undefined, 'normal');
+
+          const totalValorGeneral = this.aportesPorTipo.reduce((sum, t) => sum + t.totalValor, 0);
+
+          this.aportesPorTipo.forEach((tipo) => {
+            checkPageBreak();
+            const porcentaje =
+              totalValorGeneral > 0 ? (tipo.totalValor / totalValorGeneral) * 100 : 0;
+            doc.text(
+              `${tipo.tipoAporte}: ${porcentaje.toFixed(1)}% ($${tipo.totalValor.toFixed(2)})`,
+              14,
+              yPosition
+            );
+            yPosition += 6;
+          });
+
+          // Footer
+          const pageCount = (doc as any).internal.getNumberOfPages();
+          for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.setFontSize(8);
+            doc.setTextColor(128, 128, 128);
+            doc.setFont(undefined, 'normal');
+            doc.text(
+              `Generado: ${new Date().toLocaleString('es-ES')} - Página ${i} de ${pageCount}`,
+              105,
+              doc.internal.pageSize.height - 10,
+              { align: 'center' }
+            );
+          }
+
+          // Guardar el PDF
+          const filename = `Resumen_Aportes_${
+            entidad.numeroIdentificacion
+          }_${new Date().getTime()}.pdf`;
+          doc.save(filename);
+
+          this.snackBar.open('PDF resumen de aportes generado exitosamente', 'Cerrar', {
+            duration: 3000,
+          });
+        })
+        .catch((error) => {
+          console.error('Error al cargar jsPDF:', error);
+          this.snackBar.open('Error al generar el PDF. Por favor, intente nuevamente.', 'Cerrar', {
+            duration: 5000,
+          });
+        });
+    } catch (error) {
+      console.error('Error al generar PDF resumen de aportes:', error);
+      this.snackBar.open('Error al generar el PDF', 'Cerrar', { duration: 3000 });
+    }
+  }
+
+  /**
    * Carga jsPDF dinámicamente
    */
   private cargarJsPDF(): Promise<any> {
@@ -1471,6 +2099,9 @@ export class ParticipeDashComponent implements OnInit {
                   this.cdr.detectChanges();
 
                   console.log('✅ Vista actualizada con nuevos detalles');
+
+                  // Recalcular el estado del préstamo basándose en las cuotas
+                  this.recalcularEstadoPrestamo(this.prestamoSeleccionado);
                 }
               }
             }
@@ -1500,6 +2131,113 @@ export class ParticipeDashComponent implements OnInit {
         this.snackBar.open('Error al recuperar la cuota', 'Cerrar', { duration: 5000 });
       },
     });
+  }
+
+  /**
+   * Recalcula el estado del préstamo basándose en el estado de todas sus cuotas
+   * y actualiza el préstamo si el estado ha cambiado
+   */
+  private recalcularEstadoPrestamo(prestamo: Prestamo): void {
+    if (!prestamo || !prestamo.codigo) {
+      return;
+    }
+
+    const detalles = this.detallesPrestamo.get(prestamo.codigo);
+    if (!detalles || detalles.length === 0) {
+      return;
+    }
+
+    // Obtener todos los estados de las cuotas
+    const estadosCuotas = detalles.map((d) => d.detalle.idEstado || d.detalle.estado || 0);
+
+    // Determinar el nuevo estado del préstamo basándose en las cuotas
+    let nuevoEstadoCodigo: number | null = null;
+
+    // Lógica de negocio para determinar el estado del préstamo:
+    // 1. Si todas las cuotas están en estado "Pagado" (código 2), el préstamo está "Pagado"
+    // 2. Si hay al menos una cuota "Vigente" (código 1), el préstamo está "Vigente"
+    // 3. Si todas las cuotas están "Anuladas" (código 3), el préstamo está "Anulado"
+    // 4. Si hay una mezcla, priorizar el estado más relevante
+
+    const todasPagadas = estadosCuotas.every((estado) => estado === 2);
+    const todasAnuladas = estadosCuotas.every((estado) => estado === 3);
+    const hayVigentes = estadosCuotas.some((estado) => estado === 1);
+    const hayPagadas = estadosCuotas.some((estado) => estado === 2);
+
+    if (todasPagadas) {
+      nuevoEstadoCodigo = 2; // Pagado
+    } else if (todasAnuladas) {
+      nuevoEstadoCodigo = 3; // Anulado
+    } else if (hayVigentes) {
+      nuevoEstadoCodigo = 1; // Vigente
+    } else if (hayPagadas) {
+      // Algunas pagadas pero no todas, mantener como Vigente
+      nuevoEstadoCodigo = 1;
+    }
+
+    // Verificar si el estado actual del préstamo es diferente
+    const estadoActualCodigo = prestamo.estadoPrestamo?.codigo || 0;
+
+    if (nuevoEstadoCodigo && nuevoEstadoCodigo !== estadoActualCodigo) {
+      console.log(
+        `🔄 Recalculando estado del préstamo ${prestamo.codigo}: ${estadoActualCodigo} → ${nuevoEstadoCodigo}`
+      );
+
+      // Recuperar el préstamo completo y actualizarlo
+      this.prestamoService.getById(prestamo.codigo.toString()).subscribe({
+        next: (prestamoCompleto) => {
+          if (!prestamoCompleto) {
+            console.warn('No se pudo recuperar el préstamo completo para actualizar estado');
+            return;
+          }
+
+          // Preparar el objeto para el backend
+          const prestamoParaBackend: any = {
+            ...prestamoCompleto,
+            estadoPrestamo: nuevoEstadoCodigo, // Solo el número
+          };
+
+          // Actualizar en el backend
+          this.prestamoService.update(prestamoParaBackend).subscribe({
+            next: (respuesta) => {
+              // Actualizar en la lista local
+              const index = this.prestamos.findIndex((p) => p.codigo === prestamo.codigo);
+              if (index !== -1) {
+                this.prestamos[index].estadoPrestamo = {
+                  codigo: nuevoEstadoCodigo,
+                  nombre: this.obtenerNombreEstadoPrestamo(nuevoEstadoCodigo),
+                } as EstadoPrestamo;
+                this.prestamos = [...this.prestamos];
+              }
+
+              // Actualizar el préstamo seleccionado
+              if (this.prestamoSeleccionado?.codigo === prestamo.codigo) {
+                this.prestamoSeleccionado.estadoPrestamo = {
+                  codigo: nuevoEstadoCodigo,
+                  nombre: this.obtenerNombreEstadoPrestamo(nuevoEstadoCodigo),
+                } as EstadoPrestamo;
+              }
+
+              // Forzar detección de cambios
+              this.cdr.detectChanges();
+
+              const estadoTexto = this.obtenerNombreEstadoPrestamo(nuevoEstadoCodigo);
+              console.log(`✅ Estado del préstamo actualizado a: ${estadoTexto}`);
+            },
+            error: (error) => {
+              console.error('Error al actualizar estado del préstamo:', error);
+            },
+          });
+        },
+        error: (error) => {
+          console.error('Error al recuperar préstamo completo:', error);
+        },
+      });
+    } else {
+      console.log(
+        `✅ Estado del préstamo ${prestamo.codigo} ya está correcto: ${estadoActualCodigo}`
+      );
+    }
   }
 
   /**

@@ -241,6 +241,15 @@
           Ver Detalles
           <mat-icon>chevron_right</mat-icon>
         </button>
+        <button
+          mat-icon-button
+          color="warn"
+          (click)="generarPDFResumenAportes($event)"
+          matTooltip="Generar PDF Resumen"
+          class="pdf-action-button"
+        >
+          <mat-icon>picture_as_pdf</mat-icon>
+        </button>
       </mat-card-actions>
     </mat-card>
 
@@ -311,6 +320,15 @@
         >
           <mat-icon>swap_horiz</mat-icon>
         </button>
+        <button
+          mat-icon-button
+          color="warn"
+          (click)="generarPDFPrestamo(prestamo, $event)"
+          matTooltip="Generar PDF del Préstamo"
+          class="pdf-action-button"
+        >
+          <mat-icon>picture_as_pdf</mat-icon>
+        </button>
       </mat-card-actions>
     </mat-card>
     }
@@ -332,6 +350,23 @@
 
     <!-- Resumen del Préstamo -->
     <mat-card class="info-card">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>summarize</mat-icon>
+          Resumen del Préstamo
+        </mat-card-title>
+        <div class="card-header-actions">
+          <button
+            mat-icon-button
+            color="warn"
+            (click)="generarPDFPrestamo(prestamoSeleccionado)"
+            matTooltip="Generar PDF del Préstamo"
+            class="pdf-button"
+          >
+            <mat-icon>picture_as_pdf</mat-icon>
+          </button>
+        </div>
+      </mat-card-header>
       <mat-card-content>
         <div class="prestamo-resumen">
           <div class="resumen-item">
@@ -536,6 +571,15 @@
           color="accent"
         >
           <mat-icon>swap_horiz</mat-icon>
+        </button>
+        <button
+          mat-icon-button
+          class="pdf-button"
+          (click)="generarPDFAporte(tipoAporte, $event)"
+          matTooltip="Generar PDF de Aportes"
+          color="warn"
+        >
+          <mat-icon>picture_as_pdf</mat-icon>
         </button>
         <button mat-icon-button class="expand-button">
           <mat-icon>{{ tipoAporte.expandido ? 'expand_less' : 'expand_more' }}</mat-icon>
