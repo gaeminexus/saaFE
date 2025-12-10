@@ -93,6 +93,7 @@ export class ParticipeDashComponent implements OnInit {
     'fechaVencimiento',
     'capital',
     'interes',
+    'desgravamen',
     'cuota',
     'saldo',
     'estado',
@@ -332,7 +333,7 @@ export class ParticipeDashComponent implements OnInit {
 
             const prestamosData = this.prestamos.map((prestamo) => [
               prestamo.producto?.nombre || 'N/A',
-              `#${prestamo.codigo}`,
+              `#${prestamo.idAsoprep}`,
               `$${prestamo.totalPrestamo.toFixed(2)}`,
               `$${prestamo.saldoTotal.toFixed(2)}`,
               `$${this.calcularTotalPagado(prestamo).toFixed(2)}`,
@@ -584,7 +585,7 @@ export class ParticipeDashComponent implements OnInit {
               doc.setTextColor(102, 126, 234);
               doc.setFont(undefined, 'bold');
               doc.text(
-                `Préstamo #${prestamo.codigo} - ${prestamo.producto?.nombre || 'N/A'}`,
+                `Préstamo #${prestamo.idAsoprep} - ${prestamo.producto?.nombre || 'N/A'}`,
                 14,
                 yPosition
               );
@@ -1637,8 +1638,15 @@ export class ParticipeDashComponent implements OnInit {
         }
 
         if (Array.isArray(prestamos)) {
+          console.log('Préstamos cargados:', prestamos);
           // Normalizar estadoPrestamo: si viene como número, convertir a objeto
-          const prestamosNormalizados = (prestamos as Prestamo[]).map((p) => {
+          // Mapear idSistema a idAsoprep si el backend lo envía con nombre diferente
+          const prestamosNormalizados = (prestamos as any[]).map((p) => {
+            // Si el backend envía idSistema en lugar de idAsoprep, mapearlo
+            if (p.idSistema !== undefined && !p.idAsoprep) {
+              p.idAsoprep = p.idSistema;
+            }
+
             if (typeof p.estadoPrestamo === 'number') {
               const codigoEstado = p.estadoPrestamo as any;
               p.estadoPrestamo = {
@@ -1646,7 +1654,7 @@ export class ParticipeDashComponent implements OnInit {
                 nombre: this.obtenerNombreEstadoPrestamo(codigoEstado),
               } as EstadoPrestamo;
             }
-            return p;
+            return p as Prestamo;
           });
 
           this.procesarPrestamosPorTipo(prestamosNormalizados);

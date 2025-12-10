@@ -1,0 +1,33 @@
+<h2 mat-dialog-title class="dialog-title">
+  <mat-icon>{{ data.icon || 'help_outline' }}</mat-icon>
+  {{ data.title }}
+</h2>
+
+<mat-dialog-content class="dialog-content">
+  @if (data.details) {
+    <div class="info-section">
+      @for (detail of data.details; track $index) {
+        <div class="info-row">
+          <span class="label">{{ detail.label }}:</span>
+          <span class="value">{{ detail.value }}</span>
+        </div>
+      }
+    </div>
+  }
+
+  <div class="message-section" [class.warning]="data.type === 'warning'" [class.danger]="data.type === 'danger'">
+    <mat-icon>{{ getMessageIcon() }}</mat-icon>
+    <p>{{ data.message }}</p>
+  </div>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end" class="dialog-actions">
+  <button mat-stroked-button (click)="onCancel()">
+    <mat-icon>close</mat-icon>
+    {{ data.cancelText || 'Cancelar' }}
+  </button>
+  <button mat-raised-button [color]="data.confirmColor || 'primary'" (click)="onConfirm()">
+    <mat-icon>{{ data.confirmIcon || 'check' }}</mat-icon>
+    {{ data.confirmText || 'Confirmar' }}
+  </button>
+</mat-dialog-actions>

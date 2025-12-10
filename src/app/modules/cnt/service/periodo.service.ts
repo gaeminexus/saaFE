@@ -1,6 +1,6 @@
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable, of } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { Empresa } from '../../../shared/model/empresa';
 import { Jerarquia } from '../../../shared/model/jerarquia';
@@ -137,6 +137,12 @@ export class PeriodoService {
         return of(filtrados);
       })
     );
+  }
+
+  verificaPeriodoAbierto(idEmpresa: number, fecha: Date): Observable<Periodo | null> {
+    const wsGetById = '/verificaPeriodoAbierto/';
+    const url = `${ServiciosCnt.RS_NTRL}${wsGetById}${idEmpresa}/${fecha.toISOString()}`;
+    return this.http.get<Periodo>(url).pipe(catchError(this.handleError));
   }
 
   /**
@@ -443,5 +449,13 @@ export class PeriodoService {
       default:
         return 'badge-inactivo';
     }
+  }
+
+  // tslint:disable-next-line: typedef
+  private handleError(error: HttpErrorResponse): Observable<null> {
+    if (+error.status === 200) {
+      return of(null);
+    }
+    return throwError(() => error?.error ?? error);
   }
 }

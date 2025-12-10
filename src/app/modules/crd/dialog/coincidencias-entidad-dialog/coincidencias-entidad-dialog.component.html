@@ -1,0 +1,72 @@
+<div class="coincidencias-dialog">
+  <h2 mat-dialog-title>
+    <mat-icon>search</mat-icon>
+    Coincidencias Encontradas
+  </h2>
+
+  <mat-dialog-content>
+    <div class="search-info">
+      <p><strong>Buscando coincidencias para:</strong> {{ data.nombreBusqueda }}</p>
+      <p class="hint">Seleccione la entidad correcta para asociar al partícipe</p>
+    </div>
+
+    @if (isLoading) {
+      <div class="loading-container">
+        <mat-spinner diameter="50"></mat-spinner>
+        <p>Buscando coincidencias...</p>
+      </div>
+    } @else if (coincidencias.length === 0) {
+      <div class="empty-state">
+        <mat-icon>person_off</mat-icon>
+        <p>No se encontraron coincidencias</p>
+        <small>Intente crear una nueva entidad</small>
+      </div>
+    } @else {
+      <table mat-table [dataSource]="coincidencias" class="coincidencias-table">
+        <!-- Columna Razón Social -->
+        <ng-container matColumnDef="razonSocial">
+          <th mat-header-cell *matHeaderCellDef>Nombre</th>
+          <td mat-cell *matCellDef="let entidad">{{ entidad.razonSocial }}</td>
+        </ng-container>
+
+        <!-- Columna Acciones -->
+        <ng-container matColumnDef="acciones">
+          <th mat-header-cell *matHeaderCellDef>Seleccionar</th>
+          <td mat-cell *matCellDef="let entidad">
+            <button
+              mat-raised-button
+              [color]="entidadSeleccionada?.codigo === entidad.codigo ? 'accent' : 'primary'"
+              (click)="seleccionarEntidad(entidad)">
+              <mat-icon>{{ entidadSeleccionada?.codigo === entidad.codigo ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>
+              {{ entidadSeleccionada?.codigo === entidad.codigo ? 'Seleccionada' : 'Seleccionar' }}
+            </button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;"
+            [class.selected-row]="entidadSeleccionada?.codigo === row.codigo"></tr>
+      </table>
+
+      <div class="result-count">
+        <mat-icon>info</mat-icon>
+        <span>{{ coincidencias.length }} coincidencia(s) encontrada(s)</span>
+      </div>
+    }
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button (click)="cancelar()">
+      <mat-icon>close</mat-icon>
+      Cancelar
+    </button>
+    <button
+      mat-raised-button
+      color="primary"
+      (click)="confirmar()"
+      [disabled]="!entidadSeleccionada">
+      <mat-icon>check</mat-icon>
+      Asociar Entidad
+    </button>
+  </mat-dialog-actions>
+</div>
