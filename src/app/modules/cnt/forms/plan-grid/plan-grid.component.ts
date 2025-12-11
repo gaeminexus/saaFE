@@ -1,32 +1,38 @@
-import { Component, OnInit, AfterViewInit, ViewChild, ElementRef, CUSTOM_ELEMENTS_SCHEMA, signal } from '@angular/core';
+import { SelectionModel } from '@angular/cdk/collections';
 import { CommonModule } from '@angular/common';
+import {
+  AfterViewInit,
+  Component,
+  CUSTOM_ELEMENTS_SCHEMA,
+  ElementRef,
+  OnInit,
+  signal,
+  ViewChild,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatSelectModule } from '@angular/material/select';
-import { MatTableModule, MatTableDataSource } from '@angular/material/table';
-import { MatPaginatorModule, MatPaginator, PageEvent } from '@angular/material/paginator';
-import { MatSortModule, MatSort, Sort } from '@angular/material/sort';
-import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSelectModule } from '@angular/material/select';
+import { MatSort, MatSortModule } from '@angular/material/sort';
+import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { SelectionModel } from '@angular/cdk/collections';
-import { catchError } from 'rxjs/operators';
 
-import { PlanCuentaService } from '../../service/plan-cuenta.service';
-import { NaturalezaCuentaService } from '../../service/naturaleza-cuenta.service';
-import { PlanCuenta } from '../../model/plan-cuenta';
-import { NaturalezaCuenta } from '../../model/naturaleza-cuenta';
+import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
+import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
+import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { ExportService } from '../../../../shared/services/export.service';
 import { PlanCuentaUtilsService } from '../../../../shared/services/plan-cuenta-utils.service';
-import { PlanGridFormComponent } from './plan-grid-form.component';
+import { NaturalezaCuenta } from '../../model/naturaleza-cuenta';
+import { PlanCuenta } from '../../model/plan-cuenta';
+import { NaturalezaCuentaService } from '../../service/naturaleza-cuenta.service';
+import { PlanCuentaService } from '../../service/plan-cuenta.service';
 import { PlanArbolFormComponent } from '../plan-arbol/plan-arbol-form.component';
-import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
-import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
-import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 
 @Component({
   selector: 'app-plan-grid',
@@ -49,7 +55,7 @@ import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/ti
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './plan-grid.component.html',
-  styleUrls: ['./plan-grid.component.scss']
+  styleUrls: ['./plan-grid.component.scss'],
 })
 export class PlanGridComponent implements OnInit, AfterViewInit {
   @ViewChild(MatPaginator) paginator!: MatPaginator;
@@ -82,7 +88,7 @@ export class PlanGridComponent implements OnInit, AfterViewInit {
     'fechaUpdate',
     'fechaInactivo',
     'estado',
-    'actions'
+    'actions',
   ];
 
   // Mapa de conteo de descendientes por cuenta raíz (nivel 1)
@@ -143,10 +149,12 @@ export class PlanGridComponent implements OnInit, AfterViewInit {
         this.getTipoLabel(data.tipo).toLowerCase(),
         this.formatDate(data.fechaUpdate).toLowerCase(),
         this.formatDate(data.fechaInactivo).toLowerCase(),
-        this.estadoLabel(data.estado).toLowerCase()
-      ].join(' ').toLowerCase();
+        this.estadoLabel(data.estado).toLowerCase(),
+      ]
+        .join(' ')
+        .toLowerCase();
 
-      return searchTerms.every(term => searchableText.includes(term));
+      return searchTerms.every((term) => searchableText.includes(term));
     };
   }
 
@@ -179,7 +187,7 @@ export class PlanGridComponent implements OnInit, AfterViewInit {
     this.planCuentaService.getAll().subscribe({
       next: (data) => {
         const list = Array.isArray(data) ? data : [];
-        
+
         if (list.length === 0) {
           this.error.set('No se encontraron cuentas.');
           this.planCuentas = [];
@@ -197,7 +205,7 @@ export class PlanGridComponent implements OnInit, AfterViewInit {
         this.handleLoadError(err);
         this.planCuentas = [];
         this.loading.set(false);
-      }
+      },
     });
   }
 
@@ -208,11 +216,18 @@ export class PlanGridComponent implements OnInit, AfterViewInit {
   }
 
   private loadNaturalezas(): void {
-    console.log('🔍 Iniciando carga de naturalezas para empresa 280...');
+    const empresaCodigo = localStorage.getItem('idSucursal') || '280';
+    console.log(`🔍 Iniciando carga de naturalezas para empresa ${empresaCodigo}...`);
 
     const criterioConsultaArray: Array<DatosBusqueda> = [];
     const criterioEmpresa = new DatosBusqueda();
-    criterioEmpresa.asignaValorConCampoPadre(TipoDatosBusqueda.LONG, 'empresa', 'codigo', '280', TipoComandosBusqueda.IGUAL);
+    criterioEmpresa.asignaValorConCampoPadre(
+      TipoDatosBusqueda.LONG,
+      'empresa',
+      'codigo',
+      empresaCodigo,
+      TipoComandosBusqueda.IGUAL
+    );
     criterioConsultaArray.push(criterioEmpresa);
 
     this.naturalezaCuentaService.selectByCriteria(criterioConsultaArray).subscribe({
@@ -227,7 +242,7 @@ export class PlanGridComponent implements OnInit, AfterViewInit {
       error: (err) => {
         console.error('❌ Error al cargar naturalezas:', err);
         this.loadNaturalezasFallback();
-      }
+      },
     });
   }
 
@@ -240,7 +255,7 @@ export class PlanGridComponent implements OnInit, AfterViewInit {
       error: (error) => {
         console.error('Error al cargar naturalezas:', error);
         this.naturalezas = [];
-      }
+      },
     });
   }
 
@@ -256,7 +271,7 @@ export class PlanGridComponent implements OnInit, AfterViewInit {
 
   private updateDataSource(): void {
     // Ordenar los datos por número de cuenta antes de asignarlos
-    const base = this.planCuentas.filter(p => p.cuentaContable !== '0'); // ocultar raíz técnica
+    const base = this.planCuentas.filter((p) => p.cuentaContable !== '0'); // ocultar raíz técnica
     const sortedData = [...base].sort((a, b) => {
       const aNumber = this.planUtils.getAccountNumberForSorting(a.cuentaContable || '');
       const bNumber = this.planUtils.getAccountNumberForSorting(b.cuentaContable || '');
@@ -293,21 +308,23 @@ export class PlanGridComponent implements OnInit, AfterViewInit {
   }
 
   private applyFilters(): void {
-    let filteredData = this.planCuentas.filter(p => p.cuentaContable !== '0');
+    let filteredData = this.planCuentas.filter((p) => p.cuentaContable !== '0');
 
     // Aplicar filtro de naturaleza
     if (this.selectedNaturaleza !== null) {
-      filteredData = filteredData.filter(item => item.naturalezaCuenta?.codigo === this.selectedNaturaleza);
+      filteredData = filteredData.filter(
+        (item) => item.naturalezaCuenta?.codigo === this.selectedNaturaleza
+      );
     }
 
     // Aplicar filtro de estado
     if (this.selectedEstado !== null) {
-      filteredData = filteredData.filter(item => item.estado === this.selectedEstado);
+      filteredData = filteredData.filter((item) => item.estado === this.selectedEstado);
     }
 
     // Aplicar filtro de nivel
     if (this.selectedNivel !== null) {
-      filteredData = filteredData.filter(item => item.nivel === this.selectedNivel);
+      filteredData = filteredData.filter((item) => item.nivel === this.selectedNivel);
     }
 
     // Re-ordenar jerárquicamente: primero 1 y todos sus hijos, luego 2 y sus hijos, etc.
@@ -363,18 +380,25 @@ export class PlanGridComponent implements OnInit, AfterViewInit {
         return;
       }
       // Intentar ubicar nodo raíz técnico '0' si existe para idPadre
-      const rootParent = this.planCuentas.find(p => p.cuentaContable === '0') || null;
-      this.dialog.open(PlanArbolFormComponent, {
-        width: '720px',
-        disableClose: true,
-        data: {
-          parent: rootParent,
-          naturalezas: this.naturalezas,
-          presetCuenta: String(nextRoot),
-          presetNivel: 1,
-          maxDepth: this.getMaxDepthAllowed()
-        }
-      }).afterClosed().subscribe(r => { if (r) { this.loadData(); }});
+      const rootParent = this.planCuentas.find((p) => p.cuentaContable === '0') || null;
+      this.dialog
+        .open(PlanArbolFormComponent, {
+          width: '720px',
+          disableClose: true,
+          data: {
+            parent: rootParent,
+            naturalezas: this.naturalezas,
+            presetCuenta: String(nextRoot),
+            presetNivel: 1,
+            maxDepth: this.getMaxDepthAllowed(),
+          },
+        })
+        .afterClosed()
+        .subscribe((r) => {
+          if (r) {
+            this.loadData();
+          }
+        });
       return;
     }
 
@@ -387,26 +411,40 @@ export class PlanGridComponent implements OnInit, AfterViewInit {
     const presetCuenta = this.generateNewCuentaContable(parent);
     const presetNivel = (parent.nivel || this.calculateLevel(parent.cuentaContable)) + 1;
 
-    this.dialog.open(PlanArbolFormComponent, {
-      width: '720px',
-      disableClose: true,
-      data: {
-        parent: parent,
-        naturalezas: this.naturalezas,
-        presetCuenta,
-        presetNivel,
-        maxDepth: this.getMaxDepthAllowed()
-      }
-    }).afterClosed().subscribe(r => { if (r) { this.loadData(); }});
+    this.dialog
+      .open(PlanArbolFormComponent, {
+        width: '720px',
+        disableClose: true,
+        data: {
+          parent: parent,
+          naturalezas: this.naturalezas,
+          presetCuenta,
+          presetNivel,
+          maxDepth: this.getMaxDepthAllowed(),
+        },
+      })
+      .afterClosed()
+      .subscribe((r) => {
+        if (r) {
+          this.loadData();
+        }
+      });
   }
 
   public onEdit(item: PlanCuenta): void {
     // Reusar formulario completo del árbol para permitir edición consistente
-    this.dialog.open(PlanArbolFormComponent, {
-      width: '720px',
-      disableClose: true,
-      data: { item, naturalezas: this.naturalezas }
-    }).afterClosed().subscribe(r => { if (r) { this.loadData(); }});
+    this.dialog
+      .open(PlanArbolFormComponent, {
+        width: '720px',
+        disableClose: true,
+        data: { item, naturalezas: this.naturalezas },
+      })
+      .afterClosed()
+      .subscribe((r) => {
+        if (r) {
+          this.loadData();
+        }
+      });
   }
 
   public onDelete(item: PlanCuenta): void {
@@ -429,45 +467,68 @@ export class PlanGridComponent implements OnInit, AfterViewInit {
 
   // Métodos de exportación
   public exportSelected(): void {
-    const selectedData = this.selection.selected.length > 0
-      ? this.selection.selected
-      : this.dataSource.data;
+    const selectedData =
+      this.selection.selected.length > 0 ? this.selection.selected : this.dataSource.data;
 
     this.exportToCSV(selectedData);
   }
 
   public exportToCSV(data?: PlanCuenta[]): void {
     const exportData = data || this.dataSource.data;
-    const headers = ['Código', 'Número', 'Descripción', 'Tipo', 'Fecha Creación', 'Fecha Desactivación', 'Estado'];
+    const headers = [
+      'Código',
+      'Número',
+      'Descripción',
+      'Tipo',
+      'Fecha Creación',
+      'Fecha Desactivación',
+      'Estado',
+    ];
     const filename = `plan-grid-${new Date().toISOString().split('T')[0]}.csv`;
 
-    const transformedData = exportData.map(item => ({
+    const transformedData = exportData.map((item) => ({
       codigo: item.codigo || '',
       numero: item.cuentaContable || '',
       descripcion: item.nombre || '',
       tipo: this.getTipoLabel(item.tipo),
       fechaCreacion: this.formatDate(item.fechaUpdate),
       fechaDesactivacion: this.formatDate(item.fechaInactivo),
-      estado: this.estadoLabel(item.estado)
+      estado: this.estadoLabel(item.estado),
     }));
 
     this.exportService.exportToCSV(transformedData, filename, headers);
   }
 
   public exportToPDF(): void {
-    const headers = ['Código', 'Número', 'Descripción', 'Tipo', 'Fecha Creación', 'Fecha Desactivación', 'Estado'];
-    const dataKeys = ['codigo', 'numero', 'descripcion', 'tipo', 'fechaCreacion', 'fechaDesactivacion', 'estado'];
+    const headers = [
+      'Código',
+      'Número',
+      'Descripción',
+      'Tipo',
+      'Fecha Creación',
+      'Fecha Desactivación',
+      'Estado',
+    ];
+    const dataKeys = [
+      'codigo',
+      'numero',
+      'descripcion',
+      'tipo',
+      'fechaCreacion',
+      'fechaDesactivacion',
+      'estado',
+    ];
     const filename = `plan-grid-${new Date().toISOString().split('T')[0]}`;
     const title = 'Plan de Cuentas - Vista Grid';
 
-    const transformedData = this.dataSource.data.map(item => ({
+    const transformedData = this.dataSource.data.map((item) => ({
       codigo: item.codigo || '',
       numero: item.cuentaContable || '',
       descripcion: item.nombre || '',
       tipo: this.getTipoLabel(item.tipo),
       fechaCreacion: this.formatDate(item.fechaUpdate),
       fechaDesactivacion: this.formatDate(item.fechaInactivo),
-      estado: this.estadoLabel(item.estado)
+      estado: this.estadoLabel(item.estado),
     }));
 
     this.exportService.exportToPDF(transformedData, filename, title, headers, dataKeys);
@@ -476,7 +537,7 @@ export class PlanGridComponent implements OnInit, AfterViewInit {
   // Métodos auxiliares
   public getNaturalezaName(id?: number): string {
     if (!id) return '';
-    const naturaleza = this.naturalezas.find(n => n.codigo === id);
+    const naturaleza = this.naturalezas.find((n) => n.codigo === id);
     return naturaleza?.nombre || '';
   }
 
@@ -489,17 +550,17 @@ export class PlanGridComponent implements OnInit, AfterViewInit {
   }
 
   public getNivelesUnicos(): number[] {
-    const niveles = [...new Set(this.planCuentas.map(c => c.nivel).filter(n => n))];
+    const niveles = [...new Set(this.planCuentas.map((c) => c.nivel).filter((n) => n))];
     return niveles.sort((a, b) => (a || 0) - (b || 0));
   }
 
   // ====== NUEVAS FUNCIONALIDADES DE PRESENTACIÓN ======
   private recomputeDescendantCounts(data: PlanCuenta[]): void {
     this.descendantCount.clear();
-    const nivel1 = data.filter(d => (d.nivel || this.calculateLevel(d.cuentaContable)) === 1);
+    const nivel1 = data.filter((d) => (d.nivel || this.calculateLevel(d.cuentaContable)) === 1);
     for (const root of nivel1) {
       const prefix = root.cuentaContable + '.';
-      const count = data.filter(d => d.cuentaContable.startsWith(prefix)).length;
+      const count = data.filter((d) => d.cuentaContable.startsWith(prefix)).length;
       this.descendantCount.set(root.cuentaContable, count);
     }
   }
@@ -525,7 +586,7 @@ export class PlanGridComponent implements OnInit, AfterViewInit {
   // Devuelve true si la cuenta tiene hijos directos (por cuentaContable prefijo)
   public hasChildren(element: PlanCuenta): boolean {
     const prefix = element.cuentaContable + '.';
-    return this.planCuentas.some(p => p.cuentaContable.startsWith(prefix));
+    return this.planCuentas.some((p) => p.cuentaContable.startsWith(prefix));
   }
 
   // Construye la ruta textual completa usando nombres ("ACTIVOS / ACTIVOS CORRIENTES / CAJA")
@@ -536,7 +597,7 @@ export class PlanGridComponent implements OnInit, AfterViewInit {
     let current = '';
     for (const part of parts) {
       current = current ? current + '.' + part : part;
-      const match = this.planCuentas.find(p => p.cuentaContable === current);
+      const match = this.planCuentas.find((p) => p.cuentaContable === current);
       if (match) path.push(match.nombre);
     }
     return path.join(' / ');
@@ -561,7 +622,7 @@ export class PlanGridComponent implements OnInit, AfterViewInit {
   }
 
   private getMaxDepthAllowed(): number {
-    const existingMax = Math.max(0, ...this.planCuentas.map(c => c.nivel || 0));
+    const existingMax = Math.max(0, ...this.planCuentas.map((c) => c.nivel || 0));
     const naturalezaCount = this.naturalezas.length || 1;
     return this.planUtils.getMaxDepthAllowed(existingMax, naturalezaCount);
   }
@@ -572,27 +633,17 @@ export class PlanGridComponent implements OnInit, AfterViewInit {
   }
 
   private generateNewCuentaContable(parent: PlanCuenta): string {
-    const existingAccounts = this.planCuentas
-      .map(p => p.cuentaContable || '')
-      .filter(c => c);
-    
-    return this.planUtils.generateNewCuentaContable(
-      parent.cuentaContable || '',
-      existingAccounts
-    );
+    const existingAccounts = this.planCuentas.map((p) => p.cuentaContable || '').filter((c) => c);
+
+    return this.planUtils.generateNewCuentaContable(parent.cuentaContable || '', existingAccounts);
   }
 
   private getNextAvailableRootNaturalezaCodigo(): number | null {
     const existingRoots = this.planUtils.extractRootNumbers(
-      this.planCuentas.map(p => p.cuentaContable || '')
+      this.planCuentas.map((p) => p.cuentaContable || '')
     );
-    const orderedCodigos = this.naturalezas
-      .map(n => n.codigo)
-      .sort((a, b) => a - b);
-    
-    return this.planUtils.getNextAvailableRootNaturalezaCodigo(
-      existingRoots,
-      orderedCodigos
-    );
+    const orderedCodigos = this.naturalezas.map((n) => n.codigo).sort((a, b) => a - b);
+
+    return this.planUtils.getNextAvailableRootNaturalezaCodigo(existingRoots, orderedCodigos);
   }
 }

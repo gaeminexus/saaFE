@@ -56,27 +56,33 @@ export class NaturalezaDeCuentasComponent implements OnInit {
     // Debug: Verificar detalles de rubro cargados
     if (this.detalleRubroService.estanDatosCargados()) {
       this.tipoNaturaleza = this.detalleRubroService.getDetallesByParent(RUBRO_TIPO_GRUPO);
-      console.log('📦 Tipos de naturaleza cargados:', this.tipoNaturaleza);
+      console.log('📦 Tipos de naturaleza cargados desde servicio:', this.tipoNaturaleza);
       console.log('📦 Cantidad de tipos:', this.tipoNaturaleza.length);
-    } else {
-      console.warn(
-        '⚠️ DetalleRubroService no está cargado. Los tipos de naturaleza no estarán disponibles.'
-      );
-      console.warn('⚠️ Verifica que AppStateService.inicializarApp() se ejecute en el login.');
-      // Intentar cargar después
-      setTimeout(() => {
-        if (this.detalleRubroService.estanDatosCargados()) {
-          this.tipoNaturaleza = this.detalleRubroService.getDetallesByParent(RUBRO_TIPO_GRUPO);
-          console.log('📦 Tipos de naturaleza cargados (retry):', this.tipoNaturaleza);
-          // Reconfigurar tabla con datos actualizados
-          if (this.naturalezaCuentas.length > 0) {
-            this.setupTableConfig();
-          }
-        }
-      }, 1000);
-    }
 
-    this.loadData();
+      // Cargar datos después de tener rubros
+      this.loadData();
+    } else {
+      console.warn('⚠️ DetalleRubroService no está cargado. Cargando rubros directamente...');
+
+      // Cargar rubros directamente desde el backend
+      this.detalleRubroService.getAll().subscribe({
+        next: (rubros) => {
+          console.log('✅ Rubros cargados directamente desde backend:', rubros?.length || 0);
+
+          // Obtener tipos de naturaleza
+          this.tipoNaturaleza = this.detalleRubroService.getDetallesByParent(RUBRO_TIPO_GRUPO);
+          console.log('📦 Tipos de naturaleza disponibles:', this.tipoNaturaleza);
+
+          // Cargar datos después de tener rubros
+          this.loadData();
+        },
+        error: (err) => {
+          console.error('❌ Error al cargar rubros:', err);
+          // Cargar datos sin rubros (el formulario tendrá problemas pero al menos mostrará la tabla)
+          this.loadData();
+        },
+      });
+    }
   }
 
   private setupTableConfig(): void {
@@ -165,7 +171,7 @@ export class NaturalezaDeCuentasComponent implements OnInit {
         type: 'checkbox' as const,
         label: 'Maneja Centro de Costo',
         name: 'manejaCentroCosto',
-        value: false,
+        value: 0, // Valor por defecto numérico
       },
     ];
 
@@ -214,7 +220,7 @@ export class NaturalezaDeCuentasComponent implements OnInit {
             centroCostoFormateado: this.manejaCentroCostoLabel(item.manejaCentroCosto),
             estadoFormateado: this.estadoLabel(item.estado),
           }))
-          .sort((a: any, b: any) => (b.numero || 0) - (a.numero || 0));
+          .sort((a: any, b: any) => (a.numero || 0) - (b.numero || 0)); // Orden ascendente
 
         this.totalElements = this.naturalezaCuentas.length;
         this.loading = false;
@@ -245,7 +251,7 @@ export class NaturalezaDeCuentasComponent implements OnInit {
                 centroCostoFormateado: this.manejaCentroCostoLabel(item.manejaCentroCosto),
                 estadoFormateado: this.estadoLabel(item.estado),
               }))
-              .sort((a: any, b: any) => (b.numero || 0) - (a.numero || 0));
+              .sort((a: any, b: any) => (a.numero || 0) - (b.numero || 0)); // Orden ascendente
 
             this.totalElements = this.naturalezaCuentas.length;
             this.loading = false;

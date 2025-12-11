@@ -1,171 +1,195 @@
-<h2 mat-dialog-title>{{ dialogTitle }}</h2>
-
-<mat-dialog-content>
-  <form [formGroup]="form" (ngSubmit)="onSubmit()">
-    <div class="form-container">
-
-      <!-- Información de centro padre si aplica -->
-      <div *ngIf="parentAccount" class="parent-info">
-        <mat-icon>account_tree</mat-icon>
-        <span>Subcentro de: {{ parentAccount.nombre }} (Nº {{ parentAccount.numero }})</span>
+<div class="form-container">
+  <!-- Header del diálogo -->
+  <div class="form-header">
+    <div class="title-section">
+      <h2>{{ dialogTitle }}</h2>
+      @if (parentAccount && !isEdit) {
+      <div class="parent-info">
+        <mat-icon class="info-icon">account_tree</mat-icon>
+        <span>Subcentro de: {{ parentAccount.nombre }} (N° {{ parentAccount.numero }})</span>
       </div>
+      }
+    </div>
+    <button mat-icon-button (click)="onCancel()" class="close-button">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
 
-      <!-- Modo Editar - Solo nombre editable -->
-      <ng-container *ngIf="isEdit">
-        <!-- Nombre del centro -->
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Nombre del centro de costo</mat-label>
-          <input matInput formControlName="nombre" placeholder="Ej: Administración, Producción, etc.">
-          <mat-icon matSuffix>drive_file_rename_outline</mat-icon>
-          <mat-error *ngIf="form.get('nombre')?.hasError('required')">
-            El nombre es requerido
-          </mat-error>
-          <mat-error *ngIf="form.get('nombre')?.hasError('maxlength')">
-            El nombre no puede exceder 100 caracteres
-          </mat-error>
-        </mat-form-field>
+  <!-- Formulario -->
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="form-body">
+    <!-- Error general -->
+    @if (error) {
+    <div class="error-banner">
+      <mat-icon class="banner-icon">error</mat-icon>
+      <span>{{ error }}</span>
+    </div>
+    }
 
-        <!-- Información de solo lectura -->
-        <div class="readonly-info">
-          <div class="info-section">
-            <h3>Información del Centro de Costo</h3>
+    <!-- Grid de campos -->
+    <div class="form-grid">
+      <!-- Nombre del centro -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Nombre del centro de costo</mat-label>
+        <input
+          matInput
+          formControlName="nombre"
+          placeholder="Ej: Administración, Producción, etc."
+        />
+        @if (form.get('nombre')?.errors?.['required'] && form.get('nombre')?.touched) {
+        <mat-error>El nombre es requerido</mat-error>
+        } @if (form.get('nombre')?.errors?.['maxlength']) {
+        <mat-error>El nombre no puede exceder 100 caracteres</mat-error>
+        }
+      </mat-form-field>
 
-            <div class="info-row">
-              <span class="label">
-                <mat-icon>tag</mat-icon>
-                Número:
-              </span>
-              <span class="value">{{ form.get('numero')?.value || '-' }}</span>
-            </div>
+      <!-- Número del centro (solo en crear) -->
+      @if (!isEdit) {
+      <mat-form-field appearance="outline">
+        <mat-label>Número del centro</mat-label>
+        @if (requiredPrefix) {
+        <span matTextPrefix class="prefix-readonly">{{ requiredPrefix }}</span>
+        }
+        <input
+          matInput
+          formControlName="numeroSufijo"
+          type="text"
+          [placeholder]="numeroPlaceholder"
+        />
+        <mat-icon matSuffix>tag</mat-icon>
+        @if (form.get('numeroSufijo')?.errors?.['required'] && form.get('numeroSufijo')?.touched) {
+        <mat-error>El número es requerido</mat-error>
+        } @if (form.get('numeroSufijo')?.errors?.['pattern']) {
+        <mat-error>Solo se permiten números enteros positivos</mat-error>
+        } @if (requiredPrefix) {
+        <mat-hint
+          >El prefijo "{{ requiredPrefix }}" está bloqueado. Ingrese el número del
+          subcentro</mat-hint
+        >
+        } @else {
+        <mat-hint>Ingrese el número del centro de costo principal</mat-hint>
+        }
+      </mat-form-field>
 
-            <div class="info-row">
-              <span class="label">
-                <mat-icon>code</mat-icon>
-                Código interno:
-              </span>
-              <span class="value">{{ form.get('codigo')?.value || '-' }}</span>
-            </div>
+      <!-- Nivel (solo lectura) -->
+      <mat-form-field appearance="outline">
+        <mat-label>Nivel</mat-label>
+        <input matInput formControlName="nivel" readonly />
+        <mat-icon matSuffix color="primary">layers</mat-icon>
+      </mat-form-field>
 
-            <div class="info-row">
-              <span class="label">
-                <mat-icon>layers</mat-icon>
-                Nivel:
-              </span>
-              <span class="value">{{ form.get('nivel')?.value || '-' }}</span>
-            </div>
+      <!-- Tipo de centro -->
+      <mat-form-field appearance="outline">
+        <mat-label>Tipo de centro</mat-label>
+        <mat-select formControlName="tipo">
+          <mat-option [value]="1">Acumulación</mat-option>
+          <mat-option [value]="2">Movimiento</mat-option>
+        </mat-select>
+        <mat-icon matSuffix>label</mat-icon>
+      </mat-form-field>
 
-            <div class="info-row">
-              <span class="label">
-                <mat-icon>label</mat-icon>
-                Tipo de centro:
-              </span>
-              <span class="value">{{ getTipoLabel(form.get('tipo')?.value) }}</span>
-            </div>
+      <!-- Estado -->
+      <mat-form-field appearance="outline">
+        <mat-label>Estado</mat-label>
+        <mat-select formControlName="estado">
+          <mat-option [value]="1">Activo</mat-option>
+          <mat-option [value]="0">Inactivo</mat-option>
+        </mat-select>
+      </mat-form-field>
+      }
 
-            <div class="info-row">
-              <span class="label">
-                <mat-icon>schedule</mat-icon>
-                Fecha de ingreso:
-              </span>
-              <span class="value">{{ formatDate(form.get('fechaIngreso')?.value) }}</span>
-            </div>
+      <!-- Campos de solo lectura en modo edición -->
+      @if (isEdit) {
+      <mat-form-field appearance="outline">
+        <mat-label>Número</mat-label>
+        <input matInput formControlName="numero" readonly />
+        <mat-icon matSuffix>tag</mat-icon>
+      </mat-form-field>
 
-            <div class="info-row" *ngIf="form.get('fechaInactivo')?.value">
-              <span class="label">
-                <mat-icon>event_busy</mat-icon>
-                Fecha de desactivación:
-              </span>
-              <span class="value fecha-inactiva">{{ formatDate(form.get('fechaInactivo')?.value) }}</span>
-            </div>
+      <mat-form-field appearance="outline">
+        <mat-label>Nivel</mat-label>
+        <input matInput formControlName="nivel" readonly />
+        <mat-icon matSuffix color="primary">layers</mat-icon>
+      </mat-form-field>
 
-            <div class="info-row">
-              <span class="label">
-                <mat-icon>toggle_on</mat-icon>
-                Estado:
-              </span>
-              <span class="value" [class.estado-activo]="form.get('estado')?.value === 1"
-                    [class.estado-inactivo]="form.get('estado')?.value !== 1">
-                {{ getEstadoLabel(form.get('estado')?.value) }}
-              </span>
-            </div>
-          </div>
+      <mat-form-field appearance="outline">
+        <mat-label>Tipo de centro</mat-label>
+        <input matInput [value]="getTipoLabel(form.get('tipo')?.value)" readonly />
+        <mat-icon matSuffix>label</mat-icon>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Estado</mat-label>
+        <input matInput [value]="getEstadoLabel(form.get('estado')?.value)" readonly />
+        <mat-icon matSuffix>toggle_on</mat-icon>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Código interno</mat-label>
+        <input matInput formControlName="codigo" readonly />
+        <mat-icon matSuffix>code</mat-icon>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Fecha de ingreso</mat-label>
+        <input matInput [value]="formatDate(form.get('fechaIngreso')?.value)" readonly />
+        <mat-icon matSuffix>schedule</mat-icon>
+      </mat-form-field>
+      }
+    </div>
+
+    <!-- Información del nivel (solo en crear) -->
+    @if (!isEdit) {
+    <div class="info-section">
+      <div class="info-card">
+        <div class="level-indicator">
+          <mat-icon class="indicator-icon">layers</mat-icon>
+          <span class="level-label">Nivel:</span>
+          <span class="level-value">{{ form.get('nivel')?.value }}</span>
         </div>
-      </ng-container>
+      </div>
+    </div>
+    }
 
-      <!-- Modo Crear - Todos los campos -->
-      <ng-container *ngIf="!isEdit">
-        <div class="form-row">
-          <!-- Código del centro -->
-          <mat-form-field appearance="outline" class="half-width">
-            <mat-label>Número asignado</mat-label>
-            <input matInput formControlName="numero" type="number" placeholder="Ej: 1001">
-            <mat-icon matSuffix>tag</mat-icon>
-            <mat-hint>Puede modificar el número sugerido</mat-hint>
-            <mat-error *ngIf="form.get('numero')?.invalid && form.get('numero')?.touched">
-              {{ numeroError }}
-            </mat-error>
-          </mat-form-field>
-
-          <!-- Tipo -->
-          <mat-form-field appearance="outline" class="half-width">
-            <mat-label>Tipo de centro</mat-label>
-            <mat-select formControlName="tipo">
-              <mat-option *ngFor="let option of tipoOptions" [value]="option.value">
-                {{ option.label }}
-              </mat-option>
-            </mat-select>
-            <mat-icon matSuffix>label</mat-icon>
-            <mat-error *ngIf="form.get('tipo')?.hasError('required')">
-              El tipo es requerido
-            </mat-error>
-          </mat-form-field>
+    <!-- Jerarquía visual (solo en crear con padre) -->
+    @if (!isEdit && parentAccount) {
+    <div class="hierarchy-section">
+      <h4>Jerarquía</h4>
+      <div class="hierarchy-tree">
+        <div class="hierarchy-item parent">
+          <mat-icon class="tree-icon">folder</mat-icon>
+          <span>{{ buildParentCode() }} - {{ parentAccount.nombre }}</span>
         </div>
-
-        <!-- Nombre del centro -->
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Nombre del centro de costo</mat-label>
-          <input matInput formControlName="nombre" placeholder="Ej: Administración, Producción, etc.">
-          <mat-icon matSuffix>drive_file_rename_outline</mat-icon>
-          <mat-error *ngIf="form.get('nombre')?.hasError('required')">
-            El nombre es requerido
-          </mat-error>
-          <mat-error *ngIf="form.get('nombre')?.hasError('maxlength')">
-            El nombre no puede exceder 100 caracteres
-          </mat-error>
-        </mat-form-field>
-
-        <!-- Información automática -->
-        <div class="auto-info" *ngIf="parentAccount">
-          <div class="info-item">
-            <mat-icon>layers</mat-icon>
-            <span>Nivel: {{ form.get('nivel')?.value }}</span>
-          </div>
+        <div class="hierarchy-connector">
+          <mat-icon class="connector-icon">subdirectory_arrow_right</mat-icon>
         </div>
-      </ng-container>
+        <div class="hierarchy-item child">
+          <mat-icon class="tree-icon">description</mat-icon>
+          <span>
+            {{ form.get('numero')?.value || '[Número]' }} -
+            {{ form.get('nombre')?.value || '[Nombre del centro]' }}
+          </span>
+        </div>
+      </div>
+    </div>
+    }
 
+    <!-- Acciones del formulario -->
+    <div class="form-actions">
+      <button mat-button type="button" (click)="onCancel()" class="cancel-button">Cancelar</button>
+      <button
+        mat-flat-button
+        color="primary"
+        type="submit"
+        [disabled]="form.invalid || loading"
+        class="submit-button"
+      >
+        @if (loading) {
+        <mat-spinner diameter="20" class="inline-spinner"></mat-spinner>
+        } @else {
+        <mat-icon class="button-icon">{{ isEdit ? 'save' : 'add' }}</mat-icon>
+        }
+        {{ isEdit ? 'Actualizar' : 'Crear' }} Centro
+      </button>
     </div>
   </form>
-
-  <!-- Error message -->
-  <div *ngIf="error" class="error-message">
-    <mat-icon>error</mat-icon>
-    <span>{{ error }}</span>
-  </div>
-</mat-dialog-content>
-
-<mat-dialog-actions align="end">
-  <button mat-button type="button" (click)="onCancel()" [disabled]="loading">
-    <mat-icon>close</mat-icon>
-    Cancelar
-  </button>
-
-  <button mat-raised-button
-          color="primary"
-          type="submit"
-          (click)="onSubmit()"
-          [disabled]="loading || form.invalid">
-    <mat-icon>save</mat-icon>
-    <span *ngIf="!loading">{{ isEdit ? 'Guardar Nombre' : 'Crear Centro' }}</span>
-    <mat-spinner *ngIf="loading" diameter="20"></mat-spinner>
-  </button>
-</mat-dialog-actions>
+</div>

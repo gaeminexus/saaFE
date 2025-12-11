@@ -1,13 +1,13 @@
-import { Component, Inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
+import { Component, Inject, OnInit } from '@angular/core';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
+import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSelectModule } from '@angular/material/select';
 
 import { CentroCosto } from '../../model/centro-costo';
 import { CentroCostoService } from '../../service/centro-costo.service';
@@ -24,10 +24,10 @@ import { CentroCostoService } from '../../service/centro-costo.service';
     MatSelectModule,
     MatButtonModule,
     MatIconModule,
-    MatProgressSpinnerModule
+    MatProgressSpinnerModule,
   ],
   templateUrl: './centro-arbol-form.component.html',
-  styleUrls: ['./centro-arbol-form.component.scss']
+  styleUrls: ['./centro-arbol-form.component.scss'],
 })
 export class CentroArbolFormComponent implements OnInit {
   form!: FormGroup;
@@ -36,19 +36,42 @@ export class CentroArbolFormComponent implements OnInit {
   error: string | null = null;
   parentAccount: CentroCosto | null = null;
 
+  // Propiedades para prefijo bloqueado (como plan-arbol)
+  requiredPrefix = '';
+  numeroPlaceholder = '';
+  presetSufijoNumero = '';
+
   tipoOptions = [
     { value: 1, label: 'Acumulación' },
-    { value: 2, label: 'Movimiento' }
+    { value: 2, label: 'Movimiento' },
   ];
 
   constructor(
     private fb: FormBuilder,
     private centroCostoService: CentroCostoService,
     private dialogRef: MatDialogRef<CentroArbolFormComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: { item: CentroCosto | null; parent: CentroCosto | null; presetNumero?: number; presetNivel?: number; maxDepth?: number }
+    @Inject(MAT_DIALOG_DATA)
+    public data: {
+      item: CentroCosto | null;
+      parent: CentroCosto | null;
+      presetNumero?: number;
+      presetNivel?: number;
+      maxDepth?: number;
+    }
   ) {
     this.isEdit = !!data.item;
     this.parentAccount = data.parent;
+
+    // Calcular prefijo si hay padre
+    if (this.parentAccount && !this.isEdit) {
+      this.requiredPrefix = `${this.parentAccount.numero}.`;
+      this.numeroPlaceholder = 'Ej: 1';
+      // Sugerir siguiente número disponible
+      this.presetSufijoNumero = String(data.presetNumero || 1);
+    } else if (!this.isEdit) {
+      this.numeroPlaceholder = 'Ej: 1, 2, 3...';
+      this.presetSufijoNumero = String(data.presetNumero || 1);
+    }
   }
 
   get dialogTitle(): string {
@@ -58,6 +81,14 @@ export class CentroArbolFormComponent implements OnInit {
     return this.parentAccount
       ? `Agregar Subcentro a: ${this.parentAccount.nombre}`
       : 'Nuevo Centro de Costo';
+  }
+
+  /**
+   * Construye el código del padre para mostrar en la jerarquía
+   */
+  buildParentCode(): string {
+    if (!this.parentAccount) return '';
+    return String(this.parentAccount.numero || '');
   }
 
   ngOnInit(): void {
@@ -74,22 +105,42 @@ export class CentroArbolFormComponent implements OnInit {
         nivel: [{ value: this.data.item.nivel, disabled: true }],
         estado: [{ value: this.data.item.estado, disabled: true }],
         fechaIngreso: [{ value: this.data.item.fechaIngreso, disabled: true }],
-        fechaInactivo: [{ value: this.data.item.fechaInactivo, disabled: true }]
+        fechaInactivo: [{ value: this.data.item.fechaInactivo, disabled: true }],
       });
     } else {
       const presetNumero = this.data.presetNumero || 0;
-      const presetNivel = this.data.presetNivel || (this.parentAccount ? this.parentAccount.nivel + 1 : 1);
+      const presetNivel =
+        this.data.presetNivel || (this.parentAccount ? this.parentAccount.nivel + 1 : 1);
+
+      // Calcular tipo automático según nivel:
+      // Nivel 1 = Acumulación (1)
+      // Nivel > 1 y no es último = Acumulación (1)
+      // Último nivel = Movimiento (2)
+      // Por defecto asignamos Acumulación, el backend o validación pueden ajustar según profundidad máxima
+      const maxDepth = this.data.maxDepth || 5;
+      const tipoAutomatico = presetNivel >= maxDepth ? 2 : 1;
+
+      console.log('[CentroArbolForm] buildForm - Modo CREAR:', {
+        presetNumero,
+        presetNivel,
+        tipoAutomatico,
+        parentCodigo: this.parentAccount?.codigo,
+      });
+
       this.form = this.fb.group({
-        numero: [presetNumero, [Validators.required, this.numeroValidator.bind(this)]],
+        numeroSufijo: [
+          this.presetSufijoNumero,
+          [Validators.required, Validators.pattern(/^[1-9]\d*$/)], // Solo enteros positivos
+        ],
         nombre: ['', [Validators.required, Validators.maxLength(100)]],
-        tipo: [1, Validators.required],
-        nivel: [presetNivel],
+        tipo: [{ value: tipoAutomatico, disabled: true }],
+        nivel: [{ value: presetNivel, disabled: true }],
         idPadre: [this.parentAccount?.codigo || null],
-        estado: [1]
+        estado: [1],
       });
     }
     // Auto mayúsculas nombre
-    this.form.get('nombre')?.valueChanges.subscribe(val => {
+    this.form.get('nombre')?.valueChanges.subscribe((val) => {
       if (val && typeof val === 'string') {
         const upper = val.toUpperCase();
         if (upper !== val) {
@@ -108,11 +159,24 @@ export class CentroArbolFormComponent implements OnInit {
     this.loading = true;
     this.error = null;
 
+    // MODO CREAR: Construir número completo con prefijo + sufijo
+    let numeroCompleto: any;
+    if (!this.isEdit) {
+      const sufijo = this.form.value.numeroSufijo?.trim() || '';
+      numeroCompleto = this.requiredPrefix ? `${this.requiredPrefix}${sufijo}` : sufijo;
+
+      console.log('[CentroArbolForm] Construyendo número:', {
+        prefijo: this.requiredPrefix,
+        sufijo: sufijo,
+        numeroCompleto: numeroCompleto,
+      });
+    }
+
     if (this.isEdit) {
       // Solo enviar los datos originales con el nombre actualizado
       const centroCosto: CentroCosto = {
         ...this.data.item!,
-        nombre: this.form.get('nombre')?.value
+        nombre: this.form.get('nombre')?.value,
       };
 
       this.centroCostoService.update(centroCosto).subscribe({
@@ -122,22 +186,32 @@ export class CentroArbolFormComponent implements OnInit {
         },
         error: (error: any) => {
           this.loading = false;
-          this.error = error.message || 'Error al actualizar el centro de costo';
-        }
+          console.error('[CentroArbolForm] Error al actualizar:', error);
+          const errorMsg = error?.error?.message || error?.message || '';
+          this.error = errorMsg || 'Error al actualizar el centro de costo';
+        },
       });
     } else {
       // Crear nuevo centro
       const raw = this.form.getRawValue();
+      const empresaCodigo = parseInt(localStorage.getItem('idSucursal') || '280', 10);
+
+      console.log('[CentroArbolForm] Datos del formulario:', {
+        raw,
+        empresaCodigo,
+        presetNumeroOriginal: this.data.presetNumero,
+      });
+
       const centroCosto: Partial<CentroCosto> = {
         // NO enviar codigo - el backend lo genera automáticamente
-        numero: raw.numero,
+        numero: numeroCompleto,
         nombre: raw.nombre,
         tipo: raw.tipo,
         nivel: raw.nivel,
         idPadre: raw.idPadre || 0,
-        estado: raw.estado,
+        estado: raw.estado || 1,
         empresa: {
-          codigo: 280,
+          codigo: empresaCodigo,
           nombre: 'Empresa Demo',
           nivel: 1,
           codigoPadre: 0,
@@ -153,11 +227,11 @@ export class CentroArbolFormComponent implements OnInit {
             rubroTipoEstructuraH: 0,
             codigoAlterno: 0,
             rubroNivelCaracteristicaP: 0,
-            rubroNivelCaracteristicaH: 0
-          }
+            rubroNivelCaracteristicaH: 0,
+          },
         },
         fechaIngreso: new Date(),
-        fechaInactivo: raw.fechaInactivo || null
+        fechaInactivo: raw.fechaInactivo || null,
       };
 
       console.log('[CentroArbolForm] Crear centro payload:', centroCosto);
@@ -168,8 +242,16 @@ export class CentroArbolFormComponent implements OnInit {
         },
         error: (error: any) => {
           this.loading = false;
-          this.error = error.message || 'Error al crear el centro de costo';
-        }
+          console.error('[CentroArbolForm] Error al crear:', error);
+
+          // Detectar error de duplicado
+          const errorMsg = error?.error?.message || error?.message || '';
+          if (errorMsg.includes('ORA-00001') || errorMsg.includes('restricción única')) {
+            this.error = `El número ${raw.numero} ya existe para este nivel. Por favor, use un número diferente.`;
+          } else {
+            this.error = errorMsg || 'Error al crear el centro de costo';
+          }
+        },
       });
     }
   }
@@ -180,9 +262,12 @@ export class CentroArbolFormComponent implements OnInit {
 
   getTipoLabel(tipo?: number): string {
     switch (tipo) {
-      case 1: return 'Acumulación';
-      case 2: return 'Movimiento';
-      default: return 'Desconocido';
+      case 1:
+        return 'Acumulación';
+      case 2:
+        return 'Movimiento';
+      default:
+        return 'Desconocido';
     }
   }
 
@@ -229,7 +314,7 @@ export class CentroArbolFormComponent implements OnInit {
       return dateObj.toLocaleDateString('es-ES', {
         day: '2-digit',
         month: '2-digit',
-        year: 'numeric'
+        year: 'numeric',
       });
     } catch {
       return '-';

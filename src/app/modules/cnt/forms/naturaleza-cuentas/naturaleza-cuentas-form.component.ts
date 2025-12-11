@@ -105,15 +105,22 @@ export class NaturalezaDeCuentasFormComponent implements OnInit {
 
     const formValue = this.form.value;
     const idSucursal = parseInt(localStorage.getItem('idSucursal') || '280', 10);
+
+    // Convertir manejaCentroCosto a número (0 o 1)
+    const manejaCentroCostoValue =
+      formValue.manejaCentroCosto === true || formValue.manejaCentroCosto === 1 ? 1 : 0;
+
     const formData: any = {
       codigo: formValue.codigo ?? null,
       nombre: String(formValue.nombre).trim(),
       tipo: Number(formValue.tipo),
       numero: Number(formValue.numero),
-      manejaCentroCosto: formValue.manejaCentroCosto ? 1 : 0,
+      manejaCentroCosto: manejaCentroCostoValue,
       estado: Number(formValue.estado ?? 1),
       empresa: { codigo: idSucursal },
     };
+
+    console.log('[NaturalezaForm] Datos a enviar:', formData);
 
     const request = this.isEditMode
       ? this.naturalezaCuentaService.update(formData)
