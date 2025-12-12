@@ -7,10 +7,13 @@
         Plantillas Contables Generales
       </h1>
       <div class="header-actions">
-        <button mat-raised-button color="primary"
-                class="action-button primary"
-                (click)="nuevaPlantilla()"
-                matTooltip="Crear nueva plantilla">
+        <button
+          mat-raised-button
+          color="primary"
+          class="action-button primary"
+          (click)="nuevaPlantilla()"
+          matTooltip="Crear nueva plantilla"
+        >
           <mat-icon>add</mat-icon>
           Nueva Plantilla
         </button>
@@ -26,9 +29,13 @@
           <mat-icon class="banner-icon">info</mat-icon>
           <div class="banner-text">
             <strong>Modo Demostración:</strong>
-            Backend no disponible. Se están mostrando datos de ejemplo para demostrar la funcionalidad.
-            <br>
-            <small>Para conectar con el backend real, asegúrese de que esté ejecutándose en http://127.0.0.1:8080</small>
+            Backend no disponible. Se están mostrando datos de ejemplo para demostrar la
+            funcionalidad.
+            <br />
+            <small
+              >Para conectar con el backend real, asegúrese de que esté ejecutándose en
+              http://127.0.0.1:8080</small
+            >
           </div>
           <button mat-icon-button (click)="cerrarBanner()" class="banner-close">
             <mat-icon>close</mat-icon>
@@ -52,23 +59,26 @@
         <mat-card-content>
           <!-- Filtro para Maestro -->
           <div class="filter-section">
-              <mat-form-field appearance="outline" class="filter-field">
+            <mat-form-field appearance="outline" class="filter-field">
               <mat-label>Buscar plantillas</mat-label>
-              <input matInput
-                     (keyup)="applyFilterMaestro($event)"
-                     placeholder="Buscar por nombre..."
-                     autocomplete="off">
+              <input
+                matInput
+                (keyup)="applyFilterMaestro($event)"
+                placeholder="Buscar por nombre..."
+                autocomplete="off"
+              />
               <mat-icon matSuffix>search</mat-icon>
             </mat-form-field>
           </div>
 
           <!-- Lista de Plantillas -->
           <div class="plantillas-list" *ngIf="!loading">
-            <div class="plantilla-item"
-                 *ngFor="let plantilla of plantillas"
-                 [class.selected]="plantillaSeleccionada?.codigo === plantilla.codigo"
-                 (click)="seleccionarPlantilla(plantilla)">
-
+            <div
+              class="plantilla-item"
+              *ngFor="let plantilla of plantillas"
+              [class.selected]="plantillaSeleccionada?.codigo === plantilla.codigo"
+              (click)="seleccionarPlantilla(plantilla)"
+            >
               <div class="plantilla-info">
                 <div class="plantilla-header">
                   <mat-chip [class]="getEstadoBadgeClass(plantilla.estado)">
@@ -119,7 +129,12 @@
             <div class="form-row">
               <mat-form-field appearance="outline" class="form-field">
                 <mat-label>Nombre *</mat-label>
-                <input matInput formControlName="nombre" placeholder="Nombre de la plantilla" maxlength="100">
+                <input
+                  matInput
+                  formControlName="nombre"
+                  placeholder="Nombre de la plantilla"
+                  maxlength="100"
+                />
                 <mat-hint>Máximo 100 caracteres</mat-hint>
                 <mat-error *ngIf="plantillaForm.get('nombre')?.hasError('required')">
                   El nombre es requerido
@@ -141,10 +156,13 @@
               </mat-form-field>
             </div>
 
-            <div class="form-row" *ngIf="plantillaForm.get('estado')?.value === EstadoPlantilla.INACTIVO">
+            <div
+              class="form-row"
+              *ngIf="plantillaForm.get('estado')?.value === EstadoPlantilla.INACTIVO"
+            >
               <mat-form-field appearance="outline" class="form-field">
                 <mat-label>Fecha de Desactivación *</mat-label>
-                <input matInput [matDatepicker]="picker" formControlName="fechaInactivo" readonly>
+                <input matInput [matDatepicker]="picker" formControlName="fechaInactivo" readonly />
                 <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
                 <mat-datepicker #picker></mat-datepicker>
                 <mat-hint>Fecha en que se desactivó la plantilla</mat-hint>
@@ -157,10 +175,13 @@
             <div class="form-row">
               <mat-form-field appearance="outline" class="form-field full-width">
                 <mat-label>Observación</mat-label>
-                <textarea matInput formControlName="observacion"
-                          placeholder="Descripción o notas sobre la plantilla"
-                          rows="3"
-                          maxlength="500">
+                <textarea
+                  matInput
+                  formControlName="observacion"
+                  placeholder="Descripción o notas sobre la plantilla"
+                  rows="3"
+                  maxlength="500"
+                >
                 </textarea>
                 <mat-hint>Máximo 500 caracteres</mat-hint>
                 <mat-error *ngIf="plantillaForm.get('observacion')?.hasError('maxlength')">
@@ -169,53 +190,62 @@
               </mat-form-field>
             </div>
 
-
-
             <div class="form-info" *ngIf="!isNewRecord">
               <div class="info-item" *ngIf="plantillaForm.get('fechaCreacion')?.value">
                 <mat-icon>schedule</mat-icon>
                 <span class="label">Creado:</span>
-                <span class="value">{{ plantillaForm.get('fechaCreacion')?.value | date:'dd/MM/yyyy HH:mm' }}</span>
+                <span class="value">{{
+                  plantillaForm.get('fechaCreacion')?.value | date : 'dd/MM/yyyy HH:mm'
+                }}</span>
               </div>
             </div>
           </form>
 
           <div class="form-actions">
-            <button mat-raised-button color="primary"
-                    (click)="guardarPlantilla()"
-                    [disabled]="loading">
+            <button
+              mat-raised-button
+              color="primary"
+              (click)="guardarPlantilla()"
+              [disabled]="loading"
+            >
               <mat-icon>save</mat-icon>
               {{ isNewRecord ? 'Crear' : 'Guardar' }}
             </button>
 
-            <button mat-raised-button color="accent"
-                    (click)="crearAsientoDesdeTemplate()"
-                    *ngIf="!isNewRecord && plantillaSeleccionada"
-                    [disabled]="loading || dataSourceDetalles.data.length === 0"
-                    matTooltip="Crear asiento contable usando esta plantilla">
+            <button
+              mat-raised-button
+              color="accent"
+              (click)="crearAsientoDesdeTemplate()"
+              *ngIf="!isNewRecord && plantillaSeleccionada"
+              [disabled]="loading || dataSourceDetalles.data.length === 0"
+              matTooltip="Crear asiento contable usando esta plantilla"
+            >
               <mat-icon>receipt_long</mat-icon>
               Crear Asiento
             </button>
 
-            <button mat-button
-                    (click)="validarEstadoDetalles()"
-                    matTooltip="Ver estado actual de los detalles"
-                    [disabled]="loading">
+            <button
+              mat-button
+              (click)="validarEstadoDetalles()"
+              matTooltip="Ver estado actual de los detalles"
+              [disabled]="loading"
+            >
               <mat-icon>info</mat-icon>
               Estado Detalles
             </button>
 
-            <button mat-button
-                    (click)="cancelarEdicion()"
-                    [disabled]="loading">
+            <button mat-button (click)="cancelarEdicion()" [disabled]="loading">
               <mat-icon>cancel</mat-icon>
               Cancelar
             </button>
 
-            <button mat-button color="warn"
-                    (click)="eliminarPlantilla()"
-                    *ngIf="!isNewRecord"
-                    [disabled]="loading">
+            <button
+              mat-button
+              color="warn"
+              (click)="eliminarPlantilla()"
+              *ngIf="!isNewRecord"
+              [disabled]="loading"
+            >
               <mat-icon>delete</mat-icon>
               Eliminar
             </button>
@@ -231,13 +261,14 @@
             Detalles de la Plantilla
           </mat-card-title>
           <div class="header-actions">
-            <button mat-icon-button
-                    (click)="agregarDetalle()"
-                    matTooltip="Agregar detalle"
-                    color="primary">
+            <button
+              mat-icon-button
+              (click)="agregarDetalle()"
+              matTooltip="Agregar detalle"
+              color="primary"
+            >
               <mat-icon>add_circle</mat-icon>
             </button>
-
           </div>
         </mat-card-header>
 
@@ -246,38 +277,47 @@
           <div class="filter-section">
             <mat-form-field appearance="outline" class="filter-field">
               <mat-label>Buscar en detalles</mat-label>
-              <input matInput
-                     [(ngModel)]="filterValue"
-                     (keyup)="applyFilterDetalles()"
-                     placeholder="Buscar por cuenta o descripción..."
-                     autocomplete="off">
+              <input
+                matInput
+                [(ngModel)]="filterValue"
+                (keyup)="applyFilterDetalles()"
+                placeholder="Buscar por cuenta o descripción..."
+                autocomplete="off"
+              />
               <mat-icon matSuffix>search</mat-icon>
             </mat-form-field>
           </div>
 
           <!-- Tabla de Detalles -->
-          <div class="table-container" *ngIf="displayedColumnsDetalles && displayedColumnsDetalles.length > 0">
-            <table mat-table [dataSource]="dataSourceDetalles"
-                   matSort
-                   class="detalles-table">
-
-
-
+          <div
+            class="table-container"
+            *ngIf="displayedColumnsDetalles && displayedColumnsDetalles.length > 0"
+          >
+            <table mat-table [dataSource]="dataSourceDetalles" matSort class="detalles-table">
               <!-- Código Cuenta Column -->
               <ng-container matColumnDef="codigoCuenta">
-                <th mat-header-cell *matHeaderCellDef mat-sort-header class="header-cell cuenta-header">
+                <th
+                  mat-header-cell
+                  *matHeaderCellDef
+                  mat-sort-header
+                  class="header-cell cuenta-header"
+                >
                   <mat-icon>account_balance</mat-icon>
                   Plan de Cuentay
                 </th>
                 <td mat-cell *matCellDef="let detalle" class="data-cell cuenta-cell">
                   <div class="cuenta-info-enhanced">
                     <!-- Manejar cuando planCuenta es un objeto -->
-                    <ng-container *ngIf="detalle.planCuenta && typeof detalle.planCuenta === 'object'; else planCuentaString">
+                    <ng-container
+                      *ngIf="detalle.planCuenta && typeof detalle.planCuenta === 'object'; else planCuentaString"
+                    >
                       <div class="cuenta-nombre-solo">{{ detalle.planCuenta.nombre }}</div>
                     </ng-container>
                     <!-- Manejar cuando planCuenta es un string - extraer solo el nombre -->
                     <ng-template #planCuentaString>
-                      <div class="cuenta-nombre-solo">{{ getPlanCuentaNombre(detalle.planCuenta) }}</div>
+                      <div class="cuenta-nombre-solo">
+                        {{ getPlanCuentaNombre(detalle.planCuenta) }}
+                      </div>
                     </ng-template>
                   </div>
                 </td>
@@ -298,55 +338,61 @@
 
               <!-- Movimiento Column -->
               <ng-container matColumnDef="movimiento">
-                <th mat-header-cell *matHeaderCellDef class="header-cell movimiento-header">Movimiento</th>
+                <th mat-header-cell *matHeaderCellDef class="header-cell movimiento-header">
+                  Movimiento
+                </th>
                 <td mat-cell *matCellDef="let detalle" class="data-cell movimiento-cell">
-                  <span class="badge badge-mov" [ngClass]="detalle.movimiento === 1 ? 'mov-debe' : 'mov-haber'">
+                  <span
+                    class="badge badge-mov"
+                    [ngClass]="detalle.movimiento === 1 ? 'mov-debe' : 'mov-haber'"
+                  >
                     {{ detalle.movimiento === 1 ? 'DEBE' : 'HABER' }}
                   </span>
                 </td>
               </ng-container>
 
-
-
               <!-- Estado Column -->
               <ng-container matColumnDef="estado">
                 <th mat-header-cell *matHeaderCellDef class="header-cell estado-header">Estado</th>
                 <td mat-cell *matCellDef="let detalle" class="data-cell estado-cell">
-                  <span class="badge badge-estado" [ngClass]="detalle.estado === 1 ? 'est-activo' : 'est-inactivo'">
+                  <span
+                    class="badge badge-estado"
+                    [ngClass]="detalle.estado === 1 ? 'est-activo' : 'est-inactivo'"
+                  >
                     {{ detalle.estado === 1 ? 'Activo' : 'Inactivo' }}
                   </span>
                 </td>
               </ng-container>
 
-
-
-
-
               <!-- Acciones Column -->
               <ng-container matColumnDef="acciones">
-                <th mat-header-cell *matHeaderCellDef class="header-cell">
-                  Acciones
-                </th>
+                <th mat-header-cell *matHeaderCellDef class="header-cell">Acciones</th>
                 <td mat-cell *matCellDef="let detalle" class="data-cell">
                   <div class="action-buttons">
-                    <button mat-icon-button
-                            class="action-btn edit-btn"
-                            (click)="editarDetalle(detalle)"
-                            matTooltip="Editar detalle">
+                    <button
+                      mat-icon-button
+                      class="action-btn edit-btn"
+                      (click)="editarDetalle(detalle)"
+                      matTooltip="Editar detalle"
+                    >
                       <mat-icon>edit</mat-icon>
                     </button>
 
-                    <button mat-icon-button
-                            class="action-btn copy-btn"
-                            (click)="duplicarDetalle(detalle)"
-                            matTooltip="Duplicar detalle">
+                    <button
+                      mat-icon-button
+                      class="action-btn copy-btn"
+                      (click)="duplicarDetalle(detalle)"
+                      matTooltip="Duplicar detalle"
+                    >
                       <mat-icon>content_copy</mat-icon>
                     </button>
 
-                    <button mat-icon-button
-                            class="action-btn delete-btn"
-                            (click)="eliminarDetalle(detalle)"
-                            matTooltip="Eliminar detalle">
+                    <button
+                      mat-icon-button
+                      class="action-btn delete-btn"
+                      (click)="eliminarDetalle(detalle)"
+                      matTooltip="Eliminar detalle"
+                    >
                       <mat-icon>delete</mat-icon>
                     </button>
                   </div>
@@ -355,7 +401,11 @@
 
               <!-- Header y Row Definitions -->
               <tr mat-header-row *matHeaderRowDef="displayedColumnsDetalles"></tr>
-              <tr mat-row *matRowDef="let row; columns: displayedColumnsDetalles;" class="detalle-row"></tr>
+              <tr
+                mat-row
+                *matRowDef="let row; columns: displayedColumnsDetalles"
+                class="detalle-row"
+              ></tr>
             </table>
 
             <!-- Estado vacío para detalles -->
@@ -370,48 +420,13 @@
             </div>
           </div>
 
-          <!-- Resumen de la Plantilla -->
-          <div class="resumen-section" *ngIf="dataSourceDetalles.data.length > 0">
-            <mat-card class="resumen-card">
-              <mat-card-header>
-                <mat-card-title>Resumen</mat-card-title>
-              </mat-card-header>
-              <mat-card-content>
-                <div class="resumen-info">
-                  <div class="resumen-item">
-                    <span class="label">Líneas:</span>
-                    <span class="value">{{ calcularResumen().totalLineas }}</span>
-                  </div>
-                  <div class="resumen-item">
-                    <span class="label">Total Debe:</span>
-                    <span class="value debe">{{ calcularResumen().totalDebe | number:'1.2-2' }}</span>
-                  </div>
-                  <div class="resumen-item">
-                    <span class="label">Total Haber:</span>
-                    <span class="value haber">{{ calcularResumen().totalHaber | number:'1.2-2' }}</span>
-                  </div>
-                  <div class="resumen-item">
-                    <span class="label">Diferencia:</span>
-                    <span class="value" [class]="calcularResumen().balanceado ? 'balanceado' : 'desbalanceado'">
-                      {{ calcularResumen().diferencia | number:'1.2-2' }}
-                    </span>
-                  </div>
-                  <div class="resumen-item">
-                    <span class="label">Estado:</span>
-                    <mat-chip [class]="calcularResumen().balanceado ? 'badge-activo' : 'badge-inactivo'">
-                      {{ calcularResumen().balanceado ? 'Balanceado' : 'Desbalanceado' }}
-                    </mat-chip>
-                  </div>
-                </div>
-              </mat-card-content>
-            </mat-card>
-          </div>
-
           <!-- Paginador para Detalles -->
-          <mat-paginator #detallesPaginator
-                         [pageSizeOptions]="[5, 10, 20]"
-                         showFirstLastButtons
-                         class="table-paginator">
+          <mat-paginator
+            #detallesPaginator
+            [pageSizeOptions]="[5, 10, 20]"
+            showFirstLastButtons
+            class="table-paginator"
+          >
           </mat-paginator>
         </mat-card-content>
       </mat-card>
@@ -425,8 +440,9 @@
             <mat-icon class="welcome-icon">description</mat-icon>
             <h2>Gestión de Plantillas Contables</h2>
             <p>
-              Las plantillas contables le permiten crear estructuras predefinidas de asientos contables
-              que pueden ser reutilizadas para facilitar el registro de operaciones recurrentes.
+              Las plantillas contables le permiten crear estructuras predefinidas de asientos
+              contables que pueden ser reutilizadas para facilitar el registro de operaciones
+              recurrentes.
             </p>
             <div class="welcome-actions">
               <button mat-raised-button color="primary" (click)="nuevaPlantilla()">

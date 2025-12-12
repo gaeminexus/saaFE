@@ -15,6 +15,7 @@ export interface Plantilla {
   fechaUpdate?: Date; // Fecha de actualización
   usuarioCreacion?: string; // Usuario que creó
   usuarioUpdate?: string; // Usuario que actualizó
+  sistema: number; // PLNSSSTM - Indicador de sistema (1 por defecto)
 }
 
 /**

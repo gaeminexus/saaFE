@@ -13,7 +13,7 @@ export enum TipoFormatoFechaBackend {
   /** Fecha con hora: yyyy-MM-dd HH:mm:ss */
   FECHA_HORA = 'FECHA_HORA',
   /** Fecha con hora pero hora en 00:00:00 */
-  FECHA_HORA_CERO = 'FECHA_HORA_CERO'
+  FECHA_HORA_CERO = 'FECHA_HORA_CERO',
 }
 
 /**
@@ -27,16 +27,13 @@ export interface ConfiguracionCampoFecha {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class FuncionesDatosService {
-
   public static FECHA_HORA = 1;
   public static SOLO_FECHA = 2;
 
-  constructor(
-    public detalleRubroService: DetalleRubroService,
-  ) { }
+  constructor(public detalleRubroService: DetalleRubroService) {}
 
   tCase(str1: any): string {
     let str = '';
@@ -72,69 +69,85 @@ export class FuncionesDatosService {
     return resultado;
   }
 
-  mostrarSoloNumeros(evento: any): boolean{
+  mostrarSoloNumeros(evento: any): boolean {
     let continuar = false;
-    if (evento.keyCode === 46){
+    if (evento.keyCode === 46) {
       continuar = true;
     }
-    if ((evento.keyCode >= 48) && (evento.keyCode <= 57)){
+    if (evento.keyCode >= 48 && evento.keyCode <= 57) {
       continuar = true;
     }
     return continuar;
   }
 
-  formatoFecha(fecha: any, tipo: number): string{
-    let fechaFac: Date|null;
+  formatoFecha(fecha: any, tipo: number): string {
+    let fechaFac: Date | null;
     let strFecha = '';
-    if (typeof fecha === 'undefined'){
+    if (typeof fecha === 'undefined') {
       fechaFac = null;
-    }else{
-      if (tipo === 2){
+    } else {
+      if (tipo === 2) {
         fecha = fecha + 'T12:00:00';
       }
       fechaFac = new Date(fecha);
     }
-    if (fechaFac){
+    if (fechaFac) {
       /* 1 ***  DD-MM-YYYY / HH:mm  *** */
-      if (tipo === FECHA_HORA){
-        strFecha = fechaFac.getDate().toString().padStart(2, '0') + '-' +
-        (fechaFac.getMonth() + 1).toString().padStart(2, '0') + '-' +
-        fechaFac.getFullYear() + ' / ' +
-        fechaFac.getHours().toString().padStart(2, '0') + ':' +
-        fechaFac.getMinutes().toString().padStart(2, '0');
+      if (tipo === FECHA_HORA) {
+        strFecha =
+          fechaFac.getDate().toString().padStart(2, '0') +
+          '-' +
+          (fechaFac.getMonth() + 1).toString().padStart(2, '0') +
+          '-' +
+          fechaFac.getFullYear() +
+          ' / ' +
+          fechaFac.getHours().toString().padStart(2, '0') +
+          ':' +
+          fechaFac.getMinutes().toString().padStart(2, '0');
       }
       /* 2 ***  DD-MM-YYYY *** */
-      if (tipo === SOLO_FECHA){
-        strFecha = fechaFac.getDate().toString().padStart(2, '0') + '-' +
-        (fechaFac.getMonth() + 1).toString().padStart(2, '0') + '-' +
-        fechaFac.getFullYear();
+      if (tipo === SOLO_FECHA) {
+        strFecha =
+          fechaFac.getDate().toString().padStart(2, '0') +
+          '-' +
+          (fechaFac.getMonth() + 1).toString().padStart(2, '0') +
+          '-' +
+          fechaFac.getFullYear();
       }
     }
     return strFecha;
   }
 
-  formatoFechaOrigenConHora(fecha: any, tipo: number): string{
-    let fechaFac: Date|null;
+  formatoFechaOrigenConHora(fecha: any, tipo: number): string {
+    let fechaFac: Date | null;
     let strFecha = '';
-    if (typeof fecha === 'undefined'){
+    if (typeof fecha === 'undefined') {
       fechaFac = null;
-    }else{
+    } else {
       fechaFac = new Date(fecha);
     }
-    if (fechaFac){
+    if (fechaFac) {
       /* 1 ***  DD-MM-YYYY / HH:mm  *** */
-      if (tipo === FECHA_HORA){
-        strFecha = fechaFac.getDate().toString().padStart(2, '0') + '-' +
-        (fechaFac.getMonth() + 1).toString().padStart(2, '0') + '-' +
-        fechaFac.getFullYear() + ' / ' +
-        fechaFac.getHours().toString().padStart(2, '0') + ':' +
-        fechaFac.getMinutes().toString().padStart(2, '0');
+      if (tipo === FECHA_HORA) {
+        strFecha =
+          fechaFac.getDate().toString().padStart(2, '0') +
+          '-' +
+          (fechaFac.getMonth() + 1).toString().padStart(2, '0') +
+          '-' +
+          fechaFac.getFullYear() +
+          ' / ' +
+          fechaFac.getHours().toString().padStart(2, '0') +
+          ':' +
+          fechaFac.getMinutes().toString().padStart(2, '0');
       }
       /* 2 ***  DD-MM-YYYY *** */
-      if (tipo === SOLO_FECHA){
-        strFecha = fechaFac.getDate().toString().padStart(2, '0') + '-' +
-        (fechaFac.getMonth() + 1).toString().padStart(2, '0') + '-' +
-        fechaFac.getFullYear();
+      if (tipo === SOLO_FECHA) {
+        strFecha =
+          fechaFac.getDate().toString().padStart(2, '0') +
+          '-' +
+          (fechaFac.getMonth() + 1).toString().padStart(2, '0') +
+          '-' +
+          fechaFac.getFullYear();
       }
     }
     return strFecha;
@@ -180,7 +193,7 @@ export class FuncionesDatosService {
 
       // Fecha con hora en 00:00:00
       if (tipoFormato === TipoFormatoFechaBackend.FECHA_HORA_CERO) {
-        return `${year}-${month}-${day} 00:00:00`;
+        return `${year}-${month}-${day}T00:00:00`;
       }
 
       // Fecha con hora actual (por defecto)
@@ -188,7 +201,7 @@ export class FuncionesDatosService {
       const minutes = String(date.getMinutes()).padStart(2, '0');
       const seconds = String(date.getSeconds()).padStart(2, '0');
 
-      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+      return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
     } catch (error) {
       console.error('Error al formatear fecha para backend:', error, 'Fecha recibida:', fecha);
       return null;
@@ -199,7 +212,10 @@ export class FuncionesDatosService {
    * VERSIÓN LEGACY: Mantiene compatibilidad con código existente
    * @deprecated Use formatearFechaParaBackend con TipoFormatoFechaBackend
    */
-  formatearFechaParaBackendLegacy(fecha: Date | string | null | undefined, incluirHora: boolean = true): string | null {
+  formatearFechaParaBackendLegacy(
+    fecha: Date | string | null | undefined,
+    incluirHora: boolean = true
+  ): string | null {
     return this.formatearFechaParaBackend(
       fecha,
       incluirHora ? TipoFormatoFechaBackend.FECHA_HORA : TipoFormatoFechaBackend.SOLO_FECHA
@@ -225,15 +241,12 @@ export class FuncionesDatosService {
    *   { campo: 'fechaVencimiento', tipo: TipoFormatoFechaBackend.FECHA_HORA_CERO }
    * ]);
    */
-  formatearFechasParaBackend(
-    obj: any,
-    configuraciones: (string | ConfiguracionCampoFecha)[]
-  ): any {
+  formatearFechasParaBackend(obj: any, configuraciones: (string | ConfiguracionCampoFecha)[]): any {
     if (!obj) return obj;
 
     const resultado = { ...obj };
 
-    configuraciones.forEach(config => {
+    configuraciones.forEach((config) => {
       // Si es string, usar formato por defecto (FECHA_HORA)
       if (typeof config === 'string') {
         if (resultado[config]) {
@@ -242,7 +255,10 @@ export class FuncionesDatosService {
       } else {
         // Si es ConfiguracionCampoFecha, usar el tipo especificado
         if (resultado[config.campo]) {
-          resultado[config.campo] = this.formatearFechaParaBackend(resultado[config.campo], config.tipo);
+          resultado[config.campo] = this.formatearFechaParaBackend(
+            resultado[config.campo],
+            config.tipo
+          );
         }
       }
     });
@@ -262,12 +278,11 @@ export class FuncionesDatosService {
   crearConfiguracionesFecha(
     campos: (string | ConfiguracionCampoFecha)[]
   ): ConfiguracionCampoFecha[] {
-    return campos.map(campo => {
+    return campos.map((campo) => {
       if (typeof campo === 'string') {
         return { campo, tipo: TipoFormatoFechaBackend.FECHA_HORA };
       }
       return campo;
     });
   }
-
 }
