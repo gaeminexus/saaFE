@@ -1,6 +1,6 @@
 import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable, catchError, map, of, throwError } from 'rxjs';
+import { Observable, catchError, of, throwError } from 'rxjs';
 import { DetallePlantilla } from '../model/detalle-plantilla';
 import { ServiciosCnt } from './ws-cnt';
 
@@ -57,9 +57,7 @@ export class DetallePlantillaService {
   selectByCriteria(datos: any): Observable<DetallePlantilla[] | null> {
     const wsGetById = '/selectByCriteria/';
     const url = `${ServiciosCnt.RS_DTPL}${wsGetById}`;
-    return this.http.post<any>(url, datos, this.httpOptions).pipe(
-      catchError(this.handleError)
-    );
+    return this.http.post<any>(url, datos, this.httpOptions).pipe(catchError(this.handleError));
   }
 
   /** DELETE: add a new sesion to the server */
