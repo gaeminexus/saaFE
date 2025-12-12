@@ -1,15 +1,21 @@
-import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
-import { FormGroup, FormBuilder, Validators, ValidatorFn, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
-import { FieldConfig } from '../../model/field.interface';
+import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
+import {
+  FormBuilder,
+  FormGroup,
+  ReactiveFormsModule,
+  ValidatorFn,
+  Validators,
+} from '@angular/forms';
 import { MaterialFormModule } from '../../../../../modules/material-form.module';
-import { InputComponent } from '../input/input.component';
-import { SelectComponent } from '../select/select.component';
-import { DateComponent } from '../date/date.component';
+import { FieldConfig } from '../../model/field.interface';
 import { AutocompleteComponent } from '../autocomplete/autocomplete.component';
-import { CheckboxComponent } from '../checkbox/checkbox.component';
-import { RadiobuttonComponent } from '../radiobutton/radiobutton.component';
 import { ButtonComponent } from '../button/button.component';
+import { CheckboxComponent } from '../checkbox/checkbox.component';
+import { DateComponent } from '../date/date.component';
+import { InputComponent } from '../input/input.component';
+import { RadiobuttonComponent } from '../radiobutton/radiobutton.component';
+import { SelectComponent } from '../select/select.component';
 
 @Component({
   selector: 'app-dynamic-form',
@@ -24,13 +30,12 @@ import { ButtonComponent } from '../button/button.component';
     AutocompleteComponent,
     CheckboxComponent,
     RadiobuttonComponent,
-    ButtonComponent
+    ButtonComponent,
   ],
   templateUrl: './dynamic-form.component.html',
-  styleUrl: './dynamic-form.component.scss'
+  styleUrl: './dynamic-form.component.scss',
 })
 export class DynamicFormComponent implements OnInit {
-
   @Input() fields: FieldConfig[] = [];
   @Input()
   accion!: number;
@@ -51,7 +56,9 @@ export class DynamicFormComponent implements OnInit {
   constructor(private fb: FormBuilder) {}
 
   ngOnInit(): void {
+    console.log('🎯 DynamicForm ngOnInit - fields recibidos:', this.fields);
     this.form = this.createControl();
+    console.log('📝 Formulario creado con controles:', Object.keys(this.form.controls));
   }
 
   onSubmit(event: Event): void {
@@ -66,8 +73,10 @@ export class DynamicFormComponent implements OnInit {
 
   private createControl(): FormGroup {
     const group = this.fb.group({});
-    this.fields.forEach(field => {
-      if (field.type === 'button') { return; }
+    this.fields.forEach((field) => {
+      if (field.type === 'button') {
+        return;
+      }
       const control = this.fb.control(
         field.value ?? null,
         this.bindValidations(field.validations || [])
@@ -79,14 +88,14 @@ export class DynamicFormComponent implements OnInit {
 
   private bindValidations(validations: { validator: ValidatorFn }[]): ValidatorFn | null {
     if (validations.length > 0) {
-      const validList = validations.map(valid => valid.validator);
+      const validList = validations.map((valid) => valid.validator);
       return Validators.compose(validList);
     }
     return null;
   }
 
   validateAllFormFields(formGroup: FormGroup): void {
-    Object.keys(formGroup.controls).forEach(field => {
+    Object.keys(formGroup.controls).forEach((field) => {
       const control = formGroup.get(field);
       if (control) {
         control.markAsTouched({ onlySelf: true });
@@ -96,6 +105,4 @@ export class DynamicFormComponent implements OnInit {
       }
     });
   }
-
 }
-

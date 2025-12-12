@@ -163,7 +163,7 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
   public loadData(): void {
     // Guardar estado de expansión actual
     this.saveExpandedState();
-    
+
     this.loading.set(true);
     this.error.set('');
 
@@ -670,9 +670,9 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
       cancelText: 'Cancelar',
       type: 'danger',
       details: [
-        `Código: ${node.codigo}`,
-        `Cuenta: ${node.cuentaContable}`,
-        `Nombre: ${node.nombre}`
+        { label: 'Código', value: String(node.codigo) },
+        { label: 'Cuenta', value: node.cuentaContable },
+        { label: 'Nombre', value: node.nombre }
       ]
     };
 
@@ -766,11 +766,11 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
 
   private generateNewCuentaContable(parent?: PlanCuentaNode): string {
     if (!parent) return '1';
-    
+
     const existingAccounts = this.planCuentas
       .map(p => p.cuentaContable || '')
       .filter(c => c);
-    
+
     return this.planUtils.generateNewCuentaContable(
       parent.cuentaContable || '',
       existingAccounts
@@ -810,7 +810,7 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
     const orderedCodigos = this.naturalezas
       .map(n => n.codigo)
       .sort((a, b) => a - b);
-    
+
     return this.planUtils.getNextAvailableRootNaturalezaCodigo(
       existingRoots,
       orderedCodigos
@@ -830,7 +830,7 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
    */
   private saveExpandedState(): void {
     this.expandedNodesCodes.clear();
-    
+
     const saveNodeState = (node: PlanCuentaNode) => {
       if (this.treeControl.isExpanded(node) && node.codigo) {
         this.expandedNodesCodes.add(node.codigo);
@@ -839,7 +839,7 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
         node.children.forEach(child => saveNodeState(child));
       }
     };
-    
+
     this.treeData.forEach(node => saveNodeState(node));
     console.log('💾 Estado guardado. Nodos expandidos:', Array.from(this.expandedNodesCodes));
   }
@@ -851,7 +851,7 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
     if (this.expandedNodesCodes.size === 0) {
       return;
     }
-    
+
     const restoreNodeState = (node: PlanCuentaNode) => {
       if (node.codigo && this.expandedNodesCodes.has(node.codigo)) {
         this.treeControl.expand(node);
@@ -860,7 +860,7 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
         node.children.forEach(child => restoreNodeState(child));
       }
     };
-    
+
     this.treeData.forEach(node => restoreNodeState(node));
     console.log('♻️ Estado restaurado. Nodos re-expandidos:', Array.from(this.expandedNodesCodes));
   }

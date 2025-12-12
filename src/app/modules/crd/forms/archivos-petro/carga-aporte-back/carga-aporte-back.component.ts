@@ -2,6 +2,7 @@ import { Component, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
+import { Router } from '@angular/router';
 
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { Filial } from '../../../model/filial';
@@ -148,7 +149,8 @@ export class CargaAporteBackComponent implements OnInit {
     private snackBar: MatSnackBar,
     private dialog: MatDialog,
     private detalleRubroService: DetalleRubroService,
-    private novedadCargaService: NovedadCargaService
+    private novedadCargaService: NovedadCargaService,
+    private router: Router
   ) {
     // Generar años del 2025 al 2035
     for (let anio = 2025; anio <= 2035; anio++) {
@@ -359,17 +361,33 @@ export class CargaAporteBackComponent implements OnInit {
     }
 
     // Solicitar confirmación para validar y guardar en el servidor
+    const mesSeleccionado = this.mesSeleccionado();
+    const anioSeleccionado = this.anioSeleccionado();
+    const filialSeleccionada = this.filialSeleccionada();
+
+    const mesNombre = this.meses.find(m => m.valor === mesSeleccionado)?.nombre || '';
+    const filialNombre = this.getFilialNombre(filialSeleccionada);
+
+    console.log('DEBUG valores:', { mesNombre, anioSeleccionado, filialNombre });
+
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
-      width: '400px',
+      width: '500px',
       data: {
         title: 'Confirmar Validación de Archivo',
-        message: `¿Desea validar y cargar el archivo "${this.nombreArchivo}" al servidor?`,
-        confirmText: 'Validar',
-        cancelText: 'Cancelar'
+        icon: 'upload_file',
+        type: 'warning',
+        message: '¿Desea validar y cargar el archivo al servidor? Este proceso enviará el archivo al backend para su procesamiento.',
+        details: [
+          { label: 'Archivo', value: String(this.nombreArchivo) },
+          { label: 'Filial', value: String(filialNombre) },
+          { label: 'Período', value: `${mesNombre} ${anioSeleccionado}` }
+        ],
+        confirmText: 'Validar y Cargar',
+        cancelText: 'Cancelar',
+        confirmIcon: 'check_circle',
+        confirmColor: 'primary'
       }
-    });
-
-    dialogRef.afterClosed().subscribe(result => {
+    });    dialogRef.afterClosed().subscribe(result => {
       if (result) {
         this.guardarArchivoEnServidor();
       }
@@ -429,15 +447,13 @@ export class CargaAporteBackComponent implements OnInit {
           console.log('📁 Ruta archivo en servidor:', cargaArchivo.rutaArchivo);
 
           this.snackBar.open(
-            `✅ Validación completada exitosamente!\n` +
-            `Código: ${cargaArchivo.codigo}\n` +
-            `Archivo: ${cargaArchivo.rutaArchivo || this.nombreArchivo}`,
+            `✅ Validación completada exitosamente! Redirigiendo...`,
             'Cerrar',
-            { duration: 8000 }
+            { duration: 3000 }
           );
 
-          // Cargar los datos desde el backend
-          this.cargarDatosDesdeBackend(cargaArchivo.codigo);
+          // Navegar al componente de detalle con el ID de la carga
+          this.router.navigate(['/menucreditos/detalle-consulta-carga', cargaArchivo.codigo]);
         } else {
           console.warn('⚠️ Respuesta no contiene CargaArchivo válido:', cargaArchivo);
           this.snackBar.open(
@@ -667,30 +683,6 @@ export class CargaAporteBackComponent implements OnInit {
     console.log('📊 Novedades agrupadas:', agrupadas);
     this.novedadesAgrupadas.set(agrupadas);
     console.log('✅ Signal novedadesAgrupadas actualizado. Valor actual:', this.novedadesAgrupadas());
-  }
-
-  /**
-   * Catálogo de novedades fallback
-   */
-  private getCatalogoFallback(): NovedadCarga[] {
-    return [
-      {
-        codigo: 0,
-        descripcion: 'Sin problemas',
-        tipo: 'PARTICIPE',
-        severidad: 'success',
-        icono: 'check_circle',
-        colorChip: 'primary'
-      },
-      {
-        codigo: 1,
-        descripcion: 'Partícipe no encontrado',
-        tipo: 'PARTICIPE',
-        severidad: 'warning',
-        icono: 'person_search',
-        colorChip: 'accent'
-      }
-    ];
   }
 
   /**

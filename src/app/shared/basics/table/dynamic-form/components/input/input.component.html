@@ -1,17 +1,19 @@
 <div [formGroup]="group">
   <mat-form-field class="demo-full-width" appearance="outline">
-    <mat-label>{{field.label || ''}}</mat-label>
+    <mat-label>{{ field.label || '' }}</mat-label>
     <input
-           matInput
-           [formControlName]="field.name"
-           [placeholder]="field.label || ''"
-           [type]="field.inputType || 'text'">
-    @for (validation of field.validations || []; track validation.name) {
-      @if (group.get(field.name)?.hasError(validation.name)) {
-        <mat-error>
-          {{validation.message || ''}}
-        </mat-error>
-      }
-    }
+      matInput
+      [formControlName]="field.name"
+      [placeholder]="field.label || ''"
+      [type]="field.inputType || 'text'"
+      [class]="field.inputClass || ''"
+      [style.text-transform]="field.transformToUppercase ? 'uppercase' : 'none'"
+    />
+    @for (validation of field.validations || []; track validation.name) { @if
+    (group.get(field.name)?.hasError(validation.name)) {
+    <mat-error>
+      {{ validation.message || '' }}
+    </mat-error>
+    } }
   </mat-form-field>
 </div>

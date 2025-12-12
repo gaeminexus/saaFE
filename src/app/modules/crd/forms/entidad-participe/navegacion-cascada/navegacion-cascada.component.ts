@@ -447,7 +447,7 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
 
   // Nueva función para seleccionar un préstamo específico y navegar al detalle
   seleccionarPrestamo(prestamo: Prestamo): void {
-    console.log('🎯 Seleccionando préstamo para ver detalle:', prestamo.codigo);
+    console.log('🎯 Seleccionando préstamo para ver detalle:', prestamo.idAsoprep);
     this.prestamoSeleccionado.set(prestamo);
     this.nivelActual.set(NivelNavegacion.DETALLE_PRESTAMOS);
 
@@ -456,7 +456,7 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
     this.breadcrumbs.set([
       { nivel: NivelNavegacion.ENTIDADES, titulo: 'Entidades', subtitulo: entidad?.razonSocial, activo: false },
       { nivel: NivelNavegacion.PRESTAMOS, titulo: 'Préstamos', subtitulo: 'Listado', activo: false },
-      { nivel: NivelNavegacion.DETALLE_PRESTAMOS, titulo: 'Detalle Préstamo', subtitulo: `Código: ${prestamo.codigo}`, activo: true }
+      { nivel: NivelNavegacion.DETALLE_PRESTAMOS, titulo: 'Detalle Préstamo', subtitulo: `ID Asoprep: ${prestamo.idAsoprep}`, activo: true }
     ]);
 
     // Cargar el detalle específico del préstamo

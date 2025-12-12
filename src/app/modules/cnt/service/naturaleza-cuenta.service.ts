@@ -40,24 +40,42 @@ export class NaturalezaCuentaService {
 
   /** POST: crear Naturaleza de Cuenta (con fallback de endpoints) */
   add(datos: any): Observable<NaturalezaCuenta | null> {
+    // Transformar manejaCentroCosto de booleano a número si es necesario
+    const datosTransformados = {
+      ...datos,
+      manejaCentroCosto: datos.manejaCentroCosto === true || datos.manejaCentroCosto === 1 ? 1 : 0,
+    };
+
     const base = ServiciosCnt.RS_NTRL;
     // Intento principal: POST al recurso base (patrón observado en otros servicios)
-    return this.http.post<NaturalezaCuenta>(base, datos, this.httpOptions).pipe(
+    return this.http.post<NaturalezaCuenta>(base, datosTransformados, this.httpOptions).pipe(
       // Fallback alterno: POST /save si existe
-      catchError(() => this.http.post<NaturalezaCuenta>(`${base}/save`, datos, this.httpOptions)),
+      catchError(() =>
+        this.http.post<NaturalezaCuenta>(`${base}/save`, datosTransformados, this.httpOptions)
+      ),
       catchError(this.handleError)
     );
   }
 
   /** PUT: actualizar Naturaleza de Cuenta (con fallback de endpoints) */
   update(datos: any): Observable<NaturalezaCuenta | null> {
+    // Transformar manejaCentroCosto de booleano a número si es necesario
+    const datosTransformados = {
+      ...datos,
+      manejaCentroCosto: datos.manejaCentroCosto === true || datos.manejaCentroCosto === 1 ? 1 : 0,
+    };
+
     const base = ServiciosCnt.RS_NTRL;
     // Intento principal: PUT al recurso base (patrón consistente con otros servicios)
-    return this.http.put<NaturalezaCuenta>(base, datos, this.httpOptions).pipe(
+    return this.http.put<NaturalezaCuenta>(base, datosTransformados, this.httpOptions).pipe(
       // Fallback 1: POST al recurso base (algunos backends usan POST para upsert)
-      catchError((err) => this.http.post<NaturalezaCuenta>(base, datos, this.httpOptions)),
+      catchError((err) =>
+        this.http.post<NaturalezaCuenta>(base, datosTransformados, this.httpOptions)
+      ),
       // Fallback 2: POST /update (caso de implementación alternativa)
-      catchError(() => this.http.post<NaturalezaCuenta>(`${base}/update`, datos, this.httpOptions)),
+      catchError(() =>
+        this.http.post<NaturalezaCuenta>(`${base}/update`, datosTransformados, this.httpOptions)
+      ),
       catchError(this.handleError)
     );
   }

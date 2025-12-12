@@ -1,0 +1,542 @@
+.asientos-container {
+  padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+
+  .header {
+    margin-bottom: 20px;
+
+    h2 {
+      color: #1976d2;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+  }
+
+  .asientos-form {
+    .cabecera-card {
+      margin-bottom: 20px;
+      border: 2px solid #1976d2;
+
+      mat-card-header {
+        background-color: #1976d2;
+        color: white;
+        padding: 12px 16px;
+        margin: -16px -16px 16px -16px;
+
+        mat-card-title {
+          font-size: 16px;
+          font-weight: 500;
+          margin: 0;
+          color: white;
+        }
+      }
+
+      .cabecera-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 16px;
+
+        @media (max-width: 768px) {
+          grid-template-columns: 1fr;
+        }
+
+        .field-tipo,
+        .field-modulo {
+          grid-column: span 1;
+        }
+
+        .field-numero,
+        .field-estado {
+          grid-column: span 1;
+        }
+
+        .field-fecha-asiento,
+        .field-fecha-ingreso {
+          grid-column: span 1;
+        }
+
+        .field-observaciones {
+          grid-column: span 3;
+
+          @media (max-width: 768px) {
+            grid-column: span 1;
+          }
+
+          textarea {
+            resize: vertical;
+            min-height: 60px;
+          }
+        }
+
+        mat-form-field {
+          width: 100%;
+        }
+      }
+
+      .cabecera-actions {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px solid #e0e0e0;
+
+        button {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+
+          mat-icon {
+            font-size: 20px;
+            width: 20px;
+            height: 20px;
+          }
+        }
+      }
+    }
+
+    .bloques-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 20px;
+
+      @media (max-width: 1024px) {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .bloque-card {
+      mat-card-header {
+        margin-bottom: 16px;
+
+        mat-card-title {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 18px;
+          font-weight: 500;
+        }
+      }
+
+      &.debe-card {
+        mat-card-header mat-card-title {
+          color: #d32f2f;
+
+          mat-icon {
+            color: #d32f2f;
+          }
+        }
+
+        .add-button {
+          background-color: #d32f2f;
+          color: white;
+        }
+      }
+
+      &.haber-card {
+        mat-card-header mat-card-title {
+          color: #388e3c;
+
+          mat-icon {
+            color: #388e3c;
+          }
+        }
+
+        .add-button {
+          background-color: #388e3c;
+          color: white;
+        }
+      }
+
+      .cuentas-list {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        margin-bottom: 20px;
+        min-height: 100px;
+
+        .cuenta-row {
+          display: flex;
+          align-items: flex-start;
+          gap: 12px;
+
+          .cuenta-field {
+            flex: 2;
+          }
+
+          .valor-field {
+            flex: 1;
+            min-width: 150px;
+          }
+
+          button[mat-icon-button] {
+            margin-top: 8px;
+          }
+        }
+      }
+
+      .add-button {
+        width: 100%;
+        margin-bottom: 16px;
+
+        mat-icon {
+          margin-right: 8px;
+        }
+      }
+
+      .divider {
+        margin: 16px 0;
+      }
+
+      .total-section {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px;
+        background-color: #f5f5f5;
+        border-radius: 4px;
+        font-size: 16px;
+
+        strong {
+          color: #424242;
+        }
+
+        .total-value {
+          font-size: 20px;
+          font-weight: 600;
+          color: #1976d2;
+        }
+      }
+    }
+
+    .resumen-card {
+      margin-top: 20px;
+      background-color: #fafafa;
+
+      &.balanceado {
+        border: 2px solid #4caf50;
+        background-color: #e8f5e9;
+      }
+
+      &.desbalanceado {
+        border: 2px solid #ff9800;
+        background-color: #fff3e0;
+      }
+
+      mat-card-content {
+        .resumen-content {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 20px;
+          margin-bottom: 20px;
+          padding: 16px;
+          background-color: white;
+          border-radius: 4px;
+
+          @media (max-width: 768px) {
+            grid-template-columns: 1fr;
+          }
+
+          .resumen-item {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+
+            .label {
+              font-size: 14px;
+              color: #666;
+              font-weight: 500;
+            }
+
+            .value {
+              font-size: 24px;
+              font-weight: 700;
+              color: #1976d2;
+              display: flex;
+              align-items: center;
+              gap: 8px;
+
+              &.error {
+                color: #f44336;
+              }
+
+              .check-icon {
+                color: #4caf50;
+                font-size: 28px;
+                width: 28px;
+                height: 28px;
+              }
+
+              .error-icon {
+                color: #ff9800;
+                font-size: 28px;
+                width: 28px;
+                height: 28px;
+              }
+            }
+
+            &.diferencia-item {
+              .value {
+                font-size: 28px;
+              }
+            }
+          }
+        }
+
+        .actions {
+          display: flex;
+          gap: 16px;
+          justify-content: center;
+
+          button {
+            min-width: 180px;
+            height: 48px;
+            font-size: 16px;
+
+            mat-icon {
+              margin-right: 8px;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+// Animaciones
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.cuenta-row {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+// Estilos para el grid con drag-and-drop
+.cuenta-input-section {
+  margin-bottom: 16px;
+
+  .cuenta-row {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    margin-bottom: 12px;
+
+    .cuenta-field {
+      flex: 2;
+    }
+
+    .valor-field {
+      flex: 1;
+      min-width: 150px;
+    }
+
+    button {
+      margin-top: 8px;
+      height: 48px;
+    }
+  }
+}
+
+.cuentas-grid-container {
+  min-height: 200px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 12px;
+  background-color: #fafafa;
+  border-radius: 4px;
+  border: 2px dashed #ccc;
+  transition: all 0.3s ease;
+
+  &.cdk-drop-list-dragging {
+    border-color: #1976d2;
+    background-color: #e3f2fd;
+  }
+
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    color: #999;
+    text-align: center;
+
+    mat-icon {
+      font-size: 48px;
+      width: 48px;
+      height: 48px;
+      margin-bottom: 12px;
+      opacity: 0.5;
+    }
+
+    p {
+      margin: 4px 0;
+
+      &.hint {
+        font-size: 12px;
+        color: #bbb;
+      }
+    }
+  }
+
+  .cuenta-grid-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    margin-bottom: 8px;
+    background-color: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    cursor: move;
+
+    &:hover {
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      border-color: #1976d2;
+    }
+
+    &.cdk-drag-preview {
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+      border: 2px solid #1976d2;
+      opacity: 0.9;
+    }
+
+    &.cdk-drag-animating {
+      transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+    }
+
+    &.cdk-drag-placeholder {
+      opacity: 0.5;
+      background-color: #e3f2fd;
+      border: 2px dashed #1976d2;
+    }
+
+    .drag-handle {
+      cursor: grab;
+      color: #999;
+      display: flex;
+      align-items: center;
+
+      &:active {
+        cursor: grabbing;
+      }
+
+      mat-icon {
+        font-size: 24px;
+        width: 24px;
+        height: 24px;
+      }
+    }
+
+    .cuenta-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 0;
+
+      .cuenta-codigo {
+        font-weight: 600;
+        color: #1976d2;
+        font-size: 14px;
+      }
+
+      .cuenta-nombre {
+        font-size: 13px;
+        color: #666;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+    }
+
+    .valor-inline {
+      width: 140px;
+
+      mat-form-field {
+        width: 100%;
+      }
+
+      input {
+        text-align: right;
+        font-weight: 600;
+        font-size: 16px;
+      }
+    }
+
+    button {
+      flex-shrink: 0;
+    }
+  }
+}
+
+// Estilos específicos para debe (rojo)
+.debe-card {
+  .cuentas-grid-container {
+    border-color: #ef9a9a;
+
+    &.cdk-drop-list-dragging {
+      border-color: #e57373;
+      background-color: #ffebee;
+    }
+
+    .cuenta-grid-item {
+      border-left: 4px solid #e57373;
+
+      &:hover {
+        border-left-color: #f44336;
+      }
+    }
+  }
+}
+
+// Estilos específicos para haber (verde)
+.haber-card {
+  .cuentas-grid-container {
+    border-color: #a5d6a7;
+
+    &.cdk-drop-list-dragging {
+      border-color: #81c784;
+      background-color: #e8f5e9;
+    }
+
+    .cuenta-grid-item {
+      border-left: 4px solid #81c784;
+
+      &:hover {
+        border-left-color: #4caf50;
+      }
+    }
+  }
+}
+
+// Animación de drop
+@keyframes dropAnimation {
+  0% {
+    transform: scale(1.05);
+  }
+  50% {
+    transform: scale(0.95);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.cdk-drop-list-receiving {
+  .cuenta-grid-item {
+    animation: dropAnimation 0.3s ease;
+  }
+}

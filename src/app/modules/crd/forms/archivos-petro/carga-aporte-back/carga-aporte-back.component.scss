@@ -1189,19 +1189,25 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
       font-weight: 500;
     }
 
-    .badge {
-      margin-right: 0.75rem;
-      padding: 4px 12px;
-      border-radius: 16px;
-      font-size: 13px;
-      font-weight: 600;
-      min-width: 28px;
-      text-align: center;
-    }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-left: auto;
 
-    .expand-icon {
-      color: #666;
-      transition: transform 0.3s ease;
+      .badge {
+        padding: 4px 12px;
+        border-radius: 16px;
+        font-size: 13px;
+        font-weight: 600;
+        min-width: 28px;
+        text-align: center;
+      }
+
+      .expand-icon {
+        color: #666;
+        transition: transform 0.3s ease;
+      }
     }
   }
 

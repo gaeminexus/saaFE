@@ -1,10 +1,9 @@
 import { HttpHeaders, HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, catchError, of, throwError } from 'rxjs';
-import { EstadoCivil } from '../../crd/model/estado-civil';
 import { ServiciosAsoprep } from './ws-asgn';
-import { consumerPollProducersForChange } from '@angular/core/primitives/signals';
 import { CargaArchivo } from '../../crd/model/carga-archivo';
+import { ParticipeXCargaArchivo } from '../../crd/model/participe-x-carga-archivo';
 
 @Injectable({
   providedIn: 'root'
@@ -27,10 +26,8 @@ export class ServiciosAsoprepService {
     detallesCargaArchivos: any[],
     participesXCargaArchivo: any[]
   ): Observable<any | null> {
-    console.log('Entrando a almacenaDatosArchivoPetro del servicio Asoprep');
     const wsEndpoint = '/procesarArchivoPetro';
     const url = `${ServiciosAsoprep.RS_ASGN}${wsEndpoint}`;
-
     const formData = new FormData();
 
     // Archivo físico
@@ -43,11 +40,6 @@ export class ServiciosAsoprepService {
     formData.append('cargaArchivo', JSON.stringify(cargaArchivo));
     formData.append('detallesCargaArchivos', JSON.stringify(detallesCargaArchivos));
     formData.append('participesXCargaArchivo', JSON.stringify(participesXCargaArchivo));
-
-    /*console.log('URL de la solicitud:', url);
-    console.log('Archivo:', archivo.name);
-    console.log('Detalles a enviar:', detallesCargaArchivos.length);*/
-    console.log('Partícipes a enviar:', participesXCargaArchivo);
 
     // Para FormData NO usar httpOptions (el navegador establece Content-Type automáticamente)
     return this.http.post<any>(url, formData).pipe(
@@ -63,18 +55,13 @@ export class ServiciosAsoprepService {
     archivo: File,
     cargaArchivo: any,
   ): Observable<CargaArchivo | null> {
-    console.log('Entrando a validaDatosArchivoPetro del servicio Asoprep');
     const wsEndpoint = '/validarArchivoPetro';
     const url = `${ServiciosAsoprep.RS_ASGN}${wsEndpoint}`;
-
     const formData = new FormData();
-
     // Archivo físico
     formData.append('archivo', archivo);
-
     // Nombre del archivo
     formData.append('archivoNombre', archivo.name);
-
     // Variables JSON como strings en FormData
     formData.append('cargaArchivo', JSON.stringify(cargaArchivo));
 
@@ -84,13 +71,11 @@ export class ServiciosAsoprepService {
     );
   }
 
-  selectByCriteria(datos: any): Observable<EstadoCivil[] | null> {
-      const wsGetById = '/selectByCriteria/';
-      const url = `${ServiciosAsoprep.RS_ASGN}${wsGetById}`;
-      return this.http.post<any>(url, datos, this.httpOptions).pipe(
-        catchError(this.handleError)
-      );
-    }
+  actualizaCodigoPetroEntidad(codigoPetro: number, idParticipeXCarga: number, idEntidad: number): Observable<ParticipeXCargaArchivo | null> {
+      const wsGetById = '/actualizaCodigoPetroEntidad/';
+      const url = `${ServiciosAsoprep.RS_ASGN}${wsGetById}${codigoPetro}/${idParticipeXCarga}/${idEntidad}`;
+      return this.http.get<ParticipeXCargaArchivo>(url).pipe(catchError(this.handleError));
+  }
 
   private handleError(error: HttpErrorResponse): Observable<null> {
     if (+error.status === 200) {

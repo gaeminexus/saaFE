@@ -1,0 +1,348 @@
+<div class="asientos-container">
+  <div class="header">
+    <h2>Asientos Contables - Proceso Dinámico</h2>
+  </div>
+
+  <form [formGroup]="form" class="asientos-form">
+    <!-- BLOQUE CABECERA -->
+    <mat-card class="cabecera-card">
+      <mat-card-header>
+        <mat-card-title>Información General</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="cabecera-grid">
+          <!-- Fila 1 -->
+          <mat-form-field appearance="outline" class="field-tipo">
+            <mat-label>Tipo</mat-label>
+            <mat-select formControlName="tipo" placeholder="Seleccione ...">
+              @for (tipo of tiposAsientos; track tipo.id) {
+              <mat-option [value]="tipo.id">{{ tipo.nombre }}</mat-option>
+              } @empty {
+              <mat-option disabled>No hay tipos de asientos disponibles</mat-option>
+              }
+            </mat-select>
+            @if (form.get('tipo')?.hasError('required') && form.get('tipo')?.touched) {
+            <mat-error>El tipo de asiento es requerido</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="field-numero">
+            <mat-label>Número</mat-label>
+            <input matInput formControlName="numero" placeholder="Ingrese número" />
+            @if (form.get('numero')?.hasError('required') && form.get('numero')?.touched) {
+            <mat-error>El número es requerido</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="field-fecha-asiento">
+            <mat-label>Fecha Asiento</mat-label>
+            <input matInput [matDatepicker]="pickerAsiento" formControlName="fechaAsiento" />
+            <mat-datepicker-toggle matIconSuffix [for]="pickerAsiento"></mat-datepicker-toggle>
+            <mat-datepicker #pickerAsiento></mat-datepicker>
+          </mat-form-field>
+
+          <!-- Fila 2 -->
+          <mat-form-field appearance="outline" class="field-estado">
+            <mat-label>Estado</mat-label>
+            <input matInput formControlName="estado" readonly />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="field-fecha-ingreso">
+            <mat-label>Fecha Ingreso</mat-label>
+            <input matInput formControlName="fechaIngreso" readonly />
+          </mat-form-field>
+
+          <!-- Fila 3 - Observaciones -->
+          <mat-form-field appearance="outline" class="field-observaciones">
+            <mat-label>Observaciones</mat-label>
+            <textarea
+              matInput
+              formControlName="observaciones"
+              rows="2"
+              maxlength="500"
+              placeholder="Ingrese observaciones (opcional)"
+            ></textarea>
+          </mat-form-field>
+        </div>
+
+        <!-- Botón para grabar cabecera -->
+        <div class="cabecera-actions">
+          <button
+            mat-raised-button
+            color="primary"
+            type="button"
+            (click)="grabarCabecera()"
+            [disabled]="loading || !form.get('tipo')?.valid || !form.get('numero')?.valid"
+            [matTooltip]="
+              codigoAsientoActual
+                ? 'Actualizar información general del asiento'
+                : 'Guardar información general del asiento'
+            "
+          >
+            <mat-icon>{{ codigoAsientoActual ? 'update' : 'save' }}</mat-icon>
+            {{ codigoAsientoActual ? 'Actualizar Cabecera' : 'Grabar Cabecera' }}
+          </button>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <div class="bloques-container">
+      <!-- BLOQUE DEBE -->
+      <mat-card class="bloque-card debe-card">
+        <mat-card-header>
+          <mat-card-title>
+            <mat-icon>arrow_circle_left</mat-icon>
+            Cuentas Debe
+          </mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <!-- Formulario para agregar cuenta -->
+          <div formArrayName="cuentasDebe" class="cuenta-input-section">
+            @for (cuenta of cuentasDebe.controls; track $index) {
+            <div [formGroupName]="$index" class="cuenta-row">
+              <mat-form-field appearance="outline" class="cuenta-field">
+                <mat-label>Cuenta</mat-label>
+                <mat-select formControlName="cuenta">
+                  <mat-option [value]="null">-- Seleccione --</mat-option>
+                  @for (cta of cuentasPlan; track cta.codigo) {
+                  <mat-option [value]="cta">
+                    {{ cta.cuentaContable }} - {{ cta.nombre }}
+                  </mat-option>
+                  }
+                </mat-select>
+                <mat-icon matPrefix>account_balance</mat-icon>
+                @if (cuenta.get('cuenta')?.hasError('required') && cuenta.get('cuenta')?.touched) {
+                <mat-error>La cuenta es requerida</mat-error>
+                }
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="valor-field">
+                <mat-label>Valor</mat-label>
+                <input matInput type="number" formControlName="valor" placeholder="0.00" />
+                <span matTextPrefix>$&nbsp;</span>
+              </mat-form-field>
+
+              <button
+                mat-raised-button
+                color="primary"
+                type="button"
+                (click)="agregarCuentaAlGrid('DEBE')"
+                matTooltip="Agregar cuenta al Debe"
+              >
+                <mat-icon>add</mat-icon>
+              </button>
+            </div>
+            }
+          </div>
+
+          <mat-divider class="divider"></mat-divider>
+
+          <!-- Grid con drag-and-drop -->
+          <div
+            class="cuentas-grid-container"
+            cdkDropList
+            #debeList="cdkDropList"
+            [cdkDropListData]="cuentasDebeGrid"
+            [cdkDropListConnectedTo]="[haberList]"
+            (cdkDropListDropped)="drop($event, 'DEBE')"
+          >
+            @if (cuentasDebeGrid.length === 0) {
+            <div class="empty-state">
+              <mat-icon>inbox</mat-icon>
+              <p>No hay cuentas en el Debe</p>
+              <p class="hint">Agregue cuentas usando el formulario arriba o arrastre desde Haber</p>
+            </div>
+            } @else { @for (item of cuentasDebeGrid; track trackByCuentaId($index, item)) {
+            <div class="cuenta-grid-item" cdkDrag>
+              <div class="drag-handle" cdkDragHandle>
+                <mat-icon>drag_indicator</mat-icon>
+              </div>
+              <div class="cuenta-info">
+                <span class="cuenta-codigo">{{ item.cuenta?.cuentaContable }}</span>
+                <span class="cuenta-nombre">{{ item.cuenta?.nombre }}</span>
+              </div>
+              <mat-form-field appearance="outline" class="valor-inline">
+                <input
+                  matInput
+                  type="number"
+                  [value]="item.valor"
+                  (change)="editarValorGrid(item, $any($event.target).value)"
+                />
+                <span matTextPrefix>$&nbsp;</span>
+              </mat-form-field>
+              <button
+                mat-icon-button
+                color="warn"
+                (click)="eliminarCuentaGrid(item, 'DEBE')"
+                matTooltip="Eliminar"
+              >
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
+            } }
+          </div>
+
+          <mat-divider class="divider"></mat-divider>
+
+          <div class="total-section">
+            <strong>Total Debe:</strong>
+            <span class="total-value">{{ totalDebe | currency }}</span>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- BLOQUE HABER -->
+      <mat-card class="bloque-card haber-card">
+        <mat-card-header>
+          <mat-card-title>
+            <mat-icon>arrow_circle_right</mat-icon>
+            Cuentas Haber
+          </mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <!-- Formulario para agregar cuenta -->
+          <div formArrayName="cuentasHaber" class="cuenta-input-section">
+            @for (cuenta of cuentasHaber.controls; track $index) {
+            <div [formGroupName]="$index" class="cuenta-row">
+              <mat-form-field appearance="outline" class="cuenta-field">
+                <mat-label>Cuenta</mat-label>
+                <mat-select formControlName="cuenta">
+                  <mat-option [value]="null">-- Seleccione --</mat-option>
+                  @for (cta of cuentasPlan; track cta.codigo) {
+                  <mat-option [value]="cta">
+                    {{ cta.cuentaContable }} - {{ cta.nombre }}
+                  </mat-option>
+                  }
+                </mat-select>
+                <mat-icon matPrefix>account_balance</mat-icon>
+                @if (cuenta.get('cuenta')?.hasError('required') && cuenta.get('cuenta')?.touched) {
+                <mat-error>La cuenta es requerida</mat-error>
+                }
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="valor-field">
+                <mat-label>Valor</mat-label>
+                <input matInput type="number" formControlName="valor" placeholder="0.00" />
+                <span matTextPrefix>$&nbsp;</span>
+              </mat-form-field>
+
+              <button
+                mat-raised-button
+                color="accent"
+                type="button"
+                (click)="agregarCuentaAlGrid('HABER')"
+                matTooltip="Agregar cuenta al Haber"
+              >
+                <mat-icon>add</mat-icon>
+              </button>
+            </div>
+            }
+          </div>
+
+          <mat-divider class="divider"></mat-divider>
+
+          <!-- Grid con drag-and-drop -->
+          <div
+            class="cuentas-grid-container"
+            cdkDropList
+            #haberList="cdkDropList"
+            [cdkDropListData]="cuentasHaberGrid"
+            [cdkDropListConnectedTo]="[debeList]"
+            (cdkDropListDropped)="drop($event, 'HABER')"
+          >
+            @if (cuentasHaberGrid.length === 0) {
+            <div class="empty-state">
+              <mat-icon>inbox</mat-icon>
+              <p>No hay cuentas en el Haber</p>
+              <p class="hint">Agregue cuentas usando el formulario arriba o arrastre desde Debe</p>
+            </div>
+            } @else { @for (item of cuentasHaberGrid; track trackByCuentaId($index, item)) {
+            <div class="cuenta-grid-item" cdkDrag>
+              <div class="drag-handle" cdkDragHandle>
+                <mat-icon>drag_indicator</mat-icon>
+              </div>
+              <div class="cuenta-info">
+                <span class="cuenta-codigo">{{ item.cuenta?.cuentaContable }}</span>
+                <span class="cuenta-nombre">{{ item.cuenta?.nombre }}</span>
+              </div>
+              <mat-form-field appearance="outline" class="valor-inline">
+                <input
+                  matInput
+                  type="number"
+                  [value]="item.valor"
+                  (change)="editarValorGrid(item, $any($event.target).value)"
+                />
+                <span matTextPrefix>$&nbsp;</span>
+              </mat-form-field>
+              <button
+                mat-icon-button
+                color="warn"
+                (click)="eliminarCuentaGrid(item, 'HABER')"
+                matTooltip="Eliminar"
+              >
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
+            } }
+          </div>
+
+          <mat-divider class="divider"></mat-divider>
+
+          <div class="total-section">
+            <strong>Total Haber:</strong>
+            <span class="total-value">{{ totalHaber | currency }}</span>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    <!-- RESUMEN Y ACCIONES -->
+    <mat-card
+      class="resumen-card"
+      [class.balanceado]="diferencia === 0"
+      [class.desbalanceado]="diferencia !== 0"
+    >
+      <mat-card-content>
+        <div class="resumen-content">
+          <div class="resumen-item">
+            <span class="label">Total Debe:</span>
+            <span class="value">{{ totalDebe | currency }}</span>
+          </div>
+          <div class="resumen-item">
+            <span class="label">Total Haber:</span>
+            <span class="value">{{ totalHaber | currency }}</span>
+          </div>
+          <div class="resumen-item diferencia-item">
+            <span class="label">Diferencia:</span>
+            <span class="value" [class.error]="diferencia !== 0">
+              {{ diferencia | currency }}
+              @if (diferencia === 0) {
+              <mat-icon class="check-icon">check_circle</mat-icon>
+              } @else {
+              <mat-icon class="error-icon">error</mat-icon>
+              }
+            </span>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button
+            mat-raised-button
+            color="primary"
+            type="button"
+            (click)="insertar()"
+            [disabled]="form.invalid || diferencia !== 0"
+          >
+            <mat-icon>save</mat-icon>
+            Insertar Asiento
+          </button>
+
+          <button mat-raised-button type="button" (click)="limpiar()">
+            <mat-icon>clear</mat-icon>
+            Limpiar
+          </button>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </form>
+</div>

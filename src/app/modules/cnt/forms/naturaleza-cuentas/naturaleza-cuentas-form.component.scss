@@ -36,14 +36,29 @@ mat-form-field.full-width {
   width: 100%;
 }
 
+// Text Transform para campos específicos
+input[formControlName='nombre'] {
+  text-transform: uppercase;
+}
+
 // Checkbox Container
 .checkbox-container {
   display: flex;
   align-items: center;
   padding: 0.5rem 0;
+  min-height: 48px;
 
   mat-checkbox {
     margin: 0;
+
+    ::ng-deep .mdc-form-field {
+      display: flex;
+      align-items: center;
+    }
+
+    ::ng-deep .mdc-checkbox {
+      margin-right: 8px;
+    }
   }
 }
 

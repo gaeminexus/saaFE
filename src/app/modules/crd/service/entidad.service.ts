@@ -33,6 +33,14 @@ export class EntidadService {
     );
   }
 
+  getCoincidencias(nombre: string): Observable<Entidad[] | null> {
+    const wsGetById = '/getCoincidencias/';
+    const url = `${ServiciosCrd.RS_ENTD}${wsGetById}${nombre}`;
+    return this.http.get<Entidad[]>(url).pipe(
+      catchError(this.handleError)
+    );
+  }
+
   /** POST: add new record */
   add(datos: any): Observable<Entidad | null> {
     return this.http.post<Entidad>(ServiciosCrd.RS_ENTD, datos, this.httpOptions).pipe(

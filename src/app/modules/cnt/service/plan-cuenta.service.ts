@@ -1,12 +1,12 @@
-import { HttpHeaders, HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable, catchError, of, throwError, map } from 'rxjs';
+import { Observable, catchError, map, of, throwError } from 'rxjs';
+import { DatosBusqueda } from '../../../shared/model/datos-busqueda/datos-busqueda';
 import { PlanCuenta } from '../model/plan-cuenta';
 import { ServiciosCnt } from './ws-cnt';
-import { DatosBusqueda } from '../../../shared/model/datos-busqueda/datos-busqueda';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class PlanCuentaService {
   // Obtener empresa desde localStorage
@@ -15,19 +15,17 @@ export class PlanCuentaService {
   }
 
   httpOptions = {
-    headers: new HttpHeaders({ 'Content-Type': 'application/json' })
+    headers: new HttpHeaders({ 'Content-Type': 'application/json' }),
   };
 
-  constructor(
-    private http: HttpClient
-  ) { }
+  constructor(private http: HttpClient) {}
 
   getAll(): Observable<PlanCuenta[] | null> {
     const wsGetById = '/getAll';
     const url = `${ServiciosCnt.RS_PLNN}${wsGetById}`;
     return this.http.get<PlanCuenta[]>(url).pipe(
       map((items: PlanCuenta[]) =>
-        (items || []).filter(p => p?.empresa?.codigo === this.idSucursal)
+        (items || []).filter((p) => p?.empresa?.codigo === this.idSucursal)
       ),
       catchError(this.handleError)
     );
@@ -36,9 +34,7 @@ export class PlanCuentaService {
   getById(id: string): Observable<PlanCuenta | null> {
     const wsGetById = '/getId/';
     const url = `${ServiciosCnt.RS_PLNN}${wsGetById}${id}`;
-    return this.http.get<PlanCuenta>(url).pipe(
-      catchError(this.handleError)
-    );
+    return this.http.get<PlanCuenta>(url).pipe(catchError(this.handleError));
   }
 
   /** POST: add a new plan cuenta to the server */
@@ -53,12 +49,12 @@ export class PlanCuentaService {
       idPadre: datos.idPadre,
       naturalezaCuenta: datos.naturalezaCuenta,
       empresa: { codigo: this.idSucursal },
-      fechaUpdate: new Date()
+      fechaUpdate: this.formatDateToLocalDate(new Date()),
     };
 
     // Agregar fechaInactivo solo si el estado es inactivo (0)
     if (datos.estado === 0) {
-      payload.fechaInactivo = new Date();
+      payload.fechaInactivo = this.formatDateToLocalDate(new Date());
     }
 
     // Solo incluir codigo si existe y no es 0
@@ -66,9 +62,9 @@ export class PlanCuentaService {
       payload.codigo = datos.codigo;
     }
 
-    return this.http.post<PlanCuenta>(ServiciosCnt.RS_PLNN, payload, this.httpOptions).pipe(
-      catchError(this.handleError)
-    );
+    return this.http
+      .post<PlanCuenta>(ServiciosCnt.RS_PLNN, payload, this.httpOptions)
+      .pipe(catchError(this.handleError));
   }
 
   /** PUT: update an existing plan cuenta */
@@ -84,18 +80,18 @@ export class PlanCuentaService {
       idPadre: datos.idPadre,
       naturalezaCuenta: datos.naturalezaCuenta,
       empresa: { codigo: this.idSucursal },
-      fechaUpdate: new Date()
+      fechaUpdate: this.formatDateToLocalDate(new Date()),
     };
 
     // Agregar fechaInactivo solo si el estado es inactivo (0)
     if (datos.estado === 0) {
-      payload.fechaInactivo = new Date();
+      payload.fechaInactivo = this.formatDateToLocalDate(new Date());
     }
 
     console.log('[PlanCuentaService.update] Payload enviado:', JSON.stringify(payload, null, 2));
 
     return this.http.put<PlanCuenta>(ServiciosCnt.RS_PLNN, payload, this.httpOptions).pipe(
-      catchError(err => {
+      catchError((err) => {
         console.error('[PlanCuentaService.update] Error:', err);
         console.error('[PlanCuentaService.update] Payload que causó error:', payload);
         return this.handleError(err);
@@ -106,10 +102,10 @@ export class PlanCuentaService {
   /** POST: search by criteria using DatosBusqueda[] */
   selectByCriteria(criterios: DatosBusqueda[]): Observable<PlanCuenta[] | null> {
     const url = `${ServiciosCnt.RS_PLNN}/selectByCriteria`;
-    
+
     return this.http.post<PlanCuenta[]>(url, criterios, this.httpOptions).pipe(
       map((items: PlanCuenta[]) =>
-        (items || []).filter(p => p?.empresa?.codigo === this.idSucursal)
+        (items || []).filter((p) => p?.empresa?.codigo === this.idSucursal)
       ),
       catchError(this.handleError)
     );
@@ -119,9 +115,7 @@ export class PlanCuentaService {
   delete(datos: any): Observable<PlanCuenta | null> {
     const wsGetById = '/' + datos;
     const url = `${ServiciosCnt.RS_PLNN}${wsGetById}`;
-    return this.http.delete<PlanCuenta>(url, this.httpOptions).pipe(
-      catchError(this.handleError)
-    );
+    return this.http.delete<PlanCuenta>(url, this.httpOptions).pipe(catchError(this.handleError));
   }
 
   // tslint:disable-next-line: typedef
@@ -132,4 +126,13 @@ export class PlanCuentaService {
     return throwError(() => error ?? { message: 'Error desconocido' });
   }
 
+  /**
+   * Convierte Date a formato YYYY-MM-DD para compatibilidad con LocalDate del backend
+   */
+  private formatDateToLocalDate(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
 }

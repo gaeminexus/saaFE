@@ -30,6 +30,46 @@ export class AppStateService {
   }
 
   /**
+   * Espera a que la inicialización del servicio se complete.
+   * Usado por APP_INITIALIZER para bloquear el bootstrap hasta que los rubros estén cargados.
+   * @returns Promesa que se resuelve cuando los datos están disponibles o no hay sesión activa
+   */
+  esperarInicializacion(): Promise<void> {
+    return new Promise<void>((resolve) => {
+      // Si no hay sesión activa, resolver inmediatamente
+      const logged = localStorage.getItem('logged');
+      if (logged !== 'true') {
+        console.log('✅ AppStateService: No hay sesión activa, continuando bootstrap');
+        resolve();
+        return;
+      }
+
+      // Si ya se completó la carga, resolver inmediatamente
+      if (this.cargaIniciada && this.datosGlobales$.value) {
+        console.log('✅ AppStateService: Datos ya cargados, continuando bootstrap');
+        resolve();
+        return;
+      }
+
+      // Esperar a que se carguen los datos (timeout de 5 segundos)
+      const timeout = setTimeout(() => {
+        console.warn('⚠️ AppStateService: Timeout al esperar inicialización, continuando bootstrap');
+        resolve();
+      }, 5000);
+
+      // Suscribirse al BehaviorSubject para detectar cuando los datos estén listos
+      const subscription = this.datosGlobales$.pipe(
+        filter(datos => datos !== null)
+      ).subscribe(() => {
+        console.log('✅ AppStateService: Inicialización completada, continuando bootstrap');
+        clearTimeout(timeout);
+        subscription.unsubscribe();
+        resolve();
+      });
+    });
+  }
+
+  /**
    * Restaura los datos desde localStorage si existe sesión activa
    * Se ejecuta automáticamente al inicializar el servicio (vía APP_INITIALIZER)
    * @private

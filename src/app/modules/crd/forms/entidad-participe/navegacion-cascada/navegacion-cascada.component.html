@@ -229,10 +229,10 @@
       <div class="tabla-container">
         <table mat-table [dataSource]="dataSourcePrestamos" matSort class="mat-elevation-z2">
 
-          <!-- Código -->
+          <!-- ID Asoprep -->
           <ng-container matColumnDef="codigo">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>Código</th>
-            <td mat-cell *matCellDef="let p">{{ p.codigo }}</td>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>ID Asoprep</th>
+            <td mat-cell *matCellDef="let p">{{ p.idAsoprep }}</td>
           </ng-container>
 
           <!-- Producto -->
@@ -329,7 +329,7 @@
 
       <div class="info-seleccion" *ngIf="prestamoSeleccionado()">
         <mat-icon>info</mat-icon>
-        <span>Detalle del préstamo: <strong>Código {{ prestamoSeleccionado()!.codigo }}</strong> -
+        <span>Detalle del préstamo: <strong>ID Asoprep {{ prestamoSeleccionado()!.idAsoprep }}</strong> -
           {{ getProductoNombre(prestamoSeleccionado()!) }}
         </span>
       </div>

@@ -2,13 +2,13 @@
   <!-- Header simplificado similar a plan-arbol -->
   <div class="header-section">
     <div class="title-section">
-      <h2>CentroCostos Árbol</h2>
-      <p class="subtitle">Gestión jerárquica de centros (empresa 280)</p>
+      <h2>Centros de Costo</h2>
+      <p class="subtitle">Gestión jerárquica de centros de costo</p>
     </div>
     <div class="actions-section">
       <mat-form-field appearance="outline" class="level-selector">
         <mat-label>Código destino</mat-label>
-        <input matInput type="text" [value]="previewCodigoDestino" readonly>
+        <input matInput type="text" [value]="previewCodigoDestino" readonly />
       </mat-form-field>
       <button mat-flat-button color="primary" (click)="onAdd()" class="add-button">
         <mat-icon>add</mat-icon>
@@ -29,102 +29,184 @@
     </div>
   </div>
 
-      <!-- Loading spinner -->
-      <div *ngIf="loading" class="loading-container">
-        <mat-spinner diameter="50"></mat-spinner>
-        <p>Cargando centros de costo...</p>
-      </div>
+  <!-- Loading spinner -->
+  <div *ngIf="loading" class="loading-container">
+    <mat-spinner diameter="50"></mat-spinner>
+    <p>Cargando centros de costo...</p>
+  </div>
 
-      <!-- Error message -->
-      <div *ngIf="error && !loading" class="error-container">
-        <mat-icon color="warn">error</mat-icon>
-        <p>{{ error }}</p>
-        <button mat-button color="primary" (click)="loadData()">
-          <mat-icon>refresh</mat-icon>
-          Reintentar
-        </button>
-      </div>
+  <!-- Error message -->
+  <div *ngIf="error && !loading" class="error-container">
+    <mat-icon color="warn">error</mat-icon>
+    <p>{{ error }}</p>
+    <button mat-button color="primary" (click)="loadData()">
+      <mat-icon>refresh</mat-icon>
+      Reintentar
+    </button>
+  </div>
 
-      <!-- Tree view con cabecera como PlanArbol -->
-      <div *ngIf="!loading && !error" class="tree-container">
-        <div class="tree-header">
-          <div class="tree-title">
-            <mat-icon>account_tree</mat-icon>
-            <span>ÁRBOL</span>
+  <!-- Tree view con cabecera como PlanArbol -->
+  <div *ngIf="!loading && !error" class="tree-container">
+    <div class="tree-header">
+      <div class="tree-title">
+        <mat-icon>account_tree</mat-icon>
+        <span>ÁRBOL</span>
+      </div>
+    </div>
+    <mat-tree [dataSource]="dataSource" [treeControl]="treeControl" class="plan-tree centro-tree">
+      <!-- Nodo hoja (sin hijos) -->
+      <mat-nested-tree-node
+        *matTreeNodeDef="let node"
+        class="tree-node leaf-node"
+        [style.padding-left]="(node.level || 0) * 20 + 'px'"
+      >
+        <div
+          class="node-content"
+          [class.selected]="selectedNode === node"
+          (click)="selectNode(node)"
+        >
+          <div class="node-spacer"></div>
+          <span class="node-icon">📄</span>
+          <div class="node-info">
+            <div class="account-header">
+              <span class="account-number">{{ node.numero }}</span>
+              <span class="account-name">{{ node.nombre }}</span>
+            </div>
+          </div>
+          <div class="node-actions">
+            @if (canAddChild(node)) {
+            <button
+              mat-icon-button
+              (click)="onAdd(node)"
+              matTooltip="Agregar centro hijo"
+              class="action-button add-child"
+            >
+              <mat-icon>add</mat-icon>
+            </button>
+            } @if (canEdit(node)) {
+            <button
+              mat-icon-button
+              (click)="onEdit(node)"
+              matTooltip="Editar centro"
+              class="action-button edit"
+            >
+              <mat-icon>edit</mat-icon>
+            </button>
+            } @else {
+            <button
+              mat-icon-button
+              disabled
+              matTooltip="Solo se puede editar el último nivel"
+              class="action-button edit disabled"
+            >
+              <mat-icon>edit_off</mat-icon>
+            </button>
+            }
+            <button
+              mat-icon-button
+              (click)="onDelete(node)"
+              matTooltip="Eliminar"
+              class="action-button delete"
+              [disabled]="
+                !node.codigo || node.codigo === 0 || (node.children && node.children.length > 0)
+              "
+            >
+              <mat-icon>delete_outline</mat-icon>
+            </button>
           </div>
         </div>
-        <mat-tree [dataSource]="dataSource" [treeControl]="treeControl" class="plan-tree centro-tree">
-          <!-- Nodo hoja (sin hijos) -->
-          <mat-nested-tree-node *matTreeNodeDef="let node"
-                                 class="tree-node leaf-node"
-                                 [style.padding-left]="(node.level || 0) * 20 + 'px'">
-            <div class="node-content" [class.selected]="selectedNode === node" (click)="selectNode(node)">
-              <div class="node-spacer"></div>
-              <span class="node-icon">📄</span>
-              <div class="node-info">
-                <div class="account-header">
-                  <span class="account-number">{{ node.numero }}</span>
-                  <span class="account-name">{{ node.nombre }}</span>
-                </div>
-              </div>
-              <div class="node-actions">
-                <button mat-icon-button (click)="onAdd(node)" matTooltip="Agregar centro hijo" class="action-button add-child">
-                  <mat-icon>add</mat-icon>
-                </button>
-                <button mat-icon-button (click)="onEdit(node)" matTooltip="Editar centro" class="action-button edit">
-                  <mat-icon>edit</mat-icon>
-                </button>
-                <button mat-icon-button (click)="onDelete(node)" matTooltip="Eliminar" class="action-button delete" [disabled]="!node.codigo || node.codigo === 0">
-                  <mat-icon>delete_outline</mat-icon>
-                </button>
-              </div>
-            </div>
-          </mat-nested-tree-node>
+      </mat-nested-tree-node>
 
-          <!-- Nodo expandible -->
-          <mat-nested-tree-node *matTreeNodeDef="let node; when: hasChild"
-                                 class="tree-node expandable-node"
-                                 [style.padding-left]="(node.level || 0) * 20 + 'px'">
-            <div class="node-content" [class.selected]="selectedNode === node">
-              <button mat-icon-button matTreeNodeToggle
-                      [attr.aria-label]="'Toggle ' + node.nombre"
-                      class="expand-button"
-                      [class.expanded]="treeControl.isExpanded(node)"
-                      (click)="$event.stopPropagation()">
-                <mat-icon>{{ treeControl.isExpanded(node) ? 'expand_more' : 'chevron_right' }}</mat-icon>
-              </button>
-              <span class="node-icon" [class.expanded]="treeControl.isExpanded(node)"
-                    (click)="selectNode(node); treeControl.toggle(node)" role="button">
-                {{ treeControl.isExpanded(node) ? '📂' : '📁' }}
-              </span>
-              <div class="node-info" (click)="selectNode(node); treeControl.toggle(node)" role="button">
-                <div class="account-header">
-                  <span class="account-number">{{ node.numero }}</span>
-                  <span class="account-name">{{ node.nombre }}</span>
-                  <span class="children-count" *ngIf="node.children?.length">{{ node.children.length }} hijos</span>
-                </div>
-              </div>
-              <div class="node-actions">
-                <button mat-icon-button (click)="onAdd(node)" matTooltip="Agregar centro hijo" class="action-button add-child">
-                  <mat-icon>add</mat-icon>
-                </button>
-                <button mat-icon-button (click)="onEdit(node)" matTooltip="Editar centro" class="action-button edit">
-                  <mat-icon>edit</mat-icon>
-                </button>
-                <button mat-icon-button (click)="onDelete(node)" matTooltip="Eliminar" class="action-button delete" [disabled]="!node.codigo || node.codigo === 0">
-                  <mat-icon>delete_outline</mat-icon>
-                </button>
-              </div>
+      <!-- Nodo expandible -->
+      <mat-nested-tree-node
+        *matTreeNodeDef="let node; when: hasChild"
+        class="tree-node expandable-node"
+        [style.padding-left]="(node.level || 0) * 20 + 'px'"
+      >
+        <div class="node-content" [class.selected]="selectedNode === node">
+          <button
+            mat-icon-button
+            matTreeNodeToggle
+            [attr.aria-label]="'Toggle ' + node.nombre"
+            class="expand-button"
+            [class.expanded]="treeControl.isExpanded(node)"
+            (click)="$event.stopPropagation()"
+          >
+            <mat-icon>{{
+              treeControl.isExpanded(node) ? 'expand_more' : 'chevron_right'
+            }}</mat-icon>
+          </button>
+          <span
+            class="node-icon"
+            [class.expanded]="treeControl.isExpanded(node)"
+            (click)="selectNode(node); treeControl.toggle(node)"
+            role="button"
+          >
+            {{ treeControl.isExpanded(node) ? '📂' : '📁' }}
+          </span>
+          <div class="node-info" (click)="selectNode(node); treeControl.toggle(node)" role="button">
+            <div class="account-header">
+              <span class="account-number">{{ node.numero }}</span>
+              <span class="account-name">{{ node.nombre }}</span>
+              <span class="children-count" *ngIf="node.children?.length"
+                >{{ node.children.length }} hijos</span
+              >
             </div>
-            <div [class.hidden]="!treeControl.isExpanded(node)">
-              <ng-container matTreeNodeOutlet></ng-container>
-            </div>
-          </mat-nested-tree-node>
-        </mat-tree>
-      </div>
+          </div>
+          <div class="node-actions">
+            @if (canAddChild(node)) {
+            <button
+              mat-icon-button
+              (click)="onAdd(node)"
+              matTooltip="Agregar centro hijo"
+              class="action-button add-child"
+            >
+              <mat-icon>add</mat-icon>
+            </button>
+            } @if (canEdit(node)) {
+            <button
+              mat-icon-button
+              (click)="onEdit(node)"
+              matTooltip="Editar centro"
+              class="action-button edit"
+            >
+              <mat-icon>edit</mat-icon>
+            </button>
+            } @else {
+            <button
+              mat-icon-button
+              disabled
+              matTooltip="Solo se puede editar el último nivel"
+              class="action-button edit disabled"
+            >
+              <mat-icon>edit_off</mat-icon>
+            </button>
+            }
+            <button
+              mat-icon-button
+              (click)="onDelete(node)"
+              matTooltip="Eliminar"
+              class="action-button delete"
+              [disabled]="
+                !node.codigo || node.codigo === 0 || (node.children && node.children.length > 0)
+              "
+            >
+              <mat-icon>delete_outline</mat-icon>
+            </button>
+          </div>
+        </div>
+        <div [class.hidden]="!treeControl.isExpanded(node)">
+          <ng-container matTreeNodeOutlet></ng-container>
+        </div>
+      </mat-nested-tree-node>
+    </mat-tree>
+  </div>
 
   <!-- No Data -->
-  <div *ngIf="!loading && !error && (!dataSource.data || dataSource.data.length === 0)" class="empty-state">
+  <div
+    *ngIf="!loading && !error && (!dataSource.data || dataSource.data.length === 0)"
+    class="empty-state"
+  >
     <mat-icon>account_tree</mat-icon>
     <h3>No se encontraron centros de costo</h3>
     <p>No hay centros de costo que coincidan con los filtros aplicados.</p>

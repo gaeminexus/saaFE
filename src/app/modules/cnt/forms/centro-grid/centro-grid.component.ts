@@ -1,24 +1,24 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormControl } from '@angular/forms';
-import { MatTableModule, MatTableDataSource } from '@angular/material/table';
-import { MatPaginatorModule, MatPaginator } from '@angular/material/paginator';
-import { MatSortModule, MatSort } from '@angular/material/sort';
-import { MatIconModule } from '@angular/material/icon';
+import { Component, OnInit, ViewChild } from '@angular/core';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
+import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
-import { MatDialogModule, MatDialog } from '@angular/material/dialog';
+import { MatSelectModule } from '@angular/material/select';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatSort, MatSortModule } from '@angular/material/sort';
+import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
-import { CentroCosto} from '../../model/centro-costo';
-import { CentroCostoService } from '../../service/centro-costo.service';
 import { CentroCostoUtilsService } from '../../../../shared/services/centro-costo-utils.service';
+import { CentroCosto } from '../../model/centro-costo';
+import { CentroCostoService } from '../../service/centro-costo.service';
 import { CentroGridFormComponent } from './centro-grid-form.component';
 
 @Component({
@@ -40,10 +40,10 @@ import { CentroGridFormComponent } from './centro-grid-form.component';
     MatProgressSpinnerModule,
     MatSnackBarModule,
     MatDialogModule,
-    MatTooltipModule
+    MatTooltipModule,
   ],
   templateUrl: './centro-grid.component.html',
-  styleUrls: ['./centro-grid.component.scss']
+  styleUrls: ['./centro-grid.component.scss'],
 })
 export class CentroGridComponent implements OnInit {
   @ViewChild(MatPaginator) paginator!: MatPaginator;
@@ -60,7 +60,7 @@ export class CentroGridComponent implements OnInit {
     'tipo',
     'fechaIngreso',
     'fechaInactivo',
-    'actions'
+    'actions',
   ];
 
   // Filters
@@ -76,13 +76,13 @@ export class CentroGridComponent implements OnInit {
   tipoOptions = [
     { value: '', label: 'Todos los tipos' },
     { value: 1, label: 'Movimiento' },
-    { value: 2, label: 'Acumulación' }
+    { value: 2, label: 'Acumulación' },
   ];
 
   estadoOptions = [
     { value: '', label: 'Todos los estados' },
     { value: 1, label: 'Activo' },
-    { value: 0, label: 'Inactivo' }
+    { value: 0, label: 'Inactivo' },
   ];
 
   constructor(
@@ -124,12 +124,18 @@ export class CentroGridComponent implements OnInit {
     this.loading = true;
     this.error = null;
 
+    // Obtener empresa del usuario logueado
+    const empresaCodigo = parseInt(localStorage.getItem('idSucursal') || '280', 10);
+
     this.centroCostoService.getAll().subscribe({
       next: (centros: CentroCosto[] | null) => {
         const lista = centros || [];
-        const filtrados = lista.filter(c => c.empresa?.codigo === 280);
-        console.log('[CentroGridComponent] Centros cargados (empresa 280):', filtrados.length);
-        
+        const filtrados = lista.filter((c) => c.empresa?.codigo === empresaCodigo);
+        console.log(
+          `[CentroGridComponent] Centros cargados (empresa ${empresaCodigo}):`,
+          filtrados.length
+        );
+
         this.originalData = filtrados;
         this.applyFilters();
         this.loading = false;
@@ -139,7 +145,7 @@ export class CentroGridComponent implements OnInit {
         this.error = 'Error al cargar los centros de costo desde el backend';
         this.originalData = [];
         this.loading = false;
-      }
+      },
     });
   }
 
@@ -159,22 +165,23 @@ export class CentroGridComponent implements OnInit {
     // Filtro de búsqueda por texto
     const searchTerm = this.searchControl.value?.toLowerCase() || '';
     if (searchTerm) {
-      filtered = filtered.filter(centro =>
-        centro.nombre.toLowerCase().includes(searchTerm) ||
-        centro.numero.toString().toLowerCase().includes(searchTerm)
+      filtered = filtered.filter(
+        (centro) =>
+          centro.nombre.toLowerCase().includes(searchTerm) ||
+          centro.numero.toString().toLowerCase().includes(searchTerm)
       );
     }
 
     // Filtro por tipo
     const tipoValue = this.selectedTipo.value;
     if (tipoValue !== '' && tipoValue !== null) {
-      filtered = filtered.filter(centro => centro.tipo === Number(tipoValue));
+      filtered = filtered.filter((centro) => centro.tipo === Number(tipoValue));
     }
 
     // Filtro por estado
     const estadoValue = this.selectedEstado.value;
     if (estadoValue !== '' && estadoValue !== null) {
-      filtered = filtered.filter(centro => centro.estado === Number(estadoValue));
+      filtered = filtered.filter((centro) => centro.estado === Number(estadoValue));
     }
 
     this.dataSource.data = filtered;
@@ -187,7 +194,7 @@ export class CentroGridComponent implements OnInit {
       'Entendido',
       {
         duration: 5000,
-        panelClass: ['info-snackbar']
+        panelClass: ['info-snackbar'],
       }
     );
   }
@@ -195,15 +202,15 @@ export class CentroGridComponent implements OnInit {
   onEdit(centroCosto: CentroCosto): void {
     const dialogRef = this.dialog.open(CentroGridFormComponent, {
       width: '600px',
-      data: { item: centroCosto }
+      data: { item: centroCosto },
     });
 
-    dialogRef.afterClosed().subscribe(result => {
+    dialogRef.afterClosed().subscribe((result) => {
       if (result) {
         this.loadData();
         this.snackBar.open('Centro de costo actualizado exitosamente', 'Cerrar', {
           duration: 3000,
-          panelClass: ['success-snackbar']
+          panelClass: ['success-snackbar'],
         });
       }
     });
@@ -214,7 +221,7 @@ export class CentroGridComponent implements OnInit {
     if (!centroCosto.codigo || centroCosto.codigo === 0) {
       this.snackBar.open('No se puede eliminar un centro sin código válido', 'Cerrar', {
         duration: 3000,
-        panelClass: ['error-snackbar']
+        panelClass: ['error-snackbar'],
       });
       return;
     }
@@ -226,7 +233,7 @@ export class CentroGridComponent implements OnInit {
             this.loadData();
             this.snackBar.open('Centro de costo eliminado', 'Cerrar', {
               duration: 3000,
-              panelClass: ['success-snackbar']
+              panelClass: ['success-snackbar'],
             });
           }
         },
@@ -234,9 +241,9 @@ export class CentroGridComponent implements OnInit {
           console.error('Error deleting centro:', error);
           this.snackBar.open('Error al eliminar el centro de costo', 'Cerrar', {
             duration: 5000,
-            panelClass: ['error-snackbar']
+            panelClass: ['error-snackbar'],
           });
-        }
+        },
       });
     }
   }
@@ -268,7 +275,7 @@ export class CentroGridComponent implements OnInit {
   exportData(): void {
     // Implementar exportación
     this.snackBar.open('Funcionalidad de exportación en desarrollo', 'Cerrar', {
-      duration: 3000
+      duration: 3000,
     });
   }
 

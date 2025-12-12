@@ -4,13 +4,18 @@ import { MatDialogModule, MAT_DIALOG_DATA, MatDialogRef } from '@angular/materia
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 
+export interface ConfirmDialogDetail {
+  label: string;
+  value: string;
+}
+
 export interface ConfirmDialogData {
   title: string;
   message: string;
   confirmText?: string;
   cancelText?: string;
   type?: 'info' | 'warning' | 'danger' | 'success';
-  details?: string[];
+  details?: ConfirmDialogDetail[];
 }
 
 @Component({
@@ -46,13 +51,13 @@ export interface ConfirmDialogData {
 
       <mat-dialog-content>
         <p class="dialog-message">{{ data.message }}</p>
-        
+
         @if (data.details && data.details.length > 0) {
           <div class="dialog-details">
             @for (detail of data.details; track $index) {
               <div class="detail-item">
                 <mat-icon>chevron_right</mat-icon>
-                <span>{{ detail }}</span>
+                <span><strong>{{ detail.label }}:</strong> {{ detail.value }}</span>
               </div>
             }
           </div>
@@ -63,9 +68,9 @@ export interface ConfirmDialogData {
         <button mat-button (click)="onCancel()" class="cancel-button">
           {{ data.cancelText || 'Cancelar' }}
         </button>
-        <button mat-raised-button 
+        <button mat-raised-button
                 [color]="data.type === 'danger' ? 'warn' : 'primary'"
-                (click)="onConfirm()" 
+                (click)="onConfirm()"
                 class="confirm-button"
                 cdkFocusInitial>
           {{ data.confirmText || 'Confirmar' }}
@@ -95,7 +100,7 @@ export interface ConfirmDialogData {
       width: 48px;
       height: 48px;
       border-radius: 50%;
-      
+
       mat-icon {
         font-size: 32px;
         width: 32px;
@@ -199,7 +204,7 @@ export interface ConfirmDialogData {
         padding: 0 24px;
         min-width: 100px;
         height: 40px;
-        
+
         &:hover {
           background: #f1f5f9;
         }
@@ -224,6 +229,14 @@ export class ConfirmDialogComponent {
     public dialogRef: MatDialogRef<ConfirmDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: ConfirmDialogData
   ) {
+    console.log('ConfirmDialog data recibida:', data);
+    if (data.details) {
+      console.log('Details:', data.details);
+      data.details.forEach((d, i) => {
+        console.log(`Detail ${i}:`, d, 'typeof value:', typeof d.value);
+      });
+    }
+
     // Valores por defecto
     this.data.type = this.data.type || 'info';
     this.data.confirmText = this.data.confirmText || 'Confirmar';
@@ -236,5 +249,16 @@ export class ConfirmDialogComponent {
 
   onCancel(): void {
     this.dialogRef.close(false);
+  }
+
+  getMessageIcon(): string {
+    switch (this.data.type) {
+      case 'warning':
+        return 'warning';
+      case 'danger':
+        return 'error';
+      default:
+        return 'info_outline';
+    }
   }
 }

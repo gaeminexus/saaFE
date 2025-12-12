@@ -27,8 +27,10 @@ import { MenutesoreriaComponent } from './modules/tsr/menu/menutesoreria/menutes
 import { authGuard } from './shared/guard/auth.guard';
 import { canDeactivateGuard } from './shared/guard/can-deactivate.guard';
 // Reemplazamos placeholder EXTR por componente grid paginado
+import { AsientosContablesDinamico } from './modules/cnt/forms/asientos-contables-dinamico/asientos-contables-dinamico';
 import { AsientosContablesComponent } from './modules/cnt/forms/asientos-contables/asientos-contables.component';
 import { NaturalezaDeCuentasComponent } from './modules/cnt/forms/naturaleza-cuentas/naturaleza-cuentas.component';
+import { CargaAporteBackComponent } from './modules/crd/forms/archivos-petro/carga-aporte-back/carga-aporte-back.component';
 import { CargaAportesComponent } from './modules/crd/forms/archivos-petro/carga-aportes/carga-aportes.component';
 import { ConsultaArchivosPetroComponent } from './modules/crd/forms/archivos-petro/consulta-archivos-petro/consulta-archivos-petro.component';
 import { DetalleConsultaCargaComponent } from './modules/crd/forms/archivos-petro/detalle-consulta-carga/detalle-consulta-carga.component';
@@ -50,7 +52,6 @@ import { entidadEditResolver } from './modules/crd/resolver/entidad-edit.resolve
 import { EstadosResolverService } from './modules/crd/resolver/estados-resolver.service';
 import { ListadosCrdResolverService } from './modules/crd/resolver/listados-crd-resolver.service';
 import { TiposCrdResolverService } from './modules/crd/resolver/tipos-crd-resolver.service';
-import { CargaAporteBackComponent } from './modules/crd/forms/archivos-petro/carga-aporte-back/carga-aporte-back.component';
 
 export const routes: Routes = [
   { path: '', component: LoginComponent },
@@ -128,6 +129,11 @@ export const routes: Routes = [
       {
         path: 'asientos-contables',
         component: AsientosContablesComponent,
+        canDeactivate: [canDeactivateGuard],
+      },
+      {
+        path: 'procesos/asientos-dinamico',
+        component: AsientosContablesDinamico,
         canDeactivate: [canDeactivateGuard],
       },
       {
