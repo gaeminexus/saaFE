@@ -1,23 +1,23 @@
+import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders, HttpErrorResponse } from '@angular/common/http';
 import { Observable, of, throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
-import { Plantilla, EstadoPlantilla } from '../model/plantilla-general';
-import { DetallePlantilla, TipoMovimiento } from '../model/detalle-plantilla-general';
-import { ServiciosCnt } from './ws-cnt';
 import { Empresa } from '../../../shared/model/empresa';
-import { PlanCuenta } from '../model/plan-cuenta';
-import { NaturalezaCuenta } from '../model/naturaleza-cuenta';
 import { Jerarquia } from '../../../shared/model/jerarquia';
+import { DetallePlantilla, TipoMovimiento } from '../model/detalle-plantilla-general';
+import { NaturalezaCuenta } from '../model/naturaleza-cuenta';
+import { PlanCuenta } from '../model/plan-cuenta';
+import { EstadoPlantilla, Plantilla } from '../model/plantilla-general';
+import { ServiciosCnt } from './ws-cnt';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class PlantillaService {
   private static readonly EMPRESA_CODIGO = 280;
 
   private httpOptions = {
-    headers: new HttpHeaders({ 'Content-Type': 'application/json' })
+    headers: new HttpHeaders({ 'Content-Type': 'application/json' }),
   };
 
   // Bandera para indicar si estamos en modo demostración
@@ -35,7 +35,7 @@ export class PlantillaService {
     rubroTipoEstructuraH: 1,
     codigoAlterno: 1,
     rubroNivelCaracteristicaP: 1,
-    rubroNivelCaracteristicaH: 1
+    rubroNivelCaracteristicaH: 1,
   };
 
   // Empresa mock para ejemplos
@@ -45,14 +45,38 @@ export class PlantillaService {
     nombre: 'GAEMI NEXUS',
     nivel: 1,
     codigoPadre: 0,
-    ingresado: 1
+    ingresado: 1,
   };
 
   // Naturaleza de cuentas mock
   private mockNaturalezas: NaturalezaCuenta[] = [
-    { codigo: 1, nombre: 'Activo', tipo: 1, numero: 1, estado: 1, empresa: this.mockEmpresa, manejaCentroCosto: 0 },
-    { codigo: 2, nombre: 'Pasivo', tipo: 2, numero: 2, estado: 1, empresa: this.mockEmpresa, manejaCentroCosto: 0 },
-    { codigo: 5, nombre: 'Gasto', tipo: 5, numero: 5, estado: 1, empresa: this.mockEmpresa, manejaCentroCosto: 1 }
+    {
+      codigo: 1,
+      nombre: 'Activo',
+      tipo: 1,
+      numero: 1,
+      estado: 1,
+      empresa: this.mockEmpresa,
+      manejaCentroCosto: 0,
+    },
+    {
+      codigo: 2,
+      nombre: 'Pasivo',
+      tipo: 2,
+      numero: 2,
+      estado: 1,
+      empresa: this.mockEmpresa,
+      manejaCentroCosto: 0,
+    },
+    {
+      codigo: 5,
+      nombre: 'Gasto',
+      tipo: 5,
+      numero: 5,
+      estado: 1,
+      empresa: this.mockEmpresa,
+      manejaCentroCosto: 1,
+    },
   ];
 
   // Plan de cuentas mock para ejemplos
@@ -68,7 +92,7 @@ export class PlantillaService {
       estado: 1,
       fechaInactivo: new Date(),
       empresa: this.mockEmpresa,
-      fechaUpdate: new Date()
+      fechaUpdate: new Date(),
     },
     {
       codigo: 2,
@@ -81,7 +105,7 @@ export class PlantillaService {
       estado: 1,
       fechaInactivo: new Date(),
       empresa: this.mockEmpresa,
-      fechaUpdate: new Date()
+      fechaUpdate: new Date(),
     },
     {
       codigo: 3,
@@ -94,8 +118,8 @@ export class PlantillaService {
       estado: 1,
       fechaInactivo: new Date(),
       empresa: this.mockEmpresa,
-      fechaUpdate: new Date()
-    }
+      fechaUpdate: new Date(),
+    },
   ];
 
   /** Retorna plan de cuentas demo (solo modo mock) */
@@ -111,7 +135,7 @@ export class PlantillaService {
       codigoAlterno: 1001,
       estado: EstadoPlantilla.ACTIVO,
       empresa: this.mockEmpresa,
-      observacion: 'Plantilla para registrar asientos de nómina mensual'
+      observacion: 'Plantilla para registrar asientos de nómina mensual',
     },
     {
       codigo: 2,
@@ -119,7 +143,7 @@ export class PlantillaService {
       codigoAlterno: 1002,
       estado: EstadoPlantilla.ACTIVO,
       empresa: this.mockEmpresa,
-      observacion: 'Plantilla para asientos de cierre mensual'
+      observacion: 'Plantilla para asientos de cierre mensual',
     },
     {
       codigo: 3,
@@ -127,7 +151,7 @@ export class PlantillaService {
       codigoAlterno: 1003,
       estado: EstadoPlantilla.ACTIVO,
       empresa: this.mockEmpresa,
-      observacion: 'Plantilla para registrar provisiones contables'
+      observacion: 'Plantilla para registrar provisiones contables',
     },
     {
       codigo: 4,
@@ -136,8 +160,8 @@ export class PlantillaService {
       estado: EstadoPlantilla.INACTIVO,
       empresa: this.mockEmpresa,
       observacion: 'Plantilla para registrar depreciaciones de activos fijos',
-      fechaInactivo: new Date('2024-02-01')
-    }
+      fechaInactivo: new Date('2024-02-01'),
+    },
   ];
 
   // Datos mock para detalles
@@ -153,7 +177,7 @@ export class PlantillaService {
       auxiliar2: 0,
       auxiliar3: 0,
       auxiliar4: 0,
-      auxiliar5: 0
+      auxiliar5: 0,
     },
     {
       codigo: 2,
@@ -165,7 +189,7 @@ export class PlantillaService {
       auxiliar2: 0,
       auxiliar3: 0,
       auxiliar4: 0,
-      auxiliar5: 0
+      auxiliar5: 0,
     },
     {
       codigo: 3,
@@ -177,8 +201,8 @@ export class PlantillaService {
       auxiliar2: 1,
       auxiliar3: 0,
       auxiliar4: 0,
-      auxiliar5: 0
-    }
+      auxiliar5: 0,
+    },
   ];
 
   constructor(private http: HttpClient) {}
@@ -191,13 +215,9 @@ export class PlantillaService {
     const url = `${ServiciosCnt.RS_PLNS}${wsGetAll}`;
 
     return this.http.get<Plantilla[]>(url).pipe(
-      map((items: Plantilla[]) =>
-        (items || []).filter(p => p?.empresa?.codigo === PlantillaService.EMPRESA_CODIGO)
-      ),
       catchError(() => {
         console.log('[PlantillaService] Usando datos mock para plantillas');
-        // Asegurar filtro por empresa en mock
-        return of(this.mockPlantillas.filter(p => p?.empresa?.codigo === PlantillaService.EMPRESA_CODIGO));
+        return of(this.mockPlantillas);
       })
     );
   }
@@ -212,7 +232,7 @@ export class PlantillaService {
     return this.http.get<Plantilla>(url).pipe(
       catchError(() => {
         console.log('[PlantillaService] Usando datos mock para plantilla');
-        const item = this.mockPlantillas.find(p => p.codigo === codigo);
+        const item = this.mockPlantillas.find((p) => p.codigo === codigo);
         return of(item || null);
       })
     );
@@ -229,7 +249,7 @@ export class PlantillaService {
     return this.http.get<DetallePlantilla[]>(url).pipe(
       catchError(() => {
         console.log('[PlantillaService] Usando datos mock para detalles');
-        const detalles = this.mockDetalles.filter(d => d.plantilla.codigo === plantillaCodigo);
+        const detalles = this.mockDetalles.filter((d) => d.plantilla.codigo === plantillaCodigo);
         return of(detalles);
       })
     );
@@ -242,11 +262,11 @@ export class PlantillaService {
     return this.http.post<Plantilla>(ServiciosCnt.RS_PLNS, plantilla, this.httpOptions).pipe(
       catchError(() => {
         // Simular creación en mock
-        const newCodigo = Math.max(...this.mockPlantillas.map(p => p.codigo)) + 1;
+        const newCodigo = Math.max(...this.mockPlantillas.map((p) => p.codigo)) + 1;
         const newItem: Plantilla = {
           ...plantilla,
           codigo: newCodigo,
-          empresa: this.mockEmpresa
+          empresa: this.mockEmpresa,
         };
         this.mockPlantillas.push(newItem);
         return of(newItem);
@@ -261,7 +281,7 @@ export class PlantillaService {
     return this.http.put<Plantilla>(ServiciosCnt.RS_PLNS, plantilla, this.httpOptions).pipe(
       catchError(() => {
         // Simular actualización en mock
-        const index = this.mockPlantillas.findIndex(p => p.codigo === plantilla.codigo);
+        const index = this.mockPlantillas.findIndex((p) => p.codigo === plantilla.codigo);
         if (index !== -1) {
           this.mockPlantillas[index] = plantilla;
           return of(this.mockPlantillas[index]);
@@ -282,12 +302,15 @@ export class PlantillaService {
       map(() => true),
       catchError(() => {
         // Simular eliminación en mock
-        const index = this.mockPlantillas.findIndex(p => p.codigo === codigo);
+        const index = this.mockPlantillas.findIndex((p) => p.codigo === codigo);
         if (index !== -1) {
           this.mockPlantillas.splice(index, 1);
           // Eliminar también los detalles
-          this.mockDetalles.splice(0, this.mockDetalles.length,
-            ...this.mockDetalles.filter(d => d.plantilla.codigo !== codigo));
+          this.mockDetalles.splice(
+            0,
+            this.mockDetalles.length,
+            ...this.mockDetalles.filter((d) => d.plantilla.codigo !== codigo)
+          );
           return of(true);
         }
         return of(false);
@@ -302,25 +325,23 @@ export class PlantillaService {
     const wsSelectByCriteria = '/selectByCriteria/';
     const url = `${ServiciosCnt.RS_PLNS}${wsSelectByCriteria}`;
 
-    // Forzamos filtro de empresa en el request (si backend lo soporta)
-    const criteriosConEmpresa = { ...criterios, empresa: { codigo: PlantillaService.EMPRESA_CODIGO } };
+    const empresaCodigo = parseInt(localStorage.getItem('idSucursal') || '280', 10);
+    // Incluir filtro de empresa en el request
+    const criteriosConEmpresa = { ...criterios, empresa: { codigo: empresaCodigo } };
 
     return this.http.post<Plantilla[]>(url, criteriosConEmpresa, this.httpOptions).pipe(
-      map((items: Plantilla[]) =>
-        (items || []).filter(p => p?.empresa?.codigo === PlantillaService.EMPRESA_CODIGO)
-      ),
       catchError(() => {
         console.log('[PlantillaService] Usando filtros mock');
-        let filtered = this.mockPlantillas.filter(p => p?.empresa?.codigo === PlantillaService.EMPRESA_CODIGO);
+        let filtered = this.mockPlantillas.filter((p) => p?.empresa?.codigo === empresaCodigo);
 
         if (criterios.nombre) {
-          filtered = filtered.filter(p =>
+          filtered = filtered.filter((p) =>
             p.nombre.toLowerCase().includes(criterios.nombre.toLowerCase())
           );
         }
 
         if (criterios.estado !== undefined) {
-          filtered = filtered.filter(p => p.estado === criterios.estado);
+          filtered = filtered.filter((p) => p.estado === criterios.estado);
         }
 
         return of(filtered);
@@ -331,12 +352,14 @@ export class PlantillaService {
   /**
    * Obtiene plantilla completa con detalles
    */
-  getPlantillaCompleta(codigo: number): Observable<{plantilla: Plantilla, detalles: DetallePlantilla[]} | null> {
+  getPlantillaCompleta(
+    codigo: number
+  ): Observable<{ plantilla: Plantilla; detalles: DetallePlantilla[] } | null> {
     // En el backend real, esto sería un endpoint especializado
-    return new Observable(observer => {
-      this.getById(codigo).subscribe(plantilla => {
+    return new Observable((observer) => {
+      this.getById(codigo).subscribe((plantilla) => {
         if (plantilla) {
-          this.getDetallesByPlantillaCodigo(codigo).subscribe(detalles => {
+          this.getDetallesByPlantillaCodigo(codigo).subscribe((detalles) => {
             observer.next({ plantilla, detalles });
             observer.complete();
           });
@@ -354,7 +377,7 @@ export class PlantillaService {
   cambiarEstado(codigo: number, estado: EstadoPlantilla): Observable<boolean> {
     // Buscar la plantilla actual
     return this.getById(codigo).pipe(
-      map(plantilla => {
+      map((plantilla) => {
         if (plantilla) {
           plantilla.estado = estado;
           if (estado === EstadoPlantilla.INACTIVO) {

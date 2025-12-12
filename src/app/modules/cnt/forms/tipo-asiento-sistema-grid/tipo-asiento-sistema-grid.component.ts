@@ -69,6 +69,8 @@ export class TipoAsientoSistemaGridComponent implements OnInit {
   loadData(): void {
     this.tipoAsientoSistemaService.getAll().subscribe({
       next: (data: TipoAsientoSistema[]) => {
+        // TipoAsientoSistema son catálogos del sistema, no filtrados por empresa
+        console.log('[TipoAsientoSistema] Tipos cargados:', data.length);
         this.dataSource.data = data;
       },
       error: (error: any) => {
