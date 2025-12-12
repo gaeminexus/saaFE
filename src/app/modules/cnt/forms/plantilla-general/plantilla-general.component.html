@@ -370,43 +370,6 @@
             </div>
           </div>
 
-          <!-- Resumen de la Plantilla -->
-          <div class="resumen-section" *ngIf="dataSourceDetalles.data.length > 0">
-            <mat-card class="resumen-card">
-              <mat-card-header>
-                <mat-card-title>Resumen</mat-card-title>
-              </mat-card-header>
-              <mat-card-content>
-                <div class="resumen-info">
-                  <div class="resumen-item">
-                    <span class="label">Líneas:</span>
-                    <span class="value">{{ calcularResumen().totalLineas }}</span>
-                  </div>
-                  <div class="resumen-item">
-                    <span class="label">Total Debe:</span>
-                    <span class="value debe">{{ calcularResumen().totalDebe | number:'1.2-2' }}</span>
-                  </div>
-                  <div class="resumen-item">
-                    <span class="label">Total Haber:</span>
-                    <span class="value haber">{{ calcularResumen().totalHaber | number:'1.2-2' }}</span>
-                  </div>
-                  <div class="resumen-item">
-                    <span class="label">Diferencia:</span>
-                    <span class="value" [class]="calcularResumen().balanceado ? 'balanceado' : 'desbalanceado'">
-                      {{ calcularResumen().diferencia | number:'1.2-2' }}
-                    </span>
-                  </div>
-                  <div class="resumen-item">
-                    <span class="label">Estado:</span>
-                    <mat-chip [class]="calcularResumen().balanceado ? 'badge-activo' : 'badge-inactivo'">
-                      {{ calcularResumen().balanceado ? 'Balanceado' : 'Desbalanceado' }}
-                    </mat-chip>
-                  </div>
-                </div>
-              </mat-card-content>
-            </mat-card>
-          </div>
-
           <!-- Paginador para Detalles -->
           <mat-paginator #detallesPaginator
                          [pageSizeOptions]="[5, 10, 20]"

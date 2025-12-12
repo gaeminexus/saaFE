@@ -25,6 +25,7 @@ import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router } from '@angular/router';
 
+import { FuncionesDatosService } from '../../../../shared/services/funciones-datos.service';
 import { DetallePlantilla, TipoMovimiento } from '../../model/detalle-plantilla-general';
 import { EstadoPlantilla, Plantilla } from '../../model/plantilla-general';
 import { DetallePlantillaService } from '../../service/detalle-plantilla.service';
@@ -102,7 +103,8 @@ export class PlantillaGeneralComponent implements OnInit {
     private planCuentaService: PlanCuentaService,
     private dialog: MatDialog,
     private snackBar: MatSnackBar,
-    private router: Router
+    private router: Router,
+    private funcionesDatosService: FuncionesDatosService
   ) {
     this.plantillaForm = this.createForm();
     // Inicializar dataSource con array vacío
@@ -194,7 +196,12 @@ export class PlantillaGeneralComponent implements OnInit {
    */
   seleccionarPlantilla(plantilla: Plantilla): void {
     this.plantillaSeleccionada = plantilla;
-    this.plantillaForm.patchValue(plantilla);
+    // Asegurar mayúsculas al cargar en formulario
+    this.plantillaForm.patchValue({
+      ...plantilla,
+      nombre: plantilla.nombre?.toUpperCase() || '',
+      observacion: plantilla.observacion?.toUpperCase() || '',
+    });
     this.isEditing = true;
     this.isNewRecord = false;
 
@@ -209,8 +216,12 @@ export class PlantillaGeneralComponent implements OnInit {
     this.plantillaService.getPlantillaCompleta(codigo).subscribe({
       next: (data: { plantilla: Plantilla; detalles: DetallePlantilla[] } | null) => {
         if (data) {
-          // Cargar datos al formulario
-          this.plantillaForm.patchValue(data.plantilla);
+          // Cargar datos al formulario con mayúsculas
+          this.plantillaForm.patchValue({
+            ...data.plantilla,
+            nombre: data.plantilla.nombre?.toUpperCase() || '',
+            observacion: data.plantilla.observacion?.toUpperCase() || '',
+          });
 
           // Cargar detalles en la tabla
           this.dataSourceDetalles.data = data.detalles.sort(
@@ -344,9 +355,12 @@ export class PlantillaGeneralComponent implements OnInit {
 
     const plantillaData: Plantilla = {
       ...this.plantillaForm.value,
+      nombre: this.plantillaForm.value.nombre?.toUpperCase() || '',
+      observacion: this.plantillaForm.value.observacion?.toUpperCase() || '',
       fechaUpdate: new Date(),
       usuarioUpdate: 'current-user',
       empresa: { codigo: empresaCodigo, nombre: empresaNombre } as any,
+      sistema: 1, // PLNSSSTM - Indicador de sistema (1 por defecto)
     };
 
     // Eliminar codigo si es nuevo registro (el backend lo genera)
@@ -374,7 +388,12 @@ export class PlantillaGeneralComponent implements OnInit {
             this.showMessage('Plantilla creada correctamente', 'success');
             this.loadPlantillas();
             this.plantillaSeleccionada = result;
-            this.plantillaForm.patchValue(result);
+            // Asegurar mayúsculas al actualizar el formulario
+            this.plantillaForm.patchValue({
+              ...result,
+              nombre: result.nombre?.toUpperCase() || '',
+              observacion: result.observacion?.toUpperCase() || '',
+            });
             this.isNewRecord = false;
           } else {
             console.warn('⚠️ add() retornó null o undefined');
@@ -400,7 +419,12 @@ export class PlantillaGeneralComponent implements OnInit {
             this.showMessage('Plantilla actualizada correctamente', 'success');
             this.loadPlantillas();
             this.plantillaSeleccionada = result;
-            this.plantillaForm.patchValue(result);
+            // Asegurar mayúsculas al actualizar el formulario
+            this.plantillaForm.patchValue({
+              ...result,
+              nombre: result.nombre?.toUpperCase() || '',
+              observacion: result.observacion?.toUpperCase() || '',
+            });
           } else {
             this.showMessage('Error al actualizar la plantilla', 'error');
           }
@@ -822,9 +846,13 @@ export class PlantillaGeneralComponent implements OnInit {
       descripcion: resultadoDialog.descripcion || '',
       movimiento: resultadoDialog.movimiento,
       estado: resultadoDialog.estado || 1,
-      fechaDesde: resultadoDialog.fechaDesde || null,
-      fechaHasta: resultadoDialog.fechaHasta || null,
-      fechaInactivo: resultadoDialog.estado === 2 ? new Date() : null,
+      // Formatear fechas para LocalDateTime (sin timezone)
+      fechaDesde: this.funcionesDatosService.formatearFechaParaBackend(resultadoDialog.fechaDesde),
+      fechaHasta: this.funcionesDatosService.formatearFechaParaBackend(resultadoDialog.fechaHasta),
+      fechaInactivo:
+        resultadoDialog.estado === 2
+          ? this.funcionesDatosService.formatearFechaParaBackend(new Date())
+          : null,
       // Campos auxiliares requeridos por el backend
       auxiliar1: 0,
       auxiliar2: 0,
@@ -1399,11 +1427,8 @@ export class PlantillaGeneralComponent implements OnInit {
         const planes = Array.isArray(planCuentas) ? planCuentas : [];
 
         if (planes.length === 0) {
-          console.warn(
-            '⚠️ No se encontraron planes de cuenta en el servidor, usando datos demo como último recurso'
-          );
-          const planesMock = this.plantillaService.getPlanCuentasDemo();
-          this.abrirDialogoConPlanes(planesMock, detalleExistente);
+          console.warn('⚠️ No se encontraron planes de cuenta en el servidor');
+          this.showMessage('No hay planes de cuenta disponibles', 'warn');
         } else {
           console.log(`✅ Se cargaron ${planes.length} planes de cuenta del servidor`);
           // Filtrar solo los planes de la empresa dinámica
@@ -1423,10 +1448,8 @@ export class PlantillaGeneralComponent implements OnInit {
       },
       error: (error) => {
         this.loading = false;
-        console.error('❌ Error al cargar planes del servidor, usando datos mock:', error);
-        this.showMessage('⚠️ Error al cargar planes del servidor, usando datos de ejemplo', 'warn');
-        const planesMock = this.plantillaService.getPlanCuentasDemo();
-        this.abrirDialogoConPlanes(planesMock, detalleExistente);
+        console.error('❌ Error al cargar planes del servidor:', error);
+        this.showMessage('Error al cargar planes de cuenta. Verifique la conexión.', 'error');
       },
     });
   }
@@ -1440,11 +1463,8 @@ export class PlantillaGeneralComponent implements OnInit {
         const planes = Array.isArray(planCuentas) ? planCuentas : [];
 
         if (planes.length === 0) {
-          console.warn(
-            '⚠️ No se encontraron planes de cuenta en el servidor, usando datos demo como último recurso'
-          );
-          const planesMock = this.plantillaService.getPlanCuentasDemo();
-          this.abrirDialogoConPlanes(planesMock, detalleExistente);
+          console.warn('⚠️ No se encontraron planes de cuenta en el servidor');
+          this.showMessage('No hay planes de cuenta disponibles', 'warn');
         } else {
           console.log(
             `✅ Fallback exitoso: Se cargaron ${planes.length} planes de cuenta del servidor`
@@ -1462,10 +1482,8 @@ export class PlantillaGeneralComponent implements OnInit {
       },
       error: (error) => {
         this.loading = false;
-        console.error('❌ Error total al cargar planes, usando datos mock:', error);
-        this.showMessage('⚠️ Error al cargar planes del servidor, usando datos de ejemplo', 'warn');
-        const planesMock = this.plantillaService.getPlanCuentasDemo();
-        this.abrirDialogoConPlanes(planesMock, detalleExistente);
+        console.error('❌ Error total al cargar planes:', error);
+        this.showMessage('Error al cargar planes de cuenta. Verifique la conexión.', 'error');
       },
     });
   }
@@ -1527,10 +1545,16 @@ export class PlantillaGeneralComponent implements OnInit {
       planCuenta: result.planCuenta,
       descripcion: result.descripcion,
       movimiento: result.movimiento,
-      fechaDesde: result.fechaDesde,
-      fechaHasta: result.fechaHasta,
+      // Formatear fechas para LocalDateTime (sin timezone)
+      fechaDesde: this.funcionesDatosService.formatearFechaParaBackend(result.fechaDesde),
+      fechaHasta: this.funcionesDatosService.formatearFechaParaBackend(result.fechaHasta),
       estado: result.estado,
-      fechaInactivo: result.estado === 2 ? detalle.fechaInactivo || new Date() : null,
+      fechaInactivo:
+        result.estado === 2
+          ? this.funcionesDatosService.formatearFechaParaBackend(
+              detalle.fechaInactivo || new Date()
+            )
+          : null,
       // Campos auxiliares preservados del detalle original o valores por defecto
       auxiliar1: detalle.auxiliar1 || 0,
       auxiliar2: detalle.auxiliar2 || 0,
