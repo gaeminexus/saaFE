@@ -291,13 +291,13 @@
         <div class="stat-grid">
           <div class="stat-item">
             <mat-icon>attach_money</mat-icon>
-            <div class="stat-value">${{ prestamo.totalPrestamo | number : '1.2-2' }}</div>
-            <div class="stat-label">Monto Total</div>
+            <div class="stat-value">${{ prestamo.montoSolicitado| number : '1.2-2' }}</div>
+            <div class="stat-label">Capital solicitado</div>
           </div>
           <div class="stat-item">
             <mat-icon>account_balance</mat-icon>
-            <div class="stat-value">${{ prestamo.saldoTotal | number : '1.2-2' }}</div>
-            <div class="stat-label">Saldo</div>
+            <div class="stat-value">${{ prestamo.plazo | number : '1.2-2' }}</div>
+            <div class="stat-label">Plazo</div>
           </div>
           <div class="stat-item">
             <mat-icon>paid</mat-icon>

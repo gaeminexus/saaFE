@@ -21,10 +21,17 @@ import { NovedadCarga, NovedadAgrupada } from '../../../model/novedad-carga';
 import { ConfirmDialogComponent } from '../../../../../shared/basics/confirm-dialog/confirm-dialog.component';
 import { CoincidenciasEntidadDialogComponent } from '../../../dialog/coincidencias-entidad-dialog/coincidencias-entidad-dialog.component';
 import { ServiciosAsoprepService } from '../../../../asoprep/service/servicios-asoprep.service';
+import { EntidadService } from '../../../service/entidad.service';
+import { Entidad } from '../../../model/entidad';
 import { forkJoin, of } from 'rxjs';
 
 const RUBRO_ESTADOS_CARGA = 166;
 const RUBRO_NOVEDADES_CARGA = 169;
+const OK = 0;
+const PARTICIPE_NO_ENCONTRADO = 1;
+const CODIGO_ROL_DUPLICADO = 2;
+const NOMBRE_ENTIDAD_DUPLICADO = 3;
+
 
 interface Mes {
   valor: number;
@@ -158,6 +165,7 @@ export class DetalleConsultaCargaComponent implements OnInit {
     private detalleRubroService: DetalleRubroService,
     private novedadCargaService: NovedadCargaService,
     private serviciosAsoprepService: ServiciosAsoprepService,
+    private entidadService: EntidadService,
     private dialog: MatDialog,
     private snackBar: MatSnackBar
   ) {
@@ -629,11 +637,14 @@ export class DetalleConsultaCargaComponent implements OnInit {
   corregirRegistro(registro: ParticipeXCargaArchivo): void {
     const novedad = registro.novedadesCarga;
 
-    if (novedad === 1) {
+    if (novedad === PARTICIPE_NO_ENCONTRADO) {
       // PARTICIPE NO ENCONTRADO - Mostrar diálogo de coincidencias
       this.mostrarCoincidencias(registro);
-    } else if (novedad === 2) {
+    } else if (novedad === CODIGO_ROL_DUPLICADO) {
       this.corregirDuplicado(registro);
+    } else if (novedad === NOMBRE_ENTIDAD_DUPLICADO) {
+      // NOMBRE DUPLICADO - Mostrar coincidencias por Petro35
+      this.mostrarCoincidenciasPetro35(registro);
     } else {
       this.snackBar.open(
         `⚠ Corrección para novedad ${novedad} no implementada aún`,
@@ -657,8 +668,6 @@ export class DetalleConsultaCargaComponent implements OnInit {
 
     dialogRef.afterClosed().subscribe(entidadSeleccionada => {
       if (entidadSeleccionada) {
-        console.log('✅ Entidad seleccionada:', entidadSeleccionada);
-        console.log('📝 Registro original:', registro);
 
         // Llamar al servicio para actualizar el código Petro con la entidad seleccionada
         this.isLoading = true;
@@ -668,8 +677,6 @@ export class DetalleConsultaCargaComponent implements OnInit {
           entidadSeleccionada.codigo
         ).subscribe({
           next: (participeActualizado: ParticipeXCargaArchivo | null) => {
-            console.log('✅ Partícipe actualizado:', participeActualizado);
-
             if (participeActualizado) {
               // Actualizar el registro en la lista local
               this.actualizarRegistroEnNovedades(registro, participeActualizado);
@@ -850,6 +857,21 @@ export class DetalleConsultaCargaComponent implements OnInit {
       return;
     }
 
+    // Validar que todas las novedades estén resueltas (código 0 = Sin novedad)
+    const novedadesPendientes = this.novedadesAgrupadas().filter(
+      novedad => novedad.novedad.codigo !== 0 && novedad.total > 0
+    );
+
+    if (novedadesPendientes.length > 0) {
+      const totalRegistrosPendientes = novedadesPendientes.reduce((sum, nov) => sum + nov.total, 0);
+      this.snackBar.open(
+        `⚠️ Debe resolver todas las novedades antes de procesar el archivo. Hay ${totalRegistrosPendientes} registro(s) pendiente(s).`,
+        'Cerrar',
+        { duration: 5000 }
+      );
+      return;
+    }
+
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
       width: '500px',
       data: {
@@ -874,6 +896,69 @@ export class DetalleConsultaCargaComponent implements OnInit {
    */
   volverAtras(): void {
     this.router.navigate(['/menucreditos/consulta-archivos-petro']);
+  }
+
+  /**
+   * Muestra el diálogo de coincidencias usando getByNombrePetro35
+   * para novedad de NOMBRE DUPLICADO (código 3)
+   */
+  private mostrarCoincidenciasPetro35(registro: ParticipeXCargaArchivo): void {
+    // Llamar al servicio getByNombrePetro35
+    this.entidadService.getByNombrePetro35(registro.nombre).subscribe({
+      next: (entidades: Entidad[] | null) => {
+        if (!entidades || entidades.length === 0) {
+          this.snackBar.open('No se encontraron coincidencias por nombre Petro35', 'Cerrar', {
+            duration: 3000
+          });
+          return;
+        }
+
+        // Abrir el dialog con las entidades encontradas
+        const dialogRef = this.dialog.open(CoincidenciasEntidadDialogComponent, {
+          width: '800px',
+          data: {
+            nombreBusqueda: registro.nombre,
+            registroOriginal: registro
+          }
+        });
+
+        // Cargar manualmente las coincidencias en el diálogo
+        dialogRef.componentInstance.coincidencias = entidades;
+        dialogRef.componentInstance.isLoading = false;
+
+        dialogRef.afterClosed().subscribe(entidadSeleccionada => {
+          if (entidadSeleccionada) {
+            this.isLoading = true;
+            this.serviciosAsoprepService.actualizaCodigoPetroEntidad(
+              registro.codigoPetro,
+              registro.codigo!,
+              entidadSeleccionada.codigo
+            ).subscribe({
+              next: (participeActualizado: ParticipeXCargaArchivo | null) => {
+                if (participeActualizado) {
+                  this.actualizarRegistroEnNovedades(registro, participeActualizado);
+                  this.snackBar.open(
+                    `✓ Entidad "${entidadSeleccionada.razonSocial}" asociada correctamente`,
+                    'Cerrar',
+                    { duration: 3000 }
+                  );
+                }
+                this.isLoading = false;
+              },
+              error: (error: any) => {
+                console.error('❌ Error al actualizar partícipe:', error);
+                this.snackBar.open('❌ Error al asociar la entidad', 'Cerrar', { duration: 5000 });
+                this.isLoading = false;
+              }
+            });
+          }
+        });
+      },
+      error: (error: any) => {
+        console.error('❌ Error al buscar coincidencias Petro35:', error);
+        this.snackBar.open('❌ Error al buscar coincidencias', 'Cerrar', { duration: 5000 });
+      }
+    });
   }
 }
 

@@ -131,13 +131,13 @@ export class MenucreditosComponent {
           iconName: 'cards_stack',
           route: '/menucreditos/parametrizacion',
           children: [
-            {
+            /*{
               displayName: 'Carga Aportes',
               iconName: 'drive_folder_upload',
               route: '/menucreditos/carga-aportes',
-            },
+            },*/
             {
-              displayName: 'Carga Aportes Opcion 1',
+              displayName: 'Carga Aportes',
               iconName: 'drive_folder_upload',
               route: '/menucreditos/carga-aportes-back',
             },

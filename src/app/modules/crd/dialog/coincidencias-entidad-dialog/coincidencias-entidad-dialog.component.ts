@@ -21,7 +21,7 @@ export class CoincidenciasEntidadDialogComponent {
   isLoading = true;
   entidadSeleccionada: Entidad | null = null;
 
-  displayedColumns: string[] = ['razonSocial', 'acciones'];
+  displayedColumns: string[] = ['razonSocial', 'numeroIdentificacion', 'acciones'];
 
   constructor(
     public dialogRef: MatDialogRef<CoincidenciasEntidadDialogComponent>,

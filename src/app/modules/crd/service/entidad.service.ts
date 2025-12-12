@@ -41,6 +41,14 @@ export class EntidadService {
     );
   }
 
+  getByNombrePetro35(nombre: string): Observable<Entidad[] | null> {
+    const wsGetById = '/getByNombrePetro35/';
+    const url = `${ServiciosCrd.RS_ENTD}${wsGetById}${nombre}`;
+    return this.http.get<Entidad[]>(url).pipe(
+      catchError(this.handleError)
+    );
+  }
+
   /** POST: add new record */
   add(datos: any): Observable<Entidad | null> {
     return this.http.post<Entidad>(ServiciosCrd.RS_ENTD, datos, this.httpOptions).pipe(
