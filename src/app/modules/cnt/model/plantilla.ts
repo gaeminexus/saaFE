@@ -8,4 +8,5 @@ export interface Plantilla {
     empresa: Empresa;
     observacion: string;
     fechaInactivo: Date;
+    sistema: number;
 }

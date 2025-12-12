@@ -21,5 +21,6 @@ export interface ParticipeXCargaArchivo {
     estadoRevision: number;            // Estado de revisión
     novedadesCarga: number;            // Novedades de la carga
     estado: number;                    // Estado del registro
+    novedadesFinancieras: number;     // Novedades financieras (texto)
 
 }

@@ -30,15 +30,13 @@ export class AsientoService {
   /**
    * Obtener todos los asientos - usa POST ya que GET retorna 405
    */
-  getAll(): Observable<Asiento[]> {
-    // Usar selectByCriteria vacío para obtener todos
-    return this.selectByCriteria({}).pipe(
-      catchError((err) => {
-        console.warn('[AsientoService] getAll falló, retornando array vacío:', err);
-        return of([]);
-      })
-    );
-  }
+  getAll(): Observable<Asiento[] | null> {
+      const wsGetById = '/getAll';
+      const url = `${this.baseUrl}/${wsGetById}`;
+      return this.http.get<Asiento[]>(url).pipe(
+        catchError(this.handleError)
+      );
+    }
 
   /**
    * Obtener asiento por ID

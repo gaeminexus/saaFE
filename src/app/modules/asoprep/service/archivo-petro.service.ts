@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { Observable } from 'rxjs';
 
 export interface RegistroAporte {
   codigoAporte: string;
@@ -293,4 +294,5 @@ export class ArchivoPetroService {
     const numero = parseFloat(valorLimpio);
     return isNaN(numero) ? 0 : numero;
   }
+
 }
