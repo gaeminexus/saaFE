@@ -1,6 +1,8 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, ViewChild, AfterViewInit, QueryList, ViewChildren } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
+import { MatSort } from '@angular/material/sort';
+import { MatTableDataSource } from '@angular/material/table';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { CargaArchivo } from '../../../model/carga-archivo';
 import { DetalleCargaArchivo } from '../../../model/detalle-carga-archivo';
@@ -55,7 +57,7 @@ interface AporteAgrupado {
     interesNoDescontado: number;
     desgravamenNoDescontado: number;
   };
-  participes: ParticipeXCargaArchivo[];
+  participes: MatTableDataSource<ParticipeXCargaArchivo>;
 }
 
 @Component({
@@ -65,7 +67,8 @@ interface AporteAgrupado {
   templateUrl: './detalle-consulta-carga.component.html',
   styleUrl: './detalle-consulta-carga.component.scss'
 })
-export class DetalleConsultaCargaComponent implements OnInit {
+export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
+  @ViewChildren(MatSort) sorts!: QueryList<MatSort>;
 
   // Datos de la carga
   cargaArchivo: CargaArchivo | null = null;
@@ -125,7 +128,7 @@ export class DetalleConsultaCargaComponent implements OnInit {
 
   displayedColumns: string[] = [
     'codigo', 'nombre', 'plazoInicial', 'saldoActual', 'mesesPlazo',
-    'interesAnual', 'valorSeguro', 'totalDescontar', 'capitalDescontado',
+    'interesAnual', 'valorSeguro', 'montoDescontar', 'capitalDescontado',
     'interesDescontado', 'seguroDescontado', 'totalDescontado',
     'capitalNoDescontado', 'interesNoDescontado', 'desgravamenNoDescontado'
   ];
@@ -173,6 +176,26 @@ export class DetalleConsultaCargaComponent implements OnInit {
     for (let anio = 2025; anio <= 2035; anio++) {
       this.anios.push(anio);
     }
+  }
+
+  ngAfterViewInit(): void {
+    // Asignar sort a cada MatTableDataSource cuando estén disponibles
+    this.sorts.changes.subscribe(() => {
+      this.asignarSorts();
+    });
+    this.asignarSorts();
+  }
+
+  /**
+   * Asigna el MatSort a cada MatTableDataSource de los aportes
+   */
+  private asignarSorts(): void {
+    const sortsArray = this.sorts.toArray();
+    this.aporteAgrupados.forEach((aporte, index) => {
+      if (sortsArray[index]) {
+        aporte.participes.sort = sortsArray[index];
+      }
+    });
   }
 
   ngOnInit(): void {
@@ -405,12 +428,12 @@ export class DetalleConsultaCargaComponent implements OnInit {
             interesNoDescontado: 0,
             desgravamenNoDescontado: 0
           },
-          participes: []
+          participes: new MatTableDataSource<ParticipeXCargaArchivo>([])
         });
       }
 
       const aporte = aportesMap.get(codigoAporte)!;
-      aporte.participes.push(participe);
+      aporte.participes.data.push(participe);
       aporte.totalParticipes++;
 
       // Acumular totales
@@ -896,6 +919,135 @@ export class DetalleConsultaCargaComponent implements OnInit {
    */
   volverAtras(): void {
     this.router.navigate(['/menucreditos/consulta-archivos-petro']);
+  }
+
+  /**
+   * Filtra registros por tipo de total (campo específico con valor mayor a 0)
+   */
+  filtrarPorTotal(codigoAporte: string, campoFiltro: keyof AporteAgrupado['totales']): void {
+    if (!this.cargaArchivo?.codigo) return;
+
+    // Encontrar el aporte para verificar el valor del total
+    const aporte = this.aporteAgrupados.find((a: AporteAgrupado) => a.codigoAporte === codigoAporte);
+    if (!aporte) return;
+
+    // Validar que el total no sea cero
+    const valorTotal = aporte.totales[campoFiltro];
+    if (valorTotal === 0) {
+      this.snackBar.open(
+        `El total de ${this.obtenerEtiquetaCampo(campoFiltro)} es cero. No hay registros que mostrar.`,
+        'Cerrar',
+        { duration: 3000 }
+      );
+      return;
+    }
+
+    // Obtener código del detalle desde el primer partícipe
+    const codigoDetalleCarga = aporte.participes.data[0]?.detalleCargaArchivo?.codigo;
+    if (!codigoDetalleCarga) {
+      console.error('No se pudo obtener el código del detalle de carga');
+      return;
+    }
+
+    // Guardar partícipes originales para restaurar en caso de error
+    const participesOriginales = [...aporte.participes.data];
+
+    // Limpiar partícipes para mostrar loading en el panel
+    aporte.participes.data = [];
+
+    const criterioArray: DatosBusqueda[] = [];
+
+    // Filtro por código de detalle de carga
+    let db = new DatosBusqueda();
+    db.asignaValorConCampoPadre(
+      TipoDatosBusqueda.LONG,
+      'detalleCargaArchivo',
+      'codigo',
+      codigoDetalleCarga.toString(),
+      TipoComandosBusqueda.IGUAL
+    );
+    criterioArray.push(db);
+
+    // Filtro por campo específico > 0
+    // Nota: totalDescontar se mapea a montoDescontar en backend
+    const campoBackend = campoFiltro === 'totalDescontar' ? 'montoDescontar' : campoFiltro;
+    db = new DatosBusqueda();
+    db.asignaUnCampoSinTrunc(
+      TipoDatosBusqueda.DOUBLE,
+      campoBackend,
+      '0',
+      TipoComandosBusqueda.MAYOR
+    );
+    criterioArray.push(db);
+
+    // Ordenar por nombre
+    db = new DatosBusqueda();
+    db.orderBy('nombre');
+    db.setTipoOrden(DatosBusqueda.ORDER_ASC);
+    criterioArray.push(db);
+
+    this.participeXCargaArchivoService.selectByCriteria(criterioArray).subscribe({
+      next: (registros) => {
+        if (registros && registros.length > 0) {
+          this.mostrarRegistrosFiltrados(registros, codigoAporte, campoFiltro);
+        } else {
+          // Restaurar partícipes originales
+          aporte.participes.data = participesOriginales;
+          this.snackBar.open('No se encontraron registros para este filtro', 'Cerrar', {
+            duration: 3000
+          });
+        }
+      },
+      error: (error) => {
+        // Restaurar partícipes originales en caso de error
+        aporte.participes.data = participesOriginales;
+        console.error('Error al filtrar registros:', error);
+        this.snackBar.open('Error al filtrar registros', 'Cerrar', { duration: 3000 });
+      }
+    });
+  }
+
+  /**
+   * Muestra los registros filtrados (puedes personalizarlo según necesites)
+   */
+  private mostrarRegistrosFiltrados(
+    registros: ParticipeXCargaArchivo[],
+    codigoAporte: string,
+    campo: keyof AporteAgrupado['totales']
+  ): void {
+    console.log(`📊 Registros filtrados para ${campo}:`, registros);
+
+    // Actualizar la tabla del acordeón correspondiente con los registros filtrados
+    const aporte = this.aporteAgrupados.find((a: AporteAgrupado) => a.codigoAporte === codigoAporte);
+    if (aporte) {
+      aporte.participes.data = registros;
+    }
+
+    this.snackBar.open(
+      `Se encontraron ${registros.length} registro(s) con ${this.obtenerEtiquetaCampo(campo)} > 0`,
+      'Cerrar',
+      { duration: 3000 }
+    );
+  }
+
+  /**
+   * Obtiene la etiqueta legible del campo
+   */
+  private obtenerEtiquetaCampo(campo: keyof AporteAgrupado['totales']): string {
+    const etiquetas: Record<keyof AporteAgrupado['totales'], string> = {
+      saldoActual: 'Saldo Actual',
+      interesAnual: 'Interés Anual',
+      valorSeguro: 'Valor Seguro',
+      totalDescontar: 'Total a Descontar',
+      capitalDescontado: 'Capital Descontado',
+      interesDescontado: 'Interés Descontado',
+      seguroDescontado: 'Seguro Descontado',
+      totalDescontado: 'Total Descontado',
+      capitalNoDescontado: 'Capital No Descontado',
+      interesNoDescontado: 'Interés No Descontado',
+      desgravamenNoDescontado: 'Desgravamen No Descontado'
+    };
+    return etiquetas[campo];
   }
 
   /**

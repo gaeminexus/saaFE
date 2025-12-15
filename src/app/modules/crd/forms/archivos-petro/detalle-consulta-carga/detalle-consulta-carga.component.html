@@ -132,47 +132,47 @@
                   Totales del Aporte
                 </h4>
                 <div class="totales-grid">
-                  <div class="total-item">
+                  <div class="total-item clickable" (click)="filtrarPorTotal(aporte.codigoAporte, 'saldoActual')">
                     <span class="total-label">Saldo Actual</span>
                     <span class="total-valor">{{ aporte.totales.saldoActual | number:'1.2-2' }}</span>
                   </div>
-                  <div class="total-item">
+                  <div class="total-item clickable" (click)="filtrarPorTotal(aporte.codigoAporte, 'interesAnual')">
                     <span class="total-label">Interés Anual</span>
                     <span class="total-valor">{{ aporte.totales.interesAnual | number:'1.2-2' }}</span>
                   </div>
-                  <div class="total-item">
+                  <div class="total-item clickable" (click)="filtrarPorTotal(aporte.codigoAporte, 'valorSeguro')">
                     <span class="total-label">Valor Seguro</span>
                     <span class="total-valor">{{ aporte.totales.valorSeguro | number:'1.2-2' }}</span>
                   </div>
-                  <div class="total-item destacado">
+                  <div class="total-item destacado clickable" (click)="filtrarPorTotal(aporte.codigoAporte, 'totalDescontar')">
                     <span class="total-label">Total a Descontar</span>
                     <span class="total-valor">{{ aporte.totales.totalDescontar | number:'1.2-2' }}</span>
                   </div>
-                  <div class="total-item">
+                  <div class="total-item clickable" (click)="filtrarPorTotal(aporte.codigoAporte, 'capitalDescontado')">
                     <span class="total-label">Capital Descontado</span>
                     <span class="total-valor">{{ aporte.totales.capitalDescontado | number:'1.2-2' }}</span>
                   </div>
-                  <div class="total-item">
+                  <div class="total-item clickable" (click)="filtrarPorTotal(aporte.codigoAporte, 'interesDescontado')">
                     <span class="total-label">Interés Descontado</span>
                     <span class="total-valor">{{ aporte.totales.interesDescontado | number:'1.2-2' }}</span>
                   </div>
-                  <div class="total-item">
+                  <div class="total-item clickable" (click)="filtrarPorTotal(aporte.codigoAporte, 'seguroDescontado')">
                     <span class="total-label">Seguro Descontado</span>
                     <span class="total-valor">{{ aporte.totales.seguroDescontado | number:'1.2-2' }}</span>
                   </div>
-                  <div class="total-item destacado">
+                  <div class="total-item destacado clickable" (click)="filtrarPorTotal(aporte.codigoAporte, 'totalDescontado')">
                     <span class="total-label">Total Descontado</span>
                     <span class="total-valor">{{ aporte.totales.totalDescontado | number:'1.2-2' }}</span>
                   </div>
-                  <div class="total-item no-descontado">
+                  <div class="total-item no-descontado clickable" (click)="filtrarPorTotal(aporte.codigoAporte, 'capitalNoDescontado')">
                     <span class="total-label">Capital No Descontado</span>
                     <span class="total-valor">{{ aporte.totales.capitalNoDescontado | number:'1.2-2' }}</span>
                   </div>
-                  <div class="total-item no-descontado">
+                  <div class="total-item no-descontado clickable" (click)="filtrarPorTotal(aporte.codigoAporte, 'interesNoDescontado')">
                     <span class="total-label">Interés No Descontado</span>
                     <span class="total-valor">{{ aporte.totales.interesNoDescontado | number:'1.2-2' }}</span>
                   </div>
-                  <div class="total-item no-descontado">
+                  <div class="total-item no-descontado clickable" (click)="filtrarPorTotal(aporte.codigoAporte, 'desgravamenNoDescontado')">
                     <span class="total-label">Desgravamen No Descontado</span>
                     <span class="total-valor">{{ aporte.totales.desgravamenNoDescontado | number:'1.2-2' }}</span>
                   </div>
@@ -181,94 +181,94 @@
 
               <!-- Tabla de partícipes -->
               <div class="table-container">
-                <table mat-table [dataSource]="aporte.participes" class="participes-table">
+                <table mat-table [dataSource]="aporte.participes" matSort class="participes-table">
                   <!-- Código -->
                   <ng-container matColumnDef="codigo">
-                    <th mat-header-cell *matHeaderCellDef>Código</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Código</th>
                     <td mat-cell *matCellDef="let participe">{{ participe.codigoPetro }}</td>
                   </ng-container>
 
                   <!-- Nombre -->
                   <ng-container matColumnDef="nombre">
-                    <th mat-header-cell *matHeaderCellDef>Nombre</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Nombre</th>
                     <td mat-cell *matCellDef="let participe">{{ participe.nombre }}</td>
                   </ng-container>
 
                   <!-- Plazo Inicial -->
                   <ng-container matColumnDef="plazoInicial">
-                    <th mat-header-cell *matHeaderCellDef>Plazo Inicial</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Plazo Inicial</th>
                     <td mat-cell *matCellDef="let participe">{{ participe.plazoInicial }}</td>
                   </ng-container>
 
                   <!-- Saldo Actual -->
                   <ng-container matColumnDef="saldoActual">
-                    <th mat-header-cell *matHeaderCellDef>Saldo Actual</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Saldo Actual</th>
                     <td mat-cell *matCellDef="let participe">{{ participe.saldoActual | number:'1.2-2' }}</td>
                   </ng-container>
 
                   <!-- Meses Plazo -->
                   <ng-container matColumnDef="mesesPlazo">
-                    <th mat-header-cell *matHeaderCellDef>Meses Plazo</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Meses Plazo</th>
                     <td mat-cell *matCellDef="let participe">{{ participe.mesesPlazo }}</td>
                   </ng-container>
 
                   <!-- Interés Anual -->
                   <ng-container matColumnDef="interesAnual">
-                    <th mat-header-cell *matHeaderCellDef>Interés Anual</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Interés Anual</th>
                     <td mat-cell *matCellDef="let participe">{{ participe.interesAnual | number:'1.2-2' }}</td>
                   </ng-container>
 
                   <!-- Valor Seguro -->
                   <ng-container matColumnDef="valorSeguro">
-                    <th mat-header-cell *matHeaderCellDef>Valor Seguro</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Valor Seguro</th>
                     <td mat-cell *matCellDef="let participe">{{ participe.valorSeguro | number:'1.2-2' }}</td>
                   </ng-container>
 
                   <!-- Total Descontar -->
-                  <ng-container matColumnDef="totalDescontar">
-                    <th mat-header-cell *matHeaderCellDef>Total Descontar</th>
+                  <ng-container matColumnDef="montoDescontar">
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Total Descontar</th>
                     <td mat-cell *matCellDef="let participe" class="destacado">{{ participe.montoDescontar | number:'1.2-2' }}</td>
                   </ng-container>
 
                   <!-- Capital Descontado -->
                   <ng-container matColumnDef="capitalDescontado">
-                    <th mat-header-cell *matHeaderCellDef>Capital Desc.</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Capital Desc.</th>
                     <td mat-cell *matCellDef="let participe">{{ participe.capitalDescontado | number:'1.2-2' }}</td>
                   </ng-container>
 
                   <!-- Interés Descontado -->
                   <ng-container matColumnDef="interesDescontado">
-                    <th mat-header-cell *matHeaderCellDef>Interés Desc.</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Interés Desc.</th>
                     <td mat-cell *matCellDef="let participe">{{ participe.interesDescontado | number:'1.2-2' }}</td>
                   </ng-container>
 
                   <!-- Seguro Descontado -->
                   <ng-container matColumnDef="seguroDescontado">
-                    <th mat-header-cell *matHeaderCellDef>Seguro Desc.</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Seguro Desc.</th>
                     <td mat-cell *matCellDef="let participe">{{ participe.seguroDescontado | number:'1.2-2' }}</td>
                   </ng-container>
 
                   <!-- Total Descontado -->
                   <ng-container matColumnDef="totalDescontado">
-                    <th mat-header-cell *matHeaderCellDef>Total Desc.</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Total Desc.</th>
                     <td mat-cell *matCellDef="let participe" class="destacado">{{ participe.totalDescontado | number:'1.2-2' }}</td>
                   </ng-container>
 
                   <!-- Capital No Descontado -->
                   <ng-container matColumnDef="capitalNoDescontado">
-                    <th mat-header-cell *matHeaderCellDef>Capital No Desc.</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Capital No Desc.</th>
                     <td mat-cell *matCellDef="let participe" class="no-descontado">{{ participe.capitalNoDescontado | number:'1.2-2' }}</td>
                   </ng-container>
 
                   <!-- Interés No Descontado -->
                   <ng-container matColumnDef="interesNoDescontado">
-                    <th mat-header-cell *matHeaderCellDef>Interés No Desc.</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Interés No Desc.</th>
                     <td mat-cell *matCellDef="let participe" class="no-descontado">{{ participe.interesNoDescontado | number:'1.2-2' }}</td>
                   </ng-container>
 
                   <!-- Desgravamen No Descontado -->
                   <ng-container matColumnDef="desgravamenNoDescontado">
-                    <th mat-header-cell *matHeaderCellDef>Desgravamen No Desc.</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Desgravamen No Desc.</th>
                     <td mat-cell *matCellDef="let participe" class="no-descontado">{{ participe.desgravamenNoDescontado | number:'1.2-2' }}</td>
                   </ng-container>
 
