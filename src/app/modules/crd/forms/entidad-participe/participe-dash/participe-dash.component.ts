@@ -2728,6 +2728,7 @@ export class ParticipeDashComponent implements OnInit {
 
       criterio = new DatosBusqueda();
       criterio.orderBy('numeroCuota');
+      criterio.setTipoOrden(DatosBusqueda.ORDER_DESC);
       criterioConsultaArray.push(criterio);
 
       this.detallePrestamoService.selectByCriteria(criterioConsultaArray).subscribe({
