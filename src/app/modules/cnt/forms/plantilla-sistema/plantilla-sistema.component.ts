@@ -147,14 +147,17 @@ export class PlantillaSistemaComponent implements OnInit {
     this.loading = true;
     const empresaCodigo = parseInt(localStorage.getItem('idSucursal') || '280', 10);
 
-    this.plantillaService.getAll().subscribe({
+    // Usar selectByCriteria para filtrar desde el backend
+    const criterios = {
+      empresa: { codigo: empresaCodigo },
+      sistema: 1, // Solo plantillas de sistema
+    };
+
+    this.plantillaService.selectByCriteria(criterios).subscribe({
       next: (data: Plantilla[] | null) => {
-        // Filtrar solo las plantillas de la empresa logueada y sistema: 1 (sistema)
-        this.plantillas = (data || []).filter(
-          (p) => p.empresa && p.empresa.codigo === empresaCodigo && p.sistema === 1
-        );
+        this.plantillas = data || [];
         console.log(
-          `🔍 Plantillas cargadas para empresa ${empresaCodigo}: ${this.plantillas.length}`
+          `🔍 Plantillas de sistema cargadas para empresa ${empresaCodigo}: ${this.plantillas.length}`
         );
         this.loading = false;
         if (this.plantillas.length > 0) {

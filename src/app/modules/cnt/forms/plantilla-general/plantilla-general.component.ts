@@ -150,17 +150,21 @@ export class PlantillaGeneralComponent implements OnInit {
     console.log('🔄 [INICIO] loadPlantillas() llamado');
     console.log('🏢 idSucursal actual:', this.idSucursal);
     this.loading = true;
-    this.plantillaService.getAll().subscribe({
+
+    // Usar selectByCriteria para filtrar desde el backend
+    const criterios = {
+      empresa: { codigo: this.idSucursal },
+      sistema: 0, // Solo plantillas generales
+    };
+
+    this.plantillaService.selectByCriteria(criterios).subscribe({
       next: (data: Plantilla[] | null) => {
-        console.log('📥 Plantillas recibidas del backend:', data?.length || 0);
+        console.log('📥 Plantillas generales recibidas del backend:', data?.length || 0);
         console.log('📥 Datos completos:', data);
 
-        // Filtrar solo las plantillas de la empresa logueada y sistema: 0 (generales)
-        this.plantillas = (data || []).filter(
-          (p) => p.empresa && p.empresa.codigo === this.idSucursal && p.sistema === 0
-        );
+        this.plantillas = data || [];
 
-        console.log('✅ Plantillas después de filtrar por empresa:', this.plantillas.length);
+        console.log('✅ Plantillas generales cargadas:', this.plantillas.length);
         console.log('✅ Plantillas filtradas:', this.plantillas);
 
         this.loading = false;
