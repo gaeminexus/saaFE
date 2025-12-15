@@ -155,9 +155,9 @@ export class PlantillaGeneralComponent implements OnInit {
         console.log('📥 Plantillas recibidas del backend:', data?.length || 0);
         console.log('📥 Datos completos:', data);
 
-        // Filtrar solo las plantillas de la empresa logueada
+        // Filtrar solo las plantillas de la empresa logueada y sistema: 0 (generales)
         this.plantillas = (data || []).filter(
-          (p) => p.empresa && p.empresa.codigo === this.idSucursal
+          (p) => p.empresa && p.empresa.codigo === this.idSucursal && p.sistema === 0
         );
 
         console.log('✅ Plantillas después de filtrar por empresa:', this.plantillas.length);
@@ -360,7 +360,7 @@ export class PlantillaGeneralComponent implements OnInit {
       fechaUpdate: new Date(),
       usuarioUpdate: 'current-user',
       empresa: { codigo: empresaCodigo, nombre: empresaNombre } as any,
-      sistema: 1, // PLNSSSTM - Indicador de sistema (1 por defecto)
+      sistema: 0, // PLNSSSTM - Indicador de sistema (0 para plantilla general)
     };
 
     // Eliminar codigo si es nuevo registro (el backend lo genera)

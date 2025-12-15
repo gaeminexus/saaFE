@@ -27,8 +27,9 @@ import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router } from '@angular/router';
 
+import { FuncionesDatosService } from '../../../../shared/services/funciones-datos.service';
 import { DetallePlantilla } from '../../model/detalle-plantilla';
-import { Plantilla } from '../../model/plantilla';
+import { EstadoPlantilla, Plantilla } from '../../model/plantilla-general';
 import { DetallePlantillaService } from '../../service/detalle-plantilla.service';
 import { PlanCuentaService } from '../../service/plan-cuenta.service';
 import { PlantillaService } from '../../service/plantilla.service';
@@ -72,6 +73,9 @@ import { DetallePlantillaDialogComponent } from '../plantilla-general/detalle-pl
   styleUrls: ['./plantilla-sistema.component.scss'],
 })
 export class PlantillaSistemaComponent implements OnInit {
+  // Enum expuesto para el template
+  EstadoPlantilla = EstadoPlantilla;
+
   // Formulario maestro
   plantillaForm: FormGroup;
 
@@ -107,7 +111,8 @@ export class PlantillaSistemaComponent implements OnInit {
     private planCuentaService: PlanCuentaService,
     private dialog: MatDialog,
     private snackBar: MatSnackBar,
-    private router: Router
+    private router: Router,
+    private funcionesDatosService: FuncionesDatosService
   ) {
     this.plantillaForm = this.createForm();
     this.dataSourceDetalles.data = [];
@@ -132,8 +137,9 @@ export class PlantillaSistemaComponent implements OnInit {
       nombre: ['', [Validators.required, Validators.maxLength(100)]],
       alterno: [0],
       observacion: ['', Validators.maxLength(500)],
-      estado: [1, Validators.required],
+      estado: [EstadoPlantilla.ACTIVO, Validators.required],
       fechaInactivo: [null],
+      fechaCreacion: [null],
     });
   }
 
@@ -143,9 +149,9 @@ export class PlantillaSistemaComponent implements OnInit {
 
     this.plantillaService.getAll().subscribe({
       next: (data: Plantilla[] | null) => {
-        // Filtrar solo las plantillas de la empresa logueada
+        // Filtrar solo las plantillas de la empresa logueada y sistema: 1 (sistema)
         this.plantillas = (data || []).filter(
-          (p) => p.empresa && p.empresa.codigo === empresaCodigo
+          (p) => p.empresa && p.empresa.codigo === empresaCodigo && p.sistema === 1
         );
         console.log(
           `🔍 Plantillas cargadas para empresa ${empresaCodigo}: ${this.plantillas.length}`
@@ -170,7 +176,12 @@ export class PlantillaSistemaComponent implements OnInit {
 
   seleccionarPlantilla(plantilla: Plantilla): void {
     this.plantillaSeleccionada = plantilla;
-    this.plantillaForm.patchValue(plantilla);
+    // Asegurar mayúsculas al cargar en formulario
+    this.plantillaForm.patchValue({
+      ...plantilla,
+      nombre: plantilla.nombre?.toUpperCase() || '',
+      observacion: plantilla.observacion?.toUpperCase() || '',
+    });
     this.isEditing = true;
     this.isNewRecord = false;
     this.cargarDetalles(plantilla.codigo);
@@ -228,7 +239,10 @@ export class PlantillaSistemaComponent implements OnInit {
 
     const formValue = {
       ...this.plantillaForm.value,
+      nombre: this.plantillaForm.value.nombre?.toUpperCase() || '',
+      observacion: this.plantillaForm.value.observacion?.toUpperCase() || '',
       empresa: { codigo: empresaCodigo, nombre: empresaNombre } as any,
+      sistema: 1, // PLNSSSTM - Indicador de sistema (1 para plantilla sistema)
     };
 
     // Eliminar codigo si es nuevo registro (el backend lo genera)
@@ -260,6 +274,14 @@ export class PlantillaSistemaComponent implements OnInit {
           if (result) {
             this.showMessage('Plantilla creada correctamente', 'success');
             this.loadPlantillas();
+            this.plantillaSeleccionada = result;
+            // Asegurar mayúsculas al actualizar el formulario
+            this.plantillaForm.patchValue({
+              ...result,
+              nombre: result.nombre?.toUpperCase() || '',
+              observacion: result.observacion?.toUpperCase() || '',
+            });
+            this.isNewRecord = false;
             this.cancelarEdicion();
           } else {
             console.warn('⚠️ add() retornó null o undefined');
@@ -279,6 +301,13 @@ export class PlantillaSistemaComponent implements OnInit {
           if (result) {
             this.showMessage('Plantilla actualizada correctamente', 'success');
             this.loadPlantillas();
+            this.plantillaSeleccionada = result;
+            // Asegurar mayúsculas al actualizar el formulario
+            this.plantillaForm.patchValue({
+              ...result,
+              nombre: result.nombre?.toUpperCase() || '',
+              observacion: result.observacion?.toUpperCase() || '',
+            });
           }
         },
         error: () => {
@@ -361,8 +390,9 @@ export class PlantillaSistemaComponent implements OnInit {
       planCuenta: result.planCuenta,
       descripcion: result.descripcion,
       movimiento: result.movimiento,
-      fechaDesde: result.fechaDesde,
-      fechaHasta: result.fechaHasta,
+      // Formatear fechas para LocalDateTime (sin timezone)
+      fechaDesde: this.funcionesDatosService.formatearFechaParaBackend(result.fechaDesde),
+      fechaHasta: this.funcionesDatosService.formatearFechaParaBackend(result.fechaHasta),
       estado: result.estado,
       auxiliar1: 0,
       auxiliar2: 0,
@@ -395,11 +425,19 @@ export class PlantillaSistemaComponent implements OnInit {
     const detalleActualizado: any = {
       ...detalle,
       ...result,
+      // Formatear fechas para LocalDateTime (sin timezone)
+      fechaDesde: this.funcionesDatosService.formatearFechaParaBackend(result.fechaDesde),
+      fechaHasta: this.funcionesDatosService.formatearFechaParaBackend(result.fechaHasta),
       plantilla: {
         ...detalle.plantilla,
         empresa: { codigo: empresaCodigo, nombre: empresaNombre },
       },
-      fechaInactivo: result.estado === 2 ? detalle.fechaInactivo || new Date() : null,
+      fechaInactivo:
+        result.estado === 2
+          ? this.funcionesDatosService.formatearFechaParaBackend(
+              detalle.fechaInactivo || new Date()
+            )
+          : null,
     };
 
     console.log('🔄 Actualizando detalle en backend:', detalleActualizado);
@@ -494,6 +532,92 @@ export class PlantillaSistemaComponent implements OnInit {
     };
   }
 
+  /**
+   * Elimina una plantilla
+   */
+  eliminarPlantilla(): void {
+    if (!this.plantillaSeleccionada) return;
+
+    if (confirm(`¿Está seguro de eliminar la plantilla "${this.plantillaSeleccionada.nombre}"?`)) {
+      this.plantillaService.delete(this.plantillaSeleccionada.codigo).subscribe({
+        next: (result: Plantilla | null) => {
+          if (result) {
+            this.showMessage('Plantilla eliminada correctamente', 'success');
+            this.loadPlantillas();
+            this.isEditing = false;
+            this.plantillaSeleccionada = null;
+            this.plantillaForm.reset();
+            this.dataSourceDetalles.data = [];
+          }
+        },
+        error: (error: any) => {
+          console.error('Error al eliminar plantilla:', error);
+          this.showMessage('Error al eliminar plantilla', 'error');
+        },
+      });
+    }
+  }
+
+  /**
+   * Valida el estado actual de los detalles y muestra información
+   */
+  validarEstadoDetalles(): void {
+    const detallesCount = this.dataSourceDetalles.data.length;
+    const plantillaNombre =
+      this.plantillaSeleccionada?.nombre || this.plantillaForm.get('nombre')?.value || 'Sin nombre';
+
+    console.log('=== ESTADO DE DETALLES DE PLANTILLA ===');
+    console.log(`Plantilla: ${plantillaNombre}`);
+    console.log(`Código de plantilla: ${this.plantillaSeleccionada?.codigo || 'Sin guardar'}`);
+    console.log(`Total de detalles: ${detallesCount}`);
+    console.log(`Es nueva plantilla: ${this.isNewRecord}`);
+    console.log('Detalles actuales:', this.dataSourceDetalles.data);
+
+    if (this.isNewRecord) {
+      this.showMessage(
+        `Esta plantilla es nueva y tiene ${detallesCount} detalles pendientes de guardar`,
+        'info'
+      );
+    } else if (this.plantillaSeleccionada?.codigo) {
+      this.showMessage(`Plantilla guardada con ${detallesCount} detalles cargados`, 'success');
+    } else {
+      this.showMessage(`Estado inconsistente: plantilla sin código pero no es nueva`, 'warn');
+    }
+  }
+
+  /**
+   * Crear asiento contable basado en la plantilla seleccionada
+   */
+  crearAsientoDesdeTemplate(): void {
+    if (!this.plantillaSeleccionada) {
+      this.showMessage('No hay plantilla seleccionada', 'warn');
+      return;
+    }
+
+    const detalles = this.dataSourceDetalles.data;
+    if (detalles.length === 0) {
+      this.showMessage('La plantilla no tiene detalles para crear el asiento', 'warn');
+      return;
+    }
+
+    // Preparar datos de la plantilla para el asiento
+    const plantillaData = {
+      plantillaCodigo: this.plantillaSeleccionada.codigo,
+      plantillaNombre: this.plantillaSeleccionada.nombre,
+      detalles: detalles,
+    };
+
+    // Guardar en localStorage para usar en el componente de asientos
+    localStorage.setItem('plantillaParaAsiento', JSON.stringify(plantillaData));
+
+    this.showMessage('Navegando a crear asiento desde plantilla...', 'info');
+
+    // Navegar al componente de asientos con parámetro
+    this.router.navigate(['/menucontabilidad/asientos'], {
+      queryParams: { plantilla: this.plantillaSeleccionada.codigo },
+    });
+  }
+
   cerrarBanner(): void {
     this.mostrarBannerDemo = false;
   }
@@ -512,12 +636,26 @@ export class PlantillaSistemaComponent implements OnInit {
     });
   }
 
-  getEstadoBadgeClass(estado: number): string {
-    return estado === 1 ? 'badge-activo' : 'badge-inactivo';
+  getEstadoBadgeClass(estado: EstadoPlantilla): string {
+    switch (estado) {
+      case EstadoPlantilla.ACTIVO:
+        return 'badge-activo';
+      case EstadoPlantilla.INACTIVO:
+        return 'badge-inactivo';
+      default:
+        return 'badge-default';
+    }
   }
 
-  getEstadoText(estado: number): string {
-    return estado === 1 ? 'Activo' : 'Inactivo';
+  getEstadoText(estado: EstadoPlantilla): string {
+    switch (estado) {
+      case EstadoPlantilla.ACTIVO:
+        return 'Activo';
+      case EstadoPlantilla.INACTIVO:
+        return 'Inactivo';
+      default:
+        return 'Desconocido';
+    }
   }
 
   getPlanCuentaNombre(planCuenta: any): string {
