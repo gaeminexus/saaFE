@@ -409,17 +409,18 @@
         <table
           mat-table
           [dataSource]="detallesPrestamo.get(prestamoSeleccionado.codigo)!"
+          matSort
           class="detalle-table"
         >
           <!-- Columna Cuota -->
           <ng-container matColumnDef="numeroCuota">
-            <th mat-header-cell *matHeaderCellDef>Cuota</th>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Cuota</th>
             <td mat-cell *matCellDef="let detalle">{{ detalle.detalle.numeroCuota }}</td>
           </ng-container>
 
           <!-- Columna Fecha Vencimiento -->
           <ng-container matColumnDef="fechaVencimiento">
-            <th mat-header-cell *matHeaderCellDef>Vencimiento</th>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Vencimiento</th>
             <td mat-cell *matCellDef="let detalle">
               {{ detalle.detalle.fechaVencimiento | date : 'dd/MM/yyyy' }}
             </td>
@@ -427,7 +428,7 @@
 
           <!-- Columna Capital -->
           <ng-container matColumnDef="capital">
-            <th mat-header-cell *matHeaderCellDef>Capital</th>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Capital</th>
             <td mat-cell *matCellDef="let detalle">
               ${{ detalle.detalle.capital | number : '1.2-2' }}
             </td>
@@ -435,7 +436,7 @@
 
           <!-- Columna Interés -->
           <ng-container matColumnDef="interes">
-            <th mat-header-cell *matHeaderCellDef>Interés</th>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Interés</th>
             <td mat-cell *matCellDef="let detalle">
               ${{ detalle.detalle.interes | number : '1.2-2' }}
             </td>
@@ -443,7 +444,7 @@
 
           <!-- Columna Desgravamen -->
           <ng-container matColumnDef="desgravamen">
-            <th mat-header-cell *matHeaderCellDef>Desgravamen</th>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Desgravamen</th>
             <td mat-cell *matCellDef="let detalle">
               ${{ detalle.detalle.desgravamen | number : '1.2-2' }}
             </td>
@@ -451,7 +452,7 @@
 
           <!-- Columna Cuota Total -->
           <ng-container matColumnDef="cuota">
-            <th mat-header-cell *matHeaderCellDef>Cuota Total</th>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Cuota Total</th>
             <td mat-cell *matCellDef="let detalle">
               ${{ detalle.detalle.total | number : '1.2-2' }}
             </td>
@@ -459,7 +460,7 @@
 
           <!-- Columna Saldo -->
           <ng-container matColumnDef="saldo">
-            <th mat-header-cell *matHeaderCellDef>Saldo</th>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Saldo</th>
             <td mat-cell *matCellDef="let detalle">
               ${{ detalle.detalle.saldo | number : '1.2-2' }}
             </td>
@@ -556,7 +557,7 @@
           <div class="tipo-stats">
             <span class="stat-chip">
               <mat-icon>payments</mat-icon>
-              {{ tipoAporte.aportes.length }} registros
+              {{ tipoAporte.aportes.data.length }} registros
             </span>
             <span class="stat-chip">
               <mat-icon>account_balance_wallet</mat-icon>
@@ -613,10 +614,10 @@
         </div>
 
         <!-- Tabla de aportes del tipo -->
-        <table mat-table [dataSource]="tipoAporte.aportes" class="detalle-table tipo-table">
+        <table mat-table [dataSource]="tipoAporte.aportes" matSort class="detalle-table tipo-table">
           <!-- Columna Fecha Transacción -->
           <ng-container matColumnDef="fechaTransaccion">
-            <th mat-header-cell *matHeaderCellDef>Fecha</th>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Fecha</th>
             <td mat-cell *matCellDef="let aporte">
               {{ aporte.fechaTransaccion | date : 'dd/MM/yyyy' }}
             </td>
@@ -624,13 +625,13 @@
 
           <!-- Columna Glosa -->
           <ng-container matColumnDef="glosa">
-            <th mat-header-cell *matHeaderCellDef>Glosa</th>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Glosa</th>
             <td mat-cell *matCellDef="let aporte">{{ aporte.glosa || '-' }}</td>
           </ng-container>
 
           <!-- Columna Valor -->
           <ng-container matColumnDef="valor">
-            <th mat-header-cell *matHeaderCellDef>Valor</th>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Valor</th>
             <td mat-cell *matCellDef="let aporte" class="number-column">
               ${{ aporte.valor | number : '1.2-2' }}
             </td>
@@ -638,7 +639,7 @@
 
           <!-- Columna Valor Pagado -->
           <ng-container matColumnDef="valorPagado">
-            <th mat-header-cell *matHeaderCellDef>Pagado</th>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Pagado</th>
             <td mat-cell *matCellDef="let aporte" class="number-column">
               ${{ aporte.valorPagado | number : '1.2-2' }}
             </td>
@@ -646,7 +647,7 @@
 
           <!-- Columna Saldo -->
           <ng-container matColumnDef="saldo">
-            <th mat-header-cell *matHeaderCellDef>Saldo</th>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Saldo</th>
             <td mat-cell *matCellDef="let aporte" class="number-column saldo-column">
               ${{ aporte.saldo | number : '1.2-2' }}
             </td>

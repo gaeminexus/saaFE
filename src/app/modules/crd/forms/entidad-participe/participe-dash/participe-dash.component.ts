@@ -1,6 +1,8 @@
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, ViewChild, AfterViewInit, QueryList, ViewChildren } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
+import { MatSort } from '@angular/material/sort';
+import { MatTableDataSource } from '@angular/material/table';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, Router } from '@angular/router';
 
@@ -47,7 +49,7 @@ interface AportesPorTipo {
   tipoAporte: string;
   codigoTipo: number;
   estadoTipo: number; // Estado del TipoAporte
-  aportes: Aporte[];
+  aportes: MatTableDataSource<Aporte>;
   totalValor: number;
   totalPagado: number;
   totalSaldo: number;
@@ -61,7 +63,9 @@ interface AportesPorTipo {
   templateUrl: './participe-dash.component.html',
   styleUrl: './participe-dash.component.scss',
 })
-export class ParticipeDashComponent implements OnInit {
+export class ParticipeDashComponent implements OnInit, AfterViewInit {
+  @ViewChildren(MatSort) sorts!: QueryList<MatSort>;
+
   // Búsqueda
   searchText: string = '';
   isSearching: boolean = false;
@@ -84,7 +88,7 @@ export class ParticipeDashComponent implements OnInit {
   prestamoSeleccionado: Prestamo | null = null;
 
   // Detalles de préstamos
-  detallesPrestamo: Map<number, DetalleConPagos[]> = new Map();
+  detallesPrestamo: Map<number, MatTableDataSource<DetalleConPagos>> = new Map();
   prestamoExpandido: number | null = null;
 
   // Columnas de las tablas
@@ -151,6 +155,49 @@ export class ParticipeDashComponent implements OnInit {
         }
 
         this.cargarEntidadPorCodigo(codigo);
+      }
+    });
+  }
+
+  ngAfterViewInit(): void {
+    // Asignar sort a cada MatTableDataSource cuando estén disponibles
+    this.sorts.changes.subscribe(() => {
+      setTimeout(() => this.asignarSorts(), 100);
+    });
+    // Usar setTimeout para asegurar que los ViewChildren estén disponibles
+    setTimeout(() => this.asignarSorts(), 100);
+  }
+
+  /**
+   * Asigna el MatSort a cada MatTableDataSource de los aportes y préstamos
+   */
+  private asignarSorts(): void {
+    // Forzar detección de cambios para asegurar que las tablas estén renderizadas
+    this.cdr.detectChanges();
+
+    const sortsArray = this.sorts?.toArray() || [];
+
+    // Validar que existan sorts disponibles
+    if (sortsArray.length === 0) {
+      console.log('No hay sorts disponibles aún');
+      return;
+    }
+
+    // Asignar sort a tabla de préstamos (primera tabla)
+    if (this.prestamoSeleccionado?.codigo && sortsArray[0]) {
+      const dataSource = this.detallesPrestamo.get(this.prestamoSeleccionado.codigo);
+      if (dataSource) {
+        dataSource.sort = sortsArray[0];
+        console.log('Sort asignado a tabla de préstamo');
+      }
+    }
+
+    // Asignar sorts a tablas de aportes (resto de tablas)
+    this.aportesPorTipo.forEach((tipo, index) => {
+      const sortIndex = this.prestamoSeleccionado ? index + 1 : index;
+      if (sortsArray[sortIndex]) {
+        tipo.aportes.sort = sortsArray[sortIndex];
+        console.log(`Sort asignado a tabla de aporte tipo: ${tipo.tipoAporte}`);
       }
     });
   }
@@ -424,7 +471,7 @@ export class ParticipeDashComponent implements OnInit {
     try {
       // Cargar detalles de todos los préstamos primero
       const promesasCarga = this.prestamos.map((prestamo) =>
-        this.cargarDetallesPrestamoAsync(prestamo.codigo)
+        this.cargarDetallesPrestamo(prestamo.codigo)
       );
 
       await Promise.all(promesasCarga);
@@ -505,7 +552,7 @@ export class ParticipeDashComponent implements OnInit {
               doc.setFont(undefined, 'normal');
               doc.text(
                 `Total: $${tipoAporte.totalValor.toFixed(2)} | Cantidad: ${
-                  tipoAporte.aportes.length
+                  tipoAporte.aportes.data.length
                 }`,
                 20,
                 yPosition
@@ -513,7 +560,7 @@ export class ParticipeDashComponent implements OnInit {
               yPosition += 8;
 
               // Tabla de aportes del tipo
-              const aportesData = tipoAporte.aportes.map((aporte) => {
+              const aportesData = tipoAporte.aportes.data.map((aporte: Aporte) => {
                 const fecha = this.convertirFecha(aporte.fechaTransaccion);
                 return [
                   fecha ? fecha.toLocaleDateString('es-ES') : 'N/A',
@@ -616,11 +663,11 @@ export class ParticipeDashComponent implements OnInit {
               yPosition += 8;
 
               // Cargar detalles del préstamo si no están cargados
-              const detalles = this.detallesPrestamo.get(prestamo.codigo);
+              const dataSource = this.detallesPrestamo.get(prestamo.codigo);
 
-              if (detalles && detalles.length > 0) {
+              if (dataSource && dataSource.data.length > 0) {
                 // Tabla de cuotas
-                const cuotasData = detalles.map((dc) => {
+                const cuotasData = dataSource.data.map((dc) => {
                   const fechaVenc = this.convertirFecha(dc.detalle.fechaVencimiento);
                   return [
                     dc.detalle.numeroCuota?.toString() || 'N/A',
@@ -742,10 +789,11 @@ export class ParticipeDashComponent implements OnInit {
 
       // Cargar detalles del préstamo si no están cargados
       if (!this.detallesPrestamo.has(prestamo.codigo)) {
-        await this.cargarDetallesPrestamoAsync(prestamo.codigo);
+        await this.cargarDetallesPrestamo(prestamo.codigo);
       }
 
-      const detalles = this.detallesPrestamo.get(prestamo.codigo) || [];
+      const dataSource = this.detallesPrestamo.get(prestamo.codigo);
+      const detalles = dataSource ? dataSource.data : [];
       const entidad = this.entidadEncontrada;
 
       this.cargarJsPDF()
@@ -1020,20 +1068,20 @@ export class ParticipeDashComponent implements OnInit {
           yPosition += 6;
           doc.text(`Total Saldo: $${tipoAporte.totalSaldo.toFixed(2)}`, 14, yPosition);
           yPosition += 6;
-          doc.text(`Cantidad de Aportes: ${tipoAporte.aportes.length}`, 14, yPosition);
+          doc.text(`Cantidad de Aportes: ${tipoAporte.aportes.data.length}`, 14, yPosition);
           yPosition += 12;
 
           checkPageBreak(40);
 
           // Tabla de aportes
-          if (tipoAporte.aportes.length > 0) {
+          if (tipoAporte.aportes.data.length > 0) {
             doc.setFontSize(12);
             doc.setTextColor(246, 173, 85);
             doc.setFont(undefined, 'bold');
             doc.text('Detalle de Aportes', 14, yPosition);
             yPosition += 8;
 
-            const aportesData = tipoAporte.aportes.map((aporte) => {
+            const aportesData = tipoAporte.aportes.data.map((aporte: Aporte) => {
               const fecha = this.convertirFecha(aporte.fechaTransaccion);
               const fechaStr = fecha ? fecha.toLocaleDateString('es-ES') : 'N/A';
 
@@ -1080,12 +1128,12 @@ export class ParticipeDashComponent implements OnInit {
             doc.setFontSize(10);
             doc.setFont(undefined, 'normal');
 
-            const totalValor = tipoAporte.aportes.reduce((sum, a) => sum + (a.valor || 0), 0);
-            const totalPagado = tipoAporte.aportes.reduce(
-              (sum, a) => sum + (a.valorPagado || 0),
+            const totalValor = tipoAporte.aportes.data.reduce((sum: number, a: Aporte) => sum + (a.valor || 0), 0);
+            const totalPagado = tipoAporte.aportes.data.reduce(
+              (sum: number, a: Aporte) => sum + (a.valorPagado || 0),
               0
             );
-            const totalSaldo = tipoAporte.aportes.reduce((sum, a) => sum + (a.saldo || 0), 0);
+            const totalSaldo = tipoAporte.aportes.data.reduce((sum: number, a: Aporte) => sum + (a.saldo || 0), 0);
 
             doc.text(`Total Valor: $${totalValor.toFixed(2)}`, 14, yPosition);
             yPosition += 6;
@@ -1219,7 +1267,7 @@ export class ParticipeDashComponent implements OnInit {
 
           const totalTipos = this.aportesPorTipo.length;
           const totalAportes = this.aportesPorTipo.reduce(
-            (sum, tipo) => sum + tipo.aportes.length,
+            (sum, tipo) => sum + tipo.aportes.data.length,
             0
           );
 
@@ -1242,7 +1290,7 @@ export class ParticipeDashComponent implements OnInit {
           const tiposData = this.aportesPorTipo.map((tipo) => {
             return [
               tipo.tipoAporte,
-              tipo.aportes.length.toString(),
+              tipo.aportes.data.length.toString(),
               `$${tipo.totalValor.toFixed(2)}`,
               `$${tipo.totalPagado.toFixed(2)}`,
               `$${tipo.totalSaldo.toFixed(2)}`,
@@ -1753,11 +1801,25 @@ export class ParticipeDashComponent implements OnInit {
       const estadoTipo = aporte.tipoAporte?.estado || 0;
 
       if (!tiposMap.has(codigoTipo)) {
+        const dataSource = new MatTableDataSource<Aporte>([]);
+
+        // Configurar sortingDataAccessor para fechas
+        dataSource.sortingDataAccessor = (item: Aporte, property: string) => {
+          switch (property) {
+            case 'fechaTransaccion': return new Date(item.fechaTransaccion).getTime();
+            case 'glosa': return item.glosa || '';
+            case 'valor': return item.valor || 0;
+            case 'valorPagado': return item.valorPagado || 0;
+            case 'saldo': return item.saldo || 0;
+            default: return '';
+          }
+        };
+
         tiposMap.set(codigoTipo, {
           tipoAporte: nombreTipo,
           codigoTipo: codigoTipo,
           estadoTipo: estadoTipo,
-          aportes: [],
+          aportes: dataSource,
           totalValor: 0,
           totalPagado: 0,
           totalSaldo: 0,
@@ -1766,16 +1828,17 @@ export class ParticipeDashComponent implements OnInit {
       }
 
       const grupo = tiposMap.get(codigoTipo)!;
-      grupo.aportes.push(aporte);
+      grupo.aportes.data.push(aporte);
       grupo.totalValor += aporte.valor || 0;
       grupo.totalPagado += aporte.valorPagado || 0;
       grupo.totalSaldo += aporte.saldo || 0;
     });
 
     this.aportesPorTipo = Array.from(tiposMap.values());
-  }
 
-  toggleTipoAporte(tipo: AportesPorTipo): void {
+    // Asignar sorts después de crear las tablas
+    setTimeout(() => this.asignarSorts(), 100);
+  }  toggleTipoAporte(tipo: AportesPorTipo): void {
     tipo.expandido = !tipo.expandido;
   }
 
@@ -1796,11 +1859,16 @@ export class ParticipeDashComponent implements OnInit {
     // Cargar detalles si no están cargados
     if (!this.detallesPrestamo.has(prestamo.codigo)) {
       this.cargarDetallesPrestamo(prestamo.codigo);
+    } else {
+      // Si ya están cargados, asignar sorts después de que la vista cambie
+      setTimeout(() => this.asignarSorts(), 100);
     }
   }
 
   verDetalleAportes(): void {
     this.vistaActual = 'detalleAportes';
+    // Asignar sorts después de que la vista cambie y las tablas se rendericen
+    setTimeout(() => this.asignarSorts(), 100);
   }
 
   volverDashboard(): void {
@@ -2087,8 +2155,9 @@ export class ParticipeDashComponent implements OnInit {
           next: (respuesta) => {
             // Actualizar en el Map local de detalles
             if (this.prestamoSeleccionado?.codigo) {
-              const detalles = this.detallesPrestamo.get(this.prestamoSeleccionado.codigo);
-              if (detalles) {
+              const dataSource = this.detallesPrestamo.get(this.prestamoSeleccionado.codigo);
+              if (dataSource) {
+                const detalles = dataSource.data;
                 const index = detalles.findIndex((d) => d.detalle.codigo === cuota.codigo);
                 if (index !== -1) {
                   console.log('🔄 Estado anterior cuota:', detalles[index].detalle.idEstado);
@@ -2099,9 +2168,8 @@ export class ParticipeDashComponent implements OnInit {
 
                   console.log('🔄 Estado nuevo cuota:', detalles[index].detalle.idEstado);
 
-                  // Crear nueva referencia del array para forzar detección de cambios
-                  const nuevosDetalles = [...detalles];
-                  this.detallesPrestamo.set(this.prestamoSeleccionado.codigo, nuevosDetalles);
+                  // Actualizar el dataSource para forzar detección de cambios
+                  dataSource.data = [...detalles];
 
                   // Forzar detección de cambios en Angular
                   this.cdr.detectChanges();
@@ -2150,13 +2218,13 @@ export class ParticipeDashComponent implements OnInit {
       return;
     }
 
-    const detalles = this.detallesPrestamo.get(prestamo.codigo);
-    if (!detalles || detalles.length === 0) {
+    const dataSource = this.detallesPrestamo.get(prestamo.codigo);
+    if (!dataSource || dataSource.data.length === 0) {
       return;
     }
 
     // Obtener todos los estados de las cuotas
-    const estadosCuotas = detalles.map((d) => d.detalle.idEstado || d.detalle.estado || 0);
+    const estadosCuotas = dataSource.data.map((d) => d.detalle.idEstado || d.detalle.estado || 0);
 
     // Determinar el nuevo estado del préstamo basándose en las cuotas
     let nuevoEstadoCodigo: number | null = null;
@@ -2645,12 +2713,14 @@ export class ParticipeDashComponent implements OnInit {
     }
   }
 
-  cargarDetallesPrestamo(codigoPrestamo: number): void {
-    if (this.detallesPrestamo.has(codigoPrestamo)) {
-      return; // Ya está cargado
-    }
+  cargarDetallesPrestamo(codigoPrestamo: number): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (this.detallesPrestamo.has(codigoPrestamo)) {
+        resolve(); // Ya está cargado
+        return;
+      }
 
-    this.isLoadingDetalles = true;
+      this.isLoadingDetalles = true;
 
     const criterioConsultaArray: DatosBusqueda[] = [];
 
@@ -2666,13 +2736,15 @@ export class ParticipeDashComponent implements OnInit {
 
     criterio = new DatosBusqueda();
     criterio.orderBy('numeroCuota');
+    criterio.setTipoOrden(DatosBusqueda.ORDER_DESC);
     criterioConsultaArray.push(criterio);
 
     this.detallePrestamoService.selectByCriteria(criterioConsultaArray).subscribe({
       next: (detalles: any) => {
         if (!detalles || !Array.isArray(detalles)) {
-          this.detallesPrestamo.set(codigoPrestamo, []);
+          this.detallesPrestamo.set(codigoPrestamo, new MatTableDataSource<DetalleConPagos>([]));
           this.isLoadingDetalles = false;
+          resolve();
           return;
         }
 
@@ -2693,77 +2765,37 @@ export class ParticipeDashComponent implements OnInit {
             mostrarPagos: false,
           };
         });
-        this.detallesPrestamo.set(codigoPrestamo, detallesConPagos);
+        const dataSource = new MatTableDataSource<DetalleConPagos>(detallesConPagos);
+
+        // Configurar sortingDataAccessor para acceder a propiedades anidadas
+        dataSource.sortingDataAccessor = (item: DetalleConPagos, property: string) => {
+          switch (property) {
+            case 'numeroCuota': return item.detalle.numeroCuota;
+            case 'fechaVencimiento': return new Date(item.detalle.fechaVencimiento).getTime();
+            case 'capital': return item.detalle.capital || 0;
+            case 'interes': return item.detalle.interes || 0;
+            case 'desgravamen': return item.detalle.desgravamen || 0;
+            case 'cuota': return item.detalle.total || 0;
+            case 'saldo': return item.detalle.saldo || 0;
+            default: return '';
+          }
+        };
+
+        this.detallesPrestamo.set(codigoPrestamo, dataSource);
         this.isLoadingDetalles = false;
+
+        // Asignar sort después de crear la tabla
+        setTimeout(() => this.asignarSorts(), 100);
+
+        resolve();
       },
       error: (error) => {
         console.error('Error al cargar detalles del préstamo:', error);
         this.snackBar.open('Error al cargar detalles del préstamo', 'Cerrar', { duration: 3000 });
         this.isLoadingDetalles = false;
+        reject(error);
       },
     });
-  }
-
-  /**
-   * Carga los detalles de un préstamo y retorna una Promise
-   */
-  private cargarDetallesPrestamoAsync(codigoPrestamo: number): Promise<void> {
-    return new Promise((resolve, reject) => {
-      if (this.detallesPrestamo.has(codigoPrestamo)) {
-        resolve(); // Ya está cargado
-        return;
-      }
-
-      const criterioConsultaArray: DatosBusqueda[] = [];
-
-      let criterio = new DatosBusqueda();
-      criterio.asignaValorConCampoPadre(
-        TipoDatosBusqueda.LONG,
-        'prestamo',
-        'codigo',
-        codigoPrestamo.toString(),
-        TipoComandosBusqueda.IGUAL
-      );
-      criterioConsultaArray.push(criterio);
-
-      criterio = new DatosBusqueda();
-      criterio.orderBy('numeroCuota');
-      criterio.setTipoOrden(DatosBusqueda.ORDER_DESC);
-      criterioConsultaArray.push(criterio);
-
-      this.detallePrestamoService.selectByCriteria(criterioConsultaArray).subscribe({
-        next: (detalles: any) => {
-          if (!detalles || !Array.isArray(detalles)) {
-            this.detallesPrestamo.set(codigoPrestamo, []);
-            resolve();
-            return;
-          }
-
-          const detallesConPagos: DetalleConPagos[] = (detalles as DetallePrestamo[]).map((det) => {
-            // Convertir fechas de string a Date de forma segura
-            const fechaVencimiento = this.convertirFecha(det.fechaVencimiento);
-            const fechaPagado = this.convertirFecha(det.fechaPagado);
-            const fechaRegistro = this.convertirFecha(det.fechaRegistro);
-
-            return {
-              detalle: {
-                ...det,
-                fechaVencimiento: fechaVencimiento || det.fechaVencimiento,
-                fechaPagado: fechaPagado || det.fechaPagado,
-                fechaRegistro: fechaRegistro || det.fechaRegistro,
-              },
-              pagos: [],
-              mostrarPagos: false,
-            };
-          });
-          this.detallesPrestamo.set(codigoPrestamo, detallesConPagos);
-          resolve();
-        },
-        error: (error) => {
-          console.error('Error al cargar detalles del préstamo:', error);
-          reject(error);
-        },
-      });
     });
   }
 
@@ -2849,10 +2881,10 @@ export class ParticipeDashComponent implements OnInit {
   }
 
   calcularTotales(codigoPrestamo: number): { capital: number; interes: number; cuota: number } {
-    const detalles = this.detallesPrestamo.get(codigoPrestamo);
-    if (!detalles) return { capital: 0, interes: 0, cuota: 0 };
+    const dataSource = this.detallesPrestamo.get(codigoPrestamo);
+    if (!dataSource) return { capital: 0, interes: 0, cuota: 0 };
 
-    return detalles.reduce(
+    return dataSource.data.reduce(
       (acc, dc) => ({
         capital: acc.capital + (dc.detalle.capital || 0),
         interes: acc.interes + (dc.detalle.interes || 0),
