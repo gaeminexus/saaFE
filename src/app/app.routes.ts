@@ -8,7 +8,6 @@ import { PeriodosComponent } from './modules/cnt/forms/periodos/periodos.compone
 import { PlanArbolComponent } from './modules/cnt/forms/plan-arbol/plan-arbol.component';
 import { PlanGridComponent } from './modules/cnt/forms/plan-grid/plan-grid.component';
 import { PlantillaGeneralComponent } from './modules/cnt/forms/plantilla-general/plantilla-general.component';
-import { PlantillaSistemaComponent } from './modules/cnt/forms/plantilla-sistema/plantilla-sistema.component';
 import { TipoAsientoGeneralGridComponent } from './modules/cnt/forms/tipo-asiento-general-grid/tipo-asiento-general-grid.component';
 import { TipoAsientoSistemaGridComponent } from './modules/cnt/forms/tipo-asiento-sistema-grid/tipo-asiento-sistema-grid.component';
 import { MenuContabilidadComponent } from './modules/cnt/menu/menucontabilidad/menucontabilidad.component';
@@ -106,11 +105,13 @@ export const routes: Routes = [
         path: 'plantillas/general',
         component: PlantillaGeneralComponent,
         canDeactivate: [canDeactivateGuard],
+        data: { sistema: 0 },
       },
       {
         path: 'plantillas/sistema',
-        component: PlantillaSistemaComponent,
+        component: PlantillaGeneralComponent,
         canDeactivate: [canDeactivateGuard],
+        data: { sistema: 1 },
       },
       {
         path: 'periodo-contable',

@@ -23,14 +23,17 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 
+import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
+import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
+import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { FuncionesDatosService } from '../../../../shared/services/funciones-datos.service';
 import { DetallePlantilla, TipoMovimiento } from '../../model/detalle-plantilla-general';
 import { EstadoPlantilla, Plantilla } from '../../model/plantilla-general';
 import { DetallePlantillaService } from '../../service/detalle-plantilla.service';
 import { PlanCuentaService } from '../../service/plan-cuenta.service';
-import { PlantillaService } from '../../service/plantilla-general.service';
+import { PlantillaService } from '../../service/plantilla.service';
 import { ConfirmDeleteDetalleDialogComponent } from './confirm-delete-detalle-dialog.component';
 import { DetallePlantillaDialogComponent } from './detalle-plantilla-dialog.component';
 
@@ -87,6 +90,10 @@ export class PlantillaGeneralComponent implements OnInit {
   mostrarBannerDemo = false;
   idSucursal = parseInt(localStorage.getItem('idSucursal') || '280', 10);
 
+  // Tipo de plantilla: 0 = General, 1 = Sistema
+  tipoSistema: number = 0;
+  tituloPlantilla: string = 'Plantilla General';
+
   // Enums
   EstadoPlantilla = EstadoPlantilla;
   TipoMovimiento = TipoMovimiento;
@@ -104,6 +111,7 @@ export class PlantillaGeneralComponent implements OnInit {
     private dialog: MatDialog,
     private snackBar: MatSnackBar,
     private router: Router,
+    private route: ActivatedRoute,
     private funcionesDatosService: FuncionesDatosService
   ) {
     this.plantillaForm = this.createForm();
@@ -112,6 +120,12 @@ export class PlantillaGeneralComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // Leer el tipo de plantilla desde los datos de la ruta
+    this.route.data.subscribe((data) => {
+      this.tipoSistema = data['sistema'] ?? 0;
+      this.tituloPlantilla = this.tipoSistema === 1 ? 'Plantilla de Sistema' : 'Plantilla General';
+    });
+
     this.loadPlantillas();
   }
 
@@ -147,31 +161,42 @@ export class PlantillaGeneralComponent implements OnInit {
    * Carga todas las plantillas
    */
   loadPlantillas(): void {
-    console.log('🔄 [INICIO] loadPlantillas() llamado');
-    console.log('🏢 idSucursal actual:', this.idSucursal);
     this.loading = true;
 
-    // Usar selectByCriteria para filtrar desde el backend
-    const criterios = {
-      empresa: { codigo: this.idSucursal },
-      sistema: 0, // Solo plantillas generales
-    };
+    // Crear criterios usando el patrón DatosBusqueda (como naturaleza-cuentas)
+    const criterioConsultaArray: Array<DatosBusqueda> = [];
 
-    this.plantillaService.selectByCriteria(criterios).subscribe({
+    // Filtro por empresa
+    const criterioEmpresa = new DatosBusqueda();
+    criterioEmpresa.asignaValorConCampoPadre(
+      TipoDatosBusqueda.LONG,
+      'empresa',
+      'codigo',
+      String(this.idSucursal),
+      TipoComandosBusqueda.IGUAL
+    );
+    criterioConsultaArray.push(criterioEmpresa);
+
+    // Nota: El filtro por 'sistema' se aplica en frontend ya que el backend
+    // no tiene configurado este parámetro en el named query
+
+    // Ordenar por nombre
+    const criterioOrden = new DatosBusqueda();
+    criterioOrden.orderBy('nombre');
+    criterioConsultaArray.push(criterioOrden);
+
+    this.plantillaService.selectByCriteria(criterioConsultaArray).subscribe({
       next: (data: Plantilla[] | null) => {
-        console.log('📥 Plantillas generales recibidas del backend:', data?.length || 0);
-        console.log('📥 Datos completos:', data);
+        // Filtrar por tipo de sistema en el frontend
+        const plantillasFiltradas = data?.filter((p) => p.sistema === this.tipoSistema) || [];
 
-        this.plantillas = data || [];
-
-        console.log('✅ Plantillas generales cargadas:', this.plantillas.length);
-        console.log('✅ Plantillas filtradas:', this.plantillas);
-
+        this.plantillas = plantillasFiltradas || [];
         this.loading = false;
 
-        // Verificar si estamos usando datos mock
         if (this.plantillas.length > 0) {
-          this.showMessage('Datos cargados correctamente', 'success');
+          this.showMessage(`${this.plantillas.length} plantillas cargadas`, 'success');
+        } else {
+          this.showMessage(`No hay plantillas disponibles (${this.tituloPlantilla})`, 'info');
         }
       },
       error: (error: any) => {
@@ -295,34 +320,6 @@ export class PlantillaGeneralComponent implements OnInit {
   }
 
   /**
-   * Asegura que las columnas 'movimiento' y 'estado' estén presentes y visibles
-   * y fuerza un re-render de la tabla si fuera necesario.
-   */
-  // Eliminado: lógica de refuerzo e instrumentación (ya no necesaria)
-
-  /**
-   * Instrumenta la tabla listando las clases de columnas reales presentes en el DOM
-   * y añade estilos de refuerzo si faltan las columnas movimiento/estado.
-   */
-  // (Depurado) instrumentarTabla eliminado
-
-  /** Inserta estilos forzados para mostrar las columnas ocultas */
-  // (Depurado) inyectarEstilosRefuerzo eliminado
-
-  /** Extiende los métodos de carga para ejecutar instrumentación */
-  // (Depurado) postCargaDetallesHook eliminado
-
-  /**
-   * Verifica las MatColumnDef realmente registradas y si faltan 'movimiento' o 'estado'
-   */
-  // (Depurado) verificarColumnDefs eliminado
-
-  /**
-   * Intenta parchear dinámicamente agregando columnas faltantes mediante recreación manual
-   */
-  // (Depurado) parcheDinamicoColumnDefs eliminado
-
-  /**
    * Guarda la plantilla (maestro y detalle)
    */
   guardarPlantilla(): void {
@@ -332,7 +329,6 @@ export class PlantillaGeneralComponent implements OnInit {
     console.log('📋 Form value:', this.plantillaForm.value);
 
     if (this.plantillaForm.invalid) {
-      console.warn('⚠️ Formulario inválido, deteniendo guardado');
       this.markFormGroupTouched();
       this.showMessage('Por favor complete todos los campos requeridos', 'warn');
       return;
@@ -345,17 +341,14 @@ export class PlantillaGeneralComponent implements OnInit {
       this.plantillaForm.patchValue({
         fechaInactivo: new Date(),
       });
-      console.log('📅 Estado inactivo, agregando fechaInactivo');
     } else if (formValue.estado === EstadoPlantilla.ACTIVO) {
       this.plantillaForm.patchValue({
         fechaInactivo: null,
       });
-      console.log('📅 Estado activo, removiendo fechaInactivo');
     }
 
     const empresaCodigo = parseInt(localStorage.getItem('idSucursal') || '280', 10);
     const empresaNombre = localStorage.getItem('empresaName') || 'Empresa';
-    console.log('🏢 Empresa:', { codigo: empresaCodigo, nombre: empresaNombre });
 
     const plantillaData: Plantilla = {
       ...this.plantillaForm.value,
@@ -364,13 +357,12 @@ export class PlantillaGeneralComponent implements OnInit {
       fechaUpdate: new Date(),
       usuarioUpdate: 'current-user',
       empresa: { codigo: empresaCodigo, nombre: empresaNombre } as any,
-      sistema: 0, // PLNSSSTM - Indicador de sistema (0 para plantilla general)
+      sistema: this.tipoSistema, // PLNSSSTM - Indicador de sistema (0=General, 1=Sistema)
     };
 
     // Eliminar codigo si es nuevo registro (el backend lo genera)
     if (this.isNewRecord && (plantillaData as any).codigo === 0) {
       delete (plantillaData as any).codigo;
-      console.log('🆕 Registro nuevo, código eliminado para que el backend lo genere');
     }
 
     if (this.isNewRecord) {
@@ -378,16 +370,11 @@ export class PlantillaGeneralComponent implements OnInit {
       plantillaData.usuarioCreacion = 'current-user';
     }
 
-    console.log('📤 Datos a enviar:', plantillaData);
-    console.log('🔄 Es nuevo registro:', this.isNewRecord);
-
     this.loading = true;
 
     if (this.isNewRecord) {
-      console.log('➕ Llamando a plantillaService.add()...');
       this.plantillaService.add(plantillaData).subscribe({
         next: (result: Plantilla | null) => {
-          console.log('✅ Respuesta de add():', result);
           if (result) {
             this.showMessage('Plantilla creada correctamente', 'success');
             this.loadPlantillas();
@@ -400,15 +387,12 @@ export class PlantillaGeneralComponent implements OnInit {
             });
             this.isNewRecord = false;
           } else {
-            console.warn('⚠️ add() retornó null o undefined');
             this.showMessage('Error al crear la plantilla', 'error');
           }
           this.loading = false;
         },
         error: (error: any) => {
-          console.error('❌ Error al crear plantilla:', error);
-          console.error('❌ Error status:', error.status);
-          console.error('❌ Error message:', error.message);
+          console.error('Error al crear plantilla:', error);
           this.showMessage(
             'Error al guardar plantilla. Verifique la conexión con el servidor.',
             'error'
@@ -638,13 +622,6 @@ export class PlantillaGeneralComponent implements OnInit {
     const plantillaNombre =
       this.plantillaSeleccionada?.nombre || this.plantillaForm.get('nombre')?.value || 'Sin nombre';
 
-    console.log('=== ESTADO DE DETALLES DE PLANTILLA ===');
-    console.log(`Plantilla: ${plantillaNombre}`);
-    console.log(`Código de plantilla: ${this.plantillaSeleccionada?.codigo || 'Sin guardar'}`);
-    console.log(`Total de detalles: ${detallesCount}`);
-    console.log(`Es nueva plantilla: ${this.isNewRecord}`);
-    console.log('Detalles actuales:', this.dataSourceDetalles.data);
-
     if (this.isNewRecord) {
       this.showMessage(
         `Esta plantilla es nueva y tiene ${detallesCount} detalles pendientes de guardar`,
@@ -668,8 +645,6 @@ export class PlantillaGeneralComponent implements OnInit {
     this.cargarPlanesCuentaParaDialog();
   }
   private intentarGuardarDetalle(detalleOriginal: any, resultadoDialog: any): void {
-    console.log('🚀 Intentando guardar detalle en servidor...');
-
     // Validaciones adicionales antes del envío
     if (!this.validarDetalleParaServidor(detalleOriginal)) {
       this.showMessage(
@@ -698,41 +673,29 @@ export class PlantillaGeneralComponent implements OnInit {
 
         switch (tipoError) {
           case 'INTEGRIDAD_FK':
-            console.error(
-              '🔍 Error de integridad detectado: FK_DTPL_PLNN - Plan de cuenta no existe en servidor'
-            );
-            console.error(
-              `🔍 Código problemático: PLNNCDGO = ${detalleOriginal.planCuenta?.codigo}`
-            );
-            console.error(
-              `🔍 Verificar en servidor: SELECT * FROM CNT.PLNN WHERE CODIGO = ${detalleOriginal.planCuenta?.codigo}`
-            );
             this.showMessage(
-              `🔍 Error FK_DTPL_PLNN: El plan de cuenta [${detalleOriginal.planCuenta?.codigo}] "${resultadoDialog.planCuenta?.cuentaContable}" no existe en el servidor. Guardado localmente.`,
+              `Error FK_DTPL_PLNN: El plan de cuenta [${detalleOriginal.planCuenta?.codigo}] "${resultadoDialog.planCuenta?.cuentaContable}" no existe en el servidor. Guardado localmente.`,
               'warn'
             );
             break;
 
           case 'SERVIDOR_NO_DISPONIBLE':
-            console.error('📡 Servidor no disponible');
             this.showMessage(
-              `📡 Servidor no disponible. Detalle guardado localmente para demostración.`,
+              `Servidor no disponible. Detalle guardado localmente para demostración.`,
               'info'
             );
             break;
 
           case 'ERROR_TRANSACCION':
-            console.error('⚡ Error de transacción en servidor');
             this.showMessage(
-              `⚡ Error de transacción en el servidor. Guardado localmente para demostración.`,
+              `Error de transacción en el servidor. Guardado localmente para demostración.`,
               'warn'
             );
             break;
 
           default:
-            console.error('💾 Error general, guardando en modo demostración...');
             this.showMessage(
-              `🔄 Error del servidor. Detalle guardado localmente para demostración.`,
+              `Error del servidor. Detalle guardado localmente para demostración.`,
               'info'
             );
         }
@@ -748,19 +711,16 @@ export class PlantillaGeneralComponent implements OnInit {
   private validarDetalleParaServidor(detalle: any): boolean {
     // Validar que el plan de cuenta exista y tenga código válido
     if (!detalle.planCuenta || !detalle.planCuenta.codigo || detalle.planCuenta.codigo <= 0) {
-      console.error('❌ Plan de cuenta inválido:', detalle.planCuenta);
       return false;
     }
 
     // Validar que el movimiento sea válido (1=DEBE, 2=HABER)
     if (!detalle.movimiento || (detalle.movimiento !== 1 && detalle.movimiento !== 2)) {
-      console.error('❌ Tipo de movimiento inválido:', detalle.movimiento);
       return false;
     }
 
     // Validar que la plantilla padre exista
     if (!detalle.plantilla || !detalle.plantilla.codigo || detalle.plantilla.codigo <= 0) {
-      console.error('❌ Plantilla padre inválida:', detalle.plantilla);
       return false;
     }
 
@@ -865,15 +825,6 @@ export class PlantillaGeneralComponent implements OnInit {
       auxiliar5: 0,
     };
 
-    // Log detallado para debugging
-    console.log('📋 Plan de cuenta seleccionado:', {
-      codigo: resultadoDialog.planCuenta.codigo,
-      cuentaContable: resultadoDialog.planCuenta.cuentaContable,
-      nombre: resultadoDialog.planCuenta.nombre,
-      tipo: resultadoDialog.planCuenta.tipo,
-      nivel: resultadoDialog.planCuenta.nivel,
-    });
-
     return detalle;
   }
 
@@ -897,14 +848,6 @@ export class PlantillaGeneralComponent implements OnInit {
 
     const data = [...this.dataSourceDetalles.data, detalleLocal];
     this.dataSourceDetalles.data = data;
-
-    // Log informativo para demostración
-    console.log('💾 Detalle agregado localmente:', {
-      planCuenta: `${resultadoDialog.planCuenta.codigo} - ${resultadoDialog.planCuenta.nombre}`,
-      descripcion: resultadoDialog.descripcion,
-      movimiento: resultadoDialog.movimiento === 1 ? 'DEBE' : 'HABER',
-      totalDetalles: data.length,
-    });
 
     // Mostrar mensaje de confirmación específico
     const movimientoTexto = resultadoDialog.movimiento === 1 ? 'DEBE' : 'HABER';
@@ -1000,258 +943,6 @@ export class PlantillaGeneralComponent implements OnInit {
    */
   cerrarBanner(): void {
     this.mostrarBannerDemo = false;
-  }
-
-  /**
-   * Función temporal para debugging - verificar datos de detalles
-   */
-  debugDetalles(): void {
-    console.log('🔍 DEBUG DETALLES COMPLETO:');
-    console.log('📋 Total detalles:', this.dataSourceDetalles.data.length);
-    console.log('📊 Columnas definidas:', this.displayedColumnsDetalles);
-    console.log('🎯 Plantilla seleccionada:', this.plantillaSeleccionada?.codigo);
-
-    // Verificar si hay datos
-    if (this.dataSourceDetalles.data.length === 0) {
-      console.warn('⚠️ NO HAY DATOS en dataSourceDetalles');
-      return;
-    }
-
-    this.dataSourceDetalles.data.forEach((detalle, index) => {
-      console.log(`📄 Detalle ${index}:`, {
-        codigo: detalle.codigo,
-        descripcion: detalle.descripcion,
-        movimiento: {
-          valor: detalle.movimiento,
-          tipo: typeof detalle.movimiento,
-          esValido: detalle.movimiento === 1 || detalle.movimiento === 2,
-        },
-        estado: {
-          valor: detalle.estado,
-          tipo: typeof detalle.estado,
-          esValido: detalle.estado === 1 || detalle.estado === 0,
-        },
-        planCuenta: detalle.planCuenta
-          ? typeof detalle.planCuenta === 'string'
-            ? detalle.planCuenta
-            : `${detalle.planCuenta.codigo} - ${detalle.planCuenta.nombre}`
-          : 'Sin plan de cuenta',
-      });
-    });
-
-    // Verificar el estado del MatTableDataSource
-    console.log('🗂️ Estado del DataSource:', {
-      data: this.dataSourceDetalles.data,
-      filteredData: this.dataSourceDetalles.filteredData,
-      filter: this.dataSourceDetalles.filter,
-      paginator: !!this.dataSourceDetalles.paginator,
-      sort: !!this.dataSourceDetalles.sort,
-    });
-  }
-
-  /**
-   * Diagnóstico completo del problema de columnas invisibles
-   */
-  diagnosticoCompletoColumnas(): void {
-    console.log('🩺 === DIAGNÓSTICO COMPLETO DE COLUMNAS ===');
-
-    // 1. Verificar definición básica
-    console.log('1️⃣ DEFINICIONES BÁSICAS:');
-    console.log('📊 displayedColumnsDetalles:', this.displayedColumnsDetalles);
-    console.log('🗃️ dataSourceDetalles existe:', !!this.dataSourceDetalles);
-    console.log('📋 Cantidad de datos:', this.dataSourceDetalles?.data?.length || 0);
-
-    // 2. Verificar datos específicos
-    if (this.dataSourceDetalles?.data?.length > 0) {
-      const primerDetalle = this.dataSourceDetalles.data[0];
-      console.log('2️⃣ DATOS DEL PRIMER DETALLE:');
-      console.log('  movimiento:', primerDetalle.movimiento, typeof primerDetalle.movimiento);
-      console.log('  estado:', primerDetalle.estado, typeof primerDetalle.estado);
-      console.log('  Detalle completo:', primerDetalle);
-    }
-
-    // 3. Verificar DOM
-    console.log('3️⃣ VERIFICACIÓN DOM:');
-    setTimeout(() => {
-      const table = document.querySelector('table[mat-table]');
-      const tableContainer = document.querySelector('.table-container');
-
-      console.log('🏗️ Contenedor tabla existe:', !!tableContainer);
-      console.log('🏗️ Elemento table existe:', !!table);
-
-      if (table) {
-        const allHeaders = table.querySelectorAll('th');
-        const allCells = table.querySelectorAll('td');
-
-        console.log('📋 Total headers:', allHeaders.length);
-        console.log('📋 Total celdas:', allCells.length);
-
-        // Listar todos los headers
-        Array.from(allHeaders).forEach((header, index) => {
-          console.log(
-            `  Header ${index}: "${header.textContent?.trim()}" - clases: ${header.className}`
-          );
-        });
-
-        // Buscar específicamente movimiento y estado
-        const movimientoHeader = Array.from(allHeaders).find(
-          (h) => h.textContent?.includes('Movimiento') || h.classList.contains('movimiento-header')
-        );
-        const estadoHeader = Array.from(allHeaders).find(
-          (h) => h.textContent?.includes('Estado') || h.classList.contains('estado-header')
-        );
-
-        console.log('🎯 Header Movimiento encontrado:', !!movimientoHeader);
-        console.log('🎯 Header Estado encontrado:', !!estadoHeader);
-
-        if (!movimientoHeader || !estadoHeader) {
-          console.error('❌ PROBLEMA: Headers de movimiento o estado no encontrados');
-
-          // Verificar si las ng-container existen
-          const movimientoContainer = document.querySelector(
-            'ng-container[matColumnDef="movimiento"]'
-          );
-          const estadoContainer = document.querySelector('ng-container[matColumnDef="estado"]');
-
-          console.log('📦 ng-container movimiento:', !!movimientoContainer);
-          console.log('📦 ng-container estado:', !!estadoContainer);
-        }
-      }
-    }, 200);
-
-    // 4. Verificar *ngIf de la tabla
-    const tablaDeberiaMostrarse =
-      this.displayedColumnsDetalles && this.displayedColumnsDetalles.length > 0;
-    console.log('4️⃣ CONDICIONES DE VISIBILIDAD:');
-    console.log('👁️ Tabla debería mostrarse (*ngIf):', tablaDeberiaMostrarse);
-
-    this.showMessage('🩺 Diagnóstico ejecutado. Revisar consola.', 'info');
-  }
-
-  /**
-   * Método para verificar y solucionar problemas de renderizado de columnas
-   */
-  verificarYSolucionarRenderizado(): void {
-    console.log('🔧 VERIFICANDO RENDERIZADO DE COLUMNAS:');
-
-    // 0. Verificar condiciones básicas de la tabla
-    this.verificarCondicionesTabla();
-
-    // 1. Verificar filtros activos
-    console.log('🔍 Filtro activo:', this.dataSourceDetalles.filter);
-    if (this.dataSourceDetalles.filter) {
-      console.log('⚠️ Hay filtro activo, limpiando...');
-      this.dataSourceDetalles.filter = '';
-      this.filterValue = '';
-    }
-
-    // 2. Verificar datos filtrados vs datos originales
-    console.log('📊 Datos originales:', this.dataSourceDetalles.data.length);
-    console.log('📊 Datos filtrados:', this.dataSourceDetalles.filteredData.length);
-
-    // 3. Forzar re-renderizado de la tabla
-    console.log('🔄 Forzando actualización de tabla...');
-    const currentData = [...this.dataSourceDetalles.data];
-    this.dataSourceDetalles.data = [];
-
-    setTimeout(() => {
-      this.dataSourceDetalles.data = currentData;
-      console.log('✅ Tabla actualizada con', currentData.length, 'registros');
-
-      // 4. Verificar columnas renderizadas
-      setTimeout(() => {
-        // Buscar la tabla usando diferentes selectores
-        let tableElement =
-          document.querySelector('table[mat-table]') ||
-          document.querySelector('mat-table') ||
-          document.querySelector('.mat-table');
-
-        console.log('🔍 Buscando elemento tabla...');
-
-        if (tableElement) {
-          console.log('✅ Tabla encontrada:', tableElement.tagName);
-
-          const headers = tableElement.querySelectorAll('th');
-          const rows = tableElement.querySelectorAll('td');
-          console.log('🏗️ Headers encontrados:', headers.length);
-          console.log('🏗️ Celdas encontradas:', rows.length);
-
-          // Log de todos los headers para debugging
-          Array.from(headers).forEach((header, index) => {
-            console.log(`📋 Header ${index}: "${header.textContent?.trim()}"`);
-          });
-
-          // Buscar específicamente las columnas de movimiento y estado
-          const movimientoHeaders = Array.from(headers).filter(
-            (h) =>
-              h.textContent?.includes('Movimiento') || h.classList.contains('movimiento-header')
-          );
-          const estadoHeaders = Array.from(headers).filter(
-            (h) => h.textContent?.includes('Estado') || h.classList.contains('estado-header')
-          );
-
-          console.log('🎯 Headers Movimiento encontrados:', movimientoHeaders.length);
-          console.log('🎯 Headers Estado encontrados:', estadoHeaders.length);
-
-          if (movimientoHeaders.length === 0) {
-            console.error('❌ PROBLEMA: No se encuentra el header de Movimiento');
-          } else {
-            console.log('✅ Header Movimiento encontrado:', movimientoHeaders[0].textContent);
-          }
-
-          if (estadoHeaders.length === 0) {
-            console.error('❌ PROBLEMA: No se encuentra el header de Estado');
-          } else {
-            console.log('✅ Header Estado encontrado:', estadoHeaders[0].textContent);
-          }
-
-          // Verificar si las columnas tienen datos
-          const movimientoCells = tableElement.querySelectorAll(
-            '.movimiento-cell, td.mat-column-movimiento'
-          );
-          const estadoCells = tableElement.querySelectorAll('.estado-cell, td.mat-column-estado');
-
-          console.log('🔢 Celdas Movimiento:', movimientoCells.length);
-          console.log('🔢 Celdas Estado:', estadoCells.length);
-        } else {
-          console.error('❌ PROBLEMA: No se encuentra ningún elemento de tabla');
-
-          // Debugging adicional - buscar todos los elementos mat-table posibles
-          const allTables = document.querySelectorAll('table');
-          console.log('🔍 Total de tablas en el DOM:', allTables.length);
-
-          allTables.forEach((table, index) => {
-            console.log(`📋 Tabla ${index}:`, table.className, table.getAttribute('mat-table'));
-          });
-        }
-      }, 200);
-    }, 100);
-  }
-
-  /**
-   * Prueba el método getPlanCuentaNombre con diferentes casos
-   */
-  probarExtraccionNombre(): void {
-    const casos = [
-      '8793 - CXC CORPORACION ELECTRICA DEL ECUADOR',
-      '1110 - CAJA GENERAL',
-      '2110 - PROVEEDORES NACIONALES',
-      '1110',
-      'Solo texto sin guión',
-      '123-456 - CUENTA CON GUIÓN DIFERENTE',
-    ];
-
-    console.log('🧪 PRUEBAS DE EXTRACCIÓN DE NOMBRES:');
-    console.log('=====================================');
-
-    casos.forEach((caso, index) => {
-      const resultado = this.getPlanCuentaNombre(caso);
-      console.log(`${index + 1}. Entrada: "${caso}"`);
-      console.log(`   Resultado: "${resultado}"`);
-      console.log('');
-    });
-
-    this.showMessage('🧪 Pruebas ejecutadas. Ver consola para resultados.', 'info');
   }
 
   /**
@@ -1410,18 +1101,12 @@ export class PlantillaGeneralComponent implements OnInit {
     console.log('📋 Nuevos datos:', this.dataSourceDetalles.data.length);
     console.log('🔍 Primer detalle:', this.dataSourceDetalles.data[0]);
     console.log('💾 DataSource completo:', this.dataSourceDetalles);
-
-    // Forzar detección de cambios
-    setTimeout(() => {
-      this.debugDetalles();
-    }, 100);
   }
   /**
    * Carga planes de cuenta reales del servidor para el diálogo
    * Optimizado para usar directamente getAll() que sabemos que funciona
    */
   private cargarPlanesCuentaParaDialog(detalleExistente?: DetallePlantilla): void {
-    console.log('🔍 Cargando planes de cuenta reales del servidor (método optimizado)...');
     this.loading = true;
 
     // Usar directamente getAll() ya que sabemos que funciona
@@ -1431,21 +1116,15 @@ export class PlantillaGeneralComponent implements OnInit {
         const planes = Array.isArray(planCuentas) ? planCuentas : [];
 
         if (planes.length === 0) {
-          console.warn('⚠️ No se encontraron planes de cuenta en el servidor');
           this.showMessage('No hay planes de cuenta disponibles', 'warn');
         } else {
-          console.log(`✅ Se cargaron ${planes.length} planes de cuenta del servidor`);
           // Filtrar solo los planes de la empresa dinámica
           const planesFiltrados = planes.filter(
             (plan) => plan.empresa && plan.empresa.codigo === this.idSucursal
           );
-          console.log(
-            `🔍 Planes filtrados para empresa ${this.idSucursal}: ${planesFiltrados.length}`
-          );
 
           // Ordenar jerárquicamente como en plan-grid
           const planesOrdenados = this.ordenarPlanesCuentaJerarquicamente(planesFiltrados);
-          console.log(`📋 Planes ordenados jerárquicamente: ${planesOrdenados.length}`);
 
           this.abrirDialogoConPlanes(planesOrdenados, detalleExistente);
         }
@@ -1775,7 +1454,6 @@ export class PlantillaGeneralComponent implements OnInit {
 
                 // Debug final
                 setTimeout(() => {
-                  this.debugDetalles();
                   this.showMessage(
                     '💣 Tabla reconstruida completamente. Verificar columnas ahora.',
                     'success'

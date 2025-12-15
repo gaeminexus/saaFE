@@ -1,6 +1,8 @@
 import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, catchError, of, throwError } from 'rxjs';
+import { map } from 'rxjs/operators';
+import { DetallePlantilla } from '../model/detalle-plantilla-general';
 import { Plantilla } from '../model/plantilla';
 import { ServiciosCnt } from './ws-cnt';
 
@@ -45,19 +47,47 @@ export class PlantillaService {
   selectByCriteria(datos: any): Observable<Plantilla[] | null> {
     const wsGetById = '/selectByCriteria/';
     const url = `${ServiciosCnt.RS_PLNS}${wsGetById}`;
-    const empresaCodigo = parseInt(localStorage.getItem('idSucursal') || '280', 10);
-    // Incluir filtro de empresa en el request
-    const criteriosConEmpresa = { ...datos, empresa: { codigo: empresaCodigo } };
-    return this.http
-      .post<any>(url, criteriosConEmpresa, this.httpOptions)
-      .pipe(catchError(this.handleError));
+    return this.http.post<any>(url, datos, this.httpOptions).pipe(catchError(this.handleError));
   }
 
-  /** DELETE: add a new sesion to the server */
-  delete(datos: any): Observable<Plantilla | null> {
-    const wsGetById = '/' + datos;
-    const url = `${ServiciosCnt.RS_PLNS}${wsGetById}`;
-    return this.http.delete<Plantilla>(url, this.httpOptions).pipe(catchError(this.handleError));
+  /** DELETE: elimina una plantilla */
+  delete(codigo: number): Observable<boolean> {
+    const wsDelete = '/' + codigo;
+    const url = `${ServiciosCnt.RS_PLNS}${wsDelete}`;
+    return this.http.delete<Plantilla>(url, this.httpOptions).pipe(
+      map(() => true),
+      catchError(() => of(false))
+    );
+  }
+
+  /**
+   * Obtiene detalles de una plantilla
+   */
+  getDetallesByPlantillaCodigo(plantillaCodigo: number): Observable<DetallePlantilla[]> {
+    const wsGetDetalles = '/getByParent/';
+    const url = `${ServiciosCnt.RS_DTPL}${wsGetDetalles}${plantillaCodigo}`;
+    return this.http.get<DetallePlantilla[]>(url).pipe(catchError(() => of([])));
+  }
+
+  /**
+   * Obtiene plantilla completa con detalles
+   */
+  getPlantillaCompleta(
+    codigo: number
+  ): Observable<{ plantilla: Plantilla; detalles: DetallePlantilla[] } | null> {
+    return new Observable((observer) => {
+      this.getById(codigo.toString()).subscribe((plantilla) => {
+        if (plantilla) {
+          this.getDetallesByPlantillaCodigo(codigo).subscribe((detalles) => {
+            observer.next({ plantilla, detalles });
+            observer.complete();
+          });
+        } else {
+          observer.next(null);
+          observer.complete();
+        }
+      });
+    });
   }
 
   // tslint:disable-next-line: typedef
