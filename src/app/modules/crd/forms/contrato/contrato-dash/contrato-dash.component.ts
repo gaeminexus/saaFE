@@ -325,8 +325,10 @@ export class ContratoDashComponent implements OnInit {
       Observación: c.observacion || ''
     }));
 
+    const headers = ['Código', 'Código Entidad', 'Fecha Inicio', 'Fecha Fin', 'Filial', '% Individual', '% Jubilación', 'Estado', 'Observación'];
+    const dataKeys = ['Código', 'Código Entidad', 'Fecha Inicio', 'Fecha Fin', 'Filial', '% Individual', '% Jubilación', 'Estado', 'Observación'];
     const filename = `contratos-${tipo}-${new Date().toISOString().split('T')[0]}`;
-    this.exportService.exportToCSV(rows, filename, Object.keys(rows[0] || {}));
+    this.exportService.exportToCSV(rows, filename, headers, dataKeys);
   }
 
   exportarPDF(tipo: 'soloIndividual' | 'soloJubilacion' | 'ambos'): void {

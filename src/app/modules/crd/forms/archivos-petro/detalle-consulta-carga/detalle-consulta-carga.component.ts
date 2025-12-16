@@ -25,6 +25,7 @@ import { CoincidenciasEntidadDialogComponent } from '../../../dialog/coincidenci
 import { ServiciosAsoprepService } from '../../../../asoprep/service/servicios-asoprep.service';
 import { EntidadService } from '../../../service/entidad.service';
 import { Entidad } from '../../../model/entidad';
+import { ExportService } from '../../../../../shared/services/export.service';
 import { forkJoin, of } from 'rxjs';
 
 const RUBRO_ESTADOS_CARGA = 166;
@@ -169,6 +170,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
     private novedadCargaService: NovedadCargaService,
     private serviciosAsoprepService: ServiciosAsoprepService,
     private entidadService: EntidadService,
+    private exportService: ExportService,
     private dialog: MatDialog,
     private snackBar: MatSnackBar
   ) {
@@ -1111,6 +1113,66 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
         this.snackBar.open('❌ Error al buscar coincidencias', 'Cerrar', { duration: 5000 });
       }
     });
+  }
+
+  /**
+   * Exporta la tabla de un aporte específico a CSV
+   */
+  exportarAporteACSV(codigoAporte: string, event: Event): void {
+    event.stopPropagation(); // Prevenir que se expanda/colapse el panel
+
+    const aporte = this.aporteAgrupados.find(a => a.codigoAporte === codigoAporte);
+    if (!aporte) {
+      this.snackBar.open('No se encontró el aporte', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    const data = aporte.participes.data;
+    if (data.length === 0) {
+      this.snackBar.open('No hay datos para exportar', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    const headers = [
+      'Código',
+      'Nombre',
+      'Plazo Inicial',
+      'Saldo Actual',
+      'Meses Plazo',
+      'Interés Anual',
+      'Valor Seguro',
+      'Monto a Descontar',
+      'Capital Descontado',
+      'Interés Descontado',
+      'Seguro Descontado',
+      'Total Descontado',
+      'Capital No Descontado',
+      'Interés No Descontado',
+      'Desgravamen No Descontado'
+    ];
+
+    const dataKeys = [
+      'codigoPetro',
+      'nombre',
+      'plazoInicial',
+      'saldoActual',
+      'mesesPlazo',
+      'interesAnual',
+      'valorSeguro',
+      'montoDescontar',
+      'capitalDescontado',
+      'interesDescontado',
+      'seguroDescontado',
+      'totalDescontado',
+      'capitalNoDescontado',
+      'interesNoDescontado',
+      'desgravamenNoDescontado'
+    ];
+
+    const fileName = `${aporte.nombreAporte}_${codigoAporte}`;
+
+    this.exportService.exportToCSV(data, fileName, headers, dataKeys);
+    this.snackBar.open(`Exportado ${data.length} registros a CSV`, 'Cerrar', { duration: 3000 });
   }
 }
 

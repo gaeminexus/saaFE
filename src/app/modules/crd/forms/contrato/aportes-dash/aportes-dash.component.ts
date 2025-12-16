@@ -227,8 +227,10 @@ export class AportesDashComponent implements OnInit {
       'Tipo Aporte': a.tipoAporte?.codigo || '', Estado: a.estado || 1,
       Glosa: a.glosa || ''
     }));
+    const headers = ['Código', 'Fecha', 'Monto', 'Tipo Aporte', 'Estado', 'Glosa'];
+    const dataKeys = ['Código', 'Fecha', 'Monto', 'Tipo Aporte', 'Estado', 'Glosa'];
     const filename = `aportes-entidad-${this.codigoEntidad}-${new Date().toISOString().split('T')[0]}`;
-    this.exportService.exportToCSV(rows, filename, Object.keys(rows[0] || {}));
+    this.exportService.exportToCSV(rows, filename, headers, dataKeys);
   }
 
   exportarPDF(): void {

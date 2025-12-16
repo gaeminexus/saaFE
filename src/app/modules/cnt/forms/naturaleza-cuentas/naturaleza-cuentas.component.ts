@@ -269,9 +269,10 @@ export class NaturalezaDeCuentasComponent implements OnInit {
   // Métodos de exportación
   public exportToCSV(): void {
     const headers = ['Número', 'Nombre', 'Tipo de Naturaleza', 'Centro de Costos', 'Estado'];
+    const dataKeys = ['numero', 'nombre', 'tipo', 'manejaCentroCosto', 'estado'];
     const filename = `naturaleza-cuentas-${new Date().toISOString().split('T')[0]}`;
 
-    this.exportService.exportToCSV(this.naturalezaCuentas, filename, headers);
+    this.exportService.exportToCSV(this.naturalezaCuentas, filename, headers, dataKeys);
   }
 
   public exportToPDF(): void {

@@ -548,11 +548,12 @@ export class CruceValoresComponent implements OnInit {
     }
 
     const headers = ['Fecha', 'Concepto', 'Debe', 'Haber', 'Saldo'];
+    const dataKeys = ['fecha', 'concepto', 'debe', 'haber', 'saldo'];
     const filename = `cruce-valores-${this.entidadEncontrada?.numeroIdentificacion}-${
       new Date().toISOString().split('T')[0]
     }`;
 
-    this.exportService.exportToCSV(this.cruceValores, filename, headers);
+    this.exportService.exportToCSV(this.cruceValores, filename, headers, dataKeys);
   }
 
   /**

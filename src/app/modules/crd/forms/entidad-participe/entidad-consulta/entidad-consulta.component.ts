@@ -494,7 +494,10 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
       Estado: e.idEstado === 1 ? 'Activo' : 'Inactivo',
     }));
 
-    this.exportService.exportToCSV(rows, 'entidades', Object.keys(rows[0]));
+    const headers = ['Código', 'Tipo ID', 'Número ID', 'Razón Social', 'Filial', 'Correo Personal', 'Correo Institucional', 'Teléfono', 'Móvil', 'Estado'];
+    const dataKeys = ['Código', 'Tipo ID', 'Número ID', 'Razón Social', 'Filial', 'Correo Personal', 'Correo Institucional', 'Teléfono', 'Móvil', 'Estado'];
+
+    this.exportService.exportToCSV(rows, 'entidades', headers, dataKeys);
 
     this.snackBar.open('CSV exportado correctamente', 'Cerrar', { duration: 3000 });
   }
