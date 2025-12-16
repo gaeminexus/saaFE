@@ -39,6 +39,82 @@
     </mat-card-header>
 
     <mat-card-content>
+      <!-- Filtros de búsqueda -->
+      <div class="filtros-container">
+        <div class="filtros-grid">
+          <mat-form-field appearance="outline" class="filtro-numero">
+            <mat-label>Buscar por número</mat-label>
+            <input matInput [formControl]="filtroNumero" placeholder="Ej: 123" />
+            <mat-icon matSuffix>search</mat-icon>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="filtro-estado">
+            <mat-label>Filtrar por estado</mat-label>
+            <mat-select [formControl]="filtroEstado">
+              @for (estado of estadosDisponibles; track estado.valor) {
+              <mat-option [value]="estado.valor">{{ estado.texto }}</mat-option>
+              }
+            </mat-select>
+            <mat-icon matSuffix>filter_list</mat-icon>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="filtro-fecha-desde">
+            <mat-label>Fecha desde</mat-label>
+            <input
+              matInput
+              [matDatepicker]="pickerDesde"
+              [formControl]="filtroFechaDesde"
+              placeholder="dd/mm/aaaa"
+            />
+            <mat-datepicker-toggle matIconSuffix [for]="pickerDesde"></mat-datepicker-toggle>
+            <mat-datepicker #pickerDesde></mat-datepicker>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="filtro-fecha-hasta">
+            <mat-label>Fecha hasta</mat-label>
+            <input
+              matInput
+              [matDatepicker]="pickerHasta"
+              [formControl]="filtroFechaHasta"
+              placeholder="dd/mm/aaaa"
+            />
+            <mat-datepicker-toggle matIconSuffix [for]="pickerHasta"></mat-datepicker-toggle>
+            <mat-datepicker #pickerHasta></mat-datepicker>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="filtro-tipo-asiento">
+            <mat-label>Tipo de asiento</mat-label>
+            <mat-select [formControl]="filtroTipoAsiento">
+              @for (tipo of tiposAsientoDisponibles; track tipo.valor) {
+              <mat-option [value]="tipo.valor">{{ tipo.texto }}</mat-option>
+              }
+            </mat-select>
+            <mat-icon matSuffix>category</mat-icon>
+          </mat-form-field>
+
+          <div class="filtros-acciones">
+            <button
+              mat-stroked-button
+              (click)="limpiarFiltros()"
+              matTooltip="Limpiar filtros"
+              class="btn-limpiar-filtros"
+            >
+              <mat-icon>clear</mat-icon>
+              Limpiar
+            </button>
+          </div>
+        </div>
+
+        <!-- Contador de resultados -->
+        <div class="contador-resultados" *ngIf="asientosCompletos.length > 0">
+          <span class="contador-texto">
+            Mostrando {{ totalElements }} de {{ asientosCompletos.length }} asientos
+            <mat-icon class="contador-icon">info</mat-icon>
+          </span>
+        </div>
+      </div>
+
+      <mat-divider class="filtros-divider"></mat-divider>
       <!-- Loading -->
       <div class="loading-container" *ngIf="loading">
         <mat-spinner diameter="50"></mat-spinner>

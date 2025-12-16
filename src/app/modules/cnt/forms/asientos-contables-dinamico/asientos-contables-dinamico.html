@@ -1,6 +1,18 @@
 <div class="asientos-container">
   <div class="header">
-    <h2>Asientos Contables - Proceso Dinámico</h2>
+    <div class="header-content">
+      <h2>Asientos Contables - Proceso Dinámico</h2>
+      <button
+        mat-raised-button
+        color="primary"
+        class="btn-nuevo-asiento"
+        (click)="nuevoAsiento()"
+        matTooltip="Crear nuevo asiento contable"
+      >
+        <mat-icon>add</mat-icon>
+        Nuevo Asiento
+      </button>
+    </div>
   </div>
 
   <form [formGroup]="form" class="asientos-form">
@@ -82,6 +94,71 @@
             <mat-icon>{{ codigoAsientoActual ? 'update' : 'save' }}</mat-icon>
             {{ codigoAsientoActual ? 'Actualizar Cabecera' : 'Grabar Cabecera' }}
           </button>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- GRID DE DETALLES DEL ASIENTO -->
+    <mat-card class="detalle-grid-card" *ngIf="detalleDataSource.data.length > 0">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>view_list</mat-icon>
+          Detalle del Asiento
+        </mat-card-title>
+        <mat-card-subtitle> Vista consolidada de las cuentas agregadas </mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="table-container">
+          <table mat-table [dataSource]="detalleDataSource" matSort class="detalle-table">
+            <!-- Columna Cuenta -->
+            <ng-container matColumnDef="cuenta">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Cuenta</th>
+              <td mat-cell *matCellDef="let detalle">{{ detalle.cuenta }}</td>
+            </ng-container>
+
+            <!-- Columna Descripción -->
+            <ng-container matColumnDef="descripcion">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Descripción</th>
+              <td mat-cell *matCellDef="let detalle">{{ detalle.descripcion }}</td>
+            </ng-container>
+
+            <!-- Columna Debe -->
+            <ng-container matColumnDef="debe">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Debe</th>
+              <td mat-cell *matCellDef="let detalle" class="amount-cell">
+                <span [class.amount-highlight]="detalle.debe > 0">
+                  {{ detalle.debe | currency }}
+                </span>
+              </td>
+            </ng-container>
+
+            <!-- Columna Haber -->
+            <ng-container matColumnDef="haber">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Haber</th>
+              <td mat-cell *matCellDef="let detalle" class="amount-cell">
+                <span [class.amount-highlight]="detalle.haber > 0">
+                  {{ detalle.haber | currency }}
+                </span>
+              </td>
+            </ng-container>
+
+            <!-- Columna Tipo -->
+            <ng-container matColumnDef="tipo">
+              <th mat-header-cell *matHeaderCellDef>Tipo</th>
+              <td mat-cell *matCellDef="let detalle">
+                <mat-chip [class]="'tipo-' + detalle.tipo.toLowerCase()">
+                  {{ detalle.tipo }}
+                </mat-chip>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="detalleColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: detalleColumns"></tr>
+          </table>
+
+          <!-- Paginador -->
+          <mat-paginator [pageSizeOptions]="[5, 10, 20]" [pageSize]="10" showFirstLastButtons>
+          </mat-paginator>
         </div>
       </mat-card-content>
     </mat-card>
@@ -336,80 +413,26 @@
               !form.get('numero')?.valid ||
               !form.get('fechaAsiento')?.valid
             "
+            [matTooltip]="
+              detallesOriginales && detallesOriginales.length > 0
+                ? 'Actualizar detalles existentes del asiento'
+                : 'Grabar nuevos detalles del asiento'
+            "
           >
-            <mat-icon>save</mat-icon>
-            Grabar Detalle
+            <mat-icon>{{
+              detallesOriginales && detallesOriginales.length > 0 ? 'update' : 'save'
+            }}</mat-icon>
+            {{
+              detallesOriginales && detallesOriginales.length > 0
+                ? 'Actualizar Detalle'
+                : 'Grabar Detalle'
+            }}
           </button>
 
           <button mat-raised-button type="button" (click)="limpiar()">
             <mat-icon>clear</mat-icon>
             Limpiar
           </button>
-        </div>
-      </mat-card-content>
-    </mat-card>
-
-    <!-- GRID DE DETALLES DEL ASIENTO -->
-    <mat-card class="detalle-grid-card" *ngIf="detalleDataSource.data.length > 0">
-      <mat-card-header>
-        <mat-card-title>
-          <mat-icon>view_list</mat-icon>
-          Detalle del Asiento
-        </mat-card-title>
-        <mat-card-subtitle> Vista consolidada de las cuentas agregadas </mat-card-subtitle>
-      </mat-card-header>
-      <mat-card-content>
-        <div class="table-container">
-          <table mat-table [dataSource]="detalleDataSource" matSort class="detalle-table">
-            <!-- Columna Cuenta -->
-            <ng-container matColumnDef="cuenta">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header>Cuenta</th>
-              <td mat-cell *matCellDef="let detalle">{{ detalle.cuenta }}</td>
-            </ng-container>
-
-            <!-- Columna Descripción -->
-            <ng-container matColumnDef="descripcion">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header>Descripción</th>
-              <td mat-cell *matCellDef="let detalle">{{ detalle.descripcion }}</td>
-            </ng-container>
-
-            <!-- Columna Debe -->
-            <ng-container matColumnDef="debe">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header>Debe</th>
-              <td mat-cell *matCellDef="let detalle" class="amount-cell">
-                <span [class.amount-highlight]="detalle.debe > 0">
-                  {{ detalle.debe | currency }}
-                </span>
-              </td>
-            </ng-container>
-
-            <!-- Columna Haber -->
-            <ng-container matColumnDef="haber">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header>Haber</th>
-              <td mat-cell *matCellDef="let detalle" class="amount-cell">
-                <span [class.amount-highlight]="detalle.haber > 0">
-                  {{ detalle.haber | currency }}
-                </span>
-              </td>
-            </ng-container>
-
-            <!-- Columna Tipo -->
-            <ng-container matColumnDef="tipo">
-              <th mat-header-cell *matHeaderCellDef>Tipo</th>
-              <td mat-cell *matCellDef="let detalle">
-                <mat-chip [class]="'tipo-' + detalle.tipo.toLowerCase()">
-                  {{ detalle.tipo }}
-                </mat-chip>
-              </td>
-            </ng-container>
-
-            <tr mat-header-row *matHeaderRowDef="detalleColumns"></tr>
-            <tr mat-row *matRowDef="let row; columns: detalleColumns"></tr>
-          </table>
-
-          <!-- Paginador -->
-          <mat-paginator [pageSizeOptions]="[5, 10, 20]" [pageSize]="10" showFirstLastButtons>
-          </mat-paginator>
         </div>
       </mat-card-content>
     </mat-card>

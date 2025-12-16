@@ -30,7 +30,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
@@ -88,6 +88,7 @@ export class AsientosContablesDinamico implements OnInit {
   loading = false;
   codigoAsientoActual: number | null = null; // Para trackear si estamos editando
   asientoActual: Asiento | null = null; // Para almacenar datos completos del asiento
+  detallesOriginales: any[] = []; // Para trackear detalles cargados del backend
 
   // Arrays para el grid con drag-and-drop
   cuentasDebeGrid: CuentaItem[] = [];
@@ -125,14 +126,18 @@ export class AsientosContablesDinamico implements OnInit {
     private detalleAsientoService: DetalleAsientoService,
     private planCuentaService: PlanCuentaService,
     private snackBar: MatSnackBar,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private router: Router
   ) {}
 
   ngOnInit(): void {
     this.initializeForm();
     this.cargarRubros();
-    this.cargarCuentasPlan();
-    this.verificarCargaAsiento();
+
+    // Cargar cuentas del plan ANTES de verificar carga de asiento
+    this.cargarCuentasPlan().then(() => {
+      this.verificarCargaAsiento();
+    });
   }
 
   /**
@@ -181,30 +186,38 @@ export class AsientosContablesDinamico implements OnInit {
     });
   }
 
-  private cargarCuentasPlan(): void {
-    // Cargar cuentas del plan desde el backend
-    this.planCuentaService.getAll().subscribe({
-      next: (data) => {
-        if (data) {
-          // Filtrar solo cuentas activas (estado = 1) y de movimiento (tipo = 2)
-          this.cuentasPlan = data
-            .filter((cuenta: PlanCuenta) => cuenta.estado === 1 && cuenta.tipo === 2)
-            .sort((a, b) => {
-              // Ordenar por cuentaContable
-              const cuentaA = a.cuentaContable || '';
-              const cuentaB = b.cuentaContable || '';
-              return cuentaA.localeCompare(cuentaB);
-            });
-          console.log(
-            `📊 Cuentas de Movimiento cargadas para empresa ${this.idSucursal}:`,
-            this.cuentasPlan.length
-          );
-        }
-      },
-      error: (err) => {
-        console.error('❌ Error al cargar cuentas del plan:', err);
-        this.cuentasPlan = [];
-      },
+  private cargarCuentasPlan(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      // Cargar cuentas del plan desde el backend
+      this.planCuentaService.getAll().subscribe({
+        next: (data) => {
+          if (data) {
+            // Filtrar solo cuentas activas (estado = 1) y de movimiento (tipo = 2)
+            this.cuentasPlan = data
+              .filter((cuenta: PlanCuenta) => cuenta.estado === 1 && cuenta.tipo === 2)
+              .sort((a, b) => {
+                // Ordenar por cuentaContable
+                const cuentaA = a.cuentaContable || '';
+                const cuentaB = b.cuentaContable || '';
+                return cuentaA.localeCompare(cuentaB);
+              });
+            console.log(
+              `📊 Cuentas de Movimiento cargadas para empresa ${this.idSucursal}:`,
+              this.cuentasPlan.length
+            );
+            resolve();
+          } else {
+            console.warn('⚠️ No se recibieron datos de cuentas del plan');
+            this.cuentasPlan = [];
+            resolve();
+          }
+        },
+        error: (err) => {
+          console.error('❌ Error al cargar cuentas del plan:', err);
+          this.cuentasPlan = [];
+          reject(err);
+        },
+      });
     });
   }
 
@@ -322,6 +335,15 @@ export class AsientosContablesDinamico implements OnInit {
     this.detalleAsientoService.selectByCriteria(criterioConsultaArray).subscribe({
       next: (detalles: any) => {
         console.log('🔍 Respuesta detalles del backend:', detalles);
+        console.log(
+          '📊 Cuentas del plan disponibles:',
+          this.cuentasPlan.length,
+          this.cuentasPlan.map((c) => ({
+            codigo: c.codigo,
+            cuenta: c.cuentaContable,
+            nombre: c.nombre,
+          }))
+        );
 
         // Limpiar grids actuales siempre
         this.cuentasDebeGrid = [];
@@ -330,6 +352,9 @@ export class AsientosContablesDinamico implements OnInit {
         if (detalles && (Array.isArray(detalles) ? detalles.length > 0 : true)) {
           // Procesar cada detalle
           const detallesArray = Array.isArray(detalles) ? detalles : [detalles];
+
+          // Guardar detalles originales para comparar en update
+          this.detallesOriginales = [...detallesArray];
 
           let detallesProcesados = 0;
           detallesArray.forEach((detalle: any) => {
@@ -356,6 +381,18 @@ export class AsientosContablesDinamico implements OnInit {
               }
             } else {
               console.warn('⚠️ Cuenta no encontrada para detalle:', detalle);
+              console.warn(
+                '🔍 Buscando código:',
+                detalle.planCuenta?.codigo,
+                'en',
+                this.cuentasPlan.length,
+                'cuentas disponibles'
+              );
+              console.warn(
+                '🔍 Códigos disponibles:',
+                this.cuentasPlan.map((c) => c.codigo).slice(0, 10),
+                '...'
+              );
             }
           });
 
@@ -749,8 +786,16 @@ export class AsientosContablesDinamico implements OnInit {
 
     // Verificar si ya existe la cabecera del asiento (codigoAsientoActual no null)
     if (this.codigoAsientoActual) {
-      console.log('📝 Asiento existente detectado. Grabando solo detalles...');
-      this.grabarSoloDetalles();
+      console.log('📝 Asiento existente detectado...');
+
+      // Si hay detalles originales cargados, hacer actualización inteligente
+      if (this.detallesOriginales && this.detallesOriginales.length > 0) {
+        console.log('🔄 Hay detalles originales. Usando actualización inteligente...');
+        this.actualizarDetallesDelAsiento(this.codigoAsientoActual);
+      } else {
+        console.log('📝 No hay detalles originales. Grabando nuevos detalles...');
+        this.grabarSoloDetalles();
+      }
     } else {
       console.log('📝 Asiento nuevo. Grabando cabecera + detalles...');
       this.grabarCabeceraYDetalles();
@@ -1001,6 +1046,216 @@ export class AsientosContablesDinamico implements OnInit {
   }
 
   /**
+   * Actualiza los detalles existentes de un asiento
+   */
+  private actualizarDetallesDelAsiento(asientoId: number): void {
+    console.log('🔄 Actualizando detalles del asiento ID:', asientoId);
+
+    // Recopilar detalles actuales del grid
+    const detallesActuales = this.recopilarDetallesDelGrid(asientoId);
+
+    if (detallesActuales.length === 0) {
+      console.log('ℹ️ No hay detalles para actualizar');
+      this.loading = false;
+      this.snackBar.open('No hay cuentas para actualizar', 'Cerrar', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'top',
+        panelClass: ['warning-snackbar'],
+      });
+      return;
+    }
+
+    // Lógica de actualización: comparar con detalles originales
+    const operaciones = this.determinarOperacionesDeActualizacion(detallesActuales);
+
+    console.log('📋 Operaciones a realizar:', operaciones);
+
+    this.ejecutarOperacionesDeActualizacion(operaciones, asientoId);
+  }
+
+  /**
+   * Recopila detalles del grid dinámico
+   */
+  private recopilarDetallesDelGrid(asientoId: number): any[] {
+    const detalles: any[] = [];
+
+    // Procesar cuentas DEBE
+    this.cuentasDebeGrid.forEach((item) => {
+      if (item && item.cuenta && item.valor > 0) {
+        detalles.push({
+          asiento: { codigo: asientoId },
+          planCuenta: { codigo: item.cuenta.codigo },
+          valorDebe: item.valor,
+          valorHaber: 0,
+          tipo: 'DEBE',
+        });
+      }
+    });
+
+    // Procesar cuentas HABER
+    this.cuentasHaberGrid.forEach((item) => {
+      if (item && item.cuenta && item.valor > 0) {
+        detalles.push({
+          asiento: { codigo: asientoId },
+          planCuenta: { codigo: item.cuenta.codigo },
+          valorDebe: 0,
+          valorHaber: item.valor,
+          tipo: 'HABER',
+        });
+      }
+    });
+
+    return detalles;
+  }
+
+  /**
+   * Determina qué operaciones hacer: crear, actualizar o eliminar detalles
+   */
+  private determinarOperacionesDeActualizacion(detallesActuales: any[]): any {
+    const operaciones = {
+      crear: [] as any[],
+      actualizar: [] as any[],
+      eliminar: [] as any[],
+    };
+
+    // Comparar detalles actuales con originales
+    detallesActuales.forEach((detalleActual) => {
+      const detalleOriginal = this.detallesOriginales.find(
+        (orig) => orig.planCuenta?.codigo === detalleActual.planCuenta.codigo
+      );
+
+      if (detalleOriginal) {
+        // Verificar si cambió el valor
+        const valorOriginalDebe = detalleOriginal.valorDebe || 0;
+        const valorOriginalHaber = detalleOriginal.valorHaber || 0;
+        const valorActualDebe = detalleActual.valorDebe || 0;
+        const valorActualHaber = detalleActual.valorHaber || 0;
+
+        if (valorOriginalDebe !== valorActualDebe || valorOriginalHaber !== valorActualHaber) {
+          operaciones.actualizar.push({
+            ...detalleActual,
+            codigo: detalleOriginal.codigo, // Necesario para update
+          });
+        }
+      } else {
+        // Es un nuevo detalle
+        operaciones.crear.push(detalleActual);
+      }
+    });
+
+    // Buscar detalles eliminados (estaban en originales pero no en actuales)
+    this.detallesOriginales.forEach((detalleOriginal) => {
+      const existe = detallesActuales.find(
+        (actual) => actual.planCuenta.codigo === detalleOriginal.planCuenta?.codigo
+      );
+
+      if (!existe) {
+        operaciones.eliminar.push(detalleOriginal);
+      }
+    });
+
+    return operaciones;
+  }
+
+  /**
+   * Ejecuta las operaciones de actualización determinadas
+   */
+  private ejecutarOperacionesDeActualizacion(operaciones: any, asientoId: number): void {
+    let operacionesCompletadas = 0;
+    const totalOperaciones =
+      operaciones.crear.length + operaciones.actualizar.length + operaciones.eliminar.length;
+    let errores: string[] = [];
+
+    console.log(`🚀 Ejecutando ${totalOperaciones} operaciones de actualización`);
+
+    if (totalOperaciones === 0) {
+      console.log('ℹ️ No hay cambios para procesar');
+      this.loading = false;
+      this.snackBar.open('No hay cambios para actualizar', 'Cerrar', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'top',
+        panelClass: ['info-snackbar'],
+      });
+      return;
+    }
+
+    const verificarComplecion = () => {
+      operacionesCompletadas++;
+      if (operacionesCompletadas === totalOperaciones) {
+        this.loading = false;
+        if (errores.length === 0) {
+          this.snackBar.open(
+            `✅ Detalles actualizados: ${operaciones.crear.length} creados, ${operaciones.actualizar.length} modificados, ${operaciones.eliminar.length} eliminados`,
+            'Cerrar',
+            {
+              duration: 4000,
+              horizontalPosition: 'center',
+              verticalPosition: 'top',
+              panelClass: ['success-snackbar'],
+            }
+          );
+          // Recargar detalles para mostrar los cambios
+          this.cargarDetallesAsiento(asientoId);
+        } else {
+          this.snackBar.open(`❌ Errores en actualización: ${errores.join(', ')}`, 'Cerrar', {
+            duration: 6000,
+            horizontalPosition: 'center',
+            verticalPosition: 'top',
+            panelClass: ['error-snackbar'],
+          });
+        }
+      }
+    };
+
+    // Ejecutar creaciones
+    operaciones.crear.forEach((detalle: any) => {
+      this.detalleAsientoService.add(detalle).subscribe({
+        next: (response) => {
+          console.log('✅ Detalle creado:', response);
+          verificarComplecion();
+        },
+        error: (error) => {
+          errores.push(`Error creando: ${error?.message || 'Desconocido'}`);
+          console.error('❌ Error creando detalle:', error);
+          verificarComplecion();
+        },
+      });
+    });
+
+    // Ejecutar actualizaciones
+    operaciones.actualizar.forEach((detalle: any) => {
+      this.detalleAsientoService.update(detalle).subscribe({
+        next: (response) => {
+          console.log('✅ Detalle actualizado:', response);
+          verificarComplecion();
+        },
+        error: (error) => {
+          errores.push(`Error actualizando: ${error?.message || 'Desconocido'}`);
+          console.error('❌ Error actualizando detalle:', error);
+          verificarComplecion();
+        },
+      });
+    });
+
+    // Ejecutar eliminaciones
+    operaciones.eliminar.forEach((detalle: any) => {
+      this.detalleAsientoService.delete(detalle.codigo).subscribe({
+        next: (response) => {
+          console.log('✅ Detalle eliminado:', response);
+          verificarComplecion();
+        },
+        error: (error) => {
+          errores.push(`Error eliminando: ${error?.message || 'Desconocido'}`);
+          console.error('❌ Error eliminando detalle:', error);
+          verificarComplecion();
+        },
+      });
+    });
+  }
+
+  /**
    * Configurar paginador y ordenamiento después de la vista inicializada
    */
   ngAfterViewInit(): void {
@@ -1166,7 +1421,9 @@ export class AsientosContablesDinamico implements OnInit {
 
     // Si es un string, intenta parsearlo
     if (typeof fecha === 'string') {
-      const parsedDate = new Date(fecha);
+      // Manejar formato específico con Z[UTC]: 2025-12-16T00:00:00Z[UTC]
+      const fechaLimpia = fecha.replace(/Z\[UTC\]$/, 'Z');
+      const parsedDate = new Date(fechaLimpia);
       if (!isNaN(parsedDate.getTime())) {
         return parsedDate;
       }
@@ -1193,5 +1450,39 @@ export class AsientosContablesDinamico implements OnInit {
 
     console.warn('⚠️ Formato de fecha no reconocido:', fecha);
     return new Date(); // Fallback a fecha actual
+  }
+
+  /**
+   * Crea un nuevo asiento limpiando el formulario
+   */
+  nuevoAsiento(): void {
+    console.log('🆕 Creando nuevo asiento...');
+
+    // Limpiar el estado actual
+    this.codigoAsientoActual = null;
+    this.detallesOriginales = [];
+
+    // Reinicializar el formulario
+    this.initializeForm();
+
+    // Limpiar los arrays de cuentas del grid
+    this.cuentasDebeGrid = [];
+    this.cuentasHaberGrid = [];
+
+    // Resetear totales
+    this.totalDebe = 0;
+    this.totalHaber = 0;
+    this.diferencia = 0;
+
+    // Navegar a la URL sin parámetros para un nuevo asiento
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: {},
+      replaceUrl: true,
+    });
+
+    this.showMessage('✅ Listo para crear un nuevo asiento', 'success');
+
+    console.log('✅ Nuevo asiento iniciado correctamente');
   }
 }
