@@ -2,8 +2,6 @@ import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http
 import { Injectable } from '@angular/core';
 import { Observable, of, throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
-import { Empresa } from '../../../shared/model/empresa';
-import { Jerarquia } from '../../../shared/model/jerarquia';
 import { CrearPeriodo, EstadoPeriodo, FiltrosPeriodo, Periodo } from '../model/periodo';
 import { ServiciosCnt } from './ws-cnt';
 
@@ -19,93 +17,6 @@ export class PeriodoService {
   private httpOptions = {
     headers: new HttpHeaders({ 'Content-Type': 'application/json' }),
   };
-
-  // Jerarquía mock
-  private mockJerarquia: Jerarquia = {
-    codigo: 1,
-    nombre: 'Matriz',
-    nivel: 1,
-    codigoPadre: 0,
-    descripcion: 'Jerarquía principal',
-    ultimoNivel: 1,
-    rubroTipoEstructuraP: 1,
-    rubroTipoEstructuraH: 1,
-    codigoAlterno: 1,
-    rubroNivelCaracteristicaP: 1,
-    rubroNivelCaracteristicaH: 1,
-  };
-
-  // Empresa mock
-  private mockEmpresa: Empresa = {
-    codigo: 280,
-    jerarquia: this.mockJerarquia,
-    nombre: 'GAEMI NEXUS',
-    nivel: 1,
-    codigoPadre: 0,
-    ingresado: 1,
-  };
-
-  // Datos mock para períodos
-  private mockPeriodos: Periodo[] = [
-    {
-      codigo: 1,
-      empresa: this.mockEmpresa,
-      mes: 1,
-      anio: 2024,
-      nombre: 'Enero 2024',
-      estado: EstadoPeriodo.MAYORIZADO,
-      primerDia: new Date('2024-01-01'),
-      ultimoDia: new Date('2024-01-31'),
-      idMayorizacion: 1001,
-      periodoCierre: 0,
-    },
-    {
-      codigo: 2,
-      empresa: this.mockEmpresa,
-      mes: 2,
-      anio: 2024,
-      nombre: 'Febrero 2024',
-      estado: EstadoPeriodo.MAYORIZADO,
-      primerDia: new Date('2024-02-01'),
-      ultimoDia: new Date('2024-02-29'),
-      idMayorizacion: 1002,
-      periodoCierre: 0,
-    },
-    {
-      codigo: 3,
-      empresa: this.mockEmpresa,
-      mes: 3,
-      anio: 2024,
-      nombre: 'Marzo 2024',
-      estado: EstadoPeriodo.MAYORIZADO,
-      primerDia: new Date('2024-03-01'),
-      ultimoDia: new Date('2024-03-31'),
-      idMayorizacion: 1003,
-      periodoCierre: 0,
-    },
-    {
-      codigo: 4,
-      empresa: this.mockEmpresa,
-      mes: 4,
-      anio: 2024,
-      nombre: 'Abril 2024',
-      estado: EstadoPeriodo.ABIERTO,
-      primerDia: new Date('2024-04-01'),
-      ultimoDia: new Date('2024-04-30'),
-      periodoCierre: 0,
-    },
-    {
-      codigo: 5,
-      empresa: this.mockEmpresa,
-      mes: 5,
-      anio: 2024,
-      nombre: 'Mayo 2024',
-      estado: EstadoPeriodo.ABIERTO,
-      primerDia: new Date('2024-05-01'),
-      ultimoDia: new Date('2024-05-31'),
-      periodoCierre: 0,
-    },
-  ];
 
   constructor(private http: HttpClient) {}
 
@@ -127,22 +38,14 @@ export class PeriodoService {
         );
         return filtrados;
       }),
-      catchError(() => {
-        console.log(
-          `[PeriodoService] Usando datos mock para períodos de empresa ${this.EMPRESA_CODIGO}`
-        );
-        const filtrados = this.mockPeriodos.filter(
-          (p) => p?.empresa?.codigo === this.EMPRESA_CODIGO
-        );
-        return of(filtrados);
-      })
+      catchError(this.handleErrorWithEmpty<Periodo>())
     );
   }
 
   verificaPeriodoAbierto(idEmpresa: number, fecha: Date): Observable<Periodo | null> {
     const wsGetById = '/verificaPeriodoAbierto/';
     const url = `${ServiciosCnt.RS_NTRL}${wsGetById}${idEmpresa}/${fecha.toISOString()}`;
-    return this.http.get<Periodo>(url).pipe(catchError(this.handleError));
+    return this.http.get<Periodo>(url).pipe(catchError(this.handleErrorWithNull));
   }
 
   /**
@@ -152,13 +55,7 @@ export class PeriodoService {
     const wsGetById = '/getId/';
     const url = `${ServiciosCnt.RS_PRDO}${wsGetById}${codigo}`;
 
-    return this.http.get<Periodo>(url).pipe(
-      catchError(() => {
-        console.log('[PeriodoService] Usando datos mock para período');
-        const item = this.mockPeriodos.find((p) => p.codigo === codigo);
-        return of(item || null);
-      })
-    );
+    return this.http.get<Periodo>(url).pipe(catchError(this.handleErrorWithNull));
   }
 
   /**
@@ -168,13 +65,7 @@ export class PeriodoService {
     const wsGetByAnio = '/getByAnio/';
     const url = `${ServiciosCnt.RS_PRDO}${wsGetByAnio}${anio}`;
 
-    return this.http.get<Periodo[]>(url).pipe(
-      catchError(() => {
-        console.log('[PeriodoService] Usando filtro por año en datos mock');
-        const periodosAnio = this.mockPeriodos.filter((p) => p.anio === anio);
-        return of(periodosAnio);
-      })
-    );
+    return this.http.get<Periodo[]>(url).pipe(catchError(this.handleErrorWithEmpty<Periodo>()));
   }
 
   /**
@@ -184,14 +75,7 @@ export class PeriodoService {
     const wsGetActual = '/getActual';
     const url = `${ServiciosCnt.RS_PRDO}${wsGetActual}`;
 
-    return this.http.get<Periodo>(url).pipe(
-      catchError(() => {
-        console.log('[PeriodoService] Usando período actual mock');
-        // Devuelve el primer período abierto
-        const periodoActual = this.mockPeriodos.find((p) => p.estado === EstadoPeriodo.ABIERTO);
-        return of(periodoActual || null);
-      })
-    );
+    return this.http.get<Periodo>(url).pipe(catchError(this.handleErrorWithNull));
   }
 
   /**
@@ -201,32 +85,9 @@ export class PeriodoService {
     const wsSelectByCriteria = '/selectByCriteria/';
     const url = `${ServiciosCnt.RS_PRDO}${wsSelectByCriteria}`;
 
-    return this.http.post<Periodo[]>(url, filtros, this.httpOptions).pipe(
-      catchError(() => {
-        console.log('[PeriodoService] Usando filtros mock');
-        let filtered = [...this.mockPeriodos];
-
-        if (filtros.anio) {
-          filtered = filtered.filter((p) => p.anio === filtros.anio);
-        }
-
-        if (filtros.mes) {
-          filtered = filtered.filter((p) => p.mes === filtros.mes);
-        }
-
-        if (filtros.estado !== undefined) {
-          filtered = filtered.filter((p) => p.estado === filtros.estado);
-        }
-
-        if (filtros.nombre) {
-          filtered = filtered.filter((p) =>
-            p.nombre.toLowerCase().includes(filtros.nombre!.toLowerCase())
-          );
-        }
-
-        return of(filtered);
-      })
-    );
+    return this.http
+      .post<Periodo[]>(url, filtros, this.httpOptions)
+      .pipe(catchError(this.handleErrorWithEmpty<Periodo>()));
   }
 
   /**
@@ -248,35 +109,38 @@ export class PeriodoService {
       periodoCierre: 0,
     };
 
-    return this.http.post<Periodo>(ServiciosCnt.RS_PRDO, periodoBackend, this.httpOptions).pipe(
-      catchError(() => {
-        // Simular creación en mock
-        const nuevoCodigo = Math.max(...this.mockPeriodos.map((p) => p.codigo)) + 1;
+    return this.http
+      .post<Periodo>(ServiciosCnt.RS_PRDO, periodoBackend, this.httpOptions)
+      .pipe(catchError(this.handleErrorWithNull));
+  }
 
-        const nuevoPeriodo: Periodo = {
-          codigo: nuevoCodigo,
-          empresa: {
-            codigo: this.EMPRESA_CODIGO,
-            jerarquia: this.mockJerarquia,
-            nombre: 'GAEMI NEXUS',
-            nivel: 1,
-            codigoPadre: 0,
-            ingresado: 1,
-          },
-          mes: datosPeriodo.mes,
-          anio: datosPeriodo.anio,
-          nombre: periodoBackend.nombre,
-          estado: EstadoPeriodo.ABIERTO,
-          primerDia: periodoBackend.primerDia,
-          ultimoDia: periodoBackend.ultimoDia,
-          periodoCierre: 0,
-        };
+  /**
+   * Actualiza un período existente
+   * PUT: update record
+   */
+  update(datosPeriodo: Periodo): Observable<Periodo | null> {
+    const periodoBackend: any = {
+      codigo: datosPeriodo.codigo,
+      empresa: {
+        codigo: datosPeriodo.empresa?.codigo || this.EMPRESA_CODIGO,
+      },
+      mes: datosPeriodo.mes,
+      anio: datosPeriodo.anio,
+      nombre: datosPeriodo.nombre || `${this.getNombreMes(datosPeriodo.mes)} ${datosPeriodo.anio}`,
+      estado: datosPeriodo.estado,
+      primerDia: datosPeriodo.primerDia || new Date(datosPeriodo.anio, datosPeriodo.mes - 1, 1),
+      ultimoDia: datosPeriodo.ultimoDia || new Date(datosPeriodo.anio, datosPeriodo.mes, 0),
+      periodoCierre:
+        typeof datosPeriodo.periodoCierre === 'boolean'
+          ? datosPeriodo.periodoCierre
+            ? 1
+            : 0
+          : datosPeriodo.periodoCierre || 0,
+    };
 
-        this.mockPeriodos.push(nuevoPeriodo);
-        console.log('✅ Período creado (mock):', nuevoPeriodo);
-        return of(nuevoPeriodo);
-      })
-    );
+    return this.http
+      .put<Periodo>(ServiciosCnt.RS_PRDO, periodoBackend, this.httpOptions)
+      .pipe(catchError(this.handleErrorWithNull));
   }
 
   /**
@@ -286,18 +150,7 @@ export class PeriodoService {
     const wsMayorizar = '/mayorizar/';
     const url = `${ServiciosCnt.RS_PRDO}${wsMayorizar}${codigoPeriodo}`;
 
-    return this.http.post<boolean>(url, {}, this.httpOptions).pipe(
-      catchError(() => {
-        // Simular mayorización en mock
-        const periodo = this.mockPeriodos.find((p) => p.codigo === codigoPeriodo);
-        if (periodo && periodo.estado === EstadoPeriodo.ABIERTO) {
-          periodo.estado = EstadoPeriodo.MAYORIZADO;
-          periodo.idMayorizacion = Date.now(); // ID temporal
-          return of(true);
-        }
-        return of(false);
-      })
-    );
+    return this.http.post<boolean>(url, {}, this.httpOptions).pipe(catchError(() => of(false)));
   }
 
   /**
@@ -307,29 +160,23 @@ export class PeriodoService {
     const wsDesmayorizar = '/desmayorizar/';
     const url = `${ServiciosCnt.RS_PRDO}${wsDesmayorizar}${codigoPeriodo}`;
 
-    return this.http.post<boolean>(url, {}, this.httpOptions).pipe(
-      catchError(() => {
-        // Simular desmayorización en mock
-        const periodo = this.mockPeriodos.find((p) => p.codigo === codigoPeriodo);
-        if (periodo && periodo.estado === EstadoPeriodo.MAYORIZADO) {
-          periodo.estado = EstadoPeriodo.DESMAYORIZADO;
-          periodo.idDesmayorizacion = Date.now(); // ID temporal
-          return of(true);
-        }
-        return of(false);
-      })
-    );
+    return this.http.post<boolean>(url, {}, this.httpOptions).pipe(catchError(() => of(false)));
   }
 
   /**
    * Elimina un período (solo si está abierto y sin movimientos)
+   * DELETE: delete record
    */
   delete(codigo: number): Observable<string | null> {
     const wsDelete = '/' + codigo;
     const url = `${ServiciosCnt.RS_PRDO}${wsDelete}`;
+
     return this.http.delete<string>(url, this.httpOptions).pipe(
-          catchError(this.handleError)
-        );
+      catchError((error: HttpErrorResponse) => {
+        console.error('❌ Error eliminando período:', error);
+        return throwError(() => error.error || error);
+      })
+    );
   }
 
   /**
@@ -339,13 +186,7 @@ export class PeriodoService {
     const wsGetAnios = '/getAnios';
     const url = `${ServiciosCnt.RS_PRDO}${wsGetAnios}`;
 
-    return this.http.get<number[]>(url).pipe(
-      catchError(() => {
-        // Obtener años únicos de los períodos mock
-        const anios = [...new Set(this.mockPeriodos.map((p) => p.anio))].sort((a, b) => b - a);
-        return of(anios);
-      })
-    );
+    return this.http.get<number[]>(url).pipe(catchError(() => of([])));
   }
 
   /**
@@ -355,16 +196,6 @@ export class PeriodoService {
     mes: number,
     anio: number
   ): Observable<{ valido: boolean; mensaje?: string }> {
-    // Verificar si ya existe el período
-    const existe = this.mockPeriodos.some((p) => p.mes === mes && p.anio === anio);
-
-    if (existe) {
-      return of({
-        valido: false,
-        mensaje: `Ya existe un período para ${this.getNombreMes(mes)} ${anio}`,
-      });
-    }
-
     // Verificar que el mes sea válido
     if (mes < 1 || mes > 12) {
       return of({
@@ -375,10 +206,10 @@ export class PeriodoService {
 
     // Verificar que el año sea razonable
     const anioActual = new Date().getFullYear();
-    if (anio < 2020 || anio > anioActual + 5) {
+    if (anio < 2000 || anio > 2100) {
       return of({
         valido: false,
-        mensaje: `El año debe estar entre 2020 y ${anioActual + 5}`,
+        mensaje: 'El año debe estar entre 2000 y 2100',
       });
     }
 
@@ -439,11 +270,23 @@ export class PeriodoService {
   }
 
   // tslint:disable-next-line: typedef
-  private handleError(error: HttpErrorResponse): Observable<null> {
+  private handleError(error: HttpErrorResponse): Observable<never> {
+    console.error('❌ Error en petición HTTP:', error);
+    return throwError(() => error.error || error);
+  }
+
+  private handleErrorWithNull(error: HttpErrorResponse): Observable<null> {
+    console.error('❌ Error en petición HTTP:', error);
     if (+error.status === 200) {
       return of(null);
-    } else {
-      return throwError(() => error.error);
     }
+    return throwError(() => error.error || error);
+  }
+
+  private handleErrorWithEmpty<T>(): (error: HttpErrorResponse) => Observable<T[]> {
+    return (error: HttpErrorResponse) => {
+      console.error('❌ Error en petición HTTP, devolviendo array vacío:', error);
+      return of([] as T[]);
+    };
   }
 }

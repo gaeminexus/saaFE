@@ -183,21 +183,10 @@
                   maxlength="500"
                 >
                 </textarea>
-                <mat-hint>Máximo 500 caracteres</mat-hint>
                 <mat-error *ngIf="plantillaForm.get('observacion')?.hasError('maxlength')">
                   La observación no puede exceder 500 caracteres
                 </mat-error>
               </mat-form-field>
-            </div>
-
-            <div class="form-info" *ngIf="!isNewRecord">
-              <div class="info-item" *ngIf="plantillaForm.get('fechaCreacion')?.value">
-                <mat-icon>schedule</mat-icon>
-                <span class="label">Creado:</span>
-                <span class="value">{{
-                  plantillaForm.get('fechaCreacion')?.value | date : 'dd/MM/yyyy HH:mm'
-                }}</span>
-              </div>
             </div>
           </form>
 
@@ -222,16 +211,6 @@
             >
               <mat-icon>receipt_long</mat-icon>
               Crear Asiento
-            </button>
-
-            <button
-              mat-button
-              (click)="validarEstadoDetalles()"
-              matTooltip="Ver estado actual de los detalles"
-              [disabled]="loading"
-            >
-              <mat-icon>info</mat-icon>
-              Estado Detalles
             </button>
 
             <button mat-button (click)="cancelarEdicion()" [disabled]="loading">
@@ -273,21 +252,6 @@
         </mat-card-header>
 
         <mat-card-content>
-          <!-- Filtro para Detalles -->
-          <div class="filter-section">
-            <mat-form-field appearance="outline" class="filter-field">
-              <mat-label>Buscar en detalles</mat-label>
-              <input
-                matInput
-                [(ngModel)]="filterValue"
-                (keyup)="applyFilterDetalles()"
-                placeholder="Buscar por cuenta o descripción..."
-                autocomplete="off"
-              />
-              <mat-icon matSuffix>search</mat-icon>
-            </mat-form-field>
-          </div>
-
           <!-- Tabla de Detalles -->
           <div
             class="table-container"

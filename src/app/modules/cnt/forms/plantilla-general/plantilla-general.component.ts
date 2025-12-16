@@ -86,7 +86,6 @@ export class PlantillaGeneralComponent implements OnInit {
   isEditing = false;
   isNewRecord = false;
   loading = false;
-  filterValue = '';
   mostrarBannerDemo = false;
   idSucursal = parseInt(localStorage.getItem('idSucursal') || '280', 10);
 
@@ -557,13 +556,6 @@ export class PlantillaGeneralComponent implements OnInit {
       );
       this.plantillas = filteredPlantillas;
     }
-  }
-
-  /**
-   * Aplica filtro a los detalles
-   */
-  applyFilterDetalles(): void {
-    this.dataSourceDetalles.filter = this.filterValue.trim().toLowerCase();
   }
 
   /**

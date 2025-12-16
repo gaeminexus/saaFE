@@ -61,15 +61,7 @@ export class PeriodoContableComponent implements OnInit {
   // Datos principales
   periodos: Periodo[] = [];
   dataSource = new MatTableDataSource<Periodo>();
-  displayedColumns: string[] = [
-    'codigo',
-    'anio',
-    'mes',
-    'nombre',
-    'periodoCierre',
-    'estado',
-    'acciones',
-  ];
+  displayedColumns: string[] = ['anio', 'mes', 'nombre', 'periodoCierre', 'estado', 'acciones'];
 
   // Formulario
   periodoForm: FormGroup;
@@ -80,12 +72,6 @@ export class PeriodoContableComponent implements OnInit {
   // Estados
   loading = false;
   mostrarBannerDemo = false;
-
-  // Filtros
-  filtroAnio: number | null = null;
-  filtroMes: number | null = null;
-  filtroEstado: EstadoPeriodo | null = null;
-  filtroTexto = '';
 
   // Opciones para selects
   aniosDisponibles: number[] = [];
@@ -134,7 +120,15 @@ export class PeriodoContableComponent implements OnInit {
     return this.fb.group({
       codigo: [0],
       mes: ['', [Validators.required, Validators.min(1), Validators.max(12)]],
-      anio: [new Date().getFullYear(), [Validators.required, Validators.min(2020)]],
+      anio: [
+        new Date().getFullYear(),
+        [
+          Validators.required,
+          Validators.min(2000),
+          Validators.max(2100),
+          Validators.pattern(/^[0-9]{4}$/),
+        ],
+      ],
       nombre: [''],
       estado: [EstadoPeriodo.ABIERTO, Validators.required],
       periodoCierre: [false],
@@ -157,20 +151,38 @@ export class PeriodoContableComponent implements OnInit {
   generateAniosDisponibles(): void {
     const anioActual = new Date().getFullYear();
     this.aniosDisponibles = [];
-    for (let i = anioActual + 2; i >= 2020; i--) {
+    // Generar hasta 10 años en el futuro para permitir planificación a largo plazo
+    for (let i = anioActual + 10; i >= 2020; i--) {
       this.aniosDisponibles.push(i);
     }
   }
 
   loadPeriodos(): void {
     this.loading = true;
-    console.log('🔍 Cargando períodos contables para empresa 280...');
+    const empresaCodigo = localStorage.getItem('idSucursal');
+
+    if (!empresaCodigo) {
+      this.loading = false;
+      this.showMessage('No hay empresa seleccionada. Por favor inicie sesión nuevamente.', 'error');
+      console.error('❌ No se encontró idSucursal en localStorage');
+      return;
+    }
+
+    console.log(`🔍 Cargando períodos contables para empresa ${empresaCodigo}...`);
 
     this.periodoService.getAll().subscribe({
       next: (data: Periodo[]) => {
         this.periodos = data || [];
         console.log(`✅ Períodos cargados: ${this.periodos.length}`);
-        this.aplicarFiltros();
+
+        // Ordenar por año y mes descendente
+        this.dataSource.data = this.periodos.sort((a, b) => {
+          if (a.anio !== b.anio) {
+            return b.anio - a.anio;
+          }
+          return b.mes - a.mes;
+        });
+
         this.loading = false;
 
         if (this.periodos.length > 0) {
@@ -188,50 +200,6 @@ export class PeriodoContableComponent implements OnInit {
         this.loading = false;
       },
     });
-  }
-
-  aplicarFiltros(): void {
-    let periodosFiltrados = [...this.periodos];
-
-    if (this.filtroAnio) {
-      periodosFiltrados = periodosFiltrados.filter((p) => p.anio === this.filtroAnio);
-    }
-
-    if (this.filtroMes) {
-      periodosFiltrados = periodosFiltrados.filter((p) => p.mes === this.filtroMes);
-    }
-
-    if (this.filtroEstado !== null) {
-      periodosFiltrados = periodosFiltrados.filter((p) => p.estado === this.filtroEstado);
-    }
-
-    if (this.filtroTexto) {
-      const texto = this.filtroTexto.toLowerCase();
-      periodosFiltrados = periodosFiltrados.filter(
-        (p) =>
-          p.nombre.toLowerCase().includes(texto) ||
-          p.anio.toString().includes(texto) ||
-          p.mes.toString().includes(texto)
-      );
-    }
-
-    this.dataSource.data = periodosFiltrados.sort((a, b) => {
-      if (a.anio !== b.anio) {
-        return b.anio - a.anio; // Año descendente
-      }
-      return b.mes - a.mes; // Mes descendente
-    });
-
-    // Forzar la actualización de la tabla
-    this.dataSource._updateChangeSubscription();
-  }
-
-  limpiarFiltros(): void {
-    this.filtroAnio = null;
-    this.filtroMes = null;
-    this.filtroEstado = null;
-    this.filtroTexto = '';
-    this.aplicarFiltros();
   }
 
   nuevoPeriodo(): void {
@@ -261,9 +229,23 @@ export class PeriodoContableComponent implements OnInit {
       return;
     }
 
+    // Obtener código de empresa desde localStorage
+    const empresaCodigoStr = localStorage.getItem('idSucursal');
+
+    if (!empresaCodigoStr) {
+      this.showMessage('No hay empresa seleccionada. Por favor inicie sesión nuevamente.', 'error');
+      console.error('❌ No se encontró idSucursal en localStorage');
+      return;
+    }
+
+    const empresaCodigo = parseInt(empresaCodigoStr, 10);
+
     const formValue = {
       ...this.periodoForm.value,
-      empresa: { codigo: 280, nombre: 'GAEMI NEXUS' }, // Forzar empresa 280
+      // Al editar, mantener la empresa original; al crear, usar la de localStorage
+      empresa: this.isNewRecord
+        ? { codigo: empresaCodigo }
+        : this.periodoSeleccionado?.empresa || { codigo: empresaCodigo },
     };
 
     // Eliminar codigo si es nuevo registro (el backend lo genera)
@@ -271,10 +253,13 @@ export class PeriodoContableComponent implements OnInit {
       delete formValue.codigo;
     }
 
-    // Generar nombre automático si no se especifica
-    if (!formValue.nombre) {
-      const nombreMes = this.mesesDisponibles.find((m) => m.valor === formValue.mes)?.nombre || '';
-      formValue.nombre = `${nombreMes} ${formValue.anio}`;
+    // Generar nombre automático basado en mes y año actuales
+    // Si es edición y cambió el mes o año, regenerar el nombre
+    const nombreMes = this.mesesDisponibles.find((m) => m.valor === formValue.mes)?.nombre || '';
+    const nombreEsperado = `${nombreMes} ${formValue.anio}`;
+
+    if (!formValue.nombre || formValue.nombre !== nombreEsperado) {
+      formValue.nombre = nombreEsperado;
     }
 
     // Calcular fechas del período
@@ -311,12 +296,23 @@ export class PeriodoContableComponent implements OnInit {
       });
     } else {
       console.log('📤 Actualizando período:', formValue);
-      // Para actualización, usar el método update del servicio
-      const url = '/api/saa-backend/rest/prdo';
 
-      // Simular actualización exitosa por ahora
-      this.showMessage('Actualización de períodos no implementada aún', 'info');
-      this.cancelarEdicion();
+      this.periodoService.update(formValue).subscribe({
+        next: (periodoActualizado) => {
+          if (periodoActualizado) {
+            console.log('✅ Período actualizado exitosamente');
+            this.showMessage('Período actualizado correctamente', 'success');
+            this.loadPeriodos();
+            this.cancelarEdicion();
+          } else {
+            this.showMessage('No se pudo actualizar el período', 'error');
+          }
+        },
+        error: (error) => {
+          console.error('❌ Error al actualizar período:', error);
+          this.showMessage('Error al actualizar período', 'error');
+        },
+      });
     }
   }
 
@@ -392,7 +388,7 @@ export class PeriodoContableComponent implements OnInit {
         details: [
           { label: 'Año', value: periodo.anio.toString() },
           { label: 'Mes', value: this.getNombreMes(periodo.mes) },
-          { label: 'Estado', value: this.getNombreEstado(periodo.estado) },
+          { label: 'Estado', value: this.getEstadoTexto(periodo.estado) },
         ],
       },
     });
