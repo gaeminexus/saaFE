@@ -1,5 +1,4 @@
 import { Routes } from '@angular/router';
-import { AsientosComponent } from './modules/cnt/forms/asientos/asientos.component';
 import { CentroArbolComponent } from './modules/cnt/forms/centro-arbol/centro-arbol.component';
 import { CentroGridComponent } from './modules/cnt/forms/centro-grid/centro-grid.component';
 import { MayorizacionProcesoComponent } from './modules/cnt/forms/mayorizacion-proceso/mayorizacion-proceso.component';
@@ -26,7 +25,7 @@ import { authGuard } from './shared/guard/auth.guard';
 import { canDeactivateGuard } from './shared/guard/can-deactivate.guard';
 // Reemplazamos placeholder EXTR por componente grid paginado
 import { AsientosContablesDinamico } from './modules/cnt/forms/asientos-contables-dinamico/asientos-contables-dinamico';
-import { AsientosContablesComponent } from './modules/cnt/forms/asientos-contables/asientos-contables.component';
+import { ListadoAsientosComponent } from './modules/cnt/forms/listado-asientos/listado-asientos.component';
 import { NaturalezaDeCuentasComponent } from './modules/cnt/forms/naturaleza-cuentas/naturaleza-cuentas.component';
 import { CargaAporteBackComponent } from './modules/crd/forms/archivos-petro/carga-aporte-back/carga-aporte-back.component';
 import { CargaAportesComponent } from './modules/crd/forms/archivos-petro/carga-aportes/carga-aportes.component';
@@ -118,19 +117,14 @@ export const routes: Routes = [
         canDeactivate: [canDeactivateGuard],
       },
       {
-        path: 'asientos',
-        component: AsientosComponent,
-        canDeactivate: [canDeactivateGuard],
-      },
-      {
-        path: 'asientos-contables',
-        component: AsientosContablesComponent,
-        canDeactivate: [canDeactivateGuard],
-      },
-      {
         path: 'procesos/asientos-dinamico',
         component: AsientosContablesDinamico,
         canDeactivate: [canDeactivateGuard],
+      },
+      {
+        path: 'listado-asientos',
+        component: ListadoAsientosComponent,
+        canActivate: [authGuard],
       },
       {
         path: 'mayorizacion-proceso',

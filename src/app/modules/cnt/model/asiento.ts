@@ -1,8 +1,8 @@
 import { Empresa } from '../../../shared/model/empresa';
+import { DetalleAsiento } from './detalle-asiento';
 import { Mayorizacion } from './mayorizacion';
 import { Periodo } from './periodo';
 import { TipoAsiento } from './tipo-asiento';
-import { DetalleAsiento } from './detalle-asiento';
 
 /**
  * Enumeración de estados del asiento contable
@@ -12,7 +12,7 @@ export enum EstadoAsiento {
   ACTIVO = 1,
   ANULADO = 2,
   REVERSADO = 3,
-  INCOMPLETO = 4
+  INCOMPLETO = 4,
 }
 
 export interface Asiento {
@@ -66,6 +66,7 @@ export interface CrearDetalleAsiento {
  * Interface para filtros de búsqueda de asientos
  */
 export interface FiltrosAsiento {
+  empresa?: number; // código de la empresa (requerido para filtrado)
   fechaDesde?: Date;
   fechaHasta?: Date;
   tipoAsiento?: number;

@@ -5,7 +5,7 @@ import {
   transferArrayItem,
 } from '@angular/cdk/drag-drop';
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import {
   FormArray,
   FormBuilder,
@@ -16,21 +16,30 @@ import {
 } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
+import { MatChipsModule } from '@angular/material/chips';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatTableModule } from '@angular/material/table';
+import { MatSort, MatSortModule } from '@angular/material/sort';
+import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { ActivatedRoute } from '@angular/router';
+import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
+import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
+import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { DetalleRubroService } from '../../../../shared/services/detalle-rubro.service';
+import { Asiento } from '../../model/asiento';
 import { PlanCuenta } from '../../model/plan-cuenta';
 import { TipoAsiento } from '../../model/tipo-asiento';
 import { AsientoService } from '../../service/asiento.service';
+import { DetalleAsientoService } from '../../service/detalle-asiento.service';
 import { PlanCuentaService } from '../../service/plan-cuenta.service';
 import { TipoAsientoService } from '../../service/tipo-asiento.service';
 
@@ -61,17 +70,24 @@ interface CuentaItem {
     MatSnackBarModule,
     MatProgressSpinnerModule,
     MatTableModule,
+    MatPaginatorModule,
+    MatSortModule,
+    MatChipsModule,
     DragDropModule,
   ],
   templateUrl: './asientos-contables-dinamico.html',
   styleUrl: './asientos-contables-dinamico.scss',
 })
 export class AsientosContablesDinamico implements OnInit {
+  @ViewChild(MatPaginator) paginator!: MatPaginator;
+  @ViewChild(MatSort) sort!: MatSort;
+
   form!: FormGroup;
 
   // Estado
   loading = false;
   codigoAsientoActual: number | null = null; // Para trackear si estamos editando
+  asientoActual: Asiento | null = null; // Para almacenar datos completos del asiento
 
   // Arrays para el grid con drag-and-drop
   cuentasDebeGrid: CuentaItem[] = [];
@@ -92,6 +108,10 @@ export class AsientosContablesDinamico implements OnInit {
   // Columnas para mat-table
   displayedColumns: string[] = ['cuenta', 'valor', 'acciones'];
 
+  // Grid de detalles del asiento
+  detalleDataSource = new MatTableDataSource<any>([]);
+  detalleColumns: string[] = ['cuenta', 'descripcion', 'debe', 'haber', 'tipo'];
+
   // Empresa del usuario logueado
   private get idSucursal(): number {
     return parseInt(localStorage.getItem('idSucursal') || '280', 10);
@@ -102,14 +122,32 @@ export class AsientosContablesDinamico implements OnInit {
     private detalleRubroService: DetalleRubroService,
     private tipoAsientoService: TipoAsientoService,
     private asientoService: AsientoService,
+    private detalleAsientoService: DetalleAsientoService,
     private planCuentaService: PlanCuentaService,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private route: ActivatedRoute
   ) {}
 
   ngOnInit(): void {
     this.initializeForm();
     this.cargarRubros();
     this.cargarCuentasPlan();
+    this.verificarCargaAsiento();
+  }
+
+  /**
+   * Verifica si se debe cargar un asiento existente desde query params
+   */
+  private verificarCargaAsiento(): void {
+    this.route.queryParams.subscribe((params) => {
+      const asientoId = params['id'];
+      const mode = params['mode'];
+
+      if (asientoId) {
+        console.log(`🔍 Cargando asiento ID: ${asientoId}, modo: ${mode || 'edit'}`);
+        this.cargarAsientoPorId(parseInt(asientoId, 10), mode);
+      }
+    });
   }
 
   private cargarRubros(): void {
@@ -170,13 +208,185 @@ export class AsientosContablesDinamico implements OnInit {
     });
   }
 
+  /**
+   * Carga un asiento existente por ID con sus detalles
+   */
+  private cargarAsientoPorId(id: number, mode?: string): void {
+    this.loading = true;
+    console.log(`📥 Cargando asiento ID: ${id}...`);
+
+    // Crear criterios usando selectByCriteria (POST) ya que getById (GET) retorna 405
+    const criterios = new DatosBusqueda();
+    criterios.asignaUnCampoSinTrunc(
+      TipoDatosBusqueda.LONG,
+      'codigo',
+      id.toString(),
+      TipoComandosBusqueda.IGUAL
+    );
+
+    // Cargar asiento principal usando selectByCriteria
+    this.asientoService.selectByCriteria([criterios]).subscribe({
+      next: (asientos: Asiento[] | null) => {
+        if (asientos && asientos.length > 0) {
+          const asiento = asientos[0]; // Tomar el primer resultado
+          console.log('🗂️ Asiento cargado:', asiento);
+          console.log('📅 Fecha Asiento raw:', asiento.fechaAsiento);
+          console.log('📅 Fecha Ingreso raw:', asiento.fechaIngreso);
+
+          this.codigoAsientoActual = asiento.codigo;
+          this.asientoActual = asiento; // Almacenar datos completos
+
+          // Procesar fechas con manejo de diferentes formatos
+          const fechaAsiento = this.parseFechaFromBackend(asiento.fechaAsiento);
+          const fechaIngreso = this.parseFechaFromBackend(asiento.fechaIngreso);
+
+          console.log('📅 Fecha Asiento procesada:', fechaAsiento);
+          console.log('📅 Fecha Ingreso procesada:', fechaIngreso);
+
+          // Llenar el formulario con los datos del asiento
+          this.form.patchValue({
+            numero: asiento.numero,
+            fechaAsiento: fechaAsiento,
+            fechaIngreso: fechaIngreso,
+            observaciones: asiento.observaciones || '',
+            tipo: asiento.tipoAsiento?.codigo || null,
+            estado: asiento.estado || 1,
+          });
+
+          // Forzar actualización de controles específicos y validez
+          const fechaAsientoControl = this.form.get('fechaAsiento');
+          const fechaIngresoControl = this.form.get('fechaIngreso');
+
+          fechaAsientoControl?.setValue(fechaAsiento);
+          fechaAsientoControl?.updateValueAndValidity();
+
+          fechaIngresoControl?.setValue(fechaIngreso);
+          fechaIngresoControl?.updateValueAndValidity();
+
+          // Verificar que el setValue funcionó
+          console.log('📝 Valores del formulario después de setValue y updateValueAndValidity:');
+          console.log('  - fechaAsiento:', this.form.get('fechaAsiento')?.value);
+          console.log('  - fechaIngreso:', this.form.get('fechaIngreso')?.value);
+          console.log('  - numero:', this.form.get('numero')?.value);
+          console.log('  - estado:', this.form.get('estado')?.value);
+
+          // Cargar detalles del asiento
+          this.cargarDetallesAsiento(id);
+
+          if (mode === 'view') {
+            // Deshabilitar formulario para solo lectura
+            this.form.disable();
+            this.showMessage('Asiento cargado en modo solo lectura', 'info');
+          } else {
+            this.showMessage(`Asiento ${asiento.numero} cargado para edición`, 'success');
+          }
+        } else {
+          console.warn('⚠️ No se encontró asiento con ID:', id);
+          this.loading = false;
+          this.showMessage(`No se encontró el asiento con ID ${id}`, 'error');
+        }
+      },
+      error: (err) => {
+        console.error('❌ Error al cargar asiento:', err);
+        this.loading = false;
+        this.showMessage('Error al cargar el asiento', 'error');
+      },
+    });
+  }
+
+  /**
+   * Carga los detalles de un asiento y los coloca en el grid dinámico
+   */
+  private cargarDetallesAsiento(asientoId: number): void {
+    console.log(`📋 Cargando detalles del asiento ID: ${asientoId}...`);
+
+    // Crear criterios usando el patrón DatosBusqueda como en listado-asientos
+    const criterioConsultaArray: Array<DatosBusqueda> = [];
+
+    // Filtro por asiento ID
+    const criterioAsiento = new DatosBusqueda();
+    criterioAsiento.asignaValorConCampoPadre(
+      TipoDatosBusqueda.LONG,
+      'asiento',
+      'codigo',
+      asientoId.toString(),
+      TipoComandosBusqueda.IGUAL
+    );
+    criterioConsultaArray.push(criterioAsiento);
+
+    // Ordenar por código del detalle
+    const criterioOrden = new DatosBusqueda();
+    criterioOrden.orderBy('codigo');
+    criterioConsultaArray.push(criterioOrden);
+
+    this.detalleAsientoService.selectByCriteria(criterioConsultaArray).subscribe({
+      next: (detalles: any) => {
+        console.log('🔍 Respuesta detalles del backend:', detalles);
+
+        // Limpiar grids actuales siempre
+        this.cuentasDebeGrid = [];
+        this.cuentasHaberGrid = [];
+
+        if (detalles && (Array.isArray(detalles) ? detalles.length > 0 : true)) {
+          // Procesar cada detalle
+          const detallesArray = Array.isArray(detalles) ? detalles : [detalles];
+
+          let detallesProcesados = 0;
+          detallesArray.forEach((detalle: any) => {
+            const cuenta = this.cuentasPlan.find((c) => c.codigo === detalle.planCuenta?.codigo);
+
+            if (cuenta) {
+              const item: CuentaItem = {
+                cuenta: cuenta,
+                valor: 0,
+                tipo: 'DEBE',
+                id: `item_${Date.now()}_${Math.random()}`,
+              };
+
+              if (detalle.valorDebe > 0) {
+                item.valor = detalle.valorDebe;
+                item.tipo = 'DEBE';
+                this.cuentasDebeGrid.push(item);
+                detallesProcesados++;
+              } else if (detalle.valorHaber > 0) {
+                item.valor = detalle.valorHaber;
+                item.tipo = 'HABER';
+                this.cuentasHaberGrid.push(item);
+                detallesProcesados++;
+              }
+            } else {
+              console.warn('⚠️ Cuenta no encontrada para detalle:', detalle);
+            }
+          });
+
+          console.log(`✅ ${detallesProcesados} detalles procesados en el grid dinámico`);
+          if (detallesProcesados === 0) {
+            this.showMessage('El asiento no tiene detalles válidos', 'info');
+          }
+        } else {
+          console.log('ℹ️ No se encontraron detalles para este asiento');
+          this.showMessage('Este asiento no tiene detalles asociados', 'info');
+        }
+
+        // Recalcular totales y actualizar grid de detalles siempre
+        this.calcularTotalesGrid();
+        this.loading = false;
+      },
+      error: (err) => {
+        console.error('❌ Error al cargar detalles del asiento:', err);
+        this.loading = false;
+        this.showMessage('Error al cargar los detalles del asiento', 'error');
+      },
+    });
+  }
+
   private initializeForm(): void {
     this.form = this.fb.group({
       tipo: ['', [Validators.required]],
       numero: ['', [Validators.required]],
       fechaAsiento: [new Date(), [Validators.required]],
       fechaIngreso: [{ value: new Date(), disabled: true }],
-      estado: [{ value: 'INCOMPLETO', disabled: true }],
+      estado: [4], // Campo habilitado y con valor numérico por defecto (4 = INCOMPLETO)
       observaciones: ['', [Validators.maxLength(500)]],
       cuentasDebe: this.fb.array([this.createCuentaGroup()]),
       cuentasHaber: this.fb.array([this.createCuentaGroup()]),
@@ -282,6 +492,9 @@ export class AsientosContablesDinamico implements OnInit {
     this.totalDebe = this.cuentasDebeGrid.reduce((sum, item) => sum + item.valor, 0);
     this.totalHaber = this.cuentasHaberGrid.reduce((sum, item) => sum + item.valor, 0);
     this.diferencia = Math.abs(this.totalDebe - this.totalHaber);
+
+    // Actualizar el grid de detalles
+    this.actualizarGridDetalles();
   }
 
   /**
@@ -371,6 +584,11 @@ export class AsientosContablesDinamico implements OnInit {
     // Construir objeto para enviar al backend
     const tipoAsientoSeleccionado = this.tiposAsientos.find((t) => t.id === tipo?.value);
 
+    // Obtener fechas del formulario
+    const fechaAsiento = this.form.get('fechaAsiento')?.value;
+    const fechaAsientoFormatted =
+      fechaAsiento instanceof Date ? this.formatDateToLocalDate(fechaAsiento) : fechaAsiento;
+
     const asientoBackend: any = {
       empresa: {
         codigo: this.idSucursal,
@@ -380,11 +598,11 @@ export class AsientosContablesDinamico implements OnInit {
         nombre: tipoAsientoSeleccionado?.nombre || '',
       },
       numero: parseInt(numero?.value, 10),
-      fechaAsiento: this.form.get('fechaAsiento')?.value,
-      observaciones: this.form.get('observaciones')?.value || '',
-      estado: 4, // INCOMPLETO
+      fechaAsiento: fechaAsientoFormatted,
+      observaciones: this.form.get('observaciones')?.value?.trim() || '',
+      estado: this.form.get('estado')?.value || this.asientoActual?.estado || 4, // Usar estado del formulario o del asiento existente
       nombreUsuario: localStorage.getItem('username') || 'sistema',
-      fechaIngreso: new Date(),
+      fechaIngreso: this.formatDateToLocalDate(new Date()),
       numeroMes: new Date().getMonth() + 1,
       numeroAnio: new Date().getFullYear(),
       moneda: 1,
@@ -392,14 +610,22 @@ export class AsientosContablesDinamico implements OnInit {
       rubroModuloClienteH: 0,
       rubroModuloSistemaP: 0,
       rubroModuloSistemaH: 0,
-      periodo: {
-        codigo: 1,
-      },
     };
 
-    // Si estamos actualizando, incluir el código del asiento
+    // Si estamos actualizando, incluir el código del asiento y período del asiento existente
     if (this.codigoAsientoActual) {
       asientoBackend.codigo = this.codigoAsientoActual;
+
+      // Usar el período del asiento existente si está disponible
+      if (this.asientoActual?.periodo) {
+        asientoBackend.periodo = {
+          codigo: this.asientoActual.periodo.codigo,
+        };
+        console.log('🗓️ Usando período del asiento existente:', this.asientoActual.periodo.codigo);
+      }
+    } else {
+      // Para asientos nuevos, omitir el período y dejar que el backend use el valor por defecto
+      console.log('🆕 Asiento nuevo - omitiendo período (backend usará valor por defecto)');
     }
 
     console.log(`📤 Enviando cabecera al backend (${accion}):`, asientoBackend);
@@ -521,9 +747,7 @@ export class AsientosContablesDinamico implements OnInit {
       rubroModuloClienteH: 0,
       rubroModuloSistemaP: 0,
       rubroModuloSistemaH: 0,
-      periodo: {
-        codigo: 1, // TODO: Obtener período actual activo
-      },
+      // Omitir período para asientos nuevos - el backend manejará el valor por defecto
     };
 
     console.log('📤 Enviando asiento al backend:', asientoBackend);
@@ -556,13 +780,76 @@ export class AsientosContablesDinamico implements OnInit {
   }
 
   /**
+   * Configurar paginador y ordenamiento después de la vista inicializada
+   */
+  ngAfterViewInit(): void {
+    this.detalleDataSource.paginator = this.paginator;
+    this.detalleDataSource.sort = this.sort;
+  }
+
+  /**
+   * Actualiza el grid de detalles combinando cuentas debe y haber
+   */
+  private actualizarGridDetalles(): void {
+    const detalles: any[] = [];
+
+    // Agregar cuentas debe
+    this.cuentasDebeGrid.forEach((cuenta) => {
+      detalles.push({
+        cuenta: cuenta.cuenta?.cuentaContable || '',
+        descripcion: cuenta.cuenta?.nombre || '',
+        debe: cuenta.valor,
+        haber: 0,
+        tipo: 'DEBE',
+      });
+    });
+
+    // Agregar cuentas haber
+    this.cuentasHaberGrid.forEach((cuenta) => {
+      detalles.push({
+        cuenta: cuenta.cuenta?.cuentaContable || '',
+        descripcion: cuenta.cuenta?.nombre || '',
+        debe: 0,
+        haber: cuenta.valor,
+        tipo: 'HABER',
+      });
+    });
+
+    this.detalleDataSource.data = detalles;
+  }
+
+  /**
    * Formatea una fecha a formato LocalDate (YYYY-MM-DD) para el backend
    */
   private formatDateToLocalDate(date: Date): string {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+
+    // Formato ISO completo para java.util.Date: YYYY-MM-DDTHH:mm:ss
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+  }
+
+  /**
+   * Muestra un mensaje usando MatSnackBar
+   */
+  private showMessage(message: string, type: 'success' | 'error' | 'info' = 'info'): void {
+    const panelClass =
+      type === 'success'
+        ? 'success-snackbar'
+        : type === 'error'
+        ? 'error-snackbar'
+        : 'info-snackbar';
+
+    this.snackBar.open(message, 'Cerrar', {
+      duration: 4000,
+      horizontalPosition: 'center',
+      verticalPosition: 'top',
+      panelClass: [panelClass],
+    });
   }
 
   limpiar(): void {
@@ -571,8 +858,72 @@ export class AsientosContablesDinamico implements OnInit {
     this.cuentasHaber.clear();
     this.cuentasDebe.push(this.createCuentaGroup());
     this.cuentasHaber.push(this.createCuentaGroup());
+
+    // Limpiar también los grids dinámicos
+    this.cuentasDebeGrid = [];
+    this.cuentasHaberGrid = [];
+
     this.calcularTotales();
+    this.calcularTotalesGrid();
+
     this.codigoAsientoActual = null; // Resetear código para nueva creación
+    this.asientoActual = null; // Resetear datos del asiento
     console.log('🧹 Formulario limpiado, listo para nuevo asiento');
+  }
+
+  /**
+   * Convierte un código de estado numérico a texto descriptivo
+   */
+  getEstadoTexto(estado: number): string {
+    const estados: { [key: number]: string } = {
+      1: 'CONFIRMADO',
+      2: 'ANULADO',
+      3: 'CONTABILIZADO',
+      4: 'INCOMPLETO',
+    };
+    return estados[estado] || 'DESCONOCIDO';
+  }
+  /**
+   * Parsea fechas del backend que pueden venir en diferentes formatos
+   */
+  private parseFechaFromBackend(fecha: any): Date {
+    if (!fecha) {
+      return new Date(); // Fecha actual por defecto
+    }
+
+    // Si ya es un Date válido
+    if (fecha instanceof Date && !isNaN(fecha.getTime())) {
+      return fecha;
+    }
+
+    // Si es un string, intenta parsearlo
+    if (typeof fecha === 'string') {
+      const parsedDate = new Date(fecha);
+      if (!isNaN(parsedDate.getTime())) {
+        return parsedDate;
+      }
+    }
+
+    // Si es un número (timestamp)
+    if (typeof fecha === 'number') {
+      return new Date(fecha);
+    }
+
+    // Si es un array [año, mes, día, hora, minuto, segundo] (formato Java LocalDateTime)
+    if (Array.isArray(fecha) && fecha.length >= 3) {
+      // Nota: Los meses en JavaScript son 0-indexados, pero Java puede enviar 1-indexados
+      const [year, month, day, hour = 0, minute = 0, second = 0] = fecha;
+      return new Date(year, month - 1, day, hour, minute, second);
+    }
+
+    // Si es un objeto con propiedades de fecha
+    if (typeof fecha === 'object' && fecha !== null) {
+      if (fecha.year && fecha.month && fecha.day) {
+        return new Date(fecha.year, fecha.month - 1, fecha.day);
+      }
+    }
+
+    console.warn('⚠️ Formato de fecha no reconocido:', fecha);
+    return new Date(); // Fallback a fecha actual
   }
 }

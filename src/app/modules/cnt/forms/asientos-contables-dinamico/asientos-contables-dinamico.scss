@@ -540,3 +540,123 @@
     animation: dropAnimation 0.3s ease;
   }
 }
+
+/* Grid de Detalles */
+.detalle-grid-card {
+  margin-top: 20px;
+  border: 1px solid #e0e0e0;
+
+  .mat-card-header {
+    padding: 16px;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #e0e0e0;
+    margin: -16px -16px 16px -16px;
+
+    .mat-card-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 1.1rem;
+      font-weight: 500;
+      color: #1976d2;
+      margin: 0;
+    }
+
+    .mat-card-subtitle {
+      color: #666;
+      font-size: 0.9rem;
+      margin: 4px 0 0 0;
+    }
+  }
+
+  .mat-card-content {
+    padding: 0;
+  }
+}
+
+.table-container {
+  border-radius: 4px;
+  overflow: hidden;
+
+  .detalle-table {
+    width: 100%;
+    background: white;
+
+    th,
+    td {
+      padding: 12px 16px;
+      text-align: left;
+    }
+
+    th {
+      background-color: #fafafa;
+      font-weight: 500;
+      font-size: 0.9rem;
+      color: #424242;
+      border-bottom: 2px solid #e0e0e0;
+    }
+
+    td {
+      border-bottom: 1px solid #f0f0f0;
+      font-size: 0.9rem;
+    }
+
+    tr:hover {
+      background-color: #f5f5f5;
+    }
+  }
+
+  .amount-cell {
+    text-align: right;
+    font-family: 'Roboto Mono', monospace;
+
+    .amount-highlight {
+      font-weight: 500;
+      color: #2e7d32;
+    }
+  }
+
+  // Chips para tipos
+  .tipo-debe {
+    background-color: #ffebee;
+    color: #d32f2f;
+    border: 1px solid #ffcdd2;
+  }
+
+  .tipo-haber {
+    background-color: #e8f5e9;
+    color: #388e3c;
+    border: 1px solid #c8e6c9;
+  }
+
+  .mat-chip {
+    font-size: 0.75rem;
+    min-height: 24px;
+    padding: 4px 8px;
+  }
+}
+
+// Paginador dentro del contenedor
+.table-container .mat-paginator {
+  border-top: 1px solid #e0e0e0;
+  background-color: #fafafa;
+}
+
+// Responsive updates
+@media (max-width: 768px) {
+  .detalle-table {
+    th,
+    td {
+      padding: 8px 12px;
+      font-size: 0.8rem;
+    }
+
+    .amount-cell {
+      min-width: 80px;
+    }
+  }
+
+  .detalle-grid-card .mat-card-header .mat-card-title {
+    font-size: 1rem;
+  }
+}

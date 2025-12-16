@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 import { Observable, of, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 
-import { Asiento, CrearAsiento, EstadoAsiento, FiltrosAsiento } from '../model/asiento';
+import { Asiento, CrearAsiento, EstadoAsiento } from '../model/asiento';
 import { ServiciosCnt } from '../service/ws-cnt';
 
 @Injectable({
@@ -31,12 +31,10 @@ export class AsientoService {
    * Obtener todos los asientos - usa POST ya que GET retorna 405
    */
   getAll(): Observable<Asiento[] | null> {
-      const wsGetById = '/getAll';
-      const url = `${this.baseUrl}/${wsGetById}`;
-      return this.http.get<Asiento[]>(url).pipe(
-        catchError(this.handleError)
-      );
-    }
+    const wsGetById = '/getAll';
+    const url = `${this.baseUrl}/${wsGetById}`;
+    return this.http.get<Asiento[]>(url).pipe(catchError(this.handleError));
+  }
 
   /**
    * Obtener asiento por ID
@@ -47,61 +45,16 @@ export class AsientoService {
       .pipe(catchError(this.handleError));
   }
 
-  /**
-   * Buscar asientos por criterios - IMPORTANTE: usa POST, no GET
-   * Backend requiere POST incluso para búsquedas
-   */
-  selectByCriteria(filtros: FiltrosAsiento): Observable<Asiento[]> {
-    const wsEndpoint = '/criteria';
-    const url = `${this.baseUrl}${wsEndpoint}`;
 
-    // Construir objeto de criterios para enviar en el body
-    const criteriosBody: any = {};
-
-    if (filtros.fechaDesde) {
-      criteriosBody.fechaDesde =
-        filtros.fechaDesde instanceof Date
-          ? filtros.fechaDesde.toISOString().split('T')[0]
-          : filtros.fechaDesde;
-    }
-
-    if (filtros.fechaHasta) {
-      criteriosBody.fechaHasta =
-        filtros.fechaHasta instanceof Date
-          ? filtros.fechaHasta.toISOString().split('T')[0]
-          : filtros.fechaHasta;
-    }
-
-    if (filtros.tipoAsiento) {
-      criteriosBody.tipoAsiento = filtros.tipoAsiento;
-    }
-
-    if (filtros.estado !== undefined && filtros.estado !== null) {
-      criteriosBody.estado = filtros.estado;
-    }
-
-    if (filtros.numero) {
-      criteriosBody.numero = filtros.numero;
-    }
-
-    if (filtros.observaciones) {
-      criteriosBody.observaciones = filtros.observaciones;
-    }
-
-    if (filtros.periodo) {
-      criteriosBody.periodo = filtros.periodo;
-    }
-
-    // POST con el body de criterios
-    return this.http.post<Asiento[]>(url, criteriosBody, this.httpOptions).pipe(
-      catchError((err: HttpErrorResponse) => {
-        console.error('[AsientoService] Error en selectByCriteria:', err);
-        // Si también falla POST, retornar array vacío en desarrollo
-        return of([]);
-      })
+  selectByCriteria(datos: any): Observable<Asiento[] | null> {
+    const wsGetById = '/selectByCriteria/';
+    const url = `${ServiciosCnt.RS_ASNT}${wsGetById}`;
+    return this.http.post<any>(url, datos, this.httpOptions).pipe(
+      catchError(this.handleError)
     );
   }
 
+  
   /**
    * Crear nuevo asiento
    */

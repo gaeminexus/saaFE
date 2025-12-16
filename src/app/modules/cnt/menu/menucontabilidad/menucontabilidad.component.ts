@@ -112,22 +112,16 @@ export class MenuContabilidadComponent {
       idPermiso: 811,
       children: [
         {
-          displayName: 'Asientos Contables',
-          iconName: 'receipt_long',
-          idPermiso: 830,
-          route: '/menucontabilidad/asientos',
-        },
-        {
-          displayName: 'Asientos Contables - Ingreso',
-          iconName: 'add_circle_outline',
-          idPermiso: 830,
-          route: '/menucontabilidad/asientos-contables',
-        },
-        {
           displayName: 'Asientos Dinámico',
           iconName: 'dynamic_form',
           idPermiso: 830,
           route: '/menucontabilidad/procesos/asientos-dinamico',
+        },
+        {
+          displayName: 'Listado de Asientos',
+          iconName: 'list_alt',
+          idPermiso: 830,
+          route: '/menucontabilidad/listado-asientos',
         },
         {
           displayName: 'Mayorización - Proceso',

@@ -1,0 +1,151 @@
+<div class="listado-asientos-container">
+  <!-- Header con título y acciones -->
+  <div class="page-header">
+    <div class="header-content">
+      <h1 class="page-title">
+        <mat-icon class="title-icon">receipt_long</mat-icon>
+        Listado de Asientos Contables
+      </h1>
+    </div>
+    <div class="header-actions">
+      <button
+        mat-icon-button
+        (click)="refrescar()"
+        matTooltip="Refrescar listado"
+        class="btn-refresh"
+      >
+        <mat-icon>refresh</mat-icon>
+      </button>
+      <button
+        mat-raised-button
+        color="primary"
+        class="btn-nuevo"
+        (click)="nuevoAsiento()"
+        matTooltip="Crear nuevo asiento"
+      >
+        <mat-icon>add</mat-icon>
+        Nuevo Asiento
+      </button>
+    </div>
+  </div>
+
+  <!-- Tabla de asientos -->
+  <mat-card class="table-card">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>view_list</mat-icon>
+        Asientos registrados
+      </mat-card-title>
+    </mat-card-header>
+
+    <mat-card-content>
+      <!-- Loading -->
+      <div class="loading-container" *ngIf="loading">
+        <mat-spinner diameter="50"></mat-spinner>
+        <p>Cargando asientos...</p>
+      </div>
+
+      <!-- Tabla -->
+      <div class="table-container" *ngIf="!loading">
+        <table mat-table [dataSource]="dataSource" matSort class="asientos-table">
+          <!-- Columna Número -->
+          <ng-container matColumnDef="numero">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header class="header-numero">Número</th>
+            <td mat-cell *matCellDef="let asiento" class="cell-numero">
+              <span class="badge-numero">{{ asiento.numero }}</span>
+            </td>
+          </ng-container>
+
+          <!-- Columna Fecha -->
+          <ng-container matColumnDef="fechaAsiento">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header class="header-fecha">Fecha</th>
+            <td mat-cell *matCellDef="let asiento" class="cell-fecha">
+              {{ asiento.fechaAsiento | date : 'dd/MM/yyyy' }}
+            </td>
+          </ng-container>
+
+          <!-- Columna Tipo Asiento -->
+          <ng-container matColumnDef="tipoAsiento">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header class="header-tipo">
+              Tipo Asiento
+            </th>
+            <td mat-cell *matCellDef="let asiento" class="cell-tipo">
+              {{ getTipoAsientoNombre(asiento.tipoAsiento) }}
+            </td>
+          </ng-container>
+
+          <!-- Columna Observaciones -->
+          <ng-container matColumnDef="observaciones">
+            <th mat-header-cell *matHeaderCellDef class="header-observaciones">Observaciones</th>
+            <td mat-cell *matCellDef="let asiento" class="cell-observaciones">
+              <span class="observaciones-text" [matTooltip]="asiento.observaciones">
+                {{ asiento.observaciones || 'Sin observaciones' }}
+              </span>
+            </td>
+          </ng-container>
+
+          <!-- Columna Estado -->
+          <ng-container matColumnDef="estado">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header class="header-estado">Estado</th>
+            <td mat-cell *matCellDef="let asiento" class="cell-estado">
+              <span
+                class="badge-estado"
+                [ngClass]="getEstadoBadgeClass(asiento.estado)"
+                [matTooltip]="getEstadoTexto(asiento.estado)"
+              >
+                {{ getEstadoTexto(asiento.estado) }}
+              </span>
+            </td>
+          </ng-container>
+
+          <!-- Columna Acciones -->
+          <ng-container matColumnDef="acciones">
+            <th mat-header-cell *matHeaderCellDef class="header-acciones">Acciones</th>
+            <td mat-cell *matCellDef="let asiento" class="cell-acciones">
+              <button
+                mat-icon-button
+                (click)="verDetalle(asiento)"
+                matTooltip="Ver detalle"
+                color="primary"
+              >
+                <mat-icon>visibility</mat-icon>
+              </button>
+              <button
+                mat-icon-button
+                (click)="editarAsiento(asiento)"
+                matTooltip="Editar asiento"
+                [disabled]="asiento.estado !== EstadoAsiento.INCOMPLETO"
+              >
+                <mat-icon>edit</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+
+          <!-- Filas -->
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns" class="table-row"></tr>
+        </table>
+
+        <!-- Mensaje cuando no hay datos -->
+        <div class="no-data-container" *ngIf="dataSource.data.length === 0">
+          <mat-icon class="no-data-icon">receipt_long</mat-icon>
+          <h3>No hay asientos contables</h3>
+          <p>Comience creando un nuevo asiento contable.</p>
+          <button mat-raised-button color="primary" (click)="nuevoAsiento()">
+            <mat-icon>add</mat-icon>
+            Crear Asiento
+          </button>
+        </div>
+
+        <!-- Paginador -->
+        <mat-paginator
+          *ngIf="dataSource.data.length > 0"
+          [pageSizeOptions]="[10, 25, 50, 100]"
+          showFirstLastButtons
+          aria-label="Seleccionar página de asientos"
+        >
+        </mat-paginator>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>
