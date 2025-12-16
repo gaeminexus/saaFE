@@ -324,25 +324,12 @@ export class PeriodoService {
   /**
    * Elimina un período (solo si está abierto y sin movimientos)
    */
-  delete(codigo: number): Observable<boolean> {
+  delete(codigo: number): Observable<string | null> {
     const wsDelete = '/' + codigo;
     const url = `${ServiciosCnt.RS_PRDO}${wsDelete}`;
-
-    return this.http.delete<boolean>(url, this.httpOptions).pipe(
-      catchError(() => {
-        // Simular eliminación en mock
-        const index = this.mockPeriodos.findIndex((p) => p.codigo === codigo);
-        if (index !== -1) {
-          const periodo = this.mockPeriodos[index];
-          // Solo permite eliminar períodos abiertos
-          if (periodo.estado === EstadoPeriodo.ABIERTO) {
-            this.mockPeriodos.splice(index, 1);
-            return of(true);
-          }
-        }
-        return of(false);
-      })
-    );
+    return this.http.delete<string>(url, this.httpOptions).pipe(
+          catchError(this.handleError)
+        );
   }
 
   /**
@@ -455,7 +442,8 @@ export class PeriodoService {
   private handleError(error: HttpErrorResponse): Observable<null> {
     if (+error.status === 200) {
       return of(null);
+    } else {
+      return throwError(() => error.error);
     }
-    return throwError(() => error?.error ?? error);
   }
 }
