@@ -395,8 +395,8 @@ export class AsientosContablesDinamico implements OnInit {
 
   private createCuentaGroup(): FormGroup {
     return this.fb.group({
-      cuenta: [null, [Validators.required]],
-      valor: [0, [Validators.required, Validators.min(0.01)]],
+      cuenta: [null], // No requerido - permite asientos incompletos
+      valor: [0], // No requerido - permite asientos incompletos
     });
   }
 
@@ -671,23 +671,28 @@ export class AsientosContablesDinamico implements OnInit {
     });
   }
 
-  insertar(): void {
-    console.log('🔍 Iniciando validación del asiento...');
+  /**
+   * Grabar los detalles del asiento (debe/haber) junto con la cabecera si es necesario
+   */
+  grabarDetalle(): void {
+    console.log('🔍 Iniciando grabado de detalle del asiento...');
     console.log('Form valid:', !this.form.invalid);
     console.log('Form value:', this.form.getRawValue());
     console.log('Diferencia:', this.diferencia);
 
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
-      console.error('❌ Formulario inválido. Revisa los campos requeridos.');
+    // Validar solo campos básicos (tipo, número, fecha) - permitir asientos incompletos
+    const tipoValido = this.form.get('tipo')?.valid;
+    const numeroValido = this.form.get('numero')?.valid;
+    const fechaValida = this.form.get('fechaAsiento')?.valid;
 
-      // Mostrar qué campos son inválidos
-      Object.keys(this.form.controls).forEach((key) => {
-        const control = this.form.get(key);
-        if (control?.invalid) {
-          console.error(`Campo inválido: ${key}`, control.errors);
-        }
-      });
+    if (!tipoValido || !numeroValido || !fechaValida) {
+      this.form.markAllAsTouched();
+      console.error('❌ Campos básicos inválidos. Revisa tipo, número y fecha.');
+
+      // Mostrar qué campos básicos son inválidos
+      if (!tipoValido) console.error('Campo inválido: tipo');
+      if (!numeroValido) console.error('Campo inválido: numero');
+      if (!fechaValida) console.error('Campo inválido: fechaAsiento');
 
       this.snackBar.open(
         'Por favor completa todos los campos requeridos: Tipo de Asiento y Número',
@@ -702,14 +707,15 @@ export class AsientosContablesDinamico implements OnInit {
       return;
     }
 
-    if (this.diferencia !== 0) {
+    // Validar cuentas que tienen datos (validación condicional)
+    const validacionCuentas = this.validarCuentasConDatos();
+    if (validacionCuentas.errors.length > 0) {
+      console.error('❌ Errores en cuentas con datos:', validacionCuentas.errors);
       this.snackBar.open(
-        `El asiento no está balanceado. Debe: $${this.totalDebe.toFixed(
-          2
-        )} - Haber: $${this.totalHaber.toFixed(2)}`,
+        `Errores en las cuentas: ${validacionCuentas.errors.join(', ')}`,
         'Cerrar',
         {
-          duration: 5000,
+          duration: 6000,
           horizontalPosition: 'center',
           verticalPosition: 'top',
           panelClass: ['error-snackbar'],
@@ -718,8 +724,43 @@ export class AsientosContablesDinamico implements OnInit {
       return;
     }
 
+    // Advertir si el asiento no está balanceado, pero permitir guardarlo como INCOMPLETO
+    if (this.diferencia !== 0) {
+      console.warn(
+        `⚠️ Asiento no balanceado. Debe: $${this.totalDebe.toFixed(
+          2
+        )} - Haber: $${this.totalHaber.toFixed(2)}`
+      );
+      this.snackBar.open(
+        `📝 Guardando asiento INCOMPLETO. Debe: $${this.totalDebe.toFixed(
+          2
+        )} - Haber: $${this.totalHaber.toFixed(2)}`,
+        'Cerrar',
+        {
+          duration: 4000,
+          horizontalPosition: 'center',
+          verticalPosition: 'top',
+          panelClass: ['warning-snackbar'],
+        }
+      );
+    }
+
     this.loading = true;
 
+    // Verificar si ya existe la cabecera del asiento (codigoAsientoActual no null)
+    if (this.codigoAsientoActual) {
+      console.log('📝 Asiento existente detectado. Grabando solo detalles...');
+      this.grabarSoloDetalles();
+    } else {
+      console.log('📝 Asiento nuevo. Grabando cabecera + detalles...');
+      this.grabarCabeceraYDetalles();
+    }
+  }
+
+  /**
+   * Graba cabecera y detalles para un asiento nuevo
+   */
+  private grabarCabeceraYDetalles(): void {
     // Construir objeto para enviar al backend
     const tipoAsientoSeleccionado = this.tiposAsientos.find(
       (t) => t.id === this.form.get('tipo')?.value
@@ -750,32 +791,212 @@ export class AsientosContablesDinamico implements OnInit {
       // Omitir período para asientos nuevos - el backend manejará el valor por defecto
     };
 
-    console.log('📤 Enviando asiento al backend:', asientoBackend);
+    console.log('📤 Enviando asiento completo al backend:', asientoBackend);
 
     this.asientoService.crearAsiento(asientoBackend).subscribe({
       next: (response) => {
         console.log('✅ Asiento creado exitosamente:', response);
-        this.loading = false;
-        this.snackBar.open(`✅ Asiento #${response.numero} creado exitosamente`, 'Cerrar', {
-          duration: 4000,
-          horizontalPosition: 'center',
-          verticalPosition: 'top',
-          panelClass: ['success-snackbar'],
-        });
-        // Limpiar formulario después de éxito
-        this.limpiar();
+        this.codigoAsientoActual = response.codigo; // Guardar código para futuros updates
+        this.asientoActual = response; // Guardar datos completos
+
+        // Ahora grabar los detalles
+        this.grabarDetallesDelAsiento(response.codigo);
       },
       error: (error) => {
-        console.error('❌ Error al crear asiento:', error);
+        console.error('❌ Error al crear cabecera del asiento:', error);
         this.loading = false;
         const errorMsg = error?.error?.message || error?.message || 'Error desconocido al guardar';
-        this.snackBar.open(`❌ Error al guardar asiento: ${errorMsg}`, 'Cerrar', {
+        this.snackBar.open(`❌ Error al crear asiento: ${errorMsg}`, 'Cerrar', {
           duration: 5000,
           horizontalPosition: 'center',
           verticalPosition: 'top',
           panelClass: ['error-snackbar'],
         });
       },
+    });
+  }
+
+  /**
+   * Graba solo los detalles para un asiento existente
+   */
+  private grabarSoloDetalles(): void {
+    if (!this.codigoAsientoActual) {
+      console.error('❌ No hay código de asiento para grabar detalles');
+      this.loading = false;
+      return;
+    }
+
+    console.log('📝 Grabando solo detalles del asiento ID:', this.codigoAsientoActual);
+    this.grabarDetallesDelAsiento(this.codigoAsientoActual);
+  }
+
+  /**
+   * Graba los detalles (cuentas debe/haber) de un asiento
+   */
+  private grabarDetallesDelAsiento(asientoId: number): void {
+    // Debug: Verificar dónde están los datos
+    console.log('🔍 Debug - Verificando fuentes de datos:');
+    console.log('   cuentasDebe.controls.length:', this.cuentasDebe.controls.length);
+    console.log('   cuentasHaber.controls.length:', this.cuentasHaber.controls.length);
+    console.log('   cuentasDebeGrid.length:', this.cuentasDebeGrid.length);
+    console.log('   cuentasHaberGrid.length:', this.cuentasHaberGrid.length);
+    console.log('   cuentasDebeGrid:', this.cuentasDebeGrid);
+    console.log('   cuentasHaberGrid:', this.cuentasHaberGrid);
+
+    // Recopilar detalles de debe y haber que tienen datos
+    const detallesParaGrabar: any[] = [];
+
+    // Procesar cuentas DEBE desde el GRID dinámico
+    this.cuentasDebeGrid.forEach((item, index) => {
+      if (item && item.cuenta && item.valor > 0) {
+        detallesParaGrabar.push({
+          asiento: {
+            codigo: asientoId,
+          },
+          planCuenta: {
+            codigo: item.cuenta.codigo,
+          },
+          valorDebe: item.valor,
+          valorHaber: 0,
+        });
+      }
+    });
+
+    // Procesar cuentas HABER desde el GRID dinámico
+    this.cuentasHaberGrid.forEach((item, index) => {
+      if (item && item.cuenta && item.valor > 0) {
+        detallesParaGrabar.push({
+          asiento: {
+            codigo: asientoId,
+          },
+          planCuenta: {
+            codigo: item.cuenta.codigo,
+          },
+          valorDebe: 0,
+          valorHaber: item.valor,
+        });
+      }
+    });
+
+    // FALLBACK: Si los grids están vacíos, intentar con FormArrays
+    if (detallesParaGrabar.length === 0) {
+      console.log('⚠️ Grids vacíos, intentando con FormArrays...');
+
+      // Procesar cuentas DEBE desde FormArrays
+      this.cuentasDebe.controls.forEach((control, index) => {
+        const cuenta = control.get('cuenta')?.value;
+        const valor = control.get('valor')?.value;
+
+        if (cuenta && valor > 0) {
+          detallesParaGrabar.push({
+            asiento: {
+              codigo: asientoId,
+            },
+            planCuenta: {
+              codigo: cuenta.codigo,
+            },
+            valorDebe: valor,
+            valorHaber: 0,
+          });
+        }
+      });
+
+      // Procesar cuentas HABER
+      this.cuentasHaber.controls.forEach((control, index) => {
+        const cuenta = control.get('cuenta')?.value;
+        const valor = control.get('valor')?.value;
+
+        if (cuenta && valor > 0) {
+          detallesParaGrabar.push({
+            asiento: {
+              codigo: asientoId,
+            },
+            planCuenta: {
+              codigo: cuenta.codigo,
+            },
+            valorDebe: 0,
+            valorHaber: valor,
+          });
+        }
+      });
+    } // Fin del fallback
+
+    // Log de los detalles que se van a grabar (versión simplificada)
+    console.log('📋 Detalles del asiento a grabar (campos básicos):');
+    console.log(`   Total de detalles: ${detallesParaGrabar.length}`);
+    detallesParaGrabar.forEach((detalle, index) => {
+      console.log(`   Detalle ${index + 1}:`, {
+        asiento: detalle.asiento.codigo,
+        planCuenta: detalle.planCuenta.codigo,
+        valorDebe: detalle.valorDebe,
+        valorHaber: detalle.valorHaber,
+      });
+    });
+    console.log('📋 Fin detalles a grabar');
+
+    if (detallesParaGrabar.length === 0) {
+      console.log('ℹ️ No hay detalles para grabar');
+      this.loading = false;
+      this.snackBar.open('No hay cuentas para grabar', 'Cerrar', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'top',
+        panelClass: ['warning-snackbar'],
+      });
+      return;
+    }
+
+    console.log('📤 Enviando detalles al backend:', detallesParaGrabar);
+
+    // Grabar cada detalle usando el servicio correspondiente
+    let detallesGrabados = 0;
+    let erroresDetalle: string[] = [];
+
+    detallesParaGrabar.forEach((detalle) => {
+      this.detalleAsientoService.add(detalle).subscribe({
+        next: (response: any) => {
+          detallesGrabados++;
+          console.log(`✅ Detalle ${detallesGrabados} grabado:`, response);
+
+          // Si todos los detalles se grabaron exitosamente
+          if (detallesGrabados === detallesParaGrabar.length) {
+            this.loading = false;
+            this.snackBar.open(
+              `✅ ${detallesGrabados} detalles del asiento grabados exitosamente`,
+              'Cerrar',
+              {
+                duration: 4000,
+                horizontalPosition: 'center',
+                verticalPosition: 'top',
+                panelClass: ['success-snackbar'],
+              }
+            );
+            // Recargar detalles para mostrar los cambios
+            this.cargarDetallesAsiento(asientoId);
+          }
+        },
+        error: (error: any) => {
+          erroresDetalle.push(`Error en detalle: ${error?.message || 'Desconocido'}`);
+          console.error('❌ Error al grabar detalle:', error);
+
+          // Si ya procesamos todos los detalles (exitosos + errores)
+          if (detallesGrabados + erroresDetalle.length === detallesParaGrabar.length) {
+            this.loading = false;
+            if (erroresDetalle.length > 0) {
+              this.snackBar.open(
+                `❌ Errores al grabar detalles: ${erroresDetalle.join(', ')}`,
+                'Cerrar',
+                {
+                  duration: 6000,
+                  horizontalPosition: 'center',
+                  verticalPosition: 'top',
+                  panelClass: ['error-snackbar'],
+                }
+              );
+            }
+          }
+        },
+      });
     });
   }
 
@@ -883,6 +1104,53 @@ export class AsientosContablesDinamico implements OnInit {
     };
     return estados[estado] || 'DESCONOCIDO';
   }
+  /**
+   * Valida que las cuentas con datos estén completas (cuenta + valor > 0)
+   */
+  private validarCuentasConDatos(): { debe: boolean; haber: boolean; errors: string[] } {
+    const errors: string[] = [];
+    let debeValido = true;
+    let haberValido = true;
+
+    // Validar cuentas DEBE que tienen datos
+    this.cuentasDebe.controls.forEach((control, index) => {
+      const cuenta = control.get('cuenta')?.value;
+      const valor = control.get('valor')?.value;
+
+      if (cuenta || valor > 0) {
+        // Si tiene cuenta o valor, ambos deben estar completos
+        if (!cuenta) {
+          errors.push(`Cuenta DEBE ${index + 1}: falta seleccionar cuenta`);
+          debeValido = false;
+        }
+        if (!valor || valor <= 0) {
+          errors.push(`Cuenta DEBE ${index + 1}: falta valor válido`);
+          debeValido = false;
+        }
+      }
+    });
+
+    // Validar cuentas HABER que tienen datos
+    this.cuentasHaber.controls.forEach((control, index) => {
+      const cuenta = control.get('cuenta')?.value;
+      const valor = control.get('valor')?.value;
+
+      if (cuenta || valor > 0) {
+        // Si tiene cuenta o valor, ambos deben estar completos
+        if (!cuenta) {
+          errors.push(`Cuenta HABER ${index + 1}: falta seleccionar cuenta`);
+          haberValido = false;
+        }
+        if (!valor || valor <= 0) {
+          errors.push(`Cuenta HABER ${index + 1}: falta valor válido`);
+          haberValido = false;
+        }
+      }
+    });
+
+    return { debe: debeValido, haber: haberValido, errors };
+  }
+
   /**
    * Parsea fechas del backend que pueden venir en diferentes formatos
    */

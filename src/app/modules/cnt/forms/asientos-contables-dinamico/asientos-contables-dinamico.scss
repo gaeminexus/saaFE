@@ -660,3 +660,21 @@
     font-size: 1rem;
   }
 }
+
+// Estilos globales para snackbars
+:host ::ng-deep {
+  .error-snackbar {
+    background-color: #f44336 !important;
+    color: white !important;
+  }
+
+  .warning-snackbar {
+    background-color: #ff9800 !important;
+    color: white !important;
+  }
+
+  .success-snackbar {
+    background-color: #4caf50 !important;
+    color: white !important;
+  }
+}

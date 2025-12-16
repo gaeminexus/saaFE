@@ -330,11 +330,15 @@
             mat-raised-button
             color="primary"
             type="button"
-            (click)="insertar()"
-            [disabled]="form.invalid || diferencia !== 0"
+            (click)="grabarDetalle()"
+            [disabled]="
+              !form.get('tipo')?.valid ||
+              !form.get('numero')?.valid ||
+              !form.get('fechaAsiento')?.valid
+            "
           >
             <mat-icon>save</mat-icon>
-            Insertar Asiento
+            Grabar Detalle
           </button>
 
           <button mat-raised-button type="button" (click)="limpiar()">
