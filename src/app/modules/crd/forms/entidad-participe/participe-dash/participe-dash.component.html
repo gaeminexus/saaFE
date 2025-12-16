@@ -81,6 +81,18 @@
             <mat-icon>badge</mat-icon>
             {{ entidadEncontrada.numeroIdentificacion }}
           </span>
+          @if (entidadEncontrada.telefono || entidadEncontrada.movil) {
+          <span class="info-item">
+            <mat-icon>phone</mat-icon>
+            {{ entidadEncontrada.telefono || entidadEncontrada.movil }}
+          </span>
+          }
+          @if (entidadEncontrada.correoPersonal || entidadEncontrada.correoInstitucional) {
+          <span class="info-item">
+            <mat-icon>email</mat-icon>
+            {{ entidadEncontrada.correoPersonal || entidadEncontrada.correoInstitucional }}
+          </span>
+          }
           @if (entidadEncontrada.nombreComercial && entidadEncontrada.razonSocial !==
           entidadEncontrada.nombreComercial) {
           <span class="info-item">
@@ -113,6 +125,35 @@
               <span class="item-value">{{ participeEncontrado.cargoActual || 'N/A' }}</span>
             </div>
           </div>
+
+          @if (direccionesEntidad.length > 0) {
+            @for (direccion of direccionesEntidad; track direccion.codigo) {
+              <div class="participe-item">
+                <mat-icon>location_on</mat-icon>
+                <div class="item-content">
+                  <span class="item-label">Dirección {{ $index + 1 }}</span>
+                  <span class="item-value">{{ direccion.descripcion }}</span>
+                  @if (direccion.referencia) {
+                    <span class="item-detail">{{ direccion.referencia }}</span>
+                  }
+                  @if (direccion.telefono || direccion.celular) {
+                    <span class="item-detail">
+                      <mat-icon inline>phone</mat-icon>
+                      {{ direccion.telefono || direccion.celular }}
+                    </span>
+                  }
+                </div>
+              </div>
+            }
+          } @else {
+            <div class="participe-item">
+              <mat-icon>location_on</mat-icon>
+              <div class="item-content">
+                <span class="item-label">Dirección</span>
+                <span class="item-value">N/A</span>
+              </div>
+            </div>
+          }
 
           <div class="participe-item total-ingresos">
             <mat-icon>account_balance_wallet</mat-icon>
@@ -406,12 +447,20 @@
         </mat-card-title>
       </mat-card-header>
       <mat-card-content>
-        <table
-          mat-table
-          [dataSource]="detallesPrestamo.get(prestamoSeleccionado.codigo)!"
-          matSort
-          class="detalle-table"
-        >
+        <div class="table-wrapper" [class.sorting]="isOrdenando">
+          @if (isOrdenando) {
+          <div class="sorting-overlay">
+            <mat-spinner diameter="30"></mat-spinner>
+            <span>Ordenando...</span>
+          </div>
+          }
+          <table
+            mat-table
+            [dataSource]="detallesPrestamo.get(prestamoSeleccionado.codigo)!"
+            matSort
+            (matSortChange)="onSortChange()"
+            class="detalle-table"
+          >
           <!-- Columna Cuota -->
           <ng-container matColumnDef="numeroCuota">
             <th mat-header-cell *matHeaderCellDef mat-sort-header>Cuota</th>
@@ -502,6 +551,7 @@
           <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
           <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
         </table>
+        </div>
       </mat-card-content>
     </mat-card>
     }
@@ -614,7 +664,14 @@
         </div>
 
         <!-- Tabla de aportes del tipo -->
-        <table mat-table [dataSource]="tipoAporte.aportes" matSort class="detalle-table tipo-table">
+        <div class="table-wrapper" [class.sorting]="isOrdenando">
+          @if (isOrdenando) {
+          <div class="sorting-overlay">
+            <mat-spinner diameter="30"></mat-spinner>
+            <span>Ordenando...</span>
+          </div>
+          }
+          <table mat-table [dataSource]="tipoAporte.aportes" matSort (matSortChange)="onSortChange()" class="detalle-table tipo-table">
           <!-- Columna Fecha Transacción -->
           <ng-container matColumnDef="fechaTransaccion">
             <th mat-header-cell *matHeaderCellDef mat-sort-header>Fecha</th>
@@ -706,6 +763,7 @@
             "
           ></tr>
         </table>
+        </div>
       </mat-card-content>
       }
     </mat-card>

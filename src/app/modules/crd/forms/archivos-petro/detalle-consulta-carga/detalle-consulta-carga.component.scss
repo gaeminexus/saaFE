@@ -357,8 +357,18 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
                     .title-right {
                       flex: 0 0 auto;
                       display: flex;
+                      align-items: center;
                       justify-content: flex-end;
+                      gap: 0.5rem;
                       margin-right: 2rem;
+
+                      .export-csv-button {
+                        mat-icon {
+                          font-size: 1.25rem;
+                          width: 1.25rem;
+                          height: 1.25rem;
+                        }
+                      }
 
                       .registro-count {
                         color: $saa-text-secondary;

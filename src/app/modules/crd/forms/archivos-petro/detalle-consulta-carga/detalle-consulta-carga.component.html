@@ -120,6 +120,15 @@
                     </span>
                   </div>
                   <div class="title-right">
+                    <button
+                      mat-icon-button
+                      (click)="exportarAporteACSV(aporte.codigoAporte, $event)"
+                      matTooltip="Exportar a CSV"
+                      class="export-csv-button"
+                      color="accent"
+                    >
+                      <mat-icon>download</mat-icon>
+                    </button>
                     <span class="registro-count">{{ aporte.totalParticipes }} partícipes</span>
                   </div>
                 </mat-panel-title>

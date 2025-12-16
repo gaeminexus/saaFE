@@ -13,8 +13,10 @@ export class ExportService {
   /**
    * Exporta datos a formato CSV
    */
-  exportToCSV(data: any[], filename: string, headers: string[]): void {
-    const csvContent = this.convertToCSV(data, headers);
+  exportToCSV(data: any[], filename: string, headers: string[], dataKeys?: string[]): void {
+    const csvContent = dataKeys
+      ? this.convertToCSVWithKeys(data, headers, dataKeys)
+      : this.convertToCSV(data, headers);
     const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
 
@@ -110,7 +112,34 @@ export class ExportService {
   }
 
   /**
-   * Convierte array de objetos a formato CSV
+   * Convierte array de objetos a formato CSV usando data keys
+   */
+  private convertToCSVWithKeys(data: any[], headers: string[], dataKeys: string[]): string {
+    const csvArray = [];
+
+    // Agregar headers
+    csvArray.push(headers.join(','));
+
+    // Agregar filas de datos
+    data.forEach(item => {
+      const row = dataKeys.map(key => {
+        const value = this.getNestedValue(item, key);
+        // Formatear valor
+        const formattedValue = this.formatCSVValue(value);
+        // Escapar comillas y envolver en comillas si contiene comas
+        if (formattedValue && (formattedValue.includes(',') || formattedValue.includes('"'))) {
+          return `"${formattedValue.replace(/"/g, '""')}"`;
+        }
+        return formattedValue;
+      });
+      csvArray.push(row.join(','));
+    });
+
+    return csvArray.join('\n');
+  }
+
+  /**
+   * Convierte array de objetos a formato CSV (método original para compatibilidad)
    */
   private convertToCSV(data: any[], headers: string[]): string {
     const csvArray = [];
@@ -132,6 +161,22 @@ export class ExportService {
     });
 
     return csvArray.join('\n');
+  }
+
+  /**
+   * Formatea un valor para CSV
+   */
+  private formatCSVValue(value: any): string {
+    if (value === null || value === undefined) {
+      return '';
+    }
+    if (typeof value === 'number') {
+      return value.toString();
+    }
+    if (typeof value === 'boolean') {
+      return value ? 'Sí' : 'No';
+    }
+    return String(value);
   }
 
   /**

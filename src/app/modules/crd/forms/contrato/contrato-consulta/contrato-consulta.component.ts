@@ -219,7 +219,9 @@ export class ContratoConsultaComponent implements OnInit {
       '% Individual': c.porcentajeAporteIndividual || 0, '% Jubilación': c.porcentajeAporteJubilacion || 0,
       Estado: c.estado || 'Activo'
     }));
-    this.exportService.exportToCSV(rows, 'contratos', Object.keys(rows[0] || {}));
+    const headers = ['Código', 'Cód. Entidad', 'Fecha Inicio', 'Fecha Fin', 'Filial', '% Individual', '% Jubilación', 'Estado'];
+    const dataKeys = ['Código', 'Cód. Entidad', 'Fecha Inicio', 'Fecha Fin', 'Filial', '% Individual', '% Jubilación', 'Estado'];
+    this.exportService.exportToCSV(rows, 'contratos', headers, dataKeys);
   }
 
   exportarPDF(): void {

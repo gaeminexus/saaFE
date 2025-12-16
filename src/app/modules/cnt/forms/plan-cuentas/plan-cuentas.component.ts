@@ -574,7 +574,7 @@ export class PlanCuentasComponent implements OnInit {
       level: item.level || 0
     }));
 
-    this.exportService.exportToCSV(transformedData, filename, headers);
+    this.exportService.exportToCSV(transformedData, filename, headers, dataKeys);
   }
 
   public exportToPDF(): void {

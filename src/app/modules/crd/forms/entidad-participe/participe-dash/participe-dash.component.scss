@@ -1709,6 +1709,46 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
   }
 }
 
+// Wrapper para tablas con overlay de ordenamiento
+.table-wrapper {
+  position: relative;
+
+  &.sorting {
+    .detalle-table {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+  }
+}
+
+.sorting-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1000;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 1.5rem 2rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+
+  mat-spinner {
+    ::ng-deep circle {
+      stroke: $saa-primary;
+    }
+  }
+
+  span {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: $saa-text-primary;
+  }
+}
+
 // Tabla de pagos anidada
 .pagos-table {
   width: 100%;

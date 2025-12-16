@@ -13,6 +13,7 @@ import { PrestamoPagosDialogComponent } from '../../../dialog/prestamo-pagos-dia
 import { Aporte } from '../../../model/aporte';
 import { Contrato } from '../../../model/contrato';
 import { DetallePrestamo } from '../../../model/detalle-prestamo';
+import { Direccion } from '../../../model/direccion';
 import { Entidad } from '../../../model/entidad';
 import { EstadoPrestamo } from '../../../model/estado-prestamo';
 import { PagoPrestamo } from '../../../model/pago-prestamo';
@@ -32,6 +33,7 @@ import { AporteService } from '../../../service/aporte.service';
 import { AuditoriaService } from '../../../service/auditoria.service';
 import { ContratoService } from '../../../service/contrato.service';
 import { DetallePrestamoService } from '../../../service/detalle-prestamo.service';
+import { DireccionService } from '../../../service/direccion.service';
 import { EntidadService } from '../../../service/entidad.service';
 import { EstadoPrestamoService } from '../../../service/estado-prestamo.service';
 import { PagoPrestamoService } from '../../../service/pago-prestamo.service';
@@ -75,6 +77,7 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
   entidadEncontrada: Entidad | null = null;
   contratoEncontrado: Contrato | null = null;
   participeEncontrado: Participe | null = null;
+  direccionesEntidad: Direccion[] = [];
 
   // Dashboard
   prestamos: Prestamo[] = [];
@@ -115,6 +118,7 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
   // Loading states
   isLoadingDetalles: boolean = false;
   isLoadingPagos: boolean = false;
+  isOrdenando: boolean = false;
   isLoadingAportes: boolean = false;
   isLoadingDashboard: boolean = false;
 
@@ -129,6 +133,7 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
     private participeService: ParticipeService,
     private estadoPrestamoService: EstadoPrestamoService,
     private auditoriaService: AuditoriaService,
+    private direccionService: DireccionService,
     private exportService: ExportService,
     private snackBar: MatSnackBar,
     private dialog: MatDialog,
@@ -179,27 +184,30 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
 
     // Validar que existan sorts disponibles
     if (sortsArray.length === 0) {
-      console.log('No hay sorts disponibles aún');
       return;
     }
 
-    // Asignar sort a tabla de préstamos (primera tabla)
-    if (this.prestamoSeleccionado?.codigo && sortsArray[0]) {
+    let sortIndex = 0;
+
+    // Asignar sort a tabla de préstamos (primera tabla, solo si estamos en esa vista)
+    if (this.vistaActual === 'detallePrestamos' && this.prestamoSeleccionado?.codigo) {
       const dataSource = this.detallesPrestamo.get(this.prestamoSeleccionado.codigo);
-      if (dataSource) {
-        dataSource.sort = sortsArray[0];
-        console.log('Sort asignado a tabla de préstamo');
+      if (dataSource && sortsArray[sortIndex]) {
+        dataSource.sort = sortsArray[sortIndex];
+        sortIndex++;
       }
     }
 
-    // Asignar sorts a tablas de aportes (resto de tablas)
-    this.aportesPorTipo.forEach((tipo, index) => {
-      const sortIndex = this.prestamoSeleccionado ? index + 1 : index;
-      if (sortsArray[sortIndex]) {
-        tipo.aportes.sort = sortsArray[sortIndex];
-        console.log(`Sort asignado a tabla de aporte tipo: ${tipo.tipoAporte}`);
-      }
-    });
+    // Asignar sorts a tablas de aportes (solo a las expandidas)
+    if (this.vistaActual === 'detalleAportes') {
+      this.aportesPorTipo.forEach((tipo) => {
+        // Solo asignar sort si el panel está expandido
+        if (tipo.expandido && sortsArray[sortIndex]) {
+          tipo.aportes.sort = sortsArray[sortIndex];
+          sortIndex++;
+        }
+      });
+    }
   }
 
   /**
@@ -207,6 +215,17 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
    */
   regresarAPantallaAnterior(): void {
     this.router.navigate(['/menucreditos/entidad-consulta']);
+  }
+
+  /**
+   * Maneja el evento de cambio de ordenamiento en las tablas
+   */
+  onSortChange(): void {
+    this.isOrdenando = true;
+    // Dar tiempo para que se complete el ordenamiento
+    setTimeout(() => {
+      this.isOrdenando = false;
+    }, 500);
   }
 
   /**
@@ -1532,7 +1551,7 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
 
     // Contador para saber cuándo terminan todas las cargas
     let loadedCount = 0;
-    const totalToLoad = 4; // contrato, partícipe, préstamos, aportes
+    const totalToLoad = 5; // contrato, partícipe, préstamos, aportes, direcciones
 
     const checkAllLoaded = () => {
       loadedCount++;
@@ -1552,6 +1571,9 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
 
     // Cargar aportes
     this.cargarAportes(checkAllLoaded);
+
+    // Cargar direcciones
+    this.cargarDirecciones(checkAllLoaded);
   }
 
   cargarContrato(onComplete?: () => void): void {
@@ -1686,7 +1708,6 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
         }
 
         if (Array.isArray(prestamos)) {
-          console.log('Préstamos cargados:', prestamos);
           // Normalizar estadoPrestamo: si viene como número, convertir a objeto
           // Mapear idSistema a idAsoprep si el backend lo envía con nombre diferente
           const prestamosNormalizados = (prestamos as any[]).map((p) => {
@@ -1792,6 +1813,30 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
     });
   }
 
+  cargarDirecciones(onComplete?: () => void): void {
+    if (!this.entidadEncontrada || !this.entidadEncontrada.codigo) {
+      if (onComplete) onComplete();
+      return;
+    }
+
+    this.direccionService.getByParent(this.entidadEncontrada.codigo).subscribe({
+      next: (direcciones: any) => {
+        if (direcciones && Array.isArray(direcciones) && direcciones.length > 0) {
+          // Tomar solo la primera dirección
+          this.direccionesEntidad = [direcciones[0]];
+        } else {
+          this.direccionesEntidad = [];
+        }
+        if (onComplete) onComplete();
+      },
+      error: (error) => {
+        console.error('Error al cargar direcciones:', error);
+        this.direccionesEntidad = [];
+        if (onComplete) onComplete();
+      },
+    });
+  }
+
   agruparAportesPorTipo(): void {
     const tiposMap = new Map<number, AportesPorTipo>();
 
@@ -1840,6 +1885,11 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
     setTimeout(() => this.asignarSorts(), 100);
   }  toggleTipoAporte(tipo: AportesPorTipo): void {
     tipo.expandido = !tipo.expandido;
+
+    // Si se expandió, asignar sorts después de renderizar
+    if (tipo.expandido) {
+      setTimeout(() => this.asignarSorts(), 100);
+    }
   }
 
   procesarPrestamosPorTipo(prestamos: Prestamo[]): void {
@@ -1992,23 +2042,14 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
         // Enviar todo el registro actualizado
         this.prestamoService.update(prestamoParaBackend).subscribe({
           next: (respuesta) => {
-            console.log('✅ Respuesta del backend (update préstamo):', respuesta);
-            console.log('✅ Estado en respuesta:', respuesta?.estadoPrestamo);
-            console.log('✅ Tipo de estadoPrestamo:', typeof respuesta?.estadoPrestamo);
-
             // Actualizar en la lista local con el objeto completo del estado
             const index = this.prestamos.findIndex((p) => p.codigo === prestamo.codigo);
             if (index !== -1) {
-              console.log('🔄 Actualizando préstamo en índice:', index);
-              console.log('🔄 Estado anterior en lista:', this.prestamos[index].estadoPrestamo);
-
               this.prestamos[index].estadoPrestamo = {
                 codigo: nuevoEstadoCodigo,
                 nombre: this.obtenerNombreEstadoPrestamo(nuevoEstadoCodigo),
               } as EstadoPrestamo;
               this.prestamos = [...this.prestamos]; // Trigger change detection
-
-              console.log('🔄 Estado nuevo en lista:', this.prestamos[index].estadoPrestamo);
             } else {
               console.warn('⚠️ No se encontró el préstamo en la lista local');
             }

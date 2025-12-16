@@ -33,6 +33,14 @@ export class DireccionService {
     );
   }
 
+  getByParent(id: number): Observable<Direccion[] | null> {
+    const wsGetById = '/getByParent/';
+    const url = `${ServiciosCrd.RS_DRCC}${wsGetById}${id}`;
+    return this.http.get<Direccion[]>(url).pipe(
+      catchError(this.handleError)
+    );
+  }
+
   /** POST: add new record */
   add(datos: any): Observable<Direccion | null> {
     return this.http.post<Direccion>(ServiciosCrd.RS_DRCC, datos, this.httpOptions).pipe(

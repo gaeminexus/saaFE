@@ -375,10 +375,14 @@ export class PagoCuotasComponent implements OnInit {
       Estado: p.estadoPrestamo?.nombre || 'Sin Estado',
     }));
 
+    const headers = ['Código', 'Producto', 'Fecha', 'Monto Solicitado', 'Total Pagado', 'Saldo Total', 'Estado'];
+    const dataKeys = ['Código', 'Producto', 'Fecha', 'Monto Solicitado', 'Total Pagado', 'Saldo Total', 'Estado'];
+
     this.exportService.exportToCSV(
       datos,
       `prestamos_${this.entidadEncontrada?.numeroIdentificacion}_${new Date().getTime()}`,
-      Object.keys(datos[0])
+      headers,
+      dataKeys
     );
   }
 

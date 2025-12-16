@@ -484,6 +484,15 @@ export class PlanGridComponent implements OnInit, AfterViewInit {
       'Fecha Desactivación',
       'Estado',
     ];
+    const dataKeys = [
+      'codigo',
+      'numero',
+      'descripcion',
+      'tipo',
+      'fechaCreacion',
+      'fechaDesactivacion',
+      'estado',
+    ];
     const filename = `plan-grid-${new Date().toISOString().split('T')[0]}.csv`;
 
     const transformedData = exportData.map((item) => ({
@@ -496,7 +505,7 @@ export class PlanGridComponent implements OnInit, AfterViewInit {
       estado: this.estadoLabel(item.estado),
     }));
 
-    this.exportService.exportToCSV(transformedData, filename, headers);
+    this.exportService.exportToCSV(transformedData, filename, headers, dataKeys);
   }
 
   public exportToPDF(): void {
