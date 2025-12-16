@@ -4,7 +4,6 @@ import { CentroArbolComponent } from './modules/cnt/forms/centro-arbol/centro-ar
 import { CentroGridComponent } from './modules/cnt/forms/centro-grid/centro-grid.component';
 import { MayorizacionProcesoComponent } from './modules/cnt/forms/mayorizacion-proceso/mayorizacion-proceso.component';
 import { PeriodoContableComponent } from './modules/cnt/forms/periodo-contable/periodo-contable.component';
-import { PeriodosComponent } from './modules/cnt/forms/periodos/periodos.component';
 import { PlanArbolComponent } from './modules/cnt/forms/plan-arbol/plan-arbol.component';
 import { PlanGridComponent } from './modules/cnt/forms/plan-grid/plan-grid.component';
 import { PlantillaGeneralComponent } from './modules/cnt/forms/plantilla-general/plantilla-general.component';
@@ -117,10 +116,6 @@ export const routes: Routes = [
         path: 'periodo-contable',
         component: PeriodoContableComponent,
         canDeactivate: [canDeactivateGuard],
-      },
-      {
-        path: 'periodos',
-        component: PeriodosComponent,
       },
       {
         path: 'asientos',

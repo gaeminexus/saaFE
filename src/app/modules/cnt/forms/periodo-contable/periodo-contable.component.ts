@@ -1,24 +1,31 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
-import { MatTableModule, MatTableDataSource } from '@angular/material/table';
-import { MatPaginatorModule, MatPaginator } from '@angular/material/paginator';
-import { MatSortModule, MatSort } from '@angular/material/sort';
-import { MatIconModule } from '@angular/material/icon';
+import { Component, OnInit, ViewChild } from '@angular/core';
+import {
+  FormBuilder,
+  FormGroup,
+  FormsModule,
+  ReactiveFormsModule,
+  Validators,
+} from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
-import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatInputModule } from '@angular/material/input';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatSelectModule } from '@angular/material/select';
 import { MatCardModule } from '@angular/material/card';
-import { MatDialogModule } from '@angular/material/dialog';
-import { MatChipsModule } from '@angular/material/chips';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatCheckboxModule } from '@angular/material/checkbox';
-import { FormsModule } from '@angular/forms';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
 
-import { Periodo, EstadoPeriodo } from '../../model/periodo';
+import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
+import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSelectModule } from '@angular/material/select';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatSort, MatSortModule } from '@angular/material/sort';
+import { MatTableDataSource, MatTableModule } from '@angular/material/table';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { ConfirmDialogComponent } from '../../../../shared/basics/confirm-dialog/confirm-dialog.component';
+
+import { EstadoPeriodo, Periodo } from '../../model/periodo';
 import { PeriodoService } from '../../service/periodo.service';
 
 @Component({
@@ -42,10 +49,10 @@ import { PeriodoService } from '../../service/periodo.service';
     MatChipsModule,
     MatSnackBarModule,
     MatProgressSpinnerModule,
-    MatCheckboxModule
+    MatCheckboxModule,
   ],
   templateUrl: './periodo-contable.component.html',
-  styleUrl: './periodo-contable.component.scss'
+  styleUrl: './periodo-contable.component.scss',
 })
 export class PeriodoContableComponent implements OnInit {
   @ViewChild(MatPaginator) paginator!: MatPaginator;
@@ -54,7 +61,15 @@ export class PeriodoContableComponent implements OnInit {
   // Datos principales
   periodos: Periodo[] = [];
   dataSource = new MatTableDataSource<Periodo>();
-  displayedColumns: string[] = ['codigo', 'anio', 'mes', 'nombre', 'periodoCierre', 'estado', 'acciones'];
+  displayedColumns: string[] = [
+    'codigo',
+    'anio',
+    'mes',
+    'nombre',
+    'periodoCierre',
+    'estado',
+    'acciones',
+  ];
 
   // Formulario
   periodoForm: FormGroup;
@@ -86,19 +101,20 @@ export class PeriodoContableComponent implements OnInit {
     { valor: 9, nombre: 'Septiembre' },
     { valor: 10, nombre: 'Octubre' },
     { valor: 11, nombre: 'Noviembre' },
-    { valor: 12, nombre: 'Diciembre' }
+    { valor: 12, nombre: 'Diciembre' },
   ];
 
   estadosDisponibles = [
     { valor: EstadoPeriodo.ABIERTO, nombre: 'Abierto' },
     { valor: EstadoPeriodo.MAYORIZADO, nombre: 'Mayorizado' },
-    { valor: EstadoPeriodo.DESMAYORIZADO, nombre: 'Desmayorizado' }
+    { valor: EstadoPeriodo.DESMAYORIZADO, nombre: 'Desmayorizado' },
   ];
 
   constructor(
     private fb: FormBuilder,
     private periodoService: PeriodoService,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private dialog: MatDialog
   ) {
     this.periodoForm = this.createForm();
   }
@@ -123,16 +139,18 @@ export class PeriodoContableComponent implements OnInit {
       estado: [EstadoPeriodo.ABIERTO, Validators.required],
       periodoCierre: [false],
       primerDia: [null],
-      ultimoDia: [null]
+      ultimoDia: [null],
     });
   }
 
   initializeDataSource(): void {
     this.dataSource.filterPredicate = (data: Periodo, filter: string) => {
       const searchText = filter.toLowerCase();
-      return data.nombre.toLowerCase().includes(searchText) ||
-             data.anio.toString().includes(searchText) ||
-             data.mes.toString().includes(searchText);
+      return (
+        data.nombre.toLowerCase().includes(searchText) ||
+        data.anio.toString().includes(searchText) ||
+        data.mes.toString().includes(searchText)
+      );
     };
   }
 
@@ -168,7 +186,7 @@ export class PeriodoContableComponent implements OnInit {
           this.showMessage('Error al cargar períodos. Verifique la conexión.', 'error');
         }
         this.loading = false;
-      }
+      },
     });
   }
 
@@ -176,23 +194,24 @@ export class PeriodoContableComponent implements OnInit {
     let periodosFiltrados = [...this.periodos];
 
     if (this.filtroAnio) {
-      periodosFiltrados = periodosFiltrados.filter(p => p.anio === this.filtroAnio);
+      periodosFiltrados = periodosFiltrados.filter((p) => p.anio === this.filtroAnio);
     }
 
     if (this.filtroMes) {
-      periodosFiltrados = periodosFiltrados.filter(p => p.mes === this.filtroMes);
+      periodosFiltrados = periodosFiltrados.filter((p) => p.mes === this.filtroMes);
     }
 
     if (this.filtroEstado !== null) {
-      periodosFiltrados = periodosFiltrados.filter(p => p.estado === this.filtroEstado);
+      periodosFiltrados = periodosFiltrados.filter((p) => p.estado === this.filtroEstado);
     }
 
     if (this.filtroTexto) {
       const texto = this.filtroTexto.toLowerCase();
-      periodosFiltrados = periodosFiltrados.filter(p =>
-        p.nombre.toLowerCase().includes(texto) ||
-        p.anio.toString().includes(texto) ||
-        p.mes.toString().includes(texto)
+      periodosFiltrados = periodosFiltrados.filter(
+        (p) =>
+          p.nombre.toLowerCase().includes(texto) ||
+          p.anio.toString().includes(texto) ||
+          p.mes.toString().includes(texto)
       );
     }
 
@@ -202,6 +221,9 @@ export class PeriodoContableComponent implements OnInit {
       }
       return b.mes - a.mes; // Mes descendente
     });
+
+    // Forzar la actualización de la tabla
+    this.dataSource._updateChangeSubscription();
   }
 
   limpiarFiltros(): void {
@@ -221,7 +243,7 @@ export class PeriodoContableComponent implements OnInit {
       codigo: 0,
       anio: new Date().getFullYear(),
       estado: EstadoPeriodo.ABIERTO,
-      periodoCierre: false
+      periodoCierre: false,
     });
   }
 
@@ -241,7 +263,7 @@ export class PeriodoContableComponent implements OnInit {
 
     const formValue = {
       ...this.periodoForm.value,
-      empresa: { codigo: 280, nombre: 'GAEMI NEXUS' } // Forzar empresa 280
+      empresa: { codigo: 280, nombre: 'GAEMI NEXUS' }, // Forzar empresa 280
     };
 
     // Eliminar codigo si es nuevo registro (el backend lo genera)
@@ -251,7 +273,7 @@ export class PeriodoContableComponent implements OnInit {
 
     // Generar nombre automático si no se especifica
     if (!formValue.nombre) {
-      const nombreMes = this.mesesDisponibles.find(m => m.valor === formValue.mes)?.nombre || '';
+      const nombreMes = this.mesesDisponibles.find((m) => m.valor === formValue.mes)?.nombre || '';
       formValue.nombre = `${nombreMes} ${formValue.anio}`;
     }
 
@@ -263,8 +285,8 @@ export class PeriodoContableComponent implements OnInit {
 
     if (this.isNewRecord) {
       // Validar que no exista el período
-      const existePeriodo = this.periodos.some(p =>
-        p.mes === formValue.mes && p.anio === formValue.anio
+      const existePeriodo = this.periodos.some(
+        (p) => p.mes === formValue.mes && p.anio === formValue.anio
       );
 
       if (existePeriodo) {
@@ -285,7 +307,7 @@ export class PeriodoContableComponent implements OnInit {
         error: (error) => {
           console.error('❌ Error al crear período:', error);
           this.showMessage('Error al crear período', 'error');
-        }
+        },
       });
     } else {
       console.log('📤 Actualizando período:', formValue);
@@ -325,7 +347,7 @@ export class PeriodoContableComponent implements OnInit {
       error: (error) => {
         console.error('❌ Error al mayorizar período:', error);
         this.showMessage('Error al mayorizar período', 'error');
-      }
+      },
     });
   }
 
@@ -349,7 +371,7 @@ export class PeriodoContableComponent implements OnInit {
       error: (error) => {
         console.error('❌ Error al desmayorizar período:', error);
         this.showMessage('Error al desmayorizar período', 'error');
-      }
+      },
     });
   }
 
@@ -359,24 +381,42 @@ export class PeriodoContableComponent implements OnInit {
       return;
     }
 
-    if (confirm(`¿Está seguro de eliminar el período ${periodo.nombre}?`)) {
-      console.log('🗑️ Eliminando período:', periodo.codigo);
-      this.periodoService.delete(periodo.codigo).subscribe({
-        next: (success) => {
-          if (success) {
-            console.log('✅ Período eliminado exitosamente');
-            this.showMessage('Período eliminado correctamente', 'success');
-            this.loadPeriodos();
-          } else {
-            this.showMessage('No se pudo eliminar el período', 'error');
-          }
-        },
-        error: (error) => {
-          console.error('❌ Error al eliminar período:', error);
-          this.showMessage('Error al eliminar período', 'error');
-        }
-      });
-    }
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      width: '400px',
+      data: {
+        title: 'Eliminar Período',
+        message: `¿Está seguro de eliminar el período ${periodo.nombre}?`,
+        confirmText: 'Eliminar',
+        cancelText: 'Cancelar',
+        type: 'danger',
+        details: [
+          { label: 'Año', value: periodo.anio.toString() },
+          { label: 'Mes', value: this.getNombreMes(periodo.mes) },
+          { label: 'Estado', value: this.getNombreEstado(periodo.estado) },
+        ],
+      },
+    });
+
+    dialogRef.afterClosed().subscribe((confirmed) => {
+      if (confirmed) {
+        console.log('🗑️ Eliminando período:', periodo.codigo);
+        this.periodoService.delete(periodo.codigo).subscribe({
+          next: (success) => {
+            if (success) {
+              console.log('✅ Período eliminado exitosamente');
+              this.showMessage('Período eliminado correctamente', 'success');
+              this.loadPeriodos();
+            } else {
+              this.showMessage('No se pudo eliminar el período', 'error');
+            }
+          },
+          error: (error) => {
+            console.error('❌ Error al eliminar período:', error);
+            this.showMessage('Error al eliminar período', 'error');
+          },
+        });
+      }
+    });
   }
 
   getNombreMes(mes: number): string {
@@ -408,7 +448,7 @@ export class PeriodoContableComponent implements OnInit {
   }
 
   private markFormGroupTouched(): void {
-    Object.keys(this.periodoForm.controls).forEach(key => {
+    Object.keys(this.periodoForm.controls).forEach((key) => {
       const control = this.periodoForm.get(key);
       control?.markAsTouched();
     });
@@ -436,7 +476,11 @@ export class PeriodoContableComponent implements OnInit {
         if (formato === 'dd/MM') {
           return fecha.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
         } else {
-          return fecha.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+          return fecha.toLocaleDateString('es-ES', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+          });
         }
       }
 
@@ -468,7 +512,7 @@ export class PeriodoContableComponent implements OnInit {
       duration: 4000,
       panelClass: [panelClass],
       horizontalPosition: 'end',
-      verticalPosition: 'top'
+      verticalPosition: 'top',
     });
   }
 }
