@@ -4,6 +4,7 @@ import { Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 
 import { FieldConfig } from '../../../../shared/basics/table/dynamic-form/model/field.interface';
 import { TableBasicHijosComponent } from '../../../../shared/basics/table/forms/table-basic-hijos/table-basic-hijos.component';
@@ -30,6 +31,7 @@ const RUBRO_TIPO_GRUPO = 12;
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
+    MatSnackBarModule,
     TableBasicHijosComponent,
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
@@ -49,7 +51,8 @@ export class NaturalezaDeCuentasComponent implements OnInit {
   constructor(
     private naturalezaCuentaService: NaturalezaCuentaService,
     private detalleRubroService: DetalleRubroService,
-    private exportService: ExportService
+    private exportService: ExportService,
+    private snackBar: MatSnackBar
   ) {}
 
   ngOnInit(): void {
@@ -94,7 +97,7 @@ export class NaturalezaDeCuentasComponent implements OnInit {
       regConfig: this.getRegConfig(),
       add: true,
       edit: true,
-      remove: false,
+      remove: true,
       paginator: true,
       filter: true,
       fSize: 'em-1',
@@ -308,5 +311,18 @@ export class NaturalezaDeCuentasComponent implements OnInit {
 
   private estadoLabel(valor: any): string {
     return Number(valor) === 1 ? 'Activo' : 'Inactivo';
+  }
+
+  /**
+   * Maneja los errores emitidos por el componente table-basic-hijos
+   * y los muestra en un snackbar al usuario
+   */
+  onTableError(mensajeError: string): void {
+    this.snackBar.open(mensajeError, 'Cerrar', {
+      duration: 8000,
+      panelClass: ['error-snackbar'],
+      horizontalPosition: 'center',
+      verticalPosition: 'bottom'
+    });
   }
 }

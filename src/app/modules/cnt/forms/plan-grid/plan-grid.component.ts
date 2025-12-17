@@ -32,7 +32,7 @@ import { NaturalezaCuenta } from '../../model/naturaleza-cuenta';
 import { PlanCuenta } from '../../model/plan-cuenta';
 import { NaturalezaCuentaService } from '../../service/naturaleza-cuenta.service';
 import { PlanCuentaService } from '../../service/plan-cuenta.service';
-import { PlanArbolFormComponent } from '../plan-arbol/plan-arbol-form.component';
+import { PlanCuentaAddEditComponent } from '../../dialog/plan-cuenta-add-edit/plan-cuenta-add-edit.component';
 
 @Component({
   selector: 'app-plan-grid',
@@ -382,7 +382,7 @@ export class PlanGridComponent implements OnInit, AfterViewInit {
       // Intentar ubicar nodo raíz técnico '0' si existe para idPadre
       const rootParent = this.planCuentas.find((p) => p.cuentaContable === '0') || null;
       this.dialog
-        .open(PlanArbolFormComponent, {
+        .open(PlanCuentaAddEditComponent, {
           width: '720px',
           disableClose: true,
           data: {
@@ -412,7 +412,7 @@ export class PlanGridComponent implements OnInit, AfterViewInit {
     const presetNivel = (parent.nivel || this.calculateLevel(parent.cuentaContable)) + 1;
 
     this.dialog
-      .open(PlanArbolFormComponent, {
+      .open(PlanCuentaAddEditComponent, {
         width: '720px',
         disableClose: true,
         data: {
@@ -434,7 +434,7 @@ export class PlanGridComponent implements OnInit, AfterViewInit {
   public onEdit(item: PlanCuenta): void {
     // Reusar formulario completo del árbol para permitir edición consistente
     this.dialog
-      .open(PlanArbolFormComponent, {
+      .open(PlanCuentaAddEditComponent, {
         width: '720px',
         disableClose: true,
         data: { item, naturalezas: this.naturalezas },

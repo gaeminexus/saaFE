@@ -22,7 +22,7 @@ import { PlanCuenta } from '../../model/plan-cuenta';
 import { NaturalezaCuenta } from '../../model/naturaleza-cuenta';
 import { ExportService } from '../../../../shared/services/export.service';
 import { PlanCuentaUtilsService } from '../../../../shared/services/plan-cuenta-utils.service';
-import { PlanArbolFormComponent } from './plan-arbol-form.component';
+import { PlanCuentaAddEditComponent } from '../../dialog/plan-cuenta-add-edit/plan-cuenta-add-edit.component';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../../../../shared/basics/confirm-dialog/confirm-dialog.component';
 import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
@@ -583,7 +583,7 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
       }
       // Obtener nodo raíz (cuentaContable == '0') para usar su codigo como idPadre real
       const rootParent = this.planCuentas.find(p => p.cuentaContable === '0') || null;
-      const dialogRef = this.dialog.open(PlanArbolFormComponent, {
+      const dialogRef = this.dialog.open(PlanCuentaAddEditComponent, {
         width: '720px',
         disableClose: true,
         data: {
@@ -606,7 +606,7 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
     const presetCuenta = this.generateNewCuentaContable(parent);
     const presetNivel = parent ? (parent.level || 0) + 1 : 1;
 
-    const dialogRef = this.dialog.open(PlanArbolFormComponent, {
+    const dialogRef = this.dialog.open(PlanCuentaAddEditComponent, {
       width: '720px',
       disableClose: true,
       data: {
@@ -626,7 +626,7 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
   }
 
   onEdit(item: PlanCuentaNode) {
-    const dialogRef = this.dialog.open(PlanArbolFormComponent, {
+    const dialogRef = this.dialog.open(PlanCuentaAddEditComponent, {
       width: '700px',
       disableClose: true,
       data: { item, naturalezas: this.naturalezas }

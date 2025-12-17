@@ -3,6 +3,7 @@ import { AfterViewInit, ChangeDetectorRef, Component, EventEmitter, forwardRef, 
 import { FormsModule } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { MatPaginator, MatPaginatorIntl } from '@angular/material/paginator';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatSort } from '@angular/material/sort';
 import { MatTableDataSource } from '@angular/material/table';
 import { AccionesGrid } from '../../../constantes';
@@ -73,6 +74,7 @@ export class TableBasicHijosComponent implements OnInit, OnChanges, AfterViewIni
 
   @Output() emiteRegistro = new EventEmitter<any>();
   @Output() emiteButtonExtra = new EventEmitter<any>();
+  @Output() emiteError = new EventEmitter<string>();
 
   textoFiltro!: string;
   fields!: FieldFormat[];
@@ -101,6 +103,7 @@ export class TableBasicHijosComponent implements OnInit, OnChanges, AfterViewIni
   public getLocatorService = inject(GetLocatorService);
   public dialog = inject(MatDialog);
   private changeDetectorRefs = inject(ChangeDetectorRef);
+  private snackBar = inject(MatSnackBar);
   // Comentamos temporalmente para evitar dependencia circular
   // public funciones = inject(FuncionesTableService);
 
@@ -322,6 +325,14 @@ export class TableBasicHijosComponent implements OnInit, OnChanges, AfterViewIni
       // Ejecutar la operación principal
       await this.serviceLocatorService.ejecutaServicio(this.entidad, result, opcion);
 
+      // Mostrar mensaje de éxito
+      const operacion = opcion === AccionesGrid.ADD ? 'creado' :
+                       opcion === AccionesGrid.EDIT ? 'actualizado' : 'eliminado';
+      this.snackBar.open(`Registro ${operacion} correctamente`, 'Cerrar', {
+        duration: 3000,
+        panelClass: ['success-snackbar']
+      });
+
       // Recargar datos después de la operación
       if (this.configTable.es_hijo) {
         try {
@@ -331,21 +342,18 @@ export class TableBasicHijosComponent implements OnInit, OnChanges, AfterViewIni
           );
           this.asignaYRefresca(re);
         } catch (error) {
-          // Opcional: mostrar mensaje al usuario
-          // this.mostrarMensajeError('Error al cargar los datos relacionados');
+          this.mostrarMensajeError('Error al cargar los datos relacionados', error);
         }
       } else {
         try {
           const re = await this.serviceLocatorService.recargarValores(this.entidad);
           this.asignaYRefresca(re);
         } catch (error) {
-          // Opcional: mostrar mensaje al usuario
-          // this.mostrarMensajeError('Error al recargar los datos');
+          this.mostrarMensajeError('Error al recargar los datos', error);
         }
       }
     } catch (error) {
-      // Opcional: mostrar mensaje al usuario
-      // this.mostrarMensajeError('Error al procesar la operación');
+      this.mostrarMensajeError('Error al procesar la operación', error);
     }
   }
 
@@ -511,12 +519,69 @@ export class TableBasicHijosComponent implements OnInit, OnChanges, AfterViewIni
     return value !== null && value !== undefined ? value.toString() : '';
   }
 
-  // Método auxiliar para mostrar mensajes de error
-  private mostrarMensajeError(mensaje: string): void {
-    console.error(mensaje);
-    // Aquí puedes implementar la lógica para mostrar el error al usuario
-    // Por ejemplo, usando MatSnackBar, notificaciones toast, etc.
-    // this.snackBar.open(mensaje, 'Cerrar', { duration: 5000 });
+  /**
+   * Método auxiliar para mostrar mensajes de error del backend
+   * Extrae el mensaje del error HTTP y lo muestra al usuario en un snackbar (galleta)
+   */
+  private mostrarMensajeError(mensajeGenerico: string, error: any): void {
+    let mensajeError = mensajeGenerico;
+
+    // Intentar extraer mensaje del backend en múltiples formatos
+    if (error) {
+      try {
+        // Si el error tiene una estructura de HttpErrorResponse
+        if (error.error) {
+          // Caso 1: error.error es un string directo
+          if (typeof error.error === 'string') {
+            mensajeError = error.error;
+          }
+          // Caso 2: error.error es un objeto con propiedades
+          else if (typeof error.error === 'object') {
+            if (error.error.message) {
+              mensajeError = error.error.message;
+            } else if (error.error.error) {
+              mensajeError = error.error.error;
+            } else if (error.error.mensaje) {
+              mensajeError = error.error.mensaje;
+            } else if (error.error.msg) {
+              mensajeError = error.error.msg;
+            } else if (error.error.description) {
+              mensajeError = error.error.description;
+            }
+          }
+        }
+        // Caso 3: error.message (error estándar de JavaScript)
+        else if (error.message && error.message !== 'Http failure response for (unknown url): 0 Unknown Error') {
+          mensajeError = error.message;
+        }
+        // Caso 4: error.statusText (texto de estado HTTP)
+        else if (error.statusText && error.statusText !== 'Unknown Error') {
+          mensajeError = `${mensajeGenerico}: ${error.statusText}`;
+        }
+        // Caso 5: error.status (código de estado HTTP)
+        else if (error.status) {
+          mensajeError = `${mensajeGenerico} (Código: ${error.status})`;
+        }
+
+        // Caso 6: Verificar si el error es un string directo
+        if (typeof error === 'string' && error !== mensajeGenerico) {
+          mensajeError = error;
+        }
+      } catch (e) {
+        console.error('Error al procesar mensaje de error:', e);
+      }
+    }
+
+    // Mostrar snackbar al usuario
+    this.snackBar.open(mensajeError, 'Cerrar', {
+      duration: 6000,
+      panelClass: ['error-snackbar'],
+      horizontalPosition: 'center',
+      verticalPosition: 'bottom'
+    });
+
+    // Emitir el error al componente padre para que también pueda manejarlo
+    this.emiteError.emit(mensajeError);
   }
 
 }
