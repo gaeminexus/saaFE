@@ -105,7 +105,9 @@ export class CentroGridComponent implements OnInit {
     this.dataSource.sortingDataAccessor = (data: CentroCosto, sortHeaderId: string) => {
       switch (sortHeaderId) {
         case 'numero':
-          return data.numero;
+          // Construir código jerárquico y convertirlo a formato ordenable (1, 1.1, 1.1.1, etc.)
+          const codigoJerarquico = this.buildCodigoStrForCentro(data);
+          return this.centroUtils.getCodigoForSorting(codigoJerarquico);
         case 'nombre':
           return data.nombre.toLowerCase();
         case 'tipo':
@@ -118,6 +120,13 @@ export class CentroGridComponent implements OnInit {
           return '';
       }
     };
+
+    // Establecer ordenamiento por defecto por número jerárquico
+    this.sort.sort({
+      id: 'numero',
+      start: 'asc',
+      disableClear: false,
+    });
   }
 
   loadData(): void {
@@ -183,6 +192,15 @@ export class CentroGridComponent implements OnInit {
     if (estadoValue !== '' && estadoValue !== null) {
       filtered = filtered.filter((centro) => centro.estado === Number(estadoValue));
     }
+
+    // Ordenar jerárquicamente los datos filtrados (1, 1.1, 1.1.1, 2, 2.1, etc.)
+    filtered.sort((a, b) => {
+      const codigoA = this.buildCodigoStrForCentro(a);
+      const codigoB = this.buildCodigoStrForCentro(b);
+      const sortableA = this.centroUtils.getCodigoForSorting(codigoA);
+      const sortableB = this.centroUtils.getCodigoForSorting(codigoB);
+      return sortableA.localeCompare(sortableB);
+    });
 
     this.dataSource.data = filtered;
   }
@@ -263,6 +281,24 @@ export class CentroGridComponent implements OnInit {
 
   formatDate(date?: Date): string {
     return this.centroUtils.formatFecha(date);
+  }
+
+  /**
+   * Construye el código jerárquico de un centro de costo (ej: "1", "1.1", "1.1.2")
+   * @param centro - Centro de costo
+   * @returns Código jerárquico como string
+   */
+  private buildCodigoStrForCentro(centro: CentroCosto): string {
+    // Reconstruir código jerárquico desde el centro
+    if (!centro.idPadre) {
+      return String(centro.numero);
+    }
+    const parent = this.originalData.find((c) => c.codigo === centro.idPadre);
+    if (!parent) {
+      return String(centro.numero);
+    }
+    const parentCodigo = this.buildCodigoStrForCentro(parent);
+    return `${parentCodigo}.${centro.numero}`;
   }
 
   // Actions

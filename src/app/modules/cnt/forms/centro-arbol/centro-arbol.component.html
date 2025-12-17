@@ -10,10 +10,34 @@
         <mat-label>Código destino</mat-label>
         <input matInput type="text" [value]="previewCodigoDestino" readonly />
       </mat-form-field>
-      <button mat-flat-button color="primary" (click)="onAdd()" class="add-button">
+
+      <!-- Menú desplegable para crear centros -->
+      <button mat-flat-button color="primary" [matMenuTriggerFor]="addMenu" class="add-button">
         <mat-icon>add</mat-icon>
         Nuevo Centro
+        <mat-icon>arrow_drop_down</mat-icon>
       </button>
+
+      <mat-menu #addMenu="matMenu" class="add-menu">
+        <button mat-menu-item (click)="onAddNivel1()">
+          <mat-icon>add_circle</mat-icon>
+          <span>Nuevo Centro Nivel 1</span>
+          <div class="menu-hint">Agregar centro raíz independiente</div>
+        </button>
+        <button
+          mat-menu-item
+          (click)="onAddHijo()"
+          [disabled]="!selectedNode"
+          [class.disabled-item]="!selectedNode"
+        >
+          <mat-icon>subdirectory_arrow_right</mat-icon>
+          <span>Nuevo Centro Hijo</span>
+          <div class="menu-hint">
+            {{ selectedNode ? 'Hijo de: ' + selectedNode.nombre : 'Seleccione un centro padre' }}
+          </div>
+        </button>
+      </mat-menu>
+
       <button mat-stroked-button (click)="expandAll()" matTooltip="Expandir" class="view-toggle">
         <mat-icon>unfold_more</mat-icon>
         Expandir
@@ -71,6 +95,17 @@
             <div class="account-header">
               <span class="account-number">{{ node.numero }}</span>
               <span class="account-name">{{ node.nombre }}</span>
+              <span
+                class="tipo-badge"
+                [class.acumulacion]="node.tipo === 1"
+                [class.movimiento]="node.tipo === 2"
+              >
+                <mat-icon
+                  class="tipo-icon"
+                  [innerHTML]="node.tipo === 1 ? 'account_tree' : 'radio_button_unchecked'"
+                ></mat-icon>
+                {{ getTipoLabel(node.tipo) }}
+              </span>
             </div>
           </div>
           <div class="node-actions">
@@ -148,6 +183,17 @@
             <div class="account-header">
               <span class="account-number">{{ node.numero }}</span>
               <span class="account-name">{{ node.nombre }}</span>
+              <span
+                class="tipo-badge"
+                [class.acumulacion]="node.tipo === 1"
+                [class.movimiento]="node.tipo === 2"
+              >
+                <mat-icon
+                  class="tipo-icon"
+                  [innerHTML]="node.tipo === 1 ? 'account_tree' : 'radio_button_unchecked'"
+                ></mat-icon>
+                {{ getTipoLabel(node.tipo) }}
+              </span>
               <span class="children-count" *ngIf="node.children?.length"
                 >{{ node.children.length }} hijos</span
               >

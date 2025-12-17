@@ -36,9 +36,11 @@ import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/ti
 import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { DetalleRubroService } from '../../../../shared/services/detalle-rubro.service';
 import { Asiento } from '../../model/asiento';
+import { CentroCosto } from '../../model/centro-costo';
 import { PlanCuenta } from '../../model/plan-cuenta';
 import { TipoAsiento } from '../../model/tipo-asiento';
 import { AsientoService } from '../../service/asiento.service';
+import { CentroCostoService } from '../../service/centro-costo.service';
 import { DetalleAsientoService } from '../../service/detalle-asiento.service';
 import { PlanCuentaService } from '../../service/plan-cuenta.service';
 import { TipoAsientoService } from '../../service/tipo-asiento.service';
@@ -47,6 +49,7 @@ interface CuentaItem {
   cuenta: PlanCuenta | null;
   valor: number;
   tipo: 'DEBE' | 'HABER';
+  centroCosto?: CentroCosto | null; // Centro de costo asociado
   id?: string; // Para trackear items únicos
 }
 
@@ -102,6 +105,7 @@ export class AsientosContablesDinamico implements OnInit {
   // Rubros para dropdowns
   tiposAsientos: any[] = [];
   cuentasPlan: PlanCuenta[] = [];
+  centrosCosto: CentroCosto[] = [];
 
   // Constantes de rubros
   private readonly RUBRO_TIPO_ASIENTO = 15;
@@ -111,7 +115,7 @@ export class AsientosContablesDinamico implements OnInit {
 
   // Grid de detalles del asiento
   detalleDataSource = new MatTableDataSource<any>([]);
-  detalleColumns: string[] = ['cuenta', 'descripcion', 'debe', 'haber', 'tipo'];
+  detalleColumns: string[] = ['cuenta', 'descripcion', 'centroCosto', 'debe', 'haber', 'tipo'];
 
   // Empresa del usuario logueado
   private get idSucursal(): number {
@@ -125,6 +129,7 @@ export class AsientosContablesDinamico implements OnInit {
     private asientoService: AsientoService,
     private detalleAsientoService: DetalleAsientoService,
     private planCuentaService: PlanCuentaService,
+    private centroCostoService: CentroCostoService,
     private snackBar: MatSnackBar,
     private route: ActivatedRoute,
     private router: Router
@@ -134,8 +139,8 @@ export class AsientosContablesDinamico implements OnInit {
     this.initializeForm();
     this.cargarRubros();
 
-    // Cargar cuentas del plan ANTES de verificar carga de asiento
-    this.cargarCuentasPlan().then(() => {
+    // Cargar datos paralelos
+    Promise.all([this.cargarCuentasPlan(), this.cargarCentrosCosto()]).then(() => {
       this.verificarCargaAsiento();
     });
   }
@@ -216,6 +221,74 @@ export class AsientosContablesDinamico implements OnInit {
           console.error('❌ Error al cargar cuentas del plan:', err);
           this.cuentasPlan = [];
           reject(err);
+        },
+      });
+    });
+  }
+
+  /**
+   * Carga centros de costo desde el backend
+   */
+  private cargarCentrosCosto(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      // Crear criterios de filtrado usando selectByCriteria - combinar empresa y estado en un solo objeto
+      const criterios = new DatosBusqueda();
+
+      // Filtrar por empresa (usando idSucursal como empresa)
+      criterios.asignaUnCampoSinTrunc(
+        TipoDatosBusqueda.LONG,
+        'empresa.codigo',
+        this.idSucursal.toString(),
+        TipoComandosBusqueda.IGUAL
+      );
+
+      this.centroCostoService.selectByCriteria([criterios]).subscribe({
+        next: (data: CentroCosto[] | null) => {
+          if (data && data.length > 0) {
+            // Filtrar localmente por estado activo (mostrar todos para contexto jerárquico)
+            this.centrosCosto = data
+              .filter((centro: CentroCosto) => centro.estado === 1)
+              .sort((a: CentroCosto, b: CentroCosto) => {
+                const nombreA = a.nombre || '';
+                const nombreB = b.nombre || '';
+                return nombreA.localeCompare(nombreB);
+              });
+          } else {
+            console.warn(
+              `⚠️ No se encontraron centros de costo activos para empresa ${this.idSucursal}`
+            );
+            this.centrosCosto = [];
+          }
+          resolve();
+        },
+        error: (err: any) => {
+          console.error('❌ Error cargando centros de costo con criterios:', err);
+          // Fallback: cargar todos y filtrar localmente
+          this.centroCostoService.getAll().subscribe({
+            next: (dataFallback: CentroCosto[] | null) => {
+              if (dataFallback) {
+                // Filtrar localmente por empresa y estado activo (mostrar todos para contexto jerárquico)
+                this.centrosCosto = dataFallback
+                  .filter(
+                    (centro: CentroCosto) =>
+                      centro.estado === 1 && centro.empresa?.codigo === this.idSucursal
+                  )
+                  .sort((a: CentroCosto, b: CentroCosto) => {
+                    const nombreA = a.nombre || '';
+                    const nombreB = b.nombre || '';
+                    return nombreA.localeCompare(nombreB);
+                  });
+              } else {
+                this.centrosCosto = [];
+              }
+              resolve();
+            },
+            error: (errFallback: any) => {
+              console.error('❌ Error en fallback de centros de costo:', errFallback);
+              this.centrosCosto = [];
+              resolve(); // No rechazar, permitir que continúe la aplicación
+            },
+          });
         },
       });
     });
@@ -361,10 +434,19 @@ export class AsientosContablesDinamico implements OnInit {
             const cuenta = this.cuentasPlan.find((c) => c.codigo === detalle.planCuenta?.codigo);
 
             if (cuenta) {
+              // Buscar centro de costo si existe en el detalle
+              let centroCosto = null;
+              if (detalle.centroCosto?.codigo) {
+                centroCosto = this.centrosCosto.find(
+                  (c) => c.codigo === detalle.centroCosto.codigo
+                );
+              }
+
               const item: CuentaItem = {
                 cuenta: cuenta,
                 valor: 0,
                 tipo: 'DEBE',
+                centroCosto: centroCosto || null,
                 id: `item_${Date.now()}_${Math.random()}`,
               };
 
@@ -434,6 +516,7 @@ export class AsientosContablesDinamico implements OnInit {
     return this.fb.group({
       cuenta: [null], // No requerido - permite asientos incompletos
       valor: [0], // No requerido - permite asientos incompletos
+      centroCosto: [null], // Centro de costo opcional
     });
   }
 
@@ -493,6 +576,7 @@ export class AsientosContablesDinamico implements OnInit {
 
     const cuenta = ultimoControl.get('cuenta')?.value;
     const valor = ultimoControl.get('valor')?.value;
+    const centroCosto = ultimoControl.get('centroCosto')?.value;
 
     if (!cuenta || !valor || valor <= 0) {
       this.snackBar.open('Por favor complete la cuenta y el valor', 'Cerrar', {
@@ -507,6 +591,7 @@ export class AsientosContablesDinamico implements OnInit {
       cuenta,
       valor: Number(valor),
       tipo,
+      centroCosto: centroCosto || null,
       id: `${tipo}-${Date.now()}-${Math.random()}`,
     };
 
@@ -517,7 +602,7 @@ export class AsientosContablesDinamico implements OnInit {
     }
 
     // Limpiar el formulario
-    ultimoControl.patchValue({ cuenta: null, valor: 0 });
+    ultimoControl.patchValue({ cuenta: null, valor: 0, centroCosto: null });
 
     this.calcularTotalesGrid();
   }
@@ -712,11 +797,6 @@ export class AsientosContablesDinamico implements OnInit {
    * Grabar los detalles del asiento (debe/haber) junto con la cabecera si es necesario
    */
   grabarDetalle(): void {
-    console.log('🔍 Iniciando grabado de detalle del asiento...');
-    console.log('Form valid:', !this.form.invalid);
-    console.log('Form value:', this.form.getRawValue());
-    console.log('Diferencia:', this.diferencia);
-
     // Validar solo campos básicos (tipo, número, fecha) - permitir asientos incompletos
     const tipoValido = this.form.get('tipo')?.valid;
     const numeroValido = this.form.get('numero')?.valid;
@@ -724,12 +804,6 @@ export class AsientosContablesDinamico implements OnInit {
 
     if (!tipoValido || !numeroValido || !fechaValida) {
       this.form.markAllAsTouched();
-      console.error('❌ Campos básicos inválidos. Revisa tipo, número y fecha.');
-
-      // Mostrar qué campos básicos son inválidos
-      if (!tipoValido) console.error('Campo inválido: tipo');
-      if (!numeroValido) console.error('Campo inválido: numero');
-      if (!fechaValida) console.error('Campo inválido: fechaAsiento');
 
       this.snackBar.open(
         'Por favor completa todos los campos requeridos: Tipo de Asiento y Número',
@@ -879,22 +953,13 @@ export class AsientosContablesDinamico implements OnInit {
    * Graba los detalles (cuentas debe/haber) de un asiento
    */
   private grabarDetallesDelAsiento(asientoId: number): void {
-    // Debug: Verificar dónde están los datos
-    console.log('🔍 Debug - Verificando fuentes de datos:');
-    console.log('   cuentasDebe.controls.length:', this.cuentasDebe.controls.length);
-    console.log('   cuentasHaber.controls.length:', this.cuentasHaber.controls.length);
-    console.log('   cuentasDebeGrid.length:', this.cuentasDebeGrid.length);
-    console.log('   cuentasHaberGrid.length:', this.cuentasHaberGrid.length);
-    console.log('   cuentasDebeGrid:', this.cuentasDebeGrid);
-    console.log('   cuentasHaberGrid:', this.cuentasHaberGrid);
-
     // Recopilar detalles de debe y haber que tienen datos
     const detallesParaGrabar: any[] = [];
 
     // Procesar cuentas DEBE desde el GRID dinámico
     this.cuentasDebeGrid.forEach((item, index) => {
       if (item && item.cuenta && item.valor > 0) {
-        detallesParaGrabar.push({
+        const detalle: any = {
           asiento: {
             codigo: asientoId,
           },
@@ -903,14 +968,23 @@ export class AsientosContablesDinamico implements OnInit {
           },
           valorDebe: item.valor,
           valorHaber: 0,
-        });
+        };
+
+        // Agregar centro de costo si está presente
+        if (item.centroCosto) {
+          detalle.centroCosto = {
+            codigo: item.centroCosto.codigo,
+          };
+        }
+
+        detallesParaGrabar.push(detalle);
       }
     });
 
     // Procesar cuentas HABER desde el GRID dinámico
     this.cuentasHaberGrid.forEach((item, index) => {
       if (item && item.cuenta && item.valor > 0) {
-        detallesParaGrabar.push({
+        const detalle: any = {
           asiento: {
             codigo: asientoId,
           },
@@ -919,21 +993,29 @@ export class AsientosContablesDinamico implements OnInit {
           },
           valorDebe: 0,
           valorHaber: item.valor,
-        });
+        };
+
+        // Agregar centro de costo si está presente
+        if (item.centroCosto) {
+          detalle.centroCosto = {
+            codigo: item.centroCosto.codigo,
+          };
+        }
+
+        detallesParaGrabar.push(detalle);
       }
     });
 
     // FALLBACK: Si los grids están vacíos, intentar con FormArrays
     if (detallesParaGrabar.length === 0) {
-      console.log('⚠️ Grids vacíos, intentando con FormArrays...');
-
       // Procesar cuentas DEBE desde FormArrays
       this.cuentasDebe.controls.forEach((control, index) => {
         const cuenta = control.get('cuenta')?.value;
         const valor = control.get('valor')?.value;
+        const centroCosto = control.get('centroCosto')?.value;
 
         if (cuenta && valor > 0) {
-          detallesParaGrabar.push({
+          const detalle: any = {
             asiento: {
               codigo: asientoId,
             },
@@ -942,7 +1024,16 @@ export class AsientosContablesDinamico implements OnInit {
             },
             valorDebe: valor,
             valorHaber: 0,
-          });
+          };
+
+          // Agregar centro de costo si está presente
+          if (centroCosto) {
+            detalle.centroCosto = {
+              codigo: centroCosto.codigo,
+            };
+          }
+
+          detallesParaGrabar.push(detalle);
         }
       });
 
@@ -950,9 +1041,10 @@ export class AsientosContablesDinamico implements OnInit {
       this.cuentasHaber.controls.forEach((control, index) => {
         const cuenta = control.get('cuenta')?.value;
         const valor = control.get('valor')?.value;
+        const centroCosto = control.get('centroCosto')?.value;
 
         if (cuenta && valor > 0) {
-          detallesParaGrabar.push({
+          const detalle: any = {
             asiento: {
               codigo: asientoId,
             },
@@ -961,26 +1053,21 @@ export class AsientosContablesDinamico implements OnInit {
             },
             valorDebe: 0,
             valorHaber: valor,
-          });
+          };
+
+          // Agregar centro de costo si está presente
+          if (centroCosto) {
+            detalle.centroCosto = {
+              codigo: centroCosto.codigo,
+            };
+          }
+
+          detallesParaGrabar.push(detalle);
         }
       });
     } // Fin del fallback
 
-    // Log de los detalles que se van a grabar (versión simplificada)
-    console.log('📋 Detalles del asiento a grabar (campos básicos):');
-    console.log(`   Total de detalles: ${detallesParaGrabar.length}`);
-    detallesParaGrabar.forEach((detalle, index) => {
-      console.log(`   Detalle ${index + 1}:`, {
-        asiento: detalle.asiento.codigo,
-        planCuenta: detalle.planCuenta.codigo,
-        valorDebe: detalle.valorDebe,
-        valorHaber: detalle.valorHaber,
-      });
-    });
-    console.log('📋 Fin detalles a grabar');
-
     if (detallesParaGrabar.length === 0) {
-      console.log('ℹ️ No hay detalles para grabar');
       this.loading = false;
       this.snackBar.open('No hay cuentas para grabar', 'Cerrar', {
         duration: 3000,
@@ -1274,6 +1361,9 @@ export class AsientosContablesDinamico implements OnInit {
       detalles.push({
         cuenta: cuenta.cuenta?.cuentaContable || '',
         descripcion: cuenta.cuenta?.nombre || '',
+        centroCosto: cuenta.centroCosto
+          ? `${cuenta.centroCosto.numero} - ${cuenta.centroCosto.nombre}`
+          : '',
         debe: cuenta.valor,
         haber: 0,
         tipo: 'DEBE',
@@ -1285,6 +1375,9 @@ export class AsientosContablesDinamico implements OnInit {
       detalles.push({
         cuenta: cuenta.cuenta?.cuentaContable || '',
         descripcion: cuenta.cuenta?.nombre || '',
+        centroCosto: cuenta.centroCosto
+          ? `${cuenta.centroCosto.numero} - ${cuenta.centroCosto.nombre}`
+          : '',
         debe: 0,
         haber: cuenta.valor,
         tipo: 'HABER',
@@ -1344,7 +1437,6 @@ export class AsientosContablesDinamico implements OnInit {
 
     this.codigoAsientoActual = null; // Resetear código para nueva creación
     this.asientoActual = null; // Resetear datos del asiento
-    console.log('🧹 Formulario limpiado, listo para nuevo asiento');
   }
 
   /**
@@ -1453,6 +1545,187 @@ export class AsientosContablesDinamico implements OnInit {
   }
 
   /**
+   * Verifica si una cuenta requiere centro de costos basándose en su naturaleza
+   */
+  cuentaRequiereCentroCosto(cuenta: PlanCuenta): boolean {
+    if (!cuenta || !cuenta.naturalezaCuenta) {
+      return false;
+    }
+
+    // El campo manejaCentroCosto: 1 = Sí maneja, 0 = No maneja
+    return cuenta.naturalezaCuenta.manejaCentroCosto === 1;
+  }
+
+  /**
+   * Obtiene el nombre de la naturaleza de una cuenta
+   */
+  getNaturalezaCuentaNombre(cuenta: PlanCuenta): string {
+    return cuenta?.naturalezaCuenta?.nombre || 'Sin naturaleza';
+  }
+
+  /**
+   * Verifica si una fila del grid requiere centro de costos
+   */
+  filaRequiereCentroCosto(tipo: 'DEBE' | 'HABER', index: number): boolean {
+    const formArray = tipo === 'DEBE' ? this.cuentasDebe : this.cuentasHaber;
+    const control = formArray.at(index);
+    const cuenta = control?.get('cuenta')?.value;
+
+    return this.cuentaRequiereCentroCosto(cuenta);
+  }
+
+  /**
+   * Obtiene todas las cuentas que requieren centro de costos en el asiento actual
+   */
+  getCuentasConCentroCosto(): { tipo: 'DEBE' | 'HABER'; index: number; cuenta: PlanCuenta }[] {
+    const cuentasConCosto: { tipo: 'DEBE' | 'HABER'; index: number; cuenta: PlanCuenta }[] = [];
+
+    // Verificar cuentas del DEBE
+    this.cuentasDebe.controls.forEach((control, index) => {
+      const cuenta = control.get('cuenta')?.value;
+      if (cuenta && this.cuentaRequiereCentroCosto(cuenta)) {
+        cuentasConCosto.push({ tipo: 'DEBE', index, cuenta });
+      }
+    });
+
+    // Verificar cuentas del HABER
+    this.cuentasHaber.controls.forEach((control, index) => {
+      const cuenta = control.get('cuenta')?.value;
+      if (cuenta && this.cuentaRequiereCentroCosto(cuenta)) {
+        cuentasConCosto.push({ tipo: 'HABER', index, cuenta });
+      }
+    });
+
+    return cuentasConCosto;
+  }
+
+  /**
+   * Maneja la selección de una cuenta en el formulario
+   */
+  onCuentaSeleccionada(tipo: 'DEBE' | 'HABER', index: number, cuenta: PlanCuenta): void {
+    if (!cuenta) return;
+
+    console.log(
+      `📊 Cuenta seleccionada ${tipo}[${index + 1}]:`,
+      cuenta.cuentaContable,
+      '-',
+      cuenta.nombre
+    );
+
+    if (this.cuentaRequiereCentroCosto(cuenta)) {
+      console.log(`🏢 Esta cuenta requiere centro de costos`);
+      console.log(`   Naturaleza: ${this.getNaturalezaCuentaNombre(cuenta)}`);
+
+      // Mostrar notificación al usuario
+      const mensaje = `La cuenta "${cuenta.nombre}" requiere centro de costos`;
+      this.snackBar.open(mensaje, 'Entendido', {
+        duration: 4000,
+        horizontalPosition: 'center',
+        verticalPosition: 'top',
+        panelClass: ['snackbar-warning'],
+      });
+    }
+  }
+
+  /**
+   * Muestra información sobre las cuentas que requieren centro de costos
+   */
+  mostrarInfoCentroCostos(): void {
+    const cuentasConCosto = this.getCuentasConCentroCosto();
+
+    if (cuentasConCosto.length === 0) {
+      console.log('ℹ️ Ninguna cuenta en este asiento requiere centro de costos');
+      return;
+    }
+
+    console.group('🏢 Cuentas que requieren Centro de Costos:');
+    cuentasConCosto.forEach(({ tipo, index, cuenta }) => {
+      console.log(`${tipo} [${index + 1}]: ${cuenta.cuentaContable} - ${cuenta.nombre}`);
+      console.log(`   Naturaleza: ${this.getNaturalezaCuentaNombre(cuenta)}`);
+    });
+    console.groupEnd();
+
+    // Mostrar mensaje al usuario
+    const mensaje = `${cuentasConCosto.length} cuenta(s) requieren centro de costos`;
+    this.snackBar.open(mensaje, 'Ver detalles', {
+      duration: 5000,
+      horizontalPosition: 'center',
+      verticalPosition: 'top',
+    });
+  }
+
+  /**
+   * Valida que todas las cuentas con centro de costos tengan uno asignado
+   */
+  validarCentrosCostos(): { valido: boolean; errores: string[] } {
+    const errores: string[] = [];
+
+    // Validar cuentas del DEBE
+    this.cuentasDebe.controls.forEach((control, index) => {
+      const cuenta = control.get('cuenta')?.value;
+      const centroCosto = control.get('centroCosto')?.value;
+
+      if (cuenta && this.cuentaRequiereCentroCosto(cuenta) && !centroCosto) {
+        errores.push(`DEBE [${index + 1}] "${cuenta.nombre}" requiere centro de costos`);
+      }
+    });
+
+    // Validar cuentas del HABER
+    this.cuentasHaber.controls.forEach((control, index) => {
+      const cuenta = control.get('cuenta')?.value;
+      const centroCosto = control.get('centroCosto')?.value;
+
+      if (cuenta && this.cuentaRequiereCentroCosto(cuenta) && !centroCosto) {
+        errores.push(`HABER [${index + 1}] "${cuenta.nombre}" requiere centro de costos`);
+      }
+    });
+
+    return {
+      valido: errores.length === 0,
+      errores,
+    };
+  }
+
+  /**
+   * Obtiene información de centros de costo asignados en el asiento
+   */
+  getCentrosCostoAsignados(): {
+    tipo: 'DEBE' | 'HABER';
+    index: number;
+    cuenta: PlanCuenta;
+    centroCosto: CentroCosto;
+  }[] {
+    const centrosAsignados: {
+      tipo: 'DEBE' | 'HABER';
+      index: number;
+      cuenta: PlanCuenta;
+      centroCosto: CentroCosto;
+    }[] = [];
+
+    // Revisar cuentas del DEBE
+    this.cuentasDebe.controls.forEach((control, index) => {
+      const cuenta = control.get('cuenta')?.value;
+      const centroCosto = control.get('centroCosto')?.value;
+
+      if (cuenta && centroCosto) {
+        centrosAsignados.push({ tipo: 'DEBE', index, cuenta, centroCosto });
+      }
+    });
+
+    // Revisar cuentas del HABER
+    this.cuentasHaber.controls.forEach((control, index) => {
+      const cuenta = control.get('cuenta')?.value;
+      const centroCosto = control.get('centroCosto')?.value;
+
+      if (cuenta && centroCosto) {
+        centrosAsignados.push({ tipo: 'HABER', index, cuenta, centroCosto });
+      }
+    });
+
+    return centrosAsignados;
+  }
+
+  /**
    * Crea un nuevo asiento limpiando el formulario
    */
   nuevoAsiento(): void {
@@ -1484,5 +1757,53 @@ export class AsientosContablesDinamico implements OnInit {
     this.showMessage('✅ Listo para crear un nuevo asiento', 'success');
 
     console.log('✅ Nuevo asiento iniciado correctamente');
+  }
+
+  /**
+   * Determina si un centro de costo puede ser seleccionado (solo Movimiento)
+   */
+  isCentroSeleccionable(centro: CentroCosto): boolean {
+    return centro.tipo === 2; // Solo centros de Movimiento
+  }
+
+  /**
+   * Obtiene el texto descriptivo del tipo de centro
+   */
+  getTipoTexto(tipo: number): string {
+    return tipo === 1 ? 'Acumulación' : 'Movimiento';
+  }
+
+  /**
+   * Validar selección de centro de costo
+   */
+  onCentroSelected(centroId: number | null, tipo: 'DEBE' | 'HABER', index: number): void {
+    if (centroId) {
+      const centro = this.centrosCosto.find((c) => c.codigo === centroId);
+      if (centro && centro.tipo === 1) {
+        // Si seleccionó un centro de Acumulación, mostrar error y limpiar selección
+        this.showMessage(
+          `El centro "${centro.nombre}" es de tipo Acumulación. Solo se pueden seleccionar centros de Movimiento.`,
+          'error'
+        );
+
+        // Limpiar la selección según el tipo
+        if (tipo === 'DEBE') {
+          const control = this.cuentasDebe.at(index);
+          control?.get('centroCosto')?.setValue(null);
+        } else {
+          const control = this.cuentasHaber.at(index);
+          control?.get('centroCosto')?.setValue(null);
+        }
+        return;
+      }
+    }
+  }
+
+  /**
+   * Construir ruta jerárquica para un centro de costo con indicador de tipo
+   */
+  buildRutaJerarquicaCentro(centro: CentroCosto): string {
+    const tipoTexto = centro.tipo === 1 ? '[ACUM]' : '[MOV]';
+    return `${centro.nombre} ${tipoTexto}`;
   }
 }

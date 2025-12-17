@@ -77,14 +77,15 @@
         <mat-icon matSuffix color="primary">layers</mat-icon>
       </mat-form-field>
 
-      <!-- Tipo de centro -->
+      <!-- Tipo de centro (automático) -->
       <mat-form-field appearance="outline">
         <mat-label>Tipo de centro</mat-label>
-        <mat-select formControlName="tipo">
-          <mat-option [value]="1">Acumulación</mat-option>
-          <mat-option [value]="2">Movimiento</mat-option>
-        </mat-select>
-        <mat-icon matSuffix>label</mat-icon>
+        <input matInput [value]="getTipoLabel(form.get('tipo')?.value)" readonly />
+        <mat-icon matSuffix color="accent">auto_awesome</mat-icon>
+        <mat-hint>
+          @if (form.get('nivel')?.value === 1) { Nivel 1: Acumulación (automático) } @else { Nivel
+          {{ form.get('nivel')?.value }}: Movimiento (automático) }
+        </mat-hint>
       </mat-form-field>
 
       <!-- Estado -->

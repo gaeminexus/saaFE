@@ -7,6 +7,7 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -36,6 +37,7 @@ interface CentroCostoNode extends CentroCosto {
     MatButtonModule,
     MatFormFieldModule,
     MatInputModule,
+    MatMenuModule,
     MatProgressSpinnerModule,
     MatSnackBarModule,
     MatDialogModule,
@@ -159,7 +161,7 @@ export class CentroArbolComponent implements OnInit {
 
   /**
    * Genera el siguiente número único disponible para un centro de costo
-   * Considera hermanos con el mismo padre para evitar duplicados
+   * Mantiene secuencia secuencial considerando hermanos con el mismo padre
    */
   private generateNextNumero(parent?: CentroCostoNode): number {
     const parentId = parent?.codigo || 0;
@@ -169,6 +171,7 @@ export class CentroArbolComponent implements OnInit {
 
     console.log('[CentroArbol] generateNextNumero:', {
       parentId,
+      parentNombre: parent?.nombre || 'ROOT',
       totalCentros: this.centros.length,
       siblingsCount: siblings.length,
       siblingsNumeros: siblings.map((s) => ({ numero: s.numero, nombre: s.nombre })),
@@ -179,14 +182,25 @@ export class CentroArbolComponent implements OnInit {
       return 1;
     }
 
-    // Encontrar el máximo número entre hermanos
-    const maxNumero = Math.max(...siblings.map((c) => c.numero || 0));
-    const nextNumero = maxNumero + 1;
+    // Obtener números existentes ordenados
+    const existingNumbers = siblings
+      .map((c) => c.numero || 0)
+      .filter((n) => n > 0)
+      .sort((a, b) => a - b);
 
-    console.log('[CentroArbol] Número calculado:', {
-      maxNumero,
-      nextNumero,
-    });
+    console.log('[CentroArbol] Números existentes ordenados:', existingNumbers);
+
+    // Buscar el primer hueco en la secuencia o agregar al final
+    for (let i = 1; i <= existingNumbers.length + 1; i++) {
+      if (!existingNumbers.includes(i)) {
+        console.log(`[CentroArbol] Encontrado hueco en secuencia: ${i}`);
+        return i;
+      }
+    }
+
+    // Si no hay huecos, agregar después del máximo
+    const nextNumero = Math.max(...existingNumbers) + 1;
+    console.log('[CentroArbol] Número calculado al final de secuencia:', nextNumero);
 
     return nextNumero;
   }
@@ -214,6 +228,18 @@ export class CentroArbolComponent implements OnInit {
 
   // Tree helper
   hasChild = (_: number, node: CentroCostoNode) => !!node.children && node.children.length > 0;
+
+  // Etiquetas de tipo (como en plan-arbol)
+  getTipoLabel(tipo?: number): string {
+    switch (tipo) {
+      case 1:
+        return 'Acumulación';
+      case 2:
+        return 'Movimiento';
+      default:
+        return 'N/A';
+    }
+  }
 
   // Reglas de acciones por nivel
   canAddChild(node: CentroCostoNode): boolean {
@@ -278,6 +304,55 @@ export class CentroArbolComponent implements OnInit {
     });
   }
 
+  /**
+   * Agregar nuevo centro de nivel 1 (raíz)
+   * Los centros de nivel 1 son de tipo Acumulación automáticamente
+   */
+  onAddNivel1(): void {
+    const presetCodigo = this.generateNuevoCodigo(undefined);
+    const presetNumero = this.generateNextNumero(undefined);
+    const presetNivel = 1;
+
+    console.log('[CentroArbol] onAddNivel1 - Datos para diálogo:', {
+      presetNumero,
+      presetNivel,
+      presetCodigo,
+    });
+
+    const dialogRef = this.dialog.open(CentroArbolFormComponent, {
+      width: '720px',
+      disableClose: true,
+      data: {
+        item: null,
+        parent: null, // Sin padre para nivel 1
+        presetNumero: presetNumero,
+        presetNivel,
+        maxDepth: this.getMaxDepthAllowed(),
+      },
+    });
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result) {
+        this.loadData();
+      }
+    });
+  }
+
+  /**
+   * Agregar centro hijo del nodo seleccionado
+   * Los centros hijos (nivel > 1) son de tipo Movimiento automáticamente
+   */
+  onAddHijo(): void {
+    if (!this.selectedNode) {
+      this.snackBar.open('Seleccione un centro padre primero', 'Cerrar', {
+        duration: 3000,
+        panelClass: ['warning-snackbar'],
+      });
+      return;
+    }
+
+    this.onAdd(this.selectedNode);
+  }
+
   onEdit(node: CentroCostoNode): void {
     const centroCosto = this.findCentroCostoByNode(node);
     if (!centroCosto) return;
@@ -330,10 +405,6 @@ export class CentroArbolComponent implements OnInit {
   }
 
   // Utility methods delegados a utils
-  getTipoLabel(tipo: number): string {
-    return this.centroUtils.getTipoLabel(tipo);
-  }
-
   getTipoClass(tipo: number): string {
     return this.centroUtils.getTipoClass(tipo);
   }

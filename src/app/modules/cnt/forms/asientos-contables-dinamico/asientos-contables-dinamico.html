@@ -122,6 +122,22 @@
               <td mat-cell *matCellDef="let detalle">{{ detalle.descripcion }}</td>
             </ng-container>
 
+            <!-- Columna Centro de Costo -->
+            <ng-container matColumnDef="centroCosto">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>🏢 Centro de Costo</th>
+              <td mat-cell *matCellDef="let detalle">
+                @if (detalle.centroCosto) {
+                <span class="centro-costo-detalle">
+                  <mat-icon color="primary" class="centro-icon">business</mat-icon>
+                  {{ detalle.centroCosto }}
+                  <span class="tipo-badge tipo-movimiento">MOV</span>
+                </span>
+                } @else {
+                <span class="sin-centro">-</span>
+                }
+              </td>
+            </ng-container>
+
             <!-- Columna Debe -->
             <ng-container matColumnDef="debe">
               <th mat-header-cell *matHeaderCellDef mat-sort-header>Debe</th>
@@ -160,6 +176,56 @@
           <mat-paginator [pageSizeOptions]="[5, 10, 20]" [pageSize]="10" showFirstLastButtons>
           </mat-paginator>
         </div>
+
+        <!-- Sección de Totales Globales -->
+        <mat-divider class="totales-divider"></mat-divider>
+        <div class="totales-globales-section">
+          <h3 class="totales-title">
+            <mat-icon>calculate</mat-icon>
+            Totales Globales
+          </h3>
+          <div class="totales-container">
+            <div class="total-debe-global">
+              <mat-icon color="primary">arrow_circle_left</mat-icon>
+              <span class="total-label">Total Debe:</span>
+              <span class="total-value debe-value">{{ totalDebe | currency }}</span>
+            </div>
+            <div class="total-haber-global">
+              <mat-icon color="accent">arrow_circle_right</mat-icon>
+              <span class="total-label">Total Haber:</span>
+              <span class="total-value haber-value">{{ totalHaber | currency }}</span>
+            </div>
+          </div>
+
+          <!-- Botón Actualizar Detalle -->
+          <div class="actualizar-detalle-container">
+            <button
+              mat-raised-button
+              color="primary"
+              type="button"
+              (click)="grabarDetalle()"
+              [disabled]="
+                !form.get('tipo')?.valid ||
+                !form.get('numero')?.valid ||
+                !form.get('fechaAsiento')?.valid
+              "
+              [matTooltip]="
+                detallesOriginales && detallesOriginales.length > 0
+                  ? 'Actualizar detalles existentes del asiento'
+                  : 'Grabar nuevos detalles del asiento'
+              "
+            >
+              <mat-icon>{{
+                detallesOriginales && detallesOriginales.length > 0 ? 'update' : 'save'
+              }}</mat-icon>
+              {{
+                detallesOriginales && detallesOriginales.length > 0
+                  ? 'Actualizar Detalle'
+                  : 'Grabar Detalle'
+              }}
+            </button>
+          </div>
+        </div>
       </mat-card-content>
     </mat-card>
 
@@ -176,38 +242,111 @@
           <!-- Formulario para agregar cuenta -->
           <div formArrayName="cuentasDebe" class="cuenta-input-section">
             @for (cuenta of cuentasDebe.controls; track $index) {
-            <div [formGroupName]="$index" class="cuenta-row">
-              <mat-form-field appearance="outline" class="cuenta-field">
-                <mat-label>Cuenta</mat-label>
-                <mat-select formControlName="cuenta">
-                  <mat-option [value]="null">-- Seleccione --</mat-option>
-                  @for (cta of cuentasPlan; track cta.codigo) {
-                  <mat-option [value]="cta">
-                    {{ cta.cuentaContable }} - {{ cta.nombre }}
-                  </mat-option>
+            <div [formGroupName]="$index" class="cuenta-row-container">
+              <!-- Fila principal: Cuenta, Valor y Botón -->
+              <div class="cuenta-row">
+                <mat-form-field
+                  appearance="outline"
+                  class="cuenta-field"
+                  [class.cuenta-centro-costo]="filaRequiereCentroCosto('DEBE', $index)"
+                >
+                  <mat-label>Cuenta</mat-label>
+                  <mat-select
+                    formControlName="cuenta"
+                    (selectionChange)="onCuentaSeleccionada('DEBE', $index, $event.value)"
+                  >
+                    <mat-option [value]="null">-- Seleccione --</mat-option>
+                    @for (cta of cuentasPlan; track cta.codigo) {
+                    <mat-option [value]="cta">
+                      {{ cta.cuentaContable }} - {{ cta.nombre }}
+                      @if (cuentaRequiereCentroCosto(cta)) {
+                      <span class="centro-costo-indicator"> 🏢 Centro de Costo</span>
+                      }
+                    </mat-option>
+                    }
+                  </mat-select>
+                  <mat-icon matPrefix>account_balance</mat-icon>
+                  @if (filaRequiereCentroCosto('DEBE', $index)) {
+                  <mat-icon
+                    matSuffix
+                    class="centro-costo-icon"
+                    matTooltip="🏢 Centro de Costo Requerido - Debe asignar un centro de costo para esta cuenta"
+                    >business</mat-icon
+                  >
+                  } @if (cuenta.get('cuenta')?.hasError('required') &&
+                  cuenta.get('cuenta')?.touched) {
+                  <mat-error>La cuenta es requerida</mat-error>
+                  } @if (filaRequiereCentroCosto('DEBE', $index)) {
+                  <mat-hint class="centro-costo-hint"
+                    >🏢 Esta cuenta requiere asignar Centro de Costo</mat-hint
+                  >
                   }
-                </mat-select>
-                <mat-icon matPrefix>account_balance</mat-icon>
-                @if (cuenta.get('cuenta')?.hasError('required') && cuenta.get('cuenta')?.touched) {
-                <mat-error>La cuenta es requerida</mat-error>
-                }
-              </mat-form-field>
+                </mat-form-field>
 
-              <mat-form-field appearance="outline" class="valor-field">
-                <mat-label>Valor</mat-label>
-                <input matInput type="number" formControlName="valor" placeholder="0.00" />
-                <span matTextPrefix>$&nbsp;</span>
-              </mat-form-field>
+                <mat-form-field appearance="outline" class="valor-field">
+                  <mat-label>Valor</mat-label>
+                  <input matInput type="number" formControlName="valor" placeholder="0.00" />
+                  <span matTextPrefix>$&nbsp;</span>
+                </mat-form-field>
 
-              <button
-                mat-raised-button
-                color="primary"
-                type="button"
-                (click)="agregarCuentaAlGrid('DEBE')"
-                matTooltip="Agregar cuenta al Debe"
-              >
-                <mat-icon>add</mat-icon>
-              </button>
+                <button
+                  mat-raised-button
+                  color="primary"
+                  type="button"
+                  (click)="agregarCuentaAlGrid('DEBE')"
+                  matTooltip="Agregar cuenta al Debe"
+                >
+                  <mat-icon>add</mat-icon>
+                </button>
+              </div>
+
+              <!-- Fila de Centro de Costo (debajo, solo si la cuenta lo requiere) -->
+              @if (filaRequiereCentroCosto('DEBE', $index)) {
+              <div class="centro-costo-row">
+                <mat-form-field appearance="outline" class="centro-costo-field">
+                  <mat-label>🏢 Centro de Costo (Solo Movimiento)</mat-label>
+                  <mat-select
+                    formControlName="centroCosto"
+                    placeholder="Seleccione un centro de costo (solo Movimiento)"
+                    (selectionChange)="onCentroSelected($event?.value?.codigo, 'DEBE', $index)"
+                  >
+                    <mat-option [value]="null">-- Seleccione --</mat-option>
+                    @for (centro of centrosCosto; track centro.codigo) {
+                    <mat-option
+                      [value]="centro"
+                      [disabled]="!isCentroSeleccionable(centro)"
+                      [class.centro-acumulacion]="centro.tipo === 1"
+                      [class.centro-movimiento]="centro.tipo === 2"
+                    >
+                      <span [class.disabled-option]="centro.tipo === 1">
+                        <mat-icon
+                          [color]="centro.tipo === 2 ? 'primary' : 'warn'"
+                          class="tipo-icon"
+                        >
+                        </mat-icon>
+                        {{ centro.numero }} - {{ centro.nombre }}
+                        <span
+                          class="tipo-badge"
+                          [class.tipo-acumulacion]="centro.tipo === 1"
+                          [class.tipo-movimiento]="centro.tipo === 2"
+                        >
+                          {{ getTipoTexto(centro.tipo) }}
+                        </span>
+                      </span>
+                    </mat-option>
+                    }
+                  </mat-select>
+                  <mat-icon matPrefix>business</mat-icon>
+                  @if (cuenta.get('centroCosto')?.hasError('required') &&
+                  cuenta.get('centroCosto')?.touched) {
+                  <mat-error>El centro de costo es requerido</mat-error>
+                  }
+                  <mat-hint
+                    >Solo centros de Movimiento. Los de Acumulación están deshabilitados.</mat-hint
+                  >
+                </mat-form-field>
+              </div>
+              }
             </div>
             }
           </div>
@@ -237,6 +376,12 @@
               <div class="cuenta-info">
                 <span class="cuenta-codigo">{{ item.cuenta?.cuentaContable }}</span>
                 <span class="cuenta-nombre">{{ item.cuenta?.nombre }}</span>
+                @if (item.centroCosto) {
+                <span class="centro-costo-info">
+                  🏢 {{ item.centroCosto.numero }} - {{ item.centroCosto.nombre }}
+                  <span class="tipo-badge tipo-movimiento">MOV</span>
+                </span>
+                }
               </div>
               <mat-form-field appearance="outline" class="valor-inline">
                 <input
@@ -280,38 +425,111 @@
           <!-- Formulario para agregar cuenta -->
           <div formArrayName="cuentasHaber" class="cuenta-input-section">
             @for (cuenta of cuentasHaber.controls; track $index) {
-            <div [formGroupName]="$index" class="cuenta-row">
-              <mat-form-field appearance="outline" class="cuenta-field">
-                <mat-label>Cuenta</mat-label>
-                <mat-select formControlName="cuenta">
-                  <mat-option [value]="null">-- Seleccione --</mat-option>
-                  @for (cta of cuentasPlan; track cta.codigo) {
-                  <mat-option [value]="cta">
-                    {{ cta.cuentaContable }} - {{ cta.nombre }}
-                  </mat-option>
+            <div [formGroupName]="$index" class="cuenta-row-container">
+              <!-- Fila principal: Cuenta, Valor y Botón -->
+              <div class="cuenta-row">
+                <mat-form-field
+                  appearance="outline"
+                  class="cuenta-field"
+                  [class.cuenta-centro-costo]="filaRequiereCentroCosto('HABER', $index)"
+                >
+                  <mat-label>Cuenta</mat-label>
+                  <mat-select
+                    formControlName="cuenta"
+                    (selectionChange)="onCuentaSeleccionada('HABER', $index, $event.value)"
+                  >
+                    <mat-option [value]="null">-- Seleccione --</mat-option>
+                    @for (cta of cuentasPlan; track cta.codigo) {
+                    <mat-option [value]="cta">
+                      {{ cta.cuentaContable }} - {{ cta.nombre }}
+                      @if (cuentaRequiereCentroCosto(cta)) {
+                      <span class="centro-costo-indicator"> 🏢 Centro de Costo</span>
+                      }
+                    </mat-option>
+                    }
+                  </mat-select>
+                  <mat-icon matPrefix>account_balance</mat-icon>
+                  @if (filaRequiereCentroCosto('HABER', $index)) {
+                  <mat-icon
+                    matSuffix
+                    class="centro-costo-icon"
+                    matTooltip="🏢 Centro de Costo Requerido - Debe asignar un centro de costo para esta cuenta"
+                    >business</mat-icon
+                  >
+                  } @if (cuenta.get('cuenta')?.hasError('required') &&
+                  cuenta.get('cuenta')?.touched) {
+                  <mat-error>La cuenta es requerida</mat-error>
+                  } @if (filaRequiereCentroCosto('HABER', $index)) {
+                  <mat-hint class="centro-costo-hint"
+                    >🏢 Esta cuenta requiere asignar Centro de Costo</mat-hint
+                  >
                   }
-                </mat-select>
-                <mat-icon matPrefix>account_balance</mat-icon>
-                @if (cuenta.get('cuenta')?.hasError('required') && cuenta.get('cuenta')?.touched) {
-                <mat-error>La cuenta es requerida</mat-error>
-                }
-              </mat-form-field>
+                </mat-form-field>
 
-              <mat-form-field appearance="outline" class="valor-field">
-                <mat-label>Valor</mat-label>
-                <input matInput type="number" formControlName="valor" placeholder="0.00" />
-                <span matTextPrefix>$&nbsp;</span>
-              </mat-form-field>
+                <mat-form-field appearance="outline" class="valor-field">
+                  <mat-label>Valor</mat-label>
+                  <input matInput type="number" formControlName="valor" placeholder="0.00" />
+                  <span matTextPrefix>$&nbsp;</span>
+                </mat-form-field>
 
-              <button
-                mat-raised-button
-                color="accent"
-                type="button"
-                (click)="agregarCuentaAlGrid('HABER')"
-                matTooltip="Agregar cuenta al Haber"
-              >
-                <mat-icon>add</mat-icon>
-              </button>
+                <button
+                  mat-raised-button
+                  color="accent"
+                  type="button"
+                  (click)="agregarCuentaAlGrid('HABER')"
+                  matTooltip="Agregar cuenta al Haber"
+                >
+                  <mat-icon>add</mat-icon>
+                </button>
+              </div>
+
+              <!-- Fila de Centro de Costo (debajo, solo si la cuenta lo requiere) -->
+              @if (filaRequiereCentroCosto('HABER', $index)) {
+              <div class="centro-costo-row">
+                <mat-form-field appearance="outline" class="centro-costo-field">
+                  <mat-label>🏢 Centro de Costo (Solo Movimiento)</mat-label>
+                  <mat-select
+                    formControlName="centroCosto"
+                    placeholder="Seleccione un centro de costo (solo Movimiento)"
+                    (selectionChange)="onCentroSelected($event?.value?.codigo, 'HABER', $index)"
+                  >
+                    <mat-option [value]="null">-- Seleccione --</mat-option>
+                    @for (centro of centrosCosto; track centro.codigo) {
+                    <mat-option
+                      [value]="centro"
+                      [disabled]="!isCentroSeleccionable(centro)"
+                      [class.centro-acumulacion]="centro.tipo === 1"
+                      [class.centro-movimiento]="centro.tipo === 2"
+                    >
+                      <span [class.disabled-option]="centro.tipo === 1">
+                        <mat-icon
+                          [color]="centro.tipo === 2 ? 'primary' : 'warn'"
+                          class="tipo-icon"
+                        >
+                        </mat-icon>
+                        {{ centro.numero }} - {{ centro.nombre }}
+                        <span
+                          class="tipo-badge"
+                          [class.tipo-acumulacion]="centro.tipo === 1"
+                          [class.tipo-movimiento]="centro.tipo === 2"
+                        >
+                          {{ getTipoTexto(centro.tipo) }}
+                        </span>
+                      </span>
+                    </mat-option>
+                    }
+                  </mat-select>
+                  <mat-icon matPrefix>business</mat-icon>
+                  @if (cuenta.get('centroCosto')?.hasError('required') &&
+                  cuenta.get('centroCosto')?.touched) {
+                  <mat-error>El centro de costo es requerido</mat-error>
+                  }
+                  <mat-hint
+                    >Solo centros de Movimiento. Los de Acumulación están deshabilitados.</mat-hint
+                  >
+                </mat-form-field>
+              </div>
+              }
             </div>
             }
           </div>
@@ -341,6 +559,17 @@
               <div class="cuenta-info">
                 <span class="cuenta-codigo">{{ item.cuenta?.cuentaContable }}</span>
                 <span class="cuenta-nombre">{{ item.cuenta?.nombre }}</span>
+                @if (item.centroCosto) {
+                <span class="centro-costo-info">
+                  🏢 {{ item.centroCosto.numero }} - {{ item.centroCosto.nombre }}
+                  <span class="tipo-badge tipo-movimiento">MOV</span>
+                </span>
+                } @if (item.centroCosto) {
+                <span class="centro-costo-info">
+                  🏢 {{ item.centroCosto.numero }} - {{ item.centroCosto.nombre }}
+                  <span class="tipo-badge tipo-movimiento">MOV</span>
+                </span>
+                }
               </div>
               <mat-form-field appearance="outline" class="valor-inline">
                 <input
@@ -372,69 +601,5 @@
         </mat-card-content>
       </mat-card>
     </div>
-
-    <!-- RESUMEN Y ACCIONES -->
-    <mat-card
-      class="resumen-card"
-      [class.balanceado]="diferencia === 0"
-      [class.desbalanceado]="diferencia !== 0"
-    >
-      <mat-card-content>
-        <div class="resumen-content">
-          <div class="resumen-item">
-            <span class="label">Total Debe:</span>
-            <span class="value">{{ totalDebe | currency }}</span>
-          </div>
-          <div class="resumen-item">
-            <span class="label">Total Haber:</span>
-            <span class="value">{{ totalHaber | currency }}</span>
-          </div>
-          <div class="resumen-item diferencia-item">
-            <span class="label">Diferencia:</span>
-            <span class="value" [class.error]="diferencia !== 0">
-              {{ diferencia | currency }}
-              @if (diferencia === 0) {
-              <mat-icon class="check-icon">check_circle</mat-icon>
-              } @else {
-              <mat-icon class="error-icon">error</mat-icon>
-              }
-            </span>
-          </div>
-        </div>
-
-        <div class="actions">
-          <button
-            mat-raised-button
-            color="primary"
-            type="button"
-            (click)="grabarDetalle()"
-            [disabled]="
-              !form.get('tipo')?.valid ||
-              !form.get('numero')?.valid ||
-              !form.get('fechaAsiento')?.valid
-            "
-            [matTooltip]="
-              detallesOriginales && detallesOriginales.length > 0
-                ? 'Actualizar detalles existentes del asiento'
-                : 'Grabar nuevos detalles del asiento'
-            "
-          >
-            <mat-icon>{{
-              detallesOriginales && detallesOriginales.length > 0 ? 'update' : 'save'
-            }}</mat-icon>
-            {{
-              detallesOriginales && detallesOriginales.length > 0
-                ? 'Actualizar Detalle'
-                : 'Grabar Detalle'
-            }}
-          </button>
-
-          <button mat-raised-button type="button" (click)="limpiar()">
-            <mat-icon>clear</mat-icon>
-            Limpiar
-          </button>
-        </div>
-      </mat-card-content>
-    </mat-card>
   </form>
 </div>

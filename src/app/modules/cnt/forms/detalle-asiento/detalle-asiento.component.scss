@@ -6,6 +6,14 @@
   gap: 1.5rem;
 }
 
+// Badge para tipo de centro de costo
+.tipo-badge {
+  font-size: 0.7rem;
+  color: #4caf50;
+  font-weight: 500;
+  opacity: 0.8;
+}
+
 // Toolbar
 .action-toolbar {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);

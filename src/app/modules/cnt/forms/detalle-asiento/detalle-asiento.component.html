@@ -122,12 +122,14 @@
         <!-- Fila 3: Centro de Costos (opcional) -->
         <div class="form-row-full">
           <mat-form-field appearance="outline" class="form-field full-width">
-            <mat-label>Centro de Costos (Opcional)</mat-label>
+            <mat-label>Centro de Costos (Solo Movimiento - Opcional)</mat-label>
             <mat-select formControlName="centroCosto">
               <mat-option value="">Sin centro de costos</mat-option>
-              @for (cc of centrosCosto; track cc.codigo) {
-              <mat-option [value]="cc.codigo"> {{ cc.codigo }} - {{ cc.nombre }} </mat-option>
-              }
+              @for (cc of centrosCosto; track cc.codigo) { @if (cc.tipo === 2) {
+              <mat-option [value]="cc.codigo" [title]="cc.rutaCompleta + ' (Movimiento)'">
+                {{ cc.rutaCompleta }} <span class="tipo-badge">(Movimiento)</span>
+              </mat-option>
+              } }
             </mat-select>
           </mat-form-field>
         </div>

@@ -5,10 +5,9 @@ import { Injectable } from '@angular/core';
  * Contiene funciones de cálculo, formateo y validación reutilizables
  */
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class CentroCostoUtilsService {
-
   /**
    * Formatea una fecha de forma segura para mostrar en UI
    * @param fecha - Fecha en formato string, Date o null/undefined
@@ -16,19 +15,19 @@ export class CentroCostoUtilsService {
    */
   formatFecha(fecha: string | Date | null | undefined): string {
     if (!fecha) return '-';
-    
+
     try {
       const fechaStr = typeof fecha === 'string' ? fecha : fecha.toISOString();
       // Remover zona horaria problemática
       const fechaLimpia = fechaStr.split('[')[0].replace('Z', '');
       const fechaObj = new Date(fechaLimpia);
-      
+
       if (isNaN(fechaObj.getTime())) return '-';
-      
+
       return fechaObj.toLocaleDateString('es-ES', {
         day: '2-digit',
         month: '2-digit',
-        year: 'numeric'
+        year: 'numeric',
       });
     } catch (err) {
       console.error('Error formateando fecha:', err);
@@ -43,7 +42,7 @@ export class CentroCostoUtilsService {
    */
   calculateLevel(codigoStr: string): number {
     if (!codigoStr) return 1;
-    
+
     const dots = (codigoStr.match(/\./g) || []).length;
     return dots + 1;
   }
@@ -56,8 +55,8 @@ export class CentroCostoUtilsService {
   getCodigoForSorting(codigo: string): string {
     if (!codigo) return '0000';
 
-    const parts = codigo.split('.').filter(p => p.length > 0);
-    const paddedParts = parts.map(part => {
+    const parts = codigo.split('.').filter((p) => p.length > 0);
+    const paddedParts = parts.map((part) => {
       const numPart = parseInt(part.trim(), 10) || 0;
       return numPart.toString().padStart(4, '0');
     });
@@ -76,12 +75,14 @@ export class CentroCostoUtilsService {
     if (!a) return -1;
     if (!b) return 1;
 
-    const aParts = a.split('.')
-      .filter(p => p.length > 0)
-      .map(p => p.padStart(4, '0'));
-    const bParts = b.split('.')
-      .filter(p => p.length > 0)
-      .map(p => p.padStart(4, '0'));
+    const aParts = a
+      .split('.')
+      .filter((p) => p.length > 0)
+      .map((p) => p.padStart(4, '0'));
+    const bParts = b
+      .split('.')
+      .filter((p) => p.length > 0)
+      .map((p) => p.padStart(4, '0'));
 
     const max = Math.max(aParts.length, bParts.length);
     for (let i = 0; i < max; i++) {
@@ -93,34 +94,49 @@ export class CentroCostoUtilsService {
   }
 
   /**
-   * Genera el siguiente código disponible para un hijo
-   * @param parentCodigo - Código del padre (opcional)
-   * @param existingCodigos - Array de códigos existentes
-   * @returns Nuevo código sugerido
+   * Genera el siguiente código disponible manteniendo secuencia secuencial
+   * Para nivel 1: busca el primer número libre en secuencia (1,2,3...) o añade al final
+   * Para niveles inferiores: genera código hijo basado en el padre
+   * @param parentCodigo - Código del padre (opcional, null para nivel 1)
+   * @param existingCodigos - Array de códigos jerárquicos existentes
+   * @returns Nuevo código sugerido siguiendo secuencia secuencial
    */
   generateNuevoCodigo(parentCodigo: string | null, existingCodigos: string[]): string {
     if (!parentCodigo) {
-      // Generar código raíz
+      // Generar código raíz manteniendo secuencia secuencial
       const rootNums = existingCodigos
-        .filter(c => !c.includes('.'))
-        .map(c => parseInt(c, 10))
-        .filter(n => !isNaN(n));
-      
-      const next = rootNums.length === 0 ? 1 : Math.max(...rootNums) + 1;
+        .filter((c) => !c.includes('.'))
+        .map((c) => parseInt(c, 10))
+        .filter((n) => !isNaN(n))
+        .sort((a, b) => a - b);
+
+      if (rootNums.length === 0) {
+        return '1';
+      }
+
+      // Buscar el primer hueco en la secuencia o agregar al final
+      for (let i = 1; i <= rootNums.length + 1; i++) {
+        if (!rootNums.includes(i)) {
+          return String(i);
+        }
+      }
+
+      // Si no hay huecos, agregar después del máximo
+      const next = Math.max(...rootNums) + 1;
       return String(next);
     }
 
     // Generar código hijo
     const children = existingCodigos
-      .filter(c => c.startsWith(parentCodigo + '.'))
-      .filter(c => {
+      .filter((c) => c.startsWith(parentCodigo + '.'))
+      .filter((c) => {
         // Solo hijos directos (mismo número de puntos + 1)
         const parentDots = (parentCodigo.match(/\./g) || []).length;
         const childDots = (c.match(/\./g) || []).length;
         return childDots === parentDots + 1;
       });
 
-    const segs = children.map(ch => {
+    const segs = children.map((ch) => {
       const parts = ch.split('.');
       const last = parts[parts.length - 1] || '0';
       return parseInt(last, 10) || 0;
@@ -156,9 +172,12 @@ export class CentroCostoUtilsService {
    */
   getTipoLabel(tipo?: number): string {
     switch (tipo) {
-      case 1: return 'Acumulación';
-      case 2: return 'Movimiento';
-      default: return 'Desconocido';
+      case 1:
+        return 'Acumulación';
+      case 2:
+        return 'Movimiento';
+      default:
+        return 'Desconocido';
     }
   }
 
@@ -169,9 +188,12 @@ export class CentroCostoUtilsService {
    */
   getTipoClass(tipo?: number): string {
     switch (tipo) {
-      case 1: return 'movimiento';
-      case 2: return 'acumulacion';
-      default: return 'desconocido';
+      case 1:
+        return 'movimiento';
+      case 2:
+        return 'acumulacion';
+      default:
+        return 'desconocido';
     }
   }
 
@@ -217,7 +239,7 @@ export class CentroCostoUtilsService {
    */
   countDescendants(codigoPadre: string, allCodigos: string[]): number {
     const prefix = `${codigoPadre}.`;
-    return allCodigos.filter(c => c.startsWith(prefix)).length;
+    return allCodigos.filter((c) => c.startsWith(prefix)).length;
   }
 
   /**
@@ -226,10 +248,7 @@ export class CentroCostoUtilsService {
    * @param allCentros - Mapa de códigos a centros
    * @returns Ruta textual (ej: "Producción / Manufactura / Línea 1")
    */
-  getFullPath(
-    codigoStr: string,
-    allCentros: Map<string, { nombre: string }>
-  ): string {
+  getFullPath(codigoStr: string, allCentros: Map<string, { nombre: string }>): string {
     if (!codigoStr) return '';
 
     const parts = codigoStr.split('.');

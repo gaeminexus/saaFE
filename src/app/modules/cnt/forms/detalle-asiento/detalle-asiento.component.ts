@@ -25,6 +25,11 @@ import { PlanCuenta } from '../../model/plan-cuenta';
 import { CentroCostoService } from '../../service/centro-costo.service';
 import { PlanCuentaService } from '../../service/plan-cuenta.service';
 
+// Interface para centros de costo con ruta completa
+interface CentroCostoConRuta extends CentroCosto {
+  rutaCompleta: string;
+}
+
 @Component({
   selector: 'app-detalle-asiento',
   standalone: true,
@@ -62,7 +67,7 @@ export class DetalleAsientoComponent implements OnInit {
 
   // Dropdowns
   planCuentas: PlanCuenta[] = [];
-  centrosCosto: CentroCosto[] = [];
+  centrosCosto: CentroCostoConRuta[] = [];
 
   // Totales
   totalDebe = 0;
@@ -113,8 +118,35 @@ export class DetalleAsientoComponent implements OnInit {
     // Cargar centros de costo
     this.centroCostoService.getAll().subscribe({
       next: (data) => {
-        this.centrosCosto = Array.isArray(data) ? data : (data as any)?.data ?? [];
-        console.log('📋 Centros de Costo cargados:', this.centrosCosto.length);
+        const allCentros = Array.isArray(data) ? data : (data as any)?.data ?? [];
+
+        // Filtrar por empresa actual
+        const empresaCodigo = parseInt(localStorage.getItem('idSucursal') || '280', 10);
+        const centrosFiltrados = allCentros.filter(
+          (c: CentroCosto) => c.empresa?.codigo === empresaCodigo
+        );
+
+        // Solo permitir seleccionar centros de tipo Movimiento (tipo: 2)
+        const centrosMovimiento = centrosFiltrados.filter((c: CentroCosto) => {
+          const esMovimiento = c.tipo === 2;
+          if (!esMovimiento) {
+            console.log('🚫 Centro descartado (Acumulación):', c.numero, c.nombre, 'tipo:', c.tipo);
+          }
+          return esMovimiento;
+        });
+
+        this.centrosCosto = centrosMovimiento.map((centro: CentroCosto) => ({
+          ...centro,
+          // Agregar ruta jerárquica completa para mostrar contexto
+          rutaCompleta: this.buildRutaJerarquica(centro, centrosFiltrados),
+        }));
+
+        console.log('📋 Centros de Costo de Movimiento cargados:', this.centrosCosto.length);
+        console.log('📋 Total centros en empresa:', centrosFiltrados.length);
+        console.log(
+          '✅ Centros disponibles para selección:',
+          this.centrosCosto.map((c) => `${c.numero} - ${c.nombre} (tipo: ${c.tipo})`)
+        );
         this.loading = false;
       },
       error: (err) => {
@@ -242,6 +274,27 @@ export class DetalleAsientoComponent implements OnInit {
 
   private obtenerCentroCosto(codigo: any): CentroCosto {
     return this.centrosCosto.find((c) => c.codigo === codigo) || ({} as CentroCosto);
+  }
+
+  /**
+   * Construye la ruta jerárquica completa de un centro de costo
+   * Ejemplo: "1 - TALENTO HUMANO > 1.1 - MARKETING"
+   */
+  private buildRutaJerarquica(centro: CentroCosto, todosLosCentros: CentroCosto[]): string {
+    const buildPath = (c: CentroCosto): string => {
+      if (!c.idPadre) {
+        return `${c.numero} - ${c.nombre}`;
+      }
+
+      const parent = todosLosCentros.find((tc) => tc.codigo === c.idPadre);
+      if (!parent) {
+        return `${c.numero} - ${c.nombre}`;
+      }
+
+      return `${buildPath(parent)} > ${c.numero} - ${c.nombre}`;
+    };
+
+    return buildPath(centro);
   }
 
   private emitirCambios(): void {

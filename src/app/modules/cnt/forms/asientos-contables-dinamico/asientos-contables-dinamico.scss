@@ -243,98 +243,6 @@
         }
       }
     }
-
-    .resumen-card {
-      margin-top: 20px;
-      background-color: #fafafa;
-
-      &.balanceado {
-        border: 2px solid #4caf50;
-        background-color: #e8f5e9;
-      }
-
-      &.desbalanceado {
-        border: 2px solid #ff9800;
-        background-color: #fff3e0;
-      }
-
-      mat-card-content {
-        .resumen-content {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 20px;
-          margin-bottom: 20px;
-          padding: 16px;
-          background-color: white;
-          border-radius: 4px;
-
-          @media (max-width: 768px) {
-            grid-template-columns: 1fr;
-          }
-
-          .resumen-item {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-
-            .label {
-              font-size: 14px;
-              color: #666;
-              font-weight: 500;
-            }
-
-            .value {
-              font-size: 24px;
-              font-weight: 700;
-              color: #1976d2;
-              display: flex;
-              align-items: center;
-              gap: 8px;
-
-              &.error {
-                color: #f44336;
-              }
-
-              .check-icon {
-                color: #4caf50;
-                font-size: 28px;
-                width: 28px;
-                height: 28px;
-              }
-
-              .error-icon {
-                color: #ff9800;
-                font-size: 28px;
-                width: 28px;
-                height: 28px;
-              }
-            }
-
-            &.diferencia-item {
-              .value {
-                font-size: 28px;
-              }
-            }
-          }
-        }
-
-        .actions {
-          display: flex;
-          gap: 16px;
-          justify-content: center;
-
-          button {
-            min-width: 180px;
-            height: 48px;
-            font-size: 16px;
-
-            mat-icon {
-              margin-right: 8px;
-            }
-          }
-        }
-      }
-    }
   }
 }
 
@@ -358,7 +266,103 @@
 .cuenta-input-section {
   margin-bottom: 16px;
 
-  .cuenta-row {
+  // Container para cada fila (incluye fila principal + fila centro costo)
+  .cuenta-row-container {
+    margin-bottom: 16px;
+    animation: fadeIn 0.3s ease-in-out;
+
+    // Fila principal: Cuenta, Valor y Botón
+    .cuenta-row {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      margin-bottom: 8px;
+
+      .cuenta-field {
+        flex: 2;
+
+        // Estilos para cuentas que requieren centro de costos
+        &.cuenta-centro-costo {
+          .mat-mdc-form-field-outline {
+            border-color: #ff9800 !important;
+            border-width: 2px !important;
+          }
+
+          .mat-mdc-form-field-outline-thick {
+            border-color: #f57c00 !important;
+          }
+
+          background: linear-gradient(
+            45deg,
+            transparent 49%,
+            rgba(255, 152, 0, 0.1) 49%,
+            rgba(255, 152, 0, 0.1) 51%,
+            transparent 51%
+          );
+        }
+
+        .centro-costo-icon {
+          color: #ff9800;
+          animation: pulse 2s infinite;
+        }
+
+        .centro-costo-hint {
+          color: #f57c00;
+          font-weight: 500;
+          font-size: 12px;
+        }
+      }
+
+      .valor-field {
+        flex: 1;
+        min-width: 150px;
+      }
+
+      button {
+        margin-top: 8px;
+        height: 48px;
+      }
+    }
+
+    // Fila de centro de costo (aparece debajo cuando es necesario)
+    .centro-costo-row {
+      margin-left: 0;
+      animation: slideDown 0.3s ease-out;
+
+      .centro-costo-field {
+        width: 100%;
+        max-width: 400px;
+
+        .mat-mdc-form-field-outline {
+          border-color: #ff9800 !important;
+        }
+
+        .mat-mdc-form-field-outline-thick {
+          border-color: #f57c00 !important;
+        }
+
+        background: linear-gradient(
+          90deg,
+          transparent 98%,
+          rgba(255, 152, 0, 0.1) 98%,
+          rgba(255, 152, 0, 0.1) 100%
+        );
+
+        .mat-mdc-select-arrow {
+          color: #ff9800;
+        }
+
+        mat-hint {
+          color: #f57c00;
+          font-weight: 500;
+          font-size: 11px;
+        }
+      }
+    }
+  }
+
+  // Backward compatibility para cuenta-row individual (si queda alguna)
+  .cuenta-row:not(.cuenta-row-container .cuenta-row) {
     display: flex;
     gap: 12px;
     align-items: flex-start;
@@ -366,11 +370,53 @@
 
     .cuenta-field {
       flex: 2;
+
+      .centro-costo-indicator {
+        color: #ff9800;
+        font-size: 11px;
+        font-weight: 600;
+        background: rgba(255, 152, 0, 0.1);
+        padding: 2px 6px;
+        border-radius: 12px;
+        margin-left: 8px;
+        display: inline-block;
+        border: 1px solid rgba(255, 152, 0, 0.3);
+      }
     }
 
     .valor-field {
       flex: 1;
       min-width: 150px;
+    }
+
+    .centro-costo-field {
+      flex: 1.5;
+      min-width: 220px;
+
+      .mat-mdc-form-field-outline {
+        border-color: #ff9800 !important;
+      }
+
+      .mat-mdc-form-field-outline-thick {
+        border-color: #f57c00 !important;
+      }
+
+      background: linear-gradient(
+        90deg,
+        transparent 98%,
+        rgba(255, 152, 0, 0.1) 98%,
+        rgba(255, 152, 0, 0.1) 100%
+      );
+
+      .mat-mdc-select-arrow {
+        color: #ff9800;
+      }
+
+      mat-hint {
+        color: #f57c00;
+        font-weight: 500;
+        font-size: 11px;
+      }
     }
 
     button {
@@ -491,6 +537,28 @@
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+      }
+
+      .centro-costo-info {
+        font-size: 12px;
+        color: #4caf50;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 2px;
+
+        .tipo-badge {
+          &.tipo-movimiento {
+            background: linear-gradient(135deg, #4caf50, #66bb6a);
+            color: white;
+            padding: 1px 4px;
+            border-radius: 6px;
+            font-size: 9px;
+            font-weight: bold;
+            letter-spacing: 0.3px;
+          }
+        }
       }
     }
 
@@ -648,6 +716,39 @@
     }
   }
 
+  // Estilos para columna centro de costo
+  .centro-costo-detalle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    color: #4caf50;
+
+    .centro-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+    }
+
+    .tipo-badge {
+      &.tipo-movimiento {
+        background: linear-gradient(135deg, #4caf50, #66bb6a);
+        color: white;
+        padding: 2px 4px;
+        border-radius: 6px;
+        font-size: 8px;
+        font-weight: bold;
+        letter-spacing: 0.3px;
+      }
+    }
+  }
+
+  .sin-centro {
+    color: #9e9e9e;
+    font-style: italic;
+    text-align: center;
+  }
+
   // Chips para tipos
   .tipo-debe {
     background-color: #ffebee;
@@ -693,6 +794,44 @@
   }
 }
 
+// Animaciones para centro de costos
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes highlight {
+  0% {
+    background-color: transparent;
+  }
+  50% {
+    background-color: rgba(255, 152, 0, 0.2);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+@keyframes slideDown {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px);
+    max-height: 0;
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    max-height: 80px;
+  }
+}
+
 // Estilos globales para snackbars
 :host ::ng-deep {
   .error-snackbar {
@@ -700,13 +839,221 @@
     color: white !important;
   }
 
-  .warning-snackbar {
+  .warning-snackbar,
+  .snackbar-warning {
     background-color: #ff9800 !important;
     color: white !important;
+
+    .mat-simple-snack-bar-action {
+      color: #fff !important;
+      font-weight: bold;
+    }
   }
 
   .success-snackbar {
     background-color: #4caf50 !important;
     color: white !important;
+  }
+
+  // Estilos específicos para opciones de centro de costos
+  .mat-mdc-option {
+    .centro-costo-indicator {
+      margin-left: 8px;
+      animation: pulse 2s infinite;
+      font-size: 11px;
+      padding: 1px 4px;
+      border-radius: 8px;
+      white-space: nowrap;
+    }
+
+    // Hacer las opciones un poco más altas para acomodar el badge
+    &:has(.centro-costo-indicator) {
+      min-height: 48px;
+      align-items: center;
+
+      .mdc-list-item__primary-text {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 4px;
+      }
+    }
+
+    // Estilos para opciones de centros por tipo
+    &.centro-movimiento {
+      background-color: rgba(76, 175, 80, 0.05);
+      border-left: 3px solid #4caf50;
+
+      &:hover {
+        background-color: rgba(76, 175, 80, 0.1);
+      }
+    }
+
+    &.centro-acumulacion {
+      background-color: rgba(244, 67, 54, 0.05);
+      border-left: 3px solid #f44336;
+      opacity: 0.6;
+
+      &:hover {
+        background-color: rgba(244, 67, 54, 0.1);
+      }
+    }
+
+    // Estilos para contenido de opciones con validación
+    .disabled-option {
+      color: rgba(0, 0, 0, 0.38) !important;
+      opacity: 0.7;
+
+      .tipo-icon {
+        font-size: 18px;
+        margin-right: 8px;
+        vertical-align: middle;
+      }
+    }
+
+    .tipo-badge {
+      font-size: 10px;
+      font-weight: bold;
+      padding: 2px 6px;
+      border-radius: 10px;
+      margin-left: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+
+      &.tipo-movimiento {
+        background: linear-gradient(135deg, #4caf50, #66bb6a);
+        color: white;
+        box-shadow: 0 2px 4px rgba(76, 175, 80, 0.3);
+      }
+
+      &.tipo-acumulacion {
+        background: linear-gradient(135deg, #f44336, #ef5350);
+        color: white;
+        box-shadow: 0 2px 4px rgba(244, 67, 54, 0.3);
+      }
+    }
+  }
+}
+
+// ============================================
+// ESTILOS PARA SECCIÓN DE TOTALES GLOBALES
+// ============================================
+.totales-globales-section {
+  margin-top: 20px;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+
+  .totales-divider {
+    margin: 16px 0;
+  }
+
+  .totales-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 16px 0;
+    color: #495057;
+    font-size: 16px;
+    font-weight: 600;
+
+    mat-icon {
+      font-size: 20px;
+      color: #6c757d;
+    }
+  }
+
+  .totales-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    align-items: center;
+
+    @media (max-width: 768px) {
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    .total-debe-global,
+    .total-haber-global {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      border-radius: 6px;
+      background: white;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      transition: all 0.2s ease;
+
+      &:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+      }
+
+      mat-icon {
+        font-size: 24px;
+        width: 24px;
+        height: 24px;
+      }
+
+      .total-label,
+      .diferencia-label {
+        font-weight: 500;
+        color: #495057;
+        font-size: 14px;
+      }
+
+      .total-value {
+        font-weight: 700;
+        font-size: 18px;
+        margin-left: auto;
+      }
+    }
+
+    .total-debe-global {
+      border-left: 4px solid #1976d2;
+
+      .debe-value {
+        color: #1976d2;
+      }
+    }
+
+    .total-haber-global {
+      border-left: 4px solid #388e3c;
+
+      .haber-value {
+        color: #388e3c;
+      }
+    }
+  }
+
+  .actualizar-detalle-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #dee2e6;
+
+    button {
+      padding: 12px 24px;
+      font-weight: 600;
+      box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+      transition: all 0.2s ease;
+
+      &:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+      }
+
+      &:disabled {
+        transform: none;
+        box-shadow: none;
+      }
+
+      mat-icon {
+        margin-right: 8px;
+      }
+    }
   }
 }

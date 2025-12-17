@@ -112,13 +112,10 @@ export class CentroArbolFormComponent implements OnInit {
       const presetNivel =
         this.data.presetNivel || (this.parentAccount ? this.parentAccount.nivel + 1 : 1);
 
-      // Calcular tipo automático según nivel:
-      // Nivel 1 = Acumulación (1)
-      // Nivel > 1 y no es último = Acumulación (1)
-      // Último nivel = Movimiento (2)
-      // Por defecto asignamos Acumulación, el backend o validación pueden ajustar según profundidad máxima
-      const maxDepth = this.data.maxDepth || 5;
-      const tipoAutomatico = presetNivel >= maxDepth ? 2 : 1;
+      // Calcular tipo automático según nivel (igual que plan-arbol):
+      // Nivel 1 = Acumulación (1) - Centros superiores
+      // Nivel > 1 = Movimiento (2) - Centros hijos
+      const tipoAutomatico = presetNivel === 1 ? 1 : 2;
 
       console.log('[CentroArbolForm] buildForm - Modo CREAR:', {
         presetNumero,
