@@ -30,7 +30,8 @@
   <div class="table-content">
     <app-table-basic-hijos
       *ngIf="tableConfig"
-      [configTable]="tableConfig">
+      [configTable]="tableConfig"
+      (emiteError)="onTableError($event)">
     </app-table-basic-hijos>
   </div>
 </div>

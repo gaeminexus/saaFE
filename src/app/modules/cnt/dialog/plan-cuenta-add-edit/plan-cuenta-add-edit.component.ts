@@ -14,7 +14,7 @@ import { NaturalezaCuenta } from '../../model/naturaleza-cuenta';
 import { PlanCuenta } from '../../model/plan-cuenta';
 import { PlanCuentaService } from '../../service/plan-cuenta.service';
 
-export interface PlanArbolFormData {
+export interface PlanCuentaAddEditData {
   item?: PlanCuenta;
   parent?: PlanCuenta;
   naturalezas: NaturalezaCuenta[];
@@ -24,7 +24,7 @@ export interface PlanArbolFormData {
 }
 
 @Component({
-  selector: 'app-plan-arbol-form',
+  selector: 'app-plan-cuenta-add-edit',
   standalone: true,
   imports: [
     CommonModule,
@@ -38,10 +38,10 @@ export interface PlanArbolFormData {
     MatIconModule,
     MatCheckboxModule,
   ],
-  templateUrl: './plan-arbol-form.component.html',
-  styleUrls: ['./plan-arbol-form.component.scss'],
+  templateUrl: './plan-cuenta-add-edit.component.html',
+  styleUrls: ['./plan-cuenta-add-edit.component.scss'],
 })
-export class PlanArbolFormComponent implements OnInit {
+export class PlanCuentaAddEditComponent implements OnInit {
   form: FormGroup;
   loading = false;
   error: string | null = null;
@@ -109,9 +109,9 @@ export class PlanArbolFormComponent implements OnInit {
 
   constructor(
     private fb: FormBuilder,
-    private dialogRef: MatDialogRef<PlanArbolFormComponent>,
+    private dialogRef: MatDialogRef<PlanCuentaAddEditComponent>,
     private planCuentaService: PlanCuentaService,
-    @Inject(MAT_DIALOG_DATA) public data: PlanArbolFormData
+    @Inject(MAT_DIALOG_DATA) public data: PlanCuentaAddEditData
   ) {
     this.isEdit = !!data.item;
     this.naturalezas = data.naturalezas;

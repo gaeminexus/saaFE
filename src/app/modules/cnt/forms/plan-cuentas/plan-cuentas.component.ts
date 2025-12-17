@@ -20,7 +20,7 @@ import { NaturalezaCuentaService } from '../../service/naturaleza-cuenta.service
 import { PlanCuenta } from '../../model/plan-cuenta';
 import { NaturalezaCuenta } from '../../model/naturaleza-cuenta';
 import { ExportService } from '../../../../shared/services/export.service';
-import { PlanCuentasFormComponent } from './plan-cuentas-form.component';
+import { PlanCuentaAddEditComponent } from '../../dialog/plan-cuenta-add-edit/plan-cuenta-add-edit.component';
 import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
@@ -532,7 +532,7 @@ export class PlanCuentasComponent implements OnInit {
 
   // ---- Acciones CRUD ----
   onAdd(parent?: PlanCuentaNode) {
-    const dialogRef = this.dialog.open(PlanCuentasFormComponent, {
+    const dialogRef = this.dialog.open(PlanCuentaAddEditComponent, {
       width: '700px',
       disableClose: true,
       data: { parent: parent || null, naturalezas: this.naturalezas }
@@ -546,7 +546,7 @@ export class PlanCuentasComponent implements OnInit {
   }
 
   onEdit(item: PlanCuentaNode) {
-    const dialogRef = this.dialog.open(PlanCuentasFormComponent, {
+    const dialogRef = this.dialog.open(PlanCuentaAddEditComponent, {
       width: '700px',
       disableClose: true,
       data: { item, naturalezas: this.naturalezas }
