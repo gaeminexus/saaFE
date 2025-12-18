@@ -1379,40 +1379,48 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
           }
         }
 
-        .estado-button {
-          position: absolute;
-          right: 7rem;
-          top: 50%;
-          transform: translateY(-50%);
-          color: $saa-accent;
-          transition: all 0.3s ease;
-
-          &:hover {
-            background: rgba($saa-accent, 0.1);
-            transform: translateY(-50%) scale(1.1);
-          }
-        }
-
-        .pdf-button {
-          position: absolute;
-          right: 4rem;
-          top: 50%;
-          transform: translateY(-50%);
-          color: $saa-error;
-          transition: all 0.3s ease;
-
-          &:hover {
-            background: rgba($saa-error, 0.1);
-            transform: translateY(-50%) scale(1.1);
-          }
-        }
-
-        .expand-button {
+        .header-actions {
           position: absolute;
           right: 1rem;
           top: 50%;
           transform: translateY(-50%);
-          color: $saa-primary;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+
+          .pdf-button {
+            color: $saa-error;
+            transition: all 0.3s ease;
+
+            &:hover {
+              background: rgba($saa-error, 0.1);
+              transform: scale(1.1);
+            }
+          }
+
+          .csv-button {
+            color: $saa-primary;
+            transition: all 0.3s ease;
+
+            &:hover {
+              background: rgba($saa-primary, 0.1);
+              transform: scale(1.1);
+            }
+          }
+
+          .estado-button {
+            color: $saa-accent;
+            transition: all 0.3s ease;
+
+            &:hover {
+              background: rgba($saa-accent, 0.1);
+              transform: scale(1.1);
+            }
+          }
+
+          .expand-button {
+            color: $saa-primary;
+          }
         }
       }
 

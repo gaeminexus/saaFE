@@ -291,6 +291,15 @@
         >
           <mat-icon>picture_as_pdf</mat-icon>
         </button>
+        <button
+          mat-icon-button
+          color="primary"
+          (click)="exportarCSVResumenAportes($event)"
+          matTooltip="Exportar CSV Resumen"
+          class="csv-action-button"
+        >
+          <mat-icon>description</mat-icon>
+        </button>
       </mat-card-actions>
     </mat-card>
 
@@ -370,6 +379,15 @@
         >
           <mat-icon>picture_as_pdf</mat-icon>
         </button>
+        <button
+          mat-icon-button
+          color="primary"
+          (click)="exportarCSVPrestamo(prestamo, $event)"
+          matTooltip="Exportar CSV del Préstamo"
+          class="csv-action-button"
+        >
+          <mat-icon>description</mat-icon>
+        </button>
       </mat-card-actions>
     </mat-card>
     }
@@ -405,6 +423,15 @@
             class="pdf-button"
           >
             <mat-icon>picture_as_pdf</mat-icon>
+          </button>
+          <button
+            mat-icon-button
+            color="primary"
+            (click)="exportarCSVPrestamo(prestamoSeleccionado)"
+            matTooltip="Exportar CSV del Préstamo"
+            class="csv-button"
+          >
+            <mat-icon>description</mat-icon>
           </button>
         </div>
       </mat-card-header>
@@ -622,27 +649,38 @@
             }
           </div>
         </mat-card-subtitle>
-        <button
-          mat-icon-button
-          class="estado-button"
-          (click)="cambiarEstadoTipoAporte(tipoAporte, $event)"
-          matTooltip="Cambio de Estado"
-          color="accent"
-        >
-          <mat-icon>swap_horiz</mat-icon>
-        </button>
-        <button
-          mat-icon-button
-          class="pdf-button"
-          (click)="generarPDFAporte(tipoAporte, $event)"
-          matTooltip="Generar PDF de Aportes"
-          color="warn"
-        >
-          <mat-icon>picture_as_pdf</mat-icon>
-        </button>
-        <button mat-icon-button class="expand-button">
-          <mat-icon>{{ tipoAporte.expandido ? 'expand_less' : 'expand_more' }}</mat-icon>
-        </button>
+        <div class="header-actions">
+          <button
+            mat-icon-button
+            class="pdf-button"
+            (click)="generarPDFAporte(tipoAporte, $event)"
+            matTooltip="Generar PDF de Aportes"
+            color="warn"
+          >
+            <mat-icon>picture_as_pdf</mat-icon>
+          </button>
+          <button
+            mat-icon-button
+            class="csv-button"
+            (click)="exportarCSVAporte(tipoAporte, $event)"
+            matTooltip="Exportar CSV de Aportes"
+            color="primary"
+          >
+            <mat-icon>description</mat-icon>
+          </button>
+          <button
+            mat-icon-button
+            class="estado-button"
+            (click)="cambiarEstadoTipoAporte(tipoAporte, $event)"
+            matTooltip="Cambio de Estado"
+            color="accent"
+          >
+            <mat-icon>swap_horiz</mat-icon>
+          </button>
+          <button mat-icon-button class="expand-button">
+            <mat-icon>{{ tipoAporte.expandido ? 'expand_less' : 'expand_more' }}</mat-icon>
+          </button>
+        </div>
       </mat-card-header>
 
       @if (tipoAporte.expandido) {

@@ -789,6 +789,63 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
   }
 
   /**
+   * Exporta préstamo individual a CSV
+   */
+  async exportarCSVPrestamo(prestamo: Prestamo, event?: Event): Promise<void> {
+    if (event) {
+      event.stopPropagation();
+    }
+
+    if (!this.entidadEncontrada) {
+      this.snackBar.open('No hay información de entidad', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    try {
+      // Cargar detalles del préstamo si no están cargados
+      if (!this.detallesPrestamo.has(prestamo.codigo)) {
+        await this.cargarDetallesPrestamo(prestamo.codigo);
+      }
+
+      const dataSource = this.detallesPrestamo.get(prestamo.codigo);
+      const detalles = dataSource ? dataSource.data : [];
+
+      if (detalles.length === 0) {
+        this.snackBar.open('No hay cuotas para exportar', 'Cerrar', { duration: 3000 });
+        return;
+      }
+
+      const rows = detalles.map((detalleConPagos) => {
+        const detalle = detalleConPagos.detalle;
+        const fechaVenc = this.convertirFecha(detalle.fechaVencimiento);
+        return {
+          cuota: detalle.numeroCuota || 0,
+          fechaVencimiento: fechaVenc ? fechaVenc.toLocaleDateString('es-ES') : 'N/A',
+          capital: detalle.capital || 0,
+          interes: detalle.interes || 0,
+          desgravamen: detalle.desgravamen || 0,
+          cuotaTotal: detalle.cuota || 0,
+          saldo: detalle.saldo || 0,
+          estado: detalle.estado === 1 ? 'Pagada' : 'Pendiente',
+        };
+      });
+
+      const filename = `Prestamo_${prestamo.codigo}_${this.entidadEncontrada.numeroIdentificacion}`;
+      this.exportService.exportToCSV(
+        rows,
+        filename,
+        ['Cuota', 'Fecha Vencimiento', 'Capital', 'Interés', 'Desgravamen', 'Cuota Total', 'Saldo', 'Estado'],
+        ['cuota', 'fechaVencimiento', 'capital', 'interes', 'desgravamen', 'cuotaTotal', 'saldo', 'estado']
+      );
+
+      this.snackBar.open('CSV exportado exitosamente', 'Cerrar', { duration: 3000 });
+    } catch (error) {
+      console.error('Error al exportar CSV del préstamo:', error);
+      this.snackBar.open('Error al exportar el CSV', 'Cerrar', { duration: 3000 });
+    }
+  }
+
+  /**
    * Genera PDF para un préstamo individual con sus detalles
    */
   async generarPDFPrestamo(prestamo: Prestamo, event?: Event): Promise<void> {
@@ -1007,6 +1064,50 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
   }
 
   /**
+   * Exporta aportes de un tipo específico a CSV
+   */
+  exportarCSVAporte(tipoAporte: AportesPorTipo, event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+
+    if (!this.entidadEncontrada) {
+      this.snackBar.open('No hay información de entidad', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    // Obtener datos del MatTableDataSource
+    const aportes = tipoAporte.aportes.data || [];
+
+    if (aportes.length === 0) {
+      this.snackBar.open('No hay aportes para exportar', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    const rows = aportes.map((aporte: Aporte) => {
+      const fecha = this.convertirFecha(aporte.fechaTransaccion);
+      return {
+        fechaTransaccion: fecha ? fecha.toLocaleDateString('es-ES') : 'N/A',
+        tipoAporte: tipoAporte.tipoAporte,
+        glosa: aporte.glosa || '',
+        valor: aporte.valor || 0,
+        valorPagado: aporte.valorPagado || 0,
+        saldo: aporte.saldo || 0,
+      };
+    });
+
+    const filename = `Aportes_${tipoAporte.tipoAporte}_${this.entidadEncontrada.numeroIdentificacion}`;
+    this.exportService.exportToCSV(
+      rows,
+      filename,
+      ['Fecha Transacción', 'Tipo Aporte', 'Glosa', 'Valor', 'Valor Pagado', 'Saldo'],
+      ['fechaTransaccion', 'tipoAporte', 'glosa', 'valor', 'valorPagado', 'saldo']
+    );
+
+    this.snackBar.open('CSV exportado exitosamente', 'Cerrar', { duration: 3000 });
+  }
+
+  /**
    * Genera PDF para un tipo de aporte específico con sus detalles
    */
   generarPDFAporte(tipoAporte: AportesPorTipo, event?: Event): void {
@@ -1202,6 +1303,43 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
       console.error('Error al generar PDF de aportes:', error);
       this.snackBar.open('Error al generar el PDF', 'Cerrar', { duration: 3000 });
     }
+  }
+
+  /**
+   * Exporta resumen de aportes a CSV
+   */
+  exportarCSVResumenAportes(event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+
+    if (!this.entidadEncontrada) {
+      this.snackBar.open('No hay información de entidad', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    if (this.aportesPorTipo.length === 0) {
+      this.snackBar.open('No hay aportes para exportar', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    const rows = this.aportesPorTipo.map((tipo) => ({
+      tipoAporte: tipo.tipoAporte,
+      cantidad: tipo.aportes.data.length,
+      totalValor: tipo.totalValor,
+      totalPagado: tipo.totalPagado,
+      totalSaldo: tipo.totalSaldo,
+    }));
+
+    const filename = `Resumen_Aportes_${this.entidadEncontrada.numeroIdentificacion}`;
+    this.exportService.exportToCSV(
+      rows,
+      filename,
+      ['Tipo de Aporte', 'Cantidad', 'Total Valor', 'Total Pagado', 'Total Saldo'],
+      ['tipoAporte', 'cantidad', 'totalValor', 'totalPagado', 'totalSaldo']
+    );
+
+    this.snackBar.open('CSV exportado exitosamente', 'Cerrar', { duration: 3000 });
   }
 
   /**
