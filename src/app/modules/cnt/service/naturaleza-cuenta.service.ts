@@ -87,19 +87,18 @@ export class NaturalezaCuentaService {
   }
 
   /** DELETE: add a new sesion to the server */
-  delete(datos: any): Observable<NaturalezaCuenta | null> {
+  delete(datos: any): Observable<string | null> {
     const wsGetById = '/' + datos;
     const url = `${ServiciosCnt.RS_NTRL}${wsGetById}`;
     return this.http
-      .delete<NaturalezaCuenta>(url, this.httpOptions)
+      .delete<string>(url, { ...this.httpOptions, responseType: 'text' as 'json' })
       .pipe(catchError(this.handleError));
   }
 
   // tslint:disable-next-line: typedef
   private handleError(error: HttpErrorResponse): Observable<null> {
-    if (+error.status === 200) {
-      return of(null);
-    }
+    // Si el backend devuelve 200, no es un error, dejar que siga el flujo normal
+    // Solo manejar errores reales (4xx, 5xx)
     return throwError(() => error?.error ?? error);
   }
 }

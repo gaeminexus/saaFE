@@ -31,7 +31,8 @@
     <app-table-basic-hijos
       *ngIf="tableConfig"
       [configTable]="tableConfig"
-      (emiteError)="onTableError($event)">
+      (emiteError)="onTableError($event)"
+      (emiteResultadoOperacion)="onOperacionCompletada($event)">
     </app-table-basic-hijos>
   </div>
 </div>

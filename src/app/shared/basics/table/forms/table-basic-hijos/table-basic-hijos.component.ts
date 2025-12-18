@@ -75,6 +75,7 @@ export class TableBasicHijosComponent implements OnInit, OnChanges, AfterViewIni
   @Output() emiteRegistro = new EventEmitter<any>();
   @Output() emiteButtonExtra = new EventEmitter<any>();
   @Output() emiteError = new EventEmitter<string>();
+  @Output() emiteResultadoOperacion = new EventEmitter<any>();
 
   textoFiltro!: string;
   fields!: FieldFormat[];
@@ -322,8 +323,15 @@ export class TableBasicHijosComponent implements OnInit, OnChanges, AfterViewIni
 
   async ejecuta(opcion: number, result: any): Promise<void> {
     try {
-      // Ejecutar la operación principal
-      await this.serviceLocatorService.ejecutaServicio(this.entidad, result, opcion);
+      // Ejecutar la operación principal y capturar el resultado
+      const resultadoOperacion = await this.serviceLocatorService.ejecutaServicio(this.entidad, result, opcion);
+      console.log('Resultado de la operación:', resultadoOperacion);
+      // Emitir el resultado al componente padre
+      this.emiteResultadoOperacion.emit({
+        operacion: opcion,
+        resultado: resultadoOperacion,
+        datosEnviados: result
+      });
 
       // Mostrar mensaje de éxito
       const operacion = opcion === AccionesGrid.ADD ? 'creado' :

@@ -91,6 +91,7 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
     'numeroIdentificacion',
     'razonSocial',
     'filial',
+    'rolPetroComercial',
     'correo',
     'telefono',
     'estado',
@@ -143,6 +144,7 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
       tipoIdentificacion: [null],
       numeroIdentificacion: [null],
       razonSocial: [null],
+      rolPetroComercial: [null],
       email: [null],
       telefono: [null],
       sectorPublico: [null],
@@ -178,6 +180,7 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
       tipoIdentificacion,
       numeroIdentificacion,
       razonSocial,
+      rolPetroComercial,
       email,
       telefono,
       sectorPublico,
@@ -235,6 +238,18 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
         'razonSocial',
         razonSocial,
         TipoComandosBusqueda.LIKE
+      );
+      criterios.push(db);
+    }
+
+    // rolPetroComercial (IGUAL)
+    if (rolPetroComercial) {
+      const db = new DatosBusqueda();
+      db.asignaUnCampoSinTrunc(
+        TipoDatos.LONG,
+        'rolPetroComercial',
+        rolPetroComercial.toString(),
+        TipoComandosBusqueda.IGUAL
       );
       criterios.push(db);
     }

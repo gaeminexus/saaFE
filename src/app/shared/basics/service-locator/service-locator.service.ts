@@ -38,7 +38,6 @@ export class ServiceLocatorService {
           }
           case AccionesGrid.EDIT: {
             this.reg = value as NaturalezaCuenta;
-            console.log('Actualizando Naturaleza de Cuenta:', this.reg);
             return firstValueFrom(
               this.naturalezaCuentaService.update(this.reg as NaturalezaCuenta)
             );

@@ -325,4 +325,12 @@ export class NaturalezaDeCuentasComponent implements OnInit {
       verticalPosition: 'bottom'
     });
   }
+
+  onOperacionCompletada(evento: any): void {
+    console.log('Operación:', evento.operacion); // AccionesGrid.ADD, EDIT o REMOVE
+    console.log('Resultado:', evento.resultado); // Lo que devolvió el backend
+    console.log('Datos enviados:', evento.datosEnviados); // Los datos que se enviaron
+
+    // Aquí puedes hacer lo que necesites con el resultado
+  }
 }

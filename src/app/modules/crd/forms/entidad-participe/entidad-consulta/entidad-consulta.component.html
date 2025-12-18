@@ -61,6 +61,12 @@
               <mat-icon matPrefix>person</mat-icon>
               <input matInput formControlName="razonSocial" placeholder="Ingrese razón social" />
             </mat-form-field>
+
+            <mat-form-field appearance="fill" class="filter-field">
+              <mat-label>Código Petro</mat-label>
+              <mat-icon matPrefix>qr_code</mat-icon>
+              <input matInput formControlName="rolPetroComercial" type="number" placeholder="Ingrese código" />
+            </mat-form-field>
           </div>
         </div>
 
@@ -218,6 +224,12 @@
           <ng-container matColumnDef="filial">
             <th mat-header-cell *matHeaderCellDef mat-sort-header>Filial</th>
             <td mat-cell *matCellDef="let entidad">{{ entidad.filial?.nombre || '-' }}</td>
+          </ng-container>
+
+          <!-- Columna Código Petro -->
+          <ng-container matColumnDef="rolPetroComercial">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Código Petro</th>
+            <td mat-cell *matCellDef="let entidad">{{ entidad.rolPetroComercial || '-' }}</td>
           </ng-container>
 
           <!-- Columna Correo (combinado, sin sort) -->
