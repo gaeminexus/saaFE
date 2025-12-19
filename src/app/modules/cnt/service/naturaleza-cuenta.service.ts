@@ -86,6 +86,12 @@ export class NaturalezaCuentaService {
     return this.http.post<any>(url, datos, this.httpOptions).pipe(catchError(this.handleError));
   }
 
+  inactivaNaturalezaCuenta(datos: any): Observable<string | null> {
+    const wsGetById = '/inactivaNaturalezaCuenta';
+    const url = `${ServiciosCnt.RS_NTRL}${wsGetById}`;
+    return this.http.post<any>(url, datos, this.httpOptions).pipe(catchError(this.handleError));
+  }
+
   /** DELETE: add a new sesion to the server */
   delete(datos: any): Observable<string | null> {
     const wsGetById = '/' + datos;

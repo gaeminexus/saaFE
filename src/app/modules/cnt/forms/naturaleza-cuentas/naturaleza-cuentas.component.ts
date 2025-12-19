@@ -196,23 +196,23 @@ export class NaturalezaDeCuentasComponent implements OnInit {
     this.naturalezaCuentaService.selectByCriteria(criterioConsultaArray).subscribe({
       next: (data) => {
         const list = Array.isArray(data) ? data : (data as any)?.data ?? [];
-
         this.naturalezaCuentas = list.sort((a: any, b: any) => (a.numero || 0) - (b.numero || 0));
-
-        this.totalElements = this.naturalezaCuentas.length;
         this.loading = false;
         this.setupTableConfig();
       },
       error: (err) => {
-        // Fallback a getAll() si falla el filtro
-        this.naturalezaCuentaService.getAll().subscribe({
+        // Fallback a getByEmpresa() si falla el filtro
+        this.recargaDatos();
+      },
+    });
+  }
+
+  recargaDatos(): void {
+    const empresaId = parseInt(localStorage.getItem('idEmpresa') || '1236', 10);
+        this.naturalezaCuentaService.getByEmpresa(empresaId).subscribe({
           next: (data) => {
-            const list = Array.isArray(data) ? data : (data as any)?.data ?? [];
-            const filtered = list.filter((nat: any) => nat?.empresa?.codigo === idSucursal);
-
-            this.naturalezaCuentas = filtered.sort((a: any, b: any) => (a.numero || 0) - (b.numero || 0));
-
-            this.totalElements = this.naturalezaCuentas.length;
+            const list = Array.isArray(data) ? data : [];
+            this.naturalezaCuentas = list.sort((a: any, b: any) => (a.numero || 0) - (b.numero || 0));
             this.loading = false;
             this.setupTableConfig();
           },
@@ -221,9 +221,8 @@ export class NaturalezaDeCuentasComponent implements OnInit {
             this.loading = false;
           },
         });
-      },
-    });
   }
+
 
   // Métodos de exportación
   public exportToCSV(): void {
@@ -300,9 +299,20 @@ export class NaturalezaDeCuentasComponent implements OnInit {
 
       dialogRef.afterClosed().subscribe(result => {
         if (result) {
-          // Aquí se implementará la lógica de inactivación en el futuro
+          this.naturalezaCuentaService.inactivaNaturalezaCuenta(evento.datosEnviados).subscribe({
+            next: (respuesta) => {
+              this.snackBar.open('Naturaleza y todas las cuentas de la misma inactivadas con éxito', 'Cerrar', {
+                duration: 8000,
+                panelClass: ['success-snackbar'],
+                horizontalPosition: 'center',
+                verticalPosition: 'bottom'
+              });
+              this.recargaDatos();
+            }
+          });
         }
       });
+
     } else if (!evento.exitoso || (evento.codigoHttp && evento.codigoHttp >= 400)) {
       // Solo mostrar snackbar para errores reales (códigos 400+)
       const mensaje = evento.resultado || 'Error al procesar la operación';
