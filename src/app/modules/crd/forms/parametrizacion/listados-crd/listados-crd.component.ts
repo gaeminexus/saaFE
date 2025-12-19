@@ -20,6 +20,7 @@ import { FilialService } from '../../../service/filial.service';
 import { TipoPrestamoService } from '../../../service/tipo-prestamo.service';
 import { Validators } from '@angular/forms';
 import { SelectFieldConfig } from '../../../../../shared/basics/table/dynamic-form/model/select.interface';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 @Component({
   selector: 'app-listados-crd.component',
@@ -68,7 +69,8 @@ export class ListadosCrdComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private filialService: FilialService,
-    private tipoPrestamoService: TipoPrestamoService
+    private tipoPrestamoService: TipoPrestamoService,
+    private snackBar: MatSnackBar
   ) { }
 
   // Método para navegar al tab correspondiente
@@ -349,6 +351,22 @@ export class ListadosCrdComponent implements OnInit {
         ]
       } as SelectFieldConfig,
     ];
+  }
+
+  /**
+   * Maneja los errores emitidos por el componente table-basic-hijos
+   * y los muestra en un snackbar al usuario con color según el código HTTP
+   */
+  onTableError(errorData: { mensaje: string; codigoHttp?: number }): void {
+    const esExito = errorData.codigoHttp && errorData.codigoHttp >= 200 && errorData.codigoHttp < 300;
+    const panelClass = esExito ? 'success-snackbar' : 'error-snackbar';
+
+    this.snackBar.open(errorData.mensaje, 'Cerrar', {
+      duration: esExito ? 4000 : 8000,
+      panelClass: [panelClass],
+      horizontalPosition: 'center',
+      verticalPosition: 'bottom'
+    });
   }
 
 }

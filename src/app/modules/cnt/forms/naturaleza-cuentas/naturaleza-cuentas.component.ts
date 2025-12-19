@@ -315,12 +315,17 @@ export class NaturalezaDeCuentasComponent implements OnInit {
 
   /**
    * Maneja los errores emitidos por el componente table-basic-hijos
-   * y los muestra en un snackbar al usuario
+   * y los muestra en un snackbar al usuario con color según el código HTTP
    */
-  onTableError(mensajeError: string): void {
-    this.snackBar.open(mensajeError, 'Cerrar', {
-      duration: 8000,
-      panelClass: ['error-snackbar'],
+  onTableError(errorData: { mensaje: string; codigoHttp?: number }): void {
+    // Determinar el color del snackbar según el código HTTP
+    // 200-299: success (verde), 400-599: error (rojo)
+    const esExito = errorData.codigoHttp && errorData.codigoHttp >= 200 && errorData.codigoHttp < 300;
+    const panelClass = esExito ? 'success-snackbar' : 'error-snackbar';
+
+    this.snackBar.open(errorData.mensaje, 'Cerrar', {
+      duration: esExito ? 4000 : 8000,
+      panelClass: [panelClass],
       horizontalPosition: 'center',
       verticalPosition: 'bottom'
     });
@@ -329,8 +334,22 @@ export class NaturalezaDeCuentasComponent implements OnInit {
   onOperacionCompletada(evento: any): void {
     console.log('Operación:', evento.operacion); // AccionesGrid.ADD, EDIT o REMOVE
     console.log('Resultado:', evento.resultado); // Lo que devolvió el backend
-    console.log('Datos enviados:', evento.datosEnviados); // Los datos que se enviaron
+    console.log('Exitoso:', evento.exitoso);
+    console.log('Código HTTP:', evento.codigoHttp);
+    console.log('Datos enviados:', evento.datosEnviados);
 
-    // Aquí puedes hacer lo que necesites con el resultado
+    // Determinar mensaje y estilo según éxito/error
+    const mensaje = evento.exitoso
+      ? evento.resultado || 'Operación completada exitosamente'
+      : 'Error al procesar la operación';
+
+    const panelClass = evento.exitoso ? 'success-snackbar' : 'error-snackbar';
+
+    this.snackBar.open(mensaje, 'Cerrar', {
+      duration: evento.exitoso ? 4000 : 8000,
+      panelClass: [panelClass],
+      horizontalPosition: 'center',
+      verticalPosition: 'bottom'
+    });
   }
 }

@@ -74,8 +74,17 @@ export class TableBasicHijosComponent implements OnInit, OnChanges, AfterViewIni
 
   @Output() emiteRegistro = new EventEmitter<any>();
   @Output() emiteButtonExtra = new EventEmitter<any>();
-  @Output() emiteError = new EventEmitter<string>();
-  @Output() emiteResultadoOperacion = new EventEmitter<any>();
+  @Output() emiteError = new EventEmitter<{
+    mensaje: string;
+    codigoHttp?: number;
+  }>();
+  @Output() emiteResultadoOperacion = new EventEmitter<{
+    operacion: number;
+    resultado: any;
+    datosEnviados: any;
+    exitoso: boolean;
+    codigoHttp?: number;
+  }>();
 
   textoFiltro!: string;
   fields!: FieldFormat[];
@@ -326,11 +335,13 @@ export class TableBasicHijosComponent implements OnInit, OnChanges, AfterViewIni
       // Ejecutar la operación principal y capturar el resultado
       const resultadoOperacion = await this.serviceLocatorService.ejecutaServicio(this.entidad, result, opcion);
       console.log('Resultado de la operación:', resultadoOperacion);
-      // Emitir el resultado al componente padre
+      // Emitir el resultado al componente padre con información de éxito
       this.emiteResultadoOperacion.emit({
         operacion: opcion,
         resultado: resultadoOperacion,
-        datosEnviados: result
+        datosEnviados: result,
+        exitoso: true,
+        codigoHttp: 200
       });
 
       // Mostrar mensaje de éxito
@@ -360,8 +371,17 @@ export class TableBasicHijosComponent implements OnInit, OnChanges, AfterViewIni
           this.mostrarMensajeError('Error al recargar los datos', error);
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       this.mostrarMensajeError('Error al procesar la operación', error);
+
+      // Emitir el resultado al componente padre con información de error
+      this.emiteResultadoOperacion.emit({
+        operacion: opcion,
+        resultado: error?.message || 'Error desconocido',
+        datosEnviados: result,
+        exitoso: false,
+        codigoHttp: error?.status || 500
+      });
     }
   }
 
@@ -580,6 +600,9 @@ export class TableBasicHijosComponent implements OnInit, OnChanges, AfterViewIni
       }
     }
 
+    // Extraer código HTTP del error
+    const codigoHttp = error?.status || 500;
+
     // Mostrar snackbar al usuario
     this.snackBar.open(mensajeError, 'Cerrar', {
       duration: 6000,
@@ -588,8 +611,11 @@ export class TableBasicHijosComponent implements OnInit, OnChanges, AfterViewIni
       verticalPosition: 'bottom'
     });
 
-    // Emitir el error al componente padre para que también pueda manejarlo
-    this.emiteError.emit(mensajeError);
+    // Emitir el error al componente padre con código HTTP
+    this.emiteError.emit({
+      mensaje: mensajeError,
+      codigoHttp: codigoHttp
+    });
   }
 
 }

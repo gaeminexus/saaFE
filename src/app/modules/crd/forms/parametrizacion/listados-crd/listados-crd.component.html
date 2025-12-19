@@ -41,7 +41,8 @@
       <div class="tab-content">
         <app-table-basic-hijos
           *ngIf="tableConfigMotivoPrestamo"
-          [configTable]="tableConfigMotivoPrestamo">
+          [configTable]="tableConfigMotivoPrestamo"
+          (emiteError)="onTableError($event)">
         </app-table-basic-hijos>
       </div>
     </mat-tab>
@@ -57,7 +58,7 @@
       <div class="tab-content">
         <app-table-basic-hijos
           *ngIf="tableConfigMetodoPago"
-          [configTable]="tableConfigMetodoPago">
+          [configTable]="tableConfigMetodoPago" (emiteError)="onTableError($event)">
         </app-table-basic-hijos>
       </div>
     </mat-tab>
@@ -73,7 +74,7 @@
       <div class="tab-content">
         <app-table-basic-hijos
           *ngIf="tableConfigNivelEstudio"
-          [configTable]="tableConfigNivelEstudio">
+          [configTable]="tableConfigNivelEstudio" (emiteError)="onTableError($event)">
         </app-table-basic-hijos>
       </div>
     </mat-tab>
@@ -89,7 +90,7 @@
       <div class="tab-content">
         <app-table-basic-hijos
           *ngIf="tableConfigProfesion"
-          [configTable]="tableConfigProfesion">
+          [configTable]="tableConfigProfesion" (emiteError)="onTableError($event)">
         </app-table-basic-hijos>
       </div>
     </mat-tab>
@@ -105,7 +106,7 @@
       <div class="tab-content">
         <app-table-basic-hijos
           *ngIf="tableConfigProducto"
-          [configTable]="tableConfigProducto">
+          [configTable]="tableConfigProducto" (emiteError)="onTableError($event)">
         </app-table-basic-hijos>
       </div>
     </mat-tab>

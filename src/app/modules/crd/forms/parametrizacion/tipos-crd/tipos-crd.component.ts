@@ -21,6 +21,7 @@ import { TipoGenero } from '../../../model/tipo-genero';
 import { TipoIdentificacion } from '../../../model/tipo-identificacion';
 import { TipoVivienda } from '../../../model/tipo-vivienda';
 import { Validators } from '@angular/forms';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 @Component({
   selector: 'app-tipos-crd.component',
@@ -80,7 +81,10 @@ export class TiposCrdComponent implements OnInit {
     { nombre: 'Tipo Vivienda', icono: 'home', index: 10 }
   ];
 
-  constructor(private route: ActivatedRoute) { }
+  constructor(
+    private route: ActivatedRoute,
+    private snackBar: MatSnackBar
+  ) { }
 
   // Método para navegar al tab correspondiente
   navigateToTab(index: number): void {
@@ -642,5 +646,21 @@ export class TiposCrdComponent implements OnInit {
         ]
       }
     ];
+  }
+
+  /**
+   * Maneja los errores emitidos por el componente table-basic-hijos
+   * y los muestra en un snackbar al usuario con color según el código HTTP
+   */
+  onTableError(errorData: { mensaje: string; codigoHttp?: number }): void {
+    const esExito = errorData.codigoHttp && errorData.codigoHttp >= 200 && errorData.codigoHttp < 300;
+    const panelClass = esExito ? 'success-snackbar' : 'error-snackbar';
+
+    this.snackBar.open(errorData.mensaje, 'Cerrar', {
+      duration: esExito ? 4000 : 8000,
+      panelClass: [panelClass],
+      horizontalPosition: 'center',
+      verticalPosition: 'bottom'
+    });
   }
 }

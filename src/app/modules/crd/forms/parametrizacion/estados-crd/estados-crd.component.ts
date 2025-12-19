@@ -14,6 +14,7 @@ import { EstadoPrestamo } from '../../../model/estado-prestamo';
 import { EstadoCesantia } from '../../../model/estado-cesantia';
 import { EstadoCivil } from '../../../model/estado-civil';
 import { Validators } from '@angular/forms';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 @Component({
   selector: 'app-estados-crd.component',
@@ -52,7 +53,10 @@ export class EstadosCrdComponent implements OnInit {
     { nombre: 'Estado Civil', icono: 'family_restroom', index: 3 }
   ];
 
-  constructor(private route: ActivatedRoute) { }
+  constructor(
+    private route: ActivatedRoute,
+    private snackBar: MatSnackBar
+  ) { }
 
   // Método para navegar al tab correspondiente
   navigateToTab(index: number): void {
@@ -253,5 +257,21 @@ export class EstadosCrdComponent implements OnInit {
         ]
       }
     ];
+  }
+
+  /**
+   * Maneja los errores emitidos por el componente table-basic-hijos
+   * y los muestra en un snackbar al usuario con color según el código HTTP
+   */
+  onTableError(errorData: { mensaje: string; codigoHttp?: number }): void {
+    const esExito = errorData.codigoHttp && errorData.codigoHttp >= 200 && errorData.codigoHttp < 300;
+    const panelClass = esExito ? 'success-snackbar' : 'error-snackbar';
+
+    this.snackBar.open(errorData.mensaje, 'Cerrar', {
+      duration: esExito ? 4000 : 8000,
+      panelClass: [panelClass],
+      horizontalPosition: 'center',
+      verticalPosition: 'bottom'
+    });
   }
 }
