@@ -56,9 +56,7 @@ export class DynamicFormComponent implements OnInit {
   constructor(private fb: FormBuilder) {}
 
   ngOnInit(): void {
-    console.log('🎯 DynamicForm ngOnInit - fields recibidos:', this.fields);
     this.form = this.createControl();
-    console.log('📝 Formulario creado con controles:', Object.keys(this.form.controls));
   }
 
   onSubmit(event: Event): void {

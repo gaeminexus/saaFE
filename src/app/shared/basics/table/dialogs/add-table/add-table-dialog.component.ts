@@ -39,7 +39,6 @@ export class AddTableDialogComponent implements OnInit  {
         // Cerrar el diálogo después de guardar exitosamente
         this.dialogRef.close(true);
       } catch (error) {
-        console.error('Error al guardar:', error);
         // Aquí podrías mostrar un mensaje de error al usuario
       }
     }

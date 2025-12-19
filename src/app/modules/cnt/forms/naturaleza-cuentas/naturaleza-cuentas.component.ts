@@ -5,11 +5,14 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 
 import { FieldConfig } from '../../../../shared/basics/table/dynamic-form/model/field.interface';
+import { ConfirmDialogComponent } from '../../../../shared/basics/confirm-dialog/confirm-dialog.component';
 import { TableBasicHijosComponent } from '../../../../shared/basics/table/forms/table-basic-hijos/table-basic-hijos.component';
 import { FieldFormat } from '../../../../shared/basics/table/model/field-format-interface';
 import { TableConfig } from '../../../../shared/basics/table/model/table-interface';
+import { ColumnaTipo } from '../../../../shared/basics/table/model/fields-constants';
 import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
@@ -22,6 +25,7 @@ import { NaturalezaCuentaService } from '../../service/naturaleza-cuenta.service
 
 // 🔑 Rubro para filtrar tipos de naturaleza (el valor seleccionado se almacena en el campo 'tipo' del formulario)
 const RUBRO_TIPO_GRUPO = 12;
+const RUBRO_ESTADO = 11;
 
 @Component({
   selector: 'app-naturalezadecuentas',
@@ -32,6 +36,7 @@ const RUBRO_TIPO_GRUPO = 12;
     MatIconModule,
     MatProgressSpinnerModule,
     MatSnackBarModule,
+    MatDialogModule,
     TableBasicHijosComponent,
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
@@ -52,36 +57,21 @@ export class NaturalezaDeCuentasComponent implements OnInit {
     private naturalezaCuentaService: NaturalezaCuentaService,
     private detalleRubroService: DetalleRubroService,
     private exportService: ExportService,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private dialog: MatDialog
   ) {}
 
   ngOnInit(): void {
-    // Debug: Verificar detalles de rubro cargados
     if (this.detalleRubroService.estanDatosCargados()) {
       this.tipoNaturaleza = this.detalleRubroService.getDetallesByParent(RUBRO_TIPO_GRUPO);
-      console.log('📦 Tipos de naturaleza cargados desde servicio:', this.tipoNaturaleza);
-      console.log('📦 Cantidad de tipos:', this.tipoNaturaleza.length);
-
-      // Cargar datos después de tener rubros
       this.loadData();
     } else {
-      console.warn('⚠️ DetalleRubroService no está cargado. Cargando rubros directamente...');
-
-      // Cargar rubros directamente desde el backend
       this.detalleRubroService.getAll().subscribe({
         next: (rubros) => {
-          console.log('✅ Rubros cargados directamente desde backend:', rubros?.length || 0);
-
-          // Obtener tipos de naturaleza
           this.tipoNaturaleza = this.detalleRubroService.getDetallesByParent(RUBRO_TIPO_GRUPO);
-          console.log('📦 Tipos de naturaleza disponibles:', this.tipoNaturaleza);
-
-          // Cargar datos después de tener rubros
           this.loadData();
         },
         error: (err) => {
-          console.error('❌ Error al cargar rubros:', err);
-          // Cargar datos sin rubros (el formulario tendrá problemas pero al menos mostrará la tabla)
           this.loadData();
         },
       });
@@ -109,23 +99,19 @@ export class NaturalezaDeCuentasComponent implements OnInit {
     return [
       { column: 'numero', header: 'Número', fWidth: '15%', fSort: true },
       { column: 'nombre', header: 'Nombre', fWidth: '35%', fSort: true },
-      { column: 'tipoFormateado', header: 'Tipo', fWidth: '20%', fSort: true },
-      { column: 'centroCostoFormateado', header: 'Centro de Costos', fWidth: '20%', fSort: true },
-      { column: 'estadoFormateado', header: 'Estado', fWidth: '10%', fSort: true },
+      { column: 'r_12_tipo', header: 'Tipo', fWidth: '20%', fSort: true },
+      { column: 'manejaCentroCosto', header: 'Maneja Centro Costos', fWidth: '20%', fSort: true, fType: ColumnaTipo.CHECK },
+      { column: 'Rr_11_estado', header: 'Estado', fWidth: '10%', fSort: true},
     ];
   }
 
   private getRegConfig(): FieldConfig[] {
-    console.log('🔧 getRegConfig() - tipoNaturaleza:', this.tipoNaturaleza);
-
     // Transformar DetalleRubro a formato de opciones para el select
     // El valor seleccionado (codigoAlterno) se almacenará en el campo 'tipo'
     const tiposOptions = this.tipoNaturaleza.map((detalle) => ({
       key: detalle.codigoAlterno,
       value: detalle.descripcion,
     }));
-
-    console.log(`✅ Opciones transformadas para select:`, tiposOptions);
 
     const config: FieldConfig[] = [
       {
@@ -178,7 +164,6 @@ export class NaturalezaDeCuentasComponent implements OnInit {
       },
     ];
 
-    console.log('📋 Configuración final de campos del formulario:', config);
     return config;
   }
 
@@ -188,7 +173,6 @@ export class NaturalezaDeCuentasComponent implements OnInit {
     this.error = null;
 
     const idSucursal = parseInt(localStorage.getItem('idSucursal') || '280', 10);
-    console.log(`🔍 Iniciando carga de naturalezas de cuenta para empresa ${idSucursal}...`);
 
     // Crear criterios usando el patrón DatosBusqueda
     const criterioConsultaArray: Array<DatosBusqueda> = [];
@@ -211,50 +195,22 @@ export class NaturalezaDeCuentasComponent implements OnInit {
 
     this.naturalezaCuentaService.selectByCriteria(criterioConsultaArray).subscribe({
       next: (data) => {
-        console.log(`📡 Respuesta del backend para naturalezas empresa ${idSucursal}:`, data);
         const list = Array.isArray(data) ? data : (data as any)?.data ?? [];
-        console.log(`📋 Lista de naturalezas procesada para empresa ${idSucursal}:`, list);
 
-        // Transformar datos numéricos a texto legible para el grid
-        this.naturalezaCuentas = list
-          .map((item: any) => ({
-            ...item,
-            tipoFormateado: this.tipoLabel(item.tipo),
-            centroCostoFormateado: this.manejaCentroCostoLabel(item.manejaCentroCosto),
-            estadoFormateado: this.estadoLabel(item.estado),
-          }))
-          .sort((a: any, b: any) => (a.numero || 0) - (b.numero || 0)); // Orden ascendente
+        this.naturalezaCuentas = list.sort((a: any, b: any) => (a.numero || 0) - (b.numero || 0));
 
         this.totalElements = this.naturalezaCuentas.length;
         this.loading = false;
-
-        // Configurar la tabla con los datos cargados
         this.setupTableConfig();
-
-        console.log(
-          `✅ Se cargaron ${list.length} naturalezas para empresa ${idSucursal} exitosamente`
-        );
       },
       error: (err) => {
-        console.error(`❌ Error al cargar naturalezas con empresa ${idSucursal}:`, err);
-
         // Fallback a getAll() si falla el filtro
-        console.log('🔄 Probando getAll como fallback...');
         this.naturalezaCuentaService.getAll().subscribe({
           next: (data) => {
-            console.log('📡 Respuesta fallback getAll:', data);
             const list = Array.isArray(data) ? data : (data as any)?.data ?? [];
             const filtered = list.filter((nat: any) => nat?.empresa?.codigo === idSucursal);
 
-            // Transformar datos numéricos a texto legible para el grid
-            this.naturalezaCuentas = filtered
-              .map((item: any) => ({
-                ...item,
-                tipoFormateado: this.tipoLabel(item.tipo),
-                centroCostoFormateado: this.manejaCentroCostoLabel(item.manejaCentroCosto),
-                estadoFormateado: this.estadoLabel(item.estado),
-              }))
-              .sort((a: any, b: any) => (a.numero || 0) - (b.numero || 0)); // Orden ascendente
+            this.naturalezaCuentas = filtered.sort((a: any, b: any) => (a.numero || 0) - (b.numero || 0));
 
             this.totalElements = this.naturalezaCuentas.length;
             this.loading = false;
@@ -298,10 +254,7 @@ export class NaturalezaDeCuentasComponent implements OnInit {
 
   // Helpers de formato para exportación
   private tipoLabel(valor: any): string {
-    const n = Number(valor);
-    if (n === 1) return 'Deudora';
-    if (n === 2) return 'Acreedora';
-    return String(valor ?? '');
+    return this.detalleRubroService.getDescripcionByParentAndAlterno(RUBRO_TIPO_GRUPO, valor) || String(valor ?? '');
   }
 
   private manejaCentroCostoLabel(valor: any): string {
@@ -315,41 +268,53 @@ export class NaturalezaDeCuentasComponent implements OnInit {
 
   /**
    * Maneja los errores emitidos por el componente table-basic-hijos
-   * y los muestra en un snackbar al usuario con color según el código HTTP
+   * y los muestra en un snackbar al usuario solo si son errores reales (400+)
    */
   onTableError(errorData: { mensaje: string; codigoHttp?: number }): void {
-    // Determinar el color del snackbar según el código HTTP
-    // 200-299: success (verde), 400-599: error (rojo)
-    const esExito = errorData.codigoHttp && errorData.codigoHttp >= 200 && errorData.codigoHttp < 300;
-    const panelClass = esExito ? 'success-snackbar' : 'error-snackbar';
-
-    this.snackBar.open(errorData.mensaje, 'Cerrar', {
-      duration: esExito ? 4000 : 8000,
-      panelClass: [panelClass],
-      horizontalPosition: 'center',
-      verticalPosition: 'bottom'
-    });
+    // Solo mostrar snackbar si es un error real (código 400 o superior)
+    // Los códigos 200-299 se manejan en onOperacionCompletada
+    if (errorData.codigoHttp && errorData.codigoHttp >= 400) {
+      this.snackBar.open(errorData.mensaje, 'Cerrar', {
+        duration: 8000,
+        panelClass: ['error-snackbar'],
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom'
+      });
+    }
   }
 
   onOperacionCompletada(evento: any): void {
-    console.log('Operación:', evento.operacion); // AccionesGrid.ADD, EDIT o REMOVE
-    console.log('Resultado:', evento.resultado); // Lo que devolvió el backend
-    console.log('Exitoso:', evento.exitoso);
-    console.log('Código HTTP:', evento.codigoHttp);
-    console.log('Datos enviados:', evento.datosEnviados);
+    // Manejo especial para operación de DELETE (operacion === 3) con código 200
+    if (evento.operacion === 3 && evento.exitoso && evento.codigoHttp === 200) {
+      // Mostrar diálogo de confirmación directamente (sin snackbar previo)
+      const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+        width: '450px',
+        data: {
+          title: 'Confirmación de Inactivación',
+          message: evento.resultado + '\n\n¿Desea inactivar la naturaleza y todas sus cuentas?',
+          confirmText: 'Aceptar',
+          cancelText: 'Cancelar',
+          type: 'warning'
+        }
+      });
 
-    // Determinar mensaje y estilo según éxito/error
-    const mensaje = evento.exitoso
-      ? evento.resultado || 'Operación completada exitosamente'
-      : 'Error al procesar la operación';
+      dialogRef.afterClosed().subscribe(result => {
+        if (result) {
+          // Aquí se implementará la lógica de inactivación en el futuro
+        }
+      });
+    } else if (!evento.exitoso || (evento.codigoHttp && evento.codigoHttp >= 400)) {
+      // Solo mostrar snackbar para errores reales (códigos 400+)
+      const mensaje = evento.resultado || 'Error al procesar la operación';
 
-    const panelClass = evento.exitoso ? 'success-snackbar' : 'error-snackbar';
-
-    this.snackBar.open(mensaje, 'Cerrar', {
-      duration: evento.exitoso ? 4000 : 8000,
-      panelClass: [panelClass],
-      horizontalPosition: 'center',
-      verticalPosition: 'bottom'
-    });
+      this.snackBar.open(mensaje, 'Cerrar', {
+        duration: 8000,
+        panelClass: ['error-snackbar'],
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom'
+      });
+    }
+    // Si es exitoso con código 200-299 y no es delete, no hacer nada (sin snackbar)
   }
 }
+

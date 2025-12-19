@@ -145,7 +145,8 @@ export class FuncionesTableService {
       case ColumnaTipo.CHECK: {
         if (resultado) {
           if (+resultado === 1) {
-            resultado = '\u2B24';
+            // Círculo azul que combina con header/footer (#667eea)
+            resultado = '<span style="color: #667eea; font-size: 1.2rem; font-weight: 500;">⬤</span>';
           }
         } else {
           resultado = null;

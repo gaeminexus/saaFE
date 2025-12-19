@@ -29,4 +29,6 @@ export interface TableConfig {
   entidad_padre?: number;
   reg_padre?: any;
   campo_padre?: string;
+  // Callback para formatear datos después de recargar
+  onDataUpdate?: (data: any[]) => any[];
 }

@@ -120,7 +120,7 @@
                 [ngClass]="darFormatoColumn(reg, configTable.fSize || '')"
                 *matCellDef="let row"
                 class="saa-data-cell">
-              <div class="cell-content">{{ procesaCampo(row, reg) }}</div>
+              <div class="cell-content" [innerHTML]="procesaCampo(row, reg)"></div>
             </td>
             <td mat-footer-cell
                 [ngClass]="darFormatoColumn(reg, configTable.fSize || '')"
@@ -144,7 +144,7 @@
                 [ngClass]="darFormatoColumn(reg, configTable.fSize || '')"
                 *matCellDef="let row"
                 class="saa-data-cell">
-              <div class="cell-content">{{ procesaCampo(row, reg) }}</div>
+              <div class="cell-content" [innerHTML]="procesaCampo(row, reg)"></div>
             </td>
             <td mat-footer-cell
                 [ngClass]="darFormatoColumn(reg, configTable.fSize || '')"

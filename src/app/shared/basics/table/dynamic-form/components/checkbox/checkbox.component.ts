@@ -20,8 +20,6 @@ export class CheckboxComponent implements OnInit, DynamicFormComponent {
   constructor() {}
 
   ngOnInit(): void {
-    console.log('☑️ CheckboxComponent init - field:', this.field.name, 'label:', this.field.label);
-    console.log('☑️ FormGroup:', this.group);
-    console.log('☑️ Control exists:', this.group.get(this.field.name));
+
   }
 }

@@ -47,31 +47,10 @@ export class AutocompleteComponent implements OnInit, DynamicFormComponent {
   ) {}
 
   ngOnInit(): void {
-    console.log(
-      '🔍 AutocompleteComponent init - field:',
-      this.field.name,
-      'rubroAlterno:',
-      this.field.rubroAlterno
-    );
-
     // CARGA COLLECCION EN CASO DE SER RUBRO (acceso síncrono desde caché)
     if (this.field.rubroAlterno) {
       this.field.collections = this.detalleRubroService.getDetallesByParent(
         Number(this.field.rubroAlterno)
-      );
-      console.log('📦 Collections cargadas para', this.field.name, ':', this.field.collections);
-
-      // Verificar si los datos están cargados
-      if (this.field.collections.length === 0 && !this.detalleRubroService.estanDatosCargados()) {
-        console.warn('⚠️ AutocompleteComponent: Rubros no cargados aún para', this.field.name);
-        console.warn('⚠️ Asegúrate de llamar AppStateService.inicializarApp() en el login.');
-      }
-    } else {
-      console.log(
-        '📦 Collections pasadas directamente para',
-        this.field.name,
-        ':',
-        this.field.collections
       );
     }
 
@@ -211,8 +190,6 @@ export class AutocompleteComponent implements OnInit, DynamicFormComponent {
   }
 
   seleccion(item: any): void {
-    /* console.log(item);
-    console.log(item.option.value); */
     const control = this.group.get(this.field['name'] || '');
     if (control) {
       if (this.field.rubroAlterno) {
@@ -230,8 +207,6 @@ export class AutocompleteComponent implements OnInit, DynamicFormComponent {
   }
 
   seleccionHijo(item: any): void {
-    /* console.log(item);
-    console.log(item.option.value);*/
     const control = this.group.get(this.field['name'] || '');
     if (control) {
       control.setValue(item.option.value);

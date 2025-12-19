@@ -28,11 +28,12 @@
 
   <!-- Tabla dinámica -->
   <div class="table-content">
-    <app-table-basic-hijos
-      *ngIf="tableConfig"
-      [configTable]="tableConfig"
-      (emiteError)="onTableError($event)"
-      (emiteResultadoOperacion)="onOperacionCompletada($event)">
-    </app-table-basic-hijos>
+    @if (tableConfig) {
+      <app-table-basic-hijos
+        [configTable]="tableConfig"
+        (emiteError)="onTableError($event)"
+        (emiteResultadoOperacion)="onOperacionCompletada($event)">
+      </app-table-basic-hijos>
+    }
   </div>
 </div>

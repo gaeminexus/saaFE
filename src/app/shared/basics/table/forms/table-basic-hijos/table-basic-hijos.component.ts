@@ -1,6 +1,7 @@
 import { animate, state, style, transition, trigger } from '@angular/animations';
 import { AfterViewInit, ChangeDetectorRef, Component, EventEmitter, forwardRef, Input, OnInit, OnChanges, SimpleChanges, Output, ViewChild, CUSTOM_ELEMENTS_SCHEMA, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { MatDialog } from '@angular/material/dialog';
 import { MatPaginator, MatPaginatorIntl } from '@angular/material/paginator';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -19,6 +20,7 @@ import { TableConfig } from '../../model/table-interface';
 import { MaterialFormModule } from '../../../../modules/material-form.module';
 import { Injectable } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FuncionesTableService } from '../../service/funciones-table.service';
 
 // Clase para internacionalización del paginador en español
 @Injectable()
@@ -114,8 +116,8 @@ export class TableBasicHijosComponent implements OnInit, OnChanges, AfterViewIni
   public dialog = inject(MatDialog);
   private changeDetectorRefs = inject(ChangeDetectorRef);
   private snackBar = inject(MatSnackBar);
-  // Comentamos temporalmente para evitar dependencia circular
-  // public funciones = inject(FuncionesTableService);
+  private sanitizer = inject(DomSanitizer);
+  public funciones = inject(FuncionesTableService);
 
   constructor() { }
 
@@ -334,7 +336,6 @@ export class TableBasicHijosComponent implements OnInit, OnChanges, AfterViewIni
     try {
       // Ejecutar la operación principal y capturar el resultado
       const resultadoOperacion = await this.serviceLocatorService.ejecutaServicio(this.entidad, result, opcion);
-      console.log('Resultado de la operación:', resultadoOperacion);
       // Emitir el resultado al componente padre con información de éxito
       this.emiteResultadoOperacion.emit({
         operacion: opcion,
@@ -342,14 +343,6 @@ export class TableBasicHijosComponent implements OnInit, OnChanges, AfterViewIni
         datosEnviados: result,
         exitoso: true,
         codigoHttp: 200
-      });
-
-      // Mostrar mensaje de éxito
-      const operacion = opcion === AccionesGrid.ADD ? 'creado' :
-                       opcion === AccionesGrid.EDIT ? 'actualizado' : 'eliminado';
-      this.snackBar.open(`Registro ${operacion} correctamente`, 'Cerrar', {
-        duration: 3000,
-        panelClass: ['success-snackbar']
       });
 
       // Recargar datos después de la operación
@@ -386,8 +379,13 @@ export class TableBasicHijosComponent implements OnInit, OnChanges, AfterViewIni
   }
 
   asignaYRefresca(regist: any): void {
-    this.dataSource.data = regist;
-    this.registros = regist;
+    // Formatear datos si existe la función onDataUpdate en la configuración
+    const datosFormateados = this.configTable?.onDataUpdate
+      ? this.configTable.onDataUpdate(regist)
+      : regist;
+
+    this.dataSource.data = datosFormateados;
+    this.registros = datosFormateados;
 
     // Reconfigurar el sort después de actualizar los datos
     this.configurarSort();
@@ -451,7 +449,6 @@ export class TableBasicHijosComponent implements OnInit, OnChanges, AfterViewIni
   }
 
   recuperaDetalle(row: any): void {
-    // console.log(row);
     this.hijos.forEach(val => {
       this.getLocatorService.obtienePorPadre(
         val.entidad,
@@ -538,13 +535,15 @@ export class TableBasicHijosComponent implements OnInit, OnChanges, AfterViewIni
     return selectedRowIndex === codigo ? `${baseClass} selected` : baseClass;
   }
 
-  procesaCampo(row: any, reg: FieldFormat): string {
-    // Implementación simplificada para procesar campos
-    if (!row || !reg?.column) {
-      return '';
+  procesaCampo(row: any, reg: FieldFormat): SafeHtml | string {
+    const resultado = this.funciones.procesaCampo(row, reg);
+
+    // Si contiene HTML (para campos CHECK con estilo), marcar como seguro
+    if (resultado && typeof resultado === 'string' && resultado.includes('<')) {
+      return this.sanitizer.bypassSecurityTrustHtml(resultado);
     }
-    const value = row[reg.column];
-    return value !== null && value !== undefined ? value.toString() : '';
+
+    return resultado;
   }
 
   /**
@@ -596,7 +595,7 @@ export class TableBasicHijosComponent implements OnInit, OnChanges, AfterViewIni
           mensajeError = error;
         }
       } catch (e) {
-        console.error('Error al procesar mensaje de error:', e);
+        // Error al procesar mensaje de error
       }
     }
 

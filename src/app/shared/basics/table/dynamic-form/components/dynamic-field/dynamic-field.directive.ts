@@ -48,7 +48,6 @@ export class DynamicFieldDirective implements OnInit {
 
   ngOnInit(): void {
     if (!this.field.type) {
-      console.error('Field type is required');
       return;
     }
 
@@ -56,7 +55,6 @@ export class DynamicFieldDirective implements OnInit {
     const type = this.field.type as ComponentType;
     const componentType = componentMapper[type];
     if (!componentType) {
-      console.error(`Component type ${type} not found in mapper`);
       return;
     }
 
