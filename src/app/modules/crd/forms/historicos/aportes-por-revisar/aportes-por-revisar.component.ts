@@ -142,13 +142,10 @@ export class AportesPorRevisarComponent implements OnInit {
           return;
         }
 
-        console.log(`Encontrados ${tiposAporte.length} tipos de aporte con estado 99`);
-
         // Paso 2: Para cada TipoAporte, cargar sus aportes
         this.cargarAportesPorTipo(tiposAporte);
       },
       error: (error) => {
-        console.error('Error al cargar tipos de aporte:', error);
         this.isLoading = false;
         this.snackBar.open('Error al cargar tipos de aporte', 'Cerrar', { duration: 3000 });
       },
@@ -267,8 +264,6 @@ export class AportesPorRevisarComponent implements OnInit {
               cantidad: aportesConvertidos.length,
               expandido: false,
             });
-
-            console.log(`Tipo ${tipo.nombre}: ${aportesConvertidos.length} aportes cargados`);
           }
 
           // Verificar si todos los tipos fueron procesados
@@ -277,7 +272,6 @@ export class AportesPorRevisarComponent implements OnInit {
           }
         },
         error: (error) => {
-          console.error(`Error al cargar aportes del tipo ${tipo.nombre}:`, error);
           tiposProcesados++;
 
           // Verificar si todos los tipos fueron procesados
@@ -510,7 +504,6 @@ export class AportesPorRevisarComponent implements OnInit {
       doc.save(`Resumen_Aportes_Por_Revisar_${new Date().toISOString().split('T')[0]}.pdf`);
       this.snackBar.open('PDF generado exitosamente', 'Cerrar', { duration: 3000 });
     } catch (error) {
-      console.error('Error al generar PDF:', error);
       this.snackBar.open('Error al generar el PDF', 'Cerrar', { duration: 3000 });
     }
   }
@@ -580,7 +573,6 @@ export class AportesPorRevisarComponent implements OnInit {
       doc.save(`Detalle_${tipo.tipoAporte}_${new Date().toISOString().split('T')[0]}.pdf`);
       this.snackBar.open('PDF generado exitosamente', 'Cerrar', { duration: 3000 });
     } catch (error) {
-      console.error('Error al generar PDF:', error);
       this.snackBar.open('Error al generar el PDF', 'Cerrar', { duration: 3000 });
     }
   }
