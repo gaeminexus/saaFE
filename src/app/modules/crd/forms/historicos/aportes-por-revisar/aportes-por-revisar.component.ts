@@ -106,135 +106,211 @@ export class AportesPorRevisarComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.cargarAportes();
+    // La búsqueda se ejecuta solo al presionar el botón buscar
   }
 
   /**
    * Carga todos los aportes con estado de tipo = 99
+   * Estrategia: Primero cargar TipoAporte con estado 99, luego aportes por cada tipo
    */
   cargarAportes(): void {
     this.isLoading = true;
     this.sinResultados = false;
+    this.aportesPorTipo = [];
 
-    const criterioConsultaArray: DatosBusqueda[] = [];
-
-    // Filtro principal: tipoAporte.estado = 99
+    // Paso 1: Obtener todos los TipoAporte con estado = 99
+    const criterioTipo: DatosBusqueda[] = [];
     let criterio = new DatosBusqueda();
-    criterio.asignaValorConCampoPadre(
+    criterio.asignaUnCampoSinTrunc(
       TipoDatosBusqueda.LONG,
-      'tipoAporte',
       'estado',
       ESTADO_POR_REVISAR,
       TipoComandosBusqueda.IGUAL
     );
-    criterioConsultaArray.push(criterio);
+    criterioTipo.push(criterio);
 
-    // Filtros opcionales
-    const filtros = this.filtrosForm.value;
-
-    // Filtro por fecha inicio
-    if (filtros.fechaInicio) {
-      criterio = new DatosBusqueda();
-      criterio.asignaUnCampoSinTrunc(
-        TipoDatosBusqueda.DATE_TIME,
-        'fechaTransaccion',
-        this.formatearFecha(filtros.fechaInicio),
-        TipoComandosBusqueda.MAYOR_IGUAL
-      );
-      criterioConsultaArray.push(criterio);
-    }
-
-    // Filtro por fecha fin
-    if (filtros.fechaFin) {
-      criterio = new DatosBusqueda();
-      criterio.asignaUnCampoSinTrunc(
-        TipoDatosBusqueda.DATE_TIME,
-        'fechaTransaccion',
-        this.formatearFecha(filtros.fechaFin),
-        TipoComandosBusqueda.MENOR_IGUAL
-      );
-      criterioConsultaArray.push(criterio);
-    }
-
-    // Filtro por número de identificación de entidad
-    if (filtros.numeroIdentificacion && filtros.numeroIdentificacion.trim()) {
-      criterio = new DatosBusqueda();
-      criterio.asignaValorConCampoPadre(
-        TipoDatosBusqueda.STRING,
-        'entidad',
-        'numeroIdentificacion',
-        filtros.numeroIdentificacion.trim(),
-        TipoComandosBusqueda.LIKE
-      );
-      criterioConsultaArray.push(criterio);
-    }
-
-    // Filtro por razón social
-    if (filtros.razonSocial && filtros.razonSocial.trim()) {
-      criterio = new DatosBusqueda();
-      criterio.asignaValorConCampoPadre(
-        TipoDatosBusqueda.STRING,
-        'entidad',
-        'razonSocial',
-        filtros.razonSocial.trim(),
-        TipoComandosBusqueda.LIKE
-      );
-      criterioConsultaArray.push(criterio);
-    }
-
-    // Ordenar por fecha descendente
-    criterio = new DatosBusqueda();
-    criterio.orderBy('fechaTransaccion');
-    criterioConsultaArray.push(criterio);
-
-    this.aporteService.selectByCriteria(criterioConsultaArray).subscribe({
-      next: (aportes: any) => {
-        console.log('Aportes cargados:', aportes);
-        if (!aportes || !Array.isArray(aportes) || aportes.length === 0) {
-          this.aportesPorTipo = [];
+    this.tipoAporteService.selectByCriteria(criterioTipo).subscribe({
+      next: (tiposAporte: any) => {
+        if (!tiposAporte || !Array.isArray(tiposAporte) || tiposAporte.length === 0) {
           this.sinResultados = true;
           this.isLoading = false;
-          this.calcularTotalesGenerales();
+          this.snackBar.open(
+            'No se encontraron tipos de aporte con estado por revisar',
+            'Cerrar',
+            { duration: 3000 }
+          );
           return;
         }
 
-        // Convertir fechas y ordenar
-        const aportesConvertidos = aportes.map((aporte: Aporte) => ({
-          ...aporte,
-          fechaTransaccion: this.convertirFecha(aporte.fechaTransaccion) || aporte.fechaTransaccion,
-          fechaRegistro: this.convertirFecha(aporte.fechaRegistro) || aporte.fechaRegistro,
-        }));
+        console.log(`Encontrados ${tiposAporte.length} tipos de aporte con estado 99`);
 
-        // Ordenar por fecha descendente
-        aportesConvertidos.sort((a, b) => {
-          const fechaA = new Date(a.fechaTransaccion).getTime();
-          const fechaB = new Date(b.fechaTransaccion).getTime();
-          return fechaB - fechaA;
-        });
-
-        // Agrupar por tipo de aporte
-        this.agruparAportesPorTipo(aportesConvertidos);
-
-        this.sinResultados = false;
-        this.isLoading = false;
-
-        this.snackBar.open(
-          `Se encontraron ${aportes.length} aportes por revisar`,
-          'Cerrar',
-          { duration: 3000 }
-        );
+        // Paso 2: Para cada TipoAporte, cargar sus aportes
+        this.cargarAportesPorTipo(tiposAporte);
       },
       error: (error) => {
-        console.error('Error al cargar aportes:', error);
-        this.aportesPorTipo = [];
+        console.error('Error al cargar tipos de aporte:', error);
         this.isLoading = false;
-        this.snackBar.open('Error al cargar aportes', 'Cerrar', { duration: 3000 });
+        this.snackBar.open('Error al cargar tipos de aporte', 'Cerrar', { duration: 3000 });
       },
     });
   }
 
   /**
-   * Agrupa los aportes por tipo de aporte
+   * Carga los aportes para cada tipo de aporte
+   */
+  private cargarAportesPorTipo(tiposAporte: TipoAporte[]): void {
+    const filtros = this.filtrosForm.value;
+    let tiposProcesados = 0;
+    const totalTipos = tiposAporte.length;
+
+    tiposAporte.forEach((tipo: TipoAporte) => {
+      const criterioConsultaArray: DatosBusqueda[] = [];
+
+      // Filtro por código de tipo de aporte
+      let criterio = new DatosBusqueda();
+      criterio.asignaValorConCampoPadre(
+        TipoDatosBusqueda.LONG,
+        'tipoAporte',
+        'codigo',
+        tipo.codigo.toString(),
+        TipoComandosBusqueda.IGUAL
+      );
+      criterioConsultaArray.push(criterio);
+
+      // Filtro por fecha inicio
+      if (filtros.fechaInicio) {
+        criterio = new DatosBusqueda();
+        criterio.asignaUnCampoSinTrunc(
+          TipoDatosBusqueda.DATE_TIME,
+          'fechaTransaccion',
+          this.formatearFecha(filtros.fechaInicio),
+          TipoComandosBusqueda.MAYOR_IGUAL
+        );
+        criterioConsultaArray.push(criterio);
+      }
+
+      // Filtro por fecha fin
+      if (filtros.fechaFin) {
+        criterio = new DatosBusqueda();
+        criterio.asignaUnCampoSinTrunc(
+          TipoDatosBusqueda.DATE_TIME,
+          'fechaTransaccion',
+          this.formatearFecha(filtros.fechaFin),
+          TipoComandosBusqueda.MENOR_IGUAL
+        );
+        criterioConsultaArray.push(criterio);
+      }
+
+      // Filtro por número de identificación de entidad
+      if (filtros.numeroIdentificacion && filtros.numeroIdentificacion.trim()) {
+        criterio = new DatosBusqueda();
+        criterio.asignaValorConCampoPadre(
+          TipoDatosBusqueda.STRING,
+          'entidad',
+          'numeroIdentificacion',
+          filtros.numeroIdentificacion.trim(),
+          TipoComandosBusqueda.LIKE
+        );
+        criterioConsultaArray.push(criterio);
+      }
+
+      // Filtro por razón social
+      if (filtros.razonSocial && filtros.razonSocial.trim()) {
+        criterio = new DatosBusqueda();
+        criterio.asignaValorConCampoPadre(
+          TipoDatosBusqueda.STRING,
+          'entidad',
+          'razonSocial',
+          filtros.razonSocial.trim(),
+          TipoComandosBusqueda.LIKE
+        );
+        criterioConsultaArray.push(criterio);
+      }
+
+      // Ordenar por fecha descendente
+      criterio = new DatosBusqueda();
+      criterio.orderBy('fechaTransaccion');
+      criterioConsultaArray.push(criterio);
+
+      this.aporteService.selectByCriteria(criterioConsultaArray).subscribe({
+        next: (aportes: any) => {
+          tiposProcesados++;
+
+          if (aportes && Array.isArray(aportes) && aportes.length > 0) {
+            // Convertir fechas
+            const aportesConvertidos = aportes.map((aporte: Aporte) => ({
+              ...aporte,
+              fechaTransaccion: this.convertirFecha(aporte.fechaTransaccion) || aporte.fechaTransaccion,
+              fechaRegistro: this.convertirFecha(aporte.fechaRegistro) || aporte.fechaRegistro,
+            }));
+
+            // Ordenar por fecha descendente
+            aportesConvertidos.sort((a, b) => {
+              const fechaA = new Date(a.fechaTransaccion).getTime();
+              const fechaB = new Date(b.fechaTransaccion).getTime();
+              return fechaB - fechaA;
+            });
+
+            // Calcular totales
+            const totalValor = aportesConvertidos.reduce((sum, a) => sum + (a.valor || 0), 0);
+            const totalPagado = aportesConvertidos.reduce((sum, a) => sum + (a.valorPagado || 0), 0);
+            const totalSaldo = aportesConvertidos.reduce((sum, a) => sum + (a.saldo || 0), 0);
+
+            // Agregar grupo
+            this.aportesPorTipo.push({
+              tipoAporte: tipo.nombre,
+              codigoTipo: tipo.codigo,
+              aportes: new MatTableDataSource<Aporte>(aportesConvertidos),
+              totalValor: totalValor,
+              totalPagado: totalPagado,
+              totalSaldo: totalSaldo,
+              cantidad: aportesConvertidos.length,
+              expandido: false,
+            });
+
+            console.log(`Tipo ${tipo.nombre}: ${aportesConvertidos.length} aportes cargados`);
+          }
+
+          // Verificar si todos los tipos fueron procesados
+          if (tiposProcesados === totalTipos) {
+            this.finalizarCarga();
+          }
+        },
+        error: (error) => {
+          console.error(`Error al cargar aportes del tipo ${tipo.nombre}:`, error);
+          tiposProcesados++;
+
+          // Verificar si todos los tipos fueron procesados
+          if (tiposProcesados === totalTipos) {
+            this.finalizarCarga();
+          }
+        },
+      });
+    });
+  }
+
+  /**
+   * Finaliza la carga de aportes y actualiza la UI
+   */
+  private finalizarCarga(): void {
+    this.calcularTotalesGenerales();
+    this.sinResultados = this.aportesPorTipo.length === 0;
+    this.isLoading = false;
+
+    if (this.aportesPorTipo.length > 0) {
+      const totalAportes = this.totalGeneral.cantidad;
+      this.snackBar.open(
+        `Se encontraron ${totalAportes} aportes en ${this.aportesPorTipo.length} tipos`,
+        'Cerrar',
+        { duration: 3000 }
+      );
+    } else {
+      this.snackBar.open('No se encontraron aportes', 'Cerrar', { duration: 3000 });
+    }
+  }
+
+  /**
+   * Agrupa los aportes por tipo de aporte (método legacy, ya no se usa con la nueva estrategia)
    */
   private agruparAportesPorTipo(aportes: Aporte[]): void {
     const tiposMap = new Map<number, AportesPorTipo>();
