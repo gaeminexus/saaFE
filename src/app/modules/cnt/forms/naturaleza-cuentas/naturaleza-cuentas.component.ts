@@ -2,23 +2,24 @@ import { CommonModule } from '@angular/common';
 import { Component, CUSTOM_ELEMENTS_SCHEMA, OnInit } from '@angular/core';
 import { Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 
-import { FieldConfig } from '../../../../shared/basics/table/dynamic-form/model/field.interface';
 import { ConfirmDialogComponent } from '../../../../shared/basics/confirm-dialog/confirm-dialog.component';
+import { FieldConfig } from '../../../../shared/basics/table/dynamic-form/model/field.interface';
 import { TableBasicHijosComponent } from '../../../../shared/basics/table/forms/table-basic-hijos/table-basic-hijos.component';
 import { FieldFormat } from '../../../../shared/basics/table/model/field-format-interface';
-import { TableConfig } from '../../../../shared/basics/table/model/table-interface';
 import { ColumnaTipo } from '../../../../shared/basics/table/model/fields-constants';
+import { TableConfig } from '../../../../shared/basics/table/model/table-interface';
 import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { DetalleRubro } from '../../../../shared/model/detalle-rubro';
 import { DetalleRubroService } from '../../../../shared/services/detalle-rubro.service';
 import { ExportService } from '../../../../shared/services/export.service';
+import { JasperReportesService } from '../../../../shared/services/jasper-reportes.service';
 import { EntidadesContabilidad } from '../../model/entidades-cnt';
 import { NaturalezaCuenta } from '../../model/naturaleza-cuenta';
 import { NaturalezaCuentaService } from '../../service/naturaleza-cuenta.service';
@@ -57,6 +58,7 @@ export class NaturalezaDeCuentasComponent implements OnInit {
     private naturalezaCuentaService: NaturalezaCuentaService,
     private detalleRubroService: DetalleRubroService,
     private exportService: ExportService,
+    private jasperReportes: JasperReportesService,
     private snackBar: MatSnackBar,
     private dialog: MatDialog
   ) {}
@@ -100,8 +102,14 @@ export class NaturalezaDeCuentasComponent implements OnInit {
       { column: 'numero', header: 'Número', fWidth: '15%', fSort: true },
       { column: 'nombre', header: 'Nombre', fWidth: '35%', fSort: true },
       { column: 'r_12_tipo', header: 'Tipo', fWidth: '20%', fSort: true },
-      { column: 'manejaCentroCosto', header: 'Maneja Centro Costos', fWidth: '20%', fSort: true, fType: ColumnaTipo.CHECK },
-      { column: 'Rr_11_estado', header: 'Estado', fWidth: '10%', fSort: true},
+      {
+        column: 'manejaCentroCosto',
+        header: 'Maneja Centro Costos',
+        fWidth: '20%',
+        fSort: true,
+        fType: ColumnaTipo.CHECK,
+      },
+      { column: 'Rr_11_estado', header: 'Estado', fWidth: '10%', fSort: true },
     ];
   }
 
@@ -197,6 +205,7 @@ export class NaturalezaDeCuentasComponent implements OnInit {
       next: (data) => {
         const list = Array.isArray(data) ? data : (data as any)?.data ?? [];
         this.naturalezaCuentas = list.sort((a: any, b: any) => (a.numero || 0) - (b.numero || 0));
+        this.totalElements = this.naturalezaCuentas.length;
         this.loading = false;
         this.setupTableConfig();
       },
@@ -209,20 +218,20 @@ export class NaturalezaDeCuentasComponent implements OnInit {
 
   recargaDatos(): void {
     const empresaId = parseInt(localStorage.getItem('idEmpresa') || '1236', 10);
-        this.naturalezaCuentaService.getByEmpresa(empresaId).subscribe({
-          next: (data) => {
-            const list = Array.isArray(data) ? data : [];
-            this.naturalezaCuentas = list.sort((a: any, b: any) => (a.numero || 0) - (b.numero || 0));
-            this.loading = false;
-            this.setupTableConfig();
-          },
-          error: () => {
-            this.error = 'Error al recuperar datos de naturaleza de cuentas';
-            this.loading = false;
-          },
-        });
+    this.naturalezaCuentaService.getByEmpresa(empresaId).subscribe({
+      next: (data) => {
+        const list = Array.isArray(data) ? data : [];
+        this.naturalezaCuentas = list.sort((a: any, b: any) => (a.numero || 0) - (b.numero || 0));
+        this.totalElements = this.naturalezaCuentas.length;
+        this.loading = false;
+        this.setupTableConfig();
+      },
+      error: () => {
+        this.error = 'Error al recuperar datos de naturaleza de cuentas';
+        this.loading = false;
+      },
+    });
   }
-
 
   // Métodos de exportación
   public exportToCSV(): void {
@@ -234,26 +243,35 @@ export class NaturalezaDeCuentasComponent implements OnInit {
   }
 
   public exportToPDF(): void {
-    const headers = ['Número', 'Nombre', 'Tipo', 'C. Costos', 'Estado'];
-    const dataKeys = ['numero', 'nombre', 'tipo', 'manejaCentroCosto', 'estado'];
-    const filename = `naturaleza-cuentas-${new Date().toISOString().split('T')[0]}`;
-    const title = 'Reporte de Naturaleza de Cuentas';
+    this.loading = true;
 
-    // Transformar los datos para el PDF con labels formateados
-    const transformedData = this.naturalezaCuentas.map((item) => ({
-      numero: item.numero || '',
-      nombre: item.nombre || '',
-      tipo: this.tipoLabel(item.tipo),
-      manejaCentroCosto: this.manejaCentroCostoLabel(item.manejaCentroCosto),
-      estado: this.estadoLabel(item.estado),
-    }));
+    this.jasperReportes.generar('naturaleza-cuentas').subscribe({
+      next: (blob) => {
+        this.loading = false;
 
-    this.exportService.exportToPDF(transformedData, filename, title, headers, dataKeys);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'naturaleza-cuentas.pdf';
+        a.click();
+
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+      },
+      error: () => {
+        this.loading = false;
+        this.snackBar.open('No se pudo generar el reporte', 'Cerrar', {
+          duration: 6000,
+        });
+      },
+    });
   }
 
   // Helpers de formato para exportación
   private tipoLabel(valor: any): string {
-    return this.detalleRubroService.getDescripcionByParentAndAlterno(RUBRO_TIPO_GRUPO, valor) || String(valor ?? '');
+    return (
+      this.detalleRubroService.getDescripcionByParentAndAlterno(RUBRO_TIPO_GRUPO, valor) ||
+      String(valor ?? '')
+    );
   }
 
   private manejaCentroCostoLabel(valor: any): string {
@@ -277,7 +295,7 @@ export class NaturalezaDeCuentasComponent implements OnInit {
         duration: 8000,
         panelClass: ['error-snackbar'],
         horizontalPosition: 'center',
-        verticalPosition: 'bottom'
+        verticalPosition: 'bottom',
       });
     }
   }
@@ -293,26 +311,29 @@ export class NaturalezaDeCuentasComponent implements OnInit {
           message: evento.resultado + '\n\n¿Desea inactivar la naturaleza y todas sus cuentas?',
           confirmText: 'Aceptar',
           cancelText: 'Cancelar',
-          type: 'warning'
-        }
+          type: 'warning',
+        },
       });
 
-      dialogRef.afterClosed().subscribe(result => {
+      dialogRef.afterClosed().subscribe((result) => {
         if (result) {
           this.naturalezaCuentaService.inactivaNaturalezaCuenta(evento.datosEnviados).subscribe({
             next: (respuesta) => {
-              this.snackBar.open('Naturaleza y todas las cuentas de la misma inactivadas con éxito', 'Cerrar', {
-                duration: 8000,
-                panelClass: ['success-snackbar'],
-                horizontalPosition: 'center',
-                verticalPosition: 'bottom'
-              });
+              this.snackBar.open(
+                'Naturaleza y todas las cuentas de la misma inactivadas con éxito',
+                'Cerrar',
+                {
+                  duration: 8000,
+                  panelClass: ['success-snackbar'],
+                  horizontalPosition: 'center',
+                  verticalPosition: 'bottom',
+                }
+              );
               this.recargaDatos();
-            }
+            },
           });
         }
       });
-
     } else if (!evento.exitoso || (evento.codigoHttp && evento.codigoHttp >= 400)) {
       // Solo mostrar snackbar para errores reales (códigos 400+)
       const mensaje = evento.resultado || 'Error al procesar la operación';
@@ -321,10 +342,9 @@ export class NaturalezaDeCuentasComponent implements OnInit {
         duration: 8000,
         panelClass: ['error-snackbar'],
         horizontalPosition: 'center',
-        verticalPosition: 'bottom'
+        verticalPosition: 'bottom',
       });
     }
     // Si es exitoso con código 200-299 y no es delete, no hacer nada (sin snackbar)
   }
 }
-
