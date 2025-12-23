@@ -26,6 +26,7 @@ import { ServiciosAsoprepService } from '../../../../asoprep/service/servicios-a
 import { EntidadService } from '../../../service/entidad.service';
 import { Entidad } from '../../../model/entidad';
 import { ExportService } from '../../../../../shared/services/export.service';
+import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { forkJoin, of } from 'rxjs';
 
 const RUBRO_ESTADOS_CARGA = 166;
@@ -149,7 +150,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
   expandedNovedad = signal<number | null>(null);
   loadingNovedad = signal<number | null>(null);
 
-  // PaginaciÃ³n de novedades
+  // Paginación de novedades
   pageSize = 10;
   pageIndexMap = new Map<number, number>(); // codigo novedad -> pageIndex
   pageSizeOptions = [5, 10, 20, 50];
@@ -171,17 +172,18 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
     private serviciosAsoprepService: ServiciosAsoprepService,
     private entidadService: EntidadService,
     private exportService: ExportService,
+    private funcionesDatos: FuncionesDatosService,
     private dialog: MatDialog,
     private snackBar: MatSnackBar
   ) {
-    // Generar aÃ±os del 2025 al 2035
+    // Generar años del 2025 al 2035
     for (let anio = 2025; anio <= 2035; anio++) {
       this.anios.push(anio);
     }
   }
 
   ngAfterViewInit(): void {
-    // Asignar sort a cada MatTableDataSource cuando estÃ©n disponibles
+    // Asignar sort a cada MatTableDataSource cuando estén disponibles
     this.sorts.changes.subscribe(() => {
       this.asignarSorts();
     });
@@ -201,16 +203,14 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
   }
 
   ngOnInit(): void {
-
-    // Verificar si los DetalleRubros ya estÃ¡n cargados en memoria
+    // Verificar si los DetalleRubros ya están cargados en memoria
     const detallesEnMemoria = this.detalleRubroService.getDetalles();
 
     if (detallesEnMemoria.length > 0) {
-      // âœ… Los datos ya estÃ¡n cargados, usar directamente
+      // ✅ Los datos ya están cargados, usar directamente
       this.inicializarComponente();
     } else {
-      // âš ï¸ Los datos no estÃ¡n cargados, cargar desde backend
-
+      // ⚠️ Los datos no están cargados, cargar desde backend
       this.detalleRubroService.inicializar().subscribe({
         next: (detalles) => {
           this.inicializarComponente();
@@ -223,11 +223,10 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
   }
 
   /**
-   * Inicializa el componente una vez que los rubros estÃ¡n disponibles
+   * Inicializa el componente una vez que los rubros están disponibles
    */
   private inicializarComponente(): void {
-
-    // Cargar catÃ¡logos (acceso SÃNCRONO desde cachÃ©)
+    // Cargar catálogos (acceso SÍNCRONO desde caché)
     this.cargarCatalogoEstados();
     this.cargarCatalogoNovedades();
 
@@ -236,7 +235,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
     if (id) {
       this.cargarDatos(parseInt(id, 10));
     } else {
-      this.snackBar.open('No se proporcionÃ³ ID de carga', 'Cerrar', { duration: 3000 });
+      this.snackBar.open('No se proporcionó ID de carga', 'Cerrar', { duration: 3000 });
       this.volverAtras();
     }
   }
@@ -251,7 +250,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
     this.cargaArchivoService.getById(idCarga.toString()).subscribe({
       next: (carga: any) => {
         if (!carga) {
-          this.snackBar.open('No se encontrÃ³ la carga de archivo', 'Cerrar', { duration: 3000 });
+          this.snackBar.open('No se encontró la carga de archivo', 'Cerrar', { duration: 3000 });
           this.volverAtras();
           return;
         }
@@ -262,11 +261,11 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
         this.filialSeleccionada = carga.filial;
         this.nombreArchivo = carga.nombre;
 
-        // Determinar quÃ© secciones mostrar segÃºn el estado
+        // Determinar qué secciones mostrar según el estado
         const codigoEstado = carga.codigoEstado || '1';
         this.determinarSeccionesVisibles(codigoEstado);
 
-        // Buscar el estado actual en el catÃ¡logo
+        // Buscar el estado actual en el catálogo
         const estadoEncontrado = this.estadosCatalogo().find(e => e.codigo === codigoEstado);
         this.estadoActual.set(estadoEncontrado || null);
 
@@ -321,7 +320,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
 
         this.detalles = Array.isArray(detalles) ? detalles : [detalles];
 
-        // Cargar partÃ­cipes para cada detalle
+        // Cargar partícipes para cada detalle
         this.cargarParticipes();
       },
       error: (error) => {
@@ -332,7 +331,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
   }
 
   /**
-   * Carga los partÃ­cipes para todos los detalles
+   * Carga los partícipes para todos los detalles
    */
   private cargarParticipes(): void {
     if (this.detalles.length === 0) {
@@ -340,7 +339,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
       return;
     }
 
-    // Crear un observable por cada detalle para buscar sus partÃ­cipes
+    // Crear un observable por cada detalle para buscar sus partícipes
     const observables = this.detalles.map(detalle => {
       const criterioArray: DatosBusqueda[] = [];
       const criterio = new DatosBusqueda();
@@ -357,7 +356,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
       return this.participeXCargaArchivoService.selectByCriteria(criterioArray);
     });
 
-    // Ejecutar todas las bÃºsquedas en paralelo
+    // Ejecutar todas las búsquedas en paralelo
     forkJoin(observables).subscribe({
       next: (resultados: any[]) => {
         this.isLoading = false;
@@ -373,11 +372,11 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
         });
 
         if (todosLosParticipes.length === 0) {
-          this.snackBar.open('No se encontraron partÃ­cipes para esta carga', 'Cerrar', { duration: 3000 });
+          this.snackBar.open('No se encontraron partícipes para esta carga', 'Cerrar', { duration: 3000 });
           return;
         }
 
-        // Agrupar partÃ­cipes por detalle (producto/aporte)
+        // Agrupar partícipes por detalle (producto/aporte)
         this.agruparDatosPorAporte(todosLosParticipes);
 
         // Procesar novedades
@@ -385,13 +384,13 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
       },
       error: (error) => {
         this.isLoading = false;
-        this.snackBar.open('Error al cargar partÃ­cipes', 'Cerrar', { duration: 3000 });
+        this.snackBar.open('Error al cargar partícipes', 'Cerrar', { duration: 3000 });
       }
     });
   }
 
   /**
-   * Agrupa los partÃ­cipes por aporte/producto
+   * Agrupa los partícipes por aporte/producto
    */
   private agruparDatosPorAporte(participes: ParticipeXCargaArchivo[]): void {
     const aportesMap = new Map<string, AporteAgrupado>();
@@ -461,18 +460,18 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
       return;
     }
 
-    // AquÃ­ implementarÃ­as la lÃ³gica para descargar el archivo
+    // Aquí implementarías la lógica para descargar el archivo
     // Por ahora mostramos un mensaje
-    this.snackBar.open('Funcionalidad de descarga en construcciÃ³n', 'Cerrar', { duration: 3000 });
+    this.snackBar.open('Funcionalidad de descarga en construcción', 'Cerrar', { duration: 3000 });
 
     // TODO: Implementar descarga real del archivo
     // window.open(rutaDescarga, '_blank');
   }
 
-  // ==================== MÃ“DULO DE ESTADOS ====================
+  // ==================== MÓDULO DE ESTADOS ====================
 
   /**
-   * Cargar catÃ¡logo de estados desde DetalleRubro con cÃ³digo padre 166
+   * Cargar catálogo de estados desde DetalleRubro con código padre 166
    */
   private cargarCatalogoEstados(): void {
     const detalles = this.detalleRubroService.getDetallesByParent(RUBRO_ESTADOS_CARGA);
@@ -480,7 +479,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
   }
 
   /**
-   * Determinar quÃ© secciones mostrar segÃºn el estado de la carga
+   * Determinar qué secciones mostrar según el estado de la carga
    */
   private determinarSeccionesVisibles(codigoEstado: string): void {
     // Estado 1 = todas las secciones visibles
@@ -490,8 +489,8 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
       this.mostrarProcesar.set(true);
       this.archivoYaProcesado.set(false);
     } else {
-      // Por ahora, otros estados tambiÃ©n muestran todo
-      // TODO: Implementar lÃ³gica especÃ­fica para otros estados
+      // Por ahora, otros estados también muestran todo
+      // TODO: Implementar lógica específica para otros estados
       this.mostrarResumen.set(true);
       this.mostrarNovedades.set(true);
       this.mostrarProcesar.set(true);
@@ -499,17 +498,16 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
     }
   }
 
-  // ==================== MÃ“DULO DE NOVEDADES ====================
+  // ==================== MÓDULO DE NOVEDADES ====================
 
   /**
-   * Cargar catÃ¡logo de novedades desde DetalleRubro con cÃ³digo padre 169
+   * Cargar catálogo de novedades desde DetalleRubro con código padre 169
    */
   private cargarCatalogoNovedades(): void {
     const detalles = this.detalleRubroService.getDetallesByParent(RUBRO_NOVEDADES_CARGA);
 
 
     if (!detalles || detalles.length === 0) {
-
       // Intentar cargar todos los detalles para debug
       const todosLosDetalles = this.detalleRubroService.getDetalles();
 
@@ -529,16 +527,15 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
   }
 
   /**
-   * Procesar novedades despuÃ©s de cargar datos desde backend
+   * Procesar novedades después de cargar datos desde backend
    */
   private procesarNovedades(todosLosRegistros: ParticipeXCargaArchivo[]): void {
-
     const catalogo = this.catalogoNovedades();
 
     if (catalogo.length === 0) {
       this.cargarCatalogoNovedades();
 
-      // Verificar si se cargÃ³
+      // Verificar si se cargó
       const catalogoActualizado = this.catalogoNovedades();
       if (catalogoActualizado.length === 0) {
         return;
@@ -552,12 +549,12 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
 
 
     this.novedadesAgrupadas.set(agrupadas);
-    this.onTabNovedadChange(0); // Inicializar con tab de PartÃ­cipes
+    this.onTabNovedadChange(0); // Inicializar con tab de Partícipes
 
   }
 
   /**
-   * Toggle expansiÃ³n de novedad
+   * Toggle expansión de novedad
    */
   toggleExpansion(codigo: number): void {
     const isExpanding = this.expandedNovedad() !== codigo;
@@ -593,14 +590,14 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
   }
 
   /**
-   * Cambiar pÃ¡gina de una novedad
+   * Cambiar página de una novedad
    */
   onPageChange(event: any, codigoNovedad: number): void {
     this.pageIndexMap.set(codigoNovedad, event.pageIndex);
   }
 
   /**
-   * Obtener Ã­ndice de pÃ¡gina actual
+   * Obtener índice de página actual
    */
   getPageIndex(codigoNovedad: number): number {
     return this.pageIndexMap.get(codigoNovedad) || 0;
@@ -625,13 +622,13 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
   }
 
   /**
-   * Corregir registro segÃºn tipo de novedad
+   * Corregir registro según tipo de novedad
    */
   corregirRegistro(registro: ParticipeXCargaArchivo): void {
     const novedad = registro.novedadesCarga;
 
     if (novedad === PARTICIPE_NO_ENCONTRADO) {
-      // PARTICIPE NO ENCONTRADO - Mostrar diÃ¡logo de coincidencias
+      // PARTICIPE NO ENCONTRADO - Mostrar diálogo de coincidencias
       this.mostrarCoincidencias(registro);
     } else if (novedad === CODIGO_ROL_DUPLICADO) {
       this.corregirDuplicado(registro);
@@ -640,7 +637,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
       this.mostrarCoincidenciasPetro35(registro);
     } else {
       this.snackBar.open(
-        `âš  CorrecciÃ³n para novedad ${novedad} no implementada aÃºn`,
+        `⚠ Corrección para novedad ${novedad} no implementada aún`,
         'Cerrar',
         { duration: 3000 }
       );
@@ -648,7 +645,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
   }
 
   /**
-   * Mostrar diÃ¡logo de coincidencias para partÃ­cipe no encontrado
+   * Mostrar diálogo de coincidencias para partícipe no encontrado
    */
   private mostrarCoincidencias(registro: ParticipeXCargaArchivo): void {
     const dialogRef = this.dialog.open(CoincidenciasEntidadDialogComponent, {
@@ -662,7 +659,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
     dialogRef.afterClosed().subscribe(entidadSeleccionada => {
       if (entidadSeleccionada) {
 
-        // Llamar al servicio para actualizar el cÃ³digo Petro con la entidad seleccionada
+        // Llamar al servicio para actualizar el código Petro con la entidad seleccionada
         this.isLoading = true;
         this.serviciosAsoprepService.actualizaCodigoPetroEntidad(
           registro.codigoPetro,
@@ -675,7 +672,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
               this.actualizarRegistroEnNovedades(registro, participeActualizado);
 
               this.snackBar.open(
-                `âœ“ Entidad "${entidadSeleccionada.razonSocial}" asociada correctamente`,
+                `✓ Entidad "${entidadSeleccionada.razonSocial}" asociada correctamente`,
                 'Cerrar',
                 { duration: 3000 }
               );
@@ -685,7 +682,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
           },
           error: (error: any) => {
             this.snackBar.open(
-              'âŒ Error al asociar la entidad',
+              '❌ Error al asociar la entidad',
               'Cerrar',
               { duration: 5000 }
             );
@@ -697,13 +694,12 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
   }
 
   /**
-   * Actualizar registro en novedades despuÃ©s de correcciÃ³n
+   * Actualizar registro en novedades después de corrección
    */
   private actualizarRegistroEnNovedades(
     registroOriginal: ParticipeXCargaArchivo,
     registroActualizado: ParticipeXCargaArchivo
   ): void {
-
     // Obtener todas las novedades agrupadas actuales
     const novedadesActuales = this.novedadesAgrupadas();
 
@@ -727,7 +723,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
     novedadConRegistro.total = registrosFiltrados.length;
 
 
-    // Buscar o crear la novedad "Sin novedad" (cÃ³digo 0)
+    // Buscar o crear la novedad "Sin novedad" (código 0)
     let novedadSinNovedad = novedadesActuales.find(n => n.novedad.codigo === 0);
 
     if (!novedadSinNovedad) {
@@ -749,7 +745,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
       novedadSinNovedad.total = novedadSinNovedad.registros.length;
     }
 
-    // Filtrar novedades vacÃ­as
+    // Filtrar novedades vacías
     const novedadesFiltradas = novedadesActuales.filter(n => n.total > 0);
 
     // Actualizar el signal de novedades agrupadas
@@ -761,7 +757,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
   }
 
   /**
-   * Corregir partÃ­cipe no encontrado (Novedad 1)
+   * Corregir partícipe no encontrado (Novedad 1)
    */
   private corregirParticipeNoEncontrado(registro: ParticipeXCargaArchivo): void {
     this.novedadCargaService.buscarParticipesSimilares(
@@ -770,16 +766,16 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
     ).subscribe({
       next: (similares) => {
 
-        // TODO: Abrir dialog de selecciÃ³n
+        // TODO: Abrir dialog de selección
         this.snackBar.open(
-          `âœ“ Encontrados ${similares.length} partÃ­cipes similares`,
+          `✓ Encontrados ${similares.length} partícipes similares`,
           'Cerrar',
           { duration: 3000 }
         );
       },
       error: (error) => {
         this.snackBar.open(
-          'âŒ Error al buscar partÃ­cipes similares',
+          '❌ Error al buscar partícipes similares',
           'Cerrar',
           { duration: 3000 }
         );
@@ -791,11 +787,11 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
    * Corregir duplicado (Novedad 2)
    */
   private corregirDuplicado(registro: ParticipeXCargaArchivo): void {
-    // TODO: Implementar lÃ³gica de duplicados
+    // TODO: Implementar lógica de duplicados
   }
 
   /**
-   * Mapear cÃ³digo de novedad a severidad
+   * Mapear código de novedad a severidad
    */
   private mapearSeveridad(codigo: number): 'success' | 'warning' | 'error' {
     if (codigo === 0) return 'success';
@@ -804,7 +800,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
   }
 
   /**
-   * Mapear cÃ³digo de novedad a icono Material
+   * Mapear código de novedad a icono Material
    */
   private mapearIcono(codigo: number): string {
     const iconos: Record<number, string> = {
@@ -822,7 +818,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
   }
 
   /**
-   * Mapear cÃ³digo de novedad a color de chip
+   * Mapear código de novedad a color de chip
    */
   private mapearColor(codigo: number): string {
     if (codigo === 0) return '#4caf50';
@@ -839,7 +835,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
       return;
     }
 
-    // Validar que todas las novedades estÃ©n resueltas (cÃ³digo 0 = Sin novedad)
+    // Validar que todas las novedades estén resueltas (código 0 = Sin novedad)
     const novedadesPendientes = this.novedadesAgrupadas().filter(
       novedad => novedad.novedad.codigo !== 0 && novedad.total > 0
     );
@@ -847,7 +843,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
     if (novedadesPendientes.length > 0) {
       const totalRegistrosPendientes = novedadesPendientes.reduce((sum, nov) => sum + nov.total, 0);
       this.snackBar.open(
-        `âš ï¸ Debe resolver todas las novedades antes de procesar el archivo. Hay ${totalRegistrosPendientes} registro(s) pendiente(s).`,
+        `⚠️ Debe resolver todas las novedades antes de procesar el archivo. Hay ${totalRegistrosPendientes} registro(s) pendiente(s).`,
         'Cerrar',
         { duration: 5000 }
       );
@@ -858,7 +854,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
       width: '500px',
       data: {
         title: 'Confirmar Procesamiento',
-        message: 'Â¿EstÃ¡ seguro de que desea procesar este archivo? Esta acciÃ³n generarÃ¡ los registros definitivos en el sistema.',
+        message: '¿Está seguro de que desea procesar este archivo? Esta acción generará los registros definitivos en el sistema.',
         type: 'warning',
         confirmText: 'Procesar',
         cancelText: 'Cancelar'
@@ -868,7 +864,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
         // TODO: Implementar llamada al backend para procesar archivo
-        this.snackBar.open('Funcionalidad de procesamiento en construcciÃ³n', 'Cerrar', { duration: 3000 });
+        this.snackBar.open('Funcionalidad de procesamiento en construcción', 'Cerrar', { duration: 3000 });
       }
     });
   }
@@ -881,7 +877,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
   }
 
   /**
-   * Filtra registros por tipo de total (campo especÃ­fico con valor mayor a 0)
+   * Filtra registros por tipo de total (campo específico con valor mayor a 0)
    */
   filtrarPorTotal(codigoAporte: string, campoFiltro: keyof AporteAgrupado['totales']): void {
     if (!this.cargaArchivo?.codigo) return;
@@ -901,21 +897,21 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
       return;
     }
 
-    // Obtener cÃ³digo del detalle desde el primer partÃ­cipe
+    // Obtener código del detalle desde el primer partícipe
     const codigoDetalleCarga = aporte.participes.data[0]?.detalleCargaArchivo?.codigo;
     if (!codigoDetalleCarga) {
       return;
     }
 
-    // Guardar partÃ­cipes originales para restaurar en caso de error
+    // Guardar partícipes originales para restaurar en caso de error
     const participesOriginales = [...aporte.participes.data];
 
-    // Limpiar partÃ­cipes para mostrar loading en el panel
+    // Limpiar partícipes para mostrar loading en el panel
     aporte.participes.data = [];
 
     const criterioArray: DatosBusqueda[] = [];
 
-    // Filtro por cÃ³digo de detalle de carga
+    // Filtro por código de detalle de carga
     let db = new DatosBusqueda();
     db.asignaValorConCampoPadre(
       TipoDatosBusqueda.LONG,
@@ -926,7 +922,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
     );
     criterioArray.push(db);
 
-    // Filtro por campo especÃ­fico > 0
+    // Filtro por campo específico > 0
     // Nota: totalDescontar se mapea a montoDescontar en backend
     const campoBackend = campoFiltro === 'totalDescontar' ? 'montoDescontar' : campoFiltro;
     db = new DatosBusqueda();
@@ -949,7 +945,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
         if (registros && registros.length > 0) {
           this.mostrarRegistrosFiltrados(registros, codigoAporte, campoFiltro);
         } else {
-          // Restaurar partÃ­cipes originales
+          // Restaurar partícipes originales
           aporte.participes.data = participesOriginales;
           this.snackBar.open('No se encontraron registros para este filtro', 'Cerrar', {
             duration: 3000
@@ -957,7 +953,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
         }
       },
       error: (error) => {
-        // Restaurar partÃ­cipes originales en caso de error
+        // Restaurar partícipes originales en caso de error
         aporte.participes.data = participesOriginales;
         this.snackBar.open('Error al filtrar registros', 'Cerrar', { duration: 3000 });
       }
@@ -965,15 +961,14 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
   }
 
   /**
-   * Muestra los registros filtrados (puedes personalizarlo segÃºn necesites)
+   * Muestra los registros filtrados (puedes personalizarlo según necesites)
    */
   private mostrarRegistrosFiltrados(
     registros: ParticipeXCargaArchivo[],
     codigoAporte: string,
     campo: keyof AporteAgrupado['totales']
   ): void {
-
-    // Actualizar la tabla del acordeÃ³n correspondiente con los registros filtrados
+    // Actualizar la tabla del acordeón correspondiente con los registros filtrados
     const aporte = this.aporteAgrupados.find((a: AporteAgrupado) => a.codigoAporte === codigoAporte);
     if (aporte) {
       aporte.participes.data = registros;
@@ -992,23 +987,23 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
   private obtenerEtiquetaCampo(campo: keyof AporteAgrupado['totales']): string {
     const etiquetas: Record<keyof AporteAgrupado['totales'], string> = {
       saldoActual: 'Saldo Actual',
-      interesAnual: 'InterÃ©s Anual',
+      interesAnual: 'Interés Anual',
       valorSeguro: 'Valor Seguro',
       totalDescontar: 'Total a Descontar',
       capitalDescontado: 'Capital Descontado',
-      interesDescontado: 'InterÃ©s Descontado',
+      interesDescontado: 'Interés Descontado',
       seguroDescontado: 'Seguro Descontado',
       totalDescontado: 'Total Descontado',
       capitalNoDescontado: 'Capital No Descontado',
-      interesNoDescontado: 'InterÃ©s No Descontado',
+      interesNoDescontado: 'Interés No Descontado',
       desgravamenNoDescontado: 'Desgravamen No Descontado'
     };
     return etiquetas[campo];
   }
 
   /**
-   * Muestra el diÃ¡logo de coincidencias usando getByNombrePetro35
-   * para novedad de NOMBRE DUPLICADO (cÃ³digo 3)
+   * Muestra el diálogo de coincidencias usando getByNombrePetro35
+   * para novedad de NOMBRE DUPLICADO (código 3)
    */
   private mostrarCoincidenciasPetro35(registro: ParticipeXCargaArchivo): void {
     // Llamar al servicio getByNombrePetro35
@@ -1030,7 +1025,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
           }
         });
 
-        // Cargar manualmente las coincidencias en el diÃ¡logo
+        // Cargar manualmente las coincidencias en el diálogo
         dialogRef.componentInstance.coincidencias = entidades;
         dialogRef.componentInstance.isLoading = false;
 
@@ -1046,7 +1041,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
                 if (participeActualizado) {
                   this.actualizarRegistroEnNovedades(registro, participeActualizado);
                   this.snackBar.open(
-                    `âœ“ Entidad "${entidadSeleccionada.razonSocial}" asociada correctamente`,
+                    `✓ Entidad "${entidadSeleccionada.razonSocial}" asociada correctamente`,
                     'Cerrar',
                     { duration: 3000 }
                   );
@@ -1054,7 +1049,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
                 this.isLoading = false;
               },
               error: (error: any) => {
-                this.snackBar.open('âŒ Error al asociar la entidad', 'Cerrar', { duration: 5000 });
+                this.snackBar.open('❌ Error al asociar la entidad', 'Cerrar', { duration: 5000 });
                 this.isLoading = false;
               }
             });
@@ -1062,20 +1057,20 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
         });
       },
       error: (error: any) => {
-        this.snackBar.open('âŒ Error al buscar coincidencias', 'Cerrar', { duration: 5000 });
+        this.snackBar.open('❌ Error al buscar coincidencias', 'Cerrar', { duration: 5000 });
       }
     });
   }
 
   /**
-   * Exporta la tabla de un aporte especÃ­fico a CSV
+   * Exporta la tabla de un aporte específico a CSV
    */
   exportarAporteACSV(codigoAporte: string, event: Event): void {
     event.stopPropagation(); // Prevenir que se expanda/colapse el panel
 
     const aporte = this.aporteAgrupados.find(a => a.codigoAporte === codigoAporte);
     if (!aporte) {
-      this.snackBar.open('No se encontrÃ³ el aporte', 'Cerrar', { duration: 3000 });
+      this.snackBar.open('No se encontró el aporte', 'Cerrar', { duration: 3000 });
       return;
     }
 
@@ -1086,20 +1081,20 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
     }
 
     const headers = [
-      'CÃ³digo',
+      'Código',
       'Nombre',
       'Plazo Inicial',
       'Saldo Actual',
       'Meses Plazo',
-      'InterÃ©s Anual',
+      'Interés Anual',
       'Valor Seguro',
       'Monto a Descontar',
       'Capital Descontado',
-      'InterÃ©s Descontado',
+      'Interés Descontado',
       'Seguro Descontado',
       'Total Descontado',
       'Capital No Descontado',
-      'InterÃ©s No Descontado',
+      'Interés No Descontado',
       'Desgravamen No Descontado'
     ];
 
@@ -1125,6 +1120,18 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
 
     this.exportService.exportToCSV(data, fileName, headers, dataKeys);
     this.snackBar.open(`Exportado ${data.length} registros a CSV`, 'Cerrar', { duration: 3000 });
+  }
+
+  /**
+   * Formatea una fecha para mostrar en template
+   * Usa el servicio global FuncionesDatosService
+   */
+  formatearFecha(fecha: any): string {
+    if (!fecha) return '-';
+
+    // Usar el método global formatoFechaOrigenConHora que maneja el formato del backend
+    // Tipo 1 = FECHA_HORA (DD-MM-YYYY / HH:mm)
+    return this.funcionesDatos.formatoFechaOrigenConHora(fecha, FuncionesDatosService.FECHA_HORA) || '-';
   }
 }
 
