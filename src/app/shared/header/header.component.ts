@@ -1,4 +1,5 @@
-import { CommonModule } from '@angular/common';
+import { NaturalezaCuentaService } from './../../modules/cnt/service/naturaleza-cuenta.service';
+import { CommonModule, DatePipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
@@ -16,6 +17,9 @@ import { MaterialFormModule } from '../modules/material-form.module';
 import { AppStateService } from '../services/app-state.service';
 import { LoadingService } from '../services/loading.service';
 import { UsuarioService } from '../services/usuario.service';
+import { DatosBusqueda } from '../model/datos-busqueda/datos-busqueda';
+import { TipoComandosBusqueda } from '../model/datos-busqueda/tipo-comandos-busqueda';
+import { TipoDatosBusqueda } from '../model/datos-busqueda/tipo-datos-busqueda';
 
 @Component({
   selector: 'app-header',
@@ -31,6 +35,10 @@ export class HeaderComponent implements OnInit, OnDestroy {
   loading$;
   private storageListener?: (e: StorageEvent) => void;
 
+  // Variables para selectByCriteria
+  criterioConsultaArray: Array<DatosBusqueda> = [];
+  criterioConsulta = new DatosBusqueda();
+
   get showBackButton(): boolean {
     return this.router.url !== '/menu';
   }
@@ -45,6 +53,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
     private appStateService: AppStateService,
     private snackBar: MatSnackBar,
     private loadingService: LoadingService,
+    private naturalezaCuentaService: NaturalezaCuentaService,
     private cdr: ChangeDetectorRef,
     private dialog: MatDialog
   ) {
@@ -153,4 +162,78 @@ export class HeaderComponent implements OnInit, OnDestroy {
       verticalPosition: 'top',
     });
   }
+
+  testServicios() {
+      const pipe = new DatePipe('en-US');
+      this.criterioConsultaArray = [];
+
+      this.criterioConsulta = new DatosBusqueda();
+      this.criterioConsulta.asignaUnCampoSinTrunc(
+        TipoDatosBusqueda.STRING,
+        'nombre',
+        'PASIVO',
+        TipoComandosBusqueda.LIKE
+      );
+      this.criterioConsultaArray.push(this.criterioConsulta);
+
+      this.criterioConsulta = new DatosBusqueda();
+      this.criterioConsulta.orderBy('codigo');
+      this.criterioConsultaArray.push(this.criterioConsulta);
+
+      this.naturalezaCuentaService.selectByCriteria(this.criterioConsultaArray).subscribe({
+        next: (data: any) => {
+          console.log('Datos de NaturalezaCuenta:', data);
+        },
+        error: (error: any) => {
+          console.error('Error al obtener NaturalezaCuenta:', error);
+        },
+      });
+
+      /*this.naturalezaCuentaService.getById('2588').subscribe({
+        next: (data) => {
+          console.log('GetById - Registro específico:', data);
+        },
+        error: (error) => {
+          console.error('Error al obtener NaturalezaCuenta:', error);
+        }
+      });*/
+
+      this.naturalezaCuentaService.getById('2607').subscribe({
+        next: (data: any) => {
+          console.log('GetById - Registro específico:', data);
+        },
+        error: (error: any) => {
+          console.error('Error al obtener NaturalezaCuenta:', error);
+        },
+      });
+
+      /*this.naturalezaCuentaService.selectByCriteria(this.criterioConsultaArray).subscribe({
+        next: (data) => {
+          console.log('Datos de NaturalezaCuenta:', data);
+        },
+        error: (error) => {
+          console.error('Error al obtener NaturalezaCuenta:', error);
+        }
+      });*/
+
+      /*this.criterioConsultaArray = [];
+
+      this.criterioConsulta = new DatosBusqueda();
+      this.criterioConsulta.asignaValorConCampoPadre(TipoDatosBusqueda.LONG, 'prestamo', 'codigo',
+                                                     '2739', TipoComandosBusqueda.IGUAL);
+      this.criterioConsultaArray.push(this.criterioConsulta);
+
+      this.criterioConsulta = new DatosBusqueda();
+      this.criterioConsulta.orderBy('codigo');
+      this.criterioConsultaArray.push(this.criterioConsulta);
+
+      this.fileService.selectByCriteria(this.criterioConsultaArray).subscribe({
+        next: (data) => {
+          console.log('Datos de Prestamo:', data);
+        },
+        error: (error) => {
+          console.error('Error al obtener Prestamo:', error);
+        }
+      });*/
+    }
 }

@@ -21,6 +21,11 @@ export class MenucreditosComponent {
           iconName: 'hard_drive_2',
           route: '/menucreditos/extr',
         },
+        {
+          displayName: 'Aportes Por Revisar',
+          iconName: 'indeterminate_question_box',
+          route: '/menucreditos/aportes-revisar',
+        },
       ],
     },
     {

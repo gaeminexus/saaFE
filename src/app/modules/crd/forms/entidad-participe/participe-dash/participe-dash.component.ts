@@ -41,6 +41,8 @@ import { ParticipeService } from '../../../service/participe.service';
 import { PrestamoService } from '../../../service/prestamo.service';
 import { TipoAporteService } from '../../../service/tipo-aporte.service';
 
+const ESTADO_ACTIVO = "1";
+
 interface DetalleConPagos {
   detalle: DetallePrestamo;
   pagos: PagoPrestamo[];
@@ -1892,6 +1894,16 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
       'entidad',
       'codigo',
       this.entidadEncontrada.codigo.toString(),
+      TipoComandosBusqueda.IGUAL
+    );
+    criterioConsultaArray.push(criterio);
+
+    criterio = new DatosBusqueda();
+    criterio.asignaValorConCampoPadre(
+      TipoDatosBusqueda.LONG,
+      'tipoAporte',
+      'estado',
+      ESTADO_ACTIVO,
       TipoComandosBusqueda.IGUAL
     );
     criterioConsultaArray.push(criterio);

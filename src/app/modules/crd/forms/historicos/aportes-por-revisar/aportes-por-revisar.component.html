@@ -1,0 +1,278 @@
+<div class="aportes-container" [@fadeIn]>
+  <!-- Header -->
+  <div class="page-header">
+    <div class="header-content">
+      <div class="title-section">
+        <mat-icon class="header-icon">pending_actions</mat-icon>
+        <div>
+          <h1 class="page-title">Aportes Por Revisar</h1>
+          <p class="page-subtitle">Consulta y gestión de aportes pendientes de revisión</p>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <button mat-raised-button color="primary" (click)="generarPDFResumen()"
+                [disabled]="aportesPorTipo.length === 0">
+          <mat-icon>picture_as_pdf</mat-icon>
+          PDF Resumen
+        </button>
+        <button mat-raised-button color="accent" (click)="exportarResumenCSV()"
+                [disabled]="aportesPorTipo.length === 0">
+          <mat-icon>table_view</mat-icon>
+          CSV Resumen
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <mat-card class="filters-card" [@fadeIn]>
+    <mat-card-content>
+      <form [formGroup]="filtrosForm" class="filters-form">
+        <div class="filters-grid">
+          <!-- Rango de Fechas -->
+          <mat-form-field appearance="outline" class="filter-field">
+            <mat-label>Fecha Inicio</mat-label>
+            <input matInput [matDatepicker]="pickerInicio" formControlName="fechaInicio">
+            <mat-datepicker-toggle matIconSuffix [for]="pickerInicio"></mat-datepicker-toggle>
+            <mat-datepicker #pickerInicio></mat-datepicker>
+            <mat-icon matPrefix>event</mat-icon>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="filter-field">
+            <mat-label>Fecha Fin</mat-label>
+            <input matInput [matDatepicker]="pickerFin" formControlName="fechaFin">
+            <mat-datepicker-toggle matIconSuffix [for]="pickerFin"></mat-datepicker-toggle>
+            <mat-datepicker #pickerFin></mat-datepicker>
+            <mat-icon matPrefix>event</mat-icon>
+          </mat-form-field>
+
+          <!-- Datos de Entidad -->
+          <mat-form-field appearance="outline" class="filter-field">
+            <mat-label>Número de Identificación</mat-label>
+            <input matInput formControlName="numeroIdentificacion"
+                   placeholder="Ej: 1234567890">
+            <mat-icon matPrefix>badge</mat-icon>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="filter-field">
+            <mat-label>Razón Social</mat-label>
+            <input matInput formControlName="razonSocial"
+                   placeholder="Buscar por nombre">
+            <mat-icon matPrefix>business</mat-icon>
+          </mat-form-field>
+        </div>
+
+        <!-- Botones de acción -->
+        <div class="filter-actions">
+          <button mat-raised-button color="primary" (click)="aplicarFiltros()"
+                  [disabled]="isLoading">
+            <mat-icon>search</mat-icon>
+            Buscar
+          </button>
+          <button mat-stroked-button (click)="limpiarFiltros()"
+                  [disabled]="isLoading">
+            <mat-icon>clear</mat-icon>
+            Limpiar
+          </button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Loading Spinner -->
+  @if (isLoading) {
+    <div class="loading-container" [@fadeIn]>
+      <mat-spinner diameter="60"></mat-spinner>
+      <p class="loading-text">Cargando aportes...</p>
+    </div>
+  }
+
+  <!-- Totales Generales -->
+  @if (!isLoading && aportesPorTipo.length > 0) {
+    <div class="totals-cards" [@fadeIn]>
+      <mat-card class="total-card">
+        <mat-card-content>
+          <div class="total-icon" style="background: #667eea;">
+            <mat-icon>list_alt</mat-icon>
+          </div>
+          <div class="total-info">
+            <span class="total-label">Total Registros</span>
+            <span class="total-value">{{ totalGeneral.cantidad }}</span>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="total-card">
+        <mat-card-content>
+          <div class="total-icon" style="background: #f093fb;">
+            <mat-icon>attach_money</mat-icon>
+          </div>
+          <div class="total-info">
+            <span class="total-label">Valor Total</span>
+            <span class="total-value">${{ totalGeneral.valor | number:'1.2-2' }}</span>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="total-card">
+        <mat-card-content>
+          <div class="total-icon" style="background: #4facfe;">
+            <mat-icon>payments</mat-icon>
+          </div>
+          <div class="total-info">
+            <span class="total-label">Total Pagado</span>
+            <span class="total-value">${{ totalGeneral.pagado | number:'1.2-2' }}</span>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="total-card">
+        <mat-card-content>
+          <div class="total-icon" style="background: #fa709a;">
+            <mat-icon>account_balance_wallet</mat-icon>
+          </div>
+          <div class="total-info">
+            <span class="total-label">Saldo Total</span>
+            <span class="total-value">${{ totalGeneral.saldo | number:'1.2-2' }}</span>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  }
+
+  <!-- Sin Resultados -->
+  @if (!isLoading && sinResultados) {
+    <div class="empty-state" [@fadeIn]>
+      <mat-icon class="empty-icon">search_off</mat-icon>
+      <h2>No se encontraron aportes</h2>
+      <p>No hay aportes por revisar con los criterios seleccionados</p>
+    </div>
+  }
+
+  <!-- Lista de Aportes por Tipo -->
+  @if (!isLoading && aportesPorTipo.length > 0) {
+    <div class="tipos-list" [@fadeIn]>
+      @for (tipo of aportesPorTipo; track tipo.codigoTipo) {
+        <mat-card class="tipo-card" [class.expanded]="tipo.expandido">
+          <!-- Header del Tipo -->
+          <mat-card-header class="tipo-header" (click)="toggleTipo(tipo)">
+            <div class="tipo-header-content">
+              <div class="tipo-info">
+                <mat-icon class="tipo-icon">folder_open</mat-icon>
+                <div class="tipo-details">
+                  <h3 class="tipo-nombre">{{ tipo.tipoAporte }}</h3>
+                  <span class="tipo-cantidad">{{ tipo.cantidad }} registro(s)</span>
+                </div>
+              </div>
+
+              <div class="tipo-totales">
+                <div class="total-item">
+                  <span class="total-item-label">Valor:</span>
+                  <span class="total-item-value">${{ tipo.totalValor | number:'1.2-2' }}</span>
+                </div>
+                <div class="total-item">
+                  <span class="total-item-label">Pagado:</span>
+                  <span class="total-item-value">${{ tipo.totalPagado | number:'1.2-2' }}</span>
+                </div>
+                <div class="total-item">
+                  <span class="total-item-label">Saldo:</span>
+                  <span class="total-item-value saldo">${{ tipo.totalSaldo | number:'1.2-2' }}</span>
+                </div>
+              </div>
+
+              <div class="tipo-actions">
+                <button mat-icon-button (click)="generarPDFDetalle(tipo); $event.stopPropagation()"
+                        matTooltip="Exportar a PDF">
+                  <mat-icon>picture_as_pdf</mat-icon>
+                </button>
+                <button mat-icon-button (click)="exportarDetalleCSV(tipo); $event.stopPropagation()"
+                        matTooltip="Exportar a CSV">
+                  <mat-icon>table_view</mat-icon>
+                </button>
+                <mat-icon class="expand-icon" [class.rotated]="tipo.expandido">
+                  expand_more
+                </mat-icon>
+              </div>
+            </div>
+          </mat-card-header>
+
+          <!-- Detalle expandible -->
+          <div class="tipo-content" [@expandCollapse]="tipo.expandido ? 'expanded' : 'collapsed'">
+            @if (tipo.expandido) {
+              <mat-card-content>
+                <div class="table-container">
+                  <table mat-table [dataSource]="tipo.aportes" class="aportes-table">
+                    <!-- Fecha -->
+                    <ng-container matColumnDef="fechaTransaccion">
+                      <th mat-header-cell *matHeaderCellDef>Fecha</th>
+                      <td mat-cell *matCellDef="let aporte">
+                        {{ formatearFechaDisplay(aporte.fechaTransaccion) }}
+                      </td>
+                    </ng-container>
+
+                    <!-- Entidad -->
+                    <ng-container matColumnDef="entidad">
+                      <th mat-header-cell *matHeaderCellDef>Entidad</th>
+                      <td mat-cell *matCellDef="let aporte">
+                        <div class="entidad-info">
+                          <span class="entidad-id">{{ aporte.entidad?.numeroIdentificacion || '-' }}</span>
+                          <span class="entidad-nombre">{{ aporte.entidad?.razonSocial || '-' }}</span>
+                        </div>
+                      </td>
+                    </ng-container>
+
+                    <!-- Glosa -->
+                    <ng-container matColumnDef="glosa">
+                      <th mat-header-cell *matHeaderCellDef>Glosa</th>
+                      <td mat-cell *matCellDef="let aporte">
+                        {{ aporte.glosa || '-' }}
+                      </td>
+                    </ng-container>
+
+                    <!-- Valor -->
+                    <ng-container matColumnDef="valor">
+                      <th mat-header-cell *matHeaderCellDef class="text-right">Valor</th>
+                      <td mat-cell *matCellDef="let aporte" class="text-right">
+                        ${{ aporte.valor | number:'1.2-2' }}
+                      </td>
+                    </ng-container>
+
+                    <!-- Pagado -->
+                    <ng-container matColumnDef="valorPagado">
+                      <th mat-header-cell *matHeaderCellDef class="text-right">Pagado</th>
+                      <td mat-cell *matCellDef="let aporte" class="text-right">
+                        ${{ aporte.valorPagado | number:'1.2-2' }}
+                      </td>
+                    </ng-container>
+
+                    <!-- Saldo -->
+                    <ng-container matColumnDef="saldo">
+                      <th mat-header-cell *matHeaderCellDef class="text-right">Saldo</th>
+                      <td mat-cell *matCellDef="let aporte" class="text-right saldo-cell">
+                        ${{ aporte.saldo | number:'1.2-2' }}
+                      </td>
+                    </ng-container>
+
+                    <!-- Estado -->
+                    <ng-container matColumnDef="estado">
+                      <th mat-header-cell *matHeaderCellDef>Estado</th>
+                      <td mat-cell *matCellDef="let aporte">
+                        <span class="estado-badge" [ngClass]="obtenerEstadoClase(aporte.estado)">
+                          {{ obtenerEstadoTexto(aporte.estado) }}
+                        </span>
+                      </td>
+                    </ng-container>
+
+                    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+                    <tr mat-row *matRowDef="let row; columns: displayedColumns" class="table-row"></tr>
+                  </table>
+                </div>
+              </mat-card-content>
+            }
+          </div>
+        </mat-card>
+      }
+    </div>
+  }
+</div>

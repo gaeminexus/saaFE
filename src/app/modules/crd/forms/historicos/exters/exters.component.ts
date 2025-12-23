@@ -9,8 +9,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { Exter } from '../../model/exter';
-import { ExterService } from '../../service/exter.service';
+import { Exter } from '../../../model/exter';
+import { ExterService } from '../../../service/exter.service';
 import { catchError, finalize } from 'rxjs/operators';
 import { of } from 'rxjs';
 

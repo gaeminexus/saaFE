@@ -38,7 +38,7 @@ import { EntidadParticipeInfoComponent } from './modules/crd/forms/entidad-parti
 import { NavegacionCascadaComponent } from './modules/crd/forms/entidad-participe/navegacion-cascada/navegacion-cascada.component';
 import { ParticipeDashComponent } from './modules/crd/forms/entidad-participe/participe-dash/participe-dash.component';
 import { ParticipeInfoComponent } from './modules/crd/forms/entidad-participe/participe-info/participe-info.component';
-import { ExtersComponent } from './modules/crd/forms/exters/exters.component';
+import { ExtersComponent } from './modules/crd/forms/historicos/exters/exters.component';
 import { PagoCuotasComponent } from './modules/crd/forms/pago-cuotas/pago-cuotas.component';
 import { EstadosCrdComponent } from './modules/crd/forms/parametrizacion/estados-crd/estados-crd.component';
 import { ListadosCrdComponent } from './modules/crd/forms/parametrizacion/listados-crd/listados-crd.component';
@@ -49,6 +49,7 @@ import { entidadEditResolver } from './modules/crd/resolver/entidad-edit.resolve
 import { EstadosResolverService } from './modules/crd/resolver/estados-resolver.service';
 import { ListadosCrdResolverService } from './modules/crd/resolver/listados-crd-resolver.service';
 import { TiposCrdResolverService } from './modules/crd/resolver/tipos-crd-resolver.service';
+import { AportesPorRevisarComponent } from './modules/crd/forms/historicos/aportes-por-revisar/aportes-por-revisar.component';
 
 export const routes: Routes = [
   { path: '', component: LoginComponent },
@@ -156,6 +157,7 @@ export const routes: Routes = [
     children: [
       { path: 'parametrizacion', component: ParametrizacionCreditosComponent },
       { path: 'extr', component: ExtersComponent },
+      { path: 'aportes-revisar', component: AportesPorRevisarComponent },
       { path: 'entidad', component: EntidadCreditosComponent },
       { path: 'navegacion-cascada', component: NavegacionCascadaComponent },
       { path: 'participe-dash', component: ParticipeDashComponent },
