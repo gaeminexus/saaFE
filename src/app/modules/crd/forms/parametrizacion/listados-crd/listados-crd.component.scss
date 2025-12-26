@@ -54,12 +54,10 @@
       }
     }
 
-    // Grid de listados navegables: 2 columnas x 2 filas (vertical)
+    // Grid de listados navegables: 3 columnas equitativamente distribuidas
     .listados-grid {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      grid-template-rows: repeat(2, auto);
-      grid-auto-flow: column;
+      grid-template-columns: repeat(3, 1fr);
       gap: 0.5rem;
       margin-top: 1rem;
 

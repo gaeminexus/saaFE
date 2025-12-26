@@ -1129,9 +1129,48 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
   formatearFecha(fecha: any): string {
     if (!fecha) return '-';
 
+    // Convertir la fecha a un formato que el servicio pueda procesar
+    const fechaConvertida = this.convertirFecha(fecha);
+    if (!fechaConvertida) return '-';
+
     // Usar el método global formatoFechaOrigenConHora que maneja el formato del backend
     // Tipo 1 = FECHA_HORA (DD-MM-YYYY / HH:mm)
-    return this.funcionesDatos.formatoFechaOrigenConHora(fecha, FuncionesDatosService.FECHA_HORA) || '-';
+    return this.funcionesDatos.formatoFechaOrigenConHora(fechaConvertida, FuncionesDatosService.FECHA_HORA) || '-';
+  }
+
+  /**
+   * Convierte una fecha de forma segura manejando diferentes formatos
+   */
+  private convertirFecha(fecha: any): Date | null {
+    if (!fecha) return null;
+
+    if (fecha instanceof Date) return fecha;
+
+    // Si es un array (como [2023,7,31,0,0]), convertir a Date
+    if (Array.isArray(fecha)) {
+      // Array format: [year, month, day, hour, minute, second?, millisecond?]
+      const [year, month, day, hour = 0, minute = 0, second = 0, ms = 0] = fecha;
+      // Nota: los meses en JavaScript Date van de 0-11, pero el backend puede enviar 1-12
+      // Asumimos que el backend envía 1-12 (mes real), así que restamos 1
+      return new Date(year, month - 1, day, hour, minute, second, ms);
+    }
+
+    if (typeof fecha === 'string') {
+      // Limpiar el string de fecha quitando el timezone [UTC] si existe
+      const fechaLimpia = fecha.replace(/\[.*?\]/, '');
+      const fechaConvertida = new Date(fechaLimpia);
+
+      // Verificar si la fecha es válida
+      if (!isNaN(fechaConvertida.getTime())) {
+        return fechaConvertida;
+      }
+    }
+
+    if (typeof fecha === 'number') {
+      return new Date(fecha);
+    }
+
+    return null;
   }
 }
 

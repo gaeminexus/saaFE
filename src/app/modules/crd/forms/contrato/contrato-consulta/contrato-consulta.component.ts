@@ -87,7 +87,14 @@ export class ContratoConsultaComponent implements OnInit {
 
     this.contratoService.selectByCriteria(criterios).subscribe({
       next: (data) => {
-        this.allContratos = data || [];
+        this.allContratos = (data || []).map(contrato => ({
+          ...contrato,
+          fechaInicio: this.convertirFecha(contrato.fechaInicio) as Date,
+          fechaTerminacion: this.convertirFecha(contrato.fechaTerminacion) as Date,
+          fechaAprobacion: this.convertirFecha(contrato.fechaAprobacion) as Date,
+          fechaReporte: this.convertirFecha(contrato.fechaReporte) as Date,
+          fechaRegistro: this.convertirFecha(contrato.fechaRegistro) as Date
+        }));
         this.dataSource.data = this.allContratos;
         this.dataSource.paginator = this.paginator;
         this.dataSource.sort = this.sort;
@@ -101,6 +108,19 @@ export class ContratoConsultaComponent implements OnInit {
         this.busquedaRealizada.set(true);
       }
     });
+  }
+
+  private convertirFecha(fecha: any): Date | null {
+    if (!fecha) return null;
+    if (Array.isArray(fecha)) {
+      const [year, month, day, hour = 0, minute = 0, second = 0, ms = 0] = fecha;
+      return new Date(year, month - 1, day, hour, minute, second, ms);
+    }
+    if (fecha instanceof Date) return fecha;
+    if (typeof fecha === 'string' || typeof fecha === 'number') {
+      return new Date(fecha);
+    }
+    return null;
   }
 
   private buildCriterios(): DatosBusqueda[] {

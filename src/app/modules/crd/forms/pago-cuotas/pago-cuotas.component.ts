@@ -191,7 +191,23 @@ export class PagoCuotasComponent implements OnInit {
       next: (data) => {
         const participes = Array.isArray(data) ? data : [data];
         if (participes && participes.length > 0) {
-          this.participeEncontrado = participes[0];
+          const participe = participes[0];
+
+          // Convertir fechas que puedan tener formato array
+          const fechaIngresoTrabajo = this.convertirFecha(participe?.fechaIngresoTrabajo);
+          const fechaIngresoFondo = this.convertirFecha(participe?.fechaIngresoFondo);
+          const fechaFallecimiento = this.convertirFecha(participe?.fechaFallecimiento);
+          const fechaSalida = this.convertirFecha(participe?.fechaSalida);
+          const fechaIngreso = this.convertirFecha(participe?.fechaIngreso);
+
+          this.participeEncontrado = {
+            ...participe,
+            fechaIngresoTrabajo: fechaIngresoTrabajo || participe?.fechaIngresoTrabajo,
+            fechaIngresoFondo: fechaIngresoFondo || participe?.fechaIngresoFondo,
+            fechaFallecimiento: fechaFallecimiento || participe?.fechaFallecimiento,
+            fechaSalida: fechaSalida || participe?.fechaSalida,
+            fechaIngreso: fechaIngreso || participe?.fechaIngreso,
+          } as Participe;
         }
         this.cargarPrestamos();
       },
@@ -226,7 +242,20 @@ export class PagoCuotasComponent implements OnInit {
     this.prestamoService.selectByCriteria(criterios).subscribe({
       next: (data) => {
         const prestamos = Array.isArray(data) ? data : data ? [data] : [];
-        this.prestamos = prestamos;
+
+        // Convertir fechas que puedan venir en formato array desde el backend
+        this.prestamos = prestamos.map((p: any) => {
+          const fechaPrestamo = this.convertirFecha(p.fecha);
+          const fechaDesembolso = this.convertirFecha(p.fechaDesembolso);
+          const fechaRegistro = this.convertirFecha(p.fechaRegistro);
+
+          return {
+            ...p,
+            fecha: fechaPrestamo || p.fecha,
+            fechaDesembolso: fechaDesembolso || p.fechaDesembolso,
+            fechaRegistro: fechaRegistro || p.fechaRegistro,
+          };
+        });
 
         this.isLoadingDatos = false;
       },
@@ -697,5 +726,40 @@ export class PagoCuotasComponent implements OnInit {
    */
   regresarAPantallaAnterior(): void {
     this.router.navigate(['../'], { relativeTo: this.route });
+  }
+
+  /**
+   * Convierte una fecha de forma segura manejando diferentes formatos
+   */
+  private convertirFecha(fecha: any): Date | null {
+    if (!fecha) return null;
+
+    if (fecha instanceof Date) return fecha;
+
+    // Si es un array (como [2023,7,31,0,0]), convertir a Date
+    if (Array.isArray(fecha)) {
+      // Array format: [year, month, day, hour, minute, second?, millisecond?]
+      const [year, month, day, hour = 0, minute = 0, second = 0, ms = 0] = fecha;
+      // Nota: los meses en JavaScript Date van de 0-11, pero el backend puede enviar 1-12
+      // Asumimos que el backend envía 1-12 (mes real), así que restamos 1
+      return new Date(year, month - 1, day, hour, minute, second, ms);
+    }
+
+    if (typeof fecha === 'string') {
+      // Limpiar el string de fecha quitando el timezone [UTC] si existe
+      const fechaLimpia = fecha.replace(/\[.*?\]/, '');
+      const fechaConvertida = new Date(fechaLimpia);
+
+      // Verificar si la fecha es válida
+      if (!isNaN(fechaConvertida.getTime())) {
+        return fechaConvertida;
+      }
+    }
+
+    if (typeof fecha === 'number') {
+      return new Date(fecha);
+    }
+
+    return null;
   }
 }

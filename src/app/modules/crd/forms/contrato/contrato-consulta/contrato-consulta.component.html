@@ -132,7 +132,7 @@
 
             <ng-container matColumnDef="fechaInicio">
               <th mat-header-cell *matHeaderCellDef mat-sort-header>Fecha Inicio</th>
-              <td mat-cell *matCellDef="let contrato">{{ contrato.fechaInicio }}</td>
+              <td mat-cell *matCellDef="let contrato">{{ contrato.fechaInicio | date:'dd/MM/yyyy' }}</td>
             </ng-container>
 
             <ng-container matColumnDef="filial">
