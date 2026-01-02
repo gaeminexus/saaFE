@@ -1,0 +1,252 @@
+.dialog-container {
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+  min-width: 800px;
+
+  .dialog-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 1.5rem;
+    margin: -24px -24px 0 -24px;
+
+    h2 {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin: 0;
+      font-size: 1.5rem;
+      font-weight: 600;
+
+      mat-icon {
+        font-size: 2rem;
+        width: 2rem;
+        height: 2rem;
+      }
+    }
+
+    .btn-cerrar {
+      color: white;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.2);
+      }
+    }
+  }
+}
+
+mat-dialog-content {
+  padding: 1.5rem;
+  overflow-y: auto;
+  max-height: 70vh;
+}
+
+.loading-container,
+.error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  gap: 1rem;
+
+  mat-icon {
+    font-size: 3rem;
+    width: 3rem;
+    height: 3rem;
+    color: #667eea;
+  }
+
+  p {
+    margin: 0;
+    color: #666;
+    font-size: 1rem;
+  }
+}
+
+.error-container {
+  mat-icon {
+    color: #f44336;
+  }
+}
+
+.info-section {
+  .section-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #667eea;
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 1.5rem 0 1rem 0;
+
+    mat-icon {
+      font-size: 1.5rem;
+      width: 1.5rem;
+      height: 1.5rem;
+    }
+
+    &:first-child {
+      margin-top: 0;
+    }
+  }
+
+  .info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+
+    .info-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      padding: 0.75rem;
+      background: #f8f9fa;
+      border-radius: 8px;
+
+      .label {
+        font-size: 0.75rem;
+        color: #666;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .value {
+        font-size: 1rem;
+        color: #333;
+        font-weight: 600;
+
+        &.highlight {
+          color: #667eea;
+          font-size: 1.1rem;
+        }
+      }
+    }
+  }
+}
+
+mat-divider {
+  margin: 1.5rem 0;
+}
+
+.cuotas-section {
+  margin-top: 1rem;
+
+  .section-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #667eea;
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+
+    mat-icon {
+      font-size: 1.5rem;
+      width: 1.5rem;
+      height: 1.5rem;
+    }
+  }
+
+  .table-container {
+    overflow-x: auto;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+    .cuotas-table {
+      width: 100%;
+
+      th {
+        background: #f8f9fa;
+        color: #667eea;
+        font-weight: 600;
+        font-size: 0.875rem;
+      }
+
+      td {
+        padding: 0.75rem;
+        font-size: 0.875rem;
+      }
+
+      .estado-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+
+        &.pagada {
+          background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+          color: white;
+        }
+
+        &.vencida {
+          background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
+          color: white;
+        }
+
+        &.por-vencer {
+          background: linear-gradient(135deg, #f2994a 0%, #f2c94c 100%);
+          color: white;
+        }
+
+        &.pendiente {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+        }
+      }
+    }
+  }
+}
+
+mat-dialog-actions {
+  padding: 1rem 1.5rem;
+  margin: 0 -24px -24px -24px;
+  background: #f8f9fa;
+  border-top: 1px solid #e0e0e0;
+  gap: 0.75rem;
+
+  button {
+    min-width: 120px;
+    font-weight: 600;
+
+    &.btn-export {
+      transition: all 0.3s ease;
+
+      &.btn-csv {
+        background: white;
+        color: #4caf50;
+        border: 2px solid transparent;
+
+        &:hover:not(:disabled) {
+          border-color: #4caf50;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+        }
+      }
+
+      &.btn-pdf {
+        background: white;
+        color: #f44336;
+        border: 2px solid transparent;
+
+        &:hover:not(:disabled) {
+          border-color: #f44336;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
+        }
+      }
+
+      &:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+    }
+  }
+}

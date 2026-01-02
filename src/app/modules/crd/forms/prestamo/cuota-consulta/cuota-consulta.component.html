@@ -1,0 +1,234 @@
+<div class="consulta-container">
+  <!-- Header moderno con gradiente -->
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-icon">
+        <mat-icon>event_note</mat-icon>
+      </div>
+      <div class="header-text">
+        <h1>Consulta de Cuotas de Préstamos</h1>
+        <p class="subtitle">Consulta las cuotas de préstamos por mes y año</p>
+      </div>
+      <div class="header-actions">
+        <button mat-icon-button (click)="toggleFiltrosSecundarios()" class="toggle-filtros-btn"
+                [matTooltip]="filtrosSecundariosExpandidos() ? 'Ocultar filtros secundarios' : 'Mostrar filtros secundarios'">
+          <mat-icon>{{ filtrosSecundariosExpandidos() ? 'expand_less' : 'expand_more' }}</mat-icon>
+        </button>
+      </div>
+    </div>
+
+    <!-- Filtros integrados en el header -->
+    <div class="filtros-container">
+      <form [formGroup]="filtrosForm">
+        <!-- Filtros Principales (siempre visibles) -->
+        <div class="filtros-principales">
+          <h3 class="filtros-titulo">
+            <mat-icon>filter_alt</mat-icon>
+            Filtros Principales
+          </h3>
+          <div class="filtros-grid">
+            <mat-form-field appearance="fill" class="filter-field">
+              <mat-label>Mes</mat-label>
+              <mat-icon matPrefix>calendar_month</mat-icon>
+              <mat-select formControlName="mes">
+                @for (mes of meses; track mes.valor) {
+                  <mat-option [value]="mes.valor">{{ mes.nombre }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="fill" class="filter-field">
+              <mat-label>Año</mat-label>
+              <mat-icon matPrefix>calendar_today</mat-icon>
+              <mat-select formControlName="anio">
+                @for (anio of anios; track anio) {
+                  <mat-option [value]="anio">{{ anio }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+          </div>
+        </div>
+
+        <!-- Filtros Secundarios (colapsables) -->
+        @if (filtrosSecundariosExpandidos()) {
+          <div class="filtros-secundarios">
+            <h3 class="filtros-titulo">
+              <mat-icon>tune</mat-icon>
+              Filtros Secundarios
+            </h3>
+            <div class="filtros-grid">
+              <mat-form-field appearance="fill" class="filter-field">
+                <mat-label>Número de Préstamo</mat-label>
+                <mat-icon matPrefix>numbers</mat-icon>
+                <input matInput type="text" formControlName="numeroPrestamo" placeholder="Buscar número de préstamo">
+              </mat-form-field>
+
+              <mat-form-field appearance="fill" class="filter-field">
+                <mat-label>Nombre de Entidad</mat-label>
+                <mat-icon matPrefix>person</mat-icon>
+                <input matInput type="text" formControlName="nombreEntidad" placeholder="Buscar por nombre">
+              </mat-form-field>
+
+              <mat-form-field appearance="fill" class="filter-field">
+                <mat-label>Número de Identificación</mat-label>
+                <mat-icon matPrefix>badge</mat-icon>
+                <input matInput type="text" formControlName="numeroIdentificacion" placeholder="Ej: 1234567890">
+              </mat-form-field>
+
+              <mat-form-field appearance="fill" class="filter-field">
+                <mat-label>Código Petro</mat-label>
+                <mat-icon matPrefix>oil_barrel</mat-icon>
+                <input matInput type="text" formControlName="codigoPetro" placeholder="Buscar código petro">
+              </mat-form-field>
+            </div>
+          </div>
+        }
+
+        <!-- Acciones de filtros -->
+        <div class="acciones-filtros">
+          <button mat-raised-button (click)="aplicarFiltros()" class="btn-action btn-buscar" [disabled]="loading()">
+            <mat-icon>search</mat-icon>
+            Buscar
+          </button>
+          <button mat-raised-button (click)="limpiarFiltros()" class="btn-action btn-limpiar" [disabled]="loading()">
+            <mat-icon>clear</mat-icon>
+            Limpiar
+          </button>
+          <button mat-raised-button (click)="exportarCSV()" [disabled]="dataSource.data.length === 0" class="btn-action btn-exportar">
+            <mat-icon>download</mat-icon>
+            Exportar CSV
+          </button>
+          <button mat-raised-button (click)="exportarPDF()" [disabled]="dataSource.data.length === 0" class="btn-action btn-exportar">
+            <mat-icon>picture_as_pdf</mat-icon>
+            Exportar PDF
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Tabla de Resultados -->
+  <mat-card class="resultados-card">
+    @if (dataSource.data.length > 0) {
+      <mat-card-header>
+        <mat-card-title>Resultados ({{ dataSource.data.length }} cuotas)</mat-card-title>
+      </mat-card-header>
+    }
+
+    <mat-card-content>
+      @if (loading()) {
+        <div class="loading-container">
+          <mat-spinner diameter="60"></mat-spinner>
+          <p>Cargando cuotas...</p>
+        </div>
+      }
+
+      @if (error() && !loading()) {
+        <div class="error-container">
+          <mat-icon>error_outline</mat-icon>
+          <p>{{ error() }}</p>
+          <button mat-raised-button class="btn-action btn-buscar" (click)="aplicarFiltros()">
+            <mat-icon>refresh</mat-icon> Reintentar
+          </button>
+        </div>
+      }
+
+      @if (!loading() && !error() && dataSource.data.length > 0) {
+        <div class="table-container">
+          <table mat-table [dataSource]="dataSource" matSort class="resultados-table">
+            <ng-container matColumnDef="numeroPrestamo">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Nº Préstamo</th>
+              <td mat-cell *matCellDef="let cuota">{{ cuota.numeroPrestamo }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="tipoPrestamo">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Tipo Préstamo</th>
+              <td mat-cell *matCellDef="let cuota">{{ cuota.tipoPrestamo }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="numeroCuota">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Nº Cuota</th>
+              <td mat-cell *matCellDef="let cuota">{{ cuota.numeroCuota }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="fechaVencimiento">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Fecha Vencimiento</th>
+              <td mat-cell *matCellDef="let cuota">{{ cuota.fechaVencimiento | date:'dd/MM/yyyy' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="valorCuota">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Valor Cuota</th>
+              <td mat-cell *matCellDef="let cuota" class="valor-cell">
+                ${{ cuota.valorCuota | number:'1.2-2' }}
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="nombreEntidad">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Nombre Entidad</th>
+              <td mat-cell *matCellDef="let cuota">{{ cuota.nombreEntidad }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="numeroIdentificacion">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Nº Identificación</th>
+              <td mat-cell *matCellDef="let cuota">{{ cuota.numeroIdentificacion }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="codigoPetro">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Cód. Petro</th>
+              <td mat-cell *matCellDef="let cuota">{{ cuota.codigoPetro }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="estado">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Estado</th>
+              <td mat-cell *matCellDef="let cuota">
+                <span class="estado-badge"
+                      [class.pagada]="cuota.estado === 'Pagada'"
+                      [class.vencida]="cuota.estado === 'Vencida'"
+                      [class.por-vencer]="cuota.estado === 'Por vencer'"
+                      [class.pendiente]="cuota.estado === 'Pendiente'">
+                  {{ cuota.estado }}
+                </span>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="acciones">
+              <th mat-header-cell *matHeaderCellDef class="acciones-header">Acciones</th>
+              <td mat-cell *matCellDef="let cuota" class="acciones-cell">
+                <button mat-icon-button color="primary"
+                        (click)="$event.stopPropagation(); verDetallesPrestamo(cuota.codigoPrestamo)"
+                        matTooltip="Ver todos los detalles del préstamo">
+                  <mat-icon>visibility</mat-icon>
+                </button>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns;" class="tabla-row"></tr>
+          </table>
+        </div>
+      }
+
+      @if (!loading() && !error() && dataSource.data.length === 0 && !busquedaRealizada()) {
+        <div class="empty-state-inline">
+          <mat-icon class="empty-icon">search</mat-icon>
+          <p>Seleccione un mes y año, luego presione "Buscar" para consultar las cuotas.</p>
+        </div>
+      }
+
+      @if (!loading() && !error() && dataSource.data.length === 0 && busquedaRealizada()) {
+        <div class="empty-state-inline">
+          <mat-icon class="empty-icon">search_off</mat-icon>
+          <p>No se encontraron cuotas para el período seleccionado.</p>
+        </div>
+      }
+
+      <!-- Paginador -->
+      <mat-paginator
+        [pageSizeOptions]="[10, 25, 50, 100]"
+        [pageSize]="25"
+        showFirstLastButtons
+        [style.display]="busquedaRealizada() ? 'block' : 'none'">
+      </mat-paginator>
+    </mat-card-content>
+  </mat-card>
+</div>

@@ -50,6 +50,7 @@ import { EstadosResolverService } from './modules/crd/resolver/estados-resolver.
 import { ListadosCrdResolverService } from './modules/crd/resolver/listados-crd-resolver.service';
 import { TiposCrdResolverService } from './modules/crd/resolver/tipos-crd-resolver.service';
 import { AportesPorRevisarComponent } from './modules/crd/forms/historicos/aportes-por-revisar/aportes-por-revisar.component';
+import { CuotaConsultaComponent } from './modules/crd/forms/prestamo/cuota-consulta/cuota-consulta.component';
 
 export const routes: Routes = [
   { path: '', component: LoginComponent },
@@ -236,6 +237,11 @@ export const routes: Routes = [
         component: ContratoEditComponent,
         canActivate: [authGuard],
         canDeactivate: [canDeactivateGuard],
+      },
+      {
+        path: 'cuota-consulta',
+        component: CuotaConsultaComponent,
+        canActivate: [authGuard],
       },
     ],
   },

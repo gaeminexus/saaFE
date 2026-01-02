@@ -1,0 +1,208 @@
+<div class="dialog-container">
+  <div class="dialog-header">
+    <h2 mat-dialog-title>
+      <mat-icon>account_balance</mat-icon>
+      Detalles del Préstamo
+    </h2>
+    <button mat-icon-button (click)="cerrar()" class="btn-cerrar">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <mat-dialog-content>
+    @if (loading) {
+      <div class="loading-container">
+        <mat-spinner diameter="50"></mat-spinner>
+        <p>Cargando información...</p>
+      </div>
+    }
+
+    @if (error) {
+      <div class="error-container">
+        <mat-icon>error_outline</mat-icon>
+        <p>{{ error }}</p>
+      </div>
+    }
+
+    @if (!loading && !error && prestamo) {
+      <!-- Información General del Préstamo -->
+      <div class="info-section">
+        <h3 class="section-title">
+          <mat-icon>info</mat-icon>
+          Información General
+        </h3>
+        <div class="info-grid">
+          <div class="info-item">
+            <span class="label">Número Préstamo (ASOPREP):</span>
+            <span class="value">{{ prestamo.idAsoprep }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Código Interno:</span>
+            <span class="value">{{ prestamo.codigo }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Tipo de Préstamo:</span>
+            <span class="value">{{ prestamo.producto?.nombre || 'N/A' }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Estado:</span>
+            <span class="value">{{ prestamo.estadoPrestamo?.nombre || 'N/A' }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Entidad:</span>
+            <span class="value">{{ prestamo.entidad?.razonSocial || prestamo.entidad?.nombreComercial || 'N/A' }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Número Identificación:</span>
+            <span class="value">{{ prestamo.entidad?.numeroIdentificacion || 'N/A' }}</span>
+          </div>
+        </div>
+
+        <mat-divider></mat-divider>
+
+        <h3 class="section-title">
+          <mat-icon>account_balance_wallet</mat-icon>
+          Información Financiera
+        </h3>
+        <div class="info-grid">
+          <div class="info-item">
+            <span class="label">Monto Solicitado:</span>
+            <span class="value">${{ prestamo.montoSolicitado | number:'1.2-2' }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Total Préstamo:</span>
+            <span class="value">${{ prestamo.totalPrestamo | number:'1.2-2' }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Valor Cuota:</span>
+            <span class="value">${{ prestamo.valorCuota | number:'1.2-2' }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Plazo:</span>
+            <span class="value">{{ prestamo.plazo }} meses</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Tasa Nominal:</span>
+            <span class="value">{{ prestamo.tasaNominal }}%</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Tasa Efectiva:</span>
+            <span class="value">{{ prestamo.tasaEfectiva }}%</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Saldo Total:</span>
+            <span class="value highlight">${{ prestamo.saldoTotal | number:'1.2-2' }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Total Pagado:</span>
+            <span class="value">${{ prestamo.totalPagado | number:'1.2-2' }}</span>
+          </div>
+        </div>
+
+        <mat-divider></mat-divider>
+
+        <h3 class="section-title">
+          <mat-icon>calendar_today</mat-icon>
+          Fechas
+        </h3>
+        <div class="info-grid">
+          <div class="info-item">
+            <span class="label">Fecha de Solicitud:</span>
+            <span class="value">{{ formatearFecha(prestamo.fecha) }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Fecha Inicio:</span>
+            <span class="value">{{ formatearFecha(prestamo.fechaInicio) }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Fecha Fin:</span>
+            <span class="value">{{ formatearFecha(prestamo.fechaFin) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabla de Cuotas -->
+      @if (detalles.length > 0) {
+        <mat-divider></mat-divider>
+
+        <div class="cuotas-section">
+          <h3 class="section-title">
+            <mat-icon>list</mat-icon>
+            Plan de Pagos ({{ detalles.length }} cuotas)
+          </h3>
+
+          <div class="table-container">
+            <table mat-table [dataSource]="detalles" class="cuotas-table">
+              <ng-container matColumnDef="numeroCuota">
+                <th mat-header-cell *matHeaderCellDef>Cuota</th>
+                <td mat-cell *matCellDef="let detalle">{{ detalle.numeroCuota }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="fechaVencimiento">
+                <th mat-header-cell *matHeaderCellDef>Vencimiento</th>
+                <td mat-cell *matCellDef="let detalle">{{ formatearFecha(detalle.fechaVencimiento) }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="capital">
+                <th mat-header-cell *matHeaderCellDef>Capital</th>
+                <td mat-cell *matCellDef="let detalle">${{ detalle.capital | number:'1.2-2' }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="interes">
+                <th mat-header-cell *matHeaderCellDef>Interés</th>
+                <td mat-cell *matCellDef="let detalle">${{ detalle.interes | number:'1.2-2' }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="cuota">
+                <th mat-header-cell *matHeaderCellDef>Valor Cuota</th>
+                <td mat-cell *matCellDef="let detalle">${{ detalle.cuota | number:'1.2-2' }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="saldo">
+                <th mat-header-cell *matHeaderCellDef>Saldo</th>
+                <td mat-cell *matCellDef="let detalle">${{ detalle.saldo | number:'1.2-2' }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="estado">
+                <th mat-header-cell *matHeaderCellDef>Estado</th>
+                <td mat-cell *matCellDef="let detalle">
+                  <span class="estado-badge"
+                        [class.pagada]="obtenerEstadoCuota(detalle) === 'Pagada'"
+                        [class.vencida]="obtenerEstadoCuota(detalle) === 'Vencida'"
+                        [class.por-vencer]="obtenerEstadoCuota(detalle) === 'Por vencer'"
+                        [class.pendiente]="obtenerEstadoCuota(detalle) === 'Pendiente'">
+                    {{ obtenerEstadoCuota(detalle) }}
+                  </span>
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+              <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+            </table>
+          </div>
+        </div>
+      }
+    }
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-raised-button
+            (click)="exportarCuotasCSV()"
+            [disabled]="loading || !detalles || detalles.length === 0"
+            class="btn-export btn-csv">
+      <mat-icon>download</mat-icon>
+      Exportar Cuotas (CSV)
+    </button>
+    <button mat-raised-button
+            (click)="exportarTodoPDF()"
+            [disabled]="loading || !prestamo"
+            class="btn-export btn-pdf">
+      <mat-icon>picture_as_pdf</mat-icon>
+      Exportar Todo (PDF)
+    </button>
+    <button mat-raised-button color="primary" (click)="cerrar()">
+      <mat-icon>close</mat-icon>
+      Cerrar
+    </button>
+  </mat-dialog-actions>
+</div>

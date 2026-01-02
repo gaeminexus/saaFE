@@ -119,6 +119,11 @@ export class MenucreditosComponent {
           iconName: 'money_bag',
           // route: '/menucreditos/participe-dash'
         },
+        {
+          displayName: 'Consulta Cuotas',
+          iconName: 'manage_search',
+          route: '/menucreditos/cuota-consulta'
+        },
       ],
     },
     {
