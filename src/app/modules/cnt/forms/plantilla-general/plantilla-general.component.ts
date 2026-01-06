@@ -223,6 +223,25 @@ export class PlantillaGeneralComponent implements OnInit {
    * Selecciona una plantilla del maestro
    */
   seleccionarPlantilla(plantilla: Plantilla): void {
+    console.log(
+      '📥 [DEBUG] Estructura de plantilla seleccionada (del backend):',
+      JSON.stringify(plantilla, null, 2)
+    );
+    console.log('📥 [DEBUG] Campos disponibles:', Object.keys(plantilla));
+    console.log('📥 [DEBUG] Tipos de datos:', {
+      codigo: typeof plantilla.codigo,
+      codigoAlterno: typeof plantilla.codigoAlterno,
+      nombre: typeof plantilla.nombre,
+      estado: typeof plantilla.estado,
+      observacion: typeof plantilla.observacion,
+      empresa: typeof plantilla.empresa,
+      fechaCreacion: typeof plantilla.fechaCreacion,
+      usuarioCreacion: typeof plantilla.usuarioCreacion,
+      fechaUpdate: typeof plantilla.fechaUpdate,
+      usuarioUpdate: typeof plantilla.usuarioUpdate,
+      sistema: typeof plantilla.sistema,
+    });
+
     this.plantillaSeleccionada = plantilla;
     // Asegurar mayúsculas al cargar en formulario
     this.plantillaForm.patchValue({
@@ -349,25 +368,93 @@ export class PlantillaGeneralComponent implements OnInit {
     const empresaCodigo = parseInt(localStorage.getItem('idSucursal') || '280', 10);
     const empresaNombre = localStorage.getItem('empresaName') || 'Empresa';
 
-    const plantillaData: Plantilla = {
-      ...this.plantillaForm.value,
-      nombre: this.plantillaForm.value.nombre?.toUpperCase() || '',
-      observacion: this.plantillaForm.value.observacion?.toUpperCase() || '',
-      fechaUpdate: new Date(),
-      usuarioUpdate: 'current-user',
-      empresa: { codigo: empresaCodigo, nombre: empresaNombre } as any,
-      sistema: this.tipoSistema, // PLNSSSTM - Indicador de sistema (0=General, 1=Sistema)
+    // Re-obtener formValue después de las validaciones
+    const updatedFormValue = this.plantillaForm.value;
+
+    // Crear objeto limpio para enviar al backend
+    let plantillaData: any = {
+      codigo: updatedFormValue.codigo || 0,
+      nombre: (updatedFormValue.nombre || '').toString().toUpperCase(),
+      estado: updatedFormValue.estado || 1,
+      observacion: (updatedFormValue.observacion || '').toString().toUpperCase(),
+      empresa: {
+        codigo: empresaCodigo,
+        nombre: empresaNombre || 'Empresa',
+      },
+      sistema: this.tipoSistema || 0, // PLNSSSTM - Indicador de sistema (0=General, 1=Sistema)
     };
 
-    // Eliminar codigo si es nuevo registro (el backend lo genera)
-    if (this.isNewRecord && (plantillaData as any).codigo === 0) {
-      delete (plantillaData as any).codigo;
+    // Solo agregar campos opcionales si tienen valores válidos
+    if (updatedFormValue.codigoAlterno && !isNaN(parseInt(updatedFormValue.codigoAlterno))) {
+      plantillaData.codigoAlterno = parseInt(updatedFormValue.codigoAlterno);
     }
 
-    if (this.isNewRecord) {
-      plantillaData.fechaCreacion = new Date();
-      plantillaData.usuarioCreacion = 'current-user';
+    if (updatedFormValue.fechaInactivo) {
+      plantillaData.fechaInactivo = updatedFormValue.fechaInactivo;
     }
+
+    // Eliminar campos de auditoría que el backend no acepta
+    // Estos campos serán manejados automáticamente por el backend
+
+    // Configurar campos específicos para nuevo registro
+    if (this.isNewRecord) {
+      // Eliminar codigo para que el backend lo genere
+      delete plantillaData.codigo;
+      // Eliminar campos de auditoría que el backend maneja automáticamente
+      // plantillaData.fechaCreacion = new Date().toISOString();
+      // plantillaData.usuarioCreacion = 'current-user';
+      console.log('🆕 Creando nueva plantilla');
+    } else {
+      console.log('✏️ Actualizando plantilla existente con código:', plantillaData.codigo);
+
+      // Para actualización, usar la estructura original de la plantilla y solo modificar los campos editables
+      if (this.plantillaSeleccionada) {
+        const plantillaActualizada = {
+          ...this.plantillaSeleccionada, // Mantener todos los campos originales
+          // Sobrescribir solo los campos modificables
+          nombre: updatedFormValue.nombre,
+          estado: updatedFormValue.estado,
+          observacion: updatedFormValue.observacion,
+          // ELIMINAR: fechaUpdate y usuarioUpdate no son aceptados por el backend
+        };
+
+        // Agregar campos opcionales si están presentes
+        if (updatedFormValue.codigoAlterno && !isNaN(parseInt(updatedFormValue.codigoAlterno))) {
+          plantillaActualizada.codigoAlterno = parseInt(updatedFormValue.codigoAlterno);
+        }
+
+        if (updatedFormValue.fechaInactivo) {
+          plantillaActualizada.fechaInactivo = updatedFormValue.fechaInactivo;
+        }
+
+        // Limpiar campos que el backend no acepta
+        delete (plantillaActualizada as any).fechaUpdate;
+        delete (plantillaActualizada as any).usuarioUpdate;
+        delete (plantillaActualizada as any).fechaCreacion;
+        delete (plantillaActualizada as any).usuarioCreacion;
+
+        // Limpiar campos undefined
+        Object.keys(plantillaActualizada).forEach((key) => {
+          if ((plantillaActualizada as any)[key] === undefined) {
+            delete (plantillaActualizada as any)[key];
+          }
+        });
+
+        console.log(
+          '🔧 Plantilla actualizada (conservando estructura backend):',
+          JSON.stringify(plantillaActualizada, null, 2)
+        );
+        console.log('🔧 Campos incluidos:', Object.keys(plantillaActualizada));
+
+        plantillaData = plantillaActualizada;
+      }
+    }
+
+    // Debug: mostrar datos que se envían
+    console.log('🔧 Form values originales:', updatedFormValue);
+    console.log('🔧 Datos que se enviarán al backend:', JSON.stringify(plantillaData, null, 2));
+    console.log('🔧 Tipo de sistema:', this.tipoSistema);
+    console.log('🔧 Es nuevo registro:', this.isNewRecord);
 
     this.loading = true;
 
@@ -390,12 +477,29 @@ export class PlantillaGeneralComponent implements OnInit {
           }
           this.loading = false;
         },
-        error: (error: any) => {
-          console.error('Error al crear plantilla:', error);
-          this.showMessage(
-            'Error al guardar plantilla. Verifique la conexión con el servidor.',
-            'error'
-          );
+        error: (httpErrorResponse: any) => {
+          console.error('🚨 HttpErrorResponse completo al crear:', httpErrorResponse);
+          console.error('🚨 Status:', httpErrorResponse?.status);
+          console.error('🚨 Status Text:', httpErrorResponse?.statusText);
+          console.error('🚨 Error message:', httpErrorResponse?.message);
+          console.error('🚨 Error body:', httpErrorResponse?.error);
+          console.error('🚨 URL:', httpErrorResponse?.url);
+
+          let errorMessage = 'Error al guardar plantilla.';
+
+          if (httpErrorResponse?.status === 400) {
+            if (typeof httpErrorResponse.error === 'string') {
+              errorMessage = `Error de datos: ${httpErrorResponse.error}`;
+            } else if (httpErrorResponse.error && httpErrorResponse.error.message) {
+              errorMessage = `Error: ${httpErrorResponse.error.message}`;
+            } else {
+              errorMessage = 'Error 400: Datos inválidos. Revise los campos del formulario.';
+            }
+          } else if (httpErrorResponse?.status === 0) {
+            errorMessage = 'Error de conexión. Verifique que el servidor esté funcionando.';
+          }
+
+          this.showMessage(errorMessage, 'error');
           this.loading = false;
         },
       });
@@ -417,12 +521,37 @@ export class PlantillaGeneralComponent implements OnInit {
           }
           this.loading = false;
         },
-        error: (error: any) => {
-          console.error('Error al actualizar plantilla:', error);
-          this.showMessage(
-            'Error al actualizar plantilla. Verifique la conexión con el servidor.',
-            'error'
-          );
+        error: (httpErrorResponse: any) => {
+          console.error('🚨 HttpErrorResponse completo:', httpErrorResponse);
+          console.error('🚨 Status:', httpErrorResponse?.status);
+          console.error('🚨 Status Text:', httpErrorResponse?.statusText);
+          console.error('🚨 Error message:', httpErrorResponse?.message);
+          console.error('🚨 Error body:', httpErrorResponse?.error);
+          console.error('🚨 URL:', httpErrorResponse?.url);
+          console.error('🚨 Headers:', httpErrorResponse?.headers);
+
+          // Si es un error de string (del handleError anterior), manejarlo
+          if (typeof httpErrorResponse === 'string') {
+            console.error('🚨 Error string del backend:', httpErrorResponse);
+          }
+
+          let errorMessage = 'Error al actualizar plantilla.';
+
+          if (httpErrorResponse?.status === 400) {
+            if (typeof httpErrorResponse.error === 'string') {
+              errorMessage = `Error de datos: ${httpErrorResponse.error}`;
+            } else if (httpErrorResponse.error && httpErrorResponse.error.message) {
+              errorMessage = `Error: ${httpErrorResponse.error.message}`;
+            } else {
+              errorMessage = 'Error 400: Datos inválidos. Revise los campos del formulario.';
+            }
+          } else if (httpErrorResponse?.status === 0) {
+            errorMessage = 'Error de conexión. Verifique que el servidor esté funcionando.';
+          } else if (typeof httpErrorResponse === 'string') {
+            errorMessage = `Error del backend: ${httpErrorResponse}`;
+          }
+
+          this.showMessage(errorMessage, 'error');
           this.loading = false;
         },
       });

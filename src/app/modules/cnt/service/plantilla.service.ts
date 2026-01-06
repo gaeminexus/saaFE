@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 import { Observable, catchError, of, throwError } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { DetallePlantilla } from '../model/detalle-plantilla-general';
-import { Plantilla } from '../model/plantilla';
+import { Plantilla } from '../model/plantilla-general';
 import { ServiciosCnt } from './ws-cnt';
 
 @Injectable({
@@ -92,10 +92,18 @@ export class PlantillaService {
 
   // tslint:disable-next-line: typedef
   private handleError(error: HttpErrorResponse): Observable<null> {
+    console.error('🔥 [PlantillaService] HttpErrorResponse completo:', error);
+    console.error('🔥 Status:', error.status);
+    console.error('🔥 Status Text:', error.statusText);
+    console.error('🔥 Error body:', error.error);
+    console.error('🔥 Headers:', error.headers);
+    console.error('🔥 URL:', error.url);
+
     if (+error.status === 200) {
       return of(null);
     } else {
-      return throwError(() => error.error);
+      // Retornar el error completo para debugging, no solo error.error
+      return throwError(() => error);
     }
   }
 }

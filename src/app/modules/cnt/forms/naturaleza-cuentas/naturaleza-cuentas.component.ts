@@ -245,23 +245,23 @@ export class NaturalezaDeCuentasComponent implements OnInit {
   public exportToPDF(): void {
     this.loading = true;
 
-    this.jasperReportes.generar('naturaleza-cuentas').subscribe({
+    const idEmpresa = Number(localStorage.getItem('idEmpresa') || '1236');
+
+    this.jasperReportes.generar('naturaleza-cuentas-empresa', { empresa: idEmpresa }).subscribe({
       next: (blob) => {
         this.loading = false;
 
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'naturaleza-cuentas.pdf';
+        a.download = `naturaleza-cuentas-${idEmpresa}.pdf`;
         a.click();
 
         setTimeout(() => URL.revokeObjectURL(url), 2000);
       },
       error: () => {
         this.loading = false;
-        this.snackBar.open('No se pudo generar el reporte', 'Cerrar', {
-          duration: 6000,
-        });
+        this.snackBar.open('No se pudo generar el reporte', 'Cerrar', { duration: 6000 });
       },
     });
   }
