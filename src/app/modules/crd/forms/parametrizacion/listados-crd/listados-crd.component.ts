@@ -301,8 +301,9 @@ export class ListadosCrdComponent implements OnInit {
   // ========== Producto ==========
   private getFieldsProducto(): FieldFormat[] {
     return [
-      { column: 'nombre', header: 'Nombre', fWidth: '30%' },
-      { column: 'codigoSBS', header: 'Código SBS', fWidth: '15%' },
+      { column: 'nombre', header: 'Nombre', fWidth: '25%' },
+      { column: 'codigoSBS', header: 'Código SBS', fWidth: '12%' },
+      { column: 'codigoPetro', header: 'Código Petrocomercial', fWidth: '15%' },
       { column: 'filial.nombre', header: 'Filial', fWidth: '20%' },
       { column: 'tipoPrestamo.nombre', header: 'Tipo Préstamo', fWidth: '20%' },
     ];
@@ -329,6 +330,14 @@ export class ListadosCrdComponent implements OnInit {
         validations: [
           { name: 'required', validator: Validators.required, message: 'El código SBS es requerido' }
         ]
+      },
+      {
+        type: 'input',
+        label: 'Código Petrocomercial',
+        name: 'codigoPetro',
+        inputType: 'text',
+        value: '',
+        validations: []
       },
       {
         type: 'select',

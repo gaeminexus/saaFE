@@ -1,0 +1,389 @@
+.consulta-container {
+  padding: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+
+  // ========== Header Moderno ==========
+  .page-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem 2.5rem;
+    box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+    border-radius: 0 0 20px 20px;
+    margin-bottom: 2rem;
+
+    .header-content {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+
+      .header-icon {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 16px;
+        padding: 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(10px);
+
+        mat-icon {
+          font-size: 2.5rem;
+          width: 2.5rem;
+          height: 2.5rem;
+          color: white;
+        }
+      }
+
+      .header-text {
+        flex: 1;
+
+        h1 {
+          margin: 0;
+          font-size: 1.75rem;
+          font-weight: 600;
+          letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+          margin: 0.25rem 0 0 0;
+          font-size: 0.95rem;
+          opacity: 0.9;
+          font-weight: 300;
+        }
+      }
+
+      .header-actions {
+        display: flex;
+        gap: 0.75rem;
+        align-items: center;
+
+        .btn-nueva {
+          background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+          color: white;
+          padding: 0.75rem 1.5rem;
+          font-weight: 500;
+          border-radius: 12px;
+          box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4);
+          transition: all 0.3s ease;
+
+          &:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(245, 87, 108, 0.5);
+          }
+
+          mat-icon {
+            margin-right: 0.5rem;
+          }
+        }
+
+        .toggle-filtros-btn {
+          background: rgba(255, 255, 255, 0.2);
+          color: white;
+          backdrop-filter: blur(10px);
+
+          &:hover {
+            background: rgba(255, 255, 255, 0.3);
+          }
+        }
+      }
+    }
+
+    // Filtros
+    .filtros-container {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 16px;
+      padding: 1.5rem;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+
+      .filtros-titulo {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin: 0 0 1rem 0;
+        font-size: 1rem;
+        font-weight: 500;
+        opacity: 0.95;
+
+        mat-icon {
+          font-size: 1.25rem;
+          width: 1.25rem;
+          height: 1.25rem;
+        }
+      }
+
+      .filtros-principales,
+      .filtros-secundarios {
+        margin-bottom: 1rem;
+      }
+
+      .filtros-secundarios {
+        padding-top: 1rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.15);
+      }
+
+      .filtros-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1rem;
+
+        .filter-field {
+          ::ng-deep {
+            .mat-mdc-text-field-wrapper {
+              background: rgba(255, 255, 255, 0.95);
+              border-radius: 12px;
+            }
+
+            .mat-mdc-form-field-focus-overlay {
+              background-color: rgba(102, 126, 234, 0.05);
+            }
+
+            .mat-mdc-form-field-icon-prefix {
+              color: #667eea;
+              padding-right: 0.5rem;
+            }
+          }
+        }
+      }
+
+      .acciones-filtros {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        flex-wrap: wrap;
+        margin-top: 1.5rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.2);
+
+        .btn-action {
+          min-width: 140px;
+          font-weight: 600;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+          transition: all 0.3s ease;
+          background: white;
+          border: 2px solid transparent;
+
+          &:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+            border-color: currentColor;
+          }
+
+          &:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            background: rgba(255, 255, 255, 0.6);
+          }
+
+          mat-icon {
+            margin-right: 0.5rem;
+          }
+
+          // Botón Buscar - Color primario del header
+          &.btn-buscar {
+            color: #667eea;
+
+            &:hover:not(:disabled) {
+              background: white;
+              color: #764ba2;
+            }
+          }
+
+          // Botón Limpiar - Color secundario del header
+          &.btn-limpiar {
+            color: #764ba2;
+
+            &:hover:not(:disabled) {
+              background: white;
+              color: #667eea;
+            }
+          }
+
+          // Botón Exportar - Tono azul del header
+          &.btn-exportar {
+            color: #5b6fd8;
+
+            &:hover:not(:disabled) {
+              background: white;
+              color: #6b7ee3;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // ========== Resultados Card ==========
+  .resultados-card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    margin: 0 2rem 2rem 2rem;
+    border-radius: 16px;
+    box-shadow: 0 2px 20px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+
+    ::ng-deep .mat-mdc-card-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 1.5rem;
+
+      .mat-mdc-card-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin: 0;
+      }
+    }
+
+    ::ng-deep .mat-mdc-card-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 0;
+    }
+  }
+
+  // ========== Estados ==========
+  .loading-container,
+  .error-container,
+  .empty-state-inline {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem;
+    text-align: center;
+    color: #666;
+
+    mat-icon {
+      font-size: 4rem;
+      width: 4rem;
+      height: 4rem;
+      margin-bottom: 1rem;
+      opacity: 0.5;
+
+      &.empty-icon {
+        color: #aaa;
+      }
+    }
+
+    mat-spinner {
+      margin-bottom: 1.5rem;
+    }
+
+    p {
+      margin: 0.5rem 0;
+      font-size: 1rem;
+      color: #666;
+    }
+  }
+
+  .error-container {
+    mat-icon {
+      color: #f44336;
+      opacity: 0.8;
+    }
+  }
+
+  // ========== Tabla ==========
+  .table-container {
+    flex: 1;
+    overflow: auto;
+    padding: 1.5rem;
+
+    .resultados-table {
+      width: 100%;
+      background: white;
+
+      th {
+        background: #f8f9fa;
+        color: #495057;
+        font-weight: 600;
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        padding: 1rem;
+        border-bottom: 2px solid #e9ecef;
+      }
+
+      td {
+        padding: 1rem;
+        border-bottom: 1px solid #f1f3f5;
+        color: #495057;
+        font-size: 0.9rem;
+
+        &.valor-cell {
+          font-weight: 600;
+          color: #28a745;
+        }
+      }
+
+      .tabla-row {
+        transition: all 0.2s ease;
+
+        &:hover {
+          background-color: #f8f9fa;
+          cursor: pointer;
+        }
+      }
+
+      .acciones-header {
+        text-align: center;
+        width: 100px;
+      }
+
+      .acciones-cell {
+        text-align: center;
+
+        button {
+          transition: all 0.2s ease;
+
+          &:hover {
+            transform: scale(1.1);
+          }
+        }
+      }
+
+      .estado-badge {
+        display: inline-block;
+        padding: 0.35rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+
+        &.pagada {
+          background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+          color: white;
+        }
+
+        &.vencida {
+          background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
+          color: white;
+        }
+
+        &.por-vencer {
+          background: linear-gradient(135deg, #f7971e 0%, #ffd200 100%);
+          color: white;
+        }
+
+        &.pendiente {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+        }
+      }
+    }
+  }
+
+  // ========== Paginador ==========
+  ::ng-deep .mat-mdc-paginator {
+    background: #f8f9fa;
+    border-top: 2px solid #e9ecef;
+    border-radius: 0 0 16px 16px;
+  }
+}

@@ -183,9 +183,7 @@
             <mat-icon>event</mat-icon>
             <div class="item-content">
               <span class="item-label">Fecha Inicio</span>
-              <span class="item-value">{{
-                contratoEncontrado.fechaInicio | date : 'dd/MM/yyyy'
-              }}</span>
+              <span class="item-value">{{ formatearFecha(contratoEncontrado.fechaInicio) }}</span>
             </div>
           </div>
 
@@ -219,9 +217,7 @@
             <mat-icon>schedule</mat-icon>
             <div class="item-content">
               <span class="item-label">Fecha Registro</span>
-              <span class="item-value">{{
-                contratoEncontrado.fechaRegistro | date : 'dd/MM/yyyy'
-              }}</span>
+              <span class="item-value">{{ formatearFecha(contratoEncontrado.fechaRegistro) }}</span>
             </div>
           </div>
 
@@ -330,7 +326,7 @@
         <div class="prestamo-info-row">
           <div class="info-item-inline">
             <mat-icon>event</mat-icon>
-            <span>{{ prestamo.fecha | date : 'dd/MM/yyyy' }}</span>
+            <span>{{ formatearFecha(prestamo.fecha) }}</span>
           </div>
           <div class="info-item-inline">
             <mat-icon>schedule</mat-icon>
@@ -498,7 +494,7 @@
           <ng-container matColumnDef="fechaVencimiento">
             <th mat-header-cell *matHeaderCellDef mat-sort-header>Vencimiento</th>
             <td mat-cell *matCellDef="let detalle">
-              {{ detalle.detalle.fechaVencimiento | date : 'dd/MM/yyyy' }}
+              {{ formatearFecha(detalle.detalle.fechaVencimiento) }}
             </td>
           </ng-container>
 
@@ -714,7 +710,7 @@
           <ng-container matColumnDef="fechaTransaccion">
             <th mat-header-cell *matHeaderCellDef mat-sort-header>Fecha</th>
             <td mat-cell *matCellDef="let aporte">
-              {{ aporte.fechaTransaccion | date : 'dd/MM/yyyy' }}
+              {{ formatearFecha(aporte.fechaTransaccion) }}
             </td>
           </ng-container>
 

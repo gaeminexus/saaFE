@@ -74,7 +74,7 @@
               <div class="file-detail-item">
                 <mat-icon>event</mat-icon>
                 <span class="label">Fecha de Carga:</span>
-                <span class="value">{{ cargaArchivo.fechaCarga | date:'dd/MM/yyyy HH:mm' }}</span>
+                <span class="value">{{ formatearFecha(cargaArchivo.fechaCarga) }}</span>
               </div>
 
               <div class="file-detail-item">

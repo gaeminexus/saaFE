@@ -30,6 +30,14 @@ export class DetallePrestamoService {
     );
   }
 
+  getByMesAnio(mes: number, anio: number): Observable<DetallePrestamo[] | null> {
+    const wsGetByMesAnio = '/getByMesAnio/';
+    const url = `${ServiciosCrd.RS_DTPR}${wsGetByMesAnio}${mes}/${anio}`;
+    return this.http.get<DetallePrestamo[]>(url).pipe(
+      catchError(this.handleError)
+    );
+  }
+
   add(datos: any): Observable<DetallePrestamo | null> {
     return this.http.post<DetallePrestamo>(ServiciosCrd.RS_DTPR, datos, this.httpOptions).pipe(
       catchError(this.handleError)

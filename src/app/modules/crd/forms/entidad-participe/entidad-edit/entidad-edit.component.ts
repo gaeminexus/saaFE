@@ -345,7 +345,7 @@ export class EntidadEditComponent implements OnInit, OnChanges, OnDestroy {
       numeroIdentificacion: entidad.numeroIdentificacion,
       razonSocial: entidad.razonSocial,
       nombreComercial: entidad.nombreComercial,
-      fechaNacimiento: entidad.fechaNacimiento ? new Date(entidad.fechaNacimiento) : null,
+      fechaNacimiento: this.convertirFecha(entidad.fechaNacimiento) || (entidad.fechaNacimiento ? new Date(entidad.fechaNacimiento) : null),
       correoPersonal: entidad.correoPersonal,
       correoInstitucional: entidad.correoInstitucional,
       telefono: entidad.telefono,
@@ -362,7 +362,7 @@ export class EntidadEditComponent implements OnInit, OnChanges, OnDestroy {
       migrado: entidad.migrado || 0,
       urlFotoLogo: entidad.urlFotoLogo,
       usuarioIngreso: entidad.usuarioIngreso,
-      fechaIngreso: entidad.fechaIngreso,
+      fechaIngreso: this.convertirFecha(entidad.fechaIngreso) || entidad.fechaIngreso,
       usuarioModificacion: entidad.usuarioModificacion,
       ipIngreso: entidad.ipIngreso,
       ipModificacion: entidad.ipModificacion
@@ -548,6 +548,41 @@ export class EntidadEditComponent implements OnInit, OnChanges, OnDestroy {
   ngOnDestroy(): void {
     // Cancelar todas las suscripciones activas para evitar memory leaks
     this.subscriptions.unsubscribe();
+  }
+
+  /**
+   * Convierte una fecha de forma segura manejando diferentes formatos
+   */
+  private convertirFecha(fecha: any): Date | null {
+    if (!fecha) return null;
+
+    if (fecha instanceof Date) return fecha;
+
+    // Si es un array (como [2023,7,31,0,0]), convertir a Date
+    if (Array.isArray(fecha)) {
+      // Array format: [year, month, day, hour, minute, second?, millisecond?]
+      const [year, month, day, hour = 0, minute = 0, second = 0, ms = 0] = fecha;
+      // Nota: los meses en JavaScript Date van de 0-11, pero el backend puede enviar 1-12
+      // Asumimos que el backend envía 1-12 (mes real), así que restamos 1
+      return new Date(year, month - 1, day, hour, minute, second, ms);
+    }
+
+    if (typeof fecha === 'string') {
+      // Limpiar el string de fecha quitando el timezone [UTC] si existe
+      const fechaLimpia = fecha.replace(/\[.*?\]/, '');
+      const fechaConvertida = new Date(fechaLimpia);
+
+      // Verificar si la fecha es válida
+      if (!isNaN(fechaConvertida.getTime())) {
+        return fechaConvertida;
+      }
+    }
+
+    if (typeof fecha === 'number') {
+      return new Date(fecha);
+    }
+
+    return null;
   }
 
 }

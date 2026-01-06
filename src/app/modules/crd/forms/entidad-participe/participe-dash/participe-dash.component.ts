@@ -25,6 +25,7 @@ import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-
 import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { ExportService } from '../../../../../shared/services/export.service';
+import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import {
   AuditoriaDialogComponent,
   CambiarEstadoDialogData,
@@ -137,6 +138,7 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
     private auditoriaService: AuditoriaService,
     private direccionService: DireccionService,
     private exportService: ExportService,
+    private funcionesDatos: FuncionesDatosService,
     private snackBar: MatSnackBar,
     private dialog: MatDialog,
     private router: Router,
@@ -1580,6 +1582,15 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
 
     if (fecha instanceof Date) return fecha;
 
+    // Si es un array (como [2023,7,31,0,0]), convertir a Date
+    if (Array.isArray(fecha)) {
+      // Array format: [year, month, day, hour, minute, second?, millisecond?]
+      const [year, month, day, hour = 0, minute = 0, second = 0, ms = 0] = fecha;
+      // Nota: los meses en JavaScript Date van de 0-11, pero el backend puede enviar 1-12
+      // Asumimos que el backend envía 1-12 (mes real), así que restamos 1
+      return new Date(year, month - 1, day, hour, minute, second, ms);
+    }
+
     if (typeof fecha === 'string') {
       // Limpiar el string de fecha quitando el timezone [UTC] si existe
       const fechaLimpia = fecha.replace(/\[.*?\]/, '');
@@ -1863,7 +1874,18 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
                 nombre: this.obtenerNombreEstadoPrestamo(codigoEstado),
               } as EstadoPrestamo;
             }
-            return p as Prestamo;
+
+            // Convertir fechas que puedan venir en formato array desde el backend
+            const fechaPrestamo = this.convertirFecha(p.fecha);
+            const fechaDesembolso = this.convertirFecha(p.fechaDesembolso);
+            const fechaRegistro = this.convertirFecha(p.fechaRegistro);
+
+            return {
+              ...p,
+              fecha: fechaPrestamo || p.fecha,
+              fechaDesembolso: fechaDesembolso || p.fechaDesembolso,
+              fechaRegistro: fechaRegistro || p.fechaRegistro,
+            } as Prestamo;
           });
 
           this.procesarPrestamosPorTipo(prestamosNormalizados);
@@ -3109,5 +3131,15 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
     this.vistaActual = 'dashboard';
     this.detallesPrestamo.clear();
     this.prestamoExpandido = null;
+  }
+
+  /**
+   * Formatea una fecha usando el servicio global de fechas
+   * @param fecha Fecha a formatear (puede ser Date, string o número)
+   * @returns Fecha formateada como string o '-' si no hay fecha
+   */
+  formatearFecha(fecha: any): string {
+    if (!fecha) return '-';
+    return this.funcionesDatos.formatoFechaOrigenConHora(fecha, FuncionesDatosService.SOLO_FECHA) || '-';
   }
 }

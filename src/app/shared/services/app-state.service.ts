@@ -39,21 +39,18 @@ export class AppStateService {
       // Si no hay sesión activa, resolver inmediatamente
       const logged = localStorage.getItem('logged');
       if (logged !== 'true') {
-        console.log('✅ AppStateService: No hay sesión activa, continuando bootstrap');
         resolve();
         return;
       }
 
       // Si ya se completó la carga, resolver inmediatamente
       if (this.cargaIniciada && this.datosGlobales$.value) {
-        console.log('✅ AppStateService: Datos ya cargados, continuando bootstrap');
         resolve();
         return;
       }
 
       // Esperar a que se carguen los datos (timeout de 5 segundos)
       const timeout = setTimeout(() => {
-        console.warn('⚠️ AppStateService: Timeout al esperar inicialización, continuando bootstrap');
         resolve();
       }, 5000);
 
@@ -61,7 +58,6 @@ export class AppStateService {
       const subscription = this.datosGlobales$.pipe(
         filter(datos => datos !== null)
       ).subscribe(() => {
-        console.log('✅ AppStateService: Inicialización completada, continuando bootstrap');
         clearTimeout(timeout);
         subscription.unsubscribe();
         resolve();
@@ -100,11 +96,6 @@ export class AppStateService {
           this.cargaIniciada = true;
         },
         error: (err) => {
-          console.error(
-            '⚠️ AppStateService: Error al restaurar rubros, continuando sin ellos',
-            err
-          );
-
           // Aún así restaurar empresa y usuario (sin rubros)
           const appData: AppData = {
             empresa,
@@ -116,7 +107,6 @@ export class AppStateService {
         },
       });
     } catch (error) {
-      console.error('❌ AppStateService: Error al parsear datos de localStorage', error);
       this.limpiarDatos(); // Limpiar sesión corrupta
     }
   }
@@ -165,7 +155,6 @@ export class AppStateService {
         this.usuarioService.setUsuarioLog(appData.usuario);
       }),
       catchError((error) => {
-        console.error('Error al inicializar datos globales:', error);
         this.cargaIniciada = false;
         this.detalleRubroService.limpiarCache();
         throw error;

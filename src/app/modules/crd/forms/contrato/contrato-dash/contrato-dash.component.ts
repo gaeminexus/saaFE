@@ -113,8 +113,18 @@ export class ContratoDashComponent implements OnInit {
 
     this.contratoService.selectByCriteria(criterios).subscribe({
       next: (data) => {
-        this.contratos.set(data || []);
-        this.clasificarContratos(data || []);
+        // Convertir fechas que puedan venir en formato array desde el backend
+        const contratosConFechas = (data || []).map(contrato => ({
+          ...contrato,
+          fechaInicio: this.convertirFecha(contrato.fechaInicio) || contrato.fechaInicio,
+          fechaTerminacion: this.convertirFecha(contrato.fechaTerminacion) || contrato.fechaTerminacion,
+          fechaAprobacion: this.convertirFecha(contrato.fechaAprobacion) || contrato.fechaAprobacion,
+          fechaReporte: this.convertirFecha(contrato.fechaReporte) || contrato.fechaReporte,
+          fechaRegistro: this.convertirFecha(contrato.fechaRegistro) || contrato.fechaRegistro
+        }));
+
+        this.contratos.set(contratosConFechas);
+        this.clasificarContratos(contratosConFechas);
         this.loading.set(false);
       },
       error: (err) => {
@@ -260,7 +270,14 @@ export class ContratoDashComponent implements OnInit {
         );
         criterios.push(db);
 
-        const aportes = await this.aporteService.selectByCriteria(criterios).toPromise() || [];
+        const aportesRaw = await this.aporteService.selectByCriteria(criterios).toPromise() || [];
+
+        // Convertir fechas de aportes
+        const aportes = aportesRaw.map(aporte => ({
+          ...aporte,
+          fechaTransaccion: this.convertirFecha(aporte.fechaTransaccion) || aporte.fechaTransaccion,
+          fechaRegistro: this.convertirFecha(aporte.fechaRegistro) || aporte.fechaRegistro
+        }));
 
         entidadesConAportes.push({
           entidad,
@@ -377,5 +394,40 @@ export class ContratoDashComponent implements OnInit {
         behavior: 'smooth'
       });
     }
+  }
+
+  /**
+   * Convierte una fecha de forma segura manejando diferentes formatos
+   */
+  private convertirFecha(fecha: any): Date | null {
+    if (!fecha) return null;
+
+    if (fecha instanceof Date) return fecha;
+
+    // Si es un array (como [2023,7,31,0,0]), convertir a Date
+    if (Array.isArray(fecha)) {
+      // Array format: [year, month, day, hour, minute, second?, millisecond?]
+      const [year, month, day, hour = 0, minute = 0, second = 0, ms = 0] = fecha;
+      // Nota: los meses en JavaScript Date van de 0-11, pero el backend puede enviar 1-12
+      // Asumimos que el backend envía 1-12 (mes real), así que restamos 1
+      return new Date(year, month - 1, day, hour, minute, second, ms);
+    }
+
+    if (typeof fecha === 'string') {
+      // Limpiar el string de fecha quitando el timezone [UTC] si existe
+      const fechaLimpia = fecha.replace(/\[.*?\]/, '');
+      const fechaConvertida = new Date(fechaLimpia);
+
+      // Verificar si la fecha es válida
+      if (!isNaN(fechaConvertida.getTime())) {
+        return fechaConvertida;
+      }
+    }
+
+    if (typeof fecha === 'number') {
+      return new Date(fecha);
+    }
+
+    return null;
   }
 }

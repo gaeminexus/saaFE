@@ -185,7 +185,7 @@
                       @for (aporte of entidadData.aportes; track aporte.codigo) {
                         <tr>
                           <td>{{ aporte.codigo }}</td>
-                          <td>{{ aporte.tipoAporte?.codigo || 'N/A' }}</td>
+                          <td>{{ aporte.tipoAporte.codigo || 'N/A' }}</td>
                           <td>{{ aporte.valor | currency }}</td>
                           <td>{{ aporte.fechaTransaccion }}</td>
                         </tr>
@@ -241,7 +241,7 @@
                       @for (aporte of entidadData.aportes; track aporte.codigo) {
                         <tr>
                           <td>{{ aporte.codigo }}</td>
-                          <td>{{ aporte.tipoAporte?.codigo || 'N/A' }}</td>
+                          <td>{{ aporte.tipoAporte.codigo || 'N/A' }}</td>
                           <td>{{ aporte.valor | currency }}</td>
                           <td>{{ aporte.fechaTransaccion }}</td>
                         </tr>
@@ -297,7 +297,7 @@
                       @for (aporte of entidadData.aportes; track aporte.codigo) {
                         <tr>
                           <td>{{ aporte.codigo }}</td>
-                          <td>{{ aporte.tipoAporte?.codigo || 'N/A' }}</td>
+                          <td>{{ aporte.tipoAporte.codigo || 'N/A' }}</td>
                           <td>{{ aporte.valor | currency }}</td>
                           <td>{{ aporte.fechaTransaccion }}</td>
                         </tr>
