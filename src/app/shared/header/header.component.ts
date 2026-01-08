@@ -20,6 +20,14 @@ import { UsuarioService } from '../services/usuario.service';
 import { DatosBusqueda } from '../model/datos-busqueda/datos-busqueda';
 import { TipoComandosBusqueda } from '../model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda } from '../model/datos-busqueda/tipo-datos-busqueda';
+import { AprobacionXMontoService } from '../../modules/cxp/service/aprobacion-x-monto.service';
+import { AprobacionXProposicionPagoService } from '../../modules/cxp/service/aprobacion-x-proposicion-pago.service';
+import { ComposicionCuotaInicialPagoService } from '../../modules/cxp/service/composicion-cuota-inicial-pago.service';
+import { CuotaXFinanciacionPagoService } from '../../modules/cxp/service/cuota-x-financiacion-pago.service';
+import { DetalleDocumentoPagoService } from '../../modules/cxp/service/detalle-documento-pago.service';
+import { FinanciacionXDocumentoPagoService } from '../../modules/cxp/service/financiacion-x-documento-pago.service';
+import { MontoAprobacionService } from '../../modules/cxp/service/monto-aprobacion.service';
+import { ValorImpuestoDocumentoCobroService } from '../../modules/cxc/service/valor-impuesto-documento-cobro.service';
 
 @Component({
   selector: 'app-header',
@@ -53,7 +61,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
     private appStateService: AppStateService,
     private snackBar: MatSnackBar,
     private loadingService: LoadingService,
-    private naturalezaCuentaService: NaturalezaCuentaService,
+    private valorImpuestoDocumentoCobro: ValorImpuestoDocumentoCobroService,
     private cdr: ChangeDetectorRef,
     private dialog: MatDialog
   ) {
@@ -169,10 +177,10 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
       this.criterioConsulta = new DatosBusqueda();
       this.criterioConsulta.asignaUnCampoSinTrunc(
-        TipoDatosBusqueda.STRING,
-        'nombre',
-        'PASIVO',
-        TipoComandosBusqueda.LIKE
+        TipoDatosBusqueda.LONG,
+        'codigo',
+        '8',
+        TipoComandosBusqueda.IGUAL
       );
       this.criterioConsultaArray.push(this.criterioConsulta);
 
@@ -180,12 +188,12 @@ export class HeaderComponent implements OnInit, OnDestroy {
       this.criterioConsulta.orderBy('codigo');
       this.criterioConsultaArray.push(this.criterioConsulta);
 
-      this.naturalezaCuentaService.selectByCriteria(this.criterioConsultaArray).subscribe({
+      this.valorImpuestoDocumentoCobro.selectByCriteria(this.criterioConsultaArray).subscribe({
         next: (data: any) => {
-          console.log('Datos de NaturalezaCuenta:', data);
+          console.log('Datos de ValorImpuestoDocumentoCobro:', data);
         },
         error: (error: any) => {
-          console.error('Error al obtener NaturalezaCuenta:', error);
+          console.error('Error al obtener ValorImpuestoDocumentoCobro:', error);
         },
       });
 
@@ -198,12 +206,12 @@ export class HeaderComponent implements OnInit, OnDestroy {
         }
       });*/
 
-      this.naturalezaCuentaService.getById('2607').subscribe({
+      this.valorImpuestoDocumentoCobro.getById('').subscribe({
         next: (data: any) => {
           console.log('GetById - Registro específico:', data);
         },
         error: (error: any) => {
-          console.error('Error al obtener NaturalezaCuenta:', error);
+          console.error('Error al obtener ValorImpuestoDocumentoCobro:', error);
         },
       });
 
