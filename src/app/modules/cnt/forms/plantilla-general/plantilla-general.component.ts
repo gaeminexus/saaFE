@@ -223,25 +223,6 @@ export class PlantillaGeneralComponent implements OnInit {
    * Selecciona una plantilla del maestro
    */
   seleccionarPlantilla(plantilla: Plantilla): void {
-    console.log(
-      '📥 [DEBUG] Estructura de plantilla seleccionada (del backend):',
-      JSON.stringify(plantilla, null, 2)
-    );
-    console.log('📥 [DEBUG] Campos disponibles:', Object.keys(plantilla));
-    console.log('📥 [DEBUG] Tipos de datos:', {
-      codigo: typeof plantilla.codigo,
-      codigoAlterno: typeof plantilla.codigoAlterno,
-      nombre: typeof plantilla.nombre,
-      estado: typeof plantilla.estado,
-      observacion: typeof plantilla.observacion,
-      empresa: typeof plantilla.empresa,
-      fechaCreacion: typeof plantilla.fechaCreacion,
-      usuarioCreacion: typeof plantilla.usuarioCreacion,
-      fechaUpdate: typeof plantilla.fechaUpdate,
-      usuarioUpdate: typeof plantilla.usuarioUpdate,
-      sistema: typeof plantilla.sistema,
-    });
-
     this.plantillaSeleccionada = plantilla;
     // Asegurar mayúsculas al cargar en formulario
     this.plantillaForm.patchValue({
@@ -341,11 +322,6 @@ export class PlantillaGeneralComponent implements OnInit {
    * Guarda la plantilla (maestro y detalle)
    */
   guardarPlantilla(): void {
-    console.log('🔵 [INICIO] guardarPlantilla() llamado');
-    console.log('📋 Form valid:', this.plantillaForm.valid);
-    console.log('📋 Form errors:', this.plantillaForm.errors);
-    console.log('📋 Form value:', this.plantillaForm.value);
-
     if (this.plantillaForm.invalid) {
       this.markFormGroupTouched();
       this.showMessage('Por favor complete todos los campos requeridos', 'warn');
@@ -403,10 +379,7 @@ export class PlantillaGeneralComponent implements OnInit {
       // Eliminar campos de auditoría que el backend maneja automáticamente
       // plantillaData.fechaCreacion = new Date().toISOString();
       // plantillaData.usuarioCreacion = 'current-user';
-      console.log('🆕 Creando nueva plantilla');
     } else {
-      console.log('✏️ Actualizando plantilla existente con código:', plantillaData.codigo);
-
       // Para actualización, usar la estructura original de la plantilla y solo modificar los campos editables
       if (this.plantillaSeleccionada) {
         const plantillaActualizada = {
@@ -440,21 +413,9 @@ export class PlantillaGeneralComponent implements OnInit {
           }
         });
 
-        console.log(
-          '🔧 Plantilla actualizada (conservando estructura backend):',
-          JSON.stringify(plantillaActualizada, null, 2)
-        );
-        console.log('🔧 Campos incluidos:', Object.keys(plantillaActualizada));
-
         plantillaData = plantillaActualizada;
       }
     }
-
-    // Debug: mostrar datos que se envían
-    console.log('🔧 Form values originales:', updatedFormValue);
-    console.log('🔧 Datos que se enviarán al backend:', JSON.stringify(plantillaData, null, 2));
-    console.log('🔧 Tipo de sistema:', this.tipoSistema);
-    console.log('🔧 Es nuevo registro:', this.isNewRecord);
 
     this.loading = true;
 
@@ -478,13 +439,6 @@ export class PlantillaGeneralComponent implements OnInit {
           this.loading = false;
         },
         error: (httpErrorResponse: any) => {
-          console.error('🚨 HttpErrorResponse completo al crear:', httpErrorResponse);
-          console.error('🚨 Status:', httpErrorResponse?.status);
-          console.error('🚨 Status Text:', httpErrorResponse?.statusText);
-          console.error('🚨 Error message:', httpErrorResponse?.message);
-          console.error('🚨 Error body:', httpErrorResponse?.error);
-          console.error('🚨 URL:', httpErrorResponse?.url);
-
           let errorMessage = 'Error al guardar plantilla.';
 
           if (httpErrorResponse?.status === 400) {
@@ -522,19 +476,6 @@ export class PlantillaGeneralComponent implements OnInit {
           this.loading = false;
         },
         error: (httpErrorResponse: any) => {
-          console.error('🚨 HttpErrorResponse completo:', httpErrorResponse);
-          console.error('🚨 Status:', httpErrorResponse?.status);
-          console.error('🚨 Status Text:', httpErrorResponse?.statusText);
-          console.error('🚨 Error message:', httpErrorResponse?.message);
-          console.error('🚨 Error body:', httpErrorResponse?.error);
-          console.error('🚨 URL:', httpErrorResponse?.url);
-          console.error('🚨 Headers:', httpErrorResponse?.headers);
-
-          // Si es un error de string (del handleError anterior), manejarlo
-          if (typeof httpErrorResponse === 'string') {
-            console.error('🚨 Error string del backend:', httpErrorResponse);
-          }
-
           let errorMessage = 'Error al actualizar plantilla.';
 
           if (httpErrorResponse?.status === 400) {
@@ -787,8 +728,6 @@ export class PlantillaGeneralComponent implements OnInit {
         }
       },
       error: (error) => {
-        console.error('❌ Error al conectar con servidor. Detalles:', error);
-
         // Análisis específico del tipo de error
         const tipoError = this.analizarTipoError(error);
 
@@ -1070,27 +1009,11 @@ export class PlantillaGeneralComponent implements OnInit {
    * Verificar específicamente las condiciones del *ngIf de la tabla
    */
   verificarCondicionesTabla(): void {
-    console.log('🔍 VERIFICANDO CONDICIONES DE VISIBILIDAD DE LA TABLA:');
-    console.log('📊 displayedColumnsDetalles existe:', !!this.displayedColumnsDetalles);
-    console.log('📊 displayedColumnsDetalles.length:', this.displayedColumnsDetalles?.length);
-    console.log(
-      '📊 Condición *ngIf cumplida:',
-      !!(this.displayedColumnsDetalles && this.displayedColumnsDetalles.length > 0)
-    );
-
-    console.log('🗃️ dataSourceDetalles existe:', !!this.dataSourceDetalles);
-    console.log('🗃️ dataSourceDetalles.data existe:', !!this.dataSourceDetalles?.data);
-    console.log('🗃️ dataSourceDetalles.data.length:', this.dataSourceDetalles?.data?.length);
-
     // Verificar si la tabla debería estar visible
     const deberiaEstarVisible =
       this.displayedColumnsDetalles && this.displayedColumnsDetalles.length > 0;
-    console.log('👁️ La tabla DEBERÍA estar visible:', deberiaEstarVisible);
 
     if (!deberiaEstarVisible) {
-      console.error('❌ PROBLEMA ENCONTRADO: La condición *ngIf NO se cumple');
-      console.log('🔧 Intentando corregir displayedColumnsDetalles...');
-
       this.displayedColumnsDetalles = [
         'codigoCuenta',
         'descripcion',
@@ -1098,24 +1021,7 @@ export class PlantillaGeneralComponent implements OnInit {
         'estado',
         'acciones',
       ];
-
-      console.log('✅ displayedColumnsDetalles corregido:', this.displayedColumnsDetalles);
-      this.showMessage('🔧 Condiciones de tabla corregidas', 'info');
-    } else {
-      console.log('✅ Las condiciones están correctas, la tabla debería ser visible');
-
-      // Verificar en el DOM si realmente está visible
-      setTimeout(() => {
-        const tableContainer = document.querySelector('.table-container');
-        const table = document.querySelector('table[mat-table]');
-
-        console.log('🏗️ Contenedor de tabla encontrado:', !!tableContainer);
-        console.log('🏗️ Elemento tabla encontrado:', !!table);
-
-        if (tableContainer && !table) {
-          console.error('❌ PROBLEMA: Contenedor existe pero tabla no se renderiza');
-        }
-      }, 100);
+      this.showMessage('Condiciones de tabla corregidas', 'info');
     }
   }
 
@@ -1123,9 +1029,7 @@ export class PlantillaGeneralComponent implements OnInit {
    * Método de emergencia para forzar la visibilidad de las columnas
    */
   forzarVisibilidadColumnas(): void {
-    console.log('🚨 MÉTODO DE EMERGENCIA: Forzando visibilidad de columnas');
-
-    // 1. Limpiar y reconfigurar displayedColumns
+    // Limpiar y reconfigurar displayedColumns
     this.displayedColumnsDetalles = [];
 
     setTimeout(() => {
@@ -1136,9 +1040,8 @@ export class PlantillaGeneralComponent implements OnInit {
         'estado',
         'acciones',
       ];
-      console.log('🔧 Columnas reconfiguradas:', this.displayedColumnsDetalles);
 
-      // 2. Forzar CSS para hacer visibles las columnas
+      // Forzar CSS para hacer visibles las columnas
       setTimeout(() => {
         const style = document.createElement('style');
         style.innerHTML = `
@@ -1155,10 +1058,9 @@ export class PlantillaGeneralComponent implements OnInit {
           }
         `;
         document.head.appendChild(style);
-        console.log('💅 CSS de emergencia aplicado');
 
         this.showMessage(
-          '🚨 CSS de emergencia aplicado. Las columnas deberían ser visibles ahora.',
+          'CSS de emergencia aplicado. Las columnas deberían ser visibles ahora.',
           'warn'
         );
       }, 100);
@@ -1212,16 +1114,7 @@ export class PlantillaGeneralComponent implements OnInit {
       },
     ];
 
-    console.log('🧪 ANTES de agregar datos de prueba:');
-    console.log('📊 Columnas configuradas:', this.displayedColumnsDetalles);
-    console.log('📋 Datos anteriores:', this.dataSourceDetalles.data.length);
-
     this.dataSourceDetalles.data = datosPrueba;
-
-    console.log('✅ DESPUÉS de agregar datos de prueba:');
-    console.log('📋 Nuevos datos:', this.dataSourceDetalles.data.length);
-    console.log('🔍 Primer detalle:', this.dataSourceDetalles.data[0]);
-    console.log('💾 DataSource completo:', this.dataSourceDetalles);
   }
   /**
    * Carga planes de cuenta reales del servidor para el diálogo
@@ -1270,16 +1163,10 @@ export class PlantillaGeneralComponent implements OnInit {
           console.warn('⚠️ No se encontraron planes de cuenta en el servidor');
           this.showMessage('No hay planes de cuenta disponibles', 'warn');
         } else {
-          console.log(
-            `✅ Fallback exitoso: Se cargaron ${planes.length} planes de cuenta del servidor`
-          );
           // Filtrar solo los planes de la empresa logueada en fallback también
           const empresaCodigo = parseInt(localStorage.getItem('idSucursal') || '280', 10);
           const planesFiltrados = planes.filter(
             (plan) => plan.empresa && plan.empresa.codigo === empresaCodigo
-          );
-          console.log(
-            `🔍 Planes filtrados para empresa ${empresaCodigo} (fallback): ${planesFiltrados.length}`
           );
           this.abrirDialogoConPlanes(planesFiltrados, detalleExistente);
         }
@@ -1323,17 +1210,6 @@ export class PlantillaGeneralComponent implements OnInit {
     if (!nuevoDetalle) {
       return; // Error ya mostrado en prepararDetalleParaServidor
     }
-
-    console.log('📤 Enviando detalle validado al servidor:', JSON.stringify(nuevoDetalle, null, 2));
-
-    // Logging específico para el problema FK_DTPL_PLNN
-    console.log('🔍 ANÁLISIS DE DATOS PARA FK_DTPL_PLNN:');
-    console.log(`   - PLNSCDGO (Plan Sistema): ${nuevoDetalle.plantilla.codigo}`);
-    console.log(`   - PLNNCDGO (Plan Cuenta): ${nuevoDetalle.planCuenta.codigo}`);
-    console.log(`   - Cuenta Contable: ${result.planCuenta.cuentaContable}`);
-    console.log(
-      `   - SQL esperado: INSERT INTO CNT.DTPL (..., PLNNCDGO, PLNSCDGO, ...) VALUES (..., ${nuevoDetalle.planCuenta.codigo}, ${nuevoDetalle.plantilla.codigo}, ...)`
-    );
 
     // Intentar diferentes formatos de datos para el backend
     this.intentarGuardarDetalle(nuevoDetalle, result);
@@ -1403,7 +1279,6 @@ export class PlantillaGeneralComponent implements OnInit {
         this.mostrarDiagnosticoPlanes(planes || []);
       },
       error: (error) => {
-        console.log('❌ Error al cargar planes reales, usando fallback getAll...');
         this.planCuentaService.getAll().subscribe({
           next: (planesFallback) => {
             this.mostrarDiagnosticoPlanes(planesFallback || []);
@@ -1418,25 +1293,8 @@ export class PlantillaGeneralComponent implements OnInit {
   }
 
   private mostrarDiagnosticoPlanes(planesDemoLocal: any[]): void {
-    console.log('🔍 DIAGNÓSTICO DE PLANES DE CUENTA');
-    console.log('=================================');
-    console.log(`📋 Planes disponibles en demo local: ${planesDemoLocal.length}`);
-
-    planesDemoLocal.forEach((plan) => {
-      console.log(
-        `  [${plan.codigo}] ${plan.cuentaContable} - ${plan.nombre} (Nivel: ${plan.nivel})`
-      );
-    });
-
-    console.log('\n💡 DIAGNÓSTICO DEL PROBLEMA FK_DTPL_PLNN:');
-    console.log('💡 1. Verificar que estos códigos [1,2,3,etc] existan en CNT.PLNN del servidor');
-    console.log('💡 2. Los códigos mostrados son los PK que el frontend intenta insertar');
-    console.log('💡 3. El servidor rechaza porque no encuentra la FK en la tabla padre');
-    console.log('💡 4. Verificar: SELECT CODIGO FROM CNT.PLNN WHERE CODIGO IN (1,2,3,4,5,6)');
-    console.log('💡 5. Si no existen, insertar datos de prueba o ajustar códigos del frontend');
-
     this.showMessage(
-      `📊 Diagnóstico ejecutado. Ver consola para detalles de ${planesDemoLocal.length} planes de cuenta.`,
+      `Diagnóstico ejecutado. Ver consola para detalles de ${planesDemoLocal.length} planes de cuenta.`,
       'info'
     );
   }
@@ -1487,8 +1345,6 @@ export class PlantillaGeneralComponent implements OnInit {
    * Útil para verificar qué códigos existen realmente en el servidor
    */
   testearPlanCuentaEspecifico(codigoPlan: number): void {
-    console.log(`🧪 Testeando disponibilidad del plan de cuenta [${codigoPlan}] en el servidor...`);
-
     // Crear un detalle de prueba mínimo
     const detallePrueba = {
       plantilla: { codigo: this.plantillaSeleccionada?.codigo || 1 },
@@ -1505,16 +1361,13 @@ export class PlantillaGeneralComponent implements OnInit {
 
     this.detallePlantillaService.add(detallePrueba).subscribe({
       next: (resultado) => {
-        console.log(`✅ Plan [${codigoPlan}] existe en el servidor`);
-        this.showMessage(`✅ Plan de cuenta [${codigoPlan}] disponible en servidor`, 'success');
+        this.showMessage(`Plan de cuenta [${codigoPlan}] disponible en servidor`, 'success');
       },
       error: (error) => {
         if (this.esErrorIntegridad(error)) {
-          console.log(`❌ Plan [${codigoPlan}] NO existe en el servidor (FK_DTPL_PLNN)`);
-          this.showMessage(`❌ Plan [${codigoPlan}] no existe en servidor`, 'error');
+          this.showMessage(`Plan [${codigoPlan}] no existe en servidor`, 'error');
         } else {
-          console.log(`⚠️ Plan [${codigoPlan}] - Error diferente: ${error.status}`);
-          this.showMessage(`⚠️ Error diferente para plan [${codigoPlan}]: ${error.status}`, 'warn');
+          this.showMessage(`Error diferente para plan [${codigoPlan}]: ${error.status}`, 'warn');
         }
       },
     });
@@ -1525,37 +1378,27 @@ export class PlantillaGeneralComponent implements OnInit {
    * ÚLTIMA OPCIÓN: reconstruye la tabla paso a paso con intervalos
    */
   reconstruirTablaCompleta(): void {
-    console.log('💣 MÉTODO NUCLEAR: Reconstruyendo tabla completa');
-
-    // 1. Guardar datos actuales
+    // Guardar datos actuales
     const datosActuales = [...(this.dataSourceDetalles?.data || [])];
-    console.log('💾 Datos guardados:', datosActuales.length);
 
-    // 2. Destruir tabla completamente
+    // Destruir tabla completamente
     this.displayedColumnsDetalles = [];
     this.dataSourceDetalles.data = [];
 
-    console.log('💥 Tabla destruida');
-
-    // 3. Esperar un ciclo y reconstruir paso a paso
+    // Esperar un ciclo y reconstruir paso a paso
     setTimeout(() => {
-      console.log('🔄 Paso 1: Agregando codigoCuenta');
       this.displayedColumnsDetalles = ['codigoCuenta'];
 
       setTimeout(() => {
-        console.log('🔄 Paso 2: Agregando descripcion');
         this.displayedColumnsDetalles = ['codigoCuenta', 'descripcion'];
 
         setTimeout(() => {
-          console.log('🔄 Paso 3: Agregando movimiento');
           this.displayedColumnsDetalles = ['codigoCuenta', 'descripcion', 'movimiento'];
 
           setTimeout(() => {
-            console.log('🔄 Paso 4: Agregando estado');
             this.displayedColumnsDetalles = ['codigoCuenta', 'descripcion', 'movimiento', 'estado'];
 
             setTimeout(() => {
-              console.log('🔄 Paso 5: Agregando acciones');
               this.displayedColumnsDetalles = [
                 'codigoCuenta',
                 'descripcion',
@@ -1566,17 +1409,12 @@ export class PlantillaGeneralComponent implements OnInit {
 
               setTimeout(() => {
                 // Restaurar datos al final
-                console.log('🔄 Paso 6: Restaurando datos');
                 this.dataSourceDetalles.data = datosActuales;
-
-                console.log('✅ TABLA RECONSTRUIDA COMPLETAMENTE');
-                console.log('📊 Columnas finales:', this.displayedColumnsDetalles);
-                console.log('📋 Datos restaurados:', this.dataSourceDetalles.data.length);
 
                 // Debug final
                 setTimeout(() => {
                   this.showMessage(
-                    '💣 Tabla reconstruida completamente. Verificar columnas ahora.',
+                    'Tabla reconstruida completamente. Verificar columnas ahora.',
                     'success'
                   );
                 }, 200);
