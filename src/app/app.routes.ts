@@ -20,12 +20,33 @@ import { MenucuentasxcobrarComponent } from './modules/cxc/menu/menucuentasxcobr
 import { MenucuentaxpagarComponent } from './modules/cxp/menu/menucuentasxpagar/menucuentasxpagar.component';
 import { LoginComponent } from './modules/dash/forms/login/login.component';
 import { MenuComponent } from './modules/dash/menu/menu.component';
+import { MenurecursoshumanosComponent } from './modules/rrh/menu/menurecursoshumanos/menurecursoshumanos.component';
+// RRHH demo components
+import { RrhAsistenciaComponent } from './modules/rrh/forms/gestion/asistencia/rrh-asistencia.component';
+import { RrhContratosComponent } from './modules/rrh/forms/gestion/contratos/rrh-contratos.component';
+import { RrhEmpleadosComponent } from './modules/rrh/forms/gestion/empleados/rrh-empleados.component';
+import { RrhPermisosComponent } from './modules/rrh/forms/gestion/permisos/rrh-permisos.component';
+import { RrhVacacionesComponent } from './modules/rrh/forms/gestion/vacaciones/rrh-vacaciones.component';
+import { RrhCargosComponent } from './modules/rrh/forms/parametrizacion/cargos/rrh-cargos.component';
+import { RrhDepartamentosComponent } from './modules/rrh/forms/parametrizacion/departamentos/rrh-departamentos.component';
+import { RrhTiposContratoComponent } from './modules/rrh/forms/parametrizacion/tipos-contrato/rrh-tipos-contrato.component';
+import { RrhTurnosComponent } from './modules/rrh/forms/parametrizacion/turnos/rrh-turnos.component';
+import { RrhAportesComponent } from './modules/rrh/forms/procesos/aportes/rrh-aportes.component';
+import { RrhLiquidacionesComponent } from './modules/rrh/forms/procesos/liquidaciones/rrh-liquidaciones.component';
+import { RrhNominaComponent } from './modules/rrh/forms/procesos/nomina/rrh-nomina.component';
+import { RrhRolesPagoComponent } from './modules/rrh/forms/procesos/roles-pago/rrh-roles-pago.component';
+import { RrhReporteAsistenciaComponent } from './modules/rrh/forms/reportes/asistencia/rrh-reporte-asistencia.component';
+import { RrhReporteNominaComponent } from './modules/rrh/forms/reportes/nomina/rrh-reporte-nomina.component';
+import { RrhReporteRolesComponent } from './modules/rrh/forms/reportes/roles/rrh-reporte-roles.component';
+import { RrhReporteVacacionesComponent } from './modules/rrh/forms/reportes/vacaciones/rrh-reporte-vacaciones.component';
 import { MenutesoreriaComponent } from './modules/tsr/menu/menutesoreria/menutesoreria.component';
 import { authGuard } from './shared/guard/auth.guard';
 import { canDeactivateGuard } from './shared/guard/can-deactivate.guard';
 // Reemplazamos placeholder EXTR por componente grid paginado
 import { AsientosContablesDinamico } from './modules/cnt/forms/asientos-contables-dinamico/asientos-contables-dinamico';
+import { DetalleMayorizacionComponent } from './modules/cnt/forms/detalle-mayorizacion/detalle-mayorizacion.component';
 import { ListadoAsientosComponent } from './modules/cnt/forms/listado-asientos/listado-asientos.component';
+import { MayorizacionComponent } from './modules/cnt/forms/mayorizacion/mayorizacion.component';
 import { NaturalezaDeCuentasComponent } from './modules/cnt/forms/naturaleza-cuentas/naturaleza-cuentas.component';
 import { CargaAporteBackComponent } from './modules/crd/forms/archivos-petro/carga-aporte-back/carga-aporte-back.component';
 import { CargaAportesComponent } from './modules/crd/forms/archivos-petro/carga-aportes/carga-aportes.component';
@@ -38,19 +59,19 @@ import { EntidadParticipeInfoComponent } from './modules/crd/forms/entidad-parti
 import { NavegacionCascadaComponent } from './modules/crd/forms/entidad-participe/navegacion-cascada/navegacion-cascada.component';
 import { ParticipeDashComponent } from './modules/crd/forms/entidad-participe/participe-dash/participe-dash.component';
 import { ParticipeInfoComponent } from './modules/crd/forms/entidad-participe/participe-info/participe-info.component';
+import { AportesPorRevisarComponent } from './modules/crd/forms/historicos/aportes-por-revisar/aportes-por-revisar.component';
 import { ExtersComponent } from './modules/crd/forms/historicos/exters/exters.component';
 import { PagoCuotasComponent } from './modules/crd/forms/pago-cuotas/pago-cuotas.component';
 import { EstadosCrdComponent } from './modules/crd/forms/parametrizacion/estados-crd/estados-crd.component';
 import { ListadosCrdComponent } from './modules/crd/forms/parametrizacion/listados-crd/listados-crd.component';
 import { TiposCrdComponent } from './modules/crd/forms/parametrizacion/tipos-crd/tipos-crd.component';
+import { CuotaConsultaComponent } from './modules/crd/forms/prestamo/cuota-consulta/cuota-consulta.component';
 import { EntidadCreditosComponent } from './modules/crd/menucreditos/entidad-creditos.component';
 import { ConsultaCargaArchivoResolverService } from './modules/crd/resolver/consulta-carga-archivo-resolver.service';
 import { entidadEditResolver } from './modules/crd/resolver/entidad-edit.resolver';
 import { EstadosResolverService } from './modules/crd/resolver/estados-resolver.service';
 import { ListadosCrdResolverService } from './modules/crd/resolver/listados-crd-resolver.service';
 import { TiposCrdResolverService } from './modules/crd/resolver/tipos-crd-resolver.service';
-import { AportesPorRevisarComponent } from './modules/crd/forms/historicos/aportes-por-revisar/aportes-por-revisar.component';
-import { CuotaConsultaComponent } from './modules/crd/forms/prestamo/cuota-consulta/cuota-consulta.component';
 
 export const routes: Routes = [
   { path: '', component: LoginComponent },
@@ -124,6 +145,16 @@ export const routes: Routes = [
         canDeactivate: [canDeactivateGuard],
       },
       {
+        path: 'procesos/mayorizacion',
+        component: MayorizacionComponent,
+        canActivate: [authGuard],
+      },
+      {
+        path: 'procesos/detalle-mayorizacion',
+        component: DetalleMayorizacionComponent,
+        canActivate: [authGuard],
+      },
+      {
         path: 'listado-asientos',
         component: ListadoAsientosComponent,
         canActivate: [authGuard],
@@ -140,6 +171,54 @@ export const routes: Routes = [
     path: 'menutesoreria',
     component: MenutesoreriaComponent,
     canActivate: [authGuard],
+  },
+  {
+    path: 'menurecursoshumanos',
+    component: MenurecursoshumanosComponent,
+    canActivate: [authGuard],
+    children: [
+      // Parametrización
+      {
+        path: 'parametrizacion/departamentos',
+        component: RrhDepartamentosComponent,
+        canActivate: [authGuard],
+      },
+      { path: 'parametrizacion/cargos', component: RrhCargosComponent, canActivate: [authGuard] },
+      {
+        path: 'parametrizacion/tipos-contrato',
+        component: RrhTiposContratoComponent,
+        canActivate: [authGuard],
+      },
+      { path: 'parametrizacion/turnos', component: RrhTurnosComponent, canActivate: [authGuard] },
+      // Gestión de Personal
+      { path: 'gestion/empleados', component: RrhEmpleadosComponent, canActivate: [authGuard] },
+      { path: 'gestion/contratos', component: RrhContratosComponent, canActivate: [authGuard] },
+      { path: 'gestion/vacaciones', component: RrhVacacionesComponent, canActivate: [authGuard] },
+      { path: 'gestion/permisos', component: RrhPermisosComponent, canActivate: [authGuard] },
+      { path: 'gestion/asistencia', component: RrhAsistenciaComponent, canActivate: [authGuard] },
+      // Procesos
+      { path: 'procesos/nomina', component: RrhNominaComponent, canActivate: [authGuard] },
+      { path: 'procesos/roles-pago', component: RrhRolesPagoComponent, canActivate: [authGuard] },
+      { path: 'procesos/aportes', component: RrhAportesComponent, canActivate: [authGuard] },
+      {
+        path: 'procesos/liquidaciones',
+        component: RrhLiquidacionesComponent,
+        canActivate: [authGuard],
+      },
+      // Reportes
+      { path: 'reportes/roles', component: RrhReporteRolesComponent, canActivate: [authGuard] },
+      {
+        path: 'reportes/vacaciones',
+        component: RrhReporteVacacionesComponent,
+        canActivate: [authGuard],
+      },
+      {
+        path: 'reportes/asistencia',
+        component: RrhReporteAsistenciaComponent,
+        canActivate: [authGuard],
+      },
+      { path: 'reportes/nomina', component: RrhReporteNominaComponent, canActivate: [authGuard] },
+    ],
   },
   {
     path: 'menucuentasxcobrar',

@@ -71,7 +71,6 @@ export class PeriodoContableComponent implements OnInit {
 
   // Estados
   loading = false;
-  mostrarBannerDemo = false;
 
   // Opciones para selects
   aniosDisponibles: number[] = [];
@@ -191,12 +190,7 @@ export class PeriodoContableComponent implements OnInit {
       },
       error: (error: any) => {
         console.error('❌ Error al cargar períodos:', error);
-        if (error.status === 0 || error.message?.includes('ERR_CONNECTION_REFUSED')) {
-          this.mostrarBannerDemo = true;
-          this.showMessage('Backend no disponible. Usando datos de ejemplo.', 'info');
-        } else {
-          this.showMessage('Error al cargar períodos. Verifique la conexión.', 'error');
-        }
+        this.showMessage('Error al cargar períodos. Verifique la conexión.', 'error');
         this.loading = false;
       },
     });

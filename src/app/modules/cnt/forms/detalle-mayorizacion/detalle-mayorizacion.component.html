@@ -1,0 +1,104 @@
+<div class="page-header">
+  <h2>
+    <mat-icon>table_view</mat-icon>
+    Detalle de Mayorización
+  </h2>
+
+  <div class="actions">
+    <button mat-stroked-button color="primary" (click)="cargarDatos()" [disabled]="loading()">
+      <mat-icon>refresh</mat-icon>
+      Recargar
+    </button>
+  </div>
+</div>
+
+<div class="toolbar">
+  <mat-form-field appearance="outline" class="filter-field">
+    <mat-label>Filtrar</mat-label>
+    <input
+      matInput
+      placeholder="Cuenta, nombre o valores"
+      (keyup)="aplicarFiltro($event.target.value)"
+    />
+    <button
+      *ngIf="filtroTexto"
+      matSuffix
+      mat-icon-button
+      aria-label="Limpiar"
+      (click)="limpiarFiltro()"
+    >
+      <mat-icon>close</mat-icon>
+    </button>
+  </mat-form-field>
+</div>
+
+<div class="table-wrapper" *ngIf="!loading(); else loadingTpl">
+  <table mat-table [dataSource]="dataSource" matSort>
+    <!-- Número de Cuenta -->
+    <ng-container matColumnDef="numeroCuenta">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>Número</th>
+      <td mat-cell *matCellDef="let row">{{ row.numeroCuenta }}</td>
+    </ng-container>
+
+    <!-- Nombre Cuenta -->
+    <ng-container matColumnDef="nombreCuenta">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>Nombre</th>
+      <td mat-cell *matCellDef="let row">{{ row.nombreCuenta }}</td>
+    </ng-container>
+
+    <!-- Saldo Anterior -->
+    <ng-container matColumnDef="saldoAnterior">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>Saldo Anterior</th>
+      <td mat-cell *matCellDef="let row" class="num">{{ row.saldoAnterior | number : '1.2-2' }}</td>
+    </ng-container>
+
+    <!-- Debe -->
+    <ng-container matColumnDef="valorDebe">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>Debe</th>
+      <td mat-cell *matCellDef="let row" class="num">{{ row.valorDebe | number : '1.2-2' }}</td>
+    </ng-container>
+
+    <!-- Haber -->
+    <ng-container matColumnDef="valorHaber">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>Haber</th>
+      <td mat-cell *matCellDef="let row" class="num">{{ row.valorHaber | number : '1.2-2' }}</td>
+    </ng-container>
+
+    <!-- Saldo Actual -->
+    <ng-container matColumnDef="saldoActual">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>Saldo Actual</th>
+      <td mat-cell *matCellDef="let row" class="num">{{ row.saldoActual | number : '1.2-2' }}</td>
+    </ng-container>
+
+    <!-- Tipo -->
+    <ng-container matColumnDef="tipoCuenta">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>Tipo</th>
+      <td mat-cell *matCellDef="let row">{{ row.tipoCuenta }}</td>
+    </ng-container>
+
+    <!-- Nivel -->
+    <ng-container matColumnDef="nivelCuenta">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>Nivel</th>
+      <td mat-cell *matCellDef="let row">{{ row.nivelCuenta }}</td>
+    </ng-container>
+
+    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+    <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+  </table>
+
+  <mat-paginator
+    [length]="totalRegistros()"
+    [pageSize]="25"
+    [pageSizeOptions]="[10, 25, 50, 100]"
+    showFirstLastButtons
+  />
+</div>
+
+<ng-template #loadingTpl>
+  <div class="loading">
+    <mat-spinner diameter="40"></mat-spinner>
+    <span>Cargando detalle...</span>
+  </div>
+</ng-template>
+
+<div *ngIf="errorMsg()" class="error">{{ errorMsg() }}</div>

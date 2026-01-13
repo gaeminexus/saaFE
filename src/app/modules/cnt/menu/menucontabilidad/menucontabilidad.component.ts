@@ -118,6 +118,12 @@ export class MenuContabilidadComponent {
           route: '/menucontabilidad/procesos/asientos-dinamico',
         },
         {
+          displayName: 'Mayorización',
+          iconName: 'account_balance',
+          idPermiso: 830,
+          route: '/menucontabilidad/procesos/mayorizacion',
+        },
+        {
           displayName: 'Listado de Asientos',
           iconName: 'list_alt',
           idPermiso: 830,
@@ -128,6 +134,12 @@ export class MenuContabilidadComponent {
           iconName: 'account_balance',
           idPermiso: 830,
           route: '/menucontabilidad/mayorizacion-proceso',
+        },
+        {
+          displayName: 'Detalle Mayorización',
+          iconName: 'table_view',
+          idPermiso: 830,
+          route: '/menucontabilidad/procesos/detalle-mayorizacion',
         },
       ],
     },
