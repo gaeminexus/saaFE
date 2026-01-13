@@ -1,3 +1,4 @@
+/* Tesorería menu styling can inherit from shared side menu defaults */
 .menutesoreria-layout {
   display: flex;
   flex-direction: column;
@@ -156,6 +157,10 @@
 
 /* Animación */
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }

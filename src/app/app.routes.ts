@@ -39,6 +39,7 @@ import { RrhReporteAsistenciaComponent } from './modules/rrh/forms/reportes/asis
 import { RrhReporteNominaComponent } from './modules/rrh/forms/reportes/nomina/rrh-reporte-nomina.component';
 import { RrhReporteRolesComponent } from './modules/rrh/forms/reportes/roles/rrh-reporte-roles.component';
 import { RrhReporteVacacionesComponent } from './modules/rrh/forms/reportes/vacaciones/rrh-reporte-vacaciones.component';
+import { TsrPlaceholderComponent } from './modules/tsr/forms/placeholder/tsr-placeholder.component';
 import { MenutesoreriaComponent } from './modules/tsr/menu/menutesoreria/menutesoreria.component';
 import { authGuard } from './shared/guard/auth.guard';
 import { canDeactivateGuard } from './shared/guard/can-deactivate.guard';
@@ -171,6 +172,245 @@ export const routes: Routes = [
     path: 'menutesoreria',
     component: MenutesoreriaComponent,
     canActivate: [authGuard],
+    children: [
+      // Parametrización
+      {
+        path: 'parametrizacion/bancos',
+        component: TsrPlaceholderComponent,
+        canActivate: [authGuard],
+        data: { title: 'Bancos' },
+      },
+      {
+        path: 'parametrizacion/cajas/logicas',
+        component: TsrPlaceholderComponent,
+        canActivate: [authGuard],
+        data: { title: 'Cajas Lógicas' },
+      },
+      {
+        path: 'parametrizacion/cajas/fisicas',
+        component: TsrPlaceholderComponent,
+        canActivate: [authGuard],
+        data: { title: 'Cajas Físicas' },
+      },
+      {
+        path: 'parametrizacion/bancos/nacionales-extranjeros',
+        component: TsrPlaceholderComponent,
+        canActivate: [authGuard],
+        data: { title: 'Nacionales y Extranjeros' },
+      },
+      {
+        path: 'parametrizacion/bancos/mis-bancos/bancos',
+        component: TsrPlaceholderComponent,
+        canActivate: [authGuard],
+        data: { title: 'Mis Bancos - Bancos' },
+      },
+      {
+        path: 'parametrizacion/bancos/mis-bancos/cuentas-bancarias',
+        component: TsrPlaceholderComponent,
+        canActivate: [authGuard],
+        data: { title: 'Mis Bancos - Cuentas Bancarias' },
+      },
+      {
+        path: 'parametrizacion/bancos/mis-bancos/chequeras/solicitud',
+        component: TsrPlaceholderComponent,
+        canActivate: [authGuard],
+        data: { title: 'Solicitud Chequera' },
+      },
+      {
+        path: 'parametrizacion/bancos/mis-bancos/chequeras/recepcion',
+        component: TsrPlaceholderComponent,
+        canActivate: [authGuard],
+        data: { title: 'Recepción Chequera' },
+      },
+      {
+        path: 'parametrizacion/bancos/mis-bancos/chequeras/cheques',
+        component: TsrPlaceholderComponent,
+        canActivate: [authGuard],
+        data: { title: 'Cheques' },
+      },
+      {
+        path: 'parametrizacion/cajas/logicas/grupos',
+        component: TsrPlaceholderComponent,
+        canActivate: [authGuard],
+        data: { title: 'Grupos' },
+      },
+      {
+        path: 'parametrizacion/cajas/logicas/cajas-por-grupo',
+        component: TsrPlaceholderComponent,
+        canActivate: [authGuard],
+        data: { title: 'Cajas por Grupo' },
+      },
+      // Redirect old nested path to new flat path
+      {
+        path: 'parametrizacion/cajas/logicas/grupo/cajas-por-grupo',
+        redirectTo: 'parametrizacion/cajas/logicas/cajas-por-grupo',
+        pathMatch: 'full',
+      },
+      {
+        path: 'parametrizacion/personas',
+        component: TsrPlaceholderComponent,
+        canActivate: [authGuard],
+        data: { title: 'Personas' },
+      },
+
+      // Procesos - Cobros
+      {
+        path: 'procesos/cobros/ingresar',
+        component: TsrPlaceholderComponent,
+        canActivate: [authGuard],
+        data: { title: 'Cobros - Ingresar' },
+      },
+      {
+        path: 'procesos/cobros/cierre-caja',
+        component: TsrPlaceholderComponent,
+        canActivate: [authGuard],
+        data: { title: 'Cobros - Cierre de Caja' },
+      },
+      {
+        path: 'procesos/cobros/depositos/envio',
+        component: TsrPlaceholderComponent,
+        canActivate: [authGuard],
+        data: { title: 'Cobros - Depósitos Envío' },
+      },
+      {
+        path: 'procesos/cobros/depositos/ratificacion',
+        component: TsrPlaceholderComponent,
+        canActivate: [authGuard],
+        data: { title: 'Cobros - Depósitos Ratificación' },
+      },
+      {
+        path: 'procesos/cobros/consultas/cobros',
+        component: TsrPlaceholderComponent,
+        canActivate: [authGuard],
+        data: { title: 'Consultas - Cobros' },
+      },
+      {
+        path: 'procesos/cobros/consultas/cierres',
+        component: TsrPlaceholderComponent,
+        canActivate: [authGuard],
+        data: { title: 'Consultas - Cierres' },
+      },
+      {
+        path: 'procesos/cobros/procesos/cobros',
+        component: TsrPlaceholderComponent,
+        canActivate: [authGuard],
+        data: { title: 'Procesos - Cobros' },
+      },
+      {
+        path: 'procesos/cobros/procesos/cierres',
+        component: TsrPlaceholderComponent,
+        canActivate: [authGuard],
+        data: { title: 'Procesos - Cierres' },
+      },
+      {
+        path: 'procesos/cobros/procesos/depositos',
+        component: TsrPlaceholderComponent,
+        canActivate: [authGuard],
+        data: { title: 'Procesos - Depósitos' },
+      },
+      {
+        path: 'procesos/cobros/procesos/ratificacion-depositos',
+        component: TsrPlaceholderComponent,
+        canActivate: [authGuard],
+        data: { title: 'Procesos - Ratificación Depósitos' },
+      },
+
+      // Procesos - Pagos
+      {
+        path: 'procesos/pagos/ingreso',
+        component: TsrPlaceholderComponent,
+        canActivate: [authGuard],
+        data: { title: 'Pagos - Ingreso' },
+      },
+      {
+        path: 'procesos/pagos/cheques/impresion',
+        component: TsrPlaceholderComponent,
+        canActivate: [authGuard],
+        data: { title: 'Pagos - Cheques Impresión' },
+      },
+      {
+        path: 'procesos/pagos/cheques/entrega',
+        component: TsrPlaceholderComponent,
+        canActivate: [authGuard],
+        data: { title: 'Pagos - Cheques Entrega' },
+      },
+      {
+        path: 'procesos/pagos/consulta/pagos',
+        component: TsrPlaceholderComponent,
+        canActivate: [authGuard],
+        data: { title: 'Consulta - Pagos' },
+      },
+      {
+        path: 'procesos/pagos/consulta/cheques',
+        component: TsrPlaceholderComponent,
+        canActivate: [authGuard],
+        data: { title: 'Consulta - Cheques' },
+      },
+      {
+        path: 'procesos/pagos/procesos/solicitud-pagos',
+        component: TsrPlaceholderComponent,
+        canActivate: [authGuard],
+        data: { title: 'Procesos - Solicitud Pagos' },
+      },
+      {
+        path: 'procesos/pagos/procesos/cheques-generados',
+        component: TsrPlaceholderComponent,
+        canActivate: [authGuard],
+        data: { title: 'Procesos - Cheques Generados' },
+      },
+      {
+        path: 'procesos/pagos/procesos/cheques-impresos',
+        component: TsrPlaceholderComponent,
+        canActivate: [authGuard],
+        data: { title: 'Procesos - Cheques Impresos' },
+      },
+      {
+        path: 'procesos/pagos/procesos/cheques-entregados',
+        component: TsrPlaceholderComponent,
+        canActivate: [authGuard],
+        data: { title: 'Procesos - Cheques Entregados' },
+      },
+
+      // Procesos - Movimientos Bancarios
+      {
+        path: 'procesos/movimientos-bancarios/debitos',
+        component: TsrPlaceholderComponent,
+        canActivate: [authGuard],
+        data: { title: 'Movimientos Bancarios - Débitos' },
+      },
+      {
+        path: 'procesos/movimientos-bancarios/creditos',
+        component: TsrPlaceholderComponent,
+        canActivate: [authGuard],
+        data: { title: 'Movimientos Bancarios - Créditos' },
+      },
+      {
+        path: 'procesos/movimientos-bancarios/transferencias',
+        component: TsrPlaceholderComponent,
+        canActivate: [authGuard],
+        data: { title: 'Movimientos Bancarios - Transferencias' },
+      },
+
+      // Procesos - Generales
+      {
+        path: 'procesos/generales/conciliacion',
+        component: TsrPlaceholderComponent,
+        canActivate: [authGuard],
+        data: { title: 'Conciliación' },
+      },
+      {
+        path: 'procesos/generales/consulta-conciliacion',
+        component: TsrPlaceholderComponent,
+        canActivate: [authGuard],
+        data: { title: 'Consulta Conciliación' },
+      },
+      {
+        path: 'procesos/generales/ried',
+        component: TsrPlaceholderComponent,
+        canActivate: [authGuard],
+        data: { title: 'RIED' },
+      },
+    ],
   },
   {
     path: 'menurecursoshumanos',
