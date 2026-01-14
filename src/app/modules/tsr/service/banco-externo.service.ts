@@ -1,15 +1,15 @@
-import { HttpHeaders, HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, catchError, of, throwError } from 'rxjs';
-import { BancoExterno } from '../model/banco-externo';
+import { BancoExterno } from '../model/banco-externo.model';
 import { ServiciosTsr } from './ws-tsr';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class BancoExternoService {
   httpOptions = {
-    headers: new HttpHeaders({ 'Content-Type': 'application/json' })
+    headers: new HttpHeaders({ 'Content-Type': 'application/json' }),
   };
 
   constructor(private http: HttpClient) {}
@@ -20,9 +20,7 @@ export class BancoExternoService {
   getAll(): Observable<BancoExterno[] | null> {
     const wsGetAll = '/getAll';
     const url = `${ServiciosTsr.RS_BEXT}${wsGetAll}`;
-    return this.http.get<BancoExterno[]>(url).pipe(
-      catchError(this.handleError)
-    );
+    return this.http.get<BancoExterno[]>(url).pipe(catchError(this.handleError));
   }
 
   /**
@@ -31,27 +29,25 @@ export class BancoExternoService {
   getById(id: string): Observable<BancoExterno | null> {
     const wsGetById = '/getId/';
     const url = `${ServiciosTsr.RS_BEXT}${wsGetById}${id}`;
-    return this.http.get<BancoExterno>(url).pipe(
-      catchError(this.handleError)
-    );
+    return this.http.get<BancoExterno>(url).pipe(catchError(this.handleError));
   }
 
   /**
    * Crea un nuevo registro.
    */
   add(datos: any): Observable<BancoExterno | null> {
-    return this.http.post<BancoExterno>(ServiciosTsr.RS_BEXT, datos, this.httpOptions).pipe(
-      catchError(this.handleError)
-    );
+    return this.http
+      .post<BancoExterno>(ServiciosTsr.RS_BEXT, datos, this.httpOptions)
+      .pipe(catchError(this.handleError));
   }
 
   /**
    * Actualiza un registro existente.
    */
   update(datos: any): Observable<BancoExterno | null> {
-    return this.http.put<BancoExterno>(ServiciosTsr.RS_BEXT, datos, this.httpOptions).pipe(
-      catchError(this.handleError)
-    );
+    return this.http
+      .put<BancoExterno>(ServiciosTsr.RS_BEXT, datos, this.httpOptions)
+      .pipe(catchError(this.handleError));
   }
 
   /**
@@ -60,9 +56,9 @@ export class BancoExternoService {
   selectByCriteria(datos: any): Observable<BancoExterno[] | null> {
     const wsCriteria = '/criteria';
     const url = `${ServiciosTsr.RS_BEXT}${wsCriteria}`;
-    return this.http.post<BancoExterno[]>(url, datos, this.httpOptions).pipe(
-      catchError(this.handleError)
-    );
+    return this.http
+      .post<BancoExterno[]>(url, datos, this.httpOptions)
+      .pipe(catchError(this.handleError));
   }
 
   /**
@@ -71,9 +67,7 @@ export class BancoExternoService {
   delete(id: any): Observable<BancoExterno | null> {
     const wsDelete = '/' + id;
     const url = `${ServiciosTsr.RS_BEXT}${wsDelete}`;
-    return this.http.delete<BancoExterno>(url, this.httpOptions).pipe(
-      catchError(this.handleError)
-    );
+    return this.http.delete<BancoExterno>(url, this.httpOptions).pipe(catchError(this.handleError));
   }
 
   /**
