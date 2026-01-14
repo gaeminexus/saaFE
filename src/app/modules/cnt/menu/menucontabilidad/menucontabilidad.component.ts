@@ -181,11 +181,6 @@ export class MenuContabilidadComponent {
       ],
     },
     {
-      displayName: 'Créditos',
-      iconName: 'credit_score',
-      route: '/menucreditos',
-    },
-    {
       displayName: 'Regresar',
       iconName: 'arrow_back',
       route: '/menu',
