@@ -1,4 +1,5 @@
 export interface Banco {
+
     codigo: number;
     nombre: string;
     conciliaDescuadre: number;
