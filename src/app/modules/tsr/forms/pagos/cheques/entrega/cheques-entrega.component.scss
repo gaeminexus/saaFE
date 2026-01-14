@@ -1,0 +1,30 @@
+.cheques-entrega {
+  .filters {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(180px, 1fr));
+    gap: 12px;
+  }
+  .full {
+    grid-column: 1 / -1;
+  }
+  .table-wrapper {
+    margin-top: 8px;
+    overflow: auto;
+  }
+  .full-width {
+    width: 100%;
+  }
+  .actions {
+    margin: 12px 0;
+    display: flex;
+    gap: 8px;
+  }
+  .totals {
+    margin-top: 10px;
+    font-weight: 500;
+  }
+  .error {
+    color: #c62828;
+    margin: 6px 0 2px;
+  }
+}

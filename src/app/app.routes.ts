@@ -39,6 +39,39 @@ import { RrhReporteAsistenciaComponent } from './modules/rrh/forms/reportes/asis
 import { RrhReporteNominaComponent } from './modules/rrh/forms/reportes/nomina/rrh-reporte-nomina.component';
 import { RrhReporteRolesComponent } from './modules/rrh/forms/reportes/roles/rrh-reporte-roles.component';
 import { RrhReporteVacacionesComponent } from './modules/rrh/forms/reportes/vacaciones/rrh-reporte-vacaciones.component';
+import { BancosNacionalesExtranjerosComponent } from './modules/tsr/forms/bancos/bancos-nacionales-extranjeros.component';
+import { BancosComponent } from './modules/tsr/forms/bancos/bancos.component';
+import { GruposCajasComponent } from './modules/tsr/forms/cajas-logicas/grupos/grupos-cajas.component';
+import { ChequeraComponent } from './modules/tsr/forms/chequeras/chequera/chequera.component';
+import { RecepcionChequeraComponent } from './modules/tsr/forms/chequeras/recepcion-chequera/recepcion-chequera.component';
+import { SolicitudChequeraComponent } from './modules/tsr/forms/chequeras/solicitud-chequera/solicitud-chequera.component';
+import { CierreCajaComponent } from './modules/tsr/forms/cobros/cierre-caja/cierre-caja.component';
+import { ConsultasCierresComponent } from './modules/tsr/forms/cobros/consultas/cierres/consultas-cierres.component';
+import { ConsultasCobrosComponent } from './modules/tsr/forms/cobros/consultas/cobros/consultas-cobros.component';
+import { EnvioDepositosComponent } from './modules/tsr/forms/cobros/depositos/envio/envio-depositos.component';
+import { RatificacionDepositosComponent } from './modules/tsr/forms/cobros/depositos/ratificacion/ratificacion-depositos.component';
+import { CobrosIngresarComponent } from './modules/tsr/forms/cobros/ingresar/cobros-ingresar.component';
+import { ProcesosCierresComponent } from './modules/tsr/forms/cobros/procesos/procesos-cierres.component';
+import { ProcesosCobrosComponent } from './modules/tsr/forms/cobros/procesos/procesos-cobros.component';
+import { ProcesosDepositosComponent } from './modules/tsr/forms/cobros/procesos/procesos-depositos.component';
+import { ProcesosRatificacionDepositosComponent } from './modules/tsr/forms/cobros/procesos/procesos-ratificacion-depositos.component';
+import { CuentasBancariasComponent } from './modules/tsr/forms/cuentas-bancarias/cuentas-bancarias.component';
+import { ConciliacionComponent } from './modules/tsr/forms/generales/conciliacion/conciliacion.component';
+import { ConsultaConciliacionComponent } from './modules/tsr/forms/generales/consulta-conciliacion/consulta-conciliacion.component';
+import { RiedComponent } from './modules/tsr/forms/generales/ried/ried.component';
+import { CreditosComponent } from './modules/tsr/forms/movimientos-bancarios/creditos/creditos.component';
+import { DebitosComponent } from './modules/tsr/forms/movimientos-bancarios/debitos/debitos.component';
+import { TransferenciasComponent } from './modules/tsr/forms/movimientos-bancarios/transferencias/transferencias.component';
+import { ChequesEntregaComponent } from './modules/tsr/forms/pagos/cheques/entrega/cheques-entrega.component';
+import { ChequesImpresionComponent } from './modules/tsr/forms/pagos/cheques/impresion/cheques-impresion.component';
+import { ConsultasChequesComponent } from './modules/tsr/forms/pagos/consultas/cheques/consultas-cheques.component';
+import { ConsultasPagosComponent } from './modules/tsr/forms/pagos/consultas/pagos/consultas-pagos.component';
+import { PagosIngresarComponent } from './modules/tsr/forms/pagos/ingresar/pagos-ingresar.component';
+import { ChequesEntregadosProcComponent } from './modules/tsr/forms/pagos/procesos/entregados/cheques-entregados-proc.component';
+import { ChequesGeneradosComponent } from './modules/tsr/forms/pagos/procesos/generados/cheques-generados.component';
+import { ChequesImpresosProcComponent } from './modules/tsr/forms/pagos/procesos/impresos/cheques-impresos-proc.component';
+import { SolicitudPagosComponent } from './modules/tsr/forms/pagos/procesos/solicitud/solicitud-pagos.component';
+import { PersonasComponent } from './modules/tsr/forms/personas/personas.component';
 import { TsrPlaceholderComponent } from './modules/tsr/forms/placeholder/tsr-placeholder.component';
 import { MenutesoreriaComponent } from './modules/tsr/menu/menutesoreria/menutesoreria.component';
 import { authGuard } from './shared/guard/auth.guard';
@@ -194,43 +227,49 @@ export const routes: Routes = [
       },
       {
         path: 'parametrizacion/bancos/nacionales-extranjeros',
-        component: TsrPlaceholderComponent,
+        component: BancosNacionalesExtranjerosComponent,
         canActivate: [authGuard],
         data: { title: 'Nacionales y Extranjeros' },
       },
       {
         path: 'parametrizacion/bancos/mis-bancos/bancos',
-        component: TsrPlaceholderComponent,
+        component: BancosComponent,
         canActivate: [authGuard],
         data: { title: 'Mis Bancos - Bancos' },
       },
       {
         path: 'parametrizacion/bancos/mis-bancos/cuentas-bancarias',
-        component: TsrPlaceholderComponent,
+        component: CuentasBancariasComponent,
         canActivate: [authGuard],
         data: { title: 'Mis Bancos - Cuentas Bancarias' },
       },
       {
         path: 'parametrizacion/bancos/mis-bancos/chequeras/solicitud',
-        component: TsrPlaceholderComponent,
+        component: SolicitudChequeraComponent,
         canActivate: [authGuard],
         data: { title: 'Solicitud Chequera' },
       },
       {
+        path: 'parametrizacion/bancos/mis-bancos/chequeras/chequera',
+        component: ChequeraComponent,
+        canActivate: [authGuard],
+        data: { title: 'Chequera' },
+      },
+      {
         path: 'parametrizacion/bancos/mis-bancos/chequeras/recepcion',
-        component: TsrPlaceholderComponent,
+        component: RecepcionChequeraComponent,
         canActivate: [authGuard],
         data: { title: 'Recepción Chequera' },
       },
       {
         path: 'parametrizacion/bancos/mis-bancos/chequeras/cheques',
-        component: TsrPlaceholderComponent,
+        component: ChequeraComponent,
         canActivate: [authGuard],
         data: { title: 'Cheques' },
       },
       {
         path: 'parametrizacion/cajas/logicas/grupos',
-        component: TsrPlaceholderComponent,
+        component: GruposCajasComponent,
         canActivate: [authGuard],
         data: { title: 'Grupos' },
       },
@@ -248,7 +287,7 @@ export const routes: Routes = [
       },
       {
         path: 'parametrizacion/personas',
-        component: TsrPlaceholderComponent,
+        component: PersonasComponent,
         canActivate: [authGuard],
         data: { title: 'Personas' },
       },
@@ -256,61 +295,61 @@ export const routes: Routes = [
       // Procesos - Cobros
       {
         path: 'procesos/cobros/ingresar',
-        component: TsrPlaceholderComponent,
+        component: CobrosIngresarComponent,
         canActivate: [authGuard],
         data: { title: 'Cobros - Ingresar' },
       },
       {
         path: 'procesos/cobros/cierre-caja',
-        component: TsrPlaceholderComponent,
+        component: CierreCajaComponent,
         canActivate: [authGuard],
         data: { title: 'Cobros - Cierre de Caja' },
       },
       {
         path: 'procesos/cobros/depositos/envio',
-        component: TsrPlaceholderComponent,
+        component: EnvioDepositosComponent,
         canActivate: [authGuard],
         data: { title: 'Cobros - Depósitos Envío' },
       },
       {
         path: 'procesos/cobros/depositos/ratificacion',
-        component: TsrPlaceholderComponent,
+        component: RatificacionDepositosComponent,
         canActivate: [authGuard],
         data: { title: 'Cobros - Depósitos Ratificación' },
       },
       {
         path: 'procesos/cobros/consultas/cobros',
-        component: TsrPlaceholderComponent,
+        component: ConsultasCobrosComponent,
         canActivate: [authGuard],
         data: { title: 'Consultas - Cobros' },
       },
       {
         path: 'procesos/cobros/consultas/cierres',
-        component: TsrPlaceholderComponent,
+        component: ConsultasCierresComponent,
         canActivate: [authGuard],
         data: { title: 'Consultas - Cierres' },
       },
       {
         path: 'procesos/cobros/procesos/cobros',
-        component: TsrPlaceholderComponent,
+        component: ProcesosCobrosComponent,
         canActivate: [authGuard],
         data: { title: 'Procesos - Cobros' },
       },
       {
         path: 'procesos/cobros/procesos/cierres',
-        component: TsrPlaceholderComponent,
+        component: ProcesosCierresComponent,
         canActivate: [authGuard],
         data: { title: 'Procesos - Cierres' },
       },
       {
         path: 'procesos/cobros/procesos/depositos',
-        component: TsrPlaceholderComponent,
+        component: ProcesosDepositosComponent,
         canActivate: [authGuard],
         data: { title: 'Procesos - Depósitos' },
       },
       {
         path: 'procesos/cobros/procesos/ratificacion-depositos',
-        component: TsrPlaceholderComponent,
+        component: ProcesosRatificacionDepositosComponent,
         canActivate: [authGuard],
         data: { title: 'Procesos - Ratificación Depósitos' },
       },
@@ -318,55 +357,55 @@ export const routes: Routes = [
       // Procesos - Pagos
       {
         path: 'procesos/pagos/ingreso',
-        component: TsrPlaceholderComponent,
+        component: PagosIngresarComponent,
         canActivate: [authGuard],
         data: { title: 'Pagos - Ingreso' },
       },
       {
         path: 'procesos/pagos/cheques/impresion',
-        component: TsrPlaceholderComponent,
+        component: ChequesImpresionComponent,
         canActivate: [authGuard],
         data: { title: 'Pagos - Cheques Impresión' },
       },
       {
         path: 'procesos/pagos/cheques/entrega',
-        component: TsrPlaceholderComponent,
+        component: ChequesEntregaComponent,
         canActivate: [authGuard],
         data: { title: 'Pagos - Cheques Entrega' },
       },
       {
         path: 'procesos/pagos/consulta/pagos',
-        component: TsrPlaceholderComponent,
+        component: ConsultasPagosComponent,
         canActivate: [authGuard],
         data: { title: 'Consulta - Pagos' },
       },
       {
         path: 'procesos/pagos/consulta/cheques',
-        component: TsrPlaceholderComponent,
+        component: ConsultasChequesComponent,
         canActivate: [authGuard],
         data: { title: 'Consulta - Cheques' },
       },
       {
         path: 'procesos/pagos/procesos/solicitud-pagos',
-        component: TsrPlaceholderComponent,
+        component: SolicitudPagosComponent,
         canActivate: [authGuard],
         data: { title: 'Procesos - Solicitud Pagos' },
       },
       {
         path: 'procesos/pagos/procesos/cheques-generados',
-        component: TsrPlaceholderComponent,
+        component: ChequesGeneradosComponent,
         canActivate: [authGuard],
         data: { title: 'Procesos - Cheques Generados' },
       },
       {
         path: 'procesos/pagos/procesos/cheques-impresos',
-        component: TsrPlaceholderComponent,
+        component: ChequesImpresosProcComponent,
         canActivate: [authGuard],
         data: { title: 'Procesos - Cheques Impresos' },
       },
       {
         path: 'procesos/pagos/procesos/cheques-entregados',
-        component: TsrPlaceholderComponent,
+        component: ChequesEntregadosProcComponent,
         canActivate: [authGuard],
         data: { title: 'Procesos - Cheques Entregados' },
       },
@@ -374,19 +413,19 @@ export const routes: Routes = [
       // Procesos - Movimientos Bancarios
       {
         path: 'procesos/movimientos-bancarios/debitos',
-        component: TsrPlaceholderComponent,
+        component: DebitosComponent,
         canActivate: [authGuard],
         data: { title: 'Movimientos Bancarios - Débitos' },
       },
       {
         path: 'procesos/movimientos-bancarios/creditos',
-        component: TsrPlaceholderComponent,
+        component: CreditosComponent,
         canActivate: [authGuard],
         data: { title: 'Movimientos Bancarios - Créditos' },
       },
       {
         path: 'procesos/movimientos-bancarios/transferencias',
-        component: TsrPlaceholderComponent,
+        component: TransferenciasComponent,
         canActivate: [authGuard],
         data: { title: 'Movimientos Bancarios - Transferencias' },
       },
@@ -394,19 +433,19 @@ export const routes: Routes = [
       // Procesos - Generales
       {
         path: 'procesos/generales/conciliacion',
-        component: TsrPlaceholderComponent,
+        component: ConciliacionComponent,
         canActivate: [authGuard],
         data: { title: 'Conciliación' },
       },
       {
         path: 'procesos/generales/consulta-conciliacion',
-        component: TsrPlaceholderComponent,
+        component: ConsultaConciliacionComponent,
         canActivate: [authGuard],
         data: { title: 'Consulta Conciliación' },
       },
       {
         path: 'procesos/generales/ried',
-        component: TsrPlaceholderComponent,
+        component: RiedComponent,
         canActivate: [authGuard],
         data: { title: 'RIED' },
       },

@@ -1,0 +1,138 @@
+<section class="page">
+  <header class="page-header">
+    <h2>Movimientos Bancarios · Transferencias</h2>
+    <div class="actions">
+      <button mat-raised-button color="primary" (click)="registrarTransferencia()">
+        <mat-icon>compare_arrows</mat-icon>
+        Registrar Transferencia
+      </button>
+    </div>
+  </header>
+
+  <div class="filters">
+    <mat-form-field appearance="outline">
+      <mat-label>Banco origen</mat-label>
+      <input
+        matInput
+        [value]="bancoOrigen()"
+        (input)="bancoOrigen.set($any($event.target).value)"
+      />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Cuenta origen</mat-label>
+      <input
+        matInput
+        [value]="cuentaOrigen()"
+        (input)="cuentaOrigen.set($any($event.target).value)"
+      />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Banco destino</mat-label>
+      <input
+        matInput
+        [value]="bancoDestino()"
+        (input)="bancoDestino.set($any($event.target).value)"
+      />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Cuenta destino</mat-label>
+      <input
+        matInput
+        [value]="cuentaDestino()"
+        (input)="cuentaDestino.set($any($event.target).value)"
+      />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Fecha desde</mat-label>
+      <input matInput [matDatepicker]="dpd" (dateChange)="fechaDesde.set($event.value)" />
+      <mat-datepicker-toggle matSuffix [for]="dpd"></mat-datepicker-toggle>
+      <mat-datepicker #dpd></mat-datepicker>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Fecha hasta</mat-label>
+      <input matInput [matDatepicker]="dph" (dateChange)="fechaHasta.set($event.value)" />
+      <mat-datepicker-toggle matSuffix [for]="dph"></mat-datepicker-toggle>
+      <mat-datepicker #dph></mat-datepicker>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Referencia</mat-label>
+      <input matInput [value]="referencia()" (input)="referencia.set($any($event.target).value)" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Monto mínimo</mat-label>
+      <input
+        matInput
+        type="number"
+        [value]="montoMin() ?? ''"
+        (input)="montoMin.set(+$any($event.target).value || null)"
+      />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Monto máximo</mat-label>
+      <input
+        matInput
+        type="number"
+        [value]="montoMax() ?? ''"
+        (input)="montoMax.set(+$any($event.target).value || null)"
+      />
+    </mat-form-field>
+
+    <button mat-stroked-button color="primary" class="buscar" (click)="buscar()">
+      <mat-icon>search</mat-icon>
+      Buscar
+    </button>
+  </div>
+
+  <div class="totals">
+    <span>Total registros: {{ totalRegistros() }}</span>
+    <span>Total monto: {{ totalMonto() | number : '1.2-2' }}</span>
+  </div>
+
+  <table mat-table [dataSource]="items()" class="mat-elevation-z1">
+    <ng-container matColumnDef="fecha">
+      <th mat-header-cell *matHeaderCellDef>Fecha</th>
+      <td mat-cell *matCellDef="let row">{{ row.fecha | date : 'dd/MM/yyyy' }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="origen">
+      <th mat-header-cell *matHeaderCellDef>Origen</th>
+      <td mat-cell *matCellDef="let row">{{ row.bancoOrigen }} · {{ row.cuentaOrigen }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="destino">
+      <th mat-header-cell *matHeaderCellDef>Destino</th>
+      <td mat-cell *matCellDef="let row">{{ row.bancoDestino }} · {{ row.cuentaDestino }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="referencia">
+      <th mat-header-cell *matHeaderCellDef>Referencia</th>
+      <td mat-cell *matCellDef="let row">{{ row.referencia }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="descripcion">
+      <th mat-header-cell *matHeaderCellDef>Descripción</th>
+      <td mat-cell *matCellDef="let row">{{ row.descripcion }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="monto">
+      <th mat-header-cell *matHeaderCellDef>Monto</th>
+      <td mat-cell *matCellDef="let row" class="num">{{ row.monto | number : '1.2-2' }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="estado">
+      <th mat-header-cell *matHeaderCellDef>Estado</th>
+      <td mat-cell *matCellDef="let row">{{ row.estado }}</td>
+    </ng-container>
+
+    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+    <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+  </table>
+</section>

@@ -1,0 +1,74 @@
+@use '../../../../../styles/abstracts/colors' as *;
+@use '../../../../../styles/abstracts/variables' as *;
+
+.cuentas-admin {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+  color: $text-primary;
+}
+
+.listas {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: $spacing-md;
+}
+
+.panel {
+  border: $border-width solid $border-light;
+  border-radius: $border-radius-md;
+  padding: $spacing-sm;
+  background: $background-primary;
+  box-shadow: 0 2px 6px $shadow-color-light;
+}
+
+.panel header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-sm $spacing-md;
+  margin: calc(-1 * $spacing-sm) calc(-1 * $spacing-sm) $spacing-sm;
+  border-radius: $border-radius-md $border-radius-md 0 0;
+  background: $background-gradient;
+  color: $text-light;
+}
+
+.bancos-table td.selected {
+  font-weight: 600;
+}
+
+.filter-field {
+  width: 220px;
+}
+
+.form-panel {
+  border: $border-width solid $border-light;
+  border-radius: $border-radius-md;
+  padding: $spacing-md;
+  background: $background-primary;
+  box-shadow: 0 2px 6px $shadow-color-light;
+}
+
+.form-grid {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $spacing-sm;
+}
+
+.row-4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+.span-2 {
+  grid-column: span 2;
+}
+
+.actions {
+  display: flex;
+  gap: $spacing-sm;
+}

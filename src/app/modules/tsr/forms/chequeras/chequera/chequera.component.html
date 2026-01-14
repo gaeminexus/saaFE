@@ -1,0 +1,117 @@
+<div class="chequera-page">
+  <h1>Chequera</h1>
+
+  <div class="form-card">
+    <div class="section-title">FILTRO DE CUENTAS</div>
+
+    <div class="row">
+      <mat-form-field appearance="outline">
+        <mat-label>Bancos</mat-label>
+        <mat-select [value]="selectedBancoId()" (selectionChange)="onBancoChange($event.value)">
+          <mat-option [value]="null">Seleccione ...</mat-option>
+          @for (banco of bancos(); track banco.id) {
+          <mat-option [value]="banco.id">{{ banco.nombre }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Cuentas Bancarias</mat-label>
+        <mat-select
+          [disabled]="!selectedBancoId()"
+          [value]="selectedCuentaId()"
+          (selectionChange)="onCuentaChange($event.value)"
+        >
+          <mat-option [value]="null">Seleccione ...</mat-option>
+          @for (cuenta of cuentas(); track cuenta.id) { @if (cuenta.bancoId === selectedBancoId()) {
+          <mat-option [value]="cuenta.id">{{ cuenta.numero }}</mat-option>
+          } }
+        </mat-select>
+      </mat-form-field>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-title">CHEQUERAS</div>
+    <table mat-table [dataSource]="chequeras()" class="mat-elevation-z0">
+      <ng-container matColumnDef="fechaSolicitud">
+        <th mat-header-cell *matHeaderCellDef>FECHA SOLICITUD</th>
+        <td mat-cell *matCellDef="let row">{{ row.fechaSolicitud }}</td>
+      </ng-container>
+      <ng-container matColumnDef="fechaEntrega">
+        <th mat-header-cell *matHeaderCellDef>FECHA ENTREGA</th>
+        <td mat-cell *matCellDef="let row">{{ row.fechaEntrega }}</td>
+      </ng-container>
+      <ng-container matColumnDef="numeroCheques">
+        <th mat-header-cell *matHeaderCellDef>NUMERO CHEQUES</th>
+        <td mat-cell *matCellDef="let row">{{ row.numeroCheques }}</td>
+      </ng-container>
+      <ng-container matColumnDef="chequeDesde">
+        <th mat-header-cell *matHeaderCellDef>CHEQUE DESDE</th>
+        <td mat-cell *matCellDef="let row">{{ row.chequeDesde }}</td>
+      </ng-container>
+      <ng-container matColumnDef="chequeHasta">
+        <th mat-header-cell *matHeaderCellDef>CHEQUE HASTA</th>
+        <td mat-cell *matCellDef="let row">{{ row.chequeHasta }}</td>
+      </ng-container>
+      <ng-container matColumnDef="estado">
+        <th mat-header-cell *matHeaderCellDef>ESTADO</th>
+        <td mat-cell *matCellDef="let row">{{ row.estado }}</td>
+      </ng-container>
+      <tr mat-header-row *matHeaderRowDef="chequerasColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: chequerasColumns"></tr>
+    </table>
+  </div>
+
+  <div class="table-card">
+    <div class="table-title">CHEQUES</div>
+    <table mat-table [dataSource]="cheques()" class="mat-elevation-z0">
+      <ng-container matColumnDef="cheque">
+        <th mat-header-cell *matHeaderCellDef>CHEQUE</th>
+        <td mat-cell *matCellDef="let row">{{ row.cheque }}</td>
+      </ng-container>
+      <ng-container matColumnDef="numero">
+        <th mat-header-cell *matHeaderCellDef>NUMERO</th>
+        <td mat-cell *matCellDef="let row">{{ row.numero }}</td>
+      </ng-container>
+      <ng-container matColumnDef="fechaUso">
+        <th mat-header-cell *matHeaderCellDef>F. USO</th>
+        <td mat-cell *matCellDef="let row">{{ row.fechaUso }}</td>
+      </ng-container>
+      <ng-container matColumnDef="fechaImpresion">
+        <th mat-header-cell *matHeaderCellDef>F. IMPRESION</th>
+        <td mat-cell *matCellDef="let row">{{ row.fechaImpresion }}</td>
+      </ng-container>
+      <ng-container matColumnDef="fechaEntrega">
+        <th mat-header-cell *matHeaderCellDef>F. ENTREGA</th>
+        <td mat-cell *matCellDef="let row">{{ row.fechaEntrega }}</td>
+      </ng-container>
+      <ng-container matColumnDef="asiento">
+        <th mat-header-cell *matHeaderCellDef>ASIENTO</th>
+        <td mat-cell *matCellDef="let row">{{ row.asiento }}</td>
+      </ng-container>
+      <ng-container matColumnDef="beneficiario">
+        <th mat-header-cell *matHeaderCellDef>BENEFICIARIO</th>
+        <td mat-cell *matCellDef="let row">{{ row.beneficiario }}</td>
+      </ng-container>
+      <ng-container matColumnDef="monto">
+        <th mat-header-cell *matHeaderCellDef>MONTO</th>
+        <td mat-cell *matCellDef="let row">{{ row.monto }}</td>
+      </ng-container>
+      <ng-container matColumnDef="fechaCaducidad">
+        <th mat-header-cell *matHeaderCellDef>F. CADUCIDAD</th>
+        <td mat-cell *matCellDef="let row">{{ row.fechaCaducidad }}</td>
+      </ng-container>
+      <ng-container matColumnDef="fechaAnulacion">
+        <th mat-header-cell *matHeaderCellDef>F. ANULACION</th>
+        <td mat-cell *matCellDef="let row">{{ row.fechaAnulacion }}</td>
+      </ng-container>
+      <ng-container matColumnDef="estado">
+        <th mat-header-cell *matHeaderCellDef>ESTADO</th>
+        <td mat-cell *matCellDef="let row">{{ row.estado }}</td>
+      </ng-container>
+      <tr mat-header-row *matHeaderRowDef="chequesColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: chequesColumns"></tr>
+    </table>
+  </div>
+</div>

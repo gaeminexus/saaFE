@@ -1,0 +1,33 @@
+@use '../../../../../../styles/abstracts/_colors.scss' as *;
+@use '../../../../../../styles/abstracts/_variables.scss' as *;
+
+.procesos-ratificacion-depositos {
+  padding: 16px;
+
+  .toolbar {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+
+    h2 {
+      margin: 0;
+      color: $text-primary;
+    }
+
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+
+      .field {
+        min-width: 220px;
+      }
+    }
+  }
+
+  .error {
+    color: $error-color;
+    margin-top: 8px;
+  }
+}

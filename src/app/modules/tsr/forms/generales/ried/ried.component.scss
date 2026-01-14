@@ -1,0 +1,28 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.filters {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+.totals {
+  display: flex;
+  gap: 24px;
+  font-weight: 600;
+}
+.mat-column-ingresos,
+.mat-column-egresos,
+.mat-column-saldo {
+  text-align: right;
+}
+.num {
+  text-align: right;
+}

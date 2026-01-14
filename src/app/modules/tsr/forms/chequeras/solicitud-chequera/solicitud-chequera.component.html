@@ -1,0 +1,51 @@
+<div class="solicitud-page">
+  <h2>Solicitud de Chequera</h2>
+
+  <div class="form-card">
+    <div class="row">
+      <mat-form-field appearance="outline">
+        <mat-label>Banco</mat-label>
+        <mat-select [(ngModel)]="bancoSel" (selectionChange)="onBancoChange($event.value)">
+          <mat-option [value]="null">Seleccione ...</mat-option>
+          <mat-option *ngFor="let b of bancos()" [value]="b">{{ b.nombre }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Cuenta Bancaria</mat-label>
+        <mat-select [(ngModel)]="cuentaSel">
+          <mat-option [value]="null">Seleccione ...</mat-option>
+          <mat-option *ngFor="let c of cuentasFiltradas()" [value]="c">{{
+            c.numeroCuenta
+          }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+    </div>
+
+    <div class="row">
+      <mat-form-field appearance="outline">
+        <mat-label>Fecha de solicitud</mat-label>
+        <input matInput type="date" [(ngModel)]="fechaSolicitud" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Número de cheques</mat-label>
+        <input matInput type="number" min="1" [(ngModel)]="numeroCheques" />
+      </mat-form-field>
+    </div>
+
+    <div class="actions">
+      <button
+        mat-raised-button
+        color="primary"
+        (click)="solicitar()"
+        [disabled]="!formValido() || loading()"
+      >
+        <mat-icon>playlist_add</mat-icon>
+        Solicitar
+      </button>
+      <span class="msg ok" *ngIf="successMsg()">{{ successMsg() }}</span>
+      <span class="msg err" *ngIf="errorMsg()">{{ errorMsg() }}</span>
+    </div>
+  </div>
+</div>

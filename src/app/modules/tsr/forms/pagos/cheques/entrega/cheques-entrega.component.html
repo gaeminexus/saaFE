@@ -1,0 +1,103 @@
+<div class="cheques-entrega">
+  <mat-card>
+    <mat-card-title>Cheques · Entrega</mat-card-title>
+    <mat-card-content>
+      <div class="filters">
+        <mat-form-field appearance="outline">
+          <mat-label>Desde</mat-label>
+          <input matInput [matDatepicker]="d1" (dateChange)="fechaDesde.set($event.value)" />
+          <mat-datepicker-toggle matSuffix [for]="d1"></mat-datepicker-toggle>
+          <mat-datepicker #d1></mat-datepicker>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Hasta</mat-label>
+          <input matInput [matDatepicker]="d2" (dateChange)="fechaHasta.set($event.value)" />
+          <mat-datepicker-toggle matSuffix [for]="d2"></mat-datepicker-toggle>
+          <mat-datepicker #d2></mat-datepicker>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full">
+          <mat-label>Beneficiario</mat-label>
+          <input matInput (input)="beneficiarioFiltro.set($any($event.target).value)" />
+        </mat-form-field>
+      </div>
+
+      @if (errorMsg()) {
+      <div class="error">{{ errorMsg() }}</div>
+      }
+
+      <div class="actions">
+        <button mat-stroked-button color="basic" (click)="limpiarFiltros()">
+          <mat-icon>refresh</mat-icon>
+          Limpiar filtros
+        </button>
+      </div>
+
+      <div class="table-wrapper">
+        <table mat-table [dataSource]="cheques()" class="mat-elevation-z1 full-width">
+          <ng-container matColumnDef="select">
+            <th mat-header-cell *matHeaderCellDef>
+              <mat-checkbox
+                [checked]="allSelected()"
+                (change)="toggleAll($any($event).checked)"
+              ></mat-checkbox>
+            </th>
+            <td mat-cell *matCellDef="let row; let i = index">
+              <mat-checkbox
+                [checked]="selected().has(i)"
+                (change)="toggleOne(i, $any($event).checked)"
+              ></mat-checkbox>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="numero">
+            <th mat-header-cell *matHeaderCellDef>Número</th>
+            <td mat-cell *matCellDef="let c">{{ c.numero }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="beneficiario">
+            <th mat-header-cell *matHeaderCellDef>Beneficiario</th>
+            <td mat-cell *matCellDef="let c">{{ c.beneficiario }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="valor">
+            <th mat-header-cell *matHeaderCellDef>Valor</th>
+            <td mat-cell *matCellDef="let c">{{ c.valor | number : '1.2-2' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="fecha">
+            <th mat-header-cell *matHeaderCellDef>Impresión</th>
+            <td mat-cell *matCellDef="let c">{{ c.fechaImpresion }}</td>
+          </ng-container>
+
+          <tr
+            mat-header-row
+            *matHeaderRowDef="['select', 'numero', 'beneficiario', 'valor', 'fecha']"
+          ></tr>
+          <tr
+            mat-row
+            *matRowDef="let row; columns: ['select', 'numero', 'beneficiario', 'valor', 'fecha']"
+          ></tr>
+        </table>
+      </div>
+
+      <div class="totals">
+        Seleccionados: <strong>{{ selectedCount() }}</strong> — Total:
+        <strong>{{ selectedTotal() | number : '1.2-2' }}</strong>
+      </div>
+
+      <div class="actions">
+        <button
+          mat-flat-button
+          color="primary"
+          (click)="registrarEntrega()"
+          [disabled]="loading() || selectedCount() === 0"
+        >
+          <mat-icon>assignment_turned_in</mat-icon>
+          Registrar entrega
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

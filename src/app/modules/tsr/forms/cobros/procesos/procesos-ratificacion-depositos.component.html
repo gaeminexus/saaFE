@@ -1,0 +1,42 @@
+<div class="procesos-ratificacion-depositos">
+  <div class="toolbar">
+    <h2>Procesos - Ratificación Depósitos</h2>
+    <div class="filters">
+      <mat-form-field appearance="outline" class="field">
+        <mat-label>Fecha</mat-label>
+        <input
+          matInput
+          [matDatepicker]="picker"
+          [value]="fecha()"
+          (dateChange)="fecha.set($event.value)"
+        />
+        <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+        <mat-datepicker #picker></mat-datepicker>
+      </mat-form-field>
+
+      <button mat-raised-button color="primary" (click)="procesar()" [disabled]="loading()">
+        <mat-icon>play_circle</mat-icon>
+        Procesar
+      </button>
+      <button mat-button (click)="limpiar()">
+        <mat-icon>filter_alt_off</mat-icon>
+        Limpiar
+      </button>
+    </div>
+  </div>
+
+  @if (errorMsg()) {
+  <div class="error">{{ errorMsg() }}</div>
+  }
+
+  <mat-card>
+    <mat-card-title>Bitácora</mat-card-title>
+    <mat-card-content>
+      <ul>
+        @for (line of logs(); track $index) {
+        <li>{{ line }}</li>
+        }
+      </ul>
+    </mat-card-content>
+  </mat-card>
+</div>

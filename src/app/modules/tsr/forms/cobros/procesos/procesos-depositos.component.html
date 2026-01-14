@@ -1,0 +1,85 @@
+<div class="procesos-depositos">
+  <mat-card>
+    <mat-card-title>Procesos · Depósitos</mat-card-title>
+    <mat-card-content>
+      <div class="filters">
+        <mat-form-field appearance="outline">
+          <mat-label>Fecha inicio</mat-label>
+          <input matInput [matDatepicker]="dp1" (dateChange)="fechaInicio.set($event.value)" />
+          <mat-datepicker-toggle matSuffix [for]="dp1"></mat-datepicker-toggle>
+          <mat-datepicker #dp1></mat-datepicker>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Fecha fin</mat-label>
+          <input matInput [matDatepicker]="dp2" (dateChange)="fechaFin.set($event.value)" />
+          <mat-datepicker-toggle matSuffix [for]="dp2"></mat-datepicker-toggle>
+          <mat-datepicker #dp2></mat-datepicker>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Banco (código)</mat-label>
+          <input
+            matInput
+            type="number"
+            (input)="bancoCodigo.set(+$any($event.target).value || null)"
+          />
+        </mat-form-field>
+      </div>
+
+      @if (errorMsg()) {
+      <div class="error">{{ errorMsg() }}</div>
+      }
+
+      <div class="table-wrapper">
+        <table mat-table [dataSource]="detalles()" class="mat-elevation-z1 full-width">
+          <ng-container matColumnDef="numero">
+            <th mat-header-cell *matHeaderCellDef>Número</th>
+            <td mat-cell *matCellDef="let d">{{ d.numeroDeposito }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="efectivo">
+            <th mat-header-cell *matHeaderCellDef>Efectivo</th>
+            <td mat-cell *matCellDef="let d">{{ d.valorEfectivo | number : '1.2-2' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="cheque">
+            <th mat-header-cell *matHeaderCellDef>Cheque</th>
+            <td mat-cell *matCellDef="let d">{{ d.valorCheque | number : '1.2-2' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="total">
+            <th mat-header-cell *matHeaderCellDef>Total</th>
+            <td mat-cell *matCellDef="let d">{{ d.valor | number : '1.2-2' }}</td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="['numero', 'efectivo', 'cheque', 'total']"></tr>
+          <tr mat-row *matRowDef="let row; columns: ['numero', 'efectivo', 'cheque', 'total']"></tr>
+        </table>
+      </div>
+
+      <div class="totals">
+        <div>
+          Efectivo: <strong>{{ totals().efectivo | number : '1.2-2' }}</strong>
+        </div>
+        <div>
+          Cheque: <strong>{{ totals().cheque | number : '1.2-2' }}</strong>
+        </div>
+        <div>
+          Total: <strong>{{ totals().total | number : '1.2-2' }}</strong>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button mat-flat-button color="primary" (click)="generarDeposito()" [disabled]="loading()">
+          <mat-icon>payments</mat-icon>
+          Generar depósito
+        </button>
+        <button mat-stroked-button color="basic" (click)="limpiar()" [disabled]="loading()">
+          <mat-icon>refresh</mat-icon>
+          Limpiar
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

@@ -1,0 +1,40 @@
+<div class="grupos-page">
+  <h1>{{ title }}</h1>
+
+  <div class="table-card">
+    <div class="table-title">DATOS</div>
+
+    <div class="toolbar">
+      <button mat-button (click)="insertar()"><mat-icon>add</mat-icon> Insertar</button>
+      <button mat-button (click)="eliminar()"><mat-icon>remove</mat-icon> Eliminar</button>
+      <button mat-button (click)="modificar()"><mat-icon>edit</mat-icon> Modificar</button>
+      <button mat-button (click)="aceptar()"><mat-icon>check</mat-icon> Aceptar</button>
+      <button mat-button (click)="cancelar()"><mat-icon>close</mat-icon> Cancelar</button>
+    </div>
+
+    <table mat-table [dataSource]="grupos()" class="mat-elevation-z0">
+      <ng-container matColumnDef="nombre">
+        <th mat-header-cell *matHeaderCellDef>NOMBRE</th>
+        <td mat-cell *matCellDef="let row">{{ row.nombre }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="fIngreso">
+        <th mat-header-cell *matHeaderCellDef>F.INGRESO</th>
+        <td mat-cell *matCellDef="let row">{{ row.fIngreso }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="fEliminacion">
+        <th mat-header-cell *matHeaderCellDef>F.ELIMINACION</th>
+        <td mat-cell *matCellDef="let row">{{ row.fEliminacion }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="estado">
+        <th mat-header-cell *matHeaderCellDef>ESTADO</th>
+        <td mat-cell *matCellDef="let row">{{ row.estado }}</td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+    </table>
+  </div>
+</div>

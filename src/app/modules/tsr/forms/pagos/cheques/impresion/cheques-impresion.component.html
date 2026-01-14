@@ -1,0 +1,114 @@
+<div class="cheques-impresion">
+  <mat-card>
+    <mat-card-title>Cheques · Impresión</mat-card-title>
+    <mat-card-content>
+      <div class="filters">
+        <mat-form-field appearance="outline">
+          <mat-label>Fecha inicio</mat-label>
+          <input matInput [matDatepicker]="d1" (dateChange)="fechaInicio.set($event.value)" />
+          <mat-datepicker-toggle matSuffix [for]="d1"></mat-datepicker-toggle>
+          <mat-datepicker #d1></mat-datepicker>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Fecha fin</mat-label>
+          <input matInput [matDatepicker]="d2" (dateChange)="fechaFin.set($event.value)" />
+          <mat-datepicker-toggle matSuffix [for]="d2"></mat-datepicker-toggle>
+          <mat-datepicker #d2></mat-datepicker>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Banco</mat-label>
+          <mat-select (selectionChange)="bancoCodigo.set($any($event.value))">
+            <mat-option [value]="null">Todos</mat-option>
+            <mat-option *ngFor="let b of bancos" [value]="b.codigo">{{ b.nombre }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Cuenta</mat-label>
+          <mat-select (selectionChange)="cuentaNumero.set($any($event.value))">
+            <mat-option [value]="''">Todas</mat-option>
+            <mat-option *ngFor="let c of cuentas" [value]="c.numero">{{ c.numero }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+
+      @if (errorMsg()) {
+      <div class="error">{{ errorMsg() }}</div>
+      }
+
+      <div class="actions">
+        <button mat-stroked-button color="basic" (click)="limpiarFiltros()">
+          <mat-icon>refresh</mat-icon>
+          Limpiar filtros
+        </button>
+      </div>
+
+      <div class="table-wrapper">
+        <table mat-table [dataSource]="cheques()" class="mat-elevation-z1 full-width">
+          <ng-container matColumnDef="select">
+            <th mat-header-cell *matHeaderCellDef>
+              <mat-checkbox
+                [checked]="allSelected()"
+                (change)="toggleAll($any($event).checked)"
+              ></mat-checkbox>
+            </th>
+            <td mat-cell *matCellDef="let row; let i = index">
+              <mat-checkbox
+                [checked]="selected().has(i)"
+                (change)="toggleOne(i, $any($event).checked)"
+              ></mat-checkbox>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="numero">
+            <th mat-header-cell *matHeaderCellDef>Número</th>
+            <td mat-cell *matCellDef="let c">{{ c.numero }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="beneficiario">
+            <th mat-header-cell *matHeaderCellDef>Beneficiario</th>
+            <td mat-cell *matCellDef="let c">{{ c.beneficiario }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="valor">
+            <th mat-header-cell *matHeaderCellDef>Valor</th>
+            <td mat-cell *matCellDef="let c">{{ c.valor | number : '1.2-2' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="fecha">
+            <th mat-header-cell *matHeaderCellDef>Emisión</th>
+            <td mat-cell *matCellDef="let c">{{ c.fechaEmision }}</td>
+          </ng-container>
+
+          <tr
+            mat-header-row
+            *matHeaderRowDef="['select', 'numero', 'beneficiario', 'valor', 'fecha']"
+          ></tr>
+          <tr
+            mat-row
+            *matRowDef="let row; columns: ['select', 'numero', 'beneficiario', 'valor', 'fecha']"
+          ></tr>
+        </table>
+      </div>
+
+      <div class="totals">
+        Seleccionados: <strong>{{ selectedCount() }}</strong> — Total:
+        <strong>{{ selectedTotal() | number : '1.2-2' }}</strong>
+      </div>
+
+      <div class="actions">
+        <button
+          mat-flat-button
+          color="primary"
+          (click)="imprimirSeleccionados()"
+          [disabled]="loading() || selectedCount() === 0"
+        >
+          <mat-icon>print</mat-icon>
+          Imprimir seleccionados
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

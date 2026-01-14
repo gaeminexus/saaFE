@@ -1,0 +1,119 @@
+<div class="procesos-cierres">
+  <div class="toolbar">
+    <h2>Procesos - Cierres</h2>
+    <div class="filters">
+      <mat-form-field appearance="outline" class="field">
+        <mat-label>Fecha</mat-label>
+        <input
+          matInput
+          [matDatepicker]="picker"
+          [value]="fecha()"
+          (dateChange)="fecha.set($event.value)"
+        />
+        <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+        <mat-datepicker #picker></mat-datepicker>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="field">
+        <mat-label>Código de Caja (opcional)</mat-label>
+        <input
+          matInput
+          type="number"
+          [value]="cajaCodigo() ?? ''"
+          (input)="cajaCodigo.set($any($event.target).value ? +$any($event.target).value : null)"
+        />
+      </mat-form-field>
+
+      <button mat-raised-button color="primary" (click)="generarCierre()" [disabled]="loading()">
+        <mat-icon>task_alt</mat-icon>
+        Generar Cierre
+      </button>
+      <button mat-button (click)="limpiar()">
+        <mat-icon>filter_alt_off</mat-icon>
+        Limpiar
+      </button>
+    </div>
+  </div>
+
+  @if (errorMsg()) {
+  <div class="error">{{ errorMsg() }}</div>
+  }
+
+  <mat-card>
+    <mat-card-title>Detalle de Cierre</mat-card-title>
+    <mat-card-content>
+      <table mat-table [dataSource]="detalles()" class="mat-elevation-z1">
+        <ng-container matColumnDef="cliente">
+          <th mat-header-cell *matHeaderCellDef>Cliente</th>
+          <td mat-cell *matCellDef="let row">{{ row.nombreCliente }}</td>
+        </ng-container>
+        <ng-container matColumnDef="fechaCobro">
+          <th mat-header-cell *matHeaderCellDef>Fecha Cobro</th>
+          <td mat-cell *matCellDef="let row">{{ row.fechaCobro | date : 'dd/MM/yyyy' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="efectivo">
+          <th mat-header-cell *matHeaderCellDef>Efectivo</th>
+          <td mat-cell *matCellDef="let row">{{ row.valorEfectivo | number : '1.2-2' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="cheque">
+          <th mat-header-cell *matHeaderCellDef>Cheque</th>
+          <td mat-cell *matCellDef="let row">{{ row.valorCheque | number : '1.2-2' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="tarjeta">
+          <th mat-header-cell *matHeaderCellDef>Tarjeta</th>
+          <td mat-cell *matCellDef="let row">{{ row.valorTarjeta | number : '1.2-2' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="transferencia">
+          <th mat-header-cell *matHeaderCellDef>Transferencia</th>
+          <td mat-cell *matCellDef="let row">{{ row.valorTransferencia | number : '1.2-2' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="retencion">
+          <th mat-header-cell *matHeaderCellDef>Retención</th>
+          <td mat-cell *matCellDef="let row">{{ row.valorRetencion | number : '1.2-2' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="total">
+          <th mat-header-cell *matHeaderCellDef>Total</th>
+          <td mat-cell *matCellDef="let row">{{ row.valorTotal | number : '1.2-2' }}</td>
+        </ng-container>
+
+        <tr
+          mat-header-row
+          *matHeaderRowDef="[
+            'cliente',
+            'fechaCobro',
+            'efectivo',
+            'cheque',
+            'tarjeta',
+            'transferencia',
+            'retencion',
+            'total'
+          ]"
+        ></tr>
+        <tr
+          mat-row
+          *matRowDef="
+            let row;
+            columns: [
+              'cliente',
+              'fechaCobro',
+              'efectivo',
+              'cheque',
+              'tarjeta',
+              'transferencia',
+              'retencion',
+              'total'
+            ]
+          "
+        ></tr>
+      </table>
+      <div class="totals">
+        <strong>Totales:</strong>
+        Efectivo {{ totals().efectivo | number : '1.2-2' }} · Cheque
+        {{ totals().cheque | number : '1.2-2' }} · Tarjeta
+        {{ totals().tarjeta | number : '1.2-2' }} · Transferencia
+        {{ totals().transferencia | number : '1.2-2' }} · Retención
+        {{ totals().retencion | number : '1.2-2' }} · Total {{ totals().total | number : '1.2-2' }}
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

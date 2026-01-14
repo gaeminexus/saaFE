@@ -1,0 +1,81 @@
+<div class="consultas-cobros-container">
+  <div class="toolbar">
+    <h2>Consultas - Cobros</h2>
+    <div class="filters">
+      <mat-form-field appearance="outline" class="field">
+        <mat-label>Fecha inicio</mat-label>
+        <input
+          matInput
+          [matDatepicker]="pickerStart"
+          [value]="fechaInicio()"
+          (dateChange)="fechaInicio.set($event.value)"
+        />
+        <mat-datepicker-toggle matSuffix [for]="pickerStart"></mat-datepicker-toggle>
+        <mat-datepicker #pickerStart></mat-datepicker>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="field">
+        <mat-label>Fecha fin</mat-label>
+        <input
+          matInput
+          [matDatepicker]="pickerEnd"
+          [value]="fechaFin()"
+          (dateChange)="fechaFin.set($event.value)"
+        />
+        <mat-datepicker-toggle matSuffix [for]="pickerEnd"></mat-datepicker-toggle>
+        <mat-datepicker #pickerEnd></mat-datepicker>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="field field--wide">
+        <mat-label>Cliente</mat-label>
+        <input
+          matInput
+          [value]="clienteNombre()"
+          (input)="clienteNombre.set($any($event.target).value)"
+        />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="field">
+        <mat-label>Estado</mat-label>
+        <mat-select [value]="estado()" (selectionChange)="estado.set($any($event.value))">
+          <mat-option [value]="''">Todos</mat-option>
+          <mat-option value="PENDIENTE">Pendiente</mat-option>
+          <mat-option value="CERRADO">Cerrado</mat-option>
+          <mat-option value="ANULADO">Anulado</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <button mat-raised-button color="primary" (click)="limpiarFiltros()">
+        <mat-icon>filter_alt_off</mat-icon>
+        Limpiar filtros
+      </button>
+    </div>
+  </div>
+
+  <mat-card>
+    <mat-card-title>Resultados</mat-card-title>
+    <mat-card-content>
+      <table mat-table [dataSource]="filtered()" class="mat-elevation-z1">
+        <ng-container matColumnDef="fecha">
+          <th mat-header-cell *matHeaderCellDef>Fecha</th>
+          <td mat-cell *matCellDef="let row">{{ row.fecha | date : 'dd/MM/yyyy' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="cliente">
+          <th mat-header-cell *matHeaderCellDef>Cliente</th>
+          <td mat-cell *matCellDef="let row">{{ row.cliente }}</td>
+        </ng-container>
+        <ng-container matColumnDef="monto">
+          <th mat-header-cell *matHeaderCellDef>Monto</th>
+          <td mat-cell *matCellDef="let row">{{ row.monto | number : '1.2-2' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="estado">
+          <th mat-header-cell *matHeaderCellDef>Estado</th>
+          <td mat-cell *matCellDef="let row">{{ row.estado }}</td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="['fecha', 'cliente', 'monto', 'estado']"></tr>
+        <tr mat-row *matRowDef="let row; columns: ['fecha', 'cliente', 'monto', 'estado']"></tr>
+      </table>
+    </mat-card-content>
+  </mat-card>
+</div>

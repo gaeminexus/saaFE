@@ -1,0 +1,77 @@
+<div class="consultas-cierres-container">
+  <div class="toolbar">
+    <h2>Consultas - Cierres</h2>
+    <div class="filters">
+      <mat-form-field appearance="outline" class="field">
+        <mat-label>Fecha inicio</mat-label>
+        <input
+          matInput
+          [matDatepicker]="pickerStart"
+          [value]="fechaInicio()"
+          (dateChange)="fechaInicio.set($event.value)"
+        />
+        <mat-datepicker-toggle matSuffix [for]="pickerStart"></mat-datepicker-toggle>
+        <mat-datepicker #pickerStart></mat-datepicker>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="field">
+        <mat-label>Fecha fin</mat-label>
+        <input
+          matInput
+          [matDatepicker]="pickerEnd"
+          [value]="fechaFin()"
+          (dateChange)="fechaFin.set($event.value)"
+        />
+        <mat-datepicker-toggle matSuffix [for]="pickerEnd"></mat-datepicker-toggle>
+        <mat-datepicker #pickerEnd></mat-datepicker>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="field">
+        <mat-label>Código Caja</mat-label>
+        <input
+          matInput
+          type="number"
+          [value]="cajaCodigo() ?? ''"
+          (input)="cajaCodigo.set($any($event.target).value ? +$any($event.target).value : null)"
+        />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="field field--wide">
+        <mat-label>Usuario</mat-label>
+        <input matInput [value]="usuario()" (input)="usuario.set($any($event.target).value)" />
+      </mat-form-field>
+
+      <button mat-raised-button color="primary" (click)="limpiarFiltros()">
+        <mat-icon>filter_alt_off</mat-icon>
+        Limpiar filtros
+      </button>
+    </div>
+  </div>
+
+  <mat-card>
+    <mat-card-title>Resultados</mat-card-title>
+    <mat-card-content>
+      <table mat-table [dataSource]="filtered()" class="mat-elevation-z1">
+        <ng-container matColumnDef="fecha">
+          <th mat-header-cell *matHeaderCellDef>Fecha</th>
+          <td mat-cell *matCellDef="let row">{{ row.fecha | date : 'dd/MM/yyyy' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="caja">
+          <th mat-header-cell *matHeaderCellDef>Caja</th>
+          <td mat-cell *matCellDef="let row">{{ row.cajaCodigo }}</td>
+        </ng-container>
+        <ng-container matColumnDef="usuario">
+          <th mat-header-cell *matHeaderCellDef>Usuario</th>
+          <td mat-cell *matCellDef="let row">{{ row.usuario }}</td>
+        </ng-container>
+        <ng-container matColumnDef="total">
+          <th mat-header-cell *matHeaderCellDef>Total</th>
+          <td mat-cell *matCellDef="let row">{{ row.total | number : '1.2-2' }}</td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="['fecha', 'caja', 'usuario', 'total']"></tr>
+        <tr mat-row *matRowDef="let row; columns: ['fecha', 'caja', 'usuario', 'total']"></tr>
+      </table>
+    </mat-card-content>
+  </mat-card>
+</div>

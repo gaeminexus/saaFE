@@ -1,0 +1,32 @@
+@use '../../../../../../../styles/abstracts/_colors.scss' as *;
+@use '../../../../../../../styles/abstracts/_variables.scss' as *;
+
+.consultas-cierres-container {
+  padding: 16px;
+
+  .toolbar {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+
+    h2 {
+      color: $text-primary;
+      margin: 0;
+    }
+
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+
+      .field {
+        min-width: 220px;
+      }
+
+      .field--wide {
+        flex: 1 1 100%;
+      }
+    }
+  }
+}

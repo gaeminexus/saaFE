@@ -1,0 +1,66 @@
+<div class="recepcion-page">
+  <h1>Recepción de Chequera</h1>
+
+  <div class="form-card">
+    <div class="section-title">FILTRO DE CUENTAS</div>
+
+    <div class="row">
+      <mat-form-field appearance="outline">
+        <mat-label>Banco</mat-label>
+        <mat-select [value]="selectedBancoId()" (selectionChange)="onBancoChange($event.value)">
+          <mat-option [value]="null">Seleccione ...</mat-option>
+          @for (banco of bancos(); track banco.id) {
+          <mat-option [value]="banco.id">{{ banco.nombre }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Cuenta Bancaria</mat-label>
+        <mat-select
+          [disabled]="!selectedBancoId()"
+          [value]="selectedCuentaId()"
+          (selectionChange)="onCuentaChange($event.value)"
+        >
+          <mat-option [value]="null">Seleccione ...</mat-option>
+          @for (cuenta of cuentas(); track cuenta.id) { @if (cuenta.bancoId === selectedBancoId()) {
+          <mat-option [value]="cuenta.id">{{ cuenta.numero }}</mat-option>
+          } }
+        </mat-select>
+      </mat-form-field>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-title">CHEQUERAS SOLICITADAS</div>
+
+    <table mat-table [dataSource]="solicitudes()" class="mat-elevation-z0">
+      <!-- Banco -->
+      <ng-container matColumnDef="banco">
+        <th mat-header-cell *matHeaderCellDef>BANCO</th>
+        <td mat-cell *matCellDef="let row">{{ row.banco }}</td>
+      </ng-container>
+
+      <!-- Cuenta Bancaria -->
+      <ng-container matColumnDef="cuentaBancaria">
+        <th mat-header-cell *matHeaderCellDef>CUENTA BANCARIA</th>
+        <td mat-cell *matCellDef="let row">{{ row.cuentaBancaria }}</td>
+      </ng-container>
+
+      <!-- Fecha Solicitud -->
+      <ng-container matColumnDef="fechaSolicitud">
+        <th mat-header-cell *matHeaderCellDef>FECHA SOLICITUD</th>
+        <td mat-cell *matCellDef="let row">{{ row.fechaSolicitud }}</td>
+      </ng-container>
+
+      <!-- Número de Cheques -->
+      <ng-container matColumnDef="numeroCheques">
+        <th mat-header-cell *matHeaderCellDef>NUMERO DE CHEQUES</th>
+        <td mat-cell *matCellDef="let row">{{ row.numeroCheques }}</td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+    </table>
+  </div>
+</div>

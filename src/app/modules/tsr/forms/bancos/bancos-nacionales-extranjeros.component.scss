@@ -1,0 +1,50 @@
+@use '../../../../../styles/abstracts/colors' as *;
+@use '../../../../../styles/abstracts/variables' as *;
+.bancos-page {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+  color: $text-primary;
+}
+
+.form-card {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  border: $border-width solid $border-light;
+  border-radius: $border-radius-md;
+  padding: $spacing-md;
+  background: $background-primary;
+  box-shadow: 0 2px 6px $shadow-color-light;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: $spacing-sm;
+}
+
+.filter-field {
+  width: 320px;
+}
+
+.table-card {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  border: $border-width solid $border-light;
+  border-radius: $border-radius-md;
+  padding: $spacing-sm;
+  background: $background-primary;
+  box-shadow: 0 2px 6px $shadow-color-light;
+}
+
+.spinner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.error {
+  color: $error-color;
+}

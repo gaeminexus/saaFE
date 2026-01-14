@@ -1,0 +1,90 @@
+<div class="procesos-cobros">
+  <div class="toolbar">
+    <h2>Procesos - Cobros</h2>
+    <div class="filters">
+      <mat-form-field appearance="outline" class="field">
+        <mat-label>Fecha inicio</mat-label>
+        <input
+          matInput
+          [matDatepicker]="pickerStart"
+          [value]="fechaInicio()"
+          (dateChange)="fechaInicio.set($event.value)"
+        />
+        <mat-datepicker-toggle matSuffix [for]="pickerStart"></mat-datepicker-toggle>
+        <mat-datepicker #pickerStart></mat-datepicker>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="field">
+        <mat-label>Fecha fin</mat-label>
+        <input
+          matInput
+          [matDatepicker]="pickerEnd"
+          [value]="fechaFin()"
+          (dateChange)="fechaFin.set($event.value)"
+        />
+        <mat-datepicker-toggle matSuffix [for]="pickerEnd"></mat-datepicker-toggle>
+        <mat-datepicker #pickerEnd></mat-datepicker>
+      </mat-form-field>
+
+      <button
+        mat-raised-button
+        color="primary"
+        (click)="consolidarSeleccionados()"
+        [disabled]="loading() || selectedIds().size === 0"
+      >
+        <mat-icon>task_alt</mat-icon>
+        Consolidar Seleccionados
+      </button>
+      <button mat-button (click)="limpiar()">
+        <mat-icon>filter_alt_off</mat-icon>
+        Limpiar
+      </button>
+    </div>
+  </div>
+
+  @if (errorMsg()) {
+  <div class="error">{{ errorMsg() }}</div>
+  }
+
+  <mat-card>
+    <mat-card-title>Temp Cobros</mat-card-title>
+    <mat-card-content>
+      <table mat-table [dataSource]="filteredCobros()" class="mat-elevation-z1">
+        <ng-container matColumnDef="select">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let row">
+            <mat-checkbox
+              (change)="toggleSelect(row.codigo, $any($event).checked)"
+              [checked]="selectedIds().has(row.codigo)"
+            ></mat-checkbox>
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="fecha">
+          <th mat-header-cell *matHeaderCellDef>Fecha</th>
+          <td mat-cell *matCellDef="let row">{{ row.fecha | date : 'dd/MM/yyyy' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="cliente">
+          <th mat-header-cell *matHeaderCellDef>Cliente</th>
+          <td mat-cell *matCellDef="let row">{{ row.cliente }}</td>
+        </ng-container>
+        <ng-container matColumnDef="descripcion">
+          <th mat-header-cell *matHeaderCellDef>Descripción</th>
+          <td mat-cell *matCellDef="let row">{{ row.descripcion }}</td>
+        </ng-container>
+        <ng-container matColumnDef="valor">
+          <th mat-header-cell *matHeaderCellDef>Valor</th>
+          <td mat-cell *matCellDef="let row">{{ row.valor | number : '1.2-2' }}</td>
+        </ng-container>
+        <tr
+          mat-header-row
+          *matHeaderRowDef="['select', 'fecha', 'cliente', 'descripcion', 'valor']"
+        ></tr>
+        <tr
+          mat-row
+          *matRowDef="let row; columns: ['select', 'fecha', 'cliente', 'descripcion', 'valor']"
+        ></tr>
+      </table>
+      <div class="totals">Total filtrado: {{ totalFiltrado() | number : '1.2-2' }}</div>
+    </mat-card-content>
+  </mat-card>
+</div>

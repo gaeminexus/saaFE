@@ -1,0 +1,178 @@
+<div class="pagos-ingresar">
+  <mat-card>
+    <mat-card-title>Pagos · Ingreso</mat-card-title>
+    <mat-card-content>
+      <div class="grid">
+        <mat-form-field appearance="outline">
+          <mat-label>Fecha</mat-label>
+          <input matInput [matDatepicker]="dp" (dateChange)="fecha.set($event.value)" />
+          <mat-datepicker-toggle matSuffix [for]="dp"></mat-datepicker-toggle>
+          <mat-datepicker #dp></mat-datepicker>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full">
+          <mat-label>Beneficiario</mat-label>
+          <input matInput (input)="beneficiario.set($any($event.target).value)" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Forma de pago</mat-label>
+          <mat-select (selectionChange)="formaPago.set($any($event.value))">
+            <mat-option [value]="''">Seleccione</mat-option>
+            <mat-option *ngFor="let f of formasPago" [value]="f">{{ f }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" *ngIf="formaPago() !== 'EFECTIVO'">
+          <mat-label>Banco</mat-label>
+          <mat-select (selectionChange)="bancoCodigo.set($any($event.value))">
+            <mat-option [value]="null">Seleccione</mat-option>
+            <mat-option *ngFor="let b of bancos" [value]="b.codigo">{{ b.nombre }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" *ngIf="formaPago() !== 'EFECTIVO'">
+          <mat-label>Cuenta</mat-label>
+          <mat-select (selectionChange)="cuentaNumero.set($any($event.value))">
+            <mat-option [value]="''">Seleccione</mat-option>
+            <mat-option *ngFor="let c of cuentas" [value]="c.numero">
+              {{ c.numero }} ({{ c.bancoCodigo }})
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full">
+          <mat-label>Observación</mat-label>
+          <textarea
+            matInput
+            rows="2"
+            (input)="observacion.set($any($event.target).value)"
+          ></textarea>
+        </mat-form-field>
+      </div>
+
+      @if (errorMsg()) {
+      <div class="error">{{ errorMsg() }}</div>
+      }
+
+      <div class="actions">
+        <button mat-stroked-button color="primary" (click)="agregarDetalle()">
+          <mat-icon>add</mat-icon>
+          Agregar detalle
+        </button>
+      </div>
+
+      <div class="table-wrapper">
+        <table mat-table [dataSource]="detalles()" class="mat-elevation-z1 full-width">
+          <ng-container matColumnDef="documento">
+            <th mat-header-cell *matHeaderCellDef>Documento</th>
+            <td mat-cell *matCellDef="let d; let i = index">
+              <input
+                matInput
+                placeholder="No."
+                [value]="d.documento"
+                #doc
+                (input)="updateDetalle(i, { documento: doc.value })"
+              />
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="descripcion">
+            <th mat-header-cell *matHeaderCellDef>Descripción</th>
+            <td mat-cell *matCellDef="let d; let i = index">
+              <input
+                matInput
+                placeholder="Descripción"
+                [value]="d.descripcion"
+                #desc
+                (input)="updateDetalle(i, { descripcion: desc.value })"
+              />
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="fecha">
+            <th mat-header-cell *matHeaderCellDef>Emisión</th>
+            <td mat-cell *matCellDef="let d; let i = index">
+              <input
+                matInput
+                type="date"
+                [value]="d.fechaEmision"
+                #fec
+                (input)="updateDetalle(i, { fechaEmision: fec.value })"
+              />
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="valorDoc">
+            <th mat-header-cell *matHeaderCellDef>Valor Doc.</th>
+            <td mat-cell *matCellDef="let d; let i = index">
+              <input
+                matInput
+                type="number"
+                [value]="d.valorDocumento"
+                #valDoc
+                (input)="updateDetalle(i, { valorDocumento: +valDoc.value || 0 })"
+              />
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="aPagar">
+            <th mat-header-cell *matHeaderCellDef>A Pagar</th>
+            <td mat-cell *matCellDef="let d; let i = index">
+              <input
+                matInput
+                type="number"
+                [value]="d.aPagar"
+                #aPag
+                (input)="updateDetalle(i, { aPagar: +aPag.value || 0 })"
+              />
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="acciones">
+            <th mat-header-cell *matHeaderCellDef></th>
+            <td mat-cell *matCellDef="let d; let i = index">
+              <button mat-icon-button color="warn" (click)="removerDetalle(i)">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+
+          <tr
+            mat-header-row
+            *matHeaderRowDef="[
+              'documento',
+              'descripcion',
+              'fecha',
+              'valorDoc',
+              'aPagar',
+              'acciones'
+            ]"
+          ></tr>
+          <tr
+            mat-row
+            *matRowDef="
+              let row;
+              columns: ['documento', 'descripcion', 'fecha', 'valorDoc', 'aPagar', 'acciones']
+            "
+          ></tr>
+        </table>
+      </div>
+
+      <div class="totals">
+        Total a pagar: <strong>{{ totalAPagar() | number : '1.2-2' }}</strong>
+      </div>
+
+      <div class="actions">
+        <button mat-flat-button color="primary" (click)="guardar()" [disabled]="loading()">
+          <mat-icon>save</mat-icon>
+          Guardar
+        </button>
+        <button mat-stroked-button color="basic" (click)="limpiar()" [disabled]="loading()">
+          <mat-icon>refresh</mat-icon>
+          Limpiar
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

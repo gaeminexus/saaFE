@@ -1,0 +1,30 @@
+.pagos-ingresar {
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(180px, 1fr));
+    gap: 12px;
+  }
+  .full {
+    grid-column: 1 / -1;
+  }
+  .actions {
+    margin: 12px 0;
+    display: flex;
+    gap: 8px;
+  }
+  .table-wrapper {
+    overflow: auto;
+    margin-top: 8px;
+  }
+  .full-width {
+    width: 100%;
+  }
+  .totals {
+    margin-top: 10px;
+    font-weight: 500;
+  }
+  .error {
+    color: #c62828;
+    margin: 6px 0 2px;
+  }
+}

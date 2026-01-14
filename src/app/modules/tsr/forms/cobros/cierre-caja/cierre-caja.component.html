@@ -1,0 +1,103 @@
+<div class="cierre-caja-container">
+  <div class="toolbar">
+    <h2>Cierre de Caja</h2>
+
+    <div class="filters">
+      <mat-form-field appearance="outline" class="field">
+        <mat-label>Fecha de cierre</mat-label>
+        <input
+          matInput
+          [matDatepicker]="picker"
+          [value]="fechaCierre()"
+          (dateChange)="fechaCierre.set($event.value)"
+        />
+        <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+        <mat-datepicker #picker></mat-datepicker>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="field">
+        <mat-label>Código de Caja</mat-label>
+        <input
+          matInput
+          type="number"
+          [value]="cajaCodigo() ?? ''"
+          (input)="cajaCodigo.set($any($event.target).value ? +$any($event.target).value : null)"
+        />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="field">
+        <mat-label>Nombre Usuario</mat-label>
+        <input
+          matInput
+          [value]="nombreUsuario()"
+          (input)="nombreUsuario.set($any($event.target).value)"
+        />
+      </mat-form-field>
+
+      <button mat-raised-button color="primary" (click)="cargarTotales()" [disabled]="loading()">
+        <mat-icon>calculate</mat-icon>
+        Calcular Totales
+      </button>
+    </div>
+  </div>
+
+  @if (errorMsg()) {
+  <div class="error">{{ errorMsg() }}</div>
+  }
+
+  <div class="totals-grid">
+    <mat-card class="total-card">
+      <mat-card-title>Efectivo</mat-card-title>
+      <mat-card-content>
+        <div class="amount">{{ montoEfectivo() | number : '1.2-2' }}</div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="total-card">
+      <mat-card-title>Cheque</mat-card-title>
+      <mat-card-content>
+        <div class="amount">{{ montoCheque() | number : '1.2-2' }}</div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="total-card">
+      <mat-card-title>Tarjeta</mat-card-title>
+      <mat-card-content>
+        <div class="amount">{{ montoTarjeta() | number : '1.2-2' }}</div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="total-card">
+      <mat-card-title>Transferencia</mat-card-title>
+      <mat-card-content>
+        <div class="amount">{{ montoTransferencia() | number : '1.2-2' }}</div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="total-card">
+      <mat-card-title>Retención</mat-card-title>
+      <mat-card-content>
+        <div class="amount">{{ montoRetencion() | number : '1.2-2' }}</div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="total-card total-card--accent">
+      <mat-card-title>Total</mat-card-title>
+      <mat-card-content>
+        <div class="amount">{{ montoTotal() | number : '1.2-2' }}</div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <div class="actions">
+    <button
+      mat-raised-button
+      color="primary"
+      (click)="cerrarCaja()"
+      [disabled]="loading() || montoTotal() <= 0"
+    >
+      <mat-icon>lock</mat-icon>
+      Cerrar Caja
+    </button>
+  </div>
+</div>

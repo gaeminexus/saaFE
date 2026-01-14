@@ -1,0 +1,104 @@
+<div class="bancos-page">
+  <h2>Bancos Nacionales y Extranjeros</h2>
+
+  <div class="form-card">
+    <div class="form-row">
+      <mat-form-field appearance="outline">
+        <mat-label>Descripción</mat-label>
+        <input
+          matInput
+          placeholder="Descripción del banco"
+          [(ngModel)]="nombre"
+          (keyup.enter)="guardar()"
+        />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Tipo de Banco</mat-label>
+        <mat-select
+          [(ngModel)]="tipoBancoSeleccion"
+          (selectionChange)="onTipoBancoChange($event.value)"
+        >
+          <mat-option
+            *ngFor="let r of rubrosTipoBanco(); trackBy: trackByCodigoAlterno"
+            [value]="r"
+          >
+            {{ r.descripcion }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-checkbox [(ngModel)]="permiteDescuadre">Permite Descuadre</mat-checkbox>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Estado</mat-label>
+        <mat-select [(ngModel)]="estado">
+          <mat-option [value]="1">Activo</mat-option>
+          <mat-option [value]="0">Inactivo</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <button mat-raised-button color="primary" (click)="guardar()" [disabled]="!formValido()">
+        <mat-icon>save</mat-icon>
+        Guardar
+      </button>
+    </div>
+
+    <div class="error" *ngIf="errorMsg()">{{ errorMsg() }}</div>
+  </div>
+
+  <div class="table-card">
+    <mat-form-field appearance="outline" class="filter-field">
+      <mat-label>Filtrar</mat-label>
+      <input
+        matInput
+        placeholder="Buscar por código/nombre"
+        (input)="aplicarFiltro($event.target.value)"
+      />
+      <button mat-icon-button matSuffix (click)="aplicarFiltro('')">
+        <mat-icon>close</mat-icon>
+      </button>
+    </mat-form-field>
+
+    <div class="spinner" *ngIf="loading()">
+      <mat-spinner diameter="32"></mat-spinner>
+    </div>
+
+    <table mat-table [dataSource]="pageData()" class="mat-elevation-z2">
+      <ng-container matColumnDef="codigo">
+        <th mat-header-cell *matHeaderCellDef>Código</th>
+        <td mat-cell *matCellDef="let row">{{ row.codigo }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="nombre">
+        <th mat-header-cell *matHeaderCellDef>Descripción</th>
+        <td mat-cell *matCellDef="let row">{{ row.nombre }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="tipo">
+        <th mat-header-cell *matHeaderCellDef>Tipo</th>
+        <td mat-cell *matCellDef="let row">{{ mostrarTipo(row) }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="permite">
+        <th mat-header-cell *matHeaderCellDef>Permite Descuadre</th>
+        <td mat-cell *matCellDef="let row">{{ mostrarPermite(row) }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="estado">
+        <th mat-header-cell *matHeaderCellDef>Estado</th>
+        <td mat-cell *matCellDef="let row">{{ mostrarEstado(row) }}</td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+    </table>
+
+    <mat-paginator
+      [length]="totalItems()"
+      [pageSize]="pageSize()"
+      [pageSizeOptions]="[5, 10, 20, 50]"
+      (page)="onPageChange($event)"
+    ></mat-paginator>
+  </div>
+</div>

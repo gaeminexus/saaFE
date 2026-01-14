@@ -1,0 +1,73 @@
+<div class="depositos-ratificacion-container">
+  <div class="toolbar">
+    <h2>Depósitos - Ratificación</h2>
+  </div>
+
+  @if (errorMsg()) {
+  <div class="error">{{ errorMsg() }}</div>
+  }
+
+  <mat-card>
+    <mat-card-title>Pendientes</mat-card-title>
+    <mat-card-content>
+      <table mat-table [dataSource]="depositos()" class="mat-elevation-z1">
+        <!-- Selección -->
+        <ng-container matColumnDef="select">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let row; let i = index; trackBy: trackById">
+            <mat-checkbox
+              (change)="toggleSeleccion(row.id, $any($event).checked)"
+              [checked]="seleccionados().has(row.id)"
+            ></mat-checkbox>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="fecha">
+          <th mat-header-cell *matHeaderCellDef>Fecha</th>
+          <td mat-cell *matCellDef="let row">{{ row.fecha | date : 'dd/MM/yyyy' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="banco">
+          <th mat-header-cell *matHeaderCellDef>Banco</th>
+          <td mat-cell *matCellDef="let row">{{ row.bancoCodigo }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="numero">
+          <th mat-header-cell *matHeaderCellDef>Número</th>
+          <td mat-cell *matCellDef="let row">{{ row.numero }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="monto">
+          <th mat-header-cell *matHeaderCellDef>Monto</th>
+          <td mat-cell *matCellDef="let row">{{ row.monto | number : '1.2-2' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="estado">
+          <th mat-header-cell *matHeaderCellDef>Estado</th>
+          <td mat-cell *matCellDef="let row">{{ row.estado }}</td>
+        </ng-container>
+
+        <tr
+          mat-header-row
+          *matHeaderRowDef="['select', 'fecha', 'banco', 'numero', 'monto', 'estado']"
+        ></tr>
+        <tr
+          mat-row
+          *matRowDef="let row; columns: ['select', 'fecha', 'banco', 'numero', 'monto', 'estado']"
+        ></tr>
+      </table>
+    </mat-card-content>
+  </mat-card>
+
+  <div class="actions">
+    <button
+      mat-raised-button
+      color="primary"
+      (click)="ratificarSeleccionados()"
+      [disabled]="loading() || !hasSeleccion()"
+    >
+      <mat-icon>task_alt</mat-icon>
+      Ratificar Seleccionados
+    </button>
+  </div>
+</div>
