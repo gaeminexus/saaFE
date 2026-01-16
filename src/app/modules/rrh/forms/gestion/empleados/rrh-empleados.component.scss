@@ -1,3 +1,37 @@
-.rrh-demo {
+.rrh-empleados {
   padding: 16px;
+
+  h2 {
+    margin-bottom: 12px;
+  }
+
+  .form-card {
+    margin-bottom: 16px;
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+  }
+
+  .buttons {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .loading {
+    display: flex;
+    justify-content: center;
+    padding: 12px;
+  }
+  .error {
+    color: #c62828;
+    padding: 6px 0;
+  }
+  .empty {
+    padding: 12px;
+    color: #666;
+  }
 }
