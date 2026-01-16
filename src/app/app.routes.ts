@@ -452,6 +452,42 @@ export const routes: Routes = [
     ],
   },
   {
+    path: 'rrhh',
+    component: MenurecursoshumanosComponent,
+    canActivate: [authGuard],
+    children: [
+      // Parametrización
+      {
+        path: 'parametrizacion/departamentos',
+        component: RrhDepartamentosComponent,
+        canActivate: [authGuard],
+      },
+      { path: 'parametrizacion/cargos', component: RrhCargosComponent, canActivate: [authGuard] },
+      {
+        path: 'parametrizacion/tipos-contrato',
+        component: RrhTiposContratoComponent,
+        canActivate: [authGuard],
+      },
+      { path: 'parametrizacion/turnos', component: RrhTurnosComponent, canActivate: [authGuard] },
+      // TODO: parametrizacion/rubros se agregará cuando exista su componente
+      // Gestión de Personal
+      { path: 'gestion/empleados', component: RrhEmpleadosComponent, canActivate: [authGuard] },
+      { path: 'gestion/contratos', component: RrhContratosComponent, canActivate: [authGuard] },
+      { path: 'gestion/vacaciones', component: RrhVacacionesComponent, canActivate: [authGuard] },
+      { path: 'gestion/permisos', component: RrhPermisosComponent, canActivate: [authGuard] },
+      { path: 'gestion/asistencia', component: RrhAsistenciaComponent, canActivate: [authGuard] },
+      // Procesos
+      { path: 'procesos/nomina', component: RrhNominaComponent, canActivate: [authGuard] },
+      { path: 'procesos/roles-pago', component: RrhRolesPagoComponent, canActivate: [authGuard] },
+      { path: 'procesos/aportes', component: RrhAportesComponent, canActivate: [authGuard] },
+      {
+        path: 'procesos/liquidaciones',
+        component: RrhLiquidacionesComponent,
+        canActivate: [authGuard],
+      },
+    ],
+  },
+  {
     path: 'menurecursoshumanos',
     component: MenurecursoshumanosComponent,
     canActivate: [authGuard],
