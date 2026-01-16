@@ -1,4 +1,3 @@
-import { NaturalezaCuentaService } from './../../modules/cnt/service/naturaleza-cuenta.service';
 import { CommonModule, DatePipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
@@ -27,7 +26,8 @@ import { CuotaXFinanciacionPagoService } from '../../modules/cxp/service/cuota-x
 import { DetalleDocumentoPagoService } from '../../modules/cxp/service/detalle-documento-pago.service';
 import { FinanciacionXDocumentoPagoService } from '../../modules/cxp/service/financiacion-x-documento-pago.service';
 import { MontoAprobacionService } from '../../modules/cxp/service/monto-aprobacion.service';
-import { ValorImpuestoDocumentoCobroService } from '../../modules/cxc/service/valor-impuesto-documento-cobro.service';
+import { TransaccionesAsoprepService } from '../../modules/crd/service/transacciones-asoprep.service';
+import { NaturalezaCuenta } from '../../modules/cnt/model/naturaleza-cuenta';
 
 @Component({
   selector: 'app-header',
@@ -61,7 +61,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
     private appStateService: AppStateService,
     private snackBar: MatSnackBar,
     private loadingService: LoadingService,
-    private valorImpuestoDocumentoCobro: ValorImpuestoDocumentoCobroService,
+    private transaccionesAsoprep: TransaccionesAsoprepService,
     private cdr: ChangeDetectorRef,
     private dialog: MatDialog
   ) {
@@ -188,12 +188,12 @@ export class HeaderComponent implements OnInit, OnDestroy {
       this.criterioConsulta.orderBy('codigo');
       this.criterioConsultaArray.push(this.criterioConsulta);
 
-      this.valorImpuestoDocumentoCobro.selectByCriteria(this.criterioConsultaArray).subscribe({
+      this.transaccionesAsoprep.selectByCriteria(this.criterioConsultaArray).subscribe({
         next: (data: any) => {
-          console.log('Datos de ValorImpuestoDocumentoCobro:', data);
+          console.log('Datos de Transacciones:', data);
         },
         error: (error: any) => {
-          console.error('Error al obtener ValorImpuestoDocumentoCobro:', error);
+          console.error('Error al obtener Transacciones:', error);
         },
       });
 
@@ -206,12 +206,12 @@ export class HeaderComponent implements OnInit, OnDestroy {
         }
       });*/
 
-      this.valorImpuestoDocumentoCobro.getById('').subscribe({
+      this.transaccionesAsoprep.getById('').subscribe({
         next: (data: any) => {
           console.log('GetById - Registro específico:', data);
         },
         error: (error: any) => {
-          console.error('Error al obtener ValorImpuestoDocumentoCobro:', error);
+          console.error('Error al obtener Transacciones:', error);
         },
       });
 

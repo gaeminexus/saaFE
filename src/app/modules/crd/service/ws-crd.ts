@@ -65,6 +65,9 @@ export class ServiciosCrd {
   public static RS_RLPR = `${API_URL}/rlpr`;
   public static RS_RQPR = `${API_URL}/rqpr`;
   public static RS_TSPR = `${API_URL}/tspr`;
+  public static RS_PRAS = `${API_URL}/pras`;
+  public static RS_APAS = `${API_URL}/apas`;
+  public static RS_TRAS = `${API_URL}/tras`;
 }
 /*
 export class ServiciosCrd {
@@ -131,6 +134,9 @@ export class ServiciosCrd {
   public static RS_RLPR = "http://localhost:8080/saa-backend/rest/rlpr";
   public static RS_RQPR = "http://localhost:8080/saa-backend/rest/rqpr";
   public static RS_TSPR = "http://localhost:8080/saa-backend/rest/tspr";
+  public static RS_PRAS = "http://localhost:8080/saa-backend/rest/tras";
+  public static RS_APAS = "http://localhost:8080/saa-backend/rest/apas";
+  public static RS_TRAS = "http://localhost:8080/saa-backend/rest/tras";
 
 }
 */
