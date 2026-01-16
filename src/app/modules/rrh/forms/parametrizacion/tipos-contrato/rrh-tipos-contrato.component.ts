@@ -1,11 +1,12 @@
 import { Component, computed, signal } from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatTableModule } from '@angular/material/table';
 
 @Component({
   selector: 'app-rrh-tipos-contrato',
   standalone: true,
-  imports: [MatTableModule, MatCardModule],
+  imports: [MatTableModule, MatCardModule, MatButtonModule],
   templateUrl: './rrh-tipos-contrato.component.html',
   styleUrls: ['./rrh-tipos-contrato.component.scss'],
 })
@@ -18,4 +19,11 @@ export class RrhTiposContratoComponent {
     { nombre: 'Prácticas', estado: 'Inactivo' },
   ]);
   hasData = computed(() => this.data().length > 0);
+
+  onNuevo(): void {}
+  onGuardar(): void {}
+  onCancelar(): void {}
+  onVolver(): void {
+    history.back();
+  }
 }

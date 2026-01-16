@@ -1,11 +1,12 @@
 import { Component, computed, signal } from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatTableModule } from '@angular/material/table';
 
 @Component({
   selector: 'app-rrh-cargos',
   standalone: true,
-  imports: [MatTableModule, MatCardModule],
+  imports: [MatTableModule, MatCardModule, MatButtonModule],
   templateUrl: './rrh-cargos.component.html',
   styleUrls: ['./rrh-cargos.component.scss'],
 })
@@ -19,4 +20,11 @@ export class RrhCargosComponent {
     { nombre: 'Auxiliar', estado: 'Inactivo' },
   ]);
   hasData = computed(() => this.data().length > 0);
+
+  onNuevo(): void {}
+  onGuardar(): void {}
+  onCancelar(): void {}
+  onVolver(): void {
+    history.back();
+  }
 }

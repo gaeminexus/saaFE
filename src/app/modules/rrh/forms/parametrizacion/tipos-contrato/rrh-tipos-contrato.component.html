@@ -2,6 +2,13 @@
   <h2>{{ titulo() }}</h2>
   <mat-card>
     <mat-card-content>
+      <div class="actions">
+        <button mat-flat-button color="primary" (click)="onNuevo()">Nuevo</button>
+        <button mat-stroked-button color="primary" (click)="onGuardar()">Guardar</button>
+        <button mat-stroked-button color="warn" (click)="onCancelar()">Cancelar</button>
+        <button mat-button (click)="onVolver()">Volver</button>
+      </div>
+
       <table mat-table [dataSource]="data()" class="mat-elevation-z1" style="width: 100%">
         <ng-container matColumnDef="nombre">
           <th mat-header-cell *matHeaderCellDef>Nombre</th>
