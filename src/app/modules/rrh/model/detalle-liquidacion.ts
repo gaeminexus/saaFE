@@ -1,4 +1,5 @@
 import { Rubro } from '../../../shared/model/rubro';
+import { Liquidacion } from './Liquidacion';
 export interface DetalleLiquidacion {
   codigo: number;
   liquidacion: Liquidacion;
@@ -7,5 +8,4 @@ export interface DetalleLiquidacion {
   descripcion: String;
   fechaRegistro: Date;
   usuarioRegistro: String;
-
 }

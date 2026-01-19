@@ -1,4 +1,6 @@
-import { Empleado } from "./empleado";
+import { Contrato } from './contrato';
+import { Empleado } from './empleado';
+import { PeriodoNomina } from './periodo-nomina';
 
 export interface Nomina {
   codigo: number;
