@@ -1,4 +1,4 @@
-import { Contrato } from './contrato';
+import { ContratoEmpleado } from './contrato-empleado';
 import { Empleado } from './empleado';
 import { PeriodoNomina } from './periodo-nomina';
 
@@ -6,7 +6,7 @@ export interface Nomina {
   codigo: number;
   periodoNomina: PeriodoNomina;
   empleado: Empleado;
-  contrato: Contrato;
+  contratoEmpleado: ContratoEmpleado;
   salarioBase: number;
   totalIngresos: number;
   totalDescuentos: number;
