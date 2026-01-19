@@ -1,8 +1,8 @@
-import { Contrato } from "./contrato";
+import { ContratoEmpleado } from "./contrato-empleado";
 
 export interface AporteRetenciones {
     codigo: number;               // Código del adjunto
-    contrato: Contrato;             // Entidad (partícipe)
+    contratoEmpleado: ContratoEmpleado;             // Entidad (partícipe)
     tipo: String;         // ID referencia bancaria
     fechaAnexo: Date;           // Préstamo
     detalle: string;    // Solicitud de cambio de aporte

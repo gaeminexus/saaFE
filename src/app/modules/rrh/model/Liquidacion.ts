@@ -1,9 +1,9 @@
 import { Empleado } from './empleado';
-import { Contrato } from './contrato';
+import { ContratoEmpleado } from './contrato-empleado';
 export interface Liquidacion {
   codigo: number;
   empleado: Empleado;
-  contrato: Contrato;
+  contratoEmpleado: ContratoEmpleado;
   fechaSalida: Date;
   motivo: number;
   neto:number;

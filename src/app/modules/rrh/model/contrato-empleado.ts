@@ -1,7 +1,7 @@
 import { Empleado } from './empleado';
 import { TipoContrato } from './tipo-contrato';
 
-export interface Contrato {
+export interface ContratoEmpleado {
   codigo: number;
   empleado: Empleado;
   tipoContrato: TipoContrato;

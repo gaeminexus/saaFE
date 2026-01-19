@@ -1,8 +1,8 @@
-import { Contrato } from './contrato';
+import { ContratoEmpleado } from './contrato-empleado';
 
 export interface AnexoContrato {
   codigo: number;
-  contrato: Contrato;
+  contratoEmpleado: ContratoEmpleado;
   tipo: string;
   fechaAnexo: Date;
   detalle: string;
