@@ -1157,10 +1157,29 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
 
     if (typeof fecha === 'string') {
       // Limpiar el string de fecha quitando el timezone [UTC] si existe
-      const fechaLimpia = fecha.replace(/\[.*?\]/, '');
-      const fechaConvertida = new Date(fechaLimpia);
+      const fechaLimpia = fecha.replace(/\[.*?\]/, '').trim();
 
-      // Verificar si la fecha es válida
+      // Parsear manualmente strings con formato "yyyy-MM-dd HH:mm:ss.SSS" o similar
+      // Para evitar problemas de zona horaria con new Date(string)
+      const regexFecha = /^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?/;
+      const match = fechaLimpia.match(regexFecha);
+
+      if (match) {
+        const [_, year, month, day, hour, minute, second, ms = '0'] = match;
+        // Crear fecha usando constructor que NO aplica timezone
+        return new Date(
+          parseInt(year),
+          parseInt(month) - 1, // Mes es 0-indexed
+          parseInt(day),
+          parseInt(hour),
+          parseInt(minute),
+          parseInt(second),
+          parseInt(ms)
+        );
+      }
+
+      // Fallback: intentar parseo estándar
+      const fechaConvertida = new Date(fechaLimpia);
       if (!isNaN(fechaConvertida.getTime())) {
         return fechaConvertida;
       }
