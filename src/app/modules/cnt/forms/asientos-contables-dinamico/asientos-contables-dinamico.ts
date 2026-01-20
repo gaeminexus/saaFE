@@ -4,6 +4,8 @@ import {
   moveItemInArray,
   transferArrayItem,
 } from '@angular/cdk/drag-drop';
+import { Observable } from 'rxjs';
+import { map, startWith } from 'rxjs/operators';
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, ViewChild } from '@angular/core';
 import {
@@ -26,6 +28,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
@@ -68,6 +71,7 @@ interface CuentaItem {
     MatDividerModule,
     MatTooltipModule,
     MatSelectModule,
+    MatAutocompleteModule,
     MatDatepickerModule,
     MatNativeDateModule,
     MatSnackBarModule,
@@ -101,6 +105,10 @@ export class AsientosContablesDinamico implements OnInit {
   totalDebe = 0;
   totalHaber = 0;
   diferencia = 0;
+
+  // Autocomplete para búsqueda de cuentas
+  cuentasFiltradasDebe: Observable<PlanCuenta[]>[] = [];
+  cuentasFiltradasHaber: Observable<PlanCuenta[]>[] = [];
 
   // Rubros para dropdowns
   tiposAsientos: any[] = [];
@@ -299,7 +307,6 @@ export class AsientosContablesDinamico implements OnInit {
    */
   private cargarAsientoPorId(id: number, mode?: string): void {
     this.loading = true;
-    console.log(`📥 Cargando asiento ID: ${id}...`);
 
     // Crear criterios usando selectByCriteria (POST) ya que getById (GET) retorna 405
     const criterios = new DatosBusqueda();
@@ -315,9 +322,6 @@ export class AsientosContablesDinamico implements OnInit {
       next: (asientos: Asiento[] | null) => {
         if (asientos && asientos.length > 0) {
           const asiento = asientos[0]; // Tomar el primer resultado
-          console.log('🗂️ Asiento cargado:', asiento);
-          console.log('📅 Fecha Asiento raw:', asiento.fechaAsiento);
-          console.log('📅 Fecha Ingreso raw:', asiento.fechaIngreso);
 
           this.codigoAsientoActual = asiento.codigo;
           this.asientoActual = asiento; // Almacenar datos completos
@@ -325,9 +329,6 @@ export class AsientosContablesDinamico implements OnInit {
           // Procesar fechas con manejo de diferentes formatos
           const fechaAsiento = this.parseFechaFromBackend(asiento.fechaAsiento);
           const fechaIngreso = this.parseFechaFromBackend(asiento.fechaIngreso);
-
-          console.log('📅 Fecha Asiento procesada:', fechaAsiento);
-          console.log('📅 Fecha Ingreso procesada:', fechaIngreso);
 
           // Llenar el formulario con los datos del asiento
           this.form.patchValue({
@@ -348,13 +349,6 @@ export class AsientosContablesDinamico implements OnInit {
 
           fechaIngresoControl?.setValue(fechaIngreso);
           fechaIngresoControl?.updateValueAndValidity();
-
-          // Verificar que el setValue funcionó
-          console.log('📝 Valores del formulario después de setValue y updateValueAndValidity:');
-          console.log('  - fechaAsiento:', this.form.get('fechaAsiento')?.value);
-          console.log('  - fechaIngreso:', this.form.get('fechaIngreso')?.value);
-          console.log('  - numero:', this.form.get('numero')?.value);
-          console.log('  - estado:', this.form.get('estado')?.value);
 
           // Cargar detalles del asiento
           this.cargarDetallesAsiento(id);
@@ -384,8 +378,6 @@ export class AsientosContablesDinamico implements OnInit {
    * Carga los detalles de un asiento y los coloca en el grid dinámico
    */
   private cargarDetallesAsiento(asientoId: number): void {
-    console.log(`📋 Cargando detalles del asiento ID: ${asientoId}...`);
-
     // Crear criterios usando el patrón DatosBusqueda como en listado-asientos
     const criterioConsultaArray: Array<DatosBusqueda> = [];
 
@@ -407,17 +399,6 @@ export class AsientosContablesDinamico implements OnInit {
 
     this.detalleAsientoService.selectByCriteria(criterioConsultaArray).subscribe({
       next: (detalles: any) => {
-        console.log('🔍 Respuesta detalles del backend:', detalles);
-        console.log(
-          '📊 Cuentas del plan disponibles:',
-          this.cuentasPlan.length,
-          this.cuentasPlan.map((c) => ({
-            codigo: c.codigo,
-            cuenta: c.cuentaContable,
-            nombre: c.nombre,
-          }))
-        );
-
         // Limpiar grids actuales siempre
         this.cuentasDebeGrid = [];
         this.cuentasHaberGrid = [];
@@ -478,12 +459,10 @@ export class AsientosContablesDinamico implements OnInit {
             }
           });
 
-          console.log(`✅ ${detallesProcesados} detalles procesados en el grid dinámico`);
           if (detallesProcesados === 0) {
             this.showMessage('El asiento no tiene detalles válidos', 'info');
           }
         } else {
-          console.log('ℹ️ No se encontraron detalles para este asiento');
           this.showMessage('Este asiento no tiene detalles asociados', 'info');
         }
 
@@ -510,11 +489,18 @@ export class AsientosContablesDinamico implements OnInit {
       cuentasDebe: this.fb.array([this.createCuentaGroup()]),
       cuentasHaber: this.fb.array([this.createCuentaGroup()]),
     });
+
+    // Configurar autocomplete para las filas iniciales
+    setTimeout(() => {
+      this.configurarAutocompleteDebe(0);
+      this.configurarAutocompleteHaber(0);
+    }, 0);
   }
 
   private createCuentaGroup(): FormGroup {
     return this.fb.group({
       cuenta: [null], // No requerido - permite asientos incompletos
+      cuentaBusqueda: [''], // Campo para autocomplete
       valor: [0], // No requerido - permite asientos incompletos
       centroCosto: [null], // Centro de costo opcional
     });
@@ -529,11 +515,19 @@ export class AsientosContablesDinamico implements OnInit {
   }
 
   agregarCuentaDebe(): void {
+    const index = this.cuentasDebe.length;
     this.cuentasDebe.push(this.createCuentaGroup());
+
+    // Configurar autocomplete para la nueva fila
+    setTimeout(() => this.configurarAutocompleteDebe(index), 0);
   }
 
   agregarCuentaHaber(): void {
+    const index = this.cuentasHaber.length;
     this.cuentasHaber.push(this.createCuentaGroup());
+
+    // Configurar autocomplete para la nueva fila
+    setTimeout(() => this.configurarAutocompleteHaber(index), 0);
   }
 
   eliminarCuentaDebe(index: number): void {
@@ -677,9 +671,6 @@ export class AsientosContablesDinamico implements OnInit {
    * Grabar solo la cabecera del asiento sin validar detalles
    */
   grabarCabecera(): void {
-    const accion = this.codigoAsientoActual ? 'Actualizando' : 'Grabando';
-    console.log(`💾 ${accion} cabecera del asiento...`);
-
     // Validar solo campos de cabecera
     const tipo = this.form.get('tipo');
     const numero = this.form.get('numero');
@@ -743,14 +734,8 @@ export class AsientosContablesDinamico implements OnInit {
         asientoBackend.periodo = {
           codigo: this.asientoActual.periodo.codigo,
         };
-        console.log('🗓️ Usando período del asiento existente:', this.asientoActual.periodo.codigo);
       }
-    } else {
-      // Para asientos nuevos, omitir el período y dejar que el backend use el valor por defecto
-      console.log('🆕 Asiento nuevo - omitiendo período (backend usará valor por defecto)');
     }
-
-    console.log(`📤 Enviando cabecera al backend (${accion}):`, asientoBackend);
 
     // Decidir si crear o actualizar
     const operacion = this.codigoAsientoActual
@@ -759,13 +744,11 @@ export class AsientosContablesDinamico implements OnInit {
 
     operacion.subscribe({
       next: (response) => {
-        console.log(`✅ Cabecera de asiento ${accion.toLowerCase()} exitosamente:`, response);
         this.loading = false;
 
         // Guardar el código si es creación nueva
         if (!this.codigoAsientoActual && response.codigo) {
           this.codigoAsientoActual = response.codigo;
-          console.log('🆔 Asiento creado con código:', this.codigoAsientoActual);
         }
 
         const mensaje = this.codigoAsientoActual
@@ -780,7 +763,6 @@ export class AsientosContablesDinamico implements OnInit {
         });
       },
       error: (error) => {
-        console.error(`❌ Error al ${accion.toLowerCase()} cabecera:`, error);
         this.loading = false;
         const errorMsg = error?.error?.message || error?.message || 'Error desconocido';
         this.snackBar.open(`❌ Error al guardar cabecera: ${errorMsg}`, 'Cerrar', {
@@ -860,18 +842,13 @@ export class AsientosContablesDinamico implements OnInit {
 
     // Verificar si ya existe la cabecera del asiento (codigoAsientoActual no null)
     if (this.codigoAsientoActual) {
-      console.log('📝 Asiento existente detectado...');
-
       // Si hay detalles originales cargados, hacer actualización inteligente
       if (this.detallesOriginales && this.detallesOriginales.length > 0) {
-        console.log('🔄 Hay detalles originales. Usando actualización inteligente...');
         this.actualizarDetallesDelAsiento(this.codigoAsientoActual);
       } else {
-        console.log('📝 No hay detalles originales. Grabando nuevos detalles...');
         this.grabarSoloDetalles();
       }
     } else {
-      console.log('📝 Asiento nuevo. Grabando cabecera + detalles...');
       this.grabarCabeceraYDetalles();
     }
   }
@@ -910,11 +887,8 @@ export class AsientosContablesDinamico implements OnInit {
       // Omitir período para asientos nuevos - el backend manejará el valor por defecto
     };
 
-    console.log('📤 Enviando asiento completo al backend:', asientoBackend);
-
     this.asientoService.crearAsiento(asientoBackend).subscribe({
       next: (response) => {
-        console.log('✅ Asiento creado exitosamente:', response);
         this.codigoAsientoActual = response.codigo; // Guardar código para futuros updates
         this.asientoActual = response; // Guardar datos completos
 
@@ -1807,5 +1781,77 @@ export class AsientosContablesDinamico implements OnInit {
   buildRutaJerarquicaCentro(centro: CentroCosto): string {
     const tipoTexto = centro.tipo === 1 ? '[ACUM]' : '[MOV]';
     return `${centro.nombre} ${tipoTexto}`;
+  }
+
+  /**
+   * Configurar autocomplete para una fila específica de DEBE
+   */
+  configurarAutocompleteDebe(index: number): void {
+    const control = this.cuentasDebe.at(index).get('cuentaBusqueda');
+    if (control) {
+      this.cuentasFiltradasDebe[index] = control.valueChanges.pipe(
+        startWith(''),
+        map(value => this._filtrarCuentas(value || ''))
+      );
+    }
+  }
+
+  /**
+   * Configurar autocomplete para una fila específica de HABER
+   */
+  configurarAutocompleteHaber(index: number): void {
+    const control = this.cuentasHaber.at(index).get('cuentaBusqueda');
+    if (control) {
+      this.cuentasFiltradasHaber[index] = control.valueChanges.pipe(
+        startWith(''),
+        map(value => this._filtrarCuentas(value || ''))
+      );
+    }
+  }
+
+  /**
+   * Filtrar cuentas por número o nombre (búsqueda flexible)
+   */
+  private _filtrarCuentas(busqueda: string | PlanCuenta): PlanCuenta[] {
+    // Si es un objeto PlanCuenta (selección), mostrar todas
+    if (typeof busqueda === 'object' && busqueda !== null) {
+      return this.cuentasPlan;
+    }
+
+    // Si es string vacío, mostrar todas
+    if (!busqueda || busqueda.trim() === '') {
+      return this.cuentasPlan;
+    }
+
+    const filtro = busqueda.toLowerCase().trim();
+
+    return this.cuentasPlan.filter(cuenta => {
+      const numeroCoincide = cuenta.cuentaContable?.toLowerCase().includes(filtro);
+      const nombreCoincide = cuenta.nombre?.toLowerCase().includes(filtro);
+      return numeroCoincide || nombreCoincide;
+    });
+  }
+
+  /**
+   * Mostrar nombre de cuenta en el autocomplete
+   */
+  displayCuenta(cuenta: PlanCuenta | null): string {
+    if (!cuenta) return '';
+    return `${cuenta.cuentaContable} - ${cuenta.nombre}`;
+  }
+
+  /**
+   * Cuando se selecciona una cuenta del autocomplete
+   */
+  onCuentaAutocompleteSeleccionada(tipo: 'DEBE' | 'HABER', index: number, cuenta: PlanCuenta | null): void {
+    if (cuenta) {
+      // Actualizar el control de cuenta
+      const formArray = tipo === 'DEBE' ? this.cuentasDebe : this.cuentasHaber;
+      const control = formArray.at(index);
+      control.get('cuenta')?.setValue(cuenta);
+
+      // Llamar al handler existente
+      this.onCuentaSeleccionada(tipo, index, cuenta);
+    }
   }
 }

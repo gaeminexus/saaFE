@@ -167,18 +167,13 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
     this.loading.set(true);
     this.error.set('');
 
-    console.log(`🔍 Cargando PlanArbol con getAll y filtrando por empresa ${this.idSucursal}...`);
-
     this.planCuentaService.getAll().subscribe({
       next: (data) => {
-        console.log('📡 Respuesta del backend (getAll):', data);
         const list = Array.isArray(data) ? data : (data as any)?.data ?? [];
 
         // Filtrar por empresa desde localStorage
         const filtered = list.filter((it: any) => it?.empresa?.codigo === this.idSucursal);
-        console.log(`📋 Total: ${list.length} | Empresa ${this.idSucursal}: ${filtered.length}`);
 
-        console.log(`✅ Se cargaron ${filtered.length} cuentas para empresa ${this.idSucursal}`);
         this.error.set('');
         this.planCuentas = filtered;
         this.totalRegistros.set(filtered.length);
@@ -204,20 +199,13 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
 
   // Método de fallback usando getAll
   private loadDataFallback(): void {
-    console.log('🔍 Cargando datos sin filtro de empresa (fallback)...');
-    console.log('🔗 URL del servicio fallback:', '/api/saa-backend/rest/plnn/getAll');
-
     this.planCuentaService.getAll().subscribe({
       next: (data) => {
-        console.log('📡 Respuesta del backend (fallback getAll):', data);
         const list = Array.isArray(data) ? data : (data as any)?.data ?? [];
-        console.log('📋 Lista procesada (fallback):', list);
 
         if (list.length === 0) {
-          console.log('⚠️ No se encontraron datos en la base de datos');
           this.error.set('No se encontraron cuentas en la base de datos. Verificar que las tablas CNT.PLNN existan.');
         } else {
-          console.log(`✅ Se cargaron ${list.length} cuentas exitosamente (fallback)`);
           this.error.set(''); // Limpiar error si se cargaron datos
         }
 
@@ -243,15 +231,12 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
         this.loading.set(false);
 
         // En caso de error
-        console.log('Error al cargar datos del backend');
         this.planCuentas = [];
       }
     });
   }
 
   private loadNaturalezas(): void {
-    console.log(`🔍 Iniciando carga de naturalezas para empresa ${this.idSucursal}...`);
-
     // Crear criterios usando el patrón DatosBusqueda
     const criterioConsultaArray: Array<DatosBusqueda> = [];
 
@@ -267,22 +252,17 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
 
     this.naturalezaCuentaService.selectByCriteria(criterioConsultaArray).subscribe({
       next: (data) => {
-        console.log(`📡 Respuesta del backend para naturalezas empresa ${this.idSucursal}:`, data);
         const list = Array.isArray(data) ? data : (data as any)?.data ?? [];
-        console.log(`📋 Lista de naturalezas procesada para empresa ${this.idSucursal}:`, list);
 
         if (list.length === 0) {
-          console.log(`⚠️ No se encontraron naturalezas para empresa ${this.idSucursal}, probando getAll...`);
           this.loadNaturalezasFallback();
         } else {
-          console.log(`✅ Se cargaron ${list.length} naturalezas para empresa ${this.idSucursal} exitosamente`);
           // Ordenar por número de cuenta de menor a mayor
           this.naturalezas = list.sort((a: any, b: any) => (a.numero || 0) - (b.numero || 0));
         }
       },
       error: (err) => {
         console.error(`❌ Error al cargar naturalezas con empresa ${this.idSucursal}:`, err);
-        console.log('🔄 Probando getAll como fallback...');
         this.loadNaturalezasFallback();
       }
     });
@@ -290,37 +270,28 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
 
   // Método de fallback para naturalezas usando getAll
   private loadNaturalezasFallback(): void {
-    console.log('🔍 Cargando naturalezas sin filtro (fallback)...');
-
     this.naturalezaCuentaService.getAll().subscribe({
       next: (data) => {
-        console.log('📡 Respuesta del backend para naturalezas (fallback):', data);
         const list = Array.isArray(data) ? data : (data as any)?.data ?? [];
-        console.log('📋 Lista de naturalezas procesada (fallback):', list);
 
         // Filtrar por empresa desde localStorage
         const filtered = list.filter((nat: any) => nat?.empresa?.codigo === this.idSucursal);
-        console.log(`🔍 Filtrado frontend: ${list.length} total → ${filtered.length} empresa ${this.idSucursal}`);
 
         if (filtered.length === 0) {
-          console.log(`⚠️ No se encontraron naturalezas para empresa ${this.idSucursal} en la base de datos`);
           this.loadMockNaturalezas();
         } else {
-          console.log(`✅ Se cargaron ${filtered.length} naturalezas para empresa ${this.idSucursal} exitosamente (fallback)`);
           // Ordenar por número de cuenta de menor a mayor
           this.naturalezas = filtered.sort((a: any, b: any) => (a.numero || 0) - (b.numero || 0));
         }
       },
       error: (err) => {
         console.error('❌ Error al cargar naturalezas del backend (fallback):', err);
-        console.log('📝 Cargando naturalezas de ejemplo...');
         this.loadMockNaturalezas();
       }
     });
   }
 
   private loadMockNaturalezas(): void {
-    console.log('📝 Cargando naturalezas mock desde servicio centralizado');
     this.naturalezas = [];
   }
 
@@ -384,12 +355,6 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
     // Restaurar estado de expansión
     this.restoreExpandedState();
 
-    console.log('🌲 Árbol construido:', {
-      totalCuentas: this.planCuentas.length,
-      nodosRaiz: rootNodes.length,
-      treeData: this.treeData,
-      flatData: this.treeControl.dataNodes
-    });
     // No expandir automáticamente: iniciar todo colapsado
     this.updatePreviewCuentaDestino();
   }
@@ -841,7 +806,6 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
     };
 
     this.treeData.forEach(node => saveNodeState(node));
-    console.log('💾 Estado guardado. Nodos expandidos:', Array.from(this.expandedNodesCodes));
   }
 
   /**
@@ -862,6 +826,5 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
     };
 
     this.treeData.forEach(node => restoreNodeState(node));
-    console.log('♻️ Estado restaurado. Nodos re-expandidos:', Array.from(this.expandedNodesCodes));
   }
 }

@@ -27,6 +27,7 @@ import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-bus
 import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { ExportService } from '../../../../shared/services/export.service';
+import { FuncionesDatosService } from '../../../../shared/services/funciones-datos.service';
 import { PlanCuentaUtilsService } from '../../../../shared/services/plan-cuenta-utils.service';
 import { NaturalezaCuenta } from '../../model/naturaleza-cuenta';
 import { PlanCuenta } from '../../model/plan-cuenta';
@@ -103,7 +104,8 @@ export class PlanGridComponent implements OnInit, AfterViewInit {
     private naturalezaCuentaService: NaturalezaCuentaService,
     private dialog: MatDialog,
     private exportService: ExportService,
-    private planUtils: PlanCuentaUtilsService
+    private planUtils: PlanCuentaUtilsService,
+    private funcionesDatosService: FuncionesDatosService
   ) {}
 
   ngOnInit(): void {
@@ -620,8 +622,17 @@ export class PlanGridComponent implements OnInit, AfterViewInit {
   }
 
   // Función personalizada para formateo seguro de fechas
-  formatFecha(fecha: string | Date | null | undefined): string {
-    return this.planUtils.formatFecha(fecha);
+  formatFecha(fecha: any): string {
+    if (!fecha) return '-';
+
+    try {
+      // Dejar que formatoFecha maneje la conversión completa (arrays, strings, Date)
+      // No pre-convertir porque formatoFecha necesita el formato original
+      return this.funcionesDatosService.formatoFecha(fecha, FuncionesDatosService.SOLO_FECHA);
+    } catch (err) {
+      console.error('❌ Error formateando fecha:', err, 'Fecha recibida:', fecha);
+      return 'Error de formato';
+    }
   }
 
   // ====== NUEVA LÓGICA JERÁRQUICA (paridad con Plan Árbol) ======

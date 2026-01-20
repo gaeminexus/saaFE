@@ -14,33 +14,14 @@
           <mat-icon>add</mat-icon>
           Nuevo
         </button>
-        <button mat-icon-button
+        <button mat-raised-button
                 class="action-button secondary"
                 (click)="refresh()"
                 matTooltip="Actualizar datos">
           <mat-icon>refresh</mat-icon>
+          Refrescar
         </button>
       </div>
-    </div>
-
-    <!-- Filter Section -->
-    <div class="filter-section">
-      <mat-form-field appearance="outline" class="filter-field">
-        <mat-label>Buscar tipos de asientos</mat-label>
-        <input matInput
-               [(ngModel)]="filterValue"
-               (keyup)="applyFilter()"
-               placeholder="Buscar por nombre..."
-               autocomplete="off">
-        <mat-icon matSuffix>search</mat-icon>
-      </mat-form-field>
-      <button mat-icon-button
-              *ngIf="filterValue"
-              (click)="clearFilter()"
-              matTooltip="Limpiar filtro"
-              class="clear-filter-btn">
-        <mat-icon>clear</mat-icon>
-      </button>
     </div>
   </div>
 

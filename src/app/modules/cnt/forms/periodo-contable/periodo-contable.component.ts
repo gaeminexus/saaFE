@@ -167,12 +167,9 @@ export class PeriodoContableComponent implements OnInit {
       return;
     }
 
-    console.log(`🔍 Cargando períodos contables para empresa ${empresaCodigo}...`);
-
     this.periodoService.getAll().subscribe({
       next: (data: Periodo[]) => {
         this.periodos = data || [];
-        console.log(`✅ Períodos cargados: ${this.periodos.length}`);
 
         // Ordenar por año y mes descendente
         this.dataSource.data = this.periodos.sort((a, b) => {
@@ -273,11 +270,9 @@ export class PeriodoContableComponent implements OnInit {
         return;
       }
 
-      console.log('📤 Creando nuevo período:', formValue);
       this.periodoService.crearPeriodo(formValue).subscribe({
         next: (result) => {
           if (result) {
-            console.log('✅ Período creado exitosamente');
             this.showMessage('Período creado correctamente', 'success');
             this.loadPeriodos();
             this.cancelarEdicion();
@@ -289,12 +284,9 @@ export class PeriodoContableComponent implements OnInit {
         },
       });
     } else {
-      console.log('📤 Actualizando período:', formValue);
-
       this.periodoService.update(formValue).subscribe({
         next: (periodoActualizado) => {
           if (periodoActualizado) {
-            console.log('✅ Período actualizado exitosamente');
             this.showMessage('Período actualizado correctamente', 'success');
             this.loadPeriodos();
             this.cancelarEdicion();
@@ -323,11 +315,9 @@ export class PeriodoContableComponent implements OnInit {
       return;
     }
 
-    console.log('📤 Majorizando período:', periodo.codigo);
     this.periodoService.mayorizar(periodo.codigo).subscribe({
       next: (success) => {
         if (success) {
-          console.log('✅ Período mayorizado exitosamente');
           this.showMessage('Período mayorizado correctamente', 'success');
           this.loadPeriodos();
         } else {
@@ -347,11 +337,9 @@ export class PeriodoContableComponent implements OnInit {
       return;
     }
 
-    console.log('📤 Desmayorizando período:', periodo.codigo);
     this.periodoService.desmayorizar(periodo.codigo).subscribe({
       next: (success) => {
         if (success) {
-          console.log('✅ Período desmayorizado exitosamente');
           this.showMessage('Período desmayorizado correctamente', 'success');
           this.loadPeriodos();
         } else {
@@ -389,11 +377,9 @@ export class PeriodoContableComponent implements OnInit {
 
     dialogRef.afterClosed().subscribe((confirmed) => {
       if (confirmed) {
-        console.log('🗑️ Eliminando período:', periodo.codigo);
         this.periodoService.delete(periodo.codigo).subscribe({
           next: (success) => {
             if (success) {
-              console.log('✅ Período eliminado exitosamente');
               this.showMessage('Período eliminado correctamente', 'success');
               this.loadPeriodos();
             } else {

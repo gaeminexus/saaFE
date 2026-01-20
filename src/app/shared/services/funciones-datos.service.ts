@@ -81,18 +81,34 @@ export class FuncionesDatosService {
   }
 
   formatoFecha(fecha: any, tipo: number): string {
-    let fechaFac: Date | null;
+    let fechaFac: Date | null = null;
     let strFecha = '';
-    if (typeof fecha === 'undefined') {
-      fechaFac = null;
-    } else {
-      if (tipo === 2) {
-        fecha = fecha + 'T12:00:00';
-      }
-      // Usar el método centralizado para convertir fechas
+
+    if (typeof fecha === 'undefined' || !fecha) {
+      return '';
+    }
+
+    // Si es un array, convertir primero
+    if (Array.isArray(fecha)) {
       fechaFac = this.convertirFechaDesdeBackend(fecha);
     }
-    if (fechaFac) {
+    // Si es string y tipo SOLO_FECHA, agregar hora para parseo correcto
+    else if (typeof fecha === 'string') {
+      if (tipo === 2 && !fecha.includes('T')) {
+        fecha = fecha + 'T12:00:00';
+      }
+      fechaFac = this.convertirFechaDesdeBackend(fecha);
+    }
+    // Si ya es Date, usar directamente
+    else if (fecha instanceof Date) {
+      fechaFac = fecha;
+    }
+    // Otros casos, intentar convertir
+    else {
+      fechaFac = this.convertirFechaDesdeBackend(fecha);
+    }
+
+    if (fechaFac && !isNaN(fechaFac.getTime())) {
       /* 1 ***  DD-MM-YYYY / HH:mm  *** */
       if (tipo === FECHA_HORA) {
         strFecha =

@@ -250,21 +250,33 @@
                   class="cuenta-field"
                   [class.cuenta-centro-costo]="filaRequiereCentroCosto('DEBE', $index)"
                 >
-                  <mat-label>Cuenta</mat-label>
-                  <mat-select
-                    formControlName="cuenta"
-                    (selectionChange)="onCuentaSeleccionada('DEBE', $index, $event.value)"
+                  <mat-label>Cuenta (buscar por número o nombre)</mat-label>
+                  <input
+                    type="text"
+                    matInput
+                    formControlName="cuentaBusqueda"
+                    [matAutocomplete]="autoDebe"
+                    placeholder="Escriba para buscar..."
+                  />
+                  <mat-autocomplete
+                    #autoDebe="matAutocomplete"
+                    [displayWith]="displayCuenta.bind(this)"
+                    (optionSelected)="onCuentaAutocompleteSeleccionada('DEBE', $index, $any($event.option.value))"
                   >
-                    <mat-option [value]="null">-- Seleccione --</mat-option>
-                    @for (cta of cuentasPlan; track cta.codigo) {
-                    <mat-option [value]="cta">
-                      {{ cta.cuentaContable }} - {{ cta.nombre }}
-                      @if (cuentaRequiereCentroCosto(cta)) {
-                      <span class="centro-costo-indicator"> 🏢 Centro de Costo</span>
+                    @if (cuentasFiltradasDebe[$index] | async; as cuentas) {
+                      @for (cta of cuentas; track cta.codigo) {
+                        <mat-option [value]="cta">
+                          <div class="cuenta-option">
+                            <span class="cuenta-numero">{{ cta.cuentaContable }}</span>
+                            <span class="cuenta-nombre">{{ cta.nombre }}</span>
+                            @if (cuentaRequiereCentroCosto(cta)) {
+                              <mat-icon class="centro-costo-mini-icon" matTooltip="Requiere Centro de Costo">business</mat-icon>
+                            }
+                          </div>
+                        </mat-option>
                       }
-                    </mat-option>
                     }
-                  </mat-select>
+                  </mat-autocomplete>
                   <mat-icon matPrefix>account_balance</mat-icon>
                   @if (filaRequiereCentroCosto('DEBE', $index)) {
                   <mat-icon
@@ -308,7 +320,7 @@
                   <mat-select
                     formControlName="centroCosto"
                     placeholder="Seleccione un centro de costo (solo Movimiento)"
-                    (selectionChange)="onCentroSelected($event?.value?.codigo, 'DEBE', $index)"
+                    (selectionChange)="onCentroSelected($event.value.codigo, 'DEBE', $index)"
                   >
                     <mat-option [value]="null">-- Seleccione --</mat-option>
                     @for (centro of centrosCosto; track centro.codigo) {
@@ -433,21 +445,33 @@
                   class="cuenta-field"
                   [class.cuenta-centro-costo]="filaRequiereCentroCosto('HABER', $index)"
                 >
-                  <mat-label>Cuenta</mat-label>
-                  <mat-select
-                    formControlName="cuenta"
-                    (selectionChange)="onCuentaSeleccionada('HABER', $index, $event.value)"
+                  <mat-label>Cuenta (buscar por número o nombre)</mat-label>
+                  <input
+                    type="text"
+                    matInput
+                    formControlName="cuentaBusqueda"
+                    [matAutocomplete]="autoHaber"
+                    placeholder="Escriba para buscar..."
+                  />
+                  <mat-autocomplete
+                    #autoHaber="matAutocomplete"
+                    [displayWith]="displayCuenta.bind(this)"
+                    (optionSelected)="onCuentaAutocompleteSeleccionada('HABER', $index, $any($event.option.value))"
                   >
-                    <mat-option [value]="null">-- Seleccione --</mat-option>
-                    @for (cta of cuentasPlan; track cta.codigo) {
-                    <mat-option [value]="cta">
-                      {{ cta.cuentaContable }} - {{ cta.nombre }}
-                      @if (cuentaRequiereCentroCosto(cta)) {
-                      <span class="centro-costo-indicator"> 🏢 Centro de Costo</span>
+                    @if (cuentasFiltradasHaber[$index] | async; as cuentas) {
+                      @for (cta of cuentas; track cta.codigo) {
+                        <mat-option [value]="cta">
+                          <div class="cuenta-option">
+                            <span class="cuenta-numero">{{ cta.cuentaContable }}</span>
+                            <span class="cuenta-nombre">{{ cta.nombre }}</span>
+                            @if (cuentaRequiereCentroCosto(cta)) {
+                              <mat-icon class="centro-costo-mini-icon" matTooltip="Requiere Centro de Costo">business</mat-icon>
+                            }
+                          </div>
+                        </mat-option>
                       }
-                    </mat-option>
                     }
-                  </mat-select>
+                  </mat-autocomplete>
                   <mat-icon matPrefix>account_balance</mat-icon>
                   @if (filaRequiereCentroCosto('HABER', $index)) {
                   <mat-icon
@@ -491,7 +515,7 @@
                   <mat-select
                     formControlName="centroCosto"
                     placeholder="Seleccione un centro de costo (solo Movimiento)"
-                    (selectionChange)="onCentroSelected($event?.value?.codigo, 'HABER', $index)"
+                    (selectionChange)="onCentroSelected($event.value.codigo, 'HABER', $index)"
                   >
                     <mat-option [value]="null">-- Seleccione --</mat-option>
                     @for (centro of centrosCosto; track centro.codigo) {

@@ -149,7 +149,6 @@ export class ListadoAsientosComponent implements OnInit {
     this.error = null;
 
     const idEmpresa = this.idEmpresa;
-    console.log(`🔍 Iniciando carga de asientos para empresa ${idEmpresa}...`);
 
     // Crear criterios usando el patrón DatosBusqueda
     const criterioConsultaArray: Array<DatosBusqueda> = [];
@@ -167,9 +166,7 @@ export class ListadoAsientosComponent implements OnInit {
 
     this.asientoService.selectByCriteria(criterioConsultaArray).subscribe({
       next: (data) => {
-        console.log(`📡 Respuesta del backend para asientos empresa ${idEmpresa}:`, data);
         const list = Array.isArray(data) ? data : (data as any)?.data ?? [];
-        console.log(`📋 Lista de asientos procesada para empresa ${idEmpresa}:`, list);
 
         // Transformar fechas y ordenar por número de asiento ascendente (numérico)
         this.asientosCompletos = list
@@ -188,22 +185,14 @@ export class ListadoAsientosComponent implements OnInit {
         this.aplicarFiltros();
         this.loading = false;
 
-        console.log(
-          `✅ Se cargaron ${list.length} asientos para empresa ${idEmpresa} exitosamente`
-        );
-
         if (this.asientos.length > 0) {
           this.showMessage('Asientos cargados correctamente', 'success');
         }
       },
       error: (err) => {
-        console.error(`❌ Error al cargar asientos con empresa ${idEmpresa}:`, err);
-
         // Fallback a getAll() si falla el filtro
-        console.log('🔄 Probando getAll como fallback...');
         this.asientoService.getAll().subscribe({
           next: (data) => {
-            console.log('📡 Respuesta fallback getAll:', data);
             const list = Array.isArray(data) ? data : (data as any)?.data ?? [];
             const filtered = list.filter((asiento: any) => asiento?.empresa?.codigo === idEmpresa);
 
@@ -299,10 +288,6 @@ export class ListadoAsientosComponent implements OnInit {
     this.asientos = asientosFiltrados;
     this.dataSource.data = this.asientos;
     this.totalElements = this.asientos.length;
-
-    console.log(
-      `🔍 Filtros aplicados: ${this.asientos.length} de ${this.asientosCompletos.length} asientos mostrados`
-    );
   }
 
   /**
@@ -334,8 +319,6 @@ export class ListadoAsientosComponent implements OnInit {
       const estadosRubros = this.detalleRubroService.getDetallesByParent(RUBRO_ESTADOS_ASIENTOS);
 
       if (estadosRubros && estadosRubros.length > 0) {
-        console.log(`✅ Estados cargados desde rubro ${RUBRO_ESTADOS_ASIENTOS}:`, estadosRubros);
-
         // 3. Construir opciones para el dropdown
         this.estadosDisponibles = [
           { valor: '', texto: 'Todos los estados' },
@@ -347,7 +330,6 @@ export class ListadoAsientosComponent implements OnInit {
             })),
         ];
 
-        console.log('📋 Estados disponibles configurados:', this.estadosDisponibles);
         return;
       }
 
@@ -383,7 +365,6 @@ export class ListadoAsientosComponent implements OnInit {
     try {
       // Verificar que los datos están cargados
       if (!this.detalleRubroService.estanDatosCargados()) {
-        console.warn('⚠️ DetalleRubroService: Datos no cargados aún');
         this.usarTiposAsientoPorDefecto();
         return;
       }
@@ -393,11 +374,6 @@ export class ListadoAsientosComponent implements OnInit {
       const tiposRubros = this.detalleRubroService.getDetallesByParent(RUBRO_TIPOS_ASIENTO);
 
       if (tiposRubros && tiposRubros.length > 0) {
-        console.log(
-          `✅ Tipos de asiento cargados desde rubro ${RUBRO_TIPOS_ASIENTO}:`,
-          tiposRubros
-        );
-
         this.tiposAsientoDisponibles = [
           { valor: '', texto: 'Todos los tipos' },
           ...tiposRubros
@@ -408,7 +384,6 @@ export class ListadoAsientosComponent implements OnInit {
             })),
         ];
 
-        console.log('📋 Tipos de asiento disponibles configurados:', this.tiposAsientoDisponibles);
         return;
       }
 
@@ -472,7 +447,6 @@ export class ListadoAsientosComponent implements OnInit {
    * Navega a la edición de un asiento
    */
   editarAsiento(asiento: Asiento): void {
-    console.log('🔧 Editando asiento:', asiento);
     this.router.navigate(['/menucontabilidad/procesos/asientos-dinamico'], {
       queryParams: { id: asiento.codigo, mode: 'edit' },
     });
@@ -482,7 +456,6 @@ export class ListadoAsientosComponent implements OnInit {
    * Ver detalles de un asiento
    */
   verDetalle(asiento: Asiento): void {
-    console.log('👁️ Viendo detalle de asiento:', asiento);
     this.router.navigate(['/menucontabilidad/procesos/asientos-dinamico'], {
       queryParams: { id: asiento.codigo, mode: 'view' },
     });

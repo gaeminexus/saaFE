@@ -10,7 +10,7 @@ export interface PlanCuenta {
   nivel: number;
   idPadre: number;
   estado: number;
-  fechaInactivo: Date;
+  fechaInactivo: any; // Puede ser Date, string o array del backend
   empresa: Empresa;
-  fechaUpdate: Date;
+  fechaUpdate: any; // Puede ser Date, string o array del backend
 }
