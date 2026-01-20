@@ -63,6 +63,8 @@ export class CargaAportesComponent implements OnInit {
   // Carga de archivos
   nombreArchivo: string = '';
   archivoSeleccionado: File | null = null;
+  archivoValido: boolean = false;
+  mensajeErrorArchivo: string = '';
   aporteAgrupados: AporteAgrupado[] = [];
   totalRegistros: number = 0;
   totalesGenerales: {
@@ -180,6 +182,8 @@ export class CargaAportesComponent implements OnInit {
     this.aporteAgrupados = [];
     this.nombreArchivo = '';
     this.archivoSeleccionado = null;
+    this.archivoValido = false;
+    this.mensajeErrorArchivo = '';
     this.cargaExitosa = false;
   }
 
@@ -201,44 +205,35 @@ export class CargaAportesComponent implements OnInit {
     this.aporteAgrupados = [];
     this.nombreArchivo = '';
     this.archivoSeleccionado = null;
+    this.archivoValido = false;
+    this.mensajeErrorArchivo = '';
   }
 
   onAnioChange(): void {
-    console.log('🔵🔵🔵 onAnioChange EJECUTADO 🔵🔵🔵');
-    console.log('Año seleccionado:', this.anioSeleccionado);
-    console.log('Filial seleccionada:', this.filialSeleccionada);
-
     // Limpiar mes cuando cambie el año
     this.mesSeleccionado = null;
     this.mesesDeshabilitados = [];
 
     if (this.anioSeleccionado && this.filialSeleccionada) {
       // Buscar meses ya cargados para esta filial/año
-      console.log('✅ Condiciones cumplidas, llamando a buscarMesesCargados()');
       this.buscarMesesCargados();
     } else {
       this.mesDeshabilitado = true;
-      console.log('❌ Mes deshabilitado porque falta año o filial');
     }
 
     // Limpiar resultados
     this.aporteAgrupados = [];
     this.nombreArchivo = '';
     this.archivoSeleccionado = null;
+    this.archivoValido = false;
+    this.mensajeErrorArchivo = '';
   }
 
   buscarMesesCargados(): void {
-    console.log('======================================================');
-    console.log('INICIO buscarMesesCargados() - Filial:', this.filialSeleccionada, 'Año:', this.anioSeleccionado);
-    console.log('======================================================');
-
     if (!this.filialSeleccionada || !this.anioSeleccionado) {
-      console.error('❌ Saliendo de buscarMesesCargados porque falta filial o año');
       this.mesDeshabilitado = true;
       return;
     }
-
-    console.log('✅ Construyendo criterios de búsqueda...');
 
     const criterios: DatosBusqueda[] = [];
 
@@ -252,12 +247,10 @@ export class CargaAportesComponent implements OnInit {
       TipoComandosBusqueda.IGUAL
     );
     criterios.push(dbFilial);
-    console.log('Criterio filial agregado:', this.filialSeleccionada);
 
-    // Filtro por año - VALIDACIÓN EXTRA
+    // Filtro por año
     const anioValor = this.anioSeleccionado?.toString();
     if (!anioValor) {
-      console.error('ERROR: anioSeleccionado es null/undefined al construir criterio');
       return;
     }
 
@@ -269,28 +262,21 @@ export class CargaAportesComponent implements OnInit {
       TipoComandosBusqueda.IGUAL
     );
     criterios.push(dbAnio);
-    console.log('Criterio año agregado:', anioValor);
-    console.log('Ejecutando selectByCriteria con', criterios.length, 'criterios');
 
     this.cargaArchivoService.selectByCriteria(criterios).subscribe({
       next: (cargas: CargaArchivo[] | null) => {
-        console.log('Respuesta del servidor:', cargas);
         // Extraer los meses que ya tienen carga
         if (cargas && Array.isArray(cargas)) {
           this.mesesDeshabilitados = cargas.map(c => c.mesAfectacion).filter((mes): mes is number => mes !== undefined && mes !== null);
-          console.log('Meses deshabilitados:', this.mesesDeshabilitados);
         } else {
           this.mesesDeshabilitados = [];
-          console.log('No hay cargas, todos los meses disponibles');
         }
 
         // Habilitar el combo de meses
         this.mesDeshabilitado = false;
-        console.log('Combo de meses habilitado');
       },
       error: (error) => {
         console.error('Error al buscar meses cargados:', error);
-        console.error('Error completo:', JSON.stringify(error, null, 2));
         this.mesesDeshabilitados = [];
         // Habilitar el combo de meses aunque haya error
         this.mesDeshabilitado = false;
@@ -315,6 +301,49 @@ export class CargaAportesComponent implements OnInit {
     }
 
     const file = input.files[0];
+
+    // Validar extensión del archivo
+    const fileName = file.name.toLowerCase();
+    if (!fileName.endsWith('.txt')) {
+      this.mensajeErrorArchivo = `Archivo rechazado: "${file.name}". Solo se permiten archivos con extensión .txt`;
+      this.archivoValido = false;
+      this.snackBar.open(
+        '❌ ERROR: Solo se permiten archivos con extensión .txt',
+        'Cerrar',
+        {
+          duration: 5000,
+          panelClass: ['error-snackbar']
+        }
+      );
+      // Limpiar el input
+      input.value = '';
+      this.nombreArchivo = '';
+      this.archivoSeleccionado = null;
+      return;
+    }
+
+    // Validar tipo MIME (debe ser text/plain)
+    if (file.type && file.type !== 'text/plain' && file.type !== '') {
+      this.mensajeErrorArchivo = `Archivo rechazado: "${file.name}". Tipo detectado: ${file.type || 'desconocido'}. Solo archivos de texto plano (.txt) son permitidos`;
+      this.archivoValido = false;
+      this.snackBar.open(
+        '❌ ERROR: El archivo seleccionado no es un archivo de texto válido',
+        'Cerrar',
+        {
+          duration: 5000,
+          panelClass: ['error-snackbar']
+        }
+      );
+      // Limpiar el input
+      input.value = '';
+      this.nombreArchivo = '';
+      this.archivoSeleccionado = null;
+      return;
+    }
+
+    // Archivo válido - limpiar mensaje de error
+    this.mensajeErrorArchivo = '';
+    this.archivoValido = true;
     this.nombreArchivo = file.name;
 
     try {
@@ -458,17 +487,6 @@ export class CargaAportesComponent implements OnInit {
       });
     });
 
-    // Debug: Verificar encoding de nombres antes de enviar
-    const primerParticipeConEnie = participesXCargaArchivo.find(p =>
-      p.nombre && (p.nombre.includes('ñ') || p.nombre.includes('Ñ'))
-    );
-    if (primerParticipeConEnie) {
-      console.log('🔍 Nombre con Ñ a enviar al backend:');
-      console.log('  Nombre:', primerParticipeConEnie.nombre);
-      console.log('  Char code de Ñ:', primerParticipeConEnie.nombre.charCodeAt(primerParticipeConEnie.nombre.indexOf('Ñ')));
-      console.log('  Debe ser 209 para estar correcto ✓');
-    }
-    
     // Enviar al servicio (construye FormData internamente)
     this.serviciosAsoprep.almacenaDatosArchivoPetro(
       this.archivoSeleccionado,
@@ -477,7 +495,6 @@ export class CargaAportesComponent implements OnInit {
       participesXCargaArchivo
     ).subscribe({
       next: (response: any) => {
-        console.log('Respuesta del servidor:', response);
         this.isUploadingFile = false;
 
         if (response && response.success) {
@@ -489,7 +506,6 @@ export class CargaAportesComponent implements OnInit {
             'Cerrar',
             { duration: 8000 }
           );
-          console.log('Carga completa:', response);
 
           // Mostrar mensaje de éxito
           this.cargaExitosa = true;

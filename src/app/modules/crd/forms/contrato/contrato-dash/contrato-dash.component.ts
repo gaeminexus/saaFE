@@ -407,9 +407,10 @@ export class ContratoDashComponent implements OnInit {
     // Si es un array (como [2023,7,31,0,0]), convertir a Date
     if (Array.isArray(fecha)) {
       // Array format: [year, month, day, hour, minute, second?, millisecond?]
-      const [year, month, day, hour = 0, minute = 0, second = 0, ms = 0] = fecha;
-      // Nota: los meses en JavaScript Date van de 0-11, pero el backend puede enviar 1-12
-      // Asumimos que el backend envía 1-12 (mes real), así que restamos 1
+      const [year, month, day, hour = 0, minute = 0, second = 0, nanoseconds = 0] = fecha;
+      // Convertir nanosegundos a milisegundos
+      const ms = Math.floor(nanoseconds / 1000000);
+      // Nota: los meses en JavaScript Date van de 0-11, pero el backend envía 1-12
       return new Date(year, month - 1, day, hour, minute, second, ms);
     }
 

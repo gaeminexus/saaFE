@@ -156,17 +156,22 @@
                 </div>
 
                 @if (nombreArchivo) {
-                  <div class="file-selected-info">
-                    <mat-icon color="accent">check_circle</mat-icon>
-                    <span class="file-name">{{ nombreArchivo }}</span>
+                  <div class="file-selected-wrapper">
+                    <div class="file-selected-info">
+                      @if (archivoValido) {
+                        <mat-icon color="accent">check_circle</mat-icon>
+                      } @else {
+                        <mat-icon class="error-icon">error</mat-icon>
+                      }
+                      <span class="file-name">{{ nombreArchivo }}</span>
 
-                    <button
-                      mat-raised-button
-                      color="accent"
-                      class="validate-button"
-                      [disabled]="isUploadingFile()"
-                      (click)="validarArchivo()">
-                      @if (isUploadingFile()) {
+                      <button
+                        mat-raised-button
+                        color="accent"
+                        class="validate-button"
+                        [disabled]="isUploadingFile() || !archivoValido"
+                        (click)="validarArchivo()">
+                        @if (isUploadingFile()) {
                         <mat-spinner diameter="20"></mat-spinner>
                         <span>Validando...</span>
                       } @else {
@@ -176,6 +181,14 @@
                         </ng-container>
                       }
                     </button>
+                    </div>
+
+                    @if (mensajeErrorArchivo) {
+                      <div class="file-error-message">
+                        <mat-icon class="error-icon-small">warning</mat-icon>
+                        <span class="error-text">{{ mensajeErrorArchivo }}</span>
+                      </div>
+                    }
                   </div>
                 }
               </mat-card-content>

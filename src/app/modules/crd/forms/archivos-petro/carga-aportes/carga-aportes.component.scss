@@ -444,6 +444,55 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
               color: $saa-text-primary;
               font-weight: 500;
             }
+
+            &.file-success {
+              background-color: #e8f5e9;
+              border: 2px solid $saa-success;
+
+              .success-icon {
+                color: $saa-success;
+                font-size: 24px;
+                width: 24px;
+                height: 24px;
+              }
+
+              span {
+                color: darken($saa-success, 20%);
+              }
+            }
+          }
+
+          .file-error {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            padding: 1rem 1.5rem;
+            margin-top: 1rem;
+            background-color: #ffebee;
+            border: 2px solid $saa-error;
+            border-radius: 0.75rem;
+            animation: shake 0.5s ease-in-out;
+
+            .error-icon {
+              color: $saa-error;
+              font-size: 24px;
+              width: 24px;
+              height: 24px;
+              flex-shrink: 0;
+            }
+
+            .error-text {
+              font-size: 13px;
+              color: darken($saa-error, 10%);
+              line-height: 1.5;
+              font-weight: 500;
+            }
+          }
+
+          @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
           }
         }
       }

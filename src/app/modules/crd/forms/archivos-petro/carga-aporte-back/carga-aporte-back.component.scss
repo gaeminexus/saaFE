@@ -1303,3 +1303,52 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
     transform: translateY(0);
   }
 }
+
+// Estilos para validación de archivos
+.error-icon {
+  color: $saa-error !important;
+}
+
+.file-selected-wrapper {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.file-error-message {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: #ffebee;
+  border: 2px solid $saa-error;
+  border-radius: 0.5rem;
+  animation: shake 0.5s ease-in-out;
+
+  .error-icon-small {
+    color: $saa-error;
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+  }
+
+  .error-text {
+    flex: 1;
+    font-size: 13px;
+    color: darken($saa-error, 10%);
+    line-height: 1.5;
+    font-weight: 500;
+    word-break: break-word;
+  }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}

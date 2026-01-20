@@ -1526,11 +1526,13 @@ export class AsientosContablesDinamico implements OnInit {
       return new Date(fecha);
     }
 
-    // Si es un array [año, mes, día, hora, minuto, segundo] (formato Java LocalDateTime)
+    // Si es un array [año, mes, día, hora, minuto, segundo, nanosegundos] (formato Java LocalDateTime)
     if (Array.isArray(fecha) && fecha.length >= 3) {
-      // Nota: Los meses en JavaScript son 0-indexados, pero Java puede enviar 1-indexados
-      const [year, month, day, hour = 0, minute = 0, second = 0] = fecha;
-      return new Date(year, month - 1, day, hour, minute, second);
+      // Nota: Los meses en JavaScript son 0-indexados, pero Java envía 1-indexados
+      const [year, month, day, hour = 0, minute = 0, second = 0, nanoseconds = 0] = fecha;
+      // Convertir nanosegundos a milisegundos (dividir entre 1,000,000)
+      const ms = Math.floor(nanoseconds / 1000000);
+      return new Date(year, month - 1, day, hour, minute, second, ms);
     }
 
     // Si es un objeto con propiedades de fecha

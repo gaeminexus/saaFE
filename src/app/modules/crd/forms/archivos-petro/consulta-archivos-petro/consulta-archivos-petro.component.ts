@@ -5,6 +5,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { CargaArchivo } from '../../../model/carga-archivo';
 import { CargaArchivoService } from '../../../service/carga-archivo.service';
+import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 
 interface MesCirculo {
   numero: number;
@@ -46,7 +47,8 @@ export class ConsultaArchivosPetroComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private cargaArchivoService: CargaArchivoService
+    private cargaArchivoService: CargaArchivoService,
+    private funcionesDatosService: FuncionesDatosService
   ) {}
 
   ngOnInit(): void {
@@ -54,6 +56,7 @@ export class ConsultaArchivosPetroComponent implements OnInit {
     this.route.data.subscribe(data => {
       this.todasLasCargas = data['cargas'] || [];
       this.cargasFiltradas = [...this.todasLasCargas];
+      this.ordenarCargasCronologicamente(this.cargasFiltradas);
       this.extraerAniosDisponibles();
       this.inicializarVista();
     });
@@ -116,6 +119,7 @@ export class ConsultaArchivosPetroComponent implements OnInit {
 
         // Mostrar todas las cargas del año
         this.cargasFiltradas = cargasArray.filter(c => c && c.anioAfectacion === this.anioSeleccionado);
+        this.ordenarCargasCronologicamente(this.cargasFiltradas);
       },
       error: (error) => {
         console.error('Error al cargar cargas del año:', error);
@@ -140,6 +144,7 @@ export class ConsultaArchivosPetroComponent implements OnInit {
       this.cargasFiltradas = this.todasLasCargas.filter(c =>
         c.anioAfectacion === this.anioSeleccionado
       );
+      this.ordenarCargasCronologicamente(this.cargasFiltradas);
     } else {
       // Seleccionar nuevo mes
       this.mesSeleccionado = mes.numero;
@@ -150,6 +155,7 @@ export class ConsultaArchivosPetroComponent implements OnInit {
       this.cargasFiltradas = this.todasLasCargas.filter(c =>
         c.anioAfectacion === this.anioSeleccionado && c.mesAfectacion === mes.numero
       );
+      this.ordenarCargasCronologicamente(this.cargasFiltradas);
     }
   }
 
@@ -160,6 +166,34 @@ export class ConsultaArchivosPetroComponent implements OnInit {
     this.meses.forEach(mes => {
       mes.activo = false;
       mes.tieneCarga = false;
+    });
+  }
+
+  /**
+   * Ordena las cargas cronológicamente: año descendente, mes descendente
+   * (más recientes primero)
+   */
+  private ordenarCargasCronologicamente(cargas: CargaArchivo[]): void {
+    cargas.sort((a, b) => {
+      // Primero ordenar por año (descendente - más reciente primero)
+      if (a.anioAfectacion !== b.anioAfectacion) {
+        return (b.anioAfectacion || 0) - (a.anioAfectacion || 0);
+      }
+
+      // Si el año es igual, ordenar por mes (descendente - más reciente primero)
+      if (a.mesAfectacion !== b.mesAfectacion) {
+        return (b.mesAfectacion || 0) - (a.mesAfectacion || 0);
+      }
+
+      // Si año y mes son iguales, ordenar por fecha de carga (descendente)
+      const fechaA = this.funcionesDatosService.convertirFechaDesdeBackend(a.fechaCarga);
+      const fechaB = this.funcionesDatosService.convertirFechaDesdeBackend(b.fechaCarga);
+
+      if (fechaA && fechaB) {
+        return fechaB.getTime() - fechaA.getTime();
+      }
+
+      return 0;
     });
   }
 
@@ -186,7 +220,8 @@ export class ConsultaArchivosPetroComponent implements OnInit {
   formatearFechaCarga(carga: CargaArchivo): string {
     if (!carga.fechaCarga) return 'N/A';
 
-    const fechaConvertida = this.convertirFecha(carga.fechaCarga);
+    // Usar el método centralizado que maneja nanosegundos correctamente
+    const fechaConvertida = this.funcionesDatosService.convertirFechaDesdeBackend(carga.fechaCarga);
     if (!fechaConvertida) return 'N/A';
 
     return fechaConvertida.toLocaleDateString('es-EC', {
@@ -233,37 +268,10 @@ export class ConsultaArchivosPetroComponent implements OnInit {
   }
 
   /**
-   * Convierte una fecha de forma segura manejando diferentes formatos
+   * @deprecated Usar funcionesDatosService.convertirFechaDesdeBackend() en su lugar
+   * Mantener por compatibilidad temporal
    */
   private convertirFecha(fecha: any): Date | null {
-    if (!fecha) return null;
-
-    if (fecha instanceof Date) return fecha;
-
-    // Si es un array (como [2023,7,31,0,0]), convertir a Date
-    if (Array.isArray(fecha)) {
-      // Array format: [year, month, day, hour, minute, second?, millisecond?]
-      const [year, month, day, hour = 0, minute = 0, second = 0, ms = 0] = fecha;
-      // Nota: los meses en JavaScript Date van de 0-11, pero el backend puede enviar 1-12
-      // Asumimos que el backend envía 1-12 (mes real), así que restamos 1
-      return new Date(year, month - 1, day, hour, minute, second, ms);
-    }
-
-    if (typeof fecha === 'string') {
-      // Limpiar el string de fecha quitando el timezone [UTC] si existe
-      const fechaLimpia = fecha.replace(/\[.*?\]/, '');
-      const fechaConvertida = new Date(fechaLimpia);
-
-      // Verificar si la fecha es válida
-      if (!isNaN(fechaConvertida.getTime())) {
-        return fechaConvertida;
-      }
-    }
-
-    if (typeof fecha === 'number') {
-      return new Date(fecha);
-    }
-
-    return null;
+    return this.funcionesDatosService.convertirFechaDesdeBackend(fecha);
   }
 }

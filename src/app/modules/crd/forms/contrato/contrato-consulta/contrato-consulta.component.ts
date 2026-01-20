@@ -113,7 +113,8 @@ export class ContratoConsultaComponent implements OnInit {
   private convertirFecha(fecha: any): Date | null {
     if (!fecha) return null;
     if (Array.isArray(fecha)) {
-      const [year, month, day, hour = 0, minute = 0, second = 0, ms = 0] = fecha;
+      const [year, month, day, hour = 0, minute = 0, second = 0, nanoseconds = 0] = fecha;
+      const ms = Math.floor(nanoseconds / 1000000);
       return new Date(year, month - 1, day, hour, minute, second, ms);
     }
     if (fecha instanceof Date) return fecha;

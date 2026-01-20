@@ -10,6 +10,18 @@
 			<input matInput (keyup)="applyFilter($any($event.target).value)" placeholder="Buscar por cualquier campo..." />
 			<mat-hint>Busca por cédula, nombre, correo, etc.</mat-hint>
 		</mat-form-field>
+
+		<div class="action-buttons">
+			<button mat-raised-button color="accent" (click)="exportarCSV()" [disabled]="loading() || totalRegistros() === 0" matTooltip="Exportar a Excel">
+				<mat-icon>file_download</mat-icon>
+				Excel
+			</button>
+			<button mat-raised-button color="accent" (click)="exportarPDF()" [disabled]="loading() || totalRegistros() === 0" matTooltip="Exportar a PDF">
+				<mat-icon>picture_as_pdf</mat-icon>
+				PDF
+			</button>
+		</div>
+
 		<div class="total-info">
 			<mat-icon>info</mat-icon>
 			Total: {{totalRegistros()}} registros

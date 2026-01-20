@@ -89,7 +89,8 @@ export class FuncionesDatosService {
       if (tipo === 2) {
         fecha = fecha + 'T12:00:00';
       }
-      fechaFac = new Date(fecha);
+      // Usar el método centralizado para convertir fechas
+      fechaFac = this.convertirFechaDesdeBackend(fecha);
     }
     if (fechaFac) {
       /* 1 ***  DD-MM-YYYY / HH:mm  *** */
@@ -118,13 +119,76 @@ export class FuncionesDatosService {
     return strFecha;
   }
 
+  /**
+   * Convierte una fecha desde el backend manejando múltiples formatos:
+   * - Date object
+   * - String ISO
+   * - Array [year, month, day, hour, minute, second, nanoseconds]
+   * - Timestamp numérico
+   *
+   * @param fecha - Fecha en cualquier formato desde backend
+   * @returns Date object o null si es inválida
+   */
+  convertirFechaDesdeBackend(fecha: any): Date | null {
+    if (!fecha) return null;
+
+    if (fecha instanceof Date) return fecha;
+
+    // Array format: [year, month, day, hour, minute, second, nanoseconds]
+    // El backend Java envía nanosegundos en el último elemento
+    if (Array.isArray(fecha)) {
+      const [year, month, day, hour = 0, minute = 0, second = 0, nanoseconds = 0] = fecha;
+
+      // Convertir nanosegundos a milisegundos (dividir entre 1,000,000)
+      const ms = Math.floor(nanoseconds / 1000000);
+
+      // Los meses en JavaScript Date van de 0-11, pero el backend envía 1-12
+      return new Date(year, month - 1, day, hour, minute, second, ms);
+    }
+
+    if (typeof fecha === 'string') {
+      // Limpiar timezone markers como [UTC]
+      const fechaLimpia = fecha.replace(/\[.*?\]/, '').trim();
+
+      // Parsear formato "yyyy-MM-dd HH:mm:ss.SSS"
+      const regexFecha = /^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?/;
+      const match = fechaLimpia.match(regexFecha);
+
+      if (match) {
+        const [_, year, month, day, hour, minute, second, ms = '0'] = match;
+        return new Date(
+          parseInt(year),
+          parseInt(month) - 1,
+          parseInt(day),
+          parseInt(hour),
+          parseInt(minute),
+          parseInt(second),
+          parseInt(ms)
+        );
+      }
+
+      // Fallback: parseo estándar
+      const fechaConvertida = new Date(fechaLimpia);
+      if (!isNaN(fechaConvertida.getTime())) {
+        return fechaConvertida;
+      }
+    }
+
+    if (typeof fecha === 'number') {
+      return new Date(fecha);
+    }
+
+    return null;
+  }
+
   formatoFechaOrigenConHora(fecha: any, tipo: number): string {
     let fechaFac: Date | null;
     let strFecha = '';
     if (typeof fecha === 'undefined') {
       fechaFac = null;
     } else {
-      fechaFac = new Date(fecha);
+      // Usar el método centralizado para convertir fechas
+      fechaFac = this.convertirFechaDesdeBackend(fecha);
     }
     if (fechaFac) {
       /* 1 ***  DD-MM-YYYY / HH:mm  *** */

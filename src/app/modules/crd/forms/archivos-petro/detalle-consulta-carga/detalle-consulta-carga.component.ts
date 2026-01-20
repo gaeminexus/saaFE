@@ -1124,72 +1124,30 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
 
   /**
    * Formatea una fecha para mostrar en template
-   * Usa el servicio global FuncionesDatosService
    */
   formatearFecha(fecha: any): string {
     if (!fecha) return '-';
 
-    // Convertir la fecha a un formato que el servicio pueda procesar
-    const fechaConvertida = this.convertirFecha(fecha);
+    // Usar el método centralizado del servicio compartido
+    const fechaConvertida = this.funcionesDatos.convertirFechaDesdeBackend(fecha);
     if (!fechaConvertida) return '-';
 
-    // Usar el método global formatoFechaOrigenConHora que maneja el formato del backend
-    // Tipo 1 = FECHA_HORA (DD-MM-YYYY / HH:mm)
-    return this.funcionesDatos.formatoFechaOrigenConHora(fechaConvertida, FuncionesDatosService.FECHA_HORA) || '-';
+    // Formatear manualmente (DD-MM-YYYY / HH:mm)
+    const dia = fechaConvertida.getDate().toString().padStart(2, '0');
+    const mes = (fechaConvertida.getMonth() + 1).toString().padStart(2, '0');
+    const anio = fechaConvertida.getFullYear();
+    const hora = fechaConvertida.getHours().toString().padStart(2, '0');
+    const minuto = fechaConvertida.getMinutes().toString().padStart(2, '0');
+
+    return `${dia}-${mes}-${anio} / ${hora}:${minuto}`;
   }
 
   /**
-   * Convierte una fecha de forma segura manejando diferentes formatos
+   * @deprecated Usar funcionesDatos.convertirFechaDesdeBackend() en su lugar
+   * Mantener por compatibilidad temporal
    */
   private convertirFecha(fecha: any): Date | null {
-    if (!fecha) return null;
-
-    if (fecha instanceof Date) return fecha;
-
-    // Si es un array (como [2023,7,31,0,0]), convertir a Date
-    if (Array.isArray(fecha)) {
-      // Array format: [year, month, day, hour, minute, second?, millisecond?]
-      const [year, month, day, hour = 0, minute = 0, second = 0, ms = 0] = fecha;
-      // Nota: los meses en JavaScript Date van de 0-11, pero el backend puede enviar 1-12
-      // Asumimos que el backend envía 1-12 (mes real), así que restamos 1
-      return new Date(year, month - 1, day, hour, minute, second, ms);
-    }
-
-    if (typeof fecha === 'string') {
-      // Limpiar el string de fecha quitando el timezone [UTC] si existe
-      const fechaLimpia = fecha.replace(/\[.*?\]/, '').trim();
-
-      // Parsear manualmente strings con formato "yyyy-MM-dd HH:mm:ss.SSS" o similar
-      // Para evitar problemas de zona horaria con new Date(string)
-      const regexFecha = /^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?/;
-      const match = fechaLimpia.match(regexFecha);
-
-      if (match) {
-        const [_, year, month, day, hour, minute, second, ms = '0'] = match;
-        // Crear fecha usando constructor que NO aplica timezone
-        return new Date(
-          parseInt(year),
-          parseInt(month) - 1, // Mes es 0-indexed
-          parseInt(day),
-          parseInt(hour),
-          parseInt(minute),
-          parseInt(second),
-          parseInt(ms)
-        );
-      }
-
-      // Fallback: intentar parseo estándar
-      const fechaConvertida = new Date(fechaLimpia);
-      if (!isNaN(fechaConvertida.getTime())) {
-        return fechaConvertida;
-      }
-    }
-
-    if (typeof fecha === 'number') {
-      return new Date(fecha);
-    }
-
-    return null;
+    return this.funcionesDatos.convertirFechaDesdeBackend(fecha);
   }
 }
 

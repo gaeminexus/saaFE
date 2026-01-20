@@ -11,6 +11,8 @@ import { MatInputModule } from '@angular/material/input';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Exter } from '../../../model/exter';
 import { ExterService } from '../../../service/exter.service';
+import { ExportService } from '../../../../../shared/services/export.service';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { catchError, finalize } from 'rxjs/operators';
 import { of } from 'rxjs';
 
@@ -50,7 +52,11 @@ export class ExtersComponent implements OnInit, AfterViewInit {
   @ViewChild(MatSort) sort!: MatSort;
   @ViewChild('tableContainer', { read: ElementRef }) tableContainer!: ElementRef<HTMLDivElement>;
 
-  constructor(private exterService: ExterService) {}
+  constructor(
+    private exterService: ExterService,
+    private exportService: ExportService,
+    private snackBar: MatSnackBar
+  ) {}
 
   ngOnInit(): void {
     this.loadAllData();
@@ -198,9 +204,10 @@ export class ExtersComponent implements OnInit, AfterViewInit {
     // Si es un array (como [2023,7,31,0,0]), convertir a Date
     if (Array.isArray(fecha)) {
       // Array format: [year, month, day, hour, minute, second?, millisecond?]
-      const [year, month, day, hour = 0, minute = 0, second = 0, ms = 0] = fecha;
-      // Nota: los meses en JavaScript Date van de 0-11, pero el backend puede enviar 1-12
-      // Asumimos que el backend envía 1-12 (mes real), así que restamos 1
+      const [year, month, day, hour = 0, minute = 0, second = 0, nanoseconds = 0] = fecha;
+      // Convertir nanosegundos a milisegundos
+      const ms = Math.floor(nanoseconds / 1000000);
+      // Nota: los meses en JavaScript Date van de 0-11, pero el backend envía 1-12
       return new Date(year, month - 1, day, hour, minute, second, ms);
     }
 
@@ -220,5 +227,114 @@ export class ExtersComponent implements OnInit, AfterViewInit {
     }
 
     return null;
+  }
+
+  /**
+   * Exporta los datos actuales (filtrados) a CSV
+   */
+  exportarCSV(): void {
+    let dataToExport = this.allData;
+
+    // Si hay filtro activo, exportar solo datos filtrados
+    if (this.currentFilter) {
+      const filterValue = this.currentFilter.toLowerCase();
+      dataToExport = this.allData.filter(item =>
+        Object.values(item).some(val =>
+          val?.toString().toLowerCase().includes(filterValue)
+        )
+      );
+    }
+
+    if (dataToExport.length === 0) {
+      this.snackBar.open('No hay datos para exportar', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    // Preparar datos con fechas formateadas
+    const dataFormateada = dataToExport.map(item => ({
+      ...item,
+      fechaNacimiento: this.formatCellValue(item.fechaNacimiento, 'fechaNacimiento'),
+      fechaDefuncion: this.formatCellValue(item.fechaDefuncion, 'fechaDefuncion')
+    }));
+
+    const headers = [
+      'Cédula', 'Nombre', 'Estado', 'Fecha Nacimiento', 'Estado Civil',
+      'Nivel Estudios', 'Edad', 'Profesión', 'Género',
+      'Nacionalidad', 'Provincia', 'Cantón', 'Móvil', 'Teléfono',
+      'Correo Principal', 'Correo Institucional', 'Celular 1', 'Celular 2',
+      'Correo Extra', 'Teléfono Laboral IE', 'Correo IE', 'Salario Fijo',
+      'Salario Variable', 'Salario Total', 'Sumados Ingresos', 'Sumados Egresos', 'Disponible'
+    ];
+
+    const dataKeys: (keyof Exter)[] = [
+      'cedula', 'nombre', 'estado', 'fechaNacimiento', 'estadoCivil',
+      'nivelEstudios', 'edad', 'profesion', 'genero',
+      'nacionalidad', 'provincia', 'canton', 'movil', 'telefono',
+      'correoPrincipal', 'correoInstitucional', 'celular1', 'celular2',
+      'correoExtra', 'telefonoLaboralIE', 'correoIE', 'salarioFijo',
+      'salarioVariable', 'salarioTotal', 'sumadosIngresos', 'sumadosEgresos', 'disponible'
+    ];
+
+    const fileName = `externos_${new Date().toISOString().split('T')[0]}`;
+    this.exportService.exportToCSV(dataFormateada, fileName, headers, dataKeys);
+    this.snackBar.open(`Exportados ${dataFormateada.length} registros a CSV`, 'Cerrar', { duration: 3000 });
+  }
+
+  /**
+   * Exporta los datos actuales (filtrados) a PDF
+   */
+  exportarPDF(): void {
+    let dataToExport = this.allData;
+
+    // Si hay filtro activo, exportar solo datos filtrados
+    if (this.currentFilter) {
+      const filterValue = this.currentFilter.toLowerCase();
+      dataToExport = this.allData.filter(item =>
+        Object.values(item).some(val =>
+          val?.toString().toLowerCase().includes(filterValue)
+        )
+      );
+    }
+
+    if (dataToExport.length === 0) {
+      this.snackBar.open('No hay datos para exportar', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    // Preparar datos con fechas formateadas y columnas limitadas para PDF (paisaje)
+    const dataFormateada = dataToExport.map(item => ({
+      cedula: item.cedula || '',
+      nombre: item.nombre || '',
+      estado: item.estado || '',
+      fechaNacimiento: this.formatCellValue(item.fechaNacimiento, 'fechaNacimiento'),
+      edad: item.edad || '',
+      genero: item.genero || '',
+      profesion: item.profesion || '',
+      movil: item.movil || '',
+      correoPrincipal: item.correoPrincipal || ''
+    }));
+
+    const headers = [
+      'Cédula', 'Nombre', 'Estado', 'Fecha Nac.', 'Edad',
+      'Género', 'Profesión', 'Móvil', 'Correo'
+    ];
+
+    const dataKeys = [
+      'cedula', 'nombre', 'estado', 'fechaNacimiento', 'edad',
+      'genero', 'profesion', 'movil', 'correoPrincipal'
+    ];
+
+    const titulo = 'EXTR - Registros de Externos';
+    const fileName = `externos_${new Date().toISOString().split('T')[0]}.pdf`;
+
+    this.exportService.exportToPDF(
+      dataFormateada,
+      fileName,
+      titulo,
+      headers,
+      dataKeys
+    );
+
+    this.snackBar.open(`Exportados ${dataFormateada.length} registros a PDF`, 'Cerrar', { duration: 3000 });
   }
 }

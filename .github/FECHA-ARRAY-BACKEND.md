@@ -7,14 +7,15 @@ El backend Java con Spring Boot/Jackson está enviando las fechas `LocalDateTime
 ### Formato Actual (Incorrecto)
 ```json
 {
-  "fechaCarga": [2025, 12, 11, 9, 23, 32, 2957000]
+  "fechaCarga": [2025, 12, 11, 9, 23, 32, 211267000]
 }
 ```
+**Nota importante:** El último elemento son **nanosegundos** (no milisegundos).
 
 ### Formato Esperado (Correcto)
 ```json
 {
-  "fechaCarga": "2025-12-11T09:23:32.002957"
+  "fechaCarga": "2025-12-11T09:23:32.211267"
 }
 ```
 
@@ -24,30 +25,65 @@ Jackson (librería de serialización JSON en Java) serializa `LocalDateTime` com
 1. No tiene configurado `JavaTimeModule`
 2. O tiene `SerializationFeature.WRITE_DATES_AS_TIMESTAMPS` habilitado
 
-## ✅ Solución Frontend (Implementada)
+## ✅ Solución Frontend (Implementada - CENTRALIZADA)
 
-Se agregó manejo de fechas en formato array en los métodos `convertirFecha()`:
+Se creó un método centralizado en `FuncionesDatosService` para manejar todas las conversiones de fecha:
+
+### Método Centralizado
 
 ```typescript
-private convertirFecha(fecha: any): Date | null {
+// src/app/shared/services/funciones-datos.service.ts
+
+/**
+ * Convierte una fecha desde el backend manejando múltiples formatos:
+ * - Date object
+ * - String ISO
+ * - Array [year, month, day, hour, minute, second, nanoseconds]
+ * - Timestamp numérico
+ */
+convertirFechaDesdeBackend(fecha: any): Date | null {
   if (!fecha) return null;
 
   if (fecha instanceof Date) return fecha;
 
-  // Si es un array (como [2023,7,31,0,0]), convertir a Date
+  // Array format: [year, month, day, hour, minute, second, nanoseconds]
+  // ⚠️ CRÍTICO: El último elemento son NANOSEGUNDOS, NO milisegundos
   if (Array.isArray(fecha)) {
-    const [year, month, day, hour = 0, minute = 0, second = 0, ms = 0] = fecha;
+    const [year, month, day, hour = 0, minute = 0, second = 0, nanoseconds = 0] = fecha;
+    
+    // Convertir nanosegundos a milisegundos (dividir entre 1,000,000)
+    const ms = Math.floor(nanoseconds / 1000000);
+    
     // Los meses en JavaScript Date van de 0-11, pero el backend envía 1-12
     return new Date(year, month - 1, day, hour, minute, second, ms);
   }
 
-  // ... otros formatos
+  // ... otros formatos (string, number)
 }
 ```
 
+### Métodos Actualizados
+
+Los siguientes métodos ahora usan `convertirFechaDesdeBackend()` internamente:
+- ✅ `formatoFechaOrigenConHora()` - Formateo con hora
+- ✅ `formatoFecha()` - Formateo general
+
 **Archivos modificados:**
-- `src/app/modules/crd/forms/entidad-participe/participe-dash/participe-dash.component.ts`
-- `src/app/modules/crd/forms/archivos-petro/detalle-consulta-carga/detalle-consulta-carga.component.ts`
+- ✅ `src/app/shared/services/funciones-datos.service.ts` (servicio centralizado)
+- ✅ `src/app/modules/crd/forms/archivos-petro/detalle-consulta-carga/detalle-consulta-carga.component.ts`
+
+### Uso en Componentes
+
+```typescript
+// Opción 1: Usar el servicio directamente (RECOMENDADO)
+const fechaConvertida = this.funcionesDatos.convertirFechaDesdeBackend(fechaBackend);
+
+// Opción 2: Usar los métodos de formateo (usan convertirFechaDesdeBackend internamente)
+const fechaFormateada = this.funcionesDatos.formatoFechaOrigenConHora(
+  fechaBackend, 
+  FuncionesDatosService.FECHA_HORA
+);
+```
 
 ## 🛠️ Solución Backend (Recomendada)
 

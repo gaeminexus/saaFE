@@ -95,6 +95,8 @@ export class CargaAporteBackComponent implements OnInit {
   // Archivo y datos cargados
   nombreArchivo: string = '';
   archivoSeleccionado: File | null = null;
+  archivoValido: boolean = false;
+  mensajeErrorArchivo: string = '';
   codigoCargaArchivo: number | null = null;
   cargaArchivoActual: CargaArchivo | null = null;
 
@@ -198,6 +200,8 @@ export class CargaAporteBackComponent implements OnInit {
     this.aporteAgrupados = [];
     this.nombreArchivo = '';
     this.archivoSeleccionado = null;
+    this.archivoValido = false;
+    this.mensajeErrorArchivo = '';
     this.codigoCargaArchivo = null;
     this.cargaArchivoActual = null;
     this.cargaExitosa.set(false);
@@ -345,6 +349,44 @@ export class CargaAporteBackComponent implements OnInit {
   }
 
   private setSelectedFile(file: File): void {
+    // Validar extensión del archivo
+    const fileName = file.name.toLowerCase();
+    if (!fileName.endsWith('.txt')) {
+      this.mensajeErrorArchivo = `Archivo rechazado: "${file.name}". Solo se permiten archivos con extensión .txt`;
+      this.archivoValido = false;
+      this.nombreArchivo = file.name;
+      this.archivoSeleccionado = file;
+      this.snackBar.open(
+        '❌ ERROR: Solo se permiten archivos con extensión .txt',
+        'Cerrar',
+        {
+          duration: 5000,
+          panelClass: ['error-snackbar']
+        }
+      );
+      return;
+    }
+
+    // Validar tipo MIME (debe ser text/plain)
+    if (file.type && file.type !== 'text/plain' && file.type !== '') {
+      this.mensajeErrorArchivo = `Archivo rechazado: "${file.name}". Tipo detectado: ${file.type || 'desconocido'}. Solo archivos de texto plano (.txt) son permitidos`;
+      this.archivoValido = false;
+      this.nombreArchivo = file.name;
+      this.archivoSeleccionado = file;
+      this.snackBar.open(
+        '❌ ERROR: El archivo seleccionado no es un archivo de texto válido',
+        'Cerrar',
+        {
+          duration: 5000,
+          panelClass: ['error-snackbar']
+        }
+      );
+      return;
+    }
+
+    // Archivo válido - limpiar mensaje de error
+    this.mensajeErrorArchivo = '';
+    this.archivoValido = true;
     this.nombreArchivo = file.name;
     this.archivoSeleccionado = file;
     this.snackBar.open(
@@ -367,8 +409,6 @@ export class CargaAporteBackComponent implements OnInit {
 
     const mesNombre = this.meses.find(m => m.valor === mesSeleccionado)?.nombre || '';
     const filialNombre = this.getFilialNombre(filialSeleccionada);
-
-    console.log('DEBUG valores:', { mesNombre, anioSeleccionado, filialNombre });
 
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
       width: '500px',
@@ -439,12 +479,9 @@ export class CargaAporteBackComponent implements OnInit {
     ).subscribe({
       next: (cargaArchivo: CargaArchivo | null) => {
         this.isUploadingFile.set(false);
-        console.log('📥 CargaArchivo recibido del backend:', cargaArchivo);
 
         if (cargaArchivo && cargaArchivo.codigo) {
           this.codigoCargaArchivo = cargaArchivo.codigo;
-          console.log('✅ Código de carga:', cargaArchivo.codigo);
-          console.log('📁 Ruta archivo en servidor:', cargaArchivo.rutaArchivo);
 
           this.snackBar.open(
             `✅ Validación completada exitosamente! Redirigiendo...`,
@@ -455,7 +492,6 @@ export class CargaAporteBackComponent implements OnInit {
           // Navegar al componente de detalle con el ID de la carga
           this.router.navigate(['/menucreditos/detalle-consulta-carga', cargaArchivo.codigo]);
         } else {
-          console.warn('⚠️ Respuesta no contiene CargaArchivo válido:', cargaArchivo);
           this.snackBar.open(
             `⚠️ Error al guardar: No se recibió el objeto CargaArchivo`,
             'Cerrar',
@@ -476,13 +512,11 @@ export class CargaAporteBackComponent implements OnInit {
   }
 
   private cargarDatosDesdeBackend(codigoCarga: number): void {
-    console.log('🔍 Iniciando cargarDatosDesdeBackend con código:', codigoCarga);
     this.isLoadingData.set(true);
 
     // 1. Obtener CargaArchivo
     this.cargaArchivoService.getById(codigoCarga.toString()).subscribe({
       next: (cargaArchivo: CargaArchivo | null) => {
-        console.log('📦 CargaArchivo recibido:', cargaArchivo);
         if (!cargaArchivo) {
           this.isLoadingData.set(false);
           this.snackBar.open('No se encontró la carga de archivo', 'Cerrar', { duration: 3000 });
@@ -516,7 +550,6 @@ export class CargaAporteBackComponent implements OnInit {
   }
 
   private cargarDetallesCargaArchivo(codigoCarga: number): void {
-    console.log('🔍 Cargando detalles para código:', codigoCarga);
     const criterios: DatosBusqueda[] = [];
     const dbCarga = new DatosBusqueda();
     dbCarga.asignaValorConCampoPadre(
@@ -530,7 +563,6 @@ export class CargaAporteBackComponent implements OnInit {
 
     this.detalleCargaArchivoService.selectByCriteria(criterios).subscribe({
       next: (detalles: DetalleCargaArchivo[] | null) => {
-        console.log('📋 Detalles recibidos:', detalles);
         if (!detalles || detalles.length === 0) {
           this.isLoadingData.set(false);
           this.snackBar.open('No se encontraron detalles de carga', 'Cerrar', { duration: 3000 });
@@ -642,10 +674,7 @@ export class CargaAporteBackComponent implements OnInit {
   private cargarCatalogoNovedades(): void {
     const detalles = this.detalleRubroService.getDetallesByParent(RUBRO_NOVEDAES_CARGA);
 
-    console.log('📋 DetalleRubros recuperados para código padre 169:', detalles);
-
     if (!detalles || detalles.length === 0) {
-      console.warn('⚠ No se encontraron detalles de rubro con código padre 169');
       return;
     }
 
@@ -659,19 +688,15 @@ export class CargaAporteBackComponent implements OnInit {
     }));
 
     this.catalogoNovedades.set(catalogo);
-    console.log('✅ Catálogo de novedades cargado:', catalogo);
-  }  /**
+  }
+
+  /**
    * Procesar novedades después de cargar datos desde backend
    */
   private procesarNovedades(todosLosRegistros: ParticipeXCargaArchivo[]): void {
-    console.log('📊 Procesando novedades de carga...');
-    console.log('📊 Total de registros a procesar:', todosLosRegistros.length);
-
     const catalogo = this.catalogoNovedades();
-    console.log('📋 Catálogo de novedades:', catalogo);
 
     if (catalogo.length === 0) {
-      console.warn('⚠ Catálogo de novedades no cargado aún');
       return;
     }
 
@@ -680,9 +705,7 @@ export class CargaAporteBackComponent implements OnInit {
       catalogo
     );
 
-    console.log('📊 Novedades agrupadas:', agrupadas);
     this.novedadesAgrupadas.set(agrupadas);
-    console.log('✅ Signal novedadesAgrupadas actualizado. Valor actual:', this.novedadesAgrupadas());
   }
 
   /**
@@ -746,8 +769,6 @@ export class CargaAporteBackComponent implements OnInit {
       registro.codigoPetro
     ).subscribe({
       next: (similares) => {
-        console.log('🔍 Partícipes similares encontrados:', similares);
-
         // TODO: Abrir dialog de selección
         this.snackBar.open(
           `✓ Encontrados ${similares.length} partícipes similares`,
@@ -771,7 +792,6 @@ export class CargaAporteBackComponent implements OnInit {
    */
   private corregirDuplicado(registro: ParticipeXCargaArchivo): void {
     // TODO: Implementar lógica de duplicados
-    console.log('📝 Corrigiendo duplicado:', registro);
   }
 
   /**
