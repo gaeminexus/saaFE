@@ -35,7 +35,6 @@ import {
     MatFormFieldModule,
     MatChipsModule,
     FormsModule,
-    TipoAsientoSistemaDialog,
   ],
   templateUrl: './tipo-asiento-sistema-grid.component.html',
   styleUrls: ['./tipo-asiento-sistema-grid.component.scss'],
