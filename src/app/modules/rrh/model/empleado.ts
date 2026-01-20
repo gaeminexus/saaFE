@@ -1,7 +1,15 @@
-export interface Empleado {
+export interface Empleado   {
+
   codigo: number;
-  identificacion: string;
-  nombres: string;
-  apellidos: string;
-  estado?: number;
+  identificacion: String;
+  apellidos: String;
+  nombres: String;
+  fechaNacimiento: Date;
+  email: String;
+  telefono: String;
+  direccion: String;
+  estado: String;
+  fechaRegistro: Date;
+  usuarioRegistro: String;
+
 }
