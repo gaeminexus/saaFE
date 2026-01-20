@@ -3,13 +3,46 @@
   <mat-card>
     <mat-card-content>
       <div class="actions">
-        <button mat-flat-button color="primary" (click)="onNuevo()">Nuevo</button>
-        <button mat-stroked-button color="primary" (click)="onGuardar()">Guardar</button>
-        <button mat-stroked-button color="warn" (click)="onCancelar()">Cancelar</button>
+        <button mat-flat-button color="primary" (click)="onNuevo()" [disabled]="loading()">
+          Nuevo
+        </button>
+        <button mat-stroked-button color="primary" (click)="onGuardar()" [disabled]="loading()">
+          Guardar
+        </button>
+        <button mat-stroked-button color="warn" (click)="onCancelar()" [disabled]="loading()">
+          Cancelar
+        </button>
         <button mat-button (click)="onVolver()">Volver</button>
       </div>
 
-      <table mat-table [dataSource]="data()" class="mat-elevation-z1" style="width: 100%">
+      @if (errorMsg()) {
+        <div class="error">{{ errorMsg() }}</div>
+      }
+      @if (successMsg()) {
+        <div class="success">{{ successMsg() }}</div>
+      }
+
+      <div class="form-grid">
+        <mat-form-field appearance="outline" style="width: 360px">
+          <mat-label>Nombre</mat-label>
+          <input
+            matInput
+            placeholder="Nombre del departamento"
+            [ngModel]="formNombre()"
+            (ngModelChange)="formNombre.set($event)"
+          />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" style="width: 220px">
+          <mat-label>Estado</mat-label>
+          <mat-select [value]="formEstado()" (selectionChange)="formEstado.set($event.value)">
+            <mat-option value="A">Activo</mat-option>
+            <mat-option value="I">Inactivo</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+
+      <table mat-table [dataSource]="pagedData()" class="mat-elevation-z1" style="width: 100%">
         <ng-container matColumnDef="nombre">
           <th mat-header-cell *matHeaderCellDef>Nombre</th>
           <td mat-cell *matCellDef="let row">{{ row?.nombre }}</td>
@@ -17,7 +50,31 @@
 
         <ng-container matColumnDef="estado">
           <th mat-header-cell *matHeaderCellDef>Estado</th>
-          <td mat-cell *matCellDef="let row">{{ row?.estado }}</td>
+          <td mat-cell *matCellDef="let row">{{ estadoLabel(row?.estado) }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="acciones">
+          <th mat-header-cell *matHeaderCellDef style="width: 140px">Acciones</th>
+          <td mat-cell *matCellDef="let row">
+            <button
+              mat-icon-button
+              color="primary"
+              (click)="onEditar(row)"
+              [disabled]="loading()"
+              aria-label="Editar"
+            >
+              <mat-icon>edit</mat-icon>
+            </button>
+            <button
+              mat-icon-button
+              color="warn"
+              (click)="onEliminar(row)"
+              [disabled]="loading()"
+              aria-label="Eliminar"
+            >
+              <mat-icon>delete</mat-icon>
+            </button>
+          </td>
         </ng-container>
 
         <tr mat-header-row *matHeaderRowDef="columns()"></tr>
@@ -25,8 +82,15 @@
       </table>
 
       @if (!hasData()) {
-      <div class="empty">Sin datos disponibles</div>
+        <div class="empty">Sin datos disponibles</div>
       }
+
+      <mat-paginator
+        [length]="data().length"
+        [pageSize]="pageSize()"
+        [pageSizeOptions]="[5, 10, 20, 50]"
+        (page)="onPageChange($event)"
+      ></mat-paginator>
     </mat-card-content>
   </mat-card>
 </section>
