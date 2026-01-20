@@ -1,3 +1,4 @@
+import { CargaArchivoService } from './../../modules/crd/service/carga-archivo.service';
 import { NaturalezaCuentaService } from './../../modules/cnt/service/naturaleza-cuenta.service';
 import { CommonModule, DatePipe } from '@angular/common';
 import {
@@ -63,7 +64,8 @@ export class HeaderComponent implements OnInit, OnDestroy {
     private loadingService: LoadingService,
     private valorImpuestoDocumentoCobro: ValorImpuestoDocumentoCobroService,
     private cdr: ChangeDetectorRef,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private cargaArchivoService: CargaArchivoService,
   ) {
     this.loading$ = this.loadingService.loading$;
   }
@@ -215,6 +217,15 @@ export class HeaderComponent implements OnInit, OnDestroy {
         },
       });
 
+      /*this.cargaArchivoService.melyTest(6311).subscribe({
+        next: (data: any) => {
+          console.log('GetById - Registro específico:', data);
+        },
+        error: (error: any) => {
+          console.error('Error al obtener ValorImpuestoDocumentoCobro:', error);
+        },
+      });*/
+
       /*this.naturalezaCuentaService.selectByCriteria(this.criterioConsultaArray).subscribe({
         next: (data) => {
           console.log('Datos de NaturalezaCuenta:', data);
@@ -244,4 +255,20 @@ export class HeaderComponent implements OnInit, OnDestroy {
         }
       });*/
     }
+
+    melyTest(idEntidad: number) {
+      console.log('Invocando melyTest con idEntidad:', idEntidad);
+    this.cargaArchivoService.melyTest(idEntidad).subscribe({
+        next: (melania: any) => {
+          console.log('el nombre del participe es: ', melania);
+        },
+        error: (error: any) => {
+          console.error('Error al obtener ValorImpuestoDocumentoCobro:', error);
+        },
+      });
+  }
+
+
+
+
 }

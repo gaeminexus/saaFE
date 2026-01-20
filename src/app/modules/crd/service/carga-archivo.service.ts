@@ -31,6 +31,14 @@ export class CargaArchivoService {
     );
   }
 
+  melyTest(idEntidad: number): Observable<string | null> {
+    const ws = '/melyTest/';
+    const url = `${ServiciosCrd.RS_CRAR}${ws}${idEntidad}`;
+    return this.http.get<string>(url).pipe(
+      catchError(this.handleError)
+    );
+  }
+
   getByAnio(anio: string): Observable<CargaArchivo | null> {
     const ws = '/getByAnio/';
     const url = `${ServiciosCrd.RS_CRAR}${ws}${anio}`;
