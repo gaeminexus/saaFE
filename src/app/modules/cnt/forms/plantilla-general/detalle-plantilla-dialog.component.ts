@@ -54,7 +54,7 @@ export interface DetalleDialogData {
       <div class="grid">
         <mat-form-field appearance="outline" class="col-span-cuenta">
           <mat-label>Plan de Cuenta *</mat-label>
-          <mat-select formControlName="planCuenta" required panelClass="panel-cuenta">
+          <mat-select formControlName="planCuenta" required panelClass="panel-cuenta" [compareWith]="compararCuentas">
             <mat-option *ngFor="let pc of data.planCuentas" [value]="pc">
               <div class="option-line">
                 <span class="code">{{ pc.cuentaContable }}</span>
@@ -205,6 +205,10 @@ export class DetallePlantillaDialogComponent {
       fechaHasta: [data.detalle?.fechaHasta || null],
       estado: [data.detalle?.estado || 1, Validators.required]
     });
+  }
+
+  compararCuentas(c1: PlanCuenta, c2: PlanCuenta): boolean {
+    return c1 && c2 ? c1.codigo === c2.codigo : c1 === c2;
   }
 
   abrirBusquedaAvanzada(): void {

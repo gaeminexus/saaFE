@@ -318,6 +318,16 @@
         min-width: 150px;
       }
 
+      .btn-busqueda-inline {
+        margin-top: 8px;
+        height: 48px;
+        color: #5b5fc7;
+
+        &:hover {
+          background-color: rgba(91, 95, 199, 0.1);
+        }
+      }
+
       button {
         margin-top: 8px;
         height: 48px;

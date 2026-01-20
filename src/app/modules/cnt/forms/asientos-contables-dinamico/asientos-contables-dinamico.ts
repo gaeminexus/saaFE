@@ -21,6 +21,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
@@ -47,6 +48,7 @@ import { CentroCostoService } from '../../service/centro-costo.service';
 import { DetalleAsientoService } from '../../service/detalle-asiento.service';
 import { PlanCuentaService } from '../../service/plan-cuenta.service';
 import { TipoAsientoService } from '../../service/tipo-asiento.service';
+import { PlanCuentaSelectorDialogComponent } from '../../../../shared/components/plan-cuenta-selector-dialog/plan-cuenta-selector-dialog.component';
 
 interface CuentaItem {
   cuenta: PlanCuenta | null;
@@ -80,6 +82,7 @@ interface CuentaItem {
     MatPaginatorModule,
     MatSortModule,
     MatChipsModule,
+    MatDialogModule,
     DragDropModule,
   ],
   templateUrl: './asientos-contables-dinamico.html',
@@ -138,6 +141,7 @@ export class AsientosContablesDinamico implements OnInit {
     private detalleAsientoService: DetalleAsientoService,
     private planCuentaService: PlanCuentaService,
     private centroCostoService: CentroCostoService,
+    private dialog: MatDialog,
     private snackBar: MatSnackBar,
     private route: ActivatedRoute,
     private router: Router
@@ -1853,5 +1857,39 @@ export class AsientosContablesDinamico implements OnInit {
       // Llamar al handler existente
       this.onCuentaSeleccionada(tipo, index, cuenta);
     }
+  }
+
+  /**
+   * Abre el dialog de búsqueda avanzada de cuentas
+   */
+  abrirBusquedaAvanzadaCuenta(tipo: 'DEBE' | 'HABER', index: number): void {
+    const formArray = tipo === 'DEBE' ? this.cuentasDebe : this.cuentasHaber;
+    const control = formArray.at(index);
+    const cuentaActual = control.get('cuenta')?.value;
+
+    const dialogRef = this.dialog.open(PlanCuentaSelectorDialogComponent, {
+      width: '900px',
+      maxHeight: '85vh',
+      data: {
+        cuentaPreseleccionada: cuentaActual,
+        titulo: `Seleccionar Cuenta para ${tipo}`,
+        mostrarSoloMovimiento: true
+      },
+      disableClose: false,
+      autoFocus: true
+    });
+
+    dialogRef.afterClosed().subscribe((cuentaSeleccionada: PlanCuenta | null) => {
+      if (cuentaSeleccionada) {
+        // Actualizar el control de cuenta
+        control.get('cuenta')?.setValue(cuentaSeleccionada);
+
+        // Actualizar el campo de búsqueda del autocomplete
+        control.get('cuentaBusqueda')?.setValue(cuentaSeleccionada);
+
+        // Llamar al handler existente para procesar la cuenta seleccionada
+        this.onCuentaSeleccionada(tipo, index, cuentaSeleccionada);
+      }
+    });
   }
 }

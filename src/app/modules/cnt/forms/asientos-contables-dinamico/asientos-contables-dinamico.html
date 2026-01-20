@@ -243,7 +243,7 @@
           <div formArrayName="cuentasDebe" class="cuenta-input-section">
             @for (cuenta of cuentasDebe.controls; track $index) {
             <div [formGroupName]="$index" class="cuenta-row-container">
-              <!-- Fila principal: Cuenta, Valor y Botón -->
+              <!-- Fila principal: Cuenta, Valor y Botones -->
               <div class="cuenta-row">
                 <mat-form-field
                   appearance="outline"
@@ -294,6 +294,17 @@
                   >
                   }
                 </mat-form-field>
+
+                <button
+                  mat-icon-button
+                  color="accent"
+                  type="button"
+                  (click)="abrirBusquedaAvanzadaCuenta('DEBE', $index)"
+                  matTooltip="Búsqueda avanzada de cuentas"
+                  class="btn-busqueda-inline"
+                >
+                  <mat-icon>search</mat-icon>
+                </button>
 
                 <mat-form-field appearance="outline" class="valor-field">
                   <mat-label>Valor</mat-label>
@@ -438,7 +449,7 @@
           <div formArrayName="cuentasHaber" class="cuenta-input-section">
             @for (cuenta of cuentasHaber.controls; track $index) {
             <div [formGroupName]="$index" class="cuenta-row-container">
-              <!-- Fila principal: Cuenta, Valor y Botón -->
+              <!-- Fila principal: Cuenta, Valor y Botones -->
               <div class="cuenta-row">
                 <mat-form-field
                   appearance="outline"
@@ -489,6 +500,17 @@
                   >
                   }
                 </mat-form-field>
+
+                <button
+                  mat-icon-button
+                  color="accent"
+                  type="button"
+                  (click)="abrirBusquedaAvanzadaCuenta('HABER', $index)"
+                  matTooltip="Búsqueda avanzada de cuentas"
+                  class="btn-busqueda-inline"
+                >
+                  <mat-icon>search</mat-icon>
+                </button>
 
                 <mat-form-field appearance="outline" class="valor-field">
                   <mat-label>Valor</mat-label>
