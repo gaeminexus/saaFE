@@ -22,26 +22,6 @@
         </button>
       </div>
     </div>
-
-    <!-- Filter Section -->
-    <div class="filter-section">
-      <mat-form-field appearance="outline" class="filter-field">
-        <mat-label>Buscar tipos de asientos del sistema</mat-label>
-        <input matInput
-               [(ngModel)]="filterValue"
-               (keyup)="applyFilter()"
-               placeholder="Buscar por nombre o código..."
-               autocomplete="off">
-        <mat-icon matSuffix>search</mat-icon>
-      </mat-form-field>
-      <button mat-icon-button
-              *ngIf="filterValue"
-              (click)="clearFilter()"
-              matTooltip="Limpiar filtro"
-              class="clear-filter-btn">
-        <mat-icon>clear</mat-icon>
-      </button>
-    </div>
   </div>
 
   <!-- Data Table -->
