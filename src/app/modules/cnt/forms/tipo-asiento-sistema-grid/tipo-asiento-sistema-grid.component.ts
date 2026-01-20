@@ -13,8 +13,8 @@ import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
-import { EstadoTipoAsiento, TipoAsientoSistema } from '../../model/tipo-asiento';
-import { TipoAsientoSistemaService } from '../../service/tipo-asiento-sistema.service';
+import { EstadoTipoAsiento, TipoAsiento } from '../../model/tipo-asiento';
+import { TipoAsientoService } from '../../service/tipo-asiento.service';
 import {
   TipoAsientoSistemaDialog,
   TipoAsientoSistemaDialogData,
@@ -40,7 +40,7 @@ import {
   styleUrls: ['./tipo-asiento-sistema-grid.component.scss'],
 })
 export class TipoAsientoSistemaGridComponent implements OnInit {
-  dataSource = new MatTableDataSource<TipoAsientoSistema>();
+  dataSource = new MatTableDataSource<TipoAsiento>();
   displayedColumns: string[] = ['nombre', 'codigoAlterno', 'estado', 'acciones'];
   filterValue = '';
 
@@ -48,7 +48,7 @@ export class TipoAsientoSistemaGridComponent implements OnInit {
   @ViewChild(MatSort) sort!: MatSort;
 
   constructor(
-    private tipoAsientoSistemaService: TipoAsientoSistemaService,
+    private tipoAsientoService: TipoAsientoService,
     private dialog: MatDialog,
     private snackBar: MatSnackBar
   ) {}
@@ -66,10 +66,10 @@ export class TipoAsientoSistemaGridComponent implements OnInit {
    * Carga los datos de tipos de asientos del sistema
    */
   loadData(): void {
-    this.tipoAsientoSistemaService.getAll().subscribe({
-      next: (data: TipoAsientoSistema[]) => {
-        // TipoAsientoSistema son catálogos del sistema, no filtrados por empresa
-        console.log('[TipoAsientoSistema] Tipos cargados:', data.length);
+    this.tipoAsientoService.getAllSistema().subscribe({
+      next: (data: TipoAsiento[]) => {
+        // TipoAsiento son catálogos del sistema, no filtrados por empresa
+        console.log('[TipoAsiento] Tipos cargados:', data.length);
         this.dataSource.data = data;
       },
       error: (error: any) => {
@@ -124,13 +124,13 @@ export class TipoAsientoSistemaGridComponent implements OnInit {
   /**
    * Cambia el estado de un tipo de asiento
    */
-  cambiarEstado(tipoAsiento: TipoAsientoSistema): void {
+  cambiarEstado(tipoAsiento: TipoAsiento): void {
     const nuevoEstado =
       tipoAsiento.estado === EstadoTipoAsiento.ACTIVO
         ? EstadoTipoAsiento.INACTIVO
         : EstadoTipoAsiento.ACTIVO;
 
-    this.tipoAsientoSistemaService.cambiarEstado(tipoAsiento.id, nuevoEstado).subscribe({
+    this.tipoAsientoService.cambiarEstado(tipoAsiento.codigo, nuevoEstado).subscribe({
       next: (success: boolean) => {
         if (success) {
           this.loadData();
@@ -147,7 +147,7 @@ export class TipoAsientoSistemaGridComponent implements OnInit {
   /**
    * Edita un tipo de asiento
    */
-  editar(tipoAsiento: TipoAsientoSistema): void {
+  editar(tipoAsiento: TipoAsiento): void {
     const dialogData: TipoAsientoSistemaDialogData = {
       tipoAsiento: { ...tipoAsiento },
       isEdit: true,
@@ -159,23 +159,22 @@ export class TipoAsientoSistemaGridComponent implements OnInit {
       disableClose: true,
     });
 
-    dialogRef.afterClosed().subscribe((result: Partial<TipoAsientoSistema> | undefined) => {
-      if (result && result.id) {
+    dialogRef.afterClosed().subscribe((result: Partial<TipoAsiento> | undefined) => {
+      if (result && result.codigo) {
         const empresaCodigo = parseInt(localStorage.getItem('idSucursal') || '280', 10);
 
         const updateData: any = {
-          codigo: result.id,
+          codigo: result.codigo,
           nombre: result.nombre,
           codigoAlterno: result.codigoAlterno,
           estado: result.estado,
           sistema: 1, // Tipo de asiento del sistema
           empresa: { codigo: empresaCodigo },
-          fechaUpdate: new Date(),
-          usuarioUpdate: localStorage.getItem('username') || 'sistema',
+          observacion: result.observacion || '',
         };
 
-        this.tipoAsientoSistemaService.update(result.id, updateData).subscribe({
-          next: (updatedItem: TipoAsientoSistema) => {
+        this.tipoAsientoService.update(updateData).subscribe({
+          next: (updatedItem: TipoAsiento | null) => {
             this.snackBar.open('Tipo de asiento del sistema actualizado exitosamente', 'Cerrar', {
               duration: 3000,
               horizontalPosition: 'center',
@@ -200,11 +199,11 @@ export class TipoAsientoSistemaGridComponent implements OnInit {
   /**
    * Elimina un tipo de asiento
    */
-  eliminar(tipoAsiento: TipoAsientoSistema): void {
+  eliminar(tipoAsiento: TipoAsiento): void {
     if (
       confirm(`¿Está seguro de eliminar el tipo de asiento del sistema "${tipoAsiento.nombre}"?`)
     ) {
-      this.tipoAsientoSistemaService.delete(tipoAsiento.id).subscribe({
+      this.tipoAsientoService.delete(tipoAsiento.codigo).subscribe({
         next: (success: boolean) => {
           if (success) {
             this.snackBar.open('Tipo de asiento del sistema eliminado exitosamente', 'Cerrar', {
@@ -249,7 +248,7 @@ export class TipoAsientoSistemaGridComponent implements OnInit {
       disableClose: true,
     });
 
-    dialogRef.afterClosed().subscribe((result: Partial<TipoAsientoSistema> | undefined) => {
+    dialogRef.afterClosed().subscribe((result: Partial<TipoAsiento> | undefined) => {
       if (result) {
         const empresaCodigo = parseInt(localStorage.getItem('idSucursal') || '280', 10);
 
@@ -259,12 +258,11 @@ export class TipoAsientoSistemaGridComponent implements OnInit {
           estado: result.estado,
           sistema: 1, // Tipo de asiento del sistema
           empresa: { codigo: empresaCodigo },
-          fechaIngreso: new Date(),
-          usuarioIngreso: localStorage.getItem('username') || 'sistema',
+          observacion: result.observacion || '',
         };
 
-        this.tipoAsientoSistemaService.create(createData).subscribe({
-          next: (newItem: TipoAsientoSistema) => {
+        this.tipoAsientoService.create(createData).subscribe({
+          next: (newItem: TipoAsiento | null) => {
             this.snackBar.open('Tipo de asiento del sistema creado exitosamente', 'Cerrar', {
               duration: 3000,
               horizontalPosition: 'center',

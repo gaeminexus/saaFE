@@ -224,6 +224,9 @@
     color: white;
     border-radius: 12px 12px 0 0;
     padding: 16px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 
     mat-card-title {
       font-family: 'JetBrains Mono', monospace;

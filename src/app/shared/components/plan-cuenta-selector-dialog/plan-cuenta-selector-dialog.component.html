@@ -1,0 +1,163 @@
+<div class="dialog-container">
+  <!-- Header -->
+  <div class="dialog-header">
+    <h2 mat-dialog-title>
+      <mat-icon>account_tree</mat-icon>
+      {{ data.titulo || 'Seleccionar Cuenta Contable' }}
+    </h2>
+    <button mat-icon-button (click)="cancelar()" class="close-button">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <!-- Filtros -->
+  <div class="filtros-section">
+    <div class="filtros-row">
+      <mat-form-field appearance="outline" class="filtro-busqueda">
+        <mat-label>Buscar por número o nombre</mat-label>
+        <input
+          matInput
+          [(ngModel)]="busquedaTexto"
+          (keyup)="aplicarFiltros()"
+          placeholder="Ej: 1105 o CAJA"
+          autocomplete="off"
+        />
+        <mat-icon matPrefix>search</mat-icon>
+        <button
+          mat-icon-button
+          matSuffix
+          *ngIf="busquedaTexto"
+          (click)="busquedaTexto = ''; aplicarFiltros()"
+          matTooltip="Limpiar búsqueda"
+        >
+          <mat-icon>clear</mat-icon>
+        </button>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="filtro-naturaleza">
+        <mat-label>Naturaleza</mat-label>
+        <mat-select [(ngModel)]="naturalezaSeleccionada" (selectionChange)="aplicarFiltros()">
+          <mat-option [value]="null">Todas</mat-option>
+          <mat-option *ngFor="let nat of naturalezas" [value]="nat.codigo">
+            {{ nat.nombre }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <button
+        mat-raised-button
+        color="accent"
+        (click)="limpiarFiltros()"
+        class="btn-limpiar"
+        matTooltip="Limpiar todos los filtros"
+      >
+        <mat-icon>filter_alt_off</mat-icon>
+        Limpiar
+      </button>
+    </div>
+
+    <!-- Indicador de solo movimiento -->
+    <div class="info-badge" *ngIf="soloMovimiento">
+      <mat-icon>info</mat-icon>
+      <span>Solo se pueden seleccionar cuentas de movimiento</span>
+    </div>
+  </div>
+
+  <!-- Tabla -->
+  <div class="table-container">
+    <div class="loading-overlay" *ngIf="loading">
+      <mat-spinner diameter="50"></mat-spinner>
+    </div>
+
+    <table mat-table [dataSource]="dataSource" matSort class="plan-table">
+      <!-- Columna Cuenta Contable -->
+      <ng-container matColumnDef="cuentaContable">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Número de Cuenta</th>
+        <td mat-cell *matCellDef="let cuenta" [style.padding-left.px]="getIndentPx(cuenta) + 16">
+          <div class="cuenta-numero">
+            <mat-icon class="cuenta-icon" *ngIf="cuenta.nivel > 1">subdirectory_arrow_right</mat-icon>
+            <span [class.cuenta-movimiento]="esMovimiento(cuenta)">
+              {{ cuenta.cuentaContable }}
+            </span>
+          </div>
+        </td>
+      </ng-container>
+
+      <!-- Columna Nombre -->
+      <ng-container matColumnDef="nombre">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Nombre</th>
+        <td mat-cell *matCellDef="let cuenta">
+          <span [class.cuenta-movimiento]="esMovimiento(cuenta)" [class.cuenta-acumulativa]="!esMovimiento(cuenta)">
+            {{ cuenta.nombre }}
+          </span>
+        </td>
+      </ng-container>
+
+      <!-- Columna Tipo -->
+      <ng-container matColumnDef="tipo">
+        <th mat-header-cell *matHeaderCellDef>Tipo</th>
+        <td mat-cell *matCellDef="let cuenta">
+          <span class="badge" [class.badge-movimiento]="esMovimiento(cuenta)" [class.badge-acumulativa]="!esMovimiento(cuenta)">
+            {{ getTipoLabel(cuenta.tipo) }}
+          </span>
+        </td>
+      </ng-container>
+
+      <!-- Columna Naturaleza -->
+      <ng-container matColumnDef="naturaleza">
+        <th mat-header-cell *matHeaderCellDef>Naturaleza</th>
+        <td mat-cell *matCellDef="let cuenta">
+          {{ getNaturalezaName(cuenta.naturalezaCuenta?.codigo) }}
+        </td>
+      </ng-container>
+
+      <!-- Columna Estado -->
+      <ng-container matColumnDef="estado">
+        <th mat-header-cell *matHeaderCellDef>Estado</th>
+        <td mat-cell *matCellDef="let cuenta">
+          <span class="badge" [class.badge-activo]="cuenta.estado === 1" [class.badge-inactivo]="cuenta.estado === 0">
+            {{ getEstadoLabel(cuenta.estado) }}
+          </span>
+        </td>
+      </ng-container>
+
+      <!-- Columna Acciones -->
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef>Seleccionar</th>
+        <td mat-cell *matCellDef="let cuenta">
+          <button
+            mat-raised-button
+            color="primary"
+            (click)="confirmarSeleccionCuenta(cuenta)"
+            [disabled]="!puedeSeleccionar(cuenta)"
+            [matTooltip]="puedeSeleccionar(cuenta) ? 'Seleccionar esta cuenta' : 'Solo se pueden seleccionar cuentas de movimiento'"
+          >
+            <mat-icon>check</mat-icon>
+            Seleccionar
+          </button>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr
+        mat-row
+        *matRowDef="let row; columns: displayedColumns"
+        [class.disabled-row]="!puedeSeleccionar(row)"
+      ></tr>
+    </table>
+
+    <mat-paginator
+      [pageSizeOptions]="[10, 25, 50, 100]"
+      [pageSize]="25"
+      showFirstLastButtons
+    ></mat-paginator>
+  </div>
+
+  <!-- Acciones -->
+  <div mat-dialog-actions class="dialog-actions">
+    <button mat-button (click)="cancelar()">
+      <mat-icon>cancel</mat-icon>
+      Cancelar
+    </button>
+  </div>
+</div>

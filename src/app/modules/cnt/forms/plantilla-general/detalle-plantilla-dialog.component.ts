@@ -1,6 +1,6 @@
 import { Component, Inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { MatDialog, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -12,6 +12,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { PlanCuenta } from '../../model/plan-cuenta';
 import { DetallePlantilla, TipoMovimiento } from '../../model/detalle-plantilla-general';
+import { PlanCuentaSelectorDialogComponent } from '../../../../shared/components/plan-cuenta-selector-dialog/plan-cuenta-selector-dialog.component';
 
 export interface DetalleDialogData {
   detalle?: DetallePlantilla;
@@ -51,7 +52,7 @@ export interface DetalleDialogData {
     <section class="section">
       <h3 class="section-title"><mat-icon>tune</mat-icon> Datos Principales</h3>
       <div class="grid">
-        <mat-form-field appearance="outline" class="col-span-2">
+        <mat-form-field appearance="outline" class="col-span-cuenta">
           <mat-label>Plan de Cuenta *</mat-label>
           <mat-select formControlName="planCuenta" required panelClass="panel-cuenta">
             <mat-option *ngFor="let pc of data.planCuentas" [value]="pc">
@@ -63,6 +64,14 @@ export interface DetalleDialogData {
           </mat-select>
           <mat-error *ngIf="form.get('planCuenta')?.hasError('required')">Seleccione un plan</mat-error>
         </mat-form-field>
+        <button mat-raised-button
+                type="button"
+                class="btn-busqueda-avanzada"
+                (click)="abrirBusquedaAvanzada()"
+                matTooltip="Búsqueda avanzada de cuentas">
+          <mat-icon>search</mat-icon>
+          Buscar
+        </button>
         <mat-form-field appearance="outline" class="col-span-2">
           <mat-label>Descripción *</mat-label>
             <textarea matInput rows="2" formControlName="descripcion" maxlength="200" placeholder="Ej: Ajuste mensual de gastos"></textarea>
@@ -143,6 +152,10 @@ export interface DetalleDialogData {
     .grid { display:grid; grid-template-columns:repeat(4,1fr); gap:18px; }
     .col { grid-column:span 2; }
     .col-span-2 { grid-column:span 4; }
+    .col-span-cuenta { grid-column:span 3; }
+    .btn-busqueda-avanzada { grid-column:span 1; height:56px; background-color:#5b5fc7; color:white; }
+    .btn-busqueda-avanzada:hover { background-color:#4a4db5; }
+    .btn-busqueda-avanzada mat-icon { margin-right:4px; }
     textarea { resize:vertical; }
     .option-line { display:flex; flex-direction:row; gap:8px; align-items:center; }
     .option-line .code { font-weight:600; font-family:'JetBrains Mono',monospace; color:#37474f; }
@@ -167,6 +180,8 @@ export interface DetalleDialogData {
       .grid { grid-template-columns:repeat(2,1fr); }
       .col { grid-column:span 2; }
       .col-span-2 { grid-column:span 2; }
+      .col-span-cuenta { grid-column:span 2; }
+      .btn-busqueda-avanzada { grid-column:span 2; height:48px; }
       .plan-preview { display:none; }
       .section { padding:10px 10px 10px; }
     }
@@ -178,6 +193,7 @@ export class DetallePlantillaDialogComponent {
 
   constructor(
     private fb: FormBuilder,
+    private dialog: MatDialog,
     private dialogRef: MatDialogRef<DetallePlantillaDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: DetalleDialogData
   ) {
@@ -188,6 +204,26 @@ export class DetallePlantillaDialogComponent {
       fechaDesde: [data.detalle?.fechaDesde || null],
       fechaHasta: [data.detalle?.fechaHasta || null],
       estado: [data.detalle?.estado || 1, Validators.required]
+    });
+  }
+
+  abrirBusquedaAvanzada(): void {
+    const dialogRef = this.dialog.open(PlanCuentaSelectorDialogComponent, {
+      width: '900px',
+      maxHeight: '85vh',
+      data: {
+        cuentaPreseleccionada: this.form.get('planCuenta')?.value,
+        titulo: 'Seleccionar Cuenta para Detalle de Plantilla',
+        mostrarSoloMovimiento: true
+      },
+      disableClose: false,
+      autoFocus: true
+    });
+
+    dialogRef.afterClosed().subscribe((cuentaSeleccionada: PlanCuenta | null) => {
+      if (cuentaSeleccionada) {
+        this.form.patchValue({ planCuenta: cuentaSeleccionada });
+      }
     });
   }
 

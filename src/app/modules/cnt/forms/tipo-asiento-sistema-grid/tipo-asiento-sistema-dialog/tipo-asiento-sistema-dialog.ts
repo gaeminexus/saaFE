@@ -12,10 +12,10 @@ import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/materia
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { EstadoTipoAsiento, TipoAsientoSistema } from '../../../model/tipo-asiento';
+import { EstadoTipoAsiento, TipoAsiento } from '../../../model/tipo-asiento';
 
 export interface TipoAsientoSistemaDialogData {
-  tipoAsiento?: TipoAsientoSistema;
+  tipoAsiento?: TipoAsiento;
   isEdit: boolean;
 }
 
@@ -81,10 +81,10 @@ export class TipoAsientoSistemaDialog implements OnInit {
       return;
     }
 
-    const result: Partial<TipoAsientoSistema> = {
+    const result: Partial<TipoAsiento> = {
       ...this.data.tipoAsiento,
       nombre: this.form.get('nombre')?.value.trim().toUpperCase(),
-      codigoAlterno: this.form.get('codigoAlterno')?.value.trim().toUpperCase(),
+      codigoAlterno: parseInt(this.form.get('codigoAlterno')?.value, 10) || 0,
       estado: this.form.get('estado')?.value,
     };
 

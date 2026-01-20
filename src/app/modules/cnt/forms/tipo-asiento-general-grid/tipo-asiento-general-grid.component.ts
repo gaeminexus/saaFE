@@ -13,8 +13,8 @@ import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
-import { EstadoTipoAsiento, TipoAsientoGeneral } from '../../model/tipo-asiento';
-import { TipoAsientoGeneralService } from '../../service/tipo-asiento-general.service';
+import { EstadoTipoAsiento, TipoAsiento } from '../../model/tipo-asiento';
+import { TipoAsientoService } from '../../service/tipo-asiento.service';
 import {
   TipoAsientoDialog,
   TipoAsientoDialogData,
@@ -35,13 +35,12 @@ import {
     MatFormFieldModule,
     MatChipsModule,
     FormsModule,
-    TipoAsientoDialog,
   ],
   templateUrl: './tipo-asiento-general-grid.component.html',
   styleUrls: ['./tipo-asiento-general-grid.component.scss'],
 })
 export class TipoAsientoGeneralGridComponent implements OnInit {
-  dataSource = new MatTableDataSource<TipoAsientoGeneral>();
+  dataSource = new MatTableDataSource<TipoAsiento>();
   displayedColumns: string[] = ['nombre', 'estado', 'acciones'];
   filterValue = '';
 
@@ -49,7 +48,7 @@ export class TipoAsientoGeneralGridComponent implements OnInit {
   @ViewChild(MatSort) sort!: MatSort;
 
   constructor(
-    private tipoAsientoGeneralService: TipoAsientoGeneralService,
+    private tipoAsientoService: TipoAsientoService,
     private dialog: MatDialog,
     private snackBar: MatSnackBar
   ) {}
@@ -67,7 +66,7 @@ export class TipoAsientoGeneralGridComponent implements OnInit {
    * Carga los datos de tipos de asientos generales
    */
   loadData(): void {
-    this.tipoAsientoGeneralService.getAll().subscribe({
+    this.tipoAsientoService.getAllGenerales().subscribe({
       next: (data) => {
         this.dataSource.data = data;
       },
@@ -123,13 +122,13 @@ export class TipoAsientoGeneralGridComponent implements OnInit {
   /**
    * Cambia el estado de un tipo de asiento
    */
-  cambiarEstado(tipoAsiento: TipoAsientoGeneral): void {
+  cambiarEstado(tipoAsiento: TipoAsiento): void {
     const nuevoEstado =
       tipoAsiento.estado === EstadoTipoAsiento.ACTIVO
         ? EstadoTipoAsiento.INACTIVO
         : EstadoTipoAsiento.ACTIVO;
 
-    this.tipoAsientoGeneralService.cambiarEstado(tipoAsiento.id, nuevoEstado).subscribe({
+    this.tipoAsientoService.cambiarEstado(tipoAsiento.codigo, nuevoEstado).subscribe({
       next: (success) => {
         if (success) {
           this.loadData();
@@ -146,7 +145,7 @@ export class TipoAsientoGeneralGridComponent implements OnInit {
   /**
    * Edita un tipo de asiento
    */
-  editar(tipoAsiento: TipoAsientoGeneral): void {
+  editar(tipoAsiento: TipoAsiento): void {
     const dialogData: TipoAsientoDialogData = {
       tipoAsiento: { ...tipoAsiento },
       isEdit: true,
@@ -158,16 +157,22 @@ export class TipoAsientoGeneralGridComponent implements OnInit {
       disableClose: true,
     });
 
-    dialogRef.afterClosed().subscribe((result: Partial<TipoAsientoGeneral> | undefined) => {
-      if (result && result.id) {
-        const updateData: Partial<TipoAsientoGeneral> = {
-          ...result,
-          fechaUpdate: new Date(),
-          usuarioUpdate: localStorage.getItem('username') || 'sistema',
+    dialogRef.afterClosed().subscribe((result: Partial<TipoAsiento> | undefined) => {
+      if (result && result.codigo) {
+        const empresaCodigo = parseInt(localStorage.getItem('idSucursal') || '280', 10);
+
+        const updateData: any = {
+          codigo: result.codigo,
+          nombre: result.nombre,
+          codigoAlterno: result.codigoAlterno,
+          estado: result.estado,
+          sistema: 0, // Tipo de asiento general
+          empresa: { codigo: empresaCodigo },
+          observacion: result.observacion || '',
         };
 
-        this.tipoAsientoGeneralService.update(result.id, updateData).subscribe({
-          next: (updatedItem: TipoAsientoGeneral) => {
+        this.tipoAsientoService.update(updateData).subscribe({
+          next: (updatedItem: TipoAsiento | null) => {
             this.snackBar.open('Tipo de asiento actualizado exitosamente', 'Cerrar', {
               duration: 3000,
               horizontalPosition: 'center',
@@ -192,9 +197,9 @@ export class TipoAsientoGeneralGridComponent implements OnInit {
   /**
    * Elimina un tipo de asiento
    */
-  eliminar(tipoAsiento: TipoAsientoGeneral): void {
+  eliminar(tipoAsiento: TipoAsiento): void {
     if (confirm(`¿Está seguro de eliminar el tipo de asiento "${tipoAsiento.nombre}"?`)) {
-      this.tipoAsientoGeneralService.delete(tipoAsiento.id).subscribe({
+      this.tipoAsientoService.delete(tipoAsiento.codigo).subscribe({
         next: (success: boolean) => {
           if (success) {
             this.snackBar.open('Tipo de asiento eliminado exitosamente', 'Cerrar', {
@@ -239,17 +244,22 @@ export class TipoAsientoGeneralGridComponent implements OnInit {
       disableClose: true,
     });
 
-    dialogRef.afterClosed().subscribe((result: Partial<TipoAsientoGeneral> | undefined) => {
+    dialogRef.afterClosed().subscribe((result: Partial<TipoAsiento> | undefined) => {
       if (result) {
+        const empresaCodigo = parseInt(localStorage.getItem('idSucursal') || '280', 10);
+
         // Agregar campos adicionales requeridos por el backend
-        const nuevoTipoAsiento: Partial<TipoAsientoGeneral> = {
-          ...result,
-          fechaCreacion: new Date(),
-          usuarioCreacion: localStorage.getItem('username') || 'sistema',
+        const nuevoTipoAsiento: any = {
+          nombre: result.nombre,
+          codigoAlterno: result.codigoAlterno,
+          estado: result.estado,
+          sistema: 0, // Tipo de asiento general
+          empresa: { codigo: empresaCodigo },
+          observacion: result.observacion || '',
         };
 
-        this.tipoAsientoGeneralService.create(nuevoTipoAsiento).subscribe({
-          next: (createdItem: TipoAsientoGeneral) => {
+        this.tipoAsientoService.create(nuevoTipoAsiento).subscribe({
+          next: (createdItem: TipoAsiento | null) => {
             this.snackBar.open('Tipo de asiento creado exitosamente', 'Cerrar', {
               duration: 3000,
               horizontalPosition: 'center',
