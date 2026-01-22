@@ -111,7 +111,7 @@ export class PlanCuentaAddEditComponent implements OnInit {
     private fb: FormBuilder,
     private dialogRef: MatDialogRef<PlanCuentaAddEditComponent>,
     private planCuentaService: PlanCuentaService,
-    @Inject(MAT_DIALOG_DATA) public data: PlanCuentaAddEditData
+    @Inject(MAT_DIALOG_DATA) public data: PlanCuentaAddEditData,
   ) {
     this.isEdit = !!data.item;
     this.naturalezas = data.naturalezas;
@@ -313,6 +313,29 @@ export class PlanCuentaAddEditComponent implements OnInit {
 
     request$.subscribe({
       next: (result: PlanCuenta | null) => {
+        // Si se creó una subcuenta y el padre está en Movimiento (2), actualizarlo a Acumulación (1)
+        if (!this.isEdit && this.parentAccount && Number(this.parentAccount.tipo) === 2) {
+          const parentUpdate: PlanCuenta = {
+            ...this.parentAccount,
+            tipo: 1,
+            fechaUpdate: this.formatDateToLocalDate(new Date()),
+          } as PlanCuenta;
+
+          this.planCuentaService.update(parentUpdate).subscribe({
+            next: () => {
+              this.loading = false;
+              this.dialogRef.close(result);
+            },
+            error: (err) => {
+              // Loguear pero no bloquear el cierre del diálogo
+              console.error('❌ Error al actualizar padre a Acumulación:', err);
+              this.loading = false;
+              this.dialogRef.close(result);
+            },
+          });
+          return; // Evitar cerrar dos veces
+        }
+
         this.loading = false;
         this.dialogRef.close(result);
       },

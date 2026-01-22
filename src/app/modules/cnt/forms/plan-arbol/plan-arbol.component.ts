@@ -1,32 +1,41 @@
-import { Component, OnInit, AfterViewInit, ViewChild, ElementRef, CUSTOM_ELEMENTS_SCHEMA, signal } from '@angular/core';
+import { NestedTreeControl } from '@angular/cdk/tree';
 import { CommonModule } from '@angular/common';
+import {
+  AfterViewInit,
+  Component,
+  CUSTOM_ELEMENTS_SCHEMA,
+  ElementRef,
+  OnInit,
+  signal,
+  ViewChild,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
-import { MatTreeModule } from '@angular/material/tree';
-import { NestedTreeControl } from '@angular/cdk/tree';
-import { MatNestedTreeNode } from '@angular/material/tree';
-import { MatTreeNestedDataSource } from '@angular/material/tree';
 import { MatExpansionModule } from '@angular/material/expansion';
-import { PageEvent, MatPaginatorModule } from '@angular/material/paginator';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
+import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatTreeModule, MatTreeNestedDataSource } from '@angular/material/tree';
 
-import { PlanCuentaService } from '../../service/plan-cuenta.service';
-import { NaturalezaCuentaService } from '../../service/naturaleza-cuenta.service';
-import { PlanCuenta } from '../../model/plan-cuenta';
-import { NaturalezaCuenta } from '../../model/naturaleza-cuenta';
+import {
+  ConfirmDialogComponent,
+  ConfirmDialogData,
+} from '../../../../shared/basics/confirm-dialog/confirm-dialog.component';
+import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
+import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
+import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { ExportService } from '../../../../shared/services/export.service';
 import { PlanCuentaUtilsService } from '../../../../shared/services/plan-cuenta-utils.service';
 import { PlanCuentaAddEditComponent } from '../../dialog/plan-cuenta-add-edit/plan-cuenta-add-edit.component';
-import { ConfirmDialogComponent, ConfirmDialogData } from '../../../../shared/basics/confirm-dialog/confirm-dialog.component';
-import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
-import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
-import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
+import { NaturalezaCuenta } from '../../model/naturaleza-cuenta';
+import { PlanCuenta } from '../../model/plan-cuenta';
+import { NaturalezaCuentaService } from '../../service/naturaleza-cuenta.service';
+import { PlanCuentaService } from '../../service/plan-cuenta.service';
 
 interface PlanCuentaNode extends PlanCuenta {
   children?: PlanCuentaNode[];
@@ -60,10 +69,9 @@ interface SortConfig {
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './plan-arbol.component.html',
-  styleUrls: ['./plan-arbol.component.scss']
+  styleUrls: ['./plan-arbol.component.scss'],
 })
 export class PlanArbolComponent implements OnInit, AfterViewInit {
-
   // ViewChild para scroll detection
   @ViewChild('treeContainer') treeContainer!: ElementRef;
 
@@ -86,6 +94,10 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
   // Filtros
   selectedNaturaleza: number | null = null;
   selectedEstado: number | null = null;
+  selectedTipo: number | null = null;
+  numeroSearchText: string = '';
+  naturalezaSearchText: string = '';
+  globalSearchText: string = '';
 
   // Paginación (solo para vista de lista)
   pageIndex = 0;
@@ -124,7 +136,7 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
     private dialog: MatDialog,
     private exportService: ExportService,
     private planUtils: PlanCuentaUtilsService,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
   ) {}
 
   ngOnInit(): void {
@@ -169,7 +181,7 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
 
     this.planCuentaService.getAll().subscribe({
       next: (data) => {
-        const list = Array.isArray(data) ? data : (data as any)?.data ?? [];
+        const list = Array.isArray(data) ? data : ((data as any)?.data ?? []);
 
         // Filtrar por empresa desde localStorage
         const filtered = list.filter((it: any) => it?.empresa?.codigo === this.idSucursal);
@@ -185,15 +197,21 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
       error: (err) => {
         console.error('❌ Error al cargar datos (getAll):', err);
         if (err?.error?.message?.includes('ORA-00942')) {
-          this.error.set('Error de Base de Datos: Tabla CNT.PLNN no existe. Contactar administrador.');
+          this.error.set(
+            'Error de Base de Datos: Tabla CNT.PLNN no existe. Contactar administrador.',
+          );
         } else if (err?.status === 0) {
-          this.error.set('Backend no disponible. Verificar que esté ejecutándose en localhost:8080');
+          this.error.set(
+            'Backend no disponible. Verificar que esté ejecutándose en localhost:8080',
+          );
         } else {
-          this.error.set(`Error del servidor: ${err?.status} - ${err?.message || 'Error desconocido'}`);
+          this.error.set(
+            `Error del servidor: ${err?.status} - ${err?.message || 'Error desconocido'}`,
+          );
         }
         this.planCuentas = [];
         this.loading.set(false);
-      }
+      },
     });
   }
 
@@ -201,10 +219,12 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
   private loadDataFallback(): void {
     this.planCuentaService.getAll().subscribe({
       next: (data) => {
-        const list = Array.isArray(data) ? data : (data as any)?.data ?? [];
+        const list = Array.isArray(data) ? data : ((data as any)?.data ?? []);
 
         if (list.length === 0) {
-          this.error.set('No se encontraron cuentas en la base de datos. Verificar que las tablas CNT.PLNN existan.');
+          this.error.set(
+            'No se encontraron cuentas en la base de datos. Verificar que las tablas CNT.PLNN existan.',
+          );
         } else {
           this.error.set(''); // Limpiar error si se cargaron datos
         }
@@ -221,18 +241,24 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
 
         // Proporcionar información específica del error
         if (err.error?.message?.includes('ORA-00942')) {
-          this.error.set('Error BD: Las tablas CNT.PLNN/CNT.NTRL no existen. Ejecutar scripts de creación de BD.');
+          this.error.set(
+            'Error BD: Las tablas CNT.PLNN/CNT.NTRL no existen. Ejecutar scripts de creación de BD.',
+          );
         } else if (err.status === 0) {
-          this.error.set('Backend no disponible en localhost:8080. Verificar que WildFly esté ejecutándose.');
+          this.error.set(
+            'Backend no disponible en localhost:8080. Verificar que WildFly esté ejecutándose.',
+          );
         } else {
-          this.error.set(`Error del servidor: ${err.status} - ${err.message || 'Error desconocido'}`);
+          this.error.set(
+            `Error del servidor: ${err.status} - ${err.message || 'Error desconocido'}`,
+          );
         }
 
         this.loading.set(false);
 
         // En caso de error
         this.planCuentas = [];
-      }
+      },
     });
   }
 
@@ -242,7 +268,13 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
 
     // Filtro por empresa desde localStorage
     const criterioEmpresa = new DatosBusqueda();
-    criterioEmpresa.asignaValorConCampoPadre(TipoDatosBusqueda.LONG, 'empresa', 'codigo', String(this.idSucursal), TipoComandosBusqueda.IGUAL);
+    criterioEmpresa.asignaValorConCampoPadre(
+      TipoDatosBusqueda.LONG,
+      'empresa',
+      'codigo',
+      String(this.idSucursal),
+      TipoComandosBusqueda.IGUAL,
+    );
     criterioConsultaArray.push(criterioEmpresa);
 
     // Ordenar por nombre
@@ -252,7 +284,7 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
 
     this.naturalezaCuentaService.selectByCriteria(criterioConsultaArray).subscribe({
       next: (data) => {
-        const list = Array.isArray(data) ? data : (data as any)?.data ?? [];
+        const list = Array.isArray(data) ? data : ((data as any)?.data ?? []);
 
         if (list.length === 0) {
           this.loadNaturalezasFallback();
@@ -264,7 +296,7 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
       error: (err) => {
         console.error(`❌ Error al cargar naturalezas con empresa ${this.idSucursal}:`, err);
         this.loadNaturalezasFallback();
-      }
+      },
     });
   }
 
@@ -272,7 +304,7 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
   private loadNaturalezasFallback(): void {
     this.naturalezaCuentaService.getAll().subscribe({
       next: (data) => {
-        const list = Array.isArray(data) ? data : (data as any)?.data ?? [];
+        const list = Array.isArray(data) ? data : ((data as any)?.data ?? []);
 
         // Filtrar por empresa desde localStorage
         const filtered = list.filter((nat: any) => nat?.empresa?.codigo === this.idSucursal);
@@ -287,7 +319,7 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
       error: (err) => {
         console.error('❌ Error al cargar naturalezas del backend (fallback):', err);
         this.loadMockNaturalezas();
-      }
+      },
     });
   }
 
@@ -300,13 +332,13 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
     const accountMap = new Map<number, PlanCuentaNode>();
 
     // Convertir a nodos del árbol
-    this.planCuentas.forEach(cuenta => {
+    this.planCuentas.forEach((cuenta) => {
       const node: PlanCuentaNode = {
         ...cuenta,
         children: [],
         level: this.planUtils.calculateLevel(cuenta.cuentaContable || ''),
         expandable: false,
-        isExpanded: false
+        isExpanded: false,
       };
       accountMap.set(cuenta.codigo!, node);
     });
@@ -314,7 +346,7 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
     // Construir jerarquía
     const rootNodes: PlanCuentaNode[] = [];
 
-    this.planCuentas.forEach(cuenta => {
+    this.planCuentas.forEach((cuenta) => {
       const node = accountMap.get(cuenta.codigo!)!;
 
       if (cuenta.idPadre && cuenta.idPadre !== 0 && cuenta.idPadre !== cuenta.codigo) {
@@ -338,7 +370,7 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
         const bNumber = this.planUtils.getAccountNumberForSorting(b.cuentaContable || '');
         return aNumber.localeCompare(bNumber);
       });
-      nodes.forEach(node => {
+      nodes.forEach((node) => {
         if (node.children && node.children.length > 0) {
           sortNodes(node.children);
         }
@@ -363,7 +395,7 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
     const result: PlanCuentaNode[] = [];
 
     const flatten = (nodeList: PlanCuentaNode[]) => {
-      nodeList.forEach(node => {
+      nodeList.forEach((node) => {
         result.push(node);
         if (node.children && node.children.length > 0) {
           flatten(node.children);
@@ -391,13 +423,22 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
   public clearFilters(): void {
     this.selectedNaturaleza = null;
     this.selectedEstado = null;
+    this.selectedTipo = null;
+    this.numeroSearchText = '';
+    this.naturalezaSearchText = '';
+    this.globalSearchText = '';
+    this.pageIndex = 0;
     this.applyFiltersAndPagination();
   }
 
   public onSort(column: string): void {
     if (this.sortConfig.column === column) {
-      this.sortConfig.direction = this.sortConfig.direction === 'asc' ? 'desc' :
-                                  this.sortConfig.direction === 'desc' ? null : 'asc';
+      this.sortConfig.direction =
+        this.sortConfig.direction === 'asc'
+          ? 'desc'
+          : this.sortConfig.direction === 'desc'
+            ? null
+            : 'asc';
     } else {
       this.sortConfig.column = column;
       this.sortConfig.direction = 'asc';
@@ -416,29 +457,47 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
     this.applyFiltersAndPagination();
   }
 
+  public onGlobalSearchChange(value: string): void {
+    this.globalSearchText = value || '';
+    this.pageIndex = 0;
+    this.applyFiltersAndPagination();
+  }
+
+  public onNaturalezaSearchChange(value: string): void {
+    this.naturalezaSearchText = value || '';
+    this.pageIndex = 0;
+    this.applyFiltersAndPagination();
+  }
+
+  public onNumeroSearchChange(value: string): void {
+    this.numeroSearchText = value || '';
+    this.pageIndex = 0;
+    this.applyFiltersAndPagination();
+  }
+
   public getSortIcon(column: string): string {
     if (this.sortConfig.column !== column) return 'unfold_more';
     return this.sortConfig.direction === 'asc' ? 'keyboard_arrow_up' : 'keyboard_arrow_down';
   }
 
-  private applyFiltersAndPagination(): void {
+  public applyFiltersAndPagination(): void {
     // 1. Obtener datos base según la vista
     let baseData: PlanCuentaNode[];
 
     if (this.viewMode === 'tree') {
       baseData = this.flattenTree(this.treeData);
     } else {
-      baseData = this.planCuentas.map(cuenta => ({
+      baseData = this.planCuentas.map((cuenta) => ({
         ...cuenta,
         level: this.calculateLevel(cuenta.cuentaContable || ''),
         children: [],
         expandable: false,
-        isExpanded: false
+        isExpanded: false,
       }));
     }
 
     // 2. Filtrar
-    this.filteredData = baseData.filter(item => {
+    this.filteredData = baseData.filter((item) => {
       let matches = true;
 
       if (this.selectedNaturaleza !== null) {
@@ -449,11 +508,46 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
         matches = matches && item.estado === this.selectedEstado;
       }
 
+      if (this.selectedTipo !== null) {
+        matches = matches && item.tipo === this.selectedTipo;
+      }
+
+      // Filtro por Número de cuenta (texto: incluye/prefijo)
+      if ((this.numeroSearchText || '').trim().length > 0) {
+        const q = (this.numeroSearchText || '').trim().toLowerCase();
+        const num = (item.cuentaContable || '').toLowerCase();
+        // Coincide si incluye o si el número empieza con la consulta
+        const matchesNumero = num.includes(q) || num.startsWith(q);
+        matches = matches && matchesNumero;
+      }
+
+      // Búsqueda por Naturaleza específica (texto)
+      if ((this.naturalezaSearchText || '').trim().length > 0) {
+        const q = (this.naturalezaSearchText || '').trim().toLowerCase();
+        const nat = this.getNaturalezaName(item.naturalezaCuenta?.codigo).toLowerCase();
+        matches = matches && nat.includes(q);
+      }
+
+      // Búsqueda global de texto (número, nombre, naturaleza, tipo, estado)
+      if ((this.globalSearchText || '').trim().length > 0) {
+        const t = (this.globalSearchText || '').trim().toLowerCase();
+        const searchableText = [
+          item.cuentaContable || '',
+          item.nombre || '',
+          this.getNaturalezaName(item.naturalezaCuenta?.codigo).toLowerCase(),
+          this.estadoLabel(item.estado).toLowerCase(),
+        ]
+          .join(' ')
+          .toLowerCase();
+
+        matches = matches && searchableText.includes(t);
+      }
+
       return matches;
     });
 
     // 3. Ordenar
-      if (this.sortConfig.column && this.sortConfig.direction) {
+    if (this.sortConfig.column && this.sortConfig.direction) {
       this.filteredData.sort((a, b) => {
         let aVal: any;
         let bVal: any;
@@ -482,7 +576,12 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
       });
     }
 
-    // 4. Paginar (solo en vista de lista)
+    // 4. Expandir/colapsar árbol según filtros/búsquedas
+    if (this.viewMode === 'tree') {
+      this.updateTreeExpansionByFilters();
+    }
+
+    // 5. Paginar (solo en vista de lista)
     this.totalElements = this.filteredData.length;
 
     if (this.viewMode === 'list') {
@@ -494,15 +593,82 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
     }
   }
 
+  // ---- Expansión/colapso según filtros y utilidades ----
+  private updateTreeExpansionByFilters(): void {
+    const hasActiveExpansionFilters =
+      (this.numeroSearchText || '').trim().length > 0 ||
+      (this.globalSearchText || '').trim().length > 0 ||
+      (this.naturalezaSearchText || '').trim().length > 0 ||
+      this.selectedNaturaleza !== null ||
+      this.selectedEstado !== null ||
+      this.selectedTipo !== null;
+
+    if (!hasActiveExpansionFilters) {
+      // No tocar el estado de expansión si no hay filtros/búsquedas activas
+      return;
+    }
+
+    const matchedCodes = new Set<number>(
+      (this.filteredData || [])
+        .map((n: any) => n?.codigo)
+        .filter((c: any) => typeof c === 'number' && !isNaN(c)),
+    );
+
+    const visit = (node: PlanCuentaNode): boolean => {
+      let selfMatch = node.codigo ? matchedCodes.has(node.codigo) : false;
+      let childMatch = false;
+      if (node.children && node.children.length) {
+        for (const child of node.children) {
+          childMatch = visit(child) || childMatch;
+        }
+      }
+
+      const shouldExpand = selfMatch || childMatch;
+      if (shouldExpand) {
+        this.treeControl.expand(node);
+      } else {
+        this.treeControl.collapse(node);
+      }
+      return shouldExpand;
+    };
+
+    (this.treeData || []).forEach((root) => visit(root));
+  }
+
+  public expandAll(): void {
+    const expandNode = (node: PlanCuentaNode) => {
+      this.treeControl.expand(node);
+      if (node.children) node.children.forEach(expandNode);
+    };
+    (this.treeData || []).forEach(expandNode);
+  }
+
+  public collapseAll(): void {
+    const collapseNode = (node: PlanCuentaNode) => {
+      this.treeControl.collapse(node);
+      if (node.children) node.children.forEach(collapseNode);
+    };
+    (this.treeData || []).forEach(collapseNode);
+  }
+
+  public expandMatches(): void {
+    // Forzar actualización de expansión basada en filtros actuales
+    this.updateTreeExpansionByFilters();
+  }
+
   // ---- Helpers de presentación (públicos para usarlos en el template) ----
   public getNaturalezaName(id?: number): string {
     if (!id) return '';
-    const naturaleza = this.naturalezas.find(n => n.codigo === id);
+    const naturaleza = this.naturalezas.find((n) => n.codigo === id);
     return naturaleza?.nombre || '';
   }
 
   public estadoLabel(valor: any): string {
     return this.planUtils.getEstadoLabel(valor);
+  }
+
+  public getTipoLabel(tipo?: number): string {
+    return this.planUtils.getTipoLabel(tipo);
   }
 
   // Función personalizada para formateo seguro de fechas
@@ -511,8 +677,7 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
     return formatted === '-' ? 'N/A' : formatted;
   }
 
-  public trackByCodigo = (_: number, item: PlanCuentaNode) =>
-    (item as any).codigo ?? _;
+  public trackByCodigo = (_: number, item: PlanCuentaNode) => (item as any).codigo ?? _;
 
   // ---- Tree helpers ----
   hasChild = (_: number, node: PlanCuentaNode) => !!node.children && node.children.length > 0;
@@ -547,7 +712,7 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
         return;
       }
       // Obtener nodo raíz (cuentaContable == '0') para usar su codigo como idPadre real
-      const rootParent = this.planCuentas.find(p => p.cuentaContable === '0') || null;
+      const rootParent = this.planCuentas.find((p) => p.cuentaContable === '0') || null;
       const dialogRef = this.dialog.open(PlanCuentaAddEditComponent, {
         width: '720px',
         disableClose: true,
@@ -556,10 +721,14 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
           naturalezas: this.naturalezas,
           presetCuenta: String(nextRoot),
           presetNivel: 1,
-          maxDepth: this.getMaxDepthAllowed()
+          maxDepth: this.getMaxDepthAllowed(),
+        },
+      });
+      dialogRef.afterClosed().subscribe((result) => {
+        if (result) {
+          this.loadData();
         }
       });
-      dialogRef.afterClosed().subscribe(result => { if (result) { this.loadData(); } });
       return;
     }
 
@@ -579,11 +748,11 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
         naturalezas: this.naturalezas,
         presetCuenta,
         presetNivel,
-        maxDepth: this.getMaxDepthAllowed()
-      }
+        maxDepth: this.getMaxDepthAllowed(),
+      },
     });
 
-    dialogRef.afterClosed().subscribe(result => {
+    dialogRef.afterClosed().subscribe((result) => {
       if (result) {
         this.loadData();
       }
@@ -594,10 +763,10 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
     const dialogRef = this.dialog.open(PlanCuentaAddEditComponent, {
       width: '700px',
       disableClose: true,
-      data: { item, naturalezas: this.naturalezas }
+      data: { item, naturalezas: this.naturalezas },
     });
 
-    dialogRef.afterClosed().subscribe(result => {
+    dialogRef.afterClosed().subscribe((result) => {
       if (result) {
         this.loadData();
       }
@@ -611,7 +780,7 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
         duration: 3000,
         horizontalPosition: 'center',
         verticalPosition: 'top',
-        panelClass: ['warning-snackbar']
+        panelClass: ['warning-snackbar'],
       });
       return;
     }
@@ -622,7 +791,7 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
         duration: 4000,
         horizontalPosition: 'center',
         verticalPosition: 'top',
-        panelClass: ['warning-snackbar']
+        panelClass: ['warning-snackbar'],
       });
       return;
     }
@@ -630,25 +799,26 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
     // Abrir diálogo de confirmación moderno
     const dialogData: ConfirmDialogData = {
       title: '¿Eliminar cuenta?',
-      message: 'Esta acción no se puede deshacer. Se eliminará permanentemente la cuenta del sistema.',
+      message:
+        'Esta acción no se puede deshacer. Se eliminará permanentemente la cuenta del sistema.',
       confirmText: 'Eliminar',
       cancelText: 'Cancelar',
       type: 'danger',
       details: [
         { label: 'Código', value: String(node.codigo) },
         { label: 'Cuenta', value: node.cuentaContable },
-        { label: 'Nombre', value: node.nombre }
-      ]
+        { label: 'Nombre', value: node.nombre },
+      ],
     };
 
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
       width: '500px',
       data: dialogData,
       disableClose: false,
-      autoFocus: true
+      autoFocus: true,
     });
 
-    dialogRef.afterClosed().subscribe(confirmed => {
+    dialogRef.afterClosed().subscribe((confirmed) => {
       if (!confirmed) {
         return;
       }
@@ -660,7 +830,7 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
             duration: 3000,
             horizontalPosition: 'center',
             verticalPosition: 'top',
-            panelClass: ['success-snackbar']
+            panelClass: ['success-snackbar'],
           });
           this.loadData();
         },
@@ -671,9 +841,9 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
             duration: 5000,
             horizontalPosition: 'center',
             verticalPosition: 'top',
-            panelClass: ['error-snackbar']
+            panelClass: ['error-snackbar'],
           });
-        }
+        },
       });
     });
   }
@@ -684,13 +854,13 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
     const dataKeys = ['codigo', 'nombre', 'numero', 'naturaleza', 'estado', 'level'];
     const filename = `planarbol-${new Date().toISOString().split('T')[0]}.csv`;
 
-    const transformedData = this.filteredData.map(item => ({
+    const transformedData = this.filteredData.map((item) => ({
       codigo: item.codigo || '',
       nombre: item.nombre || '',
       numero: item.cuentaContable || '',
       naturaleza: this.getNaturalezaName(item.naturalezaCuenta?.codigo),
       estado: this.estadoLabel(item.estado),
-      level: item.level || 0
+      level: item.level || 0,
     }));
 
     this.exportService.exportToCSV(transformedData, filename, headers, dataKeys);
@@ -702,13 +872,13 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
     const filename = `planarbol-${new Date().toISOString().split('T')[0]}`;
     const title = 'PlanArbol';
 
-    const transformedData = this.filteredData.map(item => ({
+    const transformedData = this.filteredData.map((item) => ({
       codigo: item.codigo || '',
       nombre: item.nombre || '',
       numero: item.cuentaContable || '',
       naturaleza: this.getNaturalezaName(item.naturalezaCuenta?.codigo),
       estado: this.estadoLabel(item.estado),
-      level: item.level || 0
+      level: item.level || 0,
     }));
 
     this.exportService.exportToPDF(transformedData, filename, title, headers, dataKeys);
@@ -724,7 +894,7 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
 
   // --- Nueva lógica de numeración y límites ---
   private getMaxDepthAllowed(): number {
-    const existingMax = Math.max(0, ...this.planCuentas.map(c => c.nivel || 0));
+    const existingMax = Math.max(0, ...this.planCuentas.map((c) => c.nivel || 0));
     const naturalezaCount = this.naturalezas.length || 1;
     return this.planUtils.getMaxDepthAllowed(existingMax, naturalezaCount);
   }
@@ -732,18 +902,13 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
   private generateNewCuentaContable(parent?: PlanCuentaNode): string {
     if (!parent) return '1';
 
-    const existingAccounts = this.planCuentas
-      .map(p => p.cuentaContable || '')
-      .filter(c => c);
+    const existingAccounts = this.planCuentas.map((p) => p.cuentaContable || '').filter((c) => c);
 
-    return this.planUtils.generateNewCuentaContable(
-      parent.cuentaContable || '',
-      existingAccounts
-    );
+    return this.planUtils.generateNewCuentaContable(parent.cuentaContable || '', existingAccounts);
   }
 
   private findRootNodeByNumber(levelStr: string): PlanCuentaNode | undefined {
-    const candidates = (this.treeData || []).filter(n => (n.cuentaContable || '') === levelStr);
+    const candidates = (this.treeData || []).filter((n) => (n.cuentaContable || '') === levelStr);
     return candidates[0];
   }
 
@@ -770,22 +935,17 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
   // Obtener siguiente código de naturaleza sin cuenta raíz
   private getNextAvailableRootNaturalezaCodigo(): number | null {
     const existingRoots = this.planUtils.extractRootNumbers(
-      this.planCuentas.map(p => p.cuentaContable || '')
+      this.planCuentas.map((p) => p.cuentaContable || ''),
     );
-    const orderedCodigos = this.naturalezas
-      .map(n => n.codigo)
-      .sort((a, b) => a - b);
+    const orderedCodigos = this.naturalezas.map((n) => n.codigo).sort((a, b) => a - b);
 
-    return this.planUtils.getNextAvailableRootNaturalezaCodigo(
-      existingRoots,
-      orderedCodigos
-    );
+    return this.planUtils.getNextAvailableRootNaturalezaCodigo(existingRoots, orderedCodigos);
   }
 
   // Nuevo método: calcula el siguiente número de cuenta raíz secuencial (máx + 1)
   private getNextRootSequentialCuenta(): number | null {
     const rootNumbers = this.planUtils.extractRootNumbers(
-      this.planCuentas.map(p => p.cuentaContable || '')
+      this.planCuentas.map((p) => p.cuentaContable || ''),
     );
     return this.planUtils.getNextRootSequentialCuenta(rootNumbers);
   }
@@ -801,11 +961,11 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
         this.expandedNodesCodes.add(node.codigo);
       }
       if (node.children) {
-        node.children.forEach(child => saveNodeState(child));
+        node.children.forEach((child) => saveNodeState(child));
       }
     };
 
-    this.treeData.forEach(node => saveNodeState(node));
+    this.treeData.forEach((node) => saveNodeState(node));
   }
 
   /**
@@ -821,10 +981,10 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
         this.treeControl.expand(node);
       }
       if (node.children) {
-        node.children.forEach(child => restoreNodeState(child));
+        node.children.forEach((child) => restoreNodeState(child));
       }
     };
 
-    this.treeData.forEach(node => restoreNodeState(node));
+    this.treeData.forEach((node) => restoreNodeState(node));
   }
 }

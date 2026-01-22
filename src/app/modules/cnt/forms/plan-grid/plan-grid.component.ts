@@ -15,6 +15,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -29,11 +30,11 @@ import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-
 import { ExportService } from '../../../../shared/services/export.service';
 import { FuncionesDatosService } from '../../../../shared/services/funciones-datos.service';
 import { PlanCuentaUtilsService } from '../../../../shared/services/plan-cuenta-utils.service';
+import { PlanCuentaAddEditComponent } from '../../dialog/plan-cuenta-add-edit/plan-cuenta-add-edit.component';
 import { NaturalezaCuenta } from '../../model/naturaleza-cuenta';
 import { PlanCuenta } from '../../model/plan-cuenta';
 import { NaturalezaCuentaService } from '../../service/naturaleza-cuenta.service';
 import { PlanCuentaService } from '../../service/plan-cuenta.service';
-import { PlanCuentaAddEditComponent } from '../../dialog/plan-cuenta-add-edit/plan-cuenta-add-edit.component';
 
 @Component({
   selector: 'app-plan-grid',
@@ -46,6 +47,7 @@ import { PlanCuentaAddEditComponent } from '../../dialog/plan-cuenta-add-edit/pl
     MatProgressSpinnerModule,
     MatDialogModule,
     MatFormFieldModule,
+    MatInputModule,
     MatSelectModule,
     MatTableModule,
     MatPaginatorModule,
@@ -74,11 +76,16 @@ export class PlanGridComponent implements OnInit, AfterViewInit {
   error = signal<string>('');
   totalRegistros = signal<number>(0);
   isScrolled = signal<boolean>(false);
+  // Búsqueda global (texto libre)
+  globalSearchText: string = '';
+  // Búsqueda por Naturaleza (texto)
+  naturalezaSearchText: string = '';
 
   // Filtros
   selectedNaturaleza: number | null = null;
   selectedEstado: number | null = null;
   selectedNivel: number | null = null;
+  selectedTipo: number | null = null;
 
   // Configuración de la tabla
   displayedColumns: string[] = [
@@ -105,7 +112,7 @@ export class PlanGridComponent implements OnInit, AfterViewInit {
     private dialog: MatDialog,
     private exportService: ExportService,
     private planUtils: PlanCuentaUtilsService,
-    private funcionesDatosService: FuncionesDatosService
+    private funcionesDatosService: FuncionesDatosService,
   ) {}
 
   ngOnInit(): void {
@@ -148,6 +155,7 @@ export class PlanGridComponent implements OnInit, AfterViewInit {
       const searchableText = [
         data.cuentaContable || '',
         data.nombre || '',
+        this.getNaturalezaName(data.naturalezaCuenta?.codigo).toLowerCase(),
         this.getTipoLabel(data.tipo).toLowerCase(),
         this.formatDate(data.fechaUpdate).toLowerCase(),
         this.formatDate(data.fechaInactivo).toLowerCase(),
@@ -228,13 +236,13 @@ export class PlanGridComponent implements OnInit, AfterViewInit {
       'empresa',
       'codigo',
       empresaCodigo,
-      TipoComandosBusqueda.IGUAL
+      TipoComandosBusqueda.IGUAL,
     );
     criterioConsultaArray.push(criterioEmpresa);
 
     this.naturalezaCuentaService.selectByCriteria(criterioConsultaArray).subscribe({
       next: (data) => {
-        const list = Array.isArray(data) ? data : (data as any)?.data ?? [];
+        const list = Array.isArray(data) ? data : ((data as any)?.data ?? []);
         if (list.length === 0) {
           this.loadNaturalezasFallback();
         } else {
@@ -251,7 +259,7 @@ export class PlanGridComponent implements OnInit, AfterViewInit {
   private loadNaturalezasFallback(): void {
     this.naturalezaCuentaService.getAll().subscribe({
       next: (data) => {
-        const list = Array.isArray(data) ? data : (data as any)?.data ?? [];
+        const list = Array.isArray(data) ? data : ((data as any)?.data ?? []);
         this.naturalezas = list;
       },
       error: (error) => {
@@ -306,6 +314,8 @@ export class PlanGridComponent implements OnInit, AfterViewInit {
     this.selectedNaturaleza = null;
     this.selectedEstado = null;
     this.selectedNivel = null;
+    this.selectedTipo = null;
+    this.naturalezaSearchText = '';
     this.applyFilters();
   }
 
@@ -315,7 +325,15 @@ export class PlanGridComponent implements OnInit, AfterViewInit {
     // Aplicar filtro de naturaleza
     if (this.selectedNaturaleza !== null) {
       filteredData = filteredData.filter(
-        (item) => item.naturalezaCuenta?.codigo === this.selectedNaturaleza
+        (item) => item.naturalezaCuenta?.codigo === this.selectedNaturaleza,
+      );
+    }
+
+    // Aplicar búsqueda por Naturaleza (texto libre sobre nombre de naturaleza)
+    if ((this.naturalezaSearchText || '').trim().length > 0) {
+      const q = (this.naturalezaSearchText || '').trim().toLowerCase();
+      filteredData = filteredData.filter((item) =>
+        this.getNaturalezaName(item.naturalezaCuenta?.codigo).toLowerCase().includes(q),
       );
     }
 
@@ -329,6 +347,11 @@ export class PlanGridComponent implements OnInit, AfterViewInit {
       filteredData = filteredData.filter((item) => item.nivel === this.selectedNivel);
     }
 
+    // Aplicar filtro de tipo de cuenta
+    if (this.selectedTipo !== null) {
+      filteredData = filteredData.filter((item) => item.tipo === this.selectedTipo);
+    }
+
     // Re-ordenar jerárquicamente: primero 1 y todos sus hijos, luego 2 y sus hijos, etc.
     filteredData.sort((a, b) => {
       const aKey = this.planUtils.getAccountNumberForSorting(a.cuentaContable || '');
@@ -337,6 +360,23 @@ export class PlanGridComponent implements OnInit, AfterViewInit {
     });
     this.dataSource.data = filteredData;
     this.recomputeDescendantCounts(filteredData);
+  }
+
+  // Handler para búsqueda por Naturaleza
+  public onNaturalezaSearchChange(value: string): void {
+    this.naturalezaSearchText = value || '';
+    this.applyFilters();
+    if (this.dataSource.paginator) {
+      this.dataSource.paginator.firstPage();
+    }
+  }
+
+  public clearNaturalezaSearch(): void {
+    this.naturalezaSearchText = '';
+    this.applyFilters();
+    if (this.dataSource.paginator) {
+      this.dataSource.paginator.firstPage();
+    }
   }
 
   // Métodos de selección
@@ -660,7 +700,7 @@ export class PlanGridComponent implements OnInit, AfterViewInit {
 
   private getNextAvailableRootNaturalezaCodigo(): number | null {
     const existingRoots = this.planUtils.extractRootNumbers(
-      this.planCuentas.map((p) => p.cuentaContable || '')
+      this.planCuentas.map((p) => p.cuentaContable || ''),
     );
     const orderedCodigos = this.naturalezas.map((n) => n.codigo).sort((a, b) => a - b);
 
