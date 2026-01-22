@@ -485,7 +485,7 @@ export class AsientosContablesDinamico implements OnInit {
   private initializeForm(): void {
     this.form = this.fb.group({
       tipo: ['', [Validators.required]],
-      numero: ['', [Validators.required]],
+      numero: [''], // Sin validación, generado por backend
       fechaAsiento: [new Date(), [Validators.required]],
       fechaIngreso: [{ value: new Date(), disabled: true }],
       estado: [4], // Campo habilitado y con valor numérico por defecto (4 = INCOMPLETO)
@@ -703,8 +703,6 @@ export class AsientosContablesDinamico implements OnInit {
 
     // Obtener fechas del formulario
     const fechaAsiento = this.form.get('fechaAsiento')?.value;
-    const fechaAsientoFormatted =
-      fechaAsiento instanceof Date ? this.formatDateToLocalDate(fechaAsiento) : fechaAsiento;
 
     const asientoBackend: any = {
       empresa: {
@@ -715,11 +713,11 @@ export class AsientosContablesDinamico implements OnInit {
         nombre: tipoAsientoSeleccionado?.nombre || '',
       },
       numero: parseInt(numero?.value, 10),
-      fechaAsiento: fechaAsientoFormatted,
+      fechaAsiento: fechaAsiento,
       observaciones: this.form.get('observaciones')?.value?.trim() || '',
       estado: this.form.get('estado')?.value || this.asientoActual?.estado || 4, // Usar estado del formulario o del asiento existente
       nombreUsuario: localStorage.getItem('username') || 'sistema',
-      fechaIngreso: this.formatDateToLocalDate(new Date()),
+      fechaIngreso: new Date(),
       numeroMes: new Date().getMonth() + 1,
       numeroAnio: new Date().getFullYear(),
       moneda: 1,

@@ -72,10 +72,6 @@ export class SessionTimeoutService {
     this.isInitialized = true;
     this.startInactivityTimer();
     this.setupActivityListeners();
-
-    console.log(
-      `✅ Session timeout inicializado - Inactividad: ${this.INACTIVITY_TIME} min, Advertencia: ${this.WARNING_TIME} min`
-    );
   }
 
   /**
@@ -83,7 +79,6 @@ export class SessionTimeoutService {
    */
   private loadTimeoutConfiguration(): void {
     if (!this.detalleRubroService.estanDatosCargados()) {
-      console.warn('⚠️ DetalleRubroService no tiene datos cargados. Usando valores por defecto.');
       this.INACTIVITY_TIME = this.DEFAULT_INACTIVITY_TIME;
       this.WARNING_TIME = this.DEFAULT_WARNING_TIME;
       return;
@@ -105,16 +100,8 @@ export class SessionTimeoutService {
     this.INACTIVITY_TIME = inactivityFromDB > 0 ? inactivityFromDB : this.DEFAULT_INACTIVITY_TIME;
     this.WARNING_TIME = warningFromDB > 0 ? warningFromDB : this.DEFAULT_WARNING_TIME;
 
-    console.log(
-      `📊 Configuración de timeout cargada desde BD (Rubro ${this.RUBRO_TIMEOUT_SESION}):`,
-      { inactivityTime: this.INACTIVITY_TIME, warningTime: this.WARNING_TIME }
-    );
-
     // Validar que WARNING_TIME no sea mayor que INACTIVITY_TIME
     if (this.WARNING_TIME >= this.INACTIVITY_TIME) {
-      console.error(
-        `❌ Configuración inválida: WARNING_TIME (${this.WARNING_TIME}) >= INACTIVITY_TIME (${this.INACTIVITY_TIME}). Usando defaults.`
-      );
       this.INACTIVITY_TIME = this.DEFAULT_INACTIVITY_TIME;
       this.WARNING_TIME = this.DEFAULT_WARNING_TIME;
     }
@@ -127,7 +114,6 @@ export class SessionTimeoutService {
     this.clearTimers();
 
     this.inactivityTimer = setTimeout(() => {
-      console.warn('⏰ Tiempo de inactividad alcanzado - mostrando advertencia');
       this.showWarningDialog();
     }, (this.INACTIVITY_TIME - this.WARNING_TIME) * 60 * 1000);
   }
@@ -155,7 +141,6 @@ export class SessionTimeoutService {
         this.endSession();
       } else if (result === 'continue') {
         // Usuario confirmó seguir activo
-        console.log('👤 Sesión continuada - reiniciando contador de inactividad');
         this.startInactivityTimer();
       }
     });
@@ -194,8 +179,6 @@ export class SessionTimeoutService {
    * Termina la sesión y redirige al login
    */
   private endSession(): void {
-    console.log('🔓 Cerrando sesión por inactividad');
-
     this.clearTimers();
     this.destroy$.next();
     this.destroy$.complete();

@@ -229,14 +229,6 @@ export class ConfirmDialogComponent {
     public dialogRef: MatDialogRef<ConfirmDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: ConfirmDialogData
   ) {
-    console.log('ConfirmDialog data recibida:', data);
-    if (data.details) {
-      console.log('Details:', data.details);
-      data.details.forEach((d, i) => {
-        console.log(`Detail ${i}:`, d, 'typeof value:', typeof d.value);
-      });
-    }
-
     // Valores por defecto
     this.data.type = this.data.type || 'info';
     this.data.confirmText = this.data.confirmText || 'Confirmar';

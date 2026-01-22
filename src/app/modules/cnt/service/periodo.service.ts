@@ -26,16 +26,10 @@ export class PeriodoService {
   getAll(): Observable<Periodo[]> {
     const wsGetAll = '/getAll';
     const url = `${ServiciosCnt.RS_PRDO}${wsGetAll}`;
-    console.log(
-      `🔍 [PeriodoService.getAll] Cargando períodos para empresa ${this.EMPRESA_CODIGO}...`
-    );
 
     return this.http.get<Periodo[]>(url).pipe(
       map((items: Periodo[]) => {
         const filtrados = (items || []).filter((p) => p?.empresa?.codigo === this.EMPRESA_CODIGO);
-        console.log(
-          `✅ Períodos filtrados para empresa ${this.EMPRESA_CODIGO}: ${filtrados.length}`
-        );
         return filtrados;
       }),
       catchError(this.handleErrorWithEmpty<Periodo>())
@@ -171,9 +165,11 @@ export class PeriodoService {
     const wsDelete = '/' + codigo;
     const url = `${ServiciosCnt.RS_PRDO}${wsDelete}`;
 
-    return this.http.delete<string>(url, this.httpOptions).pipe(
+    return this.http.delete(url, {
+      ...this.httpOptions,
+      responseType: 'text'
+    }).pipe(
       catchError((error: HttpErrorResponse) => {
-        console.error('❌ Error eliminando período:', error);
         return throwError(() => error.error || error);
       })
     );
@@ -271,12 +267,10 @@ export class PeriodoService {
 
   // tslint:disable-next-line: typedef
   private handleError(error: HttpErrorResponse): Observable<never> {
-    console.error('❌ Error en petición HTTP:', error);
     return throwError(() => error.error || error);
   }
 
   private handleErrorWithNull(error: HttpErrorResponse): Observable<null> {
-    console.error('❌ Error en petición HTTP:', error);
     if (+error.status === 200) {
       return of(null);
     }
@@ -285,7 +279,6 @@ export class PeriodoService {
 
   private handleErrorWithEmpty<T>(): (error: HttpErrorResponse) => Observable<T[]> {
     return (error: HttpErrorResponse) => {
-      console.error('❌ Error en petición HTTP, devolviendo array vacío:', error);
       return of([] as T[]);
     };
   }

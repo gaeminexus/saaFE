@@ -58,23 +58,22 @@
         <mat-form-field appearance="outline">
           <mat-label>Mes</mat-label>
           <mat-select formControlName="mes" required>
-            <mat-option *ngFor="let mes of mesesDisponibles" [value]="mes.valor">
+            <mat-option
+              *ngFor="let mes of mesesDisponibles"
+              [value]="mes.valor"
+              [disabled]="!isMesDisponible(mes.valor)">
               {{ mes.nombre }}
+              @if (!isMesDisponible(mes.valor)) {
+                <span class="mes-ocupado">(No disponible)</span>
+              }
             </mat-option>
           </mat-select>
           <mat-error *ngIf="periodoForm.get('mes')?.hasError('required')">
             El mes es requerido
           </mat-error>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline">
-          <mat-label>Nombre del período</mat-label>
-          <input
-            matInput
-            formControlName="nombre"
-            placeholder="Se generará automáticamente si se deja vacío"
-          />
-          <mat-hint>Opcional - se generará con formato "Mes Año"</mat-hint>
+          @if (isNewRecord) {
+            <mat-hint>Solo puede crear el período siguiente al último creado</mat-hint>
+          }
         </mat-form-field>
 
         <mat-form-field appearance="outline">

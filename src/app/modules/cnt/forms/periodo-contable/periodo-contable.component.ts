@@ -108,6 +108,7 @@ export class PeriodoContableComponent implements OnInit {
     this.loadPeriodos();
     this.initializeDataSource();
     this.generateAniosDisponibles();
+    this.onAnioChange();
   }
 
   ngAfterViewInit(): void {
@@ -156,6 +157,81 @@ export class PeriodoContableComponent implements OnInit {
     }
   }
 
+  /**
+   * Obtiene el último período creado
+   */
+  getUltimoPeriodo(): Periodo | null {
+    if (this.periodos.length === 0) {
+      return null;
+    }
+
+    // Los períodos ya están ordenados por año y mes descendente
+    return this.periodos[0];
+  }
+
+  /**
+   * Calcula el siguiente período al último creado
+   */
+  getSiguientePeriodo(): { mes: number; anio: number } | null {
+    const ultimoPeriodo = this.getUltimoPeriodo();
+
+    if (!ultimoPeriodo) {
+      // Si no hay períodos, permitir cualquier mes/año
+      return null;
+    }
+
+    let siguienteMes = ultimoPeriodo.mes + 1;
+    let siguienteAnio = ultimoPeriodo.anio;
+
+    if (siguienteMes > 12) {
+      siguienteMes = 1;
+      siguienteAnio++;
+    }
+
+    return { mes: siguienteMes, anio: siguienteAnio };
+  }
+
+  /**
+   * Verifica si un mes está disponible para creación
+   * Solo permite el mes siguiente al último período creado
+   */
+  isMesDisponible(mes: number): boolean {
+    const anioSeleccionado = this.periodoForm.get('anio')?.value;
+    if (!anioSeleccionado) {
+      return false;
+    }
+
+    // Si estamos editando, permitir el mes actual del período que se está editando
+    if (!this.isNewRecord && this.periodoSeleccionado) {
+      if (this.periodoSeleccionado.mes === mes && this.periodoSeleccionado.anio === anioSeleccionado) {
+        return true;
+      }
+      return false;
+    }
+
+    // Si no hay períodos creados, permitir cualquier mes
+    const siguientePeriodo = this.getSiguientePeriodo();
+    if (!siguientePeriodo) {
+      return true;
+    }
+
+    // Solo permitir el mes siguiente al último período creado
+    return mes === siguientePeriodo.mes && anioSeleccionado === siguientePeriodo.anio;
+  }
+
+  /**
+   * Listener de cambio de año para actualizar meses disponibles
+   */
+  onAnioChange(): void {
+    this.periodoForm.get('anio')?.valueChanges.subscribe(() => {
+      // Limpiar el mes seleccionado cuando cambia el año
+      const mesActual = this.periodoForm.get('mes')?.value;
+      if (mesActual && !this.isMesDisponible(mesActual)) {
+        this.periodoForm.get('mes')?.setValue('');
+      }
+    });
+  }
+
   loadPeriodos(): void {
     this.loading = true;
     const empresaCodigo = localStorage.getItem('idSucursal');
@@ -198,12 +274,30 @@ export class PeriodoContableComponent implements OnInit {
     this.isEditing = true;
     this.periodoSeleccionado = null;
     this.periodoForm.reset();
-    this.periodoForm.patchValue({
-      codigo: 0,
-      anio: new Date().getFullYear(),
-      estado: EstadoPeriodo.ABIERTO,
-      periodoCierre: false,
-    });
+
+    // Obtener el siguiente período disponible
+    const siguientePeriodo = this.getSiguientePeriodo();
+
+    if (siguientePeriodo) {
+      // Pre-seleccionar el siguiente período
+      this.periodoForm.patchValue({
+        codigo: 0,
+        mes: siguientePeriodo.mes,
+        anio: siguientePeriodo.anio,
+        estado: EstadoPeriodo.ABIERTO,
+        periodoCierre: false,
+      });
+    } else {
+      // Si no hay períodos, usar el mes y año actual
+      const fechaActual = new Date();
+      this.periodoForm.patchValue({
+        codigo: 0,
+        mes: fechaActual.getMonth() + 1,
+        anio: fechaActual.getFullYear(),
+        estado: EstadoPeriodo.ABIERTO,
+        periodoCierre: false,
+      });
+    }
   }
 
   editarPeriodo(periodo: Periodo): void {
