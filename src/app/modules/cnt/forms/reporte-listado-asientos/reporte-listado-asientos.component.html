@@ -1,0 +1,107 @@
+<div class="reporte-container">
+  <h2>LISTADO DE ASIENTO CONTABLE</h2>
+
+  <div class="form-card">
+    <div class="filters-header">Filtros de búsqueda:</div>
+
+    <div class="grid-2">
+      <div>
+        <div class="section-title">Fecha Ingreso</div>
+        <div class="row">
+          <div class="col">
+            <label>Desde:</label>
+            <mat-form-field appearance="outline" class="full-width">
+              <input
+                matInput
+                type="date"
+                [value]="fechaIngresoDesde()"
+                (change)="fechaIngresoDesde.set($any($event.target).value)"
+              />
+            </mat-form-field>
+          </div>
+          <div class="col">
+            <label>Hasta:</label>
+            <mat-form-field appearance="outline" class="full-width">
+              <input
+                matInput
+                type="date"
+                [value]="fechaIngresoHasta()"
+                (change)="fechaIngresoHasta.set($any($event.target).value)"
+              />
+            </mat-form-field>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col">
+            <label>Num. Asiento:</label>
+            <mat-form-field appearance="outline" class="full-width">
+              <input
+                matInput
+                [value]="numeroAsiento()"
+                (input)="numeroAsiento.set($any($event.target).value)"
+              />
+            </mat-form-field>
+          </div>
+          <div class="col">
+            <label>Tipo de Asiento:</label>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-select [value]="tipoAsiento()" (selectionChange)="tipoAsiento.set($event.value)">
+                <mat-option *ngFor="let t of tipos" [value]="t">{{ t }}</mat-option>
+              </mat-select>
+            </mat-form-field>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-title">Fecha Asiento</div>
+        <div class="row">
+          <div class="col">
+            <label>Desde:</label>
+            <mat-form-field appearance="outline" class="full-width">
+              <input
+                matInput
+                type="date"
+                [value]="fechaAsientoDesde()"
+                (change)="fechaAsientoDesde.set($any($event.target).value)"
+              />
+            </mat-form-field>
+          </div>
+          <div class="col">
+            <label>Hasta:</label>
+            <mat-form-field appearance="outline" class="full-width">
+              <input
+                matInput
+                type="date"
+                [value]="fechaAsientoHasta()"
+                (change)="fechaAsientoHasta.set($any($event.target).value)"
+              />
+            </mat-form-field>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col">
+            <label>Estado:</label>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-select [value]="estado()" (selectionChange)="estado.set($event.value)">
+                <mat-option *ngFor="let e of estados" [value]="e">{{ e }}</mat-option>
+              </mat-select>
+            </mat-form-field>
+          </div>
+          <div class="col">
+            <label>Usuario:</label>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-select [value]="usuario()" (selectionChange)="usuario.set($event.value)">
+                <mat-option *ngFor="let u of usuarios" [value]="u">{{ u }}</mat-option>
+              </mat-select>
+            </mat-form-field>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button mat-raised-button color="primary" (click)="buscar()">Buscar</button>
+    </div>
+  </div>
+</div>

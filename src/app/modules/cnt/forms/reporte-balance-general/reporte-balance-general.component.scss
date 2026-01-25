@@ -1,0 +1,26 @@
+.reporte-container {
+  padding: 16px;
+}
+.form-card {
+  padding: 12px 0;
+}
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+.col.small {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.full-width {
+  width: 100%;
+}
+.actions {
+  margin-top: 12px;
+}
+.error {
+  margin-top: 8px;
+}

@@ -1,0 +1,31 @@
+.reporte-container {
+  padding: 16px;
+}
+.form-card {
+  padding: 12px 0;
+}
+.filters-header {
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+.full-width {
+  width: 100%;
+}
+.section-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.actions {
+  margin-top: 8px;
+}

@@ -6,6 +6,9 @@ import { PeriodoContableComponent } from './modules/cnt/forms/periodo-contable/p
 import { PlanArbolComponent } from './modules/cnt/forms/plan-arbol/plan-arbol.component';
 import { PlanGridComponent } from './modules/cnt/forms/plan-grid/plan-grid.component';
 import { PlantillaGeneralComponent } from './modules/cnt/forms/plantilla-general/plantilla-general.component';
+import { ReporteBalanceGeneralComponent } from './modules/cnt/forms/reporte-balance-general/reporte-balance-general.component';
+import { ReporteListadoAsientosComponent } from './modules/cnt/forms/reporte-listado-asientos/reporte-listado-asientos.component';
+import { ReporteMayorAnaliticoComponent } from './modules/cnt/forms/reporte-mayor-analitico/reporte-mayor-analitico.component';
 import { TipoAsientoGeneralGridComponent } from './modules/cnt/forms/tipo-asiento-general-grid/tipo-asiento-general-grid.component';
 import { TipoAsientoSistemaGridComponent } from './modules/cnt/forms/tipo-asiento-sistema-grid/tipo-asiento-sistema-grid.component';
 import { MenuContabilidadComponent } from './modules/cnt/menu/menucontabilidad/menucontabilidad.component';
@@ -197,6 +200,24 @@ export const routes: Routes = [
         path: 'mayorizacion-proceso',
         component: MayorizacionProcesoComponent,
         canDeactivate: [canDeactivateGuard],
+      },
+      {
+        path: 'reportes/balance-general',
+        component: ReporteBalanceGeneralComponent,
+        canActivate: [authGuard],
+        data: { title: 'Balance General' },
+      },
+      {
+        path: 'reportes/mayor-analitico',
+        component: ReporteMayorAnaliticoComponent,
+        canActivate: [authGuard],
+        data: { title: 'Mayor Analítico' },
+      },
+      {
+        path: 'reportes/listado-asientos',
+        component: ReporteListadoAsientosComponent,
+        canActivate: [authGuard],
+        data: { title: 'Listado de Asientos' },
       },
       // Puedes agregar más rutas hijas aquí
     ],

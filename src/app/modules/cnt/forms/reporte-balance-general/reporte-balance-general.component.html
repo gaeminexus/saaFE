@@ -1,0 +1,84 @@
+<div class="reporte-container">
+  <h2>REPORTES DE ESTADOS DE CUENTAS CONTABLES</h2>
+
+  <div class="form-card">
+    <div class="row">
+      <div class="col">
+        <label>Tipo de Reporte:</label>
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-select [value]="tipoReporte()" (selectionChange)="tipoReporte.set($event.value)">
+            <mat-option *ngFor="let t of reportTypes" [value]="t">{{ t }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+      <div class="col">
+        <label>Fecha Inicial:</label>
+        <mat-form-field appearance="outline" class="full-width">
+          <input
+            matInput
+            type="date"
+            [value]="fechaInicial()"
+            (change)="fechaInicial.set($any($event.target).value)"
+          />
+        </mat-form-field>
+      </div>
+      <div class="col">
+        <label>Fecha Final:</label>
+        <mat-form-field appearance="outline" class="full-width">
+          <input
+            matInput
+            type="date"
+            [value]="fechaFinal()"
+            (change)="fechaFinal.set($any($event.target).value)"
+          />
+        </mat-form-field>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col small">
+        <label>Solo con movimientos:</label>
+        <mat-checkbox
+          [checked]="soloConMovimientos()"
+          (change)="soloConMovimientos.set($event.checked)"
+        ></mat-checkbox>
+      </div>
+      <div class="col small">
+        <label>Acumulado:</label>
+        <mat-checkbox
+          [checked]="acumulado()"
+          (change)="acumulado.set($event.checked)"
+        ></mat-checkbox>
+      </div>
+      <div class="col small">
+        <label>Visualizar Debe / Haber:</label>
+        <mat-checkbox
+          [checked]="visualizarDebeHaber()"
+          (change)="visualizarDebeHaber.set($event.checked)"
+        ></mat-checkbox>
+      </div>
+      <div class="col small">
+        <label>Centro Costo:</label>
+        <mat-checkbox
+          [checked]="centroCosto()"
+          (change)="centroCosto.set($event.checked)"
+        ></mat-checkbox>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button
+        mat-raised-button
+        color="primary"
+        [disabled]="loading() || !rangoFechasValido()"
+        (click)="generarReporte()"
+      >
+        Generar
+      </button>
+    </div>
+
+    @if (errorMsg()) {
+      <div class="error">{{ errorMsg() }}</div>
+    }
+  </div>
+</div>

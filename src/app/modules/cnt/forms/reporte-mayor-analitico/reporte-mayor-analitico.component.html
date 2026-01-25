@@ -1,0 +1,133 @@
+<div class="reporte-container">
+  <h2>REPORTE MAYOR ANALÍTICO</h2>
+
+  <div class="form-card">
+    <div class="filters-header">Filtros de Búsqueda</div>
+
+    <div class="row">
+      <div class="col">
+        <label>Cuenta Inicial:</label>
+        <mat-form-field appearance="outline" class="full-width">
+          <input
+            matInput
+            [value]="cuentaInicial()"
+            (input)="cuentaInicial.set($any($event.target).value)"
+          />
+        </mat-form-field>
+      </div>
+      <div class="col">
+        <label>Fecha Inicial:</label>
+        <mat-form-field appearance="outline" class="full-width">
+          <input
+            matInput
+            type="date"
+            [value]="fechaInicial()"
+            (change)="fechaInicial.set($any($event.target).value)"
+          />
+        </mat-form-field>
+      </div>
+      <div class="col small">
+        <label>Acumulado:</label>
+        <mat-checkbox
+          [checked]="acumulado()"
+          (change)="acumulado.set($event.checked)"
+        ></mat-checkbox>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col">
+        <label>Cuenta Final:</label>
+        <mat-form-field appearance="outline" class="full-width">
+          <input
+            matInput
+            [value]="cuentaFinal()"
+            (input)="cuentaFinal.set($any($event.target).value)"
+          />
+        </mat-form-field>
+      </div>
+      <div class="col">
+        <label>Fecha Final:</label>
+        <mat-form-field appearance="outline" class="full-width">
+          <input
+            matInput
+            type="date"
+            [value]="fechaFinal()"
+            (change)="fechaFinal.set($any($event.target).value)"
+          />
+        </mat-form-field>
+      </div>
+      <div class="col small">
+        <label>Centro Costo:</label>
+        <mat-checkbox
+          [checked]="centroCosto()"
+          (change)="centroCosto.set($event.checked)"
+        ></mat-checkbox>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button mat-raised-button color="primary" (click)="generar()">Buscar</button>
+    </div>
+  </div>
+
+  <div class="grid-block">
+    <div class="grid-title">CUENTAS</div>
+    <table mat-table [dataSource]="cuentasData()" class="mat-elevation-z1">
+      <ng-container matColumnDef="numero">
+        <th mat-header-cell *matHeaderCellDef>NUMERO DE CUENTA</th>
+        <td mat-cell *matCellDef="let row">{{ row.numero }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="nombre">
+        <th mat-header-cell *matHeaderCellDef>NOMBRE</th>
+        <td mat-cell *matCellDef="let row">{{ row.nombre }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="saldoAnterior">
+        <th mat-header-cell *matHeaderCellDef>SALDO ANTERIOR</th>
+        <td mat-cell *matCellDef="let row">{{ row.saldoAnterior | number: '1.2-2' }}</td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="cuentasColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: cuentasColumns"></tr>
+    </table>
+  </div>
+
+  <div class="grid-block">
+    <div class="grid-title">DETALLE</div>
+    <table mat-table [dataSource]="detalleData()" class="mat-elevation-z1">
+      <ng-container matColumnDef="fecha">
+        <th mat-header-cell *matHeaderCellDef>FECHA</th>
+        <td mat-cell *matCellDef="let row">{{ row.fecha }}</td>
+      </ng-container>
+      <ng-container matColumnDef="numero">
+        <th mat-header-cell *matHeaderCellDef>NUMERO</th>
+        <td mat-cell *matCellDef="let row">{{ row.numero }}</td>
+      </ng-container>
+      <ng-container matColumnDef="descripcion">
+        <th mat-header-cell *matHeaderCellDef>DESCRIPCION</th>
+        <td mat-cell *matCellDef="let row">{{ row.descripcion }}</td>
+      </ng-container>
+      <ng-container matColumnDef="debe">
+        <th mat-header-cell *matHeaderCellDef>DEBE</th>
+        <td mat-cell *matCellDef="let row">{{ row.debe | number: '1.2-2' }}</td>
+      </ng-container>
+      <ng-container matColumnDef="haber">
+        <th mat-header-cell *matHeaderCellDef>HABER</th>
+        <td mat-cell *matCellDef="let row">{{ row.haber | number: '1.2-2' }}</td>
+      </ng-container>
+      <ng-container matColumnDef="saldoActual">
+        <th mat-header-cell *matHeaderCellDef>SALDO ACTUAL</th>
+        <td mat-cell *matCellDef="let row">{{ row.saldoActual | number: '1.2-2' }}</td>
+      </ng-container>
+      <ng-container matColumnDef="estado">
+        <th mat-header-cell *matHeaderCellDef>ESTADO ASIENTO</th>
+        <td mat-cell *matCellDef="let row">{{ row.estado }}</td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="detalleColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: detalleColumns"></tr>
+    </table>
+  </div>
+</div>
