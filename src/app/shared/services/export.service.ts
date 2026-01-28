@@ -4,20 +4,30 @@ import { Injectable } from '@angular/core';
 declare let window: any;
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class ExportService {
-
-  constructor() { }
+  constructor() {}
 
   /**
    * Exporta datos a formato CSV
    */
-  exportToCSV(data: any[], filename: string, headers: string[], dataKeys?: string[]): void {
+  exportToCSV(
+    data: any[],
+    filename: string,
+    headers: string[],
+    dataKeys?: string[],
+    options?: { delimiter?: string; includeBom?: boolean },
+  ): void {
+    const delimiter = options?.delimiter ?? this.detectCsvDelimiter();
+    const includeBom = options?.includeBom ?? true;
+
     const csvContent = dataKeys
-      ? this.convertToCSVWithKeys(data, headers, dataKeys)
-      : this.convertToCSV(data, headers);
-    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      ? this.convertToCSVWithKeys(data, headers, dataKeys, delimiter)
+      : this.convertToCSV(data, headers, delimiter);
+
+    const prefix = includeBom ? '\ufeff' : '';
+    const blob = new Blob([prefix + csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
 
     if (link.download !== undefined) {
@@ -34,105 +44,114 @@ export class ExportService {
   /**
    * Exporta datos a formato PDF
    */
-  exportToPDF(data: any[], filename: string, title: string, headers: string[], dataKeys: string[]): void {
+  exportToPDF(
+    data: any[],
+    filename: string,
+    title: string,
+    headers: string[],
+    dataKeys: string[],
+  ): void {
     // Intentar cargar jsPDF dinámicamente si no está disponible
-    this.ensureJsPDFLoaded().then((jsPDF: any) => {
-      try {
-        const doc = new jsPDF();
+    this.ensureJsPDFLoaded()
+      .then((jsPDF: any) => {
+        try {
+          const doc = new jsPDF();
 
-        // Título del documento
-        doc.setFontSize(16);
-        doc.text(title, 14, 15);
+          // Título del documento
+          doc.setFontSize(16);
+          doc.text(title, 14, 15);
 
-        // Fecha de generación
-        const currentDate = new Date().toLocaleDateString('es-ES');
-        doc.setFontSize(10);
-        doc.text(`Generado el: ${currentDate}`, 14, 25);
+          // Fecha de generación
+          const currentDate = new Date().toLocaleDateString('es-ES');
+          doc.setFontSize(10);
+          doc.text(`Generado el: ${currentDate}`, 14, 25);
 
-        // Configurar la tabla
-        const tableData = data.map(item =>
-          dataKeys.map(key => {
-            const value = this.getNestedValue(item, key);
-            return value !== null && value !== undefined ? value.toString() : '';
-          })
-        );
+          // Configurar la tabla
+          const tableData = data.map((item) =>
+            dataKeys.map((key) => {
+              const value = this.getNestedValue(item, key);
+              return value !== null && value !== undefined ? value.toString() : '';
+            }),
+          );
 
-        // Usar autoTable si está disponible
-        if (doc.autoTable) {
-          doc.autoTable({
-            head: [headers],
-            body: tableData,
-            startY: 35,
-            theme: 'grid',
-            styles: {
-              fontSize: 8,
-              cellPadding: 2
-            },
-            headStyles: {
-              fillColor: [102, 126, 234],
-              textColor: 255,
-              fontSize: 9,
-              fontStyle: 'bold'
-            },
-            alternateRowStyles: {
-              fillColor: [248, 250, 252]
-            }
-          });
-        } else {
-          // Fallback básico sin autoTable
-          let yPosition = 35;
-
-          // Headers
-          doc.setFontSize(8);
-          doc.setFont(undefined, 'bold');
-          headers.forEach((header, index) => {
-            doc.text(header, 14 + (index * 30), yPosition);
-          });
-
-          // Data
-          yPosition += 10;
-          doc.setFont(undefined, 'normal');
-          tableData.forEach((row, rowIndex) => {
-            row.forEach((cell, cellIndex) => {
-              doc.text(cell, 14 + (cellIndex * 30), yPosition + (rowIndex * 8));
+          // Usar autoTable si está disponible
+          if (doc.autoTable) {
+            doc.autoTable({
+              head: [headers],
+              body: tableData,
+              startY: 35,
+              theme: 'grid',
+              styles: {
+                fontSize: 8,
+                cellPadding: 2,
+              },
+              headStyles: {
+                fillColor: [102, 126, 234],
+                textColor: 255,
+                fontSize: 9,
+                fontStyle: 'bold',
+              },
+              alternateRowStyles: {
+                fillColor: [248, 250, 252],
+              },
             });
-          });
-        }
+          } else {
+            // Fallback básico sin autoTable
+            let yPosition = 35;
 
-        // Guardar el PDF
-        doc.save(`${filename}.pdf`);
-      } catch (error) {
-        console.error('Error al generar PDF:', error);
-        alert('Error al generar el archivo PDF. Por favor, intenta nuevamente.');
-      }
-    }).catch(() => {
-      console.warn('jsPDF no está disponible. Usando método alternativo...');
-      this.exportToPDFAlternative(data, filename, title, headers, dataKeys);
-    });
+            // Headers
+            doc.setFontSize(8);
+            doc.setFont(undefined, 'bold');
+            headers.forEach((header, index) => {
+              doc.text(header, 14 + index * 30, yPosition);
+            });
+
+            // Data
+            yPosition += 10;
+            doc.setFont(undefined, 'normal');
+            tableData.forEach((row, rowIndex) => {
+              row.forEach((cell, cellIndex) => {
+                doc.text(cell, 14 + cellIndex * 30, yPosition + rowIndex * 8);
+              });
+            });
+          }
+
+          // Guardar el PDF
+          doc.save(`${filename}.pdf`);
+        } catch (error) {
+          console.error('Error al generar PDF:', error);
+          alert('Error al generar el archivo PDF. Por favor, intenta nuevamente.');
+        }
+      })
+      .catch(() => {
+        console.warn('jsPDF no está disponible. Usando método alternativo...');
+        this.exportToPDFAlternative(data, filename, title, headers, dataKeys);
+      });
   }
 
   /**
    * Convierte array de objetos a formato CSV usando data keys
    */
-  private convertToCSVWithKeys(data: any[], headers: string[], dataKeys: string[]): string {
+  private convertToCSVWithKeys(
+    data: any[],
+    headers: string[],
+    dataKeys: string[],
+    delimiter: string,
+  ): string {
     const csvArray = [];
 
     // Agregar headers
-    csvArray.push(headers.join(','));
+    csvArray.push(this.joinCsvRow(headers, delimiter));
 
     // Agregar filas de datos
-    data.forEach(item => {
-      const row = dataKeys.map(key => {
+    data.forEach((item) => {
+      const row = dataKeys.map((key) => {
         const value = this.getNestedValue(item, key);
         // Formatear valor
         const formattedValue = this.formatCSVValue(value);
-        // Escapar comillas y envolver en comillas si contiene comas
-        if (formattedValue && (formattedValue.includes(',') || formattedValue.includes('"'))) {
-          return `"${formattedValue.replace(/"/g, '""')}"`;
-        }
-        return formattedValue;
+        return this.escapeForCSV(formattedValue, delimiter);
       });
-      csvArray.push(row.join(','));
+      csvArray.push(this.joinCsvRow(row, delimiter));
     });
 
     return csvArray.join('\n');
@@ -141,23 +160,27 @@ export class ExportService {
   /**
    * Convierte array de objetos a formato CSV (método original para compatibilidad)
    */
-  private convertToCSV(data: any[], headers: string[]): string {
+  private convertToCSV(data: any[], headers: string[], delimiter: string): string {
     const csvArray = [];
 
     // Agregar headers
-    csvArray.push(headers.join(','));
+    csvArray.push(this.joinCsvRow(headers, delimiter));
 
     // Agregar filas de datos
-    data.forEach(item => {
-      const row = headers.map(header => {
-        const value = this.getValueForHeader(item, header);
-        // Escapar comillas y envolver en comillas si contiene comas
-        if (value && (value.toString().includes(',') || value.toString().includes('"'))) {
-          return `"${value.toString().replace(/"/g, '""')}"`;
+    data.forEach((item) => {
+      const row = headers.map((header) => {
+        // 1) Intentar mapping específico existente
+        let value = this.getValueForHeader(item, header);
+
+        // 2) Si no hay valor, intentar mapping dinámico por nombre de header → key
+        if (value === '' || value === undefined || value === null) {
+          value = this.getValueForDynamicHeader(item, header);
         }
-        return value || '';
+
+        // 3) Escapar/normalizar
+        return this.escapeForCSV(this.formatCSVValue(value), delimiter);
       });
-      csvArray.push(row.join(','));
+      csvArray.push(this.joinCsvRow(row, delimiter));
     });
 
     return csvArray.join('\n');
@@ -200,6 +223,100 @@ export class ExportService {
   }
 
   /**
+   * Intento genérico de obtener el valor mapeando el header a una key del objeto
+   * - Normaliza acentos, espacios y mayúsculas
+   * - Contempla alias comunes en contabilidad (Fecha, Número, Glosa, Debe, Haber)
+   */
+  private getValueForDynamicHeader(item: any, header: string): any {
+    if (!item || typeof item !== 'object') return '';
+
+    const norm = (s: string) =>
+      s
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/\p{Diacritic}/gu, '')
+        .replace(/\s+|\.|\-|\//g, '');
+
+    const headerNorm = norm(header);
+
+    // Alias frecuentes → key probable
+    const alias: Record<string, string[]> = {
+      fecha: ['fecha', 'fechacomprobante', 'fch', 'fcontable'],
+      numero: ['numero', 'num', 'nro', 'comprobante', 'asiento'],
+      glosa: ['glosa', 'descripcion', 'detalle', 'concepto'],
+      debe: ['debe', 'debitos', 'debit'],
+      haber: ['haber', 'creditos', 'credit'],
+      estado: ['estado', 'estatus', 'activo'],
+      usuario: ['usuario', 'user', 'creadoPor', 'creadopor'],
+      id: ['id', 'codigo', 'code'],
+    };
+
+    // 1) Buscar key exacta por normalización del header
+    const keys = Object.keys(item ?? {});
+    const keyByNorm = keys.find((k) => norm(k) === headerNorm);
+    if (keyByNorm) return this.getNestedValue(item, keyByNorm);
+
+    // 2) Buscar por alias
+    for (const [canonical, variants] of Object.entries(alias)) {
+      if (variants.includes(headerNorm)) {
+        const found = keys.find((k) => norm(k) === canonical || variants.includes(norm(k)));
+        if (found) return this.getNestedValue(item, found);
+      }
+    }
+
+    return '';
+  }
+
+  /**
+   * Escapa el valor para CSV considerando el delimitador y saltos de línea
+   */
+  private escapeForCSV(value: string, delimiter: string): string {
+    if (value === undefined || value === null) return '';
+    const needsQuotes =
+      value.includes(delimiter) ||
+      value.includes('"') ||
+      value.includes('\n') ||
+      value.includes('\r');
+    if (needsQuotes) {
+      return '"' + value.replace(/"/g, '""') + '"';
+    }
+    return value;
+  }
+
+  /**
+   * Une una fila con el delimitador adecuado
+   */
+  private joinCsvRow(columns: string[], delimiter: string): string {
+    return columns.join(delimiter);
+  }
+
+  /**
+   * Detecta delimitador ideal para CSV según configuración regional
+   * - En regiones con coma decimal (p.ej. es-ES) usar ';'
+   * - En el resto usar ','
+   */
+  private detectCsvDelimiter(): string {
+    try {
+      const lang = (navigator?.language || '').toLowerCase();
+      const sample = (1.1).toLocaleString(navigator?.language || 'es-ES');
+      const usesCommaDecimal = sample.includes(',');
+      if (
+        usesCommaDecimal ||
+        lang.startsWith('es') ||
+        lang.startsWith('pt') ||
+        lang.startsWith('fr') ||
+        lang.startsWith('de') ||
+        lang.startsWith('it')
+      ) {
+        return ';';
+      }
+    } catch {
+      // Ignorar y usar valor por defecto
+    }
+    return ',';
+  }
+
+  /**
    * Obtiene valor anidado de un objeto
    */
   private getNestedValue(obj: any, path: string): any {
@@ -239,7 +356,8 @@ export class ExportService {
 
       // Intentar usar la función de carga global
       if (typeof window !== 'undefined' && (window as any).loadJsPDF) {
-        (window as any).loadJsPDF()
+        (window as any)
+          .loadJsPDF()
           .then((jsPDF: any) => resolve(jsPDF))
           .catch((error: any) => reject(error));
       } else {
@@ -305,7 +423,13 @@ export class ExportService {
   /**
    * Método alternativo para exportar PDF usando window.print()
    */
-  private exportToPDFAlternative(data: any[], filename: string, title: string, headers: string[], dataKeys: string[]): void {
+  private exportToPDFAlternative(
+    data: any[],
+    filename: string,
+    title: string,
+    headers: string[],
+    dataKeys: string[],
+  ): void {
     const printWindow = window.open('', '_blank');
 
     if (printWindow) {
@@ -320,14 +444,21 @@ export class ExportService {
         printWindow.close();
       }, 250);
     } else {
-      alert('No se pudo abrir la ventana de impresión. Por favor, permite ventanas emergentes para esta función.');
+      alert(
+        'No se pudo abrir la ventana de impresión. Por favor, permite ventanas emergentes para esta función.',
+      );
     }
   }
 
   /**
    * Genera HTML imprimible para el reporte
    */
-  private generatePrintableHTML(data: any[], title: string, headers: string[], dataKeys: string[]): string {
+  private generatePrintableHTML(
+    data: any[],
+    title: string,
+    headers: string[],
+    dataKeys: string[],
+  ): string {
     const currentDate = new Date().toLocaleDateString('es-ES');
 
     let html = `
@@ -358,16 +489,16 @@ export class ExportService {
         <table>
           <thead>
             <tr>
-              ${headers.map(header => `<th>${header}</th>`).join('')}
+              ${headers.map((header) => `<th>${header}</th>`).join('')}
             </tr>
           </thead>
           <tbody>
     `;
 
     // Agregar filas de datos
-    data.forEach(item => {
+    data.forEach((item) => {
       html += '<tr>';
-      dataKeys.forEach(key => {
+      dataKeys.forEach((key) => {
         const value = this.getNestedValue(item, key);
         html += `<td>${value !== null && value !== undefined ? value.toString() : ''}</td>`;
       });
