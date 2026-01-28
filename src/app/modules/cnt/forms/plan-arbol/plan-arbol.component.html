@@ -67,12 +67,12 @@
 
       <!-- Filtro por Número de cuenta -->
       <mat-form-field appearance="outline" class="filter-field search-field">
-        <mat-label>Número de cuenta</mat-label>
+        <mat-label>Número o Nombre de Cuenta</mat-label>
         <input
           matInput
           [(ngModel)]="numeroSearchText"
           (ngModelChange)="onNumeroSearchChange($event)"
-          placeholder="Ej: 1, 1.1, 1101..."
+          placeholder="Ej: 1.1, Caja, Bancos..."
         />
         <button
           mat-icon-button
@@ -161,12 +161,13 @@
           <!-- Nodo hoja (nested para evitar mezcla de tipos) -->
           <mat-nested-tree-node
             *matTreeNodeDef="let node"
-            [style.padding-left]="getLevel(node) * 20 + 'px'"
+            [attr.data-level]="getLevel(node)"
             class="tree-node leaf-node"
           >
             <div
               class="node-content"
               [class.selected]="selectedNode === node"
+              [style.padding-left]="getLevel(node) * 40 + 10 + 'px'"
               (click)="selectNode(node)"
             >
               <div class="node-spacer"></div>
@@ -224,9 +225,13 @@
           <mat-nested-tree-node
             *matTreeNodeDef="let node; when: hasChild"
             class="tree-node expandable-node"
-            [style.padding-left]="getLevel(node) * 20 + 'px'"
+            [attr.data-level]="getLevel(node)"
           >
-            <div class="node-content" [class.selected]="selectedNode === node">
+            <div
+              class="node-content"
+              [class.selected]="selectedNode === node"
+              [style.padding-left]="getLevel(node) * 40 + 10 + 'px'"
+            >
               <button
                 mat-icon-button
                 matTreeNodeToggle

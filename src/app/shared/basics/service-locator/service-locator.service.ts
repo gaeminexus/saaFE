@@ -6,6 +6,8 @@ import { NaturalezaCuentaService } from '../../../modules/cnt/service/naturaleza
 import { EntidadesCrd } from '../../../modules/crd/model/entidades-crd';
 import { AccionesGrid } from '../constantes';
 import { ServiceLocatorCrdService } from './service-locator-crd.service';
+import { PlanCuentaService } from '../../../modules/cnt/service/plan-cuenta.service';
+import { PlanCuenta } from '../../../modules/cnt/model/plan-cuenta';
 
 @Injectable({
   providedIn: 'root',
@@ -15,6 +17,7 @@ export class ServiceLocatorService {
 
   constructor(
     public naturalezaCuentaService: NaturalezaCuentaService,
+    public planCuentaService: PlanCuentaService,
     private serviceLocatorCrd: ServiceLocatorCrdService
   ) {}
 
@@ -49,6 +52,29 @@ export class ServiceLocatorService {
             return Promise.resolve(undefined);
         }
       }
+      case EntidadesContabilidad.PLAN_CUENTA: {
+        switch (proceso) {
+          case AccionesGrid.ADD: {
+            this.reg = value as PlanCuenta;
+            this.reg.estado = 1;
+            this.reg.empresa = localStorage.getItem('empresa')
+              ? JSON.parse(localStorage.getItem('empresa') as string)
+              : null;
+            return firstValueFrom(this.planCuentaService.add(this.reg as PlanCuenta));
+          }
+          case AccionesGrid.EDIT: {
+            this.reg = value as PlanCuenta;
+            return firstValueFrom(
+              this.planCuentaService.update(this.reg as PlanCuenta)
+            );
+          }
+          case AccionesGrid.REMOVE: {
+            return firstValueFrom(this.planCuentaService.delete(value));
+          }
+          default:
+            return Promise.resolve(undefined);
+        }
+      }
       default: {
         console.log('NO SE ENCONTRO EL SERVICIO');
         return Promise.resolve(undefined);
@@ -67,6 +93,11 @@ export class ServiceLocatorService {
       case EntidadesContabilidad.NATURALEZA_CUENTA: {
         return firstValueFrom(
           this.naturalezaCuentaService.getByEmpresa(Number(localStorage.getItem('idEmpresa')) ?? 0)
+        );
+      }
+      case EntidadesContabilidad.PLAN_CUENTA: {
+        return firstValueFrom(
+          this.planCuentaService.getByEmpresa(Number(localStorage.getItem('idEmpresa')) ?? 0)
         );
       }
       default: {

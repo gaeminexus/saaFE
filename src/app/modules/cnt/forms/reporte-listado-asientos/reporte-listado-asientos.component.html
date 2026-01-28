@@ -1,8 +1,27 @@
 <div class="reporte-container">
   <h2>LISTADO DE ASIENTO CONTABLE</h2>
 
+  @if (loading()) {
+    <div class="loading-overlay">
+      <mat-spinner></mat-spinner>
+      <p>Buscando asientos...</p>
+    </div>
+  }
+
   <div class="form-card">
-    <div class="filters-header">Filtros de búsqueda:</div>
+    <mat-expansion-panel
+      [expanded]="filtrosExpandidos()"
+      (expandedChange)="filtrosExpandidos.set($event)"
+      class="filtros-panel">
+      <mat-expansion-panel-header>
+        <mat-panel-title>
+          <mat-icon>filter_alt</mat-icon>
+          <span>Filtros de búsqueda</span>
+        </mat-panel-title>
+        <mat-panel-description>
+          {{ filtrosExpandidos() ? 'Haga clic para ocultar' : 'Haga clic para mostrar filtros' }}
+        </mat-panel-description>
+      </mat-expansion-panel-header>
 
     <div class="grid-2">
       <div>
@@ -13,10 +32,12 @@
             <mat-form-field appearance="outline" class="full-width">
               <input
                 matInput
-                type="date"
-                [value]="fechaIngresoDesde()"
-                (change)="fechaIngresoDesde.set($any($event.target).value)"
+                [matDatepicker]="pickerIngresoDesde"
+                [(ngModel)]="fechaIngresoDesde"
+                placeholder="dd/mm/aaaa"
               />
+              <mat-datepicker-toggle matIconSuffix [for]="pickerIngresoDesde"></mat-datepicker-toggle>
+              <mat-datepicker #pickerIngresoDesde></mat-datepicker>
             </mat-form-field>
           </div>
           <div class="col">
@@ -24,10 +45,12 @@
             <mat-form-field appearance="outline" class="full-width">
               <input
                 matInput
-                type="date"
-                [value]="fechaIngresoHasta()"
-                (change)="fechaIngresoHasta.set($any($event.target).value)"
+                [matDatepicker]="pickerIngresoHasta"
+                [(ngModel)]="fechaIngresoHasta"
+                placeholder="dd/mm/aaaa"
               />
+              <mat-datepicker-toggle matIconSuffix [for]="pickerIngresoHasta"></mat-datepicker-toggle>
+              <mat-datepicker #pickerIngresoHasta></mat-datepicker>
             </mat-form-field>
           </div>
         </div>
@@ -37,16 +60,49 @@
             <mat-form-field appearance="outline" class="full-width">
               <input
                 matInput
+                type="number"
                 [value]="numeroAsiento()"
                 (input)="numeroAsiento.set($any($event.target).value)"
+                placeholder="Número de asiento"
               />
             </mat-form-field>
           </div>
           <div class="col">
+            <label>Descripción:</label>
+            <mat-form-field appearance="outline" class="full-width">
+              <input
+                matInput
+                [value]="descripcion()"
+                (input)="descripcion.set($any($event.target).value)"
+                placeholder="Buscar en observaciones..."
+              />
+            </mat-form-field>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col">
+            <label>Categoría de Asiento:</label>
+            <mat-radio-group
+              [value]="categoriaAsiento()"
+              (change)="categoriaAsiento.set($any($event.value)); onCategoriaChange()"
+              class="radio-group">
+              <mat-radio-button value="general">General</mat-radio-button>
+              <mat-radio-button value="sistema">Sistema</mat-radio-button>
+            </mat-radio-group>
+          </div>
+          <div class="col">
             <label>Tipo de Asiento:</label>
             <mat-form-field appearance="outline" class="full-width">
-              <mat-select [value]="tipoAsiento()" (selectionChange)="tipoAsiento.set($event.value)">
-                <mat-option *ngFor="let t of tipos" [value]="t">{{ t }}</mat-option>
+              <mat-select
+                [value]="tipoAsientoSeleccionado()"
+                (selectionChange)="tipoAsientoSeleccionado.set($event.value)"
+                placeholder="Seleccione un tipo">
+                <mat-option [value]="null">-- Todos --</mat-option>
+                @for (tipo of tiposAsientoFiltrados; track tipo.codigo) {
+                  <mat-option [value]="tipo.codigo">
+                    {{ tipo.nombre }}
+                  </mat-option>
+                }
               </mat-select>
             </mat-form-field>
           </div>
@@ -61,10 +117,12 @@
             <mat-form-field appearance="outline" class="full-width">
               <input
                 matInput
-                type="date"
-                [value]="fechaAsientoDesde()"
-                (change)="fechaAsientoDesde.set($any($event.target).value)"
+                [matDatepicker]="pickerAsientoDesde"
+                [(ngModel)]="fechaAsientoDesde"
+                placeholder="dd/mm/aaaa"
               />
+              <mat-datepicker-toggle matIconSuffix [for]="pickerAsientoDesde"></mat-datepicker-toggle>
+              <mat-datepicker #pickerAsientoDesde></mat-datepicker>
             </mat-form-field>
           </div>
           <div class="col">
@@ -72,10 +130,12 @@
             <mat-form-field appearance="outline" class="full-width">
               <input
                 matInput
-                type="date"
-                [value]="fechaAsientoHasta()"
-                (change)="fechaAsientoHasta.set($any($event.target).value)"
+                [matDatepicker]="pickerAsientoHasta"
+                [(ngModel)]="fechaAsientoHasta"
+                placeholder="dd/mm/aaaa"
               />
+              <mat-datepicker-toggle matIconSuffix [for]="pickerAsientoHasta"></mat-datepicker-toggle>
+              <mat-datepicker #pickerAsientoHasta></mat-datepicker>
             </mat-form-field>
           </div>
         </div>
@@ -83,17 +143,25 @@
           <div class="col">
             <label>Estado:</label>
             <mat-form-field appearance="outline" class="full-width">
-              <mat-select [value]="estado()" (selectionChange)="estado.set($event.value)">
-                <mat-option *ngFor="let e of estados" [value]="e">{{ e }}</mat-option>
+              <mat-select
+                [value]="estado()"
+                (selectionChange)="estado.set($event.value)"
+                placeholder="Seleccione un estado">
+                @for (e of estados; track e.valor) {
+                  <mat-option [value]="e.valor">{{ e.etiqueta }}</mat-option>
+                }
               </mat-select>
             </mat-form-field>
           </div>
           <div class="col">
             <label>Usuario:</label>
             <mat-form-field appearance="outline" class="full-width">
-              <mat-select [value]="usuario()" (selectionChange)="usuario.set($event.value)">
-                <mat-option *ngFor="let u of usuarios" [value]="u">{{ u }}</mat-option>
-              </mat-select>
+              <input
+                matInput
+                [value]="usuario()"
+                (input)="usuario.set($any($event.target).value)"
+                placeholder="Nombre de usuario..."
+              />
             </mat-form-field>
           </div>
         </div>
@@ -101,7 +169,159 @@
     </div>
 
     <div class="actions">
-      <button mat-raised-button color="primary" (click)="buscar()">Buscar</button>
+      <button mat-raised-button color="primary" (click)="buscar()" [disabled]="loading()">
+        <mat-icon>search</mat-icon>
+        Buscar
+      </button>
+      <button mat-stroked-button (click)="limpiarFiltros()" [disabled]="loading()">
+        <mat-icon>clear</mat-icon>
+        Limpiar Filtros
+      </button>
     </div>
+
+    </mat-expansion-panel>
+
+    @if (resultadosAsientos.length > 0) {
+      <div class="resultados-section">
+        <div class="resultados-header">
+          <h3>Resultados ({{ resultadosAsientos.length }} asiento(s))</h3>
+          <div class="export-buttons">
+            <button mat-raised-button color="accent" (click)="exportarCSV()">
+              <mat-icon>download</mat-icon>
+              Exportar CSV
+            </button>
+            <button mat-raised-button color="accent" (click)="exportarPDF()">
+              <mat-icon>picture_as_pdf</mat-icon>
+              Exportar PDF
+            </button>
+          </div>
+        </div>
+        <div class="resultados-list">
+          @for (asiento of resultadosAsientos; track asiento.codigo) {
+            <div class="asiento-item" [class.expandido]="isAsientoExpandido(asiento.codigo)">
+              <div class="asiento-header" (click)="toggleAsiento(asiento)">
+                <div class="header-left">
+                  <button mat-icon-button class="expand-button">
+                    <mat-icon>{{ isAsientoExpandido(asiento.codigo) ? 'expand_less' : 'expand_more' }}</mat-icon>
+                  </button>
+                  <span class="asiento-numero">Asiento #{{ asiento.numero }}</span>
+                </div>
+                <span class="asiento-fecha">{{ asiento.fechaAsiento | date: 'dd/MM/yyyy' }}</span>
+              </div>
+
+              <div class="asiento-body">
+                <div class="info-grid">
+                  <div class="info-item">
+                    <strong>Fecha Ingreso:</strong> {{ formatearFecha(asiento.fechaIngreso) }}
+                  </div>
+                  <div class="info-item">
+                    <strong>Fecha Asiento:</strong> {{ formatearFecha(asiento.fechaAsiento) }}
+                  </div>
+                  <div class="info-item">
+                    <strong>Tipo:</strong> {{ asiento.tipoAsiento.nombre || 'N/A' }}
+                  </div>
+                  <div class="info-item">
+                    <strong>Estado:</strong> {{ getEstadoLabel(asiento.estado) }}
+                  </div>
+                  <div class="info-item">
+                    <strong>Usuario:</strong> {{ asiento.nombreUsuario || 'N/A' }}
+                  </div>
+                  @if (asiento.observaciones) {
+                    <div class="info-item full-width">
+                      <strong>Observaciones:</strong> {{ asiento.observaciones }}
+                    </div>
+                  }
+                </div>
+
+                <div class="asiento-actions">
+                  <button mat-raised-button color="primary"
+                          (click)="editarAsiento(asiento); $event.stopPropagation()"
+                          matTooltip="Editar asiento">
+                    <mat-icon>edit</mat-icon>
+                    Editar Asiento
+                  </button>
+                </div>
+              </div>
+
+              @if (isAsientoExpandido(asiento.codigo)) {
+                <div class="asiento-detalles">
+                  @if (isLoadingDetalles(asiento.codigo)) {
+                    <div class="detalles-loading">
+                      <mat-spinner diameter="40"></mat-spinner>
+                      <p>Cargando detalles...</p>
+                    </div>
+                  } @else {
+                    @if (getDetalles(asiento.codigo).length > 0) {
+                      <div class="detalles-header">
+                        <h4>Detalles del Asiento</h4>
+                        <div class="detalles-export-buttons">
+                          <button mat-mini-fab color="primary"
+                                  (click)="exportarAsientoCSV(asiento); $event.stopPropagation()"
+                                  matTooltip="Exportar detalles a CSV">
+                            <mat-icon>download</mat-icon>
+                          </button>
+                          <button mat-mini-fab color="primary"
+                                  (click)="exportarAsientoPDF(asiento); $event.stopPropagation()"
+                                  matTooltip="Exportar detalles a PDF">
+                            <mat-icon>picture_as_pdf</mat-icon>
+                          </button>
+                        </div>
+                      </div>
+                      <div class="table-container">
+                        <table mat-table [dataSource]="getDetalles(asiento.codigo)" class="detalles-table">
+
+                          <ng-container matColumnDef="cuenta">
+                            <th mat-header-cell *matHeaderCellDef>Cuenta</th>
+                            <td mat-cell *matCellDef="let detalle">{{ detalle.planCuenta?.cuentaContable || 'N/A' }}</td>
+                          </ng-container>
+
+                          <ng-container matColumnDef="nombreCuenta">
+                            <th mat-header-cell *matHeaderCellDef>Nombre</th>
+                            <td mat-cell *matCellDef="let detalle">{{ detalle.planCuenta?.nombre || 'N/A' }}</td>
+                          </ng-container>
+
+                          <ng-container matColumnDef="descripcion">
+                            <th mat-header-cell *matHeaderCellDef>Descripción</th>
+                            <td mat-cell *matCellDef="let detalle">{{ detalle.descripcion || '-' }}</td>
+                          </ng-container>
+
+                          <ng-container matColumnDef="debe">
+                            <th mat-header-cell *matHeaderCellDef class="text-right">Debe</th>
+                            <td mat-cell *matCellDef="let detalle" class="text-right">
+                              {{ detalle.valorDebe ? (detalle.valorDebe | number: '1.2-2') : '0.00' }}
+                            </td>
+                          </ng-container>
+
+                          <ng-container matColumnDef="haber">
+                            <th mat-header-cell *matHeaderCellDef class="text-right">Haber</th>
+                            <td mat-cell *matCellDef="let detalle" class="text-right">
+                              {{ detalle.valorHaber ? (detalle.valorHaber | number: '1.2-2') : '0.00' }}
+                            </td>
+                          </ng-container>
+
+                          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+                          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+                        </table>
+                      </div>
+
+                      <div class="totales-row">
+                        <span class="totales-label">Totales:</span>
+                        <span class="total-debe">Debe: {{ getTotalDebe(asiento.codigo) | number: '1.2-2' }}</span>
+                        <span class="total-haber">Haber: {{ getTotalHaber(asiento.codigo) | number: '1.2-2' }}</span>
+                      </div>
+                    } @else {
+                      <div class="no-detalles">
+                        <mat-icon>info</mat-icon>
+                        <p>No hay detalles disponibles para este asiento</p>
+                      </div>
+                    }
+                  }
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    }
   </div>
 </div>

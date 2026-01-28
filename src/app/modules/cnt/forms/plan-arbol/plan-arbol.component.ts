@@ -512,12 +512,13 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
         matches = matches && item.tipo === this.selectedTipo;
       }
 
-      // Filtro por Número de cuenta (texto: incluye/prefijo)
+      // Filtro por Número de cuenta (texto: incluye/prefijo) y nombre de cuenta
       if ((this.numeroSearchText || '').trim().length > 0) {
         const q = (this.numeroSearchText || '').trim().toLowerCase();
         const num = (item.cuentaContable || '').toLowerCase();
-        // Coincide si incluye o si el número empieza con la consulta
-        const matchesNumero = num.includes(q) || num.startsWith(q);
+        const nombre = (item.nombre || '').toLowerCase();
+        // Coincide si incluye o si el número empieza con la consulta, o si el nombre contiene la búsqueda
+        const matchesNumero = num.includes(q) || num.startsWith(q) || nombre.includes(q);
         matches = matches && matchesNumero;
       }
 

@@ -56,6 +56,7 @@ interface CuentaItem {
   tipo: 'DEBE' | 'HABER';
   centroCosto?: CentroCosto | null; // Centro de costo asociado
   id?: string; // Para trackear items únicos
+  descripcion?: string; // Descripción del detalle (editable por usuario)
 }
 
 @Component({
@@ -158,15 +159,24 @@ export class AsientosContablesDinamico implements OnInit {
   }
 
   /**
-   * Verifica si se debe cargar un asiento existente desde query params
+   * Verifica si se debe cargar un asiento existente desde query params o route params
    */
   private verificarCargaAsiento(): void {
+    // Primero verificar parámetros de ruta (/asientos-dinamico/:id)
+    this.route.params.subscribe((params) => {
+      const asientoId = params['id'];
+      if (asientoId) {
+        this.cargarAsientoPorId(parseInt(asientoId, 10), 'edit');
+        return;
+      }
+    });
+
+    // Si no hay parámetro de ruta, verificar query params (?id=123&mode=edit)
     this.route.queryParams.subscribe((params) => {
       const asientoId = params['id'];
       const mode = params['mode'];
 
       if (asientoId) {
-        console.log(`🔍 Cargando asiento ID: ${asientoId}, modo: ${mode || 'edit'}`);
         this.cargarAsientoPorId(parseInt(asientoId, 10), mode);
       }
     });
@@ -190,14 +200,9 @@ export class AsientosContablesDinamico implements OnInit {
               nombre: tipo.nombre,
               codigoAlterno: tipo.codigoAlterno,
             }));
-          console.log(
-            `📋 Tipos de Asientos cargados para empresa ${this.idSucursal}:`,
-            this.tiposAsientos
-          );
         }
       },
       error: (err) => {
-        console.error('❌ Error al cargar tipos de asientos:', err);
         this.tiposAsientos = [];
       },
     });
@@ -218,19 +223,13 @@ export class AsientosContablesDinamico implements OnInit {
                 const cuentaB = b.cuentaContable || '';
                 return cuentaA.localeCompare(cuentaB);
               });
-            console.log(
-              `📊 Cuentas de Movimiento cargadas para empresa ${this.idSucursal}:`,
-              this.cuentasPlan.length
-            );
             resolve();
           } else {
-            console.warn('⚠️ No se recibieron datos de cuentas del plan');
             this.cuentasPlan = [];
             resolve();
           }
         },
         error: (err) => {
-          console.error('❌ Error al cargar cuentas del plan:', err);
           this.cuentasPlan = [];
           reject(err);
         },
@@ -265,16 +264,11 @@ export class AsientosContablesDinamico implements OnInit {
                 const nombreB = b.nombre || '';
                 return nombreA.localeCompare(nombreB);
               });
-          } else {
-            console.warn(
-              `⚠️ No se encontraron centros de costo activos para empresa ${this.idSucursal}`
-            );
-            this.centrosCosto = [];
+          } else {            this.centrosCosto = [];
           }
           resolve();
         },
         error: (err: any) => {
-          console.error('❌ Error cargando centros de costo con criterios:', err);
           // Fallback: cargar todos y filtrar localmente
           this.centroCostoService.getAll().subscribe({
             next: (dataFallback: CentroCosto[] | null) => {
@@ -296,7 +290,6 @@ export class AsientosContablesDinamico implements OnInit {
               resolve();
             },
             error: (errFallback: any) => {
-              console.error('❌ Error en fallback de centros de costo:', errFallback);
               this.centrosCosto = [];
               resolve(); // No rechazar, permitir que continúe la aplicación
             },
@@ -364,15 +357,11 @@ export class AsientosContablesDinamico implements OnInit {
           } else {
             this.showMessage(`Asiento ${asiento.numero} cargado para edición`, 'success');
           }
-        } else {
-          console.warn('⚠️ No se encontró asiento con ID:', id);
-          this.loading = false;
+        } else {          this.loading = false;
           this.showMessage(`No se encontró el asiento con ID ${id}`, 'error');
         }
       },
-      error: (err) => {
-        console.error('❌ Error al cargar asiento:', err);
-        this.loading = false;
+      error: (err) => {        this.loading = false;
         this.showMessage('Error al cargar el asiento', 'error');
       },
     });
@@ -446,21 +435,7 @@ export class AsientosContablesDinamico implements OnInit {
                 this.cuentasHaberGrid.push(item);
                 detallesProcesados++;
               }
-            } else {
-              console.warn('⚠️ Cuenta no encontrada para detalle:', detalle);
-              console.warn(
-                '🔍 Buscando código:',
-                detalle.planCuenta?.codigo,
-                'en',
-                this.cuentasPlan.length,
-                'cuentas disponibles'
-              );
-              console.warn(
-                '🔍 Códigos disponibles:',
-                this.cuentasPlan.map((c) => c.codigo).slice(0, 10),
-                '...'
-              );
-            }
+            } else {            }
           });
 
           if (detallesProcesados === 0) {
@@ -475,7 +450,6 @@ export class AsientosContablesDinamico implements OnInit {
         this.loading = false;
       },
       error: (err) => {
-        console.error('❌ Error al cargar detalles del asiento:', err);
         this.loading = false;
         this.showMessage('Error al cargar los detalles del asiento', 'error');
       },
@@ -507,6 +481,7 @@ export class AsientosContablesDinamico implements OnInit {
       cuentaBusqueda: [''], // Campo para autocomplete
       valor: [0], // No requerido - permite asientos incompletos
       centroCosto: [null], // Centro de costo opcional
+      descripcion: [''], // Descripción del detalle (inicialmente nombre de la cuenta)
     });
   }
 
@@ -575,6 +550,7 @@ export class AsientosContablesDinamico implements OnInit {
     const cuenta = ultimoControl.get('cuenta')?.value;
     const valor = ultimoControl.get('valor')?.value;
     const centroCosto = ultimoControl.get('centroCosto')?.value;
+    const descripcion = ultimoControl.get('descripcion')?.value;
 
     if (!cuenta || !valor || valor <= 0) {
       this.snackBar.open('Por favor complete la cuenta y el valor', 'Cerrar', {
@@ -591,6 +567,7 @@ export class AsientosContablesDinamico implements OnInit {
       tipo,
       centroCosto: centroCosto || null,
       id: `${tipo}-${Date.now()}-${Math.random()}`,
+      descripcion: descripcion || cuenta.nombre || '', // Usar descripcion o nombre de cuenta
     };
 
     if (tipo === 'DEBE') {
@@ -600,7 +577,13 @@ export class AsientosContablesDinamico implements OnInit {
     }
 
     // Limpiar el formulario
-    ultimoControl.patchValue({ cuenta: null, valor: 0, centroCosto: null });
+    ultimoControl.patchValue({
+      cuenta: null,
+      cuentaBusqueda: '', // Limpiar también el campo de búsqueda
+      valor: 0,
+      centroCosto: null,
+      descripcion: '' // Limpiar también la descripción
+    });
 
     this.calcularTotalesGrid();
   }
@@ -609,8 +592,8 @@ export class AsientosContablesDinamico implements OnInit {
    * Calcular totales desde los grids
    */
   calcularTotalesGrid(): void {
-    this.totalDebe = this.cuentasDebeGrid.reduce((sum, item) => sum + item.valor, 0);
-    this.totalHaber = this.cuentasHaberGrid.reduce((sum, item) => sum + item.valor, 0);
+    this.totalDebe = this.cuentasDebeGrid.reduce((sum, item) => sum + (Number(item.valor) || 0), 0);
+    this.totalHaber = this.cuentasHaberGrid.reduce((sum, item) => sum + (Number(item.valor) || 0), 0);
     this.diferencia = Math.abs(this.totalDebe - this.totalHaber);
 
     // Actualizar el grid de detalles
@@ -657,9 +640,10 @@ export class AsientosContablesDinamico implements OnInit {
   /**
    * Editar valor de cuenta en el grid
    */
-  editarValorGrid(item: CuentaItem, nuevoValor: number): void {
-    if (nuevoValor > 0) {
-      item.valor = nuevoValor;
+  editarValorGrid(item: CuentaItem, nuevoValor: number | string): void {
+    const valorNumerico = Number(nuevoValor);
+    if (valorNumerico > 0) {
+      item.valor = valorNumerico;
       this.calcularTotalesGrid();
     }
   }
@@ -704,6 +688,14 @@ export class AsientosContablesDinamico implements OnInit {
     // Obtener fechas del formulario
     const fechaAsiento = this.form.get('fechaAsiento')?.value;
 
+    // Determinar el estado del asiento
+    let estadoAsiento = this.form.get('estado')?.value || this.asientoActual?.estado || 4;
+
+    // Si estamos actualizando y el asiento está cuadrado, cambiar a ACTIVO
+    if (this.codigoAsientoActual && this.diferencia === 0 && this.totalDebe > 0 && this.totalHaber > 0) {
+      estadoAsiento = 1; // ACTIVO
+    }
+
     const asientoBackend: any = {
       empresa: {
         codigo: this.idSucursal,
@@ -715,7 +707,7 @@ export class AsientosContablesDinamico implements OnInit {
       numero: parseInt(numero?.value, 10),
       fechaAsiento: fechaAsiento,
       observaciones: this.form.get('observaciones')?.value?.trim() || '',
-      estado: this.form.get('estado')?.value || this.asientoActual?.estado || 4, // Usar estado del formulario o del asiento existente
+      estado: estadoAsiento,
       nombreUsuario: localStorage.getItem('username') || 'sistema',
       fechaIngreso: new Date(),
       numeroMes: new Date().getMonth() + 1,
@@ -751,11 +743,27 @@ export class AsientosContablesDinamico implements OnInit {
         // Guardar el código si es creación nueva
         if (!this.codigoAsientoActual && response.codigo) {
           this.codigoAsientoActual = response.codigo;
+          this.asientoActual = response;
+
+          // Actualizar el número en el formulario
+          if (response.numero) {
+            this.form.patchValue({ numero: response.numero });
+          }
         }
 
-        const mensaje = this.codigoAsientoActual
+        // Actualizar el estado en el formulario si cambió a ACTIVO
+        if (estadoAsiento === 1) {
+          this.form.patchValue({ estado: 1 });
+        }
+
+        let mensaje = this.codigoAsientoActual
           ? `✅ Cabecera del Asiento #${response.numero} actualizada exitosamente`
           : `✅ Cabecera del Asiento #${response.numero} guardada exitosamente`;
+
+        // Agregar mensaje si el asiento pasó a ACTIVO
+        if (estadoAsiento === 1 && this.codigoAsientoActual) {
+          mensaje += ' - 🟢 Asiento ACTIVO (cuadrado)';
+        }
 
         this.snackBar.open(mensaje, 'Cerrar', {
           duration: 4000,
@@ -804,9 +812,7 @@ export class AsientosContablesDinamico implements OnInit {
 
     // Validar cuentas que tienen datos (validación condicional)
     const validacionCuentas = this.validarCuentasConDatos();
-    if (validacionCuentas.errors.length > 0) {
-      console.error('❌ Errores en cuentas con datos:', validacionCuentas.errors);
-      this.snackBar.open(
+    if (validacionCuentas.errors.length > 0) {      this.snackBar.open(
         `Errores en las cuentas: ${validacionCuentas.errors.join(', ')}`,
         'Cerrar',
         {
@@ -820,13 +826,7 @@ export class AsientosContablesDinamico implements OnInit {
     }
 
     // Advertir si el asiento no está balanceado, pero permitir guardarlo como INCOMPLETO
-    if (this.diferencia !== 0) {
-      console.warn(
-        `⚠️ Asiento no balanceado. Debe: $${this.totalDebe.toFixed(
-          2
-        )} - Haber: $${this.totalHaber.toFixed(2)}`
-      );
-      this.snackBar.open(
+    if (this.diferencia !== 0) {      this.snackBar.open(
         `📝 Guardando asiento INCOMPLETO. Debe: $${this.totalDebe.toFixed(
           2
         )} - Haber: $${this.totalHaber.toFixed(2)}`,
@@ -897,9 +897,7 @@ export class AsientosContablesDinamico implements OnInit {
         // Ahora grabar los detalles
         this.grabarDetallesDelAsiento(response.codigo);
       },
-      error: (error) => {
-        console.error('❌ Error al crear cabecera del asiento:', error);
-        this.loading = false;
+      error: (error) => {        this.loading = false;
         const errorMsg = error?.error?.message || error?.message || 'Error desconocido al guardar';
         this.snackBar.open(`❌ Error al crear asiento: ${errorMsg}`, 'Cerrar', {
           duration: 5000,
@@ -915,14 +913,9 @@ export class AsientosContablesDinamico implements OnInit {
    * Graba solo los detalles para un asiento existente
    */
   private grabarSoloDetalles(): void {
-    if (!this.codigoAsientoActual) {
-      console.error('❌ No hay código de asiento para grabar detalles');
-      this.loading = false;
+    if (!this.codigoAsientoActual) {      this.loading = false;
       return;
-    }
-
-    console.log('📝 Grabando solo detalles del asiento ID:', this.codigoAsientoActual);
-    this.grabarDetallesDelAsiento(this.codigoAsientoActual);
+    }    this.grabarDetallesDelAsiento(this.codigoAsientoActual);
   }
 
   /**
@@ -944,6 +937,9 @@ export class AsientosContablesDinamico implements OnInit {
           },
           valorDebe: item.valor,
           valorHaber: 0,
+          descripcion: item.descripcion || item.cuenta.nombre || '',
+          nombreCuenta: item.cuenta.nombre || '',
+          numeroCuenta: item.cuenta.cuentaContable || '',
         };
 
         // Agregar centro de costo si está presente
@@ -969,6 +965,9 @@ export class AsientosContablesDinamico implements OnInit {
           },
           valorDebe: 0,
           valorHaber: item.valor,
+          descripcion: item.descripcion || item.cuenta.nombre || '',
+          nombreCuenta: item.cuenta.nombre || '',
+          numeroCuenta: item.cuenta.cuentaContable || '',
         };
 
         // Agregar centro de costo si está presente
@@ -989,6 +988,7 @@ export class AsientosContablesDinamico implements OnInit {
         const cuenta = control.get('cuenta')?.value;
         const valor = control.get('valor')?.value;
         const centroCosto = control.get('centroCosto')?.value;
+        const descripcion = control.get('descripcion')?.value;
 
         if (cuenta && valor > 0) {
           const detalle: any = {
@@ -1000,6 +1000,9 @@ export class AsientosContablesDinamico implements OnInit {
             },
             valorDebe: valor,
             valorHaber: 0,
+            descripcion: descripcion || cuenta.nombre || '',
+            nombreCuenta: cuenta.nombre || '',
+            numeroCuenta: cuenta.cuentaContable || '',
           };
 
           // Agregar centro de costo si está presente
@@ -1018,6 +1021,7 @@ export class AsientosContablesDinamico implements OnInit {
         const cuenta = control.get('cuenta')?.value;
         const valor = control.get('valor')?.value;
         const centroCosto = control.get('centroCosto')?.value;
+        const descripcion = control.get('descripcion')?.value;
 
         if (cuenta && valor > 0) {
           const detalle: any = {
@@ -1029,6 +1033,9 @@ export class AsientosContablesDinamico implements OnInit {
             },
             valorDebe: 0,
             valorHaber: valor,
+            descripcion: descripcion || cuenta.nombre || '',
+            nombreCuenta: cuenta.nombre || '',
+            numeroCuenta: cuenta.cuentaContable || '',
           };
 
           // Agregar centro de costo si está presente
@@ -1053,9 +1060,6 @@ export class AsientosContablesDinamico implements OnInit {
       });
       return;
     }
-
-    console.log('📤 Enviando detalles al backend:', detallesParaGrabar);
-
     // Grabar cada detalle usando el servicio correspondiente
     let detallesGrabados = 0;
     let erroresDetalle: string[] = [];
@@ -1064,8 +1068,6 @@ export class AsientosContablesDinamico implements OnInit {
       this.detalleAsientoService.add(detalle).subscribe({
         next: (response: any) => {
           detallesGrabados++;
-          console.log(`✅ Detalle ${detallesGrabados} grabado:`, response);
-
           // Si todos los detalles se grabaron exitosamente
           if (detallesGrabados === detallesParaGrabar.length) {
             this.loading = false;
@@ -1081,12 +1083,13 @@ export class AsientosContablesDinamico implements OnInit {
             );
             // Recargar detalles para mostrar los cambios
             this.cargarDetallesAsiento(asientoId);
+
+            // Verificar si el asiento quedó descuadrado y actualizar estado si es necesario
+            this.verificarYActualizarEstadoAsiento(asientoId);
           }
         },
         error: (error: any) => {
           erroresDetalle.push(`Error en detalle: ${error?.message || 'Desconocido'}`);
-          console.error('❌ Error al grabar detalle:', error);
-
           // Si ya procesamos todos los detalles (exitosos + errores)
           if (detallesGrabados + erroresDetalle.length === detallesParaGrabar.length) {
             this.loading = false;
@@ -1112,14 +1115,10 @@ export class AsientosContablesDinamico implements OnInit {
    * Actualiza los detalles existentes de un asiento
    */
   private actualizarDetallesDelAsiento(asientoId: number): void {
-    console.log('🔄 Actualizando detalles del asiento ID:', asientoId);
-
     // Recopilar detalles actuales del grid
     const detallesActuales = this.recopilarDetallesDelGrid(asientoId);
 
-    if (detallesActuales.length === 0) {
-      console.log('ℹ️ No hay detalles para actualizar');
-      this.loading = false;
+    if (detallesActuales.length === 0) {      this.loading = false;
       this.snackBar.open('No hay cuentas para actualizar', 'Cerrar', {
         duration: 3000,
         horizontalPosition: 'center',
@@ -1131,9 +1130,6 @@ export class AsientosContablesDinamico implements OnInit {
 
     // Lógica de actualización: comparar con detalles originales
     const operaciones = this.determinarOperacionesDeActualizacion(detallesActuales);
-
-    console.log('📋 Operaciones a realizar:', operaciones);
-
     this.ejecutarOperacionesDeActualizacion(operaciones, asientoId);
   }
 
@@ -1149,9 +1145,12 @@ export class AsientosContablesDinamico implements OnInit {
         detalles.push({
           asiento: { codigo: asientoId },
           planCuenta: { codigo: item.cuenta.codigo },
+          descripcion: item.descripcion || '',
           valorDebe: item.valor,
           valorHaber: 0,
-          tipo: 'DEBE',
+          nombreCuenta: item.cuenta.nombre || '',
+          numeroCuenta: item.cuenta.cuentaContable || '',
+          centroCosto: item.centroCosto ? { codigo: item.centroCosto.codigo } : null,
         });
       }
     });
@@ -1162,9 +1161,12 @@ export class AsientosContablesDinamico implements OnInit {
         detalles.push({
           asiento: { codigo: asientoId },
           planCuenta: { codigo: item.cuenta.codigo },
+          descripcion: item.descripcion || '',
           valorDebe: 0,
           valorHaber: item.valor,
-          tipo: 'HABER',
+          nombreCuenta: item.cuenta.nombre || '',
+          numeroCuenta: item.cuenta.cuentaContable || '',
+          centroCosto: item.centroCosto ? { codigo: item.centroCosto.codigo } : null,
         });
       }
     });
@@ -1229,12 +1231,7 @@ export class AsientosContablesDinamico implements OnInit {
     const totalOperaciones =
       operaciones.crear.length + operaciones.actualizar.length + operaciones.eliminar.length;
     let errores: string[] = [];
-
-    console.log(`🚀 Ejecutando ${totalOperaciones} operaciones de actualización`);
-
-    if (totalOperaciones === 0) {
-      console.log('ℹ️ No hay cambios para procesar');
-      this.loading = false;
+    if (totalOperaciones === 0) {      this.loading = false;
       this.snackBar.open('No hay cambios para actualizar', 'Cerrar', {
         duration: 3000,
         horizontalPosition: 'center',
@@ -1275,14 +1272,10 @@ export class AsientosContablesDinamico implements OnInit {
     // Ejecutar creaciones
     operaciones.crear.forEach((detalle: any) => {
       this.detalleAsientoService.add(detalle).subscribe({
-        next: (response) => {
-          console.log('✅ Detalle creado:', response);
-          verificarComplecion();
+        next: (response) => {          verificarComplecion();
         },
         error: (error) => {
-          errores.push(`Error creando: ${error?.message || 'Desconocido'}`);
-          console.error('❌ Error creando detalle:', error);
-          verificarComplecion();
+          errores.push(`Error creando: ${error?.message || 'Desconocido'}`);          verificarComplecion();
         },
       });
     });
@@ -1290,14 +1283,10 @@ export class AsientosContablesDinamico implements OnInit {
     // Ejecutar actualizaciones
     operaciones.actualizar.forEach((detalle: any) => {
       this.detalleAsientoService.update(detalle).subscribe({
-        next: (response) => {
-          console.log('✅ Detalle actualizado:', response);
-          verificarComplecion();
+        next: (response) => {          verificarComplecion();
         },
         error: (error) => {
-          errores.push(`Error actualizando: ${error?.message || 'Desconocido'}`);
-          console.error('❌ Error actualizando detalle:', error);
-          verificarComplecion();
+          errores.push(`Error actualizando: ${error?.message || 'Desconocido'}`);          verificarComplecion();
         },
       });
     });
@@ -1305,14 +1294,10 @@ export class AsientosContablesDinamico implements OnInit {
     // Ejecutar eliminaciones
     operaciones.eliminar.forEach((detalle: any) => {
       this.detalleAsientoService.delete(detalle.codigo).subscribe({
-        next: (response) => {
-          console.log('✅ Detalle eliminado:', response);
-          verificarComplecion();
+        next: (response) => {          verificarComplecion();
         },
         error: (error) => {
-          errores.push(`Error eliminando: ${error?.message || 'Desconocido'}`);
-          console.error('❌ Error eliminando detalle:', error);
-          verificarComplecion();
+          errores.push(`Error eliminando: ${error?.message || 'Desconocido'}`);          verificarComplecion();
         },
       });
     });
@@ -1336,7 +1321,7 @@ export class AsientosContablesDinamico implements OnInit {
     this.cuentasDebeGrid.forEach((cuenta) => {
       detalles.push({
         cuenta: cuenta.cuenta?.cuentaContable || '',
-        descripcion: cuenta.cuenta?.nombre || '',
+        descripcion: cuenta.descripcion || cuenta.cuenta?.nombre || '',
         centroCosto: cuenta.centroCosto
           ? `${cuenta.centroCosto.numero} - ${cuenta.centroCosto.nombre}`
           : '',
@@ -1350,7 +1335,7 @@ export class AsientosContablesDinamico implements OnInit {
     this.cuentasHaberGrid.forEach((cuenta) => {
       detalles.push({
         cuenta: cuenta.cuenta?.cuentaContable || '',
-        descripcion: cuenta.cuenta?.nombre || '',
+        descripcion: cuenta.descripcion || cuenta.cuenta?.nombre || '',
         centroCosto: cuenta.centroCosto
           ? `${cuenta.centroCosto.numero} - ${cuenta.centroCosto.nombre}`
           : '',
@@ -1361,6 +1346,73 @@ export class AsientosContablesDinamico implements OnInit {
     });
 
     this.detalleDataSource.data = detalles;
+  }
+
+  /**
+   * Verifica si el asiento está descuadrado y actualiza el estado a INCOMPLETO si es necesario
+   */
+  private verificarYActualizarEstadoAsiento(asientoId: number): void {
+    // Calcular totales actuales
+    const debe = this.totalDebe;
+    const haber = this.totalHaber;
+    const diferencia = Math.abs(debe - haber);
+
+    // Si el asiento está descuadrado y el estado actual es ACTIVO (1)
+    if (diferencia !== 0 && this.form.get('estado')?.value === 1) {
+      // Construir objeto para actualizar solo el estado
+      const asientoActualizado: any = {
+        codigo: asientoId,
+        empresa: {
+          codigo: this.idSucursal,
+        },
+        estado: 4, // INCOMPLETO
+      };
+
+      // Incluir campos requeridos del asiento actual
+      if (this.asientoActual) {
+        asientoActualizado.tipoAsiento = {
+          codigo: this.asientoActual.tipoAsiento?.codigo,
+        };
+        asientoActualizado.numero = this.asientoActual.numero;
+        asientoActualizado.fechaAsiento = this.asientoActual.fechaAsiento;
+        asientoActualizado.observaciones = this.asientoActual.observaciones || '';
+        asientoActualizado.nombreUsuario = this.asientoActual.nombreUsuario || 'sistema';
+        asientoActualizado.fechaIngreso = this.asientoActual.fechaIngreso;
+        asientoActualizado.numeroMes = this.asientoActual.numeroMes;
+        asientoActualizado.numeroAnio = this.asientoActual.numeroAnio;
+        asientoActualizado.moneda = this.asientoActual.moneda || 1;
+        asientoActualizado.rubroModuloClienteP = this.asientoActual.rubroModuloClienteP || 0;
+        asientoActualizado.rubroModuloClienteH = this.asientoActual.rubroModuloClienteH || 0;
+        asientoActualizado.rubroModuloSistemaP = this.asientoActual.rubroModuloSistemaP || 0;
+        asientoActualizado.rubroModuloSistemaH = this.asientoActual.rubroModuloSistemaH || 0;
+
+        if (this.asientoActual.periodo) {
+          asientoActualizado.periodo = {
+            codigo: this.asientoActual.periodo.codigo,
+          };
+        }
+      }
+
+      // Actualizar el asiento
+      this.asientoService.actualizarAsiento(asientoId, asientoActualizado).subscribe({
+        next: () => {
+          // Actualizar el estado en el formulario
+          this.form.patchValue({ estado: 4 });
+
+          this.snackBar.open(
+            `⚠️ Asiento descuadrado. Estado cambiado a INCOMPLETO (Debe: $${debe.toFixed(2)} - Haber: $${haber.toFixed(2)})`,
+            'Cerrar',
+            {
+              duration: 5000,
+              horizontalPosition: 'center',
+              verticalPosition: 'top',
+              panelClass: ['warning-snackbar'],
+            }
+          );
+        },
+        error: (error) => {        }
+      });
+    }
   }
 
   /**
@@ -1516,10 +1568,7 @@ export class AsientosContablesDinamico implements OnInit {
       if (fecha.year && fecha.month && fecha.day) {
         return new Date(fecha.year, fecha.month - 1, fecha.day);
       }
-    }
-
-    console.warn('⚠️ Formato de fecha no reconocido:', fecha);
-    return new Date(); // Fallback a fecha actual
+    }    return new Date(); // Fallback a fecha actual
   }
 
   /**
@@ -1582,18 +1631,18 @@ export class AsientosContablesDinamico implements OnInit {
    */
   onCuentaSeleccionada(tipo: 'DEBE' | 'HABER', index: number, cuenta: PlanCuenta): void {
     if (!cuenta) return;
+    // Obtener el FormGroup correspondiente
+    const formArray = tipo === 'DEBE' ? this.cuentasDebe : this.cuentasHaber;
+    const cuentaGroup = formArray.at(index) as FormGroup;
 
-    console.log(
-      `📊 Cuenta seleccionada ${tipo}[${index + 1}]:`,
-      cuenta.cuentaContable,
-      '-',
-      cuenta.nombre
-    );
+    // Llenar automáticamente la descripción con el nombre de la cuenta
+    // El usuario podrá editarlo después
+    cuentaGroup.patchValue({
+      descripcion: cuenta.nombre || '',
+      cuenta: cuenta // Asegurar que la cuenta está asignada
+    });
 
     if (this.cuentaRequiereCentroCosto(cuenta)) {
-      console.log(`🏢 Esta cuenta requiere centro de costos`);
-      console.log(`   Naturaleza: ${this.getNaturalezaCuentaNombre(cuenta)}`);
-
       // Mostrar notificación al usuario
       const mensaje = `La cuenta "${cuenta.nombre}" requiere centro de costos`;
       this.snackBar.open(mensaje, 'Entendido', {
@@ -1611,18 +1660,8 @@ export class AsientosContablesDinamico implements OnInit {
   mostrarInfoCentroCostos(): void {
     const cuentasConCosto = this.getCuentasConCentroCosto();
 
-    if (cuentasConCosto.length === 0) {
-      console.log('ℹ️ Ninguna cuenta en este asiento requiere centro de costos');
-      return;
-    }
-
-    console.group('🏢 Cuentas que requieren Centro de Costos:');
-    cuentasConCosto.forEach(({ tipo, index, cuenta }) => {
-      console.log(`${tipo} [${index + 1}]: ${cuenta.cuentaContable} - ${cuenta.nombre}`);
-      console.log(`   Naturaleza: ${this.getNaturalezaCuentaNombre(cuenta)}`);
-    });
-    console.groupEnd();
-
+    if (cuentasConCosto.length === 0) {      return;
+    }    cuentasConCosto.forEach(({ tipo, index, cuenta }) => {    });
     // Mostrar mensaje al usuario
     const mensaje = `${cuentasConCosto.length} cuenta(s) requieren centro de costos`;
     this.snackBar.open(mensaje, 'Ver detalles', {
@@ -1707,10 +1746,9 @@ export class AsientosContablesDinamico implements OnInit {
    * Crea un nuevo asiento limpiando el formulario
    */
   nuevoAsiento(): void {
-    console.log('🆕 Creando nuevo asiento...');
-
     // Limpiar el estado actual
     this.codigoAsientoActual = null;
+    this.asientoActual = null;
     this.detallesOriginales = [];
 
     // Reinicializar el formulario
@@ -1725,17 +1763,15 @@ export class AsientosContablesDinamico implements OnInit {
     this.totalHaber = 0;
     this.diferencia = 0;
 
-    // Navegar a la URL sin parámetros para un nuevo asiento
-    this.router.navigate([], {
-      relativeTo: this.route,
-      queryParams: {},
+    // Actualizar el grid de detalles
+    this.actualizarGridDetalles();
+
+    // Navegar a la URL base sin parámetros para un nuevo asiento
+    this.router.navigate(['/menucontabilidad/procesos/asientos-dinamico'], {
       replaceUrl: true,
     });
 
-    this.showMessage('✅ Listo para crear un nuevo asiento', 'success');
-
-    console.log('✅ Nuevo asiento iniciado correctamente');
-  }
+    this.showMessage('✅ Listo para crear un nuevo asiento', 'success');  }
 
   /**
    * Determina si un centro de costo puede ser seleccionado (solo Movimiento)
@@ -1891,3 +1927,4 @@ export class AsientosContablesDinamico implements OnInit {
     });
   }
 }
+

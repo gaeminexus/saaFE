@@ -37,6 +37,12 @@ export class PlanCuentaService {
     return this.http.get<PlanCuenta>(url).pipe(catchError(this.handleError));
   }
 
+  getByEmpresa(idEmpresa: number): Observable<PlanCuenta[] | null> {
+      const wsGetById = '/getByEmpresa/';
+      const url = `${ServiciosCnt.RS_PLNN}${wsGetById}${idEmpresa}`;
+      return this.http.get<PlanCuenta[]>(url).pipe(catchError(this.handleError));
+    }
+
   /** POST: add a new plan cuenta to the server */
   add(datos: any): Observable<PlanCuenta | null> {
     // Preparar datos para creación - NO enviar codigo si es 0

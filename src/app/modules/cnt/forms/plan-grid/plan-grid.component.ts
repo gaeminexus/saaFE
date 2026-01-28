@@ -211,7 +211,6 @@ export class PlanGridComponent implements OnInit, AfterViewInit {
         this.loading.set(false);
       },
       error: (err) => {
-        console.error('❌ PlanGrid getAll error:', err);
         this.handleLoadError(err);
         this.planCuentas = [];
         this.loading.set(false);
@@ -227,7 +226,6 @@ export class PlanGridComponent implements OnInit, AfterViewInit {
 
   private loadNaturalezas(): void {
     const empresaCodigo = localStorage.getItem('idSucursal') || '280';
-    console.log(`🔍 Iniciando carga de naturalezas para empresa ${empresaCodigo}...`);
 
     const criterioConsultaArray: Array<DatosBusqueda> = [];
     const criterioEmpresa = new DatosBusqueda();
@@ -250,7 +248,6 @@ export class PlanGridComponent implements OnInit, AfterViewInit {
         }
       },
       error: (err) => {
-        console.error('❌ Error al cargar naturalezas:', err);
         this.loadNaturalezasFallback();
       },
     });
@@ -263,7 +260,6 @@ export class PlanGridComponent implements OnInit, AfterViewInit {
         this.naturalezas = list;
       },
       error: (error) => {
-        console.error('Error al cargar naturalezas:', error);
         this.naturalezas = [];
       },
     });
@@ -383,16 +379,17 @@ export class PlanGridComponent implements OnInit, AfterViewInit {
   public isAllSelected(): boolean {
     const numSelected = this.selection.selected.length;
     const numRows = this.dataSource.data.length;
-    return numSelected === numRows;
+    return numRows > 0 && numSelected === numRows;
   }
 
   public toggleAllRows(): void {
+    // Si todos están seleccionados, limpiar todo
     if (this.isAllSelected()) {
       this.selection.clear();
-      return;
+    } else {
+      // Si no todos están seleccionados, seleccionar todos los de la página actual
+      this.selection.select(...this.dataSource.data);
     }
-
-    this.selection.select(...this.dataSource.data);
   }
 
   public checkboxLabel(row?: PlanCuenta): string {
@@ -490,21 +487,108 @@ export class PlanGridComponent implements OnInit, AfterViewInit {
   }
 
   public onDelete(item: PlanCuenta): void {
-    if (confirm(`¿Está seguro de eliminar la cuenta "${item.nombre}"?`)) {
-      // Aquí implementarías la lógica de eliminación
-      console.log('Eliminar cuenta:', item);
+    // Validar que no tenga hijos antes de eliminar
+    if (this.hasChildren(item)) {
+      alert(`No se puede eliminar la cuenta "${item.nombre}" porque tiene subcuentas asociadas.\nElimina primero las subcuentas.`);
+      return;
     }
+
+    if (!confirm(`¿Está seguro de eliminar la cuenta "${item.nombre}"?\n\nEsta acción no se puede deshacer.`)) {
+      return;
+    }
+
+    this.loading.set(true);
+    this.planCuentaService.delete(item.codigo).subscribe({
+      next: () => {
+        this.loadData();
+        this.selection.deselect(item);
+      },
+      error: (err) => {
+        this.loading.set(false);
+        let errorMsg = 'No se pudo eliminar la cuenta.';
+
+        if (err.error?.message) {
+          errorMsg += `\n${err.error.message}`;
+        } else if (err.status === 0) {
+          errorMsg += '\nBackend no disponible.';
+        } else if (err.status === 409) {
+          errorMsg += '\nLa cuenta está siendo utilizada en transacciones.';
+        }
+
+        alert(errorMsg);
+      }
+    });
   }
 
   public onDeleteSelected(): void {
-    if (this.selection.selected.length === 0) return;
+    if (this.selection.selected.length === 0) {
+      return;
+    }
+
+    // Validar que ninguna cuenta seleccionada tenga hijos
+    const conHijos = this.selection.selected.filter(item => this.hasChildren(item));
+
+    if (conHijos.length > 0) {
+      const nombres = conHijos.map(c => c.nombre).slice(0, 3).join('\n- ');
+      const mas = conHijos.length > 3 ? `\n... y ${conHijos.length - 3} más` : '';
+      alert(
+        `No se puede eliminar porque las siguientes cuentas tienen subcuentas asociadas:\n\n- ${nombres}${mas}\n\nElimina primero las subcuentas.`
+      );
+      return;
+    }
 
     const count = this.selection.selected.length;
-    if (confirm(`¿Está seguro de eliminar ${count} cuenta(s) seleccionada(s)?`)) {
-      // Aquí implementarías la lógica de eliminación masiva
-      console.log('Eliminar cuentas seleccionadas:', this.selection.selected);
-      this.selection.clear();
+    console.log(`✅ Todas las cuentas seleccionadas son elegibles para eliminación`);
+
+    if (!confirm(
+      `¿Está seguro de eliminar ${count} cuenta(s) seleccionada(s)?\n\nEsta acción no se puede deshacer.`
+    )) {
+      console.log('❌ Usuario canceló la eliminación');
+      return;
     }
+
+    this.loading.set(true);
+    let eliminadas = 0;
+    let errores = 0;
+    const total = this.selection.selected.length;
+    const cuentasAEliminar = [...this.selection.selected];
+
+    // Eliminar una por una
+    const eliminarCuenta = (index: number) => {
+      if (index >= cuentasAEliminar.length) {
+        // Terminó el proceso
+        this.loading.set(false);
+        this.selection.clear();
+
+        if (errores === 0) {
+          alert(`✅ Se eliminaron exitosamente ${eliminadas} cuenta(s).`);
+        } else {
+          alert(
+            `Proceso completado:\n✅ Eliminadas: ${eliminadas}\n❌ Errores: ${errores}\n\nRevisa la consola para más detalles.`
+          );
+        }
+
+        this.loadData();
+        return;
+      }
+
+      const cuenta = cuentasAEliminar[index];
+      console.log(`🔄 [${index + 1}/${total}] Eliminando cuenta: ${cuenta.nombre} (Código: ${cuenta.codigo})`);
+
+      this.planCuentaService.delete(cuenta.codigo).subscribe({
+        next: () => {
+          console.log(`✅ [${index + 1}/${total}] Cuenta eliminada: ${cuenta.nombre}`);
+          eliminadas++;
+          eliminarCuenta(index + 1);
+        },
+        error: (err) => {
+          errores++;
+          eliminarCuenta(index + 1);
+        }
+      });
+    };
+
+    eliminarCuenta(0);
   }
 
   // Métodos de exportación
@@ -635,9 +719,12 @@ export class PlanGridComponent implements OnInit, AfterViewInit {
   }
 
   // Devuelve true si la cuenta tiene hijos directos (por cuentaContable prefijo)
+  // IMPORTANTE: Siempre valida contra el array completo (planCuentas), NO contra dataSource.data
+  // porque puede haber hijos que no están visibles por filtros aplicados
   public hasChildren(element: PlanCuenta): boolean {
+    if (!element.cuentaContable) return false;
     const prefix = element.cuentaContable + '.';
-    return this.planCuentas.some((p) => p.cuentaContable.startsWith(prefix));
+    return this.planCuentas.some((p) => p.cuentaContable && p.cuentaContable.startsWith(prefix));
   }
 
   // Construye la ruta textual completa usando nombres ("ACTIVOS / ACTIVOS CORRIENTES / CAJA")
@@ -670,7 +757,6 @@ export class PlanGridComponent implements OnInit, AfterViewInit {
       // No pre-convertir porque formatoFecha necesita el formato original
       return this.funcionesDatosService.formatoFecha(fecha, FuncionesDatosService.SOLO_FECHA);
     } catch (err) {
-      console.error('❌ Error formateando fecha:', err, 'Fecha recibida:', fecha);
       return 'Error de formato';
     }
   }

@@ -117,7 +117,7 @@
   .cuenta-destino-field {
     width: 100%;
     max-width: 600px;
-    
+
     mat-icon {
       color: #667eea;
       margin-right: 8px;
@@ -264,10 +264,34 @@
         background: #f8fafc !important;
       }
 
-      // Eliminamos líneas de guía para evitar barras visuales
-      &:before,
-      &:after {
-        content: none;
+      // Línea vertical de jerarquía
+      &[data-level]:not([data-level="0"]) {
+        &:before {
+          content: '';
+          position: absolute;
+          left: calc(var(--level) * 40px - 10px);
+          top: 0;
+          bottom: 0;
+          width: 2px;
+          background: linear-gradient(to bottom, #e2e8f0 0%, #cbd5e1 50%, #e2e8f0 100%);
+          opacity: 0.5;
+        }
+      }
+
+      &[data-level="1"]:before {
+        --level: 1;
+      }
+      &[data-level="2"]:before {
+        --level: 2;
+      }
+      &[data-level="3"]:before {
+        --level: 3;
+      }
+      &[data-level="4"]:before {
+        --level: 4;
+      }
+      &[data-level="5"]:before {
+        --level: 5;
       }
 
       .node-content {
@@ -312,7 +336,7 @@
 
           &:hover {
             background: rgba(102, 126, 234, 0.1);
-            
+
             mat-icon {
               color: #667eea;
             }
@@ -454,7 +478,7 @@
               border-color: rgba(255, 255, 255, 0.8);
               font-weight: bold;
             }
-            
+
             .account-name {
               color: #1e293b;
               background: white;
@@ -496,14 +520,14 @@
             color: #374151;
             font-weight: 600;
           }
-          
+
           .expand-button {
             color: #374151;
-            
+
             mat-icon {
               color: #374151;
             }
-            
+
             &.expanded mat-icon {
               color: #667eea;
             }
@@ -521,14 +545,14 @@
             color: #64748b;
             font-weight: 500;
           }
-          
+
           .expand-button {
             color: #64748b;
-            
+
             mat-icon {
               color: #64748b;
             }
-            
+
             &.expanded mat-icon {
               color: #10b981;
             }
@@ -545,14 +569,14 @@
           .node-info .account-header .account-name {
             color: #64748b;
           }
-          
+
           .expand-button {
             color: #64748b;
-            
+
             mat-icon {
               color: #64748b;
             }
-            
+
             &.expanded mat-icon {
               color: #f59e0b;
             }
@@ -569,14 +593,14 @@
           .node-info .account-header .account-name {
             color: #64748b;
           }
-          
+
           .expand-button {
             color: #64748b;
-            
+
             mat-icon {
               color: #64748b;
             }
-            
+
             &.expanded mat-icon {
               color: #0ea5e9;
             }
@@ -800,7 +824,7 @@
     .actions-section {
       width: 100%;
       justify-content: flex-start;
-      
+
       .add-button,
       .view-toggle {
         flex: 1;

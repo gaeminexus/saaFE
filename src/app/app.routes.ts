@@ -182,6 +182,11 @@ export const routes: Routes = [
         canDeactivate: [canDeactivateGuard],
       },
       {
+        path: 'procesos/asientos-dinamico/:id',
+        component: AsientosContablesDinamico,
+        canDeactivate: [canDeactivateGuard],
+      },
+      {
         path: 'procesos/mayorizacion',
         component: MayorizacionComponent,
         canActivate: [authGuard],

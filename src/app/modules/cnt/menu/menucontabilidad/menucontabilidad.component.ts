@@ -118,17 +118,23 @@ export class MenuContabilidadComponent {
           route: '/menucontabilidad/procesos/asientos-dinamico',
         },
         {
+          displayName: 'Listado de Asientos',
+          iconName: 'list_alt',
+          idPermiso: 830,
+          route: '/menucontabilidad/reportes/listado-asientos',
+        },
+        {
           displayName: 'Mayorización',
           iconName: 'account_balance',
           idPermiso: 830,
           route: '/menucontabilidad/procesos/mayorizacion',
         },
-        {
+        /*{
           displayName: 'Listado de Asientos',
           iconName: 'list_alt',
           idPermiso: 830,
           route: '/menucontabilidad/listado-asientos',
-        },
+        },*/
         {
           displayName: 'Mayorización - Proceso',
           iconName: 'account_balance',
@@ -149,6 +155,12 @@ export class MenuContabilidadComponent {
       idPermiso: 811,
       children: [
         {
+          displayName: 'Listado de Asientos',
+          iconName: 'list_alt',
+          idPermiso: 830,
+          route: '/menucontabilidad/reportes/listado-asientos',
+        },
+        {
           displayName: 'Balance General',
           iconName: 'balance',
           idPermiso: 830,
@@ -165,12 +177,6 @@ export class MenuContabilidadComponent {
           iconName: 'analytics',
           idPermiso: 830,
           route: '/menucontabilidad/reportes/mayor-analitico',
-        },
-        {
-          displayName: 'Listado de Asientos',
-          iconName: 'list_alt',
-          idPermiso: 830,
-          route: '/menucontabilidad/reportes/listado-asientos',
         },
         {
           displayName: 'Balance de Prueba',

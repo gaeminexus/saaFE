@@ -1,7 +1,12 @@
 <div class="asientos-container">
   <div class="header">
     <div class="header-content">
-      <h2>Asientos Contables - Proceso Dinámico</h2>
+      <h2>
+        {{ codigoAsientoActual ? 'Editar Asiento #' + form.get('numero')?.value : 'Nuevo Asiento Contable' }}
+        @if (codigoAsientoActual) {
+          <mat-chip class="edit-chip">Modo Edición</mat-chip>
+        }
+      </h2>
       <button
         mat-raised-button
         color="primary"
@@ -322,6 +327,21 @@
                 </button>
               </div>
 
+              <!-- Fila secundaria: Descripción -->
+              <div class="descripcion-row">
+                <mat-form-field appearance="outline" class="descripcion-field-full">
+                  <mat-label>Descripción</mat-label>
+                  <input
+                    matInput
+                    type="text"
+                    formControlName="descripcion"
+                    placeholder="Descripción del movimiento"
+                    matTooltip="Se llena automáticamente con el nombre de la cuenta, pero puede editarlo"
+                  />
+                  <mat-icon matPrefix>description</mat-icon>
+                </mat-form-field>
+              </div>
+
               <!-- Fila de Centro de Costo (debajo, solo si la cuenta lo requiere) -->
               @if (filaRequiereCentroCosto('DEBE', $index)) {
               <div class="centro-costo-row">
@@ -397,7 +417,7 @@
               </div>
               <div class="cuenta-info">
                 <span class="cuenta-codigo">{{ item.cuenta?.cuentaContable }}</span>
-                <span class="cuenta-nombre">{{ item.cuenta?.nombre }}</span>
+                <span class="cuenta-nombre">{{ item.descripcion || item.cuenta?.nombre }}</span>
                 @if (item.centroCosto) {
                 <span class="centro-costo-info">
                   🏢 {{ item.centroCosto.numero }} - {{ item.centroCosto.nombre }}
@@ -528,6 +548,21 @@
                 </button>
               </div>
 
+              <!-- Fila secundaria: Descripción -->
+              <div class="descripcion-row">
+                <mat-form-field appearance="outline" class="descripcion-field-full">
+                  <mat-label>Descripción</mat-label>
+                  <input
+                    matInput
+                    type="text"
+                    formControlName="descripcion"
+                    placeholder="Descripción del movimiento"
+                    matTooltip="Se llena automáticamente con el nombre de la cuenta, pero puede editarlo"
+                  />
+                  <mat-icon matPrefix>description</mat-icon>
+                </mat-form-field>
+              </div>
+
               <!-- Fila de Centro de Costo (debajo, solo si la cuenta lo requiere) -->
               @if (filaRequiereCentroCosto('HABER', $index)) {
               <div class="centro-costo-row">
@@ -603,7 +638,7 @@
               </div>
               <div class="cuenta-info">
                 <span class="cuenta-codigo">{{ item.cuenta?.cuentaContable }}</span>
-                <span class="cuenta-nombre">{{ item.cuenta?.nombre }}</span>
+                <span class="cuenta-nombre">{{ item.descripcion || item.cuenta?.nombre }}</span>
                 @if (item.centroCosto) {
                 <span class="centro-costo-info">
                   🏢 {{ item.centroCosto.numero }} - {{ item.centroCosto.nombre }}
