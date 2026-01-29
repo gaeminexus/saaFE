@@ -61,8 +61,13 @@
 
 .form-row {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: 2fr 1fr 1fr auto auto auto;
   gap: $spacing-sm;
+  align-items: end;
+
+  button {
+    height: 56px;
+  }
 }
 
 .checkbox-field {
