@@ -56,8 +56,18 @@
       </mat-form-field>
 
       <button mat-raised-button color="primary" (click)="guardar()" [disabled]="!formValido()">
-        <mat-icon>save</mat-icon>
-        Guardar
+        <mat-icon>{{ estaEditando() ? 'edit' : 'save' }}</mat-icon>
+        {{ estaEditando() ? 'Actualizar' : 'Guardar' }}
+      </button>
+
+      <button *ngIf="estaEditando()" mat-raised-button color="warn" (click)="cancelarEdicion()">
+        <mat-icon>cancel</mat-icon>
+        Cancelar
+      </button>
+
+      <button mat-raised-button color="accent" (click)="buscarPorCriterio()" [disabled]="loading()">
+        <mat-icon>search</mat-icon>
+        Buscar
       </button>
     </div>
 
@@ -81,30 +91,61 @@
       <mat-spinner diameter="32"></mat-spinner>
     </div>
 
-    <table mat-table [dataSource]="pageData()" class="mat-elevation-z2">
-      <ng-container matColumnDef="codigo">
-        <th mat-header-cell *matHeaderCellDef>Código</th>
-        <td mat-cell *matCellDef="let row">{{ row.codigo }}</td>
-      </ng-container>
+    <div class="table-scroll">
+      <table mat-table [dataSource]="pageData()" class="mat-elevation-z2">
+        <ng-container matColumnDef="codigo">
+          <th mat-header-cell *matHeaderCellDef>Código</th>
+          <td mat-cell *matCellDef="let row">{{ row.codigo }}</td>
+        </ng-container>
 
-      <ng-container matColumnDef="entidad">
-        <th mat-header-cell *matHeaderCellDef>Entidad Bancaria</th>
-        <td mat-cell *matCellDef="let row">{{ mostrarEntidad(row) }}</td>
-      </ng-container>
+        <ng-container matColumnDef="nombre">
+          <th mat-header-cell *matHeaderCellDef>Nombre</th>
+          <td mat-cell *matCellDef="let row">{{ mostrarNombre(row) }}</td>
+        </ng-container>
 
-      <ng-container matColumnDef="tarjeta">
-        <th mat-header-cell *matHeaderCellDef>Tarjeta de Crédito</th>
-        <td mat-cell *matCellDef="let row">{{ mostrarTarjeta(row) }}</td>
-      </ng-container>
+        <ng-container matColumnDef="tarjeta">
+          <th mat-header-cell *matHeaderCellDef>Tarjeta</th>
+          <td mat-cell *matCellDef="let row">{{ mostrarTarjeta(row) }}</td>
+        </ng-container>
 
-      <ng-container matColumnDef="estado">
-        <th mat-header-cell *matHeaderCellDef>Estado</th>
-        <td mat-cell *matCellDef="let row">{{ mostrarEstado(row) }}</td>
-      </ng-container>
+        <ng-container matColumnDef="estado">
+          <th mat-header-cell *matHeaderCellDef>Estado</th>
+          <td mat-cell *matCellDef="let row">{{ mostrarEstado(row) }}</td>
+        </ng-container>
 
-      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-      <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
-    </table>
+        <ng-container matColumnDef="fechaIngreso">
+          <th mat-header-cell *matHeaderCellDef>Fecha Ingreso</th>
+          <td mat-cell *matCellDef="let row">{{ mostrarFechaIngreso(row) }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="acciones">
+          <th mat-header-cell *matHeaderCellDef>Acciones</th>
+          <td mat-cell *matCellDef="let row">
+            <button
+              mat-icon-button
+              color="primary"
+              (click)="editar(row)"
+              matTooltip="Editar"
+              [disabled]="loading()"
+            >
+              <mat-icon>edit</mat-icon>
+            </button>
+            <button
+              mat-icon-button
+              color="warn"
+              (click)="eliminar(row)"
+              matTooltip="Eliminar"
+              [disabled]="loading()"
+            >
+              <mat-icon>delete</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+      </table>
+    </div>
 
     <mat-paginator
       [length]="totalItems()"

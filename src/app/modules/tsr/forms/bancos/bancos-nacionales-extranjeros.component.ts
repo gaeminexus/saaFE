@@ -10,10 +10,14 @@ import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
+import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
+import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { ExportService } from '../../../../shared/services/export.service';
-import { Banco } from '../../model/banco';
-import { BancoService } from '../../service/banco.service';
+import { FuncionesDatosService } from '../../../../shared/services/funciones-datos.service';
+import { BancoExterno } from '../../model/banco-externo.model';
+import { BancoExternoService } from '../../service/banco-externo.service';
 
 @Component({
   selector: 'app-bancos-nacionales-extranjeros',
@@ -30,6 +34,7 @@ import { BancoService } from '../../service/banco.service';
     MatIconModule,
     MatButtonModule,
     MatCheckboxModule,
+    MatTooltipModule,
   ],
   templateUrl: './bancos-nacionales-extranjeros.component.html',
   styleUrls: ['./bancos-nacionales-extranjeros.component.scss'],
@@ -40,8 +45,8 @@ export class BancosNacionalesExtranjerosComponent implements OnInit {
   errorMsg = signal<string>('');
 
   // Datos
-  allData = signal<Banco[]>([]);
-  pageData = signal<Banco[]>([]);
+  allData = signal<BancoExterno[]>([]);
+  pageData = signal<BancoExterno[]>([]);
   totalItems = signal<number>(0);
 
   // Paginación
@@ -55,13 +60,22 @@ export class BancosNacionalesExtranjerosComponent implements OnInit {
   entidadBancaria = '';
   tarjetaCredito = false;
   estado: 0 | 1 = 1;
+  codigoEdicion: number | null = null; // null = crear, número = editar
 
-  displayedColumns: string[] = ['codigo', 'entidad', 'tarjeta', 'estado'];
+  displayedColumns: string[] = [
+    'codigo',
+    'nombre',
+    'tarjeta',
+    'estado',
+    'fechaIngreso',
+    'acciones',
+  ];
   hasItems = computed(() => this.pageData().length > 0);
 
   constructor(
-    private bancoService: BancoService,
+    private bancoExternoService: BancoExternoService,
     private exportService: ExportService,
+    private funcionesDatos: FuncionesDatosService,
   ) {}
 
   ngOnInit(): void {
@@ -71,13 +85,62 @@ export class BancosNacionalesExtranjerosComponent implements OnInit {
   cargarDatos(): void {
     this.loading.set(true);
     this.errorMsg.set('');
-    // Priorizar selectByCriteria con orderBy por defecto; fallback a getAll
+
+    // Usar getAll y ordenar en el frontend
+    this.bancoExternoService.getAll().subscribe({
+      next: (data) => {
+        const items = Array.isArray(data) ? data : [];
+        // Ordenar por código
+        items.sort((a, b) => (a.codigo ?? 0) - (b.codigo ?? 0));
+        this.allData.set(items);
+        this.totalItems.set(items.length);
+        this.pageIndex.set(0);
+        this.updatePageData();
+        this.loading.set(false);
+      },
+      error: () => {
+        this.errorMsg.set('Error al cargar bancos');
+        this.loading.set(false);
+      },
+    });
+  }
+
+  buscarPorCriterio(): void {
+    this.loading.set(true);
+    this.errorMsg.set('');
     const criterios: DatosBusqueda[] = [];
+
+    // Orden por código
     const dbOrder = new DatosBusqueda();
     dbOrder.orderBy('codigo');
     criterios.push(dbOrder);
 
-    this.bancoService.selectByCriteria(criterios).subscribe({
+    // Filtros opcionales por nombre y estado
+    if (this.entidadBancaria?.trim()) {
+      const byNombre = new DatosBusqueda();
+      byNombre.asignaUnCampoSinTrunc(
+        TipoDatosBusqueda.STRING,
+        'nombre',
+        this.entidadBancaria.trim(),
+        TipoComandosBusqueda.LIKE,
+      );
+      criterios.push(byNombre);
+    }
+
+    if (this.estado === 0 || this.estado === 1) {
+      const byEstado = new DatosBusqueda();
+      byEstado.asignaUnCampoSinTrunc(
+        TipoDatosBusqueda.INTEGER,
+        'estado',
+        String(this.estado),
+        TipoComandosBusqueda.IGUAL,
+      );
+      criterios.push(byEstado);
+    }
+
+    // criterio por tarjetaCredito eliminado: no soportado por el backend
+
+    this.bancoExternoService.selectByCriteria(criterios).subscribe({
       next: (data) => {
         const items = Array.isArray(data) ? data : [];
         this.allData.set(items);
@@ -88,7 +151,7 @@ export class BancosNacionalesExtranjerosComponent implements OnInit {
       },
       error: () => {
         // Fallback a GET si criteria falla
-        this.bancoService.getAll().subscribe({
+        this.bancoExternoService.getAll().subscribe({
           next: (data2) => {
             const items2 = Array.isArray(data2) ? data2 : [];
             this.allData.set(items2);
@@ -98,7 +161,7 @@ export class BancosNacionalesExtranjerosComponent implements OnInit {
             this.loading.set(false);
           },
           error: () => {
-            this.errorMsg.set('Error al cargar bancos');
+            this.errorMsg.set('Error al buscar bancos por criterio');
             this.loading.set(false);
           },
         });
@@ -111,26 +174,95 @@ export class BancosNacionalesExtranjerosComponent implements OnInit {
       return;
     }
     const payload: any = {
-      // Backend acepta 'nombre' y 'estado';
-      // evitar propiedades desconocidas como 'entidadBancaria' y 'tarjetaCredito'.
       nombre: this.entidadBancaria?.trim(),
       estado: this.estado,
+      tarjeta: this.tarjetaCredito ? 1 : 0, // Backend espera Long (1 o 0)
     };
 
     this.loading.set(true);
-    this.bancoService.add(payload).subscribe({
+
+    if (this.codigoEdicion === null) {
+      // Crear nuevo
+      this.bancoExternoService.add(payload).subscribe({
+        next: () => {
+          this.limpiarFormulario();
+          this.cargarDatos();
+        },
+        error: () => {
+          this.errorMsg.set('No se pudo guardar el banco');
+          this.loading.set(false);
+        },
+      });
+    } else {
+      // Actualizar existente - incluir código y preservar fechaIngreso
+      payload.codigo = this.codigoEdicion;
+
+      // Buscar el registro original para preservar la fechaIngreso
+      const registroOriginal = this.allData().find(
+        (item) => (item as any).codigo === this.codigoEdicion,
+      );
+      if (registroOriginal && (registroOriginal as any).fechaIngreso) {
+        payload.fechaIngreso = (registroOriginal as any).fechaIngreso;
+      }
+
+      this.bancoExternoService.update(payload).subscribe({
+        next: () => {
+          this.limpiarFormulario();
+          this.cargarDatos();
+        },
+        error: () => {
+          this.errorMsg.set('No se pudo actualizar el banco');
+          this.loading.set(false);
+        },
+      });
+    }
+  }
+
+  editar(row: BancoExterno): void {
+    this.codigoEdicion = (row as any).codigo ?? null;
+    this.entidadBancaria = (row as any).nombre ?? '';
+    this.tarjetaCredito = !!((row as any).tarjetaCredito ?? (row as any).tarjeta);
+    this.estado = (row as any).estado ?? 1;
+    this.errorMsg.set('');
+
+    // Scroll al formulario
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  eliminar(row: BancoExterno): void {
+    const nombre = (row as any).nombre ?? 'este banco';
+    const codigo = (row as any).codigo;
+
+    if (!confirm(`¿Está seguro de eliminar ${nombre}?`)) {
+      return;
+    }
+
+    this.loading.set(true);
+    this.bancoExternoService.delete(codigo).subscribe({
       next: () => {
-        // Recargar listado tras crear
-        this.entidadBancaria = '';
-        this.tarjetaCredito = false;
-        this.estado = 1;
         this.cargarDatos();
       },
       error: () => {
-        this.errorMsg.set('No se pudo guardar el banco');
+        this.errorMsg.set('No se pudo eliminar el banco');
         this.loading.set(false);
       },
     });
+  }
+
+  cancelarEdicion(): void {
+    this.limpiarFormulario();
+  }
+
+  limpiarFormulario(): void {
+    this.codigoEdicion = null;
+    this.entidadBancaria = '';
+    this.tarjetaCredito = false;
+    this.estado = 1;
+    this.errorMsg.set('');
+  }
+
+  estaEditando(): boolean {
+    return this.codigoEdicion !== null;
   }
 
   formValido(): boolean {
@@ -164,46 +296,55 @@ export class BancosNacionalesExtranjerosComponent implements OnInit {
     this.updatePageData();
   }
 
-  trackByCodigo(index: number, item: Banco): number {
+  trackByCodigo(index: number, item: BancoExterno): number {
     return (item as any).codigo;
   }
 
-  mostrarEstado(row: Banco): string {
+  mostrarEstado(row: BancoExterno): string {
     const e = (row as any).estado;
     return e === 1 ? 'Activo' : 'Inactivo';
   }
 
-  mostrarEntidad(row: Banco): string {
+  mostrarNombre(row: BancoExterno): string {
     return (row as any).nombre ?? (row as any).entidadBancaria ?? '—';
   }
 
-  mostrarTarjeta(row: Banco): string {
-    const v = (row as any).tarjetaCredito;
+  mostrarTarjeta(row: BancoExterno): string {
+    // Intentar múltiples nombres de campo por compatibilidad
+    const v = (row as any).tarjetaCredito ?? (row as any).tarjeta;
     if (v === null || v === undefined) return '—';
     return !!v ? 'Sí' : 'No';
   }
 
+  mostrarFechaIngreso(row: BancoExterno): string {
+    const fecha = (row as any).fechaIngreso;
+    if (!fecha) return '—';
+    return this.funcionesDatos.formatoFecha(fecha, FuncionesDatosService.SOLO_FECHA);
+  }
+
   // Export helpers
   exportToCSV(): void {
-    const headers = ['Código', 'Entidad Bancaria', 'Tarjeta de Crédito', 'Estado'];
-    const dataKeys = ['codigo', 'entidadLabel', 'tarjetaLabel', 'estadoLabel'];
+    const headers = ['Código', 'Nombre', 'Tarjeta', 'Estado', 'Fecha Ingreso'];
+    const dataKeys = ['codigo', 'nombre', 'tarjetaLabel', 'estadoLabel', 'fechaIngreso'];
     const exportData = (this.allData() || []).map((row: any) => ({
       codigo: row.codigo ?? '',
-      entidadLabel: this.mostrarEntidad(row),
+      nombre: this.mostrarNombre(row),
       tarjetaLabel: this.mostrarTarjeta(row),
       estadoLabel: this.mostrarEstado(row),
+      fechaIngreso: this.mostrarFechaIngreso(row),
     }));
     this.exportService.exportToCSV(exportData, 'bancos-nacionales-extranjeros', headers, dataKeys);
   }
 
   exportToPDF(): void {
-    const headers = ['Código', 'Entidad Bancaria', 'Tarjeta de Crédito', 'Estado'];
-    const dataKeys = ['codigo', 'entidadLabel', 'tarjetaLabel', 'estadoLabel'];
+    const headers = ['Código', 'Nombre', 'Tarjeta', 'Estado', 'Fecha Ingreso'];
+    const dataKeys = ['codigo', 'nombre', 'tarjetaLabel', 'estadoLabel', 'fechaIngreso'];
     const exportData = (this.allData() || []).map((row: any) => ({
       codigo: row.codigo ?? '',
-      entidadLabel: this.mostrarEntidad(row),
+      nombre: this.mostrarNombre(row),
       tarjetaLabel: this.mostrarTarjeta(row),
       estadoLabel: this.mostrarEstado(row),
+      fechaIngreso: this.mostrarFechaIngreso(row),
     }));
     this.exportService.exportToPDF(
       exportData,
