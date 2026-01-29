@@ -1,5 +1,23 @@
 <div class="cuentas-admin">
-  <h2>Administración Cuentas Bancarias</h2>
+  <div class="page-header">
+    <div class="icon-wrap">
+      <mat-icon>account_balance</mat-icon>
+    </div>
+    <div class="title-wrap">
+      <h2 class="title">Cuentas Bancarias</h2>
+      <p class="subtitle">Administración y consulta por Banco</p>
+    </div>
+    <div class="actions">
+      <button mat-stroked-button color="primary" (click)="exportCuentasCSV()">
+        <mat-icon>table_rows</mat-icon>
+        CSV
+      </button>
+      <button mat-stroked-button color="primary" (click)="exportCuentasPDF()">
+        <mat-icon>picture_as_pdf</mat-icon>
+        PDF
+      </button>
+    </div>
+  </div>
 
   <div class="listas">
     <section class="panel bancos">
@@ -44,7 +62,7 @@
         </mat-form-field>
       </header>
 
-      <table mat-table [dataSource]="cuentasPage()" class="mat-elevation-z1">
+      <table mat-table [dataSource]="cuentasPage()" class="mat-elevation-z1 cuentas-table">
         <ng-container matColumnDef="numero">
           <th mat-header-cell *matHeaderCellDef>CUENTA</th>
           <td mat-cell *matCellDef="let row">{{ row.numeroCuenta }}</td>
@@ -57,7 +75,7 @@
 
         <ng-container matColumnDef="saldo">
           <th mat-header-cell *matHeaderCellDef>SALDO INICIAL</th>
-          <td mat-cell *matCellDef="let row">{{ row.saldoInicial | number : '1.2-2' }}</td>
+          <td mat-cell *matCellDef="let row">{{ row.saldoInicial | number: '1.2-2' }}</td>
         </ng-container>
 
         <ng-container matColumnDef="cuentaContable">
@@ -200,7 +218,7 @@
         </mat-form-field>
       </div>
 
-      <div class="actions">
+      <div class="form-actions">
         <button mat-raised-button color="primary" [disabled]="!hasBanco()">Guardar</button>
         <button mat-stroked-button color="accent">Limpiar</button>
       </div>

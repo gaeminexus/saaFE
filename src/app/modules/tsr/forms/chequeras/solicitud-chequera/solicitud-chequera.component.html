@@ -1,7 +1,19 @@
 <div class="solicitud-page">
-  <h2>Solicitud de Chequera</h2>
+  <div class="page-header">
+    <div class="icon-wrap"><mat-icon>library_add</mat-icon></div>
+    <div class="title-wrap">
+      <h2 class="title">Solicitud de Chequera</h2>
+      <p class="subtitle">Generación de pedidos por banco y cuenta</p>
+    </div>
+    <div class="actions">
+      <!-- Acciones de cabecera opcionales -->
+    </div>
+  </div>
 
   <div class="form-card">
+    <header class="panel-header">
+      <h3>Datos de la solicitud</h3>
+    </header>
     <div class="row">
       <mat-form-field appearance="outline">
         <mat-label>Banco</mat-label>
@@ -34,7 +46,7 @@
       </mat-form-field>
     </div>
 
-    <div class="actions">
+    <div class="form-actions">
       <button
         mat-raised-button
         color="primary"

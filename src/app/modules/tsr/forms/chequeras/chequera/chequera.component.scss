@@ -7,10 +7,39 @@
   gap: $spacing-md;
 }
 
-h1 {
+// Encabezado de página
+.page-header {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: $spacing-md;
+  padding: $spacing-sm $spacing-md;
+  border: $border-width solid $border-light;
+  border-radius: $border-radius-md;
+  background: $background-primary;
+  box-shadow: 0 2px 6px $shadow-color-light;
+}
+
+.icon-wrap {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: $background-gradient;
+  color: $text-light;
+}
+
+.title-wrap .title {
   margin: 0;
-  font-size: $font-size-xl;
-  color: $text-primary;
+  font-size: 20px;
+}
+
+.title-wrap .subtitle {
+  margin: 0;
+  font-size: 13px;
+  color: $text-secondary;
 }
 
 .form-card {
@@ -24,12 +53,15 @@ h1 {
   gap: $spacing-sm;
 }
 
-.section-title {
-  background: $primary-color;
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-sm $spacing-md;
+  margin: calc(-1 * $spacing-md) calc(-1 * $spacing-md) $spacing-sm;
+  border-radius: $border-radius-md $border-radius-md 0 0;
+  background: $background-gradient;
   color: $text-light;
-  padding: $spacing-xs $spacing-sm;
-  border-radius: $border-radius-sm;
-  font-weight: 600;
 }
 
 .row {
@@ -44,19 +76,63 @@ h1 {
   background: $background-primary;
 }
 
-.table-title {
-  background: $secondary-color;
-  color: $text-light;
-  padding: $spacing-xs $spacing-sm;
-  font-weight: 600;
+.table-scroll {
+  max-height: 360px;
+  overflow: auto;
 }
 
 .table-card table {
   width: 100%;
 }
 
-th[mat-header-cell] {
-  background: $background-tertiary;
-  color: $text-primary;
-  border-bottom: $border-width solid $border-medium;
+// Estilos del grid y sticky header
+.chequeras-table,
+.cheques-table {
+  thead .mat-mdc-header-row .mat-mdc-header-cell,
+  .mat-header-row .mat-header-cell {
+    background: $background-gradient;
+    color: $text-light;
+    font-weight: 600;
+  }
+
+  .mat-mdc-row:hover,
+  .mat-row:hover {
+    background: rgba(0, 0, 0, 0.04);
+  }
+
+  .mat-mdc-header-row,
+  .mat-header-row {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+  }
+}
+
+/* Export buttons: force white text/icon for visibility */
+.export-actions .mat-mdc-button,
+.export-actions .mat-mdc-raised-button,
+.export-actions [mat-button],
+.export-actions [mat-raised-button],
+.export-actions [mat-stroked-button],
+.export-actions [mat-flat-button] {
+  color: #fff !important;
+}
+
+.export-actions .mat-icon {
+  color: #fff !important;
+}
+
+/* Fallbacks if using aria-labels instead of wrapper class */
+button[aria-label*='CSV'],
+button[aria-label*='csv'],
+button[aria-label*='PDF'],
+button[aria-label*='pdf'] {
+  color: #fff !important;
+}
+
+button[aria-label*='CSV'] .mat-icon,
+button[aria-label*='csv'] .mat-icon,
+button[aria-label*='PDF'] .mat-icon,
+button[aria-label*='pdf'] .mat-icon {
+  color: #fff !important;
 }

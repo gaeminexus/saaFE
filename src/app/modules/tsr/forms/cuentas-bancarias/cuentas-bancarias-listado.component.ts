@@ -7,6 +7,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTableModule } from '@angular/material/table';
+import { ExportService } from '../../../../shared/services/export.service';
 import { CuentaBancaria } from '../../model/cuenta-bancaria';
 import { CuentaBancariaService } from '../../service/cuenta-bancaria.service';
 
@@ -25,7 +26,23 @@ import { CuentaBancariaService } from '../../service/cuenta-bancaria.service';
   ],
   template: `
     <div class="cuentas-page">
-      <h2>Cuentas Bancarias</h2>
+      <div class="page-header">
+        <div class="icon-wrap"><mat-icon>account_balance_wallet</mat-icon></div>
+        <div class="title-wrap">
+          <h2 class="title">Cuentas Bancarias</h2>
+          <p class="subtitle">Listado general y exportación</p>
+        </div>
+        <div class="actions">
+          <button mat-stroked-button color="primary" (click)="exportCSV()">
+            <mat-icon>table_rows</mat-icon>
+            CSV
+          </button>
+          <button mat-stroked-button color="primary" (click)="exportPDF()">
+            <mat-icon>picture_as_pdf</mat-icon>
+            PDF
+          </button>
+        </div>
+      </div>
 
       <div class="table-card">
         <mat-form-field appearance="outline" class="filter-field">
@@ -44,7 +61,7 @@ import { CuentaBancariaService } from '../../service/cuenta-bancaria.service';
           <mat-spinner diameter="32"></mat-spinner>
         </div>
 
-        <table mat-table [dataSource]="pageData()" class="mat-elevation-z2">
+        <table mat-table [dataSource]="pageData()" class="mat-elevation-z2 cuentas-table">
           <ng-container matColumnDef="codigo">
             <th mat-header-cell *matHeaderCellDef>Código</th>
             <td mat-cell *matCellDef="let row">{{ row.codigo }}</td>
@@ -62,7 +79,7 @@ import { CuentaBancariaService } from '../../service/cuenta-bancaria.service';
 
           <ng-container matColumnDef="estado">
             <th mat-header-cell *matHeaderCellDef>Estado</th>
-            <td mat-cell *matCellDef="let row">{{ row.estado }}</td>
+            <td mat-cell *matCellDef="let row">{{ mostrarEstado(row) }}</td>
           </ng-container>
 
           <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
@@ -102,7 +119,10 @@ export class CuentasBancariasListadoComponent implements OnInit {
   // Computados
   hasItems = computed(() => this.pageData().length > 0);
 
-  constructor(private cuentaService: CuentaBancariaService) {}
+  constructor(
+    private cuentaService: CuentaBancariaService,
+    private exportService: ExportService,
+  ) {}
 
   ngOnInit(): void {
     this.cargarDatos();
@@ -156,5 +176,54 @@ export class CuentasBancariasListadoComponent implements OnInit {
 
   trackByCodigo(index: number, item: CuentaBancaria): number {
     return item.codigo;
+  }
+
+  mostrarEstado(row: CuentaBancaria): string {
+    const est: any = (row as any).estado;
+    return est === 1 ? 'Activo' : est === 0 ? 'Inactivo' : `${est}`;
+  }
+
+  // Exportaciones
+  exportCSV(): void {
+    const headers = ['Código', 'Nº Cuenta', 'Titular', 'Estado'];
+    // Exportar el dataset filtrado completo
+    const filtroTxt = this.filtro().toLowerCase();
+    const filtered = this.allData().filter((item) => {
+      const base = `${item.codigo} ${item.numeroCuenta ?? ''} ${item.titular ?? ''}`.toLowerCase();
+      return base.includes(filtroTxt);
+    });
+    const rows = filtered.map((c) => ({
+      codigo: (c as any).codigo ?? '',
+      numeroCuenta: (c as any).numeroCuenta ?? '',
+      titular: (c as any).titular ?? '',
+      estadoLabel: this.mostrarEstado(c),
+    }));
+    this.exportService.exportToCSV(rows, 'cuentas-bancarias', headers, [
+      'codigo',
+      'numeroCuenta',
+      'titular',
+      'estadoLabel',
+    ]);
+  }
+
+  exportPDF(): void {
+    const headers = ['Código', 'Nº Cuenta', 'Titular', 'Estado'];
+    const filtroTxt = this.filtro().toLowerCase();
+    const filtered = this.allData().filter((item) => {
+      const base = `${item.codigo} ${item.numeroCuenta ?? ''} ${item.titular ?? ''}`.toLowerCase();
+      return base.includes(filtroTxt);
+    });
+    const rows = filtered.map((c) => ({
+      codigo: (c as any).codigo ?? '',
+      numeroCuenta: (c as any).numeroCuenta ?? '',
+      titular: (c as any).titular ?? '',
+      estadoLabel: this.mostrarEstado(c),
+    }));
+    this.exportService.exportToPDF(rows, 'cuentas-bancarias', 'Cuentas Bancarias', headers, [
+      'codigo',
+      'numeroCuenta',
+      'titular',
+      'estadoLabel',
+    ]);
   }
 }

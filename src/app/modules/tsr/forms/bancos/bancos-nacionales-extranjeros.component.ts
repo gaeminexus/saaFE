@@ -11,8 +11,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
 import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
-import { DetalleRubro } from '../../../../shared/model/detalle-rubro';
-import { DetalleRubroService } from '../../../../shared/services/detalle-rubro.service';
+import { ExportService } from '../../../../shared/services/export.service';
 import { Banco } from '../../model/banco';
 import { BancoService } from '../../service/banco.service';
 
@@ -53,45 +52,20 @@ export class BancosNacionalesExtranjerosComponent implements OnInit {
   filtro = signal<string>('');
 
   // Formulario
-  nombre = '';
-  tipoBancoSeleccion: DetalleRubro | null = null;
-  permiteDescuadre = false;
+  entidadBancaria = '';
+  tarjetaCredito = false;
   estado: 0 | 1 = 1;
 
-  // Rubros tipo de banco (id 24)
-  rubrosTipoBanco = signal<DetalleRubro[]>([]);
-
-  displayedColumns: string[] = ['codigo', 'nombre', 'tipo', 'permite', 'estado'];
+  displayedColumns: string[] = ['codigo', 'entidad', 'tarjeta', 'estado'];
   hasItems = computed(() => this.pageData().length > 0);
 
   constructor(
     private bancoService: BancoService,
-    private detalleRubroService: DetalleRubroService
+    private exportService: ExportService,
   ) {}
 
   ngOnInit(): void {
-    this.cargarRubrosTipoBanco();
     this.cargarDatos();
-  }
-
-  cargarRubrosTipoBanco(): void {
-    // Rubro 24: Tipo de banco
-    // Preferir caché local si DetalleRubroService ya fue inicializado
-    const cached = this.detalleRubroService.getDetallesByParent(24);
-    if (Array.isArray(cached) && cached.length > 0) {
-      this.rubrosTipoBanco.set(cached);
-      return;
-    }
-
-    // Fallback a obtener desde backend
-    this.detalleRubroService.getRubros(24).subscribe({
-      next: (rubros) => {
-        this.rubrosTipoBanco.set(Array.isArray(rubros) ? rubros : []);
-      },
-      error: () => {
-        this.errorMsg.set('Error al cargar rubros de tipo de banco');
-      },
-    });
   }
 
   cargarDatos(): void {
@@ -137,25 +111,18 @@ export class BancosNacionalesExtranjerosComponent implements OnInit {
       return;
     }
     const payload: any = {
-      nombre: this.nombre?.trim(),
-      // Campos según pantalla clásica
-      permiteDescuadre: this.permiteDescuadre,
+      // Backend acepta 'nombre' y 'estado';
+      // evitar propiedades desconocidas como 'entidadBancaria' y 'tarjetaCredito'.
+      nombre: this.entidadBancaria?.trim(),
       estado: this.estado,
     };
-
-    // Mapear rubro seleccionado si existe (convención P/H como en otros modelos)
-    if (this.tipoBancoSeleccion) {
-      payload.rubroTipoBancoP = this.tipoBancoSeleccion.rubro?.codigoAlterno ?? 24;
-      payload.rubroTipoBancoH = this.tipoBancoSeleccion.codigoAlterno;
-    }
 
     this.loading.set(true);
     this.bancoService.add(payload).subscribe({
       next: () => {
         // Recargar listado tras crear
-        this.nombre = '';
-        this.tipoBancoSeleccion = null;
-        this.permiteDescuadre = false;
+        this.entidadBancaria = '';
+        this.tarjetaCredito = false;
         this.estado = 1;
         this.cargarDatos();
       },
@@ -166,22 +133,8 @@ export class BancosNacionalesExtranjerosComponent implements OnInit {
     });
   }
 
-  mostrarTipo(row: Banco): string {
-    // Resolver nombre del tipo usando catálogo cargado
-    const p: number = (row as any).rubroTipoBancoP;
-    const h: number = (row as any).rubroTipoBancoH;
-    const found = this.rubrosTipoBanco().find(
-      (r) => r.rubro?.codigoAlterno === p && r.codigoAlterno === h
-    );
-    return found ? found.descripcion : '—';
-  }
-
   formValido(): boolean {
-    return !!this.nombre?.trim() && !!this.tipoBancoSeleccion;
-  }
-
-  onTipoBancoChange(rubro: DetalleRubro | null): void {
-    this.tipoBancoSeleccion = rubro;
+    return !!this.entidadBancaria?.trim();
   }
 
   aplicarFiltro(value: string): void {
@@ -193,7 +146,9 @@ export class BancosNacionalesExtranjerosComponent implements OnInit {
   updatePageData(): void {
     const filtroTxt = this.filtro().toLowerCase();
     const filtered = this.allData().filter((item) => {
-      const base = `${(item as any).codigo ?? ''} ${(item as any).nombre ?? ''}`.toLowerCase();
+      const tarjetaTxt = (item as any).tarjetaCredito ? 'si' : 'no';
+      const base =
+        `${(item as any).codigo ?? ''} ${(item as any).nombre ?? ''} ${tarjetaTxt}`.toLowerCase();
       return base.includes(filtroTxt);
     });
 
@@ -213,17 +168,49 @@ export class BancosNacionalesExtranjerosComponent implements OnInit {
     return (item as any).codigo;
   }
 
-  trackByCodigoAlterno(index: number, item: DetalleRubro): number {
-    return item.codigoAlterno;
-  }
-
-  mostrarPermite(row: Banco): string {
-    const p = !!(row as any).permiteDescuadre;
-    return p ? 'Sí' : 'No';
-  }
-
   mostrarEstado(row: Banco): string {
     const e = (row as any).estado;
     return e === 1 ? 'Activo' : 'Inactivo';
+  }
+
+  mostrarEntidad(row: Banco): string {
+    return (row as any).nombre ?? (row as any).entidadBancaria ?? '—';
+  }
+
+  mostrarTarjeta(row: Banco): string {
+    const v = (row as any).tarjetaCredito;
+    if (v === null || v === undefined) return '—';
+    return !!v ? 'Sí' : 'No';
+  }
+
+  // Export helpers
+  exportToCSV(): void {
+    const headers = ['Código', 'Entidad Bancaria', 'Tarjeta de Crédito', 'Estado'];
+    const dataKeys = ['codigo', 'entidadLabel', 'tarjetaLabel', 'estadoLabel'];
+    const exportData = (this.allData() || []).map((row: any) => ({
+      codigo: row.codigo ?? '',
+      entidadLabel: this.mostrarEntidad(row),
+      tarjetaLabel: this.mostrarTarjeta(row),
+      estadoLabel: this.mostrarEstado(row),
+    }));
+    this.exportService.exportToCSV(exportData, 'bancos-nacionales-extranjeros', headers, dataKeys);
+  }
+
+  exportToPDF(): void {
+    const headers = ['Código', 'Entidad Bancaria', 'Tarjeta de Crédito', 'Estado'];
+    const dataKeys = ['codigo', 'entidadLabel', 'tarjetaLabel', 'estadoLabel'];
+    const exportData = (this.allData() || []).map((row: any) => ({
+      codigo: row.codigo ?? '',
+      entidadLabel: this.mostrarEntidad(row),
+      tarjetaLabel: this.mostrarTarjeta(row),
+      estadoLabel: this.mostrarEstado(row),
+    }));
+    this.exportService.exportToPDF(
+      exportData,
+      'bancos-nacionales-extranjeros',
+      'Bancos Nacionales y Extranjeros',
+      headers,
+      dataKeys,
+    );
   }
 }

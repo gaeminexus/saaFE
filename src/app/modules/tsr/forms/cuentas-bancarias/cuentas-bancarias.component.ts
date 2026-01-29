@@ -13,6 +13,7 @@ import { MatTableModule } from '@angular/material/table';
 import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
 import { DetalleRubro } from '../../../../shared/model/detalle-rubro';
 import { DetalleRubroService } from '../../../../shared/services/detalle-rubro.service';
+import { ExportService } from '../../../../shared/services/export.service';
 import { Banco } from '../../model/banco';
 import { CuentaBancaria } from '../../model/cuenta-bancaria';
 import { BancoService } from '../../service/banco.service';
@@ -97,7 +98,8 @@ export class CuentasBancariasComponent implements OnInit {
   constructor(
     private bancoService: BancoService,
     private cuentaService: CuentaBancariaService,
-    private detalleRubroService: DetalleRubroService
+    private detalleRubroService: DetalleRubroService,
+    private exportService: ExportService,
   ) {}
 
   ngOnInit(): void {
@@ -170,7 +172,7 @@ export class CuentasBancariasComponent implements OnInit {
   updateBancoPage(): void {
     const filtro = this.filtroBancos().toLowerCase();
     const filtered = this.bancos().filter((b) =>
-      `${(b as any).nombre ?? ''}`.toLowerCase().includes(filtro)
+      `${(b as any).nombre ?? ''}`.toLowerCase().includes(filtro),
     );
     this.bancosTotal.set(filtered.length);
     const start = this.bancosPageIndex() * this.bancosPageSize();
@@ -226,12 +228,45 @@ export class CuentasBancariasComponent implements OnInit {
     const p: number = (row as any).rubroTipoCuentaP;
     const h: number = (row as any).rubroTipoCuentaH;
     const found = this.tiposCuenta().find(
-      (r) => r.rubro?.codigoAlterno === p && r.codigoAlterno === h
+      (r) => r.rubro?.codigoAlterno === p && r.codigoAlterno === h,
     );
     return found ? found.descripcion : '—';
   }
 
   mostrarEstado(row: CuentaBancaria): string {
     return (row as any).estado === 1 ? 'Activo' : 'Inactivo';
+  }
+
+  // Exportaciones
+  exportCuentasCSV(): void {
+    const headers = ['Código', 'Nº Cuenta', 'Titular', 'Estado'];
+    const rows = this.cuentasFiltradas().map((c) => ({
+      codigo: (c as any).codigo ?? '',
+      numeroCuenta: (c as any).numeroCuenta ?? '',
+      titular: (c as any).titular ?? '',
+      estadoLabel: this.mostrarEstado(c),
+    }));
+    this.exportService.exportToCSV(rows, 'cuentas-bancarias', headers, [
+      'codigo',
+      'numeroCuenta',
+      'titular',
+      'estadoLabel',
+    ]);
+  }
+
+  exportCuentasPDF(): void {
+    const headers = ['Código', 'Nº Cuenta', 'Titular', 'Estado'];
+    const rows = this.cuentasFiltradas().map((c) => ({
+      codigo: (c as any).codigo ?? '',
+      numeroCuenta: (c as any).numeroCuenta ?? '',
+      titular: (c as any).titular ?? '',
+      estadoLabel: this.mostrarEstado(c),
+    }));
+    this.exportService.exportToPDF(rows, 'cuentas-bancarias', 'Cuentas Bancarias', headers, [
+      'codigo',
+      'numeroCuenta',
+      'titular',
+      'estadoLabel',
+    ]);
   }
 }

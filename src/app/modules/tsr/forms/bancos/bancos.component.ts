@@ -10,9 +10,11 @@ import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
+import { MatToolbarModule } from '@angular/material/toolbar';
 import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
 import { DetalleRubro } from '../../../../shared/model/detalle-rubro';
 import { DetalleRubroService } from '../../../../shared/services/detalle-rubro.service';
+import { ExportService } from '../../../../shared/services/export.service';
 import { Banco } from '../../model/banco';
 import { BancoService } from '../../service/banco.service';
 
@@ -31,6 +33,7 @@ import { BancoService } from '../../service/banco.service';
     MatIconModule,
     MatButtonModule,
     MatCheckboxModule,
+    MatToolbarModule,
   ],
   templateUrl: './bancos.component.html',
   styleUrls: ['./bancos.component.scss'],
@@ -66,7 +69,8 @@ export class BancosComponent implements OnInit {
 
   constructor(
     private bancoService: BancoService,
-    private detalleRubroService: DetalleRubroService
+    private detalleRubroService: DetalleRubroService,
+    private exportService: ExportService,
   ) {}
 
   ngOnInit(): void {
@@ -154,7 +158,7 @@ export class BancosComponent implements OnInit {
     const p: number = (row as any).rubroTipoBancoP;
     const h: number = (row as any).rubroTipoBancoH;
     const found = this.rubrosTipoBanco().find(
-      (r) => r.rubro?.codigoAlterno === p && r.codigoAlterno === h
+      (r) => r.rubro?.codigoAlterno === p && r.codigoAlterno === h,
     );
     return found ? found.descripcion : '—';
   }
@@ -206,5 +210,41 @@ export class BancosComponent implements OnInit {
 
   trackByCodigoAlterno(index: number, item: DetalleRubro): number {
     return item.codigoAlterno;
+  }
+
+  // Export helpers
+  exportToCSV(): void {
+    const headers = ['Código', 'Descripción', 'Tipo', 'Permite Descuadre', 'Estado'];
+    const dataKeys = ['codigo', 'nombre', 'tipoLabel', 'permiteLabel', 'estadoLabel'];
+    const exportData = (this.allData() || []).map((row: any) => ({
+      codigo: row.codigo ?? '',
+      nombre: row.nombre ?? '',
+      tipoLabel: this.mostrarTipo(row),
+      permiteLabel: this.mostrarPermite(row),
+      estadoLabel: this.mostrarEstado(row),
+    }));
+    this.exportService.exportToCSV(exportData, 'bancos', headers, dataKeys);
+  }
+
+  exportToPDF(): void {
+    const headers = ['Código', 'Descripción', 'Tipo', 'Permite Descuadre', 'Estado'];
+    const dataKeys = ['codigo', 'nombre', 'tipoLabel', 'permiteLabel', 'estadoLabel'];
+    const exportData = (this.allData() || []).map((row: any) => ({
+      codigo: row.codigo ?? '',
+      nombre: row.nombre ?? '',
+      tipoLabel: this.mostrarTipo(row),
+      permiteLabel: this.mostrarPermite(row),
+      estadoLabel: this.mostrarEstado(row),
+    }));
+    try {
+      this.exportService.exportToPDF(exportData, 'bancos', 'Bancos', headers, dataKeys);
+    } catch (e) {
+      const w = window as any;
+      if (typeof w.loadJsPDF === 'function') {
+        w.loadJsPDF().then(() =>
+          this.exportService.exportToPDF(exportData, 'bancos', 'Bancos', headers, dataKeys),
+        );
+      }
+    }
   }
 }

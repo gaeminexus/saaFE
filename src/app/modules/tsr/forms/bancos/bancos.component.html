@@ -1,5 +1,35 @@
 <div class="bancos-page">
-  <h2>Bancos</h2>
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-icon">
+        <mat-icon>account_balance</mat-icon>
+      </div>
+      <div class="header-text">
+        <h1>Bancos</h1>
+        <p class="subtitle">Gestión de bancos y clasificación</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <div class="export-buttons">
+        <button
+          mat-stroked-button
+          (click)="exportToCSV()"
+          [disabled]="loading() || totalItems() === 0"
+        >
+          <mat-icon>description</mat-icon>
+          CSV
+        </button>
+        <button
+          mat-stroked-button
+          (click)="exportToPDF()"
+          [disabled]="loading() || totalItems() === 0"
+        >
+          <mat-icon>picture_as_pdf</mat-icon>
+          PDF
+        </button>
+      </div>
+    </div>
+  </div>
 
   <div class="form-card">
     <div class="form-row">
