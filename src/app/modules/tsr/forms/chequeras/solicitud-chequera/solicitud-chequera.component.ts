@@ -195,9 +195,9 @@ export class SolicitudChequeraComponent implements OnInit {
     this.successMsg.set('');
 
     if (this.codigoEdicion === null) {
-      // Estado por defecto: rubro 25, valor 3
+      // Estado por defecto: rubro 25, valor 3 (se usa solo P)
       payload.rubroEstadoChequeraP = 3;
-      const estadoDefault = this.estadosChequera().find((e) => e.rubro?.codigoAlterno === 3);
+      const estadoDefault = this.estadosChequera().find((e) => e.codigoAlterno === 3);
       if (estadoDefault) {
         payload.rubroEstadoChequeraH = estadoDefault.codigoAlterno;
       }
@@ -325,11 +325,22 @@ export class SolicitudChequeraComponent implements OnInit {
   mostrarEstado(row: any): string {
     const p = (row as any).rubroEstadoChequeraP;
     const h = (row as any).rubroEstadoChequeraH;
-    if (!p || !h) return '—';
+    if (p == null) return '—';
 
-    const found = this.estadosChequera().find(
-      (e) => String(e.rubro?.codigoAlterno) === String(p) && String(e.codigoAlterno) === String(h),
-    );
+    const estados = this.estadosChequera();
+    let found;
+
+    if (h != null) {
+      // Caso completo P/H
+      found = estados.find(
+        (e) =>
+          String(e.rubro?.codigoAlterno) === String(p) && String(e.codigoAlterno) === String(h),
+      );
+    } else {
+      // Backend solo llena P (como en tus logs)
+      found = estados.find((e) => String(e.codigoAlterno) === String(p));
+    }
+
     return found ? found.descripcion : '—';
   }
 }
