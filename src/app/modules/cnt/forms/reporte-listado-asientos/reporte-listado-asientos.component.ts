@@ -604,6 +604,8 @@ export class ReporteListadoAsientosComponent implements OnInit {
    * Navega a la pantalla de edición de asiento
    */
   editarAsiento(asiento: Asiento): void {
-    this.router.navigate(['/menucontabilidad/procesos/asientos-dinamico', asiento.codigo]);
+    this.router.navigate(['/menucontabilidad/procesos/asientos-dinamico', asiento.codigo], {
+      queryParams: { fromReport: 'true' }
+    });
   }
 }

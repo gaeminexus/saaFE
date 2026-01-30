@@ -247,7 +247,7 @@ export class NaturalezaDeCuentasComponent implements OnInit {
 
     const idEmpresa = Number(localStorage.getItem('idEmpresa') || '1236');
 
-    this.jasperReportes.generar('naturaleza-cuentas-empresa', { empresa: idEmpresa }).subscribe({
+    this.jasperReportes.generar('cnt', 'naturaleza-cuentas-empresa', { empresa: idEmpresa }, 'PDF').subscribe({
       next: (blob) => {
         this.loading = false;
 

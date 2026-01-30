@@ -49,6 +49,8 @@ import { DetalleAsientoService } from '../../service/detalle-asiento.service';
 import { PlanCuentaService } from '../../service/plan-cuenta.service';
 import { TipoAsientoService } from '../../service/tipo-asiento.service';
 import { PlanCuentaSelectorDialogComponent } from '../../../../shared/components/plan-cuenta-selector-dialog/plan-cuenta-selector-dialog.component';
+import { ConfirmDialogComponent } from '../../../../shared/basics/confirm-dialog/confirm-dialog.component';
+import { JasperReportesService } from '../../../../shared/services/jasper-reportes.service';
 
 interface CuentaItem {
   cuenta: PlanCuenta | null;
@@ -100,6 +102,7 @@ export class AsientosContablesDinamico implements OnInit {
   codigoAsientoActual: number | null = null; // Para trackear si estamos editando
   asientoActual: Asiento | null = null; // Para almacenar datos completos del asiento
   detallesOriginales: any[] = []; // Para trackear detalles cargados del backend
+  vieneDesdeReporte = false; // Para mostrar botón de regreso
 
   // Arrays para el grid con drag-and-drop
   cuentasDebeGrid: CuentaItem[] = [];
@@ -145,7 +148,8 @@ export class AsientosContablesDinamico implements OnInit {
     private dialog: MatDialog,
     private snackBar: MatSnackBar,
     private route: ActivatedRoute,
-    private router: Router
+    private router: Router,
+    private jasperReportes: JasperReportesService
   ) {}
 
   ngOnInit(): void {
@@ -175,6 +179,12 @@ export class AsientosContablesDinamico implements OnInit {
     this.route.queryParams.subscribe((params) => {
       const asientoId = params['id'];
       const mode = params['mode'];
+      const fromReport = params['fromReport'];
+
+      // Detectar si viene desde reporte
+      if (fromReport === 'true') {
+        this.vieneDesdeReporte = true;
+      }
 
       if (asientoId) {
         this.cargarAsientoPorId(parseInt(asientoId, 10), mode);
@@ -350,12 +360,24 @@ export class AsientosContablesDinamico implements OnInit {
           // Cargar detalles del asiento
           this.cargarDetallesAsiento(id);
 
+          // Solo permitir edición si el asiento está INCOMPLETO (4)
+          if (asiento.estado !== 4) {
+            this.deshabilitarFormulario();
+          }
+
           if (mode === 'view') {
             // Deshabilitar formulario para solo lectura
             this.form.disable();
             this.showMessage('Asiento cargado en modo solo lectura', 'info');
           } else {
-            this.showMessage(`Asiento ${asiento.numero} cargado para edición`, 'success');
+            // Mensaje según el estado
+            if (asiento.estado === 1) {
+              this.showMessage(`Asiento ${asiento.numero} cargado - ACTIVO (solo consulta)`, 'info');
+            } else if (asiento.estado === 2) {
+              this.showMessage(`Asiento ${asiento.numero} cargado - ANULADO (solo consulta)`, 'info');
+            } else {
+              this.showMessage(`Asiento ${asiento.numero} cargado para edición`, 'success');
+            }
           }
         } else {          this.loading = false;
           this.showMessage(`No se encontró el asiento con ID ${id}`, 'error');
@@ -688,13 +710,8 @@ export class AsientosContablesDinamico implements OnInit {
     // Obtener fechas del formulario
     const fechaAsiento = this.form.get('fechaAsiento')?.value;
 
-    // Determinar el estado del asiento
+    // Determinar el estado del asiento (mantener en INCOMPLETO hasta confirmación manual)
     let estadoAsiento = this.form.get('estado')?.value || this.asientoActual?.estado || 4;
-
-    // Si estamos actualizando y el asiento está cuadrado, cambiar a ACTIVO
-    if (this.codigoAsientoActual && this.diferencia === 0 && this.totalDebe > 0 && this.totalHaber > 0) {
-      estadoAsiento = 1; // ACTIVO
-    }
 
     const asientoBackend: any = {
       empresa: {
@@ -759,11 +776,6 @@ export class AsientosContablesDinamico implements OnInit {
         let mensaje = this.codigoAsientoActual
           ? `✅ Cabecera del Asiento #${response.numero} actualizada exitosamente`
           : `✅ Cabecera del Asiento #${response.numero} guardada exitosamente`;
-
-        // Agregar mensaje si el asiento pasó a ACTIVO
-        if (estadoAsiento === 1 && this.codigoAsientoActual) {
-          mensaje += ' - 🟢 Asiento ACTIVO (cuadrado)';
-        }
 
         this.snackBar.open(mensaje, 'Cerrar', {
           duration: 4000,
@@ -1925,6 +1937,306 @@ export class AsientosContablesDinamico implements OnInit {
         this.onCuentaSeleccionada(tipo, index, cuentaSeleccionada);
       }
     });
+  }
+
+  /**
+   * Verificar si el asiento está cuadrado (listo para confirmar)
+   */
+  get asientoCuadrado(): boolean {
+    return this.diferencia === 0 && this.totalDebe > 0 && this.totalHaber > 0;
+  }
+
+  /**
+   * Verificar si el asiento está en estado ACTIVO (confirmado)
+   */
+  get asientoActivo(): boolean {
+    const estado = this.form.get('estado')?.value;
+    return estado === 1;
+  }
+
+  /**
+   * Verificar si el asiento está en estado ANULADO
+   */
+  get asientoAnulado(): boolean {
+    const estado = this.form.get('estado')?.value;
+    return estado === 2;
+  }
+
+  /**
+   * Confirmar el asiento (cambiar de INCOMPLETO a ACTIVO)
+   * Solo disponible cuando el asiento está cuadrado
+   */
+  confirmarAsiento(): void {
+    if (!this.asientoCuadrado) {
+      this.snackBar.open('⚠️ El asiento debe estar cuadrado para confirmarlo', 'Cerrar', {
+        duration: 4000,
+        panelClass: ['warning-snackbar']
+      });
+      return;
+    }
+
+    if (!this.codigoAsientoActual) {
+      this.snackBar.open('⚠️ Debe guardar la cabecera primero', 'Cerrar', {
+        duration: 4000,
+        panelClass: ['warning-snackbar']
+      });
+      return;
+    }
+
+    // Mostrar diálogo de confirmación
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      width: '450px',
+      data: {
+        title: '🔒 Confirmar Asiento',
+        message: '¿Está seguro de confirmar este asiento?',
+        detail: 'Una vez confirmado, NO se podrán realizar modificaciones. Solo podrá consultar, anular o reversar el asiento.',
+        confirmText: 'Sí, Confirmar',
+        cancelText: 'Cancelar'
+      }
+    });
+
+    dialogRef.afterClosed().subscribe((confirmed: boolean) => {
+      if (confirmed) {
+        this.ejecutarConfirmacion();
+      }
+    });
+  }
+
+  /**
+   * Ejecutar la confirmación del asiento (cambiar estado a ACTIVO)
+   */
+  private ejecutarConfirmacion(): void {
+    this.loading = true;
+
+    // Actualizar solo el estado del asiento a ACTIVO (1)
+    const asientoActualizado = {
+      ...this.asientoActual,
+      codigo: this.codigoAsientoActual,
+      estado: 1 // ACTIVO
+    };
+
+    this.asientoService.actualizarAsiento(this.codigoAsientoActual!, asientoActualizado).subscribe({
+      next: () => {
+        this.loading = false;
+        this.form.patchValue({ estado: 1 });
+
+        // Deshabilitar formulario para prevenir ediciones
+        this.deshabilitarFormulario();
+
+        this.snackBar.open('✅ Asiento confirmado exitosamente - Estado: ACTIVO 🔒', 'Cerrar', {
+          duration: 5000,
+          horizontalPosition: 'center',
+          verticalPosition: 'top',
+          panelClass: ['success-snackbar']
+        });
+      },
+      error: (error: any) => {
+        this.loading = false;
+        const errorMsg = error?.error?.message || error?.message || 'Error desconocido';
+        this.snackBar.open(`❌ Error al confirmar asiento: ${errorMsg}`, 'Cerrar', {
+          duration: 5000,
+          panelClass: ['error-snackbar']
+        });
+      }
+    });
+  }
+
+  /**
+   * Anular el asiento (cambiar estado a ANULADO)
+   */
+  anularAsiento(): void {
+    if (!this.asientoActivo) {
+      this.snackBar.open('⚠️ Solo se pueden anular asientos confirmados', 'Cerrar', {
+        duration: 4000,
+        panelClass: ['warning-snackbar']
+      });
+      return;
+    }
+
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      width: '450px',
+      data: {
+        title: '🚫 Anular Asiento',
+        message: '¿Está seguro de anular este asiento?',
+        detail: 'Esta acción marcará el asiento como anulado.',
+        confirmText: 'Sí, Anular',
+        cancelText: 'Cancelar'
+      }
+    });
+
+    dialogRef.afterClosed().subscribe((confirmed: boolean) => {
+      if (confirmed) {
+        this.ejecutarAnulacion();
+      }
+    });
+  }
+
+  /**
+   * Ejecutar la anulación del asiento
+   */
+  private ejecutarAnulacion(): void {
+    this.loading = true;
+
+    const asientoAnulado = {
+      ...this.asientoActual,
+      codigo: this.codigoAsientoActual,
+      estado: 2 // ANULADO
+    };
+
+    this.asientoService.actualizarAsiento(this.codigoAsientoActual!, asientoAnulado).subscribe({
+      next: () => {
+        this.loading = false;
+        this.form.patchValue({ estado: 2 });
+
+        this.snackBar.open('✅ Asiento anulado exitosamente', 'Cerrar', {
+          duration: 5000,
+          horizontalPosition: 'center',
+          verticalPosition: 'top',
+          panelClass: ['success-snackbar']
+        });
+      },
+      error: (error: any) => {
+        this.loading = false;
+        const errorMsg = error?.error?.message || error?.message || 'Error desconocido';
+        this.snackBar.open(`❌ Error al anular asiento: ${errorMsg}`, 'Cerrar', {
+          duration: 5000,
+          panelClass: ['error-snackbar']
+        });
+      }
+    });
+  }
+
+  /**
+   * Reversar el asiento (servicio backend pendiente de especificar)
+   */
+  reversarAsiento(): void {
+    if (!this.asientoActivo) {
+      this.snackBar.open('⚠️ Solo se pueden reversar asientos confirmados', 'Cerrar', {
+        duration: 4000,
+        panelClass: ['warning-snackbar']
+      });
+      return;
+    }
+
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      width: '450px',
+      data: {
+        title: '🔄 Reversar Asiento',
+        message: '¿Está seguro de reversar este asiento?',
+        detail: 'Esta acción creará un asiento inverso.',
+        confirmText: 'Sí, Reversar',
+        cancelText: 'Cancelar'
+      }
+    });
+
+    dialogRef.afterClosed().subscribe((confirmed: boolean) => {
+      if (confirmed) {
+        this.ejecutarReversa();
+      }
+    });
+  }
+
+  /**
+   * Ejecutar la reversa del asiento
+   * TODO: Especificar el servicio backend para reversa
+   */
+  private ejecutarReversa(): void {
+    this.loading = true;
+
+    // TODO: Implementar cuando se especifique el servicio backend
+    // Por ahora, mostrar mensaje de pendiente
+    setTimeout(() => {
+      this.loading = false;
+      this.snackBar.open('⚠️ Funcionalidad de reversa pendiente de implementación en backend', 'Cerrar', {
+        duration: 5000,
+        panelClass: ['warning-snackbar']
+      });
+    }, 500);
+
+    // Ejemplo de cómo se llamaría el servicio:
+    // this.asientoService.reversar(this.codigoAsientoActual).subscribe({
+    //   next: (asientoReversado) => {
+    //     this.loading = false;
+    //     this.snackBar.open('✅ Asiento reversado exitosamente', 'Cerrar', {
+    //       duration: 5000,
+    //       panelClass: ['success-snackbar']
+    //     });
+    //   },
+    //   error: (error) => {
+    //     this.loading = false;
+    //     this.snackBar.open(`❌ Error al reversar: ${error.message}`, 'Cerrar', {
+    //       duration: 5000,
+    //       panelClass: ['error-snackbar']
+    //     });
+    //   }
+    // });
+  }
+
+  /**
+   * Imprimir el asiento usando reporte Jasper
+   */
+  imprimirAsiento(): void {
+    if (!this.codigoAsientoActual) {
+      this.snackBar.open('⚠️ No hay asiento para imprimir', 'Cerrar', {
+        duration: 4000,
+        panelClass: ['warning-snackbar']
+      });
+      return;
+    }
+
+    this.loading = true;
+
+    // Parámetros del reporte RPRT_ASNT_CNTB
+    const parametros = {
+      P_PATH: '',  // Vacío por ahora, posteriormente tendrá el módulo
+      P_REPORTE: 'ASIENTO',
+      P_ASNTCDGO: this.codigoAsientoActual,
+      P_IMAGEN: null  // Null por ahora, posteriormente path del logo
+    };
+
+    // Llamar al servicio Jasper con módulo 'cnt' y nombre del reporte
+    this.jasperReportes.generar('cnt', 'RPRT_ASNT_CNTB', parametros, 'PDF').subscribe({
+      next: (blob) => {
+        this.loading = false;
+
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `asiento-${this.codigoAsientoActual}.pdf`;
+        a.click();
+
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+
+        this.snackBar.open('✅ Reporte generado exitosamente', 'Cerrar', {
+          duration: 3000,
+          panelClass: ['success-snackbar']
+        });
+      },
+      error: () => {
+        this.loading = false;
+        this.snackBar.open('❌ No se pudo generar el reporte', 'Cerrar', {
+          duration: 5000,
+          panelClass: ['error-snackbar']
+        });
+      }
+    });
+  }
+
+  /**
+   * Deshabilitar formulario cuando el asiento está confirmado
+   */
+  private deshabilitarFormulario(): void {
+    // Deshabilitar campos de la cabecera (excepto los que ya están deshabilitados)
+    this.form.get('tipo')?.disable();
+    this.form.get('observaciones')?.disable();
+    // fechaAsiento, fechaIngreso, numero, estado ya están deshabilitados o no editables
+  }
+
+  /**
+   * Volver a la pantalla de reporte listado asientos
+   */
+  volverAReporte(): void {
+    this.router.navigate(['/menucontabilidad/reportes/listado-asientos']);
   }
 }
 

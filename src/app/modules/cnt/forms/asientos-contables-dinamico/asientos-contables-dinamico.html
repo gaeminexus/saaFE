@@ -7,16 +7,32 @@
           <mat-chip class="edit-chip">Modo Edición</mat-chip>
         }
       </h2>
-      <button
-        mat-raised-button
-        color="primary"
-        class="btn-nuevo-asiento"
-        (click)="nuevoAsiento()"
-        matTooltip="Crear nuevo asiento contable"
-      >
-        <mat-icon>add</mat-icon>
-        Nuevo Asiento
-      </button>
+      <div class="header-buttons">
+        <!-- Botón Volver: Solo si viene desde reporte -->
+        @if (vieneDesdeReporte) {
+        <button
+          mat-raised-button
+          color="accent"
+          class="btn-volver-reporte"
+          (click)="volverAReporte()"
+          matTooltip="Volver a la pantalla de consulta de asientos"
+        >
+          <mat-icon>arrow_back</mat-icon>
+          Volver a Consulta
+        </button>
+        }
+
+        <button
+          mat-raised-button
+          color="primary"
+          class="btn-nuevo-asiento"
+          (click)="nuevoAsiento()"
+          matTooltip="Crear nuevo asiento contable"
+        >
+          <mat-icon>add</mat-icon>
+          Nuevo Asiento
+        </button>
+      </div>
     </div>
   </div>
 
@@ -82,23 +98,95 @@
           </mat-form-field>
         </div>
 
-        <!-- Botón para grabar cabecera -->
+        <!-- Botones para cabecera -->
         <div class="cabecera-actions">
-          <button
-            mat-raised-button
-            color="primary"
-            type="button"
-            (click)="grabarCabecera()"
-            [disabled]="loading || !form.get('tipo')?.valid"
-            [matTooltip]="
-              codigoAsientoActual
-                ? 'Actualizar información general del asiento'
-                : 'Guardar información general del asiento'
-            "
-          >
-            <mat-icon>{{ codigoAsientoActual ? 'update' : 'save' }}</mat-icon>
-            {{ codigoAsientoActual ? 'Actualizar Cabecera' : 'Grabar Cabecera' }}
-          </button>
+          <!-- Botones de EDICIÓN: Solo en estado INCOMPLETO (4) -->
+          @if (!asientoActivo && !asientoAnulado) {
+            <!-- Botón Actualizar/Grabar Cabecera (cuando NO está cuadrado o no está confirmado) -->
+            @if (!asientoCuadrado || !codigoAsientoActual) {
+            <button
+              mat-raised-button
+              color="primary"
+              type="button"
+              (click)="grabarCabecera()"
+              [disabled]="loading || !form.get('tipo')?.valid"
+              [matTooltip]="
+                codigoAsientoActual
+                  ? 'Actualizar información general del asiento'
+                  : 'Guardar información general del asiento'
+              "
+            >
+              <mat-icon>{{ codigoAsientoActual ? 'update' : 'save' }}</mat-icon>
+              {{ codigoAsientoActual ? 'Actualizar Cabecera' : 'Grabar Cabecera' }}
+            </button>
+            }
+
+            <!-- Botón Confirmar Asiento (cuando está cuadrado) -->
+            @if (asientoCuadrado && codigoAsientoActual) {
+            <button
+              mat-raised-button
+              color="accent"
+              type="button"
+              (click)="confirmarAsiento()"
+              [disabled]="loading"
+              matTooltip="Confirmar asiento cuadrado (NO se podrán hacer modificaciones)"
+            >
+              <mat-icon>lock</mat-icon>
+              Confirmar Asiento
+            </button>
+            }
+          }
+
+          <!-- Botones para asiento ACTIVO (1): Anular, Reversar, Imprimir -->
+          @if (asientoActivo && !asientoAnulado) {
+          <div class="botones-asiento-activo">
+            <button
+              mat-raised-button
+              color="warn"
+              type="button"
+              (click)="anularAsiento()"
+              [disabled]="loading"
+              matTooltip="Anular el asiento confirmado"
+            >
+              <mat-icon>cancel</mat-icon>
+              Anular Asiento
+            </button>
+
+            <button
+              mat-raised-button
+              color="primary"
+              type="button"
+              (click)="reversarAsiento()"
+              [disabled]="loading"
+              matTooltip="Reversar el asiento creando uno inverso"
+            >
+              <mat-icon>swap_horiz</mat-icon>
+              Reversar Asiento
+            </button>
+
+            <button
+              mat-raised-button
+              color="accent"
+              type="button"
+              (click)="imprimirAsiento()"
+              [disabled]="loading"
+              matTooltip="Imprimir asiento en formato PDF"
+            >
+              <mat-icon>print</mat-icon>
+              Imprimir Asiento
+            </button>
+          </div>
+          }
+
+          <!-- Si está ANULADO (2): No mostrar ningún botón -->
+          @if (asientoAnulado) {
+          <div class="mensaje-anulado">
+            <mat-chip color="warn" highlighted>
+              <mat-icon>block</mat-icon>
+              Asiento ANULADO - Solo consulta
+            </mat-chip>
+          </div>
+          }
         </div>
       </mat-card-content>
     </mat-card>
@@ -202,7 +290,8 @@
             </div>
           </div>
 
-          <!-- Botón Actualizar Detalle -->
+          <!-- Botón Actualizar Detalle: Solo en estado INCOMPLETO (4) -->
+          @if (!asientoActivo && !asientoAnulado) {
           <div class="actualizar-detalle-container">
             <button
               mat-raised-button
@@ -229,10 +318,13 @@
               }}
             </button>
           </div>
+          }
         </div>
       </mat-card-content>
     </mat-card>
 
+    <!-- Bloques de agregar cuentas: Solo en estado INCOMPLETO (4) -->
+    @if (!asientoActivo && !asientoAnulado) {
     <div class="bloques-container">
       <!-- BLOQUE DEBE -->
       <mat-card class="bloque-card debe-card">
@@ -306,6 +398,7 @@
                   (click)="abrirBusquedaAvanzadaCuenta('DEBE', $index)"
                   matTooltip="Búsqueda avanzada de cuentas"
                   class="btn-busqueda-inline"
+                  [disabled]="asientoActivo"
                 >
                   <mat-icon>search</mat-icon>
                 </button>
@@ -322,6 +415,7 @@
                   type="button"
                   (click)="agregarCuentaAlGrid('DEBE')"
                   matTooltip="Agregar cuenta al Debe"
+                  [disabled]="asientoActivo"
                 >
                   <mat-icon>add</mat-icon>
                 </button>
@@ -681,5 +775,6 @@
         </mat-card-content>
       </mat-card>
     </div>
+    }
   </form>
 </div>
