@@ -61,6 +61,176 @@
 
 .form-row {
   display: grid;
+  grid-template-columns: 1.5fr 1.5fr 1fr 1fr auto auto;
+  gap: $spacing-sm;
+  align-items: end;
+
+  button {
+    height: 56px;
+  }
+
+  mat-checkbox {
+    padding-top: 20px;
+  }
+}
+
+.filter-field {
+  width: 320px;
+}
+
+.table-card {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  border: $border-width solid $border-light;
+  border-radius: $border-radius-md;
+  padding: $spacing-sm;
+  background: $background-primary;
+  box-shadow: 0 2px 6px $shadow-color-light;
+}
+
+.spinner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.error {
+  color: $error-color;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+
+  .export-buttons {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    button[mat-stroked-button] {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: #667eea;
+      border-color: #667eea;
+      min-width: 80px;
+
+      &:hover {
+        background-color: rgba(102, 126, 234, 0.1);
+        border-color: #764ba2;
+        color: #764ba2;
+      }
+
+      &:disabled {
+        opacity: 0.5;
+        color: #9ca3af;
+        border-color: #9ca3af;
+      }
+
+      mat-icon {
+        font-size: 1.1rem;
+        width: 1.1rem;
+        height: 1.1rem;
+      }
+    }
+  }
+}
+
+// Estilos del grid con gradiente y efectos
+::ng-deep .bancos-page {
+  // Headers con gradiente
+  .mat-mdc-table .mat-mdc-header-cell,
+  table thead th {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.5px !important;
+    text-transform: uppercase !important;
+    padding: 10px 16px !important;
+    font-size: 0.875rem !important;
+  }
+
+  // Border radius en primera y última columna
+  .mat-mdc-table .mat-mdc-header-cell:first-child,
+  table thead th:first-child {
+    border-top-left-radius: 8px !important;
+  }
+
+  .mat-mdc-table .mat-mdc-header-cell:last-child,
+  table thead th:last-child {
+    border-top-right-radius: 8px !important;
+  }
+
+  // Sticky header
+  .mat-mdc-table .mat-mdc-header-row,
+  table thead {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 3 !important;
+  }
+
+  // Hover effect en filas
+  .mat-mdc-table .mat-mdc-row:hover .mat-mdc-cell,
+  table tbody tr:hover td {
+    background-color: rgba(102, 126, 234, 0.08) !important;
+    transition: background-color 0.2s ease;
+  }
+
+  // Estilo de celdas - altura reducida
+  .mat-mdc-table .mat-mdc-cell,
+  table tbody td {
+    padding: 8px 16px !important;
+    border-bottom: 1px solid rgba(118, 75, 162, 0.1) !important;
+    color: #374151;
+    font-size: 0.9rem;
+  }
+
+  // Alternancia de filas (opcional)
+  .mat-mdc-table .mat-mdc-row:nth-child(even),
+  table tbody tr:nth-child(even) {
+    background-color: rgba(102, 126, 234, 0.02);
+  }
+
+  // Columna de acciones
+  .mat-mdc-table .mat-column-acciones,
+  table td:last-child,
+  table th:last-child {
+    text-align: center;
+    width: 120px;
+  }
+
+  // Botones de acciones en línea
+  .mat-mdc-table .mat-column-acciones {
+    td,
+    .mat-mdc-cell {
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      gap: 4px !important;
+    }
+
+    .mdc-icon-button,
+    button[mat-icon-button] {
+      margin: 0 !important;
+    }
+  }
+}
+
+.form-card {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  border: $border-width solid $border-light;
+  border-radius: $border-radius-md;
+  padding: $spacing-md;
+  background: $background-primary;
+  box-shadow: 0 2px 6px $shadow-color-light;
+}
+
+.form-row {
+  display: grid;
   grid-template-columns: 1fr 1fr auto 160px auto;
   gap: $spacing-sm;
   align-items: end;

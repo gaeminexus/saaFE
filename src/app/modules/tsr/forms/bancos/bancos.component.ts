@@ -11,7 +11,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
 import { MatToolbarModule } from '@angular/material/toolbar';
-import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { DetalleRubro } from '../../../../shared/model/detalle-rubro';
 import { DetalleRubroService } from '../../../../shared/services/detalle-rubro.service';
 import { ExportService } from '../../../../shared/services/export.service';
@@ -34,6 +34,7 @@ import { BancoService } from '../../service/banco.service';
     MatButtonModule,
     MatCheckboxModule,
     MatToolbarModule,
+    MatTooltipModule,
   ],
   templateUrl: './bancos.component.html',
   styleUrls: ['./bancos.component.scss'],
@@ -58,13 +59,14 @@ export class BancosComponent implements OnInit {
   // Formulario
   nombre = '';
   tipoBancoSeleccion: DetalleRubro | null = null;
-  permiteDescuadre = false;
+  conciliaDescuadre = false;
   estado: 0 | 1 = 1;
+  codigoEdicion: number | null = null; // null = crear, número = editar
 
   // Rubros tipo de banco (id 24)
   rubrosTipoBanco = signal<DetalleRubro[]>([]);
 
-  displayedColumns: string[] = ['codigo', 'nombre', 'tipo', 'permite', 'estado'];
+  displayedColumns: string[] = ['codigo', 'nombre', 'tipo', 'permite', 'estado', 'acciones'];
   hasItems = computed(() => this.pageData().length > 0);
 
   constructor(
@@ -79,28 +81,31 @@ export class BancosComponent implements OnInit {
   }
 
   cargarRubrosTipoBanco(): void {
-    const cached = this.detalleRubroService.getDetallesByParent(24);
-    if (Array.isArray(cached) && cached.length > 0) {
-      this.rubrosTipoBanco.set(cached);
-      return;
-    }
-    this.detalleRubroService.getRubros(24).subscribe({
-      next: (rubros) => this.rubrosTipoBanco.set(Array.isArray(rubros) ? rubros : []),
-      error: () => this.errorMsg.set('Error al cargar rubros de tipo de banco'),
-    });
+    // Acceso síncrono - datos ya cargados en memoria por AppStateService
+    const rubros = this.detalleRubroService.getDetallesByParent(24);
+    this.rubrosTipoBanco.set(Array.isArray(rubros) ? rubros : []);
   }
 
   cargarDatos(): void {
     this.loading.set(true);
     this.errorMsg.set('');
-    const criterios: DatosBusqueda[] = [];
-    const dbOrder = new DatosBusqueda();
-    dbOrder.orderBy('codigo');
-    criterios.push(dbOrder);
 
-    this.bancoService.selectByCriteria(criterios).subscribe({
+    // Obtener código de empresa del localStorage
+    const empresaCodigo = localStorage.getItem('empresaCodigo');
+    const empresaCodigoNum = empresaCodigo ? parseInt(empresaCodigo, 10) : null;
+
+    // Usar getAll y ordenar/filtrar en el frontend
+    this.bancoService.getAll().subscribe({
       next: (data) => {
-        const items = Array.isArray(data) ? data : [];
+        let items = Array.isArray(data) ? data : [];
+
+        // Filtrar por empresa si existe el código
+        if (empresaCodigoNum) {
+          items = items.filter((item) => (item as any).empresa === empresaCodigoNum);
+        }
+
+        // Ordenar por código
+        items.sort((a, b) => (a.codigo ?? 0) - (b.codigo ?? 0));
         this.allData.set(items);
         this.totalItems.set(items.length);
         this.pageIndex.set(0);
@@ -108,50 +113,127 @@ export class BancosComponent implements OnInit {
         this.loading.set(false);
       },
       error: () => {
-        this.bancoService.getAll().subscribe({
-          next: (data2) => {
-            const items2 = Array.isArray(data2) ? data2 : [];
-            this.allData.set(items2);
-            this.totalItems.set(items2.length);
-            this.pageIndex.set(0);
-            this.updatePageData();
-            this.loading.set(false);
-          },
-          error: () => {
-            this.errorMsg.set('Error al cargar bancos');
-            this.loading.set(false);
-          },
-        });
+        this.errorMsg.set('Error al cargar bancos');
+        this.loading.set(false);
       },
     });
   }
 
   guardar(): void {
     if (!this.formValido()) return;
+
+    // Obtener código de empresa del localStorage
+    const empresaCodigo = localStorage.getItem('empresaCodigo');
+    const empresaCodigoNum = empresaCodigo ? parseInt(empresaCodigo, 10) : null;
+
     const payload: any = {
       nombre: this.nombre?.trim(),
-      permiteDescuadre: this.permiteDescuadre,
+      conciliaDescuadre: this.conciliaDescuadre ? 1 : 0,
       estado: this.estado,
     };
+
+    // Agregar empresa si existe
+    if (empresaCodigoNum) {
+      payload.empresa = empresaCodigoNum;
+    }
+
     if (this.tipoBancoSeleccion) {
       payload.rubroTipoBancoP = this.tipoBancoSeleccion.rubro?.codigoAlterno ?? 24;
       payload.rubroTipoBancoH = this.tipoBancoSeleccion.codigoAlterno;
     }
 
     this.loading.set(true);
-    this.bancoService.add(payload).subscribe({
+
+    if (this.codigoEdicion === null) {
+      // Crear nuevo
+      this.bancoService.add(payload).subscribe({
+        next: () => {
+          this.limpiarFormulario();
+          this.cargarDatos();
+        },
+        error: () => {
+          this.errorMsg.set('No se pudo guardar el banco');
+          this.loading.set(false);
+        },
+      });
+    } else {
+      // Actualizar existente - incluir código y preservar fechaIngreso
+      payload.codigo = this.codigoEdicion;
+
+      // Buscar el registro original para preservar la fechaIngreso
+      const registroOriginal = this.allData().find((item) => item.codigo === this.codigoEdicion);
+      if (registroOriginal && registroOriginal.fechaIngreso) {
+        payload.fechaIngreso = registroOriginal.fechaIngreso;
+      }
+
+      this.bancoService.update(payload).subscribe({
+        next: () => {
+          this.limpiarFormulario();
+          this.cargarDatos();
+        },
+        error: () => {
+          this.errorMsg.set('No se pudo actualizar el banco');
+          this.loading.set(false);
+        },
+      });
+    }
+  }
+
+  editar(row: Banco): void {
+    this.codigoEdicion = row.codigo ?? null;
+    this.nombre = row.nombre ?? '';
+    this.conciliaDescuadre = !!(row as any).conciliaDescuadre;
+    this.estado = (row.estado ?? 1) as 0 | 1;
+
+    // Buscar el tipo de banco en los rubros
+    const p: number = (row as any).rubroTipoBancoP;
+    const h: number = (row as any).rubroTipoBancoH;
+    const found = this.rubrosTipoBanco().find(
+      (r) => r.rubro?.codigoAlterno === p && r.codigoAlterno === h,
+    );
+    this.tipoBancoSeleccion = found ?? null;
+
+    this.errorMsg.set('');
+
+    // Scroll al formulario
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  eliminar(row: Banco): void {
+    const nombre = row.nombre ?? 'este banco';
+    const codigo = row.codigo;
+
+    if (!confirm(`¿Está seguro de eliminar ${nombre}?`)) {
+      return;
+    }
+
+    this.loading.set(true);
+    this.bancoService.delete(codigo).subscribe({
       next: () => {
-        this.nombre = '';
-        this.tipoBancoSeleccion = null;
-        this.permiteDescuadre = false;
-        this.estado = 1;
         this.cargarDatos();
       },
       error: () => {
-        this.errorMsg.set('No se pudo guardar el banco');
+        this.errorMsg.set('No se pudo eliminar el banco');
         this.loading.set(false);
       },
     });
+  }
+
+  cancelarEdicion(): void {
+    this.limpiarFormulario();
+  }
+
+  limpiarFormulario(): void {
+    this.codigoEdicion = null;
+    this.nombre = '';
+    this.tipoBancoSeleccion = null;
+    this.conciliaDescuadre = false;
+    this.estado = 1;
+    this.errorMsg.set('');
+  }
+
+  estaEditando(): boolean {
+    return this.codigoEdicion !== null;
   }
 
   mostrarTipo(row: Banco): string {
@@ -164,7 +246,7 @@ export class BancosComponent implements OnInit {
   }
 
   mostrarPermite(row: Banco): string {
-    return (row as any).permiteDescuadre ? 'Sí' : 'No';
+    return (row as any).conciliaDescuadre ? 'Sí' : 'No';
   }
 
   mostrarEstado(row: Banco): string {
@@ -172,11 +254,16 @@ export class BancosComponent implements OnInit {
   }
 
   formValido(): boolean {
-    return !!this.nombre?.trim() && !!this.tipoBancoSeleccion;
+    // Tipo de banco es opcional si no hay rubros disponibles
+    return !!this.nombre?.trim();
   }
 
-  onTipoBancoChange(rubro: DetalleRubro | null): void {
-    this.tipoBancoSeleccion = rubro;
+  // Función para comparar rubros en el mat-select
+  compararRubros(r1: DetalleRubro | null, r2: DetalleRubro | null): boolean {
+    if (!r1 || !r2) return r1 === r2;
+    return (
+      r1.codigoAlterno === r2.codigoAlterno && r1.rubro?.codigoAlterno === r2.rubro?.codigoAlterno
+    );
   }
 
   aplicarFiltro(value: string): void {

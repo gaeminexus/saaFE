@@ -53,11 +53,96 @@
         (click)="solicitar()"
         [disabled]="!formValido() || loading()"
       >
-        <mat-icon>playlist_add</mat-icon>
-        Solicitar
+        <mat-icon>{{ estaEditando() ? 'save' : 'playlist_add' }}</mat-icon>
+        {{ estaEditando() ? 'Actualizar' : 'Solicitar' }}
+      </button>
+      <button
+        mat-raised-button
+        color="warn"
+        (click)="limpiarFormulario()"
+        style="margin-left: 10px"
+        *ngIf="estaEditando()"
+      >
+        <mat-icon>cancel</mat-icon>
+        Cancelar
       </button>
       <span class="msg ok" *ngIf="successMsg()">{{ successMsg() }}</span>
       <span class="msg err" *ngIf="errorMsg()">{{ errorMsg() }}</span>
     </div>
   </div>
+</div>
+
+<!-- Grid de Solicitudes -->
+<div class="tabla-container" style="margin-top: 20px">
+  <h3>Solicitudes de Chequera</h3>
+
+  @if (loading()) {
+    <div style="text-align: center; padding: 20px">
+      <mat-spinner diameter="40"></mat-spinner>
+    </div>
+  }
+
+  @if (!loading()) {
+    <table mat-table [dataSource]="solicitudesPage()" class="solicitudes-table">
+      <!-- Código -->
+      <ng-container matColumnDef="codigo">
+        <th mat-header-cell *matHeaderCellDef>Código</th>
+        <td mat-cell *matCellDef="let row">{{ row.codigo }}</td>
+      </ng-container>
+
+      <!-- Banco -->
+      <ng-container matColumnDef="banco">
+        <th mat-header-cell *matHeaderCellDef>Banco</th>
+        <td mat-cell *matCellDef="let row">{{ mostrarBanco(row) }}</td>
+      </ng-container>
+
+      <!-- Cuenta -->
+      <ng-container matColumnDef="cuenta">
+        <th mat-header-cell *matHeaderCellDef>Cuenta</th>
+        <td mat-cell *matCellDef="let row">{{ mostrarCuenta(row) }}</td>
+      </ng-container>
+
+      <!-- Fecha Solicitud -->
+      <ng-container matColumnDef="fechaSolicitud">
+        <th mat-header-cell *matHeaderCellDef>Fecha Solicitud</th>
+        <td mat-cell *matCellDef="let row">{{ mostrarFechaSolicitud(row) }}</td>
+      </ng-container>
+
+      <!-- Número de Cheques -->
+      <ng-container matColumnDef="numeroCheques">
+        <th mat-header-cell *matHeaderCellDef>Nº Cheques</th>
+        <td mat-cell *matCellDef="let row">{{ row.numeroCheques }}</td>
+      </ng-container>
+
+      <!-- Estado -->
+      <ng-container matColumnDef="estado">
+        <th mat-header-cell *matHeaderCellDef>Estado</th>
+        <td mat-cell *matCellDef="let row">{{ mostrarEstado(row) }}</td>
+      </ng-container>
+
+      <!-- Acciones -->
+      <ng-container matColumnDef="acciones">
+        <th mat-header-cell *matHeaderCellDef>Acciones</th>
+        <td mat-cell *matCellDef="let row">
+          <button mat-icon-button color="primary" (click)="editar(row)" matTooltip="Editar">
+            <mat-icon>edit</mat-icon>
+          </button>
+          <button mat-icon-button color="warn" (click)="eliminar(row)" matTooltip="Eliminar">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+    </table>
+
+    <mat-paginator
+      [length]="totalSolicitudes()"
+      [pageSize]="pageSize()"
+      [pageSizeOptions]="[5, 10, 20, 50]"
+      (page)="onPageChange($event)"
+      showFirstLastButtons
+    ></mat-paginator>
+  }
 </div>
