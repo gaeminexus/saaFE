@@ -1,6 +1,6 @@
 import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable, catchError, of, throwError } from 'rxjs';
+import { Observable, catchError, throwError } from 'rxjs';
 import { NaturalezaCuenta } from '../model/naturaleza-cuenta';
 import { ServiciosCnt } from './ws-cnt';
 
@@ -51,9 +51,9 @@ export class NaturalezaCuentaService {
     return this.http.post<NaturalezaCuenta>(base, datosTransformados, this.httpOptions).pipe(
       // Fallback alterno: POST /save si existe
       catchError(() =>
-        this.http.post<NaturalezaCuenta>(`${base}/save`, datosTransformados, this.httpOptions)
+        this.http.post<NaturalezaCuenta>(`${base}/save`, datosTransformados, this.httpOptions),
       ),
-      catchError(this.handleError)
+      catchError(this.handleError),
     );
   }
 
@@ -70,13 +70,13 @@ export class NaturalezaCuentaService {
     return this.http.put<NaturalezaCuenta>(base, datosTransformados, this.httpOptions).pipe(
       // Fallback 1: POST al recurso base (algunos backends usan POST para upsert)
       catchError((err) =>
-        this.http.post<NaturalezaCuenta>(base, datosTransformados, this.httpOptions)
+        this.http.post<NaturalezaCuenta>(base, datosTransformados, this.httpOptions),
       ),
       // Fallback 2: POST /update (caso de implementación alternativa)
       catchError(() =>
-        this.http.post<NaturalezaCuenta>(`${base}/update`, datosTransformados, this.httpOptions)
+        this.http.post<NaturalezaCuenta>(`${base}/update`, datosTransformados, this.httpOptions),
       ),
-      catchError(this.handleError)
+      catchError(this.handleError),
     );
   }
 

@@ -1,15 +1,15 @@
-import { HttpHeaders, HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, catchError, of, throwError } from 'rxjs';
 import { CuentaBancaria } from '../model/cuenta-bancaria';
 import { ServiciosTsr } from './ws-tsr';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class CuentaBancariaService {
   httpOptions = {
-    headers: new HttpHeaders({ 'Content-Type': 'application/json' })
+    headers: new HttpHeaders({ 'Content-Type': 'application/json' }),
   };
 
   constructor(private http: HttpClient) {}
@@ -20,9 +20,7 @@ export class CuentaBancariaService {
   getAll(): Observable<CuentaBancaria[] | null> {
     const wsGetAll = '/getAll';
     const url = `${ServiciosTsr.RS_CNBC}${wsGetAll}`;
-    return this.http.get<CuentaBancaria[]>(url).pipe(
-      catchError(this.handleError)
-    );
+    return this.http.get<CuentaBancaria[]>(url).pipe(catchError(this.handleError));
   }
 
   /**
@@ -31,27 +29,25 @@ export class CuentaBancariaService {
   getById(id: string): Observable<CuentaBancaria | null> {
     const wsGetById = '/getId/';
     const url = `${ServiciosTsr.RS_CNBC}${wsGetById}${id}`;
-    return this.http.get<CuentaBancaria>(url).pipe(
-      catchError(this.handleError)
-    );
+    return this.http.get<CuentaBancaria>(url).pipe(catchError(this.handleError));
   }
 
   /**
    * Crea un nuevo registro de CuentaBancaria.
    */
   add(datos: any): Observable<CuentaBancaria | null> {
-    return this.http.post<CuentaBancaria>(ServiciosTsr.RS_CNBC, datos, this.httpOptions).pipe(
-      catchError(this.handleError)
-    );
+    return this.http
+      .post<CuentaBancaria>(ServiciosTsr.RS_CNBC, datos, this.httpOptions)
+      .pipe(catchError(this.handleError));
   }
 
   /**
    * Actualiza un registro existente de CuentaBancaria.
    */
   update(datos: any): Observable<CuentaBancaria | null> {
-    return this.http.put<CuentaBancaria>(ServiciosTsr.RS_CNBC, datos, this.httpOptions).pipe(
-      catchError(this.handleError)
-    );
+    return this.http
+      .put<CuentaBancaria>(ServiciosTsr.RS_CNBC, datos, this.httpOptions)
+      .pipe(catchError(this.handleError));
   }
 
   /**
@@ -60,9 +56,9 @@ export class CuentaBancariaService {
   selectByCriteria(datos: any): Observable<CuentaBancaria[] | null> {
     const wsCriteria = '/criteria';
     const url = `${ServiciosTsr.RS_CNBC}${wsCriteria}`;
-    return this.http.post<CuentaBancaria[]>(url, datos, this.httpOptions).pipe(
-      catchError(this.handleError)
-    );
+    return this.http
+      .post<CuentaBancaria[]>(url, datos, this.httpOptions)
+      .pipe(catchError(this.handleError));
   }
 
   /**
@@ -71,9 +67,9 @@ export class CuentaBancariaService {
   delete(id: any): Observable<CuentaBancaria | null> {
     const wsDelete = '/' + id;
     const url = `${ServiciosTsr.RS_CNBC}${wsDelete}`;
-    return this.http.delete<CuentaBancaria>(url, this.httpOptions).pipe(
-      catchError(this.handleError)
-    );
+    return this.http
+      .delete<CuentaBancaria>(url, this.httpOptions)
+      .pipe(catchError(this.handleError));
   }
 
   /**
@@ -83,7 +79,8 @@ export class CuentaBancariaService {
     if (+error.status === 200) {
       return of(null);
     } else {
-      return throwError(() => error.error);
+      // Propagar el HttpErrorResponse completo para facilitar el diagnóstico (status, url)
+      return throwError(() => error);
     }
   }
 }
