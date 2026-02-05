@@ -52,6 +52,9 @@ import { PlanCuentaSelectorDialogComponent } from '../../../../shared/components
 import { ConfirmDialogComponent } from '../../../../shared/basics/confirm-dialog/confirm-dialog.component';
 import { JasperReportesService } from '../../../../shared/services/jasper-reportes.service';
 
+const RUBRO_MODULOS_SISTEMA = 15;
+const RUBRO_MODULO_CNT = 1;
+
 interface CuentaItem {
   cuenta: PlanCuenta | null;
   valor: number;
@@ -322,21 +325,10 @@ export class AsientosContablesDinamico implements OnInit {
   private cargarAsientoPorId(id: number, mode?: string): void {
     this.loading = true;
 
-    // Crear criterios usando selectByCriteria (POST) ya que getById (GET) retorna 405
-    const criterios = new DatosBusqueda();
-    criterios.asignaUnCampoSinTrunc(
-      TipoDatosBusqueda.LONG,
-      'codigo',
-      id.toString(),
-      TipoComandosBusqueda.IGUAL
-    );
-
-    // Cargar asiento principal usando selectByCriteria
-    this.asientoService.selectByCriteria([criterios]).subscribe({
-      next: (asientos: Asiento[] | null) => {
-        if (asientos && asientos.length > 0) {
-          const asiento = asientos[0]; // Tomar el primer resultado
-
+    // Usar getById para recuperar por clave primaria
+    this.asientoService.getById(id).subscribe({
+      next: (asiento: Asiento) => {
+        if (asiento) {
           this.codigoAsientoActual = asiento.codigo;
           this.asientoActual = asiento; // Almacenar datos completos
 
@@ -386,11 +378,14 @@ export class AsientosContablesDinamico implements OnInit {
               this.showMessage(`Asiento ${asiento.numero} cargado para edición`, 'success');
             }
           }
-        } else {          this.loading = false;
+        } else {
+          this.loading = false;
           this.showMessage(`No se encontró el asiento con ID ${id}`, 'error');
         }
       },
-      error: (err) => {        this.loading = false;
+      error: (err) => {
+        this.loading = false;
+        console.error('Error al cargar el asiento:', err);
         this.showMessage('Error al cargar el asiento', 'error');
       },
     });
@@ -768,13 +763,13 @@ export class AsientosContablesDinamico implements OnInit {
       estado: estadoAsiento,
       nombreUsuario: localStorage.getItem('username') || 'sistema',
       fechaIngreso: new Date(),
-      numeroMes: new Date().getMonth() + 1,
-      numeroAnio: new Date().getFullYear(),
+      numeroMes: fechaAsiento ? fechaAsiento.getMonth() + 1 : new Date().getMonth() + 1,
+      numeroAnio: fechaAsiento ? fechaAsiento.getFullYear() : new Date().getFullYear(),
       moneda: 1,
-      rubroModuloClienteP: 0,
-      rubroModuloClienteH: 0,
-      rubroModuloSistemaP: 0,
-      rubroModuloSistemaH: 0,
+      rubroModuloClienteP: RUBRO_MODULOS_SISTEMA,    // Código alterno del rubro de módulos del sistema
+      rubroModuloClienteH: RUBRO_MODULO_CNT,     // Código alterno del módulo de contabilidad
+      rubroModuloSistemaP: RUBRO_MODULOS_SISTEMA,    // Código alterno del rubro de módulos del sistema
+      rubroModuloSistemaH: RUBRO_MODULO_CNT,     // Código alterno del módulo de contabilidad
     };
 
     // Si estamos actualizando, incluir el código del asiento y período del asiento existente
@@ -815,8 +810,8 @@ export class AsientosContablesDinamico implements OnInit {
         }
 
         let mensaje = this.codigoAsientoActual
-          ? `✅ Cabecera del Asiento #${response.numero} actualizada exitosamente`
-          : `✅ Cabecera del Asiento #${response.numero} guardada exitosamente`;
+          ? `Cabecera del Asiento #${response.numero} actualizada exitosamente`
+          : `Cabecera del Asiento #${response.numero} guardada exitosamente`;
 
         this.snackBar.open(mensaje, 'Cerrar', {
           duration: 4000,
@@ -828,7 +823,7 @@ export class AsientosContablesDinamico implements OnInit {
       error: (error) => {
         this.loading = false;
         const errorMsg = error?.error?.message || error?.message || 'Error desconocido';
-        this.snackBar.open(`❌ Error al guardar cabecera: ${errorMsg}`, 'Cerrar', {
+        this.snackBar.open(`Error al guardar cabecera: ${errorMsg}`, 'Cerrar', {
           duration: 5000,
           horizontalPosition: 'center',
           verticalPosition: 'top',

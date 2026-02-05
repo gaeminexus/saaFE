@@ -40,9 +40,11 @@ export class AsientoService {
    * Obtener asiento por ID
    */
   getById(id: number): Observable<Asiento> {
-    return this.http
-      .get<Asiento>(`${this.baseUrl}/${id}`, this.httpOptions)
-      .pipe(catchError(this.handleError));
+    const wsGetById = '/getId/';
+        const url = `${ServiciosCnt.RS_ASNT}${wsGetById}${id}`;
+        return this.http.get<Asiento>(url).pipe(
+          catchError(this.handleError)
+        );
   }
 
   /**

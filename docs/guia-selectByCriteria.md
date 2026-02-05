@@ -4,9 +4,9 @@
 
 `selectByCriteria` es el método estándar para realizar búsquedas dinámicas en los servicios del backend. Utiliza objetos `DatosBusqueda` para construir consultas SQL complejas de forma programática.
 
-## ⚠️ REGLA CRÍTICA
+## ⚠️ REGLAS CRÍTICAS
 
-**SIEMPRE usar array de `DatosBusqueda[]`, NUNCA objetos planos.**
+### 1. SIEMPRE usar array de `DatosBusqueda[]`, NUNCA objetos planos
 
 ```typescript
 // ❌ INCORRECTO
@@ -22,6 +22,36 @@ db.asignaUnCampoSinTrunc(TipoDatos.STRING, 'nombre', 'Juan', TipoComandosBusqued
 criterios.push(db);
 this.service.selectByCriteria(criterios);
 ```
+
+### 2. Para recuperar por ID, usar `getById()`, NO `selectByCriteria`
+
+**`selectByCriteria` es para búsquedas complejas o múltiples resultados. Para recuperar UN objeto por su clave primaria, usar `getById()`.**
+
+```typescript
+// ❌ INCORRECTO - NO usar selectByCriteria para buscar por ID
+const criterios = new DatosBusqueda();
+criterios.asignaUnCampoSinTrunc(TipoDatos.LONG, 'codigo', id.toString(), TipoComandosBusqueda.IGUAL);
+this.asientoService.selectByCriteria([criterios]).subscribe({
+  next: (asientos) => {
+    const asiento = asientos[0]; // ❌ Extrae primer elemento de un array
+  }
+});
+
+// ✅ CORRECTO - Usar getById para recuperar por clave primaria
+this.asientoService.getById(id).subscribe({
+  next: (asiento) => {
+    // ✅ Recibe directamente el objeto, no un array
+    console.log(asiento.numero);
+  }
+});
+```
+
+**Razones para usar `getById()`:**
+- ✅ Más eficiente (consulta directa por PK)
+- ✅ Retorna el objeto directamente, no un array
+- ✅ Código más limpio y legible
+- ✅ Semánticamente correcto
+- ✅ Mejor rendimiento en el backend
 
 ---
 
