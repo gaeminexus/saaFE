@@ -101,7 +101,7 @@
         <!-- Botones para cabecera -->
         <div class="cabecera-actions">
           <!-- Botones de EDICIÓN: Solo en estado INCOMPLETO (4) -->
-          @if (!asientoActivo && !asientoAnulado) {
+          @if (!asientoActivo && !asientoAnulado && !asientoReversado) {
             <!-- Botón Actualizar/Grabar Cabecera (cuando NO está cuadrado o no está confirmado) -->
             @if (!asientoCuadrado || !codigoAsientoActual) {
             <button
@@ -121,8 +121,8 @@
             </button>
             }
 
-            <!-- Botón Confirmar Asiento (cuando está cuadrado) -->
-            @if (asientoCuadrado && codigoAsientoActual) {
+            <!-- Botón Confirmar Asiento: Solo visible cuando está cuadrado y sin cambios pendientes -->
+            @if (!hayDetallesSinGuardar && codigoAsientoActual && asientoCuadrado && !asientoActivo && !asientoAnulado && !asientoReversado) {
             <button
               mat-raised-button
               color="accent"
@@ -138,7 +138,7 @@
           }
 
           <!-- Botones para asiento ACTIVO (1): Anular, Reversar, Imprimir -->
-          @if (asientoActivo && !asientoAnulado) {
+          @if (asientoActivo && !asientoAnulado && !asientoReversado) {
           <div class="botones-asiento-activo">
             <button
               mat-raised-button
@@ -171,6 +171,23 @@
               (click)="imprimirAsiento()"
               [disabled]="loading"
               matTooltip="Imprimir asiento en formato PDF"
+            >
+              <mat-icon>print</mat-icon>
+              Imprimir Asiento
+            </button>
+          </div>
+          }
+
+          <!-- Botón Imprimir para asiento REVERSADO (3): Solo imprimir -->
+          @if (asientoReversado) {
+          <div class="botones-asiento-reversado">
+            <button
+              mat-raised-button
+              color="accent"
+              type="button"
+              (click)="imprimirAsiento()"
+              [disabled]="loading"
+              matTooltip="Imprimir asiento reversado en formato PDF"
             >
               <mat-icon>print</mat-icon>
               Imprimir Asiento
@@ -289,39 +306,35 @@
               <span class="total-value haber-value">{{ totalHaber | currency }}</span>
             </div>
           </div>
-
-          <!-- Botón Actualizar Detalle: Solo en estado INCOMPLETO (4) -->
-          @if (!asientoActivo && !asientoAnulado) {
-          <div class="actualizar-detalle-container">
-            <button
-              mat-raised-button
-              color="primary"
-              type="button"
-              (click)="grabarDetalle()"
-              [disabled]="
-                !form.get('tipo')?.valid ||
-                !form.get('fechaAsiento')?.valid
-              "
-              [matTooltip]="
-                detallesOriginales && detallesOriginales.length > 0
-                  ? 'Actualizar detalles existentes del asiento'
-                  : 'Grabar nuevos detalles del asiento'
-              "
-            >
-              <mat-icon>{{
-                detallesOriginales && detallesOriginales.length > 0 ? 'update' : 'save'
-              }}</mat-icon>
-              {{
-                detallesOriginales && detallesOriginales.length > 0
-                  ? 'Actualizar Detalle'
-                  : 'Grabar Detalle'
-              }}
-            </button>
-          </div>
-          }
         </div>
       </mat-card-content>
     </mat-card>
+
+    <!-- Botón Actualizar Detalle: Solo en estado INCOMPLETO (4) y con asiento cargado -->
+    @if (!asientoActivo && !asientoAnulado && codigoAsientoActual) {
+    <div class="actualizar-detalle-container">
+      <button
+        mat-raised-button
+        [color]="hayDetallesSinGuardar ? 'warn' : 'primary'"
+        type="button"
+        (click)="grabarDetalle()"
+        [disabled]="
+          !form.get('tipo')?.valid ||
+          !form.get('fechaAsiento')?.valid
+        "
+        [matTooltip]="
+          hayDetallesSinGuardar
+            ? 'Debe guardar los detalles agregados antes de confirmar'
+            : (detallesOriginales && detallesOriginales.length > 0
+              ? 'Actualizar detalles existentes del asiento'
+              : 'Grabar nuevos detalles del asiento')
+        "
+      >
+        <mat-icon>{{ detallesOriginales && detallesOriginales.length > 0 ? 'update' : 'save' }}</mat-icon>
+        {{ detallesOriginales && detallesOriginales.length > 0 ? 'Actualizar Detalle' : 'Grabar Detalle' }}
+      </button>
+    </div>
+    }
 
     <!-- Bloques de agregar cuentas: Solo en estado INCOMPLETO (4) -->
     @if (!asientoActivo && !asientoAnulado) {

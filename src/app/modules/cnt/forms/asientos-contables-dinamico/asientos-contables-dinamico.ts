@@ -57,7 +57,8 @@ interface CuentaItem {
   valor: number;
   tipo: 'DEBE' | 'HABER';
   centroCosto?: CentroCosto | null; // Centro de costo asociado
-  id?: string; // Para trackear items únicos
+  id?: string; // Para trackear items únicos en el grid (temporal)
+  codigoDetalle?: number; // Código del detalle en BD (para updates)
   descripcion?: string; // Descripción del detalle (editable por usuario)
 }
 
@@ -103,6 +104,7 @@ export class AsientosContablesDinamico implements OnInit {
   asientoActual: Asiento | null = null; // Para almacenar datos completos del asiento
   detallesOriginales: any[] = []; // Para trackear detalles cargados del backend
   vieneDesdeReporte = false; // Para mostrar botón de regreso
+  hayDetallesSinGuardar = false; // Control para habilitar/deshabilitar botones
 
   // Arrays para el grid con drag-and-drop
   cuentasDebeGrid: CuentaItem[] = [];
@@ -121,9 +123,11 @@ export class AsientosContablesDinamico implements OnInit {
   tiposAsientos: any[] = [];
   cuentasPlan: PlanCuenta[] = [];
   centrosCosto: CentroCosto[] = [];
+  estadosAsientos: any[] = []; // Estados cargados desde detalleRubro
 
   // Constantes de rubros
   private readonly RUBRO_TIPO_ASIENTO = 15;
+  private readonly RUBRO_ESTADO_ASIENTO = 21;
 
   // Columnas para mat-table
   displayedColumns: string[] = ['cuenta', 'valor', 'acciones'];
@@ -193,6 +197,9 @@ export class AsientosContablesDinamico implements OnInit {
   }
 
   private cargarRubros(): void {
+    // Cargar estados de asientos
+    this.cargarEstadosAsientos();
+
     // Cargar tipos de asientos desde el backend
     this.tipoAsientoService.getAll().subscribe({
       next: (data) => {
@@ -444,6 +451,8 @@ export class AsientosContablesDinamico implements OnInit {
                 tipo: 'DEBE',
                 centroCosto: centroCosto || null,
                 id: `item_${Date.now()}_${Math.random()}`,
+                codigoDetalle: detalle.codigo, // IMPORTANTE: Guardar el código del detalle de BD
+                descripcion: detalle.descripcion || '', // Cargar descripción del detalle
               };
 
               if (detalle.valorDebe > 0) {
@@ -469,6 +478,20 @@ export class AsientosContablesDinamico implements OnInit {
 
         // Recalcular totales y actualizar grid de detalles siempre
         this.calcularTotalesGrid();
+
+        // Resetear bandera porque los detalles cargados ya están guardados
+        this.hayDetallesSinGuardar = false;
+
+        // Debug: Verificar estado de variables para botones
+        console.log('🔍 Estado después de cargar detalles:', {
+          hayDetallesSinGuardar: this.hayDetallesSinGuardar,
+          asientoCuadrado: this.asientoCuadrado,
+          totalDebe: this.totalDebe,
+          totalHaber: this.totalHaber,
+          diferencia: this.diferencia,
+          estado: this.form.get('estado')?.value
+        });
+
         this.loading = false;
       },
       error: (err) => {
@@ -519,6 +542,11 @@ export class AsientosContablesDinamico implements OnInit {
     const index = this.cuentasDebe.length;
     this.cuentasDebe.push(this.createCuentaGroup());
 
+    // Marcar que hay detalles sin guardar - desactiva botón Confirmar Asiento
+    console.log('agregarCuentaDebe - ANTES: hayDetallesSinGuardar =', this.hayDetallesSinGuardar);
+    this.hayDetallesSinGuardar = true;
+    console.log('agregarCuentaDebe - DESPUÉS: hayDetallesSinGuardar =', this.hayDetallesSinGuardar);
+
     // Configurar autocomplete para la nueva fila
     setTimeout(() => this.configurarAutocompleteDebe(index), 0);
   }
@@ -526,6 +554,11 @@ export class AsientosContablesDinamico implements OnInit {
   agregarCuentaHaber(): void {
     const index = this.cuentasHaber.length;
     this.cuentasHaber.push(this.createCuentaGroup());
+
+    // Marcar que hay detalles sin guardar - desactiva botón Confirmar Asiento
+    console.log('agregarCuentaHaber - ANTES: hayDetallesSinGuardar =', this.hayDetallesSinGuardar);
+    this.hayDetallesSinGuardar = true;
+    console.log('agregarCuentaHaber - DESPUÉS: hayDetallesSinGuardar =', this.hayDetallesSinGuardar);
 
     // Configurar autocomplete para la nueva fila
     setTimeout(() => this.configurarAutocompleteHaber(index), 0);
@@ -598,6 +631,11 @@ export class AsientosContablesDinamico implements OnInit {
       this.cuentasHaberGrid.push(nuevaCuenta);
     }
 
+    // Marcar que hay detalles sin guardar - desactiva botón Confirmar Asiento
+    console.log('agregarCuentaAlGrid - ANTES: hayDetallesSinGuardar =', this.hayDetallesSinGuardar);
+    this.hayDetallesSinGuardar = true;
+    console.log('agregarCuentaAlGrid - DESPUÉS: hayDetallesSinGuardar =', this.hayDetallesSinGuardar);
+
     // Limpiar el formulario
     ultimoControl.patchValue({
       cuenta: null,
@@ -656,6 +694,9 @@ export class AsientosContablesDinamico implements OnInit {
     if (index > -1) {
       array.splice(index, 1);
       this.calcularTotalesGrid();
+
+      // Marcar que hay cambios sin guardar
+      this.hayDetallesSinGuardar = true;
     }
   }
 
@@ -1083,6 +1124,7 @@ export class AsientosContablesDinamico implements OnInit {
           // Si todos los detalles se grabaron exitosamente
           if (detallesGrabados === detallesParaGrabar.length) {
             this.loading = false;
+
             this.snackBar.open(
               `✅ ${detallesGrabados} detalles del asiento grabados exitosamente`,
               'Cerrar',
@@ -1095,6 +1137,8 @@ export class AsientosContablesDinamico implements OnInit {
             );
             // Recargar detalles para mostrar los cambios
             this.cargarDetallesAsiento(asientoId);
+
+            // IMPORTANTE: hayDetallesSinGuardar se resetea en cargarDetallesAsiento()
 
             // Verificar si el asiento quedó descuadrado y actualizar estado si es necesario
             this.verificarYActualizarEstadoAsiento(asientoId);
@@ -1130,7 +1174,9 @@ export class AsientosContablesDinamico implements OnInit {
     // Recopilar detalles actuales del grid
     const detallesActuales = this.recopilarDetallesDelGrid(asientoId);
 
-    if (detallesActuales.length === 0) {      this.loading = false;
+    // Si no hay detalles actuales Y tampoco hay detalles originales, no hay nada que hacer
+    if (detallesActuales.length === 0 && this.detallesOriginales.length === 0) {
+      this.loading = false;
       this.snackBar.open('No hay cuentas para actualizar', 'Cerrar', {
         duration: 3000,
         horizontalPosition: 'center',
@@ -1155,6 +1201,7 @@ export class AsientosContablesDinamico implements OnInit {
     this.cuentasDebeGrid.forEach((item) => {
       if (item && item.cuenta && item.valor > 0) {
         detalles.push({
+          codigo: item.codigoDetalle, // Incluir código si existe (para updates)
           asiento: { codigo: asientoId },
           planCuenta: { codigo: item.cuenta.codigo },
           descripcion: item.descripcion || '',
@@ -1171,6 +1218,7 @@ export class AsientosContablesDinamico implements OnInit {
     this.cuentasHaberGrid.forEach((item) => {
       if (item && item.cuenta && item.valor > 0) {
         detalles.push({
+          codigo: item.codigoDetalle, // Incluir código si existe (para updates)
           asiento: { codigo: asientoId },
           planCuenta: { codigo: item.cuenta.codigo },
           descripcion: item.descripcion || '',
@@ -1198,25 +1246,31 @@ export class AsientosContablesDinamico implements OnInit {
 
     // Comparar detalles actuales con originales
     detallesActuales.forEach((detalleActual) => {
-      const detalleOriginal = this.detallesOriginales.find(
-        (orig) => orig.planCuenta?.codigo === detalleActual.planCuenta.codigo
-      );
+      // Si tiene codigo, es un detalle existente (buscar por codigo)
+      if (detalleActual.codigo) {
+        const detalleOriginal = this.detallesOriginales.find(
+          (orig) => orig.codigo === detalleActual.codigo
+        );
 
-      if (detalleOriginal) {
-        // Verificar si cambió el valor
-        const valorOriginalDebe = detalleOriginal.valorDebe || 0;
-        const valorOriginalHaber = detalleOriginal.valorHaber || 0;
-        const valorActualDebe = detalleActual.valorDebe || 0;
-        const valorActualHaber = detalleActual.valorHaber || 0;
+        if (detalleOriginal) {
+          // Verificar si cambió algún valor
+          const valorOriginalDebe = detalleOriginal.valorDebe || 0;
+          const valorOriginalHaber = detalleOriginal.valorHaber || 0;
+          const valorActualDebe = detalleActual.valorDebe || 0;
+          const valorActualHaber = detalleActual.valorHaber || 0;
 
-        if (valorOriginalDebe !== valorActualDebe || valorOriginalHaber !== valorActualHaber) {
-          operaciones.actualizar.push({
-            ...detalleActual,
-            codigo: detalleOriginal.codigo, // Necesario para update
-          });
+          if (valorOriginalDebe !== valorActualDebe ||
+              valorOriginalHaber !== valorActualHaber ||
+              detalleOriginal.descripcion !== detalleActual.descripcion) {
+            operaciones.actualizar.push(detalleActual);
+          }
+          // Si no cambió nada, no hacer nada (mantener como está)
+        } else {
+          // Tiene codigo pero no está en originales (caso extraño, tratarlo como update)
+          operaciones.actualizar.push(detalleActual);
         }
       } else {
-        // Es un nuevo detalle
+        // No tiene codigo, es un nuevo detalle
         operaciones.crear.push(detalleActual);
       }
     });
@@ -1224,7 +1278,7 @@ export class AsientosContablesDinamico implements OnInit {
     // Buscar detalles eliminados (estaban en originales pero no en actuales)
     this.detallesOriginales.forEach((detalleOriginal) => {
       const existe = detallesActuales.find(
-        (actual) => actual.planCuenta.codigo === detalleOriginal.planCuenta?.codigo
+        (actual) => actual.codigo && actual.codigo === detalleOriginal.codigo
       );
 
       if (!existe) {
@@ -1270,6 +1324,9 @@ export class AsientosContablesDinamico implements OnInit {
           );
           // Recargar detalles para mostrar los cambios
           this.cargarDetallesAsiento(asientoId);
+
+          // IMPORTANTE: hayDetallesSinGuardar se resetea en cargarDetallesAsiento()
+          // No lo reseteamos aquí para evitar que aparezca el botón antes de tiempo
         } else {
           this.snackBar.open(`❌ Errores en actualización: ${errores.join(', ')}`, 'Cerrar', {
             duration: 6000,
@@ -1480,16 +1537,48 @@ export class AsientosContablesDinamico implements OnInit {
   }
 
   /**
+   * Cargar estados de asientos desde detalleRubro
+   */
+  private cargarEstadosAsientos(): void {
+    // Verificar si los datos están cargados
+    if (!this.detalleRubroService.estanDatosCargados()) {
+      console.warn('DetalleRubros no están cargados aún');
+      // Usar estados por defecto
+      this.estadosAsientos = [
+        { codigo: 1, nombre: 'CONFIRMADO' },
+        { codigo: 2, nombre: 'ANULADO' },
+        { codigo: 3, nombre: 'REVERSADO' },
+        { codigo: 4, nombre: 'INCOMPLETO' }
+      ];
+      return;
+    }
+
+    // Obtener detalles del rubro de estados de asientos (código alterno 21)
+    const detalles = this.detalleRubroService.getDetallesByParent(this.RUBRO_ESTADO_ASIENTO);
+
+    if (detalles && detalles.length > 0) {
+      this.estadosAsientos = detalles.map(detalle => ({
+        codigo: detalle.codigoAlterno,
+        nombre: detalle.descripcion
+      }));
+    } else {
+      console.warn('No se encontraron estados de asientos en rubro 21');
+      // Usar estados por defecto
+      this.estadosAsientos = [
+        { codigo: 1, nombre: 'CONFIRMADO' },
+        { codigo: 2, nombre: 'ANULADO' },
+        { codigo: 3, nombre: 'REVERSADO' },
+        { codigo: 4, nombre: 'INCOMPLETO' }
+      ];
+    }
+  }
+
+  /**
    * Convierte un código de estado numérico a texto descriptivo
    */
   getEstadoTexto(estado: number): string {
-    const estados: { [key: number]: string } = {
-      1: 'CONFIRMADO',
-      2: 'ANULADO',
-      3: 'CONTABILIZADO',
-      4: 'INCOMPLETO',
-    };
-    return estados[estado] || 'DESCONOCIDO';
+    const estadoEncontrado = this.estadosAsientos.find(e => e.codigo === estado);
+    return estadoEncontrado ? estadoEncontrado.nombre : 'DESCONOCIDO';
   }
   /**
    * Valida que las cuentas con datos estén completas (cuenta + valor > 0)
@@ -1963,20 +2052,59 @@ export class AsientosContablesDinamico implements OnInit {
   }
 
   /**
+   * Verificar si el asiento está en estado REVERSADO
+   */
+  get asientoReversado(): boolean {
+    const estado = this.form.get('estado')?.value;
+    return estado === 3;
+  }
+
+  /**
+   * Determinar si el botón "Confirmar Asiento" debe estar habilitado
+   * Solo habilitado si:
+   * - El asiento está cuadrado
+   * - No hay detalles sin guardar
+   * - El asiento está en estado INCOMPLETO (no activo ni anulado)
+   */
+  get puedeConfirmarAsiento(): boolean {
+    return this.asientoCuadrado && !this.hayDetallesSinGuardar && !this.asientoActivo && !this.asientoAnulado;
+  }
+
+  /**
+   * Determinar si el botón "Actualizar Detalle" debe estar habilitado
+   * Habilitado cuando hay detalles sin guardar o cuando hay cambios en el grid
+   */
+  get puedeActualizarDetalle(): boolean {
+    return this.hayDetallesSinGuardar || (this.cuentasDebeGrid.length + this.cuentasHaberGrid.length > 0);
+  }
+
+  /**
    * Confirmar el asiento (cambiar de INCOMPLETO a ACTIVO)
    * Solo disponible cuando el asiento está cuadrado
    */
   confirmarAsiento(): void {
-    if (!this.asientoCuadrado) {
-      this.snackBar.open('⚠️ El asiento debe estar cuadrado para confirmarlo', 'Cerrar', {
+    // Validación 1: Debe existir la cabecera guardada
+    if (!this.codigoAsientoActual) {
+      this.snackBar.open('⚠️ Debe guardar la cabecera primero', 'Cerrar', {
         duration: 4000,
         panelClass: ['warning-snackbar']
       });
       return;
     }
 
-    if (!this.codigoAsientoActual) {
-      this.snackBar.open('⚠️ Debe guardar la cabecera primero', 'Cerrar', {
+    // Validación 2: Deben existir al menos 2 detalles guardados
+    const totalDetalles = this.cuentasDebeGrid.length + this.cuentasHaberGrid.length;
+    if (totalDetalles < 2) {
+      this.snackBar.open('⚠️ El asiento debe tener al menos 2 detalles guardados', 'Cerrar', {
+        duration: 4000,
+        panelClass: ['warning-snackbar']
+      });
+      return;
+    }
+
+    // Validación 3: El asiento debe estar cuadrado
+    if (!this.asientoCuadrado) {
+      this.snackBar.open('⚠️ El asiento debe estar cuadrado para confirmarlo (DEBE = HABER)', 'Cerrar', {
         duration: 4000,
         panelClass: ['warning-snackbar']
       });
@@ -2138,38 +2266,40 @@ export class AsientosContablesDinamico implements OnInit {
 
   /**
    * Ejecutar la reversa del asiento
-   * TODO: Especificar el servicio backend para reversa
    */
   private ejecutarReversa(): void {
+    if (!this.codigoAsientoActual) {
+      this.snackBar.open('❌ No hay asiento seleccionado para reversar', 'Cerrar', {
+        duration: 4000,
+        panelClass: ['error-snackbar']
+      });
+      return;
+    }
+
     this.loading = true;
 
-    // TODO: Implementar cuando se especifique el servicio backend
-    // Por ahora, mostrar mensaje de pendiente
-    setTimeout(() => {
-      this.loading = false;
-      this.snackBar.open('⚠️ Funcionalidad de reversa pendiente de implementación en backend', 'Cerrar', {
-        duration: 5000,
-        panelClass: ['warning-snackbar']
-      });
-    }, 500);
+    this.asientoService.generaReversion(this.codigoAsientoActual).subscribe({
+      next: (asientoReversado) => {
+        this.loading = false;
+        this.snackBar.open('✅ Asiento reversado exitosamente', 'Cerrar', {
+          duration: 4000,
+          panelClass: ['success-snackbar']
+        });
 
-    // Ejemplo de cómo se llamaría el servicio:
-    // this.asientoService.reversar(this.codigoAsientoActual).subscribe({
-    //   next: (asientoReversado) => {
-    //     this.loading = false;
-    //     this.snackBar.open('✅ Asiento reversado exitosamente', 'Cerrar', {
-    //       duration: 5000,
-    //       panelClass: ['success-snackbar']
-    //     });
-    //   },
-    //   error: (error) => {
-    //     this.loading = false;
-    //     this.snackBar.open(`❌ Error al reversar: ${error.message}`, 'Cerrar', {
-    //       duration: 5000,
-    //       panelClass: ['error-snackbar']
-    //     });
-    //   }
-    // });
+        // Recargar el asiento actual para ver los cambios
+        if (this.codigoAsientoActual) {
+          this.cargarAsientoPorId(this.codigoAsientoActual);
+        }
+      },
+      error: (error) => {
+        this.loading = false;
+        console.error('Error al reversar asiento:', error);
+        this.snackBar.open('❌ Error al reversar el asiento', 'Cerrar', {
+          duration: 4000,
+          panelClass: ['error-snackbar']
+        });
+      }
+    });
   }
 
   /**

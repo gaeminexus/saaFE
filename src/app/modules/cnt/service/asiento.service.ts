@@ -45,6 +45,17 @@ export class AsientoService {
       .pipe(catchError(this.handleError));
   }
 
+  /**
+   * Obtener asiento por ID
+   */
+  generaReversion(idAsiento: number): Observable<Asiento> {
+    const wsGetById = '/generaReversion';
+    const url = `${this.baseUrl}${wsGetById}/${idAsiento}`;
+    return this.http
+      .get<Asiento>(url)
+      .pipe(catchError(this.handleError));
+  }
+
 
   selectByCriteria(datos: any): Observable<Asiento[] | null> {
     const wsGetById = '/selectByCriteria/';
@@ -54,7 +65,7 @@ export class AsientoService {
     );
   }
 
-  
+
   /**
    * Crear nuevo asiento
    */
