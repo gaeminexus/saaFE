@@ -1,23 +1,12 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, ViewChild } from '@angular/core';
-import { FormControl, ReactiveFormsModule } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
-import { MatChipsModule } from '@angular/material/chips';
-import { MatNativeDateModule } from '@angular/material/core';
-import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { MatDividerModule } from '@angular/material/divider';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
-import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatSelectModule } from '@angular/material/select';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatSort, MatSortModule } from '@angular/material/sort';
-import { MatTableDataSource, MatTableModule } from '@angular/material/table';
-import { MatTooltipModule } from '@angular/material/tooltip';
+import { FormControl } from '@angular/forms';
+import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
+import { MatDialog } from '@angular/material/dialog';
+import { MatPaginator } from '@angular/material/paginator';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatSort } from '@angular/material/sort';
+import { MatTableDataSource } from '@angular/material/table';
 import { Router } from '@angular/router';
 
 import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
@@ -32,24 +21,7 @@ import { AsientoService } from '../../service/asiento.service';
   standalone: true,
   imports: [
     CommonModule,
-    ReactiveFormsModule,
-    MatTableModule,
-    MatPaginatorModule,
-    MatSortModule,
-    MatIconModule,
-    MatButtonModule,
-    MatSnackBarModule,
-    MatDialogModule,
-    MatDividerModule,
-    MatDatepickerModule,
-    MatNativeDateModule,
-    MatTooltipModule,
-    MatProgressSpinnerModule,
-    MatCardModule,
-    MatChipsModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatSelectModule,
+    MaterialFormModule,
   ],
   templateUrl: './listado-asientos.component.html',
   styleUrls: ['./listado-asientos.component.scss'],

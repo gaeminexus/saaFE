@@ -165,8 +165,8 @@ export class PeriodoService {
     const wsDelete = '/' + codigo;
     const url = `${ServiciosCnt.RS_PRDO}${wsDelete}`;
 
+    // Opciones específicas para recibir texto plano (sin Content-Type: application/json)
     return this.http.delete(url, {
-      ...this.httpOptions,
       responseType: 'text'
     }).pipe(
       catchError((error: HttpErrorResponse) => {

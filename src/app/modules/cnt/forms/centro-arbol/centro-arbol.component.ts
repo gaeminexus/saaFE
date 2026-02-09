@@ -1,17 +1,10 @@
 import { NestedTreeControl } from '@angular/cdk/tree';
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
-import { ReactiveFormsModule } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
-import { MatMenuModule } from '@angular/material/menu';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatTreeModule, MatTreeNestedDataSource } from '@angular/material/tree';
+import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
+import { MatDialog } from '@angular/material/dialog';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatTreeNestedDataSource } from '@angular/material/tree';
 
 import { CentroCostoUtilsService } from '../../../../shared/services/centro-costo-utils.service';
 import { CentroCosto } from '../../model/centro-costo';
@@ -31,17 +24,7 @@ interface CentroCostoNode extends CentroCosto {
   standalone: true,
   imports: [
     CommonModule,
-    ReactiveFormsModule,
-    MatTreeModule,
-    MatIconModule,
-    MatButtonModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatMenuModule,
-    MatProgressSpinnerModule,
-    MatSnackBarModule,
-    MatDialogModule,
-    MatTooltipModule,
+    MaterialFormModule,
   ],
   templateUrl: './centro-arbol.component.html',
   styleUrls: ['./centro-arbol.component.scss'],

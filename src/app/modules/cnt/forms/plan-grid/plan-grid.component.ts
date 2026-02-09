@@ -9,20 +9,11 @@ import {
   signal,
   ViewChild,
 } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
-import { MatMenuModule } from '@angular/material/menu';
-import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatSelectModule } from '@angular/material/select';
-import { MatSort, MatSortModule } from '@angular/material/sort';
-import { MatTableDataSource, MatTableModule } from '@angular/material/table';
-import { MatTooltipModule } from '@angular/material/tooltip';
+import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
+import { MatDialog } from '@angular/material/dialog';
+import { MatPaginator } from '@angular/material/paginator';
+import { MatSort } from '@angular/material/sort';
+import { MatTableDataSource } from '@angular/material/table';
 
 import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
@@ -41,20 +32,7 @@ import { PlanCuentaService } from '../../service/plan-cuenta.service';
   standalone: true,
   imports: [
     CommonModule,
-    FormsModule,
-    MatButtonModule,
-    MatIconModule,
-    MatProgressSpinnerModule,
-    MatDialogModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatSelectModule,
-    MatTableModule,
-    MatPaginatorModule,
-    MatSortModule,
-    MatCheckboxModule,
-    MatMenuModule,
-    MatTooltipModule,
+    MaterialFormModule,
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './plan-grid.component.html',

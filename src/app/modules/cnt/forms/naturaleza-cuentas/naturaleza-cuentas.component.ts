@@ -1,11 +1,9 @@
 import { CommonModule } from '@angular/common';
 import { Component, CUSTOM_ELEMENTS_SCHEMA, OnInit } from '@angular/core';
 import { Validators } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { MatIconModule } from '@angular/material/icon';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
+import { MatDialog } from '@angular/material/dialog';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { ConfirmDialogComponent } from '../../../../shared/basics/confirm-dialog/confirm-dialog.component';
 import { FieldConfig } from '../../../../shared/basics/table/dynamic-form/model/field.interface';
@@ -33,11 +31,7 @@ const RUBRO_ESTADO = 11;
   standalone: true,
   imports: [
     CommonModule,
-    MatButtonModule,
-    MatIconModule,
-    MatProgressSpinnerModule,
-    MatSnackBarModule,
-    MatDialogModule,
+    MaterialFormModule,
     TableBasicHijosComponent,
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
