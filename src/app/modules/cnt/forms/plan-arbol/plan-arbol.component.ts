@@ -9,18 +9,11 @@ import {
   signal,
   ViewChild,
 } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { MatExpansionModule } from '@angular/material/expansion';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
-import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatSelectModule } from '@angular/material/select';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatTreeModule, MatTreeNestedDataSource } from '@angular/material/tree';
+import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
+import { MatDialog } from '@angular/material/dialog';
+import { PageEvent } from '@angular/material/paginator';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatTreeNestedDataSource } from '@angular/material/tree';
 
 import {
   ConfirmDialogComponent,
@@ -54,18 +47,7 @@ interface SortConfig {
   standalone: true,
   imports: [
     CommonModule,
-    FormsModule,
-    MatButtonModule,
-    MatIconModule,
-    MatProgressSpinnerModule,
-    MatDialogModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatSelectModule,
-    MatTreeModule,
-    MatExpansionModule,
-    MatPaginatorModule,
-    MatSnackBarModule,
+    MaterialFormModule,
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './plan-arbol.component.html',

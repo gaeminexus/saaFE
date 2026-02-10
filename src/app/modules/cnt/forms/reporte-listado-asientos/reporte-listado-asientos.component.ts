@@ -1,19 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, signal, OnInit } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
-import { MatRadioModule } from '@angular/material/radio';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatIconModule } from '@angular/material/icon';
-import { MatExpansionModule } from '@angular/material/expansion';
-import { MatTableModule } from '@angular/material/table';
-import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatNativeDateModule } from '@angular/material/core';
+import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
@@ -25,6 +13,7 @@ import { TipoAsiento } from '../../model/tipo-asiento';
 import { Asiento } from '../../model/asiento';
 import { DetalleAsiento } from '../../model/detalle-asiento';
 import { ExportService } from '../../../../shared/services/export.service';
+import { DetalleRubroService } from '../../../../shared/services/detalle-rubro.service';
 import { Router } from '@angular/router';
 
 @Component({
@@ -32,20 +21,7 @@ import { Router } from '@angular/router';
   standalone: true,
   imports: [
     CommonModule,
-    FormsModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatSelectModule,
-    MatButtonModule,
-    MatRadioModule,
-    MatSnackBarModule,
-    MatProgressSpinnerModule,
-    MatIconModule,
-    MatExpansionModule,
-    MatTableModule,
-    MatTooltipModule,
-    MatDatepickerModule,
-    MatNativeDateModule,
+    MaterialFormModule,
   ],
   templateUrl: './reporte-listado-asientos.component.html',
   styleUrls: ['./reporte-listado-asientos.component.scss'],
@@ -79,19 +55,17 @@ export class ReporteListadoAsientosComponent implements OnInit {
   // Columnas de la tabla de detalles
   displayedColumns: string[] = ['cuenta', 'nombreCuenta', 'descripcion', 'debe', 'haber'];
 
+  // Constantes de rubros
+  private readonly RUBRO_ESTADO_ASIENTO = 21;
+
   // Opciones
-  estados = [
-    { valor: null, etiqueta: 'Todos' },
-    { valor: 1, etiqueta: 'Activo' },
-    { valor: 2, etiqueta: 'Inactivo' },
-    { valor: 3, etiqueta: 'Anulado' },
-    { valor: 4, etiqueta: 'Incompleto' },
-  ];
+  estados: { valor: number | null; etiqueta: string }[] = [];
 
   constructor(
     private asientoService: AsientoService,
     private tipoAsientoService: TipoAsientoService,
     private detalleAsientoService: DetalleAsientoService,
+    private detalleRubroService: DetalleRubroService,
     private snackBar: MatSnackBar,
     private exportService: ExportService,
     private router: Router
@@ -99,7 +73,50 @@ export class ReporteListadoAsientosComponent implements OnInit {
 
   ngOnInit(): void {
     this.idSucursal = localStorage.getItem('idSucursal') || '280';
+    this.cargarEstadosAsientos();
     this.cargarTiposAsiento();
+  }
+
+  /**
+   * Cargar estados de asientos desde detalleRubro
+   */
+  private cargarEstadosAsientos(): void {
+    // Opción "Todos" siempre presente
+    this.estados = [{ valor: null, etiqueta: 'Todos' }];
+
+    // Verificar si los datos están cargados
+    if (!this.detalleRubroService.estanDatosCargados()) {
+      console.warn('DetalleRubros no están cargados aún');
+      // Usar estados por defecto
+      this.estados.push(
+        { valor: 1, etiqueta: 'CONFIRMADO' },
+        { valor: 2, etiqueta: 'ANULADO' },
+        { valor: 3, etiqueta: 'REVERSADO' },
+        { valor: 4, etiqueta: 'INCOMPLETO' }
+      );
+      return;
+    }
+
+    // Obtener detalles del rubro de estados de asientos
+    const detalles = this.detalleRubroService.getDetallesByParent(this.RUBRO_ESTADO_ASIENTO);
+
+    if (detalles && detalles.length > 0) {
+      detalles.forEach(detalle => {
+        this.estados.push({
+          valor: detalle.codigoAlterno,
+          etiqueta: detalle.descripcion
+        });
+      });
+    } else {
+      console.warn('No se encontraron estados de asientos en rubro 21');
+      // Usar estados por defecto
+      this.estados.push(
+        { valor: 1, etiqueta: 'CONFIRMADO' },
+        { valor: 2, etiqueta: 'ANULADO' },
+        { valor: 3, etiqueta: 'REVERSADO' },
+        { valor: 4, etiqueta: 'INCOMPLETO' }
+      );
+    }
   }
 
   /**

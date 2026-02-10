@@ -77,3 +77,39 @@ app-root {
 body {
   padding-bottom: 35px !important; // Espacio reservado para el footer fijo
 }
+
+// Estilos globales para SnackBar (deben estar aquí, no en componentes)
+.success-snackbar {
+  background: #4caf50 !important;
+  color: white !important;
+
+  .mat-mdc-snack-bar-label {
+    color: white !important;
+  }
+}
+
+.error-snackbar {
+  background: #f44336 !important;
+  color: white !important;
+
+  .mat-mdc-snack-bar-label {
+    color: white !important;
+  }
+}
+
+.warning-snackbar {
+  background: #ff9800 !important;
+  color: white !important;
+
+  .mat-mdc-snack-bar-label {
+    color: white !important;
+  }
+}
+
+.info-snackbar {
+  color: white !important;
+
+  .mat-mdc-snack-bar-label {
+    color: white !important;
+  }
+}

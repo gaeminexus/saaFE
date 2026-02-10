@@ -188,6 +188,41 @@
         box-shadow: 0 2px 8px rgba(25, 118, 210, 0.15);
       }
 
+      // Estilo para asientos anulados (estado 2)
+      &.asiento-anulado {
+        background: #ffebee;
+        border-color: #ef5350;
+
+        &.expandido {
+          background: #ffcdd2;
+          border-color: #d32f2f;
+          box-shadow: 0 4px 12px rgba(211, 47, 47, 0.3);
+        }
+
+        &:hover {
+          border-color: #d32f2f;
+          box-shadow: 0 2px 8px rgba(211, 47, 47, 0.2);
+        }
+
+        .asiento-header {
+          background: rgba(239, 83, 80, 0.1);
+          border-bottom-color: #ef5350;
+
+          &:hover {
+            background: rgba(239, 83, 80, 0.15);
+          }
+        }
+
+        .asiento-numero {
+          color: #c62828;
+          font-weight: 600;
+        }
+
+        .info-item strong {
+          color: #d32f2f;
+        }
+      }
+
       .asiento-header {
         display: flex;
         justify-content: space-between;

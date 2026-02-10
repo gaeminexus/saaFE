@@ -1,18 +1,8 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
-import { MatNativeDateModule } from '@angular/material/core';
-import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatSelectModule } from '@angular/material/select';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatTableModule } from '@angular/material/table';
-import { MatTabsModule } from '@angular/material/tabs';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { Mayorizacion } from '../../model/mayorizacion';
 import { MayorizacionProceso, TipoProceso } from '../../model/mayorizacion-proceso';
@@ -25,19 +15,7 @@ import { PeriodoService } from '../../service/periodo.service';
   standalone: true,
   imports: [
     CommonModule,
-    ReactiveFormsModule,
-    MatCardModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatButtonModule,
-    MatSelectModule,
-    MatProgressSpinnerModule,
-    MatSnackBarModule,
-    MatIconModule,
-    MatTableModule,
-    MatTabsModule,
-    MatDatepickerModule,
-    MatNativeDateModule,
+    MaterialFormModule,
   ],
   templateUrl: './mayorizacion-proceso.component.html',
   styleUrl: './mayorizacion-proceso.component.scss',

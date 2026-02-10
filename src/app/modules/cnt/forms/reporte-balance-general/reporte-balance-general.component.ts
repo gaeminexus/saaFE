@@ -1,23 +1,13 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
+import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
 
 @Component({
   selector: 'cnt-reporte-balance-general',
   standalone: true,
   imports: [
     CommonModule,
-    FormsModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatSelectModule,
-    MatCheckboxModule,
-    MatButtonModule,
+    MaterialFormModule,
   ],
   templateUrl: './reporte-balance-general.component.html',
   styleUrls: ['./reporte-balance-general.component.scss'],

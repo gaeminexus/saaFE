@@ -1,13 +1,9 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, ViewChild, computed, signal } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
-import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatSort, MatSortModule } from '@angular/material/sort';
-import { MatTableDataSource, MatTableModule } from '@angular/material/table';
+import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
+import { MatPaginator } from '@angular/material/paginator';
+import { MatSort } from '@angular/material/sort';
+import { MatTableDataSource } from '@angular/material/table';
 
 import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
@@ -20,14 +16,7 @@ import { DetalleMayorizacionService } from '../../service/detalle-mayorizacion.s
   standalone: true,
   imports: [
     CommonModule,
-    MatTableModule,
-    MatPaginatorModule,
-    MatSortModule,
-    MatIconModule,
-    MatButtonModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatProgressSpinnerModule,
+    MaterialFormModule,
   ],
   templateUrl: './detalle-mayorizacion.component.html',
   styleUrls: ['./detalle-mayorizacion.component.scss'],

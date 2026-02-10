@@ -1,14 +1,10 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, ViewChild, computed, signal } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
-import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatIconModule } from '@angular/material/icon';
-import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatSort, MatSortModule } from '@angular/material/sort';
-import { MatTableDataSource, MatTableModule } from '@angular/material/table';
+import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
+import { MatPaginator } from '@angular/material/paginator';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatSort } from '@angular/material/sort';
+import { MatTableDataSource } from '@angular/material/table';
 
 import { EstadoPeriodo, Periodo } from '../../model/periodo';
 import { PeriodoService } from '../../service/periodo.service';
@@ -18,15 +14,7 @@ import { PeriodoService } from '../../service/periodo.service';
   standalone: true,
   imports: [
     CommonModule,
-    MatCardModule,
-    MatTableModule,
-    MatPaginatorModule,
-    MatSortModule,
-    MatIconModule,
-    MatButtonModule,
-    MatSnackBarModule,
-    MatCheckboxModule,
-    MatProgressSpinnerModule,
+    MaterialFormModule,
   ],
   templateUrl: './mayorizacion.component.html',
   styleUrl: './mayorizacion.component.scss',

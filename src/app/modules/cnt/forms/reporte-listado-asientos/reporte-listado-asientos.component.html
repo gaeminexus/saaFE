@@ -198,7 +198,9 @@
         </div>
         <div class="resultados-list">
           @for (asiento of resultadosAsientos; track asiento.codigo) {
-            <div class="asiento-item" [class.expandido]="isAsientoExpandido(asiento.codigo)">
+            <div class="asiento-item"
+                 [class.expandido]="isAsientoExpandido(asiento.codigo)"
+                 [class.asiento-anulado]="asiento.estado === 2">
               <div class="asiento-header" (click)="toggleAsiento(asiento)">
                 <div class="header-left">
                   <button mat-icon-button class="expand-button">
@@ -236,9 +238,9 @@
                 <div class="asiento-actions">
                   <button mat-raised-button color="primary"
                           (click)="editarAsiento(asiento); $event.stopPropagation()"
-                          matTooltip="Editar asiento">
-                    <mat-icon>edit</mat-icon>
-                    Editar Asiento
+                          matTooltip="Ir a asiento">
+                    <mat-icon>arrow_right_alt</mat-icon>
+                    Ir a Asiento
                   </button>
                 </div>
               </div>

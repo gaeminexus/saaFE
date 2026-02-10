@@ -40,8 +40,21 @@ export class AsientoService {
    * Obtener asiento por ID
    */
   getById(id: number): Observable<Asiento> {
+    const wsGetById = '/getId/';
+        const url = `${ServiciosCnt.RS_ASNT}${wsGetById}${id}`;
+        return this.http.get<Asiento>(url).pipe(
+          catchError(this.handleError)
+        );
+  }
+
+  /**
+   * Obtener asiento por ID
+   */
+  generaReversion(idAsiento: number): Observable<Asiento> {
+    const wsGetById = '/generaReversion';
+    const url = `${this.baseUrl}${wsGetById}/${idAsiento}`;
     return this.http
-      .get<Asiento>(`${this.baseUrl}/${id}`, this.httpOptions)
+      .get<Asiento>(url)
       .pipe(catchError(this.handleError));
   }
 
@@ -54,7 +67,7 @@ export class AsientoService {
     );
   }
 
-  
+
   /**
    * Crear nuevo asiento
    */

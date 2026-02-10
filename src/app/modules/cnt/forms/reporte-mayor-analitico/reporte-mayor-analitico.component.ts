@@ -1,12 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
-import { MatTableModule } from '@angular/material/table';
+import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
 
 interface CuentaRow {
   numero: string;
@@ -29,13 +23,7 @@ interface DetalleRow {
   standalone: true,
   imports: [
     CommonModule,
-    FormsModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatSelectModule,
-    MatCheckboxModule,
-    MatButtonModule,
-    MatTableModule,
+    MaterialFormModule,
   ],
   templateUrl: './reporte-mayor-analitico.component.html',
   styleUrls: ['./reporte-mayor-analitico.component.scss'],

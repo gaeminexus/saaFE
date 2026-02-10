@@ -3,6 +3,39 @@
   max-width: 1400px;
   margin: 0 auto;
 
+  .actualizar-detalle-container {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    margin: 20px 0;
+    padding: 16px 0;
+
+    button {
+      padding: 12px 24px;
+      font-weight: 600;
+      box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+
+      mat-icon {
+        margin-right: 8px;
+        line-height: 1;
+      }
+
+      &:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+      }
+
+      &:disabled {
+        transform: none;
+        box-shadow: none;
+      }
+    }
+  }
+
   .header {
     margin-bottom: 20px;
 
@@ -1106,21 +1139,57 @@
   }
 
   .actualizar-detalle-container {
-    display: flex;
-    justify-content: center;
-    margin-top: 16px;
-    padding-top: 16px;
-    border-top: 1px solid #dee2e6;
+    display: grid;
+    place-items: center;
+    width: 100%;
+    margin: 20px 0;
+    padding: 16px 0;
 
     button {
       padding: 12px 24px;
       font-weight: 600;
       box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
       transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+
+      mat-icon {
+        margin-right: 8px;
+        line-height: 1;
+      }
 
       &:hover {
         transform: translateY(-1px);
         box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+      }
+
+      .badge-pendiente {
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        background-color: #f44336;
+        color: white;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        font-weight: 700;
+        animation: pulse 1.5s infinite;
+      }
+
+      @keyframes pulse {
+        0%, 100% {
+          transform: scale(1);
+          opacity: 1;
+        }
+        50% {
+          transform: scale(1.1);
+          opacity: 0.8;
+        }
       }
 
       &:disabled {

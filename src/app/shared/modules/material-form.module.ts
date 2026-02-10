@@ -1,6 +1,6 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule } from '@angular/forms';
+import { ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -27,16 +27,22 @@ import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatStepperModule } from '@angular/material/stepper';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatDividerModule } from '@angular/material/divider';
+import { MatTreeModule } from '@angular/material/tree';
 
 const MaterialComponents = [
   CommonModule,
   ReactiveFormsModule,
+  FormsModule,
   MatAutocompleteModule,
   MatButtonModule,
   MatCardModule,
   MatCheckboxModule,
+  MatChipsModule,
   MatDatepickerModule,
   MatDialogModule,
+  MatDividerModule,
   MatExpansionModule,
   MatFormFieldModule,
   MatIconModule,
@@ -57,6 +63,7 @@ const MaterialComponents = [
   MatToolbarModule,
   MatTooltipModule,
   MatStepperModule,
+  MatTreeModule,
 ];
 
 @NgModule({

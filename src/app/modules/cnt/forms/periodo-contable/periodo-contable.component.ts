@@ -1,30 +1,13 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, ViewChild } from '@angular/core';
-import {
-  FormBuilder,
-  FormGroup,
-  FormsModule,
-  ReactiveFormsModule,
-  Validators,
-} from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
-import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatChipsModule } from '@angular/material/chips';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
-
-import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
-import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatSelectModule } from '@angular/material/select';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatSort, MatSortModule } from '@angular/material/sort';
-import { MatTableDataSource, MatTableModule } from '@angular/material/table';
-import { MatTooltipModule } from '@angular/material/tooltip';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { MatDialog } from '@angular/material/dialog';
+import { MatPaginator } from '@angular/material/paginator';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatSort } from '@angular/material/sort';
+import { MatTableDataSource } from '@angular/material/table';
 import { ConfirmDialogComponent } from '../../../../shared/basics/confirm-dialog/confirm-dialog.component';
-
+import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
 import { EstadoPeriodo, Periodo } from '../../model/periodo';
 import { PeriodoService } from '../../service/periodo.service';
 
@@ -33,23 +16,7 @@ import { PeriodoService } from '../../service/periodo.service';
   standalone: true,
   imports: [
     CommonModule,
-    ReactiveFormsModule,
-    FormsModule,
-    MatTableModule,
-    MatPaginatorModule,
-    MatSortModule,
-    MatIconModule,
-    MatButtonModule,
-    MatTooltipModule,
-    MatInputModule,
-    MatFormFieldModule,
-    MatSelectModule,
-    MatCardModule,
-    MatDialogModule,
-    MatChipsModule,
-    MatSnackBarModule,
-    MatProgressSpinnerModule,
-    MatCheckboxModule,
+    MaterialFormModule,
   ],
   templateUrl: './periodo-contable.component.html',
   styleUrl: './periodo-contable.component.scss',
@@ -239,7 +206,6 @@ export class PeriodoContableComponent implements OnInit {
     if (!empresaCodigo) {
       this.loading = false;
       this.showMessage('No hay empresa seleccionada. Por favor inicie sesión nuevamente.', 'error');
-      console.error('❌ No se encontró idSucursal en localStorage');
       return;
     }
 
@@ -256,13 +222,8 @@ export class PeriodoContableComponent implements OnInit {
         });
 
         this.loading = false;
-
-        if (this.periodos.length > 0) {
-          this.showMessage('Períodos cargados correctamente', 'success');
-        }
       },
       error: (error: any) => {
-        console.error('❌ Error al cargar períodos:', error);
         this.showMessage('Error al cargar períodos. Verifique la conexión.', 'error');
         this.loading = false;
       },
@@ -319,7 +280,7 @@ export class PeriodoContableComponent implements OnInit {
 
     if (!empresaCodigoStr) {
       this.showMessage('No hay empresa seleccionada. Por favor inicie sesión nuevamente.', 'error');
-      console.error('❌ No se encontró idSucursal en localStorage');
+
       return;
     }
 
@@ -373,7 +334,7 @@ export class PeriodoContableComponent implements OnInit {
           }
         },
         error: (error) => {
-          console.error('❌ Error al crear período:', error);
+
           this.showMessage('Error al crear período', 'error');
         },
       });
@@ -389,7 +350,7 @@ export class PeriodoContableComponent implements OnInit {
           }
         },
         error: (error) => {
-          console.error('❌ Error al actualizar período:', error);
+
           this.showMessage('Error al actualizar período', 'error');
         },
       });
@@ -419,7 +380,6 @@ export class PeriodoContableComponent implements OnInit {
         }
       },
       error: (error) => {
-        console.error('❌ Error al mayorizar período:', error);
         this.showMessage('Error al mayorizar período', 'error');
       },
     });
@@ -441,7 +401,6 @@ export class PeriodoContableComponent implements OnInit {
         }
       },
       error: (error) => {
-        console.error('❌ Error al desmayorizar período:', error);
         this.showMessage('Error al desmayorizar período', 'error');
       },
     });
@@ -472,17 +431,26 @@ export class PeriodoContableComponent implements OnInit {
     dialogRef.afterClosed().subscribe((confirmed) => {
       if (confirmed) {
         this.periodoService.delete(periodo.codigo).subscribe({
-          next: (success) => {
-            if (success) {
-              this.showMessage('Período eliminado correctamente', 'success');
-              this.loadPeriodos();
-            } else {
-              this.showMessage('No se pudo eliminar el período', 'error');
-            }
+          next: (response) => {
+            // Delay para que el dialog se cierre completamente antes de mostrar el snackbar
+            setTimeout(() => {
+              // El backend devuelve un string: "OK" = éxito, otro texto = error
+              if (response === 'OK') {
+                this.showMessage('Período eliminado correctamente', 'success');
+                this.loadPeriodos();
+              } else {
+                // Mostrar el mensaje de error devuelto por el backend
+                this.showMessage(response || 'No se pudo eliminar el período', 'error');
+              }
+            }, 300);
           },
           error: (error) => {
-            console.error('❌ Error al eliminar período:', error);
-            this.showMessage('Error al eliminar período', 'error');
+            const errorMsg = error?.error || error?.message || 'Error al eliminar período';
+
+            // Delay también para errores
+            setTimeout(() => {
+              this.showMessage(errorMsg, 'error');
+            }, 300);
           },
         });
       }
@@ -556,7 +524,6 @@ export class PeriodoContableComponent implements OnInit {
 
       return '';
     } catch (error) {
-      console.warn('Error al formatear fecha:', error, fecha);
       return '';
     }
   }
@@ -565,24 +532,24 @@ export class PeriodoContableComponent implements OnInit {
     let panelClass = '';
     switch (type) {
       case 'success':
-        panelClass = 'snackbar-success';
+        panelClass = 'success-snackbar';
         break;
       case 'error':
-        panelClass = 'snackbar-error';
+        panelClass = 'error-snackbar';
         break;
       case 'warn':
-        panelClass = 'snackbar-warn';
+        panelClass = 'warning-snackbar';
         break;
       case 'info':
-        panelClass = 'snackbar-info';
+        panelClass = 'info-snackbar';
         break;
     }
 
     this.snackBar.open(message, 'Cerrar', {
-      duration: 4000,
+      duration: 6000,
       panelClass: [panelClass],
-      horizontalPosition: 'end',
-      verticalPosition: 'top',
+      horizontalPosition: 'center',
+      verticalPosition: 'bottom'
     });
   }
 }

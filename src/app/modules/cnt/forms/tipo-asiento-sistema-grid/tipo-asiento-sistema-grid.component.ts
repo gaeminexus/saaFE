@@ -1,17 +1,11 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, ViewChild } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MatChipsModule } from '@angular/material/chips';
+import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
 import { MatDialog } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
-import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
+import { MatPaginator } from '@angular/material/paginator';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { MatSort, MatSortModule } from '@angular/material/sort';
-import { MatTableDataSource, MatTableModule } from '@angular/material/table';
-import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatSort } from '@angular/material/sort';
+import { MatTableDataSource } from '@angular/material/table';
 
 import { EstadoTipoAsiento, TipoAsiento } from '../../model/tipo-asiento';
 import { TipoAsientoService } from '../../service/tipo-asiento.service';
@@ -25,16 +19,7 @@ import {
   standalone: true,
   imports: [
     CommonModule,
-    MatTableModule,
-    MatPaginatorModule,
-    MatSortModule,
-    MatIconModule,
-    MatButtonModule,
-    MatTooltipModule,
-    MatInputModule,
-    MatFormFieldModule,
-    MatChipsModule,
-    FormsModule,
+    MaterialFormModule,
   ],
   templateUrl: './tipo-asiento-sistema-grid.component.html',
   styleUrls: ['./tipo-asiento-sistema-grid.component.scss'],
