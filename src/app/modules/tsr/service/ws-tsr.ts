@@ -38,6 +38,7 @@ export class ServiciosTsr {
   public static RS_MVCB = `${API_URL}/mvcb`;
   public static RS_PGSS = `${API_URL}/pgss`;
   public static RS_PRSN = `${API_URL}/prsn`;
+  public static RS_TTLR = `${API_URL}/ttlr`; // Titular (Tesorería)
   public static RS_PRCC = `${API_URL}/prcc`;
   public static RS_PRRL = `${API_URL}/prrl`;
   public static RS_SLCB = `${API_URL}/slcb`;

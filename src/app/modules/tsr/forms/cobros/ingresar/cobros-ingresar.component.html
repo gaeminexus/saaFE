@@ -8,32 +8,46 @@
         <div class="form-grid">
           <mat-form-field appearance="outline">
             <mat-label>Tipo Identificación</mat-label>
-            <mat-select [value]="tipoId()">
+            <mat-select [value]="tipoId()" (selectionChange)="tipoId.set($event.value)">
               <mat-option [value]="null">Seleccione ...</mat-option>
-              <mat-option [value]="1">Cédula</mat-option>
-              <mat-option [value]="2">RUC</mat-option>
+              @for (tipo of tiposIdentificacion(); track tipo.codigo) {
+                <mat-option [value]="tipo.codigo">{{ tipo.descripcion }}</mat-option>
+              }
             </mat-select>
           </mat-form-field>
 
           <mat-form-field appearance="outline">
-            <mat-label>Número Identificación</mat-label>
-            <input matInput [value]="numeroId()" />
+            <mat-label>CI / RUC</mat-label>
+            <input
+              matInput
+              [value]="numeroId()"
+              (input)="updateNumeroId($any($event.target).value)"
+            />
           </mat-form-field>
 
           <mat-form-field appearance="outline">
             <mat-label>Cliente</mat-label>
-            <input matInput [value]="cliente()" />
+            <input
+              matInput
+              [value]="cliente()"
+              (input)="updateCliente($any($event.target).value)"
+            />
           </mat-form-field>
 
           <mat-form-field appearance="outline">
             <mat-label>Fecha</mat-label>
-            <input matInput [matDatepicker]="picker" [value]="fecha()" />
+            <input
+              matInput
+              [matDatepicker]="picker"
+              [value]="fecha()"
+              (dateChange)="fecha.set($event.value)"
+            />
             <mat-datepicker #picker></mat-datepicker>
           </mat-form-field>
 
           <mat-form-field appearance="outline">
             <mat-label>Tipo Cobro</mat-label>
-            <mat-select [value]="tipoCobro()">
+            <mat-select [value]="tipoCobro()" (selectionChange)="tipoCobro.set($event.value)">
               <mat-option [value]="1">Factura</mat-option>
               <mat-option [value]="2">Anticipo</mat-option>
             </mat-select>
@@ -41,37 +55,52 @@
 
           <mat-form-field appearance="outline">
             <mat-label>Valor</mat-label>
-            <input matInput type="number" [value]="valor() ?? ''" />
+            <input
+              matInput
+              type="number"
+              [value]="valor() ?? ''"
+              (input)="updateValor($any($event.target).value)"
+            />
           </mat-form-field>
 
           <mat-form-field appearance="outline">
-            <mat-label>Caja Lógica</mat-label>
-            <mat-select [value]="cajaLogicaId()">
+            <mat-label>Caja Contable</mat-label>
+            <mat-select [value]="cajaLogicaId()" (selectionChange)="cajaLogicaId.set($event.value)">
               <mat-option [value]="null">Seleccione ...</mat-option>
-              <mat-option [value]="1">Caja Central</mat-option>
-              <mat-option [value]="2">Caja Tesorería</mat-option>
+              @for (caja of cajasLogicas(); track caja.codigo) {
+                <mat-option [value]="caja.codigo">{{ getCajaLogicaLabel(caja) }}</mat-option>
+              }
             </mat-select>
           </mat-form-field>
 
           <mat-form-field appearance="outline">
-            <mat-label>Persona</mat-label>
-            <mat-select [value]="personaId()">
+            <mat-label>Titular</mat-label>
+            <mat-select [value]="personaId()" (selectionChange)="personaId.set($event.value)">
               <mat-option [value]="null">Seleccione ...</mat-option>
-              <mat-option [value]="101">Juan Pérez</mat-option>
-              <mat-option [value]="102">María López</mat-option>
+              @for (titular of titulares(); track titular.codigo) {
+                <mat-option [value]="titular.codigo">{{ getTitularLabel(titular) }}</mat-option>
+              }
             </mat-select>
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="span-2">
             <mat-label>Descripción</mat-label>
-            <input matInput [value]="descripcion()" />
+            <input
+              matInput
+              [value]="descripcion()"
+              (input)="updateDescripcion($any($event.target).value)"
+            />
           </mat-form-field>
         </div>
 
         <div class="actions">
           <button mat-raised-button color="primary" (click)="guardar()">
             <mat-icon>save</mat-icon>
-            Guardar
+            Siguiente
+          </button>
+          <button mat-stroked-button color="warn" (click)="cancelar()">
+            <mat-icon>close</mat-icon>
+            Cancelar
           </button>
         </div>
       </div>
@@ -85,13 +114,22 @@
           <ng-container matColumnDef="descripcion">
             <th mat-header-cell *matHeaderCellDef>DESCRIPCIÓN</th>
             <td mat-cell *matCellDef="let row">
-              <input matInput [value]="row.descripcion" />
+              <input
+                matInput
+                [value]="row.descripcion"
+                (input)="updateMotivoDescripcion(row, $any($event.target).value)"
+              />
             </td>
           </ng-container>
           <ng-container matColumnDef="valor">
             <th mat-header-cell *matHeaderCellDef>VALOR</th>
             <td mat-cell *matCellDef="let row">
-              <input matInput type="number" [value]="row.valor" />
+              <input
+                matInput
+                type="number"
+                [value]="row.valor"
+                (input)="updateMotivoValor(row, $any($event.target).value)"
+              />
             </td>
           </ng-container>
           <ng-container matColumnDef="acciones">
@@ -114,10 +152,11 @@
         <div class="panel-body">
           <mat-form-field appearance="outline">
             <mat-label>Estado (Rubro 28)</mat-label>
-            <mat-select [value]="rubroEstadoH()">
+            <mat-select [value]="rubroEstadoH()" (selectionChange)="rubroEstadoH.set($event.value)">
               <mat-option [value]="null">Seleccione ...</mat-option>
-              <mat-option [value]="1">Generado</mat-option>
-              <mat-option [value]="2">Cobrado</mat-option>
+              @for (estado of estadosCobro(); track estado.codigo) {
+                <mat-option [value]="estado.codigo">{{ estado.descripcion }}</mat-option>
+              }
             </mat-select>
           </mat-form-field>
         </div>
@@ -128,10 +167,14 @@
         <div class="panel-body">
           <mat-form-field appearance="outline">
             <mat-label>Motivo (Rubro 29)</mat-label>
-            <mat-select [value]="rubroMotivoAnulacionH()">
+            <mat-select
+              [value]="rubroMotivoAnulacionH()"
+              (selectionChange)="rubroMotivoAnulacionH.set($event.value)"
+            >
               <mat-option [value]="null">Seleccione ...</mat-option>
-              <mat-option [value]="1">Error</mat-option>
-              <mat-option [value]="2">Cliente</mat-option>
+              @for (motivo of motivosAnulacion(); track motivo.codigo) {
+                <mat-option [value]="motivo.codigo">{{ motivo.descripcion }}</mat-option>
+              }
             </mat-select>
           </mat-form-field>
         </div>

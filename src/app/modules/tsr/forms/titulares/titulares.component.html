@@ -1,0 +1,317 @@
+<div class="titulares-container">
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="header-content">
+      <div class="icon-container">
+        <mat-icon>people</mat-icon>
+      </div>
+      <div class="title-container">
+        <h1>Gestión de Titulares</h1>
+        <p class="subtitle">Registro de clientes, proveedores, empleados y beneficiarios</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="content-wrapper">
+    <!-- Tabla de Titulares -->
+    <div class="table-panel">
+      <div class="panel-header">
+        <mat-icon>list</mat-icon>
+        <span>LISTADO DE Titulares</span>
+      </div>
+
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <button
+          mat-raised-button
+          (click)="insertar()"
+          [disabled]="editMode()"
+          matTooltip="Insertar nueva titular"
+        >
+          <mat-icon>add</mat-icon> Insertar
+        </button>
+
+        <button
+          mat-raised-button
+          (click)="eliminar()"
+          [disabled]="!selectedRow() || editMode()"
+          matTooltip="Inactivar titular seleccionada"
+        >
+          <mat-icon>delete</mat-icon> Eliminar
+        </button>
+
+        <button
+          mat-raised-button
+          (click)="modificar()"
+          [disabled]="!selectedRow() || editMode()"
+          matTooltip="Modificar titular seleccionada"
+        >
+          <mat-icon>edit</mat-icon> Modificar
+        </button>
+
+        <button
+          mat-raised-button
+          color="primary"
+          (click)="aceptar()"
+          [disabled]="!editMode()"
+          matTooltip="Guardar cambios"
+        >
+          <mat-icon>check</mat-icon> Aceptar
+        </button>
+
+        <button
+          mat-raised-button
+          color="warn"
+          (click)="cancelar()"
+          [disabled]="!editMode()"
+          matTooltip="Cancelar edición"
+        >
+          <mat-icon>close</mat-icon> Cancelar
+        </button>
+      </div>
+
+      <!-- Tabla -->
+      <div class="table-container">
+        @if (errorMessage()) {
+          <div class="error-panel">
+            <mat-icon class="error-icon">error</mat-icon>
+            <div class="error-content">
+              <h3>Error al Cargar Titulares</h3>
+              <pre class="error-details">{{ errorMessage() }}</pre>
+              <div class="error-actions">
+                <button mat-raised-button color="primary" (click)="cargarDatos()">
+                  <mat-icon>refresh</mat-icon> Reintentar
+                </button>
+                <a
+                  mat-raised-button
+                  href="docs/Titulares_DB_ERROR_DIAGNOSTICO.md"
+                  target="_blank"
+                  matTooltip="Ver guía de diagnóstico completa"
+                >
+                  <mat-icon>help</mat-icon> Ver Diagnóstico
+                </a>
+              </div>
+            </div>
+          </div>
+        } @else if (loading()) {
+          <div class="loading-message">
+            <mat-icon>hourglass_empty</mat-icon>
+            <span>Cargando Titulares...</span>
+          </div>
+        } @else if (dataSource.data.length === 0) {
+          <div class="empty-message">
+            <mat-icon>people_outline</mat-icon>
+            <p>No hay Titulares registradas</p>
+            <small>Presione "Insertar" para agregar la primera titular</small>
+          </div>
+        } @else {
+          <table mat-table [dataSource]="dataSource">
+            <!-- Tipo titular Column -->
+            <ng-container matColumnDef="tipoTitular">
+              <th mat-header-cell *matHeaderCellDef>TIPO titular</th>
+              <td mat-cell *matCellDef="let titular">
+                {{ getTipoPersonaDesc(titular) }}
+              </td>
+            </ng-container>
+
+            <!-- Tipo Identificación Column -->
+            <ng-container matColumnDef="tipoIdentificacion">
+              <th mat-header-cell *matHeaderCellDef>TIPO IDENTIFICACIÓN</th>
+              <td mat-cell *matCellDef="let titular">
+                {{ getTipoIdentificacionDesc(titular) }}
+              </td>
+            </ng-container>
+
+            <!-- Identificación Column -->
+            <ng-container matColumnDef="identificacion">
+              <th mat-header-cell *matHeaderCellDef>IDENTIFICACIÓN</th>
+              <td mat-cell *matCellDef="let titular">
+                {{ titular.identificacion }}
+              </td>
+            </ng-container>
+
+            <!-- Apellido Column -->
+            <ng-container matColumnDef="apellido">
+              <th mat-header-cell *matHeaderCellDef>APELLIDO</th>
+              <td mat-cell *matCellDef="let titular">
+                {{ titular.apellido || titular.apellidos }}
+              </td>
+            </ng-container>
+
+            <!-- Nombre Column -->
+            <ng-container matColumnDef="nombre">
+              <th mat-header-cell *matHeaderCellDef>NOMBRE</th>
+              <td mat-cell *matCellDef="let titular">
+                {{ titular.nombre || titular.nombres }}
+              </td>
+            </ng-container>
+
+            <!-- Razón Social Column -->
+            <ng-container matColumnDef="razonSocial">
+              <th mat-header-cell *matHeaderCellDef>RAZÓN SOCIAL</th>
+              <td mat-cell *matCellDef="let titular">
+                {{ titular.razonSocial }}
+              </td>
+            </ng-container>
+
+            <!-- Estado Column -->
+            <ng-container matColumnDef="estado">
+              <th mat-header-cell *matHeaderCellDef>ESTADO</th>
+              <td mat-cell *matCellDef="let titular">
+                <span
+                  class="estado-badge"
+                  [class.activo]="titular.estado === 1"
+                  [class.inactivo]="titular.estado === 0"
+                >
+                  {{ getEstadoTexto(titular.estado) }}
+                </span>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr
+              mat-row
+              *matRowDef="let row; columns: displayedColumns"
+              [class.selected]="selectedRow()?.codigo === row.codigo"
+              (click)="onRowClick(row)"
+            ></tr>
+          </table>
+        }
+      </div>
+    </div>
+
+    <!-- Formulario de Edición -->
+    @if (editMode() && titularEdit) {
+      <div class="form-panel">
+        <div class="panel-header">
+          <mat-icon>edit</mat-icon>
+          <span>{{ titularEdit.codigo === 0 ? 'NUEVA titular' : 'EDITAR titular' }}</span>
+        </div>
+
+        <div class="form-content">
+          <div class="form-section">
+            <h3 class="section-title">Información General</h3>
+            <div class="form-grid">
+              <!-- Tipo titular -->
+              <mat-form-field appearance="outline">
+                <mat-label>Tipo titular</mat-label>
+                <mat-select
+                  [(ngModel)]="titularEdit.rubroTipoPersonaH"
+                  [compareWith]="compareRubro"
+                  required
+                >
+                  <mat-option [value]="0">Seleccione...</mat-option>
+                  @for (tipo of tiposTitular(); track tipo.codigo) {
+                    <mat-option [value]="tipo.codigo">
+                      {{ tipo.descripcion }}
+                    </mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+
+              <!-- Tipo Identificación -->
+              <mat-form-field appearance="outline">
+                <mat-label>Tipo Identificación</mat-label>
+                <mat-select
+                  [(ngModel)]="titularEdit.rubroTipoIdentificacionH"
+                  [compareWith]="compareRubro"
+                  required
+                >
+                  <mat-option [value]="0">Seleccione...</mat-option>
+                  @for (tipo of tiposIdentificacion(); track tipo.codigo) {
+                    <mat-option [value]="tipo.codigo">
+                      {{ tipo.descripcion }}
+                    </mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+
+              <!-- Identificación -->
+              <mat-form-field appearance="outline">
+                <mat-label>Identificación</mat-label>
+                <input matInput [(ngModel)]="titularEdit.identificacion" required maxlength="20" />
+              </mat-form-field>
+
+              <!-- Apellidos -->
+              <mat-form-field appearance="outline">
+                <mat-label>Apellidos</mat-label>
+                <input
+                  matInput
+                  [(ngModel)]="titularEdit.apellido"
+                  (ngModelChange)="titularEdit.apellidos = titularEdit.apellido"
+                  maxlength="100"
+                />
+              </mat-form-field>
+
+              <!-- Nombres -->
+              <mat-form-field appearance="outline">
+                <mat-label>Nombres</mat-label>
+                <input
+                  matInput
+                  [(ngModel)]="titularEdit.nombre"
+                  (ngModelChange)="titularEdit.nombres = titularEdit.nombre"
+                  maxlength="100"
+                />
+              </mat-form-field>
+
+              <!-- Estado -->
+              <mat-form-field appearance="outline">
+                <mat-label>Estado</mat-label>
+                <mat-select [(ngModel)]="titularEdit.estado">
+                  <mat-option [value]="1">ACTIVO</mat-option>
+                  <mat-option [value]="0">INACTIVO</mat-option>
+                </mat-select>
+              </mat-form-field>
+
+              <!-- Razón Social (span 2 columns) -->
+              <mat-form-field appearance="outline" class="span-2">
+                <mat-label>Razón Social</mat-label>
+                <input matInput [(ngModel)]="titularEdit.razonSocial" maxlength="200" />
+              </mat-form-field>
+            </div>
+          </div>
+
+          <!-- Roles y Configuración -->
+          <div class="form-section">
+            <h3 class="section-title">Roles y Configuración</h3>
+            <div class="checks-grid">
+              <div class="checks-column">
+                <h4>Rol</h4>
+                <mat-form-field appearance="outline" class="role-field">
+                  <mat-label>Rol del titular</mat-label>
+                  <mat-select [(ngModel)]="titularEdit.rubroRolH" [compareWith]="compareRubro">
+                    <mat-option [value]="0">Seleccione...</mat-option>
+                    @for (rol of rolesTitular(); track rol.codigo) {
+                      <mat-option [value]="rol.codigo">
+                        {{ rol.descripcion }}
+                      </mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+              </div>
+
+              <div class="checks-column">
+                <h4>Impuestos</h4>
+                <mat-checkbox
+                  [(ngModel)]="titularEdit.aplicaIVA"
+                  [checked]="titularEdit.aplicaIVA === 1"
+                  (change)="titularEdit.aplicaIVA = $event.checked ? 1 : 0"
+                >
+                  Aplica IVA
+                </mat-checkbox>
+                <mat-checkbox
+                  [(ngModel)]="titularEdit.aplicaRetencion"
+                  [checked]="titularEdit.aplicaRetencion === 1"
+                  (change)="titularEdit.aplicaRetencion = $event.checked ? 1 : 0"
+                >
+                  Aplica Retención
+                </mat-checkbox>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+</div>

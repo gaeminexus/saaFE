@@ -1,8 +1,8 @@
-import { DireccionPersona } from "./direccion-persona";
+import { DireccionTitular } from "./direccion-titular";
 
 export interface TelefonoDireccion {
     codigo: number;                   // Identificador único del teléfono
-    direccionPersona: DireccionPersona; // Dirección a la que pertenece el teléfono
+    DireccionTitular: DireccionTitular; // Dirección a la que pertenece el teléfono
     rubroTipoTelefonoP: number;       // Rubro 31 - Tipo de teléfono (principal)
     rubroTipoTelefonoH: number;       // Detalle de Rubro 31 - Tipo de teléfono
     telefono: string;                 // Número de teléfono

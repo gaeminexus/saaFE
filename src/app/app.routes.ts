@@ -44,6 +44,8 @@ import { RrhReporteRolesComponent } from './modules/rrh/forms/reportes/roles/rrh
 import { RrhReporteVacacionesComponent } from './modules/rrh/forms/reportes/vacaciones/rrh-reporte-vacaciones.component';
 import { BancosNacionalesExtranjerosComponent } from './modules/tsr/forms/bancos/bancos-nacionales-extranjeros.component';
 import { BancosComponent } from './modules/tsr/forms/bancos/bancos.component';
+import { CajasFisicasComponent } from './modules/tsr/forms/cajas-logicas/cajas-fisicas/cajas-fisicas.component';
+import { CajasPorGrupoComponent } from './modules/tsr/forms/cajas-logicas/cajas-por-grupo/cajas-por-grupo.component';
 import { GruposCajasComponent } from './modules/tsr/forms/cajas-logicas/grupos/grupos-cajas.component';
 import { ChequeraComponent } from './modules/tsr/forms/chequeras/chequera/chequera.component';
 import { RecepcionChequeraComponent } from './modules/tsr/forms/chequeras/recepcion-chequera/recepcion-chequera.component';
@@ -74,8 +76,8 @@ import { ChequesEntregadosProcComponent } from './modules/tsr/forms/pagos/proces
 import { ChequesGeneradosComponent } from './modules/tsr/forms/pagos/procesos/generados/cheques-generados.component';
 import { ChequesImpresosProcComponent } from './modules/tsr/forms/pagos/procesos/impresos/cheques-impresos-proc.component';
 import { SolicitudPagosComponent } from './modules/tsr/forms/pagos/procesos/solicitud/solicitud-pagos.component';
-import { PersonasComponent } from './modules/tsr/forms/personas/personas.component';
 import { TsrPlaceholderComponent } from './modules/tsr/forms/placeholder/tsr-placeholder.component';
+import { TitularesComponent } from './modules/tsr/forms/titulares/titulares.component';
 import { MenutesoreriaComponent } from './modules/tsr/menu/menutesoreria/menutesoreria.component';
 import { authGuard } from './shared/guard/auth.guard';
 import { canDeactivateGuard } from './shared/guard/can-deactivate.guard';
@@ -247,7 +249,7 @@ export const routes: Routes = [
       },
       {
         path: 'parametrizacion/cajas/fisicas',
-        component: TsrPlaceholderComponent,
+        component: CajasFisicasComponent,
         canActivate: [authGuard],
         data: { title: 'Cajas Físicas' },
       },
@@ -301,7 +303,7 @@ export const routes: Routes = [
       },
       {
         path: 'parametrizacion/cajas/logicas/cajas-por-grupo',
-        component: TsrPlaceholderComponent,
+        component: CajasPorGrupoComponent,
         canActivate: [authGuard],
         data: { title: 'Cajas por Grupo' },
       },
@@ -313,9 +315,14 @@ export const routes: Routes = [
       },
       {
         path: 'parametrizacion/personas',
-        component: PersonasComponent,
+        redirectTo: 'parametrizacion/titulares',
+        pathMatch: 'full',
+      },
+      {
+        path: 'parametrizacion/titulares',
+        component: TitularesComponent,
         canActivate: [authGuard],
-        data: { title: 'Personas' },
+        data: { title: 'Titulares' },
       },
 
       // Procesos - Cobros

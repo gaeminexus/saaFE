@@ -1,9 +1,9 @@
-<div class="grupos-page">
+<div class="cajas-fisicas-page">
   <div class="page-header">
-    <div class="icon-wrap"><mat-icon>folder</mat-icon></div>
+    <div class="icon-wrap"><mat-icon>business_center</mat-icon></div>
     <div class="title-wrap">
       <h2 class="title">{{ title }}</h2>
-      <p class="subtitle">Gestión de grupos de cajas lógicas</p>
+      <p class="subtitle">Gestión de cajas físicas</p>
     </div>
   </div>
 
@@ -17,7 +17,7 @@
         mat-raised-button
         (click)="insertar()"
         [disabled]="editMode() || loading()"
-        matTooltip="Insertar nuevo registro"
+        matTooltip="Insertar nueva caja física"
       >
         <mat-icon>add</mat-icon>
         Insertar
@@ -27,7 +27,7 @@
         color="warn"
         (click)="eliminar()"
         [disabled]="!selectedRow || editMode() || loading()"
-        matTooltip="Eliminar registro seleccionado"
+        matTooltip="Eliminar caja física seleccionada"
       >
         <mat-icon>delete</mat-icon>
         Eliminar
@@ -36,7 +36,7 @@
         mat-raised-button
         (click)="modificar()"
         [disabled]="!selectedRow || editMode() || loading()"
-        matTooltip="Modificar registro seleccionado"
+        matTooltip="Modificar caja física seleccionada"
       >
         <mat-icon>edit</mat-icon>
         Modificar
@@ -63,7 +63,7 @@
     </div>
 
     <div class="table-scroll">
-      <table mat-table [dataSource]="dataSource" class="mat-elevation-z0 grupos-table">
+      <table mat-table [dataSource]="dataSource" class="mat-elevation-z0 cajas-table">
         <!-- Columna NOMBRE -->
         <ng-container matColumnDef="nombre">
           <th mat-header-cell *matHeaderCellDef>NOMBRE</th>
@@ -73,13 +73,40 @@
                 <input
                   matInput
                   [(ngModel)]="row.nombre"
-                  placeholder="Nombre del grupo"
+                  placeholder="Nombre de la caja física"
                   maxlength="100"
                   required
                 />
               </mat-form-field>
             } @else {
               {{ row.nombre }}
+            }
+          </td>
+        </ng-container>
+
+        <!-- Columna CUENTA -->
+        <ng-container matColumnDef="planCuenta">
+          <th mat-header-cell *matHeaderCellDef>CUENTA</th>
+          <td mat-cell *matCellDef="let row" [class.editing]="isEditing(row)">
+            @if (isEditing(row)) {
+              <mat-form-field appearance="outline" class="inline-edit">
+                <mat-select
+                  [(ngModel)]="row.planCuenta"
+                  placeholder="Seleccione cuenta"
+                  required
+                  [compareWith]="comparePlanCuenta"
+                >
+                  <mat-option *ngFor="let plan of planesCuenta" [value]="plan">
+                    {{ plan.cuentaContable }} - {{ plan.nombre }}
+                  </mat-option>
+                </mat-select>
+              </mat-form-field>
+            } @else {
+              @if (row.planCuenta && row.planCuenta.codigo) {
+                {{ row.planCuenta.cuentaContable }} - {{ row.planCuenta.nombre }}
+              } @else {
+                <span class="text-muted">Sin cuenta</span>
+              }
             }
           </td>
         </ng-container>
@@ -115,6 +142,13 @@
           (click)="seleccionarFila(row)"
         ></tr>
       </table>
+
+      @if (dataSource.data.length === 0 && !loading()) {
+        <div class="no-data">
+          <mat-icon>info</mat-icon>
+          <p>No hay cajas físicas registradas</p>
+        </div>
+      }
     </div>
   </div>
 </div>

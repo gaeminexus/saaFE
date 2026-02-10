@@ -1,0 +1,511 @@
+@use '../../../../../styles/abstracts/colors' as *;
+
+// Variables de colores y medidas
+$celeste-seleccionado: #e3f2fd;
+$verde-activo: #4caf50;
+$rojo-inactivo: #f44336;
+$gris-deshabilitado: #bdbdbd;
+$fondo-claro: #fafafa;
+$border-color: #e0e0e0;
+
+// Container principal
+.titulares-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: $fondo-claro;
+  gap: 16px;
+  padding: 16px;
+}
+
+// Header de la página
+.page-header {
+  background: $background-gradient;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 24px;
+  color: white;
+
+  .header-content {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .icon-container {
+    width: 60px;
+    height: 60px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    mat-icon {
+      font-size: 32px;
+      width: 32px;
+      height: 32px;
+    }
+  }
+
+  .title-container {
+    flex: 1;
+
+    h1 {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+    }
+
+    .subtitle {
+      margin: 4px 0 0 0;
+      font-size: 14px;
+      opacity: 0.9;
+    }
+  }
+}
+
+// Contenedor principal del contenido
+.content-wrapper {
+  display: flex;
+  gap: 16px;
+  flex: 1;
+  overflow: hidden;
+}
+
+// Panel de tabla
+.table-panel {
+  flex: 2;
+  display: flex;
+  flex-direction: column;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+// Panel de formulario
+.form-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  max-width: 500px;
+}
+
+// Header de paneles
+.panel-header {
+  background: $background-gradient;
+  color: white;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 500;
+  font-size: 16px;
+
+  mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+}
+
+// Toolbar de botones
+.toolbar {
+  display: flex;
+  gap: 8px;
+  padding: 16px;
+  border-bottom: 1px solid $border-color;
+  flex-wrap: wrap;
+
+  button {
+    flex: 0 0 auto;
+
+    mat-icon {
+      margin-right: 4px;
+    }
+  }
+}
+
+// Contenedor de tabla
+.table-container {
+  flex: 1;
+  overflow-y: auto;
+  position: relative;
+
+  table {
+    width: 100%;
+  }
+
+  th.mat-mdc-header-cell {
+    background: $background-gradient;
+    color: $text-light;
+    font-weight: 600;
+    font-size: 12px;
+    padding: 12px 16px;
+    border-bottom: 2px solid $border-color;
+  }
+
+  td.mat-mdc-cell {
+    padding: 12px 16px;
+    font-size: 13px;
+    color: #555;
+    border-bottom: 1px solid #f0f0f0;
+  }
+
+  tr.mat-mdc-row {
+    cursor: pointer;
+    transition: background-color 0.2s;
+
+    &:hover {
+      background-color: #f5f5f5;
+    }
+
+    &.selected {
+      background-color: $celeste-seleccionado !important;
+    }
+  }
+}
+
+// Mensajes de estado
+.loading-message,
+.empty-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px;
+  text-align: center;
+  color: #999;
+
+  mat-icon {
+    font-size: 64px;
+    width: 64px;
+    height: 64px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+  }
+
+  p {
+    margin: 8px 0;
+    font-size: 16px;
+  }
+
+  small {
+    font-size: 12px;
+  }
+}
+
+// Panel de error
+.error-panel {
+  display: flex;
+  gap: 20px;
+  padding: 32px;
+  background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+  border: 2px solid #ff9800;
+  border-radius: 8px;
+  margin: 16px;
+  align-items: flex-start;
+
+  .error-icon {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+    color: #f44336;
+    flex-shrink: 0;
+  }
+
+  .error-content {
+    flex: 1;
+
+    h3 {
+      margin: 0 0 12px 0;
+      font-size: 18px;
+      color: #d32f2f;
+      font-weight: 600;
+    }
+
+    .error-details {
+      background: white;
+      border: 1px solid #ffcc80;
+      border-radius: 4px;
+      padding: 16px;
+      margin: 12px 0;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      color: #424242;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .error-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 16px;
+
+      button {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        mat-icon {
+          font-size: 18px;
+          width: 18px;
+          height: 18px;
+        }
+      }
+    }
+  }
+}
+
+// Responsive - Error panel en móvil
+@media (max-width: 768px) {
+  .error-panel {
+    flex-direction: column;
+    gap: 12px;
+
+    .error-icon {
+      font-size: 36px;
+      width: 36px;
+      height: 36px;
+    }
+
+    .error-content {
+      .error-details {
+        font-size: 11px;
+        max-height: 200px;
+      }
+
+      .error-actions {
+        flex-direction: column;
+
+        button {
+          width: 100%;
+        }
+      }
+    }
+  }
+}
+
+// Badge de estado
+.estado-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+
+  &.activo {
+    background-color: $verde-activo;
+    color: white;
+  }
+
+  &.inactivo {
+    background-color: $rojo-inactivo;
+    color: white;
+  }
+}
+
+// Contenido del formulario
+.form-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+// Secciones del formulario
+.form-section {
+  margin-bottom: 24px;
+
+  .section-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: $primary-color;
+    margin: 0 0 16px 0;
+    padding-bottom: 8px;
+    border-bottom: 2px solid $secondary-color;
+  }
+}
+
+// Grid del formulario
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+
+  .span-2 {
+    grid-column: span 2;
+  }
+
+  mat-form-field {
+    width: 100%;
+  }
+}
+
+// Grid de checkboxes
+.checks-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+
+  .checks-column {
+    h4 {
+      font-size: 13px;
+      font-weight: 600;
+      color: #666;
+      margin: 0 0 12px 0;
+      padding-bottom: 8px;
+      border-bottom: 1px solid $border-color;
+    }
+
+    mat-checkbox {
+      display: block;
+      margin-bottom: 12px;
+
+      ::ng-deep .mdc-checkbox__background {
+        border-color: $primary-color;
+      }
+
+      ::ng-deep .mdc-checkbox--checked .mdc-checkbox__background {
+        background-color: $primary-color;
+        border-color: $primary-color;
+      }
+    }
+  }
+}
+
+// Estilos de Material customizados
+::ng-deep {
+  .mat-mdc-form-field {
+    .mat-mdc-text-field-wrapper {
+      background-color: white;
+    }
+
+    .mdc-text-field--outlined {
+      .mdc-notched-outline__leading,
+      .mdc-notched-outline__notch,
+      .mdc-notched-outline__trailing {
+        border-color: $border-color;
+      }
+
+      &:hover .mdc-notched-outline {
+        .mdc-notched-outline__leading,
+        .mdc-notched-outline__notch,
+        .mdc-notched-outline__trailing {
+          border-color: $primary-color;
+        }
+      }
+    }
+
+    .mdc-text-field--focused {
+      .mdc-notched-outline {
+        .mdc-notched-outline__leading,
+        .mdc-notched-outline__notch,
+        .mdc-notched-outline__trailing {
+          border-color: $primary-color !important;
+          border-width: 2px !important;
+        }
+      }
+    }
+
+    .mat-mdc-form-field-required-marker {
+      color: $rojo-inactivo;
+    }
+  }
+
+  .mat-mdc-raised-button {
+    font-weight: 500;
+    letter-spacing: 0.5px;
+
+    &:disabled {
+      background-color: $gris-deshabilitado;
+      color: white;
+    }
+
+    &.mat-primary {
+      background-color: $primary-color;
+      color: white;
+
+      &:hover:not(:disabled) {
+        background-color: $secondary-color;
+      }
+    }
+
+    &.mat-warn {
+      background-color: $rojo-inactivo;
+      color: white;
+
+      &:hover:not(:disabled) {
+        background-color: #d32f2f;
+      }
+    }
+  }
+}
+
+// Snackbar personalizado
+::ng-deep {
+  .error-snackbar {
+    .mdc-snackbar__surface {
+      background-color: $rojo-inactivo;
+    }
+
+    .mat-mdc-snack-bar-label {
+      color: white;
+    }
+  }
+
+  .success-snackbar {
+    .mdc-snackbar__surface {
+      background-color: $verde-activo;
+    }
+
+    .mat-mdc-snack-bar-label {
+      color: white;
+    }
+  }
+}
+
+// Responsive
+@media (max-width: 1200px) {
+  .content-wrapper {
+    flex-direction: column;
+  }
+
+  .form-panel {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .form-grid,
+  .checks-grid {
+    grid-template-columns: 1fr;
+
+    .span-2 {
+      grid-column: span 1;
+    }
+  }
+
+  .toolbar {
+    button {
+      flex: 1 1 calc(50% - 4px);
+      min-width: 0;
+    }
+  }
+
+  .page-header {
+    .header-content {
+      flex-direction: column;
+      text-align: center;
+    }
+  }
+}

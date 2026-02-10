@@ -5,12 +5,17 @@
   display: flex;
   flex-direction: column;
   gap: $spacing-md;
+  color: $text-primary;
 }
 
 h1 {
   margin: 0;
-  font-size: $font-size-xl;
-  color: $text-primary;
+  font-size: $font-size-2xl;
+  font-weight: $font-weight-semibold;
+  color: transparent;
+  background: $background-gradient;
+  -webkit-background-clip: text;
+  background-clip: text;
 }
 
 .content-grid {
@@ -21,24 +26,27 @@ h1 {
 
 .form-card,
 .table-card {
-  border: $border-width solid $border-dark;
+  border: $border-width solid $border-light;
   border-radius: $border-radius-md;
   background: $background-primary;
+  box-shadow: 0 2px 6px $shadow-color-light;
+  overflow: hidden;
 }
 
 .section-title,
 .table-title {
-  background: $secondary-color;
+  background: $background-gradient;
   color: $text-light;
-  padding: $spacing-xs $spacing-sm;
+  padding: $spacing-sm $spacing-md;
   font-weight: 600;
+  letter-spacing: 0.3px;
 }
 
 .form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: $spacing-sm;
-  padding: $spacing-sm;
+  gap: $spacing-md;
+  padding: $spacing-md;
 }
 
 .span-2 {
@@ -48,19 +56,32 @@ h1 {
 .actions {
   display: flex;
   gap: $spacing-sm;
-  padding: $spacing-sm;
+  padding: 0 $spacing-md $spacing-md;
+  align-items: center;
+
+  button[mat-raised-button] {
+    background: $background-gradient;
+    color: $text-light;
+  }
 }
 
 .toolbar {
   display: flex;
   gap: $spacing-sm;
-  padding: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  border-bottom: $border-width solid $border-light;
 }
 
 th[mat-header-cell] {
-  background: $background-tertiary;
-  color: $text-primary;
+  background: $background-gradient;
+  color: $text-light;
   border-bottom: $border-width solid $border-medium;
+  font-weight: $font-weight-semibold;
+  letter-spacing: 0.3px;
+}
+
+td[mat-cell] {
+  border-bottom: $border-width solid $border-light;
 }
 
 .right {
@@ -72,15 +93,23 @@ th[mat-header-cell] {
   border: $border-width solid $border-light;
   border-radius: $border-radius-md;
   background: $background-primary;
+  box-shadow: 0 2px 6px $shadow-color-light;
+  overflow: hidden;
 }
 .panel-title {
-  background: $primary-color;
+  background: $background-gradient;
   color: $text-light;
-  padding: $spacing-xs $spacing-sm;
+  padding: $spacing-sm $spacing-md;
   font-weight: 600;
 }
 .panel-body {
-  padding: $spacing-sm;
+  padding: $spacing-md;
   display: grid;
-  gap: $spacing-xs;
+  gap: $spacing-sm;
+}
+
+@media (max-width: $breakpoint-lg) {
+  .content-grid {
+    grid-template-columns: 1fr;
+  }
 }

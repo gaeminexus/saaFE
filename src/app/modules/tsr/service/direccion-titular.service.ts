@@ -1,13 +1,13 @@
 import { HttpHeaders, HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, catchError, of, throwError } from 'rxjs';
-import { DireccionPersona } from '../model/direccion-persona';
+import { DireccionTitular } from '../model/direccion-titular';
 import { ServiciosTsr } from './ws-tsr';
 
 @Injectable({
   providedIn: 'root'
 })
-export class DireccionPersonaService {
+export class DireccionTitularService {
   httpOptions = {
     headers: new HttpHeaders({ 'Content-Type': 'application/json' })
   };
@@ -15,63 +15,63 @@ export class DireccionPersonaService {
   constructor(private http: HttpClient) {}
 
   /**
-   * Recupera todos los registros de DireccionPersona.
+   * Recupera todos los registros de DireccionTitular.
    */
-  getAll(): Observable<DireccionPersona[] | null> {
+  getAll(): Observable<DireccionTitular[] | null> {
     const wsGetAll = '/getAll';
     const url = `${ServiciosTsr.RS_PDRC}${wsGetAll}`;
-    return this.http.get<DireccionPersona[]>(url).pipe(
+    return this.http.get<DireccionTitular[]>(url).pipe(
       catchError(this.handleError)
     );
   }
 
   /**
-   * Recupera un registro de DireccionPersona por su ID.
+   * Recupera un registro de DireccionTitular por su ID.
    */
-  getById(id: string): Observable<DireccionPersona | null> {
+  getById(id: string): Observable<DireccionTitular | null> {
     const wsGetById = '/getId/';
     const url = `${ServiciosTsr.RS_PDRC}${wsGetById}${id}`;
-    return this.http.get<DireccionPersona>(url).pipe(
+    return this.http.get<DireccionTitular>(url).pipe(
       catchError(this.handleError)
     );
   }
 
   /**
-   * Crea un nuevo registro de DireccionPersona.
+   * Crea un nuevo registro de DireccionTitular.
    */
-  add(datos: any): Observable<DireccionPersona | null> {
-    return this.http.post<DireccionPersona>(ServiciosTsr.RS_PDRC, datos, this.httpOptions).pipe(
+  add(datos: any): Observable<DireccionTitular | null> {
+    return this.http.post<DireccionTitular>(ServiciosTsr.RS_PDRC, datos, this.httpOptions).pipe(
       catchError(this.handleError)
     );
   }
 
   /**
-   * Actualiza un registro existente de DireccionPersona.
+   * Actualiza un registro existente de DireccionTitular.
    */
-  update(datos: any): Observable<DireccionPersona | null> {
-    return this.http.put<DireccionPersona>(ServiciosTsr.RS_PDRC, datos, this.httpOptions).pipe(
+  update(datos: any): Observable<DireccionTitular | null> {
+    return this.http.put<DireccionTitular>(ServiciosTsr.RS_PDRC, datos, this.httpOptions).pipe(
       catchError(this.handleError)
     );
   }
 
   /**
-   * Selecciona registros de DireccionPersona según criterios personalizados.
+   * Selecciona registros de DireccionTitular según criterios personalizados.
    */
-  selectByCriteria(datos: any): Observable<DireccionPersona[] | null> {
+  selectByCriteria(datos: any): Observable<DireccionTitular[] | null> {
     const wsCriteria = '/criteria';
     const url = `${ServiciosTsr.RS_PDRC}${wsCriteria}`;
-    return this.http.post<DireccionPersona[]>(url, datos, this.httpOptions).pipe(
+    return this.http.post<DireccionTitular[]>(url, datos, this.httpOptions).pipe(
       catchError(this.handleError)
     );
   }
 
   /**
-   * Elimina un registro de DireccionPersona por su ID.
+   * Elimina un registro de DireccionTitular por su ID.
    */
-  delete(id: any): Observable<DireccionPersona | null> {
+  delete(id: any): Observable<DireccionTitular | null> {
     const wsDelete = '/' + id;
     const url = `${ServiciosTsr.RS_PDRC}${wsDelete}`;
-    return this.http.delete<DireccionPersona>(url, this.httpOptions).pipe(
+    return this.http.delete<DireccionTitular>(url, this.httpOptions).pipe(
       catchError(this.handleError)
     );
   }

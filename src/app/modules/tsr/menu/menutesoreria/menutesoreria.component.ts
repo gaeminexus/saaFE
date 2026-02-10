@@ -108,10 +108,10 @@ export class MenutesoreriaComponent {
           ],
         },
         {
-          displayName: 'Personas',
-          iconName: 'groups',
+          displayName: 'Titulares',
+          iconName: 'account_box',
           idPermiso: 830,
-          route: '/menutesoreria/parametrizacion/personas',
+          route: '/menutesoreria/parametrizacion/titulares',
         },
       ],
     },

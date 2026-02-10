@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, signal } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatDatepickerModule } from '@angular/material/datepicker';
@@ -9,8 +9,14 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
 
+import { DetalleRubro } from '../../../../../shared/model/detalle-rubro';
+import { DetalleRubroService } from '../../../../../shared/services/detalle-rubro.service';
+import { CajaLogica } from '../../../model/caja-logica';
 import { TempCobro } from '../../../model/temp-cobro';
 import { TempMotivoCobro } from '../../../model/temp-motivo-cobro';
+import { Titular } from '../../../model/titular';
+import { CajaLogicaService } from '../../../service/caja-logica.service';
+import { TitularService } from '../../../service/titular.service';
 
 @Component({
   selector: 'app-cobros-ingresar',
@@ -29,8 +35,14 @@ import { TempMotivoCobro } from '../../../model/temp-motivo-cobro';
   templateUrl: './cobros-ingresar.component.html',
   styleUrls: ['./cobros-ingresar.component.scss'],
 })
-export class CobrosIngresarComponent {
-  title = 'INGRESO DE COBROS';
+export class CobrosIngresarComponent implements OnInit {
+  title = 'INGRESO COBRO';
+
+  tiposIdentificacion = signal<DetalleRubro[]>([]);
+  cajasLogicas = signal<CajaLogica[]>([]);
+  titulares = signal<Titular[]>([]);
+  estadosCobro = signal<DetalleRubro[]>([]);
+  motivosAnulacion = signal<DetalleRubro[]>([]);
 
   // Form state based on TempCobro
   tipoId = signal<number | null>(null); // 1=Cédula, 2=RUC
@@ -54,6 +66,112 @@ export class CobrosIngresarComponent {
   motivos = signal<TempMotivoCobro[]>([]);
   displayedColumns = ['descripcion', 'valor', 'acciones'];
 
+  private readonly RUBRO_TIPO_IDENTIFICACION = 36;
+  private readonly RUBRO_ESTADO_COBRO = 28;
+  private readonly RUBRO_MOTIVO_ANULACION = 29;
+
+  constructor(
+    private detalleRubroService: DetalleRubroService,
+    private cajaLogicaService: CajaLogicaService,
+    private titularService: TitularService,
+  ) {}
+
+  ngOnInit(): void {
+    this.cargarRubros();
+    this.cargarCajasLogicas();
+    this.cargarTitulares();
+  }
+
+  private cargarRubros(): void {
+    const tiposI = this.detalleRubroService.getDetallesByParent(this.RUBRO_TIPO_IDENTIFICACION);
+    this.tiposIdentificacion.set(tiposI);
+
+    const estados = this.detalleRubroService.getDetallesByParent(this.RUBRO_ESTADO_COBRO);
+    this.estadosCobro.set(estados);
+
+    const motivos = this.detalleRubroService.getDetallesByParent(this.RUBRO_MOTIVO_ANULACION);
+    this.motivosAnulacion.set(motivos);
+
+    if (tiposI.length === 0 || estados.length === 0 || motivos.length === 0) {
+      this.detalleRubroService.inicializar().subscribe(() => {
+        this.tiposIdentificacion.set(
+          this.detalleRubroService.getDetallesByParent(this.RUBRO_TIPO_IDENTIFICACION),
+        );
+        this.estadosCobro.set(
+          this.detalleRubroService.getDetallesByParent(this.RUBRO_ESTADO_COBRO),
+        );
+        this.motivosAnulacion.set(
+          this.detalleRubroService.getDetallesByParent(this.RUBRO_MOTIVO_ANULACION),
+        );
+      });
+    }
+  }
+
+  private cargarCajasLogicas(): void {
+    this.cajaLogicaService.getAll().subscribe({
+      next: (data: CajaLogica[] | null) => {
+        this.cajasLogicas.set(data ?? []);
+      },
+      error: (error: any) => {
+        console.error('Error al cargar cajas logicas', error);
+        this.cajasLogicas.set([]);
+      },
+    });
+  }
+
+  private cargarTitulares(): void {
+    this.titularService.getAll().subscribe({
+      next: (data: Titular[] | null) => {
+        this.titulares.set(data ?? []);
+      },
+      error: (error: any) => {
+        console.error('Error al cargar titulares', error);
+        this.titulares.set([]);
+      },
+    });
+  }
+
+  updateNumeroId(value: string): void {
+    this.numeroId.set(this.normalizeUpper(value));
+  }
+
+  updateCliente(value: string): void {
+    this.cliente.set(this.normalizeUpper(value));
+  }
+
+  updateDescripcion(value: string): void {
+    this.descripcion.set(this.normalizeUpper(value));
+  }
+
+  updateNombreUsuario(value: string): void {
+    this.nombreUsuario.set(this.normalizeUpper(value));
+  }
+
+  updateValor(value: string): void {
+    const parsed = Number(value);
+    this.valor.set(Number.isFinite(parsed) ? parsed : null);
+  }
+
+  updateMotivoDescripcion(motivo: TempMotivoCobro, value: string): void {
+    const normalized = this.normalizeUpper(value);
+    this.motivos.update((arr) =>
+      arr.map((item) =>
+        item.codigo === motivo.codigo ? { ...item, descripcion: normalized } : item,
+      ),
+    );
+  }
+
+  updateMotivoValor(motivo: TempMotivoCobro, value: string): void {
+    const parsed = Number(value);
+    this.motivos.update((arr) =>
+      arr.map((item) =>
+        item.codigo === motivo.codigo
+          ? { ...item, valor: Number.isFinite(parsed) ? parsed : 0 }
+          : item,
+      ),
+    );
+  }
+
   addMotivo(): void {
     const nuevo: TempMotivoCobro = {
       codigo: Date.now(),
@@ -69,6 +187,22 @@ export class CobrosIngresarComponent {
     this.motivos.update((arr) => arr.filter((m) => m.codigo !== codigo));
   }
 
+  cancelar(): void {
+    this.tipoId.set(null);
+    this.numeroId.set('');
+    this.cliente.set('');
+    this.descripcion.set('');
+    this.fecha.set(new Date());
+    this.nombreUsuario.set('');
+    this.valor.set(null);
+    this.tipoCobro.set(1);
+    this.rubroEstadoH.set(null);
+    this.rubroMotivoAnulacionH.set(null);
+    this.cajaLogicaId.set(null);
+    this.personaId.set(null);
+    this.motivos.set([]);
+  }
+
   guardar(): void {
     // Cascarón: construir payload mínimo de TempCobro
     const cobro: Partial<TempCobro> = {
@@ -82,5 +216,29 @@ export class CobrosIngresarComponent {
       tipoCobro: this.tipoCobro() ?? 1,
     };
     console.log('Guardar cobro (shell):', cobro, this.motivos());
+  }
+
+  getTitularLabel(titular: Titular): string {
+    if (titular.razonSocial && titular.razonSocial.trim() !== '') {
+      return titular.razonSocial;
+    }
+
+    const apellido = titular.apellido || titular.apellidos || '';
+    const nombre = titular.nombre || titular.nombres || '';
+    const fullName = `${apellido} ${nombre}`.trim();
+
+    if (fullName !== '') {
+      return fullName;
+    }
+
+    return titular.identificacion || '';
+  }
+
+  getCajaLogicaLabel(caja: CajaLogica): string {
+    return caja.nombre || caja.cuentaContable || '';
+  }
+
+  private normalizeUpper(value: string): string {
+    return value?.toString().trim().toUpperCase() ?? '';
   }
 }

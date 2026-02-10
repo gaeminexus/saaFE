@@ -6,15 +6,18 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatPaginatorModule } from '@angular/material/paginator';
+import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
-import { GrupoCaja } from '../../../model/grupo-caja';
-import { GrupoCajaService } from '../../../service/grupo-caja.service';
+import { PlanCuenta } from '../../../../cnt/model/plan-cuenta';
+import { PlanCuentaService } from '../../../../cnt/service/plan-cuenta.service';
+import { CajaFisica } from '../../../model/caja-fisica';
+import { CajaFisicaService } from '../../../service/caja-fisica.service';
 
 @Component({
-  selector: 'app-grupos-cajas',
+  selector: 'app-cajas-fisicas',
   standalone: true,
   imports: [
     CommonModule,
@@ -25,42 +28,49 @@ import { GrupoCajaService } from '../../../service/grupo-caja.service';
     MatIconModule,
     MatFormFieldModule,
     MatInputModule,
+    MatSelectModule,
     MatSnackBarModule,
     MatTooltipModule,
   ],
-  templateUrl: './grupos-cajas.component.html',
-  styleUrls: ['./grupos-cajas.component.scss'],
+  templateUrl: './cajas-fisicas.component.html',
+  styleUrls: ['./cajas-fisicas.component.scss'],
 })
-export class GruposCajasComponent implements OnInit {
-  title = 'GRUPO CAJA';
+export class CajasFisicasComponent implements OnInit {
+  title = 'CAJAS FÍSICAS';
 
-  dataSource = new MatTableDataSource<GrupoCaja>([]);
-  displayedColumns = ['nombre', 'fechaIngreso', 'fechaInactivo', 'estado'];
+  dataSource = new MatTableDataSource<CajaFisica>([]);
+  displayedColumns = ['nombre', 'planCuenta', 'fechaIngreso', 'fechaInactivo', 'estado'];
 
   // Estados de la interfaz
   loading = signal<boolean>(false);
   editMode = signal<boolean>(false);
-  selectedRow: GrupoCaja | null = null;
-  editedData: Partial<GrupoCaja> = {};
-  originalData: GrupoCaja[] = [];
+  selectedRow: CajaFisica | null = null;
+  editedData: Partial<CajaFisica> = {};
+  originalData: CajaFisica[] = [];
+
+  // Combos
+  planesCuenta: PlanCuenta[] = [];
 
   // Estados
   readonly ESTADO_ACTIVO = 1;
   readonly ESTADO_INACTIVO = 0;
+  readonly TIPO_CUENTA_MOVIMIENTO = 3;
 
   constructor(
-    private grupoCajaService: GrupoCajaService,
+    private cajaFisicaService: CajaFisicaService,
+    private planCuentaService: PlanCuentaService,
     private funcionesDatos: FuncionesDatosService,
     private snackBar: MatSnackBar,
   ) {}
 
   ngOnInit(): void {
     this.cargarDatos();
+    this.cargarPlanesCuenta();
   }
 
   cargarDatos(): void {
     this.loading.set(true);
-    this.grupoCajaService.getAll().subscribe({
+    this.cajaFisicaService.getAll().subscribe({
       next: (data) => {
         this.loading.set(false);
         if (data && data.length > 0) {
@@ -72,9 +82,35 @@ export class GruposCajasComponent implements OnInit {
         }
       },
       error: (err) => {
-        console.error('Error al cargar grupos de caja:', err);
+        console.error('Error al cargar cajas físicas:', err);
         this.loading.set(false);
         this.snackBar.open('Error al cargar datos', 'Cerrar', { duration: 3000 });
+      },
+    });
+  }
+
+  cargarPlanesCuenta(): void {
+    this.planCuentaService.getAll().subscribe({
+      next: (data) => {
+        if (data && data.length > 0) {
+          const cuentasMovimiento = data.filter((p) => p.tipo === this.TIPO_CUENTA_MOVIMIENTO);
+
+          if (cuentasMovimiento.length > 0) {
+            this.planesCuenta = cuentasMovimiento.sort((a, b) =>
+              a.cuentaContable.localeCompare(b.cuentaContable),
+            );
+          } else {
+            this.planesCuenta = data.sort((a, b) =>
+              a.cuentaContable.localeCompare(b.cuentaContable),
+            );
+          }
+        } else {
+          this.planesCuenta = [];
+        }
+      },
+      error: (err) => {
+        console.error('Error al cargar planes de cuenta:', err);
+        this.planesCuenta = [];
       },
     });
   }
@@ -85,17 +121,18 @@ export class GruposCajasComponent implements OnInit {
       return;
     }
 
-    const nuevoGrupo: GrupoCaja = {
+    const nuevaCaja: CajaFisica = {
       codigo: 0,
       nombre: '',
       empresa: { codigo: parseInt(localStorage.getItem('empresaId') || '1') } as any,
-      fechaIngreso: new Date(),
+      planCuenta: {} as PlanCuenta,
+      fechaIngreso: '',
       fechaInactivo: null as any,
       estado: this.ESTADO_ACTIVO,
     };
 
-    this.dataSource.data = [nuevoGrupo, ...this.dataSource.data];
-    this.selectedRow = nuevoGrupo;
+    this.dataSource.data = [nuevaCaja, ...this.dataSource.data];
+    this.selectedRow = nuevaCaja;
     this.editMode.set(true);
   }
 
@@ -125,22 +162,23 @@ export class GruposCajasComponent implements OnInit {
       return;
     }
 
-    if (!confirm(`¿Está seguro de eliminar el grupo "${this.selectedRow.nombre}"?`)) {
+    if (!confirm(`¿Está seguro de eliminar la caja física "${this.selectedRow.nombre}"?`)) {
       return;
     }
 
-    // Eliminación lógica: cambiar estado a INACTIVO y poner fecha de eliminación
+    // Eliminación lógica
     const payload = {
       codigo: this.selectedRow.codigo,
       nombre: this.selectedRow.nombre,
+      empresa: { codigo: this.selectedRow.empresa.codigo },
+      planCuenta: { codigo: this.selectedRow.planCuenta.codigo },
       fechaIngreso: this.selectedRow.fechaIngreso,
       fechaInactivo: new Date().toISOString(),
       estado: this.ESTADO_INACTIVO,
-      empresa: this.selectedRow.empresa,
     };
 
     this.loading.set(true);
-    this.grupoCajaService.update(payload).subscribe({
+    this.cajaFisicaService.update(payload).subscribe({
       next: () => {
         this.loading.set(false);
         this.snackBar.open('✓ Registro eliminado correctamente', 'Cerrar', {
@@ -173,13 +211,18 @@ export class GruposCajasComponent implements OnInit {
       return;
     }
 
+    if (!this.selectedRow?.planCuenta?.codigo) {
+      this.snackBar.open('La cuenta contable es obligatoria', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
     // Validar duplicados
     const existe = this.dataSource.data.some(
-      (g) =>
-        g.nombre.toLowerCase() === nombre.toLowerCase() && g.codigo !== this.selectedRow?.codigo,
+      (c) =>
+        c.nombre.toLowerCase() === nombre.toLowerCase() && c.codigo !== this.selectedRow?.codigo,
     );
     if (existe) {
-      this.snackBar.open('Ya existe un grupo con ese nombre', 'Cerrar', { duration: 3000 });
+      this.snackBar.open('Ya existe una caja física con ese nombre', 'Cerrar', { duration: 3000 });
       return;
     }
 
@@ -188,16 +231,17 @@ export class GruposCajasComponent implements OnInit {
     const payload = {
       codigo: esNuevo ? undefined : this.selectedRow!.codigo,
       nombre: nombre,
+      empresa: { codigo: parseInt(localStorage.getItem('empresaId') || '1') },
+      planCuenta: { codigo: this.selectedRow!.planCuenta.codigo },
       fechaIngreso: esNuevo ? new Date().toISOString() : this.selectedRow!.fechaIngreso,
       estado: this.selectedRow!.estado,
-      empresa: { codigo: parseInt(localStorage.getItem('empresaId') || '1') },
     };
 
     this.loading.set(true);
 
     const operacion = esNuevo
-      ? this.grupoCajaService.add(payload)
-      : this.grupoCajaService.update(payload);
+      ? this.cajaFisicaService.add(payload)
+      : this.cajaFisicaService.update(payload);
 
     operacion.subscribe({
       next: () => {
@@ -233,7 +277,7 @@ export class GruposCajasComponent implements OnInit {
 
     // Si es nuevo, eliminarlo de la lista
     if (this.selectedRow?.codigo === 0) {
-      this.dataSource.data = this.dataSource.data.filter((g) => g.codigo !== 0);
+      this.dataSource.data = this.dataSource.data.filter((c) => c.codigo !== 0);
     } else {
       // Restaurar datos originales
       this.dataSource.data = JSON.parse(JSON.stringify(this.originalData));
@@ -244,18 +288,18 @@ export class GruposCajasComponent implements OnInit {
     this.editedData = {};
   }
 
-  seleccionarFila(row: GrupoCaja): void {
+  seleccionarFila(row: CajaFisica): void {
     if (this.editMode()) {
       return;
     }
     this.selectedRow = row;
   }
 
-  isSelected(row: GrupoCaja): boolean {
+  isSelected(row: CajaFisica): boolean {
     return this.selectedRow?.codigo === row.codigo;
   }
 
-  isEditing(row: GrupoCaja): boolean {
+  isEditing(row: CajaFisica): boolean {
     return this.editMode() && this.selectedRow?.codigo === row.codigo;
   }
 
@@ -266,5 +310,9 @@ export class GruposCajasComponent implements OnInit {
   formatearFecha(fecha: any): string {
     if (!fecha) return '';
     return this.funcionesDatos.formatoFecha(fecha, FuncionesDatosService.FECHA_HORA);
+  }
+
+  comparePlanCuenta(p1: PlanCuenta, p2: PlanCuenta): boolean {
+    return p1 && p2 ? p1.codigo === p2.codigo : p1 === p2;
   }
 }
