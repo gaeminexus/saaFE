@@ -27,6 +27,5 @@ export class ServiciosRhh {
   public static RS_TPCN = `${API_URL}/tpcn`;
   public static RS_TRNO = `${API_URL}/trno`;
 
-
   // Agregar más endpoints de RRHH acá según necesidades
 }

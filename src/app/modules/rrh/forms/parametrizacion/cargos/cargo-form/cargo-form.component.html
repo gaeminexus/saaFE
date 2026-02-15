@@ -1,0 +1,79 @@
+<div class="dialog-header">
+  <div class="title">
+    <mat-icon>badge</mat-icon>
+    <div>
+      <h2>{{ data.mode === 'edit' ? 'Editar Cargo' : 'Nuevo Cargo' }}</h2>
+      <p>Completa la informacion del cargo</p>
+    </div>
+  </div>
+</div>
+
+<div class="dialog-body">
+  <mat-form-field appearance="outline" class="w-100">
+    <mat-label>Nombre</mat-label>
+    <input
+      matInput
+      placeholder="Nombre del cargo"
+      [ngModel]="formNombre()"
+      (ngModelChange)="onNombreChange($event)"
+      [disabled]="loading()"
+      class="input-uppercase"
+    />
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="w-100">
+    <mat-label>Descripcion</mat-label>
+    <input
+      matInput
+      placeholder="Descripcion del cargo"
+      [ngModel]="formDescripcion()"
+      (ngModelChange)="formDescripcion.set($event)"
+      [disabled]="loading()"
+    />
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="w-100">
+    <mat-label>Requisitos</mat-label>
+    <input
+      matInput
+      placeholder="Requisitos del cargo"
+      [ngModel]="formRequisitos()"
+      (ngModelChange)="formRequisitos.set($event)"
+      [disabled]="loading()"
+    />
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="w-100">
+    <mat-label>Estado</mat-label>
+    <mat-select
+      [ngModel]="formEstado()"
+      (ngModelChange)="formEstado.set($event)"
+      [disabled]="loading()"
+    >
+      @for (opt of estadoOptions; track opt.value) {
+        <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+
+  @if (errorMsg()) {
+    <div class="error-msg">
+      <mat-icon>error</mat-icon>
+      <span>{{ errorMsg() }}</span>
+    </div>
+  }
+</div>
+
+<div class="dialog-actions">
+  <button mat-stroked-button (click)="onCancelar()" [disabled]="loading()">Cancelar</button>
+  <button
+    mat-raised-button
+    color="primary"
+    class="btn-gradient"
+    (click)="onGuardar()"
+    [disabled]="loading()"
+  >
+    <mat-icon>save</mat-icon>
+    Guardar
+  </button>
+</div>

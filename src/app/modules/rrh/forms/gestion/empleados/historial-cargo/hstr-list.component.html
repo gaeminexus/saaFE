@@ -1,0 +1,103 @@
+<section class="rrh-hstr">
+  <mat-card class="rrh-card">
+    <mat-card-header>
+      <mat-icon class="title-icon">timeline</mat-icon>
+      <mat-card-title>{{ titulo() }}</mat-card-title>
+      <mat-card-subtitle>Historial de cargos por empleado</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      <div class="toolbar">
+        <mat-form-field appearance="outline">
+          <mat-label>Empleado</mat-label>
+          <mat-select [ngModel]="filtroEmpleado()" (ngModelChange)="filtroEmpleado.set($event)">
+            <mat-option [value]="null">Seleccione</mat-option>
+            @for (emp of empleados(); track emp.codigo) {
+              <mat-option [value]="emp.codigo">{{ empleadoLabel(emp.codigo) }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <div class="toolbar-actions">
+          <button mat-stroked-button color="primary" (click)="buscar()" [disabled]="loading()">
+            <mat-icon>search</mat-icon>
+            Buscar
+          </button>
+          <button mat-raised-button color="primary" class="btn-gradient" (click)="onCambiarCargo()">
+            <mat-icon>swap_horiz</mat-icon>
+            Cambiar Cargo
+          </button>
+        </div>
+      </div>
+
+      <div class="records-line">{{ totalItems() }} registros</div>
+
+      <div class="table-wrapper">
+        <table mat-table [dataSource]="pagedData()" class="mat-elevation-z1 rrh-table">
+          <ng-container matColumnDef="cargo">
+            <th mat-header-cell *matHeaderCellDef>Cargo</th>
+            <td mat-cell *matCellDef="let row">{{ cargoLabel(row?.cargo) }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="departamento">
+            <th mat-header-cell *matHeaderCellDef>Departamento</th>
+            <td mat-cell *matCellDef="let row">{{ departamentoLabel(row?.departamento) }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="inicio">
+            <th mat-header-cell *matHeaderCellDef>Inicio</th>
+            <td mat-cell *matCellDef="let row">{{ row?.fechaInicio }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="fin">
+            <th mat-header-cell *matHeaderCellDef>Fin</th>
+            <td mat-cell *matCellDef="let row">{{ row?.fechaFin }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="activo">
+            <th mat-header-cell *matHeaderCellDef>Activo</th>
+            <td mat-cell *matCellDef="let row">
+              <span class="state-pill" [class.active]="+row?.actual === 1">
+                {{ +row?.actual === 1 ? 'Activo' : 'Inactivo' }}
+              </span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="acciones">
+            <th mat-header-cell *matHeaderCellDef class="acciones">Acciones</th>
+            <td mat-cell *matCellDef="let row" class="acciones">
+              <button
+                mat-icon-button
+                color="primary"
+                class="action-btn edit-btn"
+                (click)="onEditar(row)"
+              >
+                <mat-icon>edit</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="columns()"></tr>
+          <tr mat-row *matRowDef="let row; columns: columns()"></tr>
+        </table>
+      </div>
+
+      <div class="paginator">
+        <mat-paginator
+          [length]="totalItems()"
+          [pageSize]="pageSize()"
+          [pageIndex]="pageIndex()"
+          [pageSizeOptions]="[5, 10, 20, 50]"
+          (page)="onPageChange($event)"
+        ></mat-paginator>
+      </div>
+
+      @if (!totalItems()) {
+        <div class="empty-state">
+          <mat-icon>inbox</mat-icon>
+          <span>Sin datos disponibles</span>
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+</section>

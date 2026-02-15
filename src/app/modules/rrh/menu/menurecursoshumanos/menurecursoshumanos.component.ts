@@ -1,11 +1,14 @@
-import { Component } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { Component, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { SideMenuCustomComponent } from '../../../../shared/basics/menu/forms/side-menu-custom/side-menu-custom.component';
 import { NavItem } from '../../../../shared/basics/menu/model/nav-item';
+import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
 
 @Component({
   selector: 'app-menurecursoshumanos',
   standalone: true,
-  imports: [SideMenuCustomComponent],
+  imports: [CommonModule, MaterialFormModule, SideMenuCustomComponent],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './menurecursoshumanos.component.html',
   styleUrls: ['./menurecursoshumanos.component.scss'],
 })

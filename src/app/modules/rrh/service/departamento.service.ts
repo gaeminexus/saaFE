@@ -1,57 +1,57 @@
 import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, catchError, of, throwError } from 'rxjs';
-import { DepartamentoCargo } from '../model/departamento-cargo';
+import { Departamento } from '../model/departamento';
 import { ServiciosRhh } from './ws-rrh';
 
 @Injectable({
   providedIn: 'root',
 })
-export class DepartementoCargoService {
+export class DepartamentoService {
   httpOptions = {
     headers: new HttpHeaders({ 'Content-Type': 'application/json' }),
   };
 
   constructor(private http: HttpClient) {}
 
-  getAll(): Observable<DepartamentoCargo[] | null> {
+  getAll(): Observable<Departamento[] | null> {
     const wsGetById = '/getAll';
     const url = `${ServiciosRhh.RS_DPRT}${wsGetById}`;
-    return this.http.get<DepartamentoCargo[]>(url).pipe(catchError(this.handleError));
+    return this.http.get<Departamento[]>(url).pipe(catchError(this.handleError));
   }
 
-  getById(id: string): Observable<DepartamentoCargo | null> {
+  getById(id: string): Observable<Departamento | null> {
     const wsGetById = '/getId/';
     const url = `${ServiciosRhh.RS_DPRT}${wsGetById}${id}`;
-    return this.http.get<DepartamentoCargo>(url).pipe(catchError(this.handleError));
+    return this.http.get<Departamento>(url).pipe(catchError(this.handleError));
   }
 
   /** POST: add new record */
-  add(datos: any): Observable<DepartamentoCargo | null> {
+  add(datos: any): Observable<Departamento | null> {
     return this.http
-      .post<DepartamentoCargo>(ServiciosRhh.RS_DPRT, datos, this.httpOptions)
+      .post<Departamento>(ServiciosRhh.RS_DPRT, datos, this.httpOptions)
       .pipe(catchError(this.handleError));
   }
 
   /** PUT: update record */
-  update(datos: any): Observable<DepartamentoCargo | null> {
+  update(datos: any): Observable<Departamento | null> {
     return this.http
-      .put<DepartamentoCargo>(ServiciosRhh.RS_DPRT, datos, this.httpOptions)
+      .put<Departamento>(ServiciosRhh.RS_DPRT, datos, this.httpOptions)
       .pipe(catchError(this.handleError));
   }
 
-  selectByCriteria(datos: any): Observable<DepartamentoCargo[] | null> {
+  selectByCriteria(datos: any): Observable<Departamento[] | null> {
     const wsEndpoint = '/selectByCriteria/';
     const url = `${ServiciosRhh.RS_DPRT}${wsEndpoint}`;
     return this.http.post<any>(url, datos, this.httpOptions).pipe(catchError(this.handleError));
   }
 
   /** DELETE */
-  delete(id: any): Observable<DepartamentoCargo | null> {
+  delete(id: any): Observable<Departamento | null> {
     const wsEndpoint = '/' + id;
     const url = `${ServiciosRhh.RS_DPRT}${wsEndpoint}`;
     return this.http
-      .delete<DepartamentoCargo>(url, this.httpOptions)
+      .delete<Departamento>(url, this.httpOptions)
       .pipe(catchError(this.handleError));
   }
 

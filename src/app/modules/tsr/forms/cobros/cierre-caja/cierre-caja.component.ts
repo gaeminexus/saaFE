@@ -10,7 +10,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { CierreCaja } from '../../../model/cierre-caja';
+import { UsuarioPorCaja } from '../../../model/usuario-por-caja';
 import { CierreCajaService } from '../../../service/cierre-caja.service';
+import { UsuarioPorCajaService } from '../../../service/usuario-por-caja.service';
 
 @Component({
   selector: 'app-cierre-caja',
@@ -39,6 +41,8 @@ export class CierreCajaComponent implements OnInit {
   fechaCierre = signal<Date>(new Date());
   cajaCodigo = signal<number | null>(null);
   nombreUsuario = signal<string>('');
+  usuarioPorCaja = signal<UsuarioPorCaja | null>(null);
+  cierreHabilitado = signal<boolean>(true);
 
   // Totales
   montoEfectivo = signal<number>(0);
@@ -53,22 +57,63 @@ export class CierreCajaComponent implements OnInit {
       (this.montoCheque() || 0) +
       (this.montoTarjeta() || 0) +
       (this.montoTransferencia() || 0) +
-      (this.montoRetencion() || 0)
+      (this.montoRetencion() || 0),
   );
 
-  constructor(private cierreService: CierreCajaService) {}
+  constructor(
+    private cierreService: CierreCajaService,
+    private usuarioPorCajaService: UsuarioPorCajaService,
+  ) {}
 
-  ngOnInit(): void {}
+  ngOnInit(): void {
+    this.nombreUsuario.set(this.getNombreUsuarioLocal());
+    this.cargarUsuarioCaja();
+  }
+
+  private cargarUsuarioCaja(): void {
+    const idUsuario = this.getIdUsuarioLocal();
+    if (!idUsuario) {
+      this.cierreHabilitado.set(false);
+      this.errorMsg.set('No se pudo identificar el usuario para cierre de caja.');
+      return;
+    }
+
+    this.usuarioPorCajaService.getAll().subscribe({
+      next: (data) => {
+        const usuariosCaja = data ?? [];
+        const asignado = usuariosCaja.find(
+          (item) => item.usuario?.codigo === idUsuario && item.estado === 1,
+        );
+        if (!asignado) {
+          this.cierreHabilitado.set(false);
+          this.errorMsg.set('EL USUARIO NO TIENE CAJAS ASIGNADAS');
+          return;
+        }
+        this.usuarioPorCaja.set(asignado);
+        this.cajaCodigo.set(asignado.cajaFisica?.codigo ?? null);
+        this.cargarTotales();
+      },
+      error: (error: any) => {
+        console.error('Error al cargar UsuarioPorCaja', error);
+        this.cierreHabilitado.set(false);
+        this.errorMsg.set('No se pudo validar la caja del usuario.');
+      },
+    });
+  }
 
   cargarTotales(): void {
     this.errorMsg.set('');
     this.loading.set(true);
 
+    const usuarioCaja = this.usuarioPorCaja();
     const criterios: any = {
       fechaCierre: this.formatDate(this.fechaCierre()),
       cajaCodigo: this.cajaCodigo(),
       nombreUsuario: this.nombreUsuario(),
     };
+    if (usuarioCaja?.codigo) {
+      criterios.usuarioPorCaja = { codigo: usuarioCaja.codigo };
+    }
 
     this.cierreService.selectByCriteria(criterios).subscribe({
       next: (lista) => {
@@ -89,6 +134,7 @@ export class CierreCajaComponent implements OnInit {
           this.montoTarjeta.set(0);
           this.montoTransferencia.set(0);
           this.montoRetencion.set(0);
+          this.errorMsg.set('COBROS NO EXISTENTES');
         }
         this.loading.set(false);
       },
@@ -103,9 +149,16 @@ export class CierreCajaComponent implements OnInit {
     this.errorMsg.set('');
     this.loading.set(true);
 
+    const usuarioCaja = this.usuarioPorCaja();
+    if (!usuarioCaja) {
+      this.loading.set(false);
+      this.errorMsg.set('EL USUARIO NO TIENE CAJAS ASIGNADAS');
+      return;
+    }
+
     const payload: CierreCaja = {
       codigo: 0,
-      usuarioPorCaja: undefined as any, // Se integrará con selección real de UsuarioPorCaja
+      usuarioPorCaja: usuarioCaja,
       fechaCierre: this.formatDate(this.fechaCierre()),
       nombreUsuario: this.nombreUsuario() || '',
       monto: this.montoTotal(),
@@ -140,5 +193,19 @@ export class CierreCajaComponent implements OnInit {
     const mm = pad(d.getMonth() + 1);
     const dd = pad(d.getDate());
     return `${yyyy}-${mm}-${dd}`;
+  }
+
+  private getIdUsuarioLocal(): number | null {
+    const raw = localStorage.getItem('idUsuario');
+    if (!raw) {
+      return null;
+    }
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  private getNombreUsuarioLocal(): string {
+    const username = localStorage.getItem('userName') || localStorage.getItem('usuario');
+    return username?.toString().trim() ?? '';
   }
 }

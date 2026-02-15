@@ -1,11 +1,12 @@
-import { Component, computed, signal } from '@angular/core';
-import { MatCardModule } from '@angular/material/card';
-import { MatTableModule } from '@angular/material/table';
+import { CommonModule } from '@angular/common';
+import { Component, computed, CUSTOM_ELEMENTS_SCHEMA, signal } from '@angular/core';
+import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 
 @Component({
   selector: 'app-rrh-contratos',
   standalone: true,
-  imports: [MatTableModule, MatCardModule],
+  imports: [CommonModule, MaterialFormModule],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './rrh-contratos.component.html',
   styleUrls: ['./rrh-contratos.component.scss'],
 })

@@ -1,37 +1,18 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, computed, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
-import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatSelectModule } from '@angular/material/select';
-import { MatTableModule } from '@angular/material/table';
+import { Component, computed, CUSTOM_ELEMENTS_SCHEMA, OnInit, signal } from '@angular/core';
+import { PageEvent } from '@angular/material/paginator';
 import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
+import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { Empleado } from '../../../model/empleado';
 import { EmpleadoService } from '../../../service/empleado.service';
 
 @Component({
   selector: 'app-rrh-empleados',
   standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule,
-    MatTableModule,
-    MatPaginatorModule,
-    MatProgressSpinnerModule,
-    MatFormFieldModule,
-    MatSelectModule,
-    MatInputModule,
-    MatIconModule,
-    MatButtonModule,
-    MatCardModule,
-  ],
+  imports: [CommonModule, MaterialFormModule],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './rrh-empleados.component.html',
   styleUrls: ['./rrh-empleados.component.scss'],
 })
@@ -86,7 +67,7 @@ export class RrhEmpleadosComponent implements OnInit {
         TipoDatosBusqueda.LONG,
         'codigo',
         String(this.codigo),
-        TipoComandosBusqueda.IGUAL
+        TipoComandosBusqueda.IGUAL,
       );
       criterios.push(db);
     }
@@ -96,7 +77,7 @@ export class RrhEmpleadosComponent implements OnInit {
         TipoDatosBusqueda.STRING,
         'identificacion',
         this.identificacion.trim(),
-        TipoComandosBusqueda.LIKE
+        TipoComandosBusqueda.LIKE,
       );
       criterios.push(db);
     }
@@ -106,7 +87,7 @@ export class RrhEmpleadosComponent implements OnInit {
         TipoDatosBusqueda.STRING,
         'nombres',
         this.nombres.trim(),
-        TipoComandosBusqueda.LIKE
+        TipoComandosBusqueda.LIKE,
       );
       criterios.push(db);
     }
@@ -116,7 +97,7 @@ export class RrhEmpleadosComponent implements OnInit {
         TipoDatosBusqueda.STRING,
         'apellidos',
         this.apellidos.trim(),
-        TipoComandosBusqueda.LIKE
+        TipoComandosBusqueda.LIKE,
       );
       criterios.push(db);
     }
@@ -126,7 +107,7 @@ export class RrhEmpleadosComponent implements OnInit {
         TipoDatosBusqueda.INTEGER,
         'estado',
         String(this.estado),
-        TipoComandosBusqueda.IGUAL
+        TipoComandosBusqueda.IGUAL,
       );
       criterios.push(db);
     }

@@ -22,6 +22,8 @@
               matInput
               [value]="numeroId()"
               (input)="updateNumeroId($any($event.target).value)"
+              (blur)="verificarIdentificacion()"
+              (keyup.enter)="verificarIdentificacion()"
             />
           </mat-form-field>
 
@@ -31,6 +33,7 @@
               matInput
               [value]="cliente()"
               (input)="updateCliente($any($event.target).value)"
+              [disabled]="clienteBloqueado()"
             />
           </mat-form-field>
 
@@ -47,9 +50,19 @@
 
           <mat-form-field appearance="outline">
             <mat-label>Tipo Cobro</mat-label>
-            <mat-select [value]="tipoCobro()" (selectionChange)="tipoCobro.set($event.value)">
+            <mat-select [value]="tipoCobro()" (selectionChange)="onTipoCobroChange($event.value)">
               <mat-option [value]="1">Factura</mat-option>
               <mat-option [value]="2">Anticipo</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Forma de Pago</mat-label>
+            <mat-select [value]="formaPago()" (selectionChange)="formaPago.set($event.value)">
+              <mat-option [value]="''">Seleccione ...</mat-option>
+              @for (forma of formasPago; track forma) {
+                <mat-option [value]="forma">{{ forma }}</mat-option>
+              }
             </mat-select>
           </mat-form-field>
 
@@ -65,7 +78,11 @@
 
           <mat-form-field appearance="outline">
             <mat-label>Caja Contable</mat-label>
-            <mat-select [value]="cajaLogicaId()" (selectionChange)="cajaLogicaId.set($event.value)">
+            <mat-select
+              [value]="cajaLogicaId()"
+              (selectionChange)="cajaLogicaId.set($event.value)"
+              [disabled]="cajaLogicaBloqueada()"
+            >
               <mat-option [value]="null">Seleccione ...</mat-option>
               @for (caja of cajasLogicas(); track caja.codigo) {
                 <mat-option [value]="caja.codigo">{{ getCajaLogicaLabel(caja) }}</mat-option>
@@ -73,28 +90,24 @@
             </mat-select>
           </mat-form-field>
 
-          <mat-form-field appearance="outline">
-            <mat-label>Titular</mat-label>
-            <mat-select [value]="personaId()" (selectionChange)="personaId.set($event.value)">
-              <mat-option [value]="null">Seleccione ...</mat-option>
-              @for (titular of titulares(); track titular.codigo) {
-                <mat-option [value]="titular.codigo">{{ getTitularLabel(titular) }}</mat-option>
-              }
-            </mat-select>
-          </mat-form-field>
-
           <mat-form-field appearance="outline" class="span-2">
-            <mat-label>Descripción</mat-label>
+            <mat-label>Descripción del Cobro</mat-label>
             <input
               matInput
               [value]="descripcion()"
               (input)="updateDescripcion($any($event.target).value)"
+              [disabled]="descripcionBloqueada()"
             />
           </mat-form-field>
         </div>
 
         <div class="actions">
-          <button mat-raised-button color="primary" (click)="guardar()">
+          <button
+            mat-raised-button
+            color="primary"
+            (click)="guardar()"
+            [disabled]="!formHabilitado()"
+          >
             <mat-icon>save</mat-icon>
             Siguiente
           </button>
@@ -103,46 +116,6 @@
             Cancelar
           </button>
         </div>
-      </div>
-
-      <div class="table-card">
-        <div class="table-title">Motivos de Cobro</div>
-        <div class="toolbar">
-          <button mat-button (click)="addMotivo()"><mat-icon>add</mat-icon> Agregar</button>
-        </div>
-        <table mat-table [dataSource]="motivos()" class="mat-elevation-z0">
-          <ng-container matColumnDef="descripcion">
-            <th mat-header-cell *matHeaderCellDef>DESCRIPCIÓN</th>
-            <td mat-cell *matCellDef="let row">
-              <input
-                matInput
-                [value]="row.descripcion"
-                (input)="updateMotivoDescripcion(row, $any($event.target).value)"
-              />
-            </td>
-          </ng-container>
-          <ng-container matColumnDef="valor">
-            <th mat-header-cell *matHeaderCellDef>VALOR</th>
-            <td mat-cell *matCellDef="let row">
-              <input
-                matInput
-                type="number"
-                [value]="row.valor"
-                (input)="updateMotivoValor(row, $any($event.target).value)"
-              />
-            </td>
-          </ng-container>
-          <ng-container matColumnDef="acciones">
-            <th mat-header-cell *matHeaderCellDef></th>
-            <td mat-cell *matCellDef="let row">
-              <button mat-icon-button (click)="eliminarMotivo(row.codigo)">
-                <mat-icon>delete</mat-icon>
-              </button>
-            </td>
-          </ng-container>
-          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-          <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
-        </table>
       </div>
     </div>
 

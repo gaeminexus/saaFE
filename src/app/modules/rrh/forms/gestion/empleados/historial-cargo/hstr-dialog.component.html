@@ -1,0 +1,81 @@
+<div class="dialog-header">
+  <div class="title">
+    <mat-icon>timeline</mat-icon>
+    <div>
+      <h2>{{ data.mode === 'edit' ? 'Editar Historial' : 'Cambiar Cargo' }}</h2>
+      <p>{{ data.empleadoLabel }}</p>
+    </div>
+  </div>
+</div>
+
+<div class="dialog-body">
+  <mat-form-field appearance="outline" class="w-100">
+    <mat-label>Departamento</mat-label>
+    <mat-select [ngModel]="formDepartamento()" (ngModelChange)="formDepartamento.set($event)">
+      @for (opt of data.departamentos; track opt.value) {
+        <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="w-100">
+    <mat-label>Cargo</mat-label>
+    <mat-select [ngModel]="formCargo()" (ngModelChange)="formCargo.set($event)">
+      @for (opt of data.cargos; track opt.value) {
+        <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+
+  <div class="dates-grid">
+    <mat-form-field appearance="outline">
+      <mat-label>Fecha inicio</mat-label>
+      <input
+        matInput
+        type="date"
+        [ngModel]="formFechaInicio()"
+        (ngModelChange)="formFechaInicio.set($event)"
+      />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Fecha fin</mat-label>
+      <input
+        matInput
+        type="date"
+        [ngModel]="formFechaFin()"
+        (ngModelChange)="formFechaFin.set($event)"
+      />
+    </mat-form-field>
+  </div>
+
+  @if (data.mode === 'edit') {
+    <mat-form-field appearance="outline" class="w-100">
+      <mat-label>Activo</mat-label>
+      <mat-select [ngModel]="formActual()" (ngModelChange)="formActual.set($event)">
+        <mat-option [value]="1">Activo</mat-option>
+        <mat-option [value]="0">Inactivo</mat-option>
+      </mat-select>
+    </mat-form-field>
+  }
+
+  <mat-form-field appearance="outline" class="w-100">
+    <mat-label>Observacion</mat-label>
+    <input matInput [ngModel]="formObservacion()" (ngModelChange)="formObservacion.set($event)" />
+  </mat-form-field>
+
+  @if (errorMsg()) {
+    <div class="error-msg">
+      <mat-icon>error</mat-icon>
+      <span>{{ errorMsg() }}</span>
+    </div>
+  }
+</div>
+
+<div class="dialog-actions">
+  <button mat-stroked-button (click)="onCancelar()">Cancelar</button>
+  <button mat-raised-button color="primary" class="btn-gradient" (click)="onGuardar()">
+    <mat-icon>save</mat-icon>
+    Guardar
+  </button>
+</div>

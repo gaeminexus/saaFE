@@ -1,9 +1,11 @@
-export interface departamentocargo {
+import { Cargo } from './cargo';
+import { Departamento } from './departamento';
+
+export interface DepartamentoCargo {
   codigo: number;
-  nombre: string;
+  Departamento: Departamento;
+  Cargo: Cargo;
   estado: string;
   fechaRegistro: Date;
-  usuarioRegistro: String;
-
-
+  usuarioRegistro: string;
 }

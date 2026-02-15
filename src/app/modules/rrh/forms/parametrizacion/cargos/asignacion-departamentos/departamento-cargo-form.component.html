@@ -1,0 +1,78 @@
+<div class="dialog-header">
+  <div class="title">
+    <mat-icon>hub</mat-icon>
+    <div>
+      <h2>{{ data.mode === 'edit' ? 'Editar' : 'Nuevo' }}</h2>
+      <p>Departamento - Cargo</p>
+    </div>
+  </div>
+</div>
+
+<div class="dialog-body">
+  @if (data.mode === 'edit') {
+    <div class="info-grid">
+      <mat-form-field appearance="outline">
+        <mat-label>Codigo</mat-label>
+        <input matInput [value]="formCodigo()" disabled />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Fecha registro</mat-label>
+        <input matInput [value]="formFechaRegistro()" disabled />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Usuario registro</mat-label>
+        <input matInput [value]="formUsuarioRegistro()" disabled />
+      </mat-form-field>
+    </div>
+  }
+
+  <mat-form-field appearance="outline" class="w-100">
+    <mat-label>Departamento</mat-label>
+    <mat-select [ngModel]="formDepartamento()" (ngModelChange)="formDepartamento.set($event)">
+      @for (opt of departamentos(); track opt.codigo) {
+        <mat-option [value]="opt.codigo">{{ opt.nombre }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="w-100">
+    <mat-label>Cargo</mat-label>
+    <mat-select [ngModel]="formCargo()" (ngModelChange)="formCargo.set($event)">
+      @for (opt of cargos(); track opt.codigo) {
+        <mat-option [value]="opt.codigo">{{ opt.nombre }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="w-100">
+    <mat-label>Estado</mat-label>
+    <mat-select [ngModel]="formEstado()" (ngModelChange)="formEstado.set($event)">
+      @for (opt of estadoOptions; track opt.value) {
+        <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+
+  @if (errorMsg()) {
+    <div class="error-msg">
+      <mat-icon>error</mat-icon>
+      <span>{{ errorMsg() }}</span>
+    </div>
+  }
+</div>
+
+<div class="dialog-actions">
+  <button mat-stroked-button (click)="onCancelar()" [disabled]="loading()">Cancelar</button>
+  <button
+    mat-raised-button
+    color="primary"
+    class="btn-gradient"
+    (click)="onGuardar()"
+    [disabled]="loading()"
+  >
+    <mat-icon>save</mat-icon>
+    Guardar
+  </button>
+</div>

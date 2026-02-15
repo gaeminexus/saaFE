@@ -1,0 +1,147 @@
+:host {
+  display: block;
+}
+
+.rrh-hstr {
+  padding: 16px;
+}
+
+.rrh-card {
+  --rrh-muted: #6b7280;
+  --rrh-border: #d7e0ee;
+  --rrh-surface: #ffffff;
+  --rrh-surface-alt: #f4f7fb;
+  --rrh-accent: #667eea;
+  --rrh-warn: #f44336;
+
+  border: 1px solid var(--rrh-border);
+  background:
+    linear-gradient(180deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.03) 100%),
+    var(--rrh-surface);
+  box-shadow:
+    0 16px 30px -24px rgba(15, 23, 42, 0.45),
+    0 2px 6px -4px rgba(102, 126, 234, 0.25);
+}
+
+.title-icon {
+  margin-right: 8px;
+  color: var(--rrh-accent);
+}
+
+.toolbar {
+  display: flex;
+  gap: 12px;
+  align-items: end;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.toolbar-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.records-line {
+  color: var(--rrh-muted);
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.btn-gradient {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  color: #fff !important;
+}
+
+.btn-gradient mat-icon {
+  color: #fff !important;
+}
+
+.table-wrapper {
+  overflow: auto;
+  border-radius: 12px;
+  border: 1px solid var(--rrh-border);
+  background: var(--rrh-surface);
+}
+
+.rrh-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.rrh-table th,
+.rrh-table td {
+  padding: 12px 14px;
+}
+
+.rrh-table thead th {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.92) 0%, rgba(118, 75, 162, 0.92) 100%);
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.rrh-table thead th:first-child {
+  border-top-left-radius: 12px;
+}
+
+.rrh-table thead th:last-child {
+  border-top-right-radius: 12px;
+}
+
+.rrh-table thead th.acciones,
+.rrh-table td.acciones {
+  text-align: right;
+  width: 120px;
+}
+
+.rrh-table tbody tr:nth-child(even) {
+  background: var(--rrh-surface-alt);
+}
+
+.rrh-table tbody tr:hover {
+  background: rgba(102, 126, 234, 0.08);
+}
+
+.state-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  background: rgba(244, 67, 54, 0.12);
+  color: var(--rrh-warn);
+  border: 1px solid rgba(244, 67, 54, 0.25);
+}
+
+.state-pill.active {
+  background: rgba(102, 126, 234, 0.12);
+  color: #4c5bdc;
+  border-color: rgba(102, 126, 234, 0.3);
+}
+
+.action-btn.edit-btn .mat-icon {
+  color: #667eea;
+}
+
+.action-btn.edit-btn:hover {
+  background: rgba(102, 126, 234, 0.12);
+}
+
+.paginator {
+  margin-top: 10px;
+}
+
+.empty-state {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--rrh-muted);
+  padding: 12px 0;
+}

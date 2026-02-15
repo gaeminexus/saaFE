@@ -1,16 +1,16 @@
 import { Cargo } from './cargo';
-import { departamentocargo } from './departamento-cargo';
+import { Departamento } from './departamento';
 import { Empleado } from './empleado';
 
 export interface Historial {
   codigo: number;
   empleado: Empleado;
-  departamento: departamentocargo;
+  departamento: Departamento;
   cargo: Cargo;
-  fechaInicio: Date;
-  fechaFin: Date;
-  actual: String;
-  observacion: String;
-  fechaRegistro: Date;
-  usuarioRegistro: Date;
+  fechaInicio: Date | string;
+  fechaFin?: Date | string | null;
+  actual: string | number;
+  observacion?: string | null;
+  fechaRegistro?: Date | string | null;
+  usuarioRegistro?: string | null;
 }

@@ -1,0 +1,113 @@
+<section class="rrh-departamento">
+  <mat-card class="rrh-card">
+    <mat-card-header>
+      <mat-icon class="title-icon">hub</mat-icon>
+      <mat-card-title>{{ titulo() }}</mat-card-title>
+      <mat-card-subtitle>Departamentos</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      <div class="toolbar">
+        <div class="filters-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Nombre</mat-label>
+            <input matInput [ngModel]="filtroNombre()" (ngModelChange)="filtroNombre.set($event)" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Estado</mat-label>
+            <mat-select [ngModel]="filtroEstado()" (ngModelChange)="filtroEstado.set($event)">
+              <mat-option [value]="null">Todos</mat-option>
+              @for (opt of estadoOptions; track opt.value) {
+                <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        </div>
+
+        <div class="toolbar-actions">
+          <button mat-stroked-button (click)="limpiarFiltros()" [disabled]="loading()">
+            <mat-icon>restart_alt</mat-icon>
+            Limpiar
+          </button>
+          <button mat-stroked-button color="primary" (click)="buscar()" [disabled]="loading()">
+            <mat-icon>search</mat-icon>
+            Buscar
+          </button>
+          <button
+            mat-raised-button
+            color="primary"
+            class="btn-gradient"
+            (click)="onNuevo()"
+            [disabled]="loading()"
+          >
+            <mat-icon>add</mat-icon>
+            Nuevo
+          </button>
+        </div>
+      </div>
+
+      <div class="records-line">{{ totalItems() }} registros</div>
+
+      <div class="table-wrapper">
+        <table mat-table [dataSource]="pagedData()" class="mat-elevation-z1 rrh-table">
+          <ng-container matColumnDef="nombre">
+            <th mat-header-cell *matHeaderCellDef>Nombre</th>
+            <td mat-cell *matCellDef="let row">{{ row?.nombre }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="estado">
+            <th mat-header-cell *matHeaderCellDef>Estado</th>
+            <td mat-cell *matCellDef="let row">
+              <span class="state-pill" [class.active]="isActivo(row?.estado)">
+                {{ estadoLabel(row?.estado) }}
+              </span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="acciones">
+            <th mat-header-cell *matHeaderCellDef class="acciones">Acciones</th>
+            <td mat-cell *matCellDef="let row" class="acciones">
+              <button
+                mat-icon-button
+                color="primary"
+                class="action-btn edit-btn"
+                (click)="onEditar(row)"
+              >
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button
+                mat-icon-button
+                color="accent"
+                class="action-btn toggle-btn"
+                (click)="onToggleEstado(row)"
+              >
+                <mat-icon>{{ isActivo(row?.estado) ? 'toggle_off' : 'toggle_on' }}</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="columns()"></tr>
+          <tr mat-row *matRowDef="let row; columns: columns()"></tr>
+        </table>
+      </div>
+
+      <div class="paginator">
+        <mat-paginator
+          [length]="totalItems()"
+          [pageSize]="pageSize()"
+          [pageIndex]="pageIndex()"
+          [pageSizeOptions]="[5, 10, 20, 50]"
+          (page)="onPageChange($event)"
+        ></mat-paginator>
+      </div>
+
+      @if (!totalItems()) {
+        <div class="empty-state">
+          <mat-icon>inbox</mat-icon>
+          <span>Sin datos disponibles</span>
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+</section>

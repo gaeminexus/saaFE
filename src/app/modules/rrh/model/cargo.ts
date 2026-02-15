@@ -1,10 +1,9 @@
 export interface Cargo {
-    codigo: number;               // Código del adjunto
-    nombre: String;             // Entidad (partícipe)
-    descripcion: String;         // ID referencia bancaria
-    requisitos: String;           // Préstamo
-    estado: string;    // Solicitud de cambio de aporte
-    fechaRegistro: Date;     // Tipo de adjunto
-    usuarioRegistro: string;        // Nombre archivo
-
+  codigo: number;
+  nombre: string;
+  descripcion?: string | null;
+  requisitos?: string | null;
+  estado: number | string;
+  fechaRegistro?: string | Date | null;
+  usuarioRegistro?: string | null;
 }

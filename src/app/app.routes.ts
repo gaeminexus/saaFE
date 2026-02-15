@@ -30,8 +30,6 @@ import { RrhContratosComponent } from './modules/rrh/forms/gestion/contratos/rrh
 import { RrhEmpleadosComponent } from './modules/rrh/forms/gestion/empleados/rrh-empleados.component';
 import { RrhPermisosComponent } from './modules/rrh/forms/gestion/permisos/rrh-permisos.component';
 import { RrhVacacionesComponent } from './modules/rrh/forms/gestion/vacaciones/rrh-vacaciones.component';
-import { RrhCargosComponent } from './modules/rrh/forms/parametrizacion/cargos/rrh-cargos.component';
-import { RrhDepartamentosComponent } from './modules/rrh/forms/parametrizacion/departamentos/rrh-departamentos.component';
 import { RrhTiposContratoComponent } from './modules/rrh/forms/parametrizacion/tipos-contrato/rrh-tipos-contrato.component';
 import { RrhTurnosComponent } from './modules/rrh/forms/parametrizacion/turnos/rrh-turnos.component';
 import { RrhAportesComponent } from './modules/rrh/forms/procesos/aportes/rrh-aportes.component';
@@ -491,11 +489,37 @@ export const routes: Routes = [
     children: [
       // Parametrización
       {
-        path: 'parametrizacion/departamentos',
-        component: RrhDepartamentosComponent,
+        path: 'parametrizacion/departamento-cargo',
+        loadComponent: () =>
+          import('./modules/rrh/forms/parametrizacion/cargos/asignacion-departamentos/departamento-cargo-list.component').then(
+            (m) => m.DepartamentoCargoListComponent,
+          ),
         canActivate: [authGuard],
       },
-      { path: 'parametrizacion/cargos', component: RrhCargosComponent, canActivate: [authGuard] },
+      {
+        path: 'parametrizacion/departamentos',
+        loadComponent: () =>
+          import('./modules/rrh/forms/parametrizacion/cargos/asignacion-departamentos/departamento-list.component').then(
+            (m) => m.DepartamentoListComponent,
+          ),
+        canActivate: [authGuard],
+      },
+      {
+        path: 'parametrizacion/cargos',
+        loadComponent: () =>
+          import('./modules/rrh/forms/parametrizacion/cargos/cargo-list/cargo-list.component').then(
+            (m) => m.CargoListComponent,
+          ),
+        canActivate: [authGuard],
+      },
+      {
+        path: 'parametrizacion/cargos/asignacion-departamentos',
+        loadComponent: () =>
+          import('./modules/rrh/forms/parametrizacion/cargos/asignacion-departamentos/departamento-list.component').then(
+            (m) => m.DepartamentoListComponent,
+          ),
+        canActivate: [authGuard],
+      },
       {
         path: 'parametrizacion/tipos-contrato',
         component: RrhTiposContratoComponent,
@@ -505,6 +529,14 @@ export const routes: Routes = [
       // TODO: parametrizacion/rubros se agregará cuando exista su componente
       // Gestión de Personal
       { path: 'gestion/empleados', component: RrhEmpleadosComponent, canActivate: [authGuard] },
+      {
+        path: 'gestion/empleados/historial-cargo',
+        loadComponent: () =>
+          import('./modules/rrh/forms/gestion/empleados/historial-cargo/hstr-list.component').then(
+            (m) => m.HstrListComponent,
+          ),
+        canActivate: [authGuard],
+      },
       { path: 'gestion/contratos', component: RrhContratosComponent, canActivate: [authGuard] },
       { path: 'gestion/vacaciones', component: RrhVacacionesComponent, canActivate: [authGuard] },
       { path: 'gestion/permisos', component: RrhPermisosComponent, canActivate: [authGuard] },
@@ -527,11 +559,37 @@ export const routes: Routes = [
     children: [
       // Parametrización
       {
-        path: 'parametrizacion/departamentos',
-        component: RrhDepartamentosComponent,
+        path: 'parametrizacion/departamento-cargo',
+        loadComponent: () =>
+          import('./modules/rrh/forms/parametrizacion/cargos/asignacion-departamentos/departamento-cargo-list.component').then(
+            (m) => m.DepartamentoCargoListComponent,
+          ),
         canActivate: [authGuard],
       },
-      { path: 'parametrizacion/cargos', component: RrhCargosComponent, canActivate: [authGuard] },
+      {
+        path: 'parametrizacion/departamentos',
+        loadComponent: () =>
+          import('./modules/rrh/forms/parametrizacion/cargos/asignacion-departamentos/departamento-list.component').then(
+            (m) => m.DepartamentoListComponent,
+          ),
+        canActivate: [authGuard],
+      },
+      {
+        path: 'parametrizacion/cargos',
+        loadComponent: () =>
+          import('./modules/rrh/forms/parametrizacion/cargos/cargo-list/cargo-list.component').then(
+            (m) => m.CargoListComponent,
+          ),
+        canActivate: [authGuard],
+      },
+      {
+        path: 'parametrizacion/cargos/asignacion-departamentos',
+        loadComponent: () =>
+          import('./modules/rrh/forms/parametrizacion/cargos/asignacion-departamentos/departamento-list.component').then(
+            (m) => m.DepartamentoListComponent,
+          ),
+        canActivate: [authGuard],
+      },
       {
         path: 'parametrizacion/tipos-contrato',
         component: RrhTiposContratoComponent,
@@ -540,6 +598,14 @@ export const routes: Routes = [
       { path: 'parametrizacion/turnos', component: RrhTurnosComponent, canActivate: [authGuard] },
       // Gestión de Personal
       { path: 'gestion/empleados', component: RrhEmpleadosComponent, canActivate: [authGuard] },
+      {
+        path: 'gestion/empleados/historial-cargo',
+        loadComponent: () =>
+          import('./modules/rrh/forms/gestion/empleados/historial-cargo/hstr-list.component').then(
+            (m) => m.HstrListComponent,
+          ),
+        canActivate: [authGuard],
+      },
       { path: 'gestion/contratos', component: RrhContratosComponent, canActivate: [authGuard] },
       { path: 'gestion/vacaciones', component: RrhVacacionesComponent, canActivate: [authGuard] },
       { path: 'gestion/permisos', component: RrhPermisosComponent, canActivate: [authGuard] },

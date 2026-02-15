@@ -3,7 +3,7 @@ import { Titular } from './titular';
 
 export interface PersonaRol {
   codigo: number; // Identificador único del registro
-  persona: Titular; // Persona asociada al rol
+  titular: Titular; // Persona asociada al rol
   rubroRolPersonaP: number; // Código alterno del rubro (tomado del rubro 55)
   rubroRolPersonaH: number; // Código alterno del detalle de rubro (rubro 55)
   diasVencimientoFactura: number; // Días de vencimiento de facturas asociados al rol

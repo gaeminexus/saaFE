@@ -11,10 +11,13 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { catchError, forkJoin, map, of, switchMap } from 'rxjs';
 import { DetalleRubro } from '../../../../shared/model/detalle-rubro';
 import { DetalleRubroService } from '../../../../shared/services/detalle-rubro.service';
 import { FuncionesDatosService } from '../../../../shared/services/funciones-datos.service';
+import { PersonaRol } from '../../model/persona-rol';
 import { Titular } from '../../model/titular';
+import { PersonaRolService } from '../../service/persona-rol.service';
 import { TitularService } from '../../service/titular.service';
 
 @Component({
@@ -56,12 +59,15 @@ export class TitularesComponent implements OnInit {
     'apellido',
     'nombre',
     'razonSocial',
+    'roles',
     'estado',
   ];
 
   // Formulario de edición (objeto editable)
   titularEdit: Titular | null = null;
   backup: Titular | null = null;
+  rolesSeleccionados = signal<number[]>([]);
+  rolesPorPersona = signal<Record<number, number[]>>({});
 
   // Códigos de rubro según la base de datos
   private readonly RUBRO_TIPO_Titular = 35; // Tipo de Titular (Natural/Jurídica)
@@ -72,6 +78,7 @@ export class TitularesComponent implements OnInit {
     private titularService: TitularService,
     private detalleRubroService: DetalleRubroService,
     private funcionesDatos: FuncionesDatosService,
+    private personaRolService: PersonaRolService,
     private snackBar: MatSnackBar,
     private dialog: MatDialog,
   ) {}
@@ -95,6 +102,7 @@ export class TitularesComponent implements OnInit {
           this.titulares.set(data);
           this.dataSource.data = data;
           console.log('titulares cargadas exitosamente:', data.length);
+          this.cargarRolesAsignados();
         }
         this.loading.set(false);
       },
@@ -121,6 +129,7 @@ export class TitularesComponent implements OnInit {
           this.snackBar.open('⚠️ Datos cargados con método alternativo', 'Cerrar', {
             duration: 4000,
           });
+          this.cargarRolesAsignados();
         }
         this.loading.set(false);
       },
@@ -203,6 +212,7 @@ export class TitularesComponent implements OnInit {
     this.titularEdit = nuevaTitular;
     this.selectedRow.set(nuevaTitular);
     this.editMode.set(true);
+    this.rolesSeleccionados.set([]);
   }
 
   /**
@@ -223,6 +233,12 @@ export class TitularesComponent implements OnInit {
     this.backup = JSON.parse(JSON.stringify(this.selectedRow()));
     this.titularEdit = this.selectedRow();
     this.editMode.set(true);
+    const personaCodigo = this.titularEdit?.codigo ?? 0;
+    if (personaCodigo > 0) {
+      this.cargarRolesPersona(personaCodigo);
+    } else {
+      this.rolesSeleccionados.set([]);
+    }
   }
 
   /**
@@ -283,6 +299,7 @@ export class TitularesComponent implements OnInit {
       this.titularService.add(titularesanitized).subscribe({
         next: (response: Titular | null) => {
           if (response) {
+            this.actualizarRolesPersona(response.codigo);
             this.mostrarExito('Titular creada correctamente');
             this.cargarDatos();
             this.limpiar();
@@ -298,6 +315,7 @@ export class TitularesComponent implements OnInit {
       this.titularService.update(titularesanitized).subscribe({
         next: (response: Titular | null) => {
           if (response) {
+            this.actualizarRolesPersona(this.titularEdit!.codigo);
             this.mostrarExito('Titular actualizada correctamente');
             this.cargarDatos();
             this.limpiar();
@@ -457,6 +475,126 @@ export class TitularesComponent implements OnInit {
     }
   }
 
+  private cargarRolesPersona(personaCodigo: number): void {
+    const empresaCodigo = this.getEmpresaCodigo();
+    this.fetchRolesPersona(personaCodigo, empresaCodigo).subscribe({
+      next: (data: PersonaRol[]) => {
+        const roles = data
+          .map((item) => item.rubroRolPersonaH)
+          .filter((rol): rol is number => Number.isFinite(rol));
+        this.rolesSeleccionados.set(roles);
+      },
+      error: (error: any) => {
+        console.error('Error al cargar roles de la titular', error);
+        this.mostrarError('No se pudieron cargar los roles de la titular');
+        this.rolesSeleccionados.set([]);
+      },
+    });
+  }
+
+  private actualizarRolesPersona(personaCodigo: number): void {
+    const empresaCodigo = this.getEmpresaCodigo();
+    if (!empresaCodigo) {
+      this.mostrarError('No se pudo obtener la empresa para roles');
+      return;
+    }
+
+    this.fetchRolesPersona(personaCodigo, empresaCodigo)
+      .pipe(
+        switchMap((existentes: PersonaRol[]) => {
+          if (existentes.length === 0) {
+            return of([]);
+          }
+          return forkJoin(existentes.map((item) => this.personaRolService.delete(item.codigo)));
+        }),
+        switchMap(() => {
+          const roles = this.rolesSeleccionados();
+          if (roles.length === 0) {
+            return of([]);
+          }
+          const payloads = roles.map((rol) => ({
+            titular: { codigo: personaCodigo },
+            rubroRolPersonaP: this.RUBRO_ROL_TITULAR,
+            rubroRolPersonaH: rol,
+            diasVencimientoFactura: 0,
+            calificacionRiesgo: '',
+            estado: 1,
+            empresa: { codigo: empresaCodigo },
+          }));
+          return forkJoin(payloads.map((payload) => this.personaRolService.add(payload)));
+        }),
+      )
+      .subscribe({
+        next: () => {
+          this.rolesPorPersona.update((current) => ({
+            ...current,
+            [personaCodigo]: [...this.rolesSeleccionados()],
+          }));
+        },
+        error: (error: any) => {
+          console.error('Error al actualizar roles de la titular', error);
+          this.mostrarError('No se pudieron actualizar los roles de la titular');
+        },
+      });
+  }
+
+  private cargarRolesAsignados(): void {
+    this.personaRolService
+      .getAll()
+      .pipe(map((data: PersonaRol[] | null) => data ?? []))
+      .subscribe({
+        next: (data: PersonaRol[]) => {
+          const agrupados: Record<number, number[]> = {};
+          data.forEach((item) => {
+            const personaCodigo = item.titular?.codigo;
+            const rolCodigo = item.rubroRolPersonaH;
+            if (!personaCodigo || !Number.isFinite(rolCodigo)) {
+              return;
+            }
+            if (!agrupados[personaCodigo]) {
+              agrupados[personaCodigo] = [];
+            }
+            agrupados[personaCodigo].push(rolCodigo as number);
+          });
+          this.rolesPorPersona.set(agrupados);
+        },
+        error: (error: any) => {
+          console.error('Error al cargar roles asignados', error);
+          this.rolesPorPersona.set({});
+        },
+      });
+  }
+
+  private fetchRolesPersona(personaCodigo: number, empresaCodigo: number | null): any {
+    const criteria: any = {
+      titular: { codigo: personaCodigo },
+    };
+    if (empresaCodigo) {
+      criteria.empresa = { codigo: empresaCodigo };
+    }
+
+    return this.personaRolService.getAll().pipe(
+      map((data: PersonaRol[] | null) => {
+        const items = data ?? [];
+        return items.filter((item) => {
+          const samePersona = item.titular?.codigo === personaCodigo;
+          const sameEmpresa = empresaCodigo ? item.empresa?.codigo === empresaCodigo : true;
+          return samePersona && sameEmpresa;
+        });
+      }),
+      catchError(() => of([])),
+    );
+  }
+
+  private getEmpresaCodigo(): number | null {
+    const raw = localStorage.getItem('idEmpresa');
+    if (!raw) {
+      return null;
+    }
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
   /**
    * Obtiene el nombre completo de una Titular
    */
@@ -504,6 +642,24 @@ export class TitularesComponent implements OnInit {
    */
   getEstadoTexto(estado: number): string {
     return estado === 1 ? 'ACTIVO' : 'INACTIVO';
+  }
+
+  getRolesTexto(personaCodigo: number | undefined): string {
+    if (!personaCodigo) {
+      return '';
+    }
+    const roles = this.rolesPorPersona()[personaCodigo] || [];
+    if (roles.length === 0) {
+      return '';
+    }
+    const descripciones = roles
+      .map(
+        (rolCodigo) =>
+          this.rolesTitular().find((rol) => rol.codigo === rolCodigo)?.descripcion ||
+          String(rolCodigo),
+      )
+      .filter((descripcion) => descripcion.trim() !== '');
+    return descripciones.join(', ');
   }
 
   /**
