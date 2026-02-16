@@ -1,0 +1,119 @@
+<div class="dialog-header">
+  <div class="title">
+    <mat-icon>person</mat-icon>
+    <div>
+      <h2>{{ data.mode === 'edit' ? 'Editar' : 'Nuevo' }}</h2>
+      <p>Empleado</p>
+    </div>
+  </div>
+</div>
+
+<div class="dialog-body">
+  @if (data.mode === 'edit') {
+    <div class="info-grid">
+      <mat-form-field appearance="outline">
+        <mat-label>Codigo</mat-label>
+        <input matInput [value]="formCodigo()" disabled />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Fecha registro</mat-label>
+        <input matInput [value]="formFechaRegistro()" disabled />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Usuario registro</mat-label>
+        <input matInput [value]="formUsuarioRegistro()" disabled />
+      </mat-form-field>
+    </div>
+  }
+
+  <div class="section-title">Datos personales</div>
+  <div class="form-grid">
+    <mat-form-field appearance="outline">
+      <mat-label>Identificacion</mat-label>
+      <mat-select
+        [ngModel]="formIdentificacion()"
+        (ngModelChange)="formIdentificacion.set($event)"
+        [compareWith]="compareIdentificacion"
+      >
+        @for (tipo of identificaciones(); track tipo.codigo) {
+          <mat-option [value]="tipo">{{ tipo.descripcion }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Nombres</mat-label>
+      <input matInput [ngModel]="formNombres()" (ngModelChange)="formNombres.set($event)" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Apellidos</mat-label>
+      <input matInput [ngModel]="formApellidos()" (ngModelChange)="formApellidos.set($event)" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Fecha nacimiento</mat-label>
+      <input
+        matInput
+        type="date"
+        [ngModel]="formFechaNacimiento()"
+        (ngModelChange)="formFechaNacimiento.set($event)"
+      />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Telefono</mat-label>
+      <input matInput [ngModel]="formTelefono()" (ngModelChange)="formTelefono.set($event)" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Email</mat-label>
+      <input matInput [ngModel]="formEmail()" (ngModelChange)="formEmail.set($event)" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Direccion</mat-label>
+      <textarea
+        matInput
+        rows="2"
+        [ngModel]="formDireccion()"
+        (ngModelChange)="formDireccion.set($event)"
+      ></textarea>
+    </mat-form-field>
+  </div>
+
+  <div class="section-title">Datos laborales</div>
+  <div class="form-grid">
+    <mat-form-field appearance="outline">
+      <mat-label>Estado</mat-label>
+      <mat-select [ngModel]="formEstado()" (ngModelChange)="formEstado.set($event)">
+        @for (opt of estadoOptions; track opt.value) {
+          <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+  </div>
+
+  @if (errorMsg()) {
+    <div class="error-msg">
+      <mat-icon>error</mat-icon>
+      <span>{{ errorMsg() }}</span>
+    </div>
+  }
+</div>
+
+<div class="dialog-actions">
+  <button mat-stroked-button (click)="onCancelar()" [disabled]="loading()">Cancelar</button>
+  <button
+    mat-raised-button
+    color="primary"
+    class="btn-gradient"
+    (click)="onGuardar()"
+    [disabled]="loading()"
+  >
+    <mat-icon>save</mat-icon>
+    Guardar
+  </button>
+</div>

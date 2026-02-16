@@ -9,6 +9,7 @@ export class ServiciosRhh {
   public static RS_CTLG = `${API_URL}/ctlg`;
   public static RS_CNTR = `${API_URL}/cntr`;
   public static RS_DPRT = `${API_URL}/dprt`;
+  public static RS_DPTC = `${API_URL}/dptc`;
   public static RS_TMLQ = `${API_URL}/tmlq`;
   public static RS_DTLL = `${API_URL}/dtll`;
   public static RS_MPLD = `${API_URL}/mpld`;
@@ -24,7 +25,7 @@ export class ServiciosRhh {
   public static RS_RBRO = `${API_URL}/rbro`;
   public static RS_SLDV = `${API_URL}/sldv`;
   public static RS_SLCT = `${API_URL}/slct`;
-  public static RS_TPCN = `${API_URL}/tpcn`;
+  public static RS_TPCE = `${API_URL}/tpce`;
   public static RS_TRNO = `${API_URL}/trno`;
 
   // Agregar más endpoints de RRHH acá según necesidades

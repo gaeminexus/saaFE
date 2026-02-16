@@ -43,6 +43,22 @@
   padding: 8px 0 4px;
 }
 
+.section-title {
+  font-weight: 700;
+  color: #374151;
+  padding-top: 6px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.full-width {
+  grid-column: 1 / -1;
+}
+
 .dialog-actions {
   display: flex;
   justify-content: flex-end;
@@ -58,10 +74,6 @@
 
 .btn-gradient mat-icon {
   color: #fff !important;
-}
-
-.w-100 {
-  width: 100%;
 }
 
 .error-msg {

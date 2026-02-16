@@ -27,11 +27,9 @@ import { MenurecursoshumanosComponent } from './modules/rrh/menu/menurecursoshum
 // RRHH demo components
 import { RrhAsistenciaComponent } from './modules/rrh/forms/gestion/asistencia/rrh-asistencia.component';
 import { RrhContratosComponent } from './modules/rrh/forms/gestion/contratos/rrh-contratos.component';
-import { RrhEmpleadosComponent } from './modules/rrh/forms/gestion/empleados/rrh-empleados.component';
 import { RrhPermisosComponent } from './modules/rrh/forms/gestion/permisos/rrh-permisos.component';
 import { RrhVacacionesComponent } from './modules/rrh/forms/gestion/vacaciones/rrh-vacaciones.component';
-import { RrhTiposContratoComponent } from './modules/rrh/forms/parametrizacion/tipos-contrato/rrh-tipos-contrato.component';
-import { RrhTurnosComponent } from './modules/rrh/forms/parametrizacion/turnos/rrh-turnos.component';
+import { TurnoListComponent } from './modules/rrh/forms/parametrizacion/turnos/turno-list.component';
 import { RrhAportesComponent } from './modules/rrh/forms/procesos/aportes/rrh-aportes.component';
 import { RrhLiquidacionesComponent } from './modules/rrh/forms/procesos/liquidaciones/rrh-liquidaciones.component';
 import { RrhNominaComponent } from './modules/rrh/forms/procesos/nomina/rrh-nomina.component';
@@ -522,13 +520,23 @@ export const routes: Routes = [
       },
       {
         path: 'parametrizacion/tipos-contrato',
-        component: RrhTiposContratoComponent,
+        loadComponent: () =>
+          import('./modules/rrh/forms/parametrizacion/tipos-contrato/tipo-contrato-list.component').then(
+            (m) => m.TipoContratoListComponent,
+          ),
         canActivate: [authGuard],
       },
-      { path: 'parametrizacion/turnos', component: RrhTurnosComponent, canActivate: [authGuard] },
+      { path: 'parametrizacion/turnos', component: TurnoListComponent, canActivate: [authGuard] },
       // TODO: parametrizacion/rubros se agregará cuando exista su componente
       // Gestión de Personal
-      { path: 'gestion/empleados', component: RrhEmpleadosComponent, canActivate: [authGuard] },
+      {
+        path: 'gestion/empleados',
+        loadComponent: () =>
+          import('./modules/rrh/forms/gestion/empleados/empleado-list.component').then(
+            (m) => m.EmpleadoListComponent,
+          ),
+        canActivate: [authGuard],
+      },
       {
         path: 'gestion/empleados/historial-cargo',
         loadComponent: () =>
@@ -592,12 +600,22 @@ export const routes: Routes = [
       },
       {
         path: 'parametrizacion/tipos-contrato',
-        component: RrhTiposContratoComponent,
+        loadComponent: () =>
+          import('./modules/rrh/forms/parametrizacion/tipos-contrato/tipo-contrato-list.component').then(
+            (m) => m.TipoContratoListComponent,
+          ),
         canActivate: [authGuard],
       },
-      { path: 'parametrizacion/turnos', component: RrhTurnosComponent, canActivate: [authGuard] },
+      { path: 'parametrizacion/turnos', component: TurnoListComponent, canActivate: [authGuard] },
       // Gestión de Personal
-      { path: 'gestion/empleados', component: RrhEmpleadosComponent, canActivate: [authGuard] },
+      {
+        path: 'gestion/empleados',
+        loadComponent: () =>
+          import('./modules/rrh/forms/gestion/empleados/empleado-list.component').then(
+            (m) => m.EmpleadoListComponent,
+          ),
+        canActivate: [authGuard],
+      },
       {
         path: 'gestion/empleados/historial-cargo',
         loadComponent: () =>

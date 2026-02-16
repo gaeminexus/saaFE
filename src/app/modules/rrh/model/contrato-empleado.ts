@@ -1,10 +1,10 @@
 import { Empleado } from './empleado';
-import { TipoContrato } from './tipo-contrato';
+import { TipoContratoEmpleado } from './tipo-contrato-empleado';
 
 export interface ContratoEmpleado {
   codigo: number;
   empleado: Empleado;
-  tipoContrato: TipoContrato;
+  tipoContratoEmpleado: TipoContratoEmpleado;
   numero: String;
   fechaInicio: Date;
   fechaFin: Date;
@@ -14,6 +14,4 @@ export interface ContratoEmpleado {
   observacion: String;
   fechaRegistro: Date;
   usuarioRegistro: String;
-
-
 }

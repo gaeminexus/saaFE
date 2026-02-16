@@ -34,6 +34,12 @@ export class MenurecursoshumanosComponent {
           route: '/menurecursoshumanos/parametrizacion/cargos',
         },
         {
+          displayName: 'Departamento - Cargo',
+          iconName: 'hub',
+          idPermiso: 830,
+          route: '/menurecursoshumanos/parametrizacion/departamento-cargo',
+        },
+        {
           displayName: 'Tipos de Contrato',
           iconName: 'description',
           idPermiso: 830,

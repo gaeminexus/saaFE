@@ -1,26 +1,27 @@
-<section class="rrh-departamento-cargo">
+<section class="rrh-tipo-contrato">
   <mat-card class="rrh-card">
     <mat-card-header>
-      <mat-icon class="title-icon">hub</mat-icon>
+      <mat-icon class="title-icon">description</mat-icon>
       <mat-card-title>{{ titulo() }}</mat-card-title>
-      <mat-card-subtitle>Relacion Departamento - Cargo</mat-card-subtitle>
+      <mat-card-subtitle>Tipos de Contrato</mat-card-subtitle>
     </mat-card-header>
 
     <mat-card-content>
       <div class="toolbar">
         <div class="filters-grid">
           <mat-form-field appearance="outline">
-            <mat-label>Departamento</mat-label>
-            <input
-              matInput
-              [ngModel]="filtroDepartamento()"
-              (ngModelChange)="filtroDepartamento.set($event)"
-            />
+            <mat-label>Nombre</mat-label>
+            <input matInput [ngModel]="filtroNombre()" (ngModelChange)="filtroNombre.set($event)" />
           </mat-form-field>
 
           <mat-form-field appearance="outline">
-            <mat-label>Cargo</mat-label>
-            <input matInput [ngModel]="filtroCargo()" (ngModelChange)="filtroCargo.set($event)" />
+            <mat-label>Requiere fecha fin</mat-label>
+            <mat-select [ngModel]="filtroRequiere()" (ngModelChange)="filtroRequiere.set($event)">
+              <mat-option [value]="null">Todos</mat-option>
+              @for (opt of requiereOptions; track opt.value) {
+                <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+              }
+            </mat-select>
           </mat-form-field>
 
           <mat-form-field appearance="outline">
@@ -37,8 +38,8 @@
             <mat-label>Ordenar por</mat-label>
             <mat-select [ngModel]="orderBy()" (ngModelChange)="orderBy.set($event)">
               <mat-option value="codigo">Codigo</mat-option>
-              <mat-option value="Departamento.nombre">Departamento</mat-option>
-              <mat-option value="Cargo.nombre">Cargo</mat-option>
+              <mat-option value="nombre">Nombre</mat-option>
+              <mat-option value="requiereFechaFin">Requiere fecha fin</mat-option>
               <mat-option value="estado">Estado</mat-option>
               <mat-option value="fechaRegistro">Fecha registro</mat-option>
               <mat-option value="usuarioRegistro">Usuario</mat-option>
@@ -85,14 +86,14 @@
             <td mat-cell *matCellDef="let row">{{ row?.codigo }}</td>
           </ng-container>
 
-          <ng-container matColumnDef="departamento">
-            <th mat-header-cell *matHeaderCellDef>Departamento</th>
-            <td mat-cell *matCellDef="let row">{{ departamentoNombre(row) }}</td>
+          <ng-container matColumnDef="nombre">
+            <th mat-header-cell *matHeaderCellDef>Nombre</th>
+            <td mat-cell *matCellDef="let row">{{ row?.nombre }}</td>
           </ng-container>
 
-          <ng-container matColumnDef="cargo">
-            <th mat-header-cell *matHeaderCellDef>Cargo</th>
-            <td mat-cell *matCellDef="let row">{{ cargoNombre(row) }}</td>
+          <ng-container matColumnDef="requiereFechaFin">
+            <th mat-header-cell *matHeaderCellDef>Requiere fecha fin</th>
+            <td mat-cell *matCellDef="let row">{{ requiereLabel(row?.requiereFechaFin) }}</td>
           </ng-container>
 
           <ng-container matColumnDef="estado">
@@ -106,9 +107,7 @@
 
           <ng-container matColumnDef="fechaRegistro">
             <th mat-header-cell *matHeaderCellDef>Fecha registro</th>
-            <td mat-cell *matCellDef="let row">
-              {{ row?.fechaRegistro | date: 'dd/MM/yyyy' }}
-            </td>
+            <td mat-cell *matCellDef="let row">{{ row?.fechaRegistro | date: 'dd/MM/yyyy' }}</td>
           </ng-container>
 
           <ng-container matColumnDef="usuarioRegistro">

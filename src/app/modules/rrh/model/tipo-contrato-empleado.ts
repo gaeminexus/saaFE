@@ -1,10 +1,8 @@
-export interface TipoContrato {
-
+export interface TipoContratoEmpleado {
   codigo: number;
   nombre: String;
   requiereFechaFin: String;
   estado: String;
   fechaRegistro: Date;
   usuarioRegistro: String;
-
 }

@@ -69,7 +69,8 @@ export class DepartamentoCargoListComponent implements OnInit {
     this.departamentoCargoService.selectByCriteria(criterios).subscribe({
       next: (rows: DepartamentoCargo[] | null) => {
         const items = Array.isArray(rows) ? rows : [];
-        this.allData.set(this.applyLocalSort(items));
+        const filtered = this.applyEstadoFilter(items);
+        this.allData.set(this.applyLocalSort(filtered));
         this.pageIndex.set(0);
         this.loading.set(false);
       },
@@ -99,13 +100,18 @@ export class DepartamentoCargoListComponent implements OnInit {
 
   onToggleEstado(row: DepartamentoCargo): void {
     const next = this.isActivo(row.estado) ? 'I' : 'A';
-    const payload: Partial<DepartamentoCargo> = {
+    const departamento = this.resolveDepartamento(row);
+    const cargo = this.resolveCargo(row);
+    const payload = {
       codigo: row.codigo,
-      Departamento: row.Departamento,
-      Cargo: row.Cargo,
+      departamento,
+      cargo,
       estado: next,
       fechaRegistro: row.fechaRegistro,
       usuarioRegistro: this.getUsuarioRegistro(),
+    } as Partial<DepartamentoCargo> & {
+      departamento?: DepartamentoCargo['Departamento'];
+      cargo?: DepartamentoCargo['Cargo'];
     };
 
     this.loading.set(true);
@@ -143,7 +149,7 @@ export class DepartamentoCargoListComponent implements OnInit {
       const db = new DatosBusqueda();
       db.asignaValorConCampoPadre(
         TipoDatosBusqueda.STRING,
-        'Departamento',
+        'departamento',
         'nombre',
         departamento,
         TipoComandosBusqueda.LIKE,
@@ -156,22 +162,10 @@ export class DepartamentoCargoListComponent implements OnInit {
       const db = new DatosBusqueda();
       db.asignaValorConCampoPadre(
         TipoDatosBusqueda.STRING,
-        'Cargo',
+        'cargo',
         'nombre',
         cargo,
         TipoComandosBusqueda.LIKE,
-      );
-      criterios.push(db);
-    }
-
-    const estado = this.filtroEstado();
-    if (estado) {
-      const db = new DatosBusqueda();
-      db.asignaUnCampoSinTrunc(
-        TipoDatosBusqueda.STRING,
-        'estado',
-        estado,
-        TipoComandosBusqueda.IGUAL,
       );
       criterios.push(db);
     }
@@ -200,6 +194,15 @@ export class DepartamentoCargoListComponent implements OnInit {
     return sorted;
   }
 
+  private applyEstadoFilter(rows: DepartamentoCargo[]): DepartamentoCargo[] {
+    const estado = this.filtroEstado();
+    if (!estado) return rows;
+    const wantsActivo = estado.toString().toUpperCase().startsWith('A');
+    return rows.filter((row) =>
+      wantsActivo ? this.isActivo(row?.estado) : !this.isActivo(row?.estado),
+    );
+  }
+
   private getSortValue(row: DepartamentoCargo, field: string): string | number {
     switch (field) {
       case 'codigo':
@@ -207,9 +210,9 @@ export class DepartamentoCargoListComponent implements OnInit {
       case 'estado':
         return (row?.estado ?? '').toString().toUpperCase();
       case 'Departamento.nombre':
-        return (row?.Departamento?.nombre ?? '').toString().toUpperCase();
+        return this.departamentoNombre(row).toUpperCase();
       case 'Cargo.nombre':
-        return (row?.Cargo?.nombre ?? '').toString().toUpperCase();
+        return this.cargoNombre(row).toUpperCase();
       case 'fechaRegistro':
         return row?.fechaRegistro ? new Date(row.fechaRegistro).getTime() : 0;
       case 'usuarioRegistro':
@@ -266,6 +269,26 @@ export class DepartamentoCargoListComponent implements OnInit {
       horizontalPosition: 'right',
       verticalPosition: 'top',
     });
+  }
+
+  departamentoNombre(row?: DepartamentoCargo | null): string {
+    const item = row as DepartamentoCargo & { departamento?: DepartamentoCargo['Departamento'] };
+    return (item?.Departamento?.nombre ?? item?.departamento?.nombre ?? '').toString();
+  }
+
+  cargoNombre(row?: DepartamentoCargo | null): string {
+    const item = row as DepartamentoCargo & { cargo?: DepartamentoCargo['Cargo'] };
+    return (item?.Cargo?.nombre ?? item?.cargo?.nombre ?? '').toString();
+  }
+
+  private resolveDepartamento(row: DepartamentoCargo): DepartamentoCargo['Departamento'] {
+    const item = row as DepartamentoCargo & { departamento?: DepartamentoCargo['Departamento'] };
+    return item.Departamento ?? item.departamento ?? ({} as DepartamentoCargo['Departamento']);
+  }
+
+  private resolveCargo(row: DepartamentoCargo): DepartamentoCargo['Cargo'] {
+    const item = row as DepartamentoCargo & { cargo?: DepartamentoCargo['Cargo'] };
+    return item.Cargo ?? item.cargo ?? ({} as DepartamentoCargo['Cargo']);
   }
 
   private normalizeText(value: string): string {

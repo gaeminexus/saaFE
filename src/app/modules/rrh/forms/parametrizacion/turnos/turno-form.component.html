@@ -1,0 +1,113 @@
+<div class="dialog-header">
+  <div class="title">
+    <mat-icon>schedule</mat-icon>
+    <div>
+      <h2>{{ data.mode === 'edit' ? 'Editar' : 'Nuevo' }}</h2>
+      <p>Turno y Horario</p>
+    </div>
+  </div>
+</div>
+
+<div class="dialog-body">
+  @if (data.mode === 'edit') {
+    <div class="info-grid">
+      <mat-form-field appearance="outline">
+        <mat-label>Codigo</mat-label>
+        <input matInput [value]="formCodigo()" disabled />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Fecha registro</mat-label>
+        <input matInput [value]="formFechaRegistro()" disabled />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Usuario registro</mat-label>
+        <input matInput [value]="formUsuarioRegistro()" disabled />
+      </mat-form-field>
+    </div>
+  }
+
+  <mat-form-field appearance="outline" class="w-100">
+    <mat-label>Nombre</mat-label>
+    <input
+      matInput
+      [ngModel]="formNombre()"
+      (ngModelChange)="formNombre.set($event)"
+      maxlength="80"
+    />
+  </mat-form-field>
+
+  <div class="time-grid">
+    <mat-form-field appearance="outline">
+      <mat-label>Hora entrada</mat-label>
+      <input
+        matInput
+        type="time"
+        [ngModel]="formHoraEntrada()"
+        (ngModelChange)="formHoraEntrada.set($event)"
+        step="60"
+      />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Hora salida</mat-label>
+      <input
+        matInput
+        type="time"
+        [ngModel]="formHoraSalida()"
+        (ngModelChange)="formHoraSalida.set($event)"
+        step="60"
+      />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Tolerancia (min)</mat-label>
+      <input
+        matInput
+        type="number"
+        min="0"
+        [ngModel]="formToleranciaMinutos()"
+        (ngModelChange)="formToleranciaMinutos.set($event)"
+      />
+    </mat-form-field>
+  </div>
+
+  <mat-checkbox
+    class="checkbox-row"
+    [ngModel]="formRequiereSalida()"
+    (ngModelChange)="formRequiereSalida.set($event)"
+  >
+    Requiere marcacion de salida
+  </mat-checkbox>
+
+  <mat-form-field appearance="outline" class="w-100">
+    <mat-label>Estado</mat-label>
+    <mat-select [ngModel]="formEstado()" (ngModelChange)="formEstado.set($event)">
+      @for (opt of estadoOptions; track opt.value) {
+        <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+
+  @if (errorMsg()) {
+    <div class="error-msg">
+      <mat-icon>error</mat-icon>
+      <span>{{ errorMsg() }}</span>
+    </div>
+  }
+</div>
+
+<div class="dialog-actions">
+  <button mat-stroked-button (click)="onCancelar()" [disabled]="loading()">Cancelar</button>
+  <button
+    mat-raised-button
+    color="primary"
+    class="btn-gradient"
+    (click)="onGuardar()"
+    [disabled]="loading()"
+  >
+    <mat-icon>save</mat-icon>
+    Guardar
+  </button>
+</div>

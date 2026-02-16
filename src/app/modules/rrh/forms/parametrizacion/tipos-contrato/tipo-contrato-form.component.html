@@ -1,0 +1,74 @@
+<div class="dialog-header">
+  <div class="title">
+    <mat-icon>description</mat-icon>
+    <div>
+      <h2>{{ data.mode === 'edit' ? 'Editar' : 'Nuevo' }}</h2>
+      <p>Tipo de Contrato</p>
+    </div>
+  </div>
+</div>
+
+<div class="dialog-body">
+  @if (data.mode === 'edit') {
+    <div class="info-grid">
+      <mat-form-field appearance="outline">
+        <mat-label>Codigo</mat-label>
+        <input matInput [value]="formCodigo()" disabled />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Fecha registro</mat-label>
+        <input matInput [value]="formFechaRegistro()" disabled />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Usuario registro</mat-label>
+        <input matInput [value]="formUsuarioRegistro()" disabled />
+      </mat-form-field>
+    </div>
+  }
+
+  <mat-form-field appearance="outline" class="w-100">
+    <mat-label>Nombre</mat-label>
+    <input
+      matInput
+      [ngModel]="formNombre()"
+      (ngModelChange)="formNombre.set($event)"
+      maxlength="80"
+    />
+  </mat-form-field>
+
+  <mat-checkbox [ngModel]="formRequiere()" (ngModelChange)="formRequiere.set($event)">
+    Requiere fecha fin
+  </mat-checkbox>
+
+  <mat-form-field appearance="outline" class="w-100">
+    <mat-label>Estado</mat-label>
+    <mat-select [ngModel]="formEstado()" (ngModelChange)="formEstado.set($event)">
+      @for (opt of estadoOptions; track opt.value) {
+        <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+
+  @if (errorMsg()) {
+    <div class="error-msg">
+      <mat-icon>error</mat-icon>
+      <span>{{ errorMsg() }}</span>
+    </div>
+  }
+</div>
+
+<div class="dialog-actions">
+  <button mat-stroked-button (click)="onCancelar()" [disabled]="loading()">Cancelar</button>
+  <button
+    mat-raised-button
+    color="primary"
+    class="btn-gradient"
+    (click)="onGuardar()"
+    [disabled]="loading()"
+  >
+    <mat-icon>save</mat-icon>
+    Guardar
+  </button>
+</div>

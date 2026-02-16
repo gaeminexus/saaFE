@@ -1,11 +1,11 @@
 export interface Turno {
   codigo: number;
-  nombre: String;
-  horaEntrada: String;
-  horaSalida: String;
-  minutosTolerancia: number;
-  estado: String;
+  nombre: string;
+  horaEntrada: string;
+  horaSalida: string;
+  toleranciaMinutos: number;
+  requiereMarcacionSalida: boolean;
+  estado: string;
   fechaRegistro: Date;
-  usuarioRegistro: String;
-
+  usuarioRegistro: string;
 }

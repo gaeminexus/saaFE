@@ -1,15 +1,15 @@
-export interface Empleado   {
+import { DetalleRubro } from '../../../shared/model/detalle-rubro';
 
+export interface Empleado {
   codigo: number;
-  identificacion: String;
-  apellidos: String;
-  nombres: String;
+  identificacion: DetalleRubro | string | number;
+  apellidos: string;
+  nombres: string;
   fechaNacimiento: Date;
-  email: String;
-  telefono: String;
-  direccion: String;
-  estado: String;
+  email: string;
+  telefono: string;
+  direccion: string;
+  estado: string;
   fechaRegistro: Date;
-  usuarioRegistro: String;
-
+  usuarioRegistro: string;
 }

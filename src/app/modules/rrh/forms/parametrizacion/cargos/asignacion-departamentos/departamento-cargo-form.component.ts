@@ -92,11 +92,14 @@ export class DepartamentoCargoFormComponent implements OnInit {
     const current = this.data?.item ?? null;
     const isUpdate = !!current?.codigo && current.codigo > 0;
 
-    const payload: Partial<DepartamentoCargo> = {
-      Departamento: { codigo: departamentoId } as Departamento,
-      Cargo: { codigo: cargoId } as Cargo,
+    const payload = {
+      departamento: { codigo: departamentoId } as Departamento,
+      cargo: { codigo: cargoId } as Cargo,
       estado,
       usuarioRegistro: this.getUsuarioRegistro(),
+    } as Partial<DepartamentoCargo> & {
+      departamento?: Departamento;
+      cargo?: Cargo;
     };
 
     if (isUpdate) {
@@ -149,18 +152,10 @@ export class DepartamentoCargoFormComponent implements OnInit {
 
   private loadDepartamentosActivos(): void {
     const criterios: DatosBusqueda[] = [];
-    const estado = new DatosBusqueda();
-    estado.asignaUnCampoSinTrunc(
-      TipoDatosBusqueda.STRING,
-      'estado',
-      'A',
-      TipoComandosBusqueda.IGUAL,
-    );
-    criterios.push(estado);
-
     this.departamentoService.selectByCriteria(criterios).subscribe({
       next: (rows: Departamento[] | null) => {
-        this.departamentos.set(Array.isArray(rows) ? rows : []);
+        const items = Array.isArray(rows) ? rows : [];
+        this.departamentos.set(items.filter((r) => this.isActivo(r?.estado)));
       },
       error: () => this.showError('Error al cargar departamentos'),
     });
@@ -168,18 +163,10 @@ export class DepartamentoCargoFormComponent implements OnInit {
 
   private loadCargosActivos(): void {
     const criterios: DatosBusqueda[] = [];
-    const estado = new DatosBusqueda();
-    estado.asignaUnCampoSinTrunc(
-      TipoDatosBusqueda.INTEGER,
-      'estado',
-      '1',
-      TipoComandosBusqueda.IGUAL,
-    );
-    criterios.push(estado);
-
     this.cargoService.selectByCriteria(criterios).subscribe({
       next: (rows: Cargo[] | null) => {
-        this.cargos.set(Array.isArray(rows) ? rows : []);
+        const items = Array.isArray(rows) ? rows : [];
+        this.cargos.set(items.filter((r) => this.isActivo(r?.estado)));
       },
       error: () => this.showError('Error al cargar cargos'),
     });
@@ -194,7 +181,7 @@ export class DepartamentoCargoFormComponent implements OnInit {
     const dbDepartamento = new DatosBusqueda();
     dbDepartamento.asignaValorConCampoPadre(
       TipoDatosBusqueda.LONG,
-      'Departamento',
+      'departamento',
       'codigo',
       String(departamentoId),
       TipoComandosBusqueda.IGUAL,
@@ -204,28 +191,20 @@ export class DepartamentoCargoFormComponent implements OnInit {
     const dbCargo = new DatosBusqueda();
     dbCargo.asignaValorConCampoPadre(
       TipoDatosBusqueda.LONG,
-      'Cargo',
+      'cargo',
       'codigo',
       String(cargoId),
       TipoComandosBusqueda.IGUAL,
     );
     criterios.push(dbCargo);
 
-    const dbEstado = new DatosBusqueda();
-    dbEstado.asignaUnCampoSinTrunc(
-      TipoDatosBusqueda.STRING,
-      'estado',
-      'A',
-      TipoComandosBusqueda.IGUAL,
-    );
-    criterios.push(dbEstado);
-
     return this.departamentoCargoService.selectByCriteria(criterios).pipe(
       map((rows: DepartamentoCargo[] | null) => {
         const items = Array.isArray(rows) ? rows : [];
-        if (!items.length) return true;
+        const activos = items.filter((r) => this.isActivo(r?.estado));
+        if (!activos.length) return true;
         if (!currentId) return false;
-        return items.every((r) => r.codigo === currentId);
+        return activos.every((r) => r.codigo === currentId);
       }),
       catchError(() => of(true)),
     );
@@ -248,6 +227,12 @@ export class DepartamentoCargoFormComponent implements OnInit {
       return 'A';
     }
     return 'I';
+  }
+
+  private isActivo(value?: string | number | null): boolean {
+    if (value === null || value === undefined) return false;
+    const normalized = value.toString().toUpperCase();
+    return normalized === '1' || normalized === 'A' || normalized.startsWith('ACT');
   }
 
   private formatDate(value: string | Date | null | undefined): string {
