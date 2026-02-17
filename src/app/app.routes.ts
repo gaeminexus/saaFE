@@ -26,9 +26,8 @@ import { MenuComponent } from './modules/dash/menu/menu.component';
 import { MenurecursoshumanosComponent } from './modules/rrh/menu/menurecursoshumanos/menurecursoshumanos.component';
 // RRHH demo components
 import { RrhAsistenciaComponent } from './modules/rrh/forms/gestion/asistencia/rrh-asistencia.component';
-import { RrhContratosComponent } from './modules/rrh/forms/gestion/contratos/rrh-contratos.component';
-import { RrhPermisosComponent } from './modules/rrh/forms/gestion/permisos/rrh-permisos.component';
-import { RrhVacacionesComponent } from './modules/rrh/forms/gestion/vacaciones/rrh-vacaciones.component';
+import { ContratoEmpleadoListComponent } from './modules/rrh/forms/gestion/contratos/contrato-empleado-list.component';
+import { VacacionesListComponent } from './modules/rrh/forms/gestion/vacaciones/vacaciones-list.component';
 import { TurnoListComponent } from './modules/rrh/forms/parametrizacion/turnos/turno-list.component';
 import { RrhAportesComponent } from './modules/rrh/forms/procesos/aportes/rrh-aportes.component';
 import { RrhLiquidacionesComponent } from './modules/rrh/forms/procesos/liquidaciones/rrh-liquidaciones.component';
@@ -545,9 +544,20 @@ export const routes: Routes = [
           ),
         canActivate: [authGuard],
       },
-      { path: 'gestion/contratos', component: RrhContratosComponent, canActivate: [authGuard] },
-      { path: 'gestion/vacaciones', component: RrhVacacionesComponent, canActivate: [authGuard] },
-      { path: 'gestion/permisos', component: RrhPermisosComponent, canActivate: [authGuard] },
+      {
+        path: 'gestion/contratos',
+        component: ContratoEmpleadoListComponent,
+        canActivate: [authGuard],
+      },
+      { path: 'gestion/vacaciones', component: VacacionesListComponent, canActivate: [authGuard] },
+      {
+        path: 'gestion/permisos',
+        loadComponent: () =>
+          import('./modules/rrh/forms/gestion/permisos/rrh-permisos.component').then(
+            (m) => m.RrhPermisosComponent,
+          ),
+        canActivate: [authGuard],
+      },
       { path: 'gestion/asistencia', component: RrhAsistenciaComponent, canActivate: [authGuard] },
       // Procesos
       { path: 'procesos/nomina', component: RrhNominaComponent, canActivate: [authGuard] },
@@ -624,9 +634,20 @@ export const routes: Routes = [
           ),
         canActivate: [authGuard],
       },
-      { path: 'gestion/contratos', component: RrhContratosComponent, canActivate: [authGuard] },
-      { path: 'gestion/vacaciones', component: RrhVacacionesComponent, canActivate: [authGuard] },
-      { path: 'gestion/permisos', component: RrhPermisosComponent, canActivate: [authGuard] },
+      {
+        path: 'gestion/contratos',
+        component: ContratoEmpleadoListComponent,
+        canActivate: [authGuard],
+      },
+      { path: 'gestion/vacaciones', component: VacacionesListComponent, canActivate: [authGuard] },
+      {
+        path: 'gestion/permisos',
+        loadComponent: () =>
+          import('./modules/rrh/forms/gestion/permisos/rrh-permisos.component').then(
+            (m) => m.RrhPermisosComponent,
+          ),
+        canActivate: [authGuard],
+      },
       { path: 'gestion/asistencia', component: RrhAsistenciaComponent, canActivate: [authGuard] },
       // Procesos
       { path: 'procesos/nomina', component: RrhNominaComponent, canActivate: [authGuard] },

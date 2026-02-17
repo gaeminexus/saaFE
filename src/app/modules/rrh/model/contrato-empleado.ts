@@ -5,13 +5,13 @@ export interface ContratoEmpleado {
   codigo: number;
   empleado: Empleado;
   tipoContratoEmpleado: TipoContratoEmpleado;
-  numero: String;
+  numero: string;
   fechaInicio: Date;
   fechaFin: Date;
   salarioBase: number;
-  estado: String;
+  estado: string;
   fechaFirma: Date;
-  observacion: String;
+  observacion: string;
   fechaRegistro: Date;
-  usuarioRegistro: String;
+  usuarioRegistro: string;
 }

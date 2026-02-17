@@ -1,3 +1,19 @@
-.rrh-demo {
+.rrh-permisos {
   padding: 16px;
+}
+
+.rrh-card {
+  border-radius: 16px;
+}
+
+.title-icon {
+  margin-right: 8px;
+}
+
+.empty-state {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #64748b;
+  padding: 12px 0;
 }

@@ -7,7 +7,7 @@ export class ServiciosRhh {
   public static RS_PRTE = `${API_URL}/prte`;
   public static RS_CRGO = `${API_URL}/crgo`;
   public static RS_CTLG = `${API_URL}/ctlg`;
-  public static RS_CNTR = `${API_URL}/cntr`;
+  public static RS_CNTE = `${API_URL}/cnte`;
   public static RS_DPRT = `${API_URL}/dprt`;
   public static RS_DPTC = `${API_URL}/dptc`;
   public static RS_TMLQ = `${API_URL}/tmlq`;

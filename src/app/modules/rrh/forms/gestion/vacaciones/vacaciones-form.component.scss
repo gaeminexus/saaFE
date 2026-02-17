@@ -1,0 +1,110 @@
+:host {
+  display: block;
+  padding: 16px 20px 20px;
+  box-sizing: border-box;
+}
+
+.dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dialog-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.search-grid {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.full-width {
+  grid-column: 1 / -1;
+}
+
+.saldo-panel {
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: rgba(14, 165, 233, 0.06);
+}
+
+.saldo-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.saldo-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  text-align: center;
+}
+
+.saldo-grid span {
+  display: block;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.saldo-grid strong {
+  font-size: 16px;
+}
+
+.aprobacion-info {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, auto));
+  gap: 8px 16px;
+  font-size: 13px;
+  color: #475569;
+}
+
+.w-100 {
+  width: 100%;
+}
+
+.error-msg {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #fee2e2;
+  color: #b91c1c;
+  border-radius: 8px;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.btn-gradient {
+  background: linear-gradient(135deg, #14b8a6 0%, #0ea5e9 100%) !important;
+  color: #fff !important;
+}

@@ -9,6 +9,6 @@ export interface SaldoVacaciones {
   diasUsados: number;
   diasPendientes: number;
   fechaRegistro: Date;
-  usuarioRegistro: String;
+  usuarioRegistro: string;
 
 }

@@ -1,0 +1,45 @@
+:host {
+  display: block;
+  padding: 16px 20px 20px;
+  box-sizing: border-box;
+}
+
+.dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dialog-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.w-100 {
+  width: 100%;
+}
+
+.error-msg {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #fee2e2;
+  color: #b91c1c;
+  border-radius: 8px;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 16px;
+}

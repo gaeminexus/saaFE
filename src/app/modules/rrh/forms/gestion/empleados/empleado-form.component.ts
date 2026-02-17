@@ -2,9 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, CUSTOM_ELEMENTS_SCHEMA, Inject, OnInit, signal } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { DetalleRubro } from '../../../../../shared/model/detalle-rubro';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
-import { DetalleRubroService } from '../../../../../shared/services/detalle-rubro.service';
 import { Empleado } from '../../../model/empleado';
 import { EmpleadoService } from '../../../service/empleado.service';
 
@@ -22,7 +20,7 @@ export interface EmpleadoFormData {
   styleUrls: ['./empleado-form.component.scss'],
 })
 export class EmpleadoFormComponent implements OnInit {
-  formIdentificacion = signal<DetalleRubro | null>(null);
+  formIdentificacion = signal<string>('');
   formNombres = signal<string>('');
   formApellidos = signal<string>('');
   formFechaNacimiento = signal<string>('');
@@ -36,14 +34,8 @@ export class EmpleadoFormComponent implements OnInit {
   formFechaRegistro = signal<string>('');
   formUsuarioRegistro = signal<string>('');
 
-  identificaciones = signal<DetalleRubro[]>([]);
-
   loading = signal<boolean>(false);
   errorMsg = signal<string>('');
-
-  private initialIdentificacion: Empleado['identificacion'] | null = null;
-
-  private readonly RUBRO_TIPO_IDENTIFICACION = 36;
 
   estadoOptions = [
     { value: 'A', label: 'Activo' },
@@ -54,21 +46,14 @@ export class EmpleadoFormComponent implements OnInit {
     private dialogRef: MatDialogRef<EmpleadoFormComponent>,
     @Inject(MAT_DIALOG_DATA) public data: EmpleadoFormData,
     private empleadoService: EmpleadoService,
-    private detalleRubroService: DetalleRubroService,
     private snackBar: MatSnackBar,
   ) {}
 
   ngOnInit(): void {
-    this.loadCombos();
-
     const item = this.data?.item ?? null;
     if (item) {
-      this.initialIdentificacion = item.identificacion ?? null;
-      const rawIdentificacion = (item as any)?.identificacion ?? item.identificacion ?? null;
-      const identificacion = this.resolveIdentificacion(rawIdentificacion);
-      if (identificacion) {
-        this.formIdentificacion.set(identificacion);
-      }
+      const rawIdentificacion = item.identificacion ?? '';
+      this.formIdentificacion.set(String(rawIdentificacion));
       this.formNombres.set(String(item.nombres ?? ''));
       this.formApellidos.set(String(item.apellidos ?? ''));
       this.formFechaNacimiento.set(this.formatDate(item.fechaNacimiento));
@@ -88,7 +73,7 @@ export class EmpleadoFormComponent implements OnInit {
   }
 
   onGuardar(): void {
-    const identificacion = this.formIdentificacion();
+    const identificacion = this.formIdentificacion().trim();
     const nombres = this.normalizeText(this.formNombres());
     const apellidos = this.normalizeText(this.formApellidos());
     const fechaNacimiento = this.formFechaNacimiento();
@@ -130,7 +115,8 @@ export class EmpleadoFormComponent implements OnInit {
     const current = this.data?.item ?? null;
     const isUpdate = !!current?.codigo && Number(current.codigo) > 0;
 
-    const payload: Partial<Empleado> & { identificacion?: number } = {
+    const payload: Partial<Empleado> & { identificacion?: string } = {
+      identificacion,
       nombres,
       apellidos,
       fechaNacimiento: fechaNacimiento ? new Date(fechaNacimiento) : (undefined as any),
@@ -139,10 +125,6 @@ export class EmpleadoFormComponent implements OnInit {
       direccion,
       estado,
     };
-
-    if (identificacion?.codigoAlterno !== undefined && identificacion?.codigoAlterno !== null) {
-      payload.identificacion = identificacion.codigoAlterno;
-    }
 
     if (isUpdate) {
       payload.codigo = current!.codigo;
@@ -200,60 +182,6 @@ export class EmpleadoFormComponent implements OnInit {
     const date = value instanceof Date ? value : new Date(value);
     if (isNaN(date.getTime())) return '';
     return date.toISOString().slice(0, 10);
-  }
-
-  private loadCombos(): void {
-    this.loadIdentificaciones();
-  }
-
-  private loadIdentificaciones(): void {
-    const cached = this.detalleRubroService.getDetallesByParent(this.RUBRO_TIPO_IDENTIFICACION);
-    if (cached.length) {
-      this.identificaciones.set(cached);
-      if (!this.formIdentificacion() && this.initialIdentificacion) {
-        const resolved = this.resolveIdentificacion(this.initialIdentificacion);
-        if (resolved) this.formIdentificacion.set(resolved);
-      }
-      return;
-    }
-
-    this.detalleRubroService.inicializar().subscribe({
-      next: () => {
-        const items = this.detalleRubroService.getDetallesByParent(this.RUBRO_TIPO_IDENTIFICACION);
-        this.identificaciones.set(items);
-        if (!this.formIdentificacion() && this.initialIdentificacion) {
-          const resolved = this.resolveIdentificacion(this.initialIdentificacion);
-          if (resolved) this.formIdentificacion.set(resolved);
-        }
-      },
-      error: () => this.identificaciones.set([]),
-    });
-  }
-
-  compareIdentificacion = (a: DetalleRubro | null, b: DetalleRubro | null): boolean => {
-    if (!a || !b) return a === b;
-    return a.codigoAlterno === b.codigoAlterno && a.rubro?.codigoAlterno === b.rubro?.codigoAlterno;
-  };
-
-  private resolveIdentificacion(
-    value: Empleado['identificacion'] | null | undefined,
-  ): DetalleRubro | null {
-    if (!value) return null;
-    if (typeof value === 'object' && 'codigoAlterno' in value) {
-      return value as DetalleRubro;
-    }
-
-    const items = this.identificaciones();
-    if (!items.length) return null;
-
-    const needle = value.toString();
-    return (
-      items.find((item) => item.codigoAlterno?.toString() === needle) ??
-      items.find((item) => item.valorNumerico?.toString() === needle) ??
-      items.find((item) => item.valorAlfanumerico?.toString() === needle) ??
-      items.find((item) => item.descripcion?.toString().toUpperCase() === needle.toUpperCase()) ??
-      null
-    );
   }
 
   private normalizeText(value: string | null | undefined): string {

@@ -1,8 +1,6 @@
-import { DetalleRubro } from '../../../shared/model/detalle-rubro';
-
 export interface Empleado {
   codigo: number;
-  identificacion: DetalleRubro | string | number;
+  identificacion: string | number;
   apellidos: string;
   nombres: string;
   fechaNacimiento: Date;

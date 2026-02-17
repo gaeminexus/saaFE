@@ -36,7 +36,7 @@ export class TipoContratoListComponent implements OnInit {
   filtroNombre = signal<string>('');
   filtroEstado = signal<string | null>('1');
   filtroRequiere = signal<string | null>(null);
-  orderBy = signal<string>('nombre');
+  orderBy = signal<string>('codigo');
   orderDir = signal<'ASC' | 'DESC'>('ASC');
 
   estadoOptions = [
@@ -87,7 +87,7 @@ export class TipoContratoListComponent implements OnInit {
     this.filtroNombre.set('');
     this.filtroEstado.set('1');
     this.filtroRequiere.set(null);
-    this.orderBy.set('nombre');
+    this.orderBy.set('codigo');
     this.orderDir.set('ASC');
     this.buscar();
   }

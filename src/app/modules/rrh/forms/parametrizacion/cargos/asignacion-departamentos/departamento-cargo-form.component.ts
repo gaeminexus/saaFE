@@ -211,13 +211,26 @@ export class DepartamentoCargoFormComponent implements OnInit {
   }
 
   private getUsuarioRegistro(): string {
-    const raw =
-      localStorage.getItem('usuarioRegistro') ||
-      localStorage.getItem('usuario') ||
-      localStorage.getItem('username') ||
-      localStorage.getItem('user') ||
-      'web';
-    return String(raw).substring(0, 59);
+    const raw = localStorage.getItem('usuario') || '';
+    const text = String(raw).trim();
+    if (!text) return 'web';
+
+    if (text.startsWith('{') || text.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(text) as Record<string, unknown> | Array<Record<string, unknown>>;
+        const user = Array.isArray(parsed) ? parsed[0] : parsed;
+        const candidate =
+          (user?.['nombre'] as string) ||
+          (user?.['usuario'] as string) ||
+          (user?.['username'] as string) ||
+          (user?.['login'] as string);
+        if (candidate) return String(candidate).substring(0, 59);
+      } catch {
+        return 'web';
+      }
+    }
+
+    return text.substring(0, 59);
   }
 
   private normalizeEstado(value?: string | number | null): string {

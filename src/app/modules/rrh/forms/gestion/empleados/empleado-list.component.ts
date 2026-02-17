@@ -7,9 +7,7 @@ import { Router } from '@angular/router';
 import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
-import { DetalleRubro } from '../../../../../shared/model/detalle-rubro';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
-import { DetalleRubroService } from '../../../../../shared/services/detalle-rubro.service';
 import { Empleado } from '../../../model/empleado';
 import { EmpleadoService } from '../../../service/empleado.service';
 import { EmpleadoFormComponent } from './empleado-form.component';
@@ -49,10 +47,6 @@ export class EmpleadoListComponent implements OnInit {
     { value: 'I', label: 'Inactivo' },
   ];
 
-  identificaciones = signal<DetalleRubro[]>([]);
-
-  private readonly RUBRO_TIPO_IDENTIFICACION = 36;
-
   allData = signal<Empleado[]>([]);
   pageSize = signal<number>(10);
   pageIndex = signal<number>(0);
@@ -63,13 +57,9 @@ export class EmpleadoListComponent implements OnInit {
   });
   totalItems = computed(() => this.allData().length);
 
-  constructor(
-    private empleadoService: EmpleadoService,
-    private detalleRubroService: DetalleRubroService,
-  ) {}
+  constructor(private empleadoService: EmpleadoService) {}
 
   ngOnInit(): void {
-    this.loadIdentificaciones();
     this.buscar();
   }
 
@@ -126,7 +116,7 @@ export class EmpleadoListComponent implements OnInit {
       usuarioRegistro: this.getUsuarioRegistro(),
     };
 
-    const identificacion = this.getIdentificacionValue(row);
+    const identificacion = row.identificacion;
     if (identificacion !== null && identificacion !== undefined) {
       payload.identificacion = identificacion;
     }
@@ -160,22 +150,9 @@ export class EmpleadoListComponent implements OnInit {
   }
 
   identificacionLabel(row: Empleado): string {
-    const value = this.getIdentificacionRaw(row);
+    const value = row?.identificacion ?? null;
     if (value === null || value === undefined) return '';
-    if (typeof value === 'object') {
-      const item = value as DetalleRubro;
-      return item.descripcion ?? item.valorAlfanumerico ?? item.codigoAlterno?.toString() ?? '';
-    }
-
-    const items = this.identificaciones();
-    const needle = value.toString();
-    const match =
-      items.find((item) => item.codigoAlterno?.toString() === needle) ??
-      items.find((item) => item.valorNumerico?.toString() === needle) ??
-      items.find((item) => item.valorAlfanumerico?.toString() === needle) ??
-      items.find((item) => item.descripcion?.toString().toUpperCase() === needle.toUpperCase());
-
-    return match?.descripcion ?? match?.valorAlfanumerico ?? value.toString();
+    return value.toString();
   }
 
   isActivo(value?: string | number | null): boolean {
@@ -231,37 +208,6 @@ export class EmpleadoListComponent implements OnInit {
     criterios.push(order);
 
     return criterios;
-  }
-
-  private loadIdentificaciones(): void {
-    const cached = this.detalleRubroService.getDetallesByParent(this.RUBRO_TIPO_IDENTIFICACION);
-    if (cached.length) {
-      this.identificaciones.set(cached);
-      return;
-    }
-
-    this.detalleRubroService.inicializar().subscribe({
-      next: () =>
-        this.identificaciones.set(
-          this.detalleRubroService.getDetallesByParent(this.RUBRO_TIPO_IDENTIFICACION),
-        ),
-      error: () => this.identificaciones.set([]),
-    });
-  }
-
-  private getIdentificacionRaw(row: Empleado): DetalleRubro | string | number | null {
-    const raw = row?.identificacion ?? null;
-    return raw ?? null;
-  }
-
-  private getIdentificacionValue(row: Empleado): number | string | null {
-    const raw = this.getIdentificacionRaw(row);
-    if (raw === null || raw === undefined) return null;
-    if (typeof raw === 'object' && 'codigoAlterno' in raw) {
-      const item = raw as DetalleRubro;
-      return item.codigoAlterno ?? null;
-    }
-    return raw;
   }
 
   private normalizeText(value: string | null | undefined): string {

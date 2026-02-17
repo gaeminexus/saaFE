@@ -1,0 +1,357 @@
+<section class="rrh-vacaciones">
+  <div class="vacaciones-layout">
+    <mat-card class="rrh-card">
+      <mat-card-header>
+        <mat-icon class="title-icon">event_available</mat-icon>
+        <mat-card-title>{{ titulo() }}</mat-card-title>
+        <mat-card-subtitle>Solicitudes de vacaciones</mat-card-subtitle>
+      </mat-card-header>
+
+      <mat-card-content>
+        <div class="toolbar">
+          <div class="filters-grid">
+            <mat-form-field appearance="outline">
+              <mat-label>Identificacion</mat-label>
+              <input
+                matInput
+                [ngModel]="filtroIdentificacion()"
+                (ngModelChange)="filtroIdentificacion.set($event)"
+              />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Codigo empleado</mat-label>
+              <input
+                matInput
+                type="number"
+                [ngModel]="filtroEmpleadoCodigo()"
+                (ngModelChange)="filtroEmpleadoCodigo.set($event)"
+              />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Estado</mat-label>
+              <mat-select [ngModel]="filtroEstado()" (ngModelChange)="filtroEstado.set($event)">
+                <mat-option [value]="null">Todos</mat-option>
+                @for (opt of estadoOptions; track opt.value) {
+                  <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Fecha inicio desde</mat-label>
+              <input
+                matInput
+                type="date"
+                [ngModel]="filtroInicioDesde()"
+                (ngModelChange)="filtroInicioDesde.set($event)"
+              />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Fecha inicio hasta</mat-label>
+              <input
+                matInput
+                type="date"
+                [ngModel]="filtroInicioHasta()"
+                (ngModelChange)="filtroInicioHasta.set($event)"
+              />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Fecha fin desde</mat-label>
+              <input
+                matInput
+                type="date"
+                [ngModel]="filtroFinDesde()"
+                (ngModelChange)="filtroFinDesde.set($event)"
+              />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Fecha fin hasta</mat-label>
+              <input
+                matInput
+                type="date"
+                [ngModel]="filtroFinHasta()"
+                (ngModelChange)="filtroFinHasta.set($event)"
+              />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Anio</mat-label>
+              <input
+                matInput
+                type="number"
+                [ngModel]="filtroAnio()"
+                (ngModelChange)="filtroAnio.set($event)"
+              />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Aprobador</mat-label>
+              <input
+                matInput
+                [ngModel]="filtroAprobador()"
+                (ngModelChange)="filtroAprobador.set($event)"
+              />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Ordenar por</mat-label>
+              <mat-select [ngModel]="orderBy()" (ngModelChange)="orderBy.set($event)">
+                <mat-option value="codigo">Codigo</mat-option>
+                <mat-option value="identificacion">Identificacion</mat-option>
+                <mat-option value="empleado">Empleado</mat-option>
+                <mat-option value="fechaInicio">Fecha inicio</mat-option>
+                <mat-option value="fechaFin">Fecha fin</mat-option>
+                <mat-option value="diasSolicitados">Dias solicitados</mat-option>
+                <mat-option value="estado">Estado</mat-option>
+                <mat-option value="fechaAprobacion">Fecha aprobacion</mat-option>
+                <mat-option value="aprobador">Aprobador</mat-option>
+                <mat-option value="fechaRegistro">Fecha registro</mat-option>
+                <mat-option value="usuarioRegistro">Usuario</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Orden</mat-label>
+              <mat-select [ngModel]="orderDir()" (ngModelChange)="orderDir.set($event)">
+                <mat-option value="ASC">Ascendente</mat-option>
+                <mat-option value="DESC">Descendente</mat-option>
+              </mat-select>
+            </mat-form-field>
+          </div>
+
+          <div class="toolbar-actions">
+            <button mat-stroked-button (click)="limpiarFiltros()" [disabled]="loading()">
+              <mat-icon>restart_alt</mat-icon>
+              Limpiar
+            </button>
+            <button mat-stroked-button color="primary" (click)="buscar()" [disabled]="loading()">
+              <mat-icon>search</mat-icon>
+              Buscar
+            </button>
+            <button
+              mat-raised-button
+              color="primary"
+              class="btn-gradient"
+              (click)="onNuevo()"
+              [disabled]="loading()"
+            >
+              <mat-icon>add</mat-icon>
+              Nueva solicitud
+            </button>
+          </div>
+        </div>
+
+        <div class="records-line">{{ totalItems() }} registros</div>
+
+        <div class="table-wrapper">
+          <table mat-table [dataSource]="pagedData()" class="mat-elevation-z1 rrh-table">
+            <ng-container matColumnDef="codigo">
+              <th mat-header-cell *matHeaderCellDef>Codigo</th>
+              <td mat-cell *matCellDef="let row">{{ row?.codigo }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="identificacion">
+              <th mat-header-cell *matHeaderCellDef>Identificacion</th>
+              <td mat-cell *matCellDef="let row">
+                {{ formatIdentificacion(row?.empleado?.identificacion) }}
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="empleado">
+              <th mat-header-cell *matHeaderCellDef>Empleado</th>
+              <td mat-cell *matCellDef="let row">{{ empleadoNombre(row) }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="fechaInicio">
+              <th mat-header-cell *matHeaderCellDef>Fecha inicio</th>
+              <td mat-cell *matCellDef="let row">{{ row?.fechaDesde | date: 'dd/MM/yyyy' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="fechaFin">
+              <th mat-header-cell *matHeaderCellDef>Fecha fin</th>
+              <td mat-cell *matCellDef="let row">{{ row?.fechaHasta | date: 'dd/MM/yyyy' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="diasSolicitados">
+              <th mat-header-cell *matHeaderCellDef>Dias</th>
+              <td mat-cell *matCellDef="let row">{{ row?.diasSolicitados }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="estado">
+              <th mat-header-cell *matHeaderCellDef>Estado</th>
+              <td mat-cell *matCellDef="let row">
+                <span class="state-pill" [class.active]="row?.estado === 'APROBADA'">
+                  {{ estadoLabel(row?.estado) }}
+                </span>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="fechaAprobacion">
+              <th mat-header-cell *matHeaderCellDef>Fecha aprobacion</th>
+              <td mat-cell *matCellDef="let row">
+                {{ fechaAprobacionLabel(row) }}
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="aprobador">
+              <th mat-header-cell *matHeaderCellDef>Aprobador</th>
+              <td mat-cell *matCellDef="let row">{{ row?.usuarioAprobacion ?? '-' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="fechaRegistro">
+              <th mat-header-cell *matHeaderCellDef>Fecha registro</th>
+              <td mat-cell *matCellDef="let row">{{ row?.fechaRegistro | date: 'dd/MM/yyyy' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="usuarioRegistro">
+              <th mat-header-cell *matHeaderCellDef>Usuario</th>
+              <td mat-cell *matCellDef="let row">{{ row?.usuarioRegistro }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="acciones">
+              <th mat-header-cell *matHeaderCellDef class="acciones">Acciones</th>
+              <td mat-cell *matCellDef="let row" class="acciones">
+                <button mat-icon-button color="primary" (click)="onVer(row)">
+                  <mat-icon>visibility</mat-icon>
+                </button>
+                <button
+                  mat-icon-button
+                  color="primary"
+                  class="action-btn edit-btn"
+                  (click)="onEditar(row)"
+                >
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button
+                  mat-icon-button
+                  color="primary"
+                  class="action-btn approve-btn"
+                  (click)="onAprobar(row)"
+                >
+                  <mat-icon>check_circle</mat-icon>
+                </button>
+                <button
+                  mat-icon-button
+                  color="warn"
+                  class="action-btn reject-btn"
+                  (click)="onRechazar(row)"
+                >
+                  <mat-icon>cancel</mat-icon>
+                </button>
+                <button
+                  mat-icon-button
+                  color="accent"
+                  class="action-btn cancel-btn"
+                  (click)="onCancelar(row)"
+                >
+                  <mat-icon>block</mat-icon>
+                </button>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="columns()"></tr>
+            <tr mat-row *matRowDef="let row; columns: columns()"></tr>
+          </table>
+        </div>
+
+        <div class="paginator">
+          <mat-paginator
+            [length]="totalItems()"
+            [pageSize]="pageSize()"
+            [pageIndex]="pageIndex()"
+            [pageSizeOptions]="[5, 10, 20, 50]"
+            (page)="onPageChange($event)"
+          ></mat-paginator>
+        </div>
+
+        @if (!totalItems()) {
+          <div class="empty-state">
+            <mat-icon>inbox</mat-icon>
+            <span>Sin datos disponibles</span>
+          </div>
+        }
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="rrh-card saldo-card">
+      <mat-card-header>
+        <mat-icon class="title-icon">schedule</mat-icon>
+        <mat-card-title>Saldo de vacaciones</mat-card-title>
+        <mat-card-subtitle>Consulta por empleado y anio</mat-card-subtitle>
+      </mat-card-header>
+
+      <mat-card-content>
+        <div class="saldo-toolbar">
+          <mat-form-field appearance="outline">
+            <mat-label>Identificacion empleado</mat-label>
+            <input
+              matInput
+              [ngModel]="saldoEmpleadoBusqueda()"
+              (ngModelChange)="saldoEmpleadoBusqueda.set($event)"
+            />
+          </mat-form-field>
+          <button mat-stroked-button color="primary" (click)="buscarSaldoEmpleado()">
+            <mat-icon>search</mat-icon>
+            Buscar
+          </button>
+        </div>
+
+        <mat-form-field appearance="outline" class="w-100">
+          <mat-label>Anio</mat-label>
+          <input
+            matInput
+            type="number"
+            [ngModel]="saldoAnio()"
+            (ngModelChange)="onSaldoAnioChange($event)"
+          />
+        </mat-form-field>
+
+        @if (saldoError()) {
+          <div class="error-msg">
+            <mat-icon>error</mat-icon>
+            <span>{{ saldoError() }}</span>
+          </div>
+        }
+
+        <div class="saldo-info">
+          <div class="saldo-row">
+            <span>Empleado:</span>
+            <strong>{{ saldoEmpleadoLabel(saldoEmpleado()) }}</strong>
+          </div>
+        </div>
+
+        <div class="table-wrapper">
+          <table mat-table [dataSource]="saldoData()" class="mat-elevation-z1 rrh-table">
+            <ng-container matColumnDef="anio">
+              <th mat-header-cell *matHeaderCellDef>Anio</th>
+              <td mat-cell *matCellDef="let row">{{ row?.anio }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="diasAsignados">
+              <th mat-header-cell *matHeaderCellDef>Asignados</th>
+              <td mat-cell *matCellDef="let row">{{ row?.diasAsignados }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="diasUsados">
+              <th mat-header-cell *matHeaderCellDef>Tomados</th>
+              <td mat-cell *matCellDef="let row">{{ row?.diasUsados }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="diasPendientes">
+              <th mat-header-cell *matHeaderCellDef>Pendientes</th>
+              <td mat-cell *matCellDef="let row">{{ row?.diasPendientes }}</td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="['anio', 'diasAsignados', 'diasUsados', 'diasPendientes']"></tr>
+            <tr mat-row *matRowDef="let row; columns: ['anio', 'diasAsignados', 'diasUsados', 'diasPendientes']"></tr>
+          </table>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+</section>

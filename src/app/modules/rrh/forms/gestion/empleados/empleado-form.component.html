@@ -32,15 +32,11 @@
   <div class="form-grid">
     <mat-form-field appearance="outline">
       <mat-label>Identificacion</mat-label>
-      <mat-select
+      <input
+        matInput
         [ngModel]="formIdentificacion()"
         (ngModelChange)="formIdentificacion.set($event)"
-        [compareWith]="compareIdentificacion"
-      >
-        @for (tipo of identificaciones(); track tipo.codigo) {
-          <mat-option [value]="tipo">{{ tipo.descripcion }}</mat-option>
-        }
-      </mat-select>
+      />
     </mat-form-field>
 
     <mat-form-field appearance="outline">

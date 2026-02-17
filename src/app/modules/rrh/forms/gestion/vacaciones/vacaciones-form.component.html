@@ -1,0 +1,169 @@
+<div class="dialog-header">
+  <div class="title">
+    <mat-icon>event_available</mat-icon>
+    <div>
+      <h2>
+        {{ data.mode === 'edit' ? 'Editar' : data.mode === 'view' ? 'Detalle' : 'Nueva' }}
+      </h2>
+      <p>Solicitud de vacaciones</p>
+    </div>
+  </div>
+</div>
+
+<div class="dialog-body">
+  @if (data.mode !== 'new') {
+    <div class="info-grid">
+      <mat-form-field appearance="outline">
+        <mat-label>Codigo</mat-label>
+        <input matInput [value]="formCodigo()" disabled />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Estado</mat-label>
+        <input matInput [value]="formEstado()" disabled />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Fecha registro</mat-label>
+        <input matInput [value]="formFechaRegistro()" disabled />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Usuario registro</mat-label>
+        <input matInput [value]="formUsuarioRegistro()" disabled />
+      </mat-form-field>
+    </div>
+  }
+
+  <div class="search-grid">
+    <mat-form-field appearance="outline" class="w-100">
+      <mat-label>Buscar empleado (identificacion)</mat-label>
+      <input
+        matInput
+        [ngModel]="formEmpleadoBusqueda()"
+        (ngModelChange)="formEmpleadoBusqueda.set($event)"
+        [disabled]="isView()"
+      />
+    </mat-form-field>
+    <button
+      mat-stroked-button
+      color="primary"
+      (click)="onBuscarEmpleados()"
+      [disabled]="loading() || isView()"
+    >
+      <mat-icon>search</mat-icon>
+      Buscar
+    </button>
+  </div>
+
+  <mat-form-field appearance="outline" class="w-100">
+    <mat-label>Empleado</mat-label>
+    <mat-select
+      [ngModel]="formEmpleado()"
+      (ngModelChange)="onEmpleadoChange($event)"
+      [compareWith]="compareEmpleado"
+      [disabled]="isView()"
+    >
+      @for (emp of empleados(); track emp.codigo) {
+        <mat-option [value]="emp">{{ empleadoLabel(emp) }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+
+  <div class="form-grid">
+    <mat-form-field appearance="outline">
+      <mat-label>Fecha inicio</mat-label>
+      <input
+        matInput
+        type="date"
+        [ngModel]="formFechaInicio()"
+        (ngModelChange)="onFechaInicioChange($event)"
+        [disabled]="isView()"
+      />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Fecha fin</mat-label>
+      <input
+        matInput
+        type="date"
+        [ngModel]="formFechaFin()"
+        (ngModelChange)="onFechaFinChange($event)"
+        [disabled]="isView()"
+      />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Dias solicitados</mat-label>
+      <input
+        matInput
+        type="number"
+        min="1"
+        [ngModel]="formDiasSolicitados()"
+        (ngModelChange)="onDiasSolicitadosChange($event)"
+        [disabled]="isView()"
+      />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Observacion</mat-label>
+      <textarea
+        matInput
+        rows="2"
+        [ngModel]="formObservacion()"
+        (ngModelChange)="formObservacion.set($event)"
+        [disabled]="isView()"
+      ></textarea>
+    </mat-form-field>
+  </div>
+
+  <div class="saldo-panel">
+    <div class="saldo-title">Saldo disponible ({{ saldoAnio() }})</div>
+    <div class="saldo-grid">
+      <div>
+        <span>Asignados</span>
+        <strong>{{ saldoData()?.diasAsignados ?? 0 }}</strong>
+      </div>
+      <div>
+        <span>Tomados</span>
+        <strong>{{ saldoData()?.diasUsados ?? 0 }}</strong>
+      </div>
+      <div>
+        <span>Pendientes</span>
+        <strong>{{ saldoData()?.diasPendientes ?? 0 }}</strong>
+      </div>
+    </div>
+  </div>
+
+  @if (formAprobador()) {
+    <div class="aprobacion-info">
+      <span>Aprobador:</span>
+      <strong>{{ formAprobador() }}</strong>
+      <span>Fecha aprobacion:</span>
+      <strong>{{ formFechaAprobacion() || '-' }}</strong>
+    </div>
+  }
+
+  @if (errorMsg()) {
+    <div class="error-msg">
+      <mat-icon>error</mat-icon>
+      <span>{{ errorMsg() }}</span>
+    </div>
+  }
+</div>
+
+<div class="dialog-actions">
+  <button mat-stroked-button (click)="onCancelar()">Cerrar</button>
+  @if (!isView()) {
+    <button
+      mat-raised-button
+      color="primary"
+      class="btn-gradient"
+      (click)="onGuardar()"
+      [disabled]="loading()"
+    >
+      <mat-icon>save</mat-icon>
+      Guardar
+    </button>
+  }
+</div>

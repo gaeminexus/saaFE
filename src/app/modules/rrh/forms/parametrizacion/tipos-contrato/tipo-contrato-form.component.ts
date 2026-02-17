@@ -55,6 +55,9 @@ export class TipoContratoFormComponent implements OnInit {
       this.formCodigo.set(String(item.codigo ?? ''));
       this.formFechaRegistro.set(this.formatDate(item.fechaRegistro));
       this.formUsuarioRegistro.set(String(item.usuarioRegistro ?? ''));
+    } else {
+      this.formFechaRegistro.set(this.getTodayIsoDate());
+      this.formUsuarioRegistro.set(this.getUsuarioRegistro());
     }
   }
 
@@ -88,15 +91,16 @@ export class TipoContratoFormComponent implements OnInit {
     const payload: Partial<TipoContratoEmpleado> = {
       nombre,
       estado,
+      requiereFechaFin: requiere,
     };
-
-    if (requiere !== null) {
-      payload.requiereFechaFin = requiere;
-    }
 
     if (isUpdate) {
       payload.codigo = current!.codigo;
       payload.fechaRegistro = current?.fechaRegistro ?? undefined;
+      payload.usuarioRegistro = current?.usuarioRegistro ?? this.getUsuarioRegistro();
+    } else {
+      payload.fechaRegistro = this.toBackendFechaRegistro(this.formFechaRegistro());
+      payload.usuarioRegistro = this.getUsuarioRegistro();
     }
 
     console.log('[TipoContratoForm] guardar', {
@@ -214,8 +218,8 @@ export class TipoContratoFormComponent implements OnInit {
     return normalized === '1' || normalized === 'S' || normalized === 'SI' || normalized === 'TRUE';
   }
 
-  private toBackendRequiere(value: boolean): string | null {
-    return value ? '1' : null;
+  private toBackendRequiere(value: boolean): string {
+    return value ? 'S' : 'N';
   }
 
   private toBackendEstado(value?: string | null): string {
@@ -229,6 +233,42 @@ export class TipoContratoFormComponent implements OnInit {
     const date = value instanceof Date ? value : new Date(value);
     if (isNaN(date.getTime())) return '';
     return date.toISOString().slice(0, 10);
+  }
+
+  private getTodayIsoDate(): string {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  private getUsuarioRegistro(): string {
+    const raw = localStorage.getItem('usuario') || '';
+    const text = String(raw).trim();
+    if (!text) return 'web';
+
+    if (text.startsWith('{') || text.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(text) as Record<string, unknown> | Array<Record<string, unknown>>;
+        const user = Array.isArray(parsed) ? parsed[0] : parsed;
+        const candidate =
+          (user?.['nombre'] as string) ||
+          (user?.['usuario'] as string) ||
+          (user?.['username'] as string) ||
+          (user?.['login'] as string);
+        if (candidate) return String(candidate).substring(0, 59);
+      } catch {
+        return 'web';
+      }
+    }
+
+    return text.substring(0, 59);
+  }
+
+  private toBackendFechaRegistro(value: string): Date {
+    const raw = value || this.getTodayIsoDate();
+    const parsed = new Date(raw);
+    if (isNaN(parsed.getTime())) {
+      return new Date();
+    }
+    return parsed;
   }
 
   private extractError(error: unknown): string {

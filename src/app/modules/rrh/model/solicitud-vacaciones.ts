@@ -7,10 +7,10 @@ export interface SolicitudVacaciones {
   fechaDesde: Date;
   fechaHasta: Date;
   diasSolicitados: number;
-  estado: String;
-  usuarioAprobacion: String;
-  observacion: String;
+  estado: string;
+  usuarioAprobacion: string | null;
+  observacion: string | null;
   fechaRegistro: Date;
-  usuarioRegistro: String;
+  usuarioRegistro: string;
 
 }
