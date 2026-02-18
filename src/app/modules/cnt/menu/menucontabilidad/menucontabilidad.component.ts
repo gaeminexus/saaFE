@@ -123,12 +123,12 @@ export class MenuContabilidadComponent {
           idPermiso: 830,
           route: '/menucontabilidad/reportes/listado-asientos',
         },
-        {
+        /*{
           displayName: 'Mayorización',
           iconName: 'account_balance',
           idPermiso: 830,
           route: '/menucontabilidad/procesos/mayorizacion',
-        },
+        },*/
         /*{
           displayName: 'Listado de Asientos',
           iconName: 'list_alt',

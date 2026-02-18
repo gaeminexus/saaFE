@@ -3,12 +3,17 @@ import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { FuncionesDatosService } from '../../../../shared/services/funciones-datos.service';
+import { DetalleRubroService } from '../../../../shared/services/detalle-rubro.service';
 
 import { Mayorizacion } from '../../model/mayorizacion';
 import { MayorizacionProceso, TipoProceso } from '../../model/mayorizacion-proceso';
 import { Periodo } from '../../model/periodo';
 import { MayorizacionService } from '../../service/mayorizacion.service';
 import { PeriodoService } from '../../service/periodo.service';
+
+const FECHA_HORA = 1;
+const RUBRO_PROCESOS_MAYORIZACION = 49;
 
 @Component({
   selector: 'app-mayorizacion-proceso',
@@ -27,8 +32,8 @@ export class MayorizacionProcesoComponent implements OnInit {
   cargando = false;
   procesando = false;
 
-  // Único tipo de proceso según requerimiento
-  tiposProceso = [{ value: TipoProceso.MAYORIZACION, label: 'Mayorización' }];
+  // Procesos cargados desde detalleRubro (rubro 49)
+  tiposProceso: any[] = [];
 
   displayedColumns: string[] = ['codigo', 'periodo', 'fecha', 'acciones'];
 
@@ -36,19 +41,35 @@ export class MayorizacionProcesoComponent implements OnInit {
     private fb: FormBuilder,
     private mayorizacionService: MayorizacionService,
     private periodoService: PeriodoService,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private funcionesDatos: FuncionesDatosService,
+    private detalleRubroService: DetalleRubroService
   ) {
     this.formProceso = this.fb.group({
       // Empresa ya se filtra por login; no se selecciona en UI
       periodoDesde: ['', [Validators.required]],
       periodoHasta: ['', [Validators.required]],
-      proceso: [TipoProceso.MAYORIZACION, [Validators.required]],
+      proceso: ['', [Validators.required]],
     });
   }
 
   ngOnInit(): void {
+    this.cargarProcesosMayorizacion();
     this.cargarPeriodos();
     this.cargarMayorizaciones();
+  }
+
+  cargarProcesosMayorizacion(): void {
+    const detalles = this.detalleRubroService.getDetallesByParent(RUBRO_PROCESOS_MAYORIZACION);
+    this.tiposProceso = detalles.map(detalle => ({
+      value: detalle.codigoAlterno, // 1=Mayorizar, 2=Mayorizar Cierre, 3=Desmayorizar
+      label: detalle.descripcion
+    }));
+
+    // Establecer proceso 1 (Mayorizar) como default si existe
+    if (this.tiposProceso.length > 0) {
+      this.formProceso.patchValue({ proceso: 1 });
+    }
   }
 
   cargarPeriodos(): void {
@@ -85,80 +106,35 @@ export class MayorizacionProcesoComponent implements OnInit {
   ejecutarProceso(): void {
     if (this.formProceso.valid) {
       this.procesando = true;
-      const datos: MayorizacionProceso = {
-        ...this.formProceso.value,
-        empresa: this.getEmpresaCodigo(),
-      } as MayorizacionProceso;
+      const periodoDesde = this.formProceso.value.periodoDesde;
+      const periodoHasta = this.formProceso.value.periodoHasta;
+      const proceso = this.formProceso.value.proceso; // 1=Mayorizar, 2=Mayorizar Cierre, 3=Desmayorizar
+      const empresaCodigo = this.getEmpresaCodigo().toString();
 
       // Validar que periodo hasta sea mayor o igual a periodo desde
-      if (datos.periodoHasta < datos.periodoDesde) {
+      if (periodoHasta < periodoDesde) {
         this.mostrarMensaje('El período hasta debe ser mayor o igual al período desde', 'error');
         this.procesando = false;
         return;
       }
 
-      this.mayorizacionService.ejecutarMayorizacion(datos).subscribe({
-        next: (response) => {
-          if (response?.success) {
-            this.mostrarMensaje('Proceso de mayorización ejecutado exitosamente', 'success');
-            this.cargarMayorizaciones(); // Recargar la lista
-            this.formProceso.reset({
-              proceso: TipoProceso.MAYORIZACION,
-            });
-          } else {
-            this.mostrarMensaje(
-              response?.mensaje || 'Error en el proceso de mayorización',
-              'error'
-            );
-          }
+      // Seleccionar el servicio según el tipo de proceso
+      const serviceCall = proceso === 3
+        ? this.mayorizacionService.desmayorizacion(empresaCodigo, periodoDesde, periodoHasta, proceso)
+        : this.mayorizacionService.mayorizacion(empresaCodigo, periodoDesde, periodoHasta, proceso);
+
+      serviceCall.subscribe({
+        next: () => {
+          const mensajeProceso = proceso === 3 ? 'desmayorización' : proceso === 2 ? 'mayorización de cierre' : 'mayorización';
+          this.mostrarMensaje(`Proceso de ${mensajeProceso} ejecutado exitosamente`, 'success');
+          this.cargarMayorizaciones(); // Recargar la lista
+          this.formProceso.patchValue({ proceso: 1 }); // Resetear a Mayorizar
           this.procesando = false;
         },
         error: (error) => {
-          console.error('Error en proceso de mayorización:', error);
+          const mensajeProceso = proceso === 3 ? 'desmayorización' : proceso === 2 ? 'mayorización de cierre' : 'mayorización';
           this.mostrarMensaje(
-            'Error al ejecutar el proceso de mayorización. Verifique la conexión con el servidor.',
-            'error'
-          );
-          this.procesando = false;
-        },
-      });
-    } else {
-      this.mostrarMensaje('Por favor complete todos los campos requeridos', 'warn');
-    }
-  }
-
-  ejecutarDesmayorizacion(): void {
-    if (this.formProceso.valid) {
-      this.procesando = true;
-      const datos: MayorizacionProceso = {
-        ...this.formProceso.value,
-        empresa: this.getEmpresaCodigo(),
-      } as MayorizacionProceso;
-
-      // Validar que periodo hasta sea mayor o igual a periodo desde
-      if (datos.periodoHasta < datos.periodoDesde) {
-        this.mostrarMensaje('El período hasta debe ser mayor o igual al período desde', 'error');
-        this.procesando = false;
-        return;
-      }
-
-      this.mayorizacionService.ejecutarDesmayorizacion(datos).subscribe({
-        next: (response) => {
-          if (response?.success) {
-            this.mostrarMensaje('Proceso de desmayorización ejecutado exitosamente', 'success');
-            this.cargarMayorizaciones(); // Recargar la lista
-          } else {
-            this.mostrarMensaje(
-              response?.mensaje || 'Error en el proceso de desmayorización',
-              'error'
-            );
-          }
-          this.procesando = false;
-        },
-        error: (error) => {
-          console.error('Error en proceso de desmayorización:', error);
-          this.mostrarMensaje(
-            'Error al ejecutar el proceso de desmayorización. Verifique la conexión con el servidor.',
+            error || `Error al ejecutar el proceso de ${mensajeProceso}. Verifique la conexión con el servidor.`,
             'error'
           );
           this.procesando = false;
@@ -185,5 +161,12 @@ export class MayorizacionProcesoComponent implements OnInit {
 
   private getEmpresaCodigo(): number {
     return parseInt(localStorage.getItem('idSucursal') || '280', 10);
+  }
+
+  /**
+   * Formatea una fecha usando el servicio global de funciones
+   */
+  formatFecha(fecha: any): string {
+    return this.funcionesDatos.formatoFechaOrigenConHora(fecha, FECHA_HORA);
   }
 }
