@@ -34,6 +34,22 @@ export class MayorizacionService {
     );
   }
 
+  mayorizacion(empresa: string, periodoDesde: number, periodoHasta: number, proceso: number): Observable<void | null> {
+    const wsGetById = '/mayorizacion/';
+    const url = `${ServiciosCnt.RS_MYRZ}${wsGetById}${empresa}/${periodoDesde}/${periodoHasta}/${proceso}`;
+    return this.http.get<void>(url).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  desmayorizacion(empresa: string, periodoDesde: number, periodoHasta: number, proceso: number): Observable<void | null> {
+    const wsGetById = '/desmayorizacion/';
+    const url = `${ServiciosCnt.RS_MYRZ}${wsGetById}${empresa}/${periodoDesde}/${periodoHasta}/${proceso}`;
+    return this.http.get<void>(url).pipe(
+      catchError(this.handleError)
+    );
+  }
+
   /** POST: add a new sesion to the server */
   add(datos: any): Observable<Mayorizacion | null> {
     return this.http.post<Mayorizacion>(ServiciosCnt.RS_MYRZ, datos, this.httpOptions).pipe(

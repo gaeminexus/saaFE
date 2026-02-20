@@ -8,6 +8,7 @@ import { ServiciosCnt } from './ws-cnt';
   providedIn: 'root'
 })
 export class CentroCostoService {
+
   httpOptions = {
     headers: new HttpHeaders({ 'Content-Type': 'application/json' })
   };
