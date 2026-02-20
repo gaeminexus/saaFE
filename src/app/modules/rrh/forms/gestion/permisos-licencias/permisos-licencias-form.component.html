@@ -1,0 +1,337 @@
+<div class="form-container">
+  <mat-card>
+    <mat-card-header>
+      <mat-icon class="title-icon">assignment_ind</mat-icon>
+      <mat-card-title>{{ getTitle() }}</mat-card-title>
+      @if (formTipoPermiso()) {
+        <mat-card-subtitle>{{ getModalidadDescripcion() }}</mat-card-subtitle>
+      }
+    </mat-card-header>
+
+    <mat-card-content>
+      <form class="form-grid">
+        <!-- Información del Empleado -->
+        <div class="section-header">
+          <mat-icon>person</mat-icon>
+          <h3>Información del Empleado</h3>
+        </div>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Empleado *</mat-label>
+          <mat-select
+            [ngModel]="formEmpleado()"
+            (ngModelChange)="formEmpleado.set($event)"
+            [disabled]="isReadonly()"
+            [required]="!isReadonly()"
+            name="empleado"
+          >
+            <mat-option>Seleccione un empleado</mat-option>
+            @for (emp of empleados(); track emp.codigo) {
+              <mat-option [value]="emp">
+                {{ formatEmpleado(emp) }}
+              </mat-option>
+            }
+          </mat-select>
+          @if (empleadoRequerido()) {
+            <mat-error>El empleado es obligatorio</mat-error>
+          }
+        </mat-form-field>
+
+        <!-- Tipo de Permiso y Configuración -->
+        <div class="section-header">
+          <mat-icon>category</mat-icon>
+          <h3>Tipo de Permiso</h3>
+        </div>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Tipo de Permiso *</mat-label>
+          <mat-select
+            [ngModel]="formTipoPermiso()"
+            (ngModelChange)="onTipoPermisoChange($event)"
+            [disabled]="isReadonly()"
+            [required]="!isReadonly()"
+            name="tipoPermiso"
+          >
+            <mat-option>Seleccione un tipo</mat-option>
+            @for (tipo of tiposPermiso(); track tipo.codigo) {
+              <mat-option [value]="tipo">
+                {{ tipo.nombre }}
+                <small class="modalidad-indicator">
+                  ({{ tipo.modalidad === 'D' ? 'Días' : 'Horas' }})
+                </small>
+              </mat-option>
+            }
+          </mat-select>
+          @if (tipoPermisoRequerido()) {
+            <mat-error>El tipo de permiso es obligatorio</mat-error>
+          }
+        </mat-form-field>
+
+        @if (formTipoPermiso()?.modalidad) {
+          <div class="info-card">
+            <mat-icon color="primary">info</mat-icon>
+            <div class="info-content">
+              <p>
+                <strong>Modalidad:</strong>
+                {{
+                  formTipoPermiso()?.modalidad === 'D' ? 'Por días completos' : 'Por horas del día'
+                }}
+              </p>
+              <p>
+                <strong>Requiere documento:</strong>
+                {{ formTipoPermiso()?.requiereDocumento ? 'Sí' : 'No' }}
+              </p>
+              <p>
+                <strong>Con goce por defecto:</strong>
+                {{ formTipoPermiso()?.conGocePorDefecto ? 'Sí' : 'No' }}
+              </p>
+            </div>
+          </div>
+        }
+
+        <!-- Período de Tiempo -->
+        <div class="section-header">
+          <mat-icon>date_range</mat-icon>
+          <h3>Período del Permiso</h3>
+        </div>
+
+        <!-- Fecha de Inicio (siempre visible) -->
+        <mat-form-field appearance="outline" class="half-width">
+          <mat-label>Fecha de Inicio *</mat-label>
+          <input
+            matInput
+            [matDatepicker]="pickerInicio"
+            [ngModel]="formFechaInicio()"
+            (ngModelChange)="formFechaInicio.set($event)"
+            [disabled]="isReadonly()"
+            [required]="!isReadonly()"
+            name="fechaInicio"
+          />
+          <mat-datepicker-toggle
+            matSuffix
+            [for]="pickerInicio"
+            [disabled]="isReadonly()"
+          ></mat-datepicker-toggle>
+          <mat-datepicker #pickerInicio></mat-datepicker>
+          @if (fechaInicioRequerida()) {
+            <mat-error>La fecha de inicio es obligatoria</mat-error>
+          }
+        </mat-form-field>
+
+        @if (esRetroactivo()) {
+          <div class="warning-card">
+            <mat-icon color="warn">warning</mat-icon>
+            <p>Esta es una solicitud retroactiva. Se requiere observación.</p>
+          </div>
+        }
+
+        <!-- Campos para modalidad por DÍAS -->
+        @if (formTipoPermiso()?.modalidad === 'D') {
+          <mat-form-field appearance="outline" class="half-width">
+            <mat-label>Fecha de Fin *</mat-label>
+            <input
+              matInput
+              [matDatepicker]="pickerFin"
+              [ngModel]="formFechaFin()"
+              (ngModelChange)="formFechaFin.set($event)"
+              [disabled]="isReadonly()"
+              [required]="!isReadonly()"
+              name="fechaFin"
+            />
+            <mat-datepicker-toggle
+              matSuffix
+              [for]="pickerFin"
+              [disabled]="isReadonly()"
+            ></mat-datepicker-toggle>
+            <mat-datepicker #pickerFin></mat-datepicker>
+            @if (fechaFinRequerida()) {
+              <mat-error>La fecha de fin es obligatoria</mat-error>
+            }
+          </mat-form-field>
+
+          @if (formDias() !== null) {
+            <div class="calculated-field">
+              <mat-icon color="primary">calculate</mat-icon>
+              <span class="calculated-label">Días calculados:</span>
+              <span class="calculated-value">{{ formDias() }} días</span>
+            </div>
+          }
+        }
+
+        <!-- Campos para modalidad por HORAS -->
+        @if (formTipoPermiso()?.modalidad === 'H') {
+          <div class="hora-container">
+            <mat-form-field appearance="outline" class="quarter-width">
+              <mat-label>Hora Inicio *</mat-label>
+              <input
+                matInput
+                type="time"
+                [ngModel]="formHoraInicio()"
+                (ngModelChange)="formHoraInicio.set($event)"
+                [disabled]="isReadonly()"
+                [required]="!isReadonly()"
+                name="horaInicio"
+              />
+              @if (horasRequeridas()) {
+                <mat-error>La hora de inicio es obligatoria</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="quarter-width">
+              <mat-label>Hora Fin *</mat-label>
+              <input
+                matInput
+                type="time"
+                [ngModel]="formHoraFin()"
+                (ngModelChange)="formHoraFin.set($event)"
+                [disabled]="isReadonly()"
+                [required]="!isReadonly()"
+                name="horaFin"
+              />
+              @if (horasRequeridas()) {
+                <mat-error>La hora de fin es obligatoria</mat-error>
+              }
+            </mat-form-field>
+          </div>
+
+          @if (formHoras() !== null) {
+            <div class="calculated-field">
+              <mat-icon color="primary">calculate</mat-icon>
+              <span class="calculated-label">Horas calculadas:</span>
+              <span class="calculated-value">{{ formHoras() }} horas</span>
+            </div>
+          }
+        }
+
+        <!-- Configuración Adicional -->
+        <div class="section-header">
+          <mat-icon>settings</mat-icon>
+          <h3>Configuración</h3>
+        </div>
+
+        <mat-slide-toggle
+          [ngModel]="formConGoce()"
+          (ngModelChange)="formConGoce.set($event)"
+          [disabled]="isReadonly()"
+          color="primary"
+          name="conGoce"
+        >
+          Con Goce de Sueldo
+        </mat-slide-toggle>
+
+        @if (formTipoPermiso()?.requiereDocumento) {
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Número de Documento *</mat-label>
+            <input
+              matInput
+              [ngModel]="formNumeroDocumento()"
+              (ngModelChange)="formNumeroDocumento.set($event)"
+              [disabled]="isReadonly()"
+              [required]="!isReadonly()"
+              placeholder="Ej: 123456, CERT-2024-001, etc."
+              name="numeroDocumento"
+            />
+            @if (documentoRequerido()) {
+              <mat-error>El número de documento es obligatorio para este tipo de permiso</mat-error>
+            }
+          </mat-form-field>
+        }
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>
+            Observaciones
+            @if (esRetroactivo()) {
+              *
+            }
+          </mat-label>
+          <textarea
+            matInput
+            rows="3"
+            [ngModel]="formObservacion()"
+            (ngModelChange)="formObservacion.set($event)"
+            [disabled]="isReadonly()"
+            [required]="esRetroactivo() && !isReadonly()"
+            placeholder="Motivo del permiso, justificación, detalles adicionales..."
+            name="observacion"
+          ></textarea>
+          @if (observacionRequerida()) {
+            <mat-error>La observación es obligatoria para solicitudes retroactivas</mat-error>
+          }
+        </mat-form-field>
+
+        <!-- Estado del permiso (solo mostrar si estamos editando) -->
+        @if (formData.data) {
+          <div class="section-header">
+            <mat-icon>info</mat-icon>
+            <h3>Estado del Permiso</h3>
+          </div>
+
+          <div class="status-info">
+            <div class="status-item">
+              <span class="status-label">Código:</span>
+              <span class="status-value">{{ formData.data.codigo }}</span>
+            </div>
+            <div class="status-item">
+              <span class="status-label">Estado:</span>
+              <mat-chip [color]="getEstadoColor(formData.data.estado)" selected>
+                {{ getEstadoLabel(formData.data.estado) }}
+              </mat-chip>
+            </div>
+            <div class="status-item">
+              <span class="status-label">Fecha de Registro:</span>
+              <span class="status-value">{{
+                formData.data.fechaRegistro | date: 'dd/MM/yyyy HH:mm'
+              }}</span>
+            </div>
+            <div class="status-item">
+              <span class="status-label">Usuario de Registro:</span>
+              <span class="status-value">{{ formData.data.usuarioRegistro }}</span>
+            </div>
+            @if (formData.data.fechaAprobacion) {
+              <div class="status-item">
+                <span class="status-label">Fecha de Aprobación:</span>
+                <span class="status-value">{{
+                  formData.data.fechaAprobacion | date: 'dd/MM/yyyy HH:mm'
+                }}</span>
+              </div>
+              <div class="status-item">
+                <span class="status-label">Usuario de Aprobación:</span>
+                <span class="status-value">{{ formData.data.usuarioAprobacion }}</span>
+              </div>
+            }
+          </div>
+        }
+      </form>
+
+      <!-- Mensaje de error -->
+      @if (errorMsg()) {
+        <div class="error-message">
+          <mat-icon color="warn">error</mat-icon>
+          <span>{{ errorMsg() }}</span>
+        </div>
+      }
+
+      <!-- Loading -->
+      @if (loading()) {
+        <div class="loading-overlay">
+          <mat-spinner diameter="40"></mat-spinner>
+          <p>Guardando permiso...</p>
+        </div>
+      }
+    </mat-card-content>
+
+    <mat-card-actions class="form-actions">
+      <button mat-stroked-button (click)="onCancelar()" [disabled]="loading()">
+        <mat-icon>close</mat-icon>
+        {{ isReadonly() ? 'Cerrar' : 'Cancelar' }}
+      </button>
+
+      @if (!isReadonly()) {
+        <button mat-raised-button color="primary" (click)="onGuardar()" [disabled]="loading()">
+          <mat-icon>save</mat-icon>
+          {{ formData.mode === 'new' ? 'Crear' : 'Actualizar' }}
+        </button>
+      }
+    </mat-card-actions>
+  </mat-card>
+</div>

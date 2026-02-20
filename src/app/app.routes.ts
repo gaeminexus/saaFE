@@ -551,12 +551,13 @@ export const routes: Routes = [
       },
       { path: 'gestion/vacaciones', component: VacacionesListComponent, canActivate: [authGuard] },
       {
-        path: 'gestion/permisos',
+        path: 'gestion/permisos-licencias',
         loadComponent: () =>
-          import('./modules/rrh/forms/gestion/permisos/rrh-permisos.component').then(
-            (m) => m.RrhPermisosComponent,
+          import('./modules/rrh/forms/gestion/permisos-licencias/permisos-licencias-list.component').then(
+            (m) => m.PermisosLicenciasListComponent,
           ),
         canActivate: [authGuard],
+        data: { title: 'Gestión de Permisos y Licencias' },
       },
       { path: 'gestion/asistencia', component: RrhAsistenciaComponent, canActivate: [authGuard] },
       // Procesos
@@ -641,12 +642,13 @@ export const routes: Routes = [
       },
       { path: 'gestion/vacaciones', component: VacacionesListComponent, canActivate: [authGuard] },
       {
-        path: 'gestion/permisos',
+        path: 'gestion/permisos-licencias',
         loadComponent: () =>
-          import('./modules/rrh/forms/gestion/permisos/rrh-permisos.component').then(
-            (m) => m.RrhPermisosComponent,
+          import('./modules/rrh/forms/gestion/permisos-licencias/permisos-licencias-list.component').then(
+            (m) => m.PermisosLicenciasListComponent,
           ),
         canActivate: [authGuard],
+        data: { title: 'Gestión de Permisos y Licencias' },
       },
       { path: 'gestion/asistencia', component: RrhAsistenciaComponent, canActivate: [authGuard] },
       // Procesos

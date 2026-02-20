@@ -209,7 +209,6 @@ export class VacacionesFormComponent implements OnInit {
       payload.fechaRegistro = current?.fechaRegistro ?? undefined;
       payload.usuarioRegistro = current?.usuarioRegistro ?? undefined;
       payload.usuarioAprobacion = current?.usuarioAprobacion ?? undefined;
-      (payload as any).fechaAprobacion = (current as any)?.fechaAprobacion ?? null;
     } else {
       payload.fechaRegistro = new Date();
       payload.usuarioRegistro = this.getUsuarioRegistro();

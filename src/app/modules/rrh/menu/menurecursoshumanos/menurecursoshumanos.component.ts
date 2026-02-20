@@ -78,9 +78,9 @@ export class MenurecursoshumanosComponent {
         },
         {
           displayName: 'Permisos/Licencias',
-          iconName: 'event',
+          iconName: 'event_note',
           idPermiso: 830,
-          route: '/menurecursoshumanos/gestion/permisos',
+          route: '/menurecursoshumanos/gestion/permisos-licencias',
         },
         {
           displayName: 'Asistencia',

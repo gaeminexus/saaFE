@@ -342,7 +342,8 @@ export class VacacionesListComponent implements OnInit {
     action: 'approve' | 'reject' | 'cancel',
     observacion: string | null,
   ): void {
-    const estado = action === 'approve' ? 'APROBADA' : action === 'reject' ? 'RECHAZADA' : 'ANULADA';
+    const estado =
+      action === 'approve' ? 'APROBADA' : action === 'reject' ? 'RECHAZADA' : 'ANULADA';
     const payload: Partial<SolicitudVacaciones> = {
       codigo: row.codigo,
       empleado: { codigo: row.empleado?.codigo } as Empleado,
@@ -355,8 +356,6 @@ export class VacacionesListComponent implements OnInit {
       fechaRegistro: row.fechaRegistro,
       usuarioRegistro: row.usuarioRegistro,
     };
-
-    (payload as any).fechaAprobacion = action === 'approve' || action === 'reject' ? new Date() : null;
 
     this.loading.set(true);
     this.solicitudService.update(payload).subscribe({

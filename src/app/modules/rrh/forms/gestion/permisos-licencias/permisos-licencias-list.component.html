@@ -1,0 +1,298 @@
+<section class="rrh-permisos-licencias">
+  <mat-card class="rrh-card">
+    <mat-card-header>
+      <mat-icon class="title-icon">assignment_ind</mat-icon>
+      <mat-card-title>{{ titulo() }}</mat-card-title>
+      <mat-card-subtitle>Gestión de Permisos y Licencias del Personal</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      <div class="toolbar">
+        <div class="filters-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Identificación Empleado</mat-label>
+            <input
+              matInput
+              [ngModel]="filtroIdentificacion()"
+              (ngModelChange)="filtroIdentificacion.set($event)"
+              placeholder="Ej: 1234567890"
+            />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Tipo de Permiso</mat-label>
+            <mat-select
+              [ngModel]="filtroTipoPermiso()"
+              (ngModelChange)="filtroTipoPermiso.set($event)"
+            >
+              <mat-option [value]="null">Todos</mat-option>
+              @for (tipo of tiposPermiso(); track tipo.codigo) {
+                <mat-option [value]="tipo.codigo">{{ tipo.nombre }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Estado</mat-label>
+            <mat-select [ngModel]="filtroEstado()" (ngModelChange)="filtroEstado.set($event)">
+              <mat-option [value]="null">Todos</mat-option>
+              @for (opt of estadoOptions; track opt.value) {
+                <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Con/Sin Goce</mat-label>
+            <mat-select [ngModel]="filtroConGoce()" (ngModelChange)="filtroConGoce.set($event)">
+              <mat-option [value]="null">Todos</mat-option>
+              @for (opt of goceOptions; track opt.value) {
+                <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Fecha Inicio Desde</mat-label>
+            <input
+              matInput
+              [matDatepicker]="pickerDesde"
+              [ngModel]="filtroFechaInicio()"
+              (ngModelChange)="filtroFechaInicio.set($event)"
+            />
+            <mat-datepicker-toggle matSuffix [for]="pickerDesde"></mat-datepicker-toggle>
+            <mat-datepicker #pickerDesde></mat-datepicker>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Fecha Inicio Hasta</mat-label>
+            <input
+              matInput
+              [matDatepicker]="pickerHasta"
+              [ngModel]="filtroFechaFin()"
+              (ngModelChange)="filtroFechaFin.set($event)"
+            />
+            <mat-datepicker-toggle matSuffix [for]="pickerHasta"></mat-datepicker-toggle>
+            <mat-datepicker #pickerHasta></mat-datepicker>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Ordenar por</mat-label>
+            <mat-select [ngModel]="orderBy()" (ngModelChange)="orderBy.set($event)">
+              <mat-option value="fechaRegistro">Fecha Registro</mat-option>
+              <mat-option value="fechaInicio">Fecha Inicio</mat-option>
+              <mat-option value="empleado.apellidos">Empleado</mat-option>
+              <mat-option value="tipoPermiso.nombre">Tipo Permiso</mat-option>
+              <mat-option value="estado">Estado</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Dirección</mat-label>
+            <mat-select [ngModel]="orderDir()" (ngModelChange)="orderDir.set($event)">
+              <mat-option value="ASC">Ascendente</mat-option>
+              <mat-option value="DESC">Descendente</mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
+
+        <div class="action-buttons">
+          <button mat-raised-button color="primary" (click)="onNuevo()">
+            <mat-icon>add</mat-icon>
+            Nuevo Permiso
+          </button>
+          <button mat-raised-button (click)="buscar()" [disabled]="loading()">
+            <mat-icon>search</mat-icon>
+            Buscar
+          </button>
+          <button mat-stroked-button (click)="limpiarFiltros()">
+            <mat-icon>clear</mat-icon>
+            Limpiar
+          </button>
+        </div>
+      </div>
+
+      @if (loading()) {
+        <div class="loading-container">
+          <mat-spinner diameter="40"></mat-spinner>
+          <p>Cargando permisos y licencias...</p>
+        </div>
+      } @else {
+        <div class="table-container">
+          <table mat-table [dataSource]="pagedData()">
+            <!-- Código -->
+            <ng-container matColumnDef="codigo">
+              <th mat-header-cell *matHeaderCellDef>Código</th>
+              <td mat-cell *matCellDef="let row">{{ row.codigo }}</td>
+            </ng-container>
+
+            <!-- Identificación -->
+            <ng-container matColumnDef="identificacion">
+              <th mat-header-cell *matHeaderCellDef>Identificación</th>
+              <td mat-cell *matCellDef="let row">{{ row.empleado?.identificacion }}</td>
+            </ng-container>
+
+            <!-- Empleado -->
+            <ng-container matColumnDef="empleado">
+              <th mat-header-cell *matHeaderCellDef>Empleado</th>
+              <td mat-cell *matCellDef="let row">
+                {{ row.empleado?.apellidos }} {{ row.empleado?.nombres }}
+              </td>
+            </ng-container>
+
+            <!-- Tipo Permiso -->
+            <ng-container matColumnDef="tipoPermiso">
+              <th mat-header-cell *matHeaderCellDef>Tipo</th>
+              <td mat-cell *matCellDef="let row">{{ row.tipoPermiso?.nombre }}</td>
+            </ng-container>
+
+            <!-- Modalidad -->
+            <ng-container matColumnDef="modalidad">
+              <th mat-header-cell *matHeaderCellDef>Modalidad</th>
+              <td mat-cell *matCellDef="let row">
+                <mat-chip
+                  [color]="row.tipoPermiso?.modalidad === 'D' ? 'primary' : 'accent'"
+                  selected
+                >
+                  {{ row.tipoPermiso?.modalidad === 'D' ? 'Días' : 'Horas' }}
+                </mat-chip>
+              </td>
+            </ng-container>
+
+            <!-- Fecha Inicio -->
+            <ng-container matColumnDef="fechaInicio">
+              <th mat-header-cell *matHeaderCellDef>Fecha Inicio</th>
+              <td mat-cell *matCellDef="let row">{{ row.fechaInicio | date: 'dd/MM/yyyy' }}</td>
+            </ng-container>
+
+            <!-- Fecha Fin -->
+            <ng-container matColumnDef="fechaFin">
+              <th mat-header-cell *matHeaderCellDef>Fecha Fin</th>
+              <td mat-cell *matCellDef="let row">
+                @if (row.fechaFin) {
+                  {{ row.fechaFin | date: 'dd/MM/yyyy' }}
+                } @else if (row.horaInicio && row.horaFin) {
+                  {{ row.horaInicio }} - {{ row.horaFin }}
+                } @else {
+                  -
+                }
+              </td>
+            </ng-container>
+
+            <!-- Días/Horas -->
+            <ng-container matColumnDef="diasHoras">
+              <th mat-header-cell *matHeaderCellDef>Cantidad</th>
+              <td mat-cell *matCellDef="let row">{{ formatDiasHoras(row) }}</td>
+            </ng-container>
+
+            <!-- Con Goce -->
+            <ng-container matColumnDef="conGoce">
+              <th mat-header-cell *matHeaderCellDef>Goce</th>
+              <td mat-cell *matCellDef="let row">
+                <mat-chip [color]="row.conGoce ? 'primary' : 'warn'" selected>
+                  {{ row.conGoce ? 'Con' : 'Sin' }}
+                </mat-chip>
+              </td>
+            </ng-container>
+
+            <!-- Estado -->
+            <ng-container matColumnDef="estado">
+              <th mat-header-cell *matHeaderCellDef>Estado</th>
+              <td mat-cell *matCellDef="let row">
+                <mat-chip [color]="getEstadoColor(row.estado)" selected>
+                  {{ getEstadoLabel(row.estado) }}
+                </mat-chip>
+              </td>
+            </ng-container>
+
+            <!-- Fecha Aprobación -->
+            <ng-container matColumnDef="fechaAprobacion">
+              <th mat-header-cell *matHeaderCellDef>F. Aprobación</th>
+              <td mat-cell *matCellDef="let row">
+                @if (row.fechaAprobacion) {
+                  {{ row.fechaAprobacion | date: 'dd/MM/yyyy' }}
+                  <br />
+                  <small>{{ row.usuarioAprobacion }}</small>
+                } @else {
+                  -
+                }
+              </td>
+            </ng-container>
+
+            <!-- Acciones -->
+            <ng-container matColumnDef="acciones">
+              <th mat-header-cell *matHeaderCellDef>Acciones</th>
+              <td mat-cell *matCellDef="let row">
+                <div class="action-buttons-cell">
+                  <button mat-icon-button matTooltip="Ver" (click)="onVer(row)">
+                    <mat-icon>visibility</mat-icon>
+                  </button>
+
+                  @if (canEdit(row)) {
+                    <button
+                      mat-icon-button
+                      matTooltip="Editar"
+                      color="primary"
+                      (click)="onEditar(row)"
+                    >
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                  }
+
+                  @if (canApprove(row)) {
+                    <button
+                      mat-icon-button
+                      matTooltip="Aprobar"
+                      color="primary"
+                      (click)="onAprobar(row)"
+                    >
+                      <mat-icon>check_circle</mat-icon>
+                    </button>
+
+                    <button
+                      mat-icon-button
+                      matTooltip="Rechazar"
+                      color="warn"
+                      (click)="onRechazar(row)"
+                    >
+                      <mat-icon>cancel</mat-icon>
+                    </button>
+                  }
+
+                  @if (canCancel(row)) {
+                    <button
+                      mat-icon-button
+                      matTooltip="Cancelar"
+                      color="accent"
+                      (click)="onCancelar(row)"
+                    >
+                      <mat-icon>block</mat-icon>
+                    </button>
+                  }
+                </div>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="columns()"></tr>
+            <tr mat-row *matRowDef="let row; columns: columns()"></tr>
+          </table>
+
+          @if (totalItems() === 0) {
+            <div class="no-data">
+              <mat-icon>inbox</mat-icon>
+              <p>No se encontraron permisos con los criterios especificados</p>
+            </div>
+          }
+        </div>
+
+        <mat-paginator
+          [length]="totalItems()"
+          [pageSize]="pageSize()"
+          [pageSizeOptions]="[10, 20, 50, 100]"
+          (page)="onPageChange($event)"
+          showFirstLastButtons
+        ></mat-paginator>
+      }
+    </mat-card-content>
+  </mat-card>
+</section>

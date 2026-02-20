@@ -3,6 +3,7 @@ import { environment } from '../../../../environments/environment';
 const API_URL = environment.apiUrl;
 
 export class ServiciosRhh {
+  // RESTFULL SERVICES - Configuración dinámica según ambiente
   public static RS_NXOO = `${API_URL}/nxoo`;
   public static RS_PRTE = `${API_URL}/prte`;
   public static RS_CRGO = `${API_URL}/crgo`;
@@ -27,6 +28,8 @@ export class ServiciosRhh {
   public static RS_SLCT = `${API_URL}/slct`;
   public static RS_TPCE = `${API_URL}/tpce`;
   public static RS_TRNO = `${API_URL}/trno`;
+  public static RS_PMLS = `${API_URL}/pmls`; // Permisos y Licencias
+  public static RS_TPPR = `${API_URL}/tppr`; // Tipos de Permiso
 
   // Agregar más endpoints de RRHH acá según necesidades
 }
