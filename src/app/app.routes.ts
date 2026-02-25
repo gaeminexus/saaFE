@@ -20,6 +20,7 @@ import { ContratoEditComponent } from './modules/crd/forms/contrato/contrato-edi
 import { MenucreditosComponent } from './modules/crd/menucreditos/menucreditos.component';
 import { ParametrizacionCreditosComponent } from './modules/crd/menucreditos/parametrizacion-creditos.component';
 import { MenucuentasxcobrarComponent } from './modules/cxc/menu/menucuentasxcobrar/menucuentasxcobrar.component';
+import { GrupoProductosComponent } from './modules/cxc/forms/grupo-productos.component/grupo-productos.component';
 import { MenucuentaxpagarComponent } from './modules/cxp/menu/menucuentasxpagar/menucuentasxpagar.component';
 import { LoginComponent } from './modules/dash/forms/login/login.component';
 import { MenuComponent } from './modules/dash/menu/menu.component';
@@ -106,6 +107,7 @@ import { entidadEditResolver } from './modules/crd/resolver/entidad-edit.resolve
 import { EstadosResolverService } from './modules/crd/resolver/estados-resolver.service';
 import { ListadosCrdResolverService } from './modules/crd/resolver/listados-crd-resolver.service';
 import { TiposCrdResolverService } from './modules/crd/resolver/tipos-crd-resolver.service';
+import { BaseInicialParticipesComponent } from './modules/crd/forms/historicos/base-inicial-participes/base-inicial-participes.component';
 
 export const routes: Routes = [
   { path: '', component: LoginComponent },
@@ -679,6 +681,9 @@ export const routes: Routes = [
     path: 'menucuentasxcobrar',
     component: MenucuentasxcobrarComponent,
     canActivate: [authGuard],
+    children: [
+      { path: 'grupo-productos', component: GrupoProductosComponent, canActivate: [authGuard] },
+    ],
   },
   {
     path: 'menucuentaxpagar',
@@ -693,6 +698,7 @@ export const routes: Routes = [
       { path: 'parametrizacion', component: ParametrizacionCreditosComponent },
       { path: 'extr', component: ExtersComponent },
       { path: 'aportes-revisar', component: AportesPorRevisarComponent },
+      { path: 'participe-inicial', component: BaseInicialParticipesComponent },
       { path: 'entidad', component: EntidadCreditosComponent },
       { path: 'navegacion-cascada', component: NavegacionCascadaComponent },
       { path: 'participe-dash', component: ParticipeDashComponent },

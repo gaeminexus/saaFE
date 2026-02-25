@@ -11,9 +11,6 @@
     </mat-card-header>
 
     <mat-card-content>
-      <mat-tab-group>
-        <!-- Tab Proceso -->
-        <mat-tab label="Ejecutar Proceso">
           <div class="tab-content">
             <form [formGroup]="formProceso" class="proceso-form">
               <!-- Selector de tipo de proceso -->
@@ -70,78 +67,9 @@
                   </mat-progress-spinner>
                   {{ procesando ? 'Procesando...' : 'Ejecutar Proceso' }}
                 </button>
-
-                <button
-                  mat-button
-                  type="button"
-                  [disabled]="procesando"
-                  (click)="cargarMayorizaciones()"
-                >
-                  <mat-icon>refresh</mat-icon>
-                  Actualizar
-                </button>
               </div>
             </form>
           </div>
-        </mat-tab>
-
-        <!-- Tab Historial -->
-        <mat-tab label="Historial de Mayorizaciones">
-          <div class="tab-content">
-            <div class="table-container" *ngIf="mayorizaciones.length > 0; else noMayorizaciones">
-              <mat-table [dataSource]="mayorizaciones" class="mayorizaciones-table">
-                <ng-container matColumnDef="codigo">
-                  <mat-header-cell *matHeaderCellDef>Código</mat-header-cell>
-                  <mat-cell *matCellDef="let element">{{ element.codigo }}</mat-cell>
-                </ng-container>
-
-                <ng-container matColumnDef="periodo">
-                  <mat-header-cell *matHeaderCellDef>Período</mat-header-cell>
-                  <mat-cell *matCellDef="let element">
-                    {{ element.periodo?.nombre }} ({{ element.periodo?.anio }})
-                  </mat-cell>
-                </ng-container>
-
-                <ng-container matColumnDef="fecha">
-                  <mat-header-cell *matHeaderCellDef>Fecha</mat-header-cell>
-                  <mat-cell *matCellDef="let element">
-                    {{ formatFecha(element.fecha) }}
-                  </mat-cell>
-                </ng-container>
-
-                <ng-container matColumnDef="acciones">
-                  <mat-header-cell *matHeaderCellDef>Acciones</mat-header-cell>
-                  <mat-cell *matCellDef="let element">
-                    <button
-                      mat-icon-button
-                      color="primary"
-                      [disabled]="procesando"
-                      matTooltip="Ver detalle"
-                    >
-                      <mat-icon>visibility</mat-icon>
-                    </button>
-                  </mat-cell>
-                </ng-container>
-
-                <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
-                <mat-row *matRowDef="let row; columns: displayedColumns"></mat-row>
-              </mat-table>
-            </div>
-
-            <ng-template #noMayorizaciones>
-              <div class="no-data">
-                <mat-icon class="no-data-icon">account_balance</mat-icon>
-                <h3>No hay mayorizaciones registradas</h3>
-                <p>Las mayorizaciones aparecerán aquí después de ejecutar el proceso.</p>
-                <button mat-button color="primary" (click)="cargarMayorizaciones()">
-                  <mat-icon>refresh</mat-icon>
-                  Actualizar
-                </button>
-              </div>
-            </ng-template>
-          </div>
-        </mat-tab>
-      </mat-tab-group>
     </mat-card-content>
   </mat-card>
 

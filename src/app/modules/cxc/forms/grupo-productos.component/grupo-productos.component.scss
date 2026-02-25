@@ -1,0 +1,559 @@
+﻿// ═══════════════════════════════════════════════════════════════════════════
+// Grupo Productos – Estilos maestro/detalle (sin @use para evitar problemas
+// de path en compilación Angular)
+// ═══════════════════════════════════════════════════════════════════════════
+
+$primary:    #1976d2;
+$primary-bg: #eff6ff;
+$success:    #16a34a;
+$success-bg: #dcfce7;
+$danger:     #991b1b;
+$danger-bg:  #fee2e2;
+$grey-50:    #f9fafb;
+$grey-100:   #f3f4f6;
+$grey-200:   #e5e7eb;
+$grey-400:   #9ca3af;
+$grey-600:   #6b7280;
+$grey-700:   #374151;
+$grey-900:   #1f2937;
+$card-radius: 12px;
+$left-width: 320px;
+
+// ── Wrapper principal ──────────────────────────────────────────────────────
+.gp-wrapper {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: #f5f7fa;
+}
+
+// ── Header ─────────────────────────────────────────────────────────────────
+.gp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px 14px;
+  background: #fff;
+  border-bottom: 1px solid $grey-200;
+  flex-shrink: 0;
+
+  &__left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  &__icon {
+    font-size: 32px !important;
+    width: 32px !important;
+    height: 32px !important;
+    color: $primary;
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #1a1a2e;
+    line-height: 1.2;
+  }
+
+  &__sub {
+    margin: 2px 0 0;
+    font-size: 0.78rem;
+    color: $grey-600;
+  }
+
+  .btn-nuevo-grupo {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+
+    mat-icon { font-size: 18px !important; width: 18px !important; height: 18px !important; }
+  }
+}
+
+// ── Layout 2 paneles ───────────────────────────────────────────────────────
+.gp-layout {
+  display: flex;
+  flex-direction: row;
+  gap: 0;
+  min-height: 500px;
+}
+
+// ── Panel izquierdo ────────────────────────────────────────────────────────
+.gp-panel-left {
+  width: $left-width;
+  min-width: $left-width;
+  max-width: $left-width;
+  background: #fff;
+  border-right: 1px solid $grey-200;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+// Buscador
+.gp-search {
+  display: flex;
+  align-items: center;
+  padding: 10px 14px;
+  border-bottom: 1px solid $grey-100;
+  flex-shrink: 0;
+  gap: 6px;
+
+  &__icon {
+    color: $grey-400;
+    font-size: 18px !important;
+    width: 18px !important;
+    height: 18px !important;
+    flex-shrink: 0;
+  }
+
+  &__input {
+    flex: 1;
+    border: none;
+    outline: none;
+    font-size: 0.875rem;
+    color: $grey-700;
+    background: transparent;
+    font-family: inherit;
+    min-width: 0;
+
+    &::placeholder { color: $grey-400; }
+  }
+
+  &__clear.mat-mdc-icon-button {
+    width: 28px !important;
+    height: 28px !important;
+    line-height: 28px !important;
+    flex-shrink: 0;
+
+    mat-icon { font-size: 16px !important; width: 16px !important; height: 16px !important; }
+  }
+}
+
+// Spinner
+.gp-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 32px;
+}
+
+// Lista de grupos
+.gp-group-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px;
+}
+
+.gp-group-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  margin-bottom: 2px;
+
+  &:hover { background: $grey-50; }
+
+  &.active {
+    background: $primary-bg;
+    box-shadow: inset 3px 0 0 $primary;
+  }
+
+  &__avatar {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.9rem;
+  }
+
+  &__info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &__nombre {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: $grey-900;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+  }
+
+  &__cuenta {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 0.72rem;
+    color: $grey-600;
+
+    .mini-icon {
+      font-size: 12px !important;
+      width: 12px !important;
+      height: 12px !important;
+    }
+  }
+}
+
+.sin-cuenta { font-style: italic; color: $grey-200; }
+
+.estado-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  border-radius: 99px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0 6px;
+  background: $danger-bg;
+  color: $danger;
+  white-space: nowrap;
+  flex-shrink: 0;
+
+  &.activo {
+    background: $success-bg;
+    color: $success;
+  }
+}
+
+.gp-empty-list {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 16px;
+  color: $grey-400;
+  gap: 8px;
+  text-align: center;
+
+  mat-icon {
+    font-size: 40px !important;
+    width: 40px !important;
+    height: 40px !important;
+    opacity: 0.4;
+  }
+
+  p { font-size: 0.85rem; margin: 0; }
+}
+
+// ── Panel derecho ──────────────────────────────────────────────────────────
+.gp-panel-right {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+// Placeholder vacío
+.gp-placeholder {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: $grey-400;
+  text-align: center;
+  padding: 60px 40px;
+
+  mat-icon {
+    font-size: 56px !important;
+    width: 56px !important;
+    height: 56px !important;
+    opacity: 0.35;
+  }
+
+  h3 { margin: 0; font-size: 1.1rem; color: $grey-600; font-weight: 600; }
+  p  { margin: 0; font-size: 0.85rem; max-width: 280px; line-height: 1.5; }
+}
+
+// ── Detalle ────────────────────────────────────────────────────────────────
+.gp-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+
+  &__header-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    mat-icon { color: $primary; }
+
+    h2 { margin: 0; font-size: 1rem; font-weight: 600; color: $grey-900; }
+  }
+}
+
+// ── Cards ──────────────────────────────────────────────────────────────────
+.gp-card {
+  background: #fff;
+  border-radius: $card-radius;
+  padding: 20px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.07);
+
+  &__title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: $grey-700;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid $grey-100;
+
+    mat-icon { font-size: 18px !important; width: 18px !important; height: 18px !important; color: $primary; }
+  }
+
+  &__title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid $grey-100;
+  }
+
+  &--productos { padding-top: 16px; }
+}
+
+.count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #bbdefb;
+  color: #1565c0;
+  border-radius: 99px;
+  padding: 1px 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  margin-left: 6px;
+}
+
+// ── Formularios ────────────────────────────────────────────────────────────
+.gp-form-grupo,
+.gp-form-producto {
+  display: flex;
+  flex-direction: column;
+}
+
+.gp-form-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.gp-field {
+  min-width: 130px;
+  &--grow { flex: 1; }
+  &--tipo  { width: 200px; flex-shrink: 0; }
+  &--estado { width: 130px; flex-shrink: 0; }
+  &--short { width: 120px; flex-shrink: 0; }
+}
+
+.gp-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid $grey-100;
+
+  button { display: inline-flex; align-items: center; gap: 4px; }
+}
+
+// ── Selector de cuenta ─────────────────────────────────────────────────────
+.gp-cuenta-selector {
+  margin-bottom: 16px;
+}
+
+.gp-cuenta-selector__label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: $grey-700;
+  margin-bottom: 8px;
+
+  mat-icon { font-size: 16px !important; width: 16px !important; height: 16px !important; color: $primary; }
+}
+
+.required-star { color: #ef4444; margin-left: 2px; }
+
+.gp-cuenta-card {
+  display: flex;
+  align-items: center;
+  background: $primary-bg;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  padding: 10px 12px;
+  gap: 8px;
+
+  &__info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+}
+
+.cuenta-codigo {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #1d4ed8;
+  font-family: monospace;
+  letter-spacing: 0.5px;
+}
+
+.cuenta-nombre { font-size: 0.8rem; color: $grey-700; }
+
+.btn-seleccionar-cuenta {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 6px;
+  border-style: dashed !important;
+  color: $grey-600 !important;
+}
+
+.error-cuenta {
+  font-size: 0.75rem;
+  color: #ef4444;
+  margin: 4px 0 0 2px;
+}
+
+// ── Formulario inline de producto ──────────────────────────────────────────
+.gp-producto-form {
+  background: #f8faff;
+  border: 1px solid #dbeafe;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 16px;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #1d4ed8;
+    margin-bottom: 14px;
+
+    mat-icon { font-size: 18px !important; width: 18px !important; height: 18px !important; }
+  }
+}
+
+// ── Tabla de productos ─────────────────────────────────────────────────────
+.table-wrapper {
+  overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid $grey-200;
+  margin-top: 8px;
+}
+
+.gp-table {
+  width: 100%;
+  font-size: 0.85rem;
+
+  th.mat-header-cell {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: $grey-600;
+    background: $grey-50;
+    padding: 10px 14px;
+  }
+
+  td.mat-cell {
+    padding: 8px 14px;
+    color: $grey-700;
+    border-bottom-color: $grey-100;
+  }
+
+  tr.mat-row {
+    transition: background 0.1s;
+    &:hover { background: $grey-50; }
+    &.row-editing { background: $primary-bg; }
+  }
+
+  .cell-center { text-align: center; }
+}
+
+.chip-numero {
+  display: inline-block;
+  background: $grey-100;
+  color: $grey-700;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-family: monospace;
+}
+
+.icon-si { color: #16a34a !important; }
+.icon-no { color: $grey-200 !important; }
+
+.gp-empty-productos {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 32px 16px;
+  color: $grey-400;
+  text-align: center;
+
+  mat-icon {
+    font-size: 36px !important;
+    width: 36px !important;
+    height: 36px !important;
+    opacity: 0.35;
+  }
+
+  p { margin: 0; font-size: 0.82rem; }
+}
+
+// ── Responsivo ─────────────────────────────────────────────────────────────
+@media (max-width: 900px) {
+  .gp-layout {
+    flex-direction: column;
+  }
+
+  .gp-panel-left {
+    width: 100%;
+    min-width: unset;
+    max-width: unset;
+    max-height: 260px;
+    border-right: none;
+    border-bottom: 1px solid $grey-200;
+  }
+}

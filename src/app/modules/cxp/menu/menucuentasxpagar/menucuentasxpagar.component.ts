@@ -1,18 +1,44 @@
 import { Component } from '@angular/core';
-import { RouterModule } from '@angular/router';
-
-import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
+import { SideMenuCustomComponent } from '../../../../shared/basics/menu/forms/side-menu-custom/side-menu-custom.component';
+import { NavItem } from '../../../../shared/basics/menu/model/nav-item';
 
 @Component({
-	selector: 'app-menucuentaxpagar',
-	standalone: true,
-	templateUrl: './menucuentasxpagar.component.html',
-	styleUrls: ['./menucuentasxpagar.component.scss'],
-	imports: [
-		RouterModule,
-		MaterialFormModule
-	]
+  selector: 'app-menucuentaxpagar',
+  standalone: true,
+  imports: [SideMenuCustomComponent],
+  templateUrl: './menucuentasxpagar.component.html',
+  styleUrls: ['./menucuentasxpagar.component.scss'],
 })
 export class MenucuentaxpagarComponent {
-	isCollapsed = false;
+  navItems: NavItem[] = [
+    {
+      displayName: 'Parametrización',
+      iconName: 'tune',
+      route: '/menucuentasxpagar/parametrizacion',
+      children: [
+        {
+          displayName: 'Productos Grid',
+          iconName: 'grid_on',
+          route: '/productos-grid',
+        },
+        {
+          displayName: 'Productos Árbol',
+          iconName: 'account_tree',
+          route: '/productos-arbol',
+        },
+      ],
+    },
+    {
+      displayName: 'Procesos',
+      iconName: 'settings',
+      route: '/menucuentasxpagar/procesos',
+      children: [],
+    },
+    {
+      displayName: 'Reportes',
+      iconName: 'assessment',
+      route: '/menucuentasxpagar/reportes',
+      children: [],
+    },
+  ];
 }

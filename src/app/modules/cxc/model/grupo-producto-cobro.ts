@@ -11,5 +11,4 @@ export interface GrupoProductoCobro {
     planCuenta: PlanCuenta;             // Cuenta contable asignada al grupo de producto
     estado: number;                      // Estado 1 = activo, 2 = inactivo
     empresa: Empresa;                    // Empresa a la que pertenece el grupo de producto
-    productoCobros: ProductoCobro;     // Listado de productos que pertenecen a este grupo
 }

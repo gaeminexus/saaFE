@@ -1,104 +1,324 @@
-<div class="page-header">
-  <h2>
-    <mat-icon>table_view</mat-icon>
-    Detalle de Mayorización
-  </h2>
+<div class="dm-wrapper">
 
-  <div class="actions">
-    <button mat-stroked-button color="primary" (click)="cargarDatos()" [disabled]="loading()">
-      <mat-icon>refresh</mat-icon>
-      Recargar
-    </button>
-  </div>
+  <!-- ══════════════════════════ PANEL IZQUIERDO ══════════════════════════ -->
+  <aside class="dm-panel-left">
+
+    <!-- Header -->
+    <div class="dm-panel-header">
+      <mat-icon class="dm-header-icon">account_balance</mat-icon>
+      <div>
+        <h2 class="dm-title">Mayorizaciones</h2>
+        <span class="dm-subtitle">Contabilidad general</span>
+      </div>
+    </div>
+
+    <!-- Filtros -->
+    <mat-card class="dm-filter-card" appearance="outlined">
+      <mat-card-content>
+        <p class="dm-filter-label">
+          <mat-icon class="dm-filter-icon">filter_list</mat-icon>
+          Filtros de búsqueda
+        </p>
+
+        <!-- Período Desde / Hasta -->
+        <div class="dm-filter-row">
+          <mat-form-field appearance="outline" class="dm-field">
+            <mat-label>Período desde</mat-label>
+            <mat-select [formControl]="periodoDesdeCtrl">
+              <mat-option [value]="null">Todos</mat-option>
+              @for (p of periodos(); track p.codigo) {
+                <mat-option [value]="p.codigo">
+                  {{ periodoLabel(p) }}
+                </mat-option>
+              }
+            </mat-select>
+            <mat-icon matPrefix>calendar_today</mat-icon>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="dm-field">
+            <mat-label>Período hasta</mat-label>
+            <mat-select [formControl]="periodoHastaCtrl">
+              <mat-option [value]="null">Todos</mat-option>
+              @for (p of periodos(); track p.codigo) {
+                <mat-option [value]="p.codigo">
+                  {{ periodoLabel(p) }}
+                </mat-option>
+              }
+            </mat-select>
+            <mat-icon matPrefix>calendar_today</mat-icon>
+          </mat-form-field>
+        </div>
+
+        <!-- Fecha Desde / Hasta -->
+        <div class="dm-filter-row">
+          <mat-form-field appearance="outline" class="dm-field">
+            <mat-label>Fecha desde</mat-label>
+            <input matInput [matDatepicker]="pickerDesde"
+                   [formControl]="fechaDesdeCtrl" placeholder="dd/mm/aaaa">
+            <mat-datepicker-toggle matSuffix [for]="pickerDesde"></mat-datepicker-toggle>
+            <mat-datepicker #pickerDesde></mat-datepicker>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="dm-field">
+            <mat-label>Fecha hasta</mat-label>
+            <input matInput [matDatepicker]="pickerHasta"
+                   [formControl]="fechaHastaCtrl" placeholder="dd/mm/aaaa">
+            <mat-datepicker-toggle matSuffix [for]="pickerHasta"></mat-datepicker-toggle>
+            <mat-datepicker #pickerHasta></mat-datepicker>
+          </mat-form-field>
+        </div>
+
+        <!-- Acciones filtro -->
+        <div class="dm-filter-actions">
+          <button mat-flat-button color="primary"
+                  (click)="buscarMayorizaciones()"
+                  [disabled]="loadingMayorizaciones()">
+            <mat-icon>search</mat-icon>
+            Buscar
+          </button>
+          <button mat-stroked-button (click)="limpiarFiltros()"
+                  [disabled]="loadingMayorizaciones()">
+            <mat-icon>clear</mat-icon>
+            Limpiar
+          </button>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Lista de mayorizaciones -->
+    <div class="dm-list-container">
+
+      @if (loadingMayorizaciones()) {
+        <div class="dm-list-loading">
+          <mat-spinner diameter="32"></mat-spinner>
+          <span>Buscando...</span>
+        </div>
+      }
+
+      @if (errorMayorizaciones()) {
+        <div class="dm-list-error">
+          <mat-icon>error_outline</mat-icon>
+          <span>{{ errorMayorizaciones() }}</span>
+        </div>
+      }
+
+      @if (!loadingMayorizaciones() && !errorMayorizaciones() && mayorizacionesFiltradas().length === 0) {
+        <div class="dm-list-empty">
+          <mat-icon>search_off</mat-icon>
+          <span>Use los filtros para buscar mayorizaciones</span>
+        </div>
+      }
+
+      @for (m of mayorizacionesFiltradas(); track m.codigo) {
+        <div class="dm-myrz-item"
+             [class.dm-myrz-item--active]="selectedMayorizacion()?.codigo === m.codigo"
+             (click)="seleccionarMayorizacion(m)">
+          <div class="dm-myrz-date">
+            <mat-icon class="dm-myrz-icon">event</mat-icon>
+            <span>{{ formatFecha(m.fecha) }}</span>
+          </div>
+          <div class="dm-myrz-periodo">{{ periodoLabel(m.periodo) }}</div>
+          <div class="dm-myrz-meta">
+            <span class="dm-myrz-id"># {{ m.codigo }}</span>
+            @if (m.periodo?.estado) {
+              <span class="dm-myrz-badge dm-myrz-badge--{{ m.periodo!.estado }}">
+                @switch (m.periodo!.estado) {
+                  @case (2) { Mayorizado }
+                  @case (1) { Abierto }
+                  @default  { Est. {{ m.periodo!.estado }} }
+                }
+              </span>
+            }
+          </div>
+        </div>
+      }
+    </div>
+
+  </aside>
+
+  <!-- ══════════════════════════ PANEL DERECHO ══════════════════════════ -->
+  <main class="dm-panel-right">
+
+    <!-- Estado sin selección -->
+    @if (!selectedMayorizacion() && !loadingDetalles()) {
+      <div class="dm-empty-state">
+        <mat-icon class="dm-empty-icon">table_chart</mat-icon>
+        <h3>Selecciona una mayorización</h3>
+        <p>Busca y selecciona una mayorización en el panel izquierdo para ver su detalle.</p>
+      </div>
+    }
+
+    <!-- Cargando detalle -->
+    @if (loadingDetalles()) {
+      <div class="dm-detail-loading">
+        <mat-spinner diameter="48"></mat-spinner>
+        <p>Cargando detalle de mayorización...</p>
+      </div>
+    }
+
+    <!-- Error detalle -->
+    @if (errorDetalles() && !loadingDetalles()) {
+      <div class="dm-detail-error">
+        <mat-icon>error_outline</mat-icon>
+        <span>{{ errorDetalles() }}</span>
+      </div>
+    }
+
+    <!-- ── Detalle principal ── -->
+    @if (selectedMayorizacion() && !loadingDetalles() && !errorDetalles()) {
+      <!-- Header del detalle -->
+      <div class="dm-detail-header">
+        <div class="dm-detail-title-group">
+          <mat-icon class="dm-detail-icon">receipt_long</mat-icon>
+          <div>
+            <h3 class="dm-detail-title">Detalle de Mayorización</h3>
+            <span class="dm-detail-breadcrumb">
+              {{ periodoLabel(selectedMayorizacion()!.periodo) }}
+              &nbsp;·&nbsp;
+              {{ formatFecha(selectedMayorizacion()!.fecha) }}
+              &nbsp;·&nbsp;
+              <strong># {{ selectedMayorizacion()!.codigo }}</strong>
+            </span>
+          </div>
+        </div>
+
+        <!-- Stats chips -->
+        <div class="dm-stats-row">
+          <div class="dm-stat-chip">
+            <span class="dm-stat-label">Registros</span>
+            <span class="dm-stat-value">{{ totalRegistrosDetalle() | number }}</span>
+          </div>
+          <div class="dm-stat-chip dm-stat-chip--debe">
+            <span class="dm-stat-label">Total Debe</span>
+            <span class="dm-stat-value">{{ totalDebe() | number:'1.2-2' }}</span>
+          </div>
+          <div class="dm-stat-chip dm-stat-chip--haber">
+            <span class="dm-stat-label">Total Haber</span>
+            <span class="dm-stat-value">{{ totalHaber() | number:'1.2-2' }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Barra de búsqueda del detalle -->
+      <div class="dm-detail-toolbar">
+        <mat-form-field appearance="outline" class="dm-search-field">
+          <mat-label>Buscar cuenta</mat-label>
+          <mat-icon matPrefix>search</mat-icon>
+          <input matInput [formControl]="filtroDetalle"
+                 (input)="aplicarFiltroDetalle()"
+                 placeholder="Número o nombre de cuenta">
+          @if (filtroDetalle.value) {
+            <button matSuffix mat-icon-button (click)="limpiarFiltroDetalle()"
+                    aria-label="Limpiar búsqueda">
+              <mat-icon>close</mat-icon>
+            </button>
+          }
+        </mat-form-field>
+      </div>
+
+      <!-- Tabla del detalle -->
+      <div class="dm-table-container">
+        <table mat-table [dataSource]="detallesPage()" class="dm-table">
+
+          <!-- Número de Cuenta -->
+          <ng-container matColumnDef="numeroCuenta">
+            <th mat-header-cell *matHeaderCellDef>Núm. Cuenta</th>
+            <td mat-cell *matCellDef="let row">
+              <span class="dm-cuenta-num">{{ row.numeroCuenta }}</span>
+            </td>
+            <td mat-footer-cell *matFooterCellDef>
+              <strong>TOTALES</strong>
+            </td>
+          </ng-container>
+
+          <!-- Nombre Cuenta -->
+          <ng-container matColumnDef="nombreCuenta">
+            <th mat-header-cell *matHeaderCellDef>Nombre de Cuenta</th>
+            <td mat-cell *matCellDef="let row" class="dm-cuenta-nombre">
+              {{ row.nombreCuenta }}
+            </td>
+            <td mat-footer-cell *matFooterCellDef></td>
+          </ng-container>
+
+          <!-- Nivel -->
+          <ng-container matColumnDef="nivelCuenta">
+            <th mat-header-cell *matHeaderCellDef class="dm-col-num">Nivel</th>
+            <td mat-cell *matCellDef="let row" class="dm-col-num">
+              <span class="dm-nivel-badge">{{ row.nivelCuenta }}</span>
+            </td>
+            <td mat-footer-cell *matFooterCellDef></td>
+          </ng-container>
+
+          <!-- Saldo Anterior -->
+          <ng-container matColumnDef="saldoAnterior">
+            <th mat-header-cell *matHeaderCellDef class="dm-col-num">Saldo Anterior</th>
+            <td mat-cell *matCellDef="let row" class="dm-col-num">
+              {{ row.saldoAnterior | number:'1.2-2' }}
+            </td>
+            <td mat-footer-cell *matFooterCellDef class="dm-col-num dm-total-cell">
+              {{ totalSaldoAnterior() | number:'1.2-2' }}
+            </td>
+          </ng-container>
+
+          <!-- Debe -->
+          <ng-container matColumnDef="valorDebe">
+            <th mat-header-cell *matHeaderCellDef class="dm-col-num">Debe</th>
+            <td mat-cell *matCellDef="let row" class="dm-col-num dm-debe">
+              {{ row.valorDebe | number:'1.2-2' }}
+            </td>
+            <td mat-footer-cell *matFooterCellDef class="dm-col-num dm-total-cell dm-debe">
+              {{ totalDebe() | number:'1.2-2' }}
+            </td>
+          </ng-container>
+
+          <!-- Haber -->
+          <ng-container matColumnDef="valorHaber">
+            <th mat-header-cell *matHeaderCellDef class="dm-col-num">Haber</th>
+            <td mat-cell *matCellDef="let row" class="dm-col-num dm-haber">
+              {{ row.valorHaber | number:'1.2-2' }}
+            </td>
+            <td mat-footer-cell *matFooterCellDef class="dm-col-num dm-total-cell dm-haber">
+              {{ totalHaber() | number:'1.2-2' }}
+            </td>
+          </ng-container>
+
+          <!-- Saldo Actual -->
+          <ng-container matColumnDef="saldoActual">
+            <th mat-header-cell *matHeaderCellDef class="dm-col-num">Saldo Actual</th>
+            <td mat-cell *matCellDef="let row" class="dm-col-num dm-saldo-actual">
+              {{ row.saldoActual | number:'1.2-2' }}
+            </td>
+            <td mat-footer-cell *matFooterCellDef class="dm-col-num dm-total-cell dm-saldo-actual">
+              {{ totalSaldoActual() | number:'1.2-2' }}
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="colsDetalle; sticky: true"></tr>
+          <tr mat-row *matRowDef="let row; columns: colsDetalle"
+              [class.dm-row--parent]="row.nivelCuenta <= 2"></tr>
+          <tr mat-footer-row *matFooterRowDef="colsDetalle; sticky: true"></tr>
+        </table>
+
+        @if (detallesPage().length === 0 && !loadingDetalles()) {
+          <div class="dm-table-empty">
+            <mat-icon>search_off</mat-icon>
+            <span>No se encontraron registros con el filtro aplicado</span>
+          </div>
+        }
+      </div>
+
+      <!-- Paginador -->
+      <mat-paginator
+        #paginatorDetalle
+        [length]="totalRegistrosDetalle()"
+        [pageSize]="pageSize"
+        [pageSizeOptions]="[10, 20, 50, 100]"
+        (page)="onPageChange($event)"
+        showFirstLastButtons>
+      </mat-paginator>
+    }
+
+  </main>
+
 </div>
 
-<div class="toolbar">
-  <mat-form-field appearance="outline" class="filter-field">
-    <mat-label>Filtrar</mat-label>
-    <input
-      matInput
-      placeholder="Cuenta, nombre o valores"
-      (keyup)="aplicarFiltro($event.target.value)"
-    />
-    <button
-      *ngIf="filtroTexto"
-      matSuffix
-      mat-icon-button
-      aria-label="Limpiar"
-      (click)="limpiarFiltro()"
-    >
-      <mat-icon>close</mat-icon>
-    </button>
-  </mat-form-field>
-</div>
-
-<div class="table-wrapper" *ngIf="!loading(); else loadingTpl">
-  <table mat-table [dataSource]="dataSource" matSort>
-    <!-- Número de Cuenta -->
-    <ng-container matColumnDef="numeroCuenta">
-      <th mat-header-cell *matHeaderCellDef mat-sort-header>Número</th>
-      <td mat-cell *matCellDef="let row">{{ row.numeroCuenta }}</td>
-    </ng-container>
-
-    <!-- Nombre Cuenta -->
-    <ng-container matColumnDef="nombreCuenta">
-      <th mat-header-cell *matHeaderCellDef mat-sort-header>Nombre</th>
-      <td mat-cell *matCellDef="let row">{{ row.nombreCuenta }}</td>
-    </ng-container>
-
-    <!-- Saldo Anterior -->
-    <ng-container matColumnDef="saldoAnterior">
-      <th mat-header-cell *matHeaderCellDef mat-sort-header>Saldo Anterior</th>
-      <td mat-cell *matCellDef="let row" class="num">{{ row.saldoAnterior | number : '1.2-2' }}</td>
-    </ng-container>
-
-    <!-- Debe -->
-    <ng-container matColumnDef="valorDebe">
-      <th mat-header-cell *matHeaderCellDef mat-sort-header>Debe</th>
-      <td mat-cell *matCellDef="let row" class="num">{{ row.valorDebe | number : '1.2-2' }}</td>
-    </ng-container>
-
-    <!-- Haber -->
-    <ng-container matColumnDef="valorHaber">
-      <th mat-header-cell *matHeaderCellDef mat-sort-header>Haber</th>
-      <td mat-cell *matCellDef="let row" class="num">{{ row.valorHaber | number : '1.2-2' }}</td>
-    </ng-container>
-
-    <!-- Saldo Actual -->
-    <ng-container matColumnDef="saldoActual">
-      <th mat-header-cell *matHeaderCellDef mat-sort-header>Saldo Actual</th>
-      <td mat-cell *matCellDef="let row" class="num">{{ row.saldoActual | number : '1.2-2' }}</td>
-    </ng-container>
-
-    <!-- Tipo -->
-    <ng-container matColumnDef="tipoCuenta">
-      <th mat-header-cell *matHeaderCellDef mat-sort-header>Tipo</th>
-      <td mat-cell *matCellDef="let row">{{ row.tipoCuenta }}</td>
-    </ng-container>
-
-    <!-- Nivel -->
-    <ng-container matColumnDef="nivelCuenta">
-      <th mat-header-cell *matHeaderCellDef mat-sort-header>Nivel</th>
-      <td mat-cell *matCellDef="let row">{{ row.nivelCuenta }}</td>
-    </ng-container>
-
-    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-    <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
-  </table>
-
-  <mat-paginator
-    [length]="totalRegistros()"
-    [pageSize]="25"
-    [pageSizeOptions]="[10, 25, 50, 100]"
-    showFirstLastButtons
-  />
-</div>
-
-<ng-template #loadingTpl>
-  <div class="loading">
-    <mat-spinner diameter="40"></mat-spinner>
-    <span>Cargando detalle...</span>
-  </div>
-</ng-template>
-
-<div *ngIf="errorMsg()" class="error">{{ errorMsg() }}</div>

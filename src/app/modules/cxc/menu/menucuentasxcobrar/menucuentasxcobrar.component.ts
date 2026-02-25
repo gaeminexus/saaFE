@@ -1,27 +1,39 @@
 import { Component } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
-import { MatSidenavModule } from '@angular/material/sidenav';
-import { MatListModule } from '@angular/material/list';
-import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
-import { MatExpansionModule } from '@angular/material/expansion';
+import { SideMenuCustomComponent } from '../../../../shared/basics/menu/forms/side-menu-custom/side-menu-custom.component';
+import { NavItem } from '../../../../shared/basics/menu/model/nav-item';
 
 @Component({
   selector: 'app-menucuentasxcobrar',
   standalone: true,
+  imports: [SideMenuCustomComponent],
   templateUrl: './menucuentasxcobrar.component.html',
   styleUrls: ['./menucuentasxcobrar.component.scss'],
-  imports: [
-    CommonModule,
-    RouterModule,
-    MatSidenavModule,
-    MatListModule,
-    MatIconModule,
-    MatButtonModule,
-    MatExpansionModule
-  ]
 })
 export class MenucuentasxcobrarComponent {
-  isCollapsed = false;
+  navItems: NavItem[] = [
+    {
+      displayName: 'Parametrización',
+      iconName: 'tune',
+      route: '/menucuentasxcobrar/parametrizacion',
+      children: [
+        {
+          displayName: 'Grupos de Productos',
+          iconName: 'category',
+          route: '/menucuentasxcobrar/grupo-productos',
+        },
+      ],
+    },
+    {
+      displayName: 'Procesos',
+      iconName: 'settings',
+      route: '/menucuentasxcobrar/procesos',
+      children: [],
+    },
+    {
+      displayName: 'Reportes',
+      iconName: 'assessment',
+      route: '/menucuentasxcobrar/reportes',
+      children: [],
+    },
+  ];
 }

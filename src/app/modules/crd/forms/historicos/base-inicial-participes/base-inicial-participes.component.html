@@ -1,0 +1,274 @@
+<!-- ══════════════════════════════════════════════════════════ -->
+<!--  BASE INICIAL DE PARTÍCIPES                              -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="bip-wrapper">
+
+  <!-- ── PAGE HEADER ── -->
+  <div class="bip-page-header">
+    <div class="bip-header-left">
+      <div class="bip-header-icon-wrap">
+        <mat-icon>group</mat-icon>
+      </div>
+      <div>
+        <h1 class="bip-page-title">Base Inicial de Partícipes</h1>
+        <p class="bip-page-sub">Consulta y análisis de saldos iniciales</p>
+      </div>
+    </div>
+    <div class="bip-header-actions">
+      <button mat-stroked-button class="bip-btn-export"
+              (click)="exportarCSV()" [disabled]="!totalRegistros()">
+        <mat-icon>table_view</mat-icon>
+        Excel
+      </button>
+      <button mat-stroked-button class="bip-btn-export bip-btn-pdf"
+              (click)="exportarPDF()" [disabled]="!totalRegistros()">
+        <mat-icon>picture_as_pdf</mat-icon>
+        PDF
+      </button>
+    </div>
+  </div>
+
+  <!-- ── FILTROS ── -->
+  <mat-card class="bip-filter-card" appearance="outlined">
+    <mat-card-content>
+      <div class="bip-filter-header">
+        <mat-icon class="bip-filter-icon">manage_search</mat-icon>
+        <span class="bip-filter-title">Filtros de búsqueda</span>
+        <span class="bip-filter-hint">Deja todos los campos vacíos para cargar todos los registros</span>
+      </div>
+      <div class="bip-filter-row">
+        <mat-form-field appearance="outline" class="bip-field bip-field--lg">
+          <mat-label>Nombre del partícipe</mat-label>
+          <mat-icon matPrefix>person_search</mat-icon>
+          <input matInput [formControl]="nombreCtrl" placeholder="Buscar por nombre..."
+                 (keyup.enter)="buscar()">
+          @if (nombreCtrl.value) {
+            <button matSuffix mat-icon-button (click)="nombreCtrl.reset()">
+              <mat-icon>close</mat-icon>
+            </button>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="bip-field">
+          <mat-label>Cédula</mat-label>
+          <mat-icon matPrefix>badge</mat-icon>
+          <input matInput [formControl]="cedulaCtrl" placeholder="Número de cédula"
+                 (keyup.enter)="buscar()">
+          @if (cedulaCtrl.value) {
+            <button matSuffix mat-icon-button (click)="cedulaCtrl.reset()">
+              <mat-icon>close</mat-icon>
+            </button>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="bip-field bip-field--sm">
+          <mat-label>ID SAA</mat-label>
+          <mat-icon matPrefix>tag</mat-icon>
+          <input matInput type="number" [formControl]="idSaaCtrl" placeholder="Código SAA"
+                 (keyup.enter)="buscar()">
+          @if (idSaaCtrl.value) {
+            <button matSuffix mat-icon-button (click)="idSaaCtrl.reset()">
+              <mat-icon>close</mat-icon>
+            </button>
+          }
+        </mat-form-field>
+
+        <div class="bip-filter-btns">
+          <button mat-flat-button color="primary" (click)="buscar()" [disabled]="loading()">
+            @if (loading()) {
+              <mat-spinner diameter="18" class="bip-btn-spinner"></mat-spinner>
+            } @else {
+              <mat-icon>search</mat-icon>
+            }
+            Buscar
+          </button>
+          <button mat-stroked-button (click)="limpiar()" [disabled]="loading()">
+            <mat-icon>clear_all</mat-icon>
+            Limpiar
+          </button>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- ── ERROR ── -->
+  @if (errorMsg()) {
+    <div class="bip-error-banner">
+      <mat-icon>error_outline</mat-icon>
+      <span>{{ errorMsg() }}</span>
+    </div>
+  }
+
+  <!-- ── STATS (visible solo con datos) ── -->
+  @if (buscado() && !loading() && totalRegistros() > 0) {
+    <div class="bip-stats-row">
+      <div class="bip-stat-card bip-stat-card--primary">
+        <mat-icon>groups</mat-icon>
+        <div>
+          <span class="bip-stat-label">Total partícipes</span>
+          <span class="bip-stat-value">{{ totalRegistros() | number }}</span>
+        </div>
+      </div>
+      <div class="bip-stat-card bip-stat-card--cesantia">
+        <mat-icon>savings</mat-icon>
+        <div>
+          <span class="bip-stat-label">Total Cesantía</span>
+          <span class="bip-stat-value">{{ totalCesantia() | number:'1.2-2' }}</span>
+        </div>
+      </div>
+      <div class="bip-stat-card bip-stat-card--jubilacion">
+        <mat-icon>elderly</mat-icon>
+        <div>
+          <span class="bip-stat-label">Total Jubilación</span>
+          <span class="bip-stat-value">{{ totalJubilacion() | number:'1.2-2' }}</span>
+        </div>
+      </div>
+      <div class="bip-stat-card bip-stat-card--total">
+        <mat-icon>account_balance_wallet</mat-icon>
+        <div>
+          <span class="bip-stat-label">Total General</span>
+          <span class="bip-stat-value">{{ totalGeneral() | number:'1.2-2' }}</span>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ── ESTADO INICIAL / SIN RESULTADOS ── -->
+  @if (!buscado() && !loading()) {
+    <div class="bip-empty-state">
+      <mat-icon class="bip-empty-icon">manage_search</mat-icon>
+      <h3>Ingresa los criterios de búsqueda</h3>
+      <p>Usa los filtros para encontrar partícipes, o deja todo vacío para cargar el listado completo.</p>
+    </div>
+  }
+
+  @if (buscado() && !loading() && totalRegistros() === 0) {
+    <div class="bip-empty-state">
+      <mat-icon class="bip-empty-icon">search_off</mat-icon>
+      <h3>Sin resultados</h3>
+      <p>No se encontraron registros con los criterios ingresados.</p>
+    </div>
+  }
+
+  <!-- ── TABLA ── -->
+  @if (buscado() && !loading() && totalRegistros() > 0) {
+    <div class="bip-table-wrap">
+      <table mat-table [dataSource]="registrosPage()" class="bip-table">
+
+        <!-- ID SAA -->
+        <ng-container matColumnDef="idSaa">
+          <th mat-header-cell *matHeaderCellDef>ID SAA</th>
+          <td mat-cell *matCellDef="let r">
+            <span class="bip-id-chip">{{ r.idSaa }}</span>
+          </td>
+          <td mat-footer-cell *matFooterCellDef><strong>TOTALES</strong></td>
+        </ng-container>
+
+        <!-- Cédula -->
+        <ng-container matColumnDef="cedula">
+          <th mat-header-cell *matHeaderCellDef>Cédula</th>
+          <td mat-cell *matCellDef="let r" class="bip-cedula">{{ r.cedula }}</td>
+          <td mat-footer-cell *matFooterCellDef></td>
+        </ng-container>
+
+        <!-- Nombre -->
+        <ng-container matColumnDef="nombre">
+          <th mat-header-cell *matHeaderCellDef>Nombre</th>
+          <td mat-cell *matCellDef="let r" class="bip-nombre">{{ r.nombre }}</td>
+          <td mat-footer-cell *matFooterCellDef>
+            <span class="bip-footer-count">{{ totalRegistros() | number }} registros</span>
+          </td>
+        </ng-container>
+
+        <!-- Cesantía Patronal -->
+        <ng-container matColumnDef="cesantiaPatronal">
+          <th mat-header-cell *matHeaderCellDef class="bip-col-num">Ces. Patronal</th>
+          <td mat-cell *matCellDef="let r" class="bip-col-num">{{ r.cesantiaPatronal | number:'1.2-2' }}</td>
+          <td mat-footer-cell *matFooterCellDef class="bip-col-num bip-footer-total"></td>
+        </ng-container>
+
+        <!-- Cesantía Personal -->
+        <ng-container matColumnDef="cesantiaPersonal">
+          <th mat-header-cell *matHeaderCellDef class="bip-col-num">Ces. Personal</th>
+          <td mat-cell *matCellDef="let r" class="bip-col-num">{{ r.cesantiaPersonal | number:'1.2-2' }}</td>
+          <td mat-footer-cell *matFooterCellDef class="bip-col-num bip-footer-total"></td>
+        </ng-container>
+
+        <!-- Cesantía Retiro Voluntario -->
+        <ng-container matColumnDef="cesantiaRetiroVoluntario">
+          <th mat-header-cell *matHeaderCellDef class="bip-col-num">Ces. Retiro Vol.</th>
+          <td mat-cell *matCellDef="let r" class="bip-col-num">{{ r.cesantiaRetiroVoluntario | number:'1.2-2' }}</td>
+          <td mat-footer-cell *matFooterCellDef class="bip-col-num bip-footer-total"></td>
+        </ng-container>
+
+        <!-- Jubilación Patronal -->
+        <ng-container matColumnDef="jubilacionPatronal">
+          <th mat-header-cell *matHeaderCellDef class="bip-col-num">Jub. Patronal</th>
+          <td mat-cell *matCellDef="let r" class="bip-col-num">{{ r.jubilacionPatronal | number:'1.2-2' }}</td>
+          <td mat-footer-cell *matFooterCellDef class="bip-col-num bip-footer-total"></td>
+        </ng-container>
+
+        <!-- Jubilación Personal -->
+        <ng-container matColumnDef="jubilacionPersonal">
+          <th mat-header-cell *matHeaderCellDef class="bip-col-num">Jub. Personal</th>
+          <td mat-cell *matCellDef="let r" class="bip-col-num">{{ r.jubilacionPersonal | number:'1.2-2' }}</td>
+          <td mat-footer-cell *matFooterCellDef class="bip-col-num bip-footer-total"></td>
+        </ng-container>
+
+        <!-- Jubilación Retiro Voluntario -->
+        <ng-container matColumnDef="jubilacionRetiroVoluntario">
+          <th mat-header-cell *matHeaderCellDef class="bip-col-num">Jub. Retiro Vol.</th>
+          <td mat-cell *matCellDef="let r" class="bip-col-num">{{ r.jubilacionRetiroVoluntario | number:'1.2-2' }}</td>
+          <td mat-footer-cell *matFooterCellDef class="bip-col-num bip-footer-total"></td>
+        </ng-container>
+
+        <!-- Pensión Complementaria -->
+        <ng-container matColumnDef="pensionComplementaria">
+          <th mat-header-cell *matHeaderCellDef class="bip-col-num">Pensión Comp.</th>
+          <td mat-cell *matCellDef="let r" class="bip-col-num">{{ r.pensionComplementaria | number:'1.2-2' }}</td>
+          <td mat-footer-cell *matFooterCellDef class="bip-col-num bip-footer-total"></td>
+        </ng-container>
+
+        <!-- Total General -->
+        <ng-container matColumnDef="totalGeneral">
+          <th mat-header-cell *matHeaderCellDef class="bip-col-num">Total General</th>
+          <td mat-cell *matCellDef="let r" class="bip-col-num bip-total-cell">
+            {{ r.totalGeneral | number:'1.2-2' }}
+          </td>
+          <td mat-footer-cell *matFooterCellDef class="bip-col-num bip-footer-total bip-total-cell">
+            {{ totalGeneral() | number:'1.2-2' }}
+          </td>
+        </ng-container>
+
+        <!-- Acciones -->
+        <ng-container matColumnDef="acciones" [sticky]="true">
+          <th mat-header-cell *matHeaderCellDef class="bip-col-acciones">Acciones</th>
+          <td mat-cell *matCellDef="let r" class="bip-col-acciones">
+            <button mat-flat-button color="primary" class="bip-btn-saa"
+                    (click)="irADatosSaa(r)"
+                    matTooltip="Ver dashboard del partícipe en SAA">
+              <mat-icon>account_circle</mat-icon>
+              Datos SAA
+            </button>
+          </td>
+          <td mat-footer-cell *matFooterCellDef></td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="cols; sticky: true"></tr>
+        <tr mat-row *matRowDef="let row; columns: cols;" class="bip-row"></tr>
+        <tr mat-footer-row *matFooterRowDef="cols; sticky: true"></tr>
+      </table>
+    </div>
+
+    <!-- Paginador -->
+    <mat-paginator
+      #paginator
+      [length]="totalRegistros()"
+      [pageSize]="pageSize"
+      [pageSizeOptions]="[10, 15, 25, 50, 100]"
+      (page)="onPageChange($event)"
+      showFirstLastButtons>
+    </mat-paginator>
+  }
+
+</div>

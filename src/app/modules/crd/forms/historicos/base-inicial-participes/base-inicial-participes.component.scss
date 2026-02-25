@@ -1,0 +1,434 @@
+// ── Variables ───────────────────────────────────────────────────────────────
+$gradient-start: #667eea;
+$gradient-end:   #764ba2;
+$primary:        #667eea;
+$primary-dark:   #5a67d8;
+$accent:         #764ba2;
+$success:        #2e7d32;
+$success-bg:     #e8f5e9;
+$warn-color:     #e65100;
+$warn-bg:        #fff3e0;
+$cesantia-color: #0277bd;
+$cesantia-bg:    #e1f5fe;
+$jubilacion-color: #5c6bc0;
+$jubilacion-bg:  #e8eaf6;
+$total-color:    #1b5e20;
+$total-bg:       #e8f5e9;
+$surface:        #ffffff;
+$bg:             #f5f7fa;
+$border:         #e0e0e0;
+$text-primary:   #212121;
+$text-secondary: #616161;
+$radius:         12px;
+$radius-sm:      6px;
+$shadow-sm:      0 1px 3px rgba(0,0,0,.08);
+$shadow-md:      0 4px 16px rgba(0,0,0,.10);
+$transition:     0.18s ease;
+
+// ── Host ────────────────────────────────────────────────────────────────────
+:host {
+  display: block;
+  padding: 20px 24px;
+  background: $bg;
+  min-height: 100%;
+}
+
+// ── Wrapper ──────────────────────────────────────────────────────────────────
+.bip-wrapper {
+  max-width: 1600px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+// ── Page Header ──────────────────────────────────────────────────────────────
+.bip-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: linear-gradient(135deg, $gradient-start 0%, $gradient-end 100%);
+  border-radius: $radius;
+  padding: 20px 24px;
+  color: #fff;
+  box-shadow: $shadow-md;
+  flex-wrap: wrap;
+}
+
+.bip-header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.bip-header-icon-wrap {
+  width: 48px;
+  height: 48px;
+  background: rgba(255,255,255,.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+
+  mat-icon {
+    font-size: 26px;
+    width: 26px;
+    height: 26px;
+    color: #fff;
+  }
+}
+
+.bip-page-title {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: .4px;
+  font-family: 'Montserrat', Arial, sans-serif;
+}
+
+.bip-page-sub {
+  margin: 2px 0 0;
+  font-size: .82rem;
+  opacity: .85;
+}
+
+.bip-header-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.bip-btn-export {
+  color: #fff !important;
+  border-color: rgba(255,255,255,.5) !important;
+  background: rgba(255,255,255,.12) !important;
+  backdrop-filter: blur(4px);
+  font-size: .85rem;
+  transition: background $transition;
+
+  mat-icon { font-size: 18px; width: 18px; height: 18px; }
+
+  &:hover { background: rgba(255,255,255,.22) !important; }
+  &[disabled] { opacity: .45 !important; }
+}
+
+.bip-btn-pdf {
+  border-color: rgba(255,150,100,.6) !important;
+}
+
+// ── Filter Card ──────────────────────────────────────────────────────────────
+.bip-filter-card {
+  border-radius: $radius !important;
+  box-shadow: $shadow-sm !important;
+
+  mat-card-content { padding: 16px 20px !important; }
+}
+
+.bip-filter-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.bip-filter-icon {
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+  color: $primary;
+}
+
+.bip-filter-title {
+  font-size: .82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  color: $primary;
+}
+
+.bip-filter-hint {
+  font-size: .75rem;
+  color: $text-secondary;
+  margin-left: auto;
+}
+
+.bip-filter-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.bip-field {
+  flex: 1;
+  min-width: 160px;
+
+  &--lg { flex: 2; }
+  &--sm { flex: 0 0 160px; }
+
+  ::ng-deep .mat-mdc-form-field-infix {
+    padding-top: 10px !important;
+    padding-bottom: 10px !important;
+  }
+}
+
+.bip-filter-btns {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding-top: 4px;
+
+  button {
+    height: 52px;
+    font-size: .88rem;
+    white-space: nowrap;
+  }
+}
+
+.bip-btn-spinner {
+  display: inline-block;
+  margin-right: 4px;
+}
+
+// ── Error Banner ─────────────────────────────────────────────────────────────
+.bip-error-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  background: #ffebee;
+  color: #c62828;
+  border-radius: $radius-sm;
+  font-size: .9rem;
+  border-left: 4px solid #c62828;
+
+  mat-icon { font-size: 20px; width: 20px; height: 20px; }
+}
+
+// ── Stats ────────────────────────────────────────────────────────────────────
+.bip-stats-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.bip-stat-card {
+  flex: 1;
+  min-width: 180px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 20px;
+  background: $surface;
+  border-radius: $radius-sm;
+  box-shadow: $shadow-sm;
+  border-left: 4px solid transparent;
+
+  mat-icon {
+    font-size: 30px;
+    width: 30px;
+    height: 30px;
+    opacity: .8;
+  }
+
+  &--primary  { border-color: $primary; mat-icon { color: $primary; } }
+  &--cesantia { border-color: $cesantia-color; mat-icon { color: $cesantia-color; } }
+  &--jubilacion { border-color: $jubilacion-color; mat-icon { color: $jubilacion-color; } }
+  &--total    { border-color: $total-color; mat-icon { color: $total-color; } }
+}
+
+.bip-stat-label {
+  display: block;
+  font-size: .72rem;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  color: $text-secondary;
+  font-weight: 500;
+}
+
+.bip-stat-value {
+  display: block;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: $text-primary;
+  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
+}
+
+// ── Empty State ──────────────────────────────────────────────────────────────
+.bip-empty-state {
+  text-align: center;
+  padding: 56px 24px;
+  color: $text-secondary;
+
+  h3 { font-size: 1.05rem; font-weight: 600; color: $text-primary; margin: 16px 0 8px; }
+  p  { font-size: .88rem; max-width: 360px; margin: 0 auto; }
+}
+
+.bip-empty-icon {
+  font-size: 64px !important;
+  width: 64px !important;
+  height: 64px !important;
+  color: $border;
+}
+
+// ── Table ────────────────────────────────────────────────────────────────────
+.bip-table-wrap {
+  background: $surface;
+  border-radius: $radius;
+  overflow: auto;
+  box-shadow: $shadow-sm;
+
+  &::-webkit-scrollbar        { height: 6px; width: 4px; }
+  &::-webkit-scrollbar-thumb  { background: $border; border-radius: 4px; }
+  &::-webkit-scrollbar-track  { background: transparent; }
+}
+
+.bip-table {
+  width: 100%;
+  font-size: .84rem;
+
+  ::ng-deep .mat-mdc-header-row {
+    background: #f0f4f8;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+
+  ::ng-deep .mat-mdc-header-cell {
+    font-size: .75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .45px;
+    color: $text-secondary;
+    border-bottom: 2px solid $primary;
+    white-space: nowrap;
+    padding: 0 10px;
+  }
+
+  ::ng-deep .mat-mdc-cell {
+    padding: 0 10px;
+    border-bottom: 1px solid #f0f0f0;
+    color: $text-primary;
+  }
+
+  ::ng-deep .mat-mdc-row {
+    transition: background $transition;
+    &:hover { background: #f3f0fd; }
+  }
+
+  ::ng-deep .mat-mdc-footer-row {
+    background: #ede7f6;
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+  }
+
+  ::ng-deep .mat-mdc-footer-cell {
+    font-size: .84rem;
+    font-weight: 700;
+    padding: 0 10px;
+    border-top: 2px solid $accent;
+  }
+}
+
+// Columnas numéricas
+.bip-col-num {
+  text-align: right !important;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.bip-total-cell {
+  font-weight: 700;
+  color: $total-color !important;
+}
+
+.bip-footer-total {
+  color: $total-color;
+}
+
+.bip-footer-count {
+  font-size: .8rem;
+  color: $text-secondary;
+  font-style: italic;
+}
+
+.bip-nombre {
+  min-width: 200px;
+  max-width: 260px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bip-cedula {
+  font-family: 'Roboto Mono', monospace;
+  font-size: .82rem;
+  white-space: nowrap;
+}
+
+.bip-id-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #ede7f6;
+  color: $accent;
+  font-size: .78rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-variant-numeric: tabular-nums;
+}
+
+// Columna acciones pegada a la derecha
+.bip-col-acciones {
+  white-space: nowrap;
+  text-align: center !important;
+  padding: 0 8px !important;
+  background: $surface;
+}
+
+.bip-btn-saa {
+  font-size: .78rem !important;
+  height: 30px !important;
+  line-height: 30px !important;
+  padding: 0 12px !important;
+  border-radius: 20px !important;
+
+  mat-icon {
+    font-size: 15px !important;
+    width: 15px !important;
+    height: 15px !important;
+    margin-right: 4px;
+  }
+}
+
+// Paginador
+mat-paginator {
+  background: $surface;
+  border-top: 1px solid $border;
+  border-radius: 0 0 $radius $radius;
+  font-size: .84rem;
+}
+
+// ── Responsive ───────────────────────────────────────────────────────────────
+@media (max-width: 768px) {
+  :host { padding: 12px; }
+
+  .bip-page-header { gap: 12px; }
+  .bip-page-title  { font-size: 1.1rem; }
+
+  .bip-filter-row {
+    flex-direction: column;
+    .bip-field, .bip-field--sm, .bip-field--lg { flex: 1 1 100%; }
+  }
+
+  .bip-stats-row {
+    .bip-stat-card { min-width: 140px; }
+  }
+
+  .bip-filter-hint { display: none; }
+}

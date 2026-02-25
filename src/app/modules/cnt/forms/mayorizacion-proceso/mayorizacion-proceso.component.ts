@@ -3,16 +3,11 @@ import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { FuncionesDatosService } from '../../../../shared/services/funciones-datos.service';
 import { DetalleRubroService } from '../../../../shared/services/detalle-rubro.service';
-
-import { Mayorizacion } from '../../model/mayorizacion';
-import { MayorizacionProceso, TipoProceso } from '../../model/mayorizacion-proceso';
 import { Periodo } from '../../model/periodo';
 import { MayorizacionService } from '../../service/mayorizacion.service';
 import { PeriodoService } from '../../service/periodo.service';
 
-const FECHA_HORA = 1;
 const RUBRO_PROCESOS_MAYORIZACION = 49;
 
 @Component({
@@ -28,21 +23,17 @@ const RUBRO_PROCESOS_MAYORIZACION = 49;
 export class MayorizacionProcesoComponent implements OnInit {
   formProceso: FormGroup;
   periodos: Periodo[] = [];
-  mayorizaciones: Mayorizacion[] = [];
   cargando = false;
   procesando = false;
 
   // Procesos cargados desde detalleRubro (rubro 49)
   tiposProceso: any[] = [];
 
-  displayedColumns: string[] = ['codigo', 'periodo', 'fecha', 'acciones'];
-
   constructor(
     private fb: FormBuilder,
     private mayorizacionService: MayorizacionService,
     private periodoService: PeriodoService,
     private snackBar: MatSnackBar,
-    private funcionesDatos: FuncionesDatosService,
     private detalleRubroService: DetalleRubroService
   ) {
     this.formProceso = this.fb.group({
@@ -56,7 +47,6 @@ export class MayorizacionProcesoComponent implements OnInit {
   ngOnInit(): void {
     this.cargarProcesosMayorizacion();
     this.cargarPeriodos();
-    this.cargarMayorizaciones();
   }
 
   cargarProcesosMayorizacion(): void {
@@ -91,17 +81,6 @@ export class MayorizacionProcesoComponent implements OnInit {
     });
   }
 
-  cargarMayorizaciones(): void {
-    this.mayorizacionService.getAll().subscribe({
-      next: (mayorizaciones) => {
-        this.mayorizaciones = mayorizaciones || [];
-      },
-      error: (error) => {
-        console.error('Error al cargar mayorizaciones:', error);
-        this.mostrarMensaje('Error al cargar mayorizaciones', 'error');
-      },
-    });
-  }
 
   ejecutarProceso(): void {
     if (this.formProceso.valid) {
@@ -127,7 +106,6 @@ export class MayorizacionProcesoComponent implements OnInit {
         next: () => {
           const mensajeProceso = proceso === 3 ? 'desmayorización' : proceso === 2 ? 'mayorización de cierre' : 'mayorización';
           this.mostrarMensaje(`Proceso de ${mensajeProceso} ejecutado exitosamente`, 'success');
-          this.cargarMayorizaciones(); // Recargar la lista
           this.formProceso.patchValue({ proceso: 1 }); // Resetear a Mayorizar
           this.procesando = false;
         },
@@ -161,12 +139,5 @@ export class MayorizacionProcesoComponent implements OnInit {
 
   private getEmpresaCodigo(): number {
     return parseInt(localStorage.getItem('idSucursal') || '280', 10);
-  }
-
-  /**
-   * Formatea una fecha usando el servicio global de funciones
-   */
-  formatFecha(fecha: any): string {
-    return this.funcionesDatos.formatoFechaOrigenConHora(fecha, FECHA_HORA);
   }
 }

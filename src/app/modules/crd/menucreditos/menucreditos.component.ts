@@ -26,6 +26,11 @@ export class MenucreditosComponent {
           iconName: 'indeterminate_question_box',
           route: '/menucreditos/aportes-revisar',
         },
+        {
+          displayName: 'Participes Inicial',
+          iconName: 'person_text',
+          route: '/menucreditos/participe-inicial',
+        },
       ],
     },
     {
