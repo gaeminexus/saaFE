@@ -87,12 +87,8 @@
 .page-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-  padding: 20px 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  align-items: flex-start;
+  margin-bottom: 2rem;
 }
 
 .header-content {
@@ -100,13 +96,20 @@
 }
 
 .page-title {
-  margin: 0;
-  color: white;
-  font-size: 28px;
-  font-weight: 500;
+  margin: 0 0 0.5rem 0;
+  font-size: 2rem;
+  font-weight: 600;
   display: flex;
   align-items: center;
   gap: 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+
+  mat-icon {
+    color: #667eea !important;
+  }
 }
 
 .title-icon {
@@ -122,17 +125,12 @@
 }
 
 .btn-refresh {
-  background-color: rgba(255, 255, 255, 0.2);
-  color: white;
-}
-
-.btn-refresh:hover {
-  background-color: rgba(255, 255, 255, 0.3);
+  color: #667eea;
 }
 
 .btn-nuevo {
-  background-color: white;
-  color: #667eea;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white !important;
   font-weight: 500;
 }
 

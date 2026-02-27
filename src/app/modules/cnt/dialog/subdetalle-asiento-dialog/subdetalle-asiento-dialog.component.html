@@ -1,0 +1,403 @@
+<h2 mat-dialog-title class="dialog-title">
+  <mat-icon>inventory_2</mat-icon>
+  Subdetalles de Activo Fijo
+  <span class="cuenta-info">{{ data.cuentaInfo }}</span>
+</h2>
+
+<mat-dialog-content class="dialog-content">
+  <!-- Spinner de carga al consultar registros existentes -->
+  @if (loading) {
+    <div class="loading-overlay">
+      <mat-spinner diameter="48"></mat-spinner>
+      <p>Cargando subdetalles existentes...</p>
+    </div>
+  }
+
+  <!-- Panel de ayuda para importación CSV -->
+  <mat-expansion-panel class="csv-info-panel">
+    <mat-expansion-panel-header>
+      <mat-panel-title>
+        <mat-icon>help_outline</mat-icon>
+        Formato de importación CSV / Excel
+      </mat-panel-title>
+    </mat-expansion-panel-header>
+    <p class="csv-info-text">
+      El archivo CSV debe tener las columnas <strong>en este orden</strong>
+      (con o sin fila de encabezado). Use coma (<code>,</code>) como separador:
+    </p>
+    <code class="csv-columns">{{ csvColumnsOrder.join(', ') }}</code>
+    <p class="csv-info-note">
+      ⚠️ Si usa <strong>Microsoft Excel</strong>, guarde el archivo como
+      <strong>CSV UTF-8 (delimitado por comas)</strong> antes de importar.
+      Los campos numéricos deben usar punto como separador decimal.
+    </p>
+  </mat-expansion-panel>
+
+  <!-- Barra de herramientas de la tabla -->
+  <div class="table-toolbar">
+    <button mat-raised-button color="primary" type="button" (click)="agregarFila()">
+      <mat-icon>add</mat-icon>
+      Agregar Fila
+    </button>
+
+    <button
+      mat-raised-button
+      color="accent"
+      type="button"
+      (click)="abrirSelectorArchivo()"
+      matTooltip="Importar datos desde archivo CSV o Excel (guardado como CSV)"
+    >
+      <mat-icon>upload_file</mat-icon>
+      Importar CSV / Excel
+    </button>
+
+    <!-- Input de archivo oculto -->
+    <input
+      #fileInput
+      type="file"
+      accept=".csv,.txt"
+      hidden
+      (change)="importarArchivo($event)"
+    />
+
+    <span class="row-count">
+      <mat-icon>table_rows</mat-icon>
+      {{ rows.length }} registro(s)
+    </span>
+  </div>
+
+  <!-- Tabla de subdetalles -->
+  @if (rows.length > 0) {
+    <div class="table-scroll-wrapper">
+      <form [formGroup]="form">
+        <table
+          mat-table
+          [dataSource]="tableRows"
+          formArrayName="rows"
+          class="subdetalle-table"
+        >
+          <!-- ── Acciones ───────────────────────────────────────── -->
+          <ng-container matColumnDef="acciones" sticky>
+            <th mat-header-cell *matHeaderCellDef class="col-sticky col-acciones">Quitar</th>
+            <td mat-cell *matCellDef="let ctrl; let i = index" class="col-sticky col-acciones">
+              <button
+                mat-icon-button
+                color="warn"
+                type="button"
+                (click)="eliminarFila(i)"
+                matTooltip="Eliminar fila"
+              >
+                <mat-icon>delete</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+
+          <!-- ── Código Activo ──────────────────────────────────── -->
+          <ng-container matColumnDef="codigoActivo">
+            <th mat-header-cell *matHeaderCellDef class="col-sm">Cód. Activo</th>
+            <td mat-cell *matCellDef="let ctrl; let i = index" [formGroupName]="i">
+              <input
+                type="text"
+                formControlName="codigoActivo"
+                class="cell-input"
+                placeholder="Código"
+              />
+            </td>
+          </ng-container>
+
+          <!-- ── Nombre del Bien ────────────────────────────────── -->
+          <ng-container matColumnDef="nombreBien">
+            <th mat-header-cell *matHeaderCellDef class="col-lg">Nombre del Bien</th>
+            <td mat-cell *matCellDef="let ctrl; let i = index" [formGroupName]="i">
+              <input
+                type="text"
+                formControlName="nombreBien"
+                class="cell-input"
+                placeholder="Nombre completo del bien"
+              />
+            </td>
+          </ng-container>
+
+          <!-- ── Categoría ──────────────────────────────────────── -->
+          <ng-container matColumnDef="categoria">
+            <th mat-header-cell *matHeaderCellDef class="col-md">Categoría</th>
+            <td mat-cell *matCellDef="let ctrl; let i = index" [formGroupName]="i">
+              <input
+                type="text"
+                formControlName="categoria"
+                class="cell-input"
+                placeholder="Categoría"
+              />
+            </td>
+          </ng-container>
+
+          <!-- ── Tipo ───────────────────────────────────────────── -->
+          <ng-container matColumnDef="tipo">
+            <th mat-header-cell *matHeaderCellDef class="col-sm">Tipo</th>
+            <td mat-cell *matCellDef="let ctrl; let i = index" [formGroupName]="i">
+              <input
+                type="text"
+                formControlName="tipo"
+                class="cell-input"
+                placeholder="Tipo"
+              />
+            </td>
+          </ng-container>
+
+          <!-- ── Fecha Adquisición ──────────────────────────────── -->
+          <ng-container matColumnDef="fechaAdquisicion">
+            <th mat-header-cell *matHeaderCellDef class="col-date">Fecha Adq.</th>
+            <td mat-cell *matCellDef="let ctrl; let i = index" [formGroupName]="i">
+              <input
+                type="date"
+                formControlName="fechaAdquisicion"
+                class="cell-input cell-date"
+              />
+            </td>
+          </ng-container>
+
+          <!-- ── Costo Adquisición ──────────────────────────────── -->
+          <ng-container matColumnDef="costoAdquisicion">
+            <th mat-header-cell *matHeaderCellDef class="col-num">Costo Adq.</th>
+            <td mat-cell *matCellDef="let ctrl; let i = index" [formGroupName]="i">
+              <input
+                type="number"
+                formControlName="costoAdquisicion"
+                class="cell-input cell-num"
+                placeholder="0.00"
+                step="0.01"
+              />
+            </td>
+          </ng-container>
+
+          <!-- ── Mejoras Capitalizadas ──────────────────────────── -->
+          <ng-container matColumnDef="mejorasCapitalizadas">
+            <th mat-header-cell *matHeaderCellDef class="col-num">Mejoras Cap.</th>
+            <td mat-cell *matCellDef="let ctrl; let i = index" [formGroupName]="i">
+              <input
+                type="number"
+                formControlName="mejorasCapitalizadas"
+                class="cell-input cell-num"
+                placeholder="0.00"
+                step="0.01"
+              />
+            </td>
+          </ng-container>
+
+          <!-- ── Valor Residual ─────────────────────────────────── -->
+          <ng-container matColumnDef="valorResidual">
+            <th mat-header-cell *matHeaderCellDef class="col-num">Val. Residual</th>
+            <td mat-cell *matCellDef="let ctrl; let i = index" [formGroupName]="i">
+              <input
+                type="number"
+                formControlName="valorResidual"
+                class="cell-input cell-num"
+                placeholder="0.00"
+                step="0.01"
+              />
+            </td>
+          </ng-container>
+
+          <!-- ── Base a Depreciar ──────────────────────────────── -->
+          <ng-container matColumnDef="baseDepreciar">
+            <th mat-header-cell *matHeaderCellDef class="col-num">Base Depr.</th>
+            <td mat-cell *matCellDef="let ctrl; let i = index" [formGroupName]="i">
+              <input
+                type="number"
+                formControlName="baseDepreciar"
+                class="cell-input cell-num"
+                placeholder="0.00"
+                step="0.01"
+              />
+            </td>
+          </ng-container>
+
+          <!-- ── Vida Útil Total ────────────────────────────────── -->
+          <ng-container matColumnDef="vidaUtilTotal">
+            <th mat-header-cell *matHeaderCellDef class="col-int">V.Útil Tot.(m)</th>
+            <td mat-cell *matCellDef="let ctrl; let i = index" [formGroupName]="i">
+              <input
+                type="number"
+                formControlName="vidaUtilTotal"
+                class="cell-input cell-num"
+                placeholder="0"
+                step="1"
+              />
+            </td>
+          </ng-container>
+
+          <!-- ── Vida Útil Remanente ────────────────────────────── -->
+          <ng-container matColumnDef="vidaUtilRemanente">
+            <th mat-header-cell *matHeaderCellDef class="col-int">V.Útil Rem.(m)</th>
+            <td mat-cell *matCellDef="let ctrl; let i = index" [formGroupName]="i">
+              <input
+                type="number"
+                formControlName="vidaUtilRemanente"
+                class="cell-input cell-num"
+                placeholder="0"
+                step="1"
+              />
+            </td>
+          </ng-container>
+
+          <!-- ── % Depreciación ────────────────────────────────── -->
+          <ng-container matColumnDef="porcentajeDepreciacion">
+            <th mat-header-cell *matHeaderCellDef class="col-pct">% Depr.</th>
+            <td mat-cell *matCellDef="let ctrl; let i = index" [formGroupName]="i">
+              <input
+                type="number"
+                formControlName="porcentajeDepreciacion"
+                class="cell-input cell-num"
+                placeholder="0.00"
+                step="0.01"
+              />
+            </td>
+          </ng-container>
+
+          <!-- ── Cuota Depreciación ─────────────────────────────── -->
+          <ng-container matColumnDef="cuotaDepreciacion">
+            <th mat-header-cell *matHeaderCellDef class="col-num">Cuota Depr.</th>
+            <td mat-cell *matCellDef="let ctrl; let i = index" [formGroupName]="i">
+              <input
+                type="number"
+                formControlName="cuotaDepreciacion"
+                class="cell-input cell-num"
+                placeholder="0.00"
+                step="0.01"
+              />
+            </td>
+          </ng-container>
+
+          <!-- ── Depreciación Acumulada ──────────────────────────── -->
+          <ng-container matColumnDef="depreciacionAcumulada">
+            <th mat-header-cell *matHeaderCellDef class="col-num">Depr. Acum.</th>
+            <td mat-cell *matCellDef="let ctrl; let i = index" [formGroupName]="i">
+              <input
+                type="number"
+                formControlName="depreciacionAcumulada"
+                class="cell-input cell-num"
+                placeholder="0.00"
+                step="0.01"
+              />
+            </td>
+          </ng-container>
+
+          <!-- ── Valor Neto Libros ──────────────────────────────── -->
+          <ng-container matColumnDef="valorNetoLibros">
+            <th mat-header-cell *matHeaderCellDef class="col-num">V. Neto Libros</th>
+            <td mat-cell *matCellDef="let ctrl; let i = index" [formGroupName]="i">
+              <input
+                type="number"
+                formControlName="valorNetoLibros"
+                class="cell-input cell-num"
+                placeholder="0.00"
+                step="0.01"
+              />
+            </td>
+          </ng-container>
+
+          <!-- ── Ubicación General ──────────────────────────────── -->
+          <ng-container matColumnDef="ubicacionGeneral">
+            <th mat-header-cell *matHeaderCellDef class="col-md">Ubic. General</th>
+            <td mat-cell *matCellDef="let ctrl; let i = index" [formGroupName]="i">
+              <input
+                type="text"
+                formControlName="ubicacionGeneral"
+                class="cell-input"
+                placeholder="Planta / Edificio"
+              />
+            </td>
+          </ng-container>
+
+          <!-- ── Ubicación Específica ───────────────────────────── -->
+          <ng-container matColumnDef="ubicacionEspecifica">
+            <th mat-header-cell *matHeaderCellDef class="col-md">Ubic. Específica</th>
+            <td mat-cell *matCellDef="let ctrl; let i = index" [formGroupName]="i">
+              <input
+                type="text"
+                formControlName="ubicacionEspecifica"
+                class="cell-input"
+                placeholder="Oficina / Área"
+              />
+            </td>
+          </ng-container>
+
+          <!-- ── Responsable ───────────────────────────────────── -->
+          <ng-container matColumnDef="responsable">
+            <th mat-header-cell *matHeaderCellDef class="col-md">Responsable</th>
+            <td mat-cell *matCellDef="let ctrl; let i = index" [formGroupName]="i">
+              <input
+                type="text"
+                formControlName="responsable"
+                class="cell-input"
+                placeholder="Custodio"
+              />
+            </td>
+          </ng-container>
+
+          <!-- ── Estado Físico ─────────────────────────────────── -->
+          <ng-container matColumnDef="estadoFisico">
+            <th mat-header-cell *matHeaderCellDef class="col-sm">Estado Físico</th>
+            <td mat-cell *matCellDef="let ctrl; let i = index" [formGroupName]="i">
+              <input
+                type="text"
+                formControlName="estadoFisico"
+                class="cell-input"
+                placeholder="Bueno / Regular"
+              />
+            </td>
+          </ng-container>
+
+          <!-- ── Factura ───────────────────────────────────────── -->
+          <ng-container matColumnDef="factura">
+            <th mat-header-cell *matHeaderCellDef class="col-md">Factura</th>
+            <td mat-cell *matCellDef="let ctrl; let i = index" [formGroupName]="i">
+              <input
+                type="text"
+                formControlName="factura"
+                class="cell-input"
+                placeholder="N° / Proveedor"
+              />
+            </td>
+          </ng-container>
+
+          <!-- ── Observaciones ─────────────────────────────────── -->
+          <ng-container matColumnDef="observaciones">
+            <th mat-header-cell *matHeaderCellDef class="col-lg">Observaciones</th>
+            <td mat-cell *matCellDef="let ctrl; let i = index" [formGroupName]="i">
+              <input
+                type="text"
+                formControlName="observaciones"
+                class="cell-input"
+                placeholder="Observaciones"
+              />
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+        </table>
+      </form>
+    </div>
+  } @else {
+    <div class="empty-state">
+      <mat-icon>inbox</mat-icon>
+      <p>
+        No hay subdetalles registrados.<br />
+        Haga clic en <strong>Agregar Fila</strong> para ingresar manualmente, o en
+        <strong>Importar CSV / Excel</strong> para cargar desde un archivo.
+      </p>
+    </div>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end" class="dialog-actions">
+  <button mat-button type="button" (click)="cancelar()">
+    <mat-icon>close</mat-icon>
+    Cancelar
+  </button>
+  <button mat-raised-button color="primary" type="button" (click)="guardar()">
+    <mat-icon>check</mat-icon>
+    Confirmar ({{ rows.length }})
+  </button>
+</mat-dialog-actions>

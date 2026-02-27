@@ -1,0 +1,321 @@
+<div class="rc-page">
+
+  <!-- ══════════════════════ ENCABEZADO ══════════════════════ -->
+  <div class="rc-header">
+    <div class="rc-header__title">
+      <mat-icon class="rc-header__icon">receipt_long</mat-icon>
+      <div>
+        <h2>Configuración de Reportes Contables</h2>
+        <span class="rc-header__sub">Administre los balances y reportes disponibles en el sistema</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════ LAYOUT MAESTRO / DETALLE ═══════════════════════ -->
+  <div class="rc-layout">
+
+    <!-- ── Panel izquierdo: lista de reportes ─────────────────── -->
+    <div class="rc-panel rc-panel--left">
+      <div class="rc-panel__head">
+        <span class="rc-panel__title">
+          <mat-icon>list</mat-icon> Reportes
+          <span class="rc-badge">{{ reportesFiltrados().length }}</span>
+        </span>
+        <button mat-mini-fab color="primary" (click)="nuevoReporte()"
+                matTooltip="Nuevo reporte">
+          <mat-icon>add</mat-icon>
+        </button>
+      </div>
+
+      <!-- Buscador -->
+      <div class="rc-search">
+        <mat-form-field appearance="outline" class="rc-search__field">
+          <mat-label>Buscar reporte</mat-label>
+          <mat-icon matPrefix>search</mat-icon>
+          <input matInput
+                 [value]="filtro()"
+                 (input)="filtro.set($any($event.target).value)"
+                 placeholder="Nombre o código alterno..." />
+        </mat-form-field>
+      </div>
+
+      <!-- Lista -->
+      @if (loadingMaestro()) {
+        <div class="rc-center"><mat-spinner diameter="36"></mat-spinner></div>
+      } @else if (reportesFiltrados().length === 0) {
+        <div class="rc-empty">
+          <mat-icon>inbox</mat-icon>
+          <span>Sin reportes</span>
+        </div>
+      } @else {
+        <div class="rc-list">
+          @for (r of reportesFiltrados(); track r.codigo) {
+            <div class="rc-list__item"
+                 [class.rc-list__item--active]="selected()?.codigo === r.codigo"
+                 (click)="seleccionarReporte(r)">
+              <div class="rc-list__item-body">
+                <span class="rc-list__item-name">{{ r.nombreReporte }}</span>
+                <span class="rc-list__item-meta">Cód. alterno: {{ r.codigoAlterno }}</span>
+              </div>
+              <div class="rc-list__item-chips">
+                <span class="rc-estado-chip"
+                      [attr.data-estado]="r.estado">
+                  {{ estadoLabel(r.estado) }}
+                </span>
+                <button mat-icon-button color="warn"
+                        (click)="$event.stopPropagation(); eliminarReporte(r)"
+                        matTooltip="Eliminar">
+                  <mat-icon>delete_outline</mat-icon>
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <!-- ── Panel derecho: form + detalle ─────────────────────── -->
+    <div class="rc-panel rc-panel--right">
+
+      <!-- Estado vacío -->
+      @if (!selected() && !modoNuevo()) {
+        <div class="rc-empty rc-empty--big">
+          <mat-icon>touch_app</mat-icon>
+          <p>Seleccione un reporte de la lista o cree uno nuevo</p>
+          <button mat-stroked-button color="primary" (click)="nuevoReporte()">
+            <mat-icon>add</mat-icon> Nuevo Reporte
+          </button>
+        </div>
+
+      } @else {
+
+        <!-- ── Formulario Maestro ───────────────────────────── -->
+        <mat-card class="rc-card">
+          <mat-card-header>
+            <mat-icon mat-card-avatar>description</mat-icon>
+            <mat-card-title>
+              {{ modoNuevo() ? 'Nuevo Reporte' : 'Editar Reporte' }}
+            </mat-card-title>
+            <mat-card-subtitle>
+              @if (!modoNuevo() && selected()) {
+                ID: {{ selected()!.codigo }}
+              }
+            </mat-card-subtitle>
+          </mat-card-header>
+
+          <mat-card-content>
+            <form [formGroup]="formMaestro">
+              <div class="rc-form-row rc-form-row--3">
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Nombre del Reporte</mat-label>
+                  <input matInput formControlName="nombre"
+                         placeholder="Ej. Balance General" />
+                  @if (formMaestro.get('nombre')?.hasError('required')) {
+                    <mat-error>Campo requerido</mat-error>
+                  }
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Código Alterno</mat-label>
+                  <input matInput type="number" formControlName="codigoAlterno"
+                         placeholder="Ej. 100" />
+                  <mat-hint>Usado como parámetro al generar</mat-hint>
+                  @if (formMaestro.get('codigoAlterno')?.hasError('required')) {
+                    <mat-error>Campo requerido</mat-error>
+                  }
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Estado</mat-label>
+                  <mat-select formControlName="estado">
+                    <mat-option [value]="1">Activo</mat-option>
+                    <mat-option [value]="0">Inactivo</mat-option>
+                  </mat-select>
+                </mat-form-field>
+
+              </div>
+            </form>
+          </mat-card-content>
+
+          <mat-card-actions align="end">
+            <button mat-button (click)="cancelarMaestro()">Cancelar</button>
+            <button mat-raised-button color="primary"
+                    [disabled]="loadingGuardar() || formMaestro.invalid"
+                    (click)="guardarMaestro()">
+              @if (loadingGuardar()) {
+                <mat-spinner diameter="18" class="spinner-btn"></mat-spinner>
+              } @else {
+                <mat-icon>save</mat-icon>
+              }
+              Guardar
+            </button>
+          </mat-card-actions>
+        </mat-card>
+
+        <!-- ── Tabla de Detalles (Rangos de Cuentas) ─────────── -->
+        @if (!modoNuevo()) {
+          <mat-card class="rc-card rc-card--detalle">
+            <mat-card-header>
+              <mat-icon mat-card-avatar>account_tree</mat-icon>
+              <mat-card-title>Rangos de Cuentas</mat-card-title>
+              <mat-card-subtitle>Define qué cuentas incluye este reporte y con qué signo</mat-card-subtitle>
+            </mat-card-header>
+
+            <mat-card-content>
+
+              <!-- Formulario inline add/edit -->
+              @if (modoNuevoDetalle() || selectedDetalle()) {
+                <div class="rc-detalle-form">
+                  <div class="rc-detalle-form__title">
+                    <mat-icon>{{ modoNuevoDetalle() ? 'add_circle_outline' : 'edit' }}</mat-icon>
+                    {{ modoNuevoDetalle() ? 'Agregar Rango' : 'Editar Rango' }}
+                  </div>
+                  <form [formGroup]="formDetalle">
+                    <div class="rc-form-row rc-form-row--5">
+
+                      <mat-form-field appearance="outline">
+                        <mat-label>N° Cuenta Desde</mat-label>
+                        <input matInput formControlName="numeroDesde" />
+                        <button matSuffix mat-icon-button type="button"
+                                matTooltip="Buscar en plan de cuentas"
+                                (click)="abrirSelectorDesde()">
+                          <mat-icon>search</mat-icon>
+                        </button>
+                        @if (formDetalle.get('numeroDesde')?.hasError('required')) {
+                          <mat-error>Requerido</mat-error>
+                        }
+                      </mat-form-field>
+
+                      <mat-form-field appearance="outline">
+                        <mat-label>Nombre Desde</mat-label>
+                        <input matInput formControlName="nombreDesde" readonly />
+                      </mat-form-field>
+
+                      <mat-form-field appearance="outline">
+                        <mat-label>N° Cuenta Hasta</mat-label>
+                        <input matInput formControlName="numeroHasta" />
+                        <button matSuffix mat-icon-button type="button"
+                                matTooltip="Buscar en plan de cuentas"
+                                (click)="abrirSelectorHasta()">
+                          <mat-icon>search</mat-icon>
+                        </button>
+                        @if (formDetalle.get('numeroHasta')?.hasError('required')) {
+                          <mat-error>Requerido</mat-error>
+                        }
+                      </mat-form-field>
+
+                      <mat-form-field appearance="outline">
+                        <mat-label>Nombre Hasta</mat-label>
+                        <input matInput formControlName="nombreHasta" readonly />
+                      </mat-form-field>
+
+                      <mat-form-field appearance="outline">
+                        <mat-label>Signo</mat-label>
+                        <mat-select formControlName="signo">
+                          <mat-option [value]="1">+ Suma</mat-option>
+                          <mat-option [value]="-1">− Resta</mat-option>
+                        </mat-select>
+                      </mat-form-field>
+
+                    </div>
+                  </form>
+                  <div class="rc-detalle-form__actions">
+                    <button mat-button (click)="cancelarDetalle()">Cancelar</button>
+                    <button mat-raised-button color="accent"
+                            [disabled]="loadingGuardar() || formDetalle.invalid"
+                            (click)="guardarDetalle()">
+                      @if (loadingGuardar()) {
+                        <mat-spinner diameter="16" class="spinner-btn"></mat-spinner>
+                      } @else {
+                        <mat-icon>check</mat-icon>
+                      }
+                      {{ modoNuevoDetalle() ? 'Agregar' : 'Actualizar' }}
+                    </button>
+                  </div>
+                </div>
+                <mat-divider class="rc-divider"></mat-divider>
+              }
+
+              <!-- Tabla -->
+              @if (loadingDetalle()) {
+                <div class="rc-center"><mat-spinner diameter="32"></mat-spinner></div>
+              } @else if (detalles().length === 0) {
+                <div class="rc-empty">
+                  <mat-icon>format_list_bulleted</mat-icon>
+                  <span>Sin rangos de cuentas. Agregue el primero.</span>
+                </div>
+              } @else {
+                <table mat-table [dataSource]="detalles()" class="rc-table">
+
+                  <ng-container matColumnDef="numeroDesde">
+                    <th mat-header-cell *matHeaderCellDef>N° Desde</th>
+                    <td mat-cell *matCellDef="let row" class="rc-mono">{{ row.numeroDesde }}</td>
+                  </ng-container>
+
+                  <ng-container matColumnDef="nombreDesde">
+                    <th mat-header-cell *matHeaderCellDef>Nombre Desde</th>
+                    <td mat-cell *matCellDef="let row" class="rc-desc">{{ row.nombreDesde }}</td>
+                  </ng-container>
+
+                  <ng-container matColumnDef="numeroHasta">
+                    <th mat-header-cell *matHeaderCellDef>N° Hasta</th>
+                    <td mat-cell *matCellDef="let row" class="rc-mono">{{ row.numeroHasta }}</td>
+                  </ng-container>
+
+                  <ng-container matColumnDef="nombreHasta">
+                    <th mat-header-cell *matHeaderCellDef>Nombre Hasta</th>
+                    <td mat-cell *matCellDef="let row" class="rc-desc">{{ row.nombreHasta }}</td>
+                  </ng-container>
+
+                  <ng-container matColumnDef="signo">
+                    <th mat-header-cell *matHeaderCellDef class="rc-col-center">Signo</th>
+                    <td mat-cell *matCellDef="let row" class="rc-col-center">
+                      <span class="rc-signo-chip"
+                            [class.rc-signo-chip--suma]="row.signo === 1"
+                            [class.rc-signo-chip--resta]="row.signo === -1">
+                        {{ signoLabel(row.signo) }}
+                      </span>
+                    </td>
+                  </ng-container>
+
+                  <ng-container matColumnDef="acciones">
+                    <th mat-header-cell *matHeaderCellDef class="rc-col-actions">Acciones</th>
+                    <td mat-cell *matCellDef="let row" class="rc-col-actions">
+                      <button mat-icon-button color="primary"
+                              (click)="editarDetalle(row)"
+                              matTooltip="Editar">
+                        <mat-icon>edit</mat-icon>
+                      </button>
+                      <button mat-icon-button color="warn"
+                              (click)="eliminarDetalle(row)"
+                              matTooltip="Eliminar">
+                        <mat-icon>delete_outline</mat-icon>
+                      </button>
+                    </td>
+                  </ng-container>
+
+                  <tr mat-header-row *matHeaderRowDef="colsDetalle; sticky: true"></tr>
+                  <tr mat-row *matRowDef="let row; columns: colsDetalle"
+                      [class.rc-row-editing]="selectedDetalle()?.codigo === row.codigo">
+                  </tr>
+                </table>
+              }
+
+            </mat-card-content>
+
+            <mat-card-actions>
+              <button mat-stroked-button color="accent"
+                      [disabled]="modoNuevoDetalle() || !!selectedDetalle()"
+                      (click)="nuevoDetalle()">
+                <mat-icon>add</mat-icon> Agregar Rango
+              </button>
+            </mat-card-actions>
+          </mat-card>
+        }
+
+      }
+    </div><!-- /rc-panel--right -->
+
+  </div><!-- /rc-layout -->
+</div>

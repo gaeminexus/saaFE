@@ -448,6 +448,21 @@ export class ListadoAsientosComponent implements OnInit {
   }
 
   /**
+   * Copia un asiento existente usando generaCopia del servicio
+   */
+  copiarAsiento(asiento: Asiento): void {
+    this.asientoService.generaCopia(asiento.codigo).subscribe({
+      next: (copia) => {
+        this.showMessage(`Asiento copiado correctamente (nuevo código: ${copia?.codigo ?? ''})`, 'success');
+        this.loadAsientos();
+      },
+      error: () => {
+        this.showMessage('Error al copiar el asiento', 'error');
+      },
+    });
+  }
+
+  /**
    * Muestra un mensaje usando MatSnackBar
    */
   private showMessage(message: string, type: 'success' | 'error' | 'info'): void {

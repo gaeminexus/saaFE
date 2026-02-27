@@ -1,0 +1,327 @@
+$primary:       #667eea;
+$primary-dark:  #764ba2;
+$accent:        #26a69a;
+$warn:          #ef5350;
+$border:        #e0e0e0;
+$bg-panel:      #fafafa;
+$bg-hover:      #f5f5f5;
+$selected-bg:   #ede7f6;
+$selected-border: #7c4dff;
+
+// ─────────────────────────────────────────────────────────
+// Página
+// ─────────────────────────────────────────────────────────
+.rc-page {
+  padding: 16px 20px;
+  max-width: 1400px;
+}
+
+// ─────────────────────────────────────────────────────────
+// Header
+// ─────────────────────────────────────────────────────────
+.rc-header {
+  margin-bottom: 20px;
+
+  &__title {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+
+    h2 {
+      margin: 0;
+      font-size: 1.6rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, $primary 0%, $primary-dark 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+  }
+
+  &__icon {
+    font-size: 2rem;
+    width: 2rem;
+    height: 2rem;
+    color: $primary;
+  }
+
+  &__sub {
+    display: block;
+    color: #888;
+    font-size: 0.85rem;
+    margin-top: 2px;
+  }
+}
+
+// ─────────────────────────────────────────────────────────
+// Layout maestro-detalle
+// ─────────────────────────────────────────────────────────
+.rc-layout {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+// ─────────────────────────────────────────────────────────
+// Paneles
+// ─────────────────────────────────────────────────────────
+.rc-panel {
+  border: 1px solid $border;
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
+
+  &__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: $bg-panel;
+    border-bottom: 1px solid $border;
+  }
+
+  &__title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    font-size: 0.9rem;
+
+    mat-icon { color: $primary; font-size: 1.1rem; }
+  }
+
+  &--right {
+    min-height: 200px;
+  }
+}
+
+// ─────────────────────────────────────────────────────────
+// Badge contador
+// ─────────────────────────────────────────────────────────
+.rc-badge {
+  background: $primary;
+  color: #fff;
+  border-radius: 12px;
+  padding: 1px 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+// ─────────────────────────────────────────────────────────
+// Buscador
+// ─────────────────────────────────────────────────────────
+.rc-search {
+  padding: 10px 12px 0;
+
+  &__field {
+    width: 100%;
+  }
+}
+
+// ─────────────────────────────────────────────────────────
+// Lista de reportes
+// ─────────────────────────────────────────────────────────
+.rc-list {
+  max-height: calc(100vh - 300px);
+  overflow-y: auto;
+
+  &__item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-bottom: 1px solid $border;
+    cursor: pointer;
+    transition: background 0.15s;
+
+    &:hover { background: $bg-hover; }
+
+    &--active {
+      background: $selected-bg !important;
+      border-left: 3px solid $selected-border;
+    }
+  }
+
+  &__item-body {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    overflow: hidden;
+  }
+
+  &__item-name {
+    font-weight: 500;
+    font-size: 0.88rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__item-meta {
+    font-size: 0.75rem;
+    color: #999;
+  }
+
+  &__item-chips {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+}
+
+// ─────────────────────────────────────────────────────────
+// Cards del panel derecho
+// ─────────────────────────────────────────────────────────
+.rc-card {
+  margin: 14px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.07) !important;
+
+  &--detalle {
+    margin-top: 0;
+  }
+}
+
+// ─────────────────────────────────────────────────────────
+// Grids de formulario
+// ─────────────────────────────────────────────────────────
+.rc-form-row {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 4px;
+
+  &.rc-form-row--3 { grid-template-columns: 2fr 1fr 1fr; }
+  &.rc-form-row--5 { grid-template-columns: 1fr 1.2fr 1fr 1.2fr 0.8fr; }
+
+  mat-form-field { width: 100%; }
+}
+
+// ─────────────────────────────────────────────────────────
+// Formulario inline de detalle
+// ─────────────────────────────────────────────────────────
+.rc-detalle-form {
+  background: #f8f9ff;
+  border: 1px solid #d0d5f5;
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+
+  &__title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: $primary-dark;
+    margin-bottom: 12px;
+
+    mat-icon { font-size: 1rem; }
+  }
+
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 4px;
+  }
+}
+
+.rc-divider {
+  margin: 12px 0;
+}
+
+// ─────────────────────────────────────────────────────────
+// Tabla de detalles
+// ─────────────────────────────────────────────────────────
+.rc-table {
+  width: 100%;
+}
+
+.rc-row-editing {
+  background: #fff8e1 !important;
+}
+
+.rc-mono {
+  font-family: monospace;
+  font-size: 0.85rem;
+}
+
+.rc-desc {
+  max-width: 180px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rc-col-center {
+  text-align: center;
+}
+
+.rc-col-actions {
+  text-align: right;
+  white-space: nowrap;
+}
+
+// ─────────────────────────────────────────────────────────
+// Chips
+// ─────────────────────────────────────────────────────────
+.rc-estado-chip {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 12px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: #e8f5e9;
+  color: #2e7d32;
+
+  &[data-estado="0"] {
+    background: #f5f5f5;
+    color: #757575;
+  }
+}
+
+.rc-signo-chip {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+
+  &--suma  { background: #e8f5e9; color: #2e7d32; }
+  &--resta { background: #ffebee; color: #c62828; }
+}
+
+// ─────────────────────────────────────────────────────────
+// Utilitarios
+// ─────────────────────────────────────────────────────────
+.rc-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 32px;
+}
+
+.rc-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px;
+  color: #aaa;
+  font-size: 0.88rem;
+
+  mat-icon { font-size: 2rem; width: 2rem; height: 2rem; }
+
+  &--big {
+    padding: 60px 24px;
+    color: #bbb;
+
+    p { margin: 0; }
+    mat-icon { font-size: 3rem; width: 3rem; height: 3rem; color: #ddd; }
+  }
+}
+
+.spinner-btn {
+  display: inline-block;
+}

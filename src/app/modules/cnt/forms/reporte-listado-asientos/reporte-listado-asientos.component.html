@@ -1,5 +1,5 @@
 <div class="reporte-container">
-  <h2>LISTADO DE ASIENTO CONTABLE</h2>
+  <h2>LISTADO DE ASIENTOS CONTABLE</h2>
 
   @if (loading()) {
     <div class="loading-overlay">
@@ -241,6 +241,13 @@
                           matTooltip="Ir a asiento">
                     <mat-icon>arrow_right_alt</mat-icon>
                     Ir a Asiento
+                  </button>
+                  <span class="asiento-actions__sep"></span>
+                  <button mat-raised-button color="accent"
+                          (click)="copiarAsiento(asiento); $event.stopPropagation()"
+                          matTooltip="Copiar asiento">
+                    <mat-icon>content_copy</mat-icon>
+                    Copiar Asiento
                   </button>
                 </div>
               </div>

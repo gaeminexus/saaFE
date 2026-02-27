@@ -214,6 +214,23 @@
             </button>
           }
         </mat-form-field>
+
+        <div class="dm-export-actions">
+          <button mat-stroked-button color="primary"
+                  (click)="exportarCSV()"
+                  [disabled]="!detallesFiltrados().length"
+                  matTooltip="Exportar a CSV">
+            <mat-icon>table_view</mat-icon>
+            CSV
+          </button>
+          <button mat-stroked-button color="accent"
+                  (click)="exportarPDF()"
+                  [disabled]="!detallesFiltrados().length"
+                  matTooltip="Exportar a PDF">
+            <mat-icon>picture_as_pdf</mat-icon>
+            PDF
+          </button>
+        </div>
       </div>
 
       <!-- Tabla del detalle -->

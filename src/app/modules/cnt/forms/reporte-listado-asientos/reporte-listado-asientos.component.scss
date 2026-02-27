@@ -2,6 +2,16 @@
   padding: 20px;
   max-width: 1400px;
   margin: 0 auto;
+
+  > h2 {
+    font-size: 2rem;
+    font-weight: 600;
+    margin: 0 0 1.5rem 0;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
 }
 
 .form-card {
@@ -294,6 +304,12 @@
           border-top: 1px solid #e0e0e0;
           display: flex;
           justify-content: flex-end;
+          align-items: center;
+          gap: 8px;
+
+          &__sep {
+            width: 24px;
+          }
 
           button {
             display: flex;

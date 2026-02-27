@@ -16,6 +16,7 @@ import { DetalleMayorizacionService } from '../../service/detalle-mayorizacion.s
 import { PeriodoService } from '../../service/periodo.service';
 import { AppStateService } from '../../../../shared/services/app-state.service';
 import { FuncionesDatosService } from '../../../../shared/services/funciones-datos.service';
+import { ExportService } from '../../../../shared/services/export.service';
 
 @Component({
   selector: 'app-detalle-mayorizacion',
@@ -39,6 +40,7 @@ export class DetalleMayorizacionComponent implements OnInit, AfterViewInit {
   private appState            = inject(AppStateService);
   private snackBar            = inject(MatSnackBar);
   private funcionesDatos      = inject(FuncionesDatosService);
+  private exportService       = inject(ExportService);
 
   // ── Estado ──────────────────────────────────────────────────
   periodos                = signal<Periodo[]>([]);
@@ -301,5 +303,52 @@ export class DetalleMayorizacionComponent implements OnInit, AfterViewInit {
   periodoLabel(periodo: Periodo | null): string {
     if (!periodo) return '—';
     return `${periodo.nombre || ''} ${periodo.anio}`.trim();
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // Exportación
+  // ─────────────────────────────────────────────────────────────
+
+  private get _exportData(): { headers: string[]; keys: string[]; rows: any[] } {
+    const m = this.selectedMayorizacion();
+    const filas = this.detallesFiltrados().map(d => ({
+      numeroCuenta:    d.numeroCuenta   ?? '',
+      nombreCuenta:    d.nombreCuenta   ?? '',
+      nivelCuenta:     d.nivelCuenta    ?? '',
+      saldoAnterior:   d.saldoAnterior  ?? 0,
+      valorDebe:       d.valorDebe      ?? 0,
+      valorHaber:      d.valorHaber     ?? 0,
+      saldoActual:     d.saldoActual    ?? 0,
+    }));
+    return {
+      headers: ['N\u00fam. Cuenta', 'Nombre de Cuenta', 'Nivel', 'Saldo Anterior', 'Debe', 'Haber', 'Saldo Actual'],
+      keys:    ['numeroCuenta', 'nombreCuenta', 'nivelCuenta', 'saldoAnterior', 'valorDebe', 'valorHaber', 'saldoActual'],
+      rows:    filas,
+    };
+  }
+
+  exportarCSV(): void {
+    const { headers, keys, rows } = this._exportData;
+    if (!rows.length) {
+      this.snackBar.open('No hay datos para exportar', 'Cerrar', { duration: 3000 });
+      return;
+    }
+    const m = this.selectedMayorizacion();
+    const nombre = m ? `detalle-mayorizacion-${m.codigo}` : 'detalle-mayorizacion';
+    this.exportService.exportToCSV(rows, nombre, headers, keys);
+  }
+
+  exportarPDF(): void {
+    const { headers, keys, rows } = this._exportData;
+    if (!rows.length) {
+      this.snackBar.open('No hay datos para exportar', 'Cerrar', { duration: 3000 });
+      return;
+    }
+    const m = this.selectedMayorizacion();
+    const nombre = m ? `detalle-mayorizacion-${m.codigo}` : 'detalle-mayorizacion';
+    const titulo = m
+      ? `Detalle Mayorización — ${this.periodoLabel(m.periodo ?? null)} — ${this.formatFecha(m.fecha)}`
+      : 'Detalle Mayorización';
+    this.exportService.exportToPDF(rows, nombre, titulo, headers, keys);
   }
 }

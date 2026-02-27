@@ -9,6 +9,22 @@
   max-width: 1200px;
   margin: 0 auto;
 
+  mat-card-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+
+    mat-icon {
+      color: #667eea !important;
+    }
+  }
+
   .proceso-card {
     .tab-content {
       padding: 1.5rem 0;

@@ -1262,3 +1262,29 @@
     }
   }
 }
+/* ── Columna de subdetalles de activo fijo en la tabla de detalle ─────── */
+.col-acciones-subtdl {
+  white-space: nowrap;
+  position: relative;
+}
+
+/* Badge numérico sobre el botón de activo fijo */
+.subdtl-count-badge {
+  position: relative;
+  top: -10px;
+  left: -6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  vertical-align: top;
+  pointer-events: none;
+}
