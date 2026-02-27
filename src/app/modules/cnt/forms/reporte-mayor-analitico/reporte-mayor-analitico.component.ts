@@ -2,8 +2,10 @@ import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatDialog } from '@angular/material/dialog';
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
 import { AppStateService } from '../../../../shared/services/app-state.service';
+import { PlanCuentaSelectorDialogComponent } from '../../../../shared/components/plan-cuenta-selector-dialog/plan-cuenta-selector-dialog.component';
 import { MayorAnalitico } from '../../model/mayor-analitico';
 import { DetalleMayorAnalitico } from '../../model/detalle-mayor-analitico';
 import { ReporteMyanService } from '../../service/reporte-myan.service';
@@ -21,6 +23,7 @@ export class ReporteMayorAnaliticoComponent implements OnInit, OnDestroy {
   // ── Services ────────────────────────────────────────────────
   private fb              = inject(FormBuilder);
   private snackBar        = inject(MatSnackBar);
+  private dialog          = inject(MatDialog);
   private reporteService  = inject(ReporteMyanService);
   private appState        = inject(AppStateService);
   private funcionesDatos  = inject(FuncionesDatosService);
@@ -86,6 +89,29 @@ export class ReporteMayorAnaliticoComponent implements OnInit, OnDestroy {
     if (sec) {
       this.reporteService.eliminarReporte(sec).subscribe();
     }
+  }
+
+  // ── Selectores de Plan de Cuentas ─────────────────────────────
+  abrirSelectorCuentaInicio(): void {
+    const ref = this.dialog.open(PlanCuentaSelectorDialogComponent, {
+      width: '900px', maxWidth: '95vw',
+      data: { titulo: 'Seleccionar Cuenta Inicio', mostrarSoloMovimiento: false }
+    });
+    ref.afterClosed().subscribe(cuenta => {
+      if (!cuenta) return;
+      this.form.patchValue({ cuentaInicio: cuenta.cuentaContable });
+    });
+  }
+
+  abrirSelectorCuentaFin(): void {
+    const ref = this.dialog.open(PlanCuentaSelectorDialogComponent, {
+      width: '900px', maxWidth: '95vw',
+      data: { titulo: 'Seleccionar Cuenta Fin', mostrarSoloMovimiento: false }
+    });
+    ref.afterClosed().subscribe(cuenta => {
+      if (!cuenta) return;
+      this.form.patchValue({ cuentaFin: cuenta.cuentaContable });
+    });
   }
 
   // ── Generar Reporte ──────────────────────────────────────────
