@@ -189,6 +189,82 @@ logout(): void {
 
 ## Ejemplos de Uso
 
+### 0. Patrón de Campos P / H en Modelos
+
+En el sistema saaFE, cada campo que almacena un detalle de rubro se representa con **dos propiedades** en el modelo de backend:
+
+| Sufijo | Contenido | Valor típico |
+|--------|-----------|--------------|
+| `...P` | Código del **rubro padre** (constante fija del negocio) | `74` |
+| `...H` | **Código alterno** del detalle seleccionado por el usuario | `codigoAlterno` del `DetalleRubro` |
+
+**Ejemplo — GrupoProductoCobro (rubro 74 = Tipo de Grupo de Producto):**
+
+```typescript
+// Modelo
+export interface GrupoProductoCobro {
+  rubroTipoGrupoP: number;  // Siempre = 74 (identifica el rubro padre)
+  rubroTipoGrupoH: number;  // codigoAlterno elegido por el usuario
+}
+```
+
+**En el componente — cómo construir el combo:**
+
+```typescript
+import { DetalleRubroService } from '@shared/services/detalle-rubro.service';
+
+const RUBRO_TIPO_GRUPO_PRODUCTO = 74;  // constante fija
+
+export class GrupoProductosComponent implements OnInit {
+  tiposGrupoOptions = signal<DetalleRubro[]>([]);
+
+  private detalleRubroService = inject(DetalleRubroService);
+
+  ngOnInit(): void {
+    // Los datos ya están en caché — acceso síncrono
+    this.tiposGrupoOptions.set(
+      this.detalleRubroService.getDetallesByParent(RUBRO_TIPO_GRUPO_PRODUCTO)
+    );
+  }
+}
+```
+
+**En el template:**
+
+```html
+<mat-form-field appearance="outline">
+  <mat-label>Tipo de Grupo</mat-label>
+  <mat-select formControlName="rubroTipoGrupoH">
+    @for (tipo of tiposGrupoOptions(); track tipo.codigoAlterno) {
+      <mat-option [value]="tipo.codigoAlterno">{{ tipo.descripcion }}</mat-option>
+    }
+  </mat-select>
+</mat-form-field>
+```
+
+**Al construir el payload para guardar:**
+
+```typescript
+const payload = {
+  // ...otros campos...
+  rubroTipoGrupoP: RUBRO_TIPO_GRUPO_PRODUCTO,  // ← rubro padre, siempre fijo
+  rubroTipoGrupoH: valores.rubroTipoGrupoH,     // ← codigoAlterno elegido
+};
+```
+
+**Al leer un registro existente (patchValue):**
+
+```typescript
+this.formGrupo.patchValue({
+  // ...
+  rubroTipoGrupoH: grupo.rubroTipoGrupoH || null,  // ← restaurar la selección
+});
+```
+
+> **Resumen del patrón:** `P` = constante del catálogo (el número del rubro), `H` = `codigoAlterno` de la opción que el usuario seleccionó.
+
+---
+
 ### 1. Dropdown de Estados en Componente
 
 ```typescript

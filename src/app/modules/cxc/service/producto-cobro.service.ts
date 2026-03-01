@@ -21,7 +21,7 @@ export class ProductoCobroService {
 
   getAll(): Observable<ProductoCobro[] | null> {
     const wsGetById = '/getAll';
-    const url = `${ServiciosCxc.RS_PRDC}${wsGetById}`;
+    const url = `${ServiciosCxc.RS_PCCC}${wsGetById}`;
     return this.http.get<ProductoCobro[]>(url).pipe(
       catchError(this.handleError)
     );
@@ -29,7 +29,7 @@ export class ProductoCobroService {
 
   getById(id: string): Observable<ProductoCobro | null> {
     const wsGetById = '/getId/';
-    const url = `${ServiciosCxc.RS_PRDC}${wsGetById}${id}`;
+    const url = `${ServiciosCxc.RS_PCCC}${wsGetById}${id}`;
     return this.http.get<ProductoCobro>(url).pipe(
       catchError(this.handleError)
     );
@@ -37,21 +37,21 @@ export class ProductoCobroService {
 
   /** POST: add new record */
   add(datos: any): Observable<ProductoCobro | null> {
-    return this.http.post<ProductoCobro>(ServiciosCxc.RS_PRDC, datos, this.httpOptions).pipe(
+    return this.http.post<ProductoCobro>(ServiciosCxc.RS_PCCC, datos, this.httpOptions).pipe(
       catchError(this.handleError)
     );
   }
 
   /** PUT: update record */
   update(datos: any): Observable<ProductoCobro | null> {
-    return this.http.put<ProductoCobro>(ServiciosCxc.RS_PRDC, datos, this.httpOptions).pipe(
+    return this.http.put<ProductoCobro>(ServiciosCxc.RS_PCCC, datos, this.httpOptions).pipe(
       catchError(this.handleError)
     );
   }
 
   selectByCriteria(datos: any): Observable<ProductoCobro[] | null> {
     const wsEndpoint = '/selectByCriteria/';
-    const url = `${ServiciosCxc.RS_PRDC}${wsEndpoint}`;
+    const url = `${ServiciosCxc.RS_PCCC}${wsEndpoint}`;
     return this.http.post<any>(url, datos, this.httpOptions).pipe(
       catchError(this.handleError)
     );
@@ -60,7 +60,7 @@ export class ProductoCobroService {
   /** DELETE */
   delete(id: any): Observable<ProductoCobro | null> {
     const wsEndpoint = '/' + id;
-    const url = `${ServiciosCxc.RS_PRDC}${wsEndpoint}`;
+    const url = `${ServiciosCxc.RS_PCCC}${wsEndpoint}`;
     return this.http.delete<ProductoCobro>(url, this.httpOptions).pipe(
       catchError(this.handleError)
     );

@@ -61,6 +61,8 @@ export class ServiciosCnt {
   public static RS_RPRT = `${API_URL}/rprt`;
   public static RS_RCNC = `${API_URL}/rcnc`;
   public static RS_SLDS = `${API_URL}/slds`;
+  public static RS_SDAS = `${API_URL}/sdas`;
+  public static RS_DTMT = `${API_URL}/dtmt`;
 
 
 }

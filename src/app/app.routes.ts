@@ -1,16 +1,17 @@
 import { Routes } from '@angular/router';
-import { CentroArbolComponent } from './modules/cnt/forms/centro-arbol/centro-arbol.component';
-import { CentroGridComponent } from './modules/cnt/forms/centro-grid/centro-grid.component';
+import { CentroArbolComponent } from './modules/cnt/forms/parametrizacion/centro-arbol/centro-arbol.component';
+import { CentroGridComponent } from './modules/cnt/forms/parametrizacion/centro-grid/centro-grid.component';
 import { MayorizacionProcesoComponent } from './modules/cnt/forms/mayorizacion-proceso/mayorizacion-proceso.component';
-import { PeriodoContableComponent } from './modules/cnt/forms/periodo-contable/periodo-contable.component';
-import { PlanArbolComponent } from './modules/cnt/forms/plan-arbol/plan-arbol.component';
-import { PlanGridComponent } from './modules/cnt/forms/plan-grid/plan-grid.component';
-import { PlantillaGeneralComponent } from './modules/cnt/forms/plantilla-general/plantilla-general.component';
+import { PeriodoContableComponent } from './modules/cnt/forms/parametrizacion/periodo-contable/periodo-contable.component';
+import { PlanArbolComponent } from './modules/cnt/forms/parametrizacion/plan-arbol/plan-arbol.component';
+import { PlanGridComponent } from './modules/cnt/forms/parametrizacion/plan-grid/plan-grid.component';
+import { PlantillaGeneralComponent } from './modules/cnt/forms/parametrizacion/plantilla-general/plantilla-general.component';
+import { ReportesContablesComponent } from './modules/cnt/forms/parametrizacion/reportes-contables/reportes-contables.component';
 import { ReporteBalanceGeneralComponent } from './modules/cnt/forms/reporte-balance-general/reporte-balance-general.component';
 import { ReporteListadoAsientosComponent } from './modules/cnt/forms/reporte-listado-asientos/reporte-listado-asientos.component';
 import { ReporteMayorAnaliticoComponent } from './modules/cnt/forms/reporte-mayor-analitico/reporte-mayor-analitico.component';
-import { TipoAsientoGeneralGridComponent } from './modules/cnt/forms/tipo-asiento-general-grid/tipo-asiento-general-grid.component';
-import { TipoAsientoSistemaGridComponent } from './modules/cnt/forms/tipo-asiento-sistema-grid/tipo-asiento-sistema-grid.component';
+import { TipoAsientoGeneralGridComponent } from './modules/cnt/forms/parametrizacion/tipo-asiento-general-grid/tipo-asiento-general-grid.component';
+import { TipoAsientoSistemaGridComponent } from './modules/cnt/forms/parametrizacion/tipo-asiento-sistema-grid/tipo-asiento-sistema-grid.component';
 import { MenuContabilidadComponent } from './modules/cnt/menu/menucontabilidad/menucontabilidad.component';
 import { NaturalezaCuentaResolverService } from './modules/cnt/resolver/naturaleza-cuenta-resolver.service';
 import { AportesDashComponent } from './modules/crd/forms/contrato/aportes-dash/aportes-dash.component';
@@ -20,6 +21,7 @@ import { ContratoEditComponent } from './modules/crd/forms/contrato/contrato-edi
 import { MenucreditosComponent } from './modules/crd/menucreditos/menucreditos.component';
 import { ParametrizacionCreditosComponent } from './modules/crd/menucreditos/parametrizacion-creditos.component';
 import { MenucuentasxcobrarComponent } from './modules/cxc/menu/menucuentasxcobrar/menucuentasxcobrar.component';
+import { GrupoProductosComponent } from './modules/cxc/forms/grupo-productos.component/grupo-productos.component';
 import { MenucuentaxpagarComponent } from './modules/cxp/menu/menucuentasxpagar/menucuentasxpagar.component';
 import { LoginComponent } from './modules/dash/forms/login/login.component';
 import { MenuComponent } from './modules/dash/menu/menu.component';
@@ -81,7 +83,7 @@ import { AsientosContablesDinamico } from './modules/cnt/forms/asientos-contable
 import { DetalleMayorizacionComponent } from './modules/cnt/forms/detalle-mayorizacion/detalle-mayorizacion.component';
 import { ListadoAsientosComponent } from './modules/cnt/forms/listado-asientos/listado-asientos.component';
 import { MayorizacionComponent } from './modules/cnt/forms/mayorizacion/mayorizacion.component';
-import { NaturalezaDeCuentasComponent } from './modules/cnt/forms/naturaleza-cuentas/naturaleza-cuentas.component';
+import { NaturalezaDeCuentasComponent } from './modules/cnt/forms/parametrizacion/naturaleza-cuentas/naturaleza-cuentas.component';
 import { CargaAporteBackComponent } from './modules/crd/forms/archivos-petro/carga-aporte-back/carga-aporte-back.component';
 import { CargaAportesComponent } from './modules/crd/forms/archivos-petro/carga-aportes/carga-aportes.component';
 import { ConsultaArchivosPetroComponent } from './modules/crd/forms/archivos-petro/consulta-archivos-petro/consulta-archivos-petro.component';
@@ -106,6 +108,7 @@ import { entidadEditResolver } from './modules/crd/resolver/entidad-edit.resolve
 import { EstadosResolverService } from './modules/crd/resolver/estados-resolver.service';
 import { ListadosCrdResolverService } from './modules/crd/resolver/listados-crd-resolver.service';
 import { TiposCrdResolverService } from './modules/crd/resolver/tipos-crd-resolver.service';
+import { BaseInicialParticipesComponent } from './modules/crd/forms/historicos/base-inicial-participes/base-inicial-participes.component';
 
 export const routes: Routes = [
   { path: '', component: LoginComponent },
@@ -167,6 +170,10 @@ export const routes: Routes = [
         component: PlantillaGeneralComponent,
         canDeactivate: [canDeactivateGuard],
         data: { sistema: 1 },
+      },
+      {
+        path: 'parametrizacion/reportes-contables',
+        component: ReportesContablesComponent,
       },
       {
         path: 'periodo-contable',
@@ -687,6 +694,9 @@ export const routes: Routes = [
     path: 'menucuentasxcobrar',
     component: MenucuentasxcobrarComponent,
     canActivate: [authGuard],
+    children: [
+      { path: 'grupo-productos', component: GrupoProductosComponent, canActivate: [authGuard] },
+    ],
   },
   {
     path: 'menucuentaxpagar',
@@ -701,6 +711,7 @@ export const routes: Routes = [
       { path: 'parametrizacion', component: ParametrizacionCreditosComponent },
       { path: 'extr', component: ExtersComponent },
       { path: 'aportes-revisar', component: AportesPorRevisarComponent },
+      { path: 'participe-inicial', component: BaseInicialParticipesComponent },
       { path: 'entidad', component: EntidadCreditosComponent },
       { path: 'navegacion-cascada', component: NavegacionCascadaComponent },
       { path: 'participe-dash', component: ParticipeDashComponent },

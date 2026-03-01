@@ -104,6 +104,12 @@ export class MenuContabilidadComponent {
           idPermiso: 830,
           route: '/menucontabilidad/periodo-contable',
         },
+        {
+          displayName: 'Reportes Contables',
+          iconName: 'receipt_long',
+          idPermiso: 831,
+          route: '/menucontabilidad/parametrizacion/reportes-contables',
+        },
       ],
     },
     {
@@ -166,24 +172,24 @@ export class MenuContabilidadComponent {
           idPermiso: 830,
           route: '/menucontabilidad/reportes/balance-general',
         },
-        {
+        /*{
           displayName: 'Estado de Resultados',
           iconName: 'trending_up',
           idPermiso: 830,
           route: '/menucontabilidad/reportes/estado-resultados',
-        },
+        },*/
         {
           displayName: 'Mayor Analítico',
           iconName: 'analytics',
           idPermiso: 830,
           route: '/menucontabilidad/reportes/mayor-analitico',
         },
-        {
+        /*{
           displayName: 'Balance de Prueba',
           iconName: 'fact_check',
           idPermiso: 830,
           route: '/menucontabilidad/reportes/balance-prueba',
-        },
+        },*/
       ],
     },
     {

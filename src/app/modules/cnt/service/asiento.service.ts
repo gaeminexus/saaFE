@@ -58,6 +58,17 @@ export class AsientoService {
       .pipe(catchError(this.handleError));
   }
 
+  /**
+   * Obtener asiento por ID
+   */
+  generaCopia(idAsiento: number): Observable<Asiento> {
+    const wsGetById = '/generaCopia';
+    const url = `${this.baseUrl}${wsGetById}/${idAsiento}`;
+    return this.http
+      .get<Asiento>(url)
+      .pipe(catchError(this.handleError));
+  }
+
 
   selectByCriteria(datos: any): Observable<Asiento[] | null> {
     const wsGetById = '/selectByCriteria/';

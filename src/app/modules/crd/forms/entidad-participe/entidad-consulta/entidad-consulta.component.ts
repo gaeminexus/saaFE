@@ -101,13 +101,6 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
 
-  // Estados disponibles
-  estadosOptions = [
-    { value: null, label: 'Todos' },
-    { value: '1', label: 'Activo' },
-    { value: '0', label: 'Inactivo' },
-  ];
-
   // Opciones migrado
   migradoOptions = [
     { value: null, label: 'Todos' },
@@ -131,7 +124,6 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
   ngAfterViewInit(): void {
     if (this.paginator) {
       this.dataSource.paginator = this.paginator;
-      console.log('Paginator conectado:', this.paginator);
     }
     if (this.sort) {
       this.dataSource.sort = this.sort;
@@ -167,7 +159,6 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
         this.estadosParticipesOptions.set(result.estadosParticipes || []);
       },
       error: (error) => {
-        console.error('Error cargando opciones de selects:', error);
         this.snackBar.open('Error cargando opciones', 'Cerrar', { duration: 3000 });
       },
     });
@@ -328,7 +319,7 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
     // idEstado
     if (idEstado !== null && idEstado !== undefined) {
       const db = new DatosBusqueda();
-      db.asignaUnCampoSinTrunc(TipoDatos.INTEGER, 'idEstado', idEstado, TipoComandosBusqueda.IGUAL);
+      db.asignaUnCampoSinTrunc(TipoDatos.LONG, 'idEstado', idEstado, TipoComandosBusqueda.IGUAL);
       criterios.push(db);
     }
 
@@ -422,7 +413,6 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
       error: (error) => {
         this.entidades.set([]);
         this.dataSource.data = [];
-        console.error('Error en la búsqueda:', error);
         this.snackBar.open('Error al buscar entidades: ' + error, 'Cerrar', { duration: 3000 });
       },
     });
@@ -629,14 +619,12 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
             });
           },
           error: (error) => {
-            console.error('Error al actualizar entidad:', error);
             const mensaje = error?.mensaje || 'Error al actualizar el estado de la entidad';
             this.snackBar.open(mensaje, 'Cerrar', { duration: 5000 });
           },
         });
       },
       error: (error) => {
-        console.error('Error al recuperar entidad:', error);
         const mensaje = error?.mensaje || 'Error al recuperar la entidad';
         this.snackBar.open(mensaje, 'Cerrar', { duration: 5000 });
       },
@@ -675,24 +663,12 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
       // Los campos opcionales se toman de localStorage automáticamente
     });
 
-    // 🔍 DEBUG: Verificar objeto antes de enviar
-    console.log('📤 Enviando a auditoría:', JSON.stringify(registroAuditoria, null, 2));
-
     // Enviar registro de auditoría (no bloqueante)
     this.auditoriaService.add(registroAuditoria).subscribe({
       next: () => {
-        console.log('✅ Auditoría registrada:', {
-          componente: 'EntidadConsulta',
-          accion: 'UPDATE',
-          entidad: `ENTIDAD:${entidad.codigo}`,
-          razonSocial: entidad.razonSocial,
-          cambio: `${estadoAnterior.nombre} → ${estadoNuevo.nombre}`,
-          usuario: localStorage.getItem('username') || 'SYSTEM',
-          timestamp: new Date().toISOString(),
-        });
+        // Auditoría registrada exitosamente
       },
       error: (err) => {
-        console.error('❌ Error al registrar auditoría (no crítico):', err);
         // No mostramos error al usuario, la auditoría falla silenciosamente
       },
     });

@@ -1,0 +1,403 @@
+<div class="gp-wrapper">
+
+  <!-- ══ CABECERA ══════════════════════════════════════════════════════════ -->
+  <div class="gp-header">
+    <div class="gp-header__left">
+      <mat-icon class="gp-header__icon">category</mat-icon>
+      <div>
+        <h1 class="gp-header__title">Grupos de Productos</h1>
+        <p class="gp-header__sub">Parametrización de grupos y productos para documentos de cobro</p>
+      </div>
+    </div>
+    <button mat-flat-button color="primary" (click)="nuevoGrupo()" class="btn-nuevo-grupo">
+      <mat-icon>add</mat-icon>
+      Nuevo Grupo
+    </button>
+  </div>
+
+  <!-- ══ LAYOUT MAESTRO / DETALLE ═══════════════════════════════════════════ -->
+  <div class="gp-layout">
+
+    <!-- ────────────────────────────────────────────────────────────────────
+         PANEL IZQUIERDO – Lista de Grupos
+    ─────────────────────────────────────────────────────────────────────── -->
+    <aside class="gp-panel-left">
+
+      <!-- Buscador -->
+      <div class="gp-search">
+        <mat-icon class="gp-search__icon">search</mat-icon>
+        <input
+          class="gp-search__input"
+          placeholder="Buscar grupo..."
+          [value]="filtroBusqueda()"
+          (input)="filtroBusqueda.set($any($event.target).value)"
+        />
+        @if (filtroBusqueda()) {
+          <button mat-icon-button class="gp-search__clear" (click)="filtroBusqueda.set('')">
+            <mat-icon>close</mat-icon>
+          </button>
+        }
+      </div>
+
+      <!-- Spinner cargando -->
+      @if (cargando()) {
+        <div class="gp-loading">
+          <mat-spinner diameter="32"></mat-spinner>
+        </div>
+      }
+
+      <!-- Lista de grupos -->
+      @if (!cargando()) {
+        <div class="gp-group-list">
+          @for (grupo of gruposFiltrados(); track grupo.codigo) {
+            <div
+              class="gp-group-item"
+              [class.active]="grupoSeleccionado()?.codigo === grupo.codigo"
+              (click)="seleccionarGrupo(grupo)"
+            >
+              <div class="gp-group-item__avatar"
+                   [style.background]="'hsl(' + (grupo.codigo * 47 % 360) + ', 60%, 45%)'">
+                {{ grupo.nombre.charAt(0).toUpperCase() }}
+              </div>
+              <div class="gp-group-item__info">
+                <span class="gp-group-item__nombre">{{ grupo.nombre }}</span>
+                <span class="gp-group-item__cuenta">
+                  @if (grupo.planCuenta) {
+                    <mat-icon class="mini-icon">account_balance</mat-icon>
+                    {{ grupo.planCuenta.cuentaContable }}
+                  } @else {
+                    <span class="sin-cuenta">Sin cuenta contable</span>
+                  }
+                </span>
+              </div>
+              <span class="estado-badge" [class.activo]="grupo.estado === 1">
+                {{ grupo.estado === 1 ? 'A' : 'I' }}
+              </span>
+            </div>
+          }
+
+          @if (gruposFiltrados().length === 0 && !cargando()) {
+            <div class="gp-empty-list">
+              <mat-icon>category</mat-icon>
+              <p>No hay grupos registrados</p>
+            </div>
+          }
+        </div>
+      }
+    </aside>
+
+    <!-- ────────────────────────────────────────────────────────────────────
+         PANEL DERECHO – Formulario + Detalle de Productos
+    ─────────────────────────────────────────────────────────────────────── -->
+    <section class="gp-panel-right">
+
+      <!-- Estado vacío -->
+      @if (modoGrupo() === 'lista' && !grupoSeleccionado()) {
+        <div class="gp-placeholder">
+          <mat-icon>touch_app</mat-icon>
+          <h3>Seleccione un grupo</h3>
+          <p>Haga clic en un grupo de la lista o cree uno nuevo para comenzar</p>
+          <button mat-flat-button color="primary" (click)="nuevoGrupo()">
+            <mat-icon>add</mat-icon>
+            Crear primer grupo
+          </button>
+        </div>
+      }
+
+      <!-- Formulario de Grupo (nuevo o editar) -->
+      @if (modoGrupo() === 'nuevo' || (modoGrupo() === 'editar' && grupoSeleccionado())) {
+        <div class="gp-detail">
+
+          <!-- Cabecera del detalle -->
+          <div class="gp-detail__header">
+            <div class="gp-detail__header-info">
+              <mat-icon>{{ modoGrupo() === 'nuevo' ? 'add_circle' : 'edit' }}</mat-icon>
+              <h2>{{ tituloPanel }}</h2>
+            </div>
+            @if (modoGrupo() === 'editar') {
+              <button mat-icon-button color="warn"
+                      matTooltip="Eliminar grupo"
+                      (click)="eliminarGrupo(grupoSeleccionado()!)">
+                <mat-icon>delete_outline</mat-icon>
+              </button>
+            }
+          </div>
+
+          <!-- ─── Formulario Grupo ───────────────────────────────────── -->
+          <div class="gp-card">
+            <div class="gp-card__title">
+              <mat-icon>tune</mat-icon>
+              Datos del Grupo
+            </div>
+
+            <form [formGroup]="formGrupo" class="gp-form-grupo" (ngSubmit)="guardarGrupo()">
+
+              <div class="gp-form-row">
+                <mat-form-field appearance="outline" class="gp-field gp-field--grow">
+                  <mat-label>Nombre del Grupo</mat-label>
+                  <mat-icon matPrefix>label</mat-icon>
+                  <input matInput formControlName="nombre" placeholder="Ej: Productos Eléctricos">
+                  @if (formGrupo.get('nombre')?.hasError('required') && formGrupo.get('nombre')?.touched) {
+                    <mat-error>El nombre es requerido</mat-error>
+                  }
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="gp-field gp-field--tipo">
+                  <mat-label>Tipo de Grupo</mat-label>
+                  <mat-icon matPrefix>class</mat-icon>
+                  <mat-select formControlName="rubroTipoGrupoH">
+                    @for (tipo of tiposGrupoOptions(); track tipo.codigoAlterno) {
+                      <mat-option [value]="tipo.codigoAlterno">{{ tipo.descripcion }}</mat-option>
+                    }
+                  </mat-select>
+                  @if (formGrupo.get('rubroTipoGrupoH')?.hasError('required') && formGrupo.get('rubroTipoGrupoH')?.touched) {
+                    <mat-error>Requerido</mat-error>
+                  }
+                  @if (tiposGrupoOptions().length === 0) {
+                    <mat-hint>Sin opciones (rubro 74 vacío)</mat-hint>
+                  }
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="gp-field gp-field--estado">
+                  <mat-label>Estado</mat-label>
+                  <mat-select formControlName="estado">
+                    @for (op of opcionesEstado; track op.value) {
+                      <mat-option [value]="op.value">{{ op.label }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+              </div>
+
+              <!-- Selector de Plan de Cuentas -->
+              <div class="gp-cuenta-selector">
+                <div class="gp-cuenta-selector__label">
+                  <mat-icon>account_balance</mat-icon>
+                  Cuenta Contable
+                  <span class="required-star">*</span>
+                </div>
+
+                @if (planCuentaSeleccionada()) {
+                  <div class="gp-cuenta-card">
+                    <div class="gp-cuenta-card__info">
+                      <span class="cuenta-codigo">{{ planCuentaSeleccionada()!.cuentaContable }}</span>
+                      <span class="cuenta-nombre">{{ planCuentaSeleccionada()!.nombre }}</span>
+                    </div>
+                    <button mat-icon-button matTooltip="Cambiar cuenta" type="button"
+                            (click)="abrirSelectorCuenta()">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                  </div>
+                } @else {
+                  <button mat-stroked-button type="button" class="btn-seleccionar-cuenta"
+                          (click)="abrirSelectorCuenta()">
+                    <mat-icon>search</mat-icon>
+                    Seleccionar del Plan de Cuentas
+                  </button>
+                  @if (formGrupo.get('planCuenta')?.invalid && formGrupo.touched) {
+                    <p class="error-cuenta">Debe seleccionar una cuenta contable</p>
+                  }
+                }
+              </div>
+
+              <!-- Botones del formulario de grupo -->
+              <div class="gp-form-actions">
+                <button mat-stroked-button type="button" (click)="cancelarGrupo()">
+                  <mat-icon>close</mat-icon>
+                  Cancelar
+                </button>
+                <button mat-flat-button color="primary" type="submit"
+                        [disabled]="guardando()">
+                  @if (guardando()) {
+                    <mat-spinner diameter="18"></mat-spinner>
+                  } @else {
+                    <mat-icon>save</mat-icon>
+                  }
+                  {{ modoGrupo() === 'nuevo' ? 'Crear Grupo' : 'Guardar Cambios' }}
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- ─── Detalle: Productos del Grupo ──────────────────────── -->
+          @if (modoGrupo() === 'editar') {
+            <div class="gp-card gp-card--productos">
+
+              <div class="gp-card__title-row">
+                <div class="gp-card__title">
+                  <mat-icon>inventory_2</mat-icon>
+                  Productos del Grupo
+                  <span class="count-badge">{{ productos().length }}</span>
+                </div>
+                <button mat-flat-button color="accent" (click)="nuevoProducto()"
+                        [disabled]="modoProducto() !== 'lista'">
+                  <mat-icon>add</mat-icon>
+                  Agregar Producto
+                </button>
+              </div>
+
+              <!-- Formulario inline de Producto -->
+              @if (modoProducto() === 'nuevo' || modoProducto() === 'editar') {
+                <div class="gp-producto-form">
+                  <div class="gp-producto-form__header">
+                    <mat-icon>{{ modoProducto() === 'nuevo' ? 'add_box' : 'edit' }}</mat-icon>
+                    {{ modoProducto() === 'nuevo' ? 'Nuevo Producto' : 'Editando: ' + productoEditando()?.nombre }}
+                  </div>
+
+                  <form [formGroup]="formProducto" (ngSubmit)="guardarProducto()" class="gp-form-producto">
+
+                    <div class="gp-form-row">
+                      <mat-form-field appearance="outline" class="gp-field gp-field--short">
+                        <mat-label>Número / Código</mat-label>
+                        <mat-icon matPrefix>tag</mat-icon>
+                        <input matInput formControlName="numero" placeholder="Ej: 001">
+                        @if (formProducto.get('numero')?.hasError('required') && formProducto.get('numero')?.touched) {
+                          <mat-error>Requerido</mat-error>
+                        }
+                      </mat-form-field>
+
+                      <mat-form-field appearance="outline" class="gp-field gp-field--grow">
+                        <mat-label>Nombre del Producto</mat-label>
+                        <mat-icon matPrefix>inventory_2</mat-icon>
+                        <input matInput formControlName="nombre" placeholder="Ej: Transformador 15 KVA">
+                        @if (formProducto.get('nombre')?.hasError('required') && formProducto.get('nombre')?.touched) {
+                          <mat-error>El nombre es requerido</mat-error>
+                        }
+                      </mat-form-field>
+                    </div>
+
+                    <div class="gp-form-row">
+                      <mat-form-field appearance="outline" class="gp-field">
+                        <mat-label>Aplica IVA</mat-label>
+                        <mat-icon matPrefix>receipt</mat-icon>
+                        <mat-select formControlName="aplicaIVA">
+                          @for (op of opcionesSiNo; track op.value) {
+                            <mat-option [value]="op.value">{{ op.label }}</mat-option>
+                          }
+                        </mat-select>
+                      </mat-form-field>
+
+                      <mat-form-field appearance="outline" class="gp-field">
+                        <mat-label>Aplica Retención</mat-label>
+                        <mat-icon matPrefix>percent</mat-icon>
+                        <mat-select formControlName="aplicaRetencion">
+                          @for (op of opcionesSiNo; track op.value) {
+                            <mat-option [value]="op.value">{{ op.label }}</mat-option>
+                          }
+                        </mat-select>
+                      </mat-form-field>
+
+                      <mat-form-field appearance="outline" class="gp-field">
+                        <mat-label>% Base Retención</mat-label>
+                        <mat-icon matPrefix>percent</mat-icon>
+                        <input matInput type="number" formControlName="porcentajeBaseRetencion"
+                               min="0" max="100" placeholder="100">
+                        <span matSuffix>%</span>
+                      </mat-form-field>
+
+                      <mat-form-field appearance="outline" class="gp-field">
+                        <mat-label>Estado</mat-label>
+                        <mat-select formControlName="estado">
+                          @for (op of opcionesEstado; track op.value) {
+                            <mat-option [value]="op.value">{{ op.label }}</mat-option>
+                          }
+                        </mat-select>
+                      </mat-form-field>
+                    </div>
+
+                    <div class="gp-form-actions">
+                      <button mat-stroked-button type="button" (click)="cancelarProducto()">
+                        <mat-icon>close</mat-icon>
+                        Cancelar
+                      </button>
+                      <button mat-flat-button color="primary" type="submit"
+                              [disabled]="guardando()">
+                        @if (guardando()) {
+                          <mat-spinner diameter="18"></mat-spinner>
+                        } @else {
+                          <mat-icon>save</mat-icon>
+                        }
+                        {{ modoProducto() === 'nuevo' ? 'Agregar' : 'Actualizar' }}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              }
+
+              <!-- Tabla de productos -->
+              @if (productos().length > 0) {
+                <div class="table-wrapper">
+                  <table mat-table [dataSource]="dataSourceProductos" class="gp-table">
+
+                    <ng-container matColumnDef="numero">
+                      <th mat-header-cell *matHeaderCellDef>Nro.</th>
+                      <td mat-cell *matCellDef="let p">
+                        <span class="chip-numero">{{ p.numero }}</span>
+                      </td>
+                    </ng-container>
+
+                    <ng-container matColumnDef="nombre">
+                      <th mat-header-cell *matHeaderCellDef>Producto</th>
+                      <td mat-cell *matCellDef="let p">{{ p.nombre }}</td>
+                    </ng-container>
+
+                    <ng-container matColumnDef="aplicaIVA">
+                      <th mat-header-cell *matHeaderCellDef class="cell-center">IVA</th>
+                      <td mat-cell *matCellDef="let p" class="cell-center">
+                        <mat-icon [class.icon-si]="p.aplicaIVA === 1" [class.icon-no]="p.aplicaIVA !== 1">
+                          {{ p.aplicaIVA === 1 ? 'check_circle' : 'cancel' }}
+                        </mat-icon>
+                      </td>
+                    </ng-container>
+
+                    <ng-container matColumnDef="aplicaRetencion">
+                      <th mat-header-cell *matHeaderCellDef class="cell-center">Retención</th>
+                      <td mat-cell *matCellDef="let p" class="cell-center">
+                        <mat-icon [class.icon-si]="p.aplicaRetencion === 1" [class.icon-no]="p.aplicaRetencion !== 1">
+                          {{ p.aplicaRetencion === 1 ? 'check_circle' : 'cancel' }}
+                        </mat-icon>
+                      </td>
+                    </ng-container>
+
+                    <ng-container matColumnDef="estado">
+                      <th mat-header-cell *matHeaderCellDef class="cell-center">Estado</th>
+                      <td mat-cell *matCellDef="let p" class="cell-center">
+                        <span class="estado-badge" [class.activo]="p.estado === 1">
+                          {{ p.estado === 1 ? 'Activo' : 'Inactivo' }}
+                        </span>
+                      </td>
+                    </ng-container>
+
+                    <ng-container matColumnDef="acciones">
+                      <th mat-header-cell *matHeaderCellDef class="cell-center">Acciones</th>
+                      <td mat-cell *matCellDef="let p" class="cell-center">
+                        <button mat-icon-button color="primary" matTooltip="Editar"
+                                (click)="editarProducto(p)">
+                          <mat-icon>edit</mat-icon>
+                        </button>
+                        <button mat-icon-button color="warn" matTooltip="Eliminar"
+                                (click)="eliminarProducto(p)">
+                          <mat-icon>delete_outline</mat-icon>
+                        </button>
+                      </td>
+                    </ng-container>
+
+                    <tr mat-header-row *matHeaderRowDef="columnasProductos"></tr>
+                    <tr mat-row *matRowDef="let row; columns: columnasProductos"
+                        [class.row-editing]="productoEditando()?.codigo === row.codigo"></tr>
+                  </table>
+                </div>
+              } @else if (modoProducto() === 'lista') {
+                <div class="gp-empty-productos">
+                  <mat-icon>inventory_2</mat-icon>
+                  <p>Este grupo aún no tiene productos. Agregue el primero.</p>
+                </div>
+              }
+            </div>
+          }
+
+        </div>
+      }
+
+    </section>
+  </div>
+</div>

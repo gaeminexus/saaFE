@@ -1,26 +1,159 @@
-.reporte-container {
-  padding: 16px;
+$primary: #667eea;
+$primary-dark: #764ba2;
+$debe-color: #b71c1c;
+$haber-color: #1b5e20;
+$chip-gap: 12px;
+
+.bg-container {
+  padding: 16px 20px;
 }
-.form-card {
-  padding: 12px 0;
+
+.bg-title {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin: 0 0 1.2rem;
+  background: linear-gradient(135deg, $primary 0%, $primary-dark 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
-.row {
+
+.bg-card {
+  padding: 16px 20px;
+  margin-bottom: 16px;
+}
+
+.bg-filters-header {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #555;
+  margin-bottom: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.bg-row {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
   gap: 16px;
   margin-bottom: 12px;
+
+  &.bg-row--4 {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  mat-form-field {
+    width: 100%;
+  }
 }
-.col.small {
+
+.bg-checks-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  margin-bottom: 12px;
+}
+
+.bg-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 4px;
+
+  button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+}
+
+.spinner-btn {
+  display: inline-block;
+}
+
+.bg-error {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #ffebee;
+  border-left: 4px solid #f44336;
+  border-radius: 4px;
+  color: #c62828;
+  margin-bottom: 12px;
+
+  mat-icon { font-size: 1.1rem; }
 }
-.full-width {
+
+/* ── Info chips ──────────────────────────────────────── */
+.bg-reporte-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $chip-gap;
+  margin-bottom: 14px;
+}
+
+.bg-info-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  background: #f0f0f0;
+  border-radius: 16px;
+  font-size: 0.82rem;
+  font-weight: 500;
+
+  mat-icon { font-size: 0.95rem; height: 1rem; width: 1rem; }
+}
+
+/* ── Tabla ───────────────────────────────────────────── */
+.bg-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.bg-table {
   width: 100%;
 }
-.actions {
-  margin-top: 12px;
+
+.bg-cuenta-num {
+  font-family: monospace;
+  font-size: 0.85rem;
 }
-.error {
-  margin-top: 8px;
+
+.bg-col-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
+
+.bg-col-center {
+  text-align: center;
+}
+
+.bg-col-desc {
+  max-width: 280px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bg-debe  { color: $debe-color; }
+.bg-haber { color: $haber-color; }
+
+/* ── Filas especiales por nivel ──────────────────────── */
+.bg-row-level1 {
+  font-weight: 700;
+  background: #f3f3f3 !important;
+}
+
+.bg-row-level2 {
+  font-weight: 600;
+}
+
+.bg-row-total {
+  background: #e8eaf6 !important;
+  font-weight: 700;
+  border-top: 2px solid #3f51b5;
+}
+

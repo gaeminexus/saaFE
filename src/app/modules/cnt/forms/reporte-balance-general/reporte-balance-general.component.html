@@ -1,84 +1,153 @@
-<div class="reporte-container">
-  <h2>REPORTES DE ESTADOS DE CUENTAS CONTABLES</h2>
+<div class="bg-container">
+  <h2 class="bg-title">BALANCE CONTABLE</h2>
 
-  <div class="form-card">
-    <div class="row">
-      <div class="col">
-        <label>Tipo de Reporte:</label>
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-select [value]="tipoReporte()" (selectionChange)="tipoReporte.set($event.value)">
-            <mat-option *ngFor="let t of reportTypes" [value]="t">{{ t }}</mat-option>
+  <!-- ── Filtros ─────────────────────────────────────────────── -->
+  <mat-card class="bg-card">
+    <div class="bg-filters-header">Parámetros de Consulta</div>
+
+    <form [formGroup]="form" (ngSubmit)="generar()">
+      <!-- Fila 1: fechas + codigoAlterno + acumulacion -->
+      <div class="bg-row bg-row--4">
+        <mat-form-field appearance="outline">
+          <mat-label>Fecha Inicio</mat-label>
+          <input matInput [matDatepicker]="pickerInicio" formControlName="fechaInicio"
+                 placeholder="DD/MM/YYYY" readonly />
+          <mat-datepicker-toggle matIconSuffix [for]="pickerInicio"></mat-datepicker-toggle>
+          <mat-datepicker #pickerInicio></mat-datepicker>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Fecha Fin</mat-label>
+          <input matInput [matDatepicker]="pickerFin" formControlName="fechaFin"
+                 placeholder="DD/MM/YYYY" readonly />
+          <mat-datepicker-toggle matIconSuffix [for]="pickerFin"></mat-datepicker-toggle>
+          <mat-datepicker #pickerFin></mat-datepicker>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Tipo de Reporte</mat-label>
+          <mat-select formControlName="codigoAlterno">
+            @for (r of reportes(); track r.codigo) {
+              <mat-option [value]="r.codigoAlterno">{{ r.nombreReporte }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Acumulación</mat-label>
+          <mat-select formControlName="acumulacion">
+            <mat-option value="0">Por periodo</mat-option>
+            <mat-option value="1">Acumulado</mat-option>
           </mat-select>
         </mat-form-field>
       </div>
-      <div class="col">
-        <label>Fecha Inicial:</label>
-        <mat-form-field appearance="outline" class="full-width">
-          <input
-            matInput
-            type="date"
-            [value]="fechaInicial()"
-            (change)="fechaInicial.set($any($event.target).value)"
-          />
-        </mat-form-field>
+
+      <!-- Fila 2: opciones booleanas -->
+      <div class="bg-checks-row">
+        <mat-checkbox formControlName="incluyeCentrosCosto">
+          Incluye centros de costo
+        </mat-checkbox>
+        <mat-checkbox formControlName="reporteDistribuido">
+          Reporte distribuido
+        </mat-checkbox>
+        <mat-checkbox formControlName="eliminarSaldosCero">
+          Eliminar saldos cero
+        </mat-checkbox>
       </div>
-      <div class="col">
-        <label>Fecha Final:</label>
-        <mat-form-field appearance="outline" class="full-width">
-          <input
-            matInput
-            type="date"
-            [value]="fechaFinal()"
-            (change)="fechaFinal.set($any($event.target).value)"
-          />
-        </mat-form-field>
+
+      <!-- Acciones -->
+      <div class="bg-actions">
+        <button mat-raised-button color="primary"
+                type="submit"
+                [disabled]="loading() || form.invalid">
+          @if (loading()) {
+            <mat-spinner diameter="18" class="spinner-btn"></mat-spinner>
+          } @else {
+            <mat-icon>summarize</mat-icon>
+          }
+          Generar Balance
+        </button>
       </div>
+    </form>
+  </mat-card>
+
+  <!-- ── Error ──────────────────────────────────────────────── -->
+  @if (errorMsg()) {
+    <div class="bg-error">
+      <mat-icon>error_outline</mat-icon>
+      {{ errorMsg() }}
+    </div>
+  }
+
+  <!-- ── Resultado ──────────────────────────────────────────── -->
+  @if (generado()) {
+    <!-- Info chips -->
+    <div class="bg-reporte-info">
+      <span class="bg-info-chip">
+        <mat-icon>calendar_today</mat-icon>
+        Proceso: {{ formatFecha(fechaProceso()) }}
+      </span>
+      <span class="bg-info-chip">
+        <mat-icon>format_list_numbered</mat-icon>
+        Registros: {{ totalRegistros() }}
+      </span>
     </div>
 
-    <div class="row">
-      <div class="col small">
-        <label>Solo con movimientos:</label>
-        <mat-checkbox
-          [checked]="soloConMovimientos()"
-          (change)="soloConMovimientos.set($event.checked)"
-        ></mat-checkbox>
-      </div>
-      <div class="col small">
-        <label>Acumulado:</label>
-        <mat-checkbox
-          [checked]="acumulado()"
-          (change)="acumulado.set($event.checked)"
-        ></mat-checkbox>
-      </div>
-      <div class="col small">
-        <label>Visualizar Debe / Haber:</label>
-        <mat-checkbox
-          [checked]="visualizarDebeHaber()"
-          (change)="visualizarDebeHaber.set($event.checked)"
-        ></mat-checkbox>
-      </div>
-      <div class="col small">
-        <label>Centro Costo:</label>
-        <mat-checkbox
-          [checked]="centroCosto()"
-          (change)="centroCosto.set($event.checked)"
-        ></mat-checkbox>
-      </div>
-    </div>
+    <!-- Tabla de balance -->
+    <div class="bg-table-wrap">
+      <table mat-table [dataSource]="balanceData()" class="bg-table">
 
-    <div class="actions">
-      <button
-        mat-raised-button
-        color="primary"
-        [disabled]="loading() || !rangoFechasValido()"
-        (click)="generarReporte()"
-      >
-        Generar
-      </button>
-    </div>
+        <ng-container matColumnDef="cuentaContable">
+          <th mat-header-cell *matHeaderCellDef>N° Cuenta</th>
+          <td mat-cell *matCellDef="let row" class="bg-cuenta-num">{{ row.cuentaContable }}</td>
+          <td mat-footer-cell *matFooterCellDef><strong>TOTALES</strong></td>
+        </ng-container>
 
-    @if (errorMsg()) {
-      <div class="error">{{ errorMsg() }}</div>
-    }
-  </div>
+        <ng-container matColumnDef="nombreCuenta">
+          <th mat-header-cell *matHeaderCellDef>Nombre</th>
+          <td mat-cell *matCellDef="let row" class="bg-col-desc">{{ row.nombreCuenta }}</td>
+          <td mat-footer-cell *matFooterCellDef></td>
+        </ng-container>
+
+        <ng-container matColumnDef="nivel">
+          <th mat-header-cell *matHeaderCellDef class="bg-col-center">Nivel</th>
+          <td mat-cell *matCellDef="let row" class="bg-col-center">{{ row.nivel }}</td>
+          <td mat-footer-cell *matFooterCellDef></td>
+        </ng-container>
+
+        <ng-container matColumnDef="saldoCuenta">
+          <th mat-header-cell *matHeaderCellDef class="bg-col-num">Saldo Anterior</th>
+          <td mat-cell *matCellDef="let row" class="bg-col-num">{{ row.saldoCuenta | number:'1.2-2' }}</td>
+          <td mat-footer-cell *matFooterCellDef class="bg-col-num"><strong>{{ totalSaldoAnterior() | number:'1.2-2' }}</strong></td>
+        </ng-container>
+
+        <ng-container matColumnDef="valorDebe">
+          <th mat-header-cell *matHeaderCellDef class="bg-col-num bg-debe">Debe</th>
+          <td mat-cell *matCellDef="let row" class="bg-col-num bg-debe">{{ row.valorDebe | number:'1.2-2' }}</td>
+          <td mat-footer-cell *matFooterCellDef class="bg-col-num bg-debe"><strong>{{ totalDebe() | number:'1.2-2' }}</strong></td>
+        </ng-container>
+
+        <ng-container matColumnDef="valorHaber">
+          <th mat-header-cell *matHeaderCellDef class="bg-col-num bg-haber">Haber</th>
+          <td mat-cell *matCellDef="let row" class="bg-col-num bg-haber">{{ row.valorHaber | number:'1.2-2' }}</td>
+          <td mat-footer-cell *matFooterCellDef class="bg-col-num bg-haber"><strong>{{ totalHaber() | number:'1.2-2' }}</strong></td>
+        </ng-container>
+
+        <ng-container matColumnDef="valorActual">
+          <th mat-header-cell *matHeaderCellDef class="bg-col-num">Saldo Actual</th>
+          <td mat-cell *matCellDef="let row" class="bg-col-num">{{ row.valorActual | number:'1.2-2' }}</td>
+          <td mat-footer-cell *matFooterCellDef class="bg-col-num"><strong>{{ totalSaldoActual() | number:'1.2-2' }}</strong></td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="colsBalance; sticky: true"></tr>
+        <tr mat-row     *matRowDef="let row; columns: colsBalance"
+            [class.bg-row-level1]="row.nivel === 1"
+            [class.bg-row-level2]="row.nivel === 2"
+            [class.bg-row-total]="row.esTotalSeccion">
+        </tr>
+        <tr mat-footer-row *matFooterRowDef="colsBalance"></tr>
+      </table>
+    </div>
+  }
+
 </div>

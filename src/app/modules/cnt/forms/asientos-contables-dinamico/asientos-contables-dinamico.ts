@@ -37,6 +37,12 @@ import { TipoAsientoService } from '../../service/tipo-asiento.service';
 import { PlanCuentaSelectorDialogComponent } from '../../../../shared/components/plan-cuenta-selector-dialog/plan-cuenta-selector-dialog.component';
 import { ConfirmDialogComponent } from '../../../../shared/basics/confirm-dialog/confirm-dialog.component';
 import { JasperReportesService } from '../../../../shared/services/jasper-reportes.service';
+import { SubdetalleAsientoService } from '../../service/subdetalle-asiento.service';
+import {
+  SubdetalleAsientoDialogComponent,
+  SubdetalleItem,
+  SubdetalleDialogResult,
+} from '../../dialog/subdetalle-asiento-dialog/subdetalle-asiento-dialog.component';
 
 const RUBRO_MODULOS_SISTEMA = 15;
 const RUBRO_MODULO_CNT = 1;
@@ -49,6 +55,8 @@ interface CuentaItem {
   id?: string; // Para trackear items únicos en el grid (temporal)
   codigoDetalle?: number; // Código del detalle en BD (para updates)
   descripcion?: string; // Descripción del detalle (editable por usuario)
+  subdetalles?: SubdetalleItem[]; // Subdetalles de activo fijo pendientes de guardar
+  subdetallesEliminados?: number[]; // Códigos de subdetalles a eliminar al grabar
 }
 
 @Component({
@@ -104,7 +112,7 @@ export class AsientosContablesDinamico implements OnInit {
 
   // Grid de detalles del asiento
   detalleDataSource = new MatTableDataSource<any>([]);
-  detalleColumns: string[] = ['cuenta', 'descripcion', 'centroCosto', 'debe', 'haber', 'tipo'];
+  detalleColumns: string[] = ['cuenta', 'descripcion', 'centroCosto', 'debe', 'haber', 'tipo', 'acciones'];
 
   // Empresa del usuario logueado
   private get idSucursal(): number {
@@ -123,7 +131,8 @@ export class AsientosContablesDinamico implements OnInit {
     private snackBar: MatSnackBar,
     private route: ActivatedRoute,
     private router: Router,
-    private jasperReportes: JasperReportesService
+    private jasperReportes: JasperReportesService,
+    private subdetalleAsientoService: SubdetalleAsientoService
   ) {}
 
   ngOnInit(): void {
@@ -439,22 +448,74 @@ export class AsientosContablesDinamico implements OnInit {
         }
 
         // Recalcular totales y actualizar grid de detalles siempre
-        this.calcularTotalesGrid();
+        // Cargar subdetalles existentes en paralelo para mostrar badges
+        const todosItems = [...this.cuentasDebeGrid, ...this.cuentasHaberGrid];
+        const itemsConDetalle = todosItems.filter((i) => !!i.codigoDetalle);
 
-        // Resetear bandera porque los detalles cargados ya están guardados
-        this.hayDetallesSinGuardar = false;
+        const finalizarCarga = () => {
+          this.calcularTotalesGrid();
+          this.hayDetallesSinGuardar = false;
+          console.log('🔍 Estado después de cargar detalles:', {
+            hayDetallesSinGuardar: this.hayDetallesSinGuardar,
+            asientoCuadrado: this.asientoCuadrado,
+            totalDebe: this.totalDebe,
+            totalHaber: this.totalHaber,
+            diferencia: this.diferencia,
+            estado: this.form.get('estado')?.value
+          });
+          this.loading = false;
+        };
 
-        // Debug: Verificar estado de variables para botones
-        console.log('🔍 Estado después de cargar detalles:', {
-          hayDetallesSinGuardar: this.hayDetallesSinGuardar,
-          asientoCuadrado: this.asientoCuadrado,
-          totalDebe: this.totalDebe,
-          totalHaber: this.totalHaber,
-          diferencia: this.diferencia,
-          estado: this.form.get('estado')?.value
+        if (itemsConDetalle.length === 0) {
+          finalizarCarga();
+          return;
+        }
+
+        let subsCargados = 0;
+        itemsConDetalle.forEach((itemDet) => {
+          const crit = new DatosBusqueda();
+          crit.asignaValorConCampoPadre(
+            TipoDatosBusqueda.LONG,
+            'detalleAsiento',
+            'codigo',
+            String(itemDet.codigoDetalle),
+            TipoComandosBusqueda.IGUAL
+          );
+          this.subdetalleAsientoService.selectByCriteria([crit]).subscribe({
+            next: (subs: any) => {
+              itemDet.subdetalles = (subs ?? []).map((s: any) => ({
+                _codigo: s.codigo,
+                codigoActivo: s.codigoActivo ?? '',
+                nombreBien: s.nombreBien ?? '',
+                categoria: s.categoria ?? '',
+                tipo: s.tipo ?? '',
+                fechaAdquisicion: s.fechaAdquisicion ?? '',
+                costoAdquisicion: s.costoAdquisicion ?? null,
+                mejorasCapitalizadas: s.mejorasCapitalizadas ?? null,
+                valorResidual: s.valorResidual ?? null,
+                baseDepreciar: s.baseDepreciar ?? null,
+                vidaUtilTotal: s.vidaUtilTotal ?? null,
+                vidaUtilRemanente: s.vidaUtilRemanente ?? null,
+                porcentajeDepreciacion: s.porcentajeDepreciacion ?? null,
+                cuotaDepreciacion: s.cuotaDepreciacion ?? null,
+                depreciacionAcumulada: s.depreciacionAcumulada ?? null,
+                valorNetoLibros: s.valorNetoLibros ?? null,
+                ubicacionGeneral: s.ubicacionGeneral ?? '',
+                ubicacionEspecifica: s.ubicacionEspecifica ?? '',
+                responsable: s.responsable ?? '',
+                estadoFisico: s.estadoFisico ?? '',
+                factura: s.factura ?? '',
+                observaciones: s.observaciones ?? '',
+              } as SubdetalleItem));
+              subsCargados++;
+              if (subsCargados === itemsConDetalle.length) finalizarCarga();
+            },
+            error: () => {
+              subsCargados++;
+              if (subsCargados === itemsConDetalle.length) finalizarCarga();
+            },
+          });
         });
-
-        this.loading = false;
       },
       error: (err) => {
         this.loading = false;
@@ -955,6 +1016,7 @@ export class AsientosContablesDinamico implements OnInit {
           descripcion: item.descripcion || item.cuenta.nombre || '',
           nombreCuenta: item.cuenta.nombre || '',
           numeroCuenta: item.cuenta.cuentaContable || '',
+          _itemRef: item,
         };
 
         // Agregar centro de costo si está presente
@@ -983,6 +1045,7 @@ export class AsientosContablesDinamico implements OnInit {
           descripcion: item.descripcion || item.cuenta.nombre || '',
           nombreCuenta: item.cuenta.nombre || '',
           numeroCuenta: item.cuenta.cuentaContable || '',
+          _itemRef: item,
         };
 
         // Agregar centro de costo si está presente
@@ -1076,54 +1139,53 @@ export class AsientosContablesDinamico implements OnInit {
       return;
     }
     // Grabar cada detalle usando el servicio correspondiente
-    let detallesGrabados = 0;
-    let erroresDetalle: string[] = [];
+    let completados = 0;
+    const erroresDetalle: string[] = [];
+
+    const checkFinalizacion = () => {
+      completados++;
+      if (completados === detallesParaGrabar.length) {
+        this.loading = false;
+        const msg =
+          erroresDetalle.length === 0
+            ? `✅ ${completados} detalles del asiento grabados exitosamente`
+            : `⚠️ Detalles grabados con errores: ${erroresDetalle.join(', ')}`;
+        this.snackBar.open(msg, 'Cerrar', {
+          duration: 4000,
+          horizontalPosition: 'center',
+          verticalPosition: 'top',
+          panelClass: erroresDetalle.length === 0 ? ['success-snackbar'] : ['warning-snackbar'],
+        });
+        // Recargar detalles para mostrar los cambios
+        this.cargarDetallesAsiento(asientoId);
+        // Verificar si el asiento quedó descuadrado y actualizar estado si es necesario
+        this.verificarYActualizarEstadoAsiento(asientoId);
+      }
+    };
 
     detallesParaGrabar.forEach((detalle) => {
-      this.detalleAsientoService.add(detalle).subscribe({
+      const itemRef: CuentaItem | undefined = detalle._itemRef;
+      const payload = { ...detalle };
+      delete payload._itemRef;
+
+      this.detalleAsientoService.add(payload).subscribe({
         next: (response: any) => {
-          detallesGrabados++;
-          // Si todos los detalles se grabaron exitosamente
-          if (detallesGrabados === detallesParaGrabar.length) {
-            this.loading = false;
-
-            this.snackBar.open(
-              `✅ ${detallesGrabados} detalles del asiento grabados exitosamente`,
-              'Cerrar',
-              {
-                duration: 4000,
-                horizontalPosition: 'center',
-                verticalPosition: 'top',
-                panelClass: ['success-snackbar'],
-              }
+          const subdetallesPendientes: SubdetalleItem[] = itemRef?.subdetalles ?? [];
+          if (subdetallesPendientes.length > 0 && response?.codigo) {
+            this.guardarSubdetalles(
+              subdetallesPendientes,
+              [],
+              response.codigo,
+              erroresDetalle,
+              checkFinalizacion
             );
-            // Recargar detalles para mostrar los cambios
-            this.cargarDetallesAsiento(asientoId);
-
-            // IMPORTANTE: hayDetallesSinGuardar se resetea en cargarDetallesAsiento()
-
-            // Verificar si el asiento quedó descuadrado y actualizar estado si es necesario
-            this.verificarYActualizarEstadoAsiento(asientoId);
+          } else {
+            checkFinalizacion();
           }
         },
         error: (error: any) => {
-          erroresDetalle.push(`Error en detalle: ${error?.message || 'Desconocido'}`);
-          // Si ya procesamos todos los detalles (exitosos + errores)
-          if (detallesGrabados + erroresDetalle.length === detallesParaGrabar.length) {
-            this.loading = false;
-            if (erroresDetalle.length > 0) {
-              this.snackBar.open(
-                `❌ Errores al grabar detalles: ${erroresDetalle.join(', ')}`,
-                'Cerrar',
-                {
-                  duration: 6000,
-                  horizontalPosition: 'center',
-                  verticalPosition: 'top',
-                  panelClass: ['error-snackbar'],
-                }
-              );
-            }
-          }
+          erroresDetalle.push(`Detalle: ${error?.message || 'Desconocido'}`);
+          checkFinalizacion();
         },
       });
     });
@@ -1172,6 +1234,7 @@ export class AsientosContablesDinamico implements OnInit {
           nombreCuenta: item.cuenta.nombre || '',
           numeroCuenta: item.cuenta.cuentaContable || '',
           centroCosto: item.centroCosto ? { codigo: item.centroCosto.codigo } : null,
+          _itemRef: item,
         });
       }
     });
@@ -1189,6 +1252,7 @@ export class AsientosContablesDinamico implements OnInit {
           nombreCuenta: item.cuenta.nombre || '',
           numeroCuenta: item.cuenta.cuentaContable || '',
           centroCosto: item.centroCosto ? { codigo: item.centroCosto.codigo } : null,
+          _itemRef: item,
         });
       }
     });
@@ -1221,9 +1285,22 @@ export class AsientosContablesDinamico implements OnInit {
           const valorActualDebe = detalleActual.valorDebe || 0;
           const valorActualHaber = detalleActual.valorHaber || 0;
 
+          // También incluir en actualizar si tiene subdetalles nuevos, editados o eliminados
+          const tieneNuevosSubdetalles = (detalleActual._itemRef?.subdetalles ?? []).some(
+            (s: any) => !s._codigo
+          );
+          const tieneSubdetallesExistentes = (detalleActual._itemRef?.subdetalles ?? []).some(
+            (s: any) => !!s._codigo
+          );
+          const tieneSubdetallesEliminados =
+            (detalleActual._itemRef?.subdetallesEliminados ?? []).length > 0;
+
           if (valorOriginalDebe !== valorActualDebe ||
               valorOriginalHaber !== valorActualHaber ||
-              detalleOriginal.descripcion !== detalleActual.descripcion) {
+              detalleOriginal.descripcion !== detalleActual.descripcion ||
+              tieneNuevosSubdetalles ||
+              tieneSubdetallesExistentes ||
+              tieneSubdetallesEliminados) {
             operaciones.actualizar.push(detalleActual);
           }
           // Si no cambió nada, no hacer nada (mantener como está)
@@ -1302,8 +1379,18 @@ export class AsientosContablesDinamico implements OnInit {
 
     // Ejecutar creaciones
     operaciones.crear.forEach((detalle: any) => {
-      this.detalleAsientoService.add(detalle).subscribe({
-        next: (response) => {          verificarComplecion();
+      const itemRef: CuentaItem | undefined = detalle._itemRef;
+      const payload = { ...detalle };
+      delete payload._itemRef;
+
+      this.detalleAsientoService.add(payload).subscribe({
+        next: (response: any) => {
+          const subdetallesPendientes: SubdetalleItem[] = itemRef?.subdetalles ?? [];
+          if (subdetallesPendientes.length > 0 && response?.codigo) {
+            this.guardarSubdetalles(subdetallesPendientes, [], response.codigo, errores, verificarComplecion);
+          } else {
+            verificarComplecion();
+          }
         },
         error: (error) => {
           errores.push(`Error creando: ${error?.message || 'Desconocido'}`);          verificarComplecion();
@@ -1313,8 +1400,28 @@ export class AsientosContablesDinamico implements OnInit {
 
     // Ejecutar actualizaciones
     operaciones.actualizar.forEach((detalle: any) => {
-      this.detalleAsientoService.update(detalle).subscribe({
-        next: (response) => {          verificarComplecion();
+      const itemRef: CuentaItem | undefined = detalle._itemRef;
+      const payload = { ...detalle };
+      delete payload._itemRef;
+
+      this.detalleAsientoService.update(payload).subscribe({
+        next: () => {
+          // Pasar TODOS los subdetalles: guardarSubdetalles ya distingue add (sin _codigo) vs update (con _codigo)
+          const todosSubdetalles: SubdetalleItem[] = itemRef?.subdetalles ?? [];
+          const subdetallesAEliminar: number[] = itemRef?.subdetallesEliminados ?? [];
+          const hayOpsSub =
+            (todosSubdetalles.length > 0 || subdetallesAEliminar.length > 0) && payload.codigo;
+          if (hayOpsSub) {
+            this.guardarSubdetalles(
+              todosSubdetalles,
+              subdetallesAEliminar,
+              payload.codigo,
+              errores,
+              verificarComplecion
+            );
+          } else {
+            verificarComplecion();
+          }
         },
         error: (error) => {
           errores.push(`Error actualizando: ${error?.message || 'Desconocido'}`);          verificarComplecion();
@@ -1325,7 +1432,7 @@ export class AsientosContablesDinamico implements OnInit {
     // Ejecutar eliminaciones
     operaciones.eliminar.forEach((detalle: any) => {
       this.detalleAsientoService.delete(detalle.codigo).subscribe({
-        next: (response) => {          verificarComplecion();
+        next: () => {          verificarComplecion();
         },
         error: (error) => {
           errores.push(`Error eliminando: ${error?.message || 'Desconocido'}`);          verificarComplecion();
@@ -1359,6 +1466,8 @@ export class AsientosContablesDinamico implements OnInit {
         debe: cuenta.valor,
         haber: 0,
         tipo: 'DEBE',
+        itemRef: cuenta,
+        subdetalleCount: cuenta.subdetalles?.length ?? 0,
       });
     });
 
@@ -1373,6 +1482,8 @@ export class AsientosContablesDinamico implements OnInit {
         debe: 0,
         haber: cuenta.valor,
         tipo: 'HABER',
+        itemRef: cuenta,
+        subdetalleCount: cuenta.subdetalles?.length ?? 0,
       });
     });
 
@@ -2322,6 +2433,121 @@ export class AsientosContablesDinamico implements OnInit {
     this.form.get('tipo')?.disable();
     this.form.get('observaciones')?.disable();
     // fechaAsiento, fechaIngreso, numero, estado ya están deshabilitados o no editables
+  }
+
+  /**
+   * Abre el diálogo de subdetalles de activo fijo para una línea del detalle.
+   * Los subdetalles quedan en memoria y se persisten al presionar "Grabar Detalle".
+   */
+  abrirSubdetallesDialog(row: any): void {
+    const item: CuentaItem = row.itemRef;
+    if (!item) return;
+
+    const dialogRef = this.dialog.open(SubdetalleAsientoDialogComponent, {
+      width: '95vw',
+      maxWidth: '95vw',
+      height: '85vh',
+      data: {
+        cuentaInfo: `${item.cuenta?.cuentaContable ?? ''} — ${item.cuenta?.nombre ?? ''}`,
+        codigoDetalle: item.codigoDetalle,
+        subdetalles: item.subdetalles ?? [],
+      },
+    });
+
+    dialogRef.afterClosed().subscribe((resultado: SubdetalleDialogResult | null) => {
+      if (resultado !== null && resultado !== undefined) {
+        // El diálogo calcula internamente los deletedCodes comparando contra lo que cargó desde BD
+        item.subdetallesEliminados = [
+          ...(item.subdetallesEliminados ?? []),
+          ...resultado.deletedCodes,
+        ];
+
+        item.subdetalles = resultado.items;
+        // Refrescar la tabla para actualizar el contador del badge
+        this.calcularTotalesGrid();
+        this.showMessage(
+          `${resultado.items.length} subdetalle(s) configurado(s). Se guardarán al presionar "Grabar Detalle".`,
+          'success'
+        );
+      }
+    });
+  }
+
+  /**
+   * Persiste los subdetalles de activo fijo asociados a un DetalleAsiento ya grabado.
+   * Invoca onAllDone() cuando todos los registros han sido procesados (éxito o error).
+   */
+  private guardarSubdetalles(
+    subdetalles: SubdetalleItem[],
+    subdetallesAEliminar: number[],
+    codigoDetalle: number,
+    errores: string[],
+    onAllDone: () => void
+  ): void {
+    const totalOps = subdetalles.length + subdetallesAEliminar.length;
+    if (totalOps === 0) {
+      onAllDone();
+      return;
+    }
+    let subCompletados = 0;
+    const verificarSub = () => {
+      subCompletados++;
+      if (subCompletados === totalOps) onAllDone();
+    };
+
+    // Eliminar subdetalles removidos del diálogo
+    subdetallesAEliminar.forEach((codigo) => {
+      this.subdetalleAsientoService.delete(codigo).subscribe({
+        next: () => verificarSub(),
+        error: (err: any) => {
+          errores.push(`Error eliminando subdetalle ${codigo}: ${err?.message || 'Error'}`);
+          verificarSub();
+        },
+      });
+    });
+
+    subdetalles.forEach((sub) => {
+      const payload: any = {
+        detalleAsiento: { codigo: codigoDetalle },
+        codigoActivo: sub.codigoActivo || null,
+        nombreBien: sub.nombreBien || null,
+        categoria: sub.categoria || null,
+        tipo: sub.tipo || null,
+        fechaAdquisicion: sub.fechaAdquisicion || null,
+        costoAdquisicion: sub.costoAdquisicion ?? null,
+        mejorasCapitalizadas: sub.mejorasCapitalizadas ?? null,
+        valorResidual: sub.valorResidual ?? null,
+        baseDepreciar: sub.baseDepreciar ?? null,
+        vidaUtilTotal: sub.vidaUtilTotal ?? null,
+        vidaUtilRemanente: sub.vidaUtilRemanente ?? null,
+        porcentajeDepreciacion: sub.porcentajeDepreciacion ?? null,
+        cuotaDepreciacion: sub.cuotaDepreciacion ?? null,
+        depreciacionAcumulada: sub.depreciacionAcumulada ?? null,
+        valorNetoLibros: sub.valorNetoLibros ?? null,
+        ubicacionGeneral: sub.ubicacionGeneral || null,
+        ubicacionEspecifica: sub.ubicacionEspecifica || null,
+        responsable: sub.responsable || null,
+        estadoFisico: sub.estadoFisico || null,
+        factura: sub.factura || null,
+        observaciones: sub.observaciones || null,
+      };
+
+      if (sub._codigo) {
+        payload.codigo = sub._codigo;
+      }
+
+      const operacion = sub._codigo
+        ? this.subdetalleAsientoService.update(payload)
+        : this.subdetalleAsientoService.add(payload);
+
+      operacion.subscribe({
+        next: () => verificarSub(),
+        error: (err: any) => {
+          errores.push(`Subdetalle "${sub.nombreBien ?? ''}": ${err?.message || 'Error'}`);
+          verificarSub();
+        },
+      });
+    });
   }
 
   /**

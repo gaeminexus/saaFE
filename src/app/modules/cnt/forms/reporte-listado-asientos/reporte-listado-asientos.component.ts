@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, signal, OnInit } from '@angular/core';
+import { Component, signal, OnInit, inject } from '@angular/core';
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
@@ -15,6 +15,8 @@ import { DetalleAsiento } from '../../model/detalle-asiento';
 import { ExportService } from '../../../../shared/services/export.service';
 import { DetalleRubroService } from '../../../../shared/services/detalle-rubro.service';
 import { Router } from '@angular/router';
+import { MatDialog } from '@angular/material/dialog';
+import { ConfirmDialogComponent } from '../../../../shared/basics/confirm-dialog/confirm-dialog.component';
 
 @Component({
   selector: 'cnt-reporte-listado-asientos',
@@ -27,6 +29,9 @@ import { Router } from '@angular/router';
   styleUrls: ['./reporte-listado-asientos.component.scss'],
 })
 export class ReporteListadoAsientosComponent implements OnInit {
+
+  private dialog = inject(MatDialog);
+
   // Filtros
   fechaIngresoDesde = signal<Date | null>(null);
   fechaIngresoHasta = signal<Date | null>(null);
@@ -623,6 +628,42 @@ export class ReporteListadoAsientosComponent implements OnInit {
   editarAsiento(asiento: Asiento): void {
     this.router.navigate(['/menucontabilidad/procesos/asientos-dinamico', asiento.codigo], {
       queryParams: { fromReport: 'true' }
+    });
+  }
+
+  /**
+   * Genera una copia del asiento (con confirmación previa)
+   */
+  copiarAsiento(asiento: Asiento): void {
+    const ref = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: 'Copiar Asiento',
+        message: `¿Está seguro de que desea copiar el asiento N° ${asiento.numero ?? asiento.codigo}?`,
+        confirmText: 'Sí, copiar',
+        cancelText: 'Cancelar',
+      }
+    });
+    ref.afterClosed().subscribe(ok => {
+      if (!ok) return;
+      this.ejecutarCopiaAsiento(asiento);
+    });
+  }
+
+  private ejecutarCopiaAsiento(asiento: Asiento): void {
+    this.asientoService.generaCopia(asiento.codigo).subscribe({
+      next: (copia) => {
+        this.snackBar.open(
+          `Asiento copiado correctamente (nuevo código: ${copia?.codigo ?? ''})`,
+          'Cerrar',
+          { duration: 4000, panelClass: ['success-snackbar'] }
+        );
+      },
+      error: () => {
+        this.snackBar.open('Error al copiar el asiento', 'Cerrar', {
+          duration: 3000,
+          panelClass: ['error-snackbar'],
+        });
+      },
     });
   }
 }

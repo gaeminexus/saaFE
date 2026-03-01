@@ -158,8 +158,8 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
       if (codigoEntidadParam) {
         const codigo = Number(codigoEntidadParam);
 
-        // Si viene desde entidad-consulta, ocultar el campo de búsqueda
-        if (from === 'entidad-consulta') {
+        // Ocultar búsqueda cuando viene desde cualquier pantalla de consulta
+        if (from === 'entidad-consulta' || from === 'base-inicial-participes') {
           this.mostrarBusqueda = false;
         }
 
@@ -215,10 +215,16 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
   }
 
   /**
-   * Regresa a la pantalla anterior (entidad-consulta)
+   * Regresa a la pantalla anterior (entidad-consulta o base-inicial-participes según origen)
    */
   regresarAPantallaAnterior(): void {
-    this.router.navigate(['/menucreditos/entidad-consulta']);
+    this.route.queryParams.subscribe((params: any) => {
+      if (params['from'] === 'base-inicial-participes') {
+        this.router.navigate(['/menucreditos/participe-inicial']);
+      } else {
+        this.router.navigate(['/menucreditos/entidad-consulta']);
+      }
+    }).unsubscribe();
   }
 
   /**

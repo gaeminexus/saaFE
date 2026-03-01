@@ -108,8 +108,9 @@
               <mat-label>Estado</mat-label>
               <mat-icon matPrefix>toggle_on</mat-icon>
               <mat-select formControlName="idEstado">
-                @for (opt of estadosOptions; track $index) {
-                <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+                <mat-option [value]="null">Todos</mat-option>
+                @for (opt of estadosParticipesOptions(); track opt.codigo) {
+                <mat-option [value]="opt.codigo">{{ opt.nombre }}</mat-option>
                 }
               </mat-select>
             </mat-form-field>

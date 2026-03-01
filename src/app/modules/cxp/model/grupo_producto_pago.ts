@@ -9,6 +9,4 @@ export interface GrupoProductoPago{
     planCuenta: PlanCuenta;
     estado: number;
     empresa: Empresa;
-        
-
 }

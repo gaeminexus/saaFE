@@ -278,6 +278,30 @@
               </td>
             </ng-container>
 
+            <!-- Columna Acciones — Subdetalles de Activo Fijo -->
+            <ng-container matColumnDef="acciones">
+              <th mat-header-cell *matHeaderCellDef>Activos Fijos</th>
+              <td mat-cell *matCellDef="let detalle" class="col-acciones-subtdl">
+                <button
+                  mat-icon-button
+                  color="primary"
+                  type="button"
+                  (click)="abrirSubdetallesDialog(detalle)"
+                  [matTooltip]="
+                    detalle.subdetalleCount > 0
+                      ? 'Ver / editar ' + detalle.subdetalleCount + ' subdetalle(s) de activo fijo'
+                      : 'Agregar subdetalles de activo fijo a este detalle'
+                  "
+                  [disabled]="asientoActivo || asientoAnulado"
+                >
+                  <mat-icon>inventory_2</mat-icon>
+                </button>
+                @if (detalle.subdetalleCount > 0) {
+                  <span class="subdtl-count-badge">{{ detalle.subdetalleCount }}</span>
+                }
+              </td>
+            </ng-container>
+
             <tr mat-header-row *matHeaderRowDef="detalleColumns"></tr>
             <tr mat-row *matRowDef="let row; columns: detalleColumns"></tr>
           </table>
