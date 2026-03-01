@@ -1,0 +1,47 @@
+:host {
+  display: block;
+  padding: 16px 20px 20px;
+  box-sizing: border-box;
+  max-height: 90vh;
+  overflow: auto;
+}
+
+.dialog-header {
+  margin-bottom: 12px;
+}
+
+.dialog-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dialog-title h2,
+.dialog-title p {
+  margin: 0;
+}
+
+.dialog-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 16px;
+}

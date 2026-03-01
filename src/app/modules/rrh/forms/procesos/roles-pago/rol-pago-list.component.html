@@ -1,0 +1,458 @@
+<section class="rrh-rol-pago">
+  <mat-card class="rrh-card">
+    <mat-card-header>
+      <mat-icon class="title-icon">paid</mat-icon>
+      <mat-card-title>{{ titulo() }}</mat-card-title>
+      <mat-card-subtitle>Procesos de Recursos Humanos</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      <mat-drawer-container class="drawer-container" autosize>
+        <mat-drawer
+          class="rol-drawer"
+          mode="over"
+          position="end"
+          [opened]="formOpen()"
+          (openedChange)="formOpen.set($event)"
+        >
+          <div class="drawer-header">
+            <h3>{{ drawerTitle() }}</h3>
+            <button
+              type="button"
+              mat-icon-button
+              (click)="closeForm()"
+              aria-label="Cerrar formulario"
+            >
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+
+          <form [formGroup]="rolPagoForm" class="drawer-form">
+            <mat-expansion-panel [expanded]="true">
+              <mat-expansion-panel-header>
+                <mat-panel-title>Datos del Rol</mat-panel-title>
+              </mat-expansion-panel-header>
+
+              <div class="form-grid">
+                <mat-form-field appearance="outline">
+                  <mat-label>Nómina</mat-label>
+                  <input
+                    matInput
+                    [matAutocomplete]="nominaAuto"
+                    formControlName="nomina"
+                    [readonly]="readonlyMode()"
+                    required
+                  />
+                  <mat-autocomplete #nominaAuto="matAutocomplete" [displayWith]="nominaLabel">
+                    @for (nomina of nominas(); track nomina?.codigo) {
+                      <mat-option [value]="nomina">{{ nominaLabel(nomina) }}</mat-option>
+                    }
+                  </mat-autocomplete>
+                  @if (rolPagoForm.controls.nomina.touched && rolPagoForm.controls.nomina.invalid) {
+                    <mat-error>Nómina es requerida</mat-error>
+                  }
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Número</mat-label>
+                  <input matInput formControlName="numero" [readonly]="readonlyMode()" required />
+                  @if (rolPagoForm.controls.numero.touched && rolPagoForm.controls.numero.invalid) {
+                    <mat-error>Número es requerido</mat-error>
+                  }
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Fecha Emisión</mat-label>
+                  <input
+                    matInput
+                    [matDatepicker]="pickerFechaEmision"
+                    formControlName="fechaEmision"
+                    [readonly]="readonlyMode()"
+                    required
+                  />
+                  <mat-datepicker-toggle
+                    matIconSuffix
+                    [for]="pickerFechaEmision"
+                  ></mat-datepicker-toggle>
+                  <mat-datepicker #pickerFechaEmision></mat-datepicker>
+                  @if (
+                    rolPagoForm.controls.fechaEmision.touched &&
+                    rolPagoForm.controls.fechaEmision.invalid
+                  ) {
+                    <mat-error>Fecha Emisión es requerida</mat-error>
+                  }
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Estado</mat-label>
+                  <mat-select formControlName="estado" required>
+                    @for (estado of estadosRolPago; track estado) {
+                      <mat-option [value]="estado">{{ estado }}</mat-option>
+                    }
+                  </mat-select>
+                  @if (rolPagoForm.controls.estado.touched && rolPagoForm.controls.estado.invalid) {
+                    <mat-error>Estado es requerido</mat-error>
+                  }
+                </mat-form-field>
+              </div>
+            </mat-expansion-panel>
+
+            <mat-expansion-panel [expanded]="true">
+              <mat-expansion-panel-header>
+                <mat-panel-title>Documento</mat-panel-title>
+              </mat-expansion-panel-header>
+
+              <div class="form-grid">
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>rutaPdf</mat-label>
+                  <input matInput formControlName="rutaPdf" readonly />
+                </mat-form-field>
+              </div>
+
+              <div class="document-actions">
+                <button type="button" mat-stroked-button color="primary" (click)="onAdjuntarPdf()">
+                  <mat-icon>attach_file</mat-icon>
+                  Seleccionar/Adjuntar PDF
+                </button>
+                <button
+                  type="button"
+                  mat-stroked-button
+                  color="primary"
+                  [disabled]="!rolPagoForm.getRawValue().rutaPdf"
+                  (click)="onVerPdf(selectedRol()!)"
+                >
+                  <mat-icon>open_in_new</mat-icon>
+                  Abrir PDF
+                </button>
+              </div>
+            </mat-expansion-panel>
+
+            <mat-expansion-panel [expanded]="false">
+              <mat-expansion-panel-header>
+                <mat-panel-title>Auditoría</mat-panel-title>
+              </mat-expansion-panel-header>
+
+              <div class="form-grid">
+                <mat-form-field appearance="outline">
+                  <mat-label>fechaRegistro</mat-label>
+                  <input
+                    matInput
+                    [matDatepicker]="pickerRegistro"
+                    formControlName="fechaRegistro"
+                    readonly
+                  />
+                  <mat-datepicker-toggle
+                    matIconSuffix
+                    [for]="pickerRegistro"
+                  ></mat-datepicker-toggle>
+                  <mat-datepicker #pickerRegistro></mat-datepicker>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>usuarioRegistro</mat-label>
+                  <input matInput formControlName="usuarioRegistro" readonly />
+                </mat-form-field>
+              </div>
+            </mat-expansion-panel>
+
+            <div class="drawer-actions">
+              <button
+                type="button"
+                mat-stroked-button
+                color="primary"
+                [disabled]="true"
+                matTooltip="Disponible en fase funcional"
+              >
+                <mat-icon>picture_as_pdf</mat-icon>
+                Generar PDF
+              </button>
+
+              <button
+                type="button"
+                mat-flat-button
+                color="primary"
+                (click)="onGuardar()"
+                [disabled]="!saveEnabled()"
+              >
+                <mat-icon>save</mat-icon>
+                Guardar
+              </button>
+
+              <button type="button" mat-stroked-button (click)="closeForm()">
+                <mat-icon>close</mat-icon>
+                {{ readonlyMode() ? 'Cerrar' : 'Cancelar' }}
+              </button>
+            </div>
+          </form>
+        </mat-drawer>
+
+        <mat-drawer-content>
+          <div class="toolbar">
+            <div class="toolbar-title-actions">
+              <button type="button" mat-flat-button color="primary" (click)="onNuevoRol()">
+                <mat-icon>add</mat-icon>
+                Nuevo Rol
+              </button>
+
+              <button type="button" mat-stroked-button color="primary" (click)="onToolbarBuscar()">
+                <mat-icon>search</mat-icon>
+                Buscar
+              </button>
+
+              @if (selectedRol()) {
+                <mat-chip [color]="estadoChipColor(selectedEstadoLabel())" selected>
+                  {{ selectedEstadoLabel() }}
+                </mat-chip>
+              }
+            </div>
+          </div>
+
+          @if (filtrosVisibles()) {
+            <mat-card class="filters-card">
+              <mat-card-content>
+                <form [formGroup]="filtroForm">
+                  <div class="filters-grid">
+                    <mat-form-field appearance="outline">
+                      <mat-label>Nómina</mat-label>
+                      <input
+                        matInput
+                        [matAutocomplete]="nominaFiltroAuto"
+                        formControlName="nomina"
+                      />
+                      <mat-autocomplete
+                        #nominaFiltroAuto="matAutocomplete"
+                        [displayWith]="nominaLabel"
+                      >
+                        @for (nomina of nominas(); track nomina?.codigo) {
+                          <mat-option [value]="nomina">{{ nominaLabel(nomina) }}</mat-option>
+                        }
+                      </mat-autocomplete>
+                    </mat-form-field>
+
+                    <mat-form-field appearance="outline">
+                      <mat-label>Número</mat-label>
+                      <input matInput formControlName="numero" />
+                    </mat-form-field>
+
+                    <mat-form-field appearance="outline">
+                      <mat-label>Estado</mat-label>
+                      <mat-select formControlName="estado">
+                        <mat-option [value]="null">Todos</mat-option>
+                        @for (estado of estadosRolPago; track estado) {
+                          <mat-option [value]="estado">{{ estado }}</mat-option>
+                        }
+                      </mat-select>
+                    </mat-form-field>
+
+                    <mat-form-field appearance="outline">
+                      <mat-label>Fecha Emisión desde</mat-label>
+                      <input
+                        matInput
+                        [matDatepicker]="pickerEmisionDesde"
+                        formControlName="fechaEmisionDesde"
+                      />
+                      <mat-datepicker-toggle
+                        matIconSuffix
+                        [for]="pickerEmisionDesde"
+                      ></mat-datepicker-toggle>
+                      <mat-datepicker #pickerEmisionDesde></mat-datepicker>
+                    </mat-form-field>
+
+                    <mat-form-field appearance="outline">
+                      <mat-label>Fecha Emisión hasta</mat-label>
+                      <input
+                        matInput
+                        [matDatepicker]="pickerEmisionHasta"
+                        formControlName="fechaEmisionHasta"
+                      />
+                      <mat-datepicker-toggle
+                        matIconSuffix
+                        [for]="pickerEmisionHasta"
+                      ></mat-datepicker-toggle>
+                      <mat-datepicker #pickerEmisionHasta></mat-datepicker>
+                    </mat-form-field>
+
+                    <mat-form-field appearance="outline">
+                      <mat-label>Fecha Registro desde</mat-label>
+                      <input
+                        matInput
+                        [matDatepicker]="pickerRegistroDesde"
+                        formControlName="fechaRegistroDesde"
+                      />
+                      <mat-datepicker-toggle
+                        matIconSuffix
+                        [for]="pickerRegistroDesde"
+                      ></mat-datepicker-toggle>
+                      <mat-datepicker #pickerRegistroDesde></mat-datepicker>
+                    </mat-form-field>
+
+                    <mat-form-field appearance="outline">
+                      <mat-label>Fecha Registro hasta</mat-label>
+                      <input
+                        matInput
+                        [matDatepicker]="pickerRegistroHasta"
+                        formControlName="fechaRegistroHasta"
+                      />
+                      <mat-datepicker-toggle
+                        matIconSuffix
+                        [for]="pickerRegistroHasta"
+                      ></mat-datepicker-toggle>
+                      <mat-datepicker #pickerRegistroHasta></mat-datepicker>
+                    </mat-form-field>
+                  </div>
+
+                  <div class="toolbar-actions">
+                    <button type="button" mat-stroked-button (click)="limpiarFiltros()">
+                      <mat-icon>restart_alt</mat-icon>
+                      Limpiar
+                    </button>
+                    <button
+                      type="button"
+                      mat-flat-button
+                      color="primary"
+                      (click)="aplicarFiltros()"
+                    >
+                      <mat-icon>filter_alt</mat-icon>
+                      Aplicar filtros
+                    </button>
+                  </div>
+                </form>
+              </mat-card-content>
+            </mat-card>
+          }
+
+          @if (loading()) {
+            <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+          }
+
+          <div class="records-line">{{ totalItems() }} registros</div>
+
+          <div class="table-wrapper">
+            <table mat-table [dataSource]="dataSource" matSort class="mat-elevation-z1 rrh-table">
+              <ng-container matColumnDef="codigo">
+                <th mat-header-cell *matHeaderCellDef mat-sort-header>codigo</th>
+                <td mat-cell *matCellDef="let row">{{ row?.codigo }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="nomina">
+                <th mat-header-cell *matHeaderCellDef mat-sort-header>nomina</th>
+                <td mat-cell *matCellDef="let row">{{ nominaLabel(row?.nomina) }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="numero">
+                <th mat-header-cell *matHeaderCellDef mat-sort-header>numero</th>
+                <td mat-cell *matCellDef="let row">{{ row?.numero }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="fechaEmision">
+                <th mat-header-cell *matHeaderCellDef mat-sort-header>fechaEmision</th>
+                <td mat-cell *matCellDef="let row">{{ row?.fechaEmision | date: 'dd/MM/yyyy' }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="rutaPdf">
+                <th mat-header-cell *matHeaderCellDef>rutaPdf</th>
+                <td mat-cell *matCellDef="let row">
+                  @if (hasRutaPdf(row)) {
+                    <button
+                      type="button"
+                      mat-stroked-button
+                      color="primary"
+                      (click)="onVerPdf(row)"
+                    >
+                      Ver PDF
+                    </button>
+                  } @else {
+                    —
+                  }
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="estado">
+                <th mat-header-cell *matHeaderCellDef mat-sort-header>estado</th>
+                <td mat-cell *matCellDef="let row">
+                  <mat-chip [color]="estadoChipColor(row?.estado?.toString())" selected>
+                    {{ row?.estado }}
+                  </mat-chip>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="fechaRegistro">
+                <th mat-header-cell *matHeaderCellDef mat-sort-header>fechaRegistro</th>
+                <td mat-cell *matCellDef="let row">
+                  {{ row?.fechaRegistro | date: 'dd/MM/yyyy' }}
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="usuarioRegistro">
+                <th mat-header-cell *matHeaderCellDef mat-sort-header>usuarioRegistro</th>
+                <td mat-cell *matCellDef="let row">{{ row?.usuarioRegistro }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="acciones">
+                <th mat-header-cell *matHeaderCellDef class="acciones">acciones</th>
+                <td mat-cell *matCellDef="let row" class="acciones">
+                  <button
+                    type="button"
+                    mat-icon-button
+                    color="primary"
+                    (click)="onVer(row)"
+                    matTooltip="Ver"
+                  >
+                    <mat-icon>visibility</mat-icon>
+                  </button>
+                  <button
+                    type="button"
+                    mat-icon-button
+                    color="primary"
+                    (click)="onEditar(row)"
+                    matTooltip="Editar"
+                  >
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                  <button
+                    type="button"
+                    mat-icon-button
+                    color="warn"
+                    (click)="onAnularInactivar(row)"
+                    matTooltip="Anular / Inactivar"
+                  >
+                    <mat-icon>block</mat-icon>
+                  </button>
+                  <button
+                    type="button"
+                    mat-icon-button
+                    color="accent"
+                    (click)="onDescargarPdf(row)"
+                    matTooltip="Descargar PDF"
+                  >
+                    <mat-icon>download</mat-icon>
+                  </button>
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="columns()"></tr>
+              <tr mat-row *matRowDef="let row; columns: columns()" (click)="onRowSelect(row)"></tr>
+            </table>
+          </div>
+
+          <div class="paginator">
+            <mat-paginator
+              [length]="totalItems()"
+              [pageSize]="pageSize()"
+              [pageIndex]="pageIndex()"
+              [pageSizeOptions]="[5, 10, 20, 50]"
+              (page)="onPageChange($event)"
+            ></mat-paginator>
+          </div>
+
+          @if (!loading() && !dataSource.data.length) {
+            <div class="empty-state">
+              <mat-icon>inbox</mat-icon>
+              <span>No hay roles de pago con los criterios seleccionados</span>
+            </div>
+          }
+        </mat-drawer-content>
+      </mat-drawer-container>
+    </mat-card-content>
+  </mat-card>
+</section>

@@ -1,17 +1,17 @@
 import { Routes } from '@angular/router';
+import { MayorizacionProcesoComponent } from './modules/cnt/forms/mayorizacion-proceso/mayorizacion-proceso.component';
 import { CentroArbolComponent } from './modules/cnt/forms/parametrizacion/centro-arbol/centro-arbol.component';
 import { CentroGridComponent } from './modules/cnt/forms/parametrizacion/centro-grid/centro-grid.component';
-import { MayorizacionProcesoComponent } from './modules/cnt/forms/mayorizacion-proceso/mayorizacion-proceso.component';
 import { PeriodoContableComponent } from './modules/cnt/forms/parametrizacion/periodo-contable/periodo-contable.component';
 import { PlanArbolComponent } from './modules/cnt/forms/parametrizacion/plan-arbol/plan-arbol.component';
 import { PlanGridComponent } from './modules/cnt/forms/parametrizacion/plan-grid/plan-grid.component';
 import { PlantillaGeneralComponent } from './modules/cnt/forms/parametrizacion/plantilla-general/plantilla-general.component';
 import { ReportesContablesComponent } from './modules/cnt/forms/parametrizacion/reportes-contables/reportes-contables.component';
+import { TipoAsientoGeneralGridComponent } from './modules/cnt/forms/parametrizacion/tipo-asiento-general-grid/tipo-asiento-general-grid.component';
+import { TipoAsientoSistemaGridComponent } from './modules/cnt/forms/parametrizacion/tipo-asiento-sistema-grid/tipo-asiento-sistema-grid.component';
 import { ReporteBalanceGeneralComponent } from './modules/cnt/forms/reporte-balance-general/reporte-balance-general.component';
 import { ReporteListadoAsientosComponent } from './modules/cnt/forms/reporte-listado-asientos/reporte-listado-asientos.component';
 import { ReporteMayorAnaliticoComponent } from './modules/cnt/forms/reporte-mayor-analitico/reporte-mayor-analitico.component';
-import { TipoAsientoGeneralGridComponent } from './modules/cnt/forms/parametrizacion/tipo-asiento-general-grid/tipo-asiento-general-grid.component';
-import { TipoAsientoSistemaGridComponent } from './modules/cnt/forms/parametrizacion/tipo-asiento-sistema-grid/tipo-asiento-sistema-grid.component';
 import { MenuContabilidadComponent } from './modules/cnt/menu/menucontabilidad/menucontabilidad.component';
 import { NaturalezaCuentaResolverService } from './modules/cnt/resolver/naturaleza-cuenta-resolver.service';
 import { AportesDashComponent } from './modules/crd/forms/contrato/aportes-dash/aportes-dash.component';
@@ -20,8 +20,8 @@ import { ContratoDashComponent } from './modules/crd/forms/contrato/contrato-das
 import { ContratoEditComponent } from './modules/crd/forms/contrato/contrato-edit/contrato-edit.component';
 import { MenucreditosComponent } from './modules/crd/menucreditos/menucreditos.component';
 import { ParametrizacionCreditosComponent } from './modules/crd/menucreditos/parametrizacion-creditos.component';
-import { MenucuentasxcobrarComponent } from './modules/cxc/menu/menucuentasxcobrar/menucuentasxcobrar.component';
 import { GrupoProductosComponent } from './modules/cxc/forms/grupo-productos.component/grupo-productos.component';
+import { MenucuentasxcobrarComponent } from './modules/cxc/menu/menucuentasxcobrar/menucuentasxcobrar.component';
 import { MenucuentaxpagarComponent } from './modules/cxp/menu/menucuentasxpagar/menucuentasxpagar.component';
 import { LoginComponent } from './modules/dash/forms/login/login.component';
 import { MenuComponent } from './modules/dash/menu/menu.component';
@@ -31,10 +31,9 @@ import { AsistenciaListComponent } from './modules/rrh/forms/gestion/asistencia/
 import { ContratoEmpleadoListComponent } from './modules/rrh/forms/gestion/contratos/contrato-empleado-list.component';
 import { VacacionesListComponent } from './modules/rrh/forms/gestion/vacaciones/vacaciones-list.component';
 import { TurnoListComponent } from './modules/rrh/forms/parametrizacion/turnos/turno-list.component';
-import { RrhAportesComponent } from './modules/rrh/forms/procesos/aportes/rrh-aportes.component';
-import { RrhLiquidacionesComponent } from './modules/rrh/forms/procesos/liquidaciones/rrh-liquidaciones.component';
-import { RrhNominaComponent } from './modules/rrh/forms/procesos/nomina/rrh-nomina.component';
-import { RrhRolesPagoComponent } from './modules/rrh/forms/procesos/roles-pago/rrh-roles-pago.component';
+import { AporteRetencionListComponent } from './modules/rrh/forms/procesos/aportes-retenciones/aporte-retencion-list.component';
+import { LiquidacionListComponent } from './modules/rrh/forms/procesos/liquidacion/liquidacion-list.component';
+import { NominaListComponent } from './modules/rrh/forms/procesos/nomina/nomina-list.component';
 import { RrhReporteAsistenciaComponent } from './modules/rrh/forms/reportes/asistencia/rrh-reporte-asistencia.component';
 import { RrhReporteNominaComponent } from './modules/rrh/forms/reportes/nomina/rrh-reporte-nomina.component';
 import { RrhReporteRolesComponent } from './modules/rrh/forms/reportes/roles/rrh-reporte-roles.component';
@@ -96,6 +95,7 @@ import { NavegacionCascadaComponent } from './modules/crd/forms/entidad-particip
 import { ParticipeDashComponent } from './modules/crd/forms/entidad-participe/participe-dash/participe-dash.component';
 import { ParticipeInfoComponent } from './modules/crd/forms/entidad-participe/participe-info/participe-info.component';
 import { AportesPorRevisarComponent } from './modules/crd/forms/historicos/aportes-por-revisar/aportes-por-revisar.component';
+import { BaseInicialParticipesComponent } from './modules/crd/forms/historicos/base-inicial-participes/base-inicial-participes.component';
 import { ExtersComponent } from './modules/crd/forms/historicos/exters/exters.component';
 import { PagoCuotasComponent } from './modules/crd/forms/pago-cuotas/pago-cuotas.component';
 import { EstadosCrdComponent } from './modules/crd/forms/parametrizacion/estados-crd/estados-crd.component';
@@ -108,7 +108,6 @@ import { entidadEditResolver } from './modules/crd/resolver/entidad-edit.resolve
 import { EstadosResolverService } from './modules/crd/resolver/estados-resolver.service';
 import { ListadosCrdResolverService } from './modules/crd/resolver/listados-crd-resolver.service';
 import { TiposCrdResolverService } from './modules/crd/resolver/tipos-crd-resolver.service';
-import { BaseInicialParticipesComponent } from './modules/crd/forms/historicos/base-inicial-participes/base-inicial-participes.component';
 
 export const routes: Routes = [
   { path: '', component: LoginComponent },
@@ -576,13 +575,29 @@ export const routes: Routes = [
         data: { title: 'Gestión de Asistencia' },
       },
       // Procesos
-      { path: 'procesos/nomina', component: RrhNominaComponent, canActivate: [authGuard] },
-      { path: 'procesos/roles-pago', component: RrhRolesPagoComponent, canActivate: [authGuard] },
-      { path: 'procesos/aportes', component: RrhAportesComponent, canActivate: [authGuard] },
+      { path: 'procesos/nomina', component: NominaListComponent, canActivate: [authGuard] },
+      {
+        path: 'procesos/roles-pago',
+        loadComponent: () =>
+          import('./modules/rrh/forms/procesos/roles-pago/rol-pago-list.component').then(
+            (m) => m.RolPagoListComponent,
+          ),
+        canActivate: [authGuard],
+      },
+      {
+        path: 'procesos/aportes',
+        component: AporteRetencionListComponent,
+        canActivate: [authGuard],
+      },
+      {
+        path: 'procesos/liquidacion',
+        component: LiquidacionListComponent,
+        canActivate: [authGuard],
+      },
       {
         path: 'procesos/liquidaciones',
-        component: RrhLiquidacionesComponent,
-        canActivate: [authGuard],
+        redirectTo: 'procesos/liquidacion',
+        pathMatch: 'full',
       },
     ],
   },
@@ -667,13 +682,29 @@ export const routes: Routes = [
       },
       { path: 'gestion/asistencia', component: AsistenciaListComponent, canActivate: [authGuard] },
       // Procesos
-      { path: 'procesos/nomina', component: RrhNominaComponent, canActivate: [authGuard] },
-      { path: 'procesos/roles-pago', component: RrhRolesPagoComponent, canActivate: [authGuard] },
-      { path: 'procesos/aportes', component: RrhAportesComponent, canActivate: [authGuard] },
+      { path: 'procesos/nomina', component: NominaListComponent, canActivate: [authGuard] },
+      {
+        path: 'procesos/roles-pago',
+        loadComponent: () =>
+          import('./modules/rrh/forms/procesos/roles-pago/rol-pago-list.component').then(
+            (m) => m.RolPagoListComponent,
+          ),
+        canActivate: [authGuard],
+      },
+      {
+        path: 'procesos/aportes',
+        component: AporteRetencionListComponent,
+        canActivate: [authGuard],
+      },
+      {
+        path: 'procesos/liquidacion',
+        component: LiquidacionListComponent,
+        canActivate: [authGuard],
+      },
       {
         path: 'procesos/liquidaciones',
-        component: RrhLiquidacionesComponent,
-        canActivate: [authGuard],
+        redirectTo: 'procesos/liquidacion',
+        pathMatch: 'full',
       },
       // Reportes
       { path: 'reportes/roles', component: RrhReporteRolesComponent, canActivate: [authGuard] },

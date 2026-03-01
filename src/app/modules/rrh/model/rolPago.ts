@@ -8,6 +8,4 @@ export interface RolPago {
   estado: String;
   fechaRegistro: Date;
   usuarioRegistro: String;
-
-
 }

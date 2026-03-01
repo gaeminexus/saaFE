@@ -1,0 +1,112 @@
+.rrh-nomina {
+  padding: 16px;
+}
+
+.rrh-card {
+  border-radius: 16px;
+}
+
+.drawer-container {
+  min-height: 640px;
+}
+
+.nomina-drawer {
+  width: min(700px, 92vw);
+  padding: 16px;
+}
+
+.drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.drawer-header h3 {
+  margin: 0;
+  font-weight: 600;
+}
+
+.drawer-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.toolbar-title-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.filters-card {
+  margin-bottom: 12px;
+}
+
+.filters-grid,
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.toolbar-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.records-line {
+  font-weight: 600;
+  margin: 8px 0 12px;
+}
+
+.table-wrapper {
+  overflow: auto;
+}
+
+.rrh-table {
+  width: 100%;
+  min-width: 1200px;
+}
+
+.acciones {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.neto-cell,
+.neto-field {
+  font-weight: 700;
+}
+
+.paginator {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 12px;
+}
+
+.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px 0 12px;
+}
+
+.drawer-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+}
