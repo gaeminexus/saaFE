@@ -1,0 +1,181 @@
+<div class="dialog-container">
+  <div class="dialog-header">
+    <h2 mat-dialog-title>{{ titulo() }}</h2>
+    <button mat-icon-button mat-dialog-close [disabled]="guardando()">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <mat-dialog-content>
+    @if (loading()) {
+      <div class="loading-container">
+        <mat-spinner diameter="40"></mat-spinner>
+        <p>Cargando datos...</p>
+      </div>
+    } @else {
+      <form [formGroup]="form" class="asistencia-form">
+        <!-- Sección: Empleado -->
+        <div class="form-section">
+          <h3 class="section-title">
+            <mat-icon>person</mat-icon>
+            Información del Empleado
+          </h3>
+
+          <div class="form-row">
+            <!-- Búsqueda de empleado -->
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Buscar Empleado</mat-label>
+              <input
+                type="text"
+                matInput
+                formControlName="empleadoSearch"
+                [matAutocomplete]="autoEmpleado"
+                placeholder="Ingrese cédula o nombre (mín. 3 caracteres)"
+                [readonly]="readonly()"
+              />
+              <mat-icon matPrefix>search</mat-icon>
+              @if (buscandoEmpleado()) {
+                <mat-spinner matSuffix diameter="20"></mat-spinner>
+              }
+              <mat-autocomplete
+                #autoEmpleado="matAutocomplete"
+                [displayWith]="displayEmpleado.bind(this)"
+                (optionSelected)="onEmpleadoSeleccionado($event.option.value)"
+              >
+                @for (empleado of empleadosBusqueda(); track empleado.codigo) {
+                  <mat-option [value]="empleado">
+                    {{ empleado.identificacion }} - {{ getEmpleadoNombreCompleto(empleado) }}
+                  </mat-option>
+                }
+                @if (empleadosBusqueda().length === 0 && !buscandoEmpleado()) {
+                  <mat-option disabled>No se encontraron empleados</mat-option>
+                }
+              </mat-autocomplete>
+              <mat-error>{{ getErrorMessage('empleadoCodigo') }}</mat-error>
+            </mat-form-field>
+          </div>
+
+          <!-- Nombre completo (readonly) -->
+          @if (empleadoSeleccionado()) {
+            <div class="form-row">
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Nombre Completo</mat-label>
+                <input matInput formControlName="empleadoNombre" readonly />
+                <mat-icon matPrefix>badge</mat-icon>
+              </mat-form-field>
+            </div>
+          }
+        </div>
+
+        <!-- Sección: Datos de Asistencia -->
+        <div class="form-section">
+          <h3 class="section-title">
+            <mat-icon>access_time</mat-icon>
+            Datos de Asistencia
+          </h3>
+
+          <div class="form-row">
+            <!-- Fecha -->
+            <mat-form-field appearance="outline">
+              <mat-label>Fecha *</mat-label>
+              <input
+                matInput
+                [matDatepicker]="pickerFecha"
+                formControlName="fecha"
+                [readonly]="readonly()"
+              />
+              <mat-datepicker-toggle matSuffix [for]="pickerFecha"></mat-datepicker-toggle>
+              <mat-datepicker #pickerFecha></mat-datepicker>
+              <mat-error>{{ getErrorMessage('fecha') }}</mat-error>
+              @if (esRetroactivo()) {
+                <mat-hint class="warning-hint">
+                  <mat-icon>warning</mat-icon>
+                  Registro retroactivo - Observación obligatoria
+                </mat-hint>
+              }
+            </mat-form-field>
+
+            <!-- Hora de Marcación -->
+            <mat-form-field appearance="outline">
+              <mat-label>Hora de Marcación *</mat-label>
+              <input matInput type="time" formControlName="horaEntrada" [readonly]="readonly()" />
+              <mat-icon matPrefix>schedule</mat-icon>
+              <mat-error>{{ getErrorMessage('horaEntrada') }}</mat-error>
+            </mat-form-field>
+          </div>
+
+          <div class="form-row">
+            <!-- Tipo de Registro -->
+            <mat-form-field appearance="outline">
+              <mat-label>Tipo de Registro *</mat-label>
+              <mat-select formControlName="tipoRegistro">
+                @for (opt of tipoRegistroOptions; track opt.value) {
+                  <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+                }
+              </mat-select>
+              <mat-icon matPrefix>category</mat-icon>
+              <mat-error>{{ getErrorMessage('tipoRegistro') }}</mat-error>
+              <mat-hint>Valores permitidos: Entrada o Salida</mat-hint>
+            </mat-form-field>
+          </div>
+
+          <!-- Observación -->
+          <div class="form-row">
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Observación {{ observacionRequerida() ? '*' : '' }}</mat-label>
+              <textarea
+                matInput
+                formControlName="observacion"
+                rows="3"
+                placeholder="Ingrese observaciones sobre el registro..."
+                [readonly]="readonly()"
+              ></textarea>
+              <mat-icon matPrefix>comment</mat-icon>
+              <mat-error>{{ getErrorMessage('observacion') }}</mat-error>
+              @if (observacionRequerida()) {
+                <mat-hint class="warning-hint">
+                  <mat-icon>info</mat-icon>
+                  Observación obligatoria para registros retroactivos o tardanzas
+                </mat-hint>
+              }
+            </mat-form-field>
+          </div>
+        </div>
+
+        <!-- Info adicional (solo en edición/vista) -->
+        @if (!esNuevo() && form.get('usuarioRegistro')?.value) {
+          <div class="form-section info-section">
+            <h3 class="section-title">
+              <mat-icon>info</mat-icon>
+              Información de Auditoría
+            </h3>
+            <div class="audit-info">
+              <p><strong>Usuario Registro:</strong> {{ form.get('usuarioRegistro')?.value }}</p>
+              <p><strong>Fecha Registro:</strong> {{ form.get('fechaRegistro')?.value }}</p>
+            </div>
+          </div>
+        }
+      </form>
+    }
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button type="button" (click)="onCancelar()" [disabled]="guardando()">
+      {{ readonly() ? 'Cerrar' : 'Cancelar' }}
+    </button>
+    @if (!readonly()) {
+      <button
+        mat-raised-button
+        color="primary"
+        type="button"
+        (click)="onGuardar()"
+        [disabled]="form.invalid || guardando()"
+      >
+        @if (guardando()) {
+          <mat-spinner diameter="20" class="btn-spinner"></mat-spinner>
+        }
+        <span>{{ guardando() ? 'Guardando...' : 'Guardar' }}</span>
+      </button>
+    }
+  </mat-dialog-actions>
+</div>

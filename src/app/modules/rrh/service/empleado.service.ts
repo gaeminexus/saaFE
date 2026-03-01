@@ -18,6 +18,7 @@ export class EmpleadoService {
   getAll(): Observable<Empleado[] | null> {
     const wsGetAll = '/getAll';
     const url = `${ServiciosRhh.RS_MPLD}${wsGetAll}`;
+    console.log('🔍 Consultando empleados desde backend:', url);
     return this.http.get<Empleado[]>(url).pipe(catchError(this.handleError));
   }
 
@@ -46,9 +47,19 @@ export class EmpleadoService {
   selectByCriteria(datos: any): Observable<Empleado[] | null> {
     const wsCriteria = '/selectByCriteria/';
     const url = `${ServiciosRhh.RS_MPLD}${wsCriteria}`;
-    return this.http
-      .post<Empleado[]>(url, datos, this.httpOptions)
-      .pipe(catchError(this.handleError));
+    console.log('🔍 Consultando empleados desde backend:', url);
+    console.log('📋 Criterios enviados (JSON):', JSON.stringify(datos, null, 2));
+    return this.http.post<Empleado[]>(url, datos, this.httpOptions).pipe(
+      catchError((error: HttpErrorResponse) => {
+        if (error.status === 400) {
+          // El backend SAA devuelve 400 cuando no hay registros (comportamiento esperado)
+          console.warn('⚠️ Sin empleados en BD para los criterios dados. Retornando array vacío.');
+          return of([]);
+        }
+        console.error('❌ Error al consultar empleados:', error);
+        return this.handleError(error);
+      }),
+    );
   }
 
   // DELETE: eliminar por ID

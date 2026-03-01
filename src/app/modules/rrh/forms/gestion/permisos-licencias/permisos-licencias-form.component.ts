@@ -9,12 +9,7 @@ import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda
 import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { Empleado } from '../../../model/empleado';
-import {
-  EstadoPermisoLicencia,
-  ModalidadPermiso,
-  PermisoLicencia,
-  TipoPermiso,
-} from '../../../model/permiso-licencia';
+import { ModalidadPermiso, PermisoLicencia, TipoPermiso } from '../../../model/permiso-licencia';
 import { EmpleadoService } from '../../../service/empleado.service';
 import { PermisoLicenciaService } from '../../../service/permiso-licencia.service';
 import { TipoPermisoService } from '../../../service/tipo-permiso.service';
@@ -97,23 +92,28 @@ export class PermisosLicenciasFormComponent implements OnInit {
     return tipo?.modalidad === 'H' && (!this.formHoraInicio() || !this.formHoraFin());
   });
 
-  documentoRequerido = computed(() => {
-    if (this.isReadonly()) return false;
-    const tipo = this.formTipoPermiso();
-    return tipo?.requiereDocumento && !this.formNumeroDocumento().trim();
-  });
-
   esRetroactivo = computed(() => {
     const fechaInicio = this.formFechaInicio();
     if (!fechaInicio) return false;
+
     const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
-    return fechaInicio < hoy;
+    hoy.setHours(0, 0, 0, 0); // Resetear tiempo para comparar solo fechas
+
+    const inicio = new Date(fechaInicio);
+    inicio.setHours(0, 0, 0, 0);
+
+    return inicio < hoy;
   });
 
   observacionRequerida = computed(() => {
     if (this.isReadonly()) return false;
     return this.esRetroactivo() && !this.formObservacion().trim();
+  });
+
+  documentoRequerido = computed(() => {
+    if (this.isReadonly()) return false;
+    const tipo = this.formTipoPermiso();
+    return tipo?.requiereDocumento && !this.formNumeroDocumento().trim();
   });
 
   constructor(
@@ -273,45 +273,35 @@ export class PermisosLicenciasFormComponent implements OnInit {
     this.loading.set(true);
     this.errorMsg.set('');
 
-    try {
-      // Validar solapamientos
-      await this.validarSolapamientos();
+    const datos = this.buildRequestData();
 
-      const datos = this.buildRequestData();
+    let observable: Observable<PermisoLicencia | null>;
 
-      let observable: Observable<PermisoLicencia | null>;
-
-      if (this.formData.mode === 'new') {
-        observable = this.permisoLicenciaService.add(datos);
-      } else {
-        observable = this.permisoLicenciaService.update(datos);
-      }
-
-      observable.subscribe({
-        next: (result) => {
-          this.loading.set(false);
-          if (result) {
-            this.showSuccess(
-              this.formData.mode === 'new'
-                ? 'Permiso creado exitosamente'
-                : 'Permiso actualizado exitosamente',
-            );
-            this.dialogRef.close(true);
-          } else {
-            this.errorMsg.set('No se pudo procesar la solicitud');
-          }
-        },
-        error: (err) => {
-          this.loading.set(false);
-          this.errorMsg.set(this.extractError(err) || 'Error al guardar el permiso');
-        },
-      });
-    } catch (error) {
-      this.loading.set(false);
-      if (typeof error === 'string') {
-        this.errorMsg.set(error);
-      }
+    if (this.formData.mode === 'new') {
+      observable = this.permisoLicenciaService.add(datos);
+    } else {
+      observable = this.permisoLicenciaService.update(datos);
     }
+
+    observable.subscribe({
+      next: (result) => {
+        this.loading.set(false);
+        if (result) {
+          this.showSuccess(
+            this.formData.mode === 'new'
+              ? 'Permiso creado exitosamente'
+              : 'Permiso actualizado exitosamente',
+          );
+          this.dialogRef.close(true);
+        } else {
+          this.errorMsg.set('No se pudo procesar la solicitud');
+        }
+      },
+      error: (err) => {
+        this.loading.set(false);
+        this.errorMsg.set(this.extractError(err) || 'Error al guardar el permiso');
+      },
+    });
   }
 
   private validarFormulario(): boolean {
@@ -334,7 +324,19 @@ export class PermisosLicenciasFormComponent implements OnInit {
       return false;
     }
 
+    // Validar observación en solicitudes retroactivas
+    if (this.esRetroactivo() && !this.formObservacion().trim()) {
+      this.errorMsg.set('La observación es obligatoria para solicitudes retroactivas');
+      return false;
+    }
+
     const tipo = this.formTipoPermiso()!;
+
+    // Validar documento si es requerido
+    if (tipo.requiereDocumento && !this.formNumeroDocumento().trim()) {
+      this.errorMsg.set('El número de documento es obligatorio para este tipo de permiso');
+      return false;
+    }
 
     // Validaciones según modalidad
     if (tipo.modalidad === ModalidadPermiso.DIAS) {
@@ -369,53 +371,7 @@ export class PermisosLicenciasFormComponent implements OnInit {
       }
     }
 
-    // Documento requerido
-    if (tipo.requiereDocumento && !this.formNumeroDocumento().trim()) {
-      this.errorMsg.set('El número de documento es obligatorio para este tipo de permiso');
-      return false;
-    }
-
-    // Observación requerida para casos retroactivos
-    if (this.esRetroactivo() && !this.formObservacion().trim()) {
-      this.errorMsg.set('La observación es obligatoria para solicitudes retroactivas');
-      return false;
-    }
-
     return true;
-  }
-
-  private async validarSolapamientos(): Promise<void> {
-    const empleado = this.formEmpleado()!;
-    const fechaInicio = this.formFechaInicio()!;
-    const fechaFin = this.formFechaFin();
-    const tipo = this.formTipoPermiso()!;
-
-    const datosValidacion = {
-      empleadoCodigo: empleado.codigo,
-      fechaInicio: fechaInicio.toISOString(),
-      fechaFin: fechaFin?.toISOString() || fechaInicio.toISOString(),
-      modalidad: tipo.modalidad,
-      permisoCodigoExcluir: this.formData.data?.codigo || null,
-    };
-
-    return new Promise((resolve, reject) => {
-      this.permisoLicenciaService.validarSolapamientos(datosValidacion).subscribe({
-        next: (result) => {
-          if (result?.tieneSolapamiento) {
-            reject(
-              `Existe un solapamiento con: ${result.detallesSolapamiento || 'Otro permiso o vacación'}`,
-            );
-          } else {
-            resolve();
-          }
-        },
-        error: (err) => {
-          // Si el servicio de validación falla, continuar con advertencia
-          console.warn('No se pudo validar solapamientos:', err);
-          resolve();
-        },
-      });
-    });
   }
 
   private buildRequestData(): any {
@@ -430,7 +386,9 @@ export class PermisosLicenciasFormComponent implements OnInit {
       conGoce: this.formConGoce(),
       observacion: this.formObservacion().trim() || null,
       numeroDocumento: this.formNumeroDocumento().trim() || null,
-      estado: EstadoPermisoLicencia.PENDIENTE,
+      estado: 'SOLICITADA', // Backend usa strings como en SolicitudVacaciones
+      usuarioRegistro: this.getUsuarioRegistro(),
+      fechaRegistro: new Date().toISOString(),
     };
 
     if (this.formData.mode === 'edit' && this.formData.data) {
@@ -452,6 +410,10 @@ export class PermisosLicenciasFormComponent implements OnInit {
     }
 
     return datos;
+  }
+
+  private getUsuarioRegistro(): string {
+    return localStorage.getItem('username') || 'sistema';
   }
 
   formatEmpleado(empleado: Empleado): string {
@@ -503,25 +465,27 @@ export class PermisosLicenciasFormComponent implements OnInit {
     return '';
   }
 
-  getEstadoColor(estado: number): string {
+  getEstadoColor(estado: string | number): string {
+    const estadoUpper = estado?.toString().toUpperCase();
     const estadoOptions = [
-      { value: 1, label: 'Pendiente', color: 'warn' },
-      { value: 2, label: 'Aprobado', color: 'primary' },
-      { value: 3, label: 'Rechazado', color: 'accent' },
-      { value: 4, label: 'Cancelado', color: 'basic' },
+      { value: 'SOLICITADA', label: 'Pendiente', color: 'warn' },
+      { value: 'APROBADA', label: 'Aprobado', color: 'primary' },
+      { value: 'RECHAZADA', label: 'Rechazado', color: 'accent' },
+      { value: 'ANULADA', label: 'Cancelado', color: 'basic' },
     ];
-    const opt = estadoOptions.find((o) => o.value === estado);
+    const opt = estadoOptions.find((o) => o.value === estadoUpper);
     return opt?.color || 'basic';
   }
 
-  getEstadoLabel(estado: number): string {
+  getEstadoLabel(estado: string | number): string {
+    const estadoUpper = estado?.toString().toUpperCase();
     const estadoOptions = [
-      { value: 1, label: 'Pendiente' },
-      { value: 2, label: 'Aprobado' },
-      { value: 3, label: 'Rechazado' },
-      { value: 4, label: 'Cancelado' },
+      { value: 'SOLICITADA', label: 'Pendiente' },
+      { value: 'APROBADA', label: 'Aprobado' },
+      { value: 'RECHAZADA', label: 'Rechazado' },
+      { value: 'ANULADA', label: 'Cancelado' },
     ];
-    const opt = estadoOptions.find((o) => o.value === estado);
+    const opt = estadoOptions.find((o) => o.value === estadoUpper);
     return opt?.label || 'Desconocido';
   }
 }

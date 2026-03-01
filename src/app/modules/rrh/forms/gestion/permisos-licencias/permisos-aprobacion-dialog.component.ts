@@ -266,7 +266,7 @@ export class PermisosAprobacionDialogComponent {
     }
 
     observable.subscribe({
-      next: (result) => {
+      next: (result: PermisoLicencia | null) => {
         this.loading.set(false);
         if (result) {
           this.showSuccess(successMessage);
@@ -275,7 +275,7 @@ export class PermisosAprobacionDialogComponent {
           this.errorMsg.set('No se pudo procesar la acción');
         }
       },
-      error: (err) => {
+      error: (err: any) => {
         this.loading.set(false);
         this.errorMsg.set(this.extractError(err) || `Error al ${this.data.action} el permiso`);
       },

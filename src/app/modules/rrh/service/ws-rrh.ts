@@ -28,7 +28,10 @@ export class ServiciosRhh {
   public static RS_SLCT = `${API_URL}/slct`;
   public static RS_TPCE = `${API_URL}/tpce`;
   public static RS_TRNO = `${API_URL}/trno`;
-  public static RS_PMLS = `${API_URL}/pmls`; // Permisos y Licencias
+
+  // TEMPORAL: Permisos/Licencias usando mismo endpoint que Solicitudes Vacaciones
+  // hasta que backend implemente endpoint dedicado PMLS
+  public static RS_PMLS = `${API_URL}/slct`; // Permisos y Licencias (TEMPORAL: usa slct)
   public static RS_TPPR = `${API_URL}/tppr`; // Tipos de Permiso
 
   // Agregar más endpoints de RRHH acá según necesidades

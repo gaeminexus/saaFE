@@ -8,7 +8,7 @@ import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-
 import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
-import { EstadoPermisoLicencia, PermisoLicencia } from '../../../model/permiso-licencia';
+import { PermisoLicencia } from '../../../model/permiso-licencia';
 import { EmpleadoService } from '../../../service/empleado.service';
 import { PermisoLicenciaService } from '../../../service/permiso-licencia.service';
 import { TipoPermisoService } from '../../../service/tipo-permiso.service';
@@ -48,7 +48,7 @@ export class PermisosLicenciasListComponent implements OnInit {
   // Filtros
   filtroIdentificacion = signal<string>('');
   filtroTipoPermiso = signal<number | null>(null);
-  filtroEstado = signal<number | null>(null);
+  filtroEstado = signal<string | null>(null); // Cambiar a string para coincidir con backend
   filtroConGoce = signal<boolean | null>(null);
   filtroFechaInicio = signal<Date | null>(null);
   filtroFechaFin = signal<Date | null>(null);
@@ -56,12 +56,12 @@ export class PermisosLicenciasListComponent implements OnInit {
   orderBy = signal<string>('fechaRegistro');
   orderDir = signal<'ASC' | 'DESC'>('DESC');
 
-  // Opciones para combos
+  // Opciones para combos (usar strings como el backend)
   estadoOptions = [
-    { value: 1, label: 'Pendiente', color: 'warn' },
-    { value: 2, label: 'Aprobado', color: 'primary' },
-    { value: 3, label: 'Rechazado', color: 'accent' },
-    { value: 4, label: 'Cancelado', color: 'basic' },
+    { value: 'SOLICITADA', label: 'Pendiente', color: 'warn' },
+    { value: 'APROBADA', label: 'Aprobado', color: 'primary' },
+    { value: 'RECHAZADA', label: 'Rechazado', color: 'accent' },
+    { value: 'ANULADA', label: 'Cancelado', color: 'basic' },
   ];
 
   goceOptions = [
@@ -231,7 +231,7 @@ export class PermisosLicenciasListComponent implements OnInit {
   }
 
   onEditar(row: PermisoLicencia): void {
-    if (row.estado !== EstadoPermisoLicencia.PENDIENTE) {
+    if (row.estado?.toString().toUpperCase() !== 'SOLICITADA') {
       this.showError('Solo se pueden editar permisos en estado Pendiente');
       return;
     }
@@ -243,7 +243,7 @@ export class PermisosLicenciasListComponent implements OnInit {
   }
 
   onAprobar(row: PermisoLicencia): void {
-    if (row.estado !== EstadoPermisoLicencia.PENDIENTE) {
+    if (row.estado?.toString().toUpperCase() !== 'SOLICITADA') {
       this.showError('Solo se pueden aprobar permisos en estado Pendiente');
       return;
     }
@@ -251,7 +251,7 @@ export class PermisosLicenciasListComponent implements OnInit {
   }
 
   onRechazar(row: PermisoLicencia): void {
-    if (row.estado !== EstadoPermisoLicencia.PENDIENTE) {
+    if (row.estado?.toString().toUpperCase() !== 'SOLICITADA') {
       this.showError('Solo se pueden rechazar permisos en estado Pendiente');
       return;
     }
@@ -259,10 +259,8 @@ export class PermisosLicenciasListComponent implements OnInit {
   }
 
   onCancelar(row: PermisoLicencia): void {
-    if (
-      row.estado !== EstadoPermisoLicencia.PENDIENTE &&
-      row.estado !== EstadoPermisoLicencia.APROBADO
-    ) {
+    const estadoUpper = row.estado?.toString().toUpperCase();
+    if (estadoUpper !== 'SOLICITADA' && estadoUpper !== 'APROBADA') {
       this.showError('Solo se pueden cancelar permisos Pendientes o Aprobados');
       return;
     }
@@ -303,13 +301,15 @@ export class PermisosLicenciasListComponent implements OnInit {
     this.pageSize.set(event.pageSize);
   }
 
-  getEstadoColor(estado: number): string {
-    const opcEstado = this.estadoOptions.find((opt) => opt.value === estado);
+  getEstadoColor(estado: string | number): string {
+    const estadoUpper = estado?.toString().toUpperCase();
+    const opcEstado = this.estadoOptions.find((opt) => opt.value === estadoUpper);
     return opcEstado?.color || 'basic';
   }
 
-  getEstadoLabel(estado: number): string {
-    const opcEstado = this.estadoOptions.find((opt) => opt.value === estado);
+  getEstadoLabel(estado: string | number): string {
+    const estadoUpper = estado?.toString().toUpperCase();
+    const opcEstado = this.estadoOptions.find((opt) => opt.value === estadoUpper);
     return opcEstado?.label || 'Desconocido';
   }
 
@@ -323,18 +323,16 @@ export class PermisosLicenciasListComponent implements OnInit {
   }
 
   canEdit(row: PermisoLicencia): boolean {
-    return row.estado === EstadoPermisoLicencia.PENDIENTE;
+    return row.estado?.toString().toUpperCase() === 'SOLICITADA';
   }
 
   canApprove(row: PermisoLicencia): boolean {
-    return row.estado === EstadoPermisoLicencia.PENDIENTE;
+    return row.estado?.toString().toUpperCase() === 'SOLICITADA';
   }
 
   canCancel(row: PermisoLicencia): boolean {
-    return (
-      row.estado === EstadoPermisoLicencia.PENDIENTE ||
-      row.estado === EstadoPermisoLicencia.APROBADO
-    );
+    const estadoUpper = row.estado?.toString().toUpperCase();
+    return estadoUpper === 'SOLICITADA' || estadoUpper === 'APROBADA';
   }
 
   // Utilidades para manejo de datos y errores

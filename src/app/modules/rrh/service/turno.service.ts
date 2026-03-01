@@ -17,6 +17,7 @@ export class TurnoService {
   getAll(): Observable<Turno[] | null> {
     const wsGetById = '/getAll';
     const url = `${ServiciosRhh.RS_TRNO}${wsGetById}`;
+    console.log('🔍 Consultando turnos desde backend:', url);
     return this.http.get<Turno[]>(url).pipe(
       catchError(this.handleError),
       map((rows) => this.mapFromBackendArray(rows)),
@@ -53,9 +54,24 @@ export class TurnoService {
   selectByCriteria(datos: any): Observable<Turno[] | null> {
     const wsEndpoint = '/selectByCriteria/';
     const url = `${ServiciosRhh.RS_TRNO}${wsEndpoint}`;
+    console.log('🔍 Consultando turnos desde backend:', url);
+    console.log('📋 Criterios enviados (JSON):', JSON.stringify(datos, null, 2));
+
     return this.http.post<any>(url, datos, this.httpOptions).pipe(
-      catchError(this.handleError),
-      map((rows) => this.mapFromBackendArray(rows)),
+      map((rows) => {
+        const mapped = this.mapFromBackendArray(rows);
+        console.log(`✅ Turnos cargados desde BASE DE DATOS:`, mapped?.length || 0, 'registros');
+        return mapped;
+      }),
+      catchError((error: HttpErrorResponse) => {
+        if (error.status === 400) {
+          // El backend SAA devuelve 400 cuando no hay registros (comportamiento esperado)
+          console.warn('⚠️ Sin turnos en BD para los criterios dados. Retornando array vacío.');
+          return of([]);
+        }
+        console.error('❌ Error al consultar backend de turnos:', error);
+        return this.handleError(error);
+      }),
     );
   }
 

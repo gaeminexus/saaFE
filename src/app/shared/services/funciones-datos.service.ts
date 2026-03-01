@@ -179,7 +179,7 @@ export class FuncionesDatosService {
           parseInt(hour),
           parseInt(minute),
           parseInt(second),
-          parseInt(ms)
+          parseInt(ms),
         );
       }
 
@@ -249,7 +249,7 @@ export class FuncionesDatosService {
    */
   formatearFechaParaBackend(
     fecha: Date | string | null | undefined,
-    tipoFormato: TipoFormatoFechaBackend = TipoFormatoFechaBackend.FECHA_HORA
+    tipoFormato: TipoFormatoFechaBackend = TipoFormatoFechaBackend.FECHA_HORA,
   ): string | null {
     if (!fecha) return null;
 
@@ -273,7 +273,7 @@ export class FuncionesDatosService {
 
       // Fecha con hora en 00:00:00
       if (tipoFormato === TipoFormatoFechaBackend.FECHA_HORA_CERO) {
-        return `${year}-${month}-${day}T00:00:00`;
+        return `${year}-${month}-${day} 00:00:00`;
       }
 
       // Fecha con hora actual (por defecto)
@@ -281,7 +281,7 @@ export class FuncionesDatosService {
       const minutes = String(date.getMinutes()).padStart(2, '0');
       const seconds = String(date.getSeconds()).padStart(2, '0');
 
-      return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
     } catch (error) {
       console.error('Error al formatear fecha para backend:', error, 'Fecha recibida:', fecha);
       return null;
@@ -294,11 +294,11 @@ export class FuncionesDatosService {
    */
   formatearFechaParaBackendLegacy(
     fecha: Date | string | null | undefined,
-    incluirHora: boolean = true
+    incluirHora: boolean = true,
   ): string | null {
     return this.formatearFechaParaBackend(
       fecha,
-      incluirHora ? TipoFormatoFechaBackend.FECHA_HORA : TipoFormatoFechaBackend.SOLO_FECHA
+      incluirHora ? TipoFormatoFechaBackend.FECHA_HORA : TipoFormatoFechaBackend.SOLO_FECHA,
     );
   }
 
@@ -337,7 +337,7 @@ export class FuncionesDatosService {
         if (resultado[config.campo]) {
           resultado[config.campo] = this.formatearFechaParaBackend(
             resultado[config.campo],
-            config.tipo
+            config.tipo,
           );
         }
       }
@@ -356,7 +356,7 @@ export class FuncionesDatosService {
    * ]);
    */
   crearConfiguracionesFecha(
-    campos: (string | ConfiguracionCampoFecha)[]
+    campos: (string | ConfiguracionCampoFecha)[],
   ): ConfiguracionCampoFecha[] {
     return campos.map((campo) => {
       if (typeof campo === 'string') {

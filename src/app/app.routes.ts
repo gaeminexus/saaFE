@@ -25,7 +25,7 @@ import { LoginComponent } from './modules/dash/forms/login/login.component';
 import { MenuComponent } from './modules/dash/menu/menu.component';
 import { MenurecursoshumanosComponent } from './modules/rrh/menu/menurecursoshumanos/menurecursoshumanos.component';
 // RRHH demo components
-import { RrhAsistenciaComponent } from './modules/rrh/forms/gestion/asistencia/rrh-asistencia.component';
+import { AsistenciaListComponent } from './modules/rrh/forms/gestion/asistencia/asistencia-list.component';
 import { ContratoEmpleadoListComponent } from './modules/rrh/forms/gestion/contratos/contrato-empleado-list.component';
 import { VacacionesListComponent } from './modules/rrh/forms/gestion/vacaciones/vacaciones-list.component';
 import { TurnoListComponent } from './modules/rrh/forms/parametrizacion/turnos/turno-list.component';
@@ -559,7 +559,15 @@ export const routes: Routes = [
         canActivate: [authGuard],
         data: { title: 'Gestión de Permisos y Licencias' },
       },
-      { path: 'gestion/asistencia', component: RrhAsistenciaComponent, canActivate: [authGuard] },
+      {
+        path: 'gestion/asistencia',
+        loadComponent: () =>
+          import('./modules/rrh/forms/gestion/asistencia/asistencia-list.component').then(
+            (m) => m.AsistenciaListComponent,
+          ),
+        canActivate: [authGuard],
+        data: { title: 'Gestión de Asistencia' },
+      },
       // Procesos
       { path: 'procesos/nomina', component: RrhNominaComponent, canActivate: [authGuard] },
       { path: 'procesos/roles-pago', component: RrhRolesPagoComponent, canActivate: [authGuard] },
@@ -650,7 +658,7 @@ export const routes: Routes = [
         canActivate: [authGuard],
         data: { title: 'Gestión de Permisos y Licencias' },
       },
-      { path: 'gestion/asistencia', component: RrhAsistenciaComponent, canActivate: [authGuard] },
+      { path: 'gestion/asistencia', component: AsistenciaListComponent, canActivate: [authGuard] },
       // Procesos
       { path: 'procesos/nomina', component: RrhNominaComponent, canActivate: [authGuard] },
       { path: 'procesos/roles-pago', component: RrhRolesPagoComponent, canActivate: [authGuard] },
