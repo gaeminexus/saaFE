@@ -115,9 +115,9 @@ export class MenucreditosComponent {
           route: '/menucreditos/carga-aportes',
         },
         {
-          displayName: 'Administrar',
+          displayName: 'Consulta',
           iconName: 'app_registration',
-          // route: '/menucreditos/navegacion-cascada'
+          route: '/menucreditos/prestamo-consulta',
         },
         {
           displayName: 'Dash',
@@ -127,7 +127,7 @@ export class MenucreditosComponent {
         {
           displayName: 'Consulta Cuotas',
           iconName: 'manage_search',
-          route: '/menucreditos/cuota-consulta'
+          route: '/menucreditos/cuota-consulta',
         },
       ],
     },

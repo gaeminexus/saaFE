@@ -1,1 +1,332 @@
-<p>prestamo-consulta.component works!</p>
+<div class="consulta-container" @fadeIn>
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-icon">
+        <mat-icon>account_balance</mat-icon>
+      </div>
+      <div class="header-text">
+        <h1>Consulta de Préstamos</h1>
+        <p class="subtitle">Consulta y seguimiento de préstamos por criterios</p>
+      </div>
+      <div class="header-actions">
+        <button
+          mat-icon-button
+          (click)="toggleFiltrosPrincipales()"
+          class="toggle-filtros-btn"
+          matTooltip="{{ filtrosPrincipalesExpandidos ? 'Ocultar filtros' : 'Mostrar filtros' }}"
+        >
+          <mat-icon>{{ filtrosPrincipalesExpandidos ? 'expand_less' : 'expand_more' }}</mat-icon>
+        </button>
+      </div>
+    </div>
+
+    @if (filtrosPrincipalesExpandidos) {
+      <div class="filtros-container" @fadeIn>
+        <form [formGroup]="filtrosForm">
+          <div class="filtros-principales">
+            <div class="filtros-grid">
+              <mat-form-field appearance="fill" class="filter-field">
+                <mat-label>N° Préstamo</mat-label>
+                <mat-icon matPrefix>numbers</mat-icon>
+                <input matInput formControlName="idAsoprep" />
+              </mat-form-field>
+
+              <mat-form-field appearance="fill" class="filter-field">
+                <mat-label>Identificación</mat-label>
+                <mat-icon matPrefix>badge</mat-icon>
+                <input matInput formControlName="numeroIdentificacion" />
+              </mat-form-field>
+
+              <mat-form-field appearance="fill" class="filter-field">
+                <mat-label>Razón Social</mat-label>
+                <mat-icon matPrefix>person</mat-icon>
+                <input matInput formControlName="razonSocial" />
+              </mat-form-field>
+
+              <mat-form-field appearance="fill" class="filter-field">
+                <mat-label>Producto</mat-label>
+                <mat-icon matPrefix>category</mat-icon>
+                <mat-select formControlName="producto">
+                  <mat-option [value]="null">Todos</mat-option>
+                  @for (prod of productosOptions(); track prod.codigo) {
+                    <mat-option [value]="prod.codigo">{{ prod.nombre }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="fill" class="filter-field">
+                <mat-label>Estado Préstamo</mat-label>
+                <mat-icon matPrefix>toggle_on</mat-icon>
+                <mat-select formControlName="estadoPrestamo">
+                  <mat-option [value]="null">Todos</mat-option>
+                  @for (estado of estadosOptions(); track estado.codigo) {
+                    <mat-option [value]="estado.codigo">{{ estado.nombre }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="fill" class="filter-field">
+                <mat-label>Fecha Desde</mat-label>
+                <mat-icon matPrefix>event</mat-icon>
+                <input matInput [matDatepicker]="pickerDesde" formControlName="fechaDesde" />
+                <mat-datepicker-toggle matSuffix [for]="pickerDesde"></mat-datepicker-toggle>
+                <mat-datepicker #pickerDesde></mat-datepicker>
+              </mat-form-field>
+
+              <mat-form-field appearance="fill" class="filter-field">
+                <mat-label>Fecha Hasta</mat-label>
+                <mat-icon matPrefix>event</mat-icon>
+                <input matInput [matDatepicker]="pickerHasta" formControlName="fechaHasta" />
+                <mat-datepicker-toggle matSuffix [for]="pickerHasta"></mat-datepicker-toggle>
+                <mat-datepicker #pickerHasta></mat-datepicker>
+              </mat-form-field>
+            </div>
+          </div>
+
+          <div class="toggle-filtros">
+            <button mat-button type="button" (click)="toggleFiltrosAvanzados()" class="btn-toggle">
+              <mat-icon>{{ filtrosAvanzadosExpandidos ? 'expand_less' : 'expand_more' }}</mat-icon>
+              {{ filtrosAvanzadosExpandidos ? 'Ocultar' : 'Mostrar' }} Filtros Avanzados
+            </button>
+          </div>
+
+          @if (filtrosAvanzadosExpandidos) {
+            <div class="filtros-avanzados" @fadeIn>
+              <div class="filtros-grid">
+                <mat-form-field appearance="fill" class="filter-field">
+                  <mat-label>Filial</mat-label>
+                  <mat-icon matPrefix>storefront</mat-icon>
+                  <mat-select formControlName="filial">
+                    <mat-option [value]="null">Todas</mat-option>
+                    @for (filial of filialesOptions(); track filial.codigo) {
+                      <mat-option [value]="filial.codigo">{{ filial.nombre }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+
+                <mat-form-field appearance="fill" class="filter-field">
+                  <mat-label>Monto Desde</mat-label>
+                  <mat-icon matPrefix>attach_money</mat-icon>
+                  <input matInput type="number" formControlName="montoDesde" />
+                </mat-form-field>
+
+                <mat-form-field appearance="fill" class="filter-field">
+                  <mat-label>Monto Hasta</mat-label>
+                  <mat-icon matPrefix>attach_money</mat-icon>
+                  <input matInput type="number" formControlName="montoHasta" />
+                </mat-form-field>
+
+                <mat-form-field appearance="fill" class="filter-field">
+                  <mat-label>Saldo Desde</mat-label>
+                  <mat-icon matPrefix>payments</mat-icon>
+                  <input matInput type="number" formControlName="saldoDesde" />
+                </mat-form-field>
+
+                <mat-form-field appearance="fill" class="filter-field">
+                  <mat-label>Saldo Hasta</mat-label>
+                  <mat-icon matPrefix>payments</mat-icon>
+                  <input matInput type="number" formControlName="saldoHasta" />
+                </mat-form-field>
+
+                <mat-form-field appearance="fill" class="filter-field">
+                  <mat-label>Plazo</mat-label>
+                  <mat-icon matPrefix>schedule</mat-icon>
+                  <input matInput type="number" formControlName="plazo" />
+                </mat-form-field>
+
+                <mat-form-field appearance="fill" class="filter-field">
+                  <mat-label>Novación</mat-label>
+                  <mat-icon matPrefix>sync_alt</mat-icon>
+                  <mat-select formControlName="esNovacion">
+                    @for (opt of binarioOptions; track $index) {
+                      <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+
+                <mat-form-field appearance="fill" class="filter-field">
+                  <mat-label>Reestructurado</mat-label>
+                  <mat-icon matPrefix>autorenew</mat-icon>
+                  <mat-select formControlName="reestructurado">
+                    @for (opt of binarioOptions; track $index) {
+                      <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+
+                <mat-form-field appearance="fill" class="filter-field">
+                  <mat-label>Refinanciado</mat-label>
+                  <mat-icon matPrefix>currency_exchange</mat-icon>
+                  <mat-select formControlName="refinanciado">
+                    @for (opt of binarioOptions; track $index) {
+                      <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+              </div>
+            </div>
+          }
+
+          <div class="acciones-filtros">
+            <button
+              mat-raised-button
+              (click)="buscar()"
+              class="btn-action btn-buscar"
+              [disabled]="loading()"
+            >
+              <mat-icon>search</mat-icon>
+              Buscar
+            </button>
+            <button
+              mat-raised-button
+              (click)="limpiarFiltros()"
+              class="btn-action btn-limpiar"
+              [disabled]="loading()"
+            >
+              <mat-icon>clear</mat-icon>
+              Limpiar
+            </button>
+            <button
+              mat-raised-button
+              (click)="exportarCSV()"
+              [disabled]="prestamos().length === 0"
+              class="btn-action btn-exportar"
+            >
+              <mat-icon>download</mat-icon>
+              Exportar CSV
+            </button>
+            <button
+              mat-raised-button
+              (click)="exportarPDF()"
+              [disabled]="prestamos().length === 0"
+              class="btn-action btn-exportar"
+            >
+              <mat-icon>picture_as_pdf</mat-icon>
+              Exportar PDF
+            </button>
+          </div>
+        </form>
+      </div>
+    }
+  </div>
+
+  <mat-card class="resultados-card" @fadeIn>
+    @if (prestamos().length > 0) {
+      <mat-card-header>
+        <mat-card-title>Resultados ({{ prestamos().length }})</mat-card-title>
+      </mat-card-header>
+    }
+
+    <mat-card-content>
+      @if (loading()) {
+        <div class="loading-container">
+          <mat-spinner diameter="60"></mat-spinner>
+          <p>Cargando préstamos...</p>
+        </div>
+      }
+
+      @if (error() && !loading()) {
+        <div class="error-container">
+          <mat-icon>error_outline</mat-icon>
+          <p>{{ error() }}</p>
+        </div>
+      }
+
+      @if (!loading() && !error() && prestamos().length > 0) {
+        <div class="table-container">
+          <table mat-table [dataSource]="dataSource" matSort class="resultados-table">
+            <ng-container matColumnDef="codigo">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Código</th>
+              <td mat-cell *matCellDef="let p">{{ p.codigo }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="idAsoprep">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>N° Préstamo</th>
+              <td mat-cell *matCellDef="let p">{{ p.idAsoprep || '-' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="entidad">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Entidad</th>
+              <td mat-cell *matCellDef="let p">
+                {{ p.entidad?.razonSocial || p.entidad?.nombreComercial || '-' }}
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="producto">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Producto</th>
+              <td mat-cell *matCellDef="let p">{{ p.producto?.nombre || '-' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="fecha">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Fecha</th>
+              <td mat-cell *matCellDef="let p">{{ p.fecha | date: 'dd/MM/yyyy' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="estadoPrestamo">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Estado</th>
+              <td mat-cell *matCellDef="let p">
+                <span class="estado-badge" [class.activo]="p.estadoPrestamo?.codigo === 1">
+                  {{ p.estadoPrestamo?.nombre || '-' }}
+                </span>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="montoSolicitado">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Monto</th>
+              <td mat-cell *matCellDef="let p">${{ p.montoSolicitado || 0 | number: '1.2-2' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="totalPagado">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Total Pagado</th>
+              <td mat-cell *matCellDef="let p">${{ p.totalPagado || 0 | number: '1.2-2' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="saldoTotal">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Saldo Total</th>
+              <td mat-cell *matCellDef="let p">${{ p.saldoTotal || 0 | number: '1.2-2' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="acciones">
+              <th mat-header-cell *matHeaderCellDef class="acciones-header">Acciones</th>
+              <td mat-cell *matCellDef="let p" class="acciones-cell">
+                <button
+                  mat-icon-button
+                  color="primary"
+                  (click)="verDetalle(p)"
+                  matTooltip="Ver detalle"
+                >
+                  <mat-icon>visibility</mat-icon>
+                </button>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns" class="tabla-row"></tr>
+          </table>
+        </div>
+      }
+
+      @if (!loading() && !error() && prestamos().length === 0 && !busquedaRealizada()) {
+        <div class="empty-state-inline">
+          <mat-icon class="empty-icon">search</mat-icon>
+          <p>Use los filtros y presione Buscar para consultar préstamos.</p>
+        </div>
+      }
+
+      @if (!loading() && !error() && prestamos().length === 0 && busquedaRealizada()) {
+        <div class="empty-state-inline">
+          <mat-icon class="empty-icon">search_off</mat-icon>
+          <p>No se encontraron préstamos con los criterios seleccionados.</p>
+        </div>
+      }
+
+      <mat-paginator
+        [pageSizeOptions]="[10, 25, 50, 100]"
+        [pageSize]="25"
+        showFirstLastButtons
+        [style.display]="busquedaRealizada() ? 'block' : 'none'"
+      >
+      </mat-paginator>
+    </mat-card-content>
+  </mat-card>
+</div>
