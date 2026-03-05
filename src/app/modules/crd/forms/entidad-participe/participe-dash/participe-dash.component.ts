@@ -104,6 +104,7 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
     'capital',
     'interes',
     'desgravamen',
+    'pagoExtra',
     'cuota',
     'saldo',
     'estado',
@@ -840,7 +841,7 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
         };
       });
 
-      const filename = `Prestamo_${prestamo.codigo}_${this.entidadEncontrada.numeroIdentificacion}`;
+      const filename = `Prestamo_${prestamo.idAsoprep || prestamo.codigo}_${this.entidadEncontrada.numeroIdentificacion}`;
       this.exportService.exportToCSV(
         rows,
         filename,
@@ -931,7 +932,7 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
           doc.setTextColor(102, 126, 234);
           doc.setFont(undefined, 'bold');
           doc.text(
-            `Préstamo #${prestamo.codigo} - ${prestamo.producto?.nombre || 'N/A'}`,
+            `Préstamo #${prestamo.idAsoprep || prestamo.codigo} - ${prestamo.producto?.nombre || 'N/A'}`,
             14,
             yPosition
           );
@@ -1052,7 +1053,7 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
           }
 
           // Guardar el PDF
-          const filename = `Prestamo_${prestamo.codigo}_${
+          const filename = `Prestamo_${prestamo.idAsoprep || prestamo.codigo}_${
             entidad.numeroIdentificacion
           }_${new Date().getTime()}.pdf`;
           doc.save(filename);
@@ -2956,7 +2957,7 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
 
     criterio = new DatosBusqueda();
     criterio.orderBy('numeroCuota');
-    criterio.setTipoOrden(DatosBusqueda.ORDER_DESC);
+    criterio.setTipoOrden(DatosBusqueda.ORDER_ASC);
     criterioConsultaArray.push(criterio);
 
     this.detallePrestamoService.selectByCriteria(criterioConsultaArray).subscribe({
@@ -3100,17 +3101,19 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
     });
   }
 
-  calcularTotales(codigoPrestamo: number): { capital: number; interes: number; cuota: number } {
+  calcularTotales(codigoPrestamo: number): { capital: number; interes: number; desgravamen: number; pagoExtra: number; cuota: number } {
     const dataSource = this.detallesPrestamo.get(codigoPrestamo);
-    if (!dataSource) return { capital: 0, interes: 0, cuota: 0 };
+    if (!dataSource) return { capital: 0, interes: 0, desgravamen: 0, pagoExtra: 0, cuota: 0 };
 
     return dataSource.data.reduce(
       (acc, dc) => ({
         capital: acc.capital + (dc.detalle.capital || 0),
         interes: acc.interes + (dc.detalle.interes || 0),
+        desgravamen: acc.desgravamen + (dc.detalle.desgravamen || 0),
+        pagoExtra: acc.pagoExtra + (dc.detalle.saldoOtros || 0),
         cuota: acc.cuota + (dc.detalle.cuota || 0),
       }),
-      { capital: 0, interes: 0, cuota: 0 }
+      { capital: 0, interes: 0, desgravamen: 0, pagoExtra: 0, cuota: 0 }
     );
   }
 

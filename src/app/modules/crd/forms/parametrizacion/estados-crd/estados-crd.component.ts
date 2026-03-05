@@ -13,6 +13,7 @@ import { EstadoParticipe } from '../../../model/estado-participe';
 import { EstadoPrestamo } from '../../../model/estado-prestamo';
 import { EstadoCesantia } from '../../../model/estado-cesantia';
 import { EstadoCivil } from '../../../model/estado-civil';
+import { EstadoCuotaPrestamo } from '../../../model/estado-cuota-prestamo';
 import { Validators } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
@@ -35,12 +36,14 @@ export class EstadosCrdComponent implements OnInit {
   estadosPrestamo: EstadoPrestamo[] = [];
   estadosCesantia: EstadoCesantia[] = [];
   estadosCivil: EstadoCivil[] = [];
+  estadosCuotaPrestamo: EstadoCuotaPrestamo[] = [];
 
   // Configuraciones de tabla para cada entidad
   tableConfigParticipe!: TableConfig;
   tableConfigPrestamo!: TableConfig;
   tableConfigCesantia!: TableConfig;
   tableConfigCivil!: TableConfig;
+  tableConfigCuotaPrestamo!: TableConfig;
 
   // Índice del tab seleccionado
   selectedTabIndex: number = 0;
@@ -50,7 +53,8 @@ export class EstadosCrdComponent implements OnInit {
     { nombre: 'Estado Partícipe', icono: 'person', index: 0 },
     { nombre: 'Estado Préstamo', icono: 'account_balance_wallet', index: 1 },
     { nombre: 'Estado Cesantía', icono: 'assignment', index: 2 },
-    { nombre: 'Estado Civil', icono: 'family_restroom', index: 3 }
+    { nombre: 'Estado Civil', icono: 'family_restroom', index: 3 },
+    { nombre: 'Estado Cuota Préstamo', icono: 'receipt_long', index: 4 }
   ];
 
   constructor(
@@ -70,6 +74,7 @@ export class EstadosCrdComponent implements OnInit {
     this.estadosPrestamo = data.estadosPrestamo || [];
     this.estadosCesantia = data.estadosCesantia || [];
     this.estadosCivil = data.estadosCivil || [];
+    this.estadosCuotaPrestamo = data.estadosCuotaPrestamo || [];
 
     // Configurar tablas
     this.setupTableConfigs();
@@ -134,6 +139,22 @@ export class EstadosCrdComponent implements OnInit {
       add: true,
       edit: true,
       remove: false,
+      paginator: true,
+      filter: true,
+      fSize: 'em-1',
+      row_size: 's08'
+    };
+
+    // Estado Cuota Préstamo
+    this.tableConfigCuotaPrestamo = {
+      entidad: EntidadesCrd.ESTADO_CUOTA_PRESTAMO,
+      titulo: 'Estados Cuota Préstamo',
+      registros: this.estadosCuotaPrestamo,
+      fields: this.getFieldsCuotaPrestamo(),
+      regConfig: this.getRegConfigCuotaPrestamo(),
+      add: true,
+      edit: true,
+      remove: true,
       paginator: true,
       filter: true,
       fSize: 'em-1',
@@ -254,6 +275,38 @@ export class EstadosCrdComponent implements OnInit {
         inputType: 'number',
         validations: [
           { name: 'required', validator: Validators.required, message: 'El código auxiliar es requerido' }
+        ]
+      }
+    ];
+  }
+
+  // ========== Estado Cuota Préstamo ==========
+  private getFieldsCuotaPrestamo(): FieldFormat[] {
+    return [
+      { column: 'nombre', header: 'Nombre', fWidth: '60%' },
+      { column: 'codigoAlterno', header: 'Código Alterno', fWidth: '40%' },
+    ];
+  }
+
+  private getRegConfigCuotaPrestamo(): FieldConfig[] {
+    return [
+      {
+        type: 'input',
+        label: 'Nombre',
+        name: 'nombre',
+        inputType: 'text',
+        validations: [
+          { name: 'required', validator: Validators.required, message: 'El nombre es requerido' },
+          { name: 'maxlength', validator: Validators.maxLength(100), message: 'Máximo 100 caracteres' }
+        ]
+      },
+      {
+        type: 'input',
+        label: 'Código Alterno',
+        name: 'codigoAlterno',
+        inputType: 'number',
+        validations: [
+          { name: 'required', validator: Validators.required, message: 'El código alterno es requerido' }
         ]
       }
     ];

@@ -40,6 +40,10 @@
         <span class="label">Saldo:</span>
         <span class="value">{{ data.detalle.saldo | currency : 'USD' : 'symbol' : '1.2-2' }}</span>
       </div>
+      <div class="info-item">
+        <span class="label">Pago Extra:</span>
+        <span class="value">{{ data.detalle.saldoOtros | currency : 'USD' : 'symbol' : '1.2-2' }}</span>
+      </div>
     </div>
 
     @if (data.pagos && data.pagos.length > 0) {
@@ -78,6 +82,14 @@
           <th mat-header-cell *matHeaderCellDef>Mora Pagada</th>
           <td mat-cell *matCellDef="let pago">
             {{ pago.moraPagada | currency : 'USD' : 'symbol' : '1.2-2' }}
+          </td>
+        </ng-container>
+
+        <!-- Pago Extra Column -->
+        <ng-container matColumnDef="saldoOtros">
+          <th mat-header-cell *matHeaderCellDef>Pago Extra</th>
+          <td mat-cell *matCellDef="let pago">
+            {{ pago.saldoOtros | currency : 'USD' : 'symbol' : '1.2-2' }}
           </td>
         </ng-container>
 

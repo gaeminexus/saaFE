@@ -1579,6 +1579,19 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
     font-variant-numeric: tabular-nums;
   }
 
+  // Alineación derecha para columnas numéricas
+  [matColumnDef="capital"],
+  [matColumnDef="interes"],
+  [matColumnDef="desgravamen"],
+  [matColumnDef="pagoExtra"],
+  [matColumnDef="cuota"],
+  [matColumnDef="saldo"] {
+    th, td {
+      text-align: right !important;
+      font-variant-numeric: tabular-nums;
+    }
+  }
+
   .saldo-column {
     color: $saa-primary;
     font-weight: 700;
@@ -1665,6 +1678,29 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
     &:hover mat-icon {
       transform: rotate(180deg);
     }
+  }
+
+  // Fila de totales footer
+  .footer-totales-row {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    font-weight: 700;
+
+    td {
+      color: #ffffff !important;
+      font-size: 0.875rem;
+      border-top: 2px solid rgba(255, 255, 255, 0.3);
+    }
+  }
+
+  .footer-label {
+    font-weight: 800;
+    letter-spacing: 1px;
+    font-size: 0.8rem;
+  }
+
+  .footer-total {
+    font-variant-numeric: tabular-nums;
+    text-align: right;
   }
 }
 

@@ -12,13 +12,14 @@ export const AppConfig = {
     footerYear: new Date().getFullYear()
   }
 };
-import { ApplicationConfig, APP_INITIALIZER, provideBrowserGlobalErrorListeners, provideZoneChangeDetection } from '@angular/core';
+import { ApplicationConfig, APP_INITIALIZER, provideBrowserGlobalErrorListeners, provideZoneChangeDetection, isDevMode } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { routes } from './app.routes';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideMaterial } from './shared/providers/material.providers';
 import { loadingInterceptor } from './shared/interceptors/loading.interceptor';
 import { AppStateService } from './shared/services/app-state.service';
+import { provideServiceWorker } from '@angular/service-worker';
 
 /**
  * Factory function para inicializar AppStateService antes del bootstrap
@@ -48,7 +49,10 @@ export const appConfig: ApplicationConfig = {
       useFactory: initializeApp,
       deps: [AppStateService],
       multi: true
-    }
+    }, provideServiceWorker('ngsw-worker.js', {
+            enabled: !isDevMode(),
+            registrationStrategy: 'registerWhenStable:30000'
+          })
   ]
 };
 

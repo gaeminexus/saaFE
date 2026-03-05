@@ -111,5 +111,21 @@
       </div>
     </mat-tab>
 
+    <mat-tab label="">
+      <ng-template mat-tab-label>
+        <div class="tab-label">
+          <mat-icon class="tab-icon">format_list_numbered</mat-icon>
+          <span class="tab-text">Orden Afectación</span>
+          <span class="tab-badge">{{ ordenesAfectacion.length }}</span>
+        </div>
+      </ng-template>
+      <div class="tab-content">
+        <app-table-basic-hijos
+          *ngIf="tableConfigOrdenAfectacion"
+          [configTable]="tableConfigOrdenAfectacion" (emiteError)="onTableError($event)">
+        </app-table-basic-hijos>
+      </div>
+    </mat-tab>
+
   </mat-tab-group>
 </div>

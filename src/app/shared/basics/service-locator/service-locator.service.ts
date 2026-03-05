@@ -140,6 +140,8 @@ export class ServiceLocatorService {
       EntidadesCrd.METODO_PAGO,
       EntidadesCrd.NIVEL_ESTUDIO,
       EntidadesCrd.PROFESION,
+      EntidadesCrd.ESTADO_CUOTA_PRESTAMO,
+      EntidadesCrd.ORDEN_AFECTACION_VALOR_PRESTAMO,
     ];
 
     return entidadesCrd.includes(entidad);

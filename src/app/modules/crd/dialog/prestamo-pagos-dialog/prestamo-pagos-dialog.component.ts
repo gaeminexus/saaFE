@@ -20,7 +20,7 @@ export interface PrestamoPagosDialogData {
   encapsulation: ViewEncapsulation.None,
 })
 export class PrestamoPagosDialogComponent {
-  displayedColumns: string[] = ['fecha', 'capitalPagado', 'interesPagado', 'moraPagada', 'valor'];
+  displayedColumns: string[] = ['fecha', 'capitalPagado', 'interesPagado', 'moraPagada', 'saldoOtros', 'valor'];
 
   constructor(
     @Inject(MAT_DIALOG_DATA) public data: PrestamoPagosDialogData,
@@ -101,6 +101,7 @@ export class PrestamoPagosDialogComponent {
                 `$${(p.capitalPagado || 0).toFixed(2)}`,
                 `$${(p.interesPagado || 0).toFixed(2)}`,
                 `$${(p.moraPagada || 0).toFixed(2)}`,
+                `$${(p.saldoOtros || 0).toFixed(2)}`,
                 `$${(p.valor || 0).toFixed(2)}`,
               ];
             });
@@ -115,12 +116,13 @@ export class PrestamoPagosDialogComponent {
               0
             );
             const totalMora = this.data.pagos.reduce((sum, p) => sum + (p.moraPagada || 0), 0);
+            const totalSaldoOtros = this.data.pagos.reduce((sum, p) => sum + (p.saldoOtros || 0), 0);
             const totalValor = this.data.pagos.reduce((sum, p) => sum + (p.valor || 0), 0);
 
             if (doc.autoTable) {
               doc.autoTable({
                 startY: yPosition,
-                head: [['Fecha', 'Capital Pagado', 'Interés Pagado', 'Mora Pagada', 'Valor Total']],
+                head: [['Fecha', 'Capital Pagado', 'Interés Pagado', 'Mora Pagada', 'Pago Extra', 'Valor Total']],
                 body: pagosData,
                 theme: 'striped',
                 styles: { fontSize: 9, cellPadding: 3 },
@@ -131,11 +133,12 @@ export class PrestamoPagosDialogComponent {
                   fontStyle: 'bold',
                 },
                 columnStyles: {
-                  0: { cellWidth: 30, halign: 'center' },
-                  1: { cellWidth: 35, halign: 'right' },
-                  2: { cellWidth: 35, halign: 'right' },
-                  3: { cellWidth: 35, halign: 'right' },
-                  4: { cellWidth: 35, halign: 'right' },
+                  0: { cellWidth: 28, halign: 'center' },
+                  1: { cellWidth: 30, halign: 'right' },
+                  2: { cellWidth: 30, halign: 'right' },
+                  3: { cellWidth: 28, halign: 'right' },
+                  4: { cellWidth: 28, halign: 'right' },
+                  5: { cellWidth: 28, halign: 'right' },
                 },
                 footStyles: {
                   fillColor: [102, 126, 234],
@@ -148,6 +151,7 @@ export class PrestamoPagosDialogComponent {
                     `$${totalCapital.toFixed(2)}`,
                     `$${totalInteres.toFixed(2)}`,
                     `$${totalMora.toFixed(2)}`,
+                    `$${totalSaldoOtros.toFixed(2)}`,
                     `$${totalValor.toFixed(2)}`,
                   ],
                 ],

@@ -95,6 +95,22 @@
       </div>
     </mat-tab>
 
+    <mat-tab label="">
+      <ng-template mat-tab-label>
+        <div class="tab-label">
+          <mat-icon class="tab-icon">receipt_long</mat-icon>
+          <span class="tab-text">Estado Cuota Préstamo</span>
+          <span class="tab-badge">{{ estadosCuotaPrestamo.length }}</span>
+        </div>
+      </ng-template>
+      <div class="tab-content">
+        <app-table-basic-hijos
+          *ngIf="tableConfigCuotaPrestamo"
+          [configTable]="tableConfigCuotaPrestamo" (emiteError)="onTableError($event)">
+        </app-table-basic-hijos>
+      </div>
+    </mat-tab>
+
   </mat-tab-group>
 </div>
 

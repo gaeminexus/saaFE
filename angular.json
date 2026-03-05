@@ -64,6 +64,7 @@
               "extractLicenses": true,
               "prerender": false,
               "baseHref": "/Saa/",
+              "serviceWorker": "ngsw-config.json",
             },
             "development": {
               "optimization": false,

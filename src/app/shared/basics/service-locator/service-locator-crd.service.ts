@@ -6,10 +6,12 @@ import { EstadoParticipeService } from '../../../modules/crd/service/estado-part
 import { EstadoPrestamoService } from '../../../modules/crd/service/estado-prestamo.service';
 import { EstadoCesantiaService } from '../../../modules/crd/service/estado-cesantia.service';
 import { EstadoCivilService } from '../../../modules/crd/service/estado-civil.service';
+import { EstadoCuotaPrestamoService } from '../../../modules/crd/service/estado-cuota-prestamo.service';
 import { EstadoParticipe } from '../../../modules/crd/model/estado-participe';
 import { EstadoPrestamo } from '../../../modules/crd/model/estado-prestamo';
 import { EstadoCesantia } from '../../../modules/crd/model/estado-cesantia';
 import { EstadoCivil } from '../../../modules/crd/model/estado-civil';
+import { EstadoCuotaPrestamo } from '../../../modules/crd/model/estado-cuota-prestamo';
 // Servicios de Tipos
 import { TipoContratoService } from '../../../modules/crd/service/tipo-contrato.service';
 import { TipoParticipeService } from '../../../modules/crd/service/tipo-participe.service';
@@ -39,11 +41,13 @@ import { MotivoPrestamoService } from '../../../modules/crd/service/motivo-prest
 import { MetodoPagoService } from '../../../modules/crd/service/metodo-pago.service';
 import { NivelEstudioService } from '../../../modules/crd/service/nivel-estudio.service';
 import { ProfesionService } from '../../../modules/crd/service/profesion.service';
+import { OrdenAfectacionValorPrestamoService } from '../../../modules/crd/service/orden-afectacion-valor-prestamo.service';
 // Modelos de Listados
 import { MotivoPrestamo } from '../../../modules/crd/model/motivo-prestamo';
 import { MetodoPago } from '../../../modules/crd/model/metodo-pago';
 import { NivelEstudio } from '../../../modules/crd/model/nivel-estudio';
 import { Profesion } from '../../../modules/crd/model/profesion';
+import { OrdenAfectacionValorPrestamo } from '../../../modules/crd/model/orden-afectacion-valor-prestamo';
 // Servicios de Entidades Principales
 import { AdjuntoService } from '../../../modules/crd/service/adjunto.service';
 import { AporteService } from '../../../modules/crd/service/aporte.service';
@@ -138,9 +142,9 @@ import { TipoPago } from '../../../modules/crd/model/tipo-pago';
  *
  * Cobertura de Entidades (61 de 65 implementadas):
  * ✅ Implementadas: 61 entidades con servicios CRUD completos
- *    - Estados: ESTADO_PARTICIPE, ESTADO_PRESTAMO, ESTADO_CESANTIA, ESTADO_CIVIL
+ *    - Estados: ESTADO_PARTICIPE, ESTADO_PRESTAMO, ESTADO_CESANTIA, ESTADO_CIVIL, ESTADO_CUOTA_PRESTAMO
  *    - Tipos: 13 tipos (TIPO_CONTRATO, TIPO_PARTICIPE, TIPO_PRESTAMO, etc.)
- *    - Listados: MOTIVO_PRESTAMO, METODO_PAGO, NIVEL_ESTUDIO, PROFESION
+ *    - Listados: MOTIVO_PRESTAMO, METODO_PAGO, NIVEL_ESTUDIO, PROFESION, ORDEN_AFECTACION_VALOR_PRESTAMO
  *    - Entidades principales: PARTICIPE, PRESTAMO, CONTRATO, APORTE, etc.
  *    - Geográficas: PAIS, PROVINCIA, CANTON, CIUDAD, PARROQUIA
  *    - Financieras: CREDITO_MONTO_APROBACION, MORA_PRESTAMO, TASA_PRESTAMO, etc.
@@ -179,6 +183,7 @@ export class ServiceLocatorCrdService {
     public estadoPrestamoService: EstadoPrestamoService,
     public estadoCesantiaService: EstadoCesantiaService,
     public estadoCivilService: EstadoCivilService,
+    public estadoCuotaPrestamoService: EstadoCuotaPrestamoService,
     // Servicios de Tipos
     public tipoContratoService: TipoContratoService,
     public tipoParticipeService: TipoParticipeService,
@@ -198,6 +203,7 @@ export class ServiceLocatorCrdService {
     public metodoPagoService: MetodoPagoService,
     public nivelEstudioService: NivelEstudioService,
     public profesionService: ProfesionService,
+    public ordenAfectacionService: OrdenAfectacionValorPrestamoService,
     // Servicios de Entidades Principales
     public adjuntoService: AdjuntoService,
     public aporteService: AporteService,
@@ -311,6 +317,24 @@ export class ServiceLocatorCrdService {
           }
           case AccionesGrid.REMOVE: {
             return firstValueFrom(this.estadoCivilService.delete(value));
+          }
+          default:
+            return Promise.resolve(undefined);
+        }
+      }
+      case EntidadesCrd.ESTADO_CUOTA_PRESTAMO: {
+        switch (proceso) {
+          case AccionesGrid.ADD: {
+            this.reg = value as EstadoCuotaPrestamo;
+            this.reg.estado = 1;
+            return firstValueFrom(this.estadoCuotaPrestamoService.add(this.reg as EstadoCuotaPrestamo));
+          }
+          case AccionesGrid.EDIT: {
+            this.reg = value as EstadoCuotaPrestamo;
+            return firstValueFrom(this.estadoCuotaPrestamoService.update(this.reg as EstadoCuotaPrestamo));
+          }
+          case AccionesGrid.REMOVE: {
+            return firstValueFrom(this.estadoCuotaPrestamoService.delete(value));
           }
           default:
             return Promise.resolve(undefined);
@@ -583,6 +607,24 @@ export class ServiceLocatorCrdService {
           }
           case AccionesGrid.REMOVE: {
             return firstValueFrom(this.profesionService.delete(value));
+          }
+          default:
+            return Promise.resolve(undefined);
+        }
+      }
+      case EntidadesCrd.ORDEN_AFECTACION_VALOR_PRESTAMO: {
+        switch (proceso) {
+          case AccionesGrid.ADD: {
+            this.reg = value as OrdenAfectacionValorPrestamo;
+            this.reg.estado = 1;
+            return firstValueFrom(this.ordenAfectacionService.add(this.reg as OrdenAfectacionValorPrestamo));
+          }
+          case AccionesGrid.EDIT: {
+            this.reg = value as OrdenAfectacionValorPrestamo;
+            return firstValueFrom(this.ordenAfectacionService.update(this.reg as OrdenAfectacionValorPrestamo));
+          }
+          case AccionesGrid.REMOVE: {
+            return firstValueFrom(this.ordenAfectacionService.delete(value));
           }
           default:
             return Promise.resolve(undefined);
@@ -1367,6 +1409,9 @@ export class ServiceLocatorCrdService {
       case EntidadesCrd.ESTADO_CIVIL: {
         return firstValueFrom(this.estadoCivilService.getAll());
       }
+      case EntidadesCrd.ESTADO_CUOTA_PRESTAMO: {
+        return firstValueFrom(this.estadoCuotaPrestamoService.getAll());
+      }
       // ========== TIPOS ==========
       case EntidadesCrd.TIPO_CONTRATO: {
         return firstValueFrom(this.tipoContratoService.getAll());
@@ -1413,6 +1458,9 @@ export class ServiceLocatorCrdService {
       }
       case EntidadesCrd.PROFESION: {
         return firstValueFrom(this.profesionService.getAll());
+      }
+      case EntidadesCrd.ORDEN_AFECTACION_VALOR_PRESTAMO: {
+        return firstValueFrom(this.ordenAfectacionService.getAll());
       }
       // ========== ENTIDADES PRINCIPALES ==========
       case EntidadesCrd.ADJUNTO: {

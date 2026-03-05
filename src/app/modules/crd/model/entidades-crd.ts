@@ -70,5 +70,7 @@ export class EntidadesCrd {
   public static readonly TIPO_REQUISITO_PRESTAMO = 463;
   public static readonly TIPO_VIVIENDA = 464;
   public static readonly BASE_INICIAL_PARTICIPES = 465;
+  public static readonly ESTADO_CUOTA_PRESTAMO = 466;
+  public static readonly ORDEN_AFECTACION_VALOR_PRESTAMO = 467;
 
 }

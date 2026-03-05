@@ -69,6 +69,8 @@ export class ServiciosCrd {
   public static RS_APAS = `${API_URL}/apas`;
   public static RS_TRAS = `${API_URL}/tras`;
   public static RS_BIPR = `${API_URL}/bipr`;
+  public static RS_ESCP = `${API_URL}/escp`;
+  public static RS_OAVP = `${API_URL}/oavp`;
 }
 /*
 export class ServiciosCrd {

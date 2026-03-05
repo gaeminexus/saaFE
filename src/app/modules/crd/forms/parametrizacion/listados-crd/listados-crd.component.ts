@@ -14,6 +14,7 @@ import { MetodoPago } from '../../../model/metodo-pago';
 import { NivelEstudio } from '../../../model/nivel-estudio';
 import { Profesion } from '../../../model/profesion';
 import { Producto } from '../../../model/producto';
+import { OrdenAfectacionValorPrestamo } from '../../../model/orden-afectacion-valor-prestamo';
 import { Filial } from '../../../model/filial';
 import { TipoPrestamo } from '../../../model/tipo-prestamo';
 import { FilialService } from '../../../service/filial.service';
@@ -42,6 +43,7 @@ export class ListadosCrdComponent implements OnInit {
   nivelesEstudio: NivelEstudio[] = [];
   profesiones: Profesion[] = [];
   productos: Producto[] = [];
+  ordenesAfectacion: OrdenAfectacionValorPrestamo[] = [];
 
   // Datos para selects
   filiales: Filial[] = [];
@@ -53,6 +55,7 @@ export class ListadosCrdComponent implements OnInit {
   tableConfigNivelEstudio!: TableConfig;
   tableConfigProfesion!: TableConfig;
   tableConfigProducto!: TableConfig;
+  tableConfigOrdenAfectacion!: TableConfig;
 
   // Índice del tab seleccionado
   selectedTabIndex: number = 0;
@@ -63,7 +66,8 @@ export class ListadosCrdComponent implements OnInit {
     { nombre: 'Método Pago', icono: 'payment', index: 1 },
     { nombre: 'Nivel Estudio', icono: 'school', index: 2 },
     { nombre: 'Profesión', icono: 'work', index: 3 },
-    { nombre: 'Productos', icono: 'category', index: 4 }
+    { nombre: 'Productos', icono: 'category', index: 4 },
+    { nombre: 'Orden Afectación', icono: 'format_list_numbered', index: 5 }
   ];
 
   constructor(
@@ -86,6 +90,7 @@ export class ListadosCrdComponent implements OnInit {
     this.nivelesEstudio = data.nivelesEstudio || [];
     this.profesiones = data.profesiones || [];
     this.productos = data.productos || [];
+    this.ordenesAfectacion = data.ordenesAfectacion || [];
 
     // Cargar datos para los selects de Producto
     this.cargarDatosSelects();
@@ -178,6 +183,22 @@ export class ListadosCrdComponent implements OnInit {
       registros: this.productos,
       fields: this.getFieldsProducto(),
       regConfig: this.getRegConfigProducto(),
+      add: true,
+      edit: true,
+      remove: false,
+      paginator: true,
+      filter: true,
+      fSize: 'em-1',
+      row_size: 's08'
+    };
+
+    // Orden Afectación Valor Préstamo
+    this.tableConfigOrdenAfectacion = {
+      entidad: EntidadesCrd.ORDEN_AFECTACION_VALOR_PRESTAMO,
+      titulo: 'Orden de Afectación de Valor',
+      registros: this.ordenesAfectacion,
+      fields: this.getFieldsOrdenAfectacion(),
+      regConfig: this.getRegConfigOrdenAfectacion(),
       add: true,
       edit: true,
       remove: false,
@@ -359,6 +380,40 @@ export class ListadosCrdComponent implements OnInit {
           { name: 'required', validator: Validators.required, message: 'El tipo de préstamo es requerido' }
         ]
       } as SelectFieldConfig,
+    ];
+  }
+
+  // ========== Orden Afectación Valor Préstamo ==========
+  private getFieldsOrdenAfectacion(): FieldFormat[] {
+    return [
+      { column: 'nombre', header: 'Nombre', fWidth: '50%' },
+      { column: 'orden', header: 'Orden', fWidth: '50%' },
+    ];
+  }
+
+  private getRegConfigOrdenAfectacion(): FieldConfig[] {
+    return [
+      {
+        type: 'input',
+        label: 'Nombre',
+        name: 'nombre',
+        inputType: 'text',
+        value: '',
+        validations: [
+          { name: 'required', validator: Validators.required, message: 'El nombre es requerido' },
+          { name: 'maxlength', validator: Validators.maxLength(100), message: 'Máximo 100 caracteres' }
+        ]
+      },
+      {
+        type: 'input',
+        label: 'Orden',
+        name: 'orden',
+        inputType: 'number',
+        value: '',
+        validations: [
+          { name: 'required', validator: Validators.required, message: 'El orden es requerido' }
+        ]
+      }
     ];
   }
 

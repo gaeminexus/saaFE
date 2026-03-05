@@ -7,11 +7,13 @@ import { MetodoPagoService } from '../service/metodo-pago.service';
 import { NivelEstudioService } from '../service/nivel-estudio.service';
 import { ProfesionService } from '../service/profesion.service';
 import { ProductoService } from '../service/producto.service';
+import { OrdenAfectacionValorPrestamoService } from '../service/orden-afectacion-valor-prestamo.service';
 import { MotivoPrestamo } from '../model/motivo-prestamo';
 import { MetodoPago } from '../model/metodo-pago';
 import { NivelEstudio } from '../model/nivel-estudio';
 import { Profesion } from '../model/profesion';
 import { Producto } from '../model/producto';
+import { OrdenAfectacionValorPrestamo } from '../model/orden-afectacion-valor-prestamo';
 
 export interface ListadosData {
   motivosPrestamo: MotivoPrestamo[] | null;
@@ -19,6 +21,7 @@ export interface ListadosData {
   nivelesEstudio: NivelEstudio[] | null;
   profesiones: Profesion[] | null;
   productos: Producto[] | null;
+  ordenesAfectacion: OrdenAfectacionValorPrestamo[] | null;
 }
 
 @Injectable({
@@ -32,6 +35,7 @@ export class ListadosCrdResolverService implements Resolve<ListadosData> {
     private nivelEstudioService: NivelEstudioService,
     private profesionService: ProfesionService,
     private productoService: ProductoService,
+    private ordenAfectacionService: OrdenAfectacionValorPrestamoService,
   ) { }
 
   resolve(): Observable<ListadosData> {
@@ -66,7 +70,12 @@ export class ListadosCrdResolverService implements Resolve<ListadosData> {
           return of(null);
         })
       ),
+      ordenesAfectacion: this.ordenAfectacionService.getAll().pipe(
+        catchError(error => {
+          console.error('Error al cargar órdenes de afectación:', error);
+          return of(null);
+        })
+      ),
     });
   }
 }
-
