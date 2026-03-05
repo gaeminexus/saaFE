@@ -58,6 +58,13 @@ export class PrestamoService {
     );
   }
 
+  generarTablaAmortizacion(id: number): Observable<Prestamo | null> {
+    const url = `${ServiciosCrd.RS_PRST}/generarTablaAmortizacion/${id}`;
+    return this.http.post<Prestamo>(url, null, this.httpOptions).pipe(
+      catchError(this.handleError)
+    );
+  }
+
   private handleError(error: HttpErrorResponse): Observable<null> {
     if (+error.status === 200) {
       return of(null);
