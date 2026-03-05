@@ -384,7 +384,8 @@ export class PrestamoEditComponent implements OnInit {
       .pipe(finalize(() => this.cargandoDetalle.set(false)))
       .subscribe({
         next: (res) => {
-          this.detallePrestamo.set(res || []);
+          const detalleNormalizado = (res || []).map((d) => this.normalizarDetallePrestamo(d));
+          this.detallePrestamo.set(detalleNormalizado);
         },
         error: () => {
           this.detallePrestamo.set([]);
@@ -393,6 +394,61 @@ export class PrestamoEditComponent implements OnInit {
           });
         },
       });
+  }
+
+  private normalizarDetallePrestamo(detalle: DetallePrestamo): DetallePrestamo {
+    return {
+      ...detalle,
+      fechaVencimiento: this.convertirFechaFlexible((detalle as any).fechaVencimiento) as any,
+      fechaPagado: this.convertirFechaFlexible((detalle as any).fechaPagado) as any,
+      fechaRegistro: this.convertirFechaFlexible((detalle as any).fechaRegistro) as any,
+    };
+  }
+
+  private convertirFechaFlexible(valor: any): Date | null {
+    if (!valor) {
+      return null;
+    }
+
+    if (valor instanceof Date) {
+      return valor;
+    }
+
+    if (Array.isArray(valor)) {
+      const [year, month, day, hour = 0, minute = 0, second = 0, nanoseconds = 0] = valor;
+      const ms = Math.floor((Number(nanoseconds) || 0) / 1000000);
+      return new Date(
+        Number(year),
+        Number(month) - 1,
+        Number(day),
+        Number(hour),
+        Number(minute),
+        Number(second),
+        ms,
+      );
+    }
+
+    if (typeof valor === 'string') {
+      const texto = valor.trim();
+
+      // Backend sometimes sends dates as "yyyy,m,d,h,m[,s[,ns]]"
+      if (/^\d{4},\d{1,2},\d{1,2}(,\d{1,2}){0,4}$/.test(texto)) {
+        const parts = texto.split(',').map((n) => Number(n));
+        const [year, month, day, hour = 0, minute = 0, second = 0, nanoseconds = 0] = parts;
+        const ms = Math.floor((nanoseconds || 0) / 1000000);
+        return new Date(year, month - 1, day, hour, minute, second, ms);
+      }
+
+      const parsed = new Date(texto);
+      return isNaN(parsed.getTime()) ? null : parsed;
+    }
+
+    if (typeof valor === 'number') {
+      const parsed = new Date(valor);
+      return isNaN(parsed.getTime()) ? null : parsed;
+    }
+
+    return null;
   }
 
   irConsulta(): void {
