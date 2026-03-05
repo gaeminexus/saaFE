@@ -112,7 +112,7 @@ export class MenucreditosComponent {
         {
           displayName: 'Ingreso',
           iconName: 'credit_score',
-          route: '/menucreditos/carga-aportes',
+          route: '/menucreditos/prestamo-edit',
         },
         {
           displayName: 'Consulta',

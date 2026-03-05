@@ -1,1 +1,184 @@
-<p>prestamo-edit.component works!</p>
+<div class="prestamo-edit-container">
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-icon">
+        <mat-icon>credit_score</mat-icon>
+      </div>
+      <div class="header-text">
+        <h1>Ingreso de Prestamos</h1>
+        <p class="subtitle">Registre un nuevo prestamo para participes</p>
+      </div>
+    </div>
+  </div>
+
+  <mat-card class="form-card">
+    <mat-card-content>
+      @if (loading()) {
+        <div class="loading-box">
+          <mat-spinner diameter="52"></mat-spinner>
+          <p>Cargando informacion...</p>
+        </div>
+      } @else {
+        <form [formGroup]="form" class="form-grid">
+          <mat-form-field appearance="fill" class="field field-top">
+            <mat-label>Participe</mat-label>
+            <mat-icon matPrefix>person</mat-icon>
+            <input
+              matInput
+              [value]="participeQuery()"
+              (input)="onParticipeInput($event)"
+              [matAutocomplete]="autoParticipe"
+              placeholder="Buscar por cedula o nombre"
+            />
+            <mat-autocomplete
+              #autoParticipe="matAutocomplete"
+              (optionSelected)="onParticipeSelected($event.option.value)"
+            >
+              @for (p of participesFiltrados(); track p.codigoParticipe) {
+                <mat-option [value]="p.codigoParticipe"
+                  >{{ p.numeroIdentificacion }} - {{ p.nombre }}</mat-option
+                >
+              }
+            </mat-autocomplete>
+            <mat-error>El participe es obligatorio</mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="fill" class="field field-top">
+            <mat-label>Producto</mat-label>
+            <mat-icon matPrefix>category</mat-icon>
+            <mat-select formControlName="producto">
+              <mat-option [value]="null">Seleccione</mat-option>
+              @for (prod of productosOptions(); track prod.codigo) {
+                <mat-option [value]="prod.codigo">{{ prod.nombre }}</mat-option>
+              }
+            </mat-select>
+            <mat-error>El producto es obligatorio</mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="fill" class="field">
+            <mat-label>Tasa</mat-label>
+            <mat-icon matPrefix>percent</mat-icon>
+            <input matInput type="number" formControlName="tasa" min="0" step="0.01" />
+            <mat-error>La tasa es obligatoria</mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="fill" class="field">
+            <mat-label>Monto</mat-label>
+            <mat-icon matPrefix>attach_money</mat-icon>
+            <input matInput type="number" formControlName="monto" min="0" step="0.01" />
+            <mat-error>El monto es obligatorio</mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="fill" class="field">
+            <mat-label>Plazo en meses</mat-label>
+            <mat-icon matPrefix>schedule</mat-icon>
+            <input matInput type="number" formControlName="plazo" min="1" step="1" />
+            <mat-error>El plazo es obligatorio</mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="fill" class="field">
+            <mat-label>Tipo de tabla de amortizacion</mat-label>
+            <mat-icon matPrefix>account_tree</mat-icon>
+            <mat-select formControlName="tipoAmortizacion">
+              @for (opt of tipoAmortizacionOptions; track opt.value) {
+                <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+              }
+            </mat-select>
+            <mat-error>El tipo de amortizacion es obligatorio</mat-error>
+          </mat-form-field>
+
+          <div class="actions field-full">
+            <button mat-raised-button color="primary" type="button" (click)="guardar()">
+              <mat-icon>save</mat-icon>
+              Guardar
+            </button>
+            <button
+              mat-raised-button
+              color="accent"
+              type="button"
+              (click)="generarTablaAmortizacion()"
+              [disabled]="generandoTabla() || !ultimoPrestamoId()"
+            >
+              <mat-icon>table_chart</mat-icon>
+              Generar Tabla Amortizacion
+            </button>
+            <button mat-raised-button type="button" (click)="limpiar()">
+              <mat-icon>clear</mat-icon>
+              Limpiar
+            </button>
+            <button mat-raised-button type="button" (click)="irConsulta()">
+              <mat-icon>manage_search</mat-icon>
+              Ir a Consulta
+            </button>
+          </div>
+        </form>
+
+        @if (ultimoPrestamoId()) {
+          <div class="detalle-header">
+            <h3>Detalle Prestamo generado</h3>
+            <span>Prestamo ID: {{ ultimoPrestamoId() }}</span>
+          </div>
+
+          @if (cargandoDetalle()) {
+            <div class="loading-box loading-detalle">
+              <mat-spinner diameter="40"></mat-spinner>
+              <p>Cargando cuotas generadas...</p>
+            </div>
+          } @else {
+            <div class="detalle-table-wrapper">
+              <table
+                mat-table
+                [dataSource]="detallePrestamo()"
+                class="detalle-table mat-elevation-z2"
+              >
+                <ng-container matColumnDef="numeroCuota">
+                  <th mat-header-cell *matHeaderCellDef># Cuota</th>
+                  <td mat-cell *matCellDef="let d">{{ d.numeroCuota }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="fechaVencimiento">
+                  <th mat-header-cell *matHeaderCellDef>Vencimiento</th>
+                  <td mat-cell *matCellDef="let d">
+                    {{ d.fechaVencimiento | date: 'dd/MM/yyyy' }}
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="capital">
+                  <th mat-header-cell *matHeaderCellDef>Capital</th>
+                  <td mat-cell *matCellDef="let d">{{ d.capital | number: '1.2-2' }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="interes">
+                  <th mat-header-cell *matHeaderCellDef>Interes</th>
+                  <td mat-cell *matCellDef="let d">{{ d.interes | number: '1.2-2' }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="cuota">
+                  <th mat-header-cell *matHeaderCellDef>Cuota</th>
+                  <td mat-cell *matCellDef="let d">{{ d.cuota | number: '1.2-2' }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="saldoCapital">
+                  <th mat-header-cell *matHeaderCellDef>Saldo Capital</th>
+                  <td mat-cell *matCellDef="let d">{{ d.saldoCapital | number: '1.2-2' }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="estado">
+                  <th mat-header-cell *matHeaderCellDef>Estado</th>
+                  <td mat-cell *matCellDef="let d">{{ d.estado }}</td>
+                </ng-container>
+
+                <tr mat-header-row *matHeaderRowDef="displayedColumnsDetalle"></tr>
+                <tr mat-row *matRowDef="let row; columns: displayedColumnsDetalle"></tr>
+              </table>
+            </div>
+
+            @if (!detallePrestamo().length) {
+              <p class="detalle-empty">No existen cuotas generadas para este prestamo.</p>
+            }
+          }
+        }
+      }
+    </mat-card-content>
+  </mat-card>
+</div>

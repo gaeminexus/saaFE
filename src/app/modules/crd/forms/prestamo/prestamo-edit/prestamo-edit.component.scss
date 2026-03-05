@@ -1,0 +1,150 @@
+.prestamo-edit-container {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+}
+
+.page-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 2rem 2.5rem;
+  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+  border-radius: 0 0 20px 20px;
+  margin-bottom: 1.5rem;
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.header-icon {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  mat-icon {
+    font-size: 2.2rem;
+    width: 2.2rem;
+    height: 2.2rem;
+    color: white;
+  }
+}
+
+.header-text h1 {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 600;
+}
+
+.subtitle {
+  margin: 0.25rem 0 0;
+  font-size: 0.95rem;
+  opacity: 0.95;
+}
+
+.form-card {
+  margin: 0 2rem 1.5rem;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(320px, 1fr));
+  gap: 0.85rem;
+}
+
+.field {
+  width: 100%;
+}
+
+.field-top {
+  min-width: 0;
+}
+
+.field-full {
+  grid-column: 1 / -1;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+  margin-top: 0.5rem;
+}
+
+.loading-box {
+  display: grid;
+  justify-items: center;
+  gap: 0.65rem;
+  padding: 1.25rem;
+}
+
+.detalle-header {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+
+  h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #2a3b4f;
+  }
+
+  span {
+    font-size: 0.9rem;
+    color: #516173;
+    font-weight: 600;
+  }
+}
+
+.loading-detalle {
+  padding: 1rem 0;
+}
+
+.detalle-table-wrapper {
+  margin-top: 0.75rem;
+  overflow-x: auto;
+  border-radius: 10px;
+}
+
+.detalle-table {
+  width: 100%;
+  min-width: 760px;
+}
+
+.detalle-empty {
+  margin: 0.9rem 0 0;
+  color: #5f6f82;
+  font-size: 0.92rem;
+}
+
+@media (max-width: 768px) {
+  .page-header {
+    padding: 1.4rem;
+  }
+
+  .form-card {
+    margin: 0 1rem 1rem;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .actions {
+    justify-content: stretch;
+
+    button {
+      flex: 1 1 auto;
+      min-width: 150px;
+    }
+  }
+}
