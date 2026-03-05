@@ -17,6 +17,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
 
 import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
@@ -132,6 +133,7 @@ export class PrestamoConsultaComponent implements OnInit {
     private funcionesDatos: FuncionesDatosService,
     private snackBar: MatSnackBar,
     private dialog: MatDialog,
+    private router: Router,
   ) {}
 
   ngOnInit(): void {
@@ -540,6 +542,12 @@ export class PrestamoConsultaComponent implements OnInit {
       maxHeight: '90vh',
       data: { codigoPrestamo: prestamo.codigo },
       panelClass: 'prestamo-detalle-dialog',
+    });
+  }
+
+  abrirIngreso(prestamo: Prestamo): void {
+    this.router.navigate(['/menucreditos/prestamo-edit'], {
+      state: { prestamo },
     });
   }
 

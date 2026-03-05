@@ -21,6 +21,7 @@ import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda
 import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { DetallePrestamo } from '../../../model/detalle-prestamo';
 import { Participe } from '../../../model/participe';
+import { Prestamo } from '../../../model/prestamo';
 import { Producto } from '../../../model/producto';
 import { DetallePrestamoService } from '../../../service/detalle-prestamo.service';
 import { ParticipeService } from '../../../service/participe.service';
@@ -68,6 +69,7 @@ export class PrestamoEditComponent implements OnInit {
   generandoTabla = signal<boolean>(false);
   cargandoDetalle = signal<boolean>(false);
   detallePrestamo = signal<DetallePrestamo[]>([]);
+  private prestamoDesdeConsulta: Prestamo | null = null;
 
   displayedColumnsDetalle: string[] = [
     'numeroCuota',
@@ -117,6 +119,7 @@ export class PrestamoEditComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.prestamoDesdeConsulta = (history.state?.prestamo as Prestamo) || null;
     this.cargarCatalogos();
   }
 
@@ -128,6 +131,7 @@ export class PrestamoEditComponent implements OnInit {
       .subscribe({
         next: (participes) => {
           this.participesOptions.set(this.mapParticipes(participes || []));
+          this.intentarCargarPrestamoDesdeConsulta();
         },
         error: () => {
           this.snackBar.open('Error cargando partícipes', 'Cerrar', { duration: 3500 });
@@ -135,9 +139,47 @@ export class PrestamoEditComponent implements OnInit {
       });
 
     this.productoService.getAll().subscribe({
-      next: (productos) => this.productosOptions.set(productos || []),
+      next: (productos) => {
+        this.productosOptions.set(productos || []);
+        this.intentarCargarPrestamoDesdeConsulta();
+      },
       error: () => this.snackBar.open('Error cargando productos', 'Cerrar', { duration: 3500 }),
     });
+  }
+
+  private intentarCargarPrestamoDesdeConsulta(): void {
+    if (!this.prestamoDesdeConsulta) {
+      return;
+    }
+
+    if (!this.participesOptions().length || !this.productosOptions().length) {
+      return;
+    }
+
+    const prestamo = this.prestamoDesdeConsulta;
+    const participe = this.participesOptions().find(
+      (p) => p.codigoEntidad === prestamo.entidad?.codigo,
+    );
+
+    this.form.patchValue({
+      participe: participe?.codigoParticipe ?? null,
+      producto: prestamo.producto?.codigo ?? null,
+      tipoAmortizacion: prestamo.tipoAmortizacion ?? 1,
+      tasa: prestamo.tasa ?? prestamo.tasaNominal ?? 0,
+      monto: prestamo.montoSolicitado ?? 0,
+      plazo: prestamo.plazo ?? null,
+    });
+
+    if (participe) {
+      this.participeQuery.set(participe.label);
+    }
+
+    this.ultimoPrestamoId.set(prestamo.codigo || null);
+    if (prestamo.codigo) {
+      this.cargarDetallePrestamo(prestamo.codigo);
+    }
+
+    this.prestamoDesdeConsulta = null;
   }
 
   private mapParticipes(participes: Participe[]): ParticipeOption[] {
@@ -259,18 +301,18 @@ export class PrestamoEditComponent implements OnInit {
     };
 
     this.loading.set(true);
-    this.ultimoPrestamoId.set(null);
-    this.detallePrestamo.set([]);
     this.prestamoService.add(payload).subscribe({
       next: (res) => {
         this.loading.set(false);
-        this.ultimoPrestamoId.set(res?.codigo || null);
+        const nuevoPrestamoId = res?.codigo || null;
+        const prestamoAnteriorId = this.ultimoPrestamoId();
+
+        this.ultimoPrestamoId.set(nuevoPrestamoId);
+        if (prestamoAnteriorId !== nuevoPrestamoId) {
+          this.detallePrestamo.set([]);
+        }
+
         this.snackBar.open('Préstamo guardado correctamente', 'Cerrar', { duration: 3000 });
-        this.form.reset({
-          tipoAmortizacion: 1,
-          tasa: 0,
-        });
-        this.participeQuery.set('');
       },
       error: (err) => {
         this.loading.set(false);
