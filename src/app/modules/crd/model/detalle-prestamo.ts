@@ -13,6 +13,7 @@ export interface DetallePrestamo {
   interes: number;              // DTPRINTR - Interés
   mora: number;                 // DTPRMRAA - Mora
   interesVencido: number;       // DTPRINVN - Interés Vencido
+  saldoInicialCapital: number;  // DTPRSICP - Saldo inicial capital de la cuota
   saldoCapital: number;         // DTPRSLCP - Saldo capital
   saldoInteres: number;         // DTPRSLIN - Saldo Interes
   saldoMora: number;            // DTPRSLMR - Saldo mora
@@ -42,4 +43,5 @@ export interface DetallePrestamo {
   codigoExterno: number;        // DTPRCDEX - Código externo
   otrosSeguros: number;         // DTPROTSG - Otros seguros
   totalConSeguro: number;       // DTPRTTCS - Total con seguro
+  valorSeguroIncendio: number;  // DTPRVLSI - Valor del seguro de incendio
 }

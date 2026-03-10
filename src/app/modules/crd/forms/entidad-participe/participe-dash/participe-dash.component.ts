@@ -101,15 +101,28 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
   displayedColumns: string[] = [
     'numeroCuota',
     'fechaVencimiento',
+    'saldoInicialCapital',
     'capital',
+    'saldoCapital',
     'interes',
     'desgravamen',
     'pagoExtra',
     'cuota',
-    'saldo',
     'estado',
     'acciones',
   ];
+
+  /** Columnas de la tabla de cuotas — incluye seguro incendio solo si el préstamo es hipotecario (tipoPrestamo.codigo === 2) */
+  get displayedColumnsCuotas(): string[] {
+    const esHipotecario = this.prestamoSeleccionado?.producto?.tipoPrestamo?.codigo === 2;
+    if (esHipotecario) {
+      const cols = [...this.displayedColumns];
+      const idx = cols.indexOf('pagoExtra');
+      cols.splice(idx + 1, 0, 'valorSeguroIncendio');
+      return cols;
+    }
+    return this.displayedColumns;
+  }
   displayedColumnsAportes: string[] = [
     'fechaTransaccion',
     'tipoAporte',
@@ -697,40 +710,42 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
 
               if (dataSource && dataSource.data.length > 0) {
                 // Tabla de cuotas
+                const esHipotecarioRpt = prestamo.producto?.tipoPrestamo?.codigo === 2;
+                const rptHead = ['Cuota', 'Vencimiento', 'Saldo Ini.', 'Capital', 'Saldo Cap.', 'Interés', 'Desgravamen', 'Pago Extra'];
+                if (esHipotecarioRpt) rptHead.push('Seg. Incendio');
+                rptHead.push('Cuota Total');
+
                 const cuotasData = dataSource.data.map((dc) => {
                   const fechaVenc = this.convertirFecha(dc.detalle.fechaVencimiento);
-                  return [
+                  const row = [
                     dc.detalle.numeroCuota?.toString() || 'N/A',
                     fechaVenc ? fechaVenc.toLocaleDateString('es-ES') : 'N/A',
+                    `$${(dc.detalle.saldoInicialCapital || 0).toFixed(2)}`,
                     `$${(dc.detalle.capital || 0).toFixed(2)}`,
+                    `$${(dc.detalle.saldoCapital || 0).toFixed(2)}`,
                     `$${(dc.detalle.interes || 0).toFixed(2)}`,
-                    `$${(dc.detalle.cuota || 0).toFixed(2)}`,
-                    `$${(dc.detalle.saldo || 0).toFixed(2)}`,
+                    `$${(dc.detalle.desgravamen || 0).toFixed(2)}`,
+                    `$${(dc.detalle.saldoOtros || 0).toFixed(2)}`,
                   ];
+                  if (esHipotecarioRpt) row.push(`$${(dc.detalle.valorSeguroIncendio || 0).toFixed(2)}`);
+                  row.push(`$${(dc.detalle.cuota || 0).toFixed(2)}`);
+                  return row;
                 });
 
                 if (doc.autoTable) {
                   doc.autoTable({
                     startY: yPosition,
-                    head: [['Cuota', 'Vencimiento', 'Capital', 'Interés', 'Cuota', 'Saldo']],
+                    head: [rptHead],
                     body: cuotasData,
                     theme: 'striped',
-                    styles: { fontSize: 7, cellPadding: 2 },
+                    styles: { fontSize: 6, cellPadding: 1 },
                     headStyles: {
                       fillColor: [102, 126, 234],
                       textColor: 255,
-                      fontSize: 7,
+                      fontSize: 6,
                       fontStyle: 'bold',
                     },
-                    margin: { left: 20, right: 14 },
-                    columnStyles: {
-                      0: { cellWidth: 15 },
-                      1: { cellWidth: 25 },
-                      2: { cellWidth: 28 },
-                      3: { cellWidth: 28 },
-                      4: { cellWidth: 28 },
-                      5: { cellWidth: 28 },
-                    },
+                    margin: { left: 14, right: 14 },
                   });
                   yPosition = (doc as any).lastAutoTable.finalY + 10;
                 } else {
@@ -826,28 +841,40 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
         return;
       }
 
+      const esHipotecarioCSV = prestamo.producto?.tipoPrestamo?.codigo === 2;
+
       const rows = detalles.map((detalleConPagos) => {
         const detalle = detalleConPagos.detalle;
         const fechaVenc = this.convertirFecha(detalle.fechaVencimiento);
-        return {
+        const row: Record<string, any> = {
           cuota: detalle.numeroCuota || 0,
           fechaVencimiento: fechaVenc ? fechaVenc.toLocaleDateString('es-ES') : 'N/A',
+          saldoInicialCapital: detalle.saldoInicialCapital || 0,
           capital: detalle.capital || 0,
+          saldoCapital: detalle.saldoCapital || 0,
           interes: detalle.interes || 0,
           desgravamen: detalle.desgravamen || 0,
-          cuotaTotal: detalle.cuota || 0,
-          saldo: detalle.saldo || 0,
-          estado: detalle.estado === 1 ? 'Pagada' : 'Pendiente',
+          pagoExtra: detalle.saldoOtros || 0,
         };
+        if (esHipotecarioCSV) {
+          row['seguroIncendio'] = detalle.valorSeguroIncendio || 0;
+        }
+        row['cuotaTotal'] = detalle.cuota || 0;
+        row['estado'] = detalle.estado === 1 ? 'Pagada' : 'Pendiente';
+        return row;
       });
 
+      const csvHeaders = ['Cuota', 'Fecha Vencimiento', 'Saldo Inicial', 'Capital', 'Saldo Capital', 'Interés', 'Desgravamen', 'Pago Extra'];
+      const csvKeys = ['cuota', 'fechaVencimiento', 'saldoInicialCapital', 'capital', 'saldoCapital', 'interes', 'desgravamen', 'pagoExtra'];
+      if (esHipotecarioCSV) {
+        csvHeaders.push('Seg. Incendio');
+        csvKeys.push('seguroIncendio');
+      }
+      csvHeaders.push('Cuota Total', 'Estado');
+      csvKeys.push('cuotaTotal', 'estado');
+
       const filename = `Prestamo_${prestamo.idAsoprep || prestamo.codigo}_${this.entidadEncontrada.numeroIdentificacion}`;
-      this.exportService.exportToCSV(
-        rows,
-        filename,
-        ['Cuota', 'Fecha Vencimiento', 'Capital', 'Interés', 'Desgravamen', 'Cuota Total', 'Saldo', 'Estado'],
-        ['cuota', 'fechaVencimiento', 'capital', 'interes', 'desgravamen', 'cuotaTotal', 'saldo', 'estado']
-      );
+      this.exportService.exportToCSV(rows, filename, csvHeaders, csvKeys);
 
       this.snackBar.open('CSV exportado exitosamente', 'Cerrar', { duration: 3000 });
     } catch (error) {
@@ -969,43 +996,52 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
             doc.text('Detalle de Cuotas', 14, yPosition);
             yPosition += 8;
 
+            const esHipotecarioPDF = prestamo.producto?.tipoPrestamo?.codigo === 2;
+            const pdfHead = ['Cuota', 'Vencimiento', 'Saldo Inicial', 'Capital', 'Saldo Cap.', 'Interés', 'Desgravamen', 'Pago Extra'];
+            if (esHipotecarioPDF) pdfHead.push('Seg. Incendio');
+            pdfHead.push('Cuota Total', 'Estado');
+
             const cuotasData = detalles.map((detalleConPagos) => {
               const detalle = detalleConPagos.detalle;
               const fechaVenc = this.convertirFecha(detalle.fechaVencimiento);
               const fechaVencStr = fechaVenc ? fechaVenc.toLocaleDateString('es-ES') : 'N/A';
-
-              return [
+              const row = [
                 detalle.numeroCuota?.toString() || 'N/A',
                 fechaVencStr,
+                `$${(detalle.saldoInicialCapital || 0).toFixed(2)}`,
                 `$${(detalle.capital || 0).toFixed(2)}`,
+                `$${(detalle.saldoCapital || 0).toFixed(2)}`,
                 `$${(detalle.interes || 0).toFixed(2)}`,
-                `$${(detalle.cuota || 0).toFixed(2)}`,
-                `$${(detalle.saldo || 0).toFixed(2)}`,
-                detalle.estado === 1 ? 'Pagada' : 'Pendiente',
+                `$${(detalle.desgravamen || 0).toFixed(2)}`,
+                `$${(detalle.saldoOtros || 0).toFixed(2)}`,
               ];
+              if (esHipotecarioPDF) row.push(`$${(detalle.valorSeguroIncendio || 0).toFixed(2)}`);
+              row.push(`$${(detalle.cuota || 0).toFixed(2)}`, detalle.estado === 1 ? 'Pagada' : 'Pendiente');
+              return row;
             });
 
             if (doc.autoTable) {
               doc.autoTable({
                 startY: yPosition,
-                head: [['Cuota', 'Vencimiento', 'Capital', 'Interés', 'Cuota', 'Saldo', 'Estado']],
+                head: [pdfHead],
                 body: cuotasData,
                 theme: 'striped',
-                styles: { fontSize: 8, cellPadding: 2 },
+                styles: { fontSize: 7, cellPadding: 1.5 },
                 headStyles: {
                   fillColor: [102, 126, 234],
                   textColor: 255,
-                  fontSize: 8,
+                  fontSize: 7,
                   fontStyle: 'bold',
                 },
                 columnStyles: {
-                  0: { cellWidth: 15, halign: 'center' },
-                  1: { cellWidth: 25 },
-                  2: { cellWidth: 25, halign: 'right' },
-                  3: { cellWidth: 25, halign: 'right' },
-                  4: { cellWidth: 25, halign: 'right' },
-                  5: { cellWidth: 25, halign: 'right' },
-                  6: { cellWidth: 25, halign: 'center' },
+                  0: { cellWidth: 12, halign: 'center' },
+                  1: { cellWidth: 20 },
+                  2: { cellWidth: 20, halign: 'right' },
+                  3: { cellWidth: 20, halign: 'right' },
+                  4: { cellWidth: 20, halign: 'right' },
+                  5: { cellWidth: 17, halign: 'right' },
+                  6: { cellWidth: 20, halign: 'right' },
+                  7: { cellWidth: 17, halign: 'right' },
                 },
               });
               yPosition = (doc as any).lastAutoTable.finalY + 10;
@@ -1023,12 +1059,23 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
 
             const totalCapital = detalles.reduce((sum, d) => sum + (d.detalle.capital || 0), 0);
             const totalInteres = detalles.reduce((sum, d) => sum + (d.detalle.interes || 0), 0);
+            const totalDesgravamen = detalles.reduce((sum, d) => sum + (d.detalle.desgravamen || 0), 0);
+            const totalPagoExtra = detalles.reduce((sum, d) => sum + (d.detalle.saldoOtros || 0), 0);
             const totalCuotas = detalles.reduce((sum, d) => sum + (d.detalle.cuota || 0), 0);
 
             doc.text(`Total Capital: $${totalCapital.toFixed(2)}`, 14, yPosition);
             yPosition += 6;
             doc.text(`Total Interés: $${totalInteres.toFixed(2)}`, 14, yPosition);
             yPosition += 6;
+            doc.text(`Total Desgravamen: $${totalDesgravamen.toFixed(2)}`, 14, yPosition);
+            yPosition += 6;
+            doc.text(`Total Pago Extra: $${totalPagoExtra.toFixed(2)}`, 14, yPosition);
+            yPosition += 6;
+            if (esHipotecarioPDF) {
+              const totalSeguroIncendio = detalles.reduce((sum, d) => sum + (d.detalle.valorSeguroIncendio || 0), 0);
+              doc.text(`Total Seg. Incendio: $${totalSeguroIncendio.toFixed(2)}`, 14, yPosition);
+              yPosition += 6;
+            }
             doc.text(`Total Cuotas: $${totalCuotas.toFixed(2)}`, 14, yPosition);
           } else {
             doc.setFontSize(10);
@@ -3101,9 +3148,9 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
     });
   }
 
-  calcularTotales(codigoPrestamo: number): { capital: number; interes: number; desgravamen: number; pagoExtra: number; cuota: number } {
+  calcularTotales(codigoPrestamo: number): { capital: number; interes: number; desgravamen: number; pagoExtra: number; cuota: number; seguroIncendio: number } {
     const dataSource = this.detallesPrestamo.get(codigoPrestamo);
-    if (!dataSource) return { capital: 0, interes: 0, desgravamen: 0, pagoExtra: 0, cuota: 0 };
+    if (!dataSource) return { capital: 0, interes: 0, desgravamen: 0, pagoExtra: 0, cuota: 0, seguroIncendio: 0 };
 
     return dataSource.data.reduce(
       (acc, dc) => ({
@@ -3112,8 +3159,9 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
         desgravamen: acc.desgravamen + (dc.detalle.desgravamen || 0),
         pagoExtra: acc.pagoExtra + (dc.detalle.saldoOtros || 0),
         cuota: acc.cuota + (dc.detalle.cuota || 0),
+        seguroIncendio: acc.seguroIncendio + (dc.detalle.valorSeguroIncendio || 0),
       }),
-      { capital: 0, interes: 0, desgravamen: 0, pagoExtra: 0, cuota: 0 }
+      { capital: 0, interes: 0, desgravamen: 0, pagoExtra: 0, cuota: 0, seguroIncendio: 0 }
     );
   }
 

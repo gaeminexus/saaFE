@@ -66,4 +66,7 @@ export interface Prestamo {
     mesesACobrar: number;      // PRSTMSCB - Meses a cobrar
     estado: number;          // PRSTIDST - ID Estado
     firmadoTitular: number;    // PRSTFRTT - Indica si fue Firmado Titular
+    valorAsegurado: number;     // PRSTVLAS - Valor asegurado del préstamo
+    tasaSeguroIncendio: number; // PRSTTSIN - Tasa de seguro de incendio
+    primaSeguroIncendio: number; // PRSTPRIN - Prima de seguro de incendio
 }
