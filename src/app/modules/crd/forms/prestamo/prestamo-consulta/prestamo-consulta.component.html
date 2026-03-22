@@ -60,7 +60,7 @@
                 <mat-select formControlName="estadoPrestamo">
                   <mat-option [value]="null">Todos</mat-option>
                   @for (estado of estadosOptions(); track estado.codigo) {
-                    <mat-option [value]="estado.codigo">{{ estado.nombre }}</mat-option>
+                    <mat-option [value]="estado.codigoExterno">{{ estado.nombre }}</mat-option>
                   }
                 </mat-select>
               </mat-form-field>
@@ -293,9 +293,17 @@
                   mat-icon-button
                   color="accent"
                   (click)="abrirIngreso(p)"
-                  matTooltip="Abrir en Ingreso"
+                  matTooltip="Editar préstamo"
                 >
-                  <mat-icon>open_in_new</mat-icon>
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button
+                  mat-icon-button
+                  color="warn"
+                  (click)="generarTablaDesdeConsulta(p)"
+                  matTooltip="Generar tabla de amortización"
+                >
+                  <mat-icon>table_chart</mat-icon>
                 </button>
                 <button
                   mat-icon-button

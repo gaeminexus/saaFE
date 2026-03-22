@@ -78,6 +78,7 @@ export class CuotaConsultaComponent implements OnInit {
   filtrosForm = new FormGroup({
     mes: new FormControl<number>(new Date().getMonth() + 1),
     anio: new FormControl<number>(new Date().getFullYear()),
+    busquedaRapida: new FormControl<string>(''),
     numeroPrestamo: new FormControl<string>(''),
     nombreEntidad: new FormControl<string>(''),
     numeroIdentificacion: new FormControl<string>(''),
@@ -142,8 +143,18 @@ export class CuotaConsultaComponent implements OnInit {
   }
 
   private aplicarFiltrosSecundarios(): void {
-    const { numeroPrestamo, nombreEntidad, numeroIdentificacion, codigoPetro } = this.filtrosForm.value;
+    const { busquedaRapida, numeroPrestamo, nombreEntidad, numeroIdentificacion, codigoPetro } = this.filtrosForm.value;
     let cuotasFiltradas = [...this.allCuotas];
+
+    // Búsqueda rápida combinada: cédula, razón social o ID ASOPREP
+    if (busquedaRapida && busquedaRapida.trim()) {
+      const term = busquedaRapida.trim().toLowerCase();
+      cuotasFiltradas = cuotasFiltradas.filter(cuota =>
+        cuota.numeroIdentificacion.toLowerCase().includes(term) ||
+        cuota.nombreEntidad.toLowerCase().includes(term) ||
+        cuota.numeroPrestamo.toString().includes(term)
+      );
+    }
 
     // Filtrar por número de préstamo (búsqueda parcial)
     if (numeroPrestamo && numeroPrestamo.trim()) {
@@ -213,17 +224,17 @@ export class CuotaConsultaComponent implements OnInit {
   }
 
   private obtenerEstadoCuota(detalle: DetallePrestamo): string {
-    if (detalle.fechaPagado) return 'Pagada';
-
-    const hoy = new Date();
-    const fechaVencimiento = new Date(detalle.fechaVencimiento);
-
-    if (fechaVencimiento < hoy) return 'Vencida';
-
-    const diferenciaDias = Math.floor((fechaVencimiento.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
-    if (diferenciaDias <= 7) return 'Por vencer';
-
-    return 'Pendiente';
+    const mapa: Record<number, string> = {
+      1: 'Pendiente',
+      2: 'Activa',
+      3: 'Emitida',
+      4: 'Pagada',
+      5: 'En mora',
+      6: 'Parcial',
+      7: 'Cancelada anticipada',
+      8: 'Vencida',
+    };
+    return detalle.estado != null ? (mapa[detalle.estado] ?? 'Desconocido') : 'Desconocido';
   }
 
   aplicarFiltros(): void {
@@ -240,6 +251,7 @@ export class CuotaConsultaComponent implements OnInit {
     this.filtrosForm.patchValue({
       mes: new Date().getMonth() + 1,
       anio: new Date().getFullYear(),
+      busquedaRapida: '',
       numeroPrestamo: '',
       nombreEntidad: '',
       numeroIdentificacion: '',

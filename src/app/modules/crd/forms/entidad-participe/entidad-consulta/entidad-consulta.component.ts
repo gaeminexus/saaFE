@@ -8,7 +8,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { Router } from '@angular/router';
-import { forkJoin } from 'rxjs';
+import { forkJoin, of, switchMap } from 'rxjs';
 
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 
@@ -33,6 +33,7 @@ import { AuditoriaService } from '../../../service/auditoria.service';
 import { EntidadService } from '../../../service/entidad.service';
 import { EstadoParticipeService } from '../../../service/estado-participe.service';
 import { FilialService } from '../../../service/filial.service';
+import { PrestamoService } from '../../../service/prestamo.service';
 import { TipoIdentificacionService } from '../../../service/tipo-identificacion.service';
 
 @Component({
@@ -70,6 +71,7 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
   private exportService = inject(ExportService);
   private funcionesDatos = inject(FuncionesDatosService);
   private auditoriaService = inject(AuditoriaService);
+  private prestamoService = inject(PrestamoService);
 
   // Signals
   entidades = signal<Entidad[]>([]);
@@ -137,6 +139,7 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
       numeroIdentificacion: [null],
       razonSocial: [null],
       rolPetroComercial: [null],
+      idAsoprep: [null],
       email: [null],
       telefono: [null],
       sectorPublico: [null],
@@ -172,6 +175,7 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
       numeroIdentificacion,
       razonSocial,
       rolPetroComercial,
+      idAsoprep,
       email,
       telefono,
       sectorPublico,
@@ -244,6 +248,8 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
       );
       criterios.push(db);
     }
+
+    // idAsoprep: se resuelve primero en la tabla prestamo (ver ejecución abajo)
 
     // Email: (correoPersonal LIKE email OR correoInstitucional LIKE email)
     if (email) {
@@ -395,7 +401,40 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
     criterios.push(dbOrderBy);
 
     // Ejecutar búsqueda
-    this.entidadService.selectByCriteria(criterios).subscribe({
+    // Si se filtró por idAsoprep, primero buscar en prestamo y resolver el código de entidad
+    const criteriosAsoprep: DatosBusqueda[] = [];
+    if (idAsoprep) {
+      const dbAso = new DatosBusqueda();
+      dbAso.asignaUnCampoSinTrunc(
+        TipoDatos.LONG,
+        'idAsoprep',
+        idAsoprep.toString(),
+        TipoComandosBusqueda.IGUAL
+      );
+      criteriosAsoprep.push(dbAso);
+    }
+
+    const busqueda$ = idAsoprep
+      ? this.prestamoService.selectByCriteria(criteriosAsoprep).pipe(
+          switchMap((prestamos) => {
+            const codigoEntidad = prestamos?.[0]?.entidad?.codigo;
+            if (!codigoEntidad) {
+              return of(null); // prestamo no encontrado
+            }
+            const dbEnt = new DatosBusqueda();
+            dbEnt.asignaUnCampoSinTrunc(
+              TipoDatos.LONG,
+              'codigo',
+              codigoEntidad.toString(),
+              TipoComandosBusqueda.IGUAL
+            );
+            criterios.push(dbEnt);
+            return this.entidadService.selectByCriteria(criterios);
+          })
+        )
+      : this.entidadService.selectByCriteria(criterios);
+
+    busqueda$.subscribe({
       next: (result) => {
         this.busquedaRealizada.set(true); // Marcar que se realizó una búsqueda
         this.entidades.set(result || []);
@@ -424,6 +463,8 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
       tipoIdentificacion: null,
       numeroIdentificacion: null,
       razonSocial: null,
+      rolPetroComercial: null,
+      idAsoprep: null,
       email: null,
       telefono: null,
       sectorPublico: null,

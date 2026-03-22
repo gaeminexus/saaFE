@@ -62,7 +62,8 @@ export class ExportService {
           doc.text(title, 14, 15);
 
           // Fecha de generación
-          const currentDate = new Date().toLocaleDateString('es-ES');
+          const d = new Date();
+          const currentDate = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
           doc.setFontSize(10);
           doc.text(`Generado el: ${currentDate}`, 14, 25);
 
@@ -459,7 +460,8 @@ export class ExportService {
     headers: string[],
     dataKeys: string[],
   ): string {
-    const currentDate = new Date().toLocaleDateString('es-ES');
+    const _d = new Date();
+    const currentDate = `${String(_d.getDate()).padStart(2, '0')}/${String(_d.getMonth() + 1).padStart(2, '0')}/${_d.getFullYear()}`;
 
     let html = `
       <!DOCTYPE html>

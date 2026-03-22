@@ -37,6 +37,8 @@ import { DetallePrestamoService } from '../../../service/detalle-prestamo.servic
 import { DireccionService } from '../../../service/direccion.service';
 import { EntidadService } from '../../../service/entidad.service';
 import { EstadoPrestamoService } from '../../../service/estado-prestamo.service';
+import { EstadoCuotaPrestamo } from '../../../model/estado-cuota-prestamo';
+import { EstadoCuotaPrestamoService } from '../../../service/estado-cuota-prestamo.service';
 import { PagoPrestamoService } from '../../../service/pago-prestamo.service';
 import { ParticipeService } from '../../../service/participe.service';
 import { PrestamoService } from '../../../service/prestamo.service';
@@ -88,6 +90,7 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
   aportesPorTipo: AportesPorTipo[] = [];
   totalAportes: number = 0;
   estadosPrestamo: EstadoPrestamo[] = [];
+  estadosCuota: EstadoCuotaPrestamo[] = [];
 
   // Vista de detalle
   vistaActual: 'dashboard' | 'detallePrestamos' | 'detalleAportes' = 'dashboard';
@@ -95,6 +98,8 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
 
   // Detalles de préstamos
   detallesPrestamo: Map<number, MatTableDataSource<DetalleConPagos>> = new Map();
+  detallesPrestamoRaw: Map<number, DetalleConPagos[]> = new Map();
+  mostrarCanceladas = false;
   prestamoExpandido: number | null = null;
 
   // Columnas de las tablas
@@ -112,10 +117,10 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
     'acciones',
   ];
 
-  /** Columnas de la tabla de cuotas — incluye seguro incendio solo si el préstamo es hipotecario (tipoPrestamo.codigo === 2) */
+  /** Columnas de la tabla de cuotas — incluye seguro si el préstamo es hipotecario o prendario (tipoPrestamo.codigo 2,3,4,5) */
   get displayedColumnsCuotas(): string[] {
-    const esHipotecario = this.prestamoSeleccionado?.producto?.tipoPrestamo?.codigo === 2;
-    if (esHipotecario) {
+    const esConSeguro = [2, 3, 4, 5].includes(this.prestamoSeleccionado?.producto?.tipoPrestamo?.codigo ?? 0);
+    if (esConSeguro) {
       const cols = [...this.displayedColumns];
       const idx = cols.indexOf('pagoExtra');
       cols.splice(idx + 1, 0, 'valorSeguroIncendio');
@@ -149,6 +154,7 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
     private contratoService: ContratoService,
     private participeService: ParticipeService,
     private estadoPrestamoService: EstadoPrestamoService,
+    private estadoCuotaPrestamoService: EstadoCuotaPrestamoService,
     private auditoriaService: AuditoriaService,
     private direccionService: DireccionService,
     private exportService: ExportService,
@@ -161,8 +167,9 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
   ) {}
 
   ngOnInit(): void {
-    // Cargar estados de préstamo
+    // Cargar estados de préstamo y estados de cuota
     this.cargarEstadosPrestamo();
+    this.cargarEstadosCuota();
 
     // Verificar si hay código de entidad en los query params
     this.route.queryParams.subscribe((params: any) => {
@@ -469,9 +476,7 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
             doc.setFontSize(8);
             doc.setTextColor(128, 128, 128);
             doc.text(
-              `Generado el: ${new Date().toLocaleDateString(
-                'es-ES'
-              )} ${new Date().toLocaleTimeString('es-ES')}`,
+              `Generado el: ${this.fmtFechaHora(new Date())}`,
               14,
               doc.internal.pageSize.height - 10
             );
@@ -606,8 +611,7 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
               const aportesData = tipoAporte.aportes.data.map((aporte: Aporte) => {
                 const fecha = this.convertirFecha(aporte.fechaTransaccion);
                 return [
-                  fecha ? fecha.toLocaleDateString('es-ES') : 'N/A',
-                  aporte.glosa || 'N/A',
+                  this.fmtFecha(fecha),
                   `$${(aporte.valor || 0).toFixed(2)}`,
                   `$${(aporte.valorPagado || 0).toFixed(2)}`,
                   `$${(aporte.saldo || 0).toFixed(2)}`,
@@ -686,7 +690,7 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
               doc.setFont(undefined, 'normal');
 
               const fechaPrestamo = this.convertirFecha(prestamo.fecha);
-              const fechaStr = fechaPrestamo ? fechaPrestamo.toLocaleDateString('es-ES') : 'N/A';
+              const fechaStr = this.fmtFecha(fechaPrestamo);
 
               doc.text(
                 `Fecha: ${fechaStr} | Estado: ${prestamo.estadoPrestamo?.nombre || 'N/A'}`,
@@ -710,16 +714,16 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
 
               if (dataSource && dataSource.data.length > 0) {
                 // Tabla de cuotas
-                const esHipotecarioRpt = prestamo.producto?.tipoPrestamo?.codigo === 2;
+                const esConSeguroRpt = [2, 3, 4, 5].includes(prestamo.producto?.tipoPrestamo?.codigo ?? 0);
                 const rptHead = ['Cuota', 'Vencimiento', 'Saldo Ini.', 'Capital', 'Saldo Cap.', 'Interés', 'Desgravamen', 'Pago Extra'];
-                if (esHipotecarioRpt) rptHead.push('Seg. Incendio');
+                if (esConSeguroRpt) rptHead.push('Seguro');
                 rptHead.push('Cuota Total');
 
                 const cuotasData = dataSource.data.map((dc) => {
                   const fechaVenc = this.convertirFecha(dc.detalle.fechaVencimiento);
                   const row = [
                     dc.detalle.numeroCuota?.toString() || 'N/A',
-                    fechaVenc ? fechaVenc.toLocaleDateString('es-ES') : 'N/A',
+                    this.fmtFecha(fechaVenc),
                     `$${(dc.detalle.saldoInicialCapital || 0).toFixed(2)}`,
                     `$${(dc.detalle.capital || 0).toFixed(2)}`,
                     `$${(dc.detalle.saldoCapital || 0).toFixed(2)}`,
@@ -727,7 +731,7 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
                     `$${(dc.detalle.desgravamen || 0).toFixed(2)}`,
                     `$${(dc.detalle.saldoOtros || 0).toFixed(2)}`,
                   ];
-                  if (esHipotecarioRpt) row.push(`$${(dc.detalle.valorSeguroIncendio || 0).toFixed(2)}`);
+                  if (esConSeguroRpt) row.push(`$${(dc.detalle.valorSeguroIncendio || 0).toFixed(2)}`);
                   row.push(`$${(dc.detalle.cuota || 0).toFixed(2)}`);
                   return row;
                 });
@@ -781,9 +785,7 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
             doc.setFontSize(8);
             doc.setTextColor(128, 128, 128);
             doc.text(
-              `Generado el: ${new Date().toLocaleDateString(
-                'es-ES'
-              )} ${new Date().toLocaleTimeString('es-ES')}`,
+              `Generado el: ${this.fmtFechaHora(new Date())}`,
               14,
               doc.internal.pageSize.height - 10
             );
@@ -841,14 +843,14 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
         return;
       }
 
-      const esHipotecarioCSV = prestamo.producto?.tipoPrestamo?.codigo === 2;
+      const esHipotecarioCSV = [2, 3, 4, 5].includes(prestamo.producto?.tipoPrestamo?.codigo ?? 0);
 
       const rows = detalles.map((detalleConPagos) => {
         const detalle = detalleConPagos.detalle;
         const fechaVenc = this.convertirFecha(detalle.fechaVencimiento);
         const row: Record<string, any> = {
           cuota: detalle.numeroCuota || 0,
-          fechaVencimiento: fechaVenc ? fechaVenc.toLocaleDateString('es-ES') : 'N/A',
+          fechaVencimiento: this.fmtFecha(fechaVenc),
           saldoInicialCapital: detalle.saldoInicialCapital || 0,
           capital: detalle.capital || 0,
           saldoCapital: detalle.saldoCapital || 0,
@@ -860,14 +862,18 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
           row['seguroIncendio'] = detalle.valorSeguroIncendio || 0;
         }
         row['cuotaTotal'] = detalle.cuota || 0;
-        row['estado'] = detalle.estado === 1 ? 'Pagada' : 'Pendiente';
+        const estadoMapCSV: Record<number, string> = {
+          1: 'Pendiente', 2: 'Activa', 3: 'Emitida', 4: 'Pagada',
+          5: 'En mora', 6: 'Parcial', 7: 'Cancelada ant.', 8: 'Vencida',
+        };
+        row['estado'] = detalle.estado != null ? (estadoMapCSV[detalle.estado] ?? 'N/A') : 'N/A';
         return row;
       });
 
       const csvHeaders = ['Cuota', 'Fecha Vencimiento', 'Saldo Inicial', 'Capital', 'Saldo Capital', 'Interés', 'Desgravamen', 'Pago Extra'];
       const csvKeys = ['cuota', 'fechaVencimiento', 'saldoInicialCapital', 'capital', 'saldoCapital', 'interes', 'desgravamen', 'pagoExtra'];
       if (esHipotecarioCSV) {
-        csvHeaders.push('Seg. Incendio');
+        csvHeaders.push('Seguro');
         csvKeys.push('seguroIncendio');
       }
       csvHeaders.push('Cuota Total', 'Estado');
@@ -970,7 +976,7 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
           doc.setFont(undefined, 'normal');
 
           const fechaPrestamo = this.convertirFecha(prestamo.fecha);
-          const fechaStr = fechaPrestamo ? fechaPrestamo.toLocaleDateString('es-ES') : 'N/A';
+          const fechaStr = this.fmtFecha(fechaPrestamo);
 
           doc.text(`Fecha: ${fechaStr}`, 14, yPosition);
           yPosition += 6;
@@ -996,15 +1002,15 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
             doc.text('Detalle de Cuotas', 14, yPosition);
             yPosition += 8;
 
-            const esHipotecarioPDF = prestamo.producto?.tipoPrestamo?.codigo === 2;
+            const esHipotecarioPDF = [2, 3, 4, 5].includes(prestamo.producto?.tipoPrestamo?.codigo ?? 0);
             const pdfHead = ['Cuota', 'Vencimiento', 'Saldo Inicial', 'Capital', 'Saldo Cap.', 'Interés', 'Desgravamen', 'Pago Extra'];
-            if (esHipotecarioPDF) pdfHead.push('Seg. Incendio');
+            if (esHipotecarioPDF) pdfHead.push('Seguro');
             pdfHead.push('Cuota Total', 'Estado');
 
             const cuotasData = detalles.map((detalleConPagos) => {
               const detalle = detalleConPagos.detalle;
               const fechaVenc = this.convertirFecha(detalle.fechaVencimiento);
-              const fechaVencStr = fechaVenc ? fechaVenc.toLocaleDateString('es-ES') : 'N/A';
+              const fechaVencStr = this.fmtFecha(fechaVenc);
               const row = [
                 detalle.numeroCuota?.toString() || 'N/A',
                 fechaVencStr,
@@ -1016,7 +1022,12 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
                 `$${(detalle.saldoOtros || 0).toFixed(2)}`,
               ];
               if (esHipotecarioPDF) row.push(`$${(detalle.valorSeguroIncendio || 0).toFixed(2)}`);
-              row.push(`$${(detalle.cuota || 0).toFixed(2)}`, detalle.estado === 1 ? 'Pagada' : 'Pendiente');
+              const estadoMapPDF: Record<number, string> = {
+                1: 'Pendiente', 2: 'Activa', 3: 'Emitida', 4: 'Pagada',
+                5: 'En mora', 6: 'Parcial', 7: 'Cancelada ant.', 8: 'Vencida',
+              };
+              const estadoNombrePDF = detalle.estado != null ? (estadoMapPDF[detalle.estado] ?? 'N/A') : 'N/A';
+              row.push(`$${(detalle.cuota || 0).toFixed(2)}`, estadoNombrePDF);
               return row;
             });
 
@@ -1145,7 +1156,7 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
     const rows = aportes.map((aporte: Aporte) => {
       const fecha = this.convertirFecha(aporte.fechaTransaccion);
       return {
-        fechaTransaccion: fecha ? fecha.toLocaleDateString('es-ES') : 'N/A',
+        fechaTransaccion: this.fmtFecha(fecha),
         tipoAporte: tipoAporte.tipoAporte,
         glosa: aporte.glosa || '',
         valor: aporte.valor || 0,
@@ -1261,7 +1272,7 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
 
             const aportesData = tipoAporte.aportes.data.map((aporte: Aporte) => {
               const fecha = this.convertirFecha(aporte.fechaTransaccion);
-              const fechaStr = fecha ? fecha.toLocaleDateString('es-ES') : 'N/A';
+              const fechaStr = this.fmtFecha(fecha);
 
               return [
                 fechaStr,
@@ -1664,6 +1675,18 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
     return null;
   }
 
+  /** Formatea Date a dd/MM/yyyy para visualización en pantalla, CSV y PDF */
+  private fmtFecha(date: Date | null): string {
+    if (!date) return 'N/A';
+    return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
+  }
+
+  /** Formatea Date a dd/MM/yyyy HH:mm:ss para visualización cuando se requiere hora */
+  private fmtFechaHora(date: Date | null): string {
+    if (!date) return 'N/A';
+    return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
+  }
+
   buscarEntidad(): void {
     if (!this.searchText.trim()) {
       this.snackBar.open('Por favor ingrese un criterio de búsqueda', 'Cerrar', { duration: 3000 });
@@ -1922,15 +1945,24 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
               p.idAsoprep = p.idSistema;
             }
 
-            if (typeof p.estadoPrestamo === 'number') {
-              const codigoEstado = p.estadoPrestamo as any;
+            // Normalizar estadoPrestamo: idEstado y estado son PRSTIDST = codigoExterno del catálogo
+            const estadoObjInline = typeof p.estadoPrestamo === 'object' && p.estadoPrestamo ? p.estadoPrestamo : null;
+            const nombreOriginalInline: string | undefined = estadoObjInline?.nombre;
+            const codigoAltEstado =
+              p.idEstado ??
+              (typeof p.estadoPrestamo === 'number' ? p.estadoPrestamo : null) ??
+              (estadoObjInline
+                ? (estadoObjInline.codigoExterno ?? estadoObjInline.codigoAlterno ?? estadoObjInline.codigo ?? null)
+                : null);
+            if (codigoAltEstado != null) {
               p.estadoPrestamo = {
-                codigo: codigoEstado,
-                nombre: this.obtenerNombreEstadoPrestamo(codigoEstado),
+                ...(estadoObjInline || {}),
+                codigo: codigoAltEstado,
+                codigoAlterno: codigoAltEstado,
+                codigoExterno: codigoAltEstado,
+                nombre: this.obtenerNombreEstadoPrestamo(codigoAltEstado, nombreOriginalInline),
               } as EstadoPrestamo;
             }
-
-            // Convertir fechas que puedan venir en formato array desde el backend
             const fechaPrestamo = this.convertirFecha(p.fecha);
             const fechaDesembolso = this.convertirFecha(p.fechaDesembolso);
             const fechaRegistro = this.convertirFecha(p.fechaRegistro);
@@ -2155,6 +2187,22 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
   }
 
   /**
+   * Carga los estados de cuota de préstamo disponibles desde el backend
+   */
+  cargarEstadosCuota(): void {
+    this.estadoCuotaPrestamoService.getAll().subscribe({
+      next: (estados) => {
+        if (estados && Array.isArray(estados)) {
+          this.estadosCuota = estados;
+        }
+      },
+      error: (error) => {
+        console.error('Error al cargar estados de cuota:', error);
+      },
+    });
+  }
+
+  /**
    * Carga los estados de préstamo disponibles desde el backend
    */
   cargarEstadosPrestamo(): void {
@@ -2162,6 +2210,11 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
       next: (estados) => {
         if (estados && Array.isArray(estados)) {
           this.estadosPrestamo = estados;
+          // Re-normalizar préstamos ya cargados que llegaron antes que el catálogo
+          if (this.prestamos.length > 0) {
+            this.prestamos = this.prestamos.map((p) => this.normalizarEstadoPrestamo(p as any) as Prestamo);
+            this.cdr.detectChanges();
+          }
         }
       },
       error: (error) => {
@@ -2196,12 +2249,16 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
 
     const dialogData: CambiarEstadoDialogData = {
       entidad: prestamo,
-      estadosDisponibles: this.estadosPrestamo,
+      // El diálogo trabaja con la propiedad `codigo`; remapeamos a código alterno (PRSTIDST)
+      estadosDisponibles: this.estadosPrestamo.map((e) => ({
+        ...e,
+        codigo: e.codigoExterno ?? e.codigoAlterno ?? e.codigo,
+      })),
       titulo: 'Cambiar Estado de Préstamo',
       entidadTipo: 'Préstamo',
       campoNombre: 'producto.nombre',
       campoIdentificacion: 'codigo',
-      campoEstadoActual: 'estadoPrestamo.codigo',
+      campoEstadoActual: 'idEstado',
     };
 
     const dialogRef = this.dialog.open(AuditoriaDialogComponent, {
@@ -2240,18 +2297,30 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
         }
 
         // Guardar estado anterior para auditoría
-        const estadoAnteriorCodigo = prestamoCompleto.estadoPrestamo?.codigo || 0;
+        const estadoAnteriorCodigo =
+          prestamoCompleto?.idEstado ??
+          prestamoCompleto?.estadoPrestamo?.codigoExterno ??
+          prestamoCompleto?.estadoPrestamo?.codigoAlterno ??
+          prestamoCompleto?.estadoPrestamo?.codigo ??
+          0;
         const estadoAnterior = {
           codigo: estadoAnteriorCodigo,
           nombre: this.obtenerNombreEstadoPrestamo(estadoAnteriorCodigo),
         };
 
+        const estadoResuelto = this.resolverEstadoPrestamo(nuevoEstadoCodigo);
+
         // Preparar el objeto para enviar al backend
-        // El backend espera estadoPrestamo como un número (código del estado)
+        // estadoPrestamo = PK de catálogo, idEstado = código alterno (PRSTIDST)
         const prestamoParaBackend: any = {
           ...prestamoCompleto,
-          estadoPrestamo: nuevoEstadoCodigo, // ← Solo el número, no un objeto
+          idEstado: estadoResuelto.codigoAlterno,
+          estadoPrestamo: estadoResuelto.codigoPk,
         };
+
+        if ('estado' in prestamoParaBackend) {
+          delete prestamoParaBackend.estado;
+        }
 
         console.log('🔍 Préstamo completo recuperado:', prestamoCompleto);
         console.log('🔍 Estado ANTES (objeto):', prestamoCompleto.estadoPrestamo);
@@ -2289,7 +2358,7 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
               motivo
             );
 
-            const estadoTexto = this.obtenerNombreEstadoPrestamo(nuevoEstadoCodigo);
+            const estadoTexto = this.obtenerNombreEstadoPrestamo(estadoResuelto.codigoAlterno);
             this.snackBar.open(`Estado del préstamo cambiado a ${estadoTexto}`, 'Cerrar', {
               duration: 3000,
             });
@@ -2314,51 +2383,147 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
 
   /**
    * Obtiene el nombre del estado de préstamo por su código
+   * Primero busca en el catálogo cargado; si no lo encuentra usa mapa hardcoded
    */
-  private obtenerNombreEstadoPrestamo(codigo: number): string {
-    const estado = this.estadosPrestamo.find((e) => e.codigo === codigo);
-    return estado?.nombre || 'Desconocido';
+  private readonly NOMBRES_ESTADO_PRESTAMO: Record<number, string> = {
+    1: 'Generado',
+    2: 'Vigente',
+    3: 'Cancelado',
+    4: 'Cancelado anticipado',
+    5: 'Cancelado por novación',
+    6: 'Pendiente de aprobación',
+    7: 'Rechazado',
+    8: 'De plazo vencido',
+    9: 'Cancelado por revisar',
+    10: 'Vigente por revisar',
+  };
+
+  private obtenerNombreEstadoPrestamo(codigoAlterno: number, nombreFallback?: string): string {
+    // Buscar en catálogo solo por codigoExterno o codigoAlterno (NO por codigo/PK — es un ID interno arbitrario)
+    const estado = this.estadosPrestamo.find(
+      (e) => e.codigoExterno === codigoAlterno || e.codigoAlterno === codigoAlterno
+    );
+    if (estado?.nombre) return estado.nombre;
+    if (this.NOMBRES_ESTADO_PRESTAMO[codigoAlterno]) return this.NOMBRES_ESTADO_PRESTAMO[codigoAlterno];
+    return nombreFallback || 'Desconocido';
+  }
+
+  private resolverEstadoPrestamo(codigoRecibido: number): { codigoPk: number; codigoAlterno: number } {
+    const estado = this.estadosPrestamo.find(
+      (e) =>
+        e.codigoExterno === codigoRecibido ||
+        e.codigoAlterno === codigoRecibido ||
+        e.codigo === codigoRecibido
+    );
+
+    return {
+      codigoPk: estado?.codigo ?? codigoRecibido,
+      codigoAlterno: estado?.codigoExterno ?? estado?.codigoAlterno ?? codigoRecibido,
+    };
+  }
+
+  /** Normaliza el campo estadoPrestamo de un préstamo usando idEstado / estado (codigoExterno) */
+  private normalizarEstadoPrestamo(p: any): any {
+    const estadoObjeto = typeof p.estadoPrestamo === 'object' && p.estadoPrestamo ? p.estadoPrestamo : null;
+    const nombreOriginal: string | undefined = estadoObjeto?.nombre;
+    // p.idEstado es PRSTIDST = código alterno del estado préstamo
+    const codigoAltEstado =
+      p.idEstado ??
+      (typeof p.estadoPrestamo === 'number' ? p.estadoPrestamo : null) ??
+      (estadoObjeto
+        ? (estadoObjeto.codigoExterno ?? estadoObjeto.codigoAlterno ?? estadoObjeto.codigo ?? null)
+        : null);
+    if (codigoAltEstado != null) {
+      return {
+        ...p,
+        estadoPrestamo: {
+          ...(estadoObjeto || {}),
+          codigo: codigoAltEstado,
+          codigoAlterno: codigoAltEstado,
+          codigoExterno: codigoAltEstado,
+          nombre: this.obtenerNombreEstadoPrestamo(codigoAltEstado, nombreOriginal),
+        },
+      };
+    }
+    return p;
+  }
+
+  obtenerClaseTarjetaPrestamo(prestamo: Prestamo): string {
+    const cod =
+      prestamo.estadoPrestamo?.codigoExterno ??
+      prestamo.estadoPrestamo?.codigoAlterno ??
+      prestamo.estadoPrestamo?.codigo;
+    // Códigos según catálogo (codigoExterno): 1=Generado, 2=Vigente, 3=Cancelado,
+    // 4=Cancelado anticipado, 5=Cancelado por novación, 6=Pendiente, 7=Rechazado,
+    // 8=De plazo vencido, 9=Cancelado por revisar, 10=Vigente por revisar
+    const mapa: Record<number, string> = {
+      1: 'prestamo-card--generado',
+      2: 'prestamo-card--vigente',
+      3: 'prestamo-card--cancelado',
+      4: 'prestamo-card--cancelado',
+      5: 'prestamo-card--cancelado',
+      6: 'prestamo-card--pendiente',
+      7: 'prestamo-card--anulado',
+      8: 'prestamo-card--vencido',
+      9: 'prestamo-card--cancelado',
+      10: 'prestamo-card--vigente',
+    };
+    return cod != null ? (mapa[cod] ?? 'prestamo-card--default') : 'prestamo-card--default';
   }
 
   /**
    * Obtiene el nombre y estilo del estado de una cuota
    * Basado en el catálogo de estados de préstamo
    */
+  tieneCuotasCanceladas(codigoPrestamo: number): boolean {
+    return (this.detallesPrestamoRaw.get(codigoPrestamo) || []).some(dc => dc.detalle.estado === 7);
+  }
+
+  toggleMostrarCanceladas(codigoPrestamo: number): void {
+    this.mostrarCanceladas = !this.mostrarCanceladas;
+    const raw = this.detallesPrestamoRaw.get(codigoPrestamo) || [];
+    const cuotasVisibles = this.mostrarCanceladas ? raw : raw.filter(dc => dc.detalle.estado !== 7);
+    const ds = this.detallesPrestamo.get(codigoPrestamo);
+    if (ds) { ds.data = cuotasVisibles; }
+    this.cdr.detectChanges();
+  }
+
+  obtenerClaseFilaCuota(codigoAlterno: number | null | undefined): string {
+    if (!codigoAlterno) return 'cuota-desconocida';
+    const mapa: Record<number, string> = {
+      1: 'cuota-pendiente',
+      2: 'cuota-activa',
+      3: 'cuota-emitida',
+      4: 'cuota-pagada',
+      5: 'cuota-mora',
+      6: 'cuota-parcial',
+      7: 'cuota-cancelada',
+      8: 'cuota-vencida',
+    };
+    return mapa[codigoAlterno] ?? 'cuota-desconocida';
+  }
+
   obtenerEstadoCuota(detalle: DetallePrestamo): { texto: string; clase: string } {
-    const estadoId = detalle.idEstado || detalle.estado || 0;
+    const estadoId = detalle.estado || 0;
 
-    // Buscar el estado en el catálogo
-    const estadoEncontrado = this.estadosPrestamo.find((e) => e.codigo === estadoId);
+    // Mapa directo codigoAlterno → clase CSS (fuente primaria, siempre confiable)
+    const mapaCodigo: Record<number, { clase: string; texto: string }> = {
+      1: { clase: 'estado-cuota-pendiente',  texto: 'PENDIENTE' },
+      2: { clase: 'estado-cuota-activa',     texto: 'ACTIVA' },
+      3: { clase: 'estado-cuota-emitida',    texto: 'EMITIDA' },
+      4: { clase: 'estado-cuota-pagada',     texto: 'PAGADA' },
+      5: { clase: 'estado-cuota-mora',       texto: 'EN MORA' },
+      6: { clase: 'estado-cuota-parcial',    texto: 'PARCIAL' },
+      7: { clase: 'estado-cuota-cancelada',  texto: 'CANCELADA ANT.' },
+      8: { clase: 'estado-cuota-vencida',    texto: 'VENCIDA' },
+    };
 
-    if (estadoEncontrado) {
-      // Usar el nombre real del catálogo
-      const nombreEstado = estadoEncontrado.nombre.toUpperCase();
+    // Intentar obtener nombre real del catálogo
+    const estadoEncontrado = this.estadosCuota.find((e) => e.codigoAlterno === estadoId);
+    const textoReal = estadoEncontrado?.nombre?.toUpperCase() || mapaCodigo[estadoId]?.texto || 'SIN ESTADO';
+    const clase = mapaCodigo[estadoId]?.clase || 'estado-cuota-desconocida';
 
-      // Determinar la clase CSS según el nombre o código
-      let clase = 'estado-desconocido';
-
-      // Mapeo de estados comunes a clases CSS
-      if (nombreEstado.includes('PAGADO') || nombreEstado.includes('CANCELAD')) {
-        clase = 'estado-pagado';
-      } else if (nombreEstado.includes('VENCIDO') || nombreEstado.includes('MORA')) {
-        clase = 'estado-vencido';
-      } else if (
-        nombreEstado.includes('PENDIENTE') ||
-        nombreEstado.includes('VIGENTE') ||
-        nombreEstado.includes('ACTIVO')
-      ) {
-        clase = 'estado-pendiente';
-      } else if (nombreEstado.includes('REVISADO') || nombreEstado.includes('APROBADO')) {
-        clase = 'estado-aprobado';
-      } else if (nombreEstado.includes('LEGALIZADO') || nombreEstado.includes('DESEMBOLSADO')) {
-        clase = 'estado-legalizado';
-      }
-
-      return { texto: nombreEstado, clase };
-    }
-
-    // Fallback si no se encuentra en el catálogo
-    return { texto: 'SIN ESTADO', clase: 'estado-desconocido' };
+    return { texto: textoReal, clase };
   }
 
   /**
@@ -2373,12 +2538,14 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
       width: '500px',
       data: {
         entidad: cuota,
-        estadosDisponibles: this.estadosPrestamo, // Reutilizamos los mismos estados del préstamo
+        // Remapeamos codigo → codigoAlterno para que el diálogo devuelva codigoAlterno
+        // directamente (DTPRESTD), evitando cualquier conversión posterior
+        estadosDisponibles: this.estadosCuota.map((e) => ({ ...e, codigo: e.codigoAlterno })),
         titulo: 'Cambiar Estado de Cuota',
         entidadTipo: 'Cuota',
         campoNombre: 'numeroCuota',
         campoIdentificacion: 'codigo',
-        campoEstadoActual: 'idEstado', // Campo que contiene el estado actual
+        campoEstadoActual: 'estado', // cuota.estado almacena codigoAlterno (DTPRESTD)
       } as CambiarEstadoDialogData,
     });
 
@@ -2412,44 +2579,21 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
           nombre: this.obtenerNombreEstadoPrestamo(estadoAnteriorCodigo),
         };
 
-        // Preparar el objeto para el backend (igual que préstamo, solo FK como número)
+        // nuevoEstadoCodigo YA ES el codigoAlterno (por el remap en el diálogo)
+        // Buscamos el PK real para el campo idEstado
+        const estadoPK = this.estadosCuota.find((e) => e.codigoAlterno === nuevoEstadoCodigo)?.codigo
+          ?? nuevoEstadoCodigo;
+
+        // Preparar el objeto para el backend
         const cuotaParaBackend: any = {
           ...cuotaCompleta,
-          idEstado: nuevoEstadoCodigo, // Solo el número
+          estado: nuevoEstadoCodigo,  // DTPRESTD - codigoAlterno directo, sin conversión
+          idEstado: estadoPK,         // DTPRIDST - PK de EstadoCuotaPrestamo
         };
 
         // Enviar actualización
         this.detallePrestamoService.update(cuotaParaBackend).subscribe({
-          next: (respuesta) => {
-            // Actualizar en el Map local de detalles
-            if (this.prestamoSeleccionado?.codigo) {
-              const dataSource = this.detallesPrestamo.get(this.prestamoSeleccionado.codigo);
-              if (dataSource) {
-                const detalles = dataSource.data;
-                const index = detalles.findIndex((d) => d.detalle.codigo === cuota.codigo);
-                if (index !== -1) {
-                  console.log('🔄 Estado anterior cuota:', detalles[index].detalle.idEstado);
-
-                  // Actualizar ambos campos de estado
-                  detalles[index].detalle.idEstado = nuevoEstadoCodigo;
-                  detalles[index].detalle.estado = nuevoEstadoCodigo;
-
-                  console.log('🔄 Estado nuevo cuota:', detalles[index].detalle.idEstado);
-
-                  // Actualizar el dataSource para forzar detección de cambios
-                  dataSource.data = [...detalles];
-
-                  // Forzar detección de cambios en Angular
-                  this.cdr.detectChanges();
-
-                  console.log('✅ Vista actualizada con nuevos detalles');
-
-                  // Recalcular el estado del préstamo basándose en las cuotas
-                  this.recalcularEstadoPrestamo(this.prestamoSeleccionado);
-                }
-              }
-            }
-
+          next: () => {
             // Registrar en auditoría
             this.registrarCambioEstadoCuotaEnAuditoria(
               cuota,
@@ -2458,10 +2602,20 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
               motivo
             );
 
-            const estadoTexto = this.obtenerNombreEstadoPrestamo(nuevoEstadoCodigo);
+            // nuevoEstadoCodigo es codigoAlterno, buscar nombre por codigoAlterno
+            const estadoCuotaTexto = this.estadosCuota.find((e) => e.codigoAlterno === nuevoEstadoCodigo);
+            const estadoTexto = estadoCuotaTexto?.nombre ?? String(nuevoEstadoCodigo);
             this.snackBar.open(`Estado de la cuota cambiado a ${estadoTexto}`, 'Cerrar', {
               duration: 3000,
             });
+
+            // Recargar desde el backend para mostrar datos exactos sin transformaciones locales
+            if (this.prestamoSeleccionado?.codigo) {
+              this.cargarDetallesPrestamo(this.prestamoSeleccionado.codigo, true).then(() => {
+                this.sincronizarEstadoPrestamoDesdeBackend(this.prestamoSeleccionado!.codigo);
+                this.cdr.detectChanges();
+              });
+            }
           },
           error: (error) => {
             console.error('Error al actualizar cuota:', error);
@@ -2536,10 +2690,16 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
           }
 
           // Preparar el objeto para el backend
+          const estadoResuelto = this.resolverEstadoPrestamo(nuevoEstadoCodigo);
           const prestamoParaBackend: any = {
             ...prestamoCompleto,
-            estadoPrestamo: nuevoEstadoCodigo, // Solo el número
+            idEstado: estadoResuelto.codigoAlterno,
+            estadoPrestamo: estadoResuelto.codigoPk,
           };
+
+          if ('estado' in prestamoParaBackend) {
+            delete prestamoParaBackend.estado;
+          }
 
           // Actualizar en el backend
           this.prestamoService.update(prestamoParaBackend).subscribe({
@@ -2582,6 +2742,41 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
         `✅ Estado del préstamo ${prestamo.codigo} ya está correcto: ${estadoActualCodigo}`
       );
     }
+  }
+
+  /**
+   * Sincroniza el estado del préstamo desde backend para evitar estados temporales incorrectos en frontend.
+   */
+  private sincronizarEstadoPrestamoDesdeBackend(codigoPrestamo: number): void {
+    this.prestamoService.getById(codigoPrestamo.toString()).subscribe({
+      next: (prestamoActualizado) => {
+        if (!prestamoActualizado) {
+          return;
+        }
+
+        const prestamoNormalizado = this.normalizarEstadoPrestamo(prestamoActualizado as any) as Prestamo;
+
+        const index = this.prestamos.findIndex((p) => p.codigo === codigoPrestamo);
+        if (index !== -1) {
+          this.prestamos[index] = {
+            ...this.prestamos[index],
+            ...prestamoNormalizado,
+          };
+          this.prestamos = [...this.prestamos];
+        }
+
+        if (this.prestamoSeleccionado?.codigo === codigoPrestamo) {
+          this.prestamoSeleccionado = {
+            ...this.prestamoSeleccionado,
+            ...prestamoNormalizado,
+          };
+        }
+
+        this.cdr.detectChanges();
+      },
+      error: () => {
+      },
+    });
   }
 
   /**
@@ -2981,12 +3176,15 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
     }
   }
 
-  cargarDetallesPrestamo(codigoPrestamo: number): Promise<void> {
+  cargarDetallesPrestamo(codigoPrestamo: number, forzarRecarga = false): Promise<void> {
     return new Promise((resolve, reject) => {
-      if (this.detallesPrestamo.has(codigoPrestamo)) {
+      if (!forzarRecarga && this.detallesPrestamo.has(codigoPrestamo)) {
         resolve(); // Ya está cargado
         return;
       }
+      // Limpiar cache para forzar recarga
+      this.detallesPrestamo.delete(codigoPrestamo);
+      this.detallesPrestamoRaw.delete(codigoPrestamo);
 
       this.isLoadingDetalles = true;
 
@@ -3033,7 +3231,11 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
             mostrarPagos: false,
           };
         });
-        const dataSource = new MatTableDataSource<DetalleConPagos>(detallesConPagos);
+        this.detallesPrestamoRaw.set(codigoPrestamo, detallesConPagos);
+        const cuotasVisibles = this.mostrarCanceladas
+          ? detallesConPagos
+          : detallesConPagos.filter(dc => dc.detalle.estado !== 7);
+        const dataSource = new MatTableDataSource<DetalleConPagos>(cuotasVisibles);
 
         // Configurar sortingDataAccessor para acceder a propiedades anidadas
         dataSource.sortingDataAccessor = (item: DetalleConPagos, property: string) => {
@@ -3170,6 +3372,20 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
     const totalPrestamo = prestamo.totalPrestamo || 0;
     const saldoTotal = prestamo.saldoTotal || 0;
     return totalPrestamo - saldoTotal;
+  }
+
+  /**
+   * Retorna el saldoCapital de la cuota pagada (estado=4) con mayor numeroCuota.
+   * Si no existe ninguna cuota pagada, retorna el saldoTotal del préstamo como fallback.
+   */
+  obtenerSaldoDesdeUltimaPagada(codigoPrestamo: number, fallback: number): number {
+    const raw = this.detallesPrestamoRaw.get(codigoPrestamo) || [];
+    const pagadas = raw.filter(dc => dc.detalle.estado === 4);
+    if (pagadas.length === 0) return fallback;
+    const ultima = pagadas.reduce((max, dc) =>
+      (dc.detalle.numeroCuota ?? 0) > (max.detalle.numeroCuota ?? 0) ? dc : max
+    );
+    return ultima.detalle.saldoCapital ?? fallback;
   }
 
   get totalIngresos(): number {

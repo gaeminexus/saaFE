@@ -14,6 +14,7 @@ import { Asiento } from '../../model/asiento';
 import { DetalleAsiento } from '../../model/detalle-asiento';
 import { ExportService } from '../../../../shared/services/export.service';
 import { DetalleRubroService } from '../../../../shared/services/detalle-rubro.service';
+import { FuncionesDatosService, TipoFormatoFechaBackend } from '../../../../shared/services/funciones-datos.service';
 import { Router } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { ConfirmDialogComponent } from '../../../../shared/basics/confirm-dialog/confirm-dialog.component';
@@ -73,7 +74,8 @@ export class ReporteListadoAsientosComponent implements OnInit {
     private detalleRubroService: DetalleRubroService,
     private snackBar: MatSnackBar,
     private exportService: ExportService,
-    private router: Router
+    private router: Router,
+    private funcionesDatos: FuncionesDatosService
   ) {}
 
   ngOnInit(): void {
@@ -193,40 +195,55 @@ export class ReporteListadoAsientosComponent implements OnInit {
     );
     criterios.push(criterioEmpresa);
 
-    // Criterio: Fecha Ingreso (BETWEEN) - con hora
+    // Criterio: Fecha Ingreso (LocalDateTime → dos criterios separados, con hora)
     const fechaIngresoDesde = this.fechaIngresoDesde();
     const fechaIngresoHasta = this.fechaIngresoHasta();
-    if (fechaIngresoDesde && fechaIngresoHasta) {
-      const criterioFechaIngreso = new DatosBusqueda();
-      const fechaDesdeStr = this.formatDateWithTime(fechaIngresoDesde);
-      const fechaHastaStr = this.formatDateWithTime(fechaIngresoHasta, '23:59:59');
-
-      criterioFechaIngreso.asignaUnCampoConBetween(
-        'fechaIngreso',
-        TipoDatosBusqueda.DATE,
-        fechaDesdeStr,
-        TipoComandosBusqueda.BETWEEN,
-        fechaHastaStr
-      );
-      criterios.push(criterioFechaIngreso);
+    if (fechaIngresoDesde) {
+      const d = new Date(fechaIngresoDesde);
+      d.setHours(0, 0, 0, 0);
+      const fid = this.funcionesDatos.formatearFechaParaBackend(d, TipoFormatoFechaBackend.FECHA_HORA);
+      if (fid) {
+        const db = new DatosBusqueda();
+        db.asignaUnCampoSinTrunc(TipoDatosBusqueda.DATE_TIME, 'fechaIngreso', fid, TipoComandosBusqueda.MAYOR_IGUAL);
+        criterios.push(db);
+      }
+    }
+    if (fechaIngresoHasta) {
+      const h = new Date(fechaIngresoHasta);
+      h.setHours(23, 59, 59, 0);
+      const fih = this.funcionesDatos.formatearFechaParaBackend(h, TipoFormatoFechaBackend.FECHA_HORA);
+      if (fih) {
+        const db = new DatosBusqueda();
+        db.asignaUnCampoSinTrunc(TipoDatosBusqueda.DATE_TIME, 'fechaIngreso', fih, TipoComandosBusqueda.MENOR_IGUAL);
+        criterios.push(db);
+      }
     }
 
-    // Criterio: Fecha Asiento (BETWEEN)
+    // Criterio: Fecha Asiento
     const fechaAsientoDesde = this.fechaAsientoDesde();
     const fechaAsientoHasta = this.fechaAsientoHasta();
     if (fechaAsientoDesde && fechaAsientoHasta) {
-      const criterioFechaAsiento = new DatosBusqueda();
-      const fechaDesdeStr = this.formatDate(fechaAsientoDesde);
-      const fechaHastaStr = this.formatDate(fechaAsientoHasta);
-
-      criterioFechaAsiento.asignaUnCampoConBetween(
-        'fechaAsiento',
-        TipoDatosBusqueda.DATE,
-        fechaDesdeStr,
-        TipoComandosBusqueda.BETWEEN,
-        fechaHastaStr
-      );
-      criterios.push(criterioFechaAsiento);
+      const fad = this.funcionesDatos.formatearFechaParaBackend(fechaAsientoDesde, TipoFormatoFechaBackend.SOLO_FECHA);
+      const fah = this.funcionesDatos.formatearFechaParaBackend(fechaAsientoHasta, TipoFormatoFechaBackend.SOLO_FECHA);
+      if (fad && fah) {
+        const db = new DatosBusqueda();
+        db.asignaUnCampoConBetween('fechaAsiento', TipoDatosBusqueda.DATE, fad, TipoComandosBusqueda.BETWEEN, fah);
+        criterios.push(db);
+      }
+    } else if (fechaAsientoDesde) {
+      const fad = this.funcionesDatos.formatearFechaParaBackend(fechaAsientoDesde, TipoFormatoFechaBackend.SOLO_FECHA);
+      if (fad) {
+        const db = new DatosBusqueda();
+        db.asignaUnCampoSinTrunc(TipoDatosBusqueda.DATE, 'fechaAsiento', fad, TipoComandosBusqueda.MAYOR_IGUAL);
+        criterios.push(db);
+      }
+    } else if (fechaAsientoHasta) {
+      const fah = this.funcionesDatos.formatearFechaParaBackend(fechaAsientoHasta, TipoFormatoFechaBackend.SOLO_FECHA);
+      if (fah) {
+        const db = new DatosBusqueda();
+        db.asignaUnCampoSinTrunc(TipoDatosBusqueda.DATE, 'fechaAsiento', fah, TipoComandosBusqueda.MENOR_IGUAL);
+        criterios.push(db);
+      }
     }
 
     // Criterio: Número de asiento
@@ -289,6 +306,17 @@ export class ReporteListadoAsientosComponent implements OnInit {
       );
       criterios.push(criterioUsuario);
     }
+
+    // Ordenamiento: tipo de asiento DESC, luego número DESC
+    const ordenTipo = new DatosBusqueda();
+    ordenTipo.orderBy('tipoAsiento.codigo');
+    ordenTipo.setTipoOrden(DatosBusqueda.ORDER_DESC);
+    criterios.push(ordenTipo);
+
+    const ordenNumero = new DatosBusqueda();
+    ordenNumero.orderBy('numero');
+    ordenNumero.setTipoOrden(DatosBusqueda.ORDER_DESC);
+    criterios.push(ordenNumero);
 
     // Ejecutar consulta
     this.asientoService.selectByCriteria(criterios).subscribe({

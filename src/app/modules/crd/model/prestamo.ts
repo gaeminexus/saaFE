@@ -22,6 +22,7 @@ export interface Prestamo {
     montoLiquidacion: number;  // PRSTMNLD - Monto Liquidacion deuda
     filial: Filial;      // FLLLCDGO - Filial codigo
     estadoPrestamo: EstadoPrestamo; // ESPSCDGO - FK - Código Estado Préstamo
+    idEstado: number;              // PRSTIDST - Código alterno del estado préstamo
     tasa: number;              // PRSTTSAA - Tasa
     totalPagado: number;       // PRSTTTPG - Total Pagado
     totalCapital: number;      // PRSTTTCP - Total Capital
@@ -64,7 +65,6 @@ export interface Prestamo {
     fechaAcreditacion: Date;   // PRSTFCAC - Fecha de Acreditacion
     ajusteAportes: number; // PRSTAJAP - Indica si hubo Ajuste aportes
     mesesACobrar: number;      // PRSTMSCB - Meses a cobrar
-    estado: number;          // PRSTIDST - ID Estado
     firmadoTitular: number;    // PRSTFRTT - Indica si fue Firmado Titular
     valorAsegurado: number;     // PRSTVLAS - Valor asegurado del préstamo
     tasaSeguroIncendio: number; // PRSTTSIN - Tasa de seguro de incendio

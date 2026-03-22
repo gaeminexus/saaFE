@@ -348,154 +348,6 @@
       }
     }
 
-    // Tarjeta de Resumen
-    .resumen-card {
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-      margin-bottom: 24px;
-      overflow: hidden;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-
-      &:hover {
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-      }
-
-      mat-card-header {
-        padding: 20px 24px;
-        background: linear-gradient(
-          135deg,
-          rgba(102, 126, 234, 0.08) 0%,
-          rgba(118, 75, 162, 0.08) 100%
-        );
-        border-bottom: 2px solid #e2e8f0;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-
-        .card-header-content {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-
-          mat-icon {
-            color: #667eea;
-            font-size: 28px;
-            width: 28px;
-            height: 28px;
-          }
-
-          mat-card-title {
-            color: #1a202c;
-            font-size: 18px;
-            margin: 0;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-          }
-        }
-
-        .card-header-actions {
-          display: flex;
-          gap: 8px;
-
-          .pdf-button {
-            mat-icon {
-              color: #e53e3e;
-              transition: all 0.2s ease;
-            }
-
-            &:hover mat-icon {
-              transform: scale(1.1);
-              color: darken(#e53e3e, 10%);
-            }
-          }
-        }
-      }
-
-      mat-card-content {
-        padding: 24px;
-
-        .resumen-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-          gap: 20px;
-
-          .resumen-item {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            padding: 20px;
-            background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
-            border-radius: 12px;
-            border: 2px solid transparent;
-            transition: all 0.3s ease;
-
-            &:hover {
-              border-color: #667eea;
-              transform: translateY(-2px);
-              box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
-            }
-
-            .resumen-icon {
-              font-size: 40px;
-              width: 40px;
-              height: 40px;
-              color: #667eea;
-              flex-shrink: 0;
-
-              &.success {
-                color: #48bb78;
-              }
-
-              &.warning {
-                color: #ed8936;
-              }
-            }
-
-            .resumen-content {
-              display: flex;
-              flex-direction: column;
-              gap: 4px;
-              min-width: 0;
-
-              .resumen-label {
-                font-size: 12px;
-                color: #718096;
-                font-weight: 500;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-              }
-
-              .resumen-value {
-                font-size: 24px;
-                font-weight: 700;
-                color: #1a202c;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-
-                &.highlight {
-                  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                  -webkit-background-clip: text;
-                  -webkit-text-fill-color: transparent;
-                  background-clip: text;
-                }
-
-                &.success {
-                  color: #48bb78;
-                }
-
-                &.warning {
-                  color: #ed8936;
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-
     .datos-card {
       background: white;
       border-radius: 12px;
@@ -538,174 +390,233 @@
       mat-card-content {
         padding: 24px;
 
-        .table-wrapper {
+        .prestamos-stack {
           display: flex;
           flex-direction: column;
           gap: 20px;
+        }
 
-          .table-container {
+        .prestamo-panel {
+          border: 1px solid #e2e8f0;
+          border-radius: 16px;
+          overflow: hidden;
+          background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+          box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+        }
+
+        .prestamo-header {
+          padding: 20px;
+          border-bottom: 1px solid #e2e8f0;
+          display: flex;
+          flex-direction: column;
+          gap: 18px;
+
+          .prestamo-header-main {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            flex-wrap: wrap;
+          }
+
+          .prestamo-identidad {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+
+            h3 {
+              margin: 0 0 6px;
+              font-size: 20px;
+              color: #1a202c;
+            }
+
+            p {
+              margin: 0;
+              color: #4a5568;
+              display: flex;
+              flex-wrap: wrap;
+              gap: 6px;
+              align-items: center;
+            }
+          }
+
+          .codigo-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 84px;
+            padding: 10px 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 999px;
+            font-size: 16px;
+            font-weight: 700;
+            box-shadow: 0 8px 16px rgba(102, 126, 234, 0.25);
+          }
+
+          .estado-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: white;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+
+          .btn-pago-prestamo {
+            min-height: 44px;
+            padding: 0 18px;
+            border-radius: 999px;
+            font-weight: 600;
+
+            mat-icon {
+              margin-right: 6px;
+            }
+          }
+
+          .prestamo-resumen-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 14px;
+          }
+
+          .prestamo-resumen-item {
+            padding: 14px 16px;
+            border-radius: 12px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+
+            .label {
+              font-size: 12px;
+              color: #64748b;
+              text-transform: uppercase;
+              letter-spacing: 0.4px;
+              font-weight: 600;
+            }
+
+            strong {
+              font-size: 18px;
+              color: #1e293b;
+            }
+
+            &.success strong {
+              color: #2f855a;
+            }
+
+            &.danger strong {
+              color: #c53030;
+            }
+          }
+        }
+
+        .detalle-section {
+          padding: 20px;
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+
+          .detalle-title-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+
+            h4 {
+              margin: 0;
+              font-size: 15px;
+              color: #334155;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+            }
+          }
+
+          .detalle-loading,
+          .detalle-empty {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            min-height: 80px;
+            border-radius: 12px;
+            background: #f8fafc;
+            color: #64748b;
+            border: 1px dashed #cbd5e1;
+          }
+
+          .detalle-table-wrapper {
             overflow-x: auto;
-            border-radius: 10px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+          }
 
-            .prestamos-table {
-              width: 100%;
-              border-collapse: collapse;
-              background: white;
+          .detalle-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
 
-              th {
-                background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-                font-weight: 600;
-                padding: 16px 12px;
-                text-align: left;
-                border-bottom: 2px solid #cbd5e0;
-                color: white;
-                font-size: 14px;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-                position: sticky;
-                top: 0;
-                z-index: 1;
+            thead th {
+              background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+              color: white;
+              padding: 14px 12px;
+              font-size: 12px;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+              text-align: left;
+              white-space: nowrap;
+            }
 
-                &.col-tipo {
-                  min-width: 250px;
-                }
+            tbody td {
+              padding: 14px 12px;
+              border-bottom: 1px solid #e2e8f0;
+              color: #334155;
+              vertical-align: middle;
+              white-space: nowrap;
+            }
 
-                &.col-fecha {
-                  width: 120px;
-                }
+            tbody tr:hover {
+              background: #f8fafc;
+            }
 
-                &.col-estado {
-                  width: 150px;
-                }
+            tbody tr:last-child td {
+              border-bottom: none;
+            }
 
-                &.col-numero {
-                  width: 150px;
-                  text-align: right;
-                  padding-right: 24px;
-                }
+            .cuota-badge {
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
+              min-width: 38px;
+              padding: 4px 10px;
+              border-radius: 999px;
+              background: #e0e7ff;
+              color: #4338ca;
+              font-weight: 700;
+            }
 
-                &.col-acciones {
-                  width: 200px;
-                  text-align: center;
-                }
+            .saldo-cuota {
+              font-weight: 700;
+
+              &.saldo-pendiente {
+                color: #c53030;
               }
 
-              td {
-                padding: 18px 14px;
-                border-bottom: 1px solid #e2e8f0;
-                color: #2d3748;
-                font-size: 14px;
-
-                &.col-tipo {
-                  .tipo-cell {
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                    font-weight: 600;
-                    color: #1a202c;
-
-                    mat-icon {
-                      color: #667eea;
-                      font-size: 24px;
-                      width: 24px;
-                      height: 24px;
-                    }
-                  }
-                }
-
-                &.col-fecha {
-                  color: #4a5568;
-                  font-weight: 500;
-                }
-
-                &.col-estado {
-                  .estado-badge {
-                    display: inline-block;
-                    padding: 6px 12px;
-                    background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
-                    color: white;
-                    border-radius: 12px;
-                    font-size: 12px;
-                    font-weight: 600;
-                    text-transform: uppercase;
-                    letter-spacing: 0.5px;
-                  }
-                }
-
-                &.col-numero {
-                  text-align: right;
-                  padding-right: 24px;
-                  font-family: 'Roboto Mono', monospace;
-                  font-weight: 600;
-
-                  .codigo-badge {
-                    display: inline-block;
-                    padding: 4px 12px;
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    color: white;
-                    border-radius: 12px;
-                    font-size: 13px;
-                    font-weight: 700;
-                  }
-
-                  .currency-value {
-                    display: inline-block;
-                    font-size: 15px;
-
-                    &.pagado {
-                      color: #48bb78;
-                      font-weight: 700;
-                    }
-
-                    &.saldo-value {
-                      font-weight: 700;
-
-                      &.saldo-positivo {
-                        color: #e53e3e;
-                      }
-
-                      &.saldo-cero {
-                        color: #718096;
-                      }
-                    }
-                  }
-                }
-
-                &.col-acciones {
-                  text-align: center;
-                  display: flex;
-                  gap: 8px;
-                  justify-content: center;
-                  align-items: center;
-
-                  .btn-pago-cuota {
-                    font-size: 13px;
-                    padding: 8px 16px;
-                    height: auto;
-                    min-width: auto;
-
-                    mat-icon {
-                      font-size: 18px;
-                      width: 18px;
-                      height: 18px;
-                      margin-right: 4px;
-                    }
-                  }
-                }
+              &.saldo-cero {
+                color: #2f855a;
               }
+            }
 
-              tr.table-row {
-                transition: all 0.2s ease;
+            .btn-pago-cuota-inline {
+              white-space: nowrap;
 
-                &:hover {
-                  background: linear-gradient(90deg, #f7fafc 0%, #edf2f7 100%);
-                  box-shadow: inset 0 0 8px rgba(102, 126, 234, 0.05);
-                }
-
-                &:last-child td {
-                  border-bottom: 2px solid #cbd5e0;
-                }
+              mat-icon {
+                margin-right: 4px;
               }
             }
           }

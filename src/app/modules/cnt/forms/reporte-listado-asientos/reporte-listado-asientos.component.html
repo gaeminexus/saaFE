@@ -33,7 +33,8 @@
               <input
                 matInput
                 [matDatepicker]="pickerIngresoDesde"
-                [(ngModel)]="fechaIngresoDesde"
+                [ngModel]="fechaIngresoDesde()"
+                (ngModelChange)="fechaIngresoDesde.set($event)"
                 placeholder="dd/mm/aaaa"
               />
               <mat-datepicker-toggle matIconSuffix [for]="pickerIngresoDesde"></mat-datepicker-toggle>
@@ -46,7 +47,8 @@
               <input
                 matInput
                 [matDatepicker]="pickerIngresoHasta"
-                [(ngModel)]="fechaIngresoHasta"
+                [ngModel]="fechaIngresoHasta()"
+                (ngModelChange)="fechaIngresoHasta.set($event)"
                 placeholder="dd/mm/aaaa"
               />
               <mat-datepicker-toggle matIconSuffix [for]="pickerIngresoHasta"></mat-datepicker-toggle>
@@ -118,7 +120,8 @@
               <input
                 matInput
                 [matDatepicker]="pickerAsientoDesde"
-                [(ngModel)]="fechaAsientoDesde"
+                [ngModel]="fechaAsientoDesde()"
+                (ngModelChange)="fechaAsientoDesde.set($event)"
                 placeholder="dd/mm/aaaa"
               />
               <mat-datepicker-toggle matIconSuffix [for]="pickerAsientoDesde"></mat-datepicker-toggle>
@@ -131,7 +134,8 @@
               <input
                 matInput
                 [matDatepicker]="pickerAsientoHasta"
-                [(ngModel)]="fechaAsientoHasta"
+                [ngModel]="fechaAsientoHasta()"
+                (ngModelChange)="fechaAsientoHasta.set($event)"
                 placeholder="dd/mm/aaaa"
               />
               <mat-datepicker-toggle matIconSuffix [for]="pickerAsientoHasta"></mat-datepicker-toggle>

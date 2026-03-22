@@ -109,26 +109,28 @@ export class FuncionesDatosService {
     }
 
     if (fechaFac && !isNaN(fechaFac.getTime())) {
-      /* 1 ***  DD-MM-YYYY / HH:mm  *** */
+      /* 1 ***  DD/MM/YYYY HH:mm:ss  *** */
       if (tipo === FECHA_HORA) {
         strFecha =
           fechaFac.getDate().toString().padStart(2, '0') +
-          '-' +
+          '/' +
           (fechaFac.getMonth() + 1).toString().padStart(2, '0') +
-          '-' +
+          '/' +
           fechaFac.getFullYear() +
-          ' / ' +
+          ' ' +
           fechaFac.getHours().toString().padStart(2, '0') +
           ':' +
-          fechaFac.getMinutes().toString().padStart(2, '0');
+          fechaFac.getMinutes().toString().padStart(2, '0') +
+          ':' +
+          fechaFac.getSeconds().toString().padStart(2, '0');
       }
-      /* 2 ***  DD-MM-YYYY *** */
+      /* 2 ***  DD/MM/YYYY *** */
       if (tipo === SOLO_FECHA) {
         strFecha =
           fechaFac.getDate().toString().padStart(2, '0') +
-          '-' +
+          '/' +
           (fechaFac.getMonth() + 1).toString().padStart(2, '0') +
-          '-' +
+          '/' +
           fechaFac.getFullYear();
       }
     }
@@ -207,26 +209,28 @@ export class FuncionesDatosService {
       fechaFac = this.convertirFechaDesdeBackend(fecha);
     }
     if (fechaFac) {
-      /* 1 ***  DD-MM-YYYY / HH:mm  *** */
+      /* 1 ***  DD/MM/YYYY HH:mm:ss  *** */
       if (tipo === FECHA_HORA) {
         strFecha =
           fechaFac.getDate().toString().padStart(2, '0') +
-          '-' +
+          '/' +
           (fechaFac.getMonth() + 1).toString().padStart(2, '0') +
-          '-' +
+          '/' +
           fechaFac.getFullYear() +
-          ' / ' +
+          ' ' +
           fechaFac.getHours().toString().padStart(2, '0') +
           ':' +
-          fechaFac.getMinutes().toString().padStart(2, '0');
+          fechaFac.getMinutes().toString().padStart(2, '0') +
+          ':' +
+          fechaFac.getSeconds().toString().padStart(2, '0');
       }
-      /* 2 ***  DD-MM-YYYY *** */
+      /* 2 ***  DD/MM/YYYY *** */
       if (tipo === SOLO_FECHA) {
         strFecha =
           fechaFac.getDate().toString().padStart(2, '0') +
-          '-' +
+          '/' +
           (fechaFac.getMonth() + 1).toString().padStart(2, '0') +
-          '-' +
+          '/' +
           fechaFac.getFullYear();
       }
     }

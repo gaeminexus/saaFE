@@ -148,6 +148,14 @@
             }
           }
         }
+
+        .filter-field--wide {
+          grid-column: span 2;
+
+          @media (max-width: 600px) {
+            grid-column: span 1;
+          }
+        }
       }
 
       .acciones-filtros {

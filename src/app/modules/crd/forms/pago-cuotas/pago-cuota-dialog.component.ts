@@ -16,10 +16,12 @@ import { MatSelectModule } from '@angular/material/select';
 import { Banco } from '../../../tsr/model/banco';
 import { CuentaAsoprep } from '../../model/cuenta-asoprep';
 import { DatosPago } from '../../model/datos-pago';
+import { DetallePrestamo } from '../../model/detalle-prestamo';
 import { Prestamo } from '../../model/prestamo';
 
 export interface PagoCuotaDialogData {
   prestamo: Prestamo;
+  detallePrestamo?: DetallePrestamo;
   bancos: Banco[];
   cuentasAsoprep: CuentaAsoprep[];
 }
@@ -68,8 +70,7 @@ export class PagoCuotaDialogComponent implements OnInit {
     public dialogRef: MatDialogRef<PagoCuotaDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: PagoCuotaDialogData
   ) {
-    // Monto máximo = saldo total del préstamo
-    this.montoMaximo = data.prestamo.saldoTotal || 0;
+    this.montoMaximo = this.saldoReferencia;
   }
 
   ngOnInit(): void {
@@ -135,6 +136,24 @@ export class PagoCuotaDialogComponent implements OnInit {
 
   get esDeposito(): boolean {
     return this.pagoForm.get('tipoPago')?.value === 'DEPOSITO';
+  }
+
+  get esPagoCuotaEspecifica(): boolean {
+    return !!this.data.detallePrestamo;
+  }
+
+  get tituloDialogo(): string {
+    return this.esPagoCuotaEspecifica ? 'Pagar Cuota' : 'Pagar Préstamo';
+  }
+
+  get textoBotonConfirmar(): string {
+    return this.esPagoCuotaEspecifica ? 'Pagar Cuota' : 'Pagar Préstamo';
+  }
+
+  get saldoReferencia(): number {
+    return this.data.detallePrestamo
+      ? Number(this.data.detallePrestamo.saldo ?? this.data.detallePrestamo.cuota ?? 0)
+      : Number(this.data.prestamo.saldoTotal || 0);
   }
 
   get montoValido(): boolean {

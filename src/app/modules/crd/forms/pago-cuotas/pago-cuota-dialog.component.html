@@ -5,8 +5,13 @@
       <mat-icon>payment</mat-icon>
     </div>
     <div class="header-content">
-      <h2 mat-dialog-title>Pagar Cuota</h2>
-      <p class="subtitle">Préstamo #{{ data.prestamo.idAsoprep }}</p>
+      <h2 mat-dialog-title>{{ tituloDialogo }}</h2>
+      <p class="subtitle">
+        Préstamo #{{ data.prestamo.idAsoprep }}
+        @if (data.detallePrestamo) {
+        <span>· Cuota #{{ data.detallePrestamo.numeroCuota }}</span>
+        }
+      </p>
     </div>
   </div>
 
@@ -14,18 +19,23 @@
   <div class="prestamo-info">
     <div class="info-row">
       <span class="label">Producto:</span>
-      <span class="value">{{ data.prestamo.producto?.nombre || 'N/A' }}</span>
+      <span class="value">{{ data.prestamo.producto.nombre || 'N/A' }}</span>
     </div>
     <div class="info-row">
-      <span class="label">Saldo Total:</span>
-      <span class="value saldo">{{
-        data.prestamo.saldoTotal | currency : 'USD' : 'symbol' : '1.2-2'
-      }}</span>
+      <span class="label">{{ data.detallePrestamo ? 'Saldo Cuota:' : 'Saldo Total:' }}</span>
+      <span class="value saldo">{{ saldoReferencia | currency : 'USD' : 'symbol' : '1.2-2' }}</span>
     </div>
+    @if (data.detallePrestamo) {
+    <div class="info-row">
+      <span class="label">Vencimiento:</span>
+      <span class="value">{{ data.detallePrestamo.fechaVencimiento | date : 'dd/MM/yyyy' }}</span>
+    </div>
+    } @else {
     <div class="info-row">
       <span class="label">Fecha Préstamo:</span>
       <span class="value">{{ data.prestamo.fecha | date : 'dd/MM/yyyy' }}</span>
     </div>
+    }
   </div>
 
   <!-- Formulario -->
@@ -211,8 +221,7 @@
           <p class="resumen-nuevo-saldo">
             Nuevo saldo:
             <strong>{{
-              data.prestamo.saldoTotal - pagoForm.get('monto')?.value
-                | currency : 'USD' : 'symbol' : '1.2-2'
+              saldoReferencia - pagoForm.get('monto')?.value | currency : 'USD' : 'symbol' : '1.2-2'
             }}</strong>
           </p>
         </div>
@@ -236,8 +245,10 @@
         <mat-spinner diameter="20" class="spinner-inline"></mat-spinner>
         <span>Procesando...</span>
         } @else {
-        <mat-icon>check_circle</mat-icon>
-        <span>Pagar Cuota</span>
+        <ng-container>
+          <mat-icon>check_circle</mat-icon>
+          <span>{{ textoBotonConfirmar }}</span>
+        </ng-container>
         }
       </button>
     </mat-dialog-actions>

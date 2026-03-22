@@ -301,7 +301,7 @@
 
     <!-- Tarjetas de Préstamos individuales -->
     @for (prestamo of prestamos; track prestamo.idAsoprep) {
-    <mat-card class="dashboard-card prestamos-card" (click)="verDetallePrestamo(prestamo)">
+    <mat-card class="dashboard-card prestamos-card" [ngClass]="obtenerClaseTarjetaPrestamo(prestamo)" (click)="verDetallePrestamo(prestamo)">
       <mat-card-header>
         <mat-icon mat-card-avatar class="card-icon">credit_card</mat-icon>
         <mat-card-title
@@ -309,7 +309,7 @@
         >
         <mat-card-subtitle>
           @if (prestamo.estadoPrestamo) {
-          <span class="info-chip" [class.estado-activo]="prestamo.estadoPrestamo.codigo === 1">
+          <span class="info-chip" [ngClass]="'estado-prestamo--' + prestamo.estadoPrestamo.codigoAlterno">
             <mat-icon>info</mat-icon>
             {{ prestamo.estadoPrestamo.nombre || 'N/A' }}
           </span>
@@ -341,14 +341,14 @@
             <div class="stat-label">Capital solicitado</div>
           </div>
           <div class="stat-item">
-            <mat-icon>account_balance</mat-icon>
-            <div class="stat-value">${{ prestamo.plazo | number : '1.2-2' }}</div>
+            <mat-icon>schedule</mat-icon>
+            <div class="stat-value">{{ prestamo.plazo }} <small>meses</small></div>
             <div class="stat-label">Plazo</div>
           </div>
           <div class="stat-item">
-            <mat-icon>paid</mat-icon>
-            <div class="stat-value">${{ calcularTotalPagado(prestamo) | number : '1.2-2' }}</div>
-            <div class="stat-label">Total Pagado</div>
+            <mat-icon>trending_up</mat-icon>
+            <div class="stat-value">{{ prestamo.tasaNominal | number : '1.2-2' }}<small>%</small></div>
+            <div class="stat-label">Tasa de Interés</div>
           </div>
         </div>
       </mat-card-content>
@@ -438,13 +438,13 @@
             <span class="value">${{ prestamoSeleccionado.montoSolicitado | number : '1.2-2' }}</span>
           </div>
           <div class="resumen-item">
-            <span class="label">Saldo:</span>
-            <span class="value">${{ prestamoSeleccionado.saldoTotal | number : '1.2-2' }}</span>
+            <span class="label">Saldo Capital:</span>
+            <span class="value">${{ obtenerSaldoDesdeUltimaPagada(prestamoSeleccionado.codigo, prestamoSeleccionado.saldoTotal) | number : '1.2-2' }}</span>
           </div>
           <div class="resumen-item">
-            <span class="label">Total Pagado:</span>
+            <span class="label">Total Pagado Capital:</span>
             <span class="value"
-              >${{ calcularTotalPagado(prestamoSeleccionado) | number : '1.2-2' }}</span
+              >${{ (prestamoSeleccionado.montoSolicitado - obtenerSaldoDesdeUltimaPagada(prestamoSeleccionado.codigo, prestamoSeleccionado.saldoTotal)) | number : '1.2-2' }}</span
             >
           </div>
           <div class="resumen-item">
@@ -468,6 +468,14 @@
           <mat-icon>list_alt</mat-icon>
           Cuotas del Préstamo
         </mat-card-title>
+        @if (tieneCuotasCanceladas(prestamoSeleccionado.codigo)) {
+          <button mat-stroked-button type="button"
+                  (click)="toggleMostrarCanceladas(prestamoSeleccionado.codigo)"
+                  style="margin-left: auto">
+            <mat-icon>{{ mostrarCanceladas ? 'visibility_off' : 'visibility' }}</mat-icon>
+            {{ mostrarCanceladas ? 'Ocultar canceladas anticipadas' : 'Ver canceladas anticipadas' }}
+          </button>
+        }
       </mat-card-header>
       <mat-card-content>
         <div class="table-wrapper" [class.sorting]="isOrdenando">
@@ -562,9 +570,9 @@
             </td>
           </ng-container>
 
-          <!-- Columna Seguro Incendio (solo préstamos hipotecarios) -->
+          <!-- Columna Seguro (préstamos hipotecarios y prendarios) -->
           <ng-container matColumnDef="valorSeguroIncendio">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header style="text-align: right">Seg. Incendio</th>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header style="text-align: right">Seguro</th>
             <td mat-cell *matCellDef="let detalle" style="text-align: right">
               ${{ (detalle.detalle.valorSeguroIncendio || 0) | number : '1.2-2' }}
             </td>

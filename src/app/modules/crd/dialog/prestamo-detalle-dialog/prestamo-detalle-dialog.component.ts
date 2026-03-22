@@ -140,17 +140,17 @@ export class PrestamoDetalleDialogComponent implements OnInit {
   }
 
   obtenerEstadoCuota(detalle: DetallePrestamo): string {
-    if (detalle.fechaPagado) return 'Pagada';
-
-    const hoy = new Date();
-    const fechaVencimiento = new Date(detalle.fechaVencimiento);
-
-    if (fechaVencimiento < hoy) return 'Vencida';
-
-    const diferenciaDias = Math.floor((fechaVencimiento.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
-    if (diferenciaDias <= 7) return 'Por vencer';
-
-    return 'Pendiente';
+    const mapa: Record<number, string> = {
+      1: 'Pendiente',
+      2: 'Activa',
+      3: 'Emitida',
+      4: 'Pagada',
+      5: 'En mora',
+      6: 'Parcial',
+      7: 'Cancelada anticipada',
+      8: 'Vencida',
+    };
+    return detalle.estado != null ? (mapa[detalle.estado] ?? 'Desconocido') : 'Desconocido';
   }
 
   exportarCuotasCSV(): void {

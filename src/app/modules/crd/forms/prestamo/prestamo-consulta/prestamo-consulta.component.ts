@@ -4,7 +4,6 @@ import { Component, OnInit, ViewChild, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
-import { MatNativeDateModule } from '@angular/material/core';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -56,7 +55,6 @@ import { ProductoService } from '../../../service/producto.service';
     MatTooltipModule,
     MatProgressSpinnerModule,
     MatDatepickerModule,
-    MatNativeDateModule,
   ],
   templateUrl: './prestamo-consulta.component.html',
   styleUrl: './prestamo-consulta.component.scss',
@@ -249,11 +247,11 @@ export class PrestamoConsultaComponent implements OnInit {
     }
 
     if (v.estadoPrestamo) {
+      // idEstado = codigoExterno del catálogo (PRSTIDST en el backend)
       const c = new DatosBusqueda();
-      c.asignaValorConCampoPadre(
+      c.asignaUnCampoSinTrunc(
         TipoDatos.LONG,
-        'estadoPrestamo',
-        'codigo',
+        'idEstado',
         String(v.estadoPrestamo),
         TipoComandosBusqueda.IGUAL,
       );
@@ -548,6 +546,12 @@ export class PrestamoConsultaComponent implements OnInit {
   abrirIngreso(prestamo: Prestamo): void {
     this.router.navigate(['/menucreditos/prestamo-edit'], {
       state: { prestamo },
+    });
+  }
+
+  generarTablaDesdeConsulta(prestamo: Prestamo): void {
+    this.router.navigate(['/menucreditos/prestamo-edit'], {
+      state: { prestamo, enfocarGenerarTabla: true },
     });
   }
 

@@ -454,15 +454,19 @@ export class AsientosContablesDinamico implements OnInit {
 
         const finalizarCarga = () => {
           this.calcularTotalesGrid();
+
+          // Recalcular totales directamente desde los detalles del backend (fuente de verdad).
+          // calcularTotalesGrid() solo suma items que se encontraron en cuentasPlan (tipo===2).
+          // Si alguna cuenta del asiento tiene otro tipo, no aparece en el grid y el total queda mal.
+          if (this.detallesOriginales.length > 0) {
+            const totalDebeRaw = this.detallesOriginales.reduce((sum, d) => sum + (Number(d.valorDebe) || 0), 0);
+            const totalHaberRaw = this.detallesOriginales.reduce((sum, d) => sum + (Number(d.valorHaber) || 0), 0);
+            this.totalDebe = totalDebeRaw;
+            this.totalHaber = totalHaberRaw;
+            this.diferencia = parseFloat(Math.abs(totalDebeRaw - totalHaberRaw).toFixed(2));
+          }
+
           this.hayDetallesSinGuardar = false;
-          console.log('🔍 Estado después de cargar detalles:', {
-            hayDetallesSinGuardar: this.hayDetallesSinGuardar,
-            asientoCuadrado: this.asientoCuadrado,
-            totalDebe: this.totalDebe,
-            totalHaber: this.totalHaber,
-            diferencia: this.diferencia,
-            estado: this.form.get('estado')?.value
-          });
           this.loading = false;
         };
 
@@ -610,7 +614,7 @@ export class AsientosContablesDinamico implements OnInit {
       return sum + (Number(control.get('valor')?.value) || 0);
     }, 0);
 
-    this.diferencia = Math.abs(this.totalDebe - this.totalHaber);
+    this.diferencia = parseFloat(Math.abs(this.totalDebe - this.totalHaber).toFixed(2));
   }
 
   onValorChange(): void {
@@ -677,7 +681,7 @@ export class AsientosContablesDinamico implements OnInit {
   calcularTotalesGrid(): void {
     this.totalDebe = this.cuentasDebeGrid.reduce((sum, item) => sum + (Number(item.valor) || 0), 0);
     this.totalHaber = this.cuentasHaberGrid.reduce((sum, item) => sum + (Number(item.valor) || 0), 0);
-    this.diferencia = Math.abs(this.totalDebe - this.totalHaber);
+    this.diferencia = parseFloat(Math.abs(this.totalDebe - this.totalHaber).toFixed(2));
 
     // Actualizar el grid de detalles
     this.actualizarGridDetalles();
@@ -742,6 +746,48 @@ export class AsientosContablesDinamico implements OnInit {
   }
 
   /**
+   * Construye el payload de cabecera a partir del formulario actual.
+   * @param estado  Estado a asignar al asiento (por defecto: el del formulario o 4-INCOMPLETO)
+   */
+  private buildCabeceraPayload(estado?: number): any {
+    const tipo = this.form.get('tipo');
+    const numero = this.form.get('numero');
+    const fechaAsiento = this.form.get('fechaAsiento')?.value;
+    const tipoAsientoSeleccionado = this.tiposAsientos.find((t) => t.id === tipo?.value);
+    const estadoFinal = estado ?? this.form.get('estado')?.value ?? this.asientoActual?.estado ?? 4;
+
+    const payload: any = {
+      empresa: { codigo: this.idSucursal },
+      tipoAsiento: {
+        codigo: tipo?.value,
+        nombre: tipoAsientoSeleccionado?.nombre || '',
+      },
+      numero: parseInt(numero?.value, 10),
+      fechaAsiento: fechaAsiento,
+      observaciones: this.form.get('observaciones')?.value?.trim() || '',
+      estado: estadoFinal,
+      nombreUsuario: localStorage.getItem('username') || 'sistema',
+      fechaIngreso: new Date(),
+      numeroMes: fechaAsiento ? fechaAsiento.getMonth() + 1 : new Date().getMonth() + 1,
+      numeroAnio: fechaAsiento ? fechaAsiento.getFullYear() : new Date().getFullYear(),
+      moneda: 1,
+      rubroModuloClienteP: RUBRO_MODULOS_SISTEMA,
+      rubroModuloClienteH: RUBRO_MODULO_CNT,
+      rubroModuloSistemaP: RUBRO_MODULOS_SISTEMA,
+      rubroModuloSistemaH: RUBRO_MODULO_CNT,
+    };
+
+    if (this.codigoAsientoActual) {
+      payload.codigo = this.codigoAsientoActual;
+      if (this.asientoActual?.periodo) {
+        payload.periodo = { codigo: this.asientoActual.periodo.codigo };
+      }
+    }
+
+    return payload;
+  }
+
+  /**
    * Grabar solo la cabecera del asiento sin validar detalles
    */
   grabarCabecera(): void {
@@ -769,48 +815,8 @@ export class AsientosContablesDinamico implements OnInit {
     this.loading = true;
 
     // Construir objeto para enviar al backend
-    const tipoAsientoSeleccionado = this.tiposAsientos.find((t) => t.id === tipo?.value);
-
-    // Obtener fechas del formulario
-    const fechaAsiento = this.form.get('fechaAsiento')?.value;
-
-    // Determinar el estado del asiento (mantener en INCOMPLETO hasta confirmación manual)
-    let estadoAsiento = this.form.get('estado')?.value || this.asientoActual?.estado || 4;
-
-    const asientoBackend: any = {
-      empresa: {
-        codigo: this.idSucursal,
-      },
-      tipoAsiento: {
-        codigo: tipo?.value,
-        nombre: tipoAsientoSeleccionado?.nombre || '',
-      },
-      numero: parseInt(numero?.value, 10),
-      fechaAsiento: fechaAsiento,
-      observaciones: this.form.get('observaciones')?.value?.trim() || '',
-      estado: estadoAsiento,
-      nombreUsuario: localStorage.getItem('username') || 'sistema',
-      fechaIngreso: new Date(),
-      numeroMes: fechaAsiento ? fechaAsiento.getMonth() + 1 : new Date().getMonth() + 1,
-      numeroAnio: fechaAsiento ? fechaAsiento.getFullYear() : new Date().getFullYear(),
-      moneda: 1,
-      rubroModuloClienteP: RUBRO_MODULOS_SISTEMA,    // Código alterno del rubro de módulos del sistema
-      rubroModuloClienteH: RUBRO_MODULO_CNT,     // Código alterno del módulo de contabilidad
-      rubroModuloSistemaP: RUBRO_MODULOS_SISTEMA,    // Código alterno del rubro de módulos del sistema
-      rubroModuloSistemaH: RUBRO_MODULO_CNT,     // Código alterno del módulo de contabilidad
-    };
-
-    // Si estamos actualizando, incluir el código del asiento y período del asiento existente
-    if (this.codigoAsientoActual) {
-      asientoBackend.codigo = this.codigoAsientoActual;
-
-      // Usar el período del asiento existente si está disponible
-      if (this.asientoActual?.periodo) {
-        asientoBackend.periodo = {
-          codigo: this.asientoActual.periodo.codigo,
-        };
-      }
-    }
+    const estadoAsiento = this.form.get('estado')?.value || this.asientoActual?.estado || 4;
+    const asientoBackend = this.buildCabeceraPayload(estadoAsiento);
 
     // Decidir si crear o actualizar
     const operacion = this.codigoAsientoActual
@@ -1497,7 +1503,7 @@ export class AsientosContablesDinamico implements OnInit {
     // Calcular totales actuales
     const debe = this.totalDebe;
     const haber = this.totalHaber;
-    const diferencia = Math.abs(debe - haber);
+    const diferencia = parseFloat(Math.abs(debe - haber).toFixed(2));
 
     // Si el asiento está descuadrado y el estado actual es ACTIVO (1)
     if (diferencia !== 0 && this.form.get('estado')?.value === 1) {
@@ -2209,12 +2215,9 @@ export class AsientosContablesDinamico implements OnInit {
   private ejecutarConfirmacion(): void {
     this.loading = true;
 
-    // Actualizar solo el estado del asiento a ACTIVO (1)
-    const asientoActualizado = {
-      ...this.asientoActual,
-      codigo: this.codigoAsientoActual,
-      estado: 1 // ACTIVO
-    };
+    // Construir payload desde el formulario actual (para reflejar cambios pendientes en cabecera)
+    // y forzar estado ACTIVO (1)
+    const asientoActualizado = this.buildCabeceraPayload(1);
 
     this.asientoService.actualizarAsiento(this.codigoAsientoActual!, asientoActualizado).subscribe({
       next: () => {

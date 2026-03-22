@@ -21,6 +21,7 @@ import { MaterialFormModule } from '../../../../shared/modules/material-form.mod
 import { Banco } from '../../../tsr/model/banco';
 import { CuentaAsoprep } from '../../model/cuenta-asoprep';
 import { DatosPago } from '../../model/datos-pago';
+import { DetallePrestamo } from '../../model/detalle-prestamo';
 import { Entidad } from '../../model/entidad';
 import { Participe } from '../../model/participe';
 import { Prestamo } from '../../model/prestamo';
@@ -30,6 +31,7 @@ import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/ti
 import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { ExportService } from '../../../../shared/services/export.service';
 import { BancoService } from '../../../tsr/service/banco.service';
+import { DetallePrestamoService } from '../../service/detalle-prestamo.service';
 import { EntidadService } from '../../service/entidad.service';
 import { ParticipeService } from '../../service/participe.service';
 import { PrestamoService } from '../../service/prestamo.service';
@@ -61,6 +63,7 @@ export class PagoCuotasComponent implements OnInit {
   private entidadService = inject(EntidadService);
   private participeService = inject(ParticipeService);
   private prestamoService = inject(PrestamoService);
+  private detallePrestamoService = inject(DetallePrestamoService);
   private bancoService = inject(BancoService);
   private exportService = inject(ExportService);
   private snackBar = inject(MatSnackBar);
@@ -69,14 +72,18 @@ export class PagoCuotasComponent implements OnInit {
   private route = inject(ActivatedRoute);
 
   // Variables de búsqueda
-  searchText: string = '';
+  searchEntidadText: string = '';
+  searchPrestamoText: string = '';
   isSearching: boolean = false;
   mostrarBusqueda: boolean = true;
+  filtroPrestamoIdAsoprep: number | null = null;
 
   // Variables de datos
   entidadEncontrada: Entidad | null = null;
   participeEncontrado: Participe | null = null;
   prestamos: Prestamo[] = [];
+  detallesPrestamoPorCodigo: Record<number, DetallePrestamo[]> = {};
+  loadingDetallesPorPrestamo: Record<number, boolean> = {};
 
   // Variables de estado
   isLoadingBusqueda: boolean = false;
@@ -87,7 +94,7 @@ export class PagoCuotasComponent implements OnInit {
     const state = history.state;
     if (state && state.entidad) {
       this.entidadEncontrada = state.entidad;
-      this.searchText = state.entidad.numeroIdentificacion || '';
+      this.searchEntidadText = state.entidad.numeroIdentificacion || '';
       this.mostrarBusqueda = false;
       this.cargarParticipe(state.entidad.codigo);
     }
@@ -97,7 +104,7 @@ export class PagoCuotasComponent implements OnInit {
    * Busca una entidad por número de identificación, razón social o nombre comercial
    */
   buscarEntidad(): void {
-    if (!this.searchText || this.searchText.trim() === '') {
+    if (!this.searchEntidadText || this.searchEntidadText.trim() === '') {
       this.snackBar.open('Por favor, ingrese un criterio de búsqueda', 'Cerrar', {
         duration: 3000,
       });
@@ -109,8 +116,84 @@ export class PagoCuotasComponent implements OnInit {
     this.entidadEncontrada = null;
     this.participeEncontrado = null;
     this.prestamos = [];
+    this.detallesPrestamoPorCodigo = {};
+    this.loadingDetallesPorPrestamo = {};
 
-    const searchValue = this.searchText.trim();
+    const searchValue = this.searchEntidadText.trim();
+
+    this.buscarEntidadPorTexto(searchValue);
+  }
+
+  buscarPrestamo(): void {
+    if (!this.searchPrestamoText || this.searchPrestamoText.trim() === '') {
+      this.snackBar.open('Por favor, ingrese un número de préstamo', 'Cerrar', {
+        duration: 3000,
+      });
+      return;
+    }
+
+    const searchValue = this.searchPrestamoText.trim();
+    if (!/^\d+$/.test(searchValue)) {
+      this.snackBar.open('El número de préstamo debe ser numérico', 'Cerrar', {
+        duration: 3000,
+      });
+      return;
+    }
+
+    this.isSearching = true;
+    this.isLoadingBusqueda = true;
+    this.entidadEncontrada = null;
+    this.participeEncontrado = null;
+    this.prestamos = [];
+    this.detallesPrestamoPorCodigo = {};
+    this.loadingDetallesPorPrestamo = {};
+
+    this.buscarPorPrestamoIdAsoprep(searchValue);
+  }
+
+  private buscarPorPrestamoIdAsoprep(searchValue: string): void {
+    this.filtroPrestamoIdAsoprep = Number(searchValue);
+
+    const criteriosPrestamo: DatosBusqueda[] = [];
+    const criterioPrestamo = new DatosBusqueda();
+    criterioPrestamo.asignaUnCampoSinTrunc(
+      TipoDatosBusqueda.LONG,
+      'idAsoprep',
+      searchValue,
+      TipoComandosBusqueda.IGUAL
+    );
+    criteriosPrestamo.push(criterioPrestamo);
+
+    this.prestamoService.selectByCriteria(criteriosPrestamo).subscribe({
+      next: (prestamos: any) => {
+        const resultados = Array.isArray(prestamos) ? prestamos : prestamos ? [prestamos] : [];
+
+        if (resultados.length > 0 && resultados[0]?.entidad) {
+          const prestamoEncontrado = this.normalizarPrestamo(resultados[0]);
+          this.entidadEncontrada = prestamoEncontrado.entidad as Entidad;
+          this.prestamos = [prestamoEncontrado];
+          this.cargarDetallesPrestamos(this.prestamos);
+          this.isLoadingBusqueda = false;
+          this.cargarParticipe(this.entidadEncontrada.codigo, false);
+          return;
+        }
+
+        this.isSearching = false;
+        this.isLoadingBusqueda = false;
+        this.snackBar.open('No se encontró ningún préstamo con ese número', 'Cerrar', {
+          duration: 3000,
+        });
+      },
+      error: () => {
+        this.isSearching = false;
+        this.isLoadingBusqueda = false;
+        this.snackBar.open('Error al buscar el préstamo', 'Cerrar', { duration: 3000 });
+      },
+    });
+  }
+
+  private buscarEntidadPorTexto(searchValue: string): void {
+    this.filtroPrestamoIdAsoprep = null;
 
     // Crear criterios de búsqueda usando el patrón de cruce-valores
     const criterioConsultaArray: DatosBusqueda[] = [];
@@ -173,7 +256,7 @@ export class PagoCuotasComponent implements OnInit {
   /**
    * Carga la información del partícipe asociado a la entidad
    */
-  cargarParticipe(codigoEntidad: number): void {
+  cargarParticipe(codigoEntidad: number, cargarPrestamosEntidad: boolean = true): void {
     this.isLoadingDatos = true;
 
     const criterios: DatosBusqueda[] = [];
@@ -209,14 +292,103 @@ export class PagoCuotasComponent implements OnInit {
             fechaIngreso: fechaIngreso || participe?.fechaIngreso,
           } as Participe;
         }
-        this.cargarPrestamos();
+        if (cargarPrestamosEntidad) {
+          this.cargarPrestamos();
+        } else {
+          this.isSearching = false;
+          this.isLoadingDatos = false;
+        }
       },
       error: (error) => {
         console.error('Error al cargar partícipe:', error);
-        this.isLoadingDatos = false;
-        this.cargarPrestamos();
+        if (cargarPrestamosEntidad) {
+          this.isLoadingDatos = false;
+          this.cargarPrestamos();
+        } else {
+          this.isSearching = false;
+          this.isLoadingDatos = false;
+        }
       },
     });
+  }
+
+  private normalizarPrestamo(p: any): Prestamo {
+    const fechaPrestamo = this.convertirFecha(p.fecha);
+    const fechaDesembolso = this.convertirFecha(p.fechaDesembolso);
+    const fechaRegistro = this.convertirFecha(p.fechaRegistro);
+
+    return {
+      ...p,
+      fecha: fechaPrestamo || p.fecha,
+      fechaDesembolso: fechaDesembolso || p.fechaDesembolso,
+      fechaRegistro: fechaRegistro || p.fechaRegistro,
+    } as Prestamo;
+  }
+
+  private normalizarDetallePrestamo(detalle: any): DetallePrestamo {
+    const fechaVencimiento = this.convertirFecha(detalle.fechaVencimiento);
+    const fechaPagado = this.convertirFecha(detalle.fechaPagado);
+    const fechaRegistro = this.convertirFecha(detalle.fechaRegistro);
+
+    return {
+      ...detalle,
+      fechaVencimiento: fechaVencimiento || detalle.fechaVencimiento,
+      fechaPagado: fechaPagado || detalle.fechaPagado,
+      fechaRegistro: fechaRegistro || detalle.fechaRegistro,
+    } as DetallePrestamo;
+  }
+
+  private cargarDetallesPrestamos(prestamos: Prestamo[]): void {
+    this.detallesPrestamoPorCodigo = {};
+    this.loadingDetallesPorPrestamo = {};
+
+    prestamos.forEach((prestamo) => this.cargarDetallePrestamo(prestamo));
+  }
+
+  private cargarDetallePrestamo(prestamo: Prestamo): void {
+    if (!prestamo?.codigo) {
+      return;
+    }
+
+    this.loadingDetallesPorPrestamo[prestamo.codigo] = true;
+
+    const criterios: DatosBusqueda[] = [];
+    const criterioPrestamo = new DatosBusqueda();
+    criterioPrestamo.asignaValorConCampoPadre(
+      TipoDatosBusqueda.LONG,
+      'prestamo',
+      'codigo',
+      String(prestamo.codigo),
+      TipoComandosBusqueda.IGUAL
+    );
+    criterios.push(criterioPrestamo);
+
+    const criterioOrden = new DatosBusqueda();
+    criterioOrden.orderBy('numeroCuota');
+    criterios.push(criterioOrden);
+
+    this.detallePrestamoService.selectByCriteria(criterios).subscribe({
+      next: (data) => {
+        const detalles = Array.isArray(data) ? data : data ? [data] : [];
+        this.detallesPrestamoPorCodigo[prestamo.codigo] = detalles.map((detalle: any) =>
+          this.normalizarDetallePrestamo(detalle)
+        );
+        this.loadingDetallesPorPrestamo[prestamo.codigo] = false;
+      },
+      error: (error) => {
+        console.error('Error al cargar detalle del préstamo:', error);
+        this.detallesPrestamoPorCodigo[prestamo.codigo] = [];
+        this.loadingDetallesPorPrestamo[prestamo.codigo] = false;
+      },
+    });
+  }
+
+  getDetallesPrestamo(prestamo: Prestamo): DetallePrestamo[] {
+    return this.detallesPrestamoPorCodigo[prestamo.codigo] || [];
+  }
+
+  getSaldoCuota(detalle: DetallePrestamo): number {
+    return Number(detalle.saldo ?? detalle.cuota ?? 0);
   }
 
   /**
@@ -244,19 +416,15 @@ export class PagoCuotasComponent implements OnInit {
         const prestamos = Array.isArray(data) ? data : data ? [data] : [];
 
         // Convertir fechas que puedan venir en formato array desde el backend
-        this.prestamos = prestamos.map((p: any) => {
-          const fechaPrestamo = this.convertirFecha(p.fecha);
-          const fechaDesembolso = this.convertirFecha(p.fechaDesembolso);
-          const fechaRegistro = this.convertirFecha(p.fechaRegistro);
+        const prestamosConvertidos = prestamos.map((p: any) => this.normalizarPrestamo(p));
 
-          return {
-            ...p,
-            fecha: fechaPrestamo || p.fecha,
-            fechaDesembolso: fechaDesembolso || p.fechaDesembolso,
-            fechaRegistro: fechaRegistro || p.fechaRegistro,
-          };
-        });
+        this.prestamos = this.filtroPrestamoIdAsoprep
+          ? prestamosConvertidos.filter(
+              (p: any) => Number(p.idAsoprep) === Number(this.filtroPrestamoIdAsoprep)
+            )
+          : prestamosConvertidos;
 
+        this.cargarDetallesPrestamos(this.prestamos);
         this.isLoadingDatos = false;
       },
       error: (error) => {
@@ -272,10 +440,14 @@ export class PagoCuotasComponent implements OnInit {
    * Limpia el campo de búsqueda
    */
   limpiarBusqueda(): void {
-    this.searchText = '';
+    this.searchEntidadText = '';
+    this.searchPrestamoText = '';
+    this.filtroPrestamoIdAsoprep = null;
     this.entidadEncontrada = null;
     this.participeEncontrado = null;
     this.prestamos = [];
+    this.detallesPrestamoPorCodigo = {};
+    this.loadingDetallesPorPrestamo = {};
   }
 
   /**
@@ -288,9 +460,17 @@ export class PagoCuotasComponent implements OnInit {
   }
 
   /**
-   * Realizar pago de cuota
+   * Realizar pago a nivel de préstamo
    */
   realizarPagoCuota(prestamo: Prestamo): void {
+    this.abrirDialogoPago(prestamo);
+  }
+
+  realizarPagoDetalle(prestamo: Prestamo, detalle: DetallePrestamo): void {
+    this.abrirDialogoPago(prestamo, detalle);
+  }
+
+  private abrirDialogoPago(prestamo: Prestamo, detalle?: DetallePrestamo): void {
     // Datos mock de bancos (tabla TSR.BNCO aún no existe en la base de datos)
     // TODO: Cuando la tabla TSR.BNCO esté disponible, usar: this.bancoService.getAll()
     const bancosMock: Banco[] = [
@@ -399,7 +579,8 @@ export class PagoCuotasComponent implements OnInit {
       maxWidth: '95vw',
       disableClose: true,
       data: {
-        prestamo: prestamo,
+        prestamo,
+        detallePrestamo: detalle,
         bancos: bancosMock,
         cuentasAsoprep: cuentasAsoprep,
       },
@@ -408,12 +589,16 @@ export class PagoCuotasComponent implements OnInit {
     dialogRef.afterClosed().subscribe((result: DatosPago | undefined) => {
       if (result) {
         console.log('Datos de pago recibidos:', result);
-        // TODO: Enviar datos al backend para procesar el pago
+        const destinoPago = detalle
+          ? `cuota #${detalle.numeroCuota} del préstamo #${prestamo.idAsoprep}`
+          : `préstamo #${prestamo.idAsoprep}`;
+
         this.snackBar.open(
-          `Pago de $${result.monto.toFixed(2)} registrado exitosamente`,
+          `Pago de $${result.monto.toFixed(2)} registrado exitosamente para ${destinoPago}`,
           'Cerrar',
           { duration: 3000 }
         );
+        // TODO: Enviar datos al backend para procesar el pago
         // TODO: Refrescar lista de préstamos después del pago
         // this.cargarPrestamos();
       }
