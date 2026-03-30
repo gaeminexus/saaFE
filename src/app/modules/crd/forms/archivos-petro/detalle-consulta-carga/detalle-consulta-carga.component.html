@@ -346,7 +346,7 @@
       </mat-card>
 
       <!-- Sección de Novedades -->
-      @if (mostrarNovedades() && novedadesAgrupadas().length > 0) {
+      @if (mostrarNovedades()) {
         <mat-card class="novedades-card">
           <mat-card-header>
             <mat-icon mat-card-avatar class="avatar-icon">report_problem</mat-icon>
@@ -493,6 +493,18 @@
                             <mat-icon>filter_alt_off</mat-icon>
                             <span class="clear-filter-text">Limpiar filtro</span>
                           </button>
+
+                          <button
+                            mat-flat-button
+                            color="primary"
+                            type="button"
+                            matTooltip="Exportar novedades filtradas"
+                            aria-label="Exportar novedades filtradas"
+                            (click)="exportarNovedadesDescuentosACSV()"
+                            [disabled]="totalNovedadesDescuentosFiltradas === 0">
+                            <mat-icon>download</mat-icon>
+                            Exportar CSV
+                          </button>
                         </div>
 
                         <div style="font-size: 0.9rem; color: #666;">
@@ -623,90 +635,6 @@
                       <div class="empty-state">
                         <mat-icon>filter_alt_off</mat-icon>
                         <p>No hay registros para el tipo de novedad seleccionado</p>
-                      </div>
-                    }
-                  </div>
-                </mat-tab>
-
-                <!-- Tab Descuentos - Antiguo (mantener para referencia) -->
-                <mat-tab style="display: none;">
-                  <ng-template mat-tab-label>
-                    <mat-icon class="tab-icon">attach_money</mat-icon>
-                    Descuentos Antiguo
-                    @if (contarNovedades('DESCUENTO') > 0) {
-                      <span class="tab-count badge-warning">
-                        {{ contarNovedades('DESCUENTO') }}
-                      </span>
-                    }
-                  </ng-template>
-
-                  <div class="tab-content">
-                    @for (novedad of novedadesFiltradas; track novedad.novedad.codigo) {
-                      <mat-card class="novedad-card" [class.expanded]="expandedNovedad() === novedad.novedad.codigo">
-                        <mat-card-header (click)="toggleExpansion(novedad.novedad.codigo)">
-                          <mat-icon class="novedad-icon" [style.color]="novedad.novedad.colorChip">
-                            {{ novedad.novedad.icono }}
-                          </mat-icon>
-                          <mat-card-title>{{ novedad.novedad.descripcion }}</mat-card-title>
-                          <div class="header-actions">
-                            <span class="badge" [class]="'badge-' + novedad.novedad.severidad">
-                              {{ novedad.total }}
-                            </span>
-                            <mat-icon class="expand-icon">
-                              {{ expandedNovedad() === novedad.novedad.codigo ? 'expand_less' : 'expand_more' }}
-                            </mat-icon>
-                          </div>
-                        </mat-card-header>
-
-                        @if (expandedNovedad() === novedad.novedad.codigo) {
-                          <mat-card-content>
-                            <table mat-table [dataSource]="novedad.registros" class="novedad-table">
-                              <!-- Código Petroamazonas -->
-                              <ng-container matColumnDef="codigoPetro">
-                                <th mat-header-cell *matHeaderCellDef>Código Petro</th>
-                                <td mat-cell *matCellDef="let element">{{ element.codigoPetro }}</td>
-                              </ng-container>
-
-                              <!-- Nombre -->
-                              <ng-container matColumnDef="nombre">
-                                <th mat-header-cell *matHeaderCellDef>Nombre</th>
-                                <td mat-cell *matCellDef="let element">{{ element.nombre }}</td>
-                              </ng-container>
-
-                              <!-- Acciones -->
-                              <ng-container matColumnDef="acciones">
-                                <th mat-header-cell *matHeaderCellDef>Acciones</th>
-                                <td mat-cell *matCellDef="let element">
-                                  <button
-                                    mat-raised-button
-                                    color="primary"
-                                    (click)="corregirRegistro(element)"
-                                    class="btn-corregir">
-                                    <mat-icon>{{ novedad.novedad.codigo === 1 ? 'search' : 'build' }}</mat-icon>
-                                    {{ novedad.novedad.codigo === 1 ? 'Coincidencias' : 'Corregir' }}
-                                  </button>
-                                </td>
-                              </ng-container>
-
-                              <tr mat-header-row *matHeaderRowDef="['codigoPetro', 'nombre', 'acciones']"></tr>
-                              <tr mat-row *matRowDef="let row; columns: ['codigoPetro', 'nombre', 'acciones'];"></tr>
-                            </table>
-
-                            <mat-paginator
-                              [length]="novedad.registros.length"
-                              [pageSize]="pageSize"
-                              [pageIndex]="getPageIndex(novedad.novedad.codigo)"
-                              [pageSizeOptions]="pageSizeOptions"
-                              (page)="onPageChange($event, novedad.novedad.codigo)"
-                              showFirstLastButtons>
-                            </mat-paginator>
-                          </mat-card-content>
-                        }
-                      </mat-card>
-                    } @empty {
-                      <div class="empty-state">
-                        <mat-icon>check_circle</mat-icon>
-                        <p>No hay novedades de descuentos</p>
                       </div>
                     }
                   </div>

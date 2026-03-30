@@ -2412,12 +2412,11 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
     const estado = this.estadosPrestamo.find(
       (e) =>
         e.codigoExterno === codigoRecibido ||
-        e.codigoAlterno === codigoRecibido ||
-        e.codigo === codigoRecibido
+        e.codigoAlterno === codigoRecibido
     );
 
     return {
-      codigoPk: estado?.codigo ?? codigoRecibido,
+      codigoPk: estado?.codigo ?? 0,
       codigoAlterno: estado?.codigoExterno ?? estado?.codigoAlterno ?? codigoRecibido,
     };
   }

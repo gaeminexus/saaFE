@@ -7,6 +7,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { CargaArchivo } from '../../../model/carga-archivo';
 import { CargaArchivoService } from '../../../service/carga-archivo.service';
+import { ServiciosAsoprepService } from '../../../../asoprep/service/servicios-asoprep.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { ConfirmDialogComponent } from '../../../../../shared/basics/confirm-dialog/confirm-dialog.component';
 
@@ -20,7 +21,7 @@ interface MesCirculo {
 @Component({
   selector: 'app-consulta-archivos-petro.component',
   standalone: true,
-  imports: [CommonModule, FormsModule, MaterialFormModule, ConfirmDialogComponent],
+  imports: [CommonModule, FormsModule, MaterialFormModule],
   templateUrl: './consulta-archivos-petro.component.html',
   styleUrl: './consulta-archivos-petro.component.scss'
 })
@@ -53,6 +54,7 @@ export class ConsultaArchivosPetroComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private cargaArchivoService: CargaArchivoService,
+    private serviciosAsoprepService: ServiciosAsoprepService,
     private funcionesDatosService: FuncionesDatosService,
     private snackBar: MatSnackBar,
     private dialog: MatDialog
@@ -290,7 +292,7 @@ export class ConsultaArchivosPetroComponent implements OnInit {
       procesando.add(carga.codigo!);
       this.procesandoCodigos.set(procesando);
 
-      this.cargaArchivoService.procesarCargaPetro(carga.codigo!).subscribe({
+      this.serviciosAsoprepService.aplicarPagosArchivoPetro(carga.codigo!).subscribe({
         next: () => {
           const actualizado = new Set(this.procesandoCodigos());
           actualizado.delete(carga.codigo!);

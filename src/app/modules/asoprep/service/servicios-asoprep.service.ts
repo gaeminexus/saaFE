@@ -77,6 +77,12 @@ export class ServiciosAsoprepService {
       return this.http.get<ParticipeXCargaArchivo>(url).pipe(catchError(this.handleError));
   }
 
+  aplicarPagosArchivoPetro(idCargaArchivo: number): Observable<any | null> {
+    const wsEndpoint = `/aplicarPagosArchivoPetro/${idCargaArchivo}`;
+    const url = `${ServiciosAsoprep.RS_ASGN}${wsEndpoint}`;
+    return this.http.post<any>(url, {}).pipe(catchError(this.handleError));
+  }
+
   private handleError(error: HttpErrorResponse): Observable<null> {
     if (+error.status === 200) {
       return of(null);

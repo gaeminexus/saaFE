@@ -263,6 +263,19 @@
                       <h3>Sin novedades de descuentos</h3>
                     </div>
                   } @else {
+                    <div style="display: flex; justify-content: flex-end; margin-bottom: 0.75rem;">
+                      <button
+                        mat-flat-button
+                        color="primary"
+                        type="button"
+                        matTooltip="Exportar novedades de descuentos"
+                        aria-label="Exportar novedades de descuentos"
+                        (click)="exportarNovedadesDescuentosACSV()">
+                        <mat-icon>download</mat-icon>
+                        Exportar CSV
+                      </button>
+                    </div>
+
                     <div class="table-container novedad-table">
                       <table mat-table [dataSource]="novedadesDescuentos()" class="data-table">
                         <ng-container matColumnDef="codigoPetro">

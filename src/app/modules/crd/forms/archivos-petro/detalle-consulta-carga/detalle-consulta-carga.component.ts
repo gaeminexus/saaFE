@@ -663,8 +663,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
    */
   onTabNovedadChange(index: number): void {
     this.tabNovedadSeleccionado = index;
-    const tipo = index === 0 ? 'PARTICIPE' : 'DESCUENTO';
-    this.novedadesFiltradas = this.novedadesAgrupadas().filter(n => n.novedad.tipo === tipo);
+    this.novedadesFiltradas = this.novedadesAgrupadas().filter(n => n.novedad.tipo === 'PARTICIPE');
 
     if (index === 1 && !this.novedadesDescuentosCargadas && !this.isLoadingNovedadesDescuentos()) {
       this.novedadesDescuentosCargadas = true;
@@ -675,7 +674,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
   /**
    * Contar novedades por tipo
    */
-  contarNovedades(tipo: 'PARTICIPE' | 'DESCUENTO'): number {
+  contarNovedades(tipo: 'PARTICIPE'): number {
     return this.novedadesAgrupadas()
       .filter(n => n.novedad.tipo === tipo)
       .reduce((sum, n) => sum + n.total, 0);
@@ -872,7 +871,13 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
       5: 'account_balance',
       6: 'receipt',
       7: 'warning',
-      8: 'priority_high'
+      8: 'priority_high',
+      18: 'history',
+      19: 'content_copy',
+      20: 'do_not_disturb_on',
+      21: 'money_off',
+      22: 'sync_problem',
+      23: 'rule'
     };
     return iconos[codigo] || 'help';
   }
@@ -1189,6 +1194,67 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
 
     this.exportService.exportToCSV(data, fileName, headers, dataKeys);
     this.snackBar.open(`Exportado ${data.length} registros a CSV`, 'Cerrar', { duration: 3000 });
+  }
+
+  /**
+   * Exporta a CSV las novedades de descuentos filtradas
+   */
+  exportarNovedadesDescuentosACSV(): void {
+    const data = this.novedadesDescuentosFiltradas;
+
+    if (data.length === 0) {
+      this.snackBar.open('No hay novedades de descuentos para exportar', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    const rows = data.map((item) => ({
+      codigoPetro: item.participeXCargaArchivo?.codigoPetro || '-',
+      participe: item.participeXCargaArchivo?.nombre || '-',
+      tipoNovedad: this.getDescripcionTipoNovedad(item.tipoNovedad),
+      descripcion: item.descripcion || '-',
+      codigoProducto: item.codigoProducto || '-',
+      codigoPrestamo: item.codigoPrestamo || '-',
+      idAsoprepPrestamo: item.idAsoprepPrestamo || '-',
+      codigoCuota: item.codigoCuota || '-',
+      montoEsperado: Number(item.montoEsperado || 0),
+      montoRecibido: Number(item.montoRecibido || 0),
+      montoDiferencia: Number(item.montoDiferencia || 0)
+    }));
+
+    const headers = [
+      'Código Petro',
+      'Partícipe',
+      'Tipo Novedad',
+      'Descripción',
+      'Código Producto',
+      'Código Préstamo',
+      'ID ASOPREP',
+      'Código Cuota',
+      'Monto Esperado',
+      'Monto Recibido',
+      'Monto Diferencia'
+    ];
+
+    const dataKeys = [
+      'codigoPetro',
+      'participe',
+      'tipoNovedad',
+      'descripcion',
+      'codigoProducto',
+      'codigoPrestamo',
+      'idAsoprepPrestamo',
+      'codigoCuota',
+      'montoEsperado',
+      'montoRecibido',
+      'montoDiferencia'
+    ];
+
+    const filtro = this.filtroTipoNovedadSeleccionado();
+    const filtroTexto = filtro === 'TODOS' ? 'todos' : `tipo-${filtro}`;
+    const fileName = `novedades_descuentos_carga_${this.cargaArchivo?.codigo || 'sin-id'}_${filtroTexto}`;
+
+    this.exportService.exportToCSV(rows, fileName, headers, dataKeys);
+    this.snackBar.open(`Exportadas ${rows.length} novedades de descuentos a CSV`, 'Cerrar', { duration: 3000 });
   }
 
   /**

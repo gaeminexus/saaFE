@@ -24,6 +24,7 @@ import { NovedadCargaService } from '../../../service/novedad-carga.service';
 import { NovedadCarga, NovedadAgrupada } from '../../../model/novedad-carga';
 import { AppStateService } from '../../../../../shared/services/app-state.service';
 import { UsuarioService } from '../../../../../shared/services/usuario.service';
+import { ExportService } from '../../../../../shared/services/export.service';
 import { NovedadParticipeCargaService } from '../../../service/novedad-participe-carga.service';
 import { NovedadParticipeCarga } from '../../../model/novedad-participe-carga';
 import { catchError, forkJoin, map, of } from 'rxjs';
@@ -160,6 +161,7 @@ export class CargaAporteBackComponent implements OnInit {
     private detalleRubroService: DetalleRubroService,
     private novedadCargaService: NovedadCargaService,
     private novedadParticipeCargaService: NovedadParticipeCargaService,
+    private exportService: ExportService,
     private appStateService: AppStateService,
     private usuarioService: UsuarioService,
     private router: Router
@@ -832,7 +834,7 @@ export class CargaAporteBackComponent implements OnInit {
   /**
    * Contar novedades por tipo
    */
-  contarNovedades(tipo: 'PARTICIPE' | 'DESCUENTO'): number {
+  contarNovedades(tipo: 'PARTICIPE'): number {
     return this.novedadesAgrupadas()
       .filter(n => n.novedad.tipo === tipo)
       .reduce((sum, n) => sum + n.total, 0);
@@ -859,12 +861,59 @@ export class CargaAporteBackComponent implements OnInit {
     return `Novedad ${tipoNovedad}`;
   }
 
-  /**
-   * Obtener novedades filtradas por tab
-   */
-  get novedadesFiltradas(): NovedadAgrupada[] {
-    const tipo = this.tabNovedadSeleccionado() === 0 ? 'PARTICIPE' : 'DESCUENTO';
-    return this.novedadesAgrupadas().filter(n => n.novedad.tipo === tipo);
+  exportarNovedadesDescuentosACSV(): void {
+    const data = this.novedadesDescuentos();
+
+    if (!data.length) {
+      this.snackBar.open('No hay novedades de descuentos para exportar', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    const rows = data.map((item) => ({
+      codigoPetro: item.participeXCargaArchivo?.codigoPetro || '-',
+      participe: item.participeXCargaArchivo?.nombre || '-',
+      tipoNovedad: this.getDescripcionTipoNovedad(item.tipoNovedad),
+      descripcion: item.descripcion || '-',
+      codigoProducto: item.codigoProducto || '-',
+      codigoPrestamo: item.codigoPrestamo || '-',
+      idAsoprepPrestamo: item.idAsoprepPrestamo || '-',
+      codigoCuota: item.codigoCuota || '-',
+      montoEsperado: Number(item.montoEsperado || 0),
+      montoRecibido: Number(item.montoRecibido || 0),
+      montoDiferencia: Number(item.montoDiferencia || 0)
+    }));
+
+    const headers = [
+      'Código Petro',
+      'Partícipe',
+      'Tipo Novedad',
+      'Descripción',
+      'Código Producto',
+      'Código Préstamo',
+      'ID ASOPREP',
+      'Código Cuota',
+      'Monto Esperado',
+      'Monto Recibido',
+      'Monto Diferencia'
+    ];
+
+    const dataKeys = [
+      'codigoPetro',
+      'participe',
+      'tipoNovedad',
+      'descripcion',
+      'codigoProducto',
+      'codigoPrestamo',
+      'idAsoprepPrestamo',
+      'codigoCuota',
+      'montoEsperado',
+      'montoRecibido',
+      'montoDiferencia'
+    ];
+
+    const fileName = `novedades_descuentos_carga_${this.codigoCargaArchivo || 'sin-id'}`;
+    this.exportService.exportToCSV(rows, fileName, headers, dataKeys);
+    this.snackBar.open(`Exportadas ${rows.length} novedades de descuentos a CSV`, 'Cerrar', { duration: 3000 });
   }
 
   /**
@@ -942,7 +991,13 @@ export class CargaAporteBackComponent implements OnInit {
       5: 'account_balance',
       6: 'receipt',
       7: 'warning',
-      8: 'priority_high'
+      8: 'priority_high',
+      18: 'history',
+      19: 'content_copy',
+      20: 'do_not_disturb_on',
+      21: 'money_off',
+      22: 'sync_problem',
+      23: 'rule'
     };
     return iconos[codigo] || 'help';
   }
