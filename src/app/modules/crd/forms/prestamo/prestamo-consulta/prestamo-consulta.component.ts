@@ -455,6 +455,15 @@ export class PrestamoConsultaComponent implements OnInit {
     this.busquedaRealizada.set(false);
   }
 
+  private resolverNombreEstado(p: Prestamo): string {
+    if (p.estadoPrestamo?.nombre) return p.estadoPrestamo.nombre;
+    if (p.idEstado) {
+      const estado = this.estadosOptions().find(e => e.codigoExterno === p.idEstado);
+      return estado?.nombre || String(p.idEstado);
+    }
+    return '';
+  }
+
   exportarCSV(): void {
     const data = this.prestamos();
     if (!data.length) {
@@ -468,7 +477,7 @@ export class PrestamoConsultaComponent implements OnInit {
       Entidad: p.entidad?.razonSocial || p.entidad?.nombreComercial || '',
       Identificacion: p.entidad?.numeroIdentificacion || '',
       Producto: p.producto?.nombre || '',
-      Estado: p.estadoPrestamo?.nombre || '',
+      Estado: this.resolverNombreEstado(p),
       Fecha: p.fecha ? new Date(p.fecha).toLocaleDateString('es-ES') : '',
       MontoSolicitado: p.montoSolicitado || 0,
       TotalPagado: p.totalPagado || 0,
@@ -503,7 +512,7 @@ export class PrestamoConsultaComponent implements OnInit {
       numero: String(p.idAsoprep || ''),
       entidad: p.entidad?.razonSocial || p.entidad?.nombreComercial || '',
       producto: p.producto?.nombre || '',
-      estado: p.estadoPrestamo?.nombre || '',
+      estado: this.resolverNombreEstado(p),
       fecha: p.fecha ? new Date(p.fecha).toLocaleDateString('es-ES') : '',
       monto: String(p.montoSolicitado || 0),
       saldo: String(p.saldoTotal || 0),

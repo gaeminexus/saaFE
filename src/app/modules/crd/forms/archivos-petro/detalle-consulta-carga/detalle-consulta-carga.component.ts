@@ -25,9 +25,21 @@ import { CoincidenciasEntidadDialogComponent } from '../../../dialog/coincidenci
 import { ServiciosAsoprepService } from '../../../../asoprep/service/servicios-asoprep.service';
 import { EntidadService } from '../../../service/entidad.service';
 import { Entidad } from '../../../model/entidad';
+import { Prestamo } from '../../../model/prestamo';
+import { DetallePrestamo } from '../../../model/detalle-prestamo';
+import { AfectacionValoresParticipeCarga } from '../../../model/afectacion-valores-participe-carga';
 import { ExportService } from '../../../../../shared/services/export.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
-import { forkJoin, of } from 'rxjs';
+import { AppStateService } from '../../../../../shared/services/app-state.service';
+import { UsuarioService } from '../../../../../shared/services/usuario.service';
+import { NovedadParticipeCargaService } from '../../../service/novedad-participe-carga.service';
+import { PrestamoService } from '../../../service/prestamo.service';
+import { DetallePrestamoService } from '../../../service/detalle-prestamo.service';
+import { AfectacionValoresParticipeCargaService } from '../../../service/afectacion-valores-participe-carga.service';
+import { NovedadParticipeCarga } from '../../../model/novedad-participe-carga';
+import { Usuario } from '../../../../../shared/model/usuario';
+import { forkJoin, of, catchError, map } from 'rxjs';
+import { AfectacionFinancieraCuotasDialogComponent } from '../../../dialog/afectacion-financiera-cuotas-dialog/afectacion-financiera-cuotas-dialog.component';
 
 const RUBRO_ESTADOS_CARGA = 166;
 const RUBRO_NOVEDADES_CARGA = 169;
@@ -60,6 +72,11 @@ interface AporteAgrupado {
     desgravamenNoDescontado: number;
   };
   participes: MatTableDataSource<ParticipeXCargaArchivo>;
+}
+
+interface PrestamoAfectable {
+  prestamo: Prestamo;
+  cuotas: DetallePrestamo[];
 }
 
 @Component({
@@ -144,6 +161,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
 
   // Novedades (Rubro 169)
   catalogoNovedades = signal<NovedadCarga[]>([]);
+  descripcionesNovedadPorCodigo = signal<Record<number, string>>({});
   novedadesAgrupadas = signal<NovedadAgrupada[]>([]);
   novedadesFiltradas: NovedadAgrupada[] = [];
   tabNovedadSeleccionado = 0;
@@ -161,6 +179,19 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
   mostrarProcesar = signal<boolean>(false);
   archivoYaProcesado = signal<boolean>(false);
 
+  // Signals para novedades de descuentos
+  novedadesDescuentos = signal<NovedadParticipeCarga[]>([]);
+  isLoadingNovedadesDescuentos = signal<boolean>(false);
+  filtroTipoNovedadSeleccionado = signal<number | 'TODOS'>('TODOS');
+  private registrosParticipesCarga: ParticipeXCargaArchivo[] = [];
+  private novedadesDescuentosCargadas = false;
+  novedadFinancieraSeleccionada = signal<NovedadParticipeCarga | null>(null);
+  prestamosAfectables = signal<PrestamoAfectable[]>([]);
+  afectacionesRegistradas = signal<AfectacionValoresParticipeCarga[]>([]);
+  valoresAfectarEditados = signal<Record<number, number>>({});
+  isLoadingAfectacionFinanciera = signal<boolean>(false);
+  isSavingAfectacionFinanciera = signal<boolean>(false);
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
@@ -171,8 +202,14 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
     private novedadCargaService: NovedadCargaService,
     private serviciosAsoprepService: ServiciosAsoprepService,
     private entidadService: EntidadService,
+    private prestamoService: PrestamoService,
+    private detallePrestamoService: DetallePrestamoService,
     private exportService: ExportService,
     private funcionesDatos: FuncionesDatosService,
+    private appStateService: AppStateService,
+    private usuarioService: UsuarioService,
+    private novedadParticipeCargaService: NovedadParticipeCargaService,
+    private afectacionValoresParticipeCargaService: AfectacionValoresParticipeCargaService,
     private dialog: MatDialog,
     private snackBar: MatSnackBar
   ) {
@@ -376,6 +413,10 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
           return;
         }
 
+        this.registrosParticipesCarga = todosLosParticipes;
+        this.novedadesDescuentosCargadas = false;
+        this.novedadesDescuentos.set([]);
+
         // Agrupar partícipes por detalle (producto/aporte)
         this.agruparDatosPorAporte(todosLosParticipes);
 
@@ -511,12 +552,25 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
       // Intentar cargar todos los detalles para debug
       const todosLosDetalles = this.detalleRubroService.getDetalles();
 
+      this.catalogoNovedades.set([]);
+      this.descripcionesNovedadPorCodigo.set({});
+
       return;
     }
 
+    const descripcionesPorCodigo: Record<number, string> = {};
+    detalles.forEach((detalle) => {
+      const descripcion = this.detalleRubroService.getDescripcionByParentAndAlterno(
+        RUBRO_NOVEDADES_CARGA,
+        detalle.codigoAlterno
+      ) || detalle.descripcion || 'Sin descripción';
+
+      descripcionesPorCodigo[detalle.codigoAlterno] = descripcion;
+    });
+
     const catalogo: NovedadCarga[] = detalles.map(detalle => ({
       codigo: detalle.codigoAlterno,
-      descripcion: detalle.descripcion || `Novedad ${detalle.codigoAlterno}`,
+      descripcion: descripcionesPorCodigo[detalle.codigoAlterno] || 'Sin descripción',
       tipo: detalle.codigoAlterno <= 3 ? 'PARTICIPE' : 'DESCUENTO',
       severidad: this.mapearSeveridad(detalle.codigoAlterno),
       icono: this.mapearIcono(detalle.codigoAlterno),
@@ -524,6 +578,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
     }));
 
     this.catalogoNovedades.set(catalogo);
+    this.descripcionesNovedadPorCodigo.set(descripcionesPorCodigo);
   }
 
   /**
@@ -610,6 +665,11 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
     this.tabNovedadSeleccionado = index;
     const tipo = index === 0 ? 'PARTICIPE' : 'DESCUENTO';
     this.novedadesFiltradas = this.novedadesAgrupadas().filter(n => n.novedad.tipo === tipo);
+
+    if (index === 1 && !this.novedadesDescuentosCargadas && !this.isLoadingNovedadesDescuentos()) {
+      this.novedadesDescuentosCargadas = true;
+      this.cargarNovedadesDescuentos(this.registrosParticipesCarga);
+    }
   }
 
   /**
@@ -863,8 +923,17 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
 
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
-        // TODO: Implementar llamada al backend para procesar archivo
-        this.snackBar.open('Funcionalidad de procesamiento en construcción', 'Cerrar', { duration: 3000 });
+        this.archivoYaProcesado.set(true);
+        this.cargaArchivoService.procesarCargaPetro(this.cargaArchivo!.codigo!).subscribe({
+          next: () => {
+            this.snackBar.open('Archivo procesado exitosamente. Los registros han sido generados en el sistema.', 'Cerrar', { duration: 5000 });
+          },
+          error: (err) => {
+            this.archivoYaProcesado.set(false);
+            const mensaje = err?.message || err?.mensaje || 'Error al procesar el archivo';
+            this.snackBar.open(`Error: ${mensaje}`, 'Cerrar', { duration: 5000 });
+          }
+        });
       }
     });
   }
@@ -1148,6 +1217,695 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
    */
   private convertirFecha(fecha: any): Date | null {
     return this.funcionesDatos.convertirFechaDesdeBackend(fecha);
+  }
+
+  /**
+   * Cargar novedades de descuentos (NovedadParticipeCarga)
+   */
+  private cargarNovedadesDescuentos(registros: ParticipeXCargaArchivo[]): void {
+    const registrosValidos = registros.filter(r => r.codigo !== undefined && r.codigo !== null);
+    const codigoCargaArchivo = this.cargaArchivo?.codigo;
+
+    if (registrosValidos.length === 0 || !codigoCargaArchivo) {
+      this.novedadesDescuentos.set([]);
+      return;
+    }
+
+    this.isLoadingNovedadesDescuentos.set(true);
+
+    const registrosByCodigo = new Map<number, ParticipeXCargaArchivo>(
+      registrosValidos.map(r => [r.codigo, r])
+    );
+
+    const criterios: DatosBusqueda[] = [];
+
+    const dbCargaArchivo = new DatosBusqueda();
+    dbCargaArchivo.asignaUnCampoSinTrunc(
+      TipoDatosBusqueda.LONG,
+      'codigoCargaArchivo',
+      String(codigoCargaArchivo),
+      TipoComandosBusqueda.IGUAL
+    );
+    criterios.push(dbCargaArchivo);
+
+    const dbOrden = new DatosBusqueda();
+    dbOrden.orderBy('tipoNovedad');
+    dbOrden.setTipoOrden(DatosBusqueda.ORDER_ASC);
+    criterios.push(dbOrden);
+
+    this.novedadParticipeCargaService.selectByCriteria(criterios).pipe(
+      map((novedades) => (novedades || []).map((novedad) => {
+        const codigoParticipe = novedad.participeXCargaArchivo?.codigo;
+        const participeCompleto = codigoParticipe ? registrosByCodigo.get(codigoParticipe) : undefined;
+
+        return {
+          ...novedad,
+          participeXCargaArchivo: participeCompleto || novedad.participeXCargaArchivo
+        } as NovedadParticipeCarga;
+      })),
+      catchError(() => of([] as NovedadParticipeCarga[]))
+    ).subscribe({
+      next: (novedades) => {
+        const novedadesOrdenadas = novedades
+          .filter((n) => (n.tipoNovedad || 0) > 3)
+          .sort((a, b) => (a.tipoNovedad || 0) - (b.tipoNovedad || 0));
+
+        this.novedadesDescuentos.set(novedadesOrdenadas);
+        this.isLoadingNovedadesDescuentos.set(false);
+      },
+      error: (error) => {
+        console.error('Error al cargar novedades de descuentos:', error);
+        this.novedadesDescuentos.set([]);
+        this.isLoadingNovedadesDescuentos.set(false);
+      }
+    });
+  }
+
+  /**
+   * Obtener usuario actual con triple fallback
+   */
+  private obtenerUsuarioActual(): Usuario | null {
+    // 1. Intentar desde UsuarioService (accede a memoria + localStorage)
+    const usuarioService = this.usuarioService.getUsuarioLog();
+    if (usuarioService && usuarioService.codigo) {
+      return usuarioService;
+    }
+
+    // 2. Intentar desde AppStateService (memoria)
+    const usuarioState = this.appStateService.getUsuario();
+    if (usuarioState && usuarioState.codigo) {
+      return usuarioState;
+    }
+
+    // 3. Fallback manual directo a localStorage
+    const posiblesClavesUsuario = ['usuario', 'usuarioLog'];
+    for (const clave of posiblesClavesUsuario) {
+      const usuarioStr = localStorage.getItem(clave);
+      if (!usuarioStr) {
+        continue;
+      }
+
+      try {
+        const usuario = JSON.parse(usuarioStr) as Usuario;
+        if (usuario && usuario.codigo) {
+          return usuario;
+        }
+      } catch (error) {
+        console.error(`Error al parsear usuario desde localStorage (${clave}):`, error);
+      }
+    }
+
+    // 4. Último recurso: construir desde datos fragmentarios
+    const userName = localStorage.getItem('userName')?.trim();
+    const idUsuario = localStorage.getItem('idUsuario');
+    if (userName || idUsuario) {
+      return {
+        codigo: idUsuario ? Number(idUsuario) : 0,
+        nombre: userName || ''
+      } as Usuario;
+    }
+
+    return null;
+  }
+
+  /**
+   * Mapear tipoNovedad a descripción legible
+   */
+  getDescripcionTipoNovedad(tipoNovedad: number | null | undefined): string {
+    if (tipoNovedad === null || tipoNovedad === undefined) {
+      return '-';
+    }
+
+    const codigoAlterno = Number(tipoNovedad);
+    const descripcion = this.descripcionesNovedadPorCodigo()[codigoAlterno];
+
+    if (descripcion && descripcion.trim().length > 0) {
+      return descripcion;
+    }
+
+    return 'Sin descripción';
+  }
+
+  get montoDisponibleAfectacion(): number {
+    const novedad = this.novedadFinancieraSeleccionada();
+    if (!novedad) {
+      return 0;
+    }
+
+    const montoRecibido = this.normalizarMontoPetro(novedad.montoRecibido);
+    const montoDiferencia = this.normalizarMontoPetro(novedad.montoDiferencia);
+    const montoEsperado = this.normalizarMontoPetro(novedad.montoEsperado);
+
+    return montoRecibido ?? montoDiferencia ?? montoEsperado ?? 0;
+  }
+
+  get totalValorAfectarActual(): number {
+    return Object.values(this.valoresAfectarEditados()).reduce((sum, valor) => sum + (Number(valor) || 0), 0);
+  }
+
+  get saldoPendienteAfectacion(): number {
+    return this.redondear(this.montoDisponibleAfectacion - this.totalValorAfectarActual);
+  }
+
+  private normalizarMontoPetro(valor: number | string | null | undefined): number | null {
+    if (valor === null || valor === undefined) {
+      return null;
+    }
+
+    const texto = String(valor).trim();
+    if (!texto) {
+      return null;
+    }
+
+    const numero = Number(texto.replace(',', '.'));
+    return Number.isFinite(numero) ? numero : null;
+  }
+
+  /**
+   * Obtener total de novedades de descuentos
+   */
+  get totalNovedadesDescuentos(): number {
+    return this.novedadesDescuentos().length;
+  }
+
+  get tiposNovedadDisponibles(): number[] {
+    const tipos = new Set(
+      this.novedadesDescuentos()
+        .map((item) => Number(item.tipoNovedad || 0))
+        .filter((tipo) => tipo > 0)
+    );
+
+    return Array.from(tipos).sort((a, b) => a - b);
+  }
+
+  get novedadesDescuentosFiltradas(): NovedadParticipeCarga[] {
+    const filtro = this.filtroTipoNovedadSeleccionado();
+    const novedades = this.novedadesDescuentos();
+
+    if (filtro === 'TODOS') {
+      return novedades;
+    }
+
+    return novedades.filter((item) => Number(item.tipoNovedad || 0) === filtro);
+  }
+
+  get totalNovedadesDescuentosFiltradas(): number {
+    return this.novedadesDescuentosFiltradas.length;
+  }
+
+  get totalMontoEsperadoFiltrado(): number {
+    return this.novedadesDescuentosFiltradas.reduce((sum, item) => sum + Number(item.montoEsperado || 0), 0);
+  }
+
+  get totalMontoRecibidoFiltrado(): number {
+    return this.novedadesDescuentosFiltradas.reduce((sum, item) => sum + Number(item.montoRecibido || 0), 0);
+  }
+
+  get totalMontoDiferenciaFiltrado(): number {
+    return this.novedadesDescuentosFiltradas.reduce((sum, item) => sum + Number(item.montoDiferencia || 0), 0);
+  }
+
+  togglePanelAfectacionFinanciera(novedad: NovedadParticipeCarga): void {
+    this.resetAfectacionFinancieraState();
+    this.novedadFinancieraSeleccionada.set(novedad);
+    this.isLoadingAfectacionFinanciera.set(true);
+
+    const dialogRef = this.dialog.open(AfectacionFinancieraCuotasDialogComponent, {
+      width: '95%',
+      maxWidth: '1200px',
+      maxHeight: '90vh',
+      panelClass: 'afectacion-financiera-dialog',
+      data: {
+        novedad,
+        getPrestamosAfectables: () => this.prestamosAfectables(),
+        getAfectacionesRegistradas: () => this.afectacionesRegistradas(),
+        getValoresAfectarEditados: () => this.valoresAfectarEditados(),
+        onValorAfectarChange: (detalle: DetallePrestamo, valor: string | number) => this.onValorAfectarChange(detalle, valor),
+        getValorAfectarEditado: (detalleCodigo: number | undefined) => this.getValorAfectarEditado(detalleCodigo),
+        getValorCuotaOriginal: (detalle: DetallePrestamo | null | undefined) => this.getValorCuotaOriginal(detalle),
+        getEstadoCuotaTexto: (detalle: DetallePrestamo | null | undefined) => this.getEstadoCuotaTexto(detalle),
+        getMontoDisponibleAfectacion: () => this.montoDisponibleAfectacion,
+        getTotalValorAfectarActual: () => this.totalValorAfectarActual,
+        getSaldoPendienteAfectacion: () => this.saldoPendienteAfectacion,
+        isLoadingAfectacionFinanciera: () => this.isLoadingAfectacionFinanciera(),
+        isSavingAfectacionFinanciera: () => this.isSavingAfectacionFinanciera(),
+        formatearFecha: (fecha: Date | string | null) => this.formatearFecha(fecha),
+        onGuardarAfectaciones: () => this.guardarAfectacionesFinancieras()
+      }
+    });
+
+    dialogRef.afterOpened().subscribe(() => {
+      this.cargarContextoAfectacionFinanciera(novedad);
+    });
+
+    dialogRef.afterClosed().subscribe(() => {
+      this.resetAfectacionFinancieraState();
+    });
+  }
+
+  private resetAfectacionFinancieraState(): void {
+    this.novedadFinancieraSeleccionada.set(null);
+    this.prestamosAfectables.set([]);
+    this.afectacionesRegistradas.set([]);
+    this.valoresAfectarEditados.set({});
+    this.isLoadingAfectacionFinanciera.set(false);
+    this.isSavingAfectacionFinanciera.set(false);
+  }
+
+  onValorAfectarChange(detalle: DetallePrestamo, valor: string | number): void {
+    const detalleCodigo = detalle.codigo;
+    const valorNumerico = this.redondear(Number(valor || 0));
+    const valorCuota = this.getValorCuotaOriginal(detalle);
+
+    if (!detalleCodigo) {
+      return;
+    }
+
+    if (Number.isNaN(valorNumerico) || valorNumerico < 0) {
+      this.valoresAfectarEditados.update((actual) => ({ ...actual, [detalleCodigo]: 0 }));
+      return;
+    }
+
+    if (valorNumerico > valorCuota) {
+      this.snackBar.open('El valor a cruzar no puede superar el valor de la cuota', 'Cerrar', { duration: 3500 });
+      this.valoresAfectarEditados.update((actual) => ({ ...actual, [detalleCodigo]: valorCuota }));
+      return;
+    }
+
+    const totalSinActual = Object.entries(this.valoresAfectarEditados())
+      .filter(([codigo]) => Number(codigo) !== detalleCodigo)
+      .reduce((sum, [, current]) => sum + (Number(current) || 0), 0);
+
+    if (this.redondear(totalSinActual + valorNumerico) > this.montoDisponibleAfectacion) {
+      this.snackBar.open('La suma de valores a cruzar no puede superar el valor recibido desde Petro', 'Cerrar', {
+        duration: 4000,
+      });
+      return;
+    }
+
+    this.valoresAfectarEditados.update((actual) => ({
+      ...actual,
+      [detalleCodigo]: valorNumerico,
+    }));
+  }
+
+  getValorAfectarEditado(detalleCodigo: number | undefined): number {
+    if (!detalleCodigo) {
+      return 0;
+    }
+
+    return Number(this.valoresAfectarEditados()[detalleCodigo] || 0);
+  }
+
+  guardarAfectacionesFinancieras(): void {
+    const novedad = this.novedadFinancieraSeleccionada();
+    const usuario = this.obtenerUsuarioActual();
+
+    if (!novedad?.codigo) {
+      this.snackBar.open('Seleccione una novedad financiera para registrar afectaciones', 'Cerrar', { duration: 3500 });
+      return;
+    }
+
+    if (!usuario) {
+      this.snackBar.open('No se pudo identificar el usuario actual', 'Cerrar', { duration: 3500 });
+      return;
+    }
+
+    if (this.totalValorAfectarActual > this.montoDisponibleAfectacion) {
+      this.snackBar.open('La suma de valores a cruzar supera el valor recibido desde Petro', 'Cerrar', {
+        duration: 4000,
+      });
+      return;
+    }
+
+    const cuotasDisponibles = new Map<number, { prestamo: Prestamo; detalle: DetallePrestamo }>();
+    this.prestamosAfectables().forEach((item) => {
+      item.cuotas.forEach((detalle) => cuotasDisponibles.set(detalle.codigo, { prestamo: item.prestamo, detalle }));
+    });
+
+    const actuales = this.valoresAfectarEditados();
+    const existentes = new Map<number, AfectacionValoresParticipeCarga>();
+    this.afectacionesRegistradas().forEach((item) => {
+      const detalleCodigo = item.detallePrestamo?.codigo;
+      if (detalleCodigo) {
+        existentes.set(detalleCodigo, item);
+      }
+    });
+
+    const operaciones: any[] = [];
+
+    Object.entries(actuales).forEach(([detalleCodigoTexto, valor]) => {
+      const detalleCodigo = Number(detalleCodigoTexto);
+      const valorAfectar = this.redondear(Number(valor || 0));
+      const cuotaSeleccionada = cuotasDisponibles.get(detalleCodigo);
+      const existente = existentes.get(detalleCodigo);
+
+      if (!cuotaSeleccionada) {
+        return;
+      }
+
+      if (valorAfectar > 0) {
+        const payload = this.construirPayloadAfectacion(
+          novedad,
+          cuotaSeleccionada.prestamo,
+          cuotaSeleccionada.detalle,
+          valorAfectar,
+          usuario,
+          existente
+        );
+
+        operaciones.push(
+          existente?.codigo
+            ? this.afectacionValoresParticipeCargaService.update(payload)
+            : this.afectacionValoresParticipeCargaService.add(payload)
+        );
+      } else if (existente?.codigo) {
+        operaciones.push(this.afectacionValoresParticipeCargaService.delete(existente.codigo));
+      }
+    });
+
+    this.afectacionesRegistradas().forEach((item) => {
+      const detalleCodigo = item.detallePrestamo?.codigo;
+      if (!detalleCodigo || detalleCodigo in actuales) {
+        return;
+      }
+
+      if (item.codigo) {
+        operaciones.push(this.afectacionValoresParticipeCargaService.delete(item.codigo));
+      }
+    });
+
+    if (operaciones.length === 0) {
+      this.snackBar.open('No hay cambios por guardar en las afectaciones', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    this.isSavingAfectacionFinanciera.set(true);
+
+    forkJoin(operaciones).subscribe({
+      next: () => {
+        this.isSavingAfectacionFinanciera.set(false);
+        this.snackBar.open('Afectaciones financieras registradas correctamente', 'Cerrar', { duration: 3500 });
+        this.cargarContextoAfectacionFinanciera(novedad);
+      },
+      error: () => {
+        this.isSavingAfectacionFinanciera.set(false);
+        this.snackBar.open('No se pudieron guardar las afectaciones financieras', 'Cerrar', { duration: 4000 });
+      }
+    });
+  }
+
+  getValorCuotaOriginal(detalle: DetallePrestamo | null | undefined): number {
+    if (!detalle) {
+      return 0;
+    }
+
+    return Number(detalle.totalConSeguro ?? detalle.total ?? detalle.cuota ?? detalle.saldo ?? detalle.capital ?? 0);
+  }
+
+  getEstadoCuotaTexto(detalle: DetallePrestamo | null | undefined): string {
+    const codigo = this.obtenerCodigoEstadoCuota(detalle);
+    const mapa: Record<number, string> = {
+      1: 'PENDIENTE',
+      2: 'ACTIVA',
+      3: 'EMITIDA',
+      4: 'PAGADA',
+      5: 'MORA',
+      6: 'PARCIAL',
+      7: 'CANCELADA ANT.',
+      8: 'VENCIDA',
+    };
+
+    return mapa[codigo || 0] || '-';
+  }
+
+  private cargarContextoAfectacionFinanciera(novedad: NovedadParticipeCarga): void {
+    const codigoPetro = novedad.participeXCargaArchivo?.codigoPetro;
+
+    if (!codigoPetro) {
+      this.snackBar.open('No se encontró el código Petro del partícipe', 'Cerrar', { duration: 3500 });
+      this.prestamosAfectables.set([]);
+      this.afectacionesRegistradas.set([]);
+      this.valoresAfectarEditados.set({});
+      return;
+    }
+
+    this.isLoadingAfectacionFinanciera.set(true);
+    this.prestamosAfectables.set([]);
+
+    const criteriosAfectaciones: DatosBusqueda[] = [];
+    const dbNovedad = new DatosBusqueda();
+    dbNovedad.asignaValorConCampoPadre(
+      TipoDatosBusqueda.LONG,
+      'novedadParticipeCarga',
+      'codigo',
+      String(novedad.codigo),
+      TipoComandosBusqueda.IGUAL
+    );
+    criteriosAfectaciones.push(dbNovedad);
+
+    this.afectacionValoresParticipeCargaService.selectByCriteria(criteriosAfectaciones).subscribe({
+      next: (afectacionesData) => {
+        const afectaciones = Array.isArray(afectacionesData) ? afectacionesData : afectacionesData ? [afectacionesData] : [];
+        this.afectacionesRegistradas.set(afectaciones);
+
+        const criteriosEntidad: DatosBusqueda[] = [];
+        const dbCodigoPetro = new DatosBusqueda();
+        dbCodigoPetro.asignaUnCampoSinTrunc(
+          TipoDatosBusqueda.LONG,
+          'rolPetroComercial',
+          String(codigoPetro),
+          TipoComandosBusqueda.IGUAL
+        );
+        criteriosEntidad.push(dbCodigoPetro);
+
+        this.entidadService.selectByCriteria(criteriosEntidad).subscribe({
+          next: (entidadesData) => {
+            const entidades = Array.isArray(entidadesData) ? entidadesData : entidadesData ? [entidadesData] : [];
+            const entidad = entidades[0] || null;
+
+            if (!entidad?.codigo) {
+              this.isLoadingAfectacionFinanciera.set(false);
+              this.prestamosAfectables.set([]);
+              this.valoresAfectarEditados.set(this.construirMapaValoresAfectados(afectaciones));
+              this.snackBar.open('No se encontró la entidad del partícipe para consultar préstamos', 'Cerrar', {
+                duration: 4000,
+              });
+              return;
+            }
+
+            const criteriosPrestamos: DatosBusqueda[] = [];
+            const dbEntidad = new DatosBusqueda();
+            dbEntidad.asignaValorConCampoPadre(
+              TipoDatosBusqueda.LONG,
+              'entidad',
+              'codigo',
+              String(entidad.codigo),
+              TipoComandosBusqueda.IGUAL
+            );
+            criteriosPrestamos.push(dbEntidad);
+
+            const dbSaldo = new DatosBusqueda();
+            dbSaldo.asignaUnCampoSinTrunc(TipoDatosBusqueda.DOUBLE, 'saldoTotal', '0', TipoComandosBusqueda.MAYOR);
+            criteriosPrestamos.push(dbSaldo);
+
+            const dbOrdenPrestamo = new DatosBusqueda();
+            dbOrdenPrestamo.orderBy('fechaInicio');
+            dbOrdenPrestamo.setTipoOrden(DatosBusqueda.ORDER_ASC);
+            criteriosPrestamos.push(dbOrdenPrestamo);
+
+            this.prestamoService.selectByCriteria(criteriosPrestamos).subscribe({
+              next: (prestamosData) => {
+                const prestamos = (Array.isArray(prestamosData) ? prestamosData : prestamosData ? [prestamosData] : [])
+                  .filter((prestamo) => Number(prestamo?.saldoTotal || 0) > 0);
+
+                if (prestamos.length === 0) {
+                  this.isLoadingAfectacionFinanciera.set(false);
+                  this.prestamosAfectables.set([]);
+                  this.valoresAfectarEditados.set(this.construirMapaValoresAfectados(afectaciones));
+                  return;
+                }
+
+                const requests = prestamos.map((prestamo) => {
+                  const criteriosDetalle: DatosBusqueda[] = [];
+                  const dbPrestamo = new DatosBusqueda();
+                  dbPrestamo.asignaValorConCampoPadre(
+                    TipoDatosBusqueda.LONG,
+                    'prestamo',
+                    'codigo',
+                    String(prestamo.codigo),
+                    TipoComandosBusqueda.IGUAL
+                  );
+                  criteriosDetalle.push(dbPrestamo);
+
+                  const dbOrdenDetalle = new DatosBusqueda();
+                  dbOrdenDetalle.orderBy('numeroCuota');
+                  dbOrdenDetalle.setTipoOrden(DatosBusqueda.ORDER_ASC);
+                  criteriosDetalle.push(dbOrdenDetalle);
+
+                  return this.detallePrestamoService.selectByCriteria(criteriosDetalle).pipe(
+                    map((detalleData) => {
+                      const detalles = Array.isArray(detalleData) ? detalleData : detalleData ? [detalleData] : [];
+                      return {
+                        prestamo,
+                        cuotas: detalles
+                          .map((detalle) => this.normalizarDetallePrestamo(detalle))
+                          .filter((detalle) => !this.esCuotaPagadaOCancelada(detalle))
+                          .sort((a, b) => this.obtenerFechaOrdenCuota(a) - this.obtenerFechaOrdenCuota(b))
+                          .slice(0, 5),
+                      } as PrestamoAfectable;
+                    }),
+                    catchError(() => of({ prestamo, cuotas: [] } as PrestamoAfectable))
+                  );
+                });
+
+                forkJoin(requests).subscribe({
+                  next: (prestamosAfectables) => {
+                    this.prestamosAfectables.set(prestamosAfectables.filter((item) => item.cuotas.length > 0));
+                    this.valoresAfectarEditados.set(this.construirMapaValoresAfectados(afectaciones));
+                    this.isLoadingAfectacionFinanciera.set(false);
+                  },
+                  error: () => {
+                    this.prestamosAfectables.set([]);
+                    this.valoresAfectarEditados.set(this.construirMapaValoresAfectados(afectaciones));
+                    this.isLoadingAfectacionFinanciera.set(false);
+                    this.snackBar.open('No se pudieron cargar las cuotas afectables', 'Cerrar', { duration: 4000 });
+                  }
+                });
+              },
+              error: () => {
+                this.isLoadingAfectacionFinanciera.set(false);
+                this.prestamosAfectables.set([]);
+                this.valoresAfectarEditados.set(this.construirMapaValoresAfectados(afectaciones));
+                this.snackBar.open('No se pudieron cargar los préstamos activos del partícipe', 'Cerrar', {
+                  duration: 4000,
+                });
+              }
+            });
+          },
+          error: () => {
+            this.isLoadingAfectacionFinanciera.set(false);
+            this.prestamosAfectables.set([]);
+            this.valoresAfectarEditados.set(this.construirMapaValoresAfectados(afectaciones));
+            this.snackBar.open('No se pudo consultar la entidad del partícipe', 'Cerrar', { duration: 4000 });
+          }
+        });
+      },
+      error: () => {
+        this.isLoadingAfectacionFinanciera.set(false);
+        this.afectacionesRegistradas.set([]);
+        this.prestamosAfectables.set([]);
+        this.valoresAfectarEditados.set({});
+        this.snackBar.open('No se pudieron cargar las afectaciones registradas', 'Cerrar', { duration: 4000 });
+      }
+    });
+  }
+
+  private construirMapaValoresAfectados(afectaciones: AfectacionValoresParticipeCarga[]): Record<number, number> {
+    return afectaciones.reduce((acc, item) => {
+      const detalleCodigo = item.detallePrestamo?.codigo;
+      if (detalleCodigo) {
+        acc[detalleCodigo] = Number(item.valorAfectar || 0);
+      }
+      return acc;
+    }, {} as Record<number, number>);
+  }
+
+  private construirPayloadAfectacion(
+    novedad: NovedadParticipeCarga,
+    prestamo: Prestamo,
+    detalle: DetallePrestamo,
+    valorAfectar: number,
+    usuario: Usuario,
+    existente?: AfectacionValoresParticipeCarga
+  ): AfectacionValoresParticipeCarga {
+    const valorCuotaOriginal = this.getValorCuotaOriginal(detalle);
+    const capitalOriginal = Number(detalle.capital || 0);
+    const interesOriginal = Number(detalle.interes || 0);
+    const desgravamenOriginal = Number(detalle.desgravamen || 0);
+    const distribucion = this.distribuirValorAfectar(valorAfectar, valorCuotaOriginal, capitalOriginal, interesOriginal, desgravamenOriginal);
+
+    return {
+      codigo: existente?.codigo,
+      novedadParticipeCarga: novedad,
+      prestamo,
+      detallePrestamo: detalle,
+      valorCuotaOriginal,
+      capitalCuotaOriginal: capitalOriginal,
+      interesCuotaOriginal: interesOriginal,
+      desgravamenCuotaOriginal: desgravamenOriginal,
+      valorAfectar,
+      capitalAfectar: distribucion.capital,
+      interesAfectar: distribucion.interes,
+      desgravamenAfectar: distribucion.desgravamen,
+      diferenciaTotal: this.redondear(valorCuotaOriginal - valorAfectar),
+      diferenciaCapital: this.redondear(capitalOriginal - distribucion.capital),
+      diferenciaInteres: this.redondear(interesOriginal - distribucion.interes),
+      diferenciaDesgravamen: this.redondear(desgravamenOriginal - distribucion.desgravamen),
+      fechaAfectacion: new Date(),
+      usuarioRegistro: usuario.nombre || usuario.codigo?.toString() || '',
+      fechaCreacionRegistro: existente?.fechaCreacionRegistro || new Date(),
+      observaciones: `Afectación registrada para novedad ${novedad.codigo}`,
+      estado: 1,
+    };
+  }
+
+  private distribuirValorAfectar(
+    valorAfectar: number,
+    valorTotal: number,
+    capitalOriginal: number,
+    interesOriginal: number,
+    desgravamenOriginal: number
+  ): { capital: number; interes: number; desgravamen: number } {
+    if (valorTotal <= 0 || valorAfectar <= 0) {
+      return { capital: 0, interes: 0, desgravamen: 0 };
+    }
+
+    const factor = Math.min(1, valorAfectar / valorTotal);
+    let capital = this.redondear(capitalOriginal * factor);
+    const interes = this.redondear(interesOriginal * factor);
+    const desgravamen = this.redondear(desgravamenOriginal * factor);
+    capital = this.redondear(capital + this.redondear(valorAfectar - capital - interes - desgravamen));
+
+    return { capital, interes, desgravamen };
+  }
+
+  private obtenerCodigoEstadoCuota(detalle: DetallePrestamo | null | undefined): number | null {
+    if (!detalle) {
+      return null;
+    }
+
+    if (detalle.estado !== null && detalle.estado !== undefined) {
+      return Number(detalle.estado);
+    }
+
+    if (detalle.idEstado !== null && detalle.idEstado !== undefined) {
+      return Number(detalle.idEstado);
+    }
+
+    return null;
+  }
+
+  private esCuotaPagadaOCancelada(detalle: DetallePrestamo | null | undefined): boolean {
+    const codigoEstado = this.obtenerCodigoEstadoCuota(detalle);
+    return codigoEstado === 4 || codigoEstado === 7;
+  }
+
+  private normalizarDetallePrestamo(detalle: DetallePrestamo): DetallePrestamo {
+    return {
+      ...detalle,
+      fechaVencimiento: this.convertirFecha(detalle.fechaVencimiento) as any,
+      fechaPagado: this.convertirFecha(detalle.fechaPagado) as any,
+      fechaRegistro: this.convertirFecha(detalle.fechaRegistro) as any,
+    };
+  }
+
+  private obtenerFechaOrdenCuota(detalle: DetallePrestamo): number {
+    return this.convertirFecha(detalle.fechaVencimiento)?.getTime() || Number.MAX_SAFE_INTEGER;
+  }
+
+  private redondear(valor: number): number {
+    return Math.round((Number(valor) || 0) * 100) / 100;
   }
 }
 

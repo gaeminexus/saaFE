@@ -118,9 +118,16 @@
           <mat-icon>visibility</mat-icon>
             Ver Detalle
           </button>
-        <button mat-button color="accent" (click)="procesarCarga(carga)">
-          <mat-icon>play_arrow</mat-icon>
+        <button mat-button color="accent"
+                (click)="procesarCarga(carga)"
+                [disabled]="procesandoCodigos().has(carga.codigo!)">
+          @if (procesandoCodigos().has(carga.codigo!)) {
+            <mat-icon>hourglass_empty</mat-icon>
+            Procesando...
+          } @else {
+            <mat-icon>play_arrow</mat-icon>
             Procesar
+          }
           </button>
         </mat-card-actions>
       </mat-card>

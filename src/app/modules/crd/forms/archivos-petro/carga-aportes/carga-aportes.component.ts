@@ -14,7 +14,8 @@ import { ArchivoPetroService, AporteAgrupado } from '../../../../asoprep/service
 import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoDatosBusqueda as TipoDatos } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
-
+import { AppStateService } from '../../../../../shared/services/app-state.service';
+import { UsuarioService } from '../../../../../shared/services/usuario.service';
 
 interface Mes {
   valor: number;
@@ -109,7 +110,9 @@ export class CargaAportesComponent implements OnInit {
     private serviciosAsoprep: ServiciosAsoprepService,
     private snackBar: MatSnackBar,
     private archivoPetroService: ArchivoPetroService,
-    private cargaArchivoService: CargaArchivoService
+    private cargaArchivoService: CargaArchivoService,
+    private appStateService: AppStateService,
+    private usuarioService: UsuarioService
   ) {
     // Generar años del 2025 al 2035
     for (let anio = 2025; anio <= 2035; anio++) {
@@ -533,16 +536,46 @@ export class CargaAportesComponent implements OnInit {
   }
 
   private obtenerUsuarioActual(): Usuario | null {
-    // Obtener usuario completo desde localStorage
-    const usuarioStr = localStorage.getItem('usuario');
-    if (usuarioStr) {
+    // 1. Intentar desde UsuarioService (accede a memoria + localStorage)
+    const usuarioService = this.usuarioService.getUsuarioLog();
+    if (usuarioService && usuarioService.codigo) {
+      return usuarioService;
+    }
+
+    // 2. Intentar desde AppStateService (memoria)
+    const usuarioState = this.appStateService.getUsuario();
+    if (usuarioState && usuarioState.codigo) {
+      return usuarioState;
+    }
+
+    // 3. Fallback manual directo a localStorage (todas las claves posibles)
+    const posiblesClavesUsuario = ['usuario', 'usuarioLog'];
+    for (const clave of posiblesClavesUsuario) {
+      const usuarioStr = localStorage.getItem(clave);
+      if (!usuarioStr) {
+        continue;
+      }
+
       try {
-        return JSON.parse(usuarioStr) as Usuario;
+        const usuario = JSON.parse(usuarioStr) as Usuario;
+        if (usuario && usuario.codigo) {
+          return usuario;
+        }
       } catch (error) {
-        console.error('Error al parsear usuario desde localStorage:', error);
-        return null;
+        console.error(`Error al parsear usuario desde localStorage (${clave}):`, error);
       }
     }
+
+    // 4. Ultimo recourse: construir desde datos fragmentarios
+    const userName = localStorage.getItem('userName')?.trim();
+    const idUsuario = localStorage.getItem('idUsuario');
+    if (userName || idUsuario) {
+      return {
+        codigo: idUsuario ? Number(idUsuario) : 0,
+        nombre: userName || ''
+      } as Usuario;
+    }
+
     return null;
   }
 

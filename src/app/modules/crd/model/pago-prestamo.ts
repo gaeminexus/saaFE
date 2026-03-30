@@ -20,4 +20,5 @@ export interface PagoPrestamo {
   fechaRegistro: Date;      // Fecha registro
   usuarioRegistro: string;  // Usuario registro
   idEstado: number;         // ID Estado
+  valorSeguroIncendio: number; // Valor seguro incendio
 }

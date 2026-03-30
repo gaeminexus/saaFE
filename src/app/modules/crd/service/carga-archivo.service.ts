@@ -68,6 +68,17 @@ export class CargaArchivoService {
   }
 
   /**
+   * Procesa la carga petrocomercial: genera registros definitivos en el sistema
+   * POST /procesarCargaPetro/{idCargaArchivo}
+   */
+  procesarCargaPetro(idCargaArchivo: number): Observable<any> {
+    const url = `${ServiciosCrd.RS_CRAR}/procesarCargaPetro/${idCargaArchivo}`;
+    return this.http.post<any>(url, null, this.httpOptions).pipe(
+      catchError((error) => throwError(() => error.error || error))
+    );
+  }
+
+  /**
    * Sube el archivo físico al servidor después de guardar en BD
    * El backend guarda el archivo y actualiza la ruta en la BD
    */

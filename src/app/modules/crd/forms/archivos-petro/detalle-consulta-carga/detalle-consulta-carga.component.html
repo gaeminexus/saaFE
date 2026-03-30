@@ -453,8 +453,186 @@
                 <!-- Tab Descuentos -->
                 <mat-tab>
                   <ng-template mat-tab-label>
-                    <mat-icon class="tab-icon">attach_money</mat-icon>
+                    <mat-icon class="tab-icon">payments</mat-icon>
                     Descuentos
+                    <span class="tab-count badge-warning" *ngIf="totalNovedadesDescuentos > 0">
+                      ({{ totalNovedadesDescuentos }})
+                    </span>
+                  </ng-template>
+
+                  <div class="tab-content">
+                    <!-- Loading spinner -->
+                    @if (isLoadingNovedadesDescuentos()) {
+                      <div style="display: flex; justify-content: center; align-items: center; padding: 2rem;">
+                        <mat-spinner diameter="40"></mat-spinner>
+                        <span style="margin-left: 1rem; color: #666;">Cargando descuentos...</span>
+                      </div>
+                    }
+
+                    @if (!isLoadingNovedadesDescuentos() && novedadesDescuentos().length > 0) {
+                      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; gap: 1rem; flex-wrap: wrap;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                          <mat-form-field appearance="outline" style="min-width: 280px; margin: 0;">
+                            <mat-label>Filtrar por tipo de novedad</mat-label>
+                            <mat-select [value]="filtroTipoNovedadSeleccionado()" (selectionChange)="filtroTipoNovedadSeleccionado.set($event.value)">
+                              <mat-option value="TODOS">Todos</mat-option>
+                              @for (tipo of tiposNovedadDisponibles; track tipo) {
+                                <mat-option [value]="tipo">{{ getDescripcionTipoNovedad(tipo) }}</mat-option>
+                              }
+                            </mat-select>
+                          </mat-form-field>
+
+                          <button
+                            mat-stroked-button
+                            type="button"
+                            class="clear-filter-btn"
+                            matTooltip="Limpiar filtro"
+                            aria-label="Limpiar filtro"
+                            (click)="filtroTipoNovedadSeleccionado.set('TODOS')"
+                            [disabled]="filtroTipoNovedadSeleccionado() === 'TODOS'">
+                            <mat-icon>filter_alt_off</mat-icon>
+                            <span class="clear-filter-text">Limpiar filtro</span>
+                          </button>
+                        </div>
+
+                        <div style="font-size: 0.9rem; color: #666;">
+                          Registros filtrados: <strong>{{ totalNovedadesDescuentosFiltradas }}</strong>
+                        </div>
+                      </div>
+                    }
+
+                    <!-- Tabla de descuentos -->
+                    @if (!isLoadingNovedadesDescuentos() && novedadesDescuentosFiltradas.length > 0) {
+                      <div class="table-container">
+                        <table mat-table [dataSource]="novedadesDescuentosFiltradas" class="descuentos-table">
+                          <!-- Código Petro -->
+                          <ng-container matColumnDef="codigoPetro">
+                            <th mat-header-cell *matHeaderCellDef>Código Petro</th>
+                            <td mat-cell *matCellDef="let element">{{ element.participeXCargaArchivo?.codigoPetro || '-' }}</td>
+                          </ng-container>
+
+                          <!-- Partícipe -->
+                          <ng-container matColumnDef="participe">
+                            <th mat-header-cell *matHeaderCellDef>Partícipe</th>
+                            <td mat-cell *matCellDef="let element">{{ element.participeXCargaArchivo?.nombre || '-' }}</td>
+                          </ng-container>
+
+                          <!-- Tipo Novedad (con descripción) -->
+                          <ng-container matColumnDef="tipoNovedad">
+                            <th mat-header-cell *matHeaderCellDef>Tipo Novedad</th>
+                            <td mat-cell *matCellDef="let element">{{ getDescripcionTipoNovedad(element.tipoNovedad) }}</td>
+                          </ng-container>
+
+                          <!-- Descripción -->
+                          <ng-container matColumnDef="descripcion">
+                            <th mat-header-cell *matHeaderCellDef>Descripción</th>
+                            <td mat-cell *matCellDef="let element">{{ element.descripcion || '-' }}</td>
+                          </ng-container>
+
+                          <!-- Código Producto -->
+                          <ng-container matColumnDef="codigoProducto">
+                            <th mat-header-cell *matHeaderCellDef>Código Producto</th>
+                            <td mat-cell *matCellDef="let element">{{ element.codigoProducto || '-' }}</td>
+                          </ng-container>
+
+                          <!-- Código Préstamo -->
+                          <ng-container matColumnDef="codigoPrestamo">
+                            <th mat-header-cell *matHeaderCellDef>Código Préstamo</th>
+                            <td mat-cell *matCellDef="let element">{{ element.codigoPrestamo || '-' }}</td>
+                          </ng-container>
+
+                          <!-- ID ASOPREP Préstamo -->
+                          <ng-container matColumnDef="idAsoprepPrestamo">
+                            <th mat-header-cell *matHeaderCellDef>ID ASOPREP</th>
+                            <td mat-cell *matCellDef="let element">{{ element.idAsoprepPrestamo || '-' }}</td>
+                          </ng-container>
+
+                          <!-- Código Cuota -->
+                          <ng-container matColumnDef="codigoCuota">
+                            <th mat-header-cell *matHeaderCellDef>Código Cuota</th>
+                            <td mat-cell *matCellDef="let element">{{ element.codigoCuota || '-' }}</td>
+                          </ng-container>
+
+                          <!-- Monto Esperado -->
+                          <ng-container matColumnDef="montoEsperado">
+                            <th mat-header-cell *matHeaderCellDef>Monto Esperado</th>
+                            <td mat-cell *matCellDef="let element">{{ element.montoEsperado | number:'1.2-2' }}</td>
+                          </ng-container>
+
+                          <!-- Monto Recibido -->
+                          <ng-container matColumnDef="montoRecibido">
+                            <th mat-header-cell *matHeaderCellDef>Monto Recibido</th>
+                            <td mat-cell *matCellDef="let element">{{ element.montoRecibido | number:'1.2-2' }}</td>
+                          </ng-container>
+
+                          <!-- Monto Diferencia -->
+                          <ng-container matColumnDef="montoDiferencia">
+                            <th mat-header-cell *matHeaderCellDef>Monto Diferencia</th>
+                            <td mat-cell *matCellDef="let element" [class.error-value]="(element.montoDiferencia || 0) !== 0">
+                              {{ element.montoDiferencia | number:'1.2-2' }}
+                            </td>
+                          </ng-container>
+
+                          <!-- Acciones -->
+                          <ng-container matColumnDef="acciones">
+                            <th mat-header-cell *matHeaderCellDef>Acciones</th>
+                            <td mat-cell *matCellDef="let element">
+                              <button
+                                mat-stroked-button
+                                color="primary"
+                                (click)="togglePanelAfectacionFinanciera(element)">
+                                <mat-icon>account_balance</mat-icon>
+                                Afectar cuotas
+                              </button>
+                            </td>
+                          </ng-container>
+
+                          <tr mat-header-row *matHeaderRowDef="['codigoPetro', 'participe', 'tipoNovedad', 'descripcion', 'codigoProducto', 'codigoPrestamo', 'idAsoprepPrestamo', 'codigoCuota', 'montoEsperado', 'montoRecibido', 'montoDiferencia', 'acciones']; sticky: true"></tr>
+                          <tr mat-row *matRowDef="let row; columns: ['codigoPetro', 'participe', 'tipoNovedad', 'descripcion', 'codigoProducto', 'codigoPrestamo', 'idAsoprepPrestamo', 'codigoCuota', 'montoEsperado', 'montoRecibido', 'montoDiferencia', 'acciones'];"></tr>
+                        </table>
+                      </div>
+
+                      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.75rem; margin-top: 0.75rem;">
+                        <div style="padding: 0.6rem 0.8rem; background: #f5f7fa; border-radius: 6px; border: 1px solid #e0e6ed;">
+                          <strong>Total registros:</strong> {{ totalNovedadesDescuentosFiltradas }}
+                        </div>
+                        <div style="padding: 0.6rem 0.8rem; background: #f5f7fa; border-radius: 6px; border: 1px solid #e0e6ed;">
+                          <strong>Total esperado:</strong> {{ totalMontoEsperadoFiltrado | number:'1.2-2' }}
+                        </div>
+                        <div style="padding: 0.6rem 0.8rem; background: #f5f7fa; border-radius: 6px; border: 1px solid #e0e6ed;">
+                          <strong>Total recibido:</strong> {{ totalMontoRecibidoFiltrado | number:'1.2-2' }}
+                        </div>
+                        <div style="padding: 0.6rem 0.8rem; background: #f5f7fa; border-radius: 6px; border: 1px solid #e0e6ed;">
+                          <strong>Total diferencia:</strong>
+                          <span [style.color]="totalMontoDiferenciaFiltrado !== 0 ? '#d32f2f' : '#2e7d32'">
+                            {{ totalMontoDiferenciaFiltrado | number:'1.2-2' }}
+                          </span>
+                        </div>
+                      </div>
+                    }
+
+                    <!-- Empty state -->
+                    @if (!isLoadingNovedadesDescuentos() && novedadesDescuentos().length === 0) {
+                      <div class="empty-state">
+                        <mat-icon>done_all</mat-icon>
+                        <p>No hay novedades de descuentos</p>
+                      </div>
+                    }
+
+                    @if (!isLoadingNovedadesDescuentos() && novedadesDescuentos().length > 0 && novedadesDescuentosFiltradas.length === 0) {
+                      <div class="empty-state">
+                        <mat-icon>filter_alt_off</mat-icon>
+                        <p>No hay registros para el tipo de novedad seleccionado</p>
+                      </div>
+                    }
+                  </div>
+                </mat-tab>
+
+                <!-- Tab Descuentos - Antiguo (mantener para referencia) -->
+                <mat-tab style="display: none;">
+                  <ng-template mat-tab-label>
+                    <mat-icon class="tab-icon">attach_money</mat-icon>
+                    Descuentos Antiguo
                     @if (contarNovedades('DESCUENTO') > 0) {
                       <span class="tab-count badge-warning">
                         {{ contarNovedades('DESCUENTO') }}
@@ -562,8 +740,8 @@
                   <div class="process-info">
                     <mat-icon>info_outline</mat-icon>
                     <p>
-                      El proceso validará y procesará los datos cargados<br>
-                      <strong>Este proceso será programado por el equipo de backend</strong>
+                      El proceso generará los registros definitivos en el sistema.<br>
+                      <strong>Asegúrese de que todas las novedades estén resueltas antes de procesar.</strong>
                     </p>
                   </div>
 

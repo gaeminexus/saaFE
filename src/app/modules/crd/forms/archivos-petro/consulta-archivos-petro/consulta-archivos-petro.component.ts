@@ -1,11 +1,14 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatDialog } from '@angular/material/dialog';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { CargaArchivo } from '../../../model/carga-archivo';
 import { CargaArchivoService } from '../../../service/carga-archivo.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
+import { ConfirmDialogComponent } from '../../../../../shared/basics/confirm-dialog/confirm-dialog.component';
 
 interface MesCirculo {
   numero: number;
@@ -17,7 +20,7 @@ interface MesCirculo {
 @Component({
   selector: 'app-consulta-archivos-petro.component',
   standalone: true,
-  imports: [CommonModule, FormsModule, MaterialFormModule],
+  imports: [CommonModule, FormsModule, MaterialFormModule, ConfirmDialogComponent],
   templateUrl: './consulta-archivos-petro.component.html',
   styleUrl: './consulta-archivos-petro.component.scss'
 })
@@ -28,6 +31,8 @@ export class ConsultaArchivosPetroComponent implements OnInit {
   aniosDisponibles: number[] = [];
   anioSeleccionado: number | null = null;
   mesSeleccionado: number | null = null;
+
+  procesandoCodigos = signal<Set<number>>(new Set());
 
   meses: MesCirculo[] = [
     { numero: 1, nombre: 'ENE', activo: false, tieneCarga: false },
@@ -48,7 +53,9 @@ export class ConsultaArchivosPetroComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private cargaArchivoService: CargaArchivoService,
-    private funcionesDatosService: FuncionesDatosService
+    private funcionesDatosService: FuncionesDatosService,
+    private snackBar: MatSnackBar,
+    private dialog: MatDialog
   ) {}
 
   ngOnInit(): void {
@@ -260,11 +267,47 @@ export class ConsultaArchivosPetroComponent implements OnInit {
   }
 
   /**
-   * Procesa la carga
+   * Procesa la carga petrocomercial llamando al backend
    */
   procesarCarga(carga: CargaArchivo): void {
-    console.log('Procesar carga:', carga.codigo);
-    // TODO: Implementar lógica de procesamiento
+    if (!carga.codigo) return;
+
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      width: '500px',
+      data: {
+        title: 'Confirmar Procesamiento',
+        message: `¿Está seguro de que desea procesar la carga ${carga.anioAfectacion}/${carga.mesAfectacion}? Esta acción generará los registros definitivos en el sistema.`,
+        type: 'warning',
+        confirmText: 'Procesar',
+        cancelText: 'Cancelar'
+      }
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (!result) return;
+
+      const procesando = new Set(this.procesandoCodigos());
+      procesando.add(carga.codigo!);
+      this.procesandoCodigos.set(procesando);
+
+      this.cargaArchivoService.procesarCargaPetro(carga.codigo!).subscribe({
+        next: () => {
+          const actualizado = new Set(this.procesandoCodigos());
+          actualizado.delete(carga.codigo!);
+          this.procesandoCodigos.set(actualizado);
+          this.snackBar.open('Carga procesada exitosamente', 'Cerrar', { duration: 4000 });
+          // Recargar cargas del año para reflejar el nuevo estado
+          this.onAnioSeleccionado();
+        },
+        error: (err) => {
+          const actualizado = new Set(this.procesandoCodigos());
+          actualizado.delete(carga.codigo!);
+          this.procesandoCodigos.set(actualizado);
+          const mensaje = err?.message || err?.mensaje || 'Error al procesar la carga';
+          this.snackBar.open(`Error: ${mensaje}`, 'Cerrar', { duration: 5000 });
+        }
+      });
+    });
   }
 
   /**

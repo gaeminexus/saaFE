@@ -621,6 +621,12 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
   }
 }
 
+.clear-filter-btn {
+  .clear-filter-text {
+    margin-left: 0.25rem;
+  }
+}
+
 // Responsive
 @media (max-width: 768px) {
   .detalle-consulta-container {
@@ -683,6 +689,20 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
           }
         }
       }
+    }
+  }
+
+  .clear-filter-btn {
+    min-width: 40px;
+    width: 40px;
+    padding: 0;
+
+    .clear-filter-text {
+      display: none;
+    }
+
+    mat-icon {
+      margin-right: 0;
     }
   }
 

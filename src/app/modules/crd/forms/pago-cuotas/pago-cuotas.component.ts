@@ -172,8 +172,7 @@ export class PagoCuotasComponent implements OnInit {
           const prestamoEncontrado = this.normalizarPrestamo(resultados[0]);
           this.entidadEncontrada = prestamoEncontrado.entidad as Entidad;
           this.prestamos = [prestamoEncontrado];
-          this.cargarDetallesPrestamos(this.prestamos);
-          this.isLoadingBusqueda = false;
+            this.isLoadingBusqueda = false;
           this.cargarParticipe(this.entidadEncontrada.codigo, false);
           return;
         }
@@ -296,7 +295,8 @@ export class PagoCuotasComponent implements OnInit {
           this.cargarPrestamos();
         } else {
           this.isSearching = false;
-          this.isLoadingDatos = false;
+            this.cargarDetallesPrestamos(this.prestamos);
+            this.isLoadingDatos = false;
         }
       },
       error: (error) => {
@@ -306,7 +306,8 @@ export class PagoCuotasComponent implements OnInit {
           this.cargarPrestamos();
         } else {
           this.isSearching = false;
-          this.isLoadingDatos = false;
+            this.cargarDetallesPrestamos(this.prestamos);
+            this.isLoadingDatos = false;
         }
       },
     });
@@ -365,6 +366,7 @@ export class PagoCuotasComponent implements OnInit {
 
     const criterioOrden = new DatosBusqueda();
     criterioOrden.orderBy('numeroCuota');
+    criterioOrden.setTipoOrden(DatosBusqueda.ORDER_ASC);
     criterios.push(criterioOrden);
 
     this.detallePrestamoService.selectByCriteria(criterios).subscribe({

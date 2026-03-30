@@ -161,37 +161,6 @@
       }
     </mat-card>
 
-    <!-- Botones de acción -->
-    <div class="action-buttons">
-      <button
-        mat-raised-button
-        color="primary"
-        (click)="exportarCSV()"
-        [disabled]="prestamos.length === 0"
-        matTooltip="Descargar datos en formato CSV"
-      >
-        <mat-icon>download</mat-icon>
-        <span>Descargar CSV</span>
-      </button>
-      <button
-        mat-raised-button
-        color="accent"
-        (click)="exportarPDF()"
-        [disabled]="prestamos.length === 0"
-        matTooltip="Descargar datos en formato PDF"
-      >
-        <mat-icon>picture_as_pdf</mat-icon>
-        <span>Descargar PDF</span>
-      </button>
-      <button
-        mat-raised-button
-        (click)="regresarAPantallaAnterior()"
-        matTooltip="Volver al menú anterior"
-      >
-        <mat-icon>arrow_back</mat-icon>
-        <span>Regresar</span>
-      </button>
-    </div>
 
     <mat-card class="datos-card">
       <mat-card-header>
@@ -211,10 +180,10 @@
                 <div class="prestamo-identidad">
                   <span class="codigo-badge">#{{ prestamo.idAsoprep }}</span>
                   <div>
-                    <h3>{{ prestamo.producto.nombre || 'Sin Producto' }}</h3>
+                    <h3>{{ prestamo.producto?.nombre || 'Sin Producto' }}</h3>
                     <p>
                       Fecha: {{ prestamo.fecha | date : 'dd/MM/yyyy' }} · Estado:
-                      <span class="estado-badge">{{ prestamo.estadoPrestamo.nombre || 'Sin Estado' }}</span>
+                      <span class="estado-badge">{{ prestamo.estadoPrestamo?.nombre || 'Sin Estado' }}</span>
                     </p>
                   </div>
                 </div>
@@ -235,15 +204,15 @@
               <div class="prestamo-resumen-grid">
                 <div class="prestamo-resumen-item">
                   <span class="label">Monto Solicitado</span>
-                  <strong>{{ prestamo.montoSolicitado | currency }}</strong>
+                    <strong>{{ (prestamo.montoSolicitado || 0) | currency }}</strong>
                 </div>
                 <div class="prestamo-resumen-item success">
                   <span class="label">Total Pagado</span>
-                  <strong>{{ prestamo.totalPagado | currency }}</strong>
+                    <strong>{{ (prestamo.totalPagado || 0) | currency }}</strong>
                 </div>
                 <div class="prestamo-resumen-item danger">
                   <span class="label">Saldo Total</span>
-                  <strong>{{ prestamo.saldoTotal | currency }}</strong>
+                    <strong>{{ (prestamo.saldoTotal || 0) | currency }}</strong>
                 </div>
               </div>
             </div>

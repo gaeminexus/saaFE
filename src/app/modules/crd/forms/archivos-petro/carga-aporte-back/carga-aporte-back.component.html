@@ -204,6 +204,127 @@
           <h3>Procesando archivo...</h3>
           <p>Por favor espere mientras se valida el archivo</p>
         </div>
+      } @else if (aporteAgrupados.length > 0) {
+        <div class="novedades-section">
+          <mat-card class="novedades-card">
+            <mat-card-header>
+              <mat-icon mat-card-avatar class="avatar-icon">rule</mat-icon>
+              <mat-card-title>Novedades detectadas</mat-card-title>
+            </mat-card-header>
+
+            <mat-card-content>
+              <div class="novedades-tabs">
+                <button
+                  mat-stroked-button
+                  [color]="tabNovedadSeleccionado() === 0 ? 'primary' : undefined"
+                  (click)="onTabNovedadChange(0)">
+                  <mat-icon class="tab-icon">person_search</mat-icon>
+                  Partícipes
+                  <span class="tab-count">{{ contarNovedades('PARTICIPE') }}</span>
+                </button>
+
+                <button
+                  mat-stroked-button
+                  [color]="tabNovedadSeleccionado() === 1 ? 'primary' : undefined"
+                  (click)="onTabNovedadChange(1)">
+                  <mat-icon class="tab-icon">payments</mat-icon>
+                  Descuentos
+                  <span class="tab-count">{{ totalNovedadesDescuentos }}</span>
+                </button>
+              </div>
+
+              <div class="tab-content">
+                @if (tabNovedadSeleccionado() === 0) {
+                  @if (novedadesParticipes.length === 0) {
+                    <div class="empty-state">
+                      <mat-icon class="empty-icon">check_circle</mat-icon>
+                      <h3>Sin novedades de partícipes</h3>
+                    </div>
+                  } @else {
+                    @for (grupo of novedadesParticipes; track grupo.novedad.codigo) {
+                      <mat-card class="novedad-card">
+                        <mat-card-header>
+                          <mat-icon mat-card-avatar class="novedad-icon">{{ grupo.novedad.icono }}</mat-icon>
+                          <mat-card-title>{{ grupo.novedad.descripcion }}</mat-card-title>
+                          <mat-card-subtitle>{{ grupo.total }} registro(s)</mat-card-subtitle>
+                        </mat-card-header>
+                      </mat-card>
+                    }
+                  }
+                } @else {
+                  @if (isLoadingNovedadesDescuentos()) {
+                    <div class="loading-state">
+                      <mat-spinner diameter="40"></mat-spinner>
+                      <p>Cargando novedades de descuentos...</p>
+                    </div>
+                  } @else if (novedadesDescuentos().length === 0) {
+                    <div class="empty-state">
+                      <mat-icon class="empty-icon">check_circle</mat-icon>
+                      <h3>Sin novedades de descuentos</h3>
+                    </div>
+                  } @else {
+                    <div class="table-container novedad-table">
+                      <table mat-table [dataSource]="novedadesDescuentos()" class="data-table">
+                        <ng-container matColumnDef="codigoPetro">
+                          <th mat-header-cell *matHeaderCellDef> Cód. Petro </th>
+                          <td mat-cell *matCellDef="let row"> {{ row.participeXCargaArchivo?.codigoPetro || '-' }} </td>
+                        </ng-container>
+
+                        <ng-container matColumnDef="participe">
+                          <th mat-header-cell *matHeaderCellDef> Partícipe </th>
+                          <td mat-cell *matCellDef="let row"> {{ row.participeXCargaArchivo?.nombre || '-' }} </td>
+                        </ng-container>
+
+                        <ng-container matColumnDef="tipoNovedad">
+                          <th mat-header-cell *matHeaderCellDef> Tipo </th>
+                          <td mat-cell *matCellDef="let row"> {{ getDescripcionTipoNovedad(row.tipoNovedad) }} </td>
+                        </ng-container>
+
+                        <ng-container matColumnDef="descripcion">
+                          <th mat-header-cell *matHeaderCellDef> Novedad </th>
+                          <td mat-cell *matCellDef="let row"> {{ row.descripcion || '-' }} </td>
+                        </ng-container>
+
+                        <ng-container matColumnDef="codigoProducto">
+                          <th mat-header-cell *matHeaderCellDef> Producto </th>
+                          <td mat-cell *matCellDef="let row"> {{ row.codigoProducto ?? '-' }} </td>
+                        </ng-container>
+
+                        <ng-container matColumnDef="codigoPrestamo">
+                          <th mat-header-cell *matHeaderCellDef> Préstamo </th>
+                          <td mat-cell *matCellDef="let row"> {{ row.codigoPrestamo ?? '-' }} </td>
+                        </ng-container>
+
+                        <ng-container matColumnDef="codigoCuota">
+                          <th mat-header-cell *matHeaderCellDef> Cuota </th>
+                          <td mat-cell *matCellDef="let row"> {{ row.codigoCuota ?? '-' }} </td>
+                        </ng-container>
+
+                        <ng-container matColumnDef="montoEsperado">
+                          <th mat-header-cell *matHeaderCellDef> Monto Esperado </th>
+                          <td mat-cell *matCellDef="let row"> {{ row.montoEsperado ?? 0 | number:'1.2-2' }} </td>
+                        </ng-container>
+
+                        <ng-container matColumnDef="montoRecibido">
+                          <th mat-header-cell *matHeaderCellDef> Monto Recibido </th>
+                          <td mat-cell *matCellDef="let row"> {{ row.montoRecibido ?? 0 | number:'1.2-2' }} </td>
+                        </ng-container>
+
+                        <ng-container matColumnDef="montoDiferencia">
+                          <th mat-header-cell *matHeaderCellDef> Diferencia </th>
+                          <td mat-cell *matCellDef="let row"> {{ row.montoDiferencia ?? 0 | number:'1.2-2' }} </td>
+                        </ng-container>
+
+                        <tr mat-header-row *matHeaderRowDef="['codigoPetro','participe','tipoNovedad','descripcion','codigoProducto','codigoPrestamo','codigoCuota','montoEsperado','montoRecibido','montoDiferencia']"></tr>
+                        <tr mat-row *matRowDef="let row; columns: ['codigoPetro','participe','tipoNovedad','descripcion','codigoProducto','codigoPrestamo','codigoCuota','montoEsperado','montoRecibido','montoDiferencia'];"></tr>
+                      </table>
+                    </div>
+                  }
+                }
+              </div>
+            </mat-card-content>
+          </mat-card>
+        </div>
       }
     }
   </div>

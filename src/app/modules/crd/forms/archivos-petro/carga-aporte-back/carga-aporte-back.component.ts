@@ -22,6 +22,11 @@ import { ConfirmDialogComponent } from '../../../../../shared/basics/confirm-dia
 import { DetalleRubroService } from '../../../../../shared/services/detalle-rubro.service';
 import { NovedadCargaService } from '../../../service/novedad-carga.service';
 import { NovedadCarga, NovedadAgrupada } from '../../../model/novedad-carga';
+import { AppStateService } from '../../../../../shared/services/app-state.service';
+import { UsuarioService } from '../../../../../shared/services/usuario.service';
+import { NovedadParticipeCargaService } from '../../../service/novedad-participe-carga.service';
+import { NovedadParticipeCarga } from '../../../model/novedad-participe-carga';
+import { catchError, forkJoin, map, of } from 'rxjs';
 
 const RUBRO_NOVEDAES_CARGA = 169;
 
@@ -139,6 +144,8 @@ export class CargaAporteBackComponent implements OnInit {
   // Signals para módulo de novedades
   catalogoNovedades = signal<NovedadCarga[]>([]);
   novedadesAgrupadas = signal<NovedadAgrupada[]>([]);
+  novedadesDescuentos = signal<NovedadParticipeCarga[]>([]);
+  isLoadingNovedadesDescuentos = signal<boolean>(false);
   tabNovedadSeleccionado = signal<number>(0); // 0=Partícipes, 1=Descuentos
   expandedNovedad = signal<number | null>(null);
 
@@ -152,6 +159,9 @@ export class CargaAporteBackComponent implements OnInit {
     private dialog: MatDialog,
     private detalleRubroService: DetalleRubroService,
     private novedadCargaService: NovedadCargaService,
+    private novedadParticipeCargaService: NovedadParticipeCargaService,
+    private appStateService: AppStateService,
+    private usuarioService: UsuarioService,
     private router: Router
   ) {
     // Generar años del 2025 al 2035
@@ -220,6 +230,11 @@ export class CargaAporteBackComponent implements OnInit {
       interesNoDescontado: 0,
       desgravamenNoDescontado: 0
     };
+    this.novedadesAgrupadas.set([]);
+    this.novedadesDescuentos.set([]);
+    this.tabNovedadSeleccionado.set(0);
+    this.expandedNovedad.set(null);
+    this.isLoadingNovedadesDescuentos.set(false);
 
     const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
     if (fileInput) {
@@ -628,6 +643,7 @@ export class CargaAporteBackComponent implements OnInit {
       // Procesar novedades con todos los registros
       const todosLosRegistros = aportes.flatMap(a => a.registros);
       this.procesarNovedades(todosLosRegistros);
+      this.cargarNovedadesDescuentos(todosLosRegistros);
 
       this.isLoadingData.set(false);
       this.snackBar.open(
@@ -654,15 +670,46 @@ export class CargaAporteBackComponent implements OnInit {
   }
 
   private obtenerUsuarioActual(): Usuario | null {
-    const usuarioStr = localStorage.getItem('usuario');
-    if (usuarioStr) {
+    // 1. Intentar desde UsuarioService (accede a memoria + localStorage)
+    const usuarioService = this.usuarioService.getUsuarioLog();
+    if (usuarioService && usuarioService.codigo) {
+      return usuarioService;
+    }
+
+    // 2. Intentar desde AppStateService (memoria)
+    const usuarioState = this.appStateService.getUsuario();
+    if (usuarioState && usuarioState.codigo) {
+      return usuarioState;
+    }
+
+    // 3. Fallback manual directo a localStorage (todas las claves posibles)
+    const posiblesClavesUsuario = ['usuario', 'usuarioLog'];
+    for (const clave of posiblesClavesUsuario) {
+      const usuarioStr = localStorage.getItem(clave);
+      if (!usuarioStr) {
+        continue;
+      }
+
       try {
-        return JSON.parse(usuarioStr) as Usuario;
+        const usuario = JSON.parse(usuarioStr) as Usuario;
+        if (usuario && usuario.codigo) {
+          return usuario;
+        }
       } catch (error) {
-        console.error('Error al parsear usuario desde localStorage:', error);
-        return null;
+        console.error(`Error al parsear usuario desde localStorage (${clave}):`, error);
       }
     }
+
+    // 4. Ultimo recourse: construir desde datos fragmentarios
+    const userName = localStorage.getItem('userName')?.trim();
+    const idUsuario = localStorage.getItem('idUsuario');
+    if (userName || idUsuario) {
+      return {
+        codigo: idUsuario ? Number(idUsuario) : 0,
+        nombre: userName || ''
+      } as Usuario;
+    }
+
     return null;
   }
 
@@ -708,6 +755,64 @@ export class CargaAporteBackComponent implements OnInit {
     this.novedadesAgrupadas.set(agrupadas);
   }
 
+  private cargarNovedadesDescuentos(registros: ParticipeXCargaArchivo[]): void {
+    const registrosValidos = registros.filter(r => r.codigo !== undefined && r.codigo !== null);
+
+    if (registrosValidos.length === 0) {
+      this.novedadesDescuentos.set([]);
+      return;
+    }
+
+    this.isLoadingNovedadesDescuentos.set(true);
+
+    const registrosByCodigo = new Map<number, ParticipeXCargaArchivo>(
+      registrosValidos.map(r => [r.codigo, r])
+    );
+
+    const requests = registrosValidos.map((registro) => {
+      const criterios: DatosBusqueda[] = [];
+      const dbParticipe = new DatosBusqueda();
+      dbParticipe.asignaValorConCampoPadre(
+        TipoDatos.LONG,
+        'participeXCargaArchivo',
+        'codigo',
+        registro.codigo.toString(),
+        TipoComandosBusqueda.IGUAL
+      );
+      criterios.push(dbParticipe);
+
+      return this.novedadParticipeCargaService.selectByCriteria(criterios).pipe(
+        map((novedades) => (novedades || []).map((novedad) => {
+          const codigoParticipe = novedad.participeXCargaArchivo?.codigo;
+          const participeCompleto = codigoParticipe ? registrosByCodigo.get(codigoParticipe) : undefined;
+
+          return {
+            ...novedad,
+            participeXCargaArchivo: participeCompleto || novedad.participeXCargaArchivo
+          } as NovedadParticipeCarga;
+        })),
+        catchError(() => of([] as NovedadParticipeCarga[]))
+      );
+    });
+
+    forkJoin(requests).subscribe({
+      next: (resultado) => {
+        const novedades = resultado
+          .flat()
+          .filter(n => (n.tipoNovedad || 0) > 3)
+          .sort((a, b) => (a.tipoNovedad || 0) - (b.tipoNovedad || 0));
+
+        this.novedadesDescuentos.set(novedades);
+        this.isLoadingNovedadesDescuentos.set(false);
+      },
+      error: (error) => {
+        console.error('Error al cargar novedades de descuentos:', error);
+        this.novedadesDescuentos.set([]);
+        this.isLoadingNovedadesDescuentos.set(false);
+      }
+    });
+  }
+
   /**
    * Toggle expansión de novedad
    */
@@ -731,6 +836,27 @@ export class CargaAporteBackComponent implements OnInit {
     return this.novedadesAgrupadas()
       .filter(n => n.novedad.tipo === tipo)
       .reduce((sum, n) => sum + n.total, 0);
+  }
+
+  get novedadesParticipes(): NovedadAgrupada[] {
+    return this.novedadesAgrupadas().filter(n => n.novedad.tipo === 'PARTICIPE');
+  }
+
+  get totalNovedadesDescuentos(): number {
+    return this.novedadesDescuentos().length;
+  }
+
+  getDescripcionTipoNovedad(tipoNovedad: number | null | undefined): string {
+    if (tipoNovedad === null || tipoNovedad === undefined) {
+      return '-';
+    }
+
+    const novedadCatalogo = this.catalogoNovedades().find(n => n.codigo === tipoNovedad);
+    if (novedadCatalogo) {
+      return `${tipoNovedad} - ${novedadCatalogo.descripcion}`;
+    }
+
+    return `Novedad ${tipoNovedad}`;
   }
 
   /**

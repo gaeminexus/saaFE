@@ -1,0 +1,180 @@
+<div style="min-width: 900px; max-width: 1200px;">
+  <!-- Header con información del partícipe -->
+  <h2 mat-dialog-title style="display: flex; align-items: center; gap: 0.5rem;">
+    <mat-icon color="primary">rule</mat-icon>
+    Afectación de valores por cuotas
+  </h2>
+
+  <mat-dialog-content>
+    <!-- Información del partícipe -->
+    <div style="background-color: #f5f5f5; padding: 1rem; border-radius: 4px; margin-bottom: 1rem;">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+        <div>
+          <strong>Partícipe:</strong><br>
+          {{ data.novedad.participeXCargaArchivo.nombre || '-' }}
+        </div>
+        <div>
+          <strong>Código Petro:</strong><br>
+          {{ data.novedad.participeXCargaArchivo.codigoPetro || '-' }}
+        </div>
+        <div>
+          <strong>Valor recibido (Archivo Petro):</strong><br>
+          <span style="color: #2196f3; font-weight: bold;">{{ data.novedad.montoRecibido | number:'1.2-2' }}</span>
+        </div>
+        <div>
+          <strong>Valor esperado (Archivo Petro):</strong><br>
+          {{ data.novedad.montoEsperado | number:'1.2-2' }}
+        </div>
+        <div>
+          <strong>Diferencia (Archivo Petro):</strong><br>
+          {{ data.novedad.montoDiferencia | number:'1.2-2' }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Resumen de afectación -->
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
+      <mat-card style="padding: 1rem; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+        <div style="font-size: 12px; color: #666;">Valor recibido Petro</div>
+        <div style="font-size: 18px; font-weight: bold; color: #1976d2;">
+          {{ data.getMontoDisponibleAfectacion() | number:'1.2-2' }}
+        </div>
+      </mat-card>
+      <mat-card style="padding: 1rem; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+        <div style="font-size: 12px; color: #666;">Total a cruzar</div>
+        <div style="font-size: 18px; font-weight: bold; color: #f57c00;">
+          {{ data.getTotalValorAfectarActual() | number:'1.2-2' }}
+        </div>
+      </mat-card>
+      <mat-card style="padding: 1rem; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+        <div style="font-size: 12px; color: #666;">Saldo pendiente</div>
+        <div style="font-size: 18px; font-weight: bold;" [style.color]="data.getSaldoPendienteAfectacion() < 0 ? '#d32f2f' : '#2e7d32'">
+          {{ data.getSaldoPendienteAfectacion() | number:'1.2-2' }}
+        </div>
+      </mat-card>
+    </div>
+
+    <!-- Loading state -->
+    @if (data.isLoadingAfectacionFinanciera()) {
+      <div class="compact-loading-state">
+        <mat-spinner diameter="28"></mat-spinner>
+        <div>
+          <div class="loading-title">Cargando préstamos y cuotas</div>
+          <div class="loading-subtitle">Consultando préstamos activos del partícipe...</div>
+        </div>
+      </div>
+    } @else if (data.getPrestamosAfectables().length === 0) {
+      <!-- Empty state -->
+      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3rem; color: #999;">
+        <mat-icon style="font-size: 64px; width: 64px; height: 64px; opacity: 0.5;">info</mat-icon>
+        <p style="margin-top: 1rem; text-align: center;">
+          No se encontraron préstamos activos con cuotas pendientes <br> para este partícipe.
+        </p>
+      </div>
+    } @else {
+      <!-- Listado de préstamos -->
+      @for (item of data.getPrestamosAfectables(); track item.prestamo.codigo) {
+        <mat-card style="margin-bottom: 1.5rem; border: 1px solid #e0e0e0; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
+          <!-- Header del préstamo con tipo -->
+          <mat-card-header style="padding-bottom: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 1rem; width: 100%;">
+              <mat-icon style="color: #2196f3; font-size: 28px; width: 28px; height: 28px;">account_balance_wallet</mat-icon>
+              <div style="flex: 1;">
+                <h3 style="margin: 0; font-size: 16px; color: #333;">
+                  Préstamo {{ item.prestamo.idAsoprep || item.prestamo.codigo }}
+                  <span style="color: #999; font-size: 12px; margin-left: 0.5rem;">
+                    · Saldo total: {{ item.prestamo.saldoTotal | number:'1.2-2' }}
+                  </span>
+                </h3>
+                <p style="margin: 0.25rem 0 0 0; font-size: 13px; color: #666;">
+                  <strong>Tipo:</strong> {{ getTipoPrestamoNombre(item.prestamo) }} (Cod: {{ item.prestamo.producto.codigo || '-' }})
+                </p>
+              </div>
+            </div>
+          </mat-card-header>
+
+          <!-- Tabla de cuotas -->
+          <mat-card-content style="padding-top: 0.5rem;">
+            <div class="table-container">
+              <table mat-table [dataSource]="item.cuotas" class="cuotas-table">
+                <!-- Columna: Número de cuota -->
+                <ng-container matColumnDef="numeroCuota">
+                  <th mat-header-cell *matHeaderCellDef style="width: 80px;">Cuota</th>
+                  <td mat-cell *matCellDef="let cuota">{{ cuota.numeroCuota }}</td>
+                </ng-container>
+
+                <!-- Columna: Fecha de vencimiento -->
+                <ng-container matColumnDef="fechaVencimiento">
+                  <th mat-header-cell *matHeaderCellDef style="width: 110px;">Fecha venc.</th>
+                  <td mat-cell *matCellDef="let cuota">{{ data.formatearFecha(cuota.fechaVencimiento) }}</td>
+                </ng-container>
+
+                <!-- Columna: Estado -->
+                <ng-container matColumnDef="estadoCuota">
+                  <th mat-header-cell *matHeaderCellDef style="width: 100px;">Estado</th>
+                  <td mat-cell *matCellDef="let cuota">
+                    <span style="padding: 0.25rem 0.5rem; border-radius: 3px; font-size: 12px; font-weight: 500; background-color: #f0f0f0;">
+                      {{ data.getEstadoCuotaTexto(cuota) }}
+                    </span>
+                  </td>
+                </ng-container>
+
+                <!-- Columna: Valor cuota -->
+                <ng-container matColumnDef="valorCuota">
+                  <th mat-header-cell *matHeaderCellDef style="width: 120px; text-align: right;">Valor cuota</th>
+                  <td mat-cell *matCellDef="let cuota" style="text-align: right;">
+                    {{ data.getValorCuotaOriginal(cuota) | number:'1.2-2' }}
+                  </td>
+                </ng-container>
+
+                <!-- Columna: Saldo -->
+                <ng-container matColumnDef="saldoCuota">
+                  <th mat-header-cell *matHeaderCellDef style="width: 120px; text-align: right;">Saldo</th>
+                  <td mat-cell *matCellDef="let cuota" style="text-align: right;">
+                    {{ cuota.saldo | number:'1.2-2' }}
+                  </td>
+                </ng-container>
+
+                <!-- Columna: Valor a cruzar -->
+                <ng-container matColumnDef="valorAfectar">
+                  <th mat-header-cell *matHeaderCellDef style="width: 150px; text-align: center;">Valor a cruzar</th>
+                  <td mat-cell *matCellDef="let cuota" style="text-align: center;">
+                    <mat-form-field appearance="outline" style="width: 140px;">
+                      <input
+                        matInput
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        [value]="data.getValorAfectarEditado(cuota.codigo)"
+                        (input)="data.onValorAfectarChange(cuota, $any($event.target).value)">
+                    </mat-form-field>
+                  </td>
+                </ng-container>
+
+                <!-- Row definitions -->
+                <tr mat-header-row *matHeaderRowDef="['numeroCuota', 'fechaVencimiento', 'estadoCuota', 'valorCuota', 'saldoCuota', 'valorAfectar']"></tr>
+                <tr mat-row *matRowDef="let row; columns: ['numeroCuota', 'fechaVencimiento', 'estadoCuota', 'valorCuota', 'saldoCuota', 'valorAfectar'];"></tr>
+              </table>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      }
+    }
+  </mat-dialog-content>
+
+  <!-- Footer con botones -->
+  <mat-dialog-actions align="end" style="padding: 1rem 0 0 0;">
+    <button mat-button (click)="cerrar()" [disabled]="data.isSavingAfectacionFinanciera()">
+      <mat-icon>close</mat-icon>
+      Cancelar
+    </button>
+    <button
+      mat-raised-button
+      color="primary"
+      (click)="guardarYCerrar()"
+      [disabled]="data.isSavingAfectacionFinanciera()">
+      <mat-icon>{{ data.isSavingAfectacionFinanciera() ? 'hourglass_top' : 'save' }}</mat-icon>
+      {{ data.isSavingAfectacionFinanciera() ? 'Guardando...' : 'Guardar afectaciones' }}
+    </button>
+  </mat-dialog-actions>
+</div>
