@@ -33,6 +33,20 @@
         }}</span>
       </div>
       <div class="info-item">
+        <span class="label">Desgravamen:</span>
+        <span class="value">{{
+          data.detalle.desgravamen | currency : 'USD' : 'symbol' : '1.2-2'
+        }}</span>
+      </div>
+      @if (mostrarSeguro) {
+      <div class="info-item">
+        <span class="label">Seguro:</span>
+        <span class="value">{{
+          data.detalle.valorSeguroIncendio | currency : 'USD' : 'symbol' : '1.2-2'
+        }}</span>
+      </div>
+      }
+      <div class="info-item">
         <span class="label">Cuota:</span>
         <span class="value">{{ data.detalle.cuota | currency : 'USD' : 'symbol' : '1.2-2' }}</span>
       </div>
@@ -85,7 +99,23 @@
           </td>
         </ng-container>
 
-        <!-- Pago Extra Column -->
+        <!-- Desgravamen Pagado Column -->
+        <ng-container matColumnDef="desgravamenPagado">
+          <th mat-header-cell *matHeaderCellDef>Desgravamen</th>
+          <td mat-cell *matCellDef="let pago">
+            {{ pago.desgravamen | currency : 'USD' : 'symbol' : '1.2-2' }}
+          </td>
+        </ng-container>
+
+        <!-- Seguro Pagado Column (solo para préstamos hipotecarios/prendarios) -->
+        @if (mostrarSeguro) {
+        <ng-container matColumnDef="seguroPagado">
+          <th mat-header-cell *matHeaderCellDef>Seguro</th>
+          <td mat-cell *matCellDef="let pago">
+            {{ pago.valorSeguroIncendio | currency : 'USD' : 'symbol' : '1.2-2' }}
+          </td>
+        </ng-container>
+        }
         <ng-container matColumnDef="saldoOtros">
           <th mat-header-cell *matHeaderCellDef>Pago Extra</th>
           <td mat-cell *matCellDef="let pago">

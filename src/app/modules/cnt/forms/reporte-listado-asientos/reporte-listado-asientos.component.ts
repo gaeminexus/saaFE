@@ -57,6 +57,7 @@ export class ReporteListadoAsientosComponent implements OnInit {
   loadingDetalles = signal<Set<number>>(new Set()); // Track loading por asiento
   filtrosExpandidos = signal<boolean>(true); // Panel de filtros expandido/colapsado
   idSucursal: string = '';
+  private searchRequestId = 0;
 
   // Columnas de la tabla de detalles
   displayedColumns: string[] = ['cuenta', 'nombreCuenta', 'descripcion', 'debe', 'haber'];
@@ -179,7 +180,14 @@ export class ReporteListadoAsientosComponent implements OnInit {
    * Realiza la búsqueda de asientos usando selectByCriteria
    */
   buscar(): void {
+    const currentSearchId = ++this.searchRequestId;
     this.loading.set(true);
+
+    // Limpiar resultados previos para evitar mostrar datos desactualizados
+    this.resultadosAsientos = [];
+    this.detallesMap.clear();
+    this.asientosExpandidos.set(new Set());
+    this.loadingDetalles.set(new Set());
 
     // Construir array de criterios
     const criterios: DatosBusqueda[] = [];
@@ -321,6 +329,10 @@ export class ReporteListadoAsientosComponent implements OnInit {
     // Ejecutar consulta
     this.asientoService.selectByCriteria(criterios).subscribe({
       next: (data) => {
+        if (currentSearchId !== this.searchRequestId) {
+          return;
+        }
+
         this.loading.set(false);
         this.resultadosAsientos = Array.isArray(data) ? data : [];
 
@@ -337,6 +349,10 @@ export class ReporteListadoAsientosComponent implements OnInit {
         console.log('Resultados:', this.resultadosAsientos);
       },
       error: (err) => {
+        if (currentSearchId !== this.searchRequestId) {
+          return;
+        }
+
         this.loading.set(false);
         console.error('Error en búsqueda de asientos:', err);
         this.snackBar.open(

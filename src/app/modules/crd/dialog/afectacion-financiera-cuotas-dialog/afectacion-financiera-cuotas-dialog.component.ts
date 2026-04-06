@@ -18,7 +18,10 @@ interface DialogData {
   getAfectacionesRegistradas: () => AfectacionValoresParticipeCarga[];
   getValoresAfectarEditados: () => Record<number, number>;
   onValorAfectarChange: (detalle: DetallePrestamo, valor: string | number) => void;
-  getValorAfectarEditado: (detalleCodigo: number | undefined) => number;
+  onValorAfectarFocus: (detalle: DetallePrestamo) => void;
+  onValorAfectarBlur: (detalle: DetallePrestamo) => void;
+  onAutocompletarValorCuota: (detalle: DetallePrestamo) => void;
+  getValorAfectarEditado: (detalleCodigo: number | undefined) => string;
   getValorCuotaOriginal: (detalle: DetallePrestamo | null | undefined) => number;
   getEstadoCuotaTexto: (detalle: DetallePrestamo | null | undefined) => string;
   getMontoDisponibleAfectacion: () => number;
@@ -38,10 +41,32 @@ interface DialogData {
   styleUrl: './afectacion-financiera-cuotas-dialog.component.scss'
 })
 export class AfectacionFinancieraCuotasDialogComponent {
+  prestamosExpandidos = new Set<number>();
+
   constructor(
     public dialogRef: MatDialogRef<AfectacionFinancieraCuotasDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: DialogData
   ) {}
+
+  togglePrestamo(prestamoCodigo: number | undefined): void {
+    if (!prestamoCodigo) {
+      return;
+    }
+
+    if (this.prestamosExpandidos.has(prestamoCodigo)) {
+      this.prestamosExpandidos.delete(prestamoCodigo);
+    } else {
+      this.prestamosExpandidos.add(prestamoCodigo);
+    }
+  }
+
+  isPrestamoExpandido(prestamoCodigo: number | undefined): boolean {
+    if (!prestamoCodigo) {
+      return false;
+    }
+
+    return this.prestamosExpandidos.has(prestamoCodigo);
+  }
 
   /**
    * Retorna el nombre del tipo de préstamo (producto)

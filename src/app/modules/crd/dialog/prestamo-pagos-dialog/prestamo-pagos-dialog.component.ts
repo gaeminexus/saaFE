@@ -9,6 +9,7 @@ import { PagoPrestamo } from '../../model/pago-prestamo';
 export interface PrestamoPagosDialogData {
   detalle: DetallePrestamo;
   pagos: PagoPrestamo[];
+  esPrestamoConSeguro?: boolean;
 }
 
 @Component({
@@ -20,7 +21,18 @@ export interface PrestamoPagosDialogData {
   encapsulation: ViewEncapsulation.None,
 })
 export class PrestamoPagosDialogComponent {
-  displayedColumns: string[] = ['fecha', 'capitalPagado', 'interesPagado', 'moraPagada', 'saldoOtros', 'valor'];
+  get displayedColumns(): string[] {
+    const cols = ['fecha', 'capitalPagado', 'interesPagado', 'moraPagada', 'desgravamenPagado'];
+    if (this.mostrarSeguro) {
+      cols.push('seguroPagado');
+    }
+    cols.push('saldoOtros', 'valor');
+    return cols;
+  }
+
+  get mostrarSeguro(): boolean {
+    return !!this.data?.esPrestamoConSeguro;
+  }
 
   constructor(
     @Inject(MAT_DIALOG_DATA) public data: PrestamoPagosDialogData,
@@ -96,14 +108,18 @@ export class PrestamoPagosDialogComponent {
             yPosition += 8;
 
             const pagosData = this.data.pagos.map((p) => {
-              return [
+              const row = [
                 new Date(p.fecha).toLocaleDateString('es-ES'),
                 `$${(p.capitalPagado || 0).toFixed(2)}`,
                 `$${(p.interesPagado || 0).toFixed(2)}`,
                 `$${(p.moraPagada || 0).toFixed(2)}`,
-                `$${(p.saldoOtros || 0).toFixed(2)}`,
-                `$${(p.valor || 0).toFixed(2)}`,
+                `$${(p.desgravamen || 0).toFixed(2)}`,
               ];
+              if (this.mostrarSeguro) {
+                row.push(`$${(p.valorSeguroIncendio || 0).toFixed(2)}`);
+              }
+              row.push(`$${(p.saldoOtros || 0).toFixed(2)}`, `$${(p.valor || 0).toFixed(2)}`);
+              return row;
             });
 
             // Calcular totales
@@ -116,45 +132,58 @@ export class PrestamoPagosDialogComponent {
               0
             );
             const totalMora = this.data.pagos.reduce((sum, p) => sum + (p.moraPagada || 0), 0);
+            const totalDesgravamen = this.data.pagos.reduce((sum, p) => sum + (p.desgravamen || 0), 0);
+            const totalSeguro = this.mostrarSeguro
+              ? this.data.pagos.reduce((sum, p) => sum + (p.valorSeguroIncendio || 0), 0)
+              : 0;
             const totalSaldoOtros = this.data.pagos.reduce((sum, p) => sum + (p.saldoOtros || 0), 0);
             const totalValor = this.data.pagos.reduce((sum, p) => sum + (p.valor || 0), 0);
 
             if (doc.autoTable) {
+              const pdfHead = ['Fecha', 'Capital Pagado', 'Interés Pagado', 'Mora Pagada', 'Desgravamen'];
+              if (this.mostrarSeguro) {
+                pdfHead.push('Seguro');
+              }
+              pdfHead.push('Pago Extra', 'Valor Total');
+
+              const pdfFoot = [
+                'TOTALES',
+                `$${totalCapital.toFixed(2)}`,
+                `$${totalInteres.toFixed(2)}`,
+                `$${totalMora.toFixed(2)}`,
+                `$${totalDesgravamen.toFixed(2)}`,
+              ];
+              if (this.mostrarSeguro) {
+                pdfFoot.push(`$${totalSeguro.toFixed(2)}`);
+              }
+              pdfFoot.push(`$${totalSaldoOtros.toFixed(2)}`, `$${totalValor.toFixed(2)}`);
+
               doc.autoTable({
                 startY: yPosition,
-                head: [['Fecha', 'Capital Pagado', 'Interés Pagado', 'Mora Pagada', 'Pago Extra', 'Valor Total']],
+                head: [pdfHead],
                 body: pagosData,
                 theme: 'striped',
-                styles: { fontSize: 9, cellPadding: 3 },
+                styles: { fontSize: 8, cellPadding: 2 },
                 headStyles: {
                   fillColor: [102, 126, 234],
                   textColor: 255,
-                  fontSize: 9,
+                  fontSize: 8,
                   fontStyle: 'bold',
                 },
                 columnStyles: {
-                  0: { cellWidth: 28, halign: 'center' },
-                  1: { cellWidth: 30, halign: 'right' },
-                  2: { cellWidth: 30, halign: 'right' },
-                  3: { cellWidth: 28, halign: 'right' },
-                  4: { cellWidth: 28, halign: 'right' },
-                  5: { cellWidth: 28, halign: 'right' },
+                  0: { cellWidth: 22, halign: 'center' },
+                  1: { cellWidth: 25, halign: 'right' },
+                  2: { cellWidth: 25, halign: 'right' },
+                  3: { cellWidth: 22, halign: 'right' },
+                  4: { cellWidth: 22, halign: 'right' },
+                  ...(this.mostrarSeguro && { 5: { cellWidth: 22, halign: 'right' } }),
                 },
                 footStyles: {
                   fillColor: [102, 126, 234],
                   textColor: 255,
                   fontStyle: 'bold',
                 },
-                foot: [
-                  [
-                    'TOTALES',
-                    `$${totalCapital.toFixed(2)}`,
-                    `$${totalInteres.toFixed(2)}`,
-                    `$${totalMora.toFixed(2)}`,
-                    `$${totalSaldoOtros.toFixed(2)}`,
-                    `$${totalValor.toFixed(2)}`,
-                  ],
-                ],
+                foot: [pdfFoot],
               });
               yPosition = (doc as any).lastAutoTable.finalY + 10;
             }

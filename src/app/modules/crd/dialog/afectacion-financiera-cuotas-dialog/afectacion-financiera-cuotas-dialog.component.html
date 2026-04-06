@@ -76,8 +76,11 @@
       @for (item of data.getPrestamosAfectables(); track item.prestamo.codigo) {
         <mat-card style="margin-bottom: 1.5rem; border: 1px solid #e0e0e0; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
           <!-- Header del préstamo con tipo -->
-          <mat-card-header style="padding-bottom: 0.5rem;">
+          <mat-card-header style="padding-bottom: 0.5rem; cursor: pointer;" (click)="togglePrestamo(item.prestamo.codigo)">
             <div style="display: flex; align-items: center; gap: 1rem; width: 100%;">
+              <button mat-icon-button type="button" (click)="togglePrestamo(item.prestamo.codigo); $event.stopPropagation()" aria-label="Expandir préstamo">
+                <mat-icon>{{ isPrestamoExpandido(item.prestamo.codigo) ? 'expand_less' : 'expand_more' }}</mat-icon>
+              </button>
               <mat-icon style="color: #2196f3; font-size: 28px; width: 28px; height: 28px;">account_balance_wallet</mat-icon>
               <div style="flex: 1;">
                 <h3 style="margin: 0; font-size: 16px; color: #333;">
@@ -94,6 +97,7 @@
           </mat-card-header>
 
           <!-- Tabla de cuotas -->
+          @if (isPrestamoExpandido(item.prestamo.codigo)) {
           <mat-card-content style="padding-top: 0.5rem;">
             <div class="table-container">
               <table mat-table [dataSource]="item.cuotas" class="cuotas-table">
@@ -142,11 +146,15 @@
                     <mat-form-field appearance="outline" style="width: 140px;">
                       <input
                         matInput
-                        type="number"
-                        min="0"
-                        step="0.01"
+                        type="text"
+                        inputmode="decimal"
+                        autocomplete="off"
+                        title="Doble click para autocompletar"
                         [value]="data.getValorAfectarEditado(cuota.codigo)"
-                        (input)="data.onValorAfectarChange(cuota, $any($event.target).value)">
+                        (focus)="data.onValorAfectarFocus(cuota)"
+                        (input)="data.onValorAfectarChange(cuota, $any($event.target).value)"
+                        (dblclick)="data.onAutocompletarValorCuota(cuota)"
+                        (blur)="data.onValorAfectarBlur(cuota)">
                     </mat-form-field>
                   </td>
                 </ng-container>
@@ -157,6 +165,7 @@
               </table>
             </div>
           </mat-card-content>
+          }
         </mat-card>
       }
     }

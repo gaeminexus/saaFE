@@ -120,7 +120,7 @@
           </button>
         <button mat-button color="accent"
                 (click)="procesarCarga(carga)"
-                [disabled]="procesandoCodigos().has(carga.codigo!)">
+          [disabled]="procesandoCodigos().has(carga.codigo!) || esCargaProcesada(carga)">
           @if (procesandoCodigos().has(carga.codigo!)) {
             <mat-icon>hourglass_empty</mat-icon>
             Procesando...

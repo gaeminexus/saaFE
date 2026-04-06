@@ -661,14 +661,27 @@ export class CargaAporteBackComponent implements OnInit {
   }
 
   procesarArchivo(): void {
-    // TODO: Llamar al servicio del backend cuando esté listo
-    // Por ahora solo mostramos mensaje de éxito
-    this.archivoProcesado.set(true);
-    this.snackBar.open(
-      '✅ Archivo procesado exitosamente (simulado)',
-      'Cerrar',
-      { duration: 5000 }
-    );
+    const codigoCarga = this.codigoCargaArchivo || this.cargaArchivoActual?.codigo;
+
+    if (!codigoCarga) {
+      this.snackBar.open('No se encontró el código de la carga para procesar', 'Cerrar', { duration: 4000 });
+      return;
+    }
+
+    this.isLoadingData.set(true);
+
+    this.serviciosAsoprep.aplicarPagosArchivoPetro(codigoCarga).subscribe({
+      next: () => {
+        this.isLoadingData.set(false);
+        this.archivoProcesado.set(true);
+        this.snackBar.open('✅ Archivo procesado exitosamente', 'Cerrar', { duration: 5000 });
+      },
+      error: (error: any) => {
+        this.isLoadingData.set(false);
+        this.archivoProcesado.set(false);
+        this.snackBar.open(`Error al procesar archivo: ${error?.message || error?.mensaje || 'Error inesperado'}`, 'Cerrar', { duration: 6000 });
+      }
+    });
   }
 
   private obtenerUsuarioActual(): Usuario | null {

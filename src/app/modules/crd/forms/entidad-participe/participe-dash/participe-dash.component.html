@@ -299,8 +299,34 @@
       </mat-card-actions>
     </mat-card>
 
+    @if (prestamos.length > 0) {
+    <mat-card class="dashboard-card prestamos-card">
+      <mat-card-content>
+        <div class="search-box">
+          <mat-form-field appearance="outline" class="search-field">
+            <mat-label>Filtrar préstamos por estado</mat-label>
+            <mat-select [(ngModel)]="filtroEstadoPrestamo">
+              <mat-option [value]="'TODOS'">Todos los estados</mat-option>
+              @for (estado of estadosDisponiblesFiltroPrestamo; track estado.codigo) {
+              <mat-option [value]="estado.codigo">{{ estado.nombre }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <button mat-stroked-button color="primary" (click)="toggleVerTodosPrestamos()">
+            {{
+              mostrarTodosPrestamos
+                ? 'Ver solo Vigente / Plazo vencido / En mora'
+                : 'Ver todos los préstamos'
+            }}
+          </button>
+        </div>
+      </mat-card-content>
+    </mat-card>
+    }
+
     <!-- Tarjetas de Préstamos individuales -->
-    @for (prestamo of prestamos; track prestamo.idAsoprep) {
+    @for (prestamo of prestamosVisibles; track prestamo.codigo) {
     <mat-card class="dashboard-card prestamos-card" [ngClass]="obtenerClaseTarjetaPrestamo(prestamo)" (click)="verDetallePrestamo(prestamo)">
       <mat-card-header>
         <mat-icon mat-card-avatar class="card-icon">credit_card</mat-icon>
@@ -385,6 +411,17 @@
           <mat-icon>description</mat-icon>
         </button>
       </mat-card-actions>
+    </mat-card>
+    }
+
+    @if (prestamos.length > 0 && prestamosVisibles.length === 0) {
+    <mat-card class="dashboard-card prestamos-card">
+      <mat-card-content>
+        <div class="placeholder-content">
+          <mat-icon class="placeholder-icon">filter_alt_off</mat-icon>
+          <p>No hay préstamos para el estado seleccionado.</p>
+        </div>
+      </mat-card-content>
     </mat-card>
     }
   </div>

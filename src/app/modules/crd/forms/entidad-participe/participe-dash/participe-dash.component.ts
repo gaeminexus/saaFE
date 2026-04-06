@@ -86,6 +86,8 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
 
   // Dashboard
   prestamos: Prestamo[] = [];
+  mostrarTodosPrestamos: boolean = false;
+  filtroEstadoPrestamo: number | 'TODOS' = 'TODOS';
   aportes: Aporte[] = [];
   aportesPorTipo: AportesPorTipo[] = [];
   totalAportes: number = 0;
@@ -167,6 +169,8 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
   ) {}
 
   ngOnInit(): void {
+    this.mostrarTodosPrestamos = false;
+    this.filtroEstadoPrestamo = 'TODOS';
     // Cargar estados de préstamo y estados de cuota
     this.cargarEstadosPrestamo();
     this.cargarEstadosCuota();
@@ -1777,6 +1781,8 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
     if (!this.entidadEncontrada) return;
 
     this.isLoadingDashboard = true;
+    this.mostrarTodosPrestamos = false;
+    this.filtroEstadoPrestamo = 'TODOS';
 
     // Contador para saber cuándo terminan todas las cargas
     let loadedCount = 0;
@@ -2161,6 +2167,68 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
     this.prestamos = prestamos;
   }
 
+  get estadosDisponiblesFiltroPrestamo(): Array<{ codigo: number; nombre: string }> {
+    const estadosMap = new Map<number, string>();
+
+    this.prestamos.forEach((prestamo) => {
+      const codigoEstado = this.obtenerCodigoEstadoPrestamo(prestamo);
+      if (codigoEstado == null) {
+        return;
+      }
+
+      const nombreEstado =
+        prestamo.estadoPrestamo?.nombre || this.obtenerNombreEstadoPrestamo(codigoEstado);
+      if (!estadosMap.has(codigoEstado)) {
+        estadosMap.set(codigoEstado, nombreEstado);
+      }
+    });
+
+    return Array.from(estadosMap.entries())
+      .map(([codigo, nombre]) => ({ codigo, nombre }))
+      .sort((a, b) => a.nombre.localeCompare(b.nombre));
+  }
+
+  get prestamosVisibles(): Prestamo[] {
+    if (!this.prestamos || this.prestamos.length === 0) {
+      return [];
+    }
+
+    if (this.filtroEstadoPrestamo !== 'TODOS') {
+      return this.prestamos.filter(
+        (prestamo) => this.obtenerCodigoEstadoPrestamo(prestamo) === this.filtroEstadoPrestamo
+      );
+    }
+
+    if (this.mostrarTodosPrestamos) {
+      return this.prestamos;
+    }
+
+    return this.prestamos.filter((prestamo) => this.esEstadoPrioritarioPrestamo(prestamo));
+  }
+
+  toggleVerTodosPrestamos(): void {
+    this.mostrarTodosPrestamos = !this.mostrarTodosPrestamos;
+  }
+
+  private esEstadoPrioritarioPrestamo(prestamo: Prestamo): boolean {
+    const codigoEstado = this.obtenerCodigoEstadoPrestamo(prestamo);
+    if (codigoEstado != null && this.ESTADOS_PRIORITARIOS_CODIGO.has(codigoEstado)) {
+      return true;
+    }
+
+    const nombreEstado = (prestamo.estadoPrestamo?.nombre || '').toUpperCase();
+    return this.ESTADOS_PRIORITARIOS_TEXTO.some((texto: string) => nombreEstado.includes(texto));
+  }
+
+  private obtenerCodigoEstadoPrestamo(prestamo: Prestamo): number | null {
+    const codigoEstado =
+      prestamo.estadoPrestamo?.codigoExterno ??
+      prestamo.estadoPrestamo?.codigoAlterno ??
+      prestamo.estadoPrestamo?.codigo;
+
+    return typeof codigoEstado === 'number' ? codigoEstado : null;
+  }
+
   verDetallePrestamo(prestamo: Prestamo): void {
     this.prestamoSeleccionado = prestamo;
     this.vistaActual = 'detallePrestamos';
@@ -2397,6 +2465,9 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
     9: 'Cancelado por revisar',
     10: 'Vigente por revisar',
   };
+
+  private readonly ESTADOS_PRIORITARIOS_CODIGO = new Set<number>([2, 8, 10]);
+  private readonly ESTADOS_PRIORITARIOS_TEXTO = ['VIGENTE', 'DE PLAZO VENCIDO', 'EN MORA'];
 
   private obtenerNombreEstadoPrestamo(codigoAlterno: number, nombreFallback?: string): string {
     // Buscar en catálogo solo por codigoExterno o codigoAlterno (NO por codigo/PK — es un ID interno arbitrario)
@@ -3282,12 +3353,17 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
   }
 
   abrirDialogPagos(detalleConPagos: DetalleConPagos): void {
+    const esPrestamoConSeguro = [2, 3, 4, 5].includes(
+      this.prestamoSeleccionado?.producto?.tipoPrestamo?.codigo ?? 0
+    );
+
     this.dialog.open(PrestamoPagosDialogComponent, {
       width: '900px',
       maxHeight: '80vh',
       data: {
         detalle: detalleConPagos.detalle,
         pagos: detalleConPagos.pagos,
+        esPrestamoConSeguro,
       },
     });
   }
@@ -3400,6 +3476,8 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
     this.contratoEncontrado = null;
     this.participeEncontrado = null;
     this.prestamos = [];
+    this.mostrarTodosPrestamos = false;
+    this.filtroEstadoPrestamo = 'TODOS';
     this.totalAportes = 0;
     this.vistaActual = 'dashboard';
     this.detallesPrestamo.clear();

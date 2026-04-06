@@ -274,6 +274,11 @@ export class ConsultaArchivosPetroComponent implements OnInit {
   procesarCarga(carga: CargaArchivo): void {
     if (!carga.codigo) return;
 
+    if (this.esCargaProcesada(carga)) {
+      this.snackBar.open('La carga ya está procesada', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
       width: '500px',
       data: {
@@ -310,6 +315,11 @@ export class ConsultaArchivosPetroComponent implements OnInit {
         }
       });
     });
+  }
+
+  esCargaProcesada(carga: CargaArchivo): boolean {
+    const estadoNumerico = Number((carga as any).codigoEstado ?? carga.estado ?? 0);
+    return estadoNumerico === 3;
   }
 
   /**

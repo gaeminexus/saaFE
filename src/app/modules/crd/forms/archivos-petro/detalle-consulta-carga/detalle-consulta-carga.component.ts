@@ -189,6 +189,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
   prestamosAfectables = signal<PrestamoAfectable[]>([]);
   afectacionesRegistradas = signal<AfectacionValoresParticipeCarga[]>([]);
   valoresAfectarEditados = signal<Record<number, number>>({});
+  detalleCuotaEnEdicion = signal<Set<number>>(new Set());
   isLoadingAfectacionFinanciera = signal<boolean>(false);
   isSavingAfectacionFinanciera = signal<boolean>(false);
 
@@ -929,7 +930,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
         this.archivoYaProcesado.set(true);
-        this.cargaArchivoService.procesarCargaPetro(this.cargaArchivo!.codigo!).subscribe({
+        this.serviciosAsoprepService.aplicarPagosArchivoPetro(this.cargaArchivo!.codigo!).subscribe({
           next: () => {
             this.snackBar.open('Archivo procesado exitosamente. Los registros han sido generados en el sistema.', 'Cerrar', { duration: 5000 });
           },
@@ -1422,11 +1423,12 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
     const montoDiferencia = this.normalizarMontoPetro(novedad.montoDiferencia);
     const montoEsperado = this.normalizarMontoPetro(novedad.montoEsperado);
 
-    return montoRecibido ?? montoDiferencia ?? montoEsperado ?? 0;
+    return this.redondear(montoRecibido ?? montoDiferencia ?? montoEsperado ?? 0);
   }
 
   get totalValorAfectarActual(): number {
-    return Object.values(this.valoresAfectarEditados()).reduce((sum, valor) => sum + (Number(valor) || 0), 0);
+    const total = Object.values(this.valoresAfectarEditados()).reduce((sum, valor) => sum + (Number(valor) || 0), 0);
+    return this.redondear(total);
   }
 
   get saldoPendienteAfectacion(): number {
@@ -1507,6 +1509,9 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
         getAfectacionesRegistradas: () => this.afectacionesRegistradas(),
         getValoresAfectarEditados: () => this.valoresAfectarEditados(),
         onValorAfectarChange: (detalle: DetallePrestamo, valor: string | number) => this.onValorAfectarChange(detalle, valor),
+        onValorAfectarFocus: (detalle: DetallePrestamo) => this.onValorAfectarFocus(detalle),
+        onValorAfectarBlur: (detalle: DetallePrestamo) => this.onValorAfectarBlur(detalle),
+        onAutocompletarValorCuota: (detalle: DetallePrestamo) => this.onAutocompletarValorCuota(detalle),
         getValorAfectarEditado: (detalleCodigo: number | undefined) => this.getValorAfectarEditado(detalleCodigo),
         getValorCuotaOriginal: (detalle: DetallePrestamo | null | undefined) => this.getValorCuotaOriginal(detalle),
         getEstadoCuotaTexto: (detalle: DetallePrestamo | null | undefined) => this.getEstadoCuotaTexto(detalle),
@@ -1534,14 +1539,70 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
     this.prestamosAfectables.set([]);
     this.afectacionesRegistradas.set([]);
     this.valoresAfectarEditados.set({});
+    this.detalleCuotaEnEdicion.set(new Set());
     this.isLoadingAfectacionFinanciera.set(false);
     this.isSavingAfectacionFinanciera.set(false);
   }
 
+  onValorAfectarFocus(detalle: DetallePrestamo): void {
+    if (!detalle.codigo) {
+      return;
+    }
+
+    const edicion = new Set(this.detalleCuotaEnEdicion());
+    edicion.add(detalle.codigo);
+    this.detalleCuotaEnEdicion.set(edicion);
+  }
+
+  onValorAfectarBlur(detalle: DetallePrestamo): void {
+    if (!detalle.codigo) {
+      return;
+    }
+
+    const edicion = new Set(this.detalleCuotaEnEdicion());
+    edicion.delete(detalle.codigo);
+    this.detalleCuotaEnEdicion.set(edicion);
+
+    const valorActual = this.valoresAfectarEditados()[detalle.codigo] || 0;
+    this.valoresAfectarEditados.update((actual) => ({
+      ...actual,
+      [detalle.codigo]: this.redondear(Number(valorActual) || 0),
+    }));
+  }
+
+  onAutocompletarValorCuota(detalle: DetallePrestamo): void {
+    const detalleCodigo = detalle.codigo;
+    if (!detalleCodigo) {
+      return;
+    }
+
+    const valorMaximoCuota = this.redondear(this.getValorMaximoAfectarCuota(detalle));
+    if (valorMaximoCuota <= 0) {
+      return;
+    }
+
+    const totalSinActual = Object.entries(this.valoresAfectarEditados())
+      .filter(([codigo]) => Number(codigo) !== detalleCodigo)
+      .reduce((sum, [, current]) => sum + (Number(current) || 0), 0);
+
+    const saldoDisponible = this.redondear(this.montoDisponibleAfectacion - this.redondear(totalSinActual));
+    if (saldoDisponible <= 0) {
+      this.valoresAfectarEditados.update((actual) => ({ ...actual, [detalleCodigo]: 0 }));
+      return;
+    }
+
+    const valorAutocompletado = this.redondear(Math.min(valorMaximoCuota, saldoDisponible));
+
+    this.valoresAfectarEditados.update((actual) => ({
+      ...actual,
+      [detalleCodigo]: valorAutocompletado,
+    }));
+  }
+
   onValorAfectarChange(detalle: DetallePrestamo, valor: string | number): void {
     const detalleCodigo = detalle.codigo;
-    const valorNumerico = this.redondear(Number(valor || 0));
-    const valorCuota = this.getValorCuotaOriginal(detalle);
+    const valorNumerico = this.redondear(this.parsearMontoEntrada(valor));
+    const valorMaximoCuota = this.getValorMaximoAfectarCuota(detalle);
 
     if (!detalleCodigo) {
       return;
@@ -1552,9 +1613,9 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
       return;
     }
 
-    if (valorNumerico > valorCuota) {
-      this.snackBar.open('El valor a cruzar no puede superar el valor de la cuota', 'Cerrar', { duration: 3500 });
-      this.valoresAfectarEditados.update((actual) => ({ ...actual, [detalleCodigo]: valorCuota }));
+    if (valorNumerico > valorMaximoCuota) {
+      this.snackBar.open('El valor a cruzar no puede superar el saldo de la cuota', 'Cerrar', { duration: 3500 });
+      this.valoresAfectarEditados.update((actual) => ({ ...actual, [detalleCodigo]: valorMaximoCuota }));
       return;
     }
 
@@ -1562,7 +1623,10 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
       .filter(([codigo]) => Number(codigo) !== detalleCodigo)
       .reduce((sum, [, current]) => sum + (Number(current) || 0), 0);
 
-    if (this.redondear(totalSinActual + valorNumerico) > this.montoDisponibleAfectacion) {
+    const totalConActual = this.redondear(totalSinActual + valorNumerico);
+    const montoDisponible = this.redondear(this.montoDisponibleAfectacion);
+
+    if (totalConActual > montoDisponible) {
       this.snackBar.open('La suma de valores a cruzar no puede superar el valor recibido desde Petro', 'Cerrar', {
         duration: 4000,
       });
@@ -1575,12 +1639,19 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
     }));
   }
 
-  getValorAfectarEditado(detalleCodigo: number | undefined): number {
+  getValorAfectarEditado(detalleCodigo: number | undefined): string {
     if (!detalleCodigo) {
-      return 0;
+      return '0,00';
     }
 
-    return Number(this.valoresAfectarEditados()[detalleCodigo] || 0);
+    const valor = Number(this.valoresAfectarEditados()[detalleCodigo] || 0);
+    const valorRedondeado = this.redondear(valor);
+
+    if (this.detalleCuotaEnEdicion().has(detalleCodigo)) {
+      return String(valorRedondeado).replace('.', ',');
+    }
+
+    return this.formatearMontoDosDecimales(valorRedondeado);
   }
 
   guardarAfectacionesFinancieras(): void {
@@ -1597,7 +1668,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
       return;
     }
 
-    if (this.totalValorAfectarActual > this.montoDisponibleAfectacion) {
+    if (this.redondear(this.totalValorAfectarActual) > this.redondear(this.montoDisponibleAfectacion)) {
       this.snackBar.open('La suma de valores a cruzar supera el valor recibido desde Petro', 'Cerrar', {
         duration: 4000,
       });
@@ -1687,6 +1758,19 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
     }
 
     return Number(detalle.totalConSeguro ?? detalle.total ?? detalle.cuota ?? detalle.saldo ?? detalle.capital ?? 0);
+  }
+
+  private getValorMaximoAfectarCuota(detalle: DetallePrestamo | null | undefined): number {
+    if (!detalle) {
+      return 0;
+    }
+
+    const saldo = this.redondear(Number(detalle.saldo || 0));
+    if (saldo > 0) {
+      return saldo;
+    }
+
+    return this.redondear(this.getValorCuotaOriginal(detalle));
   }
 
   getEstadoCuotaTexto(detalle: DetallePrestamo | null | undefined): string {
@@ -1827,7 +1911,10 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
 
                 forkJoin(requests).subscribe({
                   next: (prestamosAfectables) => {
-                    this.prestamosAfectables.set(prestamosAfectables.filter((item) => item.cuotas.length > 0));
+                    const prestamosConCuotas = prestamosAfectables.filter((item) => item.cuotas.length > 0);
+                    const prestamosOrdenados = this.ordenarPrestamosPorProductoObjetivo(prestamosConCuotas, novedad);
+
+                    this.prestamosAfectables.set(prestamosOrdenados);
                     this.valoresAfectarEditados.set(this.construirMapaValoresAfectados(afectaciones));
                     this.isLoadingAfectacionFinanciera.set(false);
                   },
@@ -1889,7 +1976,6 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
     const capitalOriginal = Number(detalle.capital || 0);
     const interesOriginal = Number(detalle.interes || 0);
     const desgravamenOriginal = Number(detalle.desgravamen || 0);
-    const distribucion = this.distribuirValorAfectar(valorAfectar, valorCuotaOriginal, capitalOriginal, interesOriginal, desgravamenOriginal);
 
     return {
       codigo: existente?.codigo,
@@ -1901,39 +1987,19 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
       interesCuotaOriginal: interesOriginal,
       desgravamenCuotaOriginal: desgravamenOriginal,
       valorAfectar,
-      capitalAfectar: distribucion.capital,
-      interesAfectar: distribucion.interes,
-      desgravamenAfectar: distribucion.desgravamen,
+      capitalAfectar: 0,
+      interesAfectar: 0,
+      desgravamenAfectar: 0,
       diferenciaTotal: this.redondear(valorCuotaOriginal - valorAfectar),
-      diferenciaCapital: this.redondear(capitalOriginal - distribucion.capital),
-      diferenciaInteres: this.redondear(interesOriginal - distribucion.interes),
-      diferenciaDesgravamen: this.redondear(desgravamenOriginal - distribucion.desgravamen),
+      diferenciaCapital: this.redondear(capitalOriginal),
+      diferenciaInteres: this.redondear(interesOriginal),
+      diferenciaDesgravamen: this.redondear(desgravamenOriginal),
       fechaAfectacion: new Date(),
       usuarioRegistro: usuario.nombre || usuario.codigo?.toString() || '',
       fechaCreacionRegistro: existente?.fechaCreacionRegistro || new Date(),
       observaciones: `Afectación registrada para novedad ${novedad.codigo}`,
       estado: 1,
     };
-  }
-
-  private distribuirValorAfectar(
-    valorAfectar: number,
-    valorTotal: number,
-    capitalOriginal: number,
-    interesOriginal: number,
-    desgravamenOriginal: number
-  ): { capital: number; interes: number; desgravamen: number } {
-    if (valorTotal <= 0 || valorAfectar <= 0) {
-      return { capital: 0, interes: 0, desgravamen: 0 };
-    }
-
-    const factor = Math.min(1, valorAfectar / valorTotal);
-    let capital = this.redondear(capitalOriginal * factor);
-    const interes = this.redondear(interesOriginal * factor);
-    const desgravamen = this.redondear(desgravamenOriginal * factor);
-    capital = this.redondear(capital + this.redondear(valorAfectar - capital - interes - desgravamen));
-
-    return { capital, interes, desgravamen };
   }
 
   private obtenerCodigoEstadoCuota(detalle: DetallePrestamo | null | undefined): number | null {
@@ -1972,6 +2038,82 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
 
   private redondear(valor: number): number {
     return Math.round((Number(valor) || 0) * 100) / 100;
+  }
+
+  private parsearMontoEntrada(valor: string | number | null | undefined): number {
+    if (valor === null || valor === undefined) {
+      return 0;
+    }
+
+    if (typeof valor === 'number') {
+      return Number.isFinite(valor) ? valor : 0;
+    }
+
+    const texto = String(valor).trim();
+    if (!texto) {
+      return 0;
+    }
+
+    const normalizado = texto.replace(/\s+/g, '');
+    const ultimoPunto = normalizado.lastIndexOf('.');
+    const ultimaComa = normalizado.lastIndexOf(',');
+
+    let canonical = normalizado;
+
+    if (ultimoPunto > -1 && ultimaComa > -1) {
+      const separadorDecimal = ultimoPunto > ultimaComa ? '.' : ',';
+      const separadorMiles = separadorDecimal === '.' ? ',' : '.';
+      canonical = canonical.split(separadorMiles).join('');
+      if (separadorDecimal === ',') {
+        canonical = canonical.replace(',', '.');
+      }
+    } else if (ultimaComa > -1) {
+      canonical = canonical.replace(',', '.');
+    }
+
+    const numero = Number(canonical);
+    return Number.isFinite(numero) ? numero : 0;
+  }
+
+  private formatearMontoDosDecimales(valor: number): string {
+    return this.redondear(valor).toFixed(2).replace('.', ',');
+  }
+
+  private ordenarPrestamosPorProductoObjetivo(
+    prestamos: PrestamoAfectable[],
+    novedad: NovedadParticipeCarga
+  ): PrestamoAfectable[] {
+    const codigoProductoNovedad = novedad.codigoProducto != null ? String(novedad.codigoProducto) : null;
+    const codigoPetroProductoNovedad = novedad.participeXCargaArchivo?.detalleCargaArchivo?.codigoPetroProducto
+      ? String(novedad.participeXCargaArchivo.detalleCargaArchivo.codigoPetroProducto)
+      : null;
+
+    const coincideProductoObjetivo = (item: PrestamoAfectable): boolean => {
+      const codigoProductoPrestamo = item.prestamo?.producto?.codigo != null
+        ? String(item.prestamo.producto.codigo)
+        : null;
+      const codigoPetroProductoPrestamo = item.prestamo?.producto?.codigoPetro
+        ? String(item.prestamo.producto.codigoPetro)
+        : null;
+
+      return (
+        (codigoProductoNovedad !== null && codigoProductoPrestamo === codigoProductoNovedad) ||
+        (codigoPetroProductoNovedad !== null && codigoPetroProductoPrestamo === codigoPetroProductoNovedad)
+      );
+    };
+
+    const prestamosOrdenados = [...prestamos].sort((a, b) => {
+      const aMatch = coincideProductoObjetivo(a);
+      const bMatch = coincideProductoObjetivo(b);
+
+      if (aMatch === bMatch) {
+        return 0;
+      }
+
+      return aMatch ? -1 : 1;
+    });
+
+    return prestamosOrdenados;
   }
 }
 
