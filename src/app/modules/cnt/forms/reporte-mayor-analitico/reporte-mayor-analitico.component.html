@@ -165,6 +165,16 @@
           @if (selectedCabecera()) {
             — {{ selectedCabecera()!.numeroCuenta }} {{ selectedCabecera()!.nombreCuenta }}
             <span class="rm-count-badge">{{ detalles().length }}</span>
+            <button
+              mat-icon-button
+              type="button"
+              (click)="exportarDetalleCSV()"
+              [disabled]="loadingDetalles() || detalles().length === 0"
+              matTooltip="Exportar detalle a CSV"
+              aria-label="Exportar detalle a CSV"
+            >
+              <mat-icon>download</mat-icon>
+            </button>
           }
         </div>
 
@@ -179,17 +189,20 @@
 
             <ng-container matColumnDef="fechaAsiento">
               <th mat-header-cell *matHeaderCellDef>Fecha</th>
-              <td mat-cell *matCellDef="let row">{{ row.fechaAsiento }}</td>
+              <td mat-cell *matCellDef="let row">{{ formatFecha(row.fechaAsiento) }}</td>
+              <td mat-footer-cell *matFooterCellDef></td>
             </ng-container>
 
             <ng-container matColumnDef="numeroAsiento">
               <th mat-header-cell *matHeaderCellDef class="rm-col-num">N° Asiento</th>
               <td mat-cell *matCellDef="let row" class="rm-col-num">{{ row.numeroAsiento }}</td>
+              <td mat-footer-cell *matFooterCellDef></td>
             </ng-container>
 
             <ng-container matColumnDef="descripcionAsiento">
               <th mat-header-cell *matHeaderCellDef>Descripción</th>
               <td mat-cell *matCellDef="let row" class="rm-col-desc">{{ row.descripcionAsiento }}</td>
+              <td mat-footer-cell *matFooterCellDef></td>
             </ng-container>
 
             <ng-container matColumnDef="valorDebe">
@@ -213,13 +226,13 @@
             <ng-container matColumnDef="estadoAsiento">
               <th mat-header-cell *matHeaderCellDef>Estado</th>
               <td mat-cell *matCellDef="let row">
-                <span class="rm-estado-chip" [attr.data-estado]="row.estadoAsiento">{{ row.estadoAsiento }}</span>
+                <span class="rm-estado-chip" [attr.data-estado]="formatEstadoAsiento(row.estadoAsiento)">{{ formatEstadoAsiento(row.estadoAsiento) }}</span>
               </td>
               <td mat-footer-cell *matFooterCellDef></td>
             </ng-container>
 
             <tr mat-header-row *matHeaderRowDef="colsDetalle; sticky: true"></tr>
-            <tr mat-row *matRowDef="let row; columns: colsDetalle"></tr>
+            <tr mat-row *matRowDef="let row; columns: colsDetalle" class="rm-row-clickable" (click)="abrirAsientoRelacionado(row)"></tr>
             <tr mat-footer-row *matFooterRowDef="colsDetalle"></tr>
           </table>
         }

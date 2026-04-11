@@ -103,6 +103,7 @@ import { ListadosCrdComponent } from './modules/crd/forms/parametrizacion/listad
 import { TiposCrdComponent } from './modules/crd/forms/parametrizacion/tipos-crd/tipos-crd.component';
 import { CuotaConsultaComponent } from './modules/crd/forms/prestamo/cuota-consulta/cuota-consulta.component';
 import { PrestamoConsultaComponent } from './modules/crd/forms/prestamo/prestamo-consulta/prestamo-consulta.component';
+import { PrestamoDashComponent } from './modules/crd/forms/prestamo/prestamo-dash/prestamo-dash.component';
 import { PrestamoEditComponent } from './modules/crd/forms/prestamo/prestamo-edit/prestamo-edit.component';
 import { EntidadCreditosComponent } from './modules/crd/menucreditos/entidad-creditos.component';
 import { ConsultaCargaArchivoResolverService } from './modules/crd/resolver/consulta-carga-archivo-resolver.service';
@@ -833,6 +834,11 @@ export const routes: Routes = [
       {
         path: 'prestamo-consulta',
         component: PrestamoConsultaComponent,
+        canActivate: [authGuard],
+      },
+      {
+        path: 'prestamo-dash',
+        component: PrestamoDashComponent,
         canActivate: [authGuard],
       },
       {

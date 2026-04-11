@@ -122,7 +122,7 @@ export class MenucreditosComponent {
         {
           displayName: 'Dash',
           iconName: 'money_bag',
-          // route: '/menucreditos/participe-dash'
+          route: '/menucreditos/prestamo-dash',
         },
         {
           displayName: 'Consulta Cuotas',

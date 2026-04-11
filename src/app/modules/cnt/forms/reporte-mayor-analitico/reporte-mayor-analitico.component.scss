@@ -169,6 +169,10 @@ $chip-gap: 12px;
   }
 }
 
+.rm-panel--detail .rm-row-clickable:hover {
+  background: #eef2ff;
+}
+
 .rm-row-selected {
   background: $selected-bg !important;
   border-left: 3px solid $selected-border;

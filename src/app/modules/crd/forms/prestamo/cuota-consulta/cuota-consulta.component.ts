@@ -31,6 +31,7 @@ interface CuotaDisplay {
   numeroIdentificacion: string;
   codigoPetro: number;
   numeroCuota: number;
+  estadoId: number;
   estado: string;
 }
 
@@ -46,6 +47,18 @@ interface CuotaDisplay {
   styleUrls: ['./cuota-consulta.component.scss']
 })
 export class CuotaConsultaComponent implements OnInit {
+  private readonly ESTADO_CUOTA_CANCELADA_ANTICIPADA = 7;
+
+  estadosCuota = [
+    { valor: 1, nombre: 'Pendiente' },
+    { valor: 2, nombre: 'Activa' },
+    { valor: 3, nombre: 'Emitida' },
+    { valor: 4, nombre: 'Pagada' },
+    { valor: 5, nombre: 'En mora' },
+    { valor: 6, nombre: 'Parcial' },
+    { valor: 8, nombre: 'Vencida' }
+  ];
+
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
 
@@ -79,6 +92,7 @@ export class CuotaConsultaComponent implements OnInit {
     mes: new FormControl<number>(new Date().getMonth() + 1),
     anio: new FormControl<number>(new Date().getFullYear()),
     busquedaRapida: new FormControl<string>(''),
+    estadoCuota: new FormControl<number | null>(null),
     numeroPrestamo: new FormControl<string>(''),
     nombreEntidad: new FormControl<string>(''),
     numeroIdentificacion: new FormControl<string>(''),
@@ -123,7 +137,8 @@ export class CuotaConsultaComponent implements OnInit {
           fechaVencimiento: this.convertirFecha(detalle.fechaVencimiento) as Date,
           fechaPagado: this.convertirFecha(detalle.fechaPagado) as Date,
           fechaRegistro: this.convertirFecha(detalle.fechaRegistro) as Date
-        }));
+        }))
+        .filter(detalle => !this.debeExcluirDetalle(detalle));
 
         this.allCuotas = this.mapearDetallesACuotas(detalles);
 
@@ -143,7 +158,7 @@ export class CuotaConsultaComponent implements OnInit {
   }
 
   private aplicarFiltrosSecundarios(): void {
-    const { busquedaRapida, numeroPrestamo, nombreEntidad, numeroIdentificacion, codigoPetro } = this.filtrosForm.value;
+    const { busquedaRapida, estadoCuota, numeroPrestamo, nombreEntidad, numeroIdentificacion, codigoPetro } = this.filtrosForm.value;
     let cuotasFiltradas = [...this.allCuotas];
 
     // Búsqueda rápida combinada: cédula, razón social o ID ASOPREP
@@ -154,6 +169,11 @@ export class CuotaConsultaComponent implements OnInit {
         cuota.nombreEntidad.toLowerCase().includes(term) ||
         cuota.numeroPrestamo.toString().includes(term)
       );
+    }
+
+    // Filtrar por estado de cuota
+    if (estadoCuota !== null && estadoCuota !== undefined) {
+      cuotasFiltradas = cuotasFiltradas.filter(cuota => cuota.estadoId === estadoCuota);
     }
 
     // Filtrar por número de préstamo (búsqueda parcial)
@@ -207,6 +227,14 @@ export class CuotaConsultaComponent implements OnInit {
     return null;
   }
 
+  private debeExcluirDetalle(detalle: DetallePrestamo): boolean {
+    return this.esCuotaCanceladaAnticipada(detalle);
+  }
+
+  private esCuotaCanceladaAnticipada(detalle: DetallePrestamo): boolean {
+    return detalle.estado === this.ESTADO_CUOTA_CANCELADA_ANTICIPADA;
+  }
+
   private mapearDetallesACuotas(detalles: DetallePrestamo[]): CuotaDisplay[] {
     return detalles.map(detalle => ({
       codigoDetalle: detalle.codigo,
@@ -219,6 +247,7 @@ export class CuotaConsultaComponent implements OnInit {
       numeroIdentificacion: detalle.prestamo?.entidad?.numeroIdentificacion || 'N/A',
       codigoPetro: detalle.prestamo?.entidad?.rolPetroComercial || 0,
       numeroCuota: detalle.numeroCuota,
+      estadoId: detalle.estado,
       estado: this.obtenerEstadoCuota(detalle)
     }));
   }
@@ -252,6 +281,7 @@ export class CuotaConsultaComponent implements OnInit {
       mes: new Date().getMonth() + 1,
       anio: new Date().getFullYear(),
       busquedaRapida: '',
+      estadoCuota: null,
       numeroPrestamo: '',
       nombreEntidad: '',
       numeroIdentificacion: '',

@@ -47,6 +47,17 @@
               </mat-select>
             </mat-form-field>
 
+            <mat-form-field appearance="fill" class="filter-field">
+              <mat-label>Estado de Cuota</mat-label>
+              <mat-icon matPrefix>rule</mat-icon>
+              <mat-select formControlName="estadoCuota">
+                <mat-option [value]="null">Todos</mat-option>
+                @for (estado of estadosCuota; track estado.valor) {
+                  <mat-option [value]="estado.valor">{{ estado.nombre }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
             <mat-form-field appearance="fill" class="filter-field filter-field--wide">
               <mat-label>Búsqueda rápida</mat-label>
               <mat-icon matPrefix>search</mat-icon>

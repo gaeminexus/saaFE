@@ -10,6 +10,8 @@ import { MayorAnalitico } from '../../model/mayor-analitico';
 import { DetalleMayorAnalitico } from '../../model/detalle-mayor-analitico';
 import { ReporteMyanService } from '../../service/reporte-myan.service';
 import { FuncionesDatosService, TipoFormatoFechaBackend } from '../../../../shared/services/funciones-datos.service';
+import { MayorAnaliticoAsientoDialogComponent } from '../../dialog/mayor-analitico-asiento-dialog/mayor-analitico-asiento-dialog.component';
+import { ExportService } from '../../../../shared/services/export.service';
 
 @Component({
   selector: 'cnt-reporte-mayor-analitico',
@@ -27,6 +29,7 @@ export class ReporteMayorAnaliticoComponent implements OnInit, OnDestroy {
   private reporteService  = inject(ReporteMyanService);
   private appState        = inject(AppStateService);
   private funcionesDatos  = inject(FuncionesDatosService);
+  private exportService   = inject(ExportService);
 
   // ── Estado ──────────────────────────────────────────────────
   loading          = signal(false);
@@ -175,12 +178,16 @@ export class ReporteMayorAnaliticoComponent implements OnInit, OnDestroy {
   private cargarCabeceras(secuencial: number): void {
     this.reporteService.obtenerCabeceras(secuencial).subscribe({
       next: (data) => {
-        this.cabeceras.set(data ?? []);
+        const cabeceras = data ?? [];
+        this.cabeceras.set(cabeceras);
         this.generado.set(true);
         this.loading.set(false);
-        if (!data || data.length === 0) {
+        if (cabeceras.length === 0) {
           this.snackBar.open('El reporte no generó resultados para los filtros indicados.', 'Cerrar', { duration: 4000 });
+          return;
         }
+
+        this.seleccionarCuenta(cabeceras[0]);
       },
       error: () => {
         this.errorMsg.set('Error al cargar las cuentas del reporte.');
@@ -213,6 +220,46 @@ export class ReporteMayorAnaliticoComponent implements OnInit, OnDestroy {
     const d = this.funcionesDatos.convertirFechaDesdeBackend(fecha);
     if (!d) return fecha ?? '—';
     return d.toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
+
+  formatEstadoAsiento(estado: number): string {
+    return this.estadoLabel(estado);
+  }
+
+  exportarDetalleCSV(): void {
+    const movimientos = this.detalles();
+    if (!movimientos.length) {
+      this.snackBar.open('No hay movimientos para exportar.', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    const rows = movimientos.map((mov) => ({
+      'Fecha': this.formatFecha(mov.fechaAsiento),
+      'N° Asiento': mov.numeroAsiento ?? '',
+      'Descripción': mov.descripcionAsiento ?? '',
+      'Debe': Number(mov.valorDebe ?? 0).toFixed(2),
+      'Haber': Number(mov.valorHaber ?? 0).toFixed(2),
+      'Saldo': Number(mov.saldoActual ?? 0).toFixed(2),
+      'Estado': this.formatEstadoAsiento(mov.estadoAsiento),
+      'Centro Costo': mov.numeroCentroCosto || mov.nombreCosto || '',
+    }));
+
+    const numeroCuenta = this.selectedCabecera()?.numeroCuenta || 'detalle';
+    const filename = `mayor-analitico-${String(numeroCuenta).replace(/\s+/g, '-')}`;
+    const headers = ['Fecha', 'N° Asiento', 'Descripción', 'Debe', 'Haber', 'Saldo', 'Estado', 'Centro Costo'];
+    const dataKeys = ['Fecha', 'N° Asiento', 'Descripción', 'Debe', 'Haber', 'Saldo', 'Estado', 'Centro Costo'];
+
+    this.exportService.exportToCSV(rows, filename, headers, dataKeys);
+  }
+
+  abrirAsientoRelacionado(detalle: DetalleMayorAnalitico): void {
+    this.dialog.open(MayorAnaliticoAsientoDialogComponent, {
+      width: '95vw',
+      maxWidth: '1600px',
+      maxHeight: '92vh',
+      data: { detalle },
+      panelClass: 'mayor-analitico-asiento-dialog-panel',
+    });
   }
 
   estadoLabel(estado: number): string {

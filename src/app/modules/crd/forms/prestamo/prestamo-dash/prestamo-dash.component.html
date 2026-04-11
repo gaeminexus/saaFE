@@ -1,1 +1,756 @@
-<p>prestamo-dash.component works!</p>
+<div class="prestamo-dash-shell">
+  <section class="hero-banner">
+    <div class="hero-copy">
+      <span class="eyebrow">Créditos · Resumen gerencial</span>
+      <h1>Dashboard ejecutivo de préstamos</h1>
+      <p>
+        Vista resumida, visual y accionable de la cartera por estado. Toda la información se organiza
+        por paneles para facilitar lectura gerencial.
+      </p>
+
+      <div class="hero-actions">
+        <button mat-raised-button class="primary-action" (click)="cargarDatos()" [disabled]="loading()">
+          <mat-icon>refresh</mat-icon>
+          Actualizar tablero
+        </button>
+        <button mat-stroked-button class="secondary-action" (click)="exportarReportesPDF()" [disabled]="loading()">
+          <mat-icon>picture_as_pdf</mat-icon>
+          Exportar PDF general
+        </button>
+        <button mat-stroked-button class="secondary-action" (click)="irAConsulta()">
+          <mat-icon>travel_explore</mat-icon>
+          Ir a consulta de préstamos
+        </button>
+      </div>
+    </div>
+
+    <div class="hero-aside">
+      <div class="hero-pill">
+        <mat-icon>schedule</mat-icon>
+        Corte: {{ obtenerFechaActualizacionTexto() }}
+      </div>
+
+      <div class="hero-highlight">
+        <div class="highlight-icon"><mat-icon>insights</mat-icon></div>
+        <div>
+          <strong>{{ obtenerEtiquetaWidgetSeleccionado() }}</strong>
+          <p>Selecciona un segmento para ver el detalle de préstamos.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="filters-panel">
+    <div class="filters-panel__header">
+      <div>
+        <span class="widget-chip">Filtros reales</span>
+        <h2>Corte por fecha, estado y producto</h2>
+      </div>
+      <div class="filters-meta">
+        <div class="filters-counter">
+          <strong>{{ activeFiltersCount() }}</strong>
+          <span>filtros activos</span>
+        </div>
+      </div>
+    </div>
+
+    <form [formGroup]="filtrosForm" class="filters-form">
+      <mat-form-field appearance="outline">
+        <mat-label>Fecha desde</mat-label>
+        <input matInput [matDatepicker]="pickerDesde" formControlName="fechaDesde" />
+        <mat-datepicker-toggle matIconSuffix [for]="pickerDesde"></mat-datepicker-toggle>
+        <mat-datepicker #pickerDesde></mat-datepicker>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Fecha hasta</mat-label>
+        <input matInput [matDatepicker]="pickerHasta" formControlName="fechaHasta" />
+        <mat-datepicker-toggle matIconSuffix [for]="pickerHasta"></mat-datepicker-toggle>
+        <mat-datepicker #pickerHasta></mat-datepicker>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Estado del préstamo</mat-label>
+        <mat-select formControlName="estadoPrestamo">
+          <mat-option [value]="null">Todos</mat-option>
+          @for (estado of obtenerEstadoFiltroOptions(); track estado.value) {
+            <mat-option [value]="estado.value">{{ estado.label }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Producto</mat-label>
+        <mat-select formControlName="producto">
+          <mat-option [value]="null">Todos</mat-option>
+          @for (producto of obtenerProductoFiltroOptions(); track producto.value) {
+            <mat-option [value]="producto.value">{{ producto.label }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <div class="filters-actions">
+        <button mat-raised-button class="primary-action" type="button" (click)="aplicarFiltros()" [disabled]="loading()">
+          <mat-icon>filter_alt</mat-icon>
+          Aplicar
+        </button>
+        <button mat-stroked-button class="secondary-action" type="button" (click)="limpiarFiltros()" [disabled]="loading() || activeFiltersCount() === 0">
+          <mat-icon>ink_eraser</mat-icon>
+          Limpiar
+        </button>
+      </div>
+    </form>
+  </section>
+
+  @if (loading()) {
+    <section class="state-panel loading-panel">
+      <mat-spinner diameter="54"></mat-spinner>
+      <h3>Construyendo resumen gerencial</h3>
+    </section>
+  } @else if (error()) {
+    <section class="state-panel error-panel">
+      <mat-icon>error_outline</mat-icon>
+      <h3>No se pudo construir el tablero</h3>
+      <p>{{ error() }}</p>
+    </section>
+  } @else {
+    <div id="reportes-pasteles-export">
+    <section class="collapsible-panel">
+      <button type="button" class="panel-toggle" (click)="togglePanel('resumen')">
+        <span class="panel-toggle__title">Resumen</span>
+        <mat-icon [class.panel-toggle__icon--open]="isPanelOpen('resumen')">expand_more</mat-icon>
+      </button>
+
+      @if (isPanelOpen('resumen')) {
+        <div class="panel-content" id="export-tab-resumen">
+          <div class="panel-export-actions">
+            <button mat-stroked-button class="secondary-action" type="button" (click)="exportarTabPDF('export-tab-resumen', 'Reporte · Resumen')">
+              <mat-icon>picture_as_pdf</mat-icon>
+              Exportar resumen
+            </button>
+          </div>
+          <section class="kpi-grid">
+            @for (card of kpiCards(); track card.label) {
+              <article class="kpi-card" [class]="'tone-' + card.tone">
+                <div class="kpi-icon"><mat-icon>{{ card.icon }}</mat-icon></div>
+                <div class="kpi-content">
+                  <span class="kpi-label">{{ card.label }}</span>
+                  <strong class="kpi-value">{{ card.value }}</strong>
+                  <small class="kpi-helper">{{ card.helper }}</small>
+                </div>
+              </article>
+            }
+          </section>
+        </div>
+      }
+    </section>
+
+    <section class="collapsible-panel">
+      <button type="button" class="panel-toggle" (click)="togglePanel('prestamos')">
+        <span class="panel-toggle__title">Préstamos</span>
+        <mat-icon [class.panel-toggle__icon--open]="isPanelOpen('prestamos')">expand_more</mat-icon>
+      </button>
+
+      @if (isPanelOpen('prestamos')) {
+        <div class="panel-content" id="export-tab-prestamos">
+          <div class="panel-export-actions">
+            <button mat-stroked-button class="secondary-action" type="button" (click)="exportarTabPDF('export-tab-prestamos', 'Reporte · Préstamos')">
+              <mat-icon>picture_as_pdf</mat-icon>
+              Exportar préstamos
+            </button>
+          </div>
+          <section class="widget-grid">
+            @for (widget of chartWidgets(); track widget.id) {
+              <article class="widget-card widget-card--active">
+                <header class="widget-header">
+                  <div>
+                    <span class="widget-chip">{{ widget.totalLabel }}</span>
+                    <h2>{{ widget.title }}</h2>
+                    <p>{{ widget.subtitle }}</p>
+                  </div>
+                  <div class="widget-icon"><mat-icon>{{ widget.icon }}</mat-icon></div>
+                </header>
+
+                <div class="widget-body">
+                  <div class="donut-panel">
+                    <div class="donut-chart">
+                      <svg viewBox="0 0 120 120" class="donut-svg" aria-hidden="true">
+                        <g transform="rotate(-90 60 60)">
+                          <circle class="donut-track" cx="60" cy="60" r="42"></circle>
+                          @for (slice of widget.slices; track slice.key; let i = $index) {
+                            <circle
+                              class="donut-segment"
+                              cx="60"
+                              cy="60"
+                              r="42"
+                              fill="none"
+                              [attr.stroke]="slice.color"
+                              [attr.stroke-dasharray]="slice.dasharray"
+                              [attr.stroke-dashoffset]="slice.dashoffset"
+                              [class.is-selected]="esSeleccionado(widget.id, slice.key)"
+                              [style.animationDelay.ms]="i * 90"
+                              (click)="seleccionarDetalle(widget.id, slice.key)">
+                            </circle>
+                          }
+                        </g>
+                      </svg>
+
+                      <div class="donut-center">
+                        <span>Total</span>
+                        <strong>{{ widget.totalValue }}</strong>
+                        <small>{{ widget.id === 'cantidad' ? 'operaciones' : 'cartera consolidada' }}</small>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="legend-panel">
+                    @for (slice of widget.slices; track slice.key) {
+                      <button
+                        type="button"
+                        class="legend-item"
+                        [class.is-selected]="esSeleccionado(widget.id, slice.key)"
+                        (click)="seleccionarDetalle(widget.id, slice.key)">
+                        <span class="legend-swatch" [style.background]="slice.color"></span>
+                        <span class="legend-copy">
+                          <strong>{{ slice.label }}</strong>
+                          <small>{{ slice.displayValue }} · {{ slice.percentage | number:'1.0-1' }}%</small>
+                        </span>
+                        <mat-icon>chevron_right</mat-icon>
+                      </button>
+                    }
+                  </div>
+                </div>
+              </article>
+            }
+          </section>
+
+        @if (selectedResumen(); as resumen) {
+            <section class="detail-grid">
+              <article class="detail-card detail-card--main">
+                <header class="detail-header">
+                  <div>
+                    <span class="detail-chip">Detalle activo</span>
+                    <h2>{{ resumen.label }}</h2>
+                  </div>
+                  <div class="detail-badge" [style.border-color]="resumen.color">
+                    <span class="dot" [style.background]="resumen.color"></span>
+                    {{ resumen.count }} préstamos
+                  </div>
+                </header>
+
+                <div class="detail-stats">
+                  <div class="detail-stat"><span>Valor colocado</span><strong>$ {{ resumen.totalValor | number:'1.0-2' }}</strong></div>
+                  <div class="detail-stat"><span>Saldo pendiente</span><strong>$ {{ resumen.totalSaldo | number:'1.0-2' }}</strong></div>
+                  <div class="detail-stat"><span>Mora acumulada</span><strong>$ {{ resumen.totalMora | number:'1.0-2' }}</strong></div>
+                  <div class="detail-stat"><span>Ticket promedio</span><strong>$ {{ resumen.promedioTicket | number:'1.0-2' }}</strong></div>
+                </div>
+
+                <div class="loan-list">
+                  @for (prestamo of detallePrestamos(); track trackByPrestamo($index, prestamo)) {
+                    <article class="loan-row">
+                      <div class="loan-main">
+                        <div class="loan-title-row">
+                          <strong>#{{ prestamo.codigo }}</strong>
+                          <span class="loan-state">{{ obtenerEstado(prestamo) }}</span>
+                        </div>
+                        <span class="loan-entity">{{ obtenerEntidad(prestamo) }}</span>
+                        <small class="loan-product">{{ obtenerProducto(prestamo) }}</small>
+                      </div>
+
+                      <div class="loan-metrics">
+                        <div><span>Valor</span><strong>{{ obtenerValorTexto(prestamo) }}</strong></div>
+                        <div><span>Saldo</span><strong>{{ obtenerSaldoTexto(prestamo) }}</strong></div>
+                        <div><span>Mora</span><strong>{{ obtenerMoraTexto(prestamo) }}</strong></div>
+                        <div><span>Días vencido</span><strong>{{ obtenerDiasVencido(prestamo) }}</strong></div>
+                      </div>
+                    </article>
+                  }
+                </div>
+              </article>
+
+              <article class="detail-card detail-card--side">
+                <header class="detail-header">
+                  <div>
+                    <span class="detail-chip">Más relevantes</span>
+                    <h2>Entidades con mayor saldo</h2>
+                  </div>
+                </header>
+
+                @for (item of topEntidades(); track item.label + $index) {
+                  <div class="ranking-row">
+                    <div>
+                      <strong>{{ item.label }}</strong>
+                      <small>{{ item.secondary }}</small>
+                    </div>
+                    <span>{{ item.displayValue }}</span>
+                  </div>
+                }
+              </article>
+
+              <article class="detail-card detail-card--side">
+                <header class="detail-header">
+                  <div>
+                    <span class="detail-chip">Más relevantes</span>
+                    <h2>Productos con mayor valor</h2>
+                  </div>
+                </header>
+
+                @for (item of topProductos(); track item.label + $index) {
+                  <div class="ranking-row">
+                    <div>
+                      <strong>{{ item.label }}</strong>
+                      <small>{{ item.secondary }}</small>
+                    </div>
+                    <span>{{ item.displayValue }}</span>
+                  </div>
+                }
+              </article>
+            </section>
+        }
+        </div>
+      }
+    </section>
+
+    <section class="collapsible-panel">
+      <button type="button" class="panel-toggle" (click)="togglePanel('entidades')">
+        <span class="panel-toggle__title">Entidades (Partícipes)</span>
+        <mat-icon [class.panel-toggle__icon--open]="isPanelOpen('entidades')">expand_more</mat-icon>
+      </button>
+
+      @if (isPanelOpen('entidades')) {
+        <div class="panel-content" id="export-tab-entidades">
+          <div class="panel-export-actions">
+            <button mat-stroked-button class="secondary-action" type="button" (click)="exportarTabPDF('export-tab-entidades', 'Reporte · Entidades (Partícipes)')">
+              <mat-icon>picture_as_pdf</mat-icon>
+              Exportar partícipes
+            </button>
+          </div>
+          @if (loadingEntidades()) {
+            <section class="state-panel loading-panel">
+              <mat-spinner diameter="44"></mat-spinner>
+              <h3>Construyendo resumen de entidades-partícipes</h3>
+            </section>
+          } @else if (errorEntidades()) {
+            <section class="state-panel error-panel">
+              <mat-icon>error_outline</mat-icon>
+              <h3>No se pudo construir el resumen de entidades</h3>
+              <p>{{ errorEntidades() }}</p>
+            </section>
+          } @else {
+            <div class="latest-load-kpis">
+              <article class="mini-kpi-card">
+                <span class="mini-kpi-card__label">Partícipes</span>
+                <strong>{{ entidadesKpi().totalParticipes | number:'1.0-0' }}</strong>
+              </article>
+              <article class="mini-kpi-card mini-kpi-card--success">
+                <span class="mini-kpi-card__label">Estados</span>
+                <strong>{{ entidadesKpi().estados | number:'1.0-0' }}</strong>
+              </article>
+              <article class="mini-kpi-card mini-kpi-card--warning">
+                <span class="mini-kpi-card__label">Total préstamos</span>
+                <strong>{{ formatearMoneda(entidadesKpi().totalPrestamos) }}</strong>
+              </article>
+              <article class="mini-kpi-card mini-kpi-card--danger">
+                <span class="mini-kpi-card__label">Total aportes</span>
+                <strong>{{ formatearMoneda(entidadesKpi().totalAportes) }}</strong>
+              </article>
+            </div>
+
+            <section class="widget-grid">
+              @for (widget of entidadEstadoWidgets(); track widget.id) {
+                <article class="widget-card widget-card--active">
+                  <header class="widget-header">
+                    <div>
+                      <span class="widget-chip">{{ widget.totalLabel }}</span>
+                      <h2>{{ widget.title }}</h2>
+                      <p>{{ widget.subtitle }}</p>
+                    </div>
+                    <div class="widget-icon"><mat-icon>{{ widget.icon }}</mat-icon></div>
+                  </header>
+
+                  <div class="widget-body">
+                    <div class="donut-panel">
+                      <div class="donut-chart">
+                        <svg viewBox="0 0 120 120" class="donut-svg" aria-hidden="true">
+                          <g transform="rotate(-90 60 60)">
+                            <circle class="donut-track" cx="60" cy="60" r="42"></circle>
+                            @for (slice of widget.slices; track slice.key; let i = $index) {
+                              <circle
+                                class="donut-segment"
+                                cx="60"
+                                cy="60"
+                                r="42"
+                                fill="none"
+                                [attr.stroke]="slice.color"
+                                [attr.stroke-dasharray]="slice.dasharray"
+                                [attr.stroke-dashoffset]="slice.dashoffset"
+                                [style.animationDelay.ms]="i * 80">
+                              </circle>
+                            }
+                          </g>
+                        </svg>
+
+                        <div class="donut-center">
+                          <span>Total</span>
+                          <strong>{{ widget.totalValue }}</strong>
+                          <small>agrupado por estado de partícipe</small>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="legend-panel">
+                      @for (slice of widget.slices; track slice.key) {
+                        <div class="legend-item legend-item--static">
+                          <span class="legend-swatch" [style.background]="slice.color"></span>
+                          <span class="legend-copy">
+                            <strong>{{ slice.label }}</strong>
+                            <small>{{ slice.displayValue }} · {{ slice.percentage | number:'1.0-1' }}%</small>
+                          </span>
+                        </div>
+                      }
+                    </div>
+                  </div>
+                </article>
+              }
+            </section>
+          }
+        </div>
+      }
+    </section>
+
+    <section class="collapsible-panel">
+      <button type="button" class="panel-toggle" (click)="togglePanel('cargas')">
+        <span class="panel-toggle__title">Cargas y novedades</span>
+        <mat-icon [class.panel-toggle__icon--open]="isPanelOpen('cargas')">expand_more</mat-icon>
+      </button>
+
+      @if (isPanelOpen('cargas')) {
+        <div class="panel-content" id="export-tab-cargas">
+          <div class="panel-export-actions">
+            <button mat-stroked-button class="secondary-action" type="button" (click)="exportarTabPDF('export-tab-cargas', 'Reporte · Cargas y novedades')">
+              <mat-icon>picture_as_pdf</mat-icon>
+              Exportar cargas
+            </button>
+          </div>
+          <section class="latest-load-panel" id="carga-resumen-bloque">
+            <div class="latest-load-header">
+              <div>
+                <span class="eyebrow">Última carga</span>
+                <h2>Resumen de recaudación y novedades</h2>
+              </div>
+
+              @if (selectedLoadSummary(); as cargaResumenMeta) {
+                <div class="latest-load-badges">
+                  <span class="latest-load-badge">
+                    <small class="latest-load-badge__label">Fecha</small>
+                    <strong class="latest-load-badge__value">{{ selectedCargaCodigo() !== null ? obtenerFechaCargaTexto(cargaResumenMeta.carga) : 'Consolidado' }}</strong>
+                  </span>
+                  <span class="latest-load-badge">
+                    <small class="latest-load-badge__label">Período</small>
+                    <strong class="latest-load-badge__value">{{ selectedCargaCodigo() !== null ? obtenerPeriodoCargaTexto(cargaResumenMeta.carga) : ('Últimas ' + latestLoadSummaries().length + ' cargas') }}</strong>
+                  </span>
+                  <span class="latest-load-badge">
+                    <small class="latest-load-badge__label">Estado</small>
+                    <strong class="latest-load-badge__value">{{ selectedCargaCodigo() !== null ? obtenerEstadoCargaTexto(cargaResumenMeta.carga.estado) : 'Mixto' }}</strong>
+                  </span>
+                  <span class="latest-load-badge">
+                    <small class="latest-load-badge__label">Usuario</small>
+                    <strong class="latest-load-badge__value">{{ selectedCargaCodigo() !== null ? obtenerUsuarioCargaTexto(cargaResumenMeta.carga) : 'Varios' }}</strong>
+                  </span>
+                  <span class="latest-load-badge">
+                    <small class="latest-load-badge__label">Carga</small>
+                    <strong class="latest-load-badge__value">{{ selectedCargaCodigo() !== null ? ('#' + cargaResumenMeta.carga.codigo) : (latestLoadSummaries().length + ' seleccionadas') }}</strong>
+                  </span>
+                  <button mat-stroked-button type="button" class="latest-load-clear-btn" (click)="limpiarSeleccionCarga()" [disabled]="selectedCargaCodigo() === null">
+                    <mat-icon>close</mat-icon>
+                    Quitar selección
+                  </button>
+                </div>
+              }
+            </div>
+
+            @if (loadingUltimaCarga()) {
+              <div class="latest-load-state latest-load-state--loading">
+                <mat-spinner diameter="34"></mat-spinner>
+                <span>Analizando la última carga...</span>
+              </div>
+            }
+
+            @if (!loadingUltimaCarga() && errorUltimaCarga()) {
+              <div class="latest-load-state latest-load-state--error">
+                <mat-icon>warning_amber</mat-icon>
+                <span>{{ errorUltimaCarga() }}</span>
+              </div>
+            }
+
+            @if (!loadingUltimaCarga() && !errorUltimaCarga()) {
+              @if (selectedLoadSummary(); as cargaResumen) {
+                <div class="latest-load-kpis">
+                  <article class="mini-kpi-card"><span class="mini-kpi-card__label">Solicitado</span><strong>{{ formatearMoneda(cargaResumen.totalSolicitado) }}</strong></article>
+                  <article class="mini-kpi-card mini-kpi-card--success"><span class="mini-kpi-card__label">Recaudado</span><strong>{{ formatearMoneda(cargaResumen.totalRecaudado) }}</strong></article>
+                  <article class="mini-kpi-card mini-kpi-card--warning"><span class="mini-kpi-card__label">Novedades</span><strong>{{ formatearMoneda(cargaResumen.totalNovedades) }}</strong></article>
+                  <article class="mini-kpi-card mini-kpi-card--danger"><span class="mini-kpi-card__label">No recaudado</span><strong>{{ formatearMoneda(cargaResumen.totalNoRecaudado) }}</strong></article>
+                </div>
+              }
+
+              @if (latestLoadSummaries().length) {
+                <div class="latest-load-charts-grid">
+                  @for (cargaResumen of latestLoadSummaries(); track cargaResumen.carga.codigo) {
+                    <article class="latest-load-chart-card" [class.is-selected]="esCargaSeleccionada(cargaResumen.carga.codigo)" (click)="seleccionarCargaResumen(cargaResumen.carga.codigo)">
+                      <header class="latest-load-chart-card__header">
+                        <strong>Carga {{ obtenerPeriodoCargaTexto(cargaResumen.carga) }}</strong>
+                        <small>
+                          {{ obtenerPeriodoCargaTexto(cargaResumen.carga) }} · {{ obtenerEstadoCargaTexto(cargaResumen.carga.estado) }}
+                        </small>
+                      </header>
+
+                      <div class="latest-load-chart-card__content">
+                        <div class="latest-load-chart-shell">
+                          <div class="donut-chart donut-chart--large donut-chart--latest-load">
+                            <svg viewBox="0 0 220 220" aria-hidden="true">
+                              <circle class="donut-chart__track" cx="110" cy="110" r="72"></circle>
+
+                              @for (slice of cargaResumen.slices; track slice.key) {
+                                <circle
+                                  class="donut-chart__segment"
+                                  cx="110"
+                                  cy="110"
+                                  r="72"
+                                  [attr.stroke]="slice.color"
+                                  [attr.stroke-dasharray]="slice.dasharray"
+                                  [attr.stroke-dashoffset]="slice.dashoffset">
+                                </circle>
+                              }
+                            </svg>
+
+                            <div class="donut-chart__center donut-chart__center--latest-load">
+                              <span class="donut-chart__label">Solicitado</span>
+                              <strong>{{ formatearMonedaCompacta(cargaResumen.totalSolicitado) }}</strong>
+                              <small>Total de la carga</small>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div class="latest-load-legend">
+                          @for (slice of cargaResumen.slices; track slice.key) {
+                            <button type="button" class="slice-legend slice-legend--static">
+                              <span class="slice-legend__dot" [style.background]="slice.color"></span>
+                              <span class="slice-legend__content">
+                                <strong>{{ slice.label }}</strong>
+                                <small>{{ slice.displayValue }} · {{ slice.percentage | number:'1.0-1' }}%</small>
+                              </span>
+                            </button>
+                          }
+                        </div>
+                      </div>
+                    </article>
+                  }
+                </div>
+              }
+
+              @if (selectedLoadSummary(); as cargaResumenActual) {
+                @if (cargaResumenActual.novedades.length) {
+                  <div class="latest-load-novedades-list">
+                    @for (novedad of cargaResumenActual.novedades; track novedad.tipoNovedad) {
+                      <button type="button" class="novedad-pill" [class.novedad-pill--active]="esNovedadSeleccionada(novedad.tipoNovedad)" (click)="seleccionarNovedadTipo(novedad.tipoNovedad)">
+                        <span class="novedad-pill__dot" [style.background]="novedad.color"></span>
+                        <span class="novedad-pill__text">
+                          <strong>{{ novedad.descripcion }}</strong>
+                          <small>{{ novedad.cantidad }} casos · {{ formatearMoneda(novedad.montoDiferencia) }}</small>
+                        </span>
+                      </button>
+                    }
+                  </div>
+
+                  @if (selectedNovedadResumen(); as detalleNovedad) {
+                    <div class="latest-load-focus-card">
+                      <div class="latest-load-focus-card__metrics">
+                        <div><span>Esperado</span><strong>{{ formatearMoneda(detalleNovedad.montoEsperado) }}</strong></div>
+                        <div><span>Recibido</span><strong>{{ formatearMoneda(detalleNovedad.montoRecibido) }}</strong></div>
+                        <div><span>Diferencia</span><strong>{{ formatearMoneda(detalleNovedad.montoDiferencia) }}</strong></div>
+                      </div>
+
+                      @if (selectedNovedadDetalle(); as resumenNovedad) {
+                        <div class="latest-load-focus-card__summary">
+                          <div class="summary-item"><span>Promedio por caso</span><strong>{{ formatearMoneda(resumenNovedad.promedioDiferencia) }}</strong></div>
+                          <div class="summary-item"><span>Peso en novedades</span><strong>{{ resumenNovedad.porcentajeSobreNovedades | number:'1.0-1' }}%</strong></div>
+                          <div class="summary-item"><span>Peso sobre solicitado</span><strong>{{ resumenNovedad.porcentajeSobreSolicitado | number:'1.0-1' }}%</strong></div>
+                        </div>
+                      }
+                    </div>
+                  }
+                }
+              }
+            }
+          </section>
+        </div>
+      }
+    </section>
+
+    <section class="collapsible-panel">
+      <button type="button" class="panel-toggle" (click)="togglePanel('aportes')">
+        <span class="panel-toggle__title">Aportes y entidades</span>
+        <mat-icon [class.panel-toggle__icon--open]="isPanelOpen('aportes')">expand_more</mat-icon>
+      </button>
+
+      @if (isPanelOpen('aportes')) {
+        <div class="panel-content" id="export-tab-aportes">
+          <div class="panel-export-actions">
+            <button mat-stroked-button class="secondary-action" type="button" (click)="exportarTabPDF('export-tab-aportes', 'Reporte · Aportes y entidades')">
+              <mat-icon>picture_as_pdf</mat-icon>
+              Exportar aportes
+            </button>
+            <button mat-stroked-button class="secondary-action" type="button" (click)="quitarSeleccionesTiposAporte()" [disabled]="resumenAportesPorTipo().length === 0">
+              <mat-icon>close</mat-icon>
+              Borrar todas
+            </button>
+            <button mat-stroked-button class="secondary-action" type="button" (click)="limpiarSeleccionTiposAporte()" [disabled]="resumenAportesPorTipo().length === 0">
+              <mat-icon>ink_eraser</mat-icon>
+              Incluir todos
+            </button>
+          </div>
+          @if (loadingAportes()) {
+            <section class="state-panel loading-panel">
+              <mat-spinner diameter="44"></mat-spinner>
+              <h3>Analizando movimientos de aportes</h3>
+            </section>
+          } @else if (errorAportes()) {
+            <section class="state-panel error-panel">
+              <mat-icon>error_outline</mat-icon>
+              <h3>No se pudo construir el resumen de aportes</h3>
+              <p>{{ errorAportes() }}</p>
+            </section>
+          } @else {
+            <div class="latest-load-kpis">
+              <article class="mini-kpi-card">
+                <span class="mini-kpi-card__label">Tipos de aporte</span>
+                <strong>{{ resumenKpiAportes().tipos | number:'1.0-0' }}</strong>
+              </article>
+              <article class="mini-kpi-card mini-kpi-card--success">
+                <span class="mini-kpi-card__label">Movimientos en más</span>
+                <strong>{{ formatearMoneda(resumenKpiAportes().totalMas) }}</strong>
+              </article>
+              <article class="mini-kpi-card mini-kpi-card--warning">
+                <span class="mini-kpi-card__label">Movimientos en menos</span>
+                <strong>{{ formatearMoneda(resumenKpiAportes().totalMenos) }}</strong>
+              </article>
+              <article class="mini-kpi-card mini-kpi-card--danger">
+                <span class="mini-kpi-card__label">Saldo neto</span>
+                <strong>{{ formatearMoneda(resumenKpiAportes().saldoNeto) }}</strong>
+              </article>
+            </div>
+
+            <section class="widget-grid widget-grid--future-only">
+              <article class="widget-card widget-card--active">
+                <header class="widget-header">
+                  <div>
+                    <span class="widget-chip">{{ aporteWidget().totalLabel }}</span>
+                    <h2>{{ aporteWidget().title }}</h2>
+                    <p>{{ aporteWidget().subtitle }}</p>
+                  </div>
+                  <div class="widget-icon"><mat-icon>{{ aporteWidget().icon }}</mat-icon></div>
+                </header>
+
+                <div class="widget-body">
+                  <div class="donut-panel">
+                    <div class="donut-chart">
+                      <svg viewBox="0 0 120 120" class="donut-svg" aria-hidden="true">
+                        <g transform="rotate(-90 60 60)">
+                          <circle class="donut-track" cx="60" cy="60" r="42"></circle>
+                          @for (slice of aporteWidget().slices; track slice.key; let i = $index) {
+                            <circle
+                              class="donut-segment"
+                              cx="60"
+                              cy="60"
+                              r="42"
+                              fill="none"
+                              [attr.stroke]="slice.color"
+                              [attr.stroke-dasharray]="slice.dasharray"
+                              [attr.stroke-dashoffset]="slice.dashoffset"
+                              [class.is-selected]="esTipoAporteSeleccionado(slice.key)"
+                              [style.animationDelay.ms]="i * 90"
+                              (click)="seleccionarTipoAporte(slice.key)">
+                            </circle>
+                          }
+                        </g>
+                      </svg>
+
+                      <div class="donut-center">
+                        <span>Saldo neto</span>
+                        <strong>{{ aporteWidget().totalValue }}</strong>
+                        <small>considera movimientos en más y menos</small>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="legend-panel">
+                    @for (tipo of resumenAportesPorTipo(); track tipo.key) {
+                      <button
+                        type="button"
+                        class="legend-item"
+                        [class.is-selected]="esTipoAporteSeleccionado(tipo.key)"
+                        [class.legend-item--included]="esTipoAporteSeleccionado(tipo.key)"
+                        [class.legend-item--excluded]="!esTipoAporteSeleccionado(tipo.key)"
+                        (click)="seleccionarTipoAporte(tipo.key)">
+                        <span class="legend-swatch" [style.background]="tipo.color"></span>
+                        <span class="legend-copy">
+                          <strong>{{ tipo.label }}</strong>
+                          <small>{{ formatearMonedaCompacta(tipo.saldoNeto < 0 ? -tipo.saldoNeto : tipo.saldoNeto) }} · {{ obtenerParticipacionTipoAporte(tipo.key) | number:'1.0-1' }}%</small>
+                        </span>
+                        <mat-icon>chevron_right</mat-icon>
+                      </button>
+                    }
+                  </div>
+                </div>
+              </article>
+            </section>
+
+            @if (selectedAporteTipoResumen(); as tipoResumen) {
+              <section class="detail-grid">
+                <article class="detail-card detail-card--main">
+                  <header class="detail-header">
+                    <div>
+                      <span class="detail-chip">Tipo seleccionado</span>
+                      <h2>{{ tipoResumen.label }}</h2>
+                    </div>
+                    <div class="detail-badge" [style.border-color]="tipoResumen.color">
+                      <span class="dot" [style.background]="tipoResumen.color"></span>
+                      {{ tipoResumen.movimientos }} movimientos
+                    </div>
+                  </header>
+
+                  <div class="detail-stats">
+                    <div class="detail-stat"><span>Movimientos en más</span><strong>{{ formatearMoneda(tipoResumen.montoMas) }}</strong></div>
+                    <div class="detail-stat"><span>Movimientos en menos</span><strong>{{ formatearMoneda(tipoResumen.montoMenos) }}</strong></div>
+                    <div class="detail-stat"><span>Saldo neto</span><strong>{{ formatearMoneda(tipoResumen.saldoNeto) }}</strong></div>
+                    <div class="detail-stat"><span>Participación</span><strong>{{ obtenerParticipacionTipoAporte(tipoResumen.key) | number:'1.0-1' }}%</strong></div>
+                  </div>
+                </article>
+
+                <article class="detail-card detail-card--side">
+                  <header class="detail-header">
+                    <div>
+                      <span class="detail-chip">Más representativos</span>
+                      <h2>Entidades con mayor impacto neto</h2>
+                    </div>
+                  </header>
+
+                  @for (item of aportesRepresentativos(); track item.key) {
+                    <div class="ranking-row">
+                      <div>
+                        <strong>{{ item.label }}</strong>
+                        <small>{{ item.secondary }}</small>
+                      </div>
+                      <span>{{ item.displayValue }}</span>
+                    </div>
+                  }
+                </article>
+              </section>
+            }
+          }
+        </div>
+      }
+    </section>
+    </div>
+  }
+</div>

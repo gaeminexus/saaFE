@@ -745,6 +745,24 @@ export class AsientosContablesDinamico implements OnInit {
     return item.id || `${index}`;
   }
 
+  private validarTipoAsientoRequerido(): boolean {
+    const tipoControl = this.form.get('tipo');
+    const tipoSeleccionado = tipoControl?.value;
+
+    if (tipoSeleccionado === null || tipoSeleccionado === undefined || tipoSeleccionado === '') {
+      tipoControl?.markAsTouched();
+      this.snackBar.open('Debe seleccionar un tipo de asiento para grabar.', 'Cerrar', {
+        duration: 4000,
+        horizontalPosition: 'center',
+        verticalPosition: 'top',
+        panelClass: ['error-snackbar'],
+      });
+      return false;
+    }
+
+    return true;
+  }
+
   /**
    * Construye el payload de cabecera a partir del formulario actual.
    * @param estado  Estado a asignar al asiento (por defecto: el del formulario o 4-INCOMPLETO)
@@ -791,6 +809,10 @@ export class AsientosContablesDinamico implements OnInit {
    * Grabar solo la cabecera del asiento sin validar detalles
    */
   grabarCabecera(): void {
+    if (!this.validarTipoAsientoRequerido()) {
+      return;
+    }
+
     // Validar solo campos de cabecera
     const tipo = this.form.get('tipo');
     const numero = this.form.get('numero');
@@ -871,6 +893,10 @@ export class AsientosContablesDinamico implements OnInit {
    * Grabar los detalles del asiento (debe/haber) junto con la cabecera si es necesario
    */
   grabarDetalle(): void {
+    if (!this.validarTipoAsientoRequerido()) {
+      return;
+    }
+
     // Validar solo campos básicos (tipo, número, fecha) - permitir asientos incompletos
     const tipoValido = this.form.get('tipo')?.valid;
     const numeroValido = this.form.get('numero')?.valid;
@@ -2162,6 +2188,10 @@ export class AsientosContablesDinamico implements OnInit {
    * Solo disponible cuando el asiento está cuadrado
    */
   confirmarAsiento(): void {
+    if (!this.validarTipoAsientoRequerido()) {
+      return;
+    }
+
     // Validación 1: Debe existir la cabecera guardada
     if (!this.codigoAsientoActual) {
       this.snackBar.open('⚠️ Debe guardar la cabecera primero', 'Cerrar', {

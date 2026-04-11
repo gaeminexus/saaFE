@@ -393,6 +393,11 @@ export class ReporteListadoAsientosComponent implements OnInit {
     return estado ? estado.etiqueta : 'Desconocido';
   }
 
+  getTipoAsientoNombre(asiento: Asiento): string {
+    const nombre = (asiento as any)?.tipoAsiento?.nombre;
+    return typeof nombre === 'string' && nombre.trim().length > 0 ? nombre : 'N/A';
+  }
+
   /**
    * Toggle expansión de un asiento para ver sus detalles
    */
@@ -506,7 +511,7 @@ export class ReporteListadoAsientosComponent implements OnInit {
       asiento.numero.toString(),
       this.formatearFecha(asiento.fechaIngreso),
       this.formatearFecha(asiento.fechaAsiento),
-      asiento.tipoAsiento.nombre || 'N/A',
+      this.getTipoAsientoNombre(asiento),
       this.getEstadoLabel(asiento.estado),
       asiento.nombreUsuario || 'N/A',
       asiento.observaciones || '-'
@@ -543,7 +548,7 @@ export class ReporteListadoAsientosComponent implements OnInit {
       numero: asiento.numero.toString(),
       fechaIngresoFormateada: this.formatearFecha(asiento.fechaIngreso),
       fechaAsientoFormateada: this.formatearFecha(asiento.fechaAsiento),
-      tipoNombre: asiento.tipoAsiento.nombre || 'N/A',
+      tipoNombre: this.getTipoAsientoNombre(asiento),
       estadoLabel: this.getEstadoLabel(asiento.estado),
       nombreUsuario: asiento.nombreUsuario || 'N/A',
       observaciones: asiento.observaciones || '-'

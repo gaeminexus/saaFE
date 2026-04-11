@@ -224,7 +224,7 @@
                     <strong>Fecha Asiento:</strong> {{ formatearFecha(asiento.fechaAsiento) }}
                   </div>
                   <div class="info-item">
-                    <strong>Tipo:</strong> {{ asiento.tipoAsiento.nombre || 'N/A' }}
+                    <strong>Tipo:</strong> {{ getTipoAsientoNombre(asiento) }}
                   </div>
                   <div class="info-item">
                     <strong>Estado:</strong> {{ getEstadoLabel(asiento.estado) }}

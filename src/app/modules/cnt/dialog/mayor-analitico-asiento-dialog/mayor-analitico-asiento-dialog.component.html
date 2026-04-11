@@ -1,0 +1,107 @@
+<div class="asiento-dialog">
+  <div class="asiento-dialog__header">
+    <div>
+      <h2>{{ titulo() }}</h2>
+      <p>
+        Fecha asiento: {{ formatFecha(detalleMayor.fechaAsiento) }} · Estado: {{ formatEstado(asiento()?.estado ?? detalleMayor.estadoAsiento) }}
+      </p>
+    </div>
+
+    <button mat-icon-button type="button" class="btn-close-like-listado" (click)="cerrar()" matTooltip="Cerrar">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <div class="asiento-dialog__meta">
+    <span class="meta-pill">Mayor: {{ mayorCuentaTexto() }}</span>
+    <span class="meta-pill">Debe: {{ detalleMayor.valorDebe | number:'1.2-2' }}</span>
+    <span class="meta-pill">Haber: {{ detalleMayor.valorHaber | number:'1.2-2' }}</span>
+    <span class="meta-pill meta-pill--related">Relacionadas: {{ totalRelacionadas() }}</span>
+  </div>
+
+  <div class="asiento-cabecera-grid">
+    <div class="cab-item">
+      <strong>Fecha Ingreso:</strong>
+      <span>{{ formatFecha(asiento()?.fechaIngreso) }}</span>
+    </div>
+    <div class="cab-item">
+      <strong>Fecha Asiento:</strong>
+      <span>{{ formatFecha(asiento()?.fechaAsiento || detalleMayor.fechaAsiento) }}</span>
+    </div>
+    <div class="cab-item">
+      <strong>Tipo:</strong>
+      <span>{{ tipoAsientoTexto() }}</span>
+    </div>
+    <div class="cab-item">
+      <strong>Estado:</strong>
+      <span>{{ formatEstado(asiento()?.estado ?? detalleMayor.estadoAsiento) }}</span>
+    </div>
+    <div class="cab-item">
+      <strong>Usuario:</strong>
+      <span>{{ asiento()?.nombreUsuario || 'N/D' }}</span>
+    </div>
+  </div>
+
+  <div class="asiento-dialog__actions">
+    <button mat-raised-button type="button" class="btn-like-listado" [class.btn-like-listado--active]="soloRelacionadas()" (click)="toggleSoloRelacionadas()">
+      <mat-icon>{{ soloRelacionadas() ? 'filter_alt' : 'filter_alt_off' }}</mat-icon>
+      {{ soloRelacionadas() ? 'Solo relacionadas' : 'Asiento completo' }}
+    </button>
+  </div>
+
+  @if (loading()) {
+    <div class="state state--loading">
+      <mat-spinner diameter="40"></mat-spinner>
+      <span>Cargando asiento relacionado...</span>
+    </div>
+  } @else if (error()) {
+    <div class="state state--error">
+      <mat-icon>error_outline</mat-icon>
+      <span>{{ error() }}</span>
+    </div>
+  } @else if (dataSource.data.length === 0) {
+    <div class="state state--empty">
+      <mat-icon>info</mat-icon>
+      <span>No hay líneas para mostrar con el filtro actual.</span>
+    </div>
+  } @else {
+    <div class="table-wrap">
+      <table mat-table [dataSource]="dataSource" class="asiento-table">
+        <ng-container matColumnDef="numeroCuenta">
+          <th mat-header-cell *matHeaderCellDef>Cuenta</th>
+          <td mat-cell *matCellDef="let row">{{ row.numeroCuenta || row.planCuenta?.cuentaContable || 'N/D' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="nombreCuenta">
+          <th mat-header-cell *matHeaderCellDef>Nombre</th>
+          <td mat-cell *matCellDef="let row">{{ row.nombreCuenta || row.planCuenta?.nombre || 'N/D' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="descripcion">
+          <th mat-header-cell *matHeaderCellDef>Descripción</th>
+          <td mat-cell *matCellDef="let row">{{ row.descripcion || '-' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="valorDebe">
+          <th mat-header-cell *matHeaderCellDef class="num">Debe</th>
+          <td mat-cell *matCellDef="let row" class="num">{{ row.valorDebe | number:'1.2-2' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="valorHaber">
+          <th mat-header-cell *matHeaderCellDef class="num">Haber</th>
+          <td mat-cell *matCellDef="let row" class="num">{{ row.valorHaber | number:'1.2-2' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="centroCosto">
+          <th mat-header-cell *matHeaderCellDef>Centro Costo</th>
+          <td mat-cell *matCellDef="let row">{{ row.centroCosto?.nombre || '-' }}</td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns" [class.row-related]="row.relacionado"></tr>
+      </table>
+    </div>
+
+    <mat-paginator [pageSizeOptions]="[10, 25, 50, 100]" [pageSize]="25" showFirstLastButtons></mat-paginator>
+  }
+</div>

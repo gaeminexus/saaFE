@@ -1,7 +1,14 @@
-import { HttpHeaders, HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpHeaders, HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, catchError, of, throwError } from 'rxjs';
 import { Entidad } from '../model/entidad';
+import {
+  EntidadDashboardFiltros,
+  EntidadResumenAportesDTO,
+  EntidadResumenConsolidadoDTO,
+  EntidadResumenEstadoDTO,
+  EntidadResumenPrestamosDTO,
+} from '../model/entidad-dashboard';
 import { ServiciosCrd } from './ws-crd';
 
 @Injectable({
@@ -69,6 +76,46 @@ export class EntidadService {
     return this.http.post<any>(url, datos, this.httpOptions).pipe(
       catchError(this.handleError)
     );
+  }
+
+  private buildDashboardParams(filtros?: EntidadDashboardFiltros): HttpParams {
+    let params = new HttpParams();
+
+    if (filtros?.estados) {
+      params = params.set('estados', filtros.estados);
+    }
+
+    return params;
+  }
+
+  getResumenPorEstado(filtros?: EntidadDashboardFiltros): Observable<EntidadResumenEstadoDTO[] | null> {
+    const url = `${ServiciosCrd.RS_ENTD}/resumen-por-estado`;
+    return this.http.get<EntidadResumenEstadoDTO[]>(url, { params: this.buildDashboardParams(filtros) }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  getResumenPrestamosPorEstado(filtros?: EntidadDashboardFiltros): Observable<EntidadResumenPrestamosDTO[] | null> {
+    const url = `${ServiciosCrd.RS_ENTD}/resumen-prestamos-por-estado`;
+    return this.http.get<EntidadResumenPrestamosDTO[]>(url, { params: this.buildDashboardParams(filtros) }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  getResumenAportesPorEstado(filtros?: EntidadDashboardFiltros): Observable<EntidadResumenAportesDTO[] | null> {
+    const url = `${ServiciosCrd.RS_ENTD}/resumen-aportes-por-estado`;
+    return this.http.get<EntidadResumenAportesDTO[]>(url, { params: this.buildDashboardParams(filtros) }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  getResumenConsolidadoPorEstado(
+    filtros?: EntidadDashboardFiltros,
+  ): Observable<EntidadResumenConsolidadoDTO[] | null> {
+    const url = `${ServiciosCrd.RS_ENTD}/resumen-consolidado-por-estado`;
+    return this.http
+      .get<EntidadResumenConsolidadoDTO[]>(url, { params: this.buildDashboardParams(filtros) })
+      .pipe(catchError(this.handleError));
   }
 
   /** DELETE */
