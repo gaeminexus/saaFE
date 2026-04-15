@@ -242,7 +242,7 @@ export class CuotaConsultaComponent implements OnInit {
       numeroPrestamo: detalle.prestamo?.idAsoprep || 0,
       tipoPrestamo: detalle.prestamo?.producto?.nombre || 'N/A',
       fechaVencimiento: detalle.fechaVencimiento,
-      valorCuota: detalle.cuota,
+      valorCuota: detalle.total,
       nombreEntidad: detalle.prestamo?.entidad?.razonSocial || detalle.prestamo?.entidad?.nombreComercial || 'N/A',
       numeroIdentificacion: detalle.prestamo?.entidad?.numeroIdentificacion || 'N/A',
       codigoPetro: detalle.prestamo?.entidad?.rolPetroComercial || 0,

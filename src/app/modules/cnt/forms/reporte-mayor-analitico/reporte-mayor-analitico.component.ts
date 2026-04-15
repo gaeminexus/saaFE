@@ -52,7 +52,7 @@ export class ReporteMayorAnaliticoComponent implements OnInit, OnDestroy {
 
   // ── Columnas ─────────────────────────────────────────────────
   readonly colsCabecera  = ['numeroCuenta', 'nombreCuenta', 'saldoAnterior'];
-  readonly colsDetalle   = ['fechaAsiento', 'numeroAsiento', 'descripcionAsiento', 'valorDebe', 'valorHaber', 'saldoActual', 'estadoAsiento'];
+  readonly colsDetalle   = ['fechaAsiento', 'numeroAsiento', 'descripcionAsiento', 'observacionAsiento', 'valorDebe', 'valorHaber', 'saldoActual', 'estadoAsiento'];
 
   // ── Formulario ───────────────────────────────────────────────
   form!: FormGroup;
@@ -226,6 +226,14 @@ export class ReporteMayorAnaliticoComponent implements OnInit, OnDestroy {
     return this.estadoLabel(estado);
   }
 
+  getTipoAsientoNombre(detalle: DetalleMayorAnalitico): string {
+    return detalle?.asiento?.tipoAsiento?.nombre || 'Sin tipo';
+  }
+
+  getObservacionAsiento(detalle: DetalleMayorAnalitico): string {
+    return detalle?.asiento?.observaciones || '—';
+  }
+
   exportarDetalleCSV(): void {
     const movimientos = this.detalles();
     if (!movimientos.length) {
@@ -235,8 +243,9 @@ export class ReporteMayorAnaliticoComponent implements OnInit, OnDestroy {
 
     const rows = movimientos.map((mov) => ({
       'Fecha': this.formatFecha(mov.fechaAsiento),
-      'N° Asiento': mov.numeroAsiento ?? '',
+      'N° Asiento': `${mov.numeroAsiento ?? ''} - ${this.getTipoAsientoNombre(mov)}`,
       'Descripción': mov.descripcionAsiento ?? '',
+      'Observación Asiento': this.getObservacionAsiento(mov),
       'Debe': Number(mov.valorDebe ?? 0).toFixed(2),
       'Haber': Number(mov.valorHaber ?? 0).toFixed(2),
       'Saldo': Number(mov.saldoActual ?? 0).toFixed(2),
@@ -246,8 +255,8 @@ export class ReporteMayorAnaliticoComponent implements OnInit, OnDestroy {
 
     const numeroCuenta = this.selectedCabecera()?.numeroCuenta || 'detalle';
     const filename = `mayor-analitico-${String(numeroCuenta).replace(/\s+/g, '-')}`;
-    const headers = ['Fecha', 'N° Asiento', 'Descripción', 'Debe', 'Haber', 'Saldo', 'Estado', 'Centro Costo'];
-    const dataKeys = ['Fecha', 'N° Asiento', 'Descripción', 'Debe', 'Haber', 'Saldo', 'Estado', 'Centro Costo'];
+    const headers = ['Fecha', 'N° Asiento', 'Descripción', 'Observación Asiento', 'Debe', 'Haber', 'Saldo', 'Estado', 'Centro Costo'];
+    const dataKeys = ['Fecha', 'N° Asiento', 'Descripción', 'Observación Asiento', 'Debe', 'Haber', 'Saldo', 'Estado', 'Centro Costo'];
 
     this.exportService.exportToCSV(rows, filename, headers, dataKeys);
   }

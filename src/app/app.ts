@@ -27,7 +27,7 @@ export class App implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     // Inicializar session timeout si el usuario está autenticado
-    const isLoggedIn = localStorage.getItem('logged') === 'true';
+    const isLoggedIn = sessionStorage.getItem('logged') === 'true';
     if (isLoggedIn) {
       this.sessionTimeout.initializeSessionTimeout();
     }
@@ -43,7 +43,7 @@ export class App implements OnInit, OnDestroy {
 
   getScreenTitle() {
     // Obtener el nombre de la empresa del localStorage
-    const nombreEmpresa = localStorage.getItem('empresaName');
+    const nombreEmpresa = sessionStorage.getItem('empresaName') || localStorage.getItem('empresaName');
 
     // Si existe el nombre de la empresa, mostrarlo siempre
     if (nombreEmpresa) {

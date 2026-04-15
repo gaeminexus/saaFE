@@ -41,8 +41,6 @@
         Limpiar
       </button>
 
-      <button mat-button (click)="debugFormErrors()">Debug Form</button>
-
       <button mat-raised-button color="primary" (click)="guardar()"
               [disabled]="!isFormValid() || loading() || saving()">
         @if (saving()) {
@@ -78,7 +76,7 @@
 
   <!-- Formulario -->
   @if (!loading()) {
-    <form [formGroup]="entidadForm" class="entidad-form">
+    <form [formGroup]="entidadForm" (ngSubmit)="guardar()" class="entidad-form">
 
       <mat-stepper orientation="vertical" linear="false" #stepper>
 
@@ -328,7 +326,173 @@
           </mat-card>
         </mat-step>
 
-        <!-- Paso 5: Metadata (Solo lectura) -->
+        <!-- Paso 5: Información de Partícipe -->
+        <mat-step label="Datos Partícipe" [completed]="true">
+          <mat-card class="step-card">
+            <mat-card-header>
+              <mat-icon mat-card-avatar>groups</mat-icon>
+              <mat-card-title>Información de Partícipe</mat-card-title>
+              <mat-card-subtitle>Datos registrados en tabla Partícipe</mat-card-subtitle>
+            </mat-card-header>
+
+            <mat-card-content>
+              <div class="form-row">
+                <mat-form-field appearance="fill" class="half-width">
+                  <mat-label>Código Partícipe</mat-label>
+                  <input matInput formControlName="codigoParticipe" readonly>
+                  <mat-icon matSuffix>pin</mat-icon>
+                  <mat-hint>Generado automáticamente</mat-hint>
+                </mat-form-field>
+
+                <mat-form-field appearance="fill" class="half-width">
+                  <mat-label>Tipo Partícipe</mat-label>
+                  <mat-select formControlName="tipoParticipe" [compareWith]="compararPorCodigo">
+                    @if (loadingTiposParticipe()) {
+                      <mat-option disabled>
+                        <mat-spinner diameter="20"></mat-spinner>
+                        Cargando...
+                      </mat-option>
+                    } @else {
+                      <mat-option [value]="null">-- Seleccionar --</mat-option>
+                      @for (tipo of tiposParticipeOptions; track tipo.codigo) {
+                        <mat-option [value]="tipo">{{ tipo.nombre }}</mat-option>
+                      }
+                    }
+                  </mat-select>
+                  <mat-icon matSuffix>badge</mat-icon>
+                </mat-form-field>
+              </div>
+
+              <div class="form-row">
+                <mat-form-field appearance="fill" class="third-width">
+                  <mat-label>Código Alterno</mat-label>
+                  <input matInput formControlName="codigoAlterno" type="number" min="0">
+                </mat-form-field>
+
+                <mat-form-field appearance="fill" class="third-width">
+                  <mat-label>Remuneración Unificada</mat-label>
+                  <input matInput formControlName="remuneracionUnificada" type="number" min="0">
+                </mat-form-field>
+
+                <mat-form-field appearance="fill" class="third-width">
+                  <mat-label>Ingreso Adicional Mensual</mat-label>
+                  <input matInput formControlName="ingresoAdicionalMensual" type="number" min="0">
+                </mat-form-field>
+              </div>
+
+              <div class="form-row">
+                <mat-form-field appearance="fill" class="half-width">
+                  <mat-label>Fecha Ingreso Trabajo</mat-label>
+                  <input matInput [matDatepicker]="pickerIngresoTrabajo" formControlName="fechaIngresoTrabajo">
+                  <mat-datepicker-toggle matIconSuffix [for]="pickerIngresoTrabajo"></mat-datepicker-toggle>
+                  <mat-datepicker #pickerIngresoTrabajo></mat-datepicker>
+                </mat-form-field>
+
+                <mat-form-field appearance="fill" class="half-width">
+                  <mat-label>Fecha Ingreso Fondo</mat-label>
+                  <input matInput [matDatepicker]="pickerIngresoFondo" formControlName="fechaIngresoFondo">
+                  <mat-datepicker-toggle matIconSuffix [for]="pickerIngresoFondo"></mat-datepicker-toggle>
+                  <mat-datepicker #pickerIngresoFondo></mat-datepicker>
+                </mat-form-field>
+              </div>
+
+              <div class="form-row">
+                <mat-form-field appearance="fill" class="half-width">
+                  <mat-label>Lugar de Trabajo</mat-label>
+                  <input matInput formControlName="lugarTrabajo" maxlength="200">
+                </mat-form-field>
+
+                <mat-form-field appearance="fill" class="half-width">
+                  <mat-label>Unidad Administrativa</mat-label>
+                  <input matInput formControlName="unidadAdministrativa" maxlength="200">
+                </mat-form-field>
+              </div>
+
+              <div class="form-row">
+                <mat-form-field appearance="fill" class="half-width">
+                  <mat-label>Cargo Actual</mat-label>
+                  <input matInput formControlName="cargoActual" maxlength="200">
+                </mat-form-field>
+
+                <mat-form-field appearance="fill" class="half-width">
+                  <mat-label>Nivel Estudios</mat-label>
+                  <input matInput formControlName="nivelEstudios" maxlength="100">
+                </mat-form-field>
+              </div>
+
+              <div class="form-row">
+                <mat-form-field appearance="fill" class="half-width">
+                  <mat-label>Actividad Ingreso Adicional</mat-label>
+                  <input matInput formControlName="ingresoAdicionalActividad" maxlength="200">
+                </mat-form-field>
+
+                <mat-form-field appearance="fill" class="half-width">
+                  <mat-label>Tipo Calificación</mat-label>
+                  <input matInput formControlName="tipoCalificacion" type="number" min="0">
+                </mat-form-field>
+              </div>
+
+              <div class="form-row">
+                <mat-form-field appearance="fill" class="third-width">
+                  <mat-label>Estado Actual</mat-label>
+                  <mat-select formControlName="estadoActual">
+                    @for (estado of estadosOptions; track estado.value) {
+                      <mat-option [value]="estado.value">{{ estado.label }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+
+                <mat-form-field appearance="fill" class="third-width">
+                  <mat-label>Estado Cesante</mat-label>
+                  <mat-select formControlName="estadoCesante">
+                    @for (estado of estadosOptions; track estado.value) {
+                      <mat-option [value]="estado.value">{{ estado.label }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+
+                <mat-form-field appearance="fill" class="third-width">
+                  <mat-label>Estado Registro Partícipe</mat-label>
+                  <mat-select formControlName="idEstadoParticipe">
+                    @for (estado of estadosOptions; track estado.value) {
+                      <mat-option [value]="estado.value">{{ estado.label }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+              </div>
+
+              <div class="form-row">
+                <mat-form-field appearance="fill" class="third-width">
+                  <mat-label>Fecha Fallecimiento</mat-label>
+                  <input matInput [matDatepicker]="pickerFallecimiento" formControlName="fechaFallecimiento">
+                  <mat-datepicker-toggle matIconSuffix [for]="pickerFallecimiento"></mat-datepicker-toggle>
+                  <mat-datepicker #pickerFallecimiento></mat-datepicker>
+                </mat-form-field>
+
+                <mat-form-field appearance="fill" class="third-width">
+                  <mat-label>Fecha Salida</mat-label>
+                  <input matInput [matDatepicker]="pickerSalida" formControlName="fechaSalida">
+                  <mat-datepicker-toggle matIconSuffix [for]="pickerSalida"></mat-datepicker-toggle>
+                  <mat-datepicker #pickerSalida></mat-datepicker>
+                </mat-form-field>
+
+                <mat-form-field appearance="fill" class="third-width">
+                  <mat-label>Motivo Salida</mat-label>
+                  <input matInput formControlName="motivoSalida" maxlength="200">
+                </mat-form-field>
+              </div>
+
+              <div class="form-row">
+                <mat-form-field appearance="fill" class="full-width">
+                  <mat-label>Causa Fallecimiento</mat-label>
+                  <input matInput formControlName="causaFallecimiento" maxlength="200">
+                </mat-form-field>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        </mat-step>
+
+        <!-- Paso 6: Metadata (Solo lectura) -->
         <mat-step label="Metadata" [completed]="true">
           <mat-card class="step-card">
             <mat-card-header>

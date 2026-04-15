@@ -28,6 +28,7 @@ import { FinanciacionXDocumentoPagoService } from '../../modules/cxp/service/fin
 import { MontoAprobacionService } from '../../modules/cxp/service/monto-aprobacion.service';
 import { TransaccionesAsoprepService } from '../../modules/crd/service/transacciones-asoprep.service';
 import { NaturalezaCuenta } from '../../modules/cnt/model/naturaleza-cuenta';
+import { SessionTimeoutService } from '../../modules/dash/forms/session-timeout/session-timeout.service';
 
 @Component({
   selector: 'app-header',
@@ -63,7 +64,8 @@ export class HeaderComponent implements OnInit, OnDestroy {
     private loadingService: LoadingService,
     private transaccionesAsoprep: TransaccionesAsoprepService,
     private cdr: ChangeDetectorRef,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private sessionTimeoutService: SessionTimeoutService
   ) {
     this.loading$ = this.loadingService.loading$;
   }
@@ -75,8 +77,22 @@ export class HeaderComponent implements OnInit, OnDestroy {
       this.cdr.markForCheck();
     });
 
-    // Escuchar cambios en localStorage de otras tabs
+    // Escuchar cambios en localStorage de otras pestañas para propagación de logout
     this.storageListener = (e: StorageEvent) => {
+      // Señal de logout explícito enviada desde otra pestaña
+      if (e.key === 'saafe_logout_signal' && e.newValue) {
+        const currentGroupId = sessionStorage.getItem('saafeSessionGroupId') ||
+          localStorage.getItem('saafeSessionGroupId');
+        try {
+          const signal = JSON.parse(e.newValue);
+          if (signal.groupId && signal.groupId === currentGroupId) {
+            // Es de mi sesión: cerrar localmente sin re-broadcast
+            this.sessionTimeoutService.performLocalLogoutForStorage();
+          }
+        } catch { /* noop */ }
+        return;
+      }
+
       if (e.key === 'usuarioLog') {
         // Ejecutar en el próximo ciclo de detección de cambios
         setTimeout(() => {
@@ -111,12 +127,19 @@ export class HeaderComponent implements OnInit, OnDestroy {
   }
 
   onSalir() {
-    // Limpiar TODA la sesión (localStorage, caché de rubros, estado global)
+    // 1. Primero propagar logout a otras pestañas (ANTES de limpiar)
+    this.sessionTimeoutService.logoutByUser();
+    // 2. Después limpiar estado local
     this.appStateService.limpiarDatos();
     this.usuarioService.clearSession();
+  }
 
-    console.log('HeaderComponent: Logout completo - redirigiendo a login');
-    this.router.navigate(['/login']);
+  abrirNuevaPestana() {
+    const firstSegment = window.location.pathname.split('/').filter(Boolean)[0] || '';
+    const normalized = firstSegment.toLowerCase();
+    const hasAppContext = normalized.length > 0 && normalized !== 'menu' && normalized !== 'login';
+    const appContext = hasAppContext ? `/${firstSegment}` : '';
+    window.open(`${window.location.origin}${appContext}/menu`, '_blank');
   }
 
   cambiarContrasena() {

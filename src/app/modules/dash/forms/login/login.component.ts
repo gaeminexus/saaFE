@@ -5,6 +5,7 @@ import {
   ElementRef,
   Inject,
   NgZone,
+  OnInit,
   OnDestroy,
   PLATFORM_ID,
   ViewChild,
@@ -35,7 +36,7 @@ const EMPRESA = 1236;
   templateUrl: './login.html',
   styleUrls: ['../../../../../styles/pages/_login.scss'],
 })
-export class LoginComponent implements AfterViewInit, OnDestroy {
+export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
   username = '';
   password = '';
   hidePassword = true;
@@ -88,6 +89,57 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
     @Inject(PLATFORM_ID) private platformId: Object
   ) {}
 
+  ngOnInit(): void {
+    if (sessionStorage.getItem('logged') === 'true') {
+      this.router.navigate(['/menu']);
+      return;
+    }
+
+    this.tryAutoRestoreFromSharedSession();
+  }
+
+  private tryAutoRestoreFromSharedSession(): void {
+    const sharedLogged = localStorage.getItem('logged') === 'true';
+    if (!sharedLogged) {
+      return;
+    }
+
+    const sharedUsername = localStorage.getItem('username');
+    const sharedToken = localStorage.getItem('token');
+    const sharedSucursal = localStorage.getItem('idSucursal') || EMPRESA.toString();
+    const sharedGroupId =
+      localStorage.getItem('saafeSessionGroupId') ||
+      (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}`);
+
+    sessionStorage.setItem('logged', 'true');
+    sessionStorage.setItem('idSucursal', sharedSucursal);
+    sessionStorage.setItem('saafeSessionGroupId', sharedGroupId);
+
+    if (sharedToken) {
+      sessionStorage.setItem('token', sharedToken);
+    }
+
+    if (!sharedUsername) {
+      this.router.navigate(['/menu']);
+      return;
+    }
+
+    const normalizedUser = sharedUsername.toUpperCase();
+    this.username = normalizedUser;
+    sessionStorage.setItem('username', normalizedUser);
+
+    this.appStateService.inicializarApp(EMPRESA, normalizedUser).subscribe({
+      next: () => {
+        this.router.navigate(['/menu']);
+      },
+      error: () => {
+        this.router.navigate(['/menu']);
+      },
+    });
+  }
+
   validaUsuario() {
     if (!this.username || !this.password) {
       this.loginMessage = 'Por favor ingrese usuario y contraseña';
@@ -99,6 +151,7 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
       next: (result: string) => {
         this.isLoading = false;
         if (result === 'OK') {
+          sessionStorage.setItem('token', result);
           localStorage.setItem('token', result);
           // Guardar el usuario logueado
           this.ingresaSistema();
@@ -123,9 +176,24 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
   }
 
   ingresaSistema(): void {
-    localStorage.setItem('logged', 'true');
+    const existingGroupId =
+      sessionStorage.getItem('saafeSessionGroupId') || localStorage.getItem('saafeSessionGroupId');
+    const groupId =
+      existingGroupId ||
+      (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}`);
+
+    sessionStorage.setItem('saafeSessionGroupId', groupId);
+    sessionStorage.setItem('logged', 'true');
+    sessionStorage.setItem('idSucursal', EMPRESA.toString());
+    sessionStorage.setItem('username', this.username.toUpperCase()); // ← Guardar usuario para auditoría
+
+    // Compatibilidad con módulos existentes que aún leen localStorage
     localStorage.setItem('idSucursal', EMPRESA.toString());
-    localStorage.setItem('username', this.username.toUpperCase()); // ← Guardar usuario para auditoría
+    localStorage.setItem('username', this.username.toUpperCase());
+    localStorage.setItem('logged', 'true');
+    localStorage.setItem('saafeSessionGroupId', groupId);
 
     // Inicializar session timeout después de logueo exitoso
     this.sessionTimeout.initializeSessionTimeout();

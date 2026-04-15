@@ -41,7 +41,6 @@ export class MayorAnaliticoAsientoDialogComponent implements AfterViewInit {
 
   readonly loading = signal<boolean>(true);
   readonly error = signal<string>('');
-  readonly soloRelacionadas = signal<boolean>(true);
   readonly asiento = signal<Asiento | null>(null);
   readonly totalRelacionadas = signal<number>(0);
 
@@ -78,6 +77,21 @@ export class MayorAnaliticoAsientoDialogComponent implements AfterViewInit {
     return typeof nombre === 'string' && nombre.trim().length > 0 ? nombre : 'N/D';
   });
 
+  readonly observacionAsientoTexto = computed(() => {
+    const observacion = (this.asiento() as any)?.observaciones;
+    return typeof observacion === 'string' && observacion.trim().length > 0
+      ? observacion
+      : 'Sin observación';
+  });
+
+  readonly totalDebe = computed(() => {
+    return this.dataSource.data.reduce((sum, row) => sum + (this.toNumber(row.valorDebe) || 0), 0);
+  });
+
+  readonly totalHaber = computed(() => {
+    return this.dataSource.data.reduce((sum, row) => sum + (this.toNumber(row.valorHaber) || 0), 0);
+  });
+
   constructor() {
     this.cargarDatosRelacionados();
   }
@@ -88,11 +102,6 @@ export class MayorAnaliticoAsientoDialogComponent implements AfterViewInit {
 
   cerrar(): void {
     this.dialogRef.close();
-  }
-
-  toggleSoloRelacionadas(): void {
-    this.soloRelacionadas.update((v) => !v);
-    this.aplicarFiltroVista();
   }
 
   formatFecha(fecha: unknown): string {
@@ -243,13 +252,7 @@ export class MayorAnaliticoAsientoDialogComponent implements AfterViewInit {
         const mapped = (rows ?? []).map((row) => ({
           ...row,
           relacionado: this.esDetalleRelacionado(row),
-        }))
-        .sort((a, b) => {
-          if (a.relacionado !== b.relacionado) {
-            return a.relacionado ? -1 : 1;
-          }
-          return this.toNumber(a.codigo) - this.toNumber(b.codigo);
-        });
+        }));
 
         this.allRows = mapped;
         const relacionadas = mapped.filter((row) => row.relacionado).length;
@@ -259,11 +262,10 @@ export class MayorAnaliticoAsientoDialogComponent implements AfterViewInit {
           console.info('[MYAN_MATCH] Total relacionadas detectadas:', relacionadas);
         }
 
-        if (relacionadas === 0) {
-          this.soloRelacionadas.set(false);
+        this.dataSource.data = mapped;
+        if (this.paginator) {
+          this.paginator.firstPage();
         }
-
-        this.aplicarFiltroVista();
         this.loading.set(false);
       },
       error: () => {
@@ -271,17 +273,6 @@ export class MayorAnaliticoAsientoDialogComponent implements AfterViewInit {
         this.error.set('No se pudo cargar el detalle del asiento.');
       },
     });
-  }
-
-  private aplicarFiltroVista(): void {
-    const rows = this.soloRelacionadas()
-      ? this.allRows.filter((row) => row.relacionado)
-      : this.allRows;
-
-    this.dataSource.data = rows;
-    if (this.paginator) {
-      this.paginator.firstPage();
-    }
   }
 
   private esDetalleRelacionado(det: DetalleAsiento): boolean {

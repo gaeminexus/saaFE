@@ -37,7 +37,7 @@ export class AppStateService {
   esperarInicializacion(): Promise<void> {
     return new Promise<void>((resolve) => {
       // Si no hay sesión activa, resolver inmediatamente
-      const logged = localStorage.getItem('logged');
+      const logged = sessionStorage.getItem('logged');
       if (logged !== 'true') {
         resolve();
         return;
@@ -71,9 +71,9 @@ export class AppStateService {
    * @private
    */
   private restaurarDesdeSesion(): void {
-    const empresaStr = localStorage.getItem('empresa');
-    const usuarioStr = localStorage.getItem('usuario');
-    const logged = localStorage.getItem('logged');
+    const empresaStr = sessionStorage.getItem('empresa') || localStorage.getItem('empresa');
+    const usuarioStr = sessionStorage.getItem('usuario') || localStorage.getItem('usuario');
+    const logged = sessionStorage.getItem('logged');
 
     // Solo restaurar si hay sesión activa
     if (logged !== 'true' || !empresaStr || !usuarioStr) {
@@ -143,12 +143,15 @@ export class AppStateService {
         this.datosGlobales$.next(appData);
 
         // Guardar en localStorage (mantener compatibilidad con código existente)
-        localStorage.setItem('empresa', JSON.stringify(appData.empresa));
-        localStorage.setItem('idEmpresa', appData.empresa.codigo.toString());
+        sessionStorage.setItem('empresa', JSON.stringify(appData.empresa));
+        sessionStorage.setItem('idEmpresa', appData.empresa.codigo.toString());
+        sessionStorage.setItem('empresaName', appData.empresa.nombre);
+        sessionStorage.setItem('usuario', JSON.stringify(appData.usuario));
+        sessionStorage.setItem('userName', username);
+        sessionStorage.setItem('idUsuario', appData.usuario.codigo.toString());
+
+        // Compatibilidad con módulos que aún leen localStorage
         localStorage.setItem('empresaName', appData.empresa.nombre);
-        localStorage.setItem('usuario', JSON.stringify(appData.usuario));
-        localStorage.setItem('userName', username);
-        localStorage.setItem('idUsuario', appData.usuario.codigo.toString());
 
         // Guardar en el servicio de usuario (mantener compatibilidad)
         this.usuarioService.setEmpresaLog(appData.empresa);
@@ -210,14 +213,18 @@ export class AppStateService {
     this.cargaIniciada = false;
     this.detalleRubroService.limpiarCache();
 
-    localStorage.removeItem('empresa');
-    localStorage.removeItem('empresaName');
-    localStorage.removeItem('usuario');
-    localStorage.removeItem('userName');
-    localStorage.removeItem('idUsuario');
-    localStorage.removeItem('idEmpresa');
-    localStorage.removeItem('logged');
-    localStorage.removeItem('token');
+    sessionStorage.removeItem('empresa');
+    sessionStorage.removeItem('empresaName');
+    sessionStorage.removeItem('usuario');
+    sessionStorage.removeItem('userName');
+    sessionStorage.removeItem('idUsuario');
+    sessionStorage.removeItem('idEmpresa');
+    sessionStorage.removeItem('logged');
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('username');
+    sessionStorage.removeItem('idSucursal');
+    sessionStorage.removeItem('usuarioLog');
+    sessionStorage.removeItem('empresaLog');
   }
 
   /**

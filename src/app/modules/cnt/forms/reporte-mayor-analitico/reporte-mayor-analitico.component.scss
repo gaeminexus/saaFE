@@ -196,6 +196,14 @@ $chip-gap: 12px;
   text-overflow: ellipsis;
 }
 
+.rm-col-observacion {
+  min-width: 420px;
+  max-width: 680px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.35;
+}
+
 .rm-debe {
   color: $debe-color;
 }

@@ -3,18 +3,24 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Location } from '@angular/common';
-import { catchError } from 'rxjs/operators';
-import { of, Subscription } from 'rxjs';
+import { Subscription } from 'rxjs';
 
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
+import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
+import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { Entidad } from '../../../model/entidad';
 import { Filial } from '../../../model/filial';
+import { Participe } from '../../../model/participe';
 import { TipoIdentificacion } from '../../../model/tipo-identificacion';
 import { TipoHidrocarburifica } from '../../../model/tipo-hidrocarburifica';
+import { TipoParticipe } from '../../../model/tipo-participe';
 import { TipoVivienda } from '../../../model/tipo-vivienda';
 import { EntidadService } from '../../../service/entidad.service';
 import { FilialService } from '../../../service/filial.service';
+import { ParticipeService } from '../../../service/participe.service';
 import { TipoIdentificacionService } from '../../../service/tipo-identificacion.service';
+import { TipoParticipeService } from '../../../service/tipo-participe.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 
 /**
@@ -76,10 +82,12 @@ export class EntidadEditComponent implements OnInit, OnChanges, OnDestroy {
   private fb = inject(FormBuilder);
   private entidadService = inject(EntidadService);
   private filialService = inject(FilialService);
+  private participeService = inject(ParticipeService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private location = inject(Location);
   private tipoIdentificacionService = inject(TipoIdentificacionService);
+  private tipoParticipeService = inject(TipoParticipeService);
   private snackBar = inject(MatSnackBar);
   private funcionesDatosService = inject(FuncionesDatosService);
 
@@ -89,6 +97,7 @@ export class EntidadEditComponent implements OnInit, OnChanges, OnDestroy {
   errorMsg = signal<string>('');
   modoEdicion = signal<boolean>(false);
   entidadActual = signal<Entidad | null>(null);
+  participeActual = signal<Participe | null>(null);
   formValid = signal<boolean>(false); // Nueva señal para validez del formulario
 
   // Formularios reactivos
@@ -109,9 +118,11 @@ export class EntidadEditComponent implements OnInit, OnChanges, OnDestroy {
   filialesOptions: Filial[] = [];
 
   tiposIdentificacionOptions: TipoIdentificacion[] = [];
+  tiposParticipeOptions: TipoParticipe[] = [];
   loadingFiliales = signal<boolean>(false);
 
   loadingTiposId = signal<boolean>(false);
+  loadingTiposParticipe = signal<boolean>(false);
 
   // Computed signals
   hasError = computed(() => this.errorMsg() !== '');
@@ -126,10 +137,9 @@ export class EntidadEditComponent implements OnInit, OnChanges, OnDestroy {
     if (resolvedData) {
       this.filialesOptions = resolvedData.filiales || [];
       this.tiposIdentificacionOptions = resolvedData.tiposIdentificacion || [];
-    } else {
-      // Fallback: cargar datos si no hay resolver (modo standalone)
-      this.cargarDatosSelect();
     }
+
+    this.cargarDatosSelect();
 
     // Verificar si hay código de entidad en los query params (versión síncrona)
     const params = this.route.snapshot.queryParams;
@@ -199,6 +209,21 @@ export class EntidadEditComponent implements OnInit, OnChanges, OnDestroy {
       }
     });
     this.subscriptions.add(tipoIdSub);
+
+    // Cargar tipos de partícipe
+    this.loadingTiposParticipe.set(true);
+    const tipoPartSub = this.tipoParticipeService.getAll().subscribe({
+      next: (tipos) => {
+        this.loadingTiposParticipe.set(false);
+        if (tipos && tipos.length > 0) {
+          this.tiposParticipeOptions = tipos;
+        }
+      },
+      error: () => {
+        this.loadingTiposParticipe.set(false);
+      }
+    });
+    this.subscriptions.add(tipoPartSub);
   }
 
   inicializarFormulario(): void {
@@ -239,6 +264,28 @@ export class EntidadEditComponent implements OnInit, OnChanges, OnDestroy {
       // Estado y migración
       idEstado: [1, [Validators.required]],
       migrado: [0],
+
+      // Tabla Partícipe (PRTC)
+      codigoParticipe: [{ value: null, disabled: true }],
+      tipoParticipe: [null as TipoParticipe | null, [Validators.required]],
+      codigoAlterno: [0],
+      remuneracionUnificada: [0, [Validators.min(0)]],
+      fechaIngresoTrabajo: [null],
+      lugarTrabajo: ['', [Validators.maxLength(200)]],
+      unidadAdministrativa: ['', [Validators.maxLength(200)]],
+      cargoActual: ['', [Validators.maxLength(200)]],
+      nivelEstudios: ['', [Validators.maxLength(100)]],
+      ingresoAdicionalMensual: [0, [Validators.min(0)]],
+      ingresoAdicionalActividad: ['', [Validators.maxLength(200)]],
+      tipoCalificacion: [0],
+      fechaIngresoFondo: [null, [Validators.required]],
+      estadoActual: [1],
+      fechaFallecimiento: [null],
+      causaFallecimiento: ['', [Validators.maxLength(200)]],
+      motivoSalida: ['', [Validators.maxLength(200)]],
+      fechaSalida: [null],
+      estadoCesante: [0],
+      idEstadoParticipe: [1],
 
       // Metadata (solo lectura)
       urlFotoLogo: [''],
@@ -302,10 +349,20 @@ export class EntidadEditComponent implements OnInit, OnChanges, OnDestroy {
       tieneTelefono: 0,
       idEstado: 1,
       migrado: 0,
-      porcentajeSimilitud: 0
+      porcentajeSimilitud: 0,
+      codigoParticipe: null,
+      tipoParticipe: null,
+      codigoAlterno: 0,
+      remuneracionUnificada: 0,
+      ingresoAdicionalMensual: 0,
+      tipoCalificacion: 0,
+      estadoActual: 1,
+      estadoCesante: 0,
+      idEstadoParticipe: 1
     });
     this.modoEdicion.set(false);
     this.entidadActual.set(null);
+    this.participeActual.set(null);
     this.errorMsg.set('');
 
     // Limpiar también el código de entidad y modo filtrado
@@ -324,6 +381,7 @@ export class EntidadEditComponent implements OnInit, OnChanges, OnDestroy {
           this.entidadActual.set(entidad);
           this.modoEdicion.set(true);
           this.llenarFormulario(entidad);
+          this.cargarParticipePorEntidad(entidad.codigo);
         } else {
           this.mostrarError('Entidad no encontrada');
         }
@@ -369,39 +427,114 @@ export class EntidadEditComponent implements OnInit, OnChanges, OnDestroy {
     });
   }
 
+  private cargarParticipePorEntidad(codigoEntidad: number): void {
+    const criterios: DatosBusqueda[] = [];
+
+    const criterioEntidad = new DatosBusqueda();
+    criterioEntidad.asignaValorConCampoPadre(
+      TipoDatosBusqueda.LONG,
+      'entidad',
+      'codigo',
+      String(codigoEntidad),
+      TipoComandosBusqueda.IGUAL
+    );
+    criterios.push(criterioEntidad);
+
+    const order = new DatosBusqueda();
+    order.orderBy('codigo');
+    order.setTipoOrden(DatosBusqueda.ORDER_DESC);
+    criterios.push(order);
+
+    const partSub = this.participeService.selectByCriteria(criterios).subscribe({
+      next: (participes) => {
+        const participe = (participes ?? [])[0] ?? null;
+        this.participeActual.set(participe);
+
+        if (participe) {
+          this.entidadForm.patchValue({
+            codigoParticipe: participe.codigo,
+            tipoParticipe: participe.tipoParticipe || null,
+            codigoAlterno: participe.codigoAlterno || 0,
+            remuneracionUnificada: participe.remuneracionUnificada || 0,
+            fechaIngresoTrabajo: this.convertirFecha(participe.fechaIngresoTrabajo),
+            lugarTrabajo: participe.lugarTrabajo || '',
+            unidadAdministrativa: participe.unidadAdministrativa || '',
+            cargoActual: participe.cargoActual || '',
+            nivelEstudios: participe.nivelEstudios || '',
+            ingresoAdicionalMensual: participe.ingresoAdicionalMensual || 0,
+            ingresoAdicionalActividad: participe.ingresoAdicionalActividad || '',
+            tipoCalificacion: participe.tipoCalificacion || 0,
+            fechaIngresoFondo: this.convertirFecha(participe.fechaIngresoFondo),
+            estadoActual: participe.estadoActual || 1,
+            fechaFallecimiento: this.convertirFecha(participe.fechaFallecimiento),
+            causaFallecimiento: participe.causaFallecimiento || '',
+            motivoSalida: participe.motivoSalida || '',
+            fechaSalida: this.convertirFecha(participe.fechaSalida),
+            estadoCesante: participe.estadoCesante || 0,
+            idEstadoParticipe: participe.idEstado || 1,
+          });
+        }
+      },
+      error: () => {
+        this.participeActual.set(null);
+      }
+    });
+
+    this.subscriptions.add(partSub);
+  }
+
   guardar(): void {
     if (this.entidadForm.valid) {
       this.saving.set(true);
       this.errorMsg.set('');
 
       const formValue = this.entidadForm.getRawValue();
-      const entidadData = this.prepararDatos(formValue);
+      const entidadData = this.prepararDatosEntidad(formValue);
 
-      const operacion = this.modoEdicion() ?
-        this.entidadService.update(entidadData) :
-        this.entidadService.add(entidadData);
+      const operacionEntidad = this.modoEdicion()
+        ? this.entidadService.update(entidadData)
+        : this.entidadService.add(entidadData);
 
-        operacion.subscribe({
-        next: (resultado) => {
-          this.saving.set(false);
-          if (resultado) {
-            const mensaje = this.modoEdicion() ? 'Entidad actualizada exitosamente' : 'Entidad creada exitosamente';
-            this.mostrarExito(mensaje);
-
-            if (!this.modoEdicion()) {
-              this.limpiarFormulario();
-            } else {
-              this.entidadActual.set(resultado);
-              this.llenarFormulario(resultado);
-            }
-          } else {
-            this.mostrarError('Error en la operación');
+      operacionEntidad.subscribe({
+        next: (entidadGuardada) => {
+          if (!entidadGuardada) {
+            this.saving.set(false);
+            this.mostrarError('No se pudo guardar la entidad');
+            return;
           }
+
+          const participeData = this.prepararDatosParticipe(formValue, entidadGuardada);
+          const codigoParticipe = this.participeActual()?.codigo;
+
+          const operacionParticipe = codigoParticipe
+            ? this.participeService.update({ ...participeData, codigo: codigoParticipe })
+            : this.participeService.add(participeData);
+
+          operacionParticipe.subscribe({
+            next: (participeGuardado) => {
+              this.saving.set(false);
+              this.entidadActual.set(entidadGuardada);
+              this.participeActual.set(participeGuardado || null);
+              this.mostrarExito(this.modoEdicion() ? 'Entidad y partícipe actualizados exitosamente' : 'Entidad y partícipe creados exitosamente');
+
+              if (!this.modoEdicion()) {
+                this.limpiarFormulario();
+                return;
+              }
+
+              this.llenarFormulario(entidadGuardada);
+              this.cargarParticipePorEntidad(entidadGuardada.codigo);
+            },
+            error: (error) => {
+              this.saving.set(false);
+              this.mostrarError(`Error al guardar partícipe: ${error?.message || 'Error desconocido'}`);
+            },
+          });
         },
         error: (error) => {
           this.saving.set(false);
-          this.mostrarError(`Error al guardar: ${error.message || 'Error desconocido'}`);
-        }
+          this.mostrarError(`Error al guardar entidad: ${error?.message || 'Error desconocido'}`);
+        },
       });
     } else {
       this.marcarCamposInvalidos();
@@ -423,6 +556,7 @@ export class EntidadEditComponent implements OnInit, OnChanges, OnDestroy {
           this.entidadActual.set(entidad);
           this.modoEdicion.set(true);
           this.llenarFormulario(entidad);
+          this.cargarParticipePorEntidad(entidad.codigo);
 
           // Si está en modo solo lectura, deshabilitar formulario
           if (this.soloLectura) {
@@ -464,23 +598,42 @@ export class EntidadEditComponent implements OnInit, OnChanges, OnDestroy {
     return this.entidadActual();
   }
 
-  prepararDatos(formValue: any): Partial<Entidad> {
+  prepararDatosEntidad(formValue: any): Partial<Entidad> {
     const datos: Partial<Entidad> = {
       ...formValue,
-      // Los objetos ya vienen completos del formulario, no necesitamos reconstruirlos
       filial: formValue.filial || undefined,
       tipoHidrocarburifica: formValue.tipoHidrocarburifica || undefined,
-      TipoIdentificacion: formValue.TipoIdentificacion || undefined,
-      TipoVivienda: formValue.TipoVivienda || undefined,
-      // Convertir fechas al formato yyyy-MM-dd HH:mm:ss usando el servicio centralizado
+      tipoIdentificacion: formValue.tipoIdentificacion || undefined,
+      tipoVivienda: formValue.tipoVivienda || undefined,
       fechaNacimiento: this.funcionesDatosService.formatearFechaParaBackend(formValue.fechaNacimiento) as any,
-      // Convertir checkboxes a números
+      cargasFamiliares: Number(formValue.numeroCargasFamiliares || 0),
       tieneCorreoPersonal: formValue.tieneCorreoPersonal ? 1 : 0,
       tieneCorreoTrabajo: formValue.tieneCorreoTrabajo ? 1 : 0,
       tieneTelefono: formValue.tieneTelefono ? 1 : 0,
       sectorPublico: formValue.sectorPublico ? 1 : 0,
       migrado: formValue.migrado ? 1 : 0
     };
+
+    delete (datos as any).codigoParticipe;
+    delete (datos as any).tipoParticipe;
+    delete (datos as any).codigoAlterno;
+    delete (datos as any).remuneracionUnificada;
+    delete (datos as any).fechaIngresoTrabajo;
+    delete (datos as any).lugarTrabajo;
+    delete (datos as any).unidadAdministrativa;
+    delete (datos as any).cargoActual;
+    delete (datos as any).nivelEstudios;
+    delete (datos as any).ingresoAdicionalMensual;
+    delete (datos as any).ingresoAdicionalActividad;
+    delete (datos as any).tipoCalificacion;
+    delete (datos as any).fechaIngresoFondo;
+    delete (datos as any).estadoActual;
+    delete (datos as any).fechaFallecimiento;
+    delete (datos as any).causaFallecimiento;
+    delete (datos as any).motivoSalida;
+    delete (datos as any).fechaSalida;
+    delete (datos as any).estadoCesante;
+    delete (datos as any).idEstadoParticipe;
 
     // No enviar campos de metadata disabled al backend (los maneja automáticamente)
     delete (datos as any).usuarioIngreso;
@@ -491,6 +644,32 @@ export class EntidadEditComponent implements OnInit, OnChanges, OnDestroy {
     delete (datos as any).ipModificacion;
 
     return datos;
+  }
+
+  prepararDatosParticipe(formValue: any, entidadGuardada: Entidad): Partial<Participe> {
+    return {
+      codigo: this.participeActual()?.codigo as any,
+      entidad: entidadGuardada,
+      codigoAlterno: Number(formValue.codigoAlterno || 0),
+      tipoParticipe: formValue.tipoParticipe || undefined,
+      remuneracionUnificada: Number(formValue.remuneracionUnificada || 0),
+      fechaIngresoTrabajo: this.funcionesDatosService.formatearFechaParaBackend(formValue.fechaIngresoTrabajo) as any,
+      lugarTrabajo: formValue.lugarTrabajo || '',
+      unidadAdministrativa: formValue.unidadAdministrativa || '',
+      cargoActual: formValue.cargoActual || '',
+      nivelEstudios: formValue.nivelEstudios || '',
+      ingresoAdicionalMensual: Number(formValue.ingresoAdicionalMensual || 0),
+      ingresoAdicionalActividad: formValue.ingresoAdicionalActividad || '',
+      tipoCalificacion: Number(formValue.tipoCalificacion || 0),
+      fechaIngresoFondo: this.funcionesDatosService.formatearFechaParaBackend(formValue.fechaIngresoFondo) as any,
+      estadoActual: Number(formValue.estadoActual || 1),
+      fechaFallecimiento: this.funcionesDatosService.formatearFechaParaBackend(formValue.fechaFallecimiento) as any,
+      causaFallecimiento: formValue.causaFallecimiento || '',
+      motivoSalida: formValue.motivoSalida || '',
+      fechaSalida: this.funcionesDatosService.formatearFechaParaBackend(formValue.fechaSalida) as any,
+      estadoCesante: Number(formValue.estadoCesante || 0),
+      idEstado: Number(formValue.idEstadoParticipe || 1),
+    };
   }
 
   marcarCamposInvalidos(): void {

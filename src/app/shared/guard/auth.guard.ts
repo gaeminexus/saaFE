@@ -8,7 +8,7 @@ import { Router, CanActivateFn } from '@angular/router';
  */
 export const authGuard: CanActivateFn = (route, state) => {
   const router = inject(Router);
-  const isLogged = localStorage.getItem('logged') === 'true';
+  const isLogged = sessionStorage.getItem('logged') === 'true';
 
   if (!isLogged) {
     console.warn('AuthGuard: Acceso denegado. Usuario no autenticado.');

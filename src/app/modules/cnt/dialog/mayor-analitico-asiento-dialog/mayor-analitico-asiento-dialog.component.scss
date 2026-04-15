@@ -153,6 +153,19 @@
   }
 }
 
+.cab-item--full {
+  grid-column: 1 / -1;
+
+  span {
+    white-space: pre-wrap;
+    word-break: break-word;
+    line-height: 1.4;
+    max-height: 220px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+}
+
 .table-wrap {
   max-height: 58vh;
   overflow: auto;
@@ -171,6 +184,24 @@
 .row-related {
   background: #ecfdf3;
   border-left: 4px solid #16a34a;
+}
+
+.footer-label {
+  font-weight: 600;
+  color: #64748b;
+}
+
+.footer-total {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.footer-total--debe {
+  color: #991b1b;
+}
+
+.footer-total--haber {
+  color: #15803d;
 }
 
 .state {

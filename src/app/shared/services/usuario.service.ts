@@ -73,16 +73,16 @@ export class UsuarioService {
 
   setUsuarioLog(usuario: Usuario): void {
     this.usuarioLog = usuario;
-    // Guardar en localStorage para persistencia
+    // Guardar en sessionStorage para sesión por pestaña
     if (usuario) {
-      localStorage.setItem('usuarioLog', JSON.stringify(usuario));
+      sessionStorage.setItem('usuarioLog', JSON.stringify(usuario));
     }
   }
 
   getUsuarioLog(): Usuario {
-    // Si no está en memoria, intentar recuperar de localStorage
+    // Si no está en memoria, intentar recuperar de sessionStorage
     if (!this.usuarioLog) {
-      const usuarioStr = localStorage.getItem('usuarioLog');
+      const usuarioStr = sessionStorage.getItem('usuarioLog') || localStorage.getItem('usuarioLog');
       if (usuarioStr) {
         try {
           this.usuarioLog = JSON.parse(usuarioStr);
@@ -96,16 +96,16 @@ export class UsuarioService {
 
   setEmpresaLog(empresa: Empresa): void {
     this.empresaLog = empresa;
-    // Guardar en localStorage para persistencia
+    // Guardar en sessionStorage para sesión por pestaña
     if (empresa) {
-      localStorage.setItem('empresaLog', JSON.stringify(empresa));
+      sessionStorage.setItem('empresaLog', JSON.stringify(empresa));
     }
   }
 
   getEmpresaLog(): Empresa {
-    // Si no está en memoria, intentar recuperar de localStorage
+    // Si no está en memoria, intentar recuperar de sessionStorage
     if (!this.empresaLog) {
-      const empresaStr = localStorage.getItem('empresaLog');
+      const empresaStr = sessionStorage.getItem('empresaLog') || localStorage.getItem('empresaLog');
       if (empresaStr) {
         try {
           this.empresaLog = JSON.parse(empresaStr);
@@ -123,16 +123,18 @@ export class UsuarioService {
     this.empresaLog = null as any;
     this.usuarios = [];
 
-    // Limpiar TODOS los datos de sesión (crítico para authGuard)
-    localStorage.removeItem('logged');  // ← Crítico: permite que authGuard bloquee acceso
-    localStorage.removeItem('usuarioLog');
-    localStorage.removeItem('empresaLog');
-    localStorage.removeItem('empresa');
-    localStorage.removeItem('empresaName');
-    localStorage.removeItem('usuario');
-    localStorage.removeItem('userName');
-    localStorage.removeItem('idUsuario');
-    localStorage.removeItem('token');
+    // Limpiar sesión de la pestaña/ventana actual
+    sessionStorage.removeItem('logged');
+    sessionStorage.removeItem('usuarioLog');
+    sessionStorage.removeItem('empresaLog');
+    sessionStorage.removeItem('empresa');
+    sessionStorage.removeItem('empresaName');
+    sessionStorage.removeItem('usuario');
+    sessionStorage.removeItem('userName');
+    sessionStorage.removeItem('idUsuario');
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('username');
+    sessionStorage.removeItem('idSucursal');
   }
 
   // tslint:disable-next-line: typedef

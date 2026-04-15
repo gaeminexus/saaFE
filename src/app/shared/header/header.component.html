@@ -8,6 +8,11 @@
       </button>
     }
 
+    <button class="header-new-tab" (click)="abrirNuevaPestana()" matTooltip="Abrir el sistema en una nueva pestaña">
+      <span class="material-icons" style="font-size:1.2em;vertical-align:middle;">open_in_new</span>
+      Nueva pestaña
+    </button>
+
     <div class="user-block" style="display:flex; align-items:center; gap:.5rem;">
       <span class="header-usuario">{{ usuarioNombre }}</span>
       <button mat-icon-button [matMenuTriggerFor]="userMenu" matTooltip="Opciones de usuario">
