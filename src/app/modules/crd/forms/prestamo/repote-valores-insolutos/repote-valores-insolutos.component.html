@@ -1,0 +1,188 @@
+<div class="consulta-container">
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-icon">
+        <mat-icon>analytics</mat-icon>
+      </div>
+      <div class="header-text">
+        <h1>Reporte de Valores Insolutos</h1>
+        <p class="subtitle">Consulta de cuotas vigentes no pagadas por período</p>
+      </div>
+      <div class="header-actions">
+        <button
+          mat-icon-button
+          (click)="toggleFiltrosPrincipales()"
+          class="toggle-filtros-btn"
+          matTooltip="{{ filtrosPrincipalesExpandidos() ? 'Ocultar filtros' : 'Mostrar filtros' }}"
+        >
+          <mat-icon>{{ filtrosPrincipalesExpandidos() ? 'expand_less' : 'expand_more' }}</mat-icon>
+        </button>
+      </div>
+    </div>
+
+    @if (filtrosPrincipalesExpandidos()) {
+      <div class="filtros-container">
+        <form [formGroup]="filtrosForm">
+          <div class="filtros-principales">
+            <div class="filtros-grid">
+              <mat-form-field appearance="fill" class="filter-field">
+                <mat-label>Mes</mat-label>
+                <mat-icon matPrefix>calendar_month</mat-icon>
+                <mat-select formControlName="mes">
+                  @for (mes of meses; track mes.valor) {
+                    <mat-option [value]="mes.valor">{{ mes.nombre }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="fill" class="filter-field">
+                <mat-label>Año</mat-label>
+                <mat-icon matPrefix>event</mat-icon>
+                <mat-select formControlName="anio">
+                  @for (anio of anios; track anio) {
+                    <mat-option [value]="anio">{{ anio }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+            </div>
+          </div>
+
+          <div class="acciones-filtros">
+            <button mat-raised-button type="button" (click)="consultar()" class="btn-action btn-buscar" [disabled]="loading()">
+              <mat-icon>search</mat-icon>
+              Consultar
+            </button>
+
+            <button mat-raised-button type="button" (click)="limpiar()" class="btn-action btn-limpiar" [disabled]="loading()">
+              <mat-icon>clear</mat-icon>
+              Limpiar
+            </button>
+
+            <button
+              mat-raised-button
+              type="button"
+              class="btn-action btn-exportar"
+              (click)="exportarCSV()"
+              [disabled]="loading() || !dataSource.data.length">
+              <mat-icon>download</mat-icon>
+              Exportar CSV
+            </button>
+
+            <button
+              mat-raised-button
+              type="button"
+              class="btn-action btn-exportar"
+              (click)="exportarPDF()"
+              [disabled]="loading() || !dataSource.data.length">
+              <mat-icon>picture_as_pdf</mat-icon>
+              Exportar PDF
+            </button>
+          </div>
+        </form>
+      </div>
+    }
+  </div>
+
+  <div class="resumen-strip">
+    <div class="resumen-item">
+      <span class="label">Registros</span>
+      <span class="value">{{ totalRegistros }}</span>
+    </div>
+    <div class="resumen-item">
+      <span class="label">Período</span>
+      <span class="value">{{ nombreMesSeleccionado }} {{ filtrosForm.getRawValue().anio }}</span>
+    </div>
+    <div class="resumen-item">
+      <span class="label">Estado</span>
+      <span class="value">{{ busquedaRealizada() ? 'Consulta ejecutada' : 'Pendiente de consulta' }}</span>
+    </div>
+  </div>
+
+  <mat-card class="resultado-card">
+    <mat-card-content>
+      @if (loading()) {
+        <div class="estado-container">
+          <mat-spinner diameter="50"></mat-spinner>
+        </div>
+      }
+
+      @if (error() && !loading()) {
+        <div class="estado-container mensaje-error">{{ error() }}</div>
+      }
+
+      @if (!loading() && !error()) {
+        <div class="tabla-wrapper">
+          <table mat-table [dataSource]="dataSource" matSort class="resultados-table">
+            <ng-container matColumnDef="apellido1">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Apellido_1</th>
+              <td mat-cell *matCellDef="let row">{{ row.apellido1 }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="apellido2">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Apellido_2</th>
+              <td mat-cell *matCellDef="let row">{{ row.apellido2 }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="nombre">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Nombre</th>
+              <td mat-cell *matCellDef="let row">{{ row.nombre }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="fechaNacimiento">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Fecha_Nacmto</th>
+              <td mat-cell *matCellDef="let row">{{ row.fechaNacimiento }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="sexo">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Sexo</th>
+              <td mat-cell *matCellDef="let row">{{ row.sexo }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="tipoDocumento">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Tipo_Dcmto</th>
+              <td mat-cell *matCellDef="let row">{{ row.tipoDocumento }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="numeroCedula">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Nro_Cedula</th>
+              <td mat-cell *matCellDef="let row">{{ row.numeroCedula }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="fechaPrestamo">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Fecha_Prestamo</th>
+              <td mat-cell *matCellDef="let row">{{ row.fechaPrestamo }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="saldoInsolutoAbril">
+              <th mat-header-cell *matHeaderCellDef style="text-align: right">Saldo Insoluto Abril</th>
+              <td mat-cell *matCellDef="let row" style="text-align: right">{{ row.saldoInsolutoAbril | number: '1.2-2' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="tipo">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Tipo</th>
+              <td mat-cell *matCellDef="let row">{{ row.tipo }}</td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns" class="tabla-row"></tr>
+            <tr class="mat-row" *matNoDataRow>
+              <td class="mat-cell" [attr.colspan]="displayedColumns.length">
+                @if (busquedaRealizada()) {
+                  No se encontraron registros para los filtros seleccionados.
+                } @else {
+                  Seleccione mes y año para consultar.
+                }
+              </td>
+            </tr>
+          </table>
+        </div>
+
+        <mat-paginator
+          [pageSize]="20"
+          [pageSizeOptions]="[10, 20, 50]"
+          showFirstLastButtons>
+        </mat-paginator>
+      }
+    </mat-card-content>
+  </mat-card>
+</div>

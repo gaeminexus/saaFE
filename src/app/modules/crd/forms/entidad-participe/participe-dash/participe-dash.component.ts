@@ -15,6 +15,7 @@ import { Contrato } from '../../../model/contrato';
 import { DetallePrestamo } from '../../../model/detalle-prestamo';
 import { Direccion } from '../../../model/direccion';
 import { Entidad } from '../../../model/entidad';
+import { EstadoParticipe } from '../../../model/estado-participe';
 import { EstadoPrestamo } from '../../../model/estado-prestamo';
 import { PagoPrestamo } from '../../../model/pago-prestamo';
 import { Participe } from '../../../model/participe';
@@ -36,6 +37,7 @@ import { ContratoService } from '../../../service/contrato.service';
 import { DetallePrestamoService } from '../../../service/detalle-prestamo.service';
 import { DireccionService } from '../../../service/direccion.service';
 import { EntidadService } from '../../../service/entidad.service';
+import { EstadoParticipeService } from '../../../service/estado-participe.service';
 import { EstadoPrestamoService } from '../../../service/estado-prestamo.service';
 import { EstadoCuotaPrestamo } from '../../../model/estado-cuota-prestamo';
 import { EstadoCuotaPrestamoService } from '../../../service/estado-cuota-prestamo.service';
@@ -92,6 +94,7 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
   aportesPorTipo: AportesPorTipo[] = [];
   totalAportes: number = 0;
   estadosPrestamo: EstadoPrestamo[] = [];
+  estadosParticipesOptions: EstadoParticipe[] = [];
   estadosCuota: EstadoCuotaPrestamo[] = [];
 
   // Vista de detalle
@@ -155,6 +158,7 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
     private tipoAporteService: TipoAporteService,
     private contratoService: ContratoService,
     private participeService: ParticipeService,
+    private estadoParticipeService: EstadoParticipeService,
     private estadoPrestamoService: EstadoPrestamoService,
     private estadoCuotaPrestamoService: EstadoCuotaPrestamoService,
     private auditoriaService: AuditoriaService,
@@ -171,6 +175,7 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
   ngOnInit(): void {
     this.mostrarTodosPrestamos = false;
     this.filtroEstadoPrestamo = 'TODOS';
+    this.cargarEstadosParticipes();
     // Cargar estados de préstamo y estados de cuota
     this.cargarEstadosPrestamo();
     this.cargarEstadosCuota();
@@ -2289,6 +2294,100 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
         console.error('Error al cargar estados de préstamo:', error);
       },
     });
+  }
+
+  /**
+   * Carga los estados de partícipe para mostrar nombre y color del estado de entidad.
+   */
+  cargarEstadosParticipes(): void {
+    this.estadoParticipeService.getAll().subscribe({
+      next: (estados) => {
+        if (estados && Array.isArray(estados)) {
+          this.estadosParticipesOptions = estados;
+        }
+      },
+      error: (error) => {
+        console.error('Error al cargar estados de partícipe:', error);
+      },
+    });
+  }
+
+  /**
+   * Obtiene el nombre del estado desde EstadoParticipe.
+   */
+  obtenerNombreEstadoEntidad(idEstado: number | undefined): string {
+    if (idEstado === undefined || idEstado === null) {
+      return '-';
+    }
+
+    const estado = this.estadosParticipesOptions.find((e) => e.codigo === idEstado);
+    return estado?.nombre || `Estado ${idEstado}`;
+  }
+
+  /**
+   * Obtiene la clase CSS para el badge de estado de entidad.
+   * Replica el mapeo de colores usado en entidad-consulta.
+   */
+  obtenerClaseEstadoEntidad(idEstado: number | undefined): string {
+    if (idEstado === undefined || idEstado === null) {
+      return 'estado-desconocido';
+    }
+
+    const estado = this.estadosParticipesOptions.find((e) => e.codigo === idEstado);
+    const nombreEstado = estado?.nombre?.toLowerCase() || '';
+
+    if (nombreEstado.includes('aprobado')) {
+      return 'estado-activo';
+    }
+    if (nombreEstado.includes('rechazado')) {
+      return 'estado-inactivo';
+    }
+    if (nombreEstado.includes('pendiente')) {
+      return 'estado-pendiente';
+    }
+    if (nombreEstado.includes('inactivo')) {
+      return 'estado-suspendido';
+    }
+    if (nombreEstado.includes('proceso')) {
+      return 'estado-revision';
+    }
+    if (nombreEstado.includes('cesado')) {
+      return 'estado-cesado';
+    }
+    if (nombreEstado.includes('jubilado')) {
+      return 'estado-jubilado';
+    }
+    if (nombreEstado.includes('fallecida')) {
+      return 'estado-fallecido';
+    }
+    if (nombreEstado.includes('desafiliacion')) {
+      return 'estado-desafiliado';
+    }
+    if (nombreEstado.includes('disponible')) {
+      return 'estado-disponible';
+    }
+    if (nombreEstado.includes('pension')) {
+      return 'estado-pension';
+    }
+    if (nombreEstado.includes('aportar')) {
+      return 'estado-aportar';
+    }
+
+    const colores = [
+      'estado-activo',
+      'estado-inactivo',
+      'estado-pendiente',
+      'estado-revision',
+      'estado-suspendido',
+      'estado-cesado',
+      'estado-jubilado',
+      'estado-fallecido',
+      'estado-desafiliado',
+      'estado-disponible',
+      'estado-pension',
+      'estado-aportar',
+    ];
+    return colores[idEstado % colores.length] || 'estado-otro';
   }
 
   /**

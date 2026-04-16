@@ -122,11 +122,9 @@
                 (click)="procesarCarga(carga)"
           [disabled]="procesandoCodigos().has(carga.codigo!) || esCargaProcesada(carga)">
           @if (procesandoCodigos().has(carga.codigo!)) {
-            <mat-icon>hourglass_empty</mat-icon>
-            Procesando...
+            <ng-container><mat-icon>hourglass_empty</mat-icon> Procesando...</ng-container>
           } @else {
-            <mat-icon>play_arrow</mat-icon>
-            Procesar
+            <ng-container><mat-icon>play_arrow</mat-icon> Procesar</ng-container>
           }
           </button>
         </mat-card-actions>

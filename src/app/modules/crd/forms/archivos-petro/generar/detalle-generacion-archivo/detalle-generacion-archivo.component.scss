@@ -1,0 +1,319 @@
+.detalle-generacion-container {
+  padding: 16px;
+  width: 100%;
+
+  // ── Cabecera ───────────────────────────────────────────────
+  .page-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+
+    .back-button {
+      background: rgba(102, 126, 234, 0.1);
+      color: #667eea;
+      &:hover { background: rgba(102, 126, 234, 0.2); }
+    }
+
+    .page-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0;
+      font-size: 1.4rem;
+      font-weight: 600;
+      color: #333;
+
+      .title-icon { color: #667eea; }
+    }
+  }
+
+  // ── Spinner global ─────────────────────────────────────────
+  .loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 48px;
+    gap: 16px;
+    color: #666;
+  }
+
+  // ── Tarjetas informativas ──────────────────────────────────
+  .info-card,
+  .productos-card {
+    margin-bottom: 20px;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+
+    mat-card-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-radius: 12px 12px 0 0;
+      padding: 16px;
+
+      &.header-with-actions {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+
+        .header-left {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          flex: 1;
+
+          .header-text {
+            display: flex;
+            flex-direction: column;
+          }
+        }
+
+        .header-button {
+          white-space: nowrap;
+          font-size: 0.85rem;
+          padding: 6px 12px !important;
+        }
+      }
+
+      mat-card-title,
+      mat-card-subtitle { color: white; }
+
+      .avatar-icon { color: rgba(255, 255, 255, 0.9); }
+    }
+  }
+
+  // ── Grid de información ────────────────────────────────────
+  .info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    padding: 16px 0;
+
+    .info-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      background: #f7f8fc;
+      border: 1px solid #e8ecf4;
+
+      &.full-width { grid-column: 1 / -1; }
+
+      mat-icon {
+        color: #667eea;
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        flex-shrink: 0;
+      }
+
+      .label {
+        font-size: 0.8rem;
+        color: #888;
+        white-space: nowrap;
+      }
+
+      .value {
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: #333;
+
+        &.monto { color: #667eea; font-weight: 600; }
+      }
+    }
+  }
+
+  // ── Estado badge ───────────────────────────────────────────
+  .estado-badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+
+    &.estado-pendiente  { background: #fff3cd; color: #856404; }
+    &.estado-procesado  { background: #d1ecf1; color: #0c5460; }
+    &.estado-enviado    { background: #d4edda; color: #155724; }
+    &.estado-error      { background: #f8d7da; color: #721c24; }
+  }
+
+  // ── Panel header de productos ──────────────────────────────
+  .panel-title {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+
+    .title-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      .prod-icon  { color: #667eea; }
+      .prod-codigo { font-weight: 600; color: #333; }
+      .separator  { color: #ccc; }
+      .prod-desc  { color: #666; font-size: 0.9rem; }
+    }
+
+    .title-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-right: 16px;
+
+      .badge-monto {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        padding: 3px 12px;
+        border-radius: 12px;
+        font-size: 0.85rem;
+        font-weight: 600;
+
+        mat-icon { font-size: 16px; width: 16px; height: 16px; }
+      }
+
+      .badge-registros {
+        background: #e8ecf4;
+        color: #667eea;
+        padding: 3px 10px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: 600;
+      }
+    }
+  }
+
+  // ── Spinner de partícipes ──────────────────────────────────
+  .loading-participes {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 20px;
+    color: #666;
+  }
+
+  // ── Tabla de partícipes ────────────────────────────────────
+  .table-wrapper {
+    overflow-x: auto;
+    max-height: 600px;
+    overflow-y: auto;
+    margin-top: 8px;
+
+    .participes-table {
+      width: 100%;
+      min-width: 600px;
+
+      th.mat-header-cell {
+        background: #f0f2fa;
+        color: #667eea;
+        font-weight: 600;
+        font-size: 0.82rem;
+      }
+
+      .num-cell {
+        text-align: right;
+        font-family: 'Courier New', monospace;
+        font-weight: 500;
+      }
+
+      .acciones-cell {
+        text-align: center;
+        width: 48px;
+        padding: 0;
+      }
+
+      .participe-row {
+        cursor: pointer;
+        transition: background 0.15s;
+        &:hover { background: #f4f6fb; }
+        &.expanded-row { background: #eef1fc; font-weight: 500; }
+      }
+
+      .detail-row {
+        height: 0;
+        td { padding: 0; border-bottom: none; }
+      }
+    }
+
+    .cuotas-container {
+      padding: 12px 24px 20px;
+      background: #f8f9fe;
+      border-left: 3px solid #667eea;
+      margin: 4px 0 8px;
+      border-radius: 0 8px 8px 0;
+
+      .cuotas-loading, .cuotas-empty {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 0;
+        color: #888;
+        font-size: 0.9rem;
+      }
+
+      .cuotas-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 10px;
+        font-weight: 600;
+        color: #667eea;
+        font-size: 0.9rem;
+
+        mat-icon { font-size: 18px; width: 18px; height: 18px; }
+      }
+
+      .cuotas-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.85rem;
+
+        thead tr {
+          background: #eef1fc;
+        }
+
+        th, td {
+          padding: 6px 12px;
+          border: 1px solid #dde2f0;
+          text-align: left;
+
+          &.num-col {
+            text-align: right;
+            font-family: 'Courier New', monospace;
+            font-weight: 500;
+            white-space: nowrap;
+          }
+        }
+
+        th {
+          font-weight: 600;
+          color: #555;
+        }
+
+        tbody tr:nth-child(even) { background: #f4f6fb; }
+        tbody tr:hover { background: #e8ecfa; }
+      }
+    }
+  }
+
+  // ── Estados vacíos ─────────────────────────────────────────
+  .sin-participes,
+  .sin-detalles {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 24px;
+    color: #aaa;
+    justify-content: center;
+
+    mat-icon {
+      font-size: 32px;
+      width: 32px;
+      height: 32px;
+    }
+  }
+}

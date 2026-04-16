@@ -1,0 +1,89 @@
+<div class="consulta-generacion-container">
+  <div class="filtros-header">
+    <h2 class="titulo-consulta">Consulta Generación Archivo Petrocomercial</h2>
+
+    <div class="selector-anio">
+      <mat-form-field appearance="fill">
+        <mat-label>Seleccionar Año</mat-label>
+        <mat-select [(ngModel)]="anioSeleccionado" (selectionChange)="onAnioSeleccionado()">
+          @for (anio of aniosDisponibles; track anio) {
+            <mat-option [value]="anio">{{ anio }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <button mat-stroked-button color="primary" (click)="limpiarFiltros()">
+        <mat-icon>filter_alt_off</mat-icon>
+        Limpiar
+      </button>
+    </div>
+
+    <div class="meses-container">
+      @for (mes of meses; track mes.numero) {
+        <div
+          class="mes-circulo"
+          [class.tiene-generacion]="mes.tieneGeneracion"
+          [class.activo]="mes.activo"
+          [class.deshabilitado]="!mes.tieneGeneracion"
+          (click)="onMesClick(mes)"
+          [title]="mes.nombre"
+        >
+          <span class="mes-nombre">{{ mes.nombre }}</span>
+        </div>
+      }
+    </div>
+  </div>
+
+  @if (isLoading()) {
+    <div class="loading-state">
+      <mat-spinner diameter="42"></mat-spinner>
+      <p>Cargando generaciones...</p>
+    </div>
+  }
+
+  @if (!isLoading() && registrosFiltrados.length === 0) {
+    <div class="sin-resultados">
+      <mat-icon>folder_open</mat-icon>
+      <p>No se encontraron generaciones para los filtros seleccionados</p>
+    </div>
+  }
+
+  <div class="tarjetas-container" *ngIf="!isLoading() && registrosFiltrados.length > 0">
+    <mat-card *ngFor="let row of registrosFiltrados" class="tarjeta-generacion">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>description</mat-icon>
+          Generación {{ getMesNombre(row.mesPeriodo) }} {{ row.anioPeriodo }}
+        </mat-card-title>
+        <mat-card-subtitle>
+          Código #{{ row.codigo }}
+        </mat-card-subtitle>
+      </mat-card-header>
+
+      <mat-card-content>
+        <div class="totales-grid">
+          <div class="total-item">
+            <span class="total-label">Registros</span>
+            <span class="total-valor">{{ row.totalRegistros || 0 }}</span>
+          </div>
+          <div class="total-item">
+            <span class="total-label">Monto Enviado</span>
+            <span class="total-valor destacado">{{ formatearMonto(row.totalMontoEnviado) }}</span>
+          </div>
+          <div class="total-item">
+            <span class="total-label">Estado</span>
+            <span class="total-valor">{{ row.estado ?? '-' }}</span>
+          </div>
+        </div>
+      </mat-card-content>
+
+      <mat-card-actions align="end">
+        <button mat-button color="primary" (click)="verDetalle(row)">
+          <mat-icon>visibility</mat-icon>
+          Ver Detalle
+        </button>
+      </mat-card-actions>
+    </mat-card>
+  </div>
+
+</div>

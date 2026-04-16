@@ -2,20 +2,20 @@ import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
-import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
-import { Filial } from '../../../model/filial';
-import { CargaArchivo } from '../../../model/carga-archivo';
-import { FilialService } from '../../../service/filial.service';
-import { CargaArchivoService } from '../../../service/carga-archivo.service';
-import { ServiciosAsoprepService } from '../../../../asoprep/service/servicios-asoprep.service';
-import { Usuario } from '../../../../../shared/model/usuario';
-import { FuncionesDatosService, TipoFormatoFechaBackend } from '../../../../../shared/services/funciones-datos.service';
-import { ArchivoPetroService, AporteAgrupado } from '../../../../asoprep/service/archivo-petro.service';
-import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
-import { TipoDatosBusqueda as TipoDatos } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
-import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
-import { AppStateService } from '../../../../../shared/services/app-state.service';
-import { UsuarioService } from '../../../../../shared/services/usuario.service';
+import { MaterialFormModule } from '../../../../../../shared/modules/material-form.module';
+import { Filial } from '../../../../model/filial';
+import { CargaArchivo } from '../../../../model/carga-archivo';
+import { FilialService } from '../../../../service/filial.service';
+import { CargaArchivoService } from '../../../../service/carga-archivo.service';
+import { ServiciosAsoprepService } from '../../../../../asoprep/service/servicios-asoprep.service';
+import { Usuario } from '../../../../../../shared/model/usuario';
+import { FuncionesDatosService, TipoFormatoFechaBackend } from '../../../../../../shared/services/funciones-datos.service';
+import { ArchivoPetroService, AporteAgrupado } from '../../../../../asoprep/service/archivo-petro.service';
+import { DatosBusqueda } from '../../../../../../shared/model/datos-busqueda/datos-busqueda';
+import { TipoDatosBusqueda as TipoDatos } from '../../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
+import { TipoComandosBusqueda } from '../../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
+import { AppStateService } from '../../../../../../shared/services/app-state.service';
+import { UsuarioService } from '../../../../../../shared/services/usuario.service';
 
 interface Mes {
   valor: number;

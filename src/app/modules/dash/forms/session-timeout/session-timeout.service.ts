@@ -54,12 +54,34 @@ export class SessionTimeoutService {
 
   private inactivityTimer: any;
   private warningTimer: any;
+  private healthCheckTimer: any;
   private destroy$ = new Subject<void>();
   private isInitialized = false;
   private broadcastChannel: BroadcastChannel | null = null;
   private readonly runtimeTabId = Math.random().toString(36).slice(2);
+  private warningDialogRef: any = null;
+  private lastBroadcastActivityAt = 0;
+  private readonly ACTIVITY_BROADCAST_THROTTLE_MS = 1000;
+
+  private readonly activityEvents = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
+  private readonly activityListener = () => {
+    this.ngZone.run(() => {
+      this.registerActivity(true);
+    });
+  };
+  private readonly visibilityListener = () => {
+    if (!document.hidden) {
+      this.evaluateSessionState();
+    }
+  };
+  private readonly focusListener = () => {
+    this.evaluateSessionState();
+  };
+  private storageListener?: (e: StorageEvent) => void;
 
   private readonly SESSION_GROUP_KEY = 'saafeSessionGroupId';
+  private readonly LAST_ACTIVITY_KEY = 'saafe_last_activity_ts';
+  private readonly ACTIVITY_SIGNAL_KEY = 'saafe_activity_signal';
   private readonly SESSION_KEYS_TO_CLEAR = [
     'logged',
     'token',
@@ -88,10 +110,15 @@ export class SessionTimeoutService {
     this.loadTimeoutConfiguration();
     this.ensureSessionGroupId();
     this.setupCrossTabLogoutListener();
+    this.setupCrossTabActivityStorageListener();
+    this.ensureActivityTimestampInitialized();
 
     this.isInitialized = true;
+    this.startSessionHealthCheck();
     this.startInactivityTimer();
     this.setupActivityListeners();
+    this.setupVisibilityListeners();
+    this.evaluateSessionState();
   }
 
   private ensureSessionGroupId(): string {
@@ -129,16 +156,62 @@ export class SessionTimeoutService {
     this.broadcastChannel = new BroadcastChannel(`saafe-auth-${groupId}`);
     this.broadcastChannel.onmessage = (event) => {
       const payload = event?.data;
-      if (!payload || payload.type !== 'LOGOUT') {
+      if (!payload) {
         return;
       }
 
-      if (payload.sourceTabId === this.runtimeTabId) {
+      if (payload.type === 'LOGOUT') {
+        if (payload.sourceTabId === this.runtimeTabId) {
+          return;
+        }
+
+        this.performLocalLogout(false);
         return;
       }
 
-      this.performLocalLogout(false);
+      if (payload.type === 'ACTIVITY') {
+        if (payload.sourceTabId === this.runtimeTabId) {
+          return;
+        }
+
+        this.applyExternalActivity(Number(payload.timestamp) || Date.now());
+      }
     };
+  }
+
+  private setupCrossTabActivityStorageListener(): void {
+    this.storageListener = (e: StorageEvent) => {
+      if (!e.key || !e.newValue) {
+        return;
+      }
+
+      if (e.key === this.ACTIVITY_SIGNAL_KEY) {
+        try {
+          const signal = JSON.parse(e.newValue);
+          if (!signal || signal.sourceTabId === this.runtimeTabId) {
+            return;
+          }
+
+          this.applyExternalActivity(Number(signal.timestamp) || Date.now());
+        } catch {
+          // noop
+        }
+        return;
+      }
+
+      if (e.key === this.LAST_ACTIVITY_KEY) {
+        this.evaluateSessionState();
+      }
+    };
+
+    window.addEventListener('storage', this.storageListener);
+  }
+
+  private ensureActivityTimestampInitialized(): void {
+    const current = Number(localStorage.getItem(this.LAST_ACTIVITY_KEY) || '0');
+    if (!current || Number.isNaN(current)) {
+      localStorage.setItem(this.LAST_ACTIVITY_KEY, Date.now().toString());
+    }
   }
 
   private broadcastLogoutToGroup(): void {
@@ -206,35 +279,59 @@ export class SessionTimeoutService {
   private startInactivityTimer(): void {
     this.clearTimers();
 
+    const warningThresholdMs = (this.INACTIVITY_TIME - this.WARNING_TIME) * 60 * 1000;
+    const elapsedMs = this.getElapsedSinceLastActivity();
+    const remainingUntilWarningMs = warningThresholdMs - elapsedMs;
+
+    if (remainingUntilWarningMs <= 0) {
+      this.showWarningDialog();
+      return;
+    }
+
     this.inactivityTimer = setTimeout(() => {
       this.showWarningDialog();
-    }, (this.INACTIVITY_TIME - this.WARNING_TIME) * 60 * 1000);
+    }, remainingUntilWarningMs);
   }
 
   /**
    * Muestra el modal de advertencia con contador regresivo
    */
   private showWarningDialog(): void {
+    const inactivityMs = this.INACTIVITY_TIME * 60 * 1000;
+    const elapsedMs = this.getElapsedSinceLastActivity();
+    const remainingToLogoutMs = inactivityMs - elapsedMs;
+
+    if (remainingToLogoutMs <= 0) {
+      this.endSession();
+      return;
+    }
+
+    if (this.warningDialogRef) {
+      return;
+    }
+
     const dialogRef = this.dialog.open(SessionTimeoutWarningComponent, {
       disableClose: true,
       width: '400px',
       data: {
-        remainingTime: this.WARNING_TIME * 60, // segundos
+        remainingTime: Math.ceil(remainingToLogoutMs / 1000), // segundos
       },
     });
+    this.warningDialogRef = dialogRef;
 
     // Cierra sesión automáticamente si no hay respuesta
     this.warningTimer = setTimeout(() => {
       dialogRef.close('timeout');
       this.endSession();
-    }, this.WARNING_TIME * 60 * 1000);
+    }, remainingToLogoutMs);
 
     dialogRef.afterClosed().subscribe((result) => {
+      this.warningDialogRef = null;
       if (result === 'logout') {
         this.endSession();
       } else if (result === 'continue') {
         // Usuario confirmó seguir activo
-        this.startInactivityTimer();
+        this.registerActivity(true);
       }
     });
   }
@@ -244,34 +341,148 @@ export class SessionTimeoutService {
    */
   private setupActivityListeners(): void {
     this.ngZone.runOutsideAngular(() => {
-      const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
-
-      events.forEach((event) => {
+      this.activityEvents.forEach((event) => {
         document.addEventListener(
           event,
-          () => {
-            this.ngZone.run(() => {
-              this.resetInactivityTimer();
-            });
-          },
+          this.activityListener,
           true // Usar captura para asegurar que se detecte toda actividad
         );
       });
     });
   }
 
+  private setupVisibilityListeners(): void {
+    document.addEventListener('visibilitychange', this.visibilityListener, true);
+    window.addEventListener('focus', this.focusListener, true);
+    window.addEventListener('pageshow', this.focusListener, true);
+  }
+
+  private startSessionHealthCheck(): void {
+    if (this.healthCheckTimer) {
+      clearInterval(this.healthCheckTimer);
+      this.healthCheckTimer = null;
+    }
+
+    this.healthCheckTimer = setInterval(() => {
+      this.evaluateSessionState();
+    }, 5000);
+  }
+
+  private evaluateSessionState(): void {
+    const isLoggedIn = sessionStorage.getItem('logged') === 'true';
+    if (!isLoggedIn) {
+      return;
+    }
+
+    const elapsedMs = this.getElapsedSinceLastActivity();
+    const inactivityMs = this.INACTIVITY_TIME * 60 * 1000;
+    const warningThresholdMs = (this.INACTIVITY_TIME - this.WARNING_TIME) * 60 * 1000;
+
+    if (elapsedMs >= inactivityMs) {
+      this.endSession();
+      return;
+    }
+
+    if (elapsedMs >= warningThresholdMs) {
+      this.showWarningDialog();
+      return;
+    }
+
+    this.closeWarningDialogIfOpen();
+    this.startInactivityTimer();
+  }
+
+  private getElapsedSinceLastActivity(): number {
+    const now = Date.now();
+    const lastActivityTs = Number(localStorage.getItem(this.LAST_ACTIVITY_KEY) || now.toString());
+
+    if (!lastActivityTs || Number.isNaN(lastActivityTs)) {
+      return 0;
+    }
+
+    return Math.max(0, now - lastActivityTs);
+  }
+
+  private registerActivity(broadcast: boolean): void {
+    const now = Date.now();
+    localStorage.setItem(this.LAST_ACTIVITY_KEY, now.toString());
+    this.closeWarningDialogIfOpen();
+    this.startInactivityTimer();
+
+    if (broadcast) {
+      this.broadcastActivityToGroup(now);
+    }
+  }
+
+  private applyExternalActivity(timestamp: number): void {
+    const currentTs = Number(localStorage.getItem(this.LAST_ACTIVITY_KEY) || '0');
+    if (!currentTs || Number.isNaN(currentTs) || timestamp > currentTs) {
+      localStorage.setItem(this.LAST_ACTIVITY_KEY, timestamp.toString());
+    }
+
+    this.closeWarningDialogIfOpen();
+    this.startInactivityTimer();
+  }
+
+  private broadcastActivityToGroup(timestamp: number): void {
+    const now = Date.now();
+    if (now - this.lastBroadcastActivityAt < this.ACTIVITY_BROADCAST_THROTTLE_MS) {
+      return;
+    }
+    this.lastBroadcastActivityAt = now;
+
+    try {
+      this.broadcastChannel?.postMessage({
+        type: 'ACTIVITY',
+        sourceTabId: this.runtimeTabId,
+        timestamp,
+      });
+    } catch {
+      // noop
+    }
+
+    try {
+      localStorage.setItem(
+        this.ACTIVITY_SIGNAL_KEY,
+        JSON.stringify({
+          sourceTabId: this.runtimeTabId,
+          timestamp,
+          ts: now,
+        })
+      );
+    } catch {
+      // noop
+    }
+  }
+
+  private closeWarningDialogIfOpen(): void {
+    if (this.warningDialogRef) {
+      this.warningDialogRef.close();
+      this.warningDialogRef = null;
+    }
+
+    if (this.warningTimer) {
+      clearTimeout(this.warningTimer);
+      this.warningTimer = null;
+    }
+  }
+
   /**
    * Reinicia el temporizador de inactividad
    */
   private resetInactivityTimer(): void {
-    this.clearTimers();
-    this.startInactivityTimer();
+    this.registerActivity(true);
   }
 
   /**
    * Termina la sesión y redirige al login
    */
   private endSession(): void {
+    const isLoggedIn = sessionStorage.getItem('logged') === 'true';
+    if (!isLoggedIn) {
+      return;
+    }
+
     this.broadcastLogoutToGroup();
     this.performLocalLogout(true);
   }
@@ -295,6 +506,8 @@ export class SessionTimeoutService {
     this.SESSION_KEYS_TO_CLEAR.forEach((key) => sessionStorage.removeItem(key));
     localStorage.removeItem('logged');
     localStorage.removeItem(this.SESSION_GROUP_KEY);
+    localStorage.removeItem(this.LAST_ACTIVITY_KEY);
+    localStorage.removeItem(this.ACTIVITY_SIGNAL_KEY);
     localStorage.removeItem('token');
     localStorage.removeItem('username');
     localStorage.removeItem('idSucursal');
@@ -318,6 +531,10 @@ export class SessionTimeoutService {
       clearTimeout(this.warningTimer);
       this.warningTimer = null;
     }
+    if (this.healthCheckTimer) {
+      clearInterval(this.healthCheckTimer);
+      this.healthCheckTimer = null;
+    }
   }
 
   /**
@@ -326,8 +543,19 @@ export class SessionTimeoutService {
   destroySessionTimeout(): void {
     this.isInitialized = false;
     this.clearTimers();
+    this.closeWarningDialogIfOpen();
     this.broadcastChannel?.close();
     this.broadcastChannel = null;
+    this.activityEvents.forEach((event) => {
+      document.removeEventListener(event, this.activityListener, true);
+    });
+    document.removeEventListener('visibilitychange', this.visibilityListener, true);
+    window.removeEventListener('focus', this.focusListener, true);
+    window.removeEventListener('pageshow', this.focusListener, true);
+    if (this.storageListener) {
+      window.removeEventListener('storage', this.storageListener);
+      this.storageListener = undefined;
+    }
   }
 
   /**

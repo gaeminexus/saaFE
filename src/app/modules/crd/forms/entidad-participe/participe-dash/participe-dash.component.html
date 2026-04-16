@@ -118,6 +118,16 @@
       @if (participeEncontrado) {
       <mat-card-content>
         <div class="participe-info-grid">
+          <div class="participe-item estado-entidad">
+            <mat-icon>toggle_on</mat-icon>
+            <div class="item-content">
+                <span class="item-label">Estado Partícipe</span>
+              <span class="entidad-estado-badge" [ngClass]="obtenerClaseEstadoEntidad(entidadEncontrada.idEstado)">
+                {{ obtenerNombreEstadoEntidad(entidadEncontrada.idEstado) }}
+              </span>
+            </div>
+          </div>
+
           <div class="participe-item">
             <mat-icon>work</mat-icon>
             <div class="item-content">

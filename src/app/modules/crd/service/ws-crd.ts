@@ -73,6 +73,10 @@ export class ServiciosCrd {
   public static RS_BIPR = `${API_URL}/bipr`;
   public static RS_ESCP = `${API_URL}/escp`;
   public static RS_OAVP = `${API_URL}/oavp`;
+  public static RS_GNAP = `${API_URL}/gnap`;
+  public static RS_DTGA = `${API_URL}/dtga`;
+  public static RS_PDGA = `${API_URL}/pdga`;
+  public static RS_CXPG = `${API_URL}/cxpg`;
 }
 /*
 export class ServiciosCrd {

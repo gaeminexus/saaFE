@@ -129,6 +129,11 @@ export class MenucreditosComponent {
           iconName: 'manage_search',
           route: '/menucreditos/cuota-consulta',
         },
+        {
+          displayName: 'Repote Valores Insolutos',
+          iconName: 'request_quote',
+          route: '/menucreditos/repote-valores-insolutos',
+        },
       ],
     },
     {
@@ -146,20 +151,39 @@ export class MenucreditosComponent {
           iconName: 'cards_stack',
           route: '/menucreditos/parametrizacion',
           children: [
-            /*{
-              displayName: 'Carga Aportes',
-              iconName: 'drive_folder_upload',
-              route: '/menucreditos/carga-aportes',
-            },*/
             {
-              displayName: 'Carga Aportes',
-              iconName: 'drive_folder_upload',
-              route: '/menucreditos/carga-aportes-back',
+              displayName: 'Carga',
+              iconName: 'folder_open',
+              route: '/menucreditos/parametrizacion',
+              children: [
+                {
+                  displayName: 'Carga Aportes',
+                  iconName: 'drive_folder_upload',
+                  route: '/menucreditos/archivos-petro/carga/carga-aportes-back',
+                },
+                {
+                  displayName: 'Consulta Carga',
+                  iconName: 'manage_search',
+                  route: '/menucreditos/archivos-petro/carga/consulta',
+                },
+              ],
             },
             {
-              displayName: 'Consulta',
-              iconName: 'manage_search',
-              route: '/menucreditos/consulta-archivos-petro',
+              displayName: 'Generar',
+              iconName: 'post_add',
+              route: '/menucreditos/parametrizacion',
+              children: [
+                {
+                  displayName: 'Generar Archivo',
+                  iconName: 'publish',
+                  route: '/menucreditos/archivos-petro/generar/proceso',
+                },
+                {
+                  displayName: 'Consulta Generación',
+                  iconName: 'description',
+                  route: '/menucreditos/archivos-petro/generar/consulta',
+                },
+              ],
             },
           ],
         },

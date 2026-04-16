@@ -4,29 +4,29 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
 import { Router } from '@angular/router';
 
-import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
-import { Filial } from '../../../model/filial';
-import { CargaArchivo } from '../../../model/carga-archivo';
-import { DetalleCargaArchivo } from '../../../model/detalle-carga-archivo';
-import { ParticipeXCargaArchivo } from '../../../model/participe-x-carga-archivo';
-import { FilialService } from '../../../service/filial.service';
-import { CargaArchivoService } from '../../../service/carga-archivo.service';
-import { DetalleCargaArchivoService } from '../../../service/detalle-carga-archivo.service';
-import { ParticipeXCargaArchivoService } from '../../../service/participe-x-carga-archivo.service';
-import { ServiciosAsoprepService } from '../../../../asoprep/service/servicios-asoprep.service';
-import { Usuario } from '../../../../../shared/model/usuario';
-import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
-import { TipoDatosBusqueda as TipoDatos } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
-import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
-import { ConfirmDialogComponent } from '../../../../../shared/basics/confirm-dialog/confirm-dialog.component';
-import { DetalleRubroService } from '../../../../../shared/services/detalle-rubro.service';
-import { NovedadCargaService } from '../../../service/novedad-carga.service';
-import { NovedadCarga, NovedadAgrupada } from '../../../model/novedad-carga';
-import { AppStateService } from '../../../../../shared/services/app-state.service';
-import { UsuarioService } from '../../../../../shared/services/usuario.service';
-import { ExportService } from '../../../../../shared/services/export.service';
-import { NovedadParticipeCargaService } from '../../../service/novedad-participe-carga.service';
-import { NovedadParticipeCarga } from '../../../model/novedad-participe-carga';
+import { MaterialFormModule } from '../../../../../../shared/modules/material-form.module';
+import { Filial } from '../../../../model/filial';
+import { CargaArchivo } from '../../../../model/carga-archivo';
+import { DetalleCargaArchivo } from '../../../../model/detalle-carga-archivo';
+import { ParticipeXCargaArchivo } from '../../../../model/participe-x-carga-archivo';
+import { FilialService } from '../../../../service/filial.service';
+import { CargaArchivoService } from '../../../../service/carga-archivo.service';
+import { DetalleCargaArchivoService } from '../../../../service/detalle-carga-archivo.service';
+import { ParticipeXCargaArchivoService } from '../../../../service/participe-x-carga-archivo.service';
+import { ServiciosAsoprepService } from '../../../../../asoprep/service/servicios-asoprep.service';
+import { Usuario } from '../../../../../../shared/model/usuario';
+import { DatosBusqueda } from '../../../../../../shared/model/datos-busqueda/datos-busqueda';
+import { TipoDatosBusqueda as TipoDatos } from '../../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
+import { TipoComandosBusqueda } from '../../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
+import { ConfirmDialogComponent } from '../../../../../../shared/basics/confirm-dialog/confirm-dialog.component';
+import { DetalleRubroService } from '../../../../../../shared/services/detalle-rubro.service';
+import { NovedadCargaService } from '../../../../service/novedad-carga.service';
+import { NovedadCarga, NovedadAgrupada } from '../../../../model/novedad-carga';
+import { AppStateService } from '../../../../../../shared/services/app-state.service';
+import { UsuarioService } from '../../../../../../shared/services/usuario.service';
+import { ExportService } from '../../../../../../shared/services/export.service';
+import { NovedadParticipeCargaService } from '../../../../service/novedad-participe-carga.service';
+import { NovedadParticipeCarga } from '../../../../model/novedad-participe-carga';
 import { catchError, forkJoin, map, of } from 'rxjs';
 
 const RUBRO_NOVEDAES_CARGA = 169;
@@ -507,7 +507,7 @@ export class CargaAporteBackComponent implements OnInit {
           );
 
           // Navegar al componente de detalle con el ID de la carga
-          this.router.navigate(['/menucreditos/detalle-consulta-carga', cargaArchivo.codigo]);
+          this.router.navigate(['/menucreditos/archivos-petro/carga/detalle', cargaArchivo.codigo]);
         } else {
           this.snackBar.open(
             `⚠️ Error al guardar: No se recibió el objeto CargaArchivo`,

@@ -4,12 +4,12 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
-import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
-import { CargaArchivo } from '../../../model/carga-archivo';
-import { CargaArchivoService } from '../../../service/carga-archivo.service';
-import { ServiciosAsoprepService } from '../../../../asoprep/service/servicios-asoprep.service';
-import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
-import { ConfirmDialogComponent } from '../../../../../shared/basics/confirm-dialog/confirm-dialog.component';
+import { MaterialFormModule } from '../../../../../../shared/modules/material-form.module';
+import { CargaArchivo } from '../../../../model/carga-archivo';
+import { CargaArchivoService } from '../../../../service/carga-archivo.service';
+import { ServiciosAsoprepService } from '../../../../../asoprep/service/servicios-asoprep.service';
+import { FuncionesDatosService } from '../../../../../../shared/services/funciones-datos.service';
+import { ConfirmDialogComponent } from '../../../../../../shared/basics/confirm-dialog/confirm-dialog.component';
 
 interface MesCirculo {
   numero: number;
@@ -256,7 +256,7 @@ export class ConsultaArchivosPetroComponent implements OnInit {
    */
   verDetalle(carga: CargaArchivo): void {
     if (carga.codigo) {
-      this.router.navigate(['/menucreditos/detalle-consulta-carga', carga.codigo]);
+      this.router.navigate(['/menucreditos/archivos-petro/carga/detalle', carga.codigo]);
     }
   }
 
