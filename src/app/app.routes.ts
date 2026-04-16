@@ -83,10 +83,13 @@ import { DetalleMayorizacionComponent } from './modules/cnt/forms/detalle-mayori
 import { ListadoAsientosComponent } from './modules/cnt/forms/listado-asientos/listado-asientos.component';
 import { MayorizacionComponent } from './modules/cnt/forms/mayorizacion/mayorizacion.component';
 import { NaturalezaDeCuentasComponent } from './modules/cnt/forms/parametrizacion/naturaleza-cuentas/naturaleza-cuentas.component';
-import { CargaAporteBackComponent } from './modules/crd/forms/archivos-petro/carga-aporte-back/carga-aporte-back.component';
-import { CargaAportesComponent } from './modules/crd/forms/archivos-petro/carga-aportes/carga-aportes.component';
-import { ConsultaArchivosPetroComponent } from './modules/crd/forms/archivos-petro/consulta-archivos-petro/consulta-archivos-petro.component';
-import { DetalleConsultaCargaComponent } from './modules/crd/forms/archivos-petro/detalle-consulta-carga/detalle-consulta-carga.component';
+import { CargaAporteBackComponent } from './modules/crd/forms/archivos-petro/carga/carga-aporte-back/carga-aporte-back.component';
+import { CargaAportesComponent } from './modules/crd/forms/archivos-petro/carga/carga-aportes/carga-aportes.component';
+import { ConsultaArchivosPetroComponent } from './modules/crd/forms/archivos-petro/carga/consulta-archivos-petro/consulta-archivos-petro.component';
+import { DetalleConsultaCargaComponent } from './modules/crd/forms/archivos-petro/carga/detalle-consulta-carga/detalle-consulta-carga.component';
+import { ConsultaGeneracionArchivoComponent } from './modules/crd/forms/archivos-petro/generar/consulta-generacion-archivo/consulta-generacion-archivo.component';
+import { DetalleGeneracionArchivoComponent } from './modules/crd/forms/archivos-petro/generar/detalle-generacion-archivo/detalle-generacion-archivo.component';
+import { GenerarArchivoPetroComponent } from './modules/crd/forms/archivos-petro/generar/generar-archivo-petro/generar-archivo-petro.component';
 import { CruceValoresComponent } from './modules/crd/forms/cruce-valores/cruce-valores.component';
 import { EntidadConsultaComponent } from './modules/crd/forms/entidad-participe/entidad-consulta/entidad-consulta.component';
 import { EntidadEditComponent } from './modules/crd/forms/entidad-participe/entidad-edit/entidad-edit.component';
@@ -105,6 +108,7 @@ import { CuotaConsultaComponent } from './modules/crd/forms/prestamo/cuota-consu
 import { PrestamoConsultaComponent } from './modules/crd/forms/prestamo/prestamo-consulta/prestamo-consulta.component';
 import { PrestamoDashComponent } from './modules/crd/forms/prestamo/prestamo-dash/prestamo-dash.component';
 import { PrestamoEditComponent } from './modules/crd/forms/prestamo/prestamo-edit/prestamo-edit.component';
+import { RepoteValoresInsolutosComponent } from './modules/crd/forms/prestamo/repote-valores-insolutos/repote-valores-insolutos.component';
 import { EntidadCreditosComponent } from './modules/crd/menucreditos/entidad-creditos.component';
 import { ConsultaCargaArchivoResolverService } from './modules/crd/resolver/consulta-carga-archivo-resolver.service';
 import { entidadEditResolver } from './modules/crd/resolver/entidad-edit.resolver';
@@ -760,23 +764,55 @@ export const routes: Routes = [
       },
       { path: 'entidad-consulta', component: EntidadConsultaComponent },
       {
-        path: 'carga-aportes',
+        path: 'archivos-petro/carga/carga-aportes',
         component: CargaAportesComponent,
         canDeactivate: [canDeactivateGuard],
       },
       {
-        path: 'carga-aportes-back',
+        path: 'archivos-petro/carga/carga-aportes-back',
         component: CargaAporteBackComponent,
         canDeactivate: [canDeactivateGuard],
       },
       {
-        path: 'consulta-archivos-petro',
+        path: 'archivos-petro/carga/consulta',
         component: ConsultaArchivosPetroComponent,
         resolve: { cargas: ConsultaCargaArchivoResolverService },
       },
       {
-        path: 'detalle-consulta-carga/:id',
+        path: 'archivos-petro/carga/detalle/:id',
         component: DetalleConsultaCargaComponent,
+      },
+      {
+        path: 'archivos-petro/generar/proceso',
+        component: GenerarArchivoPetroComponent,
+      },
+      {
+        path: 'archivos-petro/generar/consulta',
+        component: ConsultaGeneracionArchivoComponent,
+      },
+      {
+        path: 'archivos-petro/generar/detalle/:id',
+        component: DetalleGeneracionArchivoComponent,
+      },
+      {
+        path: 'carga-aportes',
+        redirectTo: 'archivos-petro/carga/carga-aportes',
+        pathMatch: 'full',
+      },
+      {
+        path: 'carga-aportes-back',
+        redirectTo: 'archivos-petro/carga/carga-aportes-back',
+        pathMatch: 'full',
+      },
+      {
+        path: 'consulta-archivos-petro',
+        redirectTo: 'archivos-petro/carga/consulta',
+        pathMatch: 'full',
+      },
+      {
+        path: 'detalle-consulta-carga/:id',
+        redirectTo: 'archivos-petro/carga/detalle/:id',
+        pathMatch: 'full',
       },
       { path: 'entidad-participe-info', component: EntidadParticipeInfoComponent },
       {
@@ -839,6 +875,11 @@ export const routes: Routes = [
       {
         path: 'prestamo-dash',
         component: PrestamoDashComponent,
+        canActivate: [authGuard],
+      },
+      {
+        path: 'repote-valores-insolutos',
+        component: RepoteValoresInsolutosComponent,
         canActivate: [authGuard],
       },
       {
