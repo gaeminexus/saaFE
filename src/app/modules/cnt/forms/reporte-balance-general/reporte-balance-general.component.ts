@@ -9,6 +9,7 @@ import { ReporteContable } from '../../model/reporte-contable';
 import { ReporteBalanceService } from '../../service/reporte-balance.service';
 import { ReporteContableService } from '../../service/reporte-contable.service';
 import { FuncionesDatosService, TipoFormatoFechaBackend } from '../../../../shared/services/funciones-datos.service';
+import { ExportService } from '../../../../shared/services/export.service';
 import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoDatosBusqueda as TipoDatos } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
@@ -29,6 +30,7 @@ export class ReporteBalanceGeneralComponent implements OnInit, OnDestroy {
   private reporteContableService = inject(ReporteContableService);
   private appState              = inject(AppStateService);
   private funcionesDatos        = inject(FuncionesDatosService);
+  private exportService         = inject(ExportService);
 
   // ── Catálogos ────────────────────────────────────────────────
   reportes = signal<ReporteContable[]>([]);
@@ -168,6 +170,56 @@ export class ReporteBalanceGeneralComponent implements OnInit, OnDestroy {
         this.generado.set(false);
       }
     });
+  }
+
+  exportarBalanceCsv(): void {
+    const data = this.balanceData();
+    if (!data || data.length === 0) {
+      this.snackBar.open('No hay datos del balance para exportar', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    const rows = data.map((row) => ({
+      cuentaContable: row.cuentaContable ?? '',
+      nombreCuenta: row.nombreCuenta ?? '',
+      nivel: row.nivel ?? '',
+      saldoCuenta: this.formatearMontoCsv(row.saldoCuenta),
+      valorDebe: this.formatearMontoCsv(row.valorDebe),
+      valorHaber: this.formatearMontoCsv(row.valorHaber),
+      valorActual: this.formatearMontoCsv(row.valorActual),
+    }));
+
+    rows.push({
+      cuentaContable: 'TOTALES',
+      nombreCuenta: '',
+      nivel: '',
+      saldoCuenta: this.formatearMontoCsv(this.totalSaldoAnterior()),
+      valorDebe: this.formatearMontoCsv(this.totalDebe()),
+      valorHaber: this.formatearMontoCsv(this.totalHaber()),
+      valorActual: this.formatearMontoCsv(this.totalSaldoActual()),
+    });
+
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const hh = String(now.getHours()).padStart(2, '0');
+    const min = String(now.getMinutes()).padStart(2, '0');
+
+    this.exportService.exportToCSV(
+      rows,
+      `balance_general_${yyyy}${mm}${dd}_${hh}${min}`,
+      ['N° Cuenta', 'Nombre', 'Nivel', 'Saldo Anterior', 'Debe', 'Haber', 'Saldo Actual'],
+      ['cuentaContable', 'nombreCuenta', 'nivel', 'saldoCuenta', 'valorDebe', 'valorHaber', 'valorActual']
+    );
+  }
+
+  private formatearMontoCsv(valor: number | null | undefined): string {
+    const numero = Number(valor ?? 0);
+    if (!Number.isFinite(numero)) {
+      return '0.00';
+    }
+    return numero.toFixed(2);
   }
 
   // ── Cleanup ───────────────────────────────────────────────────

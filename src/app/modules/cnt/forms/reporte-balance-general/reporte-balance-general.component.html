@@ -91,6 +91,10 @@
         <mat-icon>format_list_numbered</mat-icon>
         Registros: {{ totalRegistros() }}
       </span>
+      <button mat-stroked-button color="primary" (click)="exportarBalanceCsv()" [disabled]="balanceData().length === 0">
+        <mat-icon>download</mat-icon>
+        Exportar CSV
+      </button>
     </div>
 
     <!-- Tabla de balance -->

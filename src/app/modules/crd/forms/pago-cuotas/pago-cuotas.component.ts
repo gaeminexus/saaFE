@@ -18,7 +18,7 @@ import { PagoCuotaDialogComponent } from './pago-cuota-dialog.component';
 
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
 
-import { Banco } from '../../../tsr/model/banco';
+import { BancoExterno } from '../../../tsr/model/banco-externo.model';
 import { CuentaAsoprep } from '../../model/cuenta-asoprep';
 import { DatosPago } from '../../model/datos-pago';
 import { DetallePrestamo } from '../../model/detalle-prestamo';
@@ -30,7 +30,7 @@ import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-bus
 import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { ExportService } from '../../../../shared/services/export.service';
-import { BancoService } from '../../../tsr/service/banco.service';
+import { BancoExternoService } from '../../../tsr/service/banco-externo.service';
 import { DetallePrestamoService } from '../../service/detalle-prestamo.service';
 import { EntidadService } from '../../service/entidad.service';
 import { ParticipeService } from '../../service/participe.service';
@@ -64,7 +64,7 @@ export class PagoCuotasComponent implements OnInit {
   private participeService = inject(ParticipeService);
   private prestamoService = inject(PrestamoService);
   private detallePrestamoService = inject(DetallePrestamoService);
-  private bancoService = inject(BancoService);
+  private bancoExternoService = inject(BancoExternoService);
   private exportService = inject(ExportService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
@@ -82,12 +82,16 @@ export class PagoCuotasComponent implements OnInit {
   entidadEncontrada: Entidad | null = null;
   participeEncontrado: Participe | null = null;
   prestamos: Prestamo[] = [];
+  expandedPrestamos: Record<number, boolean> = {};
   detallesPrestamoPorCodigo: Record<number, DetallePrestamo[]> = {};
   loadingDetallesPorPrestamo: Record<number, boolean> = {};
 
   // Variables de estado
   isLoadingBusqueda: boolean = false;
   isLoadingDatos: boolean = false;
+
+  private readonly ESTADOS_PRESTAMO_PERMITIDOS = new Set<number>([2, 8]);
+  private readonly ESTADOS_CUOTA_EXCLUIDOS = new Set<number>([2, 7]);
 
   ngOnInit(): void {
     // Verificar si viene una entidad como parámetro de navegación
@@ -116,6 +120,7 @@ export class PagoCuotasComponent implements OnInit {
     this.entidadEncontrada = null;
     this.participeEncontrado = null;
     this.prestamos = [];
+    this.expandedPrestamos = {};
     this.detallesPrestamoPorCodigo = {};
     this.loadingDetallesPorPrestamo = {};
 
@@ -145,6 +150,7 @@ export class PagoCuotasComponent implements OnInit {
     this.entidadEncontrada = null;
     this.participeEncontrado = null;
     this.prestamos = [];
+    this.expandedPrestamos = {};
     this.detallesPrestamoPorCodigo = {};
     this.loadingDetallesPorPrestamo = {};
 
@@ -171,7 +177,21 @@ export class PagoCuotasComponent implements OnInit {
         if (resultados.length > 0 && resultados[0]?.entidad) {
           const prestamoEncontrado = this.normalizarPrestamo(resultados[0]);
           this.entidadEncontrada = prestamoEncontrado.entidad as Entidad;
-          this.prestamos = [prestamoEncontrado];
+          const prestamosFiltrados = this.filtrarPrestamosPermitidos([prestamoEncontrado]);
+
+          if (!prestamosFiltrados.length) {
+            this.isSearching = false;
+            this.isLoadingBusqueda = false;
+            this.snackBar.open(
+              'El préstamo encontrado no está en estado Vigente o De plazo vencido',
+              'Cerrar',
+              { duration: 3500 }
+            );
+            return;
+          }
+
+          this.prestamos = prestamosFiltrados;
+          this.expandedPrestamos = this.crearEstadoColapsadoPrestamos(this.prestamos);
             this.isLoadingBusqueda = false;
           this.cargarParticipe(this.entidadEncontrada.codigo, false);
           return;
@@ -386,7 +406,8 @@ export class PagoCuotasComponent implements OnInit {
   }
 
   getDetallesPrestamo(prestamo: Prestamo): DetallePrestamo[] {
-    return this.detallesPrestamoPorCodigo[prestamo.codigo] || [];
+    const detalles = this.detallesPrestamoPorCodigo[prestamo.codigo] || [];
+    return detalles.filter((detalle) => this.esCuotaVisible(detalle));
   }
 
   getSaldoCuota(detalle: DetallePrestamo): number {
@@ -426,6 +447,9 @@ export class PagoCuotasComponent implements OnInit {
             )
           : prestamosConvertidos;
 
+        this.prestamos = this.filtrarPrestamosPermitidos(this.prestamos);
+        this.expandedPrestamos = this.crearEstadoColapsadoPrestamos(this.prestamos);
+
         this.cargarDetallesPrestamos(this.prestamos);
         this.isLoadingDatos = false;
       },
@@ -448,8 +472,61 @@ export class PagoCuotasComponent implements OnInit {
     this.entidadEncontrada = null;
     this.participeEncontrado = null;
     this.prestamos = [];
+    this.expandedPrestamos = {};
     this.detallesPrestamoPorCodigo = {};
     this.loadingDetallesPorPrestamo = {};
+  }
+
+  togglePrestamo(prestamo: Prestamo): void {
+    if (!prestamo?.codigo) {
+      return;
+    }
+
+    this.expandedPrestamos[prestamo.codigo] = !this.expandedPrestamos[prestamo.codigo];
+  }
+
+  isPrestamoExpandido(prestamo: Prestamo): boolean {
+    return !!this.expandedPrestamos[prestamo.codigo];
+  }
+
+  private filtrarPrestamosPermitidos(prestamos: Prestamo[]): Prestamo[] {
+    return (prestamos || []).filter((prestamo) => this.esPrestamoVisible(prestamo));
+  }
+
+  private esPrestamoVisible(prestamo: Prestamo): boolean {
+    const nombreEstado = (prestamo.estadoPrestamo?.nombre || '').toUpperCase();
+    if (nombreEstado.includes('VIGENTE') || nombreEstado.includes('PLAZO VENCIDO')) {
+      return true;
+    }
+
+    const codigoExterno = prestamo.estadoPrestamo?.codigoExterno;
+    const codigoAlterno = prestamo.estadoPrestamo?.codigoAlterno;
+    const idEstadoPrestamo = prestamo.idEstado;
+
+    return (
+      this.ESTADOS_PRESTAMO_PERMITIDOS.has(Number(codigoExterno || 0)) ||
+      this.ESTADOS_PRESTAMO_PERMITIDOS.has(Number(codigoAlterno || 0)) ||
+      this.ESTADOS_PRESTAMO_PERMITIDOS.has(Number(idEstadoPrestamo || 0))
+    );
+  }
+
+  private esCuotaVisible(detalle: DetallePrestamo): boolean {
+    const idEstado = Number(detalle.idEstado || detalle.estado || 0);
+    if (this.ESTADOS_CUOTA_EXCLUIDOS.has(idEstado)) {
+      return false;
+    }
+
+    return true;
+  }
+
+  private crearEstadoColapsadoPrestamos(prestamos: Prestamo[]): Record<number, boolean> {
+    const estado: Record<number, boolean> = {};
+    (prestamos || []).forEach((prestamo) => {
+      if (prestamo?.codigo) {
+        estado[prestamo.codigo] = false;
+      }
+    });
+    return estado;
   }
 
   /**
@@ -473,102 +550,6 @@ export class PagoCuotasComponent implements OnInit {
   }
 
   private abrirDialogoPago(prestamo: Prestamo, detalle?: DetallePrestamo): void {
-    // Datos mock de bancos (tabla TSR.BNCO aún no existe en la base de datos)
-    // TODO: Cuando la tabla TSR.BNCO esté disponible, usar: this.bancoService.getAll()
-    const bancosMock: Banco[] = [
-      {
-        codigo: 1,
-        nombre: 'Banco Pichincha',
-        sigla: 'PCH',
-        tipo: 0,
-        conciliaDescuadre: 0,
-        estado: 1,
-        empresa: 1,
-        rubroTipoBancoP: 24,
-        rubroTipoBancoH: 1,
-        fechaIngreso: new Date().toISOString(),
-        fechaInactivo: new Date().toISOString(),
-      },
-      {
-        codigo: 2,
-        nombre: 'Banco Guayaquil',
-        sigla: 'GYE',
-        tipo: 0,
-        conciliaDescuadre: 0,
-        estado: 1,
-        empresa: 1,
-        rubroTipoBancoP: 24,
-        rubroTipoBancoH: 1,
-        fechaIngreso: new Date().toISOString(),
-        fechaInactivo: new Date().toISOString(),
-      },
-      {
-        codigo: 3,
-        nombre: 'Banco Pacífico',
-        sigla: 'PAC',
-        tipo: 0,
-        conciliaDescuadre: 0,
-        estado: 1,
-        empresa: 1,
-        rubroTipoBancoP: 24,
-        rubroTipoBancoH: 1,
-        fechaIngreso: new Date().toISOString(),
-        fechaInactivo: new Date().toISOString(),
-      },
-      {
-        codigo: 4,
-        nombre: 'Banco Bolivariano',
-        sigla: 'BOL',
-        tipo: 0,
-        conciliaDescuadre: 0,
-        estado: 1,
-        empresa: 1,
-        rubroTipoBancoP: 24,
-        rubroTipoBancoH: 1,
-        fechaIngreso: new Date().toISOString(),
-        fechaInactivo: new Date().toISOString(),
-      },
-      {
-        codigo: 5,
-        nombre: 'Banco Internacional',
-        sigla: 'INT',
-        tipo: 0,
-        conciliaDescuadre: 0,
-        estado: 1,
-        empresa: 1,
-        rubroTipoBancoP: 24,
-        rubroTipoBancoH: 1,
-        fechaIngreso: new Date().toISOString(),
-        fechaInactivo: new Date().toISOString(),
-      },
-      {
-        codigo: 6,
-        nombre: 'Produbanco',
-        sigla: 'PRO',
-        tipo: 0,
-        conciliaDescuadre: 0,
-        estado: 1,
-        empresa: 1,
-        rubroTipoBancoP: 24,
-        rubroTipoBancoH: 1,
-        fechaIngreso: new Date().toISOString(),
-        fechaInactivo: new Date().toISOString(),
-      },
-      {
-        codigo: 7,
-        nombre: 'Banco del Austro',
-        sigla: 'AUS',
-        tipo: 0,
-        conciliaDescuadre: 0,
-        estado: 1,
-        empresa: 1,
-        rubroTipoBancoP: 24,
-        rubroTipoBancoH: 1,
-        fechaIngreso: new Date().toISOString(),
-        fechaInactivo: new Date().toISOString(),
-      },
-    ];
-
     // Datos mock de cuentas ASOPREP (TODO: obtener desde servicio)
     const cuentasAsoprep: CuentaAsoprep[] = [
       { codigo: 1, numeroCuenta: '1234567890', tipoCuenta: 'Ahorros', banco: 'Pichincha' },
@@ -576,34 +557,52 @@ export class PagoCuotasComponent implements OnInit {
       { codigo: 3, numeroCuenta: '5555666677', tipoCuenta: 'Ahorros', banco: 'Pacífico' },
     ];
 
-    const dialogRef = this.dialog.open(PagoCuotaDialogComponent, {
-      width: '650px',
-      maxWidth: '95vw',
-      disableClose: true,
-      data: {
-        prestamo,
-        detallePrestamo: detalle,
-        bancos: bancosMock,
-        cuentasAsoprep: cuentasAsoprep,
+    this.bancoExternoService.getAll().subscribe({
+      next: (bancos) => {
+        const bancosActivos = (bancos || []).filter((b) => b && b.estado);
+
+        if (!bancosActivos.length) {
+          this.snackBar.open('No hay bancos externos activos disponibles', 'Cerrar', {
+            duration: 3000,
+          });
+          return;
+        }
+
+        const dialogRef = this.dialog.open(PagoCuotaDialogComponent, {
+          width: '650px',
+          maxWidth: '95vw',
+          disableClose: true,
+          data: {
+            prestamo,
+            detallePrestamo: detalle,
+            bancos: bancosActivos,
+            cuentasAsoprep: cuentasAsoprep,
+          },
+        });
+
+        dialogRef.afterClosed().subscribe((result: DatosPago | undefined) => {
+          if (result) {
+            console.log('Datos de pago recibidos:', result);
+            const destinoPago = detalle
+              ? `cuota #${detalle.numeroCuota} del préstamo #${prestamo.idAsoprep}`
+              : `préstamo #${prestamo.idAsoprep}`;
+
+            this.snackBar.open(
+              `Pago de $${result.monto.toFixed(2)} registrado exitosamente para ${destinoPago}`,
+              'Cerrar',
+              { duration: 3000 }
+            );
+            // TODO: Enviar datos al backend para procesar el pago
+            // TODO: Refrescar lista de préstamos después del pago
+            // this.cargarPrestamos();
+          }
+        });
       },
-    });
-
-    dialogRef.afterClosed().subscribe((result: DatosPago | undefined) => {
-      if (result) {
-        console.log('Datos de pago recibidos:', result);
-        const destinoPago = detalle
-          ? `cuota #${detalle.numeroCuota} del préstamo #${prestamo.idAsoprep}`
-          : `préstamo #${prestamo.idAsoprep}`;
-
-        this.snackBar.open(
-          `Pago de $${result.monto.toFixed(2)} registrado exitosamente para ${destinoPago}`,
-          'Cerrar',
-          { duration: 3000 }
-        );
-        // TODO: Enviar datos al backend para procesar el pago
-        // TODO: Refrescar lista de préstamos después del pago
-        // this.cargarPrestamos();
-      }
+      error: () => {
+        this.snackBar.open('No se pudo cargar la tabla de banco externo', 'Cerrar', {
+          duration: 3000,
+        });
+      },
     });
   }
 

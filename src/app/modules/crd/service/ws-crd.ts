@@ -77,6 +77,7 @@ export class ServiciosCrd {
   public static RS_DTGA = `${API_URL}/dtga`;
   public static RS_PDGA = `${API_URL}/pdga`;
   public static RS_CXPG = `${API_URL}/cxpg`;
+  public static RS_VPPC = `${API_URL}/vppc`;
 }
 /*
 export class ServiciosCrd {

@@ -195,7 +195,10 @@ export class ExportService {
       return '';
     }
     if (typeof value === 'number') {
-      return value.toString();
+      if (!Number.isFinite(value)) {
+        return '0.00';
+      }
+      return value.toFixed(2);
     }
     if (typeof value === 'boolean') {
       return value ? 'Sí' : 'No';

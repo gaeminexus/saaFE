@@ -1,0 +1,237 @@
+<div class="jubilados-container">
+  <mat-card class="filtros-card section-card">
+    <mat-card-header>
+      <mat-card-title>1. Buscar jubilado</mat-card-title>
+      <mat-card-subtitle>
+        Busque por cédula o nombre (solo estado Jubilado Complementario = 30)
+      </mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      <form [formGroup]="filtrosForm" class="filtros-form">
+        <mat-form-field appearance="fill">
+          <mat-label>Nombre</mat-label>
+          <mat-icon matPrefix>person</mat-icon>
+          <input matInput formControlName="nombre" placeholder="Ingrese nombre" />
+        </mat-form-field>
+
+        <mat-form-field appearance="fill">
+          <mat-label>Cédula</mat-label>
+          <mat-icon matPrefix>badge</mat-icon>
+          <input matInput formControlName="cedula" placeholder="Ingrese cédula" />
+        </mat-form-field>
+      </form>
+
+      <div class="acciones">
+        <button mat-raised-button color="primary" (click)="buscar()" [disabled]="isLoading()">
+          <mat-icon>search</mat-icon>
+          Buscar
+        </button>
+
+        <button mat-raised-button (click)="limpiarFiltros()" [disabled]="isLoading()">
+          <mat-icon>clear</mat-icon>
+          Limpiar
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="resultados-card">
+    <mat-card-header>
+      <mat-card-title>Resultados ({{ entidades().length }})</mat-card-title>
+    </mat-card-header>
+
+    <mat-card-content>
+      @if (isLoading()) {
+        <div class="estado-vacio">
+          <mat-spinner diameter="36"></mat-spinner>
+          <span>Cargando información...</span>
+        </div>
+      } @else if (entidades().length > 0) {
+        <div class="tabla-contenedor">
+          <table mat-table [dataSource]="dataSource" class="resultados-table">
+            <ng-container matColumnDef="cedula">
+              <th mat-header-cell *matHeaderCellDef>Cédula</th>
+              <td mat-cell *matCellDef="let entidad">{{ entidad.numeroIdentificacion || '-' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="nombre">
+              <th mat-header-cell *matHeaderCellDef>Nombre</th>
+              <td mat-cell *matCellDef="let entidad">{{ entidad.razonSocial || '-' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="estado">
+              <th mat-header-cell *matHeaderCellDef>Estado</th>
+              <td mat-cell *matCellDef="let entidad">
+                {{ entidad.idEstado === 30 ? 'Jubilado Complementario' : 'No aplica' }}
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="saldoPension">
+              <th mat-header-cell *matHeaderCellDef>Saldo Pensión Complementaria</th>
+              <td mat-cell *matCellDef="let entidad">
+                @if (isLoadingSaldos()) {
+                  <span>Cargando...</span>
+                } @else {
+                  <span>{{ obtenerSaldoPensionComplementaria(entidad) | number:'1.2-2' }}</span>
+                }
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="acciones">
+              <th mat-header-cell *matHeaderCellDef>Acciones</th>
+              <td mat-cell *matCellDef="let entidad">
+                <button
+                  mat-stroked-button
+                  color="primary"
+                  (click)="seleccionarEntidad(entidad)">
+                  Seleccionar
+                </button>
+                <button
+                  mat-icon-button
+                  color="primary"
+                  matTooltip="Ver dash de aportes y préstamos"
+                  (click)="verDash(entidad)">
+                  <mat-icon>person_play</mat-icon>
+                </button>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+          </table>
+        </div>
+
+        <mat-paginator [pageSizeOptions]="[10, 25, 50]" [pageSize]="10" showFirstLastButtons></mat-paginator>
+      } @else if (busquedaRealizada()) {
+        <div class="estado-vacio">
+          <mat-icon>search_off</mat-icon>
+          <span>No se encontraron jubilados con los filtros indicados.</span>
+        </div>
+      } @else {
+        <div class="estado-vacio">
+          <mat-icon>manage_search</mat-icon>
+          <span>Use los filtros para consultar jubilados.</span>
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="section-card">
+    <mat-card-header>
+      <mat-card-title>2. Asignar valor de pago</mat-card-title>
+      <mat-card-subtitle>
+        Defina el valor mensual del jubilado seleccionado y opcionalmente el número de cuotas
+      </mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      @if (entidadSeleccionada()) {
+        <div class="seleccionado-box">
+          <div><strong>Jubilado:</strong> {{ entidadSeleccionada()?.razonSocial }}</div>
+          <div><strong>Cédula:</strong> {{ entidadSeleccionada()?.numeroIdentificacion || '-' }}</div>
+        </div>
+
+        <form [formGroup]="asignacionForm" class="filtros-form asignacion-form">
+          <mat-form-field appearance="fill">
+            <mat-label>Valor a pagar</mat-label>
+            <mat-icon matPrefix>payments</mat-icon>
+            <input matInput type="number" min="0" formControlName="valorPagar" placeholder="Ej: 120" />
+          </mat-form-field>
+
+          <mat-form-field appearance="fill">
+            <mat-label>Número de cuotas (opcional)</mat-label>
+            <mat-icon matPrefix>pin</mat-icon>
+            <input matInput type="number" min="1" formControlName="numeroCuotas" placeholder="Vacío = pago mensual fijo" />
+          </mat-form-field>
+        </form>
+
+        <div class="calculo-box">
+          <span><strong>Pago mensual resultante:</strong> {{ valorMensualCalculadoFormulario | number:'1.2-2' }}</span>
+          <small>
+            Si no hay cuotas, se paga ese mismo valor todos los meses. Si hay cuotas,
+            se divide el valor para el número de cuotas.
+          </small>
+        </div>
+
+        <div class="acciones">
+          <button mat-raised-button color="primary" (click)="guardarAsignacion()" [disabled]="isSaving()">
+            <mat-icon>save</mat-icon>
+            Guardar asignación
+          </button>
+        </div>
+      } @else {
+        <div class="estado-vacio">
+          <mat-icon>touch_app</mat-icon>
+          <span>Seleccione un jubilado desde la primera sección para asignar su pago.</span>
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="section-card resultados-card">
+    <mat-card-header>
+      <mat-card-title>3. Resumen de pagos asignados</mat-card-title>
+      <mat-card-subtitle>
+        Total mensual a pagar: {{ totalPagarMensual() | number:'1.2-2' }}
+      </mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      @if (isLoadingAsignaciones()) {
+        <div class="estado-vacio">
+          <mat-spinner diameter="36"></mat-spinner>
+          <span>Cargando asignaciones...</span>
+        </div>
+      } @else if (asignaciones().length > 0) {
+        <div class="tabla-contenedor">
+          <table mat-table [dataSource]="dataSourceAsignaciones" class="resultados-table">
+            <ng-container matColumnDef="cedula">
+              <th mat-header-cell *matHeaderCellDef>Cédula</th>
+              <td mat-cell *matCellDef="let item">{{ item.entidad?.numeroIdentificacion || '-' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="nombre">
+              <th mat-header-cell *matHeaderCellDef>Nombre</th>
+              <td mat-cell *matCellDef="let item">{{ item.entidad?.razonSocial || '-' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="valorRegistrado">
+              <th mat-header-cell *matHeaderCellDef>Valor registrado</th>
+              <td mat-cell *matCellDef="let item">{{ item.valorPagar | number:'1.2-2' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="cuotas">
+              <th mat-header-cell *matHeaderCellDef>Cuotas</th>
+              <td mat-cell *matCellDef="let item">{{ item.numeroCuotas || 'Sin cuotas' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="valorMensual">
+              <th mat-header-cell *matHeaderCellDef>Valor mensual</th>
+              <td mat-cell *matCellDef="let item">{{ obtenerValorMensualRegistro(item) | number:'1.2-2' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="acciones">
+              <th mat-header-cell *matHeaderCellDef>Acciones</th>
+              <td mat-cell *matCellDef="let item">
+                <button mat-stroked-button color="primary" (click)="editarAsignacion(item)">
+                  Editar
+                </button>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumnsAsignaciones"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumnsAsignaciones"></tr>
+          </table>
+        </div>
+
+        <mat-paginator #paginatorAsignaciones [pageSizeOptions]="[10, 25, 50]" [pageSize]="10" showFirstLastButtons></mat-paginator>
+      } @else {
+        <div class="estado-vacio">
+          <mat-icon>info</mat-icon>
+          <span>Aún no existen jubilados con valor de pago asignado.</span>
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+</div>

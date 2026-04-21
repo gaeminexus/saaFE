@@ -121,10 +121,14 @@
           <div class="participe-item estado-entidad">
             <mat-icon>toggle_on</mat-icon>
             <div class="item-content">
-                <span class="item-label">Estado Partícipe</span>
-              <span class="entidad-estado-badge" [ngClass]="obtenerClaseEstadoEntidad(entidadEncontrada.idEstado)">
-                {{ obtenerNombreEstadoEntidad(entidadEncontrada.idEstado) }}
-              </span>
+              <div class="estado-inline-meta">
+                <span class="item-label">Estado Partícipe:</span>
+                <span class="entidad-estado-badge" [ngClass]="obtenerClaseEstadoEntidad(entidadEncontrada.idEstado)">
+                  {{ obtenerNombreEstadoEntidad(entidadEncontrada.idEstado) }}
+                </span>
+                <span class="meta-chip">Código Petro: {{ entidadEncontrada.rolPetroComercial || 'N/A' }}</span>
+                <span class="meta-chip">Código Entidad: {{ entidadEncontrada.codigo || 'N/A' }}</span>
+              </div>
             </div>
           </div>
 
@@ -184,7 +188,7 @@
         <mat-icon mat-card-avatar class="avatar-icon">description</mat-icon>
         <mat-card-title>Información del Contrato</mat-card-title>
         <mat-card-subtitle>{{
-          contratoEncontrado.tipoContrato?.nombre || 'Sin tipo de contrato'
+          contratoEncontrado.tipoContrato.nombre || 'Sin tipo de contrato'
         }}</mat-card-subtitle>
       </mat-card-header>
       <mat-card-content>
@@ -341,7 +345,7 @@
       <mat-card-header>
         <mat-icon mat-card-avatar class="card-icon">credit_card</mat-icon>
         <mat-card-title
-          >{{ prestamo.producto?.nombre || 'Préstamo' }} #{{ prestamo.idAsoprep || prestamo.codigo }}</mat-card-title
+          >{{ prestamo.producto.nombre || 'Préstamo' }} #{{ prestamo.idAsoprep || prestamo.codigo }}</mat-card-title
         >
         <mat-card-subtitle>
           @if (prestamo.estadoPrestamo) {
@@ -446,7 +450,7 @@
       </button>
       <h2>
         <mat-icon>credit_card</mat-icon>
-        {{ prestamoSeleccionado.producto?.nombre || 'Préstamo' }} #{{ prestamoSeleccionado.idAsoprep || prestamoSeleccionado.codigo }}
+        {{ prestamoSeleccionado.producto.nombre || 'Préstamo' }} #{{ prestamoSeleccionado.idAsoprep || prestamoSeleccionado.codigo }}
       </h2>
     </div>
 
@@ -481,6 +485,10 @@
       <mat-card-content>
         <div class="prestamo-resumen">
           <div class="resumen-item">
+            <span class="label">Fecha Inicio:</span>
+            <span class="value">{{ formatearFecha(prestamoSeleccionado.fecha) }}</span>
+          </div>
+          <div class="resumen-item">
             <span class="label">Capital Inicial:</span>
             <span class="value">${{ prestamoSeleccionado.montoSolicitado | number : '1.2-2' }}</span>
           </div>
@@ -496,7 +504,7 @@
           </div>
           <div class="resumen-item">
             <span class="label">Estado:</span>
-            <span class="value">{{ prestamoSeleccionado.estadoPrestamo?.nombre || 'N/A' }}</span>
+            <span class="value">{{ prestamoSeleccionado.estadoPrestamo.nombre || 'N/A' }}</span>
           </div>
         </div>
       </mat-card-content>

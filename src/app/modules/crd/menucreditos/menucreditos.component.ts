@@ -80,6 +80,11 @@ export class MenucreditosComponent {
           iconName: 'person_play',
           route: '/menucreditos/participe-dash',
         },
+        {
+          displayName: 'Jubilados',
+          iconName: 'elderly',
+          route: '/menucreditos/jubilados',
+        },
       ],
     },
     {

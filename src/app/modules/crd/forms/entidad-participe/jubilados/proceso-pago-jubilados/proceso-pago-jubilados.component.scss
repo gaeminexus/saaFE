@@ -1,0 +1,59 @@
+.jubilados-container {
+  display: grid;
+  gap: 1rem;
+}
+
+.section-card {
+  overflow: hidden;
+}
+
+.filtros-form {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.asignacion-form {
+  margin-top: 0.75rem;
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.seleccionado-box {
+  display: grid;
+  gap: 0.3rem;
+  background: rgba(0, 0, 0, 0.03);
+  padding: 0.75rem;
+  border-radius: 8px;
+  margin-bottom: 0.75rem;
+}
+
+.calculo-box {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 0.25rem;
+}
+
+.calculo-box small {
+  opacity: 0.8;
+}
+
+.tabla-contenedor {
+  overflow: auto;
+}
+
+.resultados-table {
+  width: 100%;
+}
+
+.estado-vacio {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 80px;
+}

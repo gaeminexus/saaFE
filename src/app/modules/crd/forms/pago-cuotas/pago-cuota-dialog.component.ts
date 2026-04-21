@@ -13,7 +13,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatSelectModule } from '@angular/material/select';
 
-import { Banco } from '../../../tsr/model/banco';
+import { BancoExterno } from '../../../tsr/model/banco-externo.model';
 import { CuentaAsoprep } from '../../model/cuenta-asoprep';
 import { DatosPago } from '../../model/datos-pago';
 import { DetallePrestamo } from '../../model/detalle-prestamo';
@@ -22,7 +22,7 @@ import { Prestamo } from '../../model/prestamo';
 export interface PagoCuotaDialogData {
   prestamo: Prestamo;
   detallePrestamo?: DetallePrestamo;
-  bancos: Banco[];
+  bancos: BancoExterno[];
   cuentasAsoprep: CuentaAsoprep[];
 }
 

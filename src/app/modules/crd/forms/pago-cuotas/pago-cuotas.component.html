@@ -166,7 +166,7 @@
       <mat-card-header>
         <div class="card-header-content">
           <mat-icon>credit_card</mat-icon>
-          <mat-card-title>Préstamos Vigentes</mat-card-title>
+          <mat-card-title>Préstamos Vigentes / De plazo vencido</mat-card-title>
         </div>
       </mat-card-header>
 
@@ -175,18 +175,22 @@
         <div class="prestamos-stack">
           @for (prestamo of prestamos; track prestamo.codigo) {
           <section class="prestamo-panel">
-            <div class="prestamo-header">
+            <div class="prestamo-header" (click)="togglePrestamo(prestamo)">
               <div class="prestamo-header-main">
                 <div class="prestamo-identidad">
                   <span class="codigo-badge">#{{ prestamo.idAsoprep }}</span>
                   <div>
-                    <h3>{{ prestamo.producto?.nombre || 'Sin Producto' }}</h3>
+                    <h3>{{ prestamo.producto.nombre || 'Sin Producto' }}</h3>
                     <p>
                       Fecha: {{ prestamo.fecha | date : 'dd/MM/yyyy' }} · Estado:
-                      <span class="estado-badge">{{ prestamo.estadoPrestamo?.nombre || 'Sin Estado' }}</span>
+                      <span class="estado-badge">{{ prestamo.estadoPrestamo.nombre || 'Sin Estado' }}</span>
                     </p>
                   </div>
                 </div>
+
+                <button mat-icon-button class="btn-expand" type="button">
+                  <mat-icon>{{ isPrestamoExpandido(prestamo) ? 'expand_less' : 'expand_more' }}</mat-icon>
+                </button>
 
                 <button
                   mat-raised-button
@@ -194,7 +198,7 @@
                   class="btn-pago-prestamo"
                   matTooltip="Pago a nivel de préstamo / abono a capital"
                   [disabled]="prestamo.saldoTotal <= 0"
-                  (click)="realizarPagoCuota(prestamo)"
+                  (click)="realizarPagoCuota(prestamo); $event.stopPropagation()"
                 >
                   <mat-icon>payments</mat-icon>
                   <span>Pagar Préstamo</span>
@@ -217,9 +221,10 @@
               </div>
             </div>
 
+            @if (isPrestamoExpandido(prestamo)) {
             <div class="detalle-section">
               <div class="detalle-title-row">
-                <h4>Detalle del préstamo</h4>
+                <h4>Detalle del préstamo (sin pagadas / canceladas anticipadas)</h4>
               </div>
 
               @if (loadingDetallesPorPrestamo[prestamo.codigo]) {
@@ -284,6 +289,7 @@
               </div>
               }
             </div>
+            }
           </section>
           }
         </div>

@@ -240,7 +240,7 @@
                                       <tr>
                                         @if (p.codigoProductoPetro !== 'AH') {
                                           <td>Cuota #{{ c.numeroCuota }}</td>
-                                          <td>{{ c.prestamo?.codigo ? 'Préstamo #' + c.prestamo?.codigo : '-' }}</td>
+                                          <td>{{ c.prestamo?.idAsoprep ? 'Préstamo #' + c.prestamo?.idAsoprep : '-' }}</td>
                                         } @else {
                                           <td>{{ c.tipoAporte?.nombre || '-' }}</td>
                                         }

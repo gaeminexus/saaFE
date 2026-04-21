@@ -94,6 +94,7 @@ import { CruceValoresComponent } from './modules/crd/forms/cruce-valores/cruce-v
 import { EntidadConsultaComponent } from './modules/crd/forms/entidad-participe/entidad-consulta/entidad-consulta.component';
 import { EntidadEditComponent } from './modules/crd/forms/entidad-participe/entidad-edit/entidad-edit.component';
 import { EntidadParticipeInfoComponent } from './modules/crd/forms/entidad-participe/entidad-participe-info/entidad-participe-info.component';
+import { ProcesoPagoJubiladosComponent } from './modules/crd/forms/entidad-participe/jubilados/proceso-pago-jubilados/proceso-pago-jubilados.component';
 import { NavegacionCascadaComponent } from './modules/crd/forms/entidad-participe/navegacion-cascada/navegacion-cascada.component';
 import { ParticipeDashComponent } from './modules/crd/forms/entidad-participe/participe-dash/participe-dash.component';
 import { ParticipeInfoComponent } from './modules/crd/forms/entidad-participe/participe-info/participe-info.component';
@@ -753,6 +754,7 @@ export const routes: Routes = [
       { path: 'entidad', component: EntidadCreditosComponent },
       { path: 'navegacion-cascada', component: NavegacionCascadaComponent },
       { path: 'participe-dash', component: ParticipeDashComponent },
+      { path: 'jubilados', component: ProcesoPagoJubiladosComponent },
       { path: 'participe-info', component: ParticipeInfoComponent },
       { path: 'cruce-valores', component: CruceValoresComponent },
       { path: 'pago-cuotas', component: PagoCuotasComponent },

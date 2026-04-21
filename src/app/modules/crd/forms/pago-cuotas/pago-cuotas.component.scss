@@ -402,12 +402,17 @@
           overflow: hidden;
           background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
           box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
-        }
+            .prestamo-header-main {
+              cursor: pointer;
 
         .prestamo-header {
           padding: 20px;
           border-bottom: 1px solid #e2e8f0;
           display: flex;
+              .btn-expand {
+                color: #4a5568;
+                flex-shrink: 0;
+              }
           flex-direction: column;
           gap: 18px;
 
