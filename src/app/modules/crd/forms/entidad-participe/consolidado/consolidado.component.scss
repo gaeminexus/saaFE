@@ -1,0 +1,53 @@
+:host {
+  display: block;
+}
+
+.consolidado-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.consolidado-header h1 {
+  margin: 0;
+}
+
+.consolidado-header p {
+  margin: 4px 0 0;
+}
+
+.filtros-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 10px;
+  align-items: end;
+}
+
+.acciones {
+  display: flex;
+  gap: 8px;
+}
+
+.loading-msg {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.error-msg {
+  font-weight: 600;
+}
+
+.resumen {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 10px;
+}
+
+.tabla-wrapper {
+  overflow: auto;
+}
+
+table {
+  width: 100%;
+}

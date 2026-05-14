@@ -10,4 +10,6 @@ export interface ValorPagoPensionComplementaria {
   fechaIngreso?: string;
   usuarioModificacion?: string;
   fechaModificacion?: string;
+  tienePrestamo?: number | null;
+  valorSeguro?: number | null;
 }

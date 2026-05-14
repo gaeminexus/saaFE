@@ -870,7 +870,7 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
         if (esHipotecarioCSV) {
           row['seguroIncendio'] = detalle.valorSeguroIncendio || 0;
         }
-        row['cuotaTotal'] = detalle.cuota || 0;
+        row['cuotaTotal'] = detalle.total || 0;
         const estadoMapCSV: Record<number, string> = {
           1: 'Pendiente', 2: 'Activa', 3: 'Emitida', 4: 'Pagada',
           5: 'En mora', 6: 'Parcial', 7: 'Cancelada ant.', 8: 'Vencida',
@@ -1036,7 +1036,7 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
                 5: 'En mora', 6: 'Parcial', 7: 'Cancelada ant.', 8: 'Vencida',
               };
               const estadoNombrePDF = detalle.estado != null ? (estadoMapPDF[detalle.estado] ?? 'N/A') : 'N/A';
-              row.push(`$${(detalle.cuota || 0).toFixed(2)}`, estadoNombrePDF);
+              row.push(`$${(detalle.total || 0).toFixed(2)}`, estadoNombrePDF);
               return row;
             });
 
@@ -1081,7 +1081,7 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
             const totalInteres = detalles.reduce((sum, d) => sum + (d.detalle.interes || 0), 0);
             const totalDesgravamen = detalles.reduce((sum, d) => sum + (d.detalle.desgravamen || 0), 0);
             const totalPagoExtra = detalles.reduce((sum, d) => sum + (d.detalle.saldoOtros || 0), 0);
-            const totalCuotas = detalles.reduce((sum, d) => sum + (d.detalle.cuota || 0), 0);
+            const totalCuotas = detalles.reduce((sum, d) => sum + (d.detalle.total || 0), 0);
 
             doc.text(`Total Capital: $${totalCapital.toFixed(2)}`, 14, yPosition);
             yPosition += 6;
@@ -3534,7 +3534,7 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
         interes: acc.interes + (dc.detalle.interes || 0),
         desgravamen: acc.desgravamen + (dc.detalle.desgravamen || 0),
         pagoExtra: acc.pagoExtra + (dc.detalle.saldoOtros || 0),
-        cuota: acc.cuota + (dc.detalle.cuota || 0),
+        cuota: acc.cuota + (dc.detalle.total || 0),
         seguroIncendio: acc.seguroIncendio + (dc.detalle.valorSeguroIncendio || 0),
       }),
       { capital: 0, interes: 0, desgravamen: 0, pagoExtra: 0, cuota: 0, seguroIncendio: 0 }

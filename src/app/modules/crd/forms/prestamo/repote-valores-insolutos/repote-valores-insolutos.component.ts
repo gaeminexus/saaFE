@@ -53,7 +53,6 @@ interface ReporteValorInsolutoRow {
   styleUrls: ['./repote-valores-insolutos.component.scss'],
 })
 export class RepoteValoresInsolutosComponent implements OnInit {
-  private readonly ESTADO_CUOTA_PAGADA = 4;
   private readonly ESTADO_CUOTA_CANCELADA_ANTICIPADA = 7;
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
@@ -189,7 +188,7 @@ export class RepoteValoresInsolutosComponent implements OnInit {
       Tipo_Dcmto: row.tipoDocumento,
       Nro_Cedula: row.numeroCedula,
       Fecha_Prestamo: row.fechaPrestamo,
-      'Saldo Insoluto Abril': row.saldoInsolutoAbril,
+      Saldo_Insoluto: row.saldoInsolutoAbril,
       Tipo: row.tipo,
     }));
 
@@ -202,7 +201,7 @@ export class RepoteValoresInsolutosComponent implements OnInit {
       'Tipo_Dcmto',
       'Nro_Cedula',
       'Fecha_Prestamo',
-      'Saldo Insoluto Abril',
+      'Saldo_Insoluto',
       'Tipo',
     ];
 
@@ -219,7 +218,7 @@ export class RepoteValoresInsolutosComponent implements OnInit {
       tipoDocumento: row.tipoDocumento,
       numeroCedula: row.numeroCedula,
       fechaPrestamo: row.fechaPrestamo,
-      saldoInsolutoAbril: row.saldoInsolutoAbril.toFixed(2),
+      saldoInsoluto: row.saldoInsolutoAbril.toFixed(2),
       tipo: row.tipo,
     }));
 
@@ -232,7 +231,7 @@ export class RepoteValoresInsolutosComponent implements OnInit {
       'Tipo_Dcmto',
       'Nro_Cedula',
       'Fecha_Prestamo',
-      'Saldo Insoluto Abril',
+      'Saldo Insoluto',
       'Tipo',
     ];
 
@@ -245,7 +244,7 @@ export class RepoteValoresInsolutosComponent implements OnInit {
       'tipoDocumento',
       'numeroCedula',
       'fechaPrestamo',
-      'saldoInsolutoAbril',
+      'saldoInsoluto',
       'tipo',
     ];
 
@@ -267,7 +266,6 @@ export class RepoteValoresInsolutosComponent implements OnInit {
 
     return detalles
       .filter((detalle) => !!detalle?.prestamo?.entidad)
-      .filter((detalle) => detalle.estado !== this.ESTADO_CUOTA_PAGADA)
       .filter((detalle) => detalle.estado !== this.ESTADO_CUOTA_CANCELADA_ANTICIPADA)
       .map((detalle) => {
         const entidad = detalle.prestamo!.entidad;
@@ -284,7 +282,7 @@ export class RepoteValoresInsolutosComponent implements OnInit {
           tipoDocumento: 'cedula',
           numeroCedula: cedula,
           fechaPrestamo: this.formatearFecha(detalle.prestamo?.fecha),
-          saldoInsolutoAbril: Number(detalle.saldoCapital || 0),
+          saldoInsolutoAbril: Number(detalle.saldoInicialCapital || 0),
           tipo: detalle.prestamo?.producto?.codigoSBS || '',
         };
       });

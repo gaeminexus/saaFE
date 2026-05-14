@@ -1,6 +1,7 @@
 export interface BaseInicialParticipes {
   numero: number;
   nombre: string;
+  estadoParticipe: string;
   cesantiaPatronal: number;
   cesantiaPersonal: number;
   cesantiaRetiroVoluntario: number;

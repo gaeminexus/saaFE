@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, ViewChild, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, ViewChild, inject, signal } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -25,7 +25,7 @@ import { ValorPagoPensionComplementariaService } from '../../../../service/valor
   templateUrl: './proceso-pago-jubilados.component.html',
   styleUrl: './proceso-pago-jubilados.component.scss',
 })
-export class ProcesoPagoJubiladosComponent implements OnInit {
+export class ProcesoPagoJubiladosComponent implements OnInit, OnDestroy {
   private static readonly ESTADO_JUBILADO_COMPLEMENTARIO = 30;
   private static readonly ESTADO_REGISTRO_ACTIVO = 1;
 
@@ -48,9 +48,14 @@ export class ProcesoPagoJubiladosComponent implements OnInit {
   busquedaRealizada = signal<boolean>(false);
   totalPagarMensual = signal<number>(0);
   saldosPensionMap = signal<Map<number, number>>(new Map<number, number>());
+  isProcesandoPago = signal<boolean>(false);
+  pagoProcesado = signal<boolean>(false);
+  segundosRestantes = signal<number>(5);
+
+  private timerProcesarPago: ReturnType<typeof setInterval> | null = null;
 
   displayedColumns: string[] = ['cedula', 'nombre', 'estado', 'saldoPension', 'acciones'];
-  displayedColumnsAsignaciones: string[] = ['cedula', 'nombre', 'valorRegistrado', 'cuotas', 'valorMensual', 'acciones'];
+  displayedColumnsAsignaciones: string[] = ['cedula', 'nombre', 'valorRegistrado', 'cuotas', 'valorMensual', 'tienePrestamo', 'valorSeguro', 'acciones'];
   dataSource = new MatTableDataSource<Entidad>([]);
   dataSourceAsignaciones = new MatTableDataSource<ValorPagoPensionComplementaria>([]);
 
@@ -66,6 +71,8 @@ export class ProcesoPagoJubiladosComponent implements OnInit {
     this.asignacionForm = this.fb.group({
       valorPagar: [null],
       numeroCuotas: [null],
+      tienePrestamo: [false],
+      valorSeguro: [null],
     });
 
     this.cargarAsignaciones();
@@ -78,6 +85,10 @@ export class ProcesoPagoJubiladosComponent implements OnInit {
     if (this.paginatorAsignaciones) {
       this.dataSourceAsignaciones.paginator = this.paginatorAsignaciones;
     }
+  }
+
+  ngOnDestroy(): void {
+    this.limpiarTimerProcesarPago();
   }
 
   buscar(): void {
@@ -171,6 +182,8 @@ export class ProcesoPagoJubiladosComponent implements OnInit {
     this.asignacionForm.patchValue({
       valorPagar: existente?.valorPagar ?? null,
       numeroCuotas: existente?.numeroCuotas ?? null,
+      tienePrestamo: (existente?.tienePrestamo ?? 0) === 1,
+      valorSeguro: existente?.valorSeguro ?? null,
     });
   }
 
@@ -184,6 +197,9 @@ export class ProcesoPagoJubiladosComponent implements OnInit {
     const valorPagar = Number(this.asignacionForm.get('valorPagar')?.value ?? 0);
     const numeroCuotasRaw = this.asignacionForm.get('numeroCuotas')?.value;
     const numeroCuotas = numeroCuotasRaw === null || numeroCuotasRaw === '' ? null : Number(numeroCuotasRaw);
+    const tienePrestamo = this.asignacionForm.get('tienePrestamo')?.value ? 1 : 0;
+    const valorSeguroRaw = this.asignacionForm.get('valorSeguro')?.value;
+    const valorSeguro = valorSeguroRaw === null || valorSeguroRaw === '' ? null : Number(valorSeguroRaw);
 
     if (!Number.isFinite(valorPagar) || valorPagar <= 0) {
       this.snackBar.open('Ingrese un valor de pago mensual válido', 'Cerrar', { duration: 3000 });
@@ -199,6 +215,8 @@ export class ProcesoPagoJubiladosComponent implements OnInit {
       entidad: { codigo: entidad.codigo } as Entidad,
       valorPagar,
       numeroCuotas,
+      tienePrestamo,
+      valorSeguro,
       estado: ProcesoPagoJubiladosComponent.ESTADO_REGISTRO_ACTIVO,
       usuarioModificacion: 'frontend',
       fechaModificacion: new Date().toISOString(),
@@ -303,6 +321,8 @@ export class ProcesoPagoJubiladosComponent implements OnInit {
     this.asignacionForm.patchValue({
       valorPagar: item.valorPagar ?? null,
       numeroCuotas: item.numeroCuotas ?? null,
+      tienePrestamo: (item.tienePrestamo ?? 0) === 1,
+      valorSeguro: item.valorSeguro ?? null,
     });
   }
 
@@ -361,6 +381,39 @@ export class ProcesoPagoJubiladosComponent implements OnInit {
 
     const normalizado = nombreTipo.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     return normalizado.includes('pension complementaria');
+  }
+
+  procesarPagoMes(): void {
+    if (this.isProcesandoPago()) {
+      return;
+    }
+
+    this.pagoProcesado.set(false);
+    this.isProcesandoPago.set(true);
+    this.segundosRestantes.set(5);
+    this.limpiarTimerProcesarPago();
+
+    this.timerProcesarPago = setInterval(() => {
+      const restante = this.segundosRestantes();
+
+      if (restante <= 1) {
+        this.limpiarTimerProcesarPago();
+        this.isProcesandoPago.set(false);
+        this.segundosRestantes.set(0);
+        this.pagoProcesado.set(true);
+        this.snackBar.open('Pago procesado exitosamente', 'Cerrar', { duration: 3000 });
+        return;
+      }
+
+      this.segundosRestantes.set(restante - 1);
+    }, 1000);
+  }
+
+  private limpiarTimerProcesarPago(): void {
+    if (this.timerProcesarPago) {
+      clearInterval(this.timerProcesarPago);
+      this.timerProcesarPago = null;
+    }
   }
 
   verDash(entidad: Entidad): void {

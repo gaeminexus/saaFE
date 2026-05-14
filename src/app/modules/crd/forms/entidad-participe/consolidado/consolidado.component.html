@@ -1,0 +1,194 @@
+<div class="consolidado-wrapper">
+  <div class="consolidado-header">
+    <div>
+      <h1>Consolidado de Partícipes</h1>
+      <p>Saldos por tipo de aporte al cierre del mes seleccionado</p>
+    </div>
+  </div>
+
+  <mat-card appearance="outlined">
+    <mat-card-content>
+      <div class="filtros-grid" [formGroup]="filtrosForm">
+        <mat-form-field appearance="outline">
+          <mat-label>Mes</mat-label>
+          <mat-select formControlName="mes">
+            @for (mes of meses; track mes.value) {
+              <mat-option [value]="mes.value">{{ mes.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Año</mat-label>
+          <mat-select formControlName="anio">
+            @for (anio of anios; track anio) {
+              <mat-option [value]="anio">{{ anio }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Estado partícipe</mat-label>
+          <mat-select formControlName="estadoParticipe">
+            <mat-option [value]="null">Todos (Activo, Cesante, Jubilado Voluntario)</mat-option>
+            @for (estado of estadosPermitidos(); track estado.codigo) {
+              <mat-option [value]="estado.codigo">{{ estado.nombre }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Tipo aporte</mat-label>
+          <mat-select formControlName="tipoAporte">
+            <mat-option [value]="null">Todos</mat-option>
+            @for (tipo of tiposAporteOptions(); track tipo.codigo) {
+              <mat-option [value]="tipo.codigo">{{ tipo.nombre }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <div class="acciones">
+          <button mat-flat-button color="primary" (click)="buscar()" [disabled]="loading()">
+            <mat-icon>search</mat-icon>
+            Consultar
+          </button>
+          <button mat-stroked-button (click)="limpiar()" [disabled]="loading()">
+            <mat-icon>clear</mat-icon>
+            Limpiar
+          </button>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  @if (errorMsg()) {
+    <mat-card appearance="outlined">
+      <mat-card-content class="error-msg">{{ errorMsg() }}</mat-card-content>
+    </mat-card>
+  }
+
+  @if (loading()) {
+    <mat-card appearance="outlined">
+      <mat-card-content class="loading-msg">
+        <mat-spinner diameter="28"></mat-spinner>
+        <span>Consultando consolidado...</span>
+      </mat-card-content>
+    </mat-card>
+  }
+
+  @if (buscado() && !loading() && totalRegistros() === 0) {
+    <mat-card appearance="outlined">
+      <mat-card-content>No se encontraron resultados para los filtros seleccionados.</mat-card-content>
+    </mat-card>
+  }
+
+  @if (buscado() && !loading() && totalRegistros() > 0) {
+    <mat-card appearance="outlined">
+      <mat-card-content>
+        <div class="resumen">
+          <span>Total registros: <strong>{{ totalRegistros() }}</strong></span>
+          <span>Total general: <strong>{{ totalGeneral() | number:'1.2-2' }}</strong></span>
+          <button mat-stroked-button color="primary" (click)="exportarCsv()">
+            <mat-icon>download</mat-icon>
+            Exportar CSV
+          </button>
+        </div>
+
+        <div class="tabla-wrapper">
+          <table mat-table [dataSource]="rowsPage()">
+            <ng-container matColumnDef="idSaa">
+              <th mat-header-cell *matHeaderCellDef>ID SAA</th>
+              <td mat-cell *matCellDef="let row">{{ row.idSaa }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="cedula">
+              <th mat-header-cell *matHeaderCellDef>Cédula</th>
+              <td mat-cell *matCellDef="let row">{{ row.cedula }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="nombre">
+              <th mat-header-cell *matHeaderCellDef>Nombre</th>
+              <td mat-cell *matCellDef="let row">{{ row.nombre }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="estadoParticipe">
+              <th mat-header-cell *matHeaderCellDef>Estado</th>
+              <td mat-cell *matCellDef="let row">{{ row.estadoParticipe }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="cesantiaPatronal">
+              <th mat-header-cell *matHeaderCellDef>Ces. Patronal</th>
+              <td mat-cell *matCellDef="let row">{{ row.cesantiaPatronal | number:'1.2-2' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="cesantiaPersonal">
+              <th mat-header-cell *matHeaderCellDef>Ces. Personal</th>
+              <td mat-cell *matCellDef="let row">{{ row.cesantiaPersonal | number:'1.2-2' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="cesantiaRetiroVoluntario">
+              <th mat-header-cell *matHeaderCellDef>Ces. Retiro Vol.</th>
+              <td mat-cell *matCellDef="let row">{{ row.cesantiaRetiroVoluntario | number:'1.2-2' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="jubilacionPatronal">
+              <th mat-header-cell *matHeaderCellDef>Jub. Patronal</th>
+              <td mat-cell *matCellDef="let row">{{ row.jubilacionPatronal | number:'1.2-2' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="jubilacionPersonal">
+              <th mat-header-cell *matHeaderCellDef>Jub. Personal</th>
+              <td mat-cell *matCellDef="let row">{{ row.jubilacionPersonal | number:'1.2-2' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="jubilacionRetiroVoluntario">
+              <th mat-header-cell *matHeaderCellDef>Jub. Retiro Vol.</th>
+              <td mat-cell *matCellDef="let row">{{ row.jubilacionRetiroVoluntario | number:'1.2-2' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="pensionComplementaria">
+              <th mat-header-cell *matHeaderCellDef>Pensión Comp.</th>
+              <td mat-cell *matCellDef="let row">{{ row.pensionComplementaria | number:'1.2-2' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="rendimientoCesantiaPersonal">
+              <th mat-header-cell *matHeaderCellDef>Rend. Ces. Personal</th>
+              <td mat-cell *matCellDef="let row">{{ row.rendimientoCesantiaPersonal | number:'1.2-2' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="rendimientoJubilacionPatronal">
+              <th mat-header-cell *matHeaderCellDef>Rend. Jub. Patronal</th>
+              <td mat-cell *matCellDef="let row">{{ row.rendimientoJubilacionPatronal | number:'1.2-2' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="rendimientoCesantiaPatronal">
+              <th mat-header-cell *matHeaderCellDef>Rend. Ces. Patronal</th>
+              <td mat-cell *matCellDef="let row">{{ row.rendimientoCesantiaPatronal | number:'1.2-2' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="rendimientoJubilacionPersonal">
+              <th mat-header-cell *matHeaderCellDef>Rend. Jub. Personal</th>
+              <td mat-cell *matCellDef="let row">{{ row.rendimientoJubilacionPersonal | number:'1.2-2' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="totalGeneral">
+              <th mat-header-cell *matHeaderCellDef>Total General</th>
+              <td mat-cell *matCellDef="let row"><strong>{{ row.totalGeneral | number:'1.2-2' }}</strong></td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="cols"></tr>
+            <tr mat-row *matRowDef="let row; columns: cols;"></tr>
+          </table>
+        </div>
+
+        <mat-paginator
+          [length]="totalRegistros()"
+          [pageSize]="pageSize"
+          [pageSizeOptions]="[10, 15, 25, 50]"
+          (page)="onPageChange($event)"
+          showFirstLastButtons>
+        </mat-paginator>
+      </mat-card-content>
+    </mat-card>
+  }
+</div>

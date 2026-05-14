@@ -15,6 +15,7 @@ import { MaterialFormModule } from '../../../../../shared/modules/material-form.
 import { Entidad } from '../../../model/entidad';
 import { EstadoParticipe } from '../../../model/estado-participe';
 import { Filial } from '../../../model/filial';
+import { TipoAporte } from '../../../model/tipo-aporte';
 import { TipoIdentificacion } from '../../../model/tipo-identificacion';
 
 import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
@@ -29,11 +30,13 @@ import {
   AuditoriaDialogComponent,
   CambiarEstadoDialogData,
 } from '../../../dialog/auditoria-dialog/auditoria-dialog.component';
+import { AporteService } from '../../../service/aporte.service';
 import { AuditoriaService } from '../../../service/auditoria.service';
 import { EntidadService } from '../../../service/entidad.service';
 import { EstadoParticipeService } from '../../../service/estado-participe.service';
 import { FilialService } from '../../../service/filial.service';
 import { PrestamoService } from '../../../service/prestamo.service';
+import { TipoAporteService } from '../../../service/tipo-aporte.service';
 import { TipoIdentificacionService } from '../../../service/tipo-identificacion.service';
 
 @Component({
@@ -70,14 +73,17 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
   private estadoParticipeService = inject(EstadoParticipeService);
   private exportService = inject(ExportService);
   private funcionesDatos = inject(FuncionesDatosService);
+  private aporteService = inject(AporteService);
   private auditoriaService = inject(AuditoriaService);
   private prestamoService = inject(PrestamoService);
+  private tipoAporteService = inject(TipoAporteService);
 
   // Signals
   entidades = signal<Entidad[]>([]);
   filialesOptions = signal<Filial[]>([]);
   tiposIdentificacionOptions = signal<TipoIdentificacion[]>([]);
   estadosParticipesOptions = signal<EstadoParticipe[]>([]);
+  tiposAporteOptions = signal<TipoAporte[]>([]);
   busquedaRealizada = signal<boolean>(false); // Controla visibilidad del paginador
 
   // Form
@@ -145,6 +151,7 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
       sectorPublico: [null],
       idEstado: [null],
       migrado: [null],
+      tipoAporte: [null],
       fechaNacimientoDesde: [null],
       fechaNacimientoHasta: [null],
     });
@@ -155,11 +162,13 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
       filiales: this.filialService.getAll(),
       tiposIdentificacion: this.tipoIdentificacionService.getAll(),
       estadosParticipes: this.estadoParticipeService.getAll(),
+      tiposAporte: this.tipoAporteService.getAll(),
     }).subscribe({
       next: (result) => {
         this.filialesOptions.set(result.filiales || []);
         this.tiposIdentificacionOptions.set(result.tiposIdentificacion || []);
         this.estadosParticipesOptions.set(result.estadosParticipes || []);
+        this.tiposAporteOptions.set(result.tiposAporte || []);
       },
       error: (error) => {
         this.snackBar.open('Error cargando opciones', 'Cerrar', { duration: 3000 });
@@ -181,6 +190,7 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
       sectorPublico,
       idEstado,
       migrado,
+      tipoAporte,
       fechaNacimientoDesde,
       fechaNacimientoHasta,
     } = formValues;
@@ -434,7 +444,45 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
         )
       : this.entidadService.selectByCriteria(criterios);
 
-    busqueda$.subscribe({
+    // Si se filtró por tipoAporte, primero obtener los códigos de entidad con ese aporte
+    const ejecutarBusqueda$ = tipoAporte
+      ? (() => {
+          const criterioAporte: DatosBusqueda[] = [];
+          const dbTpAp = new DatosBusqueda();
+          dbTpAp.asignaValorConCampoPadre(
+            TipoDatos.LONG,
+            'tipoAporte',
+            'codigo',
+            tipoAporte,
+            TipoComandosBusqueda.IGUAL
+          );
+          criterioAporte.push(dbTpAp);
+          return this.aporteService.selectByCriteria(criterioAporte).pipe(
+            switchMap((aportes) => {
+              if (!aportes || aportes.length === 0) {
+                return of(null); // sin aportes con ese tipo
+              }
+              // Obtener códigos de entidad únicos
+              const codigosEntidad = [...new Set(
+                aportes.map((a: any) => a.entidad?.codigo).filter((c: any) => !!c)
+              )] as number[];
+              if (codigosEntidad.length === 0) {
+                return of(null);
+              }
+              // Ejecutar búsqueda de entidades y post-filtrar por los códigos
+              return busqueda$.pipe(
+                switchMap((entidades) => {
+                  if (!entidades) return of(null);
+                  const codigosSet = new Set(codigosEntidad);
+                  return of(entidades.filter((e) => codigosSet.has(e.codigo!)));
+                })
+              );
+            })
+          );
+        })()
+      : busqueda$;
+
+    ejecutarBusqueda$.subscribe({
       next: (result) => {
         this.busquedaRealizada.set(true); // Marcar que se realizó una búsqueda
         this.entidades.set(result || []);
@@ -470,6 +518,7 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
       sectorPublico: null,
       idEstado: null,
       migrado: null,
+      tipoAporte: null,
       fechaNacimientoDesde: null,
       fechaNacimientoHasta: null,
     });

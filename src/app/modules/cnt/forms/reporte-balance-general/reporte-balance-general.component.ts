@@ -39,6 +39,7 @@ export class ReporteBalanceGeneralComponent implements OnInit, OnDestroy {
   loading       = signal(false);
   errorMsg      = signal('');
   generado      = signal(false);
+  mostrarDebeHaber = signal(false);
 
   idEjecucion   = signal<number | null>(null);
   totalRegistros = signal<number | null>(null);
@@ -56,10 +57,14 @@ export class ReporteBalanceGeneralComponent implements OnInit, OnDestroy {
     this.balanceData().reduce((s, r) => s + (r.valorActual || 0), 0));
 
   // ── Columnas ───────────────────────────────────────────
-  readonly colsBalance = [
-    'cuentaContable', 'nombreCuenta', 'nivel',
-    'saldoCuenta', 'valorDebe', 'valorHaber', 'valorActual'
-  ];
+  colsBalance = computed(() => {
+    const base = ['cuentaContable', 'nombreCuenta', 'nivel', 'saldoCuenta'];
+    if (this.mostrarDebeHaber()) {
+      base.push('valorDebe', 'valorHaber');
+    }
+    base.push('valorActual');
+    return base;
+  });
 
   // ── Formulario ───────────────────────────────────────────────
   form!: FormGroup;
@@ -179,25 +184,50 @@ export class ReporteBalanceGeneralComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const rows = data.map((row) => ({
-      cuentaContable: row.cuentaContable ?? '',
-      nombreCuenta: row.nombreCuenta ?? '',
-      nivel: row.nivel ?? '',
-      saldoCuenta: this.formatearMontoCsv(row.saldoCuenta),
-      valorDebe: this.formatearMontoCsv(row.valorDebe),
-      valorHaber: this.formatearMontoCsv(row.valorHaber),
-      valorActual: this.formatearMontoCsv(row.valorActual),
-    }));
+    const incluyeDebeHaber = this.mostrarDebeHaber();
 
-    rows.push({
+    const rows = data.map((row) => {
+      const registro: any = {
+        cuentaContable: row.cuentaContable ?? '',
+        nombreCuenta: row.nombreCuenta ?? '',
+        nivel: row.nivel ?? '',
+        saldoCuenta: this.formatearMontoCsv(row.saldoCuenta),
+        valorActual: this.formatearMontoCsv(row.valorActual),
+      };
+
+      if (incluyeDebeHaber) {
+        registro.valorDebe = this.formatearMontoCsv(row.valorDebe);
+        registro.valorHaber = this.formatearMontoCsv(row.valorHaber);
+      }
+
+      return registro;
+    });
+
+    const filaTotales: any = {
       cuentaContable: 'TOTALES',
       nombreCuenta: '',
       nivel: '',
       saldoCuenta: this.formatearMontoCsv(this.totalSaldoAnterior()),
-      valorDebe: this.formatearMontoCsv(this.totalDebe()),
-      valorHaber: this.formatearMontoCsv(this.totalHaber()),
       valorActual: this.formatearMontoCsv(this.totalSaldoActual()),
-    });
+    };
+
+    if (incluyeDebeHaber) {
+      filaTotales.valorDebe = this.formatearMontoCsv(this.totalDebe());
+      filaTotales.valorHaber = this.formatearMontoCsv(this.totalHaber());
+    }
+
+    rows.push(filaTotales);
+
+    const headers = ['N° Cuenta', 'Nombre', 'Nivel', 'Saldo Anterior'];
+    const dataKeys = ['cuentaContable', 'nombreCuenta', 'nivel', 'saldoCuenta'];
+
+    if (incluyeDebeHaber) {
+      headers.push('Debe', 'Haber');
+      dataKeys.push('valorDebe', 'valorHaber');
+    }
+
+    headers.push('Saldo Actual');
+    dataKeys.push('valorActual');
 
     const now = new Date();
     const yyyy = now.getFullYear();
@@ -209,9 +239,13 @@ export class ReporteBalanceGeneralComponent implements OnInit, OnDestroy {
     this.exportService.exportToCSV(
       rows,
       `balance_general_${yyyy}${mm}${dd}_${hh}${min}`,
-      ['N° Cuenta', 'Nombre', 'Nivel', 'Saldo Anterior', 'Debe', 'Haber', 'Saldo Actual'],
-      ['cuentaContable', 'nombreCuenta', 'nivel', 'saldoCuenta', 'valorDebe', 'valorHaber', 'valorActual']
+      headers,
+      dataKeys
     );
+  }
+
+  onMostrarDebeHaberChange(checked: boolean): void {
+    this.mostrarDebeHaber.set(checked);
   }
 
   private formatearMontoCsv(valor: number | null | undefined): string {

@@ -76,9 +76,9 @@ export class MenucreditosComponent {
           route: '/menucreditos/navegacion-cascada',
         },
         {
-          displayName: 'Dash',
-          iconName: 'person_play',
-          route: '/menucreditos/participe-dash',
+          displayName: 'Consolidado',
+          iconName: 'table_chart',
+          route: '/menucreditos/consolidado',
         },
         {
           displayName: 'Jubilados',

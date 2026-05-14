@@ -132,6 +132,17 @@
             </mat-form-field>
 
             <mat-form-field appearance="fill" class="filter-field">
+              <mat-label>Tipo de Aporte</mat-label>
+              <mat-icon matPrefix>savings</mat-icon>
+              <mat-select formControlName="tipoAporte">
+                <mat-option [value]="null">Todos</mat-option>
+                @for (tipo of tiposAporteOptions(); track tipo.codigo) {
+                <mat-option [value]="tipo.codigo">{{ tipo.nombre }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="fill" class="filter-field">
               <mat-label>Fecha Nacimiento Desde</mat-label>
               <mat-icon matPrefix>event</mat-icon>
               <input
