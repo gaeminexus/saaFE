@@ -3,6 +3,7 @@ import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
+import { forkJoin, of } from 'rxjs';
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
 import { AppStateService } from '../../../../shared/services/app-state.service';
 import { PlanCuentaSelectorDialogComponent } from '../../../../shared/components/plan-cuenta-selector-dialog/plan-cuenta-selector-dialog.component';
@@ -34,6 +35,7 @@ export class ReporteMayorAnaliticoComponent implements OnInit, OnDestroy {
   // ── Estado ──────────────────────────────────────────────────
   loading          = signal(false);
   loadingDetalles  = signal(false);
+  loadingExportAll = signal(false);
   errorMsg         = signal('');
   generado         = signal(false);
 
@@ -232,6 +234,82 @@ export class ReporteMayorAnaliticoComponent implements OnInit, OnDestroy {
 
   getObservacionAsiento(detalle: DetalleMayorAnalitico): string {
     return detalle?.asiento?.observaciones || '—';
+  }
+
+  /**
+   * Descarga un único CSV con todas las cuentas y sus movimientos.
+   * Llama a obtenerDetalles() para cada cabecera en paralelo (forkJoin).
+   */
+  exportarTodasCuentasCSV(): void {
+    const cuentas = this.cabeceras();
+    if (!cuentas.length) {
+      this.snackBar.open('No hay cuentas para exportar.', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    this.loadingExportAll.set(true);
+
+    const peticiones = cuentas.map(c =>
+      this.reporteService.obtenerDetalles(c.codigo)
+    );
+
+    forkJoin(peticiones).subscribe({
+      next: (resultados) => {
+        const rows: Record<string, string>[] = [];
+
+        cuentas.forEach((cuenta, idx) => {
+          const detallesCuenta = resultados[idx] ?? [];
+
+          if (detallesCuenta.length === 0) {
+            // Fila vacía para que la cuenta aparezca aunque no tenga movimientos
+            rows.push({
+              'N° Cuenta':          cuenta.numeroCuenta ?? '',
+              'Nombre Cuenta':      cuenta.nombreCuenta ?? '',
+              'Saldo Anterior':     Number(cuenta.saldoAnterior ?? 0).toFixed(2),
+              'Fecha':              '',
+              'N° Asiento':         '',
+              'Descripción':        '',
+              'Observación':        '',
+              'Debe':               '',
+              'Haber':              '',
+              'Saldo':              '',
+              'Estado':             '',
+              'Centro Costo':       '',
+            });
+          } else {
+            detallesCuenta.forEach((mov) => {
+              rows.push({
+                'N° Cuenta':        cuenta.numeroCuenta ?? '',
+                'Nombre Cuenta':    cuenta.nombreCuenta ?? '',
+                'Saldo Anterior':   Number(cuenta.saldoAnterior ?? 0).toFixed(2),
+                'Fecha':            this.formatFecha(mov.fechaAsiento),
+                'N° Asiento':       `${mov.numeroAsiento ?? ''} - ${this.getTipoAsientoNombre(mov)}`,
+                'Descripción':      mov.descripcionAsiento ?? '',
+                'Observación':      this.getObservacionAsiento(mov),
+                'Debe':             Number(mov.valorDebe  ?? 0).toFixed(2),
+                'Haber':            Number(mov.valorHaber ?? 0).toFixed(2),
+                'Saldo':            Number(mov.saldoActual ?? 0).toFixed(2),
+                'Estado':           this.formatEstadoAsiento(mov.estadoAsiento),
+                'Centro Costo':     mov.numeroCentroCosto || mov.nombreCosto || '',
+              });
+            });
+          }
+        });
+
+        this.loadingExportAll.set(false);
+
+        const headers = ['N° Cuenta','Nombre Cuenta','Saldo Anterior','Fecha','N° Asiento','Descripción','Observación','Debe','Haber','Saldo','Estado','Centro Costo'];
+        this.exportService.exportToCSV(rows, 'mayor-analitico-completo', headers, headers);
+
+        this.snackBar.open(`CSV generado: ${rows.length} filas exportadas.`, 'Cerrar', {
+          duration: 4000, panelClass: ['success-snackbar'],
+        });
+      },
+      error: () => {
+        this.loadingExportAll.set(false);
+        this.snackBar.open('Error al exportar todas las cuentas.', 'Cerrar', { duration: 4000 });
+      },
+    });
   }
 
   exportarDetalleCSV(): void {

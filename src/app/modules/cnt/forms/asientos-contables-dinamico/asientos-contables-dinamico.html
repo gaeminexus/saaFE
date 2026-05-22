@@ -69,7 +69,14 @@
 
           <mat-form-field appearance="outline" class="field-fecha-asiento">
             <mat-label>Fecha Asiento</mat-label>
-            <input matInput [matDatepicker]="pickerAsiento" formControlName="fechaAsiento" />
+            <input
+              #fechaAsientoInput
+              matInput
+              [matDatepicker]="pickerAsiento"
+              formControlName="fechaAsiento"
+              placeholder="dd/mm/aaaa"
+              (blur)="syncFechaAsiento($event)"
+            />
             <mat-datepicker-toggle matIconSuffix [for]="pickerAsiento"></mat-datepicker-toggle>
             <mat-datepicker #pickerAsiento></mat-datepicker>
           </mat-form-field>
@@ -142,6 +149,18 @@
           <div class="botones-asiento-activo">
             <button
               mat-raised-button
+              color="primary"
+              type="button"
+              (click)="copiarAsiento()"
+              [disabled]="loading"
+              matTooltip="Crear una copia de este asiento en estado Incompleto"
+            >
+              <mat-icon>content_copy</mat-icon>
+              Copiar Asiento
+            </button>
+
+            <button
+              mat-raised-button
               color="warn"
               type="button"
               (click)="anularAsiento()"
@@ -195,13 +214,25 @@
           </div>
           }
 
-          <!-- Si está ANULADO (2): No mostrar ningún botón -->
+          <!-- Si está ANULADO (2): Mostrar mensaje y permitir impresión -->
           @if (asientoAnulado) {
           <div class="mensaje-anulado">
             <mat-chip color="warn" highlighted>
               <mat-icon>block</mat-icon>
               Asiento ANULADO - Solo consulta
             </mat-chip>
+
+            <button
+              mat-raised-button
+              color="accent"
+              type="button"
+              (click)="imprimirAsiento()"
+              [disabled]="loading"
+              matTooltip="Imprimir asiento anulado en formato PDF"
+            >
+              <mat-icon>print</mat-icon>
+              Imprimir Asiento
+            </button>
           </div>
           }
         </div>

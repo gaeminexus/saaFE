@@ -25,6 +25,8 @@ import { MenucuentasxcobrarComponent } from './modules/cxc/menu/menucuentasxcobr
 import { MenucuentaxpagarComponent } from './modules/cxp/menu/menucuentasxpagar/menucuentasxpagar.component';
 import { LoginComponent } from './modules/dash/forms/login/login.component';
 import { MenuComponent } from './modules/dash/menu/menu.component';
+import { ReportesSuperBancosComponent } from './modules/reportes/forms/reportes-super-bancos/reportes-super-bancos.component';
+import { MenureportesComponent } from './modules/reportes/menu/menureportes/menureportes.component';
 import { MenurecursoshumanosComponent } from './modules/rrh/menu/menurecursoshumanos/menurecursoshumanos.component';
 // RRHH demo components
 import { AsistenciaListComponent } from './modules/rrh/forms/gestion/asistencia/asistencia-list.component';
@@ -125,6 +127,18 @@ export const routes: Routes = [
     path: 'menu',
     component: MenuComponent,
     canActivate: [authGuard],
+  },
+  {
+    path: 'reportes',
+    component: MenureportesComponent,
+    canActivate: [authGuard],
+    children: [
+      {
+        path: 'creditos/super-bancos',
+        component: ReportesSuperBancosComponent,
+        canActivate: [authGuard],
+      },
+    ],
   },
   {
     path: 'menucontabilidad',

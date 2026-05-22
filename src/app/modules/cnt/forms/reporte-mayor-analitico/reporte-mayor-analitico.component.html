@@ -125,6 +125,22 @@
           <mat-icon>account_balance</mat-icon>
           Cuentas
           <span class="rm-count-badge">{{ cabeceras().length }}</span>
+
+          @if (cabeceras().length > 0) {
+            <button
+              mat-icon-button
+              class="rm-export-all-btn"
+              (click)="exportarTodasCuentasCSV()"
+              [disabled]="loadingExportAll()"
+              matTooltip="Descargar todas las cuentas con sus movimientos en un solo CSV"
+            >
+              @if (loadingExportAll()) {
+                <mat-icon class="rm-spin">sync</mat-icon>
+              } @else {
+                <mat-icon>download</mat-icon>
+              }
+            </button>
+          }
         </div>
 
         @if (cabeceras().length === 0) {

@@ -7,7 +7,7 @@ import {
 import { Observable } from 'rxjs';
 import { map, startWith } from 'rxjs/operators';
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import {
   FormArray,
   FormBuilder,
@@ -73,6 +73,7 @@ interface CuentaItem {
 export class AsientosContablesDinamico implements OnInit {
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
+  @ViewChild('fechaAsientoInput', { read: ElementRef }) fechaAsientoInputRef!: ElementRef<HTMLInputElement>;
 
   form!: FormGroup;
 
@@ -1735,6 +1736,48 @@ export class AsientosContablesDinamico implements OnInit {
   /**
    * Parsea fechas del backend que pueden venir en diferentes formatos
    */
+  /**
+   * Handler de blur en el campo de fecha para asegurar que el valor quede seteado
+   * correctamente aunque el usuario haya tipeado la fecha manualmente.
+   * Angular Material puede dejar el control en null si hubo errores de parse
+   * intermedios durante la escritura. Este método re-parsea el texto del input.
+   */
+  syncFechaAsiento(event: FocusEvent): void {
+    const control = this.form.get('fechaAsiento');
+    if (!control) return;
+
+    // Si ya tiene un Date válido, no hacer nada
+    const current = control.value;
+    if (current instanceof Date && !isNaN(current.getTime())) return;
+
+    // Leer el texto crudo del input nativo
+    const rawValue: string = (event.target as HTMLInputElement)?.value?.trim() ?? '';
+    if (!rawValue) return;
+
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+
+    const day   = Number(parts[0]);
+    const month = Number(parts[1]) - 1;
+    const year  = Number(parts[2]);
+
+    if (
+      !isNaN(day)   && day   >= 1 && day   <= 31  &&
+      !isNaN(month) && month >= 0 && month <= 11  &&
+      !isNaN(year)  && year  >= 1000 && year <= 9999
+    ) {
+      const date = new Date(year, month, day);
+      if (
+        date.getFullYear() === year &&
+        date.getMonth()    === month &&
+        date.getDate()     === day
+      ) {
+        control.setValue(date);
+        control.updateValueAndValidity();
+      }
+    }
+  }
+
   private parseFechaFromBackend(fecha: any): Date {
     if (!fecha) {
       return new Date(); // Fecha actual por defecto
@@ -2250,9 +2293,19 @@ export class AsientosContablesDinamico implements OnInit {
     const asientoActualizado = this.buildCabeceraPayload(1);
 
     this.asientoService.actualizarAsiento(this.codigoAsientoActual!, asientoActualizado).subscribe({
-      next: () => {
+      next: (response) => {
         this.loading = false;
-        this.form.patchValue({ estado: 1 });
+
+        // Actualizar asientoActual con la respuesta del backend
+        if (response) {
+          this.asientoActual = response;
+        }
+
+        // Parchar estado y número desde la respuesta para que el título quede correcto
+        this.form.patchValue({
+          estado: 1,
+          numero: response?.numero ?? this.form.get('numero')?.value,
+        });
 
         // Deshabilitar formulario para prevenir ediciones
         this.deshabilitarFormulario();
@@ -2337,6 +2390,58 @@ export class AsientosContablesDinamico implements OnInit {
           panelClass: ['error-snackbar']
         });
       }
+    });
+  }
+
+  /**
+   * Copiar el asiento actual creando uno nuevo en estado INCOMPLETO,
+   * luego navega al nuevo asiento para permitir editarlo.
+   */
+  copiarAsiento(): void {
+    if (!this.codigoAsientoActual) return;
+
+    const numeroAsiento = this.form.get('numero')?.value ?? this.codigoAsientoActual;
+
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      width: '450px',
+      data: {
+        title: 'Copiar Asiento',
+        message: `¿Está seguro de que desea copiar el asiento N° ${numeroAsiento}?`,
+        detail: 'Se creará un nuevo asiento en estado INCOMPLETO con los mismos datos.',
+        confirmText: 'Sí, copiar',
+        cancelText: 'Cancelar',
+      },
+    });
+
+    dialogRef.afterClosed().subscribe((confirmed: boolean) => {
+      if (!confirmed) return;
+
+      this.loading = true;
+      this.asientoService.generaCopia(this.codigoAsientoActual!).subscribe({
+        next: (copia) => {
+          this.loading = false;
+          this.snackBar.open(
+            `✅ Asiento copiado. Nuevo asiento N° ${copia?.numero ?? copia?.codigo ?? ''}`,
+            'Cerrar',
+            { duration: 4000, panelClass: ['success-snackbar'] }
+          );
+          // Navegar al nuevo asiento para editarlo
+          if (copia?.codigo) {
+            this.router.navigate([
+              '/menucontabilidad/procesos/asientos-dinamico',
+              copia.codigo,
+            ]);
+          }
+        },
+        error: (error: any) => {
+          this.loading = false;
+          const errorMsg = error?.error?.message || error?.message || 'Error desconocido';
+          this.snackBar.open(`❌ Error al copiar asiento: ${errorMsg}`, 'Cerrar', {
+            duration: 5000,
+            panelClass: ['error-snackbar'],
+          });
+        },
+      });
     });
   }
 

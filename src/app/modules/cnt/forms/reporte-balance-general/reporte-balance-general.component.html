@@ -100,6 +100,13 @@
         <mat-icon>download</mat-icon>
         Exportar CSV
       </button>
+
+      <mat-checkbox
+        [checked]="mostrarDebeHaber()"
+        (change)="onMostrarDebeHaberChange($event.checked)"
+        color="primary">
+        Mostrar Debe/Haber
+      </mat-checkbox>
     </div>
 
     <!-- Tabla de balance -->

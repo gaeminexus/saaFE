@@ -26,7 +26,7 @@ export class PrestamoPagosDialogComponent {
     if (this.mostrarSeguro) {
       cols.push('seguroPagado');
     }
-    cols.push('saldoOtros', 'valor');
+    cols.push('saldoOtros', 'valor', 'observacion');
     return cols;
   }
 
@@ -118,7 +118,7 @@ export class PrestamoPagosDialogComponent {
               if (this.mostrarSeguro) {
                 row.push(`$${(p.valorSeguroIncendio || 0).toFixed(2)}`);
               }
-              row.push(`$${(p.saldoOtros || 0).toFixed(2)}`, `$${(p.valor || 0).toFixed(2)}`);
+              row.push(`$${(p.saldoOtros || 0).toFixed(2)}`, `$${(p.valor || 0).toFixed(2)}`, p.observacion || '');
               return row;
             });
 
@@ -144,7 +144,7 @@ export class PrestamoPagosDialogComponent {
               if (this.mostrarSeguro) {
                 pdfHead.push('Seguro');
               }
-              pdfHead.push('Pago Extra', 'Valor Total');
+              pdfHead.push('Pago Extra', 'Valor Total', 'Observación');
 
               const pdfFoot = [
                 'TOTALES',
@@ -156,7 +156,7 @@ export class PrestamoPagosDialogComponent {
               if (this.mostrarSeguro) {
                 pdfFoot.push(`$${totalSeguro.toFixed(2)}`);
               }
-              pdfFoot.push(`$${totalSaldoOtros.toFixed(2)}`, `$${totalValor.toFixed(2)}`);
+            pdfFoot.push(`$${totalSaldoOtros.toFixed(2)}`, `$${totalValor.toFixed(2)}`, '');
 
               doc.autoTable({
                 startY: yPosition,

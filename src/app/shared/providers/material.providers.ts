@@ -1,6 +1,7 @@
 import { importProvidersFrom, APP_INITIALIZER } from '@angular/core';
 import { provideAnimations } from '@angular/platform-browser/animations';
-import { MatCommonModule, MAT_DATE_LOCALE, MAT_DATE_FORMATS, MatDateFormats, NativeDateAdapter, DateAdapter } from '@angular/material/core';
+import { MatCommonModule, MAT_DATE_LOCALE, MAT_DATE_FORMATS, MatDateFormats, NativeDateAdapter, DateAdapter, ErrorStateMatcher } from '@angular/material/core';
+import { AbstractControl, FormGroupDirective, NgForm } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatCheckboxModule } from '@angular/material/checkbox';
@@ -35,18 +36,53 @@ export const APP_DATE_FORMATS: MatDateFormats = {
   },
 };
 
+/**
+ * ErrorStateMatcher que solo activa el estado de error cuando el campo
+ * ha perdido el foco (touched), evitando errores visuales mientras el usuario escribe.
+ */
+export class TouchedErrorStateMatcher implements ErrorStateMatcher {
+  isErrorState(control: AbstractControl | null, _form: FormGroupDirective | NgForm | null): boolean {
+    return !!(control?.invalid && control?.touched);
+  }
+}
+
 export class EsDateAdapter extends NativeDateAdapter {
   override parse(value: string): Date | null {
     if (!value) return null;
-    const parts = value.trim().split('/');
+
+    const trimmed = value.trim();
+    const parts = trimmed.split('/');
+
+    // Solo parsear cuando hay exactamente 3 partes con formato dd/MM/yyyy completo
     if (parts.length === 3) {
-      const day = Number(parts[0]);
+      const day   = Number(parts[0]);
       const month = Number(parts[1]) - 1;
-      const year = Number(parts[2]);
-      if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
-        return new Date(year, month, day);
+      const year  = Number(parts[2]);
+
+      // Validar rangos básicos y que el año sea de 4 dígitos para evitar fechas 1900+x
+      if (
+        !isNaN(day)   && day   >= 1  && day   <= 31  &&
+        !isNaN(month) && month >= 0  && month <= 11  &&
+        !isNaN(year)  && year  >= 1000 && year <= 9999
+      ) {
+        const date = new Date(year, month, day);
+        // Verificar que la fecha sea real (ej. 31/02 no se convierte en marzo)
+        if (
+          date.getFullYear() === year &&
+          date.getMonth()    === month &&
+          date.getDate()     === day
+        ) {
+          return date;
+        }
       }
     }
+
+    // Input parcial o inválido: retornar invalid Date para que matDatepickerParse
+    // no se active (Material solo activa matDatepickerParse cuando retornamos null
+    // para un input no vacío). Retornamos Invalid Date solo cuando hay texto que
+    // no puede ser parseado todavía.
+    // ← Para inputs parciales retornamos null (Material mostrará matDatepickerParse
+    //    pero TouchedErrorStateMatcher lo ocultará hasta el blur)
     return null;
   }
 
@@ -70,6 +106,7 @@ export function provideMaterial() {
     { provide: MAT_DATE_LOCALE, useValue: 'es-EC' },
     { provide: DateAdapter, useClass: EsDateAdapter, deps: [MAT_DATE_LOCALE] },
     { provide: MAT_DATE_FORMATS, useValue: APP_DATE_FORMATS },
+    { provide: ErrorStateMatcher, useClass: TouchedErrorStateMatcher },
     {
       provide: MAT_FORM_FIELD_DEFAULT_OPTIONS,
       useValue: {
