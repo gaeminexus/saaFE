@@ -2,7 +2,7 @@
   <div class="header">
     <div class="header-content">
       <h2>
-        {{ codigoAsientoActual ? 'Editar Asiento #' + form.get('numero')?.value : 'Nuevo Asiento Contable' }}
+        {{ codigoAsientoActual ? 'Editar Asiento #' + (form.get('numeroAlterno')?.value || form.get('numero')?.value) : 'Nuevo Asiento Contable' }}
         @if (codigoAsientoActual) {
           <mat-chip class="edit-chip">Modo Edición</mat-chip>
         }
@@ -59,10 +59,10 @@
             }
           </mat-form-field>
 
-          @if (form.get('numero')?.value) {
+          @if (form.get('numeroAlterno')?.value || form.get('numero')?.value) {
           <mat-form-field appearance="outline" class="field-numero">
             <mat-label>Número</mat-label>
-            <input matInput formControlName="numero" readonly />
+            <input matInput formControlName="numeroAlterno" readonly />
             <mat-hint>Generado automáticamente por el sistema</mat-hint>
           </mat-form-field>
           }

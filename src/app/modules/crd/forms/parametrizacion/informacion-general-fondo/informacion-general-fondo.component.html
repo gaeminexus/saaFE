@@ -1,0 +1,382 @@
+<div class="igf-container">
+
+  <!-- ── HEADER ── -->
+  <div class="igf-header">
+    <div class="igf-header__icon">
+      <mat-icon>account_balance</mat-icon>
+    </div>
+    <div class="igf-header__text">
+      <h1>Información General del Fondo</h1>
+      <p>Configure los datos principales del fondo complementario</p>
+    </div>
+    @if (registroExistente()) {
+      <div class="igf-header__badge">
+        <mat-icon>verified</mat-icon>
+        <span>Registro activo</span>
+      </div>
+    }
+  </div>
+
+  <!-- ── LOADING ── -->
+  @if (loading()) {
+    <div class="igf-loading">
+      <mat-spinner diameter="48"></mat-spinner>
+      <p>Cargando información del fondo...</p>
+    </div>
+  }
+
+  <!-- ── ERROR ── -->
+  @if (errorMsg()) {
+    <div class="igf-error">
+      <mat-icon>error_outline</mat-icon>
+      <span>{{ errorMsg() }}</span>
+      <button mat-stroked-button (click)="cargarDatos()">
+        <mat-icon>refresh</mat-icon> Reintentar
+      </button>
+    </div>
+  }
+
+  <!-- ── FORM ── -->
+  @if (!loading()) {
+    <form [formGroup]="form" (ngSubmit)="guardar()" autocomplete="off">
+
+      <!-- ════ 1. IDENTIFICACIÓN DEL FONDO ════ -->
+      <mat-card class="igf-card">
+        <mat-card-header>
+          <div mat-card-avatar class="card-avatar card-avatar--primary">
+            <mat-icon>badge</mat-icon>
+          </div>
+          <mat-card-title>Identificación del Fondo</mat-card-title>
+          <mat-card-subtitle>Datos de identificación legal del fondo complementario</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="form-grid form-grid--3">
+
+            <mat-form-field appearance="outline">
+              <mat-label>Tipo de Identificación</mat-label>
+              <mat-select formControlName="tipoIdentificacionFcpc">
+                @for (tipo of tiposIdentificacion; track tipo.valor) {
+                  <mat-option [value]="tipo.valor">{{ tipo.label }}</mat-option>
+                }
+              </mat-select>
+              <mat-icon matPrefix>fingerprint</mat-icon>
+              <mat-error>Campo obligatorio</mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Número de Identificación</mat-label>
+              <input matInput formControlName="identificacionFcpc" placeholder="Ej. 1791234567001">
+              <mat-icon matPrefix>tag</mat-icon>
+              <mat-error>Campo obligatorio</mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Tipo FCPC</mat-label>
+              <mat-select formControlName="tipoFcpc">
+                @for (tipo of tiposFcpc; track tipo.valor) {
+                  <mat-option [value]="tipo.valor">{{ tipo.label }}</mat-option>
+                }
+              </mat-select>
+              <mat-icon matPrefix>category</mat-icon>
+              <mat-error>Campo obligatorio</mat-error>
+            </mat-form-field>
+
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- ════ 2. RESOLUCIÓN Y FECHAS ════ -->
+      <mat-card class="igf-card">
+        <mat-card-header>
+          <div mat-card-avatar class="card-avatar card-avatar--blue">
+            <mat-icon>gavel</mat-icon>
+          </div>
+          <mat-card-title>Resolución de Constitución</mat-card-title>
+          <mat-card-subtitle>Datos de la resolución legal que constituye el fondo</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="form-grid form-grid--3">
+
+            <mat-form-field appearance="outline" class="span-col-1">
+              <mat-label>Número de Resolución</mat-label>
+              <input matInput formControlName="numeroResolucion" placeholder="Ej. SEPS-IFMR-2024-001">
+              <mat-icon matPrefix>description</mat-icon>
+              <mat-error>Campo obligatorio</mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Fecha de Resolución</mat-label>
+              <input matInput [matDatepicker]="dpResolucion" formControlName="fechaResolucion"
+                     placeholder="dd/mm/aaaa">
+              <mat-datepicker-toggle matIconSuffix [for]="dpResolucion"></mat-datepicker-toggle>
+              <mat-datepicker #dpResolucion></mat-datepicker>
+              <mat-error>Campo obligatorio</mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Fecha de Traspaso</mat-label>
+              <input matInput [matDatepicker]="dpTraspaso" formControlName="fechaTraspaso"
+                     placeholder="dd/mm/aaaa">
+              <mat-datepicker-toggle matIconSuffix [for]="dpTraspaso"></mat-datepicker-toggle>
+              <mat-datepicker #dpTraspaso></mat-datepicker>
+              <mat-hint>Opcional</mat-hint>
+            </mat-form-field>
+
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- ════ 3. UBICACIÓN Y CONTACTO ════ -->
+      <mat-card class="igf-card">
+        <mat-card-header>
+          <div mat-card-avatar class="card-avatar card-avatar--green">
+            <mat-icon>location_on</mat-icon>
+          </div>
+          <mat-card-title>Ubicación y Contacto</mat-card-title>
+          <mat-card-subtitle>Dirección física y medios de contacto del fondo</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="form-grid form-grid--2">
+
+            <mat-form-field appearance="outline">
+              <mat-label>Provincia</mat-label>
+              <input matInput formControlName="provincia" placeholder="Ej. Pichincha">
+              <mat-icon matPrefix>map</mat-icon>
+              <mat-error>Campo obligatorio</mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Cantón</mat-label>
+              <input matInput formControlName="canton" placeholder="Ej. Quito">
+              <mat-icon matPrefix>location_city</mat-icon>
+              <mat-error>Campo obligatorio</mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="span-full">
+              <mat-label>Dirección</mat-label>
+              <input matInput formControlName="direccion" placeholder="Ej. Av. República del Salvador N34-183">
+              <mat-icon matPrefix>home</mat-icon>
+              <mat-error>Campo obligatorio</mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Teléfonos</mat-label>
+              <input matInput formControlName="telefonos" placeholder="Ej. 022345678 / 0999123456">
+              <mat-icon matPrefix>phone</mat-icon>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Correo Electrónico</mat-label>
+              <input matInput formControlName="correoElectronico" type="email"
+                     placeholder="Ej. contacto@fondo.com">
+              <mat-icon matPrefix>email</mat-icon>
+              <mat-error>Ingrese un correo electrónico válido</mat-error>
+            </mat-form-field>
+
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- ════ 4. CONFIGURACIÓN DEL SISTEMA ════ -->
+      <mat-card class="igf-card">
+        <mat-card-header>
+          <div mat-card-avatar class="card-avatar card-avatar--orange">
+            <mat-icon>settings</mat-icon>
+          </div>
+          <mat-card-title>Configuración del Sistema</mat-card-title>
+          <mat-card-subtitle>Definición del tipo de sistema, prestación, aporte y administración</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="form-grid form-grid--2">
+
+            <mat-form-field appearance="outline">
+              <mat-label>Tipo de Sistema</mat-label>
+              <mat-select formControlName="tipoSistema">
+                @for (tipo of tiposSistema; track tipo.valor) {
+                  <mat-option [value]="tipo.valor">{{ tipo.label }}</mat-option>
+                }
+              </mat-select>
+              <mat-icon matPrefix>account_tree</mat-icon>
+              <mat-error>Campo obligatorio</mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Tipo de Prestación</mat-label>
+              <mat-select formControlName="tipoPrestacion">
+                @for (tipo of tiposPrestacion; track tipo.valor) {
+                  <mat-option [value]="tipo.valor">{{ tipo.label }}</mat-option>
+                }
+              </mat-select>
+              <mat-icon matPrefix>payments</mat-icon>
+              <mat-error>Campo obligatorio</mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Tipo de Aporte</mat-label>
+              <mat-select formControlName="tipoAporte">
+                @for (tipo of tiposAporte; track tipo.valor) {
+                  <mat-option [value]="tipo.valor">{{ tipo.label }}</mat-option>
+                }
+              </mat-select>
+              <mat-icon matPrefix>volunteer_activism</mat-icon>
+              <mat-error>Campo obligatorio</mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Tipo de Administración</mat-label>
+              <mat-select formControlName="tipoAdministracion">
+                @for (tipo of tiposAdministracion; track tipo.valor) {
+                  <mat-option [value]="tipo.valor">{{ tipo.label }}</mat-option>
+                }
+              </mat-select>
+              <mat-icon matPrefix>manage_accounts</mat-icon>
+              <mat-error>Campo obligatorio</mat-error>
+            </mat-form-field>
+
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- ════ 5. CAMBIO DE ESTATUTO ════ -->
+      <mat-card class="igf-card">
+        <mat-card-header>
+          <div mat-card-avatar class="card-avatar card-avatar--purple">
+            <mat-icon>edit_document</mat-icon>
+          </div>
+          <mat-card-title>Cambio de Estatuto</mat-card-title>
+          <mat-card-subtitle>Información sobre modificaciones estatutarias del fondo (opcional)</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="form-grid form-grid--3">
+
+            <mat-form-field appearance="outline" class="span-col-1">
+              <mat-label>N° Resolución Cambio Estatuto</mat-label>
+              <input matInput formControlName="numeroResolucionCambioEstatuto"
+                     placeholder="Ej. SEPS-IGJ-2023-055">
+              <mat-icon matPrefix>description</mat-icon>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Fecha Resolución Cambio</mat-label>
+              <input matInput [matDatepicker]="dpCambio" formControlName="fechaResolucionCambioEstatuto"
+                     placeholder="dd/mm/aaaa">
+              <mat-datepicker-toggle matIconSuffix [for]="dpCambio"></mat-datepicker-toggle>
+              <mat-datepicker #dpCambio></mat-datepicker>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Cambio de Nombre</mat-label>
+              <input matInput formControlName="cambioNombre" placeholder="Nuevo nombre del fondo">
+              <mat-icon matPrefix>drive_file_rename_outline</mat-icon>
+            </mat-form-field>
+
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- ════ 6. PORCENTAJES Y VALORES DE APORTE ════ -->
+      <mat-card class="igf-card igf-card--aportes">
+        <mat-card-header>
+          <div mat-card-avatar class="card-avatar card-avatar--teal">
+            <mat-icon>percent</mat-icon>
+          </div>
+          <mat-card-title>Porcentajes y Valores de Aporte</mat-card-title>
+          <mat-card-subtitle>Configure los porcentajes y valores de aporte para cesantía y jubilación</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+
+          <div class="aportes-grid">
+
+            <!-- Cesantía -->
+            <div class="aportes-section">
+              <div class="aportes-section__header">
+                <mat-icon>work_off</mat-icon>
+                <span>Cesantía</span>
+              </div>
+              <div class="form-grid form-grid--3">
+                <mat-form-field appearance="outline">
+                  <mat-label>% Aporte Patronal</mat-label>
+                  <input matInput type="number" min="0" max="100" step="0.01"
+                         formControlName="porcentajeAportePatronalCesantia">
+                  <span matSuffix>%</span>
+                  <mat-error>Valor entre 0 y 100</mat-error>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>% Aporte Personal</mat-label>
+                  <input matInput type="number" min="0" max="100" step="0.01"
+                         formControlName="porcentajeAportePersonalCesantia">
+                  <span matSuffix>%</span>
+                  <mat-error>Valor entre 0 y 100</mat-error>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Valor Aporte Personal</mat-label>
+                  <input matInput type="number" min="0" step="0.01"
+                         formControlName="valorAportePersonalCesantia">
+                  <span matPrefix>$&nbsp;</span>
+                  <mat-error>Valor mínimo 0</mat-error>
+                </mat-form-field>
+              </div>
+            </div>
+
+            <mat-divider [vertical]="true" class="aportes-divider"></mat-divider>
+
+            <!-- Jubilación -->
+            <div class="aportes-section">
+              <div class="aportes-section__header">
+                <mat-icon>elderly</mat-icon>
+                <span>Jubilación</span>
+              </div>
+              <div class="form-grid form-grid--3">
+                <mat-form-field appearance="outline">
+                  <mat-label>% Aporte Patronal</mat-label>
+                  <input matInput type="number" min="0" max="100" step="0.01"
+                         formControlName="porcentajeAportePatronalJubilacion">
+                  <span matSuffix>%</span>
+                  <mat-error>Valor entre 0 y 100</mat-error>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>% Aporte Personal</mat-label>
+                  <input matInput type="number" min="0" max="100" step="0.01"
+                         formControlName="porcentajeAportePersonalJubilacion">
+                  <span matSuffix>%</span>
+                  <mat-error>Valor entre 0 y 100</mat-error>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Valor Aporte Personal</mat-label>
+                  <input matInput type="number" min="0" step="0.01"
+                         formControlName="valorAportePersonalJubilacion">
+                  <span matPrefix>$&nbsp;</span>
+                  <mat-error>Valor mínimo 0</mat-error>
+                </mat-form-field>
+              </div>
+            </div>
+
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- ── ACCIONES ── -->
+      <div class="igf-actions">
+        <button mat-stroked-button type="button" (click)="cargarDatos()" [disabled]="saving()">
+          <mat-icon>refresh</mat-icon>
+          Recargar
+        </button>
+
+        <button mat-flat-button color="primary" type="submit" [disabled]="saving() || form.invalid">
+          @if (saving()) {
+            <mat-spinner diameter="18" class="btn-spinner"></mat-spinner>
+          } @else {
+            <mat-icon>save</mat-icon>
+          }
+          {{ registroExistente() ? 'Actualizar' : 'Guardar' }}
+        </button>
+      </div>
+
+    </form>
+  }
+
+</div>

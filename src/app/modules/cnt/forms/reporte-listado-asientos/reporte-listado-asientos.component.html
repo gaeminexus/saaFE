@@ -25,93 +25,6 @@
 
     <div class="grid-2">
       <div>
-        <div class="section-title">Fecha Ingreso</div>
-        <div class="row">
-          <div class="col">
-            <label>Desde:</label>
-            <mat-form-field appearance="outline" class="full-width">
-              <input
-                matInput
-                [matDatepicker]="pickerIngresoDesde"
-                [ngModel]="fechaIngresoDesde()"
-                (ngModelChange)="fechaIngresoDesde.set($event)"
-                placeholder="dd/mm/aaaa"
-              />
-              <mat-datepicker-toggle matIconSuffix [for]="pickerIngresoDesde"></mat-datepicker-toggle>
-              <mat-datepicker #pickerIngresoDesde></mat-datepicker>
-            </mat-form-field>
-          </div>
-          <div class="col">
-            <label>Hasta:</label>
-            <mat-form-field appearance="outline" class="full-width">
-              <input
-                matInput
-                [matDatepicker]="pickerIngresoHasta"
-                [ngModel]="fechaIngresoHasta()"
-                (ngModelChange)="fechaIngresoHasta.set($event)"
-                placeholder="dd/mm/aaaa"
-              />
-              <mat-datepicker-toggle matIconSuffix [for]="pickerIngresoHasta"></mat-datepicker-toggle>
-              <mat-datepicker #pickerIngresoHasta></mat-datepicker>
-            </mat-form-field>
-          </div>
-        </div>
-        <div class="row">
-          <div class="col">
-            <label>Num. Asiento:</label>
-            <mat-form-field appearance="outline" class="full-width">
-              <input
-                matInput
-                type="number"
-                [value]="numeroAsiento()"
-                (input)="numeroAsiento.set($any($event.target).value)"
-                placeholder="Número de asiento"
-              />
-            </mat-form-field>
-          </div>
-          <div class="col">
-            <label>Descripción:</label>
-            <mat-form-field appearance="outline" class="full-width">
-              <input
-                matInput
-                [value]="descripcion()"
-                (input)="descripcion.set($any($event.target).value)"
-                placeholder="Buscar en observaciones..."
-              />
-            </mat-form-field>
-          </div>
-        </div>
-        <div class="row">
-          <div class="col">
-            <label>Categoría de Asiento:</label>
-            <mat-radio-group
-              [value]="categoriaAsiento()"
-              (change)="categoriaAsiento.set($any($event.value)); onCategoriaChange()"
-              class="radio-group">
-              <mat-radio-button value="general">General</mat-radio-button>
-              <mat-radio-button value="sistema">Sistema</mat-radio-button>
-            </mat-radio-group>
-          </div>
-          <div class="col">
-            <label>Tipo de Asiento:</label>
-            <mat-form-field appearance="outline" class="full-width">
-              <mat-select
-                [value]="tipoAsientoSeleccionado()"
-                (selectionChange)="tipoAsientoSeleccionado.set($event.value)"
-                placeholder="Seleccione un tipo">
-                <mat-option [value]="null">-- Todos --</mat-option>
-                @for (tipo of tiposAsientoFiltrados; track tipo.codigo) {
-                  <mat-option [value]="tipo.codigo">
-                    {{ tipo.nombre }}
-                  </mat-option>
-                }
-              </mat-select>
-            </mat-form-field>
-          </div>
-        </div>
-      </div>
-
-      <div>
         <div class="section-title">Fecha Asiento</div>
         <div class="row">
           <div class="col">
@@ -145,6 +58,34 @@
         </div>
         <div class="row">
           <div class="col">
+            <label>Num. Asiento:</label>
+            <mat-form-field appearance="outline" class="full-width">
+              <input
+                matInput
+                type="number"
+                [value]="numeroAsiento()"
+                (input)="numeroAsiento.set($any($event.target).value)"
+                placeholder="Número de asiento"
+              />
+            </mat-form-field>
+          </div>
+          <div class="col">
+            <label>Descripción:</label>
+            <mat-form-field appearance="outline" class="full-width">
+              <input
+                matInput
+                [value]="descripcion()"
+                (input)="descripcion.set($any($event.target).value)"
+                placeholder="Buscar en observaciones..."
+              />
+            </mat-form-field>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="row">
+          <div class="col">
             <label>Estado:</label>
             <mat-form-field appearance="outline" class="full-width">
               <mat-select
@@ -166,6 +107,34 @@
                 (input)="usuario.set($any($event.target).value)"
                 placeholder="Nombre de usuario..."
               />
+            </mat-form-field>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col">
+            <label>Categoría de Asiento:</label>
+            <mat-radio-group
+              [value]="categoriaAsiento()"
+              (change)="categoriaAsiento.set($any($event.value)); onCategoriaChange()"
+              class="radio-group">
+              <mat-radio-button value="general">General</mat-radio-button>
+              <mat-radio-button value="sistema">Sistema</mat-radio-button>
+            </mat-radio-group>
+          </div>
+          <div class="col">
+            <label>Tipo de Asiento:</label>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-select
+                [value]="tipoAsientoSeleccionado()"
+                (selectionChange)="tipoAsientoSeleccionado.set($event.value)"
+                placeholder="Seleccione un tipo">
+                <mat-option [value]="null">-- Todos --</mat-option>
+                @for (tipo of tiposAsientoFiltrados; track tipo.codigo) {
+                  <mat-option [value]="tipo.codigo">
+                    {{ tipo.nombre }}
+                  </mat-option>
+                }
+              </mat-select>
             </mat-form-field>
           </div>
         </div>
@@ -210,7 +179,7 @@
                   <button mat-icon-button class="expand-button">
                     <mat-icon>{{ isAsientoExpandido(asiento.codigo) ? 'expand_less' : 'expand_more' }}</mat-icon>
                   </button>
-                  <span class="asiento-numero">Asiento #{{ asiento.numero }}</span>
+                  <span class="asiento-numero">Asiento #{{ asiento.numeroAlterno || asiento.numero }}</span>
                 </div>
                 <span class="asiento-fecha">{{ asiento.fechaAsiento | date: 'dd/MM/yyyy' }}</span>
               </div>

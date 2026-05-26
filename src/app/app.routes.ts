@@ -25,8 +25,8 @@ import { MenucuentasxcobrarComponent } from './modules/cxc/menu/menucuentasxcobr
 import { MenucuentaxpagarComponent } from './modules/cxp/menu/menucuentasxpagar/menucuentasxpagar.component';
 import { LoginComponent } from './modules/dash/forms/login/login.component';
 import { MenuComponent } from './modules/dash/menu/menu.component';
-import { ReportesSuperBancosComponent } from './modules/reportes/forms/reportes-super-bancos/reportes-super-bancos.component';
-import { MenureportesComponent } from './modules/reportes/menu/menureportes/menureportes.component';
+import { ReportesSuperBancosComponent } from './modules/rpr/forms/reportes-super-bancos/reportes-super-bancos.component';
+import { MenureportesComponent } from './modules/rpr/menu/menureportes/menureportes.component';
 import { MenurecursoshumanosComponent } from './modules/rrh/menu/menurecursoshumanos/menurecursoshumanos.component';
 // RRHH demo components
 import { AsistenciaListComponent } from './modules/rrh/forms/gestion/asistencia/asistencia-list.component';
@@ -106,6 +106,7 @@ import { BaseInicialParticipesComponent } from './modules/crd/forms/historicos/b
 import { ExtersComponent } from './modules/crd/forms/historicos/exters/exters.component';
 import { PagoCuotasComponent } from './modules/crd/forms/pago-cuotas/pago-cuotas.component';
 import { EstadosCrdComponent } from './modules/crd/forms/parametrizacion/estados-crd/estados-crd.component';
+import { InformacionGeneralFondoComponent } from './modules/crd/forms/parametrizacion/informacion-general-fondo/informacion-general-fondo.component';
 import { ListadosCrdComponent } from './modules/crd/forms/parametrizacion/listados-crd/listados-crd.component';
 import { TiposCrdComponent } from './modules/crd/forms/parametrizacion/tipos-crd/tipos-crd.component';
 import { CuotaConsultaComponent } from './modules/crd/forms/prestamo/cuota-consulta/cuota-consulta.component';
@@ -850,6 +851,11 @@ export const routes: Routes = [
         component: ListadosCrdComponent,
         canDeactivate: [canDeactivateGuard],
         resolve: { listados: ListadosCrdResolverService },
+      },
+      {
+        path: 'informacion-general-fondo',
+        component: InformacionGeneralFondoComponent,
+        canActivate: [authGuard],
       },
       // Rutas de Contratos
       {

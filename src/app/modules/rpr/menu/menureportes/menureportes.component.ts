@@ -11,26 +11,26 @@ import { NavItem } from '../../../../shared/basics/menu/model/nav-item';
 })
 export class MenureportesComponent {
   navItems: NavItem[] = [
-    {
-      displayName: 'Contabilidad',
-      iconName: 'calculate',
-      route: '/reportes',
-    },
-    {
-      displayName: 'Tesorería',
-      iconName: 'account_balance_wallet',
-      route: '/reportes',
-    },
-    {
-      displayName: 'CxP',
-      iconName: 'receipt_long',
-      route: '/reportes',
-    },
-    {
-      displayName: 'CxC',
-      iconName: 'attach_money',
-      route: '/reportes',
-    },
+    // {
+    //   displayName: 'Contabilidad',
+    //   iconName: 'calculate',
+    //   route: '/reportes',
+    // },
+    // {
+    //   displayName: 'Tesorería',
+    //   iconName: 'account_balance_wallet',
+    //   route: '/reportes',
+    // },
+    // {
+    //   displayName: 'CxP',
+    //   iconName: 'receipt_long',
+    //   route: '/reportes',
+    // },
+    // {
+    //   displayName: 'CxC',
+    //   iconName: 'attach_money',
+    //   route: '/reportes',
+    // },
     {
       displayName: 'Créditos',
       iconName: 'credit_score',
@@ -42,11 +42,11 @@ export class MenureportesComponent {
         },
       ],
     },
-    {
-      displayName: 'Recursos Humanos',
-      iconName: 'groups',
-      route: '/reportes',
-    },
+    // {
+    //   displayName: 'Recursos Humanos',
+    //   iconName: 'groups',
+    //   route: '/reportes',
+    // },
     {
       displayName: 'Regresar',
       iconName: 'arrow_back',

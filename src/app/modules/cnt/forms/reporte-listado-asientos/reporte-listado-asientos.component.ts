@@ -34,8 +34,6 @@ export class ReporteListadoAsientosComponent implements OnInit {
   private dialog = inject(MatDialog);
 
   // Filtros
-  fechaIngresoDesde = signal<Date | null>(null);
-  fechaIngresoHasta = signal<Date | null>(null);
   fechaAsientoDesde = signal<Date | null>(null);
   fechaAsientoHasta = signal<Date | null>(null);
   numeroAsiento = signal<string>('');
@@ -203,30 +201,6 @@ export class ReporteListadoAsientosComponent implements OnInit {
     );
     criterios.push(criterioEmpresa);
 
-    // Criterio: Fecha Ingreso (LocalDateTime → dos criterios separados, con hora)
-    const fechaIngresoDesde = this.fechaIngresoDesde();
-    const fechaIngresoHasta = this.fechaIngresoHasta();
-    if (fechaIngresoDesde) {
-      const d = new Date(fechaIngresoDesde);
-      d.setHours(0, 0, 0, 0);
-      const fid = this.funcionesDatos.formatearFechaParaBackend(d, TipoFormatoFechaBackend.FECHA_HORA);
-      if (fid) {
-        const db = new DatosBusqueda();
-        db.asignaUnCampoSinTrunc(TipoDatosBusqueda.DATE_TIME, 'fechaIngreso', fid, TipoComandosBusqueda.MAYOR_IGUAL);
-        criterios.push(db);
-      }
-    }
-    if (fechaIngresoHasta) {
-      const h = new Date(fechaIngresoHasta);
-      h.setHours(23, 59, 59, 0);
-      const fih = this.funcionesDatos.formatearFechaParaBackend(h, TipoFormatoFechaBackend.FECHA_HORA);
-      if (fih) {
-        const db = new DatosBusqueda();
-        db.asignaUnCampoSinTrunc(TipoDatosBusqueda.DATE_TIME, 'fechaIngreso', fih, TipoComandosBusqueda.MENOR_IGUAL);
-        criterios.push(db);
-      }
-    }
-
     // Criterio: Fecha Asiento
     const fechaAsientoDesde = this.fechaAsientoDesde();
     const fechaAsientoHasta = this.fechaAsientoHasta();
@@ -373,8 +347,6 @@ export class ReporteListadoAsientosComponent implements OnInit {
    * Limpia todos los filtros
    */
   limpiarFiltros(): void {
-    this.fechaIngresoDesde.set(null);
-    this.fechaIngresoHasta.set(null);
     this.fechaAsientoDesde.set(null);
     this.fechaAsientoHasta.set(null);
     this.numeroAsiento.set('');
@@ -508,7 +480,7 @@ export class ReporteListadoAsientosComponent implements OnInit {
 
     const headers = ['Número', 'Fecha Ingreso', 'Fecha Asiento', 'Tipo', 'Estado', 'Usuario', 'Observaciones'];
     const datos = this.resultadosAsientos.map(asiento => ([
-      asiento.numero.toString(),
+      asiento.numero.toString() + (asiento.numeroAlterno ? ' (' + asiento.numeroAlterno + ')' : ''),
       this.formatearFecha(asiento.fechaIngreso),
       this.formatearFecha(asiento.fechaAsiento),
       this.getTipoAsientoNombre(asiento),
@@ -545,7 +517,7 @@ export class ReporteListadoAsientosComponent implements OnInit {
     const dataKeys = ['numero', 'fechaIngresoFormateada', 'fechaAsientoFormateada', 'tipoNombre', 'estadoLabel', 'nombreUsuario', 'observaciones'];
 
     const datos = this.resultadosAsientos.map(asiento => ({
-      numero: asiento.numero.toString(),
+      numero: asiento.numero.toString() + (asiento.numeroAlterno ? ' (' + asiento.numeroAlterno + ')' : ''),
       fechaIngresoFormateada: this.formatearFecha(asiento.fechaIngreso),
       fechaAsientoFormateada: this.formatearFecha(asiento.fechaAsiento),
       tipoNombre: this.getTipoAsientoNombre(asiento),
@@ -585,7 +557,7 @@ export class ReporteListadoAsientosComponent implements OnInit {
       'Haber': detalle.valorHaber ? detalle.valorHaber.toFixed(2) : '0.00'
     }));
 
-    const filename = `Asiento_${asiento.numero}_Detalles`;
+    const filename = `Asiento_${asiento.numeroAlterno || asiento.numero}_Detalles`;
     this.exportService.exportToCSV(datos, filename, headers);
     this.snackBar.open('Detalles del asiento exportados a CSV', 'Cerrar', { duration: 3000 });
   }
@@ -612,8 +584,8 @@ export class ReporteListadoAsientosComponent implements OnInit {
       haber: detalle.valorHaber ? detalle.valorHaber.toFixed(2) : '0.00'
     }));
 
-    const title = `Asiento #${asiento.numero} - Detalles\nFecha: ${this.formatearFecha(asiento.fechaAsiento)} | Estado: ${this.getEstadoLabel(asiento.estado)}`;
-    const filename = `Asiento_${asiento.numero}_Detalles`;
+    const title = `Asiento #${asiento.numeroAlterno || asiento.numero} - Detalles\nFecha: ${this.formatearFecha(asiento.fechaAsiento)} | Estado: ${this.getEstadoLabel(asiento.estado)}`;
+    const filename = `Asiento_${asiento.numeroAlterno || asiento.numero}_Detalles`;
 
     this.exportService.exportToPDF(
       datos,
@@ -687,7 +659,7 @@ export class ReporteListadoAsientosComponent implements OnInit {
     const ref = this.dialog.open(ConfirmDialogComponent, {
       data: {
         title: 'Copiar Asiento',
-        message: `¿Está seguro de que desea copiar el asiento N° ${asiento.numero ?? asiento.codigo}?`,
+        message: `¿Está seguro de que desea copiar el asiento N° ${asiento.numeroAlterno || (asiento.numero ?? asiento.codigo)}?`,
         confirmText: 'Sí, copiar',
         cancelText: 'Cancelar',
       }

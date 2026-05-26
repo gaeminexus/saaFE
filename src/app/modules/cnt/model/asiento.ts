@@ -21,6 +21,8 @@ export interface Asiento {
   tipoAsiento: TipoAsiento;
   fechaAsiento: Date;
   numero: number;
+  numeroAlterno: string;
+  numeroMesTipo: number;
   estado: EstadoAsiento;
   observaciones: string;
   nombreUsuario: string;

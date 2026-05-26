@@ -1,0 +1,170 @@
+<mat-card class="super-bancos-card">
+  <mat-card-header>
+    <mat-card-title>Reportes para la Superintendencia de Bancos</mat-card-title>
+    <mat-card-subtitle>Generación de reportes G40 – G51</mat-card-subtitle>
+  </mat-card-header>
+
+  <mat-card-content>
+
+    <!-- Filtros -->
+    <div class="filtros-grid">
+      <mat-form-field appearance="outline">
+        <mat-label>Mes</mat-label>
+        <mat-select [value]="mesSeleccionado()" (selectionChange)="onMesChange($event.value)">
+          @for (mes of meses; track mes.valor) {
+            <mat-option [value]="mes.valor">{{ mes.nombre }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Año</mat-label>
+        <mat-select [value]="anioSeleccionado()" (selectionChange)="onAnioChange($event.value)">
+          @for (anio of anios; track anio) {
+            <mat-option [value]="anio">{{ anio }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
+
+    <!-- Acciones -->
+    <div class="acciones">
+      <button mat-flat-button color="primary"
+              (click)="generarArchivos()"
+              [disabled]="ejecutando() || cargandoDetalle()">
+        @if (ejecutando()) {
+          <mat-spinner diameter="18" style="display:inline-block;margin-right:8px"></mat-spinner>
+        } @else {
+          <mat-icon>play_arrow</mat-icon>
+        }
+        {{ puedeReintentar() ? 'Reintentar reportes fallidos' : 'Generar archivos' }}
+      </button>
+    </div>
+
+    <!-- Mensaje info (ya generados) -->
+    @if (mensajeInfo()) {
+      <div class="msg-info">
+        <mat-icon>info</mat-icon>
+        <span>{{ mensajeInfo() }}</span>
+      </div>
+    }
+
+    <!-- Error -->
+    @if (errorMsg()) {
+      <div class="msg-error">
+        <mat-icon>error_outline</mat-icon>
+        <span>{{ errorMsg() }}</span>
+      </div>
+    }
+
+    <!-- Cabecera de ejecución -->
+    @if (ejecucion()) {
+      <div class="ejrc-header">
+        <div class="ejrc-info">
+          <span class="ejrc-periodo">{{ mesNombre() }} {{ anioSeleccionado() }}</span>
+          <span class="ejrc-badge" [ngClass]="'badge-estado-' + ejecucion()!.estado">
+            {{ estadoEjrcLabel[ejecucion()!.estado] ?? ejecucion()!.estado }}
+          </span>
+        </div>
+        @if (ejecucion()!.observaciones) {
+          <p class="ejrc-obs">{{ ejecucion()!.observaciones }}</p>
+        }
+      </div>
+    }
+
+    <!-- Spinner cargando detalle -->
+    @if (cargandoDetalle()) {
+      <div class="loading-detalle">
+        <mat-spinner diameter="32"></mat-spinner>
+        <span>Cargando detalle de reportes...</span>
+      </div>
+    }
+
+    <!-- Grilla de reportes G40-G51 -->
+    @if (detalles().length > 0) {
+      <div class="opciones-circulos">
+        @for (detalle of detalles(); track detalle.tipoReporte) {
+          <button
+            type="button"
+            class="circulo-opcion"
+            [ngClass]="[estadoEjrdClass[detalle.estado] ?? '', detalleSeleccionado()?.tipoReporte === detalle.tipoReporte ? 'activo' : '']"
+            (click)="seleccionarDetalle(detalle)"
+            [matTooltip]="estadoEjrdLabel[detalle.estado] ?? ''">
+            <mat-icon class="circulo-icon">{{ estadoEjrdIcon[detalle.estado] }}</mat-icon>
+            <span class="circulo-label">{{ detalle.tipoReporte }}</span>
+            @if (detalle.cantidadRegistros != null) {
+              <span class="circulo-count">{{ detalle.cantidadRegistros }}</span>
+            }
+          </button>
+        }
+      </div>
+    }
+
+    <!-- Tabla inline de registros del G seleccionado -->
+    @if (detalleSeleccionado()) {
+      <div class="registros-panel">
+        <div class="registros-panel-header">
+          <span class="rp-titulo">
+            <mat-icon>table_chart</mat-icon>
+            Registros {{ detalleSeleccionado()!.tipoReporte }}
+          </span>
+          <span class="ejrc-badge" [ngClass]="'badge-estado-' + detalleSeleccionado()!.estado">
+            {{ estadoEjrdLabel[detalleSeleccionado()!.estado] ?? detalleSeleccionado()!.estado }}
+          </span>
+          <span class="rp-flex-sep"></span>
+          <button mat-stroked-button color="primary" (click)="descargarTxt()">
+            <mat-icon>download</mat-icon> Descargar TXT
+          </button>
+          <button mat-icon-button (click)="seleccionarDetalle(detalleSeleccionado()!)" matTooltip="Cerrar">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+
+        @if (cargandoRegistros()) {
+          <div class="loading-detalle">
+            <mat-spinner diameter="28"></mat-spinner>
+            <span>Cargando registros...</span>
+          </div>
+        }
+
+        @if (errorRegistros()) {
+          <div class="msg-error">
+            <mat-icon>error_outline</mat-icon>
+            <span>{{ errorRegistros() }}</span>
+          </div>
+        }
+
+        @if (!cargandoRegistros() && !errorRegistros() && registrosG().length === 0) {
+          <p class="rp-vacio">
+            <mat-icon>info</mat-icon>
+            Sin registros para este período. El TXT se generará solo con la línea de cabecera.
+          </p>
+        }
+
+        @if (registrosG().length > 0) {
+          <div class="rp-tabla-scroll">
+            <table class="rp-tabla">
+              <thead>
+                <tr>
+                  @for (col of columnasG(); track col) {
+                    <th>{{ col }}</th>
+                  }
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of registrosG(); track $index) {
+                  <tr>
+                    @for (col of columnasG(); track col) {
+                      <td>{{ formatVal(row[col]) }}</td>
+                    }
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          <p class="rp-total">Total: <strong>{{ registrosG().length }}</strong> registros</p>
+        }
+      </div>
+    }
+  </mat-card-content>
+</mat-card>

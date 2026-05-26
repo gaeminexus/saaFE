@@ -72,5 +72,6 @@ export class EntidadesCrd {
   public static readonly BASE_INICIAL_PARTICIPES = 465;
   public static readonly ESTADO_CUOTA_PRESTAMO = 466;
   public static readonly ORDEN_AFECTACION_VALOR_PRESTAMO = 467;
+  public static readonly INFORMACION_GENERAL_FONDO = 468; // IGFN
 
 }

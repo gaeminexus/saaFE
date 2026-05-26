@@ -316,6 +316,7 @@ export class AsientosContablesDinamico implements OnInit {
           // Llenar el formulario con los datos del asiento
           this.form.patchValue({
             numero: asiento.numero,
+            numeroAlterno: asiento.numeroAlterno || '',
             fechaAsiento: fechaAsiento,
             fechaIngreso: fechaIngreso,
             observaciones: asiento.observaciones || '',
@@ -348,11 +349,11 @@ export class AsientosContablesDinamico implements OnInit {
           } else {
             // Mensaje según el estado
             if (asiento.estado === 1) {
-              this.showMessage(`Asiento ${asiento.numero} cargado - ACTIVO (solo consulta)`, 'info');
+              this.showMessage(`Asiento ${asiento.numeroAlterno || asiento.numero} cargado - ACTIVO (solo consulta)`, 'info');
             } else if (asiento.estado === 2) {
-              this.showMessage(`Asiento ${asiento.numero} cargado - ANULADO (solo consulta)`, 'info');
+              this.showMessage(`Asiento ${asiento.numeroAlterno || asiento.numero} cargado - ANULADO (solo consulta)`, 'info');
             } else {
-              this.showMessage(`Asiento ${asiento.numero} cargado para edición`, 'success');
+              this.showMessage(`Asiento ${asiento.numeroAlterno || asiento.numero} cargado para edición`, 'success');
             }
           }
         } else {
@@ -533,6 +534,7 @@ export class AsientosContablesDinamico implements OnInit {
     this.form = this.fb.group({
       tipo: ['', [Validators.required]],
       numero: [''], // Sin validación, generado por backend
+      numeroAlterno: [''], // Número alterno generado por backend
       fechaAsiento: [new Date(), [Validators.required]],
       fechaIngreso: [{ value: new Date(), disabled: true }],
       estado: [4], // Campo habilitado y con valor numérico por defecto (4 = INCOMPLETO)
@@ -857,7 +859,10 @@ export class AsientosContablesDinamico implements OnInit {
 
           // Actualizar el número en el formulario
           if (response.numero) {
-            this.form.patchValue({ numero: response.numero });
+            this.form.patchValue({
+              numero: response.numero,
+              numeroAlterno: response.numeroAlterno || '',
+            });
           }
         }
 
@@ -867,8 +872,8 @@ export class AsientosContablesDinamico implements OnInit {
         }
 
         let mensaje = this.codigoAsientoActual
-          ? `Cabecera del Asiento #${response.numero} actualizada exitosamente`
-          : `Cabecera del Asiento #${response.numero} guardada exitosamente`;
+          ? `Cabecera del Asiento #${response.numeroAlterno || response.numero} actualizada exitosamente`
+          : `Cabecera del Asiento #${response.numeroAlterno || response.numero} guardada exitosamente`;
 
         this.snackBar.open(mensaje, 'Cerrar', {
           duration: 4000,
@@ -2305,6 +2310,7 @@ export class AsientosContablesDinamico implements OnInit {
         this.form.patchValue({
           estado: 1,
           numero: response?.numero ?? this.form.get('numero')?.value,
+          numeroAlterno: response?.numeroAlterno ?? this.form.get('numeroAlterno')?.value,
         });
 
         // Deshabilitar formulario para prevenir ediciones
@@ -2400,7 +2406,7 @@ export class AsientosContablesDinamico implements OnInit {
   copiarAsiento(): void {
     if (!this.codigoAsientoActual) return;
 
-    const numeroAsiento = this.form.get('numero')?.value ?? this.codigoAsientoActual;
+    const numeroAsiento = this.form.get('numeroAlterno')?.value || this.form.get('numero')?.value || this.codigoAsientoActual;
 
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
       width: '450px',

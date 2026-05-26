@@ -39,6 +39,11 @@ export class MenucreditosComponent {
       route: '/menucreditos/parametrizacion',
       children: [
         {
+          displayName: 'Info. General Fondo',
+          iconName: 'account_balance',
+          route: '/menucreditos/informacion-general-fondo',
+        },
+        {
           displayName: 'Tipos',
           iconName: 'dataset',
           route: '/menucreditos/tiposCrd',

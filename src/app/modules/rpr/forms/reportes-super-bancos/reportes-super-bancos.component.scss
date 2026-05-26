@@ -1,0 +1,222 @@
+.super-bancos-card {
+  margin: 16px;
+}
+
+.filtros-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.acciones {
+  margin-top: 8px;
+}
+
+.opciones-circulos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(88px, 88px));
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.circulo-opcion {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  border: 2px solid rgba(0, 0, 0, 0.18);
+  background: transparent;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+
+  &:hover {
+    transform: scale(1.06);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+
+  .circulo-icon { font-size: 22px; height: 22px; width: 22px; }
+  .circulo-label { font-size: 12px; font-weight: 700; }
+  .circulo-count { font-size: 10px; opacity: 0.7; }
+
+  // Estado 1 — OK / Completo
+  &.estado-ok {
+    border-color: #43a047;
+    color: #2e7d32;
+    background: #e8f5e9;
+  }
+
+  // Estado 2 — Con novedades
+  &.estado-novedad {
+    border-color: #fb8c00;
+    color: #e65100;
+    background: #fff3e0;
+  }
+
+  // Estado 3 — Pendiente
+  &.estado-pendiente {
+    border-color: #90a4ae;
+    color: #546e7a;
+    background: #f5f5f5;
+  }
+}
+
+// Círculo activo (seleccionado)
+.circulo-opcion.activo {
+  outline: 3px solid currentColor;
+  outline-offset: 3px;
+}
+
+// Panel de registros inline
+.registros-panel {
+  margin-top: 24px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.registros-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: #f3f4f6;
+  border-bottom: 1px solid #e0e0e0;
+
+  .rp-titulo {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    font-size: 15px;
+    mat-icon { font-size: 20px; height: 20px; width: 20px; }
+  }
+
+  .rp-flex-sep { flex: 1; }
+}
+
+.rp-vacio {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 16px;
+  color: #888;
+  font-size: 13px;
+}
+
+.rp-tabla-scroll {
+  overflow-x: auto;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.rp-tabla {
+  border-collapse: collapse;
+  font-size: 12px;
+  min-width: 100%;
+  white-space: nowrap;
+
+  th {
+    background: #f9fafb;
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 2px solid #ddd;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #555;
+  }
+
+  td {
+    padding: 6px 12px;
+    border-bottom: 1px solid #eee;
+  }
+
+  tr:hover td { background: #fafafa; }
+}
+
+.rp-total {
+  padding: 8px 16px;
+  font-size: 13px;
+  color: #555;
+  border-top: 1px solid #eee;
+}
+.ejrc-header {
+  margin-top: 16px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: #f3f4f6;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ejrc-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ejrc-periodo {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.ejrc-badge {
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+
+  &.badge-estado-1 { background: #fff9c4; color: #f57f17; }
+  &.badge-estado-2 { background: #ffe0b2; color: #e65100; }
+  &.badge-estado-3 { background: #e8f5e9; color: #2e7d32; }
+}
+
+.ejrc-obs {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #666;
+}
+
+// Mensajes
+.msg-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  background: #e3f2fd;
+  color: #0d47a1;
+  font-size: 14px;
+}
+
+.msg-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  background: #fce4ec;
+  color: #b71c1c;
+  font-size: 14px;
+}
+
+.loading-detalle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+  color: #555;
+  font-size: 14px;
+}
