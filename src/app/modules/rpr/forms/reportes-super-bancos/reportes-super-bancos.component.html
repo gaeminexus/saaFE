@@ -147,7 +147,7 @@
               <thead>
                 <tr>
                   @for (col of columnasG(); track col) {
-                    <th>{{ col }}</th>
+                    <th [class.num]="isNumericCol(col)">{{ col }}</th>
                   }
                 </tr>
               </thead>
@@ -155,7 +155,7 @@
                 @for (row of registrosG(); track $index) {
                   <tr>
                     @for (col of columnasG(); track col) {
-                      <td>{{ formatVal(row[col]) }}</td>
+                      <td [class.num]="isNumericCol(col)">{{ formatVal(row[col]) }}</td>
                     }
                   </tr>
                 }

@@ -91,6 +91,22 @@ export class ReportesSuperBancosComponent {
 
   puedeReintentar = computed(() => this.ejecucion()?.estado === 2);
 
+  /** Campos numéricos por tipo de reporte — null/0 deben salir como "0.00" en el TXT */
+  private readonly numericColsMap: Record<string, Set<string>> = {
+    G40: new Set(['porcentajeAportePatronalCesantia','porcentajeAportePersonalCesantia','porcentajeAportePatronalJubilacion','porcentajeAportePersonalJubilacion','valorAportePersonalCesantia','valorAportePersonalJubilacion']),
+    G41: new Set(['baseCalculoAportacion']),
+    G42: new Set(['aportePatronal','aportePersonal','aporteVoluntario','saldoAportePatronal','saldoAportePersonal','saldoAporteVoluntario','rendimiento']),
+    G43: new Set(['numeroImposicionesPersonales','numeroImposicionesPatronales','saldoCuentaIndividual','valoresCompensados','valoresPagados']),
+    G44: new Set(['imposicionesAcumuladas','valorPension','valorNetoRecibir','saldoCuenta','valoresCompensados']),
+    G45: new Set(['patrimonio','cargasFamiliares']),
+    G46: new Set(['valorOperacion','tasaInteresNominal']),
+    G47: new Set([]),
+    G48: new Set(['diasMorosidad','tasaInteres','valorPorVencer','valorVencido','costosOperativos','interesOrdinario','interesMora','valorDemandaJudicial','carteraCastigada','provisionRequeridaOriginal','provisionConstituida','valorTotalCuentaIndividual','valorSujetoProvision','cuotaCredito','dividendo']),
+    G49: new Set([]),
+    G50: new Set([]),
+    G51: new Set(['valorAvaluo','porcentajeCubre']),
+  };
+
   /** Columnas por defecto para cada tipo de reporte (excluyendo codigo y detalleEjecucion) */
   readonly columnasMap: Record<string, string[]> = {
     G40: ['tipoIdentificacionFcpc','identificacionFcpc','numeroResolucion','fechaResolucion','provincia','canton','direccion','telefonos','correoElectronico','tipoSistema','tipoPrestacion','tipoAporte','tipoAdministracion','fechaTraspaso','tipoFcpc','numeroResolucionCambioEstatuto','fechaResolucionCambioEstatuto','cambioNombre','porcentajeAportePatronalCesantia','porcentajeAportePersonalCesantia','porcentajeAportePatronalJubilacion','porcentajeAportePersonalJubilacion','valorAportePersonalCesantia','valorAportePersonalJubilacion'],
@@ -256,6 +272,23 @@ export class ReportesSuperBancosComponent {
       return `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}`;
     }
     if (typeof v === 'object') return '';
+    if (typeof v === 'number') return v.toFixed(2);
+    return String(v);
+  }
+
+  /** Variante para el TXT: campos numéricos con null/0 emiten "0.00" */
+  private formatValTxt(v: any, isNumeric: boolean): string {
+    if (Array.isArray(v) && v.length >= 3 && typeof v[0] === 'number') {
+      const [y, m, d] = v;
+      return `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}`;
+    }
+    if (isNumeric) {
+      if (v === null || v === undefined || v === '' || Number(v) === 0) return '0.00';
+      return Number(v).toFixed(2);
+    }
+    if (v === null || v === undefined) return '';
+    if (typeof v === 'object') return '';
+    if (typeof v === 'number') return v.toFixed(2);
     return String(v);
   }
 
@@ -272,11 +305,12 @@ export class ReportesSuperBancosComponent {
     const rows = this.registrosG();
     const cols = this.columnasG();
     const totalConCabecera = rows.length + 1;
+    const numericCols = this.numericColsMap[tipoReporte] ?? new Set<string>();
 
     const lines: string[] = [];
     lines.push([tipoReporte, '3968', fechaCierre, String(totalConCabecera)].join('\t'));
     for (const row of rows) {
-      lines.push(cols.map(c => this.formatVal(row[c])).join('\t'));
+      lines.push(cols.map(c => this.formatValTxt(row[c], numericCols.has(c))).join('\t'));
     }
 
     const blob = new Blob([lines.join('\r\n')], { type: 'text/plain;charset=utf-8' });
@@ -290,5 +324,11 @@ export class ReportesSuperBancosComponent {
 
   mesNombre(): string {
     return this.meses.find(m => m.valor === this.mesSeleccionado())?.nombre ?? '';
+  }
+
+  isNumericCol(col: string): boolean {
+    const tipo = this.detalleSeleccionado()?.tipoReporte;
+    if (!tipo) return false;
+    return this.numericColsMap[tipo]?.has(col) ?? false;
   }
 }

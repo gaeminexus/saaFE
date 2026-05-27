@@ -1748,15 +1748,12 @@ export class AsientosContablesDinamico implements OnInit {
    * intermedios durante la escritura. Este método re-parsea el texto del input.
    */
   syncFechaAsiento(event: FocusEvent): void {
+    const input = event.target as HTMLInputElement;
     const control = this.form.get('fechaAsiento');
     if (!control) return;
 
-    // Si ya tiene un Date válido, no hacer nada
-    const current = control.value;
-    if (current instanceof Date && !isNaN(current.getTime())) return;
-
     // Leer el texto crudo del input nativo
-    const rawValue: string = (event.target as HTMLInputElement)?.value?.trim() ?? '';
+    const rawValue: string = input?.value?.trim() ?? '';
     if (!rawValue) return;
 
     const parts = rawValue.split('/');
@@ -1779,11 +1776,24 @@ export class AsientosContablesDinamico implements OnInit {
       ) {
         control.setValue(date);
         control.updateValueAndValidity();
+        // setTimeout garantiza que nuestro formato DD/MM/YYYY se aplique
+        // DESPUÉS de que Angular Material reformatee el input con su propio handler de blur
+        setTimeout(() => {
+          input.value = this.formatearFechaManual(date);
+        });
       }
     }
   }
 
+  private formatearFechaManual(date: Date): string {
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  }
+
   private parseFechaFromBackend(fecha: any): Date {
+
     if (!fecha) {
       return new Date(); // Fecha actual por defecto
     }
@@ -1797,6 +1807,19 @@ export class AsientosContablesDinamico implements OnInit {
     if (typeof fecha === 'string') {
       // Manejar formato específico con Z[UTC]: 2025-12-16T00:00:00Z[UTC]
       const fechaLimpia = fecha.replace(/Z\[UTC\]$/, 'Z');
+
+      // Detectar formato DD/MM/YYYY o D/M/YYYY
+      const regexDMY = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
+      const matchDMY = fechaLimpia.match(regexDMY);
+      if (matchDMY) {
+        // Día, Mes, Año
+        const day = parseInt(matchDMY[1], 10);
+        const month = parseInt(matchDMY[2], 10) - 1; // JS: 0-indexed
+        const year = parseInt(matchDMY[3], 10);
+        return new Date(year, month, day);
+      }
+
+      // Si no es DMY, intentar parseo estándar
       const parsedDate = new Date(fechaLimpia);
       if (!isNaN(parsedDate.getTime())) {
         return parsedDate;
