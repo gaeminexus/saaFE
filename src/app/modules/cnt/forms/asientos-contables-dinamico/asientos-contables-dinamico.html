@@ -75,6 +75,7 @@
               [matDatepicker]="pickerAsiento"
               formControlName="fechaAsiento"
               placeholder="dd/mm/aaaa"
+              (input)="capturarFechaAsientoRaw($event)"
               (blur)="syncFechaAsiento($event)"
             />
             <mat-datepicker-toggle matIconSuffix [for]="pickerAsiento"></mat-datepicker-toggle>
@@ -109,8 +110,8 @@
         <div class="cabecera-actions">
           <!-- Botones de EDICIÓN: Solo en estado INCOMPLETO (4) -->
           @if (!asientoActivo && !asientoAnulado && !asientoReversado) {
-            <!-- Botón Actualizar/Grabar Cabecera (cuando NO está cuadrado o no está confirmado) -->
-            @if (!asientoCuadrado || !codigoAsientoActual) {
+            <!-- Botón Actualizar/Grabar Cabecera (cuando NO está cuadrado, no está confirmado, o es copia reciente que necesita regenerar numeración) -->
+            @if (!asientoCuadrado || !codigoAsientoActual || esCopiaReciente) {
             <button
               mat-raised-button
               color="primary"
@@ -118,18 +119,18 @@
               (click)="grabarCabecera()"
               [disabled]="loading || !form.get('tipo')?.valid"
               [matTooltip]="
-                codigoAsientoActual
+                (codigoAsientoActual && !esCopiaReciente)
                   ? 'Actualizar información general del asiento'
                   : 'Guardar información general del asiento'
               "
             >
-              <mat-icon>{{ codigoAsientoActual ? 'update' : 'save' }}</mat-icon>
-              {{ codigoAsientoActual ? 'Actualizar Cabecera' : 'Grabar Cabecera' }}
+              <mat-icon>{{ (codigoAsientoActual && !esCopiaReciente) ? 'update' : 'save' }}</mat-icon>
+              {{ (codigoAsientoActual && !esCopiaReciente) ? 'Actualizar Cabecera' : 'Grabar Cabecera' }}
             </button>
             }
 
-            <!-- Botón Confirmar Asiento: Solo visible cuando está cuadrado y sin cambios pendientes -->
-            @if (!hayDetallesSinGuardar && codigoAsientoActual && asientoCuadrado && !asientoActivo && !asientoAnulado && !asientoReversado) {
+            <!-- Botón Confirmar Asiento: Solo visible cuando está cuadrado y sin cambios pendientes (y no es copia reciente sin numeración) -->
+            @if (!hayDetallesSinGuardar && codigoAsientoActual && asientoCuadrado && !asientoActivo && !asientoAnulado && !asientoReversado && !esCopiaReciente) {
             <button
               mat-raised-button
               color="accent"

@@ -75,6 +75,9 @@ export class AsientosContablesDinamico implements OnInit {
   @ViewChild(MatSort) sort!: MatSort;
   @ViewChild('fechaAsientoInput', { read: ElementRef }) fechaAsientoInputRef!: ElementRef<HTMLInputElement>;
 
+  /** Texto tal como lo escribió el usuario, capturado antes de que Material reformatee el input en blur */
+  private _rawFechaAsiento: string = '';
+
   form!: FormGroup;
 
   // Estado
@@ -84,6 +87,7 @@ export class AsientosContablesDinamico implements OnInit {
   detallesOriginales: any[] = []; // Para trackear detalles cargados del backend
   vieneDesdeReporte = false; // Para mostrar botón de regreso
   hayDetallesSinGuardar = false; // Control para habilitar/deshabilitar botones
+  esCopiaReciente = false; // Cuando se llega desde copiarAsiento: fuerza mostrar "Grabar Cabecera" para regenerar numeración
 
   // Arrays para el grid con drag-and-drop
   cuentasDebeGrid: CuentaItem[] = [];
@@ -168,6 +172,11 @@ export class AsientosContablesDinamico implements OnInit {
       // Detectar si viene desde reporte
       if (fromReport === 'true') {
         this.vieneDesdeReporte = true;
+      }
+
+      // Detectar si viene desde copiarAsiento (necesita grabar cabecera para regenerar numeración)
+      if (params['copia'] === '1') {
+        this.esCopiaReciente = true;
       }
 
       if (asientoId) {
@@ -336,6 +345,11 @@ export class AsientosContablesDinamico implements OnInit {
 
           // Cargar detalles del asiento
           this.cargarDetallesAsiento(id);
+
+          // Rehabilitar siempre antes de evaluar el estado (evita que controles
+          // queden deshabilitados de una carga anterior, p.ej. al copiar un asiento ACTIVO)
+          this.form.get('tipo')?.enable();
+          this.form.get('observaciones')?.enable();
 
           // Solo permitir edición si el asiento está INCOMPLETO (4)
           if (asiento.estado !== 4) {
@@ -803,6 +817,16 @@ export class AsientosContablesDinamico implements OnInit {
       if (this.asientoActual?.periodo) {
         payload.periodo = { codigo: this.asientoActual.periodo.codigo };
       }
+      // Preservar campos generados por el backend (solo si NO es copia reciente;
+      // en copias, el backend debe regenerar numeroAlterno y numeroMesTipo)
+      if (!this.esCopiaReciente) {
+        if (this.asientoActual?.numeroAlterno != null) {
+          payload.numeroAlterno = this.asientoActual.numeroAlterno;
+        }
+        if (this.asientoActual?.numeroMesTipo != null) {
+          payload.numeroMesTipo = this.asientoActual.numeroMesTipo;
+        }
+      }
     }
 
     return payload;
@@ -870,6 +894,9 @@ export class AsientosContablesDinamico implements OnInit {
         if (estadoAsiento === 1) {
           this.form.patchValue({ estado: 1 });
         }
+
+        // Si veníamos de una copia, la numeración ya fue regenerada al guardar cabecera
+        this.esCopiaReciente = false;
 
         let mensaje = this.codigoAsientoActual
           ? `Cabecera del Asiento #${response.numeroAlterno || response.numero} actualizada exitosamente`
@@ -1747,13 +1774,19 @@ export class AsientosContablesDinamico implements OnInit {
    * Angular Material puede dejar el control en null si hubo errores de parse
    * intermedios durante la escritura. Este método re-parsea el texto del input.
    */
+  /** Guarda el texto del campo mientras el usuario escribe, antes de que Material lo reformatee en blur */
+  capturarFechaAsientoRaw(event: Event): void {
+    this._rawFechaAsiento = (event.target as HTMLInputElement).value;
+  }
+
   syncFechaAsiento(event: FocusEvent): void {
     const input = event.target as HTMLInputElement;
     const control = this.form.get('fechaAsiento');
     if (!control) return;
 
-    // Leer el texto crudo del input nativo
-    const rawValue: string = input?.value?.trim() ?? '';
+    // Usar el texto capturado DURANTE la escritura (antes de que Material lo reformatee en el blur)
+    const rawValue: string = (this._rawFechaAsiento || input?.value || '').trim();
+    this._rawFechaAsiento = ''; // limpiar para el siguiente uso
     if (!rawValue) return;
 
     const parts = rawValue.split('/');
@@ -2456,10 +2489,10 @@ export class AsientosContablesDinamico implements OnInit {
           );
           // Navegar al nuevo asiento para editarlo
           if (copia?.codigo) {
-            this.router.navigate([
-              '/menucontabilidad/procesos/asientos-dinamico',
-              copia.codigo,
-            ]);
+            this.router.navigate(
+              ['/menucontabilidad/procesos/asientos-dinamico', copia.codigo],
+              { queryParams: { copia: '1' } }
+            );
           }
         },
         error: (error: any) => {

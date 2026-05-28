@@ -1,6 +1,7 @@
 ﻿import { CommonModule } from '@angular/common';
-import { Component, signal, computed } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Component, OnInit, signal, computed } from '@angular/core';
+import { forkJoin, Observable, of } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
 import { UsuarioService } from '../../../../shared/services/usuario.service';
 import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
@@ -30,7 +31,7 @@ import { EjecucionReporte } from '../../model/ejecucion-reporte';
   templateUrl: './reportes-super-bancos.component.html',
   styleUrls: ['./reportes-super-bancos.component.scss'],
 })
-export class ReportesSuperBancosComponent {
+export class ReportesSuperBancosComponent implements OnInit {
 
   meses = [
     { valor: 1,  nombre: 'Enero' },
@@ -48,8 +49,12 @@ export class ReportesSuperBancosComponent {
   ];
 
   anios: number[] = [];
-  mesSeleccionado  = signal<number>(new Date().getMonth() + 1);
-  anioSeleccionado = signal<number>(new Date().getFullYear());
+  mesSeleccionado  = signal<number>(6);
+  anioSeleccionado = signal<number>(2025);
+
+  cargandoPeriodo = signal<boolean>(true);
+  /** Período único habilitado: {mes, anio} */
+  periodoPermitido = signal<{ mes: number; anio: number }>({ mes: 6, anio: 2025 });
 
   ejecutando      = signal<boolean>(false);
   cargandoDetalle = signal<boolean>(false);
@@ -89,7 +94,14 @@ export class ReportesSuperBancosComponent {
     3: 'schedule',
   };
 
-  puedeReintentar = computed(() => this.ejecucion()?.estado === 2);
+  puedeReintentar    = computed(() => this.ejecucion()?.estado === 2);
+  descargandoTodos    = signal<boolean>(false);
+
+  /** True cuando el período seleccionado coincide exactamente con el siguiente período a generar */
+  esPeriodoPermitido = computed(() => {
+    const p = this.periodoPermitido();
+    return this.mesSeleccionado() === p.mes && this.anioSeleccionado() === p.anio;
+  });
 
   /** Campos numéricos por tipo de reporte — null/0 deben salir como "0.00" en el TXT */
   private readonly numericColsMap: Record<string, Set<string>> = {
@@ -163,11 +175,83 @@ export class ReportesSuperBancosComponent {
     };
   }
 
-  onMesChange(mes: number):   void { this.mesSeleccionado.set(mes); }
-  onAnioChange(anio: number): void { this.anioSeleccionado.set(anio); }
+  ngOnInit(): void {
+    this.ejecucionService.getAll().subscribe({
+      next: (lista) => {
+        const periodo = this.calcularPeriodoPermitido(lista ?? []);
+        this.periodoPermitido.set(periodo);
+        this.mesSeleccionado.set(periodo.mes);
+        this.anioSeleccionado.set(periodo.anio);
+        this.cargandoPeriodo.set(false);
+      },
+      error: () => {
+        // Si falla la carga, usar junio 2025 por defecto
+        this.cargandoPeriodo.set(false);
+      },
+    });
+  }
+
+  /**
+   * Calcula el período permitido para generar:
+   * - Sin historial → junio 2025
+   * - Con historial → mes siguiente al último (en orden cronológico)
+   */
+  private calcularPeriodoPermitido(ejecuciones: EjecucionReporte[]): { mes: number; anio: number } {
+    if (!ejecuciones.length) {
+      return { mes: 6, anio: 2025 };
+    }
+    // Ordenar cronológicamente y tomar el último
+    const ultima = ejecuciones.reduce((prev, curr) => {
+      const prevVal = prev.anio * 100 + prev.mes;
+      const currVal = curr.anio * 100 + curr.mes;
+      return currVal > prevVal ? curr : prev;
+    });
+    // Avanzar un mes
+    const mesNext  = ultima.mes === 12 ? 1 : ultima.mes + 1;
+    const anioNext = ultima.mes === 12 ? ultima.anio + 1 : ultima.anio;
+    return { mes: mesNext, anio: anioNext };
+  }
+
+  /** Etiqueta del período permitido para mostrar al usuario */
+  periodoPermitidoLabel = computed(() => {
+    const p = this.periodoPermitido();
+    const nombreMes = this.meses.find(m => m.valor === p.mes)?.nombre ?? '';
+    return `${nombreMes} ${p.anio}`;
+  });
+
+  buscarEjecucion(): void {
+    this.mensajeInfo.set('');
+    this.errorMsg.set('');
+    this.ejecucion.set(null);
+    this.detalles.set([]);
+    this.detalleSeleccionado.set(null);
+    this.registrosG.set([]);
+    this.columnasG.set([]);
+
+    this.cargandoDetalle.set(true);
+    this.ejecucionService.getByMesAnio(this.mesSeleccionado(), this.anioSeleccionado()).subscribe({
+      next: (lista) => {
+        this.cargandoDetalle.set(false);
+        const arr = lista ?? [];
+        if (arr.length === 0) {
+          this.mensajeInfo.set(`No se encontraron ejecuciones para ${this.mesNombre()} ${this.anioSeleccionado()}.`);
+          return;
+        }
+        // Tomar la más reciente por código
+        const ej = arr.reduce((a: EjecucionReporte, b: EjecucionReporte) =>
+          (a.codigo ?? 0) > (b.codigo ?? 0) ? a : b
+        );
+        this.ejecucion.set(ej);
+        if (ej.codigo) { this.cargarDetalle(ej.codigo); }
+      },
+      error: () => {
+        this.cargandoDetalle.set(false);
+        this.errorMsg.set('Error al consultar ejecuciones del período seleccionado.');
+      },
+    });
+  }
 
   generarArchivos(): void {
-    this.ejecutando.set(true);
     this.mensajeInfo.set('');
     this.errorMsg.set('');
     this.ejecucion.set(null);
@@ -290,6 +374,64 @@ export class ReportesSuperBancosComponent {
     if (typeof v === 'object') return '';
     if (typeof v === 'number') return v.toFixed(2);
     return String(v);
+  }
+
+  descargarTodosTxt(): void {
+    const dets = this.detalles();
+    if (dets.length === 0) return;
+
+    this.descargandoTodos.set(true);
+    const mes  = this.mesSeleccionado();
+    const anio = this.anioSeleccionado();
+    const lastDay     = new Date(anio, mes, 0).getDate();
+    const fechaCierre = `${String(lastDay).padStart(2, '0')}/${String(mes).padStart(2, '0')}/${anio}`;
+
+    const requests = dets.map(detalle => {
+      if ((detalle.cantidadRegistros ?? 0) === 0) {
+        return of({ detalle, rows: [] as any[] });
+      }
+      const criterio = new DatosBusqueda();
+      criterio.asignaValorConCampoPadre(
+        TipoDatosBusqueda.LONG,
+        'detalleEjecucion',
+        'codigo',
+        String(detalle.codigo),
+        TipoComandosBusqueda.IGUAL,
+      );
+      const fn = this.servicioMap[detalle.tipoReporte];
+      if (!fn) return of({ detalle, rows: [] as any[] });
+      return fn([criterio]).pipe(map(rows => ({ detalle, rows: rows ?? [] })));
+    });
+
+    forkJoin(requests).subscribe({
+      next: (results) => {
+        this.descargandoTodos.set(false);
+        for (const { detalle, rows } of results) {
+          const { tipoReporte } = detalle;
+          const cols        = this.columnasMap[tipoReporte] ?? [];
+          const numericCols = this.numericColsMap[tipoReporte] ?? new Set<string>();
+          const totalConCabecera = rows.length + 1;
+
+          const lines: string[] = [];
+          lines.push([tipoReporte, '3968', fechaCierre, String(totalConCabecera)].join('\t'));
+          for (const row of rows) {
+            lines.push(cols.map(c => this.formatValTxt(row[c], numericCols.has(c))).join('\t'));
+          }
+
+          const blob = new Blob([lines.join('\r\n')], { type: 'text/plain;charset=utf-8' });
+          const url  = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href     = url;
+          link.download = `${tipoReporte}_${String(mes).padStart(2, '0')}_${anio}.txt`;
+          link.click();
+          URL.revokeObjectURL(url);
+        }
+      },
+      error: () => {
+        this.descargandoTodos.set(false);
+        this.errorMsg.set('Error al descargar los archivos TXT.');
+      },
+    });
   }
 
   descargarTxt(): void {

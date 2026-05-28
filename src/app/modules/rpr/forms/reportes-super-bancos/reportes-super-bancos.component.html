@@ -10,7 +10,7 @@
     <div class="filtros-grid">
       <mat-form-field appearance="outline">
         <mat-label>Mes</mat-label>
-        <mat-select [value]="mesSeleccionado()" (selectionChange)="onMesChange($event.value)">
+        <mat-select [value]="mesSeleccionado()" (selectionChange)="mesSeleccionado.set($event.value)">
           @for (mes of meses; track mes.valor) {
             <mat-option [value]="mes.valor">{{ mes.nombre }}</mat-option>
           }
@@ -19,7 +19,7 @@
 
       <mat-form-field appearance="outline">
         <mat-label>Año</mat-label>
-        <mat-select [value]="anioSeleccionado()" (selectionChange)="onAnioChange($event.value)">
+        <mat-select [value]="anioSeleccionado()" (selectionChange)="anioSeleccionado.set($event.value)">
           @for (anio of anios; track anio) {
             <mat-option [value]="anio">{{ anio }}</mat-option>
           }
@@ -27,11 +27,27 @@
       </mat-form-field>
     </div>
 
+    <!-- Aviso próximo período a generar -->
+    @if (!cargandoPeriodo()) {
+      <div class="msg-periodo">
+        <mat-icon>event</mat-icon>
+        <span>Próximo período a generar: <strong>{{ periodoPermitidoLabel() }}</strong></span>
+      </div>
+    }
+
     <!-- Acciones -->
     <div class="acciones">
+      <button mat-flat-button color="accent"
+              (click)="buscarEjecucion()"
+              [disabled]="cargandoDetalle()">
+        <mat-icon>search</mat-icon>
+        Consultar
+      </button>
+
       <button mat-flat-button color="primary"
               (click)="generarArchivos()"
-              [disabled]="ejecutando() || cargandoDetalle()">
+              [disabled]="ejecutando() || cargandoDetalle() || !esPeriodoPermitido()"
+              [matTooltip]="!esPeriodoPermitido() ? 'Solo puede generar el período: ' + periodoPermitidoLabel() : ''">
         @if (ejecutando()) {
           <mat-spinner diameter="18" style="display:inline-block;margin-right:8px"></mat-spinner>
         } @else {
@@ -97,6 +113,20 @@
             }
           </button>
         }
+      </div>
+
+      <!-- Botón descargar todos como TXT -->
+      <div class="acciones acciones-secundarias">
+        <button mat-stroked-button color="primary"
+                (click)="descargarTodosTxt()"
+                [disabled]="descargandoTodos()">
+          @if (descargandoTodos()) {
+            <mat-spinner diameter="18" style="display:inline-block;margin-right:6px"></mat-spinner>
+          } @else {
+            <mat-icon>download_for_offline</mat-icon>
+          }
+          Descargar todos los TXT
+        </button>
       </div>
     }
 
