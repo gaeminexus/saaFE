@@ -130,8 +130,13 @@ export class ConsolidadoComponent implements OnInit {
     this.filtrosForm = this.fb.group({
       mes: [ahora.getMonth() + 1],
       anio: [ahora.getFullYear()],
-      estadoParticipe: [null],
+      estadoParticipe: [[]],
       tipoAporte: [null],
+    });
+
+    this.filtrosForm.get('estadoParticipe')!.valueChanges.subscribe((val: number[]) => {
+      const total = this.estadosPermitidos().length;
+      this.todosEstadosSeleccionados.set(total > 0 && (val?.length ?? 0) === total);
     });
   }
 
@@ -157,6 +162,15 @@ export class ConsolidadoComponent implements OnInit {
     });
   }
 
+  todosEstadosSeleccionados = signal<boolean>(false);
+
+  toggleTodosEstados(): void {
+    const todos = this.estadosPermitidos().map((e) => e.codigo);
+    const actuales: number[] = this.filtrosForm.get('estadoParticipe')?.value ?? [];
+    const nuevoValor = actuales.length === todos.length ? [] : todos;
+    this.filtrosForm.get('estadoParticipe')?.setValue(nuevoValor);
+  }
+
   buscar(): void {
     const { mes, anio, estadoParticipe, tipoAporte } = this.filtrosForm.value;
 
@@ -165,9 +179,11 @@ export class ConsolidadoComponent implements OnInit {
       return;
     }
 
-    const estadosObjetivo = estadoParticipe
-      ? [Number(estadoParticipe)]
-      : this.estadosPermitidos().map((item) => item.codigo);
+    const estadosSeleccionados: number[] =
+      Array.isArray(estadoParticipe) && estadoParticipe.length > 0
+        ? (estadoParticipe as unknown[]).map(Number)
+        : this.estadosPermitidos().map((item) => item.codigo);
+    const estadosObjetivo = estadosSeleccionados;
 
     if (!estadosObjetivo.length) {
       this.snackBar.open('No se encontraron estados permitidos para la consulta', 'Cerrar', {
@@ -244,7 +260,7 @@ export class ConsolidadoComponent implements OnInit {
     this.filtrosForm.reset({
       mes: ahora.getMonth() + 1,
       anio: ahora.getFullYear(),
-      estadoParticipe: null,
+      estadoParticipe: [],
       tipoAporte: null,
     });
 
@@ -547,7 +563,11 @@ export class ConsolidadoComponent implements OnInit {
       nombre === 'cesante' ||
       nombre.includes('jubilado voluntario') ||
       nombre.includes('jubilado complementario') ||
-      estado.codigo === 3
+      nombre.includes('cesante desafiliado') ||
+      nombre.includes('jubilado pasivo') ||
+      estado.codigo === 3 ||
+      estado.codigo === 23 ||
+      estado.codigo === 42
     );
   }
 

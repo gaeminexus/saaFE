@@ -1248,21 +1248,23 @@ export class PrestamoDashComponent implements OnInit {
     this.cargarNovedadesCargasRecientes(recientes);
   }
 
-  /** IDs de los 3 estados de partícipe que se muestran en los pasteles de entidades. */
-  private static readonly ESTADOS_ENTIDAD_IDS = [10, 2, 30] as const;
+  /** IDs de los estados de partícipe que se muestran en los pasteles de entidades. */
+  private static readonly ESTADOS_ENTIDAD_IDS = [10, 2, 30, 23, 42] as const;
 
-  /** Catálogo fijo de los 3 estados conocidos (evita llamada al backend). */
+  /** Catálogo fijo de los 5 estados conocidos (evita llamada al backend). */
   private static readonly ESTADOS_ENTIDAD_FIJOS: EstadoParticipe[] = [
     { codigo: 10, nombre: 'Activo', codigoExterno: 10, idEstado: 10 },
     { codigo: 2, nombre: 'Cesante', codigoExterno: 2, idEstado: 2 },
     { codigo: 30, nombre: 'Jubilado', codigoExterno: 30, idEstado: 30 },
+    { codigo: 23, nombre: 'Cesante Desafiliado', codigoExterno: 23, idEstado: 23 },
+    { codigo: 42, nombre: 'Jubilado Pasivo', codigoExterno: 42, idEstado: 42 },
   ];
 
   private cargarResumenEntidades(): void {
     this.loadingEntidades.set(true);
     this.errorEntidades.set('');
 
-    // Hardcodeamos los 3 estados — sin llamada al backend
+    // Catálogo fijo de los 5 estados
     this.estadosParticipeOptions.set(PrestamoDashComponent.ESTADOS_ENTIDAD_FIJOS);
 
     this.entidadService
@@ -1277,7 +1279,17 @@ export class PrestamoDashComponent implements OnInit {
       )
       .subscribe({
       next: (resumen) => {
-        this.resumenConsolidadoEntidades.set(resumen ?? []);
+        const data: EntidadResumenConsolidadoDTO[] = resumen ?? [];
+
+        // Completar con filas en cero los estados que el backend no retornó
+        const estadosRetornados = new Set(data.map((r) => r.estadoId));
+        for (const id of PrestamoDashComponent.ESTADOS_ENTIDAD_IDS) {
+          if (!estadosRetornados.has(id)) {
+            data.push({ estadoId: id, totalEntidades: 0, totalPrestamos: 0, totalAportes: 0 });
+          }
+        }
+
+        this.resumenConsolidadoEntidades.set(data);
         this.loadingEntidades.set(false);
       },
       error: (err) => {

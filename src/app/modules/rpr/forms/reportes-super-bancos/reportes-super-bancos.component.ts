@@ -289,11 +289,40 @@ export class ReportesSuperBancosComponent implements OnInit {
     });
   }
 
+  /** Todos los tipos de reporte que deben aparecer siempre al descargar. */
+  private static readonly TIPOS_REPORTE_COMPLETOS = [
+    'G40','G41','G42','G43','G44','G45','G46','G47','G48','G49','G50','G51',
+  ] as const;
+
   private cargarDetalle(idEjecucion: number): void {
     this.cargandoDetalle.set(true);
     this.detalleService.getByEjecucion(idEjecucion).subscribe({
-      next:  (data)  => { this.cargandoDetalle.set(false); this.detalles.set(data ?? []); },
-      error: ()      => this.cargandoDetalle.set(false),
+      next: (data) => {
+        this.cargandoDetalle.set(false);
+        const lista: DetalleEjecucionReporte[] = data ?? [];
+
+        // Completar con entradas vacías los tipos que el backend no retornó
+        const tiposPresentes = new Set(lista.map((d) => d.tipoReporte));
+        for (const tipo of ReportesSuperBancosComponent.TIPOS_REPORTE_COMPLETOS) {
+          if (!tiposPresentes.has(tipo)) {
+            lista.push({
+              codigo: null,
+              ejecucionReporte: { codigo: idEjecucion } as any,
+              tipoReporte: tipo,
+              estado: 3,
+              fechaGeneracion: null,
+              cantidadRegistros: 0,
+              novedades: '',
+              detalleOriginal: null,
+            });
+          }
+        }
+
+        // Ordenar G40 → G51
+        lista.sort((a, b) => a.tipoReporte.localeCompare(b.tipoReporte));
+        this.detalles.set(lista);
+      },
+      error: () => this.cargandoDetalle.set(false),
     });
   }
 
@@ -349,24 +378,31 @@ export class ReportesSuperBancosComponent implements OnInit {
     });
   }
 
-  formatVal(v: any): string {
+  formatVal(v: any, col?: string): string {
     if (v === null || v === undefined) return '';
     if (Array.isArray(v) && v.length >= 3 && typeof v[0] === 'number') {
       const [y, m, d] = v;
       return `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}`;
     }
     if (typeof v === 'object') return '';
-    if (typeof v === 'number') return v.toFixed(2);
+    if (typeof v === 'number') {
+      if (col === 'diasMorosidad' || col === 'cargasFamiliares') return Number.isInteger(v) ? String(v) : v.toFixed(2);
+      return v.toFixed(2);
+    }
     return String(v);
   }
 
   /** Variante para el TXT: campos numéricos con null/0 emiten "0.00" */
-  private formatValTxt(v: any, isNumeric: boolean): string {
+  private formatValTxt(v: any, isNumeric: boolean, col?: string): string {
     if (Array.isArray(v) && v.length >= 3 && typeof v[0] === 'number') {
       const [y, m, d] = v;
       return `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}`;
     }
     if (isNumeric) {
+      if (col === 'diasMorosidad' || col === 'cargasFamiliares') {
+        const n = Number(v);
+        return (v === null || v === undefined || v === '') ? '0' : (Number.isInteger(n) ? String(n) : n.toFixed(2));
+      }
       if (v === null || v === undefined || v === '' || Number(v) === 0) return '0.00';
       return Number(v).toFixed(2);
     }
@@ -415,7 +451,7 @@ export class ReportesSuperBancosComponent implements OnInit {
           const lines: string[] = [];
           lines.push([tipoReporte, '3968', fechaCierre, String(totalConCabecera)].join('\t'));
           for (const row of rows) {
-            lines.push(cols.map(c => this.formatValTxt(row[c], numericCols.has(c))).join('\t'));
+            lines.push(cols.map(c => this.formatValTxt(row[c], numericCols.has(c), c)).join('	'));
           }
 
           const blob = new Blob([lines.join('\r\n')], { type: 'text/plain;charset=utf-8' });
@@ -452,7 +488,7 @@ export class ReportesSuperBancosComponent implements OnInit {
     const lines: string[] = [];
     lines.push([tipoReporte, '3968', fechaCierre, String(totalConCabecera)].join('\t'));
     for (const row of rows) {
-      lines.push(cols.map(c => this.formatValTxt(row[c], numericCols.has(c))).join('\t'));
+      lines.push(cols.map(c => this.formatValTxt(row[c], numericCols.has(c), c)).join('	'));
     }
 
     const blob = new Blob([lines.join('\r\n')], { type: 'text/plain;charset=utf-8' });

@@ -29,12 +29,17 @@
 
         <mat-form-field appearance="outline">
           <mat-label>Estado partícipe</mat-label>
-          <mat-select formControlName="estadoParticipe">
-            <mat-option [value]="null">Todos (Activo, Cesante, Jubilado Voluntario)</mat-option>
+          <mat-select formControlName="estadoParticipe" multiple>
+            <mat-option (click)="toggleTodosEstados()">
+              <span [style.fontWeight]="todosEstadosSeleccionados() ? '700' : 'normal'">
+                {{ todosEstadosSeleccionados() ? '✓ Todos seleccionados' : 'Seleccionar todos' }}
+              </span>
+            </mat-option>
             @for (estado of estadosPermitidos(); track estado.codigo) {
               <mat-option [value]="estado.codigo">{{ estado.nombre }}</mat-option>
             }
           </mat-select>
+          <mat-hint>Sin selección = todos los estados</mat-hint>
         </mat-form-field>
 
         <mat-form-field appearance="outline">
