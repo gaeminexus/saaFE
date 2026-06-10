@@ -418,6 +418,15 @@
         <button
           mat-icon-button
           color="primary"
+          (click)="imprimirTablaPagos(prestamo, $event)"
+          matTooltip="Tabla de amortización (Jasper)"
+          class="pdf-action-button"
+        >
+          <mat-icon>receipt_long</mat-icon>
+        </button>
+        <button
+          mat-icon-button
+          color="primary"
           (click)="exportarCSVPrestamo(prestamo, $event)"
           matTooltip="Exportar CSV del Préstamo"
           class="csv-action-button"
@@ -470,6 +479,15 @@
             class="pdf-button"
           >
             <mat-icon>picture_as_pdf</mat-icon>
+          </button>
+          <button
+            mat-icon-button
+            color="primary"
+            (click)="imprimirTablaPagos(prestamoSeleccionado)"
+            matTooltip="Tabla de amortización (Jasper)"
+            class="pdf-button"
+          >
+            <mat-icon>receipt_long</mat-icon>
           </button>
           <button
             mat-icon-button

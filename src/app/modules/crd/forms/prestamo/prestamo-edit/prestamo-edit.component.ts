@@ -14,7 +14,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import { Router } from '@angular/router';
-import { finalize } from 'rxjs';
+import { finalize, forkJoin } from 'rxjs';
 
 import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
@@ -487,7 +487,7 @@ export class PrestamoEditComponent implements OnInit {
       });
   }
 
-  private cargarDetallePrestamo(codigoPrestamo: number): void {
+  private cargarDetallePrestamo(codigoPrestamo: number, corregirEstados = false): void {
     const criterios: DatosBusqueda[] = [];
 
     const criterioPrestamo = new DatosBusqueda();
@@ -517,6 +517,36 @@ export class PrestamoEditComponent implements OnInit {
               ? detalleNormalizado
               : detalleNormalizado.filter((d) => this.obtenerCodigoEstadoCuota(d) !== 7),
           );
+
+          // Después de cargar desde Excel, persistir el idEstado (PK) correcto cuando sea incorrecto.
+          // detalle.estado (DTPRESTD) = codigoAlterno (fuente de verdad).
+          // detalle.idEstado (DTPRIDST) debe ser el PK de EstadoCuotaPrestamo.
+          if (corregirEstados) {
+            const catalogo = this.estadosCuota();
+            const aCorregir = detalleNormalizado.filter((d) => {
+              const codigoAlt = Number(d.estado);
+              const pkEsperado = catalogo.find(e => e.codigoAlterno === codigoAlt)?.codigo ?? null;
+              return pkEsperado !== null && Number(d.idEstado) !== pkEsperado;
+            }).map(d => {
+              const codigoAlt = Number(d.estado);
+              const pkCorrecto = catalogo.find(e => e.codigoAlterno === codigoAlt)!.codigo;
+              return { ...d, idEstado: pkCorrecto };
+            });
+
+            if (aCorregir.length > 0) {
+              const updates$ = aCorregir.map(d => this.detallePrestamoService.update(d));
+              forkJoin(updates$).subscribe({
+                next: () => {},
+                error: () => {
+                  this.snackBar.open(
+                    'Advertencia: algunos estados de cuota no pudieron corregirse en base de datos',
+                    'Cerrar',
+                    { duration: 5000 },
+                  );
+                },
+              });
+            }
+          }
         },
         error: (err) => {
           this.detallePrestamo.set([]);
@@ -532,8 +562,8 @@ export class PrestamoEditComponent implements OnInit {
     return {
       ...detalle,
       fechaVencimiento: this.convertirFechaFlexible((detalle as any).fechaVencimiento) as any,
-      fechaPagado: this.convertirFechaFlexible((detalle as any).fechaPagado) as any,
-      fechaRegistro: this.convertirFechaFlexible((detalle as any).fechaRegistro) as any,
+      fechaPagado:      this.convertirFechaFlexible((detalle as any).fechaPagado)      as any,
+      fechaRegistro:    this.convertirFechaFlexible((detalle as any).fechaRegistro)    as any,
     };
   }
 
@@ -598,24 +628,14 @@ export class PrestamoEditComponent implements OnInit {
     return mapa[codigoAlterno] ?? 'cuota-desconocida';
   }
 
+  /**
+   * Retorna el codigoAlterno del estado de la cuota.
+   * Contrato (igual que participe-dash): detalle.estado (DTPRESTD) almacena el codigoAlterno directamente.
+   */
   obtenerCodigoEstadoCuota(detalle: DetallePrestamo | null | undefined): number | null {
-    if (!detalle) {
-      return null;
-    }
-
-    if (detalle.estado !== null && detalle.estado !== undefined) {
-      return Number(detalle.estado);
-    }
-
-    if (detalle.idEstado !== null && detalle.idEstado !== undefined) {
-      const estadoCatalogo = this.estadosCuota().find((e) => e.codigo === Number(detalle.idEstado));
-      if (estadoCatalogo?.codigoAlterno !== null && estadoCatalogo?.codigoAlterno !== undefined) {
-        return Number(estadoCatalogo.codigoAlterno);
-      }
-      return Number(detalle.idEstado);
-    }
-
-    return null;
+    if (!detalle) return null;
+    const valor = detalle.estado;
+    return valor != null ? Number(valor) : null;
   }
 
   obtenerEstadoCuota(codigoAlterno: number | null | undefined): { texto: string; clase: string } {
@@ -663,7 +683,7 @@ export class PrestamoEditComponent implements OnInit {
       .subscribe({
         next: () => {
           this.snackBar.open('Tabla de amortización cargada correctamente desde Excel', 'Cerrar', { duration: 3500 });
-          this.cargarDetallePrestamo(idPrestamo);
+          this.cargarDetallePrestamo(idPrestamo, true);
         },
         error: (err) => {
           this.snackBar.open(this.extraerMensajeError(err, 'Error al cargar el archivo Excel'), 'Cerrar', {

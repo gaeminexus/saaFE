@@ -19,4 +19,13 @@ export class ServiciosRpr {
   public static RS_CG51 = `${API_URL}/cg51`; // GarantiaRealG51
   public static RS_EJRC = `${API_URL}/ejrc`; // EjecucionReporte
   public static RS_EJRD = `${API_URL}/ejrd`; // DetalleEjecucionReporte
+
+  // ── Informes Mensuales de Crédito ─────────────────────────────────
+  public static RS_EJCC = `${API_URL}/ejcc`; // EJCC – Control ejecución reportes cartera
+  public static RS_CPRM = `${API_URL}/cprm`; // CPRM – Crédito Partícipes Mensual
+  public static RS_CJBM = `${API_URL}/cjbm`; // CJBM – Crédito Jubilados Mensual
+  public static RS_CCPM = `${API_URL}/ccpm`; // CCPM – Crédito Cuotas Préstamos Mensual
+  public static RS_HMPR = `${API_URL}/hmpr`; // HMPR – Histórico CPRM
+  public static RS_HMJB = `${API_URL}/hmjb`; // HMJB – Histórico CJBM
+  public static RS_HMCP = `${API_URL}/hmcp`; // HMCP – Histórico CCPM
 }

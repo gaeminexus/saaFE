@@ -27,6 +27,7 @@ import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda
 import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { ExportService } from '../../../../../shared/services/export.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
+import { JasperReportesService } from '../../../../../shared/services/jasper-reportes.service';
 import {
   AuditoriaDialogComponent,
   CambiarEstadoDialogData,
@@ -169,7 +170,8 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
     private dialog: MatDialog,
     private router: Router,
     private route: ActivatedRoute,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private jasperReportes: JasperReportesService
   ) {}
 
   ngOnInit(): void {
@@ -896,6 +898,43 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
       console.error('Error al exportar CSV del préstamo:', error);
       this.snackBar.open('Error al exportar el CSV', 'Cerrar', { duration: 3000 });
     }
+  }
+
+  /**
+   * Imprime la tabla de amortización del préstamo usando Jasper (RPRT_TBLA_ACML)
+   */
+  imprimirTablaPagos(prestamo: Prestamo, event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+
+    if (!prestamo?.codigo) {
+      this.snackBar.open('⚠️ No hay préstamo para imprimir', 'Cerrar', { duration: 4000 });
+      return;
+    }
+
+    const parametros = {
+      P_PRSTCDGO: prestamo.codigo,
+      P_IMAGEN: null,
+      P_USUARIO: localStorage.getItem('username') || localStorage.getItem('userName') || '',
+    };
+
+    this.snackBar.open('Generando reporte...', '', { duration: 2000 });
+
+    this.jasperReportes.generar('crd', 'RPRT_TBLA_ACML', parametros, 'PDF').subscribe({
+      next: (blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `tabla-amortizacion-${prestamo.idAsoprep}.pdf`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+        this.snackBar.open('✅ Reporte generado exitosamente', 'Cerrar', { duration: 3000 });
+      },
+      error: () => {
+        this.snackBar.open('❌ No se pudo generar el reporte', 'Cerrar', { duration: 5000 });
+      },
+    });
   }
 
   /**

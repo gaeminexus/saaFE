@@ -26,6 +26,7 @@ import { MenucuentaxpagarComponent } from './modules/cxp/menu/menucuentasxpagar/
 import { LoginComponent } from './modules/dash/forms/login/login.component';
 import { MenuComponent } from './modules/dash/menu/menu.component';
 import { ReportesSuperBancosComponent } from './modules/rpr/forms/reportes-super-bancos/reportes-super-bancos.component';
+import { InformesMensualesCreditoComponent } from './modules/rpr/forms/informes-mensuales-credito/informes-mensuales-credito.component';
 import { MenureportesComponent } from './modules/rpr/menu/menureportes/menureportes.component';
 import { MenurecursoshumanosComponent } from './modules/rrh/menu/menurecursoshumanos/menurecursoshumanos.component';
 // RRHH demo components
@@ -137,6 +138,11 @@ export const routes: Routes = [
       {
         path: 'creditos/super-bancos',
         component: ReportesSuperBancosComponent,
+        canActivate: [authGuard],
+      },
+      {
+        path: 'creditos/informes-mensuales',
+        component: InformesMensualesCreditoComponent,
         canActivate: [authGuard],
       },
     ],

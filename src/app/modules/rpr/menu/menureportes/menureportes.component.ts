@@ -40,6 +40,11 @@ export class MenureportesComponent {
           iconName: 'insights',
           route: '/reportes/creditos/super-bancos',
         },
+        {
+          displayName: 'Informes Mensuales',
+          iconName: 'bar_chart',
+          route: '/reportes/creditos/informes-mensuales',
+        },
       ],
     },
     // {

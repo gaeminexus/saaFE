@@ -280,6 +280,15 @@ export class ReportesSuperBancosComponent implements OnInit {
             this.cargarDetalle((resp as EjecucionReporte).codigo!);
           }
         }
+        // Avanzar el período permitido al mes siguiente para permitir
+        // generar el próximo mes sin necesidad de salir y volver a entrar.
+        const mesGen  = this.mesSeleccionado();
+        const anioGen = this.anioSeleccionado();
+        const mesNext  = mesGen === 12 ? 1 : mesGen + 1;
+        const anioNext = mesGen === 12 ? anioGen + 1 : anioGen;
+        this.periodoPermitido.set({ mes: mesNext, anio: anioNext });
+        this.mesSeleccionado.set(mesNext);
+        this.anioSeleccionado.set(anioNext);
       },
       error: (err) => {
         this.ejecutando.set(false);
@@ -299,12 +308,37 @@ export class ReportesSuperBancosComponent implements OnInit {
     this.detalleService.getByEjecucion(idEjecucion).subscribe({
       next: (data) => {
         this.cargandoDetalle.set(false);
-        const lista: DetalleEjecucionReporte[] = data ?? [];
+        const raw: DetalleEjecucionReporte[] = data ?? [];
+
+        // Deduplicar por tipoReporte: preferir correcciones (detalleOriginal != null)
+        // sobre originales; entre iguales, el de mayor codigo gana.
+        const mapaReciente = new Map<string, DetalleEjecucionReporte>();
+        for (const d of raw) {
+          const existing = mapaReciente.get(d.tipoReporte);
+          if (!existing) {
+            mapaReciente.set(d.tipoReporte, d);
+          } else {
+            const dEsCorreccion       = d.detalleOriginal != null;
+            const existingEsCorreccion = existing.detalleOriginal != null;
+
+            if (dEsCorreccion && !existingEsCorreccion) {
+              // d es corrección y existing es original → d gana
+              mapaReciente.set(d.tipoReporte, d);
+            } else if (!dEsCorreccion && existingEsCorreccion) {
+              // existing es corrección y d es original → existing se queda
+            } else {
+              // Ambos del mismo tipo → gana el de mayor codigo
+              if ((d.codigo ?? 0) > (existing.codigo ?? 0)) {
+                mapaReciente.set(d.tipoReporte, d);
+              }
+            }
+          }
+        }
+        const lista: DetalleEjecucionReporte[] = [...mapaReciente.values()];
 
         // Completar con entradas vacías los tipos que el backend no retornó
-        const tiposPresentes = new Set(lista.map((d) => d.tipoReporte));
         for (const tipo of ReportesSuperBancosComponent.TIPOS_REPORTE_COMPLETOS) {
-          if (!tiposPresentes.has(tipo)) {
+          if (!mapaReciente.has(tipo)) {
             lista.push({
               codigo: null,
               ejecucionReporte: { codigo: idEjecucion } as any,

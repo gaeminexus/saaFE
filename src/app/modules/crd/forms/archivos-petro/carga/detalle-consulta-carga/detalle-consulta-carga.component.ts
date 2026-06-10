@@ -901,9 +901,10 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
       return;
     }
 
-    // Validar que todas las novedades estén resueltas (código 0 = Sin novedad)
+    // Validar que todas las novedades de PARTICIPE estén resueltas (código 0 = Sin novedad)
+    // Las novedades de DESCUENTO son informativas y no bloquean el proceso
     const novedadesPendientes = this.novedadesAgrupadas().filter(
-      novedad => novedad.novedad.codigo !== 0 && novedad.total > 0
+      novedad => novedad.novedad.tipo === 'PARTICIPE' && novedad.novedad.codigo !== 0 && novedad.total > 0
     );
 
     if (novedadesPendientes.length > 0) {

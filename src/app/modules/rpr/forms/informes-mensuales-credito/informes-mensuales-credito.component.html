@@ -1,0 +1,190 @@
+<mat-card class="informes-card">
+  <mat-card-header>
+    <mat-card-title>Informes Mensuales de Crédito</mat-card-title>
+    <mat-card-subtitle>Generación y consulta de reportes CPRM · CJBM · CCPM</mat-card-subtitle>
+  </mat-card-header>
+
+  <mat-card-content>
+
+    <!-- Filtros período -->
+    <div class="filtros-grid">
+      <mat-form-field appearance="outline">
+        <mat-label>Mes</mat-label>
+        <mat-select [value]="mesSeleccionado()" (selectionChange)="mesSeleccionado.set($event.value)">
+          @for (mes of meses; track mes.valor) {
+            <mat-option [value]="mes.valor">{{ mes.nombre }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Año</mat-label>
+        <mat-select [value]="anioSeleccionado()" (selectionChange)="anioSeleccionado.set($event.value)">
+          @for (anio of anios; track anio) {
+            <mat-option [value]="anio">{{ anio }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
+
+    <!-- Acciones -->
+    <div class="acciones">
+      <button mat-flat-button color="accent"
+              (click)="consultar()"
+              [disabled]="consultando() || ejecutando() || eliminando()">
+        @if (consultando()) {
+          <mat-spinner diameter="18" style="display:inline-block;margin-right:8px"></mat-spinner>
+        } @else {
+          <mat-icon>search</mat-icon>
+        }
+        Consultar
+      </button>
+
+      <button mat-flat-button color="primary"
+              (click)="generar()"
+              [disabled]="ejecutando() || consultando() || eliminando() || yaGenerado()"
+              [matTooltip]="yaGenerado() ? 'El período ya fue generado. Use Regenerar para volver a generarlo.' : ''">
+        @if (ejecutando()) {
+          <mat-spinner diameter="18" style="display:inline-block;margin-right:8px"></mat-spinner>
+        } @else {
+          <mat-icon>play_arrow</mat-icon>
+        }
+        Generar
+      </button>
+
+      @if (yaGenerado()) {
+        <button mat-stroked-button color="warn"
+                (click)="regenerar()"
+                [disabled]="ejecutando() || consultando() || eliminando()"
+                matTooltip="Elimina los datos existentes y vuelve a generar los reportes">
+          @if (eliminando()) {
+            <mat-spinner diameter="18" style="display:inline-block;margin-right:8px"></mat-spinner>
+          } @else {
+            <mat-icon>refresh</mat-icon>
+          }
+          Regenerar
+        </button>
+      }
+
+      <button mat-stroked-button
+              (click)="limpiar()"
+              [disabled]="ejecutando() || consultando() || eliminando()">
+        <mat-icon>clear</mat-icon>
+        Limpiar
+      </button>
+    </div>
+
+    <!-- Mensaje info -->
+    @if (mensajeInfo()) {
+      <div class="msg-info">
+        <mat-icon>info</mat-icon>
+        <span>{{ mensajeInfo() }}</span>
+      </div>
+    }
+
+    <!-- Error -->
+    @if (errorMsg()) {
+      <div class="msg-error">
+        <mat-icon>error_outline</mat-icon>
+        <span>{{ errorMsg() }}</span>
+      </div>
+    }
+
+    <!-- Cabecera de ejecución -->
+    @if (ejecucion()) {
+      <div class="ejcc-header">
+        <mat-icon>event</mat-icon>
+        <span class="ejcc-periodo">{{ mesNombre() }} {{ anioSeleccionado() }}</span>
+        <span class="ejcc-usuario">Generado por: <strong>{{ ejecucion()!.usuario }}</strong></span>
+      </div>
+    }
+
+    <!-- Tarjetas de reportes -->
+    @if (ejecucion()) {
+      <div class="tarjetas-reportes">
+        @for (res of resumenes(); track res.tipo) {
+          <div class="tarjeta-wrapper">
+            <button type="button"
+                    class="tarjeta-reporte"
+                    [class.activa]="reporteSel() === res.tipo"
+                    (click)="seleccionarReporte(res.tipo)">
+              <mat-icon class="tarjeta-icon">{{ res.icon }}</mat-icon>
+              <span class="tarjeta-label">{{ res.label }}</span>
+              <span class="tarjeta-tipo">{{ res.tipo }}</span>
+              @if (res.cantidad !== null) {
+                <span class="tarjeta-count">{{ res.cantidad }} registros</span>
+              } @else {
+                <mat-spinner diameter="16" class="tarjeta-spinner"></mat-spinner>
+              }
+            </button>
+            @if (res.cantidad && res.cantidad > 0) {
+              <button mat-icon-button
+                      class="tarjeta-csv-btn"
+                      matTooltip="Exportar {{ res.tipo }} a CSV"
+                      (click)="descargarCSV(res.tipo)">
+                <mat-icon>download</mat-icon>
+              </button>
+            }
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Tabla de registros del reporte seleccionado -->
+    @if (reporteSel() && ejecucion()) {
+      <div class="registros-panel">
+        <div class="rp-header">
+          <mat-icon>table_chart</mat-icon>
+          <span class="rp-titulo">Registros {{ reporteSel() }} — {{ mesNombre() }} {{ anioSeleccionado() }}</span>
+          <span class="rp-sep"></span>
+          @if (!cargandoReg() && registros().length > 0) {
+            <button mat-stroked-button color="primary"
+                    (click)="exportarCSV(reporteSel()!)"
+                    matTooltip="Exportar a CSV">
+              <mat-icon>download</mat-icon>
+              CSV
+            </button>
+          }
+          <button mat-icon-button (click)="seleccionarReporte(reporteSel()!)" matTooltip="Cerrar tabla">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+
+        @if (cargandoReg()) {
+          <div class="loading-reg">
+            <mat-spinner diameter="32"></mat-spinner>
+            <span>Cargando registros...</span>
+          </div>
+        }
+
+        @if (errorRegistros()) {
+          <div class="msg-error" style="margin:12px;">
+            <mat-icon>error_outline</mat-icon>
+            <span>{{ errorRegistros() }}</span>
+          </div>
+        }
+
+        @if (!cargandoReg() && registros().length > 0) {
+          <div class="tabla-scroll">
+            <table mat-table [dataSource]="registros()" class="mat-elevation-z1 tabla-datos">
+              @for (col of columnasDef(); track col.campo) {
+                <ng-container [matColumnDef]="col.campo">
+                  <th mat-header-cell *matHeaderCellDef>{{ col.header }}</th>
+                  <td mat-cell *matCellDef="let row">{{ getCellValue(row, col) }}</td>
+                </ng-container>
+              }
+              <tr mat-header-row *matHeaderRowDef="colKeys; sticky: true"></tr>
+              <tr mat-row *matRowDef="let row; columns: colKeys;"></tr>
+            </table>
+          </div>
+          <p class="rp-total">Total: {{ registros().length }} registros</p>
+        }
+
+        @if (!cargandoReg() && registros().length === 0 && !errorRegistros()) {
+          <p class="rp-vacio">No hay registros para este informe en el período seleccionado.</p>
+        }
+      </div>
+    }
+
+  </mat-card-content>
+</mat-card>
