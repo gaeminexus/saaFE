@@ -938,6 +938,44 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
   }
 
   /**
+   * Imprime los movimientos de aportes por tipo usando Jasper (RPRT_MVMN_APXT)
+   */
+  imprimirMovimientosAporte(tipoAporte: AportesPorTipo, event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+
+    if (!this.entidadEncontrada?.codigo) {
+      this.snackBar.open('No hay información de entidad', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    const parametros = {
+      P_ENTDCDGO: this.entidadEncontrada.codigo,
+      P_TPAPCDGO: tipoAporte.codigoTipo,
+      P_IMAGEN: null,
+      P_USUARIO: localStorage.getItem('username') || localStorage.getItem('userName') || '',
+    };
+
+    this.snackBar.open('Generando reporte de movimientos...', '', { duration: 2000 });
+
+    this.jasperReportes.generar('crd', 'RPRT_MVMN_APXT', parametros, 'PDF').subscribe({
+      next: (blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `movimientos-aportes-${tipoAporte.tipoAporte.replace(/\s+/g, '-')}.pdf`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+        this.snackBar.open('✅ Reporte generado exitosamente', 'Cerrar', { duration: 3000 });
+      },
+      error: () => {
+        this.snackBar.open('❌ No se pudo generar el reporte de movimientos', 'Cerrar', { duration: 5000 });
+      },
+    });
+  }
+
+  /**
    * Genera PDF para un préstamo individual con sus detalles
    */
   async generarPDFPrestamo(prestamo: Prestamo, event?: Event): Promise<void> {

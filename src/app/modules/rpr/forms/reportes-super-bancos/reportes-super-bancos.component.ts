@@ -280,15 +280,14 @@ export class ReportesSuperBancosComponent implements OnInit {
             this.cargarDetalle((resp as EjecucionReporte).codigo!);
           }
         }
-        // Avanzar el período permitido al mes siguiente para permitir
-        // generar el próximo mes sin necesidad de salir y volver a entrar.
+        // Avanzar solo el período permitido al mes siguiente para que el label
+        // "Próximo mes a generar" se actualice, pero los combos y mensajes
+        // permanecen en el mes recién generado.
         const mesGen  = this.mesSeleccionado();
         const anioGen = this.anioSeleccionado();
         const mesNext  = mesGen === 12 ? 1 : mesGen + 1;
         const anioNext = mesGen === 12 ? anioGen + 1 : anioGen;
         this.periodoPermitido.set({ mes: mesNext, anio: anioNext });
-        this.mesSeleccionado.set(mesNext);
-        this.anioSeleccionado.set(anioNext);
       },
       error: (err) => {
         this.ejecutando.set(false);
@@ -423,6 +422,13 @@ export class ReportesSuperBancosComponent implements OnInit {
       if (col === 'diasMorosidad' || col === 'cargasFamiliares') return Number.isInteger(v) ? String(v) : v.toFixed(2);
       return v.toFixed(2);
     }
+    if (typeof v === 'string' && /^\d{4}-\d{1,2}-\d{1,2}/.test(v)) {
+      const parts = v.substring(0, 10).split('-');
+      const y = parts[0];
+      const m = String(parts[1]).padStart(2, '0');
+      const d = String(parts[2]).padStart(2, '0');
+      return `${d}/${m}/${y}`;
+    }
     return String(v);
   }
 
@@ -443,6 +449,14 @@ export class ReportesSuperBancosComponent implements OnInit {
     if (v === null || v === undefined) return '';
     if (typeof v === 'object') return '';
     if (typeof v === 'number') return v.toFixed(2);
+    // Fechas que llegan como string ISO: "YYYY-MM-DD" o "YYYY-M-D"
+    if (typeof v === 'string' && /^\d{4}-\d{1,2}-\d{1,2}/.test(v)) {
+      const parts = v.substring(0, 10).split('-');
+      const y = parts[0];
+      const m = String(parts[1]).padStart(2, '0');
+      const d = String(parts[2]).padStart(2, '0');
+      return `${d}/${m}/${y}`;
+    }
     return String(v);
   }
 
@@ -476,26 +490,32 @@ export class ReportesSuperBancosComponent implements OnInit {
     forkJoin(requests).subscribe({
       next: (results) => {
         this.descargandoTodos.set(false);
-        for (const { detalle, rows } of results) {
-          const { tipoReporte } = detalle;
-          const cols        = this.columnasMap[tipoReporte] ?? [];
-          const numericCols = this.numericColsMap[tipoReporte] ?? new Set<string>();
-          const totalConCabecera = rows.length + 1;
+        results.forEach(({ detalle, rows }, index) => {
+          setTimeout(() => {
+            const { tipoReporte } = detalle;
+            const cols        = this.columnasMap[tipoReporte] ?? [];
+            const numericCols = this.numericColsMap[tipoReporte] ?? new Set<string>();
+            const totalConCabecera = rows.length + 1;
 
-          const lines: string[] = [];
-          lines.push([tipoReporte, '3968', fechaCierre, String(totalConCabecera)].join('\t'));
-          for (const row of rows) {
-            lines.push(cols.map(c => this.formatValTxt(row[c], numericCols.has(c), c)).join('	'));
-          }
+            const lines: string[] = [];
+            lines.push([tipoReporte, '3968', fechaCierre, String(totalConCabecera)].join('\t'));
+            for (const row of rows) {
+              lines.push(cols.map(c => this.formatValTxt(row[c], numericCols.has(c), c)).join('	'));
+            }
 
-          const blob = new Blob([lines.join('\r\n')], { type: 'text/plain;charset=utf-8' });
-          const url  = URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href     = url;
-          link.download = `${tipoReporte}_${String(mes).padStart(2, '0')}_${anio}.txt`;
-          link.click();
-          URL.revokeObjectURL(url);
-        }
+            const blob = new Blob([lines.join('\r\n')], { type: 'text/plain;charset=utf-8' });
+            const url  = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            const periodicidad = tipoReporte === 'G40' ? 'S' : 'M';
+            const fechaNombre  = `${String(lastDay).padStart(2, '0')}${String(mes).padStart(2, '0')}${anio}`;
+            link.href     = url;
+            link.download = `${tipoReporte}${periodicidad}3968${fechaNombre}.txt`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+          }, index * 300);
+        });
       },
       error: () => {
         this.descargandoTodos.set(false);
@@ -528,8 +548,10 @@ export class ReportesSuperBancosComponent implements OnInit {
     const blob = new Blob([lines.join('\r\n')], { type: 'text/plain;charset=utf-8' });
     const url  = URL.createObjectURL(blob);
     const link = document.createElement('a');
+    const periodicidad = tipoReporte === 'G40' ? 'S' : 'M';
+    const fechaNombre  = `${String(lastDay).padStart(2, '0')}${String(mes).padStart(2, '0')}${anio}`;
     link.href     = url;
-    link.download = `${tipoReporte}_${String(mes).padStart(2, '0')}_${anio}.txt`;
+    link.download = `${tipoReporte}${periodicidad}3968${fechaNombre}.txt`;
     link.click();
     URL.revokeObjectURL(url);
   }

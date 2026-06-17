@@ -130,6 +130,75 @@
       </div>
     }
 
+    <!-- Resumen Financiero -->
+    @if (ejecucion()) {
+      <div class="resumen-financiero">
+        <div class="resumen-header">
+          <mat-icon>summarize</mat-icon>
+          <span class="resumen-titulo">Resumen Financiero — {{ mesNombre() }} {{ anioSeleccionado() }}</span>
+          @if (cargandoResumen()) {
+            <mat-spinner diameter="18" style="margin-left:12px"></mat-spinner>
+          }
+          @if (!cargandoResumen() && resumenGrupos().length > 0) {
+            <span style="flex:1"></span>
+            <button mat-stroked-button color="primary"
+                    (click)="exportarResumenCSV()"
+                    matTooltip="Exportar resumen a CSV">
+              <mat-icon>download</mat-icon>
+              CSV
+            </button>
+            <button mat-stroked-button color="accent"
+                    (click)="exportarResumenPDF()"
+                    matTooltip="Exportar resumen a PDF"
+                    style="margin-left:8px">
+              <mat-icon>picture_as_pdf</mat-icon>
+              PDF
+            </button>
+          }
+        </div>
+
+        @if (!cargandoResumen() && resumenGrupos().length === 0) {
+          <p style="padding:16px;color:#888;font-size:0.875rem">No hay datos de resumen para el período seleccionado.</p>
+        }
+
+        @if (!cargandoResumen() && resumenGrupos().length > 0) {
+          <div class="resumen-tabla-wrap">
+            <table class="resumen-tabla">
+              <thead>
+                <tr>
+                  <th class="col-concepto">Concepto</th>
+                  <th class="col-valor">Valor</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (grupo of resumenGrupos(); track grupo.categoria) {
+                  <tr class="fila-grupo">
+                    <td colspan="2" class="grupo-cat">{{ grupo.categoria || '—' }}</td>
+                  </tr>
+                  @for (fila of grupo.filas; track fila.concepto) {
+                    <tr class="fila-detalle">
+                      <td class="col-concepto">{{ fila.concepto }}</td>
+                      <td class="col-valor">
+                        @if (fila.valor !== 0) {
+                          {{ fila.valor | number:'1.2-2' }}
+                        } @else {
+                          <span class="val-cero">0.00</span>
+                        }
+                      </td>
+                    </tr>
+                  }
+                  <tr class="fila-subtotal">
+                    <td class="col-concepto subtotal-label">SUBTOTAL</td>
+                    <td class="col-valor subtotal-val">{{ grupo.total | number:'1.2-2' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    }
+
     <!-- Tabla de registros del reporte seleccionado -->
     @if (reporteSel() && ejecucion()) {
       <div class="registros-panel">

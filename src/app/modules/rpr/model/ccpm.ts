@@ -38,6 +38,10 @@ export interface Ccpm {
   interesOrdinario: number;
   /** CCPMISMR – Interés sobre mora */
   interesMora: number;
+  /** CCPMISMD – Interés sobre mora del mes anterior diferencia*/
+  interesMoraDelMes: number;
+  /** CCPMINRM – Interés ordinario del mes */
+  interesOrdinarioDelMes: number;
   /** CCPMVEDJ – Valor en demanda judicial */
   valorDemandaJudicial: number;
   /** CCPMCRCS – Cartera castigada */

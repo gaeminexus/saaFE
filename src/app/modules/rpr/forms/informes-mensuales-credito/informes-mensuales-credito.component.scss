@@ -228,3 +228,106 @@
   color: #888;
   font-size: 0.875rem;
 }
+
+// ── Resumen Financiero ────────────────────────────────────────────
+.resumen-financiero {
+  margin-top: 28px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.resumen-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #f5f5f5;
+  border-bottom: 1px solid #e0e0e0;
+
+  mat-icon { color: #1976d2; }
+
+  .resumen-titulo {
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+}
+
+.resumen-tabla-wrap {
+  overflow-x: auto;
+  max-height: 640px;
+  overflow-y: auto;
+}
+
+.resumen-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+
+  thead tr {
+    background: #1976d2;
+    color: #fff;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+
+    th {
+      padding: 8px 14px;
+      text-align: left;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+  }
+
+  .col-concepto { width: 60%; }
+  .col-valor    { width: 40%; text-align: right; padding-right: 20px; }
+
+  .fila-grupo td.grupo-cat {
+    background: #e3f2fd;
+    color: #0d47a1;
+    font-weight: 700;
+    font-size: 0.78rem;
+    letter-spacing: 0.4px;
+    padding: 6px 14px;
+    text-transform: uppercase;
+    border-top: 2px solid #90caf9;
+  }
+
+  .fila-detalle {
+    td {
+      padding: 5px 14px;
+      border-bottom: 1px solid #f0f0f0;
+      color: #333;
+    }
+
+    &:hover td { background: #fafafa; }
+
+    .col-valor { font-family: monospace; }
+
+    .val-cero { color: #bbb; }
+  }
+
+  .fila-subtotal {
+    td {
+      padding: 5px 14px;
+      background: #fffde7;
+      border-top: 1px solid #f9a825;
+      border-bottom: 2px solid #f9a825;
+    }
+
+    .subtotal-label {
+      font-weight: 600;
+      font-size: 0.75rem;
+      color: #e65100;
+      text-transform: uppercase;
+    }
+
+    .subtotal-val {
+      font-weight: 700;
+      font-family: monospace;
+      color: #e65100;
+      text-align: right;
+      padding-right: 20px;
+    }
+  }
+}

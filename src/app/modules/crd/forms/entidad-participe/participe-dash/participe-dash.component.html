@@ -273,6 +273,15 @@
               <div class="tipo-item">
                 <span class="tipo-nombre">{{ tipo.tipoAporte }}</span>
                 <span class="tipo-valor">${{ tipo.totalValor | number : '1.2-2' }}</span>
+                <button
+                  mat-icon-button
+                  class="mov-button"
+                  (click)="imprimirMovimientosAporte(tipo, $event)"
+                  matTooltip="Movimientos de Aportes"
+                  color="primary"
+                >
+                  <mat-icon>summarize</mat-icon>
+                </button>
               </div>
               }
             </div>
@@ -786,6 +795,15 @@
             color="warn"
           >
             <mat-icon>picture_as_pdf</mat-icon>
+          </button>
+          <button
+            mat-icon-button
+            class="mov-button"
+            (click)="imprimirMovimientosAporte(tipoAporte, $event)"
+            matTooltip="Movimientos de Aportes"
+            color="primary"
+          >
+            <mat-icon>summarize</mat-icon>
           </button>
           <button
             mat-icon-button
