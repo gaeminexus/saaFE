@@ -4,8 +4,10 @@ import { EntidadesContabilidad } from '../../../modules/cnt/model/entidades-cnt'
 import { NaturalezaCuenta } from '../../../modules/cnt/model/naturaleza-cuenta';
 import { NaturalezaCuentaService } from '../../../modules/cnt/service/naturaleza-cuenta.service';
 import { EntidadesCrd } from '../../../modules/crd/model/entidades-crd';
+import { EntidadesTesoreria } from '../../../modules/tsr/model/entidades-cnt';
 import { AccionesGrid } from '../constantes';
 import { ServiceLocatorCrdService } from './service-locator-crd.service';
+import { ServiceLocatorTsrService } from './service-locator-tsr.service';
 import { PlanCuentaService } from '../../../modules/cnt/service/plan-cuenta.service';
 import { PlanCuenta } from '../../../modules/cnt/model/plan-cuenta';
 
@@ -18,13 +20,19 @@ export class ServiceLocatorService {
   constructor(
     public naturalezaCuentaService: NaturalezaCuentaService,
     public planCuentaService: PlanCuentaService,
-    private serviceLocatorCrd: ServiceLocatorCrdService
+    private serviceLocatorCrd: ServiceLocatorCrdService,
+    private serviceLocatorTsr: ServiceLocatorTsrService
   ) {}
 
   ejecutaServicio(entidad: number, value: any, proceso: number): Promise<any> {
     // Delegar a ServiceLocatorCrdService si es una entidad de CRD
     if (this.isEntidadCrd(entidad)) {
       return this.serviceLocatorCrd.ejecutaServicio(entidad, value, proceso);
+    }
+
+    // Delegar a ServiceLocatorTsrService si es una entidad de Tesorería
+    if (this.isEntidadTsr(entidad)) {
+      return this.serviceLocatorTsr.ejecutaServicio(entidad, value, proceso);
     }
 
     // Manejar entidades de Contabilidad
@@ -88,6 +96,11 @@ export class ServiceLocatorService {
       return this.serviceLocatorCrd.recargarValores(entidad);
     }
 
+    // Delegar a ServiceLocatorTsrService si es una entidad de Tesorería
+    if (this.isEntidadTsr(entidad)) {
+      return this.serviceLocatorTsr.recargarValores(entidad);
+    }
+
     // Manejar entidades de Contabilidad
     switch (entidad) {
       case EntidadesContabilidad.NATURALEZA_CUENTA: {
@@ -105,6 +118,16 @@ export class ServiceLocatorService {
         return Promise.resolve(undefined);
       }
     }
+  }
+
+  /**
+   * Verifica si una entidad pertenece al módulo de Tesorería
+   */
+  private isEntidadTsr(entidad: number): boolean {
+    const entidadesTsr = [
+      EntidadesTesoreria.BANCO,
+    ];
+    return entidadesTsr.includes(entidad);
   }
 
   /**

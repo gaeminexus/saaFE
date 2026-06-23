@@ -8,12 +8,13 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { Router } from '@angular/router';
-import { forkJoin, of, switchMap } from 'rxjs';
+import { firstValueFrom, forkJoin, of, switchMap } from 'rxjs';
 
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 
 import { Entidad } from '../../../model/entidad';
 import { EstadoParticipe } from '../../../model/estado-participe';
+import { Exter } from '../../../model/exter';
 import { Filial } from '../../../model/filial';
 import { TipoAporte } from '../../../model/tipo-aporte';
 import { TipoIdentificacion } from '../../../model/tipo-identificacion';
@@ -34,10 +35,19 @@ import { AporteService } from '../../../service/aporte.service';
 import { AuditoriaService } from '../../../service/auditoria.service';
 import { EntidadService } from '../../../service/entidad.service';
 import { EstadoParticipeService } from '../../../service/estado-participe.service';
+import { ExterService } from '../../../service/exter.service';
 import { FilialService } from '../../../service/filial.service';
 import { PrestamoService } from '../../../service/prestamo.service';
 import { TipoAporteService } from '../../../service/tipo-aporte.service';
 import { TipoIdentificacionService } from '../../../service/tipo-identificacion.service';
+
+// Interfaz extendida para incluir datos de EXTR
+interface EntidadConExtr extends Entidad {
+  correoPrincipalExtr?: string;
+  correoInstitucionalExtr?: string;
+  correoExtraExtr?: string;
+  correoIEExtr?: string;
+}
 
 @Component({
   selector: 'app-entidad-consulta',
@@ -75,11 +85,12 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
   private funcionesDatos = inject(FuncionesDatosService);
   private aporteService = inject(AporteService);
   private auditoriaService = inject(AuditoriaService);
+  private exterService = inject(ExterService);
   private prestamoService = inject(PrestamoService);
   private tipoAporteService = inject(TipoAporteService);
 
   // Signals
-  entidades = signal<Entidad[]>([]);
+  entidades = signal<EntidadConExtr[]>([]);
   filialesOptions = signal<Filial[]>([]);
   tiposIdentificacionOptions = signal<TipoIdentificacion[]>([]);
   estadosParticipesOptions = signal<EstadoParticipe[]>([]);
@@ -92,7 +103,7 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
   filtrosAvanzadosExpandidos = false;
 
   // Table
-  dataSource!: MatTableDataSource<Entidad>;
+  dataSource!: MatTableDataSource<EntidadConExtr>;
   displayedColumns: string[] = [
     'codigo',
     'tipoIdentificacion',
@@ -102,6 +113,10 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
     'rolPetroComercial',
     'correo',
     'telefono',
+    'correoPrincipalExtr',
+    'correoInstitucionalExtr',
+    'correoExtraExtr',
+    'correoIEExtr',
     'estado',
     'acciones',
   ];
@@ -126,7 +141,7 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
   ngOnInit(): void {
     this.inicializarFiltros();
     this.cargarOpcionesSelects();
-    this.dataSource = new MatTableDataSource<Entidad>([]);
+    this.dataSource = new MatTableDataSource<EntidadConExtr>([]);
   }
 
   ngAfterViewInit(): void {
@@ -485,17 +500,24 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
     ejecutarBusqueda$.subscribe({
       next: (result) => {
         this.busquedaRealizada.set(true); // Marcar que se realizó una búsqueda
-        this.entidades.set(result || []);
-        this.dataSource.data = result || [];
-
-        // Resetear el paginador a la primera página
-        if (this.paginator) {
-          this.paginator.firstPage();
-        }
 
         if (!result || result.length === 0) {
+          this.entidades.set([]);
+          this.dataSource.data = [];
           this.snackBar.open('No se encontraron resultados', 'Cerrar', { duration: 3000 });
+          return;
         }
+
+        // Cargar datos de EXTR para cada entidad
+        this.cargarDatosExtr(result).then(entidadesConExtr => {
+          this.entidades.set(entidadesConExtr);
+          this.dataSource.data = entidadesConExtr;
+
+          // Resetear el paginador a la primera página
+          if (this.paginator) {
+            this.paginator.firstPage();
+          }
+        });
       },
       error: (error) => {
         this.entidades.set([]);
@@ -530,6 +552,88 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
     if (this.paginator) {
       this.paginator.firstPage();
     }
+  }
+
+  /**
+   * Carga los datos de correo de la tabla EXTR para cada entidad.
+   * Busca por número de identificación (cédula) y agrega los campos:
+   * - correoPrincipalExtr
+   * - correoInstitucionalExtr
+   * - correoExtraExtr
+   * - correoIEExtr
+   *
+   * @param entidades Lista de entidades base
+   * @returns Promise con entidades enriquecidas con datos de EXTR
+   */
+  private async cargarDatosExtr(entidades: Entidad[]): Promise<EntidadConExtr[]> {
+    if (!entidades || entidades.length === 0) {
+      return [];
+    }
+
+    // Crear un mapa para búsqueda rápida: numeroIdentificacion -> Exter
+    const exterMap = new Map<string, Exter>();
+
+    // Obtener números de identificación únicos
+    const cedulasUnicas = [...new Set(
+      entidades
+        .map(e => e.numeroIdentificacion)
+        .filter(cedula => !!cedula && cedula.trim() !== '')
+    )];
+
+    // Buscar datos de EXTR para cada cédula única
+    for (const cedula of cedulasUnicas) {
+      try {
+        const criterio: DatosBusqueda[] = [];
+        const db = new DatosBusqueda();
+        db.asignaUnCampoSinTrunc(
+          TipoDatos.STRING,
+          'cedula',
+          cedula,
+          TipoComandosBusqueda.IGUAL
+        );
+        criterio.push(db);
+
+        const resultado = await firstValueFrom(
+          this.exterService.selectByCriteria(criterio)
+        );
+
+        if (resultado && resultado.length > 0) {
+          exterMap.set(cedula, resultado[0]);
+        }
+      } catch (error) {
+        // Error silencioso: si no existe en EXTR, simplemente no se agregan los datos
+        console.warn(`No se encontraron datos EXTR para cédula: ${cedula}`);
+      }
+    }
+
+    // Enriquecer entidades con datos de EXTR
+    return entidades.map(entidad => {
+      const entidadConExtr: EntidadConExtr = { ...entidad };
+
+      if (entidad.numeroIdentificacion) {
+        const exterData = exterMap.get(entidad.numeroIdentificacion);
+        if (exterData) {
+          entidadConExtr.correoPrincipalExtr = exterData.correoPrincipal || '-';
+          entidadConExtr.correoInstitucionalExtr = exterData.correoInstitucional || '-';
+          entidadConExtr.correoExtraExtr = exterData.correoExtra || '-';
+          entidadConExtr.correoIEExtr = exterData.correoIE || '-';
+        } else {
+          // No existe en EXTR
+          entidadConExtr.correoPrincipalExtr = '-';
+          entidadConExtr.correoInstitucionalExtr = '-';
+          entidadConExtr.correoExtraExtr = '-';
+          entidadConExtr.correoIEExtr = '-';
+        }
+      } else {
+        // Sin número de identificación
+        entidadConExtr.correoPrincipalExtr = '-';
+        entidadConExtr.correoInstitucionalExtr = '-';
+        entidadConExtr.correoExtraExtr = '-';
+        entidadConExtr.correoIEExtr = '-';
+      }
+
+      return entidadConExtr;
+    });
   }
 
   nuevaEntidad(): void {
@@ -576,7 +680,7 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
       return;
     }
 
-    const rows = data.map((e) => ({
+    const rows = data.map((e: any) => ({
       Código: e.codigo || '',
       'Tipo ID': e.tipoIdentificacion?.nombre || '',
       'Número ID': e.numeroIdentificacion || '',
@@ -584,13 +688,48 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
       Filial: e.filial?.nombre || '',
       'Correo Personal': e.correoPersonal || '',
       'Correo Institucional': e.correoInstitucional || '',
+      'Correo Principal (EXTR)': e.correoPrincipalExtr || '-',
+      'Correo Institucional (EXTR)': e.correoInstitucionalExtr || '-',
+      'Correo Extra (EXTR)': e.correoExtraExtr || '-',
+      'Correo IE (EXTR)': e.correoIEExtr || '-',
       Teléfono: e.telefono || '',
       Móvil: e.movil || '',
       Estado: e.idEstado === 1 ? 'Activo' : 'Inactivo',
     }));
 
-    const headers = ['Código', 'Tipo ID', 'Número ID', 'Razón Social', 'Filial', 'Correo Personal', 'Correo Institucional', 'Teléfono', 'Móvil', 'Estado'];
-    const dataKeys = ['Código', 'Tipo ID', 'Número ID', 'Razón Social', 'Filial', 'Correo Personal', 'Correo Institucional', 'Teléfono', 'Móvil', 'Estado'];
+    const headers = [
+      'Código',
+      'Tipo ID',
+      'Número ID',
+      'Razón Social',
+      'Filial',
+      'Correo Personal',
+      'Correo Institucional',
+      'Correo Principal (EXTR)',
+      'Correo Institucional (EXTR)',
+      'Correo Extra (EXTR)',
+      'Correo IE (EXTR)',
+      'Teléfono',
+      'Móvil',
+      'Estado'
+    ];
+
+    const dataKeys = [
+      'Código',
+      'Tipo ID',
+      'Número ID',
+      'Razón Social',
+      'Filial',
+      'Correo Personal',
+      'Correo Institucional',
+      'Correo Principal (EXTR)',
+      'Correo Institucional (EXTR)',
+      'Correo Extra (EXTR)',
+      'Correo IE (EXTR)',
+      'Teléfono',
+      'Móvil',
+      'Estado'
+    ];
 
     this.exportService.exportToCSV(rows, 'entidades', headers, dataKeys);
 

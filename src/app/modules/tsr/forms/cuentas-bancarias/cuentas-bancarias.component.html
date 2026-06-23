@@ -98,15 +98,6 @@
           <td mat-cell *matCellDef="let row">{{ mostrarEstado(row) }}</td>
         </ng-container>
 
-        <ng-container matColumnDef="acciones">
-          <th mat-header-cell *matHeaderCellDef>ACCIONES</th>
-          <td mat-cell *matCellDef="let row">
-            <button mat-icon-button color="primary" (click)="editar(row)" matTooltip="Editar">
-              <mat-icon>edit</mat-icon>
-            </button>
-          </td>
-        </ng-container>
-
         <tr mat-header-row *matHeaderRowDef="displayedColumnsCuentas"></tr>
         <tr mat-row *matRowDef="let row; columns: displayedColumnsCuentas"></tr>
       </table>
@@ -134,19 +125,19 @@
 
         <mat-form-field appearance="outline">
           <mat-label>Fecha de apertura</mat-label>
-          <input matInput type="date" [(ngModel)]="fechaApertura" [disabled]="estaEditando()" />
+          <input matInput type="date" [(ngModel)]="fechaApertura" [disabled]="!modoEdicion()" />
         </mat-form-field>
       </div>
 
       <div class="row">
         <mat-form-field appearance="outline">
           <mat-label>Cuenta</mat-label>
-          <input matInput [(ngModel)]="numeroCuenta" [disabled]="estaEditando()" />
+          <input matInput [(ngModel)]="numeroCuenta" [disabled]="!modoEdicion() || estaEditando()" />
         </mat-form-field>
 
         <mat-form-field appearance="outline">
           <mat-label>Titular</mat-label>
-          <input matInput [(ngModel)]="titular" [disabled]="estaEditando()" />
+          <input matInput [(ngModel)]="titular" [disabled]="!modoEdicion()" />
         </mat-form-field>
       </div>
 
@@ -156,7 +147,7 @@
           <mat-select
             [(ngModel)]="tipoCuentaSel"
             [compareWith]="compararRubros"
-            [disabled]="estaEditando()"
+            [disabled]="!modoEdicion()"
           >
             <mat-option [value]="null">-- Sin especificar --</mat-option>
             <mat-option *ngFor="let r of tiposCuenta()" [value]="r">{{ r.descripcion }}</mat-option>
@@ -165,7 +156,7 @@
 
         <mat-form-field appearance="outline">
           <mat-label>Oficial de cuenta</mat-label>
-          <input matInput [(ngModel)]="oficialCuenta" />
+          <input matInput [(ngModel)]="oficialCuenta" [disabled]="!modoEdicion()" />
         </mat-form-field>
       </div>
 
@@ -179,14 +170,14 @@
             placeholder="0.00"
             (blur)="formatearSaldo()"
             (focus)="$event.target.select()"
-            [disabled]="estaEditando()"
+            [disabled]="!modoEdicion()"
           />
           <span matTextSuffix>$</span>
         </mat-form-field>
 
         <mat-form-field appearance="outline">
           <mat-label>Cuenta Contable</mat-label>
-          <mat-select [(ngModel)]="cuentaContableSeleccionada" [compareWith]="compararCuentas">
+          <mat-select [(ngModel)]="cuentaContableSeleccionada" [compareWith]="compararCuentas" [disabled]="!modoEdicion()">
             <mat-option [value]="null">-- Sin especificar --</mat-option>
             <mat-option *ngFor="let c of cuentasContables()" [value]="c">
               {{ c.cuentaContable }} - {{ c.nombre }}
@@ -198,7 +189,7 @@
       <div class="row">
         <mat-form-field appearance="outline" class="span-2">
           <mat-label>Observaciones</mat-label>
-          <input matInput [(ngModel)]="observaciones" />
+          <input matInput [(ngModel)]="observaciones" [disabled]="!modoEdicion()" />
         </mat-form-field>
       </div>
 
@@ -208,7 +199,7 @@
           <mat-select
             [(ngModel)]="estadoSeleccionado"
             [compareWith]="compararRubros"
-            [disabled]="estaEditando()"
+            [disabled]="!modoEdicion()"
           >
             <mat-option [value]="null">-- Sin especificar --</mat-option>
             <mat-option *ngFor="let e of estadosCuenta()" [value]="e">
@@ -222,66 +213,82 @@
       <div class="row row-4">
         <mat-form-field appearance="outline">
           <mat-label>Teléfono 1</mat-label>
-          <input matInput [(ngModel)]="telefono1" [disabled]="estaEditando()" />
+          <input matInput [(ngModel)]="telefono1" [disabled]="!modoEdicion()" />
         </mat-form-field>
         <mat-form-field appearance="outline">
           <mat-label>Teléfono 2</mat-label>
-          <input matInput [(ngModel)]="telefono2" [disabled]="estaEditando()" />
+          <input matInput [(ngModel)]="telefono2" [disabled]="!modoEdicion()" />
         </mat-form-field>
         <mat-form-field appearance="outline">
           <mat-label>Celular</mat-label>
-          <input matInput [(ngModel)]="celular" [disabled]="estaEditando()" />
+          <input matInput [(ngModel)]="celular" [disabled]="!modoEdicion()" />
         </mat-form-field>
         <mat-form-field appearance="outline">
           <mat-label>Fax</mat-label>
-          <input matInput [(ngModel)]="fax" [disabled]="estaEditando()" />
+          <input matInput [(ngModel)]="fax" [disabled]="!modoEdicion()" />
         </mat-form-field>
       </div>
 
       <div class="row">
         <mat-form-field appearance="outline" class="span-2">
           <mat-label>Dirección</mat-label>
-          <input matInput [(ngModel)]="direccion" [disabled]="estaEditando()" />
+          <input matInput [(ngModel)]="direccion" [disabled]="!modoEdicion()" />
         </mat-form-field>
       </div>
 
       <div class="row">
         <mat-form-field appearance="outline" class="span-2">
           <mat-label>E-mail</mat-label>
-          <input matInput type="email" [(ngModel)]="email" [disabled]="estaEditando()" />
+          <input matInput type="email" [(ngModel)]="email" [disabled]="!modoEdicion()" />
         </mat-form-field>
       </div>
 
       <div class="form-actions">
-        <button
-          mat-raised-button
-          color="primary"
-          (click)="estaEditando() ? actualizar() : guardar()"
-          [disabled]="!formValido() || loading()"
-        >
-          <mat-icon>{{ estaEditando() ? 'edit' : 'save' }}</mat-icon>
-          {{ estaEditando() ? 'Actualizar' : 'Guardar' }}
-        </button>
-        <button
-          *ngIf="estaEditando()"
-          mat-raised-button
-          color="warn"
-          (click)="cancelarEdicion()"
-          [disabled]="loading()"
-        >
-          <mat-icon>cancel</mat-icon>
-          Cancelar
-        </button>
-        <button
-          *ngIf="!estaEditando()"
-          mat-stroked-button
-          color="accent"
-          (click)="limpiarFormulario()"
-          [disabled]="loading()"
-        >
-          <mat-icon>clear</mat-icon>
-          Limpiar
-        </button>
+        <!-- Modo Vista: acciones disponibles sobre la cuenta visualizada -->
+        <ng-container *ngIf="!modoEdicion()">
+          <button
+            mat-raised-button
+            color="primary"
+            (click)="activarEdicion()"
+            [disabled]="!codigoEdicion || loading()"
+            matTooltip="Editar la cuenta seleccionada"
+          >
+            <mat-icon>edit</mat-icon>
+            Editar
+          </button>
+          <button
+            mat-raised-button
+            color="accent"
+            (click)="nuevaCuenta()"
+            [disabled]="!hasBanco() || loading()"
+            matTooltip="Crear nueva cuenta para el banco seleccionado"
+          >
+            <mat-icon>add</mat-icon>
+            Nueva cuenta
+          </button>
+        </ng-container>
+
+        <!-- Modo Edición / Creación -->
+        <ng-container *ngIf="modoEdicion()">
+          <button
+            mat-raised-button
+            color="primary"
+            (click)="estaEditando() ? actualizar() : guardar()"
+            [disabled]="!formValido() || loading()"
+          >
+            <mat-icon>save</mat-icon>
+            {{ estaEditando() ? 'Actualizar' : 'Guardar' }}
+          </button>
+          <button
+            mat-raised-button
+            color="warn"
+            (click)="cancelarEdicion()"
+            [disabled]="loading()"
+          >
+            <mat-icon>cancel</mat-icon>
+            Cancelar
+          </button>
+        </ng-container>
       </div>
     </div>
 

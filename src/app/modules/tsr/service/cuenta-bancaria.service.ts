@@ -54,7 +54,7 @@ export class CuentaBancariaService {
    * Selecciona registros de CuentaBancaria según criterios personalizados.
    */
   selectByCriteria(datos: any): Observable<CuentaBancaria[] | null> {
-    const wsCriteria = '/criteria';
+    const wsCriteria = '/selectByCriteria/';
     const url = `${ServiciosTsr.RS_CNBC}${wsCriteria}`;
     return this.http
       .post<CuentaBancaria[]>(url, datos, this.httpOptions)

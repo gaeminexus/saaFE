@@ -54,7 +54,7 @@ export class BancoService {
    * Selecciona registros según criterios personalizados.
    */
   selectByCriteria(datos: any): Observable<Banco[] | null> {
-    const wsCriteria = '/criteria';
+    const wsCriteria = '/selectByCriteria/';
     const url = `${ServiciosTsr.RS_BNCO}${wsCriteria}`;
     return this.http.post<Banco[]>(url, datos, this.httpOptions).pipe(catchError(this.handleError));
   }

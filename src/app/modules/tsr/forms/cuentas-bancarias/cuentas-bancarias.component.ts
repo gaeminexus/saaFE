@@ -12,6 +12,8 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
+import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
+import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { DetalleRubro } from '../../../../shared/model/detalle-rubro';
 import { DetalleRubroService } from '../../../../shared/services/detalle-rubro.service';
 import { ExportService } from '../../../../shared/services/export.service';
@@ -66,6 +68,9 @@ export class CuentasBancariasComponent implements OnInit {
   cuentasPageSize = signal<number>(8);
   cuentasPageIndex = signal<number>(0);
 
+  // Estado del formulario: false = vista (solo lectura), true = edición/creación
+  modoEdicion = signal<boolean>(false);
+
   // Formulario (información general)
   numeroCuenta = '';
   tipoCuentaSel: DetalleRubro | null = null;
@@ -99,7 +104,6 @@ export class CuentasBancariasComponent implements OnInit {
     'fIngreso',
     'fDesactiva',
     'estado',
-    'acciones',
   ];
 
   hasBanco = computed(() => !!this.bancoSeleccionado());
@@ -114,17 +118,38 @@ export class CuentasBancariasComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.cargarBancos();
+    // Cargar catálogos primero (síncronos)
     this.cargarTiposCuenta();
     this.cargarEstadosCuenta();
+
+    // Cargar cuentas contables (necesarias para el selector), luego bancos
     this.cargarCuentasContables();
-    this.cargarCuentas();
+    this.cargarBancos();
+  }
+
+  private getEmpresaCodigo(): number | null {
+    const raw = localStorage.getItem('idEmpresa');
+    return raw ? parseInt(raw, 10) : null;
   }
 
   cargarBancos(): void {
     const criterios: DatosBusqueda[] = [];
+
+    const empresaCodigo = this.getEmpresaCodigo();
+    if (empresaCodigo) {
+      const dbEmpresa = new DatosBusqueda();
+      dbEmpresa.asignaValorConCampoPadre(
+        TipoDatosBusqueda.LONG,
+        'empresa',
+        'codigo',
+        empresaCodigo.toString(),
+        TipoComandosBusqueda.IGUAL
+      );
+      criterios.push(dbEmpresa);
+    }
+
     const dbOrder = new DatosBusqueda();
-    dbOrder.orderBy('codigo');
+    dbOrder.orderBy('nombre');
     criterios.push(dbOrder);
 
     this.bancoService.selectByCriteria(criterios).subscribe({
@@ -134,18 +159,29 @@ export class CuentasBancariasComponent implements OnInit {
         this.bancosTotal.set(arr.length);
         this.bancosPageIndex.set(0);
         this.updateBancoPage();
+        if (arr.length > 0) {
+          this.bancoSeleccionado.set(arr[0]);
+          this.cargarCuentasPorBanco(arr[0].codigo);
+        }
       },
       error: () => {
-        // Fallback a getAll si selectByCriteria falla
+        // Fallback a getAll filtrando por empresa en frontend
         this.bancoService.getAll().subscribe({
           next: (arr) => {
-            const list = Array.isArray(arr) ? arr : [];
-            // Ordenar por código en frontend como fallback
-            list.sort((a, b) => (a.codigo ?? 0) - (b.codigo ?? 0));
+            let list = Array.isArray(arr) ? arr : [];
+            const emp = this.getEmpresaCodigo();
+            if (emp) {
+              list = list.filter((b: any) => b.empresa?.codigo === emp || b.empresa === emp);
+            }
+            list.sort((a, b) => (a.nombre ?? '').localeCompare(b.nombre ?? ''));
             this.bancos.set(list);
             this.bancosTotal.set(list.length);
             this.bancosPageIndex.set(0);
             this.updateBancoPage();
+            if (list.length > 0) {
+              this.bancoSeleccionado.set(list[0]);
+              this.cargarCuentasPorBanco(list[0].codigo);
+            }
           },
           error: () => this.errorMsg.set('Error al cargar bancos'),
         });
@@ -153,12 +189,32 @@ export class CuentasBancariasComponent implements OnInit {
     });
   }
 
-  cargarCuentas(): void {
-    this.cuentaService.getAll().subscribe({
+  cargarCuentasPorBanco(bancoCodigo: number | undefined): void {
+    if (!bancoCodigo) return;
+    const criterios: DatosBusqueda[] = [];
+    const db = new DatosBusqueda();
+    db.asignaValorConCampoPadre(
+      TipoDatosBusqueda.LONG,
+      'banco',
+      'codigo',
+      bancoCodigo.toString(),
+      TipoComandosBusqueda.IGUAL
+    );
+    criterios.push(db);
+    this.cuentaService.selectByCriteria(criterios).subscribe({
       next: (data) => {
         const items = Array.isArray(data) ? data : [];
         this.cuentas.set(items);
-        this.applyCuentaFilter();
+        this.cuentasFiltradas.set(items);
+        this.cuentasTotal.set(items.length);
+        this.cuentasPageIndex.set(0);
+        this.updateCuentaPage();
+        // Auto-mostrar la primera cuenta en el formulario (modo vista)
+        if (items.length > 0) {
+          this.mostrarCuenta(items[0]);
+        } else {
+          this.limpiarFormulario();
+        }
       },
       error: () => this.errorMsg.set('Error al cargar cuentas bancarias'),
     });
@@ -183,27 +239,72 @@ export class CuentasBancariasComponent implements OnInit {
   }
 
   cargarCuentasContables(): void {
-    this.planCuentaService.getAll().subscribe({
-      next: (data) => {
-        const cuentas = Array.isArray(data) ? data : [];
-        // Filtrar solo cuentas activas
-        const activas = cuentas.filter((c) => c.estado === 1);
-        // Ordenar por cuentaContable (número de cuenta)
-        activas.sort((a, b) => {
-          const cuentaA = a.cuentaContable || '';
-          const cuentaB = b.cuentaContable || '';
-          return cuentaA.localeCompare(cuentaB, undefined, { numeric: true });
+    const empresaCodigo = this.getEmpresaCodigo();
+    const criterios: DatosBusqueda[] = [];
+
+    if (empresaCodigo) {
+      const dbEmpresa = new DatosBusqueda();
+      dbEmpresa.asignaValorConCampoPadre(
+        TipoDatosBusqueda.LONG,
+        'empresa',
+        'codigo',
+        empresaCodigo.toString(),
+        TipoComandosBusqueda.IGUAL
+      );
+      criterios.push(dbEmpresa);
+    }
+
+    const dbCuenta = new DatosBusqueda();
+    dbCuenta.asignaUnCampoSinTrunc(
+      TipoDatosBusqueda.STRING,
+      'cuentaContable',
+      '1.1.02%',
+      TipoComandosBusqueda.LIKE
+    );
+    criterios.push(dbCuenta);
+
+    const procesarResultado = (data: PlanCuenta[] | null) => {
+      let lista = Array.isArray(data) ? data : [];
+      lista = lista.filter((c) => c.estado === 1);
+      lista.sort((a, b) =>
+        (a.cuentaContable || '').localeCompare(b.cuentaContable || '', undefined, { numeric: true })
+      );
+      this.cuentasContables.set(lista);
+    };
+
+    this.planCuentaService.selectByCriteria(criterios).subscribe({
+      next: procesarResultado,
+      error: () => {
+        // Fallback: getAll con filtro client-side
+        this.planCuentaService.getAll().subscribe({
+          next: (data) => {
+            let lista = Array.isArray(data) ? data : [];
+            if (empresaCodigo) {
+              lista = lista.filter((c) => (c as any).empresa?.codigo === empresaCodigo);
+            }
+            lista = lista.filter(
+              (c) => c.estado === 1 && (c.cuentaContable ?? '').startsWith('1.1.02')
+            );
+            lista.sort((a, b) =>
+              (a.cuentaContable || '').localeCompare(b.cuentaContable || '', undefined, { numeric: true })
+            );
+            this.cuentasContables.set(lista);
+          },
+          error: () => this.errorMsg.set('Error al cargar cuentas contables'),
         });
-        this.cuentasContables.set(activas);
       },
-      error: () => this.errorMsg.set('Error al cargar cuentas contables'),
     });
   }
 
   // Función para comparar cuentas contables en el mat-select
   compararCuentas(c1: PlanCuenta | null, c2: PlanCuenta | null): boolean {
     if (!c1 || !c2) return c1 === c2;
-    return c1.codigo === c2.codigo;
+    // Normalizar comparación (manejar string vs number)
+    return String(c1.codigo) === String(c2.codigo);
+  }
+
+  private obtenerCuentaContableRegistro(row: any): PlanCuenta | null {
+    return (row?.planCuenta ?? row?.cuentaApertura ?? null) as PlanCuenta | null;
   }
 
   // Función para comparar rubros en los mat-select (tipos y estados)
@@ -294,7 +395,7 @@ export class CuentasBancariasComponent implements OnInit {
     this.cuentaService.add(payload).subscribe({
       next: () => {
         this.limpiarFormulario();
-        this.cargarCuentas();
+        this.cargarCuentasPorBanco(this.bancoSeleccionado()?.codigo);
         this.loading.set(false);
       },
       error: (err) => {
@@ -326,27 +427,37 @@ export class CuentasBancariasComponent implements OnInit {
     this.estadoSeleccionado = estadoPorDefecto ?? null;
 
     this.codigoEdicion = null;
+    this.modoEdicion.set(false);
     this.errorMsg.set('');
   }
 
-  editar(row: CuentaBancaria): void {
+  /** Puebla el formulario con los datos de una cuenta y activa modo vista (solo lectura) */
+  mostrarCuenta(row: CuentaBancaria): void {
     this.codigoEdicion = row.codigo ?? null;
+    this.modoEdicion.set(false);
 
-    // Solo cargar los campos editables
-    this.oficialCuenta = (row as any).oficialCuenta ?? '';
-
-    // Cargar cuenta contable
-    const planCuenta = (row as any).planCuenta;
-    if (planCuenta) {
-      const found = this.cuentasContables().find((c) => c.codigo === planCuenta.codigo);
-      this.cuentaContableSeleccionada = found ?? null;
-    } else {
-      this.cuentaContableSeleccionada = null;
-    }
-
-    // Cargar datos para mostrar (campos deshabilitados)
     this.numeroCuenta = row.numeroCuenta ?? '';
     this.titular = (row as any).titular ?? '';
+    this.oficialCuenta = (row as any).oficialCuenta ?? '';
+    this.observaciones = (row as any).observacion ?? '';
+    this.telefono1 = (row as any).telefono1 ?? '';
+    this.telefono2 = (row as any).telefono2 ?? '';
+    this.celular = (row as any).celular ?? '';
+    this.fax = (row as any).fax ?? '';
+    this.direccion = (row as any).direccion ?? '';
+    this.email = (row as any).email ?? '';
+
+    // Fecha de apertura - puede venir como string ISO o como array [year, month, day, hour, minute]
+    const fechaRaw = (row as any).fechaCreacion;
+    if (Array.isArray(fechaRaw)) {
+      const [year, month, day] = fechaRaw;
+      this.fechaApertura = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    } else if (fechaRaw) {
+      this.fechaApertura = fechaRaw.substring(0, 10);
+    } else {
+      this.fechaApertura = '';
+    }
+
     this.saldoInicial = row.saldoInicial
       ? row.saldoInicial.toLocaleString('en-US', {
           minimumFractionDigits: 2,
@@ -356,15 +467,61 @@ export class CuentasBancariasComponent implements OnInit {
 
     const p = (row as any).rubroTipoCuentaP;
     const h = (row as any).rubroTipoCuentaH;
-    const foundTipo = this.tiposCuenta().find(
-      (r) => r.rubro?.codigoAlterno === p && r.codigoAlterno === h,
-    );
-    this.tipoCuentaSel = foundTipo ?? null;
+    this.tipoCuentaSel =
+      this.tiposCuenta().find((r) => r.rubro?.codigoAlterno === p && r.codigoAlterno === h) ?? null;
 
     const codigoEstado = (row as any).estado;
-    const foundEstado = this.estadosCuenta().find((e) => e.codigoAlterno === codigoEstado);
-    this.estadoSeleccionado = foundEstado ?? null;
+    this.estadoSeleccionado =
+      this.estadosCuenta().find((e) => e.codigoAlterno === codigoEstado) ?? null;
 
+    // Buscar la cuenta contable en la lista cargada (por codigo)
+    const planCuentaRaw = this.obtenerCuentaContableRegistro(row);
+    if (planCuentaRaw) {
+      // Buscar el objeto equivalente en cuentasContables() para que el mat-select lo reconozca
+      const encontrada = this.cuentasContables().find(
+        (c) => String(c.codigo) === String(planCuentaRaw.codigo)
+      );
+      this.cuentaContableSeleccionada = encontrada ?? planCuentaRaw;
+    } else {
+      this.cuentaContableSeleccionada = null;
+    }
+
+    this.errorMsg.set('');
+  }
+
+  /** Clic en lápiz: muestra datos y activa modo edición */
+  editar(row: CuentaBancaria): void {
+    this.mostrarCuenta(row);
+    this.modoEdicion.set(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  /** Activa modo edición para la cuenta actualmente visualizada */
+  activarEdicion(): void {
+    this.modoEdicion.set(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  /** Limpia el formulario y activa modo creación */
+  nuevaCuenta(): void {
+    this.codigoEdicion = null;
+    this.modoEdicion.set(true);
+    this.numeroCuenta = '';
+    this.tipoCuentaSel = null;
+    this.saldoInicial = '';
+    this.cuentaContableSeleccionada = null;
+    this.fechaApertura = '';
+    this.titular = '';
+    this.oficialCuenta = '';
+    this.observaciones = '';
+    this.telefono1 = '';
+    this.telefono2 = '';
+    this.celular = '';
+    this.fax = '';
+    this.direccion = '';
+    this.email = '';
+    const estadoPorDefecto = this.estadosCuenta().find((e) => e.codigoAlterno === 3);
+    this.estadoSeleccionado = estadoPorDefecto ?? null;
     this.errorMsg.set('');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -372,42 +529,56 @@ export class CuentasBancariasComponent implements OnInit {
   actualizar(): void {
     if (!this.codigoEdicion) return;
 
-    // Buscar registro original para preservar datos
+    // Preservar fechaIngreso del original
     const registroOriginal = this.cuentas().find((c) => c.codigo === this.codigoEdicion);
-    if (!registroOriginal) {
-      this.errorMsg.set('No se encontró el registro a actualizar');
-      return;
-    }
 
     const payload: any = {
       codigo: this.codigoEdicion,
-      // Campos editables
+      banco: { codigo: this.bancoSeleccionado()?.codigo },
+      numeroCuenta: this.numeroCuenta.trim(),
+      saldoInicial: this.parsearSaldo(),
+      titular: this.titular.trim(),
       oficialCuenta: this.oficialCuenta.trim(),
-
-      // Preservar campos no editables del registro original
-      banco: (registroOriginal as any).banco,
-      numeroCuenta: (registroOriginal as any).numeroCuenta,
-      saldoInicial: (registroOriginal as any).saldoInicial,
-      titular: (registroOriginal as any).titular,
-      rubroTipoCuentaP: (registroOriginal as any).rubroTipoCuentaP,
-      rubroTipoCuentaH: (registroOriginal as any).rubroTipoCuentaH,
-      estado: (registroOriginal as any).estado,
-      fechaCreacion: (registroOriginal as any).fechaCreacion,
-      fechaIngreso: (registroOriginal as any).fechaIngreso,
-      observacion: (registroOriginal as any).observacion,
-      telefono1: (registroOriginal as any).telefono1,
-      telefono2: (registroOriginal as any).telefono2,
-      celular: (registroOriginal as any).celular,
-      fax: (registroOriginal as any).fax,
-      direccion: (registroOriginal as any).direccion,
-      email: (registroOriginal as any).email,
+      observacion: this.observaciones.trim(),
+      telefono1: this.telefono1.trim(),
+      telefono2: this.telefono2.trim(),
+      celular: this.celular.trim(),
+      fax: this.fax.trim(),
+      direccion: this.direccion.trim(),
+      email: this.email.trim(),
     };
 
-    // Cuenta contable (editable)
+    // Tipo de cuenta
+    if (this.tipoCuentaSel) {
+      payload.rubroTipoCuentaP = this.tipoCuentaSel.rubro?.codigoAlterno ?? 23;
+      payload.rubroTipoCuentaH = this.tipoCuentaSel.codigoAlterno;
+    } else if (registroOriginal) {
+      payload.rubroTipoCuentaP = (registroOriginal as any).rubroTipoCuentaP;
+      payload.rubroTipoCuentaH = (registroOriginal as any).rubroTipoCuentaH;
+    }
+
+    // Estado
+    if (this.estadoSeleccionado) {
+      payload.estado = this.estadoSeleccionado.codigoAlterno;
+    } else if (registroOriginal) {
+      payload.estado = (registroOriginal as any).estado;
+    }
+
+    // Cuenta contable
     if (this.cuentaContableSeleccionada) {
       payload.planCuenta = { codigo: this.cuentaContableSeleccionada.codigo };
-    } else if ((registroOriginal as any).planCuenta) {
-      payload.planCuenta = (registroOriginal as any).planCuenta;
+    }
+
+    // Fecha de apertura
+    if (this.fechaApertura) {
+      payload.fechaCreacion = `${this.fechaApertura}T00:00:00`;
+    } else if (registroOriginal) {
+      payload.fechaCreacion = (registroOriginal as any).fechaCreacion;
+    }
+
+    // Preservar fechaIngreso
+    if (registroOriginal) {
+      payload.fechaIngreso = (registroOriginal as any).fechaIngreso;
     }
 
     this.loading.set(true);
@@ -416,7 +587,7 @@ export class CuentasBancariasComponent implements OnInit {
     this.cuentaService.update(payload).subscribe({
       next: () => {
         this.limpiarFormulario();
-        this.cargarCuentas();
+        this.cargarCuentasPorBanco(this.bancoSeleccionado()?.codigo);
         this.loading.set(false);
       },
       error: (err) => {
@@ -428,11 +599,27 @@ export class CuentasBancariasComponent implements OnInit {
   }
 
   cancelarEdicion(): void {
-    this.limpiarFormulario();
+    this.modoEdicion.set(false);
+    // Si estaba editando, restaurar la vista de esa cuenta
+    if (this.codigoEdicion !== null) {
+      const cuenta = this.cuentas().find((c) => c.codigo === this.codigoEdicion);
+      if (cuenta) {
+        this.mostrarCuenta(cuenta);
+        return;
+      }
+    }
+    // Si estaba creando, mostrar la primera cuenta disponible
+    const first = this.cuentas()[0];
+    if (first) {
+      this.mostrarCuenta(first);
+    } else {
+      this.limpiarFormulario();
+    }
   }
 
+  /** true cuando hay una cuenta seleccionada Y el formulario está en modo edición */
   estaEditando(): boolean {
-    return this.codigoEdicion !== null;
+    return this.codigoEdicion !== null && this.modoEdicion();
   }
 
   formValido(): boolean {
@@ -441,7 +628,7 @@ export class CuentasBancariasComponent implements OnInit {
 
   seleccionarBanco(b: Banco): void {
     this.bancoSeleccionado.set(b);
-    this.applyCuentaFilter();
+    this.cargarCuentasPorBanco(b.codigo);
   }
 
   // Bancos
@@ -516,10 +703,10 @@ export class CuentasBancariasComponent implements OnInit {
   }
 
   mostrarCuentaContable(row: CuentaBancaria): string {
-    const planCuenta = (row as any).planCuenta;
+    const planCuenta = this.obtenerCuentaContableRegistro(row);
     if (!planCuenta) return '—';
     // Intentar mostrar cuentaContable o cuenta
-    return planCuenta.cuentaContable || planCuenta.cuenta || '—';
+    return planCuenta.cuentaContable || (planCuenta as any).cuenta || '—';
   }
 
   mostrarFechaIngreso(row: CuentaBancaria): string {

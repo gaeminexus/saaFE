@@ -94,9 +94,21 @@ export class PlantillaGeneralComponent implements OnInit {
     this.route.data.subscribe((data) => {
       this.tipoSistema = data['sistema'] ?? 0;
       this.tituloPlantilla = this.tipoSistema === 1 ? 'Plantilla de Sistema' : 'Plantilla General';
+      this.actualizarColumnasDetalle();
     });
 
     this.loadPlantillas();
+  }
+
+  private actualizarColumnasDetalle(): void {
+    this.displayedColumnsDetalles = [
+      'codigoCuenta',
+      'descripcion',
+      ...(this.tipoSistema === 1 ? ['auxiliar1'] : []),
+      'movimiento',
+      'estado',
+      'acciones',
+    ];
   }
 
   ngAfterViewInit(): void {
@@ -849,7 +861,7 @@ export class PlantillaGeneralComponent implements OnInit {
           ? this.funcionesDatosService.formatearFechaParaBackend(new Date())
           : null,
       // Campos auxiliares requeridos por el backend
-      auxiliar1: 0,
+      auxiliar1: Number(resultadoDialog.auxiliar1) || 0,
       auxiliar2: 0,
       auxiliar3: 0,
       auxiliar4: 0,
@@ -868,7 +880,7 @@ export class PlantillaGeneralComponent implements OnInit {
       movimiento: resultadoDialog.movimiento,
       fechaDesde: resultadoDialog.fechaDesde,
       fechaHasta: resultadoDialog.fechaHasta,
-      auxiliar1: 0,
+      auxiliar1: Number(resultadoDialog.auxiliar1) || 0,
       auxiliar2: 0,
       auxiliar3: 0,
       auxiliar4: 0,
@@ -985,13 +997,7 @@ export class PlantillaGeneralComponent implements OnInit {
       this.displayedColumnsDetalles && this.displayedColumnsDetalles.length > 0;
 
     if (!deberiaEstarVisible) {
-      this.displayedColumnsDetalles = [
-        'codigoCuenta',
-        'descripcion',
-        'movimiento',
-        'estado',
-        'acciones',
-      ];
+      this.actualizarColumnasDetalle();
       this.showMessage('Condiciones de tabla corregidas', 'info');
     }
   }
@@ -1004,13 +1010,7 @@ export class PlantillaGeneralComponent implements OnInit {
     this.displayedColumnsDetalles = [];
 
     setTimeout(() => {
-      this.displayedColumnsDetalles = [
-        'codigoCuenta',
-        'descripcion',
-        'movimiento',
-        'estado',
-        'acciones',
-      ];
+      this.actualizarColumnasDetalle();
 
       // Forzar CSS para hacer visibles las columnas
       setTimeout(() => {
@@ -1156,7 +1156,11 @@ export class PlantillaGeneralComponent implements OnInit {
   private abrirDialogoConPlanes(planCuentas: any[], detalleExistente?: DetallePlantilla): void {
     const dialogRef = this.dialog.open(DetallePlantillaDialogComponent, {
       width: '720px',
-      data: { planCuentas, detalle: detalleExistente },
+      data: {
+        planCuentas,
+        detalle: detalleExistente,
+        mostrarAuxiliar1: this.tipoSistema === 1,
+      },
     });
 
     dialogRef.afterClosed().subscribe((result: any) => {
@@ -1207,7 +1211,7 @@ export class PlantillaGeneralComponent implements OnInit {
             )
           : null,
       // Campos auxiliares preservados del detalle original o valores por defecto
-      auxiliar1: detalle.auxiliar1 || 0,
+      auxiliar1: Number(result.auxiliar1 ?? detalle.auxiliar1) || 0,
       auxiliar2: detalle.auxiliar2 || 0,
       auxiliar3: detalle.auxiliar3 || 0,
       auxiliar4: detalle.auxiliar4 || 0,
@@ -1363,20 +1367,18 @@ export class PlantillaGeneralComponent implements OnInit {
       setTimeout(() => {
         this.displayedColumnsDetalles = ['codigoCuenta', 'descripcion'];
 
+        const columnasIntermedias = this.tipoSistema === 1
+          ? ['codigoCuenta', 'descripcion', 'auxiliar1']
+          : ['codigoCuenta', 'descripcion'];
+
         setTimeout(() => {
-          this.displayedColumnsDetalles = ['codigoCuenta', 'descripcion', 'movimiento'];
+          this.displayedColumnsDetalles = [...columnasIntermedias, 'movimiento'];
 
           setTimeout(() => {
-            this.displayedColumnsDetalles = ['codigoCuenta', 'descripcion', 'movimiento', 'estado'];
+            this.displayedColumnsDetalles = [...columnasIntermedias, 'movimiento', 'estado'];
 
             setTimeout(() => {
-              this.displayedColumnsDetalles = [
-                'codigoCuenta',
-                'descripcion',
-                'movimiento',
-                'estado',
-                'acciones',
-              ];
+              this.actualizarColumnasDetalle();
 
               setTimeout(() => {
                 // Restaurar datos al final

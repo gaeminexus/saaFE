@@ -81,7 +81,7 @@ export class ExterService {
   }
 
   selectByCriteria(datos: any): Observable<Exter[] | null> {
-    const endpoint = '/criteria';
+    /*const endpoint = '/selectByCriteria/';
     const base = ServiciosCrd.RS_EXTR;
     const url = `${base}${endpoint}`;
     return this.http.post<any>(url, datos, this.httpOptions).pipe(
@@ -96,6 +96,11 @@ export class ExterService {
         }
         return throwError(() => err);
       })
+    );*/
+    const wsGetById = '/selectByCriteria/';
+    const url = `${ServiciosCrd.RS_EXTR}${wsGetById}`;
+    return this.http.post<any>(url, datos, this.httpOptions).pipe(
+      catchError(this.handleError)
     );
   }
 

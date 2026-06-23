@@ -266,6 +266,38 @@
             </td>
           </ng-container>
 
+          <!-- Columna Correo Principal EXTR -->
+          <ng-container matColumnDef="correoPrincipalExtr">
+            <th mat-header-cell *matHeaderCellDef>Correo Principal (EXTR)</th>
+            <td mat-cell *matCellDef="let entidad" class="correo-cell">
+              {{ entidad.correoPrincipalExtr || '-' }}
+            </td>
+          </ng-container>
+
+          <!-- Columna Correo Institucional EXTR -->
+          <ng-container matColumnDef="correoInstitucionalExtr">
+            <th mat-header-cell *matHeaderCellDef>Correo Institucional (EXTR)</th>
+            <td mat-cell *matCellDef="let entidad" class="correo-cell">
+              {{ entidad.correoInstitucionalExtr || '-' }}
+            </td>
+          </ng-container>
+
+          <!-- Columna Correo Extra EXTR -->
+          <ng-container matColumnDef="correoExtraExtr">
+            <th mat-header-cell *matHeaderCellDef>Correo Extra (EXTR)</th>
+            <td mat-cell *matCellDef="let entidad" class="correo-cell">
+              {{ entidad.correoExtraExtr || '-' }}
+            </td>
+          </ng-container>
+
+          <!-- Columna Correo IE EXTR -->
+          <ng-container matColumnDef="correoIEExtr">
+            <th mat-header-cell *matHeaderCellDef>Correo IE (EXTR)</th>
+            <td mat-cell *matCellDef="let entidad" class="correo-cell">
+              {{ entidad.correoIEExtr || '-' }}
+            </td>
+          </ng-container>
+
           <!-- Columna Estado -->
           <ng-container matColumnDef="estado">
             <th mat-header-cell *matHeaderCellDef mat-sort-header>Estado</th>

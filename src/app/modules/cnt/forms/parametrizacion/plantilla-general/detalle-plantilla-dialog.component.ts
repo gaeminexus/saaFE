@@ -17,6 +17,7 @@ import { PlanCuentaSelectorDialogComponent } from '../../../../../shared/compone
 export interface DetalleDialogData {
   detalle?: DetallePlantilla;
   planCuentas: PlanCuenta[];
+  mostrarAuxiliar1?: boolean;
 }
 
 @Component({
@@ -102,6 +103,15 @@ export interface DetalleDialogData {
             <mat-option [value]="2"><mat-icon class="opt-icon off">cancel</mat-icon> Inactivo</mat-option>
           </mat-select>
           <mat-error *ngIf="form.get('estado')?.hasError('required')">Seleccione estado</mat-error>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="col" *ngIf="data.mostrarAuxiliar1">
+          <mat-label>Auxiliar 1</mat-label>
+          <input
+            matInput
+            type="number"
+            formControlName="auxiliar1"
+            placeholder="Ingrese el auxiliar 1"
+          >
         </mat-form-field>
       </div>
     </section>
@@ -203,7 +213,8 @@ export class DetallePlantillaDialogComponent {
       movimiento: [data.detalle?.movimiento || TipoMovimiento.DEBE, Validators.required],
       fechaDesde: [data.detalle?.fechaDesde || null],
       fechaHasta: [data.detalle?.fechaHasta || null],
-      estado: [data.detalle?.estado || 1, Validators.required]
+      estado: [data.detalle?.estado || 1, Validators.required],
+      auxiliar1: [data.detalle?.auxiliar1 ?? 0]
     });
   }
 

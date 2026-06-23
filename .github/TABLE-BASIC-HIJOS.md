@@ -153,6 +153,50 @@ private isEntidadCrd(entidad: number): boolean {
 
 ---
 
+## Campos que leen de Rubros (nomenclatura especial)
+
+### Columna de visualización: `R_<codigoAlterno>_<campo>`
+
+La tabla detecta automáticamente columnas con este patrón y llama a `getDescripcionByParentAndAlterno()`.
+
+```typescript
+fields: [
+  // Muestra la descripción del rubro con codigoAlterno=24,
+  // usando el valor de row.rubroTipoBancoH como código del detalle
+  { column: 'R_24_rubroTipoBancoH', header: 'Tipo de Banco', fWidth: '30%' },
+]
+```
+
+- `R` → prefijo (convención)
+- `24` → `codigoAlterno` del rubro padre
+- `rubroTipoBancoH` → campo del registro que contiene el `codigoAlterno` del `DetalleRubro`
+
+> **⚠️ Restricción:** el campo (`rubroTipoBancoH`) **no debe contener guiones bajos** (`_`) ya que la tabla separa por `_`.
+
+### Campo de formulario: `type: 'autocomplete'` + `rubroAlterno`
+
+Para que el diálogo ADD/EDIT cargue las opciones desde el rubro automáticamente:
+
+```typescript
+regConfig: [
+  {
+    type: 'autocomplete',
+    label: 'Tipo de Banco',
+    name: 'rubroTipoBancoH',   // nombre del campo en el modelo
+    rubroAlterno: 24,           // codigoAlterno del rubro padre
+    autocompleteType: 1,
+  },
+]
+```
+
+El autocomplete carga las opciones llamando a `getDetallesByParent(24)` y guarda el `codigoAlterno` del `DetalleRubro` seleccionado en `rubroTipoBancoH`.
+
+---
+
+
+
+---
+
 ## Uso en Componente (Pantalla de Parametrización)
 
 ### Resolver (opcional pero recomendado para precarga)
@@ -176,6 +220,66 @@ export class MiModuloResolverService implements Resolve<MiModuloData> {
   }
 }
 ```
+
+### Carga en `ngOnInit` con `selectByCriteria` (alternativa sin resolver)
+
+Cuando la entidad pertenece a una empresa (tiene campo `empresa`) se debe filtrar
+por la empresa logueada en lugar de usar un resolver.
+
+**⚠️ `selectByCriteria` requiere siempre un array de `DatosBusqueda[]`, nunca objetos planos.**
+
+```typescript
+import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
+import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
+import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
+
+// Leer empresa del localStorage (clave estándar del proyecto)
+private getEmpresaCodigo(): number | null {
+  const raw = localStorage.getItem('idEmpresa');
+  return raw ? parseInt(raw, 10) : null;
+}
+
+// Llamar en ngOnInit:
+ngOnInit(): void {
+  this.cargarDatos();
+}
+
+private cargarDatos(): void {
+  const empresaCodigo = this.getEmpresaCodigo();
+  const criterios: DatosBusqueda[] = [];
+
+  if (empresaCodigo) {
+    const db = new DatosBusqueda();
+    db.asignaValorConCampoPadre(
+      TipoDatosBusqueda.LONG,
+      'empresa',        // nombre de la relación en la entidad JPA
+      'codigo',         // campo del objeto padre
+      empresaCodigo.toString(),
+      TipoComandosBusqueda.IGUAL
+    );
+    criterios.push(db);
+  }
+
+  // Ordenamiento (opcional)
+  const orden = new DatosBusqueda();
+  orden.orderBy('nombre');
+  criterios.push(orden);
+
+  this.miEntidadService.selectByCriteria(criterios).subscribe({
+    next: (data) => {
+      const registros = Array.isArray(data) ? data : [];
+      this.setupTableConfig(registros);        // pasar los datos al tableConfig
+    },
+    error: () => this.setupTableConfig([]),
+  });
+}
+```
+
+**Reglas clave:**
+- Usar `localStorage.getItem('idEmpresa')` (clave estándar del proyecto).
+- **Nunca** pasar objetos planos: `selectByCriteria({ empresa: { codigo } })` es **incorrecto**.
+- Para JOINs (campos de entidades relacionadas) usar `asignaValorConCampoPadre()`.
+- Pasar los datos precargados a `registros` del `TableConfig`.
 
 ### Componente TS
 

@@ -439,7 +439,12 @@ export class ReportesSuperBancosComponent implements OnInit {
       return `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}`;
     }
     if (isNumeric) {
-      if (col === 'diasMorosidad' || col === 'cargasFamiliares') {
+      // Campos que representan contadores/enteros (sin decimales)
+      if (col === 'diasMorosidad' ||
+          col === 'cargasFamiliares' ||
+          col === 'numeroImposicionesPersonales' ||
+          col === 'numeroImposicionesPatronales' ||
+          col === 'imposicionesAcumuladas') {
         const n = Number(v);
         return (v === null || v === undefined || v === '') ? '0' : (Number.isInteger(n) ? String(n) : n.toFixed(2));
       }
