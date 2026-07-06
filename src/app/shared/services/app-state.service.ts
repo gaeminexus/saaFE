@@ -151,6 +151,7 @@ export class AppStateService {
         sessionStorage.setItem('idUsuario', appData.usuario.codigo.toString());
 
         // Compatibilidad con módulos que aún leen localStorage
+        localStorage.setItem('idEmpresa', appData.empresa.codigo.toString());
         localStorage.setItem('empresaName', appData.empresa.nombre);
 
         // Guardar en el servicio de usuario (mantener compatibilidad)

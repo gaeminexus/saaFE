@@ -31,4 +31,6 @@ export interface TableConfig {
   campo_padre?: string;
   // Callback para formatear datos después de recargar
   onDataUpdate?: (data: any[]) => any[];
+  // Callback para transformar datos antes de guardar
+  onBeforeSave?: (data: any) => any;
 }

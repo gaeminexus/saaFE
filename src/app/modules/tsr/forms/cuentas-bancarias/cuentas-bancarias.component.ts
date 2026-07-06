@@ -11,6 +11,8 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatNativeDateModule } from '@angular/material/core';
 import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
@@ -41,6 +43,8 @@ import { CuentaBancariaService } from '../../service/cuenta-bancaria.service';
     MatButtonModule,
     MatIconModule,
     MatTooltipModule,
+    MatDatepickerModule,
+    MatNativeDateModule,
   ],
   templateUrl: './cuentas-bancarias.component.html',
   styleUrls: ['./cuentas-bancarias.component.scss'],
@@ -74,9 +78,10 @@ export class CuentasBancariasComponent implements OnInit {
   // Formulario (información general)
   numeroCuenta = '';
   tipoCuentaSel: DetalleRubro | null = null;
+  tipoMonedaSel: DetalleRubro | null = null;
   saldoInicial = '';
   cuentaContableSeleccionada: PlanCuenta | null = null;
-  fechaApertura = '';
+  fechaApertura: string | Date = '';
   titular = '';
   oficialCuenta = '';
   observaciones = '';
@@ -89,8 +94,12 @@ export class CuentasBancariasComponent implements OnInit {
   estadoSeleccionado: DetalleRubro | null = null;
   codigoEdicion: number | null = null; // null = crear, número = editar
 
+  // Variable para capturar el valor raw de la fecha antes del blur
+  private _rawFechaApertura = '';
+
   // Catálogos
   tiposCuenta = signal<DetalleRubro[]>([]);
+  tiposMoneda = signal<DetalleRubro[]>([]);
   estadosCuenta = signal<DetalleRubro[]>([]);
   cuentasContables = signal<PlanCuenta[]>([]);
 
@@ -99,6 +108,7 @@ export class CuentasBancariasComponent implements OnInit {
   displayedColumnsCuentas: string[] = [
     'numero',
     'tipo',
+    'moneda',
     'saldo',
     'cuentaContable',
     'fIngreso',
@@ -120,6 +130,7 @@ export class CuentasBancariasComponent implements OnInit {
   ngOnInit(): void {
     // Cargar catálogos primero (síncronos)
     this.cargarTiposCuenta();
+    this.cargarTiposMoneda();
     this.cargarEstadosCuenta();
 
     // Cargar cuentas contables (necesarias para el selector), luego bancos
@@ -226,6 +237,12 @@ export class CuentasBancariasComponent implements OnInit {
     this.tiposCuenta.set(Array.isArray(rubros) ? rubros : []);
   }
 
+  cargarTiposMoneda(): void {
+    // Cargar tipos de moneda del rubro 19 (acceso síncrono - datos ya cargados en memoria)
+    const tipos = this.detalleRubroService.getDetallesByParent(19);
+    this.tiposMoneda.set(Array.isArray(tipos) ? tipos : []);
+  }
+
   cargarEstadosCuenta(): void {
     // Cargar estados de cuenta del rubro 50 (acceso síncrono - datos ya cargados en memoria)
     const estados = this.detalleRubroService.getDetallesByParent(50);
@@ -315,6 +332,10 @@ export class CuentasBancariasComponent implements OnInit {
     );
   }
 
+  onTipoMonedaChange(): void {
+    // Callback cuando se selecciona un tipo de moneda
+  }
+
   formatearSaldo(): void {
     if (!this.saldoInicial) return;
 
@@ -361,10 +382,21 @@ export class CuentasBancariasComponent implements OnInit {
       email: this.email.trim(),
     };
 
+    // Si estamos editando, incluir el código
+    if (this.codigoEdicion !== null) {
+      payload.codigo = this.codigoEdicion;
+    }
+
     // Tipo de cuenta (rubro 23)
     if (this.tipoCuentaSel) {
       payload.rubroTipoCuentaP = this.tipoCuentaSel.rubro?.codigoAlterno ?? 23;
       payload.rubroTipoCuentaH = this.tipoCuentaSel.codigoAlterno;
+    }
+
+    // Tipo de moneda (rubro 19)
+    if (this.tipoMonedaSel) {
+      payload.rubroTipoMonedaP = this.tipoMonedaSel.rubro?.codigoAlterno ?? 19;
+      payload.rubroTipoMonedaH = this.tipoMonedaSel.codigoAlterno;
     }
 
     // Estado (rubro 50) - por defecto 3
@@ -381,7 +413,10 @@ export class CuentasBancariasComponent implements OnInit {
 
     // Fecha de apertura - convertir a LocalDateTime (ISO 8601 con hora)
     if (this.fechaApertura) {
-      payload.fechaCreacion = `${this.fechaApertura}T00:00:00`;
+      const fechaISO = this.fechaApertura instanceof Date
+        ? this.formatearFechaParaISO(this.fechaApertura)
+        : this.fechaApertura;
+      payload.fechaCreacion = `${fechaISO}T00:00:00`;
     }
 
     // Fecha de ingreso - siempre la fecha actual
@@ -392,7 +427,12 @@ export class CuentasBancariasComponent implements OnInit {
     this.loading.set(true);
     this.errorMsg.set('');
 
-    this.cuentaService.add(payload).subscribe({
+    // Usar método correcto según si estamos creando o editando
+    const operacion = this.codigoEdicion !== null
+      ? this.cuentaService.update(payload)
+      : this.cuentaService.add(payload);
+
+    operacion.subscribe({
       next: () => {
         this.limpiarFormulario();
         this.cargarCuentasPorBanco(this.bancoSeleccionado()?.codigo);
@@ -409,6 +449,7 @@ export class CuentasBancariasComponent implements OnInit {
   limpiarFormulario(): void {
     this.numeroCuenta = '';
     this.tipoCuentaSel = null;
+    this.tipoMonedaSel = null;
     this.saldoInicial = '';
     this.cuentaContableSeleccionada = null;
     this.fechaApertura = '';
@@ -451,9 +492,16 @@ export class CuentasBancariasComponent implements OnInit {
     const fechaRaw = (row as any).fechaCreacion;
     if (Array.isArray(fechaRaw)) {
       const [year, month, day] = fechaRaw;
-      this.fechaApertura = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const date = new Date(year, month - 1, day); // month es 1-indexed en el backend
+      this.fechaApertura = this.formatearFechaParaISO(date);
     } else if (fechaRaw) {
-      this.fechaApertura = fechaRaw.substring(0, 10);
+      // Si es string ISO, parsearlo y convertir
+      const date = new Date(fechaRaw);
+      if (!isNaN(date.getTime())) {
+        this.fechaApertura = this.formatearFechaParaISO(date);
+      } else {
+        this.fechaApertura = '';
+      }
     } else {
       this.fechaApertura = '';
     }
@@ -469,6 +517,11 @@ export class CuentasBancariasComponent implements OnInit {
     const h = (row as any).rubroTipoCuentaH;
     this.tipoCuentaSel =
       this.tiposCuenta().find((r) => r.rubro?.codigoAlterno === p && r.codigoAlterno === h) ?? null;
+
+    const mp = (row as any).rubroTipoMonedaP;
+    const mh = (row as any).rubroTipoMonedaH;
+    this.tipoMonedaSel =
+      this.tiposMoneda().find((r) => r.rubro?.codigoAlterno === mp && r.codigoAlterno === mh) ?? null;
 
     const codigoEstado = (row as any).estado;
     this.estadoSeleccionado =
@@ -508,6 +561,7 @@ export class CuentasBancariasComponent implements OnInit {
     this.modoEdicion.set(true);
     this.numeroCuenta = '';
     this.tipoCuentaSel = null;
+    this.tipoMonedaSel = null;
     this.saldoInicial = '';
     this.cuentaContableSeleccionada = null;
     this.fechaApertura = '';
@@ -557,6 +611,15 @@ export class CuentasBancariasComponent implements OnInit {
       payload.rubroTipoCuentaH = (registroOriginal as any).rubroTipoCuentaH;
     }
 
+    // Tipo de moneda (rubro 19)
+    if (this.tipoMonedaSel) {
+      payload.rubroTipoMonedaP = this.tipoMonedaSel.rubro?.codigoAlterno ?? 19;
+      payload.rubroTipoMonedaH = this.tipoMonedaSel.codigoAlterno;
+    } else if (registroOriginal) {
+      payload.rubroTipoMonedaP = (registroOriginal as any).rubroTipoMonedaP;
+      payload.rubroTipoMonedaH = (registroOriginal as any).rubroTipoMonedaH;
+    }
+
     // Estado
     if (this.estadoSeleccionado) {
       payload.estado = this.estadoSeleccionado.codigoAlterno;
@@ -571,7 +634,10 @@ export class CuentasBancariasComponent implements OnInit {
 
     // Fecha de apertura
     if (this.fechaApertura) {
-      payload.fechaCreacion = `${this.fechaApertura}T00:00:00`;
+      const fechaISO = this.fechaApertura instanceof Date
+        ? this.formatearFechaParaISO(this.fechaApertura)
+        : this.fechaApertura;
+      payload.fechaCreacion = `${fechaISO}T00:00:00`;
     } else if (registroOriginal) {
       payload.fechaCreacion = (registroOriginal as any).fechaCreacion;
     }
@@ -628,6 +694,7 @@ export class CuentasBancariasComponent implements OnInit {
 
   seleccionarBanco(b: Banco): void {
     this.bancoSeleccionado.set(b);
+    this.limpiarFormulario(); // Limpiar formulario al cambiar de banco
     this.cargarCuentasPorBanco(b.codigo);
   }
 
@@ -697,6 +764,15 @@ export class CuentasBancariasComponent implements OnInit {
     const p: number = (row as any).rubroTipoCuentaP;
     const h: number = (row as any).rubroTipoCuentaH;
     const found = this.tiposCuenta().find(
+      (r) => r.rubro?.codigoAlterno === p && r.codigoAlterno === h,
+    );
+    return found ? found.descripcion : '—';
+  }
+
+  mostrarTipoMoneda(row: CuentaBancaria): string {
+    const p: number = (row as any).rubroTipoMonedaP;
+    const h: number = (row as any).rubroTipoMonedaH;
+    const found = this.tiposMoneda().find(
       (r) => r.rubro?.codigoAlterno === p && r.codigoAlterno === h,
     );
     return found ? found.descripcion : '—';
@@ -784,5 +860,70 @@ export class CuentasBancariasComponent implements OnInit {
       'titular',
       'estadoLabel',
     ]);
+  }
+
+  /** Captura el texto del campo mientras el usuario escribe (formato dd/mm/yyyy) */
+  capturarFechaAperturaRaw(event: Event): void {
+    this._rawFechaApertura = (event.target as HTMLInputElement).value;
+  }
+
+  /** Sincroniza la fecha cuando el usuario termina de escribir (blur) */
+  syncFechaApertura(event: FocusEvent): void {
+    const input = event.target as HTMLInputElement;
+
+    // Usar el texto capturado DURANTE la escritura (antes de que Material lo reformatee)
+    const rawValue: string = (this._rawFechaApertura || input?.value || '').trim();
+    this._rawFechaApertura = ''; // limpiar para el siguiente uso
+    if (!rawValue) {
+      this.fechaApertura = '';
+      return;
+    }
+
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+
+    const day = Number(parts[0]);
+    const month = Number(parts[1]) - 1; // JS usa meses 0-indexed
+    const year = Number(parts[2]);
+
+    // Validar valores
+    if (
+      !isNaN(day) && day >= 1 && day <= 31 &&
+      !isNaN(month) && month >= 0 && month <= 11 &&
+      !isNaN(year) && year >= 1000 && year <= 9999
+    ) {
+      const date = new Date(year, month, day);
+      // Verificar que la fecha sea válida (ej: 31/02/2024 es inválida)
+      if (
+        date.getFullYear() === year &&
+        date.getMonth() === month &&
+        date.getDate() === day
+      ) {
+        // Formatear como YYYY-MM-DD para el ngModel que espera string
+        this.fechaApertura = this.formatearFechaParaISO(date);
+
+        // setTimeout garantiza que nuestro formato DD/MM/YYYY se aplique
+        // DESPUÉS de que Angular Material reformatee el input
+        setTimeout(() => {
+          input.value = this.formatearFechaManual(date);
+        });
+      }
+    }
+  }
+
+  /** Formatea una fecha como dd/mm/yyyy para mostrar en el input */
+  private formatearFechaManual(date: Date): string {
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  }
+
+  /** Formatea una fecha como ISO (yyyy-mm-dd) para el modelo */
+  private formatearFechaParaISO(date: Date): string {
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${year}-${month}-${day}`;
   }
 }

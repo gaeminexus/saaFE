@@ -18,6 +18,7 @@ export interface DetalleDialogData {
   detalle?: DetallePlantilla;
   planCuentas: PlanCuenta[];
   mostrarAuxiliar1?: boolean;
+  detallesExistentes?: DetallePlantilla[]; // Para calcular el siguiente auxiliar1
 }
 
 @Component({
@@ -207,6 +208,9 @@ export class DetallePlantillaDialogComponent {
     private dialogRef: MatDialogRef<DetallePlantillaDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: DetalleDialogData
   ) {
+    // Calcular el siguiente auxiliar1 sugerido
+    const siguienteAuxiliar = this.calcularSiguienteAuxiliar();
+
     this.form = this.fb.group({
       planCuenta: [data.detalle?.planCuenta || null, Validators.required],
       descripcion: [data.detalle?.descripcion || '', Validators.required],
@@ -214,12 +218,49 @@ export class DetallePlantillaDialogComponent {
       fechaDesde: [data.detalle?.fechaDesde || null],
       fechaHasta: [data.detalle?.fechaHasta || null],
       estado: [data.detalle?.estado || 1, Validators.required],
-      auxiliar1: [data.detalle?.auxiliar1 ?? 0]
+      auxiliar1: [data.detalle?.auxiliar1 ?? siguienteAuxiliar]
+    });
+
+    // Auto-llenar descripción cuando se selecciona una cuenta
+    this.form.get('planCuenta')?.valueChanges.subscribe((cuenta: PlanCuenta | null) => {
+      if (cuenta && cuenta.nombre) {
+        const descripcionActual = this.form.get('descripcion')?.value;
+        // Solo auto-llenar si la descripción está vacía o es del detalle en edición
+        if (!descripcionActual || descripcionActual === data.detalle?.descripcion) {
+          this.form.patchValue({ descripcion: cuenta.nombre }, { emitEvent: false });
+        }
+      }
     });
   }
 
   compararCuentas(c1: PlanCuenta, c2: PlanCuenta): boolean {
     return c1 && c2 ? c1.codigo === c2.codigo : c1 === c2;
+  }
+
+  /**
+   * Calcula el siguiente número auxiliar1 sugerido basado en los detalles existentes.
+   * Si es edición, retorna el valor actual del detalle.
+   * Si es nuevo, retorna el máximo auxiliar1 + 1 (o 1 si no hay detalles).
+   */
+  private calcularSiguienteAuxiliar(): number {
+    // Si es edición, mantener el valor actual
+    if (this.data.detalle?.auxiliar1 !== undefined) {
+      return this.data.detalle.auxiliar1;
+    }
+
+    // Si no hay detalles existentes, empezar en 1
+    if (!this.data.detallesExistentes || this.data.detallesExistentes.length === 0) {
+      return 1;
+    }
+
+    // Encontrar el máximo auxiliar1 y sumar 1
+    const maxAuxiliar = Math.max(
+      ...this.data.detallesExistentes
+        .map(d => d.auxiliar1 ?? 0)
+        .filter(val => typeof val === 'number' && !isNaN(val))
+    );
+
+    return maxAuxiliar + 1;
   }
 
   abrirBusquedaAvanzada(): void {
@@ -237,7 +278,10 @@ export class DetallePlantillaDialogComponent {
 
     dialogRef.afterClosed().subscribe((cuentaSeleccionada: PlanCuenta | null) => {
       if (cuentaSeleccionada) {
-        this.form.patchValue({ planCuenta: cuentaSeleccionada });
+        this.form.patchValue({
+          planCuenta: cuentaSeleccionada,
+          descripcion: cuentaSeleccionada.nombre
+        });
       }
     });
   }

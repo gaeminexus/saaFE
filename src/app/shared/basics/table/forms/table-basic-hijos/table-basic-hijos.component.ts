@@ -333,14 +333,19 @@ export class TableBasicHijosComponent implements OnInit, OnChanges, AfterViewIni
   }
 
   async ejecuta(opcion: number, result: any): Promise<void> {
+    // Aplicar transformación onBeforeSave si existe
+    const datosAEnviar = this.configTable?.onBeforeSave
+      ? this.configTable.onBeforeSave(result)
+      : result;
+
     try {
       // Ejecutar la operación principal y capturar el resultado
-      const resultadoOperacion = await this.serviceLocatorService.ejecutaServicio(this.entidad, result, opcion);
+      const resultadoOperacion = await this.serviceLocatorService.ejecutaServicio(this.entidad, datosAEnviar, opcion);
       // Emitir el resultado al componente padre con información de éxito
       this.emiteResultadoOperacion.emit({
         operacion: opcion,
         resultado: resultadoOperacion,
-        datosEnviados: result,
+        datosEnviados: datosAEnviar,
         exitoso: true,
         codigoHttp: 200
       });
@@ -371,7 +376,7 @@ export class TableBasicHijosComponent implements OnInit, OnChanges, AfterViewIni
       this.emiteResultadoOperacion.emit({
         operacion: opcion,
         resultado: error?.message || 'Error desconocido',
-        datosEnviados: result,
+        datosEnviados: datosAEnviar,
         exitoso: false,
         codigoHttp: error?.status || 500
       });

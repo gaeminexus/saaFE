@@ -18,8 +18,8 @@
         <input
           matInput
           [(ngModel)]="busquedaTexto"
-          (keyup)="aplicarFiltros()"
-          placeholder="Ej: 1105 o CAJA"
+          (keyup)="busquedaSinPuntos = ''; aplicarFiltros()"
+          placeholder="Ej: 1.1.05 o CAJA"
           autocomplete="off"
         />
         <mat-icon matPrefix>search</mat-icon>
@@ -28,6 +28,27 @@
           matSuffix
           *ngIf="busquedaTexto"
           (click)="busquedaTexto = ''; aplicarFiltros()"
+          matTooltip="Limpiar búsqueda"
+        >
+          <mat-icon>clear</mat-icon>
+        </button>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="filtro-busqueda">
+        <mat-label>Buscar sin puntos</mat-label>
+        <input
+          matInput
+          [(ngModel)]="busquedaSinPuntos"
+          (keyup)="busquedaTexto = ''; aplicarFiltros()"
+          placeholder="Ej: 430125 para 4.3.01.25"
+          autocomplete="off"
+        />
+        <mat-icon matPrefix>tag</mat-icon>
+        <button
+          mat-icon-button
+          matSuffix
+          *ngIf="busquedaSinPuntos"
+          (click)="busquedaSinPuntos = ''; aplicarFiltros()"
           matTooltip="Limpiar búsqueda"
         >
           <mat-icon>clear</mat-icon>

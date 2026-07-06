@@ -59,6 +59,7 @@ export class PlanCuentaSelectorDialogComponent implements OnInit {
 
   // Filtros
   busquedaTexto = '';
+  busquedaSinPuntos = '';
   naturalezaSeleccionada: number | null = null;
   soloMovimiento = true;
 
@@ -106,6 +107,13 @@ export class PlanCuentaSelectorDialogComponent implements OnInit {
       const searchText = filter.toLowerCase();
       const cuentaText = (data.cuentaContable || '').toLowerCase();
       const nombreText = (data.nombre || '').toLowerCase();
+
+      // Si hay búsqueda sin puntos, buscar por el número de cuenta sin puntos
+      if (this.busquedaSinPuntos) {
+        const cuentaSinPuntos = (data.cuentaContable || '').replace(/[.\s-]/g, '').toLowerCase();
+        const busquedaSinPuntosLower = this.busquedaSinPuntos.replace(/[.\s-]/g, '').toLowerCase();
+        return cuentaSinPuntos.includes(busquedaSinPuntosLower);
+      }
 
       return cuentaText.includes(searchText) || nombreText.includes(searchText);
     };
@@ -165,6 +173,9 @@ export class PlanCuentaSelectorDialogComponent implements OnInit {
     // Aplicar filtro de búsqueda de texto
     if (this.busquedaTexto) {
       this.dataSource.filter = this.busquedaTexto.trim().toLowerCase();
+    } else if (this.busquedaSinPuntos) {
+      // Forzar el filtro con un valor dummy para activar el filterPredicate
+      this.dataSource.filter = 'busqueda_sin_puntos';
     } else {
       this.dataSource.filter = '';
     }
@@ -172,6 +183,7 @@ export class PlanCuentaSelectorDialogComponent implements OnInit {
 
   limpiarFiltros(): void {
     this.busquedaTexto = '';
+    this.busquedaSinPuntos = '';
     this.naturalezaSeleccionada = null;
     this.aplicarFiltros();
   }

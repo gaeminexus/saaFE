@@ -373,9 +373,412 @@ export class MiPantallaComponent implements OnInit {
 | `type` | Uso |
 |---|---|
 | `'input'` | Texto o número (`inputType: 'text'/'number'`) |
-| `'select'` | Combo desplegable (requiere `options: []`) |
+| `'select'` | Combo desplegable estático (requiere `collections: []`) |
+| `'autocomplete'` | Combo con búsqueda (requiere `collections` o `rubroAlterno`) |
 | `'date'` | Selector de fecha |
 | `'checkbox'` | Booleano |
+
+---
+
+## 🎯 Guía Completa de Combos (Select y Autocomplete)
+
+### 📌 Diferencias entre Select y Autocomplete
+
+| Característica | `select` | `autocomplete` |
+|---|---|---|
+| **Uso principal** | Pocas opciones estáticas (2-10) | Muchas opciones o búsqueda necesaria |
+| **Búsqueda** | ❌ No | ✅ Sí (filtra al escribir) |
+| **Formato datos** | `codigo` + `descripcion` | `codigo`/`codigoAlterno` + campo libre |
+| **Rubros automáticos** | ❌ No | ✅ Sí (con `rubroAlterno`) |
+
+---
+
+### 1️⃣ Campo SELECT (Opciones Estáticas)
+
+Usado para opciones fijas como Estado (Activo/Inactivo), Sí/No, etc.
+
+#### Configuración Básica
+
+```typescript
+regConfig: [
+  {
+    type: 'select',
+    label: 'Estado',
+    name: 'estado',
+    value: 1,                    // ← Valor por defecto (opcional)
+    autocompleteType: 1,         // ← REQUERIDO (tipo simple, sin dependencias)
+    selectField: ['descripcion'], // ← Campo(s) a mostrar
+    collections: [
+      { codigo: 1, descripcion: 'Activo' },
+      { codigo: 0, descripcion: 'Inactivo' },
+    ],
+  },
+]
+```
+
+#### ⚠️ Formato Obligatorio de Collections
+
+**✅ CORRECTO:**
+```typescript
+collections: [
+  { codigo: 1, descripcion: 'Activo' },   // 'codigo' y 'descripcion'
+  { codigo: 0, descripcion: 'Inactivo' }
+]
+```
+
+**❌ INCORRECTO (formato antiguo):**
+```typescript
+options: [
+  { key: 1, value: 'Activo' },    // NO usar 'key'/'value'
+  { key: 0, value: 'Inactivo' }
+]
+```
+
+#### Valores por Defecto
+
+```typescript
+{
+  type: 'select',
+  name: 'estado',
+  value: 1,           // ← Se preselecciona "Activo" en ADD
+  collections: [ ... ]
+}
+```
+
+#### Extracción de Código en `onBeforeSave`
+
+Los selects devuelven el **objeto completo**, necesitas extraer solo el `codigo`:
+
+```typescript
+onBeforeSave: (datos: any) => {
+  const extraerCodigo = (valor: any): any => {
+    if (valor === null || valor === undefined) return null;
+    // Extraer 'codigo' si es objeto
+    return typeof valor === 'object' && valor.codigo !== undefined 
+      ? valor.codigo 
+      : valor;
+  };
+
+  return {
+    ...datos,
+    estado: extraerCodigo(datos.estado),
+    conciliaDescuadre: extraerCodigo(datos.conciliaDescuadre),
+  };
+}
+```
+
+#### Mostrar Etiquetas en la Tabla
+
+Transformar códigos numéricos a etiquetas legibles:
+
+```typescript
+// En TableConfig
+fields: [
+  { column: 'estadoLabel', header: 'Estado', fWidth: '20%' }  // ← columna con label
+],
+
+onDataUpdate: (data: any[]) => {
+  return data.map((row) => ({
+    ...row,
+    estadoLabel: row.estado === 1 ? 'Activo' : 'Inactivo',  // ← transformación
+  }));
+}
+```
+
+---
+
+### 2️⃣ Campo AUTOCOMPLETE (Búsqueda Dinámica)
+
+Usado para listas grandes o datos de rubros (catálogos del sistema).
+
+#### Tipo 1: Autocomplete Simple (con Rubros)
+
+El caso más común: cargar opciones desde un **Rubro** (ej: tipos de banco, tipos de cuenta).
+
+```typescript
+regConfig: [
+  {
+    type: 'autocomplete',
+    label: 'Tipo de Banco',
+    name: 'rubroTipoBancoH',        // ← Campo del modelo
+    autocompleteType: 1,             // ← Tipo simple (sin padre)
+    rubroAlterno: 24,                // ← ID del rubro (codigoAlterno del Rubro)
+    selectField: ['descripcion'],    // ← Campo(s) a mostrar
+  },
+]
+```
+
+**Cómo funciona:**
+1. `AutocompleteComponent` detecta `rubroAlterno: 24`
+2. Llama automáticamente a `detalleRubroService.getDetallesByParent(24)`
+3. Carga las opciones desde `DetalleRubro[]`
+4. El usuario selecciona → guarda el **`codigoAlterno`** del `DetalleRubro`
+
+#### Tipo 2: Autocomplete con Collections Manuales
+
+Si las opciones NO vienen de un rubro:
+
+```typescript
+{
+  type: 'autocomplete',
+  label: 'Cliente',
+  name: 'cliente',
+  autocompleteType: 1,
+  selectField: ['nombre', 'identificacion'],  // Muestra "Juan Pérez - 1234567890"
+  collections: this.listaClientes,             // Cargada en ngOnInit
+}
+```
+
+#### Tipo 3: Autocomplete Dependiente (Padre-Hijo)
+
+Para combos donde las opciones dependen de otro combo:
+
+```typescript
+// Combo padre
+{
+  type: 'autocomplete',
+  label: 'Provincia',
+  name: 'provincia',
+  autocompleteType: 1,
+  selectField: ['nombre'],
+  collections: this.provincias,
+}
+
+// Combo hijo (se filtra según provincia seleccionada)
+{
+  type: 'autocomplete',
+  label: 'Ciudad',
+  name: 'ciudad',
+  autocompleteType: 2,              // ← Tipo dependiente
+  filterFather: 'provincia',        // ← Campo de relación en el objeto
+  selectField: ['nombre'],
+  collections: this.ciudades,       // Todas las ciudades
+}
+```
+
+#### Extracción de Código en `onBeforeSave` (Rubros)
+
+Los autocomplete con rubros devuelven objetos con `codigoAlterno`:
+
+```typescript
+onBeforeSave: (datos: any) => {
+  const extraerCodigo = (valor: any): any => {
+    if (valor === null || valor === undefined) return null;
+    
+    // Selects normales usan 'codigo'
+    if (typeof valor === 'object' && valor.codigo !== undefined) {
+      return valor.codigo;
+    }
+    // Autocomplete de rubros usan 'codigoAlterno'
+    if (typeof valor === 'object' && valor.codigoAlterno !== undefined) {
+      return valor.codigoAlterno;
+    }
+    return valor;
+  };
+
+  return {
+    ...datos,
+    rubroTipoBancoH: extraerCodigo(datos.rubroTipoBancoH),
+    estado: extraerCodigo(datos.estado),
+  };
+}
+```
+
+#### Mostrar Descripción de Rubro en la Tabla
+
+Usar la nomenclatura `R_<codigoAlterno>_<campo>`:
+
+```typescript
+fields: [
+  { 
+    column: 'R_24_rubroTipoBancoH',   // R_<rubroPadre>_<campoModelo>
+    header: 'Tipo de Banco', 
+    fWidth: '30%' 
+  }
+]
+```
+
+La tabla automáticamente llama a:
+```typescript
+detalleRubroService.getDescripcionByParentAndAlterno(24, row.rubroTipoBancoH)
+```
+
+---
+
+### 📋 Ejemplo Completo: Entidad Banco
+
+#### 1. Modelo
+
+```typescript
+export interface Banco {
+  codigo: number;
+  nombre: string;
+  sigla: string;
+  rubroTipoBancoH: number;      // ← codigoAlterno del DetalleRubro (rubro 24)
+  conciliaDescuadre: number;     // ← 0 o 1
+  estado: number;                // ← 0 o 1
+  empresa: number;
+}
+```
+
+#### 2. TableConfig
+
+```typescript
+private setupTableConfig(registros: Banco[]): void {
+  this.tableConfig = {
+    entidad: EntidadesTesoreria.BANCO,
+    titulo: 'Bancos',
+    registros,
+    
+    // Columnas visibles
+    fields: [
+      { column: 'nombre', header: 'Descripción', fWidth: '30%' },
+      { column: 'R_24_rubroTipoBancoH', header: 'Tipo', fWidth: '25%' },  // ← Rubro
+      { column: 'conciliaLabel', header: 'Permite Descuadre', fWidth: '20%' },
+      { column: 'estadoLabel', header: 'Estado', fWidth: '15%' },
+    ],
+    
+    // Campos del formulario
+    regConfig: [
+      {
+        type: 'input',
+        label: 'Descripción',
+        name: 'nombre',
+        inputType: 'text',
+        transformToUppercase: true,
+        validations: [
+          { name: 'required', validator: Validators.required, message: 'Requerido' }
+        ],
+      },
+      {
+        type: 'autocomplete',           // ← Autocomplete con rubro
+        label: 'Tipo de Banco',
+        name: 'rubroTipoBancoH',
+        autocompleteType: 1,
+        rubroAlterno: 24,               // ← Rubro de tipos de banco
+        selectField: ['descripcion'],
+      },
+      {
+        type: 'select',                 // ← Select estático
+        label: 'Concilia Descuadre',
+        name: 'conciliaDescuadre',
+        value: 0,                       // ← Default: No
+        autocompleteType: 1,
+        selectField: ['descripcion'],
+        collections: [
+          { codigo: 1, descripcion: 'Sí' },
+          { codigo: 0, descripcion: 'No' },
+        ],
+      },
+      {
+        type: 'select',
+        label: 'Estado',
+        name: 'estado',
+        value: 1,                       // ← Default: Activo
+        autocompleteType: 1,
+        selectField: ['descripcion'],
+        collections: [
+          { codigo: 1, descripcion: 'Activo' },
+          { codigo: 0, descripcion: 'Inactivo' },
+        ],
+      },
+    ],
+    
+    add: true,
+    edit: true,
+    paginator: true,
+    filter: true,
+    
+    // Transformar datos antes de enviar al backend
+    onBeforeSave: (datos: any) => {
+      const extraerCodigo = (valor: any): any => {
+        if (!valor) return null;
+        if (typeof valor === 'object' && valor.codigo !== undefined) {
+          return valor.codigo;
+        }
+        if (typeof valor === 'object' && valor.codigoAlterno !== undefined) {
+          return valor.codigoAlterno;
+        }
+        return valor;
+      };
+
+      return {
+        ...datos,
+        empresa: this.getEmpresaCodigo(),              // ← Agregar empresa
+        rubroTipoBancoH: extraerCodigo(datos.rubroTipoBancoH),
+        conciliaDescuadre: extraerCodigo(datos.conciliaDescuadre),
+        estado: extraerCodigo(datos.estado),
+      };
+    },
+    
+    // Transformar datos para mostrar en la tabla
+    onDataUpdate: (data: any[]) => {
+      return data.map((row) => ({
+        ...row,
+        conciliaLabel: row.conciliaDescuadre ? 'Sí' : 'No',
+        estadoLabel: row.estado === 1 ? 'Activo' : 'Inactivo',
+      }));
+    },
+  };
+}
+```
+
+---
+
+### 🔧 Solución de Problemas Comunes
+
+#### ❌ El combo aparece vacío
+
+**Causa:** Formato incorrecto de `collections` o falta `autocompleteType`.
+
+**Solución:**
+```typescript
+{
+  type: 'select',
+  autocompleteType: 1,           // ← AGREGAR ESTO
+  selectField: ['descripcion'],  // ← Y ESTO
+  collections: [
+    { codigo: 1, descripcion: 'Opción 1' }  // ← usar 'codigo', no 'key'
+  ]
+}
+```
+
+#### ❌ El autocomplete de rubro no carga opciones
+
+**Causa:** Falta `collections` o `rubroAlterno` incorrecto.
+
+**Solución:**
+```typescript
+{
+  type: 'autocomplete',
+  rubroAlterno: 24,              // ← Verificar que el rubro existe
+  autocompleteType: 1,
+  selectField: ['descripcion'],
+  // NO necesitas 'collections' si usas rubroAlterno
+}
+```
+
+#### ❌ El valor no se guarda en el backend
+
+**Causa:** El objeto completo se envía en lugar del `codigo` o `codigoAlterno`.
+
+**Solución:** Usar `onBeforeSave` para extraer solo el código numérico.
+
+#### ❌ Al editar, el combo aparece vacío
+
+**Causa:** Los valores numéricos no se convierten a objetos en el diálogo de edición.
+
+**Solución:** El `EditTableDialogComponent` ya maneja esto automáticamente desde la última actualización. Si persiste el problema, verifica que `collections` esté presente en el campo.
+
+---
+
+### 📚 Referencias
+
+- **DetalleRubroService:** Ver `.github/DETALLE-RUBROS.md`
+- **Ejemplos reales:**
+  - `modules/tsr/forms/bancos/bancos.component.ts` (autocomplete + select)
+  - `modules/cnt/forms/parametrizacion/naturaleza-cuentas/` (autocomplete con rubros)
+  - `modules/crd/forms/parametrizacion/listados-crd/` (múltiples selects)
 
 ---
 
@@ -396,4 +799,4 @@ Ver lista completa en `modules/crd/model/entidades-crd.ts`.
 
 ---
 
-**Última actualización:** Marzo 2026
+**Última actualización:** Junio 2026 — Agregada guía completa de combos (Select y Autocomplete)

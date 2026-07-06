@@ -287,12 +287,13 @@
                     <ng-container
                       *ngIf="detalle.planCuenta && typeof detalle.planCuenta === 'object'; else planCuentaString"
                     >
-                      <div class="cuenta-nombre-solo">{{ detalle.planCuenta.nombre }}</div>
+                      <div class="cuenta-codigo">{{ detalle.planCuenta.cuentaContable }}</div>
+                      <div class="cuenta-nombre">{{ detalle.planCuenta.nombre }}</div>
                     </ng-container>
-                    <!-- Manejar cuando planCuenta es un string - extraer solo el nombre -->
+                    <!-- Manejar cuando planCuenta es un string - extraer código y nombre -->
                     <ng-template #planCuentaString>
                       <div class="cuenta-nombre-solo">
-                        {{ getPlanCuentaNombre(detalle.planCuenta) }}
+                        {{ detalle.planCuenta }}
                       </div>
                     </ng-template>
                   </div>

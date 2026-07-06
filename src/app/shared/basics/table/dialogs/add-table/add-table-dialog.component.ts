@@ -46,7 +46,17 @@ export class AddTableDialogComponent implements OnInit  {
 
   asignaValoresaForm(): void {
     this.data.regConfig.forEach((val: FieldConfig) => {
+      // Si el campo tiene un valor por defecto definido, usarlo; si no, null
+      if (val.value !== undefined && val.value !== null) {
+        // Para selects con collections, encontrar el objeto completo por el codigo
+        if (val.type === 'select' && val.collections && typeof val.value !== 'object') {
+          const opcionEncontrada = val.collections.find((opt: any) => opt.codigo === val.value);
+          val.value = opcionEncontrada || null;
+        }
+        // Para otros tipos, mantener el valor por defecto
+      } else {
         val.value = null;
+      }
     });
   }
 

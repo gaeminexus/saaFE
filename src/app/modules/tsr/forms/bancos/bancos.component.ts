@@ -111,35 +111,35 @@ export class BancosComponent implements OnInit {
           ],
         },
         {
-          type: 'input',
-          label: 'Sigla',
-          name: 'sigla',
-          inputType: 'text',
-          transformToUppercase: true,
-        },
-        {
           type: 'autocomplete',
           label: 'Tipo de Banco',
           name: 'rubroTipoBancoH',
-          rubroAlterno: 24,
           autocompleteType: 1,
+          rubroAlterno: 24,
+          selectField: ['descripcion'],
         },
         {
           type: 'select',
           label: 'Concilia Descuadre',
           name: 'conciliaDescuadre',
-          options: [
-            { key: 1, value: 'Sí' },
-            { key: 0, value: 'No' },
+          value: 0,
+          autocompleteType: 1,
+          selectField: ['descripcion'],
+          collections: [
+            { codigo: 1, descripcion: 'Sí' },
+            { codigo: 0, descripcion: 'No' },
           ],
         },
         {
           type: 'select',
           label: 'Estado',
           name: 'estado',
-          options: [
-            { key: 1, value: 'Activo' },
-            { key: 0, value: 'Inactivo' },
+          value: 1,
+          autocompleteType: 1,
+          selectField: ['descripcion'],
+          collections: [
+            { codigo: 1, descripcion: 'Activo' },
+            { codigo: 0, descripcion: 'Inactivo' },
           ],
         },
       ],
@@ -150,6 +150,38 @@ export class BancosComponent implements OnInit {
       filter: true,
       fSize: 'em-1',
       row_size: 's08',
+      onBeforeSave: (datos: any) => {
+        const empresaCodigo = this.getEmpresaCodigo();
+
+        if (!empresaCodigo) {
+          console.error('❌ No se encontró código de empresa en localStorage (idEmpresa)');
+          throw new Error('No se pudo determinar la empresa actual. Por favor, cierre sesión y vuelva a iniciar.');
+        }
+
+        // Función auxiliar para extraer el código de un campo
+        const extraerCodigo = (valor: any): any => {
+          if (valor === null || valor === undefined) {
+            return null;
+          }
+          // Para selects normales usa 'codigo'
+          if (typeof valor === 'object' && valor.codigo !== undefined) {
+            return valor.codigo;
+          }
+          // Para autocomplete de rubros usa 'codigoAlterno'
+          if (typeof valor === 'object' && valor.codigoAlterno !== undefined) {
+            return valor.codigoAlterno;
+          }
+          return valor;
+        };
+
+        return {
+          ...datos,
+          empresa: empresaCodigo,
+          conciliaDescuadre: extraerCodigo(datos.conciliaDescuadre),
+          estado: extraerCodigo(datos.estado),
+          rubroTipoBancoH: extraerCodigo(datos.rubroTipoBancoH),
+        };
+      },
       onDataUpdate: (data: any[]) => {
         this.exportData.set(data);
         return data.map((row) => ({

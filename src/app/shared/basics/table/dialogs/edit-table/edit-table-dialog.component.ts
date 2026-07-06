@@ -26,9 +26,20 @@ export class EditTableDialogComponent implements OnInit {
 
   asignaValoresaForm(): void {
     this.data.regConfig.forEach((val: FieldConfig) => {
-      val.value = this.data.registro[val.name];
-      if (val.type === 'autocomplete'){
-        val.selected = this.data.registro[val.name];
+      const valorActual = this.data.registro[val.name];
+
+      // Para selects con collections, convertir el valor numérico al objeto completo
+      if (val.type === 'select' && val.collections && typeof valorActual === 'number') {
+        const opcionEncontrada = val.collections.find((opt: any) => opt.codigo === valorActual);
+        val.value = opcionEncontrada || valorActual;
+      } else if (val.type === 'autocomplete') {
+        // Para autocomplete con rubroAlterno, el valor numérico es suficiente
+        // El componente AutocompleteComponent se encarga de cargar las collections
+        // y mostrar la descripción correspondiente
+        val.value = valorActual;
+        val.selected = valorActual;
+      } else {
+        val.value = valorActual;
       }
     });
   }

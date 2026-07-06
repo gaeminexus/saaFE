@@ -1160,6 +1160,7 @@ export class PlantillaGeneralComponent implements OnInit {
         planCuentas,
         detalle: detalleExistente,
         mostrarAuxiliar1: this.tipoSistema === 1,
+        detallesExistentes: this.dataSourceDetalles.data, // Pasar detalles para calcular siguiente auxiliar1
       },
     });
 

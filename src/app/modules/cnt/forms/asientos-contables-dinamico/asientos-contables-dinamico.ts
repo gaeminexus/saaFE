@@ -55,6 +55,7 @@ interface CuentaItem {
   id?: string; // Para trackear items únicos en el grid (temporal)
   codigoDetalle?: number; // Código del detalle en BD (para updates)
   descripcion?: string; // Descripción del detalle (editable por usuario)
+  nombreCuenta?: string; // Nombre de la cuenta (para mostrar en grid)
   subdetalles?: SubdetalleItem[]; // Subdetalles de activo fijo pendientes de guardar
   subdetallesEliminados?: number[]; // Códigos de subdetalles a eliminar al grabar
 }
@@ -440,6 +441,7 @@ export class AsientosContablesDinamico implements OnInit {
                 id: `item_${Date.now()}_${Math.random()}`,
                 codigoDetalle: detalle.codigo, // IMPORTANTE: Guardar el código del detalle de BD
                 descripcion: detalle.descripcion || '', // Cargar descripción del detalle
+                nombreCuenta: detalle.nombreCuenta || '', // Cargar nombre de la cuenta desde BD
               };
 
               if (detalle.valorDebe > 0) {
@@ -1524,7 +1526,7 @@ export class AsientosContablesDinamico implements OnInit {
     this.cuentasDebeGrid.forEach((cuenta) => {
       detalles.push({
         cuenta: cuenta.cuenta?.cuentaContable || '',
-        descripcion: cuenta.descripcion || cuenta.cuenta?.nombre || '',
+        descripcion: cuenta.nombreCuenta || cuenta.cuenta?.nombre || '',
         centroCosto: cuenta.centroCosto
           ? `${cuenta.centroCosto.numero} - ${cuenta.centroCosto.nombre}`
           : '',
@@ -1540,7 +1542,7 @@ export class AsientosContablesDinamico implements OnInit {
     this.cuentasHaberGrid.forEach((cuenta) => {
       detalles.push({
         cuenta: cuenta.cuenta?.cuentaContable || '',
-        descripcion: cuenta.descripcion || cuenta.cuenta?.nombre || '',
+        descripcion: cuenta.nombreCuenta || cuenta.cuenta?.nombre || '',
         centroCosto: cuenta.centroCosto
           ? `${cuenta.centroCosto.numero} - ${cuenta.centroCosto.nombre}`
           : '',
