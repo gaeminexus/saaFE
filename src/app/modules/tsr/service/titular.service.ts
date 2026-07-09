@@ -54,7 +54,7 @@ export class TitularService {
    * Selecciona registros de Titular según criterios personalizados.
    */
   selectByCriteria(datos: any): Observable<Titular[] | null> {
-    const wsCriteria = '/criteria';
+    const wsCriteria = '/selectByCriteria/';
     const url = `${ServiciosTsr.RS_TTLR}${wsCriteria}`;
     return this.http
       .post<Titular[]>(url, datos, this.httpOptions)

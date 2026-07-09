@@ -58,7 +58,7 @@ export class AuxDepositoCierreService {
    * Selecciona registros por criterio.
    */
   selectByCriteria(datos: any): Observable<AuxDepositoCierre[] | null> {
-    const wsCriteria = '/criteria';
+    const wsCriteria = '/selectByCriteria/';
     const url = `${ServiciosTsr.RS_ACPD}${wsCriteria}`;
     return this.http.post<AuxDepositoCierre[]>(url, datos, this.httpOptions).pipe(
       catchError(this.handleError)

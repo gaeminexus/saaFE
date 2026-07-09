@@ -58,7 +58,7 @@ export class HistDetalleConciliacionService {
    * Selecciona registros de HistDetalleConciliacion según criterios personalizados.
    */
   selectByCriteria(datos: any): Observable<HistDetalleConciliacion[] | null> {
-    const wsCriteria = '/criteria';
+    const wsCriteria = '/selectByCriteria/';
     const url = `${ServiciosTsr.RS_DCHI}${wsCriteria}`;
     return this.http.post<HistDetalleConciliacion[]>(url, datos, this.httpOptions).pipe(
       catchError(this.handleError)

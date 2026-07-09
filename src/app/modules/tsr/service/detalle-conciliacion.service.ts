@@ -58,7 +58,7 @@ export class DetalleConciliacionService {
    * Selecciona registros de DetalleConciliacion según criterios personalizados.
    */
   selectByCriteria(datos: any): Observable<DetalleConciliacion[] | null> {
-    const wsCriteria = '/criteria';
+    const wsCriteria = '/selectByCriteria/';
     const url = `${ServiciosTsr.RS_DTCL}${wsCriteria}`;
     return this.http.post<DetalleConciliacion[]>(url, datos, this.httpOptions).pipe(
       catchError(this.handleError)

@@ -58,7 +58,7 @@ export class CobroTransferenciaService {
    * Selecciona registros de CobroTransferencia según criterios personalizados.
    */
   selectByCriteria(datos: any): Observable<CobroTransferencia[] | null> {
-    const wsCriteria = '/criteria';
+    const wsCriteria = '/selectByCriteria/';
     const url = `${ServiciosTsr.RS_CTRN}${wsCriteria}`;
     return this.http.post<CobroTransferencia[]>(url, datos, this.httpOptions).pipe(
       catchError(this.handleError)

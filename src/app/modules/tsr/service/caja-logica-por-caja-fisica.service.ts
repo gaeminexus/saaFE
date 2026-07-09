@@ -58,7 +58,7 @@ export class CajaLogicaPorCajaFisicaService {
    * Selecciona registros según criterios personalizados.
    */
   selectByCriteria(datos: any): Observable<CajaLogicaPorCajaFisica[] | null> {
-    const wsCriteria = '/criteria';
+    const wsCriteria = '/selectByCriteria/';
     const url = `${ServiciosTsr.RS_CCXC}${wsCriteria}`;
     return this.http.post<CajaLogicaPorCajaFisica[]>(url, datos, this.httpOptions).pipe(
       catchError(this.handleError)

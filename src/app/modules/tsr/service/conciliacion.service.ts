@@ -58,7 +58,7 @@ export class ConciliacionService {
    * Selecciona registros de Conciliacion según criterios personalizados.
    */
   selectByCriteria(datos: any): Observable<Conciliacion[] | null> {
-    const wsCriteria = '/criteria';
+    const wsCriteria = '/selectByCriteria/';
     const url = `${ServiciosTsr.RS_CNCL}${wsCriteria}`;
     return this.http.post<Conciliacion[]>(url, datos, this.httpOptions).pipe(
       catchError(this.handleError)

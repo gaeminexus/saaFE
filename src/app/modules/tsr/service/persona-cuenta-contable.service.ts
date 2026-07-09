@@ -54,7 +54,7 @@ export class PersonaCuentaContableService {
    * Selecciona registros de PersonaCuentaContable según criterios personalizados.
    */
   selectByCriteria(datos: any): Observable<PersonaCuentaContable[] | null> {
-    const wsCriteria = '/criteria';
+    const wsCriteria = '/selectByCriteria/';
     const url = `${ServiciosTsr.RS_PRCC}${wsCriteria}`;
     return this.http
       .post<PersonaCuentaContable[]>(url, datos, this.httpOptions)

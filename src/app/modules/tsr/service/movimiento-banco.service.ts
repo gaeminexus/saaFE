@@ -58,7 +58,7 @@ export class MovimientoBancoService {
    * Selecciona registros de MovimientoBanco según criterios personalizados.
    */
   selectByCriteria(datos: any): Observable<MovimientoBanco[] | null> {
-    const wsCriteria = '/criteria';
+    const wsCriteria = '/selectByCriteria/';
     const url = `${ServiciosTsr.RS_MVCB}${wsCriteria}`;
     return this.http.post<MovimientoBanco[]>(url, datos, this.httpOptions).pipe(
       catchError(this.handleError)

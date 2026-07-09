@@ -28,10 +28,12 @@ import {
   TipoFormatoFechaBackend,
 } from '../../../../../shared/services/funciones-datos.service';
 import { PrestamoDetalleDialogComponent } from '../../../dialog/prestamo-detalle-dialog/prestamo-detalle-dialog.component';
+import { EstadoParticipe } from '../../../model/estado-participe';
 import { EstadoPrestamo } from '../../../model/estado-prestamo';
 import { Filial } from '../../../model/filial';
 import { Prestamo } from '../../../model/prestamo';
 import { Producto } from '../../../model/producto';
+import { EstadoParticipeService } from '../../../service/estado-participe.service';
 import { EstadoPrestamoService } from '../../../service/estado-prestamo.service';
 import { FilialService } from '../../../service/filial.service';
 import { PrestamoService } from '../../../service/prestamo.service';
@@ -78,6 +80,7 @@ export class PrestamoConsultaComponent implements OnInit {
   filialesOptions = signal<Filial[]>([]);
   productosOptions = signal<Producto[]>([]);
   estadosOptions = signal<EstadoPrestamo[]>([]);
+  estadosParticipesOptions = signal<EstadoParticipe[]>([]);
   prestamos = signal<Prestamo[]>([]);
 
   filtrosPrincipalesExpandidos = true;
@@ -88,6 +91,7 @@ export class PrestamoConsultaComponent implements OnInit {
     'codigo',
     'idAsoprep',
     'entidad',
+    'estadoParticipe',
     'producto',
     'fecha',
     'estadoPrestamo',
@@ -127,6 +131,7 @@ export class PrestamoConsultaComponent implements OnInit {
     private filialService: FilialService,
     private productoService: ProductoService,
     private estadoPrestamoService: EstadoPrestamoService,
+    private estadoParticipeService: EstadoParticipeService,
     private exportService: ExportService,
     private funcionesDatos: FuncionesDatosService,
     private snackBar: MatSnackBar,
@@ -143,10 +148,12 @@ export class PrestamoConsultaComponent implements OnInit {
       filiales: this.filialService.getAll(),
       productos: this.productoService.getAll(),
       estados: this.estadoPrestamoService.getAll(),
+      estadosParticipes: this.estadoParticipeService.getAll(),
     }).subscribe({
       next: (res) => {
         this.filialesOptions.set(res.filiales || []);
         this.productosOptions.set(res.productos || []);
+        this.estadosParticipesOptions.set(res.estadosParticipes || []);
         this.estadosOptions.set(res.estados || []);
       },
       error: () => {
@@ -455,13 +462,155 @@ export class PrestamoConsultaComponent implements OnInit {
     this.busquedaRealizada.set(false);
   }
 
+  /**
+   * Obtiene el nombre del estado del préstamo buscando en el catálogo cargado.
+   * Busca por codigoExterno o codigoAlterno en estadosOptions.
+   */
+  private obtenerNombreEstadoPrestamo(codigoAlterno: number, nombreFallback?: string): string {
+    // Buscar en catálogo cargado por codigoExterno o codigoAlterno (NO por codigo/PK)
+    const estado = this.estadosOptions().find(
+      (e) => e.codigoExterno === codigoAlterno || e.codigoAlterno === codigoAlterno
+    );
+
+    if (estado?.nombre) {
+      return estado.nombre;
+    }
+
+    // Si viene un nombreFallback del backend, usarlo
+    if (nombreFallback) {
+      return nombreFallback;
+    }
+
+    // Último recurso: mostrar código
+    console.warn(`Estado de préstamo no encontrado en catálogo: código ${codigoAlterno}`);
+    return `Estado ${codigoAlterno}`;
+  }
+
   private resolverNombreEstado(p: Prestamo): string {
     if (p.estadoPrestamo?.nombre) return p.estadoPrestamo.nombre;
     if (p.idEstado) {
-      const estado = this.estadosOptions().find(e => e.codigoExterno === p.idEstado);
-      return estado?.nombre || String(p.idEstado);
+      return this.obtenerNombreEstadoPrestamo(p.idEstado);
     }
     return '';
+  }
+
+  obtenerEstadoPrestamo(p: Prestamo): string {
+    // Normalizar estadoPrestamo: el backend puede enviar el estado de varias formas
+    const estadoObjeto = typeof p.estadoPrestamo === 'object' && p.estadoPrestamo ? p.estadoPrestamo : null;
+    const nombreOriginal: string | undefined = estadoObjeto?.nombre;
+
+    // p.idEstado es el código alterno/externo del estado préstamo (PRSTIDST en BD)
+    const codigoAltEstado =
+      p.idEstado ??
+      (typeof p.estadoPrestamo === 'number' ? p.estadoPrestamo : null) ??
+      (estadoObjeto
+        ? (estadoObjeto.codigoExterno ?? estadoObjeto.codigoAlterno ?? null)
+        : null);
+
+    if (codigoAltEstado != null) {
+      return this.obtenerNombreEstadoPrestamo(codigoAltEstado, nombreOriginal);
+    }
+
+    // Si ya viene el nombre en el objeto, usarlo
+    if (nombreOriginal) {
+      return nombreOriginal;
+    }
+
+    return '-';
+  }
+
+  obtenerClaseEstadoPrestamo(p: Prestamo): string {
+    // Usar el método normalizado para obtener el nombre del estado
+    const nombreEstado = this.obtenerEstadoPrestamo(p).toLowerCase();
+    if (!nombreEstado || nombreEstado === '-') {
+      return 'estado-desconocido';
+    }
+
+    // Estados de préstamo: Vigente, Cancelado, Vencido, Mora, etc.
+    if (nombreEstado.includes('vigente') || nombreEstado.includes('activo')) {
+      return 'estado-prestamo-vigente';
+    }
+    if (nombreEstado.includes('cancelado') || nombreEstado.includes('liquidado') || nombreEstado.includes('pagado')) {
+      return 'estado-prestamo-cancelado';
+    }
+    if (nombreEstado.includes('vencido') || nombreEstado.includes('mora')) {
+      return 'estado-prestamo-vencido';
+    }
+    if (nombreEstado.includes('pendiente') || nombreEstado.includes('proceso') || nombreEstado.includes('aprobacion')) {
+      return 'estado-prestamo-pendiente';
+    }
+    if (nombreEstado.includes('suspendido') || nombreEstado.includes('congelado')) {
+      return 'estado-prestamo-suspendido';
+    }
+    if (nombreEstado.includes('rechazado') || nombreEstado.includes('anulado')) {
+      return 'estado-prestamo-rechazado';
+    }
+
+    return 'estado-desconocido';
+  }
+
+  obtenerEstadoParticipe(p: Prestamo): string {
+    const idEstado = p.entidad?.idEstado;
+    if (idEstado === undefined || idEstado === null) {
+      return '-';
+    }
+
+    const estado = this.estadosParticipesOptions().find((e) => e.codigo === idEstado);
+    return estado?.nombre || `Estado ${idEstado}`;
+  }
+
+  obtenerClaseEstadoParticipe(p: Prestamo): string {
+    const idEstado = p.entidad?.idEstado;
+    if (idEstado === undefined || idEstado === null) {
+      return 'estado-desconocido';
+    }
+
+    const estado = this.estadosParticipesOptions().find((e) => e.codigo === idEstado);
+    const nombreEstado = estado?.nombre?.toLowerCase() || '';
+
+    // Mapeo específico por palabras clave
+    // IMPORTANTE: 'activo' debe ir ANTES de 'inactivo' para evitar falsos positivos
+    if (nombreEstado.includes('activo') && !nombreEstado.includes('inactivo')) {
+      return 'estado-activo';
+    }
+    if (nombreEstado.includes('aprobado')) {
+      return 'estado-activo';
+    }
+    if (nombreEstado.includes('rechazado')) {
+      return 'estado-inactivo';
+    }
+    if (nombreEstado.includes('pendiente')) {
+      return 'estado-pendiente';
+    }
+    if (nombreEstado.includes('inactivo')) {
+      return 'estado-suspendido';
+    }
+    if (nombreEstado.includes('proceso')) {
+      return 'estado-revision';
+    }
+    if (nombreEstado.includes('cesado') || nombreEstado.includes('cesante')) {
+      return 'estado-cesado';
+    }
+    if (nombreEstado.includes('jubilado')) {
+      return 'estado-jubilado';
+    }
+    if (nombreEstado.includes('fallecida') || nombreEstado.includes('fallecido')) {
+      return 'estado-fallecido';
+    }
+    if (nombreEstado.includes('desafiliacion') || nombreEstado.includes('desafiliado')) {
+      return 'estado-desafiliado';
+    }
+    if (nombreEstado.includes('disponible')) {
+      return 'estado-disponible';
+    }
+    if (nombreEstado.includes('pension')) {
+      return 'estado-pension';
+    }
+    if (nombreEstado.includes('aportar')) {
+      return 'estado-aportar';
+    }
+
+    return 'estado-desconocido';
   }
 
   exportarCSV(): void {
@@ -476,8 +625,9 @@ export class PrestamoConsultaComponent implements OnInit {
       NumeroPrestamo: p.idAsoprep,
       Entidad: p.entidad?.razonSocial || p.entidad?.nombreComercial || '',
       Identificacion: p.entidad?.numeroIdentificacion || '',
+      EstadoParticipe: this.obtenerEstadoParticipe(p),
+      EstadoPrestamo: this.obtenerEstadoPrestamo(p),
       Producto: p.producto?.nombre || '',
-      Estado: this.resolverNombreEstado(p),
       Fecha: p.fecha ? new Date(p.fecha).toLocaleDateString('es-ES') : '',
       MontoSolicitado: p.montoSolicitado || 0,
       TotalPagado: p.totalPagado || 0,
@@ -489,8 +639,9 @@ export class PrestamoConsultaComponent implements OnInit {
       'NumeroPrestamo',
       'Entidad',
       'Identificacion',
+      'EstadoParticipe',
+      'EstadoPrestamo',
       'Producto',
-      'Estado',
       'Fecha',
       'MontoSolicitado',
       'TotalPagado',
@@ -511,8 +662,9 @@ export class PrestamoConsultaComponent implements OnInit {
       codigo: String(p.codigo || ''),
       numero: String(p.idAsoprep || ''),
       entidad: p.entidad?.razonSocial || p.entidad?.nombreComercial || '',
+      estadoParticipe: this.obtenerEstadoParticipe(p),
+      estadoPrestamo: this.obtenerEstadoPrestamo(p),
       producto: p.producto?.nombre || '',
-      estado: this.resolverNombreEstado(p),
       fecha: p.fecha ? new Date(p.fecha).toLocaleDateString('es-ES') : '',
       monto: String(p.montoSolicitado || 0),
       saldo: String(p.saldoTotal || 0),
@@ -522,13 +674,14 @@ export class PrestamoConsultaComponent implements OnInit {
       'Código',
       'N° Préstamo',
       'Entidad',
+      'Estado Partícipe',
+      'Estado Préstamo',
       'Producto',
-      'Estado',
       'Fecha',
       'Monto',
       'Saldo',
     ];
-    const keys = ['codigo', 'numero', 'entidad', 'producto', 'estado', 'fecha', 'monto', 'saldo'];
+    const keys = ['codigo', 'numero', 'entidad', 'estadoParticipe', 'estadoPrestamo', 'producto', 'fecha', 'monto', 'saldo'];
     this.exportService.exportToPDF(
       rows,
       'prestamos-consulta',

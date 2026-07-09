@@ -28,5 +28,11 @@ public static RS_TIDC = `${API_URL}/tidc`;
 public static RS_VITC = `${API_URL}/vitc`;
 public static RS_VIDC = `${API_URL}/vidc`;
 
+// Facturación Electrónica
+public static RS_FCDR = `${API_URL}/fcdr`;  // Facturador
+public static RS_ESTB = `${API_URL}/estb`;  // Establecimiento
+public static RS_PTEM = `${API_URL}/ptem`;  // Punto de Emisión
+public static RS_NXPE = `${API_URL}/nxpe`;  // Numeración por Punto de Emisión
+
 
 }

@@ -58,7 +58,7 @@ export class TempMotivoCobroService {
    * Selecciona registros de TempMotivoCobro según criterios personalizados.
    */
   selectByCriteria(datos: any): Observable<TempMotivoCobro[] | null> {
-    const wsCriteria = '/criteria';
+    const wsCriteria = '/selectByCriteria/';
     const url = `${ServiciosTsr.RS_TCMT}${wsCriteria}`;
     return this.http.post<TempMotivoCobro[]>(url, datos, this.httpOptions).pipe(
       catchError(this.handleError)

@@ -58,7 +58,7 @@ export class TempCobroTarjetaService {
    * Selecciona registros de TempCobroTarjeta según criterios personalizados.
    */
   selectByCriteria(datos: any): Observable<TempCobroTarjeta[] | null> {
-    const wsCriteria = '/criteria';
+    const wsCriteria = '/selectByCriteria/';
     const url = `${ServiciosTsr.RS_TCTJ}${wsCriteria}`;
     return this.http.post<TempCobroTarjeta[]>(url, datos, this.httpOptions).pipe(
       catchError(this.handleError)

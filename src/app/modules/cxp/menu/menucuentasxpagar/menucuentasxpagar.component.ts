@@ -1,11 +1,12 @@
 import { Component } from '@angular/core';
+import { RouterOutlet } from '@angular/router';
 import { SideMenuCustomComponent } from '../../../../shared/basics/menu/forms/side-menu-custom/side-menu-custom.component';
 import { NavItem } from '../../../../shared/basics/menu/model/nav-item';
 
 @Component({
   selector: 'app-menucuentaxpagar',
   standalone: true,
-  imports: [SideMenuCustomComponent],
+  imports: [SideMenuCustomComponent, RouterOutlet],
   templateUrl: './menucuentasxpagar.component.html',
   styleUrls: ['./menucuentasxpagar.component.scss'],
 })
@@ -14,30 +15,58 @@ export class MenucuentaxpagarComponent {
     {
       displayName: 'Parametrización',
       iconName: 'tune',
-      route: '/menucuentasxpagar/parametrizacion',
+      route: '/menucuentaxpagar/parametrizacion',
       children: [
         {
-          displayName: 'Productos Grid',
-          iconName: 'grid_on',
-          route: '/productos-grid',
+          displayName: 'Grupos de Productos',
+          iconName: 'category',
+          route: '/menucuentaxpagar/parametrizacion/grupos-productos',
         },
         {
-          displayName: 'Productos Árbol',
-          iconName: 'account_tree',
-          route: '/productos-arbol',
+          displayName: 'Productos',
+          iconName: 'inventory_2',
+          route: '/menucuentaxpagar/parametrizacion/productos',
+        },
+        {
+          displayName: 'Proveedores',
+          iconName: 'store',
+          route: '/menucuentaxpagar/parametrizacion/proveedores',
         },
       ],
     },
     {
       displayName: 'Procesos',
       iconName: 'settings',
-      route: '/menucuentasxpagar/procesos',
-      children: [],
+      route: '/menucuentaxpagar/procesos',
+      children: [
+        {
+          displayName: 'Ingreso de Facturas',
+          iconName: 'receipt_long',
+          route: '/menucuentaxpagar/procesos/ingreso-facturas',
+        },
+        {
+          displayName: 'Proposición de Pago',
+          iconName: 'payment',
+          route: '/menucuentaxpagar/procesos/proposicion-pago',
+        },
+      ],
+    },
+    {
+      displayName: 'Consultas',
+      iconName: 'search',
+      route: '/menucuentaxpagar/consultas',
+      children: [
+        {
+          displayName: 'Consulta de CxP',
+          iconName: 'list_alt',
+          route: '/menucuentaxpagar/consultas/cxp',
+        },
+      ],
     },
     {
       displayName: 'Reportes',
       iconName: 'assessment',
-      route: '/menucuentasxpagar/reportes',
+      route: '/menucuentaxpagar/reportes',
       children: [],
     },
   ];

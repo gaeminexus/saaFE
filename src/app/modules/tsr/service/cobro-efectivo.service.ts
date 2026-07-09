@@ -58,7 +58,7 @@ export class CobroEfectivoService {
    * Selecciona registros por criterios personalizados.
    */
   selectByCriteria(datos: any): Observable<CobroEfectivo[] | null> {
-    const wsCriteria = '/criteria';
+    const wsCriteria = '/selectByCriteria/';
     const url = `${ServiciosTsr.RS_CEFC}${wsCriteria}`;
     return this.http.post<CobroEfectivo[]>(url, datos, this.httpOptions).pipe(
       catchError(this.handleError)

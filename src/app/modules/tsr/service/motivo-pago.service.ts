@@ -58,7 +58,7 @@ export class MotivoPagoService {
    * Selecciona registros de MotivoPago según criterios personalizados.
    */
   selectByCriteria(datos: any): Observable<MotivoPago[] | null> {
-    const wsCriteria = '/criteria';
+    const wsCriteria = '/selectByCriteria/';
     const url = `${ServiciosTsr.RS_PMTV}${wsCriteria}`;
     return this.http.post<MotivoPago[]>(url, datos, this.httpOptions).pipe(
       catchError(this.handleError)

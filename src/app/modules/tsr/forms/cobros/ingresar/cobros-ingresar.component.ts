@@ -301,8 +301,8 @@ export class CobrosIngresarComponent implements OnInit {
       return titular.razonSocial;
     }
 
-    const apellido = titular.apellido || titular.apellidos || '';
-    const nombre = titular.nombre || titular.nombres || '';
+    const apellido = titular.apellido || '';
+    const nombre = titular.nombre || '';
     const fullName = `${apellido} ${nombre}`.trim();
 
     if (fullName !== '') {

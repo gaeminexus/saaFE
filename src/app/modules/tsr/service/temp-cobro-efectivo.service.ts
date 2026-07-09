@@ -58,7 +58,7 @@ export class TempCobroEfectivoService {
    * Selecciona registros de TempCobroEfectivo según criterios personalizados.
    */
   selectByCriteria(datos: any): Observable<TempCobroEfectivo[] | null> {
-    const wsCriteria = '/criteria';
+    const wsCriteria = '/selectByCriteria/';
     const url = `${ServiciosTsr.RS_TCEF}${wsCriteria}`;
     return this.http.post<TempCobroEfectivo[]>(url, datos, this.httpOptions).pipe(
       catchError(this.handleError)

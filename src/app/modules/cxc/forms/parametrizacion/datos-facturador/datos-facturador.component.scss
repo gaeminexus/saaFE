@@ -1,0 +1,393 @@
+.datos-facturador-container {
+  padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+  position: relative;
+
+  // ═══════════════════════════════════════════════════════════════════
+  // BREADCRUMB
+  // ═══════════════════════════════════════════════════════════════════
+  .breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 20px;
+    padding: 12px 16px;
+    background-color: #f5f5f5;
+    border-radius: 8px;
+    flex-wrap: wrap;
+
+    button {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 14px;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+
+      &:disabled {
+        opacity: 0.6;
+      }
+    }
+
+    > mat-icon {
+      color: #9e9e9e;
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+    }
+
+    .breadcrumb-current {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #1976d2;
+      font-weight: 500;
+      font-size: 14px;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // CARDS
+  // ═══════════════════════════════════════════════════════════════════
+  mat-card {
+    margin-bottom: 20px;
+
+    mat-card-header {
+      margin-bottom: 20px;
+
+      mat-card-title {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 24px;
+        font-weight: 500;
+
+        mat-icon {
+          font-size: 28px;
+          width: 28px;
+          height: 28px;
+          color: #1976d2;
+        }
+
+        .subtitle {
+          font-size: 18px;
+          font-weight: 400;
+          color: #757575;
+          margin-left: 8px;
+        }
+      }
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // SELECTOR DE FACTURADOR
+  // ═══════════════════════════════════════════════════════════════════
+  .selector-facturador {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    margin-bottom: 24px;
+    padding: 16px;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+
+    mat-form-field {
+      flex: 1;
+    }
+
+    button {
+      margin-top: 8px;
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // FORMULARIOS
+  // ═══════════════════════════════════════════════════════════════════
+  .form-facturador,
+  .form-establecimiento,
+  .form-punto-emision,
+  .form-numeracion {
+    mat-expansion-panel {
+      margin-bottom: 16px;
+
+      mat-expansion-panel-header {
+        mat-panel-title {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          font-weight: 500;
+
+          mat-icon {
+            color: #1976d2;
+          }
+        }
+      }
+    }
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    margin-top: 16px;
+
+    .full-width {
+      grid-column: 1 / -1;
+    }
+  }
+
+  .checkboxes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    padding: 12px 0;
+
+    mat-checkbox {
+      margin: 0;
+    }
+
+    &.full-width {
+      grid-column: 1 / -1;
+    }
+  }
+
+  .form-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid #e0e0e0;
+
+    button {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      mat-spinner {
+        margin-right: 8px;
+      }
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // TABLAS
+  // ═══════════════════════════════════════════════════════════════════
+  .table-container {
+    margin-bottom: 24px;
+    overflow-x: auto;
+
+    table {
+      width: 100%;
+
+      th {
+        background-color: #f5f5f5;
+        font-weight: 600;
+        color: #424242;
+        padding: 12px 16px;
+      }
+
+      td {
+        padding: 12px 16px;
+      }
+
+      .no-data {
+        text-align: center;
+        color: #9e9e9e;
+        font-style: italic;
+        padding: 24px;
+      }
+    }
+  }
+
+  // Estados
+  .estado-activo,
+  .estado-inactivo {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    display: inline-block;
+  }
+
+  .estado-activo {
+    background-color: #c8e6c9;
+    color: #2e7d32;
+  }
+
+  .estado-inactivo {
+    background-color: #ffccbc;
+    color: #d84315;
+  }
+
+  // Iconos
+  .icon-success {
+    color: #4caf50;
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+
+  .icon-muted {
+    color: #bdbdbd;
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+
+  // Número Actual
+  .numero-actual {
+    font-weight: 600;
+    font-size: 16px;
+    color: #1976d2;
+    font-family: 'Courier New', monospace;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // SECCIÓN DE FORMULARIO
+  // ═══════════════════════════════════════════════════════════════════
+  .form-section {
+    margin-top: 24px;
+    padding: 20px;
+    background-color: #fafafa;
+    border-radius: 8px;
+
+    h3 {
+      margin: 0 0 20px 0;
+      font-size: 20px;
+      font-weight: 500;
+      color: #424242;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+  }
+
+  mat-divider {
+    margin: 24px 0;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // LOADING OVERLAY
+  // ═══════════════════════════════════════════════════════════════════
+  .loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+
+    p {
+      color: white;
+      margin-top: 16px;
+      font-size: 16px;
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // RESPONSIVE
+  // ═══════════════════════════════════════════════════════════════════
+  @media (max-width: 768px) {
+    padding: 12px;
+
+    .breadcrumb {
+      flex-direction: column;
+      align-items: stretch;
+
+      button {
+        justify-content: flex-start;
+      }
+
+      > mat-icon {
+        display: none;
+      }
+    }
+
+    .selector-facturador {
+      flex-direction: column;
+
+      button {
+        margin-top: 0;
+        width: 100%;
+      }
+    }
+
+    .form-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .table-container {
+      table {
+        font-size: 14px;
+
+        th,
+        td {
+          padding: 8px;
+        }
+      }
+    }
+
+    mat-card {
+      mat-card-header {
+        mat-card-title {
+          font-size: 20px;
+          flex-direction: column;
+          align-items: flex-start;
+
+          .subtitle {
+            margin-left: 0;
+            font-size: 16px;
+          }
+        }
+      }
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// MATERIAL OVERRIDES
+// ═══════════════════════════════════════════════════════════════════
+::ng-deep {
+  .mat-mdc-form-field-bottom-align {
+    margin-bottom: 8px;
+  }
+
+  .mat-mdc-tooltip {
+    font-size: 12px;
+  }
+
+  .snackbar-success {
+    background-color: #4caf50 !important;
+    color: white !important;
+
+    .mat-simple-snackbar-action {
+      color: white !important;
+    }
+  }
+
+  .snackbar-error {
+    background-color: #f44336 !important;
+    color: white !important;
+
+    .mat-simple-snackbar-action {
+      color: white !important;
+    }
+  }
+}

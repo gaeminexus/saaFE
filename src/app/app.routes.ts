@@ -21,8 +21,11 @@ import { ContratoEditComponent } from './modules/crd/forms/contrato/contrato-edi
 import { MenucreditosComponent } from './modules/crd/menucreditos/menucreditos.component';
 import { ParametrizacionCreditosComponent } from './modules/crd/menucreditos/parametrizacion-creditos.component';
 import { GrupoProductosComponent } from './modules/cxc/forms/grupo-productos.component/grupo-productos.component';
+import { DatosFacturadorComponent } from './modules/cxc/forms/parametrizacion/datos-facturador/datos-facturador.component';
 import { MenucuentasxcobrarComponent } from './modules/cxc/menu/menucuentasxcobrar/menucuentasxcobrar.component';
 import { MenucuentaxpagarComponent } from './modules/cxp/menu/menucuentasxpagar/menucuentasxpagar.component';
+import { GruposProductosPagoComponent } from './modules/cxp/forms/parametrizacion/grupos-productos-pago/grupos-productos-pago.component';
+import { ProveedoresComponent } from './modules/cxp/forms/parametrizacion/proveedores/proveedores.component';
 import { LoginComponent } from './modules/dash/forms/login/login.component';
 import { MenuComponent } from './modules/dash/menu/menu.component';
 import { ReportesSuperBancosComponent } from './modules/rpr/forms/reportes-super-bancos/reportes-super-bancos.component';
@@ -757,12 +760,29 @@ export const routes: Routes = [
     canActivate: [authGuard],
     children: [
       { path: 'grupo-productos', component: GrupoProductosComponent, canActivate: [authGuard] },
+      {
+        path: 'parametrizacion/datos-facturador',
+        component: DatosFacturadorComponent,
+        canActivate: [authGuard],
+      },
     ],
   },
   {
     path: 'menucuentaxpagar',
     component: MenucuentaxpagarComponent,
     canActivate: [authGuard],
+    children: [
+      {
+        path: 'parametrizacion/grupos-productos',
+        component: GruposProductosPagoComponent,
+        canActivate: [authGuard],
+      },
+      {
+        path: 'parametrizacion/proveedores',
+        component: ProveedoresComponent,
+        canActivate: [authGuard],
+      },
+    ],
   },
   {
     path: 'menucreditos',

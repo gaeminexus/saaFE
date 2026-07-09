@@ -58,7 +58,7 @@ export class SaldoBancoService {
    * Selecciona registros de SaldoBanco según criterios personalizados.
    */
   selectByCriteria(datos: any): Observable<SaldoBanco[] | null> {
-    const wsCriteria = '/criteria';
+    const wsCriteria = '/selectByCriteria/';
     const url = `${ServiciosTsr.RS_SLCB}${wsCriteria}`;
     return this.http.post<SaldoBanco[]>(url, datos, this.httpOptions).pipe(
       catchError(this.handleError)

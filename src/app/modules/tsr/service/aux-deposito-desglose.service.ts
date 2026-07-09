@@ -58,7 +58,7 @@ export class AuxDepositoDesgloseService {
    * Selecciona registros por criterios personalizados.
    */
   selectByCriteria(datos: any): Observable<AuxDepositoDesglose[] | null> {
-    const wsCriteria = '/criteria';
+    const wsCriteria = '/selectByCriteria/';
     const url = `${ServiciosTsr.RS_APDS}${wsCriteria}`;
     return this.http.post<AuxDepositoDesglose[]>(url, datos, this.httpOptions).pipe(
       catchError(this.handleError)

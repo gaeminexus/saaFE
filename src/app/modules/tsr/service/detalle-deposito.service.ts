@@ -58,7 +58,7 @@ export class DetalleDepositoService {
    * Selecciona registros de DetalleDeposito según criterios personalizados.
    */
   selectByCriteria(datos: any): Observable<DetalleDeposito[] | null> {
-    const wsCriteria = '/criteria';
+    const wsCriteria = '/selectByCriteria/';
     const url = `${ServiciosTsr.RS_DTDP}${wsCriteria}`;
     return this.http.post<DetalleDeposito[]>(url, datos, this.httpOptions).pipe(
       catchError(this.handleError)

@@ -54,7 +54,7 @@ export class PersonaRolService {
    * Selecciona registros de PersonaRol según criterios personalizados.
    */
   selectByCriteria(datos: any): Observable<PersonaRol[] | null> {
-    const wsCriteria = '/criteria';
+    const wsCriteria = '/selectByCriteria/';
     const url = `${ServiciosTsr.RS_PRRL}${wsCriteria}`;
     return this.http
       .post<PersonaRol[]>(url, datos, this.httpOptions)

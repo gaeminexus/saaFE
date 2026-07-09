@@ -58,7 +58,7 @@ export class TelefonoDireccionService {
    * Selecciona registros de TelefonoDireccion según criterios personalizados.
    */
   selectByCriteria(datos: any): Observable<TelefonoDireccion[] | null> {
-    const wsCriteria = '/criteria';
+    const wsCriteria = '/selectByCriteria/';
     const url = `${ServiciosTsr.RS_PCNT}${wsCriteria}`;
     return this.http.post<TelefonoDireccion[]>(url, datos, this.httpOptions).pipe(
       catchError(this.handleError)

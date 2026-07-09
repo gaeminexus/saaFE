@@ -58,7 +58,7 @@ export class CobroRetencionService {
    * Selecciona registros según criterios personalizados.
    */
   selectByCriteria(datos: any): Observable<CobroRetencion[] | null> {
-    const wsCriteria = '/criteria';
+    const wsCriteria = '/selectByCriteria/';
     const url = `${ServiciosTsr.RS_CRTN}${wsCriteria}`;
     return this.http.post<CobroRetencion[]>(url, datos, this.httpOptions).pipe(
       catchError(this.handleError)

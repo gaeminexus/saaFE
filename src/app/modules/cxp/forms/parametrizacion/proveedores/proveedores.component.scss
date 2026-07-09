@@ -1,0 +1,710 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// PROVEEDORES CXP - Estilos Modernos
+// ═══════════════════════════════════════════════════════════════════════════
+
+@import '../../../../../../styles/abstracts/mixins';
+
+// ── Variables Locales ────────────────────────────────────────────────────────
+$primary: #667eea;
+$secondary: #764ba2;
+$success: #10b981;
+$warning: #f59e0b;
+$danger: #ef4444;
+$info: #3b82f6;
+
+$border-radius: 16px;
+$transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+// ══════════════════════════════════════════════════════════════════════════
+// CONTENEDOR PRINCIPAL
+// ══════════════════════════════════════════════════════════════════════════
+
+.proveedores-container {
+  padding: 1.5rem;
+  max-width: 1400px;
+  margin: 0 auto;
+  animation: fadeIn 0.4s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// HEADER CON GRADIENTE
+// ══════════════════════════════════════════════════════════════════════════
+
+.page-header {
+  background: linear-gradient(135deg, $primary 0%, $secondary 100%);
+  border-radius: $border-radius;
+  padding: 2rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.15);
+  color: white;
+
+  .header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+  }
+
+  .header-icon {
+    font-size: 3rem;
+    width: 3rem;
+    height: 3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    backdrop-filter: blur(10px);
+  }
+
+  .header-text {
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      margin: 0;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .subtitle {
+      font-size: 1rem;
+      opacity: 0.9;
+      margin: 0.25rem 0 0;
+    }
+  }
+
+  .btn-nuevo {
+    padding: 0 2rem;
+    height: 48px;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: 24px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transition: $transition;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    mat-icon {
+      margin-right: 0.5rem;
+    }
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// FILTROS Y BÚSQUEDA
+// ══════════════════════════════════════════════════════════════════════════
+
+.filtros-card {
+  border-radius: $border-radius;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  margin-bottom: 1.5rem;
+
+  mat-card-content {
+    padding: 1.5rem !important;
+  }
+}
+
+.search-container {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+
+  .search-field {
+    flex: 1;
+
+    ::ng-deep {
+      .mat-mdc-text-field-wrapper {
+        background: white;
+        border-radius: 12px;
+      }
+
+      .mat-mdc-form-field-focus-overlay {
+        background-color: rgba($primary, 0.05);
+      }
+
+      .mdc-text-field--focused {
+        .mdc-notched-outline__leading,
+        .mdc-notched-outline__notch,
+        .mdc-notched-outline__trailing {
+          border-color: $primary !important;
+          border-width: 2px;
+        }
+      }
+    }
+
+    mat-icon {
+      color: $primary;
+    }
+  }
+
+  .search-stats {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    background: linear-gradient(135deg, rgba($primary, 0.1) 0%, rgba($secondary, 0.05) 100%);
+    border-radius: 999px;
+    white-space: nowrap;
+
+    .stats-icon {
+      font-size: 1.25rem;
+    }
+
+    .stats-text {
+      font-weight: 600;
+      color: $primary;
+      font-size: 0.9rem;
+    }
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// TABLA DE PROVEEDORES
+// ══════════════════════════════════════════════════════════════════════════
+
+.tabla-card {
+  border-radius: $border-radius;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+
+  mat-card-content {
+    padding: 0 !important;
+  }
+}
+
+.table-container {
+  overflow-x: auto;
+}
+
+.tabla-proveedores {
+  width: 100%;
+
+  th {
+    background: linear-gradient(135deg, rgba($primary, 0.08) 0%, rgba($secondary, 0.05) 100%);
+    color: $primary;
+    font-weight: 700;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 1.25rem 1rem;
+    border-bottom: 2px solid rgba($primary, 0.2);
+  }
+
+  td {
+    padding: 1rem;
+    font-size: 0.9rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  }
+
+  .fila-tabla {
+    transition: $transition;
+    cursor: pointer;
+
+    &:hover {
+      background: rgba($primary, 0.03);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+  }
+
+  // Estilos de celdas específicas
+  .cell-identificacion {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    color: $primary;
+
+    .cell-icon {
+      font-size: 1.25rem;
+      width: 1.25rem;
+      height: 1.25rem;
+      color: $primary;
+    }
+  }
+
+  .cell-razon-social {
+    font-weight: 600;
+    color: #334155;
+  }
+
+  .cell-contacto {
+    .contacto-nombre {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.875rem;
+      color: #64748b;
+
+      .contacto-icon {
+        font-size: 1rem;
+        width: 1rem;
+        height: 1rem;
+        opacity: 0.7;
+      }
+    }
+  }
+
+  .cell-direccion,
+  .cell-telefono,
+  .cell-correo {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.875rem;
+    color: #64748b;
+
+    mat-icon {
+      font-size: 1rem;
+      width: 1rem;
+      height: 1rem;
+      opacity: 0.7;
+    }
+  }
+
+  .col-acciones {
+    text-align: right;
+    width: 150px;
+  }
+}
+
+// Botones de acción en tabla
+.btn-accion {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  transition: $transition;
+
+  mat-icon {
+    font-size: 1.25rem;
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  &.btn-editar {
+    color: $info;
+    &:hover {
+      background: rgba($info, 0.1);
+      transform: scale(1.1);
+    }
+  }
+
+  &.btn-cuentas {
+    color: $success;
+    &:hover {
+      background: rgba($success, 0.1);
+      transform: scale(1.1);
+    }
+  }
+
+  &.btn-eliminar {
+    color: $danger;
+    &:hover {
+      background: rgba($danger, 0.1);
+      transform: scale(1.1);
+    }
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// BADGES DE ESTADO
+// ══════════════════════════════════════════════════════════════════════════
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.4rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+
+  &.estado-activo {
+    background: rgba($success, 0.15);
+    color: darken($success, 10%);
+    border: 1px solid rgba($success, 0.3);
+  }
+
+  &.estado-inactivo {
+    background: rgba(#64748b, 0.15);
+    color: #64748b;
+    border: 1px solid rgba(#64748b, 0.3);
+  }
+
+  &.badge-info {
+    background: rgba($info, 0.15);
+    color: darken($info, 10%);
+    border: 1px solid rgba($info, 0.3);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// FORMULARIO
+// ══════════════════════════════════════════════════════════════════════════
+
+.form-card {
+  border-radius: $border-radius;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  animation: slideIn 0.3s ease;
+
+  mat-card-header {
+    padding: 1.5rem 1.5rem 0;
+
+    mat-card-title {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: $primary;
+
+      mat-icon {
+        font-size: 2rem;
+        width: 2rem;
+        height: 2rem;
+      }
+    }
+  }
+
+  mat-card-content {
+    padding: 1.5rem !important;
+  }
+
+  mat-card-actions {
+    padding: 1rem 1.5rem 1.5rem;
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+
+    button {
+      min-width: 120px;
+
+      mat-icon {
+        vertical-align: middle;
+        margin-right: 0.5rem;
+      }
+
+      mat-spinner {
+        display: inline-block;
+        vertical-align: middle;
+        margin-right: 0.5rem;
+      }
+    }
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.form-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.form-section {
+  .section-title {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: $primary;
+    margin: 0 0 1.25rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid rgba($primary, 0.15);
+
+    mat-icon {
+      font-size: 1.5rem;
+      width: 1.5rem;
+      height: 1.5rem;
+    }
+  }
+
+  mat-form-field {
+    width: 100%;
+
+    &.full-width {
+      grid-column: 1 / -1;
+    }
+
+    ::ng-deep {
+      .mat-mdc-text-field-wrapper {
+        background: white;
+        border-radius: 12px;
+      }
+
+      .mat-mdc-form-field-focus-overlay {
+        background-color: rgba($primary, 0.05);
+      }
+
+      .mat-icon-button {
+        color: $primary;
+      }
+
+      label {
+        font-weight: 500;
+      }
+    }
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// GESTIÓN DE CUENTAS CONTABLES
+// ══════════════════════════════════════════════════════════════════════════
+
+.cuentas-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.cuentas-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, $primary 0%, $secondary 100%);
+  border-radius: $border-radius;
+  color: white;
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.15);
+
+  .btn-back {
+    color: white;
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+  }
+
+  .header-info {
+    flex: 1;
+
+    h2 {
+      margin: 0;
+      font-size: 1.75rem;
+      font-weight: 700;
+    }
+
+    .proveedor-info {
+      margin: 0.25rem 0 0;
+      font-size: 0.95rem;
+      opacity: 0.9;
+    }
+  }
+}
+
+.form-cuenta-card {
+  border-radius: $border-radius;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+
+  mat-card-content {
+    padding: 1.5rem !important;
+  }
+}
+
+.form-cuenta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  align-items: start;
+
+  .cuenta-selector {
+    grid-column: span 2;
+  }
+}
+
+.tabla-cuentas-card {
+  border-radius: $border-radius;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.tabla-cuentas {
+  width: 100%;
+
+  th {
+    background: linear-gradient(135deg, rgba($primary, 0.08) 0%, rgba($secondary, 0.05) 100%);
+    color: $primary;
+    font-weight: 700;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    padding: 1rem;
+  }
+
+  td {
+    padding: 1rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  }
+
+  .cell-plan-cuenta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+
+    strong {
+      color: $primary;
+      font-weight: 600;
+    }
+
+    .cuenta-nombre {
+      font-size: 0.85rem;
+      color: #64748b;
+    }
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// ESTADOS VACÍOS
+// ══════════════════════════════════════════════════════════════════════════
+
+.empty-state,
+.empty-state-small {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  text-align: center;
+
+  mat-icon {
+    font-size: 5rem;
+    width: 5rem;
+    height: 5rem;
+    color: #cbd5e1;
+    margin-bottom: 1rem;
+  }
+
+  p {
+    font-size: 1.1rem;
+    color: #64748b;
+    margin: 0 0 1.5rem;
+  }
+}
+
+.empty-state-small {
+  padding: 2rem 1rem;
+
+  mat-icon {
+    font-size: 3rem;
+    width: 3rem;
+    height: 3rem;
+  }
+
+  p {
+    font-size: 0.95rem;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// LOADING
+// ══════════════════════════════════════════════════════════════════════════
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+
+  mat-spinner {
+    margin-bottom: 1.5rem;
+  }
+
+  p {
+    font-size: 1rem;
+    color: #64748b;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// RESPONSIVE
+// ══════════════════════════════════════════════════════════════════════════
+
+@media (max-width: 992px) {
+  .page-header {
+    .header-content {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .btn-nuevo {
+      width: 100%;
+    }
+  }
+
+  .search-container {
+    flex-direction: column;
+
+    .search-stats {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+
+  .tabla-proveedores {
+    th,
+    td {
+      padding: 0.75rem 0.5rem;
+      font-size: 0.85rem;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .proveedores-container {
+    padding: 1rem;
+  }
+
+  .page-header {
+    padding: 1.5rem;
+
+    .header-text h1 {
+      font-size: 1.5rem;
+    }
+  }
+
+  .form-section .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .form-cuenta {
+    grid-template-columns: 1fr;
+
+    .cuenta-selector {
+      grid-column: span 1;
+    }
+  }
+}

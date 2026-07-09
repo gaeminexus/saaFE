@@ -58,7 +58,7 @@ export class TempCobroChequeService {
    * Selecciona registros de TempCobroCheque según criterios personalizados.
    */
   selectByCriteria(datos: any): Observable<TempCobroCheque[] | null> {
-    const wsCriteria = '/criteria';
+    const wsCriteria = '/selectByCriteria/';
     const url = `${ServiciosTsr.RS_TCCH}${wsCriteria}`;
     return this.http.post<TempCobroCheque[]>(url, datos, this.httpOptions).pipe(
       catchError(this.handleError)

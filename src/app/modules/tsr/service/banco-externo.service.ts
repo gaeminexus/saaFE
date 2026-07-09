@@ -54,7 +54,7 @@ export class BancoExternoService {
    * Selecciona registros por criterios personalizados.
    */
   selectByCriteria(datos: any): Observable<BancoExterno[] | null> {
-    const wsCriteria = '/criteria';
+    const wsCriteria = '/selectByCriteria/';
     const url = `${ServiciosTsr.RS_BEXT}${wsCriteria}`;
     return this.http
       .post<BancoExterno[]>(url, datos, this.httpOptions)

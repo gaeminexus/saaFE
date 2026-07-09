@@ -58,7 +58,7 @@ export class TempCobroTransferenciaService {
    * Selecciona registros de TempCobroTransferencia según criterios personalizados.
    */
   selectByCriteria(datos: any): Observable<TempCobroTransferencia[] | null> {
-    const wsCriteria = '/criteria';
+    const wsCriteria = '/selectByCriteria/';
     const url = `${ServiciosTsr.RS_TCTR}${wsCriteria}`;
     return this.http.post<TempCobroTransferencia[]>(url, datos, this.httpOptions).pipe(
       catchError(this.handleError)

@@ -58,7 +58,7 @@ export class UsuarioPorCajaService {
    * Selecciona registros de UsuarioPorCaja según criterios personalizados.
    */
   selectByCriteria(datos: any): Observable<UsuarioPorCaja[] | null> {
-    const wsCriteria = '/criteria';
+    const wsCriteria = '/selectByCriteria/';
     const url = `${ServiciosTsr.RS_USXC}${wsCriteria}`;
     return this.http.post<UsuarioPorCaja[]>(url, datos, this.httpOptions).pipe(
       catchError(this.handleError)

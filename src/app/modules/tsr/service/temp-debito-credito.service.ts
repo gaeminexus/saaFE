@@ -58,7 +58,7 @@ export class TempDebitoCreditoService {
    * Selecciona registros de TempDebitoCredito según criterios personalizados.
    */
   selectByCriteria(datos: any): Observable<TempDebitoCredito[] | null> {
-    const wsCriteria = '/criteria';
+    const wsCriteria = '/selectByCriteria/';
     const url = `${ServiciosTsr.RS_TDBC}${wsCriteria}`;
     return this.http.post<TempDebitoCredito[]>(url, datos, this.httpOptions).pipe(
       catchError(this.handleError)

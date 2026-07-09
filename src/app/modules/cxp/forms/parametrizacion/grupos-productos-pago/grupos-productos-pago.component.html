@@ -1,0 +1,486 @@
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     GRUPOS DE PRODUCTOS CXP - Vista Principal
+  ════════════════════════════════════════════════════════════════════════════ -->
+
+<div class="grupos-container">
+
+  @if (modoVista() === 'lista') {
+    <!-- Header con gradiente -->
+    <div class="page-header">
+      <div class="header-content">
+        <div class="header-left">
+          <mat-icon class="header-icon">category</mat-icon>
+          <div class="header-text">
+            <h1>Grupos de Productos</h1>
+            <p class="subtitle">Parametrización de grupos con cuentas contables</p>
+          </div>
+        </div>
+        <button mat-raised-button color="primary" (click)="nuevoGrupo()" class="btn-nuevo">
+          <mat-icon>add</mat-icon>
+          Nuevo Grupo
+        </button>
+      </div>
+    </div>
+
+    <!-- Barra de búsqueda -->
+    <mat-card class="filtros-card">
+      <mat-card-content>
+        <div class="search-container">
+          <mat-form-field appearance="outline" class="search-field">
+            <mat-label>Buscar grupo</mat-label>
+            <mat-icon matPrefix>search</mat-icon>
+            <input
+              matInput
+              [(ngModel)]="filtroBusqueda"
+              placeholder="Nombre o cuenta contable..."
+            />
+            @if (filtroBusqueda()) {
+              <button matSuffix mat-icon-button (click)="filtroBusqueda.set('')">
+                <mat-icon>close</mat-icon>
+              </button>
+            }
+          </mat-form-field>
+          <div class="search-stats">
+            <span class="stats-icon">📊</span>
+            <span class="stats-text">
+              {{ gruposFiltrados().length }} grupos encontrados
+            </span>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Tabla de grupos -->
+    <mat-card class="tabla-card">
+      <mat-card-content>
+        @if (cargando()) {
+          <div class="loading-container">
+            <mat-spinner diameter="60"></mat-spinner>
+            <p>Cargando grupos...</p>
+          </div>
+        } @else {
+          <div class="table-container">
+            <table mat-table [dataSource]="dataSource" class="tabla-grupos">
+
+              <ng-container matColumnDef="nombre">
+                <th mat-header-cell *matHeaderCellDef>Nombre del Grupo</th>
+                <td mat-cell *matCellDef="let row">
+                  <div class="cell-nombre">
+                    <mat-icon class="cell-icon">category</mat-icon>
+                    <span>{{ row.nombre }}</span>
+                  </div>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="tipoGrupo">
+                <th mat-header-cell *matHeaderCellDef>Tipo de Grupo</th>
+                <td mat-cell *matCellDef="let row">
+                  <span class="badge badge-info">
+                    {{ getTipoGrupoNombre(row.rubroTipoGrupoP) }}
+                  </span>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="planCuenta">
+                <th mat-header-cell *matHeaderCellDef>Cuenta Contable</th>
+                <td mat-cell *matCellDef="let row">
+                  <div class="cell-plan-cuenta">
+                    <strong>{{ row.planCuenta?.cuentaContable }}</strong>
+                    <span class="cuenta-nombre">{{ row.planCuenta?.nombre }}</span>
+                  </div>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="estado">
+                <th mat-header-cell *matHeaderCellDef>Estado</th>
+                <td mat-cell *matCellDef="let row">
+                  <span class="badge" [ngClass]="obtenerClaseEstado(row.estado || 1)">
+                    {{ obtenerNombreEstado(row.estado || 1) }}
+                  </span>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="acciones">
+                <th mat-header-cell *matHeaderCellDef class="col-acciones">Acciones</th>
+                <td mat-cell *matCellDef="let row" class="col-acciones">
+                  <button
+                    mat-icon-button
+                    matTooltip="Ver Productos"
+                    (click)="verProductos(row)"
+                    class="btn-accion btn-productos"
+                  >
+                    <mat-icon>inventory_2</mat-icon>
+                  </button>
+                  <button
+                    mat-icon-button
+                    matTooltip="Editar"
+                    (click)="editarGrupo(row)"
+                    class="btn-accion btn-editar"
+                  >
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                  <button
+                    mat-icon-button
+                    matTooltip="Eliminar"
+                    (click)="eliminarGrupo(row)"
+                    class="btn-accion btn-eliminar"
+                  >
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="columnasTabla"></tr>
+              <tr mat-row *matRowDef="let row; columns: columnasTabla" class="fila-tabla"></tr>
+            </table>
+
+            @if (gruposFiltrados().length === 0) {
+              <div class="empty-state">
+                <mat-icon>inbox</mat-icon>
+                <p>No hay grupos registrados</p>
+                <button mat-raised-button color="primary" (click)="nuevoGrupo()">
+                  <mat-icon>add</mat-icon>
+                  Crear Primer Grupo
+                </button>
+              </div>
+            }
+          </div>
+        }
+      </mat-card-content>
+    </mat-card>
+  }
+
+  @if (modoVista() === 'form') {
+    <mat-card class="form-card">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>{{ grupoSeleccionado() ? 'edit' : 'add' }}</mat-icon>
+          {{ grupoSeleccionado() ? 'Editar Grupo' : 'Nuevo Grupo' }}
+        </mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <form [formGroup]="formGrupo" class="form-grid">
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Nombre del Grupo</mat-label>
+            <mat-icon matPrefix>category</mat-icon>
+            <input matInput formControlName="nombre" maxlength="250" required />
+            @if (formGrupo.get('nombre')?.hasError('required')) {
+              <mat-error>Campo requerido</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Tipo de Grupo</mat-label>
+            <mat-icon matPrefix>label</mat-icon>
+            <mat-select formControlName="rubroTipoGrupoP" required>
+              @for (tipo of tiposGrupoOptions(); track tipo.codigo) {
+                <mat-option [value]="tipo.codigo">{{ tipo.descripcion }}</mat-option>
+              }
+            </mat-select>
+            @if (formGrupo.get('rubroTipoGrupoP')?.hasError('required')) {
+              <mat-error>Debe seleccionar un tipo</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="cuenta-selector">
+            <mat-label>Cuenta Contable</mat-label>
+            <input
+              matInput
+              readonly
+              [value]="getCuentaDisplayText()"
+              placeholder="Seleccione una cuenta..."
+              (click)="seleccionarPlanCuenta()"
+              required
+            />
+            <button matSuffix mat-icon-button (click)="seleccionarPlanCuenta()">
+              <mat-icon>search</mat-icon>
+            </button>
+            @if (formGrupo.get('planCuenta')?.hasError('required')) {
+              <mat-error>Debe seleccionar una cuenta</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Estado</mat-label>
+            <mat-icon matPrefix>check_circle</mat-icon>
+            <mat-select formControlName="estado" required>
+              @for (estado of opcionesEstado; track estado.value) {
+                <mat-option [value]="estado.value">{{ estado.label }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        </form>
+      </mat-card-content>
+
+      <mat-card-actions align="end">
+        <button mat-button (click)="cancelar()" [disabled]="guardando()">
+          <mat-icon>close</mat-icon>
+          Cancelar
+        </button>
+        <button
+          mat-raised-button
+          color="primary"
+          (click)="guardarGrupo()"
+          [disabled]="formGrupo.invalid || guardando()"
+        >
+          @if (guardando()) {
+            <mat-spinner diameter="20"></mat-spinner>
+          } @else {
+            <mat-icon>save</mat-icon>
+          }
+          {{ guardando() ? 'Guardando...' : 'Guardar' }}
+        </button>
+      </mat-card-actions>
+    </mat-card>
+  }
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- VISTA PRODUCTOS -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  @if (modoVista() === 'productos') {
+    <mat-card class="productos-card">
+      <mat-card-header>
+        <mat-card-title>
+          <div class="productos-header">
+            <div class="productos-header-left">
+              <button mat-icon-button (click)="volverAGrupos()" class="btn-volver">
+                <mat-icon>arrow_back</mat-icon>
+              </button>
+              <div>
+                <h2>
+                  <mat-icon>inventory_2</mat-icon>
+                  Productos de "{{ grupoSeleccionado()?.nombre }}"
+                </h2>
+                <p class="subtitle">Gestión de productos del grupo</p>
+              </div>
+            </div>
+            @if (modoFormProducto() === 'nuevo') {
+              <button mat-raised-button color="primary" (click)="nuevoProducto()">
+                <mat-icon>add</mat-icon>
+                Nuevo Producto
+              </button>
+            }
+          </div>
+        </mat-card-title>
+      </mat-card-header>
+
+      <mat-card-content>
+        <!-- Formulario de Producto -->
+        <div class="form-producto-container">
+          <form [formGroup]="formProducto" class="form-producto">
+            <mat-form-field appearance="outline">
+              <mat-label>Código *</mat-label>
+              <mat-icon matPrefix>tag</mat-icon>
+              <input matInput formControlName="codigo" maxlength="500" required />
+              @if (formProducto.get('codigo')?.hasError('required')) {
+                <mat-error>Campo requerido</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Código Auxiliar</mat-label>
+              <mat-icon matPrefix>qr_code</mat-icon>
+              <input matInput formControlName="codigoAux" maxlength="500" />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Nombre del Producto *</mat-label>
+              <mat-icon matPrefix>shopping_bag</mat-icon>
+              <input matInput formControlName="nombre" maxlength="1000" required />
+              @if (formProducto.get('nombre')?.hasError('required')) {
+                <mat-error>Campo requerido</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Descripción</mat-label>
+              <mat-icon matPrefix>description</mat-icon>
+              <textarea matInput formControlName="descripcion" maxlength="1000" rows="2"></textarea>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Precio Unitario *</mat-label>
+              <mat-icon matPrefix>attach_money</mat-icon>
+              <input matInput type="number" formControlName="precioUnitario"
+                     min="0" step="0.01" required />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Descuento</mat-label>
+              <mat-icon matPrefix>discount</mat-icon>
+              <input matInput type="number" formControlName="descuento" min="0" step="0.01" />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Tipo Descuento</mat-label>
+              <mat-select formControlName="tipoDescuento" required>
+                <mat-option [value]="0">Valor</mat-option>
+                <mat-option [value]="1">Porcentaje</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Incluye IVA</mat-label>
+              <mat-select formControlName="incluyeIVA" required>
+                <mat-option [value]="0">No</mat-option>
+                <mat-option [value]="1">Sí</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Tipo IVA</mat-label>
+              <input matInput type="number" formControlName="tipoIVA" min="0" />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Stock</mat-label>
+              <mat-icon matPrefix>inventory</mat-icon>
+              <input matInput type="number" formControlName="stock" min="0" />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Multi Precio</mat-label>
+              <mat-select formControlName="multiPrecio">
+                <mat-option [value]="0">No</mat-option>
+                <mat-option [value]="1">Sí</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Estado *</mat-label>
+              <mat-icon matPrefix>check_circle</mat-icon>
+              <mat-select formControlName="estado" required>
+                @for (estado of opcionesEstado; track estado.value) {
+                  <mat-option [value]="estado.value">{{ estado.label }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <div class="form-actions">
+              @if (modoFormProducto() === 'editar') {
+                <button mat-button type="button" (click)="cancelarProducto()">
+                  <mat-icon>close</mat-icon>
+                  Cancelar
+                </button>
+              }
+              <button
+                mat-raised-button
+                color="primary"
+                type="button"
+                (click)="guardarProducto()"
+                [disabled]="formProducto.invalid || guardando()"
+              >
+                @if (guardando()) {
+                  <mat-spinner diameter="20"></mat-spinner>
+                } @else {
+                  <mat-icon>save</mat-icon>
+                }
+                {{ guardando() ? 'Guardando...' : 'Guardar Producto' }}
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Tabla de Productos -->
+        @if (cargando()) {
+          <div class="loading-container">
+            <mat-spinner></mat-spinner>
+            <p>Cargando productos...</p>
+          </div>
+        } @else {
+          <div class="table-container">
+            <table mat-table [dataSource]="dataSourceProductos" class="tabla-productos">
+
+              <ng-container matColumnDef="codigo">
+                <th mat-header-cell *matHeaderCellDef>Código</th>
+                <td mat-cell *matCellDef="let row">
+                  <span class="badge badge-info">{{ row.codigo }}</span>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="nombre">
+                <th mat-header-cell *matHeaderCellDef>Nombre</th>
+                <td mat-cell *matCellDef="let row">
+                  <div class="cell-nombre">
+                    <mat-icon class="cell-icon">shopping_bag</mat-icon>
+                    <span>{{ row.nombre }}</span>
+                  </div>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="precioUnitario">
+                <th mat-header-cell *matHeaderCellDef>Precio Unit.</th>
+                <td mat-cell *matCellDef="let row">
+                  <strong>{{ row.precioUnitario | number:'1.2-2' }}</strong>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="incluyeIVA">
+                <th mat-header-cell *matHeaderCellDef>Incluye IVA</th>
+                <td mat-cell *matCellDef="let row">
+                  <span class="badge" [ngClass]="row.incluyeIVA === 1 ? 'badge-success' : 'badge-secondary'">
+                    {{ row.incluyeIVA === 1 ? 'Sí' : 'No' }}
+                  </span>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="stock">
+                <th mat-header-cell *matHeaderCellDef>Stock</th>
+                <td mat-cell *matCellDef="let row">
+                  <span class="badge badge-info">{{ row.stock || 0 }}</span>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="estado">
+                <th mat-header-cell *matHeaderCellDef>Estado</th>
+                <td mat-cell *matCellDef="let row">
+                  <span class="badge" [ngClass]="obtenerClaseEstado(row.estado || 1)">
+                    {{ obtenerNombreEstado(row.estado || 1) }}
+                  </span>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="acciones">
+                <th mat-header-cell *matHeaderCellDef class="col-acciones">Acciones</th>
+                <td mat-cell *matCellDef="let row" class="col-acciones">
+                  <button
+                    mat-icon-button
+                    matTooltip="Editar"
+                    (click)="editarProducto(row)"
+                    class="btn-accion btn-editar"
+                  >
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                  <button
+                    mat-icon-button
+                    matTooltip="Eliminar"
+                    (click)="eliminarProducto(row)"
+                    class="btn-accion btn-eliminar"
+                  >
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="columnasTablaProductos"></tr>
+              <tr mat-row *matRowDef="let row; columns: columnasTablaProductos" class="fila-tabla"></tr>
+            </table>
+
+            @if (productos().length === 0) {
+              <div class="empty-state">
+                <mat-icon>inventory_2</mat-icon>
+                <p>No hay productos registrados en este grupo</p>
+                <button mat-raised-button color="primary" (click)="nuevoProducto()">
+                  <mat-icon>add</mat-icon>
+                  Crear Primer Producto
+                </button>
+              </div>
+            }
+          </div>
+        }
+      </mat-card-content>
+    </mat-card>
+  }
+
+</div>

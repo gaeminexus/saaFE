@@ -252,6 +252,15 @@
               </td>
             </ng-container>
 
+            <ng-container matColumnDef="estadoParticipe">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Estado Partícipe</th>
+              <td mat-cell *matCellDef="let p">
+                <span class="estado-badge" [ngClass]="obtenerClaseEstadoParticipe(p)">
+                  {{ obtenerEstadoParticipe(p) }}
+                </span>
+              </td>
+            </ng-container>
+
             <ng-container matColumnDef="producto">
               <th mat-header-cell *matHeaderCellDef mat-sort-header>Producto</th>
               <td mat-cell *matCellDef="let p">{{ p.producto?.nombre || '-' }}</td>
@@ -263,10 +272,10 @@
             </ng-container>
 
             <ng-container matColumnDef="estadoPrestamo">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header>Estado</th>
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Estado Préstamo</th>
               <td mat-cell *matCellDef="let p">
-                <span class="estado-badge" [class.activo]="p.estadoPrestamo?.codigo === 1">
-                  {{ p.estadoPrestamo?.nombre || '-' }}
+                <span class="estado-badge" [ngClass]="obtenerClaseEstadoPrestamo(p)">
+                  {{ obtenerEstadoPrestamo(p) }}
                 </span>
               </td>
             </ng-container>

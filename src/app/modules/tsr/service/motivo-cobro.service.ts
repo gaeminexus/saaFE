@@ -58,7 +58,7 @@ export class MotivoCobroService {
    * Selecciona registros de MotivoCobro según criterios personalizados.
    */
   selectByCriteria(datos: any): Observable<MotivoCobro[] | null> {
-    const wsCriteria = '/criteria';
+    const wsCriteria = '/selectByCriteria/';
     const url = `${ServiciosTsr.RS_CMTV}${wsCriteria}`;
     return this.http.post<MotivoCobro[]>(url, datos, this.httpOptions).pipe(
       catchError(this.handleError)

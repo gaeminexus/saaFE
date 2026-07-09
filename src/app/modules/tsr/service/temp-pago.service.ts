@@ -58,7 +58,7 @@ export class TempPagoService {
    * Selecciona registros de TempPago según criterios personalizados.
    */
   selectByCriteria(datos: any): Observable<TempPago[] | null> {
-    const wsCriteria = '/criteria';
+    const wsCriteria = '/selectByCriteria/';
     const url = `${ServiciosTsr.RS_TPGS}${wsCriteria}`;
     return this.http.post<TempPago[]>(url, datos, this.httpOptions).pipe(
       catchError(this.handleError)

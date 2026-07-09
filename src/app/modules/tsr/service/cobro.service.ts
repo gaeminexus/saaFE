@@ -58,7 +58,7 @@ export class CobroService {
    * Selecciona registros por criterios personalizados.
    */
   selectByCriteria(datos: any): Observable<Cobro[] | null> {
-    const wsCriteria = '/criteria';
+    const wsCriteria = '/selectByCriteria/';
     const url = `${ServiciosTsr.RS_CBRO}${wsCriteria}`;
     return this.http.post<Cobro[]>(url, datos, this.httpOptions).pipe(
       catchError(this.handleError)

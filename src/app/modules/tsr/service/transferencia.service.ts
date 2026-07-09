@@ -58,7 +58,7 @@ export class TransferenciaService {
    * Selecciona registros de Transferencia según criterios personalizados.
    */
   selectByCriteria(datos: any): Observable<Transferencia[] | null> {
-    const wsCriteria = '/criteria';
+    const wsCriteria = '/selectByCriteria/';
     const url = `${ServiciosTsr.RS_TRNS}${wsCriteria}`;
     return this.http.post<Transferencia[]>(url, datos, this.httpOptions).pipe(
       catchError(this.handleError)

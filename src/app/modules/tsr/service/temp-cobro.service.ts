@@ -58,7 +58,7 @@ export class TempCobroService {
    * Selecciona registros de TempCobro según criterios personalizados.
    */
   selectByCriteria(datos: any): Observable<TempCobro[] | null> {
-    const wsCriteria = '/criteria';
+    const wsCriteria = '/selectByCriteria/';
     const url = `${ServiciosTsr.RS_TCBR}${wsCriteria}`;
     return this.http.post<TempCobro[]>(url, datos, this.httpOptions).pipe(
       catchError(this.handleError)

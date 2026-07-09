@@ -58,7 +58,7 @@ export class PagoService {
    * Selecciona registros de Pago según criterios personalizados.
    */
   selectByCriteria(datos: any): Observable<Pago[] | null> {
-    const wsCriteria = '/criteria';
+    const wsCriteria = '/selectByCriteria/';
     const url = `${ServiciosTsr.RS_PGSS}${wsCriteria}`;
     return this.http.post<Pago[]>(url, datos, this.httpOptions).pipe(
       catchError(this.handleError)

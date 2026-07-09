@@ -58,7 +58,7 @@ export class CobroTarjetaService {
    * Selecciona registros de CobroTarjeta según criterios personalizados.
    */
   selectByCriteria(datos: any): Observable<CobroTarjeta[] | null> {
-    const wsCriteria = '/criteria';
+    const wsCriteria = '/selectByCriteria/';
     const url = `${ServiciosTsr.RS_CTRJ}${wsCriteria}`;
     return this.http.post<CobroTarjeta[]>(url, datos, this.httpOptions).pipe(
       catchError(this.handleError)

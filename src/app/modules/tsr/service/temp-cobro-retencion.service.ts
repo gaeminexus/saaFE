@@ -58,7 +58,7 @@ export class TempCobroRetencionService {
    * Selecciona registros de TempCobroRetencion según criterios personalizados.
    */
   selectByCriteria(datos: any): Observable<TempCobroRetencion[] | null> {
-    const wsCriteria = '/criteria';
+    const wsCriteria = '/selectByCriteria/';
     const url = `${ServiciosTsr.RS_TCRT}${wsCriteria}`;
     return this.http.post<TempCobroRetencion[]>(url, datos, this.httpOptions).pipe(
       catchError(this.handleError)

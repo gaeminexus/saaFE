@@ -58,7 +58,7 @@ export class DireccionTitularService {
    * Selecciona registros de DireccionTitular según criterios personalizados.
    */
   selectByCriteria(datos: any): Observable<DireccionTitular[] | null> {
-    const wsCriteria = '/criteria';
+    const wsCriteria = '/selectByCriteria/';
     const url = `${ServiciosTsr.RS_PDRC}${wsCriteria}`;
     return this.http.post<DireccionTitular[]>(url, datos, this.httpOptions).pipe(
       catchError(this.handleError)

@@ -58,7 +58,7 @@ export class DesgloseDetalleDepositoService {
    * Selecciona registros de DesgloseDetalleDeposito según criterios personalizados.
    */
   selectByCriteria(datos: any): Observable<DesgloseDetalleDeposito[] | null> {
-    const wsCriteria = '/criteria';
+    const wsCriteria = '/selectByCriteria/';
     const url = `${ServiciosTsr.RS_DSDT}${wsCriteria}`;
     return this.http.post<DesgloseDetalleDeposito[]>(url, datos, this.httpOptions).pipe(
       catchError(this.handleError)

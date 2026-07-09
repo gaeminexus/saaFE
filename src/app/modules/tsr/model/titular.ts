@@ -2,25 +2,27 @@
  * Modelo de Titular para el módulo de Tesorería (TSR).
  * Representa titulares de cuentas bancarias, beneficiarios de pagos, etc.
  *
- * ⚠️ IMPORTANTE: El backend SOLO acepta 9 campos:
+ * ⚠️ IMPORTANTE: El backend acepta 12 campos principales:
  * ✅ CAMPOS VÁLIDOS PARA POST/PUT:
  *    1. codigo           (Long)    - Identificador único
- *    2. nombres          (String)  - Nombres (plural)
- *    3. apellidos        (String)  - Apellidos (plural)
+ *    2. nombre           (String)  - Nombre (singular)
+ *    3. apellido         (String)  - Apellido (singular)
  *    4. estado           (Integer) - Estado: 0=INACTIVO, 1=ACTIVO
  *    5. genero           (String)  - Género: M o F
  *    6. estadoCivil      (String)  - Estado civil: Soltero, Casado, etc.
  *    7. filial           (String)  - Filial del titular
  *    8. usuarioIngreso   (String)  - Usuario que creó el registro
  *    9. fechaIngreso     (String)  - Fecha de creación
+ *   10. telefono         (String)  - Teléfono de contacto
+ *   11. email            (String)  - Correo electrónico
+ *   12. direccion        (String)  - Dirección
  *
  * ❌ CAMPOS NO SOPORTADOS POR EL BACKEND (uso solo en frontend):
- *    - identificacion, nombre (singular), apellido (singular), razonSocial
+ *    - identificacion, razonSocial
  *    - tipoCliente, tipoProveedor, tipoBeneficiario, tipoEmpleado, tipoSocio
  *    - rubroTipoPersonaP, rubroTipoPersonaH, rubroTipoIdentificacionP, rubroTipoIdentificacionH
  *    - aplicaIVA, aplicaRetencion
  *
- * Ver sanitizeTitular() en titulares.component.ts para el filtro de envío al backend.
  */
 export interface Titular {
   // ===== CAMPOS BASE =====
@@ -28,8 +30,8 @@ export interface Titular {
   estado: number; // Estado del registro: 1 = ACTIVO, 0 = INACTIVO (OBLIGATORIO)
 
   // ===== CAMPOS DE BACKEND =====
-  nombres?: string; // Nombres (plural) - campo backend
-  apellidos?: string; // Apellidos (plural) - campo backend
+  nombre?: string; // Nombre (singular) - campo backend
+  apellido?: string; // Apellido (singular) - campo backend
   genero?: string; // Género: M o F
   estadoCivil?: string; // Estado civil: Soltero, Casado, Divorciado, Viudo, Union Libre
   filial?: string; // Filial del titular
@@ -38,9 +40,10 @@ export interface Titular {
 
   // ===== CAMPOS EXTENDIDOS (Modelo completo) =====
   identificacion?: string; // Número de identificación (RUC, Cédula, Pasaporte)
-  nombre?: string; // Nombre (singular) - usado en modelo extendido
-  apellido?: string; // Apellido (singular) - usado en modelo extendido
   razonSocial?: string; // Razón social (para personas jurídicas)
+  telefono?: string; // Teléfono (para todos)
+  email?: string; // Correo electrónico (para todos)
+  direccion?: string; // Dirección (para todos)
 
   // ===== TIPOS/ROLES =====
   tipoCliente?: number; // 1 = Es cliente, 0 = No es cliente

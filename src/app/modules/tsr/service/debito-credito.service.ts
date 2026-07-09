@@ -58,7 +58,7 @@ export class DebitoCreditoService {
    * Selecciona registros de DebitoCredito según criterios personalizados.
    */
   selectByCriteria(datos: any): Observable<DebitoCredito[] | null> {
-    const wsCriteria = '/criteria';
+    const wsCriteria = '/selectByCriteria/';
     const url = `${ServiciosTsr.RS_DBCR}${wsCriteria}`;
     return this.http.post<DebitoCredito[]>(url, datos, this.httpOptions).pipe(
       catchError(this.handleError)

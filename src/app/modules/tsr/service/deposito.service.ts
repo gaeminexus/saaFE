@@ -58,7 +58,7 @@ export class DepositoService {
    * Selecciona registros de Deposito según criterios personalizados.
    */
   selectByCriteria(datos: any): Observable<Deposito[] | null> {
-    const wsCriteria = '/criteria';
+    const wsCriteria = '/selectByCriteria/';
     const url = `${ServiciosTsr.RS_DPST}${wsCriteria}`;
     return this.http.post<Deposito[]>(url, datos, this.httpOptions).pipe(
       catchError(this.handleError)

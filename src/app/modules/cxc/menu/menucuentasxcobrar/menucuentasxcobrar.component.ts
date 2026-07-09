@@ -21,6 +21,11 @@ export class MenucuentasxcobrarComponent {
           iconName: 'category',
           route: '/menucuentasxcobrar/grupo-productos',
         },
+        {
+          displayName: 'Datos Facturador',
+          iconName: 'receipt_long',
+          route: '/menucuentasxcobrar/parametrizacion/datos-facturador',
+        },
       ],
     },
     {

@@ -1,0 +1,334 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// GRUPOS DE PRODUCTOS CXP - Estilos Modernos
+// ═══════════════════════════════════════════════════════════════════════════
+
+@import '../../../../../../styles/abstracts/variables';
+@import '../../../../../../styles/abstracts/colors';
+
+$primary: #667eea;
+$secondary: #764ba2;
+$success: #10b981;
+$danger: #ef4444;
+$border-radius: 16px;
+
+.grupos-container {
+  padding: 1.5rem;
+  max-width: 1400px;
+  margin: 0 auto;
+  animation: fadeIn 0.4s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.page-header {
+  background: linear-gradient(135deg, $primary 0%, $secondary 100%);
+  border-radius: $border-radius;
+  padding: 2rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.15);
+  color: white;
+
+  .header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+  }
+
+  .header-icon {
+    font-size: 3rem;
+    width: 3rem;
+    height: 3rem;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+  }
+
+  .header-text h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0;
+  }
+
+  .subtitle {
+    font-size: 1rem;
+    opacity: 0.9;
+    margin: 0.25rem 0 0;
+  }
+
+  .btn-nuevo {
+    padding: 0 2rem;
+    height: 48px;
+    border-radius: 24px;
+  }
+}
+
+.filtros-card, .tabla-card, .form-card {
+  border-radius: $border-radius;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  margin-bottom: 1.5rem;
+}
+
+.search-container {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+
+  .search-field {
+    flex: 1;
+  }
+
+  .search-stats {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    background: linear-gradient(135deg, rgba($primary, 0.1) 0%, rgba($secondary, 0.05) 100%);
+    border-radius: 999px;
+
+    .stats-text {
+      font-weight: 600;
+      color: $primary;
+    }
+  }
+}
+
+.tabla-grupos {
+  width: 100%;
+
+  th {
+    background: linear-gradient(135deg, rgba($primary, 0.08) 0%, rgba($secondary, 0.05) 100%);
+    color: $primary;
+    font-weight: 700;
+    padding: 1.25rem 1rem;
+  }
+
+  td {
+    padding: 1rem;
+  }
+
+  .fila-tabla:hover {
+    background: rgba($primary, 0.03);
+  }
+
+  .cell-nombre {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+
+    .cell-icon {
+      color: $primary;
+    }
+  }
+
+  .cell-plan-cuenta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+
+    strong {
+      color: $primary;
+    }
+
+    .cuenta-nombre {
+      font-size: 0.85rem;
+      color: #64748b;
+    }
+  }
+}
+
+.badge {
+  padding: 0.4rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+
+  &.estado-activo {
+    background: rgba($success, 0.15);
+    color: darken($success, 10%);
+  }
+
+  &.estado-inactivo {
+    background: rgba(#64748b, 0.15);
+    color: #64748b;
+  }
+
+  &.badge-info {
+    background: rgba($primary, 0.12);
+    color: darken($primary, 15%);
+  }
+
+  &.badge-success {
+    background: rgba($success, 0.12);
+    color: darken($success, 15%);
+  }
+
+  &.badge-warning {
+    background: rgba(#f59e0b, 0.12);
+    color: darken(#f59e0b, 15%);
+  }
+
+  &.badge-secondary {
+    background: rgba(#64748b, 0.12);
+    color: #64748b;
+  }
+}
+
+.btn-accion {
+  &.btn-productos {
+    color: #8b5cf6;
+    &:hover { background: rgba(#8b5cf6, 0.1); }
+  }
+
+  &.btn-editar {
+    color: #3b82f6;
+    &:hover { background: rgba(#3b82f6, 0.1); }
+  }
+
+  &.btn-eliminar {
+    color: $danger;
+    &:hover { background: rgba($danger, 0.1); }
+  }
+}
+
+.form-card {
+  mat-card-title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: $primary;
+  }
+}
+
+.form-grid {
+  display: grid;
+  gap: 1rem;
+
+  .full-width, .cuenta-selector {
+    grid-column: 1 / -1;
+  }
+}
+
+.empty-state, .loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4rem 2rem;
+
+  mat-icon {
+    font-size: 5rem;
+    color: #cbd5e1;
+    margin-bottom: 1rem;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PRODUCTOS
+// ═══════════════════════════════════════════════════════════════════════════
+
+.productos-card {
+  border-radius: $border-radius;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+
+  mat-card-title {
+    width: 100%;
+  }
+}
+
+.productos-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  gap: 1rem;
+
+  .productos-header-left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+
+    .btn-volver {
+      color: $primary;
+    }
+
+    h2 {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin: 0;
+      font-size: 1.5rem;
+      color: $primary;
+
+      mat-icon {
+        font-size: 1.75rem;
+        width: 1.75rem;
+        height: 1.75rem;
+      }
+    }
+
+    .subtitle {
+      margin: 0.25rem 0 0;
+      font-size: 0.9rem;
+      color: #64748b;
+      font-weight: 400;
+    }
+  }
+}
+
+.form-producto-container {
+  background: linear-gradient(135deg, rgba($primary, 0.03) 0%, rgba($secondary, 0.02) 100%);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  border: 2px dashed rgba($primary, 0.2);
+}
+
+.form-producto {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+  align-items: start;
+
+  .form-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    padding-top: 0.5rem;
+  }
+}
+
+.tabla-productos {
+  width: 100%;
+  background: white;
+
+  .cell-nombre {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    .cell-icon {
+      color: $primary;
+      font-size: 1.25rem;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .grupos-container {
+    padding: 1rem;
+  }
+
+  .search-container {
+    flex-direction: column;
+  }
+}

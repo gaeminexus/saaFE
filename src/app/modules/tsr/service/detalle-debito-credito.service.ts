@@ -58,7 +58,7 @@ export class DetalleDebitoCreditoService {
    * Selecciona registros de DetalleDebitoCredito según criterios personalizados.
    */
   selectByCriteria(datos: any): Observable<DetalleDebitoCredito[] | null> {
-    const wsCriteria = '/criteria';
+    const wsCriteria = '/selectByCriteria/';
     const url = `${ServiciosTsr.RS_DTDC}${wsCriteria}`;
     return this.http.post<DetalleDebitoCredito[]>(url, datos, this.httpOptions).pipe(
       catchError(this.handleError)

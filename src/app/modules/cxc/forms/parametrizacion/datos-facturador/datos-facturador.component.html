@@ -1,0 +1,719 @@
+<div class="datos-facturador-container">
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- BREADCRUMB DE NAVEGACIÓN -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <div class="breadcrumb">
+    <button mat-button (click)="volverAFacturador()" [disabled]="modoVista() === 'facturador'">
+      <mat-icon>business</mat-icon>
+      Facturador
+    </button>
+    @if (modoVista() !== 'facturador') {
+      <mat-icon>chevron_right</mat-icon>
+      <button mat-button (click)="volverAEstablecimientos()" [disabled]="modoVista() === 'establecimientos'">
+        <mat-icon>store</mat-icon>
+        Establecimientos
+      </button>
+    }
+    @if (modoVista() === 'puntosEmision' || modoVista() === 'numeraciones') {
+      <mat-icon>chevron_right</mat-icon>
+      <button mat-button (click)="volverAPuntosEmision()" [disabled]="modoVista() === 'puntosEmision'">
+        <mat-icon>point_of_sale</mat-icon>
+        Puntos de Emisión
+      </button>
+    }
+    @if (modoVista() === 'numeraciones') {
+      <mat-icon>chevron_right</mat-icon>
+      <span class="breadcrumb-current">
+        <mat-icon>format_list_numbered</mat-icon>
+        Numeraciones
+      </span>
+    }
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- VISTA: FACTURADOR -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  @if (modoVista() === 'facturador') {
+    <mat-card class="facturador-card">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>business</mat-icon>
+          Datos del Facturador
+        </mat-card-title>
+      </mat-card-header>
+
+      <mat-card-content>
+        <!-- Selector de Facturador Existente -->
+        @if (facturadores().length > 0) {
+          <div class="selector-facturador">
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Facturador Actual</mat-label>
+              <mat-select [(value)]="facturadorSeleccionado" (selectionChange)="seleccionarFacturador($event.value)">
+                @for (fac of facturadores(); track fac.id) {
+                  <mat-option [value]="fac">
+                    {{ fac.numDoc }} - {{ fac.razonSocial || fac.nombre }}
+                  </mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+            <button mat-raised-button color="accent" (click)="nuevoFacturador()">
+              <mat-icon>add</mat-icon>
+              Nuevo Facturador
+            </button>
+          </div>
+        }
+
+        <!-- Formulario Facturador -->
+        <form [formGroup]="formFacturador" class="form-facturador">
+          <!-- Sección: Identificación -->
+          <mat-expansion-panel [expanded]="true">
+            <mat-expansion-panel-header>
+              <mat-panel-title>
+                <mat-icon>badge</mat-icon>
+                Identificación
+              </mat-panel-title>
+            </mat-expansion-panel-header>
+
+            <div class="form-grid">
+              <mat-form-field appearance="outline">
+                <mat-label>Número de Documento *</mat-label>
+                <input matInput formControlName="numDoc" placeholder="RUC o Cédula" maxlength="50" />
+                @if (formFacturador.get('numDoc')?.invalid && formFacturador.get('numDoc')?.touched) {
+                  <mat-error>Campo requerido</mat-error>
+                }
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Nombre *</mat-label>
+                <input matInput formControlName="nombre" maxlength="1000" />
+                @if (formFacturador.get('nombre')?.invalid && formFacturador.get('nombre')?.touched) {
+                  <mat-error>Campo requerido</mat-error>
+                }
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Razón Social</mat-label>
+                <input matInput formControlName="razonSocial" maxlength="1000" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Nombre Comercial</mat-label>
+                <input matInput formControlName="nombreComercial" maxlength="500" />
+              </mat-form-field>
+            </div>
+          </mat-expansion-panel>
+
+          <!-- Sección: Contacto -->
+          <mat-expansion-panel>
+            <mat-expansion-panel-header>
+              <mat-panel-title>
+                <mat-icon>contact_mail</mat-icon>
+                Información de Contacto
+              </mat-panel-title>
+            </mat-expansion-panel-header>
+
+            <div class="form-grid">
+              <mat-form-field appearance="outline">
+                <mat-label>Email</mat-label>
+                <input matInput type="email" formControlName="mail" maxlength="200" />
+                @if (formFacturador.get('mail')?.hasError('email')) {
+                  <mat-error>Email inválido</mat-error>
+                }
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Teléfono</mat-label>
+                <input matInput formControlName="telefono" maxlength="45" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Dirección</mat-label>
+                <textarea matInput formControlName="direccion" rows="2" maxlength="1000"></textarea>
+              </mat-form-field>
+            </div>
+          </mat-expansion-panel>
+
+          <!-- Sección: Información Tributaria -->
+          <mat-expansion-panel>
+            <mat-expansion-panel-header>
+              <mat-panel-title>
+                <mat-icon>account_balance</mat-icon>
+                Información Tributaria
+              </mat-panel-title>
+            </mat-expansion-panel-header>
+
+            <div class="form-grid">
+              <mat-form-field appearance="outline">
+                <mat-label>Lleva Contabilidad *</mat-label>
+                <mat-select formControlName="contabilidad">
+                  @for (opt of opcionesSiNo; track opt.value) {
+                    <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Agente de Retención</mat-label>
+                <input matInput formControlName="agenteRetencion" placeholder="Nro. Resolución" maxlength="1000" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Contribuyente Especial</mat-label>
+                <input matInput formControlName="contribuyenteEspecial" maxlength="1000" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Calificación Artesano</mat-label>
+                <input matInput formControlName="artesano" placeholder="Código" maxlength="1000" />
+              </mat-form-field>
+            </div>
+          </mat-expansion-panel>
+
+          <!-- Sección: Regímenes Especiales -->
+          <mat-expansion-panel>
+            <mat-expansion-panel-header>
+              <mat-panel-title>
+                <mat-icon>gavel</mat-icon>
+                Regímenes Especiales
+              </mat-panel-title>
+            </mat-expansion-panel-header>
+
+            <div class="form-grid checkboxes-grid">
+              <mat-checkbox formControlName="microEmpresa">Microempresa</mat-checkbox>
+              <mat-checkbox formControlName="rimpe">RIMPE</mat-checkbox>
+              <mat-checkbox formControlName="popularRimpe">RIMPE Popular y Solidario</mat-checkbox>
+              <mat-checkbox formControlName="turistico">Régimen Turístico</mat-checkbox>
+            </div>
+          </mat-expansion-panel>
+
+          <!-- Sección: Configuración Operativa -->
+          <mat-expansion-panel>
+            <mat-expansion-panel-header>
+              <mat-panel-title>
+                <mat-icon>settings</mat-icon>
+                Configuración Operativa
+              </mat-panel-title>
+            </mat-expansion-panel-header>
+
+            <div class="form-grid">
+              <mat-form-field appearance="outline">
+                <mat-label>Documentos Emitidos</mat-label>
+                <input matInput type="number" formControlName="docEmitidos" min="0" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Documentos Permitidos</mat-label>
+                <input matInput type="number" formControlName="docPermitidos" min="0" />
+              </mat-form-field>
+
+              <div class="checkboxes-grid full-width">
+                <mat-checkbox formControlName="impCodProd">Imprimir Código de Producto</mat-checkbox>
+                <mat-checkbox formControlName="inventario">Maneja Inventario</mat-checkbox>
+                <mat-checkbox formControlName="empTransporte">Empresa de Transporte</mat-checkbox>
+                <mat-checkbox formControlName="sinLimiteConsFinal">Sin Límite Consumidor Final</mat-checkbox>
+              </div>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Estado *</mat-label>
+                <mat-select formControlName="estado">
+                  @for (opt of opcionesEstado; track opt.value) {
+                    <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+            </div>
+          </mat-expansion-panel>
+
+          <!-- Botones de Acción -->
+          <div class="form-actions">
+            <button
+              mat-raised-button
+              color="primary"
+              (click)="guardarFacturador()"
+              [disabled]="guardando() || formFacturador.invalid">
+              @if (guardando()) {
+                <mat-spinner diameter="20"></mat-spinner>
+              } @else {
+                <mat-icon>save</mat-icon>
+              }
+              {{ modoFormFacturador() === 'nuevo' ? 'Crear Facturador' : 'Guardar Cambios' }}
+            </button>
+
+            @if (facturadorSeleccionado()) {
+              <button
+                mat-raised-button
+                color="accent"
+                (click)="verEstablecimientos()"
+                [disabled]="!facturadorSeleccionado()">
+                <mat-icon>store</mat-icon>
+                Ver Establecimientos
+              </button>
+            }
+          </div>
+        </form>
+      </mat-card-content>
+    </mat-card>
+  }
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- VISTA: ESTABLECIMIENTOS -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  @if (modoVista() === 'establecimientos') {
+    <mat-card class="establecimientos-card">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>store</mat-icon>
+          Establecimientos
+          @if (facturadorSeleccionado()) {
+            <span class="subtitle">de {{ facturadorSeleccionado()?.nombre }}</span>
+          }
+        </mat-card-title>
+      </mat-card-header>
+
+      <mat-card-content>
+        <!-- Tabla de Establecimientos -->
+        <div class="table-container">
+          <table mat-table [dataSource]="dataSourceEstablecimientos" class="mat-elevation-z2">
+            <ng-container matColumnDef="codigo">
+              <th mat-header-cell *matHeaderCellDef>Código</th>
+              <td mat-cell *matCellDef="let est">{{ est.codigo }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="nombre">
+              <th mat-header-cell *matHeaderCellDef>Nombre</th>
+              <td mat-cell *matCellDef="let est">{{ est.nombre }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="direccion">
+              <th mat-header-cell *matHeaderCellDef>Dirección</th>
+              <td mat-cell *matCellDef="let est">{{ est.direccion || 'N/A' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="matriz">
+              <th mat-header-cell *matHeaderCellDef>Matriz</th>
+              <td mat-cell *matCellDef="let est">
+                @if (est.matriz === 1) {
+                  <mat-icon class="icon-success">check_circle</mat-icon>
+                } @else {
+                  <mat-icon class="icon-muted">cancel</mat-icon>
+                }
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="estado">
+              <th mat-header-cell *matHeaderCellDef>Estado</th>
+              <td mat-cell *matCellDef="let est">
+                <span [class]="obtenerClaseEstado(est.estado)">
+                  {{ obtenerNombreEstado(est.estado) }}
+                </span>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="acciones">
+              <th mat-header-cell *matHeaderCellDef>Acciones</th>
+              <td mat-cell *matCellDef="let est">
+                <button mat-icon-button color="primary" (click)="editarEstablecimiento(est)" matTooltip="Editar">
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button mat-icon-button color="accent" (click)="verPuntosEmision(est)" matTooltip="Ver Puntos de Emisión">
+                  <mat-icon>point_of_sale</mat-icon>
+                </button>
+                <button mat-icon-button color="warn" (click)="eliminarEstablecimiento(est)" matTooltip="Eliminar">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="columnasEstablecimientos"></tr>
+            <tr mat-row *matRowDef="let row; columns: columnasEstablecimientos;"></tr>
+
+            @if (dataSourceEstablecimientos.data.length === 0) {
+              <tr class="mat-row">
+                <td class="mat-cell no-data" [attr.colspan]="columnasEstablecimientos.length">
+                  No hay establecimientos registrados
+                </td>
+              </tr>
+            }
+          </table>
+        </div>
+
+        <!-- Formulario Establecimiento -->
+        <mat-divider></mat-divider>
+
+        <div class="form-section">
+          <h3>
+            @if (establecimientoSeleccionado()) {
+              Editar Establecimiento
+            } @else {
+              Nuevo Establecimiento
+            }
+          </h3>
+
+          <form [formGroup]="formEstablecimiento" class="form-establecimiento">
+            <div class="form-grid">
+              <mat-form-field appearance="outline">
+                <mat-label>Código *</mat-label>
+                <input matInput formControlName="codigo" placeholder="001" maxlength="250" />
+                @if (formEstablecimiento.get('codigo')?.invalid && formEstablecimiento.get('codigo')?.touched) {
+                  <mat-error>Campo requerido</mat-error>
+                }
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Nombre *</mat-label>
+                <input matInput formControlName="nombre" maxlength="250" />
+                @if (formEstablecimiento.get('nombre')?.invalid && formEstablecimiento.get('nombre')?.touched) {
+                  <mat-error>Campo requerido</mat-error>
+                }
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Descripción</mat-label>
+                <input matInput formControlName="descripcion" maxlength="250" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Dirección</mat-label>
+                <textarea matInput formControlName="direccion" rows="2" maxlength="1000"></textarea>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Teléfono</mat-label>
+                <input matInput formControlName="telefono" maxlength="1000" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Email</mat-label>
+                <input matInput type="email" formControlName="mail" maxlength="45" />
+                @if (formEstablecimiento.get('mail')?.hasError('email')) {
+                  <mat-error>Email inválido</mat-error>
+                }
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Es Matriz *</mat-label>
+                <mat-select formControlName="matriz">
+                  @for (opt of opcionesSiNo; track opt.value) {
+                    <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Estado *</mat-label>
+                <mat-select formControlName="estado">
+                  @for (opt of opcionesEstado; track opt.value) {
+                    <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+            </div>
+
+            <div class="form-actions">
+              <button
+                mat-raised-button
+                color="primary"
+                (click)="guardarEstablecimiento()"
+                [disabled]="guardando() || formEstablecimiento.invalid">
+                @if (guardando()) {
+                  <mat-spinner diameter="20"></mat-spinner>
+                } @else {
+                  <mat-icon>save</mat-icon>
+                }
+                Guardar
+              </button>
+
+              @if (establecimientoSeleccionado()) {
+                <button mat-button (click)="cancelarEstablecimiento()">
+                  <mat-icon>cancel</mat-icon>
+                  Cancelar
+                </button>
+              } @else {
+                <button mat-button (click)="nuevoEstablecimiento()">
+                  <mat-icon>refresh</mat-icon>
+                  Limpiar
+                </button>
+              }
+            </div>
+          </form>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  }
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- VISTA: PUNTOS DE EMISIÓN -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  @if (modoVista() === 'puntosEmision') {
+    <mat-card class="puntos-emision-card">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>point_of_sale</mat-icon>
+          Puntos de Emisión
+          @if (establecimientoSeleccionado()) {
+            <span class="subtitle">de {{ establecimientoSeleccionado()?.nombre }}</span>
+          }
+        </mat-card-title>
+      </mat-card-header>
+
+      <mat-card-content>
+        <!-- Tabla de Puntos de Emisión -->
+        <div class="table-container">
+          <table mat-table [dataSource]="dataSourcePuntosEmision" class="mat-elevation-z2">
+            <ng-container matColumnDef="codigo">
+              <th mat-header-cell *matHeaderCellDef>Código</th>
+              <td mat-cell *matCellDef="let pto">{{ pto.codigo }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="nombre">
+              <th mat-header-cell *matHeaderCellDef>Nombre</th>
+              <td mat-cell *matCellDef="let pto">{{ pto.nombre }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="estado">
+              <th mat-header-cell *matHeaderCellDef>Estado</th>
+              <td mat-cell *matCellDef="let pto">
+                <span [class]="obtenerClaseEstado(pto.estado)">
+                  {{ obtenerNombreEstado(pto.estado) }}
+                </span>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="acciones">
+              <th mat-header-cell *matHeaderCellDef>Acciones</th>
+              <td mat-cell *matCellDef="let pto">
+                <button mat-icon-button color="primary" (click)="editarPuntoEmision(pto)" matTooltip="Editar">
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button mat-icon-button color="accent" (click)="verNumeraciones(pto)" matTooltip="Ver Numeraciones">
+                  <mat-icon>format_list_numbered</mat-icon>
+                </button>
+                <button mat-icon-button color="warn" (click)="eliminarPuntoEmision(pto)" matTooltip="Eliminar">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="columnasPuntosEmision"></tr>
+            <tr mat-row *matRowDef="let row; columns: columnasPuntosEmision;"></tr>
+
+            @if (dataSourcePuntosEmision.data.length === 0) {
+              <tr class="mat-row">
+                <td class="mat-cell no-data" [attr.colspan]="columnasPuntosEmision.length">
+                  No hay puntos de emisión registrados
+                </td>
+              </tr>
+            }
+          </table>
+        </div>
+
+        <!-- Formulario Punto de Emisión -->
+        <mat-divider></mat-divider>
+
+        <div class="form-section">
+          <h3>
+            @if (puntoEmisionSeleccionado()) {
+              Editar Punto de Emisión
+            } @else {
+              Nuevo Punto de Emisión
+            }
+          </h3>
+
+          <form [formGroup]="formPuntoEmision" class="form-punto-emision">
+            <div class="form-grid">
+              <mat-form-field appearance="outline">
+                <mat-label>Código *</mat-label>
+                <input matInput formControlName="codigo" placeholder="001" maxlength="45" />
+                @if (formPuntoEmision.get('codigo')?.invalid && formPuntoEmision.get('codigo')?.touched) {
+                  <mat-error>Campo requerido</mat-error>
+                }
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Nombre *</mat-label>
+                <input matInput formControlName="nombre" maxlength="500" />
+                @if (formPuntoEmision.get('nombre')?.invalid && formPuntoEmision.get('nombre')?.touched) {
+                  <mat-error>Campo requerido</mat-error>
+                }
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Observación</mat-label>
+                <textarea matInput formControlName="observacion" rows="2" maxlength="2000"></textarea>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>ID Transportista</mat-label>
+                <input matInput type="number" formControlName="transportista" min="0" />
+                <mat-hint>Solo si es empresa de transporte</mat-hint>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Estado *</mat-label>
+                <mat-select formControlName="estado">
+                  @for (opt of opcionesEstado; track opt.value) {
+                    <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+            </div>
+
+            <div class="form-actions">
+              <button
+                mat-raised-button
+                color="primary"
+                (click)="guardarPuntoEmision()"
+                [disabled]="guardando() || formPuntoEmision.invalid">
+                @if (guardando()) {
+                  <mat-spinner diameter="20"></mat-spinner>
+                } @else {
+                  <mat-icon>save</mat-icon>
+                }
+                Guardar
+              </button>
+
+              @if (puntoEmisionSeleccionado()) {
+                <button mat-button (click)="cancelarPuntoEmision()">
+                  <mat-icon>cancel</mat-icon>
+                  Cancelar
+                </button>
+              } @else {
+                <button mat-button (click)="nuevoPuntoEmision()">
+                  <mat-icon>refresh</mat-icon>
+                  Limpiar
+                </button>
+              }
+            </div>
+          </form>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  }
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- VISTA: NUMERACIONES -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  @if (modoVista() === 'numeraciones') {
+    <mat-card class="numeraciones-card">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>format_list_numbered</mat-icon>
+          Numeraciones
+          @if (puntoEmisionSeleccionado()) {
+            <span class="subtitle">de {{ puntoEmisionSeleccionado()?.nombre }}</span>
+          }
+        </mat-card-title>
+      </mat-card-header>
+
+      <mat-card-content>
+        <!-- Tabla de Numeraciones -->
+        <div class="table-container">
+          <table mat-table [dataSource]="dataSourceNumeraciones" class="mat-elevation-z2">
+            <ng-container matColumnDef="tipoDoc">
+              <th mat-header-cell *matHeaderCellDef>Tipo de Documento</th>
+              <td mat-cell *matCellDef="let num">{{ num.tipoDoc }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="numActual">
+              <th mat-header-cell *matHeaderCellDef>Número Actual</th>
+              <td mat-cell *matCellDef="let num">
+                <span class="numero-actual">{{ num.numActual }}</span>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="acciones">
+              <th mat-header-cell *matHeaderCellDef>Acciones</th>
+              <td mat-cell *matCellDef="let num">
+                <button mat-icon-button color="primary" (click)="editarNumeracion(num)" matTooltip="Editar">
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button mat-icon-button color="warn" (click)="eliminarNumeracion(num)" matTooltip="Eliminar">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="columnasNumeraciones"></tr>
+            <tr mat-row *matRowDef="let row; columns: columnasNumeraciones;"></tr>
+
+            @if (dataSourceNumeraciones.data.length === 0) {
+              <tr class="mat-row">
+                <td class="mat-cell no-data" [attr.colspan]="columnasNumeraciones.length">
+                  No hay numeraciones registradas
+                </td>
+              </tr>
+            }
+          </table>
+        </div>
+
+        <!-- Formulario Numeración -->
+        <mat-divider></mat-divider>
+
+        <div class="form-section">
+          <h3>
+            @if (numeracionSeleccionada()) {
+              Editar Numeración
+            } @else {
+              Nueva Numeración
+            }
+          </h3>
+
+          <form [formGroup]="formNumeracion" class="form-numeracion">
+            <div class="form-grid">
+              <mat-form-field appearance="outline">
+                <mat-label>Tipo de Documento *</mat-label>
+                <input matInput formControlName="tipoDoc" placeholder="FACTURA, NC, ND..." maxlength="10" />
+                @if (formNumeracion.get('tipoDoc')?.invalid && formNumeracion.get('tipoDoc')?.touched) {
+                  <mat-error>Campo requerido</mat-error>
+                }
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Número Actual *</mat-label>
+                <input matInput type="number" formControlName="numActual" min="0" />
+                @if (formNumeracion.get('numActual')?.invalid && formNumeracion.get('numActual')?.touched) {
+                  <mat-error>Debe ser mayor o igual a 0</mat-error>
+                }
+              </mat-form-field>
+            </div>
+
+            <div class="form-actions">
+              <button
+                mat-raised-button
+                color="primary"
+                (click)="guardarNumeracion()"
+                [disabled]="guardando() || formNumeracion.invalid">
+                @if (guardando()) {
+                  <mat-spinner diameter="20"></mat-spinner>
+                } @else {
+                  <mat-icon>save</mat-icon>
+                }
+                Guardar
+              </button>
+
+              @if (numeracionSeleccionada()) {
+                <button mat-button (click)="cancelarNumeracion()">
+                  <mat-icon>cancel</mat-icon>
+                  Cancelar
+                </button>
+              } @else {
+                <button mat-button (click)="nuevaNumeracion()">
+                  <mat-icon>refresh</mat-icon>
+                  Limpiar
+                </button>
+              }
+            </div>
+          </form>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  }
+
+  <!-- Loading Overlay -->
+  @if (cargando()) {
+    <div class="loading-overlay">
+      <mat-spinner diameter="50"></mat-spinner>
+      <p>Cargando...</p>
+    </div>
+  }
+</div>

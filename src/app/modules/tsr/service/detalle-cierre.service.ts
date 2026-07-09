@@ -58,7 +58,7 @@ export class DetalleCierreService {
    * Selecciona registros de DetalleCierre según criterios personalizados.
    */
   selectByCriteria(datos: any): Observable<DetalleCierre[] | null> {
-    const wsCriteria = '/criteria';
+    const wsCriteria = '/selectByCriteria/';
     const url = `${ServiciosTsr.RS_DTCR}${wsCriteria}`;
     return this.http.post<DetalleCierre[]>(url, datos, this.httpOptions).pipe(
       catchError(this.handleError)

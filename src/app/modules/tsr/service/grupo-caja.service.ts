@@ -58,7 +58,7 @@ export class GrupoCajaService {
    * Selecciona registros de GrupoCaja según criterios personalizados.
    */
   selectByCriteria(datos: any): Observable<GrupoCaja[] | null> {
-    const wsCriteria = '/criteria';
+    const wsCriteria = '/selectByCriteria/';
     const url = `${ServiciosTsr.RS_CJIN}${wsCriteria}`;
     return this.http.post<GrupoCaja[]>(url, datos, this.httpOptions).pipe(
       catchError(this.handleError)
