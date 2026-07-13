@@ -19,12 +19,17 @@ export class MenucuentasxcobrarComponent {
         {
           displayName: 'Grupos de Productos',
           iconName: 'category',
-          route: '/menucuentasxcobrar/grupo-productos',
+          route: '/menucuentasxcobrar/parametrizacion/grupos-productos',
         },
         {
           displayName: 'Datos Facturador',
           iconName: 'receipt_long',
           route: '/menucuentasxcobrar/parametrizacion/datos-facturador',
+        },
+        {
+          displayName: 'Datos SRI',
+          iconName: 'account_balance',
+          route: '/menucuentasxcobrar/parametrizacion/datos-sri',
         },
       ],
     },

@@ -34,5 +34,9 @@ public static RS_ESTB = `${API_URL}/estb`;  // Establecimiento
 public static RS_PTEM = `${API_URL}/ptem`;  // Punto de Emisión
 public static RS_NXPE = `${API_URL}/nxpe`;  // Numeración por Punto de Emisión
 
+// Datos SRI
+public static RS_LSRI = `${API_URL}/lsri`;  // Listados SRI
+public static RS_TSRI = `${API_URL}/tsri`;  // Detalle SRI
+
 
 }

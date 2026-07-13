@@ -116,9 +116,9 @@
                     <td>{{ getTipoPersonaDesc(titular.rubroTipoPersonaH || 0) }}</td>
                     <td>{{ getTipoIdentificacionDesc(titular.rubroTipoIdentificacionH || 0) }}</td>
                     <td class="font-mono">{{ titular.identificacion }}</td>
-                    <td>{{ titular.nombre }}</td>
+                    <td class="nombre-cell">{{ titular.nombre }}</td>
                     <td>{{ titular.apellido }}</td>
-                    <td>{{ titular.razonSocial || '-' }}</td>
+                    <td class="razon-social-cell">{{ titular.razonSocial || '-' }}</td>
                     <td class="roles-cuentas-cell">
                       @if (titular.rolesConCuentas && titular.rolesConCuentas.length > 0) {
                         <div class="roles-container">
@@ -256,27 +256,57 @@
               <h3>Datos Personales</h3>
             </div>
             <div class="form-grid">
-              <mat-form-field appearance="outline">
-                <mat-label>Nombre</mat-label>
-                <input matInput formControlName="nombre" maxlength="100" />
-                <mat-icon matPrefix class="field-icon">person_outline</mat-icon>
-                <mat-error>Campo requerido (máx. 100 caracteres)</mat-error>
-              </mat-form-field>
-
-              <mat-form-field appearance="outline">
-                <mat-label>Apellido</mat-label>
-                <input matInput formControlName="apellido" maxlength="100" />
-                <mat-icon matPrefix class="field-icon">person_outline</mat-icon>
-                <mat-error>Campo requerido (máx. 100 caracteres)</mat-error>
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Razón Social</mat-label>
+                <input
+                  matInput
+                  formControlName="razonSocial"
+                  maxlength="200"
+                  (blur)="copiarRazonSocialANombre()" />
+                <mat-icon matPrefix class="field-icon">business</mat-icon>
+                <mat-error>Campo requerido (máx. 200 caracteres)</mat-error>
+                <mat-hint>Se copiará automáticamente a Nombre Comercial</mat-hint>
               </mat-form-field>
 
               <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Razón Social</mat-label>
-                <input matInput formControlName="razonSocial" maxlength="200" />
-                <mat-icon matPrefix class="field-icon">business</mat-icon>
-                <mat-hint
-                  >Opcional - Para personas jurídicas (empresas, organizaciones)</mat-hint
-                >
+                <mat-label>Nombre Comercial</mat-label>
+                <input matInput formControlName="nombre" maxlength="100" />
+                <mat-icon matPrefix class="field-icon">store</mat-icon>
+                <mat-error>Campo requerido (máx. 100 caracteres)</mat-error>
+                <mat-hint>Puede editar este campo si difiere de la Razón Social</mat-hint>
+              </mat-form-field>
+
+              <div class="checkbox-field" style="grid-column: 1 / -1;">
+                <mat-checkbox
+                  [checked]="formTitular.get('extranjero')?.value === 1"
+                  (change)="formTitular.get('extranjero')?.setValue($event.checked ? 1 : 0)">
+                  <mat-icon class="checkbox-icon">public</mat-icon>
+                  Titular Extranjero
+                </mat-checkbox>
+              </div>
+
+              <mat-form-field
+                appearance="outline"
+                class="full-width"
+                *ngIf="formTitular.get('extranjero')?.value === 1">
+                <mat-label>País</mat-label>
+                <input
+                  type="text"
+                  matInput
+                  formControlName="paisBusqueda"
+                  [matAutocomplete]="autoPais"
+                  placeholder="Buscar país..." />
+                <mat-icon matPrefix class="field-icon">flag</mat-icon>
+                <mat-autocomplete
+                  #autoPais="matAutocomplete"
+                  (optionSelected)="onPaisSelected($event.option.value)">
+                  @for (pais of paisesFiltrados(); track pais.codigo) {
+                    <mat-option [value]="pais">
+                      {{ pais.nombre }}
+                    </mat-option>
+                  }
+                </mat-autocomplete>
+                <mat-hint>Escriba para buscar el país de residencia</mat-hint>
               </mat-form-field>
             </div>
           </div>
@@ -292,22 +322,21 @@
                 <mat-label>Teléfono</mat-label>
                 <input matInput formControlName="telefono" maxlength="20" type="tel" />
                 <mat-icon matPrefix class="field-icon">phone</mat-icon>
-                <mat-hint>Opcional</mat-hint>
+                <mat-error>Campo requerido (máx. 20 caracteres)</mat-error>
               </mat-form-field>
 
               <mat-form-field appearance="outline">
                 <mat-label>Email</mat-label>
                 <input matInput formControlName="email" maxlength="100" type="email" />
                 <mat-icon matPrefix class="field-icon">email</mat-icon>
-                <mat-error>Ingrese un email válido</mat-error>
-                <mat-hint>Opcional</mat-hint>
+                <mat-error>Campo requerido - Ingrese un email válido</mat-error>
               </mat-form-field>
 
               <mat-form-field appearance="outline" class="full-width">
                 <mat-label>Dirección</mat-label>
                 <input matInput formControlName="direccion" maxlength="200" />
                 <mat-icon matPrefix class="field-icon">home</mat-icon>
-                <mat-hint>Opcional</mat-hint>
+                <mat-error>Campo requerido (máx. 200 caracteres)</mat-error>
               </mat-form-field>
             </div>
           </div>

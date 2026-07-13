@@ -28,6 +28,9 @@ import { PersonaCuentaContable } from '../../model/persona-cuenta-contable';
 import { PersonaCuentaContableService } from '../../service/persona-cuenta-contable.service';
 import { PlanCuentaSelectorDialogComponent } from '../../../../shared/components/plan-cuenta-selector-dialog/plan-cuenta-selector-dialog.component';
 import { ConfirmDialogComponent } from '../../../../shared/basics/confirm-dialog/confirm-dialog.component';
+import { PaisService } from '../../../crd/service/pais.service';
+import { Pais } from '../../../crd/model/pais';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { Empresa } from '../../../../shared/model/empresa';
 
 type Vista = 'lista' | 'form' | 'roles' | 'cuentas';
@@ -59,6 +62,7 @@ interface TitularConDetalles extends Titular {
     MatBadgeModule,
     MatCardModule,
     MatDialogModule,
+    MatAutocompleteModule,
   ],
   templateUrl: './titulares.component.html',
   styleUrls: ['./titulares.component.scss'],
@@ -73,6 +77,8 @@ export class TitularesComponent implements OnInit {
   rolesDisponibles = signal<DetalleRubro[]>([]);
   rolesAsignados = signal<PersonaRol[]>([]);
   cuentasAsignadas = signal<PersonaCuentaContable[]>([]);
+  paises = signal<Pais[]>([]);
+  paisesFiltrados = signal<Pais[]>([]);
   loading = signal<boolean>(false);
   vistaActual = signal<Vista>('lista');
   titularSeleccionado = signal<Titular | null>(null);
@@ -93,19 +99,24 @@ export class TitularesComponent implements OnInit {
   // Computed para filtrar titulares con detalles (roles y cuentas)
   titularesFiltradosConDetalles = computed(() => {
     const filtro = this.busqueda().toLowerCase().trim();
-    const titularesConDet = this.titularesConDetalles();
+    const titularesConDet = this.titularesConDetalles().length > 0
+      ? this.titularesConDetalles()
+      : this.titulares().map((titular) => ({
+          ...titular,
+          rolesConCuentas: [],
+        }));
 
     if (!filtro) {
       return titularesConDet;
     }
 
     return titularesConDet.filter((t) => {
-      const nombre = `${t.nombre || ''} ${t.apellido || ''}`.toLowerCase();
+      const nombreComercial = (t.nombre || '').toLowerCase();
       const identificacion = (t.identificacion || '').toLowerCase();
       const razon = (t.razonSocial || '').toLowerCase();
 
       return (
-        nombre.includes(filtro) || identificacion.includes(filtro) || razon.includes(filtro)
+        nombreComercial.includes(filtro) || identificacion.includes(filtro) || razon.includes(filtro)
       );
     });
   });
@@ -119,11 +130,12 @@ export class TitularesComponent implements OnInit {
   constructor(
     private fb: FormBuilder,
     private titularService: TitularService,
-    private detalleRubroService: DetalleRubroService,
+    private detalleRuboService: DetalleRubroService,
     private personaRolService: PersonaRolService,
     private personaCuentaService: PersonaCuentaContableService,
     private snackBar: MatSnackBar,
     private dialog: MatDialog,
+    private paisService: PaisService,
   ) {
     this.inicializarFormulario();
   }
@@ -131,6 +143,7 @@ export class TitularesComponent implements OnInit {
   ngOnInit(): void {
     this.cargarEmpresa();
     this.cargarRubros();
+    this.cargarPaises();
     this.cargarTitulares();
   }
 
@@ -142,41 +155,162 @@ export class TitularesComponent implements OnInit {
       rubroTipoPersonaH: [null, Validators.required],
       rubroTipoIdentificacionH: [null, Validators.required],
       identificacion: ['', [Validators.required, Validators.maxLength(20)]],
+      razonSocial: ['', [Validators.required, Validators.maxLength(200)]],
       nombre: ['', [Validators.required, Validators.maxLength(100)]],
-      apellido: ['', [Validators.required, Validators.maxLength(100)]],
-      razonSocial: ['', Validators.maxLength(200)],
-      telefono: ['', Validators.maxLength(20)],
-      email: ['', [Validators.email, Validators.maxLength(100)]],
-      direccion: ['', Validators.maxLength(200)],
+      extranjero: [0],
+      pais: [null], // Pais object
+      paisBusqueda: [''], // String para búsqueda en autocomplete
+      telefono: ['', [Validators.required, Validators.maxLength(20)]],
+      email: ['', [Validators.required, Validators.email, Validators.maxLength(100)]],
+      direccion: ['', [Validators.required, Validators.maxLength(200)]],
       estado: [1, Validators.required],
+    });
+
+    // Subscribirse a cambios de razonSocial para copiar automáticamente a nombre
+    this.formTitular.get('razonSocial')?.valueChanges.subscribe((value) => {
+      // Solo copiar si el campo nombre está vacío o si acabamos de crear el formulario
+      const nombreControl = this.formTitular.get('nombre');
+      if (nombreControl && value && !nombreControl.value) {
+        nombreControl.setValue(value);
+      }
+    });
+
+    // Subscribirse a cambios de extranjero para habilitar/deshabilitar campo pais
+    this.formTitular.get('extranjero')?.valueChanges.subscribe((value) => {
+      const paisControl = this.formTitular.get('pais');
+      const paisBusquedaControl = this.formTitular.get('paisBusqueda');
+      if (value === 1 || value === true) {
+        paisControl?.enable();
+        paisBusquedaControl?.enable();
+      } else {
+        paisControl?.disable();
+        paisControl?.setValue(null);
+        paisBusquedaControl?.disable();
+        paisBusquedaControl?.setValue('');
+      }
+    });
+
+    // Subscribirse a cambios de paisBusqueda para filtrar países
+    this.formTitular.get('paisBusqueda')?.valueChanges.subscribe((value) => {
+      this.filtrarPaises(value || '');
     });
   }
 
+  copiarRazonSocialANombre(): void {
+    const razonSocial = this.formTitular.get('razonSocial')?.value;
+    if (razonSocial) {
+      this.formTitular.get('nombre')?.setValue(razonSocial);
+    }
+  }
+
   private cargarEmpresa(): void {
-    const empresaStr = localStorage.getItem('empresa');
+    const empresaStr = sessionStorage.getItem('empresa') || localStorage.getItem('empresa');
     if (empresaStr) {
       try {
         this.empresa = JSON.parse(empresaStr);
       } catch (e) {
-        console.error('Error al parsear empresa desde localStorage', e);
+        // Error parsing empresa
+      }
+    }
+
+    if (!this.empresa) {
+      const codigo = this.getEmpresaCodigo();
+      if (codigo) {
+        this.empresa = {
+          codigo,
+          nombre: sessionStorage.getItem('empresaName') || localStorage.getItem('empresaName') || 'Empresa',
+          jerarquia: {} as any,
+          nivel: 0,
+          codigoPadre: 0,
+          ingresado: 0,
+        };
       }
     }
   }
 
+  private getEmpresaCodigo(): number | null {
+    if (this.empresa?.codigo) {
+      return this.empresa.codigo;
+    }
+
+    const idEmpresa = sessionStorage.getItem('idEmpresa') || localStorage.getItem('idEmpresa');
+    if (idEmpresa) {
+      const codigo = parseInt(idEmpresa, 10);
+      if (!isNaN(codigo)) return codigo;
+    }
+
+    const empresaId = sessionStorage.getItem('empresaId') || localStorage.getItem('empresaId');
+    if (empresaId) {
+      const codigo = parseInt(empresaId, 10);
+      if (!isNaN(codigo)) return codigo;
+    }
+
+    const idSucursal = sessionStorage.getItem('idSucursal') || localStorage.getItem('idSucursal');
+    if (idSucursal) {
+      const codigo = parseInt(idSucursal, 10);
+      if (!isNaN(codigo)) return codigo;
+    }
+
+    const empresaStr = sessionStorage.getItem('empresa') || localStorage.getItem('empresa');
+    if (empresaStr) {
+      try {
+        const empresaObj = JSON.parse(empresaStr);
+        const codigo = Number(empresaObj?.codigo);
+        return isNaN(codigo) ? null : codigo;
+      } catch {
+        return null;
+      }
+    }
+
+    return null;
+  }
+
   private cargarRubros(): void {
-    const tipos = this.detalleRubroService.getDetallesByParent(this.RUBRO_TIPO_PERSONA);
-    const tiposId = this.detalleRubroService.getDetallesByParent(this.RUBRO_TIPO_IDENTIFICACION);
-    const roles = this.detalleRubroService.getDetallesByParent(this.RUBRO_ROL_PERSONA);
+    const tipos = this.detalleRuboService.getDetallesByParent(this.RUBRO_TIPO_PERSONA);
+    const tiposId = this.detalleRuboService.getDetallesByParent(this.RUBRO_TIPO_IDENTIFICACION);
+    const roles = this.detalleRuboService.getDetallesByParent(this.RUBRO_ROL_PERSONA);
 
     this.tiposPersona.set(tipos);
     this.tiposIdentificacion.set(tiposId);
     this.rolesDisponibles.set(roles);
+  }
 
-    console.log('Rubros cargados:', {
-      tiposPersona: tipos.length,
-      tiposIdentificacion: tiposId.length,
-      roles: roles.length,
+  private cargarPaises(): void {
+    this.paisService.getAll().subscribe({
+      next: (data) => {
+        if (data) {
+          this.paises.set(data);
+          this.paisesFiltrados.set(data);
+        }
+      },
     });
+  }
+
+  filtrarPaises(value: string | Pais | null): void {
+    // Extraer string del valor (puede ser string o objeto Pais)
+    let filtro = '';
+    if (typeof value === 'string') {
+      filtro = value;
+    } else if (value && typeof value === 'object' && 'nombre' in value) {
+      // Si es un objeto Pais, extraer el nombre
+      filtro = value.nombre;
+    }
+
+    if (!filtro || filtro.trim() === '') {
+      this.paisesFiltrados.set(this.paises());
+      return;
+    }
+
+    const filtroLower = filtro.toLowerCase().trim();
+    const filtrados = this.paises().filter((p) =>
+      p.nombre.toLowerCase().includes(filtroLower)
+    );
+    this.paisesFiltrados.set(filtrados);
+  }
+
+  onPaisSelected(pais: Pais): void {
+    this.formTitular.get('pais')?.setValue(pais, { emitEvent: false });
+    this.formTitular.get('paisBusqueda')?.setValue(pais.nombre, { emitEvent: false });
   }
 
   // ==================== CARGA DE DATOS ====================
@@ -225,7 +359,6 @@ export class TitularesComponent implements OnInit {
           this.loading.set(false);
           this.mostrarExito('No se encontraron titulares activos');
         } else {
-          console.error('Error al cargar titulares:', err);
           this.mostrarError('Error al cargar titulares');
           this.loading.set(false);
         }
@@ -234,24 +367,46 @@ export class TitularesComponent implements OnInit {
   }
 
   private cargarDetallesTitulares(titulares: Titular[]): void {
-    if (!this.empresa) {
+    const empresaCodigo = this.getEmpresaCodigo();
+    if (!empresaCodigo) {
+      const titularesBasicos: TitularConDetalles[] = titulares.map((t) => ({
+        ...t,
+        rolesConCuentas: [],
+      }));
+      this.titularesConDetalles.set(titularesBasicos);
       this.loading.set(false);
       return;
     }
 
     // Crear observables para cargar roles de cada titular
     const rolesObservables = titulares.map(titular => {
-      const db1 = new DatosBusqueda();
-      db1.asignaValorConCampoPadre(
+      const criteriosRol: DatosBusqueda[] = [];
+
+      const dbTitular = new DatosBusqueda();
+      dbTitular.asignaValorConCampoPadre(
         TipoDatosBusqueda.LONG,
         'titular',
         'codigo',
         titular.codigo.toString(),
         TipoComandosBusqueda.IGUAL
       );
-      db1.setNumeroCampoRepetido(0);
+      dbTitular.setNumeroCampoRepetido(0);
+      criteriosRol.push(dbTitular);
 
-      return this.personaRolService.selectByCriteria([db1]);
+      const dbEmpresa = new DatosBusqueda();
+      dbEmpresa.asignaValorConCampoPadre(
+        TipoDatosBusqueda.LONG,
+        'empresa',
+        'codigo',
+        empresaCodigo.toString(),
+        TipoComandosBusqueda.IGUAL
+      );
+      dbEmpresa.setNumeroCampoRepetido(0);
+      criteriosRol.push(dbEmpresa);
+
+      return this.personaRolService.selectByCriteria(criteriosRol).pipe(
+        catchError(() => of([]))
+      );
     });
 
     forkJoin(rolesObservables).subscribe({
@@ -276,14 +431,11 @@ export class TitularesComponent implements OnInit {
 
         // Si hay cuentas para cargar, hacerlo
         if (cuentasObservables.length > 0) {
-          console.log(`🔍 Cargando cuentas para ${cuentasObservables.length} roles...`);
           forkJoin(cuentasObservables.map(c => c.observable)).subscribe({
             next: (resultadosCuentas) => {
-              console.log('✅ Resultados de cuentas:', resultadosCuentas);
               // Mapear cuentas a sus roles correspondientes
               resultadosCuentas.forEach((cuentas, index) => {
                 const { titularCodigo, rolCodigo } = cuentasObservables[index];
-                console.log(`  Rol ${rolCodigo}: ${cuentas?.length || 0} cuentas`);
                 const titular = titularesConRoles.find(t => t.codigo === titularCodigo);
                 if (titular && titular.rolesConCuentas) {
                   const rolConCuentas = titular.rolesConCuentas.find(rc => rc.rol.codigo === rolCodigo);
@@ -330,17 +482,13 @@ export class TitularesComponent implements OnInit {
     );
     datos.setNumeroCampoRepetido(0);
 
-    console.log(`🔎 Buscando cuentas para rol ${codigoRol}...`);
     return this.personaCuentaService.selectByCriteria([datos]).pipe(
       catchError((err) => {
         // Si el error es porque no hay registros, devolver array vacío
         const errorMsg = err?.toString() || '';
         if (errorMsg.includes('no devolvio ningun registro') || errorMsg.includes('no devolvi')) {
-          console.log(`  ⚠️ Rol ${codigoRol}: Sin cuentas (backend devolvió "no devolvio ningun registro")`);
           return of([]);
         }
-        // Para otros errores, propagar
-        console.error(`  ❌ Error al cargar cuentas del rol ${codigoRol}:`, err);
         return of([]);
       })
     );
@@ -348,10 +496,12 @@ export class TitularesComponent implements OnInit {
 
   filtrarPorRol(): void {
     const rolCodigo = this.rolFiltro();
-    if (!rolCodigo || !this.empresa) {
+    if (!rolCodigo) {
       this.cargarTitulares();
       return;
     }
+
+    const empresaCodigo = this.getEmpresaCodigo();
 
     this.loading.set(true);
 
@@ -368,16 +518,18 @@ export class TitularesComponent implements OnInit {
     dbRol.setNumeroCampoRepetido(0);
     criterios.push(dbRol);
 
-    const dbEmpresa = new DatosBusqueda();
-    dbEmpresa.asignaValorConCampoPadre(
-      TipoDatosBusqueda.LONG,
-      'empresa',
-      'codigo',
-      this.empresa.codigo.toString(),
-      TipoComandosBusqueda.IGUAL
-    );
-    dbEmpresa.setNumeroCampoRepetido(0);
-    criterios.push(dbEmpresa);
+    if (empresaCodigo) {
+      const dbEmpresa = new DatosBusqueda();
+      dbEmpresa.asignaValorConCampoPadre(
+        TipoDatosBusqueda.LONG,
+        'empresa',
+        'codigo',
+        empresaCodigo.toString(),
+        TipoComandosBusqueda.IGUAL
+      );
+      dbEmpresa.setNumeroCampoRepetido(0);
+      criterios.push(dbEmpresa);
+    }
 
     const dbEstado = new DatosBusqueda();
     dbEstado.asignaUnCampoSinTrunc(
@@ -400,6 +552,7 @@ export class TitularesComponent implements OnInit {
         } else {
           this.titulares.set([]);
           this.titularesFiltrados.set([]);
+          this.titularesConDetalles.set([]);
           this.loading.set(false);
           this.mostrarExito('No se encontraron titulares con este rol');
         }
@@ -410,10 +563,10 @@ export class TitularesComponent implements OnInit {
         if (errorMsg.includes('no devolvio ningun registro') || errorMsg.includes('no devolvi')) {
           this.titulares.set([]);
           this.titularesFiltrados.set([]);
+          this.titularesConDetalles.set([]);
           this.loading.set(false);
           this.mostrarExito('No se encontraron titulares con este rol');
         } else {
-          console.error('Error al filtrar por rol:', err);
           this.mostrarError('Error al filtrar por rol');
           this.loading.set(false);
         }
@@ -425,6 +578,7 @@ export class TitularesComponent implements OnInit {
     if (ids.length === 0) {
       this.titulares.set([]);
       this.titularesFiltrados.set([]);
+      this.titularesConDetalles.set([]);
       this.loading.set(false);
       return;
     }
@@ -452,8 +606,15 @@ export class TitularesComponent implements OnInit {
         const titulares = data || [];
         this.titulares.set(titulares);
         this.titularesFiltrados.set(titulares);
-        this.loading.set(false);
-        this.mostrarExito(`${titulares.length} titulares encontrados con este rol`);
+
+        if (titulares.length > 0) {
+          this.cargarDetallesTitulares(titulares);
+          this.mostrarExito(`${titulares.length} titulares encontrados con este rol`);
+        } else {
+          this.titularesConDetalles.set([]);
+          this.loading.set(false);
+          this.mostrarExito('No se encontraron titulares con este rol');
+        }
       },
       error: (err) => {
         // Si el error es porque no hay registros, tratarlo como resultado válido
@@ -461,10 +622,10 @@ export class TitularesComponent implements OnInit {
         if (errorMsg.includes('no devolvio ningun registro') || errorMsg.includes('no devolvi')) {
           this.titulares.set([]);
           this.titularesFiltrados.set([]);
+          this.titularesConDetalles.set([]);
           this.loading.set(false);
           this.mostrarExito('No se encontraron titulares con este rol');
         } else {
-          console.error('Error al cargar titulares:', err);
           this.mostrarError('Error al cargar titulares');
           this.loading.set(false);
         }
@@ -482,12 +643,12 @@ export class TitularesComponent implements OnInit {
     }
 
     const filtrados = this.titulares().filter((t) => {
-      const nombre = `${t.nombre || ''} ${t.apellido || ''}`.toLowerCase();
+      const nombreComercial = (t.nombre || '').toLowerCase();
       const identificacion = (t.identificacion || '').toLowerCase();
       const razon = (t.razonSocial || '').toLowerCase();
 
       return (
-        nombre.includes(filtro) || identificacion.includes(filtro) || razon.includes(filtro)
+        nombreComercial.includes(filtro) || identificacion.includes(filtro) || razon.includes(filtro)
       );
     });
 
@@ -561,9 +722,11 @@ export class TitularesComponent implements OnInit {
       rubroTipoPersonaH: titular.rubroTipoPersonaH,
       rubroTipoIdentificacionH: titular.rubroTipoIdentificacionH,
       identificacion: titular.identificacion,
-      nombre: titular.nombre,
-      apellido: titular.apellido,
       razonSocial: titular.razonSocial,
+      nombre: titular.nombre,
+      extranjero: titular.extranjero || 0,
+      pais: titular.pais || null,
+      paisBusqueda: titular.pais?.nombre || '',
       telefono: titular.telefono,
       email: titular.email,
       direccion: titular.direccion,
@@ -589,8 +752,9 @@ export class TitularesComponent implements OnInit {
       rubroTipoIdentificacionH: formValue.rubroTipoIdentificacionH,
       identificacion: formValue.identificacion,
       nombre: formValue.nombre,
-      apellido: formValue.apellido,
       razonSocial: formValue.razonSocial,
+      extranjero: formValue.extranjero || 0,
+      pais: formValue.pais || null, // Enviar objeto Pais completo
       telefono: formValue.telefono,
       email: formValue.email,
       direccion: formValue.direccion,
@@ -604,19 +768,20 @@ export class TitularesComponent implements OnInit {
       this.titularService.add(titular).subscribe({
         next: (response) => {
           if (response) {
-            this.mostrarExito('Titular creado exitosamente');
             // Actualizar solo el código del formulario con el que devolvió el backend
             this.formTitular.patchValue({ codigo: response.codigo }, { emitEvent: false });
             // Actualizar titularSeleccionado con los datos del formulario + código del backend
             this.titularSeleccionado.set({ ...formValue, codigo: response.codigo });
             this.cargarTitulares();
             this.formTitular.markAsPristine();
+            this.loading.set(false);
+            this.mostrarDialogoGuardadoExitoso();
+          } else {
+            this.loading.set(false);
           }
-          this.loading.set(false);
         },
-        error: (err) => {
-          console.error('Error al crear titular:', err);
-          this.mostrarError('Error al crear titular');
+        error: (error: any) => {
+          this.mostrarError(this.obtenerMensajeErrorGuardado(error, 'crear'));
           this.loading.set(false);
         },
       });
@@ -627,21 +792,43 @@ export class TitularesComponent implements OnInit {
       this.titularService.update(titular).subscribe({
         next: (response) => {
           if (response) {
-            this.mostrarExito('Titular actualizado exitosamente');
             // Actualizar titularSeleccionado con los datos del formulario
             this.titularSeleccionado.set(formValue);
             this.cargarTitulares();
             this.formTitular.markAsPristine();
+            this.loading.set(false);
+            this.mostrarDialogoGuardadoExitoso();
+          } else {
+            this.loading.set(false);
           }
-          this.loading.set(false);
         },
-        error: (err) => {
-          console.error('Error al actualizar titular:', err);
-          this.mostrarError('Error al actualizar titular');
+        error: (error: any) => {
+          this.mostrarError(this.obtenerMensajeErrorGuardado(error, 'actualizar'));
           this.loading.set(false);
         },
       });
     }
+  }
+
+  private mostrarDialogoGuardadoExitoso(): void {
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      width: '400px',
+      data: {
+        title: 'Registro guardado exitosamente',
+        message: '¿Desea continuar editando o regresar a la gestión de titulares?',
+        confirmText: 'Regresar a la lista',
+        cancelText: 'Continuar aquí',
+      },
+    });
+
+    dialogRef.afterClosed().subscribe((result: boolean) => {
+      if (result) {
+        // Usuario eligió regresar a la lista
+        this.vistaActual.set('lista');
+        this.titularSeleccionado.set(null);
+      }
+      // Si result es false o undefined, el usuario eligió quedarse
+    });
   }
 
   // ==================== CRUD - ELIMINAR ====================
@@ -669,8 +856,7 @@ export class TitularesComponent implements OnInit {
         this.mostrarExito('Titular inactivado exitosamente');
         this.cargarTitulares();
       },
-      error: (err) => {
-        console.error('Error al inactivar titular:', err);
+      error: () => {
         this.mostrarError('Error al inactivar titular');
       },
     });
@@ -685,7 +871,8 @@ export class TitularesComponent implements OnInit {
   }
 
   private cargarRolesAsignados(codigoTitular: number): void {
-    if (!this.empresa) {
+    const empresaCodigo = this.getEmpresaCodigo();
+    if (!empresaCodigo) {
       this.mostrarError('No se pudo cargar la empresa');
       return;
     }
@@ -707,7 +894,7 @@ export class TitularesComponent implements OnInit {
       TipoDatosBusqueda.LONG,
       'empresa',
       'codigo',
-      this.empresa.codigo.toString(),
+      empresaCodigo.toString(),
       TipoComandosBusqueda.IGUAL
     );
     db2.setNumeroCampoRepetido(0);
@@ -724,7 +911,6 @@ export class TitularesComponent implements OnInit {
           this.rolesAsignados.set([]);
           this.loading.set(false);
         } else {
-          console.error('Error al cargar roles:', err);
           this.mostrarError('Error al cargar roles');
           this.loading.set(false);
         }
@@ -739,7 +925,8 @@ export class TitularesComponent implements OnInit {
 
   agregarRol(codigoRol: number): void {
     const titular = this.titularSeleccionado();
-    if (!titular || !this.empresa) {
+    const empresaCodigo = this.getEmpresaCodigo();
+    if (!titular || !empresaCodigo) {
       this.mostrarError('Datos incompletos');
       return;
     }
@@ -755,7 +942,7 @@ export class TitularesComponent implements OnInit {
       titular: { codigo: titular.codigo },
       rubroRolPersonaP: this.RUBRO_ROL_PERSONA,
       rubroRolPersonaH: codigoRol,
-      empresa: { codigo: this.empresa.codigo },
+      empresa: { codigo: empresaCodigo },
       estado: 1,
     };
 
@@ -766,8 +953,7 @@ export class TitularesComponent implements OnInit {
           this.cargarRolesAsignados(titular.codigo);
         }
       },
-      error: (err) => {
-        console.error('Error al asignar rol:', err);
+      error: () => {
         this.mostrarError('Error al asignar rol');
       },
     });
@@ -797,8 +983,7 @@ export class TitularesComponent implements OnInit {
           this.cargarRolesAsignados(titular.codigo);
         }
       },
-      error: (err) => {
-        console.error('Error al eliminar rol:', err);
+      error: () => {
         this.mostrarError('Error al eliminar rol');
       },
     });
@@ -813,11 +998,6 @@ export class TitularesComponent implements OnInit {
   }
 
   private cargarCuentasAsignadas(codigoRol: number): void {
-    if (!this.empresa) {
-      this.mostrarError('No se pudo cargar la empresa');
-      return;
-    }
-
     this.loading.set(true);
 
     const datos = new DatosBusqueda();
@@ -841,7 +1021,6 @@ export class TitularesComponent implements OnInit {
           this.cuentasAsignadas.set([]);
           this.loading.set(false);
         } else {
-          console.error('Error al cargar cuentas:', err);
           this.mostrarError('Error al cargar cuentas contables');
           this.loading.set(false);
         }
@@ -895,13 +1074,7 @@ export class TitularesComponent implements OnInit {
   }
 
   editarSaldoInicial(cuenta: PersonaCuentaContable): void {
-    console.log('💰 editarSaldoInicial llamado con cuenta:', cuenta);
-    console.log('   Cuenta contable:', cuenta.planCuenta?.cuentaContable);
-    console.log('   Saldo actual:', cuenta.saldoInicial);
-
-    // Verificación defensiva
     if (!cuenta || !cuenta.planCuenta) {
-      console.error('❌ Cuenta o planCuenta es null/undefined');
       this.mostrarError('Error: Datos de cuenta inválidos');
       return;
     }
@@ -913,19 +1086,13 @@ export class TitularesComponent implements OnInit {
       saldoActual.toString()
     );
 
-    console.log('✏️ Usuario ingresó:', saldoStr);
-
     if (saldoStr === null) {
-      // Usuario canceló
-      console.log('❌ Usuario canceló el diálogo');
       return;
     }
 
     const nuevoSaldo = parseFloat(saldoStr);
-    console.log('🔢 Saldo parseado:', nuevoSaldo);
 
     if (isNaN(nuevoSaldo)) {
-      console.log('⚠️ Saldo inválido (NaN)');
       this.mostrarError('El saldo inicial debe ser un número válido');
       return;
     }
@@ -941,27 +1108,21 @@ export class TitularesComponent implements OnInit {
       saldoInicial: nuevoSaldo,
     };
 
-    console.log('📤 Enviando actualización:', cuentaActualizada);
-
     this.personaCuentaService.update(cuentaActualizada).subscribe({
       next: () => {
-        console.log('✅ Saldo actualizado exitosamente');
         this.mostrarExito('Saldo inicial actualizado exitosamente');
         const rol = this.rolSeleccionado();
         if (rol) {
           this.cargarCuentasAsignadas(rol.codigo);
         }
       },
-      error: (err: any) => {
-        console.error('❌ Error al actualizar saldo inicial:', err);
+      error: () => {
         this.mostrarError('Error al actualizar saldo inicial');
       },
     });
   }
 
   private solicitarSaldoInicial(planCuenta: any, callback: (saldo: number) => void, saldoActual?: number): void {
-    console.log('🔔 Solicitando saldo inicial para:', planCuenta.cuentaContable, 'Saldo actual:', saldoActual);
-
     const mensaje = saldoActual !== undefined
       ? `Ingrese el saldo inicial para ${planCuenta.cuentaContable}:\n(Saldo actual: ${saldoActual})`
       : `Ingrese el saldo inicial para ${planCuenta.cuentaContable}:`;
@@ -969,32 +1130,30 @@ export class TitularesComponent implements OnInit {
     const valorDefecto = saldoActual !== undefined ? saldoActual.toString() : '0';
     const saldoStr = window.prompt(mensaje, valorDefecto);
 
-    console.log('✏️ Usuario ingresó saldo:', saldoStr);
-
     if (saldoStr === null) {
-      // Usuario canceló
-      console.log('❌ Usuario canceló el ingreso de saldo');
       return;
     }
 
     const saldo = parseFloat(saldoStr);
     if (isNaN(saldo)) {
       this.mostrarError('El saldo inicial debe ser un número válido');
-      console.log('⚠️ Saldo inválido:', saldoStr);
       return;
     }
 
-    console.log('✅ Saldo válido, ejecutando callback con:', saldo);
     callback(saldo);
   }
 
   private crearCuentaPersona(rol: PersonaRol, planCuenta: any, tipoCuenta: number, saldoInicial: number): void {
     const titular = this.titularSeleccionado();
-    if (!titular || !this.empresa) return;
+    const empresaCodigo = this.getEmpresaCodigo();
+    if (!titular || !empresaCodigo) {
+      this.mostrarError('No se pudo cargar la empresa');
+      return;
+    }
 
     const cuenta: any = {
       personaRol: { codigo: rol.codigo },
-      empresa: { codigo: this.empresa.codigo },
+      empresa: { codigo: empresaCodigo },
       planCuenta: { codigo: planCuenta.codigo },
       tipoCuenta: tipoCuenta,
       tipoPersona: null,
@@ -1006,8 +1165,7 @@ export class TitularesComponent implements OnInit {
         this.mostrarExito('Cuenta asignada exitosamente');
         this.cargarCuentasAsignadas(rol.codigo);
       },
-      error: (err: any) => {
-        console.error('Error al asignar cuenta:', err);
+      error: () => {
         this.mostrarError('Error al asignar cuenta');
       },
     });
@@ -1032,8 +1190,7 @@ export class TitularesComponent implements OnInit {
           this.cargarCuentasAsignadas(rol.codigo);
         }
       },
-      error: (err: any) => {
-        console.error('Error al actualizar cuenta:', err);
+      error: () => {
         this.mostrarError('Error al actualizar cuenta');
       },
     });
@@ -1063,8 +1220,7 @@ export class TitularesComponent implements OnInit {
           this.cargarCuentasAsignadas(rol.codigo);
         }
       },
-      error: (err) => {
-        console.error('Error al eliminar cuenta:', err);
+      error: () => {
         this.mostrarError('Error al eliminar cuenta');
       },
     });
@@ -1127,7 +1283,7 @@ export class TitularesComponent implements OnInit {
     if (titular.razonSocial) {
       return titular.razonSocial;
     }
-    return `${titular.apellido || ''} ${titular.nombre || ''}`.trim();
+    return titular.nombre || '';
   }
 
   getRolDescripcion(codigoRol: number): string {
@@ -1153,14 +1309,141 @@ export class TitularesComponent implements OnInit {
     return estado === 1 ? 'ACTIVO' : 'INACTIVO';
   }
 
+  private obtenerMensajeErrorGuardado(error: any, accion: 'crear' | 'actualizar'): string {
+    const errorTexto = this.obtenerTextoError(error).trim();
+    const errorMsg = errorTexto.toLowerCase();
+    const esDuplicado =
+      errorMsg.includes('ora-00001') ||
+      errorMsg.includes('restricción única') ||
+      errorMsg.includes('unique constraint') ||
+      errorMsg.includes('duplicate') ||
+      errorMsg.includes('duplicado');
+
+    if (esDuplicado) {
+      const constraint = this.extraerConstraintUnica(errorTexto);
+      const campo = this.inferirCampoDuplicado(errorTexto, constraint);
+
+      if (campo && constraint) {
+        return `No se puede guardar el titular: valor duplicado en ${campo} (restricción ${constraint}).`;
+      }
+
+      if (campo) {
+        return `No se puede guardar el titular: valor duplicado en ${campo}.`;
+      }
+
+      if (constraint) {
+        return `No se puede guardar el titular: registro duplicado (restricción ${constraint}).`;
+      }
+
+      return 'No se puede guardar el titular porque ya existe un registro con la misma información.';
+    }
+
+    return errorTexto
+      ? `No se pudo ${accion} el titular: ${errorTexto}`
+      : `No se pudo ${accion} el titular.`;
+  }
+
+  private extraerConstraintUnica(textoError: string): string | null {
+    if (!textoError) {
+      return null;
+    }
+
+    const patrones = [
+      /unique constraint\s*\(([^)]+)\)/i,
+      /restricci[oó]n\s+[úu]nica\s*\(([^)]+)\)/i,
+      /constraint\s*\(([^)]+)\)\s*violated/i,
+    ];
+
+    for (const patron of patrones) {
+      const match = textoError.match(patron);
+      if (match?.[1]) {
+        const nombreCompleto = match[1].trim();
+        const nombre = nombreCompleto.split('.').pop();
+        return nombre || nombreCompleto;
+      }
+    }
+
+    return null;
+  }
+
+  private inferirCampoDuplicado(textoError: string, constraint: string | null): string | null {
+    const fuente = `${textoError} ${constraint || ''}`.toLowerCase();
+
+    if (fuente.includes('identificacion') || fuente.includes('cedula') || fuente.includes('ruc') || fuente.includes('dni')) {
+      return 'Identificación';
+    }
+
+    if (fuente.includes('razon_social') || fuente.includes('razon social')) {
+      return 'Razón social';
+    }
+
+    if (fuente.includes('nombre')) {
+      return 'Nombre';
+    }
+
+    if (fuente.includes('email') || fuente.includes('correo')) {
+      return 'Email';
+    }
+
+    if (fuente.includes('telefono') || fuente.includes('fono') || fuente.includes('celular')) {
+      return 'Teléfono';
+    }
+
+    return null;
+  }
+
+  private obtenerTextoError(error: any): string {
+    const partes: string[] = [];
+    const visitados = new Set<any>();
+
+    const recorrer = (valor: any): void => {
+      if (valor === null || valor === undefined) {
+        return;
+      }
+
+      if (typeof valor === 'string') {
+        partes.push(valor);
+        return;
+      }
+
+      if (typeof valor === 'number' || typeof valor === 'boolean') {
+        partes.push(String(valor));
+        return;
+      }
+
+      if (typeof valor !== 'object') {
+        return;
+      }
+
+      if (visitados.has(valor)) {
+        return;
+      }
+      visitados.add(valor);
+
+      if (Array.isArray(valor)) {
+        valor.forEach(recorrer);
+        return;
+      }
+
+      Object.values(valor).forEach(recorrer);
+    };
+
+    recorrer(error);
+
+    return partes
+      .join(' | ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
   // ==================== MENSAJES ====================
 
   private mostrarExito(mensaje: string): void {
     this.snackBar.open(mensaje, 'Cerrar', {
       duration: 3000,
       panelClass: ['success-snackbar'],
-      horizontalPosition: 'end',
-      verticalPosition: 'top',
+      horizontalPosition: 'center',
+      verticalPosition: 'bottom',
     });
   }
 
@@ -1168,8 +1451,8 @@ export class TitularesComponent implements OnInit {
     this.snackBar.open(mensaje, 'Cerrar', {
       duration: 5000,
       panelClass: ['error-snackbar'],
-      horizontalPosition: 'end',
-      verticalPosition: 'top',
+      horizontalPosition: 'center',
+      verticalPosition: 'bottom',
     });
   }
 }

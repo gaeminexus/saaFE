@@ -16,32 +16,32 @@ import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-
 import { TipoDatosBusqueda as TipoDatos } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 
-import { GrupoProductoPago } from '../../../model/grupo_producto_pago';
-import { ProductoPago } from '../../../model/producto_pago';
+import { GrupoProductoCobro } from '../../../model/grupo-producto-cobro';
+import { ProductoCobro } from '../../../model/producto-cobro';
 import { PlanCuenta } from '../../../../cnt/model/plan-cuenta';
 import { DetalleRubro } from '../../../../../shared/model/detalle-rubro';
 
 import { DetalleRubroService } from '../../../../../shared/services/detalle-rubro.service';
 import { AppStateService } from '../../../../../shared/services/app-state.service';
-import { GrupoProductoPagoService } from '../../../service/grupo-producto-pago.service';
-import { ProductoPagoService } from '../../../service/producto-pago.service';
+import { GrupoProductoCobroService } from '../../../service/grupo-producto-cobro.service';
+import { ProductoCobroService } from '../../../service/producto-cobro.service';
 
-/** Código del rubro para Tipo de Grupo de Producto CXP */
+/** Código del rubro para Tipo de Grupo de Producto CXC */
 const RUBRO_TIPO_GRUPO_PRODUCTO = 74;
 
 @Component({
-  selector: 'app-grupos-productos-pago',
+  selector: 'app-grupos-productos-cobro',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, MaterialFormModule],
-  templateUrl: './grupos-productos-pago.component.html',
-  styleUrl: './grupos-productos-pago.component.scss',
+  templateUrl: './grupos-productos-cobro.component.html',
+  styleUrl: './grupos-productos-cobro.component.scss',
 })
-export class GruposProductosPagoComponent implements OnInit {
+export class GruposProductosCobroComponent implements OnInit {
   private fb = inject(FormBuilder);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
-  private grupoService = inject(GrupoProductoPagoService);
-  private productoService = inject(ProductoPagoService);
+  private grupoService = inject(GrupoProductoCobroService);
+  private productoService = inject(ProductoCobroService);
   private detalleRubroService = inject(DetalleRubroService);
   private appState = inject(AppStateService);
 
@@ -52,8 +52,8 @@ export class GruposProductosPagoComponent implements OnInit {
   modoProducto = signal<'lista' | 'nuevo' | 'editar'>('lista');
 
   // Grupos
-  grupos = signal<GrupoProductoPago[]>([]);
-  grupoSeleccionado = signal<GrupoProductoPago | null>(null);
+  grupos = signal<GrupoProductoCobro[]>([]);
+  grupoSeleccionado = signal<GrupoProductoCobro | null>(null);
   filtroBusqueda = signal('');
 
   gruposFiltrados = computed(() => {
@@ -67,17 +67,17 @@ export class GruposProductosPagoComponent implements OnInit {
   });
 
   // Tabla
-  dataSource = new MatTableDataSource<GrupoProductoPago>([]);
+  dataSource = new MatTableDataSource<GrupoProductoCobro>([]);
   columnasTabla: string[] = ['nombre', 'tipoGrupo', 'planCuenta', 'estado', 'acciones'];
 
   // Opciones
   tiposGrupoOptions = signal<DetalleRubro[]>([]);
 
   // Productos
-  productos = signal<ProductoPago[]>([]);
-  productoEditando = signal<ProductoPago | null>(null);
+  productos = signal<ProductoCobro[]>([]);
+  productoEditando = signal<ProductoCobro | null>(null);
   filtroProductos = signal('');
-  dataSourceProductos = new MatTableDataSource<ProductoPago>([]);
+  dataSourceProductos = new MatTableDataSource<ProductoCobro>([]);
   columnasTablaProductos: string[] = ['codigo', 'nombre', 'precioUnitario', 'incluyeIVA', 'stock', 'estado', 'acciones'];
 
   productosFiltrados = computed(() => {
@@ -120,7 +120,7 @@ export class GruposProductosPagoComponent implements OnInit {
       codigo: [null],
       empresa: [this.empresa, Validators.required],
       nombre: ['', [Validators.required, Validators.maxLength(250)]],
-      rubroTipoGrupoP: [null, Validators.required],
+      rubroTipoGrupoH: [null, Validators.required],
       planCuenta: [null, Validators.required],
       estado: [1, Validators.required],
     });
@@ -190,7 +190,7 @@ export class GruposProductosPagoComponent implements OnInit {
     });
   }
 
-  seleccionarGrupo(grupo: GrupoProductoPago): void {
+  seleccionarGrupo(grupo: GrupoProductoCobro): void {
     this.grupoSeleccionado.set(grupo);
     this.planCuentaSeleccionada.set(grupo.planCuenta || null);
     this.formGrupo.patchValue(grupo);
@@ -279,8 +279,8 @@ export class GruposProductosPagoComponent implements OnInit {
       empresa: { codigo: this.empresa?.codigo },
       planCuenta: { codigo: this.planCuentaSeleccionada()!.codigo },
       estado: formValues.estado,
-      rubroTipoGrupoP: formValues.rubroTipoGrupoP || 0,
-      rubroTipoGrupoH: 0,  // Backend requiere number, no null
+      rubroTipoGrupoP: 0,  // Backend requiere number, no null
+      rubroTipoGrupoH: formValues.rubroTipoGrupoH || 0,
     };
 
     console.log('💾 Guardando grupo:', grupo);
@@ -290,12 +290,10 @@ export class GruposProductosPagoComponent implements OnInit {
       : this.grupoService.add(grupo);
 
     operacion$.subscribe({
-      next: (grupoGuardado) => {
+      next: () => {
         this.mostrarExito('Grupo guardado correctamente');
         this.cargarGrupos();
-        if (this.modoGrupo() === 'nuevo' && grupoGuardado) {
-          setTimeout(() => this.seleccionarGrupo(grupoGuardado), 100);
-        }
+        this.cancelar();
         this.guardando.set(false);
       },
       error: (err) => {
@@ -306,7 +304,7 @@ export class GruposProductosPagoComponent implements OnInit {
     });
   }
 
-  eliminarGrupo(grupo: GrupoProductoPago): void {
+  eliminarGrupo(grupo: GrupoProductoCobro): void {
     const dialogRef = this.dialog.open<ConfirmDialogComponent, ConfirmDialogData>(
       ConfirmDialogComponent,
       {
@@ -342,6 +340,8 @@ export class GruposProductosPagoComponent implements OnInit {
 
   // ══════════════════════════════════════════════════════════════════════════
   // GESTIÓN DE PRODUCTOS
+  // ══════════════════════════════════════════════════════════════════════════
+  // PRODUCTOS
   // ══════════════════════════════════════════════════════════════════════════
 
   cargarProductos(): void {
@@ -379,7 +379,6 @@ export class GruposProductosPagoComponent implements OnInit {
   }
 
   nuevoProducto(): void {
-    if (this.modoProducto() !== 'lista') return;
     this.formProducto.reset({
       precioUnitario: 0,
       descuento: 0,
@@ -401,7 +400,7 @@ export class GruposProductosPagoComponent implements OnInit {
     this.modoProducto.set('nuevo');
   }
 
-  editarProducto(producto: ProductoPago): void {
+  editarProducto(producto: ProductoCobro): void {
     this.productoEditando.set(producto);
     this.formProducto.patchValue({
       id: producto.id,
@@ -489,7 +488,7 @@ export class GruposProductosPagoComponent implements OnInit {
     });
   }
 
-  eliminarProducto(producto: ProductoPago): void {
+  eliminarProducto(producto: ProductoCobro): void {
     const dialogRef = this.dialog.open<ConfirmDialogComponent, ConfirmDialogData, boolean>(
       ConfirmDialogComponent,
       {
@@ -539,6 +538,11 @@ export class GruposProductosPagoComponent implements OnInit {
       unidad: 0,
       estado: 1,
     });
+    this.modoProducto.set('lista');
+  }
+
+  cancelar(): void {
+    this.cancelarGrupo();
   }
 
   cancelarGrupo(): void {

@@ -21,6 +21,48 @@ export class UsuarioService {
     private http: HttpClient
   ) { }
 
+  private setStorageSafe(storage: Storage, key: string, value: string): void {
+    try {
+      storage.setItem(key, value);
+    } catch {
+      // Ignorar errores de storage restringido
+    }
+  }
+
+  private removeStorageSafe(storage: Storage, key: string): void {
+    try {
+      storage.removeItem(key);
+    } catch {
+      // Ignorar errores de storage restringido
+    }
+  }
+
+  private syncEmpresaAliases(empresa: Empresa): void {
+    if (!empresa?.codigo) {
+      return;
+    }
+
+    const empresaJson = JSON.stringify(empresa);
+    const codigo = empresa.codigo.toString();
+    const nombre = empresa.nombre || 'Empresa';
+
+    [sessionStorage, localStorage].forEach((storage) => {
+      this.setStorageSafe(storage, 'empresa', empresaJson);
+      this.setStorageSafe(storage, 'empresaLog', empresaJson);
+      this.setStorageSafe(storage, 'idEmpresa', codigo);
+      this.setStorageSafe(storage, 'empresaId', codigo);
+      this.setStorageSafe(storage, 'idSucursal', codigo);
+      this.setStorageSafe(storage, 'empresaName', nombre);
+    });
+  }
+
+  private clearEmpresaAliases(): void {
+    const keys = ['empresa', 'empresaLog', 'idEmpresa', 'empresaId', 'idSucursal', 'empresaName'];
+    [sessionStorage, localStorage].forEach((storage) => {
+      keys.forEach((key) => this.removeStorageSafe(storage, key));
+    });
+  }
+
   getAll(): Observable<Usuario[] | null> {
     const wsGetById = '/getAll';
     const url = `${ServiciosShare.RS_USRO}${wsGetById}`;
@@ -98,7 +140,7 @@ export class UsuarioService {
     this.empresaLog = empresa;
     // Guardar en sessionStorage para sesión por pestaña
     if (empresa) {
-      sessionStorage.setItem('empresaLog', JSON.stringify(empresa));
+      this.syncEmpresaAliases(empresa);
     }
   }
 
@@ -124,17 +166,16 @@ export class UsuarioService {
     this.usuarios = [];
 
     // Limpiar sesión de la pestaña/ventana actual
-    sessionStorage.removeItem('logged');
-    sessionStorage.removeItem('usuarioLog');
-    sessionStorage.removeItem('empresaLog');
-    sessionStorage.removeItem('empresa');
-    sessionStorage.removeItem('empresaName');
-    sessionStorage.removeItem('usuario');
-    sessionStorage.removeItem('userName');
-    sessionStorage.removeItem('idUsuario');
-    sessionStorage.removeItem('token');
-    sessionStorage.removeItem('username');
-    sessionStorage.removeItem('idSucursal');
+    this.removeStorageSafe(sessionStorage, 'logged');
+    this.removeStorageSafe(sessionStorage, 'usuarioLog');
+    this.removeStorageSafe(sessionStorage, 'usuario');
+    this.removeStorageSafe(sessionStorage, 'userName');
+    this.removeStorageSafe(sessionStorage, 'idUsuario');
+    this.removeStorageSafe(sessionStorage, 'token');
+    this.removeStorageSafe(sessionStorage, 'username');
+
+    // Limpiar aliases globales de empresa para evitar estados inconsistentes
+    this.clearEmpresaAliases();
   }
 
   // tslint:disable-next-line: typedef

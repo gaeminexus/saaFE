@@ -24,9 +24,81 @@ export class AppStateService {
     private usuarioService: UsuarioService,
     private detalleRubroService: DetalleRubroService
   ) {
+    this.normalizarContextoEmpresa();
     // Restaurar automáticamente la sesión desde localStorage al construir el servicio
     // Se ejecuta UNA vez gracias a APP_INITIALIZER antes del bootstrap
     this.restaurarDesdeSesion();
+  }
+
+  private setStorageSafe(storage: Storage, key: string, value: string): void {
+    try {
+      storage.setItem(key, value);
+    } catch {
+      // Ignorar errores de storage en entornos restringidos
+    }
+  }
+
+  private sincronizarEmpresaEnStorage(empresa: Empresa): void {
+    const empresaJson = JSON.stringify(empresa);
+    const codigo = empresa.codigo.toString();
+    const nombre = empresa.nombre || 'Empresa';
+
+    // Session storage
+    this.setStorageSafe(sessionStorage, 'empresa', empresaJson);
+    this.setStorageSafe(sessionStorage, 'empresaLog', empresaJson);
+    this.setStorageSafe(sessionStorage, 'idEmpresa', codigo);
+    this.setStorageSafe(sessionStorage, 'empresaId', codigo);
+    this.setStorageSafe(sessionStorage, 'idSucursal', codigo);
+    this.setStorageSafe(sessionStorage, 'empresaName', nombre);
+
+    // Local storage (compatibilidad módulos legacy)
+    this.setStorageSafe(localStorage, 'empresa', empresaJson);
+    this.setStorageSafe(localStorage, 'empresaLog', empresaJson);
+    this.setStorageSafe(localStorage, 'idEmpresa', codigo);
+    this.setStorageSafe(localStorage, 'empresaId', codigo);
+    this.setStorageSafe(localStorage, 'idSucursal', codigo);
+    this.setStorageSafe(localStorage, 'empresaName', nombre);
+  }
+
+  private normalizarContextoEmpresa(): void {
+    const empresaStr = sessionStorage.getItem('empresa') || localStorage.getItem('empresa');
+
+    if (empresaStr) {
+      try {
+        const empresa = JSON.parse(empresaStr) as Empresa;
+        if (empresa?.codigo) {
+          this.sincronizarEmpresaEnStorage(empresa);
+        }
+      } catch {
+        // Ignorar JSON inválido y continuar con fallback por código
+      }
+      return;
+    }
+
+    const codigoStr =
+      sessionStorage.getItem('idEmpresa') ||
+      localStorage.getItem('idEmpresa') ||
+      sessionStorage.getItem('empresaId') ||
+      localStorage.getItem('empresaId') ||
+      sessionStorage.getItem('idSucursal') ||
+      localStorage.getItem('idSucursal');
+
+    const codigo = codigoStr ? parseInt(codigoStr, 10) : NaN;
+    if (isNaN(codigo)) {
+      return;
+    }
+
+    const nombre = sessionStorage.getItem('empresaName') || localStorage.getItem('empresaName') || 'Empresa';
+    const empresaFallback: Empresa = {
+      codigo,
+      nombre,
+      jerarquia: {} as any,
+      nivel: 0,
+      codigoPadre: 0,
+      ingresado: 0,
+    };
+
+    this.sincronizarEmpresaEnStorage(empresaFallback);
   }
 
   /**
@@ -142,17 +214,13 @@ export class AppStateService {
         // Guardar en el BehaviorSubject
         this.datosGlobales$.next(appData);
 
-        // Guardar en localStorage (mantener compatibilidad con código existente)
-        sessionStorage.setItem('empresa', JSON.stringify(appData.empresa));
-        sessionStorage.setItem('idEmpresa', appData.empresa.codigo.toString());
-        sessionStorage.setItem('empresaName', appData.empresa.nombre);
+        // Guardar y sincronizar alias de empresa para todos los módulos
+        this.sincronizarEmpresaEnStorage(appData.empresa);
+
+        // Mantener datos de usuario en sesión
         sessionStorage.setItem('usuario', JSON.stringify(appData.usuario));
         sessionStorage.setItem('userName', username);
         sessionStorage.setItem('idUsuario', appData.usuario.codigo.toString());
-
-        // Compatibilidad con módulos que aún leen localStorage
-        localStorage.setItem('idEmpresa', appData.empresa.codigo.toString());
-        localStorage.setItem('empresaName', appData.empresa.nombre);
 
         // Guardar en el servicio de usuario (mantener compatibilidad)
         this.usuarioService.setEmpresaLog(appData.empresa);

@@ -78,6 +78,16 @@ body {
   padding-bottom: 35px !important; // Espacio reservado para el footer fijo
 }
 
+// Asegurar que overlays de Material (snackbars, dialogs, menus) queden por encima
+// del header fijo de la aplicación.
+.cdk-overlay-container {
+  z-index: 10000 !important;
+}
+
+.mat-mdc-snack-bar-container {
+  margin-bottom: 48px !important;
+}
+
 // Estilos globales para SnackBar (deben estar aquí, no en componentes)
 .success-snackbar {
   background: #4caf50 !important;

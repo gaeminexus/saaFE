@@ -245,31 +245,78 @@
 
                   <form [formGroup]="formProducto" (ngSubmit)="guardarProducto()" class="gp-form-producto">
 
+                    <!-- Identificación -->
                     <div class="gp-form-row">
                       <mat-form-field appearance="outline" class="gp-field gp-field--short">
-                        <mat-label>Número / Código</mat-label>
+                        <mat-label>Código *</mat-label>
                         <mat-icon matPrefix>tag</mat-icon>
-                        <input matInput formControlName="numero" placeholder="Ej: 001">
-                        @if (formProducto.get('numero')?.hasError('required') && formProducto.get('numero')?.touched) {
+                        <input matInput formControlName="codigo" placeholder="Ej: PROD001" maxlength="500">
+                        @if (formProducto.get('codigo')?.hasError('required') && formProducto.get('codigo')?.touched) {
                           <mat-error>Requerido</mat-error>
                         }
                       </mat-form-field>
 
+                      <mat-form-field appearance="outline" class="gp-field gp-field--short">
+                        <mat-label>Código Aux.</mat-label>
+                        <mat-icon matPrefix>tag</mat-icon>
+                        <input matInput formControlName="codigoAux" placeholder="Ej: AUX01" maxlength="500">
+                      </mat-form-field>
+
                       <mat-form-field appearance="outline" class="gp-field gp-field--grow">
-                        <mat-label>Nombre del Producto</mat-label>
+                        <mat-label>Nombre *</mat-label>
                         <mat-icon matPrefix>inventory_2</mat-icon>
-                        <input matInput formControlName="nombre" placeholder="Ej: Transformador 15 KVA">
+                        <input matInput formControlName="nombre" placeholder="Ej: Transformador 15 KVA" maxlength="1000">
                         @if (formProducto.get('nombre')?.hasError('required') && formProducto.get('nombre')?.touched) {
                           <mat-error>El nombre es requerido</mat-error>
                         }
                       </mat-form-field>
                     </div>
 
+                    <!-- Descripción -->
+                    <div class="gp-form-row">
+                      <mat-form-field appearance="outline" class="gp-field gp-field--grow">
+                        <mat-label>Descripción</mat-label>
+                        <mat-icon matPrefix>description</mat-icon>
+                        <textarea matInput formControlName="descripcion" rows="2" maxlength="1000"
+                                  placeholder="Descripción detallada del producto"></textarea>
+                      </mat-form-field>
+                    </div>
+
+                    <!-- Precios -->
                     <div class="gp-form-row">
                       <mat-form-field appearance="outline" class="gp-field">
-                        <mat-label>Aplica IVA</mat-label>
+                        <mat-label>Precio Unitario</mat-label>
+                        <mat-icon matPrefix>attach_money</mat-icon>
+                        <input matInput type="number" formControlName="precioUnitario" min="0" step="0.01" placeholder="0.00">
+                      </mat-form-field>
+
+                      <mat-form-field appearance="outline" class="gp-field">
+                        <mat-label>Descuento</mat-label>
+                        <mat-icon matPrefix>discount</mat-icon>
+                        <input matInput type="number" formControlName="descuento" min="0" step="0.01" placeholder="0.00">
+                      </mat-form-field>
+
+                      <mat-form-field appearance="outline" class="gp-field">
+                        <mat-label>Tipo Descuento</mat-label>
+                        <mat-select formControlName="tipoDescuento">
+                          <mat-option [value]="0">Valor</mat-option>
+                          <mat-option [value]="1">Porcentaje</mat-option>
+                        </mat-select>
+                      </mat-form-field>
+
+                      <mat-form-field appearance="outline" class="gp-field">
+                        <mat-label>Stock</mat-label>
+                        <mat-icon matPrefix>inventory</mat-icon>
+                        <input matInput type="number" formControlName="stock" min="0" step="1" placeholder="0">
+                      </mat-form-field>
+                    </div>
+
+                    <!-- Impuestos IVA -->
+                    <div class="gp-form-row">
+                      <mat-form-field appearance="outline" class="gp-field">
+                        <mat-label>Incluye IVA</mat-label>
                         <mat-icon matPrefix>receipt</mat-icon>
-                        <mat-select formControlName="aplicaIVA">
+                        <mat-select formControlName="incluyeIVA">
                           @for (op of opcionesSiNo; track op.value) {
                             <mat-option [value]="op.value">{{ op.label }}</mat-option>
                           }
@@ -277,9 +324,50 @@
                       </mat-form-field>
 
                       <mat-form-field appearance="outline" class="gp-field">
-                        <mat-label>Aplica Retención</mat-label>
+                        <mat-label>Tipo IVA</mat-label>
                         <mat-icon matPrefix>percent</mat-icon>
-                        <mat-select formControlName="aplicaRetencion">
+                        <input matInput type="number" formControlName="tipoIVA" min="0" placeholder="0">
+                      </mat-form-field>
+
+                      <mat-form-field appearance="outline" class="gp-field">
+                        <mat-label>Tipo ICE</mat-label>
+                        <mat-icon matPrefix>local_fire_department</mat-icon>
+                        <input matInput type="number" formControlName="tipoICE" min="0" placeholder="0">
+                      </mat-form-field>
+
+                      <mat-form-field appearance="outline" class="gp-field">
+                        <mat-label>ICE</mat-label>
+                        <mat-icon matPrefix>local_fire_department</mat-icon>
+                        <input matInput type="number" formControlName="ice" min="0" step="0.01" placeholder="0.00">
+                      </mat-form-field>
+                    </div>
+
+                    <!-- Otros impuestos y subsidios -->
+                    <div class="gp-form-row">
+                      <mat-form-field appearance="outline" class="gp-field">
+                        <mat-label>IRBPNR</mat-label>
+                        <mat-icon matPrefix>account_balance</mat-icon>
+                        <input matInput type="number" formControlName="irbpnr" min="0" step="0.01" placeholder="0.00">
+                      </mat-form-field>
+
+                      <mat-form-field appearance="outline" class="gp-field">
+                        <mat-label>Subsidio</mat-label>
+                        <mat-icon matPrefix>volunteer_activism</mat-icon>
+                        <input matInput type="number" formControlName="subsidio" min="0" step="0.01" placeholder="0.00">
+                      </mat-form-field>
+
+                      <mat-form-field appearance="outline" class="gp-field">
+                        <mat-label>Precio sin Subsidio</mat-label>
+                        <mat-icon matPrefix>money_off</mat-icon>
+                        <input matInput type="number" formControlName="precioSinSub" min="0" step="0.01" placeholder="0.00">
+                      </mat-form-field>
+                    </div>
+
+                    <!-- Configuración adicional -->
+                    <div class="gp-form-row">
+                      <mat-form-field appearance="outline" class="gp-field">
+                        <mat-label>Multi Precio</mat-label>
+                        <mat-select formControlName="multiPrecio">
                           @for (op of opcionesSiNo; track op.value) {
                             <mat-option [value]="op.value">{{ op.label }}</mat-option>
                           }
@@ -287,11 +375,15 @@
                       </mat-form-field>
 
                       <mat-form-field appearance="outline" class="gp-field">
-                        <mat-label>% Base Retención</mat-label>
-                        <mat-icon matPrefix>percent</mat-icon>
-                        <input matInput type="number" formControlName="porcentajeBaseRetencion"
-                               min="0" max="100" placeholder="100">
-                        <span matSuffix>%</span>
+                        <mat-label>Maneja Unidad</mat-label>
+                        <mat-icon matPrefix>straighten</mat-icon>
+                        <input matInput type="number" formControlName="manejaUnidad" min="0" placeholder="0">
+                      </mat-form-field>
+
+                      <mat-form-field appearance="outline" class="gp-field">
+                        <mat-label>Unidad</mat-label>
+                        <mat-icon matPrefix>straighten</mat-icon>
+                        <input matInput type="number" formControlName="unidad" min="0" placeholder="0">
                       </mat-form-field>
 
                       <mat-form-field appearance="outline" class="gp-field">
@@ -328,10 +420,10 @@
                 <div class="table-wrapper">
                   <table mat-table [dataSource]="dataSourceProductos" class="gp-table">
 
-                    <ng-container matColumnDef="numero">
-                      <th mat-header-cell *matHeaderCellDef>Nro.</th>
+                    <ng-container matColumnDef="codigo">
+                      <th mat-header-cell *matHeaderCellDef>Código</th>
                       <td mat-cell *matCellDef="let p">
-                        <span class="chip-numero">{{ p.numero }}</span>
+                        <span class="chip-numero">{{ p.codigo }}</span>
                       </td>
                     </ng-container>
 
@@ -340,21 +432,26 @@
                       <td mat-cell *matCellDef="let p">{{ p.nombre }}</td>
                     </ng-container>
 
-                    <ng-container matColumnDef="aplicaIVA">
+                    <ng-container matColumnDef="precioUnitario">
+                      <th mat-header-cell *matHeaderCellDef class="cell-right">Precio</th>
+                      <td mat-cell *matCellDef="let p" class="cell-right">
+                        {{ p.precioUnitario | currency:'$':'symbol':'1.2-2' }}
+                      </td>
+                    </ng-container>
+
+                    <ng-container matColumnDef="incluyeIVA">
                       <th mat-header-cell *matHeaderCellDef class="cell-center">IVA</th>
                       <td mat-cell *matCellDef="let p" class="cell-center">
-                        <mat-icon [class.icon-si]="p.aplicaIVA === 1" [class.icon-no]="p.aplicaIVA !== 1">
-                          {{ p.aplicaIVA === 1 ? 'check_circle' : 'cancel' }}
+                        <mat-icon [class.icon-si]="p.incluyeIVA === 1" [class.icon-no]="p.incluyeIVA !== 1">
+                          {{ p.incluyeIVA === 1 ? 'check_circle' : 'cancel' }}
                         </mat-icon>
                       </td>
                     </ng-container>
 
-                    <ng-container matColumnDef="aplicaRetencion">
-                      <th mat-header-cell *matHeaderCellDef class="cell-center">Retención</th>
+                    <ng-container matColumnDef="stock">
+                      <th mat-header-cell *matHeaderCellDef class="cell-center">Stock</th>
                       <td mat-cell *matCellDef="let p" class="cell-center">
-                        <mat-icon [class.icon-si]="p.aplicaRetencion === 1" [class.icon-no]="p.aplicaRetencion !== 1">
-                          {{ p.aplicaRetencion === 1 ? 'check_circle' : 'cancel' }}
-                        </mat-icon>
+                        <span class="chip-stock">{{ p.stock || 0 }}</span>
                       </td>
                     </ng-container>
 
@@ -381,9 +478,9 @@
                       </td>
                     </ng-container>
 
-                    <tr mat-header-row *matHeaderRowDef="columnasProductos"></tr>
-                    <tr mat-row *matRowDef="let row; columns: columnasProductos"
-                        [class.row-editing]="productoEditando()?.codigo === row.codigo"></tr>
+                    <tr mat-header-row *matHeaderRowDef="columnasTablaProductos"></tr>
+                    <tr mat-row *matRowDef="let row; columns: columnasTablaProductos"
+                        [class.row-editing]="productoEditando()?.id === row.id"></tr>
                   </table>
                 </div>
               } @else if (modoProducto() === 'lista') {

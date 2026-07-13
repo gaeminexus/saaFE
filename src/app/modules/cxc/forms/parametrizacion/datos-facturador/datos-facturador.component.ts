@@ -24,6 +24,7 @@ import { FacturadorService } from '../../../service/facturador.service';
 import { EstablecimientoService } from '../../../service/establecimiento.service';
 import { PuntoEmisionService } from '../../../service/punto-emision.service';
 import { NumeracionPuntoEmisionService } from '../../../service/numeracion-punto-emision.service';
+import { FileService } from '../../../../../shared/services/file.service';
 
 @Component({
   selector: 'app-datos-facturador',
@@ -40,6 +41,7 @@ export class DatosFacturadorComponent implements OnInit {
   private establecimientoService = inject(EstablecimientoService);
   private puntoEmisionService = inject(PuntoEmisionService);
   private numeracionService = inject(NumeracionPuntoEmisionService);
+  private fileService = inject(FileService);
 
   // Estado
   cargando = signal(false);
@@ -106,12 +108,9 @@ export class DatosFacturadorComponent implements OnInit {
       rimpe: [0],
       popularRimpe: [0],
       turistico: [0],
-      sinLimiteConsFinal: [0],
-      inventario: [0],
-      empTransporte: [0],
-      impCodProd: [0],
-      docEmitidos: [0],
-      docPermitidos: [0],
+      firma: [''],
+      claveFirma: [''],
+      codClave: ['', [Validators.required, Validators.pattern(/^\d{8}$/)]],
       estado: [1, Validators.required],
     });
 
@@ -181,15 +180,66 @@ export class DatosFacturadorComponent implements OnInit {
       rimpe: 0,
       popularRimpe: 0,
       turistico: 0,
-      sinLimiteConsFinal: 0,
-      inventario: 0,
-      empTransporte: 0,
-      impCodProd: 0,
-      docEmitidos: 0,
-      docPermitidos: 0,
       estado: 1,
     });
     this.modoFormFacturador.set('nuevo');
+  }
+
+  onArchivoFirmaSeleccionado(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      const file = input.files[0];
+
+      // Validar extensión .p12
+      if (!file.name.toLowerCase().endsWith('.p12')) {
+        this.mostrarError('El archivo debe tener extensión .p12');
+        input.value = '';
+        return;
+      }
+
+      // Validar tamaño (máximo 5MB para firma)
+      const maxSize = 5 * 1024 * 1024;
+      if (file.size > maxSize) {
+        this.mostrarError('El archivo no debe superar 5MB');
+        input.value = '';
+        return;
+      }
+
+      this.guardando.set(true);
+
+      // Subir archivo a ruta personalizada
+      const uploadPath = 'firmas/electronicas';
+      this.fileService.uploadFileCustomPath(file, uploadPath).subscribe({
+        next: (response) => {
+          if (response.success && response.filePath) {
+            // Construir la ruta completa si el backend no la devuelve correctamente
+            let rutaCompleta = response.filePath;
+
+            // Si la ruta devuelta no incluye 'electronicas', construirla manualmente
+            if (!rutaCompleta.includes('electronicas')) {
+              // Extraer solo el nombre del archivo de la ruta devuelta
+              const fileName = rutaCompleta.split('/').pop() || file.name;
+              rutaCompleta = `${uploadPath}/${fileName}`;
+            }
+
+            // Guardar la ruta completa en el formulario
+            this.formFacturador.patchValue({
+              firma: rutaCompleta,
+            });
+            this.mostrarExito(`Firma electrónica cargada: ${file.name}`);
+          } else {
+            this.mostrarError(response.message || 'Error al subir el archivo');
+          }
+          this.guardando.set(false);
+        },
+        error: (err) => {
+          console.error('Error al subir firma:', err);
+          this.mostrarError('Error al subir la firma electrónica');
+          this.guardando.set(false);
+          input.value = '';
+        },
+      });
+    }
   }
 
   guardarFacturador(): void {

@@ -22,7 +22,7 @@ export class MenucuentaxpagarComponent {
           iconName: 'category',
           route: '/menucuentaxpagar/parametrizacion/grupos-productos',
         },
-        {
+        /*{
           displayName: 'Productos',
           iconName: 'inventory_2',
           route: '/menucuentaxpagar/parametrizacion/productos',
@@ -31,7 +31,7 @@ export class MenucuentaxpagarComponent {
           displayName: 'Proveedores',
           iconName: 'store',
           route: '/menucuentaxpagar/parametrizacion/proveedores',
-        },
+        },*/
       ],
     },
     {

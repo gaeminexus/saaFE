@@ -20,8 +20,9 @@ import { ContratoDashComponent } from './modules/crd/forms/contrato/contrato-das
 import { ContratoEditComponent } from './modules/crd/forms/contrato/contrato-edit/contrato-edit.component';
 import { MenucreditosComponent } from './modules/crd/menucreditos/menucreditos.component';
 import { ParametrizacionCreditosComponent } from './modules/crd/menucreditos/parametrizacion-creditos.component';
-import { GrupoProductosComponent } from './modules/cxc/forms/grupo-productos.component/grupo-productos.component';
+import { GruposProductosCobroComponent } from './modules/cxc/forms/parametrizacion/grupos-productos-cobro/grupos-productos-cobro.component';
 import { DatosFacturadorComponent } from './modules/cxc/forms/parametrizacion/datos-facturador/datos-facturador.component';
+import { DatosSriComponent } from './modules/cxc/forms/parametrizacion/datos-sri/datos-sri.component';
 import { MenucuentasxcobrarComponent } from './modules/cxc/menu/menucuentasxcobrar/menucuentasxcobrar.component';
 import { MenucuentaxpagarComponent } from './modules/cxp/menu/menucuentasxpagar/menucuentasxpagar.component';
 import { GruposProductosPagoComponent } from './modules/cxp/forms/parametrizacion/grupos-productos-pago/grupos-productos-pago.component';
@@ -759,10 +760,19 @@ export const routes: Routes = [
     component: MenucuentasxcobrarComponent,
     canActivate: [authGuard],
     children: [
-      { path: 'grupo-productos', component: GrupoProductosComponent, canActivate: [authGuard] },
+      {
+        path: 'parametrizacion/grupos-productos',
+        component: GruposProductosCobroComponent,
+        canActivate: [authGuard],
+      },
       {
         path: 'parametrizacion/datos-facturador',
         component: DatosFacturadorComponent,
+        canActivate: [authGuard],
+      },
+      {
+        path: 'parametrizacion/datos-sri',
+        component: DatosSriComponent,
         canActivate: [authGuard],
       },
     ],
