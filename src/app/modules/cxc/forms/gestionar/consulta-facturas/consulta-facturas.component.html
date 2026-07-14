@@ -1,0 +1,171 @@
+<div class="consulta-facturas-page">
+  <mat-card class="filtros-card">
+    <mat-card-header>
+      <mat-card-title>Consulta de Facturas</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="filtros-grid">
+        <mat-form-field appearance="outline">
+          <mat-label>Fecha desde</mat-label>
+          <input matInput [matDatepicker]="pickerDesde" [(ngModel)]="fechaDesde" placeholder="dd/mm/aaaa" />
+          <mat-datepicker-toggle matIconSuffix [for]="pickerDesde"></mat-datepicker-toggle>
+          <mat-datepicker #pickerDesde></mat-datepicker>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Fecha hasta</mat-label>
+          <input matInput [matDatepicker]="pickerHasta" [(ngModel)]="fechaHasta" placeholder="dd/mm/aaaa" />
+          <mat-datepicker-toggle matIconSuffix [for]="pickerHasta"></mat-datepicker-toggle>
+          <mat-datepicker #pickerHasta></mat-datepicker>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Número autorización</mat-label>
+          <input matInput [(ngModel)]="numeroAutorizacion" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Cliente</mat-label>
+          <input matInput [(ngModel)]="cliente" placeholder="Nombre o identificación" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Estado</mat-label>
+          <mat-select [(ngModel)]="estado">
+            <mat-option [value]="''">Todos</mat-option>
+            @for (item of estados(); track item.value) {
+              <mat-option [value]="item.value">{{ item.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      </div>
+
+      <div class="acciones-filtros">
+        <button mat-raised-button color="primary" type="button" (click)="buscar()" [disabled]="cargando()">
+          <mat-icon>search</mat-icon>
+          Buscar
+        </button>
+        <button mat-stroked-button type="button" (click)="limpiarFiltros()" [disabled]="cargando()">
+          <mat-icon>cleaning_services</mat-icon>
+          Limpiar
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="tabla-card">
+    <mat-card-content>
+      <div class="table-container">
+        <table mat-table [dataSource]="dataSource" class="mat-elevation-z1">
+          <ng-container matColumnDef="numero">
+            <th mat-header-cell *matHeaderCellDef>Num.Doc.</th>
+            <td mat-cell *matCellDef="let row">{{ row.numero }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="clienteIdentificacion">
+            <th mat-header-cell *matHeaderCellDef>CI / RUC</th>
+            <td mat-cell *matCellDef="let row">{{ row.titular?.identificacion }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="clienteNombre">
+            <th mat-header-cell *matHeaderCellDef>Nombre</th>
+            <td mat-cell *matCellDef="let row">{{ row.titular?.razonSocial || row.titular?.nombre }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="fecha">
+            <th mat-header-cell *matHeaderCellDef>Fecha</th>
+            <td mat-cell *matCellDef="let row">{{ row.fecha | date:'dd/MM/yyyy' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="autorizacion">
+            <th mat-header-cell *matHeaderCellDef>No.Autoriza</th>
+            <td mat-cell *matCellDef="let row">{{ row.autorizacion || row.clave }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="subtotal">
+            <th mat-header-cell *matHeaderCellDef class="text-right">Subtotal</th>
+            <td mat-cell *matCellDef="let row" class="text-right">{{ row.subtotal | number:'1.2-2' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="subtotal5">
+            <th mat-header-cell *matHeaderCellDef class="text-right">SUB_5</th>
+            <td mat-cell *matCellDef="let row" class="text-right">{{ row.subtotal5 | number:'1.2-2' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="subcero">
+            <th mat-header-cell *matHeaderCellDef class="text-right">SUB_0</th>
+            <td mat-cell *matCellDef="let row" class="text-right">{{ row.subcero | number:'1.2-2' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="viva5">
+            <th mat-header-cell *matHeaderCellDef class="text-right">IVA_5</th>
+            <td mat-cell *matCellDef="let row" class="text-right">{{ row.vIVA5 | number:'1.2-2' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="piva">
+            <th mat-header-cell *matHeaderCellDef class="text-right">% IVA</th>
+            <td mat-cell *matCellDef="let row" class="text-right">{{ row.pIVA | number:'1.2-2' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="viva">
+            <th mat-header-cell *matHeaderCellDef class="text-right">Valor IVA</th>
+            <td mat-cell *matCellDef="let row" class="text-right">{{ row.vIVA | number:'1.2-2' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="total">
+            <th mat-header-cell *matHeaderCellDef class="text-right">Total</th>
+            <td mat-cell *matCellDef="let row" class="text-right"><strong>{{ row.total | number:'1.2-2' }}</strong></td>
+          </ng-container>
+
+          <ng-container matColumnDef="estadoEmision">
+            <th mat-header-cell *matHeaderCellDef>Estado</th>
+            <td mat-cell *matCellDef="let row">{{ estadoLabel(row.estadoEmision) }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="acciones">
+            <th mat-header-cell *matHeaderCellDef>Acciones</th>
+            <td mat-cell *matCellDef="let row">
+              <button mat-icon-button [matMenuTriggerFor]="menuAcciones" [matMenuTriggerData]="{ row: row }" matTooltip="Opciones">
+                <mat-icon>more_horiz</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="columnas"></tr>
+          <tr mat-row *matRowDef="let row; columns: columnas"></tr>
+
+          @if (!cargando() && dataSource.data.length === 0) {
+            <tr class="mat-row">
+              <td [attr.colspan]="columnas.length" class="sin-datos">No hay facturas con los filtros seleccionados.</td>
+            </tr>
+          }
+        </table>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <mat-menu #menuAcciones="matMenu">
+    <ng-template matMenuContent let-row="row">
+      <button mat-menu-item (click)="imprimir(row)">
+        <mat-icon>print</mat-icon>
+        <span>Imprimir</span>
+      </button>
+      <button mat-menu-item (click)="copiarClave(row)">
+        <mat-icon>content_copy</mat-icon>
+        <span>Copiar clave</span>
+      </button>
+      <button mat-menu-item (click)="anular(row)">
+        <mat-icon>cancel</mat-icon>
+        <span>Anular</span>
+      </button>
+      <button mat-menu-item (click)="autorizar(row)">
+        <mat-icon>task</mat-icon>
+        <span>Autorizar</span>
+      </button>
+      <button mat-menu-item (click)="reenviarMail(row)">
+        <mat-icon>forward_to_inbox</mat-icon>
+        <span>Reenviar mail</span>
+      </button>
+    </ng-template>
+  </mat-menu>
+</div>

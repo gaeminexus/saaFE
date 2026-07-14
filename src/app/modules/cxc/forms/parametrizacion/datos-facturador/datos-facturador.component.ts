@@ -19,11 +19,14 @@ import { Facturador } from '../../../model/facturador';
 import { Establecimiento } from '../../../model/establecimientos';
 import { PuntoEmision } from '../../../model/puntos-emision';
 import { NumeracionPuntoEmision } from '../../../model/numeracion-punto-emision';
+import { DetalleSri } from '../../../model/detalle-sri';
+import { Empresa } from '../../../../../shared/model/empresa';
 
 import { FacturadorService } from '../../../service/facturador.service';
 import { EstablecimientoService } from '../../../service/establecimiento.service';
 import { PuntoEmisionService } from '../../../service/punto-emision.service';
 import { NumeracionPuntoEmisionService } from '../../../service/numeracion-punto-emision.service';
+import { DetalleSriService } from '../../../service/detalle-sri.service';
 import { FileService } from '../../../../../shared/services/file.service';
 
 @Component({
@@ -41,6 +44,7 @@ export class DatosFacturadorComponent implements OnInit {
   private establecimientoService = inject(EstablecimientoService);
   private puntoEmisionService = inject(PuntoEmisionService);
   private numeracionService = inject(NumeracionPuntoEmisionService);
+  private detalleSriService = inject(DetalleSriService);
   private fileService = inject(FileService);
 
   // Estado
@@ -75,6 +79,10 @@ export class DatosFacturadorComponent implements OnInit {
   dataSourceNumeraciones = new MatTableDataSource<NumeracionPuntoEmision>([]);
   columnasNumeraciones: string[] = ['tipoDoc', 'numActual', 'acciones'];
 
+  // Documentos (TSRI filtrado por lsri = 3)
+  documentosTsri = signal<DetalleSri[]>([]);
+  documentoSeleccionado = signal<DetalleSri | null>(null);
+
   readonly opcionesEstado = [
     { value: 1, label: 'Activo' },
     { value: 0, label: 'Inactivo' },
@@ -85,8 +93,20 @@ export class DatosFacturadorComponent implements OnInit {
     { value: 0, label: 'No' },
   ];
 
+  readonly opcionesAmbiente = [
+    { value: 1, label: 'Pruebas' },
+    { value: 2, label: 'Producción' },
+  ];
+
+  readonly opcionesGeneraConta = [
+    { value: 1, label: 'Sí' },
+    { value: 0, label: 'No' },
+    { value: null, label: 'No definido' },
+  ];
+
   ngOnInit(): void {
     this.inicializarFormularios();
+    this.cargarDocumentosTsri();
     this.cargarFacturadores();
   }
 
@@ -111,6 +131,8 @@ export class DatosFacturadorComponent implements OnInit {
       firma: [''],
       claveFirma: [''],
       codClave: ['', [Validators.required, Validators.pattern(/^\d{8}$/)]],
+      ambiente: [1, Validators.required],
+      generaConta: [null],
       estado: [1, Validators.required],
     });
 
@@ -137,6 +159,7 @@ export class DatosFacturadorComponent implements OnInit {
 
     this.formNumeracion = this.fb.group({
       id: [null],
+      documento: [null], // Almacena el objeto DetalleSri seleccionado
       tipoDoc: ['', [Validators.required, Validators.maxLength(10)]],
       numActual: [0, [Validators.required, Validators.min(0)]],
     });
@@ -180,6 +203,8 @@ export class DatosFacturadorComponent implements OnInit {
       rimpe: 0,
       popularRimpe: 0,
       turistico: 0,
+      ambiente: 1,
+      generaConta: null,
       estado: 1,
     });
     this.modoFormFacturador.set('nuevo');
@@ -250,10 +275,24 @@ export class DatosFacturadorComponent implements OnInit {
 
     this.guardando.set(true);
     const datos = this.formFacturador.value;
+    const empresaCodigo = this.obtenerEmpresaCodigoSesion();
 
-    const operacion$ = datos.id
-      ? this.facturadorService.update(datos)
-      : this.facturadorService.add(datos);
+    if (!empresaCodigo) {
+      this.mostrarError('No se encontró la empresa de la sesión. Vuelva a iniciar sesión.');
+      this.guardando.set(false);
+      return;
+    }
+
+    const payload: any = {
+      ...datos,
+      empresa: { codigo: empresaCodigo },
+      ambiente: datos.ambiente ?? 1,
+      generaConta: datos.generaConta,
+    };
+
+    const operacion$ = payload.id
+      ? this.facturadorService.update(payload)
+      : this.facturadorService.add(payload);
 
     operacion$.subscribe({
       next: (result) => {
@@ -578,7 +617,8 @@ export class DatosFacturadorComponent implements OnInit {
 
   nuevaNumeracion(): void {
     this.numeracionSeleccionada.set(null);
-    this.formNumeracion.reset({ numActual: 0 });
+    this.documentoSeleccionado.set(null);
+    this.formNumeracion.reset({ numActual: 0, documento: null, tipoDoc: '' });
   }
 
   editarNumeracion(numeracion: NumeracionPuntoEmision): void {
@@ -600,8 +640,12 @@ export class DatosFacturadorComponent implements OnInit {
 
     this.guardando.set(true);
     const formValues = this.formNumeracion.value;
+
+    // Crear datos sin el campo documento (que es solo para UI)
     const datos: any = {
-      ...formValues,
+      id: formValues.id,
+      tipoDoc: formValues.tipoDoc,
+      numActual: formValues.numActual,
       ptoEmision: { id: punto.id },
     };
 
@@ -656,11 +700,71 @@ export class DatosFacturadorComponent implements OnInit {
 
   cancelarNumeracion(): void {
     this.numeracionSeleccionada.set(null);
-    this.formNumeracion.reset({ numActual: 0 });
+    this.documentoSeleccionado.set(null);
+    this.formNumeracion.reset({ numActual: 0, documento: null, tipoDoc: '' });
   }
 
   volverAPuntosEmision(): void {
     this.modoVista.set('puntosEmision');
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // DOCUMENTOS TSRI
+  // ═══════════════════════════════════════════════════════════════════
+
+  cargarDocumentosTsri(): void {
+    this.detalleSriService.getAll().subscribe({
+      next: (detalles) => {
+        const documentos = (detalles || []).filter(
+          (d) => d.estado === 1 && this.getTablaCodigo(d.lsri) === '3'
+        );
+        this.documentosTsri.set(documentos);
+      },
+      error: () => {
+        this.documentosTsri.set([]);
+      },
+    });
+  }
+
+  private getTablaCodigo(lsri: number | { tabla?: string }): string {
+    if (typeof lsri === 'object' && lsri?.tabla) {
+      return String(lsri.tabla);
+    }
+    if (typeof lsri === 'number') {
+      return String(lsri);
+    }
+    return '';
+  }
+
+  private obtenerEmpresaCodigoSesion(): number | null {
+    const empresaStr = sessionStorage.getItem('empresa') || sessionStorage.getItem('empresaLog') || localStorage.getItem('empresa') || localStorage.getItem('empresaLog');
+    if (empresaStr) {
+      try {
+        const empresa = JSON.parse(empresaStr) as Empresa;
+        if (empresa?.codigo) {
+          return Number(empresa.codigo);
+        }
+      } catch {
+      }
+    }
+
+    const idEmpresa = sessionStorage.getItem('idEmpresa') || sessionStorage.getItem('empresaId') || localStorage.getItem('idEmpresa') || localStorage.getItem('empresaId');
+    if (idEmpresa) {
+      const codigo = Number(idEmpresa);
+      if (!Number.isNaN(codigo) && codigo > 0) {
+        return codigo;
+      }
+    }
+
+    return null;
+  }
+
+  onDocumentoChange(documento: DetalleSri): void {
+    this.documentoSeleccionado.set(documento);
+    // Rellenar tipoDoc con el codigo como string (ej: "01" en lugar de 1)
+    this.formNumeracion.patchValue({
+      tipoDoc: String(documento.codigo),
+    });
   }
 
   // ═══════════════════════════════════════════════════════════════════

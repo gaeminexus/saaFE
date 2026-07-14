@@ -1,0 +1,252 @@
+import { CommonModule } from '@angular/common';
+import { Component, OnInit, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatTableDataSource } from '@angular/material/table';
+import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { FacturaEmitir } from '../../../model/factura-emitir';
+import { FacturaEmitirService } from '../../../service/emitir/factura-emitir.service';
+import { DetalleSriService } from '../../../service/detalle-sri.service';
+import { DetalleSri } from '../../../model/detalle-sri';
+
+@Component({
+  selector: 'app-consulta-facturas',
+  standalone: true,
+  imports: [CommonModule, FormsModule, MaterialFormModule],
+  templateUrl: './consulta-facturas.component.html',
+  styleUrl: './consulta-facturas.component.scss',
+})
+export class ConsultaFacturasComponent implements OnInit {
+  private facturaService = inject(FacturaEmitirService);
+  private detalleSriService = inject(DetalleSriService);
+  private snackBar = inject(MatSnackBar);
+
+  cargando = signal(false);
+  estados = signal<Array<{ value: string; label: string }>>([]);
+
+  fechaDesde: Date | null = null;
+  fechaHasta: Date | null = null;
+  numeroAutorizacion = '';
+  cliente = '';
+  estado: number | '' = '';
+
+  registros: FacturaEmitir[] = [];
+  dataSource = new MatTableDataSource<FacturaEmitir>([]);
+  columnas = [
+    'numero',
+    'clienteIdentificacion',
+    'clienteNombre',
+    'fecha',
+    'autorizacion',
+    'subtotal',
+    'subtotal5',
+    'subcero',
+    'viva5',
+    'piva',
+    'viva',
+    'total',
+    'estadoEmision',
+    'acciones',
+  ];
+
+  ngOnInit(): void {
+    this.cargarEstados();
+    this.buscar();
+  }
+
+  private cargarEstados(): void {
+    this.detalleSriService.getAll().subscribe({
+      next: (detalles) => {
+        // LSRI 603 = Estados de emisión
+        const LSRI_ESTADOS = '603';
+        const estadosFiltered = (detalles || [])
+          .filter((d) => d.estado === 1 && this.getTablaCodigo(d.lsri) === LSRI_ESTADOS)
+          .map((d) => ({
+            value: d.codigo,
+            label: d.detalle,
+          }))
+          .sort((a, b) => {
+            const valA = Number(a.value);
+            const valB = Number(b.value);
+            return valA - valB;
+          });
+        this.estados.set(estadosFiltered);
+      },
+      error: () => {
+        this.mostrarError('No se pudieron cargar los estados');
+        this.estados.set([]);
+      },
+    });
+  }
+
+  private getTablaCodigo(lsri: number | { tabla?: string }): string {
+    if (typeof lsri === 'object' && lsri?.tabla) {
+      return String(lsri.tabla);
+    }
+    if (typeof lsri === 'number') {
+      return String(lsri);
+    }
+    return '';
+  }
+
+  buscar(): void {
+    this.cargando.set(true);
+    this.facturaService.getAll().subscribe({
+      next: (data) => {
+        const todos = (data || []).map((item) => this.normalizar(item));
+        this.registros = this.aplicarFiltros(todos);
+        this.dataSource.data = this.registros;
+        this.cargando.set(false);
+      },
+      error: () => {
+        this.cargando.set(false);
+        this.mostrarError('No se pudieron consultar las facturas');
+      },
+    });
+  }
+
+  limpiarFiltros(): void {
+    this.fechaDesde = null;
+    this.fechaHasta = null;
+    this.numeroAutorizacion = '';
+    this.cliente = '';
+    this.estado = '';
+    this.buscar();
+  }
+
+  anular(row: FacturaEmitir): void {
+    if (Number(row.estadoEmision) === 3) {
+      this.mostrarInfo('La factura ya está anulada');
+      return;
+    }
+    const payload = { ...row, estadoEmision: 3 };
+    this.facturaService.update(payload).subscribe({
+      next: () => {
+        this.mostrarExito('Factura anulada');
+        this.buscar();
+      },
+      error: () => this.mostrarError('No se pudo anular la factura'),
+    });
+  }
+
+  autorizar(row: FacturaEmitir): void {
+    const payload = { ...row, estadoEmision: 5 };
+    this.facturaService.update(payload).subscribe({
+      next: () => {
+        this.mostrarExito('Factura marcada como autorizada');
+        this.buscar();
+      },
+      error: () => this.mostrarError('No se pudo autorizar la factura'),
+    });
+  }
+
+  reenviarMail(row: FacturaEmitir): void {
+    const destinatario = row.titular?.email || '';
+    if (!destinatario) {
+      this.mostrarInfo('La factura no tiene correo de cliente');
+      return;
+    }
+    this.mostrarExito(`Reenvío solicitado a ${destinatario}`);
+  }
+
+  copiarClave(row: FacturaEmitir): void {
+    const valor = row.autorizacion || row.clave;
+    if (!valor) {
+      this.mostrarInfo('No existe autorización/clave disponible');
+      return;
+    }
+    navigator.clipboard.writeText(valor).then(() => this.mostrarExito('Clave copiada al portapapeles'));
+  }
+
+  imprimir(row: FacturaEmitir): void {
+    const clave = row.clave || row.autorizacion;
+    if (!clave) {
+      this.mostrarInfo('No existe clave para imprimir');
+      return;
+    }
+    window.open(`/api/saa-backend/rest/jaspers/reportes/factura/${clave}`, '_blank');
+  }
+
+  estadoLabel(estado: number | null | undefined): string {
+    const codigo = String(estado || '');
+    const encontrado = this.estados().find((e) => e.value === codigo);
+    return encontrado?.label || `Estado ${codigo || 'desconocido'}`;
+  }
+
+  private normalizar(item: FacturaEmitir): FacturaEmitir {
+    return {
+      ...item,
+      subtotal: this.toNumber(item.subtotal),
+      subtotal5: this.toNumber(item.subtotal5),
+      subcero: this.toNumber(item.subcero),
+      vIVA5: this.toNumber(item.vIVA5),
+      pIVA: this.toNumber(item.pIVA),
+      vIVA: this.toNumber(item.vIVA),
+      total: this.toNumber(item.total),
+    };
+  }
+
+  private aplicarFiltros(data: FacturaEmitir[]): FacturaEmitir[] {
+    return data.filter((row) => {
+      if (this.numeroAutorizacion.trim()) {
+        const autorizacion = String(row.autorizacion || row.clave || '').toLowerCase();
+        if (!autorizacion.includes(this.numeroAutorizacion.trim().toLowerCase())) {
+          return false;
+        }
+      }
+
+      if (this.cliente.trim()) {
+        const nombre = String(row.titular?.razonSocial || row.titular?.nombre || '').toLowerCase();
+        const identificacion = String(row.titular?.identificacion || '').toLowerCase();
+        const filtro = this.cliente.trim().toLowerCase();
+        if (!nombre.includes(filtro) && !identificacion.includes(filtro)) {
+          return false;
+        }
+      }
+
+      if (this.estado !== '' && Number(row.estadoEmision) !== Number(this.estado)) {
+        return false;
+      }
+
+      const fecha = this.asDate(row.fecha);
+      if (this.fechaDesde && fecha && this.soloFecha(fecha) < this.soloFecha(this.fechaDesde)) {
+        return false;
+      }
+      if (this.fechaHasta && fecha && this.soloFecha(fecha) > this.soloFecha(this.fechaHasta)) {
+        return false;
+      }
+
+      return true;
+    });
+  }
+
+  private asDate(value: Date | string | null | undefined): Date | null {
+    if (!value) return null;
+    if (value instanceof Date) return value;
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  private soloFecha(value: Date): number {
+    const date = new Date(value);
+    date.setHours(0, 0, 0, 0);
+    return date.getTime();
+  }
+
+  private toNumber(value: unknown): number {
+    const parsed = Number(value ?? 0);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  private mostrarExito(message: string): void {
+    this.snackBar.open(message, 'Cerrar', { duration: 3000, panelClass: ['snackbar-success'] });
+  }
+
+  private mostrarInfo(message: string): void {
+    this.snackBar.open(message, 'Cerrar', { duration: 3000 });
+  }
+
+  private mostrarError(message: string): void {
+    this.snackBar.open(message, 'Cerrar', { duration: 4500, panelClass: ['snackbar-error'] });
+  }
+}

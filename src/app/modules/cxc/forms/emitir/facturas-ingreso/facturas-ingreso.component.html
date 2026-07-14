@@ -1,0 +1,379 @@
+<div class="contenedor-ingreso" id="contenedor-factura">
+  <div class="titulo-barra">
+    <div class="titulo-parte-uno">
+      <div class="barra-botones-pantalla">
+        <button mat-mini-fab class="btn-principal" matTooltip="Nueva Factura" aria-label="Nueva Factura" (click)="nueva()">
+          <mat-icon>library_add</mat-icon>
+        </button>
+      </div>
+    </div>
+    <div class="titulo-parte-dos">
+      <div class="titulo-pantalla">Emisión Factura</div>
+    </div>
+  </div>
+
+  <div [ngClass]="areaIzq" [ngStyle]="altura">
+    <div class="cabecera-factura">
+      <div [ngClass]="cabeceraDatos">
+        <div class="lb-num-factura" [ngClass]="vItem">
+          Factura:&nbsp;
+          <span *ngIf="vFactura">{{ vFactura.numero }}</span>
+        </div>
+        <div [ngClass]="vItem" class="cabecera-grid-2">
+          <strong>RUC:&nbsp;</strong>{{ vFacturador.numDoc }}&nbsp;&nbsp;
+          <strong>Vence:&nbsp;</strong>{{ vFacturador.vence | date: 'dd/MM/yyyy' }}
+        </div>
+        <div [ngClass]="vItem"><strong>Nombre:&nbsp;</strong>{{ vFacturador.nombre }}</div>
+        <div [ngClass]="vItem" class="cabecera-grid-2">
+          <span><strong>Teléfono:&nbsp;</strong>{{ vFacturador.telefono }}</span>
+          <span><strong>e-mail:&nbsp;</strong>{{ vFacturador.mail }}</span>
+        </div>
+        <div [ngClass]="vItem" class="cabecera-grid-2">
+          <strong>Fecha:&nbsp;</strong>
+          <mat-form-field appearance="outline">
+            <mat-label>Fecha</mat-label>
+            <input
+              matInput
+              [matDatepicker]="pickerFechaFactura"
+              [(ngModel)]="strFecha"
+              placeholder="dd/mm/aaaa"
+              (dateChange)="validaIVAByCambioFecha()"
+            />
+            <mat-datepicker-toggle matIconSuffix [for]="pickerFechaFactura"></mat-datepicker-toggle>
+            <mat-datepicker #pickerFechaFactura></mat-datepicker>
+          </mat-form-field>
+          <span></span>
+        </div>
+        <div [ngClass]="vItem"><strong>Dirección:&nbsp;</strong>{{ vFacturador.direccion }}</div>
+        <div [ngClass]="vItem">
+          <strong>Est/Pto.Emisión:&nbsp;</strong>
+          <mat-select [(ngModel)]="ptoEmision" [compareWith]="actualizaViewCombo">
+            @for (item of ptosEmision; track item.id) {
+              <mat-option [value]="item">
+                {{ item.establecimiento.codigo }} - {{ item.establecimiento.nombre }} / {{ item.codigo }} - {{ item.nombre }}
+              </mat-option>
+            }
+          </mat-select>
+        </div>
+      </div>
+    </div>
+
+    <div class="pnlCompradorVertical" *ngIf="vertical">
+      <div class="box-cmdr titular-grid">
+        <mat-form-field class="campo-doc">
+          <mat-label>CI o RUC</mat-label>
+          <input
+            matInput
+            [formControl]="txtCIRUC"
+            placeholder="CI o RUC"
+            maxlength="20"
+            (change)="getComprador()"
+            (input)="buscarClientePorTexto($any($event.target).value)"
+            [matAutocomplete]="autoPersona"
+            />
+          <mat-autocomplete #autoPersona="matAutocomplete" (optionSelected)="seleccionarPersona($event)">
+            @for (persona of personasCliente(); track persona.codigo) {
+              <mat-option [value]="persona">
+                {{ persona.identificacion }} - {{ persona.razonSocial || persona.nombre }}
+              </mat-option>
+            }
+          </mat-autocomplete>
+        </mat-form-field>
+        <mat-form-field class="campo-nombre" [ngClass]="campoCmdr">
+          <mat-label>Nombre</mat-label>
+          <input matInput placeholder="Nombre" [(ngModel)]="txtComprador" />
+        </mat-form-field>
+        <mat-form-field class="campo-telefono">
+          <mat-label>Teléfono</mat-label>
+          <input matInput placeholder="Teléfono" [(ngModel)]="txtTelefono" />
+        </mat-form-field>
+        <mat-form-field class="campo-email" [ngClass]="campoCmdr">
+          <mat-label>eMail</mat-label>
+          <input matInput placeholder="eMail" [formControl]="txteMail" />
+        </mat-form-field>
+        <mat-form-field class="campo-direccion" [ngClass]="campoCmdr">
+          <mat-label>Dirección</mat-label>
+          <input matInput placeholder="Dirección" [(ngModel)]="txtDireccion" />
+        </mat-form-field>
+        <button mat-mini-fab class="btn-principal boton-buscar" matTooltip="Buscar Cliente" aria-label="Buscar Cliente" (click)="buscaCliente()">
+          <mat-icon>search</mat-icon>
+        </button>
+      </div>
+    </div>
+
+    <div class="fila-ingreso">
+      <div class="panel-disabled" *ngIf="deshabilitado">&nbsp;</div>
+      <div [ngStyle]="{ 'font-size': letraFcdr }">
+        <div class="titulo">Registre Detalle</div>
+      </div>
+      <div class="box-valores" [ngStyle]="{ width: anchoIngreso }">
+        <mat-form-field class="cantidad">
+          <mat-label>Cantidad</mat-label>
+          <input matInput type="number" placeholder="Cantidad" #inCantidad [(ngModel)]="txtCantidad" (change)="cambioCantidad()" />
+        </mat-form-field>
+        <mat-form-field class="relleno campo-producto">
+          <mat-label>Producto</mat-label>
+          <input matInput placeholder="Seleccione un producto" [value]="textoProductoSeleccionado()" readonly />
+          <button mat-icon-button matSuffix type="button" matTooltip="Buscar Producto" aria-label="Buscar Producto" (click)="buscaProducto()">
+            <mat-icon>search</mat-icon>
+          </button>
+        </mat-form-field>
+        <mat-form-field class="relleno" *ngIf="this.vFacturador.impCodProd === 1">
+          <mat-label>Detalle Transporte</mat-label>
+          <input matInput placeholder="Producto" [(ngModel)]="txtProductoTrans" />
+        </mat-form-field>
+        <div>
+          <mat-form-field class="inputs">
+            <mat-label>Valor</mat-label>
+            <input matInput type="number" placeholder="Valor" [(ngModel)]="txtValor" (change)="cambioCantidad()" />
+          </mat-form-field>
+          <mat-form-field class="inputs no-edit">
+            <mat-label>Total</mat-label>
+            <input matInput placeholder="Total" [(ngModel)]="txtTotal" readonly />
+          </mat-form-field>
+        </div>
+      </div>
+      <div [ngStyle]="{ 'font-size': letraFcdr }">
+        <div class="cuadro-Derecha">
+          <div class="check-iva">
+            <div class="check"><strong>Iva:</strong>&nbsp;{{ lbTipoIva }}</div>
+            <div class="check"><strong>Incluye Iva:</strong>&nbsp;{{ lbIncluyeIva }}</div>
+            <div *ngIf="txtDescuentoDetalle > 0" class="check"><strong>Dto:</strong>&nbsp;{{ lbTipoDescuento }}</div>
+          </div>
+          <button mat-mini-fab class="btn-principal" matTooltip="Agrega Detalle" aria-label="Add" (click)="addProducto()">
+            <mat-icon>add_box</mat-icon>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="tabla">
+      <table mat-table [dataSource]="dataSource" class="mat-elevation-z1">
+        <ng-container matColumnDef="cantidad">
+          <th mat-header-cell *matHeaderCellDef>Cantidad</th>
+          <td mat-cell *matCellDef="let row">{{ row.cantidad }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="descripcion">
+          <th mat-header-cell *matHeaderCellDef>Producto</th>
+          <td mat-cell *matCellDef="let row">{{ row.descripcion }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="valor">
+          <th mat-header-cell *matHeaderCellDef>Precio U.</th>
+          <td mat-cell *matCellDef="let row" class="right">{{ row.valor | number: '1.2-4' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="subTotal">
+          <th mat-header-cell *matHeaderCellDef>Subtotal</th>
+          <td mat-cell *matCellDef="let row" class="right">{{ row.subTotal | number: '1.2-2' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="descuento">
+          <th mat-header-cell *matHeaderCellDef>Descuento</th>
+          <td mat-cell *matCellDef="let row" class="right">{{ row.descuento | number: '1.2-2' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="baseImponible">
+          <th mat-header-cell *matHeaderCellDef>Total</th>
+          <td mat-cell *matCellDef="let row" class="right">{{ row.baseImponible | number: '1.2-2' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="acciones">
+          <th mat-header-cell *matHeaderCellDef>Acciones</th>
+          <td mat-cell *matCellDef="let row">
+            <button mat-icon-button color="warn" (click)="eliminaDetalle(row)">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="columnas"></tr>
+        <tr mat-row *matRowDef="let row; columns: columnas"></tr>
+      </table>
+      <div class="panel-disabled" *ngIf="deshabilitado">&nbsp;</div>
+    </div>
+  </div>
+
+  <div [ngClass]="areaDer">
+    <div class="pnlComprador" *ngIf="!vertical">
+      <div class="box-cmdr titular-grid">
+        <mat-form-field class="campo-doc">
+          <mat-label>CI o RUC</mat-label>
+          <input
+            matInput
+            [formControl]="txtCIRUC"
+            placeholder="CI o RUC"
+            maxlength="20"
+            (change)="getComprador()"
+            (input)="buscarClientePorTexto($any($event.target).value)"
+            [matAutocomplete]="autoPersonaDesktop" />
+          <mat-autocomplete #autoPersonaDesktop="matAutocomplete" (optionSelected)="seleccionarPersona($event)">
+            @for (persona of personasCliente(); track persona.codigo) {
+              <mat-option [value]="persona">
+                {{ persona.identificacion }} - {{ persona.razonSocial || persona.nombre }}
+              </mat-option>
+            }
+          </mat-autocomplete>
+        </mat-form-field>
+        <mat-form-field class="campo-nombre" [ngClass]="campoCmdr">
+          <mat-label>Nombre</mat-label>
+          <input matInput placeholder="Nombre" [(ngModel)]="txtComprador" />
+        </mat-form-field>
+        <mat-form-field class="campo-telefono">
+          <mat-label>Teléfono</mat-label>
+          <input matInput placeholder="Teléfono" [(ngModel)]="txtTelefono" />
+        </mat-form-field>
+        <mat-form-field class="campo-email" [ngClass]="campoCmdr">
+          <mat-label>eMail</mat-label>
+          <input matInput placeholder="eMail" [formControl]="txteMail" />
+        </mat-form-field>
+        <mat-form-field class="campo-direccion" [ngClass]="campoCmdr">
+          <mat-label>Dirección</mat-label>
+          <input matInput placeholder="Dirección" [(ngModel)]="txtDireccion" />
+        </mat-form-field>
+        <button mat-mini-fab class="btn-principal boton-buscar" matTooltip="Buscar Cliente" aria-label="Buscar Cliente" (click)="buscaCliente()">
+          <mat-icon>search</mat-icon>
+        </button>
+      </div>
+    </div>
+
+    <div class="pnlTotales">
+      <div class="fila-totales">
+        <span><strong>Observación:&nbsp;&nbsp;</strong></span>
+        <input class="example-spacer" type="text" [(ngModel)]="txtObservacion" />
+      </div>
+    </div>
+
+    <div class="pnlTotales">
+      <span><strong>Forma Pago:</strong></span>
+      <mat-select class="select-box" [(ngModel)]="formaPagoFactura" [compareWith]="actualizaViewCombo">
+        @for (formaPago of tablaSRIFormasPago; track formaPago.id) {
+          <mat-option [value]="formaPago">{{ formaPago.detalle }}</mat-option>
+        }
+      </mat-select>
+      <div class="fila-totales">
+        <span class="example-spacer"></span>
+        <span>
+          Plazo (días)
+          <input type="text" [(ngModel)]="plazoPago" class="derecha" size="1" />
+        </span>
+      </div>
+    </div>
+
+    <div class="pnlTotales">
+      <span><strong>Forma Pago Interna:</strong></span>
+      <mat-select class="select-box" [(ngModel)]="formaPagoFacturaOtro" [compareWith]="actualizaViewCombo">
+        @for (formaPago of tablaSRIFormasPagoInternas; track formaPago.id) {
+          <mat-option [value]="formaPago">{{ formaPago.detalle }}</mat-option>
+        }
+      </mat-select>
+    </div>
+
+    <div class="pnlTotales">
+      <div class="fila-totales">
+        <span><strong>Subtotal {{ lbIvaGral | number: '2.0-0' }}%:</strong></span>
+        <span class="example-spacer"></span>
+        <span>{{ lbSubtotal.toLocaleString('en-US', { style: 'currency', currency: 'USD' }) }}</span>
+      </div>
+      <div class="fila-totales">
+        <span><strong>Subtotal 5%:</strong></span>
+        <span class="example-spacer"></span>
+        <span>{{ lbSubtotal5.toLocaleString('en-US', { style: 'currency', currency: 'USD' }) }}</span>
+      </div>
+      <div class="fila-totales">
+        <span><strong>Subtotal tarifa especial:</strong></span>
+        <span class="example-spacer"></span>
+        <span>{{ lbSubtotal8.toLocaleString('en-US', { style: 'currency', currency: 'USD' }) }}</span>
+      </div>
+      <div class="fila-totales">
+        <span><strong>Subtotal 0%:</strong></span>
+        <span class="example-spacer"></span>
+        <span>{{ lbIVACero.toLocaleString('en-US', { style: 'currency', currency: 'USD' }) }}</span>
+      </div>
+      <div class="fila-totales">
+        <span>
+          <strong>Descuento</strong>&nbsp;
+          <input type="text" [(ngModel)]="txtPorDescuento" (change)="recalculaDescuento($event, 2)" class="derecha" size="1" /> %:
+        </span>
+        <span class="example-spacer"></span>
+        <input type="text" [(ngModel)]="txtDescuento" (change)="recalculaDescuento($event, 1)" class="derecha" size="4" />
+      </div>
+      <div class="fila-totales">
+        <span><strong>IVA {{ lbIvaGral | number: '2.0-0' }}%:</strong></span>
+        <span class="example-spacer"></span>
+        <span>{{ lbTotalIVA.toLocaleString('en-US', { style: 'currency', currency: 'USD' }) }}</span>
+      </div>
+      <div class="fila-totales">
+        <span><strong>IVA 5%:</strong></span>
+        <span class="example-spacer"></span>
+        <span>{{ lbTotalIVA5.toLocaleString('en-US', { style: 'currency', currency: 'USD' }) }}</span>
+      </div>
+      <div class="fila-totales">
+        <span><strong>IVA Tarifa Especial:</strong></span>
+        <span class="example-spacer"></span>
+        <span>{{ lbTotalIVA8.toLocaleString('en-US', { style: 'currency', currency: 'USD' }) }}</span>
+      </div>
+      <div class="fila-totales">
+        <span><strong>Propina:</strong></span>
+        <span class="example-spacer"></span>
+        <input type="text" [(ngModel)]="txtPropina" (change)="recalculaDescuento($event, 1)" class="derecha" size="1" />
+      </div>
+      <div class="fila-totales total-final">
+        <span><strong>Total:</strong></span>
+        <span class="example-spacer"></span>
+        <span>{{ lbTotal.toLocaleString('en-US', { style: 'currency', currency: 'USD' }) }}</span>
+      </div>
+    </div>
+
+    <div id="ticket" *ngIf="vFactura" hidden>
+      <div style="width: 100%; font-family: Verdana, Geneva, Tahoma, sans-serif; font-size: 0.70em;">
+        <div style="width: 100%; overflow: hidden; text-align: center;">
+          <img [src]="vLogo" width="100" height="100" loading="lazy" alt="Logo" /><br />
+          <span style="font-weight: bold;">{{ vFacturador.razonSocial }}</span><br />
+          <span>{{ vFacturador.numDoc }}</span><br />
+          <span>{{ vFacturador.direccion }} - {{ vFacturador.telefono }}</span>
+          <span>Tipo de Documento: FACTURA</span>
+        </div>
+        <br />
+        <span>No. {{ vFactura.numero }}</span><br />
+        <span *ngIf="vFactura.clave">Autorización</span><br />
+        <span>{{ vFactura.clave }}</span><br />
+        <span>Ambiente: {{ vAmbiente }} - Emisión: NORMAL</span><br /><br />
+        <span>{{ vComprador.identificacion }} - {{ vComprador.razonSocial || vComprador.nombre }}</span><br />
+        <span>{{ vComprador.email }} - {{ vComprador.telefono }}</span><br />
+        <span>Fecha: {{ vFactura.fecha | date: 'dd/MM/yyyy HH:mm:ss' }}</span><br />
+        <span>Resumen de factura</span><br />
+        <table width="100%" style="font-family: Verdana, Geneva, Tahoma, sans-serif; font-size: 1em;">
+          <tr>
+            <td>Can.</td>
+            <td>Des.</td>
+            <td style="text-align: right;">V.U.</td>
+            <td style="text-align: right;">V.T.</td>
+          </tr>
+          <tr *ngFor="let item of listaDetFactura">
+            <td>{{ item.cantidad }}</td>
+            <td>{{ item.descripcion }}</td>
+            <td style="text-align: right;">{{ item.valor | number: '1.2-4' }}</td>
+            <td style="text-align: right;">{{ item.subTotal | number: '1.2-2' }}</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="pnlBtnsfinales">
+      <button mat-raised-button class="btn-nueva" matTooltip="Generar Factura" aria-label="Generar Factura" (click)="generaFactura()" [disabled]="guardando()">
+        <mat-icon>shop_two</mat-icon>
+        Generar Factura
+      </button>
+      <button mat-raised-button class="btn-nueva" matTooltip="Imprimir Factura" aria-label="Imprimir Factura" (click)="imprimeFactura()">
+        <mat-icon>print</mat-icon>
+        Imprimir
+      </button>
+      <button mat-raised-button class="btn-nueva" matTooltip="Nueva Factura" aria-label="Nueva Factura" (click)="nueva()">
+        <mat-icon>add</mat-icon>
+        Nueva
+      </button>
+    </div>
+  </div>
+</div>

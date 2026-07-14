@@ -1,3 +1,5 @@
+import { Empresa } from '../../../shared/model/empresa';
+
 export interface Facturador {
     id: number;
     numDoc: string;
@@ -29,5 +31,8 @@ export interface Facturador {
     inventario: number;  // 0/1
     empTransporte: number;  // 0/1
     sinLimiteConsFinal: number;  // 0/1
+    empresa?: Empresa | { codigo: number } | null;
+    ambiente?: number | null; // 1 = Pruebas, 2 = Producción
+    generaConta?: number | null; // 1 = Sí, 0 = No, null = No definido
     estado: number;
 }

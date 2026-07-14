@@ -1,0 +1,78 @@
+<div class="dialog-producto">
+  <div class="dialog-header">
+    <div>
+      <h2 mat-dialog-title>{{ titulo }}</h2>
+      <p class="subtitle">Filtra por grupo y nombre del producto de CXC.</p>
+    </div>
+    <button mat-icon-button type="button" aria-label="Cerrar" (click)="cerrar()">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <div class="filtros">
+    <mat-form-field appearance="outline">
+      <mat-label>Grupo de producto</mat-label>
+      <mat-select [value]="grupoSeleccionado()" (selectionChange)="onGrupoChange($event.value)">
+        <mat-option [value]="null">Todos</mat-option>
+        @for (grupo of grupos(); track grupo.codigo) {
+          <mat-option [value]="grupo.codigo">{{ grupo.codigo }} - {{ grupo.nombre }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Nombre de producto</mat-label>
+      <input
+        matInput
+        placeholder="Buscar por nombre"
+        [value]="nombreBusqueda()"
+        (input)="onNombreChange($any($event.target).value)" />
+    </mat-form-field>
+  </div>
+
+  <div class="tabla-contenedor">
+    <table mat-table [dataSource]="dataSource" class="mat-elevation-z1 tabla-productos">
+      <ng-container matColumnDef="codigo">
+        <th mat-header-cell *matHeaderCellDef>Código</th>
+        <td mat-cell *matCellDef="let row">{{ row.codigo }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="grupo">
+        <th mat-header-cell *matHeaderCellDef>Grupo</th>
+        <td mat-cell *matCellDef="let row">{{ row.grupoProducto?.codigo }} - {{ row.grupoProducto?.nombre }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="nombre">
+        <th mat-header-cell *matHeaderCellDef>Producto</th>
+        <td mat-cell *matCellDef="let row">{{ row.nombre }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="precio">
+        <th mat-header-cell *matHeaderCellDef>Precio</th>
+        <td mat-cell *matCellDef="let row" class="right">{{ row.precioUnitario | number:'1.2-2' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="stock">
+        <th mat-header-cell *matHeaderCellDef>Stock</th>
+        <td mat-cell *matCellDef="let row" class="right">{{ row.stock | number:'1.0-0' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="acciones">
+        <th mat-header-cell *matHeaderCellDef>Acciones</th>
+        <td mat-cell *matCellDef="let row">
+          <button mat-icon-button type="button" color="primary" matTooltip="Seleccionar producto" (click)="seleccionar(row)">
+            <mat-icon>check_circle</mat-icon>
+          </button>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="columnas"></tr>
+      <tr mat-row *matRowDef="let row; columns: columnas" (dblclick)="seleccionar(row)"></tr>
+    </table>
+  </div>
+
+  <div class="dialog-footer">
+    <span>{{ dataSource.data.length }} producto(s)</span>
+    <button mat-stroked-button type="button" (click)="cerrar()">Cerrar</button>
+  </div>
+</div>

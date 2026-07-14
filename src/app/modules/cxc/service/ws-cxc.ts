@@ -38,5 +38,19 @@ public static RS_NXPE = `${API_URL}/nxpe`;  // Numeración por Punto de Emisión
 public static RS_LSRI = `${API_URL}/lsri`;  // Listados SRI
 public static RS_TSRI = `${API_URL}/tsri`;  // Detalle SRI
 
+// Emisión Documentos Tributarios
+public static RS_FCTR = `${API_URL}/fctr`;  // Factura
+public static RS_DTFC = `${API_URL}/dtfc`;  // Detalle Factura
+public static RS_NTCR = `${API_URL}/ntcr`;  // Nota Crédito
+public static RS_DTNC = `${API_URL}/dtnc`;  // Detalle Nota Crédito
+public static RS_NTDB = `${API_URL}/ntdb`;  // Nota Débito
+public static RS_DTND = `${API_URL}/dtnd`;  // Detalle Nota Débito
+public static RS_LQCS = `${API_URL}/lqcs`;  // Liquidación compras
+public static RS_DTLC = `${API_URL}/dtlc`;  // Detalle Liquidación
+public static RS_RTNC = `${API_URL}/rtnc`;  // Retención v1
+public static RS_DTRT = `${API_URL}/dtrt`;  // Detalle Retención v1
+public static RS_RTV2 = `${API_URL}/rtv2`;  // Retención v2
+public static RS_DRV2 = `${API_URL}/drv2`;  // Detalle Retención v2
+
 
 }

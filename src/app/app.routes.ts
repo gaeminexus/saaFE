@@ -23,6 +23,13 @@ import { ParametrizacionCreditosComponent } from './modules/crd/menucreditos/par
 import { GruposProductosCobroComponent } from './modules/cxc/forms/parametrizacion/grupos-productos-cobro/grupos-productos-cobro.component';
 import { DatosFacturadorComponent } from './modules/cxc/forms/parametrizacion/datos-facturador/datos-facturador.component';
 import { DatosSriComponent } from './modules/cxc/forms/parametrizacion/datos-sri/datos-sri.component';
+import { FacturasIngresoComponent } from './modules/cxc/forms/emitir/facturas-ingreso/facturas-ingreso.component';
+import { NotasCreditoComponent } from './modules/cxc/forms/emitir/notas-credito/notas-credito.component';
+import { NotasDebitoComponent } from './modules/cxc/forms/emitir/notas-debito/notas-debito.component';
+import { LiquidacionesComponent } from './modules/cxc/forms/emitir/liquidaciones/liquidaciones.component';
+import { RetencionesComponent } from './modules/cxc/forms/emitir/retenciones/retenciones.component';
+import { Retencionesv2Component } from './modules/cxc/forms/emitir/retencionesv2/retencionesv2.component';
+import { ConsultaFacturasComponent } from './modules/cxc/forms/gestionar/consulta-facturas/consulta-facturas.component';
 import { MenucuentasxcobrarComponent } from './modules/cxc/menu/menucuentasxcobrar/menucuentasxcobrar.component';
 import { MenucuentaxpagarComponent } from './modules/cxp/menu/menucuentasxpagar/menucuentasxpagar.component';
 import { GruposProductosPagoComponent } from './modules/cxp/forms/parametrizacion/grupos-productos-pago/grupos-productos-pago.component';
@@ -773,6 +780,41 @@ export const routes: Routes = [
       {
         path: 'parametrizacion/datos-sri',
         component: DatosSriComponent,
+        canActivate: [authGuard],
+      },
+      {
+        path: 'emitir/facturas',
+        component: FacturasIngresoComponent,
+        canActivate: [authGuard],
+      },
+      {
+        path: 'emitir/notas-credito',
+        component: NotasCreditoComponent,
+        canActivate: [authGuard],
+      },
+      {
+        path: 'emitir/notas-debito',
+        component: NotasDebitoComponent,
+        canActivate: [authGuard],
+      },
+      {
+        path: 'emitir/liquidaciones',
+        component: LiquidacionesComponent,
+        canActivate: [authGuard],
+      },
+      {
+        path: 'emitir/retenciones',
+        component: RetencionesComponent,
+        canActivate: [authGuard],
+      },
+      {
+        path: 'emitir/retenciones-v2',
+        component: Retencionesv2Component,
+        canActivate: [authGuard],
+      },
+      {
+        path: 'gestionar/facturas',
+        component: ConsultaFacturasComponent,
         canActivate: [authGuard],
       },
     ],

@@ -1,0 +1,30 @@
+.contenido-dialogo {
+  min-width: 900px;
+  max-width: 95vw;
+}
+
+.filtro {
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.tabla-contenedor {
+  max-height: 60vh;
+  overflow: auto;
+}
+
+table {
+  width: 100%;
+}
+
+.sin-datos {
+  padding: 14px;
+  text-align: center;
+  color: #666;
+}
+
+@media (max-width: 900px) {
+  .contenido-dialogo {
+    min-width: auto;
+  }
+}

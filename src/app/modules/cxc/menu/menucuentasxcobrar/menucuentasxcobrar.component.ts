@@ -40,6 +40,55 @@ export class MenucuentasxcobrarComponent {
       children: [],
     },
     {
+      displayName: 'Emitir',
+      iconName: 'receipt_long',
+      route: '/menucuentasxcobrar/emitir',
+      children: [
+        {
+          displayName: 'Facturas',
+          iconName: 'request_quote',
+          route: '/menucuentasxcobrar/emitir/facturas',
+        },
+        {
+          displayName: 'Notas de Crédito',
+          iconName: 'assignment_return',
+          route: '/menucuentasxcobrar/emitir/notas-credito',
+        },
+        {
+          displayName: 'Notas de Débito',
+          iconName: 'assignment_late',
+          route: '/menucuentasxcobrar/emitir/notas-debito',
+        },
+        {
+          displayName: 'Liquidación en Compras',
+          iconName: 'shopping_cart_checkout',
+          route: '/menucuentasxcobrar/emitir/liquidaciones',
+        },
+        {
+          displayName: 'Retenciones v1',
+          iconName: 'receipt',
+          route: '/menucuentasxcobrar/emitir/retenciones',
+        },
+        {
+          displayName: 'Retenciones v2',
+          iconName: 'description',
+          route: '/menucuentasxcobrar/emitir/retenciones-v2',
+        },
+      ],
+    },
+    {
+      displayName: 'Gestionar',
+      iconName: 'manage_search',
+      route: '/menucuentasxcobrar/gestionar',
+      children: [
+        {
+          displayName: 'Facturas',
+          iconName: 'fact_check',
+          route: '/menucuentasxcobrar/gestionar/facturas',
+        },
+      ],
+    },
+    {
       displayName: 'Reportes',
       iconName: 'assessment',
       route: '/menucuentasxcobrar/reportes',

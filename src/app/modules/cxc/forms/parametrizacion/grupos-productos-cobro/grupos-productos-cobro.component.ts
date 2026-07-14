@@ -20,11 +20,13 @@ import { GrupoProductoCobro } from '../../../model/grupo-producto-cobro';
 import { ProductoCobro } from '../../../model/producto-cobro';
 import { PlanCuenta } from '../../../../cnt/model/plan-cuenta';
 import { DetalleRubro } from '../../../../../shared/model/detalle-rubro';
+import { DetalleSri } from '../../../model/detalle-sri';
 
 import { DetalleRubroService } from '../../../../../shared/services/detalle-rubro.service';
 import { AppStateService } from '../../../../../shared/services/app-state.service';
 import { GrupoProductoCobroService } from '../../../service/grupo-producto-cobro.service';
 import { ProductoCobroService } from '../../../service/producto-cobro.service';
+import { DetalleSriService } from '../../../service/detalle-sri.service';
 
 /** Código del rubro para Tipo de Grupo de Producto CXC */
 const RUBRO_TIPO_GRUPO_PRODUCTO = 74;
@@ -43,6 +45,7 @@ export class GruposProductosCobroComponent implements OnInit {
   private grupoService = inject(GrupoProductoCobroService);
   private productoService = inject(ProductoCobroService);
   private detalleRubroService = inject(DetalleRubroService);
+  private detalleSriService = inject(DetalleSriService);
   private appState = inject(AppStateService);
 
   // Estado
@@ -72,13 +75,14 @@ export class GruposProductosCobroComponent implements OnInit {
 
   // Opciones
   tiposGrupoOptions = signal<DetalleRubro[]>([]);
+  tiposIVAOptions = signal<DetalleSri[]>([]);
 
   // Productos
   productos = signal<ProductoCobro[]>([]);
   productoEditando = signal<ProductoCobro | null>(null);
   filtroProductos = signal('');
   dataSourceProductos = new MatTableDataSource<ProductoCobro>([]);
-  columnasTablaProductos: string[] = ['codigo', 'nombre', 'precioUnitario', 'incluyeIVA', 'stock', 'estado', 'acciones'];
+  columnasTablaProductos: string[] = ['codigo', 'nombre', 'precioUnitario', 'incluyeIVA', 'tipoIVA', 'stock', 'estado', 'acciones'];
 
   productosFiltrados = computed(() => {
     const filtro = this.filtroProductos().toLowerCase();
@@ -156,6 +160,34 @@ export class GruposProductosCobroComponent implements OnInit {
     if (tipos && tipos.length > 0) {
       this.tiposGrupoOptions.set(tipos);
     }
+
+    this.detalleSriService.getAll().subscribe({
+      next: (detalles) => {
+        const tiposIVA = (detalles || []).filter((d) => d.estado === 1 && this.getTablaCodigo(d.lsri) === '17');
+        this.tiposIVAOptions.set(tiposIVA);
+      },
+      error: () => {
+        this.tiposIVAOptions.set([]);
+      },
+    });
+  }
+
+  private getTablaCodigo(lsri: number | { tabla?: string }): string {
+    if (typeof lsri === 'object' && lsri?.tabla) {
+      return String(lsri.tabla);
+    }
+    if (typeof lsri === 'number') {
+      return String(lsri);
+    }
+    return '';
+  }
+
+  getDetalleIVA(codigo: any): string {
+    if (!codigo) return '-';
+    const opcion = this.tiposIVAOptions().find((op) =>
+      String(op.codigo) === String(codigo)
+    );
+    return opcion ? opcion.detalle : String(codigo);
   }
 
   cargarGrupos(): void {
@@ -412,7 +444,7 @@ export class GruposProductosCobroComponent implements OnInit {
       descuento: producto.descuento || 0,
       tipoDescuento: producto.tipoDescuento || 0,
       incluyeIVA: producto.incluyeIVA || 0,
-      tipoIVA: producto.tipoIVA || 0,
+      tipoIVA: producto.tipoIVA ? String(producto.tipoIVA) : null,
       tipoICE: producto.tipoICE || 0,
       ice: producto.ice || 0,
       subsidio: producto.subsidio || 0,

@@ -1,0 +1,31 @@
+.consulta-facturas-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.filtros-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.acciones-filtros {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.table-container {
+  overflow: auto;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.sin-datos {
+  text-align: center;
+  padding: 18px;
+  color: rgba(0, 0, 0, 0.6);
+}

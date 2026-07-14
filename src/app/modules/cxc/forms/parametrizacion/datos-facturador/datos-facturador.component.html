@@ -250,6 +250,24 @@
                   }
                 </mat-select>
               </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Ambiente SRI *</mat-label>
+                <mat-select formControlName="ambiente">
+                  @for (opt of opcionesAmbiente; track opt.value) {
+                    <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Genera asiento contable</mat-label>
+                <mat-select formControlName="generaConta">
+                  @for (opt of opcionesGeneraConta; track opt.label) {
+                    <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
             </div>
           </mat-expansion-panel>
 
@@ -689,10 +707,21 @@
 
           <form [formGroup]="formNumeracion" class="form-numeracion">
             <div class="form-grid">
-              <mat-form-field appearance="outline">
+              <mat-form-field appearance="outline" class="full-width">
                 <mat-label>Tipo de Documento *</mat-label>
-                <input matInput formControlName="tipoDoc" placeholder="FACTURA, NC, ND..." maxlength="10" />
-                @if (formNumeracion.get('tipoDoc')?.invalid && formNumeracion.get('tipoDoc')?.touched) {
+                <mat-select
+                  formControlName="documento"
+                  (selectionChange)="onDocumentoChange($event.value)">
+                  <mat-option></mat-option>
+                  @for (doc of documentosTsri(); track doc.id) {
+                    <mat-option [value]="doc">
+                      {{ doc.codigo }} - {{ doc.detalle }}
+                    </mat-option>
+                  }
+                </mat-select>
+                @if (
+                  formNumeracion.get('tipoDoc')?.invalid && formNumeracion.get('tipoDoc')?.touched
+                ) {
                   <mat-error>Campo requerido</mat-error>
                 }
               </mat-form-field>

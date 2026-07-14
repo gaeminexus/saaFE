@@ -1,0 +1,178 @@
+<div class="emitir-doc">
+  <div class="titulo-barra">
+    <div class="titulo-info">
+      <div class="titulo-pantalla">{{ documentoNombre }}</div>
+      <div class="subtitulo-pantalla">{{ accionPrincipal }}</div>
+    </div>
+    <div class="barra-acciones">
+      <button mat-raised-button class="btn-principal" type="button" (click)="nueva()" [disabled]="guardando()">
+        <mat-icon>add</mat-icon>
+        Nueva
+      </button>
+      <button mat-stroked-button class="btn-secundario" type="button" (click)="recargar()">
+        <mat-icon>refresh</mat-icon>
+        Recargar
+      </button>
+    </div>
+  </div>
+
+  <mat-card class="documento-card">
+    <mat-card-content>
+      <div class="form-grid">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Proveedor</mat-label>
+          <input matInput [value]="textoTitularSeleccionado()" placeholder="Seleccione un proveedor" readonly [disabled]="deshabilitado" />
+          <button mat-icon-button matSuffix type="button" (click)="buscaProveedor()" [disabled]="deshabilitado"><mat-icon>search</mat-icon></button>
+          @if (personaSeleccionada()) {
+            <button mat-icon-button matSuffix type="button" (click)="limpiarProveedor()" [disabled]="deshabilitado"><mat-icon>close</mat-icon></button>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Fecha</mat-label>
+          <input
+            matInput
+            [matDatepicker]="pickerFechaRetencion"
+            [(ngModel)]="strFecha"
+            (dateChange)="obtenerFiscal()"
+            placeholder="dd/mm/aaaa"
+            [disabled]="deshabilitado"
+          />
+          <mat-datepicker-toggle matIconSuffix [for]="pickerFechaRetencion"></mat-datepicker-toggle>
+          <mat-datepicker #pickerFechaRetencion></mat-datepicker>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Período Fiscal (MM/YYYY)</mat-label>
+          <input matInput [ngModel]="periodoFiscal" maxlength="7" placeholder="MM/YYYY" readonly />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Punto de Emisión</mat-label>
+          <mat-select [(ngModel)]="ptoEmision" [disabled]="deshabilitado">
+            @for (p of ptosEmision; track p.id) {
+              <mat-option [value]="p">{{ p.establecimiento.codigo }}-{{ p.codigo }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Observación</mat-label>
+          <textarea matInput rows="2" [(ngModel)]="observacion" [disabled]="deshabilitado"></textarea>
+        </mat-form-field>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  @if (!deshabilitado) {
+  <mat-card class="documento-card">
+    <mat-card-header><mat-card-title>Agregar Línea de Retención</mat-card-title></mat-card-header>
+    <mat-card-content>
+      <div class="form-grid">
+        <mat-form-field appearance="outline">
+          <mat-label>Tipo documento retenido</mat-label>
+          <mat-select [(ngModel)]="idDocumento">
+            @for (d of tablaTiposDoc; track d.id) {
+              <mat-option [value]="d">{{ d.codigo }} - {{ d.detalle }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline"><mat-label>Nro. documento retenido</mat-label><input matInput [(ngModel)]="numDocReten" /></mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Fecha emisión documento</mat-label>
+          <input matInput [matDatepicker]="pickerFechaEmiDocRet" [(ngModel)]="strFechaEmiDoc" placeholder="dd/mm/aaaa" />
+          <mat-datepicker-toggle matIconSuffix [for]="pickerFechaEmiDocRet"></mat-datepicker-toggle>
+          <mat-datepicker #pickerFechaEmiDocRet></mat-datepicker>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Impuesto</mat-label>
+          <mat-select [(ngModel)]="idImpuesto" (ngModelChange)="onCambioImpuesto()">
+            @for (i of tablaImpuestos; track i.id) {
+              <mat-option [value]="i">{{ i.codigo }} - {{ i.detalle }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Código retención</mat-label>
+          <mat-select [(ngModel)]="idPorcentaje" (ngModelChange)="onCambioPorcentaje()">
+            @for (p of tablaPorcentajes; track p.id) {
+              <mat-option [value]="p">{{ p.codigo }} - {{ p.detalle }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline"><mat-label>Base imponible</mat-label><input matInput type="number" [(ngModel)]="txtBaseImponible" (ngModelChange)="calcularValorReten()" min="0" step="0.01" /></mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>Porcentaje (%)</mat-label><input matInput type="number" [(ngModel)]="txtPorcentaje" readonly /></mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>Valor retenido</mat-label><input matInput type="number" [(ngModel)]="txtValorReten" readonly /></mat-form-field>
+
+        <div class="botonera-detalle">
+          <button mat-raised-button color="primary" type="button" (click)="addDetalle()"><mat-icon>add</mat-icon> Agregar</button>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+  }
+
+  <mat-card class="documento-card">
+    <mat-card-header><mat-card-title>Detalle de Retención</mat-card-title></mat-card-header>
+    <mat-card-content>
+      <div class="table-wrapper">
+        <table mat-table [dataSource]="dataSource" class="full-width">
+          <ng-container matColumnDef="tipoDoc"><th mat-header-cell *matHeaderCellDef>Tipo Doc.</th><td mat-cell *matCellDef="let d">{{ d.tipoDocReten }}</td></ng-container>
+          <ng-container matColumnDef="numDoc"><th mat-header-cell *matHeaderCellDef>Nro. Documento</th><td mat-cell *matCellDef="let d">{{ d.numDocReten }}</td></ng-container>
+          <ng-container matColumnDef="fechaEmision"><th mat-header-cell *matHeaderCellDef>Fec. Emisión</th><td mat-cell *matCellDef="let d">{{ d.fechaEmiDoc | date:'dd/MM/yyyy' }}</td></ng-container>
+          <ng-container matColumnDef="impuesto"><th mat-header-cell *matHeaderCellDef>Impuesto</th><td mat-cell *matCellDef="let d">{{ d.codImpuesto }}</td></ng-container>
+          <ng-container matColumnDef="codReten"><th mat-header-cell *matHeaderCellDef>Cód. Ret.</th><td mat-cell *matCellDef="let d">{{ d.codRetencion }}</td></ng-container>
+          <ng-container matColumnDef="baseImponible"><th mat-header-cell *matHeaderCellDef class="text-right">Base</th><td mat-cell *matCellDef="let d" class="text-right">{{ d.baseImponible | number:'1.2-2' }}</td></ng-container>
+          <ng-container matColumnDef="porcentaje"><th mat-header-cell *matHeaderCellDef class="text-right">%</th><td mat-cell *matCellDef="let d" class="text-right">{{ d.porcentajeReten | number:'1.2-2' }}</td></ng-container>
+          <ng-container matColumnDef="valor"><th mat-header-cell *matHeaderCellDef class="text-right">V.Ret.</th><td mat-cell *matCellDef="let d" class="text-right"><strong>{{ d.valorReten | number:'1.2-2' }}</strong></td></ng-container>
+          <ng-container matColumnDef="acciones"><th mat-header-cell *matHeaderCellDef></th><td mat-cell *matCellDef="let d">@if (!deshabilitado) {<button mat-icon-button color="warn" (click)="eliminaDetalle(d)"><mat-icon>delete</mat-icon></button>}</td></ng-container>
+          <tr mat-header-row *matHeaderRowDef="columnas"></tr>
+          <tr mat-row *matRowDef="let row; columns: columnas;"></tr>
+        </table>
+      </div>
+
+      <div class="totales-panel">
+        <div class="total-fila total-grande"><span>Total Retenido:</span><span>{{ totalRetenido | number:'1.2-2' }}</span></div>
+      </div>
+
+      @if (!deshabilitado) {
+      <div class="botonera-principal">
+        <button mat-raised-button color="primary" (click)="generaRetencion()" [disabled]="guardando()">
+          <mat-icon>receipt</mat-icon>
+          {{ guardando() ? 'Procesando...' : 'Emitir Retención' }}
+        </button>
+      </div>
+      } @else {
+      <div class="botonera-principal">
+        <button mat-stroked-button (click)="copiarAutorizacion()"><mat-icon>content_copy</mat-icon> Copiar clave</button>
+        <button mat-stroked-button (click)="imprimirDocumento()"><mat-icon>print</mat-icon> Imprimir</button>
+        <button mat-raised-button color="primary" (click)="nueva()"><mat-icon>add</mat-icon> Nueva</button>
+      </div>
+      }
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="documento-card">
+    <mat-card-header><mat-card-title>Historial de Retenciones</mat-card-title></mat-card-header>
+    <mat-card-content>
+      @if (cargando()) { <mat-progress-bar mode="indeterminate"></mat-progress-bar> }
+      <div class="table-wrapper">
+        <table mat-table [dataSource]="dataSourceRegistros" class="full-width">
+          <ng-container matColumnDef="id"><th mat-header-cell *matHeaderCellDef>#</th><td mat-cell *matCellDef="let r">{{ r.id }}</td></ng-container>
+          <ng-container matColumnDef="fecha"><th mat-header-cell *matHeaderCellDef>Fecha</th><td mat-cell *matCellDef="let r">{{ r.fecha | date:'dd/MM/yyyy' }}</td></ng-container>
+          <ng-container matColumnDef="numero"><th mat-header-cell *matHeaderCellDef>Número</th><td mat-cell *matCellDef="let r">{{ r.numero }}</td></ng-container>
+          <ng-container matColumnDef="periodoFiscal"><th mat-header-cell *matHeaderCellDef>Período</th><td mat-cell *matCellDef="let r">{{ r.periodoFiscal }}</td></ng-container>
+          <ng-container matColumnDef="titular"><th mat-header-cell *matHeaderCellDef>Proveedor</th><td mat-cell *matCellDef="let r">{{ r.titular.razonSocial || r.titular.nombre }}</td></ng-container>
+          <ng-container matColumnDef="total"><th mat-header-cell *matHeaderCellDef class="text-right">Total Ret.</th><td mat-cell *matCellDef="let r" class="text-right">{{ r.total | number:'1.2-2' }}</td></ng-container>
+          <ng-container matColumnDef="estado"><th mat-header-cell *matHeaderCellDef>Estado</th><td mat-cell *matCellDef="let r">{{ estadoLabel(r.estado) }}</td></ng-container>
+          <tr mat-header-row *matHeaderRowDef="columnasRegistros"></tr>
+          <tr mat-row *matRowDef="let row; columns: columnasRegistros;"></tr>
+        </table>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

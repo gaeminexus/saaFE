@@ -1,0 +1,40 @@
+import { Facturador } from './facturador';
+import { Titular } from '../../tsr/model/titular';
+import { Usuario } from '../../../shared/model/usuario';
+import { PuntoEmision } from './puntos-emision';
+
+export interface LiquidacionEmitir {
+  id: number;
+  tipoComprobante: string;
+  facturador: Facturador;
+  titular: Titular;
+  tipoDoc: string;
+  numero: string;
+  numEstablecimiento: string;
+  numPtoEmision: string;
+  secuencial: string;
+  ambiente: number;
+  clave: string;
+  fecha: Date;
+  observacion: string;
+  subtotal: number;
+  subcero: number;
+  pIVA: number;
+  vIVA: number;
+  vICE: number;
+  vIRBPNR: number;
+  descuento: number;
+  porDescuento: number;
+  propina: number;
+  subsidio: number;
+  totalSinSub: number;
+  ahorroSub: number;
+  total: number;
+  ptoEmision: PuntoEmision;
+  usuario: Usuario;
+  pathGen: string;
+  autorizacion: string;
+  fechaAutorizacion: string;
+  estado: number;
+  estadoEmision: number;
+}
