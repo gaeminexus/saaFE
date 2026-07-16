@@ -1,0 +1,169 @@
+$saa-primary: #667eea;
+$saa-secondary: #764ba2;
+$saa-accent: #f6ad55;
+$saa-success: #22c55e;
+$saa-surface: #ffffff;
+$saa-background: #f7fafc;
+$saa-border: #dbe4ff;
+$saa-text: #334155;
+$saa-text-soft: #64748b;
+
+.anticipo-page {
+  display: grid;
+  gap: 1rem;
+  padding: 0.5rem;
+  background: $saa-background;
+}
+
+.hero-card,
+.panel {
+  border: 1px solid rgba(102, 126, 234, 0.18);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
+  overflow: hidden;
+}
+
+.hero-card {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.16), rgba(118, 75, 162, 0.12));
+
+  .hero-title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: $saa-text;
+  }
+
+  .hero-subtitle {
+    color: $saa-text-soft;
+    margin-top: 0.2rem;
+  }
+}
+
+.layout-grid {
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  gap: 1rem;
+}
+
+.panel {
+  background: $saa-surface;
+}
+
+.panel-title {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.85rem 1rem;
+  min-height: 52px;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.16), rgba(118, 75, 162, 0.12));
+  border-bottom: 1px solid rgba(102, 126, 234, 0.18);
+  color: $saa-text;
+  font-weight: 700;
+
+  mat-icon {
+    color: $saa-primary;
+  }
+}
+
+mat-card-content {
+  padding: 1rem !important;
+}
+
+.resumen-grid,
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.form-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 0.85rem;
+}
+
+.summary-box {
+  border: 1px solid $saa-border;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.06));
+  padding: 0.9rem 1rem;
+  display: grid;
+  gap: 0.25rem;
+
+  .label {
+    font-size: 0.78rem;
+    color: $saa-text-soft;
+  }
+
+  strong {
+    color: $saa-text;
+  }
+
+  &.clickable {
+    cursor: pointer;
+  }
+}
+
+.saldo-box strong {
+  color: $saa-primary;
+  font-size: 1.15rem;
+}
+
+.full-width {
+  width: 100%;
+  margin-top: 0.85rem;
+}
+
+.actions-row {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.confirm-btn {
+  background: linear-gradient(135deg, $saa-success 0%, #16a34a 100%) !important;
+  color: white !important;
+}
+
+.table-container {
+  overflow: auto;
+  border: 1px solid $saa-border;
+  border-radius: 12px;
+}
+
+.right {
+  text-align: right;
+}
+
+::ng-deep .table-container .mat-mdc-header-row {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.18), rgba(118, 75, 162, 0.12));
+}
+
+.click-row {
+  cursor: pointer;
+}
+
+.estado-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: rgba(246, 173, 85, 0.18);
+  color: #b45309;
+
+  &.confirmado {
+    background: rgba(34, 197, 94, 0.16);
+    color: #15803d;
+  }
+}
+
+@media (max-width: 1100px) {
+  .layout-grid,
+  .resumen-grid,
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .actions-row {
+    flex-wrap: wrap;
+  }
+}

@@ -86,13 +86,29 @@ export class MenucuentasxcobrarComponent {
           iconName: 'fact_check',
           route: '/menucuentasxcobrar/gestionar/facturas',
         },
+        {
+          displayName: 'Anticipos',
+          iconName: 'account_balance_wallet',
+          route: '/menucuentasxcobrar/gestionar/anticipos',
+        },
+        {
+          displayName: 'Financiar Factura',
+          iconName: 'payments',
+          route: '/menucuentasxcobrar/gestionar/financiar-factura',
+        },
       ],
     },
     {
       displayName: 'Reportes',
       iconName: 'assessment',
       route: '/menucuentasxcobrar/reportes',
-      children: [],
+      children: [
+        {
+          displayName: 'Dashboard de Ventas',
+          iconName: 'chart_data',
+          route: '/menucuentasxcobrar/reportes/dash-ventas',
+        },
+      ],
     },
   ];
 }

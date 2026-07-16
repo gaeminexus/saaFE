@@ -1,0 +1,287 @@
+﻿<div class="titulares-v2-container">
+  @if (vistaActual() === "lista") {
+    <div class="heroes-section">
+      <div class="hero-card">
+        <div class="hero-icon"><mat-icon>people</mat-icon></div>
+        <div class="hero-content">
+          <h1>Gestión de Titulares V2</h1>
+          <p>Administra titulares, roles, cuentas y saldos de forma integrada</p>
+        </div>
+        <button mat-raised-button color="primary" (click)="crearNuevoTitular()" class="btn-nuevo">
+          <mat-icon>person_add</mat-icon> Nuevo Titular
+        </button>
+      </div>
+    </div>
+
+    <div class="filtros-section">
+      <mat-form-field class="search-field">
+        <mat-label>Buscar titular...</mat-label>
+        <input matInput placeholder="Por nombre o RUC/Cédula" (input)="busqueda.set($any($event.target).value)">
+        <mat-icon matSuffix>search</mat-icon>
+      </mat-form-field>
+
+      <mat-form-field class="search-field">
+        <mat-label>Filtrar por rol</mat-label>
+        <mat-select [value]="rolFiltro()" (selectionChange)="rolFiltro.set($event.value)">
+          <mat-option [value]="null">Todos los roles</mat-option>
+          @for (rol of rolesDisponibles(); track rol.codigo) {
+            <mat-option [value]="rol.codigoAlterno">{{ rol.descripcion }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <div class="info-filtros"><span class="badge">Total: {{ totalFiltrados() }}</span></div>
+    </div>
+
+    <div class="tabla-container">
+      @if (loading()) {
+        <div class="loading-container"><mat-spinner></mat-spinner><p>Cargando titulares...</p></div>
+      } @else if (titularesFiltrados().length > 0) {
+        <div class="grid-titulares">
+          @for (titular of titularesFiltrados().slice(pageIndex * pageSize, (pageIndex + 1) * pageSize); track titular.codigo) {
+            <div class="card-titular">
+              <div class="card-header">
+                <h3>{{ titular.nombre }}</h3>
+                <span class="estado-badge" [class.activo]="titular.estado === 1">{{ titular.estado === 1 ? "Activo" : "Inactivo" }}</span>
+              </div>
+              <div class="card-body">
+                <div class="info-row"><span class="label">ID:</span><span class="value">{{ titular.codigo }}</span></div>
+                <div class="info-row"><span class="label">Identificación:</span><span class="value">{{ titular.identificacion || "N/A" }}</span></div>
+                <div class="info-row"><span class="label">Teléfono:</span><span class="value">{{ titular.telefono || "N/A" }}</span></div>
+                <div class="info-row"><span class="label">Email:</span><span class="value email">{{ titular.email || "N/A" }}</span></div>
+              </div>
+              <div class="card-actions">
+                <button mat-raised-button color="accent" (click)="abrirEdicion(titular)"><mat-icon>edit</mat-icon> Editar</button>
+              </div>
+            </div>
+          }
+        </div>
+        <mat-paginator [length]="totalFiltrados()" [pageSize]="pageSize" [pageSizeOptions]="[5, 10, 20, 50]" showFirstLastButtons
+          (page)="pageIndex = $event.pageIndex; pageSize = $event.pageSize">
+        </mat-paginator>
+      } @else {
+        <div class="empty-state">
+          <mat-icon>people_outline</mat-icon>
+          <h3>No hay titulares registrados</h3>
+          <p>Crea el primer titular para comenzar</p>
+          <button mat-raised-button color="primary" (click)="crearNuevoTitular()"><mat-icon>person_add</mat-icon> Crear Titular</button>
+        </div>
+      }
+    </div>
+  } @else if (vistaActual() === "editar" && titularSeleccionado()) {
+    <div class="edicion-section">
+      <div class="edicion-header">
+        <button mat-icon-button (click)="volverLista()" matTooltip="Volver a lista"><mat-icon>arrow_back</mat-icon></button>
+        <div class="header-content">
+          <h1>{{ esNuevo() ? "Nuevo Titular" : "Editar: " + titularSeleccionado()!.nombre }}</h1>
+          <p>Todos los datos en una sola pantalla</p>
+        </div>
+      </div>
+
+      <div class="single-page-editor">
+        <div class="editor-card">
+          <div class="editor-card-header">
+            <mat-icon>account_circle</mat-icon>
+            <h3>Datos del titular</h3>
+          </div>
+          <div class="tab-content">
+            <form [formGroup]="formTitular" class="form-titular">
+              <div class="form-grid">
+                <div class="form-group">
+                  <mat-form-field appearance="fill" class="full-width"><mat-label>Tipo de Persona *</mat-label>
+                    <mat-select formControlName="rubroTipoPersonaH">
+                      @for (tipo of tiposPersona(); track tipo.codigo) {
+                        <mat-option [value]="tipo.codigoAlterno">{{ tipo.descripcion }}</mat-option>
+                      }
+                    </mat-select>
+                    <mat-error>Requerido</mat-error></mat-form-field>
+                </div>
+                <div class="form-group">
+                  <mat-form-field appearance="fill" class="full-width"><mat-label>Tipo de Identificación *</mat-label>
+                    <mat-select formControlName="rubroTipoIdentificacionH">
+                      @for (tipo of tiposIdentificacion(); track tipo.codigo) {
+                        <mat-option [value]="tipo.codigoAlterno">{{ tipo.descripcion }}</mat-option>
+                      }
+                    </mat-select>
+                    <mat-error>Requerido</mat-error></mat-form-field>
+                </div>
+                <div class="form-group">
+                  <mat-form-field appearance="fill" class="full-width"><mat-label>Número de Identificación *</mat-label>
+                    <input matInput formControlName="identificacion" maxlength="20"><mat-error>Requerido</mat-error></mat-form-field>
+                </div>
+                <div class="form-group">
+                  <mat-form-field appearance="fill" class="full-width"><mat-label>Estado</mat-label>
+                    <mat-select formControlName="estado">
+                      <mat-option [value]="1">ACTIVO</mat-option>
+                      <mat-option [value]="0">INACTIVO</mat-option>
+                    </mat-select>
+                  </mat-form-field>
+                </div>
+                <div class="form-group full-width">
+                  <mat-form-field appearance="fill" class="full-width"><mat-label>Razón Social *</mat-label>
+                    <input matInput formControlName="razonSocial" maxlength="200" (blur)="copiarRazonSocialANombre()"><mat-error>Requerido</mat-error></mat-form-field>
+                </div>
+                <div class="form-group full-width">
+                  <mat-form-field appearance="fill" class="full-width"><mat-label>Nombre Comercial *</mat-label>
+                    <input matInput formControlName="nombre" maxlength="100"><mat-error>Requerido</mat-error></mat-form-field>
+                </div>
+                <div class="form-group full-width extranjero-row">
+                  <mat-checkbox
+                    [checked]="formTitular.get('extranjero')?.value === 1"
+                    (change)="formTitular.get('extranjero')?.setValue($event.checked ? 1 : 0)">
+                    Titular Extranjero
+                  </mat-checkbox>
+                </div>
+                @if (formTitular.get('extranjero')?.value === 1) {
+                  <div class="form-group full-width">
+                    <mat-form-field appearance="fill" class="full-width"><mat-label>País</mat-label>
+                      <input type="text" matInput formControlName="paisBusqueda" [matAutocomplete]="autoPais" placeholder="Buscar país...">
+                      <mat-autocomplete #autoPais="matAutocomplete" (optionSelected)="onPaisSelected($event.option.value)">
+                        @for (pais of paisesFiltrados(); track pais.codigo) {
+                          <mat-option [value]="pais">{{ pais.nombre }}</mat-option>
+                        }
+                      </mat-autocomplete>
+                    </mat-form-field>
+                  </div>
+                }
+                <div class="form-group full-width">
+                  <mat-form-field appearance="fill" class="full-width"><mat-label>Teléfono *</mat-label>
+                    <input matInput formControlName="telefono" maxlength="20" type="tel"><mat-error>Requerido</mat-error></mat-form-field>
+                </div>
+                <div class="form-group full-width">
+                  <mat-form-field appearance="fill" class="full-width"><mat-label>Email *</mat-label>
+                    <input matInput formControlName="email" maxlength="100" type="email"><mat-error>Requerido</mat-error></mat-form-field>
+                </div>
+                <div class="form-group full-width">
+                  <mat-form-field appearance="fill" class="full-width"><mat-label>Dirección *</mat-label>
+                    <input matInput formControlName="direccion" maxlength="200"><mat-error>Requerido</mat-error></mat-form-field>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div class="editor-card">
+          <div class="editor-card-header">
+            <mat-icon>assignment</mat-icon>
+            <h3>Roles y cuentas</h3>
+          </div>
+          <div class="tab-content roles-section">
+
+            <!-- FORMULARIO AGREGAR ROL -->
+            <div class="nueva-rol-card">
+              <h3><mat-icon>add_circle</mat-icon> Agregar Nuevo Rol</h3>
+              <form [formGroup]="formNuevaRol">
+                <div class="form-grid-rol">
+                  <mat-form-field appearance="fill" class="full-width">
+                    <mat-label>Rol *</mat-label>
+                    <mat-select formControlName="rubroRolPersonaH">
+                      @for (rubro of rolesDisponibles(); track rubro.codigo) {
+                        <mat-option [value]="rubro.codigoAlterno" [disabled]="rolYaAsignado(rubro.codigoAlterno)">
+                          {{ rubro.descripcion }}
+                          @if (rolYaAsignado(rubro.codigoAlterno)) {
+                            <span class="rol-asignado-badge">(Asignado)</span>
+                          }
+                        </mat-option>
+                      }
+                    </mat-select>
+                  </mat-form-field>
+                  <mat-form-field appearance="fill" class="full-width">
+                    <mat-label>Saldo Inicial</mat-label>
+                    <input matInput type="number" formControlName="saldoInicial" step="0.01" min="0">
+                  </mat-form-field>
+                  <mat-form-field appearance="fill" class="full-width">
+                    <mat-label>Días Crédito</mat-label>
+                    <input matInput type="number" formControlName="diasCredito" step="1" min="0">
+                  </mat-form-field>
+                  <button mat-raised-button color="primary"
+                    (click)="agregarRolAlTitular()"
+                    [disabled]="formNuevaRol.invalid || loading()">
+                    <mat-icon>add</mat-icon> Agregar Rol
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <!-- LISTA DE ROLES ASIGNADOS -->
+            @if (rolesEnEdicion().length > 0) {
+              <div class="roles-list">
+                <h3>Roles asignados ({{ rolesEnEdicion().length }})</h3>
+                @for (rol of rolesEnEdicion(); track rol.rol.codigo) {
+                  <div class="rol-card">
+                    <div class="rol-header" (click)="toggleRolExpandido(rol)">
+                      <mat-icon>{{ rol.expandido ? "expand_less" : "expand_more" }}</mat-icon>
+                      <h4>
+                        {{ obtenerNombreRubrica(rol.rol.rubroRolPersonaH) }}
+                        <small style="margin-left:.75rem; font-weight:500; opacity:.8;">
+                          Saldo Inicial: {{ rol.rol.saldoInicial | number:'1.2-2' }} ·
+                          Días Crédito: {{ rol.rol.diasCredito }}
+                        </small>
+                      </h4>
+                      <span class="cuenta-count">{{ rol.cuentas.length }} cuentas</span>
+                      <button mat-icon-button color="primary" (click)="editarDatosRol(rol); $event.stopPropagation()" matTooltip="Editar saldo inicial y días crédito">
+                        <mat-icon>edit</mat-icon>
+                      </button>
+                      <button mat-icon-button color="warn" (click)="eliminarRol(rol); $event.stopPropagation()"><mat-icon>delete</mat-icon></button>
+                    </div>
+                    @if (rol.expandido) {
+                      <div class="rol-content">
+                        <div class="agregar-cuenta-tipo-row">
+                          <mat-form-field appearance="fill" class="tipo-cuenta-select">
+                            <mat-label>Tipo de Cuenta</mat-label>
+                            <mat-select #tipoCuentaSelect>
+                              @for (tipo of tiposCuentaOpciones; track tipo.codigo) {
+                                <mat-option [value]="tipo.codigo" [disabled]="tipoCuentaYaAsignado(rol, tipo.codigo)">
+                                  {{ tipo.descripcion }}
+                                  @if (tipoCuentaYaAsignado(rol, tipo.codigo)) {
+                                    <span class="tipo-asignado-badge">(Asignado)</span>
+                                  }
+                                </mat-option>
+                              }
+                            </mat-select>
+                          </mat-form-field>
+
+                          <button mat-raised-button color="accent" class="btn-agregar-cuenta" (click)="agregarCuentaARol(rol, tipoCuentaSelect.value); tipoCuentaSelect.value = null" [disabled]="!tipoCuentaSelect.value">
+                            <mat-icon>add</mat-icon> Agregar Cuenta
+                          </button>
+                        </div>
+                        @if (rol.cuentas.length > 0) {
+                          <table class="cuentas-table">
+                            <thead><tr>
+                              <th>Número de Cuenta</th><th>Nombre</th><th></th>
+                            </tr></thead>
+                            <tbody>
+                              @for (cls of rol.cuentas; track cls.codigo) {
+                                <tr>
+                                  <td>{{ cls.planCuenta.cuentaContable || cls.planCuenta.codigo }}</td>
+                                  <td>{{ cls.planCuenta.nombre }}</td>
+                                  <td><button mat-icon-button color="warn" (click)="eliminarCuentaRol(rol, cls)"><mat-icon>delete_outline</mat-icon></button></td>
+                                </tr>
+                              }
+                            </tbody>
+                          </table>
+                        } @else {
+                          <p class="empty-cuentas-msg"><mat-icon>info_outline</mat-icon> Sin cuentas contables. Usa "Agregar Cuenta" para asignar.</p>
+                        }
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            } @else {
+              <div class="empty-roles">
+                <mat-icon>badge</mat-icon>
+                <p>Este titular no tiene roles asignados todavía.</p>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+
+      <div class="edicion-footer">
+        <button mat-raised-button (click)="volverLista()"><mat-icon>close</mat-icon> Cancelar</button>
+        <button mat-raised-button color="primary" (click)="guardarTitular()" [disabled]="loading()"><mat-icon>save</mat-icon> Guardar</button>
+      </div>
+    </div>
+  }
+</div>

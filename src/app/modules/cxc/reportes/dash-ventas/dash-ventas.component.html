@@ -1,0 +1,277 @@
+<div class="dashboard-container">
+  <div class="dashboard-header">
+    <h2>
+      <mat-icon>analytics</mat-icon>
+      Dashboard de Ventas
+    </h2>
+  </div>
+
+  <mat-card class="filtros-card">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>filter_list</mat-icon>
+        Filtros de Análisis
+      </mat-card-title>
+    </mat-card-header>
+
+    <mat-card-content>
+      <div class="filtros-grid">
+        <mat-form-field appearance="outline">
+          <mat-label>Año</mat-label>
+          <mat-select [(ngModel)]="anioSeleccionado" (selectionChange)="onAnioChange()">
+            @for (anio of aniosDisponibles; track anio) {
+              <mat-option [value]="anio">{{ anio }}</mat-option>
+            }
+          </mat-select>
+          <mat-icon matPrefix>calendar_today</mat-icon>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Desde</mat-label>
+          <input matInput [matDatepicker]="pickerDesde" [(ngModel)]="fechaDesde">
+          <mat-datepicker-toggle matIconSuffix [for]="pickerDesde"></mat-datepicker-toggle>
+          <mat-datepicker #pickerDesde></mat-datepicker>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Hasta</mat-label>
+          <input matInput [matDatepicker]="pickerHasta" [(ngModel)]="fechaHasta">
+          <mat-datepicker-toggle matIconSuffix [for]="pickerHasta"></mat-datepicker-toggle>
+          <mat-datepicker #pickerHasta></mat-datepicker>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Agrupar por</mat-label>
+          <mat-select [(ngModel)]="tipoAgrupacion">
+            <mat-option value="mes">Por Mes</mat-option>
+            <mat-option value="semana">Por Semana</mat-option>
+            <mat-option value="cliente">Por Cliente</mat-option>
+            <mat-option value="total">Total General</mat-option>
+          </mat-select>
+          <mat-icon matPrefix>group_work</mat-icon>
+        </mat-form-field>
+      </div>
+
+      <div class="filtros-acciones">
+        <button mat-raised-button color="primary" (click)="buscarDatos()" [disabled]="loading()">
+          <mat-icon>search</mat-icon>
+          Analizar
+        </button>
+        <button mat-raised-button (click)="limpiar()">
+          <mat-icon>cleaning_services</mat-icon>
+          Limpiar
+        </button>
+        <button mat-raised-button color="accent" (click)="exportarExcel()" [disabled]="resultados.length === 0">
+          <mat-icon>table_chart</mat-icon>
+          Exportar Excel
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  @if (loading()) {
+    <div class="loading-container">
+      <mat-spinner></mat-spinner>
+      <p>Cargando datos...</p>
+    </div>
+  }
+
+  @if (!loading() && resultados.length > 0) {
+    <div class="resumen-cards">
+      <mat-card class="resumen-card">
+        <mat-card-content>
+          <div class="resumen-icon">
+            <mat-icon>receipt_long</mat-icon>
+          </div>
+          <div class="resumen-info">
+            <h3>{{ totalGeneral.cantidad }}</h3>
+            <p>Facturas</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="resumen-card">
+        <mat-card-content>
+          <div class="resumen-icon subtotal">
+            <mat-icon>attach_money</mat-icon>
+          </div>
+          <div class="resumen-info">
+            <h3>${{ totalGeneral.subtotal | number:'1.2-2' }}</h3>
+            <p>Subtotal</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="resumen-card">
+        <mat-card-content>
+          <div class="resumen-icon iva">
+            <mat-icon>calculate</mat-icon>
+          </div>
+          <div class="resumen-info">
+            <h3>${{ totalGeneral.valorIVA | number:'1.2-2' }}</h3>
+            <p>IVA</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="resumen-card">
+        <mat-card-content>
+          <div class="resumen-icon total">
+            <mat-icon>payments</mat-icon>
+          </div>
+          <div class="resumen-info">
+            <h3>${{ totalGeneral.total | number:'1.2-2' }}</h3>
+            <p>Total</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    <div class="graficos-container">
+      <mat-card class="grafico-card">
+        <mat-card-header>
+          <mat-card-title>
+            <mat-icon>pie_chart</mat-icon>
+            Distribución por Categoría
+          </mat-card-title>
+        </mat-card-header>
+
+        <mat-card-content>
+          <div class="donut-layout">
+            <div class="donut-chart">
+              <svg viewBox="0 0 120 120" class="donut-svg" aria-hidden="true">
+                <g transform="rotate(-90 60 60)">
+                  <circle class="donut-track" cx="60" cy="60" r="42"></circle>
+                  @for (slice of donutSlices; track slice.key) {
+                    <circle
+                      class="donut-segment"
+                      cx="60"
+                      cy="60"
+                      r="42"
+                      fill="none"
+                      [attr.stroke]="slice.color"
+                      [attr.stroke-dasharray]="slice.dasharray"
+                      [attr.stroke-dashoffset]="slice.dashoffset">
+                    </circle>
+                  }
+                </g>
+              </svg>
+
+              <div class="donut-center">
+                <span>Total</span>
+                <strong>${{ totalGeneral.total | number:'1.2-2' }}</strong>
+                <small>{{ totalGeneral.cantidad }} facturas</small>
+              </div>
+            </div>
+
+            <div class="donut-legend">
+              @for (slice of donutSlices; track slice.key) {
+                <div class="legend-item">
+                  <span class="legend-dot" [style.background]="slice.color"></span>
+                  <div class="legend-copy">
+                    <strong>{{ slice.label }}</strong>
+                    <small>{{ slice.displayValue }} · {{ slice.percentage | number:'1.0-1' }}%</small>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="grafico-card">
+        <mat-card-header>
+          <mat-card-title>
+            <mat-icon>bar_chart</mat-icon>
+            Comparativa de Valores
+          </mat-card-title>
+        </mat-card-header>
+
+        <mat-card-content>
+          <div class="comparativa-list">
+            @for (item of comparativaMetricas; track item.label) {
+              <div class="comparativa-item">
+                <div class="comparativa-head">
+                  <span>{{ item.label }}</span>
+                  <strong>{{ item.displayValue }}</strong>
+                </div>
+                <div class="comparativa-track">
+                  <div class="comparativa-fill" [style.width.%]="item.width" [style.background]="item.color"></div>
+                </div>
+              </div>
+            }
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    <mat-card class="tabla-card">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>table_chart</mat-icon>
+          Detalle de Resultados
+        </mat-card-title>
+      </mat-card-header>
+
+      <mat-card-content>
+        <div class="tabla-container">
+          <table mat-table [dataSource]="dataSource" class="resultados-table">
+            <ng-container matColumnDef="label">
+              <th mat-header-cell *matHeaderCellDef>Categoría</th>
+              <td mat-cell *matCellDef="let row">{{ row.label }}</td>
+              <td mat-footer-cell *matFooterCellDef><strong>TOTALES</strong></td>
+            </ng-container>
+
+            <ng-container matColumnDef="cantidad">
+              <th mat-header-cell *matHeaderCellDef class="text-center">Cantidad</th>
+              <td mat-cell *matCellDef="let row" class="text-center">{{ row.cantidad || 0 }}</td>
+              <td mat-footer-cell *matFooterCellDef class="text-center"><strong>{{ totalGeneral.cantidad }}</strong></td>
+            </ng-container>
+
+            <ng-container matColumnDef="subtotal">
+              <th mat-header-cell *matHeaderCellDef class="text-right">Subtotal</th>
+              <td mat-cell *matCellDef="let row" class="text-right">${{ row.subtotal | number:'1.2-2' }}</td>
+              <td mat-footer-cell *matFooterCellDef class="text-right"><strong>${{ totalGeneral.subtotal | number:'1.2-2' }}</strong></td>
+            </ng-container>
+
+            <ng-container matColumnDef="valorIVA">
+              <th mat-header-cell *matHeaderCellDef class="text-right">IVA</th>
+              <td mat-cell *matCellDef="let row" class="text-right">${{ row.valorIVA | number:'1.2-2' }}</td>
+              <td mat-footer-cell *matFooterCellDef class="text-right"><strong>${{ totalGeneral.valorIVA | number:'1.2-2' }}</strong></td>
+            </ng-container>
+
+            <ng-container matColumnDef="total">
+              <th mat-header-cell *matHeaderCellDef class="text-right">Total</th>
+              <td mat-cell *matCellDef="let row" class="text-right"><strong>${{ row.total | number:'1.2-2' }}</strong></td>
+              <td mat-footer-cell *matFooterCellDef class="text-right total-cell"><strong>${{ totalGeneral.total | number:'1.2-2' }}</strong></td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns;" class="data-row"></tr>
+            <tr mat-footer-row *matFooterRowDef="displayedColumns"></tr>
+          </table>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  }
+
+  @if (!loading() && resultados.length === 0 && datosOriginales.length === 0) {
+    <mat-card class="sin-datos-card">
+      <mat-card-content>
+        <mat-icon>insights</mat-icon>
+        <h3>Sin datos para mostrar</h3>
+        <p>Seleccione los filtros y presione "Analizar" para ver los resultados</p>
+      </mat-card-content>
+    </mat-card>
+  }
+
+  @if (!loading() && resultados.length === 0 && datosOriginales.length > 0) {
+    <mat-card class="sin-datos-card">
+      <mat-card-content>
+        <mat-icon>info</mat-icon>
+        <h3>No hay datos para la agrupación seleccionada</h3>
+        <p>Intente con otro tipo de agrupación</p>
+      </mat-card-content>
+    </mat-card>
+  }
+</div>

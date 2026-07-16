@@ -132,7 +132,7 @@
                                   @for (cuenta of rolConCuentas.cuentas; track cuenta.codigo) {
                                     <span class="cuenta-mini" [matTooltip]="getTooltipCuenta(cuenta)">
                                       {{ getTipoCuentaDescripcion(cuenta.tipoCuenta) }}: {{ cuenta.planCuenta.cuentaContable }}
-                                      <span class="saldo-badge">({{ cuenta.saldoInicial | number:'1.2-2' }})</span>
+                                      <span class="saldo-badge">({{ rolConCuentas.rol.saldoInicial ?? 0 | number:'1.2-2' }})</span>
                                     </span>
                                   }
                                 </div>
@@ -411,10 +411,21 @@
                 }
               </mat-select>
             </mat-form-field>
+
+            <mat-form-field appearance="outline" class="rol-select">
+              <mat-label>Saldo Inicial</mat-label>
+              <input matInput type="number" #saldoInicialInput min="0" step="0.01" [value]="0" />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="rol-select">
+              <mat-label>Días Crédito</mat-label>
+              <input matInput type="number" #diasCreditoInput min="0" step="1" [value]="0" />
+            </mat-form-field>
+
             <button
               mat-raised-button
               color="primary"
-              (click)="agregarRol(rolSelect.value); rolSelect.value = null"
+              (click)="agregarRol(rolSelect.value, +saldoInicialInput.value, +diasCreditoInput.value); rolSelect.value = null; saldoInicialInput.value = '0'; diasCreditoInput.value = '0'"
               [disabled]="!rolSelect.value"
             >
               <mat-icon>add</mat-icon>
@@ -447,8 +458,18 @@
                       <div>
                         <h4>{{ getRolDescripcion(rol.rubroRolPersonaH || 0) }}</h4>
                         <p class="rol-subtitle">Código: {{ rol.codigo }}</p>
+                        <p class="rol-subtitle">Saldo Inicial: {{ rol.saldoInicial ?? 0 | number:'1.2-2' }}</p>
+                        <p class="rol-subtitle">Días Crédito: {{ rol.diasCredito ?? 0 }}</p>
                       </div>
                     </div>
+                    <button
+                      mat-icon-button
+                      color="primary"
+                      (click)="editarDatosRol(rol)"
+                      matTooltip="Editar saldo inicial y días crédito"
+                    >
+                      <mat-icon>edit</mat-icon>
+                    </button>
                     <button
                       mat-icon-button
                       color="warn"
@@ -590,22 +611,9 @@
                         <p class="cuenta-subtitle">
                           Tipo: {{ getTipoCuentaDescripcion(cuenta.tipoCuenta) }}
                         </p>
-                        <p class="cuenta-saldo">
-                          <strong>Saldo Inicial:</strong> {{ cuenta.saldoInicial | number:'1.2-2' }}
-                        </p>
                       </div>
                     </div>
                     <div class="cuenta-actions">
-                      <button
-                        type="button"
-                        mat-icon-button
-                        color="accent"
-                        (click)="editarSaldoInicial(cuenta); $event.stopPropagation()"
-                        matTooltip="Editar saldo inicial"
-                        aria-label="Editar saldo inicial"
-                      >
-                        <mat-icon>attach_money</mat-icon>
-                      </button>
                       <button
                         type="button"
                         mat-icon-button

@@ -10,4 +10,6 @@ export interface PersonaRol {
   calificacionRiesgo: string; // Calificación de riesgo de la persona en este rol
   estado: number; // Estado del rol: 1 = Activo, 2 = Inactivo
   empresa: Empresa; // Empresa a la que pertenece el rol
+  saldoInicial: number; // Saldo inicial de la cuenta contable
+  diasCredito: number; // Días de crédito asociados al rol
 }

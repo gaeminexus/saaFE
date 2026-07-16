@@ -1,0 +1,294 @@
+$saa-primary: #667eea;
+$saa-secondary: #764ba2;
+$saa-accent: #f6ad55;
+$saa-background: #f7fafc;
+$saa-surface: #ffffff;
+$saa-border: #e2e8f0;
+$saa-text-primary: #334155;
+$saa-text-secondary: #64748b;
+
+.financiar-factura-page {
+  display: grid;
+  gap: 1rem;
+  padding: 0.25rem;
+  background: $saa-background;
+}
+
+.hero-card {
+  border: 1px solid rgba(102, 126, 234, 0.2);
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.18), rgba(118, 75, 162, 0.14));
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.16);
+  overflow: hidden;
+
+  .hero-content {
+    display: grid;
+    gap: 0.2rem;
+  }
+
+  .hero-title {
+    color: $saa-text-primary;
+    font-size: 1.32rem;
+    font-weight: 700;
+  }
+
+  .hero-subtitle {
+    color: $saa-text-secondary;
+    font-size: 0.95rem;
+  }
+}
+
+.layout-grid {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 1rem;
+}
+
+.panel {
+  border: 1px solid rgba(102, 126, 234, 0.16);
+  background: $saa-surface;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.08);
+  overflow: hidden;
+
+  .panel-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.85rem 1rem;
+    margin: 0;
+    min-height: 52px;
+    border-radius: 0;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.16), rgba(118, 75, 162, 0.12));
+    border-bottom: 1px solid rgba(102, 126, 234, 0.2);
+    color: $saa-text-primary;
+    font-weight: 700;
+
+    mat-icon {
+      color: $saa-primary;
+      font-size: 1.2rem;
+      width: 1.2rem;
+      height: 1.2rem;
+    }
+  }
+
+  mat-card-content {
+    padding: 0.85rem 1rem 1rem !important;
+  }
+}
+
+.full-width {
+  width: 100%;
+}
+
+.facturas-list {
+  display: grid;
+  gap: 0.65rem;
+  max-height: 68vh;
+  overflow: auto;
+  padding-right: 0.2rem;
+}
+
+.factura-item {
+  width: 100%;
+  border: 1px solid rgba(102, 126, 234, 0.18);
+  background: linear-gradient(
+    135deg,
+    rgba(102, 126, 234, 0.09) 0%,
+    rgba(118, 75, 162, 0.05) 100%
+  );
+  color: $saa-text-primary;
+  border-radius: 12px;
+  padding: 0.7rem;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 120ms ease, transform 120ms ease;
+
+  &:hover {
+    border-color: rgba(102, 126, 234, 0.6);
+    transform: translateY(-1px) scale(1.002);
+    box-shadow: 0 6px 18px rgba(102, 126, 234, 0.22);
+  }
+
+  &.selected {
+    border-color: var(--mat-sys-primary);
+    background: linear-gradient(
+      135deg,
+      rgba(102, 126, 234, 0.24) 0%,
+      rgba(118, 75, 162, 0.18) 100%
+    );
+    box-shadow: 0 0 0 1px rgba(102, 126, 234, 0.35);
+  }
+
+  .top-row,
+  .bottom-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .top-row {
+    margin-bottom: 0.25rem;
+  }
+
+  .numero {
+    font-weight: 700;
+  }
+
+  .total {
+    font-weight: 700;
+    color: $saa-primary;
+  }
+
+  .bottom-row {
+    font-size: 0.85rem;
+    opacity: 0.9;
+  }
+}
+
+.resumen-factura {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 0.9rem;
+
+  > div {
+    border: 1px solid rgba(102, 126, 234, 0.18);
+    background: linear-gradient(
+      135deg,
+      rgba(102, 126, 234, 0.13) 0%,
+      rgba(118, 75, 162, 0.08) 100%
+    );
+    border-radius: 12px;
+    padding: 0.65rem;
+    display: grid;
+    gap: 0.2rem;
+  }
+
+  .label {
+    font-size: 0.8rem;
+    opacity: 0.85;
+  }
+}
+
+.config-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.acciones-config,
+.acciones-finales {
+  display: flex;
+  gap: 0.75rem;
+  margin: 0.6rem 0 0.9rem;
+}
+
+.cuotas-table-wrap {
+  overflow: auto;
+  border: 1px solid rgba(102, 126, 234, 0.24);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.cuotas-table {
+  width: 100%;
+  border-collapse: collapse;
+
+  th,
+  td {
+    border-bottom: 1px solid $saa-border;
+    padding: 0.6rem;
+    text-align: left;
+  }
+
+  th {
+    background: linear-gradient(
+      180deg,
+      rgba(102, 126, 234, 0.24) 0%,
+      rgba(118, 75, 162, 0.16) 100%
+    );
+    color: $saa-text-primary;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+  }
+
+  input {
+    width: 100%;
+    border: 1px solid var(--mat-sys-outline-variant);
+    border-radius: 8px;
+    padding: 0.45rem 0.5rem;
+    background: #fff;
+    color: $saa-text-primary;
+  }
+}
+
+.totales-grid {
+  margin-top: 0.85rem;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.kpi {
+  border: 1px solid rgba(102, 126, 234, 0.2);
+  border-radius: 12px;
+  padding: 0.6rem;
+  display: grid;
+  gap: 0.2rem;
+  background: linear-gradient(
+    160deg,
+    rgba(102, 126, 234, 0.14) 0%,
+    rgba(118, 75, 162, 0.08) 100%
+  );
+
+  span {
+    font-size: 0.78rem;
+    opacity: 0.85;
+  }
+
+  strong {
+    color: $saa-primary;
+  }
+
+  &.warn {
+    border-color: var(--mat-sys-error);
+
+    strong {
+      color: var(--mat-sys-error);
+    }
+  }
+}
+
+.empty-state,
+.empty-config {
+  border: 1px dashed rgba(102, 126, 234, 0.38);
+  border-radius: 12px;
+  padding: 1rem;
+  text-align: center;
+  opacity: 0.8;
+  background: rgba(102, 126, 234, 0.08);
+}
+
+@media (max-width: 1200px) {
+  .layout-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .totales-grid,
+  .resumen-factura,
+  .config-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .totales-grid,
+  .resumen-factura,
+  .config-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .acciones-config,
+  .acciones-finales {
+    flex-wrap: wrap;
+  }
+}

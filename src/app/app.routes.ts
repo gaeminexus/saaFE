@@ -28,8 +28,11 @@ import { NotasCreditoComponent } from './modules/cxc/forms/emitir/notas-credito/
 import { NotasDebitoComponent } from './modules/cxc/forms/emitir/notas-debito/notas-debito.component';
 import { LiquidacionesComponent } from './modules/cxc/forms/emitir/liquidaciones/liquidaciones.component';
 import { RetencionesComponent } from './modules/cxc/forms/emitir/retenciones/retenciones.component';
-import { Retencionesv2Component } from './modules/cxc/forms/emitir/retencionesv2/retencionesv2.component';
+import { Retencionesv2Component } from './modules/cxc/forms/emitir/retencionesv2';
+import { AnticipoComponent } from './modules/cxc/forms/gestionar/anticipo/anticipo.component';
 import { ConsultaFacturasComponent } from './modules/cxc/forms/gestionar/consulta-facturas/consulta-facturas.component';
+import { FinanciarFacturaComponent } from './modules/cxc/forms/gestionar/financiar-factura/financiar-factura.component';
+import { DashVentasComponent } from './modules/cxc/reportes/dash-ventas';
 import { MenucuentasxcobrarComponent } from './modules/cxc/menu/menucuentasxcobrar/menucuentasxcobrar.component';
 import { MenucuentaxpagarComponent } from './modules/cxp/menu/menucuentasxpagar/menucuentasxpagar.component';
 import { GruposProductosPagoComponent } from './modules/cxp/forms/parametrizacion/grupos-productos-pago/grupos-productos-pago.component';
@@ -88,6 +91,7 @@ import { ChequesImpresosProcComponent } from './modules/tsr/forms/pagos/procesos
 import { SolicitudPagosComponent } from './modules/tsr/forms/pagos/procesos/solicitud/solicitud-pagos.component';
 import { TsrPlaceholderComponent } from './modules/tsr/forms/placeholder/tsr-placeholder.component';
 import { TitularesComponent } from './modules/tsr/forms/titulares/titulares.component';
+import { TitularesV2Component } from './modules/tsr/forms/titulares-v2/titulares-v2.component';
 import { MenutesoreriaComponent } from './modules/tsr/menu/menutesoreria/menutesoreria.component';
 import { authGuard } from './shared/guard/auth.guard';
 import { canDeactivateGuard } from './shared/guard/can-deactivate.guard';
@@ -365,6 +369,12 @@ export const routes: Routes = [
         component: TitularesComponent,
         canActivate: [authGuard],
         data: { title: 'Titulares' },
+      },
+      {
+        path: 'parametrizacion/titulares-v2',
+        component: TitularesV2Component,
+        canActivate: [authGuard],
+        data: { title: 'Titulares V2' },
       },
 
       // Procesos - Cobros
@@ -815,6 +825,21 @@ export const routes: Routes = [
       {
         path: 'gestionar/facturas',
         component: ConsultaFacturasComponent,
+        canActivate: [authGuard],
+      },
+      {
+        path: 'gestionar/anticipos',
+        component: AnticipoComponent,
+        canActivate: [authGuard],
+      },
+      {
+        path: 'gestionar/financiar-factura',
+        component: FinanciarFacturaComponent,
+        canActivate: [authGuard],
+      },
+      {
+        path: 'reportes/dash-ventas',
+        component: DashVentasComponent,
         canActivate: [authGuard],
       },
     ],

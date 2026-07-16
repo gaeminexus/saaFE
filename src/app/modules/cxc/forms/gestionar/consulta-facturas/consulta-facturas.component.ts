@@ -130,26 +130,93 @@ export class ConsultaFacturasComponent implements OnInit {
   }
 
   autorizar(row: FacturaEmitir): void {
-    const payload = { ...row, estadoEmision: 5 };
-    this.facturaService.update(payload).subscribe({
+    if (!this.puedeAutorizar(row)) {
+      this.mostrarInfo('Solo se puede autorizar facturas en estado pendiente');
+      return;
+    }
+
+    this.facturaService.reintentarAutorizacion({ idFactura: Number(row.id) }).subscribe({
       next: () => {
-        this.mostrarExito('Factura marcada como autorizada');
+        this.mostrarExito('Reintento de autorización enviado');
         this.buscar();
       },
-      error: () => this.mostrarError('No se pudo autorizar la factura'),
+      error: () => this.mostrarError('No se pudo reintentar la autorización'),
     });
   }
 
   reenviarMail(row: FacturaEmitir): void {
-    const destinatario = row.titular?.email || '';
-    if (!destinatario) {
-      this.mostrarInfo('La factura no tiene correo de cliente');
+    if (!this.puedeEmitida(row)) {
+      this.mostrarInfo('Solo se puede reenviar mail para facturas en estado emitida');
       return;
     }
-    this.mostrarExito(`Reenvío solicitado a ${destinatario}`);
+
+    const correoTitular = this.obtenerCorreoTitular(row);
+    const ingresado = window.prompt(
+      'Ingrese correos separados por ;',
+      correoTitular
+    );
+
+    if (ingresado === null) {
+      return;
+    }
+
+    const destinatarios = ingresado
+      .split(';')
+      .map((correo) => correo.trim())
+      .filter((correo) => correo.length > 0);
+
+    if (destinatarios.length === 0) {
+      this.mostrarInfo('Debe ingresar al menos un correo');
+      return;
+    }
+
+    const correoInvalido = destinatarios.find((correo) => !this.esCorreoValido(correo));
+    if (correoInvalido) {
+      this.mostrarError(`Correo inválido: ${correoInvalido}`);
+      return;
+    }
+
+    this.facturaService
+      .reenviarEmail({
+        idFactura: Number(row.id),
+        destinatarios: destinatarios.join(';'),
+      })
+      .subscribe({
+        next: () => this.mostrarExito('Reenvío de correo solicitado'),
+        error: () => this.mostrarError('No se pudo reenviar el correo'),
+      });
+  }
+
+  puedeAutorizar(row: FacturaEmitir): boolean {
+    const codigo = String(Number(row.estadoEmision));
+    const estadoMapeado = this.estados().find((e) => e.value === codigo);
+
+    if (!estadoMapeado?.label) {
+      return false;
+    }
+
+    const label = estadoMapeado.label.trim().toLowerCase();
+    return /^pendiente\b/.test(label);
+  }
+
+  puedeEmitida(row: FacturaEmitir): boolean {
+    const codigo = String(Number(row.estadoEmision));
+    const estadoMapeado = this.estados().find((e) => e.value === codigo);
+
+    if (!estadoMapeado?.label) {
+      return false;
+    }
+
+    const label = estadoMapeado.label.trim().toLowerCase();
+    return /^emitida\b/.test(label);
   }
 
   copiarClave(row: FacturaEmitir): void {
+    if (!this.puedeEmitida(row)) {
+      this.mostrarInfo('Solo se puede copiar clave para facturas en estado emitida');
+      return;
+    }
+
     const valor = row.autorizacion || row.clave;
     if (!valor) {
       this.mostrarInfo('No existe autorización/clave disponible');
@@ -159,6 +226,11 @@ export class ConsultaFacturasComponent implements OnInit {
   }
 
   imprimir(row: FacturaEmitir): void {
+    if (!this.puedeEmitida(row)) {
+      this.mostrarInfo('Solo se puede imprimir facturas en estado emitida');
+      return;
+    }
+
     const clave = row.clave || row.autorizacion;
     if (!clave) {
       this.mostrarInfo('No existe clave para imprimir');
@@ -236,6 +308,15 @@ export class ConsultaFacturasComponent implements OnInit {
   private toNumber(value: unknown): number {
     const parsed = Number(value ?? 0);
     return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  private obtenerCorreoTitular(row: FacturaEmitir): string {
+    const titular = row.titular as any;
+    return String(titular?.email || titular?.mail || '').trim();
+  }
+
+  private esCorreoValido(correo: string): boolean {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo);
   }
 
   private mostrarExito(message: string): void {

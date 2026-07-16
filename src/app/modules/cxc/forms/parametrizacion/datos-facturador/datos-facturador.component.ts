@@ -124,10 +124,10 @@ export class DatosFacturadorComponent implements OnInit {
       agenteRetencion: ['', Validators.maxLength(1000)],
       contribuyenteEspecial: ['', Validators.maxLength(1000)],
       artesano: ['', Validators.maxLength(1000)],
-      microEmpresa: [0],
-      rimpe: [0],
-      popularRimpe: [0],
-      turistico: [0],
+      microEmpresa: [false],
+      rimpe: [false],
+      popularRimpe: [false],
+      turistico: [false],
       firma: [''],
       claveFirma: [''],
       codClave: ['', [Validators.required, Validators.pattern(/^\d{8}$/)]],
@@ -190,7 +190,13 @@ export class DatosFacturadorComponent implements OnInit {
 
   seleccionarFacturador(facturador: Facturador): void {
     this.facturadorSeleccionado.set(facturador);
-    this.formFacturador.patchValue(facturador);
+    this.formFacturador.patchValue({
+      ...facturador,
+      microEmpresa: this.toBooleanFromBackend(facturador.microEmpresa),
+      rimpe: this.toBooleanFromBackend(facturador.rimpe),
+      popularRimpe: this.toBooleanFromBackend(facturador.popularRimpe),
+      turistico: this.toBooleanFromBackend(facturador.turistico),
+    });
     this.modoFormFacturador.set('editar');
     this.cargarEstablecimientos();
   }
@@ -199,10 +205,10 @@ export class DatosFacturadorComponent implements OnInit {
     this.facturadorSeleccionado.set(null);
     this.formFacturador.reset({
       contabilidad: 0,
-      microEmpresa: 0,
-      rimpe: 0,
-      popularRimpe: 0,
-      turistico: 0,
+      microEmpresa: false,
+      rimpe: false,
+      popularRimpe: false,
+      turistico: false,
       ambiente: 1,
       generaConta: null,
       estado: 1,
@@ -288,6 +294,10 @@ export class DatosFacturadorComponent implements OnInit {
       empresa: { codigo: empresaCodigo },
       ambiente: datos.ambiente ?? 1,
       generaConta: datos.generaConta,
+      microEmpresa: this.toBackendFlag(datos.microEmpresa),
+      rimpe: this.toBackendFlag(datos.rimpe),
+      popularRimpe: this.toBackendFlag(datos.popularRimpe),
+      turistico: this.toBackendFlag(datos.turistico),
     };
 
     const operacion$ = payload.id
@@ -308,6 +318,18 @@ export class DatosFacturadorComponent implements OnInit {
     });
   }
 
+  private toBackendFlag(value: unknown): string {
+    if (value === true || value === 1 || value === '1') {
+      return '1';
+    }
+
+    return '0';
+  }
+
+  private toBooleanFromBackend(value: unknown): boolean {
+    return value === true || value === 1 || value === '1';
+  }
+
   // ═══════════════════════════════════════════════════════════════════
   // ESTABLECIMIENTOS
   // ═══════════════════════════════════════════════════════════════════
@@ -319,7 +341,11 @@ export class DatosFacturadorComponent implements OnInit {
 
   cargarEstablecimientos(): void {
     const facturador = this.facturadorSeleccionado();
-    if (!facturador || !facturador.id) return;
+    if (!facturador || !facturador.id) {
+      this.establecimientos.set([]);
+      this.dataSourceEstablecimientos.data = [];
+      return;
+    }
 
     this.cargando.set(true);
     const criterios: DatosBusqueda[] = [];
@@ -336,15 +362,17 @@ export class DatosFacturadorComponent implements OnInit {
 
     this.establecimientoService.selectByCriteria(criterios).subscribe({
       next: (data) => {
-        if (data) {
-          this.establecimientos.set(data);
-          this.dataSourceEstablecimientos.data = data;
-        }
+        const establecimientos = Array.isArray(data) ? data : [];
+        this.establecimientos.set(establecimientos);
+        this.dataSourceEstablecimientos.data = establecimientos;
         this.cargando.set(false);
       },
       error: (err) => {
-        console.error('Error al cargar establecimientos:', err);
-        this.mostrarError('Error al cargar establecimientos');
+        if (!this.esErrorSinDatos(err)) {
+          console.error('Error al cargar establecimientos:', err);
+        }
+        this.establecimientos.set([]);
+        this.dataSourceEstablecimientos.data = [];
         this.cargando.set(false);
       },
     });
@@ -451,7 +479,11 @@ export class DatosFacturadorComponent implements OnInit {
 
   cargarPunctosEmision(): void {
     const establecimiento = this.establecimientoSeleccionado();
-    if (!establecimiento || !establecimiento.id) return;
+    if (!establecimiento || !establecimiento.id) {
+      this.puntosEmision.set([]);
+      this.dataSourcePuntosEmision.data = [];
+      return;
+    }
 
     this.cargando.set(true);
     const criterios: DatosBusqueda[] = [];
@@ -468,15 +500,17 @@ export class DatosFacturadorComponent implements OnInit {
 
     this.puntoEmisionService.selectByCriteria(criterios).subscribe({
       next: (data) => {
-        if (data) {
-          this.puntosEmision.set(data);
-          this.dataSourcePuntosEmision.data = data;
-        }
+        const puntos = Array.isArray(data) ? data : [];
+        this.puntosEmision.set(puntos);
+        this.dataSourcePuntosEmision.data = puntos;
         this.cargando.set(false);
       },
       error: (err) => {
-        console.error('Error al cargar puntos de emisión:', err);
-        this.mostrarError('Error al cargar puntos de emisión');
+        if (!this.esErrorSinDatos(err)) {
+          console.error('Error al cargar puntos de emisión:', err);
+        }
+        this.puntosEmision.set([]);
+        this.dataSourcePuntosEmision.data = [];
         this.cargando.set(false);
       },
     });
@@ -584,7 +618,11 @@ export class DatosFacturadorComponent implements OnInit {
 
   cargarNumeraciones(): void {
     const punto = this.puntoEmisionSeleccionado();
-    if (!punto || !punto.id) return;
+    if (!punto || !punto.id) {
+      this.numeraciones.set([]);
+      this.dataSourceNumeraciones.data = [];
+      return;
+    }
 
     this.cargando.set(true);
     const criterios: DatosBusqueda[] = [];
@@ -601,15 +639,17 @@ export class DatosFacturadorComponent implements OnInit {
 
     this.numeracionService.selectByCriteria(criterios).subscribe({
       next: (data) => {
-        if (data) {
-          this.numeraciones.set(data);
-          this.dataSourceNumeraciones.data = data;
-        }
+        const numeraciones = Array.isArray(data) ? data : [];
+        this.numeraciones.set(numeraciones);
+        this.dataSourceNumeraciones.data = numeraciones;
         this.cargando.set(false);
       },
       error: (err) => {
-        console.error('Error al cargar numeraciones:', err);
-        this.mostrarError('Error al cargar numeraciones');
+        if (!this.esErrorSinDatos(err)) {
+          console.error('Error al cargar numeraciones:', err);
+        }
+        this.numeraciones.set([]);
+        this.dataSourceNumeraciones.data = [];
         this.cargando.set(false);
       },
     });
@@ -776,6 +816,52 @@ export class DatosFacturadorComponent implements OnInit {
       duration: 3000,
       panelClass: ['snackbar-success'],
     });
+  }
+
+  private esErrorSinDatos(err: any): boolean {
+    const status = Number(
+      err?.status ?? err?.statusCode ?? err?.error?.status ?? err?.error?.statusCode ?? 0
+    );
+
+    if ([200, 204, 404].includes(status)) {
+      return true;
+    }
+
+    const mensajePlano = `${
+      err?.message ?? err?.mensaje ?? err?.error?.message ?? err?.error?.mensaje ?? err?.error ?? ''
+    }`.toLowerCase();
+
+    let mensajeJson = '';
+    try {
+      mensajeJson = JSON.stringify(err ?? {}).toLowerCase();
+    } catch {
+      mensajeJson = '';
+    }
+
+    const mensaje = `${mensajePlano} ${mensajeJson}`;
+
+    if (
+      status === 500 &&
+      (mensaje.includes('no data') ||
+        mensaje.includes('no existe') ||
+        mensaje.includes('no se encontraron') ||
+        mensaje.includes('sin datos'))
+    ) {
+      return true;
+    }
+
+    return (
+      mensaje.includes('sin datos') ||
+      mensaje.includes('no hay') ||
+      mensaje.includes('no existe') ||
+      mensaje.includes('no se encontraron') ||
+      mensaje.includes('no se encontró') ||
+      mensaje.includes('no records') ||
+      mensaje.includes('empty') ||
+      mensaje.includes('lista vacía') ||
+      mensaje.includes('lista vacia') ||
+      mensaje.includes('not found')
+    );
   }
 
   private mostrarError(mensaje: string): void {

@@ -1,0 +1,120 @@
+<div class="anticipo-page">
+  <mat-card class="hero-card">
+    <div class="hero-title">Anticipos</div>
+    <div class="hero-subtitle">Registre y confirme anticipos de clientes, consultando su saldo acumulado.</div>
+  </mat-card>
+
+  <div class="layout-grid">
+    <mat-card class="panel form-panel">
+      <div class="panel-title">
+        <mat-icon>payments</mat-icon>
+        <span>Registro de anticipo</span>
+      </div>
+      <mat-card-content>
+        <div class="resumen-grid">
+          <div class="summary-box clickable" (click)="buscarTitular()">
+            <span class="label">Cliente</span>
+            <strong>{{ textoTitular() || 'Seleccionar cliente' }}</strong>
+          </div>
+          <div class="summary-box saldo-box">
+            <span class="label">Saldo de anticipos</span>
+            <strong>{{ saldoAnticipos() | number:'1.2-2' }}</strong>
+          </div>
+          <div class="summary-box">
+            <span class="label">Estado</span>
+            <strong>{{ estadoTexto() }}</strong>
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Fecha anticipo</mat-label>
+            <input matInput type="date" [(ngModel)]="fechaAnticipo" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Fecha recepción</mat-label>
+            <input matInput type="date" [(ngModel)]="fechaRecepcion" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Número documento</mat-label>
+            <input matInput [(ngModel)]="numeroDoc" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Valor</mat-label>
+            <input matInput type="number" min="0" step="0.01" [(ngModel)]="valor" />
+          </mat-form-field>
+        </div>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Observación</mat-label>
+          <textarea matInput rows="4" [(ngModel)]="observacion"></textarea>
+        </mat-form-field>
+
+        <div class="actions-row">
+          <button mat-stroked-button type="button" (click)="nuevo()">
+            <mat-icon>add</mat-icon>
+            Nuevo
+          </button>
+          <button mat-raised-button color="primary" type="button" [disabled]="guardando()" (click)="grabar()">
+            <mat-icon>save</mat-icon>
+            Grabar
+          </button>
+          <button mat-raised-button class="confirm-btn" type="button" [disabled]="confirmando() || !id" (click)="confirmar()">
+            <mat-icon>task_alt</mat-icon>
+            Confirmar
+          </button>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="panel list-panel">
+      <div class="panel-title">
+        <mat-icon>list_alt</mat-icon>
+        <span>Anticipos registrados</span>
+      </div>
+      <mat-card-content>
+        <div class="table-container">
+          <table mat-table [dataSource]="dataSource" class="mat-elevation-z0">
+            <ng-container matColumnDef="id">
+              <th mat-header-cell *matHeaderCellDef>ID</th>
+              <td mat-cell *matCellDef="let row">{{ row.id }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="fechaAnticipo">
+              <th mat-header-cell *matHeaderCellDef>Fecha</th>
+              <td mat-cell *matCellDef="let row">{{ row.fechaAnticipo | date:'dd/MM/yyyy' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="titular">
+              <th mat-header-cell *matHeaderCellDef>Cliente</th>
+              <td mat-cell *matCellDef="let row">{{ nombreTitular(row) }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="numeroDoc">
+              <th mat-header-cell *matHeaderCellDef>Documento</th>
+              <td mat-cell *matCellDef="let row">{{ row.numeroDoc }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="valor">
+              <th mat-header-cell *matHeaderCellDef class="right">Valor</th>
+              <td mat-cell *matCellDef="let row" class="right">{{ row.valor | number:'1.2-2' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="estado">
+              <th mat-header-cell *matHeaderCellDef>Estado</th>
+              <td mat-cell *matCellDef="let row">
+                <span class="estado-badge" [class.confirmado]="row.estado === 2">{{ row.estado === 2 ? 'Confirmado' : 'Pendiente' }}</span>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="columnas"></tr>
+            <tr mat-row *matRowDef="let row; columns: columnas" (click)="seleccionarRegistro(row)" class="click-row"></tr>
+          </table>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+</div>

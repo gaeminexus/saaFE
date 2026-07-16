@@ -146,11 +146,11 @@
 
   <mat-menu #menuAcciones="matMenu">
     <ng-template matMenuContent let-row="row">
-      <button mat-menu-item (click)="imprimir(row)">
+      <button mat-menu-item (click)="imprimir(row)" [disabled]="!puedeEmitida(row)">
         <mat-icon>print</mat-icon>
         <span>Imprimir</span>
       </button>
-      <button mat-menu-item (click)="copiarClave(row)">
+      <button mat-menu-item (click)="copiarClave(row)" [disabled]="!puedeEmitida(row)">
         <mat-icon>content_copy</mat-icon>
         <span>Copiar clave</span>
       </button>
@@ -158,11 +158,11 @@
         <mat-icon>cancel</mat-icon>
         <span>Anular</span>
       </button>
-      <button mat-menu-item (click)="autorizar(row)">
+      <button mat-menu-item (click)="autorizar(row)" [disabled]="!puedeAutorizar(row)">
         <mat-icon>task</mat-icon>
         <span>Autorizar</span>
       </button>
-      <button mat-menu-item (click)="reenviarMail(row)">
+      <button mat-menu-item (click)="reenviarMail(row)" [disabled]="!puedeEmitida(row)">
         <mat-icon>forward_to_inbox</mat-icon>
         <span>Reenviar mail</span>
       </button>

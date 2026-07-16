@@ -40,6 +40,7 @@ public static RS_TSRI = `${API_URL}/tsri`;  // Detalle SRI
 
 // Emisión Documentos Tributarios
 public static RS_FCTR = `${API_URL}/fctr`;  // Factura
+public static RS_ANTC = `${API_URL}/antc`;  // Anticipo cliente
 public static RS_DTFC = `${API_URL}/dtfc`;  // Detalle Factura
 public static RS_NTCR = `${API_URL}/ntcr`;  // Nota Crédito
 public static RS_DTNC = `${API_URL}/dtnc`;  // Detalle Nota Crédito

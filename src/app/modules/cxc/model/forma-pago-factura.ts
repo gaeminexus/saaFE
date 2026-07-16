@@ -13,4 +13,13 @@ export interface FormaPagoFactura {
   plazo: number;                    // Plazo en días/meses/años
   unidadTiempo: string;             // Unidad de tiempo: 'dias', 'meses', 'años'
   estado?: number;                  // Estado del registro
+
+  // Campos opcionales para financiación flexible
+  numeroCuota?: number;             // Orden de cuota dentro del plan
+  porcentaje?: number;              // Porcentaje de la factura asignado a esta cuota
+  fechaPago?: string | Date;        // Fecha exacta de pago cuando aplica fechas fijas
+  tipoProgramacion?: 'PERIODICIDAD' | 'FECHAS_FIJAS';
+  periodicidad?: 'SEMANAL' | 'QUINCENAL' | 'MENSUAL' | 'PERSONALIZADA';
+  intervaloDias?: number;           // Para periodicidad personalizada
+  esFinanciacion?: boolean;         // Marca de pago financiado
 }

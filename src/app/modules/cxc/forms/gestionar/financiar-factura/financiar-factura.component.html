@@ -1,0 +1,227 @@
+<div class="financiar-factura-page">
+  <mat-card class="hero-card">
+    <div class="hero-content">
+      <div class="hero-title">Financiar Factura</div>
+      <div class="hero-subtitle">
+        Seleccione una factura disponible y configure cuotas con periodicidad o fechas fijas.
+      </div>
+    </div>
+  </mat-card>
+
+  <div class="layout-grid">
+    <mat-card class="panel facturas-panel">
+      <div class="panel-title">
+        <mat-icon>receipt_long</mat-icon>
+        <span>Facturas disponibles para financiación</span>
+      </div>
+      <mat-card-content>
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Buscar factura</mat-label>
+          <input
+            matInput
+            placeholder="Número, cliente o identificación"
+            [ngModel]="busqueda()"
+            (ngModelChange)="busqueda.set($event)"
+          />
+          <mat-icon matIconSuffix>search</mat-icon>
+        </mat-form-field>
+
+        <div class="facturas-list">
+          @for (factura of facturasFiltradas(); track factura.id) {
+            <button
+              type="button"
+              class="factura-item"
+              [class.selected]="facturaSeleccionada()?.id === factura.id"
+              (click)="seleccionarFactura(factura)"
+            >
+              <div class="top-row">
+                <span class="numero">#{{ factura.numero }}</span>
+                <span class="total">{{ factura.total | number:'1.2-2' }}</span>
+              </div>
+              <div class="bottom-row">
+                <span>{{ nombreTitular(factura) }}</span>
+                <span>{{ factura.fecha | date:'dd/MM/yyyy' }}</span>
+              </div>
+            </button>
+          }
+
+          @if (!cargando() && facturasFiltradas().length === 0) {
+            <div class="empty-state">No hay facturas disponibles para financiar.</div>
+          }
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="panel configuracion-panel">
+      <div class="panel-title">
+        <mat-icon>tune</mat-icon>
+        <span>Configuración de financiación</span>
+      </div>
+      <mat-card-content>
+        @if (facturaSeleccionada(); as factura) {
+          <div class="resumen-factura">
+            <div>
+              <span class="label">Factura</span>
+              <strong>{{ factura.numero }}</strong>
+            </div>
+            <div>
+              <span class="label">Cliente</span>
+              <strong>{{ nombreTitular(factura) }}</strong>
+            </div>
+            <div>
+              <span class="label">Total</span>
+              <strong>{{ totalFactura() | number:'1.2-2' }}</strong>
+            </div>
+          </div>
+
+          <div class="config-grid">
+            <mat-form-field appearance="outline">
+              <mat-label>Número de pagos</mat-label>
+              <input
+                matInput
+                type="number"
+                min="1"
+                [ngModel]="numeroPagos()"
+                (ngModelChange)="numeroPagos.set($event)"
+              />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Modo de programación</mat-label>
+              <mat-select
+                [ngModel]="modoProgramacion()"
+                (ngModelChange)="modoProgramacion.set($event); onCambiarModoProgramacion()"
+              >
+                <mat-option value="PERIODICIDAD">Pagos periódicos</mat-option>
+                <mat-option value="FECHAS_FIJAS">Fechas fijas</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Fecha inicio</mat-label>
+              <input
+                matInput
+                type="date"
+                [ngModel]="fechaInicio()"
+                (ngModelChange)="fechaInicio.set($event)"
+              />
+            </mat-form-field>
+
+            @if (modoProgramacion() === 'PERIODICIDAD') {
+              <mat-form-field appearance="outline">
+                <mat-label>Periodicidad</mat-label>
+                <mat-select
+                  [ngModel]="periodicidad()"
+                  (ngModelChange)="periodicidad.set($event); onCambiarModoProgramacion()"
+                >
+                  <mat-option value="SEMANAL">Semanal</mat-option>
+                  <mat-option value="QUINCENAL">Quincenal</mat-option>
+                  <mat-option value="MENSUAL">Mensual</mat-option>
+                </mat-select>
+              </mat-form-field>
+            }
+
+            <mat-form-field appearance="outline">
+              <mat-label>Distribución</mat-label>
+              <mat-select
+                [ngModel]="modoMonto()"
+                (ngModelChange)="modoMonto.set($event); onCambiarModoMonto()"
+              >
+                <mat-option value="PORCENTAJE">Por porcentaje</mat-option>
+                <mat-option value="VALOR_FIJO">Por valor fijo</mat-option>
+              </mat-select>
+            </mat-form-field>
+          </div>
+
+          <div class="acciones-config">
+            <button mat-raised-button color="primary" type="button" (click)="generarPlan()">
+              <mat-icon>auto_awesome</mat-icon>
+              Generar plan
+            </button>
+            <button mat-stroked-button type="button" (click)="aplicarAjusteFinal()" [disabled]="cuotas().length === 0">
+              <mat-icon>balance</mat-icon>
+              Ajustar última cuota
+            </button>
+          </div>
+
+          @if (cuotas().length > 0) {
+            <div class="cuotas-table-wrap">
+              <table class="cuotas-table">
+                <thead>
+                  <tr>
+                    <th>Cuota</th>
+                    <th>Fecha pago</th>
+                    <th>%</th>
+                    <th>Valor</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (cuota of cuotas(); track cuota.numero; let idx = $index) {
+                    <tr>
+                      <td>{{ cuota.numero }}</td>
+                      <td>
+                        <input
+                          type="date"
+                          [ngModel]="cuota.fechaPago"
+                          (ngModelChange)="cuota.fechaPago = $event"
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.0001"
+                          [disabled]="modoMonto() === 'VALOR_FIJO'"
+                          [ngModel]="cuota.porcentaje"
+                          (ngModelChange)="actualizarPorcentaje(idx, $event)"
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          [disabled]="modoMonto() === 'PORCENTAJE'"
+                          [ngModel]="cuota.valor"
+                          (ngModelChange)="actualizarValor(idx, $event)"
+                        />
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+
+            <div class="totales-grid">
+              <div class="kpi">
+                <span>Total factura</span>
+                <strong>{{ totalFactura() | number:'1.2-2' }}</strong>
+              </div>
+              <div class="kpi">
+                <span>Total cuotas</span>
+                <strong>{{ totalCuotas() | number:'1.2-2' }}</strong>
+              </div>
+              <div class="kpi" [class.warn]="tieneDiferenciaMonto()">
+                <span>Diferencia</span>
+                <strong>{{ diferenciaMonto() | number:'1.2-2' }}</strong>
+              </div>
+              <div class="kpi" [class.warn]="tieneDiferenciaPorcentaje()">
+                <span>Diferencia %</span>
+                <strong>{{ diferenciaPorcentaje() | number:'1.4-4' }}</strong>
+              </div>
+            </div>
+
+            <div class="acciones-finales">
+              <button mat-raised-button color="primary" type="button" [disabled]="!canGuardar()" (click)="guardarFinanciacion()">
+                <mat-icon>save</mat-icon>
+                Guardar financiación
+              </button>
+            </div>
+          }
+        } @else {
+          <div class="empty-config">Seleccione una factura para comenzar.</div>
+        }
+      </mat-card-content>
+    </mat-card>
+  </div>
+</div>

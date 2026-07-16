@@ -923,7 +923,7 @@ export class TitularesComponent implements OnInit {
     return this.rolesAsignados().some((r) => r.rubroRolPersonaH === codigoRol);
   }
 
-  agregarRol(codigoRol: number): void {
+  agregarRol(codigoRol: number, saldoInicial: number, diasCredito: number): void {
     const titular = this.titularSeleccionado();
     const empresaCodigo = this.getEmpresaCodigo();
     if (!titular || !empresaCodigo) {
@@ -943,6 +943,10 @@ export class TitularesComponent implements OnInit {
       rubroRolPersonaP: this.RUBRO_ROL_PERSONA,
       rubroRolPersonaH: codigoRol,
       empresa: { codigo: empresaCodigo },
+      saldoInicial: saldoInicial,
+      diasCredito: diasCredito,
+      diasVencimientoFactura: 0,
+      calificacionRiesgo: '',
       estado: 1,
     };
 
@@ -1052,9 +1056,7 @@ export class TitularesComponent implements OnInit {
 
     dialogRef.afterClosed().subscribe((planCuenta) => {
       if (planCuenta) {
-        this.solicitarSaldoInicial(planCuenta, (saldoInicial) => {
-          this.crearCuentaPersona(rol, planCuenta, tipoCuenta, saldoInicial);
-        });
+        this.crearCuentaPersona(rol, planCuenta, tipoCuenta);
       }
     });
   }
@@ -1067,22 +1069,17 @@ export class TitularesComponent implements OnInit {
 
     dialogRef.afterClosed().subscribe((planCuenta) => {
       if (planCuenta) {
-        // Al cambiar la cuenta, mantener el saldo actual
-        this.actualizarCuentaPersona(cuenta, planCuenta, cuenta.saldoInicial);
+        this.actualizarCuentaPersona(cuenta, planCuenta);
       }
     });
   }
 
-  editarSaldoInicial(cuenta: PersonaCuentaContable): void {
-    if (!cuenta || !cuenta.planCuenta) {
-      this.mostrarError('Error: Datos de cuenta inválidos');
-      return;
-    }
-
-    const saldoActual = cuenta.saldoInicial ?? 0;
+  editarDatosRol(rol: PersonaRol): void {
+    const saldoActual = rol.saldoInicial ?? 0;
+    const diasActual = rol.diasCredito ?? 0;
 
     const saldoStr = window.prompt(
-      `Ingrese el nuevo saldo inicial para ${cuenta.planCuenta.cuentaContable}:`,
+      `Ingrese el saldo inicial para el rol ${this.getRolDescripcion(rol.rubroRolPersonaH || 0)}:`,
       saldoActual.toString()
     );
 
@@ -1090,60 +1087,44 @@ export class TitularesComponent implements OnInit {
       return;
     }
 
-    const nuevoSaldo = parseFloat(saldoStr);
+    const diasStr = window.prompt(
+      `Ingrese los días de crédito para el rol ${this.getRolDescripcion(rol.rubroRolPersonaH || 0)}:`,
+      diasActual.toString()
+    );
 
-    if (isNaN(nuevoSaldo)) {
-      this.mostrarError('El saldo inicial debe ser un número válido');
+    if (diasStr === null) {
       return;
     }
 
-    // Actualizar solo el saldo inicial
-    const cuentaActualizada: any = {
-      codigo: cuenta.codigo,
-      personaRol: { codigo: cuenta.personaRol.codigo },
-      empresa: { codigo: cuenta.empresa.codigo },
-      planCuenta: { codigo: cuenta.planCuenta.codigo },
-      tipoCuenta: cuenta.tipoCuenta,
-      tipoPersona: null,
+    const nuevoSaldo = parseFloat(saldoStr);
+    const nuevosDias = parseInt(diasStr, 10);
+
+    if (isNaN(nuevoSaldo) || nuevoSaldo < 0 || isNaN(nuevosDias) || nuevosDias < 0) {
+      this.mostrarError('Saldo inicial y días crédito deben ser valores numéricos válidos >= 0');
+      return;
+    }
+
+    const rolActualizado: PersonaRol = {
+      ...rol,
       saldoInicial: nuevoSaldo,
+      diasCredito: nuevosDias,
     };
 
-    this.personaCuentaService.update(cuentaActualizada).subscribe({
+    this.personaRolService.update(rolActualizado).subscribe({
       next: () => {
-        this.mostrarExito('Saldo inicial actualizado exitosamente');
-        const rol = this.rolSeleccionado();
-        if (rol) {
-          this.cargarCuentasAsignadas(rol.codigo);
+        this.mostrarExito('Datos del rol actualizados exitosamente');
+        const titular = this.titularSeleccionado();
+        if (titular) {
+          this.cargarRolesAsignados(titular.codigo);
         }
       },
       error: () => {
-        this.mostrarError('Error al actualizar saldo inicial');
+        this.mostrarError('Error al actualizar datos del rol');
       },
     });
   }
 
-  private solicitarSaldoInicial(planCuenta: any, callback: (saldo: number) => void, saldoActual?: number): void {
-    const mensaje = saldoActual !== undefined
-      ? `Ingrese el saldo inicial para ${planCuenta.cuentaContable}:\n(Saldo actual: ${saldoActual})`
-      : `Ingrese el saldo inicial para ${planCuenta.cuentaContable}:`;
-
-    const valorDefecto = saldoActual !== undefined ? saldoActual.toString() : '0';
-    const saldoStr = window.prompt(mensaje, valorDefecto);
-
-    if (saldoStr === null) {
-      return;
-    }
-
-    const saldo = parseFloat(saldoStr);
-    if (isNaN(saldo)) {
-      this.mostrarError('El saldo inicial debe ser un número válido');
-      return;
-    }
-
-    callback(saldo);
-  }
-
-  private crearCuentaPersona(rol: PersonaRol, planCuenta: any, tipoCuenta: number, saldoInicial: number): void {
+  private crearCuentaPersona(rol: PersonaRol, planCuenta: any, tipoCuenta: number): void {
     const titular = this.titularSeleccionado();
     const empresaCodigo = this.getEmpresaCodigo();
     if (!titular || !empresaCodigo) {
@@ -1157,7 +1138,6 @@ export class TitularesComponent implements OnInit {
       planCuenta: { codigo: planCuenta.codigo },
       tipoCuenta: tipoCuenta,
       tipoPersona: null,
-      saldoInicial: saldoInicial,
     };
 
     this.personaCuentaService.add(cuenta).subscribe({
@@ -1171,7 +1151,7 @@ export class TitularesComponent implements OnInit {
     });
   }
 
-  private actualizarCuentaPersona(cuenta: PersonaCuentaContable, planCuenta: any, saldoInicial: number): void {
+  private actualizarCuentaPersona(cuenta: PersonaCuentaContable, planCuenta: any): void {
     const cuentaActualizada: any = {
       codigo: cuenta.codigo,
       personaRol: { codigo: cuenta.personaRol.codigo },
@@ -1179,7 +1159,6 @@ export class TitularesComponent implements OnInit {
       planCuenta: { codigo: planCuenta.codigo },
       tipoCuenta: cuenta.tipoCuenta,
       tipoPersona: null,
-      saldoInicial: saldoInicial,
     };
 
     this.personaCuentaService.update(cuentaActualizada).subscribe({
@@ -1252,8 +1231,7 @@ export class TitularesComponent implements OnInit {
 
   getTooltipCuenta(cuenta: PersonaCuentaContable): string {
     const nombre = cuenta.planCuenta?.nombre || 'Sin nombre';
-    const saldo = cuenta.saldoInicial ?? 0;
-    return `${nombre}\nSaldo Inicial: $${saldo.toFixed(2)}`;
+    return nombre;
   }
 
   getTipoPersonaDescripcion(tipo: number): string {
