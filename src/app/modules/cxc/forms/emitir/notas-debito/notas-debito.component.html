@@ -37,11 +37,14 @@
         <mat-form-field appearance="outline">
           <mat-label>Fecha</mat-label>
           <input
+            #fechaNdInput
             matInput
             [matDatepicker]="pickerFechaNotaDebito"
-            [(ngModel)]="strFecha"
+            [formControl]="fechaControl"
             placeholder="dd/mm/aaaa"
-            [disabled]="deshabilitado"
+            (input)="capturarFechaRaw($event)"
+            (dateChange)="onFechaPickerChange($event.value)"
+            (blur)="syncFechaFromRaw($event)"
           />
           <mat-datepicker-toggle matIconSuffix [for]="pickerFechaNotaDebito"></mat-datepicker-toggle>
           <mat-datepicker #pickerFechaNotaDebito></mat-datepicker>
@@ -72,11 +75,14 @@
         <mat-form-field appearance="outline">
           <mat-label>Fecha emisión doc. modificado</mat-label>
           <input
+            #fechaNdDMInput
             matInput
             [matDatepicker]="pickerFechaNdDocMod"
-            [(ngModel)]="strFechaEmisionDM"
+            [formControl]="fechaDMControl"
             placeholder="dd/mm/aaaa"
-            [disabled]="deshabilitado"
+            (input)="capturarFechaDMRaw($event)"
+            (dateChange)="onFechaEmiDMPickerChange($event.value)"
+            (blur)="syncFechaDMFromRaw($event)"
           />
           <mat-datepicker-toggle matIconSuffix [for]="pickerFechaNdDocMod"></mat-datepicker-toggle>
           <mat-datepicker #pickerFechaNdDocMod></mat-datepicker>

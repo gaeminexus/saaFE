@@ -1,0 +1,373 @@
+<!-- ─── VISTA LISTA ─── -->
+@if (vista === 'lista') {
+  <mat-card class="page-card">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>receipt_long</mat-icon>
+        Consulta de Documentos Registrados
+      </mat-card-title>
+      <mat-card-subtitle>Comprobantes almacenados en tablas CXP — haga click en una fila para ver el detalle completo</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      <!-- Filtros -->
+      <mat-expansion-panel class="filtros-panel" [expanded]="true">
+        <mat-expansion-panel-header>
+          <mat-panel-title><mat-icon>filter_list</mat-icon> Filtros de búsqueda</mat-panel-title>
+        </mat-expansion-panel-header>
+        <div class="filtros-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>RUC Proveedor</mat-label>
+            <input matInput [(ngModel)]="filtroRuc" placeholder="Ej: 1790016919001" (keyup.enter)="buscar()" />
+            <mat-icon matSuffix>business</mat-icon>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Razón Social</mat-label>
+            <input matInput [(ngModel)]="filtroProveedor" placeholder="Nombre del proveedor" (keyup.enter)="buscar()" />
+            <mat-icon matSuffix>person</mat-icon>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Tipo de Documento</mat-label>
+            <mat-select [(ngModel)]="filtroTipo">
+              <mat-option value="">Todos</mat-option>
+              <mat-option value="Factura">Factura</mat-option>
+              <mat-option value="Nota de Crédito">Nota de Crédito</mat-option>
+              <mat-option value="Nota de Débito">Nota de Débito</mat-option>
+              <mat-option value="Liquidación">Liquidación de Compra</mat-option>
+              <mat-option value="Retención">Comprobante de Retención</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Tabla de Destino</mat-label>
+            <mat-select [(ngModel)]="filtroTabla">
+              <mat-option value="">Todas</mat-option>
+              <mat-option value="FACTURA_COMPRA">Factura Compra</mat-option>
+              <mat-option value="NOTA_CREDITO_COMPRA">Nota Crédito Compra</mat-option>
+              <mat-option value="NOTA_DEBITO_COMPRA">Nota Débito Compra</mat-option>
+              <mat-option value="LIQUIDACION_COMPRA">Liquidación Compra</mat-option>
+              <mat-option value="RETENCION_COMPRA">Retención Compra</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Fecha Emisión Desde</mat-label>
+            <input matInput type="date" [(ngModel)]="filtroFechaDesde" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Fecha Emisión Hasta</mat-label>
+            <input matInput type="date" [(ngModel)]="filtroFechaHasta" />
+          </mat-form-field>
+        </div>
+        <div class="filtros-acciones">
+          <button mat-raised-button color="primary" (click)="buscar()">
+            <mat-icon>search</mat-icon> Buscar
+          </button>
+          <button mat-stroked-button (click)="limpiarFiltros()">
+            <mat-icon>clear</mat-icon> Limpiar
+          </button>
+          <button mat-icon-button color="primary" (click)="cargar()" [disabled]="cargando()" matTooltip="Actualizar">
+            <mat-icon>refresh</mat-icon>
+          </button>
+        </div>
+      </mat-expansion-panel>
+
+      @if (cargando()) {
+        <div class="loading-container"><mat-spinner></mat-spinner></div>
+      } @else {
+        <div class="resumen-bar">
+          <span class="resumen-total">{{ dsDocumentos.data.length }} documento(s) registrado(s)</span>
+        </div>
+        <div class="table-wrapper">
+          <table mat-table [dataSource]="dsDocumentos" class="tabla-docs">
+
+            <ng-container matColumnDef="tipoComprobante">
+              <th mat-header-cell *matHeaderCellDef>Tipo</th>
+              <td mat-cell *matCellDef="let d"><span class="tipo-badge">{{ d.tipoComprobante }}</span></td>
+            </ng-container>
+
+            <ng-container matColumnDef="tipoTablaDestino">
+              <th mat-header-cell *matHeaderCellDef>Tabla</th>
+              <td mat-cell *matCellDef="let d">
+                <span class="chip-tabla" [ngClass]="tipoTablaColor(d.tipoTablaDestino)">{{ tipoTablaLabel(d.tipoTablaDestino) }}</span>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="rucEmisor">
+              <th mat-header-cell *matHeaderCellDef>RUC</th>
+              <td mat-cell *matCellDef="let d" class="font-mono">{{ d.rucEmisor }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="razonSocialEmisor">
+              <th mat-header-cell *matHeaderCellDef>Proveedor</th>
+              <td mat-cell *matCellDef="let d">{{ d.razonSocialEmisor }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="serieComprobante">
+              <th mat-header-cell *matHeaderCellDef>Serie</th>
+              <td mat-cell *matCellDef="let d" class="font-mono">{{ d.serieComprobante }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="fechaEmision">
+              <th mat-header-cell *matHeaderCellDef>F. Emisión</th>
+              <td mat-cell *matCellDef="let d">{{ toDate(d.fechaEmision) | date:'dd/MM/yyyy' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="valorSinImpuestos">
+              <th mat-header-cell *matHeaderCellDef>Subtotal</th>
+              <td mat-cell *matCellDef="let d" class="text-right">{{ d.valorSinImpuestos | number:'1.2-2' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="iva">
+              <th mat-header-cell *matHeaderCellDef>IVA</th>
+              <td mat-cell *matCellDef="let d" class="text-right">{{ d.iva | number:'1.2-2' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="importeTotal">
+              <th mat-header-cell *matHeaderCellDef>Total</th>
+              <td mat-cell *matCellDef="let d" class="text-right total-col">{{ d.importeTotal | number:'1.2-2' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="acciones">
+              <th mat-header-cell *matHeaderCellDef>Detalle</th>
+              <td mat-cell *matCellDef="let d">
+                <button mat-stroked-button color="primary" (click)="verDetalle(d)" matTooltip="Ver documento completo">
+                  <mat-icon>open_in_new</mat-icon> Ver
+                </button>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="columnas; sticky: true"></tr>
+            <tr mat-row *matRowDef="let row; columns: columnas;" class="fila-clickable" (click)="verDetalle(row)"></tr>
+
+            <tr class="mat-row" *matNoDataRow>
+              <td class="mat-cell empty-row" [attr.colspan]="columnas.length">
+                <mat-icon>receipt_long</mat-icon> No se encontraron documentos registrados.
+              </td>
+            </tr>
+          </table>
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+}
+
+<!-- ─── VISTA DETALLE ─── -->
+@if (vista === 'detalle' && docSeleccionado) {
+  <div class="detalle-container">
+    <!-- Header de navegación -->
+    <div class="detalle-nav">
+      <button mat-stroked-button (click)="volverLista()">
+        <mat-icon>arrow_back</mat-icon> Volver a la lista
+      </button>
+      <span class="detalle-titulo">
+        <span class="chip-tabla" [ngClass]="tipoTablaColor(docSeleccionado.tipoTablaDestino)">{{ tipoTablaLabel(docSeleccionado.tipoTablaDestino) }}</span>
+        {{ docSeleccionado.serieComprobante }}
+      </span>
+    </div>
+
+    @if (cargandoDetalle()) {
+      <div class="loading-container"><mat-spinner></mat-spinner></div>
+    } @else if (docReal) {
+
+      <!-- Cabecera del documento -->
+      <mat-card class="detalle-card">
+        <mat-card-header>
+          <mat-card-title><mat-icon>description</mat-icon> Datos del Documento</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="info-label">Tipo Comprobante</span>
+              <span class="info-valor">{{ docReal.tipoComprobante }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Número</span>
+              <span class="info-valor font-mono">{{ docReal.numero || (docReal.numEstablecimiento + '-' + docReal.numPtoEmision + '-' + docReal.secuencial) }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Proveedor (Titular)</span>
+              <span class="info-valor">{{ docReal.titular?.nombre || docReal.titular?.razonSocial || docSeleccionado.razonSocialEmisor }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">RUC</span>
+              <span class="info-valor font-mono">{{ docReal.titular?.identificacion || docSeleccionado.rucEmisor }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Fecha Emisión</span>
+              <span class="info-valor">{{ toDate(docReal.fecha) | date:'dd/MM/yyyy HH:mm' }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Clave Acceso</span>
+              <span class="info-valor font-mono small-text">{{ docReal.clave }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Autorización SRI</span>
+              <span class="info-valor font-mono small-text">{{ docReal.autorizacion }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Fecha Autorización</span>
+              <span class="info-valor">{{ toDate(docReal.fechaAutorizacion) | date:'dd/MM/yyyy HH:mm' }}</span>
+            </div>
+            @if (docReal.observacion) {
+              <div class="info-item full-width">
+                <span class="info-label">Observación</span>
+                <span class="info-valor">{{ docReal.observacion }}</span>
+              </div>
+            }
+          </div>
+
+          <!-- Totales -->
+          <div class="totales-grid">
+            <div class="total-item">
+              <span class="total-label">Subtotal (grav.)</span>
+              <span class="total-valor">{{ (docReal.subtotal ?? docReal.subtotal0 ?? 0) | number:'1.2-2' }}</span>
+            </div>
+            <div class="total-item">
+              <span class="total-label">Subtotal (0%)</span>
+              <span class="total-valor">{{ (docReal.subcero ?? 0) | number:'1.2-2' }}</span>
+            </div>
+            <div class="total-item">
+              <span class="total-label">% IVA</span>
+              <span class="total-valor">{{ docReal.pIVA ?? 12 }}%</span>
+            </div>
+            <div class="total-item">
+              <span class="total-label">Valor IVA</span>
+              <span class="total-valor">{{ (docReal.vIVA ?? 0) | number:'1.2-2' }}</span>
+            </div>
+            @if ((docReal.descuento ?? 0) > 0) {
+              <div class="total-item">
+                <span class="total-label">Descuento</span>
+                <span class="total-valor">{{ docReal.descuento | number:'1.2-2' }}</span>
+              </div>
+            }
+            <div class="total-item total-final">
+              <span class="total-label">TOTAL</span>
+              <span class="total-valor">{{ docReal.total | number:'1.2-2' }}</span>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Líneas de detalle -->
+      <mat-card class="detalle-card">
+        <mat-card-header>
+          <mat-card-title><mat-icon>list</mat-icon> Detalle de Productos / Rubros</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="table-wrapper">
+            <table mat-table [dataSource]="detallesDoc" class="tabla-detalle">
+
+              @if (columnasDetalle.includes('descripcion')) {
+                <ng-container matColumnDef="descripcion">
+                  <th mat-header-cell *matHeaderCellDef>Descripción</th>
+                  <td mat-cell *matCellDef="let d">{{ d.descripcion }}</td>
+                </ng-container>
+              }
+              @if (columnasDetalle.includes('cantidad')) {
+                <ng-container matColumnDef="cantidad">
+                  <th mat-header-cell *matHeaderCellDef>Cantidad</th>
+                  <td mat-cell *matCellDef="let d" class="text-right">{{ d.cantidad | number:'1.2-2' }}</td>
+                </ng-container>
+              }
+              @if (columnasDetalle.includes('valor')) {
+                <ng-container matColumnDef="valor">
+                  <th mat-header-cell *matHeaderCellDef>P. Unitario</th>
+                  <td mat-cell *matCellDef="let d" class="text-right">{{ d.valor | number:'1.2-2' }}</td>
+                </ng-container>
+              }
+              @if (columnasDetalle.includes('subTotal')) {
+                <ng-container matColumnDef="subTotal">
+                  <th mat-header-cell *matHeaderCellDef>Subtotal</th>
+                  <td mat-cell *matCellDef="let d" class="text-right">{{ d.subTotal | number:'1.2-2' }}</td>
+                </ng-container>
+              }
+              @if (columnasDetalle.includes('descuento')) {
+                <ng-container matColumnDef="descuento">
+                  <th mat-header-cell *matHeaderCellDef>Descuento</th>
+                  <td mat-cell *matCellDef="let d" class="text-right">{{ d.descuento | number:'1.2-2' }}</td>
+                </ng-container>
+              }
+              @if (columnasDetalle.includes('baseImponible')) {
+                <ng-container matColumnDef="baseImponible">
+                  <th mat-header-cell *matHeaderCellDef>Base Imp.</th>
+                  <td mat-cell *matCellDef="let d" class="text-right">{{ d.baseImponible | number:'1.2-2' }}</td>
+                </ng-container>
+              }
+              @if (columnasDetalle.includes('porcentajeIVA')) {
+                <ng-container matColumnDef="porcentajeIVA">
+                  <th mat-header-cell *matHeaderCellDef>% IVA</th>
+                  <td mat-cell *matCellDef="let d" class="text-right">{{ d.porcentajeIVA }}%</td>
+                </ng-container>
+              }
+              @if (columnasDetalle.includes('valorIVA')) {
+                <ng-container matColumnDef="valorIVA">
+                  <th mat-header-cell *matHeaderCellDef>IVA</th>
+                  <td mat-cell *matCellDef="let d" class="text-right">{{ d.valorIVA | number:'1.2-2' }}</td>
+                </ng-container>
+              }
+              @if (columnasDetalle.includes('codigoRetencion')) {
+                <ng-container matColumnDef="codigoRetencion">
+                  <th mat-header-cell *matHeaderCellDef>Código</th>
+                  <td mat-cell *matCellDef="let d" class="font-mono">{{ d.codigoRetencion }}</td>
+                </ng-container>
+              }
+              @if (columnasDetalle.includes('porcentaje')) {
+                <ng-container matColumnDef="porcentaje">
+                  <th mat-header-cell *matHeaderCellDef>% Ret.</th>
+                  <td mat-cell *matCellDef="let d" class="text-right">{{ d.porcentaje }}%</td>
+                </ng-container>
+              }
+              @if (columnasDetalle.includes('valorRetenido')) {
+                <ng-container matColumnDef="valorRetenido">
+                  <th mat-header-cell *matHeaderCellDef>Valor Ret.</th>
+                  <td mat-cell *matCellDef="let d" class="text-right total-col">{{ d.valorRetenido | number:'1.2-2' }}</td>
+                </ng-container>
+              }
+              <ng-container matColumnDef="total">
+                <th mat-header-cell *matHeaderCellDef>Total</th>
+                <td mat-cell *matCellDef="let d" class="text-right total-col">{{ d.total | number:'1.2-2' }}</td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="columnasDetalle; sticky: true"></tr>
+              <tr mat-row *matRowDef="let row; columns: columnasDetalle;"></tr>
+
+              <tr class="mat-row" *matNoDataRow>
+                <td class="mat-cell empty-row" [attr.colspan]="columnasDetalle.length">Sin líneas de detalle.</td>
+              </tr>
+            </table>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Formas de pago (solo Factura y Liquidación) -->
+      @if (tieneFormasPago() && formasPagoDoc.length > 0) {
+        <mat-card class="detalle-card">
+          <mat-card-header>
+            <mat-card-title><mat-icon>payments</mat-icon> Formas de Pago</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <table mat-table [dataSource]="formasPagoDoc" class="tabla-fp">
+              <ng-container matColumnDef="formaPago">
+                <th mat-header-cell *matHeaderCellDef>Forma de Pago</th>
+                <td mat-cell *matCellDef="let fp">{{ fp.formaPago }}</td>
+              </ng-container>
+              <ng-container matColumnDef="valor">
+                <th mat-header-cell *matHeaderCellDef>Valor</th>
+                <td mat-cell *matCellDef="let fp" class="text-right total-col">{{ fp.valor | number:'1.2-2' }}</td>
+              </ng-container>
+              <ng-container matColumnDef="plazo">
+                <th mat-header-cell *matHeaderCellDef>Plazo</th>
+                <td mat-cell *matCellDef="let fp">{{ fp.plazo }} {{ fp.unidadTiempo }}</td>
+              </ng-container>
+              <tr mat-header-row *matHeaderRowDef="['formaPago','valor','plazo']"></tr>
+              <tr mat-row *matRowDef="let row; columns: ['formaPago','valor','plazo'];"></tr>
+            </table>
+          </mat-card-content>
+        </mat-card>
+      }
+
+    } @else {
+      <div class="empty-row">No se pudo cargar el detalle del documento.</div>
+    }
+  </div>
+}
+

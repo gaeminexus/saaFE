@@ -1,0 +1,263 @@
+<mat-card class="page-card">
+  <mat-card-header>
+    <mat-card-title>
+      <mat-icon>handshake</mat-icon>
+      Negociaciones con Proveedores
+    </mat-card-title>
+    <mat-card-subtitle>Registro y seguimiento de acuerdos comerciales con proveedores</mat-card-subtitle>
+  </mat-card-header>
+
+  <mat-card-content>
+
+    <!-- ─── VISTA LISTA ─────────────────────────────── -->
+    @if (vista() === 'lista') {
+
+      <div class="toolbar">
+        <button mat-raised-button color="primary" (click)="nueva()">
+          <mat-icon>add</mat-icon> Nueva Negociación
+        </button>
+        <button mat-icon-button color="primary" (click)="cargar()" [disabled]="cargando()" matTooltip="Actualizar">
+          <mat-icon>refresh</mat-icon>
+        </button>
+      </div>
+
+      <!-- Filtros -->
+      <mat-expansion-panel class="filtros-panel">
+        <mat-expansion-panel-header>
+          <mat-panel-title><mat-icon>filter_list</mat-icon> Filtros</mat-panel-title>
+        </mat-expansion-panel-header>
+        <div class="filtros-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Proveedor</mat-label>
+            <input matInput [(ngModel)]="filtroProveedor" placeholder="Nombre del proveedor" (input)="aplicarFiltros()" />
+            <mat-icon matSuffix>search</mat-icon>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Estado</mat-label>
+            <mat-select [(ngModel)]="filtroEstado" (selectionChange)="aplicarFiltros()">
+              <mat-option value="">Todos</mat-option>
+              <mat-option value="1">Activa</mat-option>
+              <mat-option value="2">Suspendida</mat-option>
+              <mat-option value="0">Inactiva</mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
+        <div class="filtros-acciones">
+          <button mat-stroked-button (click)="limpiarFiltros()"><mat-icon>clear</mat-icon> Limpiar</button>
+        </div>
+      </mat-expansion-panel>
+
+      @if (cargando()) {
+        <div class="loading-container"><mat-spinner></mat-spinner></div>
+      } @else {
+        <div class="resumen-bar">{{ ds.data.length }} negociación(es)</div>
+        <div class="table-wrapper">
+          <table mat-table [dataSource]="ds" class="tabla-negs">
+
+            <ng-container matColumnDef="id">
+              <th mat-header-cell *matHeaderCellDef>#</th>
+              <td mat-cell *matCellDef="let n">{{ n.id }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="proveedor">
+              <th mat-header-cell *matHeaderCellDef>Proveedor</th>
+              <td mat-cell *matCellDef="let n">
+                <div class="proveedor-cell">
+                  <span class="proveedor-nombre">{{ proveedorLabel(n) }}</span>
+                  <span class="proveedor-id">{{ n.titular?.identificacion }}</span>
+                </div>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="numContrato">
+              <th mat-header-cell *matHeaderCellDef>N° Contrato</th>
+              <td mat-cell *matCellDef="let n" class="font-mono">{{ n.numContrato || '—' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="fechaNegociacion">
+              <th mat-header-cell *matHeaderCellDef>Fecha</th>
+              <td mat-cell *matCellDef="let n">{{ toDate(n.fechaNegociacion) | date:'dd/MM/yyyy' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="valorTotal">
+              <th mat-header-cell *matHeaderCellDef>Valor Total</th>
+              <td mat-cell *matCellDef="let n" class="text-right valor-col">
+                {{ n.valorTotal | number:'1.2-2' }}
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="tipoFinanciacion">
+              <th mat-header-cell *matHeaderCellDef>Tipo</th>
+              <td mat-cell *matCellDef="let n">
+                <span class="tipo-badge">{{ tipoLabel(n.tipoFinanciacion) }}</span>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="estado">
+              <th mat-header-cell *matHeaderCellDef>Estado</th>
+              <td mat-cell *matCellDef="let n">
+                <span class="estado-chip" [ngClass]="estadoColor(n.estado)">{{ estadoLabel(n.estado) }}</span>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="acciones">
+              <th mat-header-cell *matHeaderCellDef>Acciones</th>
+              <td mat-cell *matCellDef="let n">
+                <div class="acciones-fila">
+                  <button mat-icon-button color="primary" (click)="verDetalle(n)" matTooltip="Ver detalle / cuotas / pagos">
+                    <mat-icon>visibility</mat-icon>
+                  </button>
+                  <button mat-icon-button (click)="editar(n)" matTooltip="Editar cabecera">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                  <button mat-icon-button color="warn" (click)="eliminar(n)" matTooltip="Eliminar">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </div>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="columnas; sticky: true"></tr>
+            <tr mat-row *matRowDef="let row; columns: columnas;" class="fila-clickable" (click)="verDetalle(row)"></tr>
+
+            <tr class="mat-row" *matNoDataRow>
+              <td class="mat-cell empty-row" [attr.colspan]="columnas.length">
+                <mat-icon>handshake</mat-icon> No hay negociaciones registradas.
+              </td>
+            </tr>
+          </table>
+        </div>
+      }
+    }
+
+    <!-- ─── VISTA FORMULARIO ─────────────────────────── -->
+    @if (vista() === 'form') {
+      <div class="form-header">
+        <button mat-stroked-button (click)="cancelarForm()">
+          <mat-icon>arrow_back</mat-icon> Volver
+        </button>
+        <h3>{{ modoEdicion() ? 'Editar Negociación' : 'Nueva Negociación' }}</h3>
+      </div>
+
+      <div class="form-grid">
+
+        <!-- Proveedor -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Proveedor *</mat-label>
+          <input matInput [value]="form.titular ? (form.titular.nombre || form.titular.razonSocial || '') : ''" readonly placeholder="Seleccione un proveedor..." />
+          <button mat-icon-button matSuffix (click)="abrirBusquedaTitular()" matTooltip="Buscar proveedor">
+            <mat-icon>manage_search</mat-icon>
+          </button>
+        </mat-form-field>
+
+        <!-- N° Contrato -->
+        <mat-form-field appearance="outline">
+          <mat-label>N° Contrato</mat-label>
+          <input matInput [(ngModel)]="form.numContrato" placeholder="Ej: CONT-2026-001" />
+          <mat-icon matSuffix>article</mat-icon>
+        </mat-form-field>
+
+        <!-- Fecha Negociación -->
+        <mat-form-field appearance="outline">
+          <mat-label>Fecha Negociación *</mat-label>
+          <input
+            #fechaNegInput matInput
+            [matDatepicker]="pickerFechaNeg"
+            [formControl]="fechaNegControl"
+            placeholder="dd/mm/aaaa"
+            (input)="capturarFechaNegRaw($event)"
+            (dateChange)="onFechaNegPickerChange($event.value)"
+            (blur)="syncFechaNegFromRaw($event)"
+          />
+          <mat-datepicker-toggle matIconSuffix [for]="pickerFechaNeg"></mat-datepicker-toggle>
+          <mat-datepicker #pickerFechaNeg></mat-datepicker>
+        </mat-form-field>
+
+        <!-- Fecha Inicio -->
+        <mat-form-field appearance="outline">
+          <mat-label>Fecha Inicio Vigencia</mat-label>
+          <input
+            #fechaIniInput matInput
+            [matDatepicker]="pickerFechaIni"
+            [formControl]="fechaIniControl"
+            placeholder="dd/mm/aaaa"
+            (input)="capturarFechaIniRaw($event)"
+            (dateChange)="onFechaIniPickerChange($event.value)"
+            (blur)="syncFechaIniFromRaw($event)"
+          />
+          <mat-datepicker-toggle matIconSuffix [for]="pickerFechaIni"></mat-datepicker-toggle>
+          <mat-datepicker #pickerFechaIni></mat-datepicker>
+        </mat-form-field>
+
+        <!-- Fecha Fin -->
+        <mat-form-field appearance="outline">
+          <mat-label>Fecha Fin Estimada</mat-label>
+          <input
+            #fechaFinInput matInput
+            [matDatepicker]="pickerFechaFin"
+            [formControl]="fechaFinControl"
+            placeholder="dd/mm/aaaa"
+            (input)="capturarFechaFinRaw($event)"
+            (dateChange)="onFechaFinPickerChange($event.value)"
+            (blur)="syncFechaFinFromRaw($event)"
+          />
+          <mat-datepicker-toggle matIconSuffix [for]="pickerFechaFin"></mat-datepicker-toggle>
+          <mat-datepicker #pickerFechaFin></mat-datepicker>
+        </mat-form-field>
+
+        <!-- Tipo Financiación -->
+        <mat-form-field appearance="outline">
+          <mat-label>Tipo de Financiación *</mat-label>
+          <mat-select [(ngModel)]="form.tipoFinanciacion">
+            @for (t of TIPOS_FINANCIACION; track t.valor) {
+              <mat-option [value]="t.valor">{{ t.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <!-- Valor Total -->
+        <mat-form-field appearance="outline">
+          <mat-label>Valor Total *</mat-label>
+          <input matInput type="number" [(ngModel)]="form.valorTotal" placeholder="0.00" min="0" step="0.01" />
+          <span matTextPrefix>$&nbsp;</span>
+        </mat-form-field>
+
+        <!-- N° de Pagos -->
+        <mat-form-field appearance="outline">
+          <mat-label>Número de Cuotas/Pagos</mat-label>
+          <input matInput type="number" [(ngModel)]="form.numeroPagos" placeholder="1" min="1" step="1" />
+        </mat-form-field>
+
+        <!-- Estado -->
+        <mat-form-field appearance="outline">
+          <mat-label>Estado</mat-label>
+          <mat-select [(ngModel)]="form.estado">
+            <mat-option [value]="1">Activa</mat-option>
+            <mat-option [value]="2">Suspendida</mat-option>
+            <mat-option [value]="0">Inactiva</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <!-- Descripción -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Descripción / Objeto *</mat-label>
+          <textarea matInput [(ngModel)]="form.descripcion" rows="3" placeholder="Objeto o descripción del negocio..."></textarea>
+        </mat-form-field>
+
+        <!-- Observación -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Observación</mat-label>
+          <textarea matInput [(ngModel)]="form.observacion" rows="2" placeholder="Observaciones adicionales..."></textarea>
+        </mat-form-field>
+      </div>
+
+      <div class="form-acciones">
+        <button mat-stroked-button (click)="cancelarForm()">Cancelar</button>
+        <button mat-raised-button color="primary" (click)="guardar()">
+          <mat-icon>save</mat-icon> {{ modoEdicion() ? 'Actualizar' : 'Guardar y continuar' }}
+        </button>
+      </div>
+    }
+
+  </mat-card-content>
+</mat-card>

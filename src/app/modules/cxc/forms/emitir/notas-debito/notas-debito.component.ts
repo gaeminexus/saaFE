@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component, HostListener, OnInit, computed, inject, signal } from '@angular/core';
-import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { Component, ElementRef, HostListener, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
+import { FormsModule, ReactiveFormsModule, UntypedFormControl } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableDataSource } from '@angular/material/table';
@@ -34,6 +34,9 @@ const SIN_UTILIZACION_DEL_SISTEMA_FINANCIERO = '01';
   styleUrl: './notas-debito.component.scss',
 })
 export class NotasDebitoComponent implements OnInit {
+  @ViewChild('fechaNdInput', { read: ElementRef }) fechaNdInputRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('fechaNdDMInput', { read: ElementRef }) fechaNdDMInputRef!: ElementRef<HTMLInputElement>;
+
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
   private service = inject(NotaDebitoEmitirService);
@@ -62,12 +65,12 @@ export class NotasDebitoComponent implements OnInit {
   tablaSRIFormasPago: DetalleSri[] = [];
   formaPagoSri: DetalleSri | null = null;
 
-  strFecha: Date | string = '';
+  fechaControl = new UntypedFormControl(new Date());
   observacion = '';
   plazoPago = 1;
   tipoDocModificado = '01';
   numDocModificado = '';
-  strFechaEmisionDM: Date | string = '';
+  fechaDMControl = new UntypedFormControl(null);
 
   nmIvaGral = 15;
   lbIvaGral = '15';
@@ -233,8 +236,8 @@ export class NotasDebitoComponent implements OnInit {
     if (!this.numDocModificado.trim()) { this.mostrarError('Ingrese el número del documento modificado'); return; }
 
     const comprador = this.personaSeleccionada() as Titular;
-    const fechaDoc = this.parseFechaLocal(this.strFecha);
-    const fechaDM = this.parseFechaLocal(this.strFechaEmisionDM);
+    const fechaDoc = this.parseFechaLocal(this.fechaControl.value);
+    const fechaDM = this.parseFechaLocal(this.fechaDMControl.value);
 
     const payload: any = {
       id: null,
@@ -278,6 +281,7 @@ export class NotasDebitoComponent implements OnInit {
         this.documentoActual.set(resp || null);
         this.registroId = resp?.id || null;
         this.deshabilitado = true;
+        this.fechaControl.disable(); this.fechaDMControl.disable();
         this.guardando.set(false);
         this.mostrarExito('Nota de débito generada correctamente');
         this.cargarRegistros();
@@ -288,11 +292,12 @@ export class NotasDebitoComponent implements OnInit {
 
   nueva(): void {
     this.documentoActual.set(null); this.registroId = null; this.deshabilitado = false;
+    this.fechaControl.enable(); this.fechaDMControl.enable();
     this.listaDetalles = []; this.dataSource.data = [];
     this.setFecha();
     this.lbSubtotal = 0; this.lbIVACero = 0; this.lbTotalIVA = 0; this.lbTotal = 0;
     this.txtDescuento = 0; this.txtPropina = 0; this.observacion = '';
-    this.numDocModificado = ''; this.tipoDocModificado = '01'; this.strFechaEmisionDM = '';
+    this.numDocModificado = ''; this.tipoDocModificado = '01'; this.fechaDMControl.setValue(null, { emitEvent: false });
     this.detalleRazon = ''; this.detalleValor = 0;
     this.limpiarCliente();
     setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
@@ -319,8 +324,77 @@ export class NotasDebitoComponent implements OnInit {
   }
 
   setFecha(): void {
-    this.strFecha = new Date();
-    if (!this.strFechaEmisionDM) this.strFechaEmisionDM = this.strFecha;
+    this.fechaControl.setValue(new Date(), { emitEvent: false });
+    if (!this.fechaDMControl.value) this.fechaDMControl.setValue(new Date(), { emitEvent: false });
+  }
+
+  private _rawFecha: string = '';
+  private _rawFechaDM: string = '';
+
+  capturarFechaRaw(event: Event): void {
+    this._rawFecha = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFecha || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFecha = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        const formatted = this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+        this.fechaControl.setValue(date, { emitEvent: false });
+        setTimeout(() => {
+          if (this.fechaNdInputRef?.nativeElement) this.fechaNdInputRef.nativeElement.value = formatted;
+          this.aplicarIvaGeneralPorFecha();
+        });
+      }
+    }
+  }
+
+  onFechaPickerChange(date: Date | null | undefined): void {
+    const d = date || new Date();
+    this.fechaControl.setValue(d, { emitEvent: false });
+    const formatted = this.funcionesDatosS.formatoFecha(d, FuncionesDatosService.SOLO_FECHA) || '';
+    setTimeout(() => {
+      if (this.fechaNdInputRef?.nativeElement) this.fechaNdInputRef.nativeElement.value = formatted;
+    });
+    this.aplicarIvaGeneralPorFecha();
+  }
+
+  capturarFechaDMRaw(event: Event): void {
+    this._rawFechaDM = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaDMFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaDM || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaDM = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        const formatted = this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+        this.fechaDMControl.setValue(date, { emitEvent: false });
+        setTimeout(() => {
+          if (this.fechaNdDMInputRef?.nativeElement) this.fechaNdDMInputRef.nativeElement.value = formatted;
+        });
+      }
+    }
+  }
+
+  onFechaEmiDMPickerChange(date: Date | null | undefined): void {
+    const d = date || new Date();
+    this.fechaDMControl.setValue(d, { emitEvent: false });
+    const formatted = this.funcionesDatosS.formatoFecha(d, FuncionesDatosService.SOLO_FECHA) || '';
+    setTimeout(() => {
+      if (this.fechaNdDMInputRef?.nativeElement) this.fechaNdDMInputRef.nativeElement.value = formatted;
+    });
   }
 
   responsive(width: number): void {
@@ -361,7 +435,7 @@ export class NotasDebitoComponent implements OnInit {
 
   private aplicarIvaGeneralPorFecha(): void {
     if (!this.tablaSRIIVAGral.length) return;
-    const fa = this.parseFechaLocal(this.strFecha);
+    const fa = this.parseFechaLocal(this.fechaControl.value);
     const a = this.tablaSRIIVAGral.find((r) => fa >= FECHA_CAMBIO_IVA && Number(r.porcentaje) >= 12);
     const an = this.tablaSRIIVAGral.find((r) => Number(r.porcentaje) < 12);
     const el = fa >= FECHA_CAMBIO_IVA ? a || this.tablaSRIIVAGral[0] : an || this.tablaSRIIVAGral[0];

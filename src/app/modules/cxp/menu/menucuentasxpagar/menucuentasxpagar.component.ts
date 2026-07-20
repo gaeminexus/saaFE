@@ -40,9 +40,19 @@ export class MenucuentaxpagarComponent {
       route: '/menucuentaxpagar/procesos',
       children: [
         {
-          displayName: 'Ingreso de Facturas',
+          displayName: 'Bandeja Electrónica',
+          iconName: 'inbox',
+          route: '/menucuentaxpagar/procesos/bandeja-electronica',
+        },
+        {
+          displayName: 'Gestión de Documentos',
+          iconName: 'folder_open',
+          route: '/menucuentaxpagar/procesos/gestion-documentos',
+        },
+        {
+          displayName: 'Consulta Documentos',
           iconName: 'receipt_long',
-          route: '/menucuentaxpagar/procesos/ingreso-facturas',
+          route: '/menucuentaxpagar/procesos/consulta-documentos',
         },
         {
           displayName: 'Proposición de Pago',
@@ -68,6 +78,18 @@ export class MenucuentaxpagarComponent {
       iconName: 'assessment',
       route: '/menucuentaxpagar/reportes',
       children: [],
+    },
+    {
+      displayName: 'Negociaciones',
+      iconName: 'handshake',
+      route: '/menucuentaxpagar/negociaciones',
+      children: [
+        {
+          displayName: 'Administrar Negociaciones',
+          iconName: 'list_alt',
+          route: '/menucuentaxpagar/negociaciones',
+        },
+      ],
     },
   ];
 }

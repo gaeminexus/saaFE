@@ -33,11 +33,14 @@
           <mat-form-field appearance="outline">
             <mat-label>Fecha</mat-label>
             <input
+              #fechaFacturaInput
               matInput
               [matDatepicker]="pickerFechaFactura"
-              [(ngModel)]="strFecha"
+              [formControl]="fechaControl"
               placeholder="dd/mm/aaaa"
-              (dateChange)="validaIVAByCambioFecha()"
+              (input)="capturarFechaRaw($event)"
+              (dateChange)="onFechaPickerChange($event.value)"
+              (blur)="syncFechaFromRaw($event)"
             />
             <mat-datepicker-toggle matIconSuffix [for]="pickerFechaFactura"></mat-datepicker-toggle>
             <mat-datepicker #pickerFechaFactura></mat-datepicker>

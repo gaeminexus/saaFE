@@ -1,0 +1,78 @@
+.page-card {
+  margin: 16px;
+  mat-card-title { display: flex; align-items: center; gap: 8px; font-size: 1.1rem; mat-icon { color: var(--mat-sys-primary, #1565c0); } }
+}
+
+.toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+
+.filtros-panel { margin-bottom: 16px; mat-panel-title { display: flex; align-items: center; gap: 8px; } }
+
+.filtros-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.filtros-acciones { display: flex; gap: 10px; align-items: center; }
+
+.resumen-bar { padding: 6px 0 8px; font-size: 0.82rem; color: #757575; font-weight: 500; }
+
+.table-wrapper {
+  overflow: auto;
+  max-height: calc(100vh - 380px);
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+}
+
+.tabla-negs { width: 100%; font-size: 0.82rem; }
+
+.proveedor-cell { display: flex; flex-direction: column; }
+.proveedor-nombre { font-weight: 500; }
+.proveedor-id { font-size: 0.72rem; color: #757575; font-family: 'Courier New', monospace; }
+
+.valor-col { font-weight: 600; color: #1565c0; text-align: right !important; }
+.text-right { text-align: right !important; }
+.font-mono { font-family: 'Courier New', monospace; font-size: 0.78rem; }
+
+.tipo-badge {
+  background: #e3f2fd; color: #1565c0;
+  padding: 2px 8px; border-radius: 10px;
+  font-size: 0.72rem; font-weight: 600; white-space: nowrap;
+}
+
+.estado-chip {
+  padding: 2px 8px; border-radius: 10px;
+  font-size: 0.72rem; font-weight: 600; white-space: nowrap; display: inline-block;
+}
+.chip-activa     { background: #e8f5e9; color: #2e7d32; }
+.chip-inactiva   { background: #f5f5f5; color: #616161; }
+.chip-suspendida { background: #fff3e0; color: #e65100; }
+
+.acciones-fila { display: flex; gap: 4px; align-items: center; }
+
+.fila-clickable { cursor: pointer; &:hover { background: rgba(21,101,192,0.04); } }
+
+.empty-row { text-align: center !important; padding: 40px !important; color: #9e9e9e; }
+.loading-container { display: flex; justify-content: center; padding: 60px 0; }
+
+// ─── Formulario ───────────────────────────────────────────────
+.form-header {
+  display: flex; align-items: center; gap: 16px;
+  margin-bottom: 20px;
+  h3 { margin: 0; font-size: 1rem; font-weight: 600; color: #1565c0; }
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+
+  .full-width { grid-column: 1 / -1; }
+}
+
+.form-acciones {
+  display: flex; gap: 12px; justify-content: flex-end;
+  padding-top: 12px; border-top: 1px solid #e0e0e0;
+}

@@ -1,0 +1,209 @@
+.page-card {
+  margin: 16px;
+
+  mat-card-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1.1rem;
+    mat-icon { color: var(--mat-sys-primary, #1565c0); }
+  }
+}
+
+.filtros-panel {
+  margin-bottom: 16px;
+  mat-panel-title { display: flex; align-items: center; gap: 8px; }
+}
+
+.filtros-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.filtros-acciones {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.filtro-label { font-size: 0.82rem; color: #757575; font-weight: 500; }
+button.filtro-active { background: rgba(21, 101, 192, 0.08); border-color: var(--mat-sys-primary, #1565c0); font-weight: 600; }
+
+.resumen-bar {
+  padding: 6px 0 8px;
+  .resumen-total { font-size: 0.82rem; color: #757575; font-weight: 500; }
+  .resumen-filtro { font-style: italic; color: #ff9800; font-size: 0.78rem; margin-left: 4px; }
+}
+
+.table-wrapper {
+  overflow: auto;
+  max-height: calc(100vh - 420px);
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+}
+
+.tabla-docs { width: 100%; font-size: 0.8rem; }
+
+.text-right { text-align: right !important; }
+.total-col { font-weight: 600; color: #1565c0; }
+.font-mono { font-family: 'Courier New', monospace; font-size: 0.78rem; }
+
+.tipo-badge {
+  background: #e3f2fd;
+  color: #1565c0;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+// Badges de estado
+.badge {
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+  display: inline-block;
+}
+.badge-leido     { background: #e3f2fd; color: #1565c0; }
+.badge-xml       { background: #fff8e1; color: #f57f17; }
+.badge-registrado{ background: #e8f5e9; color: #2e7d32; }
+.badge-error     { background: #ffebee; color: #c62828; }
+.badge-novedad   { background: #fff3e0; color: #e65100; }
+.badge-revertido { background: #f3e5f5; color: #6a1b9a; }
+
+.fila-novedad   { background-color: #fff8e1 !important; }
+.fila-error     { background-color: #ffebee !important; }
+.fila-revertido { background-color: #f3e5f5 !important; }
+
+.empty-row { text-align: center !important; padding: 40px !important; color: #9e9e9e; }
+
+.acciones-fila {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+
+  button { min-width: unset; font-size: 0.75rem; padding: 0 8px; height: 30px; line-height: 30px; mat-icon { font-size: 16px; } }
+}
+
+.novedad-text {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  color: #e65100;
+  .icon-warn { font-size: 14px; color: #ff9800; }
+}
+
+.loading-container { display: flex; justify-content: center; padding: 60px 0; }
+
+// Productos card
+.productos-card {
+  border: 2px solid #ff9800;
+  margin-bottom: 16px;
+  mat-card-title { display: flex; align-items: center; gap: 8px; }
+}
+
+.table-productos { width: 100%; font-size: 0.82rem; }
+
+// ─── PANEL DE TOTALES ───────────────────────────────────────────────────────
+.totales-panel {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  margin: 0 0 14px 0;
+  background: #fafafa;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  overflow: hidden;
+  font-size: 0.82rem;
+  flex-wrap: wrap;
+}
+
+.totales-sep {
+  width: 1px;
+  background: #e0e0e0;
+  align-self: stretch;
+  flex-shrink: 0;
+}
+
+.totales-grupo {
+  flex: 1;
+  min-width: 220px;
+  padding: 10px 14px;
+
+  .totales-grupo-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    font-size: 0.78rem;
+    margin-bottom: 8px;
+    mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    .totales-count { font-weight: 400; color: #9e9e9e; font-size: 0.75rem; }
+  }
+
+  .totales-valores {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+}
+
+.total-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  min-width: 90px;
+
+  .total-label {
+    font-size: 0.68rem;
+    color: #9e9e9e;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .total-valor {
+    font-size: 0.88rem;
+    font-weight: 500;
+    font-family: 'Courier New', monospace;
+    color: #424242;
+  }
+
+  &.total-item--destacado {
+    .total-label { color: inherit; }
+    .total-valor { font-size: 0.95rem; font-weight: 700; }
+  }
+}
+
+// Colores por grupo
+.totales-pendientes {
+  background: linear-gradient(135deg, #fff8e1 0%, #fff 100%);
+  .totales-grupo-header { color: #e65100; mat-icon { color: #ff9800; } }
+  .total-item--destacado .total-valor { color: #e65100; }
+}
+
+.totales-registrados {
+  background: linear-gradient(135deg, #e8f5e9 0%, #fff 100%);
+  .totales-grupo-header { color: #2e7d32; mat-icon { color: #43a047; } }
+  .total-item--destacado .total-valor { color: #2e7d32; }
+}
+
+.totales-gran-total {
+  background: linear-gradient(135deg, #e3f2fd 0%, #fff 100%);
+  .totales-grupo-header { color: #1565c0; mat-icon { color: #1976d2; } }
+  .total-item--destacado .total-valor { color: #1565c0; }
+}

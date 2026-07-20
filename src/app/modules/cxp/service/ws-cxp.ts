@@ -36,6 +36,38 @@ export class ServiciosCxp {
   public static RS_VITP = `${API_URL}/vitp`;
   public static RS_VIDP = `${API_URL}/vidp`;
 
+  // --- Comprobantes de compra (recibidos de proveedores) ---
+  public static RS_FCTC = `${API_URL}/fctc`; // FacturaCompra
+  public static RS_DFCC = `${API_URL}/dfcc`; // DetalleFacturaCompra
+  public static RS_PFCC = `${API_URL}/pfcc`; // PathFacturaCompra
+  public static RS_FPFM = `${API_URL}/fpfm`; // FormaPagoFacturaCompra
+  public static RS_LQCC = `${API_URL}/lqcc`; // LiquidacionCompraCompra
+  public static RS_DLCM = `${API_URL}/dlcm`; // DetalleLiquidacionCompraCompra
+  public static RS_PLCC = `${API_URL}/plcc`; // PathLiquidacionCompraCompra
+  public static RS_FPLM = `${API_URL}/fplm`; // FormaPagoLiquidacionCompraCompra
+  public static RS_NTCC = `${API_URL}/ntcc`; // NotaCreditoCompra
+  public static RS_DTCC = `${API_URL}/dtcc`; // DetalleNotaCreditoCompra
+  public static RS_PTCV = `${API_URL}/ptcv`; // PathNotaCreditoCompra
+  public static RS_NTDC = `${API_URL}/ntdc`; // NotaDebitoCompra
+  public static RS_DTDC = `${API_URL}/dtdc`; // DetalleNotaDebitoCompra
+  public static RS_PTDC = `${API_URL}/ptdc`; // PathNotaDebitoCompra
+  public static RS_RTCM = `${API_URL}/rtcm`; // RetencionCompra
+  public static RS_DRCM = `${API_URL}/drcm`; // DetalleRetencionCompra
+  public static RS_PRCM = `${API_URL}/prcm`; // PathRetencionCompra
+  public static RS_RCV2 = `${API_URL}/rcv2`; // RetencionCompraV2
+
+  // Bandeja electrónica (proceso de carga TXT-SRI)
+  public static RS_CRTX = `${API_URL}/crtx`; // CargaArchivoTxt
+  public static RS_DCTX = `${API_URL}/dctx`; // DetalleCargaTxt
+  public static RS_DCXP = `${API_URL}/dcxp`; // DocumentoCxp
+
+  // Negociaciones con Proveedores (PGS)
+  public static RS_NGCP = `${API_URL}/ngcp`; // NegociacionProveedor
+  public static RS_FPNG = `${API_URL}/fpng`; // FormaPagoNegociacion
+  public static RS_PGNG = `${API_URL}/pgng`; // PagoNegociacion
+  public static RS_ADNG = `${API_URL}/adng`; // AdendumNegociacion
+  public static RS_PTNG = `${API_URL}/ptng`; // PathNegociacion
+
 
 
 

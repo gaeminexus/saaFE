@@ -1,0 +1,69 @@
+<h2 mat-dialog-title>
+  <mat-icon>edit_document</mat-icon> {{ modoEdicion ? 'Editar Adendum' : 'Nuevo Adendum' }}
+</h2>
+
+<mat-dialog-content>
+  <!-- Info negociación -->
+  <div class="neg-info-box">
+    <div class="info-row">
+      <span class="info-lbl">Valor Vigente Actual</span>
+      <span class="info-val font-mono">{{ data.valorVigente | number:'1.2-2' }}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-lbl">Ajuste</span>
+      <span class="info-val font-mono" [class.pos]="form.valorAjuste > 0" [class.neg]="form.valorAjuste < 0">
+        {{ form.valorAjuste > 0 ? '+' : '' }}{{ form.valorAjuste | number:'1.2-2' }}
+      </span>
+    </div>
+    <div class="info-row">
+      <span class="info-lbl">Nuevo Total Vigente</span>
+      <span class="info-val font-mono total-res">{{ valorResultante | number:'1.2-2' }}</span>
+    </div>
+  </div>
+
+  <div class="form-grid">
+    <mat-form-field appearance="outline">
+      <mat-label>N° Adendum</mat-label>
+      <input matInput [(ngModel)]="form.numAdendum" placeholder="Ej: ADENDUM-001" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Fecha Adendum *</mat-label>
+      <input
+        #fechaAdendumInput matInput
+        [matDatepicker]="pickerAdendum"
+        [formControl]="fechaControl"
+        placeholder="dd/mm/aaaa"
+        (input)="capturarFechaRaw($event)"
+        (dateChange)="onPickerChange($event.value)"
+        (blur)="syncFechaFromRaw($event)"
+      />
+      <mat-datepicker-toggle matIconSuffix [for]="pickerAdendum"></mat-datepicker-toggle>
+      <mat-datepicker #pickerAdendum></mat-datepicker>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Valor del Ajuste *</mat-label>
+      <input matInput type="number" [(ngModel)]="form.valorAjuste" placeholder="Positivo = incremento, Negativo = reducción" step="0.01" />
+      <span matTextPrefix>$&nbsp;</span>
+      <mat-hint>Positivo = incremento · Negativo = reducción</mat-hint>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-w">
+      <mat-label>Descripción / Motivo *</mat-label>
+      <textarea matInput [(ngModel)]="form.descripcion" rows="3" placeholder="Razón del adendum..."></textarea>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-w">
+      <mat-label>Observación</mat-label>
+      <textarea matInput [(ngModel)]="form.observacion" rows="2" placeholder="Observaciones adicionales..."></textarea>
+    </mat-form-field>
+  </div>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-stroked-button (click)="cancelar()">Cancelar</button>
+  <button mat-raised-button color="primary" (click)="guardar()" [disabled]="guardando">
+    <mat-icon>save</mat-icon> {{ modoEdicion ? 'Actualizar' : 'Registrar Adendum' }}
+  </button>
+</mat-dialog-actions>

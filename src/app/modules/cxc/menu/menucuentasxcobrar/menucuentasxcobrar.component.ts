@@ -33,12 +33,12 @@ export class MenucuentasxcobrarComponent {
         },
       ],
     },
-    {
+    /*{
       displayName: 'Procesos',
       iconName: 'settings',
       route: '/menucuentasxcobrar/procesos',
       children: [],
-    },
+    },*/
     {
       displayName: 'Emitir',
       iconName: 'receipt_long',

@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, ElementRef, HostListener, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
-import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule, UntypedFormControl } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableDataSource } from '@angular/material/table';
@@ -36,11 +36,13 @@ const EFECTIVO = '1';
 @Component({
   selector: 'app-liquidaciones',
   standalone: true,
-  imports: [CommonModule, FormsModule, MaterialFormModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, MaterialFormModule],
   templateUrl: './liquidaciones.component.html',
   styleUrl: './liquidaciones.component.scss',
 })
 export class LiquidacionesComponent implements OnInit {
+  @ViewChild('fechaLiquidacionInput', { read: ElementRef }) fechaLiquidacionInputRef!: ElementRef<HTMLInputElement>;
+
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
   private service = inject(LiquidacionEmitirService);
@@ -83,7 +85,7 @@ export class LiquidacionesComponent implements OnInit {
   formaPagoInterna: DetalleSri | null = null;
 
   registroId: number | null = null;
-  strFecha: Date | string | null = '';
+  fechaControl = new UntypedFormControl(new Date());
   observacion = '';
   plazoPago = 1;
   detalleDescripcion = '';
@@ -213,7 +215,7 @@ export class LiquidacionesComponent implements OnInit {
     this.registroId = registro.id;
     this.documentoActual.set(registro);
     this.asignaTitular(registro.titular || null as unknown as Titular);
-    this.strFecha = this.formatearFechaInput(registro.fecha);
+    this.fechaControl.setValue(this.formatearFechaInput(registro.fecha) || new Date(), { emitEvent: false });
     this.observacion = registro.observacion || '';
     this.ptoEmision = registro.ptoEmision || this.ptoEmision;
     this.cargandoDetalle.set(true);
@@ -243,7 +245,43 @@ export class LiquidacionesComponent implements OnInit {
   }
 
   setFecha(): void {
-    this.strFecha = new Date();
+    this.fechaControl.setValue(new Date(), { emitEvent: false });
+  }
+
+  private _rawFecha: string = '';
+
+  capturarFechaRaw(event: Event): void {
+    this._rawFecha = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFecha || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFecha = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        const formatted = this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+        this.fechaControl.setValue(date, { emitEvent: false });
+        setTimeout(() => {
+          if (this.fechaLiquidacionInputRef?.nativeElement) this.fechaLiquidacionInputRef.nativeElement.value = formatted;
+          this.validaIVAByCambioFecha();
+        });
+      }
+    }
+  }
+
+  onFechaPickerChange(date: Date | null | undefined): void {
+    const d = date || new Date();
+    this.fechaControl.setValue(d, { emitEvent: false });
+    const formatted = this.funcionesDatosS.formatoFecha(d, FuncionesDatosService.SOLO_FECHA) || '';
+    setTimeout(() => {
+      if (this.fechaLiquidacionInputRef?.nativeElement) this.fechaLiquidacionInputRef.nativeElement.value = formatted;
+    });
+    this.validaIVAByCambioFecha();
   }
 
   validaIVAByCambioFecha(): void {
@@ -332,7 +370,7 @@ export class LiquidacionesComponent implements OnInit {
     }
 
     const titular = this.personaSeleccionada() as Titular;
-    const fecha = this.parseFechaLocal(this.strFecha);
+    const fecha = this.parseFechaLocal(this.fechaControl.value);
     const detalleLiquidacion = this.listaDetalles.map((item) => ({
       ...item,
       liquidacion: { id: this.registroId || 0 } as LiquidacionEmitir,
@@ -531,7 +569,7 @@ export class LiquidacionesComponent implements OnInit {
       return;
     }
 
-    const fechaActual = this.parseFechaLocal(this.strFecha);
+    const fechaActual = this.parseFechaLocal(this.fechaControl.value);
     const actual = this.tablaSRIIVAGral.find((item) => fechaActual >= FECHA_CAMBIO_IVA && Number(item.porcentaje) >= 12);
     const anterior = this.tablaSRIIVAGral.find((item) => Number(item.porcentaje) < 12);
     const elegido = fechaActual >= FECHA_CAMBIO_IVA ? actual || this.tablaSRIIVAGral[0] : anterior || this.tablaSRIIVAGral[0];

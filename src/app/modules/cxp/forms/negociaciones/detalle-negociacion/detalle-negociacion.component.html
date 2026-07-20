@@ -1,0 +1,396 @@
+<div class="detalle-page">
+
+  <!-- HEADER NAV -->
+  <div class="detalle-nav">
+    <button mat-stroked-button (click)="volver()">
+      <mat-icon>arrow_back</mat-icon> Negociaciones
+    </button>
+    @if (negociacion()) {
+      <span class="detalle-titulo">
+        {{ negociacion()!.numContrato || 'Sin N° Contrato' }} —
+        {{ negociacion()!.titular?.nombre || negociacion()!.titular?.razonSocial }}
+      </span>
+    }
+    <button mat-icon-button color="primary" (click)="cargarTodo()" matTooltip="Actualizar">
+      <mat-icon>refresh</mat-icon>
+    </button>
+  </div>
+
+  @if (cargando()) {
+    <div class="loading-container"><mat-spinner></mat-spinner></div>
+  } @else if (negociacion()) {
+
+    <!-- RESUMEN FINANCIERO -->
+    <div class="resumen-cards">
+      <div class="res-card res-original">
+        <span class="res-label">Valor Original</span>
+        <span class="res-valor">{{ negociacion()!.valorTotal | number:'1.2-2' }}</span>
+      </div>
+      <div class="res-card res-vigente">
+        <span class="res-label">Valor Vigente</span>
+        <span class="res-valor">{{ valorVigente() | number:'1.2-2' }}</span>
+        @if (adendums().length > 0) {
+          <span class="res-sub">+{{ adendums().length }} adendum(s)</span>
+        }
+      </div>
+      <div class="res-card res-pagado">
+        <span class="res-label">Total Pagado</span>
+        <span class="res-valor">{{ totalPagado() | number:'1.2-2' }}</span>
+      </div>
+      <div class="res-card res-saldo">
+        <span class="res-label">Saldo Pendiente</span>
+        <span class="res-valor">{{ saldoPendiente() | number:'1.2-2' }}</span>
+      </div>
+      <div class="res-card res-anticipo">
+        <span class="res-label">Anticipos s/factura</span>
+        <span class="res-valor">{{ anticipoSinFactura() | number:'1.2-2' }}</span>
+      </div>
+      <div class="res-card res-liquidado">
+        <span class="res-label">Total Liquidado</span>
+        <span class="res-valor">{{ totalLiquidado() | number:'1.2-2' }}</span>
+      </div>
+    </div>
+
+    <!-- INFO CABECERA -->
+    <mat-card class="info-card">
+      <mat-card-content>
+        <div class="info-grid">
+          <div class="info-item">
+            <span class="info-lbl">Descripción</span>
+            <span class="info-val">{{ negociacion()!.descripcion }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-lbl">Tipo Financiación</span>
+            <span class="info-val">{{ negociacion()!.tipoFinanciacion }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-lbl">N° Pagos</span>
+            <span class="info-val">{{ negociacion()!.numeroPagos }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-lbl">Fecha Negociación</span>
+            <span class="info-val">{{ toDate(negociacion()!.fechaNegociacion) | date:'dd/MM/yyyy' }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-lbl">Inicio Vigencia</span>
+            <span class="info-val">{{ toDate(negociacion()!.fechaInicio) | date:'dd/MM/yyyy' }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-lbl">Fin Estimado</span>
+            <span class="info-val">{{ toDate(negociacion()!.fechaFin) | date:'dd/MM/yyyy' }}</span>
+          </div>
+          @if (negociacion()!.observacion) {
+            <div class="info-item full">
+              <span class="info-lbl">Observación</span>
+              <span class="info-val">{{ negociacion()!.observacion }}</span>
+            </div>
+          }
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- TABS -->
+    <mat-tab-group [(selectedIndex)]="tabActiva" class="tabs-detalle">
+
+      <!-- TAB 1: CUOTAS Y PAGOS -->
+      <mat-tab>
+        <ng-template mat-tab-label><mat-icon>payments</mat-icon> Cuotas y Pagos</ng-template>
+
+        <div class="tab-content">
+          <div class="tab-toolbar">
+            <button mat-raised-button color="primary" (click)="nuevaCuota()">
+              <mat-icon>add</mat-icon> Nueva Cuota
+            </button>
+          </div>
+
+          <!-- Formulario cuota inline -->
+          @if (mostrarFormCuota()) {
+            <mat-card class="form-cuota-card">
+              <mat-card-header>
+                <mat-card-title>{{ editandoCuota() ? 'Editar Cuota' : 'Nueva Cuota' }}</mat-card-title>
+              </mat-card-header>
+              <mat-card-content>
+                <div class="form-cuota-grid">
+                  <mat-form-field appearance="outline">
+                    <mat-label>N° Cuota</mat-label>
+                    <input matInput type="number" [(ngModel)]="formCuota.numeroCuota" />
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Orden</mat-label>
+                    <input matInput type="number" [(ngModel)]="formCuota.orden" />
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>% del Total</mat-label>
+                    <input matInput type="number" [(ngModel)]="formCuota.porcentaje" (ngModelChange)="calcularValorDesdePorcentaje()" />
+                    <span matTextSuffix>%</span>
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Valor Cuota *</mat-label>
+                    <input matInput type="number" [(ngModel)]="formCuota.valorCuota" />
+                    <span matTextPrefix>$&nbsp;</span>
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Fecha Pago Acordada</mat-label>
+                    <input matInput [matDatepicker]="pickerCuota" [formControl]="fechaCuotaControl" placeholder="dd/mm/aaaa" />
+                    <mat-datepicker-toggle matIconSuffix [for]="pickerCuota"></mat-datepicker-toggle>
+                    <mat-datepicker #pickerCuota></mat-datepicker>
+                  </mat-form-field>
+                  <mat-form-field appearance="outline" class="full-w">
+                    <mat-label>Descripción / Hito</mat-label>
+                    <input matInput [(ngModel)]="formCuota.descripcion" placeholder="Ej: Anticipo inicial, Entrega parcial..." />
+                  </mat-form-field>
+                </div>
+              </mat-card-content>
+              <mat-card-actions align="end">
+                <button mat-button (click)="mostrarFormCuota.set(false)">Cancelar</button>
+                <button mat-raised-button color="primary" (click)="guardarCuota()"><mat-icon>save</mat-icon> Guardar Cuota</button>
+              </mat-card-actions>
+            </mat-card>
+          }
+
+          <!-- Lista de cuotas -->
+          @for (cuota of cuotas(); track cuota.id) {
+            <mat-card class="cuota-card" [class.cuota-vencida]="vencidaHoy(cuota)">
+              <div class="cuota-header" (click)="toggleCuota(cuota)">
+                <div class="cuota-info">
+                  <span class="cuota-num">Cuota {{ cuota.numeroCuota }}</span>
+                  <span class="cuota-desc">{{ cuota.descripcion || '—' }}</span>
+                  <span class="cuota-fecha">
+                    <mat-icon class="icon-sm">event</mat-icon>
+                    {{ toDate(cuota.fechaPago) | date:'dd/MM/yyyy' }}
+                  </span>
+                </div>
+                <div class="cuota-valores">
+                  @if (cuota.porcentaje) { <span class="cuota-pct">{{ cuota.porcentaje }}%</span> }
+                  <span class="cuota-monto">{{ cuota.valorCuota | number:'1.2-2' }}</span>
+                  <span class="cuota-pagado">Pagado: {{ cuota.totalPagado | number:'1.2-2' }}</span>
+                  <span class="cuota-saldo" [class.saldo-ok]="cuota.saldo <= 0">Saldo: {{ cuota.saldo | number:'1.2-2' }}</span>
+                  <span class="estado-chip" [ngClass]="estadoCuotaColor(cuota.estado)">{{ estadoCuotaLabel(cuota.estado) }}</span>
+                </div>
+                <div class="cuota-acciones">
+                  <button mat-icon-button color="primary" (click)="$event.stopPropagation(); abrirRegistrarPago(cuota)" matTooltip="Registrar pago">
+                    <mat-icon>add_circle</mat-icon>
+                  </button>
+                  <button mat-icon-button (click)="$event.stopPropagation(); editarCuota(cuota)" matTooltip="Editar cuota">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                  <button mat-icon-button color="warn" (click)="$event.stopPropagation(); eliminarCuota(cuota)" matTooltip="Eliminar cuota">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                  <mat-icon class="expand-icon" [class.rotado]="cuota.expandida">expand_more</mat-icon>
+                </div>
+              </div>
+
+              <!-- Barra de progreso -->
+              <div class="progreso-bar">
+                <div class="progreso-fill" [style.width.%]="progresoCuota(cuota)"></div>
+              </div>
+              <div class="progreso-pct">{{ progresoCuota(cuota) }}% pagado</div>
+
+              <!-- Detalle pagos (expandible) -->
+              @if (cuota.expandida) {
+                <div class="pagos-lista">
+                  @if (cuota.pagos.length === 0) {
+                    <div class="empty-pagos"><mat-icon>info</mat-icon> Sin pagos registrados en esta cuota.</div>
+                  } @else {
+                    <table class="tabla-pagos">
+                      <thead>
+                        <tr>
+                          <th>Fecha</th><th>Valor</th><th>Tipo</th><th>Comprobante</th>
+                          <th>Facturado</th><th>Pagado</th><th></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (p of cuota.pagos; track p.id) {
+                          <tr>
+                            <td>{{ toDate(p.fechaPago) | date:'dd/MM/yyyy' }}</td>
+                            <td class="text-right">{{ p.valorPago | number:'1.2-2' }}</td>
+                            <td><span class="tipo-pago-badge" [class.anticipo]="p.tipoPago==='ANTICIPO'">{{ p.tipoPago }}</span></td>
+                            <td class="font-mono">{{ p.refComprobante || '—' }}</td>
+                            <td class="text-center">
+                              <mat-icon [class.icon-ok]="p.facturado===1" [class.icon-no]="p.facturado!==1">
+                                {{ p.facturado === 1 ? 'check_circle' : 'radio_button_unchecked' }}
+                              </mat-icon>
+                            </td>
+                            <td class="text-center">
+                              <mat-icon [class.icon-ok]="p.pagado===1" [class.icon-no]="p.pagado!==1">
+                                {{ p.pagado === 1 ? 'check_circle' : 'radio_button_unchecked' }}
+                              </mat-icon>
+                            </td>
+                            <td>
+                              <button mat-icon-button color="warn" (click)="eliminarPago(p)" matTooltip="Anular pago">
+                                <mat-icon>delete</mat-icon>
+                              </button>
+                            </td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  }
+                </div>
+              }
+            </mat-card>
+          }
+
+          @if (cuotas().length === 0 && !mostrarFormCuota()) {
+            <div class="empty-state"><mat-icon>payments</mat-icon><p>No hay cuotas registradas. Agregue la primera cuota.</p></div>
+          }
+        </div>
+      </mat-tab>
+
+      <!-- TAB 2: ADENDUMS -->
+      <mat-tab>
+        <ng-template mat-tab-label><mat-icon>edit_document</mat-icon> Adendums</ng-template>
+        <div class="tab-content">
+          <div class="tab-toolbar">
+            <button mat-raised-button color="primary" (click)="abrirAdendum()">
+              <mat-icon>add</mat-icon> Nuevo Adendum
+            </button>
+          </div>
+
+          @if (adendums().length === 0) {
+            <div class="empty-state"><mat-icon>edit_document</mat-icon><p>Sin adendums registrados.</p></div>
+          } @else {
+            <div class="table-wrapper">
+              <table mat-table [dataSource]="adendums()" class="tabla-adendums">
+                <ng-container matColumnDef="numAdendum">
+                  <th mat-header-cell *matHeaderCellDef>N° Adendum</th>
+                  <td mat-cell *matCellDef="let a" class="font-mono">{{ a.numAdendum || '—' }}</td>
+                </ng-container>
+                <ng-container matColumnDef="fechaAdendum">
+                  <th mat-header-cell *matHeaderCellDef>Fecha</th>
+                  <td mat-cell *matCellDef="let a">{{ toDate(a.fechaAdendum) | date:'dd/MM/yyyy' }}</td>
+                </ng-container>
+                <ng-container matColumnDef="descripcion">
+                  <th mat-header-cell *matHeaderCellDef>Descripción</th>
+                  <td mat-cell *matCellDef="let a">{{ a.descripcion }}</td>
+                </ng-container>
+                <ng-container matColumnDef="valorAjuste">
+                  <th mat-header-cell *matHeaderCellDef>Ajuste</th>
+                  <td mat-cell *matCellDef="let a" class="text-right" [class.ajuste-pos]="a.valorAjuste > 0" [class.ajuste-neg]="a.valorAjuste < 0">
+                    {{ a.valorAjuste > 0 ? '+' : '' }}{{ a.valorAjuste | number:'1.2-2' }}
+                  </td>
+                </ng-container>
+                <ng-container matColumnDef="valorTotalResultante">
+                  <th mat-header-cell *matHeaderCellDef>Total Resultante</th>
+                  <td mat-cell *matCellDef="let a" class="text-right font-bold">{{ a.valorTotalResultante | number:'1.2-2' }}</td>
+                </ng-container>
+                <ng-container matColumnDef="estado">
+                  <th mat-header-cell *matHeaderCellDef>Estado</th>
+                  <td mat-cell *matCellDef="let a"><span class="estado-chip" [class.c-pagado]="a.estado===1" [class.c-anulado]="a.estado===0">{{ a.estado===1 ? 'Activo' : 'Anulado' }}</span></td>
+                </ng-container>
+                <ng-container matColumnDef="acciones">
+                  <th mat-header-cell *matHeaderCellDef>Acciones</th>
+                  <td mat-cell *matCellDef="let a">
+                    <button mat-icon-button (click)="abrirAdendum(a)" matTooltip="Editar"><mat-icon>edit</mat-icon></button>
+                    <button mat-icon-button color="warn" (click)="eliminarAdendum(a)" matTooltip="Anular"><mat-icon>block</mat-icon></button>
+                  </td>
+                </ng-container>
+                <tr mat-header-row *matHeaderRowDef="columnasAdendum"></tr>
+                <tr mat-row *matRowDef="let row; columns: columnasAdendum;"></tr>
+              </table>
+            </div>
+          }
+        </div>
+      </mat-tab>
+
+      <!-- TAB 3: DOCUMENTOS -->
+      <mat-tab>
+        <ng-template mat-tab-label><mat-icon>attach_file</mat-icon> Documentos</ng-template>
+        <div class="tab-content">
+          <div class="tab-toolbar">
+            <button mat-raised-button color="primary" (click)="abrirFormDocumento()">
+              <mat-icon>upload_file</mat-icon> Subir Documento
+            </button>
+          </div>
+
+          <!-- Formulario subir documento inline -->
+          @if (mostrarFormDocumento()) {
+            <mat-card class="form-doc-card">
+              <mat-card-header>
+                <mat-card-title><mat-icon>upload_file</mat-icon> Subir Documento</mat-card-title>
+              </mat-card-header>
+              <mat-card-content>
+                <div class="form-doc-grid">
+
+                  <!-- Selector de archivo -->
+                  <div class="file-picker" (click)="seleccionarArchivo()">
+                    @if (archivoSeleccionado) {
+                      <mat-icon class="file-icon ok">check_circle</mat-icon>
+                      <span class="file-nombre">{{ archivoSeleccionado.name }}</span>
+                      <span class="file-size">{{ (archivoSeleccionado.size / 1024 | number:'1.0-0') }} KB</span>
+                    } @else {
+                      <mat-icon class="file-icon">cloud_upload</mat-icon>
+                      <span class="file-placeholder">Clic para seleccionar archivo (PDF, Word, Excel, imágenes — máx. 10 MB)</span>
+                    }
+                  </div>
+
+                  <mat-form-field appearance="outline">
+                    <mat-label>Nombre del Documento *</mat-label>
+                    <input matInput [(ngModel)]="formDoc.nombreDoc" placeholder="Ej: Contrato Principal 2026" />
+                    <mat-icon matSuffix>label</mat-icon>
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline">
+                    <mat-label>Tipo de Documento</mat-label>
+                    <mat-select [(ngModel)]="formDoc.tipoDoc">
+                      <mat-option value="CONTRATO">Contrato</mat-option>
+                      <mat-option value="ADENDUM">Adendum</mat-option>
+                      <mat-option value="ANEXO">Anexo</mat-option>
+                      <mat-option value="OTRO">Otro</mat-option>
+                    </mat-select>
+                  </mat-form-field>
+
+                  <div class="check-principal">
+                    <mat-checkbox [(ngModel)]="formDoc.principal">
+                      Documento principal (contrato base)
+                    </mat-checkbox>
+                  </div>
+                </div>
+              </mat-card-content>
+              <mat-card-actions align="end">
+                <button mat-button (click)="mostrarFormDocumento.set(false)">Cancelar</button>
+                <button mat-raised-button color="primary" (click)="guardarDocumento()" [disabled]="subiendoDoc() || !archivoSeleccionado">
+                  @if (subiendoDoc()) { <mat-spinner diameter="18"></mat-spinner> }
+                  @else { <mat-icon>save</mat-icon> }
+                  {{ subiendoDoc() ? 'Subiendo...' : 'Guardar Documento' }}
+                </button>
+              </mat-card-actions>
+            </mat-card>
+          }
+
+          @if (documentos().length === 0 && !mostrarFormDocumento()) {
+            <div class="empty-state"><mat-icon>attach_file</mat-icon><p>Sin documentos digitalizados. Use el botón para subir el contrato.</p></div>
+          } @else if (documentos().length > 0) {
+            <div class="docs-grid">
+              @for (doc of documentos(); track doc.id) {
+                <mat-card class="doc-card">
+                  <mat-card-content>
+                    <div class="doc-tipo">
+                      <mat-icon>{{ doc.tipoDoc === 'CONTRATO' ? 'description' : doc.tipoDoc === 'ADENDUM' ? 'edit_document' : 'attach_file' }}</mat-icon>
+                      <span class="tipo-badge">{{ doc.tipoDoc || 'OTRO' }}</span>
+                      @if (doc.principal === 1) { <span class="badge-principal">PRINCIPAL</span> }
+                    </div>
+                    <p class="doc-nombre">{{ doc.nombreDoc || 'Sin nombre' }}</p>
+                    <div class="doc-acciones">
+                      <button mat-stroked-button color="primary" (click)="abrirDocumento(doc.path)">
+                        <mat-icon>open_in_new</mat-icon> Abrir
+                      </button>
+                      <button mat-icon-button color="warn" (click)="eliminarDocumento(doc)" matTooltip="Eliminar documento">
+                        <mat-icon>delete</mat-icon>
+                      </button>
+                    </div>
+                  </mat-card-content>
+                </mat-card>
+              }
+            </div>
+          }
+        </div>
+      </mat-tab>
+
+    </mat-tab-group>
+
+  } @else {
+    <div class="empty-state"><mat-icon>error_outline</mat-icon><p>No se pudo cargar la negociación.</p></div>
+  }
+</div>

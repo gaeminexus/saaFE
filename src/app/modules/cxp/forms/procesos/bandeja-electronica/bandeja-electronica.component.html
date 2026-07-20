@@ -1,0 +1,574 @@
+<!-- Inputs ocultos para carga de archivos -->
+<input #inputTxt type="file" accept=".txt,.TXT" style="display:none" (change)="onArchivoTxtSeleccionado($event)" />
+<input #inputXml type="file" accept=".xml,.XML" style="display:none" (change)="onXmlFileChange($event)" />
+<input #inputXmlDoc type="file" accept=".xml,.XML" style="display:none" (change)="onXmlDocFileChange($event)" />
+
+<!-- Navegación principal (no se muestra en vista detalle) -->
+@if (vista !== 'detalle') {
+  <div class="nav-tabs-wrapper">
+    <button mat-button [class.tab-active]="vista === 'historial'" (click)="vista = 'historial'">
+      <mat-icon>upload_file</mat-icon> Cargas TXT
+    </button>
+    <button mat-button [class.tab-active]="vista === 'documentos'" (click)="irDocumentos()">
+      <mat-icon>description</mat-icon> Documentos
+    </button>
+  </div>
+}
+
+<!-- ─── HISTORIAL DE CARGAS ─── -->
+@if (vista === 'historial') {
+  <mat-card class="page-card">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>inbox</mat-icon>
+        Bandeja Electrónica — Comprobantes Recibidos
+      </mat-card-title>
+    </mat-card-header>
+
+    <mat-card-content>
+      <!-- Barra de acciones -->
+      <div class="toolbar">
+        <button mat-raised-button color="primary" (click)="abrirSelectorTxt()" [disabled]="procesando()">
+          <mat-icon>upload_file</mat-icon>
+          Nueva Carga TXT
+        </button>
+        <button mat-icon-button color="primary" (click)="cargarHistorial()" [disabled]="cargando()" matTooltip="Actualizar">
+          <mat-icon>refresh</mat-icon>
+        </button>
+        @if (procesando()) {
+          <mat-spinner diameter="24"></mat-spinner>
+          <span class="procesando-label">Procesando archivo...</span>
+        }
+      </div>
+
+      <!-- Tabla historial -->
+      @if (cargando()) {
+        <div class="loading-container"><mat-spinner></mat-spinner></div>
+      } @else {
+        <div class="table-wrapper">
+          <table mat-table [dataSource]="dsCargas" class="table-historial">
+
+            <ng-container matColumnDef="id">
+              <th mat-header-cell *matHeaderCellDef>#</th>
+              <td mat-cell *matCellDef="let row">{{ row.id }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="nombreArchivo">
+              <th mat-header-cell *matHeaderCellDef>Archivo</th>
+              <td mat-cell *matCellDef="let row">
+                <span class="nombre-archivo">
+                  <mat-icon class="icon-txt">description</mat-icon>
+                  {{ row.nombreArchivo }}
+                </span>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="fechaCarga">
+              <th mat-header-cell *matHeaderCellDef>Fecha de Carga</th>
+              <td mat-cell *matCellDef="let row">{{ toDate(row.fechaCarga) | date:'dd/MM/yyyy HH:mm' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="totalRegistros">
+              <th mat-header-cell *matHeaderCellDef>Total</th>
+              <td mat-cell *matCellDef="let row" class="text-center">{{ row.totalRegistros }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="registrosNuevos">
+              <th mat-header-cell *matHeaderCellDef>Nuevos</th>
+              <td mat-cell *matCellDef="let row" class="text-center">
+                <span class="badge badge-registrado">{{ row.registrosNuevos }}</span>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="registrosDuplicados">
+              <th mat-header-cell *matHeaderCellDef>Duplicados</th>
+              <td mat-cell *matCellDef="let row" class="text-center">
+                <span class="badge badge-xml">{{ row.registrosDuplicados }}</span>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="registrosNovedad">
+              <th mat-header-cell *matHeaderCellDef>Novedades</th>
+              <td mat-cell *matCellDef="let row" class="text-center">
+                <span class="badge" [class.badge-novedad]="row.registrosNovedad > 0" [class.badge-leido]="row.registrosNovedad === 0">{{ row.registrosNovedad }}</span>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="estado">
+              <th mat-header-cell *matHeaderCellDef>Estado</th>
+              <td mat-cell *matCellDef="let row">
+                <span class="badge" [class.badge-registrado]="row.estado === 1" [class.badge-error]="row.estado === 2">
+                  {{ estadoCargaLabel(row.estado) }}
+                </span>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="acciones">
+              <th mat-header-cell *matHeaderCellDef>Acciones</th>
+              <td mat-cell *matCellDef="let row">
+                <button mat-stroked-button color="primary" (click)="verDetalle(row)" matTooltip="Ver documentos">
+                  <mat-icon>list_alt</mat-icon>
+                  Ver documentos
+                </button>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="columnasHistorial; sticky: true"></tr>
+            <tr mat-row *matRowDef="let row; columns: columnasHistorial;"></tr>
+
+            <tr class="mat-row" *matNoDataRow>
+              <td class="mat-cell empty-row" [attr.colspan]="columnasHistorial.length">
+                <mat-icon>inbox</mat-icon>
+                No hay cargas registradas. Use "Nueva Carga TXT" para comenzar.
+              </td>
+            </tr>
+          </table>
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+}
+
+<!-- ─── VISTA DOCUMENTOS (DCXP) ─── -->
+@if (vista === 'documentos') {
+  <mat-card class="page-card">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>description</mat-icon>
+        Documentos — Registro Definitivo
+      </mat-card-title>
+      <mat-card-subtitle>Tabla DCXP — Un registro por documento (por clave de acceso SRI)</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      <!-- Barra de acciones y filtros -->
+      <div class="toolbar">
+        <button mat-icon-button color="primary" (click)="cargarDocumentos()" [disabled]="cargando()" matTooltip="Actualizar">
+          <mat-icon>refresh</mat-icon>
+        </button>
+        <span class="filtro-label">Filtrar:</span>
+        <button mat-stroked-button [class.filtro-active]="filtroEstadoDoc() === null" (click)="setFiltroEstado(null)">Todos</button>
+        <button mat-stroked-button [class.filtro-active]="filtroEstadoDoc() === 1" (click)="setFiltroEstado(1)">
+          <span class="badge badge-leido">LEÍDO</span>
+        </button>
+        <button mat-stroked-button [class.filtro-active]="filtroEstadoDoc() === 2" (click)="setFiltroEstado(2)">
+          <span class="badge badge-xml">XML CARGADO</span>
+        </button>
+        <button mat-stroked-button [class.filtro-active]="filtroEstadoDoc() === 3" (click)="setFiltroEstado(3)">
+          <span class="badge badge-registrado">REGISTRADO</span>
+        </button>
+        <button mat-stroked-button [class.filtro-active]="filtroEstadoDoc() === 4" (click)="setFiltroEstado(4)">
+          <span class="badge badge-error">ERROR</span>
+        </button>
+        <button mat-stroked-button [class.filtro-active]="filtroEstadoDoc() === 5" (click)="setFiltroEstado(5)">
+          <span class="badge badge-novedad">NOVEDAD</span>
+        </button>
+        <button mat-stroked-button [class.filtro-active]="filtroEstadoDoc() === 6" (click)="setFiltroEstado(6)">
+          <span class="badge badge-revertido">REVERTIDO</span>
+        </button>
+        @if (procesando()) {
+          <mat-spinner diameter="24"></mat-spinner>
+        }
+      </div>
+
+      <!-- Panel de productos pendientes -->
+      @if (requiereProductos()) {
+        <mat-card class="productos-card">
+          <mat-card-header>
+            <mat-card-title>
+              <mat-icon color="warn">inventory_2</mat-icon>
+              Productos nuevos — Asigne un grupo a cada uno
+            </mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <table mat-table [dataSource]="productosNuevos" class="table-productos">
+              <ng-container matColumnDef="nombre">
+                <th mat-header-cell *matHeaderCellDef>Nombre</th>
+                <td mat-cell *matCellDef="let p">{{ p.nombre }}</td>
+              </ng-container>
+              <ng-container matColumnDef="codigo">
+                <th mat-header-cell *matHeaderCellDef>Código</th>
+                <td mat-cell *matCellDef="let p" class="font-mono">{{ p.codigo }}</td>
+              </ng-container>
+              <ng-container matColumnDef="precioUnitario">
+                <th mat-header-cell *matHeaderCellDef>Precio Unit.</th>
+                <td mat-cell *matCellDef="let p" class="text-right">{{ p.precioUnitario | number:'1.2-2' }}</td>
+              </ng-container>
+              <ng-container matColumnDef="grupo">
+                <th mat-header-cell *matHeaderCellDef>Grupo *</th>
+                <td mat-cell *matCellDef="let p">
+                  <mat-select [(ngModel)]="p.idGrupo" placeholder="Seleccione grupo">
+                    @for (g of gruposProducto; track g.id) {
+                      <mat-option [value]="g.id">{{ g.nombre }}</mat-option>
+                    }
+                  </mat-select>
+                </td>
+              </ng-container>
+              <tr mat-header-row *matHeaderRowDef="['nombre','codigo','precioUnitario','grupo']"></tr>
+              <tr mat-row *matRowDef="let row; columns: ['nombre','codigo','precioUnitario','grupo'];"></tr>
+            </table>
+          </mat-card-content>
+          <mat-card-actions align="end">
+            <button mat-button (click)="cancelarProductos()">Cancelar</button>
+            <button mat-raised-button color="primary" (click)="confirmarProductosYRegistrar()" [disabled]="procesando()">
+              <mat-icon>save</mat-icon> Crear productos y registrar
+            </button>
+          </mat-card-actions>
+        </mat-card>
+      }
+
+      @if (cargando()) {
+        <div class="loading-container"><mat-spinner></mat-spinner></div>
+      } @else {
+        <div class="table-wrapper">
+          <table mat-table [dataSource]="dsDocumentos" class="table-documentos">
+
+            <ng-container matColumnDef="id">
+              <th mat-header-cell *matHeaderCellDef>#</th>
+              <td mat-cell *matCellDef="let d">{{ d.id }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="tipoComprobante">
+              <th mat-header-cell *matHeaderCellDef>Tipo</th>
+              <td mat-cell *matCellDef="let d"><span class="tipo-badge">{{ d.tipoComprobante }}</span></td>
+            </ng-container>
+
+            <ng-container matColumnDef="rucEmisor">
+              <th mat-header-cell *matHeaderCellDef>RUC Emisor</th>
+              <td mat-cell *matCellDef="let d" class="font-mono">{{ d.rucEmisor }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="razonSocialEmisor">
+              <th mat-header-cell *matHeaderCellDef>Razón Social</th>
+              <td mat-cell *matCellDef="let d">{{ d.razonSocialEmisor }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="serieComprobante">
+              <th mat-header-cell *matHeaderCellDef>Serie</th>
+              <td mat-cell *matCellDef="let d" class="font-mono">{{ d.serieComprobante }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="fechaEmision">
+              <th mat-header-cell *matHeaderCellDef>Fecha Emisión</th>
+              <td mat-cell *matCellDef="let d">{{ toDate(d.fechaEmision) | date:'dd/MM/yyyy' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="valorSinImpuestos">
+              <th mat-header-cell *matHeaderCellDef>Sin Imp.</th>
+              <td mat-cell *matCellDef="let d" class="text-right">{{ d.valorSinImpuestos | number:'1.2-2' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="iva">
+              <th mat-header-cell *matHeaderCellDef>IVA</th>
+              <td mat-cell *matCellDef="let d" class="text-right">{{ d.iva | number:'1.2-2' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="importeTotal">
+              <th mat-header-cell *matHeaderCellDef>Total</th>
+              <td mat-cell *matCellDef="let d" class="text-right total-col">{{ d.importeTotal | number:'1.2-2' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="estadoDocumento">
+              <th mat-header-cell *matHeaderCellDef>Estado</th>
+              <td mat-cell *matCellDef="let d">
+                <span class="badge" [ngClass]="estadoColor(d.estadoDocumento)">{{ estadoLabel(d.estadoDocumento) }}</span>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="novedad">
+              <th mat-header-cell *matHeaderCellDef>Novedad</th>
+              <td mat-cell *matCellDef="let d">
+                @if (d.novedad) {
+                  <span class="novedad-text" [matTooltip]="d.novedad">
+                    <mat-icon class="icon-warn">warning</mat-icon>
+                    {{ d.novedad | slice:0:40 }}{{ d.novedad.length > 40 ? '…' : '' }}
+                  </span>
+                }
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="acciones">
+              <th mat-header-cell *matHeaderCellDef>Acciones</th>
+              <td mat-cell *matCellDef="let d">
+                <div class="acciones-fila">
+                  @if (d.estadoDocumento === 1 || d.estadoDocumento === 6) {
+                    <button mat-stroked-button color="primary" (click)="abrirSelectorXmlDoc(d)" [disabled]="procesando()" matTooltip="Subir XML">
+                      <mat-icon>upload</mat-icon> Subir XML
+                    </button>
+                  }
+                  @if (d.estadoDocumento === 2) {
+                    <button mat-stroked-button color="accent" (click)="registrarDoc(d)" [disabled]="procesando()" matTooltip="Registrar en BD">
+                      <mat-icon>save</mat-icon> Registrar
+                    </button>
+                  }
+                  @if (d.estadoDocumento === 3) {
+                    <button mat-stroked-button color="warn" (click)="revertirDoc(d)" [disabled]="procesando()" matTooltip="Revertir">
+                      <mat-icon>undo</mat-icon> Revertir
+                    </button>
+                  }
+                  @if (d.estadoDocumento === 5) {
+                    <button mat-stroked-button (click)="resolverNovedadDoc(d, 'MANTENER')" [disabled]="procesando()" matTooltip="Mantener sin cambios">
+                      <mat-icon>check_circle</mat-icon> Mantener
+                    </button>
+                    <button mat-stroked-button color="primary" (click)="abrirResolverReemplazarDoc(d)" [disabled]="procesando()" matTooltip="Reemplazar con nuevo XML">
+                      <mat-icon>swap_horiz</mat-icon> Reemplazar
+                    </button>
+                  }
+                </div>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="columnasDocumentos; sticky: true"></tr>
+            <tr mat-row *matRowDef="let row; columns: columnasDocumentos;"
+                [class.fila-novedad]="row.estadoDocumento === 5"
+                [class.fila-error]="row.estadoDocumento === 4"
+                [class.fila-revertido]="row.estadoDocumento === 6">
+            </tr>
+
+            <tr class="mat-row" *matNoDataRow>
+              <td class="mat-cell empty-row" [attr.colspan]="columnasDocumentos.length">
+                <mat-icon>description</mat-icon>
+                No hay documentos registrados.
+              </td>
+            </tr>
+          </table>
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+}
+
+<!-- ─── DETALLE DE UNA CARGA ─── -->
+@if (vista === 'detalle' && cargaSeleccionada) {
+  <mat-card class="page-card">
+    <mat-card-header>
+      <mat-card-title>
+        <button mat-icon-button (click)="volverHistorial()" matTooltip="Volver al historial">
+          <mat-icon>arrow_back</mat-icon>
+        </button>
+        <mat-icon>folder_open</mat-icon>
+        Documentos — {{ cargaSeleccionada.nombreArchivo }}
+      </mat-card-title>
+    </mat-card-header>
+
+    <mat-card-content>
+      <!-- Resumen de la carga -->
+      <div class="resumen-carga">
+        <div class="resumen-item">
+          <span class="resumen-label">Fecha de carga</span>
+          <span class="resumen-valor">{{ toDate(cargaSeleccionada.fechaCarga) | date:'dd/MM/yyyy HH:mm' }}</span>
+        </div>
+        <div class="resumen-item">
+          <span class="resumen-label">Total registros</span>
+          <span class="resumen-valor">{{ cargaSeleccionada.totalRegistros }}</span>
+        </div>
+        <div class="resumen-item">
+          <span class="resumen-label">Nuevos</span>
+          <span class="badge badge-registrado">{{ cargaSeleccionada.registrosNuevos }}</span>
+        </div>
+        <div class="resumen-item">
+          <span class="resumen-label">Duplicados</span>
+          <span class="badge badge-xml">{{ cargaSeleccionada.registrosDuplicados }}</span>
+        </div>
+        <div class="resumen-item">
+          <span class="resumen-label">Novedades</span>
+          <span class="badge badge-novedad">{{ cargaSeleccionada.registrosNovedad }}</span>
+        </div>
+      </div>
+
+      @if (procesando()) {
+        <div class="procesando-banner">
+          <mat-spinner diameter="20"></mat-spinner>
+          <span>Procesando...</span>
+        </div>
+      }
+
+      <!-- Panel de productos pendientes de asignar grupo -->
+      @if (requiereProductos()) {
+        <mat-card class="productos-card">
+          <mat-card-header>
+            <mat-card-title>
+              <mat-icon color="warn">inventory_2</mat-icon>
+              Productos nuevos — Asigne un grupo a cada uno
+            </mat-card-title>
+            <mat-card-subtitle>
+              Los siguientes productos del XML no existen en el sistema. Asigne un grupo para crearlos y continuar con el registro.
+            </mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            <table mat-table [dataSource]="productosNuevos" class="table-productos">
+              <ng-container matColumnDef="nombre">
+                <th mat-header-cell *matHeaderCellDef>Nombre</th>
+                <td mat-cell *matCellDef="let p">{{ p.nombre }}</td>
+              </ng-container>
+              <ng-container matColumnDef="codigo">
+                <th mat-header-cell *matHeaderCellDef>Código</th>
+                <td mat-cell *matCellDef="let p" class="font-mono">{{ p.codigo }}</td>
+              </ng-container>
+              <ng-container matColumnDef="precioUnitario">
+                <th mat-header-cell *matHeaderCellDef>Precio Unit.</th>
+                <td mat-cell *matCellDef="let p" class="text-right">{{ p.precioUnitario | number:'1.2-2' }}</td>
+              </ng-container>
+              <ng-container matColumnDef="grupo">
+                <th mat-header-cell *matHeaderCellDef>Grupo *</th>
+                <td mat-cell *matCellDef="let p">
+                  <mat-select [(ngModel)]="p.idGrupo" placeholder="Seleccione grupo">
+                    @for (g of gruposProducto; track g.id) {
+                      <mat-option [value]="g.id">{{ g.nombre }}</mat-option>
+                    }
+                  </mat-select>
+                </td>
+              </ng-container>
+              <tr mat-header-row *matHeaderRowDef="['nombre','codigo','precioUnitario','grupo']"></tr>
+              <tr mat-row *matRowDef="let row; columns: ['nombre','codigo','precioUnitario','grupo'];"></tr>
+            </table>
+          </mat-card-content>
+          <mat-card-actions align="end">
+            <button mat-button (click)="cancelarProductos()">Cancelar</button>
+            <button mat-raised-button color="primary" (click)="confirmarProductosYRegistrar()" [disabled]="procesando()">
+              <mat-icon>save</mat-icon>
+              Crear productos y registrar
+            </button>
+          </mat-card-actions>
+        </mat-card>
+      }
+
+      @if (cargando()) {
+        <div class="loading-container"><mat-spinner></mat-spinner></div>
+      } @else {
+        <div class="table-wrapper">
+          <table mat-table [dataSource]="dsDetalles" class="table-detalle">
+
+            <ng-container matColumnDef="id">
+              <th mat-header-cell *matHeaderCellDef>#</th>
+              <td mat-cell *matCellDef="let d">{{ d.id }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="resultado">
+              <th mat-header-cell *matHeaderCellDef>Resultado</th>
+              <td mat-cell *matCellDef="let d">
+                <span class="badge" [ngClass]="resultadoColor(d.resultado)">{{ d.resultado }}</span>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="tipoComprobante">
+              <th mat-header-cell *matHeaderCellDef>Tipo</th>
+              <td mat-cell *matCellDef="let d">
+                <span class="tipo-badge">{{ d.documento.tipoComprobante }}</span>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="rucEmisor">
+              <th mat-header-cell *matHeaderCellDef>RUC Emisor</th>
+              <td mat-cell *matCellDef="let d" class="font-mono">{{ d.documento.rucEmisor }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="razonSocialEmisor">
+              <th mat-header-cell *matHeaderCellDef>Razón Social</th>
+              <td mat-cell *matCellDef="let d">{{ d.documento.razonSocialEmisor }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="serieComprobante">
+              <th mat-header-cell *matHeaderCellDef>Serie</th>
+              <td mat-cell *matCellDef="let d" class="font-mono">{{ d.documento.serieComprobante }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="fechaEmision">
+              <th mat-header-cell *matHeaderCellDef>Fecha Emisión</th>
+              <td mat-cell *matCellDef="let d">{{ toDate(d.documento.fechaEmision) | date:'dd/MM/yyyy' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="valorSinImpuestosCarga">
+              <th mat-header-cell *matHeaderCellDef>Sin Imp.</th>
+              <td mat-cell *matCellDef="let d" class="text-right">{{ d.valorSinImpuestosCarga | number:'1.2-2' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="ivaCarga">
+              <th mat-header-cell *matHeaderCellDef>IVA</th>
+              <td mat-cell *matCellDef="let d" class="text-right">{{ d.ivaCarga | number:'1.2-2' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="importeTotalCarga">
+              <th mat-header-cell *matHeaderCellDef>Total</th>
+              <td mat-cell *matCellDef="let d" class="text-right total-col">{{ d.importeTotalCarga | number:'1.2-2' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="estadoDocumento">
+              <th mat-header-cell *matHeaderCellDef>Estado</th>
+              <td mat-cell *matCellDef="let d">
+                <span class="badge" [ngClass]="estadoColor(d.documento.estadoDocumento)">
+                  {{ estadoLabel(d.documento.estadoDocumento) }}
+                </span>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="novedad">
+              <th mat-header-cell *matHeaderCellDef>Novedad</th>
+              <td mat-cell *matCellDef="let d">
+                @if (d.documento.novedad) {
+                  <span class="novedad-text" [matTooltip]="d.documento.novedad">
+                    <mat-icon class="icon-warn">warning</mat-icon>
+                    {{ d.documento.novedad | slice:0:40 }}{{ d.documento.novedad.length > 40 ? '…' : '' }}
+                  </span>
+                }
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="acciones">
+              <th mat-header-cell *matHeaderCellDef>Acciones</th>
+              <td mat-cell *matCellDef="let d">
+                <div class="acciones-fila">
+                  <!-- Estado 1 y 6: solo informativo, XML se sube desde el tab Documentos -->
+                  @if (d.documento.estadoDocumento === 1 || d.documento.estadoDocumento === 6) {
+                    <span class="info-accion">
+                      <mat-icon class="icon-info">info</mat-icon>
+                      Subir XML desde tab "Documentos"
+                    </span>
+                  }
+                  <!-- Estado 2: XML CARGADO → registrar en BD -->
+                  @if (d.documento.estadoDocumento === 2) {
+                    <button mat-stroked-button color="accent" (click)="registrarEnBD(d)" [disabled]="procesando()" matTooltip="Registrar en BD">
+                      <mat-icon>save</mat-icon>
+                      Registrar
+                    </button>
+                  }
+                  <!-- Estado 3: REGISTRADO → revertir -->
+                  @if (d.documento.estadoDocumento === 3) {
+                    <button mat-stroked-button color="warn" (click)="revertir(d)" [disabled]="procesando()" matTooltip="Revertir documento">
+                      <mat-icon>undo</mat-icon>
+                      Revertir
+                    </button>
+                  }
+                  <!-- Estado 5: NOVEDAD → mantener o reemplazar -->
+                  @if (d.documento.estadoDocumento === 5) {
+                    <button mat-stroked-button (click)="resolverNovedad(d, 'MANTENER')" [disabled]="procesando()" matTooltip="Mantener documento previo">
+                      <mat-icon>check_circle</mat-icon>
+                      Mantener
+                    </button>
+                    <button mat-stroked-button color="primary" (click)="abrirResolverReemplazar(d)" [disabled]="procesando()" matTooltip="Subir nuevo XML y reemplazar">
+                      <mat-icon>swap_horiz</mat-icon>
+                      Reemplazar
+                    </button>
+                  }
+                </div>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="columnasDetalle; sticky: true"></tr>
+            <tr mat-row *matRowDef="let row; columns: columnasDetalle;"
+                [class.fila-novedad]="row.documento.estadoDocumento === 5"
+                [class.fila-error]="row.documento.estadoDocumento === 4"
+                [class.fila-revertido]="row.documento.estadoDocumento === 6">
+            </tr>
+
+            <tr class="mat-row" *matNoDataRow>
+              <td class="mat-cell empty-row" [attr.colspan]="columnasDetalle.length">
+                No hay documentos en esta carga.
+              </td>
+            </tr>
+          </table>
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+}

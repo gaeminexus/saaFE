@@ -1,0 +1,85 @@
+<h2 mat-dialog-title>
+  <mat-icon>add_circle</mat-icon> Registrar Pago
+</h2>
+
+<mat-dialog-content>
+  <!-- Info cuota -->
+  <div class="cuota-info-box">
+    <div class="info-row">
+      <span class="info-lbl">Cuota {{ data.cuota.numeroCuota }}</span>
+      <span class="info-val">{{ data.cuota.descripcion }}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-lbl">Valor Pactado</span>
+      <span class="info-val font-mono">{{ data.cuota.valorCuota | number:'1.2-2' }}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-lbl">Ya Pagado</span>
+      <span class="info-val font-mono">{{ data.cuota.totalPagado | number:'1.2-2' }}</span>
+    </div>
+    <div class="info-row saldo-row">
+      <span class="info-lbl">Saldo Pendiente</span>
+      <span class="info-val font-mono saldo">{{ saldoCuota | number:'1.2-2' }}</span>
+    </div>
+  </div>
+
+  <!-- Formulario -->
+  <div class="form-grid">
+
+    <mat-form-field appearance="outline">
+      <mat-label>Fecha de Pago *</mat-label>
+      <input
+        #fechaPagoInput matInput
+        [matDatepicker]="pickerFecha"
+        [formControl]="fechaPagoControl"
+        placeholder="dd/mm/aaaa"
+        (input)="capturarFechaRaw($event)"
+        (dateChange)="onPickerChange($event.value)"
+        (blur)="syncFechaFromRaw($event)"
+      />
+      <mat-datepicker-toggle matIconSuffix [for]="pickerFecha"></mat-datepicker-toggle>
+      <mat-datepicker #pickerFecha></mat-datepicker>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Valor del Pago *</mat-label>
+      <input matInput type="number" [(ngModel)]="form.valorPago" [max]="saldoCuota" placeholder="0.00" step="0.01" />
+      <span matTextPrefix>$&nbsp;</span>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Tipo de Pago</mat-label>
+      <mat-select [(ngModel)]="form.tipoPago" (selectionChange)="onTipoPagoChange()">
+        <mat-option value="ANTICIPO">Anticipo (sin factura aún)</mat-option>
+        <mat-option value="FACTURA">Pago con factura</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>N° Comprobante / Transferencia</mat-label>
+      <input matInput [(ngModel)]="form.refComprobante" placeholder="Ej: TRF-20260801-001" />
+      <mat-icon matSuffix>receipt</mat-icon>
+    </mat-form-field>
+
+    <div class="checks-row">
+      <mat-checkbox [(ngModel)]="form.facturado" [disabled]="form.tipoPago === 'FACTURA'">
+        ¿Ya tiene factura del proveedor?
+      </mat-checkbox>
+      <mat-checkbox [(ngModel)]="form.pagado">
+        ¿Pago liquidado / cancelado?
+      </mat-checkbox>
+    </div>
+
+    <mat-form-field appearance="outline" class="full-w">
+      <mat-label>Descripción / Observación</mat-label>
+      <textarea matInput [(ngModel)]="form.descripcion" rows="2" placeholder="Observación del pago..."></textarea>
+    </mat-form-field>
+  </div>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-stroked-button (click)="cancelar()">Cancelar</button>
+  <button mat-raised-button color="primary" (click)="guardar()" [disabled]="guardando">
+    <mat-icon>save</mat-icon> Registrar Pago
+  </button>
+</mat-dialog-actions>

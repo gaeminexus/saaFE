@@ -37,6 +37,12 @@ import { MenucuentasxcobrarComponent } from './modules/cxc/menu/menucuentasxcobr
 import { MenucuentaxpagarComponent } from './modules/cxp/menu/menucuentasxpagar/menucuentasxpagar.component';
 import { GruposProductosPagoComponent } from './modules/cxp/forms/parametrizacion/grupos-productos-pago/grupos-productos-pago.component';
 import { ProveedoresComponent } from './modules/cxp/forms/parametrizacion/proveedores/proveedores.component';
+import { BandejaElectronicaComponent } from './modules/cxp/forms/procesos/bandeja-electronica/bandeja-electronica.component';
+import { GestionDocumentosComponent } from './modules/cxp/forms/procesos/gestion-documentos/gestion-documentos.component';
+import { ConsultaDocumentosComponent } from './modules/cxp/forms/procesos/consulta-documentos/consulta-documentos.component';
+import { NegociacionesComponent } from './modules/cxp/forms/negociaciones/negociaciones.component';
+import { DetalleNegociacionComponent } from './modules/cxp/forms/negociaciones/detalle-negociacion/detalle-negociacion.component';
+import { DashboardCxpComponent } from './modules/cxp/forms/reportes/dashboard-cxp/dashboard-cxp.component';
 import { LoginComponent } from './modules/dash/forms/login/login.component';
 import { MenuComponent } from './modules/dash/menu/menu.component';
 import { ReportesSuperBancosComponent } from './modules/rpr/forms/reportes-super-bancos/reportes-super-bancos.component';
@@ -857,6 +863,36 @@ export const routes: Routes = [
       {
         path: 'parametrizacion/proveedores',
         component: ProveedoresComponent,
+        canActivate: [authGuard],
+      },
+      {
+        path: 'procesos/bandeja-electronica',
+        component: BandejaElectronicaComponent,
+        canActivate: [authGuard],
+      },
+      {
+        path: 'procesos/gestion-documentos',
+        component: GestionDocumentosComponent,
+        canActivate: [authGuard],
+      },
+      {
+        path: 'procesos/consulta-documentos',
+        component: ConsultaDocumentosComponent,
+        canActivate: [authGuard],
+      },
+      {
+        path: 'negociaciones',
+        component: NegociacionesComponent,
+        canActivate: [authGuard],
+      },
+      {
+        path: 'negociaciones/detalle/:id',
+        component: DetalleNegociacionComponent,
+        canActivate: [authGuard],
+      },
+      {
+        path: 'reportes/dashboard',
+        component: DashboardCxpComponent,
         canActivate: [authGuard],
       },
     ],

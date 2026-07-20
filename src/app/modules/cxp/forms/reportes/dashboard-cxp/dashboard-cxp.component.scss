@@ -1,0 +1,231 @@
+.dashboard-cxp-container {
+  padding: 1rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+
+  .header-icon {
+    font-size: 2.5rem;
+    width: 2.5rem;
+    height: 2.5rem;
+    color: #5c6bc0;
+  }
+
+  h2 {
+    margin: 0;
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: #37474f;
+  }
+
+  p {
+    margin: 0;
+    font-size: 0.85rem;
+    color: #78909c;
+  }
+}
+
+.filtros-card {
+  margin-bottom: 1rem;
+
+  .filtros-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .date-field {
+    min-width: 180px;
+    flex: 1;
+    max-width: 220px;
+  }
+
+  .filtros-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .error-msg {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: #c62828;
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+  }
+}
+
+.spinner-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 3rem;
+  color: #78909c;
+}
+
+// Tarjetas de totales
+.totales-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.total-card {
+  mat-card-content {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem !important;
+  }
+
+  mat-icon {
+    font-size: 2rem;
+    width: 2rem;
+    height: 2rem;
+    opacity: 0.8;
+  }
+
+  .total-info {
+    display: flex;
+    flex-direction: column;
+
+    .total-label {
+      font-size: 0.72rem;
+      color: #78909c;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .total-value {
+      font-size: 1.15rem;
+      font-weight: 700;
+    }
+  }
+
+  &.docs {
+    mat-icon { color: #5c6bc0; }
+    .total-value { color: #3949ab; }
+  }
+  &.subtotal {
+    mat-icon { color: #43a047; }
+    .total-value { color: #2e7d32; }
+  }
+  &.subcero {
+    mat-icon { color: #00897b; }
+    .total-value { color: #00695c; }
+  }
+  &.iva {
+    mat-icon { color: #fb8c00; }
+    .total-value { color: #e65100; }
+  }
+  &.ice {
+    mat-icon { color: #8e24aa; }
+    .total-value { color: #6a1b9a; }
+  }
+  &.descuento {
+    mat-icon { color: #e53935; }
+    .total-value { color: #b71c1c; }
+  }
+  &.total-general {
+    grid-column: span 1;
+    mat-icon { color: #1565c0; }
+    .total-value { color: #0d47a1; font-size: 1.3rem; }
+    border-left: 4px solid #1565c0;
+  }
+}
+
+// Agrupación
+.agrupacion-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+
+  .agrupacion-label {
+    font-size: 0.875rem;
+    color: #546e7a;
+    font-weight: 500;
+  }
+
+  mat-button-toggle {
+    mat-icon {
+      font-size: 1rem;
+      width: 1rem;
+      height: 1rem;
+      margin-right: 4px;
+      vertical-align: middle;
+    }
+  }
+}
+
+// Tabla
+.tabla-card {
+  .table-wrapper {
+    overflow-x: auto;
+    max-height: 500px;
+    overflow-y: auto;
+  }
+}
+
+.dashboard-table {
+  width: 100%;
+  min-width: 900px;
+
+  .num-col {
+    text-align: right !important;
+    padding-right: 16px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .total-col {
+    font-weight: 600;
+    color: #1565c0;
+  }
+
+  th.mat-mdc-header-cell {
+    background-color: #e8eaf6;
+    font-weight: 700;
+    font-size: 0.8rem;
+    color: #37474f;
+  }
+
+  tr.mat-mdc-footer-row td {
+    background-color: #e8f5e9;
+    font-weight: 700;
+    border-top: 2px solid #43a047;
+  }
+
+  tr.mat-mdc-row:hover {
+    background-color: #f5f5f5;
+  }
+}
+
+.no-data {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 4rem;
+  color: #90a4ae;
+
+  mat-icon {
+    font-size: 3.5rem;
+    width: 3.5rem;
+    height: 3.5rem;
+  }
+
+  p {
+    margin: 0;
+    font-size: 0.9rem;
+  }
+}

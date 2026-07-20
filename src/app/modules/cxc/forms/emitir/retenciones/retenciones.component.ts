@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component, HostListener, OnInit, computed, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Component, ElementRef, HostListener, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
+import { FormsModule, ReactiveFormsModule, UntypedFormControl } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableDataSource } from '@angular/material/table';
@@ -27,11 +27,14 @@ const TABLA_PORCENTAJE_ISD = '15';     // % Retención ISD
 @Component({
   selector: 'app-retenciones',
   standalone: true,
-  imports: [CommonModule, FormsModule, MaterialFormModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, MaterialFormModule],
   templateUrl: './retenciones.component.html',
   styleUrls: ['./retenciones.component.scss'],
 })
 export class RetencionesComponent implements OnInit {
+  @ViewChild('fechaRetencionInput', { read: ElementRef }) fechaRetencionInputRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('fechaEmiDocInput', { read: ElementRef }) fechaEmiDocInputRef!: ElementRef<HTMLInputElement>;
+
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
   private service = inject(RetencionEmitirService);
@@ -66,12 +69,12 @@ export class RetencionesComponent implements OnInit {
   idImpuesto: DetalleSri | null = null;
   idPorcentaje: DetalleSri | null = null;
   numDocReten = '';
-  strFechaEmiDoc: Date | string = '';
+  fechaEmiDocControl = new UntypedFormControl(null);
   txtBaseImponible = 0;
   txtPorcentaje = 0;
   txtValorReten = 0;
 
-  strFecha: Date | string = '';
+  fechaControl = new UntypedFormControl(new Date());
   periodoFiscal = '';
   observacion = '';
   totalRetenido = 0;
@@ -154,7 +157,7 @@ export class RetencionesComponent implements OnInit {
   }
 
   obtenerFiscal(): void {
-    const fecha = this.parseFechaLocal(this.strFecha);
+    const fecha = this.parseFechaLocal(this.fechaControl.value);
     if (Number.isNaN(fecha.getTime())) {
       return;
     }
@@ -174,7 +177,7 @@ export class RetencionesComponent implements OnInit {
       retencion: {} as RetencionEmitir,
       tipoDocReten: this.idDocumento.codigo,
       numDocReten: this.numDocReten.trim(),
-      fechaEmiDoc: this.parseFechaLocal(this.strFechaEmiDoc),
+      fechaEmiDoc: this.parseFechaLocal(this.fechaEmiDocControl.value),
       codImpuesto: this.idImpuesto.codigo,
       codRetencion: this.idPorcentaje.codigo,
       baseImponible: this.rd(this.txtBaseImponible),
@@ -206,7 +209,7 @@ export class RetencionesComponent implements OnInit {
     const payload: any = {
       facturador: this.vFacturador,
       titular: this.personaSeleccionada() as Titular,
-      fecha: this.parseFechaLocal(this.strFecha),
+      fecha: this.parseFechaLocal(this.fechaControl.value),
       periodoFiscal: this.periodoFiscal,
       observacion: this.observacion,
       total: this.totalRetenido,
@@ -222,6 +225,7 @@ export class RetencionesComponent implements OnInit {
       next: (resp) => {
         this.documentoActual.set(resp || null);
         this.deshabilitado = true;
+        this.fechaControl.disable(); this.fechaEmiDocControl.disable();
         this.guardando.set(false);
         this.mostrarExito('Retención generada correctamente');
         this.cargarRegistros();
@@ -233,6 +237,7 @@ export class RetencionesComponent implements OnInit {
   nueva(): void {
     this.documentoActual.set(null);
     this.deshabilitado = false;
+    this.fechaControl.enable(); this.fechaEmiDocControl.enable();
     this.listaDetalles = [];
     this.dataSource.data = [];
     this.setFecha();
@@ -260,9 +265,78 @@ export class RetencionesComponent implements OnInit {
   estadoLabel(estado: number | null | undefined): string { return Number(estado) === 1 ? 'Activo' : 'Inactivo'; }
 
   setFecha(): void {
-    this.strFecha = new Date();
+    this.fechaControl.setValue(new Date(), { emitEvent: false });
     this.obtenerFiscal();
-    if (!this.strFechaEmiDoc) this.strFechaEmiDoc = this.strFecha;
+    if (!this.fechaEmiDocControl.value) this.fechaEmiDocControl.setValue(new Date(), { emitEvent: false });
+  }
+
+  private _rawFecha: string = '';
+  private _rawFechaEmiDoc: string = '';
+
+  capturarFechaRaw(event: Event): void {
+    this._rawFecha = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFecha || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFecha = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        const formatted = this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+        this.fechaControl.setValue(date, { emitEvent: false });
+        setTimeout(() => {
+          if (this.fechaRetencionInputRef?.nativeElement) this.fechaRetencionInputRef.nativeElement.value = formatted;
+          this.obtenerFiscal();
+        });
+      }
+    }
+  }
+
+  onFechaPickerChange(date: Date | null | undefined): void {
+    const d = date || new Date();
+    this.fechaControl.setValue(d, { emitEvent: false });
+    const formatted = this.funcionesDatosS.formatoFecha(d, FuncionesDatosService.SOLO_FECHA) || '';
+    setTimeout(() => {
+      if (this.fechaRetencionInputRef?.nativeElement) this.fechaRetencionInputRef.nativeElement.value = formatted;
+    });
+    this.obtenerFiscal();
+  }
+
+  capturarFechaEmiDocRaw(event: Event): void {
+    this._rawFechaEmiDoc = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaEmiDocFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaEmiDoc || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaEmiDoc = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        const formatted = this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+        this.fechaEmiDocControl.setValue(date, { emitEvent: false });
+        setTimeout(() => {
+          if (this.fechaEmiDocInputRef?.nativeElement) this.fechaEmiDocInputRef.nativeElement.value = formatted;
+        });
+      }
+    }
+  }
+
+  onFechaEmiDocPickerChange(date: Date | null | undefined): void {
+    const d = date || new Date();
+    this.fechaEmiDocControl.setValue(d, { emitEvent: false });
+    const formatted = this.funcionesDatosS.formatoFecha(d, FuncionesDatosService.SOLO_FECHA) || '';
+    setTimeout(() => {
+      if (this.fechaEmiDocInputRef?.nativeElement) this.fechaEmiDocInputRef.nativeElement.value = formatted;
+    });
   }
 
   responsive(width: number): void { this.vertical = width < 1024; }
@@ -273,7 +347,7 @@ export class RetencionesComponent implements OnInit {
 
   private limpiarDetalle(): void {
     this.idDocumento = null; this.idImpuesto = null; this.idPorcentaje = null;
-    this.numDocReten = ''; this.strFechaEmiDoc = this.strFecha;
+    this.numDocReten = ''; this.fechaEmiDocControl.setValue(this.fechaControl.value, { emitEvent: false });
     this.txtBaseImponible = 0; this.txtPorcentaje = 0; this.txtValorReten = 0;
     this.tablaPorcentajes = [];
   }

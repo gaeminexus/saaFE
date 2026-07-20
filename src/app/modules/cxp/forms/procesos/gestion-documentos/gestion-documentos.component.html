@@ -1,0 +1,353 @@
+<mat-card class="page-card">
+  <mat-card-header>
+    <mat-card-title>
+      <mat-icon>folder_open</mat-icon>
+      Gestión de Documentos Electrónicos
+    </mat-card-title>
+    <mat-card-subtitle>Documentos pendientes de procesamiento (sin registrar en BD)</mat-card-subtitle>
+  </mat-card-header>
+
+  <mat-card-content>
+
+    <!-- Filtros de búsqueda -->
+    <mat-expansion-panel class="filtros-panel">
+      <mat-expansion-panel-header>
+        <mat-panel-title><mat-icon>filter_list</mat-icon> Filtros de búsqueda</mat-panel-title>
+      </mat-expansion-panel-header>
+
+      <div class="filtros-grid">
+        <mat-form-field appearance="outline">
+          <mat-label>RUC Proveedor</mat-label>
+          <input matInput [(ngModel)]="filtroRuc" placeholder="Ej: 1790016919001" (keyup.enter)="buscar()" />
+          <mat-icon matSuffix>business</mat-icon>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Razón Social</mat-label>
+          <input matInput [(ngModel)]="filtroProveedor" placeholder="Nombre del proveedor" (keyup.enter)="buscar()" />
+          <button mat-icon-button matSuffix (click)="abrirBusquedaTitular()" matTooltip="Buscar proveedor en catálogo">
+            <mat-icon>manage_search</mat-icon>
+          </button>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Tipo de Documento</mat-label>
+          <mat-select [(ngModel)]="filtroTipo">
+            <mat-option value="">Todos</mat-option>
+            <mat-option value="Factura">Factura</mat-option>
+            <mat-option value="Nota de Crédito">Nota de Crédito</mat-option>
+            <mat-option value="Nota de Débito">Nota de Débito</mat-option>
+            <mat-option value="Liquidación">Liquidación de Compra</mat-option>
+            <mat-option value="Retención">Comprobante de Retención</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Fecha Emisión Desde</mat-label>
+          <input
+            #fechaDesdeInput
+            matInput
+            [matDatepicker]="pickerDesde"
+            [formControl]="fechaDesdeControl"
+            placeholder="dd/mm/aaaa"
+            (input)="capturarFechaDesdeRaw($event)"
+            (dateChange)="onFechaDesdePickerChange($event.value)"
+            (blur)="syncFechaDesdeFromRaw($event)"
+          />
+          <mat-datepicker-toggle matIconSuffix [for]="pickerDesde"></mat-datepicker-toggle>
+          <mat-datepicker #pickerDesde></mat-datepicker>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Fecha Emisión Hasta</mat-label>
+          <input
+            #fechaHastaInput
+            matInput
+            [matDatepicker]="pickerHasta"
+            [formControl]="fechaHastaControl"
+            placeholder="dd/mm/aaaa"
+            (input)="capturarFechaHastaRaw($event)"
+            (dateChange)="onFechaHastaPickerChange($event.value)"
+            (blur)="syncFechaHastaFromRaw($event)"
+          />
+          <mat-datepicker-toggle matIconSuffix [for]="pickerHasta"></mat-datepicker-toggle>
+          <mat-datepicker #pickerHasta></mat-datepicker>
+        </mat-form-field>
+      </div>
+
+      <div class="filtros-acciones">
+        <button mat-raised-button color="primary" (click)="buscar()">
+          <mat-icon>search</mat-icon> Buscar
+        </button>
+        <button mat-stroked-button (click)="limpiarFiltros()">
+          <mat-icon>clear</mat-icon> Limpiar
+        </button>
+      </div>
+    </mat-expansion-panel>
+
+    <!-- Filtros rápidos por estado -->
+    <div class="toolbar">
+      <button mat-icon-button color="primary" (click)="cargar()" [disabled]="cargando()" matTooltip="Actualizar">
+        <mat-icon>refresh</mat-icon>
+      </button>
+      <span class="filtro-label">Estado:</span>
+      <button mat-stroked-button [class.filtro-active]="filtroEstado() === null" (click)="setFiltroEstado(null)">Todos</button>
+      <button mat-stroked-button [class.filtro-active]="filtroEstado() === 1" (click)="setFiltroEstado(1)">
+        <span class="badge badge-leido">LEÍDO</span>
+      </button>
+      <button mat-stroked-button [class.filtro-active]="filtroEstado() === 2" (click)="setFiltroEstado(2)">
+        <span class="badge badge-xml">XML CARGADO</span>
+      </button>
+      <button mat-stroked-button [class.filtro-active]="filtroEstado() === 4" (click)="setFiltroEstado(4)">
+        <span class="badge badge-error">ERROR</span>
+      </button>
+      <button mat-stroked-button [class.filtro-active]="filtroEstado() === 5" (click)="setFiltroEstado(5)">
+        <span class="badge badge-novedad">NOVEDAD</span>
+      </button>
+      <button mat-stroked-button [class.filtro-active]="filtroEstado() === 6" (click)="setFiltroEstado(6)">
+        <span class="badge badge-revertido">REVERTIDO</span>
+      </button>
+      @if (procesando()) { <mat-spinner diameter="24"></mat-spinner> }
+    </div>
+
+    <!-- Panel de totales -->
+    <div class="totales-panel">
+      <!-- Fila de totales: Pendientes -->
+      <div class="totales-grupo totales-pendientes">
+        <div class="totales-grupo-header">
+          <mat-icon>hourglass_empty</mat-icon>
+          <span>Pendientes de registro</span>
+          <span class="totales-count">({{ totalesPendientes().count }} doc.)</span>
+        </div>
+        <div class="totales-valores">
+          <div class="total-item">
+            <span class="total-label">Subtotal</span>
+            <span class="total-valor">{{ totalesPendientes().subtotal | number:'1.2-2' }}</span>
+          </div>
+          <div class="total-item">
+            <span class="total-label">IVA</span>
+            <span class="total-valor">{{ totalesPendientes().iva | number:'1.2-2' }}</span>
+          </div>
+          <div class="total-item total-item--destacado">
+            <span class="total-label">TOTAL</span>
+            <span class="total-valor">{{ totalesPendientes().total | number:'1.2-2' }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Separador -->
+      <div class="totales-sep"></div>
+
+      <!-- Fila de totales: Registrados -->
+      <div class="totales-grupo totales-registrados">
+        <div class="totales-grupo-header">
+          <mat-icon>check_circle</mat-icon>
+          <span>Registrados en tablas definitivas</span>
+          <span class="totales-count">({{ totalesRegistrados().count }} doc.)</span>
+        </div>
+        <div class="totales-valores">
+          <div class="total-item">
+            <span class="total-label">Subtotal</span>
+            <span class="total-valor">{{ totalesRegistrados().subtotal | number:'1.2-2' }}</span>
+          </div>
+          <div class="total-item">
+            <span class="total-label">IVA</span>
+            <span class="total-valor">{{ totalesRegistrados().iva | number:'1.2-2' }}</span>
+          </div>
+          <div class="total-item total-item--destacado">
+            <span class="total-label">TOTAL</span>
+            <span class="total-valor">{{ totalesRegistrados().total | number:'1.2-2' }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Gran total -->
+      <div class="totales-sep"></div>
+      <div class="totales-grupo totales-gran-total">
+        <div class="totales-grupo-header">
+          <mat-icon>summarize</mat-icon>
+          <span>Gran Total</span>
+          <span class="totales-count">({{ totalesPendientes().count + totalesRegistrados().count }} doc.)</span>
+        </div>
+        <div class="totales-valores">
+          <div class="total-item">
+            <span class="total-label">Subtotal</span>
+            <span class="total-valor">{{ (totalesPendientes().subtotal + totalesRegistrados().subtotal) | number:'1.2-2' }}</span>
+          </div>
+          <div class="total-item">
+            <span class="total-label">IVA</span>
+            <span class="total-valor">{{ (totalesPendientes().iva + totalesRegistrados().iva) | number:'1.2-2' }}</span>
+          </div>
+          <div class="total-item total-item--destacado">
+            <span class="total-label">TOTAL</span>
+            <span class="total-valor">{{ (totalesPendientes().total + totalesRegistrados().total) | number:'1.2-2' }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel de productos pendientes -->
+    @if (requiereProductos()) {
+      <mat-card class="productos-card">
+        <mat-card-header>
+          <mat-card-title><mat-icon color="warn">inventory_2</mat-icon> Productos nuevos — Asigne un grupo</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <table mat-table [dataSource]="productosNuevos" class="table-productos">
+            <ng-container matColumnDef="nombre">
+              <th mat-header-cell *matHeaderCellDef>Nombre</th>
+              <td mat-cell *matCellDef="let p">{{ p.nombre }}</td>
+            </ng-container>
+            <ng-container matColumnDef="codigo">
+              <th mat-header-cell *matHeaderCellDef>Código</th>
+              <td mat-cell *matCellDef="let p" class="font-mono">{{ p.codigo }}</td>
+            </ng-container>
+            <ng-container matColumnDef="precio">
+              <th mat-header-cell *matHeaderCellDef>Precio Unit.</th>
+              <td mat-cell *matCellDef="let p" class="text-right">{{ p.precioUnitario | number:'1.2-2' }}</td>
+            </ng-container>
+            <ng-container matColumnDef="grupo">
+              <th mat-header-cell *matHeaderCellDef>Grupo *</th>
+              <td mat-cell *matCellDef="let p">
+                <mat-select [(ngModel)]="p.idGrupo" placeholder="Seleccione grupo">
+                  @for (g of gruposProducto; track g.id) {
+                    <mat-option [value]="g.id">{{ g.nombre }}</mat-option>
+                  }
+                </mat-select>
+              </td>
+            </ng-container>
+            <tr mat-header-row *matHeaderRowDef="['nombre','codigo','precio','grupo']"></tr>
+            <tr mat-row *matRowDef="let row; columns: ['nombre','codigo','precio','grupo'];"></tr>
+          </table>
+        </mat-card-content>
+        <mat-card-actions align="end">
+          <button mat-button (click)="cancelarProductos()">Cancelar</button>
+          <button mat-raised-button color="primary" (click)="confirmarProductosYRegistrar()" [disabled]="procesando()">
+            <mat-icon>save</mat-icon> Crear y registrar
+          </button>
+        </mat-card-actions>
+      </mat-card>
+    }
+
+    <!-- Tabla -->
+    @if (cargando()) {
+      <div class="loading-container"><mat-spinner></mat-spinner></div>
+    } @else {
+      <div class="resumen-bar">
+        <span class="resumen-total">{{ dsDocumentos.data.length }} documento(s) pendientes en tabla
+          @if (filtroEstado() !== null) { <span class="resumen-filtro">(filtro de estado activo)</span> }
+        </span>
+      </div>
+      <div class="table-wrapper">
+        <table mat-table [dataSource]="dsDocumentos" class="tabla-docs">
+
+          <ng-container matColumnDef="id">
+            <th mat-header-cell *matHeaderCellDef>#</th>
+            <td mat-cell *matCellDef="let d">{{ d.id }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="tipoComprobante">
+            <th mat-header-cell *matHeaderCellDef>Tipo</th>
+            <td mat-cell *matCellDef="let d"><span class="tipo-badge">{{ d.tipoComprobante }}</span></td>
+          </ng-container>
+
+          <ng-container matColumnDef="rucEmisor">
+            <th mat-header-cell *matHeaderCellDef>RUC</th>
+            <td mat-cell *matCellDef="let d" class="font-mono">{{ d.rucEmisor }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="razonSocialEmisor">
+            <th mat-header-cell *matHeaderCellDef>Proveedor</th>
+            <td mat-cell *matCellDef="let d">{{ d.razonSocialEmisor }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="serieComprobante">
+            <th mat-header-cell *matHeaderCellDef>Serie</th>
+            <td mat-cell *matCellDef="let d" class="font-mono">{{ d.serieComprobante }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="fechaEmision">
+            <th mat-header-cell *matHeaderCellDef>F. Emisión</th>
+            <td mat-cell *matCellDef="let d">{{ toDate(d.fechaEmision) | date:'dd/MM/yyyy' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="valorSinImpuestos">
+            <th mat-header-cell *matHeaderCellDef>Subtotal</th>
+            <td mat-cell *matCellDef="let d" class="text-right">{{ d.valorSinImpuestos | number:'1.2-2' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="iva">
+            <th mat-header-cell *matHeaderCellDef>IVA</th>
+            <td mat-cell *matCellDef="let d" class="text-right">{{ d.iva | number:'1.2-2' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="importeTotal">
+            <th mat-header-cell *matHeaderCellDef>Total</th>
+            <td mat-cell *matCellDef="let d" class="text-right total-col">{{ d.importeTotal | number:'1.2-2' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="estadoDocumento">
+            <th mat-header-cell *matHeaderCellDef>Estado</th>
+            <td mat-cell *matCellDef="let d">
+              <span class="badge" [ngClass]="estadoColor(d.estadoDocumento)">{{ estadoLabel(d.estadoDocumento) }}</span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="novedad">
+            <th mat-header-cell *matHeaderCellDef>Novedad</th>
+            <td mat-cell *matCellDef="let d">
+              @if (d.novedad) {
+                <span class="novedad-text" [matTooltip]="d.novedad">
+                  <mat-icon class="icon-warn">warning</mat-icon>
+                  {{ d.novedad | slice:0:35 }}{{ d.novedad.length > 35 ? '…' : '' }}
+                </span>
+              }
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="acciones">
+            <th mat-header-cell *matHeaderCellDef>Acciones</th>
+            <td mat-cell *matCellDef="let d">
+              <div class="acciones-fila">
+                @if (d.estadoDocumento === 1 || d.estadoDocumento === 6) {
+                  <button mat-stroked-button color="primary" (click)="abrirSelectorXml(d)" [disabled]="procesando()" matTooltip="Subir XML">
+                    <mat-icon>upload</mat-icon> Subir XML
+                  </button>
+                }
+                @if (d.estadoDocumento === 2) {
+                  <button mat-stroked-button color="accent" (click)="registrar(d)" [disabled]="procesando()" matTooltip="Registrar en BD">
+                    <mat-icon>save</mat-icon> Registrar
+                  </button>
+                }
+                @if (d.estadoDocumento === 5) {
+                  <button mat-stroked-button (click)="resolverNovedad(d, 'MANTENER')" [disabled]="procesando()">
+                    <mat-icon>check_circle</mat-icon> Mantener
+                  </button>
+                  <button mat-stroked-button color="primary" (click)="abrirResolverReemplazar(d)" [disabled]="procesando()">
+                    <mat-icon>swap_horiz</mat-icon> Reemplazar
+                  </button>
+                }
+                @if (d.estadoDocumento === 4) {
+                  <span class="badge badge-error" [matTooltip]="d.novedad">ERROR</span>
+                }
+              </div>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="columnas; sticky: true"></tr>
+          <tr mat-row *matRowDef="let row; columns: columnas;"
+              [class.fila-novedad]="row.estadoDocumento === 5"
+              [class.fila-error]="row.estadoDocumento === 4"
+              [class.fila-revertido]="row.estadoDocumento === 6">
+          </tr>
+
+          <tr class="mat-row" *matNoDataRow>
+            <td class="mat-cell empty-row" [attr.colspan]="columnas.length">
+              <mat-icon>folder_open</mat-icon> No hay documentos pendientes con los filtros seleccionados.
+            </td>
+          </tr>
+        </table>
+      </div>
+    }
+  </mat-card-content>
+</mat-card>

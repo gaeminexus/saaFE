@@ -31,12 +31,14 @@
         <mat-form-field appearance="outline">
           <mat-label>Fecha</mat-label>
           <input
+            #fechaRetencionInput
             matInput
             [matDatepicker]="pickerFechaRetencion"
-            [(ngModel)]="strFecha"
-            (dateChange)="obtenerFiscal()"
+            [formControl]="fechaControl"
             placeholder="dd/mm/aaaa"
-            [disabled]="deshabilitado"
+            (input)="capturarFechaRaw($event)"
+            (dateChange)="onFechaPickerChange($event.value)"
+            (blur)="syncFechaFromRaw($event)"
           />
           <mat-datepicker-toggle matIconSuffix [for]="pickerFechaRetencion"></mat-datepicker-toggle>
           <mat-datepicker #pickerFechaRetencion></mat-datepicker>
@@ -81,7 +83,16 @@
         <mat-form-field appearance="outline"><mat-label>Nro. documento retenido</mat-label><input matInput [(ngModel)]="numDocReten" /></mat-form-field>
         <mat-form-field appearance="outline">
           <mat-label>Fecha emisión documento</mat-label>
-          <input matInput [matDatepicker]="pickerFechaEmiDocRet" [(ngModel)]="strFechaEmiDoc" placeholder="dd/mm/aaaa" />
+          <input
+            #fechaEmiDocInput
+            matInput
+            [matDatepicker]="pickerFechaEmiDocRet"
+            [formControl]="fechaEmiDocControl"
+            placeholder="dd/mm/aaaa"
+            (input)="capturarFechaEmiDocRaw($event)"
+            (dateChange)="onFechaEmiDocPickerChange($event.value)"
+            (blur)="syncFechaEmiDocFromRaw($event)"
+          />
           <mat-datepicker-toggle matIconSuffix [for]="pickerFechaEmiDocRet"></mat-datepicker-toggle>
           <mat-datepicker #pickerFechaEmiDocRet></mat-datepicker>
         </mat-form-field>

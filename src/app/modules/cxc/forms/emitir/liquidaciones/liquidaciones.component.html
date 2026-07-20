@@ -54,12 +54,14 @@
         <mat-form-field appearance="outline">
           <mat-label>Fecha</mat-label>
           <input
+            #fechaLiquidacionInput
             matInput
             [matDatepicker]="pickerFechaLiquidacion"
-            [(ngModel)]="strFecha"
-            [ngModelOptions]="{ standalone: true }"
+            [formControl]="fechaControl"
             placeholder="dd/mm/aaaa"
-            (dateChange)="validaIVAByCambioFecha()"
+            (input)="capturarFechaRaw($event)"
+            (dateChange)="onFechaPickerChange($event.value)"
+            (blur)="syncFechaFromRaw($event)"
           />
           <mat-datepicker-toggle matIconSuffix [for]="pickerFechaLiquidacion"></mat-datepicker-toggle>
           <mat-datepicker #pickerFechaLiquidacion></mat-datepicker>

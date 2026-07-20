@@ -143,3 +143,22 @@
     background: rgba(0, 0, 0, 0.04);
   }
 }
+
+// Estilos específicos para tabla de cuentas
+.cuentas-table {
+  .mat-mdc-row.cursor-pointer,
+  .mat-row.cursor-pointer {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+
+    &.selected {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white !important;
+      font-weight: 600;
+
+      td {
+        color: white !important;
+      }
+    }
+  }
+}

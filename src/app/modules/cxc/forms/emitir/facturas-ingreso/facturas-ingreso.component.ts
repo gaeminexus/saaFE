@@ -40,6 +40,7 @@ const EFECTIVO = '1';
 })
 export class FacturasIngresoComponent implements OnInit {
   @ViewChild('inCantidad') inCantidad!: ElementRef;
+  @ViewChild('fechaFacturaInput', { read: ElementRef }) fechaFacturaInputRef!: ElementRef<HTMLInputElement>;
 
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
@@ -113,7 +114,7 @@ export class FacturasIngresoComponent implements OnInit {
 
   vLogo = '';
   vAmbiente = 'PRUEBAS';
-  strFecha: Date | string = '';
+  fechaControl = new UntypedFormControl(new Date());
 
   txtCIRUC = new UntypedFormControl('', [Validators.required, Validators.minLength(10)]);
   txteMail = new UntypedFormControl('', [Validators.required, Validators.email]);
@@ -338,7 +339,7 @@ export class FacturasIngresoComponent implements OnInit {
       return;
     }
 
-    const fechaActual = this.parseFechaLocal(this.strFecha);
+    const fechaActual = this.parseFechaLocal(this.fechaControl.value);
     const actual = this.tablaSRIIVAGral.find((r) => fechaActual >= FECHA_CAMBIO_IVA && Number(r.porcentaje) >= 12);
     const anterior = this.tablaSRIIVAGral.find((r) => Number(r.porcentaje) < 12);
 
@@ -633,7 +634,7 @@ export class FacturasIngresoComponent implements OnInit {
     }
 
     const comprador = this.personaSeleccionada() as Titular;
-    const fechaFactura = this.parseFechaLocal(this.strFecha);
+    const fechaFactura = this.parseFechaLocal(this.fechaControl.value);
 
     // Construir array de formas de pago
     const formaPagosFactura: any[] = [
@@ -749,7 +750,59 @@ export class FacturasIngresoComponent implements OnInit {
   }
 
   setFecha(): void {
-    this.strFecha = new Date();
+    this.fechaControl.setValue(new Date());
+  }
+
+  // Captura el texto crudo mientras el usuario escribe, como en asientos dinámicos (CNT)
+  private _rawFecha: string = '';
+
+  capturarFechaRaw(event: Event): void {
+    this._rawFecha = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaFromRaw(event: FocusEvent): void {
+    const rawValue: string = (this._rawFecha || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFecha = '';
+    if (!rawValue) return;
+
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+
+    const dia = Number(parts[0]);
+    const mes = Number(parts[1]) - 1;
+    const anio = Number(parts[2]);
+
+    if (
+      !isNaN(dia) && dia >= 1 && dia <= 31 &&
+      !isNaN(mes) && mes >= 0 && mes <= 11 &&
+      !isNaN(anio) && anio >= 1000 && anio <= 9999
+    ) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        const formatted = this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+        // Actualizar el FormControl con el Date (no string) para que Material no lo borre
+        this.fechaControl.setValue(date, { emitEvent: false });
+        // Después de que Material procese el blur, forzar el texto dd/MM/yyyy en el input nativo
+        setTimeout(() => {
+          if (this.fechaFacturaInputRef?.nativeElement) {
+            this.fechaFacturaInputRef.nativeElement.value = formatted;
+          }
+          this.validaIVAByCambioFecha();
+        });
+      }
+    }
+  }
+
+  onFechaPickerChange(date: Date | null | undefined): void {
+    const d = date || new Date();
+    this.fechaControl.setValue(d, { emitEvent: false });
+    const formatted = this.funcionesDatosS.formatoFecha(d, FuncionesDatosService.SOLO_FECHA) || '';
+    setTimeout(() => {
+      if (this.fechaFacturaInputRef?.nativeElement) {
+        this.fechaFacturaInputRef.nativeElement.value = formatted;
+      }
+    });
+    this.validaIVAByCambioFecha();
   }
 
   private parseFechaLocal(fechaValor: string | Date | null | undefined): Date {

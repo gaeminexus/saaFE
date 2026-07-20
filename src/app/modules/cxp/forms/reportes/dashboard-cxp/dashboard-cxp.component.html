@@ -1,0 +1,236 @@
+<div class="dashboard-cxp-container">
+
+  <!-- Encabezado -->
+  <div class="page-header">
+    <mat-icon class="header-icon">bar_chart</mat-icon>
+    <div>
+      <h2>Dashboard CXP</h2>
+      <p>Resumen de documentos de Cuentas por Pagar por rango de fechas</p>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <mat-card class="filtros-card">
+    <mat-card-content>
+      <div class="filtros-row">
+
+        <mat-form-field appearance="outline" class="date-field">
+          <mat-label>Fecha Desde</mat-label>
+          <input matInput
+                 #fechaDesdeInput
+                 [matDatepicker]="pickerDesde"
+                 [formControl]="fechaDesdeControl"
+                 placeholder="dd/MM/yyyy">
+          <mat-datepicker-toggle matSuffix [for]="pickerDesde"></mat-datepicker-toggle>
+          <mat-datepicker #pickerDesde></mat-datepicker>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="date-field">
+          <mat-label>Fecha Hasta</mat-label>
+          <input matInput
+                 #fechaHastaInput
+                 [matDatepicker]="pickerHasta"
+                 [formControl]="fechaHastaControl"
+                 placeholder="dd/MM/yyyy">
+          <mat-datepicker-toggle matSuffix [for]="pickerHasta"></mat-datepicker-toggle>
+          <mat-datepicker #pickerHasta></mat-datepicker>
+        </mat-form-field>
+
+        <div class="filtros-actions">
+          <button mat-flat-button color="primary" (click)="buscar()" [disabled]="loading()">
+            <mat-icon>search</mat-icon>
+            Buscar
+          </button>
+          <button mat-stroked-button (click)="limpiar()" [disabled]="loading()">
+            <mat-icon>clear</mat-icon>
+            Limpiar
+          </button>
+        </div>
+
+      </div>
+
+      @if (errorMsg()) {
+        <div class="error-msg">
+          <mat-icon>warning</mat-icon>
+          {{ errorMsg() }}
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Spinner -->
+  @if (loading()) {
+    <div class="spinner-container">
+      <mat-spinner diameter="48"></mat-spinner>
+      <span>Cargando documentos...</span>
+    </div>
+  }
+
+  <!-- Resultados -->
+  @if (!loading() && rows().length > 0) {
+
+    <!-- Tarjetas de totales -->
+    <div class="totales-grid">
+
+      <mat-card class="total-card docs">
+        <mat-card-content>
+          <mat-icon>description</mat-icon>
+          <div class="total-info">
+            <span class="total-label">Documentos</span>
+            <span class="total-value">{{ totalDocs() | number:'1.0-0' }}</span>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="total-card subtotal">
+        <mat-card-content>
+          <mat-icon>attach_money</mat-icon>
+          <div class="total-info">
+            <span class="total-label">Subtotal Gravado</span>
+            <span class="total-value">{{ totalSubtotal() | number:'1.2-2' }}</span>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="total-card subcero">
+        <mat-card-content>
+          <mat-icon>money_off</mat-icon>
+          <div class="total-info">
+            <span class="total-label">Subtotal 0%</span>
+            <span class="total-value">{{ totalSubcero() | number:'1.2-2' }}</span>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="total-card iva">
+        <mat-card-content>
+          <mat-icon>percent</mat-icon>
+          <div class="total-info">
+            <span class="total-label">IVA</span>
+            <span class="total-value">{{ totalIVA() | number:'1.2-2' }}</span>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="total-card ice">
+        <mat-card-content>
+          <mat-icon>local_drink</mat-icon>
+          <div class="total-info">
+            <span class="total-label">ICE</span>
+            <span class="total-value">{{ totalICE() | number:'1.2-2' }}</span>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="total-card descuento">
+        <mat-card-content>
+          <mat-icon>discount</mat-icon>
+          <div class="total-info">
+            <span class="total-label">Descuentos</span>
+            <span class="total-value">{{ totalDescuento() | number:'1.2-2' }}</span>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="total-card total-general">
+        <mat-card-content>
+          <mat-icon>account_balance_wallet</mat-icon>
+          <div class="total-info">
+            <span class="total-label">TOTAL GENERAL</span>
+            <span class="total-value">{{ totalGeneral() | number:'1.2-2' }}</span>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+    </div>
+
+    <!-- Selector de agrupación -->
+    <div class="agrupacion-row">
+      <span class="agrupacion-label">Agrupar por:</span>
+      <mat-button-toggle-group [value]="agrupacion()"
+                               (change)="cambiarAgrupacion($event.value)">
+        <mat-button-toggle value="proveedor">
+          <mat-icon>person</mat-icon> Proveedor
+        </mat-button-toggle>
+        <mat-button-toggle value="tipo">
+          <mat-icon>category</mat-icon> Tipo de Documento
+        </mat-button-toggle>
+      </mat-button-toggle-group>
+    </div>
+
+    <!-- Tabla agrupada -->
+    <mat-card class="tabla-card">
+      <mat-card-content>
+        <div class="table-wrapper">
+          <table mat-table [dataSource]="rows()" matSort class="dashboard-table">
+
+            <ng-container matColumnDef="grupo">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>
+                {{ getColumnHeader('grupo') }}
+              </th>
+              <td mat-cell *matCellDef="let row">{{ row.grupo }}</td>
+              <td mat-footer-cell *matFooterCellDef><strong>TOTALES</strong></td>
+            </ng-container>
+
+            <ng-container matColumnDef="cantidadDocumentos">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header class="num-col">Docs</th>
+              <td mat-cell *matCellDef="let row" class="num-col">{{ row.cantidadDocumentos }}</td>
+              <td mat-footer-cell *matFooterCellDef class="num-col"><strong>{{ totalDocs() }}</strong></td>
+            </ng-container>
+
+            <ng-container matColumnDef="subtotal">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header class="num-col">Subtotal Grav.</th>
+              <td mat-cell *matCellDef="let row" class="num-col">{{ row.subtotal | number:'1.2-2' }}</td>
+              <td mat-footer-cell *matFooterCellDef class="num-col"><strong>{{ totalSubtotal() | number:'1.2-2' }}</strong></td>
+            </ng-container>
+
+            <ng-container matColumnDef="subcero">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header class="num-col">Subtotal 0%</th>
+              <td mat-cell *matCellDef="let row" class="num-col">{{ row.subcero | number:'1.2-2' }}</td>
+              <td mat-footer-cell *matFooterCellDef class="num-col"><strong>{{ totalSubcero() | number:'1.2-2' }}</strong></td>
+            </ng-container>
+
+            <ng-container matColumnDef="vIVA">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header class="num-col">IVA</th>
+              <td mat-cell *matCellDef="let row" class="num-col">{{ row.vIVA | number:'1.2-2' }}</td>
+              <td mat-footer-cell *matFooterCellDef class="num-col"><strong>{{ totalIVA() | number:'1.2-2' }}</strong></td>
+            </ng-container>
+
+            <ng-container matColumnDef="vICE">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header class="num-col">ICE</th>
+              <td mat-cell *matCellDef="let row" class="num-col">{{ row.vICE | number:'1.2-2' }}</td>
+              <td mat-footer-cell *matFooterCellDef class="num-col"><strong>{{ totalICE() | number:'1.2-2' }}</strong></td>
+            </ng-container>
+
+            <ng-container matColumnDef="descuento">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header class="num-col">Descuento</th>
+              <td mat-cell *matCellDef="let row" class="num-col">{{ row.descuento | number:'1.2-2' }}</td>
+              <td mat-footer-cell *matFooterCellDef class="num-col"><strong>{{ totalDescuento() | number:'1.2-2' }}</strong></td>
+            </ng-container>
+
+            <ng-container matColumnDef="total">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header class="num-col total-col">Total</th>
+              <td mat-cell *matCellDef="let row" class="num-col total-col">{{ row.total | number:'1.2-2' }}</td>
+              <td mat-footer-cell *matFooterCellDef class="num-col total-col"><strong>{{ totalGeneral() | number:'1.2-2' }}</strong></td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+            <tr mat-footer-row *matFooterRowDef="displayedColumns; sticky: true"></tr>
+
+          </table>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+  }
+
+  <!-- Sin resultados -->
+  @if (!loading() && rows().length === 0 && !errorMsg()) {
+    <div class="no-data">
+      <mat-icon>inbox</mat-icon>
+      <p>Seleccione un rango de fechas y presione Buscar para ver el resumen.</p>
+    </div>
+  }
+
+</div>

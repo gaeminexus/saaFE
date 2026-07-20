@@ -104,7 +104,13 @@
         </ng-container>
 
         <tr mat-header-row *matHeaderRowDef="displayedColumnsCuentas"></tr>
-        <tr mat-row *matRowDef="let row; columns: displayedColumnsCuentas"></tr>
+        <tr
+          mat-row
+          *matRowDef="let row; columns: displayedColumnsCuentas"
+          (click)="mostrarCuenta(row)"
+          [class.selected]="codigoEdicion === row.codigo"
+          class="cursor-pointer"
+        ></tr>
       </table>
 
       <mat-paginator
