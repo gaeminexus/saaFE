@@ -187,11 +187,14 @@
     .formulario-listado {
       display: flex;
       flex-direction: column;
-      height: 100%;
-      transition: all 0.3s ease;
+      flex-shrink: 0;
+      max-height: 55%;
+      transition: max-height 0.3s ease;
 
       &.collapsed {
+        max-height: none;
         height: auto;
+        flex-shrink: 0;
 
         .formulario-header {
           border-bottom: 1px solid #e0e0e0;
@@ -260,7 +263,9 @@
     .seccion-detalles {
       display: flex;
       flex-direction: column;
-      height: 100%;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
 
       .detalles-header {
         display: flex;
@@ -292,6 +297,7 @@
       }
 
       .formulario-detalle {
+        flex-shrink: 0;
         background: #f9f9f9;
         border-bottom: 2px solid #e0e0e0;
         padding: 1rem 1.5rem;
@@ -349,6 +355,7 @@
 
       .tabla-detalles-container {
         flex: 1;
+        min-height: 0;
         overflow-y: auto;
         padding: 1rem 1.5rem;
 

@@ -9,4 +9,5 @@ export interface PersonaCuentaContable {
   tipoCuenta: number; // Tipo de cuenta: 1 = Facturas, 2 = Anticipos
   tipoPersona: number; // 1 = Cliente, 2 = Proveedor
   planCuenta: PlanCuenta; // Cuenta contable asociada
+  saldoInicial: number; // Saldo inicial de la cuenta contable
 }

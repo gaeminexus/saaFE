@@ -19,6 +19,10 @@ import { FacturadorService } from '../../../service/facturador.service';
 import { PuntoEmisionService } from '../../../service/punto-emision.service';
 import { DetalleSriService } from '../../../service/detalle-sri.service';
 import { FuncionesDatosService, TipoFormatoFechaBackend } from '../../../../../shared/services/funciones-datos.service';
+import { JasperReportesService } from '../../../../../shared/services/jasper-reportes.service';
+import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
+import { TipoDatosBusqueda as TipoDatos } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
+import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TitularSelectorDialogComponent } from '../../../../../shared/components/titular-selector-dialog/titular-selector-dialog.component';
 import { ProductoSelectorDialogComponent } from '../../../../../shared/components/producto-selector-dialog/producto-selector-dialog.component';
 
@@ -49,6 +53,7 @@ export class FacturasIngresoComponent implements OnInit {
   private facturadorService = inject(FacturadorService);
   private puntoEmisionService = inject(PuntoEmisionService);
   private detalleSriService = inject(DetalleSriService);
+  private jasperReportes = inject(JasperReportesService);
   public funcionesDatosS = inject(FuncionesDatosService);
 
   cargando = signal(false);
@@ -67,6 +72,7 @@ export class FacturasIngresoComponent implements OnInit {
   vFactura: FacturaEmitir | null = null;
   vFacturador = {} as Facturador;
   vUsuario = { codigo: 0 } as Usuario;
+  vEmpresaCodigo = 0;
   vComprador = {} as Titular;
   txtComprador = '';
   txtDireccion = '';
@@ -160,6 +166,20 @@ export class FacturasIngresoComponent implements OnInit {
       } catch {
         this.vUsuario = { codigo: 0 } as Usuario;
       }
+    }
+
+    const empresaStr = sessionStorage.getItem('empresa') || localStorage.getItem('empresa');
+    if (empresaStr) {
+      try {
+        const empresa = JSON.parse(empresaStr);
+        this.vEmpresaCodigo = Number(empresa?.codigo) || 0;
+      } catch {
+        this.vEmpresaCodigo = 0;
+      }
+    }
+    if (!this.vEmpresaCodigo) {
+      const idEmpresa = sessionStorage.getItem('idEmpresa') || localStorage.getItem('idEmpresa');
+      if (idEmpresa) this.vEmpresaCodigo = parseInt(idEmpresa, 10) || 0;
     }
 
     const facturadorStr = sessionStorage.getItem('facturador') || localStorage.getItem('facturador');
@@ -646,7 +666,7 @@ export class FacturasIngresoComponent implements OnInit {
       },
     ];
 
-    const payload: Partial<FacturaEmitir> & { detalleFactura?: DetalleFacturaEmitir[]; formaPagoCodigo?: string; plazo?: number } = {
+    const payload: Partial<FacturaEmitir> & { detalleFactura?: DetalleFacturaEmitir[]; formaPagoCodigo?: string; plazo?: number; empresa?: { codigo: number } } = {
       id: null as unknown as number,
       tipoComprobante: FACTURA,
       facturador: this.vFacturador,
@@ -682,13 +702,14 @@ export class FacturasIngresoComponent implements OnInit {
       pathGen: '',
       autorizacion: '',
       fechaAutorizacion: '',
-      formaPago: Number(this.formaPagoFacturaOtro.id || 0),
+      formaPago: Number(this.formaPagoFactura.id || 0),
       estado: 1,
       estadoEmision: 1,
       detalleFactura: this.listaDetFactura,
       formaPagoCodigo: this.formaPagoFactura.codigo,
       plazo: this.plazoPago,
-      formaPagosFactura: formaPagosFactura,  // Agregar array de formas de pago
+      formaPagosFactura: formaPagosFactura,
+      empresa: this.vEmpresaCodigo ? { codigo: this.vEmpresaCodigo } : undefined,
     };
 
     const requestBody = {
@@ -704,10 +725,26 @@ export class FacturasIngresoComponent implements OnInit {
     this.guardando.set(true);
     this.facturaService.procesarCompleta(requestBody).subscribe({
       next: (resp) => {
-        this.vFactura = resp || null;
         this.deshabilitado = true;
         this.guardando.set(false);
         this.mostrarExito('Factura autorizada correctamente');
+
+        const idFactura = resp?.id;
+        if (idFactura) {
+          // Tenemos el id: recargar factura completa
+          this.vFactura = resp;
+          this.facturaService.getById(String(idFactura)).subscribe({
+            next: (facturaCompleta) => {
+              if (facturaCompleta?.id) {
+                this.vFactura = facturaCompleta;
+              }
+            },
+            error: () => { /* vFactura ya está asignado desde resp */ },
+          });
+        } else {
+          // El backend no devolvió el objeto: buscar por titular y secuencial más reciente
+          this.buscarFacturaRecienEmitida(comprador.codigo);
+        }
       },
       error: (err) => {
         this.guardando.set(false);
@@ -716,29 +753,54 @@ export class FacturasIngresoComponent implements OnInit {
     });
   }
 
+  /** Fallback: busca la factura recién emitida del titular usando selectByCriteria */
+  private buscarFacturaRecienEmitida(codigoTitular: number): void {
+    const criterios: DatosBusqueda[] = [];
+
+    const cTitular = new DatosBusqueda();
+    cTitular.asignaValorConCampoPadre(
+      TipoDatos.LONG, 'titular', 'codigo', String(codigoTitular), TipoComandosBusqueda.IGUAL
+    );
+    cTitular.setNumeroCampoRepetido(0);
+    criterios.push(cTitular);
+
+    if (this.vEmpresaCodigo) {
+      const cEmpresa = new DatosBusqueda();
+      cEmpresa.asignaValorConCampoPadre(
+        TipoDatos.LONG, 'empresa', 'codigo', String(this.vEmpresaCodigo), TipoComandosBusqueda.IGUAL
+      );
+      cEmpresa.setNumeroCampoRepetido(0);
+      criterios.push(cEmpresa);
+    }
+
+    this.facturaService.selectByCriteria(criterios).subscribe({
+      next: (facturas) => {
+        const lista = (facturas || []).sort((a, b) => (b.id || 0) - (a.id || 0));
+        if (lista[0]?.id) {
+          this.vFactura = lista[0];
+        }
+      },
+      error: () => { /* no se pudo recuperar, imprimir no estará disponible */ },
+    });
+  }
+
   imprimeFactura(): void {
-    if (!this.vFactura) {
+    if (!this.vFactura?.id) {
       this.mostrarError('Primero debe emitir el documento');
       return;
     }
 
-    const printContents = document.getElementById('ticket')?.innerHTML;
-    if (!printContents) {
-      this.mostrarError('No hay contenido para imprimir');
-      return;
-    }
-
-    const w = window.open('', '_blank');
-    if (!w) {
-      this.mostrarError('No se pudo abrir ventana de impresión');
-      return;
-    }
-
-    w.document.write(printContents);
-    w.document.close();
-    w.focus();
-    w.print();
-    w.close();
+    this.jasperReportes.generar('cxc', 'RPRT_RIDE_FACTURA', { P_ID_FACTURA: this.vFactura.id }, 'PDF').subscribe({
+      next: (blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.target = '_blank';
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+      },
+      error: () => this.mostrarError('No se pudo generar el reporte'),
+    });
   }
 
   actualizaViewCombo(p1: { id?: number }, p2: { id?: number }): boolean {
@@ -868,8 +930,29 @@ export class FacturasIngresoComponent implements OnInit {
       return error;
     }
 
-    if (typeof error === 'object' && error && 'message' in error) {
-      return String((error as { message?: unknown }).message || fallback);
+    if (typeof error === 'object' && error !== null) {
+      const err = error as Record<string, unknown>;
+      // Mensaje directo en el objeto
+      if (err['message'] && typeof err['message'] === 'string') {
+        return err['message'];
+      }
+      // Respuesta HTTP: err.error puede ser string o un objeto con message
+      if (err['error']) {
+        if (typeof err['error'] === 'string') {
+          return err['error'];
+        }
+        const inner = err['error'] as Record<string, unknown>;
+        if (inner['message'] && typeof inner['message'] === 'string') {
+          return inner['message'];
+        }
+        if (inner['mensaje'] && typeof inner['mensaje'] === 'string') {
+          return inner['mensaje'];
+        }
+      }
+      // statusText como último recurso
+      if (err['statusText'] && typeof err['statusText'] === 'string' && err['statusText'] !== 'Unknown Error') {
+        return err['statusText'];
+      }
     }
 
     return fallback;

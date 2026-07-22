@@ -133,6 +133,96 @@ $text-secondary: #718096;
   }
 }
 
+// Panel resumen saldos iniciales
+.resumen-saldos-panel {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.5rem;
+
+  .resumen-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: $text-secondary;
+    margin-bottom: 1rem;
+
+    mat-icon { font-size: 18px; width: 18px; height: 18px; }
+  }
+
+  .resumen-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .resumen-grupo {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    border-radius: 10px;
+    padding: 0.75rem 1.25rem;
+    flex-wrap: wrap;
+
+    .resumen-grupo-label {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      white-space: nowrap;
+      mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    }
+
+    .resumen-item {
+      background: rgba(255,255,255,0.55);
+      min-width: 130px;
+    }
+  }
+
+  .resumen-grupo-facturas {
+    background: linear-gradient(135deg, #e3f0fb 0%, #bbdefb 100%);
+    border: 1px solid #90caf9;
+    .resumen-grupo-label { color: #1565c0; mat-icon { color: #1565c0; } }
+    .resumen-valor { color: #0d47a1; }
+  }
+
+  .resumen-grupo-anticipos {
+    background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+    border: 1px solid #a5d6a7;
+    .resumen-grupo-label { color: #2e7d32; mat-icon { color: #2e7d32; } }
+    .resumen-valor { color: #1b5e20; }
+  }
+
+  .resumen-item {
+    display: flex;
+    flex-direction: column;
+    border-radius: 8px;
+    padding: 0.6rem 1rem;
+    min-width: 130px;
+  }
+
+  .resumen-label {
+    font-size: 0.75rem;
+    color: $text-secondary;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .resumen-valor {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: $text-primary;
+    margin-top: 0.25rem;
+  }
+}
+
 // Tabla container
 .tabla-container {
   background: white;
@@ -229,6 +319,47 @@ $text-secondary: #718096;
           &.email {
             font-size: 0.85rem;
             color: $primary;
+          }
+        }
+      }
+
+      .rol-section {
+        margin-top: 0.75rem;
+        padding-top: 0.75rem;
+        border-top: 1px dashed $gray-border;
+
+        .rol-header {
+          display: flex;
+          align-items: center;
+          gap: 0.35rem;
+          margin-bottom: 0.45rem;
+          color: $text-primary;
+
+          .rol-nombre {
+            font-size: 0.85rem;
+            font-weight: 700;
+          }
+        }
+
+        .info-row.indent {
+          padding-left: 1rem;
+          margin-bottom: 0.45rem;
+          font-size: 0.82rem;
+
+          .label {
+            font-weight: 600;
+          }
+
+          .value.cuenta-codigo {
+            text-align: right;
+            max-width: 60%;
+            font-size: 0.8rem;
+          }
+
+          .label.sin-cuenta {
+            color: $text-secondary;
+            font-style: italic;
+            font-weight: 500;
           }
         }
       }

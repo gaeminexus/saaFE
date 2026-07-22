@@ -30,32 +30,57 @@ export class TitularSelectorDialogComponent {
   titulares = signal<Titular[]>([]);
   titularSeleccionado = signal<Titular | null>(null);
 
+  /** Todos los registros cargados del backend (sin filtrar) */
+  private todosLosTitulares: Titular[] = [];
+
   columnas = ['identificacion', 'nombre', 'direccion', 'telefono', 'acciones'];
   dataSource = new MatTableDataSource<Titular>([]);
 
   constructor(@Inject(MAT_DIALOG_DATA) public data: TitularSelectorDialogData) {
     this.filtroControl.valueChanges.pipe(debounceTime(300), distinctUntilChanged()).subscribe((value) => {
-      this.buscar(String(value || ''));
+      this.filtrarLocalmente(String(value || ''));
     });
 
-    this.buscar('');
+    this.cargarTodos();
   }
 
-  buscar(termino: string): void {
+  /** Carga todos los titulares del rol una sola vez desde el backend */
+  cargarTodos(): void {
     this.cargando.set(true);
-    this.personaClienteService.buscarTitularesPorRol(termino || '', this.data.rolCodigo).subscribe({
+    this.personaClienteService.buscarTitularesPorRol('', this.data.rolCodigo).subscribe({
       next: (titulares) => {
-        const rows = titulares || [];
-        this.titulares.set(rows);
-        this.dataSource.data = rows;
+        this.todosLosTitulares = titulares || [];
+        this.titulares.set(this.todosLosTitulares);
+        this.dataSource.data = this.todosLosTitulares;
         this.cargando.set(false);
       },
       error: () => {
+        this.todosLosTitulares = [];
         this.titulares.set([]);
         this.dataSource.data = [];
         this.cargando.set(false);
       },
     });
+  }
+
+  /** Filtra localmente los titulares ya cargados por nombre, razón social o identificación */
+  filtrarLocalmente(termino: string): void {
+    const t = (termino || '').trim().toLowerCase();
+    const filtrados = !t
+      ? this.todosLosTitulares
+      : this.todosLosTitulares.filter((titular) => {
+          const nombre = (titular.nombre || '').toLowerCase();
+          const razon = (titular.razonSocial || '').toLowerCase();
+          const ident = (titular.identificacion || '').toLowerCase();
+          return nombre.includes(t) || razon.includes(t) || ident.includes(t);
+        });
+    this.titulares.set(filtrados);
+    this.dataSource.data = filtrados;
+  }
+
+  /** @deprecated Mantener por compatibilidad. Usa cargarTodos() + filtrarLocalmente() */
+  buscar(termino: string): void {
+    this.filtrarLocalmente(termino);
   }
 
   seleccionar(titular: Titular): void {

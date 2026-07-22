@@ -264,3 +264,36 @@ tr.cuota-cancelada  .mat-mdc-cell { background-color: #e0e7ff !important; border
 tr.cuota-vencida    .mat-mdc-cell { background-color: #fee2e2 !important; border-left: 4px solid #dc2626 !important; color: #7f1d1d !important; }
 tr.cuota-desconocida .mat-mdc-cell { background-color: #f3f4f6 !important; border-left: 4px solid #9ca3af !important; }
 
+// ===== Snackbar global (overlay fuera del componente, requiere estilos globales) =====
+.snackbar-success .mdc-snackbar__surface {
+  background: #4caf50 !important;
+  color: white !important;
+}
+.snackbar-success .mat-mdc-snack-bar-label {
+  color: white !important;
+}
+.snackbar-success .mat-mdc-button {
+  color: white !important;
+}
+
+.snackbar-error .mdc-snackbar__surface {
+  background: #f44336 !important;
+  color: white !important;
+}
+.snackbar-error .mat-mdc-snack-bar-label {
+  color: white !important;
+}
+.snackbar-error .mat-mdc-button {
+  color: white !important;
+}
+
+.snackbar-warn .mdc-snackbar__surface {
+  background: #ff9800 !important;
+  color: white !important;
+}
+.snackbar-warn .mat-mdc-snack-bar-label {
+  color: white !important;
+}
+.snackbar-warn .mat-mdc-button {
+  color: white !important;
+}

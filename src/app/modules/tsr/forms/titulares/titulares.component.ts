@@ -32,6 +32,7 @@ import { PaisService } from '../../../crd/service/pais.service';
 import { Pais } from '../../../crd/model/pais';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { Empresa } from '../../../../shared/model/empresa';
+import { ExportService } from '../../../../shared/services/export.service';
 
 type Vista = 'lista' | 'form' | 'roles' | 'cuentas';
 
@@ -136,6 +137,7 @@ export class TitularesComponent implements OnInit {
     private snackBar: MatSnackBar,
     private dialog: MatDialog,
     private paisService: PaisService,
+    private exportService: ExportService,
   ) {
     this.inicializarFormulario();
   }
@@ -923,7 +925,7 @@ export class TitularesComponent implements OnInit {
     return this.rolesAsignados().some((r) => r.rubroRolPersonaH === codigoRol);
   }
 
-  agregarRol(codigoRol: number, saldoInicial: number, diasCredito: number): void {
+  agregarRol(codigoRol: number, diasCredito: number): void {
     const titular = this.titularSeleccionado();
     const empresaCodigo = this.getEmpresaCodigo();
     if (!titular || !empresaCodigo) {
@@ -943,7 +945,6 @@ export class TitularesComponent implements OnInit {
       rubroRolPersonaP: this.RUBRO_ROL_PERSONA,
       rubroRolPersonaH: codigoRol,
       empresa: { codigo: empresaCodigo },
-      saldoInicial: saldoInicial,
       diasCredito: diasCredito,
       diasVencimientoFactura: 0,
       calificacionRiesgo: '',
@@ -1036,7 +1037,7 @@ export class TitularesComponent implements OnInit {
     return this.cuentasAsignadas().some((c) => c.tipoCuenta === tipoCuenta);
   }
 
-  agregarCuenta(tipoCuenta: number): void {
+  agregarCuenta(tipoCuenta: number, saldoInicial: number = 0): void {
     const rol = this.rolSeleccionado();
     if (!rol) {
       this.mostrarError('No hay rol seleccionado');
@@ -1056,8 +1057,39 @@ export class TitularesComponent implements OnInit {
 
     dialogRef.afterClosed().subscribe((planCuenta) => {
       if (planCuenta) {
-        this.crearCuentaPersona(rol, planCuenta, tipoCuenta);
+        this.crearCuentaPersona(rol, planCuenta, tipoCuenta, saldoInicial);
       }
+    });
+  }
+
+  editarSaldoCuenta(cuenta: PersonaCuentaContable): void {
+    const saldoActual = cuenta.saldoInicial ?? 0;
+    const saldoStr = window.prompt(
+      `Ingrese el saldo inicial para ${this.getTipoCuentaDescripcion(cuenta.tipoCuenta)} - ${cuenta.planCuenta?.nombre || ''}:`,
+      saldoActual.toString()
+    );
+    if (saldoStr === null) { return; }
+    const nuevoSaldo = parseFloat(saldoStr);
+    if (isNaN(nuevoSaldo) || nuevoSaldo < 0) {
+      this.mostrarError('El saldo inicial debe ser un número válido >= 0');
+      return;
+    }
+    const cuentaActualizada: any = {
+      codigo: cuenta.codigo,
+      personaRol: { codigo: cuenta.personaRol.codigo },
+      empresa: { codigo: cuenta.empresa.codigo },
+      planCuenta: { codigo: cuenta.planCuenta.codigo },
+      tipoCuenta: cuenta.tipoCuenta,
+      tipoPersona: cuenta.tipoPersona ?? null,
+      saldoInicial: nuevoSaldo,
+    };
+    this.personaCuentaService.update(cuentaActualizada).subscribe({
+      next: () => {
+        this.mostrarExito('Saldo inicial actualizado');
+        const rol = this.rolSeleccionado();
+        if (rol) { this.cargarCuentasAsignadas(rol.codigo); }
+      },
+      error: () => this.mostrarError('Error al actualizar saldo inicial'),
     });
   }
 
@@ -1075,17 +1107,7 @@ export class TitularesComponent implements OnInit {
   }
 
   editarDatosRol(rol: PersonaRol): void {
-    const saldoActual = rol.saldoInicial ?? 0;
     const diasActual = rol.diasCredito ?? 0;
-
-    const saldoStr = window.prompt(
-      `Ingrese el saldo inicial para el rol ${this.getRolDescripcion(rol.rubroRolPersonaH || 0)}:`,
-      saldoActual.toString()
-    );
-
-    if (saldoStr === null) {
-      return;
-    }
 
     const diasStr = window.prompt(
       `Ingrese los días de crédito para el rol ${this.getRolDescripcion(rol.rubroRolPersonaH || 0)}:`,
@@ -1096,17 +1118,15 @@ export class TitularesComponent implements OnInit {
       return;
     }
 
-    const nuevoSaldo = parseFloat(saldoStr);
     const nuevosDias = parseInt(diasStr, 10);
 
-    if (isNaN(nuevoSaldo) || nuevoSaldo < 0 || isNaN(nuevosDias) || nuevosDias < 0) {
-      this.mostrarError('Saldo inicial y días crédito deben ser valores numéricos válidos >= 0');
+    if (isNaN(nuevosDias) || nuevosDias < 0) {
+      this.mostrarError('Días crédito debe ser un valor numérico válido >= 0');
       return;
     }
 
     const rolActualizado: PersonaRol = {
       ...rol,
-      saldoInicial: nuevoSaldo,
       diasCredito: nuevosDias,
     };
 
@@ -1124,7 +1144,7 @@ export class TitularesComponent implements OnInit {
     });
   }
 
-  private crearCuentaPersona(rol: PersonaRol, planCuenta: any, tipoCuenta: number): void {
+  private crearCuentaPersona(rol: PersonaRol, planCuenta: any, tipoCuenta: number, saldoInicial: number = 0): void {
     const titular = this.titularSeleccionado();
     const empresaCodigo = this.getEmpresaCodigo();
     if (!titular || !empresaCodigo) {
@@ -1138,6 +1158,7 @@ export class TitularesComponent implements OnInit {
       planCuenta: { codigo: planCuenta.codigo },
       tipoCuenta: tipoCuenta,
       tipoPersona: null,
+      saldoInicial: saldoInicial,
     };
 
     this.personaCuentaService.add(cuenta).subscribe({
@@ -1159,6 +1180,7 @@ export class TitularesComponent implements OnInit {
       planCuenta: { codigo: planCuenta.codigo },
       tipoCuenta: cuenta.tipoCuenta,
       tipoPersona: null,
+      saldoInicial: cuenta.saldoInicial ?? 0,
     };
 
     this.personaCuentaService.update(cuentaActualizada).subscribe({
@@ -1412,6 +1434,114 @@ export class TitularesComponent implements OnInit {
       .join(' | ')
       .replace(/\s+/g, ' ')
       .trim();
+  }
+
+  // ==================== EXPORTAR CSV ====================
+
+  exportarCSV(): void {
+    const titulares = this.titularesFiltradosConDetalles();
+    if (!titulares.length) {
+      this.mostrarError('No hay datos para exportar');
+      return;
+    }
+
+    const TIPO_CUENTA: Record<number, string> = {
+      1: 'Facturas', 2: 'Anticipos', 3: 'Retenciones', 4: 'Otros',
+    };
+    const TIPO_PERSONA: Record<number, string> = {
+      1: 'Cliente', 2: 'Proveedor',
+    };
+
+    const rolFiltroActual = this.rolFiltro();
+    const rows: Record<string, any>[] = [];
+
+    for (const titular of titulares) {
+      const rolesConCuentas = titular.rolesConCuentas || [];
+
+      // Filtrar roles según el filtro activo
+      const rolesFiltrados = rolFiltroActual
+        ? rolesConCuentas.filter(rc => rc.rol.rubroRolPersonaH === rolFiltroActual)
+        : rolesConCuentas;
+
+      if (rolesFiltrados.length === 0) {
+        // Titular sin roles (o sin coincidencia de filtro): una fila base
+        rows.push({
+          identificacion: titular.identificacion || '',
+          razonSocial: titular.razonSocial || '',
+          nombre: titular.nombre || '',
+          email: titular.email || '',
+          telefono: titular.telefono || '',
+          direccion: titular.direccion || '',
+          estado: titular.estado === 1 ? 'Activo' : 'Inactivo',
+          rol: '',
+          saldoInicial: '',
+          diasCredito: '',
+          tipoCuenta: '',
+          cuentaContable: '',
+        });
+      } else {
+        for (const rc of rolesFiltrados) {
+          const rolNombre = this.rolesDisponibles().find(
+            r => r.codigoAlterno === rc.rol.rubroRolPersonaH
+          )?.descripcion || String(rc.rol.rubroRolPersonaH);
+
+          if (!rc.cuentas || rc.cuentas.length === 0) {
+            rows.push({
+              identificacion: titular.identificacion || '',
+              razonSocial: titular.razonSocial || '',
+              nombre: titular.nombre || '',
+              email: titular.email || '',
+              telefono: titular.telefono || '',
+              direccion: titular.direccion || '',
+              estado: titular.estado === 1 ? 'Activo' : 'Inactivo',
+              rol: rolNombre,
+              saldoInicial: '',
+              diasCredito: rc.rol.diasCredito ?? '',
+              tipoCuenta: '',
+              cuentaContable: '',
+            });
+          } else {
+            for (const cuenta of rc.cuentas) {
+              rows.push({
+                identificacion: titular.identificacion || '',
+                razonSocial: titular.razonSocial || '',
+                nombre: titular.nombre || '',
+                email: titular.email || '',
+                telefono: titular.telefono || '',
+                direccion: titular.direccion || '',
+                estado: titular.estado === 1 ? 'Activo' : 'Inactivo',
+                rol: rolNombre,
+                saldoInicial: cuenta.saldoInicial ?? '',
+                diasCredito: rc.rol.diasCredito ?? '',
+                tipoCuenta: TIPO_CUENTA[cuenta.tipoCuenta] || String(cuenta.tipoCuenta),
+                cuentaContable: cuenta.planCuenta
+                  ? `${cuenta.planCuenta.codigo} - ${cuenta.planCuenta.nombre}`
+                  : '',
+              });
+            }
+          }
+        }
+      }
+    }
+
+    const headers = [
+      'Identificación', 'Razón Social', 'Nombre', 'Email', 'Teléfono',
+      'Dirección', 'Estado', 'Rol', 'Saldo Inicial', 'Días Crédito',
+      'Tipo Cuenta', 'Cuenta Contable',
+    ];
+    const keys = [
+      'identificacion', 'razonSocial', 'nombre', 'email', 'telefono',
+      'direccion', 'estado', 'rol', 'saldoInicial', 'diasCredito',
+      'tipoCuenta', 'cuentaContable',
+    ];
+
+    const rolLabel = rolFiltroActual
+      ? this.rolesDisponibles().find(r => r.codigoAlterno === rolFiltroActual)?.descripcion || 'rol'
+      : 'todos';
+    const fecha = new Date().toISOString().slice(0, 10);
+
+    this.exportService.exportToCSV(rows, `titulares_${rolLabel}_${fecha}`, headers, keys);
+    this.mostrarExito(`${rows.length} registros exportados`);
   }
 
   // ==================== MENSAJES ====================

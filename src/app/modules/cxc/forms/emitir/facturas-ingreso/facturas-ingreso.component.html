@@ -243,8 +243,8 @@
 
     <div class="pnlTotales">
       <div class="fila-totales">
-        <span><strong>Observación:&nbsp;&nbsp;</strong></span>
-        <input class="example-spacer" type="text" [(ngModel)]="txtObservacion" />
+        <span><strong>Información Adicional:&nbsp;&nbsp;</strong></span>
+        <input class="example-spacer" type="text" [(ngModel)]="txtObservacion" maxlength="300" />
       </div>
     </div>
 
@@ -365,7 +365,7 @@
     </div>
 
     <div class="pnlBtnsfinales">
-      <button mat-raised-button class="btn-nueva" matTooltip="Generar Factura" aria-label="Generar Factura" (click)="generaFactura()" [disabled]="guardando()">
+      <button mat-raised-button class="btn-nueva" matTooltip="Generar Factura" aria-label="Generar Factura" (click)="generaFactura()" [disabled]="guardando() || deshabilitado">
         <mat-icon>shop_two</mat-icon>
         Generar Factura
       </button>

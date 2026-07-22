@@ -19,7 +19,7 @@ export class FormaPagoNegociacionService {
   }
 
   selectByCriteria(criteria: any): Observable<FormaPagoNegociacion[] | null> {
-    return this.http.post<FormaPagoNegociacion[]>(`${ServiciosCxp.RS_FPNG}/selectByCriteria`, criteria, this.httpOptions).pipe(catchError(this.handleError));
+    return this.http.post<FormaPagoNegociacion[]>(`${ServiciosCxp.RS_FPNG}/selectByCriteria/`, criteria, this.httpOptions).pipe(catchError(this.handleError));
   }
 
   add(item: Partial<FormaPagoNegociacion>): Observable<FormaPagoNegociacion | null> {

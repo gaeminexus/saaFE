@@ -16,7 +16,7 @@
     <div class="filtros-section">
       <mat-form-field class="search-field">
         <mat-label>Buscar titular...</mat-label>
-        <input matInput placeholder="Por nombre o RUC/Cédula" (input)="busqueda.set($any($event.target).value)">
+        <input matInput placeholder="Por nombre o RUC/Cédula" [value]="busqueda()" (input)="busqueda.set($any($event.target).value)">
         <mat-icon matSuffix>search</mat-icon>
       </mat-form-field>
 
@@ -29,8 +29,53 @@
           }
         </mat-select>
       </mat-form-field>
+      @if (rolFiltro()) {
+        <button mat-icon-button color="warn" (click)="rolFiltro.set(null)" matTooltip="Limpiar filtro de rol">
+          <mat-icon>close</mat-icon>
+        </button>
+      }
 
       <div class="info-filtros"><span class="badge">Total: {{ totalFiltrados() }}</span></div>
+
+      @if (busqueda() || rolFiltro()) {
+        <button mat-stroked-button color="warn" (click)="busqueda.set(''); rolFiltro.set(null)" matTooltip="Limpiar todos los filtros">
+          <mat-icon>filter_alt_off</mat-icon> Limpiar filtros
+        </button>
+      }
+
+      <button mat-raised-button (click)="exportarCSV()" matTooltip="Exportar a CSV con roles y cuentas" [disabled]="loading()">
+        <mat-icon>download</mat-icon>
+        Exportar CSV
+      </button>
+    </div>
+
+    <!-- PANEL RESUMEN SALDOS INICIALES -->
+    <div class="resumen-saldos-panel">
+      <div class="resumen-title"><mat-icon>account_balance</mat-icon> Resumen de Saldos Iniciales (titulares filtrados)</div>
+      <div class="resumen-grid">
+        <div class="resumen-grupo resumen-grupo-facturas">
+          <div class="resumen-grupo-label"><mat-icon>receipt_long</mat-icon> Facturas</div>
+          <div class="resumen-item">
+            <span class="resumen-label">Clientes</span>
+            <span class="resumen-valor">{{ resumenSaldos().factCliente | number:'1.2-2' }}</span>
+          </div>
+          <div class="resumen-item">
+            <span class="resumen-label">Proveedores</span>
+            <span class="resumen-valor">{{ resumenSaldos().factProveedor | number:'1.2-2' }}</span>
+          </div>
+        </div>
+        <div class="resumen-grupo resumen-grupo-anticipos">
+          <div class="resumen-grupo-label"><mat-icon>payments</mat-icon> Anticipos</div>
+          <div class="resumen-item">
+            <span class="resumen-label">Clientes</span>
+            <span class="resumen-valor">{{ resumenSaldos().antCliente | number:'1.2-2' }}</span>
+          </div>
+          <div class="resumen-item">
+            <span class="resumen-label">Proveedores</span>
+            <span class="resumen-valor">{{ resumenSaldos().antProveedor | number:'1.2-2' }}</span>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="tabla-container">
@@ -49,6 +94,33 @@
                 <div class="info-row"><span class="label">Identificación:</span><span class="value">{{ titular.identificacion || "N/A" }}</span></div>
                 <div class="info-row"><span class="label">Teléfono:</span><span class="value">{{ titular.telefono || "N/A" }}</span></div>
                 <div class="info-row"><span class="label">Email:</span><span class="value email">{{ titular.email || "N/A" }}</span></div>
+
+                <!-- Roles con saldo inicial y cuentas contables -->
+                @for (rc of getRolesConCuentasDeTitular(titular.codigo); track rc.rol.codigo) {
+                  <div class="rol-section">
+                    <div class="rol-header">
+                      <mat-icon style="font-size:14px;width:14px;height:14px;">badge</mat-icon>
+                      <span class="rol-nombre">{{ getNombreRol(rc.rol.rubroRolPersonaH) }}</span>
+                    </div>
+                    <div class="info-row indent">
+                      <span class="label">Días Crédito:</span>
+                      <span class="value">{{ rc.rol.diasCredito }}</span>
+                    </div>
+                    @for (cuenta of rc.cuentas; track cuenta.codigo) {
+                      <div class="info-row indent cuenta-row">
+                        <span class="label">{{ getTipoCuentaLabel(cuenta.tipoCuenta) }}:</span>
+                        <span class="value cuenta-codigo">{{ cuenta.planCuenta.cuentaContable || cuenta.planCuenta.codigo }} - {{ cuenta.planCuenta.nombre }}</span>
+                        <span class="saldo-badge">&nbsp;({{ cuenta.saldoInicial | number:'1.2-2' }})</span>
+                      </div>
+                    }
+                    @if (rc.cuentas.length === 0) {
+                      <div class="info-row indent"><span class="label sin-cuenta">Sin cuenta contable asignada</span></div>
+                    }
+                  </div>
+                }
+                @if (getRolesConCuentasDeTitular(titular.codigo).length === 0) {
+                  <div class="info-row"><span class="label sin-cuenta">Sin roles asignados</span></div>
+                }
               </div>
               <div class="card-actions">
                 <button mat-raised-button color="accent" (click)="abrirEdicion(titular)"><mat-icon>edit</mat-icon> Editar</button>
@@ -187,10 +259,6 @@
                     </mat-select>
                   </mat-form-field>
                   <mat-form-field appearance="fill" class="full-width">
-                    <mat-label>Saldo Inicial</mat-label>
-                    <input matInput type="number" formControlName="saldoInicial" step="0.01" min="0">
-                  </mat-form-field>
-                  <mat-form-field appearance="fill" class="full-width">
                     <mat-label>Días Crédito</mat-label>
                     <input matInput type="number" formControlName="diasCredito" step="1" min="0">
                   </mat-form-field>
@@ -214,7 +282,6 @@
                       <h4>
                         {{ obtenerNombreRubrica(rol.rol.rubroRolPersonaH) }}
                         <small style="margin-left:.75rem; font-weight:500; opacity:.8;">
-                          Saldo Inicial: {{ rol.rol.saldoInicial | number:'1.2-2' }} ·
                           Días Crédito: {{ rol.rol.diasCredito }}
                         </small>
                       </h4>
@@ -241,21 +308,30 @@
                             </mat-select>
                           </mat-form-field>
 
-                          <button mat-raised-button color="accent" class="btn-agregar-cuenta" (click)="agregarCuentaARol(rol, tipoCuentaSelect.value); tipoCuentaSelect.value = null" [disabled]="!tipoCuentaSelect.value">
+                          <mat-form-field appearance="fill" class="tipo-cuenta-select">
+                            <mat-label>Saldo Inicial</mat-label>
+                            <input matInput type="number" #saldoInicialCuentaInput min="0" step="0.01" [value]="0" />
+                          </mat-form-field>
+
+                          <button mat-raised-button color="accent" class="btn-agregar-cuenta" (click)="agregarCuentaARol(rol, tipoCuentaSelect.value, +saldoInicialCuentaInput.value); tipoCuentaSelect.value = null; saldoInicialCuentaInput.value = '0'" [disabled]="!tipoCuentaSelect.value">
                             <mat-icon>add</mat-icon> Agregar Cuenta
                           </button>
                         </div>
                         @if (rol.cuentas.length > 0) {
                           <table class="cuentas-table">
                             <thead><tr>
-                              <th>Número de Cuenta</th><th>Nombre</th><th></th>
+                              <th>Número de Cuenta</th><th>Nombre</th><th>Saldo Inicial</th><th></th>
                             </tr></thead>
                             <tbody>
                               @for (cls of rol.cuentas; track cls.codigo) {
                                 <tr>
                                   <td>{{ cls.planCuenta.cuentaContable || cls.planCuenta.codigo }}</td>
                                   <td>{{ cls.planCuenta.nombre }}</td>
-                                  <td><button mat-icon-button color="warn" (click)="eliminarCuentaRol(rol, cls)"><mat-icon>delete_outline</mat-icon></button></td>
+                                  <td>{{ cls.saldoInicial | number:'1.2-2' }}</td>
+                                  <td>
+                                    <button mat-icon-button color="primary" (click)="editarSaldoCuenta(rol, cls)" matTooltip="Editar saldo inicial"><mat-icon>edit</mat-icon></button>
+                                    <button mat-icon-button color="warn" (click)="eliminarCuentaRol(rol, cls)"><mat-icon>delete_outline</mat-icon></button>
+                                  </td>
                                 </tr>
                               }
                             </tbody>

@@ -308,8 +308,9 @@
                 <mat-form-field appearance="fill" class="half-width">
                   <mat-label>Estado *</mat-label>
                   <mat-select formControlName="idEstado">
-                    @for (estado of estadosOptions; track estado.value) {
-                      <mat-option [value]="estado.value">{{ estado.label }}</mat-option>
+                    <mat-option [value]="null">-- Seleccionar --</mat-option>
+                    @for (estado of estadosParticipeOptions; track estado.codigo) {
+                      <mat-option [value]="estado.codigo">{{ estado.nombre }}</mat-option>
                     }
                   </mat-select>
                   <mat-icon matSuffix>flag</mat-icon>
@@ -436,8 +437,9 @@
                 <mat-form-field appearance="fill" class="third-width">
                   <mat-label>Estado Actual</mat-label>
                   <mat-select formControlName="estadoActual">
-                    @for (estado of estadosOptions; track estado.value) {
-                      <mat-option [value]="estado.value">{{ estado.label }}</mat-option>
+                    <mat-option [value]="null">-- Seleccionar --</mat-option>
+                    @for (estado of estadosParticipeOptions; track estado.codigo) {
+                      <mat-option [value]="estado.codigo">{{ estado.nombre }}</mat-option>
                     }
                   </mat-select>
                 </mat-form-field>
@@ -454,8 +456,9 @@
                 <mat-form-field appearance="fill" class="third-width">
                   <mat-label>Estado Registro Partícipe</mat-label>
                   <mat-select formControlName="idEstadoParticipe">
-                    @for (estado of estadosOptions; track estado.value) {
-                      <mat-option [value]="estado.value">{{ estado.label }}</mat-option>
+                    <mat-option [value]="null">-- Seleccionar --</mat-option>
+                    @for (estado of estadosParticipeOptions; track estado.codigo) {
+                      <mat-option [value]="estado.codigo">{{ estado.nombre }}</mat-option>
                     }
                   </mat-select>
                 </mat-form-field>

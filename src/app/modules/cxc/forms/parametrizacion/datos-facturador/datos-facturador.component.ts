@@ -864,6 +864,11 @@ export class DatosFacturadorComponent implements OnInit {
     );
   }
 
+  getNombreTipoDoc(codigo: string): string {
+    const doc = this.documentosTsri().find((d) => d.codigo === String(codigo));
+    return doc ? doc.detalle : (codigo || '-');
+  }
+
   private mostrarError(mensaje: string): void {
     this.snackBar.open(mensaje, 'Cerrar', {
       duration: 5000,

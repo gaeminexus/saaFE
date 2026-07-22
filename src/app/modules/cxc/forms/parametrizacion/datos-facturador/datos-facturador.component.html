@@ -658,7 +658,7 @@
           <table mat-table [dataSource]="dataSourceNumeraciones" class="mat-elevation-z2">
             <ng-container matColumnDef="tipoDoc">
               <th mat-header-cell *matHeaderCellDef>Tipo de Documento</th>
-              <td mat-cell *matCellDef="let num">{{ num.tipoDoc }}</td>
+              <td mat-cell *matCellDef="let num">{{ getNombreTipoDoc(num.tipoDoc) }}</td>
             </ng-container>
 
             <ng-container matColumnDef="numActual">

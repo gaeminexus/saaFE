@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableDataSource } from '@angular/material/table';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
@@ -8,6 +9,8 @@ import { FacturaEmitir } from '../../../model/factura-emitir';
 import { FacturaEmitirService } from '../../../service/emitir/factura-emitir.service';
 import { DetalleSriService } from '../../../service/detalle-sri.service';
 import { DetalleSri } from '../../../model/detalle-sri';
+import { JasperReportesService } from '../../../../../shared/services/jasper-reportes.service';
+import { MotivoAnulacionDialogComponent } from '../motivo-anulacion-dialog/motivo-anulacion-dialog.component';
 
 @Component({
   selector: 'app-consulta-facturas',
@@ -19,7 +22,19 @@ import { DetalleSri } from '../../../model/detalle-sri';
 export class ConsultaFacturasComponent implements OnInit {
   private facturaService = inject(FacturaEmitirService);
   private detalleSriService = inject(DetalleSriService);
+  private jasperReportes = inject(JasperReportesService);
   private snackBar = inject(MatSnackBar);
+  private dialog = inject(MatDialog);
+
+  private get usuarioSesion(): string {
+    try {
+      const u = sessionStorage.getItem('usuario') || localStorage.getItem('usuario');
+      if (u) return JSON.parse(u)?.username || JSON.parse(u)?.nombre || JSON.parse(u)?.login || 'sistema';
+    } catch { /* */ }
+    return 'sistema';
+  }
+
+  imprimiendo = signal(false);
 
   cargando = signal(false);
   estados = signal<Array<{ value: string; label: string }>>([]);
@@ -94,7 +109,8 @@ export class ConsultaFacturasComponent implements OnInit {
     this.facturaService.getAll().subscribe({
       next: (data) => {
         const todos = (data || []).map((item) => this.normalizar(item));
-        this.registros = this.aplicarFiltros(todos);
+        const filtrados = this.aplicarFiltros(todos);
+        this.registros = filtrados.sort((a, b) => (b.id || 0) - (a.id || 0));
         this.dataSource.data = this.registros;
         this.cargando.set(false);
       },
@@ -119,13 +135,27 @@ export class ConsultaFacturasComponent implements OnInit {
       this.mostrarInfo('La factura ya está anulada');
       return;
     }
-    const payload = { ...row, estadoEmision: 3 };
-    this.facturaService.update(payload).subscribe({
-      next: () => {
-        this.mostrarExito('Factura anulada');
-        this.buscar();
-      },
-      error: () => this.mostrarError('No se pudo anular la factura'),
+
+    const dialogRef = this.dialog.open(MotivoAnulacionDialogComponent, {
+      width: '480px',
+      disableClose: true,
+      data: { numero: row.numero || String(row.id) },
+    });
+
+    dialogRef.afterClosed().subscribe((motivo: string | null) => {
+      if (!motivo) return;
+
+      this.facturaService.anularFactura({
+        idFactura: Number(row.id),
+        usuario: this.usuarioSesion,
+        motivo,
+      }).subscribe({
+        next: () => {
+          this.mostrarExito('Factura anulada correctamente');
+          this.buscar();
+        },
+        error: () => this.mostrarError('No se pudo anular la factura'),
+      });
     });
   }
 
@@ -231,12 +261,22 @@ export class ConsultaFacturasComponent implements OnInit {
       return;
     }
 
-    const clave = row.clave || row.autorizacion;
-    if (!clave) {
-      this.mostrarInfo('No existe clave para imprimir');
-      return;
-    }
-    window.open(`/api/saa-backend/rest/jaspers/reportes/factura/${clave}`, '_blank');
+    this.imprimiendo.set(true);
+    this.jasperReportes.generar('cxc', 'RPRT_RIDE_FACTURA', { P_ID_FACTURA: row.id }, 'PDF').subscribe({
+      next: (blob) => {
+        this.imprimiendo.set(false);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.target = '_blank';
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+      },
+      error: () => {
+        this.imprimiendo.set(false);
+        this.mostrarError('No se pudo generar el reporte');
+      },
+    });
   }
 
   estadoLabel(estado: number | null | undefined): string {

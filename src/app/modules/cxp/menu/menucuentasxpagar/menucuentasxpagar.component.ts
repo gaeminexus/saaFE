@@ -77,7 +77,13 @@ export class MenucuentaxpagarComponent {
       displayName: 'Reportes',
       iconName: 'assessment',
       route: '/menucuentaxpagar/reportes',
-      children: [],
+      children: [
+        {
+          displayName: 'Dashboard',
+          iconName: 'dashboard',
+          route: '/menucuentaxpagar/reportes/dashboard',
+        },
+      ],
     },
     {
       displayName: 'Negociaciones',

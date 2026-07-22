@@ -19,7 +19,7 @@ export class PathNegociacionService {
   }
 
   selectByCriteria(criteria: any): Observable<PathNegociacion[] | null> {
-    return this.http.post<PathNegociacion[]>(`${ServiciosCxp.RS_PTNG}/selectByCriteria`, criteria, this.httpOptions).pipe(catchError(this.handleError));
+    return this.http.post<PathNegociacion[]>(`${ServiciosCxp.RS_PTNG}/selectByCriteria/`, criteria, this.httpOptions).pipe(catchError(this.handleError));
   }
 
   add(item: Partial<PathNegociacion>): Observable<PathNegociacion | null> {

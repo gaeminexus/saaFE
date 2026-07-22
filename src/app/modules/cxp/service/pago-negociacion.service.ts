@@ -19,7 +19,7 @@ export class PagoNegociacionService {
   }
 
   selectByCriteria(criteria: any): Observable<PagoNegociacion[] | null> {
-    return this.http.post<PagoNegociacion[]>(`${ServiciosCxp.RS_PGNG}/selectByCriteria`, criteria, this.httpOptions).pipe(catchError(this.handleError));
+    return this.http.post<PagoNegociacion[]>(`${ServiciosCxp.RS_PGNG}/selectByCriteria/`, criteria, this.httpOptions).pipe(catchError(this.handleError));
   }
 
   add(item: Partial<PagoNegociacion>): Observable<PagoNegociacion | null> {

@@ -19,6 +19,12 @@ interface GuardarFormaPagoFacturaRequest {
   formaPagosFactura: FormaPagoFactura[];
 }
 
+export interface AnularFacturaRequest {
+  idFactura: number;
+  usuario: string;
+  motivo: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -92,6 +98,12 @@ export class FacturaEmitirService {
   guardarFormaPagoFactura(datos: GuardarFormaPagoFacturaRequest): Observable<any | null> {
     return this.http
       .post<any>(`${ServiciosCxc.RS_FCTR}/guardarFormaPagoFactura`, datos, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
+
+  anularFactura(datos: AnularFacturaRequest): Observable<any | null> {
+    return this.http
+      .post<any>(`${ServiciosCxc.RS_FCTR}/anular`, datos, this.httpOptions)
       .pipe(catchError(this.handleError));
   }
 

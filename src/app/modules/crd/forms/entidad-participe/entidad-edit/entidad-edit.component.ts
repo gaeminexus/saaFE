@@ -21,6 +21,8 @@ import { FilialService } from '../../../service/filial.service';
 import { ParticipeService } from '../../../service/participe.service';
 import { TipoIdentificacionService } from '../../../service/tipo-identificacion.service';
 import { TipoParticipeService } from '../../../service/tipo-participe.service';
+import { EstadoParticipe } from '../../../model/estado-participe';
+import { EstadoParticipeService } from '../../../service/estado-participe.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 
 /**
@@ -88,6 +90,7 @@ export class EntidadEditComponent implements OnInit, OnChanges, OnDestroy {
   private location = inject(Location);
   private tipoIdentificacionService = inject(TipoIdentificacionService);
   private tipoParticipeService = inject(TipoParticipeService);
+  private estadoParticipeService = inject(EstadoParticipeService);
   private snackBar = inject(MatSnackBar);
   private funcionesDatosService = inject(FuncionesDatosService);
 
@@ -116,9 +119,9 @@ export class EntidadEditComponent implements OnInit, OnChanges, OnDestroy {
 
   // Opciones para selects de entidades relacionadas
   filialesOptions: Filial[] = [];
-
   tiposIdentificacionOptions: TipoIdentificacion[] = [];
   tiposParticipeOptions: TipoParticipe[] = [];
+  estadosParticipeOptions: EstadoParticipe[] = [];
   loadingFiliales = signal<boolean>(false);
 
   loadingTiposId = signal<boolean>(false);
@@ -224,6 +227,17 @@ export class EntidadEditComponent implements OnInit, OnChanges, OnDestroy {
       }
     });
     this.subscriptions.add(tipoPartSub);
+
+    // Cargar estados de partícipe
+    const estadoPartSub = this.estadoParticipeService.getAll().subscribe({
+      next: (estados) => {
+        if (estados && estados.length > 0) {
+          this.estadosParticipeOptions = estados;
+        }
+      },
+      error: () => {}
+    });
+    this.subscriptions.add(estadoPartSub);
   }
 
   inicializarFormulario(): void {

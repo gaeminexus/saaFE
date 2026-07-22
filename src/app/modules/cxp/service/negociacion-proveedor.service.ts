@@ -23,7 +23,7 @@ export class NegociacionProveedorService {
   }
 
   selectByCriteria(criteria: any): Observable<NegociacionProveedor[] | null> {
-    return this.http.post<NegociacionProveedor[]>(`${ServiciosCxp.RS_NGCP}/selectByCriteria`, criteria, this.httpOptions).pipe(catchError(this.handleError));
+    return this.http.post<NegociacionProveedor[]>(`${ServiciosCxp.RS_NGCP}/selectByCriteria/`, criteria, this.httpOptions).pipe(catchError(this.handleError));
   }
 
   add(item: Partial<NegociacionProveedor>): Observable<NegociacionProveedor | null> {

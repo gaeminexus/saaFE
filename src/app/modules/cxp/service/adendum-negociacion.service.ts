@@ -19,7 +19,7 @@ export class AdendumNegociacionService {
   }
 
   selectByCriteria(criteria: any): Observable<AdendumNegociacion[] | null> {
-    return this.http.post<AdendumNegociacion[]>(`${ServiciosCxp.RS_ADNG}/selectByCriteria`, criteria, this.httpOptions).pipe(catchError(this.handleError));
+    return this.http.post<AdendumNegociacion[]>(`${ServiciosCxp.RS_ADNG}/selectByCriteria/`, criteria, this.httpOptions).pipe(catchError(this.handleError));
   }
 
   add(item: Partial<AdendumNegociacion>): Observable<AdendumNegociacion | null> {

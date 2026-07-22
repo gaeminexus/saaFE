@@ -7,8 +7,12 @@ import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/ti
 import { Titular } from '../../../tsr/model/titular';
 import { PersonaRolService } from '../../../tsr/service/persona-rol.service';
 
+/** codigoAlterno del rubro padre de roles (rubro 55) */
+const RUBRO_ROL_P = 55;
+
 @Injectable({ providedIn: 'root' })
 export class PersonaClienteEmitirService {
+  /** codigoAlterno del detalle "CLIENTE" dentro del rubro 55 */
   private readonly ROL_CLIENTE = 1;
 
   constructor(private personaRolService: PersonaRolService) {}
@@ -17,7 +21,11 @@ export class PersonaClienteEmitirService {
     return this.buscarTitularesPorRol(termino, this.ROL_CLIENTE);
   }
 
-  buscarTitularesPorRol(termino: string, rolCodigo: number): Observable<Titular[]> {
+  /**
+   * Busca PersonaRol filtrando por empresa + rubroRolPersonaP + rubroRolPersonaH.
+   * Los titulares vienen embebidos en cada registro de PersonaRol.
+   */
+  buscarTitularesPorRol(_termino: string, rolCodigo: number): Observable<Titular[]> {
     const empresaCodigo = this.getEmpresaCodigo();
     if (!empresaCodigo) {
       return of([]);
@@ -25,60 +33,43 @@ export class PersonaClienteEmitirService {
 
     const criterios: DatosBusqueda[] = [];
 
-    const cRol = new DatosBusqueda();
-    cRol.asignaUnCampoSinTrunc(
-      TipoDatos.LONG,
-      'rubroRolPersonaH',
-      rolCodigo.toString(),
-      TipoComandosBusqueda.IGUAL
+    // Rubro padre (55 = roles)
+    const cRolP = new DatosBusqueda();
+    cRolP.asignaUnCampoSinTrunc(
+      TipoDatos.LONG, 'rubroRolPersonaP', RUBRO_ROL_P.toString(), TipoComandosBusqueda.IGUAL
     );
-    cRol.setNumeroCampoRepetido(0);
-    criterios.push(cRol);
+    cRolP.setNumeroCampoRepetido(0);
+    criterios.push(cRolP);
 
+    // Detalle del rubro (codigoAlterno: 1=CLIENTE, 2=PROVEEDOR, etc.)
+    const cRolH = new DatosBusqueda();
+    cRolH.asignaUnCampoSinTrunc(
+      TipoDatos.LONG, 'rubroRolPersonaH', rolCodigo.toString(), TipoComandosBusqueda.IGUAL
+    );
+    cRolH.setNumeroCampoRepetido(0);
+    criterios.push(cRolH);
+
+    // Empresa
     const cEmpresa = new DatosBusqueda();
     cEmpresa.asignaValorConCampoPadre(
-      TipoDatos.LONG,
-      'empresa',
-      'codigo',
-      empresaCodigo.toString(),
-      TipoComandosBusqueda.IGUAL
+      TipoDatos.LONG, 'empresa', 'codigo', empresaCodigo.toString(), TipoComandosBusqueda.IGUAL
     );
     cEmpresa.setNumeroCampoRepetido(0);
     criterios.push(cEmpresa);
 
+    // Estado activo
     const cEstado = new DatosBusqueda();
     cEstado.asignaUnCampoSinTrunc(TipoDatos.LONG, 'estado', '1', TipoComandosBusqueda.IGUAL);
     cEstado.setNumeroCampoRepetido(0);
     criterios.push(cEstado);
 
-    const terminoNormalizado = (termino || '').trim().toLowerCase();
-
     return this.personaRolService.selectByCriteria(criterios).pipe(
-      map((roles) => {
-        const titulares = (roles || [])
+      map((roles) =>
+        (roles || [])
           .map((rol) => rol.titular)
-          .filter((titular): titular is Titular => !!titular);
-
-        const unicos = titulares.filter(
-          (titular, index, arr) =>
-            index === arr.findIndex((it) => (it.codigo || 0) === (titular.codigo || 0))
-        );
-
-        if (!terminoNormalizado) {
-          return unicos;
-        }
-
-        return unicos.filter((titular) => {
-          const nombre = (titular.nombre || '').toLowerCase();
-          const razonSocial = (titular.razonSocial || '').toLowerCase();
-          const identificacion = (titular.identificacion || '').toLowerCase();
-          return (
-            nombre.includes(terminoNormalizado) ||
-            razonSocial.includes(terminoNormalizado) ||
-            identificacion.includes(terminoNormalizado)
-          );
-        });
-      }),
+          .filter((t): t is Titular => !!t)
+          .filter((t, i, arr) => i === arr.findIndex((x) => (x.codigo || 0) === (t.codigo || 0)))
+      ),
       catchError(() => of([]))
     );
   }
@@ -87,25 +78,19 @@ export class PersonaClienteEmitirService {
     const idEmpresa = sessionStorage.getItem('idEmpresa') || localStorage.getItem('idEmpresa');
     if (idEmpresa) {
       const codigo = parseInt(idEmpresa, 10);
-      if (!Number.isNaN(codigo)) {
-        return codigo;
-      }
+      if (!Number.isNaN(codigo)) return codigo;
     }
 
     const empresaId = sessionStorage.getItem('empresaId') || localStorage.getItem('empresaId');
     if (empresaId) {
       const codigo = parseInt(empresaId, 10);
-      if (!Number.isNaN(codigo)) {
-        return codigo;
-      }
+      if (!Number.isNaN(codigo)) return codigo;
     }
 
     const idSucursal = sessionStorage.getItem('idSucursal') || localStorage.getItem('idSucursal');
     if (idSucursal) {
       const codigo = parseInt(idSucursal, 10);
-      if (!Number.isNaN(codigo)) {
-        return codigo;
-      }
+      if (!Number.isNaN(codigo)) return codigo;
     }
 
     const empresaStr = sessionStorage.getItem('empresa') || localStorage.getItem('empresa');
@@ -122,3 +107,4 @@ export class PersonaClienteEmitirService {
     return null;
   }
 }
+

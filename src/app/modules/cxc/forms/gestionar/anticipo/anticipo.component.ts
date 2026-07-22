@@ -95,7 +95,7 @@ export class AnticipoComponent implements OnInit {
 
     this.personaCuentaContableService.selectByCriteria(criterio).subscribe({
       next: (rows) => {
-        const saldo = Number((rows || [])[0]?.personaRol?.saldoInicial || 0);
+        const saldo = Number((rows || [])[0]?.saldoInicial || 0);
         this.saldoAnticipos.set(Number.isFinite(saldo) ? saldo : 0);
       },
       error: () => {

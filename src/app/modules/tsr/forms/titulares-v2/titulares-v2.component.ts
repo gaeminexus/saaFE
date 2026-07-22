@@ -35,6 +35,7 @@ import { Empresa } from '../../../../shared/model/empresa';
 import { PlanCuenta } from '../../../cnt/model/plan-cuenta';
 import { Pais } from '../../../crd/model/pais';
 import { PaisService } from '../../../crd/service/pais.service';
+import { ExportService } from '../../../../shared/services/export.service';
 
 type Vista = 'lista' | 'editar';
 
@@ -87,6 +88,7 @@ export class TitularesV2Component implements OnInit {
   private cuentaService = inject(PersonaCuentaContableService);
   private detalleService = inject(DetalleRubroService);
   private paisService = inject(PaisService);
+  private exportService = inject(ExportService);
 
   // Signals principales
   vistaActual = signal<Vista>('lista');
@@ -96,6 +98,7 @@ export class TitularesV2Component implements OnInit {
   busqueda = signal<string>('');
   rolFiltro = signal<number | null>(null);
   rolesTitular = signal<PersonaRol[]>([]);
+  cuentasTitular = signal<PersonaCuentaContable[]>([]);
   rolesEnEdicion = signal<RolEnEdicion[]>([]);
   estadoGuardado = signal<'idle' | 'guardando' | 'guardado' | 'error'>('idle');
 
@@ -157,6 +160,57 @@ export class TitularesV2Component implements OnInit {
 
   totalFiltrados = computed(() => this.titularesFiltrados().length);
   esNuevo = computed(() => !this.titularSeleccionado()?.codigo || this.titularSeleccionado()!.codigo === 0);
+
+  resumenSaldos = computed(() => {
+    const titularesCodigos = new Set(this.titularesFiltrados().map(t => t.codigo));
+    const roles = this.rolesTitular().filter(r => r.titular?.codigo && titularesCodigos.has(r.titular.codigo));
+    const rolesCodigos = new Set(roles.map(r => r.codigo));
+    const cuentas = this.cuentasTitular().filter(c => c.personaRol?.codigo && rolesCodigos.has(c.personaRol.codigo));
+    const rolMap = new Map(roles.map(r => [r.codigo, r]));
+    let factCliente = 0, factProveedor = 0, antCliente = 0, antProveedor = 0;
+    for (const c of cuentas) {
+      const s = c.saldoInicial || 0;
+      let esProveedor: boolean;
+      if (c.tipoPersona === 1) {
+        esProveedor = false;
+      } else if (c.tipoPersona === 2) {
+        esProveedor = true;
+      } else {
+        // tipoPersona es null: inferir desde la descripción del rubro del rol
+        const rol = rolMap.get(c.personaRol?.codigo);
+        const desc = (this.rolesDisponibles().find(r => r.codigoAlterno === rol?.rubroRolPersonaH)?.descripcion || '').toLowerCase();
+        esProveedor = desc.includes('proveedor');
+      }
+      if (c.tipoCuenta === 1) {
+        if (esProveedor) factProveedor += s; else factCliente += s;
+      } else if (c.tipoCuenta === 2) {
+        if (esProveedor) antProveedor += s; else antCliente += s;
+      }
+    }
+    return { factCliente, factProveedor, antCliente, antProveedor };
+  });
+
+  // Retorna los roles (con sus cuentas) de un titular, respetando el filtro de rol activo
+  getRolesConCuentasDeTitular(titularCodigo: number): { rol: PersonaRol; cuentas: PersonaCuentaContable[] }[] {
+    const rolFiltroActual = this.rolFiltro();
+    const roles = this.rolesTitular().filter(r =>
+      r.titular?.codigo === titularCodigo &&
+      (!rolFiltroActual || r.rubroRolPersonaH === rolFiltroActual)
+    );
+    return roles.map(rol => ({
+      rol,
+      cuentas: this.cuentasTitular().filter(c => c.personaRol?.codigo === rol.codigo),
+    }));
+  }
+
+  getNombreRol(rubroRolPersonaH: number): string {
+    return this.rolesDisponibles().find(r => r.codigoAlterno === rubroRolPersonaH)?.descripcion || String(rubroRolPersonaH);
+  }
+
+  getTipoCuentaLabel(tipoCuenta: number): string {
+    const labels: Record<number, string> = { 1: 'Facturas', 2: 'Anticipos', 3: 'Retenciones', 4: 'Otros' };
+    return labels[tipoCuenta] || String(tipoCuenta);
+  }
 
   ngOnInit(): void {
     this.obtenerEmpresa();
@@ -220,7 +274,6 @@ export class TitularesV2Component implements OnInit {
       // rubroRolPersonaP = codigoAlterno del rubro padre, siempre 55
       // rubroRolPersonaH = codigoAlterno del detalle (el rol que elige el usuario)
       rubroRolPersonaH: ['', Validators.required],
-      saldoInicial: [0, [Validators.required, Validators.min(0)]],
       diasCredito: [0, [Validators.required, Validators.min(0)]],
       estado: [1],
     });
@@ -259,10 +312,12 @@ export class TitularesV2Component implements OnInit {
     forkJoin({
       titulares: this.titularService.getAll().pipe(catchError(() => of([] as Titular[]))),
       personaRoles: this.rolService.getAll().pipe(catchError(() => of([] as PersonaRol[]))),
+      cuentas: this.cuentaService.getAll().pipe(catchError(() => of([] as PersonaCuentaContable[]))),
     }).subscribe({
       next: (datos) => {
         this.titulares.set(datos.titulares || []);
         this.rolesTitular.set(datos.personaRoles || []);
+        this.cuentasTitular.set(datos.cuentas || []);
         this.loading.set(false);
       },
       error: () => {
@@ -480,7 +535,6 @@ export class TitularesV2Component implements OnInit {
     }
 
     const RUBRO_ROL_PERSONA = 55;
-    const saldoInicial = Number(this.formNuevaRol.value.saldoInicial ?? 0);
     const diasCredito = Number(this.formNuevaRol.value.diasCredito ?? 0);
     const titular = this.titularSeleccionado();
     const empresaCodigo = this.empresa?.codigo;
@@ -500,7 +554,6 @@ export class TitularesV2Component implements OnInit {
       rubroRolPersonaH: codigoRol,
       diasVencimientoFactura: 0,
       calificacionRiesgo: '',
-      saldoInicial,
       diasCredito,
       rubroRolPersonaP: RUBRO_ROL_PERSONA,  // siempre 55
       titular: { codigo: titular.codigo },
@@ -511,7 +564,7 @@ export class TitularesV2Component implements OnInit {
     this.rolService.add(rolData).subscribe({
       next: () => {
 
-        this.formNuevaRol.reset({ rubroRolPersonaH: '', saldoInicial: 0, diasCredito: 0, estado: 1 });
+        this.formNuevaRol.reset({ rubroRolPersonaH: '', diasCredito: 0, estado: 1 });
         this.snackBar.open('Rol agregado', 'Cerrar', { duration: 2000 });
 
         // Refrescar roles desde backend y luego recargar edición
@@ -536,7 +589,7 @@ export class TitularesV2Component implements OnInit {
     });
   }
 
-  agregarCuentaARol(rolEnEdicion: RolEnEdicion, tipoCuenta: number): void {
+  agregarCuentaARol(rolEnEdicion: RolEnEdicion, tipoCuenta: number, saldoInicial: number = 0): void {
     if (!tipoCuenta) {
       this.snackBar.open('Seleccione un tipo de cuenta', 'Cerrar', { duration: 2500 });
       return;
@@ -559,7 +612,8 @@ export class TitularesV2Component implements OnInit {
     }
 
     const dialogRef = this.dialog.open(PlanCuentaSelectorDialogComponent, {
-      width: '600px',
+      width: '95vw',
+      maxWidth: '1100px',
       data: { titulo: 'Seleccionar Cuenta Contable' },
     });
 
@@ -572,6 +626,7 @@ export class TitularesV2Component implements OnInit {
           planCuenta: { codigo: cuentaSeleccionada.codigo },
           tipoCuenta,
           tipoPersona: null,
+          saldoInicial,
         };
 
         this.cuentaService.add(cuentaPayload).subscribe({
@@ -584,6 +639,36 @@ export class TitularesV2Component implements OnInit {
           },
         });
       }
+    });
+  }
+
+  editarSaldoCuenta(rolEnEdicion: RolEnEdicion, cuenta: PersonaCuentaContable): void {
+    const saldoActual = cuenta.saldoInicial || 0;
+    const saldoStr = window.prompt(
+      `Saldo inicial para ${this.getTipoCuentaDescripcion(cuenta.tipoCuenta)} - ${cuenta.planCuenta?.nombre || ''}:`,
+      saldoActual.toString()
+    );
+    if (saldoStr === null) { return; }
+    const nuevoSaldo = parseFloat(saldoStr);
+    if (isNaN(nuevoSaldo) || nuevoSaldo < 0) {
+      this.snackBar.open('El saldo inicial debe ser un número válido >= 0', 'Cerrar', { duration: 3000 });
+      return;
+    }
+    const payload: any = {
+      codigo: cuenta.codigo,
+      personaRol: { codigo: cuenta.personaRol.codigo },
+      empresa: { codigo: cuenta.empresa.codigo },
+      planCuenta: { codigo: cuenta.planCuenta.codigo },
+      tipoCuenta: cuenta.tipoCuenta,
+      tipoPersona: cuenta.tipoPersona ?? null,
+      saldoInicial: nuevoSaldo,
+    };
+    this.cuentaService.update(payload).subscribe({
+      next: () => {
+        this.recargarCuentasRol(rolEnEdicion.rol.codigo);
+        this.snackBar.open('Saldo inicial actualizado', 'Cerrar', { duration: 2000 });
+      },
+      error: () => this.snackBar.open('Error al actualizar saldo', 'Cerrar', { duration: 3000 }),
     });
   }
 
@@ -697,22 +782,13 @@ export class TitularesV2Component implements OnInit {
     this.titularSeleccionado.set(null);
     this.rolesEnEdicion.set([]);
     this.formTitular.reset();
-    this.formNuevaRol.reset({ rubroRolPersonaH: '', saldoInicial: 0, diasCredito: 0, estado: 1 });
+    this.formNuevaRol.reset({ rubroRolPersonaH: '', diasCredito: 0, estado: 1 });
+    this.cargarDatos();
   }
 
   editarDatosRol(rolEnEdicion: RolEnEdicion): void {
     const rol = rolEnEdicion.rol;
-    const saldoInicialActual = Number(rol.saldoInicial ?? 0);
     const diasCreditoActual = Number(rol.diasCredito ?? 0);
-
-    const saldoStr = window.prompt(
-      `Ingrese el saldo inicial para el rol ${this.obtenerNombreRubrica(rol.rubroRolPersonaH)}:`,
-      saldoInicialActual.toString()
-    );
-
-    if (saldoStr === null) {
-      return;
-    }
 
     const diasStr = window.prompt(
       `Ingrese los días de crédito para el rol ${this.obtenerNombreRubrica(rol.rubroRolPersonaH)}:`,
@@ -723,17 +799,15 @@ export class TitularesV2Component implements OnInit {
       return;
     }
 
-    const nuevoSaldo = Number(saldoStr);
     const nuevosDias = Number(diasStr);
 
-    if (Number.isNaN(nuevoSaldo) || nuevoSaldo < 0 || Number.isNaN(nuevosDias) || nuevosDias < 0) {
-      this.snackBar.open('Saldo inicial y días de crédito deben ser números válidos >= 0', 'Cerrar', { duration: 3000 });
+    if (Number.isNaN(nuevosDias) || nuevosDias < 0) {
+      this.snackBar.open('Días de crédito debe ser un número válido >= 0', 'Cerrar', { duration: 3000 });
       return;
     }
 
     const rolActualizado: PersonaRol = {
       ...rol,
-      saldoInicial: nuevoSaldo,
       diasCredito: nuevosDias,
     };
 
@@ -787,6 +861,105 @@ export class TitularesV2Component implements OnInit {
   obtenerNombreTipoPersona(codigo: number): string {
     const detalle = this.tiposPersona().find((t) => t.codigoAlterno === codigo || t.codigo === codigo);
     return detalle?.descripcion || '';
+  }
+
+  // ==================== EXPORTAR CSV ====================
+
+  exportarCSV(): void {
+    const titulares = this.titularesFiltrados();
+    if (!titulares.length) {
+      this.snackBar.open('No hay datos para exportar', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    const TIPO_CUENTA: Record<number, string> = {
+      1: 'Facturas', 2: 'Anticipos', 3: 'Retenciones', 4: 'Otros',
+    };
+
+    const rolFiltroActual = this.rolFiltro();
+    const rows: Record<string, any>[] = [];
+
+    for (const titular of titulares) {
+      const rolesConCuentas = this.getRolesConCuentasDeTitular(titular.codigo);
+
+      if (rolesConCuentas.length === 0) {
+        rows.push({
+          identificacion: titular.identificacion || '',
+          razonSocial: titular.razonSocial || '',
+          nombre: titular.nombre || '',
+          email: titular.email || '',
+          telefono: titular.telefono || '',
+          direccion: titular.direccion || '',
+          estado: titular.estado === 1 ? 'Activo' : 'Inactivo',
+          rol: '',
+          saldoInicial: '',
+          diasCredito: '',
+          tipoCuenta: '',
+          cuentaContable: '',
+        });
+      } else {
+        for (const rc of rolesConCuentas) {
+          const rolNombre = this.rolesDisponibles().find(
+            r => r.codigoAlterno === rc.rol.rubroRolPersonaH
+          )?.descripcion || String(rc.rol.rubroRolPersonaH);
+
+          if (!rc.cuentas || rc.cuentas.length === 0) {
+            rows.push({
+              identificacion: titular.identificacion || '',
+              razonSocial: titular.razonSocial || '',
+              nombre: titular.nombre || '',
+              email: titular.email || '',
+              telefono: titular.telefono || '',
+              direccion: titular.direccion || '',
+              estado: titular.estado === 1 ? 'Activo' : 'Inactivo',
+              rol: rolNombre,
+              saldoInicial: '',
+              diasCredito: rc.rol.diasCredito ?? '',
+              tipoCuenta: '',
+              cuentaContable: '',
+            });
+          } else {
+            for (const cuenta of rc.cuentas) {
+              rows.push({
+                identificacion: titular.identificacion || '',
+                razonSocial: titular.razonSocial || '',
+                nombre: titular.nombre || '',
+                email: titular.email || '',
+                telefono: titular.telefono || '',
+                direccion: titular.direccion || '',
+                estado: titular.estado === 1 ? 'Activo' : 'Inactivo',
+                rol: rolNombre,
+                saldoInicial: cuenta.saldoInicial ?? '',
+                diasCredito: rc.rol.diasCredito ?? '',
+                tipoCuenta: TIPO_CUENTA[cuenta.tipoCuenta] || String(cuenta.tipoCuenta),
+                cuentaContable: cuenta.planCuenta
+                  ? `${cuenta.planCuenta.codigo} - ${cuenta.planCuenta.nombre}`
+                  : '',
+              });
+            }
+          }
+        }
+      }
+    }
+
+    const headers = [
+      'Identificación', 'Razón Social', 'Nombre', 'Email', 'Teléfono',
+      'Dirección', 'Estado', 'Rol', 'Saldo Inicial', 'Días Crédito',
+      'Tipo Cuenta', 'Cuenta Contable',
+    ];
+    const keys = [
+      'identificacion', 'razonSocial', 'nombre', 'email', 'telefono',
+      'direccion', 'estado', 'rol', 'saldoInicial', 'diasCredito',
+      'tipoCuenta', 'cuentaContable',
+    ];
+
+    const rolLabel = rolFiltroActual
+      ? this.rolesDisponibles().find(r => r.codigoAlterno === rolFiltroActual)?.descripcion || 'rol'
+      : 'todos';
+    const fecha = new Date().toISOString().slice(0, 10);
+
+    this.exportService.exportToCSV(rows, `titulares_${rolLabel}_${fecha}`, headers, keys);
+    this.snackBar.open(`${rows.length} registros exportados`, 'Cerrar', { duration: 3000 });
   }
 }
 

@@ -10,6 +10,9 @@ import { MatTableDataSource } from '@angular/material/table';
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
 import { TitularSelectorDialogComponent } from '../../../../shared/components/titular-selector-dialog/titular-selector-dialog.component';
 import { FuncionesDatosService } from '../../../../shared/services/funciones-datos.service';
+import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
+import { TipoDatosBusqueda as TipoDatos } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
+import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { Titular } from '../../../tsr/model/titular';
 import { NegociacionProveedor } from '../../model/negociacion-proveedor';
 import { NegociacionProveedorService } from '../../service/negociacion-proveedor.service';
@@ -93,7 +96,25 @@ export class NegociacionesComponent implements OnInit, AfterViewInit {
 
   cargar(): void {
     this.cargando.set(true);
-    this.negService.getByEmpresa(this.idEmpresa).subscribe({
+
+    const criterios: DatosBusqueda[] = [];
+
+    const dbEmpresa = new DatosBusqueda();
+    dbEmpresa.asignaValorConCampoPadre(
+      TipoDatos.LONG,
+      'empresa',
+      'codigo',
+      String(this.idEmpresa),
+      TipoComandosBusqueda.IGUAL
+    );
+    criterios.push(dbEmpresa);
+
+    const dbOrder = new DatosBusqueda();
+    dbOrder.orderBy('id');
+    dbOrder.setTipoOrden(DatosBusqueda.ORDER_DESC);
+    criterios.push(dbOrder);
+
+    this.negService.selectByCriteria(criterios).subscribe({
       next: (data) => {
         this.todos = data || [];
         this.aplicarFiltros();
@@ -192,7 +213,7 @@ export class NegociacionesComponent implements OnInit, AfterViewInit {
       : this.negService.add(payload);
 
     op$.subscribe({
-      next: (resp) => {
+      next: (resp: NegociacionProveedor | null) => {
         this.mostrarExito(this.modoEdicion() ? 'Negociación actualizada' : 'Negociación creada');
         this.vista.set('lista');
         this.cargar();
@@ -200,7 +221,7 @@ export class NegociacionesComponent implements OnInit, AfterViewInit {
           this.router.navigate(['/menucuentaxpagar/negociaciones/detalle', resp.id]);
         }
       },
-      error: (err) => this.mostrarError('Error al guardar: ' + (err?.message || JSON.stringify(err))),
+      error: (err: any) => this.mostrarError('Error al guardar: ' + (err?.message || JSON.stringify(err))),
     });
   }
 
