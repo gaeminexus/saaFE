@@ -31,11 +31,14 @@
             <label>Desde:</label>
             <mat-form-field appearance="outline" class="full-width">
               <input
+                #fechaAsientoDesdeInput
                 matInput
                 [matDatepicker]="pickerAsientoDesde"
-                [ngModel]="fechaAsientoDesde()"
-                (ngModelChange)="fechaAsientoDesde.set($event)"
+                [formControl]="fechaAsientoDesdeControl"
                 placeholder="dd/mm/aaaa"
+                (input)="capturarFechaAsientoDesdeRaw($event)"
+                (dateChange)="onFechaAsientoDesdePickerChange($event.value)"
+                (blur)="syncFechaAsientoDesdeFromRaw($event)"
               />
               <mat-datepicker-toggle matIconSuffix [for]="pickerAsientoDesde"></mat-datepicker-toggle>
               <mat-datepicker #pickerAsientoDesde></mat-datepicker>
@@ -45,11 +48,14 @@
             <label>Hasta:</label>
             <mat-form-field appearance="outline" class="full-width">
               <input
+                #fechaAsientoHastaInput
                 matInput
                 [matDatepicker]="pickerAsientoHasta"
-                [ngModel]="fechaAsientoHasta()"
-                (ngModelChange)="fechaAsientoHasta.set($event)"
+                [formControl]="fechaAsientoHastaControl"
                 placeholder="dd/mm/aaaa"
+                (input)="capturarFechaAsientoHastaRaw($event)"
+                (dateChange)="onFechaAsientoHastaPickerChange($event.value)"
+                (blur)="syncFechaAsientoHastaFromRaw($event)"
               />
               <mat-datepicker-toggle matIconSuffix [for]="pickerAsientoHasta"></mat-datepicker-toggle>
               <mat-datepicker #pickerAsientoHasta></mat-datepicker>

@@ -113,12 +113,6 @@ export class MenutesoreriaComponent {
           idPermiso: 830,
           route: '/menutesoreria/parametrizacion/titulares',
         },
-        {
-          displayName: 'Titulares V2',
-          iconName: 'people',
-          idPermiso: 830,
-          route: '/menutesoreria/parametrizacion/titulares-v2',
-        },
       ],
     },
     {

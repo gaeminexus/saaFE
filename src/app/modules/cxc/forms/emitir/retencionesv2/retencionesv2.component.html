@@ -13,6 +13,10 @@
         <mat-icon>refresh</mat-icon>
         Recargar
       </button>
+      <button mat-stroked-button class="btn-secundario" type="button" (click)="imprimirDocumento()" [disabled]="!documentoActual()?.id">
+        <mat-icon>print</mat-icon>
+        Imprimir
+      </button>
     </div>
   </div>
 
@@ -73,26 +77,39 @@
       <div class="form-grid">
         <mat-form-field appearance="outline">
           <mat-label>Tipo doc. retenido</mat-label>
-          <mat-select [(ngModel)]="idDocumento">
+          <mat-select [(ngModel)]="idDocumento" (ngModelChange)="onCambioTipoDocRetenido()">
             @for (d of tablaTiposDoc; track d.id) {
               <mat-option [value]="d">{{ d.codigo }} - {{ d.detalle }}</mat-option>
             }
           </mat-select>
         </mat-form-field>
-        <mat-form-field appearance="outline"><mat-label>Nro. doc.</mat-label><input matInput [(ngModel)]="numDocReten" /></mat-form-field>
-        <mat-form-field appearance="outline"><mat-label>Autorización doc.</mat-label><input matInput [(ngModel)]="drAutorizacion" /></mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Documento retenido</mat-label>
+          <mat-select [(ngModel)]="documentoRetenidoSeleccionado"
+                      (ngModelChange)="onSelectDocumentoRetenido($event)"
+                      [disabled]="cargandoDocumentos() || !idDocumento || !personaSeleccionada()">
+            <mat-option [value]="null">-- Seleccione --</mat-option>
+            @for (doc of documentosDisponibles(); track doc.id) {
+              <mat-option [value]="doc">{{ displayDocumento(doc) }}</mat-option>
+            }
+          </mat-select>
+          @if (cargandoDocumentos()) {
+            <mat-hint>Cargando documentos del proveedor...</mat-hint>
+          } @else if (!personaSeleccionada()) {
+            <mat-hint>Seleccione primero un proveedor</mat-hint>
+          } @else if (!idDocumento) {
+            <mat-hint>Seleccione el tipo de documento</mat-hint>
+          } @else if (documentosDisponibles().length === 0 && !cargandoDocumentos()) {
+            <mat-hint>Sin documentos disponibles para este proveedor</mat-hint>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline"><mat-label>Nro. doc.</mat-label><input matInput [(ngModel)]="numDocReten" [readonly]="!!documentoRetenidoSeleccionado" /></mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>Autorización doc.</mat-label><input matInput [(ngModel)]="drAutorizacion" [readonly]="!!documentoRetenidoSeleccionado" /></mat-form-field>
         <mat-form-field appearance="outline">
           <mat-label>Fecha emisión doc.</mat-label>
-          <input
-            #fechaEmiDocV2Input
-            matInput
-            [matDatepicker]="pickerFechaEmiDocRetV2"
-            [formControl]="fechaEmiDocControl"
-            placeholder="dd/mm/aaaa"
-            (input)="capturarFechaEmiDocRaw($event)"
-            (dateChange)="onFechaEmiDocPickerChange($event.value)"
-            (blur)="syncFechaEmiDocFromRaw($event)"
-          />
+          <input matInput [matDatepicker]="pickerFechaEmiDocRetV2" [formControl]="fechaEmiDocControl" placeholder="dd/mm/aaaa" readonly />
           <mat-datepicker-toggle matIconSuffix [for]="pickerFechaEmiDocRetV2"></mat-datepicker-toggle>
           <mat-datepicker #pickerFechaEmiDocRetV2></mat-datepicker>
         </mat-form-field>
@@ -128,11 +145,11 @@
           </mat-select>
         </mat-form-field>
 
-        <mat-form-field appearance="outline"><mat-label>Total sin impuestos</mat-label><input matInput type="number" [(ngModel)]="docResTSinImpuestos" min="0" step="0.01" /></mat-form-field>
-        <mat-form-field appearance="outline"><mat-label>IVA 0%</mat-label><input matInput type="number" [(ngModel)]="docResIVACero" min="0" step="0.01" /></mat-form-field>
-        <mat-form-field appearance="outline"><mat-label>% IVA</mat-label><input matInput type="number" [(ngModel)]="docResPorIVA" min="0" step="0.01" /></mat-form-field>
-        <mat-form-field appearance="outline"><mat-label>Total IVA</mat-label><input matInput type="number" [(ngModel)]="docResTotalIVA" min="0" step="0.01" /></mat-form-field>
-        <mat-form-field appearance="outline"><mat-label>Total doc.</mat-label><input matInput type="number" [(ngModel)]="docResTotal" min="0" step="0.01" /></mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>Total sin impuestos</mat-label><input matInput type="number" [ngModel]="docResTSinImpuestos" readonly /></mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>IVA 0%</mat-label><input matInput type="number" [ngModel]="docResIVACero" readonly /></mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>% IVA</mat-label><input matInput type="number" [ngModel]="docResPorIVA" readonly /></mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>Total IVA</mat-label><input matInput type="number" [ngModel]="docResTotalIVA" readonly /></mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>Total doc.</mat-label><input matInput type="number" [ngModel]="docResTotal" readonly /></mat-form-field>
 
         <div class="botonera-detalle">
           <button mat-raised-button color="primary" type="button" (click)="addDetalle()"><mat-icon>add</mat-icon> Agregar</button>
@@ -193,7 +210,7 @@
       <div class="table-wrapper">
         <table mat-table [dataSource]="dataSourceRegistros" class="full-width">
           <ng-container matColumnDef="id"><th mat-header-cell *matHeaderCellDef>#</th><td mat-cell *matCellDef="let r">{{ r.id }}</td></ng-container>
-          <ng-container matColumnDef="fecha"><th mat-header-cell *matHeaderCellDef>Fecha</th><td mat-cell *matCellDef="let r">{{ r.fecha | date:'dd/MM/yyyy' }}</td></ng-container>
+          <ng-container matColumnDef="fecha"><th mat-header-cell *matHeaderCellDef>Fecha</th><td mat-cell *matCellDef="let r">{{ parseIsoArrayDate(r.fecha) | date:'dd/MM/yyyy' }}</td></ng-container>
           <ng-container matColumnDef="numero"><th mat-header-cell *matHeaderCellDef>Número</th><td mat-cell *matCellDef="let r">{{ r.numero }}</td></ng-container>
           <ng-container matColumnDef="periodoFiscal"><th mat-header-cell *matHeaderCellDef>Período</th><td mat-cell *matCellDef="let r">{{ r.periodoFiscal }}</td></ng-container>
           <ng-container matColumnDef="titular"><th mat-header-cell *matHeaderCellDef>Proveedor</th><td mat-cell *matCellDef="let r">{{ r.titular?.razonSocial || r.titular?.nombre }}</td></ng-container>

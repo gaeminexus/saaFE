@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
@@ -68,6 +68,69 @@ export class ReporteBalanceGeneralComponent implements OnInit, OnDestroy {
 
   // ── Formulario ───────────────────────────────────────────────
   form!: FormGroup;
+
+  @ViewChild('fechaInicioInput', { read: ElementRef }) fechaInicioInputRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('fechaFinInput', { read: ElementRef }) fechaFinInputRef!: ElementRef<HTMLInputElement>;
+  private _rawFechaInicio = '';
+  private _rawFechaFin = '';
+
+  // ── Datepicker: Fecha Inicio ─────────────────────────────────
+  capturarFechaInicioRaw(event: Event): void {
+    this._rawFechaInicio = (event.target as HTMLInputElement).value;
+  }
+  syncFechaInicioFromRaw(event: FocusEvent): void {
+    const raw = (this._rawFechaInicio || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaInicio = '';
+    const date = this.parseFechaLocalBG(raw);
+    if (!date) return;
+    const formatted = this.funcionesDatos.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+    this.form.patchValue({ fechaInicio: date }, { emitEvent: false });
+    this.form.get('fechaInicio')?.setErrors(null);
+    this.form.get('fechaInicio')?.markAsUntouched();
+    setTimeout(() => { if (this.fechaInicioInputRef?.nativeElement) this.fechaInicioInputRef.nativeElement.value = formatted; });
+  }
+  onFechaInicioPickerChange(date: Date | null | undefined): void {
+    const d = date || new Date();
+    const formatted = this.funcionesDatos.formatoFecha(d, FuncionesDatosService.SOLO_FECHA) || '';
+    this.form.patchValue({ fechaInicio: d }, { emitEvent: false });
+    this.form.get('fechaInicio')?.setErrors(null);
+    this.form.get('fechaInicio')?.markAsUntouched();
+    setTimeout(() => { if (this.fechaInicioInputRef?.nativeElement) this.fechaInicioInputRef.nativeElement.value = formatted; });
+  }
+
+  // ── Datepicker: Fecha Fin ────────────────────────────────────
+  capturarFechaFinRaw(event: Event): void {
+    this._rawFechaFin = (event.target as HTMLInputElement).value;
+  }
+  syncFechaFinFromRaw(event: FocusEvent): void {
+    const raw = (this._rawFechaFin || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaFin = '';
+    const date = this.parseFechaLocalBG(raw);
+    if (!date) return;
+    const formatted = this.funcionesDatos.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+    this.form.patchValue({ fechaFin: date }, { emitEvent: false });
+    this.form.get('fechaFin')?.setErrors(null);
+    this.form.get('fechaFin')?.markAsUntouched();
+    setTimeout(() => { if (this.fechaFinInputRef?.nativeElement) this.fechaFinInputRef.nativeElement.value = formatted; });
+  }
+  onFechaFinPickerChange(date: Date | null | undefined): void {
+    const d = date || new Date();
+    const formatted = this.funcionesDatos.formatoFecha(d, FuncionesDatosService.SOLO_FECHA) || '';
+    this.form.patchValue({ fechaFin: d }, { emitEvent: false });
+    this.form.get('fechaFin')?.setErrors(null);
+    this.form.get('fechaFin')?.markAsUntouched();
+    setTimeout(() => { if (this.fechaFinInputRef?.nativeElement) this.fechaFinInputRef.nativeElement.value = formatted; });
+  }
+
+  private parseFechaLocalBG(raw: string): Date | null {
+    if (!raw) return null;
+    const parts = raw.split('/');
+    if (parts.length !== 3) return null;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (isNaN(dia) || dia < 1 || dia > 31 || isNaN(mes) || mes < 0 || mes > 11 || isNaN(anio) || anio < 1000) return null;
+    const d = new Date(anio, mes, dia);
+    return d.getFullYear() === anio && d.getMonth() === mes && d.getDate() === dia ? d : null;
+  }
 
   ngOnInit(): void {
     const today = new Date();

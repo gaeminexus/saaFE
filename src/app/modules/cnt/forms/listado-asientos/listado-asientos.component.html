@@ -61,10 +61,14 @@
           <mat-form-field appearance="outline" class="filtro-fecha-desde">
             <mat-label>Fecha desde</mat-label>
             <input
+              #fechaDesdeInput
               matInput
               [matDatepicker]="pickerDesde"
               [formControl]="filtroFechaDesde"
               placeholder="dd/mm/aaaa"
+              (input)="capturarFechaDesdeRaw($event)"
+              (dateChange)="onFechaDesdePickerChange($event.value)"
+              (blur)="syncFechaDesdeFromRaw($event)"
             />
             <mat-datepicker-toggle matIconSuffix [for]="pickerDesde"></mat-datepicker-toggle>
             <mat-datepicker #pickerDesde></mat-datepicker>
@@ -73,10 +77,14 @@
           <mat-form-field appearance="outline" class="filtro-fecha-hasta">
             <mat-label>Fecha hasta</mat-label>
             <input
+              #fechaHastaInput
               matInput
               [matDatepicker]="pickerHasta"
               [formControl]="filtroFechaHasta"
               placeholder="dd/mm/aaaa"
+              (input)="capturarFechaHastaRaw($event)"
+              (dateChange)="onFechaHastaPickerChange($event.value)"
+              (blur)="syncFechaHastaFromRaw($event)"
             />
             <mat-datepicker-toggle matIconSuffix [for]="pickerHasta"></mat-datepicker-toggle>
             <mat-datepicker #pickerHasta></mat-datepicker>

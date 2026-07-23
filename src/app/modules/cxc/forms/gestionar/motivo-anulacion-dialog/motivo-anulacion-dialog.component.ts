@@ -6,6 +6,7 @@ import { MaterialFormModule } from '../../../../../shared/modules/material-form.
 
 export interface MotivoAnulacionDialogData {
   numero: string;
+  tipoLabel?: string;
 }
 
 @Component({
@@ -13,11 +14,12 @@ export interface MotivoAnulacionDialogData {
   standalone: true,
   imports: [CommonModule, FormsModule, MatDialogModule, MaterialFormModule],
   template: `
-    <h2 mat-dialog-title>Anular Factura N° {{ data.numero }}</h2>
+    <h2 mat-dialog-title>Anular {{ tipoNombre }} N° {{ data.numero }}</h2>
 
     <mat-dialog-content>
       <p style="margin-bottom: 12px; color: #c62828;">
-        Esta acción no se puede deshacer. Ingrese el motivo de anulación.
+        ¿Está seguro de anular este documento? Esta acción no se puede deshacer.
+        Ingrese el motivo de anulación.
       </p>
       <mat-form-field appearance="outline" style="width: 100%;">
         <mat-label>Motivo de anulación</mat-label>
@@ -40,13 +42,17 @@ export interface MotivoAnulacionDialogData {
         color="warn"
         [disabled]="!motivo.trim()"
         (click)="confirmar()">
-        Anular Factura
+        Sí, Anular {{ tipoNombre }}
       </button>
     </mat-dialog-actions>
   `,
 })
 export class MotivoAnulacionDialogComponent {
   motivo = '';
+
+  get tipoNombre(): string {
+    return this.data.tipoLabel || 'Factura';
+  }
 
   constructor(
     private dialogRef: MatDialogRef<MotivoAnulacionDialogComponent, string | null>,

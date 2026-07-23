@@ -1,4 +1,5 @@
 import { NotaDebitoEmitir } from './nota-debito-emitir';
+import { ProductoCobro } from './producto-cobro';
 
 export interface DetalleNotaDebitoEmitir {
   id: number;
@@ -15,5 +16,6 @@ export interface DetalleNotaDebitoEmitir {
   valorICE: number;
   subsidio: number;
   total: number;
+  producto: ProductoCobro;
   estado: number;
 }

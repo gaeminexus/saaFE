@@ -7,6 +7,8 @@ import { MatTableDataSource } from '@angular/material/table';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { TitularSelectorDialogComponent } from '../../../../../shared/components/titular-selector-dialog/titular-selector-dialog.component';
 import { ProductoSelectorDialogComponent } from '../../../../../shared/components/producto-selector-dialog/producto-selector-dialog.component';
+import { FacturaSelectorDialogComponent } from '../../../../../shared/components/factura-selector-dialog/factura-selector-dialog.component';
+import { FacturaEmitir } from '../../../model/factura-emitir';
 import { FuncionesDatosService, TipoFormatoFechaBackend } from '../../../../../shared/services/funciones-datos.service';
 import { Usuario } from '../../../../../shared/model/usuario';
 import { NotaCreditoEmitir } from '../../../model/nota-credito-emitir';
@@ -17,10 +19,16 @@ import { PuntoEmision } from '../../../model/puntos-emision';
 import { ProductoCobro } from '../../../model/producto-cobro';
 import { DetalleSri } from '../../../model/detalle-sri';
 import { NotaCreditoEmitirService } from '../../../service/emitir/nota-credito-emitir.service';
+import { JasperReportesService } from '../../../../../shared/services/jasper-reportes.service';
 import { DetalleNotaCreditoEmitirService } from '../../../service/emitir/detalle-nota-credito-emitir.service';
+import { DetalleFacturaEmitirService } from '../../../service/emitir/detalle-factura-emitir.service';
+import { DetalleFacturaEmitir } from '../../../model/detalle-factura-emitir';
 import { FacturadorService } from '../../../service/facturador.service';
 import { PuntoEmisionService } from '../../../service/punto-emision.service';
 import { DetalleSriService } from '../../../service/detalle-sri.service';
+import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
+import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
+import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 
 const IVA_GENERAL = '614';
 const TABLA_IVA = '17';
@@ -45,10 +53,12 @@ export class NotasCreditoComponent implements OnInit {
   private dialog = inject(MatDialog);
   private service = inject(NotaCreditoEmitirService);
   private detalleService = inject(DetalleNotaCreditoEmitirService);
+  private detalleFacturaService = inject(DetalleFacturaEmitirService);
   private facturadorService = inject(FacturadorService);
   private puntoEmisionService = inject(PuntoEmisionService);
   private detalleSriService = inject(DetalleSriService);
   private funcionesDatosS = inject(FuncionesDatosService);
+  private jasperReportes = inject(JasperReportesService);
 
   cargando = signal(false);
   guardando = signal(false);
@@ -74,6 +84,10 @@ export class NotasCreditoComponent implements OnInit {
   fechaControl = new UntypedFormControl(new Date());
   observacion = '';
   plazoPago = 1;
+  facturaRelacionada = signal<FacturaEmitir | null>(null);
+  detallesFactura = signal<DetalleFacturaEmitir[]>([]);
+  cargandoDetalleFactura = signal(false);
+  productoDetalleElegido: DetalleFacturaEmitir | null = null;
   tipoDocModificado = '01';
   numDocModificado = '';
   fechaDMControl = new UntypedFormControl(null);
@@ -158,11 +172,87 @@ export class NotasCreditoComponent implements OnInit {
   }
 
   asignaCliente(cliente: Titular): void { this.personaSeleccionada.set(cliente); }
-  limpiarCliente(): void { this.personaSeleccionada.set(null); }
+  limpiarCliente(): void { this.personaSeleccionada.set(null); this.limpiarFacturaRelacionada(); }
+
+  buscaFacturaRelacionada(): void {
+    const cliente = this.personaSeleccionada();
+    if (!cliente?.codigo) { this.mostrarError('Primero seleccione un cliente'); return; }
+    const dialogRef = this.dialog.open(FacturaSelectorDialogComponent, {
+      width: '900px', maxWidth: '98vw',
+      data: { codigoTitular: cliente.codigo, nombreTitular: this.displayPersona(cliente) },
+    });
+    dialogRef.afterClosed().subscribe((factura: FacturaEmitir | null) => {
+      if (factura) this.asignarFacturaRelacionada(factura);
+    });
+  }
+
+  limpiarFacturaRelacionada(): void {
+    this.facturaRelacionada.set(null);
+    this.numDocModificado = '';
+    this.fechaDMControl.setValue(null, { emitEvent: false });
+    this.detallesFactura.set([]);
+    this.productoDetalleElegido = null;
+    this.productoSeleccionado.set(null);
+  }
+
+  asignarFacturaRelacionada(factura: FacturaEmitir): void {
+    this.facturaRelacionada.set(factura);
+    this.tipoDocModificado = '01';
+    this.numDocModificado = factura.numero || '';
+    const fechaFact = factura.fecha ? new Date(factura.fecha) : new Date();
+    this.fechaDMControl.setValue(fechaFact, { emitEvent: false });
+    // Cargar detalle de la factura para restringir productos
+    this.cargarDetalleFactura(factura.id);
+  }
+
+  private cargarDetalleFactura(idFactura: number): void {
+    this.detallesFactura.set([]);
+    this.productoDetalleElegido = null;
+    this.productoSeleccionado.set(null);
+    this.cargandoDetalleFactura.set(true);
+
+    const cFactura = new DatosBusqueda();
+    cFactura.asignaValorConCampoPadre(
+      TipoDatosBusqueda.LONG, 'factura', 'id', String(idFactura), TipoComandosBusqueda.IGUAL
+    );
+    cFactura.setNumeroCampoRepetido(0);
+
+    this.detalleFacturaService.selectByCriteria([cFactura]).subscribe({
+      next: (detalles) => {
+        const lista = detalles || [];
+        if (lista.length === 0) {
+          console.warn(`[NC] cargarDetalleFactura: 0 detalles para factura id=${idFactura}. Respuesta:`, detalles);
+        }
+        this.detallesFactura.set(lista);
+        this.cargandoDetalleFactura.set(false);
+      },
+      error: (err) => {
+        console.error('[NC] cargarDetalleFactura error:', err);
+        this.mostrarError('No se pudo cargar el detalle de la factura');
+        this.cargandoDetalleFactura.set(false);
+      },
+    });
+  }
+
+  displayFacturaRelacionada(): string {
+    const f = this.facturaRelacionada();
+    if (!f) return '';
+    return f.numero ? f.numero : `ID: ${f.id}`;
+  }
 
   displayPersona(persona: Titular | null): string {
     if (!persona) return '';
     return `${persona.identificacion || ''} - ${persona.razonSocial || persona.nombre || ''}`.trim();
+  }
+
+  onSelectProductoDetalle(detalle: DetalleFacturaEmitir | null): void {
+    this.productoDetalleElegido = detalle;
+    if (detalle?.producto) {
+      this.asignaProducto(detalle.producto);
+    } else {
+      this.productoSeleccionado.set(null);
+      this.limpiarIngreso();
+    }
   }
 
   buscaProducto(): void {
@@ -195,6 +285,8 @@ export class NotasCreditoComponent implements OnInit {
     if (this.txtCantidad <= 0) { this.mostrarError('La cantidad debe ser mayor que 0'); return; }
     if (this.txtValor <= 0) { this.mostrarError('El valor debe ser mayor que 0'); return; }
 
+    // Validar que el total de la NC no supere al de la factura relacionada
+    const limiteFactura = this.facturaRelacionada()?.total ?? Infinity;
     const prod = this.productoSeleccionado() as ProductoCobro;
     const tipoIva = this.ivaOpciones.find((iva) => Number(iva.codigo) === Number(prod.tipoIVA));
     const porcentajeIVA = Number(tipoIva?.porcentaje || this.nmIvaGral);
@@ -206,18 +298,25 @@ export class NotasCreditoComponent implements OnInit {
     const descuento = desc > 0 ? (Number(prod.tipoDescuento) === 1 ? this.rd(subTotal * desc / 100) : this.rd(desc)) : 0;
     const baseImponible = this.rd(subTotal - descuento);
     const valorIVA = this.rd(baseImponible * porcentajeIVA / 100);
+    const totalItem = this.rd(baseImponible + valorIVA);
+
+    if (this.rd(this.lbTotal + totalItem) > limiteFactura) {
+      this.mostrarError(`El total de la nota de crédito (${this.rd(this.lbTotal + totalItem)}) no puede superar el total de la factura relacionada (${limiteFactura})`);
+      return;
+    }
 
     const item = {
       id: null as unknown as number, notaCredito: {} as NotaCreditoEmitir,
       descripcion: prod.nombre || '', cantidad, valor, subTotal, descuento, baseImponible,
       porcentajeIVA, valorIVA, porcentajeICE: 0, valorICE: 0, subsidio: 0,
-      total: this.rd(baseImponible + valorIVA), producto: prod, estado: 1,
+      total: totalItem, producto: prod, estado: 1,
     } as DetalleNotaCreditoEmitir;
 
     this.listaDetalles.push(item);
     this.dataSourceDetalle.data = [...this.listaDetalles];
     this.procesoCalculaTotal();
     this.limpiarIngreso();
+    this.productoDetalleElegido = null;
   }
 
   eliminaDetalle(item: DetalleNotaCreditoEmitir): void {
@@ -239,60 +338,117 @@ export class NotasCreditoComponent implements OnInit {
     if (!this.listaDetalles.length) { this.mostrarError('Nota de crédito sin detalle'); return; }
     if (!this.personaSeleccionada()?.codigo) { this.mostrarError('Debe seleccionar un cliente para continuar'); return; }
     if (!this.ptoEmision?.id) { this.mostrarError('No existe punto de emisión configurado'); return; }
-    if (!this.numDocModificado.trim()) { this.mostrarError('Ingrese el número del documento modificado'); return; }
+    if (!this.facturaRelacionada()) { this.mostrarError('Seleccione la factura relacionada (documento modificado)'); return; }
+
+    // Validar que el total de la NC no supere al de la factura
+    const limiteFactura = this.facturaRelacionada()!.total;
+    if (this.rd(this.lbTotal) > this.rd(limiteFactura)) {
+      this.mostrarError(`El total de la nota de crédito ($${this.lbTotal.toFixed(2)}) no puede superar el total de la factura relacionada ($${limiteFactura.toFixed(2)})`);
+      return;
+    }
 
     const comprador = this.personaSeleccionada() as Titular;
     const fechaDoc = this.parseFechaLocal(this.fechaControl.value);
     const fechaDM = this.parseFechaLocal(this.fechaDMControl.value);
 
     const payload: any = {
-      id: null,
-      tipoComprobante: NOTA_CREDITO,
-      facturador: this.vFacturador,
-      titular: comprador,
-      tipoDoc: '04',
-      numero: '',
-      numEstablecimiento: this.ptoEmision.establecimiento?.codigo || '',
-      numPtoEmision: this.ptoEmision.codigo || '',
-      secuencial: '',
-      ambiente: 1,
-      clave: '',
-      fecha: fechaDoc.toISOString(),
-      tipoDocModificado: this.tipoDocModificado,
-      numDocModificado: this.numDocModificado.trim(),
-      fechaEmisionDM: fechaDM.toISOString(),
-      observacion: this.observacion,
-      subtotal: this.lbSubtotal,
-      subcero: this.lbIVACero,
-      pIVA: this.nmIvaGral,
-      vIVA: this.lbTotalIVA,
-      vICE: 0, vIRBPNR: 0,
-      descuento: this.txtDescuento,
-      porDescuento: this.txtPorDescuento,
-      propina: this.txtPropina,
-      subsidio: 0,
-      total: this.lbTotal,
-      ptoEmision: this.ptoEmision,
-      usuario: this.vUsuario,
-      pathGen: '', autorizacion: '', fechaAutorizacion: '',
-      estado: 1, estadoEmision: 1,
-      detalleNotaCredito: this.listaDetalles,
-      formaPagoCodigo: this.formaPagoSri?.codigo || SIN_UTILIZACION_DEL_SISTEMA_FINANCIERO,
-      plazo: this.plazoPago,
+      notaCredito: {
+        facturador:        this.vFacturador,
+        titular:           comprador,
+        ptoEmision:        this.ptoEmision,
+        factura:           { id: this.facturaRelacionada()!.id },
+        usuario:           this.vUsuario,
+        tipoComprobante:   NOTA_CREDITO,
+        tipoDoc:           '04',
+        numero:            '',
+        numEstablecimiento: this.ptoEmision!.establecimiento?.codigo || '',
+        numPtoEmision:     this.ptoEmision!.codigo || '',
+        secuencial:        '',
+        ambiente:          1,
+        clave:             '',
+        fecha:             fechaDoc,
+        fechaEmisionDM:    fechaDM,
+        tipoDocModificado: this.tipoDocModificado,
+        numDocModificado:  this.numDocModificado.trim(),
+        observacion:       this.observacion,
+        subtotal:          this.lbSubtotal,
+        subcero:           this.lbIVACero,
+        pIVA:              this.nmIvaGral,
+        vIVA:              this.lbTotalIVA,
+        vICE:              0,
+        vIRBPNR:           0,
+        descuento:         this.txtDescuento,
+        porDescuento:      this.txtPorDescuento,
+        propina:           this.txtPropina,
+        subsidio:          0,
+        total:             this.lbTotal,
+        pathGen:           '',
+        autorizacion:      '',
+        fechaAutorizacion: '',
+        estado:            1,
+        estadoEmision:     1,
+        comprador: {
+          id:    comprador.codigo,
+          email: comprador.email || '',
+        },
+      },
+      detalles: this.listaDetalles.map((d) => ({
+        producto:      d.producto?.id ?? d.producto,
+        descripcion:   d.descripcion,
+        cantidad:      d.cantidad,
+        valor:         d.valor,
+        subTotal:      d.subTotal,
+        descuento:     d.descuento,
+        baseImponible: d.baseImponible,
+        porcentajeIVA: d.porcentajeIVA,
+        valorIVA:      d.valorIVA,
+        total:         d.total,
+      })),
     };
 
     this.guardando.set(true);
-    this.service.grabarNotaCredito(payload).subscribe({
+    this.service.procesarCompleta(payload).subscribe({
       next: (resp) => {
-        this.documentoActual.set(resp || null);
-        this.registroId = resp?.id || null;
         this.deshabilitado = true;
         this.fechaControl.disable(); this.fechaDMControl.disable();
         this.guardando.set(false);
         this.mostrarExito('Nota de crédito generada correctamente');
+        const idNc = resp?.id;
+        if (idNc) {
+          this.documentoActual.set(resp);
+          this.registroId = idNc;
+          this.service.getById(String(idNc)).subscribe({
+            next: (ncCompleta) => { if (ncCompleta?.id) { this.documentoActual.set(ncCompleta); this.registroId = ncCompleta.id; } },
+            error: () => {},
+          });
+        } else {
+          // Fallback: backend retornó null (200 sin body JSON); buscar por titular
+          this.buscarNcRecienEmitida(this.personaSeleccionada()?.codigo ?? 0);
+        }
         this.cargarRegistros();
       },
       error: (err) => { this.guardando.set(false); this.mostrarError(this.parseError(err, 'No se pudo grabar la nota de crédito')); },
+    });
+  }
+
+  private buscarNcRecienEmitida(codigoTitular: number): void {
+    if (!codigoTitular) return;
+    const criterios: DatosBusqueda[] = [];
+    const cTitular = new DatosBusqueda();
+    cTitular.asignaValorConCampoPadre(
+      TipoDatosBusqueda.LONG, 'titular', 'codigo', String(codigoTitular), TipoComandosBusqueda.IGUAL
+    );
+    cTitular.setNumeroCampoRepetido(0);
+    criterios.push(cTitular);
+    this.service.selectByCriteria(criterios).subscribe({
+      next: (lista) => {
+        const sorted = (lista || []).sort((a, b) => (b.id || 0) - (a.id || 0));
+        if (sorted[0]?.id) {
+          this.documentoActual.set(sorted[0]);
+          this.registroId = sorted[0].id;
+        }
+      },
+      error: () => {},
     });
   }
 
@@ -304,17 +460,25 @@ export class NotasCreditoComponent implements OnInit {
     this.lbSubtotal = 0; this.lbSubtotal5 = 0; this.lbSubtotal8 = 0;
     this.lbIVACero = 0; this.lbTotalIVA = 0; this.lbTotalIVA5 = 0; this.lbTotalIVA8 = 0;
     this.lbTotal = 0; this.txtDescuento = 0; this.txtPorDescuento = 0; this.txtPropina = 0;
-    this.observacion = ''; this.numDocModificado = ''; this.tipoDocModificado = '01'; this.fechaDMControl.setValue(null, { emitEvent: false });
+    this.observacion = ''; this.numDocModificado = ''; this.tipoDocModificado = '01'; this.fechaDMControl.setValue(null, { emitEvent: false }); this.facturaRelacionada.set(null); this.detallesFactura.set([]); this.productoDetalleElegido = null;
     this.limpiarIngreso(); this.limpiarCliente();
     setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
   }
 
   imprimirDocumento(): void {
-    const contenido = document.getElementById('ticket-nota-credito')?.innerHTML;
-    if (!contenido) { this.mostrarError('No existe contenido para imprimir'); return; }
-    const ventana = window.open('', '_blank');
-    if (!ventana) { this.mostrarError('No se pudo abrir la ventana de impresión'); return; }
-    ventana.document.write(contenido); ventana.document.close(); ventana.focus(); ventana.print(); ventana.close();
+    const id = this.documentoActual()?.id;
+    if (!id) { this.mostrarError('Primero debe emitir el documento'); return; }
+    this.jasperReportes.generar('cxc', 'RPRT_RIDE_NOTA_CREDITO', { P_ID_NOTA_CREDITO: id }, 'PDF').subscribe({
+      next: (blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.target = '_blank';
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+      },
+      error: () => this.mostrarError('No se pudo generar el reporte'),
+    });
   }
 
   copiarAutorizacion(): void {
@@ -500,6 +664,19 @@ export class NotasCreditoComponent implements OnInit {
     this.lbIvaGral = String(el.porcentaje || 0);
     this.nmIvaGral = Number(el.porcentaje || 0);
     this.nmCodigoIVASRI = Number(el.codigo || 0);
+  }
+
+  /** Convierte el formato LocalDateTime del backend ("2026,7,22,18,38,49,...") a Date. */
+  parseFechaArray(fecha: string | null | undefined): Date | null {
+    if (!fecha) return null;
+    const str = String(fecha).trim();
+    if (str.includes(',')) {
+      const parts = str.split(',').map(Number);
+      const [year, month, day, hour = 0, min = 0, sec = 0] = parts;
+      if (year && month && day) return new Date(year, month - 1, day, hour, min, sec);
+    }
+    const d = new Date(str);
+    return isNaN(d.getTime()) ? null : d;
   }
 
   private parseFechaLocal(t: string | Date | null | undefined): Date {

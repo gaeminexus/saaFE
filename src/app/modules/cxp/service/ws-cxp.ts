@@ -61,6 +61,10 @@ export class ServiciosCxp {
   public static RS_DCTX = `${API_URL}/dctx`; // DetalleCargaTxt
   public static RS_DCXP = `${API_URL}/dcxp`; // DocumentoCxp
 
+  // Datos SRI - CXP
+  public static RS_LSRP = `${API_URL}/lsriCompra`; // Listados SRI CXP
+  public static RS_TSRP = `${API_URL}/tsriCompra`; // Detalle SRI CXP
+
   // Negociaciones con Proveedores (PGS)
   public static RS_NGCP = `${API_URL}/ngcp`; // NegociacionProveedor
   public static RS_FPNG = `${API_URL}/fpng`; // FormaPagoNegociacion

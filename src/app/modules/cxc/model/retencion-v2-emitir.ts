@@ -26,4 +26,7 @@ export interface RetencionV2Emitir {
   fechaAutorizacion: string;
   estado: number;
   estadoEmision: number;
+  motivoAnulacion?: string | null;
+  fechaAnulacion?: string | null;
+  usuarioAnulacion?: string | null;
 }

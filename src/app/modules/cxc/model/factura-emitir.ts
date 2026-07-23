@@ -43,5 +43,8 @@ export interface FacturaEmitir {
   formaPago: number;
   estado: number;
   estadoEmision: number;
+  motivoAnulacion?: string | null;
+  fechaAnulacion?: string | null;
+  usuarioAnulacion?: string | null;
   formaPagosFactura?: FormaPagoFactura[];  // Relación 1:N con formas de pago
 }

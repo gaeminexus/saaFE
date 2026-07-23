@@ -48,6 +48,24 @@ export class RetencionEmitirService {
       .pipe(catchError(this.handleError));
   }
 
+  reintentarAutorizacion(datos: { idRetencion: number }): Observable<any | null> {
+    return this.http
+      .post<any>(`${ServiciosCxc.RS_RTNC}/reintentarAutorizacion`, datos, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
+
+  reenviarEmail(datos: { idRetencion: number; destinatarios: string }): Observable<any | null> {
+    return this.http
+      .post<any>(`${ServiciosCxc.RS_RTNC}/reenviarEmail`, datos, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
+
+  anular(datos: { idRetencion: number; usuario: string; motivo: string }): Observable<any | null> {
+    return this.http
+      .post<any>(`${ServiciosCxc.RS_RTNC}/anular`, datos, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
+
   private handleError(error: HttpErrorResponse): Observable<null> {
     if (+error.status === 200) {
       return of(null);

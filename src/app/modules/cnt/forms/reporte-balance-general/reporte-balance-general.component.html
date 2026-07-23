@@ -10,16 +10,22 @@
       <div class="bg-row bg-row--4">
         <mat-form-field appearance="outline">
           <mat-label>Fecha Inicio</mat-label>
-          <input matInput [matDatepicker]="pickerInicio" formControlName="fechaInicio"
-                 placeholder="DD/MM/YYYY" readonly />
+          <input #fechaInicioInput matInput [matDatepicker]="pickerInicio" formControlName="fechaInicio"
+                 placeholder="dd/mm/aaaa"
+                 (input)="capturarFechaInicioRaw($event)"
+                 (dateChange)="onFechaInicioPickerChange($event.value)"
+                 (blur)="syncFechaInicioFromRaw($event)" />
           <mat-datepicker-toggle matIconSuffix [for]="pickerInicio"></mat-datepicker-toggle>
           <mat-datepicker #pickerInicio></mat-datepicker>
         </mat-form-field>
 
         <mat-form-field appearance="outline">
           <mat-label>Fecha Fin</mat-label>
-          <input matInput [matDatepicker]="pickerFin" formControlName="fechaFin"
-                 placeholder="DD/MM/YYYY" readonly />
+          <input #fechaFinInput matInput [matDatepicker]="pickerFin" formControlName="fechaFin"
+                 placeholder="dd/mm/aaaa"
+                 (input)="capturarFechaFinRaw($event)"
+                 (dateChange)="onFechaFinPickerChange($event.value)"
+                 (blur)="syncFechaFinFromRaw($event)" />
           <mat-datepicker-toggle matIconSuffix [for]="pickerFin"></mat-datepicker-toggle>
           <mat-datepicker #pickerFin></mat-datepicker>
         </mat-form-field>

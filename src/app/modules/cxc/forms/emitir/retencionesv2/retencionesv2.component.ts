@@ -7,16 +7,26 @@ import { MatTableDataSource } from '@angular/material/table';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { TitularSelectorDialogComponent } from '../../../../../shared/components/titular-selector-dialog/titular-selector-dialog.component';
 import { FuncionesDatosService, TipoFormatoFechaBackend } from '../../../../../shared/services/funciones-datos.service';
+import { JasperReportesService } from '../../../../../shared/services/jasper-reportes.service';
 import { RetencionV2Emitir } from '../../../model/retencion-v2-emitir';
 import { DetalleRetencionV2Emitir } from '../../../model/detalle-retencion-v2-emitir';
 import { Titular } from '../../../../tsr/model/titular';
 import { Facturador } from '../../../model/facturador';
 import { PuntoEmision } from '../../../model/puntos-emision';
 import { DetalleSri } from '../../../model/detalle-sri';
+import { FacturaCompra } from '../../../../cxp/model/factura-compra';
+import { NotaDebitoCompra } from '../../../../cxp/model/nota-debito-compra';
+import { NotaCreditoCompra } from '../../../../cxp/model/nota-credito-compra';
 import { RetencionV2EmitirService } from '../../../service/emitir/retencion-v2-emitir.service';
 import { FacturadorService } from '../../../service/facturador.service';
 import { PuntoEmisionService } from '../../../service/punto-emision.service';
 import { DetalleSriService } from '../../../service/detalle-sri.service';
+import { FacturaCompraService } from '../../../../cxp/service/factura-compra.service';
+import { NotaDebitoCompraService } from '../../../../cxp/service/nota-debito-compra.service';
+import { NotaCreditoCompraService } from '../../../../cxp/service/nota-credito-compra.service';
+import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
+import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
+import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 
 const TABLA_TIPO_DOC = '3';             // Tipos de documentos (LSRI 3)
 const TABLA_IMPUESTO = '19';            // Impuestos retención (LSRI 19)
@@ -43,6 +53,10 @@ export class Retencionesv2Component implements OnInit {
   private puntoEmisionService = inject(PuntoEmisionService);
   private detalleSriService = inject(DetalleSriService);
   private funcionesDatosS = inject(FuncionesDatosService);
+  private jasperReportes = inject(JasperReportesService);
+  private facturaCompraService = inject(FacturaCompraService);
+  private notaDebitoCompraService = inject(NotaDebitoCompraService);
+  private notaCreditoCompraService = inject(NotaCreditoCompraService);
 
   cargando = signal(false);
   guardando = signal(false);
@@ -77,6 +91,11 @@ export class Retencionesv2Component implements OnInit {
   txtBaseImponible = 0;
   txtPorcentaje = 0;
   txtValorReten = 0;
+
+  // Documento retenido seleccionado del combo CXP
+  documentoRetenidoSeleccionado: (FacturaCompra | NotaDebitoCompra | NotaCreditoCompra) | null = null;
+  documentosDisponibles = signal<Array<FacturaCompra | NotaDebitoCompra | NotaCreditoCompra>>([]);
+  cargandoDocumentos = signal(false);
 
   docResTSinImpuestos = 0;
   docResIVACero = 0;
@@ -133,11 +152,100 @@ export class Retencionesv2Component implements OnInit {
     dialogRef.afterClosed().subscribe((t: Titular | null) => { if (t) this.personaSeleccionada.set(t); });
   }
 
-  limpiarProveedor(): void { this.personaSeleccionada.set(null); }
+  limpiarProveedor(): void {
+    this.personaSeleccionada.set(null);
+    this.documentosDisponibles.set([]);
+    this.documentoRetenidoSeleccionado = null;
+  }
 
   displayPersona(persona: Titular | null): string {
     if (!persona) return '';
     return `${persona.identificacion || ''} - ${persona.razonSocial || persona.nombre || ''}`.trim();
+  }
+
+  onCambioTipoDocRetenido(): void {
+    this.documentoRetenidoSeleccionado = null;
+    this.documentosDisponibles.set([]);
+    this.limpiarCamposDocRetenido();
+
+    const proveedor = this.personaSeleccionada();
+    if (!proveedor?.codigo || !this.idDocumento?.codigo) return;
+
+    const codigoTipo = this.idDocumento.codigo;
+    // Solo cargamos desde CXP para los tipos que tienen tabla de compra
+    const TIPO_FACTURA       = '01';
+    const TIPO_NOTA_CREDITO  = '04';
+    const TIPO_NOTA_DEBITO   = '05';
+
+    const criterio = new DatosBusqueda();
+    criterio.asignaValorConCampoPadre(
+      TipoDatosBusqueda.LONG, 'titular', 'codigo', String(proveedor.codigo), TipoComandosBusqueda.IGUAL
+    );
+    criterio.setNumeroCampoRepetido(0);
+
+    this.cargandoDocumentos.set(true);
+
+    if (codigoTipo === TIPO_FACTURA) {
+      this.facturaCompraService.selectByCriteria([criterio]).subscribe({
+        next: (docs) => { this.documentosDisponibles.set((docs || []) as any[]); this.cargandoDocumentos.set(false); },
+        error: () => { this.mostrarError('No se pudieron cargar las facturas del proveedor'); this.cargandoDocumentos.set(false); },
+      });
+    } else if (codigoTipo === TIPO_NOTA_CREDITO) {
+      this.notaCreditoCompraService.selectByCriteria([criterio]).subscribe({
+        next: (docs) => { this.documentosDisponibles.set((docs || []) as any[]); this.cargandoDocumentos.set(false); },
+        error: () => { this.mostrarError('No se pudieron cargar las notas de crédito del proveedor'); this.cargandoDocumentos.set(false); },
+      });
+    } else if (codigoTipo === TIPO_NOTA_DEBITO) {
+      this.notaDebitoCompraService.selectByCriteria([criterio]).subscribe({
+        next: (docs) => { this.documentosDisponibles.set((docs || []) as any[]); this.cargandoDocumentos.set(false); },
+        error: () => { this.mostrarError('No se pudieron cargar las notas de débito del proveedor'); this.cargandoDocumentos.set(false); },
+      });
+    } else {
+      // Tipo sin tabla CXP: el usuario ingresa manual
+      this.cargandoDocumentos.set(false);
+    }
+  }
+
+  onSelectDocumentoRetenido(doc: FacturaCompra | NotaDebitoCompra | NotaCreditoCompra | null): void {
+    if (!doc) { this.limpiarCamposDocRetenido(); return; }
+    this.numDocReten = doc.numero || '';
+    this.drAutorizacion = doc.autorizacion || doc.clave || '';
+    const fechaDoc = this.parseIsoArrayDate(doc.fecha);
+    this.fechaEmiDocControl.setValue(fechaDoc, { emitEvent: false });
+    const subtotal = Number((doc as any).subtotal || 0);
+    const subcero  = Number((doc as any).subcero  || 0);
+    const vIVA     = Number((doc as any).vIVA     || 0);
+    const total    = Number(doc.total || 0);
+    const pIVA     = Number((doc as any).pIVA     || 0);
+    this.docResTSinImpuestos = this.rd(subtotal);
+    this.docResIVACero       = this.rd(subcero);
+    this.docResPorIVA        = this.rd(pIVA);
+    this.docResTotalIVA      = this.rd(vIVA);
+    this.docResTotal         = this.rd(total);
+  }
+
+  displayDocumento(doc: FacturaCompra | NotaDebitoCompra | NotaCreditoCompra): string {
+    return `${doc.numero || ('ID:' + doc.id)} — $${Number(doc.total || 0).toFixed(2)}`;
+  }
+
+  /** Convierte fecha ISO o array LocalDateTime del backend a Date. */
+  parseIsoArrayDate(value: string | null | undefined): Date {
+    if (!value) return new Date();
+    const str = String(value).trim();
+    if (str.includes(',')) {
+      const parts = str.split(',').map(Number);
+      const [y, mo, d, h = 0, mi = 0, s = 0] = parts;
+      if (y && mo && d) return new Date(y, mo - 1, d, h, mi, s);
+    }
+    const parsed = new Date(str);
+    return isNaN(parsed.getTime()) ? new Date() : parsed;
+  }
+
+  private limpiarCamposDocRetenido(): void {
+    this.numDocReten = ''; this.drAutorizacion = '';
+    this.fechaEmiDocControl.setValue(this.fechaControl.value, { emitEvent: false });
+    this.docResTSinImpuestos = 0; this.docResIVACero = 0;
+    this.docResPorIVA = 0; this.docResTotalIVA = 0; this.docResTotal = 0;
   }
 
   onCambioImpuesto(): void {
@@ -266,11 +374,17 @@ export class Retencionesv2Component implements OnInit {
   }
 
   imprimirDocumento(): void {
-    const contenido = document.getElementById('ticket-retencionv2')?.innerHTML;
-    if (!contenido) { this.mostrarError('No existe contenido para imprimir'); return; }
-    const ventana = window.open('', '_blank');
-    if (!ventana) { this.mostrarError('No se pudo abrir la ventana de impresión'); return; }
-    ventana.document.write(contenido); ventana.document.close(); ventana.focus(); ventana.print(); ventana.close();
+    const id = this.documentoActual()?.id;
+    if (!id) { this.mostrarError('Primero debe emitir el documento'); return; }
+    this.jasperReportes.generar('cxc', 'RPRT_RIDE_RETENCION', { P_ID_RETENCION: id }, 'PDF').subscribe({
+      next: (blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.target = '_blank'; a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+      },
+      error: () => this.mostrarError('No se pudo generar el reporte'),
+    });
   }
 
   copiarAutorizacion(): void {
@@ -364,10 +478,10 @@ export class Retencionesv2Component implements OnInit {
 
   private limpiarDetalle(): void {
     this.idDocumento = null; this.idImpuesto = null; this.idPorcentaje = null; this.idFormaPago = null;
-    this.numDocReten = ''; this.drAutorizacion = ''; this.fechaEmiDocControl.setValue(this.fechaControl.value, { emitEvent: false });
+    this.documentoRetenidoSeleccionado = null;
+    this.documentosDisponibles.set([]);
+    this.limpiarCamposDocRetenido();
     this.txtBaseImponible = 0; this.txtPorcentaje = 0; this.txtValorReten = 0;
-    this.docResTSinImpuestos = 0; this.docResIVACero = 0; this.docResPorIVA = 0;
-    this.docResTotalIVA = 0; this.docResTotal = 0;
     this.tablaPorcentajes = [];
   }
 

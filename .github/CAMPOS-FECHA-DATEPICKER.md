@@ -110,7 +110,10 @@ syncFechaFromRaw(event: FocusEvent): void {
       const formatted = this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
       // 1. Actualizar el FormControl con el Date real (no el string)
       this.fechaControl.setValue(date, { emitEvent: false });
-      // 2. DESPUÉS de que Material procese su blur, forzar el texto formateado en el input nativo
+      // 2. Limpiar el error matDatepickerParse que Material puso al intentar parsear el texto
+      this.fechaControl.setErrors(null);
+      this.fechaControl.markAsUntouched();
+      // 3. DESPUÉS de que Material procese su blur, forzar el texto formateado en el input nativo
       setTimeout(() => {
         if (this.miCampoFechaInputRef?.nativeElement) {
           this.miCampoFechaInputRef.nativeElement.value = formatted;

@@ -13,6 +13,10 @@
         <mat-icon>refresh</mat-icon>
         Recargar
       </button>
+      <button mat-stroked-button class="btn-secundario" type="button" (click)="imprimirDocumento()" [disabled]="!documentoActual()?.id">
+        <mat-icon>print</mat-icon>
+        Imprimir
+      </button>
     </div>
   </div>
 
@@ -53,29 +57,23 @@
           </mat-select>
         </mat-form-field>
 
-        <mat-form-field appearance="outline">
-          <mat-label>Tipo doc. modificado</mat-label>
-          <mat-select [(ngModel)]="tipoDocModificado" [disabled]="deshabilitado">
-            <mat-option value="01">Factura</mat-option>
-            <mat-option value="04">Nota de Crédito</mat-option>
-          </mat-select>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline"><mat-label>Nro. doc. modificado</mat-label><input matInput [(ngModel)]="numDocModificado" [disabled]="deshabilitado" /></mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Fecha emisión doc. modificado</mat-label>
-          <input
-            #fechaNcDMInput
-            matInput
-            [matDatepicker]="pickerFechaNcDocMod"
-            [formControl]="fechaDMControl"
-            placeholder="dd/mm/aaaa"
-            (input)="capturarFechaDMRaw($event)"
-            (dateChange)="onFechaEmiDMPickerChange($event.value)"
-            (blur)="syncFechaDMFromRaw($event)"
-          />
-          <mat-datepicker-toggle matIconSuffix [for]="pickerFechaNcDocMod"></mat-datepicker-toggle>
-          <mat-datepicker #pickerFechaNcDocMod></mat-datepicker>
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Factura relacionada (documento modificado)</mat-label>
+          <input matInput [value]="displayFacturaRelacionada()" placeholder="Seleccione una factura emitida al cliente" readonly [disabled]="deshabilitado" />
+          <button mat-icon-button matSuffix type="button" (click)="buscaFacturaRelacionada()" [disabled]="deshabilitado || !personaSeleccionada()">
+            <mat-icon>receipt_long</mat-icon>
+          </button>
+          @if (facturaRelacionada()) {
+            <button mat-icon-button matSuffix type="button" (click)="limpiarFacturaRelacionada()" [disabled]="deshabilitado">
+              <mat-icon>close</mat-icon>
+            </button>
+          }
+          @if (facturaRelacionada()) {
+            <mat-hint>Fecha: {{ fechaDMControl.value | date:'dd/MM/yyyy' }}&nbsp;&nbsp;Total: {{ facturaRelacionada()!.total | number:'1.2-2' }}</mat-hint>
+          }
+          @if (!personaSeleccionada() && !deshabilitado) {
+            <mat-hint>Primero seleccione un cliente</mat-hint>
+          }
         </mat-form-field>
 
         <mat-form-field appearance="outline" class="full-width">
@@ -91,11 +89,33 @@
     <mat-card-header><mat-card-title>Agregar Producto / Servicio</mat-card-title></mat-card-header>
     <mat-card-content>
       <div class="form-grid">
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Producto / Servicio</mat-label>
-          <input matInput [value]="textoProductoSeleccionado()" placeholder="Seleccione un producto" readonly />
-          <button mat-icon-button matSuffix type="button" (click)="buscaProducto()"><mat-icon>search</mat-icon></button>
-        </mat-form-field>
+        @if (!facturaRelacionada()) {
+          <div class="full-width aviso-sin-factura">
+            <mat-icon>info</mat-icon>
+            Seleccione primero la factura relacionada para ver los productos disponibles.
+          </div>
+        }
+
+        @if (facturaRelacionada()) {
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Producto / Servicio (de la factura relacionada)</mat-label>
+            <mat-select [(ngModel)]="productoDetalleElegido"
+                        (ngModelChange)="onSelectProductoDetalle($event)"
+                        [disabled]="cargandoDetalleFactura()">
+              <mat-option [value]="null">-- Seleccione --</mat-option>
+              @for (det of detallesFactura(); track det.id) {
+                <mat-option [value]="det">{{ det.producto.codigo }} - {{ det.descripcion }}</mat-option>
+              }
+            </mat-select>
+            @if (cargandoDetalleFactura()) {
+              <mat-hint>Cargando productos de la factura...</mat-hint>
+            } @else if (detallesFactura().length === 0) {
+              <mat-hint class="hint-warn">No se encontraron productos en esta factura</mat-hint>
+            } @else {
+              <mat-hint>Disponible: ${{ (facturaRelacionada()!.total - lbTotal) | number:'1.2-2' }} de ${{ facturaRelacionada()!.total | number:'1.2-2' }}</mat-hint>
+            }
+          </mat-form-field>
+        }
 
         <mat-form-field appearance="outline"><mat-label>Cantidad</mat-label><input matInput type="number" [(ngModel)]="txtCantidad" (input)="cambioCantidad()" min="1" step="1" /></mat-form-field>
         <mat-form-field appearance="outline"><mat-label>Precio unitario</mat-label><input matInput type="number" [(ngModel)]="txtValor" (input)="cambioCantidad()" min="0" step="0.01" /></mat-form-field>
@@ -159,7 +179,7 @@
       <div class="table-wrapper">
         <table mat-table [dataSource]="dataSourceRegistros" class="full-width">
           <ng-container matColumnDef="id"><th mat-header-cell *matHeaderCellDef>#</th><td mat-cell *matCellDef="let r">{{ r.id }}</td></ng-container>
-          <ng-container matColumnDef="fecha"><th mat-header-cell *matHeaderCellDef>Fecha</th><td mat-cell *matCellDef="let r">{{ r.fecha | date:'dd/MM/yyyy' }}</td></ng-container>
+          <ng-container matColumnDef="fecha"><th mat-header-cell *matHeaderCellDef>Fecha</th><td mat-cell *matCellDef="let r">{{ parseFechaArray(r.fecha) | date:'dd/MM/yyyy' }}</td></ng-container>
           <ng-container matColumnDef="numero"><th mat-header-cell *matHeaderCellDef>Número</th><td mat-cell *matCellDef="let r">{{ r.numero }}</td></ng-container>
           <ng-container matColumnDef="persona"><th mat-header-cell *matHeaderCellDef>Cliente</th><td mat-cell *matCellDef="let r">{{ r.titular?.razonSocial || r.titular?.nombre }}</td></ng-container>
           <ng-container matColumnDef="total"><th mat-header-cell *matHeaderCellDef class="text-right">Total</th><td mat-cell *matCellDef="let r" class="text-right">{{ r.total | number:'1.2-2' }}</td></ng-container>

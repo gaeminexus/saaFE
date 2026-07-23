@@ -31,12 +31,14 @@ import { RetencionesComponent } from './modules/cxc/forms/emitir/retenciones/ret
 import { Retencionesv2Component } from './modules/cxc/forms/emitir/retencionesv2';
 import { AnticipoComponent } from './modules/cxc/forms/gestionar/anticipo/anticipo.component';
 import { ConsultaFacturasComponent } from './modules/cxc/forms/gestionar/consulta-facturas/consulta-facturas.component';
+import { ConsultaDocumentosElectronicosComponent } from './modules/cxc/forms/gestionar/consulta-documentos-electronicos/consulta-documentos-electronicos.component';
 import { FinanciarFacturaComponent } from './modules/cxc/forms/gestionar/financiar-factura/financiar-factura.component';
 import { DashVentasComponent } from './modules/cxc/reportes/dash-ventas';
 import { MenucuentasxcobrarComponent } from './modules/cxc/menu/menucuentasxcobrar/menucuentasxcobrar.component';
 import { MenucuentaxpagarComponent } from './modules/cxp/menu/menucuentasxpagar/menucuentasxpagar.component';
 import { GruposProductosPagoComponent } from './modules/cxp/forms/parametrizacion/grupos-productos-pago/grupos-productos-pago.component';
 import { ProveedoresComponent } from './modules/cxp/forms/parametrizacion/proveedores/proveedores.component';
+import { DatosSriCxpComponent } from './modules/cxp/forms/parametrizacion/datos-sri-cxp/datos-sri-cxp.component';
 import { BandejaElectronicaComponent } from './modules/cxp/forms/procesos/bandeja-electronica/bandeja-electronica.component';
 import { GestionDocumentosComponent } from './modules/cxp/forms/procesos/gestion-documentos/gestion-documentos.component';
 import { ConsultaDocumentosComponent } from './modules/cxp/forms/procesos/consulta-documentos/consulta-documentos.component';
@@ -96,7 +98,6 @@ import { ChequesGeneradosComponent } from './modules/tsr/forms/pagos/procesos/ge
 import { ChequesImpresosProcComponent } from './modules/tsr/forms/pagos/procesos/impresos/cheques-impresos-proc.component';
 import { SolicitudPagosComponent } from './modules/tsr/forms/pagos/procesos/solicitud/solicitud-pagos.component';
 import { TsrPlaceholderComponent } from './modules/tsr/forms/placeholder/tsr-placeholder.component';
-import { TitularesComponent } from './modules/tsr/forms/titulares/titulares.component';
 import { TitularesV2Component } from './modules/tsr/forms/titulares-v2/titulares-v2.component';
 import { MenutesoreriaComponent } from './modules/tsr/menu/menutesoreria/menutesoreria.component';
 import { authGuard } from './shared/guard/auth.guard';
@@ -372,15 +373,14 @@ export const routes: Routes = [
       },
       {
         path: 'parametrizacion/titulares',
-        component: TitularesComponent,
+        component: TitularesV2Component,
         canActivate: [authGuard],
         data: { title: 'Titulares' },
       },
       {
         path: 'parametrizacion/titulares-v2',
-        component: TitularesV2Component,
-        canActivate: [authGuard],
-        data: { title: 'Titulares V2' },
+        redirectTo: 'parametrizacion/titulares',
+        pathMatch: 'full',
       },
 
       // Procesos - Cobros
@@ -834,6 +834,11 @@ export const routes: Routes = [
         canActivate: [authGuard],
       },
       {
+        path: 'gestionar/documentos-electronicos',
+        component: ConsultaDocumentosElectronicosComponent,
+        canActivate: [authGuard],
+      },
+      {
         path: 'gestionar/anticipos',
         component: AnticipoComponent,
         canActivate: [authGuard],
@@ -858,6 +863,11 @@ export const routes: Routes = [
       {
         path: 'parametrizacion/grupos-productos',
         component: GruposProductosPagoComponent,
+        canActivate: [authGuard],
+      },
+      {
+        path: 'parametrizacion/datos-sri',
+        component: DatosSriCxpComponent,
         canActivate: [authGuard],
       },
       {

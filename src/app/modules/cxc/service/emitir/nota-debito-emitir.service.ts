@@ -18,6 +18,12 @@ export class NotaDebitoEmitirService {
       .pipe(catchError(this.handleError));
   }
 
+  getById(id: string): Observable<NotaDebitoEmitir | null> {
+    return this.http
+      .get<NotaDebitoEmitir>(`${ServiciosCxc.RS_NTDB}/getId/${id}`)
+      .pipe(catchError(this.handleError));
+  }
+
   add(datos: Partial<NotaDebitoEmitir>): Observable<NotaDebitoEmitir | null> {
     return this.http
       .post<NotaDebitoEmitir>(ServiciosCxc.RS_NTDB, datos, this.httpOptions)
@@ -27,6 +33,12 @@ export class NotaDebitoEmitirService {
   grabarNotaDebito(datos: Partial<NotaDebitoEmitir>): Observable<NotaDebitoEmitir | null> {
     return this.http
       .post<NotaDebitoEmitir>(`${ServiciosCxc.RS_NTDB}/grabarNotaDebito`, datos, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
+
+  procesarCompleta(datos: any): Observable<NotaDebitoEmitir | null> {
+    return this.http
+      .post<NotaDebitoEmitir>(`${ServiciosCxc.RS_NTDB}/procesarCompleta`, datos, this.httpOptions)
       .pipe(catchError(this.handleError));
   }
 
@@ -45,6 +57,24 @@ export class NotaDebitoEmitirService {
   delete(id: number): Observable<NotaDebitoEmitir | null> {
     return this.http
       .delete<NotaDebitoEmitir>(`${ServiciosCxc.RS_NTDB}/${id}`, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
+
+  reintentarAutorizacion(datos: { idNotaDebito: number }): Observable<any | null> {
+    return this.http
+      .post<any>(`${ServiciosCxc.RS_NTDB}/reintentarAutorizacion`, datos, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
+
+  reenviarEmail(datos: { idNotaDebito: number; destinatarios: string }): Observable<any | null> {
+    return this.http
+      .post<any>(`${ServiciosCxc.RS_NTDB}/reenviarEmail`, datos, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
+
+  anular(datos: { idNotaDebito: number; usuario: string; motivo: string }): Observable<any | null> {
+    return this.http
+      .post<any>(`${ServiciosCxc.RS_NTDB}/anular`, datos, this.httpOptions)
       .pipe(catchError(this.handleError));
   }
 

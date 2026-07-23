@@ -2,6 +2,7 @@ import { Facturador } from './facturador';
 import { Titular } from '../../tsr/model/titular';
 import { Usuario } from '../../../shared/model/usuario';
 import { PuntoEmision } from './puntos-emision';
+import { FacturaEmitir } from './factura-emitir';
 
 export interface NotaCreditoEmitir {
   id: number;
@@ -38,4 +39,8 @@ export interface NotaCreditoEmitir {
   fechaAutorizacion: string;
   estado: number;
   estadoEmision: number;
+  motivoAnulacion?: string | null;
+  fechaAnulacion?: string | null;
+  usuarioAnulacion?: string | null;
+  factura?: FacturaEmitir;
 }

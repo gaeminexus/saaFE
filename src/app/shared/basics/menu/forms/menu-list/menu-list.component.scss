@@ -28,7 +28,7 @@ a.menu-list-item {
     line-height: 1.2;
     margin: 0 !important;
     padding: 0 !important;
-    padding-right: 40px !important; // Espacio reservado para la flecha
+    padding-right: 20px !important; // Espacio reservado para la flecha
     white-space: nowrap; // Evita que el texto se parta
     overflow: hidden; // Oculta texto que se desborde
     text-overflow: ellipsis; // Muestra ... si el texto es muy largo
@@ -60,7 +60,7 @@ a.menu-list-item {
 	flex-direction: row !important;
 	align-items: center !important;
 	justify-content: flex-start !important;
-	padding: 12px 50px 12px 8px !important; // Más padding a la derecha para la flecha absoluta
+	padding: 12px 36px 12px 8px !important; // Más padding a la derecha para la flecha absoluta
 	min-height: 48px !important; // Altura mínima para mejor interacción
 	width: 100% !important;
 	box-sizing: border-box !important;

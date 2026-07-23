@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component, signal, OnInit, inject } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild, inject, signal } from '@angular/core';
+import { ReactiveFormsModule, UntypedFormControl } from '@angular/forms';
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
@@ -24,6 +25,7 @@ import { ConfirmDialogComponent } from '../../../../shared/basics/confirm-dialog
   standalone: true,
   imports: [
     CommonModule,
+    ReactiveFormsModule,
     MaterialFormModule,
   ],
   templateUrl: './reporte-listado-asientos.component.html',
@@ -33,9 +35,14 @@ export class ReporteListadoAsientosComponent implements OnInit {
 
   private dialog = inject(MatDialog);
 
-  // Filtros
-  fechaAsientoDesde = signal<Date | null>(null);
-  fechaAsientoHasta = signal<Date | null>(null);
+  // Filtros — campos fecha con patrón FormControl + ViewChild
+  fechaAsientoDesdeControl = new UntypedFormControl(null);
+  fechaAsientoHastaControl = new UntypedFormControl(null);
+
+  @ViewChild('fechaAsientoDesdeInput', { read: ElementRef }) fechaAsientoDesdeInputRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('fechaAsientoHastaInput', { read: ElementRef }) fechaAsientoHastaInputRef!: ElementRef<HTMLInputElement>;
+  private _rawFechaAsientoDesde = '';
+  private _rawFechaAsientoHasta = '';
   numeroAsiento = signal<string>('');
   descripcion = signal<string>('');
   estado = signal<number | null>(null);
@@ -76,6 +83,64 @@ export class ReporteListadoAsientosComponent implements OnInit {
     private router: Router,
     private funcionesDatos: FuncionesDatosService
   ) {}
+
+  // ── Datepicker: Fecha Asiento Desde ─────────────────────────
+  capturarFechaAsientoDesdeRaw(event: Event): void {
+    this._rawFechaAsientoDesde = (event.target as HTMLInputElement).value;
+  }
+  syncFechaAsientoDesdeFromRaw(event: FocusEvent): void {
+    const raw = (this._rawFechaAsientoDesde || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaAsientoDesde = '';
+    const date = this.parseFechaLocalRLA(raw);
+    if (!date) return;
+    const formatted = this.funcionesDatos.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+    this.fechaAsientoDesdeControl.setValue(date, { emitEvent: false });
+    this.fechaAsientoDesdeControl.setErrors(null);
+    this.fechaAsientoDesdeControl.markAsUntouched();
+    setTimeout(() => { if (this.fechaAsientoDesdeInputRef?.nativeElement) this.fechaAsientoDesdeInputRef.nativeElement.value = formatted; });
+  }
+  onFechaAsientoDesdePickerChange(date: Date | null | undefined): void {
+    const d = date || new Date();
+    const formatted = this.funcionesDatos.formatoFecha(d, FuncionesDatosService.SOLO_FECHA) || '';
+    this.fechaAsientoDesdeControl.setValue(d, { emitEvent: false });
+    this.fechaAsientoDesdeControl.setErrors(null);
+    this.fechaAsientoDesdeControl.markAsUntouched();
+    setTimeout(() => { if (this.fechaAsientoDesdeInputRef?.nativeElement) this.fechaAsientoDesdeInputRef.nativeElement.value = formatted; });
+  }
+
+  // ── Datepicker: Fecha Asiento Hasta ──────────────────────────
+  capturarFechaAsientoHastaRaw(event: Event): void {
+    this._rawFechaAsientoHasta = (event.target as HTMLInputElement).value;
+  }
+  syncFechaAsientoHastaFromRaw(event: FocusEvent): void {
+    const raw = (this._rawFechaAsientoHasta || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaAsientoHasta = '';
+    const date = this.parseFechaLocalRLA(raw);
+    if (!date) return;
+    const formatted = this.funcionesDatos.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+    this.fechaAsientoHastaControl.setValue(date, { emitEvent: false });
+    this.fechaAsientoHastaControl.setErrors(null);
+    this.fechaAsientoHastaControl.markAsUntouched();
+    setTimeout(() => { if (this.fechaAsientoHastaInputRef?.nativeElement) this.fechaAsientoHastaInputRef.nativeElement.value = formatted; });
+  }
+  onFechaAsientoHastaPickerChange(date: Date | null | undefined): void {
+    const d = date || new Date();
+    const formatted = this.funcionesDatos.formatoFecha(d, FuncionesDatosService.SOLO_FECHA) || '';
+    this.fechaAsientoHastaControl.setValue(d, { emitEvent: false });
+    this.fechaAsientoHastaControl.setErrors(null);
+    this.fechaAsientoHastaControl.markAsUntouched();
+    setTimeout(() => { if (this.fechaAsientoHastaInputRef?.nativeElement) this.fechaAsientoHastaInputRef.nativeElement.value = formatted; });
+  }
+
+  private parseFechaLocalRLA(raw: string): Date | null {
+    if (!raw) return null;
+    const parts = raw.split('/');
+    if (parts.length !== 3) return null;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (isNaN(dia) || dia < 1 || dia > 31 || isNaN(mes) || mes < 0 || mes > 11 || isNaN(anio) || anio < 1000) return null;
+    const d = new Date(anio, mes, dia);
+    return d.getFullYear() === anio && d.getMonth() === mes && d.getDate() === dia ? d : null;
+  }
 
   ngOnInit(): void {
     this.idSucursal = localStorage.getItem('idSucursal') || '280';
@@ -202,8 +267,8 @@ export class ReporteListadoAsientosComponent implements OnInit {
     criterios.push(criterioEmpresa);
 
     // Criterio: Fecha Asiento
-    const fechaAsientoDesde = this.fechaAsientoDesde();
-    const fechaAsientoHasta = this.fechaAsientoHasta();
+    const fechaAsientoDesde = this.fechaAsientoDesdeControl.value as Date | null;
+    const fechaAsientoHasta = this.fechaAsientoHastaControl.value as Date | null;
     if (fechaAsientoDesde && fechaAsientoHasta) {
       const fad = this.funcionesDatos.formatearFechaParaBackend(fechaAsientoDesde, TipoFormatoFechaBackend.SOLO_FECHA);
       const fah = this.funcionesDatos.formatearFechaParaBackend(fechaAsientoHasta, TipoFormatoFechaBackend.SOLO_FECHA);
@@ -347,8 +412,8 @@ export class ReporteListadoAsientosComponent implements OnInit {
    * Limpia todos los filtros
    */
   limpiarFiltros(): void {
-    this.fechaAsientoDesde.set(null);
-    this.fechaAsientoHasta.set(null);
+    this.fechaAsientoDesdeControl.setValue(null);
+    this.fechaAsientoHastaControl.setValue(null);
     this.numeroAsiento.set('');
     this.descripcion.set('');
     this.estado.set(null);

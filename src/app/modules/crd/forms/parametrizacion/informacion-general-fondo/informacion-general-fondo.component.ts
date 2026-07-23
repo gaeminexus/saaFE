@@ -69,9 +69,8 @@ export class InformacionGeneralFondoComponent implements OnInit {
     { valor: 'M', label: 'Mixto' },
   ];
   readonly tiposAdministracion: { valor: string; label: string }[] = [
-    { valor: 'B', label: 'Por sí mismo (Propia)' },
-    { valor: 'D', label: 'Delegada' },
-    { valor: 'M', label: 'Mixta' },
+    { valor: 'B', label: 'BIESS' },
+    { valor: 'P', label: 'PRIVADA' },
   ];
   readonly tiposFcpc: { valor: string; label: string }[] = [
     { valor: 'I',   label: 'Tipo I' },
@@ -124,12 +123,12 @@ export class InformacionGeneralFondoComponent implements OnInit {
       // Porcentajes - Cesantía
       porcentajeAportePatronalCesantia: [5, [Validators.min(0), Validators.max(100)]],
       porcentajeAportePersonalCesantia: [2, [Validators.min(0), Validators.max(100)]],
-      valorAportePersonalCesantia: [18629701.95, [Validators.min(0)]],
+      valorAportePersonalCesantia: [0, [Validators.min(0)]],
 
       // Porcentajes - Jubilación
       porcentajeAportePatronalJubilacion: [0, [Validators.min(0), Validators.max(100)]],
       porcentajeAportePersonalJubilacion: [5, [Validators.min(0), Validators.max(100)]],
-      valorAportePersonalJubilacion: [33462534.21, [Validators.min(0)]],
+      valorAportePersonalJubilacion: [0, [Validators.min(0)]],
     });
   }
 

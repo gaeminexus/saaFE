@@ -30,7 +30,7 @@ const IVA_GENERAL = '614';
 const FECHA_CAMBIO_IVA = new Date('2024-04-01');
 const FACTURA = '01';
 const TABLA_IVA = '17';
-const SIN_UTILIZACION_DEL_SISTEMA_FINANCIERO = '01';
+const CON_UTILIZACION_DEL_SISTEMA_FINANCIERO = '20';
 const TABLA_FORMA_PAGO_INTERNA = '612';
 const TABLA_FORMA_PAGO = '24';
 const EFECTIVO = '1';
@@ -372,7 +372,7 @@ export class FacturasIngresoComponent implements OnInit {
 
   recuperaFormaPagoDefault(): void {
     this.formaPagoFactura =
-      this.tablaSRIFormasPago.find((r) => r.codigo === SIN_UTILIZACION_DEL_SISTEMA_FINANCIERO) ||
+      this.tablaSRIFormasPago.find((r) => r.codigo === CON_UTILIZACION_DEL_SISTEMA_FINANCIERO) ||
       this.tablaSRIFormasPago[0];
   }
 

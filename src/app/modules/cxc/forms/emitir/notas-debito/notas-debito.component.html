@@ -13,11 +13,13 @@
         <mat-icon>refresh</mat-icon>
         Recargar
       </button>
+      <button mat-stroked-button class="btn-secundario" type="button" (click)="imprimirDocumento()" [disabled]="!documentoActual()?.id">
+        <mat-icon>print</mat-icon>
+        Imprimir
+      </button>
     </div>
   </div>
 
-  <div class="resumen-grid">
-  <!-- Encabezado del documento -->
   <mat-card class="documento-card">
     <mat-card-content>
       <div class="form-grid">
@@ -59,33 +61,23 @@
           </mat-select>
         </mat-form-field>
 
-        <mat-form-field appearance="outline">
-          <mat-label>Tipo doc. modificado</mat-label>
-          <mat-select [(ngModel)]="tipoDocModificado" [disabled]="deshabilitado">
-            <mat-option value="01">Factura</mat-option>
-            <mat-option value="05">Nota de Débito</mat-option>
-          </mat-select>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline">
-          <mat-label>Nro. doc. modificado</mat-label>
-          <input matInput [(ngModel)]="numDocModificado" placeholder="001-001-000000001" [disabled]="deshabilitado" />
-        </mat-form-field>
-
-        <mat-form-field appearance="outline">
-          <mat-label>Fecha emisión doc. modificado</mat-label>
-          <input
-            #fechaNdDMInput
-            matInput
-            [matDatepicker]="pickerFechaNdDocMod"
-            [formControl]="fechaDMControl"
-            placeholder="dd/mm/aaaa"
-            (input)="capturarFechaDMRaw($event)"
-            (dateChange)="onFechaEmiDMPickerChange($event.value)"
-            (blur)="syncFechaDMFromRaw($event)"
-          />
-          <mat-datepicker-toggle matIconSuffix [for]="pickerFechaNdDocMod"></mat-datepicker-toggle>
-          <mat-datepicker #pickerFechaNdDocMod></mat-datepicker>
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Factura relacionada (documento modificado)</mat-label>
+          <input matInput [value]="displayFacturaRelacionada()" placeholder="Seleccione una factura emitida al cliente" readonly [disabled]="deshabilitado" />
+          <button mat-icon-button matSuffix type="button" (click)="buscaFacturaRelacionada()" [disabled]="deshabilitado || !personaSeleccionada()">
+            <mat-icon>receipt_long</mat-icon>
+          </button>
+          @if (facturaRelacionada()) {
+            <button mat-icon-button matSuffix type="button" (click)="limpiarFacturaRelacionada()" [disabled]="deshabilitado">
+              <mat-icon>close</mat-icon>
+            </button>
+          }
+          @if (facturaRelacionada()) {
+            <mat-hint>Fecha: {{ fechaDMControl.value | date:'dd/MM/yyyy' }}&nbsp;&nbsp;Total: {{ facturaRelacionada()!.total | number:'1.2-2' }}</mat-hint>
+          }
+          @if (!personaSeleccionada() && !deshabilitado) {
+            <mat-hint>Primero seleccione un cliente</mat-hint>
+          }
         </mat-form-field>
 
         <mat-form-field appearance="outline" class="full-width">
@@ -96,29 +88,26 @@
     </mat-card-content>
   </mat-card>
 
-  <!-- Ingreso de líneas de detalle -->
   @if (!deshabilitado) {
   <mat-card class="documento-card">
-    <mat-card-header><mat-card-title>Agregar Detalle</mat-card-title></mat-card-header>
+    <mat-card-header><mat-card-title>Agregar Producto / Servicio</mat-card-title></mat-card-header>
     <mat-card-content>
       <div class="form-grid">
         <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Razón / Descripción</mat-label>
-          <input matInput [(ngModel)]="detalleRazon" placeholder="Ingrese la razón del cargo" />
+          <mat-label>Producto / Servicio</mat-label>
+          <input matInput [value]="textoProductoSeleccionado()" placeholder="Seleccione un producto" readonly />
+          <button mat-icon-button matSuffix type="button" (click)="buscaProducto()"><mat-icon>search</mat-icon></button>
+          @if (productoSeleccionado()) {
+            <mat-hint>IVA: {{ lbTipoIva }}% &nbsp;|&nbsp; Incluye IVA: {{ lbIncluyeIva }} &nbsp;|&nbsp; Dcto: {{ lbTipoDescuento }}</mat-hint>
+          }
         </mat-form-field>
 
-        <mat-form-field appearance="outline">
-          <mat-label>Valor</mat-label>
-          <input matInput type="number" [(ngModel)]="detalleValor" min="0" step="0.01" />
-        </mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>Cantidad</mat-label><input matInput type="number" [(ngModel)]="txtCantidad" (input)="cambioCantidad()" min="1" step="1" /></mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>Precio unitario</mat-label><input matInput type="number" [(ngModel)]="txtValor" (input)="cambioCantidad()" min="0" step="0.01" /></mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>Descuento detalle</mat-label><input matInput type="number" [(ngModel)]="txtDescuentoDetalle" min="0" step="0.01" /></mat-form-field>
 
         <div class="botonera-detalle">
-          <button mat-raised-button color="primary" type="button" (click)="addDetalle()">
-            <mat-icon>add</mat-icon> Con IVA
-          </button>
-          <button mat-stroked-button color="primary" type="button" (click)="addDetalleIvaCero()">
-            <mat-icon>add</mat-icon> IVA 0%
-          </button>
+          <button mat-raised-button color="primary" type="button" (click)="addProducto()"><mat-icon>add</mat-icon> Agregar</button>
         </div>
       </div>
     </mat-card-content>
@@ -131,34 +120,15 @@
     <mat-card-content>
       <div class="table-wrapper">
         <table mat-table [dataSource]="dataSource" class="full-width">
-          <ng-container matColumnDef="descripcion">
-            <th mat-header-cell *matHeaderCellDef>Descripción / Razón</th>
-            <td mat-cell *matCellDef="let d">{{ d.descripcion }}</td>
-          </ng-container>
-          <ng-container matColumnDef="baseImponible">
-            <th mat-header-cell *matHeaderCellDef class="text-right">Base</th>
-            <td mat-cell *matCellDef="let d" class="text-right">{{ d.baseImponible | number:'1.2-2' }}</td>
-          </ng-container>
-          <ng-container matColumnDef="iva">
-            <th mat-header-cell *matHeaderCellDef class="text-right">IVA %</th>
-            <td mat-cell *matCellDef="let d" class="text-right">{{ d.porcentajeIVA | number:'1.0-0' }}%</td>
-          </ng-container>
-          <ng-container matColumnDef="valorIva">
-            <th mat-header-cell *matHeaderCellDef class="text-right">V.IVA</th>
-            <td mat-cell *matCellDef="let d" class="text-right">{{ d.valorIVA | number:'1.2-2' }}</td>
-          </ng-container>
-          <ng-container matColumnDef="total">
-            <th mat-header-cell *matHeaderCellDef class="text-right">Total</th>
-            <td mat-cell *matCellDef="let d" class="text-right"><strong>{{ d.total | number:'1.2-2' }}</strong></td>
-          </ng-container>
-          <ng-container matColumnDef="acciones">
-            <th mat-header-cell *matHeaderCellDef></th>
-            <td mat-cell *matCellDef="let d">
-              @if (!deshabilitado) {
-                <button mat-icon-button color="warn" (click)="eliminaDetalle(d)"><mat-icon>delete</mat-icon></button>
-              }
-            </td>
-          </ng-container>
+          <ng-container matColumnDef="cantidad"><th mat-header-cell *matHeaderCellDef class="text-right">Cant.</th><td mat-cell *matCellDef="let d" class="text-right">{{ d.cantidad | number:'1.2-2' }}</td></ng-container>
+          <ng-container matColumnDef="descripcion"><th mat-header-cell *matHeaderCellDef>Descripción</th><td mat-cell *matCellDef="let d">{{ d.descripcion }}</td></ng-container>
+          <ng-container matColumnDef="valor"><th mat-header-cell *matHeaderCellDef class="text-right">Valor</th><td mat-cell *matCellDef="let d" class="text-right">{{ d.valor | number:'1.2-2' }}</td></ng-container>
+          <ng-container matColumnDef="subTotal"><th mat-header-cell *matHeaderCellDef class="text-right">SubTotal</th><td mat-cell *matCellDef="let d" class="text-right">{{ d.subTotal | number:'1.2-2' }}</td></ng-container>
+          <ng-container matColumnDef="descuento"><th mat-header-cell *matHeaderCellDef class="text-right">Desc.</th><td mat-cell *matCellDef="let d" class="text-right">{{ d.descuento | number:'1.2-2' }}</td></ng-container>
+          <ng-container matColumnDef="baseImponible"><th mat-header-cell *matHeaderCellDef class="text-right">Base</th><td mat-cell *matCellDef="let d" class="text-right">{{ d.baseImponible | number:'1.2-2' }}</td></ng-container>
+          <ng-container matColumnDef="iva"><th mat-header-cell *matHeaderCellDef class="text-right">IVA</th><td mat-cell *matCellDef="let d" class="text-right">{{ d.valorIVA | number:'1.2-2' }}</td></ng-container>
+          <ng-container matColumnDef="total"><th mat-header-cell *matHeaderCellDef class="text-right">Total</th><td mat-cell *matCellDef="let d" class="text-right"><strong>{{ d.total | number:'1.2-2' }}</strong></td></ng-container>
+          <ng-container matColumnDef="acciones"><th mat-header-cell *matHeaderCellDef></th><td mat-cell *matCellDef="let d">@if (!deshabilitado) {<button mat-icon-button color="warn" (click)="eliminaDetalle(d)"><mat-icon>delete</mat-icon></button>}</td></ng-container>
           <tr mat-header-row *matHeaderRowDef="columnas"></tr>
           <tr mat-row *matRowDef="let row; columns: columnas;"></tr>
           @if (!listaDetalles.length) {
@@ -206,9 +176,9 @@
       <div class="table-wrapper">
         <table mat-table [dataSource]="dataSourceRegistros" class="full-width">
           <ng-container matColumnDef="id"><th mat-header-cell *matHeaderCellDef>#</th><td mat-cell *matCellDef="let r">{{ r.id }}</td></ng-container>
-          <ng-container matColumnDef="fecha"><th mat-header-cell *matHeaderCellDef>Fecha</th><td mat-cell *matCellDef="let r">{{ r.fecha | date:'dd/MM/yyyy' }}</td></ng-container>
+          <ng-container matColumnDef="fecha"><th mat-header-cell *matHeaderCellDef>Fecha</th><td mat-cell *matCellDef="let r">{{ parseFechaArray(r.fecha) | date:'dd/MM/yyyy' }}</td></ng-container>
           <ng-container matColumnDef="numero"><th mat-header-cell *matHeaderCellDef>Número</th><td mat-cell *matCellDef="let r">{{ r.numero }}</td></ng-container>
-          <ng-container matColumnDef="titular"><th mat-header-cell *matHeaderCellDef>Cliente</th><td mat-cell *matCellDef="let r">{{ r.titular?.razonSocial || r.titular?.nombre }}</td></ng-container>
+          <ng-container matColumnDef="persona"><th mat-header-cell *matHeaderCellDef>Cliente</th><td mat-cell *matCellDef="let r">{{ r.titular?.razonSocial || r.titular?.nombre }}</td></ng-container>
           <ng-container matColumnDef="total"><th mat-header-cell *matHeaderCellDef class="text-right">Total</th><td mat-cell *matCellDef="let r" class="text-right">{{ r.total | number:'1.2-2' }}</td></ng-container>
           <ng-container matColumnDef="estado"><th mat-header-cell *matHeaderCellDef>Estado</th><td mat-cell *matCellDef="let r">{{ estadoLabel(r.estado) }}</td></ng-container>
           <tr mat-header-row *matHeaderRowDef="columnasRegistros"></tr>

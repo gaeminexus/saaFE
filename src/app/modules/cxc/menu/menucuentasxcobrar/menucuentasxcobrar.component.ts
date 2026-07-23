@@ -87,6 +87,11 @@ export class MenucuentasxcobrarComponent {
           route: '/menucuentasxcobrar/gestionar/facturas',
         },
         {
+          displayName: 'Documentos Electrónicos',
+          iconName: 'receipt_long',
+          route: '/menucuentasxcobrar/gestionar/documentos-electronicos',
+        },
+        {
           displayName: 'Anticipos',
           iconName: 'account_balance_wallet',
           route: '/menucuentasxcobrar/gestionar/anticipos',

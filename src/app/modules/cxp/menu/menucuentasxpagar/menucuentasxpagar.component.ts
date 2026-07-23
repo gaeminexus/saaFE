@@ -22,6 +22,11 @@ export class MenucuentaxpagarComponent {
           iconName: 'category',
           route: '/menucuentaxpagar/parametrizacion/grupos-productos',
         },
+        {
+          displayName: 'Datos SRI',
+          iconName: 'receipt_long',
+          route: '/menucuentaxpagar/parametrizacion/datos-sri',
+        },
         /*{
           displayName: 'Productos',
           iconName: 'inventory_2',

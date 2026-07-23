@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, ViewChild } from '@angular/core';
-import { FormControl } from '@angular/forms';
+import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { FormControl, UntypedFormControl } from '@angular/forms';
+import { FuncionesDatosService } from '../../../../shared/services/funciones-datos.service';
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
 import { MatDialog } from '@angular/material/dialog';
 import { MatPaginator } from '@angular/material/paginator';
@@ -52,8 +53,8 @@ export class ListadoAsientosComponent implements OnInit {
   // Filtros
   filtroNumero = new FormControl('');
   filtroEstado = new FormControl('');
-  filtroFechaDesde = new FormControl(null);
-  filtroFechaHasta = new FormControl(null);
+  filtroFechaDesde = new UntypedFormControl(null);
+  filtroFechaHasta = new UntypedFormControl(null);
   filtroTipoAsiento = new FormControl('');
 
   // Opciones de estado para el filtro (se cargan desde rubros)
@@ -67,13 +68,81 @@ export class ListadoAsientosComponent implements OnInit {
   // Enum para template
   EstadoAsiento = EstadoAsiento;
 
+  @ViewChild('fechaDesdeInput', { read: ElementRef }) fechaDesdeInputRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('fechaHastaInput', { read: ElementRef }) fechaHastaInputRef!: ElementRef<HTMLInputElement>;
+  private _rawFechaDesde = '';
+  private _rawFechaHasta = '';
+
   constructor(
     private asientoService: AsientoService,
     private detalleRubroService: DetalleRubroService,
     private snackBar: MatSnackBar,
     private router: Router,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private funcionesDatos: FuncionesDatosService
   ) {}
+
+  // ── Datepicker: Fecha Desde ───────────────────────────────────
+  capturarFechaDesdeRaw(event: Event): void {
+    this._rawFechaDesde = (event.target as HTMLInputElement).value;
+  }
+  syncFechaDesdeFromRaw(event: FocusEvent): void {
+    const raw = (this._rawFechaDesde || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaDesde = '';
+    const date = this.parseFechaLocalLA(raw);
+    if (!date) return;
+    const formatted = this.funcionesDatos.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+    this.filtroFechaDesde.setValue(date, { emitEvent: false });
+    this.filtroFechaDesde.setErrors(null);
+    this.filtroFechaDesde.markAsUntouched();
+    setTimeout(() => { if (this.fechaDesdeInputRef?.nativeElement) this.fechaDesdeInputRef.nativeElement.value = formatted; });
+    this.aplicarFiltros();
+  }
+  onFechaDesdePickerChange(date: Date | null | undefined): void {
+    const d = date || new Date();
+    const formatted = this.funcionesDatos.formatoFecha(d, FuncionesDatosService.SOLO_FECHA) || '';
+    this.filtroFechaDesde.setValue(d, { emitEvent: false });
+    this.filtroFechaDesde.setErrors(null);
+    this.filtroFechaDesde.markAsUntouched();
+    setTimeout(() => { if (this.fechaDesdeInputRef?.nativeElement) this.fechaDesdeInputRef.nativeElement.value = formatted; });
+    this.aplicarFiltros();
+  }
+
+  // ── Datepicker: Fecha Hasta ───────────────────────────────────
+  capturarFechaHastaRaw(event: Event): void {
+    this._rawFechaHasta = (event.target as HTMLInputElement).value;
+  }
+  syncFechaHastaFromRaw(event: FocusEvent): void {
+    const raw = (this._rawFechaHasta || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaHasta = '';
+    const date = this.parseFechaLocalLA(raw);
+    if (!date) return;
+    const formatted = this.funcionesDatos.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+    this.filtroFechaHasta.setValue(date, { emitEvent: false });
+    this.filtroFechaHasta.setErrors(null);
+    this.filtroFechaHasta.markAsUntouched();
+    setTimeout(() => { if (this.fechaHastaInputRef?.nativeElement) this.fechaHastaInputRef.nativeElement.value = formatted; });
+    this.aplicarFiltros();
+  }
+  onFechaHastaPickerChange(date: Date | null | undefined): void {
+    const d = date || new Date();
+    const formatted = this.funcionesDatos.formatoFecha(d, FuncionesDatosService.SOLO_FECHA) || '';
+    this.filtroFechaHasta.setValue(d, { emitEvent: false });
+    this.filtroFechaHasta.setErrors(null);
+    this.filtroFechaHasta.markAsUntouched();
+    setTimeout(() => { if (this.fechaHastaInputRef?.nativeElement) this.fechaHastaInputRef.nativeElement.value = formatted; });
+    this.aplicarFiltros();
+  }
+
+  private parseFechaLocalLA(raw: string): Date | null {
+    if (!raw) return null;
+    const parts = raw.split('/');
+    if (parts.length !== 3) return null;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (isNaN(dia) || dia < 1 || dia > 31 || isNaN(mes) || mes < 0 || mes > 11 || isNaN(anio) || anio < 1000) return null;
+    const d = new Date(anio, mes, dia);
+    return d.getFullYear() === anio && d.getMonth() === mes && d.getDate() === dia ? d : null;
+  }
 
   ngOnInit(): void {
     if (!this.idEmpresa) {

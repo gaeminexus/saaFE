@@ -6,6 +6,9 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableDataSource } from '@angular/material/table';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { TitularSelectorDialogComponent } from '../../../../../shared/components/titular-selector-dialog/titular-selector-dialog.component';
+import { ProductoSelectorDialogComponent } from '../../../../../shared/components/producto-selector-dialog/producto-selector-dialog.component';
+import { FacturaSelectorDialogComponent } from '../../../../../shared/components/factura-selector-dialog/factura-selector-dialog.component';
+import { FacturaEmitir } from '../../../model/factura-emitir';
 import { FuncionesDatosService, TipoFormatoFechaBackend } from '../../../../../shared/services/funciones-datos.service';
 import { Usuario } from '../../../../../shared/model/usuario';
 import { NotaDebitoEmitir } from '../../../model/nota-debito-emitir';
@@ -13,11 +16,16 @@ import { DetalleNotaDebitoEmitir } from '../../../model/detalle-nota-debito-emit
 import { Titular } from '../../../../tsr/model/titular';
 import { Facturador } from '../../../model/facturador';
 import { PuntoEmision } from '../../../model/puntos-emision';
+import { ProductoCobro } from '../../../model/producto-cobro';
 import { DetalleSri } from '../../../model/detalle-sri';
 import { NotaDebitoEmitirService } from '../../../service/emitir/nota-debito-emitir.service';
 import { FacturadorService } from '../../../service/facturador.service';
 import { PuntoEmisionService } from '../../../service/punto-emision.service';
 import { DetalleSriService } from '../../../service/detalle-sri.service';
+import { JasperReportesService } from '../../../../../shared/services/jasper-reportes.service';
+import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
+import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
+import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 
 const IVA_GENERAL = '614';
 const TABLA_IVA = '17';
@@ -34,6 +42,7 @@ const SIN_UTILIZACION_DEL_SISTEMA_FINANCIERO = '01';
   styleUrl: './notas-debito.component.scss',
 })
 export class NotasDebitoComponent implements OnInit {
+  @ViewChild('inCantidad') inCantidad!: ElementRef;
   @ViewChild('fechaNdInput', { read: ElementRef }) fechaNdInputRef!: ElementRef<HTMLInputElement>;
   @ViewChild('fechaNdDMInput', { read: ElementRef }) fechaNdDMInputRef!: ElementRef<HTMLInputElement>;
 
@@ -44,6 +53,7 @@ export class NotasDebitoComponent implements OnInit {
   private puntoEmisionService = inject(PuntoEmisionService);
   private detalleSriService = inject(DetalleSriService);
   private funcionesDatosS = inject(FuncionesDatosService);
+  private jasperReportes = inject(JasperReportesService);
 
   cargando = signal(false);
   guardando = signal(false);
@@ -61,6 +71,7 @@ export class NotasDebitoComponent implements OnInit {
   ptosEmision: PuntoEmision[] = [];
   ptoEmision: PuntoEmision | null = null;
 
+  ivaOpciones: DetalleSri[] = [];
   tablaSRIIVAGral: DetalleSri[] = [];
   tablaSRIFormasPago: DetalleSri[] = [];
   formaPagoSri: DetalleSri | null = null;
@@ -68,6 +79,7 @@ export class NotasDebitoComponent implements OnInit {
   fechaControl = new UntypedFormControl(new Date());
   observacion = '';
   plazoPago = 1;
+  facturaRelacionada = signal<FacturaEmitir | null>(null);
   tipoDocModificado = '01';
   numDocModificado = '';
   fechaDMControl = new UntypedFormControl(null);
@@ -75,9 +87,19 @@ export class NotasDebitoComponent implements OnInit {
   nmIvaGral = 15;
   lbIvaGral = '15';
 
-  // Detalle en texto libre (no usa productos de inventario, como en FEG)
-  detalleRazon = '';
-  detalleValor = 0;
+  productoSeleccionado = signal<ProductoCobro | null>(null);
+  textoProductoSeleccionado = computed(() => {
+    const p = this.productoSeleccionado();
+    return p ? `${p.codigo} - ${p.nombre}` : '';
+  });
+  txtCantidad = 1;
+  txtValor = 0;
+  txtTotal = 0;
+  txtDescuentoDetalle = 0;
+  lbTipoIva = '';
+  lbIncluyeIva = '';
+  lbTipoDescuento = '';
+
   txtDescuento = 0;
   txtPropina = 0;
 
@@ -88,7 +110,7 @@ export class NotasDebitoComponent implements OnInit {
 
   listaDetalles: DetalleNotaDebitoEmitir[] = [];
   dataSource = new MatTableDataSource<DetalleNotaDebitoEmitir>([]);
-  columnas = ['descripcion', 'valor', 'baseImponible', 'iva', 'total', 'acciones'];
+  columnas = ['cantidad', 'descripcion', 'valor', 'subTotal', 'descuento', 'baseImponible', 'iva', 'total', 'acciones'];
 
   registros = signal<NotaDebitoEmitir[]>([]);
   dataSourceRegistros = new MatTableDataSource<NotaDebitoEmitir>([]);
@@ -136,83 +158,109 @@ export class NotasDebitoComponent implements OnInit {
     dialogRef.afterClosed().subscribe((t: Titular | null) => { if (t) this.personaSeleccionada.set(t); });
   }
 
-  limpiarCliente(): void { this.personaSeleccionada.set(null); }
+  limpiarCliente(): void { this.personaSeleccionada.set(null); this.limpiarFacturaRelacionada(); }
+
+  buscaFacturaRelacionada(): void {
+    const cliente = this.personaSeleccionada();
+    if (!cliente?.codigo) { this.mostrarError('Primero seleccione un cliente'); return; }
+    const dialogRef = this.dialog.open(FacturaSelectorDialogComponent, {
+      width: '900px', maxWidth: '98vw',
+      data: { codigoTitular: cliente.codigo, nombreTitular: this.displayPersona(cliente) },
+    });
+    dialogRef.afterClosed().subscribe((factura: FacturaEmitir | null) => {
+      if (factura) this.asignarFacturaRelacionada(factura);
+    });
+  }
+
+  limpiarFacturaRelacionada(): void {
+    this.facturaRelacionada.set(null);
+    this.numDocModificado = '';
+    this.fechaDMControl.setValue(null, { emitEvent: false });
+    this.productoSeleccionado.set(null);
+  }
+
+  asignarFacturaRelacionada(factura: FacturaEmitir): void {
+    this.facturaRelacionada.set(factura);
+    this.tipoDocModificado = '01';
+    this.numDocModificado = factura.numero || '';
+    const fechaFact = factura.fecha ? new Date(factura.fecha) : new Date();
+    this.fechaDMControl.setValue(fechaFact, { emitEvent: false });
+  }
+
+  displayFacturaRelacionada(): string {
+    const f = this.facturaRelacionada();
+    if (!f) return '';
+    return f.numero ? f.numero : `ID: ${f.id}`;
+  }
 
   displayPersona(persona: Titular | null): string {
     if (!persona) return '';
     return `${persona.identificacion || ''} - ${persona.razonSocial || persona.nombre || ''}`.trim();
   }
 
-  addDetalle(): void {
-    if (!this.detalleRazon.trim()) { this.mostrarError('Ingrese la razón del detalle'); return; }
-    if (this.detalleValor <= 0) { this.mostrarError('El valor debe ser mayor que 0'); return; }
-
-    const baseImponible = this.rd(this.detalleValor);
-    const valorIVA = this.rd(baseImponible * this.nmIvaGral / 100);
-    const total = this.rd(baseImponible + valorIVA);
-
-    const item = {
-      id: null as unknown as number,
-      notaDebito: {} as NotaDebitoEmitir,
-      descripcion: this.detalleRazon.trim(),
-      cantidad: 1,
-      valor: baseImponible,
-      subTotal: baseImponible,
-      descuento: 0,
-      baseImponible,
-      porcentajeIVA: this.nmIvaGral,
-      valorIVA,
-      porcentajeICE: 0,
-      valorICE: 0,
-      subsidio: 0,
-      total,
-      estado: 1,
-    } as DetalleNotaDebitoEmitir;
-
-    this.listaDetalles.push(item);
-    this.dataSource.data = [...this.listaDetalles];
-    this.calcularTotales();
-    this.detalleRazon = '';
-    this.detalleValor = 0;
+  buscaProducto(): void {
+    const dialogRef = this.dialog.open(ProductoSelectorDialogComponent, {
+      width: '1200px', maxWidth: '98vw', data: { titulo: 'Buscar Producto CXC' },
+    });
+    dialogRef.afterClosed().subscribe((p: ProductoCobro | null) => { if (p) this.asignaProducto(p); });
   }
 
-  addDetalleIvaCero(): void {
-    if (!this.detalleRazon.trim()) { this.mostrarError('Ingrese la razón del detalle'); return; }
-    if (this.detalleValor <= 0) { this.mostrarError('El valor debe ser mayor que 0'); return; }
+  asignaProducto(item: ProductoCobro): void {
+    if (!item) return;
+    this.productoSeleccionado.set(item);
+    const tipoIva = this.ivaOpciones.find((iva) => Number(iva.codigo) === Number(item.tipoIVA));
+    this.lbTipoIva = tipoIva ? String(tipoIva.porcentaje || 0) : 'No definido';
+    this.lbIncluyeIva = Number(item.incluyeIVA) === 1 ? 'SI' : 'NO';
+    this.lbTipoDescuento = Number(item.tipoDescuento) === 1 ? `${item.descuento || 0}%` : `${item.descuento || 0}`;
+    this.txtDescuentoDetalle = item.descuento || 0;
+    this.txtValor = Number(item.precioUnitario || 0);
+    this.cambioCantidad();
+  }
 
-    const baseImponible = this.rd(this.detalleValor);
+  cambioCantidad(): void {
+    this.txtCantidad = this.rd(this.txtCantidad || 0);
+    this.txtValor = this.rd(this.txtValor || 0, 4);
+    this.txtTotal = this.rd(this.txtCantidad * this.txtValor);
+  }
+
+  addProducto(): void {
+    if (!this.productoSeleccionado()) { this.mostrarError('Debe seleccionar un producto'); return; }
+    if (this.txtCantidad <= 0) { this.mostrarError('La cantidad debe ser mayor que 0'); return; }
+    if (this.txtValor <= 0) { this.mostrarError('El valor debe ser mayor que 0'); return; }
+
+    const prod = this.productoSeleccionado() as ProductoCobro;
+    const tipoIva = this.ivaOpciones.find((iva) => Number(iva.codigo) === Number(prod.tipoIVA));
+    const porcentajeIVA = Number(tipoIva?.porcentaje || this.nmIvaGral);
+    let valor = this.rd(this.txtValor, 4);
+    if (Number(prod.incluyeIVA) === 1 && porcentajeIVA > 0) valor = this.rd(valor / (1 + porcentajeIVA / 100), 4);
+    const cantidad = this.rd(this.txtCantidad);
+    const subTotal = this.rd(valor * cantidad);
+    const desc = Number(prod.descuento || 0);
+    const descuento = desc > 0 ? (Number(prod.tipoDescuento) === 1 ? this.rd(subTotal * desc / 100) : this.rd(desc)) : 0;
+    const baseImponible = this.rd(subTotal - descuento);
+    const valorIVA = this.rd(baseImponible * porcentajeIVA / 100);
+    const totalItem = this.rd(baseImponible + valorIVA);
+
     const item = {
-      id: null as unknown as number,
-      notaDebito: {} as NotaDebitoEmitir,
-      descripcion: this.detalleRazon.trim(),
-      cantidad: 1,
-      valor: baseImponible,
-      subTotal: baseImponible,
-      descuento: 0,
-      baseImponible,
-      porcentajeIVA: 0,
-      valorIVA: 0,
-      porcentajeICE: 0,
-      valorICE: 0,
-      subsidio: 0,
-      total: baseImponible,
-      estado: 1,
+      id: null as unknown as number, notaDebito: {} as NotaDebitoEmitir,
+      descripcion: prod.nombre || '', cantidad, valor, subTotal, descuento, baseImponible,
+      porcentajeIVA, valorIVA, porcentajeICE: 0, valorICE: 0, subsidio: 0,
+      total: totalItem, producto: prod, estado: 1,
     } as DetalleNotaDebitoEmitir;
 
     this.listaDetalles.push(item);
     this.dataSource.data = [...this.listaDetalles];
-    this.calcularTotales();
-    this.detalleRazon = '';
-    this.detalleValor = 0;
+    this.procesoCalculaTotal();
+    this.limpiarIngreso();
   }
 
   eliminaDetalle(item: DetalleNotaDebitoEmitir): void {
     this.listaDetalles = this.listaDetalles.filter((d) => d !== item);
     this.dataSource.data = [...this.listaDetalles];
-    this.calcularTotales();
+    this.procesoCalculaTotal();
   }
 
-  private calcularTotales(): void {
+  private procesoCalculaTotal(): void {
     let sub = 0; let sub0 = 0; let iva = 0;
     this.listaDetalles.forEach((r) => {
       const base = Number(r.baseImponible || 0);
@@ -233,60 +281,110 @@ export class NotasDebitoComponent implements OnInit {
     if (!this.listaDetalles.length) { this.mostrarError('Nota de débito sin detalle'); return; }
     if (!this.personaSeleccionada()?.codigo) { this.mostrarError('Debe seleccionar un cliente para continuar'); return; }
     if (!this.ptoEmision?.id) { this.mostrarError('No existe punto de emisión configurado'); return; }
-    if (!this.numDocModificado.trim()) { this.mostrarError('Ingrese el número del documento modificado'); return; }
+    if (!this.facturaRelacionada()) { this.mostrarError('Seleccione la factura relacionada (documento modificado)'); return; }
 
     const comprador = this.personaSeleccionada() as Titular;
     const fechaDoc = this.parseFechaLocal(this.fechaControl.value);
     const fechaDM = this.parseFechaLocal(this.fechaDMControl.value);
 
     const payload: any = {
-      id: null,
-      tipoComprobante: NOTA_DEBITO,
-      facturador: this.vFacturador,
-      titular: comprador,
-      tipoDoc: '04',
-      numero: '',
-      numEstablecimiento: this.ptoEmision.establecimiento?.codigo || '',
-      numPtoEmision: this.ptoEmision.codigo || '',
-      secuencial: '',
-      ambiente: 1,
-      clave: '',
-      fecha: fechaDoc,
-      tipoDocModificado: this.tipoDocModificado,
-      numDocModificado: this.numDocModificado.trim(),
-      fechaEmisionDM: fechaDM,
-      observacion: this.observacion,
-      subtotal: this.lbSubtotal,
-      subcero: this.lbIVACero,
-      pIVA: this.nmIvaGral,
-      vIVA: this.lbTotalIVA,
-      vICE: 0, vIRBPNR: 0,
-      descuento: this.txtDescuento,
-      porDescuento: 0,
-      propina: this.txtPropina,
-      subsidio: 0,
-      total: this.lbTotal,
-      ptoEmision: this.ptoEmision,
-      usuario: this.vUsuario,
-      pathGen: '', autorizacion: '', fechaAutorizacion: '',
-      estado: 1, estadoEmision: 1,
-      detalleNotaDebito: this.listaDetalles,
-      formaPagoCodigo: this.formaPagoSri?.codigo || SIN_UTILIZACION_DEL_SISTEMA_FINANCIERO,
-      plazo: this.plazoPago,
+      notaDebito: {
+        facturador:        this.vFacturador,
+        titular:           comprador,
+        ptoEmision:        this.ptoEmision,
+        factura:           { id: this.facturaRelacionada()!.id },
+        usuario:           this.vUsuario,
+        tipoComprobante:   NOTA_DEBITO,
+        tipoDoc:           '04',
+        numero:            '',
+        numEstablecimiento: this.ptoEmision!.establecimiento?.codigo || '',
+        numPtoEmision:     this.ptoEmision!.codigo || '',
+        secuencial:        '',
+        ambiente:          1,
+        clave:             '',
+        fecha:             fechaDoc,
+        fechaEmisionDM:    fechaDM,
+        tipoDocModificado: this.tipoDocModificado,
+        numDocModificado:  this.numDocModificado.trim(),
+        observacion:       this.observacion,
+        subtotal:          this.lbSubtotal,
+        subcero:           this.lbIVACero,
+        pIVA:              this.nmIvaGral,
+        vIVA:              this.lbTotalIVA,
+        vICE:              0,
+        vIRBPNR:           0,
+        descuento:         this.txtDescuento,
+        porDescuento:      0,
+        propina:           this.txtPropina,
+        subsidio:          0,
+        total:             this.lbTotal,
+        pathGen:           '',
+        autorizacion:      '',
+        fechaAutorizacion: '',
+        estado:            1,
+        estadoEmision:     1,
+        comprador: {
+          id:    comprador.codigo,
+          email: comprador.email || '',
+        },
+      },
+      detalles: this.listaDetalles.map((d) => ({
+        producto:      d.producto?.id ?? d.producto,
+        descripcion:   d.descripcion,
+        cantidad:      d.cantidad,
+        valor:         d.valor,
+        subTotal:      d.subTotal,
+        descuento:     d.descuento,
+        baseImponible: d.baseImponible,
+        porcentajeIVA: d.porcentajeIVA,
+        valorIVA:      d.valorIVA,
+        total:         d.total,
+      })),
     };
 
     this.guardando.set(true);
-    this.service.grabarNotaDebito(payload).subscribe({
+    this.service.procesarCompleta(payload).subscribe({
       next: (resp) => {
-        this.documentoActual.set(resp || null);
-        this.registroId = resp?.id || null;
         this.deshabilitado = true;
         this.fechaControl.disable(); this.fechaDMControl.disable();
         this.guardando.set(false);
         this.mostrarExito('Nota de débito generada correctamente');
+        const idNd = resp?.id;
+        if (idNd) {
+          this.documentoActual.set(resp);
+          this.registroId = idNd;
+          this.service.getById(String(idNd)).subscribe({
+            next: (ndCompleta) => { if (ndCompleta?.id) { this.documentoActual.set(ndCompleta); this.registroId = ndCompleta.id; } },
+            error: () => {},
+          });
+        } else {
+          // Fallback: backend retornó null (200 sin body JSON); buscar por titular
+          this.buscarNdRecienEmitida(this.personaSeleccionada()?.codigo ?? 0);
+        }
         this.cargarRegistros();
       },
       error: (err) => { this.guardando.set(false); this.mostrarError(this.parseError(err, 'No se pudo grabar la nota de débito')); },
+    });
+  }
+
+  private buscarNdRecienEmitida(codigoTitular: number): void {
+    if (!codigoTitular) return;
+    const criterios: DatosBusqueda[] = [];
+    const cTitular = new DatosBusqueda();
+    cTitular.asignaValorConCampoPadre(
+      TipoDatosBusqueda.LONG, 'titular', 'codigo', String(codigoTitular), TipoComandosBusqueda.IGUAL
+    );
+    cTitular.setNumeroCampoRepetido(0);
+    criterios.push(cTitular);
+    this.service.selectByCriteria(criterios).subscribe({
+      next: (lista) => {
+        const sorted = (lista || []).sort((a, b) => (b.id || 0) - (a.id || 0));
+        if (sorted[0]?.id) {
+          this.documentoActual.set(sorted[0]);
+          this.registroId = sorted[0].id;
+        }
+      },
+      error: () => {},
     });
   }
 
@@ -297,18 +395,24 @@ export class NotasDebitoComponent implements OnInit {
     this.setFecha();
     this.lbSubtotal = 0; this.lbIVACero = 0; this.lbTotalIVA = 0; this.lbTotal = 0;
     this.txtDescuento = 0; this.txtPropina = 0; this.observacion = '';
-    this.numDocModificado = ''; this.tipoDocModificado = '01'; this.fechaDMControl.setValue(null, { emitEvent: false });
-    this.detalleRazon = ''; this.detalleValor = 0;
+    this.numDocModificado = ''; this.tipoDocModificado = '01'; this.fechaDMControl.setValue(null, { emitEvent: false }); this.facturaRelacionada.set(null);
+    this.limpiarIngreso();
     this.limpiarCliente();
     setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
   }
 
   imprimirDocumento(): void {
-    const contenido = document.getElementById('ticket-nota-debito')?.innerHTML;
-    if (!contenido) { this.mostrarError('No existe contenido para imprimir'); return; }
-    const ventana = window.open('', '_blank');
-    if (!ventana) { this.mostrarError('No se pudo abrir la ventana de impresión'); return; }
-    ventana.document.write(contenido); ventana.document.close(); ventana.focus(); ventana.print(); ventana.close();
+    const id = this.documentoActual()?.id;
+    if (!id) { this.mostrarError('Primero debe emitir el documento'); return; }
+    this.jasperReportes.generar('cxc', 'RPRT_RIDE_NOTA_DEBITO', { P_ID_NOTA_DEBITO: id }, 'PDF').subscribe({
+      next: (blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.target = '_blank'; a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+      },
+      error: () => this.mostrarError('No se pudo generar el reporte'),
+    });
   }
 
   copiarAutorizacion(): void {
@@ -425,6 +529,7 @@ export class NotasDebitoComponent implements OnInit {
     this.detalleSriService.getAll().subscribe({
       next: (all) => {
         const d = (all || []).filter((x) => x.estado === 1);
+        this.ivaOpciones = d.filter((x) => this.gTC(x.lsri) === TABLA_IVA);
         this.tablaSRIIVAGral = d.filter((x) => this.gTC(x.lsri) === IVA_GENERAL);
         this.tablaSRIFormasPago = d.filter((x) => this.gTC(x.lsri) === TABLA_FORMA_PAGO_SRI);
         this.aplicarIvaGeneralPorFecha();
@@ -443,6 +548,20 @@ export class NotasDebitoComponent implements OnInit {
     this.nmIvaGral = Number(el.porcentaje || 0);
   }
 
+  /** Convierte el formato LocalDateTime del backend ("2026,7,22,...") a Date. */
+  parseFechaArray(value: Date | string | null | undefined): Date | null {
+    if (!value) return null;
+    if (value instanceof Date) return value;
+    const str = String(value).trim();
+    if (str.includes(',')) {
+      const parts = str.split(',').map(Number);
+      const [year, month, day, hour = 0, min = 0, sec = 0] = parts;
+      if (year && month && day) return new Date(year, month - 1, day, hour, min, sec);
+    }
+    const parsed = new Date(str);
+    return isNaN(parsed.getTime()) ? null : parsed;
+  }
+
   private parseFechaLocal(t: string | Date | null | undefined): Date {
     if (t instanceof Date) return t;
     const fechaTexto = String(t || '').trim();
@@ -459,6 +578,11 @@ export class NotasDebitoComponent implements OnInit {
   private gTC(lsri: number | { tabla?: string }): string {
     if (typeof lsri === 'object' && lsri?.tabla) return String(lsri.tabla);
     return typeof lsri === 'number' ? String(lsri) : '';
+  }
+
+  private limpiarIngreso(): void {
+    this.lbIncluyeIva = ''; this.lbTipoIva = ''; this.lbTipoDescuento = '';
+    this.productoSeleccionado.set(null); this.txtCantidad = 1; this.txtValor = 0; this.txtTotal = 0;
   }
 
   private rd(v: number, d = 2): number {

@@ -275,7 +275,7 @@ export class CuentasBancariasComponent implements OnInit {
     dbCuenta.asignaUnCampoSinTrunc(
       TipoDatosBusqueda.STRING,
       'cuentaContable',
-      '1.1.02%',
+      '1.1%',
       TipoComandosBusqueda.LIKE
     );
     criterios.push(dbCuenta);
@@ -300,7 +300,7 @@ export class CuentasBancariasComponent implements OnInit {
               lista = lista.filter((c) => (c as any).empresa?.codigo === empresaCodigo);
             }
             lista = lista.filter(
-              (c) => c.estado === 1 && (c.cuentaContable ?? '').startsWith('1.1.02')
+              (c) => c.estado === 1 && (c.cuentaContable ?? '').startsWith('1.1')
             );
             lista.sort((a, b) =>
               (a.cuentaContable || '').localeCompare(b.cuentaContable || '', undefined, { numeric: true })

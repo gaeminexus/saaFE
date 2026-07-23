@@ -18,6 +18,12 @@ export class NotaCreditoEmitirService {
       .pipe(catchError(this.handleError));
   }
 
+  getById(id: string): Observable<NotaCreditoEmitir | null> {
+    return this.http
+      .get<NotaCreditoEmitir>(`${ServiciosCxc.RS_NTCR}/getId/${id}`)
+      .pipe(catchError(this.handleError));
+  }
+
   add(datos: Partial<NotaCreditoEmitir>): Observable<NotaCreditoEmitir | null> {
     return this.http
       .post<NotaCreditoEmitir>(ServiciosCxc.RS_NTCR, datos, this.httpOptions)
@@ -27,6 +33,12 @@ export class NotaCreditoEmitirService {
   grabarNotaCredito(datos: Partial<NotaCreditoEmitir>): Observable<NotaCreditoEmitir | null> {
     return this.http
       .post<NotaCreditoEmitir>(`${ServiciosCxc.RS_NTCR}/grabarNotaCredito`, datos, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
+
+  procesarCompleta(datos: any): Observable<NotaCreditoEmitir | null> {
+    return this.http
+      .post<NotaCreditoEmitir>(`${ServiciosCxc.RS_NTCR}/procesarCompleta`, datos, this.httpOptions)
       .pipe(catchError(this.handleError));
   }
 
@@ -45,6 +57,24 @@ export class NotaCreditoEmitirService {
   delete(id: number): Observable<NotaCreditoEmitir | null> {
     return this.http
       .delete<NotaCreditoEmitir>(`${ServiciosCxc.RS_NTCR}/${id}`, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
+
+  reintentarAutorizacion(datos: { idNotaCredito: number }): Observable<any | null> {
+    return this.http
+      .post<any>(`${ServiciosCxc.RS_NTCR}/reintentarAutorizacion`, datos, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
+
+  reenviarEmail(datos: { idNotaCredito: number; destinatarios: string }): Observable<any | null> {
+    return this.http
+      .post<any>(`${ServiciosCxc.RS_NTCR}/reenviarEmail`, datos, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
+
+  anular(datos: { idNotaCredito: number; usuario: string; motivo: string }): Observable<any | null> {
+    return this.http
+      .post<any>(`${ServiciosCxc.RS_NTCR}/anular`, datos, this.httpOptions)
       .pipe(catchError(this.handleError));
   }
 

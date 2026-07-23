@@ -1,0 +1,78 @@
+.consulta-docs-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.filtros-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.acciones-filtros {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.total-registros {
+  margin-left: auto;
+  font-size: 0.85rem;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.table-container {
+  overflow: auto;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.autorizacion-cell {
+  font-family: monospace;
+  font-size: 0.82rem;
+  max-width: 180px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sin-datos {
+  text-align: center;
+  padding: 18px;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+// Badges por tipo de documento
+.badge-tipo {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+
+  &--factura {
+    background-color: #e3f2fd;
+    color: #1565c0;
+  }
+
+  &--nota_credito {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+  }
+
+  &--nota_debito {
+    background-color: #fff3e0;
+    color: #e65100;
+  }
+
+  &--retencion {
+    background-color: #f3e5f5;
+    color: #6a1b9a;
+  }
+}
