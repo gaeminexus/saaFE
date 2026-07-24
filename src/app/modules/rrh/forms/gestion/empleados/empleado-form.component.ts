@@ -1,8 +1,10 @@
 import { CommonModule } from '@angular/common';
-import { Component, CUSTOM_ELEMENTS_SCHEMA, Inject, OnInit, signal } from '@angular/core';
+import { Component, computed, CUSTOM_ELEMENTS_SCHEMA, ElementRef, Inject, OnInit, signal, ViewChild } from '@angular/core';
+import { UntypedFormControl } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { Empleado } from '../../../model/empleado';
 import { EmpleadoService } from '../../../service/empleado.service';
 
@@ -20,10 +22,13 @@ export interface EmpleadoFormData {
   styleUrls: ['./empleado-form.component.scss'],
 })
 export class EmpleadoFormComponent implements OnInit {
+  @ViewChild('fechaNacimientoInput', { read: ElementRef }) fechaNacimientoInputRef!: ElementRef<HTMLInputElement>;
+  private _rawFechaNacimiento = '';
+
   formIdentificacion = signal<string>('');
   formNombres = signal<string>('');
   formApellidos = signal<string>('');
-  formFechaNacimiento = signal<string>('');
+  formFechaNacimientoControl = new UntypedFormControl(null);
   formTelefono = signal<string>('');
   formEmail = signal<string>('');
   formDireccion = signal<string>('');
@@ -33,6 +38,11 @@ export class EmpleadoFormComponent implements OnInit {
   formCodigo = signal<string>('');
   formFechaRegistro = signal<string>('');
   formUsuarioRegistro = signal<string>('');
+
+  /** Solo para mostrar en el campo de solo lectura "Fecha registro" (dd/MM/yyyy). No altera formFechaRegistro. */
+  formFechaRegistroDisplay = computed(
+    () => this.funcionesDatosS.formatoFecha(this.formFechaRegistro(), FuncionesDatosService.SOLO_FECHA) || '',
+  );
 
   loading = signal<boolean>(false);
   errorMsg = signal<string>('');
@@ -47,6 +57,7 @@ export class EmpleadoFormComponent implements OnInit {
     @Inject(MAT_DIALOG_DATA) public data: EmpleadoFormData,
     private empleadoService: EmpleadoService,
     private snackBar: MatSnackBar,
+    private funcionesDatosS: FuncionesDatosService,
   ) {}
 
   ngOnInit(): void {
@@ -56,7 +67,7 @@ export class EmpleadoFormComponent implements OnInit {
       this.formIdentificacion.set(String(rawIdentificacion));
       this.formNombres.set(String(item.nombres ?? ''));
       this.formApellidos.set(String(item.apellidos ?? ''));
-      this.formFechaNacimiento.set(this.formatDate(item.fechaNacimiento));
+      this.formFechaNacimientoControl.setValue(item.fechaNacimiento ? new Date(item.fechaNacimiento) : null, { emitEvent: false });
       this.formTelefono.set(String(item.telefono ?? ''));
       this.formEmail.set(String(item.email ?? ''));
       this.formDireccion.set(String(item.direccion ?? ''));
@@ -76,7 +87,7 @@ export class EmpleadoFormComponent implements OnInit {
     const identificacion = this.formIdentificacion().trim();
     const nombres = this.normalizeText(this.formNombres());
     const apellidos = this.normalizeText(this.formApellidos());
-    const fechaNacimiento = this.formFechaNacimiento();
+    const fechaNacimientoDate: Date | null = this.formFechaNacimientoControl.value;
     const telefono = this.normalizeText(this.formTelefono());
     const email = this.formEmail().trim();
     const direccion = this.formDireccion().trim();
@@ -102,7 +113,7 @@ export class EmpleadoFormComponent implements OnInit {
       return;
     }
 
-    if (fechaNacimiento && this.isFutureDate(fechaNacimiento)) {
+    if (fechaNacimientoDate && this.isFutureDate(fechaNacimientoDate)) {
       this.errorMsg.set('Fecha de nacimiento no puede ser futura');
       return;
     }
@@ -119,7 +130,7 @@ export class EmpleadoFormComponent implements OnInit {
       identificacion,
       nombres,
       apellidos,
-      fechaNacimiento: fechaNacimiento ? new Date(fechaNacimiento) : (undefined as any),
+      fechaNacimiento: fechaNacimientoDate ?? (undefined as any),
       telefono,
       email,
       direccion,
@@ -204,12 +215,44 @@ export class EmpleadoFormComponent implements OnInit {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
   }
 
-  private isFutureDate(value: string): boolean {
+  private isFutureDate(value: Date): boolean {
     const date = new Date(value);
     if (isNaN(date.getTime())) return false;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    date.setHours(0, 0, 0, 0);
     return date.getTime() > today.getTime();
+  }
+
+  capturarFechaNacimientoRaw(event: Event): void {
+    this._rawFechaNacimiento = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaNacimientoFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaNacimiento || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaNacimiento = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        const formatted = this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+        this.formFechaNacimientoControl.setValue(date, { emitEvent: false });
+        setTimeout(() => {
+          if (this.fechaNacimientoInputRef?.nativeElement) this.fechaNacimientoInputRef.nativeElement.value = formatted;
+        });
+      }
+    }
+  }
+
+  onFechaNacimientoPickerChange(date: Date | null | undefined): void {
+    this.formFechaNacimientoControl.setValue(date || null, { emitEvent: false });
+    const formatted = date ? this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '' : '';
+    setTimeout(() => {
+      if (this.fechaNacimientoInputRef?.nativeElement) this.fechaNacimientoInputRef.nativeElement.value = formatted;
+    });
   }
 
   private extractRows<T>(rows: T[] | { data?: T[]; rows?: T[]; contenido?: T[] } | null): T[] {

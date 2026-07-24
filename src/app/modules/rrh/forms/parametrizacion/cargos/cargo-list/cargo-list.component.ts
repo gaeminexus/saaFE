@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, CUSTOM_ELEMENTS_SCHEMA, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, CUSTOM_ELEMENTS_SCHEMA, ElementRef, inject, OnInit, signal, ViewChild } from '@angular/core';
+import { UntypedFormControl } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { PageEvent } from '@angular/material/paginator';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -8,6 +9,7 @@ import { DatosBusqueda } from '../../../../../../shared/model/datos-busqueda/dat
 import { TipoComandosBusqueda } from '../../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda } from '../../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { MaterialFormModule } from '../../../../../../shared/modules/material-form.module';
+import { FuncionesDatosService } from '../../../../../../shared/services/funciones-datos.service';
 import { Cargo } from '../../../../model/cargo';
 import { CargoService } from '../../../../service/cargo.service';
 import { DepartamentoService } from '../../../../service/departamento.service';
@@ -30,13 +32,19 @@ export class CargoListComponent implements OnInit {
   errorMsg = signal<string>('');
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
+  private funcionesDatosS = inject(FuncionesDatosService);
+
+  @ViewChild('fechaDesdeInput', { read: ElementRef }) fechaDesdeInputRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('fechaHastaInput', { read: ElementRef }) fechaHastaInputRef!: ElementRef<HTMLInputElement>;
+  private _rawFechaDesde = '';
+  private _rawFechaHasta = '';
 
   // Filtros
   filtroCodigo = signal<string>('');
   filtroNombre = signal<string>('');
   filtroEstado = signal<string | null>('A');
-  filtroDesde = signal<string>('');
-  filtroHasta = signal<string>('');
+  filtroDesdeControl = new UntypedFormControl(null);
+  filtroHastaControl = new UntypedFormControl(null);
   orderBy = signal<string>('nombre');
   orderDir = signal<'ASC' | 'DESC'>('ASC');
 
@@ -90,11 +98,77 @@ export class CargoListComponent implements OnInit {
     this.filtroCodigo.set('');
     this.filtroNombre.set('');
     this.filtroEstado.set('A');
-    this.filtroDesde.set('');
-    this.filtroHasta.set('');
+    this.filtroDesdeControl.setValue(null, { emitEvent: false });
+    this.filtroHastaControl.setValue(null, { emitEvent: false });
+    setTimeout(() => {
+      if (this.fechaDesdeInputRef?.nativeElement) this.fechaDesdeInputRef.nativeElement.value = '';
+      if (this.fechaHastaInputRef?.nativeElement) this.fechaHastaInputRef.nativeElement.value = '';
+    });
     this.orderBy.set('nombre');
     this.orderDir.set('ASC');
     this.buscar();
+  }
+
+  capturarFechaDesdeRaw(event: Event): void {
+    this._rawFechaDesde = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaDesdeFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaDesde || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaDesde = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        const formatted = this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+        this.filtroDesdeControl.setValue(date, { emitEvent: false });
+        setTimeout(() => {
+          if (this.fechaDesdeInputRef?.nativeElement) this.fechaDesdeInputRef.nativeElement.value = formatted;
+        });
+      }
+    }
+  }
+
+  onFechaDesdePickerChange(date: Date | null | undefined): void {
+    this.filtroDesdeControl.setValue(date || null, { emitEvent: false });
+    const formatted = date ? this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '' : '';
+    setTimeout(() => {
+      if (this.fechaDesdeInputRef?.nativeElement) this.fechaDesdeInputRef.nativeElement.value = formatted;
+    });
+  }
+
+  capturarFechaHastaRaw(event: Event): void {
+    this._rawFechaHasta = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaHastaFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaHasta || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaHasta = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        const formatted = this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+        this.filtroHastaControl.setValue(date, { emitEvent: false });
+        setTimeout(() => {
+          if (this.fechaHastaInputRef?.nativeElement) this.fechaHastaInputRef.nativeElement.value = formatted;
+        });
+      }
+    }
+  }
+
+  onFechaHastaPickerChange(date: Date | null | undefined): void {
+    this.filtroHastaControl.setValue(date || null, { emitEvent: false });
+    const formatted = date ? this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '' : '';
+    setTimeout(() => {
+      if (this.fechaHastaInputRef?.nativeElement) this.fechaHastaInputRef.nativeElement.value = formatted;
+    });
   }
 
   onNuevo(): void {
@@ -180,8 +254,10 @@ export class CargoListComponent implements OnInit {
       criterios.push(db);
     }
 
-    const desde = this.filtroDesde();
-    const hasta = this.filtroHasta();
+    const desdeDate: Date | null = this.filtroDesdeControl.value;
+    const hastaDate: Date | null = this.filtroHastaControl.value;
+    const desde = desdeDate ? this.toISODate(desdeDate) : '';
+    const hasta = hastaDate ? this.toISODate(hastaDate) : '';
     if (desde && hasta) {
       const db = new DatosBusqueda();
       db.asignaUnCampoConBetween(
@@ -276,6 +352,13 @@ export class CargoListComponent implements OnInit {
         return true;
       }),
     );
+  }
+
+  private toISODate(date: Date): string {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
   }
 
   private normalizeNombre(value: string): string {

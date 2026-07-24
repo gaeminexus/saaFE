@@ -1,5 +1,6 @@
 import { CommonModule, DatePipe } from '@angular/common';
-import { Component, computed, CUSTOM_ELEMENTS_SCHEMA, inject, OnInit, signal } from '@angular/core';
+import { Component, ElementRef, computed, CUSTOM_ELEMENTS_SCHEMA, inject, OnInit, signal, ViewChild } from '@angular/core';
+import { UntypedFormControl } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { PageEvent } from '@angular/material/paginator';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -47,10 +48,16 @@ export class AsistenciaListComponent implements OnInit {
   private dialog = inject(MatDialog);
   private router = inject(Router);
 
+  @ViewChild('fechaDesdeInput', { read: ElementRef }) fechaDesdeInputRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('fechaHastaInput', { read: ElementRef }) fechaHastaInputRef!: ElementRef<HTMLInputElement>;
+
+  private _rawFechaDesde = '';
+  private _rawFechaHasta = '';
+
   // Filtros
   filtroIdentificacion = signal<string>('');
-  filtroFechaDesde = signal<Date | null>(this.getDefaultFechaDesde());
-  filtroFechaHasta = signal<Date | null>(this.getDefaultFechaHasta());
+  filtroFechaDesdeControl = new UntypedFormControl(this.getDefaultFechaDesde());
+  filtroFechaHastaControl = new UntypedFormControl(this.getDefaultFechaHasta());
   filtroTipoRegistro = signal<string | null>(null);
   orderBy = signal<string>('fechaHora');
   orderDir = signal<'ASC' | 'DESC'>('DESC');
@@ -123,7 +130,7 @@ export class AsistenciaListComponent implements OnInit {
 
   buscar(): void {
     // Validar rango de fechas obligatorio
-    if (!this.filtroFechaDesde() || !this.filtroFechaHasta()) {
+    if (!this.filtroFechaDesdeControl.value || !this.filtroFechaHastaControl.value) {
       this.showError('El rango de fechas es obligatorio para consultar asistencia');
       return;
     }
@@ -149,10 +156,10 @@ export class AsistenciaListComponent implements OnInit {
   }
 
   private applyLocalFilters(registros: Asistencia[]): Asistencia[] {
-    const desde = new Date(this.filtroFechaDesde() as Date);
+    const desde = new Date(this.filtroFechaDesdeControl.value as Date);
     desde.setHours(0, 0, 0, 0);
 
-    const hasta = new Date(this.filtroFechaHasta() as Date);
+    const hasta = new Date(this.filtroFechaHastaControl.value as Date);
     hasta.setHours(23, 59, 59, 999);
 
     const identificacion = this.normalizeText(this.filtroIdentificacion());
@@ -224,12 +231,14 @@ export class AsistenciaListComponent implements OnInit {
     }
 
     // Filtro por rango de fechas (obligatorio)
-    if (this.filtroFechaDesde() && this.filtroFechaHasta()) {
+    const fechaDesdeVal: Date | null = this.filtroFechaDesdeControl.value;
+    const fechaHastaVal: Date | null = this.filtroFechaHastaControl.value;
+    if (fechaDesdeVal && fechaHastaVal) {
       const dbFechaDesde = new DatosBusqueda();
       dbFechaDesde.asignaUnCampoSinTrunc(
         TipoDatosBusqueda.DATE_TIME,
         'fechaHora',
-        this.formatDateTime(this.filtroFechaDesde()!, false),
+        this.formatDateTime(fechaDesdeVal, false),
         TipoComandosBusqueda.MAYOR_IGUAL,
       );
       criterios.push(dbFechaDesde);
@@ -238,7 +247,7 @@ export class AsistenciaListComponent implements OnInit {
       dbFechaHasta.asignaUnCampoSinTrunc(
         TipoDatosBusqueda.DATE_TIME,
         'fechaHora',
-        this.formatDateTime(this.filtroFechaHasta()!, true),
+        this.formatDateTime(fechaHastaVal, true),
         TipoComandosBusqueda.MENOR_IGUAL,
       );
       criterios.push(dbFechaHasta);
@@ -278,11 +287,77 @@ export class AsistenciaListComponent implements OnInit {
 
   limpiar(): void {
     this.filtroIdentificacion.set('');
-    this.filtroFechaDesde.set(null);
-    this.filtroFechaHasta.set(null);
+    this.filtroFechaDesdeControl.setValue(null, { emitEvent: false });
+    this.filtroFechaHastaControl.setValue(null, { emitEvent: false });
+    setTimeout(() => {
+      if (this.fechaDesdeInputRef?.nativeElement) this.fechaDesdeInputRef.nativeElement.value = '';
+      if (this.fechaHastaInputRef?.nativeElement) this.fechaHastaInputRef.nativeElement.value = '';
+    });
     this.filtroTipoRegistro.set(null);
     this.allData.set([]);
     this.dataSource.set([]);
+  }
+
+  capturarFechaDesdeRaw(event: Event): void {
+    this._rawFechaDesde = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaDesdeFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaDesde || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaDesde = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        const formatted = this.funcionesDatosService.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+        this.filtroFechaDesdeControl.setValue(date, { emitEvent: false });
+        setTimeout(() => {
+          if (this.fechaDesdeInputRef?.nativeElement) this.fechaDesdeInputRef.nativeElement.value = formatted;
+        });
+      }
+    }
+  }
+
+  onFechaDesdePickerChange(date: Date | null | undefined): void {
+    this.filtroFechaDesdeControl.setValue(date || null, { emitEvent: false });
+    const formatted = date ? this.funcionesDatosService.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '' : '';
+    setTimeout(() => {
+      if (this.fechaDesdeInputRef?.nativeElement) this.fechaDesdeInputRef.nativeElement.value = formatted;
+    });
+  }
+
+  capturarFechaHastaRaw(event: Event): void {
+    this._rawFechaHasta = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaHastaFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaHasta || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaHasta = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        const formatted = this.funcionesDatosService.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+        this.filtroFechaHastaControl.setValue(date, { emitEvent: false });
+        setTimeout(() => {
+          if (this.fechaHastaInputRef?.nativeElement) this.fechaHastaInputRef.nativeElement.value = formatted;
+        });
+      }
+    }
+  }
+
+  onFechaHastaPickerChange(date: Date | null | undefined): void {
+    this.filtroFechaHastaControl.setValue(date || null, { emitEvent: false });
+    const formatted = date ? this.funcionesDatosService.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '' : '';
+    setTimeout(() => {
+      if (this.fechaHastaInputRef?.nativeElement) this.fechaHastaInputRef.nativeElement.value = formatted;
+    });
   }
 
   onNuevo(): void {

@@ -69,21 +69,33 @@
                 <mat-form-field appearance="outline">
                   <mat-label>Fecha Anexo desde</mat-label>
                   <input
+                    #fechaAnexoDesdeInput
                     matInput
-                    type="date"
-                    [ngModel]="filtroFechaAnexoDesde()"
-                    (ngModelChange)="filtroFechaAnexoDesde.set($event)"
+                    [matDatepicker]="pickerFechaAnexoDesde"
+                    [formControl]="filtroFechaAnexoDesdeControl"
+                    placeholder="dd/mm/aaaa"
+                    (input)="capturarFechaAnexoDesdeRaw($event)"
+                    (dateChange)="onFechaAnexoDesdePickerChange($event.value)"
+                    (blur)="syncFechaAnexoDesdeFromRaw($event)"
                   />
+                  <mat-datepicker-toggle matIconSuffix [for]="pickerFechaAnexoDesde"></mat-datepicker-toggle>
+                  <mat-datepicker #pickerFechaAnexoDesde></mat-datepicker>
                 </mat-form-field>
 
                 <mat-form-field appearance="outline">
                   <mat-label>Fecha Anexo hasta</mat-label>
                   <input
+                    #fechaAnexoHastaInput
                     matInput
-                    type="date"
-                    [ngModel]="filtroFechaAnexoHasta()"
-                    (ngModelChange)="filtroFechaAnexoHasta.set($event)"
+                    [matDatepicker]="pickerFechaAnexoHasta"
+                    [formControl]="filtroFechaAnexoHastaControl"
+                    placeholder="dd/mm/aaaa"
+                    (input)="capturarFechaAnexoHastaRaw($event)"
+                    (dateChange)="onFechaAnexoHastaPickerChange($event.value)"
+                    (blur)="syncFechaAnexoHastaFromRaw($event)"
                   />
+                  <mat-datepicker-toggle matIconSuffix [for]="pickerFechaAnexoHasta"></mat-datepicker-toggle>
+                  <mat-datepicker #pickerFechaAnexoHasta></mat-datepicker>
                 </mat-form-field>
               </div>
 
@@ -91,21 +103,33 @@
                 <mat-form-field appearance="outline">
                   <mat-label>Nueva Fecha Fin desde</mat-label>
                   <input
+                    #nuevaFechaFinDesdeInput
                     matInput
-                    type="date"
-                    [ngModel]="filtroNuevaFechaFinDesde()"
-                    (ngModelChange)="filtroNuevaFechaFinDesde.set($event)"
+                    [matDatepicker]="pickerNuevaFechaFinDesde"
+                    [formControl]="filtroNuevaFechaFinDesdeControl"
+                    placeholder="dd/mm/aaaa"
+                    (input)="capturarNuevaFechaFinDesdeRaw($event)"
+                    (dateChange)="onNuevaFechaFinDesdePickerChange($event.value)"
+                    (blur)="syncNuevaFechaFinDesdeFromRaw($event)"
                   />
+                  <mat-datepicker-toggle matIconSuffix [for]="pickerNuevaFechaFinDesde"></mat-datepicker-toggle>
+                  <mat-datepicker #pickerNuevaFechaFinDesde></mat-datepicker>
                 </mat-form-field>
 
                 <mat-form-field appearance="outline">
                   <mat-label>Nueva Fecha Fin hasta</mat-label>
                   <input
+                    #nuevaFechaFinHastaInput
                     matInput
-                    type="date"
-                    [ngModel]="filtroNuevaFechaFinHasta()"
-                    (ngModelChange)="filtroNuevaFechaFinHasta.set($event)"
+                    [matDatepicker]="pickerNuevaFechaFinHasta"
+                    [formControl]="filtroNuevaFechaFinHastaControl"
+                    placeholder="dd/mm/aaaa"
+                    (input)="capturarNuevaFechaFinHastaRaw($event)"
+                    (dateChange)="onNuevaFechaFinHastaPickerChange($event.value)"
+                    (blur)="syncNuevaFechaFinHastaFromRaw($event)"
                   />
+                  <mat-datepicker-toggle matIconSuffix [for]="pickerNuevaFechaFinHasta"></mat-datepicker-toggle>
+                  <mat-datepicker #pickerNuevaFechaFinHasta></mat-datepicker>
                 </mat-form-field>
               </div>
 

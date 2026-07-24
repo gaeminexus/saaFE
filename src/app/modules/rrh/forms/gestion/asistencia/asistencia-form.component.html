@@ -79,10 +79,15 @@
             <mat-form-field appearance="outline">
               <mat-label>Fecha *</mat-label>
               <input
+                #fechaInput
                 matInput
                 [matDatepicker]="pickerFecha"
                 formControlName="fecha"
                 [readonly]="readonly()"
+                placeholder="dd/mm/aaaa"
+                (input)="capturarFechaRaw($event)"
+                (dateChange)="onFechaPickerChange($event.value)"
+                (blur)="syncFechaFromRaw($event)"
               />
               <mat-datepicker-toggle matSuffix [for]="pickerFecha"></mat-datepicker-toggle>
               <mat-datepicker #pickerFecha></mat-datepicker>

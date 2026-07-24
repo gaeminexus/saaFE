@@ -18,7 +18,7 @@
 
       <mat-form-field appearance="outline">
         <mat-label>Fecha registro</mat-label>
-        <input matInput [value]="formFechaRegistro()" disabled />
+        <input matInput [value]="formFechaRegistroDisplay()" disabled />
       </mat-form-field>
 
       <mat-form-field appearance="outline">
@@ -85,32 +85,50 @@
     <mat-form-field appearance="outline">
       <mat-label>Fecha inicio</mat-label>
       <input
+        #fechaInicioInput
         matInput
-        type="date"
-        [ngModel]="formFechaInicio()"
-        (ngModelChange)="formFechaInicio.set($event)"
+        [matDatepicker]="pickerFechaInicio"
+        [formControl]="formFechaInicioControl"
+        placeholder="dd/mm/aaaa"
+        (input)="capturarFechaInicioRaw($event)"
+        (dateChange)="onFechaInicioPickerChange($event.value)"
+        (blur)="syncFechaInicioFromRaw($event)"
       />
+      <mat-datepicker-toggle matIconSuffix [for]="pickerFechaInicio"></mat-datepicker-toggle>
+      <mat-datepicker #pickerFechaInicio></mat-datepicker>
     </mat-form-field>
 
     @if (requiereFechaFin()) {
       <mat-form-field appearance="outline">
         <mat-label>Fecha fin</mat-label>
         <input
+          #fechaFinInput
           matInput
-          type="date"
-          [ngModel]="formFechaFin()"
-          (ngModelChange)="formFechaFin.set($event)"
+          [matDatepicker]="pickerFechaFin"
+          [formControl]="formFechaFinControl"
+          placeholder="dd/mm/aaaa"
+          (input)="capturarFechaFinRaw($event)"
+          (dateChange)="onFechaFinPickerChange($event.value)"
+          (blur)="syncFechaFinFromRaw($event)"
         />
+        <mat-datepicker-toggle matIconSuffix [for]="pickerFechaFin"></mat-datepicker-toggle>
+        <mat-datepicker #pickerFechaFin></mat-datepicker>
       </mat-form-field>
     } @else {
       <mat-form-field appearance="outline">
         <mat-label>Fecha fin (opcional)</mat-label>
         <input
+          #fechaFinInput
           matInput
-          type="date"
-          [ngModel]="formFechaFin()"
-          (ngModelChange)="formFechaFin.set($event)"
+          [matDatepicker]="pickerFechaFinOpc"
+          [formControl]="formFechaFinControl"
+          placeholder="dd/mm/aaaa"
+          (input)="capturarFechaFinRaw($event)"
+          (dateChange)="onFechaFinPickerChange($event.value)"
+          (blur)="syncFechaFinFromRaw($event)"
         />
+        <mat-datepicker-toggle matIconSuffix [for]="pickerFechaFinOpc"></mat-datepicker-toggle>
+        <mat-datepicker #pickerFechaFinOpc></mat-datepicker>
       </mat-form-field>
     }
 
@@ -137,11 +155,17 @@
     <mat-form-field appearance="outline">
       <mat-label>Fecha firma</mat-label>
       <input
+        #fechaFirmaInput
         matInput
-        type="date"
-        [ngModel]="formFechaFirma()"
-        (ngModelChange)="formFechaFirma.set($event)"
+        [matDatepicker]="pickerFechaFirma"
+        [formControl]="formFechaFirmaControl"
+        placeholder="dd/mm/aaaa"
+        (input)="capturarFechaFirmaRaw($event)"
+        (dateChange)="onFechaFirmaPickerChange($event.value)"
+        (blur)="syncFechaFirmaFromRaw($event)"
       />
+      <mat-datepicker-toggle matIconSuffix [for]="pickerFechaFirma"></mat-datepicker-toggle>
+      <mat-datepicker #pickerFechaFirma></mat-datepicker>
     </mat-form-field>
   </div>
 

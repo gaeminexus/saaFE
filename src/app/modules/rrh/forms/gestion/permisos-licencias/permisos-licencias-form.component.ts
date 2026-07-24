@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, CUSTOM_ELEMENTS_SCHEMA, Inject, OnInit, signal } from '@angular/core';
+import { Component, ElementRef, computed, CUSTOM_ELEMENTS_SCHEMA, Inject, OnInit, signal, ViewChild } from '@angular/core';
+import { UntypedFormControl } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -8,6 +9,7 @@ import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-
 import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { Empleado } from '../../../model/empleado';
 import { ModalidadPermiso, PermisoLicencia, TipoPermiso } from '../../../model/permiso-licencia';
 import { EmpleadoService } from '../../../service/empleado.service';
@@ -28,11 +30,24 @@ export interface PermisosLicenciasFormData {
   styleUrls: ['./permisos-licencias-form.component.scss'],
 })
 export class PermisosLicenciasFormComponent implements OnInit {
+  @ViewChild('fechaInicioInput', { read: ElementRef }) fechaInicioInputRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('fechaFinInput', { read: ElementRef }) fechaFinInputRef!: ElementRef<HTMLInputElement>;
+
+  private _rawFechaInicio = '';
+  private _rawFechaFin = '';
+
   // Signals de formulario
   formEmpleado = signal<Empleado | null>(null);
   formTipoPermiso = signal<TipoPermiso | null>(null);
+  /**
+   * Fuente de verdad para toda la lógica de negocio (computeds, validación, payload).
+   * El FormControl de abajo solo existe para que el datepicker de Material funcione;
+   * se mantiene sincronizado manualmente en cada punto donde se asigna una fecha.
+   */
   formFechaInicio = signal<Date | null>(null);
   formFechaFin = signal<Date | null>(null);
+  formFechaInicioControl = new UntypedFormControl(null);
+  formFechaFinControl = new UntypedFormControl(null);
   formHoraInicio = signal<string>('');
   formHoraFin = signal<string>('');
   formConGoce = signal<boolean>(true);
@@ -123,6 +138,7 @@ export class PermisosLicenciasFormComponent implements OnInit {
     private tipoPermisoService: TipoPermisoService,
     private empleadoService: EmpleadoService,
     private snackBar: MatSnackBar,
+    private funcionesDatosS: FuncionesDatosService,
   ) {
     // Configurar filtrado de empleados
     this.empleadosFiltrados = new Observable(); // Se configurará en ngOnInit
@@ -134,6 +150,11 @@ export class PermisosLicenciasFormComponent implements OnInit {
 
     if (this.formData.data) {
       this.cargarDatos(this.formData.data);
+    }
+
+    if (this.isReadonly()) {
+      this.formFechaInicioControl.disable();
+      this.formFechaFinControl.disable();
     }
   }
 
@@ -231,10 +252,14 @@ export class PermisosLicenciasFormComponent implements OnInit {
   private cargarDatos(permiso: PermisoLicencia): void {
     this.formEmpleado.set(permiso.empleado);
     this.formTipoPermiso.set(permiso.tipoPermiso);
-    this.formFechaInicio.set(new Date(permiso.fechaInicio));
+    const inicio = new Date(permiso.fechaInicio);
+    this.formFechaInicio.set(inicio);
+    this.formFechaInicioControl.setValue(inicio, { emitEvent: false });
 
     if (permiso.fechaFin) {
-      this.formFechaFin.set(new Date(permiso.fechaFin));
+      const fin = new Date(permiso.fechaFin);
+      this.formFechaFin.set(fin);
+      this.formFechaFinControl.setValue(fin, { emitEvent: false });
     }
 
     this.formHoraInicio.set(permiso.horaInicio || '');
@@ -257,8 +282,76 @@ export class PermisosLicenciasFormComponent implements OnInit {
         this.formHoraFin.set('');
       } else if (tipo.modalidad === ModalidadPermiso.HORAS) {
         this.formFechaFin.set(null);
+        this.formFechaFinControl.setValue(null, { emitEvent: false });
+        setTimeout(() => {
+          if (this.fechaFinInputRef?.nativeElement) this.fechaFinInputRef.nativeElement.value = '';
+        });
       }
     }
+  }
+
+  capturarFechaInicioRaw(event: Event): void {
+    this._rawFechaInicio = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaInicioFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaInicio || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaInicio = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        this.aplicarFechaInicio(date);
+      }
+    }
+  }
+
+  onFechaInicioPickerChange(date: Date | null | undefined): void {
+    this.aplicarFechaInicio(date || new Date());
+  }
+
+  private aplicarFechaInicio(date: Date): void {
+    this.formFechaInicio.set(date);
+    this.formFechaInicioControl.setValue(date, { emitEvent: false });
+    const formatted = this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+    setTimeout(() => {
+      if (this.fechaInicioInputRef?.nativeElement) this.fechaInicioInputRef.nativeElement.value = formatted;
+    });
+  }
+
+  capturarFechaFinRaw(event: Event): void {
+    this._rawFechaFin = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaFinFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaFin || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaFin = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        this.aplicarFechaFin(date);
+      }
+    }
+  }
+
+  onFechaFinPickerChange(date: Date | null | undefined): void {
+    this.aplicarFechaFin(date || new Date());
+  }
+
+  private aplicarFechaFin(date: Date): void {
+    this.formFechaFin.set(date);
+    this.formFechaFinControl.setValue(date, { emitEvent: false });
+    const formatted = this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+    setTimeout(() => {
+      if (this.fechaFinInputRef?.nativeElement) this.fechaFinInputRef.nativeElement.value = formatted;
+    });
   }
 
   onCancelar(): void {

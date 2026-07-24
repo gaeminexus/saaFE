@@ -64,11 +64,16 @@
                 <mat-form-field appearance="outline">
                   <mat-label>Fecha Emisión</mat-label>
                   <input
+                    #fechaEmisionInput
                     matInput
                     [matDatepicker]="pickerFechaEmision"
                     formControlName="fechaEmision"
                     [readonly]="readonlyMode()"
+                    placeholder="dd/mm/aaaa"
                     required
+                    (input)="capturarFechaEmisionRaw($event)"
+                    (dateChange)="onFechaEmisionPickerChange($event.value)"
+                    (blur)="syncFechaEmisionFromRaw($event)"
                   />
                   <mat-datepicker-toggle
                     matIconSuffix
@@ -247,9 +252,14 @@
                     <mat-form-field appearance="outline">
                       <mat-label>Fecha Emisión desde</mat-label>
                       <input
+                        #fechaEmisionDesdeInput
                         matInput
                         [matDatepicker]="pickerEmisionDesde"
                         formControlName="fechaEmisionDesde"
+                        placeholder="dd/mm/aaaa"
+                        (input)="capturarFechaEmisionDesdeRaw($event)"
+                        (dateChange)="onFechaEmisionDesdePickerChange($event.value)"
+                        (blur)="syncFechaEmisionDesdeFromRaw($event)"
                       />
                       <mat-datepicker-toggle
                         matIconSuffix
@@ -261,9 +271,14 @@
                     <mat-form-field appearance="outline">
                       <mat-label>Fecha Emisión hasta</mat-label>
                       <input
+                        #fechaEmisionHastaInput
                         matInput
                         [matDatepicker]="pickerEmisionHasta"
                         formControlName="fechaEmisionHasta"
+                        placeholder="dd/mm/aaaa"
+                        (input)="capturarFechaEmisionHastaRaw($event)"
+                        (dateChange)="onFechaEmisionHastaPickerChange($event.value)"
+                        (blur)="syncFechaEmisionHastaFromRaw($event)"
                       />
                       <mat-datepicker-toggle
                         matIconSuffix
@@ -275,9 +290,14 @@
                     <mat-form-field appearance="outline">
                       <mat-label>Fecha Registro desde</mat-label>
                       <input
+                        #fechaRegistroDesdeInput
                         matInput
                         [matDatepicker]="pickerRegistroDesde"
                         formControlName="fechaRegistroDesde"
+                        placeholder="dd/mm/aaaa"
+                        (input)="capturarFechaRegistroDesdeRaw($event)"
+                        (dateChange)="onFechaRegistroDesdePickerChange($event.value)"
+                        (blur)="syncFechaRegistroDesdeFromRaw($event)"
                       />
                       <mat-datepicker-toggle
                         matIconSuffix
@@ -289,9 +309,14 @@
                     <mat-form-field appearance="outline">
                       <mat-label>Fecha Registro hasta</mat-label>
                       <input
+                        #fechaRegistroHastaInput
                         matInput
                         [matDatepicker]="pickerRegistroHasta"
                         formControlName="fechaRegistroHasta"
+                        placeholder="dd/mm/aaaa"
+                        (input)="capturarFechaRegistroHastaRaw($event)"
+                        (dateChange)="onFechaRegistroHastaPickerChange($event.value)"
+                        (blur)="syncFechaRegistroHastaFromRaw($event)"
                       />
                       <mat-datepicker-toggle
                         matIconSuffix

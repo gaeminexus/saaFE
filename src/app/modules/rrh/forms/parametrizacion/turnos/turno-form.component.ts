@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, CUSTOM_ELEMENTS_SCHEMA, Inject, OnInit, signal } from '@angular/core';
+import { Component, computed, CUSTOM_ELEMENTS_SCHEMA, Inject, OnInit, signal } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { catchError, map, of, switchMap } from 'rxjs';
@@ -7,6 +7,7 @@ import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-
 import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { Turno } from '../../../model/turno';
 import { TurnoService } from '../../../service/turno.service';
 
@@ -34,6 +35,11 @@ export class TurnoFormComponent implements OnInit {
   formFechaRegistro = signal<string>('');
   formUsuarioRegistro = signal<string>('');
 
+  /** Solo para mostrar en el campo de solo lectura "Fecha registro" (dd/MM/yyyy). No altera formFechaRegistro. */
+  formFechaRegistroDisplay = computed(
+    () => this.funcionesDatosS.formatoFecha(this.formFechaRegistro(), FuncionesDatosService.SOLO_FECHA) || '',
+  );
+
   loading = signal<boolean>(false);
   errorMsg = signal<string>('');
 
@@ -47,6 +53,7 @@ export class TurnoFormComponent implements OnInit {
     @Inject(MAT_DIALOG_DATA) public data: TurnoFormData,
     private turnoService: TurnoService,
     private snackBar: MatSnackBar,
+    private funcionesDatosS: FuncionesDatosService,
   ) {}
 
   ngOnInit(): void {

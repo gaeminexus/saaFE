@@ -283,9 +283,14 @@
                     <mat-form-field appearance="outline">
                       <mat-label>Fecha registro desde</mat-label>
                       <input
+                        #fechaRegistroDesdeInput
                         matInput
                         [matDatepicker]="pickerDesde"
                         formControlName="fechaRegistroDesde"
+                        placeholder="dd/mm/aaaa"
+                        (input)="capturarFechaRegistroDesdeRaw($event)"
+                        (dateChange)="onFechaRegistroDesdePickerChange($event.value)"
+                        (blur)="syncFechaRegistroDesdeFromRaw($event)"
                       />
                       <mat-datepicker-toggle
                         matIconSuffix
@@ -297,9 +302,14 @@
                     <mat-form-field appearance="outline">
                       <mat-label>Fecha registro hasta</mat-label>
                       <input
+                        #fechaRegistroHastaInput
                         matInput
                         [matDatepicker]="pickerHasta"
                         formControlName="fechaRegistroHasta"
+                        placeholder="dd/mm/aaaa"
+                        (input)="capturarFechaRegistroHastaRaw($event)"
+                        (dateChange)="onFechaRegistroHastaPickerChange($event.value)"
+                        (blur)="syncFechaRegistroHastaFromRaw($event)"
                       />
                       <mat-datepicker-toggle
                         matIconSuffix

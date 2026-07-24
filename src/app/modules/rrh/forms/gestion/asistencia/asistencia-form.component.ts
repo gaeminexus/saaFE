@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, Inject, OnInit, signal } from '@angular/core';
+import { Component, computed, ElementRef, Inject, OnInit, signal, ViewChild } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatButtonModule } from '@angular/material/button';
@@ -29,6 +29,7 @@ import { Asistencia } from '../../../model/asistencia';
 import { Empleado } from '../../../model/empleado';
 import { AsistenciaService } from '../../../service/asistencia.service';
 import { EmpleadoService } from '../../../service/empleado.service';
+import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 
 export interface AsistenciaDialogData {
   asistencia?: Asistencia;
@@ -57,6 +58,10 @@ export interface AsistenciaDialogData {
   styleUrls: ['./asistencia-form.component.scss'],
 })
 export class AsistenciaFormComponent implements OnInit {
+  @ViewChild('fechaInput', { read: ElementRef }) fechaInputRef!: ElementRef<HTMLInputElement>;
+
+  private _rawFecha = '';
+
   form!: FormGroup;
   loading = signal<boolean>(false);
   guardando = signal<boolean>(false);
@@ -103,6 +108,7 @@ export class AsistenciaFormComponent implements OnInit {
     private asistenciaService: AsistenciaService,
     private empleadoService: EmpleadoService,
     private snackBar: MatSnackBar,
+    private funcionesDatosS: FuncionesDatosService,
   ) {}
 
   ngOnInit(): void {
@@ -402,6 +408,38 @@ export class AsistenciaFormComponent implements OnInit {
     const match = value.match(/(\d{2}):(\d{2})/);
     if (!match) return '';
     return `${match[1]}:${match[2]}`;
+  }
+
+  capturarFechaRaw(event: Event): void {
+    this._rawFecha = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFecha || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFecha = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        const formatted = this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+        this.form.get('fecha')?.setValue(date, { emitEvent: false });
+        setTimeout(() => {
+          if (this.fechaInputRef?.nativeElement) this.fechaInputRef.nativeElement.value = formatted;
+        });
+      }
+    }
+  }
+
+  onFechaPickerChange(date: Date | null | undefined): void {
+    const d = date || new Date();
+    this.form.get('fecha')?.setValue(d, { emitEvent: false });
+    const formatted = this.funcionesDatosS.formatoFecha(d, FuncionesDatosService.SOLO_FECHA) || '';
+    setTimeout(() => {
+      if (this.fechaInputRef?.nativeElement) this.fechaInputRef.nativeElement.value = formatted;
+    });
   }
 
   getErrorMessage(fieldName: string): string {

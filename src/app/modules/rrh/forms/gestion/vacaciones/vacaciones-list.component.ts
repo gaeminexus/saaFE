@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, CUSTOM_ELEMENTS_SCHEMA, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, CUSTOM_ELEMENTS_SCHEMA, ElementRef, inject, OnInit, signal, ViewChild } from '@angular/core';
+import { AbstractControl, UntypedFormControl } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { PageEvent } from '@angular/material/paginator';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -7,6 +8,7 @@ import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-
 import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { Empleado } from '../../../model/empleado';
 import { SaldoVacaciones } from '../../../model/saldo-vacaciones';
 import { SolicitudVacaciones } from '../../../model/solicitud-vacaciones';
@@ -44,14 +46,25 @@ export class VacacionesListComponent implements OnInit {
   loading = signal<boolean>(false);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
+  private funcionesDatosS = inject(FuncionesDatosService);
+
+  @ViewChild('inicioDesdeInput', { read: ElementRef }) inicioDesdeInputRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('inicioHastaInput', { read: ElementRef }) inicioHastaInputRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('finDesdeInput', { read: ElementRef }) finDesdeInputRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('finHastaInput', { read: ElementRef }) finHastaInputRef!: ElementRef<HTMLInputElement>;
+
+  private _rawInicioDesde = '';
+  private _rawInicioHasta = '';
+  private _rawFinDesde = '';
+  private _rawFinHasta = '';
 
   filtroIdentificacion = signal<string>('');
   filtroEmpleadoCodigo = signal<string>('');
   filtroEstado = signal<string | null>('SOLICITADA');
-  filtroInicioDesde = signal<string>('');
-  filtroInicioHasta = signal<string>('');
-  filtroFinDesde = signal<string>('');
-  filtroFinHasta = signal<string>('');
+  filtroInicioDesdeControl = new UntypedFormControl(null);
+  filtroInicioHastaControl = new UntypedFormControl(null);
+  filtroFinDesdeControl = new UntypedFormControl(null);
+  filtroFinHastaControl = new UntypedFormControl(null);
   filtroAnio = signal<string>('');
   filtroAprobador = signal<string>('');
   orderBy = signal<string>('fechaInicio');
@@ -112,16 +125,100 @@ export class VacacionesListComponent implements OnInit {
     this.filtroIdentificacion.set('');
     this.filtroEmpleadoCodigo.set('');
     this.filtroEstado.set('SOLICITADA');
-    this.filtroInicioDesde.set('');
-    this.filtroInicioHasta.set('');
-    this.filtroFinDesde.set('');
-    this.filtroFinHasta.set('');
+    this.filtroInicioDesdeControl.setValue(null, { emitEvent: false });
+    this.filtroInicioHastaControl.setValue(null, { emitEvent: false });
+    this.filtroFinDesdeControl.setValue(null, { emitEvent: false });
+    this.filtroFinHastaControl.setValue(null, { emitEvent: false });
+    setTimeout(() => {
+      if (this.inicioDesdeInputRef?.nativeElement) this.inicioDesdeInputRef.nativeElement.value = '';
+      if (this.inicioHastaInputRef?.nativeElement) this.inicioHastaInputRef.nativeElement.value = '';
+      if (this.finDesdeInputRef?.nativeElement) this.finDesdeInputRef.nativeElement.value = '';
+      if (this.finHastaInputRef?.nativeElement) this.finHastaInputRef.nativeElement.value = '';
+    });
     this.filtroAnio.set('');
     this.filtroAprobador.set('');
     this.orderBy.set('fechaInicio');
     this.orderDir.set('DESC');
     this.buscar();
   }
+
+  private crearHandlersFecha(
+    getControl: () => AbstractControl | null,
+    getRawHolder: () => string,
+    setRawHolder: (v: string) => void,
+    getInputRef: () => ElementRef<HTMLInputElement> | undefined,
+  ) {
+    const forzarTexto = (date: Date | null) => {
+      const formatted = date ? this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '' : '';
+      setTimeout(() => {
+        const ref = getInputRef();
+        if (ref?.nativeElement) ref.nativeElement.value = formatted;
+      });
+    };
+    return {
+      capturar: (event: Event) => setRawHolder((event.target as HTMLInputElement).value),
+      sync: (event: FocusEvent) => {
+        const rawValue = (getRawHolder() || (event.target as HTMLInputElement)?.value || '').trim();
+        setRawHolder('');
+        if (!rawValue) return;
+        const parts = rawValue.split('/');
+        if (parts.length !== 3) return;
+        const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+        if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+          const date = new Date(anio, mes, dia);
+          if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+            getControl()?.setValue(date, { emitEvent: false });
+            forzarTexto(date);
+          }
+        }
+      },
+      onPickerChange: (date: Date | null | undefined) => {
+        const d = date || null;
+        getControl()?.setValue(d, { emitEvent: false });
+        forzarTexto(d);
+      },
+    };
+  }
+
+  private hInicioDesde = this.crearHandlersFecha(
+    () => this.filtroInicioDesdeControl,
+    () => this._rawInicioDesde,
+    (v) => (this._rawInicioDesde = v),
+    () => this.inicioDesdeInputRef,
+  );
+  capturarInicioDesdeRaw(event: Event): void { this.hInicioDesde.capturar(event); }
+  syncInicioDesdeFromRaw(event: FocusEvent): void { this.hInicioDesde.sync(event); }
+  onInicioDesdePickerChange(date: Date | null | undefined): void { this.hInicioDesde.onPickerChange(date); }
+
+  private hInicioHasta = this.crearHandlersFecha(
+    () => this.filtroInicioHastaControl,
+    () => this._rawInicioHasta,
+    (v) => (this._rawInicioHasta = v),
+    () => this.inicioHastaInputRef,
+  );
+  capturarInicioHastaRaw(event: Event): void { this.hInicioHasta.capturar(event); }
+  syncInicioHastaFromRaw(event: FocusEvent): void { this.hInicioHasta.sync(event); }
+  onInicioHastaPickerChange(date: Date | null | undefined): void { this.hInicioHasta.onPickerChange(date); }
+
+  private hFinDesde = this.crearHandlersFecha(
+    () => this.filtroFinDesdeControl,
+    () => this._rawFinDesde,
+    (v) => (this._rawFinDesde = v),
+    () => this.finDesdeInputRef,
+  );
+  capturarFinDesdeRaw(event: Event): void { this.hFinDesde.capturar(event); }
+  syncFinDesdeFromRaw(event: FocusEvent): void { this.hFinDesde.sync(event); }
+  onFinDesdePickerChange(date: Date | null | undefined): void { this.hFinDesde.onPickerChange(date); }
+
+  private hFinHasta = this.crearHandlersFecha(
+    () => this.filtroFinHastaControl,
+    () => this._rawFinHasta,
+    (v) => (this._rawFinHasta = v),
+    () => this.finHastaInputRef,
+  );
+  capturarFinHastaRaw(event: Event): void { this.hFinHasta.capturar(event); }
+  syncFinHastaFromRaw(event: FocusEvent): void { this.hFinHasta.sync(event); }
+  onFinHastaPickerChange(date: Date | null | undefined): void { this.hFinHasta.onPickerChange(date); }
 
   onNuevo(): void {
     const dialogRef = this.dialog.open(VacacionesFormComponent, {
@@ -426,10 +523,15 @@ export class VacacionesListComponent implements OnInit {
     this.pushDateCriteria(
       criterios,
       'fechaDesde',
-      this.filtroInicioDesde(),
-      this.filtroInicioHasta(),
+      this.toISODateOrEmpty(this.filtroInicioDesdeControl.value),
+      this.toISODateOrEmpty(this.filtroInicioHastaControl.value),
     );
-    this.pushDateCriteria(criterios, 'fechaHasta', this.filtroFinDesde(), this.filtroFinHasta());
+    this.pushDateCriteria(
+      criterios,
+      'fechaHasta',
+      this.toISODateOrEmpty(this.filtroFinDesdeControl.value),
+      this.toISODateOrEmpty(this.filtroFinHastaControl.value),
+    );
 
     const anio = Number(this.filtroAnio());
     if (Number.isFinite(anio) && anio > 1900) {
@@ -513,6 +615,14 @@ export class VacacionesListComponent implements OnInit {
       );
       criterios.push(db);
     }
+  }
+
+  private toISODateOrEmpty(date: Date | null): string {
+    if (!date) return '';
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
   }
 
   private applyLocalSort(rows: SolicitudVacaciones[]): SolicitudVacaciones[] {

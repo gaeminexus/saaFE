@@ -42,41 +42,65 @@
             <mat-form-field appearance="outline">
               <mat-label>Fecha inicio desde</mat-label>
               <input
+                #inicioDesdeInput
                 matInput
-                type="date"
-                [ngModel]="filtroInicioDesde()"
-                (ngModelChange)="filtroInicioDesde.set($event)"
+                [matDatepicker]="pickerInicioDesde"
+                [formControl]="filtroInicioDesdeControl"
+                placeholder="dd/mm/aaaa"
+                (input)="capturarInicioDesdeRaw($event)"
+                (dateChange)="onInicioDesdePickerChange($event.value)"
+                (blur)="syncInicioDesdeFromRaw($event)"
               />
+              <mat-datepicker-toggle matIconSuffix [for]="pickerInicioDesde"></mat-datepicker-toggle>
+              <mat-datepicker #pickerInicioDesde></mat-datepicker>
             </mat-form-field>
 
             <mat-form-field appearance="outline">
               <mat-label>Fecha inicio hasta</mat-label>
               <input
+                #inicioHastaInput
                 matInput
-                type="date"
-                [ngModel]="filtroInicioHasta()"
-                (ngModelChange)="filtroInicioHasta.set($event)"
+                [matDatepicker]="pickerInicioHasta"
+                [formControl]="filtroInicioHastaControl"
+                placeholder="dd/mm/aaaa"
+                (input)="capturarInicioHastaRaw($event)"
+                (dateChange)="onInicioHastaPickerChange($event.value)"
+                (blur)="syncInicioHastaFromRaw($event)"
               />
+              <mat-datepicker-toggle matIconSuffix [for]="pickerInicioHasta"></mat-datepicker-toggle>
+              <mat-datepicker #pickerInicioHasta></mat-datepicker>
             </mat-form-field>
 
             <mat-form-field appearance="outline">
               <mat-label>Fecha fin desde</mat-label>
               <input
+                #finDesdeInput
                 matInput
-                type="date"
-                [ngModel]="filtroFinDesde()"
-                (ngModelChange)="filtroFinDesde.set($event)"
+                [matDatepicker]="pickerFinDesde"
+                [formControl]="filtroFinDesdeControl"
+                placeholder="dd/mm/aaaa"
+                (input)="capturarFinDesdeRaw($event)"
+                (dateChange)="onFinDesdePickerChange($event.value)"
+                (blur)="syncFinDesdeFromRaw($event)"
               />
+              <mat-datepicker-toggle matIconSuffix [for]="pickerFinDesde"></mat-datepicker-toggle>
+              <mat-datepicker #pickerFinDesde></mat-datepicker>
             </mat-form-field>
 
             <mat-form-field appearance="outline">
               <mat-label>Fecha fin hasta</mat-label>
               <input
+                #finHastaInput
                 matInput
-                type="date"
-                [ngModel]="filtroFinHasta()"
-                (ngModelChange)="filtroFinHasta.set($event)"
+                [matDatepicker]="pickerFinHasta"
+                [formControl]="filtroFinHastaControl"
+                placeholder="dd/mm/aaaa"
+                (input)="capturarFinHastaRaw($event)"
+                (dateChange)="onFinHastaPickerChange($event.value)"
+                (blur)="syncFinHastaFromRaw($event)"
               />
+              <mat-datepicker-toggle matIconSuffix [for]="pickerFinHasta"></mat-datepicker-toggle>
+              <mat-datepicker #pickerFinHasta></mat-datepicker>
             </mat-form-field>
 
             <mat-form-field appearance="outline">

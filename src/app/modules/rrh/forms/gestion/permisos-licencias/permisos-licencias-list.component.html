@@ -55,10 +55,14 @@
           <mat-form-field appearance="outline">
             <mat-label>Fecha Inicio Desde</mat-label>
             <input
+              #fechaInicioInput
               matInput
               [matDatepicker]="pickerDesde"
-              [ngModel]="filtroFechaInicio()"
-              (ngModelChange)="filtroFechaInicio.set($event)"
+              [formControl]="filtroFechaInicioControl"
+              placeholder="dd/mm/aaaa"
+              (input)="capturarFechaInicioRaw($event)"
+              (dateChange)="onFechaInicioPickerChange($event.value)"
+              (blur)="syncFechaInicioFromRaw($event)"
             />
             <mat-datepicker-toggle matSuffix [for]="pickerDesde"></mat-datepicker-toggle>
             <mat-datepicker #pickerDesde></mat-datepicker>
@@ -67,10 +71,14 @@
           <mat-form-field appearance="outline">
             <mat-label>Fecha Inicio Hasta</mat-label>
             <input
+              #fechaFinInput
               matInput
               [matDatepicker]="pickerHasta"
-              [ngModel]="filtroFechaFin()"
-              (ngModelChange)="filtroFechaFin.set($event)"
+              [formControl]="filtroFechaFinControl"
+              placeholder="dd/mm/aaaa"
+              (input)="capturarFechaFinRaw($event)"
+              (dateChange)="onFechaFinPickerChange($event.value)"
+              (blur)="syncFechaFinFromRaw($event)"
             />
             <mat-datepicker-toggle matSuffix [for]="pickerHasta"></mat-datepicker-toggle>
             <mat-datepicker #pickerHasta></mat-datepicker>

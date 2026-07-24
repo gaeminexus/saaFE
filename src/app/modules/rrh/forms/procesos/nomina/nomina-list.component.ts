@@ -4,6 +4,7 @@ import {
   Component,
   computed,
   CUSTOM_ELEMENTS_SCHEMA,
+  ElementRef,
   inject,
   OnInit,
   signal,
@@ -15,6 +16,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatSort } from '@angular/material/sort';
 import { MatTableDataSource } from '@angular/material/table';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { ContratoEmpleado } from '../../../model/contrato-empleado';
 import { Empleado } from '../../../model/empleado';
 import { Nomina } from '../../../model/nomina';
@@ -72,8 +74,15 @@ export class NominaListComponent implements OnInit, AfterViewInit {
   @ViewChild(MatPaginator) paginator?: MatPaginator;
   @ViewChild(MatSort) sort?: MatSort;
 
+  @ViewChild('fechaRegistroDesdeInput', { read: ElementRef }) fechaRegistroDesdeInputRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('fechaRegistroHastaInput', { read: ElementRef }) fechaRegistroHastaInputRef!: ElementRef<HTMLInputElement>;
+
+  private _rawFechaRegistroDesde = '';
+  private _rawFechaRegistroHasta = '';
+
   private formBuilder = inject(FormBuilder);
   private snackBar = inject(MatSnackBar);
+  private funcionesDatosS = inject(FuncionesDatosService);
 
   filtroForm = this.formBuilder.group({
     periodoNomina: [null as PeriodoNomina | null],
@@ -274,6 +283,68 @@ export class NominaListComponent implements OnInit, AfterViewInit {
     this.nominaForm.controls.netoPagar.disable({ emitEvent: false });
     this.nominaForm.controls.fechaRegistro.disable({ emitEvent: false });
     this.nominaForm.controls.usuarioRegistro.disable({ emitEvent: false });
+  }
+
+  capturarFechaRegistroDesdeRaw(event: Event): void {
+    this._rawFechaRegistroDesde = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaRegistroDesdeFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaRegistroDesde || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaRegistroDesde = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        const formatted = this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+        this.filtroForm.controls.fechaRegistroDesde.setValue(date, { emitEvent: false });
+        setTimeout(() => {
+          if (this.fechaRegistroDesdeInputRef?.nativeElement) this.fechaRegistroDesdeInputRef.nativeElement.value = formatted;
+        });
+      }
+    }
+  }
+
+  onFechaRegistroDesdePickerChange(date: Date | null | undefined): void {
+    this.filtroForm.controls.fechaRegistroDesde.setValue(date || null, { emitEvent: false });
+    const formatted = date ? this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '' : '';
+    setTimeout(() => {
+      if (this.fechaRegistroDesdeInputRef?.nativeElement) this.fechaRegistroDesdeInputRef.nativeElement.value = formatted;
+    });
+  }
+
+  capturarFechaRegistroHastaRaw(event: Event): void {
+    this._rawFechaRegistroHasta = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaRegistroHastaFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaRegistroHasta || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaRegistroHasta = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        const formatted = this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+        this.filtroForm.controls.fechaRegistroHasta.setValue(date, { emitEvent: false });
+        setTimeout(() => {
+          if (this.fechaRegistroHastaInputRef?.nativeElement) this.fechaRegistroHastaInputRef.nativeElement.value = formatted;
+        });
+      }
+    }
+  }
+
+  onFechaRegistroHastaPickerChange(date: Date | null | undefined): void {
+    this.filtroForm.controls.fechaRegistroHasta.setValue(date || null, { emitEvent: false });
+    const formatted = date ? this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '' : '';
+    setTimeout(() => {
+      if (this.fechaRegistroHastaInputRef?.nativeElement) this.fechaRegistroHastaInputRef.nativeElement.value = formatted;
+    });
   }
 
   private showInfo(message: string): void {

@@ -4,6 +4,7 @@ import {
   Component,
   computed,
   CUSTOM_ELEMENTS_SCHEMA,
+  ElementRef,
   inject,
   OnInit,
   signal,
@@ -15,6 +16,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatSort } from '@angular/material/sort';
 import { MatTableDataSource } from '@angular/material/table';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { Nomina } from '../../../model/nomina';
 import { RolPago } from '../../../model/rolPago';
 
@@ -64,8 +66,21 @@ export class RolPagoListComponent implements OnInit, AfterViewInit {
   @ViewChild(MatPaginator) paginator?: MatPaginator;
   @ViewChild(MatSort) sort?: MatSort;
 
+  @ViewChild('fechaEmisionInput', { read: ElementRef }) fechaEmisionInputRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('fechaEmisionDesdeInput', { read: ElementRef }) fechaEmisionDesdeInputRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('fechaEmisionHastaInput', { read: ElementRef }) fechaEmisionHastaInputRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('fechaRegistroDesdeInput', { read: ElementRef }) fechaRegistroDesdeInputRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('fechaRegistroHastaInput', { read: ElementRef }) fechaRegistroHastaInputRef!: ElementRef<HTMLInputElement>;
+
+  private _rawFechaEmision = '';
+  private _rawFechaEmisionDesde = '';
+  private _rawFechaEmisionHasta = '';
+  private _rawFechaRegistroDesde = '';
+  private _rawFechaRegistroHasta = '';
+
   private formBuilder = inject(FormBuilder);
   private snackBar = inject(MatSnackBar);
+  private funcionesDatosS = inject(FuncionesDatosService);
 
   filtroForm = this.formBuilder.group({
     nomina: [null as Nomina | null],
@@ -245,6 +260,94 @@ export class RolPagoListComponent implements OnInit, AfterViewInit {
       this.rolPagoForm.disable({ emitEvent: false });
     }
   }
+
+  private crearHandlersFecha(
+    getControl: () => import('@angular/forms').AbstractControl | null,
+    getRawHolder: () => string,
+    setRawHolder: (v: string) => void,
+    getInputRef: () => ElementRef<HTMLInputElement> | undefined,
+  ) {
+    const forzarTexto = (date: Date | null) => {
+      const formatted = date ? this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '' : '';
+      setTimeout(() => {
+        const ref = getInputRef();
+        if (ref?.nativeElement) ref.nativeElement.value = formatted;
+      });
+    };
+    return {
+      capturar: (event: Event) => setRawHolder((event.target as HTMLInputElement).value),
+      sync: (event: FocusEvent) => {
+        const rawValue = (getRawHolder() || (event.target as HTMLInputElement)?.value || '').trim();
+        setRawHolder('');
+        if (!rawValue) return;
+        const parts = rawValue.split('/');
+        if (parts.length !== 3) return;
+        const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+        if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+          const date = new Date(anio, mes, dia);
+          if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+            getControl()?.setValue(date, { emitEvent: false });
+            forzarTexto(date);
+          }
+        }
+      },
+      onPickerChange: (date: Date | null | undefined) => {
+        const d = date || null;
+        getControl()?.setValue(d, { emitEvent: false });
+        forzarTexto(d);
+      },
+    };
+  }
+
+  private hFechaEmision = this.crearHandlersFecha(
+    () => this.rolPagoForm.controls.fechaEmision,
+    () => this._rawFechaEmision,
+    (v) => (this._rawFechaEmision = v),
+    () => this.fechaEmisionInputRef,
+  );
+  capturarFechaEmisionRaw(event: Event): void { this.hFechaEmision.capturar(event); }
+  syncFechaEmisionFromRaw(event: FocusEvent): void { this.hFechaEmision.sync(event); }
+  onFechaEmisionPickerChange(date: Date | null | undefined): void { this.hFechaEmision.onPickerChange(date); }
+
+  private hFechaEmisionDesde = this.crearHandlersFecha(
+    () => this.filtroForm.controls.fechaEmisionDesde,
+    () => this._rawFechaEmisionDesde,
+    (v) => (this._rawFechaEmisionDesde = v),
+    () => this.fechaEmisionDesdeInputRef,
+  );
+  capturarFechaEmisionDesdeRaw(event: Event): void { this.hFechaEmisionDesde.capturar(event); }
+  syncFechaEmisionDesdeFromRaw(event: FocusEvent): void { this.hFechaEmisionDesde.sync(event); }
+  onFechaEmisionDesdePickerChange(date: Date | null | undefined): void { this.hFechaEmisionDesde.onPickerChange(date); }
+
+  private hFechaEmisionHasta = this.crearHandlersFecha(
+    () => this.filtroForm.controls.fechaEmisionHasta,
+    () => this._rawFechaEmisionHasta,
+    (v) => (this._rawFechaEmisionHasta = v),
+    () => this.fechaEmisionHastaInputRef,
+  );
+  capturarFechaEmisionHastaRaw(event: Event): void { this.hFechaEmisionHasta.capturar(event); }
+  syncFechaEmisionHastaFromRaw(event: FocusEvent): void { this.hFechaEmisionHasta.sync(event); }
+  onFechaEmisionHastaPickerChange(date: Date | null | undefined): void { this.hFechaEmisionHasta.onPickerChange(date); }
+
+  private hFechaRegistroDesde = this.crearHandlersFecha(
+    () => this.filtroForm.controls.fechaRegistroDesde,
+    () => this._rawFechaRegistroDesde,
+    (v) => (this._rawFechaRegistroDesde = v),
+    () => this.fechaRegistroDesdeInputRef,
+  );
+  capturarFechaRegistroDesdeRaw(event: Event): void { this.hFechaRegistroDesde.capturar(event); }
+  syncFechaRegistroDesdeFromRaw(event: FocusEvent): void { this.hFechaRegistroDesde.sync(event); }
+  onFechaRegistroDesdePickerChange(date: Date | null | undefined): void { this.hFechaRegistroDesde.onPickerChange(date); }
+
+  private hFechaRegistroHasta = this.crearHandlersFecha(
+    () => this.filtroForm.controls.fechaRegistroHasta,
+    () => this._rawFechaRegistroHasta,
+    (v) => (this._rawFechaRegistroHasta = v),
+    () => this.fechaRegistroHastaInputRef,
+  );
+  capturarFechaRegistroHastaRaw(event: Event): void { this.hFechaRegistroHasta.capturar(event); }
+  syncFechaRegistroHastaFromRaw(event: FocusEvent): void { this.hFechaRegistroHasta.sync(event); }
+  onFechaRegistroHastaPickerChange(date: Date | null | undefined): void { this.hFechaRegistroHasta.onPickerChange(date); }
 
   private showInfo(message: string): void {
     this.snackBar.open(message, 'Cerrar', {

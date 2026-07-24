@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, CUSTOM_ELEMENTS_SCHEMA, Inject, OnInit, signal } from '@angular/core';
+import { Component, computed, CUSTOM_ELEMENTS_SCHEMA, ElementRef, Inject, OnInit, signal, ViewChild } from '@angular/core';
+import { UntypedFormControl } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { catchError, map, of, switchMap } from 'rxjs';
@@ -7,6 +8,7 @@ import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-
 import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { Empleado } from '../../../model/empleado';
 import { SaldoVacaciones } from '../../../model/saldo-vacaciones';
 import { SolicitudVacaciones } from '../../../model/solicitud-vacaciones';
@@ -28,10 +30,17 @@ export interface VacacionesFormData {
   styleUrls: ['./vacaciones-form.component.scss'],
 })
 export class VacacionesFormComponent implements OnInit {
+  @ViewChild('fechaInicioInput', { read: ElementRef }) fechaInicioInputRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('fechaFinInput', { read: ElementRef }) fechaFinInputRef!: ElementRef<HTMLInputElement>;
+  private _rawFechaInicio = '';
+  private _rawFechaFin = '';
+
   formEmpleadoBusqueda = signal<string>('');
   formEmpleado = signal<Empleado | null>(null);
   formFechaInicio = signal<string>('');
   formFechaFin = signal<string>('');
+  formFechaInicioControl = new UntypedFormControl(null);
+  formFechaFinControl = new UntypedFormControl(null);
   formDiasSolicitados = signal<number>(0);
   formObservacion = signal<string>('');
   formCodigo = signal<string>('');
@@ -50,6 +59,14 @@ export class VacacionesFormComponent implements OnInit {
 
   isView = computed(() => this.data.mode === 'view');
 
+  /** Solo para mostrar en los campos de solo lectura (dd/MM/yyyy). No alteran formFechaRegistro/formFechaAprobacion. */
+  formFechaRegistroDisplay = computed(
+    () => this.funcionesDatosS.formatoFecha(this.formFechaRegistro(), FuncionesDatosService.SOLO_FECHA) || '',
+  );
+  formFechaAprobacionDisplay = computed(
+    () => this.funcionesDatosS.formatoFecha(this.formFechaAprobacion(), FuncionesDatosService.SOLO_FECHA) || '',
+  );
+
   constructor(
     private dialogRef: MatDialogRef<VacacionesFormComponent>,
     @Inject(MAT_DIALOG_DATA) public data: VacacionesFormData,
@@ -57,6 +74,7 @@ export class VacacionesFormComponent implements OnInit {
     private empleadoService: EmpleadoService,
     private saldoService: SaldoVacacionesService,
     private snackBar: MatSnackBar,
+    private funcionesDatosS: FuncionesDatosService,
   ) {}
 
   ngOnInit(): void {
@@ -65,6 +83,8 @@ export class VacacionesFormComponent implements OnInit {
       this.formEmpleado.set(item.empleado ?? null);
       this.formFechaInicio.set(this.formatDate(item.fechaDesde));
       this.formFechaFin.set(this.formatDate(item.fechaHasta));
+      this.formFechaInicioControl.setValue(item.fechaDesde ? new Date(item.fechaDesde) : null, { emitEvent: false });
+      this.formFechaFinControl.setValue(item.fechaHasta ? new Date(item.fechaHasta) : null, { emitEvent: false });
       this.formDiasSolicitados.set(item.diasSolicitados ?? 0);
       this.formObservacion.set(String(item.observacion ?? ''));
       this.formCodigo.set(String(item.codigo ?? ''));
@@ -80,6 +100,11 @@ export class VacacionesFormComponent implements OnInit {
       const year = this.getYearFromDate(this.formFechaInicio());
       this.saldoAnio.set(year);
       this.loadSaldo(this.formEmpleado()!.codigo, year);
+    }
+
+    if (this.isView()) {
+      this.formFechaInicioControl.disable({ emitEvent: false });
+      this.formFechaFinControl.disable({ emitEvent: false });
     }
   }
 
@@ -137,6 +162,77 @@ export class VacacionesFormComponent implements OnInit {
   onFechaFinChange(value: string): void {
     this.formFechaFin.set(value);
     this.updateDiasSolicitados();
+  }
+
+  private toISODate(date: Date): string {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  capturarFechaInicioRaw(event: Event): void {
+    this._rawFechaInicio = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaInicioFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaInicio || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaInicio = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        this.aplicarFechaInicio(date);
+      }
+    }
+  }
+
+  onFechaInicioPickerChange(date: Date | null | undefined): void {
+    this.aplicarFechaInicio(date || new Date());
+  }
+
+  private aplicarFechaInicio(date: Date): void {
+    this.formFechaInicioControl.setValue(date, { emitEvent: false });
+    this.onFechaInicioChange(this.toISODate(date));
+    const formatted = this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+    setTimeout(() => {
+      if (this.fechaInicioInputRef?.nativeElement) this.fechaInicioInputRef.nativeElement.value = formatted;
+    });
+  }
+
+  capturarFechaFinRaw(event: Event): void {
+    this._rawFechaFin = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaFinFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaFin || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaFin = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        this.aplicarFechaFin(date);
+      }
+    }
+  }
+
+  onFechaFinPickerChange(date: Date | null | undefined): void {
+    this.aplicarFechaFin(date || new Date());
+  }
+
+  private aplicarFechaFin(date: Date): void {
+    this.formFechaFinControl.setValue(date, { emitEvent: false });
+    this.onFechaFinChange(this.toISODate(date));
+    const formatted = this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+    setTimeout(() => {
+      if (this.fechaFinInputRef?.nativeElement) this.fechaFinInputRef.nativeElement.value = formatted;
+    });
   }
 
   onDiasSolicitadosChange(value: string): void {

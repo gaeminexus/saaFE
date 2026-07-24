@@ -69,21 +69,33 @@
                 <mat-form-field appearance="outline">
                   <mat-label>Fecha Salida desde</mat-label>
                   <input
+                    #fechaSalidaDesdeInput
                     matInput
-                    type="date"
-                    [ngModel]="filtroFechaSalidaDesde()"
-                    (ngModelChange)="filtroFechaSalidaDesde.set($event)"
+                    [matDatepicker]="pickerFechaSalidaDesde"
+                    [formControl]="filtroFechaSalidaDesdeControl"
+                    placeholder="dd/mm/aaaa"
+                    (input)="capturarFechaSalidaDesdeRaw($event)"
+                    (dateChange)="onFechaSalidaDesdePickerChange($event.value)"
+                    (blur)="syncFechaSalidaDesdeFromRaw($event)"
                   />
+                  <mat-datepicker-toggle matIconSuffix [for]="pickerFechaSalidaDesde"></mat-datepicker-toggle>
+                  <mat-datepicker #pickerFechaSalidaDesde></mat-datepicker>
                 </mat-form-field>
 
                 <mat-form-field appearance="outline">
                   <mat-label>Fecha Salida hasta</mat-label>
                   <input
+                    #fechaSalidaHastaInput
                     matInput
-                    type="date"
-                    [ngModel]="filtroFechaSalidaHasta()"
-                    (ngModelChange)="filtroFechaSalidaHasta.set($event)"
+                    [matDatepicker]="pickerFechaSalidaHasta"
+                    [formControl]="filtroFechaSalidaHastaControl"
+                    placeholder="dd/mm/aaaa"
+                    (input)="capturarFechaSalidaHastaRaw($event)"
+                    (dateChange)="onFechaSalidaHastaPickerChange($event.value)"
+                    (blur)="syncFechaSalidaHastaFromRaw($event)"
                   />
+                  <mat-datepicker-toggle matIconSuffix [for]="pickerFechaSalidaHasta"></mat-datepicker-toggle>
+                  <mat-datepicker #pickerFechaSalidaHasta></mat-datepicker>
                 </mat-form-field>
               </div>
 

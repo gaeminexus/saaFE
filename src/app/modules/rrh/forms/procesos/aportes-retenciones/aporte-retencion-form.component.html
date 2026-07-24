@@ -54,14 +54,19 @@
         <mat-form-field appearance="outline">
           <mat-label>Fecha Anexo *</mat-label>
           <input
+            #fechaAnexoInput
             matInput
-            type="date"
-            [ngModel]="fechaAnexo()"
-            (ngModelChange)="fechaAnexo.set($event)"
-            [disabled]="isViewMode()"
+            [matDatepicker]="pickerFechaAnexo"
+            [formControl]="fechaAnexoControl"
+            placeholder="dd/mm/aaaa"
             required
+            (input)="capturarFechaAnexoRaw($event)"
+            (dateChange)="onFechaAnexoPickerChange($event.value)"
+            (blur)="syncFechaAnexoFromRaw($event)"
           />
-          @if (mostrarValidaciones() && !fechaAnexo()) {
+          <mat-datepicker-toggle matIconSuffix [for]="pickerFechaAnexo" [disabled]="isViewMode()"></mat-datepicker-toggle>
+          <mat-datepicker #pickerFechaAnexo></mat-datepicker>
+          @if (mostrarValidaciones() && !fechaAnexoControl.value) {
             <mat-error>Campo requerido (visual)</mat-error>
           }
         </mat-form-field>
@@ -108,12 +113,17 @@
         <mat-form-field appearance="outline">
           <mat-label>Nueva Fecha Fin</mat-label>
           <input
+            #nuevaFechaFinInput
             matInput
-            type="date"
-            [ngModel]="nuevaFechaFin()"
-            (ngModelChange)="nuevaFechaFin.set($event)"
-            [disabled]="isViewMode()"
+            [matDatepicker]="pickerNuevaFechaFin"
+            [formControl]="nuevaFechaFinControl"
+            placeholder="dd/mm/aaaa"
+            (input)="capturarNuevaFechaFinRaw($event)"
+            (dateChange)="onNuevaFechaFinPickerChange($event.value)"
+            (blur)="syncNuevaFechaFinFromRaw($event)"
           />
+          <mat-datepicker-toggle matIconSuffix [for]="pickerNuevaFechaFin" [disabled]="isViewMode()"></mat-datepicker-toggle>
+          <mat-datepicker #pickerNuevaFechaFin></mat-datepicker>
           <mat-hint>Si existe, no debe ser menor a Fecha Anexo (validación pendiente)</mat-hint>
         </mat-form-field>
       </div>

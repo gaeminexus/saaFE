@@ -1,7 +1,9 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, CUSTOM_ELEMENTS_SCHEMA, Inject, OnInit, signal } from '@angular/core';
+import { Component, computed, CUSTOM_ELEMENTS_SCHEMA, ElementRef, Inject, OnInit, signal, ViewChild } from '@angular/core';
+import { UntypedFormControl } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { AporteRetenciones } from '../../../model/aportes-retenciones';
 import { ContratoEmpleado } from '../../../model/contrato-empleado';
 
@@ -22,12 +24,17 @@ export class AporteRetencionFormComponent implements OnInit {
   readonly contratosDisponibles = signal<ContratoEmpleado[]>([]);
   readonly tiposDisponibles = signal<String[]>([]);
 
+  @ViewChild('fechaAnexoInput', { read: ElementRef }) fechaAnexoInputRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('nuevaFechaFinInput', { read: ElementRef }) nuevaFechaFinInputRef!: ElementRef<HTMLInputElement>;
+  private _rawFechaAnexo = '';
+  private _rawNuevaFechaFin = '';
+
   readonly contratoEmpleado = signal<ContratoEmpleado | null>(null);
   readonly tipo = signal<String | null>(null);
-  readonly fechaAnexo = signal<string>('');
+  readonly fechaAnexoControl = new UntypedFormControl(null);
   readonly detalle = signal<string>('');
   readonly nuevoSalario = signal<string>('');
-  readonly nuevaFechaFin = signal<string>('');
+  readonly nuevaFechaFinControl = new UntypedFormControl(null);
   readonly fechaRegistro = signal<string>('');
   readonly usuarioRegistro = signal<string>('');
 
@@ -49,11 +56,17 @@ export class AporteRetencionFormComponent implements OnInit {
   constructor(
     private dialogRef: MatDialogRef<AporteRetencionFormComponent>,
     @Inject(MAT_DIALOG_DATA) public data: AporteRetencionFormData,
+    private funcionesDatosS: FuncionesDatosService,
   ) {
     // TODO RRHH: cargar catálogos reales (ContratoEmpleado y Tipo) desde servicios del módulo.
   }
 
   ngOnInit(): void {
+    if (this.isViewMode()) {
+      this.fechaAnexoControl.disable({ emitEvent: false });
+      this.nuevaFechaFinControl.disable({ emitEvent: false });
+    }
+
     const item = this.data.item;
     if (!item) {
       return;
@@ -61,14 +74,14 @@ export class AporteRetencionFormComponent implements OnInit {
 
     this.contratoEmpleado.set(item.contratoEmpleado ?? null);
     this.tipo.set(item.tipo ?? null);
-    this.fechaAnexo.set(this.toInputDate(item.fechaAnexo));
+    this.fechaAnexoControl.setValue(item.fechaAnexo ? new Date(item.fechaAnexo) : null, { emitEvent: false });
     this.detalle.set(item.detalle ?? '');
     this.nuevoSalario.set(
       item.nuevoSalario !== undefined && item.nuevoSalario !== null
         ? String(item.nuevoSalario)
         : '',
     );
-    this.nuevaFechaFin.set(this.toInputDate(item.nuevaFechaFin));
+    this.nuevaFechaFinControl.setValue(item.nuevaFechaFin ? new Date(item.nuevaFechaFin) : null, { emitEvent: false });
     this.fechaRegistro.set(this.toDateTimeDisplay(item.fechaRegistro));
     this.usuarioRegistro.set(item.usuarioRegistro ?? '');
   }
@@ -90,17 +103,66 @@ export class AporteRetencionFormComponent implements OnInit {
     return String(contrato['numero'] ?? contrato['codigo'] ?? '');
   }
 
-  private toInputDate(value: Date | string | null | undefined): string {
-    if (!value) {
-      return '';
-    }
+  capturarFechaAnexoRaw(event: Event): void {
+    this._rawFechaAnexo = (event.target as HTMLInputElement).value;
+  }
 
-    const date = value instanceof Date ? value : new Date(value);
-    if (Number.isNaN(date.getTime())) {
-      return '';
+  syncFechaAnexoFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaAnexo || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaAnexo = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        const formatted = this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+        this.fechaAnexoControl.setValue(date, { emitEvent: false });
+        setTimeout(() => {
+          if (this.fechaAnexoInputRef?.nativeElement) this.fechaAnexoInputRef.nativeElement.value = formatted;
+        });
+      }
     }
+  }
 
-    return date.toISOString().slice(0, 10);
+  onFechaAnexoPickerChange(date: Date | null | undefined): void {
+    this.fechaAnexoControl.setValue(date || null, { emitEvent: false });
+    const formatted = date ? this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '' : '';
+    setTimeout(() => {
+      if (this.fechaAnexoInputRef?.nativeElement) this.fechaAnexoInputRef.nativeElement.value = formatted;
+    });
+  }
+
+  capturarNuevaFechaFinRaw(event: Event): void {
+    this._rawNuevaFechaFin = (event.target as HTMLInputElement).value;
+  }
+
+  syncNuevaFechaFinFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawNuevaFechaFin || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawNuevaFechaFin = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        const formatted = this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+        this.nuevaFechaFinControl.setValue(date, { emitEvent: false });
+        setTimeout(() => {
+          if (this.nuevaFechaFinInputRef?.nativeElement) this.nuevaFechaFinInputRef.nativeElement.value = formatted;
+        });
+      }
+    }
+  }
+
+  onNuevaFechaFinPickerChange(date: Date | null | undefined): void {
+    this.nuevaFechaFinControl.setValue(date || null, { emitEvent: false });
+    const formatted = date ? this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '' : '';
+    setTimeout(() => {
+      if (this.nuevaFechaFinInputRef?.nativeElement) this.nuevaFechaFinInputRef.nativeElement.value = formatted;
+    });
   }
 
   private toDateTimeDisplay(value: Date | string | null | undefined): string {

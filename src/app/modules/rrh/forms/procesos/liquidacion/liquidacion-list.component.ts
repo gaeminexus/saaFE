@@ -4,14 +4,17 @@ import {
   Component,
   computed,
   CUSTOM_ELEMENTS_SCHEMA,
+  ElementRef,
   signal,
   ViewChild,
 } from '@angular/core';
+import { UntypedFormControl } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { MatPaginator } from '@angular/material/paginator';
 import { MatSort } from '@angular/material/sort';
 import { MatTableDataSource } from '@angular/material/table';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { ContratoEmpleado } from '../../../model/contrato-empleado';
 import { Empleado } from '../../../model/empleado';
 import { Liquidacion } from '../../../model/Liquidacion';
@@ -54,8 +57,8 @@ export class LiquidacionListComponent implements AfterViewInit {
 
   readonly filtroEmpleado = signal<Empleado | null>(null);
   readonly filtroContratoEmpleado = signal<ContratoEmpleado | null>(null);
-  readonly filtroFechaSalidaDesde = signal<string>('');
-  readonly filtroFechaSalidaHasta = signal<string>('');
+  readonly filtroFechaSalidaDesdeControl = new UntypedFormControl(null);
+  readonly filtroFechaSalidaHastaControl = new UntypedFormControl(null);
   readonly filtroMotivo = signal<number | null>(null);
   readonly filtroEstado = signal<String | null>(null);
   readonly filtroUsuarioRegistro = signal<string>('');
@@ -68,7 +71,16 @@ export class LiquidacionListComponent implements AfterViewInit {
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
 
-  constructor(private dialog: MatDialog) {
+  @ViewChild('fechaSalidaDesdeInput', { read: ElementRef }) fechaSalidaDesdeInputRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('fechaSalidaHastaInput', { read: ElementRef }) fechaSalidaHastaInputRef!: ElementRef<HTMLInputElement>;
+
+  private _rawFechaSalidaDesde = '';
+  private _rawFechaSalidaHasta = '';
+
+  constructor(
+    private dialog: MatDialog,
+    private funcionesDatosS: FuncionesDatosService,
+  ) {
     // TODO RRHH: cargar catálogos de Empleado, ContratoEmpleado, Motivo y Estado.
     // TODO RRHH: implementar búsqueda principal con LiquidacionService.selectByCriteria(...).
   }
@@ -109,12 +121,78 @@ export class LiquidacionListComponent implements AfterViewInit {
     this.busquedaContratoEmpleado.set('');
     this.filtroEmpleado.set(null);
     this.filtroContratoEmpleado.set(null);
-    this.filtroFechaSalidaDesde.set('');
-    this.filtroFechaSalidaHasta.set('');
+    this.filtroFechaSalidaDesdeControl.setValue(null, { emitEvent: false });
+    this.filtroFechaSalidaHastaControl.setValue(null, { emitEvent: false });
+    setTimeout(() => {
+      if (this.fechaSalidaDesdeInputRef?.nativeElement) this.fechaSalidaDesdeInputRef.nativeElement.value = '';
+      if (this.fechaSalidaHastaInputRef?.nativeElement) this.fechaSalidaHastaInputRef.nativeElement.value = '';
+    });
     this.filtroMotivo.set(null);
     this.filtroEstado.set(null);
     this.filtroUsuarioRegistro.set('');
     this.registroSeleccionado.set(null);
+  }
+
+  capturarFechaSalidaDesdeRaw(event: Event): void {
+    this._rawFechaSalidaDesde = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaSalidaDesdeFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaSalidaDesde || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaSalidaDesde = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        const formatted = this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+        this.filtroFechaSalidaDesdeControl.setValue(date, { emitEvent: false });
+        setTimeout(() => {
+          if (this.fechaSalidaDesdeInputRef?.nativeElement) this.fechaSalidaDesdeInputRef.nativeElement.value = formatted;
+        });
+      }
+    }
+  }
+
+  onFechaSalidaDesdePickerChange(date: Date | null | undefined): void {
+    this.filtroFechaSalidaDesdeControl.setValue(date || null, { emitEvent: false });
+    const formatted = date ? this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '' : '';
+    setTimeout(() => {
+      if (this.fechaSalidaDesdeInputRef?.nativeElement) this.fechaSalidaDesdeInputRef.nativeElement.value = formatted;
+    });
+  }
+
+  capturarFechaSalidaHastaRaw(event: Event): void {
+    this._rawFechaSalidaHasta = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaSalidaHastaFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaSalidaHasta || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaSalidaHasta = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        const formatted = this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+        this.filtroFechaSalidaHastaControl.setValue(date, { emitEvent: false });
+        setTimeout(() => {
+          if (this.fechaSalidaHastaInputRef?.nativeElement) this.fechaSalidaHastaInputRef.nativeElement.value = formatted;
+        });
+      }
+    }
+  }
+
+  onFechaSalidaHastaPickerChange(date: Date | null | undefined): void {
+    this.filtroFechaSalidaHastaControl.setValue(date || null, { emitEvent: false });
+    const formatted = date ? this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '' : '';
+    setTimeout(() => {
+      if (this.fechaSalidaHastaInputRef?.nativeElement) this.fechaSalidaHastaInputRef.nativeElement.value = formatted;
+    });
   }
 
   empleadoLabel(value: Empleado | null): string {

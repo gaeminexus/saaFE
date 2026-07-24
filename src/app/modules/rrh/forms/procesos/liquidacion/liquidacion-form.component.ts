@@ -1,7 +1,9 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, CUSTOM_ELEMENTS_SCHEMA, Inject, OnInit, signal } from '@angular/core';
+import { Component, computed, CUSTOM_ELEMENTS_SCHEMA, ElementRef, Inject, OnInit, signal, ViewChild } from '@angular/core';
+import { UntypedFormControl } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { ContratoEmpleado } from '../../../model/contrato-empleado';
 import { Empleado } from '../../../model/empleado';
 import { Liquidacion } from '../../../model/Liquidacion';
@@ -25,9 +27,12 @@ export class LiquidacionFormComponent implements OnInit {
   readonly motivosDisponibles = signal<Array<{ codigo: number; etiqueta: string }>>([]);
   readonly estadosDisponibles = signal<String[]>([]);
 
+  @ViewChild('fechaSalidaInput', { read: ElementRef }) fechaSalidaInputRef!: ElementRef<HTMLInputElement>;
+  private _rawFechaSalida = '';
+
   readonly empleado = signal<Empleado | null>(null);
   readonly contratoEmpleado = signal<ContratoEmpleado | null>(null);
-  readonly fechaSalida = signal<string>('');
+  readonly fechaSalidaControl = new UntypedFormControl(null);
   readonly motivo = signal<number | null>(null);
   readonly neto = signal<string>('');
   readonly estado = signal<String | null>(null);
@@ -49,6 +54,7 @@ export class LiquidacionFormComponent implements OnInit {
   constructor(
     private dialogRef: MatDialogRef<LiquidacionFormComponent>,
     @Inject(MAT_DIALOG_DATA) public data: LiquidacionFormData,
+    private funcionesDatosS: FuncionesDatosService,
   ) {
     // TODO RRHH: cargar catálogos reales (Empleado, ContratoEmpleado, Motivo y Estado).
     // TODO RRHH: enlazar contratos por empleado seleccionado (dependencia visual actualmente).
@@ -62,7 +68,10 @@ export class LiquidacionFormComponent implements OnInit {
 
     this.empleado.set(item.empleado ?? null);
     this.contratoEmpleado.set(item.contratoEmpleado ?? null);
-    this.fechaSalida.set(this.toInputDate(item.fechaSalida));
+    this.fechaSalidaControl.setValue(item.fechaSalida ? new Date(item.fechaSalida) : null, { emitEvent: false });
+    if (this.isViewMode()) {
+      this.fechaSalidaControl.disable({ emitEvent: false });
+    }
     this.motivo.set(item.motivo ?? null);
     this.neto.set(item.neto !== undefined && item.neto !== null ? String(item.neto) : '');
     this.estado.set(item.estado ?? null);
@@ -97,17 +106,35 @@ export class LiquidacionFormComponent implements OnInit {
     return String(contrato['numero'] ?? contrato['codigo'] ?? '');
   }
 
-  private toInputDate(value: Date | string | null | undefined): string {
-    if (!value) {
-      return '';
-    }
+  capturarFechaSalidaRaw(event: Event): void {
+    this._rawFechaSalida = (event.target as HTMLInputElement).value;
+  }
 
-    const date = value instanceof Date ? value : new Date(value);
-    if (Number.isNaN(date.getTime())) {
-      return '';
+  syncFechaSalidaFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaSalida || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaSalida = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        const formatted = this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+        this.fechaSalidaControl.setValue(date, { emitEvent: false });
+        setTimeout(() => {
+          if (this.fechaSalidaInputRef?.nativeElement) this.fechaSalidaInputRef.nativeElement.value = formatted;
+        });
+      }
     }
+  }
 
-    return date.toISOString().slice(0, 10);
+  onFechaSalidaPickerChange(date: Date | null | undefined): void {
+    this.fechaSalidaControl.setValue(date || null, { emitEvent: false });
+    const formatted = date ? this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '' : '';
+    setTimeout(() => {
+      if (this.fechaSalidaInputRef?.nativeElement) this.fechaSalidaInputRef.nativeElement.value = formatted;
+    });
   }
 
   private toDateTimeDisplay(value: Date | string | null | undefined): string {

@@ -53,15 +53,20 @@
         <mat-form-field appearance="outline">
           <mat-label>Fecha Salida *</mat-label>
           <input
+            #fechaSalidaInput
             matInput
-            type="date"
-            [ngModel]="fechaSalida()"
-            (ngModelChange)="fechaSalida.set($event)"
-            [disabled]="isViewMode()"
+            [matDatepicker]="pickerFechaSalida"
+            [formControl]="fechaSalidaControl"
+            placeholder="dd/mm/aaaa"
             required
+            (input)="capturarFechaSalidaRaw($event)"
+            (dateChange)="onFechaSalidaPickerChange($event.value)"
+            (blur)="syncFechaSalidaFromRaw($event)"
           />
+          <mat-datepicker-toggle matIconSuffix [for]="pickerFechaSalida" [disabled]="isViewMode()"></mat-datepicker-toggle>
+          <mat-datepicker #pickerFechaSalida></mat-datepicker>
           <mat-hint>No puede ser futura (validación pendiente)</mat-hint>
-          @if (mostrarValidaciones() && !fechaSalida()) {
+          @if (mostrarValidaciones() && !fechaSalidaControl.value) {
             <mat-error>Campo requerido (visual)</mat-error>
           }
         </mat-form-field>

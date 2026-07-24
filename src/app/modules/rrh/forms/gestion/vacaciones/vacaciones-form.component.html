@@ -25,7 +25,7 @@
 
       <mat-form-field appearance="outline">
         <mat-label>Fecha registro</mat-label>
-        <input matInput [value]="formFechaRegistro()" disabled />
+        <input matInput [value]="formFechaRegistroDisplay()" disabled />
       </mat-form-field>
 
       <mat-form-field appearance="outline">
@@ -74,23 +74,33 @@
     <mat-form-field appearance="outline">
       <mat-label>Fecha inicio</mat-label>
       <input
+        #fechaInicioInput
         matInput
-        type="date"
-        [ngModel]="formFechaInicio()"
-        (ngModelChange)="onFechaInicioChange($event)"
-        [disabled]="isView()"
+        [matDatepicker]="pickerFechaInicio"
+        [formControl]="formFechaInicioControl"
+        placeholder="dd/mm/aaaa"
+        (input)="capturarFechaInicioRaw($event)"
+        (dateChange)="onFechaInicioPickerChange($event.value)"
+        (blur)="syncFechaInicioFromRaw($event)"
       />
+      <mat-datepicker-toggle matIconSuffix [for]="pickerFechaInicio" [disabled]="isView()"></mat-datepicker-toggle>
+      <mat-datepicker #pickerFechaInicio></mat-datepicker>
     </mat-form-field>
 
     <mat-form-field appearance="outline">
       <mat-label>Fecha fin</mat-label>
       <input
+        #fechaFinInput
         matInput
-        type="date"
-        [ngModel]="formFechaFin()"
-        (ngModelChange)="onFechaFinChange($event)"
-        [disabled]="isView()"
+        [matDatepicker]="pickerFechaFin"
+        [formControl]="formFechaFinControl"
+        placeholder="dd/mm/aaaa"
+        (input)="capturarFechaFinRaw($event)"
+        (dateChange)="onFechaFinPickerChange($event.value)"
+        (blur)="syncFechaFinFromRaw($event)"
       />
+      <mat-datepicker-toggle matIconSuffix [for]="pickerFechaFin" [disabled]="isView()"></mat-datepicker-toggle>
+      <mat-datepicker #pickerFechaFin></mat-datepicker>
     </mat-form-field>
 
     <mat-form-field appearance="outline">
@@ -140,7 +150,7 @@
       <span>Aprobador:</span>
       <strong>{{ formAprobador() }}</strong>
       <span>Fecha aprobacion:</span>
-      <strong>{{ formFechaAprobacion() || '-' }}</strong>
+      <strong>{{ formFechaAprobacionDisplay() || '-' }}</strong>
     </div>
   }
 

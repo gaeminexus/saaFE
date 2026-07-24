@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, CUSTOM_ELEMENTS_SCHEMA, Inject, OnInit, signal } from '@angular/core';
+import { Component, computed, CUSTOM_ELEMENTS_SCHEMA, ElementRef, Inject, OnInit, signal, ViewChild } from '@angular/core';
+import { UntypedFormControl } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { catchError, map, of, switchMap } from 'rxjs';
@@ -7,6 +8,7 @@ import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-
 import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { ContratoEmpleado } from '../../../model/contrato-empleado';
 import { Empleado } from '../../../model/empleado';
 import { TipoContratoEmpleado } from '../../../model/tipo-contrato-empleado';
@@ -28,15 +30,22 @@ export interface ContratoEmpleadoFormData {
   styleUrls: ['./contrato-empleado-form.component.scss'],
 })
 export class ContratoEmpleadoFormComponent implements OnInit {
+  @ViewChild('fechaInicioInput', { read: ElementRef }) fechaInicioInputRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('fechaFinInput', { read: ElementRef }) fechaFinInputRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('fechaFirmaInput', { read: ElementRef }) fechaFirmaInputRef!: ElementRef<HTMLInputElement>;
+  private _rawFechaInicio = '';
+  private _rawFechaFin = '';
+  private _rawFechaFirma = '';
+
   formEmpleadoBusqueda = signal<string>('');
   formEmpleado = signal<Empleado | null>(null);
   formTipoContrato = signal<TipoContratoEmpleado | null>(null);
   formNumero = signal<string>('');
-  formFechaInicio = signal<string>('');
-  formFechaFin = signal<string>('');
+  formFechaInicioControl = new UntypedFormControl(null);
+  formFechaFinControl = new UntypedFormControl(null);
   formSalarioBase = signal<string>('');
   formEstado = signal<string>('ACTIVO');
-  formFechaFirma = signal<string>('');
+  formFechaFirmaControl = new UntypedFormControl(null);
   formObservacion = signal<string>('');
   formCodigo = signal<string>('');
   formFechaRegistro = signal<string>('');
@@ -44,6 +53,11 @@ export class ContratoEmpleadoFormComponent implements OnInit {
 
   requiereFechaFin = computed(() =>
     this.isRequiere(this.formTipoContrato()?.requiereFechaFin as unknown),
+  );
+
+  /** Solo para mostrar en el campo de solo lectura "Fecha registro" (dd/MM/yyyy). No altera formFechaRegistro. */
+  formFechaRegistroDisplay = computed(
+    () => this.funcionesDatosS.formatoFecha(this.formFechaRegistro(), FuncionesDatosService.SOLO_FECHA) || '',
   );
 
   empleados = signal<Empleado[]>([]);
@@ -67,6 +81,7 @@ export class ContratoEmpleadoFormComponent implements OnInit {
     private empleadoService: EmpleadoService,
     private tipoContratoService: TipoContratoEmpleadoService,
     private snackBar: MatSnackBar,
+    private funcionesDatosS: FuncionesDatosService,
   ) {}
 
   ngOnInit(): void {
@@ -77,11 +92,11 @@ export class ContratoEmpleadoFormComponent implements OnInit {
       this.formEmpleado.set(item.empleado ?? null);
       this.formTipoContrato.set(item.tipoContratoEmpleado ?? null);
       this.formNumero.set(String(item.numero ?? ''));
-      this.formFechaInicio.set(this.formatDate(item.fechaInicio));
-      this.formFechaFin.set(this.formatDate(item.fechaFin));
+      this.formFechaInicioControl.setValue(item.fechaInicio ? new Date(item.fechaInicio) : null, { emitEvent: false });
+      this.formFechaFinControl.setValue(item.fechaFin ? new Date(item.fechaFin) : null, { emitEvent: false });
       this.formSalarioBase.set(String(item.salarioBase ?? ''));
       this.formEstado.set(this.normalizeEstado(item.estado as string));
-      this.formFechaFirma.set(this.formatDate(item.fechaFirma));
+      this.formFechaFirmaControl.setValue(item.fechaFirma ? new Date(item.fechaFirma) : null, { emitEvent: false });
       this.formObservacion.set(String(item.observacion ?? ''));
       this.formCodigo.set(String(item.codigo ?? ''));
       this.formFechaRegistro.set(this.formatDate(item.fechaRegistro));
@@ -138,11 +153,11 @@ export class ContratoEmpleadoFormComponent implements OnInit {
     const empleado = this.formEmpleado();
     const tipoContrato = this.formTipoContrato();
     const numero = this.normalizeText(this.formNumero());
-    const fechaInicio = this.formFechaInicio();
-    const fechaFin = this.formFechaFin();
+    const fechaInicio = this.toISODateOrEmpty(this.formFechaInicioControl.value);
+    const fechaFin = this.toISODateOrEmpty(this.formFechaFinControl.value);
     const salarioBase = this.parseNumber(this.formSalarioBase());
     const estado = this.normalizeEstado(this.formEstado());
-    const fechaFirma = this.formFechaFirma();
+    const fechaFirma = this.toISODateOrEmpty(this.formFechaFirmaControl.value);
     const observacion = this.normalizeText(this.formObservacion()) || undefined;
 
     if (!empleado) {
@@ -392,6 +407,107 @@ export class ContratoEmpleadoFormComponent implements OnInit {
       const rowFin = row?.fechaFin ? this.toDateValue(row?.fechaFin) : Number.POSITIVE_INFINITY;
       if (!rowInicio) return false;
       return inicioValue <= rowFin && rowInicio <= finValue;
+    });
+  }
+
+  private toISODateOrEmpty(date: Date | null): string {
+    if (!date) return '';
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  capturarFechaInicioRaw(event: Event): void {
+    this._rawFechaInicio = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaInicioFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaInicio || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaInicio = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        const formatted = this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+        this.formFechaInicioControl.setValue(date, { emitEvent: false });
+        setTimeout(() => {
+          if (this.fechaInicioInputRef?.nativeElement) this.fechaInicioInputRef.nativeElement.value = formatted;
+        });
+      }
+    }
+  }
+
+  onFechaInicioPickerChange(date: Date | null | undefined): void {
+    this.formFechaInicioControl.setValue(date || null, { emitEvent: false });
+    const formatted = date ? this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '' : '';
+    setTimeout(() => {
+      if (this.fechaInicioInputRef?.nativeElement) this.fechaInicioInputRef.nativeElement.value = formatted;
+    });
+  }
+
+  capturarFechaFinRaw(event: Event): void {
+    this._rawFechaFin = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaFinFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaFin || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaFin = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        const formatted = this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+        this.formFechaFinControl.setValue(date, { emitEvent: false });
+        setTimeout(() => {
+          if (this.fechaFinInputRef?.nativeElement) this.fechaFinInputRef.nativeElement.value = formatted;
+        });
+      }
+    }
+  }
+
+  onFechaFinPickerChange(date: Date | null | undefined): void {
+    this.formFechaFinControl.setValue(date || null, { emitEvent: false });
+    const formatted = date ? this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '' : '';
+    setTimeout(() => {
+      if (this.fechaFinInputRef?.nativeElement) this.fechaFinInputRef.nativeElement.value = formatted;
+    });
+  }
+
+  capturarFechaFirmaRaw(event: Event): void {
+    this._rawFechaFirma = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaFirmaFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaFirma || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaFirma = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        const formatted = this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+        this.formFechaFirmaControl.setValue(date, { emitEvent: false });
+        setTimeout(() => {
+          if (this.fechaFirmaInputRef?.nativeElement) this.fechaFirmaInputRef.nativeElement.value = formatted;
+        });
+      }
+    }
+  }
+
+  onFechaFirmaPickerChange(date: Date | null | undefined): void {
+    this.formFechaFirmaControl.setValue(date || null, { emitEvent: false });
+    const formatted = date ? this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '' : '';
+    setTimeout(() => {
+      if (this.fechaFirmaInputRef?.nativeElement) this.fechaFirmaInputRef.nativeElement.value = formatted;
     });
   }
 

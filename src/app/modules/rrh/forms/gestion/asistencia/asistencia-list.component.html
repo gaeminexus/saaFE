@@ -35,11 +35,15 @@
         <mat-form-field appearance="outline" class="filter-field">
           <mat-label>Fecha Desde *</mat-label>
           <input
+            #fechaDesdeInput
             matInput
             [matDatepicker]="pickerDesde"
-            [ngModel]="filtroFechaDesde()"
-            (ngModelChange)="filtroFechaDesde.set($event)"
+            [formControl]="filtroFechaDesdeControl"
+            placeholder="dd/mm/aaaa"
             required
+            (input)="capturarFechaDesdeRaw($event)"
+            (dateChange)="onFechaDesdePickerChange($event.value)"
+            (blur)="syncFechaDesdeFromRaw($event)"
           />
           <mat-datepicker-toggle matSuffix [for]="pickerDesde"></mat-datepicker-toggle>
           <mat-datepicker #pickerDesde></mat-datepicker>
@@ -50,11 +54,15 @@
         <mat-form-field appearance="outline" class="filter-field">
           <mat-label>Fecha Hasta *</mat-label>
           <input
+            #fechaHastaInput
             matInput
             [matDatepicker]="pickerHasta"
-            [ngModel]="filtroFechaHasta()"
-            (ngModelChange)="filtroFechaHasta.set($event)"
+            [formControl]="filtroFechaHastaControl"
+            placeholder="dd/mm/aaaa"
             required
+            (input)="capturarFechaHastaRaw($event)"
+            (dateChange)="onFechaHastaPickerChange($event.value)"
+            (blur)="syncFechaHastaFromRaw($event)"
           />
           <mat-datepicker-toggle matSuffix [for]="pickerHasta"></mat-datepicker-toggle>
           <mat-datepicker #pickerHasta></mat-datepicker>

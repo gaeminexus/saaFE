@@ -18,7 +18,7 @@
 
       <mat-form-field appearance="outline">
         <mat-label>Fecha registro</mat-label>
-        <input matInput [value]="formFechaRegistro()" disabled />
+        <input matInput [value]="formFechaRegistroDisplay()" disabled />
       </mat-form-field>
 
       <mat-form-field appearance="outline">
@@ -52,11 +52,17 @@
     <mat-form-field appearance="outline">
       <mat-label>Fecha nacimiento</mat-label>
       <input
+        #fechaNacimientoInput
         matInput
-        type="date"
-        [ngModel]="formFechaNacimiento()"
-        (ngModelChange)="formFechaNacimiento.set($event)"
+        [matDatepicker]="pickerFechaNacimiento"
+        [formControl]="formFechaNacimientoControl"
+        placeholder="dd/mm/aaaa"
+        (input)="capturarFechaNacimientoRaw($event)"
+        (dateChange)="onFechaNacimientoPickerChange($event.value)"
+        (blur)="syncFechaNacimientoFromRaw($event)"
       />
+      <mat-datepicker-toggle matIconSuffix [for]="pickerFechaNacimiento"></mat-datepicker-toggle>
+      <mat-datepicker #pickerFechaNacimiento></mat-datepicker>
     </mat-form-field>
 
     <mat-form-field appearance="outline">

@@ -99,13 +99,16 @@
         <mat-form-field appearance="outline" class="half-width">
           <mat-label>Fecha de Inicio *</mat-label>
           <input
+            #fechaInicioInput
             matInput
             [matDatepicker]="pickerInicio"
-            [ngModel]="formFechaInicio()"
-            (ngModelChange)="formFechaInicio.set($event)"
-            [disabled]="isReadonly()"
+            [formControl]="formFechaInicioControl"
+            placeholder="dd/mm/aaaa"
             [required]="!isReadonly()"
             name="fechaInicio"
+            (input)="capturarFechaInicioRaw($event)"
+            (dateChange)="onFechaInicioPickerChange($event.value)"
+            (blur)="syncFechaInicioFromRaw($event)"
           />
           <mat-datepicker-toggle
             matSuffix
@@ -130,13 +133,16 @@
           <mat-form-field appearance="outline" class="half-width">
             <mat-label>Fecha de Fin *</mat-label>
             <input
+              #fechaFinInput
               matInput
               [matDatepicker]="pickerFin"
-              [ngModel]="formFechaFin()"
-              (ngModelChange)="formFechaFin.set($event)"
-              [disabled]="isReadonly()"
+              [formControl]="formFechaFinControl"
+              placeholder="dd/mm/aaaa"
               [required]="!isReadonly()"
               name="fechaFin"
+              (input)="capturarFechaFinRaw($event)"
+              (dateChange)="onFechaFinPickerChange($event.value)"
+              (blur)="syncFechaFinFromRaw($event)"
             />
             <mat-datepicker-toggle
               matSuffix
