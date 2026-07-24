@@ -1,6 +1,6 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, inject, signal, computed, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, AbstractControl, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
@@ -58,6 +58,16 @@ import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda
 })
 export class EntidadParticipeInfoComponent implements OnInit {
 
+  // ─── ViewChild para campos fecha (patrón datepicker estándar) ───
+  @ViewChild('fechaNacimientoInput', { read: ElementRef }) fechaNacimientoRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('fechaIngresoFondoInput', { read: ElementRef }) fechaIngresoFondoRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('fechaIngresoTrabajoInput', { read: ElementRef }) fechaIngresoTrabajoRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('fechaSalidaInput', { read: ElementRef }) fechaSalidaRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('fechaFallecimientoInput', { read: ElementRef }) fechaFallecimientoRef!: ElementRef<HTMLInputElement>;
+
+  /** Almacena texto crudo mientras el usuario escribe en campos fecha */
+  private _rawFechas: Record<string, string> = {};
+
   // Servicios
   private fb = inject(FormBuilder);
   private route = inject(ActivatedRoute);
@@ -88,6 +98,7 @@ export class EntidadParticipeInfoComponent implements OnInit {
   errorMsg = signal<string>('');
   exterData = signal<Exter | null>(null);
   loadingExter = signal<boolean>(false);
+  ultimaModif = signal<{ usuario: string; fecha: Date | null }>({ usuario: '', fecha: null });
 
   // Signals de datos
   codigoEntidad = signal<number | null>(null);
@@ -171,8 +182,8 @@ export class EntidadParticipeInfoComponent implements OnInit {
       nombreComercial: ['', Validators.maxLength(200)],
       correoPersonal: ['', [Validators.email, Validators.maxLength(100)]],
       correoInstitucional: ['', [Validators.email, Validators.maxLength(100)]],
-      telefono: ['', Validators.maxLength(20)],
-      movil: ['', Validators.maxLength(20)],
+      telefono: ['', Validators.maxLength(200)],
+      movil: ['', Validators.maxLength(200)],
       tieneCorreoPersonal: [0],
       tieneCorreoTrabajo: [0],
       tieneTelefono: [0],
@@ -447,6 +458,14 @@ export class EntidadParticipeInfoComponent implements OnInit {
       ipIngreso: entidad.ipIngreso || '',
       ipModificacion: entidad.ipModificacion || ''
     });
+
+    // Actualizar signal de última modificación
+    if (entidad.usuarioModificacion) {
+      this.ultimaModif.set({
+        usuario: entidad.usuarioModificacion,
+        fecha: entidad.fechaModificacion ? new Date(entidad.fechaModificacion) : null
+      });
+    }
   }
 
   private cargarDatosEnFormularioParticipe(participe: Participe): void {
@@ -561,6 +580,32 @@ export class EntidadParticipeInfoComponent implements OnInit {
     });
   }
 
+  private getNombreUsuario(): string {
+    return localStorage.getItem('userName') || localStorage.getItem('usuario') || 'sistema';
+  }
+
+  /** Registra usuarioModificacion en la entidad y actualiza el signal local */
+  private actualizarAuditoria(): void {
+    const entidad = this.entidadActual();
+    if (!entidad) return;
+    const usuario = this.getNombreUsuario();
+    const ahora = new Date();
+    // Sólo enviamos los campos de auditoría para no sobrescribir otros datos
+    const payload = { ...entidad, usuarioModificacion: usuario };
+    this.entidadService.update(payload).subscribe({
+      next: (ent) => {
+        if (ent) {
+          this.entidadActual.set(ent);
+        }
+        this.ultimaModif.set({ usuario, fecha: ahora });
+      },
+      error: () => {
+        // Actualizamos el signal local aunque falle el servicio
+        this.ultimaModif.set({ usuario, fecha: ahora });
+      }
+    });
+  }
+
   private mostrarExito(): void {
     this.snackBar.open('Registro actualizado con éxito', 'Cerrar', {
       duration: 4000,
@@ -595,6 +640,7 @@ export class EntidadParticipeInfoComponent implements OnInit {
         this.conyugeService.getByParent(entidad.codigo).subscribe(list => {
           this.conyuges.set(list || []);
         });
+        this.actualizarAuditoria();
         this.modoConyugeForm.set(null);
         this.savingSubEntidad.set(false);
       },
@@ -606,6 +652,7 @@ export class EntidadParticipeInfoComponent implements OnInit {
     if (!confirm('¿Eliminar este cónyuge?')) return;
     this.conyugeService.delete(id).subscribe(() => {
       this.conyuges.update(list => list.filter(c => c.codigo !== id));
+      this.actualizarAuditoria();
     });
   }
 
@@ -636,6 +683,7 @@ export class EntidadParticipeInfoComponent implements OnInit {
         this.referenciaFamiliarService.getByParent(entidad.codigo).subscribe(list => {
           this.referenciasFamiliares.set(list || []);
         });
+        this.actualizarAuditoria();
         this.modoRefFamiliarForm.set(null);
         this.savingSubEntidad.set(false);
       },
@@ -647,6 +695,7 @@ export class EntidadParticipeInfoComponent implements OnInit {
     if (!confirm('¿Eliminar esta referencia familiar?')) return;
     this.referenciaFamiliarService.delete(id).subscribe(() => {
       this.referenciasFamiliares.update(list => list.filter(r => r.codigo !== id));
+      this.actualizarAuditoria();
     });
   }
 
@@ -677,6 +726,7 @@ export class EntidadParticipeInfoComponent implements OnInit {
         this.referenciaPersonalService.getByParent(entidad.codigo).subscribe(list => {
           this.referenciasPersonales.set(list || []);
         });
+        this.actualizarAuditoria();
         this.modoRefPersonalForm.set(null);
         this.savingSubEntidad.set(false);
       },
@@ -688,6 +738,7 @@ export class EntidadParticipeInfoComponent implements OnInit {
     if (!confirm('¿Eliminar esta referencia personal?')) return;
     this.referenciaPersonalService.delete(id).subscribe(() => {
       this.referenciasPersonales.update(list => list.filter(r => r.codigo !== id));
+      this.actualizarAuditoria();
     });
   }
 
@@ -718,6 +769,7 @@ export class EntidadParticipeInfoComponent implements OnInit {
         this.cuentaBancariaParticipeService.getByParent(entidad.codigo).subscribe(list => {
           this.cuentasBancariasParticipe.set(list || []);
         });
+        this.actualizarAuditoria();
         this.modoCuentaBancariaForm.set(null);
         this.savingSubEntidad.set(false);
       },
@@ -729,23 +781,102 @@ export class EntidadParticipeInfoComponent implements OnInit {
     if (!confirm('¿Eliminar esta cuenta bancaria?')) return;
     this.cuentaBancariaParticipeService.delete(id).subscribe(() => {
       this.cuentasBancariasParticipe.update(list => list.filter(c => c.codigo !== id));
+      this.actualizarAuditoria();
     });
   }
 
   cancelarCuentaBancaria(): void { this.modoCuentaBancariaForm.set(null); }
 
+  // ─── PATRÓN DATEPICKER ESTÁNDAR ─────────────────────────────
+  /** Captura el texto tal como lo escribe el usuario antes de que Material lo procese */
+  capturarFechaRaw(event: Event, key: string): void {
+    this._rawFechas[key] = (event.target as HTMLInputElement).value;
+  }
+
+  /** Al salir del campo: parsea el texto crudo dd/MM/yyyy, actualiza el control y fuerza el formato en el DOM */
+  syncFechaFromRaw(event: FocusEvent, key: string, grupo: 'entidad' | 'participe', campo: string, inputRef: ElementRef): void {
+    const rawValue = (this._rawFechas[key] || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechas[key] = '';
+    if (!rawValue) return;
+    const fg = grupo === 'entidad' ? this.entidadForm : this.participeForm;
+    this._aplicarFechaAlControl(rawValue, fg.get(campo), inputRef);
+  }
+
+  /** Cuando el usuario selecciona una fecha desde el picker */
+  onFechaPickerChange(date: Date | null, grupo: 'entidad' | 'participe', campo: string, inputRef: ElementRef): void {
+    if (!date) return;
+    const fg = grupo === 'entidad' ? this.entidadForm : this.participeForm;
+    const ctrl = fg.get(campo);
+    ctrl?.setValue(date, { emitEvent: false });
+    const formatted = this.funcionesDatosService.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+    setTimeout(() => {
+      if (inputRef?.nativeElement) inputRef.nativeElement.value = formatted;
+    });
+  }
+
+  /** Helper privado: parsea dd/MM/yyyy y aplica al AbstractControl + DOM */
+  private _aplicarFechaAlControl(rawValue: string, ctrl: AbstractControl | null, inputRef: ElementRef): void {
+    if (!ctrl) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]);
+    const mes = Number(parts[1]) - 1;
+    const anio = Number(parts[2]);
+    const valido = !isNaN(dia) && dia >= 1 && dia <= 31
+      && !isNaN(mes) && mes >= 0 && mes <= 11
+      && !isNaN(anio) && anio >= 1000 && anio <= 9999;
+    if (!valido) return;
+    const date = new Date(anio, mes, dia);
+    if (date.getFullYear() !== anio || date.getMonth() !== mes || date.getDate() !== dia) return;
+    const formatted = this.funcionesDatosService.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+    ctrl.setValue(date, { emitEvent: false });
+    ctrl.setErrors(null);
+    ctrl.markAsUntouched();
+    setTimeout(() => {
+      if (inputRef?.nativeElement) inputRef.nativeElement.value = formatted;
+    });
+  }
+
   // ─── EXTER HISTÓRICO ────────────────────────────────────────
   private buscarExterPorCedula(cedula: string | null | undefined): void {
     if (!cedula) return;
     this.loadingExter.set(true);
-    this.exterService.getById(cedula).subscribe({
-      next: (exter) => {
-        this.exterData.set(exter ?? null);
-        this.loadingExter.set(false);
+
+    // Intento 1: selectByCriteria por cédula (PK de EXTER)
+    const criterio = new DatosBusqueda();
+    criterio.asignaUnCampoSinTrunc(TipoDatos.STRING, 'cedula', cedula, TipoComandosBusqueda.IGUAL);
+    this.exterService.selectByCriteria([criterio]).subscribe({
+      next: (lista) => {
+        const resultado = Array.isArray(lista) && lista.length > 0 ? lista[0] : null;
+        if (resultado) {
+          this.exterData.set(resultado);
+          this.loadingExter.set(false);
+        } else {
+          // Intento 2: getById directo con la cédula como id
+          this.exterService.getById(cedula).subscribe({
+            next: (exter) => {
+              this.exterData.set(exter ?? null);
+              this.loadingExter.set(false);
+            },
+            error: () => {
+              this.exterData.set(null);
+              this.loadingExter.set(false);
+            }
+          });
+        }
       },
       error: () => {
-        this.exterData.set(null);
-        this.loadingExter.set(false);
+        // Fallback: getById directo
+        this.exterService.getById(cedula).subscribe({
+          next: (exter) => {
+            this.exterData.set(exter ?? null);
+            this.loadingExter.set(false);
+          },
+          error: () => {
+            this.exterData.set(null);
+            this.loadingExter.set(false);
+          }
+        });
       }
     });
   }

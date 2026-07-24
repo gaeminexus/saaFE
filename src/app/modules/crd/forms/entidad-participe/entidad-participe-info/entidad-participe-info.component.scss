@@ -676,4 +676,29 @@
       white-space: nowrap;
     }
   }
+
+  // ─── Info de auditoría en cabecera del partícipe ───
+  .audit-info {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #f0f4ff;
+    border: 1px solid #c5cae9;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 0.78rem;
+    color: #3949ab;
+
+    .audit-icon {
+      font-size: 1rem;
+      height: 1rem;
+      width: 1rem;
+      color: #5c6bc0;
+    }
+
+    .audit-text strong {
+      color: #1a237e;
+    }
+  }
 }

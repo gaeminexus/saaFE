@@ -36,6 +36,7 @@ export interface Entidad {
     fechaIngreso: Date;         // ENTDFCIN - Fecha Ingreso (opcional)
     ipModificacion: string;     // ENTDIPMD - IP modificación (opcional)
     usuarioModificacion: string;// ENTDUSMD - Usuario modificación (opcional)
+    fechaModificacion?: Date;   // Fecha última modificación (si la envía el backend)
     idEstado: number;            // ENTDIDST - ID Estado
     urlFotoLogo: string;        // ENTDURFL - URL Foto Logo (opcional)
     rolPetroComercial: number; // ENTDRLPC - Rol Petro Comercial
