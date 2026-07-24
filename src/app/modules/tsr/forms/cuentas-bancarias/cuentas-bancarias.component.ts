@@ -12,7 +12,6 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatNativeDateModule } from '@angular/material/core';
 import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
@@ -44,7 +43,6 @@ import { CuentaBancariaService } from '../../service/cuenta-bancaria.service';
     MatIconModule,
     MatTooltipModule,
     MatDatepickerModule,
-    MatNativeDateModule,
   ],
   templateUrl: './cuentas-bancarias.component.html',
   styleUrls: ['./cuentas-bancarias.component.scss'],

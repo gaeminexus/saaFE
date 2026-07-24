@@ -14,7 +14,6 @@ import { MatCardModule } from '@angular/material/card';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatNativeDateModule } from '@angular/material/core';
 
 import { ContratoService } from '../../../service/contrato.service';
 import { FilialService } from '../../../service/filial.service';
@@ -32,7 +31,7 @@ import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda
   imports: [
     CommonModule, ReactiveFormsModule, MatTableModule, MatPaginatorModule, MatSortModule,
     MatFormFieldModule, MatInputModule, MatButtonModule, MatIconModule, MatCardModule,
-    MatTooltipModule, MatProgressSpinnerModule, MatDatepickerModule, MatNativeDateModule,
+    MatTooltipModule, MatProgressSpinnerModule, MatDatepickerModule,
     MatSelectModule
   ],
   templateUrl: './contrato-consulta.component.html',

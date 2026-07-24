@@ -8,7 +8,6 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatNativeDateModule } from '@angular/material/core';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 
@@ -21,7 +20,7 @@ import { CanComponentDeactivate } from '../../../../../shared/guard/can-deactiva
   standalone: true,
   imports: [
     CommonModule, ReactiveFormsModule, MatFormFieldModule, MatInputModule, MatButtonModule,
-    MatIconModule, MatCardModule, MatDatepickerModule, MatNativeDateModule,
+    MatIconModule, MatCardModule, MatDatepickerModule,
     MatProgressSpinnerModule, MatSnackBarModule
   ],
   templateUrl: './contrato-edit.component.html',

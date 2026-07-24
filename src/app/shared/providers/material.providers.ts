@@ -22,7 +22,6 @@ import { MatTableModule } from '@angular/material/table';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatNativeDateModule } from '@angular/material/core';
 
 export const APP_DATE_FORMATS: MatDateFormats = {
   parse: {
@@ -137,7 +136,6 @@ export function provideMaterial() {
       MatInputModule,
       MatListModule,
       MatMenuModule,
-      MatNativeDateModule,
       MatPaginatorModule,
       MatProgressSpinnerModule,
       MatSelectModule,

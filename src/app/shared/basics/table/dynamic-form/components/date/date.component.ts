@@ -4,7 +4,6 @@ import { CommonModule } from '@angular/common';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatInputModule } from '@angular/material/input';
-import { MatNativeDateModule } from '@angular/material/core';
 import { MatIconModule } from '@angular/material/icon';
 import { DateFieldConfig } from '../../model/date.interface';
 import { DynamicFormComponent } from '../dynamic-field/dynamic-field.directive';
@@ -20,7 +19,6 @@ import { Subject, takeUntil } from 'rxjs';
     MatFormFieldModule,
     MatDatepickerModule,
     MatInputModule,
-    MatNativeDateModule,
     MatIconModule
   ],
   templateUrl: './date.component.html',

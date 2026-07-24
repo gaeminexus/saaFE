@@ -6,7 +6,6 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
-import { MatNativeDateModule } from '@angular/material/core';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { Router } from '@angular/router';
@@ -208,7 +207,6 @@ const DONUT_CIRCUMFERENCE = 2 * Math.PI * DONUT_RADIUS;
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
-    MatNativeDateModule,
     MatProgressSpinnerModule,
     MatSelectModule,
   ],
