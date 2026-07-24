@@ -148,11 +148,21 @@
           <ng-container matColumnDef="fechaAdquisicion">
             <th mat-header-cell *matHeaderCellDef class="col-date">Fecha Adq.</th>
             <td mat-cell *matCellDef="let ctrl; let i = index" [formGroupName]="i">
-              <input
-                type="date"
-                formControlName="fechaAdquisicion"
-                class="cell-input cell-date"
-              />
+              <mat-form-field appearance="outline" class="cell-fecha-field">
+                <input
+                  #fechaAdqInput
+                  matInput
+                  [matDatepicker]="pickerFechaAdq"
+                  [formControl]="dateControls[i]"
+                  placeholder="dd/mm/aaaa"
+                  class="cell-input cell-date"
+                  (input)="capturarFechaAdqRaw(i, $event)"
+                  (dateChange)="onFechaAdqPickerChange(i, $event.value, fechaAdqInput)"
+                  (blur)="syncFechaAdqFromRaw(i, $event)"
+                />
+                <mat-datepicker-toggle matIconSuffix [for]="pickerFechaAdq"></mat-datepicker-toggle>
+                <mat-datepicker #pickerFechaAdq></mat-datepicker>
+              </mat-form-field>
             </td>
           </ng-container>
 

@@ -3,10 +3,14 @@
     <!-- Campo de fecha -->
     <mat-form-field class="demo-full-width margin-top" appearance="outline">
       <mat-label>{{field['label'] || ''}}</mat-label>
-      <input matInput
+      <input #dateInput
+             matInput
              [matDatepicker]="picker"
              [formControlName]="field['name']"
-             [placeholder]="field['label'] || ''">
+             [placeholder]="field['label'] || ''"
+             (input)="capturarFechaRaw($event)"
+             (dateChange)="onFechaPickerChange($event.value)"
+             (blur)="syncFechaFromRaw($event)">
       <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
       <mat-datepicker #picker></mat-datepicker>
       <mat-hint></mat-hint>

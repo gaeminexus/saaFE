@@ -189,6 +189,19 @@
   text-align: right;
 }
 
+.cell-fecha-field {
+  width: 100%;
+  margin: -0.6rem 0;
+
+  ::ng-deep .mat-mdc-text-field-wrapper {
+    padding: 0;
+  }
+
+  input.cell-input {
+    border: 1px solid transparent;
+  }
+}
+
 /* Quitar flechas de los inputs numéricos */
 input[type='number'].cell-input {
   -moz-appearance: textfield;

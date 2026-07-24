@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, AfterViewInit, ViewChild, computed, signal, inject } from '@angular/core';
+import { Component, ElementRef, OnInit, AfterViewInit, ViewChild, computed, signal, inject } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
 import { MatPaginator, PageEvent } from '@angular/material/paginator';
@@ -32,6 +32,8 @@ import { ExportService } from '../../../../shared/services/export.service';
 export class DetalleMayorizacionComponent implements OnInit, AfterViewInit {
 
   @ViewChild('paginatorDetalle') paginatorDetalle!: MatPaginator;
+  @ViewChild('fechaDesdeInput', { read: ElementRef }) fechaDesdeInputRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('fechaHastaInput', { read: ElementRef }) fechaHastaInputRef!: ElementRef<HTMLInputElement>;
 
   // ── Services ────────────────────────────────────────────────
   private mayorizacionService = inject(MayorizacionService);
@@ -65,6 +67,9 @@ export class DetalleMayorizacionComponent implements OnInit, AfterViewInit {
   periodoHastaCtrl = new FormControl<number | null>(null);
   fechaDesdeCtrl   = new FormControl<Date | null>(null);
   fechaHastaCtrl   = new FormControl<Date | null>(null);
+
+  private _rawFechaDesde = '';
+  private _rawFechaHasta = '';
 
   // ── Filtro detalle ───────────────────────────────────────────
   filtroDetalle = new FormControl('');
@@ -279,10 +284,76 @@ export class DetalleMayorizacionComponent implements OnInit, AfterViewInit {
     this.periodoHastaCtrl.reset();
     this.fechaDesdeCtrl.reset();
     this.fechaHastaCtrl.reset();
+    setTimeout(() => {
+      if (this.fechaDesdeInputRef?.nativeElement) this.fechaDesdeInputRef.nativeElement.value = '';
+      if (this.fechaHastaInputRef?.nativeElement) this.fechaHastaInputRef.nativeElement.value = '';
+    });
     this.mayorizaciones.set([]);
     this.mayorizacionesFiltradas.set([]);
     this.selectedMayorizacion.set(null);
     this.limpiarDetalle();
+  }
+
+  capturarFechaDesdeRaw(event: Event): void {
+    this._rawFechaDesde = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaDesdeFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaDesde || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaDesde = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        const formatted = this.funcionesDatos.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+        this.fechaDesdeCtrl.setValue(date, { emitEvent: false });
+        setTimeout(() => {
+          if (this.fechaDesdeInputRef?.nativeElement) this.fechaDesdeInputRef.nativeElement.value = formatted;
+        });
+      }
+    }
+  }
+
+  onFechaDesdePickerChange(date: Date | null | undefined): void {
+    this.fechaDesdeCtrl.setValue(date || null, { emitEvent: false });
+    const formatted = date ? this.funcionesDatos.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '' : '';
+    setTimeout(() => {
+      if (this.fechaDesdeInputRef?.nativeElement) this.fechaDesdeInputRef.nativeElement.value = formatted;
+    });
+  }
+
+  capturarFechaHastaRaw(event: Event): void {
+    this._rawFechaHasta = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaHastaFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaHasta || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaHasta = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        const formatted = this.funcionesDatos.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+        this.fechaHastaCtrl.setValue(date, { emitEvent: false });
+        setTimeout(() => {
+          if (this.fechaHastaInputRef?.nativeElement) this.fechaHastaInputRef.nativeElement.value = formatted;
+        });
+      }
+    }
+  }
+
+  onFechaHastaPickerChange(date: Date | null | undefined): void {
+    this.fechaHastaCtrl.setValue(date || null, { emitEvent: false });
+    const formatted = date ? this.funcionesDatos.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '' : '';
+    setTimeout(() => {
+      if (this.fechaHastaInputRef?.nativeElement) this.fechaHastaInputRef.nativeElement.value = formatted;
+    });
   }
 
   private limpiarDetalle(): void {

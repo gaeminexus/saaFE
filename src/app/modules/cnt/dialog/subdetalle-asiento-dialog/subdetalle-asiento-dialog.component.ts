@@ -1,17 +1,21 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, ElementRef, Inject, OnInit, ViewChild } from '@angular/core';
-import { AbstractControl, FormArray, FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { ChangeDetectorRef, Component, ElementRef, Inject, OnInit, ViewChild, inject } from '@angular/core';
+import { AbstractControl, FormArray, FormBuilder, FormGroup, ReactiveFormsModule, UntypedFormControl } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
+import { FuncionesDatosService } from '../../../../shared/services/funciones-datos.service';
 import { SubdetalleAsientoService } from '../../service/subdetalle-asiento.service';
 
 /** Representa un subdetalle de activo fijo en memoria (antes de persistir). */
@@ -69,6 +73,9 @@ export interface SubdetalleDialogResult {
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
+    MatDatepickerModule,
+    MatFormFieldModule,
+    MatInputModule,
     MatTooltipModule,
     MatExpansionModule,
     MatSnackBarModule,
@@ -83,6 +90,15 @@ export class SubdetalleAsientoDialogComponent implements OnInit {
   loading = false;
   /** Copia plana de rows.controls con nueva referencia en cada mutación para que MatTable refresque. */
   tableRows: AbstractControl[] = [];
+  /**
+   * Controles de fecha (Date) en paralelo a las filas, uno por índice de tableRows/rows.controls.
+   * Se mantienen separados del FormControl string `fechaAdquisicion` (formato ISO yyyy-MM-dd que
+   * espera el backend/CSV) para que el datepicker trabaje con Date sin filtrar ese campo extra
+   * cuando se lee `this.rows.value`.
+   */
+  dateControls: UntypedFormControl[] = [];
+  private funcionesDatosS = inject(FuncionesDatosService);
+  private _rawFechaAdq: Record<number, string> = {};
   /** Códigos BD de subdetalles que existían al abrir el diálogo (para calcular eliminados). */
   private _codigosIniciales = new Set<number>();
 
@@ -146,7 +162,7 @@ export class SubdetalleAsientoDialogComponent implements OnInit {
   ) {
     this.form = this.fb.group({ rows: this.fb.array([]) });
     (data.subdetalles ?? []).forEach((s) => {
-      this.rows.push(this.createRow(s));
+      this.pushRow(s);
       if (s._codigo) this._codigosIniciales.add(s._codigo);
     });
     this.tableRows = [...this.rows.controls];
@@ -191,18 +207,72 @@ export class SubdetalleAsientoDialogComponent implements OnInit {
   }
 
   agregarFila(): void {
-    this.rows.push(this.createRow());
+    this.pushRow();
     this.refreshTable();
   }
 
   eliminarFila(index: number): void {
     this.rows.removeAt(index);
+    this.dateControls.splice(index, 1);
     this.refreshTable();
   }
 
   private refreshTable(): void {
     this.tableRows = [...this.rows.controls];
     this.cdr.detectChanges();
+  }
+
+  /** Agrega una fila al FormArray junto con su control de fecha (Date) en paralelo. */
+  private pushRow(sub?: Partial<SubdetalleItem>): void {
+    this.rows.push(this.createRow(sub));
+    this.dateControls.push(new UntypedFormControl(this.parseIsoToDate(sub?.fechaAdquisicion)));
+  }
+
+  private parseIsoToDate(iso: string | null | undefined): Date | null {
+    if (!iso) return null;
+    const [y, m, d] = iso.split('-').map(Number);
+    if (!y || !m || !d) return null;
+    const date = new Date(y, m - 1, d);
+    return isNaN(date.getTime()) ? null : date;
+  }
+
+  private toIsoDateString(date: Date): string {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  capturarFechaAdqRaw(i: number, event: Event): void {
+    this._rawFechaAdq[i] = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaAdqFromRaw(i: number, event: FocusEvent): void {
+    const rawValue = (this._rawFechaAdq[i] || (event.target as HTMLInputElement)?.value || '').trim();
+    delete this._rawFechaAdq[i];
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        this.aplicarFechaAdq(i, date, event.target as HTMLInputElement);
+      }
+    }
+  }
+
+  onFechaAdqPickerChange(i: number, date: Date | null | undefined, input: HTMLInputElement): void {
+    this.aplicarFechaAdq(i, date || new Date(), input);
+  }
+
+  private aplicarFechaAdq(i: number, date: Date, input: HTMLInputElement): void {
+    this.dateControls[i]?.setValue(date, { emitEvent: false });
+    this.rows.at(i)?.get('fechaAdquisicion')?.setValue(this.toIsoDateString(date));
+    const formatted = this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+    setTimeout(() => {
+      if (input) input.value = formatted;
+    });
   }
 
   private cargarSubdetallesExistentes(): void {
@@ -220,33 +290,30 @@ export class SubdetalleAsientoDialogComponent implements OnInit {
         this.loading = false;
         if (data && data.length > 0) {
           data.forEach((s) =>
-            this.rows.push(
-
-              this.createRow({
-                _codigo: s.codigo,
-                codigoActivo: s.codigoActivo ?? '',
-                nombreBien: s.nombreBien ?? '',
-                categoria: s.categoria ?? '',
-                tipo: s.tipo ?? '',
-                fechaAdquisicion: s.fechaAdquisicion ?? '',
-                costoAdquisicion: s.costoAdquisicion ?? null,
-                mejorasCapitalizadas: s.mejorasCapitalizadas ?? null,
-                valorResidual: s.valorResidual ?? null,
-                baseDepreciar: s.baseDepreciar ?? null,
-                vidaUtilTotal: s.vidaUtilTotal ?? null,
-                vidaUtilRemanente: s.vidaUtilRemanente ?? null,
-                porcentajeDepreciacion: s.porcentajeDepreciacion ?? null,
-                cuotaDepreciacion: s.cuotaDepreciacion ?? null,
-                depreciacionAcumulada: s.depreciacionAcumulada ?? null,
-                valorNetoLibros: s.valorNetoLibros ?? null,
-                ubicacionGeneral: s.ubicacionGeneral ?? '',
-                ubicacionEspecifica: s.ubicacionEspecifica ?? '',
-                responsable: s.responsable ?? '',
-                estadoFisico: s.estadoFisico ?? '',
-                factura: s.factura ?? '',
-                observaciones: s.observaciones ?? '',
-              })
-            )
+            this.pushRow({
+              _codigo: s.codigo,
+              codigoActivo: s.codigoActivo ?? '',
+              nombreBien: s.nombreBien ?? '',
+              categoria: s.categoria ?? '',
+              tipo: s.tipo ?? '',
+              fechaAdquisicion: s.fechaAdquisicion ?? '',
+              costoAdquisicion: s.costoAdquisicion ?? null,
+              mejorasCapitalizadas: s.mejorasCapitalizadas ?? null,
+              valorResidual: s.valorResidual ?? null,
+              baseDepreciar: s.baseDepreciar ?? null,
+              vidaUtilTotal: s.vidaUtilTotal ?? null,
+              vidaUtilRemanente: s.vidaUtilRemanente ?? null,
+              porcentajeDepreciacion: s.porcentajeDepreciacion ?? null,
+              cuotaDepreciacion: s.cuotaDepreciacion ?? null,
+              depreciacionAcumulada: s.depreciacionAcumulada ?? null,
+              valorNetoLibros: s.valorNetoLibros ?? null,
+              ubicacionGeneral: s.ubicacionGeneral ?? '',
+              ubicacionEspecifica: s.ubicacionEspecifica ?? '',
+              responsable: s.responsable ?? '',
+              estadoFisico: s.estadoFisico ?? '',
+              factura: s.factura ?? '',
+              observaciones: s.observaciones ?? '',
+            })
           );
           // Registrar los códigos cargados desde BD como iniciales para calcular eliminados
           data.forEach((s) => { if (s.codigo) this._codigosIniciales.add(s.codigo); });
@@ -323,7 +390,7 @@ export class SubdetalleAsientoDialogComponent implements OnInit {
         factura: cols[19] ?? '',
         observaciones: cols[20] ?? '',
       };
-      this.rows.push(this.createRow(sub));
+      this.pushRow(sub);
       importados++;
     });
 

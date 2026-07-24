@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, OnDestroy, inject } from '@angular/core';
+import { Component, ElementRef, Input, OnInit, OnDestroy, ViewChild, inject } from '@angular/core';
 import { FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -29,8 +29,11 @@ export class DateComponent implements OnInit, OnDestroy, DynamicFormComponent {
   @Input() group!: FormGroup;
   @Input() accion!: number;
 
+  @ViewChild('dateInput', { read: ElementRef }) dateInputRef!: ElementRef<HTMLInputElement>;
+
   private funcionesDatosService = inject(FuncionesDatosService);
   private destroy$ = new Subject<void>();
+  private _rawFecha = '';
 
   constructor() { }
 
@@ -58,6 +61,38 @@ export class DateComponent implements OnInit, OnDestroy, DynamicFormComponent {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  capturarFechaRaw(event: Event): void {
+    this._rawFecha = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFecha || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFecha = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        const formatted = this.funcionesDatosService.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+        this.group.get(this.field.name)?.setValue(date, { emitEvent: false });
+        setTimeout(() => {
+          if (this.dateInputRef?.nativeElement) this.dateInputRef.nativeElement.value = formatted;
+        });
+      }
+    }
+  }
+
+  onFechaPickerChange(date: Date | null | undefined): void {
+    const d = date || new Date();
+    this.group.get(this.field.name)?.setValue(d, { emitEvent: false });
+    const formatted = this.funcionesDatosService.formatoFecha(d, FuncionesDatosService.SOLO_FECHA) || '';
+    setTimeout(() => {
+      if (this.dateInputRef?.nativeElement) this.dateInputRef.nativeElement.value = formatted;
+    });
   }
 
   /**
