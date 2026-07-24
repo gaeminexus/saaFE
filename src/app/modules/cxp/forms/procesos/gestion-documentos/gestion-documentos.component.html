@@ -248,7 +248,7 @@
 
           <ng-container matColumnDef="tipoComprobante">
             <th mat-header-cell *matHeaderCellDef>Tipo</th>
-            <td mat-cell *matCellDef="let d"><span class="tipo-badge">{{ d.tipoComprobante }}</span></td>
+            <td mat-cell *matCellDef="let d"><span class="tipo-badge">{{ decodeHtml(d.tipoComprobante) }}</span></td>
           </ng-container>
 
           <ng-container matColumnDef="rucEmisor">

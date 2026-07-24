@@ -16,4 +16,7 @@ export interface Direccion {
     usuarioIngreso: string;   // Usuario ingreso
     fechaIngreso: string;     // Fecha ingreso (Timestamp)
     estado: number;           // Estado
+    callePrincipal: string;   // DRCCCLPR - Calle principal
+    calleSecundaria: string;  // DRCCCLSC - Calle secundaria
+    numero: string;           // DRCCNMRO - Número de domicilio
 }

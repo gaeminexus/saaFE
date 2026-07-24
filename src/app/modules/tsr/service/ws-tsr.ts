@@ -18,6 +18,7 @@ export class ServiciosTsr {
   public static RS_CCHQ = `${API_URL}/cchq`;
   public static RS_CEFC = `${API_URL}/cefc`;
   public static RS_CBRO = `${API_URL}/cbro`;
+  public static RS_CTBN = `${API_URL}/ctbn`; // CuentaBancariaTitular
   public static RS_CRTN = `${API_URL}/crtn`;
   public static RS_CTRJ = `${API_URL}/ctrj`;
   public static RS_CTRN = `${API_URL}/ctrn`;

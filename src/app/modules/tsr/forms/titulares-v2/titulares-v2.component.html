@@ -354,6 +354,142 @@
         </div>
       </div>
 
+      <!-- ===== CUENTAS BANCARIAS ===== -->
+      <div class="editor-card">
+        <div class="editor-card-header">
+          <mat-icon>account_balance</mat-icon>
+          <h3>Cuentas Bancarias</h3>
+          @if (titularSeleccionado()?.codigo) {
+            <button mat-icon-button color="primary" (click)="nuevaCuentaBancaria()" matTooltip="Agregar cuenta bancaria">
+              <mat-icon>add_circle</mat-icon>
+            </button>
+          }
+        </div>
+
+        <!-- Formulario nuevo/editar -->
+        @if (modoFormCuentaBancaria() !== 'oculto') {
+          <div class="sub-form-card">
+            <h4>{{ modoFormCuentaBancaria() === 'nuevo' ? 'Nueva cuenta bancaria' : 'Editar cuenta bancaria' }}</h4>
+            <form [formGroup]="formCuentaBancaria" class="sub-form-grid">
+
+              <mat-form-field appearance="outline">
+                <mat-label>Banco</mat-label>
+                <mat-select formControlName="banco" (openedChange)="bancoBusqueda.set('')">
+                  <div class="select-search-box">
+                    <input
+                      class="select-search-input"
+                      placeholder="Buscar banco..."
+                      [value]="bancoBusqueda()"
+                      (input)="bancoBusqueda.set($any($event.target).value)"
+                      (keydown.space)="$event.stopPropagation()"
+                      (click)="$event.stopPropagation()" />
+                  </div>
+                  @for (banco of bancosFiltrados(); track banco.codigo) {
+                    <mat-option [value]="banco.codigo">{{ banco.nombre }}</mat-option>
+                  }
+                </mat-select>
+                @if (formCuentaBancaria.get('banco')?.hasError('required') && formCuentaBancaria.get('banco')?.touched) {
+                  <mat-error>Banco requerido</mat-error>
+                }
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Tipo de cuenta</mat-label>
+                <mat-select formControlName="tipoCuenta">
+                  @for (tipo of tiposCuentaBancaria(); track tipo.codigoAlterno) {
+                    <mat-option [value]="tipo.codigoAlterno">{{ tipo.descripcion }}</mat-option>
+                  }
+                </mat-select>
+                @if (formCuentaBancaria.get('tipoCuenta')?.hasError('required') && formCuentaBancaria.get('tipoCuenta')?.touched) {
+                  <mat-error>Tipo de cuenta requerido</mat-error>
+                }
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Número de cuenta</mat-label>
+                <input matInput formControlName="numeroCuenta" maxlength="50" />
+                @if (formCuentaBancaria.get('numeroCuenta')?.hasError('required') && formCuentaBancaria.get('numeroCuenta')?.touched) {
+                  <mat-error>Número de cuenta requerido</mat-error>
+                }
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Estado</mat-label>
+                <mat-select formControlName="estado">
+                  <mat-option [value]="1">Activo</mat-option>
+                  <mat-option [value]="0">Inactivo</mat-option>
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Observaciones</mat-label>
+                <textarea matInput formControlName="observaciones" rows="2" maxlength="500"></textarea>
+              </mat-form-field>
+
+            </form>
+            <div class="sub-form-actions">
+              <button mat-button (click)="cancelarFormCuentaBancaria()">
+                <mat-icon>close</mat-icon> Cancelar
+              </button>
+              <button mat-raised-button color="primary" (click)="guardarCuentaBancaria()">
+                <mat-icon>save</mat-icon> Guardar
+              </button>
+            </div>
+          </div>
+        }
+
+        <!-- Tabla de cuentas existentes -->
+        @if (cuentasBancariasEnEdicion().length > 0) {
+          <table mat-table [dataSource]="cuentasBancariasEnEdicion()" class="sub-table">
+
+            <ng-container matColumnDef="banco">
+              <th mat-header-cell *matHeaderCellDef>Banco</th>
+              <td mat-cell *matCellDef="let c">{{ getNombreBanco(c.banco) }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="tipoCuenta">
+              <th mat-header-cell *matHeaderCellDef>Tipo</th>
+              <td mat-cell *matCellDef="let c">{{ getNombreTipoCuentaBancaria(c.tipoCuenta) }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="numeroCuenta">
+              <th mat-header-cell *matHeaderCellDef>Número de cuenta</th>
+              <td mat-cell *matCellDef="let c">{{ c.numeroCuenta }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="estado">
+              <th mat-header-cell *matHeaderCellDef>Estado</th>
+              <td mat-cell *matCellDef="let c">
+                <span [class]="c.estado === 1 ? 'badge-activo' : 'badge-inactivo'">
+                  {{ c.estado === 1 ? 'Activo' : 'Inactivo' }}
+                </span>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="acciones">
+              <th mat-header-cell *matHeaderCellDef></th>
+              <td mat-cell *matCellDef="let c">
+                <button mat-icon-button color="primary" (click)="editarCuentaBancaria(c)" matTooltip="Editar">
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button mat-icon-button color="warn" (click)="eliminarCuentaBancaria(c)" matTooltip="Eliminar">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="['banco','tipoCuenta','numeroCuenta','estado','acciones']"></tr>
+            <tr mat-row *matRowDef="let row; columns: ['banco','tipoCuenta','numeroCuenta','estado','acciones'];"></tr>
+          </table>
+        } @else if (modoFormCuentaBancaria() === 'oculto') {
+          <p class="empty-cuentas-msg">
+            <mat-icon>info_outline</mat-icon>
+            Sin cuentas bancarias. Usa el botón "+" para agregar.
+          </p>
+        }
+      </div>
+      <!-- ===== FIN CUENTAS BANCARIAS ===== -->
+
       <div class="edicion-footer">
         <button mat-raised-button (click)="volverLista()"><mat-icon>close</mat-icon> Cancelar</button>
         <button mat-raised-button color="primary" (click)="guardarTitular()" [disabled]="loading()"><mat-icon>save</mat-icon> Guardar</button>

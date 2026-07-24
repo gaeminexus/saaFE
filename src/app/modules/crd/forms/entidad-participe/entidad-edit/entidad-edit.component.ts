@@ -467,7 +467,7 @@ export class EntidadEditComponent implements OnInit, OnChanges, OnDestroy {
         if (participe) {
           this.entidadForm.patchValue({
             codigoParticipe: participe.codigo,
-            tipoParticipe: participe.tipoParticipe || null,
+            tipoParticipe: participe.tipoParticipante || null,
             codigoAlterno: participe.codigoAlterno || 0,
             remuneracionUnificada: participe.remuneracionUnificada || 0,
             fechaIngresoTrabajo: this.convertirFecha(participe.fechaIngresoTrabajo),
@@ -665,7 +665,7 @@ export class EntidadEditComponent implements OnInit, OnChanges, OnDestroy {
       codigo: this.participeActual()?.codigo as any,
       entidad: entidadGuardada,
       codigoAlterno: Number(formValue.codigoAlterno || 0),
-      tipoParticipe: formValue.tipoParticipe || undefined,
+      tipoParticipante: formValue.tipoParticipe || undefined,
       remuneracionUnificada: Number(formValue.remuneracionUnificada || 0),
       fechaIngresoTrabajo: this.funcionesDatosService.formatearFechaParaBackend(formValue.fechaIngresoTrabajo) as any,
       lugarTrabajo: formValue.lugarTrabajo || '',

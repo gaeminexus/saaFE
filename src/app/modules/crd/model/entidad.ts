@@ -2,6 +2,7 @@ import { Filial } from "./filial";
 import { TipoHidrocarburifica } from "./tipo-hidrocarburifica";
 import { TipoIdentificacion } from "./tipo-identificacion";
 import { TipoVivienda } from "./tipo-vivienda";
+import { EstadoCivil } from "./estado-civil";
 
 // Nota: Los campos con tipos personalizados son opcionales y pueden ser null/undefined
 // en respuestas del backend si no están incluidos en las consultas
@@ -38,5 +39,5 @@ export interface Entidad {
     idEstado: number;            // ENTDIDST - ID Estado
     urlFotoLogo: string;        // ENTDURFL - URL Foto Logo (opcional)
     rolPetroComercial: number; // ENTDRLPC - Rol Petro Comercial
-
+    estadoCivil: EstadoCivil | null; // ESCVCDGO - FK Estado Civil
 }

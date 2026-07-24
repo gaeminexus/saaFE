@@ -2,6 +2,7 @@ import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { forkJoin } from 'rxjs';
 
@@ -12,13 +13,32 @@ import { TipoIdentificacion } from '../../../model/tipo-identificacion';
 import { TipoHidrocarburifica } from '../../../model/tipo-hidrocarburifica';
 import { TipoVivienda } from '../../../model/tipo-vivienda';
 import { TipoParticipe } from '../../../model/tipo-participe';
+import { EstadoCivil } from '../../../model/estado-civil';
+import { TipoAporte } from '../../../model/tipo-aporte';
+import { Direccion } from '../../../model/direccion';
+import { Conyuge } from '../../../model/conyuge';
+import { ReferenciaFamiliar } from '../../../model/referencia-familiar';
+import { ReferenciaPersonal } from '../../../model/referencia-personal';
+import { CuentaBancariaParticipe } from '../../../model/cuenta-bancaria-participe';
+import { BancoExterno } from '../../../../tsr/model/banco-externo.model';
 
 import { EntidadService } from '../../../service/entidad.service';
 import { ParticipeService } from '../../../service/participe.service';
 import { FilialService } from '../../../service/filial.service';
 import { TipoIdentificacionService } from '../../../service/tipo-identificacion.service';
 import { TipoParticipeService } from '../../../service/tipo-participe.service';
+import { EstadoCivilService } from '../../../service/estado-civil.service';
+import { TipoAporteService } from '../../../service/tipo-aporte.service';
+import { DireccionService } from '../../../service/direccion.service';
+import { ConyugeService } from '../../../service/conyuge.service';
+import { ReferenciaFamiliarService } from '../../../service/referencia-familiar.service';
+import { ReferenciaPersonalService } from '../../../service/referencia-personal.service';
+import { CuentaBancariaParticipeService } from '../../../service/cuenta-bancaria-participe.service';
+import { BancoExternoService } from '../../../../tsr/service/banco-externo.service';
 import { FuncionesDatosService, TipoFormatoFechaBackend } from '../../../../../shared/services/funciones-datos.service';
+import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
+import { TipoDatosBusqueda as TipoDatos } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
+import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 
 @Component({
   selector: 'app-entidad-participe-info',
@@ -41,7 +61,16 @@ export class EntidadParticipeInfoComponent implements OnInit {
   private filialService = inject(FilialService);
   private tipoIdentificacionService = inject(TipoIdentificacionService);
   private tipoParticipeService = inject(TipoParticipeService);
+  private estadoCivilService = inject(EstadoCivilService);
+  private tipoAporteService = inject(TipoAporteService);
+  private direccionService = inject(DireccionService);
+  private conyugeService = inject(ConyugeService);
+  private referenciaFamiliarService = inject(ReferenciaFamiliarService);
+  private referenciaPersonalService = inject(ReferenciaPersonalService);
+  private cuentaBancariaParticipeService = inject(CuentaBancariaParticipeService);
+  private bancoExternoService = inject(BancoExternoService);
   private funcionesDatosService = inject(FuncionesDatosService);
+  private snackBar = inject(MatSnackBar);
 
   // Signals de estado
   loading = signal<boolean>(true);
@@ -54,19 +83,40 @@ export class EntidadParticipeInfoComponent implements OnInit {
   codigoParticipe = signal<number | null>(null);
   entidadActual = signal<Entidad | null>(null);
   participeActual = signal<Participe | null>(null);
+  direccionActual = signal<Direccion | null>(null);
 
   // Opciones para selects
   filialesOptions = signal<Filial[]>([]);
   tiposIdentificacionOptions = signal<TipoIdentificacion[]>([]);
   tiposParticipeOptions = signal<TipoParticipe[]>([]);
+  estadosCivilOptions = signal<EstadoCivil[]>([]);
+  tiposAporteOptions = signal<TipoAporte[]>([]);
+  bancoExternosOptions = signal<BancoExterno[]>([]);
 
   loadingFiliales = signal<boolean>(false);
   loadingTiposId = signal<boolean>(false);
   loadingTiposParticipe = signal<boolean>(false);
 
-  // Signals para validez de formularios
-  entidadFormValid = signal<boolean>(false);
-  participeFormValid = signal<boolean>(false);
+  // Sub-entidades por entidad
+  conyuges = signal<Conyuge[]>([]);
+  referenciasFamiliares = signal<ReferenciaFamiliar[]>([]);
+  referenciasPersonales = signal<ReferenciaPersonal[]>([]);
+  cuentasBancariasParticipe = signal<CuentaBancariaParticipe[]>([]);
+
+  // Formularios sub-entidades
+  conyugeForm!: FormGroup;
+  referenciaFamiliarForm!: FormGroup;
+  referenciaPersonalForm!: FormGroup;
+  cuentaBancariaParticipeForm!: FormGroup;
+  direccionForm!: FormGroup;
+
+  // Estado de formularios inline
+  modoConyugeForm = signal<'nuevo' | 'editar' | null>(null);
+  modoRefFamiliarForm = signal<'nuevo' | 'editar' | null>(null);
+  modoRefPersonalForm = signal<'nuevo' | 'editar' | null>(null);
+  modoCuentaBancariaForm = signal<'nuevo' | 'editar' | null>(null);
+
+  savingSubEntidad = signal<boolean>(false);
 
   // Formularios
   entidadForm!: FormGroup;
@@ -76,13 +126,11 @@ export class EntidadParticipeInfoComponent implements OnInit {
   modoEdicion = computed(() => !!this.codigoEntidad() && !!this.codigoParticipe());
   titulo = computed(() => this.modoEdicion() ? 'Editar Información de Partícipe' : 'Nueva Información de Partícipe');
 
-  // Validación combinada de ambos formularios
-  isFormValid = computed(() => {
-    const entidadValid = this.entidadFormValid();
-    const participeValid = this.participeFormValid();
-    console.log('🔍 isFormValid computed:', { entidadValid, participeValid });
-    return entidadValid && participeValid;
-  });
+  /** Método regular (evaluado en cada CD cycle) para no tener estados transitorios */
+  isFormValid(): boolean {
+    if (!this.entidadForm || !this.participeForm) return false;
+    return this.entidadForm.valid && this.participeForm.valid;
+  }
 
   // Opciones estáticas
   estadosOptions = [
@@ -119,18 +167,18 @@ export class EntidadParticipeInfoComponent implements OnInit {
       idCiudad: [''],
       tipoHidrocarburifica: [null as TipoHidrocarburifica | null],
       tipoVivienda: [null as TipoVivienda | null],
-      numeroCargasFamiliares: [0, Validators.min(0)],
+      estadoCivil: [null as EstadoCivil | null],
+      cargasFamiliares: [0, Validators.min(0)],
       sectorPublico: [0],
       porcentajeSimilitud: [0, [Validators.min(0), Validators.max(100)]],
       busqueda: [''],
       fechaNacimiento: [null as Date | null],
       urlFotoLogo: [''],
-      idEstado: [1, Validators.required],
+      idEstado: [1],
       migrado: [0],
       usuarioIngreso: [{ value: '', disabled: true }],
       fechaIngreso: [{ value: null, disabled: true }],
       usuarioModificacion: [{ value: '', disabled: true }],
-      fechaModificacion: [{ value: null, disabled: true }],
       ipIngreso: [{ value: '', disabled: true }],
       ipModificacion: [{ value: '', disabled: true }]
     });
@@ -138,10 +186,11 @@ export class EntidadParticipeInfoComponent implements OnInit {
     // Formulario de Partícipe
     this.participeForm = this.fb.group({
       codigo: [{ value: null, disabled: true }],
-      entidad: [null as Entidad | null], // Se llenará automáticamente
+      entidad: [null as Entidad | null],
       codigoAlterno: [0],
-      tipoParticipe: [null as TipoParticipe | null, Validators.required],
-      remuneracionUnificada: [0, [Validators.required, Validators.min(0)]],
+      tipoParticipante: [null as TipoParticipe | null],
+      tipoAporte: [null as TipoAporte | null],
+      remuneracionUnificada: [0, Validators.min(0)],
       fechaIngresoTrabajo: [null as Date | null],
       lugarTrabajo: ['', Validators.maxLength(200)],
       unidadAdministrativa: ['', Validators.maxLength(200)],
@@ -149,8 +198,8 @@ export class EntidadParticipeInfoComponent implements OnInit {
       nivelEstudios: ['', Validators.maxLength(100)],
       ingresoAdicionalMensual: [0, Validators.min(0)],
       ingresoAdicionalActividad: ['', Validators.maxLength(200)],
-      codigoTipoCalificacion: [0],
-      fechaIngresoFondo: [null as Date | null, Validators.required],
+      tipoCalificacion: [null],
+      fechaIngresoFondo: [null as Date | null],
       estadoActual: [1],
       fechaFallecimiento: [null as Date | null],
       causaFallecimiento: ['', Validators.maxLength(200)],
@@ -158,24 +207,59 @@ export class EntidadParticipeInfoComponent implements OnInit {
       fechaSalida: [null as Date | null],
       estadoCesante: [0],
       fechaIngreso: [{ value: null, disabled: true }],
-      idEstado: [1, Validators.required]
+      idEstado: [1]
     });
 
-    // Suscribirse a cambios de validación de entidadForm
-    this.entidadForm.statusChanges.subscribe(() => {
-      this.entidadFormValid.set(this.entidadForm.valid);
-      console.log('📝 Entidad Form Valid:', this.entidadForm.valid);
+    // Formulario de Dirección
+    this.direccionForm = this.fb.group({
+      codigo: [null],
+      descripcion: ['', Validators.maxLength(300)],
+      referencia: ['', Validators.maxLength(200)],
+      callePrincipal: ['', Validators.maxLength(200)],
+      calleSecundaria: ['', Validators.maxLength(200)],
+      numero: ['', Validators.maxLength(50)],
+      telefono: ['', Validators.maxLength(20)],
+      celular: ['', Validators.maxLength(20)],
+      estado: [1]
     });
 
-    // Suscribirse a cambios de validación de participeForm
-    this.participeForm.statusChanges.subscribe(() => {
-      this.participeFormValid.set(this.participeForm.valid);
-      console.log('📝 Partícipe Form Valid:', this.participeForm.valid);
+    // Formulario de Cónyuge
+    this.conyugeForm = this.fb.group({
+      codigo: [null],
+      nombres: ['', [Validators.required, Validators.maxLength(200)]],
+      cedula: ['', Validators.maxLength(20)],
+      correo: ['', [Validators.email, Validators.maxLength(100)]],
+      estado: [1]
     });
 
-    // Inicializar estados de validación
-    this.entidadFormValid.set(this.entidadForm.valid);
-    this.participeFormValid.set(this.participeForm.valid);
+    // Formulario de Referencia Familiar
+    this.referenciaFamiliarForm = this.fb.group({
+      codigo: [null],
+      nombres: ['', [Validators.required, Validators.maxLength(200)]],
+      cedula: ['', Validators.maxLength(20)],
+      contacto: ['', Validators.maxLength(20)],
+      parentesco: ['', Validators.maxLength(100)],
+      estado: [1]
+    });
+
+    // Formulario de Referencia Personal
+    this.referenciaPersonalForm = this.fb.group({
+      codigo: [null],
+      nombres: ['', [Validators.required, Validators.maxLength(200)]],
+      cedula: ['', Validators.maxLength(20)],
+      contacto: ['', Validators.maxLength(20)],
+      parentesco: ['', Validators.maxLength(100)],
+      estado: [1]
+    });
+
+    // Formulario de Cuenta Bancaria del Partícipe
+    this.cuentaBancariaParticipeForm = this.fb.group({
+      codigo: [null],
+      bancoExterno: [null as BancoExterno | null, Validators.required],
+      tipoCuenta: [null, Validators.required],
+      numeroCuenta: ['', [Validators.required, Validators.maxLength(30)]],
+      estado: [1]
+    });
   }
 
   private cargarDatosIniciales(): void {
@@ -190,6 +274,29 @@ export class EntidadParticipeInfoComponent implements OnInit {
 
     // Cargar opciones de selects
     this.cargarOpcionesSelects();
+
+    // Si tiene codigoEntidad pero no codigoParticipe, buscar el partícipe por la entidad
+    if (codigoEntidadParam && !codigoParticipeParam) {
+      const criterio = new DatosBusqueda();
+      criterio.asignaValorConCampoPadre(TipoDatos.LONG, 'entidad', 'codigo', codigoEntidadParam, TipoComandosBusqueda.IGUAL);
+      this.participeService.selectByCriteria([criterio]).subscribe({
+        next: (participes) => {
+          const p = participes?.[0];
+          if (p?.codigo) {
+            this.codigoParticipe.set(p.codigo);
+          }
+          if (this.modoEdicion()) {
+            this.cargarDatosEdicion();
+          } else {
+            this.loading.set(false);
+          }
+        },
+        error: () => {
+          this.loading.set(false);
+        }
+      });
+      return;
+    }
 
     // Si es modo edición, cargar datos
     if (this.modoEdicion()) {
@@ -207,19 +314,24 @@ export class EntidadParticipeInfoComponent implements OnInit {
     forkJoin({
       filiales: this.filialService.getAll(),
       tiposIdentificacion: this.tipoIdentificacionService.getAll(),
-      tiposParticipe: this.tipoParticipeService.getAll()
+      tiposParticipe: this.tipoParticipeService.getAll(),
+      estadosCivil: this.estadoCivilService.getAll(),
+      tiposAporte: this.tipoAporteService.getAll(),
+      bancoExternos: this.bancoExternoService.getAll()
     }).subscribe({
       next: (data) => {
         this.filialesOptions.set(data.filiales || []);
         this.tiposIdentificacionOptions.set(data.tiposIdentificacion || []);
         this.tiposParticipeOptions.set(data.tiposParticipe || []);
+        this.estadosCivilOptions.set(data.estadosCivil || []);
+        this.tiposAporteOptions.set(data.tiposAporte || []);
+        this.bancoExternosOptions.set(data.bancoExternos || []);
 
         this.loadingFiliales.set(false);
         this.loadingTiposId.set(false);
         this.loadingTiposParticipe.set(false);
       },
       error: (err) => {
-        console.error('Error al cargar opciones de selects:', err);
         this.hasError.set(true);
         this.errorMsg.set('Error al cargar las opciones. Por favor, recargue la página.');
 
@@ -241,25 +353,37 @@ export class EntidadParticipeInfoComponent implements OnInit {
 
     forkJoin({
       entidad: this.entidadService.getById(codigoEnt.toString()),
-      participe: this.participeService.getById(codigoPart.toString())
+      participe: this.participeService.getById(codigoPart.toString()),
+      direcciones: this.direccionService.getByParent(codigoEnt),
+      conyuges: this.conyugeService.getByParent(codigoEnt),
+      referenciasFamiliares: this.referenciaFamiliarService.getByParent(codigoEnt),
+      referenciasPersonales: this.referenciaPersonalService.getByParent(codigoEnt),
+      cuentasBancarias: this.cuentaBancariaParticipeService.getByParent(codigoEnt)
     }).subscribe({
       next: (data) => {
         if (data.entidad) {
-          console.log('Cargando datos de entidad en formulario:', data.entidad);
           this.entidadActual.set(data.entidad);
           this.cargarDatosEnFormularioEntidad(data.entidad);
         }
-
         if (data.participe) {
-          console.log('Cargando datos de partícipe en formulario:', data.participe);
           this.participeActual.set(data.participe);
           this.cargarDatosEnFormularioParticipe(data.participe);
         }
+        // Dirección principal (porDefecto=1 o primera disponible)
+        const dirs = data.direcciones || [];
+        const dirPrincipal = dirs.find(d => d.porDefecto === 1) || dirs[0] || null;
+        if (dirPrincipal) {
+          this.direccionActual.set(dirPrincipal);
+          this.cargarDatosEnFormularioDireccion(dirPrincipal);
+        }
+        this.conyuges.set(data.conyuges || []);
+        this.referenciasFamiliares.set(data.referenciasFamiliares || []);
+        this.referenciasPersonales.set(data.referenciasPersonales || []);
+        this.cuentasBancariasParticipe.set(data.cuentasBancarias || []);
 
         this.loading.set(false);
       },
       error: (err) => {
-        console.error('Error al cargar datos:', err);
         this.hasError.set(true);
         this.errorMsg.set('Error al cargar los datos. Por favor, intente nuevamente.');
         this.loading.set(false);
@@ -285,16 +409,17 @@ export class EntidadParticipeInfoComponent implements OnInit {
       idCiudad: entidad.idCiudad || '',
       tipoHidrocarburifica: entidad.tipoHidrocarburifica,
       tipoVivienda: entidad.tipoVivienda,
-      numeroCargasFamiliares: entidad.cargasFamiliares || 0,
+      estadoCivil: entidad.estadoCivil || null,
+      cargasFamiliares: entidad.cargasFamiliares || 0,
       sectorPublico: entidad.sectorPublico || 0,
       porcentajeSimilitud: entidad.porcentajeSimilitud || 0,
       busqueda: entidad.busqueda || '',
-      fechaNacimiento: entidad.fechaNacimiento ? new Date(entidad.fechaNacimiento) : null,
+      fechaNacimiento: this.funcionesDatosService.convertirFechaDesdeBackend(entidad.fechaNacimiento),
       urlFotoLogo: entidad.urlFotoLogo || '',
       idEstado: entidad.idEstado || 1,
       migrado: entidad.migrado || 0,
       usuarioIngreso: entidad.usuarioIngreso || '',
-      fechaIngreso: entidad.fechaIngreso ? new Date(entidad.fechaIngreso) : null,
+      fechaIngreso: this.funcionesDatosService.convertirFechaDesdeBackend(entidad.fechaIngreso),
       usuarioModificacion: entidad.usuarioModificacion || '',
       ipIngreso: entidad.ipIngreso || '',
       ipModificacion: entidad.ipModificacion || ''
@@ -306,41 +431,52 @@ export class EntidadParticipeInfoComponent implements OnInit {
       codigo: participe.codigo,
       entidad: participe.entidad,
       codigoAlterno: participe.codigoAlterno || 0,
-      tipoParticipe: participe.tipoParticipe,
+      tipoParticipante: participe.tipoParticipante,
+      tipoAporte: participe.tipoAporte || null,
       remuneracionUnificada: participe.remuneracionUnificada || 0,
-      fechaIngresoTrabajo: participe.fechaIngresoTrabajo ? new Date(participe.fechaIngresoTrabajo) : null,
+      fechaIngresoTrabajo: this.funcionesDatosService.convertirFechaDesdeBackend(participe.fechaIngresoTrabajo),
       lugarTrabajo: participe.lugarTrabajo || '',
       unidadAdministrativa: participe.unidadAdministrativa || '',
       cargoActual: participe.cargoActual || '',
       nivelEstudios: participe.nivelEstudios || '',
       ingresoAdicionalMensual: participe.ingresoAdicionalMensual || 0,
       ingresoAdicionalActividad: participe.ingresoAdicionalActividad || '',
-      tipoCalificacion: participe.tipoCalificacion || 0,
-      fechaIngresoFondo: participe.fechaIngresoFondo ? new Date(participe.fechaIngresoFondo) : null,
+      tipoCalificacion: participe.tipoCalificacion || null,
+      fechaIngresoFondo: this.funcionesDatosService.convertirFechaDesdeBackend(participe.fechaIngresoFondo),
       estadoActual: participe.estadoActual || 1,
-      fechaFallecimiento: participe.fechaFallecimiento ? new Date(participe.fechaFallecimiento) : null,
+      fechaFallecimiento: this.funcionesDatosService.convertirFechaDesdeBackend(participe.fechaFallecimiento),
       causaFallecimiento: participe.causaFallecimiento || '',
       motivoSalida: participe.motivoSalida || '',
-      fechaSalida: participe.fechaSalida ? new Date(participe.fechaSalida) : null,
+      fechaSalida: this.funcionesDatosService.convertirFechaDesdeBackend(participe.fechaSalida),
       estadoCesante: participe.estadoCesante || 0,
-      fechaIngreso: participe.fechaIngreso ? new Date(participe.fechaIngreso) : null,
+      fechaIngreso: this.funcionesDatosService.convertirFechaDesdeBackend(participe.fechaIngreso),
       idEstado: participe.idEstado || 1
+    });
+  }
+
+  private cargarDatosEnFormularioDireccion(direccion: Direccion): void {
+    this.direccionForm.patchValue({
+      codigo: direccion.codigo,
+      descripcion: direccion.descripcion || '',
+      referencia: direccion.referencia || '',
+      callePrincipal: (direccion as any).callePrincipal || '',
+      calleSecundaria: (direccion as any).calleSecundaria || '',
+      numero: (direccion as any).numero || '',
+      telefono: direccion.telefono || '',
+      celular: direccion.celular || '',
+      estado: direccion.estado ?? 1
     });
   }
 
   guardar(): void {
     if (!this.isFormValid()) {
-      console.warn('Formularios inválidos');
-      this.debugFormErrors();
       return;
     }
 
     this.saving.set(true);
 
-    // Preparar datos de Entidad
     const entidadData = this.prepararDatosEntidad();
 
-    // Guardar/Actualizar Entidad primero
     const entidadObservable = this.modoEdicion()
       ? this.entidadService.update(entidadData)
       : this.entidadService.add(entidadData);
@@ -348,33 +484,17 @@ export class EntidadParticipeInfoComponent implements OnInit {
     entidadObservable.subscribe({
       next: (entidadGuardada: Entidad | null) => {
         if (entidadGuardada) {
-          // Una vez guardada la entidad, guardar el partícipe
           const participeData = this.prepararDatosParticipe(entidadGuardada);
-
           const participeObservable = this.modoEdicion()
             ? this.participeService.update(participeData)
             : this.participeService.add(participeData);
 
           participeObservable.subscribe({
-            next: (participeGuardado: Participe | null) => {
-              this.saving.set(false);
-              console.log('Datos guardados exitosamente');
-
-              // Navegar de vuelta con los códigos guardados
-              const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
-              if (returnUrl) {
-                this.router.navigate([returnUrl], {
-                  queryParams: {
-                    codigoEntidad: entidadGuardada.codigo,
-                    codigoParticipe: participeGuardado?.codigo
-                  }
-                });
-              } else {
-                this.router.navigate(['/menucreditos/participe-dash']);
-              }
+            next: () => {
+              // Guardar dirección si el formulario tiene datos
+              this.guardarDireccion(entidadGuardada);
             },
-            error: (err: any) => {
-              console.error('Error al guardar partícipe:', err);
+            error: () => {
               this.hasError.set(true);
               this.errorMsg.set('Error al guardar los datos del partícipe');
               this.saving.set(false);
@@ -382,8 +502,7 @@ export class EntidadParticipeInfoComponent implements OnInit {
           });
         }
       },
-      error: (err: any) => {
-        console.error('Error al guardar entidad:', err);
+      error: () => {
         this.hasError.set(true);
         this.errorMsg.set('Error al guardar los datos de la entidad');
         this.saving.set(false);
@@ -391,14 +510,214 @@ export class EntidadParticipeInfoComponent implements OnInit {
     });
   }
 
+  private guardarDireccion(entidad: Entidad): void {
+    const dirFormValue = this.direccionForm.getRawValue();
+    const tieneDatos = dirFormValue.descripcion || dirFormValue.callePrincipal || dirFormValue.calleSecundaria;
+
+    if (!tieneDatos) {
+      this.saving.set(false);
+      this.mostrarExito();
+      return;
+    }
+
+    const dirData = { ...dirFormValue, entidad, porDefecto: 1, trabajo: 0 };
+    const dirObs = dirFormValue.codigo
+      ? this.direccionService.update(dirData)
+      : this.direccionService.add(dirData);
+
+    dirObs.subscribe({
+      next: (dir) => {
+        if (dir) this.direccionActual.set(dir);
+        this.saving.set(false);
+        this.mostrarExito();
+      },
+      error: () => {
+        this.saving.set(false);
+        this.mostrarExito(); // igual mostramos éxito aunque la dirección falle
+      }
+    });
+  }
+
+  private mostrarExito(): void {
+    this.snackBar.open('Registro actualizado con éxito', 'Cerrar', {
+      duration: 4000,
+      horizontalPosition: 'center',
+      verticalPosition: 'top',
+      panelClass: ['snack-success']
+    });
+  }
+
+  // ─── CÓNYUGE ───────────────────────────────────────────────
+  nuevoConyuge(): void {
+    this.conyugeForm.reset({ estado: 1 });
+    this.modoConyugeForm.set('nuevo');
+  }
+
+  editarConyuge(c: Conyuge): void {
+    this.conyugeForm.patchValue({ ...c });
+    this.modoConyugeForm.set('editar');
+  }
+
+  guardarConyuge(): void {
+    if (this.conyugeForm.invalid) return;
+    const entidad = this.entidadActual();
+    if (!entidad) return;
+    this.savingSubEntidad.set(true);
+    const data = { ...this.conyugeForm.getRawValue(), entidad };
+    const obs = data.codigo
+      ? this.conyugeService.update(data)
+      : this.conyugeService.add(data);
+    obs.subscribe({
+      next: () => {
+        this.conyugeService.getByParent(entidad.codigo).subscribe(list => {
+          this.conyuges.set(list || []);
+        });
+        this.modoConyugeForm.set(null);
+        this.savingSubEntidad.set(false);
+      },
+      error: () => this.savingSubEntidad.set(false)
+    });
+  }
+
+  eliminarConyuge(id: number): void {
+    if (!confirm('¿Eliminar este cónyuge?')) return;
+    this.conyugeService.delete(id).subscribe(() => {
+      this.conyuges.update(list => list.filter(c => c.codigo !== id));
+    });
+  }
+
+  cancelarConyuge(): void { this.modoConyugeForm.set(null); }
+
+  // ─── REFERENCIAS FAMILIARES ─────────────────────────────────
+  nuevaReferenciaFamiliar(): void {
+    this.referenciaFamiliarForm.reset({ estado: 1 });
+    this.modoRefFamiliarForm.set('nuevo');
+  }
+
+  editarReferenciaFamiliar(r: ReferenciaFamiliar): void {
+    this.referenciaFamiliarForm.patchValue({ ...r });
+    this.modoRefFamiliarForm.set('editar');
+  }
+
+  guardarReferenciaFamiliar(): void {
+    if (this.referenciaFamiliarForm.invalid) return;
+    const entidad = this.entidadActual();
+    if (!entidad) return;
+    this.savingSubEntidad.set(true);
+    const data = { ...this.referenciaFamiliarForm.getRawValue(), entidad };
+    const obs = data.codigo
+      ? this.referenciaFamiliarService.update(data)
+      : this.referenciaFamiliarService.add(data);
+    obs.subscribe({
+      next: () => {
+        this.referenciaFamiliarService.getByParent(entidad.codigo).subscribe(list => {
+          this.referenciasFamiliares.set(list || []);
+        });
+        this.modoRefFamiliarForm.set(null);
+        this.savingSubEntidad.set(false);
+      },
+      error: () => this.savingSubEntidad.set(false)
+    });
+  }
+
+  eliminarReferenciaFamiliar(id: number): void {
+    if (!confirm('¿Eliminar esta referencia familiar?')) return;
+    this.referenciaFamiliarService.delete(id).subscribe(() => {
+      this.referenciasFamiliares.update(list => list.filter(r => r.codigo !== id));
+    });
+  }
+
+  cancelarReferenciaFamiliar(): void { this.modoRefFamiliarForm.set(null); }
+
+  // ─── REFERENCIAS PERSONALES ─────────────────────────────────
+  nuevaReferenciaPersonal(): void {
+    this.referenciaPersonalForm.reset({ estado: 1 });
+    this.modoRefPersonalForm.set('nuevo');
+  }
+
+  editarReferenciaPersonal(r: ReferenciaPersonal): void {
+    this.referenciaPersonalForm.patchValue({ ...r });
+    this.modoRefPersonalForm.set('editar');
+  }
+
+  guardarReferenciaPersonal(): void {
+    if (this.referenciaPersonalForm.invalid) return;
+    const entidad = this.entidadActual();
+    if (!entidad) return;
+    this.savingSubEntidad.set(true);
+    const data = { ...this.referenciaPersonalForm.getRawValue(), entidad };
+    const obs = data.codigo
+      ? this.referenciaPersonalService.update(data)
+      : this.referenciaPersonalService.add(data);
+    obs.subscribe({
+      next: () => {
+        this.referenciaPersonalService.getByParent(entidad.codigo).subscribe(list => {
+          this.referenciasPersonales.set(list || []);
+        });
+        this.modoRefPersonalForm.set(null);
+        this.savingSubEntidad.set(false);
+      },
+      error: () => this.savingSubEntidad.set(false)
+    });
+  }
+
+  eliminarReferenciaPersonal(id: number): void {
+    if (!confirm('¿Eliminar esta referencia personal?')) return;
+    this.referenciaPersonalService.delete(id).subscribe(() => {
+      this.referenciasPersonales.update(list => list.filter(r => r.codigo !== id));
+    });
+  }
+
+  cancelarReferenciaPersonal(): void { this.modoRefPersonalForm.set(null); }
+
+  // ─── CUENTAS BANCARIAS PARTÍCIPE ────────────────────────────
+  nuevaCuentaBancaria(): void {
+    this.cuentaBancariaParticipeForm.reset({ estado: 1 });
+    this.modoCuentaBancariaForm.set('nuevo');
+  }
+
+  editarCuentaBancaria(cb: CuentaBancariaParticipe): void {
+    this.cuentaBancariaParticipeForm.patchValue({ ...cb });
+    this.modoCuentaBancariaForm.set('editar');
+  }
+
+  guardarCuentaBancaria(): void {
+    if (this.cuentaBancariaParticipeForm.invalid) return;
+    const entidad = this.entidadActual();
+    if (!entidad) return;
+    this.savingSubEntidad.set(true);
+    const data = { ...this.cuentaBancariaParticipeForm.getRawValue(), entidad };
+    const obs = data.codigo
+      ? this.cuentaBancariaParticipeService.update(data)
+      : this.cuentaBancariaParticipeService.add(data);
+    obs.subscribe({
+      next: () => {
+        this.cuentaBancariaParticipeService.getByParent(entidad.codigo).subscribe(list => {
+          this.cuentasBancariasParticipe.set(list || []);
+        });
+        this.modoCuentaBancariaForm.set(null);
+        this.savingSubEntidad.set(false);
+      },
+      error: () => this.savingSubEntidad.set(false)
+    });
+  }
+
+  eliminarCuentaBancaria(id: number): void {
+    if (!confirm('¿Eliminar esta cuenta bancaria?')) return;
+    this.cuentaBancariaParticipeService.delete(id).subscribe(() => {
+      this.cuentasBancariasParticipe.update(list => list.filter(c => c.codigo !== id));
+    });
+  }
+
+  cancelarCuentaBancaria(): void { this.modoCuentaBancariaForm.set(null); }
+
   private prepararDatosEntidad(): any {
     const formValue = this.entidadForm.getRawValue();
 
     // Formatear fechas
     const datosFormateados = this.funcionesDatosService.formatearFechasParaBackend(formValue, [
       { campo: 'fechaNacimiento', tipo: TipoFormatoFechaBackend.SOLO_FECHA },
-      { campo: 'fechaIngreso', tipo: TipoFormatoFechaBackend.FECHA_HORA },
-      { campo: 'fechaModificacion', tipo: TipoFormatoFechaBackend.FECHA_HORA }
+      { campo: 'fechaIngreso', tipo: TipoFormatoFechaBackend.FECHA_HORA }
     ]);
 
     return datosFormateados;
@@ -412,11 +731,11 @@ export class EntidadParticipeInfoComponent implements OnInit {
 
     // Formatear fechas
     const datosFormateados = this.funcionesDatosService.formatearFechasParaBackend(formValue, [
-      { campo: 'fechaIngresoTrabajo', tipo: TipoFormatoFechaBackend.SOLO_FECHA },
-      { campo: 'fechaIngresoFondo', tipo: TipoFormatoFechaBackend.SOLO_FECHA },
-      { campo: 'fechaFallecimiento', tipo: TipoFormatoFechaBackend.SOLO_FECHA },
-      { campo: 'fechaSalida', tipo: TipoFormatoFechaBackend.SOLO_FECHA },
-      { campo: 'fechaIngreso', tipo: TipoFormatoFechaBackend.FECHA_HORA }
+      { campo: 'fechaIngresoTrabajo', tipo: TipoFormatoFechaBackend.FECHA_HORA_ISO },
+      { campo: 'fechaIngresoFondo', tipo: TipoFormatoFechaBackend.FECHA_HORA_ISO },
+      { campo: 'fechaFallecimiento', tipo: TipoFormatoFechaBackend.FECHA_HORA_ISO },
+      { campo: 'fechaSalida', tipo: TipoFormatoFechaBackend.FECHA_HORA_ISO },
+      { campo: 'fechaIngreso', tipo: TipoFormatoFechaBackend.FECHA_HORA_ISO }
     ]);
 
     return datosFormateados;
@@ -447,42 +766,17 @@ export class EntidadParticipeInfoComponent implements OnInit {
     return 'Campo inválido';
   }
 
-  debugFormErrors(): void {
-    console.group('🔍 Estado de Formularios');
-    console.log('Entidad Form Valid:', this.entidadForm.valid);
-    console.log('Partícipe Form Valid:', this.participeForm.valid);
-
-    console.group('Errores Entidad:');
-    Object.keys(this.entidadForm.controls).forEach(key => {
-      const control = this.entidadForm.get(key);
-      if (control && control.invalid) {
-        console.log(`${key}:`, control.errors);
-      }
-    });
-    console.groupEnd();
-
-    console.group('Errores Partícipe:');
-    Object.keys(this.participeForm.controls).forEach(key => {
-      const control = this.participeForm.get(key);
-      if (control && control.invalid) {
-        console.log(`${key}:`, control.errors);
-      }
-    });
-    console.groupEnd();
-
-    console.groupEnd();
-  }
-
   limpiarFormulario(): void {
     this.entidadForm.reset({
       idEstado: 1,
       migrado: 0,
       sectorPublico: 0,
-      numeroCargasFamiliares: 0,
+      cargasFamiliares: 0,
       porcentajeSimilitud: 0,
       tieneCorreoPersonal: 0,
       tieneCorreoTrabajo: 0,
-      tieneTelefono: 0
+      tieneTelefono: 0,
+      estadoCivil: null
     });
 
     this.participeForm.reset({
@@ -492,8 +786,11 @@ export class EntidadParticipeInfoComponent implements OnInit {
       remuneracionUnificada: 0,
       ingresoAdicionalMensual: 0,
       codigoAlterno: 0,
-      codigoTipoCalificacion: 0
+      tipoCalificacion: null,
+      tipoAporte: null
     });
+
+    this.direccionForm.reset({ estado: 1 });
   }
 
   regresar(): void {

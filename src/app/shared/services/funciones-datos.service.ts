@@ -14,6 +14,8 @@ export enum TipoFormatoFechaBackend {
   FECHA_HORA = 'FECHA_HORA',
   /** Fecha con hora pero hora en 00:00:00 */
   FECHA_HORA_CERO = 'FECHA_HORA_CERO',
+  /** Fecha con hora en formato ISO: yyyy-MM-ddT00:00:00 (para LocalDateTime sin @JsonFormat) */
+  FECHA_HORA_ISO = 'FECHA_HORA_ISO',
 }
 
 /**
@@ -278,6 +280,11 @@ export class FuncionesDatosService {
       // Fecha con hora en 00:00:00
       if (tipoFormato === TipoFormatoFechaBackend.FECHA_HORA_CERO) {
         return `${year}-${month}-${day} 00:00:00`;
+      }
+
+      // Fecha en formato ISO con T y hora en 00:00:00 (para LocalDateTime sin @JsonFormat)
+      if (tipoFormato === TipoFormatoFechaBackend.FECHA_HORA_ISO) {
+        return `${year}-${month}-${day}T00:00:00`;
       }
 
       // Fecha con hora actual (por defecto)

@@ -22,8 +22,6 @@
         Limpiar
       </button>
 
-      <button mat-button (click)="debugFormErrors()">Debug Form</button>
-
       <button mat-raised-button color="accent" (click)="guardar()"
               [disabled]="!isFormValid() || loading() || saving()">
         @if (saving()) {
@@ -128,7 +126,7 @@
                 <div class="form-row">
                   <mat-form-field appearance="outline" class="full-width">
                     <mat-label>Número de Identificación *</mat-label>
-                    <input matInput formControlName="numeroIdentificacion" maxlength="20">
+                    <input matInput formControlName="numeroIdentificacion" maxlength="20" [readonly]="modoEdicion()">
                     <mat-icon matSuffix>fingerprint</mat-icon>
                     @if (esCampoInvalido('numeroIdentificacion')) {
                       <mat-error>{{ obtenerErrorCampo('numeroIdentificacion') }}</mat-error>
@@ -236,7 +234,7 @@
                 <div class="form-row">
                   <mat-form-field appearance="outline" class="third-width">
                     <mat-label>Cargas Familiares</mat-label>
-                    <input matInput formControlName="numeroCargasFamiliares" type="number" min="0">
+                    <input matInput formControlName="cargasFamiliares" type="number" min="0">
                     <mat-icon matSuffix>family_restroom</mat-icon>
                   </mat-form-field>
 
@@ -258,34 +256,18 @@
                 </div>
 
                 <div class="form-row">
-                  <mat-form-field appearance="outline" class="half-width">
-                    <mat-label>% Similitud</mat-label>
-                    <input matInput formControlName="porcentajeSimilitud" type="number" min="0" max="100">
-                    <mat-icon matSuffix>percent</mat-icon>
-                  </mat-form-field>
-
-                  <mat-form-field appearance="outline" class="half-width">
-                    <mat-label>URL Foto/Logo</mat-label>
-                    <input matInput formControlName="urlFotoLogo">
-                    <mat-icon matSuffix>image</mat-icon>
-                  </mat-form-field>
-                </div>
-
-                <div class="form-row">
-                  <mat-form-field appearance="outline" class="half-width">
-                    <mat-label>Estado *</mat-label>
-                    <mat-select formControlName="idEstado">
-                      @for (estado of estadosOptions; track estado.value) {
-                        <mat-option [value]="estado.value">{{ estado.label }}</mat-option>
+                  <mat-form-field appearance="outline" class="full-width">
+                    <mat-label>Estado Civil</mat-label>
+                    <mat-select formControlName="estadoCivil" [compareWith]="compararPorCodigo">
+                      <mat-option [value]="null">-- Seleccionar --</mat-option>
+                      @for (ec of estadosCivilOptions(); track ec.codigo) {
+                        <mat-option [value]="ec">{{ ec.nombre }}</mat-option>
                       }
                     </mat-select>
-                    <mat-icon matSuffix>flag</mat-icon>
+                    <mat-icon matSuffix>favorite</mat-icon>
                   </mat-form-field>
-
-                  <div class="checkbox-group half-width">
-                    <mat-checkbox formControlName="migrado">Registro migrado</mat-checkbox>
-                  </div>
                 </div>
+
               </mat-card-content>
             </mat-card>
 
@@ -328,9 +310,9 @@
                 </div>
 
                 <div class="form-row">
-                  <mat-form-field appearance="outline" class="full-width">
-                    <mat-label>Tipo Partícipe *</mat-label>
-                    <mat-select formControlName="tipoParticipe" [compareWith]="compararPorCodigo">
+                  <mat-form-field appearance="outline" class="half-width">
+                    <mat-label>Tipo Partícipe</mat-label>
+                    <mat-select formControlName="tipoParticipante" [compareWith]="compararPorCodigo">
                       @if (loadingTiposParticipe()) {
                         <mat-option disabled><mat-spinner diameter="20"></mat-spinner> Cargando...</mat-option>
                       } @else {
@@ -345,11 +327,22 @@
                       <mat-error>{{ obtenerErrorCampo('tipoParticipe', 'participe') }}</mat-error>
                     }
                   </mat-form-field>
+
+                  <mat-form-field appearance="outline" class="half-width">
+                    <mat-label>Tipo Aporte</mat-label>
+                    <mat-select formControlName="tipoAporte" [compareWith]="compararPorCodigo">
+                      <mat-option [value]="null">-- Seleccionar --</mat-option>
+                      @for (ta of tiposAporteOptions(); track ta.codigo) {
+                        <mat-option [value]="ta">{{ ta.nombre }}</mat-option>
+                      }
+                    </mat-select>
+                    <mat-icon matSuffix>savings</mat-icon>
+                  </mat-form-field>
                 </div>
 
                 <div class="form-row">
                   <mat-form-field appearance="outline" class="half-width">
-                    <mat-label>Remuneración Unificada *</mat-label>
+                    <mat-label>Remuneración Unificada</mat-label>
                     <input matInput formControlName="remuneracionUnificada" type="number" min="0">
                     <mat-icon matSuffix>attach_money</mat-icon>
                     @if (esCampoInvalido('remuneracionUnificada', 'participe')) {
@@ -358,7 +351,7 @@
                   </mat-form-field>
 
                   <mat-form-field appearance="outline" class="half-width">
-                    <mat-label>Fecha Ingreso al Fondo *</mat-label>
+                    <mat-label>Fecha Ingreso al Fondo</mat-label>
                     <input matInput [matDatepicker]="pickerFondo" formControlName="fechaIngresoFondo">
                     <mat-datepicker-toggle matIconSuffix [for]="pickerFondo"></mat-datepicker-toggle>
                     <mat-datepicker #pickerFondo></mat-datepicker>
@@ -438,38 +431,6 @@
               </mat-card-header>
               <mat-card-content>
                 <div class="form-row">
-                  <mat-form-field appearance="outline" class="third-width">
-                    <mat-label>Estado Actual</mat-label>
-                    <mat-select formControlName="estadoActual">
-                      @for (estado of estadosOptions; track estado.value) {
-                        <mat-option [value]="estado.value">{{ estado.label }}</mat-option>
-                      }
-                    </mat-select>
-                    <mat-icon matSuffix>toggle_on</mat-icon>
-                  </mat-form-field>
-
-                  <mat-form-field appearance="outline" class="third-width">
-                    <mat-label>Estado Cesante</mat-label>
-                    <mat-select formControlName="estadoCesante">
-                      @for (estado of estadosOptions; track estado.value) {
-                        <mat-option [value]="estado.value">{{ estado.label }}</mat-option>
-                      }
-                    </mat-select>
-                    <mat-icon matSuffix>person_off</mat-icon>
-                  </mat-form-field>
-
-                  <mat-form-field appearance="outline" class="third-width">
-                    <mat-label>Estado *</mat-label>
-                    <mat-select formControlName="idEstado">
-                      @for (estado of estadosOptions; track estado.value) {
-                        <mat-option [value]="estado.value">{{ estado.label }}</mat-option>
-                      }
-                    </mat-select>
-                    <mat-icon matSuffix>flag</mat-icon>
-                  </mat-form-field>
-                </div>
-
-                <div class="form-row">
                   <mat-form-field appearance="outline" class="half-width">
                     <mat-label>Fecha de Salida</mat-label>
                     <input matInput [matDatepicker]="pickerSalida" formControlName="fechaSalida">
@@ -502,6 +463,424 @@
             </mat-card>
 
           </form>
+        </div>
+      </mat-tab>
+
+      <!-- TAB 3: DIRECCIÓN -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <div class="tab-label">
+            <mat-icon class="tab-icon">home</mat-icon>
+            <span class="tab-text">Dirección</span>
+          </div>
+        </ng-template>
+        <div class="tab-content">
+          <form [formGroup]="direccionForm">
+            <mat-card class="form-section">
+              <mat-card-header>
+                <mat-icon mat-card-avatar>place</mat-icon>
+                <mat-card-title>Dirección de Domicilio</mat-card-title>
+              </mat-card-header>
+              <mat-card-content>
+                <div class="form-row">
+                  <mat-form-field appearance="outline" class="half-width">
+                    <mat-label>Calle Principal</mat-label>
+                    <input matInput formControlName="callePrincipal" maxlength="200">
+                    <mat-icon matSuffix>signpost</mat-icon>
+                  </mat-form-field>
+                  <mat-form-field appearance="outline" class="half-width">
+                    <mat-label>Calle Secundaria</mat-label>
+                    <input matInput formControlName="calleSecundaria" maxlength="200">
+                    <mat-icon matSuffix>signpost</mat-icon>
+                  </mat-form-field>
+                </div>
+                <div class="form-row">
+                  <mat-form-field appearance="outline" class="third-width">
+                    <mat-label>Número</mat-label>
+                    <input matInput formControlName="numero" maxlength="50">
+                    <mat-icon matSuffix>tag</mat-icon>
+                  </mat-form-field>
+                  <mat-form-field appearance="outline" class="third-width">
+                    <mat-label>Teléfono</mat-label>
+                    <input matInput formControlName="telefono" maxlength="20">
+                    <mat-icon matSuffix>phone</mat-icon>
+                  </mat-form-field>
+                  <mat-form-field appearance="outline" class="third-width">
+                    <mat-label>Celular</mat-label>
+                    <input matInput formControlName="celular" maxlength="20">
+                    <mat-icon matSuffix>smartphone</mat-icon>
+                  </mat-form-field>
+                </div>
+                <div class="form-row">
+                  <mat-form-field appearance="outline" class="full-width">
+                    <mat-label>Descripción / Referencia</mat-label>
+                    <textarea matInput formControlName="descripcion" maxlength="300" rows="2"></textarea>
+                    <mat-icon matSuffix>description</mat-icon>
+                  </mat-form-field>
+                </div>
+              </mat-card-content>
+            </mat-card>
+          </form>
+        </div>
+      </mat-tab>
+
+      <!-- TAB 4: CÓNYUGE -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <div class="tab-label">
+            <mat-icon class="tab-icon">people</mat-icon>
+            <span class="tab-text">Cónyuge</span>
+          </div>
+        </ng-template>
+        <div class="tab-content">
+          <!-- Formulario inline -->
+          @if (modoConyugeForm()) {
+            <mat-card class="form-section">
+              <mat-card-header>
+                <mat-icon mat-card-avatar>person_add</mat-icon>
+                <mat-card-title>{{ modoConyugeForm() === 'nuevo' ? 'Nuevo Cónyuge' : 'Editar Cónyuge' }}</mat-card-title>
+              </mat-card-header>
+              <mat-card-content>
+                <form [formGroup]="conyugeForm">
+                  <div class="form-row">
+                    <mat-form-field appearance="outline" class="full-width">
+                      <mat-label>Nombres *</mat-label>
+                      <input matInput formControlName="nombres" maxlength="200">
+                      <mat-icon matSuffix>person</mat-icon>
+                    </mat-form-field>
+                  </div>
+                  <div class="form-row">
+                    <mat-form-field appearance="outline" class="half-width">
+                      <mat-label>Cédula</mat-label>
+                      <input matInput formControlName="cedula" maxlength="20">
+                      <mat-icon matSuffix>badge</mat-icon>
+                    </mat-form-field>
+                    <mat-form-field appearance="outline" class="half-width">
+                      <mat-label>Correo</mat-label>
+                      <input matInput formControlName="correo" maxlength="100" type="email">
+                      <mat-icon matSuffix>email</mat-icon>
+                    </mat-form-field>
+                  </div>
+                  <div class="form-actions-inline">
+                    <button mat-raised-button color="accent" (click)="guardarConyuge()" [disabled]="conyugeForm.invalid || savingSubEntidad()">
+                      <mat-icon>save</mat-icon> Guardar
+                    </button>
+                    <button mat-button (click)="cancelarConyuge()">Cancelar</button>
+                  </div>
+                </form>
+              </mat-card-content>
+            </mat-card>
+          }
+
+          <!-- Lista -->
+          <mat-card class="form-section">
+            <mat-card-header>
+              <mat-icon mat-card-avatar>people</mat-icon>
+              <mat-card-title>Cónyuge / Conviviente</mat-card-title>
+              <div class="header-actions">
+                @if (modoEdicion()) {
+                  <button mat-mini-fab color="primary" (click)="nuevoConyuge()" [disabled]="!!modoConyugeForm()">
+                    <mat-icon>add</mat-icon>
+                  </button>
+                }
+              </div>
+            </mat-card-header>
+            <mat-card-content>
+              @if (conyuges().length === 0) {
+                <p class="empty-msg">No hay cónyuge registrado.</p>
+              } @else {
+                <table class="sub-table">
+                  <thead><tr><th>Nombres</th><th>Cédula</th><th>Correo</th><th>Acciones</th></tr></thead>
+                  <tbody>
+                    @for (c of conyuges(); track c.codigo) {
+                      <tr>
+                        <td>{{ c.nombres }}</td>
+                        <td>{{ c.cedula }}</td>
+                        <td>{{ c.correo }}</td>
+                        <td>
+                          <button mat-icon-button color="primary" (click)="editarConyuge(c)"><mat-icon>edit</mat-icon></button>
+                          <button mat-icon-button color="warn" (click)="eliminarConyuge(c.codigo)"><mat-icon>delete</mat-icon></button>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              }
+            </mat-card-content>
+          </mat-card>
+        </div>
+      </mat-tab>
+
+      <!-- TAB 5: REFERENCIAS FAMILIARES -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <div class="tab-label">
+            <mat-icon class="tab-icon">family_restroom</mat-icon>
+            <span class="tab-text">Refs. Familiares</span>
+          </div>
+        </ng-template>
+        <div class="tab-content">
+          @if (modoRefFamiliarForm()) {
+            <mat-card class="form-section">
+              <mat-card-header>
+                <mat-icon mat-card-avatar>person_add</mat-icon>
+                <mat-card-title>{{ modoRefFamiliarForm() === 'nuevo' ? 'Nueva Referencia Familiar' : 'Editar Referencia Familiar' }}</mat-card-title>
+              </mat-card-header>
+              <mat-card-content>
+                <form [formGroup]="referenciaFamiliarForm">
+                  <div class="form-row">
+                    <mat-form-field appearance="outline" class="full-width">
+                      <mat-label>Nombres *</mat-label>
+                      <input matInput formControlName="nombres" maxlength="200">
+                      <mat-icon matSuffix>person</mat-icon>
+                    </mat-form-field>
+                  </div>
+                  <div class="form-row">
+                    <mat-form-field appearance="outline" class="third-width">
+                      <mat-label>Cédula</mat-label>
+                      <input matInput formControlName="cedula" maxlength="20">
+                      <mat-icon matSuffix>badge</mat-icon>
+                    </mat-form-field>
+                    <mat-form-field appearance="outline" class="third-width">
+                      <mat-label>Contacto</mat-label>
+                      <input matInput formControlName="contacto" maxlength="20">
+                      <mat-icon matSuffix>phone</mat-icon>
+                    </mat-form-field>
+                    <mat-form-field appearance="outline" class="third-width">
+                      <mat-label>Parentesco</mat-label>
+                      <input matInput formControlName="parentesco" maxlength="100">
+                      <mat-icon matSuffix>group</mat-icon>
+                    </mat-form-field>
+                  </div>
+                  <div class="form-actions-inline">
+                    <button mat-raised-button color="accent" (click)="guardarReferenciaFamiliar()" [disabled]="referenciaFamiliarForm.invalid || savingSubEntidad()">
+                      <mat-icon>save</mat-icon> Guardar
+                    </button>
+                    <button mat-button (click)="cancelarReferenciaFamiliar()">Cancelar</button>
+                  </div>
+                </form>
+              </mat-card-content>
+            </mat-card>
+          }
+
+          <mat-card class="form-section">
+            <mat-card-header>
+              <mat-icon mat-card-avatar>family_restroom</mat-icon>
+              <mat-card-title>Referencias Familiares</mat-card-title>
+              <div class="header-actions">
+                @if (modoEdicion()) {
+                  <button mat-mini-fab color="primary" (click)="nuevaReferenciaFamiliar()" [disabled]="!!modoRefFamiliarForm()">
+                    <mat-icon>add</mat-icon>
+                  </button>
+                }
+              </div>
+            </mat-card-header>
+            <mat-card-content>
+              @if (referenciasFamiliares().length === 0) {
+                <p class="empty-msg">No hay referencias familiares registradas.</p>
+              } @else {
+                <table class="sub-table">
+                  <thead><tr><th>Nombres</th><th>Cédula</th><th>Contacto</th><th>Parentesco</th><th>Acciones</th></tr></thead>
+                  <tbody>
+                    @for (r of referenciasFamiliares(); track r.codigo) {
+                      <tr>
+                        <td>{{ r.nombres }}</td>
+                        <td>{{ r.cedula }}</td>
+                        <td>{{ r.contacto }}</td>
+                        <td>{{ r.parentesco }}</td>
+                        <td>
+                          <button mat-icon-button color="primary" (click)="editarReferenciaFamiliar(r)"><mat-icon>edit</mat-icon></button>
+                          <button mat-icon-button color="warn" (click)="eliminarReferenciaFamiliar(r.codigo)"><mat-icon>delete</mat-icon></button>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              }
+            </mat-card-content>
+          </mat-card>
+        </div>
+      </mat-tab>
+
+      <!-- TAB 6: REFERENCIAS PERSONALES -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <div class="tab-label">
+            <mat-icon class="tab-icon">contacts</mat-icon>
+            <span class="tab-text">Refs. Personales</span>
+          </div>
+        </ng-template>
+        <div class="tab-content">
+          @if (modoRefPersonalForm()) {
+            <mat-card class="form-section">
+              <mat-card-header>
+                <mat-icon mat-card-avatar>person_add</mat-icon>
+                <mat-card-title>{{ modoRefPersonalForm() === 'nuevo' ? 'Nueva Referencia Personal' : 'Editar Referencia Personal' }}</mat-card-title>
+              </mat-card-header>
+              <mat-card-content>
+                <form [formGroup]="referenciaPersonalForm">
+                  <div class="form-row">
+                    <mat-form-field appearance="outline" class="full-width">
+                      <mat-label>Nombres *</mat-label>
+                      <input matInput formControlName="nombres" maxlength="200">
+                      <mat-icon matSuffix>person</mat-icon>
+                    </mat-form-field>
+                  </div>
+                  <div class="form-row">
+                    <mat-form-field appearance="outline" class="third-width">
+                      <mat-label>Cédula</mat-label>
+                      <input matInput formControlName="cedula" maxlength="20">
+                      <mat-icon matSuffix>badge</mat-icon>
+                    </mat-form-field>
+                    <mat-form-field appearance="outline" class="third-width">
+                      <mat-label>Contacto</mat-label>
+                      <input matInput formControlName="contacto" maxlength="20">
+                      <mat-icon matSuffix>phone</mat-icon>
+                    </mat-form-field>
+                    <mat-form-field appearance="outline" class="third-width">
+                      <mat-label>Parentesco / Relación</mat-label>
+                      <input matInput formControlName="parentesco" maxlength="100">
+                      <mat-icon matSuffix>group</mat-icon>
+                    </mat-form-field>
+                  </div>
+                  <div class="form-actions-inline">
+                    <button mat-raised-button color="accent" (click)="guardarReferenciaPersonal()" [disabled]="referenciaPersonalForm.invalid || savingSubEntidad()">
+                      <mat-icon>save</mat-icon> Guardar
+                    </button>
+                    <button mat-button (click)="cancelarReferenciaPersonal()">Cancelar</button>
+                  </div>
+                </form>
+              </mat-card-content>
+            </mat-card>
+          }
+
+          <mat-card class="form-section">
+            <mat-card-header>
+              <mat-icon mat-card-avatar>contacts</mat-icon>
+              <mat-card-title>Referencias Personales</mat-card-title>
+              <div class="header-actions">
+                @if (modoEdicion()) {
+                  <button mat-mini-fab color="primary" (click)="nuevaReferenciaPersonal()" [disabled]="!!modoRefPersonalForm()">
+                    <mat-icon>add</mat-icon>
+                  </button>
+                }
+              </div>
+            </mat-card-header>
+            <mat-card-content>
+              @if (referenciasPersonales().length === 0) {
+                <p class="empty-msg">No hay referencias personales registradas.</p>
+              } @else {
+                <table class="sub-table">
+                  <thead><tr><th>Nombres</th><th>Cédula</th><th>Contacto</th><th>Relación</th><th>Acciones</th></tr></thead>
+                  <tbody>
+                    @for (r of referenciasPersonales(); track r.codigo) {
+                      <tr>
+                        <td>{{ r.nombres }}</td>
+                        <td>{{ r.cedula }}</td>
+                        <td>{{ r.contacto }}</td>
+                        <td>{{ r.parentesco }}</td>
+                        <td>
+                          <button mat-icon-button color="primary" (click)="editarReferenciaPersonal(r)"><mat-icon>edit</mat-icon></button>
+                          <button mat-icon-button color="warn" (click)="eliminarReferenciaPersonal(r.codigo)"><mat-icon>delete</mat-icon></button>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              }
+            </mat-card-content>
+          </mat-card>
+        </div>
+      </mat-tab>
+
+      <!-- TAB 7: CUENTAS BANCARIAS PARTÍCIPE -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <div class="tab-label">
+            <mat-icon class="tab-icon">account_balance</mat-icon>
+            <span class="tab-text">Cuentas Bancarias</span>
+          </div>
+        </ng-template>
+        <div class="tab-content">
+          @if (modoCuentaBancariaForm()) {
+            <mat-card class="form-section">
+              <mat-card-header>
+                <mat-icon mat-card-avatar>add_card</mat-icon>
+                <mat-card-title>{{ modoCuentaBancariaForm() === 'nuevo' ? 'Nueva Cuenta Bancaria' : 'Editar Cuenta Bancaria' }}</mat-card-title>
+              </mat-card-header>
+              <mat-card-content>
+                <form [formGroup]="cuentaBancariaParticipeForm">
+                  <div class="form-row">
+                    <mat-form-field appearance="outline" class="half-width">
+                      <mat-label>Banco *</mat-label>
+                      <mat-select formControlName="bancoExterno" [compareWith]="compararPorCodigo">
+                        <mat-option [value]="null">-- Seleccionar --</mat-option>
+                        @for (b of bancoExternosOptions(); track b.codigo) {
+                          <mat-option [value]="b">{{ b.nombre }}</mat-option>
+                        }
+                      </mat-select>
+                      <mat-icon matSuffix>account_balance</mat-icon>
+                    </mat-form-field>
+                    <mat-form-field appearance="outline" class="half-width">
+                      <mat-label>Número de Cuenta *</mat-label>
+                      <input matInput formControlName="numeroCuenta" maxlength="30">
+                      <mat-icon matSuffix>pin</mat-icon>
+                    </mat-form-field>
+                  </div>
+                  <div class="form-row">
+                    <mat-form-field appearance="outline" class="half-width">
+                      <mat-label>Tipo de Cuenta *</mat-label>
+                      <input matInput formControlName="tipoCuenta" type="number">
+                      <mat-hint>Código alterno del tipo de cuenta</mat-hint>
+                      <mat-icon matSuffix>credit_card</mat-icon>
+                    </mat-form-field>
+                  </div>
+                  <div class="form-actions-inline">
+                    <button mat-raised-button color="accent" (click)="guardarCuentaBancaria()" [disabled]="cuentaBancariaParticipeForm.invalid || savingSubEntidad()">
+                      <mat-icon>save</mat-icon> Guardar
+                    </button>
+                    <button mat-button (click)="cancelarCuentaBancaria()">Cancelar</button>
+                  </div>
+                </form>
+              </mat-card-content>
+            </mat-card>
+          }
+
+          <mat-card class="form-section">
+            <mat-card-header>
+              <mat-icon mat-card-avatar>account_balance</mat-icon>
+              <mat-card-title>Cuentas Bancarias</mat-card-title>
+              <div class="header-actions">
+                @if (modoEdicion()) {
+                  <button mat-mini-fab color="primary" (click)="nuevaCuentaBancaria()" [disabled]="!!modoCuentaBancariaForm()">
+                    <mat-icon>add</mat-icon>
+                  </button>
+                }
+              </div>
+            </mat-card-header>
+            <mat-card-content>
+              @if (cuentasBancariasParticipe().length === 0) {
+                <p class="empty-msg">No hay cuentas bancarias registradas.</p>
+              } @else {
+                <table class="sub-table">
+                  <thead><tr><th>Banco</th><th>Número de Cuenta</th><th>Tipo</th><th>Acciones</th></tr></thead>
+                  <tbody>
+                    @for (cb of cuentasBancariasParticipe(); track cb.codigo) {
+                      <tr>
+                        <td>{{ cb.bancoExterno.nombre }}</td>
+                        <td>{{ cb.numeroCuenta }}</td>
+                        <td>{{ cb.tipoCuenta }}</td>
+                        <td>
+                          <button mat-icon-button color="primary" (click)="editarCuentaBancaria(cb)"><mat-icon>edit</mat-icon></button>
+                          <button mat-icon-button color="warn" (click)="eliminarCuentaBancaria(cb.codigo)"><mat-icon>delete</mat-icon></button>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              }
+            </mat-card-content>
+          </mat-card>
         </div>
       </mat-tab>
 

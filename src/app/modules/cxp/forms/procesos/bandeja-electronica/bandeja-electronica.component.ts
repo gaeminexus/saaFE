@@ -471,6 +471,14 @@ export class BandejaElectronicaComponent implements OnInit {
     return isNaN(d.getTime()) ? null : d;
   }
 
+  /** Decodifica entidades HTML (ej: &#xf3; → ó) que vienen del SRI en tipoComprobante */
+  decodeHtml(str: string | null | undefined): string {
+    if (!str) return '';
+    const txt = document.createElement('textarea');
+    txt.innerHTML = str;
+    return txt.value;
+  }
+
   private mostrarExito(msg: string): void {
     this.snackBar.open(msg, 'Cerrar', { duration: 4000, panelClass: ['snack-success'] });
   }

@@ -1,11 +1,12 @@
 import { Entidad } from "./entidad";
 import { TipoParticipe } from "./tipo-participe";
+import { TipoAporte } from "./tipo-aporte";
 
 export interface Participe {
     codigo: number;                 // PRTCCDGO - Código
     entidad: Entidad;          // ENTDCDGO - FK Código Entidad
     codigoAlterno: number;          // PRTCCDAL - Código alterno (FL-PART)
-    tipoParticipe: TipoParticipe;    // TPPCCDGO - FK Código Tipo Partícipe
+    tipoParticipante: TipoParticipe;    // TPPCCDGO - FK Código Tipo Partícipe
     remuneracionUnificada: number;  // PRTCRMUN - Remuneración unificada
     fechaIngresoTrabajo: Date;      // PRTCFCIT - Fecha ingreso trabajo
     lugarTrabajo: string;           // PRTCLGRT - Lugar de trabajo
@@ -24,5 +25,6 @@ export interface Participe {
     estadoCesante: number;            // PRTCESCS - Estado cesante
     fechaIngreso: Date;               // PRTCFCIN - Fecha de ingreso
     idEstado: number;                 // PRTCIDST - ID Estado
+    tipoAporte: TipoAporte | null;    // TPAPCDGO - FK Tipo Aporte
 }
 

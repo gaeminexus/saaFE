@@ -79,6 +79,10 @@ export class ServiciosCrd {
   public static RS_CXPG = `${API_URL}/cxpg`;
   public static RS_VPPC = `${API_URL}/vppc`;
   public static RS_IGFN = `${API_URL}/igfn`; // InformacionGeneralFondo
+  public static RS_CNYG = `${API_URL}/cnyg`; // Cónyuge
+  public static RS_RRFF = `${API_URL}/rrff`; // Referencia Familiar
+  public static RS_RRPP = `${API_URL}/rrpp`; // Referencia Personal
+  public static RS_CNBP = `${API_URL}/cnbp`; // Cuenta Bancaria Partícipe
 }
 /*
 export class ServiciosCrd {

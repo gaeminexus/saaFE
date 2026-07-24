@@ -36,6 +36,13 @@ import { PlanCuenta } from '../../../cnt/model/plan-cuenta';
 import { Pais } from '../../../crd/model/pais';
 import { PaisService } from '../../../crd/service/pais.service';
 import { ExportService } from '../../../../shared/services/export.service';
+import { BancoExterno } from '../../model/banco-externo.model';
+import { CuentaBancariaTitular } from '../../model/cuenta-bancaria-titular';
+import { BancoExternoService } from '../../service/banco-externo.service';
+import { CuentaBancariaTitularService } from '../../service/cuenta-bancaria-titular.service';
+import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
+import { TipoDatosBusqueda as TipoDatos } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
+import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 
 type Vista = 'lista' | 'editar';
 
@@ -89,6 +96,8 @@ export class TitularesV2Component implements OnInit {
   private detalleService = inject(DetalleRubroService);
   private paisService = inject(PaisService);
   private exportService = inject(ExportService);
+  private bancoExternoService = inject(BancoExternoService);
+  private cuentaBancariaService = inject(CuentaBancariaTitularService);
 
   // Signals principales
   vistaActual = signal<Vista>('lista');
@@ -109,6 +118,19 @@ export class TitularesV2Component implements OnInit {
   tiposIdentificacion = signal<DetalleRubro[]>([]);
   paises = signal<Pais[]>([]);
   paisesFiltrados = signal<Pais[]>([]);
+  // Cuentas bancarias del titular en edición
+  cuentasBancariasEnEdicion = signal<CuentaBancariaTitular[]>([]);
+  bancos = signal<BancoExterno[]>([]);
+  bancoBusqueda = signal<string>('');
+  bancosFiltrados = computed(() => {
+    const q = this.bancoBusqueda().toLowerCase().trim();
+    return q ? this.bancos().filter(b => b.nombre?.toLowerCase().includes(q)) : this.bancos();
+  });
+  tiposCuentaBancaria = signal<DetalleRubro[]>([]);
+  formCuentaBancaria!: FormGroup;
+  modoFormCuentaBancaria = signal<'oculto' | 'nuevo' | 'editar'>('oculto');
+  cuentaBancariaEditando = signal<CuentaBancariaTitular | null>(null);
+
   readonly tiposCuentaOpciones = [
     { codigo: 1, descripcion: 'Facturas' },
     { codigo: 2, descripcion: 'Anticipos' },
@@ -270,6 +292,15 @@ export class TitularesV2Component implements OnInit {
       this.filtrarPaises(value || '');
     });
 
+    this.formCuentaBancaria = this.fb.group({
+      codigo: [0],
+      banco: [null, Validators.required],
+      tipoCuenta: [null, Validators.required],
+      numeroCuenta: ['', [Validators.required, Validators.maxLength(50)]],
+      observaciones: ['', Validators.maxLength(500)],
+      estado: [1, Validators.required],
+    });
+
     this.formNuevaRol = this.fb.group({
       // rubroRolPersonaP = codigoAlterno del rubro padre, siempre 55
       // rubroRolPersonaH = codigoAlterno del detalle (el rol que elige el usuario)
@@ -286,17 +317,20 @@ export class TitularesV2Component implements OnInit {
     const RUBRO_TIPO_CUENTA = 38;
     const RUBRO_TIPO_PERSONA = 35;
     const RUBRO_TIPO_IDENTIFICACION = 36;
+    const RUBRO_TIPO_CUENTA_BANCARIA = 23;
 
     const rolesMemoria = this.detalleService.getDetallesByParent(RUBRO_ROL_PERSONA);
     const tiposCuentaMemoria = this.detalleService.getDetallesByParent(RUBRO_TIPO_CUENTA);
     const tiposPersonaMemoria = this.detalleService.getDetallesByParent(RUBRO_TIPO_PERSONA);
     const tiposIdentificacionMemoria = this.detalleService.getDetallesByParent(RUBRO_TIPO_IDENTIFICACION);
+    const tiposCuentaBancariaMemoria = this.detalleService.getDetallesByParent(RUBRO_TIPO_CUENTA_BANCARIA);
 
     if (rolesMemoria.length > 0) {
       this.rolesDisponibles.set(rolesMemoria);
       this.tiposCuenta.set(tiposCuentaMemoria);
       this.tiposPersona.set(tiposPersonaMemoria);
       this.tiposIdentificacion.set(tiposIdentificacionMemoria);
+      this.tiposCuentaBancaria.set(tiposCuentaBancariaMemoria);
     } else {
       // Fallback: pedir al servidor si la caché aún no tiene datos
       this.detalleService.getAll().pipe(catchError(() => of([] as DetalleRubro[]))).subscribe(all => {
@@ -305,8 +339,14 @@ export class TitularesV2Component implements OnInit {
         this.tiposCuenta.set(todos.filter((item) => item.rubro?.codigoAlterno === RUBRO_TIPO_CUENTA));
         this.tiposPersona.set(todos.filter((item) => item.rubro?.codigoAlterno === RUBRO_TIPO_PERSONA));
         this.tiposIdentificacion.set(todos.filter((item) => item.rubro?.codigoAlterno === RUBRO_TIPO_IDENTIFICACION));
+        this.tiposCuentaBancaria.set(todos.filter((item) => item.rubro?.codigoAlterno === RUBRO_TIPO_CUENTA_BANCARIA));
       });
     }
+
+    // Cargar bancos externos para los combos
+    this.bancoExternoService.getAll().pipe(catchError(() => of([] as BancoExterno[]))).subscribe(bancos => {
+      this.bancos.set(bancos || []);
+    });
 
     this.loading.set(true);
     forkJoin({
@@ -355,6 +395,8 @@ export class TitularesV2Component implements OnInit {
           }))
         );
         this.cargarDatosTitularEnFormulario(titular);
+        this.cargarCuentasBancariasDelTitular(titular.codigo!);
+        this.modoFormCuentaBancaria.set('oculto');
         this.vistaActual.set('editar');
         this.loading.set(false);
       },
@@ -364,6 +406,8 @@ export class TitularesV2Component implements OnInit {
           rolesFiltrados.map((rol) => ({ rol, cuentas: [], expandido: false }))
         );
         this.cargarDatosTitularEnFormulario(titular);
+        this.cargarCuentasBancariasDelTitular(titular.codigo!);
+        this.modoFormCuentaBancaria.set('oculto');
         this.vistaActual.set('editar');
         this.loading.set(false);
       },
@@ -389,6 +433,8 @@ export class TitularesV2Component implements OnInit {
       estado: 1,
     });
     this.ultimoNombreAutocopiado = '';
+    this.cuentasBancariasEnEdicion.set([]);
+    this.modoFormCuentaBancaria.set('oculto');
     this.vistaActual.set('editar');
   }
 
@@ -961,5 +1007,123 @@ export class TitularesV2Component implements OnInit {
     this.exportService.exportToCSV(rows, `titulares_${rolLabel}_${fecha}`, headers, keys);
     this.snackBar.open(`${rows.length} registros exportados`, 'Cerrar', { duration: 3000 });
   }
+
+  // ========== CUENTAS BANCARIAS DEL TITULAR ==========
+
+  cargarCuentasBancariasDelTitular(titularCodigo: number): void {
+    if (!titularCodigo || titularCodigo === 0) {
+      this.cuentasBancariasEnEdicion.set([]);
+      return;
+    }
+    const criterio = new DatosBusqueda();
+    criterio.asignaValorConCampoPadre(TipoDatos.LONG, 'titular', 'codigo', String(titularCodigo), TipoComandosBusqueda.IGUAL);
+    this.cuentaBancariaService.selectByCriteria([criterio]).pipe(
+      catchError(() => of([] as CuentaBancariaTitular[]))
+    ).subscribe(res => {
+      this.cuentasBancariasEnEdicion.set(res || []);
+    });
+  }
+
+  nuevaCuentaBancaria(): void {
+    this.cuentaBancariaEditando.set(null);
+    this.formCuentaBancaria.reset({
+      codigo: null,
+      banco: null,
+      tipoCuenta: null,
+      numeroCuenta: '',
+      observaciones: '',
+      estado: 1,
+    });
+    this.modoFormCuentaBancaria.set('nuevo');
+  }
+
+  editarCuentaBancaria(cuenta: CuentaBancariaTitular): void {
+    this.cuentaBancariaEditando.set(cuenta);
+    const bancoCodigo = typeof cuenta.banco === 'object' ? (cuenta.banco as any).codigo : cuenta.banco;
+    this.formCuentaBancaria.patchValue({
+      codigo: cuenta.codigo,
+      banco: bancoCodigo,
+      tipoCuenta: cuenta.tipoCuenta,
+      numeroCuenta: cuenta.numeroCuenta,
+      observaciones: cuenta.observaciones || '',
+      estado: cuenta.estado,
+    });
+    this.modoFormCuentaBancaria.set('editar');
+  }
+
+  guardarCuentaBancaria(): void {
+    if (!this.formCuentaBancaria.valid) {
+      this.formCuentaBancaria.markAllAsTouched();
+      this.snackBar.open('Complete los campos requeridos', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    const titular = this.titularSeleccionado();
+    if (!titular?.codigo) {
+      this.snackBar.open('Debe guardar el titular antes de agregar cuentas bancarias', 'Cerrar', { duration: 4000 });
+      return;
+    }
+
+    const v = this.formCuentaBancaria.value;
+    const usuario = localStorage.getItem('userName') || localStorage.getItem('usuario') || 'sistema';
+
+    const payload: any = {
+      codigo: v.codigo || null,
+      titular: { codigo: titular.codigo },
+      banco: { codigo: v.banco },
+      tipoCuenta: v.tipoCuenta,
+      numeroCuenta: v.numeroCuenta,
+      observaciones: v.observaciones || '',
+      estado: v.estado,
+      usuarioCreacion: usuario,
+    };
+
+    const esNuevo = !payload.codigo || payload.codigo === 0;
+    const op = esNuevo
+      ? this.cuentaBancariaService.add(payload)
+      : this.cuentaBancariaService.update(payload);
+
+    op.pipe(catchError(() => of(null))).subscribe(res => {
+      if (res !== undefined) {
+        this.snackBar.open(esNuevo ? 'Cuenta bancaria agregada' : 'Cuenta bancaria actualizada', 'Cerrar', { duration: 3000 });
+        this.modoFormCuentaBancaria.set('oculto');
+        this.cargarCuentasBancariasDelTitular(titular.codigo!);
+      } else {
+        this.snackBar.open('Error al guardar cuenta bancaria', 'Cerrar', { duration: 3000 });
+      }
+    });
+  }
+
+  eliminarCuentaBancaria(cuenta: CuentaBancariaTitular): void {
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      data: { message: `¿Eliminar la cuenta bancaria ${cuenta.numeroCuenta}?` },
+    });
+    dialogRef.afterClosed().subscribe(confirmado => {
+      if (confirmado) {
+        this.cuentaBancariaService.delete(cuenta.codigo).pipe(catchError(() => of(null))).subscribe(() => {
+          this.snackBar.open('Cuenta bancaria eliminada', 'Cerrar', { duration: 3000 });
+          const titular = this.titularSeleccionado();
+          if (titular?.codigo) {
+            this.cargarCuentasBancariasDelTitular(titular.codigo);
+          }
+        });
+      }
+    });
+  }
+
+  cancelarFormCuentaBancaria(): void {
+    this.modoFormCuentaBancaria.set('oculto');
+    this.cuentaBancariaEditando.set(null);
+  }
+
+  getNombreBanco(codigo: number | any): string {
+    const cod = typeof codigo === 'object' ? codigo?.codigo : codigo;
+    return this.bancos().find(b => b.codigo === cod)?.nombre || String(cod || '-');
+  }
+
+  getNombreTipoCuentaBancaria(tipo: number): string {
+    return this.tiposCuentaBancaria().find(d => d.codigoAlterno === tipo)?.descripcion || String(tipo);
+  }
 }
+
 

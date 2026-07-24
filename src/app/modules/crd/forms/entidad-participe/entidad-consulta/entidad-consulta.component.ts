@@ -650,7 +650,7 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
       return;
     }
 
-    this.router.navigate(['/menucreditos/entidad-edit'], {
+    this.router.navigate(['/menucreditos/entidad-participe-info'], {
       queryParams: {
         codigoEntidad: entidad.codigo,
         returnUrl: '/menucreditos/entidad-consulta',
