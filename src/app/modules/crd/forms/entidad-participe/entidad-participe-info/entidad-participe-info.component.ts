@@ -802,7 +802,7 @@ export class EntidadParticipeInfoComponent implements OnInit {
     this._aplicarFechaAlControl(rawValue, fg.get(campo), inputRef);
   }
 
-  /** Cuando el usuario selecciona una fecha desde el picker */
+  /** Cuando el usuario selecciona una fecha desde el picker*/
   onFechaPickerChange(date: Date | null, grupo: 'entidad' | 'participe', campo: string, inputRef: ElementRef): void {
     if (!date) return;
     const fg = grupo === 'entidad' ? this.entidadForm : this.participeForm;
