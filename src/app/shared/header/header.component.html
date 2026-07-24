@@ -1,5 +1,7 @@
 <header class="header-topbar">
-  <span class="header-title">{{ screenTitle || 'S.A.A' }}</span>
+  <button class="header-title header-title-link" (click)="onBack()" matTooltip="Ir al Menú Principal">
+    {{ screenTitle || 'S.A.A' }}
+  </button>
   <div style="display: flex; align-items: center; gap: 1rem; margin-left: auto;">
     @if (showBackButton) {
       <button class="header-back" (click)="onBack()" style="margin-right: .5rem;">
