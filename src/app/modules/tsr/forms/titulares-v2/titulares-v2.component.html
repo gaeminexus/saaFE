@@ -374,20 +374,18 @@
 
               <mat-form-field appearance="outline">
                 <mat-label>Banco</mat-label>
-                <mat-select formControlName="banco" (openedChange)="bancoBusqueda.set('')">
-                  <div class="select-search-box">
-                    <input
-                      class="select-search-input"
-                      placeholder="Buscar banco..."
-                      [value]="bancoBusqueda()"
-                      (input)="bancoBusqueda.set($any($event.target).value)"
-                      (keydown.space)="$event.stopPropagation()"
-                      (click)="$event.stopPropagation()" />
-                  </div>
+                <input
+                  type="text"
+                  matInput
+                  formControlName="bancoBusqueda"
+                  [matAutocomplete]="autoBanco"
+                  placeholder="Buscar banco..."
+                  (blur)="formCuentaBancaria.get('banco')?.markAsTouched()" />
+                <mat-autocomplete #autoBanco="matAutocomplete" (optionSelected)="onBancoSelected($event.option.value)">
                   @for (banco of bancosFiltrados(); track banco.codigo) {
-                    <mat-option [value]="banco.codigo">{{ banco.nombre }}</mat-option>
+                    <mat-option [value]="banco">{{ banco.nombre }}</mat-option>
                   }
-                </mat-select>
+                </mat-autocomplete>
                 @if (formCuentaBancaria.get('banco')?.hasError('required') && formCuentaBancaria.get('banco')?.touched) {
                   <mat-error>Banco requerido</mat-error>
                 }

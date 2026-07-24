@@ -121,11 +121,7 @@ export class TitularesV2Component implements OnInit {
   // Cuentas bancarias del titular en edición
   cuentasBancariasEnEdicion = signal<CuentaBancariaTitular[]>([]);
   bancos = signal<BancoExterno[]>([]);
-  bancoBusqueda = signal<string>('');
-  bancosFiltrados = computed(() => {
-    const q = this.bancoBusqueda().toLowerCase().trim();
-    return q ? this.bancos().filter(b => b.nombre?.toLowerCase().includes(q)) : this.bancos();
-  });
+  bancosFiltrados = signal<BancoExterno[]>([]);
   tiposCuentaBancaria = signal<DetalleRubro[]>([]);
   formCuentaBancaria!: FormGroup;
   modoFormCuentaBancaria = signal<'oculto' | 'nuevo' | 'editar'>('oculto');
@@ -295,10 +291,15 @@ export class TitularesV2Component implements OnInit {
     this.formCuentaBancaria = this.fb.group({
       codigo: [0],
       banco: [null, Validators.required],
+      bancoBusqueda: [''],
       tipoCuenta: [null, Validators.required],
       numeroCuenta: ['', [Validators.required, Validators.maxLength(50)]],
       observaciones: ['', Validators.maxLength(500)],
       estado: [1, Validators.required],
+    });
+
+    this.formCuentaBancaria.get('bancoBusqueda')?.valueChanges.subscribe((value) => {
+      this.filtrarBancos(value || '');
     });
 
     this.formNuevaRol = this.fb.group({
@@ -346,6 +347,7 @@ export class TitularesV2Component implements OnInit {
     // Cargar bancos externos para los combos
     this.bancoExternoService.getAll().pipe(catchError(() => of([] as BancoExterno[]))).subscribe(bancos => {
       this.bancos.set(bancos || []);
+      this.bancosFiltrados.set(bancos || []);
     });
 
     this.loading.set(true);
@@ -1029,6 +1031,7 @@ export class TitularesV2Component implements OnInit {
     this.formCuentaBancaria.reset({
       codigo: null,
       banco: null,
+      bancoBusqueda: '',
       tipoCuenta: null,
       numeroCuenta: '',
       observaciones: '',
@@ -1040,15 +1043,41 @@ export class TitularesV2Component implements OnInit {
   editarCuentaBancaria(cuenta: CuentaBancariaTitular): void {
     this.cuentaBancariaEditando.set(cuenta);
     const bancoCodigo = typeof cuenta.banco === 'object' ? (cuenta.banco as any).codigo : cuenta.banco;
+    const bancoNombre = this.bancos().find((b) => b.codigo === bancoCodigo)?.nombre || '';
     this.formCuentaBancaria.patchValue({
       codigo: cuenta.codigo,
       banco: bancoCodigo,
+      bancoBusqueda: bancoNombre,
       tipoCuenta: cuenta.tipoCuenta,
       numeroCuenta: cuenta.numeroCuenta,
       observaciones: cuenta.observaciones || '',
       estado: cuenta.estado,
     });
     this.modoFormCuentaBancaria.set('editar');
+  }
+
+  filtrarBancos(value: string | BancoExterno | null): void {
+    let filtro = '';
+    if (typeof value === 'string') {
+      filtro = value;
+    } else if (value && typeof value === 'object' && 'nombre' in value) {
+      filtro = (value as BancoExterno).nombre;
+    }
+
+    if (!filtro || filtro.trim() === '') {
+      this.bancosFiltrados.set(this.bancos());
+      return;
+    }
+
+    const filtroLower = filtro.toLowerCase().trim();
+    this.bancosFiltrados.set(
+      this.bancos().filter((b) => b.nombre?.toLowerCase().includes(filtroLower))
+    );
+  }
+
+  onBancoSelected(banco: BancoExterno): void {
+    this.formCuentaBancaria.get('banco')?.setValue(banco.codigo, { emitEvent: false });
+    this.formCuentaBancaria.get('bancoBusqueda')?.setValue(banco.nombre, { emitEvent: false });
   }
 
   guardarCuentaBancaria(): void {
