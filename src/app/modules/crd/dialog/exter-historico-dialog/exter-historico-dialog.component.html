@@ -1,0 +1,190 @@
+<div class="exter-dialog">
+  <h2 mat-dialog-title>
+    <mat-icon>manage_search</mat-icon>
+    Datos Históricos — EXTER
+    <span class="cedula-badge">{{ data.exter.cedula }}</span>
+  </h2>
+
+  <mat-dialog-content class="exter-content">
+
+    <!-- IDENTIFICACIÓN Y DATOS PERSONALES -->
+    <mat-card class="section-card">
+      <mat-card-header>
+        <mat-icon mat-card-avatar>person</mat-icon>
+        <mat-card-title>Datos Personales</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="field-grid">
+          <div class="field-item">
+            <span class="label">Cédula</span>
+            <span class="value">{{ data.exter.cedula || '—' }}</span>
+          </div>
+          <div class="field-item">
+            <span class="label">Nombre</span>
+            <span class="value">{{ data.exter.nombre || '—' }}</span>
+          </div>
+          <div class="field-item">
+            <span class="label">Estado</span>
+            <span class="value">{{ data.exter.estado || '—' }}</span>
+          </div>
+          <div class="field-item">
+            <span class="label">Género</span>
+            <span class="value">{{ data.exter.genero || '—' }}</span>
+          </div>
+          <div class="field-item">
+            <span class="label">Edad</span>
+            <span class="value">{{ data.exter.edad || '—' }}</span>
+          </div>
+          <div class="field-item">
+            <span class="label">Fecha de Nacimiento</span>
+            <span class="value">{{ data.exter.fechaNacimiento || '—' }}</span>
+          </div>
+          <div class="field-item">
+            <span class="label">Fecha de Defunción</span>
+            <span class="value">{{ data.exter.fechaDefuncion || '—' }}</span>
+          </div>
+          <div class="field-item">
+            <span class="label">Nacionalidad</span>
+            <span class="value">{{ data.exter.nacionalidad || '—' }}</span>
+          </div>
+          <div class="field-item">
+            <span class="label">Estado Civil</span>
+            <span class="value">{{ data.exter.estadoCivil?.nombre || '—' }}</span>
+          </div>
+          <div class="field-item">
+            <span class="label">Nivel de Estudios</span>
+            <span class="value">{{ data.exter.nivelEstudios?.nombre || '—' }}</span>
+          </div>
+          <div class="field-item">
+            <span class="label">Profesión</span>
+            <span class="value">{{ data.exter.profesion?.nombre || '—' }}</span>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- UBICACIÓN -->
+    <mat-card class="section-card">
+      <mat-card-header>
+        <mat-icon mat-card-avatar>place</mat-icon>
+        <mat-card-title>Ubicación</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="field-grid">
+          <div class="field-item">
+            <span class="label">Provincia</span>
+            <span class="value">{{ data.exter.provincia?.nombre || '—' }}</span>
+          </div>
+          <div class="field-item">
+            <span class="label">Cantón</span>
+            <span class="value">{{ data.exter.canton?.nombre || '—' }}</span>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- CONTACTO -->
+    <mat-card class="section-card">
+      <mat-card-header>
+        <mat-icon mat-card-avatar>contact_phone</mat-icon>
+        <mat-card-title>Información de Contacto</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="field-grid">
+          <div class="field-item">
+            <span class="label">Teléfono</span>
+            <span class="value">{{ data.exter.telefono || '—' }}</span>
+          </div>
+          <div class="field-item">
+            <span class="label">Móvil</span>
+            <span class="value">{{ data.exter.movil || '—' }}</span>
+          </div>
+          <div class="field-item">
+            <span class="label">Celular 1</span>
+            <span class="value">{{ data.exter.celular1 || '—' }}</span>
+          </div>
+          <div class="field-item">
+            <span class="label">Celular 2</span>
+            <span class="value">{{ data.exter.celular2 || '—' }}</span>
+          </div>
+          <div class="field-item">
+            <span class="label">Correo Principal</span>
+            <span class="value">{{ data.exter.correoPrincipal || '—' }}</span>
+          </div>
+          <div class="field-item">
+            <span class="label">Correo Institucional</span>
+            <span class="value">{{ data.exter.correoInstitucional || '—' }}</span>
+          </div>
+          <div class="field-item">
+            <span class="label">Correo Extra</span>
+            <span class="value">{{ data.exter.correoExtra || '—' }}</span>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- INFORMACIÓN LABORAL -->
+    <mat-card class="section-card">
+      <mat-card-header>
+        <mat-icon mat-card-avatar>business_center</mat-icon>
+        <mat-card-title>Información Laboral (IE)</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="field-grid">
+          <div class="field-item">
+            <span class="label">Teléfono Laboral</span>
+            <span class="value">{{ data.exter.telefonoLaboralIE || '—' }}</span>
+          </div>
+          <div class="field-item">
+            <span class="label">Correo IE</span>
+            <span class="value">{{ data.exter.correoIE || '—' }}</span>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- INFORMACIÓN FINANCIERA -->
+    <mat-card class="section-card">
+      <mat-card-header>
+        <mat-icon mat-card-avatar>account_balance_wallet</mat-icon>
+        <mat-card-title>Información Financiera</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="field-grid">
+          <div class="field-item">
+            <span class="label">Salario Fijo</span>
+            <span class="value currency">{{ (data.exter.salarioFijo | number:'1.2-2') || '—' }}</span>
+          </div>
+          <div class="field-item">
+            <span class="label">Salario Variable</span>
+            <span class="value currency">{{ (data.exter.salarioVariable | number:'1.2-2') || '—' }}</span>
+          </div>
+          <div class="field-item">
+            <span class="label">Salario Total</span>
+            <span class="value currency strong">{{ (data.exter.salarioTotal | number:'1.2-2') || '—' }}</span>
+          </div>
+          <div class="field-item">
+            <span class="label">Sumados Ingresos</span>
+            <span class="value currency">{{ (data.exter.sumadosIngresos | number:'1.2-2') || '—' }}</span>
+          </div>
+          <div class="field-item">
+            <span class="label">Sumados Egresos</span>
+            <span class="value currency">{{ (data.exter.sumadosEgresos | number:'1.2-2') || '—' }}</span>
+          </div>
+          <div class="field-item">
+            <span class="label">Disponible</span>
+            <span class="value currency strong">{{ (data.exter.disponible | number:'1.2-2') || '—' }}</span>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-raised-button color="primary" (click)="cerrar()">
+      <mat-icon>close</mat-icon>
+      Cerrar
+    </button>
+  </mat-dialog-actions>
+</div>

@@ -3,11 +3,14 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatDialog } from '@angular/material/dialog';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { forkJoin } from 'rxjs';
+import { ExterHistoricoDialogComponent } from '../../../dialog/exter-historico-dialog/exter-historico-dialog.component';
 
 import { Entidad } from '../../../model/entidad';
 import { Participe } from '../../../model/participe';
+import { Exter } from '../../../model/exter';
 import { Filial } from '../../../model/filial';
 import { TipoIdentificacion } from '../../../model/tipo-identificacion';
 import { TipoHidrocarburifica } from '../../../model/tipo-hidrocarburifica';
@@ -24,6 +27,7 @@ import { BancoExterno } from '../../../../tsr/model/banco-externo.model';
 
 import { EntidadService } from '../../../service/entidad.service';
 import { ParticipeService } from '../../../service/participe.service';
+import { ExterService } from '../../../service/exter.service';
 import { FilialService } from '../../../service/filial.service';
 import { TipoIdentificacionService } from '../../../service/tipo-identificacion.service';
 import { TipoParticipeService } from '../../../service/tipo-participe.service';
@@ -35,6 +39,8 @@ import { ReferenciaFamiliarService } from '../../../service/referencia-familiar.
 import { ReferenciaPersonalService } from '../../../service/referencia-personal.service';
 import { CuentaBancariaParticipeService } from '../../../service/cuenta-bancaria-participe.service';
 import { BancoExternoService } from '../../../../tsr/service/banco-externo.service';
+import { DetalleRubroService } from '../../../../../shared/services/detalle-rubro.service';
+import { DetalleRubro } from '../../../../../shared/model/detalle-rubro';
 import { FuncionesDatosService, TipoFormatoFechaBackend } from '../../../../../shared/services/funciones-datos.service';
 import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoDatosBusqueda as TipoDatos } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
@@ -69,14 +75,19 @@ export class EntidadParticipeInfoComponent implements OnInit {
   private referenciaPersonalService = inject(ReferenciaPersonalService);
   private cuentaBancariaParticipeService = inject(CuentaBancariaParticipeService);
   private bancoExternoService = inject(BancoExternoService);
+  private detalleRubroService = inject(DetalleRubroService);
   private funcionesDatosService = inject(FuncionesDatosService);
   private snackBar = inject(MatSnackBar);
+  private dialog = inject(MatDialog);
+  private exterService = inject(ExterService);
 
   // Signals de estado
   loading = signal<boolean>(true);
   saving = signal<boolean>(false);
   hasError = signal<boolean>(false);
   errorMsg = signal<string>('');
+  exterData = signal<Exter | null>(null);
+  loadingExter = signal<boolean>(false);
 
   // Signals de datos
   codigoEntidad = signal<number | null>(null);
@@ -92,6 +103,7 @@ export class EntidadParticipeInfoComponent implements OnInit {
   estadosCivilOptions = signal<EstadoCivil[]>([]);
   tiposAporteOptions = signal<TipoAporte[]>([]);
   bancoExternosOptions = signal<BancoExterno[]>([]);
+  tiposCuentaBancaria = signal<DetalleRubro[]>([]);
 
   loadingFiliales = signal<boolean>(false);
   loadingTiposId = signal<boolean>(false);
@@ -327,6 +339,16 @@ export class EntidadParticipeInfoComponent implements OnInit {
         this.tiposAporteOptions.set(data.tiposAporte || []);
         this.bancoExternosOptions.set(data.bancoExternos || []);
 
+        // Cargar tipos de cuenta bancaria desde rubro 23
+        const fromCache = this.detalleRubroService.getDetallesByParent(23);
+        if (fromCache && fromCache.length > 0) {
+          this.tiposCuentaBancaria.set(fromCache);
+        } else {
+          this.detalleRubroService.getAll().subscribe(all => {
+            this.tiposCuentaBancaria.set((all || []).filter(d => d.rubro?.codigoAlterno === 23));
+          });
+        }
+
         this.loadingFiliales.set(false);
         this.loadingTiposId.set(false);
         this.loadingTiposParticipe.set(false);
@@ -364,6 +386,7 @@ export class EntidadParticipeInfoComponent implements OnInit {
         if (data.entidad) {
           this.entidadActual.set(data.entidad);
           this.cargarDatosEnFormularioEntidad(data.entidad);
+          this.buscarExterPorCedula(data.entidad.numeroIdentificacion);
         }
         if (data.participe) {
           this.participeActual.set(data.participe);
@@ -711,8 +734,45 @@ export class EntidadParticipeInfoComponent implements OnInit {
 
   cancelarCuentaBancaria(): void { this.modoCuentaBancariaForm.set(null); }
 
+  // ─── EXTER HISTÓRICO ────────────────────────────────────────
+  private buscarExterPorCedula(cedula: string | null | undefined): void {
+    if (!cedula) return;
+    this.loadingExter.set(true);
+    this.exterService.getById(cedula).subscribe({
+      next: (exter) => {
+        this.exterData.set(exter ?? null);
+        this.loadingExter.set(false);
+      },
+      error: () => {
+        this.exterData.set(null);
+        this.loadingExter.set(false);
+      }
+    });
+  }
+
+  verDatosHistoricos(): void {
+    const exter = this.exterData();
+    if (!exter) return;
+    this.dialog.open(ExterHistoricoDialogComponent, {
+      data: { exter },
+      width: '820px',
+      maxWidth: '95vw',
+      maxHeight: '90vh',
+      disableClose: false
+    });
+  }
+
+  getNombreTipoCuenta(codigoAlterno: number): string {
+    return this.tiposCuentaBancaria().find(t => t.codigoAlterno === codigoAlterno)?.descripcion ?? String(codigoAlterno);
+  }
+
   private prepararDatosEntidad(): any {
     const formValue = this.entidadForm.getRawValue();
+
+    // Convertir checkboxes boolean → Long (0/1) que espera el backend
+    formValue.tieneCorreoPersonal = formValue.tieneCorreoPersonal ? 1 : 0;
+    formValue.tieneCorreoTrabajo  = formValue.tieneCorreoTrabajo  ? 1 : 0;
+    formValue.tieneTelefono       = formValue.tieneTelefono       ? 1 : 0;
 
     // Formatear fechas
     const datosFormateados = this.funcionesDatosService.formatearFechasParaBackend(formValue, [
