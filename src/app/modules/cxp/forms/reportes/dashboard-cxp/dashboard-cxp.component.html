@@ -20,7 +20,10 @@
                  #fechaDesdeInput
                  [matDatepicker]="pickerDesde"
                  [formControl]="fechaDesdeControl"
-                 placeholder="dd/MM/yyyy">
+                 placeholder="dd/MM/yyyy"
+                 (input)="capturarFechaDesdeRaw($event)"
+                 (dateChange)="onFechaDesdePickerChange($event.value)"
+                 (blur)="syncFechaDesdeFromRaw($event)">
           <mat-datepicker-toggle matSuffix [for]="pickerDesde"></mat-datepicker-toggle>
           <mat-datepicker #pickerDesde></mat-datepicker>
         </mat-form-field>
@@ -31,7 +34,10 @@
                  #fechaHastaInput
                  [matDatepicker]="pickerHasta"
                  [formControl]="fechaHastaControl"
-                 placeholder="dd/MM/yyyy">
+                 placeholder="dd/MM/yyyy"
+                 (input)="capturarFechaHastaRaw($event)"
+                 (dateChange)="onFechaHastaPickerChange($event.value)"
+                 (blur)="syncFechaHastaFromRaw($event)">
           <mat-datepicker-toggle matSuffix [for]="pickerHasta"></mat-datepicker-toggle>
           <mat-datepicker #pickerHasta></mat-datepicker>
         </mat-form-field>

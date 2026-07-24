@@ -109,7 +109,16 @@
         <mat-form-field appearance="outline"><mat-label>Autorización doc.</mat-label><input matInput [(ngModel)]="drAutorizacion" [readonly]="!!documentoRetenidoSeleccionado" /></mat-form-field>
         <mat-form-field appearance="outline">
           <mat-label>Fecha emisión doc.</mat-label>
-          <input matInput [matDatepicker]="pickerFechaEmiDocRetV2" [formControl]="fechaEmiDocControl" placeholder="dd/mm/aaaa" readonly />
+          <input
+            #fechaEmiDocV2Input
+            matInput
+            [matDatepicker]="pickerFechaEmiDocRetV2"
+            [formControl]="fechaEmiDocControl"
+            placeholder="dd/mm/aaaa"
+            (input)="capturarFechaEmiDocRaw($event)"
+            (dateChange)="onFechaEmiDocPickerChange($event.value)"
+            (blur)="syncFechaEmiDocFromRaw($event)"
+          />
           <mat-datepicker-toggle matIconSuffix [for]="pickerFechaEmiDocRetV2"></mat-datepicker-toggle>
           <mat-datepicker #pickerFechaEmiDocRetV2></mat-datepicker>
         </mat-form-field>

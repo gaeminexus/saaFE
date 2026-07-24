@@ -68,6 +68,9 @@ export class DashboardCxpComponent implements OnInit {
   fechaDesdeControl = new UntypedFormControl(null);
   fechaHastaControl = new UntypedFormControl(null);
 
+  private _rawFechaDesde = '';
+  private _rawFechaHasta = '';
+
   loading = signal<boolean>(false);
   errorMsg = signal<string>('');
   agrupacion = signal<AgrupacionTipo>('proveedor');
@@ -282,10 +285,78 @@ export class DashboardCxpComponent implements OnInit {
   }
 
   limpiar(): void {
-    this.fechaDesdeControl.setValue(null);
-    this.fechaHastaControl.setValue(null);
+    this.fechaDesdeControl.setValue(null, { emitEvent: false });
+    this.fechaHastaControl.setValue(null, { emitEvent: false });
+    setTimeout(() => {
+      if (this.fechaDesdeInput?.nativeElement) this.fechaDesdeInput.nativeElement.value = '';
+      if (this.fechaHastaInput?.nativeElement) this.fechaHastaInput.nativeElement.value = '';
+    });
     this.rows.set([]);
     this.rawData = [];
     this.errorMsg.set('');
+  }
+
+  capturarFechaDesdeRaw(event: Event): void {
+    this._rawFechaDesde = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaDesdeFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaDesde || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaDesde = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        const formatted = this.fn.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+        this.fechaDesdeControl.setValue(date, { emitEvent: false });
+        setTimeout(() => {
+          if (this.fechaDesdeInput?.nativeElement) this.fechaDesdeInput.nativeElement.value = formatted;
+        });
+      }
+    }
+  }
+
+  onFechaDesdePickerChange(date: Date | null | undefined): void {
+    const d = date || null;
+    this.fechaDesdeControl.setValue(d, { emitEvent: false });
+    const formatted = d ? this.fn.formatoFecha(d, FuncionesDatosService.SOLO_FECHA) || '' : '';
+    setTimeout(() => {
+      if (this.fechaDesdeInput?.nativeElement) this.fechaDesdeInput.nativeElement.value = formatted;
+    });
+  }
+
+  capturarFechaHastaRaw(event: Event): void {
+    this._rawFechaHasta = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaHastaFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaHasta || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaHasta = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        const formatted = this.fn.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+        this.fechaHastaControl.setValue(date, { emitEvent: false });
+        setTimeout(() => {
+          if (this.fechaHastaInput?.nativeElement) this.fechaHastaInput.nativeElement.value = formatted;
+        });
+      }
+    }
+  }
+
+  onFechaHastaPickerChange(date: Date | null | undefined): void {
+    const d = date || null;
+    this.fechaHastaControl.setValue(d, { emitEvent: false });
+    const formatted = d ? this.fn.formatoFecha(d, FuncionesDatosService.SOLO_FECHA) || '' : '';
+    setTimeout(() => {
+      if (this.fechaHastaInput?.nativeElement) this.fechaHastaInput.nativeElement.value = formatted;
+    });
   }
 }

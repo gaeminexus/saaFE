@@ -1,7 +1,8 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild, inject, signal } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule, UntypedFormControl } from '@angular/forms';
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
+import { FuncionesDatosService } from '../../../../shared/services/funciones-datos.service';
 import { FacturaEmitirService } from '../../service/emitir/factura-emitir.service';
 import { MatTableDataSource } from '@angular/material/table';
 
@@ -51,20 +52,27 @@ const SAA_COLORS = [
 @Component({
   selector: 'app-dash-ventas',
   standalone: true,
-  imports: [CommonModule, FormsModule, MaterialFormModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, MaterialFormModule],
   providers: [DatePipe],
   templateUrl: './dash-ventas.component.html',
   styleUrl: './dash-ventas.component.scss'
 })
 export class DashVentasComponent implements OnInit {
+  @ViewChild('fechaDesdeInput', { read: ElementRef }) fechaDesdeInputRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('fechaHastaInput', { read: ElementRef }) fechaHastaInputRef!: ElementRef<HTMLInputElement>;
+
   private readonly facturaService = inject(FacturaEmitirService);
   private readonly datePipe = inject(DatePipe);
+  private readonly funcionesDatosS = inject(FuncionesDatosService);
 
   anioSeleccionado: number = new Date().getFullYear();
   aniosDisponibles: number[] = [];
-  fechaDesde: Date | null = null;
-  fechaHasta: Date | null = null;
+  fechaDesdeControl = new UntypedFormControl(null);
+  fechaHastaControl = new UntypedFormControl(null);
   tipoAgrupacion: 'mes' | 'cliente' | 'total' | 'semana' = 'mes';
+
+  private _rawFechaDesde = '';
+  private _rawFechaHasta = '';
 
   loading = signal<boolean>(false);
   datosOriginales: any[] = [];
@@ -85,8 +93,8 @@ export class DashVentasComponent implements OnInit {
 
   ngOnInit(): void {
     this.generarAniosDisponibles();
-    this.fechaDesde = new Date(this.anioSeleccionado, 0, 1);
-    this.fechaHasta = new Date(this.anioSeleccionado, 11, 31);
+    this.fechaDesdeControl.setValue(new Date(this.anioSeleccionado, 0, 1), { emitEvent: false });
+    this.fechaHastaControl.setValue(new Date(this.anioSeleccionado, 11, 31), { emitEvent: false });
   }
 
   generarAniosDisponibles(): void {
@@ -97,17 +105,24 @@ export class DashVentasComponent implements OnInit {
   }
 
   onAnioChange(): void {
-    this.fechaDesde = new Date(this.anioSeleccionado, 0, 1);
-    this.fechaHasta = new Date(this.anioSeleccionado, 11, 31);
+    const desde = new Date(this.anioSeleccionado, 0, 1);
+    const hasta = new Date(this.anioSeleccionado, 11, 31);
+    this.fechaDesdeControl.setValue(desde, { emitEvent: false });
+    this.fechaHastaControl.setValue(hasta, { emitEvent: false });
+    this.forzarTextoFecha(this.fechaDesdeInputRef, desde);
+    this.forzarTextoFecha(this.fechaHastaInputRef, hasta);
   }
 
   buscarDatos(): void {
-    if (!this.fechaDesde || !this.fechaHasta) {
+    const fechaDesde: Date | null = this.fechaDesdeControl.value;
+    const fechaHasta: Date | null = this.fechaHastaControl.value;
+
+    if (!fechaDesde || !fechaHasta) {
       alert('Debe seleccionar un rango de fechas');
       return;
     }
 
-    if (this.fechaDesde > this.fechaHasta) {
+    if (fechaDesde > fechaHasta) {
       alert('La fecha inicial no puede ser mayor a la fecha final');
       return;
     }
@@ -117,7 +132,7 @@ export class DashVentasComponent implements OnInit {
       next: (facturas) => {
         this.datosOriginales = (facturas || []).filter(factura => {
           const fecha = this.asDate(factura.fecha);
-          return fecha && fecha >= this.fechaDesde! && fecha <= this.fechaHasta!;
+          return fecha && fecha >= fechaDesde && fecha <= fechaHasta;
         });
 
         this.agruparDatos();
@@ -307,8 +322,8 @@ export class DashVentasComponent implements OnInit {
     }
 
     const nombreEmpresa = localStorage.getItem('empresaName') || 'Empresa';
-    const fechaDesdeStr = this.datePipe.transform(this.fechaDesde, 'dd/MM/yyyy');
-    const fechaHastaStr = this.datePipe.transform(this.fechaHasta, 'dd/MM/yyyy');
+    const fechaDesdeStr = this.datePipe.transform(this.fechaDesdeControl.value, 'dd/MM/yyyy');
+    const fechaHastaStr = this.datePipe.transform(this.fechaHastaControl.value, 'dd/MM/yyyy');
     const tipoTexto = this.obtenerTextoAgrupacion();
 
     const headerData = [
@@ -353,7 +368,7 @@ export class DashVentasComponent implements OnInit {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Dashboard');
 
-    const fechaStr = this.datePipe.transform(this.fechaDesde, 'dd-MM-yyyy');
+    const fechaStr = this.datePipe.transform(this.fechaDesdeControl.value, 'dd-MM-yyyy');
     XLSX.writeFile(wb, `dashboard-ventas-${fechaStr}.xlsx`);
   }
 
@@ -368,8 +383,12 @@ export class DashVentasComponent implements OnInit {
   }
 
   limpiar(): void {
-    this.fechaDesde = new Date(this.anioSeleccionado, 0, 1);
-    this.fechaHasta = new Date(this.anioSeleccionado, 11, 31);
+    const desde = new Date(this.anioSeleccionado, 0, 1);
+    const hasta = new Date(this.anioSeleccionado, 11, 31);
+    this.fechaDesdeControl.setValue(desde, { emitEvent: false });
+    this.fechaHastaControl.setValue(hasta, { emitEvent: false });
+    this.forzarTextoFecha(this.fechaDesdeInputRef, desde);
+    this.forzarTextoFecha(this.fechaHastaInputRef, hasta);
     this.tipoAgrupacion = 'mes';
     this.resultados = [];
     this.dataSource.data = [];
@@ -377,6 +396,65 @@ export class DashVentasComponent implements OnInit {
     this.totalGeneral = { subtotal: 0, valorIVA: 0, total: 0, cantidad: 0 };
     this.donutSlices = [];
     this.comparativaMetricas = [];
+  }
+
+  private forzarTextoFecha(ref: ElementRef<HTMLInputElement>, date: Date | null): void {
+    const formatted = date ? this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '' : '';
+    setTimeout(() => {
+      if (ref?.nativeElement) ref.nativeElement.value = formatted;
+    });
+  }
+
+  capturarFechaDesdeRaw(event: Event): void {
+    this._rawFechaDesde = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaDesdeFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaDesde || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaDesde = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        this.fechaDesdeControl.setValue(date, { emitEvent: false });
+        this.forzarTextoFecha(this.fechaDesdeInputRef, date);
+      }
+    }
+  }
+
+  onFechaDesdePickerChange(date: Date | null | undefined): void {
+    const d = date || null;
+    this.fechaDesdeControl.setValue(d, { emitEvent: false });
+    this.forzarTextoFecha(this.fechaDesdeInputRef, d);
+  }
+
+  capturarFechaHastaRaw(event: Event): void {
+    this._rawFechaHasta = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaHastaFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaHasta || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaHasta = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        this.fechaHastaControl.setValue(date, { emitEvent: false });
+        this.forzarTextoFecha(this.fechaHastaInputRef, date);
+      }
+    }
+  }
+
+  onFechaHastaPickerChange(date: Date | null | undefined): void {
+    const d = date || null;
+    this.fechaHastaControl.setValue(d, { emitEvent: false });
+    this.forzarTextoFecha(this.fechaHastaInputRef, d);
   }
 
   private asDate(value: Date | string | null | undefined): Date | null {

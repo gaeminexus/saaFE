@@ -131,7 +131,16 @@
                   </mat-form-field>
                   <mat-form-field appearance="outline">
                     <mat-label>Fecha Pago Acordada</mat-label>
-                    <input matInput [matDatepicker]="pickerCuota" [formControl]="fechaCuotaControl" placeholder="dd/mm/aaaa" />
+                    <input
+                      #fechaCuotaInput
+                      matInput
+                      [matDatepicker]="pickerCuota"
+                      [formControl]="fechaCuotaControl"
+                      placeholder="dd/mm/aaaa"
+                      (input)="capturarFechaCuotaRaw($event)"
+                      (dateChange)="onFechaCuotaPickerChange($event.value)"
+                      (blur)="syncFechaCuotaFromRaw($event)"
+                    />
                     <mat-datepicker-toggle matIconSuffix [for]="pickerCuota"></mat-datepicker-toggle>
                     <mat-datepicker #pickerCuota></mat-datepicker>
                   </mat-form-field>

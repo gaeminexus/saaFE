@@ -1,8 +1,9 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Component, ElementRef, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
+import { FormsModule, ReactiveFormsModule, UntypedFormControl } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { FacturaEmitir } from '../../../model/factura-emitir';
 import { FormaPagoFactura } from '../../../model/forma-pago-factura';
 import { FacturaEmitirService } from '../../../service/emitir/factura-emitir.service';
@@ -16,6 +17,7 @@ const FORMA_PAGO_CREDITO = '20';
 interface CuotaPlan {
   numero: number;
   fechaPago: string;
+  fechaControl: UntypedFormControl;
   porcentaje: number;
   valor: number;
 }
@@ -23,13 +25,19 @@ interface CuotaPlan {
 @Component({
   selector: 'app-financiar-factura',
   standalone: true,
-  imports: [CommonModule, FormsModule, MaterialFormModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, MaterialFormModule],
   templateUrl: './financiar-factura.component.html',
   styleUrl: './financiar-factura.component.scss',
 })
 export class FinanciarFacturaComponent implements OnInit {
+  @ViewChild('fechaInicioInput', { read: ElementRef }) fechaInicioInputRef!: ElementRef<HTMLInputElement>;
+
   private facturaService = inject(FacturaEmitirService);
+  private funcionesDatosS = inject(FuncionesDatosService);
   private snackBar = inject(MatSnackBar);
+
+  private _rawFechaInicio = '';
+  private _rawCuotaFecha: Record<number, string> = {};
 
   cargando = signal(false);
   facturas = signal<FacturaEmitir[]>([]);
@@ -40,6 +48,7 @@ export class FinanciarFacturaComponent implements OnInit {
   numeroPagos = signal(3);
   modoProgramacion = signal<ModoProgramacion>('PERIODICIDAD');
   periodicidad = signal<Periodicidad>('MENSUAL');
+  fechaInicioControl = new UntypedFormControl(new Date());
   fechaInicio = signal(this.hoyISO());
   modoMonto = signal<ModoMonto>('PORCENTAJE');
 
@@ -328,6 +337,7 @@ export class FinanciarFacturaComponent implements OnInit {
       const cuotas = Array.from({ length: numeroPagos }, (_, idx) => ({
         numero: idx + 1,
         fechaPago: fechas[idx],
+        fechaControl: new UntypedFormControl(this.parseDate(fechas[idx])),
         porcentaje: porcentajeBase,
         valor: this.round2((total * porcentajeBase) / 100),
       }));
@@ -343,6 +353,7 @@ export class FinanciarFacturaComponent implements OnInit {
     const cuotas = Array.from({ length: numeroPagos }, (_, idx) => ({
       numero: idx + 1,
       fechaPago: fechas[idx],
+      fechaControl: new UntypedFormControl(this.parseDate(fechas[idx])),
       valor: valorBase,
       porcentaje: total > 0 ? this.round4((valorBase / total) * 100) : 0,
     }));
@@ -371,6 +382,74 @@ export class FinanciarFacturaComponent implements OnInit {
 
   private hoyISO(): string {
     return this.toISODate(new Date());
+  }
+
+  capturarFechaInicioRaw(event: Event): void {
+    this._rawFechaInicio = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaInicioFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaInicio || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaInicio = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        this.aplicarFechaInicio(date);
+      }
+    }
+  }
+
+  onFechaInicioPickerChange(date: Date | null | undefined): void {
+    this.aplicarFechaInicio(date || new Date());
+  }
+
+  private aplicarFechaInicio(date: Date): void {
+    this.fechaInicioControl.setValue(date, { emitEvent: false });
+    this.fechaInicio.set(this.toISODate(date));
+    const formatted = this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+    setTimeout(() => {
+      if (this.fechaInicioInputRef?.nativeElement) this.fechaInicioInputRef.nativeElement.value = formatted;
+    });
+  }
+
+  capturarCuotaFechaRaw(idx: number, event: Event): void {
+    this._rawCuotaFecha[idx] = (event.target as HTMLInputElement).value;
+  }
+
+  syncCuotaFechaFromRaw(idx: number, event: FocusEvent): void {
+    const rawValue = (this._rawCuotaFecha[idx] || (event.target as HTMLInputElement)?.value || '').trim();
+    delete this._rawCuotaFecha[idx];
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        this.aplicarCuotaFecha(idx, date, event.target as HTMLInputElement);
+      }
+    }
+  }
+
+  onCuotaFechaPickerChange(idx: number, date: Date | null | undefined, input: HTMLInputElement): void {
+    this.aplicarCuotaFecha(idx, date || new Date(), input);
+  }
+
+  private aplicarCuotaFecha(idx: number, date: Date, input: HTMLInputElement): void {
+    const actualizado = [...this.cuotas()];
+    const cuota = actualizado[idx];
+    if (!cuota) return;
+    cuota.fechaControl.setValue(date, { emitEvent: false });
+    cuota.fechaPago = this.toISODate(date);
+    this.cuotas.set(actualizado);
+    const formatted = this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+    setTimeout(() => {
+      if (input) input.value = formatted;
+    });
   }
 
   private toNumber(value: unknown): number {

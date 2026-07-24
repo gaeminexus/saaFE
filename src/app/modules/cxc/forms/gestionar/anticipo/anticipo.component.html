@@ -29,12 +29,34 @@
         <div class="form-grid">
           <mat-form-field appearance="outline">
             <mat-label>Fecha anticipo</mat-label>
-            <input matInput type="date" [(ngModel)]="fechaAnticipo" />
+            <input
+              #fechaAnticipoInput
+              matInput
+              [matDatepicker]="pickerFechaAnticipo"
+              [formControl]="fechaAnticipoControl"
+              placeholder="dd/mm/aaaa"
+              (input)="capturarFechaAnticipoRaw($event)"
+              (dateChange)="onFechaAnticipoPickerChange($event.value)"
+              (blur)="syncFechaAnticipoFromRaw($event)"
+            />
+            <mat-datepicker-toggle matIconSuffix [for]="pickerFechaAnticipo"></mat-datepicker-toggle>
+            <mat-datepicker #pickerFechaAnticipo></mat-datepicker>
           </mat-form-field>
 
           <mat-form-field appearance="outline">
             <mat-label>Fecha recepción</mat-label>
-            <input matInput type="date" [(ngModel)]="fechaRecepcion" />
+            <input
+              #fechaRecepcionInput
+              matInput
+              [matDatepicker]="pickerFechaRecepcion"
+              [formControl]="fechaRecepcionControl"
+              placeholder="dd/mm/aaaa"
+              (input)="capturarFechaRecepcionRaw($event)"
+              (dateChange)="onFechaRecepcionPickerChange($event.value)"
+              (blur)="syncFechaRecepcionFromRaw($event)"
+            />
+            <mat-datepicker-toggle matIconSuffix [for]="pickerFechaRecepcion"></mat-datepicker-toggle>
+            <mat-datepicker #pickerFechaRecepcion></mat-datepicker>
           </mat-form-field>
 
           <mat-form-field appearance="outline">

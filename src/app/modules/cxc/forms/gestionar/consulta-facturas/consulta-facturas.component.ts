@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Component, ElementRef, OnInit, ViewChild, inject, signal } from '@angular/core';
+import { FormsModule, ReactiveFormsModule, UntypedFormControl } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableDataSource } from '@angular/material/table';
@@ -9,20 +9,25 @@ import { FacturaEmitir } from '../../../model/factura-emitir';
 import { FacturaEmitirService } from '../../../service/emitir/factura-emitir.service';
 import { DetalleSriService } from '../../../service/detalle-sri.service';
 import { DetalleSri } from '../../../model/detalle-sri';
+import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { JasperReportesService } from '../../../../../shared/services/jasper-reportes.service';
 import { MotivoAnulacionDialogComponent } from '../motivo-anulacion-dialog/motivo-anulacion-dialog.component';
 
 @Component({
   selector: 'app-consulta-facturas',
   standalone: true,
-  imports: [CommonModule, FormsModule, MaterialFormModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, MaterialFormModule],
   templateUrl: './consulta-facturas.component.html',
   styleUrl: './consulta-facturas.component.scss',
 })
 export class ConsultaFacturasComponent implements OnInit {
+  @ViewChild('fechaDesdeInput', { read: ElementRef }) fechaDesdeInputRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('fechaHastaInput', { read: ElementRef }) fechaHastaInputRef!: ElementRef<HTMLInputElement>;
+
   private facturaService = inject(FacturaEmitirService);
   private detalleSriService = inject(DetalleSriService);
   private jasperReportes = inject(JasperReportesService);
+  private funcionesDatosS = inject(FuncionesDatosService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
 
@@ -39,11 +44,14 @@ export class ConsultaFacturasComponent implements OnInit {
   cargando = signal(false);
   estados = signal<Array<{ value: string; label: string }>>([]);
 
-  fechaDesde: Date | null = null;
-  fechaHasta: Date | null = null;
+  fechaDesdeControl = new UntypedFormControl(null);
+  fechaHastaControl = new UntypedFormControl(null);
   numeroAutorizacion = '';
   cliente = '';
   estado: number | '' = '';
+
+  private _rawFechaDesde = '';
+  private _rawFechaHasta = '';
 
   registros: FacturaEmitir[] = [];
   dataSource = new MatTableDataSource<FacturaEmitir>([]);
@@ -122,12 +130,78 @@ export class ConsultaFacturasComponent implements OnInit {
   }
 
   limpiarFiltros(): void {
-    this.fechaDesde = null;
-    this.fechaHasta = null;
+    this.fechaDesdeControl.setValue(null, { emitEvent: false });
+    this.fechaHastaControl.setValue(null, { emitEvent: false });
     this.numeroAutorizacion = '';
     this.cliente = '';
     this.estado = '';
+    setTimeout(() => {
+      if (this.fechaDesdeInputRef?.nativeElement) this.fechaDesdeInputRef.nativeElement.value = '';
+      if (this.fechaHastaInputRef?.nativeElement) this.fechaHastaInputRef.nativeElement.value = '';
+    });
     this.buscar();
+  }
+
+  capturarFechaDesdeRaw(event: Event): void {
+    this._rawFechaDesde = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaDesdeFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaDesde || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaDesde = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        const formatted = this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+        this.fechaDesdeControl.setValue(date, { emitEvent: false });
+        setTimeout(() => {
+          if (this.fechaDesdeInputRef?.nativeElement) this.fechaDesdeInputRef.nativeElement.value = formatted;
+        });
+      }
+    }
+  }
+
+  onFechaDesdePickerChange(date: Date | null | undefined): void {
+    this.fechaDesdeControl.setValue(date || null, { emitEvent: false });
+    const formatted = date ? this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '' : '';
+    setTimeout(() => {
+      if (this.fechaDesdeInputRef?.nativeElement) this.fechaDesdeInputRef.nativeElement.value = formatted;
+    });
+  }
+
+  capturarFechaHastaRaw(event: Event): void {
+    this._rawFechaHasta = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaHastaFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaHasta || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaHasta = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        const formatted = this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+        this.fechaHastaControl.setValue(date, { emitEvent: false });
+        setTimeout(() => {
+          if (this.fechaHastaInputRef?.nativeElement) this.fechaHastaInputRef.nativeElement.value = formatted;
+        });
+      }
+    }
+  }
+
+  onFechaHastaPickerChange(date: Date | null | undefined): void {
+    this.fechaHastaControl.setValue(date || null, { emitEvent: false });
+    const formatted = date ? this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '' : '';
+    setTimeout(() => {
+      if (this.fechaHastaInputRef?.nativeElement) this.fechaHastaInputRef.nativeElement.value = formatted;
+    });
   }
 
   anular(row: FacturaEmitir): void {
@@ -321,10 +395,12 @@ export class ConsultaFacturasComponent implements OnInit {
       }
 
       const fecha = this.asDate(row.fecha);
-      if (this.fechaDesde && fecha && this.soloFecha(fecha) < this.soloFecha(this.fechaDesde)) {
+      const fechaDesde: Date | null = this.fechaDesdeControl.value;
+      const fechaHasta: Date | null = this.fechaHastaControl.value;
+      if (fechaDesde && fecha && this.soloFecha(fecha) < this.soloFecha(fechaDesde)) {
         return false;
       }
-      if (this.fechaHasta && fecha && this.soloFecha(fecha) > this.soloFecha(this.fechaHasta)) {
+      if (fechaHasta && fecha && this.soloFecha(fecha) > this.soloFecha(fechaHasta)) {
         return false;
       }
 

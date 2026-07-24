@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild, inject, signal } from '@angular/core';
 import { FormsModule, UntypedFormControl } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
@@ -38,6 +38,8 @@ export interface CuotaConPagos extends FormaPagoNegociacion {
   styleUrl: './detalle-negociacion.component.scss',
 })
 export class DetalleNegociacionComponent implements OnInit {
+  @ViewChild('fechaCuotaInput', { read: ElementRef }) fechaCuotaInputRef!: ElementRef<HTMLInputElement>;
+
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private dialog = inject(MatDialog);
@@ -69,6 +71,7 @@ export class DetalleNegociacionComponent implements OnInit {
   editandoCuota = signal<CuotaConPagos | null>(null);
   formCuota = { numeroCuota: 1, descripcion: '', porcentaje: 0, valorCuota: 0, orden: 1 };
   fechaCuotaControl = new UntypedFormControl(null);
+  private _rawFechaCuota = '';
 
   // Resumen financiero
   valorVigente = signal(0);
@@ -157,6 +160,7 @@ export class DetalleNegociacionComponent implements OnInit {
     this.fechaCuotaControl.setValue(null, { emitEvent: false });
     this.editandoCuota.set(null);
     this.mostrarFormCuota.set(true);
+    this.forzarTextoFechaCuota(null);
   }
 
   editarCuota(c: CuotaConPagos): void {
@@ -165,6 +169,40 @@ export class DetalleNegociacionComponent implements OnInit {
     this.fechaCuotaControl.setValue(d, { emitEvent: false });
     this.editandoCuota.set(c);
     this.mostrarFormCuota.set(true);
+    this.forzarTextoFechaCuota(d);
+  }
+
+  private forzarTextoFechaCuota(date: Date | null): void {
+    const formatted = date ? this.funcionesDatos.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '' : '';
+    setTimeout(() => {
+      if (this.fechaCuotaInputRef?.nativeElement) this.fechaCuotaInputRef.nativeElement.value = formatted;
+    });
+  }
+
+  capturarFechaCuotaRaw(event: Event): void {
+    this._rawFechaCuota = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaCuotaFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaCuota || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaCuota = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        this.fechaCuotaControl.setValue(date, { emitEvent: false });
+        this.forzarTextoFechaCuota(date);
+      }
+    }
+  }
+
+  onFechaCuotaPickerChange(date: Date | null | undefined): void {
+    const d = date || null;
+    this.fechaCuotaControl.setValue(d, { emitEvent: false });
+    this.forzarTextoFechaCuota(d);
   }
 
   calcularValorDesdePorcentaje(): void {

@@ -1,10 +1,11 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Component, ElementRef, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
+import { FormsModule, ReactiveFormsModule, UntypedFormControl } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableDataSource } from '@angular/material/table';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { TitularSelectorDialogComponent } from '../../../../../shared/components/titular-selector-dialog/titular-selector-dialog.component';
 import { Empresa } from '../../../../../shared/model/empresa';
 import { Usuario } from '../../../../../shared/model/usuario';
@@ -16,15 +17,22 @@ import { PersonaCuentaContableService } from '../../../../tsr/service/persona-cu
 @Component({
   selector: 'app-anticipo',
   standalone: true,
-  imports: [CommonModule, FormsModule, MaterialFormModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, MaterialFormModule],
   templateUrl: './anticipo.component.html',
   styleUrl: './anticipo.component.scss',
 })
 export class AnticipoComponent implements OnInit {
+  @ViewChild('fechaAnticipoInput', { read: ElementRef }) fechaAnticipoInputRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('fechaRecepcionInput', { read: ElementRef }) fechaRecepcionInputRef!: ElementRef<HTMLInputElement>;
+
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
   private anticipoService = inject(AnticipoClienteService);
   private personaCuentaContableService = inject(PersonaCuentaContableService);
+  private funcionesDatosS = inject(FuncionesDatosService);
+
+  private _rawFechaAnticipo = '';
+  private _rawFechaRecepcion = '';
 
   readonly rolTitularCodigo = 1;
   readonly rolTitularNombre = 'CLIENTE';
@@ -49,6 +57,8 @@ export class AnticipoComponent implements OnInit {
   columnas = ['id', 'fechaAnticipo', 'titular', 'numeroDoc', 'valor', 'estado'];
 
   id: number | null = null;
+  fechaAnticipoControl = new UntypedFormControl(new Date());
+  fechaRecepcionControl = new UntypedFormControl(new Date());
   fechaAnticipo = this.hoyISO();
   fechaRecepcion = this.hoyISO();
   numeroDoc = '';
@@ -153,8 +163,8 @@ export class AnticipoComponent implements OnInit {
 
   nuevo(): void {
     this.id = null;
-    this.fechaAnticipo = this.hoyISO();
-    this.fechaRecepcion = this.hoyISO();
+    this.aplicarFechaAnticipo(new Date());
+    this.aplicarFechaRecepcion(new Date());
     this.numeroDoc = '';
     this.valor = 0;
     this.observacion = '';
@@ -183,8 +193,8 @@ export class AnticipoComponent implements OnInit {
 
   seleccionarRegistro(row: AnticipoCliente): void {
     this.id = Number(row.id || 0);
-    this.fechaAnticipo = this.toDateInput(row.fechaAnticipo);
-    this.fechaRecepcion = this.toDateInput(row.fechaRecepcion);
+    this.aplicarFechaAnticipo(this.toDateObj(row.fechaAnticipo));
+    this.aplicarFechaRecepcion(this.toDateObj(row.fechaRecepcion));
     this.numeroDoc = row.numeroDoc || '';
     this.valor = Number(row.valor || 0);
     this.observacion = row.observacion || '';
@@ -262,16 +272,78 @@ export class AnticipoComponent implements OnInit {
     return { codigo: 0, jerarquia: { codigo: 0, nombre: '' } as any, nombre: '', nivel: 0, codigoPadre: 0, ingresado: 0 };
   }
 
-  private toDateInput(value: string | Date | undefined): string {
-    if (!value) {
-      return this.hoyISO();
-    }
+  private toDateObj(value: string | Date | undefined): Date {
+    if (!value) return new Date();
     const date = value instanceof Date ? value : new Date(value);
-    return Number.isNaN(date.getTime()) ? this.hoyISO() : date.toISOString().slice(0, 10);
+    return Number.isNaN(date.getTime()) ? new Date() : date;
   }
 
   private hoyISO(): string {
     return new Date().toISOString().slice(0, 10);
+  }
+
+  private aplicarFechaAnticipo(date: Date): void {
+    this.fechaAnticipoControl.setValue(date, { emitEvent: false });
+    this.fechaAnticipo = date.toISOString().slice(0, 10);
+    const formatted = this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+    setTimeout(() => {
+      if (this.fechaAnticipoInputRef?.nativeElement) this.fechaAnticipoInputRef.nativeElement.value = formatted;
+    });
+  }
+
+  private aplicarFechaRecepcion(date: Date): void {
+    this.fechaRecepcionControl.setValue(date, { emitEvent: false });
+    this.fechaRecepcion = date.toISOString().slice(0, 10);
+    const formatted = this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+    setTimeout(() => {
+      if (this.fechaRecepcionInputRef?.nativeElement) this.fechaRecepcionInputRef.nativeElement.value = formatted;
+    });
+  }
+
+  capturarFechaAnticipoRaw(event: Event): void {
+    this._rawFechaAnticipo = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaAnticipoFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaAnticipo || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaAnticipo = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        this.aplicarFechaAnticipo(date);
+      }
+    }
+  }
+
+  onFechaAnticipoPickerChange(date: Date | null | undefined): void {
+    this.aplicarFechaAnticipo(date || new Date());
+  }
+
+  capturarFechaRecepcionRaw(event: Event): void {
+    this._rawFechaRecepcion = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaRecepcionFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaRecepcion || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaRecepcion = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        this.aplicarFechaRecepcion(date);
+      }
+    }
+  }
+
+  onFechaRecepcionPickerChange(date: Date | null | undefined): void {
+    this.aplicarFechaRecepcion(date || new Date());
   }
 
   private mostrarExito(message: string): void {

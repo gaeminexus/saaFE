@@ -1,11 +1,12 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Component, ElementRef, OnInit, ViewChild, inject, signal } from '@angular/core';
+import { FormsModule, ReactiveFormsModule, UntypedFormControl } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableDataSource } from '@angular/material/table';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { DocumentoCxp } from '../../../model/documento-cxp';
 import { DetalleFacturaCompraService } from '../../../service/detalle-factura-compra.service';
 import { DetalleLiquidacionCompraCompraService } from '../../../service/detalle-liquidacion-compra-compra.service';
@@ -24,12 +25,19 @@ import { RetencionCompraService } from '../../../service/retencion-compra.servic
 @Component({
   selector: 'app-consulta-documentos',
   standalone: true,
-  imports: [CommonModule, FormsModule, MaterialFormModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, MaterialFormModule],
   templateUrl: './consulta-documentos.component.html',
   styleUrl: './consulta-documentos.component.scss',
 })
 export class ConsultaDocumentosComponent implements OnInit {
+  @ViewChild('filtroFechaDesdeInput', { read: ElementRef }) filtroFechaDesdeInputRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('filtroFechaHastaInput', { read: ElementRef }) filtroFechaHastaInputRef!: ElementRef<HTMLInputElement>;
+
   private snackBar = inject(MatSnackBar);
+  private funcionesDatosS = inject(FuncionesDatosService);
+
+  private _rawFiltroFechaDesde = '';
+  private _rawFiltroFechaHasta = '';
   private docService = inject(DocumentoCxpService);
   private facturaService = inject(FacturaCompraService);
   private detalleFacturaService = inject(DetalleFacturaCompraService);
@@ -59,8 +67,8 @@ export class ConsultaDocumentosComponent implements OnInit {
   filtroProveedor = '';
   filtroTipo = '';
   filtroTabla = '';
-  filtroFechaDesde = '';
-  filtroFechaHasta = '';
+  filtroFechaDesdeControl = new UntypedFormControl(null);
+  filtroFechaHastaControl = new UntypedFormControl(null);
 
   // Detalle — datos reales de la tabla destino
   docSeleccionado: DocumentoCxp | null = null;
@@ -87,7 +95,13 @@ export class ConsultaDocumentosComponent implements OnInit {
 
   limpiarFiltros(): void {
     this.filtroRuc = ''; this.filtroProveedor = ''; this.filtroTipo = '';
-    this.filtroTabla = ''; this.filtroFechaDesde = ''; this.filtroFechaHasta = '';
+    this.filtroTabla = '';
+    this.filtroFechaDesdeControl.setValue(null, { emitEvent: false });
+    this.filtroFechaHastaControl.setValue(null, { emitEvent: false });
+    setTimeout(() => {
+      if (this.filtroFechaDesdeInputRef?.nativeElement) this.filtroFechaDesdeInputRef.nativeElement.value = '';
+      if (this.filtroFechaHastaInputRef?.nativeElement) this.filtroFechaHastaInputRef.nativeElement.value = '';
+    });
     this.aplicarFiltros();
   }
 
@@ -97,9 +111,19 @@ export class ConsultaDocumentosComponent implements OnInit {
     if (this.filtroProveedor.trim()) r = r.filter(d => d.razonSocialEmisor?.toLowerCase().includes(this.filtroProveedor.trim().toLowerCase()));
     if (this.filtroTipo.trim()) r = r.filter(d => d.tipoComprobante?.toLowerCase().includes(this.filtroTipo.trim().toLowerCase()));
     if (this.filtroTabla.trim()) r = r.filter(d => d.tipoTablaDestino?.toLowerCase().includes(this.filtroTabla.trim().toLowerCase()));
-    if (this.filtroFechaDesde) r = r.filter(d => this.strFecha(d.fechaEmision) >= this.filtroFechaDesde);
-    if (this.filtroFechaHasta) r = r.filter(d => this.strFecha(d.fechaEmision) <= this.filtroFechaHasta);
+    const desde = this.toISODate(this.filtroFechaDesdeControl.value);
+    const hasta = this.toISODate(this.filtroFechaHastaControl.value);
+    if (desde) r = r.filter(d => this.strFecha(d.fechaEmision) >= desde);
+    if (hasta) r = r.filter(d => this.strFecha(d.fechaEmision) <= hasta);
     this.dsDocumentos.data = r;
+  }
+
+  private toISODate(date: Date | null): string {
+    if (!date) return '';
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
   }
 
   // ─── DETALLE ──────────────────────────────────────────
@@ -197,6 +221,68 @@ export class ConsultaDocumentosComponent implements OnInit {
     if (!value) return null;
     if (Array.isArray(value)) { const [y, mo, d, h = 0, m = 0, s = 0] = value as number[]; return new Date(y, mo - 1, d, h, m, s); }
     const d = new Date(value); return isNaN(d.getTime()) ? null : d;
+  }
+
+  capturarFiltroFechaDesdeRaw(event: Event): void {
+    this._rawFiltroFechaDesde = (event.target as HTMLInputElement).value;
+  }
+
+  syncFiltroFechaDesdeFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFiltroFechaDesde || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFiltroFechaDesde = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        const formatted = this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+        this.filtroFechaDesdeControl.setValue(date, { emitEvent: false });
+        setTimeout(() => {
+          if (this.filtroFechaDesdeInputRef?.nativeElement) this.filtroFechaDesdeInputRef.nativeElement.value = formatted;
+        });
+      }
+    }
+  }
+
+  onFiltroFechaDesdePickerChange(date: Date | null | undefined): void {
+    this.filtroFechaDesdeControl.setValue(date || null, { emitEvent: false });
+    const formatted = date ? this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '' : '';
+    setTimeout(() => {
+      if (this.filtroFechaDesdeInputRef?.nativeElement) this.filtroFechaDesdeInputRef.nativeElement.value = formatted;
+    });
+  }
+
+  capturarFiltroFechaHastaRaw(event: Event): void {
+    this._rawFiltroFechaHasta = (event.target as HTMLInputElement).value;
+  }
+
+  syncFiltroFechaHastaFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFiltroFechaHasta || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFiltroFechaHasta = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        const formatted = this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+        this.filtroFechaHastaControl.setValue(date, { emitEvent: false });
+        setTimeout(() => {
+          if (this.filtroFechaHastaInputRef?.nativeElement) this.filtroFechaHastaInputRef.nativeElement.value = formatted;
+        });
+      }
+    }
+  }
+
+  onFiltroFechaHastaPickerChange(date: Date | null | undefined): void {
+    this.filtroFechaHastaControl.setValue(date || null, { emitEvent: false });
+    const formatted = date ? this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '' : '';
+    setTimeout(() => {
+      if (this.filtroFechaHastaInputRef?.nativeElement) this.filtroFechaHastaInputRef.nativeElement.value = formatted;
+    });
   }
 
   private strFecha(val: any): string {

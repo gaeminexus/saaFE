@@ -100,11 +100,17 @@
             <mat-form-field appearance="outline">
               <mat-label>Fecha inicio</mat-label>
               <input
+                #fechaInicioInput
                 matInput
-                type="date"
-                [ngModel]="fechaInicio()"
-                (ngModelChange)="fechaInicio.set($event)"
+                [matDatepicker]="pickerFechaInicio"
+                [formControl]="fechaInicioControl"
+                placeholder="dd/mm/aaaa"
+                (input)="capturarFechaInicioRaw($event)"
+                (dateChange)="onFechaInicioPickerChange($event.value)"
+                (blur)="syncFechaInicioFromRaw($event)"
               />
+              <mat-datepicker-toggle matIconSuffix [for]="pickerFechaInicio"></mat-datepicker-toggle>
+              <mat-datepicker #pickerFechaInicio></mat-datepicker>
             </mat-form-field>
 
             @if (modoProgramacion() === 'PERIODICIDAD') {
@@ -160,11 +166,20 @@
                     <tr>
                       <td>{{ cuota.numero }}</td>
                       <td>
-                        <input
-                          type="date"
-                          [ngModel]="cuota.fechaPago"
-                          (ngModelChange)="cuota.fechaPago = $event"
-                        />
+                        <mat-form-field appearance="outline" class="cuota-fecha-field">
+                          <input
+                            #cuotaFechaInput
+                            matInput
+                            [matDatepicker]="pickerCuotaFecha"
+                            [formControl]="cuota.fechaControl"
+                            placeholder="dd/mm/aaaa"
+                            (input)="capturarCuotaFechaRaw(idx, $event)"
+                            (dateChange)="onCuotaFechaPickerChange(idx, $event.value, cuotaFechaInput)"
+                            (blur)="syncCuotaFechaFromRaw(idx, $event)"
+                          />
+                          <mat-datepicker-toggle matIconSuffix [for]="pickerCuotaFecha"></mat-datepicker-toggle>
+                          <mat-datepicker #pickerCuotaFecha></mat-datepicker>
+                        </mat-form-field>
                       </td>
                       <td>
                         <input

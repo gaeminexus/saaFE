@@ -219,6 +219,18 @@ $saa-text-secondary: #64748b;
     background: #fff;
     color: $saa-text-primary;
   }
+
+  .cuota-fecha-field {
+    width: 100%;
+    margin: -0.6rem 0;
+
+    input {
+      border: none;
+      border-radius: 0;
+      padding: 0;
+      background: transparent;
+    }
+  }
 }
 
 .totales-grid {
