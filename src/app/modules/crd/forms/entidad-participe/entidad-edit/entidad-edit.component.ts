@@ -1,4 +1,4 @@
-import { Component, OnInit, Input, inject, signal, computed, OnChanges, SimpleChanges, OnDestroy } from '@angular/core';
+import { Component, OnInit, Input, inject, signal, computed, OnChanges, SimpleChanges, OnDestroy, ElementRef, ViewChild } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -70,6 +70,16 @@ import { FuncionesDatosService } from '../../../../../shared/services/funciones-
   styleUrl: './entidad-edit.component.scss'
 })
 export class EntidadEditComponent implements OnInit, OnChanges, OnDestroy {
+  @ViewChild('fechaNacimientoInput', { read: ElementRef }) fechaNacimientoInputRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('fechaIngresoTrabajoInput', { read: ElementRef }) fechaIngresoTrabajoInputRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('fechaIngresoFondoInput', { read: ElementRef }) fechaIngresoFondoInputRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('fechaFallecimientoInput', { read: ElementRef }) fechaFallecimientoInputRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('fechaSalidaInput', { read: ElementRef }) fechaSalidaInputRef!: ElementRef<HTMLInputElement>;
+  private _rawFechaNacimiento = '';
+  private _rawFechaIngresoTrabajo = '';
+  private _rawFechaIngresoFondo = '';
+  private _rawFechaFallecimiento = '';
+  private _rawFechaSalida = '';
 
   // Inputs para filtrado y configuración
   @Input() codigoEntidad?: number; // Código específico de entidad a filtrar
@@ -741,6 +751,109 @@ export class EntidadEditComponent implements OnInit, OnChanges, OnDestroy {
   ngOnDestroy(): void {
     // Cancelar todas las suscripciones activas para evitar memory leaks
     this.subscriptions.unsubscribe();
+  }
+
+  private parseYAplicarFechaRaw(
+    rawValue: string,
+    controlName: string,
+    inputRef: ElementRef<HTMLInputElement> | undefined
+  ): void {
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        const formatted = this.funcionesDatosService.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+        this.entidadForm.get(controlName)?.setValue(date, { emitEvent: false });
+        setTimeout(() => {
+          if (inputRef?.nativeElement) inputRef.nativeElement.value = formatted;
+        });
+      }
+    }
+  }
+
+  private aplicarFechaPicker(
+    date: Date | null | undefined,
+    controlName: string,
+    inputRef: ElementRef<HTMLInputElement> | undefined
+  ): void {
+    this.entidadForm.get(controlName)?.setValue(date || null, { emitEvent: false });
+    const formatted = date ? this.funcionesDatosService.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '' : '';
+    setTimeout(() => {
+      if (inputRef?.nativeElement) inputRef.nativeElement.value = formatted;
+    });
+  }
+
+  capturarFechaNacimientoRaw(event: Event): void {
+    this._rawFechaNacimiento = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaNacimientoFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaNacimiento || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaNacimiento = '';
+    this.parseYAplicarFechaRaw(rawValue, 'fechaNacimiento', this.fechaNacimientoInputRef);
+  }
+
+  onFechaNacimientoPickerChange(date: Date | null | undefined): void {
+    this.aplicarFechaPicker(date, 'fechaNacimiento', this.fechaNacimientoInputRef);
+  }
+
+  capturarFechaIngresoTrabajoRaw(event: Event): void {
+    this._rawFechaIngresoTrabajo = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaIngresoTrabajoFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaIngresoTrabajo || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaIngresoTrabajo = '';
+    this.parseYAplicarFechaRaw(rawValue, 'fechaIngresoTrabajo', this.fechaIngresoTrabajoInputRef);
+  }
+
+  onFechaIngresoTrabajoPickerChange(date: Date | null | undefined): void {
+    this.aplicarFechaPicker(date, 'fechaIngresoTrabajo', this.fechaIngresoTrabajoInputRef);
+  }
+
+  capturarFechaIngresoFondoRaw(event: Event): void {
+    this._rawFechaIngresoFondo = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaIngresoFondoFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaIngresoFondo || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaIngresoFondo = '';
+    this.parseYAplicarFechaRaw(rawValue, 'fechaIngresoFondo', this.fechaIngresoFondoInputRef);
+  }
+
+  onFechaIngresoFondoPickerChange(date: Date | null | undefined): void {
+    this.aplicarFechaPicker(date, 'fechaIngresoFondo', this.fechaIngresoFondoInputRef);
+  }
+
+  capturarFechaFallecimientoRaw(event: Event): void {
+    this._rawFechaFallecimiento = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaFallecimientoFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaFallecimiento || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaFallecimiento = '';
+    this.parseYAplicarFechaRaw(rawValue, 'fechaFallecimiento', this.fechaFallecimientoInputRef);
+  }
+
+  onFechaFallecimientoPickerChange(date: Date | null | undefined): void {
+    this.aplicarFechaPicker(date, 'fechaFallecimiento', this.fechaFallecimientoInputRef);
+  }
+
+  capturarFechaSalidaRaw(event: Event): void {
+    this._rawFechaSalida = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaSalidaFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaSalida || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaSalida = '';
+    this.parseYAplicarFechaRaw(rawValue, 'fechaSalida', this.fechaSalidaInputRef);
+  }
+
+  onFechaSalidaPickerChange(date: Date | null | undefined): void {
+    this.aplicarFechaPicker(date, 'fechaSalida', this.fechaSalidaInputRef);
   }
 
   /**

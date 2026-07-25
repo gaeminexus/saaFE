@@ -1,6 +1,6 @@
 import { animate, style, transition, trigger } from '@angular/animations';
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, ViewChild, signal } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -72,6 +72,10 @@ import { ProductoService } from '../../../service/producto.service';
 export class PrestamoConsultaComponent implements OnInit {
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
+  @ViewChild('fechaDesdeInput', { read: ElementRef }) fechaDesdeInputRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('fechaHastaInput', { read: ElementRef }) fechaHastaInputRef!: ElementRef<HTMLInputElement>;
+  private _rawFechaDesde = '';
+  private _rawFechaHasta = '';
 
   loading = signal<boolean>(false);
   error = signal<string>('');
@@ -436,6 +440,68 @@ export class PrestamoConsultaComponent implements OnInit {
     if (fecha instanceof Date) return fecha;
     if (typeof fecha === 'string' || typeof fecha === 'number') return new Date(fecha);
     return null;
+  }
+
+  capturarFechaDesdeRaw(event: Event): void {
+    this._rawFechaDesde = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaDesdeFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaDesde || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaDesde = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        const formatted = this.funcionesDatos.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+        this.filtrosForm.get('fechaDesde')?.setValue(date, { emitEvent: false });
+        setTimeout(() => {
+          if (this.fechaDesdeInputRef?.nativeElement) this.fechaDesdeInputRef.nativeElement.value = formatted;
+        });
+      }
+    }
+  }
+
+  onFechaDesdePickerChange(date: Date | null | undefined): void {
+    this.filtrosForm.get('fechaDesde')?.setValue(date || null, { emitEvent: false });
+    const formatted = date ? this.funcionesDatos.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '' : '';
+    setTimeout(() => {
+      if (this.fechaDesdeInputRef?.nativeElement) this.fechaDesdeInputRef.nativeElement.value = formatted;
+    });
+  }
+
+  capturarFechaHastaRaw(event: Event): void {
+    this._rawFechaHasta = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaHastaFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaHasta || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaHasta = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        const formatted = this.funcionesDatos.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+        this.filtrosForm.get('fechaHasta')?.setValue(date, { emitEvent: false });
+        setTimeout(() => {
+          if (this.fechaHastaInputRef?.nativeElement) this.fechaHastaInputRef.nativeElement.value = formatted;
+        });
+      }
+    }
+  }
+
+  onFechaHastaPickerChange(date: Date | null | undefined): void {
+    this.filtrosForm.get('fechaHasta')?.setValue(date || null, { emitEvent: false });
+    const formatted = date ? this.funcionesDatos.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '' : '';
+    setTimeout(() => {
+      if (this.fechaHastaInputRef?.nativeElement) this.fechaHastaInputRef.nativeElement.value = formatted;
+    });
   }
 
   limpiarFiltros(): void {

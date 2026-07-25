@@ -1,6 +1,6 @@
 import { animate, style, transition, trigger } from '@angular/animations';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
-import { Component, Inject, OnInit } from '@angular/core';
+import { Component, ElementRef, Inject, OnInit, ViewChild } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDatepickerModule } from '@angular/material/datepicker';
@@ -17,6 +17,7 @@ import { CuentaAsoprep } from '../../model/cuenta-asoprep';
 import { DatosPago } from '../../model/datos-pago';
 import { DetallePrestamo } from '../../model/detalle-prestamo';
 import { Prestamo } from '../../model/prestamo';
+import { FuncionesDatosService } from '../../../../shared/services/funciones-datos.service';
 
 export interface PagoCuotaDialogData {
   prestamo: Prestamo;
@@ -58,6 +59,10 @@ export interface PagoCuotaDialogData {
   ],
 })
 export class PagoCuotaDialogComponent implements OnInit {
+  @ViewChild('fechaTransfInput', { read: ElementRef }) fechaTransfInputRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('fechaDepInput', { read: ElementRef }) fechaDepInputRef!: ElementRef<HTMLInputElement>;
+  private _rawFecha = '';
+
   pagoForm!: FormGroup;
   loading = false;
   montoMinimo = 1;
@@ -66,7 +71,8 @@ export class PagoCuotaDialogComponent implements OnInit {
   constructor(
     private fb: FormBuilder,
     public dialogRef: MatDialogRef<PagoCuotaDialogComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: PagoCuotaDialogData
+    @Inject(MAT_DIALOG_DATA) public data: PagoCuotaDialogData,
+    private funcionesDatosS: FuncionesDatosService
   ) {
     this.montoMaximo = this.saldoReferencia;
   }
@@ -207,6 +213,39 @@ export class PagoCuotaDialogComponent implements OnInit {
       this.loading = false;
       this.dialogRef.close(datosPago);
     }, 500);
+  }
+
+  capturarFechaRaw(event: Event): void {
+    this._rawFecha = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFecha || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFecha = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        const formatted = this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+        this.pagoForm.get('fecha')?.setValue(date, { emitEvent: false });
+        setTimeout(() => {
+          if (this.fechaTransfInputRef?.nativeElement) this.fechaTransfInputRef.nativeElement.value = formatted;
+          if (this.fechaDepInputRef?.nativeElement) this.fechaDepInputRef.nativeElement.value = formatted;
+        });
+      }
+    }
+  }
+
+  onFechaPickerChange(date: Date | null | undefined): void {
+    this.pagoForm.get('fecha')?.setValue(date || null, { emitEvent: false });
+    const formatted = date ? this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '' : '';
+    setTimeout(() => {
+      if (this.fechaTransfInputRef?.nativeElement) this.fechaTransfInputRef.nativeElement.value = formatted;
+      if (this.fechaDepInputRef?.nativeElement) this.fechaDepInputRef.nativeElement.value = formatted;
+    });
   }
 
   getCuentaLabel(cuenta: CuentaAsoprep): string {

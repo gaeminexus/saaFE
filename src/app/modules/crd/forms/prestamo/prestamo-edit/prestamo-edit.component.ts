@@ -29,6 +29,7 @@ import { EstadoCuotaPrestamoService } from '../../../service/estado-cuota-presta
 import { ParticipeService } from '../../../service/participe.service';
 import { PrestamoService } from '../../../service/prestamo.service';
 import { ProductoService } from '../../../service/producto.service';
+import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 
 interface ParticipeOption {
   codigoParticipe: number;
@@ -61,7 +62,10 @@ interface ParticipeOption {
 })
 export class PrestamoEditComponent implements OnInit {
   @ViewChild('inputExcel') inputExcelRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('fechaInicioInput', { read: ElementRef }) fechaInicioInputRef!: ElementRef<HTMLInputElement>;
+  private _rawFechaInicio = '';
   private fb = inject(FormBuilder);
+  private funcionesDatosS = inject(FuncionesDatosService);
 
   loading = signal<boolean>(false);
 
@@ -696,6 +700,37 @@ export class PrestamoEditComponent implements OnInit {
 
   irConsulta(): void {
     this.router.navigate(['/menucreditos/prestamo-consulta']);
+  }
+
+  capturarFechaInicioRaw(event: Event): void {
+    this._rawFechaInicio = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaInicioFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaInicio || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaInicio = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        const formatted = this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+        this.form.get('fechaInicio')?.setValue(date, { emitEvent: false });
+        setTimeout(() => {
+          if (this.fechaInicioInputRef?.nativeElement) this.fechaInicioInputRef.nativeElement.value = formatted;
+        });
+      }
+    }
+  }
+
+  onFechaInicioPickerChange(date: Date | null | undefined): void {
+    this.form.get('fechaInicio')?.setValue(date || null, { emitEvent: false });
+    const formatted = date ? this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '' : '';
+    setTimeout(() => {
+      if (this.fechaInicioInputRef?.nativeElement) this.fechaInicioInputRef.nativeElement.value = formatted;
+    });
   }
 
   private extraerMensajeError(err: any, fallback: string): string {

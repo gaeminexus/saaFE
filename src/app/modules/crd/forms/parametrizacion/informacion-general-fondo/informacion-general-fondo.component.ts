@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, computed } from '@angular/core';
+import { Component, OnInit, signal, computed, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -15,6 +15,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatChipsModule } from '@angular/material/chips';
 import { InformacionGeneralFondoService } from '../../../service/informacion-general-fondo.service';
 import { InformacionGeneralFondo } from '../../../model/informacion-general-fondo';
+import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 
 @Component({
   selector: 'app-informacion-general-fondo',
@@ -39,6 +40,13 @@ import { InformacionGeneralFondo } from '../../../model/informacion-general-fond
   styleUrl: './informacion-general-fondo.component.scss',
 })
 export class InformacionGeneralFondoComponent implements OnInit {
+  @ViewChild('fechaResolucionInput', { read: ElementRef }) fechaResolucionInputRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('fechaTraspasoInput', { read: ElementRef }) fechaTraspasoInputRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('fechaResolucionCambioInput', { read: ElementRef }) fechaResolucionCambioInputRef!: ElementRef<HTMLInputElement>;
+  private _rawFechaResolucion = '';
+  private _rawFechaTraspaso = '';
+  private _rawFechaResolucionCambio = '';
+
   form!: FormGroup;
 
   loading = signal<boolean>(false);
@@ -83,6 +91,7 @@ export class InformacionGeneralFondoComponent implements OnInit {
     private fb: FormBuilder,
     private igfService: InformacionGeneralFondoService,
     private snackBar: MatSnackBar,
+    private funcionesDatosS: FuncionesDatosService,
   ) {}
 
   ngOnInit(): void {
@@ -236,6 +245,99 @@ export class InformacionGeneralFondoComponent implements OnInit {
       return isNaN(d.getTime()) ? null : d;
     }
     return null;
+  }
+
+  capturarFechaResolucionRaw(event: Event): void {
+    this._rawFechaResolucion = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaResolucionFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaResolucion || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaResolucion = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        const formatted = this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+        this.form.get('fechaResolucion')?.setValue(date, { emitEvent: false });
+        setTimeout(() => {
+          if (this.fechaResolucionInputRef?.nativeElement) this.fechaResolucionInputRef.nativeElement.value = formatted;
+        });
+      }
+    }
+  }
+
+  onFechaResolucionPickerChange(date: Date | null | undefined): void {
+    this.form.get('fechaResolucion')?.setValue(date || null, { emitEvent: false });
+    const formatted = date ? this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '' : '';
+    setTimeout(() => {
+      if (this.fechaResolucionInputRef?.nativeElement) this.fechaResolucionInputRef.nativeElement.value = formatted;
+    });
+  }
+
+  capturarFechaTraspasoRaw(event: Event): void {
+    this._rawFechaTraspaso = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaTraspasoFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaTraspaso || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaTraspaso = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        const formatted = this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+        this.form.get('fechaTraspaso')?.setValue(date, { emitEvent: false });
+        setTimeout(() => {
+          if (this.fechaTraspasoInputRef?.nativeElement) this.fechaTraspasoInputRef.nativeElement.value = formatted;
+        });
+      }
+    }
+  }
+
+  onFechaTraspasoPickerChange(date: Date | null | undefined): void {
+    this.form.get('fechaTraspaso')?.setValue(date || null, { emitEvent: false });
+    const formatted = date ? this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '' : '';
+    setTimeout(() => {
+      if (this.fechaTraspasoInputRef?.nativeElement) this.fechaTraspasoInputRef.nativeElement.value = formatted;
+    });
+  }
+
+  capturarFechaResolucionCambioRaw(event: Event): void {
+    this._rawFechaResolucionCambio = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaResolucionCambioFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaResolucionCambio || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaResolucionCambio = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        const formatted = this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+        this.form.get('fechaResolucionCambioEstatuto')?.setValue(date, { emitEvent: false });
+        setTimeout(() => {
+          if (this.fechaResolucionCambioInputRef?.nativeElement) this.fechaResolucionCambioInputRef.nativeElement.value = formatted;
+        });
+      }
+    }
+  }
+
+  onFechaResolucionCambioPickerChange(date: Date | null | undefined): void {
+    this.form.get('fechaResolucionCambioEstatuto')?.setValue(date || null, { emitEvent: false });
+    const formatted = date ? this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '' : '';
+    setTimeout(() => {
+      if (this.fechaResolucionCambioInputRef?.nativeElement) this.fechaResolucionCambioInputRef.nativeElement.value = formatted;
+    });
   }
 
   private formatFecha(value: any): string | null {

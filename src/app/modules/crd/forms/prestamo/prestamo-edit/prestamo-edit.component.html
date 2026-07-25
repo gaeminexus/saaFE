@@ -68,7 +68,15 @@
           <mat-form-field appearance="fill" class="field">
             <mat-label>Fecha de Inicio</mat-label>
             <mat-icon matPrefix>event</mat-icon>
-            <input matInput [matDatepicker]="pickerFechaInicio" formControlName="fechaInicio" placeholder="DD/MM/YYYY" />
+            <input
+              #fechaInicioInput
+              matInput
+              [matDatepicker]="pickerFechaInicio"
+              formControlName="fechaInicio"
+              placeholder="dd/mm/aaaa"
+              (input)="capturarFechaInicioRaw($event)"
+              (dateChange)="onFechaInicioPickerChange($event.value)"
+              (blur)="syncFechaInicioFromRaw($event)" />
             <mat-datepicker-toggle matSuffix [for]="pickerFechaInicio"></mat-datepicker-toggle>
             <mat-datepicker #pickerFechaInicio></mat-datepicker>
             <mat-error>La fecha de inicio es obligatoria</mat-error>

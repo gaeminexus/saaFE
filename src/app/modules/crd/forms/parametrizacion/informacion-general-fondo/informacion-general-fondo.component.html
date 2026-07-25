@@ -106,8 +106,11 @@
 
             <mat-form-field appearance="outline">
               <mat-label>Fecha de Resolución</mat-label>
-              <input matInput [matDatepicker]="dpResolucion" formControlName="fechaResolucion"
-                     placeholder="dd/mm/aaaa">
+              <input #fechaResolucionInput matInput [matDatepicker]="dpResolucion" formControlName="fechaResolucion"
+                     placeholder="dd/mm/aaaa"
+                     (input)="capturarFechaResolucionRaw($event)"
+                     (dateChange)="onFechaResolucionPickerChange($event.value)"
+                     (blur)="syncFechaResolucionFromRaw($event)">
               <mat-datepicker-toggle matIconSuffix [for]="dpResolucion"></mat-datepicker-toggle>
               <mat-datepicker #dpResolucion></mat-datepicker>
               <mat-error>Campo obligatorio</mat-error>
@@ -115,8 +118,11 @@
 
             <mat-form-field appearance="outline">
               <mat-label>Fecha de Traspaso</mat-label>
-              <input matInput [matDatepicker]="dpTraspaso" formControlName="fechaTraspaso"
-                     placeholder="dd/mm/aaaa">
+              <input #fechaTraspasoInput matInput [matDatepicker]="dpTraspaso" formControlName="fechaTraspaso"
+                     placeholder="dd/mm/aaaa"
+                     (input)="capturarFechaTraspasoRaw($event)"
+                     (dateChange)="onFechaTraspasoPickerChange($event.value)"
+                     (blur)="syncFechaTraspasoFromRaw($event)">
               <mat-datepicker-toggle matIconSuffix [for]="dpTraspaso"></mat-datepicker-toggle>
               <mat-datepicker #dpTraspaso></mat-datepicker>
               <mat-hint>Opcional</mat-hint>
@@ -258,8 +264,11 @@
 
             <mat-form-field appearance="outline">
               <mat-label>Fecha Resolución Cambio</mat-label>
-              <input matInput [matDatepicker]="dpCambio" formControlName="fechaResolucionCambioEstatuto"
-                     placeholder="dd/mm/aaaa">
+              <input #fechaResolucionCambioInput matInput [matDatepicker]="dpCambio" formControlName="fechaResolucionCambioEstatuto"
+                     placeholder="dd/mm/aaaa"
+                     (input)="capturarFechaResolucionCambioRaw($event)"
+                     (dateChange)="onFechaResolucionCambioPickerChange($event.value)"
+                     (blur)="syncFechaResolucionCambioFromRaw($event)">
               <mat-datepicker-toggle matIconSuffix [for]="dpCambio"></mat-datepicker-toggle>
               <mat-datepicker #dpCambio></mat-datepicker>
             </mat-form-field>

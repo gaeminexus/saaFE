@@ -33,7 +33,15 @@
           <!-- Rango de Fechas -->
           <mat-form-field appearance="outline" class="filter-field">
             <mat-label>Fecha Inicio</mat-label>
-            <input matInput [matDatepicker]="pickerInicio" formControlName="fechaInicio">
+            <input
+              #fechaInicioInput
+              matInput
+              [matDatepicker]="pickerInicio"
+              formControlName="fechaInicio"
+              placeholder="dd/mm/aaaa"
+              (input)="capturarFechaInicioRaw($event)"
+              (dateChange)="onFechaInicioPickerChange($event.value)"
+              (blur)="syncFechaInicioFromRaw($event)">
             <mat-datepicker-toggle matIconSuffix [for]="pickerInicio"></mat-datepicker-toggle>
             <mat-datepicker #pickerInicio></mat-datepicker>
             <mat-icon matPrefix>event</mat-icon>
@@ -41,7 +49,15 @@
 
           <mat-form-field appearance="outline" class="filter-field">
             <mat-label>Fecha Fin</mat-label>
-            <input matInput [matDatepicker]="pickerFin" formControlName="fechaFin">
+            <input
+              #fechaFinInput
+              matInput
+              [matDatepicker]="pickerFin"
+              formControlName="fechaFin"
+              placeholder="dd/mm/aaaa"
+              (input)="capturarFechaFinRaw($event)"
+              (dateChange)="onFechaFinPickerChange($event.value)"
+              (blur)="syncFechaFinFromRaw($event)">
             <mat-datepicker-toggle matIconSuffix [for]="pickerFin"></mat-datepicker-toggle>
             <mat-datepicker #pickerFin></mat-datepicker>
             <mat-icon matPrefix>event</mat-icon>

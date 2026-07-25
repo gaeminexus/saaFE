@@ -146,9 +146,14 @@
               <mat-label>Fecha Nacimiento Desde</mat-label>
               <mat-icon matPrefix>event</mat-icon>
               <input
+                #fechaNacimientoDesdeInput
                 matInput
                 [matDatepicker]="pickerDesde"
                 formControlName="fechaNacimientoDesde"
+                placeholder="dd/mm/aaaa"
+                (input)="capturarFechaNacimientoDesdeRaw($event)"
+                (dateChange)="onFechaNacimientoDesdePickerChange($event.value)"
+                (blur)="syncFechaNacimientoDesdeFromRaw($event)"
               />
               <mat-datepicker-toggle matSuffix [for]="pickerDesde"></mat-datepicker-toggle>
               <mat-datepicker #pickerDesde></mat-datepicker>
@@ -158,9 +163,14 @@
               <mat-label>Fecha Nacimiento Hasta</mat-label>
               <mat-icon matPrefix>event</mat-icon>
               <input
+                #fechaNacimientoHastaInput
                 matInput
                 [matDatepicker]="pickerHasta"
                 formControlName="fechaNacimientoHasta"
+                placeholder="dd/mm/aaaa"
+                (input)="capturarFechaNacimientoHastaRaw($event)"
+                (dateChange)="onFechaNacimientoHastaPickerChange($event.value)"
+                (blur)="syncFechaNacimientoHastaFromRaw($event)"
               />
               <mat-datepicker-toggle matSuffix [for]="pickerHasta"></mat-datepicker-toggle>
               <mat-datepicker #pickerHasta></mat-datepicker>

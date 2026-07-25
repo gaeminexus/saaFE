@@ -17,14 +17,30 @@
     <form [formGroup]="rangoFechas" class="filters-form">
       <mat-form-field appearance="outline">
         <mat-label>Fecha Inicio</mat-label>
-        <input matInput [matDatepicker]="pickerInicio" formControlName="inicio">
+        <input
+          #fechaInicioInput
+          matInput
+          [matDatepicker]="pickerInicio"
+          formControlName="inicio"
+          placeholder="dd/mm/aaaa"
+          (input)="capturarFechaInicioRaw($event)"
+          (dateChange)="onFechaInicioPickerChange($event.value)"
+          (blur)="syncFechaInicioFromRaw($event)">
         <mat-datepicker-toggle matIconSuffix [for]="pickerInicio"></mat-datepicker-toggle>
         <mat-datepicker #pickerInicio></mat-datepicker>
       </mat-form-field>
 
       <mat-form-field appearance="outline">
         <mat-label>Fecha Fin</mat-label>
-        <input matInput [matDatepicker]="pickerFin" formControlName="fin">
+        <input
+          #fechaFinInput
+          matInput
+          [matDatepicker]="pickerFin"
+          formControlName="fin"
+          placeholder="dd/mm/aaaa"
+          (input)="capturarFechaFinRaw($event)"
+          (dateChange)="onFechaFinPickerChange($event.value)"
+          (blur)="syncFechaFinFromRaw($event)">
         <mat-datepicker-toggle matIconSuffix [for]="pickerFin"></mat-datepicker-toggle>
         <mat-datepicker #pickerFin></mat-datepicker>
       </mat-form-field>

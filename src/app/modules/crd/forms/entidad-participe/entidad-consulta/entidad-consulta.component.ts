@@ -1,6 +1,6 @@
 ﻿import { animate, style, transition, trigger } from '@angular/animations';
 import { CommonModule } from '@angular/common';
-import { AfterViewInit, Component, inject, OnInit, signal, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, inject, OnInit, signal, ViewChild } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
@@ -72,6 +72,11 @@ interface EntidadConExtr extends Entidad {
   ],
 })
 export class EntidadConsultaComponent implements OnInit, AfterViewInit {
+  @ViewChild('fechaNacimientoDesdeInput', { read: ElementRef }) fechaNacimientoDesdeInputRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('fechaNacimientoHastaInput', { read: ElementRef }) fechaNacimientoHastaInputRef!: ElementRef<HTMLInputElement>;
+  private _rawFechaNacimientoDesde = '';
+  private _rawFechaNacimientoHasta = '';
+
   // Injects
   private fb = inject(FormBuilder);
   private router = inject(Router);
@@ -552,6 +557,68 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
     if (this.paginator) {
       this.paginator.firstPage();
     }
+  }
+
+  capturarFechaNacimientoDesdeRaw(event: Event): void {
+    this._rawFechaNacimientoDesde = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaNacimientoDesdeFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaNacimientoDesde || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaNacimientoDesde = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        const formatted = this.funcionesDatos.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+        this.filtrosForm.get('fechaNacimientoDesde')?.setValue(date, { emitEvent: false });
+        setTimeout(() => {
+          if (this.fechaNacimientoDesdeInputRef?.nativeElement) this.fechaNacimientoDesdeInputRef.nativeElement.value = formatted;
+        });
+      }
+    }
+  }
+
+  onFechaNacimientoDesdePickerChange(date: Date | null | undefined): void {
+    this.filtrosForm.get('fechaNacimientoDesde')?.setValue(date || null, { emitEvent: false });
+    const formatted = date ? this.funcionesDatos.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '' : '';
+    setTimeout(() => {
+      if (this.fechaNacimientoDesdeInputRef?.nativeElement) this.fechaNacimientoDesdeInputRef.nativeElement.value = formatted;
+    });
+  }
+
+  capturarFechaNacimientoHastaRaw(event: Event): void {
+    this._rawFechaNacimientoHasta = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaNacimientoHastaFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaNacimientoHasta || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaNacimientoHasta = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        const formatted = this.funcionesDatos.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+        this.filtrosForm.get('fechaNacimientoHasta')?.setValue(date, { emitEvent: false });
+        setTimeout(() => {
+          if (this.fechaNacimientoHastaInputRef?.nativeElement) this.fechaNacimientoHastaInputRef.nativeElement.value = formatted;
+        });
+      }
+    }
+  }
+
+  onFechaNacimientoHastaPickerChange(date: Date | null | undefined): void {
+    this.filtrosForm.get('fechaNacimientoHasta')?.setValue(date || null, { emitEvent: false });
+    const formatted = date ? this.funcionesDatos.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '' : '';
+    setTimeout(() => {
+      if (this.fechaNacimientoHastaInputRef?.nativeElement) this.fechaNacimientoHastaInputRef.nativeElement.value = formatted;
+    });
   }
 
   /**

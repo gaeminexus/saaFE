@@ -100,7 +100,16 @@
           <div class="form-row">
             <mat-form-field appearance="outline" class="half-width">
               <mat-label>Fecha</mat-label>
-              <input matInput [matDatepicker]="pickerTransf" formControlName="fecha" required />
+              <input
+                #fechaTransfInput
+                matInput
+                [matDatepicker]="pickerTransf"
+                formControlName="fecha"
+                placeholder="dd/mm/aaaa"
+                required
+                (input)="capturarFechaRaw($event)"
+                (dateChange)="onFechaPickerChange($event.value)"
+                (blur)="syncFechaFromRaw($event)" />
               <mat-datepicker-toggle matSuffix [for]="pickerTransf"></mat-datepicker-toggle>
               <mat-datepicker #pickerTransf></mat-datepicker>
               @if (pagoForm.get('fecha')?.invalid && pagoForm.get('fecha')?.touched) {
@@ -140,7 +149,16 @@
           <div class="form-row">
             <mat-form-field appearance="outline" class="half-width">
               <mat-label>Fecha</mat-label>
-              <input matInput [matDatepicker]="pickerDep" formControlName="fecha" required />
+              <input
+                #fechaDepInput
+                matInput
+                [matDatepicker]="pickerDep"
+                formControlName="fecha"
+                placeholder="dd/mm/aaaa"
+                required
+                (input)="capturarFechaRaw($event)"
+                (dateChange)="onFechaPickerChange($event.value)"
+                (blur)="syncFechaFromRaw($event)" />
               <mat-datepicker-toggle matSuffix [for]="pickerDep"></mat-datepicker-toggle>
               <mat-datepicker #pickerDep></mat-datepicker>
               @if (pagoForm.get('fecha')?.invalid && pagoForm.get('fecha')?.touched) {

@@ -66,6 +66,10 @@ interface TipoContratos {
 })
 export class ContratoDashComponent implements OnInit {
   @ViewChild('dashContainer') dashContainer!: ElementRef;
+  @ViewChild('fechaInicioInput', { read: ElementRef }) fechaInicioInputRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('fechaFinInput', { read: ElementRef }) fechaFinInputRef!: ElementRef<HTMLInputElement>;
+  private _rawFechaInicio = '';
+  private _rawFechaFin = '';
 
   // Signals
   loading = signal<boolean>(false);
@@ -392,6 +396,68 @@ export class ContratoDashComponent implements OnInit {
         behavior: 'smooth'
       });
     }
+  }
+
+  capturarFechaInicioRaw(event: Event): void {
+    this._rawFechaInicio = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaInicioFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaInicio || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaInicio = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        const formatted = this.funcionesDatos.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+        this.rangoFechas.get('inicio')?.setValue(date, { emitEvent: false });
+        setTimeout(() => {
+          if (this.fechaInicioInputRef?.nativeElement) this.fechaInicioInputRef.nativeElement.value = formatted;
+        });
+      }
+    }
+  }
+
+  onFechaInicioPickerChange(date: Date | null | undefined): void {
+    this.rangoFechas.get('inicio')?.setValue(date || null, { emitEvent: false });
+    const formatted = date ? this.funcionesDatos.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '' : '';
+    setTimeout(() => {
+      if (this.fechaInicioInputRef?.nativeElement) this.fechaInicioInputRef.nativeElement.value = formatted;
+    });
+  }
+
+  capturarFechaFinRaw(event: Event): void {
+    this._rawFechaFin = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaFinFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaFin || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaFin = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        const formatted = this.funcionesDatos.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+        this.rangoFechas.get('fin')?.setValue(date, { emitEvent: false });
+        setTimeout(() => {
+          if (this.fechaFinInputRef?.nativeElement) this.fechaFinInputRef.nativeElement.value = formatted;
+        });
+      }
+    }
+  }
+
+  onFechaFinPickerChange(date: Date | null | undefined): void {
+    this.rangoFechas.get('fin')?.setValue(date || null, { emitEvent: false });
+    const formatted = date ? this.funcionesDatos.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '' : '';
+    setTimeout(() => {
+      if (this.fechaFinInputRef?.nativeElement) this.fechaFinInputRef.nativeElement.value = formatted;
+    });
   }
 
   /**

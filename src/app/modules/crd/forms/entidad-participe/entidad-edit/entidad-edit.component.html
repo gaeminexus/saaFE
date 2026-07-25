@@ -170,7 +170,15 @@
               <div class="form-row">
                 <mat-form-field appearance="fill" class="full-width">
                   <mat-label>Fecha de Nacimiento</mat-label>
-                  <input matInput [matDatepicker]="picker" formControlName="fechaNacimiento">
+                  <input
+                    #fechaNacimientoInput
+                    matInput
+                    [matDatepicker]="picker"
+                    formControlName="fechaNacimiento"
+                    placeholder="dd/mm/aaaa"
+                    (input)="capturarFechaNacimientoRaw($event)"
+                    (dateChange)="onFechaNacimientoPickerChange($event.value)"
+                    (blur)="syncFechaNacimientoFromRaw($event)">
                   <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
                   <mat-datepicker #picker></mat-datepicker>
                 </mat-form-field>
@@ -384,14 +392,30 @@
               <div class="form-row">
                 <mat-form-field appearance="fill" class="half-width">
                   <mat-label>Fecha Ingreso Trabajo</mat-label>
-                  <input matInput [matDatepicker]="pickerIngresoTrabajo" formControlName="fechaIngresoTrabajo">
+                  <input
+                    #fechaIngresoTrabajoInput
+                    matInput
+                    [matDatepicker]="pickerIngresoTrabajo"
+                    formControlName="fechaIngresoTrabajo"
+                    placeholder="dd/mm/aaaa"
+                    (input)="capturarFechaIngresoTrabajoRaw($event)"
+                    (dateChange)="onFechaIngresoTrabajoPickerChange($event.value)"
+                    (blur)="syncFechaIngresoTrabajoFromRaw($event)">
                   <mat-datepicker-toggle matIconSuffix [for]="pickerIngresoTrabajo"></mat-datepicker-toggle>
                   <mat-datepicker #pickerIngresoTrabajo></mat-datepicker>
                 </mat-form-field>
 
                 <mat-form-field appearance="fill" class="half-width">
                   <mat-label>Fecha Ingreso Fondo</mat-label>
-                  <input matInput [matDatepicker]="pickerIngresoFondo" formControlName="fechaIngresoFondo">
+                  <input
+                    #fechaIngresoFondoInput
+                    matInput
+                    [matDatepicker]="pickerIngresoFondo"
+                    formControlName="fechaIngresoFondo"
+                    placeholder="dd/mm/aaaa"
+                    (input)="capturarFechaIngresoFondoRaw($event)"
+                    (dateChange)="onFechaIngresoFondoPickerChange($event.value)"
+                    (blur)="syncFechaIngresoFondoFromRaw($event)">
                   <mat-datepicker-toggle matIconSuffix [for]="pickerIngresoFondo"></mat-datepicker-toggle>
                   <mat-datepicker #pickerIngresoFondo></mat-datepicker>
                 </mat-form-field>
@@ -467,14 +491,30 @@
               <div class="form-row">
                 <mat-form-field appearance="fill" class="third-width">
                   <mat-label>Fecha Fallecimiento</mat-label>
-                  <input matInput [matDatepicker]="pickerFallecimiento" formControlName="fechaFallecimiento">
+                  <input
+                    #fechaFallecimientoInput
+                    matInput
+                    [matDatepicker]="pickerFallecimiento"
+                    formControlName="fechaFallecimiento"
+                    placeholder="dd/mm/aaaa"
+                    (input)="capturarFechaFallecimientoRaw($event)"
+                    (dateChange)="onFechaFallecimientoPickerChange($event.value)"
+                    (blur)="syncFechaFallecimientoFromRaw($event)">
                   <mat-datepicker-toggle matIconSuffix [for]="pickerFallecimiento"></mat-datepicker-toggle>
                   <mat-datepicker #pickerFallecimiento></mat-datepicker>
                 </mat-form-field>
 
                 <mat-form-field appearance="fill" class="third-width">
                   <mat-label>Fecha Salida</mat-label>
-                  <input matInput [matDatepicker]="pickerSalida" formControlName="fechaSalida">
+                  <input
+                    #fechaSalidaInput
+                    matInput
+                    [matDatepicker]="pickerSalida"
+                    formControlName="fechaSalida"
+                    placeholder="dd/mm/aaaa"
+                    (input)="capturarFechaSalidaRaw($event)"
+                    (dateChange)="onFechaSalidaPickerChange($event.value)"
+                    (blur)="syncFechaSalidaFromRaw($event)">
                   <mat-datepicker-toggle matIconSuffix [for]="pickerSalida"></mat-datepicker-toggle>
                   <mat-datepicker #pickerSalida></mat-datepicker>
                 </mat-form-field>

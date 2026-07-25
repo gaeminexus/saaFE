@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { FormControl, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
@@ -21,6 +21,7 @@ import { ExportService } from '../../../../../shared/services/export.service';
 import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
+import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 
 const ESTADO_POR_REVISAR = "99";
 
@@ -69,6 +70,11 @@ interface AportesPorTipo {
   ],
 })
 export class AportesPorRevisarComponent implements OnInit {
+  @ViewChild('fechaInicioInput', { read: ElementRef }) fechaInicioInputRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('fechaFinInput', { read: ElementRef }) fechaFinInputRef!: ElementRef<HTMLInputElement>;
+  private _rawFechaInicio = '';
+  private _rawFechaFin = '';
+
   // Datos
   aportesPorTipo: AportesPorTipo[] = [];
   totalGeneral = { valor: 0, pagado: 0, saldo: 0, cantidad: 0 };
@@ -100,7 +106,8 @@ export class AportesPorRevisarComponent implements OnInit {
     private aporteService: AporteService,
     private tipoAporteService: TipoAporteService,
     private exportService: ExportService,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private funcionesDatosS: FuncionesDatosService
   ) {}
 
   ngOnInit(): void {
@@ -368,6 +375,68 @@ export class AportesPorRevisarComponent implements OnInit {
   limpiarFiltros(): void {
     this.filtrosForm.reset();
     this.cargarAportes();
+  }
+
+  capturarFechaInicioRaw(event: Event): void {
+    this._rawFechaInicio = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaInicioFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaInicio || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaInicio = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        const formatted = this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+        this.filtrosForm.get('fechaInicio')?.setValue(date, { emitEvent: false });
+        setTimeout(() => {
+          if (this.fechaInicioInputRef?.nativeElement) this.fechaInicioInputRef.nativeElement.value = formatted;
+        });
+      }
+    }
+  }
+
+  onFechaInicioPickerChange(date: Date | null | undefined): void {
+    this.filtrosForm.get('fechaInicio')?.setValue(date || null, { emitEvent: false });
+    const formatted = date ? this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '' : '';
+    setTimeout(() => {
+      if (this.fechaInicioInputRef?.nativeElement) this.fechaInicioInputRef.nativeElement.value = formatted;
+    });
+  }
+
+  capturarFechaFinRaw(event: Event): void {
+    this._rawFechaFin = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaFinFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaFin || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaFin = '';
+    if (!rawValue) return;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
+      const date = new Date(anio, mes, dia);
+      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
+        const formatted = this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+        this.filtrosForm.get('fechaFin')?.setValue(date, { emitEvent: false });
+        setTimeout(() => {
+          if (this.fechaFinInputRef?.nativeElement) this.fechaFinInputRef.nativeElement.value = formatted;
+        });
+      }
+    }
+  }
+
+  onFechaFinPickerChange(date: Date | null | undefined): void {
+    this.filtrosForm.get('fechaFin')?.setValue(date || null, { emitEvent: false });
+    const formatted = date ? this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '' : '';
+    setTimeout(() => {
+      if (this.fechaFinInputRef?.nativeElement) this.fechaFinInputRef.nativeElement.value = formatted;
+    });
   }
 
   /**

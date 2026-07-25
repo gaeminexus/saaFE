@@ -172,7 +172,15 @@
               <div class="form-row">
                 <mat-form-field appearance="fill" class="full-width">
                   <mat-label>Fecha de Nacimiento</mat-label>
-                  <input matInput [matDatepicker]="picker" formControlName="fechaNacimiento">
+                  <input
+                    #fechaNacimientoInput
+                    matInput
+                    [matDatepicker]="picker"
+                    formControlName="fechaNacimiento"
+                    placeholder="dd/mm/aaaa"
+                    (input)="capturarFechaNacimientoRaw($event)"
+                    (dateChange)="onFechaNacimientoPickerChange($event.value)"
+                    (blur)="syncFechaNacimientoFromRaw($event)">
                   <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
                   <mat-datepicker #picker></mat-datepicker>
                 </mat-form-field>
