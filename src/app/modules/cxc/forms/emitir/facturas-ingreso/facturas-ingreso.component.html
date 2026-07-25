@@ -369,11 +369,11 @@
         <mat-icon>shop_two</mat-icon>
         Generar Factura
       </button>
-      <button mat-raised-button class="btn-nueva" matTooltip="Imprimir Factura" aria-label="Imprimir Factura" (click)="imprimeFactura()">
+      <button mat-raised-button class="btn-nueva" matTooltip="Imprimir Factura" aria-label="Imprimir Factura" (click)="imprimeFactura()" [disabled]="!deshabilitado">
         <mat-icon>print</mat-icon>
         Imprimir
       </button>
-      <button mat-raised-button class="btn-nueva" matTooltip="Nueva Factura" aria-label="Nueva Factura" (click)="nueva()">
+      <button mat-raised-button class="btn-nueva" matTooltip="Nueva Factura" aria-label="Nueva Factura" (click)="nueva()" [disabled]="guardando()">
         <mat-icon>add</mat-icon>
         Nueva
       </button>

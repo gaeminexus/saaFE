@@ -4,8 +4,8 @@ import { FormsModule, ReactiveFormsModule, UntypedFormControl } from '@angular/f
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableDataSource } from '@angular/material/table';
-import { forkJoin, of } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { forkJoin, of, Observable } from 'rxjs';
+import { catchError, switchMap } from 'rxjs/operators';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { ExportService } from '../../../../../shared/services/export.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
@@ -16,6 +16,10 @@ import { NotaDebitoEmitirService } from '../../../service/emitir/nota-debito-emi
 import { RetencionV2EmitirService } from '../../../service/emitir/retencion-v2-emitir.service';
 import { DetalleSriService } from '../../../service/detalle-sri.service';
 import { MotivoAnulacionDialogComponent } from '../motivo-anulacion-dialog/motivo-anulacion-dialog.component';
+import { AdvertenciaNcDialogComponent } from '../advertencia-nc-dialog/advertencia-nc-dialog.component';
+import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
+import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
+import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 
 export type TipoDocumento = 'TODOS' | 'FACTURA' | 'NOTA_CREDITO' | 'NOTA_DEBITO' | 'RETENCION';
 
@@ -325,28 +329,60 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
       this.mostrarInfo('El documento ya está anulado'); return;
     }
     const tipoLabel = row.tipoLabel || 'Documento';
-    const dialogRef = this.dialog.open(MotivoAnulacionDialogComponent, {
-      width: '480px', disableClose: true,
-      data: { numero: row.numero || String(row.id), tipoLabel },
-    });
-    dialogRef.afterClosed().subscribe((motivo: string | null) => {
-      if (!motivo) return;
-      this.anulando.set(true);
-      const usuario = this.usuarioSesion;
-      const req$ = (() => {
-        switch (row.tipo) {
-          case 'FACTURA':      return this.facturaService.anularFactura({ idFactura: row.id, usuario, motivo });
-          case 'NOTA_CREDITO': return this.ncService.anular({ idNotaCredito: row.id, usuario, motivo });
-          case 'NOTA_DEBITO':  return this.ndService.anular({ idNotaDebito: row.id, usuario, motivo });
-          case 'RETENCION':    return this.retService.anular({ idRetencion: row.id, usuario, motivo });
-          default: return of(null);
-        }
-      })();
-      req$.subscribe({
-        next: () => { this.anulando.set(false); this.mostrarExito(`${tipoLabel} anulada correctamente`); this.buscar(); },
-        error: () => { this.anulando.set(false); this.mostrarError(`No se pudo anular el documento`); },
+
+    // Si es factura, verificar si tiene NCs relacionadas antes de abrir el diálogo
+    const preCheck$: Observable<boolean> = row.tipo === 'FACTURA'
+      ? this._verificarNotasCreditoRelacionadas(row)
+      : of(true);
+
+    preCheck$.subscribe(continuar => {
+      if (!continuar) return;
+
+      const dialogRef = this.dialog.open(MotivoAnulacionDialogComponent, {
+        width: '480px', disableClose: true,
+        data: { numero: row.numero || String(row.id), tipoLabel },
+      });
+      dialogRef.afterClosed().subscribe((motivo: string | null) => {
+        if (!motivo) return;
+        this.anulando.set(true);
+        const usuario = this.usuarioSesion;
+        const req$ = (() => {
+          switch (row.tipo) {
+            case 'FACTURA':      return this.facturaService.anularFactura({ idFactura: row.id, usuario, motivo });
+            case 'NOTA_CREDITO': return this.ncService.anular({ idNotaCredito: row.id, usuario, motivo });
+            case 'NOTA_DEBITO':  return this.ndService.anular({ idNotaDebito: row.id, usuario, motivo });
+            case 'RETENCION':    return this.retService.anular({ idRetencion: row.id, usuario, motivo });
+            default: return of(null);
+          }
+        })();
+        req$.subscribe({
+          next: () => { this.anulando.set(false); this.mostrarExito(`${tipoLabel} anulada correctamente`); this.buscar(); },
+          error: () => { this.anulando.set(false); this.mostrarError(`No se pudo anular el documento`); },
+        });
       });
     });
+  }
+
+  /** Busca NCs relacionadas con la factura. Si existen, abre advertencia y retorna Observable<boolean>. */
+  private _verificarNotasCreditoRelacionadas(row: DocumentoElectronico): Observable<boolean> {
+    const criterio = new DatosBusqueda();
+    criterio.asignaValorConCampoPadre(
+      TipoDatosBusqueda.LONG, 'factura', 'id', String(row.id), TipoComandosBusqueda.IGUAL
+    );
+    return this.ncService.selectByCriteria([criterio]).pipe(
+      catchError(() => of([])),
+      switchMap(lista => {
+        const ncs = (lista || []).filter(nc => nc.estadoEmision !== 3); // excluir ya anuladas
+        if (ncs.length === 0) return of(true);
+        const numerosNC = ncs.map(nc => nc.numero || String(nc.id));
+        const advertenciaRef = this.dialog.open(AdvertenciaNcDialogComponent, {
+          width: '520px',
+          disableClose: true,
+          data: { numeroFactura: row.numero || String(row.id), numerosNC },
+        });
+        return advertenciaRef.afterClosed() as Observable<boolean>;
+      })
+    );
   }
 
   copiarClave(row: DocumentoElectronico): void {
