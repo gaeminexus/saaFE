@@ -147,6 +147,8 @@ import { entidadEditResolver } from './modules/crd/resolver/entidad-edit.resolve
 import { EstadosResolverService } from './modules/crd/resolver/estados-resolver.service';
 import { ListadosCrdResolverService } from './modules/crd/resolver/listados-crd-resolver.service';
 import { TiposCrdResolverService } from './modules/crd/resolver/tipos-crd-resolver.service';
+import { AnticiposClientesComponent } from './modules/tsr/forms/anticipos/anticipos-clientes/anticipos-clientes.component';
+import { AnticiposProveedoresComponent } from './modules/tsr/forms/anticipos/anticipos-proveedores/anticipos-proveedores.component';
 
 export const routes: Routes = [
   { path: '', component: LoginComponent },
@@ -385,6 +387,20 @@ export const routes: Routes = [
         path: 'parametrizacion/titulares-v2',
         redirectTo: 'parametrizacion/titulares',
         pathMatch: 'full',
+      },
+
+      // Procesos - Anticipos
+      {
+        path: 'procesos/anticipos/clientes',
+        component: AnticiposClientesComponent,
+        canActivate: [authGuard],
+        data: { title: 'Anticipos - Clientes' },
+      },
+      {
+        path: 'procesos/anticipos/proveedores',
+        component: AnticiposProveedoresComponent,
+        canActivate: [authGuard],
+        data: { title: 'Anticipos - Proveedores' },
       },
 
       // Procesos - Cobros

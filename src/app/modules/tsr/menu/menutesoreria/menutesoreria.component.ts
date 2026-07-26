@@ -121,6 +121,25 @@ export class MenutesoreriaComponent {
       idPermiso: 811,
       children: [
         {
+          displayName: 'Anticipos',
+          iconName: 'payments',
+          idPermiso: 830,
+          children: [
+            {
+              displayName: 'Clientes',
+              iconName: 'person',
+              idPermiso: 830,
+              route: '/menutesoreria/procesos/anticipos/clientes',
+            },
+            {
+              displayName: 'Proveedores',
+              iconName: 'business',
+              idPermiso: 830,
+              route: '/menutesoreria/procesos/anticipos/proveedores',
+            },
+          ],
+        },
+        {
           displayName: 'Cobros',
           iconName: 'attach_money',
           idPermiso: 830,
