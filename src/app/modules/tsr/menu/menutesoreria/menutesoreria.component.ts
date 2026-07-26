@@ -340,6 +340,31 @@ export class MenutesoreriaComponent {
             },
           ],
         },
+        {
+          displayName: 'Extractos Bancarios',
+          iconName: 'receipt_long',
+          idPermiso: 830,
+          children: [
+            {
+              displayName: 'Cargar Extracto',
+              iconName: 'upload_file',
+              idPermiso: 830,
+              route: '/menutesoreria/procesos/extractos-bancarios/cargar',
+            },
+            {
+              displayName: 'Consulta de Extractos',
+              iconName: 'search',
+              idPermiso: 830,
+              route: '/menutesoreria/procesos/extractos-bancarios/consulta',
+            },
+            {
+              displayName: 'Tablero de Cumplimiento',
+              iconName: 'dashboard',
+              idPermiso: 830,
+              route: '/menutesoreria/procesos/extractos-bancarios/tablero',
+            },
+          ],
+        },
       ],
     },
     { displayName: 'Regresar', iconName: 'arrow_back', route: '/menu' },

@@ -1,0 +1,141 @@
+<div class="detalle-extracto-container">
+  <div class="page-header">
+    <button mat-icon-button (click)="regresar()">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+    <mat-icon class="header-icon">description</mat-icon>
+    <div>
+      <h1>Detalle de Extracto Bancario</h1>
+      @if (extracto) {
+      <p class="subtitle">{{ extracto.cuentaBancaria?.banco?.nombre }} - {{ extracto.cuentaBancaria?.numeroCuenta }}</p>
+      }
+    </div>
+  </div>
+
+  @if (isLoadingExtracto) {
+  <div class="spinner-container">
+    <mat-spinner diameter="48"></mat-spinner>
+  </div>
+  } @else if (extracto) {
+  <mat-card class="info-card">
+    <mat-card-content>
+      <div class="resumen-grid">
+        <div class="resumen-item">
+          <span class="label">Período:</span>
+          <span class="value">{{ formatearSoloFecha(extracto.fechaDesde) }} - {{ formatearSoloFecha(extracto.fechaHasta) }}</span>
+        </div>
+        <div class="resumen-item">
+          <span class="label">Saldo Inicial:</span>
+          <span class="value">${{ extracto.saldoInicial | number : '1.2-2' }}</span>
+        </div>
+        <div class="resumen-item">
+          <span class="label">Saldo Final:</span>
+          <span class="value">${{ extracto.saldoFinal | number : '1.2-2' }}</span>
+        </div>
+        <div class="resumen-item">
+          <span class="label">Estado:</span>
+          <span class="value">{{ obtenerEstadoCargaTexto(extracto.estadoCarga) }}</span>
+        </div>
+        <div class="resumen-item">
+          <span class="label">Archivo:</span>
+          <span class="value">{{ extracto.archivoNombre }}</span>
+        </div>
+        <div class="resumen-item">
+          <span class="label">Cargado por:</span>
+          <span class="value">{{ extracto.usuarioCreacion }} - {{ formatearFechaHora(extracto.fechaCreacion) }}</span>
+        </div>
+      </div>
+      @if (extracto.observaciones) {
+      <div class="observaciones">
+        <mat-icon>error_outline</mat-icon>
+        <span>{{ extracto.observaciones }}</span>
+      </div>
+      }
+    </mat-card-content>
+  </mat-card>
+  }
+
+  @if (isLoadingDetalles) {
+  <div class="spinner-container">
+    <mat-spinner diameter="48"></mat-spinner>
+  </div>
+  } @else {
+  <div class="table-wrapper">
+    <table mat-table [dataSource]="detalles" class="detalle-table" multiTemplateDataRows>
+      <ng-container matColumnDef="fechaTransaccion">
+        <th mat-header-cell *matHeaderCellDef>Fecha</th>
+        <td mat-cell *matCellDef="let row">{{ formatearSoloFecha(row.fechaTransaccion) }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="descripcion">
+        <th mat-header-cell *matHeaderCellDef>Descripción</th>
+        <td mat-cell *matCellDef="let row" class="descripcion-cell">{{ row.descripcion }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="referencia">
+        <th mat-header-cell *matHeaderCellDef>Referencia</th>
+        <td mat-cell *matCellDef="let row">{{ row.referencia }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="debito">
+        <th mat-header-cell *matHeaderCellDef style="text-align: right">Débito</th>
+        <td mat-cell *matCellDef="let row" style="text-align: right">
+          {{ row.debito ? ('$' + (row.debito | number : '1.2-2')) : '' }}
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="credito">
+        <th mat-header-cell *matHeaderCellDef style="text-align: right">Crédito</th>
+        <td mat-cell *matCellDef="let row" style="text-align: right">
+          {{ row.credito ? ('$' + (row.credito | number : '1.2-2')) : '' }}
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="saldo">
+        <th mat-header-cell *matHeaderCellDef style="text-align: right">Saldo</th>
+        <td mat-cell *matCellDef="let row" style="text-align: right">${{ row.saldo | number : '1.2-2' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="estadoRevision">
+        <th mat-header-cell *matHeaderCellDef>Estado</th>
+        <td mat-cell *matCellDef="let row">
+          <span class="estado-badge" [ngClass]="obtenerEstadoRevisionInfo(row.estadoRevision).clase">
+            {{ obtenerEstadoRevisionInfo(row.estadoRevision).texto }}
+          </span>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="acciones">
+        <th mat-header-cell *matHeaderCellDef>Auditoría</th>
+        <td mat-cell *matCellDef="let row">
+          <button mat-icon-button (click)="toggleFilaCruda(row)" matTooltip="Ver fila cruda del archivo original">
+            <mat-icon>{{ filaExpandida === row.codigo ? 'expand_less' : 'expand_more' }}</mat-icon>
+          </button>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="filaCruda">
+        <td mat-cell *matCellDef="let row" [attr.colspan]="displayedColumns.length" class="fila-cruda-cell">
+          @if (filaExpandida === row.codigo) {
+          <div class="fila-cruda-content">
+            <strong>Fila #{{ row.numeroFila }} original:</strong>
+            <code>{{ row.filaCruda }}</code>
+          </div>
+          }
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: ['filaCruda']" class="fila-cruda-row"></tr>
+    </table>
+
+    @if (detalles.length === 0) {
+    <div class="empty-state">
+      <mat-icon>info</mat-icon>
+      <p>Este extracto no tiene movimientos registrados.</p>
+    </div>
+    }
+  </div>
+  }
+</div>

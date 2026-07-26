@@ -1,0 +1,95 @@
+.consulta-extractos-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  .header-icon {
+    font-size: 36px;
+    width: 36px;
+    height: 36px;
+    color: #667eea;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: 22px;
+  }
+
+  .subtitle {
+    margin: 0;
+    color: rgba(0, 0, 0, 0.6);
+  }
+}
+
+.filter-field {
+  width: 100%;
+  max-width: 480px;
+}
+
+.spinner-container {
+  display: flex;
+  justify-content: center;
+  padding: 32px;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+.extractos-table {
+  width: 100%;
+}
+
+.archivo-cell {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.estado-badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+
+  &.estado-cargado {
+    background: #e3f2fd;
+    color: #1565c0;
+  }
+
+  &.estado-validado {
+    background: #e8f5e9;
+    color: #2e7d32;
+  }
+
+  &.estado-aplicado {
+    background: #ede7f6;
+    color: #5e35b1;
+  }
+
+  &.estado-error {
+    background: #ffebee;
+    color: #c62828;
+  }
+
+  &.estado-desconocido {
+    background: #f5f5f5;
+    color: #616161;
+  }
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px;
+  color: rgba(0, 0, 0, 0.5);
+}

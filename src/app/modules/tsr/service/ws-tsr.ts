@@ -57,4 +57,7 @@ export class ServiciosTsr {
   public static RS_TRNS = `${API_URL}/trns`;
   public static RS_USXC = `${API_URL}/usxc`;
   public static RS_PMTV = `${API_URL}/pmtv`;
+  public static RS_EXBC = `${API_URL}/exbc`; // ExtractoBancario
+  public static RS_DEXB = `${API_URL}/dexb`; // DetalleExtractoBancario
+  public static RS_CTEB = `${API_URL}/cteb`; // ControlExtractoBancario
 }

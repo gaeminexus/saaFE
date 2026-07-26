@@ -85,6 +85,10 @@ import { CuentasBancariasComponent } from './modules/tsr/forms/cuentas-bancarias
 import { ConciliacionComponent } from './modules/tsr/forms/generales/conciliacion/conciliacion.component';
 import { ConsultaConciliacionComponent } from './modules/tsr/forms/generales/consulta-conciliacion/consulta-conciliacion.component';
 import { RiedComponent } from './modules/tsr/forms/generales/ried/ried.component';
+import { CargarExtractoBancarioComponent } from './modules/tsr/forms/generales/cargar-extracto-bancario/cargar-extracto-bancario.component';
+import { ConsultaExtractosBancariosComponent } from './modules/tsr/forms/generales/consulta-extractos-bancarios/consulta-extractos-bancarios.component';
+import { DetalleExtractoBancarioComponent } from './modules/tsr/forms/generales/detalle-extracto-bancario/detalle-extracto-bancario.component';
+import { TableroCumplimientoExtractosComponent } from './modules/tsr/forms/generales/tablero-cumplimiento-extractos/tablero-cumplimiento-extractos.component';
 import { CreditosComponent } from './modules/tsr/forms/movimientos-bancarios/creditos/creditos.component';
 import { DebitosComponent } from './modules/tsr/forms/movimientos-bancarios/debitos/debitos.component';
 import { TransferenciasComponent } from './modules/tsr/forms/movimientos-bancarios/transferencias/transferencias.component';
@@ -539,6 +543,32 @@ export const routes: Routes = [
         component: RiedComponent,
         canActivate: [authGuard],
         data: { title: 'RIED' },
+      },
+
+      // Procesos - Extractos Bancarios
+      {
+        path: 'procesos/extractos-bancarios/cargar',
+        component: CargarExtractoBancarioComponent,
+        canActivate: [authGuard],
+        data: { title: 'Cargar Extracto Bancario' },
+      },
+      {
+        path: 'procesos/extractos-bancarios/consulta',
+        component: ConsultaExtractosBancariosComponent,
+        canActivate: [authGuard],
+        data: { title: 'Consulta de Extractos Bancarios' },
+      },
+      {
+        path: 'procesos/extractos-bancarios/detalle',
+        component: DetalleExtractoBancarioComponent,
+        canActivate: [authGuard],
+        data: { title: 'Detalle de Extracto Bancario' },
+      },
+      {
+        path: 'procesos/extractos-bancarios/tablero',
+        component: TableroCumplimientoExtractosComponent,
+        canActivate: [authGuard],
+        data: { title: 'Tablero de Cumplimiento de Extractos' },
       },
     ],
   },

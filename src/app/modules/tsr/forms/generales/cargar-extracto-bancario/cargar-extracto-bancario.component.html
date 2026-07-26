@@ -1,0 +1,160 @@
+<div class="cargar-extracto-container">
+  <div class="page-header">
+    <mat-icon class="header-icon">upload_file</mat-icon>
+    <div>
+      <h1>Cargar Estado de Cuenta Bancario</h1>
+      <p class="subtitle">Seleccione la cuenta bancaria y suba el archivo Excel del banco</p>
+    </div>
+  </div>
+
+  @if (!cargaExitosa) {
+  <mat-card class="form-card">
+    <mat-card-content>
+      <div class="form-grid">
+        <mat-form-field appearance="outline">
+          <mat-label>Cuenta Bancaria</mat-label>
+          <mat-select [(ngModel)]="cuentaSeleccionada" (selectionChange)="onCuentaChange()">
+            @for (cuenta of cuentas; track cuenta.codigo) {
+            <mat-option [value]="cuenta.codigo">
+              {{ cuenta.banco?.nombre }} - {{ cuenta.numeroCuenta }}
+            </mat-option>
+            }
+          </mat-select>
+          @if (isLoadingCuentas) {
+          <mat-hint>Cargando cuentas...</mat-hint>
+          }
+        </mat-form-field>
+
+        <div class="file-input-wrap">
+          <button mat-stroked-button color="primary" (click)="fileInput.click()" [disabled]="!cuentaSeleccionada">
+            <mat-icon>attach_file</mat-icon>
+            Seleccionar Archivo
+          </button>
+          <input #fileInput type="file" accept=".xls,.xlsx" hidden (change)="onFileSelected($event)" />
+          @if (nombreArchivo) {
+          <span class="file-name">{{ nombreArchivo }}</span>
+          }
+        </div>
+      </div>
+
+      <div class="actions-row">
+        <button
+          mat-raised-button
+          color="primary"
+          (click)="validarArchivo()"
+          [disabled]="!cuentaSeleccionada || !archivoSeleccionado || isValidando"
+        >
+          @if (isValidando) {
+          <mat-spinner diameter="20"></mat-spinner>
+          } @else {
+          <ng-container>
+            <mat-icon>fact_check</mat-icon>
+            Validar
+          </ng-container>
+          }
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+  }
+
+  @if (resumen && !cargaExitosa) {
+  <mat-card class="resumen-card">
+    <mat-card-header>
+      <mat-icon mat-card-avatar class="avatar-icon">summarize</mat-icon>
+      <mat-card-title>Resumen de la Carga</mat-card-title>
+      <mat-card-subtitle>{{ resumen.nombreBanco }} - {{ resumen.numeroCuenta }}</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      @if (resumen.archivoYaCargado) {
+      <div class="alerta alerta-warn">
+        <mat-icon>warning</mat-icon>
+        Este archivo ya fue cargado previamente (extracto #{{ resumen.idExtractoExistente }}). Si confirma,
+        el backend rechazará la carga duplicada.
+      </div>
+      }
+
+      <div class="stat-grid">
+        <div class="stat-item">
+          <mat-icon>date_range</mat-icon>
+          <div class="stat-value">{{ formatearSoloFecha(resumen.fechaDesde) }} - {{ formatearSoloFecha(resumen.fechaHasta) }}</div>
+          <div class="stat-label">Período</div>
+        </div>
+        <div class="stat-item">
+          <mat-icon>account_balance_wallet</mat-icon>
+          <div class="stat-value">${{ resumen.saldoInicial | number : '1.2-2' }}</div>
+          <div class="stat-label">Saldo Inicial</div>
+        </div>
+        <div class="stat-item">
+          <mat-icon>account_balance_wallet</mat-icon>
+          <div class="stat-value">${{ resumen.saldoFinal | number : '1.2-2' }}</div>
+          <div class="stat-label">Saldo Final</div>
+        </div>
+        <div class="stat-item">
+          <mat-icon>arrow_downward</mat-icon>
+          <div class="stat-value">${{ resumen.totalDebito | number : '1.2-2' }}</div>
+          <div class="stat-label">Total Débito</div>
+        </div>
+        <div class="stat-item">
+          <mat-icon>arrow_upward</mat-icon>
+          <div class="stat-value">${{ resumen.totalCredito | number : '1.2-2' }}</div>
+          <div class="stat-label">Total Crédito</div>
+        </div>
+        <div class="stat-item">
+          <mat-icon>list_alt</mat-icon>
+          <div class="stat-value">{{ resumen.totalFilas }}</div>
+          <div class="stat-label">Filas Procesadas</div>
+        </div>
+      </div>
+
+      @if (resumen.advertencias && resumen.advertencias.length > 0) {
+      <div class="advertencias">
+        <div class="advertencias-header">
+          <mat-icon>error_outline</mat-icon>
+          {{ resumen.advertencias.length }} advertencia(s) de saldo
+        </div>
+        <ul>
+          @for (advertencia of resumen.advertencias; track $index) {
+          <li>{{ advertencia }}</li>
+          }
+        </ul>
+      </div>
+      }
+    </mat-card-content>
+    <mat-card-actions>
+      <button mat-raised-button color="primary" (click)="confirmarCarga()" [disabled]="isConfirmando">
+        @if (isConfirmando) {
+        <mat-spinner diameter="20"></mat-spinner>
+        } @else {
+        <ng-container>
+          <mat-icon>save</mat-icon>
+          Confirmar Carga
+        </ng-container>
+        }
+      </button>
+    </mat-card-actions>
+  </mat-card>
+  }
+
+  @if (cargaExitosa) {
+  <mat-card class="exito-card">
+    <mat-card-content>
+      <div class="exito-content">
+        <mat-icon class="exito-icon">check_circle</mat-icon>
+        <h2>Extracto cargado exitosamente</h2>
+        <p>El estado de cuenta ha sido procesado y guardado.</p>
+        <div class="exito-actions">
+          <button mat-raised-button color="primary" (click)="verDetalle()">
+            <mat-icon>visibility</mat-icon>
+            Ver Detalle
+          </button>
+          <button mat-stroked-button color="primary" (click)="nuevaCarga()">
+            <mat-icon>add</mat-icon>
+            Nueva Carga
+          </button>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+  }
+</div>

@@ -1,0 +1,138 @@
+.detalle-extracto-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  .header-icon {
+    font-size: 32px;
+    width: 32px;
+    height: 32px;
+    color: #667eea;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: 20px;
+  }
+
+  .subtitle {
+    margin: 0;
+    color: rgba(0, 0, 0, 0.6);
+  }
+}
+
+.spinner-container {
+  display: flex;
+  justify-content: center;
+  padding: 32px;
+}
+
+.info-card {
+  border-radius: 12px;
+}
+
+.resumen-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+
+  .resumen-item {
+    display: flex;
+    flex-direction: column;
+
+    .label {
+      font-size: 12px;
+      color: rgba(0, 0, 0, 0.6);
+    }
+
+    .value {
+      font-weight: 600;
+    }
+  }
+}
+
+.observaciones {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px;
+  background: #fff8e1;
+  color: #7a5c00;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+.detalle-table {
+  width: 100%;
+}
+
+.descripcion-cell {
+  max-width: 320px;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.estado-badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+
+  &.estado-pendiente {
+    background: #fff3e0;
+    color: #e65100;
+  }
+
+  &.estado-conciliada {
+    background: #e8f5e9;
+    color: #2e7d32;
+  }
+
+  &.estado-descartada {
+    background: #f5f5f5;
+    color: #616161;
+  }
+}
+
+.fila-cruda-row {
+  height: 0;
+}
+
+.fila-cruda-cell {
+  border-bottom: none !important;
+  padding: 0 !important;
+}
+
+.fila-cruda-content {
+  padding: 12px 16px;
+  background: #f8fafc;
+  font-size: 12px;
+
+  code {
+    display: block;
+    margin-top: 4px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: #333;
+  }
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px;
+  color: rgba(0, 0, 0, 0.5);
+}

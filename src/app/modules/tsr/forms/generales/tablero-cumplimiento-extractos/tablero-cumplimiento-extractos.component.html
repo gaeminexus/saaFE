@@ -1,0 +1,102 @@
+<div class="tablero-container">
+  <div class="page-header">
+    <mat-icon class="header-icon">dashboard</mat-icon>
+    <div>
+      <h1>Tablero de Cumplimiento de Extractos</h1>
+      <p class="subtitle">Cuántas cuentas ya cargaron y conciliaron su extracto cada mes</p>
+    </div>
+  </div>
+
+  <mat-card class="generar-card">
+    <mat-card-content>
+      <div class="generar-row">
+        <mat-form-field appearance="outline">
+          <mat-label>Período</mat-label>
+          <mat-select [(ngModel)]="periodoSeleccionado">
+            @for (periodo of periodos; track periodo.codigo) {
+            <mat-option [value]="periodo.codigo">{{ periodo.nombre }} ({{ periodo.mes }}/{{ periodo.anio }})</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <button mat-raised-button color="primary" (click)="generarPeriodo()" [disabled]="isGenerando">
+          @if (isGenerando) {
+          <mat-spinner diameter="20"></mat-spinner>
+          } @else {
+          <ng-container>
+            <mat-icon>add_task</mat-icon>
+            Generar Período
+          </ng-container>
+          }
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  @if (isLoading) {
+  <div class="spinner-container">
+    <mat-spinner diameter="48"></mat-spinner>
+  </div>
+  } @else {
+  <div class="tablero-grid">
+    @for (control of controles; track control.codigo) {
+    <mat-card class="periodo-card">
+      <mat-card-header>
+        <mat-icon mat-card-avatar class="card-icon">event_note</mat-icon>
+        <mat-card-title>{{ control.mes }}/{{ control.anio }}</mat-card-title>
+        <mat-card-subtitle>
+          Actualizado: {{ formatearFechaHora(control.fechaCreacion) }}
+        </mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="stat-row">
+          <div class="stat-item">
+            <div class="stat-value">{{ control.totalCuentas }}</div>
+            <div class="stat-label">Total Cuentas</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">{{ control.cuentasCargadas }}</div>
+            <div class="stat-label">Cargadas</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">{{ control.cuentasConciliadas }}</div>
+            <div class="stat-label">Conciliadas</div>
+          </div>
+        </div>
+
+        <div class="progreso-item">
+          <span class="progreso-label">Cargadas ({{ porcentajeCargadas(control) }}%)</span>
+          <mat-progress-bar mode="determinate" [value]="porcentajeCargadas(control)"></mat-progress-bar>
+        </div>
+        <div class="progreso-item">
+          <span class="progreso-label">Conciliadas ({{ porcentajeConciliadas(control) }}%)</span>
+          <mat-progress-bar mode="determinate" color="accent" [value]="porcentajeConciliadas(control)"></mat-progress-bar>
+        </div>
+
+        @if (control.observaciones) {
+        <div class="observaciones">{{ control.observaciones }}</div>
+        }
+      </mat-card-content>
+      <mat-card-actions>
+        <button mat-button color="primary" (click)="recalcular(control)" [disabled]="recalculandoCodigo === control.codigo">
+          @if (recalculandoCodigo === control.codigo) {
+          <mat-spinner diameter="18"></mat-spinner>
+          } @else {
+          <ng-container>
+            <mat-icon>refresh</mat-icon>
+            Recalcular
+          </ng-container>
+          }
+        </button>
+      </mat-card-actions>
+    </mat-card>
+    }
+
+    @if (controles.length === 0) {
+    <div class="empty-state">
+      <mat-icon>info</mat-icon>
+      <p>No hay períodos generados todavía.</p>
+    </div>
+    }
+  </div>
+  }
+</div>

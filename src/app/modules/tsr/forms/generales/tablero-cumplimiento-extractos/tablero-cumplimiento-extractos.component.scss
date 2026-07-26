@@ -1,0 +1,113 @@
+.tablero-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  .header-icon {
+    font-size: 36px;
+    width: 36px;
+    height: 36px;
+    color: #667eea;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: 22px;
+  }
+
+  .subtitle {
+    margin: 0;
+    color: rgba(0, 0, 0, 0.6);
+  }
+}
+
+.generar-card {
+  border-radius: 12px;
+}
+
+.generar-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+
+  mat-form-field {
+    min-width: 260px;
+  }
+}
+
+.spinner-container {
+  display: flex;
+  justify-content: center;
+  padding: 32px;
+}
+
+.tablero-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.periodo-card {
+  border-radius: 12px;
+
+  .card-icon {
+    background: #667eea;
+    color: white;
+  }
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-around;
+  margin-bottom: 16px;
+
+  .stat-item {
+    text-align: center;
+
+    .stat-value {
+      font-size: 22px;
+      font-weight: 700;
+      color: #667eea;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: rgba(0, 0, 0, 0.6);
+    }
+  }
+}
+
+.progreso-item {
+  margin-bottom: 10px;
+
+  .progreso-label {
+    font-size: 12px;
+    color: rgba(0, 0, 0, 0.7);
+  }
+}
+
+.observaciones {
+  margin-top: 12px;
+  padding: 8px;
+  background: #fff8e1;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #7a5c00;
+}
+
+.empty-state {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px;
+  color: rgba(0, 0, 0, 0.5);
+}
