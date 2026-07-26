@@ -580,7 +580,63 @@ criterios.push(dbOpen);
 
 ---
 
-### ❌ Error 5: Buscar por entidad padre incorrecta
+### ❌ Error 5: Usar objeto plano para relaciones anidadas de múltiples niveles
+
+`asignaValorConCampoPadre` **solo soporta UN nivel de nesting** (ej: `titular.codigo`).
+Para relaciones de dos o más niveles (ej: `personaRol.titular.codigo`), NO es posible expresarlo directamente. Se requiere una consulta previa.
+
+```typescript
+// ❌ INCORRECTO - objeto plano (nunca usar)
+this.cuentaContableS.selectByCriteria({
+  personaRol: { titular: { codigo: titular.codigo } }
+});
+
+// ❌ INCORRECTO - asignaValorConCampoPadre no llega a dos niveles
+db.asignaValorConCampoPadre(TipoDatos.LONG, 'personaRol', 'titular.codigo', ...);
+```
+
+**Solución correcta: consulta en dos pasos con switchMap**
+
+```typescript
+import { switchMap } from 'rxjs';
+
+// Paso 1: obtener PersonaRol por titular.codigo (un solo nivel)
+const dbTitular = new DatosBusqueda();
+dbTitular.asignaValorConCampoPadre(
+  TipoDatos.LONG, 'titular', 'codigo',
+  titular.codigo.toString(), TipoComandosBusqueda.IGUAL
+);
+const dbRol = new DatosBusqueda();
+dbRol.asignaUnCampoSinTrunc(
+  TipoDatos.LONG, 'rubroRolPersonaH',
+  ROL_CLIENTE.toString(), TipoComandosBusqueda.IGUAL
+);
+
+this.personaRolService.selectByCriteria([dbTitular, dbRol]).pipe(
+  switchMap((roles) => {
+    const personaRolCodigo = (roles || [])[0]?.codigo;
+    if (!personaRolCodigo) return [null];
+
+    // Paso 2: usar PersonaRol.codigo como clave directa (un solo nivel)
+    const dbPR = new DatosBusqueda();
+    dbPR.asignaValorConCampoPadre(
+      TipoDatos.LONG, 'personaRol', 'codigo',
+      personaRolCodigo.toString(), TipoComandosBusqueda.IGUAL
+    );
+    const dbTC = new DatosBusqueda();
+    dbTC.asignaUnCampoSinTrunc(
+      TipoDatos.LONG, 'tipoCuenta', '2', TipoComandosBusqueda.IGUAL
+    );
+    return this.cuentaContableService.selectByCriteria([dbPR, dbTC]);
+  })
+).subscribe({ next: (rows) => { ... } });
+```
+
+**Regla:** Cuando necesites filtrar por `A.B.campo`, primero busca `B` por `campo`, luego usa `B.codigo` para buscar en `A`.
+
+---
+
+### ❌ Error 6: Buscar por entidad padre incorrecta
 
 ```typescript
 // ❌ INCORRECTO - Buscar partícipes por cargaArchivo.codigo
@@ -603,6 +659,26 @@ db.asignaValorConCampoPadre(
   detalleId.toString(),
   TipoComandosBusqueda.IGUAL
 );
+```
+
+---
+
+### ❌ Error 7: Usar `TipoDatos.INTEGER` cuando el campo es `Long` en la BD
+
+Aunque un campo almacene valores pequeños (0, 1, 2...), si en el backend el tipo Java es `Long`, se debe usar `TipoDatos.LONG`. Usar `INTEGER` genera el error:
+
+```
+No argument for named parameter ':campo1'
+```
+
+**Regla:** verificar el tipo Java del campo en el modelo TypeScript (el comentario suele indicarlo) o usar siempre `TipoDatos.LONG` para campos numéricos enteros cuando haya duda.
+
+```typescript
+// ❌ INCORRECTO si tipoCuenta es Long en el backend
+db.asignaUnCampoSinTrunc(TipoDatos.INTEGER, 'tipoCuenta', '2', TipoComandosBusqueda.IGUAL);
+
+// ✅ CORRECTO
+db.asignaUnCampoSinTrunc(TipoDatos.LONG, 'tipoCuenta', '2', TipoComandosBusqueda.IGUAL);
 ```
 
 ---
@@ -686,7 +762,8 @@ Antes de ejecutar `selectByCriteria()`:
 
 - [ ] ✅ Usar array `DatosBusqueda[]`, no objetos planos
 - [ ] ✅ Importar `DatosBusqueda`, `TipoDatos` y `TipoComandosBusqueda`
-- [ ] ✅ Usar `asignaValorConCampoPadre()` para campos de entidades relacionadas
+- [ ] ✅ Usar `asignaValorConCampoPadre()` para campos de entidades relacionadas (solo UN nivel: `relacion.campo`)
+- [ ] ✅ Para relaciones de 2+ niveles (ej: `A.B.campo`): usar consulta previa con `switchMap` para obtener `B.codigo`
 - [ ] ✅ En búsquedas OR: usar paréntesis y `setNumeroCampoRepetido()`
 - [ ] ✅ Siempre cerrar paréntesis que se abrieron
 - [ ] ✅ Validar valores null/undefined antes de crear criterios

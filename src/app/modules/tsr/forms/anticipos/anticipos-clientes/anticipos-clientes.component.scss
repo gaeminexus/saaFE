@@ -1,0 +1,86 @@
+﻿.anticipos-wrap { padding: 16px; }
+
+.page-card {
+  max-width: 700px;
+
+  mat-card-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1.1rem;
+
+    mat-icon { color: var(--mat-sys-primary, #1565c0); }
+  }
+}
+
+.selector-wrap {
+  margin: 8px 0 16px;
+
+  button {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+}
+
+.titular-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #e8f5e9;
+  border-left: 4px solid #2e7d32;
+  border-radius: 4px;
+
+  .icon-ok { color: #2e7d32; }
+
+  .titular-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+
+    .titular-nombre { font-weight: 600; font-size: 0.95rem; }
+    .titular-id { font-size: 0.8rem; color: #555; }
+  }
+}
+
+.card-acciones {
+  display: flex;
+  gap: 12px;
+  padding: 8px 16px 16px;
+  flex-wrap: wrap;
+
+  button { display: flex; align-items: center; gap: 6px; }
+}
+
+// ─── Saldo de anticipos ──────────────────────────────────────
+.saldo-wrap {
+  margin-top: 14px;
+}
+
+.saldo-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 20px;
+  background: #f5f5f5;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+
+  .saldo-label {
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #666;
+    font-weight: 500;
+  }
+
+  .saldo-valor {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #333;
+
+    &.saldo-positivo { color: #1565c0; }
+  }
+}

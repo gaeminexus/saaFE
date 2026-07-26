@@ -1,11 +1,13 @@
 // Documento único por clave de acceso SRI — endpoint: /dcxp
 
 import { Empresa } from "../../../shared/model/empresa";
+import { Periodo } from "../../cnt/model/periodo";
 
 // Tabla PGS.DCXP — UN solo registro por documento (por claveAcceso)
 export interface DocumentoCxp {
   id: number;
   empresa: Empresa;
+  periodoContable: Periodo;          // FK a periodo contable
   claveAcceso: string;               // UNIQUE — clave SRI del documento
   rucEmisor: string;
   razonSocialEmisor: string;

@@ -7,6 +7,11 @@ import { MatTableDataSource } from '@angular/material/table';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { TitularSelectorDialogComponent } from '../../../../../shared/components/titular-selector-dialog/titular-selector-dialog.component';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
+import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
+import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
+import { TipoDatosBusqueda as TipoDatos } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
+import { Periodo } from '../../../../cnt/model/periodo';
+import { PeriodoService } from '../../../../cnt/service/periodo.service';
 import { Titular } from '../../../../tsr/model/titular';
 import { DocumentoCxp } from '../../../model/documento-cxp';
 import { CargaDocumentosService, GrupoProducto, ProductoNuevo } from '../../../service/carga-documentos.service';
@@ -28,6 +33,11 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit {
   private processService = inject(CargaDocumentosService);
   private dialog = inject(MatDialog);
   private funcionesDatos = inject(FuncionesDatosService);
+  private periodoService = inject(PeriodoService);
+
+  // Periodos contables
+  periodos = signal<Periodo[]>([]);
+  periodoSeleccionado = signal<number | null>(null);
 
   // ViewChild para datepickers de fecha
   @ViewChild('fechaDesdeInput', { read: ElementRef }) fechaDesdeInputRef!: ElementRef<HTMLInputElement>;
@@ -76,20 +86,49 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit {
   private get idUsuario(): number { try { const u = JSON.parse(localStorage.getItem('usuario') || sessionStorage.getItem('usuario') || '{}'); return u.codigo || u.id || 1; } catch { return 1; } }
 
   ngOnInit(): void {
-    this.cargar();
+    this.cargarPeriodos();
+    // No cargamos documentos hasta que se seleccione un periodo
   }
 
   ngAfterViewInit(): void {
     // Inicialización después de que las vistas estén disponibles
   }
 
+  // ─── PERIODOS ────────────────────────────────────────────
+
+  cargarPeriodos(): void {
+    this.periodoService.getAll().subscribe({
+      next: (data) => {
+        const sorted = (data || []).sort((a, b) => b.anio !== a.anio ? b.anio - a.anio : b.mes - a.mes);
+        this.periodos.set(sorted);
+      },
+      error: () => this.mostrarError('No se pudieron cargar los períodos contables'),
+    });
+  }
+
+  seleccionarPeriodo(idPeriodo: number | null): void {
+    this.periodoSeleccionado.set(idPeriodo);
+    this.dsDocumentos.data = [];
+    this.rawDatos = [];
+    this.todosDocumentos = [];
+    if (idPeriodo) { this.cargar(); }
+  }
+
   // ─── CARGA Y FILTROS ────────────────────────────────────
 
   cargar(): void {
+    const idPeriodo = this.periodoSeleccionado();
+    if (!idPeriodo) return;
     this.cargando.set(true);
-    // Siempre cargamos TODOS los estados para calcular totales correctamente;
-    // el filtro de estado se aplica en cliente.
-    this.docService.getByEmpresa(this.idEmpresa).subscribe({
+    // Cargamos TODOS los estados para calcular totales correctamente
+    const criterios: DatosBusqueda[] = [];
+    const dbEmpresa = new DatosBusqueda();
+    dbEmpresa.asignaValorConCampoPadre(TipoDatos.LONG, 'empresa', 'codigo', String(this.idEmpresa), TipoComandosBusqueda.IGUAL);
+    criterios.push(dbEmpresa);
+    const dbPeriodo = new DatosBusqueda();
+    dbPeriodo.asignaValorConCampoPadre(TipoDatos.LONG, 'periodoContable', 'codigo', String(idPeriodo), TipoComandosBusqueda.IGUAL);
+    criterios.push(dbPeriodo);
+    this.docService.selectByCriteria(criterios).subscribe({
       next: (data) => {
         this.rawDatos = data || [];
         this.todosDocumentos = this.rawDatos.filter(d => d.estadoDocumento !== 3);

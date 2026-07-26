@@ -9,6 +9,31 @@
 
   <mat-card-content>
 
+    <!-- Selector de período contable -->
+    <div class="periodo-selector">
+      <mat-form-field appearance="outline" class="periodo-field">
+        <mat-label><mat-icon>calendar_month</mat-icon> Período Contable</mat-label>
+        <mat-select [value]="periodoSeleccionado()" (selectionChange)="seleccionarPeriodo($event.value)">
+          <mat-option [value]="null">— Seleccione un período —</mat-option>
+          @for (p of periodos(); track p.codigo) {
+            <mat-option [value]="p.codigo">{{ p.nombre }} ({{ p.anio }}/{{ p.mes }})</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+      @if (!periodoSeleccionado()) {
+        <span class="periodo-hint"><mat-icon class="hint-icon">info</mat-icon> Seleccione un período contable para ver sus documentos</span>
+      }
+    </div>
+
+    @if (!periodoSeleccionado()) {
+      <div class="empty-periodo">
+        <mat-icon>folder_open</mat-icon>
+        <p>Seleccione un período contable para cargar los documentos correspondientes.</p>
+      </div>
+    }
+
+    @if (periodoSeleccionado()) {
+
     <!-- Filtros de búsqueda -->
     <mat-expansion-panel class="filtros-panel">
       <mat-expansion-panel-header>
@@ -258,7 +283,7 @@
 
           <ng-container matColumnDef="razonSocialEmisor">
             <th mat-header-cell *matHeaderCellDef>Proveedor</th>
-            <td mat-cell *matCellDef="let d">{{ d.razonSocialEmisor }}</td>
+            <td mat-cell *matCellDef="let d">{{ decodeHtml(d.razonSocialEmisor) }}</td>
           </ng-container>
 
           <ng-container matColumnDef="serieComprobante">
@@ -348,6 +373,7 @@
           </tr>
         </table>
       </div>
+    }
     }
   </mat-card-content>
 </mat-card>

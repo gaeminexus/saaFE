@@ -32,6 +32,33 @@
   }
 }
 
+// ── Selector de período ────────────────────────────────
+.periodo-selector {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid #e0e0e0;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+
+  .periodo-field {
+    min-width: 280px;
+    max-width: 380px;
+  }
+
+  .periodo-hint {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #666;
+    font-size: 0.85rem;
+
+    .hint-icon { font-size: 18px; width: 18px; height: 18px; color: #1565c0; }
+  }
+}
+
+
 // ── Toolbar ──────────────────────────────────────────────────
 .toolbar {
   display: flex;
@@ -218,14 +245,48 @@
   white-space: nowrap;
 }
 
-button.filtro-active {
-  background: rgba(21, 101, 192, 0.08);
-  border-color: var(--mat-sys-primary, #1565c0);
-  font-weight: 600;
-}
-
-// ── Tabla documentos ──────────────────────────────────────────
+// ── Tabla documentos ────────────────────────────────────
 .table-documentos {
   width: 100%;
   font-size: 0.8rem;
+}
+// ── Filas clickables del historial ────────────────────────────
+.fila-clickable {
+  cursor: pointer;
+  transition: background 0.15s ease;
+
+  &:hover {
+    background: rgba(21, 101, 192, 0.06);
+  }
+}
+
+.fila-seleccionada {
+  background: rgba(21, 101, 192, 0.12) !important;
+  border-left: 3px solid var(--mat-sys-primary, #1565c0);
+}
+
+// ── Card del detalle (debajo del historial) ───────────────────
+.detalle-card {
+  margin-top: 0;
+  border-top: 3px solid var(--mat-sys-primary, #1565c0);
+}
+// ── Filas clickables del historial ────────────────────────
+.fila-clickable {
+  cursor: pointer;
+  transition: background 0.15s ease;
+
+  &:hover {
+    background: rgba(21, 101, 192, 0.06);
+  }
+}
+
+.fila-seleccionada {
+  background: rgba(21, 101, 192, 0.12) !important;
+  border-left: 3px solid var(--mat-sys-primary, #1565c0);
+}
+
+// ── Card del detalle (debajo del historial) ─────────────────
+.detalle-card {
+  margin-top: 0;
+  border-top: 3px solid var(--mat-sys-primary, #1565c0);
 }

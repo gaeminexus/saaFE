@@ -351,10 +351,29 @@ export class TitularesV2Component implements OnInit {
     });
 
     this.loading.set(true);
+    const empresaCodigo = this.empresa?.codigo;
+
+    // Titulares: no tienen campo empresa, se carga todo y se filtra en memoria
+    const dbEmpresaRol = new DatosBusqueda();
+    dbEmpresaRol.asignaValorConCampoPadre(
+      TipoDatos.LONG, 'empresa', 'codigo', String(empresaCodigo ?? 0), TipoComandosBusqueda.IGUAL
+    );
+    dbEmpresaRol.setNumeroCampoRepetido(0);
+
+    const dbEmpresaCuenta = new DatosBusqueda();
+    dbEmpresaCuenta.asignaValorConCampoPadre(
+      TipoDatos.LONG, 'empresa', 'codigo', String(empresaCodigo ?? 0), TipoComandosBusqueda.IGUAL
+    );
+    dbEmpresaCuenta.setNumeroCampoRepetido(0);
+
     forkJoin({
       titulares: this.titularService.getAll().pipe(catchError(() => of([] as Titular[]))),
-      personaRoles: this.rolService.getAll().pipe(catchError(() => of([] as PersonaRol[]))),
-      cuentas: this.cuentaService.getAll().pipe(catchError(() => of([] as PersonaCuentaContable[]))),
+      personaRoles: empresaCodigo
+        ? this.rolService.selectByCriteria([dbEmpresaRol]).pipe(catchError(() => of([] as PersonaRol[])))
+        : of([] as PersonaRol[]),
+      cuentas: empresaCodigo
+        ? this.cuentaService.selectByCriteria([dbEmpresaCuenta]).pipe(catchError(() => of([] as PersonaCuentaContable[])))
+        : of([] as PersonaCuentaContable[]),
     }).subscribe({
       next: (datos) => {
         this.titulares.set(datos.titulares || []);
@@ -379,10 +398,26 @@ export class TitularesV2Component implements OnInit {
       (r) => r.titular?.codigo === titular.codigo
     );
 
-    // Cargar cuentas contables solo para los roles de este titular
-    this.cuentaService.getAll().pipe(catchError(() => of([] as PersonaCuentaContable[]))).subscribe({
-      next: (todasLasCuentas) => {
-        const cuentas = todasLasCuentas || [];
+    // Cargar cuentas contables solo para los roles de este titular usando selectByCriteria
+    const codigosRoles = rolesFiltrados.map((r) => r.codigo).filter(Boolean);
+    const cuentasObs$ = codigosRoles.length > 0
+      ? forkJoin(
+          codigosRoles.map((codigoRol) => {
+            const db = new DatosBusqueda();
+            db.asignaValorConCampoPadre(
+              TipoDatos.LONG, 'personaRol', 'codigo', String(codigoRol), TipoComandosBusqueda.IGUAL
+            );
+            db.setNumeroCampoRepetido(0);
+            return this.cuentaService.selectByCriteria([db]).pipe(catchError(() => of([] as PersonaCuentaContable[])));
+          })
+        ).pipe(catchError(() => of([] as PersonaCuentaContable[][])))
+      : of([] as PersonaCuentaContable[][]);
+
+    cuentasObs$.subscribe({
+      next: (resultados) => {
+        const cuentas: PersonaCuentaContable[] = Array.isArray(resultados)
+          ? (resultados as any[]).flat().filter(Boolean)
+          : [];
         const rolesCuentas = rolesFiltrados.map((rol) => ({
           rol,
           cuentas: cuentas.filter((c) => c.personaRol?.codigo === rol.codigo),
@@ -626,7 +661,22 @@ export class TitularesV2Component implements OnInit {
   }
 
   private recargarRolesTitularYEdicion(codigoTitular: number): void {
-    this.rolService.getAll().pipe(catchError(() => of([] as PersonaRol[]))).subscribe((roles) => {
+    const empresaCodigo = this.empresa?.codigo;
+    const dbTitular = new DatosBusqueda();
+    dbTitular.asignaValorConCampoPadre(
+      TipoDatos.LONG, 'titular', 'codigo', String(codigoTitular), TipoComandosBusqueda.IGUAL
+    );
+    dbTitular.setNumeroCampoRepetido(0);
+    const criterios: DatosBusqueda[] = [dbTitular];
+    if (empresaCodigo) {
+      const dbEmpresa = new DatosBusqueda();
+      dbEmpresa.asignaValorConCampoPadre(
+        TipoDatos.LONG, 'empresa', 'codigo', String(empresaCodigo), TipoComandosBusqueda.IGUAL
+      );
+      dbEmpresa.setNumeroCampoRepetido(0);
+      criterios.push(dbEmpresa);
+    }
+    this.rolService.selectByCriteria(criterios).pipe(catchError(() => of([] as PersonaRol[]))).subscribe((roles) => {
       this.rolesTitular.set(roles || []);
 
       const titularDesdeLista = this.titulares().find((t) => t.codigo === codigoTitular);
@@ -721,8 +771,13 @@ export class TitularesV2Component implements OnInit {
   }
 
   private recargarCuentasRol(codigoRol: number): void {
-    this.cuentaService.getAll().pipe(catchError(() => of([] as PersonaCuentaContable[]))).subscribe((todas) => {
-      const cuentasRol = (todas || []).filter((c) => c.personaRol?.codigo === codigoRol);
+    const db = new DatosBusqueda();
+    db.asignaValorConCampoPadre(
+      TipoDatos.LONG, 'personaRol', 'codigo', String(codigoRol), TipoComandosBusqueda.IGUAL
+    );
+    db.setNumeroCampoRepetido(0);
+    this.cuentaService.selectByCriteria([db]).pipe(catchError(() => of([] as PersonaCuentaContable[]))).subscribe((todas) => {
+      const cuentasRol = todas || [];
 
       this.rolesEnEdicion.update((roles) =>
         roles.map((item) =>

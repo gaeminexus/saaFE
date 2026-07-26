@@ -38,6 +38,7 @@ export class CargaDocumentosService {
     nombreArchivo: string;
     idEmpresa: number;
     idUsuario: number;
+    idPeriodo: number;
   }): Observable<any> {
     return this.http.post<any>(`${PROCESS_URL}/cargarTxt`, payload, this.httpOptions).pipe(catchError(this.handleError));
   }

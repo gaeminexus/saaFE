@@ -1,0 +1,65 @@
+﻿<div class="anticipos-wrap">
+  <mat-card class="page-card">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>business</mat-icon>
+        Anticipos — Proveedores
+      </mat-card-title>
+      <mat-card-subtitle>
+        Seleccione el proveedor para registrar o consultar anticipos entregados
+      </mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      <!-- Botón para abrir el selector -->
+      <div class="selector-wrap">
+        <button mat-flat-button color="primary" (click)="abrirBusqueda()">
+          <mat-icon>search</mat-icon>
+          Buscar Proveedor
+        </button>
+      </div>
+
+      <!-- Banner de proveedor seleccionado -->
+      @if (titularSeleccionado()) {
+        <div class="titular-banner">
+          <mat-icon class="icon-ok">check_circle</mat-icon>
+          <div class="titular-info">
+            <span class="titular-nombre">{{ titularSeleccionado()?.razonSocial || titularSeleccionado()?.nombre }}</span>
+            <span class="titular-id">{{ titularSeleccionado()?.identificacion }}</span>
+          </div>
+          <button mat-icon-button matTooltip="Cambiar proveedor" (click)="limpiar()">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+
+        <!-- Saldo de anticipos -->
+        <div class="saldo-wrap">
+          <div class="saldo-card">
+            <span class="saldo-label">Saldo de Anticipos</span>
+            @if (cargandoSaldo()) {
+              <mat-spinner diameter="20"></mat-spinner>
+            } @else {
+              <span class="saldo-valor" [class.saldo-positivo]="saldoAnticipos() > 0">
+                ${{ saldoAnticipos() | number:'1.2-2' }}
+              </span>
+            }
+          </div>
+        </div>
+      }
+    </mat-card-content>
+
+    <!-- Acciones (activas solo cuando hay titular seleccionado) -->
+    @if (titularSeleccionado()) {
+      <mat-card-actions class="card-acciones">
+        <button mat-flat-button color="accent">
+          <mat-icon>add</mat-icon>
+          Nuevo Anticipo
+        </button>
+        <button mat-stroked-button color="primary">
+          <mat-icon>history</mat-icon>
+          Ver Anticipos
+        </button>
+      </mat-card-actions>
+    }
+  </mat-card>
+</div>

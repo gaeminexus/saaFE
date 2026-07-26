@@ -10,6 +10,45 @@
   }
 }
 
+// ── Selector de período ────────────────────────────────
+.periodo-selector {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid #e0e0e0;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+
+  .periodo-field {
+    min-width: 280px;
+    max-width: 380px;
+  }
+
+  .periodo-hint {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #666;
+    font-size: 0.85rem;
+
+    .hint-icon { font-size: 18px; width: 18px; height: 18px; color: #1565c0; }
+  }
+}
+
+.empty-periodo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: #9e9e9e;
+
+  mat-icon { font-size: 56px; width: 56px; height: 56px; margin-bottom: 12px; }
+  p { font-size: 1rem; margin: 0; }
+}
+
+
 .filtros-panel {
   margin-bottom: 16px;
   mat-panel-title { display: flex; align-items: center; gap: 8px; }

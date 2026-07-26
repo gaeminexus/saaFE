@@ -27,6 +27,14 @@ export class DocumentoCxpService {
     return this.http.get<DocumentoCxp[]>(`${ServiciosCxp.RS_DCXP}/getByEmpresaEstado/${idEmpresa}/${estado}`).pipe(catchError(this.handleError));
   }
 
+  getByEmpresaPeriodo(idEmpresa: number, idPeriodo: number): Observable<DocumentoCxp[] | null> {
+    return this.http.get<DocumentoCxp[]>(`${ServiciosCxp.RS_DCXP}/getByEmpresaPeriodo/${idEmpresa}/${idPeriodo}`).pipe(catchError(this.handleError));
+  }
+
+  getByEmpresaPeriodoEstado(idEmpresa: number, idPeriodo: number, estado: number): Observable<DocumentoCxp[] | null> {
+    return this.http.get<DocumentoCxp[]>(`${ServiciosCxp.RS_DCXP}/getByEmpresaPeriodoEstado/${idEmpresa}/${idPeriodo}/${estado}`).pipe(catchError(this.handleError));
+  }
+
   novedadesPendientes(idEmpresa: number): Observable<DocumentoCxp[] | null> {
     return this.http.get<DocumentoCxp[]>(`${ServiciosCxp.RS_DCXP}/novedadesPendientes/${idEmpresa}`).pipe(catchError(this.handleError));
   }
@@ -39,7 +47,7 @@ export class DocumentoCxpService {
     return this.http.put<DocumentoCxp>(`${ServiciosCxp.RS_DCXP}/update`, item, this.httpOptions).pipe(catchError(this.handleError));
   }
 
-  selectByCriteria(criteria: Partial<DocumentoCxp>): Observable<DocumentoCxp[] | null> {
+  selectByCriteria(criteria: any[]): Observable<DocumentoCxp[] | null> {
     return this.http.post<DocumentoCxp[]>(`${ServiciosCxp.RS_DCXP}/selectByCriteria`, criteria, this.httpOptions).pipe(catchError(this.handleError));
   }
 

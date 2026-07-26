@@ -1,0 +1,364 @@
+<!-- ══════════════════════════════════════════════════════════════
+     VISTA: LISTA DE DOCUMENTOS PENDIENTES
+══════════════════════════════════════════════════════════════ -->
+@if (vista() === 'lista') {
+  <mat-card class="page-card">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>request_quote</mat-icon>
+        Proposición de Pago
+      </mat-card-title>
+      <mat-card-subtitle>
+        Documentos con saldo pendiente. Seleccione uno para registrar una propuesta de pago.
+      </mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      <!-- Filtros -->
+      <mat-expansion-panel class="filtros-panel" [expanded]="true">
+        <mat-expansion-panel-header>
+          <mat-panel-title>
+            <mat-icon>filter_list</mat-icon>
+            Filtros de búsqueda
+          </mat-panel-title>
+        </mat-expansion-panel-header>
+
+        <div class="filtros-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Razón Social</mat-label>
+            <input matInput [(ngModel)]="filtroProveedor" placeholder="Nombre del proveedor" (keyup.enter)="buscar()" />
+            <mat-icon matSuffix>person</mat-icon>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>RUC / Identificación</mat-label>
+            <input matInput [(ngModel)]="filtroRuc" placeholder="Ej: 1790016919001" (keyup.enter)="buscar()" />
+            <mat-icon matSuffix>badge</mat-icon>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Tipo de Documento</mat-label>
+            <mat-select [(ngModel)]="filtroTipo">
+              <mat-option value="">Todos</mat-option>
+              <mat-option value="FACTURA_COMPRA">Factura Compra</mat-option>
+              <mat-option value="LIQUIDACION_COMPRA">Liquidación Compra</mat-option>
+              <mat-option value="NOTA_CREDITO_COMPRA">Nota Crédito</mat-option>
+              <mat-option value="NOTA_DEBITO_COMPRA">Nota Débito</mat-option>
+              <mat-option value="RETENCION_COMPRA">Retención</mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
+
+        <div class="filtros-acciones">
+          <button mat-flat-button color="primary" (click)="buscar()">
+            <mat-icon>search</mat-icon> Buscar
+          </button>
+          <button mat-stroked-button (click)="limpiarFiltros()">
+            <mat-icon>clear</mat-icon> Limpiar
+          </button>
+          <button mat-stroked-button (click)="cargarDocumentos()">
+            <mat-icon>refresh</mat-icon> Recargar
+          </button>
+        </div>
+      </mat-expansion-panel>
+
+      <!-- Indicador de carga -->
+      @if (cargandoDocumentos()) {
+        <div class="loading-wrap">
+          <mat-spinner diameter="40"></mat-spinner>
+          <span>Cargando documentos...</span>
+        </div>
+      }
+
+      <!-- Error -->
+      @if (errorMsg()) {
+        <mat-card class="error-card">
+          <mat-card-content>
+            <mat-icon color="warn">error_outline</mat-icon>
+            {{ errorMsg() }}
+          </mat-card-content>
+        </mat-card>
+      }
+
+      <!-- Tabla de documentos -->
+      @if (!cargandoDocumentos()) {
+        <div class="table-container">
+          <table mat-table [dataSource]="dsDocumentos" class="tabla-documentos mat-elevation-z1">
+
+            <ng-container matColumnDef="tipo">
+              <th mat-header-cell *matHeaderCellDef>Tipo</th>
+              <td mat-cell *matCellDef="let doc">
+                <span class="chip-tipo chip-{{ doc.tipo | lowercase }}">{{ doc.tipoLabel }}</span>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="serie">
+              <th mat-header-cell *matHeaderCellDef>Serie</th>
+              <td mat-cell *matCellDef="let doc">{{ doc.serie || '—' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="razonSocial">
+              <th mat-header-cell *matHeaderCellDef>Proveedor</th>
+              <td mat-cell *matCellDef="let doc">{{ doc.razonSocial || '—' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="ruc">
+              <th mat-header-cell *matHeaderCellDef>RUC</th>
+              <td mat-cell *matCellDef="let doc">{{ doc.ruc || '—' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="fecha">
+              <th mat-header-cell *matHeaderCellDef>Fecha Doc.</th>
+              <td mat-cell *matCellDef="let doc">{{ formatFecha(doc.fecha) }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="total">
+              <th mat-header-cell *matHeaderCellDef class="col-monto">Total</th>
+              <td mat-cell *matCellDef="let doc" class="col-monto">{{ formatMoneda(doc.total) }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="acciones">
+              <th mat-header-cell *matHeaderCellDef>Proponer Pago</th>
+              <td mat-cell *matCellDef="let doc">
+                <button mat-icon-button color="primary"
+                        matTooltip="Registrar proposición de pago"
+                        (click)="seleccionarDocumento(doc)">
+                  <mat-icon>add_task</mat-icon>
+                </button>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="columnasDocumentos"></tr>
+            <tr mat-row *matRowDef="let row; columns: columnasDocumentos;"
+                class="fila-documento"
+                (click)="seleccionarDocumento(row)"></tr>
+
+            <!-- Sin datos -->
+            <tr class="mat-row" *matNoDataRow>
+              <td class="mat-cell sin-datos" [attr.colspan]="columnasDocumentos.length">
+                <mat-icon>inbox</mat-icon>
+                No se encontraron documentos con saldo pendiente.
+              </td>
+            </tr>
+          </table>
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+}
+
+<!-- ══════════════════════════════════════════════════════════════
+     VISTA: DETALLE — CUOTAS Y FORMULARIO DE PROPOSICIÓN
+══════════════════════════════════════════════════════════════ -->
+@if (vista() === 'detalle') {
+  <div class="detalle-wrap">
+
+    <!-- Cabecera del documento seleccionado -->
+    <mat-card class="doc-header-card">
+      <mat-card-header>
+        <mat-card-title>
+          <button mat-icon-button (click)="volverLista()" matTooltip="Volver al listado">
+            <mat-icon>arrow_back</mat-icon>
+          </button>
+          <mat-icon>description</mat-icon>
+          Proposición de Pago — {{ docSeleccionado()?.tipoLabel }} {{ docSeleccionado()?.serie || '' }}
+        </mat-card-title>
+      </mat-card-header>
+
+      <mat-card-content>
+        <div class="doc-info-grid">
+          <div class="info-item">
+            <span class="info-label">Tipo</span>
+            <span class="info-val">{{ docSeleccionado()?.tipoLabel }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Serie</span>
+            <span class="info-val">{{ docSeleccionado()?.serie || '—' }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Proveedor</span>
+            <span class="info-val">{{ docSeleccionado()?.razonSocial || '—' }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">RUC</span>
+            <span class="info-val">{{ docSeleccionado()?.ruc || '—' }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Fecha Documento</span>
+            <span class="info-val">{{ formatFecha(docSeleccionado()?.fecha) }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Total Documento</span>
+            <span class="info-val monto">{{ formatMoneda(docSeleccionado()?.total) }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Abonado</span>
+            <span class="info-val texto-abono">{{ formatMoneda(documentoPagoActual()?.abono) }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Saldo Pendiente</span>
+            <span class="info-val texto-saldo"><strong>{{ formatMoneda(documentoPagoActual()?.saldo) }}</strong></span>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Sección cuotas -->
+    <mat-card class="cuotas-card">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>splitscreen</mat-icon>
+          Cuotas Pendientes
+        </mat-card-title>
+        <mat-card-subtitle>
+          Seleccione una cuota para registrar la propuesta de pago correspondiente
+        </mat-card-subtitle>
+      </mat-card-header>
+
+      <mat-card-content>
+
+        @if (cargandoCuotas()) {
+          <div class="loading-wrap">
+            <mat-spinner diameter="36"></mat-spinner>
+            <span>Cargando cuotas...</span>
+          </div>
+        }
+
+        @if (!cargandoCuotas() && dsCuotas.data.length === 0) {
+          <div class="sin-cuotas">
+            <mat-icon>info_outline</mat-icon>
+            <span>No se encontraron cuotas con saldo pendiente para este documento.</span>
+          </div>
+        }
+
+        @if (!cargandoCuotas() && dsCuotas.data.length > 0) {
+          <div class="table-container">
+            <table mat-table [dataSource]="dsCuotas" class="tabla-cuotas mat-elevation-z1">
+
+              <ng-container matColumnDef="numeroCuotaLetra">
+                <th mat-header-cell *matHeaderCellDef>Cuota</th>
+                <td mat-cell *matCellDef="let c">{{ c.numeroCuotaLetra || c.numeroSecuencial }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="fechaVencimiento">
+                <th mat-header-cell *matHeaderCellDef>Vencimiento</th>
+                <td mat-cell *matCellDef="let c">
+                  <span [class.texto-vencido]="estaVencida(c)">{{ formatFecha(c.fechaVencimiento) }}</span>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="valor">
+                <th mat-header-cell *matHeaderCellDef class="col-monto">Valor Cuota</th>
+                <td mat-cell *matCellDef="let c" class="col-monto">{{ formatMoneda(c.valor) }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="totalAbono">
+                <th mat-header-cell *matHeaderCellDef class="col-monto">Abonado</th>
+                <td mat-cell *matCellDef="let c" class="col-monto texto-abono">{{ formatMoneda(c.totalAbono) }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="saldo">
+                <th mat-header-cell *matHeaderCellDef class="col-monto">Saldo</th>
+                <td mat-cell *matCellDef="let c" class="col-monto texto-saldo">
+                  <strong>{{ formatMoneda(c.saldo) }}</strong>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="acciones">
+                <th mat-header-cell *matHeaderCellDef>Proponer</th>
+                <td mat-cell *matCellDef="let c">
+                  <button mat-icon-button color="accent"
+                          matTooltip="Registrar proposición para esta cuota"
+                          (click)="abrirFormulario(c); $event.stopPropagation()">
+                    <mat-icon>add_circle_outline</mat-icon>
+                  </button>
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="columnasCuotas"></tr>
+              <tr mat-row *matRowDef="let row; columns: columnasCuotas;"
+                  [class.fila-seleccionada]="cuotaSeleccionada()?.codigo === row.codigo"
+                  (click)="abrirFormulario(row)"></tr>
+            </table>
+          </div>
+        }
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Formulario de proposición -->
+    @if (modoFormulario() !== null && cuotaSeleccionada()) {
+      <mat-card class="form-proposicion-card">
+        <mat-card-header>
+          <mat-card-title>
+            <mat-icon>edit_calendar</mat-icon>
+            Registrar Proposición de Pago
+          </mat-card-title>
+          <mat-card-subtitle>
+            Cuota #{{ cuotaSeleccionada()?.numeroCuotaLetra || cuotaSeleccionada()?.numeroSecuencial }} —
+            Saldo disponible: <strong>{{ formatMoneda(saldoCuota()) }}</strong>
+          </mat-card-subtitle>
+        </mat-card-header>
+
+        <mat-card-content>
+          <form [formGroup]="formProposicion" class="form-grid" (ngSubmit)="guardarProposicion()">
+
+            <mat-form-field appearance="outline">
+              <mat-label>Fecha de Pago Propuesta</mat-label>
+              <input matInput
+                     [matDatepicker]="pickerFechaPago"
+                     formControlName="fechaPago"
+                     placeholder="dd/mm/aaaa" />
+              <mat-datepicker-toggle matIconSuffix [for]="pickerFechaPago"></mat-datepicker-toggle>
+              <mat-datepicker #pickerFechaPago></mat-datepicker>
+              @if (formProposicion.get('fechaPago')?.hasError('required') && formProposicion.get('fechaPago')?.touched) {
+                <mat-error>La fecha de pago es requerida</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Valor a Pagar</mat-label>
+              <input matInput
+                     type="number"
+                     step="0.01"
+                     [max]="saldoCuota()"
+                     formControlName="valorPropuesto"
+                     placeholder="0.00" />
+              <span matTextPrefix>$&nbsp;</span>
+              <mat-hint>Máximo: {{ formatMoneda(saldoCuota()) }}</mat-hint>
+              @if (formProposicion.get('valorPropuesto')?.hasError('required') && formProposicion.get('valorPropuesto')?.touched) {
+                <mat-error>El valor es requerido</mat-error>
+              }
+              @if (formProposicion.get('valorPropuesto')?.hasError('min')) {
+                <mat-error>El valor debe ser mayor a cero</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="campo-ancho">
+              <mat-label>Observación (opcional)</mat-label>
+              <textarea matInput
+                        formControlName="observacion"
+                        rows="2"
+                        placeholder="Notas sobre esta proposición..."></textarea>
+            </mat-form-field>
+
+            <div class="form-acciones">
+              <button mat-flat-button color="primary" type="submit" [disabled]="guardando()">
+                @if (guardando()) {
+                  <mat-spinner diameter="18"></mat-spinner>
+                } @else {
+                  <mat-icon>save</mat-icon>
+                }
+                Guardar Proposición
+              </button>
+              <button mat-stroked-button type="button" (click)="cancelarFormulario()" [disabled]="guardando()">
+                <mat-icon>cancel</mat-icon>
+                Cancelar
+              </button>
+            </div>
+          </form>
+        </mat-card-content>
+      </mat-card>
+    }
+
+  </div>
+}

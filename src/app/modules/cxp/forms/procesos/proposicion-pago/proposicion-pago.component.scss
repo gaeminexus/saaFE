@@ -1,0 +1,230 @@
+.page-card {
+  margin: 16px;
+
+  mat-card-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1.1rem;
+
+    mat-icon { color: var(--mat-sys-primary, #1565c0); }
+  }
+}
+
+// ─── Filtros ──────────────────────────────────────────────────
+.filtros-panel {
+  margin-bottom: 16px;
+
+  mat-panel-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+}
+
+.filtros-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.filtros-acciones {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+// ─── Loading ──────────────────────────────────────────────────
+.loading-wrap {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 20px 0;
+  color: var(--mat-sys-on-surface-variant, #666);
+}
+
+// ─── Error ────────────────────────────────────────────────────
+.error-card {
+  margin: 8px 0;
+  background: #fff3f3;
+
+  mat-card-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #c62828;
+  }
+}
+
+// ─── Tabla documentos ─────────────────────────────────────────
+.table-container {
+  overflow-x: auto;
+  border-radius: 4px;
+}
+
+.tabla-documentos,
+.tabla-cuotas {
+  width: 100%;
+  min-width: 700px;
+
+  .col-monto {
+    text-align: right;
+    padding-right: 16px;
+  }
+
+  .sin-datos {
+    text-align: center;
+    padding: 32px;
+    color: #888;
+
+    mat-icon {
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+  }
+}
+
+.fila-documento {
+  cursor: pointer;
+  transition: background 0.15s;
+
+  &:hover {
+    background: rgba(var(--mat-sys-primary-rgb, 21, 101, 192), 0.06);
+  }
+}
+
+.fila-seleccionada {
+  background: rgba(var(--mat-sys-primary-rgb, 21, 101, 192), 0.1) !important;
+}
+
+// ─── Chips de tipo de documento ───────────────────────────────
+.chip-tipo {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.chip-factura_compra    { background: #e3f2fd; color: #1565c0; }
+.chip-liquidacion_compra { background: #e8f5e9; color: #2e7d32; }
+.chip-nota_credito_compra { background: #fff8e1; color: #f57f17; }
+.chip-nota_debito_compra  { background: #fce4ec; color: #c62828; }
+.chip-retencion_compra    { background: #ede7f6; color: #4527a0; }
+
+// ─── Colores semánticos ───────────────────────────────────────
+.texto-vencido { color: #c62828; font-weight: 600; }
+.texto-abono   { color: #2e7d32; }
+.texto-saldo   { color: #1565c0; }
+
+// ─── Detalle wrap ─────────────────────────────────────────────
+.detalle-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 16px;
+}
+
+// ─── Cabecera documento ───────────────────────────────────────
+.doc-header-card {
+  mat-card-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1.05rem;
+
+    mat-icon:not(:first-child) { color: var(--mat-sys-primary, #1565c0); }
+  }
+}
+
+.doc-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px 20px;
+  margin-top: 8px;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  .info-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #888;
+  }
+
+  .info-val {
+    font-size: 0.95rem;
+    font-weight: 500;
+
+    &.monto { font-size: 1.05rem; }
+  }
+}
+
+// ─── Cuotas ───────────────────────────────────────────────────
+.cuotas-card {
+  mat-card-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1rem;
+
+    mat-icon { color: var(--mat-sys-primary, #1565c0); }
+  }
+}
+
+.sin-cuotas {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #888;
+  padding: 20px 0;
+}
+
+// ─── Formulario proposición ───────────────────────────────────
+.form-proposicion-card {
+  border-left: 4px solid var(--mat-sys-primary, #1565c0);
+
+  mat-card-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1rem;
+
+    mat-icon { color: var(--mat-sys-primary, #1565c0); }
+  }
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 8px;
+
+  @media (max-width: 600px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.campo-ancho {
+  grid-column: 1 / -1;
+}
+
+.form-acciones {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+
+  button {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+}

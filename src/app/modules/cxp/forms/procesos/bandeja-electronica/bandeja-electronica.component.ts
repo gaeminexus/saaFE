@@ -4,13 +4,17 @@ import { FormsModule } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableDataSource } from '@angular/material/table';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { Periodo } from '../../../../cnt/model/periodo';
+import { PeriodoService } from '../../../../cnt/service/periodo.service';
+import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
+import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
+import { TipoDatosBusqueda as TipoDatos } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { CargaArchivoTxt } from '../../../model/carga-archivo-txt';
 import { DetalleCargaTxt } from '../../../model/detalle-carga-txt';
 import { DocumentoCxp } from '../../../model/documento-cxp';
 import { CargaArchivoTxtService } from '../../../service/carga-archivo-txt.service';
 import { CargaDocumentosService, GrupoProducto, ProductoNuevo } from '../../../service/carga-documentos.service';
 import { DetalleCargaTxtService } from '../../../service/detalle-carga-txt.service';
-import { DocumentoCxpService } from '../../../service/documento-cxp.service';
 
 @Component({
   selector: 'app-bandeja-electronica',
@@ -22,16 +26,16 @@ import { DocumentoCxpService } from '../../../service/documento-cxp.service';
 export class BandejaElectronicaComponent implements OnInit {
   @ViewChild('inputTxt') inputTxt!: ElementRef<HTMLInputElement>;
   @ViewChild('inputXml') inputXml!: ElementRef<HTMLInputElement>;
-  @ViewChild('inputXmlDoc') inputXmlDoc!: ElementRef<HTMLInputElement>;
 
   private snackBar = inject(MatSnackBar);
   private cargaService = inject(CargaArchivoTxtService);
   private detalleService = inject(DetalleCargaTxtService);
   private processService = inject(CargaDocumentosService);
-  private docService = inject(DocumentoCxpService);
+  private periodoService = inject(PeriodoService);
 
-  // Vista actual: historial (cargas TXT) | documentos (DCXP) | detalle (líneas de una carga)
-  vista: 'historial' | 'documentos' | 'detalle' = 'historial';
+  // Periodos contables
+  periodos = signal<Periodo[]>([]);
+  periodoSeleccionado = signal<number | null>(null);
 
   // Señales de estado
   cargando = signal(false);
@@ -40,13 +44,13 @@ export class BandejaElectronicaComponent implements OnInit {
   // Historial de cargas
   cargas: CargaArchivoTxt[] = [];
   dsCargas = new MatTableDataSource<CargaArchivoTxt>([]);
-  columnasHistorial = ['id', 'nombreArchivo', 'fechaCarga', 'totalRegistros', 'registrosNuevos', 'registrosDuplicados', 'registrosNovedad', 'estado', 'acciones'];
+  columnasHistorial = ['id', 'nombreArchivo', 'fechaCarga', 'totalRegistros', 'registrosNuevos', 'registrosDuplicados', 'registrosNovedad', 'estado'];
 
   // Detalle de una carga seleccionada (líneas DCTX con documento DCXP embebido)
   cargaSeleccionada: CargaArchivoTxt | null = null;
   detalles: DetalleCargaTxt[] = [];
   dsDetalles = new MatTableDataSource<DetalleCargaTxt>([]);
-  columnasDetalle = ['id', 'resultado', 'tipoComprobante', 'rucEmisor', 'razonSocialEmisor', 'serieComprobante', 'fechaEmision', 'valorSinImpuestosCarga', 'ivaCarga', 'importeTotalCarga', 'estadoDocumento', 'novedad', 'acciones'];
+  columnasDetalle = ['id', 'resultado', 'tipoComprobante', 'rucEmisor', 'razonSocialEmisor', 'serieComprobante', 'fechaEmision', 'valorSinImpuestosCarga', 'ivaCarga', 'importeTotalCarga', 'estadoDocumento', 'novedad'];
 
   // Detalle activo para subir XML
   detalleParaXml: DetalleCargaTxt | null = null;
@@ -58,37 +62,52 @@ export class BandejaElectronicaComponent implements OnInit {
   productosNuevos: ProductoNuevo[] = [];
   gruposProducto: GrupoProducto[] = [];
 
-  // ── Vista Documentos DCXP ──
-  todosDocumentos: DocumentoCxp[] = [];
-  dsDocumentos = new MatTableDataSource<DocumentoCxp>([]);
-  columnasDocumentos = ['id', 'tipoComprobante', 'rucEmisor', 'razonSocialEmisor', 'serieComprobante', 'fechaEmision', 'valorSinImpuestos', 'iva', 'importeTotal', 'estadoDocumento', 'novedad', 'acciones'];
-  filtroEstadoDoc = signal<number | null>(null);
-  // Detalle activo en vista Documentos
-  docParaXml: DocumentoCxp | null = null;
-  docParaResolverNovedad: DocumentoCxp | null = null;
-
   // IDs de sesión (se deben obtener del localStorage/session)
   private get idEmpresa(): number { return Number(localStorage.getItem('empresaCodigo') || localStorage.getItem('empresaId') || 1); }
   private get idUsuario(): number { try { const u = JSON.parse(localStorage.getItem('usuario') || sessionStorage.getItem('usuario') || '{}'); return u.codigo || u.id || 1; } catch { return 1; } }
 
   ngOnInit(): void {
-    this.cargarHistorial();
+    this.cargarPeriodos();
   }
 
   @HostListener('window:resize')
   onResize(): void {}
 
+  // ─── PERIODOS ───────────────────────────────────────────
+
+  cargarPeriodos(): void {
+    this.periodoService.getAll().subscribe({
+      next: (data) => {
+        const sorted = (data || []).sort((a, b) => b.anio !== a.anio ? b.anio - a.anio : b.mes - a.mes);
+        this.periodos.set(sorted);
+      },
+      error: () => this.mostrarError('No se pudieron cargar los périodos contables'),
+    });
+  }
+
   // ─── HISTORIAL ──────────────────────────────────────────
 
   cargarHistorial(): void {
+    const idPeriodo = this.periodoSeleccionado();
+    this.cargas = [];
+    this.dsCargas.data = [];
+    this.cerrarDetalle();
+    if (!idPeriodo) return;
     this.cargando.set(true);
-    this.cargaService.getByEmpresa(this.idEmpresa).subscribe({
+    const criterios: DatosBusqueda[] = [];
+    const dbEmpresa = new DatosBusqueda();
+    dbEmpresa.asignaValorConCampoPadre(TipoDatos.LONG, 'empresa', 'codigo', String(this.idEmpresa), TipoComandosBusqueda.IGUAL);
+    criterios.push(dbEmpresa);
+    const dbPeriodo = new DatosBusqueda();
+    dbPeriodo.asignaValorConCampoPadre(TipoDatos.LONG, 'periodoContable', 'codigo', String(idPeriodo), TipoComandosBusqueda.IGUAL);
+    criterios.push(dbPeriodo);
+    this.cargaService.selectByCriteria(criterios).subscribe({
       next: (data) => {
         this.cargas = (data || []);
         this.dsCargas.data = this.cargas;
         this.cargando.set(false);
       },
-      error: () => { this.mostrarError('No se pudo cargar el historial'); this.cargando.set(false); },
+      error: () => { this.cargas = []; this.dsCargas.data = []; this.cargando.set(false); },
     });
   }
 
@@ -102,6 +121,8 @@ export class BandejaElectronicaComponent implements OnInit {
   onArchivoTxtSeleccionado(event: Event): void {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file) return;
+    const idPeriodo = this.periodoSeleccionado();
+    if (!idPeriodo) { this.mostrarError('Seleccione un período contable antes de cargar.'); return; }
     if (!file.name.endsWith('.txt') && !file.name.endsWith('.TXT')) {
       this.mostrarError('Solo se aceptan archivos .TXT del SRI'); return;
     }
@@ -115,6 +136,7 @@ export class BandejaElectronicaComponent implements OnInit {
         nombreArchivo: file.name,
         idEmpresa: this.idEmpresa,
         idUsuario: this.idUsuario,
+        idPeriodo: idPeriodo,
       }).subscribe({
         next: (resp) => {
           this.procesando.set(false);
@@ -128,30 +150,31 @@ export class BandejaElectronicaComponent implements OnInit {
         },
       });
     };
-    reader.readAsText(file, 'UTF-8');
+    reader.readAsText(file, 'ISO-8859-1');
   }
 
   // ─── VER DETALLE DE UNA CARGA ───────────────────────────
 
   verDetalle(carga: CargaArchivoTxt): void {
+    if (this.cargaSeleccionada?.id === carga.id) return; // ya seleccionado
     this.cargaSeleccionada = carga;
-    this.vista = 'detalle';
     this.cargando.set(true);
     this.requiereProductos.set(false);
     this.documentoCxpPendiente = null;
-    // Consulta líneas DCTX filtradas por carga usando endpoint dedicado
-    this.detalleService.getByCarga(carga.id).subscribe({
+    // Consulta líneas DCTX filtradas por carga usando selectByCriteria
+    const db = new DatosBusqueda();
+    db.asignaValorConCampoPadre(TipoDatos.LONG, 'cargaTxt', 'id', String(carga.id), TipoComandosBusqueda.IGUAL);
+    this.detalleService.selectByCriteria([db]).subscribe({
       next: (data) => {
         this.detalles = (data || []) as DetalleCargaTxt[];
         this.dsDetalles.data = this.detalles;
         this.cargando.set(false);
       },
-      error: () => { this.mostrarError('No se pudo cargar el detalle'); this.cargando.set(false); },
+      error: () => { this.detalles = []; this.dsDetalles.data = []; this.cargando.set(false); },
     });
   }
 
-  volverHistorial(): void {
-    this.vista = 'historial';
+  cerrarDetalle(): void {
     this.cargaSeleccionada = null;
     this.detalles = [];
     this.dsDetalles.data = [];
@@ -177,7 +200,7 @@ export class BandejaElectronicaComponent implements OnInit {
         next: () => {
           this.procesando.set(false);
           this.mostrarExito('XML subido correctamente');
-          this.verDetalle(this.cargaSeleccionada!);
+          this.recargarDetalle();
         },
         error: (err) => { this.procesando.set(false); this.mostrarError('Error al subir el XML: ' + (err?.message || err)); },
       });
@@ -206,7 +229,7 @@ export class BandejaElectronicaComponent implements OnInit {
           this.mostrarError(`Proveedor no encontrado — RUC: ${resp.rucEmisor}. Créelo en TSR primero.`);
         } else {
           this.mostrarExito(`Registrado: ${resp?.mensaje || 'OK'}`);
-          this.verDetalle(this.cargaSeleccionada!);
+          this.recargarDetalle();
         }
       },
       error: (err) => { this.procesando.set(false); this.mostrarError('Error al registrar: ' + (err?.message || err)); },
@@ -230,7 +253,7 @@ export class BandejaElectronicaComponent implements OnInit {
         this.requiereProductos.set(false);
         this.documentoCxpPendiente = null;
         this.mostrarExito(`Registrado: ${resp?.mensaje || 'OK'}`);
-        if (this.vista === 'documentos') { this.cargarDocumentos(); } else { this.verDetalle(this.cargaSeleccionada!); }
+        this.recargarDetalle();
       },
       error: (err) => { this.procesando.set(false); this.mostrarError('Error al registrar: ' + (err?.message || err)); },
     });
@@ -242,138 +265,14 @@ export class BandejaElectronicaComponent implements OnInit {
     this.productosNuevos = [];
   }
 
-  // ─── VISTA DOCUMENTOS (DCXP) ─────────────────────────────
+  // ─── HELPER: recargar detalle activo ───────────────────
 
-  irDocumentos(): void {
-    this.vista = 'documentos';
-    this.cargarDocumentos();
-  }
-
-  cargarDocumentos(): void {
-    this.cargando.set(true);
-    const f = this.filtroEstadoDoc();
-    const obs$ = f === null
-      ? this.docService.getByEmpresa(this.idEmpresa)
-      : f === 5
-        ? this.docService.novedadesPendientes(this.idEmpresa)
-        : this.docService.getByEmpresaEstado(this.idEmpresa, f);
-    obs$.subscribe({
-      next: (data) => {
-        this.todosDocumentos = (data || []);
-        this.dsDocumentos.data = this.todosDocumentos;
-        this.cargando.set(false);
-      },
-      error: () => { this.mostrarError('No se pudo cargar los documentos'); this.cargando.set(false); },
-    });
-  }
-
-  setFiltroEstado(estado: number | null): void {
-    this.filtroEstadoDoc.set(estado);
-    this.cargarDocumentos();
-  }
-
-  private aplicarFiltroEstado(): void {
-    // Filtro ahora es server-side, este método ya no aplica
-  }
-
-  // Fase 2 desde vista Documentos
-  abrirSelectorXmlDoc(doc: DocumentoCxp): void {
-    this.docParaXml = doc;
-    this.docParaResolverNovedad = null;
-    this.inputXmlDoc.nativeElement.value = '';
-    this.inputXmlDoc.nativeElement.click();
-  }
-
-  // Dispatcher XML para vista Documentos
-  onXmlDocFileChange(event: Event): void {
-    const file = (event.target as HTMLInputElement).files?.[0];
-    if (!file) return;
-    if (this.docParaResolverNovedad) {
-      this.resolverNovedadDoc(this.docParaResolverNovedad, 'REEMPLAZAR', file);
-      this.docParaResolverNovedad = null;
-    } else if (this.docParaXml) {
-      this.subirXmlDoc(file, this.docParaXml);
-      this.docParaXml = null;
+  private recargarDetalle(): void {
+    if (this.cargaSeleccionada) {
+      const carga = this.cargaSeleccionada;
+      this.cargaSeleccionada = null; // forzar recarga
+      this.verDetalle(carga);
     }
-  }
-
-  private subirXmlDoc(file: File, doc: DocumentoCxp): void {
-    this.procesando.set(true);
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const contenidoXml = (e.target?.result as string) || '';
-      this.processService.cargarXml(doc.id, { contenidoXml, idUsuario: this.idUsuario }).subscribe({
-        next: () => { this.procesando.set(false); this.mostrarExito('XML subido correctamente'); this.cargarDocumentos(); },
-        error: (err) => { this.procesando.set(false); this.mostrarError('Error al subir el XML: ' + (err?.message || err)); },
-      });
-    };
-    reader.readAsText(file, 'UTF-8');
-  }
-
-  // Fase 3 desde vista Documentos
-  registrarDoc(doc: DocumentoCxp): void {
-    if (!confirm(`¿Registrar en BD el documento ${doc.serieComprobante}?`)) return;
-    this.procesando.set(true);
-    this.processService.registrarBD(doc.id, { idEmpresa: this.idEmpresa, idUsuario: this.idUsuario }).subscribe({
-      next: (resp) => {
-        this.procesando.set(false);
-        if (resp?.requiereProductos) {
-          this.documentoCxpPendiente = doc;
-          this.productosNuevos = (resp.productosNuevos || []).map((p: ProductoNuevo) => ({ ...p, idGrupo: undefined }));
-          this.requiereProductos.set(true);
-          this.processService.getGruposProducto().subscribe({
-            next: (grupos) => { this.gruposProducto = grupos || []; },
-            error: () => { this.gruposProducto = []; },
-          });
-        } else if (resp?.error === 'TITULAR_NO_ENCONTRADO') {
-          this.mostrarError(`Proveedor no encontrado — RUC: ${resp.rucEmisor}. Créelo en TSR primero.`);
-        } else {
-          this.mostrarExito(`Registrado: ${resp?.mensaje || 'OK'}`);
-          this.cargarDocumentos();
-        }
-      },
-      error: (err) => { this.procesando.set(false); this.mostrarError('Error al registrar: ' + (err?.message || err)); },
-    });
-  }
-
-  // Fase 4 desde vista Documentos
-  abrirResolverReemplazarDoc(doc: DocumentoCxp): void {
-    this.docParaResolverNovedad = doc;
-    this.docParaXml = null;
-    this.inputXmlDoc.nativeElement.value = '';
-    this.inputXmlDoc.nativeElement.click();
-  }
-
-  resolverNovedadDoc(doc: DocumentoCxp, accion: 'MANTENER' | 'REEMPLAZAR', xmlFile?: File): void {
-    if (accion === 'MANTENER') {
-      if (!confirm(`¿Mantener el documento ${doc.serieComprobante} sin cambios?`)) return;
-      this.procesando.set(true);
-      this.processService.resolverNovedad(doc.id, { accion: 'MANTENER', idUsuario: this.idUsuario }).subscribe({
-        next: () => { this.procesando.set(false); this.mostrarExito('Documento mantenido sin cambios'); this.cargarDocumentos(); },
-        error: (err) => { this.procesando.set(false); this.mostrarError(err?.message || 'Error al resolver'); },
-      });
-    } else if (xmlFile) {
-      this.procesando.set(true);
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const contenidoXml = (e.target?.result as string) || '';
-        this.processService.resolverNovedad(doc.id, { accion: 'REEMPLAZAR', contenidoXml, idUsuario: this.idUsuario }).subscribe({
-          next: (resp) => { this.procesando.set(false); this.mostrarExito(resp?.mensaje || 'Reemplazado correctamente'); this.cargarDocumentos(); },
-          error: (err) => { this.procesando.set(false); this.mostrarError(err?.message || 'Error al reemplazar'); },
-        });
-      };
-      reader.readAsText(xmlFile, 'UTF-8');
-    }
-  }
-
-  // Fase 5 desde vista Documentos
-  revertirDoc(doc: DocumentoCxp): void {
-    if (!confirm(`¿Revertir el documento ${doc.serieComprobante}? Se eliminarán los registros creados en BD.`)) return;
-    this.procesando.set(true);
-    this.processService.revertir(doc.id, this.idUsuario).subscribe({
-      next: () => { this.procesando.set(false); this.mostrarExito('Documento revertido'); this.cargarDocumentos(); },
-      error: (err) => { this.procesando.set(false); this.mostrarError('Error al revertir: ' + (err?.message || err)); },
-    });
   }
 
   // ─── FASE 4: RESOLVER NOVEDAD ───────────────────────────
@@ -384,7 +283,7 @@ export class BandejaElectronicaComponent implements OnInit {
       if (!confirm(`¿Mantener el documento ${detalle.documento.serieComprobante} sin cambios?`)) return;
       this.procesando.set(true);
       this.processService.resolverNovedad(idDocumentoCxp, { accion: 'MANTENER', idUsuario: this.idUsuario }).subscribe({
-        next: () => { this.procesando.set(false); this.mostrarExito('Documento mantenido sin cambios'); this.verDetalle(this.cargaSeleccionada!); },
+        next: () => { this.procesando.set(false); this.mostrarExito('Documento mantenido sin cambios'); this.recargarDetalle(); },
         error: (err) => { this.procesando.set(false); this.mostrarError(err?.message || 'Error al resolver'); },
       });
     } else if (xmlFile) {
@@ -393,7 +292,7 @@ export class BandejaElectronicaComponent implements OnInit {
       reader.onload = (e) => {
         const contenidoXml = (e.target?.result as string) || '';
         this.processService.resolverNovedad(idDocumentoCxp, { accion: 'REEMPLAZAR', contenidoXml, idUsuario: this.idUsuario }).subscribe({
-          next: (resp) => { this.procesando.set(false); this.mostrarExito(resp?.mensaje || 'Reemplazado correctamente'); this.verDetalle(this.cargaSeleccionada!); },
+          next: (resp) => { this.procesando.set(false); this.mostrarExito(resp?.mensaje || 'Reemplazado correctamente'); this.recargarDetalle(); },
           error: (err) => { this.procesando.set(false); this.mostrarError(err?.message || 'Error al reemplazar'); },
         });
       };
@@ -427,7 +326,7 @@ export class BandejaElectronicaComponent implements OnInit {
     if (!confirm(`¿Revertir el documento ${detalle.documento.serieComprobante}? Se eliminarán los registros creados en BD.`)) return;
     this.procesando.set(true);
     this.processService.revertir(detalle.documento.id, this.idUsuario).subscribe({
-      next: () => { this.procesando.set(false); this.mostrarExito('Documento revertido'); this.verDetalle(this.cargaSeleccionada!); },
+      next: () => { this.procesando.set(false); this.mostrarExito('Documento revertido'); this.recargarDetalle(); },
       error: (err) => { this.procesando.set(false); this.mostrarError('Error al revertir: ' + (err?.message || err)); },
     });
   }
