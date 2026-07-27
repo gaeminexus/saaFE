@@ -396,16 +396,16 @@ export class MenutesoreriaComponent {
               route: '/menutesoreria/procesos/extractos-bancarios/consulta',
             },
             {
-              displayName: 'Tablero de Cumplimiento',
-              iconName: 'dashboard',
-              idPermiso: 830,
-              route: '/menutesoreria/procesos/extractos-bancarios/tablero',
-            },
-            {
               displayName: 'Conciliación Contable',
               iconName: 'fact_check',
               idPermiso: 830,
               route: '/menutesoreria/procesos/conciliacion-contable',
+            },
+            {
+              displayName: 'Tablero de Cumplimiento',
+              iconName: 'dashboard',
+              idPermiso: 830,
+              route: '/menutesoreria/procesos/extractos-bancarios/tablero',
             },
           ],
         },

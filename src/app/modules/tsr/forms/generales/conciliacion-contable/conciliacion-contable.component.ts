@@ -12,6 +12,7 @@ import { Periodo } from '../../../../cnt/model/periodo';
 import { PeriodoService } from '../../../../cnt/service/periodo.service';
 import { ConciliacionContable, EstadoConciliacionContable } from '../../../model/conciliacion-contable';
 import { ControlExtractoBancario } from '../../../model/control-extracto-bancario';
+import { CuentaBancaria } from '../../../model/cuenta-bancaria';
 import { DetalleAsientoConciliacion } from '../../../model/detalle-asiento-conciliacion';
 import { DetalleExtractoBancario } from '../../../model/detalle-extracto-bancario';
 import { GrupoConciliacionAsiento } from '../../../model/grupo-conciliacion-asiento';
@@ -37,6 +38,8 @@ export class ConciliacionContableComponent implements OnInit {
   readonly EstadoConciliacionContable = EstadoConciliacionContable;
 
   cuentaSeleccionada: number | null = null;
+  /** Cuenta bancaria elegida en el resumen, para mostrar banco/número en el detalle. */
+  cuentaSeleccionadaInfo: CuentaBancaria | null = null;
 
   periodos: Periodo[] = [];
   periodoSeleccionado: number | null = null;
@@ -271,6 +274,9 @@ export class ConciliacionContableComponent implements OnInit {
     if (fila.estadoRevision === EstadoConciliacionContable.CON_DIFERENCIAS) {
       return 'Con diferencias';
     }
+    if (!fila.extractoCargado) {
+      return 'Extracto no cargado';
+    }
     if (fila.totalPendientesExtracto === 0 && fila.totalPendientesAsiento === 0) {
       return 'Sin movimientos';
     }
@@ -284,6 +290,9 @@ export class ConciliacionContableComponent implements OnInit {
     if (fila.estadoRevision === EstadoConciliacionContable.CON_DIFERENCIAS) {
       return 'badge-error';
     }
+    if (!fila.extractoCargado) {
+      return 'badge-novedad';
+    }
     if (fila.totalPendientesExtracto === 0 && fila.totalPendientesAsiento === 0) {
       return 'badge-revertido';
     }
@@ -293,6 +302,7 @@ export class ConciliacionContableComponent implements OnInit {
   /** Entra al detalle de conciliación de una cuenta específica. */
   seleccionarCuenta(fila: ResumenConciliacionCuenta): void {
     this.cuentaSeleccionada = fila.cuentaBancaria.codigo;
+    this.cuentaSeleccionadaInfo = fila.cuentaBancaria;
     this.limpiarSeleccion();
     this.sugerencias = [];
     this.grupoExpandido = null;
@@ -302,6 +312,7 @@ export class ConciliacionContableComponent implements OnInit {
   /** Vuelve de la vista de detalle de una cuenta a la lista de resumen del período. */
   volverAlResumen(): void {
     this.cuentaSeleccionada = null;
+    this.cuentaSeleccionadaInfo = null;
     this.limpiarVistaCuenta();
     this.cargarResumen();
   }

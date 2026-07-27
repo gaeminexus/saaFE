@@ -96,6 +96,10 @@
           <span class="cuenta-resumen-auditoria">
             Verificado por {{ fila.usuarioVerifica }} el {{ formatearSoloFecha(fila.fechaVerificacion) }}
           </span>
+          } @else if (!fila.extractoCargado) {
+          <span class="cuenta-resumen-auditoria">
+            Todavía no se ha cargado el extracto bancario de este período
+          </span>
           } @else {
           <span class="cuenta-resumen-auditoria">
             {{ fila.totalPendientesExtracto }} pendiente(s) extracto · {{ fila.totalPendientesAsiento }} pendiente(s) contabilidad
@@ -114,10 +118,18 @@
   }
 
   @if (cuentaSeleccionada) {
-  <button mat-stroked-button color="primary" class="volver-btn" (click)="volverAlResumen()">
-    <mat-icon>arrow_back</mat-icon>
-    Volver al resumen del período
-  </button>
+  <div class="cuenta-detalle-header">
+    <button mat-stroked-button color="primary" class="volver-btn" (click)="volverAlResumen()">
+      <mat-icon>arrow_back</mat-icon>
+      Volver al resumen del período
+    </button>
+    @if (cuentaSeleccionadaInfo) {
+    <span class="cuenta-detalle-titulo">
+      <mat-icon>account_balance</mat-icon>
+      {{ cuentaSeleccionadaInfo.banco?.nombre }} - {{ cuentaSeleccionadaInfo.numeroCuenta }}
+    </span>
+    }
+  </div>
 
   @if (periodoActualCerrado) {
   <div class="badge badge-revertido periodo-cerrado-aviso">

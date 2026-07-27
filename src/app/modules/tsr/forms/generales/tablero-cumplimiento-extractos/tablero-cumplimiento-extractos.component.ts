@@ -44,6 +44,33 @@ export class TableroCumplimientoExtractosComponent implements OnInit {
     this.cargarPeriodos();
   }
 
+  /**
+   * Genera (si hace falta) y recalcula el período por defecto para que su
+   * estado (cargadas/pendientes/conciliadas) esté al día apenas se abre la
+   * pantalla, sin depender de que el usuario haga clic en "Generar Período" /
+   * "Recalcular" manualmente. Solo se hace para el período por defecto, no
+   * para todo el historial, para no disparar N recálculos cada vez que se
+   * abre el tablero.
+   */
+  private verificarPeriodoPorDefecto(): void {
+    const empresa = this.appStateService.getEmpresa();
+    if (!empresa?.codigo || !this.periodoSeleccionado) {
+      return;
+    }
+    const idEmpresa = empresa.codigo;
+    const idPeriodo = this.periodoSeleccionado;
+
+    this.controlExtractoBancarioService.generarPeriodo(idEmpresa, idPeriodo).subscribe({
+      next: () => {
+        this.controlExtractoBancarioService.recalcularPeriodo(idEmpresa, idPeriodo).subscribe({
+          next: () => this.cargarControles(),
+          error: () => {},
+        });
+      },
+      error: () => {},
+    });
+  }
+
   cargarControles(): void {
     this.isLoading = true;
     this.controlExtractoBancarioService.getAll().subscribe({
@@ -64,14 +91,35 @@ export class TableroCumplimientoExtractosComponent implements OnInit {
     this.isLoadingPeriodos = true;
     this.periodoService.getAll().subscribe({
       next: (data) => {
-        this.periodos = Array.isArray(data) ? data : [];
+        this.periodos = (Array.isArray(data) ? data : []).sort((a, b) => b.anio - a.anio || b.mes - a.mes);
         this.isLoadingPeriodos = false;
+        this.seleccionarPeriodoPorDefecto();
+        this.verificarPeriodoPorDefecto();
       },
       error: () => {
         this.periodos = [];
         this.isLoadingPeriodos = false;
       },
     });
+  }
+
+  /**
+   * Mismo criterio que "Cargar Extracto" (mes anterior al actual, el banco
+   * recién publica el extracto de un mes cerrado): así el período que se
+   * auto-verifica es el que el usuario casi siempre quiere ver primero. Si
+   * ese período no existe en la lista, cae al más reciente disponible.
+   */
+  private seleccionarPeriodoPorDefecto(): void {
+    const hoy = new Date();
+    let mesAnterior = hoy.getMonth();
+    let anioAnterior = hoy.getFullYear();
+    if (mesAnterior === 0) {
+      mesAnterior = 12;
+      anioAnterior -= 1;
+    }
+
+    const periodoAnterior = this.periodos.find((p) => p.mes === mesAnterior && p.anio === anioAnterior);
+    this.periodoSeleccionado = periodoAnterior ? periodoAnterior.codigo : this.periodos[0]?.codigo ?? null;
   }
 
   generarPeriodo(): void {

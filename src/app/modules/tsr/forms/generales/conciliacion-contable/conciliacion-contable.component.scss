@@ -134,6 +134,28 @@
   align-self: flex-start;
 }
 
+.cuenta-detalle-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.cuenta-detalle-titulo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--mat-sys-primary, #1565c0);
+
+  mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+}
+
 .spinner-container {
   display: flex;
   justify-content: center;

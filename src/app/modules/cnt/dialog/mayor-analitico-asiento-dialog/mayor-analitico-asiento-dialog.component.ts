@@ -60,8 +60,8 @@ export class MayorAnaliticoAsientoDialogComponent implements AfterViewInit {
 
   readonly titulo = computed(() => {
     const asiento = this.asiento();
-    if (asiento?.numero) {
-      return `Asiento #${asiento.numero}`;
+    if (asiento?.numeroAlterno) {
+      return `Asiento #${asiento.numeroAlterno}`;
     }
     return `Asiento #${this.detalleMayor.numeroAsiento ?? 'N/D'}`;
   });
