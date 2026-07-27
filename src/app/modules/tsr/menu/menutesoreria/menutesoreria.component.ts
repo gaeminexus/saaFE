@@ -401,6 +401,12 @@ export class MenutesoreriaComponent {
               idPermiso: 830,
               route: '/menutesoreria/procesos/extractos-bancarios/tablero',
             },
+            {
+              displayName: 'Conciliación Contable',
+              iconName: 'fact_check',
+              idPermiso: 830,
+              route: '/menutesoreria/procesos/conciliacion-contable',
+            },
           ],
         },
       ],

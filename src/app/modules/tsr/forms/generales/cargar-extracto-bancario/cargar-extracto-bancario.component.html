@@ -25,8 +25,29 @@
           }
         </mat-form-field>
 
+        <mat-form-field appearance="outline">
+          <mat-label>Período Contable</mat-label>
+          <mat-select [(ngModel)]="periodoSeleccionado" (selectionChange)="onPeriodoChange()">
+            @for (periodo of periodos; track periodo.codigo) {
+            <mat-option [value]="periodo.codigo" [disabled]="isPeriodoCerrado(periodo)">
+              {{ periodo.nombre }} @if (isPeriodoCerrado(periodo)) { (Cerrado) }
+            </mat-option>
+            }
+          </mat-select>
+          @if (isLoadingPeriodos) {
+          <mat-hint>Cargando períodos...</mat-hint>
+          } @else {
+          <mat-hint>El extracto se conciliará bajo este período contable</mat-hint>
+          }
+        </mat-form-field>
+
         <div class="file-input-wrap">
-          <button mat-stroked-button color="primary" (click)="fileInput.click()" [disabled]="!cuentaSeleccionada">
+          <button
+            mat-stroked-button
+            color="primary"
+            (click)="fileInput.click()"
+            [disabled]="!cuentaSeleccionada || !periodoSeleccionado"
+          >
             <mat-icon>attach_file</mat-icon>
             Seleccionar Archivo
           </button>
@@ -42,7 +63,7 @@
           mat-raised-button
           color="primary"
           (click)="validarArchivo()"
-          [disabled]="!cuentaSeleccionada || !archivoSeleccionado || isValidando"
+          [disabled]="!cuentaSeleccionada || !periodoSeleccionado || !archivoSeleccionado || isValidando"
         >
           @if (isValidando) {
           <mat-spinner diameter="20"></mat-spinner>
@@ -63,7 +84,9 @@
     <mat-card-header>
       <mat-icon mat-card-avatar class="avatar-icon">summarize</mat-icon>
       <mat-card-title>Resumen de la Carga</mat-card-title>
-      <mat-card-subtitle>{{ resumen.nombreBanco }} - {{ resumen.numeroCuenta }}</mat-card-subtitle>
+      <mat-card-subtitle>
+        {{ resumen.nombreBanco }} - {{ resumen.numeroCuenta }} · Período: {{ resumen.nombrePeriodo }}
+      </mat-card-subtitle>
     </mat-card-header>
     <mat-card-content>
       @if (resumen.archivoYaCargado) {
@@ -116,6 +139,24 @@
         <ul>
           @for (advertencia of resumen.advertencias; track $index) {
           <li>{{ advertencia }}</li>
+          }
+        </ul>
+      </div>
+      }
+
+      @if (resumen.totalTransaccionesFueraPeriodo && resumen.totalTransaccionesFueraPeriodo > 0) {
+      <div class="advertencias advertencias-periodo">
+        <div class="advertencias-header">
+          <mat-icon>event_busy</mat-icon>
+          {{ resumen.totalTransaccionesFueraPeriodo }} transacción(es) con fecha fuera del período seleccionado
+        </div>
+        <p class="advertencias-nota">
+          Posible corte de fin de mes del banco. Verifique que correspondan al período que está conciliando -
+          no se bloquea la carga.
+        </p>
+        <ul>
+          @for (transaccion of resumen.transaccionesFueraPeriodo; track $index) {
+          <li>{{ transaccion }}</li>
           }
         </ul>
       </div>

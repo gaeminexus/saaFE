@@ -3,6 +3,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
+import { ExportService } from '../../../../../shared/services/export.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda as TipoDatos } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
@@ -44,7 +45,8 @@ export class DetalleExtractoBancarioComponent implements OnInit {
     private router: Router,
     private extractoBancarioService: ExtractoBancarioService,
     private detalleExtractoBancarioService: DetalleExtractoBancarioService,
-    private funcionesDatosService: FuncionesDatosService
+    private funcionesDatosService: FuncionesDatosService,
+    private exportService: ExportService
   ) {}
 
   ngOnInit(): void {
@@ -98,6 +100,33 @@ export class DetalleExtractoBancarioComponent implements OnInit {
 
   toggleFilaCruda(detalle: DetalleExtractoBancario): void {
     this.filaExpandida = this.filaExpandida === detalle.codigo ? null : detalle.codigo;
+  }
+
+  /**
+   * Descarga las transacciones ya cargadas en pantalla como CSV - no vuelve a
+   * consultar el backend, usa this.detalles tal como esta mostrado.
+   */
+  descargarCSV(): void {
+    const filas = this.detalles.map((d) => ({
+      fecha: this.formatearSoloFecha(d.fechaTransaccion),
+      descripcion: d.descripcion,
+      referencia: d.referencia,
+      debito: d.debito ?? 0,
+      credito: d.credito ?? 0,
+      saldo: d.saldo,
+    }));
+
+    const banco = this.extracto?.cuentaBancaria?.banco?.nombre ?? 'Banco';
+    const cuenta = this.extracto?.cuentaBancaria?.numeroCuenta ?? '';
+    const periodo = this.extracto?.periodo?.nombre ?? '';
+    const nombreArchivo = `Extracto_${banco}_${cuenta}_${periodo}`.replace(/[^a-zA-Z0-9_-]+/g, '_');
+
+    this.exportService.exportToCSV(
+      filas,
+      nombreArchivo,
+      ['Fecha', 'Descripción', 'Referencia', 'Débito', 'Crédito', 'Saldo'],
+      ['fecha', 'descripcion', 'referencia', 'debito', 'credito', 'saldo']
+    );
   }
 
   formatearSoloFecha(fecha: any): string {

@@ -1,3 +1,4 @@
+import { Periodo } from "../../cnt/model/periodo";
 import { CuentaBancaria } from "./cuenta-bancaria";
 import { ExtractoBancario } from "./extracto-bancario";
 
@@ -5,6 +6,7 @@ export interface DetalleExtractoBancario {
     codigo: number;                    // DEXBCDGO
     extractoBancario: ExtractoBancario; // EXBCCDGO
     cuentaBancaria: CuentaBancaria;     // CNBCCDGO (denormalizado)
+    periodo: Periodo;                  // PRDOCDGO (denormalizado desde ExtractoBancario)
     fechaTransaccion: string;          // DEXBFTRN (LocalDate → ISO string)
     fechaContable: string;             // DEXBFCNT (LocalDate → ISO string, nullable)
     descripcion: string;               // DEXBDSCR

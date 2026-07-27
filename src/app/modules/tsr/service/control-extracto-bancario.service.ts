@@ -2,6 +2,7 @@ import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http
 import { Injectable } from '@angular/core';
 import { Observable, catchError, of, throwError } from 'rxjs';
 import { ControlExtractoBancario } from '../model/control-extracto-bancario';
+import { DetalleCumplimientoCuenta } from '../model/detalle-cumplimiento-cuenta';
 import { ServiciosTsr } from './ws-tsr';
 
 @Injectable({
@@ -58,6 +59,17 @@ export class ControlExtractoBancarioService {
   recalcularPeriodo(idEmpresa: number, idPeriodo: number): Observable<ControlExtractoBancario | null> {
     const url = `${ServiciosTsr.RS_CTEB}/recalcular/${idEmpresa}/${idPeriodo}`;
     return this.http.post<ControlExtractoBancario>(url, null).pipe(catchError(this.handleError));
+  }
+
+  /**
+   * Detalle por cuenta bancaria (drill-down): cuales cuentas ya cargaron su
+   * extracto y cuales ya estan conciliadas para una empresa/periodo.
+   */
+  detalleCuentas(idEmpresa: number, idPeriodo: number): Observable<DetalleCumplimientoCuenta[]> {
+    const url = `${ServiciosTsr.RS_CTEB}/detalleCuentas/${idEmpresa}/${idPeriodo}`;
+    return this.http.get<DetalleCumplimientoCuenta[]>(url).pipe(
+      catchError((error: HttpErrorResponse) => throwError(() => error.error || error))
+    );
   }
 
   /**

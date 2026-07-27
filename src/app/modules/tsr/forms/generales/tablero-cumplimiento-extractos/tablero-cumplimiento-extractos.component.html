@@ -3,7 +3,7 @@
     <mat-icon class="header-icon">dashboard</mat-icon>
     <div>
       <h1>Tablero de Cumplimiento de Extractos</h1>
-      <p class="subtitle">Cuántas cuentas ya cargaron y conciliaron su extracto cada mes</p>
+      <p class="subtitle">Qué cuentas ya cargaron y conciliaron su extracto cada mes, y cuáles faltan</p>
     </div>
   </div>
 
@@ -39,7 +39,7 @@
   } @else {
   <div class="tablero-grid">
     @for (control of controles; track control.codigo) {
-    <mat-card class="periodo-card">
+    <mat-card class="periodo-card" [ngClass]="estadoTarjeta(control)">
       <mat-card-header>
         <mat-icon mat-card-avatar class="card-icon">event_note</mat-icon>
         <mat-card-title>{{ control.mes }}/{{ control.anio }}</mat-card-title>
@@ -48,6 +48,23 @@
         </mat-card-subtitle>
       </mat-card-header>
       <mat-card-content>
+        @if (faltantesCarga(control) > 0) {
+        <div class="badge badge-error alerta-faltantes">
+          <mat-icon>report_problem</mat-icon>
+          {{ faltantesCarga(control) }} cuenta(s) sin cargar extracto
+        </div>
+        } @else if (faltantesConciliacion(control) > 0) {
+        <div class="badge badge-novedad alerta-faltantes">
+          <mat-icon>hourglass_top</mat-icon>
+          {{ faltantesConciliacion(control) }} cuenta(s) cargada(s) sin conciliar
+        </div>
+        } @else if (control.totalCuentas > 0) {
+        <div class="badge badge-registrado alerta-faltantes">
+          <mat-icon>check_circle</mat-icon>
+          Todas las cuentas conciliadas
+        </div>
+        }
+
         <div class="stat-row">
           <div class="stat-item">
             <div class="stat-value">{{ control.totalCuentas }}</div>
@@ -75,8 +92,39 @@
         @if (control.observaciones) {
         <div class="observaciones">{{ control.observaciones }}</div>
         }
+
+        @if (controlExpandido === control.codigo) {
+        <div class="detalle-cuentas">
+          @if (isLoadingDetalle) {
+          <div class="spinner-container-mini"><mat-spinner diameter="28"></mat-spinner></div>
+          } @else {
+          @for (fila of detalleCuentas; track fila.cuentaBancaria.codigo) {
+          <div class="cuenta-fila">
+            <span class="cuenta-nombre">{{ fila.cuentaBancaria.banco?.nombre }} - {{ fila.cuentaBancaria.numeroCuenta }}</span>
+            <span class="badge" [class.badge-registrado]="fila.cargada" [class.badge-error]="!fila.cargada">
+              {{ fila.cargada ? 'Cargada' : 'Sin cargar' }}
+            </span>
+            <span
+              class="badge"
+              [class.badge-registrado]="fila.conciliada"
+              [class.badge-novedad]="fila.cargada && !fila.conciliada"
+              [class.badge-revertido]="!fila.cargada"
+            >
+              {{ fila.conciliada ? 'Conciliada' : (fila.cargada ? 'Pendiente' : '—') }}
+            </span>
+          </div>
+          } @empty {
+          <div class="empty-state-mini">No hay cuentas bancarias activas para esta empresa.</div>
+          }
+          }
+        </div>
+        }
       </mat-card-content>
       <mat-card-actions>
+        <button mat-button color="primary" (click)="toggleDetalle(control)">
+          <mat-icon>{{ controlExpandido === control.codigo ? 'expand_less' : 'expand_more' }}</mat-icon>
+          {{ controlExpandido === control.codigo ? 'Ocultar cuentas' : 'Ver cuentas' }}
+        </button>
         <button mat-button color="primary" (click)="recalcular(control)" [disabled]="recalculandoCodigo === control.codigo">
           @if (recalculandoCodigo === control.codigo) {
           <mat-spinner diameter="18"></mat-spinner>

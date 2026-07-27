@@ -60,4 +60,7 @@ export class ServiciosTsr {
   public static RS_EXBC = `${API_URL}/exbc`; // ExtractoBancario
   public static RS_DEXB = `${API_URL}/dexb`; // DetalleExtractoBancario
   public static RS_CTEB = `${API_URL}/cteb`; // ControlExtractoBancario
+  public static RS_CNCT = `${API_URL}/cnct`; // ConciliacionContable
+  public static RS_GCEX = `${API_URL}/gcex`; // GrupoConciliacionExtracto
+  public static RS_GCAS = `${API_URL}/gcas`; // GrupoConciliacionAsiento
 }

@@ -1,0 +1,421 @@
+<div class="conciliacion-container">
+  <div class="page-header">
+    <mat-icon class="header-icon">fact_check</mat-icon>
+    <div>
+      <h1>Conciliación Contable</h1>
+      <p class="subtitle">Concilie el extracto bancario importado contra los asientos contables del mes</p>
+    </div>
+  </div>
+
+  <mat-card class="filtros-card">
+    <mat-card-content>
+      <div class="filtros-row">
+        <mat-form-field appearance="outline" class="periodo-field">
+          <mat-label>Período Contable</mat-label>
+          <mat-select [(ngModel)]="periodoSeleccionado" (selectionChange)="onPeriodoChange()">
+            @for (periodo of periodos; track periodo.codigo) {
+            <mat-option [value]="periodo.codigo">{{ periodo.nombre }}</mat-option>
+            }
+          </mat-select>
+          @if (isLoadingPeriodos) {
+          <mat-hint>Cargando períodos...</mat-hint>
+          } @else {
+          <mat-hint>Elija el período para ver el estado de todas las cuentas</mat-hint>
+          }
+        </mat-form-field>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  @if (periodoSeleccionado && !cuentaSeleccionada) {
+  <!-- ── Vista de resumen: todas las cuentas del período elegido ─────────── -->
+  @if (isLoadingResumen) {
+  <div class="spinner-container">
+    <mat-spinner diameter="48"></mat-spinner>
+  </div>
+  } @else {
+  <mat-card class="resumen-general-card">
+    <mat-card-content>
+      <div class="resumen-general-row">
+        <mat-icon class="resumen-general-icon">fact_check</mat-icon>
+        <span class="resumen-general-texto">
+          <strong>{{ totalCuentasVerificadas }}</strong> de <strong>{{ resumenCuentas.length }}</strong> cuentas verificadas
+          este período
+          @if (periodoActualCerrado) {
+          <span class="badge badge-revertido periodo-cerrado-badge">
+            Mes cerrado
+            @if (controlPeriodoActual?.usuarioCierre) {
+             · por {{ controlPeriodoActual?.usuarioCierre }} el {{ formatearSoloFecha(controlPeriodoActual?.fechaCierre) }}
+            }
+          </span>
+          }
+        </span>
+
+        <span class="resumen-general-spacer"></span>
+
+        @if (periodoActualCerrado) {
+        <button mat-stroked-button color="warn" [disabled]="isReabriendoMes" (click)="reabrirMes()">
+          @if (isReabriendoMes) {
+          <mat-spinner diameter="18"></mat-spinner>
+          } @else {
+          <ng-container>
+            <mat-icon>lock_open</mat-icon>
+            Reabrir Mes
+          </ng-container>
+          }
+        </button>
+        } @else {
+        <button
+          mat-raised-button
+          color="primary"
+          [disabled]="!puedeCerrarMes || isCerrandoMes"
+          [matTooltip]="puedeCerrarMes ? '' : 'Todas las cuentas deben estar verificadas antes de cerrar el mes'"
+          (click)="cerrarMes()"
+        >
+          @if (isCerrandoMes) {
+          <mat-spinner diameter="18"></mat-spinner>
+          } @else {
+          <ng-container>
+            <mat-icon>lock</mat-icon>
+            Cerrar Mes
+          </ng-container>
+          }
+        </button>
+        }
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="cuentas-lista-card">
+    <mat-card-content>
+      @for (fila of resumenOrdenado; track fila.cuentaBancaria.codigo) {
+      <div class="cuenta-resumen-fila" (click)="seleccionarCuenta(fila)">
+        <div class="cuenta-resumen-info">
+          <span class="cuenta-resumen-nombre">{{ fila.cuentaBancaria.banco?.nombre }} - {{ fila.cuentaBancaria.numeroCuenta }}</span>
+          @if (fila.estadoRevision === EstadoConciliacionContable.VERIFICADO) {
+          <span class="cuenta-resumen-auditoria">
+            Verificado por {{ fila.usuarioVerifica }} el {{ formatearSoloFecha(fila.fechaVerificacion) }}
+          </span>
+          } @else {
+          <span class="cuenta-resumen-auditoria">
+            {{ fila.totalPendientesExtracto }} pendiente(s) extracto · {{ fila.totalPendientesAsiento }} pendiente(s) contabilidad
+          </span>
+          }
+        </div>
+        <span class="badge" [ngClass]="estadoResumenClase(fila)">{{ estadoResumenTexto(fila) }}</span>
+        <mat-icon class="cuenta-resumen-flecha">chevron_right</mat-icon>
+      </div>
+      } @empty {
+      <div class="empty-state"><mat-icon>info</mat-icon><p>No hay cuentas bancarias activas registradas.</p></div>
+      }
+    </mat-card-content>
+  </mat-card>
+  }
+  }
+
+  @if (cuentaSeleccionada) {
+  <button mat-stroked-button color="primary" class="volver-btn" (click)="volverAlResumen()">
+    <mat-icon>arrow_back</mat-icon>
+    Volver al resumen del período
+  </button>
+
+  @if (periodoActualCerrado) {
+  <div class="badge badge-revertido periodo-cerrado-aviso">
+    <mat-icon>lock</mat-icon>
+    Este período está cerrado - solo lectura, no se pueden hacer ni deshacer conciliaciones
+  </div>
+  }
+  }
+
+  @if (isLoadingDatos) {
+  <div class="spinner-container">
+    <mat-spinner diameter="48"></mat-spinner>
+  </div>
+  }
+
+  @if (cabecera && !isLoadingDatos) {
+  <mat-card class="resumen-card">
+    <mat-card-content>
+      <div class="resumen-row">
+        <div class="resumen-item">
+          <span class="resumen-label">Estado</span>
+          <span
+            class="estado-badge"
+            [class.estado-pendiente]="cabecera.estadoRevision === EstadoConciliacionContable.PENDIENTE"
+            [class.estado-verificado]="cabecera.estadoRevision === EstadoConciliacionContable.VERIFICADO"
+            [class.estado-diferencias]="cabecera.estadoRevision === EstadoConciliacionContable.CON_DIFERENCIAS"
+          >
+            @switch (cabecera.estadoRevision) {
+              @case (EstadoConciliacionContable.VERIFICADO) { Verificado }
+              @case (EstadoConciliacionContable.CON_DIFERENCIAS) { Con diferencias }
+              @default { Pendiente }
+            }
+          </span>
+        </div>
+        <div class="resumen-item">
+          <span class="resumen-label">Grupos conciliados</span>
+          <span class="resumen-valor">{{ cabecera.totalGrupos }}</span>
+        </div>
+        <div class="resumen-item">
+          <span class="resumen-label">Pendientes extracto</span>
+          <span class="resumen-valor">{{ pendientesExtracto.length }}</span>
+        </div>
+        <div class="resumen-item">
+          <span class="resumen-label">Pendientes contabilidad</span>
+          <span class="resumen-valor">{{ pendientesAsiento.length }}</span>
+        </div>
+        <button
+          mat-raised-button
+          color="primary"
+          [disabled]="pendientesExtracto.length > 0 || pendientesAsiento.length > 0 || periodoActualCerrado"
+          (click)="verificarCuenta()"
+        >
+          <mat-icon>verified</mat-icon>
+          Verificar Cuenta/Período
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <div class="acciones-sugerencia">
+    <button mat-stroked-button color="primary" [disabled]="isSugiriendo || periodoActualCerrado" (click)="sugerirCoincidencias()">
+      @if (isSugiriendo) {
+      <mat-spinner diameter="18"></mat-spinner>
+      } @else {
+      <ng-container>
+        <mat-icon>auto_awesome</mat-icon>
+        Sugerir Coincidencias Automáticas
+      </ng-container>
+      }
+    </button>
+  </div>
+
+  @if (sugerencias.length > 0) {
+  <mat-card class="sugerencias-card">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>auto_awesome</mat-icon>
+        {{ sugerencias.length }} coincidencia(s) sugerida(s)
+      </mat-card-title>
+      <button
+        mat-raised-button
+        color="primary"
+        class="confirmar-todas-btn"
+        [disabled]="isConfirmandoTodas || periodoActualCerrado"
+        (click)="confirmarTodasLasSugerencias()"
+      >
+        @if (isConfirmandoTodas) {
+        <mat-spinner diameter="18"></mat-spinner>
+        } @else {
+        <ng-container>
+          <mat-icon>done_all</mat-icon>
+          Confirmar Todas
+        </ng-container>
+        }
+      </button>
+    </mat-card-header>
+    <mat-card-content>
+      @for (sugerencia of sugerencias; track sugerencia) {
+      <div class="sugerencia-item">
+        <div class="sugerencia-columnas">
+          <div class="sugerencia-columna">
+            <span class="sugerencia-columna-titulo">Extracto Bancario</span>
+            @for (linea of lineasExtractoDeSugerencia(sugerencia); track linea.codigo) {
+            <div class="sugerencia-linea">
+              <span class="linea-fecha">{{ formatearSoloFecha(linea.fechaTransaccion) }}</span>
+              <span class="linea-desc">{{ linea.descripcion }}</span>
+              <span class="linea-valor">{{ valorNetoExtracto(linea) | number : '1.2-2' }}</span>
+            </div>
+            }
+          </div>
+          <mat-icon class="sugerencia-flecha">sync_alt</mat-icon>
+          <div class="sugerencia-columna">
+            <span class="sugerencia-columna-titulo">Contabilidad</span>
+            @for (linea of lineasAsientoDeSugerencia(sugerencia); track linea.codigo) {
+            <div class="sugerencia-linea">
+              <span class="linea-fecha">{{ formatearSoloFecha(linea.asiento?.fechaAsiento) }}</span>
+              <span class="linea-asiento">Asiento #{{ linea.asiento?.numero }}</span>
+              <span class="linea-desc">{{ linea.descripcion }}</span>
+              <span class="linea-valor">{{ valorNetoAsiento(linea) | number : '1.2-2' }}</span>
+            </div>
+            }
+          </div>
+        </div>
+        <div class="sugerencia-footer">
+          <span class="badge badge-registrado">${{ sugerencia.valorExtracto | number : '1.2-2' }} coinciden</span>
+          <div class="sugerencia-acciones">
+            <button
+              mat-icon-button
+              color="primary"
+              matTooltip="Confirmar"
+              [disabled]="periodoActualCerrado"
+              (click)="confirmarSugerencia(sugerencia)"
+            >
+              <mat-icon>check_circle</mat-icon>
+            </button>
+            <button mat-icon-button matTooltip="Descartar" (click)="descartarSugerencia(sugerencia)">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+        </div>
+      </div>
+      }
+    </mat-card-content>
+  </mat-card>
+  }
+
+  <div class="paneles-grid">
+    <mat-card class="panel-card">
+      <mat-card-header>
+        <mat-card-title><mat-icon>account_balance</mat-icon>Extracto Bancario</mat-card-title>
+        <mat-card-subtitle>{{ pendientesExtracto.length }} movimiento(s) pendiente(s)</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="panel-scroll">
+          @for (fila of pendientesExtracto; track fila.codigo) {
+          <label class="fila-checkbox" [class.fila-seleccionada]="seleccionExtracto.has(fila.codigo)" [class.fila-deshabilitada]="periodoActualCerrado">
+            <input
+              type="checkbox"
+              [checked]="seleccionExtracto.has(fila.codigo)"
+              [disabled]="periodoActualCerrado"
+              (change)="toggleExtracto(fila.codigo)"
+            />
+            <div class="fila-info fila-info-extracto">
+              <span class="fila-fecha">{{ formatearSoloFecha(fila.fechaTransaccion) }}</span>
+              <span class="fila-desc">{{ fila.descripcion }}</span>
+              <span class="fila-valor" [class.valor-negativo]="valorNetoExtracto(fila) < 0">
+                {{ valorNetoExtracto(fila) | number : '1.2-2' }}
+              </span>
+            </div>
+          </label>
+          } @empty {
+          <div class="empty-state"><mat-icon>info</mat-icon><p>No hay movimientos pendientes.</p></div>
+          }
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="panel-card">
+      <mat-card-header>
+        <mat-card-title><mat-icon>menu_book</mat-icon>Contabilidad (Detalle Asiento)</mat-card-title>
+        <mat-card-subtitle>{{ pendientesAsiento.length }} línea(s) pendiente(s)</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="panel-scroll">
+          @for (fila of pendientesAsiento; track fila.codigo) {
+          <label class="fila-checkbox" [class.fila-seleccionada]="seleccionAsiento.has(fila.codigo)" [class.fila-deshabilitada]="periodoActualCerrado">
+            <input
+              type="checkbox"
+              [checked]="seleccionAsiento.has(fila.codigo)"
+              [disabled]="periodoActualCerrado"
+              (change)="toggleAsiento(fila.codigo)"
+            />
+            <div class="fila-info fila-info-asiento">
+              <span class="fila-fecha">{{ formatearSoloFecha(fila.asiento?.fechaAsiento) }}</span>
+              <span class="tipo-badge">Asiento #{{ fila.asiento?.numero }}</span>
+              <span class="fila-desc">{{ fila.descripcion }}</span>
+              <span class="fila-valor" [class.valor-negativo]="valorNetoAsiento(fila) < 0">
+                {{ valorNetoAsiento(fila) | number : '1.2-2' }}
+              </span>
+            </div>
+          </label>
+          } @empty {
+          <div class="empty-state"><mat-icon>info</mat-icon><p>No hay líneas pendientes.</p></div>
+          }
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <mat-card class="seleccion-card">
+    <mat-card-content>
+      <div class="seleccion-row">
+        <div class="seleccion-item">
+          <span class="resumen-label">Seleccionado (extracto)</span>
+          <span class="resumen-valor">${{ sumaSeleccionExtracto | number : '1.2-2' }} ({{ seleccionExtracto.size }})</span>
+        </div>
+        <div class="seleccion-item">
+          <span class="resumen-label">Seleccionado (contable)</span>
+          <span class="resumen-valor">${{ sumaSeleccionAsiento | number : '1.2-2' }} ({{ seleccionAsiento.size }})</span>
+        </div>
+        <div class="seleccion-item">
+          <span class="resumen-label">Diferencia</span>
+          <span class="resumen-valor" [class.valor-negativo]="diferenciaSeleccion !== 0">
+            ${{ diferenciaSeleccion | number : '1.2-2' }}
+          </span>
+        </div>
+        <button mat-raised-button color="primary" [disabled]="!puedeConciliar || isConciliando" (click)="conciliarSeleccionados()">
+          @if (isConciliando) {
+          <mat-spinner diameter="20"></mat-spinner>
+          } @else {
+          <ng-container>
+            <mat-icon>link</mat-icon>
+            Conciliar Seleccionados
+          </ng-container>
+          }
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="grupos-card">
+    <mat-card-header>
+      <mat-card-title>Grupos Conciliados</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      @for (grupo of gruposActivos; track grupo.codigo) {
+      <div class="grupo-item">
+        <div class="grupo-resumen" (click)="toggleExpandirGrupo(grupo)">
+          <mat-icon>{{ grupoExpandido === grupo.codigo ? 'expand_less' : 'expand_more' }}</mat-icon>
+          <span class="grupo-valor">${{ grupo.valorExtracto | number : '1.2-2' }}</span>
+          <span class="grupo-fechas">
+            {{ formatearSoloFecha(grupo.fechaMinima) }} - {{ formatearSoloFecha(grupo.fechaMaxima) }}
+          </span>
+          <span class="grupo-usuario">{{ grupo.usuarioConcilia }}</span>
+          <button
+            mat-icon-button
+            color="warn"
+            matTooltip="Deshacer"
+            [disabled]="periodoActualCerrado"
+            (click)="$event.stopPropagation(); deshacerGrupo(grupo)"
+          >
+            <mat-icon>undo</mat-icon>
+          </button>
+        </div>
+        @if (grupoExpandido === grupo.codigo) {
+        <div class="grupo-detalle">
+          @if (isLoadingDetalleGrupo) {
+          <mat-spinner diameter="24"></mat-spinner>
+          } @else {
+          <div class="grupo-detalle-columnas">
+            <div>
+              <h4>Extracto</h4>
+              @for (enlace of detalleGrupoExtracto; track enlace.codigo) {
+              <div class="grupo-detalle-fila">
+                {{ formatearSoloFecha(enlace.detalleExtractoBancario?.fechaTransaccion) }} -
+                {{ enlace.detalleExtractoBancario?.descripcion }}
+              </div>
+              }
+            </div>
+            <div>
+              <h4>Contabilidad</h4>
+              @for (enlace of detalleGrupoAsiento; track enlace.codigo) {
+              <div class="grupo-detalle-fila">
+                {{ formatearSoloFecha(enlace.detalleAsiento?.asiento?.fechaAsiento) }} -
+                <span class="tipo-badge">Asiento #{{ enlace.detalleAsiento?.asiento?.numero }}</span>
+                {{ enlace.detalleAsiento?.descripcion }}
+              </div>
+              }
+            </div>
+          </div>
+          }
+        </div>
+        }
+      </div>
+      } @empty {
+      <div class="empty-state"><mat-icon>info</mat-icon><p>Todavía no hay grupos conciliados en este período.</p></div>
+      }
+    </mat-card-content>
+  </mat-card>
+  }
+</div>

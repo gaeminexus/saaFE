@@ -7,6 +7,7 @@ import { FuncionesDatosService } from '../../../../../shared/services/funciones-
 import { Periodo } from '../../../../cnt/model/periodo';
 import { PeriodoService } from '../../../../cnt/service/periodo.service';
 import { ControlExtractoBancario } from '../../../model/control-extracto-bancario';
+import { DetalleCumplimientoCuenta } from '../../../model/detalle-cumplimiento-cuenta';
 import { ControlExtractoBancarioService } from '../../../service/control-extracto-bancario.service';
 
 @Component({
@@ -25,6 +26,10 @@ export class TableroCumplimientoExtractosComponent implements OnInit {
   isLoadingPeriodos: boolean = false;
   isGenerando: boolean = false;
   recalculandoCodigo: number | null = null;
+
+  controlExpandido: number | null = null;
+  detalleCuentas: DetalleCumplimientoCuenta[] = [];
+  isLoadingDetalle: boolean = false;
 
   constructor(
     private controlExtractoBancarioService: ControlExtractoBancarioService,
@@ -109,6 +114,9 @@ export class TableroCumplimientoExtractosComponent implements OnInit {
         this.recalculandoCodigo = null;
         this.snackBar.open('Período recalculado', 'Cerrar', { duration: 4000 });
         this.cargarControles();
+        if (this.controlExpandido === control.codigo) {
+          this.cargarDetalleCuentas(control);
+        }
       },
       error: (error) => {
         this.recalculandoCodigo = null;
@@ -117,6 +125,54 @@ export class TableroCumplimientoExtractosComponent implements OnInit {
         });
       },
     });
+  }
+
+  /**
+   * Expande/colapsa el drill-down por cuenta bancaria de un período - lo que
+   * responde directamente "¿cuáles cuentas faltan?" en vez de solo un
+   * porcentaje agregado.
+   */
+  toggleDetalle(control: ControlExtractoBancario): void {
+    if (this.controlExpandido === control.codigo) {
+      this.controlExpandido = null;
+      return;
+    }
+    this.controlExpandido = control.codigo;
+    this.cargarDetalleCuentas(control);
+  }
+
+  private cargarDetalleCuentas(control: ControlExtractoBancario): void {
+    const idEmpresa = control.empresa?.codigo;
+    const idPeriodo = control.periodo?.codigo;
+    if (!idEmpresa || !idPeriodo) {
+      return;
+    }
+    this.isLoadingDetalle = true;
+    this.detalleCuentas = [];
+    this.controlExtractoBancarioService.detalleCuentas(idEmpresa, idPeriodo).subscribe({
+      next: (lista) => {
+        this.detalleCuentas = Array.isArray(lista) ? lista : [];
+        this.isLoadingDetalle = false;
+      },
+      error: (error) => {
+        this.isLoadingDetalle = false;
+        this.snackBar.open(
+          `Error al obtener el detalle por cuenta: ${error?.error || error?.message || error}`,
+          'Cerrar',
+          { duration: 6000 }
+        );
+      },
+    });
+  }
+
+  /** Cuentas que todavía no han cargado su extracto - lo primero que se quiere ver. */
+  get cuentasFaltantes(): DetalleCumplimientoCuenta[] {
+    return this.detalleCuentas.filter((d) => !d.cargada);
+  }
+
+  /** Cuentas cargadas pero aún sin conciliar. */
+  get cuentasPendientesConciliar(): DetalleCumplimientoCuenta[] {
+    return this.detalleCuentas.filter((d) => d.cargada && !d.conciliada);
   }
 
   formatearFechaHora(fecha: any): string {
@@ -135,5 +191,29 @@ export class TableroCumplimientoExtractosComponent implements OnInit {
       return 0;
     }
     return Math.round((control.cuentasConciliadas / control.totalCuentas) * 100);
+  }
+
+  /** Cuantas cuentas faltan por cargar - para el badge prominente de la tarjeta. */
+  faltantesCarga(control: ControlExtractoBancario): number {
+    return (control.totalCuentas || 0) - (control.cuentasCargadas || 0);
+  }
+
+  /** Cuantas cuentas ya cargaron pero aun no se concilian. */
+  faltantesConciliacion(control: ControlExtractoBancario): number {
+    return (control.cuentasCargadas || 0) - (control.cuentasConciliadas || 0);
+  }
+
+  /** Clase de color para el borde de la tarjeta segun que tan completo esta el mes. */
+  estadoTarjeta(control: ControlExtractoBancario): string {
+    if ((control.totalCuentas || 0) === 0) {
+      return 'estado-sin-datos';
+    }
+    if (control.cuentasConciliadas === control.totalCuentas) {
+      return 'estado-completo';
+    }
+    if (control.cuentasCargadas === 0) {
+      return 'estado-critico';
+    }
+    return 'estado-parcial';
   }
 }

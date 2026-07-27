@@ -10,6 +10,8 @@ flujo de las 4 pantallas en navegador.
 11 formatos de banco) y de la Fase 1 ya completada (tablas `TSR.EXBC` / `TSR.DEXB` /
 `TSR.CTEB`, entidades JPA, DAO/Service EJB y REST CRUD básicos — verificado en el
 contenedor Docker `saa-oracle-23ai`).
+**Actualización 2026-07-26:** se agrega período contable (`PRDOCDGO`) a `EXBC`/`DEXB`
+más sus reglas de validación — ver §10.
 
 ---
 
@@ -341,3 +343,97 @@ muestra completa de un mes antes de dar el parser de Alianza por cerrado.
   `forms/generales/tablero-cumplimiento-extractos/` (cada una con `.ts`/`.html`/`.scss`).
 - `app.routes.ts` y `menu/menutesoreria/menutesoreria.component.ts` (modificados:
   rutas y grupo de menú "Extractos Bancarios").
+
+---
+
+## 10. Actualización 2026-07-26: Período Contable en EXBC/DEXB
+
+**Motivación:** para la futura pantalla de conciliación TSR-vs-CNT (comparar
+`DetalleExtractoBancario` contra `DetalleAsiento` filtrado por período contable y
+plan de cuentas — ver `docs/RESUMEN-SESION-EXTRACTOS-BANCARIOS-2026-07-25.md` para
+el diseño completo de esa pantalla), cada extracto cargado necesita quedar
+etiquetado con el período contable (`CNT.PRDO`) al que pertenece, elegido
+explícitamente por el usuario al momento de la carga — no inferido automáticamente
+de las fechas del archivo.
+
+### 10.1 Modelo de datos
+
+- **`EXBC`**: nueva FK `PRDOCDGO` → `CNT.PRDO`, elegida por el usuario en la
+  pantalla de carga (un combo, poblado igual que `periodo-contable.component.ts`,
+  filtrado por la empresa actual).
+- **`DEXB`**: misma FK `PRDOCDGO`, denormalizada — se copia el valor del `EXBC`
+  padre a cada fila al momento de confirmar la carga. Este patrón ya existe en el
+  código: `DetalleConciliacion` (tabla `TSR.DTCL`) ya tiene tanto `PRDOCDGO` como
+  `ASNTCDGO` a nivel de línea en vez de forzar un join contra la cabecera en cada
+  consulta — se sigue el mismo precedente aquí para que la futura pantalla de
+  conciliación pueda filtrar `DetalleExtractoBancario` por período directamente.
+
+### 10.2 Reglas de validación (decisión del cliente, 2026-07-26)
+
+Dos reglas distintas, con dos comportamientos distintos — no deben confundirse:
+
+1. **Período `CERRADO` (`Periodo.estado == 4`, rubro `EstadoPeriodos.CERRADO`) →
+   bloqueo duro.** Si el usuario elige un período ya cerrado, la carga se rechaza
+   por completo (tanto en `validar` como en `confirmar`, por si el período se
+   cerró entre un paso y el otro). Sin excepción posible desde esta pantalla — el
+   objetivo explícito es que cerrar el mes impida seguir metiendo datos nuevos
+   ahí.
+2. **Fecha de transacción fuera del rango `primerDia`/`ultimoDia` del período
+   elegido → advertencia, nunca bloqueante.** Caso real y esperado: movimientos
+   fechados el último día del mes anterior o los primeros días del mes siguiente,
+   que el banco reporta con corte distinto al mes calendario, y que contabilidad
+   quiere conciliar bajo el período que está cerrando en ese momento porque así
+   corresponde. El usuario ya tomó esa decisión al elegir el período para todo el
+   extracto — no hay un campo de "período" por fila que se pueda anular
+   individualmente, cada fila simplemente hereda el período de la cabecera. La
+   respuesta de `/exbc/importar/validar` debe mostrar cuántas filas (y cuáles)
+   caen fuera de rango, con un mensaje que deje claro que es un caso esperado de
+   corte de fin de mes y no necesariamente un error, para que contabilidad
+   verifique en vez de asumir que algo salió mal.
+
+No se necesita ningún campo de esquema adicional para la advertencia — se calcula
+en el momento de la validación comparando fechas, no se persiste como tal.
+
+---
+
+## 11. Actualización 2026-07-26: Validación de encabezado (banco equivocado)
+
+**Motivación:** el parser se resuelve automáticamente por el banco de la cuenta
+elegida (decisión de §3, no reabierta) — pero si el usuario selecciona la cuenta
+correcta y sube por error el archivo de OTRO banco, antes de este cambio el
+resultado dependía de la suerte: podía lanzar una excepción técnica confusa (fecha
+o monto ilegible), o peor, "parsear" sin error pero con columnas desalineadas
+produciendo datos silenciosamente incorrectos.
+
+**Solución implementada:** nuevo método abstracto
+`AbstractExcelStatementParser.encabezadoValido(Row filaEncabezado)`, ejecutado
+antes de leer cualquier fila de datos (fila = `getPrimeraFilaDatos() - 1`). Cada
+uno de los 11 parsers lo implementa comparando 2-3 columnas — usando las mismas
+constantes `COL_*` que ya usan para leer datos — contra un fragmento de texto
+esperado (`"fecha"`, `"bito"` para Débito/Debito evitando depender de la tilde,
+`"dito"` para Crédito/Credito, `"saldo"`, `"valor"`, `"monto"`, `"tipomov"`,
+`"balance"` según el banco). Si no coincide, se lanza `IncomeException`:
+
+> "El archivo no corresponde al formato de {banco de la cuenta}. Verifique que
+> haya seleccionado la cuenta bancaria correcta antes de subir el archivo."
+
+Sin cambios de REST/UI: `validar()`/`confirmar()` ya propagaban cualquier
+`Throwable` de `parser.parse()` hasta el mensaje de error que ya muestra el
+frontend.
+
+**Caso difícil identificado y verificado:** Guayaquil y Manabí tienen su
+encabezado en la misma fila (14, 1-indexado) y comparten vocabulario casi
+idéntico ("Monto", "Saldo Total", "Concepto") — un chequeo ingenuo de "¿la
+palabra aparece en algún lado de la fila?" no los habría distinguido. La
+validación compara por **posición exacta de columna** (Guayaquil: Monto en
+columna 7; Manabí: Monto en columna 5), que sí los distingue de forma confiable
+porque cada banco lee sus propias columnas en posiciones distintas.
+
+**Verificado contra los 11 archivos reales** con un harness standalone
+(`BankStatementParserFactory.resolver()` + `parser.parse()`, sin desplegar):
+- Los 11 archivos correctos siguen parseando exactamente igual que antes (sin
+  regresión).
+- 10 combinaciones cruzadas deliberadas (incluyendo Guayaquil↔Manabí,
+  Atlántida↔Austro, Internacional↔Pacífico, Pichincha↔JEP, Alianza↔Policía
+  Nacional, Amazonas↔Guayaquil) fueron rechazadas correctamente con el mensaje
+  estándar, 10/10.

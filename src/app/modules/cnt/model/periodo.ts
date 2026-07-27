@@ -25,7 +25,8 @@ export interface Periodo {
 export enum EstadoPeriodo {
   ABIERTO = 1,      // Período abierto para registros
   MAYORIZADO = 2,   // Período mayorizado (cerrado para edición)
-  DESMAYORIZADO = 3 // Período desmayorizado (reabierto)
+  DESMAYORIZADO = 3, // Período desmayorizado (reabierto)
+  CERRADO = 4       // Período cerrado (rubro EstadoPeriodos.CERRADO) - sin edición posible
 }
 
 /**

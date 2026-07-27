@@ -244,6 +244,8 @@ export class PeriodoService {
         return 'Mayorizado';
       case EstadoPeriodo.DESMAYORIZADO:
         return 'Desmayorizado';
+      case EstadoPeriodo.CERRADO:
+        return 'Cerrado';
       default:
         return 'Desconocido';
     }
@@ -260,6 +262,8 @@ export class PeriodoService {
         return 'badge-mayorizado';
       case EstadoPeriodo.DESMAYORIZADO:
         return 'badge-desmayorizado';
+      case EstadoPeriodo.CERRADO:
+        return 'badge-cerrado';
       default:
         return 'badge-inactivo';
     }

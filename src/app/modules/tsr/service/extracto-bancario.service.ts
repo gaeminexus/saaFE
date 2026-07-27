@@ -58,11 +58,23 @@ export class ExtractoBancarioService {
    * sin persistir nada. El backend selecciona el parser automaticamente
    * segun el banco de la cuenta bancaria indicada.
    */
-  validarImportacion(archivo: File, idCuentaBancaria: number): Observable<ResumenImportacionExtracto | null> {
+  validarImportacion(
+    archivo: File,
+    idCuentaBancaria: number,
+    idPeriodo: number
+  ): Observable<ResumenImportacionExtracto | null> {
     const url = `${ServiciosTsr.RS_EXBC}/importar/validar/${idCuentaBancaria}`;
     const formData = new FormData();
     formData.append('archivo', archivo);
-    formData.append('archivoNombre', archivo.name);
+    // encodeURIComponent: el nombre de archivo viaja como campo de texto
+    // plano de multipart/form-data sin charset declarado, y el proveedor de
+    // multipart del backend (RESTEasy) puede no decodificarlo como UTF-8 por
+    // defecto - un nombre con tildes/ñ llega corrupto (ej. "COOP.
+    // ALIANZA" con í termina en caracteres de reemplazo). Codificar a ASCII
+    // puro aqui evita depender de esa configuracion; el backend decodifica
+    // con URLDecoder.decode(..., UTF_8).
+    formData.append('archivoNombre', encodeURIComponent(archivo.name));
+    formData.append('idPeriodo', String(idPeriodo));
     // Para FormData NO usar httpOptions (el navegador establece Content-Type automáticamente)
     return this.http
       .post<ResumenImportacionExtracto>(url, formData)
@@ -76,13 +88,16 @@ export class ExtractoBancarioService {
   confirmarImportacion(
     archivo: File,
     idCuentaBancaria: number,
+    idPeriodo: number,
     idEmpresa: number,
     usuarioCreacion: string
   ): Observable<ExtractoBancario | null> {
     const url = `${ServiciosTsr.RS_EXBC}/importar/confirmar/${idCuentaBancaria}`;
     const formData = new FormData();
     formData.append('archivo', archivo);
-    formData.append('archivoNombre', archivo.name);
+    // encodeURIComponent: ver comentario en validarImportacion().
+    formData.append('archivoNombre', encodeURIComponent(archivo.name));
+    formData.append('idPeriodo', String(idPeriodo));
     formData.append('idEmpresa', String(idEmpresa));
     formData.append('usuarioCreacion', usuarioCreacion || '');
     return this.http

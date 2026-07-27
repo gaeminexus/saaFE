@@ -1,3 +1,4 @@
+import { Periodo } from "../../cnt/model/periodo";
 import { Empresa } from "../../../shared/model/empresa";
 import { CuentaBancaria } from "./cuenta-bancaria";
 
@@ -5,6 +6,7 @@ export interface ExtractoBancario {
     codigo: number;                  // EXBCCDGO
     cuentaBancaria: CuentaBancaria;  // CNBCCDGO
     empresa: Empresa;                // PJRQCDGO
+    periodo: Periodo;                // PRDOCDGO - periodo contable elegido por el usuario al cargar
     archivoNombre: string;           // EXBCARCH
     archivoHash: string;             // EXBCHASH - SHA-256 del archivo origen
     formato: string;                 // EXBCFRMT - XLS/XLSX/PDF/CSV

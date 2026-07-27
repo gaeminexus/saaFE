@@ -14,4 +14,7 @@ export interface ControlExtractoBancario {
     observaciones: string;       // CTEBOBSR
     fechaCreacion: string;       // CTEBFCRG (LocalDateTime → ISO string) - snapshot, no "vivo"
     estado: number;              // CTEBESTD - 1 activo, 0 inactivo
+    cerrado?: number;            // CTEBCRRE - 1 = cerrado para conciliacion bancaria (exclusivo TSR)
+    usuarioCierre?: string;      // CTEBUSCR - quien cerro (auditoria)
+    fechaCierre?: string;        // CTEBFCCR (LocalDateTime → ISO string) - cuando se cerro
 }

@@ -89,6 +89,7 @@ import { CargarExtractoBancarioComponent } from './modules/tsr/forms/generales/c
 import { ConsultaExtractosBancariosComponent } from './modules/tsr/forms/generales/consulta-extractos-bancarios/consulta-extractos-bancarios.component';
 import { DetalleExtractoBancarioComponent } from './modules/tsr/forms/generales/detalle-extracto-bancario/detalle-extracto-bancario.component';
 import { TableroCumplimientoExtractosComponent } from './modules/tsr/forms/generales/tablero-cumplimiento-extractos/tablero-cumplimiento-extractos.component';
+import { ConciliacionContableComponent } from './modules/tsr/forms/generales/conciliacion-contable/conciliacion-contable.component';
 import { CreditosComponent } from './modules/tsr/forms/movimientos-bancarios/creditos/creditos.component';
 import { DebitosComponent } from './modules/tsr/forms/movimientos-bancarios/debitos/debitos.component';
 import { TransferenciasComponent } from './modules/tsr/forms/movimientos-bancarios/transferencias/transferencias.component';
@@ -601,6 +602,12 @@ export const routes: Routes = [
         component: TableroCumplimientoExtractosComponent,
         canActivate: [authGuard],
         data: { title: 'Tablero de Cumplimiento de Extractos' },
+      },
+      {
+        path: 'procesos/conciliacion-contable',
+        component: ConciliacionContableComponent,
+        canActivate: [authGuard],
+        data: { title: 'Conciliación Contable' },
       },
     ],
   },

@@ -10,6 +10,12 @@
       <p class="subtitle">{{ extracto.cuentaBancaria?.banco?.nombre }} - {{ extracto.cuentaBancaria?.numeroCuenta }}</p>
       }
     </div>
+    @if (detalles.length > 0) {
+    <button mat-stroked-button color="primary" class="boton-descargar" (click)="descargarCSV()">
+      <mat-icon>download</mat-icon>
+      Descargar CSV
+    </button>
+    }
   </div>
 
   @if (isLoadingExtracto) {

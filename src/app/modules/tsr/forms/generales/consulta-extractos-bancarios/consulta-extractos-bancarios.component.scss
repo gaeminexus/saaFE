@@ -28,9 +28,35 @@
   }
 }
 
+.filtros-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.periodo-field {
+  width: 100%;
+  max-width: 260px;
+}
+
 .filter-field {
   width: 100%;
   max-width: 480px;
+  flex: 1;
+}
+
+.periodo-cell {
+  display: flex;
+  flex-direction: column;
+
+  .periodo-nombre {
+    font-weight: 600;
+  }
+
+  .periodo-rango {
+    font-size: 12px;
+    color: rgba(0, 0, 0, 0.5);
+  }
 }
 
 .spinner-container {
