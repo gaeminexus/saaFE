@@ -140,6 +140,25 @@ export class MenutesoreriaComponent {
           ],
         },
         {
+          displayName: 'Registrar',
+          iconName: 'edit_note',
+          idPermiso: 830,
+          children: [
+            {
+              displayName: 'Ingresos',
+              iconName: 'arrow_downward',
+              idPermiso: 830,
+              route: '/menutesoreria/procesos/registrar/ingresos',
+            },
+            {
+              displayName: 'Egresos',
+              iconName: 'arrow_upward',
+              idPermiso: 830,
+              route: '/menutesoreria/procesos/registrar/egresos',
+            },
+          ],
+        },
+        {
           displayName: 'Cobros',
           iconName: 'attach_money',
           idPermiso: 830,

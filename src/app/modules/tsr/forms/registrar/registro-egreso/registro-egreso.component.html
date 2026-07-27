@@ -1,0 +1,110 @@
+<div class="registro-egreso-container">
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon class="titulo-icon">arrow_upward</mat-icon>
+        Registro de Egreso
+      </mat-card-title>
+      <mat-card-subtitle>Tesorería &mdash; Registrar Egresos</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-divider></mat-divider>
+
+    <mat-card-content>
+      @if (cargando()) {
+        <div class="loading-container">
+          <mat-spinner diameter="48"></mat-spinner>
+          <p>Cargando datos...</p>
+        </div>
+      } @else {
+        <form [formGroup]="form" (ngSubmit)="guardar()" class="registro-form">
+
+          <!-- Cuenta Bancaria -->
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Cuenta Bancaria</mat-label>
+            <mat-select formControlName="cuentaBancaria">
+              @for (cuenta of cuentasBancarias(); track cuenta.codigo) {
+                <mat-option [value]="cuenta.codigo">
+                  {{ cuenta.banco?.nombre }} &mdash; {{ cuenta.numeroCuenta }}
+                </mat-option>
+              }
+            </mat-select>
+            <mat-icon matSuffix>account_balance</mat-icon>
+            @if (form.get('cuentaBancaria')?.hasError('required') && form.get('cuentaBancaria')?.touched) {
+              <mat-error>Seleccione una cuenta bancaria</mat-error>
+            }
+          </mat-form-field>
+
+          <!-- Grupo de Producto (CXP) -->
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Grupo de Producto</mat-label>
+            <mat-select formControlName="grupoProducto">
+              @for (grupo of gruposProducto(); track grupo.codigo) {
+                <mat-option [value]="grupo.codigo">{{ grupo.nombre }}</mat-option>
+              }
+            </mat-select>
+            <mat-icon matSuffix>category</mat-icon>
+            @if (form.get('grupoProducto')?.hasError('required') && form.get('grupoProducto')?.touched) {
+              <mat-error>Seleccione un grupo de producto</mat-error>
+            }
+          </mat-form-field>
+
+          <!-- Producto (filtrado por grupo) -->
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Producto</mat-label>
+            <mat-select formControlName="producto" [disabled]="!form.get('grupoProducto')?.value">
+              @if (productosFiltrados().length === 0) {
+                <mat-option disabled>Seleccione primero un grupo</mat-option>
+              }
+              @for (prod of productosFiltrados(); track prod.id) {
+                <mat-option [value]="prod.id">{{ prod.nombre }}</mat-option>
+              }
+            </mat-select>
+            <mat-icon matSuffix>inventory_2</mat-icon>
+            @if (form.get('producto')?.hasError('required') && form.get('producto')?.touched) {
+              <mat-error>Seleccione un producto</mat-error>
+            }
+          </mat-form-field>
+
+          <!-- Valor -->
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Valor</mat-label>
+            <input matInput type="number" formControlName="valor" min="0.01" step="0.01" placeholder="0.00" />
+            <mat-icon matSuffix>attach_money</mat-icon>
+            @if (form.get('valor')?.hasError('required') && form.get('valor')?.touched) {
+              <mat-error>Ingrese un valor</mat-error>
+            }
+            @if (form.get('valor')?.hasError('min') && form.get('valor')?.touched) {
+              <mat-error>El valor debe ser mayor a 0</mat-error>
+            }
+          </mat-form-field>
+
+          <!-- Observación -->
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Observación</mat-label>
+            <textarea matInput formControlName="observacion" rows="3" placeholder="Observaciones opcionales..."></textarea>
+            <mat-icon matSuffix>notes</mat-icon>
+          </mat-form-field>
+
+          <!-- Acciones -->
+          <div class="acciones">
+            <button mat-stroked-button type="button" (click)="limpiar()">
+              <mat-icon>clear</mat-icon>
+              Limpiar
+            </button>
+            <button mat-raised-button color="warn" type="submit" [disabled]="guardando()">
+              @if (guardando()) {
+                <mat-spinner diameter="20"></mat-spinner>
+              } @else {
+                <mat-icon>save</mat-icon>
+              }
+              Guardar Egreso
+            </button>
+          </div>
+
+        </form>
+      }
+    </mat-card-content>
+  </mat-card>
+</div>
+

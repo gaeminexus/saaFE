@@ -149,6 +149,8 @@ import { ListadosCrdResolverService } from './modules/crd/resolver/listados-crd-
 import { TiposCrdResolverService } from './modules/crd/resolver/tipos-crd-resolver.service';
 import { AnticiposClientesComponent } from './modules/tsr/forms/anticipos/anticipos-clientes/anticipos-clientes.component';
 import { AnticiposProveedoresComponent } from './modules/tsr/forms/anticipos/anticipos-proveedores/anticipos-proveedores.component';
+import { RegistroIngresoComponent } from './modules/tsr/forms/registrar/registro-ingreso/registro-ingreso.component';
+import { RegistroEgresoComponent } from './modules/tsr/forms/registrar/registro-egreso/registro-egreso.component';
 
 export const routes: Routes = [
   { path: '', component: LoginComponent },
@@ -401,6 +403,20 @@ export const routes: Routes = [
         component: AnticiposProveedoresComponent,
         canActivate: [authGuard],
         data: { title: 'Anticipos - Proveedores' },
+      },
+
+      // Procesos - Registrar
+      {
+        path: 'procesos/registrar/ingresos',
+        component: RegistroIngresoComponent,
+        canActivate: [authGuard],
+        data: { title: 'Registrar - Ingresos' },
+      },
+      {
+        path: 'procesos/registrar/egresos',
+        component: RegistroEgresoComponent,
+        canActivate: [authGuard],
+        data: { title: 'Registrar - Egresos' },
       },
 
       // Procesos - Cobros

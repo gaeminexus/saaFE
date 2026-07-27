@@ -1,7 +1,7 @@
 import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { MatDialog } from '@angular/material/dialog';
+import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableDataSource } from '@angular/material/table';
 
@@ -28,6 +28,77 @@ import { ProductoPagoService } from '../../../service/producto-pago.service';
 
 /** Código del rubro para Tipo de Grupo de Producto CXP */
 const RUBRO_TIPO_GRUPO_PRODUCTO = 74;
+
+// ─── Dialog: seleccionar grupo destino al mover un producto ────────────────
+@Component({
+  selector: 'app-mover-producto-dialog',
+  standalone: true,
+  imports: [CommonModule, FormsModule, MatDialogModule, MaterialFormModule],
+  template: `
+    <h2 mat-dialog-title style="display:flex;align-items:center;gap:8px">
+      <mat-icon>drive_file_move</mat-icon>
+      Mover producto a otro grupo
+    </h2>
+    <mat-dialog-content style="padding-top:8px;min-width:380px">
+      <p style="margin:0 0 16px;color:#555;font-size:.9rem">
+        Seleccione el grupo destino para
+        <strong>{{ data.producto.nombre }}</strong>.
+      </p>
+      <mat-form-field appearance="outline" style="width:100%">
+        <mat-label>Grupo destino</mat-label>
+        <mat-icon matPrefix>category</mat-icon>
+        <input matInput
+               [(ngModel)]="filtroTexto"
+               [matAutocomplete]="autoGrupo"
+               placeholder="Escriba para filtrar..."
+               (ngModelChange)="filtrar()"
+               autocomplete="off">
+        <mat-autocomplete #autoGrupo="matAutocomplete"
+                          [displayWith]="displayGrupo"
+                          (optionSelected)="onGrupoSeleccionado($event.option.value)">
+          @for (g of gruposFiltrados; track g.codigo) {
+            <mat-option [value]="g">{{ g.nombre }}</mat-option>
+          }
+        </mat-autocomplete>
+        @if (grupoSeleccionado) {
+          <mat-hint>✓ {{ grupoSeleccionado.nombre }}</mat-hint>
+        }
+      </mat-form-field>
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <button mat-button [mat-dialog-close]="null">Cancelar</button>
+      <button mat-flat-button color="primary"
+              [disabled]="!grupoSeleccionado"
+              [mat-dialog-close]="grupoSeleccionado">
+        <mat-icon>check</mat-icon>
+        Mover
+      </button>
+    </mat-dialog-actions>
+  `,
+})
+export class MoverProductoDialogComponent {
+  data: { producto: ProductoPago; grupos: GrupoProductoPago[] } = inject(MAT_DIALOG_DATA);
+  filtroTexto = '';
+  grupoSeleccionado: GrupoProductoPago | null = null;
+  gruposFiltrados: GrupoProductoPago[] = this.data.grupos;
+
+  filtrar(): void {
+    this.grupoSeleccionado = null;
+    const q = this.filtroTexto?.toLowerCase() ?? '';
+    this.gruposFiltrados = q
+      ? this.data.grupos.filter(g => g.nombre?.toLowerCase().includes(q))
+      : this.data.grupos;
+  }
+
+  onGrupoSeleccionado(grupo: GrupoProductoPago): void {
+    this.grupoSeleccionado = grupo;
+    this.filtroTexto = grupo.nombre as string;
+  }
+
+  displayGrupo(g: GrupoProductoPago | string): string {
+    return typeof g === 'string' ? g : ((g?.nombre as string) ?? '');
+  }
+}
 
 @Component({
   selector: 'app-grupos-productos-pago',
@@ -79,6 +150,16 @@ export class GruposProductosPagoComponent implements OnInit {
   filtroProductos = signal('');
   dataSourceProductos = new MatTableDataSource<ProductoPago>([]);
   columnasTablaProductos: string[] = ['codigo', 'nombre', 'precioUnitario', 'incluyeIVA', 'stock', 'estado', 'acciones'];
+
+  /** True cuando el grupo activo se llama POR CLASIFICAR (sin importar mayúsculas) */
+  esPorClasificar = computed(() =>
+    this.grupoSeleccionado()?.nombre?.trim().toUpperCase() === 'POR CLASIFICAR'
+  );
+
+  /** Grupos disponibles como destino al mover un producto (excluye POR CLASIFICAR) */
+  gruposDestino = computed(() =>
+    this.grupos().filter(g => g.nombre?.trim().toUpperCase() !== 'POR CLASIFICAR')
+  );
 
   productosFiltrados = computed(() => {
     const filtro = this.filtroProductos().toLowerCase();
@@ -364,15 +445,22 @@ export class GruposProductosPagoComponent implements OnInit {
 
     this.productoService.selectByCriteria(criterios).subscribe({
       next: (productos) => {
-        if (productos) {
-          this.productos.set(productos);
-          this.dataSourceProductos.data = productos;
-        }
+        const lista = productos ?? [];
+        this.productos.set(lista);
+        this.dataSourceProductos.data = lista;
         this.cargando.set(false);
       },
       error: (err) => {
-        console.error('Error al cargar productos:', err);
-        this.mostrarError('Error al cargar productos');
+        // Cuando el grupo queda vacío el backend puede responder con 404 o body vacío
+        // lo que llega aquí como err = error.error (el body, no el HttpErrorResponse).
+        // Si no hay mensaje de error concreto, tratamos como lista vacía sin mostrar error.
+        const tieneDetalle = err && typeof err === 'object' && (err.message || err.mensaje || err.error);
+        this.productos.set([]);
+        this.dataSourceProductos.data = [];
+        if (tieneDetalle) {
+          console.error('Error al cargar productos:', err);
+          this.mostrarError('Error al cargar productos');
+        }
         this.cargando.set(false);
       },
     });
@@ -519,9 +607,47 @@ export class GruposProductosPagoComponent implements OnInit {
     });
   }
 
+  // ─── MOVER PRODUCTO A OTRO GRUPO ────────────────────────────────────────
+  moverProducto(producto: ProductoPago): void {
+    const destinos = this.gruposDestino();
+    if (destinos.length === 0) {
+      this.mostrarError('No hay otros grupos disponibles como destino.');
+      return;
+    }
+
+    const dialogRef = this.dialog.open<MoverProductoDialogComponent, any, GrupoProductoPago | null>(
+      MoverProductoDialogComponent,
+      { width: '460px', data: { producto, grupos: destinos } }
+    );
+
+    dialogRef.afterClosed().subscribe((grupoDestino) => {
+      if (!grupoDestino) return;
+      const confirmar = confirm(
+        `¿Mover "${producto.nombre}" al grupo "${grupoDestino.nombre}"?`
+      );
+      if (!confirmar) return;
+
+      this.guardando.set(true);
+      const payload = {
+        ...producto,
+        empresa: { codigo: producto.empresa?.codigo },
+        grupoProducto: { codigo: grupoDestino.codigo },
+      };
+      this.productoService.update(payload).subscribe({
+        next: () => {
+          this.mostrarExito(`"${producto.nombre}" movido a "${grupoDestino.nombre}"`);
+          this.cargarProductos();
+          this.guardando.set(false);
+        },
+        error: () => {
+          this.mostrarError('Error al mover el producto');
+          this.guardando.set(false);
+        },
+      });
+    });
+  }
+
   cancelarProducto(): void {
-    this.productoEditando.set(null);
-    this.modoProducto.set('lista');
     this.formProducto.reset({
       precioUnitario: 0,
       descuento: 0,

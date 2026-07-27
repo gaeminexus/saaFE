@@ -1,7 +1,9 @@
 import { CommonModule } from '@angular/common';
 import { AfterViewInit, Component, ElementRef, OnInit, ViewChild, inject, signal } from '@angular/core';
 import { FormsModule, UntypedFormControl } from '@angular/forms';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableDataSource } from '@angular/material/table';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
@@ -19,6 +21,243 @@ import { DocumentoCxpService } from '../../../service/documento-cxp.service';
 
 // Estados que aún no están registrados en BD (pendientes de proceso)
 const ESTADOS_PENDIENTES = [1, 2, 4, 5, 6];
+
+// ─── Dialog: errores de validación al cargar un XML ─────────────────────────
+const CAMPO_LABELS: Record<string, string> = {
+  claveAcceso:       'Clave de acceso',
+  rucEmisor:         'RUC emisor',
+  razonSocialEmisor: 'Razón social emisor',
+  serieComprobante:  'Serie comprobante',
+  valorSinImpuestos: 'Subtotal',
+  importeTotal:      'Importe total',
+  iva:               'IVA',
+};
+
+@Component({
+  selector: 'app-xml-validacion-error-dialog',
+  standalone: true,
+  imports: [CommonModule, MatDialogModule, MatIconModule, MatButtonModule],
+  template: `
+    <h2 mat-dialog-title class="xv-titulo">
+      <mat-icon class="xv-titulo-icon">warning</mat-icon>
+      XML no corresponde al documento
+    </h2>
+
+    <mat-dialog-content class="xv-content">
+      <p class="xv-descripcion">
+        El archivo XML cargado tiene valores distintos a los registrados en el TXT del SRI.
+        Verifique que está subiendo el archivo correcto.
+      </p>
+
+      <table class="xv-tabla">
+        <thead>
+          <tr>
+            <th>Campo</th>
+            <th>Esperado (TXT del SRI)</th>
+            <th>Encontrado en el XML</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (e of data.errores; track e.campo) {
+            <tr>
+              <td class="xv-campo">{{ label(e.campo) }}</td>
+              <td class="xv-esperado">{{ e.esperado }}</td>
+              <td class="xv-en-xml">{{ e.enXml }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </mat-dialog-content>
+
+    <mat-dialog-actions align="end">
+      <button mat-button [mat-dialog-close]="true">Cerrar</button>
+    </mat-dialog-actions>
+  `,
+  styles: [`
+    .xv-titulo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--mat-sys-error, #b00020);
+    }
+    .xv-titulo-icon {
+      color: var(--mat-sys-error, #b00020);
+    }
+    .xv-content {
+      min-width: 560px;
+      max-width: 90vw;
+    }
+    .xv-descripcion {
+      margin: 0 0 16px;
+      color: #555;
+      font-size: 0.9rem;
+    }
+    .xv-tabla {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+    .xv-tabla thead tr {
+      background: #f5f5f5;
+    }
+    .xv-tabla th {
+      padding: 8px 12px;
+      text-align: left;
+      font-weight: 600;
+      color: #333;
+      border-bottom: 2px solid #e0e0e0;
+    }
+    .xv-tabla tbody tr {
+      border-bottom: 1px solid #eeeeee;
+    }
+    .xv-tabla tbody tr:last-child {
+      border-bottom: none;
+    }
+    .xv-campo {
+      padding: 7px 12px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    .xv-esperado {
+      padding: 7px 12px;
+      color: #2e7d32;
+      word-break: break-all;
+    }
+    .xv-en-xml {
+      padding: 7px 12px;
+      color: var(--mat-sys-error, #b00020);
+      word-break: break-all;
+    }
+  `],
+})
+export class XmlValidacionErrorDialogComponent {
+  data: { errores: { campo: string; esperado: string; enXml: string }[] } = inject(MAT_DIALOG_DATA);
+  label(campo: string): string { return CAMPO_LABELS[campo] ?? campo; }
+}
+
+// ─── Dialog: condiciones bloqueantes al registrar factura ────────────────────
+export interface ErrorBloqueante {
+  tipo: string;
+  detalle: string;
+  productos?: string[];
+  grupos?: string[];
+}
+
+const TIPO_LABELS: Record<string, { label: string; icon: string }> = {
+  PROVEEDOR_SIN_CUENTA:       { label: 'Proveedor sin cuenta contable CxP',  icon: 'account_balance' },
+  PRODUCTOS_SIN_CLASIFICAR:   { label: 'Productos sin grupo asignado',        icon: 'category' },
+  GRUPOS_SIN_CUENTA_CONTABLE: { label: 'Grupos sin cuenta contable',          icon: 'folder_open' },
+};
+
+@Component({
+  selector: 'app-registro-bloqueantes-dialog',
+  standalone: true,
+  imports: [CommonModule, MatDialogModule, MatIconModule, MatButtonModule],
+  template: `
+    <h2 mat-dialog-title class="rb-titulo">
+      <mat-icon class="rb-titulo-icon">block</mat-icon>
+      No se puede registrar la factura
+    </h2>
+
+    <mat-dialog-content class="rb-content">
+      <p class="rb-descripcion">
+        Se encontraron <strong>{{ data.bloqueantes.length }} condición(es) bloqueante(s)</strong>
+        que deben resolverse antes de registrar este documento.
+      </p>
+
+      @for (b of data.bloqueantes; track b.tipo; let i = $index) {
+        <div class="rb-item">
+          <div class="rb-item-header">
+            <mat-icon class="rb-item-icon">{{ tipoIcon(b.tipo) }}</mat-icon>
+            <span class="rb-item-label">{{ tipoLabel(b.tipo) }}</span>
+          </div>
+          <p class="rb-item-detalle">{{ b.detalle }}</p>
+          @if (b.productos && b.productos.length > 0) {
+            <ul class="rb-lista">
+              @for (p of b.productos; track p) {
+                <li>{{ p }}</li>
+              }
+            </ul>
+          }
+          @if (b.grupos && b.grupos.length > 0) {
+            <ul class="rb-lista">
+              @for (g of b.grupos; track g) {
+                <li>{{ g }}</li>
+              }
+            </ul>
+          }
+        </div>
+      }
+    </mat-dialog-content>
+
+    <mat-dialog-actions align="end">
+      <button mat-button [mat-dialog-close]="true">Cerrar</button>
+    </mat-dialog-actions>
+  `,
+  styles: [`
+    .rb-titulo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--mat-sys-error, #b00020);
+    }
+    .rb-titulo-icon {
+      color: var(--mat-sys-error, #b00020);
+    }
+    .rb-content {
+      min-width: 500px;
+      max-width: 90vw;
+    }
+    .rb-descripcion {
+      margin: 0 0 16px;
+      color: #444;
+      font-size: 0.9rem;
+    }
+    .rb-item {
+      border: 1px solid #e0e0e0;
+      border-left: 4px solid var(--mat-sys-error, #b00020);
+      border-radius: 4px;
+      padding: 12px 14px;
+      margin-bottom: 10px;
+      background: #fff8f8;
+    }
+    .rb-item:last-child { margin-bottom: 0; }
+    .rb-item-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .rb-item-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      color: #c62828;
+    }
+    .rb-item-label {
+      font-weight: 600;
+      font-size: 0.88rem;
+      color: #333;
+    }
+    .rb-item-detalle {
+      margin: 0 0 6px;
+      font-size: 0.85rem;
+      color: #555;
+    }
+    .rb-lista {
+      margin: 4px 0 0 16px;
+      padding: 0;
+      font-size: 0.83rem;
+      color: #444;
+    }
+    .rb-lista li { margin-bottom: 2px; }
+  `],
+})
+export class RegistroBloqueantesDialogComponent {
+  data: { bloqueantes: ErrorBloqueante[] } = inject(MAT_DIALOG_DATA);
+  tipoLabel(tipo: string): string { return TIPO_LABELS[tipo]?.label ?? tipo; }
+  tipoIcon(tipo: string): string  { return TIPO_LABELS[tipo]?.icon  ?? 'error_outline'; }
+}
 
 @Component({
   selector: 'app-gestion-documentos',
@@ -340,7 +579,14 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit {
       const contenidoXml = (e.target?.result as string) || '';
       this.processService.cargarXml(doc.id, { contenidoXml, idUsuario: this.idUsuario }).subscribe({
         next: () => { this.procesando.set(false); this.mostrarExito('XML subido correctamente'); this.cargar(); },
-        error: (err) => { this.procesando.set(false); this.mostrarError('Error al subir XML: ' + (err?.message || err)); },
+        error: (err) => {
+          this.procesando.set(false);
+          if (err?.valido === false && Array.isArray(err?.errores) && err.errores.length > 0) {
+            this.mostrarErrorValidacionXml(err.errores);
+          } else {
+            this.mostrarError('Error al subir XML: ' + this.extraerMensajeError(err));
+          }
+        },
       });
     };
     reader.readAsText(file, 'UTF-8');
@@ -354,7 +600,9 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit {
     this.processService.registrarBD(doc.id, { idEmpresa: this.idEmpresa, idUsuario: this.idUsuario }).subscribe({
       next: (resp) => {
         this.procesando.set(false);
-        if (resp?.requiereProductos) {
+        if (Array.isArray(resp?.bloqueantes) && resp.bloqueantes.length > 0) {
+          this.mostrarBloqueantes(resp.bloqueantes);
+        } else if (resp?.requiereProductos) {
           this.documentoCxpPendiente = doc;
           this.productosNuevos = (resp.productosNuevos || []).map((p: ProductoNuevo) => ({ ...p, idGrupo: undefined }));
           this.requiereProductos.set(true);
@@ -364,12 +612,28 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit {
           });
         } else if (resp?.error === 'TITULAR_NO_ENCONTRADO') {
           this.mostrarError(`Proveedor no encontrado — RUC: ${resp.rucEmisor}. Créelo en TSR primero.`);
+        } else if (resp?.exito === false || (resp?.error && resp.error !== 'TITULAR_NO_ENCONTRADO')) {
+          // El backend retornó HTTP 200 pero indicó un error en el body
+          this.mostrarError(resp?.mensaje || resp?.error || 'Error al registrar la factura');
+        } else if (!resp?.idDocumentoBD && !resp?.requiereProductos && resp?.mensaje) {
+          // No hay ID de documento registrado ni flujo alternativo conocido — el mensaje describe el error
+          this.mostrarError(resp.mensaje);
+        } else if (resp?.mensaje?.includes('PENDIENTE DE CLASIFICAR')) {
+          this.mostrarAdvertencia(resp.mensaje);
+          this.cargar();
         } else {
           this.mostrarExito(`Registrado: ${resp?.mensaje || 'OK'}`);
           this.cargar();
         }
       },
-      error: (err) => { this.procesando.set(false); this.mostrarError('Error al registrar: ' + (err?.message || err)); },
+      error: (err) => {
+        this.procesando.set(false);
+        if (Array.isArray(err?.bloqueantes) && err.bloqueantes.length > 0) {
+          this.mostrarBloqueantes(err.bloqueantes);
+        } else {
+          this.mostrarError('Error al registrar: ' + this.extraerMensajeError(err));
+        }
+      },
     });
   }
 
@@ -384,7 +648,7 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit {
         this.procesando.set(false); this.requiereProductos.set(false); this.documentoCxpPendiente = null;
         this.mostrarExito(`Registrado: ${resp?.mensaje || 'OK'}`); this.cargar();
       },
-      error: (err) => { this.procesando.set(false); this.mostrarError('Error: ' + (err?.message || err)); },
+      error: (err) => { this.procesando.set(false); this.mostrarError('Error: ' + this.extraerMensajeError(err)); },
     });
   }
 
@@ -398,7 +662,7 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit {
       this.procesando.set(true);
       this.processService.resolverNovedad(doc.id, { accion: 'MANTENER', idUsuario: this.idUsuario }).subscribe({
         next: () => { this.procesando.set(false); this.mostrarExito('Documento mantenido'); this.cargar(); },
-        error: (err) => { this.procesando.set(false); this.mostrarError(err?.message || 'Error'); },
+        error: (err) => { this.procesando.set(false); this.mostrarError(this.extraerMensajeError(err)); },
       });
     } else if (xmlFile) {
       this.procesando.set(true);
@@ -407,7 +671,7 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit {
         const contenidoXml = (e.target?.result as string) || '';
         this.processService.resolverNovedad(doc.id, { accion: 'REEMPLAZAR', contenidoXml, idUsuario: this.idUsuario }).subscribe({
           next: (resp) => { this.procesando.set(false); this.mostrarExito(resp?.mensaje || 'Reemplazado'); this.cargar(); },
-          error: (err) => { this.procesando.set(false); this.mostrarError(err?.message || 'Error'); },
+          error: (err) => { this.procesando.set(false); this.mostrarError(this.extraerMensajeError(err)); },
         });
       };
       reader.readAsText(xmlFile, 'UTF-8');
@@ -460,6 +724,33 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit {
     return txt.value;
   }
 
+  /** Abre el dialog de condiciones bloqueantes al registrar */
+  private mostrarBloqueantes(bloqueantes: ErrorBloqueante[]): void {
+    this.dialog.open(RegistroBloqueantesDialogComponent, {
+      data: { bloqueantes },
+      width: '600px',
+      maxWidth: '95vw',
+    });
+  }
+
+  /** Abre un dialog con la tabla de diferencias entre el TXT del SRI y el XML subido */
+  private mostrarErrorValidacionXml(errores: { campo: string; esperado: string; enXml: string }[]): void {
+    this.dialog.open(XmlValidacionErrorDialogComponent, {
+      data: { errores },
+      width: '700px',
+      maxWidth: '95vw',
+      disableClose: false,
+    });
+  }
+
+  /** Extrae el mensaje legible de un error HTTP (el backend puede usar 'mensaje', 'message' o 'error') */
+  private extraerMensajeError(err: any): string {
+    if (!err) return 'Error desconocido';
+    if (typeof err === 'string') return err;
+    return err?.mensaje || err?.message || err?.error || JSON.stringify(err);
+  }
+
   private mostrarExito(msg: string): void { this.snackBar.open(msg, 'Cerrar', { duration: 4000, panelClass: ['snack-success'] }); }
+  private mostrarAdvertencia(msg: string): void { this.snackBar.open(msg, 'Cerrar', { duration: 8000, panelClass: ['warning-snackbar'] }); }
   private mostrarError(msg: string): void { this.snackBar.open(msg, 'Cerrar', { duration: 5000, panelClass: ['snack-error'] }); }
 }
