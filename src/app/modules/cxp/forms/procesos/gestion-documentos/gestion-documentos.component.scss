@@ -148,6 +148,14 @@ button.filtro-active { background: rgba(21, 101, 192, 0.08); border-color: var(-
   .icon-warn { font-size: 14px; color: #ff9800; }
 }
 
+.observacion-text {
+  display: block;
+  font-size: 0.75rem;
+  color: #555;
+  font-style: italic;
+  margin-top: 2px;
+}
+
 .loading-container { display: flex; justify-content: center; padding: 60px 0; }
 
 // Productos card
@@ -246,3 +254,39 @@ button.filtro-active { background: rgba(21, 101, 192, 0.08); border-color: var(-
   .totales-grupo-header { color: #1565c0; mat-icon { color: #1976d2; } }
   .total-item--destacado .total-valor { color: #1565c0; }
 }
+
+// ─── TABS PENDIENTES / PROCESADOS ──────────────────────────────────────────
+.docs-tabs {
+  margin-top: 12px;
+
+  .tab-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    margin-right: 6px;
+  }
+
+  .tab-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 10px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    margin-left: 8px;
+
+    &.tab-badge--warn {
+      background: #fff3e0;
+      color: #e65100;
+    }
+    &.tab-badge--ok {
+      background: #e8f5e9;
+      color: #2e7d32;
+    }
+  }
+}
+
+.fila-registrado { background-color: #e8f5e9 !important; }

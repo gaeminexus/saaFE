@@ -343,8 +343,29 @@ export class BandejaElectronicaComponent implements OnInit {
     return colors[estado] || '';
   }
 
+  resultadoLabel(resultado: string): string {
+    const map: Record<string, string> = {
+      'NUEVO':                    'NUEVO',
+      'DUPLICADO':                'DUPLICADO',
+      'NOVEDAD':                  'NOVEDAD',
+      'IGNORADO':                 'IGNORADO',
+      'DESAPARECIDO':             'DESAPARECIDO',
+      'REGISTRADO_CON_DIFERENCIAS': 'REG. DIFERENCIAS',
+      'REGISTRADO_DESAPARECIDO':  'REG. NO APARECE',
+    };
+    return map[resultado] || resultado;
+  }
+
   resultadoColor(resultado: string): string {
-    const map: Record<string, string> = { 'NUEVO': 'badge-registrado', 'DUPLICADO': 'badge-xml', 'NOVEDAD': 'badge-novedad', 'IGNORADO': 'badge-leido' };
+    const map: Record<string, string> = {
+      'NUEVO':                    'badge-registrado',
+      'DUPLICADO':                'badge-leido',
+      'NOVEDAD':                  'badge-novedad',
+      'IGNORADO':                 'badge-revertido',
+      'DESAPARECIDO':             'badge-error',
+      'REGISTRADO_CON_DIFERENCIAS': 'badge-xml',
+      'REGISTRADO_DESAPARECIDO':  'badge-reg-desaparecido',
+    };
     return map[resultado] || '';
   }
 

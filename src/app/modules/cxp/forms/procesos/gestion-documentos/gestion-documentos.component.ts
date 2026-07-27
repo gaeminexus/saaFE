@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableDataSource } from '@angular/material/table';
+import { MatTabsModule } from '@angular/material/tabs';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { TitularSelectorDialogComponent } from '../../../../../shared/components/titular-selector-dialog/titular-selector-dialog.component';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
@@ -259,10 +260,83 @@ export class RegistroBloqueantesDialogComponent {
   tipoIcon(tipo: string): string  { return TIPO_LABELS[tipo]?.icon  ?? 'error_outline'; }
 }
 
+// ─── Dialog genérico de error al registrar ───────────────────────────────────
+@Component({
+  selector: 'app-error-registro-dialog',
+  standalone: true,
+  imports: [CommonModule, MatDialogModule, MatIconModule, MatButtonModule],
+  template: `
+    <h2 mat-dialog-title class="er-titulo">
+      <mat-icon class="er-titulo-icon">error_outline</mat-icon>
+      Error al registrar el documento
+    </h2>
+    <mat-dialog-content class="er-content">
+      <div class="er-cuerpo">
+        <mat-icon class="er-icono-grande">cancel</mat-icon>
+        <p class="er-mensaje">{{ data.mensaje }}</p>
+      </div>
+      @if (data.detalle) {
+        <div class="er-detalle">
+          <mat-icon class="er-detalle-icon">info_outline</mat-icon>
+          <span>{{ data.detalle }}</span>
+        </div>
+      }
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <button mat-button [mat-dialog-close]="true">Cerrar</button>
+    </mat-dialog-actions>
+  `,
+  styles: [`
+    .er-titulo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--mat-sys-error, #b00020);
+    }
+    .er-titulo-icon { color: var(--mat-sys-error, #b00020); }
+    .er-content { min-width: 440px; max-width: 90vw; }
+    .er-cuerpo {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      padding: 8px 0 12px;
+    }
+    .er-icono-grande {
+      font-size: 40px;
+      width: 40px;
+      height: 40px;
+      color: var(--mat-sys-error, #b00020);
+      flex-shrink: 0;
+    }
+    .er-mensaje {
+      margin: 0;
+      font-size: 0.95rem;
+      color: #333;
+      line-height: 1.5;
+      white-space: pre-wrap;
+    }
+    .er-detalle {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      background: #fff3e0;
+      border-left: 4px solid #ff9800;
+      border-radius: 4px;
+      padding: 10px 12px;
+      font-size: 0.85rem;
+      color: #555;
+    }
+    .er-detalle-icon { font-size: 18px; width: 18px; height: 18px; color: #ff9800; flex-shrink: 0; }
+  `],
+})
+export class ErrorRegistroDialogComponent {
+  data: { mensaje: string; detalle?: string } = inject(MAT_DIALOG_DATA);
+}
+
 @Component({
   selector: 'app-gestion-documentos',
   standalone: true,
-  imports: [CommonModule, FormsModule, MaterialFormModule, MatDialogModule],
+  imports: [CommonModule, FormsModule, MaterialFormModule, MatDialogModule, MatTabsModule],
   templateUrl: './gestion-documentos.component.html',
   styleUrl: './gestion-documentos.component.scss',
 })
@@ -297,8 +371,9 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit {
 
   // Datos
   rawDatos: DocumentoCxp[] = [];          // todos los estados (para totales)
-  todosDocumentos: DocumentoCxp[] = [];   // solo no-3 (para tabla)
-  dsDocumentos = new MatTableDataSource<DocumentoCxp>([]);
+  todosDocumentos: DocumentoCxp[] = [];   // todos los estados (para tabla)
+  dsDocumentos   = new MatTableDataSource<DocumentoCxp>([]);   // pendientes (≠ 3)
+  dsRegistrados  = new MatTableDataSource<DocumentoCxp>([]);   // procesados (= 3)
   columnas = ['id', 'tipoComprobante', 'rucEmisor', 'razonSocialEmisor', 'serieComprobante', 'fechaEmision', 'valorSinImpuestos', 'iva', 'importeTotal', 'estadoDocumento', 'novedad', 'acciones'];
 
   // Totales (calculados sobre el conjunto filtrado por texto/fecha, antes del filtro de estado)
@@ -370,7 +445,7 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit {
     this.docService.selectByCriteria(criterios).subscribe({
       next: (data) => {
         this.rawDatos = data || [];
-        this.todosDocumentos = this.rawDatos.filter(d => d.estadoDocumento !== 3);
+        this.todosDocumentos = [...this.rawDatos];
         this.aplicarFiltrosBusqueda();
         this.cargando.set(false);
       },
@@ -426,16 +501,18 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit {
     // 2. Calcular totales antes del filtro de estado (registrados vs pendientes)
     this.calcularTotales(filtradosTodos);
 
-    // 3. Aplicar filtro de estado para la tabla (solo no-3 como base, luego estado si es específico)
-    let paraTabla = filtradosTodos.filter(d => d.estadoDocumento !== 3);
+    // 3. Aplicar filtro de estado para la tabla de pendientes (≠ 3)
+    let paraPendientes = filtradosTodos.filter(d => d.estadoDocumento !== 3);
     const estado = this.filtroEstado();
     if (estado !== null) {
-      paraTabla = estado === 5
-        ? paraTabla.filter(d => d.estadoDocumento === 5 && !!d.novedad)
-        : paraTabla.filter(d => d.estadoDocumento === estado);
+      paraPendientes = estado === 5
+        ? paraPendientes.filter(d => d.estadoDocumento === 5 && !!d.novedad)
+        : paraPendientes.filter(d => d.estadoDocumento === estado);
     }
+    this.dsDocumentos.data = paraPendientes;
 
-    this.dsDocumentos.data = paraTabla;
+    // 4. Tabla de procesados (= 3), aplica solo filtros de texto/fecha
+    this.dsRegistrados.data = filtradosTodos.filter(d => d.estadoDocumento === 3);
   }
 
   private calcularTotales(docs: DocumentoCxp[]): void {
@@ -611,13 +688,11 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit {
             error: () => { this.gruposProducto = []; },
           });
         } else if (resp?.error === 'TITULAR_NO_ENCONTRADO') {
-          this.mostrarError(`Proveedor no encontrado — RUC: ${resp.rucEmisor}. Créelo en TSR primero.`);
+          this.mostrarErrorDialog(`Proveedor no encontrado`, `RUC: ${resp.rucEmisor}\nEl proveedor no existe en el sistema. Créelo en TSR primero.`);
         } else if (resp?.exito === false || (resp?.error && resp.error !== 'TITULAR_NO_ENCONTRADO')) {
-          // El backend retornó HTTP 200 pero indicó un error en el body
-          this.mostrarError(resp?.mensaje || resp?.error || 'Error al registrar la factura');
+          this.mostrarErrorDialog(resp?.mensaje || resp?.error || 'Error al registrar la factura');
         } else if (!resp?.idDocumentoBD && !resp?.requiereProductos && resp?.mensaje) {
-          // No hay ID de documento registrado ni flujo alternativo conocido — el mensaje describe el error
-          this.mostrarError(resp.mensaje);
+          this.mostrarErrorDialog(resp.mensaje);
         } else if (resp?.mensaje?.includes('PENDIENTE DE CLASIFICAR')) {
           this.mostrarAdvertencia(resp.mensaje);
           this.cargar();
@@ -631,7 +706,7 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit {
         if (Array.isArray(err?.bloqueantes) && err.bloqueantes.length > 0) {
           this.mostrarBloqueantes(err.bloqueantes);
         } else {
-          this.mostrarError('Error al registrar: ' + this.extraerMensajeError(err));
+          this.mostrarErrorDialog('Error al registrar', this.extraerMensajeError(err));
         }
       },
     });
@@ -684,6 +759,16 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit {
     this.getInputXml().click();
   }
 
+  // ─── REVERTIR (estado 3 → 6) ───────────────────────────────────
+  revertir(doc: DocumentoCxp): void {
+    if (!confirm(`¿Revertir el registro del documento ${doc.serieComprobante}? Esta acción eliminará el registro en las tablas CXP y devolverá el documento al estado XML CARGADO.`)) return;
+    this.procesando.set(true);
+    this.processService.revertir(doc.id, this.idUsuario).subscribe({
+      next: () => { this.procesando.set(false); this.mostrarExito('Documento revertido correctamente'); this.cargar(); },
+      error: (err) => { this.procesando.set(false); this.mostrarError('Error al revertir: ' + this.extraerMensajeError(err)); },
+    });
+  }
+
   // ─── HELPERS ────────────────────────────────────────────
 
   estadoLabel(estado: number): string {
@@ -729,6 +814,15 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit {
     this.dialog.open(RegistroBloqueantesDialogComponent, {
       data: { bloqueantes },
       width: '600px',
+      maxWidth: '95vw',
+    });
+  }
+
+  /** Abre un dialog de error genérico con título y detalle opcional */
+  private mostrarErrorDialog(mensaje: string, detalle?: string): void {
+    this.dialog.open(ErrorRegistroDialogComponent, {
+      data: { mensaje, detalle },
+      width: '520px',
       maxWidth: '95vw',
     });
   }

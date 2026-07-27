@@ -24,6 +24,7 @@ export interface DocumentoCxp {
   idDocumentoBD: number;
   tipoTablaDestino: string;          // FACTURA_COMPRA / NOTA_CREDITO_COMPRA / etc.
   novedad: string;                   // Descripción de diferencias detectadas
+  observacion?: string;              // Observación adicional del documento
   // Estado novedad: 1=PENDIENTE 2=REEMPLAZADO 3=MANTENIDO
   estadoNovedad: number;
   fechaRegistroBD: string;

@@ -236,7 +236,7 @@
             <ng-container matColumnDef="resultado">
               <th mat-header-cell *matHeaderCellDef>Resultado</th>
               <td mat-cell *matCellDef="let d">
-                <span class="badge" [ngClass]="resultadoColor(d.resultado)">{{ d.resultado }}</span>
+                <span class="badge" [ngClass]="resultadoColor(d.resultado)" [matTooltip]="d.resultado">{{ resultadoLabel(d.resultado) }}</span>
               </td>
             </ng-container>
 
