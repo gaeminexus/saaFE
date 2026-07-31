@@ -26,4 +26,5 @@ export interface CuentaBancaria {
     fechaIngreso: string;              // Fecha de ingreso (LocalDateTime → ISO string)
     fechaInactivo: string;             // Fecha en que fue inactivada (LocalDateTime → ISO string)
     cuentaApertura: PlanCuenta;        // Cuenta contable usada en la apertura
+    cobroCredito: number;              // Indica si la cuenta se usa para cobro de crédito (1 = Sí, 0 = No)
 }

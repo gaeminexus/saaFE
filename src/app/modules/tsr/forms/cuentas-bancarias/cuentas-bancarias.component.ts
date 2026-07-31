@@ -90,6 +90,7 @@ export class CuentasBancariasComponent implements OnInit {
   direccion = '';
   email = '';
   estadoSeleccionado: DetalleRubro | null = null;
+  cobroCredito = false;
   codigoEdicion: number | null = null; // null = crear, número = editar
 
   // Variable para capturar el valor raw de la fecha antes del blur
@@ -417,6 +418,9 @@ export class CuentasBancariasComponent implements OnInit {
       payload.fechaCreacion = `${fechaISO}T00:00:00`;
     }
 
+    // Cobro de crédito
+    payload.cobroCredito = this.cobroCredito ? 1 : 0;
+
     // Fecha de ingreso - siempre la fecha actual
     const now = new Date();
     const fechaActual = now.toISOString().substring(0, 19); // Formato: YYYY-MM-DDTHH:mm:ss
@@ -465,6 +469,7 @@ export class CuentasBancariasComponent implements OnInit {
     const estadoPorDefecto = this.estadosCuenta().find((e) => e.codigoAlterno === 3);
     this.estadoSeleccionado = estadoPorDefecto ?? null;
 
+    this.cobroCredito = false;
     this.codigoEdicion = null;
     this.modoEdicion.set(false);
     this.errorMsg.set('');
@@ -524,6 +529,8 @@ export class CuentasBancariasComponent implements OnInit {
     const codigoEstado = (row as any).estado;
     this.estadoSeleccionado =
       this.estadosCuenta().find((e) => e.codigoAlterno === codigoEstado) ?? null;
+
+    this.cobroCredito = (row as any).cobroCredito === 1;
 
     // Buscar la cuenta contable en la lista cargada (por codigo)
     const planCuentaRaw = this.obtenerCuentaContableRegistro(row);
@@ -644,6 +651,9 @@ export class CuentasBancariasComponent implements OnInit {
     if (registroOriginal) {
       payload.fechaIngreso = (registroOriginal as any).fechaIngreso;
     }
+
+    // Cobro de crédito
+    payload.cobroCredito = this.cobroCredito ? 1 : 0;
 
     this.loading.set(true);
     this.errorMsg.set('');

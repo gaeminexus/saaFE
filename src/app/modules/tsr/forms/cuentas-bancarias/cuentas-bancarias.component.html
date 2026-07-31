@@ -244,7 +244,14 @@
             </mat-option>
           </mat-select>
         </mat-form-field>
-        <div></div>
+        <div class="checkbox-field">
+          <mat-checkbox
+            [(ngModel)]="cobroCredito"
+            [disabled]="!modoEdicion()"
+          >
+            Cobro de Crédito
+          </mat-checkbox>
+        </div>
       </div>
 
       <div class="row row-4">
