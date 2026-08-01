@@ -39,7 +39,7 @@ const RUBRO_TIPO_GRUPO_PRODUCTO = 74;
       <mat-icon>drive_file_move</mat-icon>
       Mover producto a otro grupo
     </h2>
-    <mat-dialog-content style="padding-top:8px;min-width:380px">
+    <mat-dialog-content style="padding-top:8px;min-width:500px">
       <p style="margin:0 0 16px;color:#555;font-size:.9rem">
         Seleccione el grupo destino para
         <strong>{{ data.producto.nombre }}</strong>.
@@ -57,11 +57,26 @@ const RUBRO_TIPO_GRUPO_PRODUCTO = 74;
                           [displayWith]="displayGrupo"
                           (optionSelected)="onGrupoSeleccionado($event.option.value)">
           @for (g of gruposFiltrados; track g.codigo) {
-            <mat-option [value]="g">{{ g.nombre }}</mat-option>
+            <mat-option [value]="g">
+              <div style="display:flex;flex-direction:column;line-height:1.3;padding:4px 0">
+                <span style="font-weight:600">{{ g.nombre }}</span>
+                @if (g.planCuenta) {
+                  <span style="font-size:.78rem;color:#666">
+                    {{ g.planCuenta.cuentaContable }} — {{ g.planCuenta.nombre }}
+                  </span>
+                } @else {
+                  <span style="font-size:.78rem;color:#aaa">Sin cuenta contable</span>
+                }
+              </div>
+            </mat-option>
           }
         </mat-autocomplete>
         @if (grupoSeleccionado) {
-          <mat-hint>✓ {{ grupoSeleccionado.nombre }}</mat-hint>
+          <mat-hint>✓ {{ grupoSeleccionado.nombre }}
+            @if (grupoSeleccionado.planCuenta) {
+              &nbsp;·&nbsp;{{ grupoSeleccionado.planCuenta.cuentaContable }} — {{ grupoSeleccionado.planCuenta.nombre }}
+            }
+          </mat-hint>
         }
       </mat-form-field>
     </mat-dialog-content>
@@ -86,7 +101,11 @@ export class MoverProductoDialogComponent {
     this.grupoSeleccionado = null;
     const q = this.filtroTexto?.toLowerCase() ?? '';
     this.gruposFiltrados = q
-      ? this.data.grupos.filter(g => g.nombre?.toLowerCase().includes(q))
+      ? this.data.grupos.filter(g =>
+          g.nombre?.toLowerCase().includes(q) ||
+          g.planCuenta?.cuentaContable?.toLowerCase().includes(q) ||
+          g.planCuenta?.nombre?.toLowerCase().includes(q)
+        )
       : this.data.grupos;
   }
 

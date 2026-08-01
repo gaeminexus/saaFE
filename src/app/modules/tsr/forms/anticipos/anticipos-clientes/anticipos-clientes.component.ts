@@ -1,5 +1,6 @@
 ﻿import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { switchMap } from 'rxjs';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
@@ -8,13 +9,16 @@ import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda
 import { TipoDatosBusqueda as TipoDatos } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { TitularSelectorDialogComponent } from '../../../../../shared/components/titular-selector-dialog/titular-selector-dialog.component';
 import { Titular } from '../../../model/titular';
+import { CuentaBancaria } from '../../../model/cuenta-bancaria';
 import { PersonaCuentaContableService } from '../../../service/persona-cuenta-contable.service';
 import { PersonaRolService } from '../../../service/persona-rol.service';
+import { CuentaBancariaService } from '../../../service/cuenta-bancaria.service';
+import { AnticipoService } from '../../../service/anticipo.service';
 
 @Component({
   selector: 'app-anticipos-clientes',
   standalone: true,
-  imports: [CommonModule, MaterialFormModule],
+  imports: [CommonModule, FormsModule, MaterialFormModule],
   templateUrl: './anticipos-clientes.component.html',
   styleUrl: './anticipos-clientes.component.scss',
 })
@@ -22,6 +26,8 @@ export class AnticiposClientesComponent {
   private dialog = inject(MatDialog);
   private personaRolS = inject(PersonaRolService);
   private cuentaContableS = inject(PersonaCuentaContableService);
+  private cuentaBancariaS = inject(CuentaBancariaService);
+  private anticipoS = inject(AnticipoService);
 
   private readonly ROL_CLIENTE = 1;
   private readonly RUBRO_ROL_P = 55;
@@ -30,6 +36,19 @@ export class AnticiposClientesComponent {
   titularSeleccionado = signal<Titular | null>(null);
   saldoAnticipos = signal<number>(0);
   cargandoSaldo = signal(false);
+
+  // Formulario de nuevo anticipo
+  mostrarFormulario = signal(false);
+  procesando = signal(false);
+  errorProceso = signal<string>('');
+  exitoProceso = signal<string>('');
+  cuentasBancarias = signal<CuentaBancaria[]>([]);
+
+  formValor = '';
+  formCuentaBancaria: CuentaBancaria | null = null;
+  formFecha: Date | null = new Date();
+  formNumeroDoc = '';
+  formObservacion = '';
 
   abrirBusqueda(): void {
     const ref = this.dialog.open(TitularSelectorDialogComponent, {
@@ -127,5 +146,87 @@ export class AnticiposClientesComponent {
   limpiar(): void {
     this.titularSeleccionado.set(null);
     this.saldoAnticipos.set(0);
+    this.cerrarFormulario();
+  }
+
+  abrirFormulario(): void {
+    this.errorProceso.set('');
+    this.exitoProceso.set('');
+    this.formValor = '';
+    this.formCuentaBancaria = null;
+    this.formFecha = new Date();
+    this.formNumeroDoc = '';
+    this.formObservacion = '';
+    this.mostrarFormulario.set(true);
+    this.cargarCuentasBancarias();
+  }
+
+  cerrarFormulario(): void {
+    this.mostrarFormulario.set(false);
+    this.errorProceso.set('');
+    this.exitoProceso.set('');
+  }
+
+  private cargarCuentasBancarias(): void {
+    if (this.cuentasBancarias().length > 0) return;
+    const idEmpresa = +(sessionStorage.getItem('idEmpresa') || localStorage.getItem('idEmpresa') || '0');
+    this.cuentaBancariaS.getAll().subscribe({
+      next: (data) => {
+        let lista = Array.isArray(data) ? data : [];
+        if (idEmpresa) {
+          lista = lista.filter((c: any) => c.banco?.empresa?.codigo === idEmpresa || c.empresa?.codigo === idEmpresa);
+        }
+        this.cuentasBancarias.set(lista);
+      },
+      error: () => {},
+    });
+  }
+
+  procesarAnticipo(): void {
+    const titular = this.titularSeleccionado();
+    if (!titular || !this.formValor || !this.formCuentaBancaria || !this.formFecha) {
+      this.errorProceso.set('Complete todos los campos obligatorios.');
+      return;
+    }
+    const valor = parseFloat(this.formValor.replace(/,/g, ''));
+    if (isNaN(valor) || valor <= 0) {
+      this.errorProceso.set('El valor debe ser un número mayor a cero.');
+      return;
+    }
+
+    const idEmpresa = +(sessionStorage.getItem('idEmpresa') || localStorage.getItem('idEmpresa') || '0');
+    const idUsuario = +(sessionStorage.getItem('idUsuario') || localStorage.getItem('idUsuario') || '0');
+    const fecha = this.formFecha instanceof Date
+      ? this.formFecha.toISOString().substring(0, 10)
+      : String(this.formFecha);
+
+    const payload = {
+      idTitular: titular.codigo,
+      valor,
+      idCuentaBancaria: this.formCuentaBancaria.codigo,
+      idEmpresa,
+      idUsuario,
+      fechaAnticipo: fecha,
+      numeroDoc: this.formNumeroDoc.trim(),
+      observacion: this.formObservacion.trim(),
+    };
+
+    this.procesando.set(true);
+    this.errorProceso.set('');
+    this.exitoProceso.set('');
+
+    this.anticipoS.procesarCliente(payload).subscribe({
+      next: () => {
+        this.exitoProceso.set('Anticipo registrado correctamente.');
+        this.procesando.set(false);
+        // Recargar saldo
+        this.cargarSaldo(titular);
+        setTimeout(() => this.cerrarFormulario(), 2000);
+      },
+      error: (err: Error) => {
+        this.errorProceso.set(err.message);
+        this.procesando.set(false);
+      },
+    });
   }
 }

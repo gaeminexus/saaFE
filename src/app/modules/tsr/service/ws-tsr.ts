@@ -63,4 +63,6 @@ export class ServiciosTsr {
   public static RS_CNCT = `${API_URL}/cnct`; // ConciliacionContable
   public static RS_GCEX = `${API_URL}/gcex`; // GrupoConciliacionExtracto
   public static RS_GCAS = `${API_URL}/gcas`; // GrupoConciliacionAsiento
+  public static RS_ANTC = `${API_URL}/antc`; // Anticipo Clientes
+  public static RS_ANTP = `${API_URL}/antp`; // Anticipo Proveedores
 }

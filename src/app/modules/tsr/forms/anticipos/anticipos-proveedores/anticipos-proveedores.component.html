@@ -51,7 +51,7 @@
     <!-- Acciones (activas solo cuando hay titular seleccionado) -->
     @if (titularSeleccionado()) {
       <mat-card-actions class="card-acciones">
-        <button mat-flat-button color="accent">
+        <button mat-flat-button color="accent" (click)="abrirFormulario()" [disabled]="mostrarFormulario()">
           <mat-icon>add</mat-icon>
           Nuevo Anticipo
         </button>
@@ -62,4 +62,72 @@
       </mat-card-actions>
     }
   </mat-card>
+
+  <!-- Formulario de nuevo anticipo -->
+  @if (mostrarFormulario()) {
+    <mat-card class="form-anticipo-card">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>receipt_long</mat-icon>
+          Registrar Anticipo — Proveedor
+        </mat-card-title>
+      </mat-card-header>
+
+      <mat-card-content>
+        <div class="form-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Valor *</mat-label>
+            <input matInput type="number" min="0.01" step="0.01" [(ngModel)]="formValor" placeholder="0.00" />
+            <span matTextSuffix>$</span>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Cuenta Bancaria *</mat-label>
+            <mat-select [(ngModel)]="formCuentaBancaria">
+              <mat-option [value]="null">-- Seleccione --</mat-option>
+              @for (cb of cuentasBancarias(); track cb.codigo) {
+                <mat-option [value]="cb">{{ cb.numeroCuenta }} — {{ $any(cb.banco)?.nombre }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Fecha de Anticipo *</mat-label>
+            <input matInput [matDatepicker]="pickerFecha" [(ngModel)]="formFecha" placeholder="dd/mm/aaaa" />
+            <mat-datepicker-toggle matIconSuffix [for]="pickerFecha"></mat-datepicker-toggle>
+            <mat-datepicker #pickerFecha></mat-datepicker>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>N° Documento</mat-label>
+            <input matInput [(ngModel)]="formNumeroDoc" placeholder="ANT-001" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="span-2">
+            <mat-label>Observación</mat-label>
+            <input matInput [(ngModel)]="formObservacion" />
+          </mat-form-field>
+        </div>
+
+        @if (errorProceso()) {
+          <div class="msg-error">{{ errorProceso() }}</div>
+        }
+        @if (exitoProceso()) {
+          <div class="msg-exito">{{ exitoProceso() }}</div>
+        }
+      </mat-card-content>
+
+      <mat-card-actions class="card-acciones">
+        <button mat-flat-button color="primary" (click)="procesarAnticipo()" [disabled]="procesando()">
+          @if (procesando()) { <mat-spinner diameter="18" style="display:inline-block;margin-right:6px"></mat-spinner> }
+          <mat-icon>save</mat-icon>
+          Guardar Anticipo
+        </button>
+        <button mat-stroked-button color="warn" (click)="cerrarFormulario()" [disabled]="procesando()">
+          <mat-icon>cancel</mat-icon>
+          Cancelar
+        </button>
+      </mat-card-actions>
+    </mat-card>
+  }
 </div>

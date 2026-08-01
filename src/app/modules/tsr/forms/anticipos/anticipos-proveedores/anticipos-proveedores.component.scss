@@ -84,3 +84,49 @@
     &.saldo-positivo { color: #1565c0; }
   }
 }
+
+// ─── Formulario de anticipo ──────────────────────────────────
+.form-anticipo-card {
+  max-width: 700px;
+  margin-top: 16px;
+
+  mat-card-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1.05rem;
+    mat-icon { color: var(--mat-sys-primary, #1565c0); }
+  }
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 12px;
+
+  .span-2 { grid-column: span 2; }
+
+  mat-form-field { width: 100%; }
+}
+
+.msg-error {
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: #ffebee;
+  border-left: 4px solid #c62828;
+  border-radius: 4px;
+  color: #b71c1c;
+  font-size: 0.88rem;
+  white-space: pre-line;
+}
+
+.msg-exito {
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: #e8f5e9;
+  border-left: 4px solid #2e7d32;
+  border-radius: 4px;
+  color: #1b5e20;
+  font-size: 0.88rem;
+}
