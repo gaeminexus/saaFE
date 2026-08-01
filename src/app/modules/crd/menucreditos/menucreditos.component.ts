@@ -208,6 +208,11 @@ export class MenucreditosComponent {
           route: '/menucreditos/cruce-valores',
         },
         {
+          displayName: 'Cobros Personales',
+          iconName: 'point_of_sale',
+          route: '/menucreditos/cobros-personales',
+        },
+        {
           displayName: 'Dash',
           iconName: 'finance',
           // route: '/menucreditos/participe-dash'

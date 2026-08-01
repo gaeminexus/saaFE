@@ -1,0 +1,348 @@
+<div class="cobros-container">
+
+  <div class="search-header">
+    <div class="header-title">
+      <mat-icon class="header-icon">payments</mat-icon>
+      <h1>Cobros Personales</h1>
+    </div>
+    <div class="search-box">
+      <mat-form-field appearance="fill" class="search-field">
+        <mat-label>Número de identificación</mat-label>
+        <input matInput [(ngModel)]="criterioIdentificacion" (keyup.enter)="buscar()" />
+      </mat-form-field>
+      <mat-form-field appearance="fill" class="search-field">
+        <mat-label>Rol Petrocomercial</mat-label>
+        <input matInput [(ngModel)]="criterioRolPetro" (keyup.enter)="buscar()" />
+      </mat-form-field>
+      <mat-form-field appearance="fill" class="search-field">
+        <mat-label>Nombre</mat-label>
+        <input matInput [(ngModel)]="criterioNombre" (keyup.enter)="buscar()" />
+      </mat-form-field>
+      <button mat-raised-button color="primary" class="search-button" (click)="buscar()" [disabled]="buscando()">
+        @if (buscando()) {
+          <mat-spinner diameter="20"></mat-spinner>
+        } @else {
+          <ng-container><mat-icon>search</mat-icon> Buscar</ng-container>
+        }
+      </button>
+    </div>
+  </div>
+
+  @if (mostrandoResultados()) {
+    <mat-card class="resultados-card">
+      <mat-card-header>
+        <mat-card-title>Resultados de búsqueda</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        @if (resultados().length === 0) {
+          <p class="texto-vacio">No se encontraron coincidencias.</p>
+        } @else {
+          <table mat-table [dataSource]="resultados()" class="tabla-resultados">
+            <ng-container matColumnDef="nombre">
+              <th mat-header-cell *matHeaderCellDef>Nombre</th>
+              <td mat-cell *matCellDef="let e">{{ e.razonSocial }}</td>
+            </ng-container>
+            <ng-container matColumnDef="ci">
+              <th mat-header-cell *matHeaderCellDef>C.I.</th>
+              <td mat-cell *matCellDef="let e">{{ e.numeroIdentificacion }}</td>
+            </ng-container>
+            <ng-container matColumnDef="rolPetro">
+              <th mat-header-cell *matHeaderCellDef>Rol Petrocomercial</th>
+              <td mat-cell *matCellDef="let e">{{ e.rolPetroComercial }}</td>
+            </ng-container>
+            <tr mat-header-row *matHeaderRowDef="['nombre', 'ci', 'rolPetro']"></tr>
+            <tr mat-row *matRowDef="let row; columns: ['nombre', 'ci', 'rolPetro'];" class="fila-clicable" (click)="seleccionarEntidad(row)"></tr>
+          </table>
+        }
+      </mat-card-content>
+    </mat-card>
+  }
+
+  @if (entidadSeleccionada(); as entidad) {
+    <div class="participante-section">
+
+      <mat-card class="entidad-card">
+        <mat-card-header>
+          <mat-icon mat-card-avatar class="avatar-icon">account_circle</mat-icon>
+          <mat-card-title>{{ entidad.razonSocial }}</mat-card-title>
+          <mat-card-subtitle>C.I. {{ entidad.numeroIdentificacion }} &middot; Rol Petrocomercial {{ entidad.rolPetroComercial }}</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <button mat-stroked-button (click)="volverABuscar()">
+            <mat-icon>search</mat-icon> Buscar otra persona
+          </button>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="pago-card">
+        <mat-card-header>
+          <mat-card-title>Datos del Pago</mat-card-title>
+        </mat-card-header>
+        <mat-card-content class="pago-card-body">
+          <mat-form-field appearance="outline" class="monto-total-field">
+            <mat-label>Monto del pago (recibido del socio)</mat-label>
+            <span matTextPrefix>$&nbsp;</span>
+            <input matInput [(ngModel)]="montoTotalTexto" (ngModelChange)="onMontoCuentaCambio()" (blur)="onMontoTotalBlur()" />
+          </mat-form-field>
+          <div id="cp-indicador-superior" class="allocation-live"
+               [class.ok]="completamenteAsignado() && asignado() > 0"
+               [class.over]="restante() < -0.004"
+               [class.under]="restante() > 0.004">
+            Asignado: <b>{{ formatMoneda(asignado()) }}</b> de {{ formatMoneda(montoTotal()) }}
+            &middot; Restante: <b>{{ formatMoneda(restante() < 0 ? -restante() : restante()) }}{{ restante() < -0.004 ? ' (excedido)' : '' }}</b>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      @if (cargandoDatos()) {
+        <div class="loading-spinner-container">
+          <mat-spinner diameter="48" color="primary"></mat-spinner>
+        </div>
+      }
+
+      @if (prestamoVigente(); as prestamo) {
+        <mat-card class="cuenta-card">
+          <mat-card-header><mat-card-title>Préstamo Vigente</mat-card-title></mat-card-header>
+          <mat-card-content>
+            <table mat-table [dataSource]="[prestamo]" class="tabla-cuentas">
+              <ng-container matColumnDef="chk">
+                <th mat-header-cell *matHeaderCellDef></th>
+                <td mat-cell *matCellDef="let p">
+                  <mat-checkbox [checked]="cuentaChecked.prestamo" (change)="toggleCuenta('prestamo', $event.checked)"></mat-checkbox>
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="idAsoprep">
+                <th mat-header-cell *matHeaderCellDef>Préstamo</th>
+                <td mat-cell *matCellDef="let p">#{{ p.idAsoprep }}</td>
+              </ng-container>
+              <ng-container matColumnDef="saldo">
+                <th mat-header-cell *matHeaderCellDef>Saldo total</th>
+                <td mat-cell *matCellDef="let p">{{ formatMoneda(saldoTotalPrestamo()) }}</td>
+              </ng-container>
+              <ng-container matColumnDef="monto">
+                <th mat-header-cell *matHeaderCellDef>Monto asignado</th>
+                <td mat-cell *matCellDef="let p">
+                  <mat-form-field appearance="outline" class="monto-cuenta-field" subscriptSizing="dynamic">
+                    <input matInput [(ngModel)]="cuentaMontoTexto.prestamo" [disabled]="!cuentaChecked.prestamo"
+                           (ngModelChange)="onMontoCuentaCambio()" (blur)="onMontoCuentaBlur('prestamo')" />
+                  </mat-form-field>
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="detalle">
+                <th mat-header-cell *matHeaderCellDef></th>
+                <td mat-cell *matCellDef="let p">
+                  <button mat-stroked-button [disabled]="!cuentaChecked.prestamo" (click)="toggleDetallePrestamo()">
+                    Ver detalle
+                    <mat-icon [class.chevron-abierto]="detallePrestamoAbierto()">expand_more</mat-icon>
+                  </button>
+                </td>
+              </ng-container>
+              <tr mat-header-row *matHeaderRowDef="['chk','idAsoprep','saldo','monto','detalle']"></tr>
+              <tr mat-row *matRowDef="let row; columns: ['chk','idAsoprep','saldo','monto','detalle'];"></tr>
+            </table>
+
+            @if (detallePrestamoAbierto() && cuentaChecked.prestamo) {
+              <div class="detalle-panel">
+                <table class="detalle-table">
+                  <thead>
+                    <tr><th>Cuota</th><th>Vencimiento</th><th>Valor</th><th>Monto aplicado</th><th>Resultado</th></tr>
+                  </thead>
+                  <tbody>
+                    @for (a of asignacionesPrestamo(); track a.cuota.codigo) {
+                      <tr>
+                        <td>{{ a.cuota.numeroCuota }}</td>
+                        <td>{{ a.cuota.fechaVencimiento | date:'dd/MM/yyyy' }}</td>
+                        <td class="num">{{ formatMoneda(a.cuota.saldo) }}</td>
+                        <td class="num">{{ a.aplicado > 0 ? formatMoneda(a.aplicado) : '—' }}</td>
+                        <td>
+                          <span class="estado-mini" [class]="a.estado">
+                            {{ a.estado === 'cubierta' ? 'Cubierta' : a.estado === 'parcial' ? 'Parcial' : 'Pendiente' }}
+                          </span>
+                        </td>
+                      </tr>
+                    }
+                    @empty {
+                      <tr><td colspan="5" class="texto-vacio">No hay cuotas pendientes para este préstamo.</td></tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+          </mat-card-content>
+        </mat-card>
+      }
+
+      <mat-card class="cuenta-card">
+        <mat-card-header><mat-card-title>Aportes</mat-card-title></mat-card-header>
+        <mat-card-content>
+          <table class="tabla-aportes">
+            <thead>
+              <tr><th></th><th>Tipo de aporte</th><th>Total aportado</th><th>Valor mensual</th><th>Monto asignado</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><mat-checkbox [checked]="cuentaChecked.cesantia" (change)="toggleCuenta('cesantia', $event.checked)"></mat-checkbox></td>
+                <td>Cesantía</td>
+                <td class="num">{{ formatMoneda(totalAportadoCesantia()) }}</td>
+                <td class="num">{{ formatMoneda(valorMensualCesantia()) }}</td>
+                <td>
+                  <mat-form-field appearance="outline" class="monto-cuenta-field" subscriptSizing="dynamic">
+                    <input matInput [(ngModel)]="cuentaMontoTexto.cesantia" [disabled]="!cuentaChecked.cesantia"
+                           (ngModelChange)="onMontoCuentaCambio()" (blur)="onMontoCuentaBlur('cesantia')" />
+                  </mat-form-field>
+                </td>
+              </tr>
+              @if (cuentaChecked.cesantia && coberturaCesantia(); as cobertura) {
+                <tr class="fila-cobertura"><td></td><td colspan="4" [innerHTML]="cobertura.mensajeHtml"></td></tr>
+              }
+              <tr>
+                <td><mat-checkbox [checked]="cuentaChecked.jubilacion" (change)="toggleCuenta('jubilacion', $event.checked)"></mat-checkbox></td>
+                <td>Jubilación</td>
+                <td class="num">{{ formatMoneda(totalAportadoJubilacion()) }}</td>
+                <td class="num">{{ formatMoneda(valorMensualJubilacion()) }}</td>
+                <td>
+                  <mat-form-field appearance="outline" class="monto-cuenta-field" subscriptSizing="dynamic">
+                    <input matInput [(ngModel)]="cuentaMontoTexto.jubilacion" [disabled]="!cuentaChecked.jubilacion"
+                           (ngModelChange)="onMontoCuentaCambio()" (blur)="onMontoCuentaBlur('jubilacion')" />
+                  </mat-form-field>
+                </td>
+              </tr>
+              @if (cuentaChecked.jubilacion && coberturaJubilacion(); as cobertura) {
+                <tr class="fila-cobertura"><td></td><td colspan="4" [innerHTML]="cobertura.mensajeHtml"></td></tr>
+              }
+            </tbody>
+          </table>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="confirmacion-card">
+        <mat-card-header><mat-card-title>Confirmar Pago</mat-card-title></mat-card-header>
+
+        @if (!pagoRegistrado()) {
+          <mat-card-content>
+            @if (!cuentaChecked.prestamo && !cuentaChecked.cesantia && !cuentaChecked.jubilacion) {
+              <p class="texto-vacio">Selecciona al menos una cuenta (préstamo, cesantía o jubilación) para continuar.</p>
+            }
+
+            <div class="section-label">Método de pago</div>
+            <mat-radio-group [ngModel]="metodoPago()" (ngModelChange)="metodoPago.set($event)" class="metodo-select">
+              @if (cuentaChecked.prestamo) {
+                <mat-radio-button value="debito" class="metodo-option">
+                  <div class="m-title">Débito de Cuenta de Aportes</div>
+                  <div class="m-desc">Descuenta del saldo acumulado de cesantía o jubilación del socio.</div>
+                </mat-radio-button>
+              }
+              <mat-radio-button value="transferencia" class="metodo-option">
+                <div class="m-title">Transferencia Bancaria</div>
+                <div class="m-desc">El socio presenta comprobante de transferencia a una cuenta de ASOPREP.</div>
+              </mat-radio-button>
+              <mat-radio-button value="deposito" class="metodo-option">
+                <div class="m-title">Depósito Directo</div>
+                <div class="m-desc">El socio presenta comprobante de depósito en ventanilla o cajero.</div>
+              </mat-radio-button>
+            </mat-radio-group>
+
+            <div class="field-grid">
+              <mat-form-field appearance="outline">
+                <mat-label>Fecha</mat-label>
+                <input matInput [matDatepicker]="picker" [(ngModel)]="fechaPago" />
+                <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+                <mat-datepicker #picker></mat-datepicker>
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="full">
+                <mat-label>Observación (opcional)</mat-label>
+                <input matInput [(ngModel)]="observacion" />
+              </mat-form-field>
+            </div>
+
+            @if (metodoPago() === 'debito') {
+              <div class="campos-grupo">
+                <mat-form-field appearance="outline" class="full">
+                  <mat-label>Cuenta de origen (saldo de aportes)</mat-label>
+                  <mat-select [ngModel]="cuentaOrigenAporte()" (ngModelChange)="cuentaOrigenAporte.set($event)">
+                    <mat-option value="cesantia">Cesantía — saldo disponible {{ formatMoneda(totalAportadoCesantia()) }}</mat-option>
+                    <mat-option value="jubilacion">Jubilación — saldo disponible {{ formatMoneda(totalAportadoJubilacion()) }}</mat-option>
+                  </mat-select>
+                </mat-form-field>
+                <div class="resumen-callout">
+                  <span>Saldo disponible tras el débito</span>
+                  <b>{{ formatMoneda(saldoAporteOrigen() - montoTotal() > 0 ? saldoAporteOrigen() - montoTotal() : 0) }}</b>
+                </div>
+                @if (saldoDebitoInsuficiente()) {
+                  <div class="error-text">
+                    <mat-icon>warning</mat-icon>
+                    <span>El monto del pago supera el saldo disponible en la cuenta de origen seleccionada.</span>
+                  </div>
+                }
+              </div>
+            } @else {
+              <div class="campos-grupo">
+                <mat-form-field appearance="outline" class="full">
+                  <mat-label>Cuenta ASOPREP destino</mat-label>
+                  <mat-select [ngModel]="cuentaAsopropDestino()" (ngModelChange)="cuentaAsopropDestino.set($event)">
+                    @for (c of cuentasBancarias(); track c.codigo) {
+                      <mat-option [value]="c">{{ c.banco?.nombre }} &middot; {{ c.numeroCuenta }}</mat-option>
+                    }
+                  </mat-select>
+                  <mat-hint>Pendiente: filtro backend (estado=1, crédito=1) aún no implementado — lista completa mostrada por ahora.</mat-hint>
+                </mat-form-field>
+                <div class="field-grid">
+                  <mat-form-field appearance="outline">
+                    <mat-label>Número de referencia (opcional)</mat-label>
+                    <input matInput [(ngModel)]="numeroReferencia" />
+                  </mat-form-field>
+                  <div class="field">
+                    <label class="dropzone-label">Comprobante</label>
+                    <div class="dropzone" (click)="archivoInput.click()">
+                      <mat-icon>upload_file</mat-icon>
+                      {{ archivoComprobante() ? archivoComprobante()!.name : 'Adjuntar PDF o imagen' }}
+                    </div>
+                    <input #archivoInput type="file" accept="application/pdf,image/*" style="display:none" (change)="onArchivoSeleccionado($event)" />
+                  </div>
+                </div>
+              </div>
+            }
+
+            <div class="confirm-actions">
+              @if (!completamenteAsignado() && (cuentaChecked.prestamo || cuentaChecked.cesantia || cuentaChecked.jubilacion)) {
+                <div class="allocation-note">
+                  @if (restante() > 0.004) {
+                    Falta asignar {{ formatMoneda(restante()) }} del monto total antes de poder confirmar.
+                  } @else {
+                    Se ha asignado {{ formatMoneda(-restante()) }} de más — ajusta los montos antes de confirmar.
+                  }
+                </div>
+              }
+              <button mat-raised-button color="accent" id="cp-boton-confirmar" [disabled]="!puedeConfirmar()" (click)="confirmarPago()">
+                @if (registrando()) {
+                  <mat-spinner diameter="18"></mat-spinner>
+                } @else {
+                  <ng-container><mat-icon>check_circle</mat-icon> Confirmar Pago</ng-container>
+                }
+              </button>
+            </div>
+          </mat-card-content>
+        } @else {
+          <mat-card-content class="success-view">
+            <mat-icon class="check-icon">check_circle</mat-icon>
+            <h3>Pago registrado</h3>
+            <p>El cobro se guardó correctamente, distribuido entre las cuentas seleccionadas.</p>
+            <button mat-stroked-button (click)="cerrarConfirmacion()">Registrar otro pago</button>
+          </mat-card-content>
+        }
+      </mat-card>
+
+    </div>
+  }
+
+  @if (mostrarIndicadorFlotante()) {
+    <div class="allocation-floating"
+         [class.ok]="completamenteAsignado() && asignado() > 0"
+         [class.over]="restante() < -0.004"
+         [class.under]="restante() > 0.004">
+      Asignado: <b>{{ formatMoneda(asignado()) }}</b> de {{ formatMoneda(montoTotal()) }}
+      &middot; Restante: <b>{{ formatMoneda(restante() < 0 ? -restante() : restante()) }}</b>
+    </div>
+  }
+
+</div>

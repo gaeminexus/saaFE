@@ -23,6 +23,7 @@ export class ServiciosCrd {
   public static RS_TPHD = `${API_URL}/tphd`;
   public static RS_TPDN = `${API_URL}/tpdn`;
   public static RS_APRT = `${API_URL}/aprt`;
+  public static RS_HDAP = `${API_URL}/hdap`;
   public static RS_CNTR = `${API_URL}/cntr`;
   public static RS_PRTC = `${API_URL}/prtc`;
   public static RS_TPPC = `${API_URL}/tppc`;
