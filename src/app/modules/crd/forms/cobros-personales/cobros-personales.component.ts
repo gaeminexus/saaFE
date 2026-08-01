@@ -105,6 +105,7 @@ export class CobrosPersonalesComponent implements OnDestroy {
   // ---- búsqueda ----
   criterioIdentificacion = '';
   criterioRolPetro = '';
+  criterioIdPrestamoAsoprep = '';
   criterioNombre = '';
   buscando = signal(false);
   resultados = signal<Entidad[]>([]);
@@ -198,6 +199,9 @@ export class CobrosPersonalesComponent implements OnDestroy {
       const c = new DatosBusqueda();
       c.asignaUnCampoSinTrunc(TipoDatosBusqueda.LONG, 'rolPetroComercial', this.criterioRolPetro.trim(), TipoComandosBusqueda.IGUAL);
       criterios.push(c);
+    } else if (this.criterioIdPrestamoAsoprep.trim()) {
+      this.buscarPorPrestamoAsoprep(this.criterioIdPrestamoAsoprep.trim());
+      return;
     } else if (this.criterioNombre.trim()) {
       const c = new DatosBusqueda();
       c.asignaUnCampoSinTrunc(TipoDatosBusqueda.STRING, 'razonSocial', this.criterioNombre.trim(), TipoComandosBusqueda.LIKE);
@@ -215,6 +219,38 @@ export class CobrosPersonalesComponent implements OnDestroy {
         this.mostrandoResultados.set(true);
         this.entidadSeleccionada.set(null);
         if (!entidades || entidades.length === 0) {
+          this.snackBar.open('No se encontraron coincidencias.', 'Cerrar', { duration: 3000 });
+        }
+      },
+      error: () => {
+        this.buscando.set(false);
+        this.snackBar.open('Ocurrió un error al buscar. Intente nuevamente.', 'Cerrar', { duration: 4000 });
+      },
+    });
+  }
+
+  // Busca por el ID de préstamo del sistema ASOPREP (Prestamo.idAsoprep) en lugar de un campo
+  // propio de Entidad, y resuelve a la(s) entidad(es) dueñas del préstamo encontrado.
+  private buscarPorPrestamoAsoprep(idAsoprep: string): void {
+    const c = new DatosBusqueda();
+    c.asignaUnCampoSinTrunc(TipoDatosBusqueda.LONG, 'idAsoprep', idAsoprep, TipoComandosBusqueda.IGUAL);
+
+    this.buscando.set(true);
+    this.prestamoService.selectByCriteria([c]).subscribe({
+      next: (prestamos) => {
+        this.buscando.set(false);
+        const entidades: Entidad[] = [];
+        const codigosVistos = new Set<number>();
+        for (const p of prestamos ?? []) {
+          if (p.entidad && !codigosVistos.has(p.entidad.codigo)) {
+            codigosVistos.add(p.entidad.codigo);
+            entidades.push(p.entidad);
+          }
+        }
+        this.resultados.set(entidades);
+        this.mostrandoResultados.set(true);
+        this.entidadSeleccionada.set(null);
+        if (entidades.length === 0) {
           this.snackBar.open('No se encontraron coincidencias.', 'Cerrar', { duration: 3000 });
         }
       },
