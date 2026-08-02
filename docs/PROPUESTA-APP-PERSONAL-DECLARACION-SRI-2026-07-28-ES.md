@@ -63,7 +63,7 @@ Dejar bien el esqueleto antes de cualquier funcionalidad específica de impuesto
 - Pipeline de despliegue containerizado (CI/CD)
 - Bases de cumplimiento LOPDP: flujo de consentimiento, política de retención/eliminación de datos, cifrado en reposo
 
-**Criterio de salida:** un usuario puede registrarse, iniciar sesión con una sesión real, y ver un dashboard vacío de forma segura.
+**Criterio de salida:** un usuario puede registrarse, iniciar sesión con una sesión on thee cobreal, y ver un dashboard vacío de forma segura.
 
 ### Fase 1 — Registro Manual + Clasificador SRI (4-6 semanas)
 
