@@ -1,6 +1,6 @@
 .asignacion-seguros-container {
   padding: 20px;
-  max-width: 1100px;
+  max-width: 1400px;
   margin: 0 auto;
 }
 
@@ -131,7 +131,7 @@
   }
 
   .status-dot.dot-asignado {
-    background: #1e7a4c;
+    background: #0f6b63;
   }
 
   .status-dot.dot-pendiente {
@@ -193,10 +193,18 @@
   }
 }
 
-.chip-asignado,
+// "Asignado" es un estado propio de esta pantalla (póliza ya cargada para el tipo de
+// seguro activo) — usa el mismo acento teal del resto de la pantalla en lugar del verde
+// reservado para el estado de préstamo "Vigente", para no mezclar ambos significados.
+.chip-asignado {
+  background: rgba(15, 107, 99, 0.12);
+  color: #0f6b63;
+}
+
+// Verde esmeralda: mismo tono que usa CRD/Préstamos/Consulta para el estado "Vigente".
 .chip-vigente {
-  background: rgba(30, 122, 76, 0.12);
-  color: #1e7a4c;
+  background: rgba(16, 185, 129, 0.14);
+  color: #047857;
 }
 
 .chip-pendiente {
@@ -300,6 +308,9 @@
 }
 
 .table-scroll {
+  // Sin min-width forzado: la tabla usa table-layout fixed con anchos por columna para
+  // caber siempre dentro del contenedor, sin necesitar scroll horizontal en pantallas de
+  // escritorio normales. overflow-x queda solo como resguardo en ventanas muy angostas.
   overflow-x: auto;
   border-radius: 8px;
   border: 1px solid rgba(0, 0, 0, 0.08);
@@ -307,11 +318,37 @@
 
 .loans-table {
   width: 100%;
-  min-width: 1180px;
+  table-layout: fixed;
+
+  th,
+  td {
+    padding: 8px 8px;
+    font-size: 12.5px;
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+
+  th {
+    line-height: 1.25;
+  }
+
+  // Orden de columnas = displayedColumns en asignacion-seguros.component.ts
+  th:nth-child(1), td:nth-child(1) { width: 6%; }   // Código
+  th:nth-child(2), td:nth-child(2) { width: 8%; }   // N° Préstamo
+  th:nth-child(3), td:nth-child(3) { width: 17%; }  // Entidad
+  th:nth-child(4), td:nth-child(4) { width: 10%; }  // Estado Partícipe
+  th:nth-child(5), td:nth-child(5) { width: 10%; }  // Producto
+  th:nth-child(6), td:nth-child(6) { width: 8%; }   // Fecha
+  th:nth-child(7), td:nth-child(7) { width: 10%; }  // Estado Préstamo
+  th:nth-child(8), td:nth-child(8) { width: 10.5%; }  // Monto
+  th:nth-child(9), td:nth-child(9) { width: 10.5%; }  // Total Pagado
+  th:nth-child(10), td:nth-child(10) { width: 10%; } // Saldo Total
 }
 
 .num {
   font-variant-numeric: tabular-nums;
+  white-space: nowrap !important;
 }
 
 .cliente-nombre {
