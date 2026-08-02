@@ -17,8 +17,8 @@
     width: 44px;
     height: 44px;
     border-radius: 50%;
-    background: rgba(15, 107, 99, 0.12);
-    color: #0f6b63;
+    background: rgba(102, 126, 234, 0.12);
+    color: #667eea;
     flex: none;
 
     mat-icon {
@@ -45,7 +45,7 @@
   margin: 12px 24px 4px;
   padding: 10px 14px;
   border-radius: 8px;
-  background: rgba(15, 107, 99, 0.06);
+  background: rgba(102, 126, 234, 0.06);
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -62,7 +62,7 @@
 
   .value.saldo {
     font-weight: 700;
-    color: #0f6b63;
+    color: #667eea;
   }
 }
 
@@ -130,12 +130,12 @@
 
   &:hover,
   &.dragover {
-    border-color: #0f6b63;
-    background: rgba(15, 107, 99, 0.06);
+    border-color: #667eea;
+    background: rgba(102, 126, 234, 0.06);
   }
 
   mat-icon {
-    color: #0f6b63;
+    color: #667eea;
     flex: none;
   }
 
@@ -166,7 +166,7 @@
   background: rgba(0, 0, 0, 0.02);
 
   .file-icon {
-    color: #0f6b63;
+    color: #667eea;
     flex: none;
   }
 

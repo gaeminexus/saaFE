@@ -14,7 +14,7 @@
     font-size: 32px;
     width: 32px;
     height: 32px;
-    color: #0f6b63;
+    color: #667eea;
   }
 
   h1 {
@@ -76,12 +76,12 @@
   transition: border-color 0.12s ease, background 0.12s ease;
 
   &:hover {
-    border-color: #0f6b63;
+    border-color: #667eea;
   }
 
   &.active {
-    border-color: #0f6b63;
-    background: rgba(15, 107, 99, 0.06);
+    border-color: #667eea;
+    background: rgba(102, 126, 234, 0.06);
   }
 
   .icon {
@@ -103,7 +103,7 @@
   }
 
   &.active .icon {
-    background: #0f6b63;
+    background: #667eea;
     color: #fff;
   }
 
@@ -131,7 +131,7 @@
   }
 
   .status-dot.dot-asignado {
-    background: #0f6b63;
+    background: #667eea;
   }
 
   .status-dot.dot-pendiente {
@@ -162,8 +162,8 @@
     width: 38px;
     height: 38px;
     border-radius: 10px;
-    background: rgba(15, 107, 99, 0.14);
-    color: #0f6b63;
+    background: rgba(102, 126, 234, 0.14);
+    color: #667eea;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -194,11 +194,11 @@
 }
 
 // "Asignado" es un estado propio de esta pantalla (póliza ya cargada para el tipo de
-// seguro activo) — usa el mismo acento teal del resto de la pantalla en lugar del verde
+// seguro activo) — usa el mismo acento azul del resto de la pantalla en lugar del verde
 // reservado para el estado de préstamo "Vigente", para no mezclar ambos significados.
 .chip-asignado {
-  background: rgba(15, 107, 99, 0.12);
-  color: #0f6b63;
+  background: rgba(102, 126, 234, 0.12);
+  color: #667eea;
 }
 
 // Verde esmeralda: mismo tono que usa CRD/Préstamos/Consulta para el estado "Vigente".
@@ -219,7 +219,7 @@
   font-size: 12.5px;
   line-height: 1.5;
   color: rgba(0, 0, 0, 0.65);
-  background: rgba(15, 107, 99, 0.06);
+  background: rgba(102, 126, 234, 0.06);
   border-radius: 8px;
   padding: 10px 14px;
   margin: 0 0 16px;
@@ -253,7 +253,7 @@
   }
 
   .value.money {
-    color: #0f6b63;
+    color: #667eea;
   }
 }
 
