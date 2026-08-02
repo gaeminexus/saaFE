@@ -1,0 +1,316 @@
+<div class="jubilar-container">
+
+  <div class="search-header">
+    <div class="header-title">
+      <mat-icon class="header-icon">person_check</mat-icon>
+      <h1>Jubilar Partícipe</h1>
+    </div>
+    <div class="search-box">
+      <mat-form-field appearance="fill" class="search-field">
+        <mat-label>Código Petro</mat-label>
+        <input matInput [(ngModel)]="criterioRolPetro" (keyup.enter)="buscar()" />
+      </mat-form-field>
+      <mat-form-field appearance="fill" class="search-field">
+        <mat-label>Nombre</mat-label>
+        <input matInput [(ngModel)]="criterioNombre" (keyup.enter)="buscar()" />
+      </mat-form-field>
+      <mat-form-field appearance="fill" class="search-field">
+        <mat-label>ID</mat-label>
+        <input matInput [(ngModel)]="criterioIdentificacion" (keyup.enter)="buscar()" />
+      </mat-form-field>
+      <mat-form-field appearance="fill" class="search-field">
+        <mat-label>Estado</mat-label>
+        <mat-select [ngModel]="criterioEstadoSeleccionado()" (ngModelChange)="criterioEstadoSeleccionado.set($event)">
+          <mat-option [value]="null">Todos (Activo / Cesante)</mat-option>
+          @for (e of estadosPermitidos(); track e.codigo) {
+            <mat-option [value]="e.codigo">{{ e.nombre }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+      <button mat-raised-button color="primary" class="search-button" (click)="buscar()" [disabled]="buscando()">
+        @if (buscando()) {
+          <mat-spinner diameter="20"></mat-spinner>
+        } @else {
+          <ng-container><mat-icon>search</mat-icon> Buscar</ng-container>
+        }
+      </button>
+    </div>
+  </div>
+
+  @if (mostrandoResultados()) {
+    <mat-card class="resultados-card">
+      <mat-card-header>
+        <mat-card-title>Resultados de búsqueda</mat-card-title>
+        <mat-card-subtitle>Solo se muestran partícipes en estado Activo o Cesante.</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        @if (resultados().length === 0) {
+          <p class="texto-vacio">No se encontraron coincidencias.</p>
+        } @else {
+          <table mat-table [dataSource]="resultados()" class="tabla-resultados">
+            <ng-container matColumnDef="nombre">
+              <th mat-header-cell *matHeaderCellDef>Nombre</th>
+              <td mat-cell *matCellDef="let e">{{ e.razonSocial }}</td>
+            </ng-container>
+            <ng-container matColumnDef="ci">
+              <th mat-header-cell *matHeaderCellDef>C.I.</th>
+              <td mat-cell *matCellDef="let e">{{ e.numeroIdentificacion }}</td>
+            </ng-container>
+            <ng-container matColumnDef="rolPetro">
+              <th mat-header-cell *matHeaderCellDef>Código Petro</th>
+              <td mat-cell *matCellDef="let e">{{ e.rolPetroComercial }}</td>
+            </ng-container>
+            <tr mat-header-row *matHeaderRowDef="['nombre', 'ci', 'rolPetro']"></tr>
+            <tr mat-row *matRowDef="let row; columns: ['nombre', 'ci', 'rolPetro'];" class="fila-clicable" (click)="seleccionarEntidad(row)"></tr>
+          </table>
+        }
+      </mat-card-content>
+    </mat-card>
+  }
+
+  @if (entidadSeleccionada(); as entidad) {
+    <div class="participante-section">
+
+      <mat-card class="entidad-card">
+        <mat-card-header>
+          <mat-icon mat-card-avatar class="avatar-icon">account_circle</mat-icon>
+          <mat-card-title>{{ entidad.razonSocial }}</mat-card-title>
+          <mat-card-subtitle>C.I. {{ entidad.numeroIdentificacion }} &middot; Código Petro {{ entidad.rolPetroComercial }}</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <button mat-stroked-button (click)="volverABuscar()">
+            <mat-icon>search</mat-icon> Buscar otro partícipe
+          </button>
+        </mat-card-content>
+      </mat-card>
+
+      @if (cargandoDatos()) {
+        <div class="loading-spinner-container">
+          <mat-spinner diameter="48" color="primary"></mat-spinner>
+        </div>
+      } @else {
+
+        <mat-card class="saldo-card">
+          <mat-card-header><mat-card-title>Aportes Jubilación Disponibles</mat-card-title></mat-card-header>
+          <mat-card-content>
+            <div class="saldo-destacado">{{ formatMoneda(saldoDisponibleJubilacion()) }}</div>
+          </mat-card-content>
+        </mat-card>
+
+        @if (prestamosActivos().length > 0) {
+          <mat-card class="cuenta-card">
+            <mat-card-header><mat-card-title>Préstamos Activos</mat-card-title></mat-card-header>
+            <mat-card-content>
+              <div class="asignacion-manual">
+                <mat-form-field appearance="outline" class="monto-prestamos-field">
+                  <mat-label>Monto a destinar al pago de préstamos</mat-label>
+                  <span matTextPrefix>$&nbsp;</span>
+                  <input matInput [(ngModel)]="montoPrestamosTexto" (blur)="onMontoPrestamosBlur()" />
+                </mat-form-field>
+                <div class="asignacion-manual-acciones">
+                  <button mat-stroked-button (click)="usarSaldoCompletoPrestamos()">
+                    {{ saldoInsuficienteParaPrestamos() ? 'Usar todo el saldo disponible' : 'Pagar préstamos completos' }}
+                    ({{ formatMoneda(maxDestinablePrestamos()) }})
+                  </button>
+                  <button mat-stroked-button (click)="noDestinarAPrestamos()">No destinar nada</button>
+                </div>
+                <p class="asignacion-manual-hint">
+                  Por defecto se sugiere el monto necesario para liquidar los préstamos activos. En casos excepcionales, el
+                  operador puede reducirlo para dejar más saldo disponible como retiro efectivo o pensión complementaria,
+                  incluso si los préstamos quedan con saldo pendiente.
+                  @if (saldoInsuficienteParaPrestamos()) {
+                    <br />El saldo de aportes jubilación no alcanza para cubrir el total de los préstamos activos
+                    ({{ formatMoneda(saldoTotalPrestamosActivos()) }}); el máximo destinable es {{ formatMoneda(maxDestinablePrestamos()) }}.
+                  }
+                </p>
+              </div>
+
+              @for (asignacion of asignacionesPrestamos(); track asignacion.prestamo.codigo) {
+                <div class="prestamo-bloque">
+                  <table mat-table [dataSource]="[asignacion]" class="tabla-cuentas">
+                    <ng-container matColumnDef="idAsoprep">
+                      <th mat-header-cell *matHeaderCellDef>Préstamo</th>
+                      <td mat-cell *matCellDef="let a">#{{ a.prestamo.idAsoprep }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="montoOriginal">
+                      <th mat-header-cell *matHeaderCellDef>Monto original</th>
+                      <td mat-cell *matCellDef="let a">{{ formatMoneda(a.prestamo.montoSolicitado) }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="saldoTotal">
+                      <th mat-header-cell *matHeaderCellDef>Saldo total</th>
+                      <td mat-cell *matCellDef="let a">{{ formatMoneda(a.prestamo.saldoTotal) }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="aplicado">
+                      <th mat-header-cell *matHeaderCellDef>Aplicado</th>
+                      <td mat-cell *matCellDef="let a">{{ formatMoneda(a.totalAplicado) }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="saldoRestante">
+                      <th mat-header-cell *matHeaderCellDef>Saldo restante</th>
+                      <td mat-cell *matCellDef="let a" [class.saldo-pendiente]="a.saldoRestante > 0.004">{{ formatMoneda(a.saldoRestante) }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="detalle">
+                      <th mat-header-cell *matHeaderCellDef></th>
+                      <td mat-cell *matCellDef="let a">
+                        <button mat-stroked-button (click)="toggleDetallePrestamo(a.prestamo.codigo)">
+                          Ver historial y cuotas pendientes
+                          <mat-icon [class.chevron-abierto]="detallesAbiertos().has(a.prestamo.codigo)">expand_more</mat-icon>
+                        </button>
+                      </td>
+                    </ng-container>
+                    <tr mat-header-row *matHeaderRowDef="['idAsoprep','montoOriginal','saldoTotal','aplicado','saldoRestante','detalle']"></tr>
+                    <tr mat-row *matRowDef="let row; columns: ['idAsoprep','montoOriginal','saldoTotal','aplicado','saldoRestante','detalle'];"></tr>
+                  </table>
+
+                  @if (detallesAbiertos().has(asignacion.prestamo.codigo)) {
+                    <div class="detalle-panel">
+                      <h3 class="detalle-subtitulo">Historial de pagos (últimos {{ cuotasPagadasDe(asignacion.prestamo.codigo).length }})</h3>
+                      <table class="detalle-table">
+                        <thead>
+                          <tr><th>Cuota</th><th>Vencimiento</th><th>Fecha de pago</th><th>Valor</th><th>Resultado</th></tr>
+                        </thead>
+                        <tbody>
+                          @for (c of cuotasPagadasDe(asignacion.prestamo.codigo); track c.codigo) {
+                            <tr>
+                              <td>{{ c.numeroCuota }}</td>
+                              <td>{{ c.fechaVencimiento | date:'dd/MM/yyyy' }}</td>
+                              <td>{{ c.fechaPagado | date:'dd/MM/yyyy' }}</td>
+                              <td class="num">{{ formatMoneda(c.cuota) }}</td>
+                              <td>
+                                <span class="estado-mini" [class]="esPagoConMora(c) ? 'parcial' : 'cubierta'">
+                                  {{ esPagoConMora(c) ? 'Con mora' : 'A tiempo' }}
+                                </span>
+                              </td>
+                            </tr>
+                          }
+                          @empty {
+                            <tr><td colspan="5" class="texto-vacio">Sin pagos registrados.</td></tr>
+                          }
+                        </tbody>
+                      </table>
+
+                      <h3 class="detalle-subtitulo">Cuotas pendientes y asignación actual</h3>
+                      <table class="detalle-table">
+                        <thead>
+                          <tr><th>Cuota</th><th>Vencimiento</th><th>Valor</th><th>Monto aplicado</th><th>Resultado</th></tr>
+                        </thead>
+                        <tbody>
+                          @for (c of asignacion.cuotas; track c.cuota.codigo) {
+                            <tr>
+                              <td>{{ c.cuota.numeroCuota }}</td>
+                              <td>{{ c.cuota.fechaVencimiento | date:'dd/MM/yyyy' }}</td>
+                              <td class="num">{{ formatMoneda(c.cuota.saldo) }}</td>
+                              <td class="num">{{ c.aplicado > 0 ? formatMoneda(c.aplicado) : '—' }}</td>
+                              <td>
+                                <span class="estado-mini" [class]="c.estado">
+                                  {{ c.estado === 'cubierta' ? 'Cubierta' : c.estado === 'parcial' ? 'Parcial' : 'Pendiente' }}
+                                </span>
+                              </td>
+                            </tr>
+                          }
+                          @empty {
+                            <tr><td colspan="5" class="texto-vacio">No hay cuotas pendientes para este préstamo.</td></tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+                  }
+                </div>
+              }
+
+              @if (faltantePagoCompleto() > 0.005) {
+                <div class="excepcion-panel">
+                  <div class="error-text">
+                    <mat-icon>warning</mat-icon>
+                    <span>Con el monto destinado actualmente ({{ formatMoneda(montoDestinadoPrestamos()) }}), los préstamos activos no quedarán completamente liquidados. Saldo pendiente: {{ formatMoneda(faltantePagoCompleto()) }}.</span>
+                  </div>
+                  <mat-checkbox [checked]="registrarExcepcion()" (change)="registrarExcepcion.set($event.checked)">
+                    Registrar excepción y continuar el proceso de jubilación con préstamos activos pendientes.
+                  </mat-checkbox>
+                </div>
+              }
+            </mat-card-content>
+          </mat-card>
+        } @else {
+          <mat-card class="cuenta-card">
+            <mat-card-header><mat-card-title>Préstamos Activos</mat-card-title></mat-card-header>
+            <mat-card-content>
+              <p class="texto-vacio">El partícipe no tiene préstamos activos.</p>
+            </mat-card-content>
+          </mat-card>
+        }
+
+        <mat-card class="asignacion-card">
+          <mat-card-header><mat-card-title>Asignación del Saldo Remanente</mat-card-title></mat-card-header>
+          <mat-card-content>
+            @if (saldoRemanenteJubilacion() === 0) {
+              <p class="texto-vacio">Sin saldo remanente para asignar: el total de aportes jubilación fue aplicado a los préstamos activos.</p>
+            } @else {
+              <p class="saldo-remanente-info">Saldo remanente a asignar: <b>{{ formatMoneda(saldoRemanenteJubilacion()) }}</b></p>
+              <div class="field-grid">
+                <mat-form-field appearance="outline">
+                  <mat-label>Retiro efectivo</mat-label>
+                  <span matTextPrefix>$&nbsp;</span>
+                  <input matInput [(ngModel)]="montoRetiroEfectivoTexto" (blur)="onMontoAllocationBlur('retiro')" />
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Pensión complementaria (mensual)</mat-label>
+                  <span matTextPrefix>$&nbsp;</span>
+                  <input matInput [(ngModel)]="montoPensionTexto" (blur)="onMontoAllocationBlur('pension')" />
+                </mat-form-field>
+                @if (parseMoneda(montoPensionTexto()) > 0) {
+                  <mat-form-field appearance="outline" class="full">
+                    <mat-label>Número de cuotas (opcional)</mat-label>
+                    <input matInput [(ngModel)]="numeroCuotasPensionTexto" />
+                  </mat-form-field>
+                }
+              </div>
+              <div class="allocation-live"
+                   [class.ok]="completamenteAsignadoAllocation() && asignadoAllocation() > 0"
+                   [class.over]="restanteAllocation() < -0.004"
+                   [class.under]="restanteAllocation() > 0.004">
+                Asignado: <b>{{ formatMoneda(asignadoAllocation()) }}</b> de {{ formatMoneda(saldoRemanenteJubilacion()) }}
+                &middot; Restante: <b>{{ formatMoneda(restanteAllocation() < 0 ? -restanteAllocation() : restanteAllocation()) }}{{ restanteAllocation() < -0.004 ? ' (excedido)' : '' }}</b>
+              </div>
+            }
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="confirmacion-card">
+          <mat-card-header><mat-card-title>Confirmar Jubilación</mat-card-title></mat-card-header>
+
+          @if (!jubilacionRegistrada()) {
+            <mat-card-content>
+              <div class="confirm-actions">
+                @if (!completamenteAsignadoAllocation() && saldoRemanenteJubilacion() > 0) {
+                  <div class="allocation-note">
+                    @if (restanteAllocation() > 0.004) {
+                      Falta asignar {{ formatMoneda(restanteAllocation()) }} del saldo remanente antes de poder jubilar.
+                    } @else {
+                      Se ha asignado {{ formatMoneda(-restanteAllocation()) }} de más — ajusta los montos antes de continuar.
+                    }
+                  </div>
+                }
+                <button mat-raised-button color="accent" [disabled]="!puedeJubilar()" (click)="confirmarJubilacion()">
+                  @if (registrando()) {
+                    <mat-spinner diameter="18"></mat-spinner>
+                  } @else {
+                    <ng-container><mat-icon>check_circle</mat-icon> Jubilar Partícipe</ng-container>
+                  }
+                </button>
+              </div>
+            </mat-card-content>
+          } @else {
+            <mat-card-content class="success-view">
+              <mat-icon class="check-icon">check_circle</mat-icon>
+              <h3>Partícipe jubilado</h3>
+              <p>El proceso de jubilación se registró correctamente.</p>
+              <button mat-stroked-button (click)="cerrarConfirmacion()">Jubilar otro partícipe</button>
+            </mat-card-content>
+          }
+        </mat-card>
+
+      }
+    </div>
+  }
+
+</div>

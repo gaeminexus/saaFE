@@ -88,7 +88,19 @@ export class MenucreditosComponent {
         {
           displayName: 'Jubilados',
           iconName: 'elderly',
-          route: '/menucreditos/jubilados',
+          route: '/menucreditos/parametrizacion',
+          children: [
+            {
+              displayName: 'Jubilar Participe',
+              iconName: 'person_check',
+              route: '/menucreditos/jubilar-participe',
+            },
+            {
+              displayName: 'Pago Jubilados',
+              iconName: 'payments',
+              route: '/menucreditos/jubilados',
+            },
+          ],
         },
       ],
     },
@@ -143,6 +155,11 @@ export class MenucreditosComponent {
           displayName: 'Repote Valores Insolutos',
           iconName: 'request_quote',
           route: '/menucreditos/repote-valores-insolutos',
+        },
+        {
+          displayName: 'Asignación de Seguros',
+          iconName: 'verified_user',
+          route: '/menucreditos/asignacion-seguros',
         },
       ],
     },

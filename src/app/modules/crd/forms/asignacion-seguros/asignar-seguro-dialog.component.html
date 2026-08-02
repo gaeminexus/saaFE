@@ -1,0 +1,146 @@
+<div class="seguro-dialog">
+  <div class="dialog-header">
+    <div class="header-icon">
+      <mat-icon>verified_user</mat-icon>
+    </div>
+    <div class="header-content">
+      <h2 mat-dialog-title>Asignar Seguro de {{ data.tipoLabel }}</h2>
+      <p class="subtitle">Aplica al total de préstamos vigentes elegibles, no a un préstamo individual.</p>
+    </div>
+  </div>
+
+  <div class="prestamo-info">
+    <div class="info-row">
+      <span class="label">Préstamos cubiertos:</span>
+      <span class="value">{{ data.cantidadPrestamos }}</span>
+    </div>
+    <div class="info-row">
+      <span class="label">Monto total asegurado:</span>
+      <span class="value saldo">{{ data.montoTotal | currency : 'USD' : 'symbol' : '1.2-2' }}</span>
+    </div>
+  </div>
+
+  <form [formGroup]="seguroForm" (ngSubmit)="onSubmit()">
+    <mat-dialog-content class="dialog-content">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Nombre (aseguradora)</mat-label>
+        <input matInput formControlName="aseguradora" required placeholder="Ej. Seguros Equinoccial" />
+        <mat-icon matPrefix>domain</mat-icon>
+        @if (seguroForm.get('aseguradora')?.invalid && seguroForm.get('aseguradora')?.touched) {
+        <mat-error>La aseguradora es obligatoria</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Broker</mat-label>
+        <input matInput formControlName="broker" required placeholder="Ej. Coeval Cía. de Seguros" />
+        <mat-icon matPrefix>handshake</mat-icon>
+        @if (seguroForm.get('broker')?.invalid && seguroForm.get('broker')?.touched) {
+        <mat-error>El broker es obligatorio</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Número de póliza</mat-label>
+        <input matInput formControlName="numeroPoliza" required placeholder="Ej. POL-2026-00981" />
+        <mat-icon matPrefix>description</mat-icon>
+        @if (seguroForm.get('numeroPoliza')?.invalid && seguroForm.get('numeroPoliza')?.touched) {
+        <mat-error>El número de póliza es obligatorio</mat-error>
+        }
+      </mat-form-field>
+
+      <div class="form-row">
+        <mat-form-field appearance="outline" class="half-width">
+          <mat-label>Fecha inicio de póliza</mat-label>
+          <input matInput [matDatepicker]="pickerInicio" formControlName="fechaInicioPoliza" required />
+          <mat-datepicker-toggle matSuffix [for]="pickerInicio"></mat-datepicker-toggle>
+          <mat-datepicker #pickerInicio></mat-datepicker>
+          @if (seguroForm.get('fechaInicioPoliza')?.invalid && seguroForm.get('fechaInicioPoliza')?.touched) {
+          <mat-error>Requerida</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="half-width">
+          <mat-label>Fecha fin de póliza</mat-label>
+          <input matInput [matDatepicker]="pickerFin" formControlName="fechaFinPoliza" required />
+          <mat-datepicker-toggle matSuffix [for]="pickerFin"></mat-datepicker-toggle>
+          <mat-datepicker #pickerFin></mat-datepicker>
+          @if (seguroForm.get('fechaFinPoliza')?.invalid && seguroForm.get('fechaFinPoliza')?.touched) {
+          <mat-error>Requerida</mat-error>
+          }
+        </mat-form-field>
+      </div>
+
+      @if (fechasInvalidas) {
+      <p class="fechas-error">
+        <mat-icon>error_outline</mat-icon>
+        La fecha fin debe ser posterior a la fecha inicio.
+      </p>
+      }
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Plazo póliza (meses)</mat-label>
+        <input matInput type="number" formControlName="plazoPolizaMeses" required min="1" />
+        <mat-icon matPrefix>event_repeat</mat-icon>
+        <mat-hint>Calculado a partir de las fechas; puede ajustarlo manualmente.</mat-hint>
+        @if (seguroForm.get('plazoPolizaMeses')?.invalid && seguroForm.get('plazoPolizaMeses')?.touched) {
+        <mat-error>El plazo es obligatorio</mat-error>
+        }
+      </mat-form-field>
+
+      <p class="adjunto-label">Documento de respaldo</p>
+
+      @if (!archivoSeleccionado) {
+      <div
+        class="upload-zone"
+        [class.dragover]="arrastrandoArchivo"
+        (click)="archivoInput.click()"
+        (dragover)="onArchivoDragOver($event)"
+        (dragleave)="onArchivoDragLeave()"
+        (drop)="onArchivoDrop($event)"
+      >
+        <mat-icon>upload_file</mat-icon>
+        <div class="copy">
+          <span class="main">Adjuntar póliza escaneada</span>
+          <span class="sub">Imagen (JPG, PNG) o PDF — máx. 10 MB</span>
+        </div>
+      </div>
+      <input
+        #archivoInput
+        type="file"
+        accept=".pdf,.jpg,.jpeg,.png"
+        style="display:none"
+        (change)="onArchivoSeleccionado($event)"
+      />
+      } @else {
+      <div class="file-chip">
+        <mat-icon class="file-icon">check_circle</mat-icon>
+        <div class="file-meta">
+          <span class="file-name">{{ archivoSeleccionado.name }}</span>
+          <span class="file-size">{{ formatoTamano(archivoSeleccionado.size) }}</span>
+        </div>
+        <button mat-icon-button type="button" (click)="quitarArchivo()" aria-label="Quitar archivo adjunto">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+      }
+    </mat-dialog-content>
+
+    <mat-dialog-actions align="end" class="dialog-actions">
+      <button mat-button type="button" (click)="onCancel()" [disabled]="loading">
+        <mat-icon>close</mat-icon>
+        Cancelar
+      </button>
+      <button mat-raised-button color="accent" type="submit" [disabled]="seguroForm.invalid || fechasInvalidas || loading">
+        @if (loading) {
+        <span>Procesando...</span>
+        } @else {
+        <ng-container>
+          <mat-icon>check_circle</mat-icon>
+          <span>Asignar Seguro</span>
+        </ng-container>
+        }
+      </button>
+    </mat-dialog-actions>
+  </form>
+</div>

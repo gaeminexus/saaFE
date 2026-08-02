@@ -126,6 +126,7 @@ import { EntidadConsultaComponent } from './modules/crd/forms/entidad-participe/
 import { EntidadEditComponent } from './modules/crd/forms/entidad-participe/entidad-edit/entidad-edit.component';
 import { EntidadParticipeInfoComponent } from './modules/crd/forms/entidad-participe/entidad-participe-info/entidad-participe-info.component';
 import { ProcesoPagoJubiladosComponent } from './modules/crd/forms/entidad-participe/jubilados/proceso-pago-jubilados/proceso-pago-jubilados.component';
+import { JubilarParticipeComponent } from './modules/crd/forms/entidad-participe/jubilados/jubilar-participe/jubilar-participe.component';
 import { NavegacionCascadaComponent } from './modules/crd/forms/entidad-participe/navegacion-cascada/navegacion-cascada.component';
 import { ConsolidadoComponent } from './modules/crd/forms/entidad-participe/consolidado/consolidado.component';
 import { ParticipeDashComponent } from './modules/crd/forms/entidad-participe/participe-dash/participe-dash.component';
@@ -138,6 +139,7 @@ import { EstadosCrdComponent } from './modules/crd/forms/parametrizacion/estados
 import { InformacionGeneralFondoComponent } from './modules/crd/forms/parametrizacion/informacion-general-fondo/informacion-general-fondo.component';
 import { ListadosCrdComponent } from './modules/crd/forms/parametrizacion/listados-crd/listados-crd.component';
 import { TiposCrdComponent } from './modules/crd/forms/parametrizacion/tipos-crd/tipos-crd.component';
+import { AsignacionSegurosComponent } from './modules/crd/forms/asignacion-seguros/asignacion-seguros.component';
 import { CuotaConsultaComponent } from './modules/crd/forms/prestamo/cuota-consulta/cuota-consulta.component';
 import { PrestamoConsultaComponent } from './modules/crd/forms/prestamo/prestamo-consulta/prestamo-consulta.component';
 import { PrestamoDashComponent } from './modules/crd/forms/prestamo/prestamo-dash/prestamo-dash.component';
@@ -991,6 +993,7 @@ export const routes: Routes = [
       { path: 'participe-dash', component: ParticipeDashComponent },
       { path: 'consolidado', component: ConsolidadoComponent },
       { path: 'jubilados', component: ProcesoPagoJubiladosComponent },
+      { path: 'jubilar-participe', component: JubilarParticipeComponent },
       { path: 'participe-info', component: ParticipeInfoComponent },
       { path: 'cruce-valores', component: CruceValoresComponent },
       { path: 'pago-cuotas', component: PagoCuotasComponent },
@@ -1119,6 +1122,11 @@ export const routes: Routes = [
       {
         path: 'prestamo-dash',
         component: PrestamoDashComponent,
+        canActivate: [authGuard],
+      },
+      {
+        path: 'asignacion-seguros',
+        component: AsignacionSegurosComponent,
         canActivate: [authGuard],
       },
       {

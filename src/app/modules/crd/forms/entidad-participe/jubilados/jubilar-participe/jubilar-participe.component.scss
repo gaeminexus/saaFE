@@ -1,0 +1,240 @@
+.jubilar-container {
+  padding: 24px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  min-height: 100%;
+}
+
+.search-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  color: #fff;
+  margin-bottom: 1.5rem;
+
+  .header-title {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.9rem;
+
+    h1 { font-size: 1.8rem; font-weight: 600; margin: 0; }
+    .header-icon { font-size: 30px; width: 30px; height: 30px; }
+  }
+
+  .search-box {
+    display: flex;
+    gap: 0.85rem;
+    align-items: flex-start;
+    flex-wrap: wrap;
+
+    .search-field {
+      flex: 1;
+      min-width: 200px;
+      ::ng-deep .mat-mdc-text-field-wrapper { background: #fff; border-radius: 0.5rem; }
+    }
+
+    .search-button {
+      height: 56px;
+      margin-top: 4px;
+    }
+  }
+}
+
+mat-card {
+  border-radius: 12px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1) !important;
+  margin-bottom: 1.5rem !important;
+}
+
+.resultados-card, .entidad-card, .saldo-card, .cuenta-card, .asignacion-card, .confirmacion-card {
+  mat-card-header {
+    border-bottom: 3px solid #667eea;
+    background: linear-gradient(90deg, #f7fafc 0%, #edf2f7 100%);
+    padding: 18px 22px;
+    margin: -16px -16px 16px -16px;
+  }
+}
+
+.texto-vacio {
+  color: #718096;
+  font-style: italic;
+  font-size: 0.86rem;
+}
+
+.fila-clicable {
+  cursor: pointer;
+  &:hover { background: rgba(102, 126, 234, 0.08); }
+}
+
+table.tabla-resultados, table.tabla-cuentas {
+  width: 100%;
+
+  th { background: #667eea; color: #fff; font-weight: 600; text-transform: uppercase; font-size: 12px; letter-spacing: 0.03em; }
+  td { font-size: 14px; }
+}
+
+.saldo-destacado {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #0d7a4f;
+  font-variant-numeric: tabular-nums;
+}
+
+.asignacion-manual {
+  margin-bottom: 1.25rem;
+  padding: 1rem 1.1rem;
+  background: #f7fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+
+  .monto-prestamos-field { max-width: 320px; display: block; }
+}
+
+.asignacion-manual-acciones {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin: 0.4rem 0 0.65rem;
+}
+
+.asignacion-manual-hint {
+  font-size: 0.78rem;
+  color: #718096;
+  margin: 0;
+  line-height: 1.45;
+}
+
+.prestamo-bloque {
+  margin-bottom: 1.25rem;
+
+  &:last-of-type { margin-bottom: 0; }
+}
+
+.saldo-pendiente { color: #dc2626; font-weight: 600; }
+
+.chevron-abierto { transform: rotate(180deg); }
+
+.detalle-panel {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #fbfbfe;
+  border-radius: 8px;
+}
+
+.detalle-subtitulo {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #718096;
+  margin: 1rem 0 0.5rem;
+
+  &:first-child { margin-top: 0; }
+}
+
+table.detalle-table {
+  width: 100%;
+  border-collapse: collapse;
+
+  th {
+    background: #edf2f7;
+    color: #2d3748;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    padding: 8px 10px;
+    text-align: left;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  td { padding: 9px 10px; border-bottom: 1px solid #e2e8f0; font-size: 13px; }
+}
+
+.estado-mini {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  padding: 0.2rem 0.55rem;
+  border-radius: 10px;
+
+  &.cubierta { background: #e3f9ec; color: #0d7a4f; }
+  &.parcial { background: #fff6e0; color: #92600d; }
+  &.pendiente { background: #edf2f7; color: #718096; }
+}
+
+.excepcion-panel {
+  margin-top: 1.25rem;
+  padding: 1rem 1.15rem;
+  background: #fff8f0;
+  border: 1px solid #fcd9a8;
+  border-radius: 8px;
+
+  mat-checkbox { margin-top: 0.6rem; font-size: 0.85rem; }
+}
+
+.error-text {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #92600d;
+  font-size: 0.85rem;
+  font-weight: 500;
+
+  mat-icon { font-size: 20px; width: 20px; height: 20px; flex-shrink: 0; }
+}
+
+.saldo-remanente-info {
+  font-size: 0.95rem;
+  color: #2d3748;
+  margin: 0 0 1rem;
+
+  b { color: #667eea; font-variant-numeric: tabular-nums; }
+}
+
+.field-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem 0.9rem;
+  margin-bottom: 1rem;
+
+  .full { grid-column: 1 / -1; }
+}
+
+.allocation-live {
+  font-size: 0.9rem;
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  background: #f7fafc;
+  color: #2d3748;
+  font-variant-numeric: tabular-nums;
+
+  &.ok { background: #e3f9ec; color: #0d7a4f; }
+  &.over { background: #fef2f2; color: #dc2626; }
+  &.under { background: #fff6e0; color: #92600d; }
+}
+
+.confirm-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.6rem;
+}
+
+.allocation-note { font-size: 0.78rem; color: #92600d; }
+
+.success-view {
+  text-align: center;
+  padding: 1rem 0.5rem 1.5rem;
+
+  .check-icon { font-size: 56px; width: 56px; height: 56px; color: #0d7a4f; }
+  h3 { font-size: 1.1rem; font-weight: 600; margin: 0.5rem 0 0.3rem; }
+  p { font-size: 0.88rem; color: #718096; margin: 0 0 1.2rem; }
+}
+
+.loading-spinner-container {
+  display: flex;
+  justify-content: center;
+  padding: 2rem 0;
+}
