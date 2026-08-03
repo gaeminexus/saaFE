@@ -9,19 +9,16 @@ export interface AnticipoRequest {
   idCuentaBancaria: number;
   idEmpresa: number;
   idUsuario: number;
-  fechaAnticipo: string;   // 'YYYY-MM-DD'
+  fechaAnticipo: string;
   numeroDoc: string;
   observacion: string;
 }
 
 export interface AnticipoResponse {
-  // El backend puede devolver cualquier estructura; se acepta como any
   [key: string]: any;
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Injectable({ providedIn: 'root' })
 export class AnticipoService {
   private httpOptions = {
     headers: new HttpHeaders({ 'Content-Type': 'application/json' }),
@@ -29,24 +26,31 @@ export class AnticipoService {
 
   constructor(private http: HttpClient) {}
 
-  /** POST /antc/procesar — Anticipo de Cliente */
   procesarCliente(payload: AnticipoRequest): Observable<AnticipoResponse> {
-    const url = `${ServiciosTsr.RS_ANTC}/procesar`;
-    return this.http.post<AnticipoResponse>(url, payload, this.httpOptions).pipe(
+    return this.http.post<AnticipoResponse>(`${ServiciosTsr.RS_ANTC}/procesar`, payload, this.httpOptions).pipe(
       catchError(this.handleError)
     );
   }
 
-  /** POST /antp/procesar — Anticipo de Proveedor */
   procesarProveedor(payload: AnticipoRequest): Observable<AnticipoResponse> {
-    const url = `${ServiciosTsr.RS_ANTP}/procesar`;
-    return this.http.post<AnticipoResponse>(url, payload, this.httpOptions).pipe(
+    return this.http.post<AnticipoResponse>(`${ServiciosTsr.RS_ANTP}/procesar`, payload, this.httpOptions).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  selectByCriteriaCliente(datos: any[]): Observable<AnticipoResponse[] | null> {
+    return this.http.post<AnticipoResponse[]>(`${ServiciosTsr.RS_ANTC}/selectByCriteria/`, datos, this.httpOptions).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  selectByCriteriaProveedor(datos: any[]): Observable<AnticipoResponse[] | null> {
+    return this.http.post<AnticipoResponse[]>(`${ServiciosTsr.RS_ANTP}/selectByCriteria/`, datos, this.httpOptions).pipe(
       catchError(this.handleError)
     );
   }
 
   private handleError(error: HttpErrorResponse): Observable<never> {
-    // Extraer mensaje de error del cuerpo si existe
     let mensaje = 'Error al procesar el anticipo';
     if (error.error) {
       if (typeof error.error === 'string') {
@@ -60,3 +64,4 @@ export class AnticipoService {
     return throwError(() => new Error(mensaje));
   }
 }
+

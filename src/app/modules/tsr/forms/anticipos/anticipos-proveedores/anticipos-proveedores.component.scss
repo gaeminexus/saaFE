@@ -1,7 +1,13 @@
-﻿.anticipos-wrap { padding: 16px; }
+﻿.anticipos-wrap {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
 
 .page-card {
   max-width: 700px;
+  width: 100%;
 
   mat-card-title {
     display: flex;
@@ -88,7 +94,14 @@
 // ─── Formulario de anticipo ──────────────────────────────────
 .form-anticipo-card {
   max-width: 700px;
+  width: 100%;
   margin-top: 16px;
+
+  .print-wrap {
+    margin-top: 12px;
+
+    button { display: flex; align-items: center; gap: 6px; }
+  }
 
   mat-card-title {
     display: flex;
@@ -129,4 +142,9 @@
   border-radius: 4px;
   color: #1b5e20;
   font-size: 0.88rem;
+}
+
+.tabla-lista-scroll {
+  overflow-x: auto;
+  margin-top: 8px;
 }

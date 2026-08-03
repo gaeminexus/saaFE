@@ -14,6 +14,9 @@ import { PersonaCuentaContableService } from '../../../service/persona-cuenta-co
 import { PersonaRolService } from '../../../service/persona-rol.service';
 import { CuentaBancariaService } from '../../../service/cuenta-bancaria.service';
 import { AnticipoService } from '../../../service/anticipo.service';
+import { JasperReportesService } from '../../../../../shared/services/jasper-reportes.service';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 
 @Component({
   selector: 'app-anticipos-clientes',
@@ -28,6 +31,9 @@ export class AnticiposClientesComponent {
   private cuentaContableS = inject(PersonaCuentaContableService);
   private cuentaBancariaS = inject(CuentaBancariaService);
   private anticipoS = inject(AnticipoService);
+  private jasperReportes = inject(JasperReportesService);
+  private snackBar = inject(MatSnackBar);
+  private funcionesDatos = inject(FuncionesDatosService);
 
   private readonly ROL_CLIENTE = 1;
   private readonly RUBRO_ROL_P = 55;
@@ -40,9 +46,16 @@ export class AnticiposClientesComponent {
   // Formulario de nuevo anticipo
   mostrarFormulario = signal(false);
   procesando = signal(false);
+  imprimiendo = signal(false);
+  ultimoAnticipoId = signal<number | null>(null);
   errorProceso = signal<string>('');
   exitoProceso = signal<string>('');
   cuentasBancarias = signal<CuentaBancaria[]>([]);
+
+  // Lista de anticipos
+  listaAnticipos = signal<any[]>([]);
+  cargandoLista = signal(false);
+  mostrandoLista = signal(false);
 
   formValor = '';
   formCuentaBancaria: CuentaBancaria | null = null;
@@ -146,6 +159,8 @@ export class AnticiposClientesComponent {
   limpiar(): void {
     this.titularSeleccionado.set(null);
     this.saldoAnticipos.set(0);
+    this.listaAnticipos.set([]);
+    this.mostrandoLista.set(false);
     this.cerrarFormulario();
   }
 
@@ -165,6 +180,42 @@ export class AnticiposClientesComponent {
     this.mostrarFormulario.set(false);
     this.errorProceso.set('');
     this.exitoProceso.set('');
+    this.ultimoAnticipoId.set(null);
+  }
+
+  verAnticipos(mostrar = true): void {
+    const titular = this.titularSeleccionado();
+    if (!titular) return;
+    this.cargandoLista.set(true);
+    if (mostrar) this.mostrandoLista.set(true);
+
+    const dbTitular = new DatosBusqueda();
+    dbTitular.asignaValorConCampoPadre(
+      TipoDatos.LONG, 'titular', 'codigo',
+      titular.codigo.toString(), TipoComandosBusqueda.IGUAL
+    );
+    dbTitular.setNumeroCampoRepetido(0);
+
+    const dbOrden = new DatosBusqueda();
+    dbOrden.orderBy('id');
+    dbOrden.setTipoOrden(DatosBusqueda.ORDER_DESC);
+
+    this.anticipoS.selectByCriteriaCliente([dbTitular, dbOrden]).subscribe({
+      next: (data) => {
+        this.listaAnticipos.set(data ?? []);
+        this.cargandoLista.set(false);
+        // Si aún no tenemos el ID, tomar el más reciente de la lista
+        if (!this.ultimoAnticipoId() && (data ?? []).length > 0) {
+          const primero = (data as any[])[0];
+          const id = primero?.['id'] ?? primero?.['antcCodigo'] ?? null;
+          if (id) this.ultimoAnticipoId.set(Number(id));
+        }
+      },
+      error: () => {
+        this.cargandoLista.set(false);
+        this.snackBar.open('No se pudo cargar el historial de anticipos.', 'Cerrar', { duration: 4000 });
+      },
+    });
   }
 
   private cargarCuentasBancarias(): void {
@@ -188,7 +239,7 @@ export class AnticiposClientesComponent {
       this.errorProceso.set('Complete todos los campos obligatorios.');
       return;
     }
-    const valor = parseFloat(this.formValor.replace(/,/g, ''));
+    const valor = parseFloat(String(this.formValor));
     if (isNaN(valor) || valor <= 0) {
       this.errorProceso.set('El valor debe ser un número mayor a cero.');
       return;
@@ -216,17 +267,65 @@ export class AnticiposClientesComponent {
     this.exitoProceso.set('');
 
     this.anticipoS.procesarCliente(payload).subscribe({
-      next: () => {
+      next: (resp) => {
+        console.log('[AnticipoCliente] Respuesta del backend:', resp);
+        const id = resp?.['id'] ?? resp?.['codigo'] ?? resp?.['antcCodigo'] ?? resp?.['idAnticipo'] ?? null;
         this.exitoProceso.set('Anticipo registrado correctamente.');
         this.procesando.set(false);
-        // Recargar saldo
         this.cargarSaldo(titular);
-        setTimeout(() => this.cerrarFormulario(), 2000);
+        // Cargar lista para obtener el ID del anticipo recién creado
+        this.verAnticipos(false);
+        if (id) this.ultimoAnticipoId.set(Number(id));
       },
       error: (err: Error) => {
         this.errorProceso.set(err.message);
         this.procesando.set(false);
       },
     });
+  }
+
+  imprimirAnticipo(): void {
+    let id = this.ultimoAnticipoId();
+    if (!id && this.listaAnticipos().length > 0) {
+      const primero = this.listaAnticipos()[0] as any;
+      const raw = primero?.['id'] ?? primero?.['antcCodigo'] ?? null;
+      if (raw) id = Number(raw);
+    }
+    if (!id) {
+      this.snackBar.open('No hay anticipo para imprimir.', 'Cerrar', { duration: 3000 });
+      return;
+    }
+    this.imprimiendo.set(true);
+    this.snackBar.open('Generando comprobante...', '', { duration: 2000 });
+
+    const parametros = {
+      P_ANTICIPO_ID: id,
+      P_REPORTE: 'COMPROBANTE DE RECEPCIÓN DE ANTICIPO - CLIENTE',
+      P_PATH: 'Tesorería > Anticipos > Cliente',
+      P_IMAGEN: null,
+    };
+
+    this.jasperReportes.generar('tsr', 'RPRT_ANTC_CLNT', parametros, 'PDF').subscribe({
+      next: (blob) => {
+        this.imprimiendo.set(false);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `anticipo-cliente-${id}.pdf`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+        this.snackBar.open('✅ Comprobante generado exitosamente', 'Cerrar', { duration: 3000 });
+      },
+      error: () => {
+        this.imprimiendo.set(false);
+        this.snackBar.open('❌ No se pudo generar el comprobante', 'Cerrar', { duration: 4000 });
+      },
+    });
+  }
+
+  formatearFecha(fecha: any): string {
+    const d = this.funcionesDatos.convertirFechaDesdeBackend(fecha);
+    if (!d) return '—';
+    return d.toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' });
   }
 }

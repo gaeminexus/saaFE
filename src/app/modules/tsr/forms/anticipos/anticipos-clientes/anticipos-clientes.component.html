@@ -55,7 +55,8 @@
           <mat-icon>add</mat-icon>
           Nuevo Anticipo
         </button>
-        <button mat-stroked-button color="primary">
+        <button mat-stroked-button color="primary" (click)="verAnticipos()" [disabled]="cargandoLista()">
+          @if (cargandoLista()) { <mat-spinner diameter="16" style="display:inline-block;margin-right:6px"></mat-spinner> }
           <mat-icon>history</mat-icon>
           Ver Anticipos
         </button>
@@ -115,10 +116,19 @@
         @if (exitoProceso()) {
           <div class="msg-exito">{{ exitoProceso() }}</div>
         }
+        @if (ultimoAnticipoId() || exitoProceso()) {
+          <div class="print-wrap">
+            <button mat-flat-button color="accent" (click)="imprimirAnticipo()" [disabled]="imprimiendo()">
+              @if (imprimiendo()) { <mat-spinner diameter="18" style="display:inline-block;margin-right:6px"></mat-spinner> }
+              <mat-icon>print</mat-icon>
+              Imprimir Comprobante
+            </button>
+          </div>
+        }
       </mat-card-content>
 
       <mat-card-actions class="card-acciones">
-        <button mat-flat-button color="primary" (click)="procesarAnticipo()" [disabled]="procesando()">
+        <button mat-flat-button color="primary" (click)="procesarAnticipo()" [disabled]="procesando() || !!exitoProceso()">
           @if (procesando()) { <mat-spinner diameter="18" style="display:inline-block;margin-right:6px"></mat-spinner> }
           <mat-icon>save</mat-icon>
           Guardar Anticipo
@@ -131,3 +141,56 @@
     </mat-card>
   }
 </div>
+
+<!-- Lista de anticipos -->
+@if (mostrandoLista()) {
+  <div class="anticipos-wrap">
+    <mat-card class="page-card" style="width:100%">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>history</mat-icon>
+          Historial de Anticipos — {{ titularSeleccionado()?.razonSocial || titularSeleccionado()?.nombre }}
+        </mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        @if (cargandoLista()) {
+          <div style="text-align:center;padding:16px"><mat-spinner diameter="32"></mat-spinner></div>
+        } @else if (listaAnticipos().length === 0) {
+          <p style="color:#666;padding:8px 0">No se encontraron anticipos registrados.</p>
+        } @else {
+          <div class="tabla-lista-scroll">
+            <table mat-table [dataSource]="listaAnticipos()" class="mat-elevation-z1" style="width:100%">
+              <ng-container matColumnDef="fecha">
+                <th mat-header-cell *matHeaderCellDef>Fecha</th>
+                <td mat-cell *matCellDef="let a">{{ formatearFecha(a.fechaAnticipo ?? a.fecha) }}</td>
+              </ng-container>
+              <ng-container matColumnDef="valor">
+                <th mat-header-cell *matHeaderCellDef>Valor</th>
+                <td mat-cell *matCellDef="let a">\${{ a.valor | number:'1.2-2' }}</td>
+              </ng-container>
+              <ng-container matColumnDef="doc">
+                <th mat-header-cell *matHeaderCellDef>N° Documento</th>
+                <td mat-cell *matCellDef="let a">{{ a.numeroDoc || a.numeroDcmnto || '—' }}</td>
+              </ng-container>
+              <ng-container matColumnDef="observacion">
+                <th mat-header-cell *matHeaderCellDef>Observación</th>
+                <td mat-cell *matCellDef="let a">{{ a.observacion || '—' }}</td>
+              </ng-container>
+              <ng-container matColumnDef="acciones">
+                <th mat-header-cell *matHeaderCellDef></th>
+                <td mat-cell *matCellDef="let a">
+                  <button mat-icon-button color="primary" matTooltip="Imprimir comprobante"
+                          (click)="ultimoAnticipoId.set(a.id); imprimirAnticipo()">
+                    <mat-icon>print</mat-icon>
+                  </button>
+                </td>
+              </ng-container>
+              <tr mat-header-row *matHeaderRowDef="['fecha','valor','doc','observacion','acciones']"></tr>
+              <tr mat-row *matRowDef="let row; columns: ['fecha','valor','doc','observacion','acciones']"></tr>
+            </table>
+          </div>
+        }
+      </mat-card-content>
+    </mat-card>
+  </div>
+}

@@ -281,12 +281,24 @@ export class CobrosPersonalesComponent implements OnDestroy {
     this.aportesJubilacion.set([]);
     this.historico.set(null);
 
+    // Criterios para préstamo: entidad + estado VIGENTE (=2) + orden por código DESC
     const criterioEntidad = new DatosBusqueda();
     criterioEntidad.asignaValorConCampoPadre(TipoDatosBusqueda.LONG, 'entidad', 'codigo', String(entidad.codigo), TipoComandosBusqueda.IGUAL);
 
-    this.prestamoService.selectByCriteria([criterioEntidad]).subscribe({
+    const criterioEstadoVigente = new DatosBusqueda();
+    criterioEstadoVigente.asignaUnCampoSinTrunc(
+      TipoDatosBusqueda.LONG, 'estadoPrestamo',
+      String(ESTADO_PRESTAMO_VIGENTE), TipoComandosBusqueda.IGUAL
+    );
+
+    const criterioOrdenPrestamo = new DatosBusqueda();
+    criterioOrdenPrestamo.orderBy('codigo');
+    criterioOrdenPrestamo.setTipoOrden(DatosBusqueda.ORDER_DESC);
+
+    this.prestamoService.selectByCriteria([criterioEntidad, criterioEstadoVigente, criterioOrdenPrestamo]).subscribe({
       next: (prestamos) => {
-        const vigente = (prestamos ?? []).find((p) => this.esPrestamoVigente(p)) ?? null;
+        // El backend ya filtra vigentes; tomamos el primero (más reciente por código DESC)
+        const vigente = (prestamos ?? [])[0] ?? null;
         this.prestamoVigente.set(vigente);
         if (vigente) this.cargarCuotasPendientes(vigente);
       },
@@ -325,24 +337,27 @@ export class CobrosPersonalesComponent implements OnDestroy {
   }
 
   private cargarCuotasPendientes(prestamo: Prestamo): void {
+    // Filtrar cuotas con saldo > 0 y ordenar por numeroCuota ASC directamente en el backend
     const criterioPrestamo = new DatosBusqueda();
     criterioPrestamo.asignaValorConCampoPadre(TipoDatosBusqueda.LONG, 'prestamo', 'codigo', String(prestamo.codigo), TipoComandosBusqueda.IGUAL);
 
-    this.detallePrestamoService.selectByCriteria([criterioPrestamo]).subscribe({
+    const criterioSaldo = new DatosBusqueda();
+    criterioSaldo.asignaUnCampoSinTrunc(
+      TipoDatosBusqueda.DOUBLE, 'saldo', '0', TipoComandosBusqueda.MAYOR
+    );
+
+    const criterioOrdenCuota = new DatosBusqueda();
+    criterioOrdenCuota.orderBy('numeroCuota');
+    criterioOrdenCuota.setTipoOrden(DatosBusqueda.ORDER_ASC);
+
+    this.detallePrestamoService.selectByCriteria([criterioPrestamo, criterioSaldo, criterioOrdenCuota]).subscribe({
       next: (cuotas) => {
-        const pendientes = (cuotas ?? [])
-          .filter((c) => (c.saldo ?? 0) > 0.004)
-          .sort((a, b) => (a.numeroCuota ?? 0) - (b.numeroCuota ?? 0));
+        // Doble-verificación en frontend por redondeo (saldo puede ser 0.001 etc.)
+        const pendientes = (cuotas ?? []).filter((c) => (c.saldo ?? 0) > 0.004);
         this.cuotasPendientes.set(pendientes);
       },
       error: () => this.snackBar.open('No se pudo cargar el detalle de cuotas del préstamo.', 'Cerrar', { duration: 4000 }),
     });
-  }
-
-  private esPrestamoVigente(p: Prestamo): boolean {
-    const estado: any = p.estadoPrestamo;
-    if (estado && typeof estado === 'object') return Number(estado.codigo) === ESTADO_PRESTAMO_VIGENTE;
-    return Number(estado) === ESTADO_PRESTAMO_VIGENTE;
   }
 
   private esTipoAporte(aporte: Aporte, fragmento: string): boolean {
