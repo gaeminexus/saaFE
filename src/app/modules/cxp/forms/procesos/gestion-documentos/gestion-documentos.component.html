@@ -221,6 +221,12 @@
                 <th mat-header-cell *matHeaderCellDef>Serie</th>
                 <td mat-cell *matCellDef="let d" class="font-mono">{{ d.serieComprobante }}</td>
               </ng-container>
+              <ng-container matColumnDef="claveAcceso">
+                <th mat-header-cell *matHeaderCellDef>Clave de Acceso</th>
+                <td mat-cell *matCellDef="let d" class="font-mono clave-cell" [matTooltip]="d.claveAcceso">
+                  {{ d.claveAcceso ? (d.claveAcceso | slice:0:20) + '…' : '—' }}
+                </td>
+              </ng-container>
               <ng-container matColumnDef="fechaEmision">
                 <th mat-header-cell *matHeaderCellDef>F. Emisión</th>
                 <td mat-cell *matCellDef="let d">{{ toDate(d.fechaEmision) | date:'dd/MM/yyyy' }}</td>
@@ -347,6 +353,12 @@
               <ng-container matColumnDef="serieComprobante">
                 <th mat-header-cell *matHeaderCellDef>Serie</th>
                 <td mat-cell *matCellDef="let d" class="font-mono">{{ d.serieComprobante }}</td>
+              </ng-container>
+              <ng-container matColumnDef="claveAcceso">
+                <th mat-header-cell *matHeaderCellDef>Clave de Acceso</th>
+                <td mat-cell *matCellDef="let d" class="font-mono clave-cell" [matTooltip]="d.claveAcceso">
+                  {{ d.claveAcceso ? (d.claveAcceso | slice:0:20) + '…' : '—' }}
+                </td>
               </ng-container>
               <ng-container matColumnDef="fechaEmision">
                 <th mat-header-cell *matHeaderCellDef>F. Emisión</th>

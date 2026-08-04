@@ -125,10 +125,6 @@ export class NotasCreditoComponent implements OnInit {
   dataSourceDetalle = new MatTableDataSource<DetalleNotaCreditoEmitir>([]);
   columnas = ['cantidad', 'descripcion', 'valor', 'subTotal', 'descuento', 'baseImponible', 'iva', 'total', 'acciones'];
 
-  registros = signal<NotaCreditoEmitir[]>([]);
-  dataSourceRegistros = new MatTableDataSource<NotaCreditoEmitir>([]);
-  columnasRegistros = ['id', 'fecha', 'numero', 'persona', 'total', 'estado'];
-
   areaIzq = 'area-izq-borde';
   areaDer = 'area-der';
   vertical = false;
@@ -142,25 +138,10 @@ export class NotasCreditoComponent implements OnInit {
     this.responsive(window.innerWidth);
     this.cargarCatalogos();
     this.cargarFacturadorYPtoEmision();
-    this.cargarRegistros();
   }
 
   get accionPrincipal(): string {
     return this.documentoActual()?.id ? 'Nota emitida' : 'Emitir nota de crédito';
-  }
-
-  recargar(): void { this.cargarRegistros(); }
-
-  cargarRegistros(): void {
-    this.cargando.set(true);
-    this.service.getAll().subscribe({
-      next: (data) => {
-        this.registros.set(data || []);
-        this.dataSourceRegistros.data = data || [];
-        this.cargando.set(false);
-      },
-      error: () => { this.mostrarError('No se pudieron cargar las notas de crédito'); this.cargando.set(false); },
-    });
   }
 
   buscaCliente(): void {
@@ -409,11 +390,15 @@ export class NotasCreditoComponent implements OnInit {
     this.guardando.set(true);
     this.service.procesarCompleta(payload).subscribe({
       next: (resp) => {
+        this.guardando.set(false);
+        if (!resp?.id) {
+          this.mostrarError('No se pudo emitir la nota de crédito. Verifique los datos e inténtelo nuevamente.');
+          return;
+        }
         this.deshabilitado = true;
         this.fechaControl.disable(); this.fechaDMControl.disable();
-        this.guardando.set(false);
         this.mostrarExito('Nota de crédito generada correctamente');
-        const idNc = resp?.id;
+        const idNc = resp.id;
         if (idNc) {
           this.documentoActual.set(resp);
           this.registroId = idNc;
@@ -425,7 +410,6 @@ export class NotasCreditoComponent implements OnInit {
           // Fallback: backend retornó null (200 sin body JSON); buscar por titular
           this.buscarNcRecienEmitida(this.personaSeleccionada()?.codigo ?? 0);
         }
-        this.cargarRegistros();
       },
       error: (err) => { this.guardando.set(false); this.mostrarError(this.parseError(err, 'No se pudo grabar la nota de crédito')); },
     });
@@ -706,7 +690,18 @@ export class NotasCreditoComponent implements OnInit {
   private parseError(error: unknown, fallback: string): string {
     if (!error) return fallback;
     if (typeof error === 'string') return error;
-    if (typeof error === 'object' && error && 'message' in error) return String((error as { message?: unknown }).message || fallback);
+    if (typeof error === 'object' && error !== null) {
+      const err = error as Record<string, unknown>;
+      if (err['message'] && typeof err['message'] === 'string') return err['message'];
+      if (err['error']) {
+        if (typeof err['error'] === 'string') return err['error'];
+        const inner = err['error'] as Record<string, unknown>;
+        if (inner['message'] && typeof inner['message'] === 'string') return inner['message'];
+        if (inner['mensaje'] && typeof inner['mensaje'] === 'string') return inner['mensaje'];
+      }
+      if (err['statusText'] && typeof err['statusText'] === 'string' && err['statusText'] !== 'Unknown Error')
+        return err['statusText'] as string;
+    }
     return fallback;
   }
 

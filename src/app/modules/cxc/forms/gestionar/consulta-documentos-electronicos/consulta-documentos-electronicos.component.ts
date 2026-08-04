@@ -65,6 +65,7 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
   imprimiendo = signal(false);
   anulando    = signal(false);
   estados     = signal<Array<{ value: string; label: string }>>([]);
+  sinBusqueda = signal(true);
 
   private get usuarioSesion(): string {
     try {
@@ -112,7 +113,12 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
 
   ngOnInit(): void {
     this.cargarEstados();
-    this.buscar();
+    // Precargar fechas con el mes actual
+    const hoy = new Date();
+    const primerDia = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+    const ultimoDia = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+    this.fechaDesdeControl.setValue(primerDia, { emitEvent: false });
+    this.fechaHastaControl.setValue(ultimoDia, { emitEvent: false });
   }
 
   private cargarEstados(): void {
@@ -136,6 +142,17 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
   }
 
   buscar(): void {
+    const fechaDesde = this.fechaDesdeControl.value as Date | null;
+    const fechaHasta = this.fechaHastaControl.value as Date | null;
+    const tieneCliente = this.cliente.trim().length > 0;
+    const tieneAutorizacion = this.numeroAutorizacion.trim().length > 0;
+
+    if (!fechaDesde && !fechaHasta && !tieneCliente && !tieneAutorizacion) {
+      this.mostrarError('Debe ingresar al menos un filtro de búsqueda (fecha, cliente o autorización).');
+      return;
+    }
+
+    this.sinBusqueda.set(false);
     this.cargando.set(true);
 
     const cargarFacturas   = (this.tipoDocumento === 'TODOS' || this.tipoDocumento === 'FACTURA')
@@ -176,10 +193,14 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
 
   limpiarFiltros(): void {
     this.tipoDocumento     = 'TODOS';
-    this.fechaDesdeControl.setValue(null, { emitEvent: false });
-    this.fechaHastaControl.setValue(null, { emitEvent: false });
+    const hoy = new Date();
+    this.fechaDesdeControl.setValue(new Date(hoy.getFullYear(), hoy.getMonth(), 1), { emitEvent: false });
+    this.fechaHastaControl.setValue(new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0), { emitEvent: false });
     this.numeroAutorizacion = '';
     this.cliente           = '';
+    this.registros         = [];
+    this.dataSource.data   = [];
+    this.sinBusqueda.set(true);
     setTimeout(() => {
       if (this.fechaDesdeInputRef?.nativeElement) this.fechaDesdeInputRef.nativeElement.value = '';
       if (this.fechaHastaInputRef?.nativeElement) this.fechaHastaInputRef.nativeElement.value = '';

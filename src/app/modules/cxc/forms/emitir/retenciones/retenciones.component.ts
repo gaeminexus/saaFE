@@ -83,10 +83,6 @@ export class RetencionesComponent implements OnInit {
   dataSource = new MatTableDataSource<DetalleRetencionEmitir>([]);
   columnas = ['tipoDoc', 'numDoc', 'fechaEmision', 'impuesto', 'codReten', 'baseImponible', 'porcentaje', 'valor', 'acciones'];
 
-  registros = signal<RetencionEmitir[]>([]);
-  dataSourceRegistros = new MatTableDataSource<RetencionEmitir>([]);
-  columnasRegistros = ['id', 'fecha', 'numero', 'periodoFiscal', 'titular', 'total', 'estado'];
-
   vertical = false;
 
   @HostListener('window:resize')
@@ -98,21 +94,10 @@ export class RetencionesComponent implements OnInit {
     this.responsive(window.innerWidth);
     this.cargarCatalogos();
     this.cargarFacturadorYPtoEmision();
-    this.cargarRegistros();
   }
 
   get accionPrincipal(): string {
     return this.documentoActual()?.id ? 'Retención emitida' : 'Emitir retención';
-  }
-
-  recargar(): void { this.cargarRegistros(); }
-
-  cargarRegistros(): void {
-    this.cargando.set(true);
-    this.service.getAll().subscribe({
-      next: (data) => { this.registros.set(data || []); this.dataSourceRegistros.data = data || []; this.cargando.set(false); },
-      error: () => { this.mostrarError('No se pudieron cargar las retenciones'); this.cargando.set(false); },
-    });
   }
 
   buscaProveedor(): void {
@@ -228,7 +213,6 @@ export class RetencionesComponent implements OnInit {
         this.fechaControl.disable(); this.fechaEmiDocControl.disable();
         this.guardando.set(false);
         this.mostrarExito('Retención generada correctamente');
-        this.cargarRegistros();
       },
       error: (err) => { this.guardando.set(false); this.mostrarError(this.parseError(err, 'No se pudo grabar la retención')); },
     });

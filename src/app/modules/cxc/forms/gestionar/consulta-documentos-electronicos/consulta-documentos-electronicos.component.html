@@ -158,7 +158,15 @@
           <tr mat-header-row *matHeaderRowDef="columnas"></tr>
           <tr mat-row *matRowDef="let row; columns: columnas"></tr>
 
-          @if (!cargando() && dataSource.data.length === 0) {
+          @if (!cargando() && sinBusqueda()) {
+            <tr class="mat-row">
+              <td [attr.colspan]="columnas.length" class="sin-datos">
+                <mat-icon style="vertical-align:middle;margin-right:6px;opacity:.5">search</mat-icon>
+                Ingrese al menos un filtro y presione <strong>Buscar</strong>.
+              </td>
+            </tr>
+          }
+          @if (!cargando() && !sinBusqueda() && dataSource.data.length === 0) {
             <tr class="mat-row">
               <td [attr.colspan]="columnas.length" class="sin-datos">
                 No hay documentos con los filtros seleccionados.

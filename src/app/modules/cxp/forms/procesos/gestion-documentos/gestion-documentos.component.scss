@@ -97,6 +97,7 @@ button.filtro-active { background: rgba(21, 101, 192, 0.08); border-color: var(-
 .text-right { text-align: right !important; }
 .total-col { font-weight: 600; color: #1565c0; }
 .font-mono { font-family: 'Courier New', monospace; font-size: 0.78rem; }
+.clave-cell { max-width: 160px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: default; }
 
 .tipo-badge {
   background: #e3f2fd;

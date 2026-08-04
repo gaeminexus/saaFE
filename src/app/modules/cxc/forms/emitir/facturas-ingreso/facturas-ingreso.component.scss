@@ -255,6 +255,24 @@
   flex: 1;
 }
 
+.textarea-adicional {
+  flex: 1;
+  min-height: 70px;
+  padding: 6px 8px;
+  font-size: 0.875rem;
+  font-family: inherit;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  resize: vertical;
+  line-height: 1.5;
+  background: rgba(0, 0, 0, 0.04);
+
+  &:focus {
+    outline: none;
+    border-color: var(--mat-sys-primary, #1565c0);
+  }
+}
+
 .select-box {
   width: 100%;
   background: rgba(0, 0, 0, 0.04);

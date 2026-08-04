@@ -27,7 +27,6 @@ import { FacturasIngresoComponent } from './modules/cxc/forms/emitir/facturas-in
 import { NotasCreditoComponent } from './modules/cxc/forms/emitir/notas-credito/notas-credito.component';
 import { NotasDebitoComponent } from './modules/cxc/forms/emitir/notas-debito/notas-debito.component';
 import { LiquidacionesComponent } from './modules/cxc/forms/emitir/liquidaciones/liquidaciones.component';
-import { RetencionesComponent } from './modules/cxc/forms/emitir/retenciones/retenciones.component';
 import { Retencionesv2Component } from './modules/cxc/forms/emitir/retencionesv2';
 import { AnticipoComponent } from './modules/cxc/forms/gestionar/anticipo/anticipo.component';
 import { ConsultaFacturasComponent } from './modules/cxc/forms/gestionar/consulta-facturas/consulta-facturas.component';
@@ -893,7 +892,7 @@ export const routes: Routes = [
       },
       {
         path: 'emitir/retenciones',
-        component: RetencionesComponent,
+        component: Retencionesv2Component,
         canActivate: [authGuard],
       },
       {

@@ -65,12 +65,7 @@ export class MenucuentasxcobrarComponent {
           route: '/menucuentasxcobrar/emitir/liquidaciones',
         },
         {
-          displayName: 'Retenciones v1',
-          iconName: 'receipt',
-          route: '/menucuentasxcobrar/emitir/retenciones',
-        },
-        {
-          displayName: 'Retenciones v2',
+          displayName: 'Retenciones',
           iconName: 'description',
           route: '/menucuentasxcobrar/emitir/retenciones-v2',
         },
@@ -82,19 +77,9 @@ export class MenucuentasxcobrarComponent {
       route: '/menucuentasxcobrar/gestionar',
       children: [
         {
-          displayName: 'Facturas',
-          iconName: 'fact_check',
-          route: '/menucuentasxcobrar/gestionar/facturas',
-        },
-        {
           displayName: 'Documentos Electrónicos',
           iconName: 'receipt_long',
           route: '/menucuentasxcobrar/gestionar/documentos-electronicos',
-        },
-        {
-          displayName: 'Anticipos',
-          iconName: 'account_balance_wallet',
-          route: '/menucuentasxcobrar/gestionar/anticipos',
         },
         {
           displayName: 'Financiar Factura',

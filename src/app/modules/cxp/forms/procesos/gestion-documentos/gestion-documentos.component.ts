@@ -374,7 +374,7 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit {
   todosDocumentos: DocumentoCxp[] = [];   // todos los estados (para tabla)
   dsDocumentos   = new MatTableDataSource<DocumentoCxp>([]);   // pendientes (≠ 3)
   dsRegistrados  = new MatTableDataSource<DocumentoCxp>([]);   // procesados (= 3)
-  columnas = ['id', 'tipoComprobante', 'rucEmisor', 'razonSocialEmisor', 'serieComprobante', 'fechaEmision', 'valorSinImpuestos', 'iva', 'importeTotal', 'estadoDocumento', 'novedad', 'acciones'];
+  columnas = ['id', 'tipoComprobante', 'rucEmisor', 'razonSocialEmisor', 'serieComprobante', 'claveAcceso', 'fechaEmision', 'valorSinImpuestos', 'iva', 'importeTotal', 'estadoDocumento', 'novedad', 'acciones'];
 
   // Totales (calculados sobre el conjunto filtrado por texto/fecha, antes del filtro de estado)
   totalesRegistrados = signal({ subtotal: 0, iva: 0, total: 0, count: 0 });

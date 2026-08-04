@@ -30,6 +30,12 @@ export class RetencionV2EmitirService {
       .pipe(catchError(this.handleError));
   }
 
+  procesarCompleta(datos: any): Observable<RetencionV2Emitir | null> {
+    return this.http
+      .post<RetencionV2Emitir>(`${ServiciosCxc.RS_RTV2}/procesarCompleta`, datos, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
+
   update(datos: Partial<RetencionV2Emitir>): Observable<RetencionV2Emitir | null> {
     return this.http
       .put<RetencionV2Emitir>(ServiciosCxc.RS_RTV2, datos, this.httpOptions)

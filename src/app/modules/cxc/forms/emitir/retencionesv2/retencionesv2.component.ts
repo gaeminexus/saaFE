@@ -66,7 +66,7 @@ export class Retencionesv2Component implements OnInit {
   personaSeleccionada = signal<Titular | null>(null);
   textoTitularSeleccionado = computed(() => this.displayPersona(this.personaSeleccionada()));
   readonly rolProveedorCodigo = 2;
-  readonly documentoNombre = 'Retención V2';
+  readonly documentoNombre = 'Retención';
 
   vFacturador = {} as Facturador;
   vUsuario: any = { codigo: 0 };
@@ -112,10 +112,6 @@ export class Retencionesv2Component implements OnInit {
   dataSource = new MatTableDataSource<DetalleRetencionV2Emitir>([]);
   columnas = ['tipoDoc', 'numDoc', 'autorizacion', 'fechaEmision', 'impuesto', 'codReten', 'baseImponible', 'porcentaje', 'valor', 'acciones'];
 
-  registros = signal<RetencionV2Emitir[]>([]);
-  dataSourceRegistros = new MatTableDataSource<RetencionV2Emitir>([]);
-  columnasRegistros = ['id', 'fecha', 'numero', 'periodoFiscal', 'titular', 'total', 'estado'];
-
   vertical = false;
 
   @HostListener('window:resize')
@@ -127,21 +123,10 @@ export class Retencionesv2Component implements OnInit {
     this.responsive(window.innerWidth);
     this.cargarCatalogos();
     this.cargarFacturadorYPtoEmision();
-    this.cargarRegistros();
   }
 
   get accionPrincipal(): string {
-    return this.documentoActual()?.id ? 'Retención V2 emitida' : 'Emitir Retención V2';
-  }
-
-  recargar(): void { this.cargarRegistros(); }
-
-  cargarRegistros(): void {
-    this.cargando.set(true);
-    this.service.getAll().subscribe({
-      next: (data) => { this.registros.set(data || []); this.dataSourceRegistros.data = data || []; this.cargando.set(false); },
-      error: () => { this.mostrarError('No se pudieron cargar las retenciones'); this.cargando.set(false); },
-    });
+    return this.documentoActual()?.id ? 'Retención emitida' : 'Emitir Retención';
   }
 
   buscaProveedor(): void {
@@ -149,13 +134,20 @@ export class Retencionesv2Component implements OnInit {
       width: '1100px', maxWidth: '98vw',
       data: { rolCodigo: this.rolProveedorCodigo, rolNombre: 'PROVEEDOR', titulo: 'Buscar Proveedor' },
     });
-    dialogRef.afterClosed().subscribe((t: Titular | null) => { if (t) this.personaSeleccionada.set(t); });
+    dialogRef.afterClosed().subscribe((t: Titular | null) => {
+      if (t) {
+        this.personaSeleccionada.set(t);
+        // Si ya hay tipo de documento seleccionado, cargar documentos del proveedor
+        if (this.idDocumento) this.onCambioTipoDocRetenido();
+      }
+    });
   }
 
   limpiarProveedor(): void {
     this.personaSeleccionada.set(null);
     this.documentosDisponibles.set([]);
     this.documentoRetenidoSeleccionado = null;
+    this.limpiarCamposDocRetenido();
   }
 
   displayPersona(persona: Titular | null): string {
@@ -209,23 +201,40 @@ export class Retencionesv2Component implements OnInit {
   onSelectDocumentoRetenido(doc: FacturaCompra | NotaDebitoCompra | NotaCreditoCompra | null): void {
     if (!doc) { this.limpiarCamposDocRetenido(); return; }
     this.numDocReten = doc.numero || '';
-    this.drAutorizacion = doc.autorizacion || doc.clave || '';
+    this.drAutorizacion = (doc as FacturaCompra).autorizacion || (doc as FacturaCompra).clave || '';
     const fechaDoc = this.parseIsoArrayDate(doc.fecha);
     this.fechaEmiDocControl.setValue(fechaDoc, { emitEvent: false });
-    const subtotal = Number((doc as any).subtotal || 0);
-    const subcero  = Number((doc as any).subcero  || 0);
-    const vIVA     = Number((doc as any).vIVA     || 0);
-    const total    = Number(doc.total || 0);
-    const pIVA     = Number((doc as any).pIVA     || 0);
-    this.docResTSinImpuestos = this.rd(subtotal);
+    if (this.fechaEmiDocV2InputRef?.nativeElement) {
+      this.fechaEmiDocV2InputRef.nativeElement.value =
+        this.funcionesDatosS.formatoFecha(fechaDoc, FuncionesDatosService.SOLO_FECHA) || '';
+    }
+    // FacturaCompra: subtotal = base IVA gravado, subcero = base IVA cero
+    const fac = doc as FacturaCompra;
+    const subtotal = Number(fac.subtotal || 0);
+    const subcero  = Number(fac.subcero  || 0);
+    const vIVA     = Number(fac.vIVA     || 0);
+    const total    = Number(fac.total    || 0);
+    const pIVA     = Number(fac.pIVA     || 0);
     this.docResIVACero       = this.rd(subcero);
+    this.docResTSinImpuestos = this.rd(subtotal + subcero);  // Total sin impuestos = base gravada + base cero
     this.docResPorIVA        = this.rd(pIVA);
     this.docResTotalIVA      = this.rd(vIVA);
     this.docResTotal         = this.rd(total);
+    // Rellenar base imponible según el impuesto actualmente seleccionado (sin resetear porcentaje)
+    this.actualizarBaseImponible();
+    // Forma de pago: intentar mapear por código si existe
+    if ((fac as any).formaPago && this.tablaFormasPago.length) {
+      const fpCod = String((fac as any).formaPago);
+      const fp = this.tablaFormasPago.find(f => String(f.id) === fpCod || f.codigo === fpCod);
+      if (fp) this.idFormaPago = fp;
+    }
   }
 
   displayDocumento(doc: FacturaCompra | NotaDebitoCompra | NotaCreditoCompra): string {
-    return `${doc.numero || ('ID:' + doc.id)} — $${Number(doc.total || 0).toFixed(2)}`;
+    const num = doc.numero || `ID:${doc.id}`;
+    const fecha = this.parseIsoArrayDate(doc.fecha);
+    const fechaStr = `${String(fecha.getDate()).padStart(2,'0')}/${String(fecha.getMonth()+1).padStart(2,'0')}/${fecha.getFullYear()}`;
+    return `${num}  |  ${fechaStr}  |  $${Number(doc.total || 0).toFixed(2)}`;
   }
 
   /** Convierte fecha ISO o array LocalDateTime del backend a Date. */
@@ -257,6 +266,25 @@ export class Retencionesv2Component implements OnInit {
     else this.tablaPorcentajes = [];
     this.idPorcentaje = null;
     this.txtPorcentaje = 0;
+    this.actualizarBaseImponible();
+  }
+
+  /** Rellena txtBaseImponible según el impuesto seleccionado y los valores del documento retenido. */
+  private actualizarBaseImponible(): void {
+    if (!this.idImpuesto) return;
+    if (this.docResTSinImpuestos <= 0 && this.docResTotal <= 0) return; // sin documento
+    const cod = this.idImpuesto.codigo;
+    if (cod === '1') {
+      // Renta: base = total sin impuestos (subcero + subtotal)
+      this.txtBaseImponible = this.rd(this.docResTSinImpuestos);
+    } else if (cod === '2') {
+      // IVA: base = solo la parte gravada con IVA (total sin impuestos - base IVA cero)
+      this.txtBaseImponible = this.rd(this.docResTSinImpuestos - this.docResIVACero);
+    } else if (cod === '6') {
+      // ISD: base = total del documento
+      this.txtBaseImponible = this.rd(this.docResTotal);
+    }
+    this.calcularValorReten();
   }
 
   onCambioPorcentaje(): void {
@@ -331,31 +359,87 @@ export class Retencionesv2Component implements OnInit {
     if (!this.ptoEmision?.id) { this.mostrarError('No existe punto de emisión configurado'); return; }
     if (!this.periodoFiscal.trim()) { this.mostrarError('Ingrese el período fiscal (MM/YYYY)'); return; }
 
+    const fechaDoc = this.parseFechaLocal(this.fechaControl.value);
+
     const payload: any = {
-      facturador: this.vFacturador,
-      titular: this.personaSeleccionada() as Titular,
-      fecha: this.parseFechaLocal(this.fechaControl.value),
-      periodoFiscal: this.periodoFiscal,
-      observacion: this.observacion,
-      total: this.totalRetenido,
-      ptoEmision: this.ptoEmision,
-      usuario: this.vUsuario,
-      autorizacion: '', clave: '', pathGen: '',
-      estado: 1, estadoEmision: 1,
-      detalleRetencion: this.listaDetalles.map((item) => ({ ...item })),
+      retencion: {
+        facturador:          { id: this.vFacturador.id },
+        proveedor:           { codigo: (this.personaSeleccionada() as Titular).codigo },
+        ptoEmision:          this.ptoEmision,
+        usuario:             this.vUsuario,
+        fecha:               fechaDoc,
+        periodoFiscal:       this.periodoFiscal,
+        observacion:         this.observacion,
+        total:               this.totalRetenido,
+        autorizacion:        '',
+        clave:               '',
+        pathGen:             '',
+        estado:              1,
+        estadoEmision:       1,
+        detalleRetencionV2:  this.listaDetalles.map((item) => ({ ...item })),
+      },
     };
 
     this.guardando.set(true);
-    this.service.grabarRetencionV2(payload).subscribe({
-      next: (resp) => {
-        this.documentoActual.set(resp || null);
-        this.deshabilitado = true;
-        this.fechaControl.disable(); this.fechaEmiDocControl.disable();
+    this.service.procesarCompleta(payload).subscribe({
+      next: (resp: any) => {
         this.guardando.set(false);
-        this.mostrarExito('Retención V2 generada correctamente');
-        this.cargarRegistros();
+
+        // HTTP 200 + exito === false → SRI no autorizó, pero el registro quedó guardado en BD
+        if (resp?.exito === false) {
+          this.mostrarAdvertencia(resp.mensaje || 'La retención fue guardada pero no fue autorizada por el SRI.');
+          // El registro quedó guardado; asignar id si viene para habilitar impresión
+          if (resp.idRetencion) {
+            this.documentoActual.set({ id: resp.idRetencion, autorizacion: resp.autorizacion, clave: resp.claveAcceso } as any);
+            this.deshabilitado = true;
+            this.fechaControl.disable(); this.fechaEmiDocControl.disable();
+          }
+          return;
+        }
+
+        // HTTP 200 + exito === true → autorizado correctamente
+        if (resp?.exito === true) {
+          this.documentoActual.set({ id: resp.idRetencion, autorizacion: resp.autorizacion, clave: resp.claveAcceso } as any);
+          this.deshabilitado = true;
+          this.fechaControl.disable(); this.fechaEmiDocControl.disable();
+          this.mostrarExito(resp.mensaje || 'Retención autorizada correctamente');
+          return;
+        }
+
+        // Respuesta directa (objeto retención sin envolver — formato legacy)
+        if (resp?.id) {
+          this.documentoActual.set(resp);
+          this.deshabilitado = true;
+          this.fechaControl.disable(); this.fechaEmiDocControl.disable();
+          this.mostrarExito('Retención generada correctamente');
+          return;
+        }
+
+        // null o respuesta inesperada
+        this.mostrarError('No se pudo emitir la retención. Verifique los datos e inténtelo nuevamente.');
       },
-      error: (err) => { this.guardando.set(false); this.mostrarError(this.parseError(err, 'No se pudo grabar la retención')); },
+      error: (err: any) => {
+        // El servicio hace throwError(() => error.error), así que err ES el body JSON:
+        // { exito, etapa, mensaje, erroresContables?, error? }
+        this.guardando.set(false);
+        const etapa: string = err?.etapa ?? '';
+
+        if (etapa === 'VALIDACION_CONTABLE') {
+          if (Array.isArray(err?.erroresContables) && err.erroresContables.length) {
+            const lista = (err.erroresContables as string[]).map((e: string) => `• ${e}`).join('\n');
+            this.mostrarError(`Faltan cuentas contables configuradas:\n${lista}`);
+          } else {
+            this.mostrarError(err?.mensaje || 'No se puede emitir: faltan cuentas contables.');
+          }
+        } else if (etapa === 'XML_DEVUELTO') {
+          this.mostrarError(err?.mensaje || 'El SRI rechazó el XML por errores de formato.');
+        } else if (etapa === 'PARAMETROS') {
+          this.mostrarError(err?.mensaje || 'Parámetros incorrectos o faltantes.');
+        } else {
+          // GRABADO_RETENCION, GRABADO_DETALLES, GENERACION_XML, ERROR_AUTORIZACION_SRI, ERROR_INESPERADO
+          this.mostrarError(err?.mensaje || err?.error || 'No se pudo grabar la retención. Intente nuevamente.');
+        }
+      },
     });
   }
 
@@ -368,6 +452,7 @@ export class Retencionesv2Component implements OnInit {
     this.setFecha();
     this.observacion = '';
     this.totalRetenido = 0;
+    this.idDocumento = null; this.idFormaPago = null;
     this.limpiarDetalle();
     this.limpiarProveedor();
     setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
@@ -375,8 +460,8 @@ export class Retencionesv2Component implements OnInit {
 
   imprimirDocumento(): void {
     const id = this.documentoActual()?.id;
-    if (!id) { this.mostrarError('Primero debe emitir el documento'); return; }
-    this.jasperReportes.generar('cxc', 'RPRT_RIDE_RETENCION', { P_ID_RETENCION: id }, 'PDF').subscribe({
+    if (!id) { this.mostrarError('Primero debe emitir la retención'); return; }
+    this.jasperReportes.generar('cxc', 'RPRT_RIDE_RETENCION_V2', { P_ID_RETENCION_V2: id }, 'PDF').subscribe({
       next: (blob) => {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -477,10 +562,8 @@ export class Retencionesv2Component implements OnInit {
   }
 
   private limpiarDetalle(): void {
-    this.idDocumento = null; this.idImpuesto = null; this.idPorcentaje = null; this.idFormaPago = null;
-    this.documentoRetenidoSeleccionado = null;
-    this.documentosDisponibles.set([]);
-    this.limpiarCamposDocRetenido();
+    // Solo limpia los campos de la línea de detalle, NO los del documento retenido
+    this.idImpuesto = null; this.idPorcentaje = null;
     this.txtBaseImponible = 0; this.txtPorcentaje = 0; this.txtValorReten = 0;
     this.tablaPorcentajes = [];
   }
@@ -550,12 +633,27 @@ export class Retencionesv2Component implements OnInit {
   private parseError(error: unknown, fallback: string): string {
     if (!error) return fallback;
     if (typeof error === 'string') return error;
-    if (typeof error === 'object' && error && 'message' in error) return String((error as { message?: unknown }).message || fallback);
+    if (typeof error === 'object' && error !== null) {
+      const err = error as Record<string, unknown>;
+      if (err['message'] && typeof err['message'] === 'string') return err['message'];
+      if (err['error']) {
+        if (typeof err['error'] === 'string') return err['error'];
+        const inner = err['error'] as Record<string, unknown>;
+        if (inner['message'] && typeof inner['message'] === 'string') return inner['message'];
+        if (inner['mensaje'] && typeof inner['mensaje'] === 'string') return inner['mensaje'];
+      }
+      if (err['statusText'] && typeof err['statusText'] === 'string' && err['statusText'] !== 'Unknown Error')
+        return err['statusText'] as string;
+    }
     return fallback;
   }
 
   private mostrarExito(mensaje: string): void {
     this.snackBar.open(mensaje, 'Cerrar', { duration: 3500, panelClass: ['snackbar-success'], horizontalPosition: 'center', verticalPosition: 'bottom' });
+  }
+
+  private mostrarAdvertencia(mensaje: string): void {
+    this.snackBar.open(mensaje, 'Cerrar', { duration: 7000, panelClass: ['snackbar-warning'], horizontalPosition: 'center', verticalPosition: 'bottom' });
   }
 
   private mostrarError(mensaje: string): void {
