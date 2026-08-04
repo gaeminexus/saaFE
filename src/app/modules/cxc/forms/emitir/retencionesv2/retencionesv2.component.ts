@@ -278,8 +278,8 @@ export class Retencionesv2Component implements OnInit {
       // Renta: base = total sin impuestos (subcero + subtotal)
       this.txtBaseImponible = this.rd(this.docResTSinImpuestos);
     } else if (cod === '2') {
-      // IVA: base = solo la parte gravada con IVA (total sin impuestos - base IVA cero)
-      this.txtBaseImponible = this.rd(this.docResTSinImpuestos - this.docResIVACero);
+      // IVA: base = valor total del IVA del documento
+      this.txtBaseImponible = this.rd(this.docResTotalIVA);
     } else if (cod === '6') {
       // ISD: base = total del documento
       this.txtBaseImponible = this.rd(this.docResTotal);
