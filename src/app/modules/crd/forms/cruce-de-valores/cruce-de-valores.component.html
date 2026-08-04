@@ -1,0 +1,331 @@
+<div class="cdv-container">
+
+  <div class="search-header">
+    <div class="header-title">
+      <mat-icon class="header-icon">sync_alt</mat-icon>
+      <h1>Cruce de Valores</h1>
+    </div>
+    <div class="search-box">
+      <mat-form-field appearance="fill" class="search-field">
+        <mat-label>Número de identificación</mat-label>
+        <input matInput [(ngModel)]="criterioIdentificacion" (keyup.enter)="buscar()" />
+      </mat-form-field>
+      <mat-form-field appearance="fill" class="search-field">
+        <mat-label>Rol Petrocomercial</mat-label>
+        <input matInput [(ngModel)]="criterioRolPetro" (keyup.enter)="buscar()" />
+      </mat-form-field>
+      <mat-form-field appearance="fill" class="search-field">
+        <mat-label>ID Préstamo ASOPREP</mat-label>
+        <input matInput [(ngModel)]="criterioIdPrestamoAsoprep" (keyup.enter)="buscar()" />
+      </mat-form-field>
+      <mat-form-field appearance="fill" class="search-field">
+        <mat-label>Nombre</mat-label>
+        <input matInput [(ngModel)]="criterioNombre" (keyup.enter)="buscar()" />
+      </mat-form-field>
+      <button mat-raised-button color="primary" class="search-button" (click)="buscar()" [disabled]="buscando()">
+        @if (buscando()) {
+          <mat-spinner diameter="20"></mat-spinner>
+        } @else {
+          <ng-container><mat-icon>search</mat-icon> Buscar</ng-container>
+        }
+      </button>
+    </div>
+  </div>
+
+  @if (mostrandoResultados()) {
+    <mat-card class="resultados-card">
+      <mat-card-header>
+        <mat-card-title>Resultados de búsqueda</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        @if (resultados().length === 0) {
+          <p class="texto-vacio">No se encontraron coincidencias.</p>
+        } @else {
+          <table mat-table [dataSource]="resultados()" class="tabla-resultados">
+            <ng-container matColumnDef="nombre">
+              <th mat-header-cell *matHeaderCellDef>Nombre</th>
+              <td mat-cell *matCellDef="let e">{{ e.razonSocial }}</td>
+            </ng-container>
+            <ng-container matColumnDef="ci">
+              <th mat-header-cell *matHeaderCellDef>C.I.</th>
+              <td mat-cell *matCellDef="let e">{{ e.numeroIdentificacion }}</td>
+            </ng-container>
+            <ng-container matColumnDef="rolPetro">
+              <th mat-header-cell *matHeaderCellDef>Rol Petrocomercial</th>
+              <td mat-cell *matCellDef="let e">{{ e.rolPetroComercial }}</td>
+            </ng-container>
+            <tr mat-header-row *matHeaderRowDef="['nombre', 'ci', 'rolPetro']"></tr>
+            <tr mat-row *matRowDef="let row; columns: ['nombre', 'ci', 'rolPetro'];" class="fila-clicable" (click)="seleccionarEntidad(row)"></tr>
+          </table>
+        }
+      </mat-card-content>
+    </mat-card>
+  }
+
+  @if (entidadSeleccionada(); as entidad) {
+    <div class="participante-section">
+
+      <mat-card class="entidad-card">
+        <mat-card-header>
+          <mat-icon mat-card-avatar class="avatar-icon">account_circle</mat-icon>
+          <mat-card-title>{{ entidad.razonSocial }}</mat-card-title>
+          <mat-card-subtitle>C.I. {{ entidad.numeroIdentificacion }} &middot; Rol Petrocomercial {{ entidad.rolPetroComercial }}</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <button mat-stroked-button (click)="volverABuscar()">
+            <mat-icon>search</mat-icon> Buscar otra persona
+          </button>
+        </mat-card-content>
+      </mat-card>
+
+      <div class="fondos-bar"
+           [class.ok]="tieneSeleccion() && fondoRestante() >= -0.004"
+           [class.over]="fondoRestante() < -0.004">
+        <div class="fb-item">
+          <span class="fb-label">Fondo disponible</span>
+          <span class="fb-value">{{ formatMoneda(fondoDisponibleTotal()) }}</span>
+        </div>
+        <div class="fb-item">
+          <span class="fb-label">Fondo utilizado</span>
+          <span class="fb-value">{{ formatMoneda(fondoUtilizadoTotal()) }}</span>
+        </div>
+        <div class="fb-item">
+          <span class="fb-label">Fondo restante</span>
+          <span class="fb-value">{{ formatMoneda(fondoRestante()) }}</span>
+        </div>
+      </div>
+
+      @if (cargandoDatos()) {
+        <div class="loading-spinner-container">
+          <mat-spinner diameter="48" color="primary"></mat-spinner>
+        </div>
+      }
+
+      <div class="section-label">Fondos de aportes disponibles para el cruce</div>
+      <div class="fondos-grid">
+        <mat-card class="fondo-card">
+          <mat-card-content>
+            <div class="fc-name"><mat-icon>work_history</mat-icon> Aportes Cesantía</div>
+            <div class="fc-amount">{{ formatMoneda(saldoDisponibleCesantia()) }}</div>
+            <div class="fc-amount-label">Saldo disponible</div>
+            <div class="fondo-input-row">
+              <mat-form-field appearance="outline" class="fondo-monto-field" subscriptSizing="dynamic">
+                <mat-label>Monto a utilizar en este cruce</mat-label>
+                <span matTextPrefix>$&nbsp;</span>
+                <input matInput [(ngModel)]="fondoTexto.cesantia" (ngModelChange)="onFondoTextoCambio()" (blur)="onFondoBlur('cesantia')" />
+              </mat-form-field>
+              <button mat-button class="usar-max-btn" (click)="usarMaximoFondo('cesantia')">Usar máximo</button>
+            </div>
+            <div class="fc-breakdown">
+              <div>Total aportado<b>{{ formatMoneda(totalAportadoCesantia()) }}</b></div>
+              <div>Ya utilizado<b>{{ formatMoneda(totalUtilizadoCesantia()) }}</b></div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="fondo-card">
+          <mat-card-content>
+            <div class="fc-name"><mat-icon>elderly</mat-icon> Aportes Jubilación</div>
+            <div class="fc-amount">{{ formatMoneda(saldoDisponibleJubilacion()) }}</div>
+            <div class="fc-amount-label">Saldo disponible</div>
+            <div class="fondo-input-row">
+              <mat-form-field appearance="outline" class="fondo-monto-field" subscriptSizing="dynamic">
+                <mat-label>Monto a utilizar en este cruce</mat-label>
+                <span matTextPrefix>$&nbsp;</span>
+                <input matInput [(ngModel)]="fondoTexto.jubilacion" (ngModelChange)="onFondoTextoCambio()" (blur)="onFondoBlur('jubilacion')" />
+              </mat-form-field>
+              <button mat-button class="usar-max-btn" (click)="usarMaximoFondo('jubilacion')">Usar máximo</button>
+            </div>
+            <div class="fc-breakdown">
+              <div>Total aportado<b>{{ formatMoneda(totalAportadoJubilacion()) }}</b></div>
+              <div>Ya utilizado<b>{{ formatMoneda(totalUtilizadoJubilacion()) }}</b></div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+
+      <div class="section-label">Préstamos vigentes <span class="count">({{ prestamosCruce().length }})</span></div>
+
+      @for (pc of prestamosCruce(); track pc.prestamo.codigo) {
+        <mat-card class="prestamo-card">
+          <div class="prestamo-head" (click)="toggleAbierto(pc)">
+            <div class="ph-left">
+              <mat-icon>account_balance</mat-icon>
+              <div>
+                <div class="ph-title">{{ pc.prestamo.producto?.nombre || 'Sin Producto' }} <span class="badge vigente">Vigente</span></div>
+                <div class="ph-meta">Préstamo #{{ pc.prestamo.idAsoprep }} &middot; {{ pc.cuotas.length }} cuotas pendientes</div>
+              </div>
+            </div>
+            <div class="ph-right">
+              <div class="ph-stat">
+                <div class="v">{{ formatMoneda(pc.prestamo.saldoTotal) }}</div>
+                <div class="l">Saldo total</div>
+              </div>
+              @if (montoAplicadoPrestamo(pc) > 0.004) {
+                <div class="ph-stat cruzar">
+                  <div class="v">{{ formatMoneda(montoAplicadoPrestamo(pc)) }}</div>
+                  <div class="l">A cruzar</div>
+                </div>
+              }
+              <mat-icon class="expand-icon" [class.open]="pc.open">expand_more</mat-icon>
+            </div>
+          </div>
+
+          @if (pc.open) {
+            <mat-card-content class="prestamo-detail">
+              <div class="alloc-modes">
+                <button mat-stroked-button class="alloc-btn" (click)="cancelarSaldoTotal(pc)">
+                  <mat-icon>done_all</mat-icon>
+                  Cancelar saldo total ({{ formatMoneda(pc.prestamo.saldoTotal) }})
+                </button>
+                <div class="alloc-custom">
+                  <mat-form-field appearance="outline" subscriptSizing="dynamic" class="alloc-custom-field">
+                    <mat-label>Monto personalizado</mat-label>
+                    <span matTextPrefix>$&nbsp;</span>
+                    <input matInput #montoPersonalizadoInput placeholder="0.00" />
+                  </mat-form-field>
+                  <button mat-flat-button color="primary"
+                          (click)="aplicarMontoPersonalizado(pc, montoPersonalizadoInput.value); montoPersonalizadoInput.value = ''">
+                    Aplicar
+                  </button>
+                </div>
+              </div>
+
+              @if (pc.nota) {
+                <div class="alloc-note"><mat-icon>info</mat-icon><span>{{ pc.nota }}</span></div>
+              }
+
+              <div class="cuotas-scroll">
+                <table class="cuotas-table">
+                  <thead>
+                    <tr>
+                      <th></th><th>N&deg;</th><th>Vencimiento</th>
+                      <th class="num">Capital</th><th class="num">Interés</th><th class="num">Saldo cuota</th>
+                      <th>Aplicado</th><th>Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (ca of pc.cuotas; track ca.detalle.codigo) {
+                      <tr [class]="estadoCuota(ca)">
+                        <td><mat-checkbox [checked]="ca.aplicado > 0.004" (change)="quickToggleCuota(pc, ca)"></mat-checkbox></td>
+                        <td>{{ ca.detalle.numeroCuota }}</td>
+                        <td>{{ ca.detalle.fechaVencimiento | date : 'dd/MM/yyyy' }}</td>
+                        <td class="num">{{ formatMoneda(ca.detalle.capital) }}</td>
+                        <td class="num">{{ formatMoneda(ca.detalle.interes) }}</td>
+                        <td class="num valor-cell">{{ formatMoneda(ca.detalle.saldo) }}</td>
+                        <td>
+                          <mat-form-field appearance="outline" class="apl-field" subscriptSizing="dynamic">
+                            <input matInput [(ngModel)]="ca.aplicadoTexto" (blur)="onCuotaMontoBlur(pc, ca)" placeholder="$0.00" />
+                          </mat-form-field>
+                        </td>
+                        <td>
+                          <span class="estado-mini" [class]="estadoCuota(ca)">
+                            {{ estadoCuota(ca) === 'cruzada' ? 'Cruzada' : estadoCuota(ca) === 'parcial' ? 'Parcial' : 'Pendiente' }}
+                          </span>
+                        </td>
+                      </tr>
+                    }
+                    @empty {
+                      <tr><td colspan="8" class="texto-vacio">No hay cuotas pendientes para este préstamo.</td></tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="prestamo-mini-summary">
+                <div class="lms-item">
+                  <div class="l">Cuotas cruzadas</div>
+                  <div class="v">{{ cuotasCruzadas(pc) }} de {{ pc.cuotas.length }}</div>
+                </div>
+                @if (cuotasParciales(pc) > 0) {
+                  <div class="lms-item">
+                    <div class="l">Cuotas parciales</div>
+                    <div class="v parcial">{{ cuotasParciales(pc) }}</div>
+                  </div>
+                }
+                <div class="lms-item">
+                  <div class="l">Monto aplicado</div>
+                  <div class="v good">{{ formatMoneda(montoAplicadoPrestamo(pc)) }}</div>
+                </div>
+                <div class="lms-item">
+                  <div class="l">Nuevo saldo del préstamo</div>
+                  <div class="v">{{ formatMoneda((pc.prestamo.saldoTotal || 0) - montoAplicadoPrestamo(pc)) }}</div>
+                </div>
+              </div>
+
+              @if (montoAplicadoPrestamo(pc) > 0.004) {
+                <button mat-button (click)="quitarCruce(pc)">Quitar cruce de este préstamo</button>
+              }
+            </mat-card-content>
+          }
+        </mat-card>
+      } @empty {
+        @if (!cargandoDatos()) {
+          <p class="texto-vacio">Este partícipe no tiene préstamos vigentes.</p>
+        }
+      }
+
+      <mat-card class="resumen-card">
+        <mat-card-header><mat-card-title>Resumen del cruce</mat-card-title></mat-card-header>
+
+        @if (!cruceRegistrado()) {
+          <mat-card-content>
+            @if (!tieneSeleccion()) {
+              <p class="texto-vacio">Ingrese un monto en al menos un fondo de aportes y aplique valores a las cuotas de un préstamo para ver el resumen aquí.</p>
+            } @else {
+              <div class="resumen-rows">
+                @if (fondoMonto().cesantia > 0.004) {
+                  <div class="resumen-row"><span>Fondo: Aportes Cesantía</span><b>{{ formatMoneda(fondoMonto().cesantia) }}</b></div>
+                }
+                @if (fondoMonto().jubilacion > 0.004) {
+                  <div class="resumen-row"><span>Fondo: Aportes Jubilación</span><b>{{ formatMoneda(fondoMonto().jubilacion) }}</b></div>
+                }
+                @for (pc of prestamosCruce(); track pc.prestamo.codigo) {
+                  @if (montoAplicadoPrestamo(pc) > 0.004) {
+                    <div class="resumen-row">
+                      <span>
+                        Préstamo #{{ pc.prestamo.idAsoprep }} — {{ cuotasCruzadas(pc) }} cuota(s) cruzada(s)
+                        @if (cuotasParciales(pc) > 0) { + {{ cuotasParciales(pc) }} parcial(es) }
+                      </span>
+                      <b>{{ formatMoneda(montoAplicadoPrestamo(pc)) }}</b>
+                    </div>
+                  }
+                }
+              </div>
+              <div class="resumen-total">
+                <span>Total a cruzar</span>
+                <b>{{ formatMoneda(fondoUtilizadoTotal()) }}</b>
+              </div>
+              <div class="confirm-actions">
+                <button mat-stroked-button (click)="limpiarSeleccion()">Limpiar selección</button>
+                <button mat-raised-button color="accent" [disabled]="!puedeConfirmar()" (click)="confirmarCruce()">
+                  @if (registrando()) {
+                    <mat-spinner diameter="18"></mat-spinner>
+                  } @else {
+                    <ng-container><mat-icon>check_circle</mat-icon> Confirmar cruce de valores</ng-container>
+                  }
+                </button>
+              </div>
+            }
+          </mat-card-content>
+        } @else {
+          <mat-card-content class="success-view">
+            <mat-icon class="check-icon">check_circle</mat-icon>
+            <h3>Cruce registrado</h3>
+            <p>El cruce se guardó correctamente entre los fondos de aportes y las cuotas seleccionadas.</p>
+            <button mat-stroked-button (click)="iniciarOtroCruce()">Iniciar otro cruce</button>
+          </mat-card-content>
+        }
+      </mat-card>
+
+    </div>
+  }
+
+  @if (!entidadSeleccionada() && !mostrandoResultados()) {
+    <div class="initial-message">
+      <mat-icon class="message-icon">info</mat-icon>
+      <p>Busque un socio por cédula, rol Petrocomercial, ID de préstamo o nombre para ver sus aportes y préstamos disponibles para cruce.</p>
+    </div>
+  }
+
+</div>

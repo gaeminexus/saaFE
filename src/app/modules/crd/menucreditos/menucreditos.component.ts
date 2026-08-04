@@ -225,6 +225,11 @@ export class MenucreditosComponent {
           route: '/menucreditos/cruce-valores',
         },
         {
+          displayName: 'Cruce de Valores',
+          iconName: 'sync_alt',
+          route: '/menucreditos/cruce-de-valores',
+        },
+        {
           displayName: 'Cobros Personales',
           iconName: 'point_of_sale',
           route: '/menucreditos/cobros-personales',

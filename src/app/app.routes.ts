@@ -121,6 +121,7 @@ import { ConsultaGeneracionArchivoComponent } from './modules/crd/forms/archivos
 import { DetalleGeneracionArchivoComponent } from './modules/crd/forms/archivos-petro/generar/detalle-generacion-archivo/detalle-generacion-archivo.component';
 import { GenerarArchivoPetroComponent } from './modules/crd/forms/archivos-petro/generar/generar-archivo-petro/generar-archivo-petro.component';
 import { CobrosPersonalesComponent } from './modules/crd/forms/cobros-personales/cobros-personales.component';
+import { CruceDeValoresComponent } from './modules/crd/forms/cruce-de-valores/cruce-de-valores.component';
 import { CruceValoresComponent } from './modules/crd/forms/cruce-valores/cruce-valores.component';
 import { EntidadConsultaComponent } from './modules/crd/forms/entidad-participe/entidad-consulta/entidad-consulta.component';
 import { EntidadEditComponent } from './modules/crd/forms/entidad-participe/entidad-edit/entidad-edit.component';
@@ -996,6 +997,7 @@ export const routes: Routes = [
       { path: 'jubilar-participe', component: JubilarParticipeComponent },
       { path: 'participe-info', component: ParticipeInfoComponent },
       { path: 'cruce-valores', component: CruceValoresComponent },
+      { path: 'cruce-de-valores', component: CruceDeValoresComponent },
       { path: 'pago-cuotas', component: PagoCuotasComponent },
       { path: 'cobros-personales', component: CobrosPersonalesComponent },
       {
