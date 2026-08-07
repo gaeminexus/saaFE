@@ -761,7 +761,7 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
       'Correo IE (EXTR)': e.correoIEExtr || '-',
       Teléfono: e.telefono || '',
       Móvil: e.movil || '',
-      Estado: e.idEstado === 1 ? 'Activo' : 'Inactivo',
+      Estado: this.obtenerNombreEstado(e.idEstado),
     }));
 
     const headers = [

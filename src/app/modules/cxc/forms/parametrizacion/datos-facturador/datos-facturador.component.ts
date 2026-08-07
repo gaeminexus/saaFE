@@ -807,6 +807,15 @@ export class DatosFacturadorComponent implements OnInit {
     });
   }
 
+  /** Devuelve true si el tipo de documento ya tiene una numeración registrada en este punto de emisión
+   * (excluye la numeración que se está editando actualmente para permitir editar sin bloqueo) */
+  esTipoDocUsado(doc: DetalleSri): boolean {
+    const actual = this.numeracionSeleccionada();
+    return this.numeraciones().some(
+      (n) => String(n.tipoDoc) === String(doc.codigo) && n.id !== actual?.id
+    );
+  }
+
   // ═══════════════════════════════════════════════════════════════════
   // UTILIDADES
   // ═══════════════════════════════════════════════════════════════════

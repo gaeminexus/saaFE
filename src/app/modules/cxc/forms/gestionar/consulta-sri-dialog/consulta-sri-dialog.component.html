@@ -1,0 +1,96 @@
+<div class="consulta-sri-dialog">
+  <div class="dialog-header">
+    <div>
+      <h2 mat-dialog-title>Consulta SRI</h2>
+      <p class="subtitle">{{ data.tipoLabel }} · Ambiente {{ data.ambiente === 2 ? 'PRODUCCIÓN' : 'PRUEBAS' }}</p>
+    </div>
+    <button mat-icon-button type="button" (click)="cerrar()">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <mat-dialog-content>
+
+    <!-- Clave de acceso -->
+    <div class="clave-box">
+      <span class="clave-label">Clave de acceso</span>
+      <div class="clave-row">
+        <span class="clave-value">{{ data.clave }}</span>
+        <button mat-icon-button type="button" title="Copiar clave" (click)="copiarClave()">
+          <mat-icon>content_copy</mat-icon>
+        </button>
+      </div>
+    </div>
+
+    @if (cargando()) {
+      <div class="loading-row">
+        <mat-spinner diameter="32"></mat-spinner>
+        <span>Consultando SRI...</span>
+      </div>
+    }
+
+    @if (errorMsg()) {
+      <div class="error-box">
+        <mat-icon>error_outline</mat-icon>
+        <span>{{ errorMsg() }}</span>
+      </div>
+    }
+
+    <!-- Resultado estado -->
+    @if (estadoResp(); as r) {
+      <div class="resultado-section">
+        <h3 class="section-title">Estado de Autorización</h3>
+        <div class="chips-row">
+          <span class="chip" [ngClass]="estadoClass">{{ r.estadoAutorizacion }}</span>
+          <span class="chip chip-ambiente">{{ r.ambiente }}</span>
+        </div>
+        <table class="info-table">
+          <tr>
+            <td class="key">Tipo comprobante</td>
+            <td class="val">{{ r.tipoComprobante }}</td>
+          </tr>
+          <tr>
+            <td class="key">RUC Emisor</td>
+            <td class="val">{{ r.rucEmisor }}</td>
+          </tr>
+          <tr>
+            <td class="key">Fecha autorización</td>
+            <td class="val">{{ r.fechaAutorizacion | date:'dd/MM/yyyy HH:mm:ss' }}</td>
+          </tr>
+        </table>
+
+        @if (r.mensajes && r.mensajes.length > 0) {
+          <div class="mensajes-box">
+            <strong>Mensajes SRI:</strong>
+            @for (m of r.mensajes; track $index) {
+              <p class="mensaje-item">{{ m | json }}</p>
+            }
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Resultado negociable -->
+    @if (negociableResp(); as n) {
+      <div class="resultado-section">
+        <h3 class="section-title">Estado Título Negociable</h3>
+        <div class="chips-row">
+          <span class="chip" [ngClass]="n.estadoConfirmacion === 'SI' ? 'estado-autorizado' : 'estado-no-autorizado'">
+            Confirmación: {{ n.estadoConfirmacion }}
+          </span>
+        </div>
+      </div>
+    }
+
+  </mat-dialog-content>
+
+  <mat-dialog-actions class="dialog-actions">
+    <button mat-stroked-button type="button" (click)="consultarEstado()" [disabled]="cargando()">
+      <mat-icon>refresh</mat-icon> Reintentar Estado
+    </button>
+    <button mat-stroked-button type="button" (click)="consultarNegociable()" [disabled]="cargando()">
+      <mat-icon>sell</mat-icon> Consultar Negociable
+    </button>
+    <button mat-flat-button color="primary" type="button" (click)="cerrar()">Cerrar</button>
+  </mat-dialog-actions>
+</div>

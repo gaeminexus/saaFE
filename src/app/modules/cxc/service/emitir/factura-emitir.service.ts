@@ -107,6 +107,12 @@ export class FacturaEmitirService {
       .pipe(catchError(this.handleError));
   }
 
+  consultarYActualizarEstado(idFactura: number): Observable<any | null> {
+    return this.http
+      .post<any>(`${ServiciosCxc.RS_FCTR}/consultarYActualizarEstado`, { idFactura }, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
+
   private handleError(error: HttpErrorResponse): Observable<null> {
     if (+error.status === 200) {
       return of(null);

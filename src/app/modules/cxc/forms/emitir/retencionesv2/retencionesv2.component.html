@@ -155,7 +155,7 @@
 
         <mat-form-field appearance="outline">
           <mat-label>Forma de Pago</mat-label>
-          <mat-select [(ngModel)]="idFormaPago" [disabled]="deshabilitado">
+          <mat-select [(ngModel)]="idFormaPago" [disabled]="deshabilitado" [compareWith]="compareSri">
             @for (fp of tablaFormasPago; track fp.id) {
               <mat-option [value]="fp">{{ fp.codigo }} - {{ fp.detalle }}</mat-option>
             }
@@ -196,8 +196,20 @@
 
         <mat-form-field appearance="outline" class="detalle-field detalle-field-wide">
           <mat-label>Porcentaje</mat-label>
-          <mat-select [(ngModel)]="idPorcentaje" (ngModelChange)="onCambioPorcentaje()">
-            @for (p of tablaPorcentajes; track p.id) {
+          <mat-select [(ngModel)]="idPorcentaje" (ngModelChange)="onCambioPorcentaje()" [compareWith]="compareSri" panelClass="select-con-buscador" (openedChange)="!$event && onFiltroPorcentajeChange('')">
+            <mat-option class="select-search-option"
+              (mousedown)="$event.preventDefault(); $event.stopPropagation()"
+              (click)="$event.stopPropagation()">
+              <input
+                class="select-search-input"
+                placeholder="Buscar por código o nombre..."
+                [value]="filtroPorcentaje"
+                (mousedown)="$event.stopPropagation()"
+                (click)="$event.stopPropagation()"
+                (keydown)="$event.stopPropagation()"
+                (input)="onFiltroPorcentajeChange($any($event.target).value)" />
+            </mat-option>
+            @for (p of tablaPorcentajesFiltrados; track p.id) {
               <mat-option [value]="p">{{ p.codigo }} - {{ p.detalle }}</mat-option>
             }
           </mat-select>

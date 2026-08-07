@@ -31,6 +31,7 @@ export class ProductoSelectorDialogComponent {
   productos = signal<ProductoCobro[]>([]);
   grupoSeleccionado = signal<number | null>(null);
   nombreBusqueda = signal('');
+  codigoBusqueda = signal('');
 
   columnas = ['codigo', 'grupo', 'nombre', 'precio', 'stock', 'acciones'];
   dataSource = new MatTableDataSource<ProductoCobro>([]);
@@ -85,8 +86,14 @@ export class ProductoSelectorDialogComponent {
     this.aplicarFiltros();
   }
 
+  onCodigoChange(valor: string): void {
+    this.codigoBusqueda.set(valor || '');
+    this.aplicarFiltros();
+  }
+
   private aplicarFiltros(): void {
     const nombre = this.nombreBusqueda().trim().toLowerCase();
+    const codigo = this.codigoBusqueda().trim().toLowerCase();
     const grupo = this.grupoSeleccionado();
 
     const rows = this.productos().filter((producto) => {
@@ -94,7 +101,9 @@ export class ProductoSelectorDialogComponent {
       const textoGrupo = (producto.grupoProducto?.nombre || '').toLowerCase();
       const textoProducto = (producto.nombre || '').toLowerCase();
       const coincideNombre = !nombre || textoProducto.includes(nombre) || textoGrupo.includes(nombre);
-      return coincideGrupo && coincideNombre;
+      const textoCodigo = String(producto.codigo || '').toLowerCase();
+      const coincideCodigo = !codigo || textoCodigo.includes(codigo);
+      return coincideGrupo && coincideNombre && coincideCodigo;
     });
 
     this.dataSource.data = rows.sort((a, b) => {

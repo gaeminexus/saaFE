@@ -714,8 +714,11 @@
                   (selectionChange)="onDocumentoChange($event.value)">
                   <mat-option></mat-option>
                   @for (doc of documentosTsri(); track doc.id) {
-                    <mat-option [value]="doc">
+                    <mat-option [value]="doc" [disabled]="esTipoDocUsado(doc)">
                       {{ doc.codigo }} - {{ doc.detalle }}
+                      @if (esTipoDocUsado(doc)) {
+                        <span class="tipo-doc-usado"> (ya registrado)</span>
+                      }
                     </mat-option>
                   }
                 </mat-select>

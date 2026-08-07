@@ -16,6 +16,16 @@
         </mat-form-field>
 
         <mat-form-field appearance="outline">
+          <mat-label>Estado</mat-label>
+          <mat-select [(ngModel)]="estadoFiltro">
+            <mat-option value="TODOS">Todos</mat-option>
+            @for (e of estados(); track e.value) {
+              <mat-option [value]="e.value">{{ e.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
           <mat-label>Fecha desde</mat-label>
           <input
             #fechaDesdeInput
@@ -181,11 +191,19 @@
 
 <mat-menu #menuAcciones="matMenu">
   <ng-template matMenuContent let-row="row">
+    <button mat-menu-item (click)="consultarSri(row)" [disabled]="!row.autorizacion">
+      <mat-icon>manage_search</mat-icon>
+      <span>Consultar SRI</span>
+    </button>
+    <button mat-menu-item (click)="consultarYActualizarEstado(row)" [disabled]="!row.autorizacion || imprimiendo()">
+      <mat-icon>sync</mat-icon>
+      <span>Actualizar estado SRI</span>
+    </button>
     <button mat-menu-item (click)="imprimir(row)" [disabled]="!puedeEmitida(row) || imprimiendo()">
       <mat-icon>print</mat-icon>
       <span>Imprimir RIDE</span>
     </button>
-    <button mat-menu-item (click)="copiarClave(row)" [disabled]="!puedeEmitida(row)">
+        <button mat-menu-item (click)="copiarClave(row)" [disabled]="!row.autorizacion">
       <mat-icon>content_copy</mat-icon>
       <span>Copiar clave</span>
     </button>

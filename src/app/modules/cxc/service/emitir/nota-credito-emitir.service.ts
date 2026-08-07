@@ -78,6 +78,12 @@ export class NotaCreditoEmitirService {
       .pipe(catchError(this.handleError));
   }
 
+  consultarYActualizarEstado(idNotaCredito: number): Observable<any | null> {
+    return this.http
+      .post<any>(`${ServiciosCxc.RS_NTCR}/consultarYActualizarEstado`, { idNotaCredito }, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
+
   private handleError(error: HttpErrorResponse): Observable<null> {
     if (+error.status === 200) {
       return of(null);

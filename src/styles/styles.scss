@@ -297,3 +297,46 @@ tr.cuota-desconocida .mat-mdc-cell { background-color: #f3f4f6 !important; borde
 .snackbar-warn .mat-mdc-button {
   color: white !important;
 }
+
+// Select con buscador interno
+.select-con-buscador .select-search-option {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #fff !important;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 4px 8px !important;
+  cursor: default;
+
+  // Evitar highlight de hover/focus del mat-option
+  &:hover,
+  &:focus,
+  &.mat-mdc-option-active,
+  &.mdc-list-item--selected {
+    background: #fff !important;
+  }
+
+  .mdc-list-item__primary-text {
+    width: 100%;
+  }
+}
+
+.select-search-input {
+  width: 100%;
+  border: 1px solid #c2c2c2;
+  border-radius: 4px;
+  padding: 5px 10px;
+  font-size: 0.9rem;
+  outline: none;
+  background: #fafafa;
+  color: #333;
+
+  &:focus {
+    border-color: #1976d2;
+    background: #fff;
+  }
+
+  &::placeholder {
+    color: #aaa;
+  }
+}

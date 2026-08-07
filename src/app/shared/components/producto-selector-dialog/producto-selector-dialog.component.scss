@@ -30,6 +30,10 @@
   gap: 0.9rem;
 }
 
+.filtros-4 {
+  grid-template-columns: 1fr 1fr 1.2fr;
+}
+
 .tabla-contenedor {
   max-height: min(58vh, 640px);
   overflow: auto;

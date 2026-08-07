@@ -31,7 +31,7 @@ import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda
 const TABLA_TIPO_DOC = '3';             // Tipos de documentos (LSRI 3)
 const TABLA_IMPUESTO = '19';            // Impuestos retención (LSRI 19)
 const TABLA_PORCENTAJE_IVA_R = '20';   // % Retención IVA (LSRI 20)
-const TABLA_PORCENTAJE_IR = '615';     // % Retención Renta vigente desde mar-2024 (LSRI 615)
+const TABLA_PORCENTAJE_IR = '608';     // % Retención Renta (LSRI 608)
 const TABLA_PORCENTAJE_ISD = '15';     // % Retención ISD
 const TABLA_FORMA_PAGO = '610';        // Formas de pago SRI (LSRI 610)
 
@@ -84,6 +84,7 @@ export class Retencionesv2Component implements OnInit {
   idDocumento: DetalleSri | null = null;
   idImpuesto: DetalleSri | null = null;
   idPorcentaje: DetalleSri | null = null;
+  filtroPorcentaje = '';
   idFormaPago: DetalleSri | null = null;
   numDocReten = '';
   drAutorizacion = '';
@@ -222,6 +223,9 @@ export class Retencionesv2Component implements OnInit {
     this.docResTotal         = this.rd(total);
     // Rellenar base imponible según el impuesto actualmente seleccionado (sin resetear porcentaje)
     this.actualizarBaseImponible();
+    // Período fiscal: usar mes/año de la fecha de emisión del documento retenido
+    const mes = String(fechaDoc.getMonth() + 1).padStart(2, '0');
+    this.periodoFiscal = `${mes}/${fechaDoc.getFullYear()}`;
     // Forma de pago: intentar mapear por código si existe
     if ((fac as any).formaPago && this.tablaFormasPago.length) {
       const fpCod = String((fac as any).formaPago);
@@ -258,13 +262,14 @@ export class Retencionesv2Component implements OnInit {
   }
 
   onCambioImpuesto(): void {
-    if (!this.idImpuesto) { this.tablaPorcentajes = []; this.idPorcentaje = null; return; }
+    if (!this.idImpuesto) { this.tablaPorcentajes = []; this.idPorcentaje = null; this.filtroPorcentaje = ''; return; }
     const cod = this.idImpuesto.codigo;
     if (cod === '1') this.tablaPorcentajes = [...this.tablaPorcentajesIR];
     else if (cod === '2') this.tablaPorcentajes = [...this.tablaPorcentajesIVA];
     else if (cod === '6') this.tablaPorcentajes = [...this.tablaPorcentajesISD];
     else this.tablaPorcentajes = [];
     this.idPorcentaje = null;
+    this.filtroPorcentaje = '';
     this.txtPorcentaje = 0;
     this.actualizarBaseImponible();
   }
@@ -376,6 +381,7 @@ export class Retencionesv2Component implements OnInit {
         pathGen:             '',
         estado:              1,
         estadoEmision:       1,
+        ambiente:            this.vFacturador.ambiente ?? 1,
         detalleRetencionV2:  this.listaDetalles.map((item) => ({ ...item })),
       },
     };
@@ -563,7 +569,7 @@ export class Retencionesv2Component implements OnInit {
 
   private limpiarDetalle(): void {
     // Solo limpia los campos de la línea de detalle, NO los del documento retenido
-    this.idImpuesto = null; this.idPorcentaje = null;
+    this.idImpuesto = null; this.idPorcentaje = null; this.filtroPorcentaje = '';
     this.txtBaseImponible = 0; this.txtPorcentaje = 0; this.txtValorReten = 0;
     this.tablaPorcentajes = [];
   }
@@ -603,6 +609,8 @@ export class Retencionesv2Component implements OnInit {
         this.tablaFormasPago = d.filter((x) => this.gTC(x.lsri) === TABLA_FORMA_PAGO);
         if (this.tablaTiposDoc.length) this.idDocumento = this.tablaTiposDoc[0];
         if (this.tablaImpuestos.length) { this.idImpuesto = this.tablaImpuestos[0]; this.onCambioImpuesto(); }
+        const fpDefault = this.tablaFormasPago.find((x) => x.codigo === '20');
+        if (fpDefault) this.idFormaPago = fpDefault;
       },
     });
   }
@@ -618,6 +626,22 @@ export class Retencionesv2Component implements OnInit {
     const [a, m, d] = fechaTexto.split('-').map(Number);
     if (!a || !m || !d) return new Date(fechaTexto);
     return new Date(a, m - 1, d);
+  }
+
+  get tablaPorcentajesFiltrados(): DetalleSri[] {
+    const q = this.filtroPorcentaje.trim().toLowerCase();
+    if (!q) return this.tablaPorcentajes;
+    return this.tablaPorcentajes.filter(
+      (p) => p.codigo.toLowerCase().includes(q) || p.detalle.toLowerCase().includes(q)
+    );
+  }
+
+  onFiltroPorcentajeChange(valor: string): void {
+    this.filtroPorcentaje = valor || '';
+  }
+
+  compareSri(a: DetalleSri | null, b: DetalleSri | null): boolean {
+    return !!a && !!b && a.id === b.id;
   }
 
   private gTC(lsri: number | { tabla?: string }): string {

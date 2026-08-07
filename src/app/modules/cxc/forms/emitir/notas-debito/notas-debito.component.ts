@@ -281,7 +281,7 @@ export class NotasDebitoComponent implements OnInit {
         numEstablecimiento: this.ptoEmision!.establecimiento?.codigo || '',
         numPtoEmision:     this.ptoEmision!.codigo || '',
         secuencial:        '',
-        ambiente:          1,
+        ambiente:          this.vFacturador.ambiente ?? 1,
         clave:             '',
         fecha:             fechaDoc,
         fechaEmisionDM:    fechaDM,

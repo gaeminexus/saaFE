@@ -21,7 +21,7 @@ import { DetalleSriService } from '../../../service/detalle-sri.service';
 const TABLA_TIPO_DOC = '3';             // Tipos de documentos (LSRI 3)
 const TABLA_IMPUESTO = '19';            // Impuestos retención (LSRI 19)
 const TABLA_PORCENTAJE_IVA_R = '20';   // % Retención IVA (LSRI 20)
-const TABLA_PORCENTAJE_IR = '615';     // % Retención Renta vigente desde mar-2024 (LSRI 615)
+const TABLA_PORCENTAJE_IR = '608';     // % Retención Renta (LSRI 608)
 const TABLA_PORCENTAJE_ISD = '15';     // % Retención ISD
 
 @Component({

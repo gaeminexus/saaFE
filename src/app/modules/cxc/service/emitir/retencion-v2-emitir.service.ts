@@ -72,6 +72,12 @@ export class RetencionV2EmitirService {
       .pipe(catchError(this.handleError));
   }
 
+  consultarYActualizarEstado(idRetencion: number): Observable<any | null> {
+    return this.http
+      .post<any>(`${ServiciosCxc.RS_RTV2}/consultarYActualizarEstado`, { idRetencion }, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
+
   private handleError(error: HttpErrorResponse): Observable<null> {
     if (+error.status === 200) {
       return of(null);

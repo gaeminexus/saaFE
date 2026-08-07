@@ -16,7 +16,9 @@ import { NotaDebitoEmitirService } from '../../../service/emitir/nota-debito-emi
 import { RetencionV2EmitirService } from '../../../service/emitir/retencion-v2-emitir.service';
 import { DetalleSriService } from '../../../service/detalle-sri.service';
 import { MotivoAnulacionDialogComponent } from '../motivo-anulacion-dialog/motivo-anulacion-dialog.component';
+import { ActualizarEstadoResultadoDialogComponent } from '../actualizar-estado-resultado-dialog/actualizar-estado-resultado-dialog.component';
 import { AdvertenciaNcDialogComponent } from '../advertencia-nc-dialog/advertencia-nc-dialog.component';
+import { ConsultaSriDialogComponent } from '../consulta-sri-dialog/consulta-sri-dialog.component';
 import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
@@ -37,12 +39,13 @@ export interface DocumentoElectronico {
   vIVA: number;
   total: number;
   estadoEmision: number | string | null;
+  ambiente: number;
 }
 
 @Component({
   selector: 'app-consulta-documentos-electronicos',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, MaterialFormModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, MaterialFormModule, ConsultaSriDialogComponent],
   templateUrl: './consulta-documentos-electronicos.component.html',
   styleUrl: './consulta-documentos-electronicos.component.scss',
 })
@@ -77,6 +80,7 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
 
   // Filtros
   tipoDocumento: TipoDocumento = 'TODOS';
+  estadoFiltro: string = 'TODOS';
   fechaDesdeControl = new UntypedFormControl(null);
   fechaHastaControl = new UntypedFormControl(null);
   numeroAutorizacion = '';
@@ -193,6 +197,7 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
 
   limpiarFiltros(): void {
     this.tipoDocumento     = 'TODOS';
+    this.estadoFiltro      = 'TODOS';
     const hoy = new Date();
     this.fechaDesdeControl.setValue(new Date(hoy.getFullYear(), hoy.getMonth(), 1), { emitEvent: false });
     this.fechaHastaControl.setValue(new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0), { emitEvent: false });
@@ -278,7 +283,7 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
       case 'FACTURA':      reporte = 'RPRT_RIDE_FACTURA';       parametros = { P_ID_FACTURA: row.id };       break;
       case 'NOTA_CREDITO': reporte = 'RPRT_RIDE_NOTA_CREDITO';  parametros = { P_ID_NOTA_CREDITO: row.id };  break;
       case 'NOTA_DEBITO':  reporte = 'RPRT_RIDE_NOTA_DEBITO';   parametros = { P_ID_NOTA_DEBITO: row.id };   break;
-      case 'RETENCION':    reporte = 'RPRT_RIDE_RETENCION';     parametros = { P_ID_RETENCION: row.id };     break;
+      case 'RETENCION':    reporte = 'RPRT_RIDE_RETENCION_V2';   parametros = { P_ID_RETENCION_V2: row.id };   break;
       default: this.mostrarError('Tipo de documento sin reporte configurado'); return;
     }
 
@@ -406,10 +411,61 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
     );
   }
 
-  copiarClave(row: DocumentoElectronico): void {
-    if (!this.puedeEmitida(row)) {
-      this.mostrarInfo('Solo se puede copiar clave para documentos en estado emitida'); return;
+  consultarYActualizarEstado(row: DocumentoElectronico): void {
+    if (!row.autorizacion) {
+      this.mostrarInfo('Este documento no tiene clave de acceso disponible');
+      return;
     }
+    const req$ = (() => {
+      switch (row.tipo) {
+        case 'FACTURA':      return this.facturaService.consultarYActualizarEstado(row.id);
+        case 'NOTA_CREDITO': return this.ncService.consultarYActualizarEstado(row.id);
+        case 'NOTA_DEBITO':  return this.ndService.consultarYActualizarEstado(row.id);
+        case 'RETENCION':    return this.retService.consultarYActualizarEstado(row.id);
+        default: return of(null);
+      }
+    })();
+    this.imprimiendo.set(true);
+    req$.subscribe({
+      next: (resp) => {
+        this.imprimiendo.set(false);
+        if (resp) {
+          this.dialog.open(ActualizarEstadoResultadoDialogComponent, {
+            data: resp,
+            width: '520px',
+            disableClose: false,
+          });
+        } else {
+          this.mostrarExito('Consulta realizada');
+        }
+        this.buscar();
+      },
+      error: () => {
+        this.imprimiendo.set(false);
+        this.mostrarError('No se pudo consultar el estado en el SRI');
+      },
+    });
+  }
+
+  consultarSri(row: DocumentoElectronico): void {
+    const clave = row.autorizacion;
+    if (!clave) { this.mostrarInfo('Este documento no tiene clave de acceso disponible'); return; }
+
+    // Obtener ambiente del facturador guardado en sesión; fallback 1 (pruebas)
+    let ambiente = row.ambiente || 1;
+    try {
+      const fStr = sessionStorage.getItem('facturador') || localStorage.getItem('facturador');
+      if (fStr) { const f = JSON.parse(fStr); if (f?.ambiente) ambiente = Number(f.ambiente); }
+    } catch { /* ignore */ }
+
+    this.dialog.open(ConsultaSriDialogComponent, {
+      width: '620px',
+      disableClose: false,
+      data: { clave, ambiente, tipoLabel: row.tipoLabel },
+    });
+  }
+
+  copiarClave(row: DocumentoElectronico): void {
     const valor = row.autorizacion;
     if (!valor) { this.mostrarInfo('No existe autorización/clave disponible'); return; }
     navigator.clipboard.writeText(valor).then(() => this.mostrarExito('Clave copiada al portapapeles'));
@@ -482,6 +538,7 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
       vIVA:                  this.toNum(f.vIVA),
       total:                 this.toNum(f.total),
       estadoEmision:         f.estadoEmision,
+      ambiente:              Number(f.ambiente || 1),
     };
   }
 
@@ -500,6 +557,7 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
       vIVA:                  this.toNum(n.vIVA),
       total:                 this.toNum(n.total),
       estadoEmision:         n.estadoEmision,
+      ambiente:              Number(n.ambiente || 1),
     };
   }
 
@@ -518,6 +576,7 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
       vIVA:                  this.toNum(n.vIVA),
       total:                 this.toNum(n.total),
       estadoEmision:         n.estadoEmision,
+      ambiente:              Number(n.ambiente || 1),
     };
   }
 
@@ -536,6 +595,7 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
       vIVA:                  0,
       total:                 this.toNum(r.total || r.totalRetenido),
       estadoEmision:         r.estadoEmision,
+      ambiente:              Number(r.ambiente || 1),
     };
   }
 
@@ -543,6 +603,7 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
 
   private aplicarFiltros(data: DocumentoElectronico[]): DocumentoElectronico[] {
     return data.filter((row) => {
+      if (this.estadoFiltro !== 'TODOS' && String(Number(row.estadoEmision)) !== this.estadoFiltro) return false;
       if (this.numeroAutorizacion.trim()) {
         if (!row.autorizacion.toLowerCase().includes(this.numeroAutorizacion.trim().toLowerCase())) return false;
       }

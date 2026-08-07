@@ -2,14 +2,14 @@
   <div class="dialog-header">
     <div>
       <h2 mat-dialog-title>{{ titulo }}</h2>
-      <p class="subtitle">Filtra por grupo y nombre del producto de CXC.</p>
+      <p class="subtitle">Filtra por grupo, código o nombre del producto de CXC.</p>
     </div>
     <button mat-icon-button type="button" aria-label="Cerrar" (click)="cerrar()">
       <mat-icon>close</mat-icon>
     </button>
   </div>
 
-  <div class="filtros">
+  <div class="filtros filtros-4">
     <mat-form-field appearance="outline">
       <mat-label>Grupo de producto</mat-label>
       <mat-select [value]="grupoSeleccionado()" (selectionChange)="onGrupoChange($event.value)">
@@ -18,6 +18,15 @@
           <mat-option [value]="grupo.codigo">{{ grupo.codigo }} - {{ grupo.nombre }}</mat-option>
         }
       </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Código de producto</mat-label>
+      <input
+        matInput
+        placeholder="Buscar por código"
+        [value]="codigoBusqueda()"
+        (input)="onCodigoChange($any($event.target).value)" />
     </mat-form-field>
 
     <mat-form-field appearance="outline">

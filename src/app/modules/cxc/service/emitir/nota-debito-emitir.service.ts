@@ -78,6 +78,12 @@ export class NotaDebitoEmitirService {
       .pipe(catchError(this.handleError));
   }
 
+  consultarYActualizarEstado(idNotaDebito: number): Observable<any | null> {
+    return this.http
+      .post<any>(`${ServiciosCxc.RS_NTDB}/consultarYActualizarEstado`, { idNotaDebito }, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
+
   private handleError(error: HttpErrorResponse): Observable<null> {
     if (+error.status === 200) {
       return of(null);
