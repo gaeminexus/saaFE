@@ -198,7 +198,7 @@ getCoincidencias(nombre: string): Observable<Entidad[] | null> {
 
 ## Referencias
 
-- **Guía de Guards:** `.github/GUARDS-AUTENTICACION-NAVEGACION.md`
+- **Guía de Guards:** `docs/patrones/GUARDS-AUTENTICACION-NAVEGACION.md`
 - **Copilot Instructions:** `.github/copilot-instructions.md`
 - **Modelo Entidad:** `src/app/modules/crd/model/entidad.ts`
 - **Modelo ParticipeXCargaArchivo:** `src/app/modules/crd/model/participe-x-carga-archivo.ts`

@@ -6,7 +6,7 @@ reales de muestra** (no solo compilación — se corrió cada parser de verdad c
 archivo real con un harness standalone, ver §7). Pendiente únicamente probar en vivo
 contra el contenedor Docker `saa-oracle-23ai` + WildFly (el REST/EJB completo) y el
 flujo de las 4 pantallas en navegador.
-**Continúa de:** `docs/PROPUESTA-IMPORTACION-EDC-BANCARIOS-2026-07-25.md` (revisión de los
+**Continúa de:** `PROPUESTA-IMPORTACION-EDC-BANCARIOS-2026-07-25.md` (revisión de los
 11 formatos de banco) y de la Fase 1 ya completada (tablas `TSR.EXBC` / `TSR.DEXB` /
 `TSR.CTEB`, entidades JPA, DAO/Service EJB y REST CRUD básicos — verificado en el
 contenedor Docker `saa-oracle-23ai`).
@@ -350,7 +350,7 @@ muestra completa de un mes antes de dar el parser de Alianza por cerrado.
 
 **Motivación:** para la futura pantalla de conciliación TSR-vs-CNT (comparar
 `DetalleExtractoBancario` contra `DetalleAsiento` filtrado por período contable y
-plan de cuentas — ver `docs/RESUMEN-SESION-EXTRACTOS-BANCARIOS-2026-07-25.md` para
+plan de cuentas — ver `docs/historico/RESUMEN-SESION-EXTRACTOS-BANCARIOS-2026-07-25.md` para
 el diseño completo de esa pantalla), cada extracto cargado necesita quedar
 etiquetado con el período contable (`CNT.PRDO`) al que pertenece, elegido
 explícitamente por el usuario al momento de la carga — no inferido automáticamente

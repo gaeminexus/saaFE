@@ -62,7 +62,7 @@ Fixes #(issue_number)
 <!-- Marca con 'x' las tareas completadas. No elimines items, solo márcalos cuando estén listos -->
 
 ### Desarrollo
-- [ ] El código sigue los [estándares de desarrollo](../.github/DEVELOPMENT_STANDARDS.md)
+- [ ] El código sigue los [estándares de desarrollo](../docs/patrones/DEVELOPMENT_STANDARDS.md)
 - [ ] He realizado una auto-revisión de mi código
 - [ ] He comentado mi código, particularmente en áreas difíciles de entender
 - [ ] He agregado/actualizado la documentación JSDoc donde es necesario

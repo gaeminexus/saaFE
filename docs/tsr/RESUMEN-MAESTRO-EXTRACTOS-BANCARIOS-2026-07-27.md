@@ -29,7 +29,7 @@ en ningún otro archivo todavía**.
 
 ## 1. Fases 1-2: Carga de extractos (parsers + período + validación de encabezado)
 
-Ver `docs/PLAN-PANTALLAS-EXTRACTOS-BANCARIOS-2026-07-25.md` para el detalle
+Ver `PLAN-PANTALLAS-EXTRACTOS-BANCARIOS-2026-07-25.md` para el detalle
 completo (tabla de los 11 bancos con fila de encabezado, formato de fecha,
 formato de monto, notas propias; los 2 bugs reales encontrados al correr los
 parsers contra archivos reales — Manabí orden descendente, JEP filas fantasma
@@ -164,7 +164,7 @@ La búsqueda era lenta. Se corrigió reescribiéndola para usar el mecanismo
 genérico **`selectByCriteria`** que ya usan todas las tablas del proyecto
 (`DatosBusqueda`/`TipoDatosBusqueda`/`TipoComandosBusqueda`,
 `EntityDaoImpl.selectByCriteria()` arma JPQL dinámicamente) — documentado en
-`docs/guia-selectByCriteria.md`. Ese documento es la referencia a seguir cada
+`docs/transversal/guia-selectByCriteria.md`. Ese documento es la referencia a seguir cada
 vez que se necesite un filtro dinámico nuevo en cualquier módulo, no solo TSR.
 
 ### 3.7 Bug de manejo de errores corregido en el camino
@@ -401,5 +401,5 @@ en vez de tener dos endpoints redundantes.
   cerrados vía `periodosCerrados`).
 - `cnt/model/periodo.ts` (campos de cierre agregados y luego removidos, ver §4.7).
 
-**Documento de referencia transversal:** `docs/guia-selectByCriteria.md` — usar
+**Documento de referencia transversal:** `docs/transversal/guia-selectByCriteria.md` — usar
 siempre que se necesite un filtro dinámico nuevo en cualquier módulo (§3.6).

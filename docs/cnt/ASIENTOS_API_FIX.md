@@ -207,8 +207,8 @@ Verifica que:
 
 ## 📚 Referencias
 
-- `.github/DEVELOPMENT_STANDARDS.md` - Estándares de desarrollo
-- `.github/GUARDS-AUTENTICACION-NAVEGACION.md` - Patrones de servicios
+- `docs/patrones/DEVELOPMENT_STANDARDS.md` - Estándares de desarrollo
+- `docs/patrones/GUARDS-AUTENTICACION-NAVEGACION.md` - Patrones de servicios
 - Otros servicios con `selectByCriteria`: `periodo.service.ts`, `plan-cuenta.service.ts`
 
 ---

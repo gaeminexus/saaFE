@@ -3,7 +3,7 @@
 **Fecha:** Julio 27, 2026
 **Estado:** Solo propuesta — **no implementado**, pendiente de autorización explícita.
 **Contexto:** Ideas discutidas para extender el módulo de Conciliación Contable
-(ver `docs/RESUMEN-MAESTRO-EXTRACTOS-BANCARIOS-2026-07-27.md` para el diseño base
+(ver `RESUMEN-MAESTRO-EXTRACTOS-BANCARIOS-2026-07-27.md` para el diseño base
 ya implementado) para cubrir dos casos clásicos de conciliación bancaria que el
 sistema actual no puede resolver todavía.
 

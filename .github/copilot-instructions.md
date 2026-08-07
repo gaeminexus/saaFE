@@ -436,7 +436,7 @@ export class AsientosComponent implements CanComponentDeactivate {
 }
 ```
 
-**Documentación completa:** `.github/GUARDS-AUTENTICACION-NAVEGACION.md`
+**Documentación completa:** `docs/patrones/GUARDS-AUTENTICACION-NAVEGACION.md`
 
 ---
 
@@ -645,13 +645,13 @@ BREAKING CHANGE: exportToCSV ahora requiere parámetro headers obligatorio"
 
 Para profundizar en patrones específicos, consultar:
 
-- **Formateo de Fechas:** `.github/FORMATEO-FECHAS.md`
-- **Formularios Dinámicos:** `.github/FORMULARIOS-DINAMICOS-FECHAS.md`
-- **Refactorización de Plan de Cuentas:** `.github/REFACTORIZACION-PLAN-CUENTAS.md`
-- **Análisis Arquitectónico:** `.github/ANALISIS_ARQUITECTURA.md`
-- **Estándares de Desarrollo:** `.github/DEVELOPMENT_STANDARDS.md`
+- **Formateo de Fechas:** `docs/patrones/FORMATEO-FECHAS.md`
+- **Formularios Dinámicos:** `docs/patrones/FORMULARIOS-DINAMICOS-FECHAS.md`
+- **Refactorización de Plan de Cuentas:** `docs/patrones/REFACTORIZACION-PLAN-CUENTAS.md`
+- **Análisis Arquitectónico:** `docs/patrones/ANALISIS_ARQUITECTURA.md`
+- **Estándares de Desarrollo:** `docs/patrones/DEVELOPMENT_STANDARDS.md`
 - **Proceso de Contribución:** `.github/CONTRIBUTING.md`
-- **Guards y Seguridad:** `.github/GUARDS-AUTENTICACION-NAVEGACION.md`
+- **Guards y Seguridad:** `docs/patrones/GUARDS-AUTENTICACION-NAVEGACION.md`
 
 ---
 

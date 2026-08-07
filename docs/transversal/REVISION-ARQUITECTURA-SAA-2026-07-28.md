@@ -97,7 +97,7 @@ Ordenadas por severidad/urgencia, no por módulo.
 
 ### 4.2 Alto — Integridad de datos y correctitud
 
-**H6. Cinco bugs de fallo silencioso confirmados y aún presentes en el módulo CRD (créditos/aportes)**, re-verificados de forma independiente en esta revisión en las líneas exactas reportadas en `docs/CRD-CODE-REVIEW-2026-07-24.md`:
+**H6. Cinco bugs de fallo silencioso confirmados y aún presentes en el módulo CRD (créditos/aportes)**, re-verificados de forma independiente en esta revisión en las líneas exactas reportadas en `docs/crd/CRD-CODE-REVIEW-2026-07-24.md`:
 - `cruce-valores.component.ts:769-782` — la llamada de persistencia del pago está comentada; el mensaje de éxito se dispara igual.
 - `proceso-pago-jubilados.component.ts:386-410` — "procesar pago" es un temporizador de cuenta regresiva de 5 segundos puramente de UI, sin llamada al backend, que termina en un mensaje de éxito falso.
 - `detalle-consulta-carga.component.ts:1991-1993` — el guardado batch de afectación financiera siempre escribe `capitalAfectar: 0, interesAfectar: 0, desgravamenAfectar: 0` sin importar los montos reales.

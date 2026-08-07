@@ -14,7 +14,7 @@ quién/cuándo cargó cada uno — más un tablero de cumplimiento.
 
 En esta sesión se construyó **todo el backend y frontend de punta a punta**:
 
-1. Se diseñó un plan (documento `docs/PLAN-PANTALLAS-EXTRACTOS-BANCARIOS-2026-07-25.md`).
+1. Se diseñó un plan (documento `docs/tsr/PLAN-PANTALLAS-EXTRACTOS-BANCARIOS-2026-07-25.md`).
 2. Se implementaron **los 11 parsers de banco** en `saaBE`, verificados **contra los
    archivos reales de muestra** (no solo compilados) con un harness Java standalone.
    Esto encontró y corrigió 2 bugs reales (ver §3).
@@ -56,9 +56,9 @@ código nuevo del backend todavía no está activo en el servidor que corre.
 - `app.routes.ts` y `menu/menutesoreria/menutesoreria.component.ts` (modificados).
 
 **Documentación completa con todos los detalles técnicos, tablas de columnas por
-banco, y hallazgos:** `docs/PLAN-PANTALLAS-EXTRACTOS-BANCARIOS-2026-07-25.md` (léelo
+banco, y hallazgos:** `docs/tsr/PLAN-PANTALLAS-EXTRACTOS-BANCARIOS-2026-07-25.md` (léelo
 para el detalle fila-por-fila de cada parser). El documento original del cliente
-sigue en `docs/PROPUESTA-IMPORTACION-EDC-BANCARIOS-2026-07-25.md`.
+sigue en `docs/tsr/PROPUESTA-IMPORTACION-EDC-BANCARIOS-2026-07-25.md`.
 
 ---
 

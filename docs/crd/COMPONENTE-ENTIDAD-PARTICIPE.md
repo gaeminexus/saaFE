@@ -1,5 +1,7 @@
 # Componente: Entidad-Partícipe Info
 
+> **PENDIENTE-ACTUALIZAR:** la ruta de carpeta que describe este documento ya no corresponde a la ubicación real del componente.
+
 ## Descripción
 Componente integrado para la edición simultánea de datos de **Entidad** y **Partícipe**. Permite gestionar toda la información relacionada con una persona (entidad) y sus datos como partícipe del fondo en una sola pantalla con diseño moderno por pestañas.
 

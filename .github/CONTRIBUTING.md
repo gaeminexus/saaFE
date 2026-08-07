@@ -4,7 +4,7 @@ Bienvenido al proyecto **saaFE** - Sistema Administrativo Avanzado Frontend. Est
 
 ## 📚 Documentación Disponible
 
-- **[Estándares de Desarrollo](DEVELOPMENT_STANDARDS.md)** - Guía completa de patrones y convenciones
+- **[Estándares de Desarrollo](../docs/patrones/DEVELOPMENT_STANDARDS.md)** - Guía completa de patrones y convenciones
 - **[Copilot Instructions](copilot-instructions.md)** - Instrucciones específicas para IA
 - **[Guía de API](../proxy.conf.json)** - Configuración de proxy para desarrollo
 
@@ -47,7 +47,7 @@ git checkout -b feature/nombre-descriptivo
 ```
 
 ### **2. Desarrollo**
-Sigue las **[Convenciones de Desarrollo](DEVELOPMENT_STANDARDS.md#checklist-para-nuevos-componentes)**:
+Sigue las **[Convenciones de Desarrollo](../docs/patrones/DEVELOPMENT_STANDARDS.md#checklist-para-nuevos-componentes)**:
 
 #### **Crear Componente Nuevo:**
 ```bash
@@ -109,7 +109,7 @@ Breve descripción de los cambios realizados.
 - [ ] Documentación (docs)
 
 ## Checklist
-- [ ] Código sigue los [estándares establecidos](DEVELOPMENT_STANDARDS.md)
+- [ ] Código sigue los [estándares establecidos](../docs/patrones/DEVELOPMENT_STANDARDS.md)
 - [ ] Tests añadidos/actualizados
 - [ ] Documentación actualizada
 - [ ] Build pasa sin errores

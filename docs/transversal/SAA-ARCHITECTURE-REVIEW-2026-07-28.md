@@ -97,7 +97,7 @@ Ordered by severity/urgency, not by module.
 
 ### 4.2 High — Data integrity & correctness
 
-**F6. Five confirmed, still-present silent-failure bugs in the CRD (loans/contributions) module**, independently re-verified in this review at the exact lines from the earlier `docs/CRD-CODE-REVIEW-2026-07-24.md`:
+**F6. Five confirmed, still-present silent-failure bugs in the CRD (loans/contributions) module**, independently re-verified in this review at the exact lines from the earlier `docs/crd/CRD-CODE-REVIEW-2026-07-24.md`:
 - `cruce-valores.component.ts:769-782` — payment persistence call is commented out; success message fires anyway.
 - `proceso-pago-jubilados.component.ts:386-410` — "process payment" is a pure 5-second UI countdown timer with no backend call, ending in a fake success message.
 - `detalle-consulta-carga.component.ts:1991-1993` — batch financial-impact save always writes `capitalAfectar: 0, interesAfectar: 0, desgravamenAfectar: 0` regardless of the real amounts.

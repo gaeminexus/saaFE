@@ -774,7 +774,7 @@ private setupTableConfig(registros: Banco[]): void {
 
 ### 📚 Referencias
 
-- **DetalleRubroService:** Ver `.github/DETALLE-RUBROS.md`
+- **DetalleRubroService:** Ver `docs/patrones/DETALLE-RUBROS.md`
 - **Ejemplos reales:**
   - `modules/tsr/forms/bancos/bancos.component.ts` (autocomplete + select)
   - `modules/cnt/forms/parametrizacion/naturaleza-cuentas/` (autocomplete con rubros)

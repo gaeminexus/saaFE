@@ -603,7 +603,7 @@ export class ConciliacionContableComponent implements OnInit {
     this.detalleGrupoExtracto = [];
     this.detalleGrupoAsiento = [];
 
-    // Ver docs/guia-selectByCriteria.md: busqueda por campo padre (JOIN),
+    // Ver docs/transversal/guia-selectByCriteria.md: busqueda por campo padre (JOIN),
     // no una consulta REST a medida - mismo mecanismo estandar que usan
     // todas las tablas del sistema.
     const criteriosGrupo = (): DatosBusqueda[] => {
