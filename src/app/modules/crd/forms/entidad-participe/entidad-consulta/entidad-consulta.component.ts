@@ -16,6 +16,7 @@ import { Entidad } from '../../../model/entidad';
 import { EstadoParticipe } from '../../../model/estado-participe';
 import { Exter } from '../../../model/exter';
 import { Filial } from '../../../model/filial';
+import { PadronParticipeDTO } from '../../../model/padron-participe';
 import { TipoAporte } from '../../../model/tipo-aporte';
 import { TipoIdentificacion } from '../../../model/tipo-identificacion';
 
@@ -101,6 +102,7 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
   estadosParticipesOptions = signal<EstadoParticipe[]>([]);
   tiposAporteOptions = signal<TipoAporte[]>([]);
   busquedaRealizada = signal<boolean>(false); // Controla visibilidad del paginador
+  descargandoElegibles = signal<boolean>(false);
 
   // Form
   filtrosForm!: FormGroup;
@@ -801,6 +803,56 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
     this.exportService.exportToCSV(rows, 'entidades', headers, dataKeys);
 
     this.snackBar.open('CSV exportado correctamente', 'Cerrar', { duration: 3000 });
+  }
+
+  /** Descarga el padrón de partícipes elegibles (GET /entd/padron-participes) como CSV. */
+  descargarElegibles(): void {
+    this.descargandoElegibles.set(true);
+
+    this.entidadService.getPadronParticipes().subscribe({
+      next: (data: PadronParticipeDTO[] | null) => {
+        this.descargandoElegibles.set(false);
+
+        if (!data || data.length === 0) {
+          this.snackBar.open('No hay datos de elegibles para exportar', 'Cerrar', { duration: 3000 });
+          return;
+        }
+
+        const rows = data.map((p) => ({
+          Número: p.numero,
+          'Código Entidad': p.entidadId,
+          Cédula: p.cedula,
+          'Nombres y Apellidos': p.nombresApellidos,
+          'Calidad Partícipe': p.calidadParticipe,
+          'N° Aportes': p.numeroAportes,
+          'Estado Mora': p.estadoMora,
+          'Meses en Mora': p.mesesEnMora ?? '',
+          'Habilitado Voto': p.habilitadoVoto,
+          'Elegible Miembro': p.elegibleMiembro,
+        }));
+
+        const headers = [
+          'Número',
+          'Código Entidad',
+          'Cédula',
+          'Nombres y Apellidos',
+          'Calidad Partícipe',
+          'N° Aportes',
+          'Estado Mora',
+          'Meses en Mora',
+          'Habilitado Voto',
+          'Elegible Miembro',
+        ];
+
+        this.exportService.exportToCSV(rows, 'padron_participes_elegibles', headers, headers);
+
+        this.snackBar.open('CSV de elegibles exportado correctamente', 'Cerrar', { duration: 3000 });
+      },
+      error: () => {
+        this.descargandoElegibles.set(false);
+        this.snackBar.open('Error al generar el padrón de elegibles', 'Cerrar', { duration: 3000 });
+      },
+    });
   }
 
   /**

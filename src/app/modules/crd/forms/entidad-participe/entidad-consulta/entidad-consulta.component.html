@@ -195,6 +195,15 @@
           </button>
           <button
             mat-raised-button
+            (click)="descargarElegibles()"
+            [disabled]="descargandoElegibles()"
+            class="btn-action btn-elegibles"
+          >
+            <mat-icon>how_to_reg</mat-icon>
+            Elegibles
+          </button>
+          <button
+            mat-raised-button
             (click)="exportarCSV()"
             [disabled]="entidades().length === 0"
             class="btn-action btn-exportar"

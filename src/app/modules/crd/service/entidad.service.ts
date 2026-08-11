@@ -9,6 +9,7 @@ import {
   EntidadResumenEstadoDTO,
   EntidadResumenPrestamosDTO,
 } from '../model/entidad-dashboard';
+import { PadronParticipeDTO, PadronParticipeFiltros } from '../model/padron-participe';
 import { ServiciosCrd } from './ws-crd';
 
 @Injectable({
@@ -116,6 +117,25 @@ export class EntidadService {
     return this.http
       .get<EntidadResumenConsolidadoDTO[]>(url, { params: this.buildDashboardParams(filtros) })
       .pipe(catchError(this.handleError));
+  }
+
+  /** GET: padrón de partícipes elegibles (reporte) */
+  getPadronParticipes(filtros?: PadronParticipeFiltros): Observable<PadronParticipeDTO[] | null> {
+    let params = new HttpParams();
+    if (filtros?.fechaEjecucion) {
+      params = params.set('fechaEjecucion', filtros.fechaEjecucion);
+    }
+    if (filtros?.calidadId != null) {
+      params = params.set('calidadId', filtros.calidadId);
+    }
+    if (filtros?.minimoAportes != null) {
+      params = params.set('minimoAportes', filtros.minimoAportes);
+    }
+
+    const url = `${ServiciosCrd.RS_ENTD}/padron-participes`;
+    return this.http.get<PadronParticipeDTO[]>(url, { params }).pipe(
+      catchError(this.handleError)
+    );
   }
 
   /** DELETE */

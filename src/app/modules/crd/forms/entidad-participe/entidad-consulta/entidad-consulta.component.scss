@@ -257,6 +257,16 @@
       }
     }
 
+    // Botón Elegibles - Tono verde (reporte de padrón de elegibles)
+    &.btn-elegibles {
+      color: #15803d;
+
+      &:hover:not(:disabled) {
+        background: white;
+        color: #16a34a;
+      }
+    }
+
     // Botón Exportar - Tono azul del header
     &.btn-exportar {
       color: #5b6fd8;
