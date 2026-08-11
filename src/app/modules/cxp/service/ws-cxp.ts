@@ -72,6 +72,10 @@ export class ServiciosCxp {
   public static RS_ADNG = `${API_URL}/adng`; // AdendumNegociacion
   public static RS_PTNG = `${API_URL}/ptng`; // PathNegociacion
 
+  // Pagos a proveedores
+  public static RS_APLP = `${API_URL}/aplp`; // AplicacionPagoCxp (abonos y saldo de factura)
+  public static RS_PGTR = `${API_URL}/pgtr`; // PagoProgramado / LotePago (transferencias)
+
 
 
 

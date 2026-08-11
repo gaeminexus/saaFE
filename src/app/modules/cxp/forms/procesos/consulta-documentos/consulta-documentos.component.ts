@@ -8,6 +8,7 @@ import { catchError } from 'rxjs/operators';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { DocumentoCxp } from '../../../model/documento-cxp';
+import { HistorialAbonosFacturaComponent } from '../../pagos/historial-abonos-factura/historial-abonos-factura.component';
 import { DetalleFacturaCompraService } from '../../../service/detalle-factura-compra.service';
 import { DetalleLiquidacionCompraCompraService } from '../../../service/detalle-liquidacion-compra-compra.service';
 import { DetalleNotaCreditoCompraService } from '../../../service/detalle-nota-credito-compra.service';
@@ -25,7 +26,7 @@ import { RetencionCompraService } from '../../../service/retencion-compra.servic
 @Component({
   selector: 'app-consulta-documentos',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, MaterialFormModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, MaterialFormModule, HistorialAbonosFacturaComponent],
   templateUrl: './consulta-documentos.component.html',
   styleUrl: './consulta-documentos.component.scss',
 })
@@ -198,6 +199,9 @@ export class ConsultaDocumentosComponent implements OnInit {
   volverLista(): void { this.vista = 'lista'; this.docSeleccionado = null; this.docReal = null; }
 
   tieneFormasPago(): boolean { return ['FACTURA_COMPRA', 'LIQUIDACION_COMPRA'].includes(this.docSeleccionado?.tipoTablaDestino || ''); }
+
+  /** El historial de abonos (/aplp) solo aplica a facturas de compra. */
+  esFacturaCompra(): boolean { return this.docSeleccionado?.tipoTablaDestino === 'FACTURA_COMPRA'; }
 
   // ─── HELPERS ──────────────────────────────────────────
 

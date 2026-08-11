@@ -53,5 +53,8 @@ public static RS_DTRT = `${API_URL}/dtrt`;  // Detalle Retención v1
 public static RS_RTV2 = `${API_URL}/rtv2`;  // Retención v2
 public static RS_DRV2 = `${API_URL}/drv2`;  // Detalle Retención v2
 
+// Cobros a clientes
+public static RS_APLC = `${API_URL}/aplc`;  // AplicacionPagoCxc (abonos, saldo y cobros)
+
 
 }

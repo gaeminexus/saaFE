@@ -12,6 +12,7 @@ import { DetalleSri } from '../../../model/detalle-sri';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { JasperReportesService } from '../../../../../shared/services/jasper-reportes.service';
 import { MotivoAnulacionDialogComponent } from '../motivo-anulacion-dialog/motivo-anulacion-dialog.component';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-consulta-facturas',
@@ -30,6 +31,7 @@ export class ConsultaFacturasComponent implements OnInit {
   private funcionesDatosS = inject(FuncionesDatosService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
+  private router = inject(Router);
 
   private get usuarioSesion(): string {
     try {
@@ -313,6 +315,17 @@ export class ConsultaFacturasComponent implements OnInit {
 
     const label = estadoMapeado.label.trim().toLowerCase();
     return /^emitida\b/.test(label);
+  }
+
+  /** Abre el historial de abonos y saldo de la factura (APLC). */
+  verAbonos(row: FacturaEmitir): void {
+    if (!row?.id) {
+      this.mostrarInfo('La factura no tiene identificador para consultar sus abonos');
+      return;
+    }
+    this.router.navigate(['/menucuentasxcobrar/cobros/abonos-factura'], {
+      queryParams: { idFactura: row.id },
+    });
   }
 
   copiarClave(row: FacturaEmitir): void {

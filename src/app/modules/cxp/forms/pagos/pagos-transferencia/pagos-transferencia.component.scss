@@ -1,0 +1,69 @@
+@use '../../../../../../styles/components/pagos-cobros' as pc;
+
+.pagina-pagos {
+  padding: 1.5rem 2rem;
+
+  @include pc.pagos-cobros-layout;
+
+  .panel {
+    margin-top: 1.25rem;
+  }
+
+  .col-check {
+    width: 56px;
+  }
+
+  .resumen-seleccion {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 1.5rem;
+    padding: 0.85rem 1rem;
+    margin-top: 0.75rem;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    color: #475569;
+
+    .total {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #1e293b;
+    }
+  }
+
+  .acciones-lote {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-top: 0.75rem;
+  }
+
+  .campo-archivo {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 1 1 320px;
+    padding-top: 0.35rem;
+
+    .nombre-archivo {
+      font-size: 0.85rem;
+      color: #64748b;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  .lista-errores {
+    margin: 0.4rem 0 0;
+    padding-left: 1.1rem;
+    font-size: 0.82rem;
+
+    li {
+      margin-bottom: 0.2rem;
+    }
+  }
+}

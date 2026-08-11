@@ -1,0 +1,12 @@
+@use '../../../../../../styles/components/pagos-cobros' as pc;
+
+.pagina-abonos {
+  padding: 1.5rem 2rem;
+
+  @include pc.pagos-cobros-layout;
+
+  .campo-selector {
+    flex: 1 1 320px;
+    min-width: 280px;
+  }
+}

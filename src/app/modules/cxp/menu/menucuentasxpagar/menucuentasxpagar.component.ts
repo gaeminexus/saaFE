@@ -67,6 +67,23 @@ export class MenucuentaxpagarComponent {
       ],
     },
     {
+      displayName: 'Pagos',
+      iconName: 'account_balance',
+      route: '/menucuentaxpagar/pagos',
+      children: [
+        {
+          displayName: 'Pagos por Transferencia',
+          iconName: 'send_money',
+          route: '/menucuentaxpagar/pagos/transferencias',
+        },
+        {
+          displayName: 'Cruce de Anticipo',
+          iconName: 'savings',
+          route: '/menucuentaxpagar/pagos/cruce-anticipo',
+        },
+      ],
+    },
+    {
       displayName: 'Consultas',
       iconName: 'search',
       route: '/menucuentaxpagar/consultas',

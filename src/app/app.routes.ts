@@ -32,6 +32,9 @@ import { AnticipoComponent } from './modules/cxc/forms/gestionar/anticipo/antici
 import { ConsultaFacturasComponent } from './modules/cxc/forms/gestionar/consulta-facturas/consulta-facturas.component';
 import { ConsultaDocumentosElectronicosComponent } from './modules/cxc/forms/gestionar/consulta-documentos-electronicos/consulta-documentos-electronicos.component';
 import { FinanciarFacturaComponent } from './modules/cxc/forms/gestionar/financiar-factura/financiar-factura.component';
+import { AbonosFacturaComponent } from './modules/cxc/forms/cobros/abonos-factura/abonos-factura.component';
+import { RegistrarCobroComponent } from './modules/cxc/forms/cobros/registrar-cobro/registrar-cobro.component';
+import { CruceAnticipoClienteComponent } from './modules/cxc/forms/cobros/cruce-anticipo-cliente/cruce-anticipo-cliente.component';
 import { DashVentasComponent } from './modules/cxc/reportes/dash-ventas';
 import { MenucuentasxcobrarComponent } from './modules/cxc/menu/menucuentasxcobrar/menucuentasxcobrar.component';
 import { MenucuentaxpagarComponent } from './modules/cxp/menu/menucuentasxpagar/menucuentasxpagar.component';
@@ -41,6 +44,8 @@ import { DatosSriCxpComponent } from './modules/cxp/forms/parametrizacion/datos-
 import { BandejaElectronicaComponent } from './modules/cxp/forms/procesos/bandeja-electronica/bandeja-electronica.component';
 import { GestionDocumentosComponent } from './modules/cxp/forms/procesos/gestion-documentos/gestion-documentos.component';
 import { ConsultaDocumentosComponent } from './modules/cxp/forms/procesos/consulta-documentos/consulta-documentos.component';
+import { CruceAnticipoProveedorComponent } from './modules/cxp/forms/pagos/cruce-anticipo-proveedor/cruce-anticipo-proveedor.component';
+import { PagosTransferenciaComponent } from './modules/cxp/forms/pagos/pagos-transferencia/pagos-transferencia.component';
 import { NegociacionesComponent } from './modules/cxp/forms/negociaciones/negociaciones.component';
 import { DetalleNegociacionComponent } from './modules/cxp/forms/negociaciones/detalle-negociacion/detalle-negociacion.component';
 import { DashboardCxpComponent } from './modules/cxp/forms/reportes/dashboard-cxp/dashboard-cxp.component';
@@ -921,6 +926,21 @@ export const routes: Routes = [
         canActivate: [authGuard],
       },
       {
+        path: 'cobros/abonos-factura',
+        component: AbonosFacturaComponent,
+        canActivate: [authGuard],
+      },
+      {
+        path: 'cobros/registrar',
+        component: RegistrarCobroComponent,
+        canActivate: [authGuard],
+      },
+      {
+        path: 'cobros/cruce-anticipo',
+        component: CruceAnticipoClienteComponent,
+        canActivate: [authGuard],
+      },
+      {
         path: 'reportes/dash-ventas',
         component: DashVentasComponent,
         canActivate: [authGuard],
@@ -960,6 +980,16 @@ export const routes: Routes = [
       {
         path: 'procesos/consulta-documentos',
         component: ConsultaDocumentosComponent,
+        canActivate: [authGuard],
+      },
+      {
+        path: 'pagos/cruce-anticipo',
+        component: CruceAnticipoProveedorComponent,
+        canActivate: [authGuard],
+      },
+      {
+        path: 'pagos/transferencias',
+        component: PagosTransferenciaComponent,
         canActivate: [authGuard],
       },
       {

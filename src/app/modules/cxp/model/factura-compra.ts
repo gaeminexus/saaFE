@@ -42,4 +42,6 @@ export interface FacturaCompra {
   formaPago: number;
   estado: number;
   estadoEmision: number;
+  /** Estado de pago (1=Pendiente, 2=Parcial, 3=Pagada). Lo informa el flujo de abonos (/aplp). */
+  estadoPago?: number;
 }

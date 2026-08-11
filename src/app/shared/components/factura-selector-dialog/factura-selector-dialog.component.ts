@@ -15,10 +15,16 @@ import { DetalleSriService } from '../../../modules/cxc/service/detalle-sri.serv
 import { DatosBusqueda } from '../../model/datos-busqueda/datos-busqueda';
 import { TipoDatosBusqueda as TipoDatos } from '../../model/datos-busqueda/tipo-datos-busqueda';
 import { TipoComandosBusqueda } from '../../model/datos-busqueda/tipo-comandos-busqueda';
+import { EstadoPagoFactura } from '../../model/pagos-cobros/catalogos-aplicacion-pago';
 
 export interface FacturaSelectorDialogData {
   codigoTitular: number;
   nombreTitular: string;
+  /**
+   * Oculta las facturas ya pagadas por completo. Lo usan las pantallas de
+   * cobros; las de notas de crédito/débito necesitan ver todas.
+   */
+  soloPendientes?: boolean;
 }
 
 @Component({
@@ -104,7 +110,12 @@ export class FacturaSelectorDialogComponent implements OnInit {
     this.facturaService.selectByCriteria(criterios).subscribe({
       next: (data) => {
         // Ordenar localmente por id DESC, solo facturas activas primero
-        const lista = (data || []).sort((a, b) => (b.id || 0) - (a.id || 0));
+        let lista = (data || []).sort((a, b) => (b.id || 0) - (a.id || 0));
+        if (this.data.soloPendientes) {
+          // Si el backend no informa estadoPago se conserva la fila: no se puede
+          // afirmar que esté pagada.
+          lista = lista.filter((f) => f.estadoPago !== EstadoPagoFactura.PAGADA);
+        }
         this.todasLasFacturas = lista;
         this.dataSource.data = [...lista];
         this.cargando.set(false);

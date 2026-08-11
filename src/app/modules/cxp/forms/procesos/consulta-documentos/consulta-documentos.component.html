@@ -387,6 +387,18 @@
         </mat-card>
       }
 
+      <!-- Abonos y saldo (solo Factura de Compra) -->
+      @if (esFacturaCompra() && docSeleccionado) {
+        <mat-card class="detalle-card">
+          <mat-card-header>
+            <mat-card-title><mat-icon>account_balance_wallet</mat-icon> Abonos y Saldo</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <app-historial-abonos-factura [idFactura]="docSeleccionado.idDocumentoBD"></app-historial-abonos-factura>
+          </mat-card-content>
+        </mat-card>
+      }
+
     } @else {
       <div class="empty-row">No se pudo cargar el detalle del documento.</div>
     }

@@ -1,0 +1,136 @@
+<div class="pagina-cruce">
+
+  <div class="titulo-barra">
+    <div class="titulo">
+      <mat-icon>savings</mat-icon>
+      <span>Cruce de Anticipo — Cliente</span>
+    </div>
+    <button mat-stroked-button (click)="volverAAbonos()">
+      <mat-icon>arrow_back</mat-icon>
+      Volver a abonos
+    </button>
+  </div>
+
+  <mat-card class="panel">
+    <mat-card-content>
+
+      <div class="fila-campos">
+        <mat-form-field appearance="outline" class="campo-selector">
+          <mat-label>Cliente</mat-label>
+          <input matInput readonly [value]="nombreCliente()" placeholder="Busque un cliente" />
+          <button mat-icon-button matSuffix type="button" matTooltip="Buscar cliente" (click)="buscarCliente()">
+            <mat-icon>search</mat-icon>
+          </button>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="campo-selector">
+          <mat-label>Factura de venta</mat-label>
+          <input matInput readonly [value]="facturaElegida()?.numero || ''" placeholder="Seleccione una factura" />
+          <button
+            mat-icon-button
+            matSuffix
+            type="button"
+            matTooltip="Buscar factura pendiente"
+            [disabled]="!cliente()"
+            (click)="buscarFactura()">
+            <mat-icon>receipt_long</mat-icon>
+          </button>
+          @if (!cliente()) {
+            <mat-hint>Elija primero el cliente</mat-hint>
+          }
+        </mat-form-field>
+      </div>
+
+      @if (cargandoSaldo()) {
+        <div class="estado-linea">
+          <mat-spinner diameter="24"></mat-spinner>
+          <span>Consultando saldo de la factura...</span>
+        </div>
+      }
+
+      @if (saldo(); as s) {
+        <div class="resumen-saldo">
+          <div class="item">
+            <span class="etiqueta">Factura</span>
+            <span class="valor">{{ s.numeroFactura }}</span>
+          </div>
+          <div class="item">
+            <span class="etiqueta">Total</span>
+            <span class="valor">{{ s.total | number: '1.2-2' }}</span>
+          </div>
+          <div class="item">
+            <span class="etiqueta">Aplicado</span>
+            <span class="valor aplicado">{{ s.totalAplicado | number: '1.2-2' }}</span>
+          </div>
+          <div class="item">
+            <span class="etiqueta">Saldo pendiente</span>
+            <span class="valor pendiente">{{ s.saldoPendiente | number: '1.2-2' }}</span>
+          </div>
+        </div>
+      }
+
+      <div class="fila-campos">
+        <mat-form-field appearance="outline">
+          <mat-label>Valor a cruzar</mat-label>
+          <input matInput type="number" min="0" step="0.01" [(ngModel)]="formValor" name="valor" />
+          @if (excedeSaldo) {
+            <mat-error>El valor supera el saldo pendiente de la factura.</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Fecha de aplicación</mat-label>
+          <input matInput [matDatepicker]="pickerFecha" [(ngModel)]="formFecha" name="fecha" />
+          <mat-datepicker-toggle matSuffix [for]="pickerFecha"></mat-datepicker-toggle>
+          <mat-datepicker #pickerFecha></mat-datepicker>
+        </mat-form-field>
+      </div>
+
+      <mat-form-field appearance="outline" class="campo-ancho">
+        <mat-label>Observación</mat-label>
+        <textarea matInput rows="2" [(ngModel)]="formObservacion" name="observacion"></textarea>
+      </mat-form-field>
+
+      @if (excedeSaldo) {
+        <div class="mensaje-advertencia">
+          <mat-icon>warning</mat-icon>
+          <span>El valor a cruzar no puede superar el saldo pendiente de la factura.</span>
+        </div>
+      }
+
+      @if (error()) {
+        <div class="mensaje-error">
+          <mat-icon>error_outline</mat-icon>
+          <span>{{ error() }}</span>
+        </div>
+      }
+
+      @if (resultado(); as r) {
+        <div class="mensaje-exito">
+          <mat-icon>check_circle</mat-icon>
+          <div>
+            <div>{{ r.mensaje }}</div>
+            <div class="detalle-exito">
+              @if (r.asiento) { <span>Asiento: {{ r.asiento }}</span> }
+              @if (r.saldoAnticipos != null) {
+                <span>Saldo de anticipos restante: {{ r.saldoAnticipos | number: '1.2-2' }}</span>
+              }
+            </div>
+          </div>
+        </div>
+      }
+
+      <div class="acciones">
+        <button mat-raised-button class="btn-confirmar" [disabled]="!puedeConfirmar" (click)="confirmar()">
+          @if (procesando()) {
+            <mat-spinner diameter="20"></mat-spinner>
+          } @else {
+            <mat-icon>check</mat-icon>
+          }
+          Confirmar cruce
+        </button>
+      </div>
+
+    </mat-card-content>
+  </mat-card>
+</div>

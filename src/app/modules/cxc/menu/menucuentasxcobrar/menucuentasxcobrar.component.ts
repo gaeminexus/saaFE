@@ -33,12 +33,23 @@ export class MenucuentasxcobrarComponent {
         },
       ],
     },
-    /*{
-      displayName: 'Procesos',
-      iconName: 'settings',
-      route: '/menucuentasxcobrar/procesos',
-      children: [],
-    },*/
+    {
+      displayName: 'Cobros',
+      iconName: 'payments',
+      route: '/menucuentasxcobrar/cobros',
+      children: [
+        {
+          displayName: 'Registrar Cobro',
+          iconName: 'account_balance',
+          route: '/menucuentasxcobrar/cobros/registrar',
+        },
+        {
+          displayName: 'Cruce de Anticipo',
+          iconName: 'savings',
+          route: '/menucuentasxcobrar/cobros/cruce-anticipo',
+        },
+      ],
+    },
     {
       displayName: 'Emitir',
       iconName: 'receipt_long',

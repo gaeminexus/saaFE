@@ -1,0 +1,222 @@
+// Estilos compartidos por las pantallas de Pagos (CXP) y Cobros (CXC).
+// Se consumen con @use desde el SCSS de cada componente.
+
+@mixin pagos-cobros-layout {
+
+  .titulo-barra {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+
+    .titulo {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 1.35rem;
+      font-weight: 600;
+      color: #1e293b;
+
+      mat-icon {
+        color: #5b6fd8;
+      }
+    }
+  }
+
+  .panel {
+    margin-bottom: 1.25rem;
+  }
+
+  .fila-campos {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 1rem;
+
+    mat-form-field {
+      flex: 1 1 220px;
+      min-width: 200px;
+    }
+  }
+
+  .campo-ancho {
+    width: 100%;
+  }
+
+  .btn-consultar {
+    margin-top: 0.35rem;
+  }
+
+  // ===== RESUMEN DE SALDO =====
+  .resumen-saldo {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2rem;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1rem;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+
+    .item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+
+    .etiqueta {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #64748b;
+    }
+
+    .valor {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #1e293b;
+
+      &.aplicado { color: #15803d; }
+      &.pendiente { color: #b45309; }
+    }
+  }
+
+  // ===== MENSAJES =====
+  .estado-linea {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.75rem 0;
+    color: #64748b;
+    font-size: 0.9rem;
+  }
+
+  .mensaje-error,
+  .mensaje-exito,
+  .mensaje-advertencia,
+  .mensaje-info {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    padding: 0.85rem 1rem;
+    margin: 0.75rem 0;
+    border-radius: 8px;
+    font-size: 0.9rem;
+  }
+
+  .mensaje-error {
+    background: #fee2e2;
+    color: #b91c1c;
+  }
+
+  .mensaje-exito {
+    background: #dcfce7;
+    color: #15803d;
+
+    .detalle-exito {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-top: 0.3rem;
+      font-size: 0.82rem;
+      opacity: 0.9;
+    }
+  }
+
+  .mensaje-advertencia {
+    background: #fef3c7;
+    color: #b45309;
+  }
+
+  .mensaje-info {
+    background: #e0f2fe;
+    color: #0369a1;
+  }
+
+  // ===== ACCIONES =====
+  .acciones {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e2e8f0;
+  }
+
+  .btn-confirmar,
+  .btn-primario {
+    background: #5b6fd8;
+    color: white;
+    font-weight: 600;
+    min-width: 170px;
+
+    &:disabled {
+      opacity: 0.5;
+    }
+
+    mat-icon,
+    mat-spinner {
+      margin-right: 0.45rem;
+    }
+
+    ::ng-deep circle {
+      stroke: white;
+    }
+  }
+
+  // ===== BADGES (mismos códigos que shared/model/pagos-cobros) =====
+  .badge {
+    display: inline-block;
+    padding: 0.2rem 0.65rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+
+    &.badge-neutro    { background: #e2e8f0; color: #475569; }
+    &.badge-parcial   { background: #fef3c7; color: #b45309; }
+    &.badge-pagada    { background: #dcfce7; color: #15803d; }
+    &.badge-rechazado { background: #fee2e2; color: #b91c1c; }
+    &.badge-anulado   { background: #e5e7eb; color: #6b7280; }
+  }
+
+  // ===== TABLAS =====
+  .tabla-scroll {
+    overflow-x: auto;
+    max-width: 100%;
+  }
+
+  table[mat-table] {
+    width: 100%;
+
+    th {
+      font-weight: 600;
+      color: #475569;
+      white-space: nowrap;
+    }
+
+    .col-monto {
+      text-align: right;
+    }
+
+    .col-acciones {
+      width: 110px;
+      text-align: center;
+    }
+  }
+
+  .sin-datos {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    padding: 1.75rem;
+    color: #64748b;
+    font-size: 0.9rem;
+
+    mat-icon { color: #cbd5e1; }
+  }
+}

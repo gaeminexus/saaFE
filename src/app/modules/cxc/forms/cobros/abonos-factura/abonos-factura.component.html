@@ -1,0 +1,57 @@
+<div class="pagina-abonos">
+
+  <div class="titulo-barra">
+    <div class="titulo">
+      <mat-icon>account_balance_wallet</mat-icon>
+      <span>Abonos y Saldo de la Factura</span>
+    </div>
+    <button mat-stroked-button (click)="volverAConsulta()">
+      <mat-icon>arrow_back</mat-icon>
+      Volver a facturas
+    </button>
+  </div>
+
+  <mat-card class="panel">
+    <mat-card-content>
+
+      <div class="fila-campos">
+        <mat-form-field appearance="outline" class="campo-selector">
+          <mat-label>Cliente</mat-label>
+          <input matInput readonly [value]="nombreCliente()" placeholder="Busque un cliente" />
+          <button mat-icon-button matSuffix type="button" matTooltip="Buscar cliente" (click)="buscarCliente()">
+            <mat-icon>search</mat-icon>
+          </button>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="campo-selector">
+          <mat-label>Factura de venta</mat-label>
+          <input matInput readonly [value]="facturaElegida()?.numero || ''" placeholder="Seleccione una factura" />
+          <button
+            mat-icon-button
+            matSuffix
+            type="button"
+            matTooltip="Buscar factura"
+            [disabled]="!cliente()"
+            (click)="buscarFactura()">
+            <mat-icon>receipt_long</mat-icon>
+          </button>
+          @if (!cliente()) {
+            <mat-hint>Elija primero el cliente, o llegue desde Consulta de Facturas</mat-hint>
+          }
+        </mat-form-field>
+      </div>
+
+      <app-historial-abonos
+        [saldo]="saldo()"
+        [filas]="filas()"
+        [cargando]="cargando()"
+        [error]="error()"
+        textoBotonPago="Registrar cobro"
+        (revertir)="confirmarReverso($event)"
+        (cruzarAnticipo)="irACruceAnticipo()"
+        (irAPagos)="irARegistrarCobro()">
+      </app-historial-abonos>
+
+    </mat-card-content>
+  </mat-card>
+</div>

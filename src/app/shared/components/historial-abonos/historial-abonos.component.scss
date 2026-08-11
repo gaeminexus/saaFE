@@ -1,0 +1,164 @@
+.historial-abonos {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+// ===== CABECERA DE SALDO =====
+.saldo-cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+
+.saldo-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+}
+
+.saldo-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+
+  .etiqueta {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #64748b;
+  }
+
+  .valor {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: #1e293b;
+
+    &.aplicado { color: #15803d; }
+    &.pendiente { color: #b45309; }
+  }
+}
+
+.saldo-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+
+  .btn-accion {
+    background: white;
+    color: #5b6fd8;
+    font-weight: 600;
+    border: 2px solid transparent;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    transition: all 0.3s ease;
+
+    &:hover:not(:disabled) {
+      transform: translateY(-2px);
+      border-color: currentColor;
+    }
+
+    mat-icon { margin-right: 0.4rem; }
+  }
+}
+
+// ===== BADGES =====
+.badge {
+  display: inline-block;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+
+  &.badge-neutro   { background: #e2e8f0; color: #475569; }
+  &.badge-parcial  { background: #fef3c7; color: #b45309; }
+  &.badge-pagada   { background: #dcfce7; color: #15803d; }
+  &.badge-rechazado{ background: #fee2e2; color: #b91c1c; }
+  &.badge-anulado  { background: #e5e7eb; color: #6b7280; }
+}
+
+// ===== ESTADOS =====
+.cargando,
+.sin-datos,
+.mensaje-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  padding: 1.5rem;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.mensaje-error {
+  justify-content: flex-start;
+  padding: 0.85rem 1rem;
+  background: #fee2e2;
+  border-radius: 8px;
+  color: #b91c1c;
+}
+
+.sin-datos mat-icon {
+  color: #cbd5e1;
+}
+
+// ===== TABLA =====
+.tabla-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.tabla-abonos {
+  width: 100%;
+
+  th {
+    font-weight: 600;
+    color: #475569;
+    white-space: nowrap;
+  }
+
+  td {
+    color: #1e293b;
+  }
+
+  .col-monto {
+    text-align: right;
+  }
+
+  .col-acciones {
+    width: 90px;
+    text-align: center;
+  }
+
+  .tipo-celda {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    white-space: nowrap;
+  }
+
+  .tipo-icono {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    color: #64748b;
+  }
+
+  // Nota de débito: aumenta el saldo en lugar de abonarlo
+  .monto-negativo {
+    color: #b91c1c;
+    font-weight: 600;
+  }
+
+  // Una fila reversada ya no cuenta para el saldo
+  .fila-reversada td {
+    opacity: 0.55;
+    text-decoration: line-through;
+  }
+}
