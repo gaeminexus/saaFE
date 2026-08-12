@@ -777,6 +777,30 @@
               <mat-icon>account_balance_wallet</mat-icon>
               ${{ tipoAporte.totalValor | number : '1.2-2' }}
             </span>
+            <span
+              class="stat-chip positivos"
+              matTooltip="Aportes con valor positivo y fecha del más reciente"
+            >
+              <mat-icon>trending_up</mat-icon>
+              {{ tipoAporte.conteoPositivos }}
+              <span class="chip-fecha">{{
+                tipoAporte.fechaUltimoPositivo ? formatearFecha(tipoAporte.fechaUltimoPositivo) : '-'
+              }}</span>
+            </span>
+            <span
+              class="stat-chip negativos"
+              matTooltip="Aportes con valor negativo y fecha del más reciente"
+            >
+              <mat-icon>trending_down</mat-icon>
+              {{ tipoAporte.conteoNegativos }}
+              <span class="chip-fecha">{{
+                tipoAporte.fechaUltimoNegativo ? formatearFecha(tipoAporte.fechaUltimoNegativo) : '-'
+              }}</span>
+            </span>
+            <span class="stat-chip" matTooltip="Fecha del aporte más reciente">
+              <mat-icon>event</mat-icon>
+              {{ tipoAporte.fechaUltimoAporte ? formatearFecha(tipoAporte.fechaUltimoAporte) : '-' }}
+            </span>
             <!-- Estado del aporte -->
             @if (obtenerEstadoPreferenteTipo(tipoAporte); as estadoInfo) {
             <span class="estado-badge" [ngClass]="estadoInfo.clase">

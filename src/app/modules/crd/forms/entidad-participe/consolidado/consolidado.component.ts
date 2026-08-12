@@ -18,12 +18,14 @@ import { EstadoParticipe } from '../../../model/estado-participe';
 import { TipoAporte } from '../../../model/tipo-aporte';
 import { AporteService } from '../../../service/aporte.service';
 import { EntidadService } from '../../../service/entidad.service';
+import { esEstadoVigente } from '../../../model/estado-participe';
 import { EstadoParticipeService } from '../../../service/estado-participe.service';
 import { TipoAporteService } from '../../../service/tipo-aporte.service';
 import { ExportService } from '../../../../../shared/services/export.service';
 
 interface EstadoFiltroOption {
-  codigo: number;
+  /** Código alterno del catálogo: lo único comparable con Entidad.idEstado. */
+  codigoExterno: number;
   nombre: string;
 }
 
@@ -148,8 +150,8 @@ export class ConsolidadoComponent implements OnInit {
       next: (result) => {
         const estados = Array.isArray(result.estados) ? result.estados : [];
         const permitidos = estados
-          .filter((estado) => this.esEstadoPermitido(estado))
-          .map((estado) => ({ codigo: estado.codigo, nombre: estado.nombre }));
+          .filter((estado) => esEstadoVigente(estado) && this.esEstadoPermitido(estado))
+          .map((estado) => ({ codigoExterno: estado.codigoExterno, nombre: estado.nombre }));
 
         const tiposAporte = Array.isArray(result.tiposAporte) ? result.tiposAporte : [];
 
@@ -165,7 +167,7 @@ export class ConsolidadoComponent implements OnInit {
   todosEstadosSeleccionados = signal<boolean>(false);
 
   toggleTodosEstados(): void {
-    const todos = this.estadosPermitidos().map((e) => e.codigo);
+    const todos = this.estadosPermitidos().map((e) => e.codigoExterno);
     const actuales: number[] = this.filtrosForm.get('estadoParticipe')?.value ?? [];
     const nuevoValor = actuales.length === todos.length ? [] : todos;
     this.filtrosForm.get('estadoParticipe')?.setValue(nuevoValor);
@@ -182,7 +184,7 @@ export class ConsolidadoComponent implements OnInit {
     const estadosSeleccionados: number[] =
       Array.isArray(estadoParticipe) && estadoParticipe.length > 0
         ? (estadoParticipe as unknown[]).map(Number)
-        : this.estadosPermitidos().map((item) => item.codigo);
+        : this.estadosPermitidos().map((item) => item.codigoExterno);
     const estadosObjetivo = estadosSeleccionados;
 
     if (!estadosObjetivo.length) {
@@ -553,7 +555,7 @@ export class ConsolidadoComponent implements OnInit {
       return '';
     }
 
-    return this.estadosPermitidos().find((estado) => estado.codigo === idEstado)?.nombre || String(idEstado);
+    return this.estadosPermitidos().find((estado) => estado.codigoExterno === idEstado)?.nombre || String(idEstado);
   }
 
   private esEstadoPermitido(estado: EstadoParticipe): boolean {
@@ -564,10 +566,7 @@ export class ConsolidadoComponent implements OnInit {
       nombre.includes('jubilado voluntario') ||
       nombre.includes('jubilado complementario') ||
       nombre.includes('cesante desafiliado') ||
-      nombre.includes('jubilado pasivo') ||
-      estado.codigo === 3 ||
-      estado.codigo === 23 ||
-      estado.codigo === 42
+      nombre.includes('jubilado pasivo')
     );
   }
 

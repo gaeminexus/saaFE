@@ -27,6 +27,11 @@ import { EntidadService } from '../../../../service/entidad.service';
 import { Entidad } from '../../../../model/entidad';
 import { Prestamo } from '../../../../model/prestamo';
 import { DetallePrestamo } from '../../../../model/detalle-prestamo';
+import {
+  CodigoEstadoCuota,
+  obtenerCodigoEstadoCuota as leerCodigoEstadoCuota,
+  obtenerNombreEstadoCuota,
+} from '../../../../model/estado-cuota-prestamo';
 import { AfectacionValoresParticipeCarga } from '../../../../model/afectacion-valores-participe-carga';
 import { ExportService } from '../../../../../../shared/services/export.service';
 import { FuncionesDatosService } from '../../../../../../shared/services/funciones-datos.service';
@@ -1776,18 +1781,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
 
   getEstadoCuotaTexto(detalle: DetallePrestamo | null | undefined): string {
     const codigo = this.obtenerCodigoEstadoCuota(detalle);
-    const mapa: Record<number, string> = {
-      1: 'PENDIENTE',
-      2: 'ACTIVA',
-      3: 'EMITIDA',
-      4: 'PAGADA',
-      5: 'MORA',
-      6: 'PARCIAL',
-      7: 'CANCELADA ANT.',
-      8: 'VENCIDA',
-    };
-
-    return mapa[codigo || 0] || '-';
+    return obtenerNombreEstadoCuota(codigo)?.toUpperCase() ?? '-';
   }
 
   private cargarContextoAfectacionFinanciera(novedad: NovedadParticipeCarga): void {
@@ -2004,24 +1998,16 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
   }
 
   private obtenerCodigoEstadoCuota(detalle: DetallePrestamo | null | undefined): number | null {
-    if (!detalle) {
-      return null;
-    }
-
-    if (detalle.estado !== null && detalle.estado !== undefined) {
-      return Number(detalle.estado);
-    }
-
-    if (detalle.idEstado !== null && detalle.idEstado !== undefined) {
-      return Number(detalle.idEstado);
-    }
-
-    return null;
+    // Lee solo estado (DTPRESTD); idEstado es un espejo y no sirve como respaldo
+    return leerCodigoEstadoCuota(detalle);
   }
 
   private esCuotaPagadaOCancelada(detalle: DetallePrestamo | null | undefined): boolean {
     const codigoEstado = this.obtenerCodigoEstadoCuota(detalle);
-    return codigoEstado === 4 || codigoEstado === 7;
+    return (
+      codigoEstado === CodigoEstadoCuota.PAGADA ||
+      codigoEstado === CodigoEstadoCuota.CANCELADA_ANTICIPADA
+    );
   }
 
   private normalizarDetallePrestamo(detalle: DetallePrestamo): DetallePrestamo {

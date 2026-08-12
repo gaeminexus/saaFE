@@ -317,8 +317,8 @@
                   <mat-label>Estado *</mat-label>
                   <mat-select formControlName="idEstado">
                     <mat-option [value]="null">-- Seleccionar --</mat-option>
-                    @for (estado of estadosParticipeOptions; track estado.codigo) {
-                      <mat-option [value]="estado.codigo">{{ estado.nombre }}</mat-option>
+                    @for (estado of estadosParticipeOptions; track estado.codigoExterno) {
+                      <mat-option [value]="estado.codigoExterno">{{ estado.nombre }}</mat-option>
                     }
                   </mat-select>
                   <mat-icon matSuffix>flag</mat-icon>

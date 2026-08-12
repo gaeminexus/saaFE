@@ -3,8 +3,11 @@ import { Component, ElementRef, OnInit, ViewChild, inject, signal } from '@angul
 import { FormsModule, ReactiveFormsModule, UntypedFormControl } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableDataSource } from '@angular/material/table';
-import { forkJoin, of } from 'rxjs';
+import { Observable, forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
+import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
+import { TipoDatosBusqueda as TipoDatos } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { DocumentoCxp } from '../../../model/documento-cxp';
@@ -57,6 +60,7 @@ export class ConsultaDocumentosComponent implements OnInit {
   vista: 'lista' | 'detalle' = 'lista';
   cargando = signal(false);
   cargandoDetalle = signal(false);
+  errorDetalle = signal('');
 
   // Lista (usa DocumentoCxp estado=3 como índice)
   todosDocumentos: DocumentoCxp[] = [];
@@ -129,11 +133,29 @@ export class ConsultaDocumentosComponent implements OnInit {
 
   // ─── DETALLE ──────────────────────────────────────────
 
+  /**
+   * Criterios para traer las líneas hijas de un documento.
+   *
+   * El endpoint genérico selectByCriteria espera una lista de DatosBusqueda,
+   * no un objeto plano como `{ factura: { id } }`: con esa forma el backend no
+   * arma el filtro y la pantalla queda "sin líneas de detalle" sin ningún error
+   * visible. Ver docs/transversal/guia-selectByCriteria.md.
+   */
+  private criteriosPorPadre(campoPadre: string, id: number): DatosBusqueda[] {
+    const criterio = new DatosBusqueda();
+    criterio.asignaValorConCampoPadre(
+      TipoDatos.LONG, campoPadre, 'id', String(id), TipoComandosBusqueda.IGUAL,
+    );
+    criterio.setNumeroCampoRepetido(0);
+    return [criterio];
+  }
+
   verDetalle(doc: DocumentoCxp): void {
     this.docSeleccionado = doc;
     this.docReal = null;
     this.detallesDoc.data = [];
     this.formasPagoDoc = [];
+    this.errorDetalle.set('');
     this.vista = 'detalle';
     this.cargandoDetalle.set(true);
     const id = doc.idDocumentoBD;
@@ -143,8 +165,8 @@ export class ConsultaDocumentosComponent implements OnInit {
         this.columnasDetalle = ['descripcion', 'cantidad', 'valor', 'subTotal', 'descuento', 'baseImponible', 'porcentajeIVA', 'valorIVA', 'total'];
         forkJoin({
           cab: this.facturaService.getById(id).pipe(catchError(() => of(null))),
-          det: this.detalleFacturaService.selectByCriteria({ factura: { id } }).pipe(catchError(() => of([]))),
-          fp:  this.formaPagoFacturaService.selectByCriteria({ factura: { id } }).pipe(catchError(() => of([]))),
+          det: this.detalleFacturaService.selectByCriteria(this.criteriosPorPadre('factura', id)).pipe(this.capturarErrorDetalle()),
+          fp:  this.formaPagoFacturaService.selectByCriteria(this.criteriosPorPadre('factura', id)).pipe(catchError(() => of([]))),
         }).subscribe(({ cab, det, fp }) => {
           this.docReal = cab; this.detallesDoc.data = det || []; this.formasPagoDoc = fp || []; this.cargandoDetalle.set(false);
         });
@@ -154,8 +176,8 @@ export class ConsultaDocumentosComponent implements OnInit {
         this.columnasDetalle = ['descripcion', 'cantidad', 'valor', 'subTotal', 'descuento', 'baseImponible', 'porcentajeIVA', 'valorIVA', 'total'];
         forkJoin({
           cab: this.liqService.getById(id).pipe(catchError(() => of(null))),
-          det: this.detalleLiqService.selectByCriteria({ liquidacion: { id } }).pipe(catchError(() => of([]))),
-          fp:  this.formaPagoLiqService.selectByCriteria({ liquidacion: { id } }).pipe(catchError(() => of([]))),
+          det: this.detalleLiqService.selectByCriteria(this.criteriosPorPadre('liquidacion', id)).pipe(this.capturarErrorDetalle()),
+          fp:  this.formaPagoLiqService.selectByCriteria(this.criteriosPorPadre('liquidacion', id)).pipe(catchError(() => of([]))),
         }).subscribe(({ cab, det, fp }) => {
           this.docReal = cab; this.detallesDoc.data = det || []; this.formasPagoDoc = fp || []; this.cargandoDetalle.set(false);
         });
@@ -165,7 +187,7 @@ export class ConsultaDocumentosComponent implements OnInit {
         this.columnasDetalle = ['descripcion', 'cantidad', 'valor', 'subTotal', 'descuento', 'baseImponible', 'porcentajeIVA', 'valorIVA', 'total'];
         forkJoin({
           cab: this.ncService.getById(id).pipe(catchError(() => of(null))),
-          det: this.detalleNcService.selectByCriteria({ notaCredito: { id } }).pipe(catchError(() => of([]))),
+          det: this.detalleNcService.selectByCriteria(this.criteriosPorPadre('notaCredito', id)).pipe(this.capturarErrorDetalle()),
         }).subscribe(({ cab, det }) => {
           this.docReal = cab; this.detallesDoc.data = det || []; this.cargandoDetalle.set(false);
         });
@@ -175,7 +197,7 @@ export class ConsultaDocumentosComponent implements OnInit {
         this.columnasDetalle = ['descripcion', 'valor', 'baseImponible', 'porcentajeIVA', 'valorIVA', 'total'];
         forkJoin({
           cab: this.ndService.getById(id).pipe(catchError(() => of(null))),
-          det: this.detalleNdService.selectByCriteria({ notaDebito: { id } }).pipe(catchError(() => of([]))),
+          det: this.detalleNdService.selectByCriteria(this.criteriosPorPadre('notaDebito', id)).pipe(this.capturarErrorDetalle()),
         }).subscribe(({ cab, det }) => {
           this.docReal = cab; this.detallesDoc.data = det || []; this.cargandoDetalle.set(false);
         });
@@ -185,7 +207,7 @@ export class ConsultaDocumentosComponent implements OnInit {
         this.columnasDetalle = ['codigoRetencion', 'descripcion', 'baseImponible', 'porcentaje', 'valorRetenido'];
         forkJoin({
           cab: this.retService.getById(id).pipe(catchError(() => of(null))),
-          det: this.detalleRetService.selectByCriteria({ retencion: { id } }).pipe(catchError(() => of([]))),
+          det: this.detalleRetService.selectByCriteria(this.criteriosPorPadre('retencion', id)).pipe(this.capturarErrorDetalle()),
         }).subscribe(({ cab, det }) => {
           this.docReal = cab; this.detallesDoc.data = det || []; this.cargandoDetalle.set(false);
         });
@@ -194,6 +216,17 @@ export class ConsultaDocumentosComponent implements OnInit {
       default:
         this.cargandoDetalle.set(false);
     }
+  }
+
+  /**
+   * Un fallo al traer el detalle deja la tabla vacía, que se ve igual que un
+   * documento sin líneas. Se registra el error para poder distinguirlos.
+   */
+  private capturarErrorDetalle<T>() {
+    return catchError<T[] | null, Observable<T[]>>(() => {
+      this.errorDetalle.set('No se pudo cargar el detalle del documento.');
+      return of([] as T[]);
+    });
   }
 
   volverLista(): void { this.vista = 'lista'; this.docSeleccionado = null; this.docReal = null; }

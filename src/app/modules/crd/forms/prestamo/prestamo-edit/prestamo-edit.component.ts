@@ -20,7 +20,13 @@ import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-
 import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { DetallePrestamo } from '../../../model/detalle-prestamo';
-import { EstadoCuotaPrestamo } from '../../../model/estado-cuota-prestamo';
+import {
+  CLASES_ESTADO_CUOTA,
+  CodigoEstadoCuota,
+  EstadoCuotaPrestamo,
+  NOMBRES_ESTADO_CUOTA,
+  obtenerCodigoEstadoCuota as leerCodigoEstadoCuota,
+} from '../../../model/estado-cuota-prestamo';
 import { Participe } from '../../../model/participe';
 import { Prestamo } from '../../../model/prestamo';
 import { Producto } from '../../../model/producto';
@@ -114,14 +120,20 @@ export class PrestamoEditComponent implements OnInit {
   }
 
   get tieneCuotasCanceladas(): boolean {
-    return this.detallePrestamoRaw().some((d) => this.obtenerCodigoEstadoCuota(d) === 7);
+    return this.detallePrestamoRaw().some(
+      (d) => this.obtenerCodigoEstadoCuota(d) === CodigoEstadoCuota.CANCELADA_ANTICIPADA,
+    );
   }
 
   toggleMostrarCanceladas(): void {
     this.mostrarCanceladas.update(v => !v);
     const raw = this.detallePrestamoRaw();
     this.detallePrestamo.set(
-      this.mostrarCanceladas() ? raw : raw.filter((d) => this.obtenerCodigoEstadoCuota(d) !== 7),
+      this.mostrarCanceladas()
+        ? raw
+        : raw.filter(
+            (d) => this.obtenerCodigoEstadoCuota(d) !== CodigoEstadoCuota.CANCELADA_ANTICIPADA,
+          ),
     );
   }
 
@@ -519,23 +531,21 @@ export class PrestamoEditComponent implements OnInit {
           this.detallePrestamo.set(
             this.mostrarCanceladas()
               ? detalleNormalizado
-              : detalleNormalizado.filter((d) => this.obtenerCodigoEstadoCuota(d) !== 7),
+              : detalleNormalizado.filter(
+                  (d) => this.obtenerCodigoEstadoCuota(d) !== CodigoEstadoCuota.CANCELADA_ANTICIPADA,
+                ),
           );
 
-          // Después de cargar desde Excel, persistir el idEstado (PK) correcto cuando sea incorrecto.
-          // detalle.estado (DTPRESTD) = codigoAlterno (fuente de verdad).
-          // detalle.idEstado (DTPRIDST) debe ser el PK de EstadoCuotaPrestamo.
+          // Después de cargar desde Excel, dejar idEstado como espejo exacto de estado.
+          // detalle.estado (DTPRESTD) es la fuente de verdad; detalle.idEstado (DTPRIDST)
+          // solo replica ese mismo código — ya no se traduce al PK de EstadoCuotaPrestamo.
           if (corregirEstados) {
-            const catalogo = this.estadosCuota();
-            const aCorregir = detalleNormalizado.filter((d) => {
-              const codigoAlt = Number(d.estado);
-              const pkEsperado = catalogo.find(e => e.codigoAlterno === codigoAlt)?.codigo ?? null;
-              return pkEsperado !== null && Number(d.idEstado) !== pkEsperado;
-            }).map(d => {
-              const codigoAlt = Number(d.estado);
-              const pkCorrecto = catalogo.find(e => e.codigoAlterno === codigoAlt)!.codigo;
-              return { ...d, idEstado: pkCorrecto };
-            });
+            const aCorregir = detalleNormalizado
+              .filter((d) => {
+                const codigo = this.obtenerCodigoEstadoCuota(d);
+                return codigo !== null && Number(d.idEstado) !== codigo;
+              })
+              .map((d) => ({ ...d, idEstado: this.obtenerCodigoEstadoCuota(d)! }));
 
             if (aCorregir.length > 0) {
               const updates$ = aCorregir.map(d => this.detallePrestamoService.update(d));
@@ -617,46 +627,29 @@ export class PrestamoEditComponent implements OnInit {
     return null;
   }
 
-  obtenerClaseFilaCuota(codigoAlterno: number | null | undefined): string {
-    if (!codigoAlterno) return 'cuota-desconocida';
-    const mapa: Record<number, string> = {
-      1: 'cuota-pendiente',
-      2: 'cuota-activa',
-      3: 'cuota-emitida',
-      4: 'cuota-pagada',
-      5: 'cuota-mora',
-      6: 'cuota-parcial',
-      7: 'cuota-cancelada',
-      8: 'cuota-vencida',
-    };
-    return mapa[codigoAlterno] ?? 'cuota-desconocida';
+  obtenerClaseFilaCuota(codigo: number | null | undefined): string {
+    if (!codigo) return 'cuota-desconocida';
+    const sufijo = CLASES_ESTADO_CUOTA[codigo];
+    return sufijo ? `cuota-${sufijo}` : 'cuota-desconocida';
   }
 
   /**
-   * Retorna el codigoAlterno del estado de la cuota.
-   * Contrato (igual que participe-dash): detalle.estado (DTPRESTD) almacena el codigoAlterno directamente.
+   * Retorna el código de negocio del estado de la cuota.
+   * Contrato: detalle.estado (DTPRESTD) es la fuente de verdad; idEstado solo lo espeja.
    */
   obtenerCodigoEstadoCuota(detalle: DetallePrestamo | null | undefined): number | null {
-    if (!detalle) return null;
-    const valor = detalle.estado;
-    return valor != null ? Number(valor) : null;
+    return leerCodigoEstadoCuota(detalle);
   }
 
-  obtenerEstadoCuota(codigoAlterno: number | null | undefined): { texto: string; clase: string } {
-    const mapaClase: Record<number, string> = {
-      1: 'cuota-pendiente',
-      2: 'cuota-activa',
-      3: 'cuota-emitida',
-      4: 'cuota-pagada',
-      5: 'cuota-mora',
-      6: 'cuota-parcial',
-      7: 'cuota-cancelada',
-      8: 'cuota-vencida',
-    };
-    if (codigoAlterno == null) return { texto: '-', clase: 'cuota-desconocida' };
-    const estadoEncontrado = this.estadosCuota().find((e) => e.codigoAlterno === codigoAlterno);
-    const texto = estadoEncontrado ? estadoEncontrado.nombre.toUpperCase() : String(codigoAlterno);
-    return { texto, clase: mapaClase[codigoAlterno] ?? 'cuota-desconocida' };
+  obtenerEstadoCuota(codigo: number | null | undefined): { texto: string; clase: string } {
+    if (codigo == null) return { texto: '-', clase: 'cuota-desconocida' };
+    const estadoEncontrado = this.estadosCuota().find((e) => e.codigoAlterno === codigo);
+    const texto =
+      estadoEncontrado?.nombre?.toUpperCase() ??
+      NOMBRES_ESTADO_CUOTA[codigo]?.toUpperCase() ??
+      String(codigo);
+    const sufijo = CLASES_ESTADO_CUOTA[codigo];
+    return { texto, clase: sufijo ? `cuota-${sufijo}` : 'cuota-desconocida' };
   }
 
   abrirSelectorExcel(): void {

@@ -21,7 +21,7 @@ import { FilialService } from '../../../service/filial.service';
 import { ParticipeService } from '../../../service/participe.service';
 import { TipoIdentificacionService } from '../../../service/tipo-identificacion.service';
 import { TipoParticipeService } from '../../../service/tipo-participe.service';
-import { EstadoParticipe } from '../../../model/estado-participe';
+import { CodigoEstadoParticipe, EstadoParticipe, esEstadoVigente } from '../../../model/estado-participe';
 import { EstadoParticipeService } from '../../../service/estado-participe.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 
@@ -242,7 +242,7 @@ export class EntidadEditComponent implements OnInit, OnChanges, OnDestroy {
     const estadoPartSub = this.estadoParticipeService.getAll().subscribe({
       next: (estados) => {
         if (estados && estados.length > 0) {
-          this.estadosParticipeOptions = estados;
+          this.estadosParticipeOptions = estados.filter(esEstadoVigente);
         }
       },
       error: () => {}
@@ -286,7 +286,7 @@ export class EntidadEditComponent implements OnInit, OnChanges, OnDestroy {
       busqueda: [''],
 
       // Estado y migración
-      idEstado: [1, [Validators.required]],
+      idEstado: [CodigoEstadoParticipe.NUEVO as number, [Validators.required]],
       migrado: [0],
 
       // Tabla Partícipe (PRTC)
@@ -371,7 +371,7 @@ export class EntidadEditComponent implements OnInit, OnChanges, OnDestroy {
       tieneCorreoPersonal: 0,
       tieneCorreoTrabajo: 0,
       tieneTelefono: 0,
-      idEstado: 1,
+      idEstado: CodigoEstadoParticipe.NUEVO,
       migrado: 0,
       porcentajeSimilitud: 0,
       codigoParticipe: null,

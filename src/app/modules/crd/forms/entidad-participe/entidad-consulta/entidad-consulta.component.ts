@@ -13,7 +13,8 @@ import { firstValueFrom, forkJoin, of, switchMap } from 'rxjs';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 
 import { Entidad } from '../../../model/entidad';
-import { EstadoParticipe } from '../../../model/estado-participe';
+import { claseBadgeEstadoEntidad } from '../../../model/estado-entidad-badge';
+import { EstadoParticipe, esEstadoVigente } from '../../../model/estado-participe';
 import { Exter } from '../../../model/exter';
 import { Filial } from '../../../model/filial';
 import { PadronParticipeDTO } from '../../../model/padron-participe';
@@ -189,7 +190,7 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
       next: (result) => {
         this.filialesOptions.set(result.filiales || []);
         this.tiposIdentificacionOptions.set(result.tiposIdentificacion || []);
-        this.estadosParticipesOptions.set(result.estadosParticipes || []);
+        this.estadosParticipesOptions.set((result.estadosParticipes || []).filter(esEstadoVigente));
         this.tiposAporteOptions.set(result.tiposAporte || []);
       },
       error: (error) => {
@@ -886,6 +887,8 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
       campoNombre: 'razonSocial',
       campoIdentificacion: 'numeroIdentificacion',
       campoEstadoActual: 'idEstado',
+      // Entidad.idEstado guarda el código alterno, no la PK del catálogo.
+      campoCodigoEstado: 'codigoExterno',
     };
 
     const dialogRef = this.dialog.open(AuditoriaDialogComponent, {
@@ -959,7 +962,7 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
             this.registrarCambioEstadoEnAuditoria(entidad, estadoAnterior, nuevoEstado, motivo);
 
             // Obtener el nombre del estado para el mensaje
-            const estadoObj = this.estadosParticipesOptions().find((e) => e.codigo === nuevoEstado);
+            const estadoObj = this.estadosParticipesOptions().find((e) => e.codigoExterno === nuevoEstado);
             const estadoTexto = estadoObj?.nombre || 'Estado ' + nuevoEstado;
 
             this.snackBar.open(`Estado cambiado a ${estadoTexto} exitosamente`, 'Cerrar', {
@@ -1055,7 +1058,7 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
       return '-';
     }
 
-    const estado = this.estadosParticipesOptions().find((e) => e.codigo === idEstado);
+    const estado = this.estadosParticipesOptions().find((e) => e.codigoExterno === idEstado);
     return estado?.nombre || `Estado ${idEstado}`;
   }
 
@@ -1072,63 +1075,10 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
     }
 
     // Buscar el estado en la lista
-    const estado = this.estadosParticipesOptions().find((e) => e.codigo === idEstado);
+    const estado = this.estadosParticipesOptions().find((e) => e.codigoExterno === idEstado);
     const nombreEstado = estado?.nombre?.toLowerCase() || '';
 
-    // Mapeo específico por palabras clave
-    if (nombreEstado.includes('aprobado')) {
-      return 'estado-activo'; // Verde - APROBADO
-    }
-    if (nombreEstado.includes('rechazado')) {
-      return 'estado-inactivo'; // Rojo - RECHAZADO
-    }
-    if (nombreEstado.includes('pendiente')) {
-      return 'estado-pendiente'; // Amarillo - PENDIENTE
-    }
-    if (nombreEstado.includes('inactivo')) {
-      return 'estado-suspendido'; // Naranja - INACTIVO
-    }
-    if (nombreEstado.includes('proceso')) {
-      return 'estado-revision'; // Azul - PROCESO CESANTIA
-    }
-    if (nombreEstado.includes('cesado')) {
-      return 'estado-cesado'; // Gris oscuro - CESADO
-    }
-    if (nombreEstado.includes('jubilado')) {
-      return 'estado-jubilado'; // Morado - JUBILADO COMPLEMENTARIO/SOLIDARIO
-    }
-    if (nombreEstado.includes('fallecida')) {
-      return 'estado-fallecido'; // Negro - FALLECIDA
-    }
-    if (nombreEstado.includes('desafiliacion')) {
-      return 'estado-desafiliado'; // Café - DESAFILIACION
-    }
-    if (nombreEstado.includes('disponible')) {
-      return 'estado-disponible'; // Cyan - NO DISPONIBLE
-    }
-    if (nombreEstado.includes('pension')) {
-      return 'estado-pension'; // Índigo - PENSION COMPLEMENTARIA CON SALDO CERO
-    }
-    if (nombreEstado.includes('aportar')) {
-      return 'estado-aportar'; // Rosa - DEJO DE APORTAR
-    }
-
-    // Default: usar código para asignar color
-    const colores = [
-      'estado-activo', // 0
-      'estado-inactivo', // 1
-      'estado-pendiente', // 2
-      'estado-revision', // 3
-      'estado-suspendido', // 4
-      'estado-cesado', // 5
-      'estado-jubilado', // 6
-      'estado-fallecido', // 7
-      'estado-desafiliado', // 8
-      'estado-disponible', // 9
-      'estado-pension', // 10
-      'estado-aportar', // 11
-    ];
-    return colores[idEstado % colores.length] || 'estado-otro';
+    return claseBadgeEstadoEntidad(nombreEstado);
   }
 
   toggleFiltrosPrincipales(): void {

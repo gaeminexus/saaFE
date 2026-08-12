@@ -160,6 +160,7 @@
   &.cuota-parcial    { background: rgba(202,138,  4,.12); color: #a16207;  border: 1px solid rgba(202,138,  4,.3); }
   &.cuota-cancelada  { background: rgba(67, 56,202,.12);  color: #3730a3;  border: 1px solid rgba(67, 56,202,.3);  }
   &.cuota-vencida    { background: rgba(220, 38, 38,.12); color: #b91c1c;  border: 1px solid rgba(220, 38, 38,.3); }
+  &.cuota-plazo-vencido { background: rgba(136, 19, 55,.12); color: #9f1239; border: 1px solid rgba(136, 19, 55,.3); }
   &.cuota-desconocida { background: rgba(156,163,175,.12); color: #6b7280; border: 1px solid rgba(156,163,175,.3); }
 }
 

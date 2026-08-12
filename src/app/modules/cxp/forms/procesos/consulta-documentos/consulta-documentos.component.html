@@ -275,6 +275,12 @@
           <mat-card-title><mat-icon>list</mat-icon> Detalle de Productos / Rubros</mat-card-title>
         </mat-card-header>
         <mat-card-content>
+          @if (errorDetalle()) {
+            <div class="mensaje-error-detalle">
+              <mat-icon>error_outline</mat-icon>
+              <span>{{ errorDetalle() }}</span>
+            </div>
+          }
           <div class="table-wrapper">
             <table mat-table [dataSource]="detallesDoc" class="tabla-detalle">
 

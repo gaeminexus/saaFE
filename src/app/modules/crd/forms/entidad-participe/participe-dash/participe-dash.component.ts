@@ -15,6 +15,7 @@ import { Contrato } from '../../../model/contrato';
 import { DetallePrestamo } from '../../../model/detalle-prestamo';
 import { Direccion } from '../../../model/direccion';
 import { Entidad } from '../../../model/entidad';
+import { claseBadgeEstadoEntidad } from '../../../model/estado-entidad-badge';
 import { EstadoParticipe } from '../../../model/estado-participe';
 import { EstadoPrestamo } from '../../../model/estado-prestamo';
 import { PagoPrestamo } from '../../../model/pago-prestamo';
@@ -40,7 +41,15 @@ import { DireccionService } from '../../../service/direccion.service';
 import { EntidadService } from '../../../service/entidad.service';
 import { EstadoParticipeService } from '../../../service/estado-participe.service';
 import { EstadoPrestamoService } from '../../../service/estado-prestamo.service';
-import { EstadoCuotaPrestamo } from '../../../model/estado-cuota-prestamo';
+import {
+  CLASES_ESTADO_CUOTA,
+  CodigoEstadoCuota,
+  EstadoCuotaPrestamo,
+  NOMBRES_ESTADO_CUOTA,
+  construirEstadoCuota,
+  obtenerCodigoEstadoCuota,
+  obtenerNombreEstadoCuota,
+} from '../../../model/estado-cuota-prestamo';
 import { EstadoCuotaPrestamoService } from '../../../service/estado-cuota-prestamo.service';
 import { PagoPrestamoService } from '../../../service/pago-prestamo.service';
 import { ParticipeService } from '../../../service/participe.service';
@@ -63,6 +72,16 @@ interface AportesPorTipo {
   totalValor: number;
   totalPagado: number;
   totalSaldo: number;
+  /** Aportes con valor > 0 (ingresos). */
+  conteoPositivos: number;
+  /** Aportes con valor < 0 (reversos/descuentos). */
+  conteoNegativos: number;
+  /** fechaTransaccion más reciente del grupo; null si ninguna es válida. */
+  fechaUltimoAporte: Date | null;
+  /** fechaTransaccion del último aporte positivo. */
+  fechaUltimoPositivo: Date | null;
+  /** fechaTransaccion del último aporte negativo. */
+  fechaUltimoNegativo: Date | null;
   expandido: boolean;
 }
 
@@ -873,11 +892,7 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
           row['seguroIncendio'] = detalle.valorSeguroIncendio || 0;
         }
         row['cuotaTotal'] = detalle.total || 0;
-        const estadoMapCSV: Record<number, string> = {
-          1: 'Pendiente', 2: 'Activa', 3: 'Emitida', 4: 'Pagada',
-          5: 'En mora', 6: 'Parcial', 7: 'Cancelada ant.', 8: 'Vencida',
-        };
-        row['estado'] = detalle.estado != null ? (estadoMapCSV[detalle.estado] ?? 'N/A') : 'N/A';
+        row['estado'] = obtenerNombreEstadoCuota(obtenerCodigoEstadoCuota(detalle)) ?? 'N/A';
         return row;
       });
 
@@ -1108,11 +1123,8 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
                 `$${(detalle.saldoOtros || 0).toFixed(2)}`,
               ];
               if (esHipotecarioPDF) row.push(`$${(detalle.valorSeguroIncendio || 0).toFixed(2)}`);
-              const estadoMapPDF: Record<number, string> = {
-                1: 'Pendiente', 2: 'Activa', 3: 'Emitida', 4: 'Pagada',
-                5: 'En mora', 6: 'Parcial', 7: 'Cancelada ant.', 8: 'Vencida',
-              };
-              const estadoNombrePDF = detalle.estado != null ? (estadoMapPDF[detalle.estado] ?? 'N/A') : 'N/A';
+              const estadoNombrePDF =
+                obtenerNombreEstadoCuota(obtenerCodigoEstadoCuota(detalle)) ?? 'N/A';
               row.push(`$${(detalle.total || 0).toFixed(2)}`, estadoNombrePDF);
               return row;
             });
@@ -2215,6 +2227,11 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
           totalValor: 0,
           totalPagado: 0,
           totalSaldo: 0,
+          conteoPositivos: 0,
+          conteoNegativos: 0,
+          fechaUltimoAporte: null,
+          fechaUltimoPositivo: null,
+          fechaUltimoNegativo: null,
           expandido: false,
         });
       }
@@ -2224,6 +2241,26 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
       grupo.totalValor += aporte.valor || 0;
       grupo.totalPagado += aporte.valorPagado || 0;
       grupo.totalSaldo += aporte.saldo || 0;
+
+      const valor = aporte.valor || 0;
+      const fecha = this.funcionesDatos.convertirFechaDesdeBackend(aporte.fechaTransaccion);
+
+      if (valor > 0) {
+        grupo.conteoPositivos++;
+        if (fecha && (!grupo.fechaUltimoPositivo || fecha > grupo.fechaUltimoPositivo)) {
+          grupo.fechaUltimoPositivo = fecha;
+        }
+      } else if (valor < 0) {
+        grupo.conteoNegativos++;
+        if (fecha && (!grupo.fechaUltimoNegativo || fecha > grupo.fechaUltimoNegativo)) {
+          grupo.fechaUltimoNegativo = fecha;
+        }
+      }
+
+      // Incluye los aportes en cero, que no entran en ninguno de los dos conteos.
+      if (fecha && (!grupo.fechaUltimoAporte || fecha > grupo.fechaUltimoAporte)) {
+        grupo.fechaUltimoAporte = fecha;
+      }
     });
 
     this.aportesPorTipo = Array.from(tiposMap.values());
@@ -2397,7 +2434,7 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
       return '-';
     }
 
-    const estado = this.estadosParticipesOptions.find((e) => e.codigo === idEstado);
+    const estado = this.estadosParticipesOptions.find((e) => e.codigoExterno === idEstado);
     return estado?.nombre || `Estado ${idEstado}`;
   }
 
@@ -2410,61 +2447,8 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
       return 'estado-desconocido';
     }
 
-    const estado = this.estadosParticipesOptions.find((e) => e.codigo === idEstado);
-    const nombreEstado = estado?.nombre?.toLowerCase() || '';
-
-    if (nombreEstado.includes('aprobado')) {
-      return 'estado-activo';
-    }
-    if (nombreEstado.includes('rechazado')) {
-      return 'estado-inactivo';
-    }
-    if (nombreEstado.includes('pendiente')) {
-      return 'estado-pendiente';
-    }
-    if (nombreEstado.includes('inactivo')) {
-      return 'estado-suspendido';
-    }
-    if (nombreEstado.includes('proceso')) {
-      return 'estado-revision';
-    }
-    if (nombreEstado.includes('cesado')) {
-      return 'estado-cesado';
-    }
-    if (nombreEstado.includes('jubilado')) {
-      return 'estado-jubilado';
-    }
-    if (nombreEstado.includes('fallecida')) {
-      return 'estado-fallecido';
-    }
-    if (nombreEstado.includes('desafiliacion')) {
-      return 'estado-desafiliado';
-    }
-    if (nombreEstado.includes('disponible')) {
-      return 'estado-disponible';
-    }
-    if (nombreEstado.includes('pension')) {
-      return 'estado-pension';
-    }
-    if (nombreEstado.includes('aportar')) {
-      return 'estado-aportar';
-    }
-
-    const colores = [
-      'estado-activo',
-      'estado-inactivo',
-      'estado-pendiente',
-      'estado-revision',
-      'estado-suspendido',
-      'estado-cesado',
-      'estado-jubilado',
-      'estado-fallecido',
-      'estado-desafiliado',
-      'estado-disponible',
-      'estado-pension',
-      'estado-aportar',
-    ];
-    return colores[idEstado % colores.length] || 'estado-otro';
+    const estado = this.estadosParticipesOptions.find((e) => e.codigoExterno === idEstado);
+    return claseBadgeEstadoEntidad(estado?.nombre);
   }
 
   /**
@@ -2722,52 +2706,42 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
    * Basado en el catálogo de estados de préstamo
    */
   tieneCuotasCanceladas(codigoPrestamo: number): boolean {
-    return (this.detallesPrestamoRaw.get(codigoPrestamo) || []).some(dc => dc.detalle.estado === 7);
+    return (this.detallesPrestamoRaw.get(codigoPrestamo) || []).some(
+      (dc) => obtenerCodigoEstadoCuota(dc.detalle) === CodigoEstadoCuota.CANCELADA_ANTICIPADA,
+    );
   }
 
   toggleMostrarCanceladas(codigoPrestamo: number): void {
     this.mostrarCanceladas = !this.mostrarCanceladas;
     const raw = this.detallesPrestamoRaw.get(codigoPrestamo) || [];
-    const cuotasVisibles = this.mostrarCanceladas ? raw : raw.filter(dc => dc.detalle.estado !== 7);
+    const cuotasVisibles = this.mostrarCanceladas
+      ? raw
+      : raw.filter(
+          (dc) => obtenerCodigoEstadoCuota(dc.detalle) !== CodigoEstadoCuota.CANCELADA_ANTICIPADA,
+        );
     const ds = this.detallesPrestamo.get(codigoPrestamo);
     if (ds) { ds.data = cuotasVisibles; }
     this.cdr.detectChanges();
   }
 
-  obtenerClaseFilaCuota(codigoAlterno: number | null | undefined): string {
-    if (!codigoAlterno) return 'cuota-desconocida';
-    const mapa: Record<number, string> = {
-      1: 'cuota-pendiente',
-      2: 'cuota-activa',
-      3: 'cuota-emitida',
-      4: 'cuota-pagada',
-      5: 'cuota-mora',
-      6: 'cuota-parcial',
-      7: 'cuota-cancelada',
-      8: 'cuota-vencida',
-    };
-    return mapa[codigoAlterno] ?? 'cuota-desconocida';
+  obtenerClaseFilaCuota(codigo: number | null | undefined): string {
+    if (!codigo) return 'cuota-desconocida';
+    const sufijo = CLASES_ESTADO_CUOTA[codigo];
+    return sufijo ? `cuota-${sufijo}` : 'cuota-desconocida';
   }
 
   obtenerEstadoCuota(detalle: DetallePrestamo): { texto: string; clase: string } {
-    const estadoId = detalle.estado || 0;
+    // detalle.estado (DTPRESTD) es la fuente de verdad; idEstado solo lo espeja
+    const estadoId = obtenerCodigoEstadoCuota(detalle) ?? 0;
 
-    // Mapa directo codigoAlterno → clase CSS (fuente primaria, siempre confiable)
-    const mapaCodigo: Record<number, { clase: string; texto: string }> = {
-      1: { clase: 'estado-cuota-pendiente',  texto: 'PENDIENTE' },
-      2: { clase: 'estado-cuota-activa',     texto: 'ACTIVA' },
-      3: { clase: 'estado-cuota-emitida',    texto: 'EMITIDA' },
-      4: { clase: 'estado-cuota-pagada',     texto: 'PAGADA' },
-      5: { clase: 'estado-cuota-mora',       texto: 'EN MORA' },
-      6: { clase: 'estado-cuota-parcial',    texto: 'PARCIAL' },
-      7: { clase: 'estado-cuota-cancelada',  texto: 'CANCELADA ANT.' },
-      8: { clase: 'estado-cuota-vencida',    texto: 'VENCIDA' },
-    };
-
-    // Intentar obtener nombre real del catálogo
+    // Intentar obtener nombre real del catálogo, con respaldo en la tabla de códigos
     const estadoEncontrado = this.estadosCuota.find((e) => e.codigoAlterno === estadoId);
-    const textoReal = estadoEncontrado?.nombre?.toUpperCase() || mapaCodigo[estadoId]?.texto || 'SIN ESTADO';
-    const clase = mapaCodigo[estadoId]?.clase || 'estado-cuota-desconocida';
+    const textoReal =
+      estadoEncontrado?.nombre?.toUpperCase() ||
+      NOMBRES_ESTADO_CUOTA[estadoId]?.toUpperCase() ||
+      'SIN ESTADO';
+    const sufijo = CLASES_ESTADO_CUOTA[estadoId];
+    const clase = sufijo ? `estado-cuota-${sufijo}` : 'estado-cuota-desconocida';
 
     return { texto: textoReal, clase };
   }
@@ -2818,23 +2792,22 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
           return;
         }
 
-        // Guardar estado anterior para auditoría
-        const estadoAnteriorCodigo = cuotaCompleta.idEstado || 0;
+        // Guardar estado anterior para auditoría (se lee de estado = DTPRESTD)
+        const estadoAnteriorCodigo = obtenerCodigoEstadoCuota(cuotaCompleta) ?? 0;
         const estadoAnterior = {
           codigo: estadoAnteriorCodigo,
-          nombre: this.obtenerNombreEstadoPrestamo(estadoAnteriorCodigo),
+          nombre:
+            this.estadosCuota.find((e) => e.codigoAlterno === estadoAnteriorCodigo)?.nombre ??
+            obtenerNombreEstadoCuota(estadoAnteriorCodigo) ??
+            'Desconocido',
         };
 
-        // nuevoEstadoCodigo YA ES el codigoAlterno (por el remap en el diálogo)
-        // Buscamos el PK real para el campo idEstado
-        const estadoPK = this.estadosCuota.find((e) => e.codigoAlterno === nuevoEstadoCodigo)?.codigo
-          ?? nuevoEstadoCodigo;
-
-        // Preparar el objeto para el backend
+        // Preparar el objeto para el backend.
+        // nuevoEstadoCodigo YA ES el código de negocio (por el remap en el diálogo);
+        // idEstado se escribe como espejo exacto de estado, sin traducir a PK.
         const cuotaParaBackend: any = {
           ...cuotaCompleta,
-          estado: nuevoEstadoCodigo,  // DTPRESTD - codigoAlterno directo, sin conversión
-          idEstado: estadoPK,         // DTPRIDST - PK de EstadoCuotaPrestamo
+          ...construirEstadoCuota(nuevoEstadoCodigo),
         };
 
         // Enviar actualización
@@ -2879,7 +2852,12 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
 
   /**
    * Recalcula el estado del préstamo basándose en el estado de todas sus cuotas
-   * y actualiza el préstamo si el estado ha cambiado
+   * y actualiza el préstamo si el estado ha cambiado.
+   *
+   * SIN USO: hoy no la invoca nadie (tras cambiar una cuota se llama a
+   * sincronizarEstadoPrestamoDesdeBackend). Los códigos de cuota ya están
+   * corregidos, pero los códigos de estado de PRÉSTAMO a los que mapea siguen
+   * pendientes de validación con negocio antes de volver a engancharla.
    */
   private recalcularEstadoPrestamo(prestamo: Prestamo): void {
     if (!prestamo || !prestamo.codigo) {
@@ -2892,21 +2870,27 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
     }
 
     // Obtener todos los estados de las cuotas
-    const estadosCuotas = dataSource.data.map((d) => d.detalle.idEstado || d.detalle.estado || 0);
+    // d.detalle.estado (DTPRESTD) es la única fuente válida del estado de la cuota
+    const estadosCuotas = dataSource.data.map((d) => obtenerCodigoEstadoCuota(d.detalle) ?? 0);
 
     // Determinar el nuevo estado del préstamo basándose en las cuotas
     let nuevoEstadoCodigo: number | null = null;
 
     // Lógica de negocio para determinar el estado del préstamo:
-    // 1. Si todas las cuotas están en estado "Pagado" (código 2), el préstamo está "Pagado"
-    // 2. Si hay al menos una cuota "Vigente" (código 1), el préstamo está "Vigente"
-    // 3. Si todas las cuotas están "Anuladas" (código 3), el préstamo está "Anulado"
+    // 1. Si todas las cuotas están PAGADAS, el préstamo está pagado
+    // 2. Si todas están CANCELADAS ANTICIPADAMENTE, el préstamo está anulado
+    // 3. Si hay al menos una cuota PENDIENTE o ACTIVA, el préstamo sigue vigente
     // 4. Si hay una mezcla, priorizar el estado más relevante
 
-    const todasPagadas = estadosCuotas.every((estado) => estado === 2);
-    const todasAnuladas = estadosCuotas.every((estado) => estado === 3);
-    const hayVigentes = estadosCuotas.some((estado) => estado === 1);
-    const hayPagadas = estadosCuotas.some((estado) => estado === 2);
+    const todasPagadas = estadosCuotas.every((estado) => estado === CodigoEstadoCuota.PAGADA);
+    const todasAnuladas = estadosCuotas.every(
+      (estado) => estado === CodigoEstadoCuota.CANCELADA_ANTICIPADA,
+    );
+    const hayVigentes = estadosCuotas.some(
+      (estado) =>
+        estado === CodigoEstadoCuota.PENDIENTE || estado === CodigoEstadoCuota.ACTIVA,
+    );
+    const hayPagadas = estadosCuotas.some((estado) => estado === CodigoEstadoCuota.PAGADA);
 
     if (todasPagadas) {
       nuevoEstadoCodigo = 2; // Pagado

@@ -19,7 +19,7 @@ import {
   TipoFormatoFechaBackend,
 } from '../../../../../shared/services/funciones-datos.service';
 import { EstadoPrestamo } from '../../../model/estado-prestamo';
-import { EstadoParticipe } from '../../../model/estado-participe';
+import { EstadoParticipe, esEstadoVigente } from '../../../model/estado-participe';
 import { CargaArchivo } from '../../../model/carga-archivo';
 import { Aporte } from '../../../model/aporte';
 import { Entidad } from '../../../model/entidad';
@@ -37,6 +37,7 @@ import { AporteService } from '../../../service/aporte.service';
 import { CargaArchivoService } from '../../../service/carga-archivo.service';
 import { EntidadService } from '../../../service/entidad.service';
 
+import { EstadoParticipeService } from '../../../service/estado-participe.service';
 import { EstadoPrestamoService } from '../../../service/estado-prestamo.service';
 import { NovedadParticipeCargaService } from '../../../service/novedad-participe-carga.service';
 import { PrestamoService } from '../../../service/prestamo.service';
@@ -222,6 +223,7 @@ export class PrestamoDashComponent implements OnInit {
   private readonly cargaArchivoService = inject(CargaArchivoService);
   private readonly entidadService = inject(EntidadService);
   private readonly estadoPrestamoService = inject(EstadoPrestamoService);
+  private readonly estadoParticipeService = inject(EstadoParticipeService);
   private readonly novedadParticipeCargaService = inject(NovedadParticipeCargaService);
   private readonly productoService = inject(ProductoService);
   private readonly prestamoService = inject(PrestamoService);
@@ -303,7 +305,8 @@ export class PrestamoDashComponent implements OnInit {
 
       return resumen
         .map((item, idx) => {
-          const estado = estados.find((e) => e.codigo === item.estadoId || e.codigoExterno === item.estadoId || e.idEstado === item.estadoId);
+          // estadoId del resumen es el código alterno del catálogo de Entidad.
+          const estado = estados.find((e) => e.codigoExterno === item.estadoId);
           const label = estado?.nombre || `Estado ${item.estadoId}`;
           return {
             key: this.normalizarKey(label),
@@ -1312,29 +1315,31 @@ export class PrestamoDashComponent implements OnInit {
     this.cargarNovedadesCargasRecientes(recientes);
   }
 
-  /** IDs de los estados de partícipe que se muestran en los pasteles de entidades. */
-  private static readonly ESTADOS_ENTIDAD_IDS = [10, 2, 30, 23, 42] as const;
-
-  /** Catálogo fijo de los 5 estados conocidos (evita llamada al backend). */
-  private static readonly ESTADOS_ENTIDAD_FIJOS: EstadoParticipe[] = [
-    { codigo: 10, nombre: 'Activo', codigoExterno: 10, idEstado: 10 },
-    { codigo: 2, nombre: 'Cesante', codigoExterno: 2, idEstado: 2 },
-    { codigo: 30, nombre: 'Jubilado', codigoExterno: 30, idEstado: 30 },
-    { codigo: 23, nombre: 'Cesante Desafiliado', codigoExterno: 23, idEstado: 23 },
-    { codigo: 42, nombre: 'Jubilado Pasivo', codigoExterno: 42, idEstado: 42 },
-  ];
-
+  /**
+   * Carga los estados desde el catálogo (/espr) en vez de declararlos aquí: así
+   * un estado nuevo entra solo en los pasteles y en el filtro. Se envía la lista
+   * completa de estados vigentes en `estados` para no depender del default del
+   * backend, que deja fuera algunos estados.
+   */
   private cargarResumenEntidades(): void {
     this.loadingEntidades.set(true);
     this.errorEntidades.set('');
 
-    // Catálogo fijo de los 5 estados
-    this.estadosParticipeOptions.set(PrestamoDashComponent.ESTADOS_ENTIDAD_FIJOS);
+    this.estadoParticipeService
+      .getAll()
+      .pipe(catchError(() => of([] as EstadoParticipe[])))
+      .subscribe((catalogo) => {
+        const vigentes = (catalogo ?? []).filter(esEstadoVigente);
+        this.estadosParticipeOptions.set(vigentes);
+        this.cargarResumenConsolidado(vigentes.map((e) => e.codigoExterno));
+      });
+  }
 
+  private cargarResumenConsolidado(codigosEstado: number[]): void {
     this.entidadService
-      .getResumenConsolidadoPorEstado({
-        estados: PrestamoDashComponent.ESTADOS_ENTIDAD_IDS.join(','),
-      })
+      .getResumenConsolidadoPorEstado(
+        codigosEstado.length ? { estados: codigosEstado.join(',') } : undefined,
+      )
       .pipe(
         catchError((err) => {
           console.error('Error al cargar resumen consolidado de entidades', err);
@@ -1347,7 +1352,7 @@ export class PrestamoDashComponent implements OnInit {
 
         // Completar con filas en cero los estados que el backend no retornó
         const estadosRetornados = new Set(data.map((r) => r.estadoId));
-        for (const id of PrestamoDashComponent.ESTADOS_ENTIDAD_IDS) {
+        for (const id of codigosEstado) {
           if (!estadosRetornados.has(id)) {
             data.push({ estadoId: id, totalEntidades: 0, totalPrestamos: 0, totalAportes: 0 });
           }
@@ -2034,13 +2039,9 @@ export class PrestamoDashComponent implements OnInit {
     estados: EstadoParticipe[],
   ): EstadoParticipe | undefined {
     const idEstado = entidad.idEstado;
+    if (idEstado == null) return undefined;
 
-    return estados.find(
-      (item) =>
-        (idEstado != null && item.codigo === idEstado) ||
-        (idEstado != null && item.codigoExterno === idEstado) ||
-        (idEstado != null && item.idEstado === idEstado),
-    );
+    return estados.find((item) => item.codigoExterno === idEstado);
   }
 
   private aplicarFiltroFechaAportes(aportes: Aporte[]): Aporte[] {

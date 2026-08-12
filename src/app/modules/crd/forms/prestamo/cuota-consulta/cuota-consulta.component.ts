@@ -18,6 +18,12 @@ import { MatDialog } from '@angular/material/dialog';
 import { DetallePrestamoService } from '../../../service/detalle-prestamo.service';
 import { ExportService } from '../../../../../shared/services/export.service';
 import { DetallePrestamo } from '../../../model/detalle-prestamo';
+import {
+  CodigoEstadoCuota,
+  NOMBRES_ESTADO_CUOTA,
+  obtenerCodigoEstadoCuota,
+  obtenerNombreEstadoCuota,
+} from '../../../model/estado-cuota-prestamo';
 import { PrestamoDetalleDialogComponent } from '../../../dialog/prestamo-detalle-dialog/prestamo-detalle-dialog.component';
 
 interface CuotaDisplay {
@@ -47,17 +53,13 @@ interface CuotaDisplay {
   styleUrls: ['./cuota-consulta.component.scss']
 })
 export class CuotaConsultaComponent implements OnInit {
-  private readonly ESTADO_CUOTA_CANCELADA_ANTICIPADA = 7;
+  private readonly ESTADO_CUOTA_CANCELADA_ANTICIPADA = CodigoEstadoCuota.CANCELADA_ANTICIPADA;
 
-  estadosCuota = [
-    { valor: 1, nombre: 'Pendiente' },
-    { valor: 2, nombre: 'Activa' },
-    { valor: 3, nombre: 'Emitida' },
-    { valor: 4, nombre: 'Pagada' },
-    { valor: 5, nombre: 'En mora' },
-    { valor: 6, nombre: 'Parcial' },
-    { valor: 8, nombre: 'Vencida' }
-  ];
+  // Opciones del filtro: todos los estados salvo CANCELADA ANTICIPADA, que esta
+  // pantalla excluye del listado (ver debeExcluirDetalle)
+  estadosCuota = Object.entries(NOMBRES_ESTADO_CUOTA)
+    .map(([valor, nombre]) => ({ valor: Number(valor), nombre }))
+    .filter((e) => e.valor !== CodigoEstadoCuota.CANCELADA_ANTICIPADA);
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
@@ -232,7 +234,7 @@ export class CuotaConsultaComponent implements OnInit {
   }
 
   private esCuotaCanceladaAnticipada(detalle: DetallePrestamo): boolean {
-    return detalle.estado === this.ESTADO_CUOTA_CANCELADA_ANTICIPADA;
+    return obtenerCodigoEstadoCuota(detalle) === this.ESTADO_CUOTA_CANCELADA_ANTICIPADA;
   }
 
   private mapearDetallesACuotas(detalles: DetallePrestamo[]): CuotaDisplay[] {
@@ -247,23 +249,13 @@ export class CuotaConsultaComponent implements OnInit {
       numeroIdentificacion: detalle.prestamo?.entidad?.numeroIdentificacion || 'N/A',
       codigoPetro: detalle.prestamo?.entidad?.rolPetroComercial || 0,
       numeroCuota: detalle.numeroCuota,
-      estadoId: detalle.estado,
+      estadoId: obtenerCodigoEstadoCuota(detalle) ?? 0,
       estado: this.obtenerEstadoCuota(detalle)
     }));
   }
 
   private obtenerEstadoCuota(detalle: DetallePrestamo): string {
-    const mapa: Record<number, string> = {
-      1: 'Pendiente',
-      2: 'Activa',
-      3: 'Emitida',
-      4: 'Pagada',
-      5: 'En mora',
-      6: 'Parcial',
-      7: 'Cancelada anticipada',
-      8: 'Vencida',
-    };
-    return detalle.estado != null ? (mapa[detalle.estado] ?? 'Desconocido') : 'Desconocido';
+    return obtenerNombreEstadoCuota(obtenerCodigoEstadoCuota(detalle)) ?? 'Desconocido';
   }
 
   aplicarFiltros(): void {

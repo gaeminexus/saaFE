@@ -9,6 +9,7 @@ import { forkJoin } from 'rxjs';
 import { ExterHistoricoDialogComponent } from '../../../dialog/exter-historico-dialog/exter-historico-dialog.component';
 
 import { Entidad } from '../../../model/entidad';
+import { CodigoEstadoParticipe } from '../../../model/estado-participe';
 import { Participe } from '../../../model/participe';
 import { Exter } from '../../../model/exter';
 import { Filial } from '../../../model/filial';
@@ -198,7 +199,7 @@ export class EntidadParticipeInfoComponent implements OnInit {
       busqueda: [''],
       fechaNacimiento: [null as Date | null],
       urlFotoLogo: [''],
-      idEstado: [1],
+      idEstado: [CodigoEstadoParticipe.NUEVO as number],
       migrado: [0],
       usuarioIngreso: [{ value: '', disabled: true }],
       fechaIngreso: [{ value: null, disabled: true }],
@@ -961,7 +962,7 @@ export class EntidadParticipeInfoComponent implements OnInit {
 
   limpiarFormulario(): void {
     this.entidadForm.reset({
-      idEstado: 1,
+      idEstado: CodigoEstadoParticipe.NUEVO,
       migrado: 0,
       sectorPublico: 0,
       cargasFamiliares: 0,

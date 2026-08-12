@@ -13,7 +13,7 @@ import { FuncionesDatosService } from '../../../../../../shared/services/funcion
 import { Aporte } from '../../../../model/aporte';
 import { DetallePrestamo } from '../../../../model/detalle-prestamo';
 import { Entidad } from '../../../../model/entidad';
-import { EstadoParticipe } from '../../../../model/estado-participe';
+import { EstadoParticipe, esEstadoVigente } from '../../../../model/estado-participe';
 import { Prestamo } from '../../../../model/prestamo';
 import { AporteService } from '../../../../service/aporte.service';
 import { DetallePrestamoService } from '../../../../service/detalle-prestamo.service';
@@ -75,7 +75,8 @@ export class JubilarParticipeComponent {
 
   constructor() {
     this.estadoParticipeService.getAll().subscribe({
-      next: (estados) => this.estadosPermitidos.set((estados ?? []).filter((e) => this.esEstadoPermitido(e))),
+      next: (estados) =>
+        this.estadosPermitidos.set((estados ?? []).filter((e) => esEstadoVigente(e) && this.esEstadoPermitido(e))),
       error: () => this.snackBar.open('No se pudieron cargar los estados de partícipe.', 'Cerrar', { duration: 4000 }),
     });
 
@@ -248,7 +249,7 @@ export class JubilarParticipeComponent {
         this.buscando.set(false);
         // Filtro de seguridad: solo Activo/Cesante son elegibles para este proceso, sin
         // importar si el criterio de estado ya fue enviado al backend.
-        const permitidos = (entidades ?? []).filter((e) => this.estadosPermitidos().some((ep) => ep.codigo === e.idEstado));
+        const permitidos = (entidades ?? []).filter((e) => this.estadosPermitidos().some((ep) => ep.codigoExterno === e.idEstado));
         this.resultados.set(permitidos);
         this.mostrandoResultados.set(true);
         this.entidadSeleccionada.set(null);

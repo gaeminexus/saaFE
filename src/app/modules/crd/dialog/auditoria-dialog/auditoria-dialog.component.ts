@@ -16,6 +16,13 @@ export interface CambiarEstadoDialogData {
   campoNombre?: string; // Campo a mostrar como nombre (razonSocial, nombre, etc.)
   campoIdentificacion?: string; // Campo de identificación (numeroIdentificacion, codigo, etc.)
   campoEstadoActual?: string; // Campo del estado actual (idEstado, estadoPrestamo.codigo, etc.)
+  /**
+   * Propiedad de `estadosDisponibles` que contiene el código a comparar y a
+   * devolver. Por defecto 'codigo'. El catálogo de estados de Entidad (/espr)
+   * debe pasar 'codigoExterno', porque su 'codigo' es una PK interna que no
+   * corresponde a `Entidad.idEstado`.
+   */
+  campoCodigoEstado?: string;
 }
 
 export interface CambiarEstadoDialogResult {
@@ -50,6 +57,7 @@ export class AuditoriaDialogComponent {
   campoNombre: string;
   campoIdentificacion: string;
   campoEstadoActual: string;
+  campoCodigoEstado: string;
 
   constructor(
     public dialogRef: MatDialogRef<AuditoriaDialogComponent>,
@@ -61,6 +69,7 @@ export class AuditoriaDialogComponent {
     this.campoNombre = this.data.campoNombre || 'razonSocial';
     this.campoIdentificacion = this.data.campoIdentificacion || 'numeroIdentificacion';
     this.campoEstadoActual = this.data.campoEstadoActual || 'idEstado';
+    this.campoCodigoEstado = this.data.campoCodigoEstado || 'codigo';
 
     // Inicializar formulario vacío para que el usuario elija
     this.form = this.fb.group({
@@ -95,8 +104,15 @@ export class AuditoriaDialogComponent {
    */
   getNombreEstadoActual(): string {
     const estadoActualCodigo = this.getEstadoActualCodigo();
-    const estadoActual = this.data.estadosDisponibles.find((e) => e.codigo === estadoActualCodigo);
+    const estadoActual = this.data.estadosDisponibles.find(
+      (e) => e[this.campoCodigoEstado] === estadoActualCodigo
+    );
     return estadoActual?.nombre || 'Desconocido';
+  }
+
+  /** Código a usar como valor de cada opción del select. */
+  getCodigoOpcion(estado: any): number {
+    return estado?.[this.campoCodigoEstado];
   }
 
   /**

@@ -22,8 +22,8 @@
         <mat-label>Estado</mat-label>
         <mat-select [ngModel]="criterioEstadoSeleccionado()" (ngModelChange)="criterioEstadoSeleccionado.set($event)">
           <mat-option [value]="null">Todos (Activo / Cesante)</mat-option>
-          @for (e of estadosPermitidos(); track e.codigo) {
-            <mat-option [value]="e.codigo">{{ e.nombre }}</mat-option>
+          @for (e of estadosPermitidos(); track e.codigoExterno) {
+            <mat-option [value]="e.codigoExterno">{{ e.nombre }}</mat-option>
           }
         </mat-select>
       </mat-form-field>

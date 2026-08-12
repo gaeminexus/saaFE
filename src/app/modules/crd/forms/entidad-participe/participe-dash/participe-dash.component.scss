@@ -478,6 +478,12 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
                 }
               }
 
+              // ACTIVO EN MORA (Rojo ladrillo)
+              &.estado-mora {
+                background: linear-gradient(135deg, #bf360c 0%, #d84315 100%);
+                color: white;
+              }
+
               &.estado-pension {
                 background: linear-gradient(135deg, #3f51b5 0%, #5c6bc0 100%);
                 color: white;
@@ -1629,6 +1635,25 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
                 height: 1rem;
                 color: $saa-primary;
               }
+
+              // Conteos por signo del valor del aporte
+              &.positivos mat-icon {
+                color: #2e7d32;
+              }
+
+              &.negativos mat-icon {
+                color: #c62828;
+              }
+
+              // Fecha del último movimiento del signo, dentro del mismo chip
+              .chip-fecha {
+                padding-left: 0.4rem;
+                margin-left: 0.15rem;
+                border-left: 1px solid rgba(0, 0, 0, 0.12);
+                font-size: 0.78rem;
+                font-weight: 400;
+                white-space: nowrap;
+              }
             }
           }
         }
@@ -1897,6 +1922,7 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
     &.estado-cuota-parcial    { background: rgba(245,158,11,.15);  color: #92400e;  border: 1px solid rgba(245,158,11,.35); } // naranja claro
     &.estado-cuota-cancelada  { background: rgba(124,58,237,.15);  color: #5b21b6;  border: 1px solid rgba(124,58,237,.35); } // púrpura
     &.estado-cuota-vencida    { background: rgba(220,53,69,.18);   color: #991b1b;  border: 1px solid rgba(220,53,69,.4); }   // rojo
+    &.estado-cuota-plazo-vencido { background: rgba(136,19,55,.15); color: #881337; border: 1px solid rgba(136,19,55,.35); } // vino
     &.estado-cuota-desconocida{ background: rgba(108,117,125,.15); color: #6c757d;  border: 1px solid rgba(108,117,125,.3); } // gris
   }
 

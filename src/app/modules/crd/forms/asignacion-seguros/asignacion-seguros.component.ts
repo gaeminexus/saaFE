@@ -208,7 +208,7 @@ export class AsignacionSegurosComponent implements OnInit {
   obtenerEstadoParticipe(p: Prestamo): string {
     const idEstado = p.entidad?.idEstado;
     if (idEstado === undefined || idEstado === null) return '-';
-    const estado = this.estadosParticipe().find((e) => e.codigo === idEstado);
+    const estado = this.estadosParticipe().find((e) => e.codigoExterno === idEstado);
     return estado?.nombre || `Estado ${idEstado}`;
   }
 

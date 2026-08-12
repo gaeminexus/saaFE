@@ -621,7 +621,7 @@ export class PrestamoConsultaComponent implements OnInit {
       return '-';
     }
 
-    const estado = this.estadosParticipesOptions().find((e) => e.codigo === idEstado);
+    const estado = this.estadosParticipesOptions().find((e) => e.codigoExterno === idEstado);
     return estado?.nombre || `Estado ${idEstado}`;
   }
 
@@ -631,7 +631,7 @@ export class PrestamoConsultaComponent implements OnInit {
       return 'estado-desconocido';
     }
 
-    const estado = this.estadosParticipesOptions().find((e) => e.codigo === idEstado);
+    const estado = this.estadosParticipesOptions().find((e) => e.codigoExterno === idEstado);
     const nombreEstado = estado?.nombre?.toLowerCase() || '';
 
     // Mapeo específico por palabras clave

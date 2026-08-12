@@ -14,6 +14,10 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { forkJoin } from 'rxjs';
 
 import { DetallePrestamo } from '../../../model/detalle-prestamo';
+import {
+  CodigoEstadoCuota,
+  obtenerCodigoEstadoCuota,
+} from '../../../model/estado-cuota-prestamo';
 import { Exter } from '../../../model/exter';
 import { DetallePrestamoService } from '../../../service/detalle-prestamo.service';
 import { ExterService } from '../../../service/exter.service';
@@ -53,7 +57,7 @@ interface ReporteValorInsolutoRow {
   styleUrls: ['./repote-valores-insolutos.component.scss'],
 })
 export class RepoteValoresInsolutosComponent implements OnInit {
-  private readonly ESTADO_CUOTA_CANCELADA_ANTICIPADA = 7;
+  private readonly ESTADO_CUOTA_CANCELADA_ANTICIPADA = CodigoEstadoCuota.CANCELADA_ANTICIPADA;
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
@@ -266,7 +270,9 @@ export class RepoteValoresInsolutosComponent implements OnInit {
 
     return detalles
       .filter((detalle) => !!detalle?.prestamo?.entidad)
-      .filter((detalle) => detalle.estado !== this.ESTADO_CUOTA_CANCELADA_ANTICIPADA)
+      .filter(
+        (detalle) => obtenerCodigoEstadoCuota(detalle) !== this.ESTADO_CUOTA_CANCELADA_ANTICIPADA,
+      )
       .map((detalle) => {
         const entidad = detalle.prestamo!.entidad;
         const cedula = entidad.numeroIdentificacion || '';

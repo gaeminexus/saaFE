@@ -3,7 +3,7 @@
     <mat-card-header>
       <mat-card-title>1. Buscar jubilado</mat-card-title>
       <mat-card-subtitle>
-        Busque por cédula o nombre (solo estado Jubilado Complementario = 30)
+        Busque por cédula o nombre (solo estado Jubilado Complementario)
       </mat-card-subtitle>
     </mat-card-header>
 
@@ -63,7 +63,7 @@
             <ng-container matColumnDef="estado">
               <th mat-header-cell *matHeaderCellDef>Estado</th>
               <td mat-cell *matCellDef="let entidad">
-                {{ entidad.idEstado === 30 ? 'Jubilado Complementario' : 'No aplica' }}
+                {{ entidad.idEstado === EstadoJubiladoComplementario ? 'Jubilado Complementario' : 'No aplica' }}
               </td>
             </ng-container>
 

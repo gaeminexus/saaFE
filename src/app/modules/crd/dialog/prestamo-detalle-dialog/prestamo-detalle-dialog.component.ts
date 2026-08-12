@@ -11,6 +11,10 @@ import { DetallePrestamoService } from '../../service/detalle-prestamo.service';
 import { ExportService } from '../../../../shared/services/export.service';
 import { Prestamo } from '../../model/prestamo';
 import { DetallePrestamo } from '../../model/detalle-prestamo';
+import {
+  obtenerCodigoEstadoCuota,
+  obtenerNombreEstadoCuota,
+} from '../../model/estado-cuota-prestamo';
 import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
@@ -140,17 +144,7 @@ export class PrestamoDetalleDialogComponent implements OnInit {
   }
 
   obtenerEstadoCuota(detalle: DetallePrestamo): string {
-    const mapa: Record<number, string> = {
-      1: 'Pendiente',
-      2: 'Activa',
-      3: 'Emitida',
-      4: 'Pagada',
-      5: 'En mora',
-      6: 'Parcial',
-      7: 'Cancelada anticipada',
-      8: 'Vencida',
-    };
-    return detalle.estado != null ? (mapa[detalle.estado] ?? 'Desconocido') : 'Desconocido';
+    return obtenerNombreEstadoCuota(obtenerCodigoEstadoCuota(detalle)) ?? 'Desconocido';
   }
 
   exportarCuotasCSV(): void {

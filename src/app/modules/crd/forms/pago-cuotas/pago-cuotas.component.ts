@@ -22,6 +22,10 @@ import { BancoExterno } from '../../../tsr/model/banco-externo.model';
 import { CuentaAsoprep } from '../../model/cuenta-asoprep';
 import { DatosPago } from '../../model/datos-pago';
 import { DetallePrestamo } from '../../model/detalle-prestamo';
+import {
+  CodigoEstadoCuota,
+  obtenerCodigoEstadoCuota,
+} from '../../model/estado-cuota-prestamo';
 import { Entidad } from '../../model/entidad';
 import { Participe } from '../../model/participe';
 import { Prestamo } from '../../model/prestamo';
@@ -91,7 +95,11 @@ export class PagoCuotasComponent implements OnInit {
   isLoadingDatos: boolean = false;
 
   private readonly ESTADOS_PRESTAMO_PERMITIDOS = new Set<number>([2, 8]);
-  private readonly ESTADOS_CUOTA_EXCLUIDOS = new Set<number>([2, 7]);
+  // Cuotas que ya no admiten pago: no se listan en la pantalla de cobro
+  private readonly ESTADOS_CUOTA_EXCLUIDOS = new Set<number>([
+    CodigoEstadoCuota.PAGADA,
+    CodigoEstadoCuota.CANCELADA_ANTICIPADA,
+  ]);
 
   ngOnInit(): void {
     // Verificar si viene una entidad como parámetro de navegación
@@ -511,8 +519,9 @@ export class PagoCuotasComponent implements OnInit {
   }
 
   private esCuotaVisible(detalle: DetallePrestamo): boolean {
-    const idEstado = Number(detalle.idEstado || detalle.estado || 0);
-    if (this.ESTADOS_CUOTA_EXCLUIDOS.has(idEstado)) {
+    // detalle.estado (DTPRESTD) es la fuente de verdad; idEstado solo lo espeja
+    const codigoEstadoCuota = obtenerCodigoEstadoCuota(detalle) ?? 0;
+    if (this.ESTADOS_CUOTA_EXCLUIDOS.has(codigoEstadoCuota)) {
       return false;
     }
 

@@ -7,7 +7,7 @@ import { EstadoPrestamoService } from '../../../modules/crd/service/estado-prest
 import { EstadoCesantiaService } from '../../../modules/crd/service/estado-cesantia.service';
 import { EstadoCivilService } from '../../../modules/crd/service/estado-civil.service';
 import { EstadoCuotaPrestamoService } from '../../../modules/crd/service/estado-cuota-prestamo.service';
-import { EstadoParticipe } from '../../../modules/crd/model/estado-participe';
+import { CodigoEstadoParticipe, EstadoParticipe } from '../../../modules/crd/model/estado-participe';
 import { EstadoPrestamo } from '../../../modules/crd/model/estado-prestamo';
 import { EstadoCesantia } from '../../../modules/crd/model/estado-cesantia';
 import { EstadoCivil } from '../../../modules/crd/model/estado-civil';
@@ -111,6 +111,10 @@ import { CxcParticipe } from '../../../modules/crd/model/cxc-participe';
 import { DatosPrestamo } from '../../../modules/crd/model/datos-prestamo';
 import { DetalleCargaArchivo } from '../../../modules/crd/model/detalle-carga-archivo';
 import { DetallePrestamo } from '../../../modules/crd/model/detalle-prestamo';
+import {
+  CodigoEstadoCuota,
+  construirEstadoCuota,
+} from '../../../modules/crd/model/estado-cuota-prestamo';
 import { Direccion } from '../../../modules/crd/model/direccion';
 import { DireccionTrabajo } from '../../../modules/crd/model/direccion-trabajo';
 import { DocumentoCredito } from '../../../modules/crd/model/documento-credito';
@@ -941,7 +945,8 @@ export class ServiceLocatorCrdService {
         switch (proceso) {
           case AccionesGrid.ADD: {
             this.reg = value as DetallePrestamo;
-            this.reg.idEstado = 1;
+            // Cuota nueva: estado PENDIENTE, con idEstado como espejo del mismo código
+            Object.assign(this.reg, construirEstadoCuota(CodigoEstadoCuota.PENDIENTE));
             return firstValueFrom(this.detallePrestamoService.add(this.reg as DetallePrestamo));
           }
           case AccionesGrid.EDIT: {
@@ -1013,7 +1018,9 @@ export class ServiceLocatorCrdService {
         switch (proceso) {
           case AccionesGrid.ADD: {
             this.reg = value as Entidad;
-            this.reg.idEstado = 1;
+            // Entidad.idEstado guarda el código alterno del catálogo: una entidad
+            // recién creada nace en NUEVO.
+            this.reg.idEstado = CodigoEstadoParticipe.NUEVO;
             return firstValueFrom(this.entidadService.add(this.reg as Entidad));
           }
           case AccionesGrid.EDIT: {

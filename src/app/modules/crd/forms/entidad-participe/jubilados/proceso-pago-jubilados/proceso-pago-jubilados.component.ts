@@ -13,6 +13,7 @@ import { TipoComandosBusqueda } from '../../../../../../shared/model/datos-busqu
 import { TipoDatosBusqueda } from '../../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { Aporte } from '../../../../model/aporte';
 import { Entidad } from '../../../../model/entidad';
+import { CodigoEstadoParticipe } from '../../../../model/estado-participe';
 import { ValorPagoPensionComplementaria } from '../../../../model/valor-pago-pension-complementaria';
 import { AporteService } from '../../../../service/aporte.service';
 import { EntidadService } from '../../../../service/entidad.service';
@@ -26,7 +27,11 @@ import { ValorPagoPensionComplementariaService } from '../../../../service/valor
   styleUrl: './proceso-pago-jubilados.component.scss',
 })
 export class ProcesoPagoJubiladosComponent implements OnInit, OnDestroy {
-  private static readonly ESTADO_JUBILADO_COMPLEMENTARIO = 30;
+  /** Expuesto al template para no repetir el código en el HTML. */
+  protected readonly EstadoJubiladoComplementario = CodigoEstadoParticipe.JUBILADO_COMPLEMENTARIO;
+
+  private static readonly ESTADO_JUBILADO_COMPLEMENTARIO =
+    CodigoEstadoParticipe.JUBILADO_COMPLEMENTARIO;
   private static readonly ESTADO_REGISTRO_ACTIVO = 1;
 
   private fb = inject(FormBuilder);

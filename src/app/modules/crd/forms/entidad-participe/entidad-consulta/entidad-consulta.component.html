@@ -115,8 +115,8 @@
               <mat-icon matPrefix>toggle_on</mat-icon>
               <mat-select formControlName="idEstado">
                 <mat-option [value]="null">Todos</mat-option>
-                @for (opt of estadosParticipesOptions(); track opt.codigo) {
-                <mat-option [value]="opt.codigo">{{ opt.nombre }}</mat-option>
+                @for (opt of estadosParticipesOptions(); track opt.codigoExterno) {
+                <mat-option [value]="opt.codigoExterno">{{ opt.nombre }}</mat-option>
                 }
               </mat-select>
             </mat-form-field>
@@ -349,15 +349,11 @@
               </button>
               <button
                 mat-icon-button
-                [color]="entidad.idEstado === 1 ? 'warn' : 'primary'"
+                color="primary"
                 (click)="cambiarEstado(entidad)"
-                [matTooltip]="
-                  'Cambiar estado (Actual: ' +
-                  (entidad.idEstado === 1 ? 'Activo' : 'Inactivo') +
-                  ')'
-                "
+                [matTooltip]="'Cambiar estado (Actual: ' + obtenerNombreEstado(entidad.idEstado) + ')'"
               >
-                <mat-icon>{{ entidad.idEstado === 1 ? 'toggle_on' : 'toggle_off' }}</mat-icon>
+                <mat-icon>swap_horiz</mat-icon>
               </button>
             </td>
           </ng-container>
