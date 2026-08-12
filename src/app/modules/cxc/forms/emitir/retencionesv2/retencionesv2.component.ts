@@ -21,12 +21,10 @@ import { RetencionV2EmitirService } from '../../../service/emitir/retencion-v2-e
 import { FacturadorService } from '../../../service/facturador.service';
 import { PuntoEmisionService } from '../../../service/punto-emision.service';
 import { DetalleSriService } from '../../../service/detalle-sri.service';
-import { FacturaCompraService } from '../../../../cxp/service/factura-compra.service';
-import { NotaDebitoCompraService } from '../../../../cxp/service/nota-debito-compra.service';
-import { NotaCreditoCompraService } from '../../../../cxp/service/nota-credito-compra.service';
-import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
-import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
-import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
+import {
+  FacturaCompraSelectorDialogComponent,
+  TipoDocumentoCompra,
+} from '../../../../cxp/dialog/factura-compra-selector-dialog/factura-compra-selector-dialog.component';
 
 const TABLA_TIPO_DOC = '3';             // Tipos de documentos (LSRI 3)
 const TABLA_IMPUESTO = '19';            // Impuestos retención (LSRI 19)
@@ -54,9 +52,6 @@ export class Retencionesv2Component implements OnInit {
   private detalleSriService = inject(DetalleSriService);
   private funcionesDatosS = inject(FuncionesDatosService);
   private jasperReportes = inject(JasperReportesService);
-  private facturaCompraService = inject(FacturaCompraService);
-  private notaDebitoCompraService = inject(NotaDebitoCompraService);
-  private notaCreditoCompraService = inject(NotaCreditoCompraService);
 
   cargando = signal(false);
   guardando = signal(false);
@@ -93,10 +88,8 @@ export class Retencionesv2Component implements OnInit {
   txtPorcentaje = 0;
   txtValorReten = 0;
 
-  // Documento retenido seleccionado del combo CXP
+  // Documento CXP que se retiene; se elige desde el diálogo de búsqueda.
   documentoRetenidoSeleccionado: (FacturaCompra | NotaDebitoCompra | NotaCreditoCompra) | null = null;
-  documentosDisponibles = signal<Array<FacturaCompra | NotaDebitoCompra | NotaCreditoCompra>>([]);
-  cargandoDocumentos = signal(false);
 
   docResTSinImpuestos = 0;
   docResIVACero = 0;
@@ -138,17 +131,15 @@ export class Retencionesv2Component implements OnInit {
     dialogRef.afterClosed().subscribe((t: Titular | null) => {
       if (t) {
         this.personaSeleccionada.set(t);
-        // Si ya hay tipo de documento seleccionado, cargar documentos del proveedor
-        if (this.idDocumento) this.onCambioTipoDocRetenido();
+        // El documento retenido pertenece al proveedor anterior: se descarta.
+        this.limpiarDocumentoRetenido();
       }
     });
   }
 
   limpiarProveedor(): void {
     this.personaSeleccionada.set(null);
-    this.documentosDisponibles.set([]);
-    this.documentoRetenidoSeleccionado = null;
-    this.limpiarCamposDocRetenido();
+    this.limpiarDocumentoRetenido();
   }
 
   displayPersona(persona: Titular | null): string {
@@ -156,47 +147,70 @@ export class Retencionesv2Component implements OnInit {
     return `${persona.identificacion || ''} - ${persona.razonSocial || persona.nombre || ''}`.trim();
   }
 
+  /** Cambiar el tipo invalida el documento ya elegido, que era de otro tipo. */
   onCambioTipoDocRetenido(): void {
-    this.documentoRetenidoSeleccionado = null;
-    this.documentosDisponibles.set([]);
-    this.limpiarCamposDocRetenido();
+    this.limpiarDocumentoRetenido();
+  }
 
-    const proveedor = this.personaSeleccionada();
-    if (!proveedor?.codigo || !this.idDocumento?.codigo) return;
-
-    const codigoTipo = this.idDocumento.codigo;
-    // Solo cargamos desde CXP para los tipos que tienen tabla de compra
-    const TIPO_FACTURA       = '01';
-    const TIPO_NOTA_CREDITO  = '04';
-    const TIPO_NOTA_DEBITO   = '05';
-
-    const criterio = new DatosBusqueda();
-    criterio.asignaValorConCampoPadre(
-      TipoDatosBusqueda.LONG, 'titular', 'codigo', String(proveedor.codigo), TipoComandosBusqueda.IGUAL
-    );
-    criterio.setNumeroCampoRepetido(0);
-
-    this.cargandoDocumentos.set(true);
-
-    if (codigoTipo === TIPO_FACTURA) {
-      this.facturaCompraService.selectByCriteria([criterio]).subscribe({
-        next: (docs) => { this.documentosDisponibles.set((docs || []) as any[]); this.cargandoDocumentos.set(false); },
-        error: () => { this.mostrarError('No se pudieron cargar las facturas del proveedor'); this.cargandoDocumentos.set(false); },
-      });
-    } else if (codigoTipo === TIPO_NOTA_CREDITO) {
-      this.notaCreditoCompraService.selectByCriteria([criterio]).subscribe({
-        next: (docs) => { this.documentosDisponibles.set((docs || []) as any[]); this.cargandoDocumentos.set(false); },
-        error: () => { this.mostrarError('No se pudieron cargar las notas de crédito del proveedor'); this.cargandoDocumentos.set(false); },
-      });
-    } else if (codigoTipo === TIPO_NOTA_DEBITO) {
-      this.notaDebitoCompraService.selectByCriteria([criterio]).subscribe({
-        next: (docs) => { this.documentosDisponibles.set((docs || []) as any[]); this.cargandoDocumentos.set(false); },
-        error: () => { this.mostrarError('No se pudieron cargar las notas de débito del proveedor'); this.cargandoDocumentos.set(false); },
-      });
-    } else {
-      // Tipo sin tabla CXP: el usuario ingresa manual
-      this.cargandoDocumentos.set(false);
+  /**
+   * Solo estos tipos del SRI tienen su tabla equivalente en CXP; para el
+   * resto el usuario captura el documento a mano.
+   */
+  private tipoCompraDelDocumento(): TipoDocumentoCompra | null {
+    switch (this.idDocumento?.codigo) {
+      case '01': return 'FACTURA';
+      case '04': return 'NOTA_CREDITO';
+      case '05': return 'NOTA_DEBITO';
+      default: return null;
     }
+  }
+
+  tipoDocRetenidoBuscable(): boolean {
+    return this.tipoCompraDelDocumento() !== null;
+  }
+
+  puedeBuscarDocumentoRetenido(): boolean {
+    return !!this.personaSeleccionada()?.codigo && this.tipoDocRetenidoBuscable();
+  }
+
+  displayDocumentoRetenido(): string {
+    const doc = this.documentoRetenidoSeleccionado;
+    return doc ? this.displayDocumento(doc) : '';
+  }
+
+  /**
+   * Reemplaza al combo: con muchas facturas por proveedor un desplegable es
+   * inmanejable. El diálogo lista solo lo que no está pagado por completo,
+   * que es lo único sobre lo que tiene sentido emitir una retención.
+   */
+  buscarDocumentoRetenido(): void {
+    const proveedor = this.personaSeleccionada();
+    if (!proveedor?.codigo) { this.mostrarError('Primero seleccione un proveedor'); return; }
+
+    const tipo = this.tipoCompraDelDocumento();
+    if (!tipo) {
+      this.mostrarError('Seleccione un tipo de documento que exista en el sistema (factura, nota de crédito o nota de débito)');
+      return;
+    }
+
+    this.dialog.open(FacturaCompraSelectorDialogComponent, {
+      width: '900px', maxWidth: '98vw',
+      data: {
+        codigoTitular: proveedor.codigo,
+        nombreTitular: this.displayPersona(proveedor),
+        soloPendientes: true,
+        tipoDocumento: tipo,
+      },
+    }).afterClosed().subscribe((doc: FacturaCompra | NotaCreditoCompra | NotaDebitoCompra | null) => {
+      if (!doc) return;
+      this.documentoRetenidoSeleccionado = doc;
+      this.onSelectDocumentoRetenido(doc);
+    });
+  }
+
+  limpiarDocumentoRetenido(): void {
+    this.documentoRetenidoSeleccionado = null;
+    this.limpiarCamposDocRetenido();
   }
 
   onSelectDocumentoRetenido(doc: FacturaCompra | NotaDebitoCompra | NotaCreditoCompra | null): void {

@@ -146,7 +146,11 @@ export class NotasDebitoComponent implements OnInit {
     if (!cliente?.codigo) { this.mostrarError('Primero seleccione un cliente'); return; }
     const dialogRef = this.dialog.open(FacturaSelectorDialogComponent, {
       width: '900px', maxWidth: '98vw',
-      data: { codigoTitular: cliente.codigo, nombreTitular: this.displayPersona(cliente) },
+      data: {
+        codigoTitular: cliente.codigo,
+        nombreTitular: this.displayPersona(cliente),
+        soloPendientes: true,
+      },
     });
     dialogRef.afterClosed().subscribe((factura: FacturaEmitir | null) => {
       if (factura) this.asignarFacturaRelacionada(factura);

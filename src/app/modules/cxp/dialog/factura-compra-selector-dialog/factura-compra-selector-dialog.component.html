@@ -1,9 +1,9 @@
-<h2 mat-dialog-title>Seleccionar Factura de Compra</h2>
+<h2 mat-dialog-title>{{ titulo }}</h2>
 <p class="dialog-subtitulo">Proveedor: <strong>{{ data.nombreTitular }}</strong></p>
 
 <mat-dialog-content class="dialog-content">
   <mat-form-field appearance="outline" class="busqueda-field">
-    <mat-label>Buscar por número de factura</mat-label>
+    <mat-label>Buscar por número de documento</mat-label>
     <input matInput [(ngModel)]="textoBusqueda" (input)="filtrar()" placeholder="001-001-000000001" />
     <mat-icon matSuffix>search</mat-icon>
   </mat-form-field>
@@ -11,7 +11,7 @@
   @if (cargando()) {
     <div class="loading-center">
       <mat-spinner diameter="40"></mat-spinner>
-      <p>Cargando facturas...</p>
+      <p>Cargando {{ nombrePlural }}...</p>
     </div>
   }
 
@@ -20,7 +20,13 @@
   }
 
   @if (!cargando() && !error() && dataSource.data.length === 0) {
-    <div class="sin-resultados">No se encontraron facturas pendientes para este proveedor.</div>
+    <div class="sin-resultados">
+      @if (data.soloPendientes) {
+        No se encontraron {{ nombrePlural }} pendientes de pago para este proveedor.
+      } @else {
+        No se encontraron {{ nombrePlural }} para este proveedor.
+      }
+    </div>
   }
 
   @if (!cargando() && dataSource.data.length > 0) {

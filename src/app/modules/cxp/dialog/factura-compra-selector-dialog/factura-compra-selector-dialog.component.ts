@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, Inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Observable } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -17,18 +18,41 @@ import {
   EstadoPagoFactura,
 } from '../../../../shared/model/pagos-cobros/catalogos-aplicacion-pago';
 import { FacturaCompra } from '../../model/factura-compra';
+import { NotaCreditoCompra } from '../../model/nota-credito-compra';
+import { NotaDebitoCompra } from '../../model/nota-debito-compra';
 import { FacturaCompraService } from '../../service/factura-compra.service';
+import { NotaCreditoCompraService } from '../../service/nota-credito-compra.service';
+import { NotaDebitoCompraService } from '../../service/nota-debito-compra.service';
+
+/** Documentos de compra que se pueden elegir desde este selector. */
+export type TipoDocumentoCompra = 'FACTURA' | 'NOTA_CREDITO' | 'NOTA_DEBITO';
+
+/** Cualquiera de los documentos de compra que devuelve el selector. */
+export type DocumentoCompraSeleccionable = FacturaCompra | NotaCreditoCompra | NotaDebitoCompra;
 
 export interface FacturaCompraSelectorDialogData {
   codigoTitular: number;
   nombreTitular: string;
-  /** Oculta las facturas ya pagadas por completo. */
+  /** Oculta los documentos ya pagados por completo. */
   soloPendientes?: boolean;
+  /** Qué documento se está buscando; por defecto, facturas de compra. */
+  tipoDocumento?: TipoDocumentoCompra;
 }
 
+const ETIQUETAS: Record<TipoDocumentoCompra, { titulo: string; singular: string; plural: string }> = {
+  FACTURA: { titulo: 'Seleccionar Factura de Compra', singular: 'factura', plural: 'facturas' },
+  NOTA_CREDITO: { titulo: 'Seleccionar Nota de Crédito de Compra', singular: 'nota de crédito', plural: 'notas de crédito' },
+  NOTA_DEBITO: { titulo: 'Seleccionar Nota de Débito de Compra', singular: 'nota de débito', plural: 'notas de débito' },
+};
+
 /**
- * Selector de facturas de compra de un proveedor. Equivalente de CXP al
- * selector de facturas de venta de CXC.
+ * Selector de documentos de compra de un proveedor (facturas, notas de
+ * crédito y notas de débito). Equivalente de CXP al selector de facturas de
+ * venta de CXC.
+ *
+ * Solo las facturas llevan `estadoPago`, así que `soloPendientes` únicamente
+ * descarta filas en ese caso: las notas se aplican completas contra una
+ * factura y no arrastran saldo propio.
  */
 @Component({
   selector: 'app-factura-compra-selector-dialog',
@@ -51,8 +75,8 @@ export class FacturaCompraSelectorDialogComponent implements OnInit {
   cargando = signal(false);
   error = signal('');
 
-  todasLasFacturas: FacturaCompra[] = [];
-  dataSource = new MatTableDataSource<FacturaCompra>([]);
+  todasLasFacturas: DocumentoCompraSeleccionable[] = [];
+  dataSource = new MatTableDataSource<DocumentoCompraSeleccionable>([]);
   columnas = ['id', 'numero', 'fecha', 'total', 'estadoPago', 'accion'];
 
   textoBusqueda = '';
@@ -61,7 +85,25 @@ export class FacturaCompraSelectorDialogComponent implements OnInit {
     private dialogRef: MatDialogRef<FacturaCompraSelectorDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: FacturaCompraSelectorDialogData,
     private facturaService: FacturaCompraService,
+    private notaCreditoService: NotaCreditoCompraService,
+    private notaDebitoService: NotaDebitoCompraService,
   ) {}
+
+  get tipo(): TipoDocumentoCompra {
+    return this.data.tipoDocumento ?? 'FACTURA';
+  }
+
+  get titulo(): string {
+    return ETIQUETAS[this.tipo].titulo;
+  }
+
+  get nombreSingular(): string {
+    return ETIQUETAS[this.tipo].singular;
+  }
+
+  get nombrePlural(): string {
+    return ETIQUETAS[this.tipo].plural;
+  }
 
   ngOnInit(): void {
     this.cargarFacturas();
@@ -83,23 +125,35 @@ export class FacturaCompraSelectorDialogComponent implements OnInit {
     );
     cTitular.setNumeroCampoRepetido(0);
 
-    this.facturaService.selectByCriteria([cTitular]).subscribe({
+    this.consultaPorTipo([cTitular]).subscribe({
       next: (data) => {
-        let lista = (data || []).sort((a, b) => (b.id || 0) - (a.id || 0));
+        let lista = ((data || []) as DocumentoCompraSeleccionable[])
+          .sort((a, b) => (b.id || 0) - (a.id || 0));
         if (this.data.soloPendientes) {
           // Si el backend no informa estadoPago se conserva la fila: no se puede
           // afirmar que esté pagada.
-          lista = lista.filter((f) => f.estadoPago !== EstadoPagoFactura.PAGADA);
+          lista = lista.filter((f) => (f as FacturaCompra).estadoPago !== EstadoPagoFactura.PAGADA);
         }
         this.todasLasFacturas = lista;
         this.dataSource.data = [...lista];
         this.cargando.set(false);
       },
       error: () => {
-        this.error.set('No se pudieron cargar las facturas del proveedor');
+        this.error.set(`No se pudieron cargar las ${this.nombrePlural} del proveedor`);
         this.cargando.set(false);
       },
     });
+  }
+
+  private consultaPorTipo(criterios: DatosBusqueda[]): Observable<DocumentoCompraSeleccionable[] | null> {
+    switch (this.tipo) {
+      case 'NOTA_CREDITO':
+        return this.notaCreditoService.selectByCriteria(criterios);
+      case 'NOTA_DEBITO':
+        return this.notaDebitoService.selectByCriteria(criterios);
+      default:
+        return this.facturaService.selectByCriteria(criterios);
+    }
   }
 
   filtrar(): void {
@@ -114,9 +168,10 @@ export class FacturaCompraSelectorDialogComponent implements OnInit {
     );
   }
 
-  etiquetaEstadoPago(row: FacturaCompra): { texto: string; clase: string } | null {
-    if (row.estadoPago == null) return null;
-    return ESTADO_PAGO_LABELS[row.estadoPago] ?? null;
+  etiquetaEstadoPago(row: DocumentoCompraSeleccionable): { texto: string; clase: string } | null {
+    const estadoPago = (row as FacturaCompra).estadoPago;
+    if (estadoPago == null) return null;
+    return ESTADO_PAGO_LABELS[estadoPago] ?? null;
   }
 
   formatFecha(fecha: Date | string | null | undefined): string {
@@ -126,7 +181,7 @@ export class FacturaCompraSelectorDialogComponent implements OnInit {
     return d.toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' });
   }
 
-  seleccionar(factura: FacturaCompra): void {
+  seleccionar(factura: DocumentoCompraSeleccionable): void {
     this.dialogRef.close(factura);
   }
 

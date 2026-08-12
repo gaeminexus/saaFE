@@ -20,7 +20,13 @@
   }
 
   @if (!cargando() && !error() && dataSource.data.length === 0) {
-    <div class="sin-resultados">No se encontraron facturas para este cliente.</div>
+    <div class="sin-resultados">
+      @if (data.soloPendientes) {
+        No se encontraron facturas pendientes de pago para este cliente.
+      } @else {
+        No se encontraron facturas para este cliente.
+      }
+    </div>
   }
 
   @if (!cargando() && dataSource.data.length > 0) {

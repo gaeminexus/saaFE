@@ -21,8 +21,8 @@ export interface FacturaSelectorDialogData {
   codigoTitular: number;
   nombreTitular: string;
   /**
-   * Oculta las facturas ya pagadas por completo. Lo usan las pantallas de
-   * cobros; las de notas de crédito/débito necesitan ver todas.
+   * Oculta las facturas ya pagadas por completo. Lo usan cobros y la emisión
+   * de notas de crédito/débito, que solo afectan facturas con saldo abierto.
    */
   soloPendientes?: boolean;
 }

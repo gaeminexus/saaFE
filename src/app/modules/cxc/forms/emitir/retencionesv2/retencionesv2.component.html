@@ -79,22 +79,40 @@
 
         <mat-form-field appearance="outline" class="col-span-2">
           <mat-label>No. del Comprobante que se retiene</mat-label>
-          <mat-select [(ngModel)]="documentoRetenidoSeleccionado"
-                      (ngModelChange)="onSelectDocumentoRetenido($event)"
-                      [disabled]="cargandoDocumentos() || !idDocumento || !personaSeleccionada() || deshabilitado">
-            <mat-option [value]="null">-- Seleccione --</mat-option>
-            @for (doc of documentosDisponibles(); track doc.id) {
-              <mat-option [value]="doc">{{ displayDocumento(doc) }}</mat-option>
-            }
-          </mat-select>
-          @if (cargandoDocumentos()) {
-            <mat-hint>Cargando documentos...</mat-hint>
-          } @else if (!personaSeleccionada()) {
+          <input
+            matInput
+            readonly
+            [value]="displayDocumentoRetenido()"
+            placeholder="Busque el documento del proveedor"
+            [disabled]="deshabilitado" />
+          <button
+            mat-icon-button
+            matSuffix
+            type="button"
+            matTooltip="Buscar documento pendiente de pago"
+            [disabled]="!puedeBuscarDocumentoRetenido() || deshabilitado"
+            (click)="buscarDocumentoRetenido()">
+            <mat-icon>search</mat-icon>
+          </button>
+          @if (documentoRetenidoSeleccionado) {
+            <button
+              mat-icon-button
+              matSuffix
+              type="button"
+              matTooltip="Quitar el documento seleccionado"
+              [disabled]="deshabilitado"
+              (click)="limpiarDocumentoRetenido()">
+              <mat-icon>close</mat-icon>
+            </button>
+          }
+          @if (!personaSeleccionada()) {
             <mat-hint>Seleccione primero un proveedor</mat-hint>
           } @else if (!idDocumento) {
             <mat-hint>Seleccione el tipo de documento</mat-hint>
-          } @else if (documentosDisponibles().length === 0 && !cargandoDocumentos()) {
-            <mat-hint>Sin documentos disponibles</mat-hint>
+          } @else if (!tipoDocRetenidoBuscable()) {
+            <mat-hint>Este tipo no se consulta en el sistema: ingrese los datos manualmente</mat-hint>
+          } @else if (!documentoRetenidoSeleccionado) {
+            <mat-hint>Se listan solo los documentos no pagados por completo</mat-hint>
           }
         </mat-form-field>
 
