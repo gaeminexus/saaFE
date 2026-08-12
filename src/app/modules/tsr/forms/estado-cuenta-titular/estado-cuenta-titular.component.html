@@ -1,0 +1,546 @@
+<div class="pagina-estado-cuenta">
+
+  <!-- ═══ CABECERA ═══════════════════════════════════════ -->
+  <div class="titulo-barra">
+    <div class="titulo">
+      <mat-icon>account_balance_wallet</mat-icon>
+      <span>Estado de Cuenta de Titular</span>
+    </div>
+
+    <div class="acciones-cabecera">
+      <mat-button-toggle-group
+        [value]="rol()"
+        (change)="rol.set($event.value); onCambioRol()"
+        hideSingleSelectionIndicator="true"
+        class="toggle-rol">
+        <mat-button-toggle [value]="RolTitular.CLIENTE">
+          <mat-icon>person</mat-icon>
+          Cliente
+        </mat-button-toggle>
+        <mat-button-toggle [value]="RolTitular.PROVEEDOR">
+          <mat-icon>local_shipping</mat-icon>
+          Proveedor
+        </mat-button-toggle>
+      </mat-button-toggle-group>
+
+      <button
+        mat-stroked-button
+        [disabled]="!titular() || cargando()"
+        matTooltip="Exportar los documentos filtrados a CSV"
+        (click)="exportarCSV()">
+        <mat-icon>table_view</mat-icon>
+        CSV
+      </button>
+      <button
+        mat-stroked-button
+        [disabled]="!titular() || cargando()"
+        matTooltip="Exportar los documentos filtrados a PDF"
+        (click)="exportarPDF()">
+        <mat-icon>picture_as_pdf</mat-icon>
+        PDF
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══ TITULAR ════════════════════════════════════════ -->
+  <mat-card class="panel panel-titular">
+    <mat-card-content>
+      @if (titular(); as t) {
+        <div class="titular-elegido">
+          <div class="avatar">{{ (nombreTitular || '?').charAt(0) }}</div>
+          <div class="datos">
+            <span class="nombre">{{ nombreTitular }}</span>
+            <span class="meta">
+              <span>{{ t.identificacion || 'Sin identificación' }}</span>
+              @if (t.email) { <span>· {{ t.email }}</span> }
+              @if (t.telefono) { <span>· {{ t.telefono }}</span> }
+            </span>
+          </div>
+          <span class="chip-rol">{{ etiquetaRol }}</span>
+          <div class="botones">
+            <button mat-stroked-button (click)="buscarTitular()">
+              <mat-icon>swap_horiz</mat-icon>
+              Cambiar
+            </button>
+            <button mat-stroked-button [disabled]="cargando()" (click)="consultar()">
+              <mat-icon>refresh</mat-icon>
+              Actualizar
+            </button>
+          </div>
+        </div>
+      } @else {
+        <div class="sin-titular">
+          <mat-icon>badge</mat-icon>
+          <div>
+            <div class="frase">Elija un {{ etiquetaRol | lowercase }} para ver su estado de cuenta.</div>
+            <div class="sub">Se listarán sus documentos, saldos, abonos y asientos contables.</div>
+          </div>
+          <button mat-raised-button class="btn-primario" (click)="buscarTitular()">
+            <mat-icon>search</mat-icon>
+            Buscar {{ etiquetaRol | lowercase }}
+          </button>
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+
+  @if (cargando()) {
+    <div class="estado-linea">
+      <mat-spinner diameter="26"></mat-spinner>
+      <span>Consultando documentos, saldos y anticipos...</span>
+    </div>
+  }
+
+  @if (advertencias().length > 0) {
+    <div class="mensaje-advertencia">
+      <mat-icon>warning</mat-icon>
+      <div>
+        <div>El estado de cuenta se muestra incompleto:</div>
+        <ul class="lista-advertencias">
+          @for (a of advertencias(); track a) {
+            <li>{{ a }}</li>
+          }
+        </ul>
+      </div>
+    </div>
+  }
+
+  @if (titular() && !cargando()) {
+
+    <!-- ═══ RESUMEN ══════════════════════════════════════ -->
+    @if (resumen(); as r) {
+      <div class="tarjetas-resumen">
+        <div class="tarjeta">
+          <span class="etiqueta">Facturado</span>
+          <span class="valor">{{ formatearMonto(r.totalFacturado) }}</span>
+          <span class="pie">{{ r.totalDocumentos }} documento(s)</span>
+        </div>
+        <div class="tarjeta">
+          <span class="etiqueta">Abonado</span>
+          <span class="valor aplicado">{{ formatearMonto(r.totalAbonado) }}</span>
+          <span class="pie">Retenciones, NC, anticipos y pagos</span>
+        </div>
+        <div class="tarjeta destacada">
+          <span class="etiqueta">{{ etiquetaSaldo }}</span>
+          <span class="valor pendiente">{{ formatearMonto(r.saldoPendiente) }}</span>
+          <span class="pie">{{ r.documentosPendientes }} factura(s) con saldo</span>
+        </div>
+        <div class="tarjeta">
+          <span class="etiqueta">Saldo a favor (anticipos)</span>
+          <span class="valor favor">{{ formatearMonto(r.saldoAnticipos) }}</span>
+          <span class="pie">Disponible para cruzar</span>
+        </div>
+        <div class="tarjeta compacta">
+          <span class="etiqueta">Notas de crédito</span>
+          <span class="valor">{{ formatearMonto(r.totalNotasCredito) }}</span>
+        </div>
+        <div class="tarjeta compacta">
+          <span class="etiqueta">Notas de débito</span>
+          <span class="valor">{{ formatearMonto(r.totalNotasDebito) }}</span>
+        </div>
+        <div class="tarjeta compacta">
+          <span class="etiqueta">Retenciones</span>
+          <span class="valor">{{ formatearMonto(r.totalRetenciones) }}</span>
+        </div>
+      </div>
+    }
+
+    <!-- ═══ FILTROS ══════════════════════════════════════ -->
+    <mat-card class="panel panel-filtros">
+      <mat-card-content>
+        <div class="filtros-cabecera">
+          <div class="titulo-filtros">
+            <mat-icon>tune</mat-icon>
+            <span>Filtros</span>
+            @if (filtrosActivos() > 0) {
+              <span class="badge badge-debito">{{ filtrosActivos() }} activo(s)</span>
+            }
+          </div>
+          <div class="atajos">
+            <button mat-button (click)="aplicarPeriodo('MES')">Último mes</button>
+            <button mat-button (click)="aplicarPeriodo('TRIMESTRE')">3 meses</button>
+            <button mat-button (click)="aplicarPeriodo('ANIO')">1 año</button>
+            <button mat-button (click)="aplicarPeriodo('TODO')">Todo</button>
+            <button mat-stroked-button (click)="limpiarFiltros()">
+              <mat-icon>filter_alt_off</mat-icon>
+              Limpiar
+            </button>
+          </div>
+        </div>
+
+        <div class="chips-tipos">
+          @for (t of tiposDocumento; track t.tipo) {
+            <button
+              type="button"
+              class="chip-tipo"
+              [class.activo]="tipoActivo(t.tipo)"
+              (click)="alternarTipo(t.tipo)">
+              <mat-icon>{{ t.icono }}</mat-icon>
+              {{ t.etiqueta }}
+            </button>
+          }
+          <span class="ayuda-chips">Sin selección se muestran todos los tipos</span>
+        </div>
+
+        <div class="fila-campos">
+          <mat-form-field appearance="outline">
+            <mat-label>Buscar</mat-label>
+            <mat-icon matPrefix>search</mat-icon>
+            <input
+              matInput
+              [ngModel]="fTexto()"
+              (ngModelChange)="fTexto.set($event)"
+              name="fTexto"
+              placeholder="N° de documento, asiento u observación" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Desde</mat-label>
+            <input matInput [matDatepicker]="pDesde" [ngModel]="fDesde()" (ngModelChange)="fDesde.set($event)" name="fDesde" />
+            <mat-datepicker-toggle matSuffix [for]="pDesde"></mat-datepicker-toggle>
+            <mat-datepicker #pDesde></mat-datepicker>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Hasta</mat-label>
+            <input matInput [matDatepicker]="pHasta" [ngModel]="fHasta()" (ngModelChange)="fHasta.set($event)" name="fHasta" />
+            <mat-datepicker-toggle matSuffix [for]="pHasta"></mat-datepicker-toggle>
+            <mat-datepicker #pHasta></mat-datepicker>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Estado de pago</mat-label>
+            <mat-select [ngModel]="fEstado()" (ngModelChange)="fEstado.set($event)" name="fEstado">
+              <mat-option value="TODOS">Todos</mat-option>
+              <mat-option value="PENDIENTE">Pendiente</mat-option>
+              <mat-option value="PARCIAL">Pago parcial</mat-option>
+              <mat-option value="PAGADA">Pagada</mat-option>
+            </mat-select>
+            <mat-hint>Aplica a facturas y anticipos</mat-hint>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="campo-corto">
+            <mat-label>Monto desde</mat-label>
+            <input matInput type="number" [ngModel]="fMontoDesde()" (ngModelChange)="fMontoDesde.set($event)" name="fMontoDesde" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="campo-corto">
+            <mat-label>Monto hasta</mat-label>
+            <input matInput type="number" [ngModel]="fMontoHasta()" (ngModelChange)="fMontoHasta.set($event)" name="fMontoHasta" />
+          </mat-form-field>
+
+          <div class="check-saldo">
+            <mat-checkbox [ngModel]="fSoloConSaldo()" (ngModelChange)="fSoloConSaldo.set($event)" name="fSoloConSaldo">
+              Solo con saldo pendiente
+            </mat-checkbox>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- ═══ DOCUMENTOS ═══════════════════════════════════ -->
+    <mat-card class="panel">
+      <mat-card-content>
+        <div class="titulo-seccion">
+          <mat-icon>receipt_long</mat-icon>
+          <span>Documentos</span>
+          <span class="conteo">{{ documentosDeuda().length }}</span>
+        </div>
+
+        @if (documentosDeuda().length === 0) {
+          <div class="sin-datos">
+            <mat-icon>inbox</mat-icon>
+            <span>
+              @if (consultado()) {
+                No hay documentos para los filtros seleccionados.
+              } @else {
+                Consulte un titular para ver sus documentos.
+              }
+            </span>
+          </div>
+        } @else {
+          <div class="tabla-scroll">
+            <table mat-table [dataSource]="documentosDeuda()" multiTemplateDataRows class="tabla-documentos">
+
+              <ng-container matColumnDef="expandir">
+                <th mat-header-cell *matHeaderCellDef class="col-expandir"></th>
+                <td mat-cell *matCellDef="let d" class="col-expandir">
+                  <button
+                    mat-icon-button
+                    [matTooltip]="estaExpandido(d) ? 'Ocultar abonos y asientos' : 'Ver abonos y asientos'"
+                    (click)="alternarExpansion(d); $event.stopPropagation()">
+                    <mat-icon>{{ estaExpandido(d) ? 'expand_less' : 'expand_more' }}</mat-icon>
+                  </button>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="tipo">
+                <th mat-header-cell *matHeaderCellDef>Tipo</th>
+                <td mat-cell *matCellDef="let d">
+                  <span class="chip-doc" [ngClass]="claseTipo(d.tipo)">
+                    <mat-icon>{{ iconoTipo(d.tipo) }}</mat-icon>
+                    {{ etiquetaTipo(d.tipo) }}
+                  </span>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="numero">
+                <th mat-header-cell *matHeaderCellDef>Número</th>
+                <td mat-cell *matCellDef="let d" class="col-numero">{{ d.numero }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="fecha">
+                <th mat-header-cell *matHeaderCellDef>Fecha</th>
+                <td mat-cell *matCellDef="let d">{{ formatearFecha(d.fecha) }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="origen">
+                <th mat-header-cell *matHeaderCellDef>Origen</th>
+                <td mat-cell *matCellDef="let d">
+                  <span class="chip-origen" [class.recibido]="d.origen === 'RECIBIDO'">
+                    {{ d.origen === 'EMITIDO' ? 'Emitido' : 'Recibido' }}
+                  </span>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="total">
+                <th mat-header-cell *matHeaderCellDef class="col-monto">Total</th>
+                <td mat-cell *matCellDef="let d" class="col-monto">
+                  <span [class.monto-resta]="d.totalConSigno < 0">
+                    {{ d.totalConSigno < 0 ? '-' : '' }}{{ formatearMonto(d.total) }}
+                  </span>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="aplicado">
+                <th mat-header-cell *matHeaderCellDef class="col-monto">Abonado</th>
+                <td mat-cell *matCellDef="let d" class="col-monto">
+                  {{ d.totalAplicado != null ? formatearMonto(d.totalAplicado) : '—' }}
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="saldo">
+                <th mat-header-cell *matHeaderCellDef class="col-monto">Saldo</th>
+                <td mat-cell *matCellDef="let d" class="col-monto">
+                  @if (d.saldoPendiente != null) {
+                    <strong [class.monto-pendiente]="d.saldoPendiente > 0.005">
+                      {{ formatearMonto(d.saldoPendiente) }}
+                    </strong>
+                  } @else {
+                    —
+                  }
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="estado">
+                <th mat-header-cell *matHeaderCellDef>Estado</th>
+                <td mat-cell *matCellDef="let d">
+                  @if (etiquetaEstadoPago(d); as e) {
+                    <span class="badge" [ngClass]="e.clase">{{ e.texto }}</span>
+                  } @else {
+                    <span class="badge badge-neutro">Aplicado</span>
+                  }
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="asiento">
+                <th mat-header-cell *matHeaderCellDef>Asiento</th>
+                <td mat-cell *matCellDef="let d">
+                  @if (d.asiento) {
+                    <span class="ref-asiento">
+                      <mat-icon>book</mat-icon>
+                      {{ d.asiento.numeroAlterno || d.asiento.codigo }}
+                    </span>
+                  } @else {
+                    <span class="sin-valor">Sin asiento</span>
+                  }
+                </td>
+              </ng-container>
+
+              <!-- Fila expandida: abonos + asientos relacionados -->
+              <ng-container matColumnDef="detalle">
+                <td mat-cell *matCellDef="let d" [attr.colspan]="columnas.length" class="celda-detalle">
+                  @if (estaExpandido(d)) {
+                    <div class="detalle-documento">
+
+                      <div class="bloque">
+                        <div class="titulo-bloque">
+                          <mat-icon>payments</mat-icon>
+                          <span>Abonos del documento</span>
+                        </div>
+
+                        @if (d.cargandoAbonos) {
+                          <div class="estado-linea">
+                            <mat-spinner diameter="20"></mat-spinner>
+                            <span>Cargando abonos...</span>
+                          </div>
+                        } @else if (!d.abonos || d.abonos.length === 0) {
+                          <div class="vacio-bloque">
+                            <mat-icon>info</mat-icon>
+                            <span>
+                              @if (d.tipo === 'FACTURA') {
+                                Este documento todavía no tiene abonos registrados.
+                              } @else {
+                                Los documentos de este tipo se aplican completos contra una factura y no llevan abonos propios.
+                              }
+                            </span>
+                          </div>
+                        } @else {
+                          <table mat-table [dataSource]="d.abonos" class="tabla-abonos">
+                            <ng-container matColumnDef="fecha">
+                              <th mat-header-cell *matHeaderCellDef>Fecha</th>
+                              <td mat-cell *matCellDef="let a">{{ formatearFecha(a.fechaAplicacion) }}</td>
+                            </ng-container>
+
+                            <ng-container matColumnDef="tipo">
+                              <th mat-header-cell *matHeaderCellDef>Tipo</th>
+                              <td mat-cell *matCellDef="let a">{{ etiquetaTipoAbono(a) }}</td>
+                            </ng-container>
+
+                            <ng-container matColumnDef="documento">
+                              <th mat-header-cell *matHeaderCellDef>Documento / Referencia</th>
+                              <td mat-cell *matCellDef="let a">{{ documentoDeAbono(a) }}</td>
+                            </ng-container>
+
+                            <ng-container matColumnDef="monto">
+                              <th mat-header-cell *matHeaderCellDef class="col-monto">Monto</th>
+                              <td mat-cell *matCellDef="let a" class="col-monto"
+                                  [class.monto-resta]="a.montoAplicado < 0">
+                                {{ formatearMonto(a.montoAplicado) }}
+                              </td>
+                            </ng-container>
+
+                            <ng-container matColumnDef="estado">
+                              <th mat-header-cell *matHeaderCellDef>Estado</th>
+                              <td mat-cell *matCellDef="let a">
+                                <span class="badge" [ngClass]="abonoReversado(a) ? 'badge-anulado' : 'badge-pagada'">
+                                  {{ abonoReversado(a) ? 'Reversado' : 'Activo' }}
+                                </span>
+                              </td>
+                            </ng-container>
+
+                            <ng-container matColumnDef="asiento">
+                              <th mat-header-cell *matHeaderCellDef>Asiento</th>
+                              <td mat-cell *matCellDef="let a">
+                                {{ a.asiento?.numeroAlterno || a.asiento?.codigo || '—' }}
+                              </td>
+                            </ng-container>
+
+                            <tr mat-header-row *matHeaderRowDef="columnasAbono"></tr>
+                            <tr mat-row *matRowDef="let row; columns: columnasAbono"
+                                [class.fila-reversada]="abonoReversado(row)"></tr>
+                          </table>
+                        }
+                      </div>
+
+                      <div class="bloque">
+                        <div class="titulo-bloque">
+                          <mat-icon>book</mat-icon>
+                          <span>Asientos contables relacionados</span>
+                        </div>
+
+                        @if (asientosDe(d).length === 0) {
+                          <div class="vacio-bloque">
+                            <mat-icon>info</mat-icon>
+                            <span>No hay asientos asociados a este documento.</span>
+                          </div>
+                        } @else {
+                          <div class="lista-asientos">
+                            @for (a of asientosDe(d); track a.codigo) {
+                              <div class="asiento">
+                                <mat-icon>receipt</mat-icon>
+                                <div class="datos-asiento">
+                                  <span class="numero">{{ a.numeroAlterno || ('Asiento ' + a.codigo) }}</span>
+                                  <span class="origen">{{ a.origen }}</span>
+                                  @if (a.observaciones) {
+                                    <span class="observacion">{{ a.observaciones }}</span>
+                                  }
+                                </div>
+                                <span class="fecha">{{ formatearFecha(a.fecha) }}</span>
+                              </div>
+                            }
+                          </div>
+                        }
+                      </div>
+
+                      @if (d.observacion) {
+                        <div class="observacion-doc">
+                          <mat-icon>notes</mat-icon>
+                          <span>{{ d.observacion }}</span>
+                        </div>
+                      }
+                    </div>
+                  }
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="columnas"></tr>
+              <tr mat-row *matRowDef="let row; columns: columnas"
+                  class="fila-documento"
+                  [class.expandida]="estaExpandido(row)"
+                  (click)="alternarExpansion(row)"></tr>
+              <tr mat-row *matRowDef="let row; columns: ['detalle']" class="fila-detalle"></tr>
+            </table>
+          </div>
+        }
+      </mat-card-content>
+    </mat-card>
+
+    <!-- ═══ ANTICIPOS / SALDO A FAVOR ════════════════════ -->
+    <mat-card class="panel">
+      <mat-card-content>
+        <div class="titulo-seccion">
+          <mat-icon>savings</mat-icon>
+          <span>Saldo a favor · Anticipos</span>
+          <span class="conteo">{{ anticipos().length }}</span>
+        </div>
+
+        @if (anticipos().length === 0) {
+          <div class="sin-datos">
+            <mat-icon>savings</mat-icon>
+            <span>Este titular no tiene anticipos registrados para los filtros seleccionados.</span>
+          </div>
+        } @else {
+          <div class="grilla-anticipos">
+            @for (a of anticipos(); track a.clave) {
+              <div class="tarjeta-anticipo" [class.agotado]="(a.saldoPendiente || 0) <= 0.005">
+                <div class="cabecera-anticipo">
+                  <span class="numero">{{ a.numero }}</span>
+                  @if (etiquetaEstadoPago(a); as e) {
+                    <span class="badge" [ngClass]="e.clase">{{ e.texto }}</span>
+                  }
+                </div>
+                <div class="montos-anticipo">
+                  <div class="item">
+                    <span class="etiqueta">Valor</span>
+                    <span class="valor">{{ formatearMonto(a.total) }}</span>
+                  </div>
+                  <div class="item">
+                    <span class="etiqueta">Usado</span>
+                    <span class="valor">{{ formatearMonto(a.totalAplicado) }}</span>
+                  </div>
+                  <div class="item">
+                    <span class="etiqueta">Disponible</span>
+                    <span class="valor favor">{{ formatearMonto(a.saldoPendiente) }}</span>
+                  </div>
+                </div>
+                <div class="pie-anticipo">
+                  <span>
+                    <mat-icon>event</mat-icon>
+                    {{ formatearFecha(a.fecha) }}
+                  </span>
+                  @if (a.asiento) {
+                    <span>
+                      <mat-icon>book</mat-icon>
+                      {{ a.asiento.numeroAlterno || a.asiento.codigo }}
+                    </span>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </mat-card-content>
+    </mat-card>
+  }
+</div>

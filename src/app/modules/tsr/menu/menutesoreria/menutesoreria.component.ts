@@ -121,6 +121,12 @@ export class MenutesoreriaComponent {
       idPermiso: 811,
       children: [
         {
+          displayName: 'Estado de Cuenta',
+          iconName: 'account_balance_wallet',
+          idPermiso: 830,
+          route: '/menutesoreria/procesos/estado-cuenta-titular',
+        },
+        {
           displayName: 'Anticipos',
           iconName: 'payments',
           idPermiso: 830,

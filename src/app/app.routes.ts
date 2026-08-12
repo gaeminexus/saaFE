@@ -158,6 +158,7 @@ import { ListadosCrdResolverService } from './modules/crd/resolver/listados-crd-
 import { TiposCrdResolverService } from './modules/crd/resolver/tipos-crd-resolver.service';
 import { AnticiposClientesComponent } from './modules/tsr/forms/anticipos/anticipos-clientes/anticipos-clientes.component';
 import { AnticiposProveedoresComponent } from './modules/tsr/forms/anticipos/anticipos-proveedores/anticipos-proveedores.component';
+import { EstadoCuentaTitularComponent } from './modules/tsr/forms/estado-cuenta-titular/estado-cuenta-titular.component';
 import { RegistroIngresoComponent } from './modules/tsr/forms/registrar/registro-ingreso/registro-ingreso.component';
 import { RegistroEgresoComponent } from './modules/tsr/forms/registrar/registro-egreso/registro-egreso.component';
 
@@ -412,6 +413,12 @@ export const routes: Routes = [
         component: AnticiposProveedoresComponent,
         canActivate: [authGuard],
         data: { title: 'Anticipos - Proveedores' },
+      },
+      {
+        path: 'procesos/estado-cuenta-titular',
+        component: EstadoCuentaTitularComponent,
+        canActivate: [authGuard],
+        data: { title: 'Estado de Cuenta de Titular' },
       },
 
       // Procesos - Registrar
