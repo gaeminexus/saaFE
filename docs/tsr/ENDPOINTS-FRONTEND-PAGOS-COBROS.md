@@ -86,11 +86,16 @@ mostrar y si la fila fue creada automáticamente o desde una pantalla:
 
 | Valor | Significado | ¿Quién la crea? |
 |---|---|---|
-| 1 | Pago/Cobro directo por transferencia | Pantalla de transferencia (§3 / §4.3) |
+| 1 | Pago/Cobro directo por transferencia o débito automático | Pantalla de transferencia (§3 / §4.3) |
 | 2 | Nota de Crédito | Automático — no se crea desde el frontend |
 | 3 | Retención | Automático — no se crea desde el frontend |
 | 4 | Anticipo (cruce) | Pantalla de cruce de anticipo (§2.2 / §4.2) |
 | 5 | Nota de Débito (**monto negativo** — aumenta el saldo) | Automático — no se crea desde el frontend |
+
+**`formaPago`** — solo tiene valor cuando `tipoDocPago = 1`; distingue cómo
+salió/entró el dinero: `1`=Efectivo, `2`=Transferencia, `3`=Cheque,
+`4`=Débito automático. En CXP hoy solo se generan `2` (transferencia
+confirmada por el banco) y `4` (débito automático, §3.1).
 
 **`estado`** de una fila de abono (`AplicacionPagoCxp`/`Cxc`): `1`=Activo,
 `2`=Reversado. Una fila reversada se muestra tachada/atenuada y ya no cuenta
@@ -115,7 +120,13 @@ transferencia, ver §3):
 | 2 | En archivo | Ya está en un archivo enviado al banco, esperando respuesta | Anular |
 | 3 | Confirmado | El banco lo ejecutó — ya generó asiento y movimiento bancario | Revertir |
 | 4 | Rechazado | El banco no lo ejecutó, o fue revertido tras confirmarse | (ninguna — solo lectura; para reintentar, registrar un pago nuevo) |
-| 5 | Anulado | El usuario lo canceló antes de enviarlo al banco | (ninguna — solo lectura) |
+| 5 | Anulado | El usuario lo canceló antes de enviarlo al banco, o revirtió un débito automático | (ninguna — solo lectura) |
+
+**`debitoAutomatico`** de un `PagoProgramado` (solo CXP): `0`=transferencia
+normal, que recorre el ciclo completo de la tabla anterior; `1`=el banco ya
+debitó la cuenta por convenio con el proveedor. Los pagos con `1` **nacen en
+estado 3**: no se aprueban, no entran en ningún lote y contabilizan en el
+momento del registro (§3.1). Al revertirse pasan a estado 5, no a 4.
 
 **`estado`** de un `LotePago`: `1`=Generado, `2`=Respuesta procesada,
 `3`=Anulado.
@@ -279,6 +290,11 @@ a) Registrar Pago  →  b) Seleccionar y Generar Archivo  →  c) Cargar Respues
         (crea el pago,          (aprueba + genera el TXT           (confirma o rechaza          (anular / revertir /
          estado=1)               que se sube al banco,              cada pago del lote)           ver histórico)
                                   estado 1→2)
+
+        └── DÉBITO AUTOMÁTICO ──────────────────────────────────────────────→  d) Seguimiento
+             (el banco ya debitó: nace en estado=3, abona la factura y
+              genera asiento + movimiento bancario al registrarlo.
+              No pasa por (b) ni por (c))
 ```
 
 #### 3.1 a) Registrar Pago
@@ -288,9 +304,11 @@ a) Registrar Pago  →  b) Seleccionar y Generar Archivo  →  c) Cargar Respues
 |---|---|---|
 | Factura de compra a pagar | selector (o pre-cargado desde §2.1) | Sí |
 | Cuenta bancaria propia de origen | selector (cuentas de Tesorería) | Sí |
-| Cuenta bancaria del proveedor (destino) | selector (cuentas del titular) | No |
+| ¿Es débito automático? | check/toggle | No (default: no) |
+| Cuenta bancaria del proveedor (destino) | selector (cuentas del titular) | No — ocultar si es débito automático |
 | Valor a pagar | numérico | Sí |
-| Fecha programada | fecha | No (default hoy) |
+| Fecha programada / fecha del débito | fecha | No (default hoy) |
+| Referencia del débito | texto libre | No — mostrar solo si es débito automático |
 | Observación | texto libre | No |
 
 **Al confirmar:** `POST /pgtr`
@@ -310,6 +328,26 @@ Requeridos: `idFacturaCompra`, `idCuentaBancariaOrigen`, `valor`, `idEmpresa`.
 `idCuentaDestinoTitular` opcional, pero si se envía debe ser una cuenta del
 mismo proveedor de la factura (si no, error).
 
+**Variante débito automático** — se agregan dos campos al mismo body:
+```json
+{
+  "idFacturaCompra": 123,
+  "idCuentaBancariaOrigen": 4,
+  "valor": 1500.00,
+  "fechaProgramada": "2026-08-12",
+  "idEmpresa": 1,
+  "idUsuario": 5,
+  "observacion": "Débito automático servicios agosto",
+  "debitoAutomatico": true,
+  "referencia": "DEB-AUT-0099"
+}
+```
+`debitoAutomatico` (boolean, default `false`) y `referencia` (opcional, la nota
+de débito o el número de convenio). Cuando es `true`: `fechaProgramada` se
+interpreta como la **fecha del débito** y es la fecha del asiento;
+`idCuentaDestinoTitular` no hace falta (el dinero no se transfiere, el banco
+debita la cuenta propia).
+
 El backend valida que `valor` no supere el saldo pendiente de la factura
 **descontando lo que ya está comprometido** en otros pagos vigentes de esa
 misma factura (registrados o en archivo) — así que una factura puede tener
@@ -322,6 +360,7 @@ sobre-comprometer.
   "exito": true,
   "mensaje": "Pago registrado. Queda pendiente de incluirse en un archivo de pagos.",
   "pago": 501,
+  "debitoAutomatico": false,
   "facturaId": 123,
   "numeroFactura": "001-001-000000123",
   "total": 1500.00,
@@ -335,6 +374,36 @@ Nota importante para la UI: **el saldo de la factura no cambia todavía**
 solo pasa cuando el banco confirma (paso c). Mostrar un mensaje de éxito
 tipo "Pago registrado, aparecerá en la pantalla de selección para el próximo
 archivo" y limpiar el formulario o navegar a §3.2.
+
+**Response `201 CREATED` con `debitoAutomatico: true`** — aquí sí cambia todo
+de una vez:
+```json
+{
+  "exito": true,
+  "mensaje": "Pago por débito automático registrado. La factura quedó abonada y el asiento contable fue generado.",
+  "pago": 502,
+  "debitoAutomatico": true,
+  "aplicacion": 77,
+  "asiento": "TEG-2026-08-0014",
+  "facturaId": 123,
+  "numeroFactura": "001-001-000000123",
+  "total": 1500.00,
+  "totalAplicado": 1500.00,
+  "saldoPendiente": 0.00,
+  "estadoPago": 3
+}
+```
+El pago queda en **estado 3 (Confirmado)** y ya no aparece en la pantalla de
+selección (§3.2) — no hay nada que aprobar ni que enviar al banco. Usar
+`debitoAutomatico` de la respuesta para decidir el mensaje y a dónde navegar:
+en este caso conviene volver al detalle de la factura (§2.1), que ya viene
+abonada en esta misma respuesta, y no a §3.2.
+
+Los errores de negocio son los mismos que los de cualquier abono, porque el
+débito automático genera contabilidad al instante: proveedor sin cuenta
+contable de facturas (tipo 1) configurada, cuenta bancaria sin plan de cuentas,
+período contable cerrado, valor mayor al saldo disponible. Si algo de eso
+falla **no queda nada grabado** — ni el pago, ni la aplicación, ni el asiento.
 
 #### 3.2 b) Seleccionar y Generar Archivo (= aprobar)
 
@@ -350,6 +419,7 @@ cuenta de origen.
     "titular": { "codigo": 9, "nombre": "Proveedor S.A." },
     "cuentaBancaria": { "codigo": 4, "numero": "...", "banco": { "nombre": "..." } },
     "cuentaDestino": { "id": 9, "numero": "...", "banco": { "nombre": "..." } },
+    "debitoAutomatico": 0,
     "valor": 1500.00,
     "fechaProgramada": "2026-08-15",
     "estado": 1,
@@ -359,6 +429,11 @@ cuenta de origen.
   }
 ]
 ```
+
+`debitoAutomatico` (`0` = transferencia normal, `1` = débito automático) viene
+en todos los pagos. En esta pantalla nunca vas a ver un `1`: los débitos
+automáticos nacen en estado 3 y este listado filtra por `estado=1`. Si igual
+llegara uno seleccionado, `POST /pgtr/lote` lo rechaza con un mensaje explícito.
 
 **Regla de negocio clave para la UI:** el backend exige que **todos los
 pagos seleccionados compartan la misma cuenta bancaria de origen**. Lo más
@@ -470,6 +545,11 @@ con selector de estado para el usuario) — muestra pagos en cualquier estado,
 con la columna de estado usando la tabla de §1 (Registrado / En archivo /
 Confirmado / Rechazado / Anulado).
 
+Aquí sí aparecen los débitos automáticos (`debitoAutomatico: 1`), siempre en
+estado 3 o 5. Conviene una columna o un badge "Débito automático" para
+distinguirlos de las transferencias confirmadas por el banco: llegaron a
+estado 3 por un camino distinto y nunca tuvieron lote (`lote: null`).
+
 **Acción "Anular"** — visible en filas con estado 1, 2 o 4 (todavía no
 confirmadas por el banco): modal pidiendo motivo →
 `POST /pgtr/anular/{id}` con `{ "motivo": "...", "idUsuario": <sesión> }`.
@@ -499,6 +579,12 @@ pidiendo motivo → `POST /pgtr/revertirConfirmado/{id}` con
 Tras revertir, el pago pasa a estado 4 (Rechazado, para seguimiento) y la
 factura recupera su saldo — si el usuario está viendo el detalle de la
 factura (§2.1) al mismo tiempo, refrescarlo.
+
+**Revertir un débito automático** usa el mismo endpoint, pero el pago queda en
+estado **5 (Anulado)**, no en 4: un débito que el banco ya ejecutó no se
+reprograma, si se reversa es porque se registró mal. El mensaje de la respuesta
+lo refleja (`"Débito automático reversado. El pago queda anulado."`), así que
+mostrar el `mensaje` tal cual en vez de un texto fijo.
 
 Para reintentar un pago Rechazado o Anulado, **no hay una acción de
 "reintentar"**: el usuario simplemente registra un pago nuevo desde §3.1
@@ -641,6 +727,7 @@ Puede repetirse para cobros parciales.
 | §2.1 Revertir abono (CXP) | `/aplp/revertir/{id}` | POST |
 | §2.2 Cruzar anticipo proveedor | `/aplp/anticipo` | POST |
 | §3.1 Registrar pago | `/pgtr` | POST |
+| §3.1 Registrar pago por débito automático (abona + contabiliza) | `/pgtr` con `debitoAutomatico: true` | POST |
 | §3.2 Listar pagos por seleccionar | `/pgtr/listar?estado=1` | GET |
 | §3.2 Generar archivo (= aprobar) | `/pgtr/lote` | POST |
 | §3.2 Re-descargar archivo de un lote | `/pgtr/lote/{id}/archivo` | GET |

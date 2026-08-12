@@ -12,6 +12,7 @@ import { TitularSelectorDialogComponent } from '../../../../../shared/components
 import {
   ESTADO_PAGO_PROGRAMADO_LABELS,
   EstadoPagoProgramado,
+  SaldoFactura,
 } from '../../../../../shared/model/pagos-cobros/catalogos-aplicacion-pago';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
@@ -25,6 +26,7 @@ import {
   PagoProgramado,
   RespuestaBancoResponse,
 } from '../../../model/pago-programado';
+import { AplicacionPagoCxpService } from '../../../service/aplicacion-pago-cxp.service';
 import { PagoProgramadoService } from '../../../service/pago-programado.service';
 
 /**
@@ -41,6 +43,7 @@ import { PagoProgramadoService } from '../../../service/pago-programado.service'
 })
 export class PagosTransferenciaComponent implements OnInit {
   private pagoS = inject(PagoProgramadoService);
+  private aplicacionS = inject(AplicacionPagoCxpService);
   private cuentaBancariaS = inject(CuentaBancariaService);
   private funcionesDatos = inject(FuncionesDatosService);
   private dialog = inject(MatDialog);
@@ -58,6 +61,11 @@ export class PagosTransferenciaComponent implements OnInit {
   regIdFactura: number | null = null;
   regCuentaOrigen: CuentaBancaria | null = null;
   regIdCuentaDestino: number | null = null;
+  regDebitoAutomatico = false;
+  regReferencia = '';
+  /** Saldo de la factura elegida: precarga el valor y le pone tope. */
+  regSaldo = signal<SaldoFactura | null>(null);
+  cargandoSaldo = signal(false);
   regValor = '';
   regFecha: Date | null = new Date();
   regObservacion = '';
@@ -87,7 +95,7 @@ export class PagosTransferenciaComponent implements OnInit {
   pagosSeguimiento = signal<PagoProgramado[]>([]);
   cargandoSeguimiento = signal(false);
   segError = signal('');
-  readonly columnasSeguimiento = ['proveedor', 'factura', 'valor', 'fechaProgramada', 'estado', 'acciones'];
+  readonly columnasSeguimiento = ['proveedor', 'factura', 'tipo', 'valor', 'fechaProgramada', 'estado', 'acciones'];
   readonly estadosFiltro = [
     { valor: EstadoPagoProgramado.REGISTRADO, texto: 'Registrado' },
     { valor: EstadoPagoProgramado.EN_ARCHIVO, texto: 'En archivo' },
@@ -100,6 +108,7 @@ export class PagosTransferenciaComponent implements OnInit {
     const id = this.route.snapshot.queryParamMap.get('idFactura');
     if (id) {
       this.regIdFactura = +id;
+      this.cargarSaldoFactura(this.regIdFactura);
     }
     this.cargarCuentasBancarias();
     this.cargarSeguimiento();
@@ -134,6 +143,8 @@ export class PagosTransferenciaComponent implements OnInit {
       this.regProveedor.set(titular);
       this.regFacturaElegida.set(null);
       this.regIdFactura = null;
+      this.regSaldo.set(null);
+      this.regValor = '';
       this.buscarFacturaRegistro();
     });
   }
@@ -158,6 +169,32 @@ export class PagosTransferenciaComponent implements OnInit {
       if (!factura) return;
       this.regFacturaElegida.set(factura);
       this.regIdFactura = factura.id;
+      this.cargarSaldoFactura(factura.id);
+    });
+  }
+
+  /**
+   * El saldo pendiente se propone como valor a pagar y es el tope del campo.
+   * Si no se puede consultar, el campo queda libre y valida solo el backend.
+   */
+  private cargarSaldoFactura(idFactura: number): void {
+    this.cargandoSaldo.set(true);
+    this.regSaldo.set(null);
+
+    this.aplicacionS.getSaldo(idFactura).subscribe({
+      next: (saldo) => {
+        this.cargandoSaldo.set(false);
+        this.regSaldo.set(saldo);
+        const pendiente = Number(saldo?.saldoPendiente) || 0;
+        this.regValor = pendiente > 0 ? pendiente.toFixed(2) : '';
+      },
+      error: (err: Error) => {
+        this.cargandoSaldo.set(false);
+        this.regValor = '';
+        this.snackBar.open(`No se pudo consultar el saldo de la factura: ${err.message}`, 'Cerrar', {
+          duration: 6000,
+        });
+      },
     });
   }
 
@@ -167,13 +204,51 @@ export class PagosTransferenciaComponent implements OnInit {
     return t.razonSocial || t.nombre || t.identificacion || `Titular ${t.codigo}`;
   }
 
+  /**
+   * En un débito automático el dinero no se transfiere: el banco debita la
+   * cuenta propia por convenio, así que la cuenta del titular no se pide.
+   */
+  onCambioDebitoAutomatico(): void {
+    if (this.regDebitoAutomatico) {
+      this.regIdCuentaDestino = null;
+    } else {
+      this.regReferencia = '';
+    }
+    this.regError.set('');
+    this.regExito.set('');
+  }
+
   get regValorNumerico(): number {
     const v = parseFloat(String(this.regValor).replace(',', '.'));
     return Number.isFinite(v) ? v : 0;
   }
 
+  /** Saldo pendiente de la factura elegida; null mientras no se conozca. */
+  get saldoPendienteFactura(): number | null {
+    const saldo = this.regSaldo();
+    return saldo ? Number(saldo.saldoPendiente) || 0 : null;
+  }
+
+  /** La tolerancia es la misma del backend, para no discrepar por redondeo. */
+  get regExcedeSaldo(): boolean {
+    const pendiente = this.saldoPendienteFactura;
+    return pendiente != null && this.regValorNumerico > pendiente + 0.01;
+  }
+
+  /** Al salir del campo se recorta lo que exceda, para no dejarlo inválido. */
+  ajustarValorAlSaldo(): void {
+    const pendiente = this.saldoPendienteFactura;
+    if (pendiente != null && this.regValorNumerico > pendiente + 0.01) {
+      this.regValor = pendiente.toFixed(2);
+    }
+  }
+
   get puedeRegistrar(): boolean {
-    return !!this.regIdFactura && !!this.regCuentaOrigen && this.regValorNumerico > 0 && !this.registrando();
+    return !!this.regIdFactura
+      && !!this.regCuentaOrigen
+      && this.regValorNumerico > 0
+      && !this.regExcedeSaldo
+      && !this.registrando();
   }
 
   registrarPago(): void {
@@ -183,26 +258,52 @@ export class PagosTransferenciaComponent implements OnInit {
     this.regError.set('');
     this.regExito.set('');
 
+    const esDebito = this.regDebitoAutomatico;
+
     this.pagoS.registrar({
       idFacturaCompra: this.regIdFactura,
       idCuentaBancariaOrigen: this.regCuentaOrigen.codigo,
-      idCuentaDestinoTitular: this.regIdCuentaDestino ?? undefined,
+      idCuentaDestinoTitular: esDebito ? undefined : (this.regIdCuentaDestino ?? undefined),
       valor: this.regValorNumerico,
       fechaProgramada: this.fechaISO(this.regFecha),
       idEmpresa: this.idEmpresaSesion(),
       idUsuario: this.idUsuarioSesion(),
       observacion: this.regObservacion.trim(),
+      debitoAutomatico: esDebito,
+      referencia: esDebito ? this.regReferencia.trim() || undefined : undefined,
     }).subscribe({
       next: (resp) => {
         this.registrando.set(false);
-        this.regExito.set(
-          resp.mensaje ?? 'Pago registrado. Aparecerá en la pantalla de selección para el próximo archivo.'
-        );
+
+        // En un débito automático el backend ya abonó la factura y generó el
+        // asiento, así que el mensaje lo dice y no hay nada que enviar al banco.
+        let mensaje = resp.mensaje
+          ?? 'Pago registrado. Aparecerá en la pantalla de selección para el próximo archivo.';
+        if (resp.debitoAutomatico && resp.asiento) {
+          mensaje += ` Asiento N° ${resp.asiento}.`;
+        }
+        this.regExito.set(mensaje);
+
+        // La respuesta ya trae el saldo actualizado de la factura: en un débito
+        // automático bajó, en una transferencia sigue igual hasta que el banco
+        // confirme. Se refresca para que el tope del campo no quede viejo.
+        if (resp.facturaId != null) {
+          this.regSaldo.set({
+            facturaId: resp.facturaId,
+            numeroFactura: resp.numeroFactura,
+            total: resp.total,
+            totalAplicado: resp.totalAplicado,
+            saldoPendiente: resp.saldoPendiente,
+            estadoPago: resp.estadoPago,
+          });
+        }
+
         this.regValor = '';
         this.regObservacion = '';
+        this.regReferencia = '';
         this.regIdCuentaDestino = null;
         this.cargarSeguimiento();
-        this.snackBar.open(this.regExito(), 'Cerrar', { duration: 5000 });
+        this.snackBar.open(mensaje, 'Cerrar', { duration: 6000 });
       },
       error: (err: Error) => {
         this.registrando.set(false);
@@ -404,6 +505,11 @@ export class PagosTransferenciaComponent implements OnInit {
     return ESTADO_PAGO_PROGRAMADO_LABELS[estado] ?? { texto: `Estado ${estado}`, clase: 'badge-neutro' };
   }
 
+  /** El banco lo debitó por convenio: nació confirmado y sin lote. */
+  esDebitoAutomatico(pago: PagoProgramado): boolean {
+    return Number(pago.debitoAutomatico) === 1;
+  }
+
   /** Solo se anula lo que el banco todavía no confirmó. */
   puedeAnular(pago: PagoProgramado): boolean {
     return pago.estado === EstadoPagoProgramado.REGISTRADO || pago.estado === EstadoPagoProgramado.EN_ARCHIVO;
@@ -434,10 +540,14 @@ export class PagosTransferenciaComponent implements OnInit {
   }
 
   confirmarReverso(pago: PagoProgramado): void {
+    const debito = this.esDebitoAutomatico(pago);
     const data: MotivoDialogData = {
-      titulo: `Revertir pago confirmado N° ${pago.id}`,
-      advertencia:
-        'Este pago ya generó asiento contable y movimiento bancario. Al revertirlo se deshace esa contabilidad, el pago queda como Rechazado y la factura recupera su saldo.',
+      titulo: debito
+        ? `Revertir débito automático N° ${pago.id}`
+        : `Revertir pago confirmado N° ${pago.id}`,
+      advertencia: debito
+        ? 'Este débito automático ya generó asiento contable y movimiento bancario. Al revertirlo se deshace esa contabilidad, el pago queda Anulado (un débito que el banco ya ejecutó no se reprograma) y la factura recupera su saldo.'
+        : 'Este pago ya generó asiento contable y movimiento bancario. Al revertirlo se deshace esa contabilidad, el pago queda como Rechazado y la factura recupera su saldo.',
       textoConfirmar: 'Sí, revertir',
       requiereDobleConfirmacion: true,
     };

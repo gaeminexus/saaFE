@@ -27,6 +27,25 @@ export const TIPO_DOC_PAGO_LABELS: Record<number, EtiquetaCatalogo> = {
   [TipoDocPago.NOTA_DEBITO]: { texto: 'Nota de Débito', icono: 'assignment_late', automatico: true },
 };
 
+/**
+ * Forma de pago de un abono directo (solo tiene valor cuando
+ * `tipoDocPago = PAGO_DIRECTO`). En CXP hoy el backend genera 2 (transferencia
+ * confirmada por el banco) y 4 (débito automático).
+ */
+export enum FormaPagoAplicacion {
+  EFECTIVO = 1,
+  TRANSFERENCIA = 2,
+  CHEQUE = 3,
+  DEBITO_AUTOMATICO = 4,
+}
+
+export const FORMA_PAGO_LABELS: Record<number, string> = {
+  [FormaPagoAplicacion.EFECTIVO]: 'Efectivo',
+  [FormaPagoAplicacion.TRANSFERENCIA]: 'Transferencia',
+  [FormaPagoAplicacion.CHEQUE]: 'Cheque',
+  [FormaPagoAplicacion.DEBITO_AUTOMATICO]: 'Débito automático',
+};
+
 /** Estado de una fila de abono. Una fila reversada ya no cuenta para el saldo. */
 export enum EstadoAplicacion {
   ACTIVO = 1,
@@ -118,7 +137,8 @@ export interface FilaAbono {
   retencionV2?: DocumentoRelacionado | null;
   notaDebito?: DocumentoRelacionado | null;
   anticipo?: DocumentoRelacionado | null;
-  formaPago?: string | null;
+  /** Ver FormaPagoAplicacion; solo viene en filas de tipoDocPago = 1. */
+  formaPago?: number | null;
   referencia?: string | null;
   banco?: string | null;
   /** Negativo en notas de débito (aumentan el saldo). */

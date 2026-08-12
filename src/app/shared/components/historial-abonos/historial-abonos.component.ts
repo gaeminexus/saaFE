@@ -4,9 +4,11 @@ import { MaterialFormModule } from '../../modules/material-form.module';
 import {
   ESTADO_PAGO_LABELS,
   EstadoAplicacion,
+  FORMA_PAGO_LABELS,
   FilaAbono,
   SaldoFactura,
   TIPO_DOC_PAGO_LABELS,
+  TipoDocPago,
 } from '../../model/pagos-cobros/catalogos-aplicacion-pago';
 import { FuncionesDatosService } from '../../services/funciones-datos.service';
 
@@ -47,7 +49,15 @@ export class HistorialAbonosComponent {
     return ESTADO_PAGO_LABELS[this.saldo?.estadoPago ?? 0] ?? { texto: '—', clase: 'badge-neutro' };
   }
 
+  /**
+   * Un pago directo se etiqueta con su forma de pago cuando la trae, para
+   * distinguir un débito automático de una transferencia confirmada.
+   */
   etiquetaTipo(fila: FilaAbono): string {
+    if (fila.tipoDocPago === TipoDocPago.PAGO_DIRECTO && fila.formaPago != null) {
+      const forma = FORMA_PAGO_LABELS[fila.formaPago];
+      if (forma) return forma;
+    }
     return TIPO_DOC_PAGO_LABELS[fila.tipoDocPago]?.texto ?? `Tipo ${fila.tipoDocPago}`;
   }
 

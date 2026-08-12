@@ -5,6 +5,10 @@ import { SaldoFactura } from '../../../shared/model/pagos-cobros/catalogos-aplic
  * ciclo de vida: registrado → en archivo → confirmado/rechazado (o anulado).
  * Registrar un pago NO mueve el saldo de la factura; eso ocurre recién
  * cuando el banco lo confirma (carga de respuesta del lote).
+ *
+ * Excepción: los pagos por débito automático (`debitoAutomatico = 1`) nacen
+ * en estado 3, ya contabilizados, porque el banco debitó la cuenta por
+ * convenio antes de que el pago llegue al sistema.
  */
 export interface PagoProgramado {
   id: number;
@@ -12,6 +16,8 @@ export interface PagoProgramado {
   titular?: { codigo: number; nombre: string } | null;
   cuentaBancaria?: { codigo: number; numero: string; banco?: { nombre: string } } | null;
   cuentaDestino?: { id: number; numero: string; banco?: { nombre: string } } | null;
+  /** 0 = transferencia normal, 1 = débito automático (no pasa por lote). */
+  debitoAutomatico?: number | null;
   valor: number;
   fechaProgramada: any;
   /** Ver EstadoPagoProgramado en shared/model/pagos-cobros. */
@@ -32,13 +38,29 @@ export interface RegistrarPagoRequest {
   idEmpresa: number;
   idUsuario: number;
   observacion?: string;
+  /**
+   * true cuando el banco ya debitó la cuenta por convenio: no hace falta la
+   * cuenta del titular y el pago se contabiliza en esta misma llamada.
+   */
+  debitoAutomatico?: boolean;
+  /** Nota de débito o número de convenio; solo aplica al débito automático. */
+  referencia?: string;
 }
 
-/** Respuesta 201 de POST /pgtr. El saldo de la factura todavía no cambia. */
+/**
+ * Respuesta 201 de POST /pgtr. En una transferencia normal el saldo de la
+ * factura todavía no cambia; en un débito automático (`debitoAutomatico`)
+ * ya viene abonada, con la aplicación y el asiento generados.
+ */
 export interface RegistrarPagoResponse extends SaldoFactura {
   exito: boolean;
   mensaje: string;
   pago?: number;
+  debitoAutomatico?: boolean;
+  /** Solo en débito automático: id de la aplicación creada. */
+  aplicacion?: number;
+  /** Solo en débito automático: número alterno del asiento contable. */
+  asiento?: string;
 }
 
 /** Body de POST /pgtr/lote. Todos los pagos deben compartir la cuenta de origen. */

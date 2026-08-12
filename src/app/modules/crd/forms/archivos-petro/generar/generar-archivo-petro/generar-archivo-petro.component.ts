@@ -8,6 +8,7 @@ import { MaterialFormModule } from '../../../../../../shared/modules/material-fo
 import { Filial } from '../../../../model/filial';
 import { DetalleGeneracionArchivo } from '../../../../model/detalle-generacion-archivo';
 import { ParticipeGeneracionArchivo } from '../../../../model/participe-generacion-archivo';
+import { EstadoGeneracionPetro } from '../../../../model/generacion-archivo-petro';
 import { FilialService } from '../../../../service/filial.service';
 import { GeneracionArchivoPetroService } from '../../../../service/generacion-archivo-petro.service';
 import { DatosBusqueda } from '../../../../../../shared/model/datos-busqueda/datos-busqueda';
@@ -194,57 +195,66 @@ export class GenerarArchivoPetroComponent implements OnInit {
       return;
     }
 
+    // El backend no valida periodo duplicado al crear la cabecera; se controla
+    // aquí con los meses que ya tienen generación para esa filial y año.
+    if (this.isMesGenerado(this.mesSeleccionado)) {
+      this.snackBar.open(
+        'Ese periodo ya tiene una generación. Elimínela desde la consulta si necesita volver a generarlo.',
+        'Cerrar',
+        { duration: 6000 }
+      );
+      return;
+    }
+
     this.isGenerating.set(true);
 
+    const usuario = this.obtenerUsuarioGeneracion();
     const payloadCabecera = {
       anioPeriodo: this.anioSeleccionado,
       mesPeriodo: this.mesSeleccionado,
+      // El paso 2 rechaza cualquier generación cuyo estado no sea 0.
+      estado: EstadoGeneracionPetro.PENDIENTE,
       filial: { codigo: this.filialSeleccionada },
-      usuarioGeneracion: this.obtenerUsuarioGeneracion(),
+      usuarioGeneracion: usuario,
+      usuarioIngreso: usuario,
     };
-
-    console.log('[GenerarArchivoPetro] Payload cabecera:', payloadCabecera);
 
     this.generacionArchivoPetroService.add(payloadCabecera).subscribe({
       next: (cabecera) => {
-        console.log('[GenerarArchivoPetro] Respuesta add cabecera:', cabecera);
         const codigoGeneracion = this.extraerCodigoGeneracion(cabecera);
-        console.log('[GenerarArchivoPetro] Código generación extraído:', codigoGeneracion);
         if (!codigoGeneracion) {
           this.isGenerating.set(false);
           this.snackBar.open('No fue posible crear la cabecera de generación', 'Cerrar', { duration: 4000 });
           return;
         }
 
-        const parametrosGeneracion = {
-          anioPeriodo: String(this.anioSeleccionado),
-          mesPeriodo: String(this.mesSeleccionado),
-          codigoFilial: String(this.filialSeleccionada),
-        };
-
-        console.log('[GenerarArchivoPetro] Invocando generarArchivo con ID:', codigoGeneracion);
-        console.log('[GenerarArchivoPetro] Parámetros generarArchivo:', parametrosGeneracion);
-
-        this.generacionArchivoPetroService
-          .generarArchivo(codigoGeneracion, parametrosGeneracion)
-          .subscribe({
-          next: (respuestaGeneracion) => {
-            console.log('[GenerarArchivoPetro] Respuesta generarArchivo:', respuestaGeneracion);
+        // Proceso pesado: recopila aportes y cuotas, arma el detalle y escribe
+        // el TXT. No lleva body, el usuario sale de la cabecera recién creada.
+        this.generacionArchivoPetroService.generarArchivo(codigoGeneracion).subscribe({
+          next: (respuesta) => {
             this.isGenerating.set(false);
-            this.snackBar.open('Archivo generado exitosamente', 'Cerrar', { duration: 4000 });
+            this.snackBar.open(
+              respuesta?.mensaje ?? 'Archivo generado exitosamente',
+              'Cerrar',
+              { duration: 5000 }
+            );
+            this.buscarMesesGenerados();
             this.router.navigate(['/menucreditos/archivos-petro/generar/detalle', codigoGeneracion]);
           },
-          error: (errorGeneracion) => {
-            console.error('[GenerarArchivoPetro] Error generarArchivo:', errorGeneracion);
+          error: (error: Error) => {
             this.isGenerating.set(false);
-            this.snackBar.open('Error al generar detalle de archivo', 'Cerrar', { duration: 4000 });
+            // La cabecera quedó creada en estado 0: es eliminable desde la consulta.
+            this.snackBar.open(error.message, 'Cerrar', { duration: 8000 });
+            this.buscarMesesGenerados();
           },
         });
       },
       error: (errorCabecera) => {
-        console.error('[GenerarArchivoPetro] Error add cabecera:', errorCabecera);
         this.isGenerating.set(false);
-        this.snackBar.open('Error al crear cabecera de generación', 'Cerrar', { duration: 4000 });
+        const mensaje = typeof errorCabecera === 'string' && errorCabecera.trim()
+          ? errorCabecera
+          : 'Error al crear cabecera de generación';
+        this.snackBar.open(mensaje, 'Cerrar', { duration: 6000 });
       },
     });
   }

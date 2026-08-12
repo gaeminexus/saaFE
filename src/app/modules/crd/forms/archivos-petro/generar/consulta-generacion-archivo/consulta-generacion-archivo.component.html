@@ -72,7 +72,16 @@
           </div>
           <div class="total-item">
             <span class="total-label">Estado</span>
-            <span class="total-valor">{{ row.estado ?? '-' }}</span>
+            <span class="total-valor estado-badge" [class]="getEstadoClass(row.estado)">
+              {{ getEstadoLabel(row.estado) }}
+            </span>
+          </div>
+          <div class="total-item">
+            <span class="total-label">Descargado</span>
+            <span class="total-valor descarga" [class.sin-descargar]="!estaDescargada(row)">
+              <mat-icon>{{ estaDescargada(row) ? 'cloud_done' : 'cloud_off' }}</mat-icon>
+              {{ descripcionDescarga(row) }}
+            </span>
           </div>
         </div>
       </mat-card-content>
@@ -82,6 +91,38 @@
           <mat-icon>visibility</mat-icon>
           Ver Detalle
         </button>
+
+        @if (tieneArchivo(row)) {
+          <button
+            mat-button
+            color="primary"
+            (click)="descargarArchivo(row)"
+            [disabled]="estaDescargando(row)"
+            matTooltip="Descargar el TXT. Al hacerlo la generación ya no se podrá eliminar.">
+            @if (estaDescargando(row)) {
+              <mat-spinner diameter="18"></mat-spinner>
+            } @else {
+              <mat-icon>download</mat-icon>
+            }
+            Descargar TXT
+          </button>
+        }
+
+        @if (puedeEliminar(row)) {
+          <button
+            mat-button
+            color="warn"
+            (click)="eliminarGeneracion(row)"
+            [disabled]="estaEliminando(row)"
+            matTooltip="Borra la cabecera, todo su detalle y el archivo TXT">
+            @if (estaEliminando(row)) {
+              <mat-spinner diameter="18"></mat-spinner>
+            } @else {
+              <mat-icon>delete_forever</mat-icon>
+            }
+            Eliminar
+          </button>
+        }
       </mat-card-actions>
     </mat-card>
   </div>

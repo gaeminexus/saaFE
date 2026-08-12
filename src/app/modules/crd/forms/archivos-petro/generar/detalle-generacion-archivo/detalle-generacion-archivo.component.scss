@@ -138,6 +138,21 @@
     &.estado-error      { background: #f8d7da; color: #721c24; }
   }
 
+  // ── Aviso de generación congelada por la descarga ──────────
+  .nota-bloqueo {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: #64748b;
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+  }
+
   // ── Panel header de productos ──────────────────────────────
   .panel-title {
     display: flex;

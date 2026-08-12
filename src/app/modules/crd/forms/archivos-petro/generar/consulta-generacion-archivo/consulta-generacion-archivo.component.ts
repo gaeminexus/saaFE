@@ -12,7 +12,13 @@ import { DatosBusqueda } from '../../../../../../shared/model/datos-busqueda/dat
 import { TipoComandosBusqueda } from '../../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda } from '../../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { DetalleGeneracionArchivo } from '../../../../model/detalle-generacion-archivo';
-import { GeneracionArchivoPetro } from '../../../../model/generacion-archivo-petro';
+import {
+  ESTADO_GENERACION_PETRO_CLASES,
+  ESTADO_GENERACION_PETRO_LABELS,
+  GeneracionArchivoPetro,
+  puedeEliminarGeneracion,
+} from '../../../../model/generacion-archivo-petro';
+import { AccionesGeneracionPetroService } from '../../../../service/acciones-generacion-petro.service';
 import { DetalleGeneracionArchivoService } from '../../../../service/detalle-generacion-archivo.service';
 import { GeneracionArchivoPetroService } from '../../../../service/generacion-archivo-petro.service';
 
@@ -56,10 +62,15 @@ export class ConsultaGeneracionArchivoComponent implements OnInit {
 
   isLoading = signal<boolean>(false);
 
+  /** Códigos con una descarga o una eliminación en curso. */
+  descargando = new Set<number>();
+  eliminando = new Set<number>();
+
   constructor(
     private router: Router,
     private generacionArchivoPetroService: GeneracionArchivoPetroService,
     private detalleGeneracionArchivoService: DetalleGeneracionArchivoService,
+    private accionesPetro: AccionesGeneracionPetroService,
     private snackBar: MatSnackBar,
   ) {}
 
@@ -265,6 +276,140 @@ export class ConsultaGeneracionArchivoComponent implements OnInit {
     this.router.navigate(['/menucreditos/archivos-petro/generar/detalle', item.codigo], {
       state: { generacion: item },
     });
+  }
+
+  // ── Descarga y eliminación ───────────────────────────────────
+
+  getEstadoLabel(estado: number | undefined): string {
+    return ESTADO_GENERACION_PETRO_LABELS[Number(estado ?? -1)] ?? 'N/A';
+  }
+
+  getEstadoClass(estado: number | undefined): string {
+    return ESTADO_GENERACION_PETRO_CLASES[Number(estado ?? -1)] ?? '';
+  }
+
+  estaDescargada(item: GeneracionArchivoPetro): boolean {
+    return item.fechaDescarga != null;
+  }
+
+  /** Fecha y usuario de la descarga: es lo que explica por qué no se puede borrar. */
+  descripcionDescarga(item: GeneracionArchivoPetro): string {
+    if (!this.estaDescargada(item)) return 'No descargado';
+    const fecha = this.formatearFecha(item.fechaDescarga);
+    return item.usuarioDescarga ? `${fecha} · ${item.usuarioDescarga}` : fecha;
+  }
+
+  tieneArchivo(item: GeneracionArchivoPetro): boolean {
+    return !!item.nombreArchivo || !!item.rutaArchivo;
+  }
+
+  puedeEliminar(item: GeneracionArchivoPetro): boolean {
+    return puedeEliminarGeneracion(item);
+  }
+
+  estaDescargando(item: GeneracionArchivoPetro): boolean {
+    return this.descargando.has(item.codigo || 0);
+  }
+
+  estaEliminando(item: GeneracionArchivoPetro): boolean {
+    return this.eliminando.has(item.codigo || 0);
+  }
+
+  /** La descarga marca la generación: al volver hay que reemplazar la fila. */
+  descargarArchivo(item: GeneracionArchivoPetro): void {
+    const codigo = item.codigo;
+    if (!codigo || this.estaDescargando(item)) return;
+
+    this.descargando.add(codigo);
+    this.accionesPetro.descargar(item).subscribe((actualizada) => {
+      this.descargando.delete(codigo);
+      if (actualizada) {
+        this.reemplazarRegistro(codigo, actualizada);
+      }
+    });
+  }
+
+  eliminarGeneracion(item: GeneracionArchivoPetro): void {
+    const codigo = item.codigo;
+    if (!codigo || this.estaEliminando(item)) return;
+
+    this.eliminando.add(codigo);
+    this.accionesPetro.eliminar(item).subscribe((resultado) => {
+      this.eliminando.delete(codigo);
+      if (resultado) {
+        this.quitarRegistro(codigo);
+      }
+    });
+  }
+
+  private reemplazarRegistro(codigo: number, actualizada: GeneracionArchivoPetro): void {
+    const [normalizada] = this.normalizarRegistros([actualizada]);
+    const reemplazar = (lista: GeneracionArchivoPetro[]) => {
+      const indice = lista.findIndex((r) => r.codigo === codigo);
+      if (indice >= 0) {
+        lista[indice] = { ...lista[indice], ...normalizada };
+      }
+    };
+
+    reemplazar(this.registros);
+    reemplazar(this.registrosAnio);
+    // La grilla itera sobre esta lista: hay que renovar la referencia.
+    this.registrosFiltrados = this.registrosFiltrados.map((r) =>
+      r.codigo === codigo ? { ...r, ...normalizada } : r
+    );
+  }
+
+  /** El periodo queda libre, así que también deja de marcar su mes. */
+  private quitarRegistro(codigo: number): void {
+    this.registros = this.registros.filter((r) => r.codigo !== codigo);
+    this.registrosAnio = this.registrosAnio.filter((r) => r.codigo !== codigo);
+    this.registrosFiltrados = this.registrosFiltrados.filter((r) => r.codigo !== codigo);
+
+    this.resetearMeses();
+    this.registrosAnio
+      .filter((item) => Number(item.anioPeriodo) === Number(this.anioSeleccionado))
+      .forEach((item) => {
+        const mes = this.meses.find((m) => m.numero === item.mesPeriodo);
+        if (mes) {
+          mes.tieneGeneracion = true;
+        }
+      });
+
+    if (this.mesSeleccionado) {
+      const mes = this.meses.find((m) => m.numero === this.mesSeleccionado);
+      if (mes?.tieneGeneracion) {
+        mes.activo = true;
+      } else {
+        this.mesSeleccionado = null;
+        this.registrosFiltrados = this.registrosAnio.filter(
+          (item) => Number(item.anioPeriodo) === Number(this.anioSeleccionado),
+        );
+      }
+    }
+
+    this.extraerAniosDisponibles();
+  }
+
+  formatearFecha(fecha: unknown): string {
+    if (!fecha) return 'N/A';
+
+    if (Array.isArray(fecha)) {
+      const [anio, mes, dia] = fecha as number[];
+      if (!anio || !mes || !dia) return String(fecha);
+      const parsed = new Date(anio, mes - 1, dia);
+      return Number.isNaN(parsed.getTime())
+        ? String(fecha)
+        : parsed.toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    }
+
+    if (typeof fecha === 'string') {
+      const parsed = new Date(fecha);
+      return Number.isNaN(parsed.getTime())
+        ? fecha
+        : parsed.toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    }
+
+    return String(fecha);
   }
 
   private enriquecerRegistros(rows: GeneracionArchivoPetro[]) {

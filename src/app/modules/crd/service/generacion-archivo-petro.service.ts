@@ -1,7 +1,12 @@
-import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable, catchError, of, throwError } from 'rxjs';
-import { GeneracionArchivoPetro } from '../model/generacion-archivo-petro';
+import { Observable, catchError, from, of, switchMap, throwError } from 'rxjs';
+import {
+  ArchivoPetroDescargado,
+  GeneracionArchivoPetro,
+  ResultadoEliminacionPetro,
+  ResultadoGeneracionPetro,
+} from '../model/generacion-archivo-petro';
 import { ServiciosCrd } from './ws-crd';
 
 @Injectable({
@@ -43,16 +48,107 @@ export class GeneracionArchivoPetroService {
       .pipe(catchError(this.handleError));
   }
 
-  delete(id: any): Observable<GeneracionArchivoPetro | null> {
-    const url = `${ServiciosCrd.RS_GNAP}/${id}`;
-    return this.http.delete<GeneracionArchivoPetro>(url, this.httpOptions).pipe(catchError(this.handleError));
-  }
-
-  generarArchivo(codigoGeneracion: number, parametros: Record<string, string> = {}): Observable<any | null> {
+  /**
+   * Paso 2: arma el detalle y escribe el TXT. Es el proceso pesado y no lleva
+   * body — el usuario sale de la cabecera creada en el paso 1.
+   */
+  generarArchivo(codigoGeneracion: number): Observable<ResultadoGeneracionPetro> {
     const url = `${ServiciosCrd.RS_GNAP}/generarArchivo/${codigoGeneracion}`;
     return this.http
-      .post<any>(url, parametros, this.httpOptions)
-      .pipe(catchError(this.handleError));
+      .post<ResultadoGeneracionPetro>(url, null, this.httpOptions)
+      .pipe(catchError(GeneracionArchivoPetroService.errorJson));
+  }
+
+  /**
+   * Paso 3: descarga el TXT por el endpoint del backend, que estampa
+   * `fechaDescarga`/`usuarioDescarga`. No usar el genérico /files/download: sin
+   * esa marca el sistema dejaría borrar generaciones ya entregadas a Petro.
+   */
+  descargarArchivo(codigoGeneracion: number, usuario?: string): Observable<ArchivoPetroDescargado> {
+    const url = `${ServiciosCrd.RS_GNAP}/descargarArchivo/${codigoGeneracion}`;
+    let params = new HttpParams();
+    if (usuario) {
+      params = params.set('usuario', usuario);
+    }
+
+    return this.http
+      .get(url, { params, responseType: 'blob', observe: 'response' })
+      .pipe(
+        switchMap((resp) =>
+          of({
+            blob: resp.body ?? new Blob(),
+            nombreArchivo: GeneracionArchivoPetroService.nombreDesdeContentDisposition(
+              resp.headers.get('Content-Disposition')
+            ),
+          })
+        ),
+        catchError(GeneracionArchivoPetroService.errorTextoPlano)
+      );
+  }
+
+  /**
+   * Borra en cascada CXPG → PDGA → DTGA → GNAP y el TXT del disco. El backend
+   * rechaza con 409 si la generación ya fue descargada, enviada o procesada.
+   */
+  eliminar(codigoGeneracion: number, usuario?: string): Observable<ResultadoEliminacionPetro> {
+    const url = `${ServiciosCrd.RS_GNAP}/eliminar/${codigoGeneracion}`;
+    let params = new HttpParams();
+    if (usuario) {
+      params = params.set('usuario', usuario);
+    }
+
+    return this.http
+      .delete<ResultadoEliminacionPetro>(url, { params })
+      .pipe(catchError(GeneracionArchivoPetroService.errorJson));
+  }
+
+  /** Nombre real del archivo, si el servidor expone la cabecera. */
+  private static nombreDesdeContentDisposition(disposition: string | null): string {
+    const match = /filename="?([^";]+)"?/.exec(disposition ?? '');
+    return match ? match[1].trim() : '';
+  }
+
+  /**
+   * Los endpoints de generación y eliminación devuelven el error como
+   * `{ "error": "..." }`, ya redactado en español para mostrarse tal cual.
+   */
+  private static errorJson(error: HttpErrorResponse): Observable<never> {
+    let mensaje = 'No se pudo completar la operación.';
+    const cuerpo = error.error;
+
+    if (typeof cuerpo === 'string' && cuerpo.trim()) {
+      mensaje = cuerpo;
+    } else if (cuerpo?.error) {
+      mensaje = cuerpo.error;
+    } else if (cuerpo?.mensaje) {
+      mensaje = cuerpo.mensaje;
+    } else if (error.message) {
+      mensaje = error.message;
+    }
+
+    return throwError(() => new Error(mensaje));
+  }
+
+  /**
+   * El endpoint de descarga devuelve sus errores en texto plano, no JSON, y
+   * como se pidió un blob hay que leerlo antes de poder mostrarlo.
+   */
+  private static errorTextoPlano(error: HttpErrorResponse): Observable<never> {
+    const cuerpo = error.error;
+
+    if (cuerpo instanceof Blob) {
+      return from(cuerpo.text()).pipe(
+        switchMap((texto) =>
+          throwError(() => new Error(texto?.trim() || 'No se pudo descargar el archivo.'))
+        )
+      );
+    }
+
+    if (typeof cuerpo === 'string' && cuerpo.trim()) {
+      return throwError(() => new Error(cuerpo));
+    }
+
+    return throwError(() => new Error(error.message || 'No se pudo descargar el archivo.'));
   }
 
   private handleError(error: HttpErrorResponse): Observable<null> {

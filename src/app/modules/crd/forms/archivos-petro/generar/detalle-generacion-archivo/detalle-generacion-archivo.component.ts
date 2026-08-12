@@ -6,13 +6,18 @@ import { MaterialFormModule } from '../../../../../../shared/modules/material-fo
 import { DatosBusqueda } from '../../../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda } from '../../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
-import { GeneracionArchivoPetro } from '../../../../model/generacion-archivo-petro';
+import {
+  ESTADO_GENERACION_PETRO_CLASES,
+  ESTADO_GENERACION_PETRO_LABELS,
+  GeneracionArchivoPetro,
+  puedeEliminarGeneracion,
+} from '../../../../model/generacion-archivo-petro';
 import { DetalleGeneracionArchivo } from '../../../../model/detalle-generacion-archivo';
 import { ParticipeGeneracionArchivo } from '../../../../model/participe-generacion-archivo';
+import { AccionesGeneracionPetroService } from '../../../../service/acciones-generacion-petro.service';
 import { GeneracionArchivoPetroService } from '../../../../service/generacion-archivo-petro.service';
 import { DetalleGeneracionArchivoService } from '../../../../service/detalle-generacion-archivo.service';
 import { ParticipeGeneracionArchivoService } from '../../../../service/participe-generacion-archivo.service';
-import { FileService } from '../../../../../../shared/services/file.service';
 import { ExportService } from '../../../../../../shared/services/export.service';
 import { CuotaXParticipeGeneracionService } from '../../../../service/cuota-x-participe-generacion.service';
 import { CuotaXParticipeGeneracion } from '../../../../model/cuota-x-participe-generacion';
@@ -39,6 +44,8 @@ export class DetalleGeneracionArchivoComponent implements OnInit {
   generacion: GeneracionArchivoPetro | null = null;
   productosAgrupados: ProductoAgrupado[] = [];
   isLoading = signal<boolean>(false);
+  descargando = signal<boolean>(false);
+  eliminando = signal<boolean>(false);
 
   nombresMeses = [
     'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -59,7 +66,7 @@ export class DetalleGeneracionArchivoComponent implements OnInit {
     private generacionService: GeneracionArchivoPetroService,
     private detalleService: DetalleGeneracionArchivoService,
     private participeService: ParticipeGeneracionArchivoService,
-    private fileService: FileService,
+    private accionesPetro: AccionesGeneracionPetroService,
     private exportService: ExportService,
     private cuotaService: CuotaXParticipeGeneracionService,
     private snackBar: MatSnackBar,
@@ -177,6 +184,18 @@ export class DetalleGeneracionArchivoComponent implements OnInit {
     return this.nombresMeses[mes - 1] || 'N/A';
   }
 
+  /**
+   * Estado de la generación (GNAP): 0=Pendiente 1=Generado 2=Enviado
+   * 3=Procesado. No es el mismo catálogo que el estado de cada partícipe.
+   */
+  getEstadoGeneracionLabel(estado: number | undefined): string {
+    return ESTADO_GENERACION_PETRO_LABELS[Number(estado ?? -1)] ?? 'N/A';
+  }
+
+  getEstadoGeneracionClass(estado: number | undefined): string {
+    return ESTADO_GENERACION_PETRO_CLASES[Number(estado ?? -1)] ?? '';
+  }
+
   getEstadoLabel(estado: number | undefined): string {
     const estados: Record<number, string> = {
       1: 'Pendiente',
@@ -257,21 +276,53 @@ export class DetalleGeneracionArchivoComponent implements OnInit {
     return String(fecha);
   }
 
+  /**
+   * Descarga por el endpoint del backend, que estampa la marca de descarga.
+   * Al volver se refresca la generación para deshabilitar "Eliminar".
+   */
   descargarArchivoGenerado(): void {
-    const filePath = (this.generacion?.rutaArchivo || '').trim();
+    if (!this.generacion || this.descargando()) return;
 
-    if (!filePath) {
-      this.snackBar.open('No existe ruta de archivo para descargar', 'Cerrar', { duration: 4000 });
-      return;
-    }
-
-    const saveFileName = this.getNombreArchivoMostrado();
-    this.fileService.downloadAndSaveFile(filePath, saveFileName);
-    this.snackBar.open('Descargando archivo...', 'Cerrar', { duration: 2500 });
+    this.descargando.set(true);
+    this.accionesPetro.descargar(this.generacion).subscribe((actualizada) => {
+      this.descargando.set(false);
+      if (actualizada) {
+        this.generacion = actualizada;
+      }
+    });
   }
 
   puedeDescargarArchivo(): boolean {
-    return !!this.generacion?.rutaArchivo;
+    return !!this.generacion?.nombreArchivo || !!this.generacion?.rutaArchivo;
+  }
+
+  /** Solo mientras el TXT no haya salido del sistema. */
+  puedeEliminar(): boolean {
+    return puedeEliminarGeneracion(this.generacion);
+  }
+
+  eliminarGeneracion(): void {
+    if (!this.generacion || this.eliminando()) return;
+
+    this.eliminando.set(true);
+    this.accionesPetro.eliminar(this.generacion).subscribe((resultado) => {
+      this.eliminando.set(false);
+      if (resultado) {
+        // Ya no existe: no queda nada que mostrar en esta pantalla.
+        this.volverAtras();
+      }
+    });
+  }
+
+  estaDescargada(): boolean {
+    return this.generacion?.fechaDescarga != null;
+  }
+
+  descripcionDescarga(): string {
+    if (!this.estaDescargada()) return 'No descargado';
+    const fecha = this.formatearFechaGeneracion(this.generacion?.fechaDescarga);
+    const usuario = this.generacion?.usuarioDescarga;
+    return usuario ? `${fecha} por ${usuario}` : fecha;
   }
 
   getNombreArchivoMostrado(): string {

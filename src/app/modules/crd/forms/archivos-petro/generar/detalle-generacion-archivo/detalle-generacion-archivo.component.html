@@ -68,9 +68,15 @@
           <div class="info-item">
             <mat-icon>flag</mat-icon>
             <span class="label">Estado:</span>
-            <span class="value estado-badge" [class]="getEstadoClass(generacion.estado)">
-              {{ getEstadoLabel(generacion.estado) }}
+            <span class="value estado-badge" [class]="getEstadoGeneracionClass(generacion.estado)">
+              {{ getEstadoGeneracionLabel(generacion.estado) }}
             </span>
+          </div>
+
+          <div class="info-item">
+            <mat-icon>{{ estaDescargada() ? 'cloud_done' : 'cloud_off' }}</mat-icon>
+            <span class="label">Descargado:</span>
+            <span class="value">{{ descripcionDescarga() }}</span>
           </div>
 
           @if (generacion.nombreArchivo || generacion.rutaArchivo) {
@@ -82,8 +88,12 @@
                 mat-stroked-button
                 color="primary"
                 (click)="descargarArchivoGenerado()"
-                [disabled]="!puedeDescargarArchivo()">
-                <mat-icon>download</mat-icon>
+                [disabled]="!puedeDescargarArchivo() || descargando()">
+                @if (descargando()) {
+                  <mat-spinner diameter="18"></mat-spinner>
+                } @else {
+                  <mat-icon>download</mat-icon>
+                }
                 Descargar TXT
               </button>
             </div>
@@ -98,6 +108,29 @@
           }
         </div>
       </mat-card-content>
+
+      <mat-card-actions align="end">
+        @if (puedeEliminar()) {
+          <button
+            mat-stroked-button
+            color="warn"
+            (click)="eliminarGeneracion()"
+            [disabled]="eliminando()"
+            matTooltip="Borra la cabecera, todo su detalle y el archivo TXT">
+            @if (eliminando()) {
+              <mat-spinner diameter="18"></mat-spinner>
+            } @else {
+              <mat-icon>delete_forever</mat-icon>
+            }
+            Eliminar generación
+          </button>
+        } @else if (estaDescargada()) {
+          <span class="nota-bloqueo">
+            <mat-icon>lock</mat-icon>
+            El archivo ya se descargó, la generación no se puede eliminar.
+          </span>
+        }
+      </mat-card-actions>
     </mat-card>
 
     <!-- Detalle por producto -->

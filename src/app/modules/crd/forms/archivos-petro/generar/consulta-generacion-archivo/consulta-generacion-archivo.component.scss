@@ -199,7 +199,7 @@
 
     .totales-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(2, 1fr);
       gap: 12px;
 
       .total-item {
@@ -224,6 +224,37 @@
           &.destacado {
             color: #667eea;
             font-size: 16px;
+          }
+
+          &.estado-badge {
+            align-self: flex-start;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+
+            &.estado-pendiente { background: #fff3cd; color: #856404; }
+            &.estado-procesado { background: #d1ecf1; color: #0c5460; }
+            &.estado-enviado   { background: #d4edda; color: #155724; }
+          }
+
+          // Explica por qué una generación ya no se puede eliminar.
+          &.descarga {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            color: #155724;
+
+            mat-icon {
+              font-size: 16px;
+              width: 16px;
+              height: 16px;
+            }
+
+            &.sin-descargar {
+              color: #94a3b8;
+            }
           }
         }
       }
