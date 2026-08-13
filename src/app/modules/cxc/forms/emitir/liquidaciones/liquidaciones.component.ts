@@ -7,6 +7,7 @@ import { MatTableDataSource } from '@angular/material/table';
 import { forkJoin, of } from 'rxjs';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { FuncionesDatosService, TipoFormatoFechaBackend } from '../../../../../shared/services/funciones-datos.service';
+import { PortapapelesService } from '../../../../../shared/services/portapapeles.service';
 import { Usuario } from '../../../../../shared/model/usuario';
 import { ProductoSelectorDialogComponent } from '../../../../../shared/components/producto-selector-dialog/producto-selector-dialog.component';
 import { TitularSelectorDialogComponent } from '../../../../../shared/components/titular-selector-dialog/titular-selector-dialog.component';
@@ -45,6 +46,7 @@ export class LiquidacionesComponent implements OnInit {
 
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
+  private portapapeles = inject(PortapapelesService);
   private service = inject(LiquidacionEmitirService);
   private detalleService = inject(DetalleLiquidacionEmitirService);
   private facturadorService = inject(FacturadorService);
@@ -493,8 +495,12 @@ export class LiquidacionesComponent implements OnInit {
       return;
     }
 
-    navigator.clipboard.writeText(autorizacion).then(() => {
-      this.mostrarExito('Clave copiada al portapapeles');
+    this.portapapeles.copiar(autorizacion).then((copiado) => {
+      if (copiado) {
+        this.mostrarExito('Clave copiada al portapapeles');
+      } else {
+        this.mostrarError('No se pudo copiar automáticamente. Seleccione la clave y use Ctrl+C.');
+      }
     });
   }
 

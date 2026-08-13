@@ -10,6 +10,7 @@ import { MaterialFormModule } from '../../../../../shared/modules/material-form.
 import { ExportService } from '../../../../../shared/services/export.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { JasperReportesService } from '../../../../../shared/services/jasper-reportes.service';
+import { PortapapelesService } from '../../../../../shared/services/portapapeles.service';
 import { FacturaEmitirService } from '../../../service/emitir/factura-emitir.service';
 import { NotaCreditoEmitirService } from '../../../service/emitir/nota-credito-emitir.service';
 import { NotaDebitoEmitirService } from '../../../service/emitir/nota-debito-emitir.service';
@@ -63,6 +64,7 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
   private funcionesDatosS   = inject(FuncionesDatosService);
   private snackBar          = inject(MatSnackBar);
   private dialog            = inject(MatDialog);
+  private portapapeles      = inject(PortapapelesService);
 
   cargando    = signal(false);
   imprimiendo = signal(false);
@@ -468,7 +470,13 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
   copiarClave(row: DocumentoElectronico): void {
     const valor = row.autorizacion;
     if (!valor) { this.mostrarInfo('No existe autorización/clave disponible'); return; }
-    navigator.clipboard.writeText(valor).then(() => this.mostrarExito('Clave copiada al portapapeles'));
+    this.portapapeles.copiar(valor).then((copiado) => {
+      if (copiado) {
+        this.mostrarExito('Clave copiada al portapapeles');
+      } else {
+        this.mostrarInfo('No se pudo copiar automáticamente. Seleccione la clave y use Ctrl+C.');
+      }
+    });
   }
 
   puedeAutorizar(row: DocumentoElectronico): boolean {

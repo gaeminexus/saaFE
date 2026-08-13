@@ -4,6 +4,7 @@ import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/materia
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { PortapapelesService } from '../../../../../shared/services/portapapeles.service';
 import {
   ConsultaSriService,
   EstadoSriResponse,
@@ -26,6 +27,7 @@ export interface ConsultaSriDialogData {
 export class ConsultaSriDialogComponent {
   private consultaSriService = inject(ConsultaSriService);
   private snackBar = inject(MatSnackBar);
+  private portapapeles = inject(PortapapelesService);
   private dialogRef = inject(MatDialogRef<ConsultaSriDialogComponent>);
 
   cargando = signal(false);
@@ -73,9 +75,15 @@ export class ConsultaSriDialogComponent {
   }
 
   copiarClave(): void {
-    navigator.clipboard.writeText(this.data.clave).then(() =>
-      this.snackBar.open('Clave copiada al portapapeles', 'Cerrar', { duration: 2000 })
-    );
+    this.portapapeles.copiar(this.data.clave).then((copiado) => {
+      this.snackBar.open(
+        copiado
+          ? 'Clave copiada al portapapeles'
+          : 'No se pudo copiar automáticamente. Seleccione la clave y use Ctrl+C.',
+        'Cerrar',
+        { duration: copiado ? 2000 : 6000 }
+      );
+    });
   }
 
   cerrar(): void {

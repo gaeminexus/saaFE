@@ -11,6 +11,7 @@ import { DetalleSriService } from '../../../service/detalle-sri.service';
 import { DetalleSri } from '../../../model/detalle-sri';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { JasperReportesService } from '../../../../../shared/services/jasper-reportes.service';
+import { PortapapelesService } from '../../../../../shared/services/portapapeles.service';
 import { MotivoAnulacionDialogComponent } from '../motivo-anulacion-dialog/motivo-anulacion-dialog.component';
 import { Router } from '@angular/router';
 
@@ -30,6 +31,7 @@ export class ConsultaFacturasComponent implements OnInit {
   private jasperReportes = inject(JasperReportesService);
   private funcionesDatosS = inject(FuncionesDatosService);
   private snackBar = inject(MatSnackBar);
+  private portapapeles = inject(PortapapelesService);
   private dialog = inject(MatDialog);
   private router = inject(Router);
 
@@ -339,7 +341,13 @@ export class ConsultaFacturasComponent implements OnInit {
       this.mostrarInfo('No existe autorización/clave disponible');
       return;
     }
-    navigator.clipboard.writeText(valor).then(() => this.mostrarExito('Clave copiada al portapapeles'));
+    this.portapapeles.copiar(valor).then((copiado) => {
+      if (copiado) {
+        this.mostrarExito('Clave copiada al portapapeles');
+      } else {
+        this.mostrarError('No se pudo copiar automáticamente. Seleccione la clave y use Ctrl+C.');
+      }
+    });
   }
 
   imprimir(row: FacturaEmitir): void {

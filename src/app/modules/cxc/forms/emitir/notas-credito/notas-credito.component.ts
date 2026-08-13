@@ -20,6 +20,7 @@ import { ProductoCobro } from '../../../model/producto-cobro';
 import { DetalleSri } from '../../../model/detalle-sri';
 import { NotaCreditoEmitirService } from '../../../service/emitir/nota-credito-emitir.service';
 import { JasperReportesService } from '../../../../../shared/services/jasper-reportes.service';
+import { PortapapelesService } from '../../../../../shared/services/portapapeles.service';
 import { DetalleNotaCreditoEmitirService } from '../../../service/emitir/detalle-nota-credito-emitir.service';
 import { DetalleFacturaEmitirService } from '../../../service/emitir/detalle-factura-emitir.service';
 import { DetalleFacturaEmitir } from '../../../model/detalle-factura-emitir';
@@ -50,6 +51,7 @@ export class NotasCreditoComponent implements OnInit {
   @ViewChild('fechaNcDMInput', { read: ElementRef }) fechaNcDMInputRef!: ElementRef<HTMLInputElement>;
 
   private snackBar = inject(MatSnackBar);
+  private portapapeles = inject(PortapapelesService);
   private dialog = inject(MatDialog);
   private service = inject(NotaCreditoEmitirService);
   private detalleService = inject(DetalleNotaCreditoEmitirService);
@@ -472,7 +474,13 @@ export class NotasCreditoComponent implements OnInit {
   copiarAutorizacion(): void {
     const clv = this.documentoActual()?.autorizacion || this.documentoActual()?.clave;
     if (!clv) { this.mostrarError('No existe clave de acceso disponible'); return; }
-    navigator.clipboard.writeText(clv).then(() => this.mostrarExito('Clave copiada al portapapeles'));
+    this.portapapeles.copiar(clv).then((copiado) => {
+      if (copiado) {
+        this.mostrarExito('Clave copiada al portapapeles');
+      } else {
+        this.mostrarError('No se pudo copiar automáticamente. Seleccione la clave y use Ctrl+C.');
+      }
+    });
   }
 
   estadoLabel(estado: number | null | undefined): string { return Number(estado) === 1 ? 'Activo' : 'Inactivo'; }

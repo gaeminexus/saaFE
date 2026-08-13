@@ -7,6 +7,7 @@ import { MatTableDataSource } from '@angular/material/table';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { TitularSelectorDialogComponent } from '../../../../../shared/components/titular-selector-dialog/titular-selector-dialog.component';
 import { FuncionesDatosService, TipoFormatoFechaBackend } from '../../../../../shared/services/funciones-datos.service';
+import { PortapapelesService } from '../../../../../shared/services/portapapeles.service';
 import { RetencionEmitir } from '../../../model/retencion-emitir';
 import { DetalleRetencionEmitir } from '../../../model/detalle-retencion-emitir';
 import { Titular } from '../../../../tsr/model/titular';
@@ -36,6 +37,7 @@ export class RetencionesComponent implements OnInit {
   @ViewChild('fechaEmiDocInput', { read: ElementRef }) fechaEmiDocInputRef!: ElementRef<HTMLInputElement>;
 
   private snackBar = inject(MatSnackBar);
+  private portapapeles = inject(PortapapelesService);
   private dialog = inject(MatDialog);
   private service = inject(RetencionEmitirService);
   private facturadorService = inject(FacturadorService);
@@ -243,7 +245,13 @@ export class RetencionesComponent implements OnInit {
   copiarAutorizacion(): void {
     const clv = this.documentoActual()?.autorizacion || this.documentoActual()?.clave;
     if (!clv) { this.mostrarError('No existe clave de acceso disponible'); return; }
-    navigator.clipboard.writeText(clv).then(() => this.mostrarExito('Clave copiada al portapapeles'));
+    this.portapapeles.copiar(clv).then((copiado) => {
+      if (copiado) {
+        this.mostrarExito('Clave copiada al portapapeles');
+      } else {
+        this.mostrarError('No se pudo copiar automáticamente. Seleccione la clave y use Ctrl+C.');
+      }
+    });
   }
 
   estadoLabel(estado: number | null | undefined): string { return Number(estado) === 1 ? 'Activo' : 'Inactivo'; }
