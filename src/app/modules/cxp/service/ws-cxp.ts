@@ -55,6 +55,7 @@ export class ServiciosCxp {
   public static RS_DRCM = `${API_URL}/drcm`; // DetalleRetencionCompra
   public static RS_PRCM = `${API_URL}/prcm`; // PathRetencionCompra
   public static RS_RCV2 = `${API_URL}/rcv2`; // RetencionCompraV2
+  public static RS_DRC2 = `${API_URL}/drc2`; // DetalleRetencionCompraV2
 
   // Bandeja electrónica (proceso de carga TXT-SRI)
   public static RS_CRTX = `${API_URL}/crtx`; // CargaArchivoTxt

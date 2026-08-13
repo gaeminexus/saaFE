@@ -207,11 +207,11 @@
             </div>
             <div class="info-item">
               <span class="info-label">Proveedor (Titular)</span>
-              <span class="info-valor">{{ docReal.titular?.nombre || docReal.titular?.razonSocial || docSeleccionado.razonSocialEmisor }}</span>
+              <span class="info-valor">{{ docReal.titular?.nombre || docReal.titular?.razonSocial || docReal.proveedor?.nombre || docReal.proveedor?.razonSocial || docSeleccionado.razonSocialEmisor }}</span>
             </div>
             <div class="info-item">
               <span class="info-label">RUC</span>
-              <span class="info-valor font-mono">{{ docReal.titular?.identificacion || docSeleccionado.rucEmisor }}</span>
+              <span class="info-valor font-mono">{{ docReal.titular?.identificacion || docReal.proveedor?.identificacion || docSeleccionado.rucEmisor }}</span>
             </div>
             <div class="info-item">
               <span class="info-label">Fecha Emisión</span>
@@ -237,32 +237,39 @@
             }
           </div>
 
-          <!-- Totales -->
+          <!-- Totales — una retención no tiene subtotales ni IVA propios -->
           <div class="totales-grid">
-            <div class="total-item">
-              <span class="total-label">Subtotal (grav.)</span>
-              <span class="total-valor">{{ (docReal.subtotal ?? docReal.subtotal0 ?? 0) | number:'1.2-2' }}</span>
-            </div>
-            <div class="total-item">
-              <span class="total-label">Subtotal (0%)</span>
-              <span class="total-valor">{{ (docReal.subcero ?? 0) | number:'1.2-2' }}</span>
-            </div>
-            <div class="total-item">
-              <span class="total-label">% IVA</span>
-              <span class="total-valor">{{ docReal.pIVA ?? 12 }}%</span>
-            </div>
-            <div class="total-item">
-              <span class="total-label">Valor IVA</span>
-              <span class="total-valor">{{ (docReal.vIVA ?? 0) | number:'1.2-2' }}</span>
-            </div>
-            @if ((docReal.descuento ?? 0) > 0) {
+            @if (!esRetencion()) {
               <div class="total-item">
-                <span class="total-label">Descuento</span>
-                <span class="total-valor">{{ docReal.descuento | number:'1.2-2' }}</span>
+                <span class="total-label">Subtotal (grav.)</span>
+                <span class="total-valor">{{ (docReal.subtotal ?? docReal.subtotal0 ?? 0) | number:'1.2-2' }}</span>
+              </div>
+              <div class="total-item">
+                <span class="total-label">Subtotal (0%)</span>
+                <span class="total-valor">{{ (docReal.subcero ?? 0) | number:'1.2-2' }}</span>
+              </div>
+              <div class="total-item">
+                <span class="total-label">% IVA</span>
+                <span class="total-valor">{{ docReal.pIVA ?? 12 }}%</span>
+              </div>
+              <div class="total-item">
+                <span class="total-label">Valor IVA</span>
+                <span class="total-valor">{{ (docReal.vIVA ?? 0) | number:'1.2-2' }}</span>
+              </div>
+              @if ((docReal.descuento ?? 0) > 0) {
+                <div class="total-item">
+                  <span class="total-label">Descuento</span>
+                  <span class="total-valor">{{ docReal.descuento | number:'1.2-2' }}</span>
+                </div>
+              }
+            } @else {
+              <div class="total-item">
+                <span class="total-label">Período Fiscal</span>
+                <span class="total-valor">{{ docReal.periodoFiscal }}</span>
               </div>
             }
             <div class="total-item total-final">
-              <span class="total-label">TOTAL</span>
+              <span class="total-label">{{ esRetencion() ? 'TOTAL RETENIDO' : 'TOTAL' }}</span>
               <span class="total-valor">{{ docReal.total | number:'1.2-2' }}</span>
             </div>
           </div>
@@ -272,7 +279,10 @@
       <!-- Líneas de detalle -->
       <mat-card class="detalle-card">
         <mat-card-header>
-          <mat-card-title><mat-icon>list</mat-icon> Detalle de Productos / Rubros</mat-card-title>
+          <mat-card-title>
+            <mat-icon>list</mat-icon>
+            {{ esRetencion() ? 'Detalle de Retenciones' : 'Detalle de Productos / Rubros' }}
+          </mat-card-title>
         </mat-card-header>
         <mat-card-content>
           @if (errorDetalle()) {
@@ -332,22 +342,34 @@
                   <td mat-cell *matCellDef="let d" class="text-right">{{ d.valorIVA | number:'1.2-2' }}</td>
                 </ng-container>
               }
-              @if (columnasDetalle.includes('codigoRetencion')) {
-                <ng-container matColumnDef="codigoRetencion">
-                  <th mat-header-cell *matHeaderCellDef>Código</th>
-                  <td mat-cell *matCellDef="let d" class="font-mono">{{ d.codigoRetencion }}</td>
+              @if (columnasDetalle.includes('codRetencion')) {
+                <ng-container matColumnDef="codRetencion">
+                  <th mat-header-cell *matHeaderCellDef>Cód. Retención</th>
+                  <td mat-cell *matCellDef="let d" class="font-mono">{{ d.codRetencion }}</td>
                 </ng-container>
               }
-              @if (columnasDetalle.includes('porcentaje')) {
-                <ng-container matColumnDef="porcentaje">
+              @if (columnasDetalle.includes('codImpuesto')) {
+                <ng-container matColumnDef="codImpuesto">
+                  <th mat-header-cell *matHeaderCellDef>Impuesto</th>
+                  <td mat-cell *matCellDef="let d">{{ impuestoLabel(d.codImpuesto) }}</td>
+                </ng-container>
+              }
+              @if (columnasDetalle.includes('numDocReten')) {
+                <ng-container matColumnDef="numDocReten">
+                  <th mat-header-cell *matHeaderCellDef>Doc. Sustento</th>
+                  <td mat-cell *matCellDef="let d" class="font-mono">{{ d.numDocReten }}</td>
+                </ng-container>
+              }
+              @if (columnasDetalle.includes('porcentajeReten')) {
+                <ng-container matColumnDef="porcentajeReten">
                   <th mat-header-cell *matHeaderCellDef>% Ret.</th>
-                  <td mat-cell *matCellDef="let d" class="text-right">{{ d.porcentaje }}%</td>
+                  <td mat-cell *matCellDef="let d" class="text-right">{{ d.porcentajeReten | number:'1.2-2' }}%</td>
                 </ng-container>
               }
-              @if (columnasDetalle.includes('valorRetenido')) {
-                <ng-container matColumnDef="valorRetenido">
+              @if (columnasDetalle.includes('valorReten')) {
+                <ng-container matColumnDef="valorReten">
                   <th mat-header-cell *matHeaderCellDef>Valor Ret.</th>
-                  <td mat-cell *matCellDef="let d" class="text-right total-col">{{ d.valorRetenido | number:'1.2-2' }}</td>
+                  <td mat-cell *matCellDef="let d" class="text-right total-col">{{ d.valorReten | number:'1.2-2' }}</td>
                 </ng-container>
               }
               <ng-container matColumnDef="total">
@@ -406,7 +428,10 @@
       }
 
     } @else {
-      <div class="empty-row">No se pudo cargar el detalle del documento.</div>
+      <div class="mensaje-error-detalle">
+        <mat-icon>error_outline</mat-icon>
+        <span>{{ errorDetalle() || 'No se pudo cargar el detalle del documento.' }}</span>
+      </div>
     }
   </div>
 }

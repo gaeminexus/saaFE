@@ -17,6 +17,7 @@ import { DetalleLiquidacionCompraCompraService } from '../../../service/detalle-
 import { DetalleNotaCreditoCompraService } from '../../../service/detalle-nota-credito-compra.service';
 import { DetalleNotaDebitoCompraService } from '../../../service/detalle-nota-debito-compra.service';
 import { DetalleRetencionCompraService } from '../../../service/detalle-retencion-compra.service';
+import { DetalleRetencionCompraV2Service } from '../../../service/detalle-retencion-compra-v2.service';
 import { DocumentoCxpService } from '../../../service/documento-cxp.service';
 import { FacturaCompraService } from '../../../service/factura-compra.service';
 import { FormaPagoFacturaCompraService } from '../../../service/forma-pago-factura-compra.service';
@@ -25,6 +26,15 @@ import { LiquidacionCompraCompraService } from '../../../service/liquidacion-com
 import { NotaCreditoCompraService } from '../../../service/nota-credito-compra.service';
 import { NotaDebitoCompraService } from '../../../service/nota-debito-compra.service';
 import { RetencionCompraService } from '../../../service/retencion-compra.service';
+import { RetencionCompraV2Service } from '../../../service/retencion-compra-v2.service';
+
+/**
+ * Columnas del detalle de una retención (RTCM/DRCM y RCV2/DRC2 comparten los
+ * mismos nombres de campo en el backend). Ojo: son `codRetencion`,
+ * `porcentajeReten` y `valorReten` — no `codigoRetencion`/`porcentaje`/
+ * `valorRetenido`, que dejaban la tabla con las celdas en blanco.
+ */
+const COLUMNAS_RETENCION = ['codRetencion', 'codImpuesto', 'numDocReten', 'baseImponible', 'porcentajeReten', 'valorReten'];
 
 @Component({
   selector: 'app-consulta-documentos',
@@ -55,6 +65,8 @@ export class ConsultaDocumentosComponent implements OnInit {
   private detalleNdService = inject(DetalleNotaDebitoCompraService);
   private retService = inject(RetencionCompraService);
   private detalleRetService = inject(DetalleRetencionCompraService);
+  private retV2Service = inject(RetencionCompraV2Service);
+  private detalleRetV2Service = inject(DetalleRetencionCompraV2Service);
 
   // Vista
   vista: 'lista' | 'detalle' = 'lista';
@@ -172,7 +184,11 @@ export class ConsultaDocumentosComponent implements OnInit {
         });
         break;
 
+      // El backend graba las liquidaciones como LIQUIDACION_COMPRA_COMPRA
+      // (ProcesoCargaDocumentosServiceImpl); LIQUIDACION_COMPRA queda por
+      // registros antiguos.
       case 'LIQUIDACION_COMPRA':
+      case 'LIQUIDACION_COMPRA_COMPRA':
         this.columnasDetalle = ['descripcion', 'cantidad', 'valor', 'subTotal', 'descuento', 'baseImponible', 'porcentajeIVA', 'valorIVA', 'total'];
         forkJoin({
           cab: this.liqService.getById(id).pipe(catchError(() => of(null))),
@@ -203,8 +219,10 @@ export class ConsultaDocumentosComponent implements OnInit {
         });
         break;
 
+      // Retención "clásica" (PGS.RTCM). Sólo quedan registros antiguos: la carga
+      // de documentos actual manda todo comprobante de retención a la V2.
       case 'RETENCION_COMPRA':
-        this.columnasDetalle = ['codigoRetencion', 'descripcion', 'baseImponible', 'porcentaje', 'valorRetenido'];
+        this.columnasDetalle = COLUMNAS_RETENCION;
         forkJoin({
           cab: this.retService.getById(id).pipe(catchError(() => of(null))),
           det: this.detalleRetService.selectByCriteria(this.criteriosPorPadre('retencion', id)).pipe(this.capturarErrorDetalle()),
@@ -213,7 +231,23 @@ export class ConsultaDocumentosComponent implements OnInit {
         });
         break;
 
+      // Retención V2 (PGS.RCV2 + PGS.DRC2). Es la tabla destino que usa hoy la
+      // carga de documentos tanto para "Comprobante de Retención" como para
+      // "Comprobante de Retención electrónica versión 2.0".
+      case 'RETENCION_COMPRA_V2':
+        this.columnasDetalle = COLUMNAS_RETENCION;
+        forkJoin({
+          cab: this.retV2Service.getById(id).pipe(catchError(() => of(null))),
+          det: this.detalleRetV2Service.getByRetencionCompraV2(id).pipe(this.capturarErrorDetalle()),
+        }).subscribe(({ cab, det }) => {
+          this.docReal = cab; this.detallesDoc.data = det || []; this.cargandoDetalle.set(false);
+        });
+        break;
+
       default:
+        // Sin este aviso, una tabla destino no contemplada deja la pantalla en
+        // blanco sin explicar por qué (fue el caso de RETENCION_COMPRA_V2).
+        this.errorDetalle.set(`No hay vista de detalle para la tabla destino "${doc.tipoTablaDestino}".`);
         this.cargandoDetalle.set(false);
     }
   }
@@ -231,7 +265,10 @@ export class ConsultaDocumentosComponent implements OnInit {
 
   volverLista(): void { this.vista = 'lista'; this.docSeleccionado = null; this.docReal = null; }
 
-  tieneFormasPago(): boolean { return ['FACTURA_COMPRA', 'LIQUIDACION_COMPRA'].includes(this.docSeleccionado?.tipoTablaDestino || ''); }
+  tieneFormasPago(): boolean { return ['FACTURA_COMPRA', 'LIQUIDACION_COMPRA', 'LIQUIDACION_COMPRA_COMPRA'].includes(this.docSeleccionado?.tipoTablaDestino || ''); }
+
+  /** Las retenciones no llevan subtotales ni IVA propios: sólo base y valor retenido. */
+  esRetencion(): boolean { return ['RETENCION_COMPRA', 'RETENCION_COMPRA_V2'].includes(this.docSeleccionado?.tipoTablaDestino || ''); }
 
   /** El historial de abonos (/aplp) solo aplica a facturas de compra. */
   esFacturaCompra(): boolean { return this.docSeleccionado?.tipoTablaDestino === 'FACTURA_COMPRA'; }
@@ -241,15 +278,25 @@ export class ConsultaDocumentosComponent implements OnInit {
   tipoTablaLabel(tabla: string): string {
     const map: Record<string, string> = {
       'FACTURA_COMPRA': 'Factura Compra', 'NOTA_CREDITO_COMPRA': 'Nota Crédito Compra',
-      'NOTA_DEBITO_COMPRA': 'Nota Débito Compra', 'LIQUIDACION_COMPRA': 'Liquidación Compra', 'RETENCION_COMPRA': 'Retención Compra',
+      'NOTA_DEBITO_COMPRA': 'Nota Débito Compra',
+      'LIQUIDACION_COMPRA': 'Liquidación Compra', 'LIQUIDACION_COMPRA_COMPRA': 'Liquidación Compra',
+      'RETENCION_COMPRA': 'Retención Compra', 'RETENCION_COMPRA_V2': 'Retención Compra',
     };
     return map[tabla] || tabla;
+  }
+
+  /** Códigos de impuesto del SRI usados en los comprobantes de retención. */
+  impuestoLabel(cod: string): string {
+    const map: Record<string, string> = { '1': 'Renta', '2': 'IVA', '6': 'ISD' };
+    return map[String(cod ?? '').trim()] || cod || '';
   }
 
   tipoTablaColor(tabla: string): string {
     const map: Record<string, string> = {
       'FACTURA_COMPRA': 'chip-factura', 'NOTA_CREDITO_COMPRA': 'chip-nc',
-      'NOTA_DEBITO_COMPRA': 'chip-nd', 'LIQUIDACION_COMPRA': 'chip-liq', 'RETENCION_COMPRA': 'chip-ret',
+      'NOTA_DEBITO_COMPRA': 'chip-nd',
+      'LIQUIDACION_COMPRA': 'chip-liq', 'LIQUIDACION_COMPRA_COMPRA': 'chip-liq',
+      'RETENCION_COMPRA': 'chip-ret', 'RETENCION_COMPRA_V2': 'chip-ret',
     };
     return map[tabla] || '';
   }
