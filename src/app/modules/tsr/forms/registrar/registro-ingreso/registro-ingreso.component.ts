@@ -1,117 +1,309 @@
-import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Component, OnInit, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
+import {
+  MotivoDialogComponent,
+  MotivoDialogData,
+} from '../../../../../shared/components/motivo-dialog/motivo-dialog.component';
+import { TitularSelectorDialogComponent } from '../../../../../shared/components/titular-selector-dialog/titular-selector-dialog.component';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 
-import { CuentaBancaria } from '../../../model/cuenta-bancaria';
 import { GrupoProductoCobro } from '../../../../cxc/model/grupo-producto-cobro';
 import { ProductoCobro } from '../../../../cxc/model/producto-cobro';
-
-import { CuentaBancariaService } from '../../../service/cuenta-bancaria.service';
 import { GrupoProductoCobroService } from '../../../../cxc/service/grupo-producto-cobro.service';
 import { ProductoCobroService } from '../../../../cxc/service/producto-cobro.service';
 
+import { CuentaBancaria } from '../../../model/cuenta-bancaria';
+import {
+  ESTADO_INGRESO_LABELS,
+  EstadoIngresoTesoreria,
+  Ingreso,
+} from '../../../model/ingreso';
+import { Titular } from '../../../model/titular';
+import { CuentaBancariaService } from '../../../service/cuenta-bancaria.service';
+import { IngresoService } from '../../../service/ingreso.service';
+
+/**
+ * Ingresos de tesorería sin documento físico (intereses ganados, créditos del
+ * banco, devoluciones). Se registran cuando el dinero YA está en la cuenta: la
+ * misma llamada graba, genera el asiento y el movimiento bancario.
+ *
+ * La cuenta contable no se pide en el formulario: sale del grupo del producto
+ * CXC elegido. Si el grupo no tiene cuenta configurada el backend rechaza el
+ * registro con un mensaje que dice qué configurar, y no queda nada grabado.
+ */
 @Component({
   selector: 'app-registro-ingreso',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, MaterialFormModule],
+  imports: [CommonModule, FormsModule, MaterialFormModule],
   templateUrl: './registro-ingreso.component.html',
   styleUrls: ['./registro-ingreso.component.scss'],
 })
 export class RegistroIngresoComponent implements OnInit {
-  private fb = inject(FormBuilder);
+  private ingresoS = inject(IngresoService);
+  private cuentaBancariaS = inject(CuentaBancariaService);
+  private grupoProductoS = inject(GrupoProductoCobroService);
+  private productoS = inject(ProductoCobroService);
+  private funcionesDatos = inject(FuncionesDatosService);
+  private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
-  private cuentaBancariaService = inject(CuentaBancariaService);
-  private grupoProductoCobroService = inject(GrupoProductoCobroService);
-  private productoCobroService = inject(ProductoCobroService);
 
-  // Estado
-  cargando = signal(false);
-  guardando = signal(false);
+  private readonly ROL_CLIENTE = 1;
 
-  // Datos
+  tabActiva = 0;
+
+  // ─── Catálogos ─────────────────────────────────────────
+  cargandoCatalogos = signal(false);
   cuentasBancarias = signal<CuentaBancaria[]>([]);
   gruposProducto = signal<GrupoProductoCobro[]>([]);
-  todosProductos = signal<ProductoCobro[]>([]);
-  grupoSeleccionadoId = signal<number | null>(null);
+  private todosProductos = signal<ProductoCobro[]>([]);
 
-  // Productos filtrados según el grupo seleccionado
-  productosFiltrados = computed(() => {
-    const grupoId = this.grupoSeleccionadoId();
-    if (!grupoId) return [];
+  // ─── a) Registrar ──────────────────────────────────────
+  regCuentaBancaria: CuentaBancaria | null = null;
+  regIdGrupo: number | null = null;
+  regIdProducto: number | null = null;
+  regTitular = signal<Titular | null>(null);
+  regDescripcion = '';
+  regValor = '';
+  regFecha: Date | null = new Date();
+  regReferencia = '';
+  regObservacion = '';
+  registrando = signal(false);
+  regError = signal('');
+  regExito = signal('');
+
+  /** El producto se elige dentro del grupo: la lista completa es muy larga. */
+  get productosFiltrados(): ProductoCobro[] {
+    const idGrupo = this.regIdGrupo;
+    if (!idGrupo) return [];
     return this.todosProductos().filter(
-      (p) => p.grupoProducto?.codigo === grupoId && p.estado === 1
+      (p) => p.grupoProducto?.codigo === idGrupo && p.estado === 1
     );
-  });
+  }
 
-  form!: FormGroup;
+  // ─── b) Consulta ───────────────────────────────────────
+  conEstado: number | null = null;
+  ingresos = signal<Ingreso[]>([]);
+  cargandoConsulta = signal(false);
+  conError = signal('');
+  readonly columnasConsulta = [
+    'fecha', 'descripcion', 'producto', 'cuenta', 'referencia', 'valor', 'asiento', 'estado', 'acciones',
+  ];
+  readonly estadosFiltro = [
+    { valor: EstadoIngresoTesoreria.ACTIVO, texto: 'Activo' },
+    { valor: EstadoIngresoTesoreria.ANULADO, texto: 'Anulado' },
+  ];
 
   ngOnInit(): void {
-    this.form = this.fb.group({
-      cuentaBancaria: [null, Validators.required],
-      grupoProducto: [null, Validators.required],
-      producto: [null, Validators.required],
-      valor: [null, [Validators.required, Validators.min(0.01)]],
-      observacion: [''],
-    });
-
-    // Cuando cambia el grupo, actualiza el signal y limpia el producto seleccionado
-    this.form.get('grupoProducto')!.valueChanges.subscribe((val) => {
-      this.grupoSeleccionadoId.set(val ?? null);
-      this.form.get('producto')!.setValue(null);
-    });
-
-    this.cargarDatos();
+    this.cargarCatalogos();
+    this.cargarIngresos();
   }
 
-  private cargarDatos(): void {
-    this.cargando.set(true);
+  onCambioTab(indice: number): void {
+    if (indice === this.tabActiva) return;
+    this.tabActiva = indice;
+    if (indice === 1) this.cargarIngresos();
+  }
 
-    this.cuentaBancariaService.getAll().subscribe({
+  private cargarCatalogos(): void {
+    this.cargandoCatalogos.set(true);
+
+    this.cuentaBancariaS.getAll().subscribe({
       next: (data) => this.cuentasBancarias.set(data ?? []),
-      error: () => this.mostrarError('Error al cargar cuentas bancarias'),
+      error: () => {
+        this.cuentasBancarias.set([]);
+        this.snackBar.open('No se pudieron cargar las cuentas bancarias.', 'Cerrar', { duration: 5000 });
+      },
     });
 
-    this.grupoProductoCobroService.getAll().subscribe({
-      next: (data) =>
-        this.gruposProducto.set((data ?? []).filter((g) => g.estado === 1)),
-      error: () => this.mostrarError('Error al cargar grupos de producto'),
+    this.grupoProductoS.getAll().subscribe({
+      next: (data) => this.gruposProducto.set((data ?? []).filter((g) => g.estado === 1)),
+      error: () => this.gruposProducto.set([]),
     });
 
-    this.productoCobroService.getAll().subscribe({
+    this.productoS.getAll().subscribe({
       next: (data) => {
         this.todosProductos.set(data ?? []);
-        this.cargando.set(false);
+        this.cargandoCatalogos.set(false);
       },
       error: () => {
-        this.mostrarError('Error al cargar productos');
-        this.cargando.set(false);
+        this.todosProductos.set([]);
+        this.cargandoCatalogos.set(false);
+        this.snackBar.open('No se pudieron cargar los productos de cobro.', 'Cerrar', { duration: 5000 });
       },
     });
   }
 
-  guardar(): void {
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
-      return;
-    }
-    // TODO: implementar llamada al backend cuando esté disponible el endpoint
-    this.snackBar.open('Función de guardado pendiente de implementación', 'Cerrar', {
-      duration: 3000,
+  // ═══ a) REGISTRAR ═══════════════════════════════════════
+
+  onCambioGrupo(): void {
+    this.regIdProducto = null;
+  }
+
+  /** El titular es opcional: solo deja constancia de quién originó el dinero. */
+  buscarTitular(): void {
+    this.dialog.open(TitularSelectorDialogComponent, {
+      width: '1100px',
+      maxWidth: '98vw',
+      data: { rolCodigo: this.ROL_CLIENTE, rolNombre: 'CLIENTE', titulo: 'Buscar Titular' },
+    }).afterClosed().subscribe((titular: Titular | null) => {
+      if (titular) this.regTitular.set(titular);
     });
   }
 
+  quitarTitular(): void {
+    this.regTitular.set(null);
+  }
+
+  nombreTitular(): string {
+    const t = this.regTitular();
+    if (!t) return '';
+    return t.razonSocial || t.nombre || t.identificacion || `Titular ${t.codigo}`;
+  }
+
+  get regValorNumerico(): number {
+    const v = parseFloat(String(this.regValor).replace(',', '.'));
+    return Number.isFinite(v) ? v : 0;
+  }
+
+  get puedeRegistrar(): boolean {
+    return !!this.regCuentaBancaria
+      && this.regIdProducto != null
+      && !!this.regDescripcion.trim()
+      && this.regValorNumerico > 0
+      && !this.registrando();
+  }
+
+  registrar(): void {
+    if (!this.puedeRegistrar || !this.regCuentaBancaria || this.regIdProducto == null) return;
+
+    this.registrando.set(true);
+    this.regError.set('');
+    this.regExito.set('');
+
+    this.ingresoS.procesar({
+      idEmpresa: this.idEmpresaSesion(),
+      idTitular: this.regTitular()?.codigo ?? undefined,
+      idProductoCobro: this.regIdProducto,
+      descripcion: this.regDescripcion.trim(),
+      valor: this.regValorNumerico,
+      fecha: this.fechaISO(this.regFecha),
+      idCuentaBancaria: this.regCuentaBancaria.codigo,
+      referencia: this.regReferencia.trim() || undefined,
+      observacion: this.regObservacion.trim() || undefined,
+      idUsuario: this.idUsuarioSesion(),
+    }).subscribe({
+      next: (resp) => {
+        this.registrando.set(false);
+
+        let mensaje = resp.mensaje
+          ?? 'Ingreso registrado. El asiento contable y el movimiento bancario fueron generados.';
+        if (resp.asiento) {
+          mensaje += ` Asiento N° ${resp.asiento}.`;
+        }
+        this.regExito.set(mensaje);
+        this.limpiar();
+        this.cargarIngresos();
+        this.snackBar.open(mensaje, 'Cerrar', { duration: 6000 });
+      },
+      error: (err: Error) => {
+        this.registrando.set(false);
+        this.regError.set(err.message);
+      },
+    });
+  }
+
+  /** Se conservan la cuenta y el grupo: lo habitual es cargar varios seguidos. */
   limpiar(): void {
-    this.form.reset();
+    this.regIdProducto = null;
+    this.regTitular.set(null);
+    this.regDescripcion = '';
+    this.regValor = '';
+    this.regReferencia = '';
+    this.regObservacion = '';
+    this.regFecha = new Date();
   }
 
-  labelCuentaBancaria(cuenta: CuentaBancaria): string {
-    return cuenta ? `${cuenta.banco?.nombre ?? ''} - ${cuenta.numeroCuenta}` : '';
+  // ═══ b) CONSULTA ════════════════════════════════════════
+
+  cargarIngresos(): void {
+    this.cargandoConsulta.set(true);
+    this.conError.set('');
+
+    this.ingresoS.listar(this.idEmpresaSesion(), this.conEstado ?? undefined).subscribe({
+      next: (data) => {
+        this.ingresos.set(data ?? []);
+        this.cargandoConsulta.set(false);
+      },
+      error: (err: Error) => {
+        this.ingresos.set([]);
+        this.cargandoConsulta.set(false);
+        this.conError.set(err.message);
+      },
+    });
   }
 
-  private mostrarError(msg: string): void {
-    this.snackBar.open(msg, 'Cerrar', { duration: 4000, panelClass: 'snack-error' });
+  puedeAnular(ingreso: Ingreso): boolean {
+    return Number(ingreso.estado) === EstadoIngresoTesoreria.ACTIVO;
+  }
+
+  /** Anular reversa el asiento y el movimiento bancario ya generados. */
+  confirmarAnulacion(ingreso: Ingreso): void {
+    const data: MotivoDialogData = {
+      titulo: `Anular ingreso N° ${ingreso.id}`,
+      advertencia:
+        'Este ingreso ya generó asiento contable y movimiento bancario. Al anularlo se reversa '
+        + 'esa contabilidad y el movimiento queda anulado para la conciliación.',
+      textoConfirmar: 'Sí, anular',
+      requiereDobleConfirmacion: true,
+    };
+
+    this.dialog.open(MotivoDialogComponent, { width: '520px', data }).afterClosed().subscribe((motivo) => {
+      if (!motivo) return;
+      this.ingresoS.anular(ingreso.id, { motivo, idUsuario: this.idUsuarioSesion() }).subscribe({
+        next: (resp) => {
+          this.snackBar.open(resp.mensaje ?? 'Ingreso anulado.', 'Cerrar', { duration: 6000 });
+          this.cargarIngresos();
+        },
+        error: (err: Error) => this.snackBar.open(err.message, 'Cerrar', { duration: 6000 }),
+      });
+    });
+  }
+
+  // ═══ HELPERS ════════════════════════════════════════════
+
+  etiquetaEstado(estado: number): { texto: string; clase: string } {
+    return ESTADO_INGRESO_LABELS[Number(estado)] ?? { texto: `Estado ${estado}`, clase: 'badge-neutro' };
+  }
+
+  etiquetaCuenta(cuenta: CuentaBancaria): string {
+    return `${cuenta.banco?.nombre ?? 'Banco'} — ${cuenta.numeroCuenta}`;
+  }
+
+  formatearFecha(fecha: any): string {
+    const d = this.funcionesDatos.convertirFechaDesdeBackend(fecha);
+    if (!d) return '—';
+    return d.toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
+
+  private fechaISO(fecha: Date | null): string | undefined {
+    if (!fecha) return undefined;
+    const d = fecha instanceof Date ? fecha : new Date(fecha);
+    if (isNaN(d.getTime())) return undefined;
+    const mes = String(d.getMonth() + 1).padStart(2, '0');
+    const dia = String(d.getDate()).padStart(2, '0');
+    return `${d.getFullYear()}-${mes}-${dia}`;
+  }
+
+  private idEmpresaSesion(): number {
+    return +(sessionStorage.getItem('idEmpresa') || localStorage.getItem('idEmpresa') || '0');
+  }
+
+  private idUsuarioSesion(): number {
+    return +(sessionStorage.getItem('idUsuario') || localStorage.getItem('idUsuario') || '0');
   }
 }

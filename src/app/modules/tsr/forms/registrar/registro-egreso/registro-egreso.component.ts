@@ -1,117 +1,402 @@
-import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Component, OnInit, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { Router } from '@angular/router';
 
+import {
+  MotivoDialogComponent,
+  MotivoDialogData,
+} from '../../../../../shared/components/motivo-dialog/motivo-dialog.component';
+import { TitularSelectorDialogComponent } from '../../../../../shared/components/titular-selector-dialog/titular-selector-dialog.component';
+import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
+import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
+import { TipoDatosBusqueda as TipoDatos } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 
-import { CuentaBancaria } from '../../../model/cuenta-bancaria';
 import { GrupoProductoPago } from '../../../../cxp/model/grupo_producto_pago';
 import { ProductoPago } from '../../../../cxp/model/producto_pago';
-
-import { CuentaBancariaService } from '../../../service/cuenta-bancaria.service';
 import { GrupoProductoPagoService } from '../../../../cxp/service/grupo-producto-pago.service';
 import { ProductoPagoService } from '../../../../cxp/service/producto-pago.service';
 
+import { CuentaBancaria } from '../../../model/cuenta-bancaria';
+import { CuentaBancariaTitular } from '../../../model/cuenta-bancaria-titular';
+import { ESTADO_EGRESO_LABELS, Egreso, EstadoEgresoTesoreria } from '../../../model/egreso';
+import { Titular } from '../../../model/titular';
+import { CuentaBancariaTitularService } from '../../../service/cuenta-bancaria-titular.service';
+import { CuentaBancariaService } from '../../../service/cuenta-bancaria.service';
+import { EgresoService } from '../../../service/egreso.service';
+
+/**
+ * Egresos de tesorería sin documento físico (comisiones, débitos por
+ * administración de cuentas, servicios bancarios).
+ *
+ * Registrar el egreso crea su pago en el circuito de /pgtr: por transferencia
+ * queda Pendiente y hay que incluirlo en un archivo del banco desde CXP →
+ * Pagos por transferencia; con débito automático el banco ya debitó y el
+ * egreso nace Pagado, con asiento y movimiento bancario generados.
+ *
+ * La cuenta contable no se pide en el formulario: sale del grupo del producto
+ * CXP elegido. Si el grupo no tiene cuenta configurada el backend rechaza el
+ * registro y no queda nada grabado.
+ */
 @Component({
   selector: 'app-registro-egreso',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, MaterialFormModule],
+  imports: [CommonModule, FormsModule, MaterialFormModule],
   templateUrl: './registro-egreso.component.html',
   styleUrls: ['./registro-egreso.component.scss'],
 })
 export class RegistroEgresoComponent implements OnInit {
-  private fb = inject(FormBuilder);
+  private egresoS = inject(EgresoService);
+  private cuentaBancariaS = inject(CuentaBancariaService);
+  private cuentaTitularS = inject(CuentaBancariaTitularService);
+  private grupoProductoS = inject(GrupoProductoPagoService);
+  private productoS = inject(ProductoPagoService);
+  private funcionesDatos = inject(FuncionesDatosService);
+  private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
-  private cuentaBancariaService = inject(CuentaBancariaService);
-  private grupoProductoPagoService = inject(GrupoProductoPagoService);
-  private productoPagoService = inject(ProductoPagoService);
+  private router = inject(Router);
 
-  // Estado
-  cargando = signal(false);
-  guardando = signal(false);
+  private readonly ROL_PROVEEDOR = 2;
 
-  // Datos
+  tabActiva = 0;
+
+  // ─── Catálogos ─────────────────────────────────────────
+  cargandoCatalogos = signal(false);
   cuentasBancarias = signal<CuentaBancaria[]>([]);
   gruposProducto = signal<GrupoProductoPago[]>([]);
-  todosProductos = signal<ProductoPago[]>([]);
-  grupoSeleccionadoId = signal<number | null>(null);
+  private todosProductos = signal<ProductoPago[]>([]);
 
-  // Productos filtrados según el grupo seleccionado
-  productosFiltrados = computed(() => {
-    const grupoId = this.grupoSeleccionadoId();
-    if (!grupoId) return [];
+  // ─── a) Registrar ──────────────────────────────────────
+  regCuentaOrigen: CuentaBancaria | null = null;
+  regIdGrupo: number | null = null;
+  regIdProducto: number | null = null;
+  regBeneficiario = signal<Titular | null>(null);
+  /** Cuentas CTBN del beneficiario: el archivo del banco necesita el destino. */
+  cuentasDestino = signal<CuentaBancariaTitular[]>([]);
+  cargandoCuentasDestino = signal(false);
+  regIdCuentaDestino: number | null = null;
+  regDebitoAutomatico = false;
+  regDescripcion = '';
+  regValor = '';
+  regFecha: Date | null = new Date();
+  regReferencia = '';
+  regObservacion = '';
+  registrando = signal(false);
+  regError = signal('');
+  regExito = signal('');
+
+  /** El producto se elige dentro del grupo: la lista completa es muy larga. */
+  get productosFiltrados(): ProductoPago[] {
+    const idGrupo = this.regIdGrupo;
+    if (!idGrupo) return [];
     return this.todosProductos().filter(
-      (p) => p.grupoProducto?.codigo === grupoId && p.estado === 1
+      (p) => p.grupoProducto?.codigo === idGrupo && p.estado === 1
     );
-  });
+  }
 
-  form!: FormGroup;
+  // ─── b) Consulta ───────────────────────────────────────
+  conEstado: number | null = null;
+  egresos = signal<Egreso[]>([]);
+  cargandoConsulta = signal(false);
+  conError = signal('');
+  readonly columnasConsulta = [
+    'fecha', 'descripcion', 'beneficiario', 'producto', 'valor', 'asiento', 'estado', 'acciones',
+  ];
+  readonly estadosFiltro = [
+    { valor: EstadoEgresoTesoreria.PENDIENTE_PAGO, texto: 'Pendiente de pago' },
+    { valor: EstadoEgresoTesoreria.PAGADO, texto: 'Pagado' },
+    { valor: EstadoEgresoTesoreria.ANULADO, texto: 'Anulado' },
+  ];
 
   ngOnInit(): void {
-    this.form = this.fb.group({
-      cuentaBancaria: [null, Validators.required],
-      grupoProducto: [null, Validators.required],
-      producto: [null, Validators.required],
-      valor: [null, [Validators.required, Validators.min(0.01)]],
-      observacion: [''],
-    });
-
-    // Cuando cambia el grupo, actualiza el signal y limpia el producto seleccionado
-    this.form.get('grupoProducto')!.valueChanges.subscribe((val) => {
-      this.grupoSeleccionadoId.set(val ?? null);
-      this.form.get('producto')!.setValue(null);
-    });
-
-    this.cargarDatos();
+    this.cargarCatalogos();
+    this.cargarEgresos();
   }
 
-  private cargarDatos(): void {
-    this.cargando.set(true);
+  onCambioTab(indice: number): void {
+    if (indice === this.tabActiva) return;
+    this.tabActiva = indice;
+    if (indice === 1) this.cargarEgresos();
+  }
 
-    this.cuentaBancariaService.getAll().subscribe({
+  private cargarCatalogos(): void {
+    this.cargandoCatalogos.set(true);
+
+    this.cuentaBancariaS.getAll().subscribe({
       next: (data) => this.cuentasBancarias.set(data ?? []),
-      error: () => this.mostrarError('Error al cargar cuentas bancarias'),
+      error: () => {
+        this.cuentasBancarias.set([]);
+        this.snackBar.open('No se pudieron cargar las cuentas bancarias.', 'Cerrar', { duration: 5000 });
+      },
     });
 
-    this.grupoProductoPagoService.getAll().subscribe({
-      next: (data) =>
-        this.gruposProducto.set((data ?? []).filter((g) => g.estado === 1)),
-      error: () => this.mostrarError('Error al cargar grupos de producto'),
+    this.grupoProductoS.getAll().subscribe({
+      next: (data) => this.gruposProducto.set((data ?? []).filter((g) => g.estado === 1)),
+      error: () => this.gruposProducto.set([]),
     });
 
-    this.productoPagoService.getAll().subscribe({
+    this.productoS.getAll().subscribe({
       next: (data) => {
         this.todosProductos.set(data ?? []);
-        this.cargando.set(false);
+        this.cargandoCatalogos.set(false);
       },
       error: () => {
-        this.mostrarError('Error al cargar productos');
-        this.cargando.set(false);
+        this.todosProductos.set([]);
+        this.cargandoCatalogos.set(false);
+        this.snackBar.open('No se pudieron cargar los productos de pago.', 'Cerrar', { duration: 5000 });
       },
     });
   }
 
-  guardar(): void {
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
-      return;
+  // ═══ a) REGISTRAR ═══════════════════════════════════════
+
+  onCambioGrupo(): void {
+    this.regIdProducto = null;
+  }
+
+  /**
+   * En un débito automático el banco debita la cuenta propia por convenio: no
+   * hay transferencia, así que ni el beneficiario ni su cuenta hacen falta.
+   */
+  onCambioDebitoAutomatico(): void {
+    if (this.regDebitoAutomatico) {
+      this.regIdCuentaDestino = null;
+    } else {
+      this.regReferencia = '';
+      this.autoSeleccionarCuentaDestino();
     }
-    // TODO: implementar llamada al backend cuando esté disponible el endpoint
-    this.snackBar.open('Función de guardado pendiente de implementación', 'Cerrar', {
-      duration: 3000,
+    this.regError.set('');
+    this.regExito.set('');
+  }
+
+  buscarBeneficiario(): void {
+    this.dialog.open(TitularSelectorDialogComponent, {
+      width: '1100px',
+      maxWidth: '98vw',
+      data: { rolCodigo: this.ROL_PROVEEDOR, rolNombre: 'PROVEEDOR', titulo: 'Buscar Beneficiario' },
+    }).afterClosed().subscribe((titular: Titular | null) => {
+      if (!titular) return;
+      this.regBeneficiario.set(titular);
+      this.cargarCuentasDestino(titular.codigo);
     });
   }
 
+  nombreBeneficiario(): string {
+    const t = this.regBeneficiario();
+    if (!t) return '';
+    return t.razonSocial || t.nombre || t.identificacion || `Titular ${t.codigo}`;
+  }
+
+  /**
+   * Sin cuenta de destino el pago se registra pero el backend lo rechaza al
+   * armar el archivo del banco, así que se exige ya desde el registro.
+   */
+  private cargarCuentasDestino(codigoTitular: number | undefined): void {
+    this.regIdCuentaDestino = null;
+    this.cuentasDestino.set([]);
+    if (!codigoTitular) return;
+
+    this.cargandoCuentasDestino.set(true);
+    const criterio = new DatosBusqueda();
+    criterio.asignaValorConCampoPadre(
+      TipoDatos.LONG, 'titular', 'codigo', String(codigoTitular), TipoComandosBusqueda.IGUAL,
+    );
+
+    this.cuentaTitularS.selectByCriteria([criterio]).subscribe({
+      next: (data) => {
+        this.cargandoCuentasDestino.set(false);
+        this.cuentasDestino.set((data ?? []).filter((c) => this.esCuentaActiva(c)));
+        this.autoSeleccionarCuentaDestino();
+      },
+      error: () => {
+        this.cargandoCuentasDestino.set(false);
+        this.cuentasDestino.set([]);
+      },
+    });
+  }
+
+  /** Con una sola cuenta no hay nada que elegir; con varias se decide a mano. */
+  private autoSeleccionarCuentaDestino(): void {
+    const cuentas = this.cuentasDestino();
+    this.regIdCuentaDestino = cuentas.length === 1 ? cuentas[0].codigo : null;
+  }
+
+  /** El estado nulo se trata como activo: hay cuentas antiguas sin CTBNESTD. */
+  private esCuentaActiva(cuenta: CuentaBancariaTitular): boolean {
+    return cuenta.estado == null || Number(cuenta.estado) !== 0;
+  }
+
+  etiquetaCuentaDestino(cuenta: CuentaBancariaTitular): string {
+    const banco = (cuenta.banco as any)?.nombre ?? 'Banco';
+    const tipo = Number(cuenta.tipoCuenta) === 1 ? 'Cte.' : Number(cuenta.tipoCuenta) === 2 ? 'Ahorros' : '';
+    return `${banco} — ${cuenta.numeroCuenta}${tipo ? ` (${tipo})` : ''}`;
+  }
+
+  /** Beneficiario ya elegido y sin ninguna cuenta activa registrada en CTBN. */
+  get beneficiarioSinCuentaDestino(): boolean {
+    return !!this.regBeneficiario() && !this.cargandoCuentasDestino() && this.cuentasDestino().length === 0;
+  }
+
+  get regValorNumerico(): number {
+    const v = parseFloat(String(this.regValor).replace(',', '.'));
+    return Number.isFinite(v) ? v : 0;
+  }
+
+  get puedeRegistrar(): boolean {
+    return !!this.regCuentaOrigen
+      && this.regIdProducto != null
+      && !!this.regDescripcion.trim()
+      && this.regValorNumerico > 0
+      // Solo el débito automático puede ir sin beneficiario ni cuenta destino.
+      && (this.regDebitoAutomatico || (!!this.regBeneficiario() && this.regIdCuentaDestino != null))
+      && !this.registrando();
+  }
+
+  registrar(): void {
+    if (!this.puedeRegistrar || !this.regCuentaOrigen || this.regIdProducto == null) return;
+
+    this.registrando.set(true);
+    this.regError.set('');
+    this.regExito.set('');
+
+    const esDebito = this.regDebitoAutomatico;
+
+    this.egresoS.procesar({
+      idEmpresa: this.idEmpresaSesion(),
+      idTitular: esDebito ? undefined : (this.regBeneficiario()?.codigo ?? undefined),
+      idProductoPago: this.regIdProducto,
+      descripcion: this.regDescripcion.trim(),
+      valor: this.regValorNumerico,
+      fecha: this.fechaISO(this.regFecha),
+      idCuentaBancariaOrigen: this.regCuentaOrigen.codigo,
+      idCuentaDestinoTitular: esDebito ? undefined : (this.regIdCuentaDestino ?? undefined),
+      debitoAutomatico: esDebito,
+      referencia: this.regReferencia.trim() || undefined,
+      observacion: this.regObservacion.trim() || undefined,
+      idUsuario: this.idUsuarioSesion(),
+    }).subscribe({
+      next: (resp) => {
+        this.registrando.set(false);
+
+        let mensaje = resp.mensaje ?? 'Egreso registrado.';
+        if (resp.debitoAutomatico && resp.asiento) {
+          mensaje += ` Asiento N° ${resp.asiento}.`;
+        }
+        this.regExito.set(mensaje);
+        this.limpiar();
+        this.cargarEgresos();
+        this.snackBar.open(mensaje, 'Cerrar', { duration: 6000 });
+      },
+      error: (err: Error) => {
+        this.registrando.set(false);
+        this.regError.set(err.message);
+      },
+    });
+  }
+
+  /** Se conservan la cuenta de origen y el grupo: se cargan varios seguidos. */
   limpiar(): void {
-    this.form.reset();
+    this.regIdProducto = null;
+    this.regBeneficiario.set(null);
+    this.cuentasDestino.set([]);
+    this.regIdCuentaDestino = null;
+    this.regDescripcion = '';
+    this.regValor = '';
+    this.regReferencia = '';
+    this.regObservacion = '';
+    this.regFecha = new Date();
   }
 
-  labelCuentaBancaria(cuenta: CuentaBancaria): string {
-    return cuenta ? `${cuenta.banco?.nombre ?? ''} - ${cuenta.numeroCuenta}` : '';
+  /** El pago del egreso se sigue desde la pantalla de pagos por transferencia. */
+  irAPagos(): void {
+    this.router.navigate(['/menucuentaxpagar/pagos/transferencias']);
   }
 
-  private mostrarError(msg: string): void {
-    this.snackBar.open(msg, 'Cerrar', { duration: 4000, panelClass: 'snack-error' });
+  // ═══ b) CONSULTA ════════════════════════════════════════
+
+  cargarEgresos(): void {
+    this.cargandoConsulta.set(true);
+    this.conError.set('');
+
+    this.egresoS.listar(this.idEmpresaSesion(), this.conEstado ?? undefined).subscribe({
+      next: (data) => {
+        this.egresos.set(data ?? []);
+        this.cargandoConsulta.set(false);
+      },
+      error: (err: Error) => {
+        this.egresos.set([]);
+        this.cargandoConsulta.set(false);
+        this.conError.set(err.message);
+      },
+    });
+  }
+
+  /** Un egreso ya pagado hay que revertirlo desde /pgtr antes de anularlo. */
+  puedeAnular(egreso: Egreso): boolean {
+    return Number(egreso.estado) === EstadoEgresoTesoreria.PENDIENTE_PAGO;
+  }
+
+  confirmarAnulacion(egreso: Egreso): void {
+    const data: MotivoDialogData = {
+      titulo: `Anular egreso N° ${egreso.id}`,
+      advertencia:
+        'Se anula el egreso y el pago que quedó pendiente en el circuito de pagos. Si el pago ya '
+        + 'salió en un archivo enviado al banco habrá que procesar la respuesta antes de anularlo.',
+      textoConfirmar: 'Sí, anular',
+    };
+
+    this.dialog.open(MotivoDialogComponent, { width: '520px', data }).afterClosed().subscribe((motivo) => {
+      if (!motivo) return;
+      this.egresoS.anular(egreso.id, { motivo, idUsuario: this.idUsuarioSesion() }).subscribe({
+        next: (resp) => {
+          this.snackBar.open(resp.mensaje ?? 'Egreso anulado.', 'Cerrar', { duration: 6000 });
+          this.cargarEgresos();
+        },
+        error: (err: Error) => this.snackBar.open(err.message, 'Cerrar', { duration: 6000 }),
+      });
+    });
+  }
+
+  // ═══ HELPERS ════════════════════════════════════════════
+
+  etiquetaEstado(estado: number): { texto: string; clase: string } {
+    return ESTADO_EGRESO_LABELS[Number(estado)] ?? { texto: `Estado ${estado}`, clase: 'badge-neutro' };
+  }
+
+  etiquetaCuenta(cuenta: CuentaBancaria): string {
+    return `${cuenta.banco?.nombre ?? 'Banco'} — ${cuenta.numeroCuenta}`;
+  }
+
+  nombreTitularFila(egreso: Egreso): string {
+    const t = egreso.titular;
+    if (!t) return '—';
+    return t.razonSocial || t.nombre || t.identificacion || `Titular ${t.codigo}`;
+  }
+
+  formatearFecha(fecha: any): string {
+    const d = this.funcionesDatos.convertirFechaDesdeBackend(fecha);
+    if (!d) return '—';
+    return d.toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
+
+  private fechaISO(fecha: Date | null): string | undefined {
+    if (!fecha) return undefined;
+    const d = fecha instanceof Date ? fecha : new Date(fecha);
+    if (isNaN(d.getTime())) return undefined;
+    const mes = String(d.getMonth() + 1).padStart(2, '0');
+    const dia = String(d.getDate()).padStart(2, '0');
+    return `${d.getFullYear()}-${mes}-${dia}`;
+  }
+
+  private idEmpresaSesion(): number {
+    return +(sessionStorage.getItem('idEmpresa') || localStorage.getItem('idEmpresa') || '0');
+  }
+
+  private idUsuarioSesion(): number {
+    return +(sessionStorage.getItem('idUsuario') || localStorage.getItem('idUsuario') || '0');
   }
 }

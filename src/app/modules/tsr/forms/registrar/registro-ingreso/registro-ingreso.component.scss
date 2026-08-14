@@ -1,61 +1,20 @@
-.registro-ingreso-container {
-  padding: 16px;
+@use '../../../../../../styles/components/pagos-cobros' as pc;
 
-  mat-card {
-    max-width: 700px;
-    margin: 0 auto;
+.pagina-ingresos {
+  padding: 1.5rem 2rem;
+
+  @include pc.pagos-cobros-layout;
+
+  .titulo-barra .titulo mat-icon {
+    color: #15803d;
   }
 
-  mat-card-header {
-    margin-bottom: 8px;
-
-    mat-card-title {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 1.2rem;
-
-      .titulo-icon {
-        color: #4caf50;
-      }
-    }
+  .panel {
+    margin-top: 1.25rem;
   }
 
-  mat-card-content {
-    padding-top: 20px;
-  }
-
-  .loading-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 48px 16px;
-    gap: 16px;
-    color: #757575;
-  }
-
-  .registro-form {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-
-  .full-width {
-    width: 100%;
-  }
-
-  .acciones {
-    display: flex;
-    justify-content: flex-end;
-    gap: 12px;
-    margin-top: 8px;
-    padding-top: 8px;
-    border-top: 1px solid #e0e0e0;
-
-    button {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
+  .hint-error {
+    color: #b91c1c;
+    font-weight: 500;
   }
 }

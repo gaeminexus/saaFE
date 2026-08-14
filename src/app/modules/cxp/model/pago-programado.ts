@@ -13,6 +13,11 @@ import { SaldoFactura } from '../../../shared/model/pagos-cobros/catalogos-aplic
 export interface PagoProgramado {
   id: number;
   facturaCompra?: { id: number; numero: string } | null;
+  /**
+   * Egreso de tesorería sin documento físico (TSR.EGRS) que originó el pago.
+   * Viene con `facturaCompra: null`: el concepto del pago es su descripción.
+   */
+  egreso?: { id: number; descripcion?: string | null } | null;
   titular?: { codigo: number; nombre: string } | null;
   cuentaBancaria?: { codigo: number; numero: string; banco?: { nombre: string } } | null;
   cuentaDestino?: { id: number; numero: string; banco?: { nombre: string } } | null;

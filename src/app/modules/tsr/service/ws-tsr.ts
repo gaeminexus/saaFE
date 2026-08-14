@@ -65,4 +65,6 @@ export class ServiciosTsr {
   public static RS_GCAS = `${API_URL}/gcas`; // GrupoConciliacionAsiento
   public static RS_ANTC = `${API_URL}/antc`; // Anticipo Clientes
   public static RS_ANTP = `${API_URL}/antp`; // Anticipo Proveedores
+  public static RS_EGRS = `${API_URL}/egrs`; // Egreso de tesorería (sin documento físico)
+  public static RS_INGR = `${API_URL}/ingr`; // Ingreso de tesorería (sin documento físico)
 }

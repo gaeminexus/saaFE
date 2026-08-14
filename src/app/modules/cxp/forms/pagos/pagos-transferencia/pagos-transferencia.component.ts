@@ -823,6 +823,14 @@ export class PagosTransferenciaComponent implements OnInit {
     return `${cuenta.banco?.nombre ?? 'Banco'} — ${cuenta.numeroCuenta}`;
   }
 
+  /**
+   * Los pagos de egresos de tesorería no tienen factura: su concepto es la
+   * descripción del egreso (TSR.EGRS).
+   */
+  conceptoPago(pago: PagoProgramado): string {
+    return pago.facturaCompra?.numero || pago.egreso?.descripcion || '—';
+  }
+
   private fechaISO(fecha: Date | null): string | undefined {
     if (!fecha) return undefined;
     const d = fecha instanceof Date ? fecha : new Date(fecha);
