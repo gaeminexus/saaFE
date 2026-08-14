@@ -361,9 +361,9 @@
             <td mat-cell *matCellDef="let d">{{ formatearMoneda(d.interes) }}</td>
           </ng-container>
 
-          <!-- Mora -->
+          <!-- Interés de mora devengado (DTPRMRAA), lo escribe el proceso de mora -->
           <ng-container matColumnDef="mora">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>Mora</th>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Interés Mora</th>
             <td mat-cell *matCellDef="let d">{{ formatearMoneda(d.mora) }}</td>
           </ng-container>
 

@@ -4,6 +4,8 @@ export interface PadronParticipeDTO {
   entidadId: number;
   cedula: string;
   nombresApellidos: string;
+  /** Correos del partícipe, separados por "; " cuando hay más de uno */
+  correo: string;
   calidadParticipeId: number;
   calidadParticipe: string;
   numeroAportes: number;

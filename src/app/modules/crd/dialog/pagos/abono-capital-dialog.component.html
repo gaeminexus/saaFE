@@ -219,6 +219,18 @@
     </div>
   }
 
+  <!-- ============ Respaldo del cobro ============
+       Se renderiza en los dos pasos a propósito: si viviera dentro del paso 1, pasar a la
+       comparativa destruiría el bloque y se perdería el archivo ya seleccionado. -->
+  <app-respaldo-cobro [monto]="valor()" [inicial]="data.respaldoSugerido ?? null"></app-respaldo-cobro>
+
+  @if (!fechaValida()) {
+    <div class="pg-aviso alerta">
+      <mat-icon>event_busy</mat-icon>
+      <span>Indique la fecha del abono. No puede quedar vacía ni ser posterior a hoy.</span>
+    </div>
+  }
+
 </mat-dialog-content>
 
 <mat-dialog-actions align="end" class="pg-acciones">
@@ -237,7 +249,7 @@
     <button mat-stroked-button (click)="volverADatos()">
       <mat-icon>arrow_back</mat-icon> Cambiar monto
     </button>
-    <button mat-raised-button color="accent" [disabled]="aplicando() || simulando()" (click)="aplicar()">
+    <button mat-raised-button color="accent" [disabled]="!puedeAplicar()" (click)="aplicar()">
       @if (aplicando() || simulando()) {
         <mat-spinner diameter="18"></mat-spinner>
       } @else {

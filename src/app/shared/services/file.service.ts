@@ -127,10 +127,13 @@ export class FileService {
    * Sube un archivo al servidor con ruta personalizada
    * @param file Archivo a subir
    * @param uploadPath Ruta personalizada para el upload
+   * @param fileName Nombre con el que se guarda en el servidor; por defecto, el del archivo original.
+   *                 Debe conservar una extensión permitida: el backend la valida antes de escribir.
    * @returns Observable con la respuesta del servidor
    */
-  uploadFileCustomPath(file: File, uploadPath: string): Observable<FileResponse> {
-    const url = `${this.baseUrl}/upload/custom?fileName=${encodeURIComponent(file.name)}&uploadPath=${encodeURIComponent(uploadPath)}`;
+  uploadFileCustomPath(file: File, uploadPath: string, fileName?: string): Observable<FileResponse> {
+    const nombreDestino = fileName?.trim() || file.name;
+    const url = `${this.baseUrl}/upload/custom?fileName=${encodeURIComponent(nombreDestino)}&uploadPath=${encodeURIComponent(uploadPath)}`;
 
     const headers = new HttpHeaders({
       'Content-Type': 'application/octet-stream'

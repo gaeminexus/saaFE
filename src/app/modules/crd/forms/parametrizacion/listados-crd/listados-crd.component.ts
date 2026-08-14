@@ -1,8 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
+import { MatButtonModule } from '@angular/material/button';
+import { MatDialog } from '@angular/material/dialog';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatIconModule } from '@angular/material/icon';
+import { ProcesosVariosDialogComponent } from '../../../dialog/procesos/procesos-varios-dialog.component';
 import { TableBasicHijosComponent } from '../../../../../shared/basics/table/forms/table-basic-hijos/table-basic-hijos.component';
 import { TableConfig } from '../../../../../shared/basics/table/model/table-interface';
 import { FieldConfig } from '../../../../../shared/basics/table/dynamic-form/model/field.interface';
@@ -28,6 +31,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
   standalone: true,
   imports: [
     CommonModule,
+    MatButtonModule,
     MatTabsModule,
     MatIconModule,
     TableBasicHijosComponent
@@ -69,6 +73,8 @@ export class ListadosCrdComponent implements OnInit {
     { nombre: 'Productos', icono: 'category', index: 4 },
     { nombre: 'Orden Afectación', icono: 'format_list_numbered', index: 5 }
   ];
+
+  private dialog = inject(MatDialog);
 
   constructor(
     private route: ActivatedRoute,
@@ -430,6 +436,22 @@ export class ListadosCrdComponent implements OnInit {
       panelClass: [panelClass],
       horizontalPosition: 'center',
       verticalPosition: 'bottom'
+    });
+  }
+
+  /**
+   * Procesos de mantenimiento del módulo que se ejecutan a demanda (hoy, el recálculo de mora).
+   * Viven acá, en parametrización, porque no son parte de la operación diaria: son la recuperación
+   * manual de las corridas automáticas.
+   */
+  abrirProcesosVarios(): void {
+    this.dialog.open(ProcesosVariosDialogComponent, {
+      width: '760px',
+      maxWidth: '96vw',
+      autoFocus: false,
+      // El proceso puede tardar minutos: cerrar por accidente con Esc o un clic fuera dejaría al
+      // usuario sin saber si terminó ni con qué resultado.
+      disableClose: true,
     });
   }
 

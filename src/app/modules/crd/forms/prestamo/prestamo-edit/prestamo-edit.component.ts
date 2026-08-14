@@ -99,6 +99,7 @@ export class PrestamoEditComponent implements OnInit {
     'capital',
     'saldoCapital',
     'interes',
+    'interesMora',
     'desgravamen',
     'pagoExtra',
     'cuota',
@@ -137,11 +138,12 @@ export class PrestamoEditComponent implements OnInit {
     );
   }
 
-  calcularTotalesDetalle(): { capital: number; interes: number; desgravamen: number; pagoExtra: number; cuota: number; seguroIncendio: number } {
+  calcularTotalesDetalle(): { capital: number; interes: number; interesMora: number; desgravamen: number; pagoExtra: number; cuota: number; seguroIncendio: number } {
     return this.detallePrestamoRaw().reduce(
       (acc, d) => {
         const capital      = d.capital ?? 0;
         const interes      = d.interes ?? 0;
+        const interesMora  = d.mora ?? 0;
         const desgravamen  = d.desgravamen ?? 0;
         const pagoExtra    = d.saldoOtros ?? 0;
         const seguro       = d.valorSeguroIncendio ?? 0;
@@ -149,13 +151,14 @@ export class PrestamoEditComponent implements OnInit {
         return {
           capital:       acc.capital       + capital,
           interes:       acc.interes       + interes,
+          interesMora:   acc.interesMora   + interesMora,
           desgravamen:   acc.desgravamen   + desgravamen,
           pagoExtra:     acc.pagoExtra     + pagoExtra,
           cuota:         acc.cuota         + cuota,
           seguroIncendio: acc.seguroIncendio + seguro,
         };
       },
-      { capital: 0, interes: 0, desgravamen: 0, pagoExtra: 0, cuota: 0, seguroIncendio: 0 },
+      { capital: 0, interes: 0, interesMora: 0, desgravamen: 0, pagoExtra: 0, cuota: 0, seguroIncendio: 0 },
     );
   }
 

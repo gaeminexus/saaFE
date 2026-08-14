@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, Inject, computed, inject, signal } from '@angular/core';
+import { Component, Inject, computed, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 
@@ -8,9 +8,11 @@ import { usuarioSesion } from '../../../../shared/services/usuario-sesion';
 import { TOLERANCIA_MONTO } from '../../model/pagos/catalogos-pago';
 import { SaldoAporte, SimulacionPrecancelacion } from '../../model/pagos/operaciones-pago';
 import { DesgloseAporte, mensajeDeRespuesta } from '../../model/pagos/respuesta-pago';
+import { ComprobanteCobroService } from '../../service/comprobante-cobro.service';
 import { OperacionesPagoPrestamoService } from '../../service/operaciones-pago-prestamo.service';
 import { ContextoPrestamo, SalidaDialogoPago } from './contexto-prestamo';
 import { ReciboOperacionDialogComponent } from './recibo-operacion-dialog.component';
+import { RespaldoCobroComponent } from './respaldo-cobro.component';
 
 type Paso = 'simulacion' | 'reparto';
 
@@ -32,17 +34,26 @@ interface RenglonFondo {
  * `valorTotalPrecancelacion` que hay que cobrar y que el reparto entre efectivo y aportes debe
  * igualar con ±0.01 de tolerancia. Como el valor depende de la fecha de corte (la mora sigue
  * corriendo), cambiar la fecha invalida el reparto y obliga a simular de nuevo.
+ *
+ * La parte del reparto que va en efectivo/transferencia es dinero que entra por fuera del sistema:
+ * en cuanto ese renglón tiene valor, el bloque de respaldo (banco, referencia y comprobante
+ * digitalizado) pasa a ser obligatorio y su ruta se estampa en los pagos que genere la operación.
+ * Un reparto cubierto íntegramente con saldo de aportes no necesita respaldo externo.
  */
 @Component({
   selector: 'app-precancelacion-dialog',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatDialogModule, MaterialFormModule],
+  imports: [CommonModule, FormsModule, MatDialogModule, MaterialFormModule, RespaldoCobroComponent],
   templateUrl: './precancelacion-dialog.component.html',
   styleUrl: './precancelacion-dialog.component.scss',
 })
 export class PrecancelacionDialogComponent {
   private servicio = inject(OperacionesPagoPrestamoService);
+  private comprobantes = inject(ComprobanteCobroService);
   private dialog = inject(MatDialog);
+
+  /** Bloque de respaldo. Se renderiza siempre: recalcular no debe perder el comprobante cargado. */
+  respaldo = viewChild(RespaldoCobroComponent);
 
   readonly hoy = new Date();
 
@@ -87,8 +98,24 @@ export class PrecancelacionDialogComponent {
     );
   });
 
+  /** Lo que se cobra en efectivo/transferencia: la parte que entra por fuera del sistema. */
+  montoEfectivo = computed(() => {
+    this.fondosVersion();
+    const efectivo = this.fondos.find((f) => f.idTipoAporte == null);
+    return +this.parseMoneda(efectivo?.texto).toFixed(2);
+  });
+
+  requiereRespaldo = computed(() => this.montoEfectivo() > 0.004);
+
+  respaldoListo = computed(() => !this.requiereRespaldo() || (this.respaldo()?.completo() ?? false));
+
   puedeConfirmar = computed(
-    () => this.cuadra() && !this.hayExcesoEnAlgunAporte() && !this.aplicando() && this.total() > 0.004
+    () =>
+      this.cuadra() &&
+      !this.hayExcesoEnAlgunAporte() &&
+      !this.aplicando() &&
+      this.total() > 0.004 &&
+      this.respaldoListo()
   );
 
   saldoAportesTotal = computed(() => this.saldos().reduce((s, a) => s + Math.max(a.saldo ?? 0, 0), 0));
@@ -241,12 +268,51 @@ export class PrecancelacionDialogComponent {
 
   // ================= confirmar =================
 
+  /**
+   * Aplica la precancelación. Cuando hay parte en efectivo/transferencia son dos etapas: primero se
+   * archiva el comprobante —su ruta viaja DENTRO del request— y recién con el archivo en el
+   * servidor se llama al endpoint. Si la subida falla se aborta sin haber tocado plata.
+   */
   confirmar(): void {
     if (!this.puedeConfirmar()) return;
     this.errorMensaje.set(null);
     this.errorCodigo.set(null);
     this.aplicando.set(true);
 
+    this.archivarComprobante((ruta, exito) => {
+      if (!exito) {
+        this.aplicando.set(false);
+        return;
+      }
+      this.enviarPrecancelacion(ruta);
+    });
+  }
+
+  private archivarComprobante(continuar: (ruta: string | null, exito: boolean) => void): void {
+    const archivo = this.requiereRespaldo() ? this.respaldo()?.datos().archivo ?? null : null;
+    if (!archivo) {
+      continuar(null, true);
+      return;
+    }
+
+    this.comprobantes
+      .archivar(
+        archivo,
+        this.comprobantes.carpetaDePrestamo(this.data.idPrestamo),
+        String(this.data.idPrestamo)
+      )
+      .subscribe((resultado) => {
+        if (resultado.error || !resultado.ruta) {
+          this.errorCodigo.set('COMPROBANTE_NO_ARCHIVADO');
+          this.errorMensaje.set(this.comprobantes.mensajeDeFallo(resultado.error ?? ''));
+          continuar(null, false);
+          return;
+        }
+        continuar(resultado.ruta, true);
+      });
+  }
+
+  private enviarPrecancelacion(rutaDocumentoRespaldo: string | null): void {
     const efectivo = this.fondos.find((f) => f.idTipoAporte == null);
     const aportes: DesgloseAporte[] = this.fondos
       .filter((f) => f.idTipoAporte != null && this.parseMoneda(f.texto) > 0.004)
@@ -260,8 +326,9 @@ export class PrecancelacionDialogComponent {
         valorEfectivo: +this.parseMoneda(efectivo?.texto).toFixed(2),
         aportes: aportes.length ? aportes : undefined,
         usuario: usuarioSesion(),
-        observacion: this.observacion.trim() || null,
+        observacion: this.armarObservacion(),
         fecha,
+        rutaDocumentoRespaldo,
       })
       .subscribe((resp) => {
         this.aplicando.set(false);
@@ -280,6 +347,7 @@ export class PrecancelacionDialogComponent {
               detalleExtra: [
                 { label: 'Intereses condonados', valor: this.formatMoneda(this.simulacion()?.interesCondonado) },
                 { label: 'Pagado en efectivo', valor: this.formatMoneda(this.parseMoneda(efectivo?.texto)) },
+                ...this.detalleDelRespaldo(rutaDocumentoRespaldo),
               ],
             },
             width: '760px',
@@ -292,6 +360,9 @@ export class PrecancelacionDialogComponent {
 
         this.errorCodigo.set(String(resp.error ?? ''));
         this.errorMensaje.set(mensajeDeRespuesta(resp));
+        // El comprobante ya subido queda huérfano: no lo referencia ningún pago, así que se borra
+        // para no dejar basura acumulándose en la carpeta del préstamo con cada reintento.
+        this.comprobantes.descartar(rutaDocumentoRespaldo);
 
         // El backend devuelve el valor correcto: se refresca en pantalla y se pide confirmar de
         // nuevo, nunca se reintenta solo (§9 de la guía).
@@ -309,6 +380,32 @@ export class PrecancelacionDialogComponent {
           this.cargarSaldos(false);
         }
       });
+  }
+
+  /**
+   * El backend guarda una sola observación por operación: el método, la referencia y la cuenta
+   * receptora se anexan a la que escribió el usuario porque son el dato con el que después se
+   * concilia el movimiento contra el extracto bancario. `PGPROBSR` admite 200 caracteres.
+   */
+  private armarObservacion(): string | null {
+    const partes: string[] = [];
+    const propia = this.observacion.trim();
+    if (propia) partes.push(propia);
+    if (this.requiereRespaldo()) {
+      const resumen = this.respaldo()?.resumen();
+      if (resumen) partes.push(resumen);
+    }
+    const texto = partes.join(' · ');
+    return texto ? texto.slice(0, 200) : null;
+  }
+
+  /** Filas del recibo que dejan constancia de qué comprobante respalda la operación. */
+  private detalleDelRespaldo(ruta: string | null): { label: string; valor: string }[] {
+    if (!ruta) return [];
+    return [
+      { label: 'Comprobante adjunto', valor: this.respaldo()?.datos().archivo?.name ?? '—' },
+      { label: 'Archivado en', valor: ruta },
+    ];
   }
 
   nombresTipoAporte(): Record<number, string> {

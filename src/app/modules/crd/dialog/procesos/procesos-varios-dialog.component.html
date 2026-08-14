@@ -1,0 +1,154 @@
+<h2 mat-dialog-title class="pv-titulo">
+  <mat-icon>settings_suggest</mat-icon>
+  Procesos varios
+  <span class="pv-titulo-sub">Módulo de créditos</span>
+</h2>
+
+<mat-dialog-content class="pv-contenido">
+
+  <div class="pv-proceso">
+    <div class="pv-proceso-cabecera">
+      <mat-icon>event_repeat</mat-icon>
+      <div>
+        <div class="pv-proceso-nombre">Cálculo de interés por mora</div>
+        <div class="pv-proceso-desc">
+          Recalcula la mora de las cuotas vencidas, marca en mora las cuotas y los préstamos que
+          corresponda, y regulariza a vigente los que se pusieron al día.
+        </div>
+      </div>
+    </div>
+
+    <div class="pv-aviso info">
+      <mat-icon>schedule</mat-icon>
+      <span>
+        En operación normal este proceso corre solo, todos los días a las <b>02:00</b>. Ejecútelo
+        acá únicamente si esa corrida falló o el servidor estuvo apagado.
+      </span>
+    </div>
+
+    <div class="pv-seccion-label">¿Sobre qué se ejecuta?</div>
+    <mat-radio-group class="pv-alcances" [ngModel]="alcance()" (ngModelChange)="cambiarAlcance($event)">
+      <mat-radio-button class="pv-alcance" value="todos">
+        <div class="pv-alcance-titulo">Todo el sistema</div>
+        <div class="pv-alcance-desc">Todas las cuotas vencidas de todos los préstamos.</div>
+      </mat-radio-button>
+      <mat-radio-button class="pv-alcance" value="uno">
+        <div class="pv-alcance-titulo">Un solo préstamo</div>
+        <div class="pv-alcance-desc">Solo las cuotas vencidas del crédito indicado.</div>
+      </mat-radio-button>
+    </mat-radio-group>
+
+    <div class="pv-form">
+      <mat-form-field appearance="outline">
+        <mat-label>Fecha de corte</mat-label>
+        <input matInput [matDatepicker]="pickerMora" [max]="hoy"
+               [ngModel]="fechaCorte()" (ngModelChange)="fechaCorte.set($event)" />
+        <mat-datepicker-toggle matSuffix [for]="pickerMora"></mat-datepicker-toggle>
+        <mat-datepicker #pickerMora></mat-datepicker>
+        <mat-hint>No puede ser posterior a hoy</mat-hint>
+      </mat-form-field>
+
+      @if (alcance() === 'uno') {
+        <mat-form-field appearance="outline">
+          <mat-label>Código del préstamo</mat-label>
+          <input matInput inputmode="numeric" [(ngModel)]="idPrestamoTexto" placeholder="Ej. 8523" />
+          <mat-hint>Código interno del préstamo (PRSTCDGO)</mat-hint>
+        </mat-form-field>
+      }
+    </div>
+
+    @if (error(); as e) {
+      <div class="pv-aviso error">
+        <mat-icon>error_outline</mat-icon>
+        <span>{{ e }}</span>
+      </div>
+    }
+
+    @if (ejecutando()) {
+      <div class="pv-aviso alerta">
+        <mat-icon>hourglass_top</mat-icon>
+        <span>
+          Procesando… sobre todo el sistema puede tardar varios minutos. No cierre esta ventana.
+        </span>
+      </div>
+    }
+
+    <!-- ==================== Resultado de la corrida ==================== -->
+    @if (resultado(); as r) {
+      @if (mensaje(); as m) {
+        <div class="pv-aviso ok">
+          <mat-icon>task_alt</mat-icon>
+          <span>{{ m }}</span>
+        </div>
+      }
+
+      <div class="pv-grid">
+        <div class="pv-dato destacado">
+          <div class="pv-dato-label">Mora calculada</div>
+          <div class="pv-dato-valor">{{ formatMoneda(r.totalMoraCalculada) }}</div>
+          <div class="pv-dato-nota">Corte al {{ r.fechaCorte }}</div>
+        </div>
+        <div class="pv-dato">
+          <div class="pv-dato-label">Cuotas actualizadas</div>
+          <div class="pv-dato-valor">{{ r.cuotasActualizadas }}</div>
+          <div class="pv-dato-nota">{{ r.cuotasMarcadasEnMora }} pasaron a EN MORA</div>
+        </div>
+        <div class="pv-dato">
+          <div class="pv-dato-label">Préstamos procesados</div>
+          <div class="pv-dato-valor">{{ r.prestamosProcesados }} / {{ r.prestamosEvaluados }}</div>
+          <div class="pv-dato-nota">evaluados con cuotas vencidas</div>
+        </div>
+        <div class="pv-dato">
+          <div class="pv-dato-label">Cambios de estado</div>
+          <div class="pv-dato-valor">{{ r.prestamosMarcadosEnMora }} &rarr; mora</div>
+          <div class="pv-dato-nota">{{ r.prestamosRegularizados }} regularizado(s) a vigente</div>
+        </div>
+        <div class="pv-dato">
+          <div class="pv-dato-label">Duración</div>
+          <div class="pv-dato-valor">{{ duracionTexto(r.duracionMs) }}</div>
+          <div class="pv-dato-nota">Inicio {{ r.fechaInicio | date: 'dd/MM/yyyy HH:mm:ss' }}</div>
+        </div>
+        <div class="pv-dato" [class.con-error]="r.prestamosConError > 0">
+          <div class="pv-dato-label">Préstamos con error</div>
+          <div class="pv-dato-valor">{{ r.prestamosConError }}</div>
+        </div>
+      </div>
+
+      @if (r.errores?.length) {
+        <div class="pv-seccion-label">
+          Errores ({{ r.errores.length }}) — el backend detalla hasta 50
+        </div>
+        <div class="pv-errores">
+          <ul>
+            @for (e of r.errores; track e) {
+              <li>{{ e }}</li>
+            }
+          </ul>
+        </div>
+      }
+
+      <div class="pv-aviso info">
+        <mat-icon>refresh</mat-icon>
+        <span>
+          La mora y los estados cambiaron: las pantallas de cobros y consulta de cuotas que estén
+          abiertas hay que volver a cargarlas para ver los valores nuevos.
+        </span>
+      </div>
+    }
+  </div>
+
+</mat-dialog-content>
+
+<mat-dialog-actions align="end" class="pv-acciones">
+  <button mat-stroked-button (click)="cerrar()" [disabled]="ejecutando()">Cerrar</button>
+  <button mat-raised-button color="primary" [disabled]="!puedeEjecutar()" (click)="ejecutarCalculoMora()">
+    @if (ejecutando()) {
+      <mat-spinner diameter="18"></mat-spinner>
+    } @else {
+      <ng-container>
+        <mat-icon>play_arrow</mat-icon>
+        {{ resultado() ? 'Volver a ejecutar' : 'Ejecutar cálculo de mora' }}
+      </ng-container>
+    }
+  </button>
+</mat-dialog-actions>

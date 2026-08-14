@@ -877,6 +877,12 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
           .card-icon {
             color: $saa-accent;
           }
+
+          .estado-cuenta-button {
+            margin-left: auto;
+            align-self: center;
+            flex-shrink: 0;
+          }
         }
 
         .stat-grid-aportes {

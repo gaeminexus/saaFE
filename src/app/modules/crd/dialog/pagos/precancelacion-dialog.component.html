@@ -203,6 +203,11 @@
     </div>
   }
 
+  <!-- Fuera del bloque de la simulación a propósito: recalcular la deja en null por un instante y
+       eso destruiría el bloque, perdiendo el comprobante ya adjuntado. -->
+  <app-respaldo-cobro [requerido]="requiereRespaldo()" [monto]="montoEfectivo()"
+                      [inicial]="data.respaldoSugerido ?? null"></app-respaldo-cobro>
+
 </mat-dialog-content>
 
 <mat-dialog-actions align="end" class="pg-acciones">

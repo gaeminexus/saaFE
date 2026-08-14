@@ -153,6 +153,12 @@
                 <td mat-cell *matCellDef="let detalle">${{ detalle.interes | number:'1.2-2' }}</td>
               </ng-container>
 
+              <!-- Interés de mora devengado (DTPRMRAA), lo escribe el proceso de mora -->
+              <ng-container matColumnDef="interesMora">
+                <th mat-header-cell *matHeaderCellDef>Interés Mora</th>
+                <td mat-cell *matCellDef="let detalle">${{ (detalle.mora || 0) | number:'1.2-2' }}</td>
+              </ng-container>
+
               <ng-container matColumnDef="cuota">
                 <th mat-header-cell *matHeaderCellDef>Valor Cuota</th>
                 <td mat-cell *matCellDef="let detalle">${{ detalle.cuota | number:'1.2-2' }}</td>

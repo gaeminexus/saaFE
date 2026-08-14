@@ -11,6 +11,10 @@ import { DesgloseAporte, MovimientoAporte } from './respuesta-pago';
  * - `usuario` es obligatorio en todos los POST (máx. 50 caracteres).
  * - ⚠️ El campo de fecha se llama `fechaPago` en los pagos de cuota y `fecha` en el abono a
  *   capital y en la precancelación.
+ * - `rutaDocumentoRespaldo` es la ruta del comprobante ya digitalizado y subido con
+ *   `FileService`. El backend la estampa en cada `PagoPrestamo`/`PagoAporte` que genere la
+ *   operación (`PGPRRTRS` / `PGAPRTRS`, 2000 caracteres). Como viaja DENTRO del request, el
+ *   archivo tiene que estar subido ANTES de llamar al endpoint de pago.
  */
 
 // ===================== §3 GET /aprt/saldosPorEntidad/{idEntidad} =====================
@@ -37,6 +41,8 @@ export interface RegistroAporteRequest {
   observacion?: string | null;
   /** ⚠️ Se llama `fechaTransaccion`. `yyyy-MM-dd`. Default hoy; no puede ser futura. */
   fechaTransaccion?: string | null;
+  /** Ruta del comprobante ya subido. Queda en el `PagoAporte` (`PGAPRTRS`). */
+  rutaDocumentoRespaldo?: string | null;
 }
 
 /** Responde 201, no 200. */
@@ -61,6 +67,8 @@ export interface PagoCuotaRequest {
   observacion?: string | null;
   /** `yyyy-MM-dd`. Default hoy; no puede ser futura. */
   fechaPago?: string | null;
+  /** Ruta del comprobante ya subido. Se estampa en todos los `PagoPrestamo` que genere el pago. */
+  rutaDocumentoRespaldo?: string | null;
 }
 
 /** Efecto del pago sobre una cuota puntual. Los seis `aplicado*` suman `totalAplicado`. */
@@ -101,6 +109,8 @@ export interface PagoConAportesRequest {
   observacion?: string | null;
   /** `yyyy-MM-dd`. Default hoy. */
   fechaPago?: string | null;
+  /** Ruta del comprobante ya subido. Se estampa en todos los `PagoPrestamo` que genere el pago. */
+  rutaDocumentoRespaldo?: string | null;
   /** Al menos un renglón, sin tipos repetidos. El valor total del pago es su suma. */
   aportes: DesgloseAporte[];
 }
@@ -152,6 +162,8 @@ export interface AbonoCapitalRequest {
   observacion?: string | null;
   /** ⚠️ Se llama `fecha`, no `fechaPago`. `yyyy-MM-dd`. */
   fecha?: string | null;
+  /** Ruta del comprobante ya subido. Se estampa en el `PagoPrestamo` del abono. */
+  rutaDocumentoRespaldo?: string | null;
 }
 
 export interface ResultadoAbonoCapital {
@@ -204,6 +216,8 @@ export interface PrecancelacionRequest {
   observacion?: string | null;
   /** Fecha de corte. Debe ser la misma que se usó al simular. `yyyy-MM-dd`. */
   fecha?: string | null;
+  /** Ruta del comprobante ya subido. Se estampa en los pagos que genere la precancelación. */
+  rutaDocumentoRespaldo?: string | null;
 }
 
 export interface ResultadoPrecancelacion {
@@ -240,6 +254,38 @@ export interface ResultadoAnulacion {
   cuotasEliminadas: number;
   movimientosAporteRevertidos: number;
   estadoFinalPrestamo: number;
+}
+
+// ===================== POST /prst/calcularMora[/{idPrestamo}] =====================
+
+/**
+ * Resumen de una corrida de cálculo de mora. El proceso normalmente lo dispara la corrida
+ * automática de las 02:00; el endpoint es la vía de recuperación manual para cuando esa corrida
+ * falló o el servidor estuvo apagado.
+ */
+export interface ResultadoCalculoMora {
+  /** `yyyy-MM-dd` con el que se calculó la mora. */
+  fechaCorte: string;
+  /** ISO. Inicio y fin de la corrida. */
+  fechaInicio: string;
+  fechaFin: string;
+  duracionMs: number;
+  /** Préstamos con al menos una cuota vencida. */
+  prestamosEvaluados: number;
+  /** Procesados sin error. */
+  prestamosProcesados: number;
+  /** Cuotas a las que se les escribió mora. */
+  cuotasActualizadas: number;
+  /** Cuotas que pasaron a estado 5 (EN_MORA) en esta corrida. */
+  cuotasMarcadasEnMora: number;
+  /** Préstamos que pasaron a PRSTIDST = 11 (EN_MORA). */
+  prestamosMarcadosEnMora: number;
+  /** Préstamos que volvieron de 11 a 2 (VIGENTE). */
+  prestamosRegularizados: number;
+  totalMoraCalculada: number;
+  prestamosConError: number;
+  /** Detalle, hasta 50: "Préstamo 8523: mensaje". */
+  errores: string[];
 }
 
 // ===================== §11 Historial =====================

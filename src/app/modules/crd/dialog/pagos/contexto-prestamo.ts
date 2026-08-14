@@ -4,6 +4,7 @@ import {
   ResultadoAnulacion,
   ResultadoPrecancelacion,
 } from '../../model/pagos/operaciones-pago';
+import { DatosRespaldoCobro } from './respaldo-cobro.component';
 
 /**
  * Datos mínimos del préstamo que necesitan los diálogos de operaciones de pago. Las pantallas lo
@@ -40,6 +41,12 @@ export interface ContextoPrestamo {
    * puede cambiarlo dentro del diálogo.
    */
   valorSugerido?: number | null;
+  /**
+   * Banco, referencia y comprobante que la pantalla que abre el diálogo ya capturó. Los diálogos
+   * los precargan en su bloque de respaldo: el cajero registró una sola vez de dónde vino el dinero
+   * y no tiene por qué repetirlo al derivar a otra operación.
+   */
+  respaldoSugerido?: Partial<DatosRespaldoCobro> | null;
 }
 
 export function contextoDesdePrestamo(prestamo: Prestamo, participante?: string | null): ContextoPrestamo {

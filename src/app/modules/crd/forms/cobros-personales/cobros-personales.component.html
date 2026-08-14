@@ -374,7 +374,8 @@
             <div class="field-grid">
               <mat-form-field appearance="outline">
                 <mat-label>Fecha</mat-label>
-                <input matInput [matDatepicker]="picker" [max]="hoy" [(ngModel)]="fechaPago" />
+                <input matInput [matDatepicker]="picker" [max]="hoy"
+                       [ngModel]="fechaPago()" (ngModelChange)="fechaPago.set($event)" />
                 <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
                 <mat-datepicker #picker></mat-datepicker>
                 <mat-hint>No puede ser posterior a hoy</mat-hint>
@@ -408,19 +409,23 @@
               </div>
             } @else {
               <div class="campos-grupo">
-                <mat-form-field appearance="outline" class="full">
-                  <mat-label>Cuenta ASOPREP destino</mat-label>
-                  <mat-select [ngModel]="cuentaAsopropDestino()" (ngModelChange)="cuentaAsopropDestino.set($event)">
-                    @for (c of cuentasBancarias(); track c.codigo) {
-                      <mat-option [value]="c">{{ c.banco?.nombre }} &middot; {{ c.numeroCuenta }}</mat-option>
-                    }
-                  </mat-select>
-                  <mat-hint>Solo cuentas vigentes habilitadas para cobro de crédito</mat-hint>
-                </mat-form-field>
                 <div class="field-grid">
                   <mat-form-field appearance="outline">
-                    <mat-label>Número de referencia (opcional)</mat-label>
-                    <input matInput [(ngModel)]="numeroReferencia" />
+                    <mat-label>Cuenta ASOPREP destino</mat-label>
+                    <mat-select [ngModel]="cuentaAsopropDestino()" (ngModelChange)="cuentaAsopropDestino.set($event)">
+                      @for (c of cuentasBancarias(); track c.codigo) {
+                        <mat-option [value]="c">{{ c.banco?.nombre }} &middot; {{ c.numeroCuenta }}</mat-option>
+                      }
+                    </mat-select>
+                    <mat-hint>Solo cuentas vigentes habilitadas para cobro de crédito</mat-hint>
+                  </mat-form-field>
+                </div>
+                <div class="field-grid">
+                  <mat-form-field appearance="outline">
+                    <mat-label>Número de referencia</mat-label>
+                    <input matInput maxlength="50" [ngModel]="numeroReferencia()"
+                           (ngModelChange)="numeroReferencia.set($event)" placeholder="Ej.: 004512873" />
+                    <mat-hint>El número del comprobante bancario</mat-hint>
                   </mat-form-field>
                   <div class="field">
                     <label class="dropzone-label">Comprobante</label>
@@ -428,7 +433,7 @@
                       <mat-icon>upload_file</mat-icon>
                       {{ archivoComprobante() ? archivoComprobante()!.name : 'Adjuntar PDF o imagen' }}
                     </div>
-                    <input #archivoInput type="file" accept="application/pdf,image/*" style="display:none" (change)="onArchivoSeleccionado($event)" />
+                    <input #archivoInput type="file" [accept]="extensionesComprobante" style="display:none" (change)="onArchivoSeleccionado($event)" />
                   </div>
                 </div>
               </div>

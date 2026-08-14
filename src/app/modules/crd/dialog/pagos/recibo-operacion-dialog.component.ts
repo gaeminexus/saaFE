@@ -17,6 +17,7 @@ import {
   ResultadoRegistroAporte,
 } from '../../model/pagos/operaciones-pago';
 import { MovimientoAporte } from '../../model/pagos/respuesta-pago';
+import { ComprobanteImpresionService } from './comprobante-impresion.service';
 
 export interface ReciboOperacionData {
   tipo: 'PAGO_MANUAL' | 'PAGO_APORTES' | 'ABONO_CAPITAL' | 'PRECANCELACION' | 'ANULACION' | 'REGISTRO_APORTE';
@@ -58,6 +59,7 @@ export class ReciboOperacionDialogComponent {
 
   constructor(
     private dialogRef: MatDialogRef<ReciboOperacionDialogComponent>,
+    private impresion: ComprobanteImpresionService,
     @Inject(MAT_DIALOG_DATA) public data: ReciboOperacionData
   ) {}
 
@@ -148,110 +150,37 @@ export class ReciboOperacionDialogComponent {
   }
 
   /**
-   * Imprime el comprobante en una ventana aparte en lugar de con `@media print` sobre el diálogo:
-   * el overlay de Material deja el resto de la aplicación en el DOM y aislarlo con CSS de
-   * impresión es frágil. Generar el documento resuelve además el corte de página de la tabla.
+   * Imprime el comprobante. El documento lo arma `ComprobanteImpresionService`, que comparte con
+   * la reimpresión de pagos de una cuota (`PrestamoPagosDialogComponent`) para que ambas pantallas
+   * emitan exactamente el mismo reporte.
    */
   imprimir(): void {
-    const ventana = window.open('', '_blank', 'width=900,height=700');
-    if (!ventana) return;
-    ventana.document.write(this.htmlComprobante());
-    ventana.document.close();
-    ventana.focus();
-    ventana.print();
-  }
+    const datos: { label: string; valor: string }[] = [];
+    if (this.data.participante) datos.push({ label: 'Partícipe', valor: this.data.participante });
+    if (this.idEvento != null) datos.push({ label: 'N° de operación', valor: String(this.idEvento) });
+    if (this.data.fecha) datos.push({ label: 'Fecha', valor: this.data.fecha });
+    for (const d of this.data.detalleExtra ?? []) datos.push(d);
 
-  private htmlComprobante(): string {
-    const esc = (t: unknown) =>
-      String(t ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c] as string);
-
-    const filas = this.cuotas
-      .map(
-        (c) => `<tr>
-          <td>${esc(c.numeroCuota)}</td>
-          <td>${esc(this.nombreEstadoCuota(c.estadoAnterior))} &rarr; ${esc(this.nombreEstadoCuota(c.estadoNuevo))}</td>
-          <td class="n">${esc(this.formatMoneda(c.aplicadoDesgravamen))}</td>
-          <td class="n">${esc(this.formatMoneda(c.aplicadoMora))}</td>
-          <td class="n">${esc(this.formatMoneda(c.aplicadoInteresVencido))}</td>
-          <td class="n">${esc(this.formatMoneda(c.aplicadoInteres))}</td>
-          <td class="n">${esc(this.formatMoneda(c.aplicadoCapital))}</td>
-          <td class="n">${esc(this.formatMoneda(c.aplicadoSeguro))}</td>
-          <td class="n"><b>${esc(this.formatMoneda(c.totalAplicado))}</b></td>
-        </tr>`
-      )
-      .join('');
-
-    const tablaCuotas = this.cuotas.length
-      ? `<table>
-          <thead><tr>
-            <th>Cuota</th><th>Estado</th><th class="n">Desgrav.</th><th class="n">Mora</th>
-            <th class="n">Int. vencido</th><th class="n">Interés</th><th class="n">Capital</th>
-            <th class="n">Seguro</th><th class="n">Total</th>
-          </tr></thead>
-          <tbody>${filas}</tbody>
-          <tfoot><tr>
-            <td colspan="2">TOTALES</td>
-            <td class="n">${esc(this.formatMoneda(this.totales['aplicadoDesgravamen']))}</td>
-            <td class="n">${esc(this.formatMoneda(this.totales['aplicadoMora']))}</td>
-            <td class="n">${esc(this.formatMoneda(this.totales['aplicadoInteresVencido']))}</td>
-            <td class="n">${esc(this.formatMoneda(this.totales['aplicadoInteres']))}</td>
-            <td class="n">${esc(this.formatMoneda(this.totales['aplicadoCapital']))}</td>
-            <td class="n">${esc(this.formatMoneda(this.totales['aplicadoSeguro']))}</td>
-            <td class="n">${esc(this.formatMoneda(this.totales['totalAplicado']))}</td>
-          </tr></tfoot>
-        </table>`
-      : '';
-
-    const tablaAportes = this.movimientos.length
-      ? `<h3>Aportes utilizados</h3>
-         <table>
-           <thead><tr><th>Tipo de aporte</th><th class="n">Valor</th></tr></thead>
-           <tbody>${this.movimientos
-             .map(
-               (m) =>
-                 `<tr><td>${esc(this.nombreTipoAporte(m.idTipoAporte))}</td><td class="n">${esc(
-                   this.formatMoneda(Math.abs(m.valor))
-                 )}</td></tr>`
-             )
-             .join('')}</tbody>
-           <tfoot><tr><td>TOTAL</td><td class="n">${esc(this.formatMoneda(this.totalAportes))}</td></tr></tfoot>
-         </table>`
-      : '';
-
-    const extras = (this.data.detalleExtra ?? [])
-      .map((d) => `<div><span>${esc(d.label)}</span><b>${esc(d.valor)}</b></div>`)
-      .join('');
-
-    return `<!doctype html><html lang="es"><head><meta charset="utf-8">
-      <title>Comprobante — ${esc(this.data.tituloPrestamo)}</title>
-      <style>
-        body { font-family: Arial, Helvetica, sans-serif; color: #1a202c; margin: 28px; }
-        h1 { font-size: 18px; margin: 0 0 2px; }
-        h3 { font-size: 13px; margin: 18px 0 6px; text-transform: uppercase; letter-spacing: .04em; color: #4a5568; }
-        .sub { color: #718096; font-size: 12px; margin-bottom: 16px; }
-        .datos { display: flex; flex-wrap: wrap; gap: 6px 28px; font-size: 12px; margin-bottom: 14px; }
-        .datos > div { display: flex; gap: 6px; }
-        .datos span { color: #718096; }
-        table { width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 10px; }
-        th { background: #edf2f7; text-align: left; padding: 6px; border-bottom: 1px solid #cbd5e0; }
-        td { padding: 6px; border-bottom: 1px solid #edf2f7; }
-        tfoot td { background: #f7fafc; font-weight: bold; border-top: 2px solid #cbd5e0; }
-        .n { text-align: right; }
-        .pie { margin-top: 22px; font-size: 10px; color: #a0aec0; border-top: 1px solid #e2e8f0; padding-top: 8px; }
-        @page { size: A4 landscape; margin: 14mm; }
-      </style></head><body>
-      <h1>${esc(this.titulo)}</h1>
-      <div class="sub">${esc(this.data.tituloPrestamo)}</div>
-      <div class="datos">
-        ${this.data.participante ? `<div><span>Partícipe:</span><b>${esc(this.data.participante)}</b></div>` : ''}
-        ${this.idEvento != null ? `<div><span>N° de operación:</span><b>${esc(this.idEvento)}</b></div>` : ''}
-        ${this.data.fecha ? `<div><span>Fecha:</span><b>${esc(this.data.fecha)}</b></div>` : ''}
-        ${extras}
-      </div>
-      ${this.data.mensaje ? `<p style="font-size:12px">${esc(this.data.mensaje)}</p>` : ''}
-      ${tablaCuotas}
-      ${tablaAportes}
-      <div class="pie">ASOPREP-FCPC &middot; Sistema de Administración de Aportes (SAA) &middot; Documento generado desde el sistema.</div>
-      </body></html>`;
+    this.impresion.imprimir({
+      titulo: this.titulo,
+      subtitulo: this.data.tituloPrestamo,
+      datos,
+      mensaje: this.data.mensaje,
+      filas: this.cuotas.map((c) => ({
+        concepto: String(c.numeroCuota),
+        estado: `${this.nombreEstadoCuota(c.estadoAnterior)} → ${this.nombreEstadoCuota(c.estadoNuevo)}`,
+        desgravamen: c.aplicadoDesgravamen,
+        mora: c.aplicadoMora,
+        interesVencido: c.aplicadoInteresVencido,
+        interes: c.aplicadoInteres,
+        capital: c.aplicadoCapital,
+        seguro: c.aplicadoSeguro,
+        total: c.totalAplicado,
+      })),
+      aportes: this.movimientos.map((m) => ({
+        nombre: this.nombreTipoAporte(m.idTipoAporte),
+        valor: Math.abs(m.valor),
+      })),
+    });
   }
 }

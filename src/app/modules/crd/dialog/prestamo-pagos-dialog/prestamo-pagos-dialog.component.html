@@ -1,160 +1,214 @@
-<div class="dialog-container">
-  <div class="dialog-header">
-    <h2 mat-dialog-title>
-      <mat-icon>payments</mat-icon>
-      Pagos de Cuota #{{ data.detalle.numeroCuota }}
-    </h2>
-    <div class="header-actions">
-      <button mat-icon-button (click)="generarPDF()" matTooltip="Generar PDF" class="pdf-button">
-        <mat-icon>picture_as_pdf</mat-icon>
-      </button>
-      <button mat-icon-button mat-dialog-close class="close-button">
-        <mat-icon>close</mat-icon>
-      </button>
+<h2 mat-dialog-title class="pg-titulo">
+  <mat-icon>receipt_long</mat-icon>
+  Cuota #{{ detalle.numeroCuota }}
+  <span class="pg-titulo-sub">{{ tituloPrestamo }}</span>
+</h2>
+
+<mat-dialog-content class="pg-contenido">
+
+  <!-- ============ Estado y avance de la cuota ============ -->
+  <section class="cp-hero" [class.saldada]="cuotaSaldada">
+    <div class="cp-hero-cabecera">
+      <span class="pg-badge" [class]="claseEstado">{{ nombreEstado }}</span>
+      @if (diasMora > 0) {
+        <span class="pg-badge est-mora">{{ diasMora }} días de mora</span>
+      }
+      <span class="cp-hero-fecha">
+        <mat-icon>event</mat-icon>
+        Vence el {{ detalle.fechaVencimiento | date : 'dd/MM/yyyy' }}
+      </span>
+      @if (detalle.fechaPagado) {
+        <span class="cp-hero-fecha">
+          <mat-icon>task_alt</mat-icon>
+          Pagada el {{ detalle.fechaPagado | date : 'dd/MM/yyyy' }}
+        </span>
+      }
+    </div>
+
+    <div class="cp-barra" [attr.aria-label]="porcentajePagado + '% cobrado'">
+      <div class="cp-barra-relleno" [style.width.%]="porcentajePagado"></div>
+    </div>
+    <div class="cp-barra-pie">
+      <span><b>{{ porcentajePagado }}%</b> cobrado</span>
+      <span>{{ formatMoneda(totalPagado) }} de {{ formatMoneda(cuotaTotal) }}</span>
+    </div>
+  </section>
+
+  <div class="pg-grid">
+    <div class="pg-dato destacado">
+      <div class="pg-dato-label">Total pagado</div>
+      <div class="pg-dato-valor">{{ formatMoneda(totalPagado) }}</div>
+      <div class="pg-dato-nota">{{ pagos.length }} {{ pagos.length === 1 ? 'pago' : 'pagos' }} registrados</div>
+    </div>
+    <div class="pg-dato">
+      <div class="pg-dato-label">Cuota total</div>
+      <div class="pg-dato-valor">{{ formatMoneda(cuotaTotal) }}</div>
+      <div class="pg-dato-nota">Lo que exigía esta cuota</div>
+    </div>
+    <div class="pg-dato" [class.beneficio]="cuotaSaldada">
+      <div class="pg-dato-label">Saldo pendiente</div>
+      <div class="pg-dato-valor">{{ formatMoneda(saldoPendiente) }}</div>
+      <div class="pg-dato-nota">{{ cuotaSaldada ? 'La cuota quedó saldada' : 'Todavía por cobrar' }}</div>
+    </div>
+    <div class="pg-dato">
+      <div class="pg-dato-label">Período de cobro</div>
+      <div class="pg-dato-valor nombre">{{ fechaPrimerPago | date : 'dd/MM/yyyy' }}</div>
+      <div class="pg-dato-nota">
+        @if (pagos.length > 1) {
+          último el {{ fechaUltimoPago | date : 'dd/MM/yyyy' }}
+        } @else {
+          pago único
+        }
+      </div>
     </div>
   </div>
 
-  <mat-dialog-content>
-    <div class="detalle-info">
-      <div class="info-item">
-        <span class="label">Vencimiento:</span>
-        <span class="value">{{ data.detalle.fechaVencimiento | date : 'dd/MM/yyyy' }}</span>
-      </div>
-      <div class="info-item">
-        <span class="label">Capital:</span>
-        <span class="value">{{
-          data.detalle.capital | currency : 'USD' : 'symbol' : '1.2-2'
-        }}</span>
-      </div>
-      <div class="info-item">
-        <span class="label">Interés:</span>
-        <span class="value">{{
-          data.detalle.interes | currency : 'USD' : 'symbol' : '1.2-2'
-        }}</span>
-      </div>
-      <div class="info-item">
-        <span class="label">Desgravamen:</span>
-        <span class="value">{{
-          data.detalle.desgravamen | currency : 'USD' : 'symbol' : '1.2-2'
-        }}</span>
-      </div>
-      @if (mostrarSeguro) {
-      <div class="info-item">
-        <span class="label">Seguro:</span>
-        <span class="value">{{
-          data.detalle.valorSeguroIncendio | currency : 'USD' : 'symbol' : '1.2-2'
-        }}</span>
-      </div>
-      }
-      <div class="info-item">
-        <span class="label">Cuota:</span>
-        <span class="value">{{ data.detalle.cuota | currency : 'USD' : 'symbol' : '1.2-2' }}</span>
-      </div>
-      <div class="info-item">
-        <span class="label">Saldo:</span>
-        <span class="value">{{ data.detalle.saldo | currency : 'USD' : 'symbol' : '1.2-2' }}</span>
-      </div>
-      <div class="info-item">
-        <span class="label">Pago Extra:</span>
-        <span class="value">{{ data.detalle.saldoOtros | currency : 'USD' : 'symbol' : '1.2-2' }}</span>
-      </div>
-    </div>
+  <div class="pg-aviso" [class.ok]="cuotaSaldada" [class.info]="!cuotaSaldada">
+    <mat-icon>{{ cuotaSaldada ? 'verified' : 'info' }}</mat-icon>
+    <span>{{ resumen }}</span>
+  </div>
 
-    @if (data.pagos && data.pagos.length > 0) {
-    <div class="pagos-section">
-      <h3>
-        <mat-icon>history</mat-icon>
-        Historial de Pagos ({{ data.pagos.length }})
-      </h3>
-      <table mat-table [dataSource]="data.pagos" class="pagos-table">
-        <!-- Fecha Column -->
-        <ng-container matColumnDef="fecha">
-          <th mat-header-cell *matHeaderCellDef>Fecha</th>
-          <td mat-cell *matCellDef="let pago">
-            {{ pago.fecha | date : 'dd/MM/yyyy' }}
-          </td>
-        </ng-container>
-
-        <!-- Capital Pagado Column -->
-        <ng-container matColumnDef="capitalPagado">
-          <th mat-header-cell *matHeaderCellDef>Capital Pagado</th>
-          <td mat-cell *matCellDef="let pago">
-            {{ pago.capitalPagado | currency : 'USD' : 'symbol' : '1.2-2' }}
-          </td>
-        </ng-container>
-
-        <!-- Interés Pagado Column -->
-        <ng-container matColumnDef="interesPagado">
-          <th mat-header-cell *matHeaderCellDef>Interés Pagado</th>
-          <td mat-cell *matCellDef="let pago">
-            {{ pago.interesPagado | currency : 'USD' : 'symbol' : '1.2-2' }}
-          </td>
-        </ng-container>
-
-        <!-- Mora Pagada Column -->
-        <ng-container matColumnDef="moraPagada">
-          <th mat-header-cell *matHeaderCellDef>Mora Pagada</th>
-          <td mat-cell *matCellDef="let pago">
-            {{ pago.moraPagada | currency : 'USD' : 'symbol' : '1.2-2' }}
-          </td>
-        </ng-container>
-
-        <!-- Desgravamen Pagado Column -->
-        <ng-container matColumnDef="desgravamenPagado">
-          <th mat-header-cell *matHeaderCellDef>Desgravamen</th>
-          <td mat-cell *matCellDef="let pago">
-            {{ pago.desgravamen | currency : 'USD' : 'symbol' : '1.2-2' }}
-          </td>
-        </ng-container>
-
-        <!-- Seguro Pagado Column (solo para préstamos hipotecarios/prendarios) -->
-        @if (mostrarSeguro) {
-        <ng-container matColumnDef="seguroPagado">
-          <th mat-header-cell *matHeaderCellDef>Seguro</th>
-          <td mat-cell *matCellDef="let pago">
-            {{ pago.valorSeguroIncendio | currency : 'USD' : 'symbol' : '1.2-2' }}
-          </td>
-        </ng-container>
+  <!-- ============ Composición: qué exigía la cuota y qué se cobró ============ -->
+  <div class="pg-seccion-label">
+    Composición de la cuota — orden de imputación: desgravamen, mora, interés vencido, interés, capital, seguro
+  </div>
+  <div class="pg-tabla-scroll">
+    <table class="pg-tabla cp-conceptos">
+      <thead>
+        <tr>
+          <th>Concepto</th>
+          <th class="cp-col-avance">Avance</th>
+          <th class="num">Pactado</th>
+          <th class="num">Pagado</th>
+          <th class="num">Pendiente</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (c of conceptos; track c.nombre) {
+          <tr>
+            <td>
+              <span class="cp-concepto">
+                <mat-icon>{{ c.icono }}</mat-icon>
+                {{ c.nombre }}
+              </span>
+            </td>
+            <td class="cp-col-avance">
+              <div class="cp-mini">
+                <div class="cp-mini-relleno" [class.completo]="c.pendiente <= 0" [style.width.%]="avanceConcepto(c)"></div>
+              </div>
+            </td>
+            <td class="num" [class.cero]="!c.pactado">{{ formatMoneda(c.pactado) }}</td>
+            <td class="num" [class.cero]="!c.pagado">{{ formatMoneda(c.pagado) }}</td>
+            <td class="num" [class.cero]="!c.pendiente" [class.deuda]="c.pendiente > 0">
+              {{ formatMoneda(c.pendiente) }}
+            </td>
+          </tr>
         }
-        <ng-container matColumnDef="saldoOtros">
-          <th mat-header-cell *matHeaderCellDef>Pago Extra</th>
-          <td mat-cell *matCellDef="let pago">
-            {{ pago.saldoOtros | currency : 'USD' : 'symbol' : '1.2-2' }}
-          </td>
-        </ng-container>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">TOTALES</td>
+          <td class="num">{{ formatMoneda(totalesConceptos.pactado) }}</td>
+          <td class="num">{{ formatMoneda(totalesConceptos.pagado) }}</td>
+          <td class="num">{{ formatMoneda(totalesConceptos.pendiente) }}</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
 
-        <!-- Valor Total Column -->
-        <ng-container matColumnDef="valor">
-          <th mat-header-cell *matHeaderCellDef>Valor Total</th>
-          <td mat-cell *matCellDef="let pago" class="total-column">
-            {{ pago.valor | currency : 'USD' : 'symbol' : '1.2-2' }}
-          </td>
-        </ng-container>
+  <!-- ============ Línea de tiempo de los pagos ============ -->
+  <div class="pg-seccion-label">
+    Pagos registrados ({{ pagos.length }}) — del más antiguo al más reciente
+  </div>
 
-        <!-- Observación Column -->
-        <ng-container matColumnDef="observacion">
-          <th mat-header-cell *matHeaderCellDef>Observación</th>
-          <td mat-cell *matCellDef="let pago" class="observacion-column">
-            {{ pago.observacion || '-' }}
-          </td>
-        </ng-container>
+  <div class="cp-linea">
+    @for (p of pagosOrdenados; track p.pago.codigo; let i = $index) {
+      <article class="cp-pago" [class.anulado]="p.anulado">
+        <div class="cp-pago-marca">
+          <span class="cp-punto">{{ i + 1 }}</span>
+        </div>
 
-        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-        <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
-      </table>
-    </div>
-    } @else {
-    <div class="no-pagos">
-      <mat-icon>info</mat-icon>
-      <p>No se encontraron pagos registrados para esta cuota.</p>
-    </div>
+        <div class="cp-pago-cuerpo">
+          <header class="cp-pago-cabecera">
+            <div class="cp-pago-fecha">
+              <span class="cp-fecha">{{ p.pago.fecha | date : 'dd/MM/yyyy' }}</span>
+              <span class="cp-pago-sub">
+                {{ nombreTipoPago(p.pago.tipo) }}
+                @if (idEvento(p.pago) != null) {
+                  &middot; operación #{{ idEvento(p.pago) }}
+                }
+              </span>
+            </div>
+            <div class="cp-pago-monto">
+              <span class="cp-monto">{{ formatMoneda(p.pago.valor) }}</span>
+              @if (p.anulado) {
+                <span class="pg-badge est-anulado">Anulado</span>
+              }
+            </div>
+          </header>
+
+          @if (p.conceptos.length) {
+            <div class="cp-chips">
+              @for (c of p.conceptos; track c.nombre) {
+                <span class="cp-chip">
+                  <span class="cp-chip-nombre">{{ c.nombre }}</span>
+                  <span class="cp-chip-valor">{{ formatMoneda(c.valor) }}</span>
+                </span>
+              }
+            </div>
+          } @else {
+            <div class="cp-sin-desglose">El pago no trae desglose por concepto.</div>
+          }
+
+          @if (p.descuadre > 0) {
+            <div class="pg-aviso alerta cp-aviso-compacto">
+              <mat-icon>warning</mat-icon>
+              <span>
+                El desglose suma {{ formatMoneda(p.sumaConceptos) }}, pero el pago se registró por
+                {{ formatMoneda(p.pago.valor) }}: hay una diferencia de <b>{{ formatMoneda(p.descuadre) }}</b>.
+              </span>
+            </div>
+          }
+
+          @if (p.pago.observacion) {
+            <div class="cp-observacion">
+              <mat-icon>sticky_note_2</mat-icon>
+              <span>{{ p.pago.observacion }}</span>
+            </div>
+          }
+
+          <div class="cp-meta">
+            @if (p.pago.usuarioRegistro) {
+              <span><mat-icon>person</mat-icon> {{ p.pago.usuarioRegistro }}</span>
+            }
+            @if (p.pago.fechaRegistro) {
+              <span><mat-icon>history</mat-icon> Registrado {{ p.pago.fechaRegistro | date : 'dd/MM/yyyy HH:mm' }}</span>
+            }
+            @if (p.pago.asiento) {
+              <span><mat-icon>menu_book</mat-icon> Asiento {{ p.pago.asiento }}</span>
+            }
+            <span><mat-icon>tag</mat-icon> Pago #{{ p.pago.codigo }}</span>
+          </div>
+
+          @if (p.anulado) {
+            <div class="cp-anulacion">
+              Anulado{{ p.pago.usuarioAnulacion ? ' por ' + p.pago.usuarioAnulacion : '' }}.
+              {{ p.pago.motivoAnulacion || '' }}
+            </div>
+          }
+        </div>
+      </article>
     }
-  </mat-dialog-content>
+  </div>
 
-  <mat-dialog-actions align="end">
-    <button mat-raised-button mat-dialog-close color="primary">
-      <mat-icon>check</mat-icon>
-      Cerrar
-    </button>
-  </mat-dialog-actions>
-</div>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end" class="pg-acciones">
+  <span class="pg-teclas"><kbd>Ctrl</kbd>+<kbd>P</kbd> imprimir &middot; <kbd>Esc</kbd> cerrar</span>
+  <button mat-stroked-button (click)="imprimir()">
+    <mat-icon>picture_as_pdf</mat-icon> Imprimir / PDF
+  </button>
+  <button mat-raised-button color="primary" mat-dialog-close cdkFocusInitial>
+    <mat-icon>check</mat-icon> Listo
+  </button>
+</mat-dialog-actions>

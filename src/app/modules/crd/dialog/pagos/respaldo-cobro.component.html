@@ -1,0 +1,96 @@
+<div class="rc-bloque" [class.opcional]="!requerido()" [class.incompleto]="requerido() && !completo()">
+
+  <div class="pg-seccion-label rc-encabezado">
+    <span>Respaldo del cobro</span>
+    @if (requerido()) {
+      <span class="rc-etiqueta obligatorio">Obligatorio</span>
+    } @else {
+      <span class="rc-etiqueta">No aplica</span>
+    }
+  </div>
+
+  @if (!requerido()) {
+    <div class="pg-aviso info">
+      <mat-icon>savings</mat-icon>
+      <span>
+        El dinero sale del saldo de aportes que lleva el propio sistema: no hay transferencia ni
+        depósito que respaldar.
+      </span>
+    </div>
+  } @else {
+
+    <div class="pg-aviso info">
+      <mat-icon>receipt_long</mat-icon>
+      <span>
+        @if (monto(); as valor) {
+          Los <b>{{ formatMoneda(valor) }}</b> entran por fuera del sistema:
+        } @else {
+          El dinero entra por fuera del sistema:
+        }
+        registre el banco receptor, la referencia y el comprobante digitalizado.
+      </span>
+    </div>
+
+    <mat-radio-group class="rc-metodos" [ngModel]="metodo()" (ngModelChange)="metodo.set($event)">
+      <mat-radio-button value="transferencia">Transferencia bancaria</mat-radio-button>
+      <mat-radio-button value="deposito">Depósito directo</mat-radio-button>
+    </mat-radio-group>
+
+    <div class="pg-form">
+      <mat-form-field appearance="outline" class="pg-ancho-total">
+        <mat-label>Cuenta ASOPREP destino</mat-label>
+        <mat-select [ngModel]="cuenta()" (ngModelChange)="cuenta.set($event)">
+          @for (c of cuentas(); track c.codigo) {
+            <mat-option [value]="c">{{ c.banco?.nombre }} &middot; {{ c.numeroCuenta }}</mat-option>
+          }
+        </mat-select>
+        <mat-hint>
+          @if (cargandoCuentas()) {
+            Cargando cuentas…
+          } @else if (!cuentas().length) {
+            No hay cuentas habilitadas para cobro de crédito: revise la parametrización.
+          } @else {
+            Solo cuentas vigentes habilitadas para cobro de crédito
+          }
+        </mat-hint>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Número de referencia</mat-label>
+        <input matInput maxlength="50" [ngModel]="referencia()" (ngModelChange)="referencia.set($event)"
+               placeholder="Ej.: 004512873" />
+        <mat-hint>El número del comprobante bancario</mat-hint>
+      </mat-form-field>
+
+      <div class="rc-archivo">
+        <label class="rc-archivo-label">Comprobante digitalizado</label>
+        <div class="rc-dropzone" [class.cargado]="!!archivo()" (click)="archivoInput.click()">
+          <mat-icon>{{ archivo() ? 'task' : 'upload_file' }}</mat-icon>
+          <span class="rc-archivo-nombre">{{ archivo() ? archivo()!.name : 'Adjuntar PDF o imagen' }}</span>
+        </div>
+        @if (archivo()) {
+          <button mat-button class="rc-quitar" (click)="quitarArchivo()">
+            <mat-icon>close</mat-icon> Quitar
+          </button>
+        }
+        <input #archivoInput type="file" [accept]="extensionesAceptadas" hidden
+               (change)="onArchivoSeleccionado($event)" />
+      </div>
+    </div>
+
+    @if (faltantes().length) {
+      <div class="pg-aviso alerta rc-faltantes">
+        <mat-icon>info</mat-icon>
+        <div>
+          <span>Para registrar la operación falta:</span>
+          <ul>
+            @for (motivo of faltantes(); track motivo) {
+              <li>{{ motivo }}</li>
+            }
+          </ul>
+        </div>
+      </div>
+    }
+  }
+
+</div>

@@ -135,6 +135,7 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
     'capital',
     'saldoCapital',
     'interes',
+    'interesMora',
     'desgravamen',
     'pagoExtra',
     'cuota',
@@ -885,6 +886,7 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
           capital: detalle.capital || 0,
           saldoCapital: detalle.saldoCapital || 0,
           interes: detalle.interes || 0,
+          interesMora: detalle.mora || 0,
           desgravamen: detalle.desgravamen || 0,
           pagoExtra: detalle.saldoOtros || 0,
         };
@@ -896,8 +898,8 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
         return row;
       });
 
-      const csvHeaders = ['Cuota', 'Fecha Vencimiento', 'Saldo Inicial', 'Capital', 'Saldo Capital', 'Interés', 'Desgravamen', 'Pago Extra'];
-      const csvKeys = ['cuota', 'fechaVencimiento', 'saldoInicialCapital', 'capital', 'saldoCapital', 'interes', 'desgravamen', 'pagoExtra'];
+      const csvHeaders = ['Cuota', 'Fecha Vencimiento', 'Saldo Inicial', 'Capital', 'Saldo Capital', 'Interés', 'Interés Mora', 'Desgravamen', 'Pago Extra'];
+      const csvKeys = ['cuota', 'fechaVencimiento', 'saldoInicialCapital', 'capital', 'saldoCapital', 'interes', 'interesMora', 'desgravamen', 'pagoExtra'];
       if (esHipotecarioCSV) {
         csvHeaders.push('Seguro');
         csvKeys.push('seguroIncendio');
@@ -986,6 +988,49 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
       },
       error: () => {
         this.snackBar.open('❌ No se pudo generar el reporte de movimientos', 'Cerrar', { duration: 5000 });
+      },
+    });
+  }
+
+  /**
+   * Imprime el estado de cuenta de aportes del partícipe usando Jasper (RPRT_ESCT_APRT)
+   */
+  imprimirEstadoCuentaAportes(event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+
+    if (!this.entidadEncontrada?.codigo) {
+      this.snackBar.open('No hay información de entidad', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    const hoy = new Date();
+    const dia = String(hoy.getDate()).padStart(2, '0');
+    const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+    const fechaCorte = `${dia}/${mes}/${hoy.getFullYear()}`;
+
+    const parametros = {
+      P_ENTDCDGO: this.entidadEncontrada.codigo,
+      P_USUARIO: localStorage.getItem('username') || localStorage.getItem('userName') || '',
+      P_IMAGEN: null,
+      P_FECHA_CORTE: fechaCorte,
+    };
+
+    this.snackBar.open('Generando estado de cuenta...', '', { duration: 2000 });
+
+    this.jasperReportes.generar('crd', 'RPRT_ESCT_APRT', parametros, 'PDF').subscribe({
+      next: (blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `estado-cuenta-aportes-${this.entidadEncontrada?.numeroIdentificacion || this.entidadEncontrada?.codigo}.pdf`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+        this.snackBar.open('✅ Reporte generado exitosamente', 'Cerrar', { duration: 3000 });
+      },
+      error: () => {
+        this.snackBar.open('❌ No se pudo generar el estado de cuenta', 'Cerrar', { duration: 5000 });
       },
     });
   }
@@ -3474,6 +3519,7 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
             case 'fechaVencimiento': return new Date(item.detalle.fechaVencimiento).getTime();
             case 'capital': return item.detalle.capital || 0;
             case 'interes': return item.detalle.interes || 0;
+            case 'interesMora': return item.detalle.mora || 0;
             case 'desgravamen': return item.detalle.desgravamen || 0;
             case 'cuota': return item.detalle.total || 0;
             case 'saldo': return item.detalle.saldo || 0;
@@ -3512,18 +3558,39 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
     }
   }
 
+  /**
+   * Abre el detalle de pagos de la cuota. Si PGPR no tiene ningún pago vigente contra ella no hay
+   * nada que explicar, así que no se abre el diálogo: solo se avisa en un snackbar.
+   */
   abrirDialogPagos(detalleConPagos: DetalleConPagos): void {
+    if (!detalleConPagos.pagos?.length) {
+      this.snackBar.open(
+        `La cuota #${detalleConPagos.detalle.numeroCuota} todavía no registra pagos`,
+        'Cerrar',
+        { duration: 3000 }
+      );
+      return;
+    }
+
     const esPrestamoConSeguro = [2, 3, 4, 5].includes(
       this.prestamoSeleccionado?.producto?.tipoPrestamo?.codigo ?? 0
     );
+    const prestamo = this.prestamoSeleccionado;
+    const tituloPrestamo = prestamo
+      ? `${prestamo.producto?.nombre || 'Préstamo'} #${prestamo.idAsoprep || prestamo.codigo}`
+      : 'Préstamo';
 
     this.dialog.open(PrestamoPagosDialogComponent, {
-      width: '900px',
-      maxHeight: '80vh',
+      width: '920px',
+      maxWidth: '96vw',
+      maxHeight: '88vh',
+      autoFocus: false,
       data: {
         detalle: detalleConPagos.detalle,
         pagos: detalleConPagos.pagos,
         esPrestamoConSeguro,
+        tituloPrestamo,
+        participante: this.entidadEncontrada?.razonSocial ?? undefined,
       },
     });
   }
@@ -3588,20 +3655,21 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
     });
   }
 
-  calcularTotales(codigoPrestamo: number): { capital: number; interes: number; desgravamen: number; pagoExtra: number; cuota: number; seguroIncendio: number } {
+  calcularTotales(codigoPrestamo: number): { capital: number; interes: number; interesMora: number; desgravamen: number; pagoExtra: number; cuota: number; seguroIncendio: number } {
     const dataSource = this.detallesPrestamo.get(codigoPrestamo);
-    if (!dataSource) return { capital: 0, interes: 0, desgravamen: 0, pagoExtra: 0, cuota: 0, seguroIncendio: 0 };
+    if (!dataSource) return { capital: 0, interes: 0, interesMora: 0, desgravamen: 0, pagoExtra: 0, cuota: 0, seguroIncendio: 0 };
 
     return dataSource.data.reduce(
       (acc, dc) => ({
         capital: acc.capital + (dc.detalle.capital || 0),
         interes: acc.interes + (dc.detalle.interes || 0),
+        interesMora: acc.interesMora + (dc.detalle.mora || 0),
         desgravamen: acc.desgravamen + (dc.detalle.desgravamen || 0),
         pagoExtra: acc.pagoExtra + (dc.detalle.saldoOtros || 0),
         cuota: acc.cuota + (dc.detalle.total || 0),
         seguroIncendio: acc.seguroIncendio + (dc.detalle.valorSeguroIncendio || 0),
       }),
-      { capital: 0, interes: 0, desgravamen: 0, pagoExtra: 0, cuota: 0, seguroIncendio: 0 }
+      { capital: 0, interes: 0, interesMora: 0, desgravamen: 0, pagoExtra: 0, cuota: 0, seguroIncendio: 0 }
     );
   }
 

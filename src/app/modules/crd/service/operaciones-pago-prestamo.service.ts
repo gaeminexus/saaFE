@@ -13,6 +13,7 @@ import {
   ResultadoAnulacion,
   ResultadoPagoConAportes,
   ResultadoPagoCuota,
+  ResultadoCalculoMora,
   ResultadoPrecancelacion,
   ResultadoRegistroAporte,
   SaldoAporte,
@@ -189,6 +190,41 @@ export class OperacionesPagoPrestamoService {
     const url = `${ServiciosCrd.RS_PRST}/anularOperacion`;
     return this.http
       .post<RespuestaPago<ResultadoAnulacion>>(url, this.limpiar(req), this.httpOptions)
+      .pipe(catchError((e: HttpErrorResponse) => of(this.normalizarError(e))));
+  }
+
+  // ===================== Cálculo de mora =====================
+
+  /**
+   * Recalcula la mora de las cuotas vencidas.
+   *
+   * Es la vía de recuperación MANUAL: en operación normal lo dispara la corrida automática de las
+   * 02:00, y este endpoint existe para cuando esa corrida falló o el servidor estuvo apagado. Sin
+   * `idPrestamo` procesa todo el sistema; con él, solo ese crédito.
+   *
+   * Además de escribir la mora, la corrida mueve estados: cuotas a EN_MORA (5), préstamos a
+   * PRSTIDST 11, y regulariza a VIGENTE (2) los que se pusieron al día. Por eso, después de
+   * ejecutarla hay que recargar cualquier pantalla que esté mostrando cuotas o saldos.
+   *
+   * @param fecha fecha de corte `yyyy-MM-dd`. Si se omite el backend usa hoy; no acepta futura.
+   * @param usuario quien dispara la recuperación. Si se omite el backend registra `SAA_MORA`.
+   */
+  calcularMora(
+    fecha?: string | null,
+    usuario?: string | null,
+    idPrestamo?: number | null
+  ): Observable<RespuestaPago<ResultadoCalculoMora>> {
+    const url = idPrestamo != null
+      ? `${ServiciosCrd.RS_PRST}/calcularMora/${idPrestamo}`
+      : `${ServiciosCrd.RS_PRST}/calcularMora`;
+
+    let params = new HttpParams();
+    if (fecha) params = params.set('fecha', fecha);
+    if (usuario) params = params.set('usuario', usuario);
+
+    // El proceso no lleva body; los dos parámetros van en la query string.
+    return this.http
+      .post<RespuestaPago<ResultadoCalculoMora>>(url, null, { ...this.httpOptions, params })
       .pipe(catchError((e: HttpErrorResponse) => of(this.normalizarError(e))));
   }
 

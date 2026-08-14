@@ -65,6 +65,10 @@ export class RegistroIngresoComponent implements OnInit {
   // ─── a) Registrar ──────────────────────────────────────
   regCuentaBancaria: CuentaBancaria | null = null;
   regIdGrupo: number | null = null;
+  regGrupo: GrupoProductoCobro | null = null;
+  /** Texto tecleado en el autocompletado; pasa a ser el grupo al elegir opción. */
+  grupoFiltro: string | GrupoProductoCobro = '';
+  gruposFiltrados: GrupoProductoCobro[] = [];
   regIdProducto: number | null = null;
   regTitular = signal<Titular | null>(null);
   regDescripcion = '';
@@ -121,8 +125,14 @@ export class RegistroIngresoComponent implements OnInit {
     });
 
     this.grupoProductoS.getAll().subscribe({
-      next: (data) => this.gruposProducto.set((data ?? []).filter((g) => g.estado === 1)),
-      error: () => this.gruposProducto.set([]),
+      next: (data) => {
+        this.gruposProducto.set((data ?? []).filter((g) => g.estado === 1));
+        this.gruposFiltrados = this.gruposProducto();
+      },
+      error: () => {
+        this.gruposProducto.set([]);
+        this.gruposFiltrados = [];
+      },
     });
 
     this.productoS.getAll().subscribe({
@@ -143,6 +153,49 @@ export class RegistroIngresoComponent implements OnInit {
   onCambioGrupo(): void {
     this.regIdProducto = null;
   }
+
+  /** Busca el grupo por nombre o por la cuenta contable (número o nombre). */
+  filtrarGrupos(): void {
+    // Mientras se teclea no hay grupo elegido: obliga a seleccionar una opción.
+    if (this.regIdGrupo != null) {
+      this.regGrupo = null;
+      this.regIdGrupo = null;
+      this.onCambioGrupo();
+    }
+
+    const q = (typeof this.grupoFiltro === 'string' ? this.grupoFiltro : '').trim().toLowerCase();
+    const grupos = this.gruposProducto();
+    this.gruposFiltrados = q
+      ? grupos.filter(
+          (g) =>
+            g.nombre?.toLowerCase().includes(q) ||
+            g.planCuenta?.cuentaContable?.toLowerCase().includes(q) ||
+            g.planCuenta?.nombre?.toLowerCase().includes(q)
+        )
+      : grupos;
+  }
+
+  onGrupoSeleccionado(grupo: GrupoProductoCobro): void {
+    this.regGrupo = grupo;
+    this.regIdGrupo = grupo.codigo;
+    this.grupoFiltro = grupo;
+    this.onCambioGrupo();
+  }
+
+  quitarGrupo(): void {
+    this.regGrupo = null;
+    this.regIdGrupo = null;
+    this.grupoFiltro = '';
+    this.gruposFiltrados = this.gruposProducto();
+    this.onCambioGrupo();
+  }
+
+  /** En el campo queda la cuenta contable del grupo, que es lo que se contabiliza. */
+  displayGrupo = (g: GrupoProductoCobro | string): string => {
+    if (!g) return '';
+    if (typeof g === 'string') return g;
+    return g.planCuenta?.cuentaContable ?? g.nombre ?? '';
+  };
 
   /** El titular es opcional: solo deja constancia de quién originó el dinero. */
   buscarTitular(): void {

@@ -21,6 +21,7 @@ import { HistorialOperacionesDialogComponent } from '../../dialog/pagos/historia
 import { PagoPrestamoDialogComponent } from '../../dialog/pagos/pago-prestamo-dialog.component';
 import { PrecancelacionDialogComponent } from '../../dialog/pagos/precancelacion-dialog.component';
 import { ReciboOperacionDialogComponent } from '../../dialog/pagos/recibo-operacion-dialog.component';
+import { MetodoCobro } from '../../dialog/pagos/respaldo-cobro.component';
 import { DetallePrestamo } from '../../model/detalle-prestamo';
 import { Entidad } from '../../model/entidad';
 import { HistoricoDesgloseAporteParticipe } from '../../model/historico-desglose-aporte-participe';
@@ -40,6 +41,7 @@ import { MovimientoAporte, RespuestaPago, mensajeDeRespuesta } from '../../model
 import { Prestamo } from '../../model/prestamo';
 import { DetallePrestamoService } from '../../service/detalle-prestamo.service';
 import { EntidadService } from '../../service/entidad.service';
+import { ComprobanteCobroService } from '../../service/comprobante-cobro.service';
 import { HistoricoDesgloseAporteParticipeService } from '../../service/historico-desglose-aporte-participe.service';
 import { OperacionesPagoPrestamoService } from '../../service/operaciones-pago-prestamo.service';
 import { PrestamoService } from '../../service/prestamo.service';
@@ -125,6 +127,7 @@ export class CobrosPersonalesComponent implements OnDestroy {
   private cuentaBancariaService = inject(CuentaBancariaService);
   private operaciones = inject(OperacionesPagoPrestamoService);
   private funcionesDatos = inject(FuncionesDatosService);
+  private comprobantes = inject(ComprobanteCobroService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
 
@@ -295,9 +298,14 @@ export class CobrosPersonalesComponent implements OnDestroy {
   metodoPago = signal<MetodoPago>('transferencia');
   cuentaOrigenAporte = signal<'cesantia' | 'jubilacion'>('cesantia');
   cuentaAsopropDestino = signal<CuentaBancaria | null>(null);
-  numeroReferencia = '';
+  /**
+   * Referencia y fecha son signals —y no campos planos como la observación— porque `puedeConfirmar`
+   * es un `computed` que los evalúa: con un campo plano el cálculo no se volvería a ejecutar al
+   * teclearlos y el botón de confirmar quedaría deshabilitado con todo ya lleno.
+   */
+  numeroReferencia = signal('');
+  fechaPago = signal<Date | null>(new Date());
   observacion = '';
-  fechaPago = new Date();
   archivoComprobante = signal<File | null>(null);
   readonly hoy = new Date();
 
@@ -316,8 +324,35 @@ export class CobrosPersonalesComponent implements OnDestroy {
 
   prestamoAdmiteOperaciones = computed(() => admiteOperaciones(this.prestamoVigente()?.idEstado));
 
-  /** ¿El cobro incluye una parte que va contra el préstamo? */
-  cobraPrestamo = computed(() => this.cuentaChecked.prestamo && this.montoPrestamo() > 0.004);
+  /**
+   * Transferencia y depósito son dinero que entró por fuera del sistema: exigen la cuenta de ASOPREP
+   * en la que se recibió y el comprobante que presentó el socio. El débito, en cambio, sale del saldo
+   * de aportes que el propio sistema lleva, así que no tiene ningún respaldo externo que adjuntar.
+   */
+  requiereComprobante = computed(() => this.metodoPago() !== 'debito');
+
+  /** La fecha del pago es parte del registro del cobro: tiene que estar y no puede ser futura. */
+  fechaValida = computed(() => {
+    const fecha = this.fechaPago();
+    if (!fecha || isNaN(fecha.getTime())) return false;
+    const limite = new Date(this.hoy);
+    limite.setHours(23, 59, 59, 999);
+    return fecha.getTime() <= limite.getTime();
+  });
+
+  /**
+   * ¿El cobro incluye una parte que va contra el préstamo?
+   *
+   * La lectura de `cuentaMontoVersion()` va primero y suelta: `cuentaChecked` es un objeto plano, y
+   * si se dejara que el `&&` cortara antes de llegar a `montoPrestamo()`, con el préstamo desmarcado
+   * este `computed` quedaría sin ninguna dependencia registrada —y un `computed` sin productores no
+   * se vuelve a evaluar nunca, así que se congelaba en `false` y el botón de confirmar no se
+   * habilitaba aunque después se marcara el préstamo y se le asignara el monto completo.
+   */
+  cobraPrestamo = computed(() => {
+    this.cuentaMontoVersion();
+    return this.cuentaChecked.prestamo && this.montoPrestamo() > 0.004;
+  });
 
   /**
    * Qué falta para poder confirmar. Es la lista que se muestra junto al botón: un botón de cobro
@@ -349,6 +384,25 @@ export class CobrosPersonalesComponent implements OnDestroy {
     if (this.saldoDebitoInsuficiente()) {
       motivos.push('El monto destinado al préstamo supera el saldo disponible en la cuenta de aportes de origen.');
     }
+
+    if (!this.fechaValida()) {
+      motivos.push('Indique la fecha del pago: no puede quedar vacía ni ser posterior a hoy.');
+    }
+
+    if (this.requiereComprobante()) {
+      if (!this.cuentaAsopropDestino()) {
+        motivos.push('Seleccione la cuenta de ASOPREP a la que ingresó el dinero.');
+      }
+      if (!this.numeroReferencia().trim()) {
+        motivos.push('Ingrese el número de referencia de la transferencia o depósito.');
+      }
+      if (!this.archivoComprobante()) {
+        motivos.push('Adjunte el comprobante de respaldo (PDF o imagen).');
+      }
+    } else if (!this.cuentaOrigenAporte()) {
+      motivos.push('Seleccione la cuenta de aportes de la que se debita el pago.');
+    }
+
     return motivos;
   });
 
@@ -450,9 +504,9 @@ export class CobrosPersonalesComponent implements OnDestroy {
     this.historico.set(null);
     this.resetAsignacion();
     this.montoTotalTexto.set('$0.00');
-    this.numeroReferencia = '';
+    this.numeroReferencia.set('');
     this.observacion = '';
-    this.fechaPago = new Date();
+    this.fechaPago.set(new Date());
     this.archivoComprobante.set(null);
   }
 
@@ -923,24 +977,41 @@ export class CobrosPersonalesComponent implements OnDestroy {
 
   // ================= archivo comprobante =================
 
+  /** Valor del `accept` del input de comprobante. */
+  readonly extensionesComprobante = this.comprobantes.extensionesAceptadas;
+
+  /**
+   * El `accept` del input es solo un filtro sugerido en el diálogo del sistema —el usuario puede
+   * cambiarlo a «todos los archivos»—, así que el archivo se vuelve a verificar acá. Se rechaza al
+   * seleccionarlo y no al confirmar: para entonces el cobro ya está registrado y el comprobante
+   * quedaría sin subir.
+   */
   onArchivoSeleccionado(event: Event): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0] ?? null;
+
+    if (file) {
+      const problema = this.comprobantes.problemaDelArchivo(file);
+      if (problema) {
+        input.value = '';
+        this.snackBar.open(problema, 'Cerrar', { duration: 5000 });
+        return;
+      }
+    }
+
     this.archivoComprobante.set(file);
   }
 
   // ================= confirmar pago =================
 
   /**
-   * Registra el cobro completo: la parte que va al préstamo y la que el socio aporta a sus propias
-   * cuentas. Son transacciones distintas del backend, así que se encadenan en ese orden.
+   * Confirma el cobro. Son dos etapas encadenadas:
    *
-   * - Préstamo: `pagarCuota` (efectivo, transferencia o depósito) o `pagarConAportes` (débito del
-   *   saldo de aportes); ambos aplican la misma cascada y prelación del lado del servidor.
-   * - Aportes del socio: un `registrarAporte` por tipo (cesantía, jubilación).
-   *
-   * Si el pago del préstamo falla no se registra ningún aporte: el usuario corrige el monto y
-   * reintenta el cobro entero sin haber dejado movimientos sueltos a medio camino.
+   * 1. **Archivar el comprobante.** `rutaDocumentoRespaldo` viaja dentro del request del pago, así
+   *    que el archivo tiene que estar en el servidor antes de llamar al endpoint. Si no se puede
+   *    subir se aborta acá, sin haber tocado plata: es preferible a dejar el pago registrado y sin
+   *    respaldo, que es exactamente lo que la ruta en `PGPRRTRS`/`PGAPRTRS` viene a evitar.
+   * 2. **Registrar el cobro**, con esa ruta estampada en cada pago que se genere.
    */
   confirmarPago(): void {
     if (!this.puedeConfirmar()) return;
@@ -958,26 +1029,50 @@ export class CobrosPersonalesComponent implements OnDestroy {
       return;
     }
 
-    const usuario = usuarioSesion();
-    const fecha = this.operaciones.formatearFecha(this.fechaPago);
-    const observacion = this.armarObservacion();
+    const prestamo = this.cobraPrestamo() ? this.prestamoVigente() : null;
+    if (this.cobraPrestamo() && !prestamo) return;
 
     this.registrando.set(true);
+    this.subirComprobante(prestamo?.codigo ?? null, entidad.codigo, (ruta, exito) => {
+      if (!exito) {
+        this.registrando.set(false);
+        return;
+      }
+      this.registrarCobro(entidad, prestamo, aportes, ruta);
+    });
+  }
+
+  /**
+   * Registra el cobro completo con el comprobante ya archivado: la parte que va al préstamo y la
+   * que el socio aporta a sus propias cuentas. Son transacciones distintas del backend, así que se
+   * encadenan en ese orden.
+   *
+   * - Préstamo: `pagarCuota` (efectivo, transferencia o depósito) o `pagarConAportes` (débito del
+   *   saldo de aportes); ambos aplican la misma cascada y prelación del lado del servidor.
+   * - Aportes del socio: un `registrarAporte` por tipo (cesantía, jubilación).
+   *
+   * Si el pago del préstamo falla no se registra ningún aporte: el usuario corrige el monto y
+   * reintenta el cobro entero sin haber dejado movimientos sueltos a medio camino.
+   */
+  private registrarCobro(
+    entidad: Entidad,
+    prestamo: Prestamo | null,
+    aportes: { clave: 'cesantia' | 'jubilacion'; idTipoAporte: number; valor: number }[],
+    rutaDocumentoRespaldo: string | null
+  ): void {
+    const usuario = usuarioSesion();
+    const fecha = this.operaciones.formatearFecha(this.fechaPago());
+    const observacion = this.armarObservacion();
 
     // Cobro solo de aportes: no hay préstamo de por medio.
-    if (!this.cobraPrestamo()) {
-      this.registrarAportesDelSocio(entidad.codigo, aportes, usuario, observacion, fecha, (registrados) => {
+    if (!prestamo) {
+      this.registrarAportesDelSocio(entidad.codigo, aportes, usuario, observacion, fecha, rutaDocumentoRespaldo, (registrados) => {
         this.registrando.set(false);
-        this.mostrarRecibo('REGISTRO_APORTE', undefined, fecha, undefined, [], registrados);
+        this.mostrarRecibo('REGISTRO_APORTE', undefined, fecha, undefined, [], registrados, rutaDocumentoRespaldo);
       });
       return;
     }
 
-    const prestamo = this.prestamoVigente();
-    if (!prestamo) {
-      this.registrando.set(false);
-      return;
-    }
     const monto = +this.montoPrestamo().toFixed(2);
 
     const alPagar = (
@@ -990,13 +1085,16 @@ export class CobrosPersonalesComponent implements OnDestroy {
         if (resp.error === 'SALDO_APORTES_INSUFICIENTE' || resp.error === 'TIPO_APORTE_NO_VIGENTE') {
           this.cargarSaldosAporte(entidad.codigo);
         }
+        // El comprobante ya subido queda huérfano: no lo referencia ningún pago, así que se borra
+        // para no dejar basura acumulándose en la carpeta del préstamo con cada reintento.
+        this.descartarComprobanteHuerfano(rutaDocumentoRespaldo);
         return;
       }
       const pago = resp.resultado;
       const movimientos = resp.movimientosAporte ?? [];
-      this.registrarAportesDelSocio(entidad.codigo, aportes, usuario, observacion, fecha, (registrados) => {
+      this.registrarAportesDelSocio(entidad.codigo, aportes, usuario, observacion, fecha, rutaDocumentoRespaldo, (registrados) => {
         this.registrando.set(false);
-        this.mostrarRecibo(tipo, resp.mensaje, fecha, pago, movimientos, registrados);
+        this.mostrarRecibo(tipo, resp.mensaje, fecha, pago, movimientos, registrados, rutaDocumentoRespaldo);
       });
     };
 
@@ -1011,14 +1109,67 @@ export class CobrosPersonalesComponent implements OnDestroy {
       }
 
       this.operaciones
-        .pagarConAportes({ idPrestamo: prestamo.codigo, usuario, observacion, fechaPago: fecha, aportes: [{ idTipoAporte, valor: monto }] })
+        .pagarConAportes({
+          idPrestamo: prestamo.codigo,
+          usuario,
+          observacion,
+          fechaPago: fecha,
+          rutaDocumentoRespaldo,
+          aportes: [{ idTipoAporte, valor: monto }],
+        })
         .subscribe((resp) => alPagar('PAGO_APORTES', resp));
       return;
     }
 
     this.operaciones
-      .pagarCuota({ idPrestamo: prestamo.codigo, valor: monto, usuario, observacion, fechaPago: fecha })
+      .pagarCuota({ idPrestamo: prestamo.codigo, valor: monto, usuario, observacion, fechaPago: fecha, rutaDocumentoRespaldo })
       .subscribe((resp) => alPagar('PAGO_MANUAL', resp));
+  }
+
+  /**
+   * Archiva el comprobante en el servidor y llama a `continuar(ruta, exito)`.
+   *
+   * `exito` es `false` solo si había un archivo que subir y la subida falló; con `true` la ruta
+   * puede venir en `null` porque el método de pago no exige comprobante (débito de aportes).
+   *
+   * El vínculo con la operación queda en el otro sentido: el `PagoPrestamo`/`PagoAporte` guarda
+   * esta ruta en `PGPRRTRS`/`PGAPRTRS`.
+   *
+   * @param idPrestamo `null` en un cobro que es solo de aportes: ahí no hay carpeta de préstamo.
+   */
+  private subirComprobante(
+    idPrestamo: number | null,
+    idEntidad: number,
+    continuar: (ruta: string | null, exito: boolean) => void
+  ): void {
+    const archivo = this.archivoComprobante();
+    if (!archivo || !this.requiereComprobante()) {
+      continuar(null, true);
+      return;
+    }
+
+    const carpeta =
+      idPrestamo != null
+        ? this.comprobantes.carpetaDePrestamo(idPrestamo)
+        : this.comprobantes.carpetaDeAportes(idEntidad);
+    const nombreBase = idPrestamo != null ? `${idPrestamo}` : `ENTD-${idEntidad}`;
+
+    this.comprobantes.archivar(archivo, carpeta, nombreBase).subscribe((resultado) => {
+      if (resultado.error || !resultado.ruta) {
+        this.snackBar.open(this.comprobantes.mensajeDeFallo(resultado.error ?? ''), 'Cerrar', { duration: 10000 });
+        continuar(null, false);
+        return;
+      }
+      continuar(resultado.ruta, true);
+    });
+  }
+
+  /**
+   * Borra un comprobante que quedó subido pero cuyo pago no llegó a registrarse. Es limpieza: si
+   * falla no hay nada que avisarle al usuario, que ya tiene el error del pago en pantalla.
+   */
+  private descartarComprobanteHuerfano(ruta: string | null): void {
+    this.comprobantes.descartar(ruta);
   }
 
   /**
@@ -1054,6 +1205,7 @@ export class CobrosPersonalesComponent implements OnDestroy {
     usuario: string,
     observacion: string | null,
     fecha: string | null,
+    rutaDocumentoRespaldo: string | null,
     continuar: (registrados: ResultadoRegistroAporte[]) => void
   ): void {
     if (!renglones.length) {
@@ -1069,6 +1221,8 @@ export class CobrosPersonalesComponent implements OnDestroy {
         usuario,
         observacion,
         fechaTransaccion: fecha,
+        // El mismo comprobante respalda todos los renglones: es un solo recibo del socio.
+        rutaDocumentoRespaldo,
       })
     );
 
@@ -1096,7 +1250,7 @@ export class CobrosPersonalesComponent implements OnDestroy {
     if (this.observacion.trim()) partes.push(this.observacion.trim());
     if (this.metodoPago() === 'transferencia') partes.push('Transferencia bancaria');
     if (this.metodoPago() === 'deposito') partes.push('Depósito directo');
-    if (this.numeroReferencia.trim()) partes.push(`Ref. ${this.numeroReferencia.trim()}`);
+    if (this.numeroReferencia().trim()) partes.push(`Ref. ${this.numeroReferencia().trim()}`);
     const cuenta = this.cuentaAsopropDestino();
     if (cuenta && this.metodoPago() !== 'debito') {
       partes.push(`Cta. ${cuenta.banco?.nombre ?? ''} ${cuenta.numeroCuenta ?? ''}`.trim());
@@ -1111,14 +1265,18 @@ export class CobrosPersonalesComponent implements OnDestroy {
     fecha: string | null,
     resultado: ResultadoPagoCuota | undefined,
     movimientosAporte: MovimientoAporte[],
-    aportesRegistrados: ResultadoRegistroAporte[]
+    aportesRegistrados: ResultadoRegistroAporte[],
+    rutaComprobante: string | null
   ): void {
     const nombres: Record<number, string> = {};
     for (const a of this.saldosAporte()) nombres[a.idTipoAporte] = a.nombre;
 
     const extras: { label: string; valor: string }[] = [];
-    if (this.archivoComprobante()) {
-      extras.push({ label: 'Comprobante adjunto', valor: this.archivoComprobante()!.name });
+    if (rutaComprobante) {
+      // El cobro no llega hasta acá sin el comprobante archivado, así que la ruta es la definitiva:
+      // la misma que quedó guardada en PGPRRTRS/PGAPRTRS.
+      extras.push({ label: 'Comprobante adjunto', valor: this.archivoComprobante()?.name ?? '—' });
+      extras.push({ label: 'Archivado en', valor: rutaComprobante });
     }
 
     this.dialog.open(ReciboOperacionDialogComponent, {
@@ -1142,7 +1300,7 @@ export class CobrosPersonalesComponent implements OnDestroy {
     this.recargarPrestamo();
     this.resetAsignacion();
     this.montoTotalTexto.set('$0.00');
-    this.numeroReferencia = '';
+    this.numeroReferencia.set('');
     this.observacion = '';
     this.archivoComprobante.set(null);
   }
@@ -1177,6 +1335,21 @@ export class CobrosPersonalesComponent implements OnDestroy {
       saldoCapital: this.saldoCapitalPrestamo(),
       valorCuota: this.valorCuotaPrestamo(),
       pendientesAcumulados: this.pendientesAcumulados(),
+      respaldoSugerido: this.respaldoSugerido(),
+    };
+  }
+
+  /**
+   * Banco, referencia y comprobante que ya se cargaron en la pantalla, para que los diálogos los
+   * precarguen. En débito de aportes no hay nada que sugerir: el dinero no entró de fuera.
+   */
+  private respaldoSugerido() {
+    if (this.metodoPago() === 'debito') return null;
+    return {
+      metodo: this.metodoPago() as MetodoCobro,
+      cuenta: this.cuentaAsopropDestino(),
+      referencia: this.numeroReferencia(),
+      archivo: this.archivoComprobante(),
     };
   }
 

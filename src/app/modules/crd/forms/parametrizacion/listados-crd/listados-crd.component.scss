@@ -20,6 +20,20 @@
       gap: 1.5rem;
       margin-bottom: 1.5rem;
 
+      // Acciones del encabezado: se van al extremo opuesto del título.
+      .btn-procesos {
+        margin-left: auto;
+        flex-shrink: 0;
+        color: #fff;
+        border-color: rgba(255, 255, 255, 0.6);
+        background: rgba(255, 255, 255, 0.12);
+        backdrop-filter: blur(10px);
+
+        &:hover {
+          background: rgba(255, 255, 255, 0.22);
+        }
+      }
+
       .header-icon {
         background: rgba(255, 255, 255, 0.2);
         border-radius: 16px;

@@ -258,6 +258,15 @@
       <mat-card-header>
         <mat-icon mat-card-avatar class="card-icon">savings</mat-icon>
         <mat-card-title>Total Aportes</mat-card-title>
+        <button
+          mat-icon-button
+          class="estado-cuenta-button"
+          (click)="imprimirEstadoCuentaAportes($event)"
+          matTooltip="Estado de cuenta de aportes (PDF)"
+          color="primary"
+        >
+          <mat-icon>picture_as_pdf</mat-icon>
+        </button>
       </mat-card-header>
       <mat-card-content>
         <div class="stat-grid-aportes">
@@ -627,6 +636,17 @@
             </td>
             <td mat-footer-cell *matFooterCellDef class="footer-total" style="text-align: right">
               ${{ calcularTotales(prestamoSeleccionado.codigo).interes | number : '1.2-2' }}
+            </td>
+          </ng-container>
+
+          <!-- Columna Interés Mora — devengado (DTPRMRAA), lo escribe el proceso de mora -->
+          <ng-container matColumnDef="interesMora">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header style="text-align: right">Interés Mora</th>
+            <td mat-cell *matCellDef="let detalle" style="text-align: right">
+              ${{ (detalle.detalle.mora || 0) | number : '1.2-2' }}
+            </td>
+            <td mat-footer-cell *matFooterCellDef class="footer-total" style="text-align: right">
+              ${{ calcularTotales(prestamoSeleccionado.codigo).interesMora | number : '1.2-2' }}
             </td>
           </ng-container>
 

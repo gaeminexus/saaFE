@@ -43,12 +43,41 @@
           <div class="fila-campos">
             <mat-form-field appearance="outline">
               <mat-label>Grupo de producto (CXC)</mat-label>
-              <mat-select [(ngModel)]="regIdGrupo" name="regIdGrupo" (selectionChange)="onCambioGrupo()">
-                @for (g of gruposProducto(); track g.codigo) {
-                  <mat-option [value]="g.codigo">{{ g.nombre }}</mat-option>
+              <input matInput
+                     [(ngModel)]="grupoFiltro"
+                     name="grupoFiltro"
+                     [matAutocomplete]="autoGrupo"
+                     (ngModelChange)="filtrarGrupos()"
+                     placeholder="Busque por nombre o número de cuenta"
+                     autocomplete="off" />
+              @if (regGrupo) {
+                <button mat-icon-button matSuffix type="button" matTooltip="Quitar grupo" (click)="quitarGrupo()">
+                  <mat-icon>close</mat-icon>
+                </button>
+              }
+              <mat-autocomplete #autoGrupo="matAutocomplete"
+                                [displayWith]="displayGrupo"
+                                (optionSelected)="onGrupoSeleccionado($event.option.value)">
+                @for (g of gruposFiltrados; track g.codigo) {
+                  <mat-option [value]="g">
+                    <div style="display:flex;flex-direction:column;line-height:1.3;padding:4px 0">
+                      <span style="font-weight:600">{{ g.nombre }}</span>
+                      @if (g.planCuenta) {
+                        <span style="font-size:.78rem;color:#666">
+                          {{ g.planCuenta.cuentaContable }} — {{ g.planCuenta.nombre }}
+                        </span>
+                      } @else {
+                        <span style="font-size:.78rem;color:#aaa">Sin cuenta contable</span>
+                      }
+                    </div>
+                  </mat-option>
                 }
-              </mat-select>
-              <mat-hint>Define la cuenta contable del ingreso</mat-hint>
+              </mat-autocomplete>
+              @if (regGrupo) {
+                <mat-hint>{{ regGrupo.nombre }}{{ regGrupo.planCuenta ? ' · ' + regGrupo.planCuenta.nombre : '' }}</mat-hint>
+              } @else {
+                <mat-hint>Define la cuenta contable del ingreso</mat-hint>
+              }
             </mat-form-field>
 
             <mat-form-field appearance="outline">

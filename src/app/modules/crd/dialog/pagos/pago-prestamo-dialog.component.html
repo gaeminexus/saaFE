@@ -46,8 +46,8 @@
     <button type="button" class="pgp-modo" [class.activo]="modo() === 'efectivo'" (click)="cambiarModo('efectivo')">
       <mat-icon>payments</mat-icon>
       <div>
-        <div class="pgp-modo-titulo">Efectivo o transferencia</div>
-        <div class="pgp-modo-desc">El socio entrega el dinero en ventanilla.</div>
+        <div class="pgp-modo-titulo">Transferencia o depósito</div>
+        <div class="pgp-modo-desc">El socio entrega el dinero y presenta el comprobante.</div>
       </div>
     </button>
     <button type="button" class="pgp-modo" [class.activo]="modo() === 'aportes'" (click)="cambiarModo('aportes')">
@@ -151,6 +151,18 @@
         </span>
       </div>
     }
+  }
+
+  <!-- Fuera de los bloques de modo a propósito: cambiar de fuente no debe perder el comprobante
+       que el cajero ya adjuntó. -->
+  <app-respaldo-cobro [requerido]="requiereRespaldo()" [monto]="montoAPagar()"
+                      [inicial]="data.respaldoSugerido ?? null"></app-respaldo-cobro>
+
+  @if (!fechaValida()) {
+    <div class="pg-aviso alerta">
+      <mat-icon>event_busy</mat-icon>
+      <span>Indique la fecha del pago. No puede quedar vacía ni ser posterior a hoy.</span>
+    </div>
   }
 
   <mat-form-field appearance="outline" class="pgp-observacion">

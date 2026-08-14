@@ -40,7 +40,7 @@ export class PrestamoDetalleDialogComponent implements OnInit {
   loading = true;
   error = '';
 
-  displayedColumns = ['numeroCuota', 'fechaVencimiento', 'capital', 'interes', 'cuota', 'saldo', 'estado'];
+  displayedColumns = ['numeroCuota', 'fechaVencimiento', 'capital', 'interes', 'interesMora', 'cuota', 'saldo', 'estado'];
 
   constructor(
     public dialogRef: MatDialogRef<PrestamoDetalleDialogComponent>,

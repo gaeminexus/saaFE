@@ -1,16 +1,18 @@
 import { CommonModule } from '@angular/common';
-import { Component, Inject, computed, inject, signal } from '@angular/core';
+import { Component, Inject, computed, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
 import { usuarioSesion } from '../../../../shared/services/usuario-sesion';
 import { TOLERANCIA_MONTO } from '../../model/pagos/catalogos-pago';
-import { SaldoAporte } from '../../model/pagos/operaciones-pago';
-import { DesgloseAporte, mensajeDeRespuesta } from '../../model/pagos/respuesta-pago';
+import { ResultadoPagoCuota, SaldoAporte } from '../../model/pagos/operaciones-pago';
+import { DesgloseAporte, MovimientoAporte, mensajeDeRespuesta } from '../../model/pagos/respuesta-pago';
+import { ComprobanteCobroService } from '../../service/comprobante-cobro.service';
 import { OperacionesPagoPrestamoService } from '../../service/operaciones-pago-prestamo.service';
 import { ContextoPrestamo, SalidaDialogoPago } from './contexto-prestamo';
 import { ReciboOperacionDialogComponent } from './recibo-operacion-dialog.component';
+import { RespaldoCobroComponent } from './respaldo-cobro.component';
 
 export type ModoPago = 'efectivo' | 'aportes';
 
@@ -33,17 +35,25 @@ interface RenglonAporte {
  * pantalla y solo cambia de dónde sale el dinero. El pago mixto de cuotas normales NO es atómico:
  * la guía indica resolverlo con dos llamadas consecutivas, por eso acá se elige una u otra fuente
  * y el aviso lo explica.
+ *
+ * Cuando el dinero entra por fuera del sistema (efectivo/transferencia) el bloque de respaldo es
+ * obligatorio: banco receptor, referencia y comprobante digitalizado, cuya ruta se estampa en el
+ * pago. En el pago con saldo de aportes no hay nada externo que respaldar y el bloque no aplica.
  */
 @Component({
   selector: 'app-pago-prestamo-dialog',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatDialogModule, MaterialFormModule],
+  imports: [CommonModule, FormsModule, MatDialogModule, MaterialFormModule, RespaldoCobroComponent],
   templateUrl: './pago-prestamo-dialog.component.html',
   styleUrl: './pago-prestamo-dialog.component.scss',
 })
 export class PagoPrestamoDialogComponent {
   private servicio = inject(OperacionesPagoPrestamoService);
+  private comprobantes = inject(ComprobanteCobroService);
   private dialog = inject(MatDialog);
+
+  /** Bloque de respaldo. Se renderiza siempre, así que cambiar de modo no pierde lo ya cargado. */
+  respaldo = viewChild(RespaldoCobroComponent);
 
   readonly hoy = new Date();
 
@@ -84,11 +94,27 @@ export class PagoPrestamoDialogComponent {
     return saldo > 0 && this.montoAPagar() > saldo + TOLERANCIA_MONTO;
   });
 
+  /** El dinero entra por fuera del sistema: hay que registrar banco, referencia y comprobante. */
+  requiereRespaldo = computed(() => this.modo() === 'efectivo');
+
+  respaldoListo = computed(() => !this.requiereRespaldo() || (this.respaldo()?.completo() ?? false));
+
+  /** La fecha del pago es parte del registro del cobro: tiene que estar y no puede ser futura. */
+  fechaValida = computed(() => {
+    const fecha = this.fechaPago();
+    if (!fecha || isNaN(fecha.getTime())) return false;
+    const limite = new Date(this.hoy);
+    limite.setHours(23, 59, 59, 999);
+    return fecha.getTime() <= limite.getTime();
+  });
+
   puedeConfirmar = computed(
     () =>
       this.montoAPagar() > 0.004 &&
       !this.registrando() &&
-      !(this.modo() === 'aportes' && this.hayExcesoEnAlgunAporte())
+      !(this.modo() === 'aportes' && this.hayExcesoEnAlgunAporte()) &&
+      this.fechaValida() &&
+      this.respaldoListo()
   );
 
   /**
@@ -193,41 +219,99 @@ export class PagoPrestamoDialogComponent {
 
   // ================= confirmar =================
 
+  /**
+   * Registra el pago. En efectivo/transferencia son dos etapas: primero se archiva el comprobante
+   * —su ruta viaja DENTRO del request— y recién con el archivo en el servidor se llama al endpoint.
+   * Si la subida falla se aborta sin haber tocado plata, que es preferible a dejar el pago
+   * registrado y sin respaldo.
+   */
   confirmar(): void {
     if (!this.puedeConfirmar()) return;
     this.limpiarError();
     this.registrando.set(true);
 
-    const fechaPago = this.servicio.formatearFecha(this.fechaPago());
-    const usuario = usuarioSesion();
-    const observacion = this.observacion.trim() || null;
-
     if (this.modo() === 'efectivo') {
-      // Se redondea acá y no en el blur: confirmar con Enter no dispara el blur del campo.
-      const valor = +this.valorEfectivo().toFixed(2);
-      this.servicio
-        .pagarCuota({ idPrestamo: this.data.idPrestamo, valor, usuario, observacion, fechaPago })
-        .subscribe((resp) => {
+      this.archivarComprobante((ruta, exito) => {
+        if (!exito) {
           this.registrando.set(false);
-          if (resp.exito && resp.resultado) {
-            this.mostrarRecibo('PAGO_MANUAL', resp.mensaje, fechaPago, resp.resultado, []);
-          } else {
-            this.manejarError(resp.error, mensajeDeRespuesta(resp));
-          }
-        });
+          return;
+        }
+        this.enviarPagoEfectivo(ruta);
+      });
       return;
     }
 
+    this.enviarPagoConAportes();
+  }
+
+  private archivarComprobante(continuar: (ruta: string | null, exito: boolean) => void): void {
+    const archivo = this.requiereRespaldo() ? this.respaldo()?.datos().archivo ?? null : null;
+    if (!archivo) {
+      continuar(null, true);
+      return;
+    }
+
+    this.comprobantes
+      .archivar(
+        archivo,
+        this.comprobantes.carpetaDePrestamo(this.data.idPrestamo),
+        String(this.data.idPrestamo)
+      )
+      .subscribe((resultado) => {
+        if (resultado.error || !resultado.ruta) {
+          this.manejarError('COMPROBANTE_NO_ARCHIVADO', this.comprobantes.mensajeDeFallo(resultado.error ?? ''));
+          continuar(null, false);
+          return;
+        }
+        continuar(resultado.ruta, true);
+      });
+  }
+
+  private enviarPagoEfectivo(rutaDocumentoRespaldo: string | null): void {
+    const fechaPago = this.servicio.formatearFecha(this.fechaPago());
+    // Se redondea acá y no en el blur: confirmar con Enter no dispara el blur del campo.
+    const valor = +this.valorEfectivo().toFixed(2);
+
+    this.servicio
+      .pagarCuota({
+        idPrestamo: this.data.idPrestamo,
+        valor,
+        usuario: usuarioSesion(),
+        observacion: this.armarObservacion(),
+        fechaPago,
+        rutaDocumentoRespaldo,
+      })
+      .subscribe((resp) => {
+        this.registrando.set(false);
+        if (resp.exito && resp.resultado) {
+          this.mostrarRecibo('PAGO_MANUAL', resp.mensaje, fechaPago, resp.resultado, [], rutaDocumentoRespaldo);
+        } else {
+          this.manejarError(resp.error, mensajeDeRespuesta(resp));
+          // El comprobante ya subido queda huérfano: no lo referencia ningún pago, así que se borra
+          // para no dejar basura acumulándose en la carpeta del préstamo con cada reintento.
+          this.comprobantes.descartar(rutaDocumentoRespaldo);
+        }
+      });
+  }
+
+  private enviarPagoConAportes(): void {
+    const fechaPago = this.servicio.formatearFecha(this.fechaPago());
     const aportes: DesgloseAporte[] = this.renglones
       .filter((r) => this.parseMoneda(r.texto) > 0.004)
       .map((r) => ({ idTipoAporte: r.idTipoAporte, valor: +this.parseMoneda(r.texto).toFixed(2) }));
 
     this.servicio
-      .pagarConAportes({ idPrestamo: this.data.idPrestamo, usuario, observacion, fechaPago, aportes })
+      .pagarConAportes({
+        idPrestamo: this.data.idPrestamo,
+        usuario: usuarioSesion(),
+        observacion: this.observacion.trim() || null,
+        fechaPago,
+        aportes,
+      })
       .subscribe((resp) => {
         this.registrando.set(false);
         if (resp.exito && resp.resultado) {
-          this.mostrarRecibo('PAGO_APORTES', resp.mensaje, fechaPago, resp.resultado, resp.movimientosAporte ?? []);
+          this.mostrarRecibo('PAGO_APORTES', resp.mensaje, fechaPago, resp.resultado, resp.movimientosAporte ?? [], null);
         } else {
           this.manejarError(resp.error, mensajeDeRespuesta(resp));
           if (resp.error === 'SALDO_APORTES_INSUFICIENTE' || resp.error === 'TIPO_APORTE_NO_VIGENTE') {
@@ -237,15 +321,40 @@ export class PagoPrestamoDialogComponent {
       });
   }
 
+  /**
+   * El backend guarda una sola observación por pago: el método, la referencia y la cuenta receptora
+   * se anexan a la que escribió el usuario porque son el dato con el que después se concilia el
+   * movimiento contra el extracto bancario. `PGPROBSR` admite 200 caracteres.
+   */
+  private armarObservacion(): string | null {
+    const partes: string[] = [];
+    const propia = this.observacion.trim();
+    if (propia) partes.push(propia);
+    if (this.requiereRespaldo()) {
+      const resumen = this.respaldo()?.resumen();
+      if (resumen) partes.push(resumen);
+    }
+    const texto = partes.join(' · ');
+    return texto ? texto.slice(0, 200) : null;
+  }
+
   private mostrarRecibo(
     tipo: 'PAGO_MANUAL' | 'PAGO_APORTES',
     mensaje: string | undefined,
     fecha: string | null,
-    resultado: import('../../model/pagos/operaciones-pago').ResultadoPagoCuota,
-    movimientosAporte: import('../../model/pagos/respuesta-pago').MovimientoAporte[]
+    resultado: ResultadoPagoCuota,
+    movimientosAporte: MovimientoAporte[],
+    rutaComprobante: string | null
   ): void {
     const nombres: Record<number, string> = {};
     for (const a of this.saldos()) nombres[a.idTipoAporte] = a.nombre;
+
+    const extras = rutaComprobante
+      ? [
+          { label: 'Comprobante adjunto', valor: this.respaldo()?.datos().archivo?.name ?? '—' },
+          { label: 'Archivado en', valor: rutaComprobante },
+        ]
+      : [];
 
     this.dialog.open(ReciboOperacionDialogComponent, {
       data: {
@@ -257,6 +366,7 @@ export class PagoPrestamoDialogComponent {
         pago: resultado,
         movimientosAporte,
         nombresTipoAporte: nombres,
+        detalleExtra: extras.length ? extras : undefined,
       },
       width: '860px',
       maxWidth: '96vw',

@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, Inject, computed, inject, signal } from '@angular/core';
+import { Component, Inject, computed, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 
@@ -8,9 +8,11 @@ import { usuarioSesion } from '../../../../shared/services/usuario-sesion';
 import { ModalidadAbono, NOMBRE_TIPO_AMORTIZACION } from '../../model/pagos/catalogos-pago';
 import { SimulacionAbonoCapital } from '../../model/pagos/operaciones-pago';
 import { mensajeDeRespuesta } from '../../model/pagos/respuesta-pago';
+import { ComprobanteCobroService } from '../../service/comprobante-cobro.service';
 import { OperacionesPagoPrestamoService } from '../../service/operaciones-pago-prestamo.service';
 import { ContextoPrestamo, SalidaDialogoPago } from './contexto-prestamo';
 import { ReciboOperacionDialogComponent } from './recibo-operacion-dialog.component';
+import { RespaldoCobroComponent } from './respaldo-cobro.component';
 
 type Paso = 'datos' | 'comparativa';
 
@@ -20,17 +22,25 @@ type Paso = 'datos' | 'comparativa';
  *
  * El usuario puede cambiar la modalidad y volver a simular sin cerrar el diálogo: ese comparador
  * es justamente lo que necesita para decidir entre "termino antes" y "pago menos por mes".
+ *
+ * El abono siempre es dinero que el socio entrega por fuera del sistema (no existe abono con saldo
+ * de aportes), así que el bloque de respaldo —banco, referencia y comprobante digitalizado— es
+ * obligatorio y su ruta viaja en el request como `rutaDocumentoRespaldo`.
  */
 @Component({
   selector: 'app-abono-capital-dialog',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatDialogModule, MaterialFormModule],
+  imports: [CommonModule, FormsModule, MatDialogModule, MaterialFormModule, RespaldoCobroComponent],
   templateUrl: './abono-capital-dialog.component.html',
   styleUrl: './abono-capital-dialog.component.scss',
 })
 export class AbonoCapitalDialogComponent {
   private servicio = inject(OperacionesPagoPrestamoService);
+  private comprobantes = inject(ComprobanteCobroService);
   private dialog = inject(MatDialog);
+
+  /** Bloque de respaldo. Se renderiza siempre, así que la consulta resuelve tras la primera vista. */
+  respaldo = viewChild(RespaldoCobroComponent);
 
   readonly ModalidadAbono = ModalidadAbono;
   readonly hoy = new Date();
@@ -51,6 +61,27 @@ export class AbonoCapitalDialogComponent {
 
   valor = computed(() => this.parseMoneda(this.valorTexto()));
   valorValido = computed(() => this.valor() > 0.004);
+
+  /** La fecha del abono es parte del registro del cobro: tiene que estar y no puede ser futura. */
+  fechaValida = computed(() => {
+    const fecha = this.fecha();
+    if (!fecha || isNaN(fecha.getTime())) return false;
+    const limite = new Date(this.hoy);
+    limite.setHours(23, 59, 59, 999);
+    return fecha.getTime() <= limite.getTime();
+  });
+
+  /** El respaldo del dinero recibido (banco, referencia y comprobante) está completo. */
+  respaldoListo = computed(() => this.respaldo()?.completo() ?? false);
+
+  puedeAplicar = computed(
+    () =>
+      !!this.simulacion() &&
+      !this.aplicando() &&
+      !this.simulando() &&
+      this.fechaValida() &&
+      this.respaldoListo()
+  );
 
   /** Sugerencias de monto para tocar en tablet en vez de teclear. */
   sugerencias = computed(() => {
@@ -134,14 +165,56 @@ export class AbonoCapitalDialogComponent {
 
   // ================= paso 2: aplicar =================
 
+  /**
+   * Aplica el abono en dos etapas: primero se archiva el comprobante —su ruta viaja DENTRO del
+   * request, así que el archivo tiene que estar en el servidor antes— y recién después se llama al
+   * endpoint. Si el archivo no se puede subir se aborta sin haber tocado plata: es preferible a
+   * dejar el abono registrado y sin respaldo, que es justo lo que `PGPRRTRS` viene a evitar.
+   */
   aplicar(): void {
     const sim = this.simulacion();
     // También se bloquea mientras hay una simulación en vuelo: cambiar de modalidad vuelve a
     // simular sin salir de este paso, y aplicar en esa ventana enviaría una modalidad distinta de
     // la que muestra la comparativa en pantalla.
-    if (!sim || this.aplicando() || this.simulando()) return;
+    if (!sim || !this.puedeAplicar()) return;
     this.limpiarError();
     this.aplicando.set(true);
+
+    this.archivarComprobante((ruta, exito) => {
+      if (!exito) {
+        this.aplicando.set(false);
+        return;
+      }
+      this.enviarAbono(sim, ruta);
+    });
+  }
+
+  private archivarComprobante(continuar: (ruta: string | null, exito: boolean) => void): void {
+    const archivo = this.respaldo()?.datos().archivo ?? null;
+    if (!archivo) {
+      continuar(null, true);
+      return;
+    }
+
+    this.comprobantes
+      .archivar(
+        archivo,
+        this.comprobantes.carpetaDePrestamo(this.data.idPrestamo),
+        String(this.data.idPrestamo)
+      )
+      .subscribe((resultado) => {
+        if (resultado.error || !resultado.ruta) {
+          this.errorCodigo.set('COMPROBANTE_NO_ARCHIVADO');
+          this.errorMensaje.set(this.comprobantes.mensajeDeFallo(resultado.error ?? ''));
+          continuar(null, false);
+          return;
+        }
+        continuar(resultado.ruta, true);
+      });
+  }
+
+  private enviarAbono(sim: SimulacionAbonoCapital, rutaDocumentoRespaldo: string | null): void {
+    const fecha = this.servicio.formatearFecha(this.fecha());
 
     this.servicio
       .abonarCapital({
@@ -150,8 +223,9 @@ export class AbonoCapitalDialogComponent {
         // Del resultado de la simulación, nunca del signal: es lo que el usuario acaba de ver.
         modalidad: sim.modalidad,
         usuario: usuarioSesion(),
-        observacion: this.observacion.trim() || null,
-        fecha: this.servicio.formatearFecha(this.fecha()),
+        observacion: this.armarObservacion(),
+        fecha,
+        rutaDocumentoRespaldo,
       })
       .subscribe((resp) => {
         this.aplicando.set(false);
@@ -163,7 +237,7 @@ export class AbonoCapitalDialogComponent {
               tituloPrestamo: this.data.titulo,
               participante: this.data.participante ?? undefined,
               mensaje: resp.mensaje,
-              fecha: this.servicio.formatearFecha(this.fecha()) ?? undefined,
+              fecha: fecha ?? undefined,
               abono: resultado,
               detalleExtra: [
                 { label: 'Ahorro en intereses', valor: this.formatMoneda(sim.ahorroIntereses) },
@@ -174,6 +248,7 @@ export class AbonoCapitalDialogComponent {
                       ? 'Mantener cuota y reducir plazo'
                       : 'Mantener plazo y reducir cuota',
                 },
+                ...this.detalleDelRespaldo(rutaDocumentoRespaldo),
               ],
             },
             width: '760px',
@@ -185,8 +260,36 @@ export class AbonoCapitalDialogComponent {
         } else {
           this.errorCodigo.set(String(resp.error ?? ''));
           this.errorMensaje.set(mensajeDeRespuesta(resp));
+          // El comprobante ya subido queda huérfano: no lo referencia ningún pago, así que se borra
+          // para no dejar basura acumulándose en la carpeta del préstamo con cada reintento.
+          this.comprobantes.descartar(rutaDocumentoRespaldo);
         }
       });
+  }
+
+  /**
+   * El backend guarda una sola observación por operación: el método, la referencia y la cuenta
+   * receptora se anexan a la que escribió el usuario porque son el dato con el que después se
+   * concilia el movimiento contra el extracto bancario. `PGPROBSR` admite 200 caracteres.
+   */
+  private armarObservacion(): string | null {
+    const partes: string[] = [];
+    const propia = this.observacion.trim();
+    if (propia) partes.push(propia);
+    const resumen = this.respaldo()?.resumen();
+    if (resumen) partes.push(resumen);
+    const texto = partes.join(' · ');
+    return texto ? texto.slice(0, 200) : null;
+  }
+
+  /** Filas del recibo que dejan constancia de qué comprobante respalda la operación. */
+  private detalleDelRespaldo(ruta: string | null): { label: string; valor: string }[] {
+    if (!ruta) return [];
+    const datos = this.respaldo()?.datos();
+    return [
+      { label: 'Comprobante adjunto', valor: datos?.archivo?.name ?? '—' },
+      { label: 'Archivado en', valor: ruta },
+    ];
   }
 
   // ================= derivaciones que sugiere la guía =================

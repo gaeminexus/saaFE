@@ -13,7 +13,9 @@ import { TitularSelectorDialogComponent } from '../../../../../shared/components
 import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda as TipoDatos } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
+import { DetalleRubro } from '../../../../../shared/model/detalle-rubro';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { DetalleRubroService } from '../../../../../shared/services/detalle-rubro.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 
 import { GrupoProductoPago } from '../../../../cxp/model/grupo_producto_pago';
@@ -55,6 +57,7 @@ export class RegistroEgresoComponent implements OnInit {
   private cuentaTitularS = inject(CuentaBancariaTitularService);
   private grupoProductoS = inject(GrupoProductoPagoService);
   private productoS = inject(ProductoPagoService);
+  private detalleRubroS = inject(DetalleRubroService);
   private funcionesDatos = inject(FuncionesDatosService);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
@@ -77,6 +80,8 @@ export class RegistroEgresoComponent implements OnInit {
   regBeneficiario = signal<Titular | null>(null);
   /** Cuentas CTBN del beneficiario: el archivo del banco necesita el destino. */
   cuentasDestino = signal<CuentaBancariaTitular[]>([]);
+  /** Catálogo de tipos de cuenta bancaria (rubro 23) para etiquetar cada cuenta. */
+  private tiposCuentaBancaria = signal<DetalleRubro[]>([]);
   cargandoCuentasDestino = signal(false);
   regIdCuentaDestino: number | null = null;
   regDebitoAutomatico = false;
@@ -123,8 +128,32 @@ export class RegistroEgresoComponent implements OnInit {
     if (indice === 1) this.cargarEgresos();
   }
 
+  /**
+   * Los códigos de rubro 23 (Corriente / Ahorros) los define la parametrización
+   * de cada empresa y no son fijos, así que la descripción se resuelve contra el
+   * catálogo en vez de mapear números a mano.
+   */
+  private cargarTiposCuentaBancaria(): void {
+    const RUBRO_TIPO_CUENTA_BANCARIA = 23;
+    const enMemoria = this.detalleRubroS.getDetallesByParent(RUBRO_TIPO_CUENTA_BANCARIA);
+    if (enMemoria.length > 0) {
+      this.tiposCuentaBancaria.set(enMemoria);
+      return;
+    }
+    // La caché se llena en el login; si se entra sin pasar por ahí, se pide
+    // todo el catálogo y se filtra, igual que hace Titulares.
+    this.detalleRubroS.getAll().subscribe({
+      next: (todos) =>
+        this.tiposCuentaBancaria.set(
+          (todos ?? []).filter((d) => d.rubro?.codigoAlterno === RUBRO_TIPO_CUENTA_BANCARIA)
+        ),
+      error: () => this.tiposCuentaBancaria.set([]),
+    });
+  }
+
   private cargarCatalogos(): void {
     this.cargandoCatalogos.set(true);
+    this.cargarTiposCuentaBancaria();
 
     this.cuentaBancariaS.getAll().subscribe({
       next: (data) => this.cuentasBancarias.set(data ?? []),
@@ -232,8 +261,15 @@ export class RegistroEgresoComponent implements OnInit {
 
   etiquetaCuentaDestino(cuenta: CuentaBancariaTitular): string {
     const banco = (cuenta.banco as any)?.nombre ?? 'Banco';
-    const tipo = Number(cuenta.tipoCuenta) === 1 ? 'Cte.' : Number(cuenta.tipoCuenta) === 2 ? 'Ahorros' : '';
+    const tipo = this.nombreTipoCuentaBancaria(cuenta.tipoCuenta);
     return `${banco} — ${cuenta.numeroCuenta}${tipo ? ` (${tipo})` : ''}`;
+  }
+
+  /** Descripción del tipo de cuenta según el catálogo (rubro 23). */
+  private nombreTipoCuentaBancaria(tipo: number | null | undefined): string {
+    if (tipo == null) return '';
+    const detalle = this.tiposCuentaBancaria().find((d) => Number(d.codigoAlterno) === Number(tipo));
+    return detalle?.descripcion?.trim() ?? '';
   }
 
   /** Beneficiario ya elegido y sin ninguna cuenta activa registrada en CTBN. */

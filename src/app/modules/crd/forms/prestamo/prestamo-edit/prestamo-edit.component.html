@@ -239,6 +239,17 @@
                   </td>
                 </ng-container>
 
+                <!-- Interés de mora devengado (DTPRMRAA), lo escribe el proceso de mora -->
+                <ng-container matColumnDef="interesMora">
+                  <th mat-header-cell *matHeaderCellDef style="text-align:right">Interés Mora</th>
+                  <td mat-cell *matCellDef="let d" style="text-align:right">
+                    ${{ (d.mora || 0) | number: '1.2-2' }}
+                  </td>
+                  <td mat-footer-cell *matFooterCellDef class="footer-total" style="text-align:right">
+                    ${{ calcularTotalesDetalle().interesMora | number: '1.2-2' }}
+                  </td>
+                </ng-container>
+
                 <ng-container matColumnDef="desgravamen">
                   <th mat-header-cell *matHeaderCellDef style="text-align:right">Desgravamen</th>
                   <td mat-cell *matCellDef="let d" style="text-align:right">
