@@ -1,6 +1,18 @@
 import { SaldoFactura } from '../../../shared/model/pagos-cobros/catalogos-aplicacion-pago';
 
 /**
+ * Asiento contable tal como llega anidado dentro de un pago. El pago no lo
+ * referencia directamente: cuelga de lo que se contabilizó (la aplicación de
+ * la factura, el egreso de tesorería o el anticipo).
+ */
+export interface AsientoDePago {
+  codigo: number;
+  numeroAlterno?: string | null;
+  numero?: number | null;
+  estado?: number | null;
+}
+
+/**
  * PGTR - Pago Programado. Un pago a proveedor por transferencia, con su
  * ciclo de vida: registrado → en archivo → confirmado/rechazado (o anulado).
  * Registrar un pago NO mueve el saldo de la factura; eso ocurre recién
@@ -17,7 +29,14 @@ export interface PagoProgramado {
    * Egreso de tesorería sin documento físico (TSR.EGRS) que originó el pago.
    * Viene con `facturaCompra: null`: el concepto del pago es su descripción.
    */
-  egreso?: { id: number; descripcion?: string | null } | null;
+  egreso?: { id: number; descripcion?: string | null; asiento?: AsientoDePago | null } | null;
+  /** Anticipo a proveedor (PGS.ANTP) que originó el pago. */
+  anticipo?: { id: number; asiento?: AsientoDePago | null } | null;
+  /**
+   * Aplicación generada al confirmar el pago de una factura; trae el asiento
+   * contable. Nula mientras el banco no confirme.
+   */
+  aplicacion?: { id: number; asiento?: AsientoDePago | null } | null;
   titular?: { codigo: number; nombre: string } | null;
   cuentaBancaria?: { codigo: number; numero: string; banco?: { nombre: string } } | null;
   cuentaDestino?: { id: number; numero: string; banco?: { nombre: string } } | null;

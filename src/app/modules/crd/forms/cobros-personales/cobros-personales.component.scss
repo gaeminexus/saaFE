@@ -37,6 +37,10 @@
     .search-button {
       height: 56px;
       margin-top: 4px;
+
+      &.limpiar {
+        background: #fff;
+      }
     }
   }
 }
@@ -125,6 +129,29 @@ table.tabla-resultados, table.tabla-cuentas {
   border-radius: 8px;
 }
 
+.detalle-resumen {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.25rem;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  font-size: 13px;
+  color: #4a5568;
+
+  .prox {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: #2b6cb0;
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+  }
+}
+
 table.detalle-table {
   width: 100%;
   border-collapse: collapse;
@@ -141,6 +168,23 @@ table.detalle-table {
     border-bottom: 1px solid #e2e8f0;
   }
   td { padding: 9px 10px; border-bottom: 1px solid #e2e8f0; font-size: 13px; }
+
+  // Las cuotas ya liquidadas se atenúan: están para dar contexto, no para operar sobre ellas.
+  tr.cuota-liquidada td { color: #a0aec0; }
+
+  // La siguiente cuota a cobrar es la información que la pantalla tiene que dejar evidente.
+  tr.cuota-proxima td {
+    background: #ebf4ff;
+    font-weight: 600;
+  }
+
+  .icono-proxima {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    vertical-align: middle;
+    color: #2b6cb0;
+  }
 }
 
 .estado-mini {
@@ -154,6 +198,27 @@ table.detalle-table {
   &.cubierta { background: #e3f9ec; color: #0d7a4f; }
   &.parcial { background: #fff6e0; color: #92600d; }
   &.pendiente { background: #edf2f7; color: #718096; }
+  &.liquidada { background: #f7fafc; color: #a0aec0; }
+}
+
+/** Estado real de la cuota (DTPRESTD); las clases salen de CLASES_ESTADO_CUOTA. */
+.estado-cuota {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  padding: 0.2rem 0.55rem;
+  border-radius: 10px;
+  white-space: nowrap;
+  background: #edf2f7;
+  color: #718096;
+
+  &.pagada { background: #e3f9ec; color: #0d7a4f; }
+  &.parcial { background: #fff6e0; color: #92600d; }
+  &.mora,
+  &.vencida,
+  &.plazo-vencido { background: #fdecec; color: #c53030; }
+  &.cancelada { background: #eef2ff; color: #4c51bf; }
 }
 
 table.tabla-aportes {

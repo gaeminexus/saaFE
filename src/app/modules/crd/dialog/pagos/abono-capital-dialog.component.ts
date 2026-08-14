@@ -73,7 +73,12 @@ export class AbonoCapitalDialogComponent {
   constructor(
     private dialogRef: MatDialogRef<AbonoCapitalDialogComponent, SalidaDialogoPago | undefined>,
     @Inject(MAT_DIALOG_DATA) public data: ContextoPrestamo
-  ) {}
+  ) {
+    // El monto ya tecleado en «Monto del pago» de la pantalla que abre el diálogo se precarga acá:
+    // el usuario ingresó una sola vez cuánto recibió del socio y no tiene por qué repetirlo.
+    const sugerido = data.valorSugerido ?? 0;
+    if (sugerido > 0.004) this.valorTexto.set(this.formatMoneda(+sugerido.toFixed(2)));
+  }
 
   nombreAmortizacion(tipo: number | undefined): string {
     if (tipo == null) return '—';

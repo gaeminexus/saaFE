@@ -28,6 +28,7 @@ import { FacturaCompraSelectorDialogComponent } from '../../../dialog/factura-co
 import { FacturaCompra } from '../../../model/factura-compra';
 import { FacturaCompraService } from '../../../service/factura-compra.service';
 import {
+  AsientoDePago,
   ConfirmarManualResponse,
   LoteGeneradoResponse,
   PagoProgramado,
@@ -35,6 +36,7 @@ import {
 } from '../../../model/pago-programado';
 import { AplicacionPagoCxpService } from '../../../service/aplicacion-pago-cxp.service';
 import { PagoProgramadoService } from '../../../service/pago-programado.service';
+import { JasperReportesService } from '../../../../../shared/services/jasper-reportes.service';
 
 /**
  * Pagos a proveedores por transferencia. Cuatro sub-vistas secuenciales:
@@ -55,6 +57,7 @@ export class PagosTransferenciaComponent implements OnInit {
   private cuentaTitularS = inject(CuentaBancariaTitularService);
   private facturaS = inject(FacturaCompraService);
   private funcionesDatos = inject(FuncionesDatosService);
+  private jasperS = inject(JasperReportesService);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
   private route = inject(ActivatedRoute);
@@ -122,6 +125,8 @@ export class PagosTransferenciaComponent implements OnInit {
   pagosSeguimiento = signal<PagoProgramado[]>([]);
   cargandoSeguimiento = signal(false);
   segError = signal('');
+  /** Pago cuyo PDF de asiento se está generando; null si no hay ninguno. */
+  imprimiendoAsiento = signal<number | null>(null);
   readonly columnasSeguimiento = ['proveedor', 'factura', 'tipo', 'valor', 'fechaProgramada', 'estado', 'acciones'];
   readonly estadosFiltro = [
     { valor: EstadoPagoProgramado.REGISTRADO, texto: 'Registrado' },
@@ -784,6 +789,53 @@ export class PagosTransferenciaComponent implements OnInit {
         error: (err: Error) => this.snackBar.open(err.message, 'Cerrar', { duration: 6000 }),
       });
     });
+  }
+
+  /**
+   * El asiento no cuelga del pago: lo tiene lo que se contabilizó al
+   * confirmarlo — la aplicación (pago de factura), el egreso de tesorería o el
+   * anticipo. Null mientras el pago no haya generado contabilidad.
+   */
+  asientoDePago(pago: PagoProgramado): AsientoDePago | null {
+    const asiento = pago.aplicacion?.asiento ?? pago.egreso?.asiento ?? pago.anticipo?.asiento;
+    return asiento?.codigo ? asiento : null;
+  }
+
+  etiquetaAsiento(asiento: AsientoDePago): string {
+    return asiento.numeroAlterno || String(asiento.codigo);
+  }
+
+  /** Genera el PDF del asiento con el mismo reporte Jasper de Contabilidad. */
+  imprimirAsiento(pago: PagoProgramado): void {
+    const asiento = this.asientoDePago(pago);
+    if (!asiento || this.imprimiendoAsiento() != null) return;
+
+    this.imprimiendoAsiento.set(pago.id);
+
+    this.jasperS.generar('cnt', 'RPRT_ASNT_CNTB', {
+      P_PATH: '',
+      P_REPORTE: 'ASIENTO',
+      P_ASNTCDGO: asiento.codigo,
+      P_IMAGEN: null,
+    }).subscribe({
+      next: (blob) => {
+        this.imprimiendoAsiento.set(null);
+        this.descargarPdf(blob, `asiento-${this.etiquetaAsiento(asiento)}.pdf`);
+      },
+      error: () => {
+        this.imprimiendoAsiento.set(null);
+        this.snackBar.open('No se pudo generar el PDF del asiento.', 'Cerrar', { duration: 6000 });
+      },
+    });
+  }
+
+  private descargarPdf(blob: Blob, nombre: string): void {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = nombre;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
   }
 
   confirmarReverso(pago: PagoProgramado): void {

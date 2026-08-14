@@ -13,6 +13,13 @@
     width: 56px;
   }
 
+  // Seguimiento llega a tener tres acciones por fila (PDF, anular, revertir),
+  // así que ensancha los 110px que trae el mixin compartido.
+  table[mat-table] .col-acciones {
+    width: 150px;
+    white-space: nowrap;
+  }
+
   .fila-check {
     margin: -0.35rem 0 1rem;
   }

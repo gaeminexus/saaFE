@@ -22,6 +22,12 @@ import { ReciboOperacionDialogComponent } from '../../dialog/pagos/recibo-operac
 import { DetallePrestamo } from '../../model/detalle-prestamo';
 import { Entidad } from '../../model/entidad';
 import { HistoricoDesgloseAporteParticipe } from '../../model/historico-desglose-aporte-participe';
+import {
+  CLASES_ESTADO_CUOTA,
+  CodigoEstadoCuota,
+  NOMBRES_ESTADO_CUOTA,
+  obtenerCodigoEstadoCuota,
+} from '../../model/estado-cuota-prestamo';
 import { NOMBRE_ESTADO_PRESTAMO, admiteOperaciones } from '../../model/pagos/catalogos-pago';
 import { SaldoAporte } from '../../model/pagos/operaciones-pago';
 import { mensajeDeRespuesta } from '../../model/pagos/respuesta-pago';
@@ -37,8 +43,18 @@ type MetodoPago = 'debito' | 'transferencia' | 'deposito';
 
 interface AsignacionCuota {
   cuota: DetallePrestamo;
+  /** Cuánto de lo asignado caería sobre esta cuota (0 en las ya liquidadas). */
   aplicado: number;
-  estado: 'cubierta' | 'parcial' | 'pendiente';
+  /** Saldo real pendiente de la cuota hoy. */
+  pendiente: number;
+  /** Estado real de la cuota en la base (DTPRESTD). */
+  estadoCuota: number | null;
+  /** La cuota ya está liquidada: PAGADA (4) o CANCELADA_ANTICIPADA (7). */
+  liquidada: boolean;
+  /** Es la primera cuota no liquidada: la que el backend cobra a continuación. */
+  esProxima: boolean;
+  /** Efecto previsto del monto asignado sobre las cuotas que siguen pendientes. */
+  resultado: 'cubierta' | 'parcial' | 'pendiente';
 }
 
 @Component({
@@ -121,9 +137,29 @@ export class CobrosPersonalesComponent implements OnDestroy {
   /** Todos los préstamos del partícipe que admiten operaciones de pago (idEstado no terminal). */
   prestamosOperables = signal<Prestamo[]>([]);
   prestamoVigente = signal<Prestamo | null>(null);
-  cuotasPendientes = signal<DetallePrestamo[]>([]);
+  /**
+   * Tabla de amortización COMPLETA por préstamo (todas las cuotas, pagadas incluidas), indexada por
+   * `Prestamo.codigo`. Se necesita entera —y no solo las cuotas con saldo— por dos motivos: para
+   * mostrar el estado real de cada cuota y para recalcular los saldos vigentes del crédito, que en
+   * PRST están desactualizados (ver `saldoCapitalPrestamo`).
+   */
+  cuotasPorPrestamo = signal<Record<number, DetallePrestamo[]>>({});
   historico = signal<HistoricoDesgloseAporteParticipe | null>(null);
   cuentasBancarias = signal<CuentaBancaria[]>([]);
+
+  /** Cuotas del préstamo seleccionado, en orden de número de cuota. */
+  cuotasPrestamo = computed<DetallePrestamo[]>(() => {
+    const codigo = this.prestamoVigente()?.codigo;
+    return codigo == null ? [] : (this.cuotasPorPrestamo()[codigo] ?? []);
+  });
+
+  /** Las que el backend todavía puede cobrar: estado distinto de PAGADA (4) y CANCELADA_ANTICIPADA (7). */
+  cuotasPendientes = computed(() => this.cuotasPrestamo().filter((c) => !this.esCuotaLiquidada(c)));
+
+  /** La cuota que se cobra a continuación: la primera no liquidada, igual que el motor de pagos. */
+  proximaCuota = computed<DetallePrestamo | null>(() => this.cuotasPendientes()[0] ?? null);
+
+  cuotasLiquidadas = computed(() => this.cuotasPrestamo().length - this.cuotasPendientes().length);
 
   /** Saldos reales por tipo de aporte, agregados por la base de datos. */
   saldosAporte = signal<SaldoAporte[]>([]);
@@ -133,7 +169,18 @@ export class CobrosPersonalesComponent implements OnDestroy {
   saldoJubilacion = computed(() => this.saldoPorNombre('jubila'));
   valorMensualCesantia = computed(() => this.historico()?.aporteCesantia ?? 0);
   valorMensualJubilacion = computed(() => this.historico()?.aporteJubilacion ?? 0);
-  saldoTotalPrestamo = computed(() => this.prestamoVigente()?.saldoTotal ?? 0);
+
+  /**
+   * Saldo total y saldo de capital VIGENTES del préstamo seleccionado.
+   *
+   * No se leen de PRST (`saldoTotal` / `saldoCapital`): esas dos columnas solo las reescribe el
+   * proceso de carga del archivo de Petrocomercial, así que entre cargas quedan congeladas —de ahí
+   * que la pantalla mostrara cifras de hace meses. Los pagos manuales sí actualizan la cuota
+   * (DTPRSLDO, DTPRCPPG, DTPRESTD), así que el valor de hoy se reconstruye desde la tabla de
+   * amortización con el mismo criterio del backend: sumar sobre las cuotas no liquidadas.
+   */
+  saldoTotalPrestamo = computed(() => this.saldoTotalDe(this.prestamoVigente()));
+  saldoCapitalPrestamo = computed(() => this.saldoCapitalDe(this.prestamoVigente()));
 
   estadoPrestamoTexto = computed(() => {
     const idEstado = this.prestamoVigente()?.idEstado;
@@ -178,10 +225,14 @@ export class CobrosPersonalesComponent implements OnDestroy {
       .reduce((s, k) => s + this.parseMoneda(this.cuentaMontoTexto[k]), 0);
   });
 
+  /**
+   * Detalle de cuotas del crédito. Se calcula aunque la fila del préstamo no esté marcada: el
+   * detalle también sirve para consultar el estado de las cuotas sin estar cobrando nada.
+   */
   asignacionesPrestamo = computed<AsignacionCuota[]>(() => {
     this.cuentaMontoVersion();
-    if (!this.cuentaChecked.prestamo) return [];
-    return this.calcularAsignacionPrestamo(this.parseMoneda(this.cuentaMontoTexto.prestamo));
+    const monto = this.cuentaChecked.prestamo ? this.parseMoneda(this.cuentaMontoTexto.prestamo) : 0;
+    return this.calcularAsignacionPrestamo(monto);
   });
 
   coberturaCesantia = computed(() => {
@@ -309,6 +360,31 @@ export class CobrosPersonalesComponent implements OnDestroy {
     });
   }
 
+  /**
+   * Deja la pantalla como recién abierta: criterios en blanco, sin resultados y sin partícipe
+   * seleccionado, para arrancar una búsqueda nueva sin tener que borrar campo por campo.
+   */
+  limpiarBusqueda(): void {
+    this.criterioIdentificacion = '';
+    this.criterioRolPetro = '';
+    this.criterioIdPrestamoAsoprep = '';
+    this.criterioNombre = '';
+    this.resultados.set([]);
+    this.mostrandoResultados.set(false);
+    this.entidadSeleccionada.set(null);
+    this.prestamosOperables.set([]);
+    this.prestamoVigente.set(null);
+    this.cuotasPorPrestamo.set({});
+    this.saldosAporte.set([]);
+    this.historico.set(null);
+    this.resetAsignacion();
+    this.montoTotalTexto.set('$0.00');
+    this.numeroReferencia = '';
+    this.observacion = '';
+    this.fechaPago = new Date();
+    this.archivoComprobante.set(null);
+  }
+
   seleccionarEntidad(entidad: Entidad): void {
     this.entidadSeleccionada.set(entidad);
     this.mostrandoResultados.set(false);
@@ -324,7 +400,7 @@ export class CobrosPersonalesComponent implements OnDestroy {
   private cargarDatosParticipante(entidad: Entidad): void {
     this.prestamosOperables.set([]);
     this.prestamoVigente.set(null);
-    this.cuotasPendientes.set([]);
+    this.cuotasPorPrestamo.set({});
     this.saldosAporte.set([]);
     this.historico.set(null);
 
@@ -378,7 +454,12 @@ export class CobrosPersonalesComponent implements OnDestroy {
         const codigoActual = this.prestamoVigente()?.codigo;
         const seleccionado = operables.find((p) => p.codigo === codigoActual) ?? operables[0] ?? null;
         this.prestamoVigente.set(seleccionado);
-        if (seleccionado) this.cargarCuotasPendientes(seleccionado);
+        // Se descarta el cache anterior antes de recargar: tras un pago o un abono las cuotas
+        // cambiaron (y en el abono hasta los códigos), así que reusarlas mostraría datos viejos.
+        this.cuotasPorPrestamo.set({});
+        // Se piden las cuotas de todos los créditos operables, no solo el elegido: los chips del
+        // selector muestran el saldo de cada uno y ese saldo se calcula desde sus cuotas.
+        for (const p of operables) this.cargarCuotas(p);
       },
       error: () => {
         this.cargandoPrestamos.set(false);
@@ -389,8 +470,9 @@ export class CobrosPersonalesComponent implements OnDestroy {
 
   seleccionarPrestamo(prestamo: Prestamo): void {
     this.prestamoVigente.set(prestamo);
-    this.cuotasPendientes.set([]);
-    this.cargarCuotasPendientes(prestamo);
+    // Las cuotas de todos los créditos operables ya se cargaron; solo se repite el pedido si el
+    // elegido todavía no está en el cache (p. ej. porque su llamada falló).
+    if (!this.cuotasPorPrestamo()[prestamo.codigo]) this.cargarCuotas(prestamo);
     if (this.cuentaChecked.prestamo) {
       this.cuentaMontoTexto.prestamo = '';
       this.cuentaMontoVersion.update((v) => v + 1);
@@ -414,28 +496,129 @@ export class CobrosPersonalesComponent implements OnDestroy {
     });
   }
 
-  private cargarCuotasPendientes(prestamo: Prestamo): void {
-    // Filtrar cuotas con saldo > 0 y ordenar por numeroCuota ASC directamente en el backend
+  /**
+   * Trae la tabla de amortización COMPLETA del préstamo, ordenada por número de cuota.
+   *
+   * Antes se pedía solo `saldo > 0`. Con ese filtro la pantalla no podía distinguir una cuota
+   * pagada de una que nunca existió: todas las que llegaban se pintaban como «Pendiente» y no había
+   * forma de ver hasta qué cuota está cubierto el crédito. Ahora llegan todas y el estado real
+   * (DTPRESTD) decide cuáles siguen cobrables.
+   */
+  private cargarCuotas(prestamo: Prestamo): void {
     const criterioPrestamo = new DatosBusqueda();
     criterioPrestamo.asignaValorConCampoPadre(TipoDatosBusqueda.LONG, 'prestamo', 'codigo', String(prestamo.codigo), TipoComandosBusqueda.IGUAL);
-
-    const criterioSaldo = new DatosBusqueda();
-    criterioSaldo.asignaUnCampoSinTrunc(
-      TipoDatosBusqueda.DOUBLE, 'saldo', '0', TipoComandosBusqueda.MAYOR
-    );
 
     const criterioOrdenCuota = new DatosBusqueda();
     criterioOrdenCuota.orderBy('numeroCuota');
     criterioOrdenCuota.setTipoOrden(DatosBusqueda.ORDER_ASC);
 
-    this.detallePrestamoService.selectByCriteria([criterioPrestamo, criterioSaldo, criterioOrdenCuota]).subscribe({
+    this.detallePrestamoService.selectByCriteria([criterioPrestamo, criterioOrdenCuota]).subscribe({
       next: (cuotas) => {
-        // Doble-verificación en frontend por redondeo (saldo puede ser 0.001 etc.)
-        const pendientes = (cuotas ?? []).filter((c) => (c.saldo ?? 0) > 0.004);
-        this.cuotasPendientes.set(pendientes);
+        const ordenadas = [...(cuotas ?? [])].sort((a, b) => (a.numeroCuota ?? 0) - (b.numeroCuota ?? 0));
+        this.cuotasPorPrestamo.update((mapa) => ({ ...mapa, [prestamo.codigo]: ordenadas }));
       },
       error: () => this.snackBar.open('No se pudo cargar el detalle de cuotas del préstamo.', 'Cerrar', { duration: 4000 }),
     });
+  }
+
+  // ================= estado y saldos reales de las cuotas =================
+
+  /**
+   * ¿La cuota ya no admite aplicación de pagos? Mismo criterio que
+   * `DetallePrestamoDaoServiceImpl.selectCuotasPendientes`: PAGADA (4) y CANCELADA_ANTICIPADA (7)
+   * quedan fuera, y el estado nulo de los datos legados cuenta como pendiente.
+   */
+  private esCuotaLiquidada(cuota: DetallePrestamo): boolean {
+    const estado = obtenerCodigoEstadoCuota(cuota);
+    return estado === CodigoEstadoCuota.PAGADA || estado === CodigoEstadoCuota.CANCELADA_ANTICIPADA;
+  }
+
+  /** Capital que sigue vivo en la cuota: lo pactado menos lo ya imputado a capital. */
+  private capitalPendienteDe(cuota: DetallePrestamo): number {
+    return Math.max((cuota.capital ?? 0) - (cuota.capitalPagado ?? 0), 0);
+  }
+
+  /** Todo lo que se debe por la cuota, igual que `totalConMoraIV()` del motor de pagos del backend. */
+  private totalCuotaDe(cuota: DetallePrestamo): number {
+    return +(
+      (cuota.capital ?? 0) +
+      (cuota.interes ?? 0) +
+      (cuota.desgravamen ?? 0) +
+      (cuota.valorSeguroIncendio ?? 0) +
+      (cuota.mora ?? 0) +
+      (cuota.interesVencido ?? 0)
+    ).toFixed(2);
+  }
+
+  /** Lo ya imputado a la cuota. El seguro de incendio no tiene columna «pagado» en DTPR. */
+  private totalPagadoDe(cuota: DetallePrestamo): number {
+    return +(
+      (cuota.capitalPagado ?? 0) +
+      (cuota.interesPagado ?? 0) +
+      (cuota.desgravamenPagado ?? 0) +
+      (cuota.moraPagado ?? 0) +
+      (cuota.interesVendidoPagado ?? 0)
+    ).toFixed(2);
+  }
+
+  /**
+   * Deuda que queda en la cuota (capital + interés + desgravamen + seguro + mora + interés vencido,
+   * menos lo pagado).
+   *
+   * No se lee DTPRSLDO a ciegas porque la columna tiene dos significados según quién la escribió:
+   * al generar la tabla de amortización guarda el capital insoluto DESPUÉS de esa cuota
+   * (`PrestamoServiceImpl`), y recién la carga de Petrocomercial y el motor de pagos la reescriben
+   * como el pendiente de la cuota. Por eso solo se usa cuando la cuota registra pagos —que es
+   * cuando ya pasó por alguno de esos dos procesos— y si no se calcula el total de la cuota, que
+   * para una cuota intacta es exactamente lo que se debe.
+   */
+  private saldoPendienteDe(cuota: DetallePrestamo): number {
+    if (this.totalPagadoDe(cuota) > 0.004) return Math.max(cuota.saldo ?? 0, 0);
+    return Math.max(this.totalCuotaDe(cuota), 0);
+  }
+
+  /** Cuotas ya descargadas del préstamo, o `undefined` si su pedido todavía no volvió. */
+  private cuotasDe(prestamo: Prestamo | null): DetallePrestamo[] | undefined {
+    return prestamo ? this.cuotasPorPrestamo()[prestamo.codigo] : undefined;
+  }
+
+  /**
+   * Saldo total vigente. Mientras la tabla de amortización no haya llegado se muestra el valor
+   * almacenado en PRST para no dejar la celda en $0.00, aunque ese valor puede estar viejo.
+   */
+  saldoTotalDe(prestamo: Prestamo | null): number {
+    const cuotas = this.cuotasDe(prestamo);
+    if (!cuotas) return prestamo?.saldoTotal ?? 0;
+    return +cuotas
+      .filter((c) => !this.esCuotaLiquidada(c))
+      .reduce((s, c) => s + this.saldoPendienteDe(c), 0)
+      .toFixed(2);
+  }
+
+  /** Saldo de capital vigente: Σ (capital − capitalPagado) de las cuotas no liquidadas. */
+  saldoCapitalDe(prestamo: Prestamo | null): number {
+    const cuotas = this.cuotasDe(prestamo);
+    if (!cuotas) return prestamo?.saldoCapital ?? 0;
+    return +cuotas
+      .filter((c) => !this.esCuotaLiquidada(c))
+      .reduce((s, c) => s + this.capitalPendienteDe(c), 0)
+      .toFixed(2);
+  }
+
+  /** Pendiente de una cuota, para mostrarlo en la plantilla. */
+  pendienteDeCuota(cuota: DetallePrestamo | null): number {
+    if (!cuota || this.esCuotaLiquidada(cuota)) return 0;
+    return this.saldoPendienteDe(cuota);
+  }
+
+  /** Nombre del estado real de la cuota, para la columna «Estado» del detalle. */
+  nombreEstadoCuota(estado: number | null): string {
+    return estado != null ? (NOMBRES_ESTADO_CUOTA[estado] ?? `Estado ${estado}`) : 'Pendiente';
+  }
+
+  /** Sufijo de clase CSS del estado real de la cuota. */
+  claseEstadoCuota(estado: number | null): string {
+    return estado != null ? (CLASES_ESTADO_CUOTA[estado] ?? 'pendiente') : 'pendiente';
   }
 
   /** Busca el saldo del tipo de aporte cuyo nombre contiene el fragmento (sin tildes, minúsculas). */
@@ -467,7 +650,6 @@ export class CobrosPersonalesComponent implements OnDestroy {
       this.cuentaMontoTexto[key] = this.formatMoneda(restante);
     } else {
       this.cuentaMontoTexto[key] = '';
-      if (key === 'prestamo') this.detallePrestamoAbierto.set(false);
     }
 
     if (key === 'prestamo' && !checked && this.metodoPago() === 'debito') {
@@ -508,27 +690,51 @@ export class CobrosPersonalesComponent implements OnDestroy {
   // ================= cobertura: préstamo (cronológico, sobre cuotas reales) =================
 
   /**
-   * Vista previa de cómo caería el pago sobre las cuotas. Es una estimación por saldo de cuota:
-   * el reparto real lo hace el backend con la prelación desgravamen → mora → interés vencido →
-   * interés → capital → seguro, y el desglose exacto llega en la respuesta del pago.
+   * Detalle de TODAS las cuotas del crédito con su estado real, más la vista previa de cómo caería
+   * el monto asignado sobre las que siguen pendientes.
+   *
+   * Las liquidadas (pagadas y canceladas anticipadamente) se incluyen para que se vea hasta dónde
+   * está cubierto el préstamo; el monto solo se reparte sobre las pendientes, en el mismo orden en
+   * que el backend las cobra (número de cuota ascendente, la más antigua primero).
+   *
+   * La distribución es una estimación por saldo de cuota: el reparto real lo hace el backend con la
+   * prelación desgravamen → mora → interés vencido → interés → capital → seguro, y el desglose
+   * exacto llega en la respuesta del pago.
    */
   private calcularAsignacionPrestamo(monto: number): AsignacionCuota[] {
     let restante = monto;
+    const codigoProxima = this.proximaCuota()?.codigo;
     const asignaciones: AsignacionCuota[] = [];
-    for (const cuota of this.cuotasPendientes()) {
-      const valor = cuota.saldo ?? 0;
+
+    for (const cuota of this.cuotasPrestamo()) {
+      const estadoCuota = obtenerCodigoEstadoCuota(cuota);
+      const liquidada = this.esCuotaLiquidada(cuota);
+      const pendiente = liquidada ? 0 : this.saldoPendienteDe(cuota);
+
       let aplicado = 0;
-      let estado: AsignacionCuota['estado'] = 'pendiente';
-      if (restante >= valor - 0.004 && valor > 0) {
-        aplicado = valor;
-        estado = 'cubierta';
-        restante = +(restante - valor).toFixed(2);
-      } else if (restante > 0.004) {
-        aplicado = +restante.toFixed(2);
-        estado = 'parcial';
-        restante = 0;
+      let resultado: AsignacionCuota['resultado'] = 'pendiente';
+
+      if (!liquidada) {
+        if (restante >= pendiente - 0.004 && pendiente > 0) {
+          aplicado = pendiente;
+          resultado = 'cubierta';
+          restante = +(restante - pendiente).toFixed(2);
+        } else if (restante > 0.004) {
+          aplicado = +restante.toFixed(2);
+          resultado = 'parcial';
+          restante = 0;
+        }
       }
-      asignaciones.push({ cuota, aplicado, estado });
+
+      asignaciones.push({
+        cuota,
+        aplicado,
+        pendiente,
+        estadoCuota,
+        liquidada,
+        esProxima: !liquidada && cuota.codigo === codigoProxima,
+        resultado,
+      });
     }
     return asignaciones;
   }
@@ -708,14 +914,35 @@ export class CobrosPersonalesComponent implements OnDestroy {
 
   // ================= operaciones sobre el préstamo =================
 
+  /**
+   * Contexto para los diálogos, con los saldos recalculados desde las cuotas. `contextoDesdePrestamo`
+   * copia `saldoTotal`/`saldoCapital` de PRST, que están congelados desde la última carga de
+   * Petrocomercial: si se pasaran tal cual, los diálogos mostrarían el capital de hace meses y
+   * validarían contra una deuda que ya no existe.
+   */
   private contextoActual(): ContextoPrestamo | null {
     const prestamo = this.prestamoVigente();
     if (!prestamo) return null;
-    return contextoDesdePrestamo(prestamo, this.entidadSeleccionada()?.razonSocial);
+    return {
+      ...contextoDesdePrestamo(prestamo, this.entidadSeleccionada()?.razonSocial),
+      saldoTotal: this.saldoTotalPrestamo(),
+      saldoCapital: this.saldoCapitalPrestamo(),
+    };
   }
 
   tituloPrestamo(): string {
     return this.contextoActual()?.titulo ?? 'Préstamo';
+  }
+
+  /**
+   * Monto con el que se precarga el campo de valor de los diálogos de operación. Se prefiere el
+   * asignado a la fila del préstamo cuando existe (es el que realmente va al crédito) y si no, el
+   * total tecleado en «Monto del pago».
+   */
+  private valorSugeridoParaDialogo(): number {
+    const asignadoAlPrestamo = this.montoPrestamo();
+    if (asignadoAlPrestamo > 0.004) return +asignadoAlPrestamo.toFixed(2);
+    return +Math.max(this.montoTotal(), 0).toFixed(2);
   }
 
   abrirPago(modoInicial: 'efectivo' | 'aportes' = 'efectivo'): void {
@@ -737,7 +964,7 @@ export class CobrosPersonalesComponent implements OnDestroy {
     if (!contexto) return;
     this.dialog
       .open(AbonoCapitalDialogComponent, {
-        data: contexto,
+        data: { ...contexto, valorSugerido: this.valorSugeridoParaDialogo() },
         width: '820px',
         maxWidth: '96vw',
         autoFocus: false,

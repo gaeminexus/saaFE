@@ -29,6 +29,9 @@
           <ng-container><mat-icon>search</mat-icon> Buscar</ng-container>
         }
       </button>
+      <button mat-stroked-button class="search-button limpiar" (click)="limpiarBusqueda()" [disabled]="buscando()">
+        <mat-icon>backspace</mat-icon> Limpiar
+      </button>
     </div>
   </div>
 
@@ -117,7 +120,7 @@
                 @for (p of prestamosOperables(); track p.codigo) {
                   <button type="button" class="sp-chip" [class.activo]="p.codigo === prestamo.codigo"
                           (click)="seleccionarPrestamo(p)">
-                    #{{ p.idAsoprep }} · {{ formatMoneda(p.saldoTotal) }}
+                    #{{ p.idAsoprep }} · {{ formatMoneda(saldoTotalDe(p)) }}
                   </button>
                 }
               </div>
@@ -163,6 +166,10 @@
                 <th mat-header-cell *matHeaderCellDef>Saldo total</th>
                 <td mat-cell *matCellDef="let p">{{ formatMoneda(saldoTotalPrestamo()) }}</td>
               </ng-container>
+              <ng-container matColumnDef="saldoCapital">
+                <th mat-header-cell *matHeaderCellDef>Saldo capital</th>
+                <td mat-cell *matCellDef="let p">{{ formatMoneda(saldoCapitalPrestamo()) }}</td>
+              </ng-container>
               <ng-container matColumnDef="monto">
                 <th mat-header-cell *matHeaderCellDef>Monto asignado</th>
                 <td mat-cell *matCellDef="let p">
@@ -175,38 +182,68 @@
               <ng-container matColumnDef="detalle">
                 <th mat-header-cell *matHeaderCellDef></th>
                 <td mat-cell *matCellDef="let p">
-                  <button mat-stroked-button [disabled]="!cuentaChecked.prestamo" (click)="toggleDetallePrestamo()">
-                    Ver detalle
+                  <button mat-stroked-button (click)="toggleDetallePrestamo()">
+                    Ver cuotas
                     <mat-icon [class.chevron-abierto]="detallePrestamoAbierto()">expand_more</mat-icon>
                   </button>
                 </td>
               </ng-container>
-              <tr mat-header-row *matHeaderRowDef="['chk','idAsoprep','saldo','monto','detalle']"></tr>
-              <tr mat-row *matRowDef="let row; columns: ['chk','idAsoprep','saldo','monto','detalle'];"></tr>
+              <tr mat-header-row *matHeaderRowDef="['chk','idAsoprep','saldo','saldoCapital','monto','detalle']"></tr>
+              <tr mat-row *matRowDef="let row; columns: ['chk','idAsoprep','saldo','saldoCapital','monto','detalle'];"></tr>
             </table>
 
-            @if (detallePrestamoAbierto() && cuentaChecked.prestamo) {
+            @if (detallePrestamoAbierto()) {
               <div class="detalle-panel">
+                <div class="detalle-resumen">
+                  <span><b>{{ cuotasLiquidadas() }}</b> de {{ cuotasPrestamo().length }} cuota(s) liquidada(s)</span>
+                  @if (proximaCuota(); as prox) {
+                    <span class="prox">
+                      <mat-icon>arrow_forward</mat-icon>
+                      Siguiente cuota a cobrar: <b>#{{ prox.numeroCuota }}</b>
+                      &middot; vence {{ prox.fechaVencimiento | date:'dd/MM/yyyy' }}
+                      &middot; pendiente <b>{{ formatMoneda(pendienteDeCuota(prox)) }}</b>
+                    </span>
+                  } @else if (cuotasPrestamo().length) {
+                    <span class="prox">
+                      <mat-icon>task_alt</mat-icon> Todas las cuotas están liquidadas.
+                    </span>
+                  }
+                </div>
                 <table class="detalle-table">
                   <thead>
-                    <tr><th>Cuota</th><th>Vencimiento</th><th>Valor</th><th>Monto aplicado</th><th>Resultado</th></tr>
+                    <tr>
+                      <th>Cuota</th><th>Vencimiento</th><th>Estado</th>
+                      <th>Pendiente</th><th>Monto aplicado</th><th>Resultado</th>
+                    </tr>
                   </thead>
                   <tbody>
                     @for (a of asignacionesPrestamo(); track a.cuota.codigo) {
-                      <tr>
-                        <td>{{ a.cuota.numeroCuota }}</td>
+                      <tr [class.cuota-liquidada]="a.liquidada" [class.cuota-proxima]="a.esProxima">
+                        <td>
+                          {{ a.cuota.numeroCuota }}
+                          @if (a.esProxima) { <mat-icon class="icono-proxima" title="Siguiente cuota a cobrar">chevron_right</mat-icon> }
+                        </td>
                         <td>{{ a.cuota.fechaVencimiento | date:'dd/MM/yyyy' }}</td>
-                        <td class="num">{{ formatMoneda(a.cuota.saldo) }}</td>
+                        <td>
+                          <span class="estado-cuota" [class]="claseEstadoCuota(a.estadoCuota)">
+                            {{ nombreEstadoCuota(a.estadoCuota) }}
+                          </span>
+                        </td>
+                        <td class="num">{{ a.liquidada ? '—' : formatMoneda(a.pendiente) }}</td>
                         <td class="num">{{ a.aplicado > 0 ? formatMoneda(a.aplicado) : '—' }}</td>
                         <td>
-                          <span class="estado-mini" [class]="a.estado">
-                            {{ a.estado === 'cubierta' ? 'Cubierta' : a.estado === 'parcial' ? 'Parcial' : 'Pendiente' }}
-                          </span>
+                          @if (a.liquidada) {
+                            <span class="estado-mini liquidada">Sin saldo</span>
+                          } @else {
+                            <span class="estado-mini" [class]="a.resultado">
+                              {{ a.resultado === 'cubierta' ? 'Cubierta' : a.resultado === 'parcial' ? 'Parcial' : 'Pendiente' }}
+                            </span>
+                          }
                         </td>
                       </tr>
                     }
                     @empty {
-                      <tr><td colspan="5" class="texto-vacio">No hay cuotas pendientes para este préstamo.</td></tr>
+                      <tr><td colspan="6" class="texto-vacio">Este préstamo no tiene tabla de amortización cargada.</td></tr>
                     }
                   </tbody>
                 </table>

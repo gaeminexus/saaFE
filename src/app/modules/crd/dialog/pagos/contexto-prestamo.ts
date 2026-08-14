@@ -22,6 +22,12 @@ export interface ContextoPrestamo {
   saldoCapital?: number | null;
   valorCuota?: number | null;
   plazo?: number | null;
+  /**
+   * Monto que el usuario ya tecleó en la pantalla que abre el diálogo ("Monto del pago"). Los
+   * diálogos lo precargan en su campo de valor para no obligar a escribirlo dos veces; el usuario
+   * puede cambiarlo dentro del diálogo.
+   */
+  valorSugerido?: number | null;
 }
 
 export function contextoDesdePrestamo(prestamo: Prestamo, participante?: string | null): ContextoPrestamo {
