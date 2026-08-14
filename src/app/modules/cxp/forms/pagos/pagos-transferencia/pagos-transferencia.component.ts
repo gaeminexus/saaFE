@@ -14,14 +14,21 @@ import {
   EstadoPagoProgramado,
   SaldoFactura,
 } from '../../../../../shared/model/pagos-cobros/catalogos-aplicacion-pago';
+import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
+import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
+import { TipoDatosBusqueda as TipoDatos } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { CuentaBancaria } from '../../../../tsr/model/cuenta-bancaria';
+import { CuentaBancariaTitular } from '../../../../tsr/model/cuenta-bancaria-titular';
 import { Titular } from '../../../../tsr/model/titular';
 import { CuentaBancariaService } from '../../../../tsr/service/cuenta-bancaria.service';
+import { CuentaBancariaTitularService } from '../../../../tsr/service/cuenta-bancaria-titular.service';
 import { FacturaCompraSelectorDialogComponent } from '../../../dialog/factura-compra-selector-dialog/factura-compra-selector-dialog.component';
 import { FacturaCompra } from '../../../model/factura-compra';
+import { FacturaCompraService } from '../../../service/factura-compra.service';
 import {
+  ConfirmarManualResponse,
   LoteGeneradoResponse,
   PagoProgramado,
   RespuestaBancoResponse,
@@ -45,6 +52,8 @@ export class PagosTransferenciaComponent implements OnInit {
   private pagoS = inject(PagoProgramadoService);
   private aplicacionS = inject(AplicacionPagoCxpService);
   private cuentaBancariaS = inject(CuentaBancariaService);
+  private cuentaTitularS = inject(CuentaBancariaTitularService);
+  private facturaS = inject(FacturaCompraService);
   private funcionesDatos = inject(FuncionesDatosService);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
@@ -61,6 +70,9 @@ export class PagosTransferenciaComponent implements OnInit {
   regIdFactura: number | null = null;
   regCuentaOrigen: CuentaBancaria | null = null;
   regIdCuentaDestino: number | null = null;
+  /** Cuentas del proveedor (CTBN). El banco las necesita para la transferencia. */
+  cuentasDestino = signal<CuentaBancariaTitular[]>([]);
+  cargandoCuentasDestino = signal(false);
   regDebitoAutomatico = false;
   regReferencia = '';
   /** Saldo de la factura elegida: precarga el valor y le pone tope. */
@@ -90,7 +102,22 @@ export class PagosTransferenciaComponent implements OnInit {
   respError = signal('');
   respResultado = signal<RespuestaBancoResponse | null>(null);
 
-  // ─── d) Seguimiento ────────────────────────────────────
+  // ─── d) Confirmación manual ────────────────────────────
+  // El banco todavía no entrega el archivo de respuesta, así que la
+  // conciliación se hace contra el estado de cuenta y el pago se confirma aquí.
+  // El efecto contable es el mismo que el de la respuesta bancaria.
+  pagosPorConfirmar = signal<PagoProgramado[]>([]);
+  confSeleccionados = new Set<number>();
+  confReferencia = '';
+  confFecha: Date | null = new Date();
+  confObservacion = '';
+  cargandoPorConfirmar = signal(false);
+  confirmandoManual = signal(false);
+  confError = signal('');
+  confResultado = signal<ConfirmarManualResponse | null>(null);
+  readonly columnasConfirmacion = ['check', 'proveedor', 'factura', 'valor', 'fechaProgramada', 'estado'];
+
+  // ─── e) Seguimiento ────────────────────────────────────
   segEstado: number | null = null;
   pagosSeguimiento = signal<PagoProgramado[]>([]);
   cargandoSeguimiento = signal(false);
@@ -109,9 +136,38 @@ export class PagosTransferenciaComponent implements OnInit {
     if (id) {
       this.regIdFactura = +id;
       this.cargarSaldoFactura(this.regIdFactura);
+      // Se entra desde la factura, sin pasar por el buscador de proveedor: hay
+      // que traerla para saber a qué titular pedirle las cuentas de destino.
+      this.facturaS.getById(this.regIdFactura).subscribe({
+        next: (factura) => {
+          if (!factura) return;
+          this.regFacturaElegida.set(factura);
+          if (factura.titular) {
+            this.regProveedor.set(factura.titular);
+            this.cargarCuentasDestino(factura.titular.codigo);
+          }
+        },
+        error: () => {},
+      });
     }
     this.cargarCuentasBancarias();
     this.cargarSeguimiento();
+  }
+
+  /**
+   * Cada pestaña de listado se refresca al entrar. Sin esto, al abrirlas desde
+   * la cabecera (en vez de con los botones "Ir a...") quedaban vacías hasta
+   * pulsar Actualizar.
+   */
+  onCambioTab(indice: number): void {
+    // El propio mat-tab-group vuelve a emitir el cambio que provocan los
+    // botones "Ir a...", así que se ignora el aviso repetido para no consultar
+    // dos veces lo mismo.
+    if (indice === this.tabActiva) return;
+    this.tabActiva = indice;
+    if (indice === 1) this.cargarPagosRegistrados();
+    else if (indice === 3) this.cargarPagosPorConfirmar();
+    else if (indice === 4) this.cargarSeguimiento();
   }
 
   private cargarCuentasBancarias(): void {
@@ -145,8 +201,65 @@ export class PagosTransferenciaComponent implements OnInit {
       this.regIdFactura = null;
       this.regSaldo.set(null);
       this.regValor = '';
+      this.cargarCuentasDestino(titular.codigo);
       this.buscarFacturaRegistro();
     });
+  }
+
+  /**
+   * Cuentas bancarias del proveedor (tabla CTBN). Sin una cuenta de destino el
+   * pago se registra pero después no se puede incluir en ningún archivo: el
+   * backend lo rechaza al formatearlo (FormateadorArchivoBancoPlanoImpl), así
+   * que aquí se exige desde el registro.
+   */
+  private cargarCuentasDestino(codigoTitular: number | undefined): void {
+    this.regIdCuentaDestino = null;
+    this.cuentasDestino.set([]);
+    if (!codigoTitular) return;
+
+    this.cargandoCuentasDestino.set(true);
+    const criterio = new DatosBusqueda();
+    criterio.asignaValorConCampoPadre(
+      TipoDatos.LONG, 'titular', 'codigo', String(codigoTitular), TipoComandosBusqueda.IGUAL,
+    );
+
+    this.cuentaTitularS.selectByCriteria([criterio]).subscribe({
+      next: (data) => {
+        this.cargandoCuentasDestino.set(false);
+        const activas = (data ?? []).filter((c) => this.esCuentaActiva(c));
+        this.cuentasDestino.set(activas);
+        this.autoSeleccionarCuentaDestino();
+      },
+      error: () => {
+        this.cargandoCuentasDestino.set(false);
+        this.cuentasDestino.set([]);
+        this.snackBar.open('No se pudieron consultar las cuentas bancarias del proveedor.', 'Cerrar', {
+          duration: 6000,
+        });
+      },
+    });
+  }
+
+  /** Con una sola cuenta no hay nada que elegir; con varias se decide a mano. */
+  private autoSeleccionarCuentaDestino(): void {
+    const cuentas = this.cuentasDestino();
+    this.regIdCuentaDestino = cuentas.length === 1 ? cuentas[0].codigo : null;
+  }
+
+  /** El estado nulo se trata como activo: hay cuentas antiguas sin CTBNESTD. */
+  private esCuentaActiva(cuenta: CuentaBancariaTitular): boolean {
+    return cuenta.estado == null || Number(cuenta.estado) !== 0;
+  }
+
+  etiquetaCuentaDestino(cuenta: CuentaBancariaTitular): string {
+    const banco = (cuenta.banco as any)?.nombre ?? 'Banco';
+    const tipo = Number(cuenta.tipoCuenta) === 1 ? 'Cte.' : Number(cuenta.tipoCuenta) === 2 ? 'Ahorros' : '';
+    return `${banco} — ${cuenta.numeroCuenta}${tipo ? ` (${tipo})` : ''}`;
+  }
+
+  /** Proveedor ya elegido y sin ninguna cuenta activa registrada en CTBN. */
+  get proveedorSinCuentaDestino(): boolean {
+    return !!this.regProveedor() && !this.cargandoCuentasDestino() && this.cuentasDestino().length === 0;
   }
 
   /** Paso 2: elegir una factura pendiente del proveedor ya seleccionado. */
@@ -213,6 +326,7 @@ export class PagosTransferenciaComponent implements OnInit {
       this.regIdCuentaDestino = null;
     } else {
       this.regReferencia = '';
+      this.autoSeleccionarCuentaDestino();
     }
     this.regError.set('');
     this.regExito.set('');
@@ -246,6 +360,9 @@ export class PagosTransferenciaComponent implements OnInit {
   get puedeRegistrar(): boolean {
     return !!this.regIdFactura
       && !!this.regCuentaOrigen
+      // En un débito automático el banco debita por convenio y no hay
+      // transferencia: solo ahí se puede registrar sin cuenta de destino.
+      && (this.regDebitoAutomatico || this.regIdCuentaDestino != null)
       && this.regValorNumerico > 0
       && !this.regExcedeSaldo
       && !this.registrando();
@@ -301,7 +418,7 @@ export class PagosTransferenciaComponent implements OnInit {
         this.regValor = '';
         this.regObservacion = '';
         this.regReferencia = '';
-        this.regIdCuentaDestino = null;
+        if (!this.regDebitoAutomatico) this.autoSeleccionarCuentaDestino();
         this.cargarSeguimiento();
         this.snackBar.open(mensaje, 'Cerrar', { duration: 6000 });
       },
@@ -313,8 +430,7 @@ export class PagosTransferenciaComponent implements OnInit {
   }
 
   irASeleccion(): void {
-    this.tabActiva = 1;
-    this.cargarPagosRegistrados();
+    this.onCambioTab(1);
   }
 
   // ═══ b) SELECCIONAR Y GENERAR ═══════════════════════════
@@ -432,8 +548,12 @@ export class PagosTransferenciaComponent implements OnInit {
     });
   }
 
+  /**
+   * Sin uso mientras la pestaña 3 esté en espera del formato de respuesta del
+   * banco. Se conserva para reactivarla junto con la pestaña.
+   */
   irACargarRespuesta(): void {
-    this.tabActiva = 2;
+    this.onCambioTab(2);
   }
 
   // ═══ c) CARGAR RESPUESTA DEL BANCO ══════════════════════
@@ -478,11 +598,138 @@ export class PagosTransferenciaComponent implements OnInit {
   }
 
   irASeguimiento(): void {
-    this.tabActiva = 3;
-    this.cargarSeguimiento();
+    this.onCambioTab(4);
   }
 
-  // ═══ d) SEGUIMIENTO ═════════════════════════════════════
+  // ═══ d) CONFIRMACIÓN MANUAL ═════════════════════════════
+
+  irAConfirmacionManual(): void {
+    this.onCambioTab(3);
+  }
+
+  /**
+   * Pagos que siguen esperando al banco: Registrado (aún sin archivo) o
+   * En archivo (ya enviado). Los débitos automáticos no entran porque nacen
+   * confirmados y ya tienen su contabilidad.
+   */
+  cargarPagosPorConfirmar(): void {
+    this.cargandoPorConfirmar.set(true);
+    this.confError.set('');
+    this.confSeleccionados.clear();
+
+    this.pagoS.listar(this.idEmpresaSesion()).subscribe({
+      next: (data) => {
+        this.pagosPorConfirmar.set(
+          (data ?? []).filter(
+            (p) => !this.esDebitoAutomatico(p)
+              && (p.estado === EstadoPagoProgramado.REGISTRADO
+                || p.estado === EstadoPagoProgramado.EN_ARCHIVO)
+          )
+        );
+        this.cargandoPorConfirmar.set(false);
+      },
+      error: (err: Error) => {
+        this.pagosPorConfirmar.set([]);
+        this.cargandoPorConfirmar.set(false);
+        this.confError.set(err.message);
+      },
+    });
+  }
+
+  estaSeleccionadoConf(pago: PagoProgramado): boolean {
+    return this.confSeleccionados.has(pago.id);
+  }
+
+  alternarSeleccionConf(pago: PagoProgramado): void {
+    if (this.confSeleccionados.has(pago.id)) {
+      this.confSeleccionados.delete(pago.id);
+    } else {
+      this.confSeleccionados.add(pago.id);
+    }
+  }
+
+  get todosSeleccionadosConf(): boolean {
+    const filas = this.pagosPorConfirmar();
+    return filas.length > 0 && filas.every((p) => this.confSeleccionados.has(p.id));
+  }
+
+  alternarTodosConf(): void {
+    if (this.todosSeleccionadosConf) {
+      this.confSeleccionados.clear();
+    } else {
+      this.pagosPorConfirmar().forEach((p) => this.confSeleccionados.add(p.id));
+    }
+  }
+
+  get totalSeleccionadoConf(): number {
+    return this.pagosPorConfirmar()
+      .filter((p) => this.confSeleccionados.has(p.id))
+      .reduce((suma, p) => suma + (Number(p.valor) || 0), 0);
+  }
+
+  get puedeConfirmarManual(): boolean {
+    return this.confSeleccionados.size > 0 && !!this.confFecha && !this.confirmandoManual();
+  }
+
+  /**
+   * Confirmar genera contabilidad irreversible salvo reversión expresa, así que
+   * se pide una confirmación explícita antes de lanzarla.
+   */
+  confirmarPagosManualmente(): void {
+    if (!this.puedeConfirmarManual) return;
+
+    const cantidad = this.confSeleccionados.size;
+    const total = this.totalSeleccionadoConf.toFixed(2);
+    const data: MotivoDialogData = {
+      titulo: `Confirmar ${cantidad} pago(s) manualmente`,
+      advertencia:
+        `Se dará por pagado un total de $${total} como si el banco lo hubiera confirmado: `
+        + 'se abona la factura y se generan el asiento contable y el movimiento bancario. '
+        + 'Hágalo solo con los pagos que ya verificó en el estado de cuenta. Para deshacerlo '
+        + 'habrá que revertir cada pago desde Seguimiento.',
+      textoConfirmar: 'Sí, confirmar y contabilizar',
+      requiereDobleConfirmacion: true,
+      textoDobleConfirmacion: 'Verifiqué en el estado de cuenta que estos pagos se ejecutaron.',
+    };
+
+    this.dialog.open(MotivoDialogComponent, { width: '540px', data }).afterClosed().subscribe((motivo) => {
+      if (!motivo) return;
+      this.ejecutarConfirmacionManual(motivo);
+    });
+  }
+
+  /** El motivo del diálogo se guarda como parte de la observación del pago. */
+  private ejecutarConfirmacionManual(motivo: string): void {
+    this.confirmandoManual.set(true);
+    this.confError.set('');
+    this.confResultado.set(null);
+
+    const nota = [this.confObservacion.trim(), motivo].filter((t) => !!t).join(' | ');
+
+    this.pagoS.confirmarManual({
+      idsPagos: Array.from(this.confSeleccionados),
+      referencia: this.confReferencia.trim() || undefined,
+      fechaPago: this.fechaISO(this.confFecha),
+      observacion: `Confirmación manual: ${nota}`,
+      idUsuario: this.idUsuarioSesion(),
+    }).subscribe({
+      next: (resp) => {
+        this.confirmandoManual.set(false);
+        this.confResultado.set(resp);
+        this.confReferencia = '';
+        this.confObservacion = '';
+        this.cargarPagosPorConfirmar();
+        this.cargarSeguimiento();
+        this.snackBar.open(resp.mensaje ?? 'Pagos confirmados.', 'Cerrar', { duration: 6000 });
+      },
+      error: (err: Error) => {
+        this.confirmandoManual.set(false);
+        this.confError.set(err.message);
+      },
+    });
+  }
+
+  // ═══ e) SEGUIMIENTO ═════════════════════════════════════
 
   cargarSeguimiento(): void {
     this.cargandoSeguimiento.set(true);

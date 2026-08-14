@@ -4,6 +4,8 @@ import { Observable, catchError, throwError } from 'rxjs';
 import { MotivoRequest } from '../../../shared/model/pagos-cobros/catalogos-aplicacion-pago';
 import {
   AnularPagoResponse,
+  ConfirmarManualRequest,
+  ConfirmarManualResponse,
   GenerarLoteRequest,
   LoteGeneradoResponse,
   PagoProgramado,
@@ -67,6 +69,16 @@ export class PagoProgramadoService {
       `${ServiciosCxp.RS_PGTR}/lote/${idLote}/respuesta`,
       contenido,
       { headers: new HttpHeaders({ 'Content-Type': 'application/octet-stream' }), params }
+    ).pipe(catchError(this.handleError));
+  }
+
+  /**
+   * Confirma manualmente pagos pendientes, como si hubiera llegado la respuesta
+   * del banco: genera aplicación, asiento contable y movimiento bancario.
+   */
+  confirmarManual(datos: ConfirmarManualRequest): Observable<ConfirmarManualResponse> {
+    return this.http.post<ConfirmarManualResponse>(
+      `${ServiciosCxp.RS_PGTR}/confirmarManual`, datos, this.httpOptions
     ).pipe(catchError(this.handleError));
   }
 

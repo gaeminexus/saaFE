@@ -93,6 +93,30 @@ export interface RespuestaBancoResponse {
   errores?: string[];
 }
 
+/**
+ * Body de POST /pgtr/confirmarManual. Confirma a mano pagos que siguen
+ * esperando al banco, con el mismo efecto contable que la respuesta bancaria.
+ */
+export interface ConfirmarManualRequest {
+  idsPagos: number[];
+  /** Referencia o N° de transacción del banco; queda en el pago y el asiento. */
+  referencia?: string;
+  /** Fecha real del pago (yyyy-MM-dd). Es la fecha del asiento contable. */
+  fechaPago?: string;
+  /** Nota que se agrega a la observación de cada pago. */
+  observacion?: string;
+  idUsuario: number;
+}
+
+/** Respuesta de POST /pgtr/confirmarManual. */
+export interface ConfirmarManualResponse {
+  exito: boolean;
+  mensaje: string;
+  confirmados: number;
+  /** Pagos que no se pudieron confirmar, con el motivo. */
+  errores?: string[];
+}
+
 /** Respuesta de POST /pgtr/anular/{id}. */
 export interface AnularPagoResponse {
   exito: boolean;

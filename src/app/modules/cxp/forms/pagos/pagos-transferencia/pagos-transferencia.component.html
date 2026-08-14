@@ -7,7 +7,7 @@
     </div>
   </div>
 
-  <mat-tab-group [(selectedIndex)]="tabActiva" animationDuration="200ms">
+  <mat-tab-group [selectedIndex]="tabActiva" (selectedIndexChange)="onCambioTab($event)" animationDuration="200ms">
 
     <!-- ═══ a) REGISTRAR PAGO ═══════════════════════════ -->
     <mat-tab label="1. Registrar Pago">
@@ -53,9 +53,22 @@
 
             @if (!regDebitoAutomatico) {
               <mat-form-field appearance="outline">
-                <mat-label>Cuenta destino del proveedor (Id)</mat-label>
-                <input matInput type="number" [(ngModel)]="regIdCuentaDestino" name="regIdCuentaDestino" />
-                <mat-hint>Opcional; debe pertenecer al proveedor de la factura</mat-hint>
+                <mat-label>Cuenta destino del proveedor</mat-label>
+                <mat-select [(ngModel)]="regIdCuentaDestino" name="regIdCuentaDestino"
+                            [disabled]="!regProveedor() || cargandoCuentasDestino() || proveedorSinCuentaDestino">
+                  @for (c of cuentasDestino(); track c.codigo) {
+                    <mat-option [value]="c.codigo">{{ etiquetaCuentaDestino(c) }}</mat-option>
+                  }
+                </mat-select>
+                @if (!regProveedor()) {
+                  <mat-hint>Elija primero el proveedor</mat-hint>
+                } @else if (cargandoCuentasDestino()) {
+                  <mat-hint>Consultando las cuentas del proveedor…</mat-hint>
+                } @else if (proveedorSinCuentaDestino) {
+                  <mat-hint class="hint-error">El proveedor no tiene cuenta bancaria registrada</mat-hint>
+                } @else {
+                  <mat-hint>Obligatorio para la transferencia</mat-hint>
+                }
               </mat-form-field>
             } @else {
               <mat-form-field appearance="outline">
@@ -132,6 +145,18 @@
               <span>
                 Registrar el pago no mueve todavía el saldo de la factura ni genera contabilidad:
                 eso ocurre cuando el banco confirma la transferencia.
+              </span>
+            </div>
+          }
+
+          @if (!regDebitoAutomatico && proveedorSinCuentaDestino) {
+            <div class="mensaje-error">
+              <mat-icon>account_balance</mat-icon>
+              <span>
+                <strong>{{ nombreProveedorRegistro() }}</strong> no tiene ninguna cuenta bancaria activa
+                registrada, así que no se le puede transferir. Regístrela en Tesorería → Titulares
+                (pestaña Cuentas bancarias) y vuelva a elegir el proveedor. Si en cambio el banco ya
+                debitó la cuenta por convenio, marque «Es débito automático».
               </span>
             </div>
           }
@@ -277,9 +302,9 @@
                     <mat-icon>download</mat-icon>
                     Descargar de nuevo
                   </button>
-                  <button mat-stroked-button (click)="irACargarRespuesta()">
-                    <mat-icon>upload_file</mat-icon>
-                    Cargar respuesta del banco
+                  <button mat-stroked-button (click)="irAConfirmacionManual()">
+                    <mat-icon>task_alt</mat-icon>
+                    Confirmar pagos manualmente
                   </button>
                   <button mat-stroked-button (click)="irASeguimiento()">
                     <mat-icon>list_alt</mat-icon>
@@ -309,8 +334,12 @@
       </mat-card>
     </mat-tab>
 
-    <!-- ═══ c) CARGAR RESPUESTA DEL BANCO ═══════════════ -->
-    <mat-tab label="3. Cargar Respuesta">
+    <!-- ═══ c) CARGAR RESPUESTA DEL BANCO ═══════════════
+         En espera: el banco todavía no define el formato del archivo de
+         respuesta, así que la pestaña queda deshabilitada y la confirmación se
+         hace en «4. Confirmación Manual». El contenido se conserva tal cual
+         para reactivarlo quitando el [disabled] cuando llegue el formato. -->
+    <mat-tab label="3. Cargar Respuesta (en espera)" [disabled]="true">
       <mat-card class="panel">
         <mat-card-content>
 
@@ -392,8 +421,165 @@
       </mat-card>
     </mat-tab>
 
-    <!-- ═══ d) SEGUIMIENTO ══════════════════════════════ -->
-    <mat-tab label="4. Seguimiento">
+    <!-- ═══ d) CONFIRMACIÓN MANUAL ══════════════════════ -->
+    <mat-tab label="4. Confirmación Manual">
+      <mat-card class="panel">
+        <mat-card-content>
+
+          <div class="mensaje-info">
+            <mat-icon>info</mat-icon>
+            <span>
+              Mientras el banco no entregue el archivo de respuesta, la conciliación se hace
+              contra el estado de cuenta y el pago se confirma aquí. Confirmar equivale a la
+              respuesta del banco: abona la factura y genera el asiento contable y el movimiento
+              bancario.
+            </span>
+          </div>
+
+          <div class="fila-campos">
+            <mat-form-field appearance="outline">
+              <mat-label>Fecha del pago</mat-label>
+              <input matInput [matDatepicker]="pickerConf" [(ngModel)]="confFecha" name="confFecha" />
+              <mat-datepicker-toggle matSuffix [for]="pickerConf"></mat-datepicker-toggle>
+              <mat-datepicker #pickerConf></mat-datepicker>
+              <mat-hint>Es la fecha del asiento contable</mat-hint>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Referencia del banco</mat-label>
+              <input matInput [(ngModel)]="confReferencia" name="confReferencia" maxlength="200" />
+              <mat-hint>Opcional; N° de transacción o comprobante</mat-hint>
+            </mat-form-field>
+
+            <button mat-stroked-button class="btn-consultar" (click)="cargarPagosPorConfirmar()">
+              <mat-icon>refresh</mat-icon>
+              Actualizar listado
+            </button>
+          </div>
+
+          <mat-form-field appearance="outline" class="campo-ancho">
+            <mat-label>Observación</mat-label>
+            <input matInput [(ngModel)]="confObservacion" name="confObservacion" maxlength="200" />
+            <mat-hint>Opcional; se agrega a la observación de cada pago confirmado</mat-hint>
+          </mat-form-field>
+
+          @if (confError()) {
+            <div class="mensaje-error">
+              <mat-icon>error_outline</mat-icon>
+              <span>{{ confError() }}</span>
+            </div>
+          }
+
+          @if (cargandoPorConfirmar()) {
+            <div class="estado-linea">
+              <mat-spinner diameter="24"></mat-spinner>
+              <span>Cargando pagos pendientes...</span>
+            </div>
+          } @else if (pagosPorConfirmar().length === 0) {
+            <div class="sin-datos">
+              <mat-icon>inbox</mat-icon>
+              <span>No hay pagos pendientes de confirmación.</span>
+            </div>
+          } @else {
+            <div class="tabla-scroll">
+              <table mat-table [dataSource]="pagosPorConfirmar()">
+
+                <ng-container matColumnDef="check">
+                  <th mat-header-cell *matHeaderCellDef class="col-check">
+                    <mat-checkbox [checked]="todosSeleccionadosConf" (change)="alternarTodosConf()"></mat-checkbox>
+                  </th>
+                  <td mat-cell *matCellDef="let p" class="col-check">
+                    <mat-checkbox [checked]="estaSeleccionadoConf(p)" (change)="alternarSeleccionConf(p)"></mat-checkbox>
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="proveedor">
+                  <th mat-header-cell *matHeaderCellDef>Proveedor</th>
+                  <td mat-cell *matCellDef="let p">{{ p.titular?.nombre || '—' }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="factura">
+                  <th mat-header-cell *matHeaderCellDef>Factura</th>
+                  <td mat-cell *matCellDef="let p">{{ p.facturaCompra?.numero || '—' }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="valor">
+                  <th mat-header-cell *matHeaderCellDef class="col-monto">Valor</th>
+                  <td mat-cell *matCellDef="let p" class="col-monto">{{ p.valor | number: '1.2-2' }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="fechaProgramada">
+                  <th mat-header-cell *matHeaderCellDef>Fecha programada</th>
+                  <td mat-cell *matCellDef="let p">{{ formatearFecha(p.fechaProgramada) }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="estado">
+                  <th mat-header-cell *matHeaderCellDef>Estado</th>
+                  <td mat-cell *matCellDef="let p">
+                    <span class="badge" [ngClass]="etiquetaEstado(p.estado).clase">
+                      {{ etiquetaEstado(p.estado).texto }}
+                    </span>
+                  </td>
+                </ng-container>
+
+                <tr mat-header-row *matHeaderRowDef="columnasConfirmacion"></tr>
+                <tr mat-row *matRowDef="let row; columns: columnasConfirmacion"></tr>
+              </table>
+            </div>
+
+            <div class="resumen-seleccion">
+              <span>{{ confSeleccionados.size }} pago(s) seleccionado(s)</span>
+              <span class="total">Total: {{ totalSeleccionadoConf | number: '1.2-2' }}</span>
+            </div>
+          }
+
+          @if (confResultado(); as r) {
+            <div class="mensaje-exito">
+              <mat-icon>check_circle</mat-icon>
+              <div>
+                <div>{{ r.mensaje }}</div>
+                <div class="detalle-exito">
+                  <span>Confirmados: {{ r.confirmados }}</span>
+                </div>
+              </div>
+            </div>
+
+            @if (r.errores && r.errores.length > 0) {
+              <div class="mensaje-advertencia">
+                <mat-icon>warning</mat-icon>
+                <div>
+                  <div>Pagos que no se pudieron confirmar (requieren revisión):</div>
+                  <ul class="lista-errores">
+                    @for (e of r.errores; track e) {
+                      <li>{{ e }}</li>
+                    }
+                  </ul>
+                </div>
+              </div>
+            }
+          }
+
+          <div class="acciones">
+            <button mat-stroked-button (click)="irASeguimiento()">
+              <mat-icon>list_alt</mat-icon>
+              Ir a seguimiento
+            </button>
+            <button mat-raised-button class="btn-confirmar" [disabled]="!puedeConfirmarManual" (click)="confirmarPagosManualmente()">
+              @if (confirmandoManual()) {
+                <mat-spinner diameter="20"></mat-spinner>
+              } @else {
+                <mat-icon>task_alt</mat-icon>
+              }
+              Confirmar y contabilizar
+            </button>
+          </div>
+
+        </mat-card-content>
+      </mat-card>
+    </mat-tab>
+
+    <!-- ═══ e) SEGUIMIENTO ══════════════════════════════ -->
+    <mat-tab label="5. Seguimiento">
       <mat-card class="panel">
         <mat-card-content>
 
