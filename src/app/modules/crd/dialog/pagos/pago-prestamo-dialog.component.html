@@ -1,0 +1,190 @@
+<h2 mat-dialog-title class="pg-titulo">
+  <mat-icon>payments</mat-icon>
+  Pagar cuotas
+  <span class="pg-titulo-sub">{{ data.titulo }}</span>
+</h2>
+
+<mat-dialog-content class="pg-contenido">
+
+  @if (errorMensaje(); as error) {
+    <div class="pg-aviso error">
+      <mat-icon>error_outline</mat-icon>
+      <div>
+        <span>{{ error }}</span>
+        <div class="pg-aviso-acciones">
+          @if (errorCodigo() === 'VALOR_EXCEDE_DEUDA') {
+            <button mat-flat-button color="primary" (click)="irAPrecancelar()">
+              <mat-icon>task_alt</mat-icon> Precancelar el crédito
+            </button>
+          }
+          @if (errorCodigo() === 'SALDO_APORTES_INSUFICIENTE') {
+            <button mat-stroked-button (click)="cargarSaldos()"><mat-icon>refresh</mat-icon> Actualizar saldos</button>
+          }
+        </div>
+      </div>
+    </div>
+  }
+
+  <div class="pg-grid">
+    <div class="pg-dato">
+      <div class="pg-dato-label">Saldo total del préstamo</div>
+      <div class="pg-dato-valor">{{ formatMoneda(data.saldoTotal) }}</div>
+    </div>
+    <div class="pg-dato">
+      <div class="pg-dato-label">Valor de cuota</div>
+      <div class="pg-dato-valor">{{ formatMoneda(data.valorCuota) }}</div>
+    </div>
+    <div class="pg-dato destacado">
+      <div class="pg-dato-label">Se va a pagar</div>
+      <div class="pg-dato-valor">{{ formatMoneda(montoAPagar()) }}</div>
+    </div>
+  </div>
+
+  <div class="pg-seccion-label">¿De dónde sale el dinero?</div>
+  <div class="pgp-modos">
+    <button type="button" class="pgp-modo" [class.activo]="modo() === 'efectivo'" (click)="cambiarModo('efectivo')">
+      <mat-icon>payments</mat-icon>
+      <div>
+        <div class="pgp-modo-titulo">Efectivo o transferencia</div>
+        <div class="pgp-modo-desc">El socio entrega el dinero en ventanilla.</div>
+      </div>
+    </button>
+    <button type="button" class="pgp-modo" [class.activo]="modo() === 'aportes'" (click)="cambiarModo('aportes')">
+      <mat-icon>savings</mat-icon>
+      <div>
+        <div class="pgp-modo-titulo">Saldo de aportes</div>
+        <div class="pgp-modo-desc">Se descuenta de cesantía, jubilación u otros aportes.</div>
+      </div>
+    </button>
+  </div>
+
+  <!-- ==================== Efectivo ==================== -->
+  @if (modo() === 'efectivo') {
+    <div class="pg-form">
+      <mat-form-field appearance="outline" class="pg-monto-input">
+        <mat-label>Valor recibido</mat-label>
+        <span matTextPrefix>$&nbsp;</span>
+        <input matInput inputmode="decimal" cdkFocusInitial
+               [ngModel]="valorTexto()" (ngModelChange)="valorTexto.set($event)"
+               (blur)="onValorBlur()" (keyup.enter)="confirmar()" placeholder="0.00" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Fecha del pago</mat-label>
+        <input matInput [matDatepicker]="pickerPago" [max]="hoy"
+               [ngModel]="fechaPago()" (ngModelChange)="fechaPago.set($event)" />
+        <mat-datepicker-toggle matSuffix [for]="pickerPago"></mat-datepicker-toggle>
+        <mat-datepicker #pickerPago></mat-datepicker>
+        <mat-hint>No puede ser posterior a hoy</mat-hint>
+      </mat-form-field>
+    </div>
+
+    @if (sugerencias().length) {
+      <div class="pg-chips">
+        @for (s of sugerencias(); track s.etiqueta) {
+          <button mat-stroked-button (click)="usarSugerencia(s.valor)">
+            {{ s.etiqueta }} · {{ formatMoneda(s.valor) }}
+          </button>
+        }
+      </div>
+    }
+  }
+
+  <!-- ==================== Aportes ==================== -->
+  @if (modo() === 'aportes') {
+    @if (cargandoSaldos()) {
+      <div class="pg-cargando">
+        <mat-spinner diameter="32"></mat-spinner>
+        <span>Consultando saldos de aportes…</span>
+      </div>
+    } @else if (!saldos().length) {
+      <div class="pg-vacio">
+        <mat-icon>savings</mat-icon>
+        <p>El partícipe no tiene saldo disponible en ningún tipo de aporte.</p>
+        <button mat-stroked-button (click)="cargarSaldos()"><mat-icon>refresh</mat-icon> Reintentar</button>
+      </div>
+    } @else {
+      <p class="pgp-saldo-total">
+        Saldo total disponible en aportes: <b>{{ formatMoneda(saldoAportesTotal()) }}</b>
+      </p>
+
+      <div class="pg-fondos">
+        @for (r of renglones; track r.idTipoAporte) {
+          <div class="pg-fondo" [class.activo]="montoDe(r) > 0.004">
+            <mat-icon class="pgp-fondo-icono">savings</mat-icon>
+            <div class="pg-fondo-nombre">
+              {{ r.nombre }}
+              <div class="pg-fondo-saldo">Disponible {{ formatMoneda(r.disponible) }}</div>
+            </div>
+            <mat-form-field appearance="outline" class="pg-fondo-input" subscriptSizing="dynamic">
+              <span matTextPrefix>$&nbsp;</span>
+              <input matInput inputmode="decimal" [(ngModel)]="r.texto" (blur)="onRenglonBlur(r)" placeholder="0.00" />
+            </mat-form-field>
+            <button mat-stroked-button class="pgp-max" (click)="usarMaximo(r)">Usar todo</button>
+          </div>
+        }
+      </div>
+
+      @if (hayExcesoEnAlgunAporte()) {
+        <div class="pg-aviso error">
+          <mat-icon>warning</mat-icon>
+          <span>Un renglón supera el saldo disponible de su tipo de aporte.</span>
+        </div>
+      }
+
+      <div class="pg-form">
+        <mat-form-field appearance="outline">
+          <mat-label>Fecha del pago</mat-label>
+          <input matInput [matDatepicker]="pickerAportes" [max]="hoy"
+                 [ngModel]="fechaPago()" (ngModelChange)="fechaPago.set($event)" />
+          <mat-datepicker-toggle matSuffix [for]="pickerAportes"></mat-datepicker-toggle>
+          <mat-datepicker #pickerAportes></mat-datepicker>
+        </mat-form-field>
+      </div>
+
+      <div class="pg-aviso info">
+        <mat-icon>info</mat-icon>
+        <span>
+          Para un pago mixto (parte en efectivo y parte con aportes) registre primero el pago con aportes
+          y después el de efectivo: son dos operaciones separadas y cada una se puede anular por su cuenta.
+        </span>
+      </div>
+    }
+  }
+
+  <mat-form-field appearance="outline" class="pgp-observacion">
+    <mat-label>Observación (opcional)</mat-label>
+    <input matInput [(ngModel)]="observacion" maxlength="200" placeholder="Ej.: pago ventanilla recibo 00123" />
+  </mat-form-field>
+
+  @if (excedeDeuda()) {
+    <div class="pg-aviso alerta">
+      <mat-icon>warning_amber</mat-icon>
+      <span>
+        El monto supera el saldo registrado del préstamo ({{ formatMoneda(data.saldoTotal) }}).
+        El servidor lo rechazará y le ofrecerá el flujo de precancelación.
+      </span>
+    </div>
+  }
+
+  <div class="pg-aviso info">
+    <mat-icon>account_balance_wallet</mat-icon>
+    <span>
+      El dinero se imputa automáticamente en cascada desde la cuota más antigua y en este orden:
+      desgravamen, mora, interés vencido, interés, capital y seguro de incendio.
+    </span>
+  </div>
+
+</mat-dialog-content>
+
+<mat-dialog-actions align="end" class="pg-acciones">
+  <span class="pg-teclas"><kbd>Enter</kbd> confirmar &middot; <kbd>Esc</kbd> cancelar</span>
+  <button mat-stroked-button (click)="cancelar()">Cancelar</button>
+  <button mat-raised-button color="accent" [disabled]="!puedeConfirmar()" (click)="confirmar()">
+    @if (registrando()) {
+      <mat-spinner diameter="18"></mat-spinner>
+    } @else {
+      <ng-container><mat-icon>check_circle</mat-icon> Registrar pago de {{ formatMoneda(montoAPagar()) }}</ng-container>
+    }
+  </button>
+</mat-dialog-actions>

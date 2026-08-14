@@ -1,0 +1,123 @@
+@use './pagos-shared.scss' as *;
+
+:host { display: block; }
+
+.hist-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.hist-item {
+  display: flex;
+  gap: 0.8rem;
+  align-items: flex-start;
+  border: 1px solid $pg-borde;
+  border-left: 4px solid #cbd5e0;
+  border-radius: 12px;
+  padding: 0.8rem 0.9rem;
+  background: #fff;
+
+  &.anulable { border-left-color: $pg-primario; background: rgba(102, 126, 234, 0.04); }
+  &.anulado { border-left-color: #cbd5e0; background: #fafafa; opacity: 0.85; }
+}
+
+.hist-icono {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: rgba(102, 126, 234, 0.12);
+  color: $pg-primario-oscuro;
+  flex-shrink: 0;
+
+  .anulado & { background: #edf2f7; color: #a0aec0; }
+}
+
+.hist-cuerpo {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+.hist-linea1 {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+
+  .hist-tipo { font-weight: 700; font-size: 0.92rem; }
+  .hist-codigo { color: $pg-texto-suave; font-size: 0.8rem; @include pg-tabular; }
+}
+
+.hist-linea2 {
+  font-size: 0.78rem;
+  color: $pg-texto-suave;
+  margin-top: 0.15rem;
+  overflow-wrap: anywhere;
+}
+
+.hist-anulacion {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.4rem;
+  font-size: 0.76rem;
+  color: #94a3b8;
+  font-style: italic;
+
+  mat-icon { font-size: 15px; width: 15px; height: 15px; }
+}
+
+.hist-ver-tabla {
+  margin-top: 0.35rem;
+  min-height: 38px;
+  font-size: 0.78rem;
+
+  mat-icon {
+    transition: transform 0.18s ease;
+    &.abierto { transform: rotate(180deg); }
+  }
+}
+
+.hist-tabla { margin: 0.5rem 0 0.2rem; max-height: 240px; }
+
+.hist-sin-datos {
+  font-size: 0.78rem;
+  color: $pg-texto-suave;
+  font-style: italic;
+  margin: 0.4rem 0 0;
+}
+
+.hist-derecha {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.45rem;
+  flex-shrink: 0;
+}
+
+.hist-valor {
+  @include pg-tabular;
+  font-size: 1.05rem;
+  font-weight: 700;
+
+  .anulado & { text-decoration: line-through; color: #a0aec0; }
+}
+
+.hist-anular {
+  min-height: $pg-toque;
+  border-radius: 10px;
+}
+
+.hist-resumen {
+  margin: 0.9rem 0 0;
+  font-size: 0.78rem;
+  color: $pg-texto-suave;
+  text-align: right;
+}
+
+@media (max-width: 640px) {
+  .hist-item { flex-wrap: wrap; }
+  .hist-derecha { flex-direction: row; align-items: center; width: 100%; justify-content: space-between; }
+}

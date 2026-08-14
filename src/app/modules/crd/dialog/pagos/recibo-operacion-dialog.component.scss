@@ -1,0 +1,19 @@
+@use './pagos-shared.scss' as *;
+
+:host { display: block; }
+
+.pg-titulo.exito {
+  background: linear-gradient(135deg, #0f9d63 0%, #0d7a4f 100%);
+}
+
+.pg-dato-valor.nombre {
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.pg-nota-saldos {
+  font-size: 0.76rem;
+  color: $pg-texto-suave;
+  margin: 0.5rem 0 0;
+}

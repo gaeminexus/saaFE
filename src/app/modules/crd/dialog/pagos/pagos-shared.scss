@@ -1,0 +1,461 @@
+/**
+ * Lenguaje visual común de los diálogos de operaciones de pago de préstamos.
+ *
+ * Se importa con `@use './pagos-shared.scss' as *;` desde cada diálogo. Mantiene la paleta ya
+ * usada en cobros-personales/cruce-de-valores (#667eea → #764ba2) y agrega las reglas de
+ * accesibilidad táctil: ningún control interactivo baja de 44px de alto, que es el mínimo
+ * cómodo para usar la pantalla con el dedo en una tablet.
+ */
+
+$pg-primario: #667eea;
+$pg-primario-oscuro: #764ba2;
+$pg-texto: #1a202c;
+$pg-texto-suave: #718096;
+$pg-borde: #e2e8f0;
+$pg-fondo-suave: #f7fafc;
+$pg-ok: #0d7a4f;
+$pg-ok-fondo: #e3f9ec;
+$pg-alerta: #92600d;
+$pg-alerta-fondo: #fff6e0;
+$pg-error: #dc2626;
+$pg-error-fondo: #fef2f2;
+$pg-toque: 44px;
+
+@mixin pg-tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+
+// ---------- contenedor del diálogo ----------
+
+.pg-titulo {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 1.1rem 1.4rem;
+  background: linear-gradient(135deg, $pg-primario 0%, $pg-primario-oscuro 100%);
+  color: #fff;
+  font-size: 1.15rem;
+  font-weight: 600;
+
+  .pg-titulo-sub {
+    margin-left: auto;
+    font-size: 0.8rem;
+    font-weight: 500;
+    opacity: 0.88;
+  }
+
+  .pg-cerrar {
+    color: #fff;
+    margin-left: 0.4rem;
+  }
+}
+
+.pg-contenido {
+  padding: 1.25rem 1.4rem 0.5rem !important;
+  max-height: 68vh;
+  color: $pg-texto;
+}
+
+.pg-acciones {
+  padding: 0.9rem 1.4rem 1.1rem !important;
+  border-top: 1px solid $pg-borde;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+
+  button {
+    min-height: $pg-toque;
+    border-radius: 10px;
+    font-weight: 600;
+  }
+}
+
+// ---------- pasos ----------
+
+.pg-pasos {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.1rem;
+  flex-wrap: wrap;
+
+  .pg-paso {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.35rem 0.8rem 0.35rem 0.4rem;
+    border-radius: 999px;
+    background: $pg-fondo-suave;
+    color: $pg-texto-suave;
+    font-size: 0.78rem;
+    font-weight: 600;
+
+    .pg-paso-num {
+      display: grid;
+      place-items: center;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #cbd5e0;
+      color: #fff;
+      font-size: 0.72rem;
+    }
+
+    &.activo {
+      background: rgba(102, 126, 234, 0.12);
+      color: $pg-primario-oscuro;
+      .pg-paso-num { background: $pg-primario; }
+    }
+
+    &.completo {
+      background: $pg-ok-fondo;
+      color: $pg-ok;
+      .pg-paso-num { background: $pg-ok; }
+    }
+  }
+
+  .pg-paso-flecha { color: #cbd5e0; font-size: 18px; }
+}
+
+// ---------- tarjetas de dato ----------
+
+.pg-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.pg-dato {
+  background: $pg-fondo-suave;
+  border: 1px solid $pg-borde;
+  border-radius: 12px;
+  padding: 0.8rem 0.95rem;
+
+  .pg-dato-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: $pg-texto-suave;
+  }
+
+  .pg-dato-valor {
+    @include pg-tabular;
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-top: 0.2rem;
+  }
+
+  .pg-dato-nota { font-size: 0.74rem; color: $pg-texto-suave; margin-top: 0.15rem; }
+
+  &.destacado {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.12) 100%);
+    border-color: rgba(102, 126, 234, 0.35);
+    .pg-dato-valor { color: $pg-primario-oscuro; }
+  }
+
+  &.beneficio {
+    background: $pg-ok-fondo;
+    border-color: rgba(13, 122, 79, 0.3);
+    .pg-dato-valor, .pg-dato-label { color: $pg-ok; }
+  }
+}
+
+/** Comparativa "antes → después" de plazo/cuota en el abono a capital. */
+.pg-comparativa {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  @include pg-tabular;
+
+  .pg-antes { color: $pg-texto-suave; text-decoration: line-through; }
+  .pg-flecha { color: $pg-primario; }
+  .pg-despues { font-weight: 700; color: $pg-primario-oscuro; }
+}
+
+// ---------- tablas ----------
+
+.pg-tabla-scroll {
+  max-height: 320px;
+  overflow: auto;
+  border: 1px solid $pg-borde;
+  border-radius: 12px;
+  -webkit-overflow-scrolling: touch;
+}
+
+table.pg-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+
+  thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: #edf2f7;
+    color: $pg-texto;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0.6rem 0.7rem;
+    text-align: left;
+    white-space: nowrap;
+    border-bottom: 1px solid $pg-borde;
+  }
+
+  tbody td {
+    padding: 0.55rem 0.7rem;
+    border-bottom: 1px solid #edf2f7;
+    white-space: nowrap;
+  }
+
+  .num { text-align: right; @include pg-tabular; }
+  .cero { color: #cbd5e0; }
+
+  tbody tr:hover { background: rgba(102, 126, 234, 0.05); }
+
+  tfoot td {
+    position: sticky;
+    bottom: 0;
+    background: #edf2f7;
+    font-weight: 700;
+    padding: 0.6rem 0.7rem;
+    border-top: 2px solid $pg-borde;
+    @include pg-tabular;
+  }
+
+  tr.anulada td {
+    color: #a0aec0;
+    text-decoration: line-through;
+    background: #fafafa;
+  }
+}
+
+// ---------- badges de estado ----------
+
+.pg-badge {
+  display: inline-block;
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0.18rem 0.5rem;
+  border-radius: 999px;
+  white-space: nowrap;
+
+  &.est-pendiente { background: #edf2f7; color: $pg-texto-suave; }
+  &.est-pagada { background: $pg-ok-fondo; color: $pg-ok; }
+  &.est-parcial { background: $pg-alerta-fondo; color: $pg-alerta; }
+  &.est-mora { background: $pg-error-fondo; color: $pg-error; }
+  &.est-anticipada { background: #ede9fe; color: #6d28d9; }
+  &.est-anulado { background: #f1f5f9; color: #94a3b8; }
+}
+
+.pg-transicion {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+
+  mat-icon { font-size: 15px; width: 15px; height: 15px; color: $pg-texto-suave; }
+}
+
+// ---------- avisos ----------
+
+.pg-aviso {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  border-radius: 10px;
+  padding: 0.7rem 0.9rem;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  margin-bottom: 1rem;
+
+  mat-icon { font-size: 20px; width: 20px; height: 20px; flex-shrink: 0; }
+
+  &.info { background: rgba(102, 126, 234, 0.09); color: #3c4a9c; }
+  &.ok { background: $pg-ok-fondo; color: $pg-ok; }
+  &.alerta { background: $pg-alerta-fondo; color: $pg-alerta; }
+  &.error { background: $pg-error-fondo; color: $pg-error; }
+
+  .pg-aviso-acciones {
+    display: flex;
+    gap: 0.4rem;
+    margin-top: 0.5rem;
+    flex-wrap: wrap;
+  }
+}
+
+// ---------- formulario ----------
+
+.pg-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 0.4rem 0.9rem;
+
+  .pg-ancho-total { grid-column: 1 / -1; }
+}
+
+.pg-monto-input input {
+  @include pg-tabular;
+  font-size: 1.15rem;
+  font-weight: 700;
+  text-align: right;
+}
+
+/** Botonera de montos sugeridos: pensada para tocarse con el dedo. */
+.pg-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin: 0.15rem 0 0.9rem;
+
+  button {
+    min-height: 38px;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    @include pg-tabular;
+  }
+}
+
+.pg-modalidades {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.pg-modalidad {
+  display: block;
+  border: 2px solid $pg-borde;
+  border-radius: 12px;
+  padding: 0.8rem 0.9rem;
+  min-height: $pg-toque;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+
+  &:hover { border-color: rgba(102, 126, 234, 0.5); }
+  &.mat-mdc-radio-checked { border-color: $pg-primario; background: rgba(102, 126, 234, 0.08); }
+
+  .pg-modalidad-titulo { font-weight: 700; font-size: 0.88rem; }
+  .pg-modalidad-desc { font-size: 0.76rem; color: $pg-texto-suave; margin-top: 0.15rem; }
+}
+
+// ---------- reparto de fondos (aportes / efectivo) ----------
+
+.pg-fondos {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0.6rem;
+}
+
+.pg-fondo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  border: 1px solid $pg-borde;
+  border-radius: 12px;
+  padding: 0.6rem 0.8rem;
+  background: #fff;
+
+  &.activo { border-color: $pg-primario; background: rgba(102, 126, 234, 0.05); }
+  &.agotado { opacity: 0.55; }
+
+  .pg-fondo-nombre { font-weight: 600; font-size: 0.88rem; flex: 1 1 150px; }
+  .pg-fondo-saldo { font-size: 0.76rem; color: $pg-texto-suave; @include pg-tabular; }
+  .pg-fondo-input { width: 150px; }
+}
+
+/** Barra de progreso del reparto: verde cuando cuadra, roja si se pasa. */
+.pg-cuadre {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  @include pg-tabular;
+  background: $pg-fondo-suave;
+  color: $pg-texto;
+
+  &.ok { background: $pg-ok-fondo; color: $pg-ok; }
+  &.falta { background: $pg-alerta-fondo; color: $pg-alerta; }
+  &.excede { background: $pg-error-fondo; color: $pg-error; }
+}
+
+// ---------- estado vacío / cargando ----------
+
+.pg-cargando {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 2.2rem 0;
+  color: $pg-texto-suave;
+  font-size: 0.85rem;
+}
+
+.pg-vacio {
+  text-align: center;
+  padding: 1.8rem 1rem;
+  color: $pg-texto-suave;
+  font-size: 0.88rem;
+
+  mat-icon { font-size: 42px; width: 42px; height: 42px; color: #cbd5e0; }
+}
+
+.pg-seccion-label {
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: $pg-texto-suave;
+  margin: 1.1rem 0 0.5rem;
+}
+
+// ---------- pista de teclado ----------
+
+.pg-teclas {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-right: auto;
+  font-size: 0.72rem;
+  color: $pg-texto-suave;
+
+  kbd {
+    font-family: inherit;
+    font-size: 0.68rem;
+    font-weight: 700;
+    background: $pg-fondo-suave;
+    border: 1px solid $pg-borde;
+    border-bottom-width: 2px;
+    border-radius: 5px;
+    padding: 0.1rem 0.35rem;
+  }
+}
+
+// ---------- responsive / tablet ----------
+
+@media (max-width: 700px) {
+  .pg-contenido { padding: 1rem 0.9rem 0.4rem !important; max-height: 74vh; }
+  .pg-acciones { padding: 0.8rem 0.9rem 1rem !important; }
+  .pg-teclas { display: none; }
+  .pg-acciones button { flex: 1 1 auto; }
+  table.pg-tabla { font-size: 0.78rem; }
+}
+
+// Con entrada táctil (sin hover fino) se agrandan los objetivos de toque.
+@media (pointer: coarse) {
+  table.pg-tabla tbody td { padding: 0.75rem 0.7rem; }
+  .pg-fondo { padding: 0.8rem; }
+}

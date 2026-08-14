@@ -106,8 +106,48 @@
 
       @if (prestamoVigente(); as prestamo) {
         <mat-card class="cuenta-card">
-          <mat-card-header><mat-card-title>Préstamo Vigente</mat-card-title></mat-card-header>
+          <mat-card-header>
+            <mat-card-title>Préstamo &middot; {{ estadoPrestamoTexto() }}</mat-card-title>
+          </mat-card-header>
           <mat-card-content>
+
+            @if (prestamosOperables().length > 1) {
+              <div class="selector-prestamos">
+                <span class="sp-label">Este partícipe tiene {{ prestamosOperables().length }} créditos activos:</span>
+                @for (p of prestamosOperables(); track p.codigo) {
+                  <button type="button" class="sp-chip" [class.activo]="p.codigo === prestamo.codigo"
+                          (click)="seleccionarPrestamo(p)">
+                    #{{ p.idAsoprep }} · {{ formatMoneda(p.saldoTotal) }}
+                  </button>
+                }
+              </div>
+            }
+
+            <div class="acciones-prestamo">
+              <button mat-flat-button color="primary" [disabled]="!prestamoAdmiteOperaciones()" (click)="abrirPago('efectivo')">
+                <mat-icon>payments</mat-icon> Pagar cuotas
+              </button>
+              <button mat-stroked-button [disabled]="!prestamoAdmiteOperaciones()" (click)="abrirPago('aportes')">
+                <mat-icon>savings</mat-icon> Pagar con aportes
+              </button>
+              <button mat-stroked-button [disabled]="!prestamoAdmiteOperaciones()" (click)="abrirAbonoCapital()">
+                <mat-icon>trending_down</mat-icon> Abonar a capital
+              </button>
+              <button mat-stroked-button [disabled]="!prestamoAdmiteOperaciones()" (click)="abrirPrecancelacion()">
+                <mat-icon>task_alt</mat-icon> Precancelar
+              </button>
+              <button mat-stroked-button (click)="abrirHistorial()">
+                <mat-icon>history</mat-icon> Historial y anulaciones
+              </button>
+            </div>
+
+            @if (!prestamoAdmiteOperaciones()) {
+              <div class="error-text">
+                <mat-icon>lock</mat-icon>
+                <span>El préstamo está en estado «{{ estadoPrestamoTexto() }}» y no admite operaciones de pago.</span>
+              </div>
+            }
+
             <table mat-table [dataSource]="[prestamo]" class="tabla-cuentas">
               <ng-container matColumnDef="chk">
                 <th mat-header-cell *matHeaderCellDef></th>
@@ -177,17 +217,32 @@
       }
 
       <mat-card class="cuenta-card">
-        <mat-card-header><mat-card-title>Aportes</mat-card-title></mat-card-header>
+        <mat-card-header><mat-card-title>Aportes del socio</mat-card-title></mat-card-header>
         <mat-card-content>
+
+          <div class="aviso-pendiente">
+            <mat-icon>info</mat-icon>
+            <span>
+              Los montos que asigne aquí son aportes del socio a sus propias cuentas.
+              <b>El backend todavía no expone un servicio para registrarlos</b>, así que al confirmar solo se
+              guarda la parte destinada al préstamo. Para <i>pagar el préstamo con el saldo de aportes</i> use
+              el botón «Pagar con aportes» o el método «Débito de cuenta de aportes».
+            </span>
+          </div>
+
+          @if (cargandoSaldos()) {
+            <div class="loading-spinner-container"><mat-spinner diameter="28"></mat-spinner></div>
+          }
+
           <table class="tabla-aportes">
             <thead>
-              <tr><th></th><th>Tipo de aporte</th><th>Total aportado</th><th>Valor mensual</th><th>Monto asignado</th></tr>
+              <tr><th></th><th>Tipo de aporte</th><th>Saldo disponible</th><th>Valor mensual</th><th>Monto asignado</th></tr>
             </thead>
             <tbody>
               <tr>
                 <td><mat-checkbox [checked]="cuentaChecked.cesantia" (change)="toggleCuenta('cesantia', $event.checked)"></mat-checkbox></td>
                 <td>Cesantía</td>
-                <td class="num">{{ formatMoneda(totalAportadoCesantia()) }}</td>
+                <td class="num">{{ formatMoneda(saldoCesantia()) }}</td>
                 <td class="num">{{ formatMoneda(valorMensualCesantia()) }}</td>
                 <td>
                   <mat-form-field appearance="outline" class="monto-cuenta-field" subscriptSizing="dynamic">
@@ -202,7 +257,7 @@
               <tr>
                 <td><mat-checkbox [checked]="cuentaChecked.jubilacion" (change)="toggleCuenta('jubilacion', $event.checked)"></mat-checkbox></td>
                 <td>Jubilación</td>
-                <td class="num">{{ formatMoneda(totalAportadoJubilacion()) }}</td>
+                <td class="num">{{ formatMoneda(saldoJubilacion()) }}</td>
                 <td class="num">{{ formatMoneda(valorMensualJubilacion()) }}</td>
                 <td>
                   <mat-form-field appearance="outline" class="monto-cuenta-field" subscriptSizing="dynamic">
@@ -222,10 +277,25 @@
       <mat-card class="confirmacion-card">
         <mat-card-header><mat-card-title>Confirmar Pago</mat-card-title></mat-card-header>
 
-        @if (!pagoRegistrado()) {
           <mat-card-content>
             @if (!cuentaChecked.prestamo && !cuentaChecked.cesantia && !cuentaChecked.jubilacion) {
               <p class="texto-vacio">Selecciona al menos una cuenta (préstamo, cesantía o jubilación) para continuar.</p>
+            }
+
+            @if (errorOperacion(); as error) {
+              <div class="error-text bloque">
+                <mat-icon>error_outline</mat-icon>
+                <div>
+                  <span>{{ error }}</span>
+                  @if (errorCodigo() === 'VALOR_EXCEDE_DEUDA') {
+                    <div class="error-acciones">
+                      <button mat-flat-button color="primary" (click)="abrirPrecancelacion()">
+                        <mat-icon>task_alt</mat-icon> Precancelar el crédito
+                      </button>
+                    </div>
+                  }
+                </div>
+              </div>
             }
 
             <div class="section-label">Método de pago</div>
@@ -249,9 +319,10 @@
             <div class="field-grid">
               <mat-form-field appearance="outline">
                 <mat-label>Fecha</mat-label>
-                <input matInput [matDatepicker]="picker" [(ngModel)]="fechaPago" />
+                <input matInput [matDatepicker]="picker" [max]="hoy" [(ngModel)]="fechaPago" />
                 <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
                 <mat-datepicker #picker></mat-datepicker>
+                <mat-hint>No puede ser posterior a hoy</mat-hint>
               </mat-form-field>
               <mat-form-field appearance="outline" class="full">
                 <mat-label>Observación (opcional)</mat-label>
@@ -264,18 +335,19 @@
                 <mat-form-field appearance="outline" class="full">
                   <mat-label>Cuenta de origen (saldo de aportes)</mat-label>
                   <mat-select [ngModel]="cuentaOrigenAporte()" (ngModelChange)="cuentaOrigenAporte.set($event)">
-                    <mat-option value="cesantia">Cesantía — saldo disponible {{ formatMoneda(totalAportadoCesantia()) }}</mat-option>
-                    <mat-option value="jubilacion">Jubilación — saldo disponible {{ formatMoneda(totalAportadoJubilacion()) }}</mat-option>
+                    <mat-option value="cesantia">Cesantía — saldo disponible {{ formatMoneda(saldoCesantia()) }}</mat-option>
+                    <mat-option value="jubilacion">Jubilación — saldo disponible {{ formatMoneda(saldoJubilacion()) }}</mat-option>
                   </mat-select>
+                  <mat-hint>Se debitan {{ formatMoneda(montoPrestamo()) }}: solo la parte destinada al préstamo</mat-hint>
                 </mat-form-field>
                 <div class="resumen-callout">
                   <span>Saldo disponible tras el débito</span>
-                  <b>{{ formatMoneda(saldoAporteOrigen() - montoTotal() > 0 ? saldoAporteOrigen() - montoTotal() : 0) }}</b>
+                  <b>{{ formatMoneda(saldoAporteOrigen() - montoPrestamo() > 0 ? saldoAporteOrigen() - montoPrestamo() : 0) }}</b>
                 </div>
                 @if (saldoDebitoInsuficiente()) {
                   <div class="error-text">
                     <mat-icon>warning</mat-icon>
-                    <span>El monto del pago supera el saldo disponible en la cuenta de origen seleccionada.</span>
+                    <span>El monto destinado al préstamo supera el saldo disponible en la cuenta de origen seleccionada.</span>
                   </div>
                 }
               </div>
@@ -317,23 +389,29 @@
                   }
                 </div>
               }
+
+              @if (!cuentaChecked.prestamo && (cuentaChecked.cesantia || cuentaChecked.jubilacion)) {
+                <div class="allocation-note">
+                  Solo se puede confirmar un cobro que incluya el préstamo: el registro de aportes todavía no tiene servicio en el backend.
+                </div>
+              }
+
+              @if (cuentaChecked.prestamo && montoAportesSinEndpoint() > 0.004) {
+                <div class="allocation-note">
+                  Se registrarán {{ formatMoneda(montoPrestamo()) }} en el préstamo.
+                  Los {{ formatMoneda(montoAportesSinEndpoint()) }} de aportes quedarán sin guardar.
+                </div>
+              }
+
               <button mat-raised-button color="accent" id="cp-boton-confirmar" [disabled]="!puedeConfirmar()" (click)="confirmarPago()">
                 @if (registrando()) {
                   <mat-spinner diameter="18"></mat-spinner>
                 } @else {
-                  <ng-container><mat-icon>check_circle</mat-icon> Confirmar Pago</ng-container>
+                  <ng-container><mat-icon>check_circle</mat-icon> Confirmar pago de {{ formatMoneda(montoPrestamo()) }}</ng-container>
                 }
               </button>
             </div>
           </mat-card-content>
-        } @else {
-          <mat-card-content class="success-view">
-            <mat-icon class="check-icon">check_circle</mat-icon>
-            <h3>Pago registrado</h3>
-            <p>El cobro se guardó correctamente, distribuido entre las cuentas seleccionadas.</p>
-            <button mat-stroked-button (click)="cerrarConfirmacion()">Registrar otro pago</button>
-          </mat-card-content>
-        }
       </mat-card>
 
     </div>

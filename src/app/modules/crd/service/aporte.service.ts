@@ -24,6 +24,11 @@ export class AporteService {
     private http: HttpClient
   ) { }
 
+  /**
+   * ⚠️ NO usar para calcular saldos de aportes: descarga las ~980.000 filas de CRD.APRT y es la
+   * causa del OutOfMemoryError de WildFly. Para saldos use
+   * `OperacionesPagoPrestamoService.saldosPorEntidad(idEntidad)`, que agrega en la base de datos.
+   */
   getAll(): Observable<Aporte[] | null> {
     const wsGetById = '/getAll';
     const url = `${ServiciosCrd.RS_APRT}${wsGetById}`;

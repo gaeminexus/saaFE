@@ -18,7 +18,7 @@ import { Entidad } from '../../../model/entidad';
 import { claseBadgeEstadoEntidad } from '../../../model/estado-entidad-badge';
 import { EstadoParticipe } from '../../../model/estado-participe';
 import { EstadoPrestamo } from '../../../model/estado-prestamo';
-import { PagoPrestamo } from '../../../model/pago-prestamo';
+import { PagoPrestamo, pagoVigente } from '../../../model/pago-prestamo';
 import { Participe } from '../../../model/participe';
 import { Prestamo } from '../../../model/prestamo';
 import { TipoAporte } from '../../../model/tipo-aporte';
@@ -3558,8 +3558,11 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
             return;
           }
 
-          // Convertir fechas de string a Date en los pagos de forma segura
-          const pagosConvertidos = (pagos as PagoPrestamo[]).map((pago) => {
+          // Convertir fechas de string a Date en los pagos de forma segura.
+          // Se descartan los anulados (§14 de la guía de servicios de pago): tras una anulación el
+          // pago sigue existiendo en PGPR con `anulado = 1` y sin este filtro se seguiría contando
+          // como válido en el estado de cuenta del partícipe.
+          const pagosConvertidos = (pagos as PagoPrestamo[]).filter(pagoVigente).map((pago) => {
             const fecha = this.convertirFecha(pago.fecha);
             const fechaRegistro = this.convertirFecha(pago.fechaRegistro);
 

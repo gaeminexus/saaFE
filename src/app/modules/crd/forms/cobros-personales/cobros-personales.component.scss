@@ -246,6 +246,73 @@ table.tabla-aportes {
   margin-top: 0.6rem;
 
   mat-icon { font-size: 18px; width: 18px; height: 18px; }
+
+  &.bloque {
+    align-items: flex-start;
+    padding: 0.8rem 1rem;
+    font-size: 0.84rem;
+    margin-bottom: 1rem;
+  }
+
+  .error-acciones { margin-top: 0.6rem; }
+}
+
+/* Selector de crédito cuando el partícipe tiene más de uno activo. */
+.selector-prestamos {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-bottom: 0.9rem;
+
+  .sp-label { font-size: 0.8rem; color: #718096; margin-right: 0.2rem; }
+
+  .sp-chip {
+    min-height: 40px;
+    padding: 0 0.9rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 999px;
+    background: #fff;
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+
+    &:hover { border-color: rgba(102, 126, 234, 0.55); }
+    &:focus-visible { outline: 3px solid rgba(102, 126, 234, 0.45); outline-offset: 2px; }
+    &.activo { border-color: #667eea; background: rgba(102, 126, 234, 0.1); color: #4c51bf; }
+  }
+}
+
+/* Barra de operaciones del préstamo: objetivos de 44px para uso con el dedo en tablet. */
+.acciones-prestamo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+
+  button {
+    min-height: 44px;
+    border-radius: 10px;
+    font-weight: 600;
+  }
+}
+
+.aviso-pendiente {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  background: rgba(102, 126, 234, 0.09);
+  color: #3c4a9c;
+  border-radius: 10px;
+  padding: 0.75rem 0.95rem;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  margin-bottom: 1rem;
+
+  mat-icon { font-size: 20px; width: 20px; height: 20px; flex-shrink: 0; }
 }
 
 .dropzone-label { display: block; font-size: 0.75rem; color: #718096; margin-bottom: 0.3rem; }

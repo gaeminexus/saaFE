@@ -1,0 +1,232 @@
+<h2 mat-dialog-title class="pg-titulo">
+  <mat-icon>task_alt</mat-icon>
+  Precancelar crédito
+  <span class="pg-titulo-sub">{{ data.titulo }}</span>
+</h2>
+
+<mat-dialog-content class="pg-contenido">
+
+  <div class="pg-pasos">
+    <div class="pg-paso" [class.activo]="paso() === 'simulacion'" [class.completo]="paso() === 'reparto'">
+      <span class="pg-paso-num">1</span> Fecha de corte y liquidación
+    </div>
+    <mat-icon class="pg-paso-flecha">chevron_right</mat-icon>
+    <div class="pg-paso" [class.activo]="paso() === 'reparto'">
+      <span class="pg-paso-num">2</span> Cómo se cobra
+    </div>
+  </div>
+
+  @if (errorMensaje(); as error) {
+    <div class="pg-aviso" [class.error]="!montoRecalculado()" [class.alerta]="montoRecalculado()">
+      <mat-icon>{{ montoRecalculado() ? 'update' : 'error_outline' }}</mat-icon>
+      <div>
+        <span>{{ error }}</span>
+        @if (montoRecalculado()) {
+          <div>Se actualizó el monto en pantalla. Revise el reparto y confirme nuevamente.</div>
+        }
+        <div class="pg-aviso-acciones">
+          @if (errorCodigo() === 'SIN_CUOTAS_FUTURAS') {
+            <button mat-flat-button color="primary" (click)="irAPagarCuotas()">
+              <mat-icon>payments</mat-icon> Ir a pagar la deuda exigible
+            </button>
+          }
+          @if (errorCodigo() === 'MONTO_NO_COINCIDE') {
+            <button mat-stroked-button (click)="usarAportesPrimero()">Recalcular reparto con aportes</button>
+            <button mat-stroked-button (click)="todoEnEfectivo()">Poner todo en efectivo</button>
+          }
+        </div>
+      </div>
+    </div>
+  }
+
+  <div class="pg-form">
+    <mat-form-field appearance="outline">
+      <mat-label>Fecha de corte</mat-label>
+      <input matInput [matDatepicker]="pickerCorte" [max]="hoy"
+             [ngModel]="fechaCorte()" (ngModelChange)="onFechaCorteCambio($event)" />
+      <mat-datepicker-toggle matSuffix [for]="pickerCorte"></mat-datepicker-toggle>
+      <mat-datepicker #pickerCorte></mat-datepicker>
+      <mat-hint>La mora se calcula hasta esta fecha</mat-hint>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="pg-ancho-total">
+      <mat-label>Observación (opcional)</mat-label>
+      <input matInput [(ngModel)]="observacion" maxlength="200" placeholder="Ej.: precancelación por retiro" />
+    </mat-form-field>
+  </div>
+
+  @if (simulando()) {
+    <div class="pg-cargando">
+      <mat-spinner diameter="36"></mat-spinner>
+      <span>Calculando el valor de precancelación…</span>
+    </div>
+  }
+
+  @if (paso() === 'simulacion' && !simulando() && !simulacion()) {
+    <div class="pg-vacio">
+      <mat-icon>calculate</mat-icon>
+      <p>Elija la fecha de corte y calcule la liquidación.</p>
+    </div>
+  }
+
+  @if (simulacion(); as sim) {
+
+    <div class="pg-grid">
+      <div class="pg-dato">
+        <div class="pg-dato-label">Deuda exigible</div>
+        <div class="pg-dato-valor">{{ formatMoneda(sim.valorExigible) }}</div>
+        <div class="pg-dato-nota">{{ sim.exigibles.length }} cuota(s) vencida(s) o del mes</div>
+      </div>
+      <div class="pg-dato">
+        <div class="pg-dato-label">Capital futuro</div>
+        <div class="pg-dato-valor">{{ formatMoneda(sim.capitalFuturo) }}</div>
+        <div class="pg-dato-nota">{{ sim.cuotasAAnular }} cuota(s) se cancelan anticipadamente</div>
+      </div>
+      <div class="pg-dato beneficio">
+        <div class="pg-dato-label">Intereses condonados</div>
+        <div class="pg-dato-valor">{{ formatMoneda(sim.interesCondonado) }}</div>
+        <div class="pg-dato-nota">Beneficio de precancelar</div>
+      </div>
+      <div class="pg-dato destacado">
+        <div class="pg-dato-label">Total a cobrar</div>
+        <div class="pg-dato-valor">{{ formatMoneda(sim.valorTotalPrecancelacion) }}</div>
+        <div class="pg-dato-nota">Al {{ sim.fecha }}</div>
+      </div>
+    </div>
+
+    @if (sim.exigibles.length) {
+      <button mat-button class="pg-toggle-detalle" (click)="toggleDetalleExigibles()">
+        <mat-icon [class.abierto]="detalleExigiblesAbierto()">expand_more</mat-icon>
+        {{ detalleExigiblesAbierto() ? 'Ocultar' : 'Ver' }} detalle de la deuda exigible
+      </button>
+
+      @if (detalleExigiblesAbierto()) {
+        <div class="pg-tabla-scroll">
+          <table class="pg-tabla">
+            <thead>
+              <tr><th>N°</th><th>Vencimiento</th><th class="num">Pendiente</th></tr>
+            </thead>
+            <tbody>
+              @for (e of sim.exigibles; track e.idCuota) {
+                <tr>
+                  <td>{{ e.numeroCuota }}</td>
+                  <td>{{ e.fechaVencimiento | date: 'dd/MM/yyyy' }}</td>
+                  <td class="num">{{ formatMoneda(e.pendiente) }}</td>
+                </tr>
+              }
+            </tbody>
+            <tfoot>
+              <tr><td colspan="2">TOTAL EXIGIBLE</td><td class="num">{{ formatMoneda(sim.valorExigible) }}</td></tr>
+            </tfoot>
+          </table>
+        </div>
+      }
+    }
+
+    <!-- ==================== Reparto ==================== -->
+    <div class="pg-seccion-label">Cómo se cubre el total</div>
+
+    @if (cargandoSaldos()) {
+      <div class="pg-cargando">
+        <mat-spinner diameter="28"></mat-spinner>
+        <span>Consultando saldos de aportes…</span>
+      </div>
+    }
+
+    <div class="pg-chips">
+      <button mat-stroked-button (click)="todoEnEfectivo()">
+        <mat-icon>payments</mat-icon> Todo en efectivo
+      </button>
+      @if (saldos().length) {
+        <button mat-stroked-button (click)="usarAportesPrimero()">
+          <mat-icon>savings</mat-icon> Usar aportes primero ({{ formatMoneda(saldoAportesTotal()) }} disponible)
+        </button>
+      }
+      <button mat-stroked-button (click)="limpiarReparto()">
+        <mat-icon>backspace</mat-icon> Limpiar
+      </button>
+    </div>
+
+    <div class="pg-fondos">
+      @for (f of fondos; track f.clave) {
+        <div class="pg-fondo"
+             [class.activo]="montoDe(f) > 0.004"
+             [class.agotado]="f.idTipoAporte !== null && f.disponible <= 0.004">
+          <mat-icon class="pg-fondo-icono">{{ f.idTipoAporte === null ? 'payments' : 'savings' }}</mat-icon>
+          <div class="pg-fondo-nombre">
+            {{ f.nombre }}
+            @if (f.idTipoAporte !== null) {
+              <div class="pg-fondo-saldo">Disponible {{ formatMoneda(f.disponible) }}</div>
+            }
+          </div>
+          <mat-form-field appearance="outline" class="pg-fondo-input" subscriptSizing="dynamic">
+            <span matTextPrefix>$&nbsp;</span>
+            <input matInput inputmode="decimal" [(ngModel)]="f.texto" (blur)="onFondoBlur(f)" placeholder="0.00" />
+          </mat-form-field>
+          <button mat-stroked-button class="pg-fondo-completar"
+                  [disabled]="!necesitaAjuste()"
+                  (click)="completarConEsteFondo(f)"
+                  matTooltip="Ajustar este renglón para que el reparto cuadre">
+            Ajustar
+          </button>
+        </div>
+      }
+    </div>
+
+    <div class="pg-cuadre"
+         [class.ok]="cuadra()"
+         [class.falta]="!cuadra() && diferencia() > 0"
+         [class.excede]="!cuadra() && diferencia() < 0">
+      <span>Repartido {{ formatMoneda(repartido()) }} de {{ formatMoneda(total()) }}</span>
+      @if (cuadra()) {
+        <span><mat-icon>check_circle</mat-icon> El reparto cuadra</span>
+      } @else if (diferencia() > 0) {
+        <span>Falta asignar {{ formatMoneda(diferencia()) }}</span>
+      } @else {
+        <span>Se asignó {{ formatMoneda(-diferencia()) }} de más</span>
+      }
+    </div>
+
+    @if (hayExcesoEnAlgunAporte()) {
+      <div class="pg-aviso error">
+        <mat-icon>warning</mat-icon>
+        <span>Uno de los aportes supera su saldo disponible. Ajuste el monto antes de confirmar.</span>
+      </div>
+    }
+
+    <div class="pg-aviso alerta">
+      <mat-icon>warning_amber</mat-icon>
+      <span>
+        Al confirmar, el préstamo queda <b>cancelado anticipadamente</b> y no admite más operaciones de pago.
+        Las {{ sim.cuotasAAnular }} cuota(s) futura(s) quedan como constancia en estado "Cancelada anticipada".
+      </span>
+    </div>
+  }
+
+</mat-dialog-content>
+
+<mat-dialog-actions align="end" class="pg-acciones">
+  <span class="pg-teclas"><kbd>Esc</kbd> cancelar</span>
+  <button mat-stroked-button (click)="cancelar()">Cancelar</button>
+
+  @if (paso() === 'simulacion') {
+    <button mat-raised-button color="primary" [disabled]="simulando()" (click)="simular()">
+      @if (simulando()) {
+        <mat-spinner diameter="18"></mat-spinner>
+      } @else {
+        <ng-container><mat-icon>calculate</mat-icon> Calcular liquidación</ng-container>
+      }
+    </button>
+  } @else {
+    <button mat-stroked-button [disabled]="simulando()" (click)="simular()">
+      <mat-icon>refresh</mat-icon> Recalcular
+    </button>
+    <button mat-raised-button color="accent" [disabled]="!puedeConfirmar()" (click)="confirmar()">
+      @if (aplicando()) {
+        <mat-spinner diameter="18"></mat-spinner>
+      } @else {
+        <ng-container><mat-icon>check_circle</mat-icon> Confirmar precancelación</ng-container>
+      }
+    </button>
+  }
+</mat-dialog-actions>

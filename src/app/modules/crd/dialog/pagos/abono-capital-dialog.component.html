@@ -1,0 +1,247 @@
+<h2 mat-dialog-title class="pg-titulo">
+  <mat-icon>trending_down</mat-icon>
+  Abono a capital
+  <span class="pg-titulo-sub">{{ data.titulo }}</span>
+</h2>
+
+<mat-dialog-content class="pg-contenido">
+
+  <div class="pg-pasos">
+    <div class="pg-paso" [class.activo]="paso() === 'datos'" [class.completo]="paso() === 'comparativa'">
+      <span class="pg-paso-num">1</span> Monto y modalidad
+    </div>
+    <mat-icon class="pg-paso-flecha">chevron_right</mat-icon>
+    <div class="pg-paso" [class.activo]="paso() === 'comparativa'">
+      <span class="pg-paso-num">2</span> Comparar y confirmar
+    </div>
+  </div>
+
+  @if (errorMensaje(); as error) {
+    <div class="pg-aviso error">
+      <mat-icon>error_outline</mat-icon>
+      <div>
+        <span>{{ error }}</span>
+        <div class="pg-aviso-acciones">
+          @switch (errorCodigo()) {
+            @case ('PRESTAMO_NO_AL_DIA') {
+              <button mat-flat-button color="primary" (click)="irAPagarCuotas()">
+                <mat-icon>payments</mat-icon> Regularizar cuotas primero
+              </button>
+            }
+            @case ('ABONO_CUBRE_CAPITAL') {
+              <button mat-flat-button color="primary" (click)="irAPrecancelar()">
+                <mat-icon>task_alt</mat-icon> Precancelar el crédito
+              </button>
+            }
+            @case ('CUOTA_NO_CUBRE_INTERES') {
+              <button mat-flat-button color="primary" (click)="usarModalidadReducirCuota()">
+                <mat-icon>swap_horiz</mat-icon> Probar reduciendo el valor de la cuota
+              </button>
+            }
+          }
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ==================== Paso 1 ==================== -->
+  @if (paso() === 'datos') {
+
+    <div class="pg-grid">
+      <div class="pg-dato">
+        <div class="pg-dato-label">Saldo de capital</div>
+        <div class="pg-dato-valor">{{ formatMoneda(data.saldoCapital) }}</div>
+      </div>
+      <div class="pg-dato">
+        <div class="pg-dato-label">Cuota actual</div>
+        <div class="pg-dato-valor">{{ formatMoneda(data.valorCuota) }}</div>
+      </div>
+      <div class="pg-dato">
+        <div class="pg-dato-label">Plazo</div>
+        <div class="pg-dato-valor">{{ data.plazo ?? '—' }}</div>
+        <div class="pg-dato-nota">cuotas</div>
+      </div>
+    </div>
+
+    <div class="pg-aviso info">
+      <mat-icon>info</mat-icon>
+      <span>
+        El crédito debe estar <b>al día</b>: si hay cuotas vencidas o parciales el sistema pedirá regularizarlas antes.
+      </span>
+    </div>
+
+    <div class="pg-form">
+      <mat-form-field appearance="outline" class="pg-monto-input">
+        <mat-label>Valor del abono</mat-label>
+        <span matTextPrefix>$&nbsp;</span>
+        <input matInput inputmode="decimal" cdkFocusInitial
+               [ngModel]="valorTexto()" (ngModelChange)="valorTexto.set($event)"
+               (blur)="onValorBlur()" (keyup.enter)="simular()" placeholder="0.00" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Fecha del abono</mat-label>
+        <input matInput [matDatepicker]="pickerAbono" [max]="hoy"
+               [ngModel]="fecha()" (ngModelChange)="fecha.set($event)" />
+        <mat-datepicker-toggle matSuffix [for]="pickerAbono"></mat-datepicker-toggle>
+        <mat-datepicker #pickerAbono></mat-datepicker>
+        <mat-hint>No puede ser posterior a hoy</mat-hint>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="pg-ancho-total">
+        <mat-label>Observación (opcional)</mat-label>
+        <input matInput [(ngModel)]="observacion" maxlength="200" />
+      </mat-form-field>
+    </div>
+
+    @if (sugerencias().length) {
+      <div class="pg-chips">
+        @for (s of sugerencias(); track s.etiqueta) {
+          <button mat-stroked-button (click)="usarSugerencia(s.valor)">
+            {{ s.etiqueta }} · {{ formatMoneda(s.valor) }}
+          </button>
+        }
+      </div>
+    }
+
+    <div class="pg-seccion-label">¿Qué se recalcula con el abono?</div>
+    <mat-radio-group class="pg-modalidades"
+                     [ngModel]="modalidad()" (ngModelChange)="cambiarModalidad($event)">
+      <mat-radio-button class="pg-modalidad" [value]="ModalidadAbono.REDUCIR_PLAZO">
+        <div class="pg-modalidad-titulo">Terminar antes</div>
+        <div class="pg-modalidad-desc">Se mantiene el valor de la cuota y se reducen las cuotas que faltan.</div>
+      </mat-radio-button>
+      <mat-radio-button class="pg-modalidad" [value]="ModalidadAbono.REDUCIR_CUOTA">
+        <div class="pg-modalidad-titulo">Pagar menos por mes</div>
+        <div class="pg-modalidad-desc">Se mantiene el plazo y baja el valor de cada cuota.</div>
+      </mat-radio-button>
+    </mat-radio-group>
+  }
+
+  <!-- ==================== Paso 2 ==================== -->
+  @if (paso() === 'comparativa' && simulacion(); as sim) {
+
+    <div class="pg-aviso info">
+      <mat-icon>calculate</mat-icon>
+      <span>
+        Simulación con amortización <b>{{ nombreAmortizacion(sim.tipoAmortizacion) }}</b>.
+        Todavía no se guardó nada: confirme abajo para aplicar el abono.
+      </span>
+    </div>
+
+    <div class="pg-grid">
+      <div class="pg-dato destacado">
+        <div class="pg-dato-label">Abono</div>
+        <div class="pg-dato-valor">{{ formatMoneda(sim.valorAbono) }}</div>
+        <div class="pg-dato-nota">Capital actual {{ formatMoneda(sim.saldoCapitalActual) }}</div>
+      </div>
+      <div class="pg-dato beneficio">
+        <div class="pg-dato-label">Ahorro en intereses</div>
+        <div class="pg-dato-valor">{{ formatMoneda(sim.ahorroIntereses) }}</div>
+        <div class="pg-dato-nota">Deja de pagarse respecto de la tabla actual</div>
+      </div>
+      <div class="pg-dato">
+        <div class="pg-dato-label">Plazo</div>
+        <div class="pg-dato-valor">
+          <span class="pg-comparativa">
+            <span class="pg-antes">{{ sim.plazoActual }}</span>
+            <mat-icon class="pg-flecha">arrow_forward</mat-icon>
+            <span class="pg-despues">{{ sim.plazoNuevo }}</span>
+          </span>
+        </div>
+        <div class="pg-dato-nota">cuotas</div>
+      </div>
+      <div class="pg-dato">
+        <div class="pg-dato-label">Valor de cuota</div>
+        <div class="pg-dato-valor">
+          <span class="pg-comparativa">
+            <span class="pg-antes">{{ formatMoneda(sim.cuotaActual) }}</span>
+            <mat-icon class="pg-flecha">arrow_forward</mat-icon>
+            <span class="pg-despues">{{ formatMoneda(sim.cuotaNueva) }}</span>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="pg-seccion-label">
+      Otra modalidad — puede cambiarla y se vuelve a simular al instante
+    </div>
+    <mat-radio-group class="pg-modalidades"
+                     [ngModel]="modalidad()" (ngModelChange)="cambiarModalidad($event)">
+      <mat-radio-button class="pg-modalidad" [value]="ModalidadAbono.REDUCIR_PLAZO">
+        <div class="pg-modalidad-titulo">Terminar antes</div>
+        <div class="pg-modalidad-desc">Mantiene la cuota, reduce el plazo.</div>
+      </mat-radio-button>
+      <mat-radio-button class="pg-modalidad" [value]="ModalidadAbono.REDUCIR_CUOTA">
+        <div class="pg-modalidad-titulo">Pagar menos por mes</div>
+        <div class="pg-modalidad-desc">Mantiene el plazo, reduce la cuota.</div>
+      </mat-radio-button>
+    </mat-radio-group>
+
+    <div class="pg-seccion-label">
+      Nueva tabla proyectada ({{ sim.tablaProyectada.length }} cuotas) ·
+      {{ sim.cuotasAHistorizar }} cuota(s) vigente(s) se reemplazarán
+    </div>
+    <div class="pg-tabla-scroll">
+      <table class="pg-tabla">
+        <thead>
+          <tr>
+            <th>N°</th><th>Vencimiento</th>
+            <th class="num">Capital</th><th class="num">Interés</th>
+            <th class="num">Cuota</th><th class="num">Saldo capital</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (c of sim.tablaProyectada; track c.numeroCuota) {
+            <tr>
+              <td>{{ c.numeroCuota }}</td>
+              <td>{{ c.fechaVencimiento | date: 'dd/MM/yyyy' }}</td>
+              <td class="num">{{ formatMoneda(c.capital) }}</td>
+              <td class="num">{{ formatMoneda(c.interes) }}</td>
+              <td class="num"><b>{{ formatMoneda(c.cuota) }}</b></td>
+              <td class="num">{{ formatMoneda(c.saldoCapital) }}</td>
+            </tr>
+          }
+          @empty {
+            <tr><td colspan="6" class="pg-vacio">La simulación no devolvió cuotas proyectadas.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pg-aviso alerta">
+      <mat-icon>warning_amber</mat-icon>
+      <span>
+        Al confirmar, las cuotas pendientes actuales pasan al histórico y se genera esta tabla nueva.
+        La operación queda registrada y puede anularse después desde el historial del préstamo.
+      </span>
+    </div>
+  }
+
+</mat-dialog-content>
+
+<mat-dialog-actions align="end" class="pg-acciones">
+  <span class="pg-teclas"><kbd>Enter</kbd> continuar &middot; <kbd>Esc</kbd> cancelar</span>
+
+  @if (paso() === 'datos') {
+    <button mat-stroked-button (click)="cancelar()">Cancelar</button>
+    <button mat-raised-button color="primary" [disabled]="!valorValido() || simulando()" (click)="simular()">
+      @if (simulando()) {
+        <mat-spinner diameter="18"></mat-spinner>
+      } @else {
+        <ng-container><mat-icon>calculate</mat-icon> Simular abono</ng-container>
+      }
+    </button>
+  } @else {
+    <button mat-stroked-button (click)="volverADatos()">
+      <mat-icon>arrow_back</mat-icon> Cambiar monto
+    </button>
+    <button mat-raised-button color="accent" [disabled]="aplicando() || simulando()" (click)="aplicar()">
+      @if (aplicando() || simulando()) {
+        <mat-spinner diameter="18"></mat-spinner>
+      } @else {
+        <ng-container><mat-icon>check_circle</mat-icon> Confirmar y aplicar abono</ng-container>
+      }
+    </button>
+  }
+</mat-dialog-actions>

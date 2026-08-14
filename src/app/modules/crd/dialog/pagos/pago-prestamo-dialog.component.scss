@@ -1,0 +1,56 @@
+@use './pagos-shared.scss' as *;
+
+:host { display: block; }
+
+.pgp-modos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 0.6rem;
+  margin-bottom: 1.1rem;
+}
+
+.pgp-modo {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  text-align: left;
+  border: 2px solid $pg-borde;
+  border-radius: 12px;
+  padding: 0.85rem 0.9rem;
+  min-height: $pg-toque;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+
+  &:hover { border-color: rgba(102, 126, 234, 0.5); }
+  &:focus-visible { outline: 3px solid rgba(102, 126, 234, 0.45); outline-offset: 2px; }
+  &.activo { border-color: $pg-primario; background: rgba(102, 126, 234, 0.08); }
+
+  mat-icon { color: $pg-primario; flex-shrink: 0; }
+
+  .pgp-modo-titulo { font-weight: 700; font-size: 0.88rem; }
+  .pgp-modo-desc { font-size: 0.76rem; color: $pg-texto-suave; margin-top: 0.12rem; }
+}
+
+.pgp-fondo-icono { color: $pg-primario; flex-shrink: 0; }
+
+.pgp-max {
+  min-height: $pg-toque;
+  border-radius: 10px;
+  font-size: 0.78rem;
+}
+
+.pgp-saldo-total {
+  font-size: 0.85rem;
+  color: $pg-texto-suave;
+  margin: 0 0 0.6rem;
+
+  b { color: $pg-texto; @include pg-tabular; }
+}
+
+.pgp-observacion {
+  width: 100%;
+  margin-top: 0.4rem;
+}

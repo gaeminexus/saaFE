@@ -20,7 +20,7 @@ import { Producto } from '../../../model/producto';
 import { Prestamo } from '../../../model/prestamo';
 import { DetallePrestamo } from '../../../model/detalle-prestamo';
 import { ServiciosCrd } from '../../../service/ws-crd';
-import { PagoPrestamo } from '../../../model/pago-prestamo';
+import { PagoPrestamo, pagoVigente } from '../../../model/pago-prestamo';
 
 import { EntidadService } from '../../../service/entidad.service';
 import { ProductoService } from '../../../service/producto.service';
@@ -1378,6 +1378,10 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
 
       const pagosFiltrados = pagos.filter(p => {
         const pago = p as any; // Usar any para evitar problemas de tipos temporalmente
+
+        // Los pagos anulados siguen existiendo en PGPR con `anulado = 1` (§14 de la guía de
+        // servicios de pago): sin este filtro un pago ya reversado seguiría contando como válido.
+        if (!pagoVigente(p)) return false;
 
         // Filtrado con lógica AND: prestamo.codigo AND detallePrestamo.codigo
         const codigoPrestamoDetalle = detallePrestamo?.prestamo?.codigo;

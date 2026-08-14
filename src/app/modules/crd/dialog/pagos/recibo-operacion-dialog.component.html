@@ -1,0 +1,244 @@
+<h2 mat-dialog-title class="pg-titulo exito">
+  <mat-icon>check_circle</mat-icon>
+  {{ titulo }}
+  <span class="pg-titulo-sub">{{ data.tituloPrestamo }}</span>
+</h2>
+
+<mat-dialog-content class="pg-contenido">
+
+  @if (data.mensaje) {
+    <div class="pg-aviso ok">
+      <mat-icon>task_alt</mat-icon>
+      <span>{{ data.mensaje }}</span>
+    </div>
+  }
+
+  <div class="pg-grid">
+    @if (idEvento != null) {
+      <div class="pg-dato">
+        <div class="pg-dato-label">N° de operación</div>
+        <div class="pg-dato-valor">#{{ idEvento }}</div>
+        <div class="pg-dato-nota">Necesario para anularla</div>
+      </div>
+    }
+    @if (data.participante) {
+      <div class="pg-dato">
+        <div class="pg-dato-label">Partícipe</div>
+        <div class="pg-dato-valor nombre">{{ data.participante }}</div>
+      </div>
+    }
+    @if (data.fecha) {
+      <div class="pg-dato">
+        <div class="pg-dato-label">Fecha</div>
+        <div class="pg-dato-valor nombre">{{ data.fecha }}</div>
+      </div>
+    }
+  </div>
+
+  <!-- ============ Pago de cuota / pago con aportes ============ -->
+  @if (data.pago; as pago) {
+    <div class="pg-grid">
+      <div class="pg-dato destacado">
+        <div class="pg-dato-label">Valor aplicado</div>
+        <div class="pg-dato-valor">{{ formatMoneda(pago.valorAplicado) }}</div>
+        <div class="pg-dato-nota">Recibido {{ formatMoneda(pago.valorRecibido) }}</div>
+      </div>
+      <div class="pg-dato">
+        <div class="pg-dato-label">Cuotas afectadas</div>
+        <div class="pg-dato-valor">{{ pago.cuotasAfectadas.length }}</div>
+      </div>
+      <div class="pg-dato">
+        <div class="pg-dato-label">Estado del préstamo</div>
+        <div class="pg-dato-valor nombre">{{ nombreEstadoPrestamo(pago.estadoFinalPrestamo) }}</div>
+      </div>
+    </div>
+
+    @if (pago.prestamoCancelado) {
+      <div class="pg-aviso ok">
+        <mat-icon>verified</mat-icon>
+        <span>El pago cubrió la deuda completa: <b>el crédito quedó cancelado</b>.</span>
+      </div>
+    }
+
+    @if (pago.excedenteNoAplicado > 0.004) {
+      <div class="pg-aviso alerta">
+        <mat-icon>warning</mat-icon>
+        <span>
+          Quedó un excedente sin aplicar de <b>{{ formatMoneda(pago.excedenteNoAplicado) }}</b>.
+          Esto no debería ocurrir: reporte esta operación (#{{ pago.idEvento }}) al área de sistemas.
+        </span>
+      </div>
+    }
+
+    <div class="pg-seccion-label">
+      Desglose por cuota — orden de imputación: desgravamen, mora, interés vencido, interés, capital, seguro
+    </div>
+    <div class="pg-tabla-scroll">
+      <table class="pg-tabla">
+        <thead>
+          <tr>
+            <th>Cuota</th>
+            <th>Estado</th>
+            <th class="num">Desgrav.</th>
+            <th class="num">Mora</th>
+            <th class="num">Int. vencido</th>
+            <th class="num">Interés</th>
+            <th class="num">Capital</th>
+            <th class="num">Seguro</th>
+            <th class="num">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (c of cuotas; track c.idCuota) {
+            <tr>
+              <td><b>{{ c.numeroCuota }}</b></td>
+              <td>
+                <span class="pg-transicion">
+                  <span class="pg-badge" [class]="claseEstadoCuota(c.estadoAnterior)">{{ nombreEstadoCuota(c.estadoAnterior) }}</span>
+                  <mat-icon>arrow_forward</mat-icon>
+                  <span class="pg-badge" [class]="claseEstadoCuota(c.estadoNuevo)">{{ nombreEstadoCuota(c.estadoNuevo) }}</span>
+                </span>
+              </td>
+              <td class="num" [class.cero]="!c.aplicadoDesgravamen">{{ formatMoneda(c.aplicadoDesgravamen) }}</td>
+              <td class="num" [class.cero]="!c.aplicadoMora">{{ formatMoneda(c.aplicadoMora) }}</td>
+              <td class="num" [class.cero]="!c.aplicadoInteresVencido">{{ formatMoneda(c.aplicadoInteresVencido) }}</td>
+              <td class="num" [class.cero]="!c.aplicadoInteres">{{ formatMoneda(c.aplicadoInteres) }}</td>
+              <td class="num" [class.cero]="!c.aplicadoCapital">{{ formatMoneda(c.aplicadoCapital) }}</td>
+              <td class="num" [class.cero]="!c.aplicadoSeguro">{{ formatMoneda(c.aplicadoSeguro) }}</td>
+              <td class="num"><b>{{ formatMoneda(c.totalAplicado) }}</b></td>
+            </tr>
+          }
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="2">TOTALES</td>
+            <td class="num">{{ formatMoneda(totales['aplicadoDesgravamen']) }}</td>
+            <td class="num">{{ formatMoneda(totales['aplicadoMora']) }}</td>
+            <td class="num">{{ formatMoneda(totales['aplicadoInteresVencido']) }}</td>
+            <td class="num">{{ formatMoneda(totales['aplicadoInteres']) }}</td>
+            <td class="num">{{ formatMoneda(totales['aplicadoCapital']) }}</td>
+            <td class="num">{{ formatMoneda(totales['aplicadoSeguro']) }}</td>
+            <td class="num">{{ formatMoneda(totales['totalAplicado']) }}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  }
+
+  <!-- ============ Abono a capital ============ -->
+  @if (data.abono; as abono) {
+    <div class="pg-grid">
+      <div class="pg-dato destacado">
+        <div class="pg-dato-label">Abono aplicado</div>
+        <div class="pg-dato-valor">{{ formatMoneda(abono.valorAbono) }}</div>
+      </div>
+      <div class="pg-dato">
+        <div class="pg-dato-label">Plazo</div>
+        <div class="pg-dato-valor">
+          <span class="pg-comparativa">
+            <span class="pg-antes">{{ abono.plazoAnterior }}</span>
+            <mat-icon class="pg-flecha">arrow_forward</mat-icon>
+            <span class="pg-despues">{{ abono.plazoNuevo }}</span>
+          </span>
+        </div>
+        <div class="pg-dato-nota">cuotas</div>
+      </div>
+      <div class="pg-dato">
+        <div class="pg-dato-label">Valor de cuota</div>
+        <div class="pg-dato-valor">
+          <span class="pg-comparativa">
+            <span class="pg-antes">{{ formatMoneda(abono.cuotaAnterior) }}</span>
+            <mat-icon class="pg-flecha">arrow_forward</mat-icon>
+            <span class="pg-despues">{{ formatMoneda(abono.cuotaNueva) }}</span>
+          </span>
+        </div>
+      </div>
+      <div class="pg-dato">
+        <div class="pg-dato-label">Cuotas regeneradas</div>
+        <div class="pg-dato-valor">{{ abono.cuotasGeneradas }}</div>
+        <div class="pg-dato-nota">{{ abono.cuotasHistorizadas }} pasaron al histórico</div>
+      </div>
+    </div>
+
+    <div class="pg-aviso info">
+      <mat-icon>refresh</mat-icon>
+      <span>La tabla de amortización se regeneró: los códigos de las cuotas pendientes cambiaron y la pantalla los recargó.</span>
+    </div>
+  }
+
+  <!-- ============ Precancelación ============ -->
+  @if (data.precancelacion; as pre) {
+    <div class="pg-grid">
+      <div class="pg-dato destacado">
+        <div class="pg-dato-label">Total precancelado</div>
+        <div class="pg-dato-valor">{{ formatMoneda(pre.valorTotalPrecancelacion) }}</div>
+      </div>
+      <div class="pg-dato">
+        <div class="pg-dato-label">Deuda exigible pagada</div>
+        <div class="pg-dato-valor">{{ formatMoneda(pre.valorExigiblePagado) }}</div>
+      </div>
+      <div class="pg-dato">
+        <div class="pg-dato-label">Capital futuro cancelado</div>
+        <div class="pg-dato-valor">{{ formatMoneda(pre.capitalPrecancelado) }}</div>
+      </div>
+      <div class="pg-dato">
+        <div class="pg-dato-label">Cuotas canceladas anticipadamente</div>
+        <div class="pg-dato-valor">{{ pre.cuotasCanceladasAnticipadas }}</div>
+      </div>
+    </div>
+
+    <div class="pg-aviso ok">
+      <mat-icon>verified</mat-icon>
+      <span>
+        El préstamo quedó en estado <b>{{ nombreEstadoPrestamo(pre.estadoFinalPrestamo) }}</b> y no admite más operaciones de pago.
+      </span>
+    </div>
+  }
+
+  <!-- ============ Aportes utilizados ============ -->
+  @if (movimientos.length) {
+    <div class="pg-seccion-label">Aportes utilizados</div>
+    <div class="pg-tabla-scroll">
+      <table class="pg-tabla">
+        <thead>
+          <tr><th>Tipo de aporte</th><th class="num">Valor debitado</th></tr>
+        </thead>
+        <tbody>
+          @for (m of movimientos; track m.idAporte) {
+            <tr>
+              <td>{{ nombreTipoAporte(m.idTipoAporte) }}</td>
+              <td class="num">{{ formatMoneda(-m.valor > 0 ? -m.valor : m.valor) }}</td>
+            </tr>
+          }
+        </tbody>
+        <tfoot>
+          <tr><td>TOTAL</td><td class="num">{{ formatMoneda(totalAportes) }}</td></tr>
+        </tfoot>
+      </table>
+    </div>
+    <p class="pg-nota-saldos">Los saldos de aportes del partícipe ya se actualizaron.</p>
+  }
+
+  @if (data.detalleExtra?.length) {
+    <div class="pg-seccion-label">Detalle</div>
+    <div class="pg-grid">
+      @for (d of data.detalleExtra; track d.label) {
+        <div class="pg-dato">
+          <div class="pg-dato-label">{{ d.label }}</div>
+          <div class="pg-dato-valor nombre">{{ d.valor }}</div>
+        </div>
+      }
+    </div>
+  }
+
+</mat-dialog-content>
+
+<mat-dialog-actions align="end" class="pg-acciones">
+  <span class="pg-teclas"><kbd>Ctrl</kbd>+<kbd>P</kbd> imprimir &middot; <kbd>Esc</kbd> cerrar</span>
+  <button mat-stroked-button (click)="imprimir()">
+    <mat-icon>print</mat-icon> Imprimir comprobante
+  </button>
+  <button mat-raised-button color="primary" cdkFocusInitial (click)="cerrar()">
+    <mat-icon>check</mat-icon> Listo
+  </button>
+</mat-dialog-actions>

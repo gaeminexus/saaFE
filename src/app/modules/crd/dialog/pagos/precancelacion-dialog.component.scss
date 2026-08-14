@@ -1,0 +1,31 @@
+@use './pagos-shared.scss' as *;
+
+:host { display: block; }
+
+.pg-fondo-icono {
+  color: $pg-primario;
+  flex-shrink: 0;
+}
+
+.pg-fondo-completar {
+  min-height: $pg-toque;
+  border-radius: 10px;
+  font-size: 0.78rem;
+}
+
+.pg-toggle-detalle {
+  margin: 0.2rem 0 0.7rem;
+  min-height: 40px;
+
+  mat-icon {
+    transition: transform 0.18s ease;
+    &.abierto { transform: rotate(180deg); }
+  }
+}
+
+.pg-cuadre mat-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  vertical-align: text-bottom;
+}

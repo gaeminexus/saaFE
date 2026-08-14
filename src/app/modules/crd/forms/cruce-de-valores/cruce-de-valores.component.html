@@ -78,81 +78,92 @@
         </mat-card-content>
       </mat-card>
 
+      <!-- Barra de totales, fija en pantalla mientras se reparte el fondo. -->
       <div class="fondos-bar"
-           [class.ok]="tieneSeleccion() && fondoRestante() >= -0.004"
-           [class.over]="fondoRestante() < -0.004">
+           [class.ok]="tieneSeleccion() && fondoRestante() >= -0.01"
+           [class.over]="fondoRestante() < -0.01">
         <div class="fb-item">
-          <span class="fb-label">Fondo disponible</span>
+          <span class="fb-label">Fondo a utilizar</span>
           <span class="fb-value">{{ formatMoneda(fondoDisponibleTotal()) }}</span>
         </div>
         <div class="fb-item">
-          <span class="fb-label">Fondo utilizado</span>
+          <span class="fb-label">Repartido en préstamos</span>
           <span class="fb-value">{{ formatMoneda(fondoUtilizadoTotal()) }}</span>
         </div>
         <div class="fb-item">
-          <span class="fb-label">Fondo restante</span>
+          <span class="fb-label">Sin repartir</span>
           <span class="fb-value">{{ formatMoneda(fondoRestante()) }}</span>
         </div>
       </div>
 
-      @if (cargandoDatos()) {
-        <div class="loading-spinner-container">
-          <mat-spinner diameter="48" color="primary"></mat-spinner>
+      <!-- ============ Paso 1: fondos ============ -->
+      <div class="section-label">
+        1 · Saldo de aportes disponible
+        <span class="count">({{ formatMoneda(saldoDisponibleTotal()) }} en total)</span>
+      </div>
+
+      @if (cargandoSaldos()) {
+        <div class="loading-spinner-container"><mat-spinner diameter="40" color="primary"></mat-spinner></div>
+      } @else if (!fondos.length) {
+        <mat-card class="vacio-card">
+          <mat-card-content class="vacio-body">
+            <mat-icon>savings</mat-icon>
+            <p>Este partícipe no tiene saldo disponible en ningún tipo de aporte, así que no hay valores para cruzar.</p>
+          </mat-card-content>
+        </mat-card>
+      } @else {
+        <div class="fondos-acciones">
+          <button mat-stroked-button (click)="usarTodosLosFondos()">
+            <mat-icon>done_all</mat-icon> Usar todo el saldo disponible
+          </button>
+          <button mat-stroked-button (click)="limpiarFondos()">
+            <mat-icon>backspace</mat-icon> Limpiar
+          </button>
+        </div>
+
+        <div class="fondos-grid">
+          @for (f of fondos; track f.idTipoAporte) {
+            <mat-card class="fondo-card" [class.activo]="montoFondo(f) > 0.004">
+              <mat-card-content>
+                <div class="fc-name"><mat-icon>savings</mat-icon> {{ f.nombre }}</div>
+                <div class="fc-amount">{{ formatMoneda(f.saldo) }}</div>
+                <div class="fc-amount-label">Saldo disponible</div>
+                <div class="fondo-input-row">
+                  <mat-form-field appearance="outline" class="fondo-monto-field" subscriptSizing="dynamic">
+                    <mat-label>Monto a utilizar</mat-label>
+                    <span matTextPrefix>$&nbsp;</span>
+                    <input matInput inputmode="decimal" [(ngModel)]="f.texto"
+                           (ngModelChange)="onFondoTextoCambio()" (blur)="onFondoBlur(f)" placeholder="0.00" />
+                  </mat-form-field>
+                  <button mat-button class="usar-max-btn" (click)="usarMaximoFondo(f)">Usar máximo</button>
+                </div>
+              </mat-card-content>
+            </mat-card>
+          }
         </div>
       }
 
-      <div class="section-label">Fondos de aportes disponibles para el cruce</div>
-      <div class="fondos-grid">
-        <mat-card class="fondo-card">
-          <mat-card-content>
-            <div class="fc-name"><mat-icon>work_history</mat-icon> Aportes Cesantía</div>
-            <div class="fc-amount">{{ formatMoneda(saldoDisponibleCesantia()) }}</div>
-            <div class="fc-amount-label">Saldo disponible</div>
-            <div class="fondo-input-row">
-              <mat-form-field appearance="outline" class="fondo-monto-field" subscriptSizing="dynamic">
-                <mat-label>Monto a utilizar en este cruce</mat-label>
-                <span matTextPrefix>$&nbsp;</span>
-                <input matInput [(ngModel)]="fondoTexto.cesantia" (ngModelChange)="onFondoTextoCambio()" (blur)="onFondoBlur('cesantia')" />
-              </mat-form-field>
-              <button mat-button class="usar-max-btn" (click)="usarMaximoFondo('cesantia')">Usar máximo</button>
-            </div>
-            <div class="fc-breakdown">
-              <div>Total aportado<b>{{ formatMoneda(totalAportadoCesantia()) }}</b></div>
-              <div>Ya utilizado<b>{{ formatMoneda(totalUtilizadoCesantia()) }}</b></div>
-            </div>
-          </mat-card-content>
-        </mat-card>
-
-        <mat-card class="fondo-card">
-          <mat-card-content>
-            <div class="fc-name"><mat-icon>elderly</mat-icon> Aportes Jubilación</div>
-            <div class="fc-amount">{{ formatMoneda(saldoDisponibleJubilacion()) }}</div>
-            <div class="fc-amount-label">Saldo disponible</div>
-            <div class="fondo-input-row">
-              <mat-form-field appearance="outline" class="fondo-monto-field" subscriptSizing="dynamic">
-                <mat-label>Monto a utilizar en este cruce</mat-label>
-                <span matTextPrefix>$&nbsp;</span>
-                <input matInput [(ngModel)]="fondoTexto.jubilacion" (ngModelChange)="onFondoTextoCambio()" (blur)="onFondoBlur('jubilacion')" />
-              </mat-form-field>
-              <button mat-button class="usar-max-btn" (click)="usarMaximoFondo('jubilacion')">Usar máximo</button>
-            </div>
-            <div class="fc-breakdown">
-              <div>Total aportado<b>{{ formatMoneda(totalAportadoJubilacion()) }}</b></div>
-              <div>Ya utilizado<b>{{ formatMoneda(totalUtilizadoJubilacion()) }}</b></div>
-            </div>
-          </mat-card-content>
-        </mat-card>
+      <!-- ============ Paso 2: préstamos ============ -->
+      <div class="section-label">
+        2 · Préstamos activos <span class="count">({{ prestamosCruce().length }})</span>
       </div>
 
-      <div class="section-label">Préstamos vigentes <span class="count">({{ prestamosCruce().length }})</span></div>
+      @if (cargandoPrestamos()) {
+        <div class="loading-spinner-container"><mat-spinner diameter="40" color="primary"></mat-spinner></div>
+      }
 
       @for (pc of prestamosCruce(); track pc.prestamo.codigo) {
-        <mat-card class="prestamo-card">
+        <mat-card class="prestamo-card" [class.aplicado]="pc.estado === 'ok'" [class.fallido]="pc.estado === 'error'">
           <div class="prestamo-head" (click)="toggleAbierto(pc)">
             <div class="ph-left">
               <mat-icon>account_balance</mat-icon>
               <div>
-                <div class="ph-title">{{ pc.prestamo.producto?.nombre || 'Sin Producto' }} <span class="badge vigente">Vigente</span></div>
+                <div class="ph-title">
+                  {{ pc.prestamo.producto?.nombre || 'Sin producto' }}
+                  <span class="badge">{{ estadoPrestamoTexto(pc) }}</span>
+                  @if (pc.estado === 'ok') { <span class="badge ok">Cruzado</span> }
+                  @if (pc.estado === 'error') { <span class="badge error">No aplicado</span> }
+                </div>
                 <div class="ph-meta">Préstamo #{{ pc.prestamo.idAsoprep }} &middot; {{ pc.cuotas.length }} cuotas pendientes</div>
               </div>
             </div>
@@ -167,27 +178,44 @@
                   <div class="l">A cruzar</div>
                 </div>
               }
+              @if (pc.estado === 'procesando') {
+                <mat-spinner diameter="22"></mat-spinner>
+              }
               <mat-icon class="expand-icon" [class.open]="pc.open">expand_more</mat-icon>
             </div>
           </div>
 
+          @if (pc.estado === 'ok' || pc.estado === 'error') {
+            <div class="resultado-linea" [class.ok]="pc.estado === 'ok'" [class.error]="pc.estado === 'error'">
+              <mat-icon>{{ pc.estado === 'ok' ? 'check_circle' : 'error_outline' }}</mat-icon>
+              <span>{{ pc.mensaje }}</span>
+              @if (pc.estado === 'ok' && pc.resultado) {
+                <button mat-button (click)="verComprobante(pc)">Ver comprobante</button>
+              }
+            </div>
+          }
+
           @if (pc.open) {
             <mat-card-content class="prestamo-detail">
+
               <div class="alloc-modes">
-                <button mat-stroked-button class="alloc-btn" (click)="cancelarSaldoTotal(pc)">
-                  <mat-icon>done_all</mat-icon>
-                  Cancelar saldo total ({{ formatMoneda(pc.prestamo.saldoTotal) }})
-                </button>
-                <div class="alloc-custom">
-                  <mat-form-field appearance="outline" subscriptSizing="dynamic" class="alloc-custom-field">
-                    <mat-label>Monto personalizado</mat-label>
-                    <span matTextPrefix>$&nbsp;</span>
-                    <input matInput #montoPersonalizadoInput placeholder="0.00" />
-                  </mat-form-field>
-                  <button mat-flat-button color="primary"
-                          (click)="aplicarMontoPersonalizado(pc, montoPersonalizadoInput.value); montoPersonalizadoInput.value = ''">
-                    Aplicar
+                <mat-form-field appearance="outline" class="alloc-monto-field" subscriptSizing="dynamic">
+                  <mat-label>Monto a cruzar en este préstamo</mat-label>
+                  <span matTextPrefix>$&nbsp;</span>
+                  <input matInput inputmode="decimal" [(ngModel)]="pc.montoTexto"
+                         (blur)="onMontoPrestamoBlur(pc)" placeholder="0.00" />
+                </mat-form-field>
+
+                <div class="alloc-chips">
+                  <button mat-stroked-button (click)="aplicarCuotas(pc, 1)">1 cuota</button>
+                  <button mat-stroked-button (click)="aplicarCuotas(pc, 3)">3 cuotas</button>
+                  <button mat-stroked-button (click)="aplicarCuotas(pc, 6)">6 cuotas</button>
+                  <button mat-stroked-button (click)="cancelarSaldoTotal(pc)">
+                    <mat-icon>done_all</mat-icon> Saldo total ({{ formatMoneda(pc.prestamo.saldoTotal) }})
                   </button>
+                  @if (montoAplicadoPrestamo(pc) > 0.004) {
+                    <button mat-button (click)="quitarCruce(pc)">Quitar</button>
+                  }
                 </div>
               </div>
 
@@ -195,38 +223,41 @@
                 <div class="alloc-note"><mat-icon>info</mat-icon><span>{{ pc.nota }}</span></div>
               }
 
+              <div class="proyeccion-nota">
+                <mat-icon>lightbulb</mat-icon>
+                <span>
+                  Proyección estimada: el servidor aplica el monto en cascada desde la cuota más antigua,
+                  imputando primero desgravamen y mora. El desglose exacto aparece en el comprobante.
+                </span>
+              </div>
+
               <div class="cuotas-scroll">
                 <table class="cuotas-table">
                   <thead>
                     <tr>
-                      <th></th><th>N&deg;</th><th>Vencimiento</th>
+                      <th>N&deg;</th><th>Vencimiento</th>
                       <th class="num">Capital</th><th class="num">Interés</th><th class="num">Saldo cuota</th>
-                      <th>Aplicado</th><th>Estado</th>
+                      <th class="num">Se aplicaría</th><th>Quedaría</th>
                     </tr>
                   </thead>
                   <tbody>
-                    @for (ca of pc.cuotas; track ca.detalle.codigo) {
-                      <tr [class]="estadoCuota(ca)">
-                        <td><mat-checkbox [checked]="ca.aplicado > 0.004" (change)="quickToggleCuota(pc, ca)"></mat-checkbox></td>
-                        <td>{{ ca.detalle.numeroCuota }}</td>
-                        <td>{{ ca.detalle.fechaVencimiento | date : 'dd/MM/yyyy' }}</td>
-                        <td class="num">{{ formatMoneda(ca.detalle.capital) }}</td>
-                        <td class="num">{{ formatMoneda(ca.detalle.interes) }}</td>
-                        <td class="num valor-cell">{{ formatMoneda(ca.detalle.saldo) }}</td>
+                    @for (c of coberturaProyectada(pc); track c.cuota.codigo) {
+                      <tr [class]="c.estado">
+                        <td>{{ c.cuota.numeroCuota }}</td>
+                        <td>{{ c.cuota.fechaVencimiento | date : 'dd/MM/yyyy' }}</td>
+                        <td class="num">{{ formatMoneda(c.cuota.capital) }}</td>
+                        <td class="num">{{ formatMoneda(c.cuota.interes) }}</td>
+                        <td class="num valor-cell">{{ formatMoneda(c.cuota.saldo) }}</td>
+                        <td class="num">{{ c.aplicado > 0.004 ? formatMoneda(c.aplicado) : '—' }}</td>
                         <td>
-                          <mat-form-field appearance="outline" class="apl-field" subscriptSizing="dynamic">
-                            <input matInput [(ngModel)]="ca.aplicadoTexto" (blur)="onCuotaMontoBlur(pc, ca)" placeholder="$0.00" />
-                          </mat-form-field>
-                        </td>
-                        <td>
-                          <span class="estado-mini" [class]="estadoCuota(ca)">
-                            {{ estadoCuota(ca) === 'cruzada' ? 'Cruzada' : estadoCuota(ca) === 'parcial' ? 'Parcial' : 'Pendiente' }}
+                          <span class="estado-mini" [class]="c.estado">
+                            {{ c.estado === 'cubierta' ? 'Cancelada' : c.estado === 'parcial' ? 'Parcial' : 'Pendiente' }}
                           </span>
                         </td>
                       </tr>
                     }
                     @empty {
-                      <tr><td colspan="8" class="texto-vacio">No hay cuotas pendientes para este préstamo.</td></tr>
+                      <tr><td colspan="7" class="texto-vacio">No hay cuotas pendientes para este préstamo.</td></tr>
                     }
                   </tbody>
                 </table>
@@ -234,8 +265,8 @@
 
               <div class="prestamo-mini-summary">
                 <div class="lms-item">
-                  <div class="l">Cuotas cruzadas</div>
-                  <div class="v">{{ cuotasCruzadas(pc) }} de {{ pc.cuotas.length }}</div>
+                  <div class="l">Cuotas que se cancelarían</div>
+                  <div class="v">{{ cuotasCubiertas(pc) }} de {{ pc.cuotas.length }}</div>
                 </div>
                 @if (cuotasParciales(pc) > 0) {
                   <div class="lms-item">
@@ -244,7 +275,7 @@
                   </div>
                 }
                 <div class="lms-item">
-                  <div class="l">Monto aplicado</div>
+                  <div class="l">Monto a cruzar</div>
                   <div class="v good">{{ formatMoneda(montoAplicadoPrestamo(pc)) }}</div>
                 </div>
                 <div class="lms-item">
@@ -253,56 +284,113 @@
                 </div>
               </div>
 
-              @if (montoAplicadoPrestamo(pc) > 0.004) {
-                <button mat-button (click)="quitarCruce(pc)">Quitar cruce de este préstamo</button>
-              }
+              <div class="otras-operaciones">
+                <span class="oo-label">Otras operaciones sobre este crédito:</span>
+                <button mat-stroked-button (click)="abrirPago(pc, 'efectivo')">
+                  <mat-icon>payments</mat-icon> Pagar en efectivo
+                </button>
+                <button mat-stroked-button (click)="abrirAbonoCapital(pc)">
+                  <mat-icon>trending_down</mat-icon> Abonar a capital
+                </button>
+                <button mat-stroked-button (click)="abrirPrecancelacion(pc)">
+                  <mat-icon>task_alt</mat-icon> Precancelar
+                </button>
+                <button mat-stroked-button (click)="abrirHistorial(pc)">
+                  <mat-icon>history</mat-icon> Historial
+                </button>
+              </div>
+
             </mat-card-content>
           }
         </mat-card>
       } @empty {
-        @if (!cargandoDatos()) {
-          <p class="texto-vacio">Este partícipe no tiene préstamos vigentes.</p>
+        @if (!cargandoPrestamos()) {
+          <mat-card class="vacio-card">
+            <mat-card-content class="vacio-body">
+              <mat-icon>account_balance</mat-icon>
+              <p>Este partícipe no tiene préstamos que admitan operaciones de pago.</p>
+            </mat-card-content>
+          </mat-card>
         }
       }
 
+      <!-- ============ Paso 3: confirmar ============ -->
       <mat-card class="resumen-card">
-        <mat-card-header><mat-card-title>Resumen del cruce</mat-card-title></mat-card-header>
+        <mat-card-header><mat-card-title>3 · Confirmar el cruce</mat-card-title></mat-card-header>
 
         @if (!cruceRegistrado()) {
           <mat-card-content>
             @if (!tieneSeleccion()) {
-              <p class="texto-vacio">Ingrese un monto en al menos un fondo de aportes y aplique valores a las cuotas de un préstamo para ver el resumen aquí.</p>
+              <p class="texto-vacio">
+                Indique cuánto usar de cada fondo de aportes y asigne un monto a por lo menos un préstamo
+                para ver aquí el resumen.
+              </p>
             } @else {
               <div class="resumen-rows">
-                @if (fondoMonto().cesantia > 0.004) {
-                  <div class="resumen-row"><span>Fondo: Aportes Cesantía</span><b>{{ formatMoneda(fondoMonto().cesantia) }}</b></div>
-                }
-                @if (fondoMonto().jubilacion > 0.004) {
-                  <div class="resumen-row"><span>Fondo: Aportes Jubilación</span><b>{{ formatMoneda(fondoMonto().jubilacion) }}</b></div>
-                }
-                @for (pc of prestamosCruce(); track pc.prestamo.codigo) {
-                  @if (montoAplicadoPrestamo(pc) > 0.004) {
-                    <div class="resumen-row">
-                      <span>
-                        Préstamo #{{ pc.prestamo.idAsoprep }} — {{ cuotasCruzadas(pc) }} cuota(s) cruzada(s)
-                        @if (cuotasParciales(pc) > 0) { + {{ cuotasParciales(pc) }} parcial(es) }
-                      </span>
-                      <b>{{ formatMoneda(montoAplicadoPrestamo(pc)) }}</b>
-                    </div>
+                @for (f of fondos; track f.idTipoAporte) {
+                  @if (montoFondo(f) > 0.004) {
+                    <div class="resumen-row"><span>Fondo: {{ f.nombre }}</span><b>{{ formatMoneda(montoFondo(f)) }}</b></div>
                   }
                 }
+                @for (pc of prestamosACruzar(); track pc.prestamo.codigo) {
+                  <div class="resumen-row">
+                    <span>
+                      Préstamo #{{ pc.prestamo.idAsoprep }} — cancelaría {{ cuotasCubiertas(pc) }} cuota(s)
+                      @if (cuotasParciales(pc) > 0) { + {{ cuotasParciales(pc) }} parcial(es) }
+                    </span>
+                    <b>{{ formatMoneda(montoAplicadoPrestamo(pc)) }}</b>
+                  </div>
+                }
               </div>
+
               <div class="resumen-total">
                 <span>Total a cruzar</span>
                 <b>{{ formatMoneda(fondoUtilizadoTotal()) }}</b>
               </div>
+
+              <div class="datos-cruce">
+                <mat-form-field appearance="outline">
+                  <mat-label>Fecha del cruce</mat-label>
+                  <input matInput [matDatepicker]="pickerCruce" [max]="hoy"
+                         [ngModel]="fechaPago()" (ngModelChange)="fechaPago.set($event)" />
+                  <mat-datepicker-toggle matSuffix [for]="pickerCruce"></mat-datepicker-toggle>
+                  <mat-datepicker #pickerCruce></mat-datepicker>
+                  <mat-hint>No puede ser posterior a hoy</mat-hint>
+                </mat-form-field>
+                <mat-form-field appearance="outline" class="ancho-total">
+                  <mat-label>Observación (opcional)</mat-label>
+                  <input matInput [(ngModel)]="observacion" maxlength="200" placeholder="Ej.: cruce con cesantía" />
+                </mat-form-field>
+              </div>
+
+              @if (prestamosACruzar().length > 1) {
+                <div class="alloc-note">
+                  <mat-icon>info</mat-icon>
+                  <span>
+                    Se registrará <b>una operación por préstamo</b> ({{ prestamosACruzar().length }} en total).
+                    No son una sola transacción: si alguna falla, las demás igual quedan aplicadas y podrá
+                    reintentar solo la que falló.
+                  </span>
+                </div>
+              }
+
+              @if (hayExcesoEnAlgunFondo()) {
+                <div class="alloc-note error">
+                  <mat-icon>warning</mat-icon>
+                  <span>Un fondo supera su saldo disponible. Ajuste el monto antes de confirmar.</span>
+                </div>
+              }
+
               <div class="confirm-actions">
                 <button mat-stroked-button (click)="limpiarSeleccion()">Limpiar selección</button>
                 <button mat-raised-button color="accent" [disabled]="!puedeConfirmar()" (click)="confirmarCruce()">
                   @if (registrando()) {
                     <mat-spinner diameter="18"></mat-spinner>
                   } @else {
-                    <ng-container><mat-icon>check_circle</mat-icon> Confirmar cruce de valores</ng-container>
+                    <ng-container>
+                      <mat-icon>check_circle</mat-icon>
+                      Cruzar {{ formatMoneda(fondoUtilizadoTotal()) }} en {{ prestamosACruzar().length }} préstamo(s)
+                    </ng-container>
                   }
                 </button>
               </div>
@@ -310,9 +398,22 @@
           </mat-card-content>
         } @else {
           <mat-card-content class="success-view">
-            <mat-icon class="check-icon">check_circle</mat-icon>
-            <h3>Cruce registrado</h3>
-            <p>El cruce se guardó correctamente entre los fondos de aportes y las cuotas seleccionadas.</p>
+            @if (resumenCruce(); as resumen) {
+              <mat-icon class="check-icon" [class.parcial]="resumen.fallidos > 0">
+                {{ resumen.fallidos > 0 ? 'warning' : 'check_circle' }}
+              </mat-icon>
+              <h3>
+                {{ resumen.fallidos === 0
+                    ? 'Cruce registrado'
+                    : (resumen.exitosos === 0 ? 'No se pudo registrar el cruce' : 'Cruce registrado parcialmente') }}
+              </h3>
+              <p>
+                {{ resumen.exitosos }} de {{ resumen.total }} préstamo(s) se cruzaron correctamente.
+                @if (resumen.fallidos > 0) {
+                  Revise el detalle de cada tarjeta para ver el motivo de los {{ resumen.fallidos }} que no se aplicaron.
+                }
+              </p>
+            }
             <button mat-stroked-button (click)="iniciarOtroCruce()">Iniciar otro cruce</button>
           </mat-card-content>
         }

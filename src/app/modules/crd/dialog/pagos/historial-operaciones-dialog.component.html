@@ -1,0 +1,156 @@
+<h2 mat-dialog-title class="pg-titulo">
+  <mat-icon>history</mat-icon>
+  Operaciones del préstamo
+  <span class="pg-titulo-sub">{{ data.titulo }}</span>
+</h2>
+
+<mat-dialog-content class="pg-contenido">
+
+  @if (avisoAnulacion(); as aviso) {
+    <div class="pg-aviso error">
+      <mat-icon>error_outline</mat-icon>
+      <span>{{ aviso }}</span>
+    </div>
+  }
+
+  @if (errorCarga(); as error) {
+    <div class="pg-aviso error">
+      <mat-icon>cloud_off</mat-icon>
+      <div>
+        <span>{{ error }}</span>
+        <div class="pg-aviso-acciones">
+          <button mat-stroked-button (click)="cargar()"><mat-icon>refresh</mat-icon> Reintentar</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (cargando()) {
+    <div class="pg-cargando">
+      <mat-spinner diameter="36"></mat-spinner>
+      <span>Cargando historial…</span>
+    </div>
+  } @else if (!eventos().length && !errorCarga()) {
+    <div class="pg-vacio">
+      <mat-icon>receipt_long</mat-icon>
+      <p>Este préstamo todavía no tiene operaciones de pago registradas.</p>
+    </div>
+  } @else if (eventos().length) {
+
+    <div class="pg-aviso info">
+      <mat-icon>info</mat-icon>
+      <span>
+        Las operaciones se anulan de la más reciente a la más antigua. Por eso solo la primera vigente
+        de la lista muestra el botón <b>Anular</b>.
+      </span>
+    </div>
+
+    <div class="hist-lista">
+      @for (e of eventos(); track e.codigo) {
+        <div class="hist-item" [class.anulado]="e.estado === 0" [class.anulable]="e.codigo === codigoAnulable()">
+
+          <div class="hist-icono"><mat-icon>{{ iconoTipo(e.tipoOperacion) }}</mat-icon></div>
+
+          <div class="hist-cuerpo">
+            <div class="hist-linea1">
+              <span class="hist-tipo">{{ nombreTipo(e.tipoOperacion) }}</span>
+              <span class="hist-codigo">#{{ e.codigo }}</span>
+              @if (e.estado === 0) {
+                <span class="pg-badge est-anulado">Anulado</span>
+              } @else if (e.codigo === codigoAnulable()) {
+                <span class="pg-badge est-pagada">Última vigente</span>
+              }
+            </div>
+            <div class="hist-linea2">
+              {{ fechaLegible(e.fecha) }} &middot; {{ e.usuario }}
+              @if (e.observacion) { &middot; {{ e.observacion }} }
+            </div>
+
+            @if (esAbonoCapital(e) && e.plazoAnterior != null) {
+              <div class="hist-linea2">
+                Plazo {{ e.plazoAnterior }} → {{ e.plazoNuevo }} &middot;
+                Cuota {{ formatMoneda(e.cuotaAnterior) }} → {{ formatMoneda(e.cuotaNueva) }}
+              </div>
+            }
+
+            @if (e.estado === 0) {
+              <div class="hist-anulacion">
+                <mat-icon>undo</mat-icon>
+                Anulado por {{ e.usuarioAnulacion }} el {{ fechaLegible(e.fechaAnulacion) }}
+                @if (e.motivoAnulacion) { — «{{ e.motivoAnulacion }}» }
+              </div>
+            }
+
+            @if (esAbonoCapital(e)) {
+              <button mat-button class="hist-ver-tabla" (click)="toggleHistorico(e)">
+                <mat-icon [class.abierto]="eventoExpandido() === e.codigo">expand_more</mat-icon>
+                {{ eventoExpandido() === e.codigo ? 'Ocultar' : 'Ver' }} tabla anterior al abono
+              </button>
+
+              @if (eventoExpandido() === e.codigo) {
+                @if (cargandoHistorico()) {
+                  <div class="pg-cargando"><mat-spinner diameter="24"></mat-spinner></div>
+                } @else if (historicoDe(e.codigo).length) {
+                  <div class="pg-tabla-scroll hist-tabla">
+                    <table class="pg-tabla">
+                      <thead>
+                        <tr>
+                          <th>N°</th><th>Vencimiento</th>
+                          <th class="num">Capital</th><th class="num">Interés</th>
+                          <th class="num">Cuota</th><th class="num">Saldo</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (h of historicoDe(e.codigo); track h.codigo) {
+                          <tr>
+                            <td>{{ h.numeroCuota }}</td>
+                            <td>{{ fechaLegible(h.fechaVencimiento) }}</td>
+                            <td class="num">{{ formatMoneda(h.capital) }}</td>
+                            <td class="num">{{ formatMoneda(h.interes) }}</td>
+                            <td class="num">{{ formatMoneda(h.cuota) }}</td>
+                            <td class="num">{{ formatMoneda(h.saldo) }}</td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                } @else {
+                  <p class="hist-sin-datos">No se encontraron cuotas historizadas para esta operación.</p>
+                }
+              }
+            }
+          </div>
+
+          <div class="hist-derecha">
+            <div class="hist-valor">{{ formatMoneda(e.valor) }}</div>
+            @if (e.estado === 1 && e.codigo === codigoAnulable()) {
+              <button mat-stroked-button color="warn" class="hist-anular"
+                      [disabled]="anulando() !== null"
+                      (click)="anular(e)">
+                @if (anulando() === e.codigo) {
+                  <mat-spinner diameter="18"></mat-spinner>
+                } @else {
+                  <ng-container><mat-icon>undo</mat-icon> Anular</ng-container>
+                }
+              </button>
+            }
+          </div>
+
+        </div>
+      }
+    </div>
+
+    <p class="hist-resumen">
+      {{ eventos().length }} operación(es) registrada(s) &middot; {{ totalVigentes() }} vigente(s)
+    </p>
+  }
+
+</mat-dialog-content>
+
+<mat-dialog-actions align="end" class="pg-acciones">
+  <span class="pg-teclas"><kbd>Esc</kbd> cerrar</span>
+  <button mat-stroked-button [disabled]="cargando()" (click)="cargar()">
+    <mat-icon>refresh</mat-icon> Actualizar
+  </button>
+  <button mat-raised-button color="primary" cdkFocusInitial (click)="cerrar()">Cerrar</button>
+</mat-dialog-actions>
