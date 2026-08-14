@@ -89,7 +89,7 @@
           <mat-form-field appearance="outline" class="monto-total-field">
             <mat-label>Monto del pago (recibido del socio)</mat-label>
             <span matTextPrefix>$&nbsp;</span>
-            <input matInput [(ngModel)]="montoTotalTexto" (ngModelChange)="onMontoCuentaCambio()" (blur)="onMontoTotalBlur()" />
+            <input matInput [(ngModel)]="montoTotalTexto" (ngModelChange)="onMontoTotalCambio()" (blur)="onMontoTotalBlur()" />
           </mat-form-field>
           <div id="cp-indicador-superior" class="allocation-live"
                [class.ok]="completamenteAsignado() && asignado() > 0"
@@ -415,7 +415,7 @@
                       <mat-option [value]="c">{{ c.banco?.nombre }} &middot; {{ c.numeroCuenta }}</mat-option>
                     }
                   </mat-select>
-                  <mat-hint>Pendiente: filtro backend (estado=1, crédito=1) aún no implementado — lista completa mostrada por ahora.</mat-hint>
+                  <mat-hint>Solo cuentas vigentes habilitadas para cobro de crédito</mat-hint>
                 </mat-form-field>
                 <div class="field-grid">
                   <mat-form-field appearance="outline">
@@ -435,13 +435,16 @@
             }
 
             <div class="confirm-actions">
-              @if (!completamenteAsignado() && (cuentaChecked.prestamo || cuentaChecked.cesantia || cuentaChecked.jubilacion)) {
-                <div class="allocation-note">
-                  @if (restante() > 0.004) {
-                    Falta asignar {{ formatMoneda(restante()) }} del monto total antes de poder confirmar.
-                  } @else {
-                    Se ha asignado {{ formatMoneda(-restante()) }} de más — ajusta los montos antes de confirmar.
-                  }
+              @if (motivosNoConfirmar().length) {
+                <div class="motivos-bloqueo">
+                  <div class="mb-titulo">
+                    <mat-icon>info</mat-icon> Para confirmar el cobro falta:
+                  </div>
+                  <ul>
+                    @for (motivo of motivosNoConfirmar(); track motivo) {
+                      <li>{{ motivo }}</li>
+                    }
+                  </ul>
                 </div>
               }
 

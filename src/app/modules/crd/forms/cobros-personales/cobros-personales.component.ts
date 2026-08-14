@@ -319,19 +319,40 @@ export class CobrosPersonalesComponent implements OnDestroy {
   /** ¿El cobro incluye una parte que va contra el préstamo? */
   cobraPrestamo = computed(() => this.cuentaChecked.prestamo && this.montoPrestamo() > 0.004);
 
-  puedeConfirmar = computed(() => {
-    // Ya sea préstamo o aportes del socio, tiene que haber algo con valor que registrar.
-    const hayAlgoQueRegistrar = this.cobraPrestamo() || this.montoAportesSocio() > 0.004;
-    // El estado del préstamo solo bloquea si el cobro efectivamente toca el préstamo.
-    const prestamoHabilitado = !this.cobraPrestamo() || this.prestamoAdmiteOperaciones();
-    return (
-      hayAlgoQueRegistrar &&
-      prestamoHabilitado &&
-      this.completamenteAsignado() &&
-      !this.saldoDebitoInsuficiente() &&
-      !this.registrando()
-    );
+  /**
+   * Qué falta para poder confirmar. Es la lista que se muestra junto al botón: un botón de cobro
+   * deshabilitado sin explicación obliga al usuario a adivinar cuál de las cinco condiciones no se
+   * cumple, y varias (el reparto por centavos, el estado del préstamo) no son evidentes en pantalla.
+   *
+   * `puedeConfirmar` se deriva de acá para que no puedan quedar desalineados: si la lista está
+   * vacía, se puede confirmar.
+   */
+  motivosNoConfirmar = computed<string[]>(() => {
+    if (this.registrando()) return ['Registrando el cobro…'];
+
+    const motivos: string[] = [];
+
+    if (!this.cobraPrestamo() && this.montoAportesSocio() <= 0.004) {
+      motivos.push('Marque el préstamo o una cuenta de aportes y asígnele un monto mayor a cero.');
+    }
+    if (this.cobraPrestamo() && !this.prestamoAdmiteOperaciones()) {
+      motivos.push(`El préstamo está en estado «${this.estadoPrestamoTexto()}» y no admite operaciones de pago.`);
+    }
+    if (!this.completamenteAsignado()) {
+      const restante = this.restante();
+      motivos.push(
+        restante > 0
+          ? `Falta asignar ${this.formatMoneda(restante)} de los ${this.formatMoneda(this.montoTotal())} del monto del pago.`
+          : `Hay ${this.formatMoneda(-restante)} asignados de más sobre el monto del pago: ajuste los montos.`
+      );
+    }
+    if (this.saldoDebitoInsuficiente()) {
+      motivos.push('El monto destinado al préstamo supera el saldo disponible en la cuenta de aportes de origen.');
+    }
+    return motivos;
   });
+
+  puedeConfirmar = computed(() => this.motivosNoConfirmar().length === 0);
 
   // ================= búsqueda =================
 
@@ -417,6 +438,8 @@ export class CobrosPersonalesComponent implements OnDestroy {
     this.criterioRolPetro = '';
     this.criterioIdPrestamoAsoprep = '';
     this.criterioNombre = '';
+    // Si una confirmación anterior quedó a medias, el flag dejaría el botón deshabilitado para siempre.
+    this.registrando.set(false);
     this.resultados.set([]);
     this.mostrandoResultados.set(false);
     this.entidadSeleccionada.set(null);
@@ -436,6 +459,7 @@ export class CobrosPersonalesComponent implements OnDestroy {
   seleccionarEntidad(entidad: Entidad): void {
     this.entidadSeleccionada.set(entidad);
     this.mostrandoResultados.set(false);
+    this.registrando.set(false);
     this.resetAsignacion();
     this.cargarDatosParticipante(entidad);
   }
@@ -468,10 +492,7 @@ export class CobrosPersonalesComponent implements OnDestroy {
       });
     }
 
-    this.cuentaBancariaService.getAll().subscribe({
-      next: (cuentas) => this.cuentasBancarias.set((cuentas ?? []).filter((c) => Number(c.estado) === 1)),
-      error: () => this.snackBar.open('No se pudieron cargar las cuentas bancarias de ASOPREP.', 'Cerrar', { duration: 4000 }),
-    });
+    this.cargarCuentasAsoprep();
   }
 
   /**
@@ -513,6 +534,37 @@ export class CobrosPersonalesComponent implements OnDestroy {
         this.cargandoPrestamos.set(false);
         this.snackBar.open('No se pudo cargar el préstamo del partícipe.', 'Cerrar', { duration: 4000 });
       },
+    });
+  }
+
+  /**
+   * Cuentas de ASOPREP que pueden recibir el cobro: vigentes (CNBCESTD = 1) y habilitadas para
+   * cobro de crédito (CNBCCBCR = 1). El filtro va en el criterio de búsqueda, no del lado del
+   * cliente: `getAll` trae todas las cuentas de tesorería, incluidas las de pagos y las dadas de
+   * baja, y ninguna de esas es un destino válido para un cobro de préstamo.
+   */
+  private cargarCuentasAsoprep(): void {
+    const criterioEstado = new DatosBusqueda();
+    criterioEstado.asignaUnCampoSinTrunc(TipoDatosBusqueda.LONG, 'estado', '1', TipoComandosBusqueda.IGUAL);
+
+    const criterioCobroCredito = new DatosBusqueda();
+    criterioCobroCredito.asignaUnCampoSinTrunc(TipoDatosBusqueda.LONG, 'cobroCredito', '1', TipoComandosBusqueda.IGUAL);
+
+    this.cuentaBancariaService.selectByCriteria([criterioEstado, criterioCobroCredito]).subscribe({
+      next: (cuentas) => {
+        const habilitadas = (cuentas ?? []).filter(
+          (c) => Number(c.estado) === 1 && Number(c.cobroCredito) === 1
+        );
+        this.cuentasBancarias.set(habilitadas);
+        if (!habilitadas.length) {
+          this.snackBar.open(
+            'No hay cuentas de ASOPREP habilitadas para cobro de crédito. Revise la parametrización de cuentas bancarias.',
+            'Cerrar',
+            { duration: 6000 }
+          );
+        }
+      },
+      error: () => this.snackBar.open('No se pudieron cargar las cuentas bancarias de ASOPREP.', 'Cerrar', { duration: 4000 }),
     });
   }
 
@@ -761,6 +813,28 @@ export class CobrosPersonalesComponent implements OnDestroy {
 
   onMontoTotalBlur(): void {
     this.montoTotalTexto.set(this.formatMoneda(Math.max(this.montoTotal(), 0)));
+    this.sincronizarCuentaUnica();
+  }
+
+  /** El campo «Monto del pago» cambió: se reasigna y se recomputan los indicadores. */
+  onMontoTotalCambio(): void {
+    this.sincronizarCuentaUnica();
+    this.cuentaMontoVersion.update((v) => v + 1);
+  }
+
+  /**
+   * El monto del pago es el dato maestro: cuando cambia y hay UNA sola cuenta marcada, se le asigna
+   * entero.
+   *
+   * Sin esto, marcar la cuenta antes de teclear el monto —o corregir el monto después de haberlo
+   * repartido— dejaba la fila con el valor viejo y el cobro quedaba sin poder confirmarse hasta
+   * reasignar a mano. Con dos o más cuentas marcadas no se toca nada: el reparto lo decide el
+   * usuario y no hay forma de adivinarlo.
+   */
+  private sincronizarCuentaUnica(): void {
+    const marcadas = (['prestamo', 'cesantia', 'jubilacion'] as CuentaKey[]).filter((k) => this.cuentaChecked[k]);
+    if (marcadas.length !== 1) return;
+    this.cuentaMontoTexto[marcadas[0]] = this.formatMoneda(Math.max(this.montoTotal(), 0));
   }
 
   toggleDetallePrestamo(): void {
