@@ -208,29 +208,39 @@
                       <mat-icon>task_alt</mat-icon> Todas las cuotas están liquidadas.
                     </span>
                   }
+                  @if (cuotasLiquidadas() > 0) {
+                    <button type="button" mat-stroked-button class="btn-ver-pagadas"
+                            (click)="ocultarCuotasPagadas.set(!ocultarCuotasPagadas())">
+                      <mat-icon>{{ ocultarCuotasPagadas() ? 'visibility' : 'visibility_off' }}</mat-icon>
+                      {{ ocultarCuotasPagadas()
+                          ? 'Mostrar las ' + cuotasLiquidadas() + ' cuota(s) liquidada(s)'
+                          : 'Ocultar cuotas liquidadas' }}
+                    </button>
+                  }
                 </div>
                 <table class="detalle-table">
                   <thead>
                     <tr>
-                      <th>Cuota</th><th>Vencimiento</th><th>Estado</th>
-                      <th>Pendiente</th><th>Monto aplicado</th><th>Resultado</th>
+                      <th>Cuota</th><th>Vencimiento</th><th class="num">Valor cuota</th><th>Estado</th>
+                      <th class="num">Pendiente</th><th class="num">Monto aplicado</th><th>Resultado</th>
                     </tr>
                   </thead>
                   <tbody>
-                    @for (a of asignacionesPrestamo(); track a.cuota.codigo) {
+                    @for (a of asignacionesVisibles(); track a.cuota.codigo) {
                       <tr [class.cuota-liquidada]="a.liquidada" [class.cuota-proxima]="a.esProxima">
                         <td>
                           {{ a.cuota.numeroCuota }}
                           @if (a.esProxima) { <mat-icon class="icono-proxima" title="Siguiente cuota a cobrar">chevron_right</mat-icon> }
                         </td>
                         <td>{{ a.cuota.fechaVencimiento | date:'dd/MM/yyyy' }}</td>
+                        <td class="num">{{ formatMoneda(valorCuotaDe(a.cuota)) }}</td>
                         <td>
                           <span class="estado-cuota" [class]="claseEstadoCuota(a.estadoCuota)">
                             {{ nombreEstadoCuota(a.estadoCuota) }}
                           </span>
                         </td>
-                        <td class="num">{{ a.liquidada ? '—' : formatMoneda(a.pendiente) }}</td>
-                        <td class="num">{{ a.aplicado > 0 ? formatMoneda(a.aplicado) : '—' }}</td>
+                        <td class="num">{{ formatMoneda(a.pendiente) }}</td>
+                        <td class="num">{{ formatMoneda(a.aplicado) }}</td>
                         <td>
                           @if (a.liquidada) {
                             <span class="estado-mini liquidada">Sin saldo</span>
@@ -243,7 +253,15 @@
                       </tr>
                     }
                     @empty {
-                      <tr><td colspan="6" class="texto-vacio">Este préstamo no tiene tabla de amortización cargada.</td></tr>
+                      <tr>
+                        <td colspan="7" class="texto-vacio">
+                          @if (cuotasPrestamo().length) {
+                            Todas las cuotas están liquidadas. Use «Mostrar cuotas liquidadas» para verlas.
+                          } @else {
+                            Este préstamo no tiene tabla de amortización cargada.
+                          }
+                        </td>
+                      </tr>
                     }
                   </tbody>
                 </table>
@@ -260,10 +278,10 @@
           <div class="aviso-pendiente">
             <mat-icon>info</mat-icon>
             <span>
-              Los montos que asigne aquí son aportes del socio a sus propias cuentas.
-              <b>El backend todavía no expone un servicio para registrarlos</b>, así que al confirmar solo se
-              guarda la parte destinada al préstamo. Para <i>pagar el préstamo con el saldo de aportes</i> use
-              el botón «Pagar con aportes» o el método «Débito de cuenta de aportes».
+              Los montos que asigne aquí son aportes del socio a sus propias cuentas: al confirmar se
+              registran y <b>suben su saldo</b>. Para lo contrario —<i>pagar el préstamo con el saldo de
+              aportes que ya tiene</i>— use el botón «Pagar con aportes» o el método «Débito de cuenta
+              de aportes».
             </span>
           </div>
 
@@ -427,16 +445,10 @@
                 </div>
               }
 
-              @if (!cuentaChecked.prestamo && (cuentaChecked.cesantia || cuentaChecked.jubilacion)) {
+              @if (cobraPrestamo() && montoAportesSocio() > 0.004) {
                 <div class="allocation-note">
-                  Solo se puede confirmar un cobro que incluya el préstamo: el registro de aportes todavía no tiene servicio en el backend.
-                </div>
-              }
-
-              @if (cuentaChecked.prestamo && montoAportesSinEndpoint() > 0.004) {
-                <div class="allocation-note">
-                  Se registrarán {{ formatMoneda(montoPrestamo()) }} en el préstamo.
-                  Los {{ formatMoneda(montoAportesSinEndpoint()) }} de aportes quedarán sin guardar.
+                  Se registrarán {{ formatMoneda(montoPrestamo()) }} en el préstamo
+                  y {{ formatMoneda(montoAportesSocio()) }} como aporte del socio, en operaciones separadas.
                 </div>
               }
 
@@ -444,7 +456,10 @@
                 @if (registrando()) {
                   <mat-spinner diameter="18"></mat-spinner>
                 } @else {
-                  <ng-container><mat-icon>check_circle</mat-icon> Confirmar pago de {{ formatMoneda(montoPrestamo()) }}</ng-container>
+                  <ng-container>
+                    <mat-icon>check_circle</mat-icon>
+                    Confirmar cobro de {{ formatMoneda(montoPrestamo() + montoAportesSocio()) }}
+                  </ng-container>
                 }
               </button>
             </div>

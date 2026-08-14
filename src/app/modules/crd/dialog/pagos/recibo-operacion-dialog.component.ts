@@ -14,11 +14,12 @@ import {
   ResultadoAbonoCapital,
   ResultadoPagoCuota,
   ResultadoPrecancelacion,
+  ResultadoRegistroAporte,
 } from '../../model/pagos/operaciones-pago';
 import { MovimientoAporte } from '../../model/pagos/respuesta-pago';
 
 export interface ReciboOperacionData {
-  tipo: 'PAGO_MANUAL' | 'PAGO_APORTES' | 'ABONO_CAPITAL' | 'PRECANCELACION' | 'ANULACION';
+  tipo: 'PAGO_MANUAL' | 'PAGO_APORTES' | 'ABONO_CAPITAL' | 'PRECANCELACION' | 'ANULACION' | 'REGISTRO_APORTE';
   /** Encabezado del comprobante, p. ej. "Préstamo #8523 · Crédito Ordinario". */
   tituloPrestamo: string;
   participante?: string;
@@ -29,6 +30,8 @@ export interface ReciboOperacionData {
   abono?: ResultadoAbonoCapital;
   precancelacion?: ResultadoPrecancelacion;
   movimientosAporte?: MovimientoAporte[];
+  /** Aportes que el socio entregó y quedaron registrados a su favor (POST /aprt/registrarAporte). */
+  aportesRegistrados?: ResultadoRegistroAporte[];
   /** idTipoAporte → nombre, para rotular los movimientos de aporte. */
   nombresTipoAporte?: Record<number, string>;
   /** Texto libre extra (motivo de anulación, observación...). */
@@ -66,7 +69,18 @@ export class ReciboOperacionDialogComponent {
 
   get titulo(): string {
     if (this.data.tipo === 'ANULACION') return 'Operación anulada';
+    if (this.data.tipo === 'REGISTRO_APORTE') {
+      return this.aportesRegistrados.length > 1 ? 'Aportes registrados' : 'Aporte registrado';
+    }
     return `${NOMBRE_TIPO_OPERACION[this.data.tipo] ?? 'Operación'} aplicado`;
+  }
+
+  get aportesRegistrados(): ResultadoRegistroAporte[] {
+    return this.data.aportesRegistrados ?? [];
+  }
+
+  get totalAportesRegistrados(): number {
+    return +this.aportesRegistrados.reduce((s, a) => s + (a.valor ?? 0), 0).toFixed(2);
   }
 
   get idEvento(): number | null {

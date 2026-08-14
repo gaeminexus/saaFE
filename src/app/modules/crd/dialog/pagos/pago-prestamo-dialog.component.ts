@@ -91,16 +91,25 @@ export class PagoPrestamoDialogComponent {
       !(this.modo() === 'aportes' && this.hayExcesoEnAlgunAporte())
   );
 
-  /** Sugerencias táctiles: una cuota, el saldo total. */
+  /**
+   * Sugerencias táctiles: las próximas cuotas y el saldo total.
+   *
+   * Si la pantalla mandó `pendientesAcumulados` se usan esos montos, que son el pendiente real de
+   * cada cuota sumado en orden de cobro. El múltiplo de `valorCuota` es solo el respaldo: da un
+   * monto aproximado cuando la primera cuota viene parcialmente pagada o alguna arrastra mora.
+   */
   sugerencias = computed(() => {
     const opciones: { etiqueta: string; valor: number }[] = [];
+    const acumulados = this.data.pendientesAcumulados ?? [];
     const cuota = this.data.valorCuota ?? 0;
     const saldo = this.data.saldoTotal ?? 0;
-    if (cuota > 0) {
-      opciones.push({ etiqueta: '1 cuota', valor: +cuota.toFixed(2) });
-      opciones.push({ etiqueta: '2 cuotas', valor: +(cuota * 2).toFixed(2) });
-      opciones.push({ etiqueta: '3 cuotas', valor: +(cuota * 3).toFixed(2) });
+
+    for (let i = 0; i < 3; i++) {
+      const etiqueta = i === 0 ? '1 cuota' : `${i + 1} cuotas`;
+      const valor = acumulados[i] ?? (cuota > 0 ? +(cuota * (i + 1)).toFixed(2) : 0);
+      if (valor > 0) opciones.push({ etiqueta, valor: +valor.toFixed(2) });
     }
+
     if (saldo > 0) opciones.push({ etiqueta: 'Saldo total', valor: +saldo.toFixed(2) });
     return opciones.filter((o) => o.valor > 0 && (saldo <= 0 || o.valor <= saldo + TOLERANCIA_MONTO));
   });

@@ -490,15 +490,31 @@ export class InformesMensualesCreditoComponent implements OnInit {
     filas.push({ concepto: 'Intereses por préstamos hipotecarios',   categoria: catInt, valor: intH });
 
     // ── Seguros ────────────────────────────────────────────────────
+    // Cada concepto se desglosa en vigentes (cuotas con 0 días de mora)
+    // y vencidos (cuotas con más de 0 días de mora).
     const catSeg = 'Seguros';
+    const rowsSegHipo = [...quiro, ...quiroNov, ...quiroRee, ...hipo, ...hipoRee, ...hipoNov];
+    const rowsSegPrend = [...prend, ...prendRee, ...prendNov];
+    const rowsSegTodos = [...quiro, ...quiroNov, ...quiroRee, ...prend, ...prendRee, ...prendNov, ...hipo, ...hipoRee, ...hipoNov];
+
+    /** Suma `field` sobre las cuotas vigentes (0 días de mora) o vencidas (> 0 días) */
+    const sfMora = (rows: Ccpm[], field: string, vigente: boolean): number =>
+      sf(rows.filter(r => vigente ? (Number(r.diasMorosidad) || 0) === 0
+                                  : (Number(r.diasMorosidad) || 0) > 0), field);
+
+    const agregarSeguro = (concepto: string, rows: Ccpm[], field: string): void => {
+      filas.push({ concepto: `${concepto} vigentes`, categoria: catSeg, valor: sfMora(rows, field, true) });
+      filas.push({ concepto: `${concepto} vencidos`, categoria: catSeg, valor: sfMora(rows, field, false) });
+    };
+
     // Hipotecarios: valorIncendio de todos EXCEPTO prendarios y prendarios restructurados
-    filas.push({ concepto: 'Seguro prestamos hipotecarios',                      categoria: catSeg, valor: sf([...quiro, ...quiroNov, ...quiroRee, ...hipo, ...hipoRee, ...hipoNov], 'valorIncendio') });
+    agregarSeguro('Seguro prestamos hipotecarios', rowsSegHipo, 'valorIncendio');
     // Prendarios: valorIncendio de prendarios y prendarios restructurados
-    filas.push({ concepto: 'Seguro prestamos prendarios',                        categoria: catSeg, valor: sf([...prend, ...prendRee, ...prendNov], 'valorIncendio') });
-    filas.push({ concepto: 'Seguro medico por cobrar',                           categoria: catSeg, valor: 0 });
+    agregarSeguro('Seguro prestamos prendarios', rowsSegPrend, 'valorIncendio');
+    filas.push({ concepto: 'Seguro medico por cobrar vigentes', categoria: catSeg, valor: 0 });
+    filas.push({ concepto: 'Seguro medico por cobrar vencidos', categoria: catSeg, valor: 0 });
     // Desgravamen: sumatoria de todos los préstamos
-    filas.push({ concepto: 'Cuenta por Cobrar Seguro de Desgravamen Participes', categoria: catSeg,
-      valor: sf([...quiro, ...quiroNov, ...quiroRee, ...prend, ...prendRee, ...prendNov, ...hipo, ...hipoRee, ...hipoNov], 'valorDesgravamen') });
+    agregarSeguro('Cuenta por Cobrar Seguro de Desgravamen Participes', rowsSegTodos, 'valorDesgravamen');
 
     // ── Provisiones Requeridas ─────────────────────────────────────
     const catPR = 'PROVISIONES INVERSIONES PRIVATIVAS';

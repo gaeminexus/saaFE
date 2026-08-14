@@ -22,6 +22,36 @@ export interface SaldoAporte {
   saldo: number;
 }
 
+// ===================== POST /aprt/registrarAporte =====================
+
+/**
+ * Alta de un aporte del socio a su propia cuenta (cesantía, jubilación...). Es la operación
+ * inversa a `pagarConAportes`: acá el partícipe ENTREGA dinero y su saldo sube.
+ */
+export interface RegistroAporteRequest {
+  /** Código del partícipe (ENTD.ENTDCDGO), NO el del préstamo. */
+  idEntidad: number;
+  idTipoAporte: number;
+  valor: number;
+  usuario: string;
+  observacion?: string | null;
+  /** ⚠️ Se llama `fechaTransaccion`. `yyyy-MM-dd`. Default hoy; no puede ser futura. */
+  fechaTransaccion?: string | null;
+}
+
+/** Responde 201, no 200. */
+export interface ResultadoRegistroAporte {
+  idAporte: number;
+  idPagoAporte: number;
+  idEntidad: number;
+  idTipoAporte: number;
+  nombreTipoAporte: string;
+  valor: number;
+  /** Saldo del tipo de aporte ya con el movimiento aplicado. */
+  saldoTipoAporte: number;
+  fechaTransaccion: string | number[] | Date;
+}
+
 // ===================== §4 POST /prst/pagarCuota =====================
 
 export interface PagoCuotaRequest {

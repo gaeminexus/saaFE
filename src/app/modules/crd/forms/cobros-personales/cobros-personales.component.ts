@@ -3,11 +3,13 @@ import { Component, OnDestroy, computed, effect, inject, signal } from '@angular
 import { FormsModule } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { forkJoin } from 'rxjs';
 
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
 import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
+import { FuncionesDatosService } from '../../../../shared/services/funciones-datos.service';
 import { usuarioSesion } from '../../../../shared/services/usuario-sesion';
 
 import { CuentaBancaria } from '../../../tsr/model/cuenta-bancaria';
@@ -29,8 +31,12 @@ import {
   obtenerCodigoEstadoCuota,
 } from '../../model/estado-cuota-prestamo';
 import { NOMBRE_ESTADO_PRESTAMO, admiteOperaciones } from '../../model/pagos/catalogos-pago';
-import { SaldoAporte } from '../../model/pagos/operaciones-pago';
-import { mensajeDeRespuesta } from '../../model/pagos/respuesta-pago';
+import {
+  ResultadoPagoCuota,
+  ResultadoRegistroAporte,
+  SaldoAporte,
+} from '../../model/pagos/operaciones-pago';
+import { MovimientoAporte, RespuestaPago, mensajeDeRespuesta } from '../../model/pagos/respuesta-pago';
 import { Prestamo } from '../../model/prestamo';
 import { DetallePrestamoService } from '../../service/detalle-prestamo.service';
 import { EntidadService } from '../../service/entidad.service';
@@ -118,6 +124,7 @@ export class CobrosPersonalesComponent implements OnDestroy {
   private historicoService = inject(HistoricoDesgloseAporteParticipeService);
   private cuentaBancariaService = inject(CuentaBancariaService);
   private operaciones = inject(OperacionesPagoPrestamoService);
+  private funcionesDatos = inject(FuncionesDatosService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
 
@@ -182,6 +189,31 @@ export class CobrosPersonalesComponent implements OnDestroy {
   saldoTotalPrestamo = computed(() => this.saldoTotalDe(this.prestamoVigente()));
   saldoCapitalPrestamo = computed(() => this.saldoCapitalDe(this.prestamoVigente()));
 
+  /**
+   * Valor de la cuota que se cobra a continuación, tomado del campo `total` de la cuota. Solo si no
+   * hay tabla de amortización se cae a `Prestamo.valorCuota`, que no incluye desgravamen ni seguro.
+   */
+  valorCuotaPrestamo = computed(() => {
+    const proxima = this.proximaCuota() ?? this.cuotasPrestamo()[0] ?? null;
+    return proxima ? this.valorCuotaDe(proxima) : (this.prestamoVigente()?.valorCuota ?? 0);
+  });
+
+  /**
+   * Cuánto hay que entregar para cubrir las próximas 1, 2, 3… cuotas, sumando el pendiente real de
+   * cada una. Sirve para que los atajos de los diálogos («2 cuotas») den el monto exacto en vez de
+   * multiplicar un valor de cuota fijo: la primera puede venir parcialmente pagada y las vencidas
+   * arrastran mora.
+   */
+  pendientesAcumulados = computed<number[]>(() => {
+    const acumulados: number[] = [];
+    let suma = 0;
+    for (const cuota of this.cuotasPendientes().slice(0, 12)) {
+      suma = +(suma + this.saldoPendienteDe(cuota)).toFixed(2);
+      acumulados.push(suma);
+    }
+    return acumulados;
+  });
+
   estadoPrestamoTexto = computed(() => {
     const idEstado = this.prestamoVigente()?.idEstado;
     if (idEstado == null) return '—';
@@ -213,16 +245,15 @@ export class CobrosPersonalesComponent implements OnDestroy {
   });
 
   /**
-   * Los montos asignados a cesantía/jubilación son un aporte del socio a sus propias cuentas, no
-   * un pago de préstamo. El backend todavía no expone un endpoint para registrarlo (la guía de
-   * servicios de pago cubre solo las operaciones sobre préstamos), así que la pantalla lo advierte
-   * en vez de simular que se guardó.
+   * Total asignado a cesantía/jubilación: un aporte del socio a sus propias cuentas, que se registra
+   * con `POST /aprt/registrarAporte` (una llamada por tipo). No es un pago de préstamo.
    */
-  montoAportesSinEndpoint = computed(() => {
+  montoAportesSocio = computed(() => {
     this.cuentaMontoVersion();
-    return (['cesantia', 'jubilacion'] as CuentaKey[])
+    return +(['cesantia', 'jubilacion'] as CuentaKey[])
       .filter((k) => this.cuentaChecked[k])
-      .reduce((s, k) => s + this.parseMoneda(this.cuentaMontoTexto[k]), 0);
+      .reduce((s, k) => s + this.parseMoneda(this.cuentaMontoTexto[k]), 0)
+      .toFixed(2);
   });
 
   /**
@@ -234,6 +265,20 @@ export class CobrosPersonalesComponent implements OnDestroy {
     const monto = this.cuentaChecked.prestamo ? this.parseMoneda(this.cuentaMontoTexto.prestamo) : 0;
     return this.calcularAsignacionPrestamo(monto);
   });
+
+  /**
+   * Las cuotas ya liquidadas se ocultan por defecto: hay créditos de más de 100 cuotas y el usuario
+   * trabaja siempre sobre las últimas, así que arrancar con todas obliga a bajar media pantalla
+   * antes de llegar a la que interesa. El resumen de arriba sigue diciendo cuántas hay.
+   */
+  ocultarCuotasPagadas = signal(true);
+
+  /** Lo que se pinta en la tabla de detalle; el reparto se calcula igual sobre todas las cuotas. */
+  asignacionesVisibles = computed<AsignacionCuota[]>(() =>
+    this.ocultarCuotasPagadas()
+      ? this.asignacionesPrestamo().filter((a) => !a.liquidada)
+      : this.asignacionesPrestamo()
+  );
 
   coberturaCesantia = computed(() => {
     this.cuentaMontoVersion();
@@ -271,14 +316,17 @@ export class CobrosPersonalesComponent implements OnDestroy {
 
   prestamoAdmiteOperaciones = computed(() => admiteOperaciones(this.prestamoVigente()?.idEstado));
 
+  /** ¿El cobro incluye una parte que va contra el préstamo? */
+  cobraPrestamo = computed(() => this.cuentaChecked.prestamo && this.montoPrestamo() > 0.004);
+
   puedeConfirmar = computed(() => {
-    const algunaCuentaMarcada = this.cuentaChecked.prestamo || this.cuentaChecked.cesantia || this.cuentaChecked.jubilacion;
-    // Sin la parte de préstamo no hay ninguna operación que el backend pueda registrar hoy.
-    const hayAlgoQueRegistrar = this.cuentaChecked.prestamo && this.montoPrestamo() > 0.004;
+    // Ya sea préstamo o aportes del socio, tiene que haber algo con valor que registrar.
+    const hayAlgoQueRegistrar = this.cobraPrestamo() || this.montoAportesSocio() > 0.004;
+    // El estado del préstamo solo bloquea si el cobro efectivamente toca el préstamo.
+    const prestamoHabilitado = !this.cobraPrestamo() || this.prestamoAdmiteOperaciones();
     return (
-      algunaCuentaMarcada &&
       hayAlgoQueRegistrar &&
-      this.prestamoAdmiteOperaciones() &&
+      prestamoHabilitado &&
       this.completamenteAsignado() &&
       !this.saldoDebitoInsuficiente() &&
       !this.registrando()
@@ -514,7 +562,9 @@ export class CobrosPersonalesComponent implements OnDestroy {
 
     this.detallePrestamoService.selectByCriteria([criterioPrestamo, criterioOrdenCuota]).subscribe({
       next: (cuotas) => {
-        const ordenadas = [...(cuotas ?? [])].sort((a, b) => (a.numeroCuota ?? 0) - (b.numeroCuota ?? 0));
+        const ordenadas = [...(cuotas ?? [])]
+          .map((c) => this.normalizarCuota(c))
+          .sort((a, b) => (a.numeroCuota ?? 0) - (b.numeroCuota ?? 0));
         this.cuotasPorPrestamo.update((mapa) => ({ ...mapa, [prestamo.codigo]: ordenadas }));
       },
       error: () => this.snackBar.open('No se pudo cargar el detalle de cuotas del préstamo.', 'Cerrar', { duration: 4000 }),
@@ -522,6 +572,19 @@ export class CobrosPersonalesComponent implements OnDestroy {
   }
 
   // ================= estado y saldos reales de las cuotas =================
+
+  /**
+   * Las fechas del backend llegan como `LocalDateTime` de Java en tres formas posibles (arreglo
+   * `[y,m,d,...]`, string formateado o `Date`). El pipe `date` no entiende el arreglo y deja la
+   * celda en blanco, así que se normalizan al recibirlas.
+   */
+  private normalizarCuota(cuota: DetallePrestamo): DetallePrestamo {
+    return {
+      ...cuota,
+      fechaVencimiento: this.funcionesDatos.convertirFechaDesdeBackend(cuota.fechaVencimiento) as Date,
+      fechaPagado: this.funcionesDatos.convertirFechaDesdeBackend(cuota.fechaPagado) as Date,
+    };
+  }
 
   /**
    * ¿La cuota ya no admite aplicación de pagos? Mismo criterio que
@@ -533,21 +596,44 @@ export class CobrosPersonalesComponent implements OnDestroy {
     return estado === CodigoEstadoCuota.PAGADA || estado === CodigoEstadoCuota.CANCELADA_ANTICIPADA;
   }
 
-  /** Capital que sigue vivo en la cuota: lo pactado menos lo ya imputado a capital. */
+  /**
+   * Capital que sigue vivo en la cuota.
+   *
+   * Una cuota PAGADA o CANCELADA_ANTICIPADA se da por cubierta en su totalidad: su estado es la
+   * conclusión de la validación, así que no se vuelve a contrastar contra lo pagado. Solo en las
+   * demás se descuenta lo ya imputado.
+   */
   private capitalPendienteDe(cuota: DetallePrestamo): number {
+    if (this.esCuotaLiquidada(cuota)) return 0;
     return Math.max((cuota.capital ?? 0) - (cuota.capitalPagado ?? 0), 0);
   }
 
-  /** Todo lo que se debe por la cuota, igual que `totalConMoraIV()` del motor de pagos del backend. */
-  private totalCuotaDe(cuota: DetallePrestamo): number {
+  /**
+   * Valor de la cuota tal como lo cobra el sistema: el campo `total` (DTPRTTLL), que el backend
+   * arma como `cuota + desgravamen + valorSeguroIncendio` (`PrestamoServiceImpl.java:223`).
+   *
+   * NO se usa `Prestamo.valorCuota` (PRSTVLCT): esa columna es solo capital + interés y deja fuera
+   * el desgravamen y el seguro de incendio, así que subestima lo que el socio tiene que pagar.
+   */
+  valorCuotaDe(cuota: DetallePrestamo | null | undefined): number {
+    if (!cuota) return 0;
+    if (cuota.total != null) return +cuota.total.toFixed(2);
+    // Dato legado sin DTPRTTLL: mismo respaldo que el motor de pagos (MotorPagoPrestamoServiceImpl.java:108-115).
     return +(
       (cuota.capital ?? 0) +
       (cuota.interes ?? 0) +
       (cuota.desgravamen ?? 0) +
-      (cuota.valorSeguroIncendio ?? 0) +
-      (cuota.mora ?? 0) +
-      (cuota.interesVencido ?? 0)
+      (cuota.valorSeguroIncendio ?? 0)
     ).toFixed(2);
+  }
+
+  /**
+   * Todo lo que se debe por la cuota: su `total` más la mora y el interés vencido, que el proceso
+   * nocturno escribe aparte porque DTPRTTLL no los incluye. Es el mismo `totalPendiente` que calcula
+   * `MotorPagoPrestamoServiceImpl.calcularSaldosRealesCuota()` para una cuota sin pagos.
+   */
+  private totalCuotaDe(cuota: DetallePrestamo): number {
+    return +(this.valorCuotaDe(cuota) + (cuota.mora ?? 0) + (cuota.interesVencido ?? 0)).toFixed(2);
   }
 
   /** Lo ya imputado a la cuota. El seguro de incendio no tiene columna «pagado» en DTPR. */
@@ -565,7 +651,11 @@ export class CobrosPersonalesComponent implements OnDestroy {
    * Deuda que queda en la cuota (capital + interés + desgravamen + seguro + mora + interés vencido,
    * menos lo pagado).
    *
-   * No se lee DTPRSLDO a ciegas porque la columna tiene dos significados según quién la escribió:
+   * Si la cuota está PAGADA o CANCELADA_ANTICIPADA no queda nada y se devuelve 0 sin mirar los
+   * pagos: el estado ya es la conclusión de esa validación y revisarla de nuevo solo abre la puerta
+   * a que un desglose incompleto reviva una cuota que el sistema dio por cerrada.
+   *
+   * En las demás no se lee DTPRSLDO a ciegas, porque la columna tiene dos significados según quién la escribió:
    * al generar la tabla de amortización guarda el capital insoluto DESPUÉS de esa cuota
    * (`PrestamoServiceImpl`), y recién la carga de Petrocomercial y el motor de pagos la reescriben
    * como el pendiente de la cuota. Por eso solo se usa cuando la cuota registra pagos —que es
@@ -573,6 +663,7 @@ export class CobrosPersonalesComponent implements OnDestroy {
    * para una cuota intacta es exactamente lo que se debe.
    */
   private saldoPendienteDe(cuota: DetallePrestamo): number {
+    if (this.esCuotaLiquidada(cuota)) return 0;
     if (this.totalPagadoDe(cuota) > 0.004) return Math.max(cuota.saldo ?? 0, 0);
     return Math.max(this.totalCuotaDe(cuota), 0);
   }
@@ -607,8 +698,7 @@ export class CobrosPersonalesComponent implements OnDestroy {
 
   /** Pendiente de una cuota, para mostrarlo en la plantilla. */
   pendienteDeCuota(cuota: DetallePrestamo | null): number {
-    if (!cuota || this.esCuotaLiquidada(cuota)) return 0;
-    return this.saldoPendienteDe(cuota);
+    return cuota ? this.saldoPendienteDe(cuota) : 0;
   }
 
   /** Nombre del estado real de la cuota, para la columna «Estado» del detalle. */
@@ -709,7 +799,8 @@ export class CobrosPersonalesComponent implements OnDestroy {
     for (const cuota of this.cuotasPrestamo()) {
       const estadoCuota = obtenerCodigoEstadoCuota(cuota);
       const liquidada = this.esCuotaLiquidada(cuota);
-      const pendiente = liquidada ? 0 : this.saldoPendienteDe(cuota);
+      // Devuelve 0 en las liquidadas: el estado ya las da por cubiertas, no se revisan sus pagos.
+      const pendiente = this.saldoPendienteDe(cuota);
 
       let aplicado = 0;
       let resultado: AsignacionCuota['resultado'] = 'pendiente';
@@ -767,23 +858,73 @@ export class CobrosPersonalesComponent implements OnDestroy {
   // ================= confirmar pago =================
 
   /**
-   * Registra la parte del cobro que corresponde al préstamo. Según el método elegido usa
-   * `pagarCuota` (efectivo, transferencia o depósito) o `pagarConAportes` (débito del saldo de
-   * aportes del socio); ambos aplican la misma cascada y prelación del lado del servidor.
+   * Registra el cobro completo: la parte que va al préstamo y la que el socio aporta a sus propias
+   * cuentas. Son transacciones distintas del backend, así que se encadenan en ese orden.
+   *
+   * - Préstamo: `pagarCuota` (efectivo, transferencia o depósito) o `pagarConAportes` (débito del
+   *   saldo de aportes); ambos aplican la misma cascada y prelación del lado del servidor.
+   * - Aportes del socio: un `registrarAporte` por tipo (cesantía, jubilación).
+   *
+   * Si el pago del préstamo falla no se registra ningún aporte: el usuario corrige el monto y
+   * reintenta el cobro entero sin haber dejado movimientos sueltos a medio camino.
    */
   confirmarPago(): void {
     if (!this.puedeConfirmar()) return;
-    const prestamo = this.prestamoVigente();
-    if (!prestamo) return;
+    const entidad = this.entidadSeleccionada();
+    if (!entidad) return;
 
     this.errorOperacion.set(null);
     this.errorCodigo.set(null);
-    this.registrando.set(true);
+
+    const aportes = this.aportesARegistrar();
+    if (aportes === null) {
+      this.errorOperacion.set(
+        'No se encontró el tipo de aporte de cesantía o jubilación entre los tipos vigentes del partícipe. Actualice los saldos e intente nuevamente.'
+      );
+      return;
+    }
 
     const usuario = usuarioSesion();
-    const fechaPago = this.operaciones.formatearFecha(this.fechaPago);
+    const fecha = this.operaciones.formatearFecha(this.fechaPago);
     const observacion = this.armarObservacion();
+
+    this.registrando.set(true);
+
+    // Cobro solo de aportes: no hay préstamo de por medio.
+    if (!this.cobraPrestamo()) {
+      this.registrarAportesDelSocio(entidad.codigo, aportes, usuario, observacion, fecha, (registrados) => {
+        this.registrando.set(false);
+        this.mostrarRecibo('REGISTRO_APORTE', undefined, fecha, undefined, [], registrados);
+      });
+      return;
+    }
+
+    const prestamo = this.prestamoVigente();
+    if (!prestamo) {
+      this.registrando.set(false);
+      return;
+    }
     const monto = +this.montoPrestamo().toFixed(2);
+
+    const alPagar = (
+      tipo: 'PAGO_MANUAL' | 'PAGO_APORTES',
+      resp: RespuestaPago<ResultadoPagoCuota>
+    ): void => {
+      if (!resp.exito || !resp.resultado) {
+        this.registrando.set(false);
+        this.registrarError(resp.error, mensajeDeRespuesta(resp));
+        if (resp.error === 'SALDO_APORTES_INSUFICIENTE' || resp.error === 'TIPO_APORTE_NO_VIGENTE') {
+          this.cargarSaldosAporte(entidad.codigo);
+        }
+        return;
+      }
+      const pago = resp.resultado;
+      const movimientos = resp.movimientosAporte ?? [];
+      this.registrarAportesDelSocio(entidad.codigo, aportes, usuario, observacion, fecha, (registrados) => {
+        this.registrando.set(false);
+        this.mostrarRecibo(tipo, resp.mensaje, fecha, pago, movimientos, registrados);
+      });
+    };
 
     if (this.metodoPago() === 'debito') {
       const idTipoAporte = this.idTipoAportePara(this.cuentaOrigenAporte());
@@ -796,38 +937,83 @@ export class CobrosPersonalesComponent implements OnDestroy {
       }
 
       this.operaciones
-        .pagarConAportes({
-          idPrestamo: prestamo.codigo,
-          usuario,
-          observacion,
-          fechaPago,
-          aportes: [{ idTipoAporte, valor: monto }],
-        })
-        .subscribe((resp) => {
-          this.registrando.set(false);
-          if (resp.exito && resp.resultado) {
-            this.mostrarRecibo('PAGO_APORTES', resp.mensaje, fechaPago, resp.resultado, resp.movimientosAporte ?? []);
-          } else {
-            this.registrarError(resp.error, mensajeDeRespuesta(resp));
-            if (resp.error === 'SALDO_APORTES_INSUFICIENTE' || resp.error === 'TIPO_APORTE_NO_VIGENTE') {
-              const entidad = this.entidadSeleccionada();
-              if (entidad) this.cargarSaldosAporte(entidad.codigo);
-            }
-          }
-        });
+        .pagarConAportes({ idPrestamo: prestamo.codigo, usuario, observacion, fechaPago: fecha, aportes: [{ idTipoAporte, valor: monto }] })
+        .subscribe((resp) => alPagar('PAGO_APORTES', resp));
       return;
     }
 
     this.operaciones
-      .pagarCuota({ idPrestamo: prestamo.codigo, valor: monto, usuario, observacion, fechaPago })
-      .subscribe((resp) => {
-        this.registrando.set(false);
+      .pagarCuota({ idPrestamo: prestamo.codigo, valor: monto, usuario, observacion, fechaPago: fecha })
+      .subscribe((resp) => alPagar('PAGO_MANUAL', resp));
+  }
+
+  /**
+   * Renglones de aporte del socio a registrar, ya resueltos a su `idTipoAporte`.
+   *
+   * Devuelve `null` —y no una lista vacía— si alguno de los tipos marcados no se puede resolver
+   * contra los tipos vigentes del partícipe: en ese caso no hay que llamar al backend con un id
+   * inventado, hay que avisar y que el usuario recargue los saldos.
+   */
+  private aportesARegistrar(): { clave: 'cesantia' | 'jubilacion'; idTipoAporte: number; valor: number }[] | null {
+    const renglones: { clave: 'cesantia' | 'jubilacion'; idTipoAporte: number; valor: number }[] = [];
+    for (const clave of ['cesantia', 'jubilacion'] as const) {
+      if (!this.cuentaChecked[clave]) continue;
+      const valor = +this.parseMoneda(this.cuentaMontoTexto[clave]).toFixed(2);
+      if (valor <= 0.004) continue;
+      const idTipoAporte = this.idTipoAportePara(clave);
+      if (idTipoAporte == null) return null;
+      renglones.push({ clave, idTipoAporte, valor });
+    }
+    return renglones;
+  }
+
+  /**
+   * Registra un aporte por tipo y llama a `continuar` con los que se guardaron.
+   *
+   * Cada renglón es su propia transacción: si uno falla, los anteriores ya quedaron guardados. Por
+   * eso el fallo no aborta el flujo —el comprobante tiene que reflejar lo que realmente entró— sino
+   * que se avisa aparte cuáles no se pudieron registrar.
+   */
+  private registrarAportesDelSocio(
+    idEntidad: number,
+    renglones: { clave: 'cesantia' | 'jubilacion'; idTipoAporte: number; valor: number }[],
+    usuario: string,
+    observacion: string | null,
+    fecha: string | null,
+    continuar: (registrados: ResultadoRegistroAporte[]) => void
+  ): void {
+    if (!renglones.length) {
+      continuar([]);
+      return;
+    }
+
+    const llamadas = renglones.map((r) =>
+      this.operaciones.registrarAporte({
+        idEntidad,
+        idTipoAporte: r.idTipoAporte,
+        valor: r.valor,
+        usuario,
+        observacion,
+        fechaTransaccion: fecha,
+      })
+    );
+
+    forkJoin(llamadas).subscribe((respuestas) => {
+      const registrados: ResultadoRegistroAporte[] = [];
+      const fallidos: string[] = [];
+      respuestas.forEach((resp, i) => {
         if (resp.exito && resp.resultado) {
-          this.mostrarRecibo('PAGO_MANUAL', resp.mensaje, fechaPago, resp.resultado, []);
+          registrados.push(resp.resultado);
         } else {
-          this.registrarError(resp.error, mensajeDeRespuesta(resp));
+          fallidos.push(`${renglones[i].clave === 'cesantia' ? 'Cesantía' : 'Jubilación'} (${this.formatMoneda(renglones[i].valor)}): ${mensajeDeRespuesta(resp)}`);
         }
       });
+
+      if (fallidos.length) {
+        this.snackBar.open(`No se pudo registrar: ${fallidos.join(' · ')}`, 'Entendido', { duration: 12000 });
+      }
+      continuar(registrados);
+    });
   }
 
   /** El backend guarda una sola observación: se le agregan los datos del comprobante. */
@@ -846,11 +1032,12 @@ export class CobrosPersonalesComponent implements OnDestroy {
   }
 
   private mostrarRecibo(
-    tipo: 'PAGO_MANUAL' | 'PAGO_APORTES',
+    tipo: 'PAGO_MANUAL' | 'PAGO_APORTES' | 'REGISTRO_APORTE',
     mensaje: string | undefined,
     fecha: string | null,
-    resultado: import('../../model/pagos/operaciones-pago').ResultadoPagoCuota,
-    movimientosAporte: import('../../model/pagos/respuesta-pago').MovimientoAporte[]
+    resultado: ResultadoPagoCuota | undefined,
+    movimientosAporte: MovimientoAporte[],
+    aportesRegistrados: ResultadoRegistroAporte[]
   ): void {
     const nombres: Record<number, string> = {};
     for (const a of this.saldosAporte()) nombres[a.idTipoAporte] = a.nombre;
@@ -859,22 +1046,17 @@ export class CobrosPersonalesComponent implements OnDestroy {
     if (this.archivoComprobante()) {
       extras.push({ label: 'Comprobante adjunto', valor: this.archivoComprobante()!.name });
     }
-    if (this.montoAportesSinEndpoint() > 0.004) {
-      extras.push({
-        label: 'Aportes del socio NO registrados',
-        valor: this.formatMoneda(this.montoAportesSinEndpoint()),
-      });
-    }
 
     this.dialog.open(ReciboOperacionDialogComponent, {
       data: {
         tipo,
-        tituloPrestamo: this.tituloPrestamo(),
+        tituloPrestamo: tipo === 'REGISTRO_APORTE' ? 'Aportes del socio' : this.tituloPrestamo(),
         participante: this.entidadSeleccionada()?.razonSocial ?? undefined,
         mensaje,
         fecha: fecha ?? undefined,
         pago: resultado,
         movimientosAporte,
+        aportesRegistrados: aportesRegistrados.length ? aportesRegistrados : undefined,
         nombresTipoAporte: nombres,
         detalleExtra: extras.length ? extras : undefined,
       },
@@ -882,14 +1064,6 @@ export class CobrosPersonalesComponent implements OnDestroy {
       maxWidth: '96vw',
       autoFocus: false,
     });
-
-    if (this.montoAportesSinEndpoint() > 0.004) {
-      this.snackBar.open(
-        `Se registró únicamente la parte del préstamo. Los ${this.formatMoneda(this.montoAportesSinEndpoint())} asignados a cesantía/jubilación no se guardaron: el backend aún no expone ese servicio.`,
-        'Entendido',
-        { duration: 10000 }
-      );
-    }
 
     this.recargarPrestamo();
     this.resetAsignacion();
@@ -927,6 +1101,8 @@ export class CobrosPersonalesComponent implements OnDestroy {
       ...contextoDesdePrestamo(prestamo, this.entidadSeleccionada()?.razonSocial),
       saldoTotal: this.saldoTotalPrestamo(),
       saldoCapital: this.saldoCapitalPrestamo(),
+      valorCuota: this.valorCuotaPrestamo(),
+      pendientesAcumulados: this.pendientesAcumulados(),
     };
   }
 

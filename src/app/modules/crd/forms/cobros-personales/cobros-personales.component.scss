@@ -150,6 +150,13 @@ table.tabla-resultados, table.tabla-cuentas {
       height: 18px;
     }
   }
+
+  .btn-ver-pagadas {
+    margin-left: auto;
+    font-size: 12px;
+    line-height: 30px;
+    background: #fff;
+  }
 }
 
 table.detalle-table {
@@ -169,8 +176,18 @@ table.detalle-table {
   }
   td { padding: 9px 10px; border-bottom: 1px solid #e2e8f0; font-size: 13px; }
 
-  // Las cuotas ya liquidadas se atenúan: están para dar contexto, no para operar sobre ellas.
-  tr.cuota-liquidada td { color: #a0aec0; }
+  .num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  // Las cuotas ya liquidadas se distinguen con un fondo tenue, NO bajando el contraste del texto:
+  // con el gris claro que tenían antes las columnas sin badge (cuota, vencimiento, pendiente,
+  // aplicado) se leían prácticamente en blanco.
+  tr.cuota-liquidada td {
+    background: #f7fafc;
+    color: #4a5568;
+  }
 
   // La siguiente cuota a cobrar es la información que la pantalla tiene que dejar evidente.
   tr.cuota-proxima td {

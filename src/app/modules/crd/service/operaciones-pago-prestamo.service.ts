@@ -8,11 +8,13 @@ import {
   PagoConAportesRequest,
   PagoCuotaRequest,
   PrecancelacionRequest,
+  RegistroAporteRequest,
   ResultadoAbonoCapital,
   ResultadoAnulacion,
   ResultadoPagoConAportes,
   ResultadoPagoCuota,
   ResultadoPrecancelacion,
+  ResultadoRegistroAporte,
   SaldoAporte,
   SimulacionAbonoCapital,
   SimulacionPrecancelacion,
@@ -53,6 +55,23 @@ export class OperacionesPagoPrestamoService {
     const url = `${ServiciosCrd.RS_APRT}/saldosPorEntidad/${idEntidad}`;
     return this.http
       .get<RespuestaPago<SaldoAporte[]>>(url)
+      .pipe(catchError((e: HttpErrorResponse) => of(this.normalizarError(e))));
+  }
+
+  // ===================== Registro de aporte del socio =====================
+
+  /**
+   * Registra un aporte del partícipe a su propia cuenta (cesantía, jubilación...) en una sola
+   * transacción: crea el movimiento en CRD.APRT y su pago asociado, y devuelve el saldo del tipo
+   * ya actualizado.
+   *
+   * Es la operación inversa a `pagarConAportes`: acá el socio entrega dinero y su saldo sube.
+   * Responde 201.
+   */
+  registrarAporte(req: RegistroAporteRequest): Observable<RespuestaPago<ResultadoRegistroAporte>> {
+    const url = `${ServiciosCrd.RS_APRT}/registrarAporte`;
+    return this.http
+      .post<RespuestaPago<ResultadoRegistroAporte>>(url, this.limpiar(req), this.httpOptions)
       .pipe(catchError((e: HttpErrorResponse) => of(this.normalizarError(e))));
   }
 

@@ -85,6 +85,7 @@ export const NOMBRE_TIPO_OPERACION: Record<string, string> = {
   PAGO_APORTES: 'Pago con aportes',
   ABONO_CAPITAL: 'Abono a capital',
   PRECANCELACION: 'Precancelación',
+  REGISTRO_APORTE: 'Registro de aporte',
 };
 
 export const ICONO_TIPO_OPERACION: Record<string, string> = {
@@ -92,6 +93,7 @@ export const ICONO_TIPO_OPERACION: Record<string, string> = {
   PAGO_APORTES: 'savings',
   ABONO_CAPITAL: 'trending_down',
   PRECANCELACION: 'task_alt',
+  REGISTRO_APORTE: 'account_balance_wallet',
 };
 
 /** Modalidad de recálculo del abono a capital. */

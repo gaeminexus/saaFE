@@ -20,8 +20,20 @@ export interface ContextoPrestamo {
   idEstado?: number | null;
   saldoTotal?: number | null;
   saldoCapital?: number | null;
+  /**
+   * Valor de la cuota que se cobra. La pantalla debe mandar el campo `total` de la cuota (DTPRTTLL
+   * = cuota + desgravamen + seguro de incendio), NO `Prestamo.valorCuota`, que es solo capital +
+   * interés y deja fuera el desgravamen y el seguro.
+   */
   valorCuota?: number | null;
   plazo?: number | null;
+  /**
+   * Monto necesario para cubrir las próximas 1, 2, 3… cuotas (`[0]` = una cuota, `[1]` = dos, …),
+   * con el pendiente real de cada una. Cuando llega, los atajos de monto lo usan en vez de
+   * multiplicar `valorCuota`: la primera cuota puede venir parcialmente pagada y las vencidas
+   * arrastran mora, así que el múltiplo no da el monto exacto.
+   */
+  pendientesAcumulados?: number[] | null;
   /**
    * Monto que el usuario ya tecleó en la pantalla que abre el diálogo ("Monto del pago"). Los
    * diálogos lo precargan en su campo de valor para no obligar a escribirlo dos veces; el usuario

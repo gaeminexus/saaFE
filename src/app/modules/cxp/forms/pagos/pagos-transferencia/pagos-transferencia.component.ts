@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute } from '@angular/router';
+import { forkJoin } from 'rxjs';
 import {
   MotivoDialogComponent,
   MotivoDialogData,
@@ -17,7 +18,9 @@ import {
 import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda as TipoDatos } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
+import { DetalleRubro } from '../../../../../shared/model/detalle-rubro';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { DetalleRubroService } from '../../../../../shared/services/detalle-rubro.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { CuentaBancaria } from '../../../../tsr/model/cuenta-bancaria';
 import { CuentaBancariaTitular } from '../../../../tsr/model/cuenta-bancaria-titular';
@@ -57,6 +60,7 @@ export class PagosTransferenciaComponent implements OnInit {
   private cuentaTitularS = inject(CuentaBancariaTitularService);
   private facturaS = inject(FacturaCompraService);
   private funcionesDatos = inject(FuncionesDatosService);
+  private detalleRubroS = inject(DetalleRubroService);
   private jasperS = inject(JasperReportesService);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
@@ -75,12 +79,18 @@ export class PagosTransferenciaComponent implements OnInit {
   regIdCuentaDestino: number | null = null;
   /** Cuentas del proveedor (CTBN). El banco las necesita para la transferencia. */
   cuentasDestino = signal<CuentaBancariaTitular[]>([]);
+  /** Catálogo de tipos de cuenta bancaria (rubro 23) para etiquetar cada cuenta. */
+  private tiposCuentaBancaria = signal<DetalleRubro[]>([]);
   cargandoCuentasDestino = signal(false);
   regDebitoAutomatico = false;
   regReferencia = '';
   /** Saldo de la factura elegida: precarga el valor y le pone tope. */
   regSaldo = signal<SaldoFactura | null>(null);
   cargandoSaldo = signal(false);
+  /** Valor ya comprometido en pagos vigentes de la misma factura. */
+  regComprometido = signal(0);
+  /** Los pagos que lo comprometen, para poder nombrarlos en el aviso. */
+  pagosComprometidos = signal<PagoProgramado[]>([]);
   regValor = '';
   regFecha: Date | null = new Date();
   regObservacion = '';
@@ -156,7 +166,31 @@ export class PagosTransferenciaComponent implements OnInit {
       });
     }
     this.cargarCuentasBancarias();
+    this.cargarTiposCuentaBancaria();
     this.cargarSeguimiento();
+  }
+
+  /**
+   * Tipos de cuenta bancaria (rubro 23). Los códigos los define el catálogo, no
+   * son fijos, así que hay que resolver la descripción contra él en vez de
+   * mapear números a mano.
+   */
+  private cargarTiposCuentaBancaria(): void {
+    const RUBRO_TIPO_CUENTA_BANCARIA = 23;
+    const enMemoria = this.detalleRubroS.getDetallesByParent(RUBRO_TIPO_CUENTA_BANCARIA);
+    if (enMemoria.length > 0) {
+      this.tiposCuentaBancaria.set(enMemoria);
+      return;
+    }
+    // La caché se llena en el login; si se entra sin pasar por ahí, se pide
+    // todo el catálogo y se filtra, igual que hace Titulares.
+    this.detalleRubroS.getAll().subscribe({
+      next: (todos) =>
+        this.tiposCuentaBancaria.set(
+          (todos ?? []).filter((d) => d.rubro?.codigoAlterno === RUBRO_TIPO_CUENTA_BANCARIA)
+        ),
+      error: () => this.tiposCuentaBancaria.set([]),
+    });
   }
 
   /**
@@ -258,8 +292,15 @@ export class PagosTransferenciaComponent implements OnInit {
 
   etiquetaCuentaDestino(cuenta: CuentaBancariaTitular): string {
     const banco = (cuenta.banco as any)?.nombre ?? 'Banco';
-    const tipo = Number(cuenta.tipoCuenta) === 1 ? 'Cte.' : Number(cuenta.tipoCuenta) === 2 ? 'Ahorros' : '';
+    const tipo = this.nombreTipoCuentaBancaria(cuenta.tipoCuenta);
     return `${banco} — ${cuenta.numeroCuenta}${tipo ? ` (${tipo})` : ''}`;
+  }
+
+  /** Descripción del tipo de cuenta según el catálogo (rubro 23). */
+  private nombreTipoCuentaBancaria(tipo: number | null | undefined): string {
+    if (tipo == null) return '';
+    const detalle = this.tiposCuentaBancaria().find(d => Number(d.codigoAlterno) === Number(tipo));
+    return detalle?.descripcion?.trim() ?? '';
   }
 
   /** Proveedor ya elegido y sin ninguna cuenta activa registrada en CTBN. */
@@ -292,19 +333,23 @@ export class PagosTransferenciaComponent implements OnInit {
   }
 
   /**
-   * El saldo pendiente se propone como valor a pagar y es el tope del campo.
+   * Lo disponible se propone como valor a pagar y es el tope del campo.
    * Si no se puede consultar, el campo queda libre y valida solo el backend.
    */
   private cargarSaldoFactura(idFactura: number): void {
     this.cargandoSaldo.set(true);
     this.regSaldo.set(null);
+    this.regComprometido.set(0);
+    this.pagosComprometidos.set([]);
+
+    this.cargarComprometidoFactura(idFactura);
 
     this.aplicacionS.getSaldo(idFactura).subscribe({
       next: (saldo) => {
         this.cargandoSaldo.set(false);
         this.regSaldo.set(saldo);
-        const pendiente = Number(saldo?.saldoPendiente) || 0;
-        this.regValor = pendiente > 0 ? pendiente.toFixed(2) : '';
+        const disponible = this.disponibleFactura ?? 0;
+        this.regValor = disponible > 0 ? disponible.toFixed(2) : '';
       },
       error: (err: Error) => {
         this.cargandoSaldo.set(false);
@@ -312,6 +357,35 @@ export class PagosTransferenciaComponent implements OnInit {
         this.snackBar.open(`No se pudo consultar el saldo de la factura: ${err.message}`, 'Cerrar', {
           duration: 6000,
         });
+      },
+    });
+  }
+
+  /**
+   * El backend no deja pagar el saldo pendiente completo: le resta lo ya
+   * comprometido en pagos registrados o enviados al banco de la misma factura
+   * (PagoProgramadoServiceImpl.validaValorContraSaldo). El endpoint de saldo no
+   * devuelve ese dato, así que se calcula aquí con los mismos estados; sin esto
+   * la pantalla proponía un valor que el backend rechazaba con "supera lo
+   * disponible".
+   */
+  private cargarComprometidoFactura(idFactura: number): void {
+    forkJoin([
+      this.pagoS.listar(this.idEmpresaSesion(), EstadoPagoProgramado.REGISTRADO),
+      this.pagoS.listar(this.idEmpresaSesion(), EstadoPagoProgramado.EN_ARCHIVO),
+    ]).subscribe({
+      next: ([registrados, enArchivo]) => {
+        const deLaFactura = [...(registrados ?? []), ...(enArchivo ?? [])]
+          .filter((p) => p.facturaCompra?.id === idFactura);
+        this.pagosComprometidos.set(deLaFactura);
+        this.regComprometido.set(
+          deLaFactura.reduce((suma, p) => suma + (Number(p.valor) || 0), 0)
+        );
+      },
+      // Sin el dato se deja pasar: el backend sigue siendo quien valida.
+      error: () => {
+        this.pagosComprometidos.set([]);
+        this.regComprometido.set(0);
       },
     });
   }
@@ -348,17 +422,26 @@ export class PagosTransferenciaComponent implements OnInit {
     return saldo ? Number(saldo.saldoPendiente) || 0 : null;
   }
 
+  /**
+   * Lo que el backend realmente acepta: el saldo pendiente menos lo
+   * comprometido en otros pagos vigentes de la misma factura.
+   */
+  get disponibleFactura(): number | null {
+    const pendiente = this.saldoPendienteFactura;
+    return pendiente == null ? null : pendiente - this.regComprometido();
+  }
+
   /** La tolerancia es la misma del backend, para no discrepar por redondeo. */
   get regExcedeSaldo(): boolean {
-    const pendiente = this.saldoPendienteFactura;
-    return pendiente != null && this.regValorNumerico > pendiente + 0.01;
+    const disponible = this.disponibleFactura;
+    return disponible != null && this.regValorNumerico > disponible + 0.01;
   }
 
   /** Al salir del campo se recorta lo que exceda, para no dejarlo inválido. */
   ajustarValorAlSaldo(): void {
-    const pendiente = this.saldoPendienteFactura;
-    if (pendiente != null && this.regValorNumerico > pendiente + 0.01) {
-      this.regValor = pendiente.toFixed(2);
+    const disponible = this.disponibleFactura;
+    if (disponible != null && this.regValorNumerico > disponible + 0.01) {
+      this.regValor = disponible > 0 ? disponible.toFixed(2) : '';
     }
   }
 
@@ -423,6 +506,9 @@ export class PagosTransferenciaComponent implements OnInit {
         this.regValor = '';
         this.regObservacion = '';
         this.regReferencia = '';
+        // El pago recién registrado ya compromete saldo: sin refrescar esto se
+        // podía volver a registrar el mismo valor sobre la misma factura.
+        if (this.regIdFactura) this.cargarComprometidoFactura(this.regIdFactura);
         if (!this.regDebitoAutomatico) this.autoSeleccionarCuentaDestino();
         this.cargarSeguimiento();
         this.snackBar.open(mensaje, 'Cerrar', { duration: 6000 });
@@ -432,6 +518,33 @@ export class PagosTransferenciaComponent implements OnInit {
         this.regError.set(err.message);
       },
     });
+  }
+
+  /**
+   * Deja la pestaña de registro en blanco y arranca el flujo de un pago nuevo.
+   * Hace falta porque después de registrar se conservan proveedor y factura
+   * (para poder abonar otra vez la misma), así que sin esto había que recargar
+   * la pantalla para pagar a otro proveedor.
+   */
+  nuevoPago(): void {
+    this.regProveedor.set(null);
+    this.regFacturaElegida.set(null);
+    this.regIdFactura = null;
+    this.regIdCuentaDestino = null;
+    this.cuentasDestino.set([]);
+    this.regSaldo.set(null);
+    this.regComprometido.set(0);
+    this.pagosComprometidos.set([]);
+    this.regDebitoAutomatico = false;
+    this.regReferencia = '';
+    this.regValor = '';
+    this.regFecha = new Date();
+    this.regObservacion = '';
+    this.regError.set('');
+    this.regExito.set('');
+
+    this.tabActiva = 0;
+    this.buscarProveedor();
   }
 
   irASeleccion(): void {

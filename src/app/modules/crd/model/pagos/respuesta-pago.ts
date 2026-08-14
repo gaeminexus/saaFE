@@ -45,6 +45,7 @@ export interface DesgloseAporte {
 /** Códigos de error estables del backend (§12 de la guía). */
 export type CodigoErrorPago =
   | 'PARAMETRO_INVALIDO'
+  | 'ENTIDAD_NO_ENCONTRADA'
   | 'PRESTAMO_NO_ENCONTRADO'
   | 'EVENTO_NO_ENCONTRADO'
   | 'ESTADO_NO_PERMITE'
@@ -73,6 +74,7 @@ export type CodigoErrorPago =
  */
 export const MENSAJE_ERROR_PAGO: Record<string, string> = {
   PARAMETRO_INVALIDO: 'Faltan datos obligatorios o vienen con un formato inválido.',
+  ENTIDAD_NO_ENCONTRADA: 'El partícipe ya no existe. Vuelva a buscarlo.',
   PRESTAMO_NO_ENCONTRADO: 'El préstamo ya no existe. Vuelva al listado y busque de nuevo.',
   EVENTO_NO_ENCONTRADO: 'La operación ya no existe. Actualice el historial.',
   ESTADO_NO_PERMITE: 'El préstamo está cancelado y no admite más operaciones de pago.',

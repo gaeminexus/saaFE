@@ -219,6 +219,31 @@
     <p class="pg-nota-saldos">Los saldos de aportes del partícipe ya se actualizaron.</p>
   }
 
+  <!-- ============ Aportes registrados a favor del socio ============ -->
+  @if (aportesRegistrados.length) {
+    <div class="pg-seccion-label">Aportes registrados</div>
+    <div class="pg-tabla-scroll">
+      <table class="pg-tabla">
+        <thead>
+          <tr><th>Tipo de aporte</th><th class="num">Valor</th><th class="num">Saldo resultante</th></tr>
+        </thead>
+        <tbody>
+          @for (a of aportesRegistrados; track a.idAporte) {
+            <tr>
+              <td>{{ a.nombreTipoAporte || nombreTipoAporte(a.idTipoAporte) }}</td>
+              <td class="num">{{ formatMoneda(a.valor) }}</td>
+              <td class="num">{{ formatMoneda(a.saldoTipoAporte) }}</td>
+            </tr>
+          }
+        </tbody>
+        <tfoot>
+          <tr><td>TOTAL</td><td class="num">{{ formatMoneda(totalAportesRegistrados) }}</td><td></td></tr>
+        </tfoot>
+      </table>
+    </div>
+    <p class="pg-nota-saldos">Los saldos de aportes del partícipe ya se actualizaron.</p>
+  }
+
   @if (data.detalleExtra?.length) {
     <div class="pg-seccion-label">Detalle</div>
     <div class="pg-grid">
