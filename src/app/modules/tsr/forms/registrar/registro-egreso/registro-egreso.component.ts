@@ -77,6 +77,10 @@ export class RegistroEgresoComponent implements OnInit {
   regCuentaOrigen: CuentaBancaria | null = null;
   regIdGrupo: number | null = null;
   regIdProducto: number | null = null;
+  /** Filtros de texto de los combos largos (buscador interno del mat-select). */
+  filtroCuentaOrigen = '';
+  filtroGrupo = '';
+  filtroProducto = '';
   regBeneficiario = signal<Titular | null>(null);
   /** Cuentas CTBN del beneficiario: el archivo del banco necesita el destino. */
   cuentasDestino = signal<CuentaBancariaTitular[]>([]);
@@ -95,12 +99,36 @@ export class RegistroEgresoComponent implements OnInit {
   regExito = signal('');
 
   /** El producto se elige dentro del grupo: la lista completa es muy larga. */
-  get productosFiltrados(): ProductoPago[] {
+  get productosDelGrupo(): ProductoPago[] {
     const idGrupo = this.regIdGrupo;
     if (!idGrupo) return [];
     return this.todosProductos().filter(
       (p) => p.grupoProducto?.codigo === idGrupo && p.estado === 1
     );
+  }
+
+  /** Productos del grupo ya aplicado el buscador interno del combo. */
+  get productosFiltrados(): ProductoPago[] {
+    const q = this.filtroProducto.trim().toLowerCase();
+    const lista = this.productosDelGrupo;
+    if (!q) return lista;
+    return lista.filter((p) => (p.nombre ?? '').toLowerCase().includes(q));
+  }
+
+  /** Cuentas propias de origen ya aplicado el buscador interno del combo. */
+  get cuentasBancariasFiltradas(): CuentaBancaria[] {
+    const q = this.filtroCuentaOrigen.trim().toLowerCase();
+    const lista = this.cuentasBancarias();
+    if (!q) return lista;
+    return lista.filter((c) => this.etiquetaCuenta(c).toLowerCase().includes(q));
+  }
+
+  /** Grupos de producto ya aplicado el buscador interno del combo. */
+  get gruposFiltrados(): GrupoProductoPago[] {
+    const q = this.filtroGrupo.trim().toLowerCase();
+    const lista = this.gruposProducto();
+    if (!q) return lista;
+    return lista.filter((g) => (g.nombre ?? '').toLowerCase().includes(q));
   }
 
   // ─── b) Consulta ───────────────────────────────────────
@@ -185,6 +213,7 @@ export class RegistroEgresoComponent implements OnInit {
 
   onCambioGrupo(): void {
     this.regIdProducto = null;
+    this.filtroProducto = '';
   }
 
   /**

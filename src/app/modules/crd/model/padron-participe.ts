@@ -13,6 +13,10 @@ export interface PadronParticipeDTO {
   mesesEnMora: number | null;
   habilitadoVoto: string;
   elegibleMiembro: string;
+  /** "SI" / "NO" — indica si el partícipe tiene algún préstamo en mora */
+  tienePrestamoMora: string;
+  /** Máximo de cuotas en mora entre los préstamos del partícipe */
+  maximoCuotasMora: number;
 }
 
 /** Filtros opcionales para GET /rest/entd/padron-participes */

@@ -126,6 +126,51 @@
               </div>
             }
 
+            <!--
+              Puesta al día. Es la primera pregunta con la que el socio llega a la ventanilla
+              («¿cuánto pago para estar al corriente?»), así que va arriba del crédito y en grande,
+              antes de las acciones y del reparto del cobro.
+            -->
+            @if (hayTablaAmortizacion()) {
+              @if (alDiaHastaMesVigente()) {
+                <div class="puesta-al-dia al-dia">
+                  <mat-icon>task_alt</mat-icon>
+                  <div class="pad-texto">
+                    <span class="pad-titulo">El préstamo está al día</span>
+                    <span class="pad-detalle">
+                      No queda saldo pendiente en las cuotas con vencimiento hasta el
+                      {{ finMesVigente | date:'dd/MM/yyyy' }} (cuota del mes en curso incluida).
+                    </span>
+                  </div>
+                </div>
+              } @else {
+                <div class="puesta-al-dia" [class.mora]="enMora()" [class.por-vencer]="!enMora()">
+                  <mat-icon>{{ enMora() ? 'warning' : 'schedule' }}</mat-icon>
+                  <div class="pad-texto">
+                    <span class="pad-etiqueta">
+                      {{ enMora() ? 'En mora · valor para ponerse al día' : 'Valor para ponerse al día' }}
+                    </span>
+                    <span class="pad-monto">{{ formatMoneda(valorPonerseAlDia()) }}</span>
+                    <span class="pad-detalle">
+                      Suma el pendiente de <b>{{ cuotasHastaMesVigente().length }}</b> cuota(s) con
+                      vencimiento hasta el {{ finMesVigente | date:'dd/MM/yyyy' }}, mora e interés
+                      vencido incluidos.
+                      @if (enMora()) {
+                        <br />
+                        En mora: <b>{{ formatMoneda(valorVencido()) }}</b> de
+                        <b>{{ cuotasVencidas().length }}</b> cuota(s) de meses anteriores
+                        @if (moraDesde(); as desde) {
+                          &middot; la más antigua venció el {{ desde | date:'dd/MM/yyyy' }}
+                        }
+                      } @else {
+                        Corresponde a la cuota del mes en curso, que todavía no cuenta como vencida.
+                      }
+                    </span>
+                  </div>
+                </div>
+              }
+            }
+
             <div class="acciones-prestamo">
               <button mat-flat-button color="primary" [disabled]="!prestamoAdmiteOperaciones()" (click)="abrirPago('efectivo')">
                 <mat-icon>payments</mat-icon> Pagar cuotas

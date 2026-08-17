@@ -1,5 +1,6 @@
 import { Component, HostListener, Inject } from '@angular/core';
 import { MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
 import {
@@ -9,7 +10,7 @@ import {
 } from '../../model/pagos/catalogos-pago';
 import { DetallePrestamo } from '../../model/detalle-prestamo';
 import { PagoPrestamo, pagoVigente } from '../../model/pago-prestamo';
-import { ComprobanteImpresionService } from '../pagos/comprobante-impresion.service';
+import { JasperReportesService } from '../../../../shared/services/jasper-reportes.service';
 
 export interface PrestamoPagosDialogData {
   detalle: DetallePrestamo;
@@ -75,7 +76,8 @@ const NOMBRE_TIPO_PAGO: Record<string, string> = {
 export class PrestamoPagosDialogComponent {
   constructor(
     @Inject(MAT_DIALOG_DATA) public data: PrestamoPagosDialogData,
-    private impresion: ComprobanteImpresionService
+    private jasperReportes: JasperReportesService,
+    private snackBar: MatSnackBar
   ) {}
 
   @HostListener('document:keydown.control.p', ['$event'])
@@ -111,8 +113,14 @@ export class PrestamoPagosDialogComponent {
     return this.suma((p) => p.valor);
   }
 
+  /**
+   * Saldo pendiente de la cuota = suma de los pendientes de TODOS los conceptos (incluidos mora e
+   * interés vencido). No se lee `DTPR.DTPRSLDO` directo porque esa columna no siempre trae la mora
+   * y el interés en mora recién acumulados; sumando los conceptos, la tarjeta cuadra por
+   * construcción con la composición de la cuota.
+   */
   get saldoPendiente(): number {
-    return Math.max(0, this.detalle.saldo ?? 0);
+    return +this.conceptosCompletos.reduce((s, c) => s + c.pendiente, 0).toFixed(2);
   }
 
   /** Avance del cobro de la cuota, acotado a 100 % para que la barra no se desborde. */
@@ -160,11 +168,36 @@ export class PrestamoPagosDialogComponent {
   // ================= composición de la cuota =================
 
   /**
-   * Conceptos en el orden de prelación con que el backend imputa el dinero. `pendiente` usa las
-   * columnas de saldo de DTPR cuando existen (son las autoritativas) y, para desgravamen, seguro y
-   * pago extra —que no tienen columna de saldo—, lo que falta contra lo pactado.
+   * Conceptos en el orden de prelación con que el backend imputa el dinero. El `pendiente` de cada
+   * concepto es SIEMPRE lo que falta EN ESTA CUOTA: lo pactado menos lo pagado. Para mora, interés
+   * vencido e interés se usa su columna de saldo de DTPR (`DTPRSLMR` / `DTPRSLIV` / `DTPRSLIN`),
+   * que ya es el pendiente por cuota; para desgravamen, capital, seguro y pago extra se calcula
+   * pactado − pagado.
+   *
+   * ⚠️ Capital NO usa `d.saldoCapital` (`DTPRSLCP`): esa columna es el saldo insoluto de capital de
+   * TODO el préstamo (saldo decreciente de la amortización), no el pendiente de la cuota. Usarla
+   * inflaba el pendiente de capital al saldo del préstamo completo y rompía la invariante de que la
+   * sumatoria de pendientes por concepto = saldo pendiente de la cuota (tarjeta superior).
    */
   get conceptos(): ConceptoCuota[] {
+    // Capital e interés se muestran siempre; el resto solo si tuvo movimiento o quedó algo
+    // pendiente (p. ej. mora / interés en mora acumulados aunque no estuvieran en lo pactado
+    // original), para no llenar la pantalla de ceros en la cuota típica sin mora ni seguros.
+    return this.conceptosCompletos.filter(
+      (f) =>
+        f.nombre === 'Capital' ||
+        f.nombre === 'Interés' ||
+        f.pactado > 0 ||
+        f.pagado > 0 ||
+        f.pendiente > 0
+    );
+  }
+
+  /**
+   * Todos los conceptos, sin el filtro de presentación. Es la base tanto de la tabla de composición
+   * (`conceptos`) como del saldo pendiente de la cuota (`saldoPendiente`), para que ambos cuadren.
+   */
+  private get conceptosCompletos(): ConceptoCuota[] {
     const d = this.detalle;
     const filas: ConceptoCuota[] = [
       this.concepto('Desgravamen', 'health_and_safety', d.desgravamen, this.suma((p) => p.desgravamen)),
@@ -177,7 +210,7 @@ export class PrestamoPagosDialogComponent {
         d.saldoInteresVencido
       ),
       this.concepto('Interés', 'percent', d.interes, this.suma((p) => p.interesPagado), d.saldoInteres),
-      this.concepto('Capital', 'account_balance', d.capital, this.suma((p) => p.capitalPagado), d.saldoCapital),
+      this.concepto('Capital', 'account_balance', d.capital, this.suma((p) => p.capitalPagado)),
     ];
 
     if (this.mostrarSeguro) {
@@ -188,11 +221,7 @@ export class PrestamoPagosDialogComponent {
 
     filas.push(this.concepto('Pago extra', 'add_circle', d.saldoOtros, this.suma((p) => p.saldoOtros)));
 
-    // Capital e interés se muestran siempre; el resto solo si tuvo movimiento, para no llenar la
-    // pantalla de ceros en la cuota típica sin mora ni seguros.
-    return filas.filter(
-      (f) => f.nombre === 'Capital' || f.nombre === 'Interés' || f.pactado > 0 || f.pagado > 0
-    );
+    return filas;
   }
 
   get totalesConceptos(): ConceptoCuota {
@@ -284,68 +313,37 @@ export class PrestamoPagosDialogComponent {
     return isNaN(t) ? 0 : t;
   }
 
-  private fechaCorta(fecha: Date | string | null | undefined): string {
-    if (!fecha) return '—';
-    const d = fecha instanceof Date ? fecha : new Date(fecha);
-    return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('es-EC');
-  }
-
   // ================= impresión =================
 
   /**
-   * Emite el mismo comprobante que el diálogo de confirmación de pago de `cobros-personales`:
-   * ambos lo arman con `ComprobanteImpresionService`. La ventana de impresión del navegador
-   * permite guardarlo como PDF.
+   * Emite el comprobante oficial de pagos de la cuota. Lo genera el backend con el reporte Jasper
+   * `RPRT_CMPB_PGCT` (mismo documento que sale al confirmar un cobro en `cobros-personales`), a
+   * partir del código de la cuota (`DTPR.DTPRCDGO`). El PDF se descarga con el logo del fondo.
    */
   imprimir(): void {
     const d = this.detalle;
 
-    const datos: { label: string; valor: string }[] = [];
-    if (this.data.participante) datos.push({ label: 'Partícipe', valor: this.data.participante });
-    datos.push({ label: 'Cuota', valor: `#${d.numeroCuota}` });
-    datos.push({ label: 'Vencimiento', valor: this.fechaCorta(d.fechaVencimiento) });
-    datos.push({ label: 'Estado', valor: this.nombreEstado });
-    datos.push({ label: 'Cuota total', valor: this.formatMoneda(this.cuotaTotal) });
-    datos.push({ label: 'Total pagado', valor: this.formatMoneda(this.totalPagado) });
-    datos.push({ label: 'Saldo pendiente', valor: this.formatMoneda(this.saldoPendiente) });
+    const parametros = {
+      P_DTPR_CODIGO: d.codigo,
+      P_IMAGEN: null,
+      P_USUARIO: localStorage.getItem('username') || localStorage.getItem('userName') || '',
+    };
 
-    const observaciones = this.pagosOrdenados
-      .filter((p) => (p.pago.observacion || '').trim())
-      .map((p) => ({ label: this.fechaCorta(p.pago.fecha), valor: p.pago.observacion.trim() }));
+    this.snackBar.open('Generando comprobante...', '', { duration: 2000 });
 
-    this.impresion.imprimir({
-      titulo: `Pagos de la cuota #${d.numeroCuota}`,
-      subtitulo: this.tituloPrestamo,
-      datos,
-      mensaje: this.resumen,
-      encabezadoConcepto: 'Fecha del pago',
-      encabezadoEstado: 'Operación',
-      notaTabla: 'Pagos registrados — imputación: desgravamen, mora, interés vencido, interés, capital, seguro',
-      filas: this.pagosOrdenados.map((p) => ({
-        concepto: this.fechaCorta(p.pago.fecha),
-        estado:
-          this.nombreTipoPago(p.pago.tipo) +
-          (this.idEvento(p.pago) != null ? ` · #${this.idEvento(p.pago)}` : ''),
-        desgravamen: p.pago.desgravamen || 0,
-        mora: p.pago.moraPagada || 0,
-        interesVencido: p.pago.interesVencidoPagado || 0,
-        interes: p.pago.interesPagado || 0,
-        capital: p.pago.capitalPagado || 0,
-        seguro: p.pago.valorSeguroIncendio || 0,
-        total: p.pago.valor || 0,
-      })),
-      bloques: [
-        {
-          titulo: 'Composición de la cuota',
-          filas: this.conceptos.map((c) => ({
-            label: c.nombre,
-            valor: `Pactado ${this.formatMoneda(c.pactado)} · Pagado ${this.formatMoneda(
-              c.pagado
-            )} · Pendiente ${this.formatMoneda(c.pendiente)}`,
-          })),
-        },
-        { titulo: 'Observaciones', filas: observaciones },
-      ],
+    this.jasperReportes.generar('crd', 'RPRT_CMPB_PGCT', parametros, 'PDF').subscribe({
+      next: (blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `comprobante-cuota-${d.numeroCuota}.pdf`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+        this.snackBar.open('✅ Comprobante generado exitosamente', 'Cerrar', { duration: 3000 });
+      },
+      error: () => {
+        this.snackBar.open('❌ No se pudo generar el comprobante', 'Cerrar', { duration: 5000 });
+      },
     });
   }
 }

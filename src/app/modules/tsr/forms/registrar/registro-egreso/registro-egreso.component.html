@@ -24,8 +24,20 @@
           <div class="fila-campos">
             <mat-form-field appearance="outline">
               <mat-label>Cuenta bancaria propia (origen)</mat-label>
-              <mat-select [(ngModel)]="regCuentaOrigen" name="regCuentaOrigen">
-                @for (c of cuentasBancarias(); track c.codigo) {
+              <mat-select [(ngModel)]="regCuentaOrigen" name="regCuentaOrigen"
+                          panelClass="select-con-buscador"
+                          (openedChange)="!$event && (filtroCuentaOrigen = '')">
+                <mat-option class="select-search-option"
+                            (mousedown)="$event.preventDefault(); $event.stopPropagation()"
+                            (click)="$event.stopPropagation()">
+                  <input class="select-search-input" placeholder="Buscar por banco o número..."
+                         [value]="filtroCuentaOrigen"
+                         (mousedown)="$event.stopPropagation()"
+                         (click)="$event.stopPropagation()"
+                         (keydown)="$event.stopPropagation()"
+                         (input)="filtroCuentaOrigen = $any($event.target).value" />
+                </mat-option>
+                @for (c of cuentasBancariasFiltradas; track c.codigo) {
                   <mat-option [value]="c">{{ etiquetaCuenta(c) }}</mat-option>
                 }
               </mat-select>
@@ -91,8 +103,20 @@
           <div class="fila-campos">
             <mat-form-field appearance="outline">
               <mat-label>Grupo de producto (CXP)</mat-label>
-              <mat-select [(ngModel)]="regIdGrupo" name="regIdGrupo" (selectionChange)="onCambioGrupo()">
-                @for (g of gruposProducto(); track g.codigo) {
+              <mat-select [(ngModel)]="regIdGrupo" name="regIdGrupo" (selectionChange)="onCambioGrupo()"
+                          panelClass="select-con-buscador"
+                          (openedChange)="!$event && (filtroGrupo = '')">
+                <mat-option class="select-search-option"
+                            (mousedown)="$event.preventDefault(); $event.stopPropagation()"
+                            (click)="$event.stopPropagation()">
+                  <input class="select-search-input" placeholder="Buscar grupo..."
+                         [value]="filtroGrupo"
+                         (mousedown)="$event.stopPropagation()"
+                         (click)="$event.stopPropagation()"
+                         (keydown)="$event.stopPropagation()"
+                         (input)="filtroGrupo = $any($event.target).value" />
+                </mat-option>
+                @for (g of gruposFiltrados; track g.codigo) {
                   <mat-option [value]="g.codigo">{{ g.nombre }}</mat-option>
                 }
               </mat-select>
@@ -101,14 +125,26 @@
 
             <mat-form-field appearance="outline">
               <mat-label>Producto</mat-label>
-              <mat-select [(ngModel)]="regIdProducto" name="regIdProducto" [disabled]="!regIdGrupo">
+              <mat-select [(ngModel)]="regIdProducto" name="regIdProducto" [disabled]="!regIdGrupo"
+                          panelClass="select-con-buscador"
+                          (openedChange)="!$event && (filtroProducto = '')">
+                <mat-option class="select-search-option"
+                            (mousedown)="$event.preventDefault(); $event.stopPropagation()"
+                            (click)="$event.stopPropagation()">
+                  <input class="select-search-input" placeholder="Buscar producto..."
+                         [value]="filtroProducto"
+                         (mousedown)="$event.stopPropagation()"
+                         (click)="$event.stopPropagation()"
+                         (keydown)="$event.stopPropagation()"
+                         (input)="filtroProducto = $any($event.target).value" />
+                </mat-option>
                 @for (p of productosFiltrados; track p.id) {
                   <mat-option [value]="p.id">{{ p.nombre }}</mat-option>
                 }
               </mat-select>
               @if (!regIdGrupo) {
                 <mat-hint>Elija primero el grupo</mat-hint>
-              } @else if (productosFiltrados.length === 0) {
+              } @else if (productosDelGrupo.length === 0) {
                 <mat-hint class="hint-error">El grupo no tiene productos activos</mat-hint>
               }
             </mat-form-field>

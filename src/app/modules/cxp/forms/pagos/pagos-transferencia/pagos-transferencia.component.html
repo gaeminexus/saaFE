@@ -643,7 +643,7 @@
             </div>
           } @else {
             <div class="tabla-scroll">
-              <table mat-table [dataSource]="pagosSeguimiento()">
+              <table mat-table [dataSource]="pagosSeguimientoFiltrados()">
 
                 <ng-container matColumnDef="proveedor">
                   <th mat-header-cell *matHeaderCellDef>Proveedor</th>
@@ -685,6 +685,66 @@
                   </td>
                 </ng-container>
 
+                <!-- ── Fila de filtros por columna ── -->
+                <ng-container matColumnDef="proveedor-filtro">
+                  <th mat-header-cell *matHeaderCellDef>
+                    <input class="filtro-col" placeholder="Filtrar proveedor"
+                           [value]="segFiltroProveedor()"
+                           (input)="segFiltroProveedor.set($any($event.target).value)" />
+                  </th>
+                </ng-container>
+
+                <ng-container matColumnDef="factura-filtro">
+                  <th mat-header-cell *matHeaderCellDef>
+                    <input class="filtro-col" placeholder="Filtrar concepto"
+                           [value]="segFiltroConcepto()"
+                           (input)="segFiltroConcepto.set($any($event.target).value)" />
+                  </th>
+                </ng-container>
+
+                <ng-container matColumnDef="tipo-filtro">
+                  <th mat-header-cell *matHeaderCellDef>
+                    <input class="filtro-col" placeholder="Filtrar tipo"
+                           [value]="segFiltroTipo()"
+                           (input)="segFiltroTipo.set($any($event.target).value)" />
+                  </th>
+                </ng-container>
+
+                <ng-container matColumnDef="valor-filtro">
+                  <th mat-header-cell *matHeaderCellDef class="col-monto">
+                    <input class="filtro-col" placeholder="Filtrar valor"
+                           [value]="segFiltroValor()"
+                           (input)="segFiltroValor.set($any($event.target).value)" />
+                  </th>
+                </ng-container>
+
+                <ng-container matColumnDef="fechaProgramada-filtro">
+                  <th mat-header-cell *matHeaderCellDef>
+                    <input class="filtro-col" placeholder="dd/mm/aaaa"
+                           [value]="segFiltroFecha()"
+                           (input)="segFiltroFecha.set($any($event.target).value)" />
+                  </th>
+                </ng-container>
+
+                <ng-container matColumnDef="estado-filtro">
+                  <th mat-header-cell *matHeaderCellDef>
+                    <input class="filtro-col" placeholder="Filtrar estado"
+                           [value]="segFiltroEstadoTexto()"
+                           (input)="segFiltroEstadoTexto.set($any($event.target).value)" />
+                  </th>
+                </ng-container>
+
+                <ng-container matColumnDef="acciones-filtro">
+                  <th mat-header-cell *matHeaderCellDef class="col-acciones">
+                    @if (hayFiltrosSeguimiento()) {
+                      <button mat-icon-button matTooltip="Limpiar filtros"
+                              (click)="limpiarFiltrosSeguimiento()">
+                        <mat-icon>filter_alt_off</mat-icon>
+                      </button>
+                    }
+                  </th>
+                </ng-container>
+
                 <ng-container matColumnDef="acciones">
                   <th mat-header-cell *matHeaderCellDef class="col-acciones">Acciones</th>
                   <td mat-cell *matCellDef="let p" class="col-acciones">
@@ -719,9 +779,17 @@
                 </ng-container>
 
                 <tr mat-header-row *matHeaderRowDef="columnasSeguimiento"></tr>
+                <tr mat-header-row *matHeaderRowDef="columnasSeguimientoFiltro" class="fila-filtros"></tr>
                 <tr mat-row *matRowDef="let row; columns: columnasSeguimiento"></tr>
               </table>
             </div>
+
+            @if (pagosSeguimientoFiltrados().length === 0) {
+              <div class="sin-datos">
+                <mat-icon>search_off</mat-icon>
+                <span>Ningún pago coincide con los filtros aplicados.</span>
+              </div>
+            }
           }
 
         </mat-card-content>

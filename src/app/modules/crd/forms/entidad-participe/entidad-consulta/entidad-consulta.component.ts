@@ -831,6 +831,8 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
           'Meses en Mora': p.mesesEnMora ?? '',
           'Habilitado Voto': p.habilitadoVoto,
           'Elegible Miembro': p.elegibleMiembro,
+          'PRESTAMOS EN MORA': p.tienePrestamoMora === 'SI' ? 'Sí' : 'No',
+          'CUOTAS EN MORA': p.maximoCuotasMora ?? 0,
         }));
 
         const headers = [
@@ -845,6 +847,8 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
           'Meses en Mora',
           'Habilitado Voto',
           'Elegible Miembro',
+          'PRESTAMOS EN MORA',
+          'CUOTAS EN MORA',
         ];
 
         this.exportService.exportToCSV(rows, 'padron_participes_elegibles', headers, headers);

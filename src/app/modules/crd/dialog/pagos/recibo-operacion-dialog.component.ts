@@ -1,8 +1,10 @@
 import { CommonModule } from '@angular/common';
 import { Component, HostListener, Inject } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
+import { JasperReportesService } from '../../../../shared/services/jasper-reportes.service';
 import {
   CLASE_ESTADO_CUOTA,
   NOMBRE_ESTADO_CUOTA,
@@ -60,6 +62,8 @@ export class ReciboOperacionDialogComponent {
   constructor(
     private dialogRef: MatDialogRef<ReciboOperacionDialogComponent>,
     private impresion: ComprobanteImpresionService,
+    private jasperReportes: JasperReportesService,
+    private snackBar: MatSnackBar,
     @Inject(MAT_DIALOG_DATA) public data: ReciboOperacionData
   ) {}
 
@@ -150,11 +154,60 @@ export class ReciboOperacionDialogComponent {
   }
 
   /**
-   * Imprime el comprobante. El documento lo arma `ComprobanteImpresionService`, que comparte con
-   * la reimpresión de pagos de una cuota (`PrestamoPagosDialogComponent`) para que ambas pantallas
-   * emitan exactamente el mismo reporte.
+   * Imprime el comprobante.
+   *
+   * Para un recibo de cobro (pago de cuotas) el documento oficial lo genera el backend con el
+   * reporte Jasper `RPRT_CMPB_PGCT` —el mismo que se reimprime desde el ojo del detalle en
+   * `participe-dash`—, un PDF por cada cuota afectada, con el logo del fondo. Para las operaciones
+   * que no impactan cuotas (registro de aporte, anulación) se mantiene el documento HTML compartido
+   * con `PrestamoPagosDialogComponent` vía `ComprobanteImpresionService`.
    */
   imprimir(): void {
+    if (this.cuotas.length > 0) {
+      this.imprimirComprobanteJasper();
+      return;
+    }
+    this.imprimirDocumentoHtml();
+  }
+
+  /** Genera el comprobante Jasper `RPRT_CMPB_PGCT` (un PDF por cuota afectada por el cobro). */
+  private imprimirComprobanteJasper(): void {
+    const usuario = localStorage.getItem('username') || localStorage.getItem('userName') || '';
+
+    this.snackBar.open('Generando comprobante...', '', { duration: 2000 });
+
+    for (const cuota of this.cuotas) {
+      const parametros = {
+        P_DTPR_CODIGO: cuota.idCuota,
+        P_IMAGEN: null,
+        P_USUARIO: usuario,
+      };
+
+      this.jasperReportes.generar('crd', 'RPRT_CMPB_PGCT', parametros, 'PDF').subscribe({
+        next: (blob) => {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `comprobante-cuota-${cuota.numeroCuota}.pdf`;
+          a.click();
+          setTimeout(() => URL.revokeObjectURL(url), 2000);
+        },
+        error: () => {
+          this.snackBar.open(
+            `❌ No se pudo generar el comprobante de la cuota #${cuota.numeroCuota}`,
+            'Cerrar',
+            { duration: 5000 }
+          );
+        },
+      });
+    }
+  }
+
+  /**
+   * Documento HTML de respaldo para operaciones sin cuota afectada. Lo arma
+   * `ComprobanteImpresionService`, compartido con `PrestamoPagosDialogComponent`.
+   */
+  private imprimirDocumentoHtml(): void {
     const datos: { label: string; valor: string }[] = [];
     if (this.data.participante) datos.push({ label: 'Partícipe', valor: this.data.participante });
     if (this.idEvento != null) datos.push({ label: 'N° de operación', valor: String(this.idEvento) });

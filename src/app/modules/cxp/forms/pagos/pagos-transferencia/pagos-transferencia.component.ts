@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -138,6 +138,20 @@ export class PagosTransferenciaComponent implements OnInit {
   /** Pago cuyo PDF de asiento se está generando; null si no hay ninguno. */
   imprimiendoAsiento = signal<number | null>(null);
   readonly columnasSeguimiento = ['proveedor', 'factura', 'tipo', 'valor', 'fechaProgramada', 'estado', 'acciones'];
+  /** Segunda fila de cabecera: un input de filtro por cada columna. */
+  readonly columnasSeguimientoFiltro = [
+    'proveedor-filtro', 'factura-filtro', 'tipo-filtro', 'valor-filtro',
+    'fechaProgramada-filtro', 'estado-filtro', 'acciones-filtro',
+  ];
+
+  // ─── Filtros por columna del seguimiento (búsqueda en cliente) ─────────
+  segFiltroProveedor = signal('');
+  segFiltroConcepto = signal('');
+  segFiltroTipo = signal('');
+  segFiltroValor = signal('');
+  segFiltroFecha = signal('');
+  segFiltroEstadoTexto = signal('');
+
   readonly estadosFiltro = [
     { valor: EstadoPagoProgramado.REGISTRADO, texto: 'Registrado' },
     { valor: EstadoPagoProgramado.EN_ARCHIVO, texto: 'En archivo' },
@@ -864,6 +878,56 @@ export class PagosTransferenciaComponent implements OnInit {
         this.segError.set(err.message);
       },
     });
+  }
+
+  /** Texto de la columna Tipo; se reutiliza en la celda y en su filtro. */
+  textoTipo(pago: PagoProgramado): string {
+    return this.esDebitoAutomatico(pago) ? 'Débito automático' : 'Transferencia';
+  }
+
+  /**
+   * Pagos del seguimiento con los filtros por columna aplicados. El backend
+   * devuelve todo el conjunto (no hay paginación server-side), así que el
+   * filtrado por campo se hace en cliente sobre el mismo texto que se muestra.
+   */
+  pagosSeguimientoFiltrados = computed<PagoProgramado[]>(() => {
+    const proveedor = this.segFiltroProveedor().trim().toLowerCase();
+    const concepto = this.segFiltroConcepto().trim().toLowerCase();
+    const tipo = this.segFiltroTipo().trim().toLowerCase();
+    const valor = this.normalizarNumero(this.segFiltroValor());
+    const fecha = this.segFiltroFecha().trim().toLowerCase();
+    const estado = this.segFiltroEstadoTexto().trim().toLowerCase();
+
+    return this.pagosSeguimiento().filter((p) => {
+      if (proveedor && !(p.titular?.nombre ?? '').toLowerCase().includes(proveedor)) return false;
+      if (concepto && !this.conceptoPago(p).toLowerCase().includes(concepto)) return false;
+      if (tipo && !this.textoTipo(p).toLowerCase().includes(tipo)) return false;
+      if (valor && !this.normalizarNumero(String(p.valor ?? '')).includes(valor)) return false;
+      if (fecha && !this.formatearFecha(p.fechaProgramada).toLowerCase().includes(fecha)) return false;
+      if (estado && !this.etiquetaEstado(p.estado).texto.toLowerCase().includes(estado)) return false;
+      return true;
+    });
+  });
+
+  /** Quita separadores de miles y espacios para comparar valores numéricos. */
+  private normalizarNumero(valor: string): string {
+    return valor.replace(/[,\s]/g, '').toLowerCase();
+  }
+
+  hayFiltrosSeguimiento(): boolean {
+    return !!(
+      this.segFiltroProveedor() || this.segFiltroConcepto() || this.segFiltroTipo()
+      || this.segFiltroValor() || this.segFiltroFecha() || this.segFiltroEstadoTexto()
+    );
+  }
+
+  limpiarFiltrosSeguimiento(): void {
+    this.segFiltroProveedor.set('');
+    this.segFiltroConcepto.set('');
+    this.segFiltroTipo.set('');
+    this.segFiltroValor.set('');
+    this.segFiltroFecha.set('');
+    this.segFiltroEstadoTexto.set('');
   }
 
   etiquetaEstado(estado: number): { texto: string; clase: string } {
