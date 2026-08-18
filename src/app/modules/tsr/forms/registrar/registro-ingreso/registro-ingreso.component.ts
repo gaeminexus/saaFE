@@ -8,6 +8,7 @@ import {
   MotivoDialogComponent,
   MotivoDialogData,
 } from '../../../../../shared/components/motivo-dialog/motivo-dialog.component';
+import { GrupoProductoSelectorDialogComponent } from '../../../../../shared/components/grupo-producto-selector-dialog/grupo-producto-selector-dialog.component';
 import { TitularSelectorDialogComponent } from '../../../../../shared/components/titular-selector-dialog/titular-selector-dialog.component';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
@@ -66,9 +67,6 @@ export class RegistroIngresoComponent implements OnInit {
   regCuentaBancaria: CuentaBancaria | null = null;
   regIdGrupo: number | null = null;
   regGrupo: GrupoProductoCobro | null = null;
-  /** Texto tecleado en el autocompletado; pasa a ser el grupo al elegir opción. */
-  grupoFiltro: string | GrupoProductoCobro = '';
-  gruposFiltrados: GrupoProductoCobro[] = [];
   regIdProducto: number | null = null;
   regTitular = signal<Titular | null>(null);
   regDescripcion = '';
@@ -125,14 +123,8 @@ export class RegistroIngresoComponent implements OnInit {
     });
 
     this.grupoProductoS.getAll().subscribe({
-      next: (data) => {
-        this.gruposProducto.set((data ?? []).filter((g) => g.estado === 1));
-        this.gruposFiltrados = this.gruposProducto();
-      },
-      error: () => {
-        this.gruposProducto.set([]);
-        this.gruposFiltrados = [];
-      },
+      next: (data) => this.gruposProducto.set((data ?? []).filter((g) => g.estado === 1)),
+      error: () => this.gruposProducto.set([]),
     });
 
     this.productoS.getAll().subscribe({
@@ -154,48 +146,36 @@ export class RegistroIngresoComponent implements OnInit {
     this.regIdProducto = null;
   }
 
-  /** Busca el grupo por nombre o por la cuenta contable (número o nombre). */
-  filtrarGrupos(): void {
-    // Mientras se teclea no hay grupo elegido: obliga a seleccionar una opción.
-    if (this.regIdGrupo != null) {
-      this.regGrupo = null;
-      this.regIdGrupo = null;
+  /**
+   * Abre el selector de grupo con búsqueda por número de cuenta contable o por
+   * nombre. Al elegir uno se limpia el producto (depende del grupo).
+   */
+  buscarGrupo(): void {
+    this.dialog.open(GrupoProductoSelectorDialogComponent, {
+      width: '760px',
+      maxWidth: '98vw',
+      data: { grupos: this.gruposProducto(), titulo: 'Buscar Grupo de producto (CXC)' },
+    }).afterClosed().subscribe((grupo) => {
+      if (!grupo) return;
+      this.regGrupo = grupo as GrupoProductoCobro;
+      this.regIdGrupo = grupo.codigo;
       this.onCambioGrupo();
-    }
-
-    const q = (typeof this.grupoFiltro === 'string' ? this.grupoFiltro : '').trim().toLowerCase();
-    const grupos = this.gruposProducto();
-    this.gruposFiltrados = q
-      ? grupos.filter(
-          (g) =>
-            g.nombre?.toLowerCase().includes(q) ||
-            g.planCuenta?.cuentaContable?.toLowerCase().includes(q) ||
-            g.planCuenta?.nombre?.toLowerCase().includes(q)
-        )
-      : grupos;
-  }
-
-  onGrupoSeleccionado(grupo: GrupoProductoCobro): void {
-    this.regGrupo = grupo;
-    this.regIdGrupo = grupo.codigo;
-    this.grupoFiltro = grupo;
-    this.onCambioGrupo();
+    });
   }
 
   quitarGrupo(): void {
     this.regGrupo = null;
     this.regIdGrupo = null;
-    this.grupoFiltro = '';
-    this.gruposFiltrados = this.gruposProducto();
     this.onCambioGrupo();
   }
 
-  /** En el campo queda la cuenta contable del grupo, que es lo que se contabiliza. */
-  displayGrupo = (g: GrupoProductoCobro | string): string => {
-    if (!g) return '';
-    if (typeof g === 'string') return g;
-    return g.planCuenta?.cuentaContable ?? g.nombre ?? '';
-  };
+  /** Etiqueta del grupo: número de cuenta contable + nombre. */
+  etiquetaGrupo(grupo: GrupoProductoCobro | null): string {
+    if (!grupo) return '';
+    const cuenta = grupo.planCuenta?.cuentaContable?.trim();
+    const nombre = String(grupo.nombre ?? '');
+    return cuenta ? `${cuenta} — ${nombre}` : `${nombre}`;
+  }
 
   /** El titular es opcional: solo deja constancia de quién originó el dinero. */
   buscarTitular(): void {

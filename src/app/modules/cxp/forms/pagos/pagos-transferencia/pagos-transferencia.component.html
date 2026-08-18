@@ -607,21 +607,95 @@
       <mat-card class="panel">
         <mat-card-content>
 
-          <div class="fila-campos">
-            <mat-form-field appearance="outline">
-              <mat-label>Estado</mat-label>
-              <mat-select [(ngModel)]="segEstado" name="segEstado" (selectionChange)="cargarSeguimiento()">
-                <mat-option [value]="null">Todos</mat-option>
-                @for (e of estadosFiltro; track e.valor) {
-                  <mat-option [value]="e.valor">{{ e.texto }}</mat-option>
+          <div class="panel-filtros">
+            <div class="fila-filtros">
+              <!-- Proveedor: mismo diálogo de búsqueda del registro -->
+              <mat-form-field appearance="outline" class="f-proveedor">
+                <mat-label>Proveedor</mat-label>
+                <input matInput readonly [value]="nombreProveedorFiltro()"
+                       placeholder="Todos los proveedores" (click)="buscarProveedorFiltro()" />
+                @if (segProveedorFiltro()) {
+                  <button mat-icon-button matSuffix type="button" matTooltip="Quitar proveedor"
+                          (click)="quitarProveedorFiltro(); $event.stopPropagation()">
+                    <mat-icon>close</mat-icon>
+                  </button>
+                } @else {
+                  <button mat-icon-button matSuffix type="button" matTooltip="Buscar proveedor"
+                          (click)="buscarProveedorFiltro()">
+                    <mat-icon>search</mat-icon>
+                  </button>
                 }
-              </mat-select>
-            </mat-form-field>
+              </mat-form-field>
 
-            <button mat-stroked-button class="btn-consultar" (click)="cargarSeguimiento()">
-              <mat-icon>refresh</mat-icon>
-              Actualizar
-            </button>
+              <!-- Tipo de pago: multiselección -->
+              <mat-form-field appearance="outline" class="f-tipo">
+                <mat-label>Tipo de pago</mat-label>
+                <mat-select [ngModel]="segTiposPago()" (ngModelChange)="segTiposPago.set($event)"
+                            name="segTiposPago" multiple>
+                  @for (t of tiposPagoFiltro; track t.valor) {
+                    <mat-option [value]="t.valor">{{ t.texto }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+
+              <!-- Estado (recarga desde el servidor) -->
+              <mat-form-field appearance="outline" class="f-estado">
+                <mat-label>Estado</mat-label>
+                <mat-select [(ngModel)]="segEstado" name="segEstado" (selectionChange)="cargarSeguimiento()">
+                  <mat-option [value]="null">Todos</mat-option>
+                  @for (e of estadosFiltro; track e.valor) {
+                    <mat-option [value]="e.valor">{{ e.texto }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+            </div>
+
+            <div class="fila-filtros">
+              <!-- Rango de fechas programadas -->
+              <mat-form-field appearance="outline" class="f-fecha">
+                <mat-label>Fecha desde</mat-label>
+                <input matInput [matDatepicker]="pickerSegDesde"
+                       [ngModel]="segFechaDesde()" (ngModelChange)="segFechaDesde.set($event)"
+                       name="segFechaDesde" />
+                <mat-datepicker-toggle matSuffix [for]="pickerSegDesde"></mat-datepicker-toggle>
+                <mat-datepicker #pickerSegDesde></mat-datepicker>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="f-fecha">
+                <mat-label>Fecha hasta</mat-label>
+                <input matInput [matDatepicker]="pickerSegHasta"
+                       [ngModel]="segFechaHasta()" (ngModelChange)="segFechaHasta.set($event)"
+                       name="segFechaHasta" />
+                <mat-datepicker-toggle matSuffix [for]="pickerSegHasta"></mat-datepicker-toggle>
+                <mat-datepicker #pickerSegHasta></mat-datepicker>
+              </mat-form-field>
+
+              <!-- Concepto: búsqueda de texto libre -->
+              <mat-form-field appearance="outline" class="f-concepto">
+                <mat-label>Concepto</mat-label>
+                <input matInput [ngModel]="segConcepto()" (ngModelChange)="segConcepto.set($event)"
+                       name="segConcepto" placeholder="Buscar en el concepto…" />
+                @if (segConcepto()) {
+                  <button mat-icon-button matSuffix type="button" matTooltip="Limpiar"
+                          (click)="segConcepto.set('')">
+                    <mat-icon>close</mat-icon>
+                  </button>
+                }
+              </mat-form-field>
+            </div>
+
+            <div class="acciones-filtros">
+              @if (hayFiltrosSeguimiento()) {
+                <button mat-stroked-button (click)="limpiarFiltrosSeguimiento()">
+                  <mat-icon>filter_alt_off</mat-icon>
+                  Limpiar filtros
+                </button>
+              }
+              <button mat-stroked-button class="btn-consultar" (click)="cargarSeguimiento()">
+                <mat-icon>refresh</mat-icon>
+                Actualizar
+              </button>
+            </div>
           </div>
 
           @if (segError()) {
@@ -685,66 +759,6 @@
                   </td>
                 </ng-container>
 
-                <!-- ── Fila de filtros por columna ── -->
-                <ng-container matColumnDef="proveedor-filtro">
-                  <th mat-header-cell *matHeaderCellDef>
-                    <input class="filtro-col" placeholder="Filtrar proveedor"
-                           [value]="segFiltroProveedor()"
-                           (input)="segFiltroProveedor.set($any($event.target).value)" />
-                  </th>
-                </ng-container>
-
-                <ng-container matColumnDef="factura-filtro">
-                  <th mat-header-cell *matHeaderCellDef>
-                    <input class="filtro-col" placeholder="Filtrar concepto"
-                           [value]="segFiltroConcepto()"
-                           (input)="segFiltroConcepto.set($any($event.target).value)" />
-                  </th>
-                </ng-container>
-
-                <ng-container matColumnDef="tipo-filtro">
-                  <th mat-header-cell *matHeaderCellDef>
-                    <input class="filtro-col" placeholder="Filtrar tipo"
-                           [value]="segFiltroTipo()"
-                           (input)="segFiltroTipo.set($any($event.target).value)" />
-                  </th>
-                </ng-container>
-
-                <ng-container matColumnDef="valor-filtro">
-                  <th mat-header-cell *matHeaderCellDef class="col-monto">
-                    <input class="filtro-col" placeholder="Filtrar valor"
-                           [value]="segFiltroValor()"
-                           (input)="segFiltroValor.set($any($event.target).value)" />
-                  </th>
-                </ng-container>
-
-                <ng-container matColumnDef="fechaProgramada-filtro">
-                  <th mat-header-cell *matHeaderCellDef>
-                    <input class="filtro-col" placeholder="dd/mm/aaaa"
-                           [value]="segFiltroFecha()"
-                           (input)="segFiltroFecha.set($any($event.target).value)" />
-                  </th>
-                </ng-container>
-
-                <ng-container matColumnDef="estado-filtro">
-                  <th mat-header-cell *matHeaderCellDef>
-                    <input class="filtro-col" placeholder="Filtrar estado"
-                           [value]="segFiltroEstadoTexto()"
-                           (input)="segFiltroEstadoTexto.set($any($event.target).value)" />
-                  </th>
-                </ng-container>
-
-                <ng-container matColumnDef="acciones-filtro">
-                  <th mat-header-cell *matHeaderCellDef class="col-acciones">
-                    @if (hayFiltrosSeguimiento()) {
-                      <button mat-icon-button matTooltip="Limpiar filtros"
-                              (click)="limpiarFiltrosSeguimiento()">
-                        <mat-icon>filter_alt_off</mat-icon>
-                      </button>
-                    }
-                  </th>
-                </ng-container>
-
                 <ng-container matColumnDef="acciones">
                   <th mat-header-cell *matHeaderCellDef class="col-acciones">Acciones</th>
                   <td mat-cell *matCellDef="let p" class="col-acciones">
@@ -779,7 +793,6 @@
                 </ng-container>
 
                 <tr mat-header-row *matHeaderRowDef="columnasSeguimiento"></tr>
-                <tr mat-header-row *matHeaderRowDef="columnasSeguimientoFiltro" class="fila-filtros"></tr>
                 <tr mat-row *matRowDef="let row; columns: columnasSeguimiento"></tr>
               </table>
             </div>

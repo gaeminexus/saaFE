@@ -138,19 +138,20 @@ export class PagosTransferenciaComponent implements OnInit {
   /** Pago cuyo PDF de asiento se está generando; null si no hay ninguno. */
   imprimiendoAsiento = signal<number | null>(null);
   readonly columnasSeguimiento = ['proveedor', 'factura', 'tipo', 'valor', 'fechaProgramada', 'estado', 'acciones'];
-  /** Segunda fila de cabecera: un input de filtro por cada columna. */
-  readonly columnasSeguimientoFiltro = [
-    'proveedor-filtro', 'factura-filtro', 'tipo-filtro', 'valor-filtro',
-    'fechaProgramada-filtro', 'estado-filtro', 'acciones-filtro',
-  ];
 
-  // ─── Filtros por columna del seguimiento (búsqueda en cliente) ─────────
-  segFiltroProveedor = signal('');
-  segFiltroConcepto = signal('');
-  segFiltroTipo = signal('');
-  segFiltroValor = signal('');
-  segFiltroFecha = signal('');
-  segFiltroEstadoTexto = signal('');
+  // ─── Filtros del seguimiento (panel superior, búsqueda en cliente) ─────
+  /** Proveedor elegido con el diálogo de búsqueda (o null = todos). */
+  segProveedorFiltro = signal<Titular | null>(null);
+  segConcepto = signal('');
+  /** Tipos de pago marcados en el combo multiselección (0 = transferencia, 1 = débito). */
+  segTiposPago = signal<number[]>([]);
+  segFechaDesde = signal<Date | null>(null);
+  segFechaHasta = signal<Date | null>(null);
+  /** Opciones del combo de tipo de pago (multiselección). */
+  readonly tiposPagoFiltro = [
+    { valor: 0, texto: 'Transferencia' },
+    { valor: 1, texto: 'Débito automático' },
+  ];
 
   readonly estadosFiltro = [
     { valor: EstadoPagoProgramado.REGISTRADO, texto: 'Registrado' },
@@ -880,54 +881,86 @@ export class PagosTransferenciaComponent implements OnInit {
     });
   }
 
-  /** Texto de la columna Tipo; se reutiliza en la celda y en su filtro. */
+  /** Texto de la columna Tipo; se reutiliza en la celda y en el filtro. */
   textoTipo(pago: PagoProgramado): string {
     return this.esDebitoAutomatico(pago) ? 'Débito automático' : 'Transferencia';
   }
 
+  /** Nombre del proveedor elegido en el filtro (chip del panel superior). */
+  nombreProveedorFiltro(): string {
+    const t = this.segProveedorFiltro();
+    if (!t) return '';
+    return t.razonSocial || t.nombre || t.identificacion || `Titular ${t.codigo}`;
+  }
+
+  /** Abre el mismo diálogo de proveedores para acotar el seguimiento. */
+  buscarProveedorFiltro(): void {
+    this.dialog.open(TitularSelectorDialogComponent, {
+      width: '1100px',
+      maxWidth: '98vw',
+      data: { rolCodigo: this.ROL_PROVEEDOR, rolNombre: 'PROVEEDOR', titulo: 'Buscar Proveedor' },
+    }).afterClosed().subscribe((titular: Titular | null) => {
+      if (titular) this.segProveedorFiltro.set(titular);
+    });
+  }
+
+  quitarProveedorFiltro(): void {
+    this.segProveedorFiltro.set(null);
+  }
+
   /**
-   * Pagos del seguimiento con los filtros por columna aplicados. El backend
-   * devuelve todo el conjunto (no hay paginación server-side), así que el
-   * filtrado por campo se hace en cliente sobre el mismo texto que se muestra.
+   * Pagos del seguimiento con los filtros del panel superior aplicados. El
+   * backend devuelve todo el conjunto (no hay paginación server-side), así que
+   * el filtrado se hace en cliente sobre lo ya cargado.
    */
   pagosSeguimientoFiltrados = computed<PagoProgramado[]>(() => {
-    const proveedor = this.segFiltroProveedor().trim().toLowerCase();
-    const concepto = this.segFiltroConcepto().trim().toLowerCase();
-    const tipo = this.segFiltroTipo().trim().toLowerCase();
-    const valor = this.normalizarNumero(this.segFiltroValor());
-    const fecha = this.segFiltroFecha().trim().toLowerCase();
-    const estado = this.segFiltroEstadoTexto().trim().toLowerCase();
+    const proveedor = this.segProveedorFiltro();
+    const concepto = this.segConcepto().trim().toLowerCase();
+    const tipos = this.segTiposPago();
+    const desde = this.aInicioDia(this.segFechaDesde());
+    const hasta = this.aFinDia(this.segFechaHasta());
 
     return this.pagosSeguimiento().filter((p) => {
-      if (proveedor && !(p.titular?.nombre ?? '').toLowerCase().includes(proveedor)) return false;
+      if (proveedor && p.titular?.codigo !== proveedor.codigo) return false;
       if (concepto && !this.conceptoPago(p).toLowerCase().includes(concepto)) return false;
-      if (tipo && !this.textoTipo(p).toLowerCase().includes(tipo)) return false;
-      if (valor && !this.normalizarNumero(String(p.valor ?? '')).includes(valor)) return false;
-      if (fecha && !this.formatearFecha(p.fechaProgramada).toLowerCase().includes(fecha)) return false;
-      if (estado && !this.etiquetaEstado(p.estado).texto.toLowerCase().includes(estado)) return false;
+      if (tipos.length && !tipos.includes(this.esDebitoAutomatico(p) ? 1 : 0)) return false;
+      if (desde || hasta) {
+        const f = this.funcionesDatos.convertirFechaDesdeBackend(p.fechaProgramada);
+        if (!f) return false;
+        if (desde && f < desde) return false;
+        if (hasta && f > hasta) return false;
+      }
       return true;
     });
   });
 
-  /** Quita separadores de miles y espacios para comparar valores numéricos. */
-  private normalizarNumero(valor: string): string {
-    return valor.replace(/[,\s]/g, '').toLowerCase();
+  private aInicioDia(fecha: Date | null): Date | null {
+    if (!fecha) return null;
+    const d = new Date(fecha);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }
+
+  private aFinDia(fecha: Date | null): Date | null {
+    if (!fecha) return null;
+    const d = new Date(fecha);
+    d.setHours(23, 59, 59, 999);
+    return d;
   }
 
   hayFiltrosSeguimiento(): boolean {
     return !!(
-      this.segFiltroProveedor() || this.segFiltroConcepto() || this.segFiltroTipo()
-      || this.segFiltroValor() || this.segFiltroFecha() || this.segFiltroEstadoTexto()
+      this.segProveedorFiltro() || this.segConcepto().trim() || this.segTiposPago().length
+      || this.segFechaDesde() || this.segFechaHasta()
     );
   }
 
   limpiarFiltrosSeguimiento(): void {
-    this.segFiltroProveedor.set('');
-    this.segFiltroConcepto.set('');
-    this.segFiltroTipo.set('');
-    this.segFiltroValor.set('');
-    this.segFiltroFecha.set('');
-    this.segFiltroEstadoTexto.set('');
+    this.segProveedorFiltro.set(null);
+    this.segConcepto.set('');
+    this.segTiposPago.set([]);
+    this.segFechaDesde.set(null);
+    this.segFechaHasta.set(null);
   }
 
   etiquetaEstado(estado: number): { texto: string; clase: string } {

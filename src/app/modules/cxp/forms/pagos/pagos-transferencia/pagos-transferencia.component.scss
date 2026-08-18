@@ -24,32 +24,44 @@
     margin: -0.35rem 0 1rem;
   }
 
-  // Segunda fila de cabecera del seguimiento: un buscador por columna.
-  tr.fila-filtros th {
-    padding-top: 0.25rem;
-    padding-bottom: 0.5rem;
-    vertical-align: top;
-  }
+  // Panel de filtros del seguimiento (parte superior).
+  .panel-filtros {
+    padding: 0.85rem 1rem 0.4rem;
+    margin-bottom: 0.75rem;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
 
-  .filtro-col {
-    width: 100%;
-    box-sizing: border-box;
-    border: 1px solid #cbd5e1;
-    border-radius: 4px;
-    padding: 4px 8px;
-    font-size: 0.82rem;
-    font-weight: 400;
-    outline: none;
-    background: #fff;
-    color: #334155;
+    .fila-filtros {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem 1rem;
 
-    &:focus {
-      border-color: #1976d2;
+      mat-form-field {
+        flex: 1 1 220px;
+      }
+
+      .f-proveedor {
+        flex: 2 1 320px;
+      }
+
+      .f-tipo,
+      .f-estado,
+      .f-fecha {
+        flex: 1 1 180px;
+      }
+
+      .f-concepto {
+        flex: 2 1 300px;
+      }
     }
 
-    &::placeholder {
-      color: #94a3b8;
-      font-weight: 400;
+    .acciones-filtros {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 0.6rem;
+      margin-top: 0.15rem;
     }
   }
 

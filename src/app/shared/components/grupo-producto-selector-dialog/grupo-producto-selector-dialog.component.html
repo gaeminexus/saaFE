@@ -1,0 +1,45 @@
+<h2 mat-dialog-title>{{ data.titulo || 'Buscar Grupo de producto (CXP)' }}</h2>
+
+<mat-dialog-content class="contenido-dialogo">
+  <mat-form-field class="filtro" appearance="outline">
+    <mat-label>Buscar por número de cuenta o nombre</mat-label>
+    <input matInput [formControl]="filtroControl" placeholder="Ej. 1.4.90 o Seguro prestamos" />
+    <button mat-icon-button matSuffix aria-label="Buscar">
+      <mat-icon>search</mat-icon>
+    </button>
+  </mat-form-field>
+
+  <div class="tabla-contenedor">
+    <table mat-table [dataSource]="dataSource" class="mat-elevation-z1">
+      <ng-container matColumnDef="cuenta">
+        <th mat-header-cell *matHeaderCellDef>Cuenta contable</th>
+        <td mat-cell *matCellDef="let row">{{ cuentaContable(row) }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="nombre">
+        <th mat-header-cell *matHeaderCellDef>Grupo</th>
+        <td mat-cell *matCellDef="let row">{{ row.nombre }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="acciones">
+        <th mat-header-cell *matHeaderCellDef>Acción</th>
+        <td mat-cell *matCellDef="let row">
+          <button mat-flat-button color="primary" (click)="seleccionar(row)">
+            Seleccionar
+          </button>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="columnas"></tr>
+      <tr mat-row *matRowDef="let row; columns: columnas"></tr>
+    </table>
+
+    @if (grupos().length === 0) {
+      <div class="sin-datos">No hay grupos para el criterio ingresado.</div>
+    }
+  </div>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="cerrar()">Cerrar</button>
+</mat-dialog-actions>

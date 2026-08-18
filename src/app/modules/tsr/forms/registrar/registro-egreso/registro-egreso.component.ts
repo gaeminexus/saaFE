@@ -9,6 +9,7 @@ import {
   MotivoDialogComponent,
   MotivoDialogData,
 } from '../../../../../shared/components/motivo-dialog/motivo-dialog.component';
+import { GrupoProductoSelectorDialogComponent } from '../../../../../shared/components/grupo-producto-selector-dialog/grupo-producto-selector-dialog.component';
 import { TitularSelectorDialogComponent } from '../../../../../shared/components/titular-selector-dialog/titular-selector-dialog.component';
 import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
@@ -76,10 +77,11 @@ export class RegistroEgresoComponent implements OnInit {
   // ─── a) Registrar ──────────────────────────────────────
   regCuentaOrigen: CuentaBancaria | null = null;
   regIdGrupo: number | null = null;
+  /** Grupo elegido en el diálogo; se conserva para mostrar cuenta + nombre. */
+  regGrupo: GrupoProductoPago | null = null;
   regIdProducto: number | null = null;
   /** Filtros de texto de los combos largos (buscador interno del mat-select). */
   filtroCuentaOrigen = '';
-  filtroGrupo = '';
   filtroProducto = '';
   regBeneficiario = signal<Titular | null>(null);
   /** Cuentas CTBN del beneficiario: el archivo del banco necesita el destino. */
@@ -123,12 +125,12 @@ export class RegistroEgresoComponent implements OnInit {
     return lista.filter((c) => this.etiquetaCuenta(c).toLowerCase().includes(q));
   }
 
-  /** Grupos de producto ya aplicado el buscador interno del combo. */
-  get gruposFiltrados(): GrupoProductoPago[] {
-    const q = this.filtroGrupo.trim().toLowerCase();
-    const lista = this.gruposProducto();
-    if (!q) return lista;
-    return lista.filter((g) => (g.nombre ?? '').toLowerCase().includes(q));
+  /** Etiqueta del grupo: número de cuenta contable + nombre. */
+  etiquetaGrupo(grupo: GrupoProductoPago | null): string {
+    if (!grupo) return '';
+    const cuenta = grupo.planCuenta?.cuentaContable?.trim();
+    const nombre = String(grupo.nombre ?? '');
+    return cuenta ? `${cuenta} — ${nombre}` : `${nombre}`;
   }
 
   // ─── b) Consulta ───────────────────────────────────────
@@ -211,9 +213,22 @@ export class RegistroEgresoComponent implements OnInit {
 
   // ═══ a) REGISTRAR ═══════════════════════════════════════
 
-  onCambioGrupo(): void {
-    this.regIdProducto = null;
-    this.filtroProducto = '';
+  /**
+   * Abre el selector de grupo con búsqueda por número de cuenta contable o por
+   * nombre. Al elegir uno se limpia el producto (depende del grupo).
+   */
+  buscarGrupo(): void {
+    this.dialog.open(GrupoProductoSelectorDialogComponent, {
+      width: '760px',
+      maxWidth: '98vw',
+      data: { grupos: this.gruposProducto() },
+    }).afterClosed().subscribe((grupo) => {
+      if (!grupo) return;
+      this.regGrupo = grupo as GrupoProductoPago;
+      this.regIdGrupo = grupo.codigo;
+      this.regIdProducto = null;
+      this.filtroProducto = '';
+    });
   }
 
   /**

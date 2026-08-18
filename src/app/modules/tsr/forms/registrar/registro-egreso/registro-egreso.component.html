@@ -103,23 +103,12 @@
           <div class="fila-campos">
             <mat-form-field appearance="outline">
               <mat-label>Grupo de producto (CXP)</mat-label>
-              <mat-select [(ngModel)]="regIdGrupo" name="regIdGrupo" (selectionChange)="onCambioGrupo()"
-                          panelClass="select-con-buscador"
-                          (openedChange)="!$event && (filtroGrupo = '')">
-                <mat-option class="select-search-option"
-                            (mousedown)="$event.preventDefault(); $event.stopPropagation()"
-                            (click)="$event.stopPropagation()">
-                  <input class="select-search-input" placeholder="Buscar grupo..."
-                         [value]="filtroGrupo"
-                         (mousedown)="$event.stopPropagation()"
-                         (click)="$event.stopPropagation()"
-                         (keydown)="$event.stopPropagation()"
-                         (input)="filtroGrupo = $any($event.target).value" />
-                </mat-option>
-                @for (g of gruposFiltrados; track g.codigo) {
-                  <mat-option [value]="g.codigo">{{ g.nombre }}</mat-option>
-                }
-              </mat-select>
+              <input matInput readonly [value]="etiquetaGrupo(regGrupo)"
+                     placeholder="Busque por número de cuenta o nombre" (click)="buscarGrupo()" />
+              <button mat-icon-button matSuffix type="button" matTooltip="Buscar grupo de producto"
+                      (click)="buscarGrupo()">
+                <mat-icon>search</mat-icon>
+              </button>
               <mat-hint>Define la cuenta contable del gasto</mat-hint>
             </mat-form-field>
 
