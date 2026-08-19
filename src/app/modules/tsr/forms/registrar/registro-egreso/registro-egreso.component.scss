@@ -17,6 +17,48 @@
     margin: -0.35rem 0 1rem;
   }
 
+  // Panel de filtros de la consulta (parte superior), igual que en Seguimiento
+  // de Pagos por transferencia.
+  .panel-filtros {
+    padding: 0.85rem 1rem 0.4rem;
+    margin-bottom: 0.75rem;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+
+    .fila-filtros {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem 1rem;
+
+      mat-form-field {
+        flex: 1 1 220px;
+      }
+
+      .f-beneficiario {
+        flex: 2 1 320px;
+      }
+
+      .f-tipo,
+      .f-estado,
+      .f-fecha {
+        flex: 1 1 180px;
+      }
+
+      .f-concepto {
+        flex: 2 1 300px;
+      }
+    }
+
+    .acciones-filtros {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 0.6rem;
+      margin-top: 0.15rem;
+    }
+  }
+
   .hint-error {
     color: #b91c1c;
     font-weight: 500;

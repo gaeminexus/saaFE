@@ -10,9 +10,11 @@ import { TipoDatosBusqueda as TipoDatos } from '../../../../../shared/model/dato
 import { TitularSelectorDialogComponent } from '../../../../../shared/components/titular-selector-dialog/titular-selector-dialog.component';
 import { Titular } from '../../../model/titular';
 import { CuentaBancaria } from '../../../model/cuenta-bancaria';
+import { CuentaBancariaTitular } from '../../../model/cuenta-bancaria-titular';
 import { PersonaCuentaContableService } from '../../../service/persona-cuenta-contable.service';
 import { PersonaRolService } from '../../../service/persona-rol.service';
 import { CuentaBancariaService } from '../../../service/cuenta-bancaria.service';
+import { CuentaBancariaTitularService } from '../../../service/cuenta-bancaria-titular.service';
 import { AnticipoService } from '../../../service/anticipo.service';
 import { JasperReportesService } from '../../../../../shared/services/jasper-reportes.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -30,6 +32,7 @@ export class AnticiposProveedoresComponent {
   private personaRolS = inject(PersonaRolService);
   private cuentaContableS = inject(PersonaCuentaContableService);
   private cuentaBancariaS = inject(CuentaBancariaService);
+  private cuentaTitularS = inject(CuentaBancariaTitularService);
   private anticipoS = inject(AnticipoService);
   private jasperReportes = inject(JasperReportesService);
   private snackBar = inject(MatSnackBar);
@@ -51,6 +54,9 @@ export class AnticiposProveedoresComponent {
   errorProceso = signal<string>('');
   exitoProceso = signal<string>('');
   cuentasBancarias = signal<CuentaBancaria[]>([]);
+  // Cuentas bancarias del proveedor (tabla CTBN) hacia donde se transfiere el anticipo
+  cuentasDestino = signal<CuentaBancariaTitular[]>([]);
+  cargandoCuentasDestino = signal(false);
 
   // Lista de anticipos
   listaAnticipos = signal<any[]>([]);
@@ -59,6 +65,7 @@ export class AnticiposProveedoresComponent {
 
   formValor = '';
   formCuentaBancaria: CuentaBancaria | null = null;
+  formCuentaDestino: number | null = null;
   formFecha: Date | null = new Date();
   formNumeroDoc = '';
   formObservacion = '';
@@ -169,11 +176,55 @@ export class AnticiposProveedoresComponent {
     this.exitoProceso.set('');
     this.formValor = '';
     this.formCuentaBancaria = null;
+    this.formCuentaDestino = null;
     this.formFecha = new Date();
     this.formNumeroDoc = '';
     this.formObservacion = '';
     this.mostrarFormulario.set(true);
     this.cargarCuentasBancarias();
+    this.cargarCuentasDestino();
+  }
+
+  /**
+   * Cuentas bancarias del proveedor (tabla CTBN). El backend las exige para
+   * incluir el pago del anticipo en el archivo del banco (salvo débito
+   * automático); sin una cuenta de destino /antp/procesar es rechazado.
+   */
+  private cargarCuentasDestino(): void {
+    this.cuentasDestino.set([]);
+    this.formCuentaDestino = null;
+    const titular = this.titularSeleccionado();
+    if (!titular) return;
+
+    this.cargandoCuentasDestino.set(true);
+    const criterio = new DatosBusqueda();
+    criterio.asignaValorConCampoPadre(
+      TipoDatos.LONG, 'titular', 'codigo',
+      titular.codigo.toString(), TipoComandosBusqueda.IGUAL,
+    );
+
+    this.cuentaTitularS.selectByCriteria([criterio]).subscribe({
+      next: (data) => {
+        this.cargandoCuentasDestino.set(false);
+        // El estado nulo se trata como activo: hay cuentas antiguas sin CTBNESTD.
+        const activas = (data ?? []).filter((c) => c.estado == null || Number(c.estado) !== 0);
+        this.cuentasDestino.set(activas);
+        // Con una sola cuenta no hay nada que elegir.
+        if (activas.length === 1) this.formCuentaDestino = activas[0].codigo;
+      },
+      error: () => {
+        this.cargandoCuentasDestino.set(false);
+        this.cuentasDestino.set([]);
+        this.snackBar.open('No se pudieron consultar las cuentas bancarias del proveedor.', 'Cerrar', { duration: 5000 });
+      },
+    });
+  }
+
+  etiquetaCuentaDestino(cuenta: CuentaBancariaTitular): string {
+    const banco = (cuenta.banco as any)?.nombre ?? 'Banco';
+    const tipo = Number(cuenta.tipoCuenta) === 1 ? 'Corriente'
+      : Number(cuenta.tipoCuenta) === 2 ? 'Ahorros' : '';
+    return `${banco} — ${cuenta.numeroCuenta}${tipo ? ` (${tipo})` : ''}`;
   }
 
   cerrarFormulario(): void {
@@ -243,6 +294,10 @@ export class AnticiposProveedoresComponent {
       this.errorProceso.set('El valor debe ser un número mayor a cero.');
       return;
     }
+    if (!this.formCuentaDestino) {
+      this.errorProceso.set('Seleccione la cuenta bancaria del proveedor para el pago.');
+      return;
+    }
 
     const idEmpresa = +(sessionStorage.getItem('idEmpresa') || localStorage.getItem('idEmpresa') || '0');
     const idUsuario = +(sessionStorage.getItem('idUsuario') || localStorage.getItem('idUsuario') || '0');
@@ -254,6 +309,7 @@ export class AnticiposProveedoresComponent {
       idTitular: titular.codigo,
       valor,
       idCuentaBancaria: this.formCuentaBancaria.codigo,
+      idCuentaDestinoTitular: this.formCuentaDestino,
       idEmpresa,
       idUsuario,
       fechaAnticipo: fecha,

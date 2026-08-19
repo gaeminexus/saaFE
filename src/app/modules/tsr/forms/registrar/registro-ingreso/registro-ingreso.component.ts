@@ -261,6 +261,16 @@ export class RegistroIngresoComponent implements OnInit {
     this.regFecha = new Date();
   }
 
+  /** Empieza un registro nuevo desde cero: borra todo, incluidos cuenta y grupo. */
+  nuevo(): void {
+    this.limpiar();
+    this.regCuentaBancaria = null;
+    this.regGrupo = null;
+    this.regIdGrupo = null;
+    this.regError.set('');
+    this.regExito.set('');
+  }
+
   // ═══ b) CONSULTA ════════════════════════════════════════
 
   cargarIngresos(): void {

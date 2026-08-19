@@ -7,6 +7,8 @@ export interface AnticipoRequest {
   idTitular: number;
   valor: number;
   idCuentaBancaria: number;
+  /** Cuenta bancaria del proveedor (CTBN) hacia donde se transfiere el anticipo. */
+  idCuentaDestinoTitular?: number;
   idEmpresa: number;
   idUsuario: number;
   fechaAnticipo: string;

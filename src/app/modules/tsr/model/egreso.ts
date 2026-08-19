@@ -44,6 +44,8 @@ export interface Egreso {
   fecha: any;
   /** Ver {@link EstadoEgresoTesoreria}. */
   estado: number;
+  /** 0 = transferencia, 1 = débito automático (columna EGRSDBAT). */
+  debitoAutomatico?: number | null;
   /** Asiento del pago; nulo mientras el egreso está pendiente. */
   asiento?: Asiento | null;
   observacion?: string | null;

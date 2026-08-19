@@ -137,9 +137,9 @@
           }
 
           <div class="acciones">
-            <button mat-stroked-button type="button" (click)="limpiar()">
-              <mat-icon>clear</mat-icon>
-              Limpiar
+            <button mat-stroked-button type="button" (click)="nuevo()">
+              <mat-icon>add</mat-icon>
+              Nuevo
             </button>
             <button mat-raised-button class="btn-confirmar" [disabled]="!puedeRegistrar" (click)="registrar()">
               @if (registrando()) {

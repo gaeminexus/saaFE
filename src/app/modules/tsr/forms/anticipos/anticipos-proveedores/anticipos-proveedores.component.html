@@ -83,13 +83,29 @@
           </mat-form-field>
 
           <mat-form-field appearance="outline">
-            <mat-label>Cuenta Bancaria *</mat-label>
+            <mat-label>Cuenta Bancaria (Origen) *</mat-label>
             <mat-select [(ngModel)]="formCuentaBancaria">
               <mat-option [value]="null">-- Seleccione --</mat-option>
               @for (cb of cuentasBancarias(); track cb.codigo) {
                 <mat-option [value]="cb">{{ cb.numeroCuenta }} — {{ $any(cb.banco)?.nombre }}</mat-option>
               }
             </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Cuenta Bancaria del Proveedor *</mat-label>
+            <mat-select [(ngModel)]="formCuentaDestino"
+                        [disabled]="cargandoCuentasDestino() || cuentasDestino().length === 0">
+              <mat-option [value]="null">-- Seleccione --</mat-option>
+              @for (cd of cuentasDestino(); track cd.codigo) {
+                <mat-option [value]="cd.codigo">{{ etiquetaCuentaDestino(cd) }}</mat-option>
+              }
+            </mat-select>
+            @if (cargandoCuentasDestino()) {
+              <mat-hint>Cargando cuentas del proveedor…</mat-hint>
+            } @else if (cuentasDestino().length === 0) {
+              <mat-hint class="hint-warn">El proveedor no tiene cuentas bancarias registradas.</mat-hint>
+            }
           </mat-form-field>
 
           <mat-form-field appearance="outline">

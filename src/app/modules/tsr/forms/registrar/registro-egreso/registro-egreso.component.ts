@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -139,12 +139,26 @@ export class RegistroEgresoComponent implements OnInit {
   cargandoConsulta = signal(false);
   conError = signal('');
   readonly columnasConsulta = [
-    'fecha', 'descripcion', 'beneficiario', 'producto', 'valor', 'asiento', 'estado', 'acciones',
+    'fecha', 'descripcion', 'beneficiario', 'producto', 'tipo', 'valor', 'asiento', 'estado', 'acciones',
   ];
   readonly estadosFiltro = [
     { valor: EstadoEgresoTesoreria.PENDIENTE_PAGO, texto: 'Pendiente de pago' },
     { valor: EstadoEgresoTesoreria.PAGADO, texto: 'Pagado' },
     { valor: EstadoEgresoTesoreria.ANULADO, texto: 'Anulado' },
+  ];
+
+  // ─── Filtros de la consulta (panel superior, búsqueda en cliente) ─────
+  /** Beneficiario elegido con el diálogo de búsqueda (o null = todos). */
+  conBeneficiarioFiltro = signal<Titular | null>(null);
+  conConcepto = signal('');
+  /** Tipos de pago marcados en el combo multiselección (0 = transferencia, 1 = débito). */
+  conTiposPago = signal<number[]>([]);
+  conFechaDesde = signal<Date | null>(null);
+  conFechaHasta = signal<Date | null>(null);
+  /** Opciones del combo de tipo de pago (multiselección). */
+  readonly tiposPagoFiltro = [
+    { valor: 0, texto: 'Transferencia' },
+    { valor: 1, texto: 'Débito automático' },
   ];
 
   ngOnInit(): void {
@@ -391,6 +405,19 @@ export class RegistroEgresoComponent implements OnInit {
     this.regFecha = new Date();
   }
 
+  /** Empieza un registro nuevo desde cero: borra todo, incluidos cuenta y grupo. */
+  nuevo(): void {
+    this.limpiar();
+    this.regCuentaOrigen = null;
+    this.regGrupo = null;
+    this.regIdGrupo = null;
+    this.regDebitoAutomatico = false;
+    this.filtroCuentaOrigen = '';
+    this.filtroProducto = '';
+    this.regError.set('');
+    this.regExito.set('');
+  }
+
   /** El pago del egreso se sigue desde la pantalla de pagos por transferencia. */
   irAPagos(): void {
     this.router.navigate(['/menucuentaxpagar/pagos/transferencias']);
@@ -413,6 +440,88 @@ export class RegistroEgresoComponent implements OnInit {
         this.conError.set(err.message);
       },
     });
+  }
+
+  /** Nombre del beneficiario elegido en el filtro (chip del panel superior). */
+  nombreBeneficiarioFiltro(): string {
+    const t = this.conBeneficiarioFiltro();
+    if (!t) return '';
+    return t.razonSocial || t.nombre || t.identificacion || `Titular ${t.codigo}`;
+  }
+
+  /** Abre el mismo diálogo de beneficiarios para acotar la consulta. */
+  buscarBeneficiarioFiltro(): void {
+    this.dialog.open(TitularSelectorDialogComponent, {
+      width: '1100px',
+      maxWidth: '98vw',
+      data: { rolCodigo: this.ROL_PROVEEDOR, rolNombre: 'PROVEEDOR', titulo: 'Buscar Beneficiario' },
+    }).afterClosed().subscribe((titular: Titular | null) => {
+      if (titular) this.conBeneficiarioFiltro.set(titular);
+    });
+  }
+
+  quitarBeneficiarioFiltro(): void {
+    this.conBeneficiarioFiltro.set(null);
+  }
+
+  /**
+   * Egresos de la consulta con los filtros del panel superior aplicados. El
+   * backend devuelve todo el conjunto (no hay paginación server-side), así que
+   * el filtrado se hace en cliente sobre lo ya cargado.
+   */
+  egresosFiltrados = computed<Egreso[]>(() => {
+    const beneficiario = this.conBeneficiarioFiltro();
+    const concepto = this.conConcepto().trim().toLowerCase();
+    const tipos = this.conTiposPago();
+    const desde = this.aInicioDia(this.conFechaDesde());
+    const hasta = this.aFinDia(this.conFechaHasta());
+
+    return this.egresos().filter((e) => {
+      if (beneficiario && e.titular?.codigo !== beneficiario.codigo) return false;
+      if (concepto && !(e.descripcion ?? '').toLowerCase().includes(concepto)) return false;
+      if (tipos.length && !tipos.includes(this.esDebitoAutomatico(e) ? 1 : 0)) return false;
+      if (desde || hasta) {
+        const f = this.funcionesDatos.convertirFechaDesdeBackend(e.fecha);
+        if (!f) return false;
+        if (desde && f < desde) return false;
+        if (hasta && f > hasta) return false;
+      }
+      return true;
+    });
+  });
+
+  private aInicioDia(fecha: Date | null): Date | null {
+    if (!fecha) return null;
+    const d = new Date(fecha);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }
+
+  private aFinDia(fecha: Date | null): Date | null {
+    if (!fecha) return null;
+    const d = new Date(fecha);
+    d.setHours(23, 59, 59, 999);
+    return d;
+  }
+
+  hayFiltrosConsulta(): boolean {
+    return !!(
+      this.conBeneficiarioFiltro() || this.conConcepto().trim() || this.conTiposPago().length
+      || this.conFechaDesde() || this.conFechaHasta()
+    );
+  }
+
+  limpiarFiltrosConsulta(): void {
+    this.conBeneficiarioFiltro.set(null);
+    this.conConcepto.set('');
+    this.conTiposPago.set([]);
+    this.conFechaDesde.set(null);
+    this.conFechaHasta.set(null);
+  }
+
+  /** Un egreso registrado como débito automático (columna EGRSDBAT = 1). */
+  esDebitoAutomatico(egreso: Egreso): boolean {
+    return Number(egreso.debitoAutomatico) === 1;
   }
 
   /** Un egreso ya pagado hay que revertirlo desde /pgtr antes de anularlo. */
