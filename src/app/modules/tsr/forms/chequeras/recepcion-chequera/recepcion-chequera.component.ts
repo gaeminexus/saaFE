@@ -156,7 +156,7 @@ export class RecepcionChequeraComponent implements OnInit {
     // Filtro por estado (SOLICITADA)
     const dbEstado = new DatosBusqueda();
     dbEstado.asignaUnCampoSinTrunc(
-      TipoDatosBusqueda.INTEGER,
+      TipoDatosBusqueda.LONG,
       'rubroEstadoChequeraP',
       estadoObjetivo.toString(),
       TipoComandosBusqueda.IGUAL,

@@ -3,7 +3,7 @@ import {
   AfterViewInit,
   Component,
   computed,
-  CUSTOM_ELEMENTS_SCHEMA,
+  
   ElementRef,
   signal,
   ViewChild,
@@ -28,7 +28,6 @@ type FormMode = 'create' | 'edit' | 'view';
   selector: 'app-aporte-retencion-list',
   standalone: true,
   imports: [CommonModule, MaterialFormModule],
-  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './aporte-retencion-list.component.html',
   styleUrls: ['./aporte-retencion-list.component.scss'],
 })

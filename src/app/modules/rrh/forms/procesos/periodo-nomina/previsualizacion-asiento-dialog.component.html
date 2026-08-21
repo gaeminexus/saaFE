@@ -1,0 +1,89 @@
+<h2 mat-dialog-title>{{ data.titulo }}</h2>
+
+<mat-dialog-content>
+  @if (lineas().length === 0) {
+    <p class="vacio">
+      El período no genera líneas para este asiento. En provisiones esto ocurre cuando no se
+      provisionó nada en el período.
+    </p>
+  } @else {
+    @if (sinConfigurar() > 0) {
+      <div class="aviso-pendiente">
+        <mat-icon>report_problem</mat-icon>
+        <span>
+          {{ sinConfigurar() }} línea(s) siguen con la cuenta marcadora, es decir,
+          <strong>sin cuenta contable configurada</strong>. Hay que mapearlas antes de contabilizar
+          en producción; en modo histórico no impiden avanzar porque no se emite asiento.
+        </span>
+      </div>
+    }
+
+    <div class="tabla-scroll">
+      <table mat-table [dataSource]="lineas()">
+        <ng-container matColumnDef="linea">
+          <th mat-header-cell *matHeaderCellDef>Línea</th>
+          <td mat-cell *matCellDef="let l">{{ l.codigoLinea }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="cuenta">
+          <th mat-header-cell *matHeaderCellDef>Cuenta</th>
+          <td mat-cell *matCellDef="let l">
+            <div class="celda-cuenta">
+              <span class="numero">{{ l.cuenta || '—' }}</span>
+              <span class="nombre">{{ nombreLimpio(l) }}</span>
+              @if (esPendiente(l)) {
+                <span class="etiqueta-pendiente" matTooltip="Esta línea aún no tiene cuenta contable asignada">
+                  <mat-icon>link_off</mat-icon>
+                  Sin configurar
+                </span>
+              }
+            </div>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="descripcion">
+          <th mat-header-cell *matHeaderCellDef>Detalle</th>
+          <td mat-cell *matCellDef="let l">
+            {{ l.descripcion }}
+            @if (l.centroCosto) {
+              <span class="centro-costo">· {{ l.centroCosto }}</span>
+            }
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="debe">
+          <th mat-header-cell *matHeaderCellDef class="derecha">Debe</th>
+          <td mat-cell *matCellDef="let l" class="derecha">
+            {{ l.debe ? (l.debe | number: '1.2-2') : '' }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="haber">
+          <th mat-header-cell *matHeaderCellDef class="derecha">Haber</th>
+          <td mat-cell *matCellDef="let l" class="derecha">
+            {{ l.haber ? (l.haber | number: '1.2-2') : '' }}
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="columnas"></tr>
+        <tr
+          mat-row
+          *matRowDef="let l; columns: columnas"
+          [class.fila-pendiente]="esPendiente(l)"
+        ></tr>
+      </table>
+    </div>
+
+    <div class="totales">
+      <span>Debe <strong>{{ totalDebe() | number: '1.2-2' }}</strong></span>
+      <span>Haber <strong>{{ totalHaber() | number: '1.2-2' }}</strong></span>
+      <span [class.descuadre]="diferencia() !== 0">
+        Diferencia <strong>{{ diferencia() | number: '1.2-2' }}</strong>
+      </span>
+    </div>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-raised-button color="primary" [mat-dialog-close]="null">Cerrar</button>
+</mat-dialog-actions>

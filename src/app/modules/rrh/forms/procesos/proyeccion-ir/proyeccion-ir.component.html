@@ -1,0 +1,119 @@
+<div class="rrh-page">
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-icon">
+        <mat-icon>account_balance</mat-icon>
+      </div>
+      <div class="header-text">
+        <h1>Proyección de impuesto a la renta</h1>
+        <p class="subtitle">Desglose del cálculo y retención mensual vigente</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <mat-form-field appearance="outline" class="selector-anio">
+        <mat-label>Ejercicio</mat-label>
+        <mat-select [ngModel]="anio()" (ngModelChange)="anio.set($event); onFiltroChange()">
+          @for (a of anios; track a) {
+            <mat-option [value]="a">{{ a }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="selector-empleado">
+        <mat-label>Colaborador</mat-label>
+        <mat-select
+          [ngModel]="empleadoSeleccionado()"
+          (ngModelChange)="empleadoSeleccionado.set($event); onFiltroChange()"
+        >
+          @for (emp of empleados(); track emp.codigo) {
+            <mat-option [value]="emp.codigo">{{ etiquetaEmpleado(emp) }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <button
+        mat-raised-button
+        color="primary"
+        (click)="proyectar()"
+        [disabled]="empleadoSeleccionado() === null || ocupado()"
+      >
+        <mat-icon>calculate</mat-icon>
+        Reproyectar
+      </button>
+      <button mat-stroked-button (click)="proyectarTodos()" [disabled]="ocupado()">
+        <mat-icon>groups</mat-icon>
+        Proyectar todos
+      </button>
+      <button mat-stroked-button (click)="exportarCsv()" [disabled]="!proyeccion()">
+        <mat-icon>description</mat-icon>
+        CSV
+      </button>
+    </div>
+  </div>
+
+  @if (empleados().length === 0) {
+    <div class="aviso">
+      <mat-icon>person_off</mat-icon>
+      <span>No hay colaboradores registrados en esta empresa.</span>
+    </div>
+  } @else if (empleadoSeleccionado() === null) {
+    <div class="aviso">
+      <mat-icon>person_search</mat-icon>
+      <span>Seleccione un colaborador para ver su proyección del ejercicio.</span>
+    </div>
+  } @else if (sinProyeccion()) {
+    <div class="aviso aviso-error">
+      <mat-icon>report_problem</mat-icon>
+      <span>
+        No hay proyección vigente para {{ anio() }}. Sin ella el cálculo del período la dispara en
+        línea, pero conviene correrla antes para poder revisarla.
+      </span>
+    </div>
+  } @else if (proyeccion(); as p) {
+    @if (p.enfermedadCatastrofica === 'S') {
+      <div class="aviso">
+        <mat-icon>medical_information</mat-icon>
+        <span>Se aplicó el tope ampliado por enfermedad catastrófica.</span>
+      </div>
+    }
+
+    <div class="panel">
+      <h2 class="panel-titulo">
+        Proyección de {{ p.anio }}, vigente desde el mes {{ p.mesDesde }}
+        @if (p.numeroCargas !== null) {
+          · {{ p.numeroCargas }} carga(s) familiares
+        }
+      </h2>
+
+      @if (p.motivo) {
+        <p class="motivo">Motivo de la última reproyección: {{ p.motivo }}</p>
+      }
+
+      <table mat-table [dataSource]="renglones" class="tabla-proyeccion">
+        <ng-container matColumnDef="concepto">
+          <th mat-header-cell *matHeaderCellDef>Concepto</th>
+          <td mat-cell *matCellDef="let renglon">
+            {{ renglon.etiqueta }}
+            @if (renglon.nota) {
+              <span class="nota">{{ renglon.nota }}</span>
+            }
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="valor">
+          <th mat-header-cell *matHeaderCellDef class="derecha">Valor</th>
+          <td mat-cell *matCellDef="let renglon" class="derecha">
+            {{ valorDe(renglon.campo) !== null ? (valorDe(renglon.campo) | number: '1.2-2') : '—' }}
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="columnas"></tr>
+        <tr
+          mat-row
+          *matRowDef="let renglon; columns: columnas"
+          [class.destacado]="renglon.destacado"
+        ></tr>
+      </table>
+    </div>
+  }
+</div>

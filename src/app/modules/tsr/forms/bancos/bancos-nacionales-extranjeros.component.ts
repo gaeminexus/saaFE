@@ -130,7 +130,7 @@ export class BancosNacionalesExtranjerosComponent implements OnInit {
     if (this.estado === 0 || this.estado === 1) {
       const byEstado = new DatosBusqueda();
       byEstado.asignaUnCampoSinTrunc(
-        TipoDatosBusqueda.INTEGER,
+        TipoDatosBusqueda.LONG,
         'estado',
         String(this.estado),
         TipoComandosBusqueda.IGUAL,

@@ -1,0 +1,103 @@
+<h2 mat-dialog-title>
+  <mat-icon color="warn">block</mat-icon>
+  Anular anticipo — {{ esProveedor ? 'Proveedor' : 'Cliente' }}
+</h2>
+
+<mat-dialog-content>
+  <!-- Datos del anticipo -->
+  <div class="doc-info-box">
+    <div class="info-row">
+      <span class="info-lbl">N° Documento</span>
+      <span class="info-val font-mono">{{ data.anticipo?.numeroDoc || '—' }}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-lbl">Valor del anticipo</span>
+      <span class="info-val font-mono">{{ data.verificacion.valorAnticipo ?? data.anticipo?.valor | number:'1.2-2' }}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-lbl">Saldo disponible de este anticipo</span>
+      <span class="info-val font-mono">{{ data.verificacion.saldoDisponible ?? 0 | number:'1.2-2' }}</span>
+    </div>
+    @if (data.verificacion.saldoGlobalAnticipos != null) {
+      <div class="info-row">
+        <span class="info-lbl">Saldo global de anticipos del titular</span>
+        <span class="info-val font-mono">{{ data.verificacion.saldoGlobalAnticipos | number:'1.2-2' }}</span>
+      </div>
+    }
+  </div>
+
+  @if (data.verificacion.mensaje) {
+    <div class="msg-box" [class.msg-warn]="fueCruzado">
+      <mat-icon>{{ fueCruzado ? 'warning' : 'info' }}</mat-icon>
+      <span>{{ data.verificacion.mensaje }}</span>
+    </div>
+  }
+
+  @if (data.verificacion.estimacion) {
+    <div class="msg-box msg-warn">
+      <mat-icon>help_outline</mat-icon>
+      <span>{{ data.verificacion.estimacion }}</span>
+    </div>
+  }
+
+  @if (data.verificacion.advertencia) {
+    <div class="msg-box msg-error">
+      <mat-icon>error_outline</mat-icon>
+      <span>{{ data.verificacion.advertencia }}</span>
+    </div>
+  }
+
+  <!-- Facturas cruzadas: hay que eliminar esos abonos para poder anular -->
+  @if (fueCruzado) {
+    <h3 class="seccion-titulo">
+      Abonos que se eliminarán ({{ cruces.length }})
+    </h3>
+    <div class="tabla-cruces">
+      <table>
+        <thead>
+          <tr>
+            <th>Factura</th>
+            <th class="num">Monto abonado</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (c of cruces; track c.idAplicacion) {
+            <tr>
+              <td>{{ c.numeroFactura || ('Aplicación ' + c.idAplicacion) }}</td>
+              <td class="num font-mono">{{ c.montoAplicado | number:'1.2-2' }}</td>
+            </tr>
+          }
+        </tbody>
+        <tfoot>
+          <tr>
+            <td>Total</td>
+            <td class="num font-mono">{{ totalCruzado | number:'1.2-2' }}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <mat-checkbox [(ngModel)]="aceptaReversionCruces" color="warn" class="check-cruces">
+      Acepto eliminar estos abonos.
+      {{ esProveedor ? 'Las facturas volverán a quedar pendientes de pago.'
+                     : 'Las facturas volverán a quedar pendientes de cobro.' }}
+    </mat-checkbox>
+  }
+
+  <mat-form-field appearance="outline" class="campo-motivo">
+    <mat-label>Motivo de la anulación *</mat-label>
+    <textarea matInput rows="3" [(ngModel)]="motivo"
+              placeholder="Indique por qué se anula el anticipo"></textarea>
+  </mat-form-field>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-stroked-button (click)="cancelar()">
+    <mat-icon>close</mat-icon>
+    Cancelar
+  </button>
+  <button mat-flat-button color="warn" [disabled]="!puedeAceptar" (click)="aceptar()">
+    <mat-icon>block</mat-icon>
+    Anular anticipo
+  </button>
+</mat-dialog-actions>

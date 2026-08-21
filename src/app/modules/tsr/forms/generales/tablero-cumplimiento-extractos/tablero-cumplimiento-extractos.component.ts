@@ -9,6 +9,7 @@ import { PeriodoService } from '../../../../cnt/service/periodo.service';
 import { ControlExtractoBancario } from '../../../model/control-extracto-bancario';
 import { DetalleCumplimientoCuenta } from '../../../model/detalle-cumplimiento-cuenta';
 import { ControlExtractoBancarioService } from '../../../service/control-extracto-bancario.service';
+import { textoDeError } from '../texto-error';
 
 @Component({
   selector: 'app-tablero-cumplimiento-extractos',
@@ -142,7 +143,7 @@ export class TableroCumplimientoExtractosComponent implements OnInit {
       },
       error: (error) => {
         this.isGenerando = false;
-        this.snackBar.open(`Error al generar período: ${error?.error || error?.message || error}`, 'Cerrar', {
+        this.snackBar.open(`Error al generar período: ${textoDeError(error)}`, 'Cerrar', {
           duration: 6000,
         });
       },
@@ -168,7 +169,7 @@ export class TableroCumplimientoExtractosComponent implements OnInit {
       },
       error: (error) => {
         this.recalculandoCodigo = null;
-        this.snackBar.open(`Error al recalcular: ${error?.error || error?.message || error}`, 'Cerrar', {
+        this.snackBar.open(`Error al recalcular: ${textoDeError(error)}`, 'Cerrar', {
           duration: 6000,
         });
       },
@@ -205,7 +206,7 @@ export class TableroCumplimientoExtractosComponent implements OnInit {
       error: (error) => {
         this.isLoadingDetalle = false;
         this.snackBar.open(
-          `Error al obtener el detalle por cuenta: ${error?.error || error?.message || error}`,
+          `Error al obtener el detalle por cuenta: ${textoDeError(error)}`,
           'Cerrar',
           { duration: 6000 }
         );

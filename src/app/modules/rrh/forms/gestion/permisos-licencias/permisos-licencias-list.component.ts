@@ -1,5 +1,5 @@
 import { CommonModule, DatePipe } from '@angular/common';
-import { Component, ElementRef, computed, CUSTOM_ELEMENTS_SCHEMA, inject, OnInit, signal, ViewChild } from '@angular/core';
+import { Component, ElementRef, computed, inject, OnInit, signal, ViewChild } from '@angular/core';
 import { UntypedFormControl } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { PageEvent } from '@angular/material/paginator';
@@ -13,7 +13,8 @@ import { FuncionesDatosService } from '../../../../../shared/services/funciones-
 import { PermisoLicencia } from '../../../model/permiso-licencia';
 import { EmpleadoService } from '../../../service/empleado.service';
 import { PermisoLicenciaService } from '../../../service/permiso-licencia.service';
-import { TipoPermisoService } from '../../../service/tipo-permiso.service';
+import { CatalogoService } from '../../../service/catalogo.service';
+import { criteriosPorEmpresa } from '../../parametrizacion/utiles-parametrizacion';
 import { PermisosAprobacionDialogComponent } from './permisos-aprobacion-dialog.component';
 import { PermisosLicenciasFormComponent } from './permisos-licencias-form.component';
 
@@ -21,7 +22,6 @@ import { PermisosLicenciasFormComponent } from './permisos-licencias-form.compon
   selector: 'app-permisos-licencias-list',
   standalone: true,
   imports: [CommonModule, MaterialFormModule, DatePipe],
-  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './permisos-licencias-list.component.html',
   styleUrls: ['./permisos-licencias-list.component.scss'],
 })
@@ -32,13 +32,12 @@ export class PermisosLicenciasListComponent implements OnInit {
     'identificacion',
     'empleado',
     'tipoPermiso',
-    'modalidad',
     'fechaInicio',
     'fechaFin',
     'diasHoras',
     'conGoce',
     'estado',
-    'fechaAprobacion',
+    'usuarioAprobacion',
     'acciones',
   ]);
 
@@ -58,7 +57,6 @@ export class PermisosLicenciasListComponent implements OnInit {
   filtroIdentificacion = signal<string>('');
   filtroTipoPermiso = signal<number | null>(null);
   filtroEstado = signal<string | null>(null); // Cambiar a string para coincidir con backend
-  filtroConGoce = signal<boolean | null>(null);
   filtroFechaInicioControl = new UntypedFormControl(null);
   filtroFechaFinControl = new UntypedFormControl(null);
   filtroTodasAcciones = signal<boolean>(false);
@@ -71,11 +69,6 @@ export class PermisosLicenciasListComponent implements OnInit {
     { value: 'APROBADA', label: 'Aprobado', color: 'primary' },
     { value: 'RECHAZADA', label: 'Rechazado', color: 'accent' },
     { value: 'ANULADA', label: 'Cancelado', color: 'basic' },
-  ];
-
-  goceOptions = [
-    { value: true, label: 'Con Goce' },
-    { value: false, label: 'Sin Goce' },
   ];
 
   tiposPermiso = signal<any[]>([]);
@@ -94,7 +87,7 @@ export class PermisosLicenciasListComponent implements OnInit {
   constructor(
     private permisoLicenciaService: PermisoLicenciaService,
     private empleadoService: EmpleadoService,
-    private tipoPermisoService: TipoPermisoService,
+    private catalogoService: CatalogoService,
   ) {}
 
   ngOnInit(): void {
@@ -103,8 +96,8 @@ export class PermisosLicenciasListComponent implements OnInit {
   }
 
   cargarTiposPermiso(): void {
-    // Cargar tipos de permiso activos usando selectByCriteria
-    const criteriosTP: DatosBusqueda[] = [];
+    // Tipos de permiso activos de la empresa; RHH.CTLG lleva PJRQCDGO desde el script 05
+    const criteriosTP: DatosBusqueda[] = criteriosPorEmpresa('nombre');
     const dbEstado = new DatosBusqueda();
     dbEstado.asignaUnCampoSinTrunc(
       TipoDatosBusqueda.STRING,
@@ -114,7 +107,7 @@ export class PermisosLicenciasListComponent implements OnInit {
     );
     criteriosTP.push(dbEstado);
 
-    this.tipoPermisoService.selectByCriteria({ criterios: criteriosTP }).subscribe({
+    this.catalogoService.selectByCriteria(criteriosTP).subscribe({
       next: (tipos) => {
         this.tiposPermiso.set(tipos || []);
       },
@@ -161,8 +154,8 @@ export class PermisosLicenciasListComponent implements OnInit {
     if (this.filtroTipoPermiso() !== null) {
       const dbTipoPermiso = new DatosBusqueda();
       dbTipoPermiso.asignaUnCampoSinTrunc(
-        TipoDatosBusqueda.INTEGER,
-        'tipoPermiso.codigo',
+        TipoDatosBusqueda.LONG,
+        'catalogo.codigo',
         this.filtroTipoPermiso()!.toString(),
         TipoComandosBusqueda.IGUAL,
       );
@@ -173,7 +166,7 @@ export class PermisosLicenciasListComponent implements OnInit {
     if (this.filtroEstado() !== null) {
       const dbEstado = new DatosBusqueda();
       dbEstado.asignaUnCampoSinTrunc(
-        TipoDatosBusqueda.INTEGER,
+        TipoDatosBusqueda.STRING,
         'estado',
         this.filtroEstado()!.toString(),
         TipoComandosBusqueda.IGUAL,
@@ -181,17 +174,7 @@ export class PermisosLicenciasListComponent implements OnInit {
       criterios.push(dbEstado);
     }
 
-    // Filtro por goce
-    if (this.filtroConGoce() !== null) {
-      const dbConGoce = new DatosBusqueda();
-      dbConGoce.asignaUnCampoSinTrunc(
-        TipoDatosBusqueda.STRING,
-        'conGoce',
-        this.filtroConGoce() ? 'true' : 'false',
-        TipoComandosBusqueda.IGUAL,
-      );
-      criterios.push(dbConGoce);
-    }
+    // El goce de sueldo es atributo del tipo (RHH.CTLG), no de la solicitud: se filtra por tipo
 
     // Filtro por rango de fecha inicio
     const fechaInicioFiltro: Date | null = this.filtroFechaInicioControl.value;
@@ -201,7 +184,7 @@ export class PermisosLicenciasListComponent implements OnInit {
       const dbFechaInicio = new DatosBusqueda();
       dbFechaInicio.asignaUnCampoSinTrunc(
         TipoDatosBusqueda.DATE,
-        'fechaInicio',
+        'fechaDesde',
         this.toISODate(fechaInicioFiltro),
         TipoComandosBusqueda.MAYOR_IGUAL,
       );
@@ -212,7 +195,7 @@ export class PermisosLicenciasListComponent implements OnInit {
       const dbFechaFin = new DatosBusqueda();
       dbFechaFin.asignaUnCampoSinTrunc(
         TipoDatosBusqueda.DATE,
-        'fechaInicio',
+        'fechaDesde',
         this.toISODate(fechaFinFiltro),
         TipoComandosBusqueda.MENOR_IGUAL,
       );
@@ -230,7 +213,6 @@ export class PermisosLicenciasListComponent implements OnInit {
     this.filtroIdentificacion.set('');
     this.filtroTipoPermiso.set(null);
     this.filtroEstado.set(null);
-    this.filtroConGoce.set(null);
     this.filtroFechaInicioControl.setValue(null, { emitEvent: false });
     this.filtroFechaFinControl.setValue(null, { emitEvent: false });
     setTimeout(() => {
@@ -399,12 +381,20 @@ export class PermisosLicenciasListComponent implements OnInit {
   }
 
   formatDiasHoras(row: PermisoLicencia): string {
-    if (row.tipoPermiso?.modalidad === 'D') {
-      return `${row.dias || 0} días`;
-    } else if (row.tipoPermiso?.modalidad === 'H') {
-      return `${row.horas || 0} horas`;
+    if (row.horas) {
+      return `${row.horas} horas`;
     }
-    return '-';
+    const dias = this.calcularDias(row);
+    return dias !== null ? `${dias} días` : '-';
+  }
+
+  /** RHH.PTCN no guarda los días: se derivan del rango de fechas. */
+  private calcularDias(row: PermisoLicencia): number | null {
+    if (!row.fechaInicio || !row.fechaFin) return null;
+    const inicio = new Date(row.fechaInicio).getTime();
+    const fin = new Date(row.fechaFin).getTime();
+    const dias = Math.ceil((fin - inicio) / (1000 * 60 * 60 * 24)) + 1;
+    return dias > 0 ? dias : null;
   }
 
   canEdit(row: PermisoLicencia): boolean {

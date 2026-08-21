@@ -1,0 +1,243 @@
+<div class="rrh-page">
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-icon">
+        <mat-icon>today</mat-icon>
+      </div>
+      <div class="header-text">
+        <h1>Resumen diario de asistencia</h1>
+        <p class="subtitle">Atrasos, salida anticipada y horas extra tipificadas, día a día</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button mat-stroked-button (click)="irAMarcaciones()">
+        <mat-icon>schedule</mat-icon>
+        Marcaciones
+      </button>
+      <button mat-stroked-button (click)="irAHorasExtra()">
+        <mat-icon>more_time</mat-icon>
+        Bandeja de horas extra
+      </button>
+      <button mat-stroked-button (click)="exportarCsv()" [disabled]="filas().length === 0">
+        <mat-icon>description</mat-icon>
+        CSV
+      </button>
+    </div>
+  </div>
+
+  <div class="panel filtros">
+    <mat-form-field appearance="outline" class="selector-empleado">
+      <mat-label>Colaborador</mat-label>
+      <mat-select
+        [ngModel]="empleadoSeleccionado()"
+        (ngModelChange)="empleadoSeleccionado.set($event)"
+      >
+        @for (emp of empleados(); track emp.codigo) {
+          <mat-option [value]="emp.codigo">{{ etiquetaEmpleado(emp) }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Desde</mat-label>
+      <input matInput type="date" [ngModel]="desde()" (ngModelChange)="desde.set($event)" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Hasta</mat-label>
+      <input matInput type="date" [ngModel]="hasta()" (ngModelChange)="hasta.set($event)" />
+    </mat-form-field>
+
+    <button mat-raised-button color="primary" (click)="consultar()" [disabled]="!puedeConsultar()">
+      <mat-icon>search</mat-icon>
+      Consultar
+    </button>
+
+    <button
+      mat-stroked-button
+      (click)="consolidar()"
+      [disabled]="!desde() || !hasta() || consolidando()"
+      matTooltip="Convierte las marcaciones del rango en resúmenes diarios; alcanza a todo el personal, no solo al colaborador filtrado"
+    >
+      <mat-icon>merge_type</mat-icon>
+      {{ consolidando() ? 'Consolidando…' : 'Consolidar rango' }}
+    </button>
+  </div>
+
+  @if (!camposPersisten) {
+    <div class="aviso">
+      <mat-icon>info</mat-icon>
+      <span>
+        Las horas tipificadas, los minutos de salida anticipada, las horas reales de entrada y
+        salida y la marca de inconsistencia <strong>todavía no llegan del backend</strong>: sus
+        columnas existen en <code>RHH.RSMN</code> pero la entidad aún no las mapea. Los ceros de
+        esta tabla no son un dato medido. Se habilitan con la ampliación de la fase 7.
+      </span>
+    </div>
+  }
+
+  @if (inconsistentes() > 0) {
+    <div class="aviso aviso-error">
+      <mat-icon>report_problem</mat-icon>
+      <div class="contenido-aviso">
+        <span>
+          {{ inconsistentes() }} día(s) con marcaciones inconsistentes: una entrada sin salida,
+          dos entradas seguidas o una salida anterior a la entrada. Hay que revisarlos antes de
+          calcular el período.
+        </span>
+        <button mat-stroked-button (click)="soloInconsistentes.set(!soloInconsistentes())">
+          {{ soloInconsistentes() ? 'Ver todos los días' : 'Ver solo los inconsistentes' }}
+        </button>
+      </div>
+    </div>
+  }
+
+  @if (empleados().length === 0) {
+    <div class="mensaje-vacio">No hay colaboradores registrados en esta empresa.</div>
+  } @else if (cargando()) {
+    <div class="mensaje-vacio">Cargando resumen…</div>
+  } @else if (resumenes().length === 0) {
+    <div class="mensaje-vacio">
+      Sin resultados. Seleccione colaborador y rango, y pulse Consultar; si ya consultó, el
+      colaborador no tiene resúmenes diarios en ese rango.
+    </div>
+  } @else {
+    <div class="panel">
+      <div class="totales">
+        <div class="total">
+          <span class="etiqueta">Horas trabajadas</span>
+          <span class="valor">{{ totales().trabajadas | number: '1.2-2' }}</span>
+        </div>
+        <div class="total">
+          <span class="etiqueta">Suplementarias 50 %</span>
+          <span class="valor">{{ totales().suplementarias | number: '1.2-2' }}</span>
+        </div>
+        <div class="total">
+          <span class="etiqueta">Extraordinarias 100 %</span>
+          <span class="valor">{{ totales().extraordinarias | number: '1.2-2' }}</span>
+        </div>
+        <div class="total">
+          <span class="etiqueta">Recargo nocturno 25 %</span>
+          <span class="valor">{{ totales().nocturnas | number: '1.2-2' }}</span>
+        </div>
+        <div class="total">
+          <span class="etiqueta">Minutos de atraso</span>
+          <span class="valor">{{ totales().atraso }}</span>
+        </div>
+      </div>
+
+      <div class="tabla-scroll">
+        <table mat-table [dataSource]="filas()">
+          <ng-container matColumnDef="fecha">
+            <th mat-header-cell *matHeaderCellDef>Fecha</th>
+            <td mat-cell *matCellDef="let fila">
+              {{ fila.fecha | date: 'dd/MM/yyyy' }}
+              @if (fila.inconsistente === 'S') {
+                <mat-icon class="marca-inconsistente" matTooltip="Marcaciones inconsistentes">
+                  report_problem
+                </mat-icon>
+              }
+              @if (camposPersisten && fila.procesado === 'S') {
+                <mat-icon class="marca-procesado" matTooltip="Ya consumido por un período cerrado">
+                  lock
+                </mat-icon>
+              }
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="entrada">
+            <th mat-header-cell *matHeaderCellDef>Entrada</th>
+            <td mat-cell *matCellDef="let fila">
+              {{ fila.entradaReal ? (fila.entradaReal | date: 'HH:mm') : fila.horaEntrada || '—' }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="salida">
+            <th mat-header-cell *matHeaderCellDef>Salida</th>
+            <td mat-cell *matCellDef="let fila">
+              {{ fila.salidaReal ? (fila.salidaReal | date: 'HH:mm') : fila.horaSalida || '—' }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="atraso">
+            <th mat-header-cell *matHeaderCellDef class="derecha">Atraso</th>
+            <td
+              mat-cell
+              *matCellDef="let fila"
+              class="derecha"
+              [class.negativo]="fila.minutosTarde > 0"
+            >
+              {{ fila.minutosTarde || 0 }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="anticipada">
+            <th mat-header-cell *matHeaderCellDef class="derecha">Sal. anticipada</th>
+            <td
+              mat-cell
+              *matCellDef="let fila"
+              class="derecha"
+              [class.negativo]="fila.minutosSalidaAnticipada > 0"
+            >
+              {{ fila.minutosSalidaAnticipada || 0 }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="trabajadas">
+            <th mat-header-cell *matHeaderCellDef class="derecha">Trabajadas</th>
+            <td mat-cell *matCellDef="let fila" class="derecha">
+              {{ (fila.horasTrabajadas || 0) | number: '1.2-2' }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="suplementarias">
+            <th mat-header-cell *matHeaderCellDef class="derecha">Supl. 50 %</th>
+            <td mat-cell *matCellDef="let fila" class="derecha">
+              {{ (fila.horasSuplementarias || 0) | number: '1.2-2' }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="extraordinarias">
+            <th mat-header-cell *matHeaderCellDef class="derecha">Extra. 100 %</th>
+            <td mat-cell *matCellDef="let fila" class="derecha">
+              {{ (fila.horasExtraordinarias || 0) | number: '1.2-2' }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="nocturnas">
+            <th mat-header-cell *matHeaderCellDef class="derecha">Nocturno 25 %</th>
+            <td mat-cell *matCellDef="let fila" class="derecha">
+              {{ (fila.horasNocturnas || 0) | number: '1.2-2' }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="ausencia">
+            <th mat-header-cell *matHeaderCellDef>Ausencia</th>
+            <td mat-cell *matCellDef="let fila">
+              {{ fila.ausenciaLabel }}
+              @if (fila.tipoAusencia && fila.justificado === 'S') {
+                <span class="justificada">justificada</span>
+              }
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="acciones">
+            <th mat-header-cell *matHeaderCellDef>Acciones</th>
+            <td mat-cell *matCellDef="let fila">
+              <button mat-icon-button (click)="corregir(fila)" matTooltip="Corregir el día">
+                <mat-icon>edit</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="columnas"></tr>
+          <tr
+            mat-row
+            *matRowDef="let fila; columns: columnas"
+            [class.fila-inconsistente]="fila.inconsistente === 'S'"
+          ></tr>
+        </table>
+      </div>
+    </div>
+  }
+</div>

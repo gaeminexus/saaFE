@@ -13,7 +13,8 @@ import { CuentaBancaria } from '../../../model/cuenta-bancaria';
 import { PersonaCuentaContableService } from '../../../service/persona-cuenta-contable.service';
 import { PersonaRolService } from '../../../service/persona-rol.service';
 import { CuentaBancariaService } from '../../../service/cuenta-bancaria.service';
-import { AnticipoService } from '../../../service/anticipo.service';
+import { AnticipoService, VerificacionAnulacionAnticipo } from '../../../service/anticipo.service';
+import { AnularAnticipoDialogComponent, AnularAnticipoDialogResult } from '../dialogs/anular-anticipo-dialog/anular-anticipo-dialog.component';
 import { JasperReportesService } from '../../../../../shared/services/jasper-reportes.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
@@ -38,6 +39,7 @@ export class AnticiposClientesComponent {
   private readonly ROL_CLIENTE = 1;
   private readonly RUBRO_ROL_P = 55;
   private readonly TIPO_CUENTA_ANTICIPO = 2;
+  private readonly ESTADO_ANULADO = 3;
 
   titularSeleccionado = signal<Titular | null>(null);
   saldoAnticipos = signal<number>(0);
@@ -56,6 +58,8 @@ export class AnticiposClientesComponent {
   listaAnticipos = signal<any[]>([]);
   cargandoLista = signal(false);
   mostrandoLista = signal(false);
+  /** Id del anticipo cuya anulación se está procesando, para bloquear su botón. */
+  anulandoId = signal<number | null>(null);
 
   formValor = '';
   formCuentaBancaria: CuentaBancaria | null = null;
@@ -319,6 +323,109 @@ export class AnticiposClientesComponent {
       error: () => {
         this.imprimiendo.set(false);
         this.snackBar.open('❌ No se pudo generar el comprobante', 'Cerrar', { duration: 4000 });
+      },
+    });
+  }
+
+  // ── Anulación de anticipos ───────────────────────────────────────────────
+
+  /**
+   * Los movimientos con valor negativo del listado no son anticipos sino el
+   * registro de un cruce con factura: se deshacen reversando el abono desde la
+   * factura, no desde aquí. Los ya anulados tampoco se vuelven a anular.
+   */
+  puedeAnular(a: any): boolean {
+    const valor = Number(a?.valor ?? 0);
+    const estado = Number(a?.estado ?? 0);
+    return valor > 0 && estado !== this.ESTADO_ANULADO;
+  }
+
+  etiquetaEstado(a: any): string {
+    const valor = Number(a?.valor ?? 0);
+    // El movimiento de un cruce reversado queda anulado: hay que distinguirlo
+    // del cruce vigente para que el listado no muestre una resta que ya no aplica.
+    if (valor < 0) return Number(a?.estado ?? 0) === this.ESTADO_ANULADO ? 'Cruce anulado' : 'Cruce';
+    switch (Number(a?.estado ?? 0)) {
+      case 1: return 'Ingresado';
+      case 2: return 'Confirmado';
+      case 3: return 'Anulado';
+      case 4: return 'Movimiento histórico';
+      default: return '—';
+    }
+  }
+
+  /**
+   * Anula un anticipo. Primero le pregunta al backend si ya fue cruzado con
+   * facturas (el cruce descuenta el saldo global del cliente, no el registro
+   * del anticipo) y muestra el diálogo con las facturas afectadas; solo si el
+   * usuario acepta se reenvía la anulación autorizando eliminar esos abonos.
+   */
+  anularAnticipo(a: any): void {
+    const id = Number(a?.id ?? a?.antcCodigo ?? 0);
+    if (!id) {
+      this.snackBar.open('No se pudo identificar el anticipo.', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    this.anulandoId.set(id);
+    this.anticipoS.verificarAnulacionCliente(id).subscribe({
+      next: (verificacion) => {
+        this.anulandoId.set(null);
+        if (verificacion?.puedeAnular === false) {
+          this.snackBar.open(verificacion?.mensaje || 'El anticipo no se puede anular.',
+            'Cerrar', { duration: 6000 });
+          return;
+        }
+        this.abrirDialogoAnulacion(id, a, verificacion);
+      },
+      error: (err: Error) => {
+        this.anulandoId.set(null);
+        this.snackBar.open(err.message, 'Cerrar', { duration: 5000 });
+      },
+    });
+  }
+
+  private abrirDialogoAnulacion(id: number, anticipo: any,
+                                verificacion: VerificacionAnulacionAnticipo): void {
+    const ref = this.dialog.open(AnularAnticipoDialogComponent, {
+      width: '640px',
+      maxWidth: '96vw',
+      disableClose: true,
+      data: { tipo: 'cliente', anticipo, verificacion },
+    });
+
+    ref.afterClosed().subscribe((res: AnularAnticipoDialogResult | null) => {
+      if (!res) return;
+      this.ejecutarAnulacion(id, anticipo, res);
+    });
+  }
+
+  private ejecutarAnulacion(id: number, anticipo: any, res: AnularAnticipoDialogResult): void {
+    const idUsuario = +(sessionStorage.getItem('idUsuario') || localStorage.getItem('idUsuario') || '0');
+    this.anulandoId.set(id);
+
+    this.anticipoS.anularCliente(id, {
+      motivo: res.motivo,
+      idUsuario,
+      confirmarReversionCruces: res.confirmarReversionCruces,
+    }).subscribe({
+      next: (resp) => {
+        this.anulandoId.set(null);
+        // El backend pudo detectar cruces nuevos entre la verificación y la
+        // anulación: se vuelve a preguntar con el detalle actualizado.
+        if (resp?.requiereConfirmacion) {
+          this.abrirDialogoAnulacion(id, anticipo, resp);
+          return;
+        }
+        this.snackBar.open(resp?.mensaje || 'Anticipo anulado correctamente.',
+          'Cerrar', { duration: 5000 });
+        const titular = this.titularSeleccionado();
+        if (titular) this.cargarSaldo(titular);
+        this.verAnticipos(false);
+      },
+      error: (err: Error) => {
+        this.anulandoId.set(null);
+        this.snackBar.open(err.message, 'Cerrar', { duration: 6000 });
       },
     });
   }

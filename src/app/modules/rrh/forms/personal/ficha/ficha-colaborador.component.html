@@ -1,0 +1,87 @@
+<div class="ficha">
+  <header class="cabecera">
+    <div class="identidad">
+      <div class="avatar">{{ iniciales() || '—' }}</div>
+      <div class="nombre">
+        <h1>{{ nombreCompleto() || 'Ficha del colaborador' }}</h1>
+        @if (empleado(); as emp) {
+          <p class="documento">
+            {{ emp.identificacion }}
+            @if (emp.codigoAfiliacion) {
+              · Afiliación IESS {{ emp.codigoAfiliacion }}
+            }
+          </p>
+        }
+      </div>
+    </div>
+
+    <button mat-stroked-button type="button" (click)="volver()">
+      <mat-icon>arrow_back</mat-icon>
+      Volver al listado
+    </button>
+  </header>
+
+  @if (cargando()) {
+    <div class="cargando">
+      <mat-spinner diameter="32"></mat-spinner>
+      <span>Abriendo la ficha…</span>
+    </div>
+  } @else if (empleado(); as emp) {
+    <!-- Lo que hay que saber sin abrir ninguna sección -->
+    <div class="pastillas">
+      @for (pastilla of pastillas(); track pastilla.etiqueta) {
+        @if (pastilla.enlace) {
+          <!-- La que lleva a otra pantalla es un botón de verdad: se tabula y se pulsa -->
+          <button type="button" class="pastilla enlazada" [class]="'tono-' + pastilla.tono"
+                  [matTooltip]="pastilla.detalle || ''" (click)="irA(pastilla)">
+            <mat-icon>{{ pastilla.icono }}</mat-icon>
+            <div class="texto">
+              <span class="etiqueta">{{ pastilla.etiqueta }}</span>
+              <strong class="valor">{{ pastilla.valor }}</strong>
+            </div>
+            <mat-icon class="ir">chevron_right</mat-icon>
+          </button>
+        } @else {
+          <div class="pastilla" [class]="'tono-' + pastilla.tono"
+               [matTooltip]="pastilla.detalle || ''">
+            <mat-icon>{{ pastilla.icono }}</mat-icon>
+            <div class="texto">
+              <span class="etiqueta">{{ pastilla.etiqueta }}</span>
+              <strong class="valor">{{ pastilla.valor }}</strong>
+            </div>
+          </div>
+        }
+      }
+    </div>
+
+    <div class="cuerpo">
+      <nav class="indice" aria-label="Secciones de la ficha">
+        <button type="button" class="entrada"
+                [class.activa]="vista() === 'datos-personales'"
+                (click)="abrir('datos-personales')">
+          <mat-icon>person</mat-icon>
+          Datos personales
+        </button>
+
+        @for (seccion of secciones(); track seccion.clave) {
+          <button type="button" class="entrada"
+                  [class.activa]="vista() === seccion.clave"
+                  (click)="abrir(seccion.clave)">
+            <mat-icon>{{ seccion.icono }}</mat-icon>
+            {{ seccion.titulo }}
+          </button>
+        }
+      </nav>
+
+      <div class="contenido">
+        @if (vista() === 'datos-personales') {
+          <app-datos-personales [empleado]="emp" (guardado)="onGuardado($event)">
+          </app-datos-personales>
+        } @else if (seccionActiva(); as seccion) {
+          <app-seccion-ficha [seccion]="seccion" [empleadoCodigo]="emp.codigo">
+          </app-seccion-ficha>
+        }
+      </div>
+    </div>
+  }
+</div>

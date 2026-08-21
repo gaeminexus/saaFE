@@ -1,0 +1,231 @@
+<div class="seguimiento-wrap">
+  <mat-card class="page-card">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>fact_check</mat-icon>
+        Seguimiento de Anticipos
+      </mat-card-title>
+      <mat-card-subtitle>
+        Anticipos entregados o recibidos, con los cruces, las anulaciones y los asientos de cada uno
+      </mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      <div class="barra-superior">
+        <mat-button-toggle-group [value]="tipo()" hideSingleSelectionIndicator="true">
+          <mat-button-toggle value="proveedor" (click)="cambiarTipo('proveedor')">
+            <mat-icon>business</mat-icon> Proveedores
+          </mat-button-toggle>
+          <mat-button-toggle value="cliente" (click)="cambiarTipo('cliente')">
+            <mat-icon>person</mat-icon> Clientes
+          </mat-button-toggle>
+        </mat-button-toggle-group>
+
+        <button mat-flat-button color="primary" (click)="buscarTitular()">
+          <mat-icon>search</mat-icon>
+          {{ tipo() === 'proveedor' ? 'Buscar Proveedor' : 'Buscar Cliente' }}
+        </button>
+
+        @if (titular()) {
+          <button mat-stroked-button (click)="cargar()" [disabled]="cargando()">
+            <mat-icon>refresh</mat-icon> Actualizar
+          </button>
+          <button mat-icon-button matTooltip="Quitar selección" (click)="limpiar()">
+            <mat-icon>close</mat-icon>
+          </button>
+        }
+      </div>
+
+      @if (titular()) {
+        <div class="titular-banner">
+          <mat-icon class="icon-ok">check_circle</mat-icon>
+          <div class="titular-info">
+            <span class="titular-nombre">{{ nombreTitular() }}</span>
+            <span class="titular-id">{{ titular()?.identificacion }}</span>
+          </div>
+        </div>
+      }
+
+      @if (error()) {
+        <div class="msg-box msg-error">
+          <mat-icon>error_outline</mat-icon>
+          <span>{{ error() }}</span>
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+
+  @if (cargando()) {
+    <div class="cargando"><mat-spinner diameter="36"></mat-spinner></div>
+  }
+
+  @if (datos(); as d) {
+    <!-- Totales y cuadre -->
+    <div class="tarjetas-totales">
+      <div class="tarjeta">
+        <span class="lbl">Total anticipos</span>
+        <span class="val">{{ d.totalAnticipos | number: '1.2-2' }}</span>
+      </div>
+      <div class="tarjeta">
+        <span class="lbl">Total cruzado</span>
+        <span class="val val-cruzado">{{ d.totalCruzado | number: '1.2-2' }}</span>
+      </div>
+      <div class="tarjeta">
+        <span class="lbl">Saldo disponible</span>
+        <span class="val val-saldo">{{ d.saldoDisponible | number: '1.2-2' }}</span>
+      </div>
+      <div class="tarjeta" [class.tarjeta-alerta]="!d.cuadra">
+        <span class="lbl">Cuadre con contabilidad</span>
+        <span class="val">
+          @if (d.cuadra) {
+            <mat-icon class="ico-ok">check_circle</mat-icon> Cuadra
+          } @else {
+            <mat-icon class="ico-warn">warning</mat-icon>
+            Dif. {{ d.diferencia | number: '1.2-2' }}
+          }
+        </span>
+      </div>
+    </div>
+
+    @if (d.advertencia) {
+      <div class="msg-box msg-warn">
+        <mat-icon>warning</mat-icon>
+        <span>{{ d.advertencia }}</span>
+      </div>
+    }
+
+    <mat-card class="page-card" style="width:100%">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>receipt_long</mat-icon>
+          Anticipos ({{ d.anticipos.length }})
+        </mat-card-title>
+        <div class="acciones-cabecera">
+          <button mat-stroked-button (click)="expandirTodo()">
+            <mat-icon>unfold_more</mat-icon> Ver cruces
+          </button>
+          <button mat-stroked-button (click)="colapsarTodo()">
+            <mat-icon>unfold_less</mat-icon> Contraer
+          </button>
+        </div>
+      </mat-card-header>
+
+      <mat-card-content>
+        @if (d.anticipos.length === 0) {
+          <p class="vacio">Este titular no tiene anticipos registrados.</p>
+        } @else {
+          <div class="tabla-scroll">
+            <table class="tabla-anticipos">
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>Fecha</th>
+                  <th>N° Documento</th>
+                  <th class="num">Valor</th>
+                  <th class="num">Cruzado</th>
+                  <th class="num">Saldo</th>
+                  <th>Estado</th>
+                  <th>Asiento</th>
+                  <th>Registrado</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (a of d.anticipos; track a.id) {
+                  <tr class="fila-anticipo" [class.fila-anulada]="a.estado === 3">
+                    <td>
+                      @if (a.cruces?.length) {
+                        <button mat-icon-button (click)="alternarDetalle(a)"
+                                [matTooltip]="estaExpandido(a) ? 'Ocultar cruces' : 'Ver cruces'">
+                          <mat-icon>{{ estaExpandido(a) ? 'expand_less' : 'expand_more' }}</mat-icon>
+                        </button>
+                      }
+                    </td>
+                    <td>{{ formatearFecha(a.fechaAnticipo) }}</td>
+                    <td>{{ a.numeroDoc || ('#' + a.id) }}</td>
+                    <td class="num">{{ a.valor | number: '1.2-2' }}</td>
+                    <td class="num val-cruzado">{{ a.totalCruzado | number: '1.2-2' }}</td>
+                    <td class="num val-saldo">{{ a.saldo | number: '1.2-2' }}</td>
+                    <td>
+                      <span class="chip" [ngClass]="claseEstado(a)">{{ a.estadoDescripcion }}</span>
+                    </td>
+                    <td>
+                      @if (a.asiento) {
+                        <span class="mono" [matTooltip]="'Asiento ' + (a.asiento?.numero ?? '')">
+                          {{ a.asiento?.numeroAlterno || a.asiento?.numero }}
+                        </span>
+                      } @else { <span class="tenue">—</span> }
+                    </td>
+                    <td class="tenue">{{ formatearFechaHora(a.fechaRegistro) }}</td>
+                    <td>
+                      @if (puedeAnular(a)) {
+                        <button mat-icon-button color="warn" matTooltip="Anular anticipo"
+                                [disabled]="anulandoId() === a.id" (click)="anular(a)">
+                          @if (anulandoId() === a.id) {
+                            <mat-spinner diameter="18"></mat-spinner>
+                          } @else {
+                            <mat-icon>block</mat-icon>
+                          }
+                        </button>
+                      }
+                    </td>
+                  </tr>
+
+                  @if (estaExpandido(a)) {
+                    <tr class="fila-detalle">
+                      <td colspan="10">
+                        <div class="detalle-cruces">
+                          <h4>
+                            <mat-icon>swap_horiz</mat-icon>
+                            Cruces con facturas ({{ a.cruces?.length }})
+                          </h4>
+                          <table class="tabla-cruces">
+                            <thead>
+                              <tr>
+                                <th>Fecha</th>
+                                <th>Factura</th>
+                                <th class="num">Monto</th>
+                                <th>Estado</th>
+                                <th>Asiento</th>
+                                <th>Usuario</th>
+                                <th>Observación</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              @for (c of a.cruces; track c.idAplicacion) {
+                                <tr [class.cruce-reversado]="c.estado !== 1">
+                                  <td>{{ formatearFecha(c.fechaAplicacion) }}</td>
+                                  <td>{{ c.numeroFactura || ('Aplicación ' + c.idAplicacion) }}</td>
+                                  <td class="num">{{ c.montoAplicado | number: '1.2-2' }}</td>
+                                  <td>
+                                    <span class="chip"
+                                          [ngClass]="c.estado === 1 ? 'chip-confirmado' : 'chip-anulado'">
+                                      {{ c.estadoDescripcion }}
+                                    </span>
+                                  </td>
+                                  <td>
+                                    @if (c.asiento) {
+                                      <span class="mono">
+                                        {{ c.asiento?.numeroAlterno || c.asiento?.numero }}
+                                      </span>
+                                    } @else { <span class="tenue">—</span> }
+                                  </td>
+                                  <td class="tenue">{{ c.usuario || '—' }}</td>
+                                  <td class="obs">{{ c.observacion || '—' }}</td>
+                                </tr>
+                              }
+                            </tbody>
+                          </table>
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </mat-card-content>
+    </mat-card>
+  }
+</div>

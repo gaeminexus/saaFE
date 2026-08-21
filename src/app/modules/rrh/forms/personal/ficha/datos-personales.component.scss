@@ -1,0 +1,67 @@
+@use '../../../../../../styles/abstracts/colors' as *;
+@use '../../../../../../styles/abstracts/variables' as *;
+
+.datos-personales {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+.encabezado {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $spacing-md;
+  flex-wrap: wrap;
+
+  h2 {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    margin: 0;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-semibold;
+    color: $text-primary;
+
+    mat-icon {
+      color: $primary-color;
+    }
+  }
+
+  .proposito {
+    margin: $spacing-xs 0 0;
+    font-size: $font-size-sm;
+    color: $text-secondary;
+    max-width: $breakpoint-md;
+  }
+
+  mat-spinner {
+    margin-right: $spacing-xs;
+  }
+}
+
+.bloque-titulo {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  margin: 0 0 $spacing-sm;
+  padding-bottom: $spacing-xs;
+  font-size: $font-size-base;
+  font-weight: $font-weight-semibold;
+  color: $secondary-color;
+  border-bottom: $border-width solid $border-light;
+
+  mat-icon {
+    color: $secondary-color;
+  }
+}
+
+.campos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(#{$breakpoint-sm * 0.35}, 1fr));
+  gap: $spacing-sm $spacing-md;
+
+  .campo-completo {
+    grid-column: 1 / -1;
+  }
+}

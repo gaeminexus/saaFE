@@ -1,0 +1,57 @@
+<h2 mat-dialog-title>
+  <mat-icon>upload_file</mat-icon> Subir XML del documento
+</h2>
+
+<mat-dialog-content>
+  <!-- Contexto del documento (read-only) -->
+  <div class="doc-info-box">
+    <div class="info-row">
+      <span class="info-lbl">Serie</span>
+      <span class="info-val font-mono">{{ data.documento.serieComprobante || '—' }}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-lbl">Emisor</span>
+      <span class="info-val">{{ decodeHtml(data.documento.razonSocialEmisor) || '—' }}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-lbl">Tipo</span>
+      <span class="info-val">{{ decodeHtml(data.documento.tipoComprobante) || '—' }}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-lbl">Importe Total</span>
+      <span class="info-val font-mono">{{ data.documento.importeTotal | number:'1.2-2' }}</span>
+    </div>
+  </div>
+
+  <!-- Selector de archivo -->
+  <div class="archivo-row">
+    <button mat-stroked-button color="primary" (click)="fileInput.click()">
+      <mat-icon>attach_file</mat-icon> Seleccionar archivo XML
+    </button>
+    <span class="archivo-nombre" [class.vacio]="!nombreArchivo">
+      {{ nombreArchivo || 'Ningún archivo seleccionado' }}
+    </span>
+    <input #fileInput type="file" accept=".xml,.XML" hidden (change)="seleccionarArchivo($event)" />
+  </div>
+
+  <!-- Checkbox reembolso -->
+  <div class="reembolso-row">
+    <mat-checkbox [(ngModel)]="esReembolso">Es factura de reembolso de gastos</mat-checkbox>
+    <p class="reembolso-hint">
+      Si el XML incluye el bloque de reembolsos del SRI se leerá automáticamente; si no,
+      podrá registrar los documentos sustento manualmente y luego contabilizar.
+    </p>
+    @if (detectadoEnXml) {
+      <p class="reembolso-detectado">
+        <mat-icon>check_circle</mat-icon> Se detectó bloque de reembolsos en el XML
+      </p>
+    }
+  </div>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-stroked-button (click)="cancelar()">Cancelar</button>
+  <button mat-raised-button color="primary" (click)="subir()" [disabled]="!archivo">
+    <mat-icon>upload</mat-icon> Subir XML
+  </button>
+</mat-dialog-actions>

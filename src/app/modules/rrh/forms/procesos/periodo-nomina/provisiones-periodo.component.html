@@ -1,0 +1,91 @@
+<div class="panel provisiones-periodo">
+  <div class="cabecera">
+    <h2 class="panel-titulo">Provisiones del período</h2>
+    <button mat-stroked-button (click)="exportarCsv()" [disabled]="provisiones().length === 0">
+      <mat-icon>description</mat-icon>
+      CSV
+    </button>
+  </div>
+
+  <p class="nota">
+    No afectan al neto del colaborador, pero sí al costo total del empleador. Se generan para los
+    beneficios en modalidad acumulada.
+  </p>
+
+  @if (cargando()) {
+    <div class="mensaje-vacio">Cargando provisiones…</div>
+  } @else if (provisiones().length === 0) {
+    <div class="mensaje-vacio">
+      El período no tiene provisiones generadas. Se crean al calcular el período.
+    </div>
+  } @else {
+    @if (incompletas().length > 0) {
+      <div class="aviso aviso-error">
+        <mat-icon>report_problem</mat-icon>
+        <div>
+          <strong>
+            Hay tipos de provisión que no cubren a los {{ numeroColaboradores }} colaboradores del
+            período:
+          </strong>
+          <ul>
+            @for (tipo of incompletas(); track tipo.tipo) {
+              <li>{{ tipo.etiqueta }}: {{ tipo.colaboradores }} colaborador(es)</li>
+            }
+          </ul>
+          <span class="pista">
+            La provisión de vacaciones es obligatoria para todos, así que su contador debe
+            coincidir con el total del período.
+          </span>
+        </div>
+      </div>
+    }
+
+    <div class="totales">
+      @for (total of totales(); track total.tipo) {
+        <div class="total">
+          <span class="etiqueta">{{ total.etiqueta }}</span>
+          <span class="valor">{{ total.total | number: '1.2-2' }}</span>
+          <span class="detalle">{{ total.colaboradores }} colaborador(es)</span>
+        </div>
+      }
+      <div class="total destacado">
+        <span class="etiqueta">Total provisionado</span>
+        <span class="valor">{{ totalGeneral() | number: '1.2-2' }}</span>
+        <span class="detalle">{{ provisiones().length }} registro(s)</span>
+      </div>
+    </div>
+
+    <div class="tabla-scroll">
+      <table mat-table [dataSource]="provisiones()">
+        <ng-container matColumnDef="empleado">
+          <th mat-header-cell *matHeaderCellDef>Colaborador</th>
+          <td mat-cell *matCellDef="let fila">
+            {{ fila.identificacion }} — {{ fila.nombreEmpleado }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="tipo">
+          <th mat-header-cell *matHeaderCellDef>Tipo de provisión</th>
+          <td mat-cell *matCellDef="let fila">{{ fila.tipoLabel || '—' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="baseCalculo">
+          <th mat-header-cell *matHeaderCellDef class="derecha">Base de cálculo</th>
+          <td mat-cell *matCellDef="let fila" class="derecha">
+            {{ fila.baseCalculo !== null ? (fila.baseCalculo | number: '1.2-2') : '—' }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="valor">
+          <th mat-header-cell *matHeaderCellDef class="derecha">Valor</th>
+          <td mat-cell *matCellDef="let fila" class="derecha valor-provision">
+            {{ (fila.valor || 0) | number: '1.2-2' }}
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="columnas"></tr>
+        <tr mat-row *matRowDef="let fila; columns: columnas"></tr>
+      </table>
+    </div>
+  }
+</div>

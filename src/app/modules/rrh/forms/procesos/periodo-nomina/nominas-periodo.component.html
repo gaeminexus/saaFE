@@ -1,0 +1,147 @@
+<div class="panel nominas-periodo">
+  <div class="cabecera">
+    <h2 class="panel-titulo">Colaboradores del período</h2>
+    <div class="acciones-export">
+      <button
+        mat-stroked-button
+        (click)="exportarResumen()"
+        [disabled]="nominas().length === 0"
+        matTooltip="Una fila por colaborador con sus totales"
+      >
+        <mat-icon>description</mat-icon>
+        Resumen
+      </button>
+      <button
+        mat-raised-button
+        color="primary"
+        (click)="exportarDetalle()"
+        [disabled]="nominas().length === 0 || exportando()"
+        matTooltip="Una fila por colaborador y concepto, para cuadrar contra el rol real"
+      >
+        <mat-icon>table_view</mat-icon>
+        {{ exportando() ? 'Preparando…' : 'Detalle de renglones' }}
+      </button>
+    </div>
+  </div>
+
+  @if (cargando()) {
+    <div class="mensaje-vacio">Cargando nóminas…</div>
+  } @else if (nominas().length === 0) {
+    <div class="mensaje-vacio">
+      El período aún no tiene nóminas. Ejecute el cálculo para generarlas.
+    </div>
+  } @else {
+    <div class="tabla-scroll">
+      <table mat-table [dataSource]="nominas()" multiTemplateDataRows>
+        <ng-container matColumnDef="empleado">
+          <th mat-header-cell *matHeaderCellDef>Colaborador</th>
+          <td mat-cell *matCellDef="let fila">
+            <button mat-icon-button (click)="alternarDetalle(fila)" matTooltip="Ver renglones">
+              <mat-icon>{{ expandida() === fila.codigo ? 'expand_less' : 'expand_more' }}</mat-icon>
+            </button>
+            <span [class.excluida]="fila.excluida">
+              {{ fila.identificacion }} — {{ fila.nombreEmpleado }}
+            </span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="diasTrabajados">
+          <th mat-header-cell *matHeaderCellDef class="derecha">Días</th>
+          <td mat-cell *matCellDef="let fila" class="derecha">{{ fila.diasTrabajados ?? '—' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="totalIngresos">
+          <th mat-header-cell *matHeaderCellDef class="derecha">Ingresos</th>
+          <td mat-cell *matCellDef="let fila" class="derecha">
+            {{ fila.totalIngresos ?? 0 | number: '1.2-2' }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="totalDescuentos">
+          <th mat-header-cell *matHeaderCellDef class="derecha">Descuentos</th>
+          <td mat-cell *matCellDef="let fila" class="derecha">
+            {{ fila.totalDescuentos ?? 0 | number: '1.2-2' }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="netoPagar">
+          <th mat-header-cell *matHeaderCellDef class="derecha">Neto</th>
+          <td mat-cell *matCellDef="let fila" class="derecha neto">
+            {{ fila.netoPagar ?? 0 | number: '1.2-2' }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="estado">
+          <th mat-header-cell *matHeaderCellDef>Estado</th>
+          <td mat-cell *matCellDef="let fila">{{ fila.estadoLabel }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="acciones">
+          <th mat-header-cell *matHeaderCellDef>Acciones</th>
+          <td mat-cell *matCellDef="let fila">
+            <button
+              mat-icon-button
+              (click)="onRecalcular(fila)"
+              [disabled]="!permiteAcciones"
+              matTooltip="Recalcular este colaborador"
+            >
+              <mat-icon>refresh</mat-icon>
+            </button>
+            <button
+              mat-icon-button
+              (click)="onExcluir(fila)"
+              [disabled]="!permiteAcciones || fila.excluida"
+              matTooltip="Excluir del período"
+            >
+              <mat-icon>person_remove</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <!-- Detalle expandible con los renglones del rol -->
+        <ng-container matColumnDef="detalle">
+          <td mat-cell *matCellDef="let fila" [attr.colspan]="columnas.length">
+            @if (expandida() === fila.codigo) {
+              <div class="detalle-renglones">
+                @if (renglonesDe(fila.codigo).length === 0) {
+                  <p class="mensaje-vacio">Sin renglones registrados.</p>
+                } @else {
+                  <table class="tabla-renglones">
+                    <thead>
+                      <tr>
+                        <th>Concepto</th>
+                        <th>Tipo</th>
+                        <th class="derecha">Cantidad</th>
+                        <th class="derecha">Base</th>
+                        <th class="derecha">%</th>
+                        <th class="derecha">Valor</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (renglon of renglonesDe(fila.codigo); track renglon.codigo) {
+                        <tr>
+                          <td>{{ renglon.descripcion || '—' }}</td>
+                          <td>{{ tipoConceptoLabel(renglon) }}</td>
+                          <td class="derecha">{{ renglon.cantidad ?? '—' }}</td>
+                          <td class="derecha">
+                            {{ renglon.baseCalculo ? (renglon.baseCalculo | number: '1.2-2') : '—' }}
+                          </td>
+                          <td class="derecha">{{ renglon.porcentaje ?? '—' }}</td>
+                          <td class="derecha">{{ renglon.valor | number: '1.2-2' }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                }
+              </div>
+            }
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="columnas"></tr>
+        <tr mat-row *matRowDef="let fila; columns: columnas"></tr>
+        <tr mat-row *matRowDef="let fila; columns: ['detalle']" class="fila-detalle"></tr>
+      </table>
+    </div>
+  }
+</div>

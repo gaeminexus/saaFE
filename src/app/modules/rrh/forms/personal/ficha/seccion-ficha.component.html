@@ -1,0 +1,65 @@
+<section class="seccion">
+  <header class="encabezado">
+    <div class="titulos">
+      <h2>
+        <mat-icon>{{ seccion.icono }}</mat-icon>
+        {{ seccion.titulo }}
+      </h2>
+      <p class="proposito">{{ seccion.proposito }}</p>
+    </div>
+    <button mat-raised-button color="primary" type="button" (click)="nuevo()">
+      <mat-icon>add</mat-icon>
+      Nuevo
+    </button>
+  </header>
+
+  @for (linea of resumen(); track linea.texto) {
+    <div class="aviso" [class.aviso-error]="linea.alerta">
+      <mat-icon>{{ linea.icono }}</mat-icon>
+      <span>{{ linea.texto }}</span>
+    </div>
+  }
+
+  <app-tabla-rrh
+    [columnas]="seccion.columnas"
+    [filas]="filas()"
+    [cargando]="cargando()"
+    [permiteBorrar]="seccion.permiteBorrar"
+    [mensajeVacio]="seccion.mensajeVacio"
+    [estadoInicial]="estadoLista"
+    (editar)="editar($event)"
+    (borrar)="pedirBorrado($event)"
+    (estadoCambia)="recordarEstado($event)"
+  >
+  </app-tabla-rrh>
+</section>
+
+<app-panel-lateral
+  [titulo]="tituloPanel"
+  [subtitulo]="modo() === 'borrar' ? 'Esta acción no se puede deshacer.' : ''"
+  [abierto]="panelAbierto()"
+  [guardando]="guardando()"
+  [etiquetaGuardar]="modo() === 'borrar' ? 'Eliminar' : 'Guardar'"
+  [hayCambios]="formulario.dirty && modo() !== 'borrar'"
+  (cerrar)="cerrarPanel()"
+  (guardar)="confirmar()"
+  (cierreBloqueado)="avisarCambiosPendientes()"
+>
+  <!--
+    El contenido proyectado se instancia aunque el panel esté cerrado: sin esta guarda, los
+    `formControlName` de la sección buscarían sus controles en un grupo todavía vacío y la
+    excepción abortaba el ciclo de detección de cambios —dejando la tabla sin pintar—.
+  -->
+  @if (panelAbierto()) {
+    <form [formGroup]="formulario" class="formulario">
+      @for (campo of seccion.campos; track campo.name) {
+        <app-campo-formulario
+          [campo]="campo"
+          [formulario]="formulario"
+          [class.campo-completo]="campo.ancho === 'completo'"
+        >
+        </app-campo-formulario>
+      }
+    </form>
+  }
+</app-panel-lateral>

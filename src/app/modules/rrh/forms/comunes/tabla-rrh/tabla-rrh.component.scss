@@ -1,0 +1,108 @@
+@use '../../../../../../styles/abstracts/colors' as *;
+@use '../../../../../../styles/abstracts/variables' as *;
+
+:host {
+  display: block;
+}
+
+.barra {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-sm;
+
+  .buscador {
+    flex: 0 1 $breakpoint-sm * 0.6;
+  }
+
+  .conteo {
+    font-size: $font-size-xs;
+    color: $text-muted;
+    margin-right: auto;
+  }
+}
+
+.marco {
+  // Cabecera fija: el encabezado se queda mientras la lista scrollea
+  max-height: $breakpoint-sm;
+  overflow: auto;
+  border: $border-width solid $border-light;
+  border-radius: $border-radius-md;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: $font-size-sm;
+}
+
+thead th {
+  position: sticky;
+  top: 0;
+  z-index: $z-index-sticky;
+  background: $background-tertiary;
+  color: $secondary-color;
+  font-weight: $font-weight-semibold;
+  text-align: left;
+  padding: $spacing-sm;
+  border-bottom: $border-width solid $border-light;
+  white-space: nowrap;
+}
+
+tbody td {
+  padding: $spacing-xs $spacing-sm;
+  border-bottom: $border-width solid $border-light;
+  color: $text-primary;
+}
+
+tbody tr:hover td {
+  background: $background-secondary;
+}
+
+.al-centro { text-align: center; }
+.a-la-derecha { text-align: right; }
+.columna-acciones { width: 1%; white-space: nowrap; }
+
+.vacio {
+  padding: $spacing-lg;
+  text-align: center;
+  color: $text-muted;
+}
+
+.pastilla {
+  display: inline-block;
+  padding: 0 $spacing-sm;
+  border-radius: $border-radius-lg;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  line-height: $line-height-relaxed;
+  border: $border-width solid transparent;
+}
+
+.pastilla-ok      { color: $success-color; border-color: $success-color; }
+.pastilla-aviso   { color: $warning-color; border-color: $warning-color; }
+.pastilla-error   { color: $error-color;   border-color: $error-color; }
+.pastilla-neutro  { color: $text-secondary; border-color: $border-medium; }
+
+thead th {
+  cursor: pointer;
+  user-select: none;
+}
+
+.cabecera {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-xs;
+}
+
+.flecha {
+  font-size: $font-size-base;
+  width: $font-size-base;
+  height: $font-size-base;
+}
+
+/* La fila que se estaba editando queda señalada al volver del formulario */
+tbody tr.destacada td {
+  background: $background-tertiary;
+  box-shadow: inset $border-width-md 0 0 0 $primary-color;
+}

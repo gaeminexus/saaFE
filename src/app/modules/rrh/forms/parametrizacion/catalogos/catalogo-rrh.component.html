@@ -1,0 +1,22 @@
+<div class="rrh-page">
+  @if (definicion) {
+    <div class="page-header">
+      <div class="header-content">
+        <div class="header-icon">
+          <mat-icon>{{ definicion.icono }}</mat-icon>
+        </div>
+        <div class="header-text">
+          <h1>{{ definicion.titulo }}</h1>
+          <p class="subtitle">{{ definicion.subtitulo }}</p>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (tableConfig) {
+    <app-table-basic-hijos [configTable]="tableConfig" (emiteError)="onTableError($event)">
+    </app-table-basic-hijos>
+  } @else if (cargando()) {
+    <div class="mensaje-vacio">Cargando…</div>
+  }
+</div>

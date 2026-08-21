@@ -1,0 +1,202 @@
+@use '../../../../../../styles/abstracts/colors' as *;
+@use '../../../../../../styles/abstracts/variables' as *;
+
+.ficha {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+  color: $text-primary;
+}
+
+// ─── Cabecera ────────────────────────────────────────────────────────────────
+
+.cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+  padding: $spacing-md;
+  border-radius: $border-radius-md;
+  background: $background-primary;
+  border: $border-width solid $border-light;
+  box-shadow: 0 $spacing-xs $spacing-sm $shadow-color-light;
+}
+
+.identidad {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+}
+
+.avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: $font-size-4xl;
+  height: $font-size-4xl;
+  border-radius: 50%;
+  background: $background-gradient;
+  color: $text-light;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+}
+
+.nombre {
+  h1 {
+    margin: 0;
+    font-size: $font-size-xl;
+    font-weight: $font-weight-semibold;
+  }
+
+  .documento {
+    margin: 0;
+    font-size: $font-size-sm;
+    color: $text-secondary;
+  }
+}
+
+// ─── Pastillas de estado ─────────────────────────────────────────────────────
+
+.pastillas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+}
+
+.pastilla {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  border-radius: $border-radius-md;
+  background: $background-primary;
+  border: $border-width solid $border-light;
+  border-left-width: $border-width-md;
+
+  .texto {
+    display: flex;
+    flex-direction: column;
+    line-height: $line-height-tight;
+  }
+
+  .etiqueta {
+    font-size: $font-size-xs;
+    color: $text-muted;
+  }
+
+  .valor {
+    font-size: $font-size-sm;
+    color: $text-primary;
+  }
+
+  // La pastilla que lleva a otra pantalla es un <button>: hay que quitarle lo de botón y
+  // devolverle la alineación a la izquierda que el resto de las pastillas tiene por defecto
+  &.enlazada {
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+
+    .ir {
+      color: $text-muted;
+      margin-left: $spacing-xs;
+    }
+
+    &:hover {
+      background: $background-secondary;
+    }
+  }
+
+  &.tono-ok { border-left-color: $success-color; mat-icon { color: $success-color; } }
+  &.tono-aviso { border-left-color: $warning-color; mat-icon { color: $warning-color; } }
+  &.tono-error { border-left-color: $error-color; mat-icon { color: $error-color; } }
+  &.tono-neutro { border-left-color: $border-medium; mat-icon { color: $text-secondary; } }
+}
+
+// ─── Cuerpo: índice a la izquierda, contenido a la derecha ───────────────────
+
+.cuerpo {
+  display: grid;
+  grid-template-columns: minmax($breakpoint-sm * 0.3, $breakpoint-sm * 0.38) 1fr;
+  gap: $spacing-md;
+  align-items: start;
+}
+
+.indice {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+  padding: $spacing-sm;
+  border-radius: $border-radius-md;
+  background: $background-primary;
+  border: $border-width solid $border-light;
+  box-shadow: 0 $spacing-xs $spacing-sm $shadow-color-light;
+  position: sticky;
+  top: $spacing-md;
+}
+
+.entrada {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm;
+  border: none;
+  border-radius: $border-radius-sm;
+  background: transparent;
+  color: $text-secondary;
+  font-size: $font-size-sm;
+  text-align: left;
+  cursor: pointer;
+  transition: background $transition-quick, color $transition-quick;
+
+  mat-icon {
+    color: $text-muted;
+  }
+
+  &:hover {
+    background: $background-secondary;
+    color: $text-primary;
+  }
+
+  &.activa {
+    background: $background-tertiary;
+    color: $primary-color;
+    font-weight: $font-weight-semibold;
+
+    mat-icon {
+      color: $primary-color;
+    }
+  }
+}
+
+.contenido {
+  padding: $spacing-md;
+  border-radius: $border-radius-md;
+  background: $background-primary;
+  border: $border-width solid $border-light;
+  box-shadow: 0 $spacing-xs $spacing-sm $shadow-color-light;
+  min-width: 0;
+}
+
+.cargando {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-sm;
+  padding: $spacing-xl;
+  color: $text-muted;
+  font-size: $font-size-sm;
+}
+
+// El índice pasa arriba cuando no hay ancho para las dos columnas
+@media (max-width: $breakpoint-lg) {
+  .cuerpo {
+    grid-template-columns: 1fr;
+  }
+
+  .indice {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+}

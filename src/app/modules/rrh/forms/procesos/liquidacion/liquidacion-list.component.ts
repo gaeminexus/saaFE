@@ -1,244 +1,132 @@
 import { CommonModule } from '@angular/common';
-import {
-  AfterViewInit,
-  Component,
-  computed,
-  CUSTOM_ELEMENTS_SCHEMA,
-  ElementRef,
-  signal,
-  ViewChild,
-} from '@angular/core';
-import { UntypedFormControl } from '@angular/forms';
-import { MatDialog } from '@angular/material/dialog';
-import { MatPaginator } from '@angular/material/paginator';
-import { MatSort } from '@angular/material/sort';
-import { MatTableDataSource } from '@angular/material/table';
-import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { Component, OnInit, signal } from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { Router } from '@angular/router';
+import { DetalleRubroService } from '../../../../../shared/services/detalle-rubro.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
-import { ContratoEmpleado } from '../../../model/contrato-empleado';
-import { Empleado } from '../../../model/empleado';
-import { Liquidacion } from '../../../model/Liquidacion';
-import { LiquidacionFormComponent, LiquidacionFormData } from './liquidacion-form.component';
+import { RubrosRrh } from '../../../model/rubros-rrh';
+import { EstadoLiquidacion } from '../../../model/estados-liquidacion';
+import { LiquidacionService } from '../../../service/liquidacion.service';
+import { EstadoLista, EstadoListaService } from '../../comunes/estado-lista.service';
+import { mensajeDeError } from '../../comunes/mensajes';
+import { ColumnaTabla, TonoPastilla } from '../../comunes/modelo-formulario';
+import { TablaRrhComponent } from '../../comunes/tabla-rrh/tabla-rrh.component';
 
-type FormMode = 'create' | 'edit' | 'view';
+const CLAVE_LISTA = 'procesos:liquidacion';
 
+/**
+ * Bandeja de finiquitos. La lista y el finiquito son dos vistas con su ruta.
+ *
+ * El estado se ve sin abrir nada: la pastilla lleva el color del rubro 196 y el asiento aparece
+ * en su columna en cuanto se contabiliza.
+ */
 @Component({
   selector: 'app-liquidacion-list',
   standalone: true,
-  imports: [CommonModule, MaterialFormModule],
-  schemas: [CUSTOM_ELEMENTS_SCHEMA],
+  imports: [CommonModule, MatButtonModule, MatIconModule, TablaRrhComponent],
   templateUrl: './liquidacion-list.component.html',
   styleUrls: ['./liquidacion-list.component.scss'],
 })
-export class LiquidacionListComponent implements AfterViewInit {
-  readonly titulo = signal<string>('Liquidación');
-  readonly mostrarFiltros = signal<boolean>(true);
-  readonly loading = signal<boolean>(false);
-  readonly registroSeleccionado = signal<Liquidacion | null>(null);
+export class LiquidacionListComponent implements OnInit {
+  readonly filas = signal<any[]>([]);
+  readonly cargando = signal<boolean>(true);
 
-  readonly displayedColumns: string[] = [
-    'codigo',
-    'empleado',
-    'contratoEmpleado',
-    'fechaSalida',
-    'motivo',
-    'neto',
-    'estado',
-    'fechaRegistro',
-    'usuarioRegistro',
-    'acciones',
+  estadoLista: EstadoLista = { filtro: '', ordenPor: null, ascendente: true, scroll: 0, destacado: null };
+
+  readonly columnas: ColumnaTabla[] = [
+    { campo: 'codigo', titulo: 'Nº', ancho: '8%', alinear: 'centro' },
+    { campo: 'colaborador', titulo: 'Colaborador', ancho: '26%' },
+    { campo: 'identificacion', titulo: 'Identificación', ancho: '14%' },
+    { campo: 'fechaSalida', titulo: 'Salida', ancho: '12%', formato: 'fecha' },
+    { campo: 'causalLabel', titulo: 'Causal', ancho: '18%' },
+    { campo: 'neto', titulo: 'Neto', ancho: '12%', formato: 'dinero', alinear: 'derecha' },
+    {
+      campo: 'estadoLabel',
+      titulo: 'Estado',
+      ancho: '14%',
+      pastilla: (fila) => this.tonoEstado(fila),
+    },
   ];
 
-  readonly dataSource = new MatTableDataSource<Liquidacion>([]);
-  readonly totalRegistros = computed(() => this.dataSource.data.length);
-
-  readonly busquedaEmpleado = signal<string>('');
-  readonly busquedaContratoEmpleado = signal<string>('');
-
-  readonly filtroEmpleado = signal<Empleado | null>(null);
-  readonly filtroContratoEmpleado = signal<ContratoEmpleado | null>(null);
-  readonly filtroFechaSalidaDesdeControl = new UntypedFormControl(null);
-  readonly filtroFechaSalidaHastaControl = new UntypedFormControl(null);
-  readonly filtroMotivo = signal<number | null>(null);
-  readonly filtroEstado = signal<String | null>(null);
-  readonly filtroUsuarioRegistro = signal<string>('');
-
-  readonly empleadosDisponibles = signal<Empleado[]>([]);
-  readonly contratosDisponibles = signal<ContratoEmpleado[]>([]);
-  readonly motivosDisponibles = signal<Array<{ codigo: number; etiqueta: string }>>([]);
-  readonly estadosDisponibles = signal<String[]>([]);
-
-  @ViewChild(MatPaginator) paginator!: MatPaginator;
-  @ViewChild(MatSort) sort!: MatSort;
-
-  @ViewChild('fechaSalidaDesdeInput', { read: ElementRef }) fechaSalidaDesdeInputRef!: ElementRef<HTMLInputElement>;
-  @ViewChild('fechaSalidaHastaInput', { read: ElementRef }) fechaSalidaHastaInputRef!: ElementRef<HTMLInputElement>;
-
-  private _rawFechaSalidaDesde = '';
-  private _rawFechaSalidaHasta = '';
-
   constructor(
-    private dialog: MatDialog,
+    private liquidacionService: LiquidacionService,
+    private detalleRubroService: DetalleRubroService,
     private funcionesDatosS: FuncionesDatosService,
-  ) {
-    // TODO RRHH: cargar catálogos de Empleado, ContratoEmpleado, Motivo y Estado.
-    // TODO RRHH: implementar búsqueda principal con LiquidacionService.selectByCriteria(...).
+    private estadoListaService: EstadoListaService,
+    private router: Router,
+    private snackBar: MatSnackBar,
+  ) {}
+
+  ngOnInit(): void {
+    this.estadoLista = this.estadoListaService.recuperar(CLAVE_LISTA);
+    this.cargar();
   }
 
-  ngAfterViewInit(): void {
-    this.dataSource.paginator = this.paginator;
-    this.dataSource.sort = this.sort;
-  }
-
-  toggleFiltros(): void {
-    this.mostrarFiltros.update((visible) => !visible);
-  }
-
-  abrirNuevaLiquidacion(): void {
-    this.abrirFormulario('create');
-  }
-
-  ver(item: Liquidacion): void {
-    this.registroSeleccionado.set(item);
-    this.abrirFormulario('view', item);
-  }
-
-  editar(item: Liquidacion): void {
-    this.registroSeleccionado.set(item);
-    this.abrirFormulario('edit', item);
-  }
-
-  inactivarAnular(item: Liquidacion): void {
-    this.registroSeleccionado.set(item);
-  }
-
-  aplicarFiltros(): void {
-    // TODO RRHH: mapear filtros a criterios y consumir selectByCriteria.
-  }
-
-  limpiarFiltros(): void {
-    this.busquedaEmpleado.set('');
-    this.busquedaContratoEmpleado.set('');
-    this.filtroEmpleado.set(null);
-    this.filtroContratoEmpleado.set(null);
-    this.filtroFechaSalidaDesdeControl.setValue(null, { emitEvent: false });
-    this.filtroFechaSalidaHastaControl.setValue(null, { emitEvent: false });
-    setTimeout(() => {
-      if (this.fechaSalidaDesdeInputRef?.nativeElement) this.fechaSalidaDesdeInputRef.nativeElement.value = '';
-      if (this.fechaSalidaHastaInputRef?.nativeElement) this.fechaSalidaHastaInputRef.nativeElement.value = '';
-    });
-    this.filtroMotivo.set(null);
-    this.filtroEstado.set(null);
-    this.filtroUsuarioRegistro.set('');
-    this.registroSeleccionado.set(null);
-  }
-
-  capturarFechaSalidaDesdeRaw(event: Event): void {
-    this._rawFechaSalidaDesde = (event.target as HTMLInputElement).value;
-  }
-
-  syncFechaSalidaDesdeFromRaw(event: FocusEvent): void {
-    const rawValue = (this._rawFechaSalidaDesde || (event.target as HTMLInputElement)?.value || '').trim();
-    this._rawFechaSalidaDesde = '';
-    if (!rawValue) return;
-    const parts = rawValue.split('/');
-    if (parts.length !== 3) return;
-    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
-    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
-      const date = new Date(anio, mes, dia);
-      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
-        const formatted = this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
-        this.filtroFechaSalidaDesdeControl.setValue(date, { emitEvent: false });
-        setTimeout(() => {
-          if (this.fechaSalidaDesdeInputRef?.nativeElement) this.fechaSalidaDesdeInputRef.nativeElement.value = formatted;
-        });
-      }
-    }
-  }
-
-  onFechaSalidaDesdePickerChange(date: Date | null | undefined): void {
-    this.filtroFechaSalidaDesdeControl.setValue(date || null, { emitEvent: false });
-    const formatted = date ? this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '' : '';
-    setTimeout(() => {
-      if (this.fechaSalidaDesdeInputRef?.nativeElement) this.fechaSalidaDesdeInputRef.nativeElement.value = formatted;
+  cargar(): void {
+    this.cargando.set(true);
+    this.liquidacionService.getAll().subscribe({
+      next: (filas) => {
+        this.filas.set(this.formatear(filas ?? []));
+        this.cargando.set(false);
+      },
+      error: (err) => {
+        this.filas.set([]);
+        this.cargando.set(false);
+        this.avisar(mensajeDeError(err, 'No se pudieron cargar los finiquitos.'), true);
+      },
     });
   }
 
-  capturarFechaSalidaHastaRaw(event: Event): void {
-    this._rawFechaSalidaHasta = (event.target as HTMLInputElement).value;
+  private formatear(filas: any[]): any[] {
+    return filas.map((fila) => ({
+      ...fila,
+      fechaSalida: this.fecha(fila.fechaSalida),
+      colaborador: `${fila.empleado?.apellidos ?? ''} ${fila.empleado?.nombres ?? ''}`.trim(),
+      identificacion: fila.empleado?.identificacion ?? '—',
+      causalLabel: fila.causalTerminacion?.nombre ?? '—',
+      estadoLabel:
+        this.detalleRubroService.getDescripcionByParentAndAlterno(
+          RubrosRrh.ESTADO_LIQUIDACION,
+          Number(fila.estado),
+        ) || '—',
+    }));
   }
 
-  syncFechaSalidaHastaFromRaw(event: FocusEvent): void {
-    const rawValue = (this._rawFechaSalidaHasta || (event.target as HTMLInputElement)?.value || '').trim();
-    this._rawFechaSalidaHasta = '';
-    if (!rawValue) return;
-    const parts = rawValue.split('/');
-    if (parts.length !== 3) return;
-    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
-    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
-      const date = new Date(anio, mes, dia);
-      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
-        const formatted = this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
-        this.filtroFechaSalidaHastaControl.setValue(date, { emitEvent: false });
-        setTimeout(() => {
-          if (this.fechaSalidaHastaInputRef?.nativeElement) this.fechaSalidaHastaInputRef.nativeElement.value = formatted;
-        });
-      }
-    }
+  /** Anulada en rojo, pagada en verde, el resto neutro: el color no sustituye a la etiqueta. */
+  private tonoEstado(fila: any): TonoPastilla {
+    const estado = Number(fila.estado);
+    if (estado === EstadoLiquidacion.ANULADA) return 'error';
+    if (estado === EstadoLiquidacion.PAGADA) return 'ok';
+    if (estado === EstadoLiquidacion.APROBADA) return 'aviso';
+    return 'neutro';
   }
 
-  onFechaSalidaHastaPickerChange(date: Date | null | undefined): void {
-    this.filtroFechaSalidaHastaControl.setValue(date || null, { emitEvent: false });
-    const formatted = date ? this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '' : '';
-    setTimeout(() => {
-      if (this.fechaSalidaHastaInputRef?.nativeElement) this.fechaSalidaHastaInputRef.nativeElement.value = formatted;
-    });
+  private fecha(valor: any): Date | null {
+    if (!valor) return null;
+    const f = this.funcionesDatosS.convertirFechaDesdeBackend(valor);
+    return f instanceof Date && !Number.isNaN(f.getTime()) ? f : null;
   }
 
-  empleadoLabel(value: Empleado | null): string {
-    if (!value) {
-      return '';
-    }
-
-    const nombres = `${value.apellidos ?? ''} ${value.nombres ?? ''}`.replace(/\s+/g, ' ').trim();
-    const identificacion = value.identificacion ? String(value.identificacion) : '';
-    return `${identificacion} ${nombres}`.trim();
+  nuevo(): void {
+    this.router.navigate(['/menurecursoshumanos/procesos/liquidacion', 'nuevo']);
   }
 
-  contratoLabel(value: ContratoEmpleado | null): string {
-    if (!value) {
-      return '';
-    }
-
-    const contrato = value as unknown as Record<string, unknown>;
-    return String(contrato['numero'] ?? contrato['codigo'] ?? '');
+  abrir(fila: any): void {
+    this.router.navigate(['/menurecursoshumanos/procesos/liquidacion', fila.codigo]);
   }
 
-  motivoLabel(motivo: number): string {
-    const encontrado = this.motivosDisponibles().find((item) => item.codigo === motivo);
-    return encontrado?.etiqueta ?? String(motivo ?? '');
+  recordarEstado(estado: Partial<EstadoLista>): void {
+    this.estadoListaService.guardar(CLAVE_LISTA, estado);
   }
 
-  estadoCssClass(estado: String | null | undefined): string {
-    const valor = String(estado ?? '').toUpperCase();
-    return valor === 'ACTIVO' ? 'estado-activo' : 'estado-inactivo';
-  }
-
-  trackByCodigo(_: number, item: Liquidacion): number {
-    return item.codigo;
-  }
-
-  private abrirFormulario(mode: FormMode, item?: Liquidacion): void {
-    const data: LiquidacionFormData = {
-      mode,
-      item,
-    };
-
-    this.dialog.open(LiquidacionFormComponent, {
-      width: '920px',
-      maxWidth: '95vw',
-      data,
-      disableClose: mode === 'view',
+  private avisar(mensaje: string, esError = false): void {
+    this.snackBar.open(mensaje, 'Cerrar', {
+      duration: esError ? 8000 : 4000,
+      panelClass: [esError ? 'snackbar-error' : 'snackbar-success'],
+      horizontalPosition: 'end',
+      verticalPosition: 'top',
     });
   }
 }

@@ -1,0 +1,89 @@
+@use '../../../../../../styles/abstracts/colors' as *;
+@use '../../../../../../styles/abstracts/variables' as *;
+@use '../../../styles/pantalla-rrh' as *;
+
+.provisiones-periodo {
+  @include pantalla-rrh;
+
+  padding: $spacing-md;
+  border-radius: $border-radius-md;
+  background: $background-primary;
+  border: $border-width solid $border-light;
+  box-shadow: 0 $spacing-xs $spacing-sm $shadow-color-light;
+
+  .cabecera {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-sm;
+  }
+
+  .nota {
+    margin: 0;
+    font-size: $font-size-sm;
+    color: $text-muted;
+  }
+
+  .aviso ul {
+    margin: $spacing-xs 0;
+    padding-left: $spacing-md;
+  }
+
+  .pista {
+    display: block;
+    font-size: $font-size-xs;
+    color: $text-muted;
+  }
+
+  .totales {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax($breakpoint-sm * 0.3, 1fr));
+    gap: $spacing-sm;
+  }
+
+  .total {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+    padding: $spacing-sm;
+    border-radius: $border-radius-sm;
+    background: $background-secondary;
+
+    .etiqueta {
+      font-size: $font-size-xs;
+      color: $text-muted;
+      text-transform: uppercase;
+    }
+
+    .valor {
+      font-size: $font-size-lg;
+      font-weight: $font-weight-semibold;
+      color: $text-primary;
+    }
+
+    .detalle {
+      font-size: $font-size-xs;
+      color: $text-secondary;
+    }
+  }
+
+  .total.destacado {
+    background: $background-tertiary;
+
+    .valor {
+      color: $secondary-color;
+    }
+  }
+
+  .tabla-scroll {
+    overflow-x: auto;
+  }
+
+  .derecha {
+    text-align: right;
+  }
+
+  .valor-provision {
+    font-weight: $font-weight-medium;
+  }
+}

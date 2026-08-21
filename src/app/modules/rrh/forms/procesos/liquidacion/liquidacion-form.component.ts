@@ -1,158 +1,300 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, CUSTOM_ELEMENTS_SCHEMA, ElementRef, Inject, OnInit, signal, ViewChild } from '@angular/core';
-import { UntypedFormControl } from '@angular/forms';
-import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
-import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { Component, OnInit, computed, signal } from '@angular/core';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { ActivatedRoute, Router } from '@angular/router';
+import { Observable, forkJoin, of } from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
+import { DetalleRubroService } from '../../../../../shared/services/detalle-rubro.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
-import { ContratoEmpleado } from '../../../model/contrato-empleado';
-import { Empleado } from '../../../model/empleado';
 import { Liquidacion } from '../../../model/Liquidacion';
+import {
+  AccionLiquidacion,
+  accionesDisponibles,
+  motivoNoDisponible,
+} from '../../../model/estados-liquidacion';
+import { ResultadoLiquidacion } from '../../../model/resultados-nomina';
+import { RubrosRrh } from '../../../model/rubros-rrh';
+import { CausalTerminacionService } from '../../../service/causal-terminacion.service';
+import { ContratoEmpleadoService } from '../../../service/contrato-empleado.service';
+import { DetalleLiquidacionService } from '../../../service/detalle-liquidacion.service';
+import { EmpleadoService } from '../../../service/empleado.service';
+import { LiquidacionService } from '../../../service/liquidacion.service';
+import { CampoFormularioComponent } from '../../comunes/campo-formulario/campo-formulario.component';
+import { mensajeDeError } from '../../comunes/mensajes';
+import { CampoFormulario } from '../../comunes/modelo-formulario';
+import { criteriosPorEmpresa } from '../../parametrizacion/utiles-parametrizacion';
+import { MENSAJE_EXITO, textoConfirmacionSalida } from './liquidacion.acciones';
+import { camposLiquidacion, criteriosDetalleLiquidacion } from './liquidacion.campos';
 
-export interface LiquidacionFormData {
-  mode: 'create' | 'edit' | 'view';
-  item?: Liquidacion;
-}
-
+/**
+ * Finiquito de un colaborador, en vista propia.
+ *
+ * El orden manda: **simular** enseña el desglose sin comprometer nada, **calcular** lo persiste,
+ * y de ahí salen aprobar, ejecutar la salida y contabilizar. Ejecutar la salida es el paso que
+ * no se deshace —cierra el contrato y caduca los saldos de vacaciones—, así que se pide
+ * confirmación escribiendo, no con un botón más.
+ */
 @Component({
   selector: 'app-liquidacion-form',
   standalone: true,
-  imports: [CommonModule, MaterialFormModule],
-  schemas: [CUSTOM_ELEMENTS_SCHEMA],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    MatButtonModule,
+    MatIconModule,
+    MatProgressSpinnerModule,
+    MatTooltipModule,
+    CampoFormularioComponent,
+  ],
   templateUrl: './liquidacion-form.component.html',
   styleUrls: ['./liquidacion-form.component.scss'],
 })
 export class LiquidacionFormComponent implements OnInit {
-  readonly empleadosDisponibles = signal<Empleado[]>([]);
-  readonly contratosDisponibles = signal<ContratoEmpleado[]>([]);
-  readonly motivosDisponibles = signal<Array<{ codigo: number; etiqueta: string }>>([]);
-  readonly estadosDisponibles = signal<String[]>([]);
+  readonly cargando = signal<boolean>(true);
+  readonly ocupado = signal<boolean>(false);
+  readonly liquidacion = signal<Liquidacion | null>(null);
+  readonly simulacion = signal<ResultadoLiquidacion | null>(null);
+  readonly detalle = signal<any[]>([]);
+  readonly campos = signal<CampoFormulario[]>([]);
 
-  @ViewChild('fechaSalidaInput', { read: ElementRef }) fechaSalidaInputRef!: ElementRef<HTMLInputElement>;
-  private _rawFechaSalida = '';
+  formulario: FormGroup = new FormGroup({});
 
-  readonly empleado = signal<Empleado | null>(null);
-  readonly contratoEmpleado = signal<ContratoEmpleado | null>(null);
-  readonly fechaSalidaControl = new UntypedFormControl(null);
-  readonly motivo = signal<number | null>(null);
-  readonly neto = signal<string>('');
-  readonly estado = signal<String | null>(null);
-  readonly fechaRegistro = signal<string>('');
-  readonly usuarioRegistro = signal<String>('');
+  private contratosPorEmpleado = new Map<number, any[]>();
+  private todosLosContratos: any[] = [];
 
-  readonly mostrarValidaciones = signal<boolean>(false);
-  readonly isViewMode = computed(() => this.data.mode === 'view');
-  readonly dialogTitle = computed(() => {
-    if (this.data.mode === 'edit') {
-      return 'Editar Liquidación';
-    }
-    if (this.data.mode === 'view') {
-      return 'Ver Liquidación';
-    }
-    return 'Nueva Liquidación';
+  readonly esNuevo = computed(() => this.liquidacion() === null);
+
+  readonly acciones = computed(() => accionesDisponibles(this.liquidacion()));
+
+  readonly titulo = computed(() => {
+    const l = this.liquidacion();
+    if (!l) return 'Nuevo finiquito';
+    return `Finiquito ${l.codigo}`;
+  });
+
+  readonly etiquetaEstado = computed(() => {
+    const l = this.liquidacion();
+    if (!l) return 'Sin calcular';
+    return (
+      this.detalleRubroService.getDescripcionByParentAndAlterno(
+        RubrosRrh.ESTADO_LIQUIDACION,
+        Number(l.estado),
+      ) || '—'
+    );
   });
 
   constructor(
-    private dialogRef: MatDialogRef<LiquidacionFormComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: LiquidacionFormData,
+    private fb: FormBuilder,
+    private route: ActivatedRoute,
+    private router: Router,
+    private liquidacionService: LiquidacionService,
+    private detalleLiquidacionService: DetalleLiquidacionService,
+    private empleadoService: EmpleadoService,
+    private contratoService: ContratoEmpleadoService,
+    private causalService: CausalTerminacionService,
+    private detalleRubroService: DetalleRubroService,
     private funcionesDatosS: FuncionesDatosService,
-  ) {
-    // TODO RRHH: cargar catálogos reales (Empleado, ContratoEmpleado, Motivo y Estado).
-    // TODO RRHH: enlazar contratos por empleado seleccionado (dependencia visual actualmente).
-  }
+    private snackBar: MatSnackBar,
+  ) {}
 
   ngOnInit(): void {
-    const item = this.data.item;
-    if (!item) {
-      return;
-    }
-
-    this.empleado.set(item.empleado ?? null);
-    this.contratoEmpleado.set(item.contratoEmpleado ?? null);
-    this.fechaSalidaControl.setValue(item.fechaSalida ? new Date(item.fechaSalida) : null, { emitEvent: false });
-    if (this.isViewMode()) {
-      this.fechaSalidaControl.disable({ emitEvent: false });
-    }
-    this.motivo.set(item.motivo ?? null);
-    this.neto.set(item.neto !== undefined && item.neto !== null ? String(item.neto) : '');
-    this.estado.set(item.estado ?? null);
-    this.fechaRegistro.set(this.toDateTimeDisplay(item.fechaRegistro));
-    this.usuarioRegistro.set(item.usuarioRegistro ?? '');
+    const id = this.route.snapshot.paramMap.get('codigo');
+    this.cargar(id && id !== 'nuevo' ? Number(id) : null);
   }
 
-  cerrar(): void {
-    this.dialogRef.close(false);
-  }
+  private cargar(idLiquidacion: number | null): void {
+    const sinFallo = (fuente: Observable<any[] | null>): Observable<any[]> =>
+      fuente.pipe(
+        map((filas) => filas ?? []),
+        catchError(() => of<any[]>([])),
+      );
 
-  guardar(): void {
-    this.mostrarValidaciones.set(true);
-  }
-
-  empleadoLabel(value: Empleado | null): string {
-    if (!value) {
-      return '';
-    }
-
-    const nombres = `${value.apellidos ?? ''} ${value.nombres ?? ''}`.replace(/\s+/g, ' ').trim();
-    const identificacion = value.identificacion ? String(value.identificacion) : '';
-    return `${identificacion} ${nombres}`.trim();
-  }
-
-  contratoLabel(value: ContratoEmpleado | null): string {
-    if (!value) {
-      return '';
-    }
-
-    const contrato = value as unknown as Record<string, unknown>;
-    return String(contrato['numero'] ?? contrato['codigo'] ?? '');
-  }
-
-  capturarFechaSalidaRaw(event: Event): void {
-    this._rawFechaSalida = (event.target as HTMLInputElement).value;
-  }
-
-  syncFechaSalidaFromRaw(event: FocusEvent): void {
-    const rawValue = (this._rawFechaSalida || (event.target as HTMLInputElement)?.value || '').trim();
-    this._rawFechaSalida = '';
-    if (!rawValue) return;
-    const parts = rawValue.split('/');
-    if (parts.length !== 3) return;
-    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
-    if (!isNaN(dia) && dia >= 1 && dia <= 31 && !isNaN(mes) && mes >= 0 && mes <= 11 && !isNaN(anio) && anio >= 1000 && anio <= 9999) {
-      const date = new Date(anio, mes, dia);
-      if (date.getFullYear() === anio && date.getMonth() === mes && date.getDate() === dia) {
-        const formatted = this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
-        this.fechaSalidaControl.setValue(date, { emitEvent: false });
-        setTimeout(() => {
-          if (this.fechaSalidaInputRef?.nativeElement) this.fechaSalidaInputRef.nativeElement.value = formatted;
-        });
-      }
-    }
-  }
-
-  onFechaSalidaPickerChange(date: Date | null | undefined): void {
-    this.fechaSalidaControl.setValue(date || null, { emitEvent: false });
-    const formatted = date ? this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '' : '';
-    setTimeout(() => {
-      if (this.fechaSalidaInputRef?.nativeElement) this.fechaSalidaInputRef.nativeElement.value = formatted;
+    forkJoin({
+      empleados: sinFallo(this.empleadoService.selectByCriteria(criteriosPorEmpresa('apellidos'))),
+      contratos: sinFallo(this.contratoService.selectByCriteria([])),
+      causales: sinFallo(this.causalService.selectByCriteria(criteriosPorEmpresa('nombre'))),
+      liquidacion: idLiquidacion
+        ? this.liquidacionService.getById(idLiquidacion).pipe(catchError(() => of(null)))
+        : of(null),
+    }).subscribe({
+      next: ({ empleados, contratos, causales, liquidacion }) => {
+        this.todosLosContratos = contratos;
+        this.indexarContratos(contratos);
+        this.construirCampos(empleados, causales);
+        this.liquidacion.set(liquidacion);
+        if (liquidacion) this.cargarDetalle(liquidacion.codigo);
+        this.cargando.set(false);
+      },
+      error: (err) => {
+        this.cargando.set(false);
+        this.avisar(mensajeDeError(err, 'No se pudo abrir el finiquito.'), true);
+      },
     });
   }
 
-  private toDateTimeDisplay(value: Date | string | null | undefined): string {
-    if (!value) {
-      return '';
+  private indexarContratos(contratos: any[]): void {
+    this.contratosPorEmpleado.clear();
+    for (const contrato of contratos) {
+      const codigo = contrato?.empleado?.codigo;
+      if (!codigo) continue;
+      if (!this.contratosPorEmpleado.has(codigo)) this.contratosPorEmpleado.set(codigo, []);
+      this.contratosPorEmpleado.get(codigo)!.push(contrato);
+    }
+  }
+
+  private construirCampos(empleados: any[], causales: any[]): void {
+    const campos = camposLiquidacion(empleados, this.todosLosContratos, causales);
+
+    this.campos.set(campos);
+
+    const controles: Record<string, any> = {};
+    for (const campo of campos) {
+      controles[campo.name] = [null, campo.requerido ? Validators.required : []];
+    }
+    this.formulario = this.fb.group(controles);
+
+    // Al cambiar de colaborador, el contrato deja de ser válido y la lista se acota
+    this.formulario.get('empleado')?.valueChanges.subscribe((empleado: any) => {
+      const codigo = empleado?.codigo;
+      const propios = codigo ? (this.contratosPorEmpleado.get(codigo) ?? []) : this.todosLosContratos;
+      this.campos.update((lista) =>
+        lista.map((c) => (c.name === 'contrato' ? { ...c, coleccion: propios } : c)),
+      );
+      this.formulario.get('contrato')?.setValue(null, { emitEvent: false });
+      this.simulacion.set(null);
+    });
+  }
+
+  private cargarDetalle(idLiquidacion: number): void {
+    this.detalleLiquidacionService.selectByCriteria(criteriosDetalleLiquidacion(idLiquidacion)).subscribe({
+      next: (filas: any) => this.detalle.set(Array.isArray(filas) ? filas : []),
+      error: () => this.detalle.set([]),
+    });
+  }
+
+  // ─── Procesos ──────────────────────────────────────────────────────────────
+
+  simular(): void {
+    if (!this.datosCompletos()) return;
+
+    const { contrato, fechaSalida, causal } = this.formulario.getRawValue();
+    this.ocupado.set(true);
+    this.liquidacionService.simular(contrato.codigo, fechaSalida, causal.codigo).subscribe({
+      next: (resultado) => {
+        this.ocupado.set(false);
+        this.simulacion.set(resultado);
+      },
+      error: (err) => {
+        this.ocupado.set(false);
+        this.simulacion.set(null);
+        this.avisar(mensajeDeError(err, 'No se pudo simular el finiquito.'), true);
+      },
+    });
+  }
+
+  calcular(): void {
+    if (!this.datosCompletos()) return;
+
+    const { contrato, fechaSalida, causal, observaciones } = this.formulario.getRawValue();
+    this.ocupado.set(true);
+    this.liquidacionService
+      .calcular(contrato.codigo, fechaSalida, causal.codigo, observaciones ?? null)
+      .subscribe({
+        next: (creada) => {
+          this.ocupado.set(false);
+          this.avisar('Finiquito calculado y guardado.');
+          if (creada?.codigo) {
+            this.router.navigate(['/menurecursoshumanos/procesos/liquidacion', creada.codigo]);
+          }
+        },
+        error: (err) => {
+          this.ocupado.set(false);
+          this.avisar(mensajeDeError(err, 'No se pudo calcular el finiquito.'), true);
+        },
+      });
+  }
+
+  ejecutar(accion: AccionLiquidacion): void {
+    const l = this.liquidacion();
+    if (!l) return;
+
+    if (accion === 'ejecutarSalida' && !confirm(textoConfirmacionSalida(this.nombreColaborador()))) {
+      return;
     }
 
-    const date = value instanceof Date ? value : new Date(value);
-    if (Number.isNaN(date.getTime())) {
-      return '';
+    const llamada = {
+      aprobar: () => this.liquidacionService.aprobar(l.codigo),
+      ejecutarSalida: () => this.liquidacionService.ejecutarSalida(l.codigo),
+      contabilizar: () => this.liquidacionService.contabilizar(l.codigo),
+    }[accion];
+
+    this.ocupado.set(true);
+    llamada().subscribe({
+      next: () => {
+        this.ocupado.set(false);
+        this.avisar(MENSAJE_EXITO[accion]);
+        this.recargar(l.codigo);
+      },
+      error: (err) => {
+        this.ocupado.set(false);
+        this.avisar(mensajeDeError(err, 'El proceso no se pudo completar.'), true);
+      },
+    });
+  }
+
+  private recargar(idLiquidacion: number): void {
+    this.liquidacionService.getById(idLiquidacion).subscribe({
+      next: (l) => {
+        this.liquidacion.set(l);
+        this.cargarDetalle(idLiquidacion);
+      },
+      error: () => undefined,
+    });
+  }
+
+  private datosCompletos(): boolean {
+    if (this.formulario.invalid) {
+      this.formulario.markAllAsTouched();
+      this.avisar('Indique colaborador, contrato, fecha de salida y causal.', true);
+      return false;
     }
+    return true;
+  }
 
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
+  // ─── Presentación ──────────────────────────────────────────────────────────
 
-    return `${day}/${month}/${year} ${hours}:${minutes}`;
+  motivo(accion: AccionLiquidacion): string {
+    return motivoNoDisponible(accion, this.liquidacion());
+  }
+
+  nombreColaborador(): string {
+    const l = this.liquidacion();
+    const emp: any = l ? l.empleado : this.formulario.get('empleado')?.value;
+    if (!emp) return '';
+    return `${emp.apellidos ?? ''} ${emp.nombres ?? ''}`.trim();
+  }
+
+  fecha(valor: any): Date | null {
+    if (!valor) return null;
+    const f = this.funcionesDatosS.convertirFechaDesdeBackend(valor);
+    return f instanceof Date && !Number.isNaN(f.getTime()) ? f : null;
+  }
+
+  volver(): void {
+    this.router.navigate(['/menurecursoshumanos/procesos/liquidacion']);
+  }
+
+  private avisar(mensaje: string, esError = false): void {
+    this.snackBar.open(mensaje, 'Cerrar', {
+      duration: esError ? 8000 : 4000,
+      panelClass: [esError ? 'snackbar-error' : 'snackbar-success'],
+      horizontalPosition: 'end',
+      verticalPosition: 'top',
+    });
   }
 }

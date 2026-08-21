@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, CUSTOM_ELEMENTS_SCHEMA, ElementRef, Inject, OnInit, signal, ViewChild } from '@angular/core';
+import { Component, computed, ElementRef, Inject, OnInit, signal, ViewChild } from '@angular/core';
 import { UntypedFormControl } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -15,6 +15,11 @@ import { SolicitudVacaciones } from '../../../model/solicitud-vacaciones';
 import { EmpleadoService } from '../../../service/empleado.service';
 import { SaldoVacacionesService } from '../../../service/saldo-vacaciones.service';
 import { SolicitudVacacionesService } from '../../../service/solicitud-vacaciones.service';
+import {
+  criteriosPorEmpresa,
+  filtrarPorAnio,
+} from '../../parametrizacion/utiles-parametrizacion';
+import { usuarioSesion } from '../../../../../shared/services/usuario-sesion';
 
 export interface VacacionesFormData {
   mode: 'new' | 'edit' | 'view';
@@ -25,7 +30,6 @@ export interface VacacionesFormData {
   selector: 'app-vacaciones-form',
   standalone: true,
   imports: [CommonModule, MaterialFormModule],
-  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './vacaciones-form.component.html',
   styleUrls: ['./vacaciones-form.component.scss'],
 })
@@ -307,15 +311,21 @@ export class VacacionesFormComponent implements OnInit {
       payload.usuarioAprobacion = current?.usuarioAprobacion ?? undefined;
     } else {
       payload.fechaRegistro = new Date();
-      payload.usuarioRegistro = this.getUsuarioRegistro();
+      payload.usuarioRegistro = usuarioSesion();
     }
 
     this.loading.set(true);
     this.errorMsg.set('');
 
-    // TODO(test): validacion de saldo deshabilitada temporalmente
-    this.validarCruces(empleado.codigo, payload, current?.codigo)
+    const inicioMs = this.toDateValue(fechaInicio);
+    const anioSolicitud = inicioMs ? new Date(inicioMs).getFullYear() : this.saldoAnio();
+
+    this.validarSaldo(empleado.codigo, anioSolicitud, diasSolicitados)
       .pipe(
+        switchMap((okSaldo) => {
+          if (!okSaldo) return of(false);
+          return this.validarCruces(empleado.codigo, payload, current?.codigo);
+        }),
         switchMap((okCruces) => {
           if (!okCruces) return of(null);
           return isUpdate
@@ -325,7 +335,11 @@ export class VacacionesFormComponent implements OnInit {
       )
       .subscribe({
         next: (res) => {
-          if (!res) return;
+          // res nulo = alguna validación previa falló y ya dejó su mensaje en errorMsg
+          if (!res) {
+            this.loading.set(false);
+            return;
+          }
           this.snackBar.open('Solicitud guardada', 'Cerrar', {
             duration: 3500,
             panelClass: ['success-snackbar'],
@@ -377,18 +391,9 @@ export class VacacionesFormComponent implements OnInit {
     );
     criterios.push(dbEmpleado);
 
-    const dbAnio = new DatosBusqueda();
-    dbAnio.asignaUnCampoSinTrunc(
-      TipoDatosBusqueda.LONG,
-      'anio',
-      String(anio),
-      TipoComandosBusqueda.IGUAL,
-    );
-    criterios.push(dbAnio);
-
     return this.saldoService.selectByCriteria(criterios).pipe(
       map((rows: SaldoVacaciones[] | null) => {
-        const items = this.extractRows(rows);
+        const items = filtrarPorAnio(this.extractRows(rows), anio);
         const saldo = items[0] ?? null;
         this.saldoData.set(saldo);
         if (!saldo) {
@@ -470,18 +475,9 @@ export class VacacionesFormComponent implements OnInit {
     );
     criterios.push(dbEmpleado);
 
-    const dbAnio = new DatosBusqueda();
-    dbAnio.asignaUnCampoSinTrunc(
-      TipoDatosBusqueda.LONG,
-      'anio',
-      String(anio),
-      TipoComandosBusqueda.IGUAL,
-    );
-    criterios.push(dbAnio);
-
     this.saldoService.selectByCriteria(criterios).subscribe({
       next: (rows: SaldoVacaciones[] | null) => {
-        const items = this.extractRows(rows);
+        const items = filtrarPorAnio(this.extractRows(rows), anio);
         this.saldoData.set(items[0] ?? null);
       },
       error: () => {
@@ -491,7 +487,8 @@ export class VacacionesFormComponent implements OnInit {
   }
 
   private buildEmpleadoCriteria(busqueda: string): DatosBusqueda[] {
-    const criterios: DatosBusqueda[] = [];
+    // RHH.MPLD lleva PJRQCDGO desde el script 05: la búsqueda se acota a la empresa activa
+    const criterios: DatosBusqueda[] = criteriosPorEmpresa();
     const texto = this.normalizeText(busqueda);
     if (texto) {
       const db = new DatosBusqueda();
@@ -606,36 +603,6 @@ export class VacacionesFormComponent implements OnInit {
     if (typeof err?.error === 'string') return err.error;
     if (typeof err?.error?.message === 'string') return err.error.message;
     return '';
-  }
-
-  private getUsuarioRegistro(): string {
-    const raw =
-      localStorage.getItem('usuarioRegistro') ||
-      localStorage.getItem('usuario') ||
-      localStorage.getItem('username') ||
-      localStorage.getItem('user') ||
-      'web';
-
-    const text = String(raw ?? '').trim();
-    if (!text) return 'web';
-
-    if (text.startsWith('{') || text.startsWith('[')) {
-      try {
-        const parsed = JSON.parse(text) as Record<string, unknown> | Array<Record<string, unknown>>;
-        const user = Array.isArray(parsed) ? parsed[0] : parsed;
-        const candidate =
-          (user?.['username'] as string) ||
-          (user?.['usuario'] as string) ||
-          (user?.['login'] as string) ||
-          (user?.['nombre'] as string) ||
-          (user?.['email'] as string);
-        if (candidate) return String(candidate).substring(0, 59);
-      } catch {
-        return 'web';
-      }
-    }
-
-    return text.substring(0, 59);
   }
 
   private showError(message: string): void {

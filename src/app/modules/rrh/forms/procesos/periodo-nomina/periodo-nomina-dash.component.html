@@ -1,0 +1,213 @@
+<div class="rrh-page">
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-icon">
+        <mat-icon>request_quote</mat-icon>
+      </div>
+      <div class="header-text">
+        @if (periodo(); as p) {
+          <h1>Período {{ p.mes }}/{{ p.anio }}</h1>
+          <p class="subtitle">
+            {{ tipoLabel() }} · estado <strong>{{ estadoLabel() }}</strong>
+          </p>
+        } @else {
+          <h1>Período de nómina</h1>
+        }
+      </div>
+    </div>
+    <div class="header-actions">
+      @if (periodo()) {
+        <span class="etiqueta-modo" [class.modo-historico]="historico()">
+          <mat-icon>{{ historico() ? 'history' : 'account_balance' }}</mat-icon>
+          {{ modoLabel() }}
+        </span>
+      }
+      <button mat-stroked-button (click)="volver()">
+        <mat-icon>arrow_back</mat-icon>
+        Volver
+      </button>
+    </div>
+  </div>
+
+  @if (cargando()) {
+    <div class="mensaje-vacio">
+      <mat-spinner diameter="32"></mat-spinner>
+    </div>
+  } @else if (periodo(); as p) {
+    @if (historico()) {
+      <div class="aviso">
+        <mat-icon>history</mat-icon>
+        <span>
+          Período histórico: recorre toda la máquina de estados pero no genera asiento contable
+          ni valida cuentas. Es lo que permite cargarlo sin plan de cuentas.
+        </span>
+      </div>
+    }
+
+    <!-- Barra que refleja la máquina de estados -->
+    <div class="panel barra-acciones">
+      <button mat-raised-button color="primary" (click)="validar()" [disabled]="!puede('validar')">
+        <mat-icon>fact_check</mat-icon>
+        Validar
+      </button>
+      <button mat-raised-button color="primary" (click)="calcular()" [disabled]="!puede('calcular')">
+        <mat-icon>calculate</mat-icon>
+        Calcular
+      </button>
+      <button mat-raised-button color="primary" (click)="aprobar()" [disabled]="!puede('aprobar')">
+        <mat-icon>how_to_reg</mat-icon>
+        Aprobar
+      </button>
+      <button
+        mat-raised-button
+        color="primary"
+        (click)="contabilizar()"
+        [disabled]="!puede('contabilizar')"
+        matTooltip="Emite el asiento del rol de pagos"
+      >
+        <mat-icon>receipt_long</mat-icon>
+        Contabilizar rol
+      </button>
+      <button
+        mat-raised-button
+        color="primary"
+        (click)="contabilizarProvisiones()"
+        [disabled]="!puede('contabilizarProvisiones')"
+        matTooltip="Emite el asiento de provisiones, que es distinto del rol y se guarda aparte"
+      >
+        <mat-icon>savings</mat-icon>
+        Contabilizar provisiones
+      </button>
+      <button mat-raised-button color="primary" (click)="cerrar()" [disabled]="!puede('cerrar')">
+        <mat-icon>lock</mat-icon>
+        Cerrar
+      </button>
+      <span class="separador"></span>
+      <!-- Previsualizar no persiste y funciona en histórico, pero arma las líneas desde las
+           nóminas: sin período calculado no habría nada que mostrar -->
+      <button
+        mat-stroked-button
+        (click)="previsualizarRol()"
+        [disabled]="!puedePrevisualizar()"
+        matTooltip="Ver las líneas del asiento del rol antes de emitirlo; necesita el período calculado"
+      >
+        <mat-icon>preview</mat-icon>
+        Ver asiento del rol
+      </button>
+      <button
+        mat-stroked-button
+        (click)="previsualizarProvisiones()"
+        [disabled]="!puedePrevisualizar()"
+        matTooltip="Ver las líneas del asiento de provisiones antes de emitirlo; necesita el período calculado"
+      >
+        <mat-icon>preview</mat-icon>
+        Ver asiento de provisiones
+      </button>
+      <span class="separador"></span>
+      <button mat-stroked-button color="warn" (click)="reabrir()" [disabled]="!puede('reabrir')">
+        <mat-icon>lock_open</mat-icon>
+        Reabrir
+      </button>
+      @if (ocupado()) {
+        <mat-spinner diameter="24"></mat-spinner>
+      }
+    </div>
+
+    <!-- Mensajes de la validación: en panel, no en snackbar -->
+    @if (mensajesValidacion(); as mensajes) {
+      @if (mensajes.length === 0) {
+        <div class="aviso">
+          <mat-icon>check_circle</mat-icon>
+          <span>La validación no encontró observaciones.</span>
+        </div>
+      } @else {
+        <div class="aviso aviso-error">
+          <mat-icon>report_problem</mat-icon>
+          <div>
+            <strong>{{ mensajes.length }} observación(es) de la validación:</strong>
+            <ul>
+              @for (mensaje of mensajes; track mensaje) {
+                <li>{{ mensaje }}</li>
+              }
+            </ul>
+          </div>
+        </div>
+      }
+    }
+
+    <!--
+      El período no se pudo cerrar. El mensaje es el del backend, entero; el enlace lleva a donde
+      se resuelve, que suelen ser novedades del IESS sin declarar.
+    -->
+    @if (bloqueoCierre(); as motivo) {
+      <div class="aviso aviso-error">
+        <mat-icon>lock</mat-icon>
+        <div>
+          <strong>El período no se cerró.</strong>
+          <p>{{ motivo }}</p>
+          <button mat-stroked-button type="button" (click)="irANovedadesIess()">
+            <mat-icon>assignment_late</mat-icon>
+            Ver novedades del mes
+          </button>
+        </div>
+      </div>
+    }
+
+    @if (erroresCalculo().length > 0) {
+      <div class="aviso aviso-error">
+        <mat-icon>error</mat-icon>
+        <div>
+          <strong>El cálculo reportó {{ erroresCalculo().length }} error(es):</strong>
+          <ul>
+            @for (error of erroresCalculo(); track error) {
+              <li>{{ error }}</li>
+            }
+          </ul>
+        </div>
+      </div>
+    }
+
+    <!-- Totales del período -->
+    <div class="panel">
+      <h2 class="panel-titulo">Totales del período</h2>
+      <div class="totales">
+        <div class="total">
+          <span class="etiqueta">Colaboradores</span>
+          <span class="valor">{{ p.numeroEmpleados ?? 0 }}</span>
+        </div>
+        <div class="total">
+          <span class="etiqueta">Ingresos</span>
+          <span class="valor">{{ p.totalIngresos ?? 0 | number: '1.2-2' }}</span>
+        </div>
+        <div class="total">
+          <span class="etiqueta">Descuentos</span>
+          <span class="valor">{{ p.totalDescuentos ?? 0 | number: '1.2-2' }}</span>
+        </div>
+        <div class="total destacado">
+          <span class="etiqueta">Neto</span>
+          <span class="valor">{{ p.totalNeto ?? 0 | number: '1.2-2' }}</span>
+        </div>
+        <div class="total">
+          <span class="etiqueta">Costo patronal</span>
+          <span class="valor">{{ p.totalPatronal ?? 0 | number: '1.2-2' }}</span>
+        </div>
+      </div>
+    </div>
+
+    <app-nominas-periodo
+      [idPeriodo]="p.codigo"
+      [version]="versionDatos()"
+      [permiteAcciones]="!cerrado()"
+      (recalcular)="onRecalcularEmpleado($event)"
+      (excluir)="onExcluirEmpleado($event)"
+    >
+    </app-nominas-periodo>
+
+    <app-provisiones-periodo
+      [idPeriodo]="p.codigo"
+      [version]="versionDatos()"
+      [numeroColaboradores]="p.numeroEmpleados ?? 0"
+    >
+    </app-provisiones-periodo>
+  }
+</div>

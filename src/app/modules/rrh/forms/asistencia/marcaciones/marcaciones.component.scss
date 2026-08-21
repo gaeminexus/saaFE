@@ -1,0 +1,18 @@
+@use '../../../../../../styles/abstracts/colors' as *;
+@use '../../../../../../styles/abstracts/variables' as *;
+@use '../../../styles/pantalla-rrh' as *;
+
+.rrh-page {
+  @include pantalla-rrh;
+
+  .filtros {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    flex-wrap: wrap;
+  }
+
+  .selector-empleado {
+    min-width: $breakpoint-sm * 0.6;
+  }
+}

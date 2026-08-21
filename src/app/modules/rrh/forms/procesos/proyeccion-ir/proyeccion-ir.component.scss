@@ -1,0 +1,41 @@
+@use '../../../../../../styles/abstracts/colors' as *;
+@use '../../../../../../styles/abstracts/variables' as *;
+@use '../../../styles/pantalla-rrh' as *;
+
+.rrh-page {
+  @include pantalla-rrh;
+
+  .selector-anio {
+    min-width: $breakpoint-sm * 0.25;
+  }
+
+  .selector-empleado {
+    min-width: $breakpoint-sm * 0.6;
+  }
+
+  .motivo {
+    margin: 0 0 $spacing-sm;
+    font-size: $font-size-sm;
+    color: $text-muted;
+  }
+
+  .tabla-proyeccion {
+    width: 100%;
+  }
+
+  .derecha {
+    text-align: right;
+  }
+
+  .nota {
+    display: block;
+    font-size: $font-size-xs;
+    color: $text-muted;
+  }
+
+  tr.destacado td {
+    font-weight: $font-weight-semibold;
+    background: $background-secondary;
+    color: $primary-color;
+  }
+}

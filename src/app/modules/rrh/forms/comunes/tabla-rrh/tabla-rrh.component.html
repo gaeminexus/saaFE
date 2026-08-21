@@ -1,0 +1,76 @@
+<div class="barra">
+  <mat-form-field appearance="outline" class="buscador">
+    <mat-icon matPrefix>search</mat-icon>
+    <input matInput [ngModel]="filtro()" (ngModelChange)="alFiltrar($event)"
+           placeholder="Filtrar" />
+  </mat-form-field>
+  <span class="conteo">{{ visibles().length }} de {{ origen().length }}</span>
+  <ng-content select="[acciones]"></ng-content>
+</div>
+
+<div class="marco" #marco>
+  <table>
+    <thead>
+      <tr>
+        @for (columna of columnas; track columna.campo) {
+          <th [style.width]="columna.ancho" [class]="clase(columna)"
+              (click)="ordenarPor(columna)" matTooltip="Ordenar por esta columna">
+            <span class="cabecera">
+              {{ columna.titulo }}
+              @if (ordenPor() === columna.campo) {
+                <mat-icon class="flecha">{{ ascendente() ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+              }
+            </span>
+          </th>
+        }
+        <th class="al-centro columna-acciones">Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (fila of visibles(); track identidad($index, fila)) {
+        <tr [class.destacada]="fila?.codigo === destacado()">
+          @for (columna of columnas; track columna.campo) {
+            <td [class]="clase(columna)">
+              @if (tono(columna, fila); as tonoFila) {
+                <span class="pastilla" [class]="'pastilla-' + tonoFila">
+                  {{ fila[columna.campo] }}
+                </span>
+              } @else {
+                @switch (columna.formato) {
+                  @case ('dinero') { {{ fila[columna.campo] | number: '1.2-2' }} }
+                  @case ('numero') { {{ fila[columna.campo] | number }} }
+                  @case ('fecha') { {{ fila[columna.campo] | date: 'dd/MM/yyyy' }} }
+                  @default { {{ fila[columna.campo] }} }
+                }
+              }
+            </td>
+          }
+          <td class="al-centro columna-acciones">
+            @if (permiteEditar) {
+              <button mat-icon-button type="button" (click)="alEditar(fila)"
+                      matTooltip="Abrir para editar">
+                <mat-icon>edit</mat-icon>
+              </button>
+            }
+            @if (permiteBorrar) {
+              <button mat-icon-button type="button" (click)="borrar.emit(fila)"
+                      matTooltip="Eliminar el registro">
+                <mat-icon>delete</mat-icon>
+              </button>
+            }
+          </td>
+        </tr>
+      } @empty {
+        <tr>
+          <td [attr.colspan]="columnas.length + 1" class="vacio">
+            @if (cargando) {
+              Cargando…
+            } @else {
+              {{ mensajeVacio }}
+            }
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>

@@ -1,0 +1,73 @@
+<div class="pantalla">
+  <header class="cabecera">
+    <div class="titulos">
+      <h1>
+        <mat-icon>pie_chart</mat-icon>
+        Reparto de utilidades
+      </h1>
+      <p>
+        Una parte se reparte por días trabajados y otra por cargas familiares. Lo que pasa del
+        tope por trabajador no se reparte entre los demás: va al IESS.
+      </p>
+    </div>
+
+    <div class="acciones-cabecera">
+      <mat-form-field appearance="outline" class="anio">
+        <mat-label>Ejercicio</mat-label>
+        <mat-select [ngModel]="anio()" (ngModelChange)="anio.set($event); cargar()">
+          @for (a of anios; track a) {
+            <mat-option [value]="a">{{ a }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="importe">
+        <mat-label>Utilidad contable</mat-label>
+        <input matInput type="number" [(ngModel)]="utilidadContable" />
+        <mat-hint>Sale del balance del ejercicio</mat-hint>
+      </mat-form-field>
+
+      <button mat-raised-button color="primary" type="button" (click)="calcular()"
+              [disabled]="ocupado()"
+              matTooltip="Reparte la utilidad entre el personal del ejercicio">
+        <mat-icon>calculate</mat-icon>
+        Calcular reparto
+      </button>
+    </div>
+  </header>
+
+  @if (utilidad(); as u) {
+    <section class="resumen">
+      <h2>Coeficientes del ejercicio {{ u.anio }}</h2>
+      <dl>
+        <div><dt>Utilidad contable</dt><dd>{{ u.utilidadContable | number: '1.2-2' }}</dd></div>
+        <div><dt>Base a repartir</dt><dd>{{ u.baseTotal | number: '1.2-2' }}</dd></div>
+        <div><dt>Base por días</dt><dd>{{ u.basePorDias | number: '1.2-2' }}</dd></div>
+        <div><dt>Base por cargas</dt><dd>{{ u.basePorCargas | number: '1.2-2' }}</dd></div>
+        <div><dt>Total días</dt><dd>{{ u.totalDias | number: '1.0-2' }}</dd></div>
+        <div><dt>Total cargas</dt><dd>{{ u.totalCargas }}</dd></div>
+        <div><dt>Valor por día</dt><dd>{{ u.valorPorDia | number: '1.2-6' }}</dd></div>
+        <div><dt>Valor por carga</dt><dd>{{ u.valorPorCarga | number: '1.2-6' }}</dd></div>
+        <div><dt>Tope por trabajador</dt><dd>{{ u.topePorTrabajador | number: '1.2-2' }}</dd></div>
+        <div><dt>Excedente al IESS</dt><dd>{{ u.excedente | number: '1.2-2' }}</dd></div>
+      </dl>
+    </section>
+  } @else if (!cargando()) {
+    <div class="aviso">
+      <mat-icon>info</mat-icon>
+      <span>
+        No hay reparto calculado para {{ anio() }}. Indique la utilidad contable del ejercicio y
+        pulse «Calcular reparto».
+      </span>
+    </div>
+  }
+
+  <app-tabla-rrh
+    [columnas]="columnas"
+    [filas]="detalle()"
+    [cargando]="cargando()"
+    [permiteEditar]="false"
+    mensajeVacio="Sin reparto por colaborador para este ejercicio."
+  >
+  </app-tabla-rrh>
+</div>

@@ -280,6 +280,11 @@
 
             <tr mat-header-row *matHeaderRowDef="columns()"></tr>
             <tr mat-row *matRowDef="let row; columns: columns()"></tr>
+            <tr class="mat-row" *matNoDataRow>
+              <td class="mat-cell fila-vacia" [attr.colspan]="columns().length">
+                No hay solicitudes de vacaciones que coincidan con los filtros.
+              </td>
+            </tr>
           </table>
         </div>
 
@@ -373,6 +378,11 @@
 
             <tr mat-header-row *matHeaderRowDef="['anio', 'diasAsignados', 'diasUsados', 'diasPendientes']"></tr>
             <tr mat-row *matRowDef="let row; columns: ['anio', 'diasAsignados', 'diasUsados', 'diasPendientes']"></tr>
+            <tr class="mat-row" *matNoDataRow>
+              <td class="mat-cell fila-vacia" colspan="4">
+                El colaborador no tiene saldos de vacaciones registrados.
+              </td>
+            </tr>
           </table>
         </div>
       </mat-card-content>

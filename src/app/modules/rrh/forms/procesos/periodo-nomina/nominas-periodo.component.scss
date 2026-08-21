@@ -1,0 +1,71 @@
+@use '../../../../../../styles/abstracts/colors' as *;
+@use '../../../../../../styles/abstracts/variables' as *;
+@use '../../../styles/pantalla-rrh' as *;
+
+.nominas-periodo {
+  @include pantalla-rrh;
+
+  padding: $spacing-md;
+  border-radius: $border-radius-md;
+  background: $background-primary;
+  border: $border-width solid $border-light;
+  box-shadow: 0 $spacing-xs $spacing-sm $shadow-color-light;
+
+  .cabecera {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-sm;
+  }
+
+  .tabla-scroll {
+    overflow-x: auto;
+  }
+
+  .derecha {
+    text-align: right;
+  }
+
+  .neto {
+    font-weight: $font-weight-semibold;
+  }
+
+  .excluida {
+    text-decoration: line-through;
+    color: $text-muted;
+  }
+
+  .fila-detalle td {
+    padding: 0;
+    border-bottom: 0;
+  }
+
+  .detalle-renglones {
+    padding: $spacing-sm $spacing-md;
+    background: $background-secondary;
+  }
+
+  .tabla-renglones {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: $font-size-sm;
+
+    th,
+    td {
+      padding: $spacing-xs $spacing-sm;
+      border-bottom: $border-width solid $border-light;
+    }
+
+    th {
+      color: $text-muted;
+      font-weight: $font-weight-medium;
+      text-align: left;
+    }
+  }
+}
+
+.nominas-periodo .acciones-export {
+  display: flex;
+  gap: $spacing-sm;
+  flex-wrap: wrap;
+}

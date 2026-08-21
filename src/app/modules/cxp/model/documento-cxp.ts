@@ -33,4 +33,6 @@ export interface DocumentoCxp {
   usuarioCargaXml: number;
   fechaReversion: string;
   usuarioReversion: number;
+  /** Marcado como factura de reembolso de gastos: 0=No 1=Sí */
+  esReembolso?: number;
 }

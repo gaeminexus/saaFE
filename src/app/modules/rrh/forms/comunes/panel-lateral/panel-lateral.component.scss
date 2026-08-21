@@ -1,0 +1,74 @@
+@use '../../../../../../styles/abstracts/colors' as *;
+@use '../../../../../../styles/abstracts/variables' as *;
+
+.fondo {
+  position: fixed;
+  inset: 0;
+  background: $overlay-dark;
+  z-index: $z-index-modal-backdrop;
+}
+
+.panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: $z-index-modal;
+
+  // Ancho cómodo para un formulario de dos columnas, sin comerse la pantalla entera
+  width: min(100%, #{$breakpoint-md * 0.75});
+
+  // La clave del arreglo: el panel ocupa el alto de la ventana y reparte en tres filas,
+  // de modo que el pie es siempre visible y el sobrante lo absorbe el cuerpo.
+  display: flex;
+  flex-direction: column;
+  max-height: 100vh;
+
+  background: $background-primary;
+  border-left: $border-width solid $border-light;
+  box-shadow: 0 0 $spacing-lg $shadow-color-dark;
+}
+
+.cabecera {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $spacing-sm;
+  padding: $spacing-md;
+  border-bottom: $border-width solid $border-light;
+
+  h2 {
+    margin: 0;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-semibold;
+    color: $text-primary;
+  }
+
+  p {
+    margin: 0;
+    font-size: $font-size-sm;
+    color: $text-secondary;
+  }
+}
+
+.cuerpo {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: $spacing-md;
+}
+
+.pie {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: flex-end;
+  gap: $spacing-sm;
+  padding: $spacing-md;
+  border-top: $border-width solid $border-light;
+  background: $background-secondary;
+
+  mat-spinner {
+    margin-right: $spacing-xs;
+  }
+}

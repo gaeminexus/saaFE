@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { AfterViewInit, Component, ElementRef, OnInit, ViewChild, inject, signal } from '@angular/core';
 import { FormsModule, UntypedFormControl } from '@angular/forms';
-import { MAT_DIALOG_DATA, MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -19,6 +19,8 @@ import { Titular } from '../../../../tsr/model/titular';
 import { DocumentoCxp } from '../../../model/documento-cxp';
 import { CargaDocumentosService, GrupoProducto, ProductoNuevo } from '../../../service/carga-documentos.service';
 import { DocumentoCxpService } from '../../../service/documento-cxp.service';
+import { SubirXmlDialogComponent, SubirXmlDialogResult } from '../dialogs/subir-xml-dialog/subir-xml-dialog.component';
+import { ReembolsosFacturaComponent } from '../reembolsos-factura/reembolsos-factura.component';
 
 // Estados que aún no están registrados en BD (pendientes de proceso)
 const ESTADOS_PENDIENTES = [1, 2, 4, 5, 6];
@@ -333,6 +335,47 @@ export class ErrorRegistroDialogComponent {
   data: { mensaje: string; detalle?: string } = inject(MAT_DIALOG_DATA);
 }
 
+// ─── Dialog: documentos de reembolso de una factura ───────────────────
+export interface ReembolsosFacturaDialogData {
+  idFacturaCompra: number;
+  contabilizacionPendiente: boolean;
+  idUsuario: number;
+  idEmpresa: number;
+}
+
+@Component({
+  selector: 'app-reembolsos-factura-dialog',
+  standalone: true,
+  imports: [CommonModule, MatDialogModule, MatIconModule, MatButtonModule, ReembolsosFacturaComponent],
+  template: `
+    <h2 mat-dialog-title class="rfd-titulo">
+      <mat-icon>fact_check</mat-icon> Documentos de reembolso
+    </h2>
+    <mat-dialog-content class="rfd-content">
+      <app-reembolsos-factura
+        [idFacturaCompra]="data.idFacturaCompra"
+        [editable]="true"
+        [contabilizacionPendiente]="data.contabilizacionPendiente"
+        [idUsuario]="data.idUsuario"
+        [idEmpresa]="data.idEmpresa"
+        (contabilizado)="onContabilizado()" />
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <button mat-button [mat-dialog-close]="cambios">Cerrar</button>
+    </mat-dialog-actions>
+  `,
+  styles: [`
+    .rfd-titulo { display: flex; align-items: center; gap: 8px; }
+    .rfd-content { min-width: 1100px; max-width: 96vw; }
+  `],
+})
+export class ReembolsosFacturaDialogComponent {
+  private ref = inject(MatDialogRef<ReembolsosFacturaDialogComponent, boolean>);
+  data: ReembolsosFacturaDialogData = inject(MAT_DIALOG_DATA);
+  cambios = false;
+  onContabilizado(): void { this.cambios = true; this.ref.close(true); }
+}
+
 @Component({
   selector: 'app-gestion-documentos',
   standalone: true,
@@ -384,11 +427,6 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit {
   filtroRuc = '';
   filtroProveedor = '';
   filtroTipo = '';
-
-  // Inputs ocultos para XML
-  private inputXmlEl: HTMLInputElement | null = null;
-  docParaXml: DocumentoCxp | null = null;
-  docParaResolverNovedad: DocumentoCxp | null = null;
 
   // Productos pendientes
   requiereProductos = signal(false);
@@ -631,31 +669,28 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit {
   // ─── SUBIR XML ──────────────────────────────────────────
 
   abrirSelectorXml(doc: DocumentoCxp): void {
-    this.docParaXml = doc;
-    this.docParaResolverNovedad = null;
-    this.getInputXml().click();
+    const ref = this.dialog.open(SubirXmlDialogComponent, {
+      data: { documento: doc },
+      width: '520px',
+      maxWidth: '95vw',
+    });
+    ref.afterClosed().subscribe((result: SubirXmlDialogResult | null) => {
+      if (result?.file) { this.subirXml(result.file, doc, result.esReembolso); }
+    });
   }
 
-  onXmlFileChange(event: Event): void {
-    const file = (event.target as HTMLInputElement).files?.[0];
-    if (!file) return;
-    if (this.docParaResolverNovedad) {
-      this.resolverNovedad(this.docParaResolverNovedad, 'REEMPLAZAR', file);
-      this.docParaResolverNovedad = null;
-    } else if (this.docParaXml) {
-      this.subirXml(file, this.docParaXml);
-      this.docParaXml = null;
-    }
-    (event.target as HTMLInputElement).value = '';
-  }
-
-  private subirXml(file: File, doc: DocumentoCxp): void {
+  private subirXml(file: File, doc: DocumentoCxp, esReembolso: boolean): void {
     this.procesando.set(true);
     const reader = new FileReader();
     reader.onload = (e) => {
       const contenidoXml = (e.target?.result as string) || '';
-      this.processService.cargarXml(doc.id, { contenidoXml, idUsuario: this.idUsuario }).subscribe({
-        next: () => { this.procesando.set(false); this.mostrarExito('XML subido correctamente'); this.cargar(); },
+      this.processService.cargarXml(doc.id, { contenidoXml, idUsuario: this.idUsuario, esReembolso: esReembolso ? 1 : 0 }).subscribe({
+        next: (resp: any) => {
+          this.procesando.set(false);
+          this.mostrarExito('XML subido correctamente');
+          this.procesarRespuestaReembolso(resp, doc);
+          this.cargar();
+        },
         error: (err) => {
           this.procesando.set(false);
           if (err?.valido === false && Array.isArray(err?.errores) && err.errores.length > 0) {
@@ -667,6 +702,27 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit {
       });
     };
     reader.readAsText(file, 'UTF-8');
+  }
+
+  /** Reacciona a los campos NUEVOS de la respuesta del proceso XML (reembolso). */
+  private procesarRespuestaReembolso(resp: any, doc: DocumentoCxp): void {
+    if (!resp) return;
+    if (resp.advertenciaReembolso) {
+      this.snackBar.open(resp.advertenciaReembolso, 'Cerrar', { duration: 8000, panelClass: ['warning-snackbar'] });
+    }
+    if (resp.reembolsoManualPendiente || resp.contabilizacionPendiente) {
+      const idFactura = resp.idFacturaCompra || resp.idDocumentoBD || doc.idDocumentoBD;
+      const snackRef = this.snackBar.open(
+        resp.motivoContabilizacionPendiente || 'Reembolso pendiente de sustentos / contabilización',
+        'Gestionar reembolsos',
+        { duration: 10000, panelClass: ['warning-snackbar'] },
+      );
+      snackRef.onAction().subscribe(() => {
+        if (idFactura) {
+          this.abrirDialogoReembolsos({ ...doc, idDocumentoBD: idFactura, esReembolso: 1, estadoDocumento: 2 });
+        }
+      });
+    }
   }
 
   // ─── REGISTRAR EN BD ────────────────────────────────────
@@ -731,7 +787,7 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit {
 
   // ─── RESOLVER NOVEDAD ───────────────────────────────────
 
-  resolverNovedad(doc: DocumentoCxp, accion: 'MANTENER' | 'REEMPLAZAR', xmlFile?: File): void {
+  resolverNovedad(doc: DocumentoCxp, accion: 'MANTENER' | 'REEMPLAZAR', xmlFile?: File, esReembolso?: boolean): void {
     if (accion === 'MANTENER') {
       if (!confirm(`¿Mantener el documento ${doc.serieComprobante} sin cambios?`)) return;
       this.procesando.set(true);
@@ -744,7 +800,7 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit {
       const reader = new FileReader();
       reader.onload = (e) => {
         const contenidoXml = (e.target?.result as string) || '';
-        this.processService.resolverNovedad(doc.id, { accion: 'REEMPLAZAR', contenidoXml, idUsuario: this.idUsuario }).subscribe({
+        this.processService.resolverNovedad(doc.id, { accion: 'REEMPLAZAR', contenidoXml, idUsuario: this.idUsuario, esReembolso: esReembolso ? 1 : 0 }).subscribe({
           next: (resp) => { this.procesando.set(false); this.mostrarExito(resp?.mensaje || 'Reemplazado'); this.cargar(); },
           error: (err) => { this.procesando.set(false); this.mostrarError(this.extraerMensajeError(err)); },
         });
@@ -754,9 +810,51 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit {
   }
 
   abrirResolverReemplazar(doc: DocumentoCxp): void {
-    this.docParaResolverNovedad = doc;
-    this.docParaXml = null;
-    this.getInputXml().click();
+    const ref = this.dialog.open(SubirXmlDialogComponent, {
+      data: { documento: doc },
+      width: '520px',
+      maxWidth: '95vw',
+    });
+    ref.afterClosed().subscribe((result: SubirXmlDialogResult | null) => {
+      if (result?.file) { this.resolverNovedad(doc, 'REEMPLAZAR', result.file, result.esReembolso); }
+    });
+  }
+
+  // ─── MARCAR / DESMARCAR REEMBOLSO ───────────────────────
+
+  toggleReembolso(doc: DocumentoCxp): void {
+    if (doc.estadoDocumento === 3) { this.mostrarError('No se puede marcar reembolso en un documento ya registrado'); return; }
+    const esMarcado = doc.esReembolso === 1;
+    const accion = esMarcado ? 'desmarcar' : 'marcar como';
+    if (!confirm(`¿Desea ${accion} reembolso de gastos el documento ${doc.serieComprobante}?`)) return;
+    this.procesando.set(true);
+    this.processService.marcarReembolso(doc.id, !esMarcado, this.idUsuario).subscribe({
+      next: () => { this.procesando.set(false); this.mostrarExito(esMarcado ? 'Reembolso desmarcado' : 'Documento marcado como reembolso'); this.cargar(); },
+      error: (err) => { this.procesando.set(false); this.mostrarError(this.extraerMensajeError(err)); },
+    });
+  }
+
+  // ─── DIÁLOGO DOCUMENTOS DE REEMBOLSO ────────────────────
+
+  puedeGestionarReembolsos(doc: DocumentoCxp): boolean {
+    return doc.esReembolso === 1
+      && doc.tipoTablaDestino === 'FACTURA_COMPRA'
+      && !!doc.idDocumentoBD
+      && (doc.estadoDocumento === 2 || doc.estadoDocumento === 3);
+  }
+
+  abrirDialogoReembolsos(doc: DocumentoCxp): void {
+    const ref = this.dialog.open(ReembolsosFacturaDialogComponent, {
+      data: {
+        idFacturaCompra: doc.idDocumentoBD,
+        contabilizacionPendiente: doc.estadoDocumento === 2,
+        idUsuario: this.idUsuario,
+        idEmpresa: this.idEmpresa,
+      },
+      width: '1200px',
+      maxWidth: '98vw',
+    });
+    ref.afterClosed().subscribe(() => this.cargar());
   }
 
   // ─── REVERTIR (estado 3 → 6) ───────────────────────────────────
@@ -786,19 +884,6 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit {
     if (Array.isArray(value)) { const [y, mo, d, h = 0, m = 0, s = 0] = value as number[]; return new Date(y, mo - 1, d, h, m, s); }
     const d = new Date(value);
     return isNaN(d.getTime()) ? null : d;
-  }
-
-  private getInputXml(): HTMLInputElement {
-    if (!this.inputXmlEl) {
-      this.inputXmlEl = document.createElement('input');
-      this.inputXmlEl.type = 'file';
-      this.inputXmlEl.accept = '.xml,.XML';
-      this.inputXmlEl.style.display = 'none';
-      this.inputXmlEl.addEventListener('change', (e) => this.onXmlFileChange(e));
-      document.body.appendChild(this.inputXmlEl);
-    }
-    this.inputXmlEl.value = '';
-    return this.inputXmlEl;
   }
 
   /** Decodifica entidades HTML (ej: &#xf3; → ó) que vienen del SRI en tipoComprobante */

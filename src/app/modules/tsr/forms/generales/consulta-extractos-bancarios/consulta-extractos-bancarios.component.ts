@@ -14,6 +14,7 @@ import { DetalleExtractoBancario } from '../../../model/detalle-extracto-bancari
 import { EstadoCargaExtracto, ExtractoBancario } from '../../../model/extracto-bancario';
 import { DetalleExtractoBancarioService } from '../../../service/detalle-extracto-bancario.service';
 import { ExtractoBancarioService } from '../../../service/extracto-bancario.service';
+import { textoDeError } from '../texto-error';
 
 const TODOS_LOS_PERIODOS = -1;
 
@@ -171,7 +172,7 @@ export class ConsultaExtractosBancariosComponent implements OnInit {
       },
       error: (error) => {
         this.codigoDescargando = null;
-        this.snackBar.open(`Error al descargar el extracto: ${error?.error || error?.message || error}`, 'Cerrar', {
+        this.snackBar.open(`Error al descargar el extracto: ${textoDeError(error)}`, 'Cerrar', {
           duration: 6000,
         });
       },

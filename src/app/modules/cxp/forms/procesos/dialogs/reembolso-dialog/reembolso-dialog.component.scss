@@ -1,0 +1,21 @@
+.form-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;
+  .full-w { grid-column: 1 / -1; }
+}
+
+.doc-numero-group {
+  display: flex; gap: 8px;
+  .doc-est { width: 90px; }
+  .doc-pto { width: 110px; }
+  .doc-sec { flex: 1; min-width: 120px; }
+}
+
+.crear-prod-row {
+  margin-top: -6px;
+}
+
+.prod-cod {
+  color: #888; font-family: 'Courier New', monospace; font-size: 0.82rem;
+}
+
+mat-dialog-content { min-width: 680px; max-width: 92vw; }

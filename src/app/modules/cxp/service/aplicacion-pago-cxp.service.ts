@@ -5,6 +5,7 @@ import { MotivoRequest, SaldoFactura } from '../../../shared/model/pagos-cobros/
 import {
   AplicacionPagoCxp,
   CruceAnticipoCxpRequest,
+  CruceAnticiposCxpRequest,
   ResultadoAplicacionCxp,
 } from '../model/aplicacion-pago-cxp';
 import { ServiciosCxp } from './ws-cxp';
@@ -42,6 +43,18 @@ export class AplicacionPagoCxpService {
   /** Cruza saldo de anticipos del proveedor contra la factura. */
   cruzarAnticipo(datos: CruceAnticipoCxpRequest): Observable<ResultadoAplicacionCxp> {
     return this.http.post<ResultadoAplicacionCxp>(`${ServiciosCxp.RS_APLP}/anticipo`, datos, this.httpOptions).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * Cruza anticipos ESPECÍFICOS contra la factura: cada línea dice de qué
+   * anticipo sale el dinero y cuánto, y genera su propia aplicación con su
+   * propio asiento. Los anticipos elegibles se consultan con
+   * AnticipoService.disponiblesProveedor().
+   */
+  cruzarAnticipos(datos: CruceAnticiposCxpRequest): Observable<ResultadoAplicacionCxp> {
+    return this.http.post<ResultadoAplicacionCxp>(`${ServiciosCxp.RS_APLP}/anticipos`, datos, this.httpOptions).pipe(
       catchError(this.handleError)
     );
   }

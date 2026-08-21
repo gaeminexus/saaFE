@@ -1,0 +1,26 @@
+<div class="rrh-page">
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-icon">
+        <mat-icon>gavel</mat-icon>
+      </div>
+      <div class="header-text">
+        <h1>Causales de terminación</h1>
+        <p class="subtitle">
+          Causales del Código del Trabajo y los rubros que cada una genera en el finiquito
+        </p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button mat-stroked-button (click)="exportarCsv()" [disabled]="exportData().length === 0">
+        <mat-icon>description</mat-icon>
+        CSV
+      </button>
+    </div>
+  </div>
+
+  @if (tableConfig) {
+    <app-table-basic-hijos [configTable]="tableConfig" (emiteError)="onTableError($event)">
+    </app-table-basic-hijos>
+  }
+</div>

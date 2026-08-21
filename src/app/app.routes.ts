@@ -56,17 +56,8 @@ import { InformesMensualesCreditoComponent } from './modules/rpr/forms/informes-
 import { MenureportesComponent } from './modules/rpr/menu/menureportes/menureportes.component';
 import { MenurecursoshumanosComponent } from './modules/rrh/menu/menurecursoshumanos/menurecursoshumanos.component';
 // RRHH demo components
-import { AsistenciaListComponent } from './modules/rrh/forms/gestion/asistencia/asistencia-list.component';
-import { ContratoEmpleadoListComponent } from './modules/rrh/forms/gestion/contratos/contrato-empleado-list.component';
 import { VacacionesListComponent } from './modules/rrh/forms/gestion/vacaciones/vacaciones-list.component';
-import { TurnoListComponent } from './modules/rrh/forms/parametrizacion/turnos/turno-list.component';
 import { AporteRetencionListComponent } from './modules/rrh/forms/procesos/aportes-retenciones/aporte-retencion-list.component';
-import { LiquidacionListComponent } from './modules/rrh/forms/procesos/liquidacion/liquidacion-list.component';
-import { NominaListComponent } from './modules/rrh/forms/procesos/nomina/nomina-list.component';
-import { RrhReporteAsistenciaComponent } from './modules/rrh/forms/reportes/asistencia/rrh-reporte-asistencia.component';
-import { RrhReporteNominaComponent } from './modules/rrh/forms/reportes/nomina/rrh-reporte-nomina.component';
-import { RrhReporteRolesComponent } from './modules/rrh/forms/reportes/roles/rrh-reporte-roles.component';
-import { RrhReporteVacacionesComponent } from './modules/rrh/forms/reportes/vacaciones/rrh-reporte-vacaciones.component';
 import { BancosNacionalesExtranjerosComponent } from './modules/tsr/forms/bancos/bancos-nacionales-extranjeros.component';
 import { BancosComponent } from './modules/tsr/forms/bancos/bancos.component';
 import { CajasFisicasComponent } from './modules/tsr/forms/cajas-logicas/cajas-fisicas/cajas-fisicas.component';
@@ -158,6 +149,7 @@ import { ListadosCrdResolverService } from './modules/crd/resolver/listados-crd-
 import { TiposCrdResolverService } from './modules/crd/resolver/tipos-crd-resolver.service';
 import { AnticiposClientesComponent } from './modules/tsr/forms/anticipos/anticipos-clientes/anticipos-clientes.component';
 import { AnticiposProveedoresComponent } from './modules/tsr/forms/anticipos/anticipos-proveedores/anticipos-proveedores.component';
+import { SeguimientoAnticiposComponent } from './modules/tsr/forms/anticipos/seguimiento-anticipos/seguimiento-anticipos.component';
 import { EstadoCuentaTitularComponent } from './modules/tsr/forms/estado-cuenta-titular/estado-cuenta-titular.component';
 import { RegistroIngresoComponent } from './modules/tsr/forms/registrar/registro-ingreso/registro-ingreso.component';
 import { RegistroEgresoComponent } from './modules/tsr/forms/registrar/registro-egreso/registro-egreso.component';
@@ -415,6 +407,12 @@ export const routes: Routes = [
         data: { title: 'Anticipos - Proveedores' },
       },
       {
+        path: 'procesos/anticipos/seguimiento',
+        component: SeguimientoAnticiposComponent,
+        canActivate: [authGuard],
+        data: { title: 'Seguimiento de Anticipos' },
+      },
+      {
         path: 'procesos/estado-cuenta-titular',
         component: EstadoCuentaTitularComponent,
         canActivate: [authGuard],
@@ -627,189 +625,155 @@ export const routes: Routes = [
     ],
   },
   {
-    path: 'rrhh',
-    component: MenurecursoshumanosComponent,
-    canActivate: [authGuard],
-    children: [
-      // Parametrización
-      {
-        path: 'parametrizacion/departamento-cargo',
-        loadComponent: () =>
-          import('./modules/rrh/forms/parametrizacion/cargos/asignacion-departamentos/departamento-cargo-list.component').then(
-            (m) => m.DepartamentoCargoListComponent,
-          ),
-        canActivate: [authGuard],
-      },
-      {
-        path: 'parametrizacion/departamentos',
-        loadComponent: () =>
-          import('./modules/rrh/forms/parametrizacion/cargos/asignacion-departamentos/departamento-list.component').then(
-            (m) => m.DepartamentoListComponent,
-          ),
-        canActivate: [authGuard],
-      },
-      {
-        path: 'parametrizacion/cargos',
-        loadComponent: () =>
-          import('./modules/rrh/forms/parametrizacion/cargos/cargo-list/cargo-list.component').then(
-            (m) => m.CargoListComponent,
-          ),
-        canActivate: [authGuard],
-      },
-      {
-        path: 'parametrizacion/cargos/asignacion-departamentos',
-        loadComponent: () =>
-          import('./modules/rrh/forms/parametrizacion/cargos/asignacion-departamentos/departamento-list.component').then(
-            (m) => m.DepartamentoListComponent,
-          ),
-        canActivate: [authGuard],
-      },
-      {
-        path: 'parametrizacion/tipos-contrato',
-        loadComponent: () =>
-          import('./modules/rrh/forms/parametrizacion/tipos-contrato/tipo-contrato-list.component').then(
-            (m) => m.TipoContratoListComponent,
-          ),
-        canActivate: [authGuard],
-      },
-      { path: 'parametrizacion/turnos', component: TurnoListComponent, canActivate: [authGuard] },
-      // TODO: parametrizacion/rubros se agregará cuando exista su componente
-      // Gestión de Personal
-      {
-        path: 'gestion/empleados',
-        loadComponent: () =>
-          import('./modules/rrh/forms/gestion/empleados/empleado-list.component').then(
-            (m) => m.EmpleadoListComponent,
-          ),
-        canActivate: [authGuard],
-      },
-      {
-        path: 'gestion/empleados/historial-cargo',
-        loadComponent: () =>
-          import('./modules/rrh/forms/gestion/empleados/historial-cargo/hstr-list.component').then(
-            (m) => m.HstrListComponent,
-          ),
-        canActivate: [authGuard],
-      },
-      {
-        path: 'gestion/contratos',
-        component: ContratoEmpleadoListComponent,
-        canActivate: [authGuard],
-      },
-      { path: 'gestion/vacaciones', component: VacacionesListComponent, canActivate: [authGuard] },
-      {
-        path: 'gestion/permisos-licencias',
-        loadComponent: () =>
-          import('./modules/rrh/forms/gestion/permisos-licencias/permisos-licencias-list.component').then(
-            (m) => m.PermisosLicenciasListComponent,
-          ),
-        canActivate: [authGuard],
-        data: { title: 'Gestión de Permisos y Licencias' },
-      },
-      {
-        path: 'gestion/asistencia',
-        loadComponent: () =>
-          import('./modules/rrh/forms/gestion/asistencia/asistencia-list.component').then(
-            (m) => m.AsistenciaListComponent,
-          ),
-        canActivate: [authGuard],
-        data: { title: 'Gestión de Asistencia' },
-      },
-      // Procesos
-      { path: 'procesos/nomina', component: NominaListComponent, canActivate: [authGuard] },
-      {
-        path: 'procesos/roles-pago',
-        loadComponent: () =>
-          import('./modules/rrh/forms/procesos/roles-pago/rol-pago-list.component').then(
-            (m) => m.RolPagoListComponent,
-          ),
-        canActivate: [authGuard],
-      },
-      {
-        path: 'procesos/aportes',
-        component: AporteRetencionListComponent,
-        canActivate: [authGuard],
-      },
-      {
-        path: 'procesos/liquidacion',
-        component: LiquidacionListComponent,
-        canActivate: [authGuard],
-      },
-      {
-        path: 'procesos/liquidaciones',
-        redirectTo: 'procesos/liquidacion',
-        pathMatch: 'full',
-      },
-    ],
-  },
-  {
     path: 'menurecursoshumanos',
     component: MenurecursoshumanosComponent,
     canActivate: [authGuard],
     children: [
       // Parametrización
       {
-        path: 'parametrizacion/departamento-cargo',
+        path: 'parametrizacion/conceptos-nomina',
         loadComponent: () =>
-          import('./modules/rrh/forms/parametrizacion/cargos/asignacion-departamentos/departamento-cargo-list.component').then(
-            (m) => m.DepartamentoCargoListComponent,
-          ),
+          import(
+            './modules/rrh/forms/parametrizacion/conceptos-nomina/conceptos-nomina.component'
+          ).then((m) => m.ConceptosNominaComponent),
         canActivate: [authGuard],
+        data: { title: 'Conceptos de nómina' },
       },
       {
-        path: 'parametrizacion/departamentos',
+        path: 'parametrizacion/parametros-anuales',
         loadComponent: () =>
-          import('./modules/rrh/forms/parametrizacion/cargos/asignacion-departamentos/departamento-list.component').then(
-            (m) => m.DepartamentoListComponent,
-          ),
+          import(
+            './modules/rrh/forms/parametrizacion/parametros-anuales/parametros-anuales.component'
+          ).then((m) => m.ParametrosAnualesComponent),
         canActivate: [authGuard],
+        data: { title: 'Parámetros anuales de nómina' },
+      },
+      {
+        path: 'parametrizacion/tabla-impuesto-renta',
+        loadComponent: () =>
+          import(
+            './modules/rrh/forms/parametrizacion/tabla-impuesto-renta/tabla-impuesto-renta.component'
+          ).then((m) => m.TablaImpuestoRentaComponent),
+        canActivate: [authGuard],
+        data: { title: 'Tabla de impuesto a la renta' },
+      },
+      {
+        path: 'parametrizacion/topes-gastos-personales',
+        loadComponent: () =>
+          import(
+            './modules/rrh/forms/parametrizacion/topes-gastos-personales/topes-gastos-personales.component'
+          ).then((m) => m.TopesGastosPersonalesComponent),
+        canActivate: [authGuard],
+        data: { title: 'Topes de gastos personales' },
+      },
+      {
+        path: 'parametrizacion/causales-terminacion',
+        loadComponent: () =>
+          import(
+            './modules/rrh/forms/parametrizacion/causales-terminacion/causales-terminacion.component'
+          ).then((m) => m.CausalesTerminacionComponent),
+        canActivate: [authGuard],
+        data: { title: 'Causales de terminación' },
+      },
+      {
+        path: 'parametrizacion/configuracion-nomina',
+        loadComponent: () =>
+          import(
+            './modules/rrh/forms/parametrizacion/configuracion-nomina/configuracion-nomina.component'
+          ).then((m) => m.ConfiguracionNominaComponent),
+        canActivate: [authGuard],
+        data: { title: 'Configuración de nómina' },
+      },
+      {
+        path: 'parametrizacion/formatos-marcacion',
+        loadComponent: () =>
+          import(
+            './modules/rrh/forms/parametrizacion/formatos-marcacion/formatos-marcacion.component'
+          ).then((m) => m.FormatosMarcacionComponent),
+        canActivate: [authGuard],
+        data: { title: 'Formatos de marcación' },
+      },
+      {
+        path: 'parametrizacion/formatos-archivo-bancario',
+        loadComponent: () =>
+          import(
+            './modules/rrh/forms/parametrizacion/formatos-archivo-bancario/formatos-archivo-bancario.component'
+          ).then((m) => m.FormatosArchivoBancarioComponent),
+        canActivate: [authGuard],
+        data: { title: 'Formatos del archivo bancario' },
       },
       {
         path: 'parametrizacion/cargos',
         loadComponent: () =>
-          import('./modules/rrh/forms/parametrizacion/cargos/cargo-list/cargo-list.component').then(
-            (m) => m.CargoListComponent,
+          import('./modules/rrh/forms/parametrizacion/catalogos/catalogo-rrh.component').then(
+            (m) => m.CatalogoRrhComponent,
           ),
         canActivate: [authGuard],
+        data: { title: 'Cargos y puestos', catalogo: 'cargos' },
       },
       {
-        path: 'parametrizacion/cargos/asignacion-departamentos',
+        path: 'parametrizacion/departamentos',
         loadComponent: () =>
-          import('./modules/rrh/forms/parametrizacion/cargos/asignacion-departamentos/departamento-list.component').then(
-            (m) => m.DepartamentoListComponent,
+          import('./modules/rrh/forms/parametrizacion/catalogos/catalogo-rrh.component').then(
+            (m) => m.CatalogoRrhComponent,
           ),
         canActivate: [authGuard],
+        data: { title: 'Departamentos', catalogo: 'departamentos' },
+      },
+      {
+        path: 'parametrizacion/departamento-cargo',
+        loadComponent: () =>
+          import('./modules/rrh/forms/parametrizacion/catalogos/catalogo-rrh.component').then(
+            (m) => m.CatalogoRrhComponent,
+          ),
+        canActivate: [authGuard],
+        data: { title: 'Departamento — Cargo', catalogo: 'departamento-cargo' },
       },
       {
         path: 'parametrizacion/tipos-contrato',
         loadComponent: () =>
-          import('./modules/rrh/forms/parametrizacion/tipos-contrato/tipo-contrato-list.component').then(
-            (m) => m.TipoContratoListComponent,
+          import('./modules/rrh/forms/parametrizacion/catalogos/catalogo-rrh.component').then(
+            (m) => m.CatalogoRrhComponent,
           ),
         canActivate: [authGuard],
+        data: { title: 'Tipos de contrato', catalogo: 'tipos-contrato' },
       },
-      { path: 'parametrizacion/turnos', component: TurnoListComponent, canActivate: [authGuard] },
-      // Gestión de Personal
       {
-        path: 'gestion/empleados',
+        path: 'parametrizacion/turnos',
         loadComponent: () =>
-          import('./modules/rrh/forms/gestion/empleados/empleado-list.component').then(
-            (m) => m.EmpleadoListComponent,
+          import('./modules/rrh/forms/parametrizacion/catalogos/catalogo-rrh.component').then(
+            (m) => m.CatalogoRrhComponent,
           ),
         canActivate: [authGuard],
+        data: { title: 'Turnos y horarios', catalogo: 'turnos' },
       },
+      // Personal
       {
-        path: 'gestion/empleados/historial-cargo',
+        path: 'personal/colaboradores',
         loadComponent: () =>
-          import('./modules/rrh/forms/gestion/empleados/historial-cargo/hstr-list.component').then(
-            (m) => m.HstrListComponent,
-          ),
+          import(
+            './modules/rrh/forms/personal/colaboradores/colaboradores.component'
+          ).then((m) => m.ColaboradoresComponent),
         canActivate: [authGuard],
+        data: { title: 'Colaboradores' },
       },
       {
-        path: 'gestion/contratos',
-        component: ContratoEmpleadoListComponent,
+        path: 'personal/ficha/:codigo/contratos/:codigoContrato',
+        loadComponent: () =>
+          import('./modules/rrh/forms/personal/ficha/contrato-form.component').then(
+            (m) => m.ContratoFormComponent,
+          ),
         canActivate: [authGuard],
+        data: { title: 'Contrato del colaborador' },
+      },
+      {
+        path: 'personal/ficha/:codigo',
+        loadComponent: () =>
+          import('./modules/rrh/forms/personal/ficha/ficha-colaborador.component').then(
+            (m) => m.FichaColaboradorComponent,
+          ),
+        canActivate: [authGuard],
+        data: { title: 'Ficha del colaborador' },
       },
       { path: 'gestion/vacaciones', component: VacacionesListComponent, canActivate: [authGuard] },
       {
@@ -821,14 +785,140 @@ export const routes: Routes = [
         canActivate: [authGuard],
         data: { title: 'Gestión de Permisos y Licencias' },
       },
-      { path: 'gestion/asistencia', component: AsistenciaListComponent, canActivate: [authGuard] },
+      // Asistencia
+      {
+        path: 'asistencia/marcaciones',
+        loadComponent: () =>
+          import('./modules/rrh/forms/asistencia/marcaciones/marcaciones.component').then(
+            (m) => m.MarcacionesComponent,
+          ),
+        canActivate: [authGuard],
+        data: { title: 'Marcaciones' },
+      },
+      {
+        path: 'asistencia/importacion',
+        loadComponent: () =>
+          import(
+            './modules/rrh/forms/asistencia/importacion-marcaciones/importacion-marcaciones.component'
+          ).then((m) => m.ImportacionMarcacionesComponent),
+        canActivate: [authGuard],
+        data: { title: 'Importación de marcaciones' },
+      },
+      {
+        path: 'asistencia/resumen-diario',
+        loadComponent: () =>
+          import('./modules/rrh/forms/asistencia/resumen-diario/resumen-diario.component').then(
+            (m) => m.ResumenDiarioComponent,
+          ),
+        canActivate: [authGuard],
+        data: { title: 'Resumen diario de asistencia' },
+      },
+      // Migración de apertura
+      {
+        path: 'migracion/saldos-apertura',
+        loadComponent: () =>
+          import('./modules/rrh/forms/migracion/saldos-apertura.component').then(
+            (m) => m.SaldosAperturaComponent,
+          ),
+        canActivate: [authGuard],
+        data: { title: 'Saldos de apertura' },
+      },
+      {
+        path: 'migracion/acumulados',
+        loadComponent: () =>
+          import('./modules/rrh/forms/migracion/acumulados.component').then(
+            (m) => m.AcumuladosComponent,
+          ),
+        canActivate: [authGuard],
+        data: { title: 'Acumulados del colaborador' },
+      },
+      {
+        path: 'procesos/descuentos-recurrentes',
+        loadComponent: () =>
+          import(
+            './modules/rrh/forms/procesos/descuentos-recurrentes/descuentos-recurrentes.component'
+          ).then((m) => m.DescuentosRecurrentesComponent),
+        canActivate: [authGuard],
+        data: { title: 'Descuentos recurrentes' },
+      },
+      // Motor de nómina
+      {
+        path: 'procesos/periodos-nomina',
+        loadComponent: () =>
+          import(
+            './modules/rrh/forms/procesos/periodo-nomina/periodos-nomina.component'
+          ).then((m) => m.PeriodosNominaComponent),
+        canActivate: [authGuard],
+        data: { title: 'Períodos de nómina' },
+      },
+      {
+        path: 'procesos/periodos-nomina/:codigo',
+        loadComponent: () =>
+          import(
+            './modules/rrh/forms/procesos/periodo-nomina/periodo-nomina-dash.component'
+          ).then((m) => m.PeriodoNominaDashComponent),
+        canActivate: [authGuard],
+        data: { title: 'Panel del período de nómina' },
+      },
+      {
+        path: 'procesos/novedades-nomina',
+        loadComponent: () =>
+          import(
+            './modules/rrh/forms/procesos/novedades-nomina/novedades-nomina.component'
+          ).then((m) => m.NovedadesNominaComponent),
+        canActivate: [authGuard],
+        data: { title: 'Novedades del período' },
+      },
+      {
+        path: 'procesos/novedades-iess',
+        loadComponent: () =>
+          import('./modules/rrh/forms/procesos/novedades-iess/novedades-iess.component').then(
+            (m) => m.NovedadesIessComponent,
+          ),
+        canActivate: [authGuard],
+        data: { title: 'Novedades del mes (IESS)' },
+      },
+      {
+        path: 'procesos/horas-extra',
+        loadComponent: () =>
+          import('./modules/rrh/forms/procesos/horas-extra/horas-extra.component').then(
+            (m) => m.HorasExtraComponent,
+          ),
+        canActivate: [authGuard],
+        data: { title: 'Horas extra' },
+      },
+      {
+        path: 'procesos/proyeccion-ir',
+        loadComponent: () =>
+          import('./modules/rrh/forms/procesos/proyeccion-ir/proyeccion-ir.component').then(
+            (m) => m.ProyeccionIrComponent,
+          ),
+        canActivate: [authGuard],
+        data: { title: 'Proyección de impuesto a la renta' },
+      },
       // Procesos
-      { path: 'procesos/nomina', component: NominaListComponent, canActivate: [authGuard] },
       {
         path: 'procesos/roles-pago',
         loadComponent: () =>
-          import('./modules/rrh/forms/procesos/roles-pago/rol-pago-list.component').then(
-            (m) => m.RolPagoListComponent,
+          import('./modules/rrh/forms/procesos/roles-pago/roles-pago.component').then(
+            (m) => m.RolesPagoComponent,
+          ),
+        canActivate: [authGuard],
+      },
+      {
+        path: 'procesos/ordenes-pago',
+        loadComponent: () =>
+          import('./modules/rrh/forms/procesos/ordenes-pago/ordenes-pago.component').then(
+            (m) => m.OrdenesPagoComponent,
+          ),
+        canActivate: [authGuard],
+        data: { title: 'Órdenes de pago' },
+      },
+      {
+        path: 'procesos/reportes-nomina',
+        loadComponent: () =>
+          import('./modules/rrh/forms/procesos/reportes-nomina/reportes-nomina.component').then(
+            (m) => m.ReportesNominaComponent,
           ),
         canActivate: [authGuard],
       },
@@ -838,28 +928,41 @@ export const routes: Routes = [
         canActivate: [authGuard],
       },
       {
+        path: 'procesos/salidas-oficiales',
+        loadComponent: () =>
+          import('./modules/rrh/forms/procesos/salidas-oficiales/salidas-oficiales.component').then(
+            (m) => m.SalidasOficialesComponent,
+          ),
+        canActivate: [authGuard],
+        data: { title: 'Salidas oficiales' },
+      },
+      {
+        path: 'procesos/utilidades',
+        loadComponent: () =>
+          import('./modules/rrh/forms/procesos/utilidades/utilidades.component').then(
+            (m) => m.UtilidadesComponent,
+          ),
+        canActivate: [authGuard],
+        data: { title: 'Reparto de utilidades' },
+      },
+      {
         path: 'procesos/liquidacion',
-        component: LiquidacionListComponent,
+        loadComponent: () =>
+          import('./modules/rrh/forms/procesos/liquidacion/liquidacion-list.component').then(
+            (m) => m.LiquidacionListComponent,
+          ),
         canActivate: [authGuard],
+        data: { title: 'Liquidación de haberes' },
       },
       {
-        path: 'procesos/liquidaciones',
-        redirectTo: 'procesos/liquidacion',
-        pathMatch: 'full',
-      },
-      // Reportes
-      { path: 'reportes/roles', component: RrhReporteRolesComponent, canActivate: [authGuard] },
-      {
-        path: 'reportes/vacaciones',
-        component: RrhReporteVacacionesComponent,
+        path: 'procesos/liquidacion/:codigo',
+        loadComponent: () =>
+          import('./modules/rrh/forms/procesos/liquidacion/liquidacion-form.component').then(
+            (m) => m.LiquidacionFormComponent,
+          ),
         canActivate: [authGuard],
+        data: { title: 'Finiquito' },
       },
-      {
-        path: 'reportes/asistencia',
-        component: RrhReporteAsistenciaComponent,
-        canActivate: [authGuard],
-      },
-      { path: 'reportes/nomina', component: RrhReporteNominaComponent, canActivate: [authGuard] },
     ],
   },
   {

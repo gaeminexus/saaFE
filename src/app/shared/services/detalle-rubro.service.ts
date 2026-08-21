@@ -110,6 +110,21 @@ export class DetalleRubroService {
   }
 
   /**
+   * Obtiene el valor alfanumérico (`PDTRVLRV`) por padre y código alterno.
+   *
+   * Devuelve `null` cuando el detalle no lo tiene, y el nulo **es un dato**, no una ausencia: en
+   * el rubro 204 significa que ese tipo de novedad no se envía por archivo batch y se registra en
+   * el portal una por una. Por eso no cae a cadena vacía como `getDescripcionByParentAndAlterno`.
+   */
+  getAlfanumericoByParentAndAlterno(idPadre: number, alterno: number): string | null {
+    const detalle = this.detallesSignal().find(
+      d => d.rubro.codigoAlterno === idPadre && d.codigoAlterno === alterno
+    );
+    const valor = detalle?.valorAlfanumerico;
+    return typeof valor === 'string' && valor.trim() ? valor.trim() : null;
+  }
+
+  /**
    * Verifica si los datos están cargados
    */
   estanDatosCargados(): boolean {

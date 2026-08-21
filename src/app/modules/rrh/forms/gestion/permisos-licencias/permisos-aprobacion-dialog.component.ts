@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, CUSTOM_ELEMENTS_SCHEMA, Inject, signal } from '@angular/core';
+import { Component, Inject, signal } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
@@ -15,7 +15,6 @@ export interface AprobacionDialogData {
   selector: 'app-permisos-aprobacion-dialog',
   standalone: true,
   imports: [CommonModule, MaterialFormModule],
-  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   template: `
     <div class="approval-dialog">
       <div class="dialog-header">
@@ -40,7 +39,7 @@ export interface AprobacionDialogData {
             <span class="label">Fecha Inicio:</span>
             <span class="value">{{ data.permiso.fechaInicio | date: 'dd/MM/yyyy' }}</span>
           </div>
-          @if (data.permiso.fechaFin && data.permiso.tipoPermiso?.modalidad === 'D') {
+          @if (data.permiso.fechaFin) {
             <div class="info-row">
               <span class="label">Fecha Fin:</span>
               <span class="value">{{ data.permiso.fechaFin | date: 'dd/MM/yyyy' }}</span>

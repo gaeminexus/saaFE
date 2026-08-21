@@ -1,0 +1,32 @@
+############################################################
+# CONSTANCIA PREVIA A sql/39 -- capturada por el dueno del modelo
+# antes de ejecutar los DELETE. Estado de RHH.NMNA 89 y 90.
+############################################################
+
+--- cabecera de las dos nominas huerfanas
+
+  NMNACDGO	 EMPL NOMBRE				     DIAS   INGRESOS	DESCTOS       NETO	  EST
+---------- ---------- -------------------------------- ---------- ---------- ---------- ---------- ----------
+	89	   48 CASTRO ARCE LESLY MARICELA	       30	 482	  45.55     436.45	    2
+	90	   49 CEVALLOS ALEMAN EDGAR GIOVANNY	       30	 482	  45.55     436.45	    2
+
+--- los diez renglones que se van a borrar
+
+      NMNA	  ORD	    CPNM RNGLDSCR				  TPCN	     BASE      VALOR I
+---------- ---------- ---------- ---------------------------------- ---------- ---------- ---------- -
+	89	    1	       1 Sueldo 				     1	      482	 482 S
+	89	    2	      17 Aporte personal IESS			     2	      482      45.55 N
+	89	    3	      28 Aporte patronal IESS			     3	      482      53.74 N
+	89	    4	      29 Aporte IECE				     3	      482	2.41 N
+	89	    5	      30 Aporte SECAP				     3	      482	2.41 N
+	90	    1	       1 Sueldo 				     1	      482	 482 S
+	90	    2	      17 Aporte personal IESS			     2	      482      45.55 N
+	90	    3	      28 Aporte patronal IESS			     3	      482      53.74 N
+	90	    4	      29 Aporte IECE				     3	      482	2.41 N
+	90	    5	      30 Aporte SECAP				     3	      482	2.41 N
+
+--- totales de NMNA ANTES (deben ser 22 / 18443,85)
+
+     FILAS   INGRESOS	 DESCTOS       NETO
+---------- ---------- ---------- ----------
+	22   21757.34	 3313.49   18443.85

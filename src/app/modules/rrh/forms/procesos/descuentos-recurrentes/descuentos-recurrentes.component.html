@@ -1,0 +1,64 @@
+<div class="rrh-page">
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-icon">
+        <mat-icon>credit_score</mat-icon>
+      </div>
+      <div class="header-text">
+        <h1>Descuentos recurrentes</h1>
+        <p class="subtitle">
+          Préstamos del IESS, anticipos, préstamos internos y retenciones judiciales
+        </p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <mat-form-field appearance="outline" class="selector-empleado">
+        <mat-label>Colaborador</mat-label>
+        <mat-select
+          [ngModel]="empleadoSeleccionado()"
+          (ngModelChange)="onEmpleadoChange($event)"
+        >
+          @for (emp of empleados(); track emp.codigo) {
+            <mat-option [value]="emp.codigo">{{ etiquetaEmpleado(emp) }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
+  </div>
+
+  @if (empleados().length === 0) {
+    <div class="aviso">
+      <mat-icon>person_off</mat-icon>
+      <span>
+        No hay colaboradores registrados en esta empresa. Regístrelos antes de cargar sus
+        descuentos.
+      </span>
+    </div>
+  } @else if (empleadoSeleccionado() === null) {
+    <div class="aviso">
+      <mat-icon>person_search</mat-icon>
+      <span>
+        Los descuentos cuelgan del colaborador, no de la empresa: seleccione uno para verlos.
+      </span>
+    </div>
+  }
+
+  @if (configDescuentos) {
+    <app-table-basic-hijos
+      [configTable]="configDescuentos"
+      (emiteRegistro)="onSeleccionDescuento($event)"
+      (emiteError)="onTableError($event)"
+    >
+    </app-table-basic-hijos>
+  }
+
+  @if (configCuotas) {
+    <app-table-basic-hijos [configTable]="configCuotas" (emiteError)="onTableError($event)">
+    </app-table-basic-hijos>
+  } @else if (configDescuentos) {
+    <div class="aviso">
+      <mat-icon>touch_app</mat-icon>
+      <span>Pulse un descuento para ver y editar su tabla de amortización.</span>
+    </div>
+  }
+</div>

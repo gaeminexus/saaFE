@@ -1,3 +1,6 @@
+@use '../../../../../../styles/abstracts/colors' as *;
+@use '../../../../../../styles/abstracts/variables' as *;
+
 .rrh-permisos-licencias {
   padding: 16px;
   max-width: 1400px;
@@ -161,4 +164,12 @@
       gap: 2px;
     }
   }
+}
+
+/* Fila que muestra `*matNoDataRow` cuando la consulta no devuelve resultados. */
+.fila-vacia {
+  padding: $spacing-lg;
+  text-align: center;
+  color: $text-muted;
+  font-size: $font-size-sm;
 }

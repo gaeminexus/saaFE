@@ -1,0 +1,187 @@
+<div class="rrh-page">
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-icon">
+        <mat-icon>upload_file</mat-icon>
+      </div>
+      <div class="header-text">
+        <h1>Importación de marcaciones</h1>
+        <p class="subtitle">Carga del archivo del reloj biométrico</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2 class="panel-titulo">1 · Archivo y formato</h2>
+
+    <div class="fila-carga">
+      <mat-form-field appearance="outline" class="selector-formato">
+        <mat-label>Formato del archivo</mat-label>
+        <mat-select
+          [ngModel]="formatoSeleccionado()"
+          (ngModelChange)="onFormatoChange($event)"
+        >
+          @for (f of formatos(); track f.codigo) {
+            <mat-option [value]="f.codigo">{{ f.nombre }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <button mat-stroked-button (click)="entrada.click()">
+        <mat-icon>attach_file</mat-icon>
+        Elegir archivo
+      </button>
+      <input #entrada type="file" hidden (change)="onArchivo($event)" />
+
+      <span class="nombre-archivo">{{ nombreArchivo() || 'Ningún archivo seleccionado' }}</span>
+    </div>
+
+    @if (formatos().length === 0) {
+      <div class="aviso aviso-error">
+        <mat-icon>report_problem</mat-icon>
+        <span>
+          No hay formatos de marcación activos. Cree uno en Parametrización → Formatos de
+          marcación antes de importar.
+        </span>
+      </div>
+    }
+  </div>
+
+  <div class="panel">
+    <h2 class="panel-titulo">2 · Previsualizar</h2>
+    <p class="explicacion">
+      La previsualización <strong>no guarda nada</strong>: dice cuántas líneas entrarían, cuántas
+      están repetidas y cuáles fallan, para poder decidir antes de comprometer la carga.
+    </p>
+
+    <button
+      mat-raised-button
+      color="primary"
+      (click)="previsualizar()"
+      [disabled]="!puedePrevisualizar()"
+    >
+      <mat-icon>preview</mat-icon>
+      Previsualizar
+    </button>
+
+    @if (previsualizacion(); as p) {
+      <div class="resultado">
+        <div class="contadores">
+          <div class="contador">
+            <span class="valor">{{ p.lineasTotales }}</span>
+            <span class="etiqueta">líneas en el archivo</span>
+          </div>
+          <div class="contador ok">
+            <span class="valor">{{ p.lineasOk }}</span>
+            <span class="etiqueta">se importarían</span>
+          </div>
+          <div class="contador duplicadas">
+            <span class="valor">{{ p.lineasDuplicadas }}</span>
+            <span class="etiqueta">duplicadas</span>
+          </div>
+          <div class="contador error">
+            <span class="valor">{{ p.lineasError }}</span>
+            <span class="etiqueta">con error</span>
+          </div>
+        </div>
+
+        @if (p.fechaDesde || p.fechaHasta) {
+          <p class="rango">
+            Marcaciones del {{ p.fechaDesde | date: 'dd/MM/yyyy' }}
+            al {{ p.fechaHasta | date: 'dd/MM/yyyy' }}
+          </p>
+        }
+
+        @if (p.errores?.length) {
+          <div class="log">
+            <h3>Detalle de lo que falla</h3>
+            <ul>
+              @for (linea of p.errores; track linea) {
+                <li>{{ linea }}</li>
+              }
+            </ul>
+          </div>
+        }
+      </div>
+    }
+  </div>
+
+  <div class="panel">
+    <h2 class="panel-titulo">3 · Confirmar</h2>
+    <p class="explicacion">
+      Las líneas con error no abortan el archivo: se registran en el log de la carga y el resto
+      entra igual. Las duplicadas se descartan.
+    </p>
+    <button
+      mat-raised-button
+      color="primary"
+      (click)="confirmar()"
+      [disabled]="!puedeConfirmar()"
+      matTooltip="Requiere haber previsualizado el mismo archivo"
+    >
+      <mat-icon>save</mat-icon>
+      Confirmar importación
+    </button>
+  </div>
+
+  <div class="panel">
+    <h2 class="panel-titulo">Cargas anteriores</h2>
+
+    @if (cargas().length === 0) {
+      <div class="mensaje-vacio">Todavía no se ha importado ningún archivo.</div>
+    } @else {
+      <div class="tabla-scroll">
+        <table mat-table [dataSource]="cargas()">
+          <ng-container matColumnDef="archivo">
+            <th mat-header-cell *matHeaderCellDef>Archivo</th>
+            <td mat-cell *matCellDef="let c">{{ c.nombreArchivo }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="formato">
+            <th mat-header-cell *matHeaderCellDef>Formato</th>
+            <td mat-cell *matCellDef="let c">{{ etiquetaFormato(c.formato) }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="fechaCarga">
+            <th mat-header-cell *matHeaderCellDef>Cargado</th>
+            <td mat-cell *matCellDef="let c">{{ c.fechaCarga | date: 'dd/MM/yyyy HH:mm' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="rango">
+            <th mat-header-cell *matHeaderCellDef>Rango de marcaciones</th>
+            <td mat-cell *matCellDef="let c">
+              {{ c.fechaDesde | date: 'dd/MM/yyyy' }} – {{ c.fechaHasta | date: 'dd/MM/yyyy' }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="lineas">
+            <th mat-header-cell *matHeaderCellDef class="centro">Líneas</th>
+            <td mat-cell *matCellDef="let c" class="centro">
+              <span class="chip-ok">{{ c.lineasOk }} ok</span>
+              <span class="chip-dup">{{ c.lineasDuplicadas }} dup</span>
+              <span class="chip-err">{{ c.lineasError }} err</span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="acciones">
+            <th mat-header-cell *matHeaderCellDef>Acciones</th>
+            <td mat-cell *matCellDef="let c">
+              <button
+                mat-icon-button
+                color="warn"
+                (click)="anular(c)"
+                [disabled]="ocupado()"
+                matTooltip="Anular la carga; se rechaza si alguna marcación ya se consolidó"
+              >
+                <mat-icon>undo</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="columnas"></tr>
+          <tr mat-row *matRowDef="let c; columns: columnas"></tr>
+        </table>
+      </div>
+    }
+  </div>
+</div>

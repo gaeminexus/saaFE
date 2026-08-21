@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, ElementRef, computed, CUSTOM_ELEMENTS_SCHEMA, Inject, OnInit, signal, ViewChild } from '@angular/core';
+import { Component, ElementRef, computed, Inject, OnInit, signal, ViewChild } from '@angular/core';
 import { UntypedFormControl } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
@@ -10,11 +10,13 @@ import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda
 import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
+import { usuarioSesion } from '../../../../../shared/services/usuario-sesion';
 import { Empleado } from '../../../model/empleado';
-import { ModalidadPermiso, PermisoLicencia, TipoPermiso } from '../../../model/permiso-licencia';
+import { PermisoLicencia, TipoPermiso } from '../../../model/permiso-licencia';
 import { EmpleadoService } from '../../../service/empleado.service';
 import { PermisoLicenciaService } from '../../../service/permiso-licencia.service';
-import { TipoPermisoService } from '../../../service/tipo-permiso.service';
+import { CatalogoService } from '../../../service/catalogo.service';
+import { criteriosPorEmpresa } from '../../parametrizacion/utiles-parametrizacion';
 
 export interface PermisosLicenciasFormData {
   mode: 'new' | 'edit' | 'view';
@@ -25,7 +27,6 @@ export interface PermisosLicenciasFormData {
   selector: 'app-permisos-licencias-form',
   standalone: true,
   imports: [CommonModule, MaterialFormModule, MatSlideToggleModule],
-  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './permisos-licencias-form.component.html',
   styleUrls: ['./permisos-licencias-form.component.scss'],
 })
@@ -58,7 +59,7 @@ export class PermisosLicenciasFormComponent implements OnInit {
   formDias = computed(() => {
     const inicio = this.formFechaInicio();
     const fin = this.formFechaFin();
-    if (!inicio || !fin || this.formTipoPermiso()?.modalidad !== 'D') return null;
+    if (!inicio || !fin) return null;
 
     const diffTime = fin.getTime() - inicio.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 para incluir primer día
@@ -68,7 +69,7 @@ export class PermisosLicenciasFormComponent implements OnInit {
   formHoras = computed(() => {
     const inicio = this.formHoraInicio();
     const fin = this.formHoraFin();
-    if (!inicio || !fin || this.formTipoPermiso()?.modalidad !== 'H') return null;
+    if (!inicio || !fin) return null;
 
     const [horaInicio, minInicio] = inicio.split(':').map(Number);
     const [horaFin, minFin] = fin.split(':').map(Number);
@@ -95,16 +96,17 @@ export class PermisosLicenciasFormComponent implements OnInit {
   tipoPermisoRequerido = computed(() => !this.formTipoPermiso() && !this.isReadonly());
   fechaInicioRequerida = computed(() => !this.formFechaInicio() && !this.isReadonly());
 
-  fechaFinRequerida = computed(() => {
-    if (this.isReadonly()) return false;
-    const tipo = this.formTipoPermiso();
-    return tipo?.modalidad === 'D' && !this.formFechaFin();
-  });
+  fechaFinRequerida = computed(() => !this.formFechaFin() && !this.isReadonly());
 
+  /**
+   * Las horas son opcionales: un permiso puede ser de días completos. Solo se exige la pareja
+   * completa cuando el usuario ya llenó una de las dos.
+   */
   horasRequeridas = computed(() => {
     if (this.isReadonly()) return false;
-    const tipo = this.formTipoPermiso();
-    return tipo?.modalidad === 'H' && (!this.formHoraInicio() || !this.formHoraFin());
+    const inicio = this.formHoraInicio();
+    const fin = this.formHoraFin();
+    return (!!inicio || !!fin) && (!inicio || !fin);
   });
 
   esRetroactivo = computed(() => {
@@ -128,14 +130,14 @@ export class PermisosLicenciasFormComponent implements OnInit {
   documentoRequerido = computed(() => {
     if (this.isReadonly()) return false;
     const tipo = this.formTipoPermiso();
-    return tipo?.requiereDocumento && !this.formNumeroDocumento().trim();
+    return tipo?.requiereDocumento === 'S' && !this.formNumeroDocumento().trim();
   });
 
   constructor(
     private dialogRef: MatDialogRef<PermisosLicenciasFormComponent>,
     @Inject(MAT_DIALOG_DATA) public formData: PermisosLicenciasFormData,
     private permisoLicenciaService: PermisoLicenciaService,
-    private tipoPermisoService: TipoPermisoService,
+    private catalogoService: CatalogoService,
     private empleadoService: EmpleadoService,
     private snackBar: MatSnackBar,
     private funcionesDatosS: FuncionesDatosService,
@@ -159,8 +161,8 @@ export class PermisosLicenciasFormComponent implements OnInit {
   }
 
   private cargarEmpleados(): void {
-    // Cargar solo empleados activos usando selectByCriteria
-    const criterios: DatosBusqueda[] = [];
+    // Empleados activos de la empresa; RHH.MPLD lleva PJRQCDGO desde el script 05
+    const criterios: DatosBusqueda[] = criteriosPorEmpresa('apellidos');
     const dbEstado = new DatosBusqueda();
     dbEstado.asignaUnCampoSinTrunc(
       TipoDatosBusqueda.STRING,
@@ -181,8 +183,8 @@ export class PermisosLicenciasFormComponent implements OnInit {
   }
 
   private cargarTiposPermiso(): void {
-    // Cargar tipos de permiso activos usando selectByCriteria
-    const criterios: DatosBusqueda[] = [];
+    // Tipos de permiso activos de la empresa; RHH.CTLG lleva PJRQCDGO desde el script 05
+    const criterios: DatosBusqueda[] = criteriosPorEmpresa('nombre');
     const dbEstado = new DatosBusqueda();
     dbEstado.asignaUnCampoSinTrunc(
       TipoDatosBusqueda.STRING,
@@ -192,61 +194,14 @@ export class PermisosLicenciasFormComponent implements OnInit {
     );
     criterios.push(dbEstado);
 
-    this.tipoPermisoService.selectByCriteria(criterios).subscribe({
+    this.catalogoService.selectByCriteria(criterios).subscribe({
       next: (data) => {
-        const tipos = data || [];
-        this.tiposPermiso.set(tipos.length > 0 ? tipos : this.buildExampleTiposPermiso());
+        this.tiposPermiso.set(data ?? []);
       },
       error: () => {
-        this.tiposPermiso.set(this.buildExampleTiposPermiso());
+        this.tiposPermiso.set([]);
       },
     });
-  }
-
-  private buildExampleTiposPermiso(): TipoPermiso[] {
-    const now = new Date();
-    return [
-      {
-        codigo: 1,
-        nombre: 'Vacaciones',
-        modalidad: ModalidadPermiso.DIAS,
-        requiereDocumento: false,
-        conGocePorDefecto: true,
-        estado: 'A',
-        fechaRegistro: now,
-        usuarioRegistro: 'demo',
-      },
-      {
-        codigo: 2,
-        nombre: 'Permiso medico',
-        modalidad: ModalidadPermiso.DIAS,
-        requiereDocumento: true,
-        conGocePorDefecto: true,
-        estado: 'A',
-        fechaRegistro: now,
-        usuarioRegistro: 'demo',
-      },
-      {
-        codigo: 3,
-        nombre: 'Permiso personal',
-        modalidad: ModalidadPermiso.HORAS,
-        requiereDocumento: false,
-        conGocePorDefecto: false,
-        estado: 'A',
-        fechaRegistro: now,
-        usuarioRegistro: 'demo',
-      },
-      {
-        codigo: 4,
-        nombre: 'Licencia maternidad',
-        modalidad: ModalidadPermiso.DIAS,
-        requiereDocumento: true,
-        conGocePorDefecto: true,
-        estado: 'A',
-        fechaRegistro: now,
-        usuarioRegistro: 'demo',
-      },
-    ];
   }
 
   private cargarDatos(permiso: PermisoLicencia): void {
@@ -273,20 +228,8 @@ export class PermisosLicenciasFormComponent implements OnInit {
     this.formTipoPermiso.set(tipo);
 
     if (tipo) {
-      // Aplicar valor por defecto de goce
-      this.formConGoce.set(tipo.conGocePorDefecto);
-
-      // Limpiar campos según modalidad
-      if (tipo.modalidad === ModalidadPermiso.DIAS) {
-        this.formHoraInicio.set('');
-        this.formHoraFin.set('');
-      } else if (tipo.modalidad === ModalidadPermiso.HORAS) {
-        this.formFechaFin.set(null);
-        this.formFechaFinControl.setValue(null, { emitEvent: false });
-        setTimeout(() => {
-          if (this.fechaFinInputRef?.nativeElement) this.fechaFinInputRef.nativeElement.value = '';
-        });
-      }
+      // El goce de sueldo es un atributo del tipo de permiso (RHH.CTLG)
+      this.formConGoce.set(tipo.conGoce === 'S');
     }
   }
 
@@ -426,34 +369,38 @@ export class PermisosLicenciasFormComponent implements OnInit {
     const tipo = this.formTipoPermiso()!;
 
     // Validar documento si es requerido
-    if (tipo.requiereDocumento && !this.formNumeroDocumento().trim()) {
+    if (tipo.requiereDocumento === 'S' && !this.formNumeroDocumento().trim()) {
       this.errorMsg.set('El número de documento es obligatorio para este tipo de permiso');
       return false;
     }
 
-    // Validaciones según modalidad
-    if (tipo.modalidad === ModalidadPermiso.DIAS) {
-      if (!this.formFechaFin()) {
-        this.errorMsg.set('La fecha de fin es obligatoria para permisos por días');
-        return false;
-      }
+    // Rango de fechas: siempre obligatorio
+    if (!this.formFechaFin()) {
+      this.errorMsg.set('La fecha de fin es obligatoria');
+      return false;
+    }
 
-      if (this.formFechaFin()! < this.formFechaInicio()!) {
-        this.errorMsg.set('La fecha de fin debe ser mayor o igual a la fecha de inicio');
-        return false;
-      }
+    if (this.formFechaFin()! < this.formFechaInicio()!) {
+      this.errorMsg.set('La fecha de fin debe ser mayor o igual a la fecha de inicio');
+      return false;
+    }
 
-      if ((this.formDias() || 0) <= 0) {
-        this.errorMsg.set('Los días calculados deben ser mayores a cero');
-        return false;
-      }
-    } else if (tipo.modalidad === ModalidadPermiso.HORAS) {
-      if (!this.formHoraInicio() || !this.formHoraFin()) {
-        this.errorMsg.set('Las horas de inicio y fin son obligatorias para permisos por horas');
-        return false;
-      }
+    if ((this.formDias() || 0) <= 0) {
+      this.errorMsg.set('Los días calculados deben ser mayores a cero');
+      return false;
+    }
 
-      if (this.formHoraFin() <= this.formHoraInicio()) {
+    // Horas: opcionales, pero si se informa una hay que informar la otra
+    const horaInicio = this.formHoraInicio();
+    const horaFin = this.formHoraFin();
+
+    if ((!!horaInicio || !!horaFin) && (!horaInicio || !horaFin)) {
+      this.errorMsg.set('Debe informar la hora de inicio y la hora de fin, o ninguna de las dos');
+      return false;
+    }
+
+    if (horaInicio && horaFin) {
+      if (horaFin <= horaInicio) {
         this.errorMsg.set('La hora de fin debe ser mayor a la hora de inicio');
         return false;
       }
@@ -479,34 +426,21 @@ export class PermisosLicenciasFormComponent implements OnInit {
       conGoce: this.formConGoce(),
       observacion: this.formObservacion().trim() || null,
       numeroDocumento: this.formNumeroDocumento().trim() || null,
-      estado: 'SOLICITADA', // Backend usa strings como en SolicitudVacaciones
-      usuarioRegistro: this.getUsuarioRegistro(),
+      estado: 'SOLICITADA', // RHH.PTCN guarda el estado como texto
+      usuarioRegistro: usuarioSesion(),
       fechaRegistro: new Date().toISOString(),
+      fechaFin: this.formFechaFin()!.toISOString(),
+      dias: this.formDias(),
+      horaInicio: this.formHoraInicio() || null,
+      horaFin: this.formHoraFin() || null,
+      horas: this.formHoras(),
     };
 
     if (this.formData.mode === 'edit' && this.formData.data) {
       datos.codigo = this.formData.data.codigo;
     }
 
-    if (tipo.modalidad === ModalidadPermiso.DIAS) {
-      datos.fechaFin = this.formFechaFin()!.toISOString();
-      datos.dias = this.formDias();
-      datos.horaInicio = null;
-      datos.horaFin = null;
-      datos.horas = null;
-    } else if (tipo.modalidad === ModalidadPermiso.HORAS) {
-      datos.fechaFin = fechaInicio.toISOString(); // Mismo día
-      datos.horaInicio = this.formHoraInicio();
-      datos.horaFin = this.formHoraFin();
-      datos.horas = this.formHoras();
-      datos.dias = null;
-    }
-
     return datos;
-  }
-
-  private getUsuarioRegistro(): string {
-    return localStorage.getItem('username') || 'sistema';
   }
 
   formatEmpleado(empleado: Empleado): string {
@@ -546,16 +480,10 @@ export class PermisosLicenciasFormComponent implements OnInit {
     }
   }
 
-  getModalidadDescripcion(): string {
+  getSubtitulo(): string {
     const tipo = this.formTipoPermiso();
     if (!tipo) return '';
-
-    if (tipo.modalidad === ModalidadPermiso.DIAS) {
-      return 'Permiso por días completos';
-    } else if (tipo.modalidad === ModalidadPermiso.HORAS) {
-      return 'Permiso por horas del día';
-    }
-    return '';
+    return tipo.conGoce === 'S' ? `${tipo.nombre} · con goce` : `${tipo.nombre} · sin goce`;
   }
 
   getEstadoColor(estado: string | number): string {

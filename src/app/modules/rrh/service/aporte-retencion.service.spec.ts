@@ -1,13 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 
-import { AporteRetencionService } from './aporte-retencion.service';
+import { AporteRetencionesService } from './aporte-retencion.service';
 
-describe('AporteRetencionService', () => {
-  let service: AporteRetencionService;
+describe('AporteRetencionesService', () => {
+  let service: AporteRetencionesService;
 
   beforeEach(() => {
     TestBed.configureTestingModule({});
-    service = TestBed.inject(AporteRetencionService);
+    service = TestBed.inject(AporteRetencionesService);
   });
 
   it('should be created', () => {

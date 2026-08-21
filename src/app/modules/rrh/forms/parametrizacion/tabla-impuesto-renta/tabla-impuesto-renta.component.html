@@ -1,0 +1,49 @@
+<div class="rrh-page">
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-icon">
+        <mat-icon>account_balance</mat-icon>
+      </div>
+      <div class="header-text">
+        <h1>Tabla de impuesto a la renta</h1>
+        <p class="subtitle">Tramos vigentes por ejercicio fiscal</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <mat-form-field appearance="outline" class="selector-anio">
+        <mat-label>Ejercicio</mat-label>
+        <mat-select [ngModel]="anio()" (ngModelChange)="onAnioChange($event)">
+          @for (a of anios; track a) {
+            <mat-option [value]="a">{{ a }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
+  </div>
+
+  @if (inconsistencias().length > 0) {
+    <div class="aviso aviso-error">
+      <mat-icon>report_problem</mat-icon>
+      <div>
+        <strong>La tabla no cuadra:</strong>
+        <ul>
+          @for (problema of inconsistencias(); track problema) {
+            <li>{{ problema }}</li>
+          }
+        </ul>
+      </div>
+    </div>
+  } @else if (tramos().length > 0) {
+    <div class="aviso">
+      <mat-icon>check_circle</mat-icon>
+      <span>
+        La tabla del {{ anio() }} es aritméticamente coherente ({{ tramos().length }} tramos).
+      </span>
+    </div>
+  }
+
+  @if (tableConfig) {
+    <app-table-basic-hijos [configTable]="tableConfig" (emiteError)="onTableError($event)">
+    </app-table-basic-hijos>
+  }
+</div>

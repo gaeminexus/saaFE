@@ -1,0 +1,98 @@
+@use 'sass:color';
+@use '../../../../../../styles/abstracts/colors' as *;
+@use '../../../../../../styles/abstracts/variables' as *;
+
+.vacio {
+  margin: 0;
+  padding: $spacing-lg;
+  text-align: center;
+  color: $text-muted;
+  font-size: $font-size-sm;
+}
+
+.aviso-pendiente {
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-md;
+  padding: $spacing-sm $spacing-md;
+  border-radius: $border-radius-sm;
+  border-left: $border-width-md solid $warning-color;
+  background: rgba($warning-color, 0.12);
+  font-size: $font-size-sm;
+  color: $text-primary;
+
+  mat-icon {
+    color: color.adjust($warning-color, $lightness: -15%);
+    flex-shrink: 0;
+  }
+}
+
+.tabla-scroll {
+  overflow-x: auto;
+  max-height: $breakpoint-sm;
+  overflow-y: auto;
+}
+
+.celda-cuenta {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs * 0.5;
+
+  .numero {
+    font-weight: $font-weight-semibold;
+  }
+
+  .nombre {
+    font-size: $font-size-xs;
+    color: $text-secondary;
+  }
+}
+
+.etiqueta-pendiente {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-xs;
+  margin-top: $spacing-xs;
+  padding: 0 $spacing-sm;
+  border-radius: $border-radius-lg;
+  background: rgba($warning-color, 0.2);
+  color: color.adjust($warning-color, $lightness: -20%);
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  width: fit-content;
+
+  mat-icon {
+    font-size: $font-size-base;
+    width: $font-size-base;
+    height: $font-size-base;
+  }
+}
+
+.fila-pendiente {
+  background: rgba($warning-color, 0.06);
+}
+
+.centro-costo {
+  color: $text-muted;
+  font-size: $font-size-xs;
+}
+
+.derecha {
+  text-align: right;
+}
+
+.totales {
+  display: flex;
+  justify-content: flex-end;
+  gap: $spacing-lg;
+  margin-top: $spacing-md;
+  padding-top: $spacing-sm;
+  border-top: $border-width solid $border-light;
+  font-size: $font-size-sm;
+
+  .descuadre {
+    color: $error-color;
+    font-weight: $font-weight-semibold;
+  }
+}

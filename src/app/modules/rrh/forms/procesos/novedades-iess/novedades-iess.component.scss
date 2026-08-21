@@ -1,0 +1,48 @@
+@use '../../../../../../styles/abstracts/colors' as *;
+@use '../../../../../../styles/abstracts/variables' as *;
+@use '../../../styles/pantalla-rrh' as *;
+
+.rrh-page {
+  @include pantalla-rrh;
+
+  .selector-anio {
+    min-width: $breakpoint-sm * 0.25;
+  }
+
+  .selector-periodo {
+    min-width: $breakpoint-sm * 0.3;
+  }
+
+  // El mixin trae `.aviso` y `.aviso-error`; el verde no existía porque hasta ahora ninguna
+  // pantalla tenía nada bueno que anunciar.
+  .aviso.aviso-ok {
+    border-left-color: $success-color;
+    color: $success-color;
+  }
+
+  .aviso p {
+    margin: $spacing-xs 0 0;
+  }
+
+  .barra-acciones {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-sm $spacing-md;
+    background: $background-secondary;
+    border-radius: $border-radius-md;
+
+    .elegida {
+      font-size: $font-size-sm;
+      color: $text-muted;
+      // Empuja el resto a la derecha sin que los botones se separen entre sí.
+      margin-right: auto;
+    }
+
+    // Separa el bloque del batch de las acciones sobre una fila: son cosas distintas.
+    .separador {
+      width: $spacing-md;
+    }
+  }
+}

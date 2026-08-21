@@ -1,0 +1,95 @@
+<h2 mat-dialog-title>Corregir el resumen del día</h2>
+
+<mat-dialog-content>
+  <p class="contexto">
+    {{ data.etiquetaEmpleado }} · {{ data.resumen.fecha | date: 'dd/MM/yyyy' }}
+  </p>
+
+  @if (camposPersisten && data.resumen.procesado === 'S') {
+    <div class="aviso-dialogo">
+      <mat-icon>lock</mat-icon>
+      <span>
+        Este día ya fue consumido por un período cerrado. Corregirlo no rehace lo ya pagado.
+      </span>
+    </div>
+  }
+
+  @if (!camposPersisten) {
+    <div class="aviso-dialogo">
+      <mat-icon>info</mat-icon>
+      <span>
+        El backend todavía no guarda las horas tipificadas, los minutos de salida anticipada ni
+        la justificación de la corrección: esas columnas existen en la base pero su entidad aún
+        no las mapea. Se habilitan con la ampliación de la fase 7.
+      </span>
+    </div>
+  }
+
+  <form [formGroup]="formulario" class="grid-correccion">
+    <mat-form-field appearance="outline">
+      <mat-label>Minutos de atraso</mat-label>
+      <input matInput type="number" formControlName="minutosTarde" />
+    </mat-form-field>
+
+    @if (camposPersisten) {
+      <mat-form-field appearance="outline">
+        <mat-label>Minutos de salida anticipada</mat-label>
+        <input matInput type="number" formControlName="minutosSalidaAnticipada" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Horas trabajadas</mat-label>
+        <input matInput type="number" formControlName="horasTrabajadas" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Horas suplementarias (50 %)</mat-label>
+        <input matInput type="number" formControlName="horasSuplementarias" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Horas extraordinarias (100 %)</mat-label>
+        <input matInput type="number" formControlName="horasExtraordinarias" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Horas con recargo nocturno (25 %)</mat-label>
+        <input matInput type="number" formControlName="horasNocturnas" />
+      </mat-form-field>
+    }
+
+    <mat-form-field appearance="outline">
+      <mat-label>Tipo de ausencia</mat-label>
+      <mat-select formControlName="tipoAusencia">
+        <mat-option [value]="null">Sin ausencia</mat-option>
+        @for (tipo of data.tiposAusencia; track tipo.codigoAlterno) {
+          <mat-option [value]="tipo.codigoAlterno">{{ tipo.descripcion }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Ausencia justificada</mat-label>
+      <mat-select formControlName="justificado">
+        <mat-option value="S">Sí</mat-option>
+        <mat-option value="N">No</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    @if (camposPersisten) {
+      <mat-form-field appearance="outline" class="campo-ancho">
+        <mat-label>Justificación de la corrección</mat-label>
+        <textarea matInput rows="3" formControlName="justificacion"></textarea>
+        <mat-hint>Obligatoria: queda registrada junto al cambio</mat-hint>
+        @if (formulario.get('justificacion')?.touched && formulario.get('justificacion')?.invalid) {
+          <mat-error>Debe explicar por qué corrige el día</mat-error>
+        }
+      </mat-form-field>
+    }
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-stroked-button [mat-dialog-close]="null">Cancelar</button>
+  <button mat-raised-button color="primary" (click)="guardar()">Guardar corrección</button>
+</mat-dialog-actions>

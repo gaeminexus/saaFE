@@ -234,6 +234,12 @@ export class EstadoCuentaTitularComponent implements OnInit {
   // ═══ FILTROS ════════════════════════════════════════════
 
   private pasaFiltros(d: DocumentoEstadoCuenta): boolean {
+    // Un documento anulado no forma parte del estado de cuenta: no suma en las
+    // tarjetas de resumen, no aparece en la grilla ni se exporta. Convención
+    // del proyecto: estado 1 = activo; cualquier otro (2 = anulado/inactivo)
+    // queda fuera. Los que no traen estado propio (null) sí pasan.
+    if (this.esAnulado(d)) return false;
+
     const tipos = this.fTipos();
     if (tipos.length && !tipos.includes(d.tipo)) return false;
 
@@ -276,6 +282,16 @@ export class EstadoCuentaTitularComponent implements OnInit {
     this.fTipos.set(
       actuales.includes(tipo) ? actuales.filter((t) => t !== tipo) : [...actuales, tipo]
     );
+  }
+
+  /**
+   * Un documento está anulado cuando trae estado propio y no es el activo.
+   * Convención del proyecto para documentos SRI y anticipos: 1 = activo,
+   * 2 = anulado/inactivo. Los documentos sin estado propio (null) no se
+   * consideran anulados.
+   */
+  private esAnulado(d: DocumentoEstadoCuenta): boolean {
+    return d.estado != null && Number(d.estado) !== 1;
   }
 
   tipoActivo(tipo: TipoDocumentoEstadoCuenta): boolean {

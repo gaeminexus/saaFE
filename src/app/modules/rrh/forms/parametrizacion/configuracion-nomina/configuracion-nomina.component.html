@@ -1,0 +1,90 @@
+<div class="rrh-page">
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-icon">
+        <mat-icon>settings_suggest</mat-icon>
+      </div>
+      <div class="header-text">
+        <h1>Configuración de nómina</h1>
+        <p class="subtitle">Plantillas contables y opciones de la empresa</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button
+        mat-raised-button
+        color="primary"
+        (click)="guardar()"
+        [disabled]="guardando() || cargando()"
+      >
+        <mat-icon>save</mat-icon>
+        Guardar
+      </button>
+    </div>
+  </div>
+
+  @if (!existe() && !cargando()) {
+    <div class="aviso">
+      <mat-icon>info</mat-icon>
+      <span>
+        Esta empresa aún no tiene configuración de nómina. Complete los datos y guarde para
+        crearla.
+      </span>
+    </div>
+  }
+
+  @if (cargando()) {
+    <div class="mensaje-vacio">
+      <mat-spinner diameter="32"></mat-spinner>
+    </div>
+  } @else {
+    <form [formGroup]="formulario">
+      <section class="panel">
+        <h2 class="panel-titulo">
+          <mat-icon>receipt</mat-icon>
+          Asientos contables
+        </h2>
+        <p class="nota">
+          Códigos alternos de la plantilla (CNT.PLNS) y del tipo de asiento (CNT.PLNT) de cada
+          proceso. Se resuelven contra contabilidad al contabilizar el período.
+        </p>
+        <div class="grid-campos">
+          @for (asiento of asientos; track asiento.proceso) {
+            <div class="fila-asiento">
+              <span class="nombre-proceso">{{ asiento.proceso }}</span>
+              <mat-form-field appearance="outline">
+                <mat-label>Plantilla</mat-label>
+                <input matInput type="number" [formControlName]="asiento.plantilla" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Tipo de asiento</mat-label>
+                <input matInput type="number" [formControlName]="asiento.tipo" />
+              </mat-form-field>
+            </div>
+          }
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2 class="panel-titulo">
+          <mat-icon>rule_settings</mat-icon>
+          Opciones de cálculo
+        </h2>
+        <div class="grid-campos">
+          <mat-form-field appearance="outline">
+            <mat-label>Tolerancia de cuadre del asiento</mat-label>
+            <input matInput type="number" formControlName="toleranciaCuadre" />
+            <span matTextSuffix>USD</span>
+            <mat-hint>Descuadre por redondeo que se ajusta automáticamente</mat-hint>
+          </mat-form-field>
+        </div>
+        <div class="lista-banderas">
+          @for (bandera of banderas; track bandera.name) {
+            <mat-slide-toggle [formControlName]="bandera.name" color="primary">
+              {{ bandera.label }}
+            </mat-slide-toggle>
+          }
+        </div>
+      </section>
+    </form>
+  }
+</div>

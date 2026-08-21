@@ -1,0 +1,45 @@
+<div class="rrh-page">
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-icon">
+        <mat-icon>account_balance</mat-icon>
+      </div>
+      <div class="header-text">
+        <h1>Formatos del archivo bancario</h1>
+        <p class="subtitle">
+          Definición del archivo de pago que exige el banco, campo a campo
+        </p>
+      </div>
+    </div>
+  </div>
+
+  @if (!hayFormatoActivo()) {
+    <div class="aviso aviso-error">
+      <mat-icon>report_problem</mat-icon>
+      <span>
+        No hay ningún formato activo para esta empresa. <strong>Sin él no se puede generar el
+        archivo bancario</strong> de ninguna orden de pago: hay que crear uno con los campos que
+        pida el banco.
+      </span>
+    </div>
+  }
+
+  @if (configFormatos) {
+    <app-table-basic-hijos
+      [configTable]="configFormatos"
+      (emiteRegistro)="onSeleccionFormato($event)"
+      (emiteError)="onTableError($event)"
+    >
+    </app-table-basic-hijos>
+  }
+
+  @if (configDetalle) {
+    <app-table-basic-hijos [configTable]="configDetalle" (emiteError)="onTableError($event)">
+    </app-table-basic-hijos>
+  } @else {
+    <div class="aviso">
+      <mat-icon>touch_app</mat-icon>
+      <span>Seleccione un formato para ver y editar sus campos.</span>
+    </div>
+  }
+</div>

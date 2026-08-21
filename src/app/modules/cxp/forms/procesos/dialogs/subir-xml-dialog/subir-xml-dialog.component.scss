@@ -1,0 +1,27 @@
+.doc-info-box {
+  background: #e3f2fd; border-radius: 6px; padding: 12px 16px;
+  margin-bottom: 16px; display: flex; flex-wrap: wrap; gap: 20px;
+}
+.info-row { display: flex; flex-direction: column; gap: 2px; }
+.info-lbl { font-size: 0.7rem; color: #1565c0; text-transform: uppercase; }
+.info-val { font-size: 0.88rem; font-weight: 500; }
+.font-mono { font-family: 'Courier New', monospace; }
+
+.archivo-row {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.archivo-nombre { font-size: 0.85rem; color: #333; }
+.archivo-nombre.vacio { color: #999; font-style: italic; }
+
+.reembolso-row { margin-top: 4px; }
+.reembolso-hint {
+  margin: 6px 0 0 4px; font-size: 0.78rem; color: #666; line-height: 1.4;
+}
+.reembolso-detectado {
+  display: flex; align-items: center; gap: 6px;
+  margin: 8px 0 0 4px; font-size: 0.8rem; color: #2e7d32; font-weight: 500;
+  mat-icon { font-size: 18px; width: 18px; height: 18px; }
+}
+
+mat-dialog-content { min-width: 460px; max-width: 90vw; }

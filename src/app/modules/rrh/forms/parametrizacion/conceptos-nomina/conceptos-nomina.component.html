@@ -1,0 +1,32 @@
+<div class="rrh-page">
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-icon">
+        <mat-icon>rule</mat-icon>
+      </div>
+      <div class="header-text">
+        <h1>Conceptos de nómina</h1>
+        <p class="subtitle">
+          Catálogo que dirige el motor de cálculo: ingresos, descuentos, aportes y provisiones
+        </p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button mat-stroked-button (click)="exportarCsv()" [disabled]="exportData().length === 0">
+        <mat-icon>description</mat-icon>
+        CSV
+      </button>
+      <button mat-stroked-button (click)="exportarPdf()" [disabled]="exportData().length === 0">
+        <mat-icon>picture_as_pdf</mat-icon>
+        PDF
+      </button>
+    </div>
+  </div>
+
+  @if (tableConfig) {
+    <app-table-basic-hijos [configTable]="tableConfig" (emiteError)="onTableError($event)">
+    </app-table-basic-hijos>
+  } @else if (cargando()) {
+    <div class="mensaje-vacio">Cargando conceptos de nómina…</div>
+  }
+</div>

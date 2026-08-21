@@ -143,6 +143,12 @@ export class MenutesoreriaComponent {
               idPermiso: 830,
               route: '/menutesoreria/procesos/anticipos/proveedores',
             },
+            {
+              displayName: 'Seguimiento',
+              iconName: 'fact_check',
+              idPermiso: 830,
+              route: '/menutesoreria/procesos/anticipos/seguimiento',
+            },
           ],
         },
         {

@@ -13,6 +13,7 @@ import { ResumenImportacionExtracto } from '../../../model/resumen-importacion-e
 import { ConciliacionContableService } from '../../../service/conciliacion-contable.service';
 import { CuentaBancariaService } from '../../../service/cuenta-bancaria.service';
 import { ExtractoBancarioService } from '../../../service/extracto-bancario.service';
+import { textoDeError } from '../texto-error';
 
 @Component({
   selector: 'app-cargar-extracto-bancario',
@@ -208,7 +209,7 @@ export class CargarExtractoBancarioComponent implements OnInit {
         },
         error: (error) => {
           this.isValidando = false;
-          this.snackBar.open(`Error al validar archivo: ${error?.error || error?.message || error}`, 'Cerrar', {
+          this.snackBar.open(`Error al validar archivo: ${textoDeError(error)}`, 'Cerrar', {
             duration: 6000,
           });
         },
@@ -245,7 +246,7 @@ export class CargarExtractoBancarioComponent implements OnInit {
         },
         error: (error) => {
           this.isConfirmando = false;
-          this.snackBar.open(`Error al confirmar carga: ${error?.error || error?.message || error}`, 'Cerrar', {
+          this.snackBar.open(`Error al confirmar carga: ${textoDeError(error)}`, 'Cerrar', {
             duration: 6000,
           });
         },

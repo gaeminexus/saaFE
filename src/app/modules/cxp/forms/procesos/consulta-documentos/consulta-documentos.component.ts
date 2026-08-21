@@ -12,6 +12,7 @@ import { MaterialFormModule } from '../../../../../shared/modules/material-form.
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { DocumentoCxp } from '../../../model/documento-cxp';
 import { HistorialAbonosFacturaComponent } from '../../pagos/historial-abonos-factura/historial-abonos-factura.component';
+import { ReembolsosFacturaComponent } from '../reembolsos-factura/reembolsos-factura.component';
 import { DetalleFacturaCompraService } from '../../../service/detalle-factura-compra.service';
 import { DetalleLiquidacionCompraCompraService } from '../../../service/detalle-liquidacion-compra-compra.service';
 import { DetalleNotaCreditoCompraService } from '../../../service/detalle-nota-credito-compra.service';
@@ -39,7 +40,7 @@ const COLUMNAS_RETENCION = ['codRetencion', 'codImpuesto', 'numDocReten', 'baseI
 @Component({
   selector: 'app-consulta-documentos',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, MaterialFormModule, HistorialAbonosFacturaComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, MaterialFormModule, HistorialAbonosFacturaComponent, ReembolsosFacturaComponent],
   templateUrl: './consulta-documentos.component.html',
   styleUrl: './consulta-documentos.component.scss',
 })

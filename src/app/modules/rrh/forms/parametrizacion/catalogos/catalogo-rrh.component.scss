@@ -1,0 +1,7 @@
+@use '../../../../../../styles/abstracts/colors' as *;
+@use '../../../../../../styles/abstracts/variables' as *;
+@use '../../../styles/pantalla-rrh' as *;
+
+.rrh-page {
+  @include pantalla-rrh;
+}

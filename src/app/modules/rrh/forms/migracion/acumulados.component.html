@@ -1,0 +1,104 @@
+<div class="rrh-page">
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-icon">
+        <mat-icon>summarize</mat-icon>
+      </div>
+      <div class="header-text">
+        <h1>Acumulados del colaborador</h1>
+        <p class="subtitle">
+          Bases de décimos, fondos de reserva e impuesto a la renta, mes a mes
+        </p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <mat-form-field appearance="outline" class="selector-empleado">
+        <mat-label>Colaborador</mat-label>
+        <mat-select
+          [ngModel]="empleadoSeleccionado()"
+          (ngModelChange)="empleadoSeleccionado.set($event); onFiltroChange()"
+        >
+          @for (emp of empleados(); track emp.codigo) {
+            <mat-option [value]="emp.codigo">{{ etiquetaEmpleado(emp) }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="selector-anio">
+        <mat-label>Ejercicio</mat-label>
+        <mat-select [ngModel]="anio()" (ngModelChange)="anio.set($event); onFiltroChange()">
+          @for (a of anios; track a) {
+            <mat-option [value]="a">{{ a }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <button mat-stroked-button (click)="exportarCsv()" [disabled]="filas().length === 0">
+        <mat-icon>description</mat-icon>
+        CSV
+      </button>
+    </div>
+  </div>
+
+  <div class="aviso">
+    <mat-icon>lock</mat-icon>
+    <span>
+      Solo lectura: los acumulados los escribe el cierre del período, no el usuario. Editar uno a
+      mano descuadraría las bases de los décimos y de la proyección del impuesto.
+    </span>
+  </div>
+
+  @if (hayApertura()) {
+    <div class="aviso">
+      <mat-icon>upload_file</mat-icon>
+      <span>Las filas marcadas provienen del corte de migración, no de un período calculado.</span>
+    </div>
+  }
+
+  @if (empleados().length === 0) {
+    <div class="mensaje-vacio">No hay colaboradores registrados en esta empresa.</div>
+  } @else if (empleadoSeleccionado() === null) {
+    <div class="mensaje-vacio">Seleccione un colaborador para ver sus acumulados.</div>
+  } @else if (cargando()) {
+    <div class="mensaje-vacio">Cargando acumulados…</div>
+  } @else if (filas().length === 0) {
+    <div class="mensaje-vacio">
+      No hay acumulados registrados para este colaborador en {{ anio() }}.
+    </div>
+  } @else {
+    <div class="panel tabla-scroll">
+      <table mat-table [dataSource]="filas()">
+        <ng-container matColumnDef="tipo">
+          <th mat-header-cell *matHeaderCellDef>Tipo de acumulado</th>
+          <td mat-cell *matCellDef="let fila">
+            {{ fila.tipoLabel }}
+            @if (fila.aperturaMigracion) {
+              <mat-icon class="marca-apertura" aria-label="Proviene del corte de apertura">
+                upload_file
+              </mat-icon>
+            }
+          </td>
+        </ng-container>
+
+        @for (mes of meses; track mes; let i = $index) {
+          <ng-container [matColumnDef]="'mes' + (i + 1)">
+            <th mat-header-cell *matHeaderCellDef class="derecha">{{ mes.slice(0, 3) }}</th>
+            <td mat-cell *matCellDef="let fila" class="derecha">
+              {{ fila['mes' + (i + 1)] ? (fila['mes' + (i + 1)] | number: '1.2-2') : '—' }}
+            </td>
+          </ng-container>
+        }
+
+        <ng-container matColumnDef="total">
+          <th mat-header-cell *matHeaderCellDef class="derecha">Total</th>
+          <td mat-cell *matCellDef="let fila" class="derecha total">
+            {{ fila.total | number: '1.2-2' }}
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="columnas"></tr>
+        <tr mat-row *matRowDef="let fila; columns: columnas"></tr>
+      </table>
+    </div>
+  }
+</div>

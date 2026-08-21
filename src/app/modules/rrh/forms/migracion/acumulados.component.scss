@@ -1,0 +1,35 @@
+@use '../../../../../styles/abstracts/colors' as *;
+@use '../../../../../styles/abstracts/variables' as *;
+@use '../../styles/pantalla-rrh' as *;
+
+.rrh-page {
+  @include pantalla-rrh;
+
+  .selector-empleado {
+    min-width: $breakpoint-sm * 0.6;
+  }
+
+  .selector-anio {
+    min-width: $breakpoint-sm * 0.25;
+  }
+
+  .tabla-scroll {
+    overflow-x: auto;
+  }
+
+  .derecha {
+    text-align: right;
+  }
+
+  .total {
+    font-weight: $font-weight-semibold;
+  }
+
+  .marca-apertura {
+    font-size: $font-size-base;
+    width: $font-size-base;
+    height: $font-size-base;
+    vertical-align: middle;
+    color: $info-color;
+  }
+}

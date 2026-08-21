@@ -50,7 +50,7 @@ export class BandejaElectronicaComponent implements OnInit {
   cargaSeleccionada: CargaArchivoTxt | null = null;
   detalles: DetalleCargaTxt[] = [];
   dsDetalles = new MatTableDataSource<DetalleCargaTxt>([]);
-  columnasDetalle = ['id', 'resultado', 'tipoComprobante', 'rucEmisor', 'razonSocialEmisor', 'serieComprobante', 'fechaEmision', 'valorSinImpuestosCarga', 'ivaCarga', 'importeTotalCarga', 'estadoDocumento', 'novedad'];
+  columnasDetalle = ['id', 'resultado', 'tipoComprobante', 'rucEmisor', 'razonSocialEmisor', 'serieComprobante', 'fechaEmision', 'valorSinImpuestosCarga', 'ivaCarga', 'importeTotalCarga', 'estadoDocumento', 'novedad', 'acciones'];
 
   // Detalle activo para subir XML
   detalleParaXml: DetalleCargaTxt | null = null;
@@ -188,6 +188,23 @@ export class BandejaElectronicaComponent implements OnInit {
     this.detalleParaResolverNovedad = null;
     this.inputXml.nativeElement.value = '';
     this.inputXml.nativeElement.click();
+  }
+
+  // ─── MARCAR / DESMARCAR REEMBOLSO ───────────────────────
+  // NOTA: en esta pantalla SOLO se marca/desmarca. La subida de XML y la
+  // captura de sustentos viven en Gestión de Documentos (decisión del usuario).
+
+  toggleReembolso(detalle: DetalleCargaTxt): void {
+    const doc = detalle.documento;
+    if (doc.estadoDocumento === 3) { this.mostrarError('No se puede marcar reembolso en un documento ya registrado'); return; }
+    const esMarcado = doc.esReembolso === 1;
+    const accion = esMarcado ? 'desmarcar' : 'marcar como';
+    if (!confirm(`¿Desea ${accion} reembolso de gastos el documento ${doc.serieComprobante}?`)) return;
+    this.procesando.set(true);
+    this.processService.marcarReembolso(doc.id, !esMarcado, this.idUsuario).subscribe({
+      next: () => { this.procesando.set(false); this.mostrarExito(esMarcado ? 'Reembolso desmarcado' : 'Documento marcado como reembolso'); this.recargarDetalle(); },
+      error: (err) => { this.procesando.set(false); this.mostrarError(this.extraerMensajeError(err)); },
+    });
   }
 
   private subirXml(file: File, detalle: DetalleCargaTxt): void {
@@ -405,5 +422,11 @@ export class BandejaElectronicaComponent implements OnInit {
 
   private mostrarError(msg: string): void {
     this.snackBar.open(msg, 'Cerrar', { duration: 5000, panelClass: ['snack-error'] });
+  }
+
+  private extraerMensajeError(err: any): string {
+    if (!err) return 'Error desconocido';
+    if (typeof err === 'string') return err;
+    return err?.error || err?.mensaje || err?.message || JSON.stringify(err);
   }
 }

@@ -193,7 +193,12 @@
       <!-- Cabecera del documento -->
       <mat-card class="detalle-card">
         <mat-card-header>
-          <mat-card-title><mat-icon>description</mat-icon> Datos del Documento</mat-card-title>
+          <mat-card-title>
+            <mat-icon>description</mat-icon> Datos del Documento
+            @if (esFacturaCompra() && docReal?.esReembolso === 1) {
+              <span class="badge-reembolso-gastos">REEMBOLSO DE GASTOS</span>
+            }
+          </mat-card-title>
         </mat-card-header>
         <mat-card-content>
           <div class="info-grid">
@@ -423,6 +428,18 @@
           </mat-card-header>
           <mat-card-content>
             <app-historial-abonos-factura [idFactura]="docSeleccionado.idDocumentoBD"></app-historial-abonos-factura>
+          </mat-card-content>
+        </mat-card>
+      }
+
+      <!-- Documentos de reembolso (solo lectura) -->
+      @if (esFacturaCompra() && docReal?.esReembolso === 1) {
+        <mat-card class="detalle-card">
+          <mat-card-header>
+            <mat-card-title><mat-icon>fact_check</mat-icon> Documentos de reembolso</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <app-reembolsos-factura [idFacturaCompra]="docReal.id" [editable]="false" />
           </mat-card-content>
         </mat-card>
       }

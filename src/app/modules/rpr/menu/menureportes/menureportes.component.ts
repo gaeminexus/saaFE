@@ -47,11 +47,11 @@ export class MenureportesComponent {
         },
       ],
     },
-    // {
-    //   displayName: 'Recursos Humanos',
-    //   iconName: 'groups',
-    //   route: '/reportes',
-    // },
+    {
+      displayName: 'Recursos Humanos',
+      iconName: 'groups',
+      route: '/menurecursoshumanos/procesos/reportes-nomina',
+    },
     {
       displayName: 'Regresar',
       iconName: 'arrow_back',

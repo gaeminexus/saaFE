@@ -1,0 +1,73 @@
+<div class="rrh-page">
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-icon">
+        <mat-icon>schedule</mat-icon>
+      </div>
+      <div class="header-text">
+        <h1>Marcaciones</h1>
+        <p class="subtitle">Registro manual y corrección, con el origen de cada marcación</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button mat-stroked-button (click)="irAResumen()">
+        <mat-icon>today</mat-icon>
+        Ir al resumen diario
+      </button>
+    </div>
+  </div>
+
+  <div class="panel filtros">
+    <mat-form-field appearance="outline" class="selector-empleado">
+      <mat-label>Colaborador</mat-label>
+      <mat-select
+        [ngModel]="empleadoSeleccionado()"
+        (ngModelChange)="empleadoSeleccionado.set($event)"
+      >
+        @for (emp of empleados(); track emp.codigo) {
+          <mat-option [value]="emp.codigo">{{ etiquetaEmpleado(emp) }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Desde</mat-label>
+      <input matInput type="date" [ngModel]="desde()" (ngModelChange)="desde.set($event)" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Hasta</mat-label>
+      <input matInput type="date" [ngModel]="hasta()" (ngModelChange)="hasta.set($event)" />
+    </mat-form-field>
+
+    <button mat-raised-button color="primary" (click)="consultar()" [disabled]="!puedeConsultar()">
+      <mat-icon>search</mat-icon>
+      Consultar
+    </button>
+  </div>
+
+  @if (empleados().length === 0) {
+    <div class="aviso">
+      <mat-icon>person_off</mat-icon>
+      <span>No hay colaboradores registrados en esta empresa.</span>
+    </div>
+  } @else if (!tableConfig) {
+    <div class="aviso">
+      <mat-icon>person_search</mat-icon>
+      <span>Seleccione colaborador y rango de fechas, y pulse Consultar.</span>
+    </div>
+  } @else {
+    @if (consolidadas() > 0) {
+      <div class="aviso">
+        <mat-icon>info</mat-icon>
+        <span>
+          {{ consolidadas() }} marcación(es) ya están consolidadas en un resumen diario.
+          Si corrige alguna, hay que volver a consolidar ese día.
+        </span>
+      </div>
+    }
+
+    <app-table-basic-hijos [configTable]="tableConfig" (emiteError)="onTableError($event)">
+    </app-table-basic-hijos>
+  }
+</div>

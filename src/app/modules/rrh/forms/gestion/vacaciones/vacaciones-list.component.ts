@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, CUSTOM_ELEMENTS_SCHEMA, ElementRef, inject, OnInit, signal, ViewChild } from '@angular/core';
+import { Component, computed, ElementRef, inject, OnInit, signal, ViewChild } from '@angular/core';
 import { AbstractControl, UntypedFormControl } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { PageEvent } from '@angular/material/paginator';
@@ -15,14 +15,18 @@ import { SolicitudVacaciones } from '../../../model/solicitud-vacaciones';
 import { EmpleadoService } from '../../../service/empleado.service';
 import { SaldoVacacionesService } from '../../../service/saldo-vacaciones.service';
 import { SolicitudVacacionesService } from '../../../service/solicitud-vacaciones.service';
+import {
+  criteriosPorEmpresa,
+  filtrarPorAnio,
+} from '../../parametrizacion/utiles-parametrizacion';
 import { VacacionesAprobacionDialogComponent } from './vacaciones-aprobacion-dialog.component';
 import { VacacionesFormComponent } from './vacaciones-form.component';
+import { usuarioSesion } from '../../../../../shared/services/usuario-sesion';
 
 @Component({
   selector: 'app-vacaciones-list',
   standalone: true,
   imports: [CommonModule, MaterialFormModule],
-  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './vacaciones-list.component.html',
   styleUrls: ['./vacaciones-list.component.scss'],
 })
@@ -391,15 +395,6 @@ export class VacacionesListComponent implements OnInit {
     );
     criterios.push(dbEmpleado);
 
-    const dbAnio = new DatosBusqueda();
-    dbAnio.asignaUnCampoSinTrunc(
-      TipoDatosBusqueda.LONG,
-      'anio',
-      String(anio),
-      TipoComandosBusqueda.IGUAL,
-    );
-    criterios.push(dbAnio);
-
     const order = new DatosBusqueda();
     order.orderBy('anio');
     order.setTipoOrden(DatosBusqueda.ORDER_DESC);
@@ -407,7 +402,7 @@ export class VacacionesListComponent implements OnInit {
 
     this.saldoService.selectByCriteria(criterios).subscribe({
       next: (rows: SaldoVacaciones[] | null) => {
-        this.saldoData.set(this.extractRows(rows));
+        this.saldoData.set(filtrarPorAnio(this.extractRows(rows), anio));
         this.saldoLoading.set(false);
       },
       error: (err) => {
@@ -449,7 +444,7 @@ export class VacacionesListComponent implements OnInit {
       diasSolicitados: row.diasSolicitados,
       estado,
       observacion: observacion ?? row.observacion ?? undefined,
-      usuarioAprobacion: this.getUsuarioRegistro(),
+      usuarioAprobacion: usuarioSesion(),
       fechaRegistro: row.fechaRegistro,
       usuarioRegistro: row.usuarioRegistro,
     };
@@ -559,7 +554,8 @@ export class VacacionesListComponent implements OnInit {
   }
 
   private buildEmpleadoCriteria(busqueda: string): DatosBusqueda[] {
-    const criterios: DatosBusqueda[] = [];
+    // RHH.MPLD lleva PJRQCDGO desde el script 05: la búsqueda se acota a la empresa activa
+    const criterios: DatosBusqueda[] = criteriosPorEmpresa();
     const texto = this.normalizeText(busqueda);
     if (texto) {
       const db = new DatosBusqueda();
@@ -719,36 +715,6 @@ export class VacacionesListComponent implements OnInit {
     if (typeof err?.error === 'string') return err.error;
     if (typeof err?.error?.message === 'string') return err.error.message;
     return '';
-  }
-
-  private getUsuarioRegistro(): string {
-    const raw =
-      localStorage.getItem('usuarioRegistro') ||
-      localStorage.getItem('usuario') ||
-      localStorage.getItem('username') ||
-      localStorage.getItem('user') ||
-      'web';
-
-    const text = String(raw ?? '').trim();
-    if (!text) return 'web';
-
-    if (text.startsWith('{') || text.startsWith('[')) {
-      try {
-        const parsed = JSON.parse(text) as Record<string, unknown> | Array<Record<string, unknown>>;
-        const user = Array.isArray(parsed) ? parsed[0] : parsed;
-        const candidate =
-          (user?.['username'] as string) ||
-          (user?.['usuario'] as string) ||
-          (user?.['login'] as string) ||
-          (user?.['nombre'] as string) ||
-          (user?.['email'] as string);
-        if (candidate) return String(candidate).substring(0, 59);
-      } catch {
-        return 'web';
-      }
-    }
-
-    return text.substring(0, 59);
   }
 
   private showSuccess(message: string): void {

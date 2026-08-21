@@ -1,0 +1,79 @@
+@use 'sass:color';
+@use '../../../../../../styles/abstracts/colors' as *;
+@use '../../../../../../styles/abstracts/variables' as *;
+@use '../../../styles/pantalla-rrh' as *;
+
+.rrh-page {
+  @include pantalla-rrh;
+
+  .selector-anio {
+    min-width: $breakpoint-sm * 0.25;
+  }
+
+  .selector-periodo {
+    min-width: $breakpoint-sm * 0.3;
+  }
+
+  .barra-resumen {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-md;
+    flex-wrap: wrap;
+    margin-bottom: $spacing-sm;
+  }
+
+  .resumen {
+    margin: 0;
+    font-size: $font-size-sm;
+    color: $text-secondary;
+  }
+
+  .col-seleccion {
+    width: $spacing-xl * 2;
+    text-align: center;
+  }
+
+  // Estado derivado de fechaEnvio y recibido, no de RLPGESTD
+  .badge-estado {
+    display: inline-flex;
+    align-items: center;
+    padding: $spacing-xs $spacing-sm;
+    border-radius: $border-radius-lg;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    white-space: nowrap;
+    background: $background-tertiary;
+    color: $text-secondary;
+
+    &.estado-enviado {
+      background: rgba($info-color, 0.15);
+      color: color.adjust($info-color, $lightness: -12%);
+    }
+
+    &.estado-recibido {
+      background: rgba($success-color, 0.15);
+      color: color.adjust($success-color, $lightness: -8%);
+    }
+  }
+
+  .verificacion-ok {
+    color: $success-color;
+  }
+
+  .verificacion-falla {
+    color: $warning-color;
+  }
+
+  .tabla-scroll {
+    overflow-x: auto;
+  }
+
+  .derecha {
+    text-align: right;
+  }
+
+  .neto {
+    font-weight: $font-weight-semibold;
+  }
+}

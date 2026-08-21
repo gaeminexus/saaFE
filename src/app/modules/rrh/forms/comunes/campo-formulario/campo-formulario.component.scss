@@ -1,0 +1,58 @@
+@use '../../../../../../styles/abstracts/colors' as *;
+@use '../../../../../../styles/abstracts/variables' as *;
+
+:host {
+  display: block;
+}
+
+:host(.campo-completo),
+mat-form-field.campo-completo {
+  grid-column: 1 / -1;
+}
+
+mat-form-field {
+  width: 100%;
+}
+
+/* Disposición de ficha de datos: etiqueta a la izquierda, control a la derecha */
+.fila {
+  display: grid;
+  grid-template-columns: minmax(0, 11rem) minmax(0, 1fr);
+  align-items: start;
+  gap: $spacing-sm;
+  padding: $spacing-xs 0;
+}
+
+.etiqueta {
+  display: flex;
+  flex-direction: column;
+  padding-top: $spacing-sm;
+  font-size: $font-size-sm;
+  color: $text-secondary;
+  line-height: $line-height-tight;
+
+  .marca-obligatorio {
+    color: $error-color;
+  }
+
+  .ayuda {
+    font-size: $font-size-xs;
+    color: $text-muted;
+  }
+}
+
+.valor {
+  min-width: 0;
+}
+
+/* Sin ancho para dos bloques, la etiqueta se pone encima sola */
+@media (max-width: $breakpoint-sm) {
+  .fila {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .etiqueta {
+    padding-top: 0;
+  }
+}

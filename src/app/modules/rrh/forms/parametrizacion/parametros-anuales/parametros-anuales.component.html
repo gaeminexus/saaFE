@@ -1,0 +1,82 @@
+<div class="rrh-page">
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-icon">
+        <mat-icon>tune</mat-icon>
+      </div>
+      <div class="header-text">
+        <h1>Parámetros anuales de nómina</h1>
+        <p class="subtitle">
+          SBU, tasas del IESS, recargos y topes vigentes en cada ejercicio
+        </p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <mat-form-field appearance="outline" class="selector-anio">
+        <mat-label>Ejercicio</mat-label>
+        <mat-select [ngModel]="anio()" (ngModelChange)="onAnioChange($event)">
+          @for (a of anios; track a) {
+            <mat-option [value]="a">{{ a }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+      <button mat-stroked-button (click)="duplicarAnioAnterior()" [disabled]="cargando()">
+        <mat-icon>content_copy</mat-icon>
+        Duplicar del año anterior
+      </button>
+      <button
+        mat-raised-button
+        color="primary"
+        (click)="guardar()"
+        [disabled]="guardando() || cargando()"
+      >
+        <mat-icon>save</mat-icon>
+        Guardar
+      </button>
+    </div>
+  </div>
+
+  @if (!existe() && !cargando()) {
+    <div class="aviso">
+      <mat-icon>info</mat-icon>
+      <span>
+        No hay parámetros cargados para {{ anio() }}. Puede partir de los del año anterior con
+        "Duplicar del año anterior" y ajustar lo que cambió.
+      </span>
+    </div>
+  }
+
+  @if (cargando()) {
+    <div class="mensaje-vacio">
+      <mat-spinner diameter="32"></mat-spinner>
+    </div>
+  } @else {
+    <form [formGroup]="formulario">
+      @for (seccion of secciones; track seccion.titulo) {
+        <section class="panel">
+          <h2 class="panel-titulo">
+            <mat-icon>{{ seccion.icono }}</mat-icon>
+            {{ seccion.titulo }}
+          </h2>
+          <div class="grid-campos">
+            @for (campo of seccion.campos; track campo.name) {
+              <mat-form-field appearance="outline">
+                <mat-label>{{ campo.label }}</mat-label>
+                <input matInput type="number" [formControlName]="campo.name" />
+                @if (campo.sufijo) {
+                  <span matTextSuffix>{{ campo.sufijo }}</span>
+                }
+                @if (campo.ayuda) {
+                  <mat-hint>{{ campo.ayuda }}</mat-hint>
+                }
+                @if (formulario.get(campo.name)?.hasError('required')) {
+                  <mat-error>{{ campo.label }} es obligatorio</mat-error>
+                }
+              </mat-form-field>
+            }
+          </div>
+        </section>
+      }
+    </form>
+  }
+</div>

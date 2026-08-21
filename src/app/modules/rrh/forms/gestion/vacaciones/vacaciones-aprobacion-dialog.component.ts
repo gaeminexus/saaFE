@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, CUSTOM_ELEMENTS_SCHEMA, Inject, signal } from '@angular/core';
+import { Component, Inject, signal } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { SolicitudVacaciones } from '../../../model/solicitud-vacaciones';
@@ -13,7 +13,6 @@ export interface VacacionesAprobacionData {
   selector: 'app-vacaciones-aprobacion-dialog',
   standalone: true,
   imports: [CommonModule, MaterialFormModule],
-  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './vacaciones-aprobacion-dialog.component.html',
   styleUrls: ['./vacaciones-aprobacion-dialog.component.scss'],
 })

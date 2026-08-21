@@ -1,0 +1,119 @@
+:host {
+  display: block;
+  max-width: 620px;
+}
+
+h2[mat-dialog-title] {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.doc-info-box {
+  background: #f5f7fa;
+  border: 1px solid #e0e5ec;
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 3px 0;
+
+    .info-lbl {
+      color: #667085;
+      font-size: 0.85rem;
+    }
+
+    .info-val {
+      font-weight: 600;
+    }
+  }
+}
+
+.font-mono {
+  font-family: 'Roboto Mono', Consolas, monospace;
+}
+
+.msg-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  font-size: 0.9rem;
+  background: #e8f1fb;
+  color: #12508f;
+
+  mat-icon {
+    flex: 0 0 auto;
+  }
+
+  &.msg-warn {
+    background: #fdf3e2;
+    color: #8a5a00;
+  }
+
+  &.msg-error {
+    background: #fdecec;
+    color: #a02020;
+  }
+}
+
+.seccion-titulo {
+  font-size: 0.95rem;
+  margin: 4px 0 8px;
+}
+
+.tabla-cruces {
+  max-height: 200px;
+  overflow: auto;
+  border: 1px solid #e0e5ec;
+  border-radius: 6px;
+  margin-bottom: 10px;
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+  }
+
+  th,
+  td {
+    padding: 6px 10px;
+    text-align: left;
+    border-bottom: 1px solid #eef1f5;
+  }
+
+  th {
+    background: #f5f7fa;
+    color: #667085;
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+  }
+
+  tfoot td {
+    font-weight: 700;
+    border-top: 2px solid #e0e5ec;
+    border-bottom: none;
+  }
+
+  .num {
+    text-align: right;
+  }
+}
+
+.check-cruces {
+  display: block;
+  margin-bottom: 14px;
+  line-height: 1.35;
+}
+
+.campo-motivo {
+  width: 100%;
+}

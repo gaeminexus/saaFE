@@ -43,16 +43,6 @@
           </mat-form-field>
 
           <mat-form-field appearance="outline">
-            <mat-label>Con/Sin Goce</mat-label>
-            <mat-select [ngModel]="filtroConGoce()" (ngModelChange)="filtroConGoce.set($event)">
-              <mat-option [value]="null">Todos</mat-option>
-              @for (opt of goceOptions; track opt.value) {
-                <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
-              }
-            </mat-select>
-          </mat-form-field>
-
-          <mat-form-field appearance="outline">
             <mat-label>Fecha Inicio Desde</mat-label>
             <input
               #fechaInicioInput
@@ -154,19 +144,6 @@
               <td mat-cell *matCellDef="let row">{{ row.tipoPermiso?.nombre }}</td>
             </ng-container>
 
-            <!-- Modalidad -->
-            <ng-container matColumnDef="modalidad">
-              <th mat-header-cell *matHeaderCellDef>Modalidad</th>
-              <td mat-cell *matCellDef="let row">
-                <mat-chip
-                  [color]="row.tipoPermiso?.modalidad === 'D' ? 'primary' : 'accent'"
-                  selected
-                >
-                  {{ row.tipoPermiso?.modalidad === 'D' ? 'Días' : 'Horas' }}
-                </mat-chip>
-              </td>
-            </ng-container>
-
             <!-- Fecha Inicio -->
             <ng-container matColumnDef="fechaInicio">
               <th mat-header-cell *matHeaderCellDef>Fecha Inicio</th>
@@ -213,18 +190,10 @@
               </td>
             </ng-container>
 
-            <!-- Fecha Aprobación -->
-            <ng-container matColumnDef="fechaAprobacion">
-              <th mat-header-cell *matHeaderCellDef>F. Aprobación</th>
-              <td mat-cell *matCellDef="let row">
-                @if (row.fechaAprobacion) {
-                  {{ row.fechaAprobacion | date: 'dd/MM/yyyy' }}
-                  <br />
-                  <small>{{ row.usuarioAprobacion }}</small>
-                } @else {
-                  -
-                }
-              </td>
+            <!-- Aprobado por -->
+            <ng-container matColumnDef="usuarioAprobacion">
+              <th mat-header-cell *matHeaderCellDef>Aprobado por</th>
+              <td mat-cell *matCellDef="let row">{{ row.usuarioAprobacion || '-' }}</td>
             </ng-container>
 
             <!-- Acciones -->
@@ -283,6 +252,11 @@
 
             <tr mat-header-row *matHeaderRowDef="columns()"></tr>
             <tr mat-row *matRowDef="let row; columns: columns()"></tr>
+            <tr class="mat-row" *matNoDataRow>
+              <td class="mat-cell fila-vacia" [attr.colspan]="columns().length">
+                No hay permisos ni licencias que coincidan con los filtros.
+              </td>
+            </tr>
           </table>
 
           @if (totalItems() === 0) {

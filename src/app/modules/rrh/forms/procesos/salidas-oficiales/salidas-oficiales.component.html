@@ -1,0 +1,81 @@
+<div class="pantalla">
+  <header class="cabecera">
+    <div class="titulos">
+      <h1>
+        <mat-icon>assured_workload</mat-icon>
+        Salidas oficiales
+      </h1>
+      <p>
+        Lo que se entrega al SRI, al IESS y al Ministerio del Trabajo. La tabla registra el hecho:
+        lo presentado se reconstruye desde los renglones, los acumulados y los beneficios.
+      </p>
+    </div>
+
+    <div class="acciones-cabecera">
+      <mat-form-field appearance="outline" class="anio">
+        <mat-label>Ejercicio</mat-label>
+        <mat-select [ngModel]="anio()" (ngModelChange)="anio.set($event)">
+          @for (a of anios; track a) {
+            <mat-option [value]="a">{{ a }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <button mat-raised-button color="primary" type="button" (click)="generarRdep()"
+              [disabled]="ocupado() || !puedeGenerar()"
+              matTooltip="Genera el XML del RDEP del ejercicio para el DIMM y deja el registro">
+        <mat-icon>download</mat-icon>
+        Generar RDEP
+      </button>
+    </div>
+  </header>
+
+  <div class="aviso">
+    <mat-icon>info</mat-icon>
+    <span>
+      Hoy el sistema genera el RDEP. La planilla del IESS y los formularios del MDT se registran
+      aquí en cuanto se producen por su vía, mientras no lleguen sus formatos.
+    </span>
+  </div>
+
+  <!-- Registrar la presentación: dos campos, en la propia página y no en un diálogo -->
+  @if (presentando(); as fila) {
+    <section class="presentacion">
+      <h2>Registrar presentación · {{ fila.tipoLabel }} {{ fila.periodo }}</h2>
+      <p class="ayuda">
+        La fecha en que el organismo recibió, que no es la de generación, y el comprobante que
+        devolvió.
+      </p>
+      <div class="campos">
+        <mat-form-field appearance="outline">
+          <mat-label>Fecha de presentación</mat-label>
+          <input matInput type="date" [(ngModel)]="fechaPresentacion" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Número de comprobante</mat-label>
+          <input matInput type="text" [(ngModel)]="numeroComprobante" />
+        </mat-form-field>
+        <div class="botones">
+          <button mat-stroked-button type="button" (click)="cerrarPresentacion()"
+                  [disabled]="ocupado()">
+            Cancelar
+          </button>
+          <button mat-raised-button color="primary" type="button" (click)="confirmarPresentacion()"
+                  [disabled]="ocupado()">
+            <mat-icon>task_alt</mat-icon>
+            Registrar
+          </button>
+        </div>
+      </div>
+    </section>
+  }
+
+  <app-tabla-rrh
+    [columnas]="columnas"
+    [filas]="visibles()"
+    [cargando]="cargando()"
+    mensajeVacio="Sin salidas registradas para este ejercicio."
+    (editar)="abrirPresentacion($event)"
+  >
+  </app-tabla-rrh>
+</div>

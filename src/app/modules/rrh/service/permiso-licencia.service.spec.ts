@@ -26,7 +26,6 @@ describe('PermisoLicenciaService', () => {
     expect(service.aprobar).toBeDefined();
     expect(service.rechazar).toBeDefined();
     expect(service.cancelar).toBeDefined();
-    expect(service.validarSolapamientos).toBeDefined();
     expect(service.delete).toBeDefined();
   });
 });

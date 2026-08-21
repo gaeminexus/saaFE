@@ -1,0 +1,155 @@
+<h2 mat-dialog-title>
+  <mat-icon>receipt_long</mat-icon> {{ modoEdicion ? 'Editar documento sustento' : 'Nuevo documento sustento' }}
+</h2>
+
+<mat-dialog-content>
+  <div class="form-grid">
+    <mat-form-field appearance="outline">
+      <mat-label>Tipo identificación proveedor *</mat-label>
+      <mat-select [(ngModel)]="form.tipoIdentificacion">
+        @for (t of tiposIdentificacion; track t.codigo) {
+          <mat-option [value]="t.codigo">{{ t.codigo }} — {{ t.descripcion }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Identificación proveedor *</mat-label>
+      <input matInput [(ngModel)]="form.identificacion" placeholder="RUC / Cédula" maxlength="20" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Tipo proveedor *</mat-label>
+      <mat-select [(ngModel)]="form.tipoProveedor">
+        @for (t of tiposProveedor; track t.codigo) {
+          <mat-option [value]="t.codigo">{{ t.codigo }} — {{ t.descripcion }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>País de pago</mat-label>
+      <input matInput [(ngModel)]="form.codPais" maxlength="3" placeholder="593" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Tipo doc. sustento *</mat-label>
+      <mat-select [(ngModel)]="form.codDoc">
+        @for (t of tiposDocSustento; track t.codigo) {
+          <mat-option [value]="t.codigo">{{ t.codigo }} — {{ t.descripcion }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <div class="doc-numero-group">
+      <mat-form-field appearance="outline" class="doc-est">
+        <mat-label>Estab.</mat-label>
+        <input matInput [(ngModel)]="form.establecimiento" maxlength="3" placeholder="001" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="doc-pto">
+        <mat-label>Pto. emisión</mat-label>
+        <input matInput [(ngModel)]="form.puntoEmision" maxlength="3" placeholder="001" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="doc-sec">
+        <mat-label>Secuencial</mat-label>
+        <input matInput [(ngModel)]="form.secuencial" maxlength="9" placeholder="000000123" />
+      </mat-form-field>
+    </div>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Fecha emisión *</mat-label>
+      <input
+        #fechaEmisionInput matInput
+        [matDatepicker]="pickerReembolso"
+        [formControl]="fechaControl"
+        placeholder="dd/mm/aaaa"
+        (input)="capturarFechaRaw($event)"
+        (dateChange)="onPickerChange($event.value)"
+        (blur)="syncFechaFromRaw($event)"
+      />
+      <mat-datepicker-toggle matIconSuffix [for]="pickerReembolso"></mat-datepicker-toggle>
+      <mat-datepicker #pickerReembolso></mat-datepicker>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Nro. autorización / clave acceso</mat-label>
+      <input matInput [(ngModel)]="form.numeroAutorizacion" maxlength="49" />
+    </mat-form-field>
+
+    <!-- Producto (contabilización) -->
+    <mat-form-field appearance="outline" class="full-w">
+      <mat-label>Producto (contabilización) *</mat-label>
+      <input
+        matInput
+        [(ngModel)]="productoBusqueda"
+        (ngModelChange)="filtrarProductos()"
+        [matAutocomplete]="autoProd"
+        placeholder="Buscar por nombre o código..."
+      />
+      <mat-icon matSuffix>search</mat-icon>
+      <mat-autocomplete #autoProd="matAutocomplete">
+        @for (p of productosFiltrados; track p.id) {
+          <mat-option [value]="p.nombre + ' (' + p.codigo + ')'" (onSelectionChange)="$event.source.selected && seleccionarProducto(p)">
+            {{ p.nombre }} <span class="prod-cod">({{ p.codigo }})</span>
+          </mat-option>
+        }
+      </mat-autocomplete>
+      @if (form.idProducto != null) {
+        <mat-hint>Seleccionado: {{ productoSeleccionadoNombre }}</mat-hint>
+      }
+    </mat-form-field>
+
+    <div class="full-w crear-prod-row">
+      <button mat-button color="primary" type="button" (click)="crearProductoPorClasificar()">
+        <mat-icon>add_circle</mat-icon> Crear producto POR CLASIFICAR
+      </button>
+    </div>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Base imponible 0%</mat-label>
+      <input matInput type="number" step="0.01" [(ngModel)]="form.baseCero" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Base imponible gravada</mat-label>
+      <input matInput type="number" step="0.01" [(ngModel)]="form.baseGravada" (ngModelChange)="recalcularIva()" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Tarifa IVA</mat-label>
+      <mat-select [(ngModel)]="form.tarifaIva" (ngModelChange)="recalcularIva()">
+        <mat-option [value]="null">— N/A —</mat-option>
+        @for (t of tarifasIva; track t) {
+          <mat-option [value]="t">{{ t }}%</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Valor IVA</mat-label>
+      <input matInput type="number" step="0.01" [(ngModel)]="form.valorIva" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Valor ICE</mat-label>
+      <input matInput type="number" step="0.01" [(ngModel)]="form.valorIce" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Total</mat-label>
+      <input matInput type="number" [value]="totalCalculado | number:'1.2-2'" readonly />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-w">
+      <mat-label>Observación</mat-label>
+      <textarea matInput [(ngModel)]="form.observacion" rows="2"></textarea>
+    </mat-form-field>
+  </div>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-stroked-button (click)="cancelar()">Cancelar</button>
+  <button mat-raised-button color="primary" (click)="guardar()" [disabled]="guardando">
+    <mat-icon>save</mat-icon> {{ modoEdicion ? 'Actualizar' : 'Guardar sustento' }}
+  </button>
+</mat-dialog-actions>

@@ -1,0 +1,169 @@
+<div class="rrh-page">
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-icon">
+        <mat-icon>more_time</mat-icon>
+      </div>
+      <div class="header-text">
+        <h1>Horas extra</h1>
+        <p class="subtitle">Bandeja de aprobación; solo las aprobadas entran en el cálculo</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <mat-form-field appearance="outline" class="selector-anio">
+        <mat-label>Ejercicio</mat-label>
+        <mat-select [ngModel]="anio()" (ngModelChange)="onAnioChange($event)">
+          @for (a of anios; track a) {
+            <mat-option [value]="a">{{ a }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="selector-periodo">
+        <mat-label>Período</mat-label>
+        <mat-select [ngModel]="periodoSeleccionado()" (ngModelChange)="onPeriodoChange($event)">
+          @for (p of periodos(); track p.codigo) {
+            <mat-option [value]="p.codigo">{{ etiquetaPeriodo(p) }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <button mat-stroked-button (click)="exportarCsv()" [disabled]="horas().length === 0">
+        <mat-icon>description</mat-icon>
+        CSV
+      </button>
+    </div>
+  </div>
+
+  @if (excedenTope() > 0) {
+    <div class="aviso aviso-error">
+      <mat-icon>report_problem</mat-icon>
+      <span>
+        {{ excedenTope() }} registro(s) exceden el tope legal de horas extra y requieren
+        aprobación excepcional. Salen destacados en la tabla.
+      </span>
+    </div>
+  }
+
+  @if (periodos().length === 0) {
+    <div class="aviso">
+      <mat-icon>event_busy</mat-icon>
+      <span>
+        No hay períodos de nómina creados para {{ anio() }}. Créelos desde Períodos de nómina
+        antes de revisar horas extra.
+      </span>
+    </div>
+  } @else if (periodoSeleccionado() === null) {
+    <div class="aviso">
+      <mat-icon>event</mat-icon>
+      <span>Seleccione un período para revisar sus horas extra.</span>
+    </div>
+  } @else {
+    <div class="panel">
+      <div class="barra-seleccion">
+        <button mat-stroked-button (click)="seleccionarPendientes()" [disabled]="pendientes().length === 0">
+          <mat-icon>checklist</mat-icon>
+          Seleccionar pendientes ({{ pendientes().length }})
+        </button>
+        <button mat-stroked-button (click)="limpiarSeleccion()" [disabled]="!haySeleccion()">
+          <mat-icon>clear</mat-icon>
+          Limpiar
+        </button>
+        <span class="separador"></span>
+        <button
+          mat-raised-button
+          color="primary"
+          (click)="aprobarSeleccionadas()"
+          [disabled]="!haySeleccion() || ocupado() || !aprobacionDisponible"
+          [matTooltip]="
+            aprobacionDisponible
+              ? 'Aprueba las horas extra marcadas'
+              : 'La aprobación en lote llega con la fase 7: el backend todavía no expone el endpoint'
+          "
+        >
+          <mat-icon>how_to_reg</mat-icon>
+          Aprobar seleccionadas
+        </button>
+      </div>
+
+      @if (!aprobacionDisponible) {
+        <div class="aviso">
+          <mat-icon>info</mat-icon>
+          <span>
+            La aprobación en lote todavía no está disponible: el backend expone solo el CRUD de
+            horas extra y el proceso de aprobación es de la fase 7. La consulta y la revisión
+            funcionan con normalidad.
+          </span>
+        </div>
+      }
+
+      @if (cargando()) {
+        <div class="mensaje-vacio">Cargando horas extra…</div>
+      } @else if (horas().length === 0) {
+        <div class="mensaje-vacio">El período no tiene horas extra registradas.</div>
+      } @else {
+        <div class="tabla-scroll">
+          <table mat-table [dataSource]="horas()">
+            <ng-container matColumnDef="seleccion">
+              <th mat-header-cell *matHeaderCellDef></th>
+              <td mat-cell *matCellDef="let fila">
+                <mat-checkbox
+                  [checked]="estaSeleccionada(fila)"
+                  (change)="alternarSeleccion(fila)"
+                  [disabled]="fila.aprobada === 'S'"
+                >
+                </mat-checkbox>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="empleado">
+              <th mat-header-cell *matHeaderCellDef>Colaborador</th>
+              <td mat-cell *matCellDef="let fila">{{ fila.empleadoLabel }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="fecha">
+              <th mat-header-cell *matHeaderCellDef>Fecha</th>
+              <td mat-cell *matCellDef="let fila">{{ fila.fecha | date: 'dd/MM/yyyy' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="tipo">
+              <th mat-header-cell *matHeaderCellDef>Tipo</th>
+              <td mat-cell *matCellDef="let fila">
+                {{ fila.tipoLabel }}
+                @if (fila.excedeTope === 'S') {
+                  <mat-icon class="marca-tope" matTooltip="Excede el tope legal">
+                    report_problem
+                  </mat-icon>
+                }
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="horas">
+              <th mat-header-cell *matHeaderCellDef class="derecha">Horas</th>
+              <td mat-cell *matCellDef="let fila" class="derecha">{{ fila.horas }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="valor">
+              <th mat-header-cell *matHeaderCellDef class="derecha">Valor</th>
+              <td mat-cell *matCellDef="let fila" class="derecha">
+                {{ fila.valor ? (fila.valor | number: '1.2-2') : '—' }}
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="estado">
+              <th mat-header-cell *matHeaderCellDef>Estado</th>
+              <td mat-cell *matCellDef="let fila">{{ fila.aprobadaLabel }}</td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="columnas"></tr>
+            <tr
+              mat-row
+              *matRowDef="let fila; columns: columnas"
+              [class.excede-tope]="fila.excedeTope === 'S'"
+            ></tr>
+          </table>
+        </div>
+      }
+    </div>
+  }
+</div>

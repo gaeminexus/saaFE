@@ -1,158 +1,163 @@
-<div class="dialog-header">
-  <div class="dialog-title">
-    <mat-icon>assignment_turned_in</mat-icon>
-    <div>
-      <h2>{{ dialogTitle() }}</h2>
-      <p>Proceso RRHH</p>
+<div class="vista">
+  <header class="contexto">
+    <button mat-icon-button type="button" (click)="volver()" matTooltip="Volver a la lista de finiquitos">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+
+    <div class="quien">
+      <span class="colaborador">{{ nombreColaborador() || 'Liquidación de haberes' }}</span>
+      <h1>{{ titulo() }}</h1>
     </div>
-  </div>
-</div>
 
-<div class="dialog-body">
-  <mat-card appearance="outlined">
-    <mat-card-header>
-      <mat-card-title>Identificación</mat-card-title>
-    </mat-card-header>
-    <mat-card-content>
-      <div class="grid-3">
-        <mat-form-field appearance="outline">
-          <mat-label>Empleado *</mat-label>
-          <mat-select
-            [ngModel]="empleado()"
-            (ngModelChange)="empleado.set($event)"
-            [disabled]="isViewMode()"
-            required
-          >
-            @for (item of empleadosDisponibles(); track item.codigo) {
-              <mat-option [value]="item">{{ empleadoLabel(item) }}</mat-option>
+    <span class="estado" [class.estado-cerrado]="!esNuevo()">{{ etiquetaEstado() }}</span>
+  </header>
+
+  @if (cargando()) {
+    <div class="cargando">
+      <mat-spinner diameter="32"></mat-spinner>
+      <span>Cargando…</span>
+    </div>
+  } @else {
+    <div class="cuerpo">
+      <!-- Datos de la salida: solo editables mientras el finiquito no se haya calculado -->
+      @if (esNuevo()) {
+        <section class="grupo">
+          <h2>Datos de la salida</h2>
+          <form [formGroup]="formulario" class="campos">
+            @for (campo of campos(); track campo.name) {
+              <app-campo-formulario
+                [campo]="campo"
+                [formulario]="formulario"
+                disposicion="izquierda"
+                [class.campo-completo]="campo.ancho === 'completo'"
+              >
+              </app-campo-formulario>
             }
-          </mat-select>
-          @if (mostrarValidaciones() && !empleado()) {
-            <mat-error>Campo requerido (visual)</mat-error>
-          }
-        </mat-form-field>
-
-        <mat-form-field appearance="outline">
-          <mat-label>Contrato Empleado *</mat-label>
-          <mat-select
-            [ngModel]="contratoEmpleado()"
-            (ngModelChange)="contratoEmpleado.set($event)"
-            [disabled]="isViewMode()"
-            required
-          >
-            @for (item of contratosDisponibles(); track $index) {
-              <mat-option [value]="item">{{ contratoLabel(item) }}</mat-option>
+          </form>
+        </section>
+      } @else if (liquidacion(); as l) {
+        <section class="grupo">
+          <h2>Datos de la salida</h2>
+          <dl class="resumen">
+            <div><dt>Colaborador</dt><dd>{{ nombreColaborador() }}</dd></div>
+            <div><dt>Fecha de salida</dt><dd>{{ fecha(l.fechaSalida) | date: 'dd/MM/yyyy' }}</dd></div>
+            <div><dt>Ingreso</dt><dd>{{ fecha(l.fechaIngreso) | date: 'dd/MM/yyyy' }}</dd></div>
+            <div><dt>Años de servicio</dt><dd>{{ l.aniosServicio | number: '1.2-4' }}</dd></div>
+            <div><dt>Última remuneración</dt><dd>{{ l.ultimaRemuneracion | number: '1.2-2' }}</dd></div>
+            @if (l.asiento) {
+              <div><dt>Asiento</dt><dd>{{ l.asiento }}</dd></div>
             }
-          </mat-select>
-          <mat-hint>Selector dependiente del empleado (pendiente de integración)</mat-hint>
-          @if (mostrarValidaciones() && !contratoEmpleado()) {
-            <mat-error>Campo requerido (visual)</mat-error>
+          </dl>
+        </section>
+      }
+
+      <!-- Desglose: el de la simulación mientras no exista, el persistido después -->
+      @if (simulacion(); as s) {
+        <section class="grupo">
+          <h2>Desglose simulado · {{ s.causal }} · {{ s.aniosServicio | number: '1.2-4' }} años</h2>
+          <table class="desglose">
+            <thead>
+              <tr>
+                <th>Concepto</th>
+                <th class="a-la-derecha">Cantidad</th>
+                <th class="a-la-derecha">Base</th>
+                <th class="a-la-derecha">Valor</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (rubro of s.rubros; track rubro.codigoConcepto) {
+                <tr>
+                  <td>{{ rubro.nombreConcepto }}</td>
+                  <td class="a-la-derecha">{{ rubro.cantidad | number: '1.0-2' }}</td>
+                  <td class="a-la-derecha">{{ rubro.base | number: '1.2-2' }}</td>
+                  <td class="a-la-derecha">{{ rubro.valor | number: '1.2-2' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+          <div class="totales">
+            <span>Ingresos <strong>{{ s.totalIngresos | number: '1.2-2' }}</strong></span>
+            <span>Descuentos <strong>{{ s.totalDescuentos | number: '1.2-2' }}</strong></span>
+            <span class="neto">Neto <strong>{{ s.neto | number: '1.2-2' }}</strong></span>
+          </div>
+          <p class="nota">
+            Simulación: todavía no se ha guardado nada. Calcular es lo que persiste el finiquito.
+          </p>
+        </section>
+      }
+
+      @if (detalle().length > 0) {
+        <section class="grupo">
+          <h2>Rubros del finiquito</h2>
+          <table class="desglose">
+            <thead>
+              <tr>
+                <th>Concepto</th>
+                <th class="a-la-derecha">Días</th>
+                <th class="a-la-derecha">Base</th>
+                <th class="a-la-derecha">Valor</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (fila of detalle(); track fila.codigo) {
+                <tr>
+                  <td>{{ fila.descripcion || fila.conceptoNomina?.nombre }}</td>
+                  <td class="a-la-derecha">{{ fila.dias | number: '1.0-2' }}</td>
+                  <td class="a-la-derecha">{{ fila.baseCalculo | number: '1.2-2' }}</td>
+                  <td class="a-la-derecha">{{ fila.valor | number: '1.2-2' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+          @if (liquidacion(); as l) {
+            <div class="totales">
+              <span>Ingresos <strong>{{ l.totalIngresos | number: '1.2-2' }}</strong></span>
+              <span>Descuentos <strong>{{ l.totalDescuentos | number: '1.2-2' }}</strong></span>
+              <span class="neto">Neto <strong>{{ l.neto | number: '1.2-2' }}</strong></span>
+            </div>
           }
-        </mat-form-field>
+        </section>
+      }
+    </div>
 
-        <mat-form-field appearance="outline">
-          <mat-label>Fecha Salida *</mat-label>
-          <input
-            #fechaSalidaInput
-            matInput
-            [matDatepicker]="pickerFechaSalida"
-            [formControl]="fechaSalidaControl"
-            placeholder="dd/mm/aaaa"
-            required
-            (input)="capturarFechaSalidaRaw($event)"
-            (dateChange)="onFechaSalidaPickerChange($event.value)"
-            (blur)="syncFechaSalidaFromRaw($event)"
-          />
-          <mat-datepicker-toggle matIconSuffix [for]="pickerFechaSalida" [disabled]="isViewMode()"></mat-datepicker-toggle>
-          <mat-datepicker #pickerFechaSalida></mat-datepicker>
-          <mat-hint>No puede ser futura (validación pendiente)</mat-hint>
-          @if (mostrarValidaciones() && !fechaSalidaControl.value) {
-            <mat-error>Campo requerido (visual)</mat-error>
-          }
-        </mat-form-field>
-      </div>
-    </mat-card-content>
-  </mat-card>
+    <footer class="acciones">
+      <span class="pista">
+        @if (ocupado()) {
+          Procesando…
+        }
+      </span>
 
-  <mat-card appearance="outlined">
-    <mat-card-header>
-      <mat-card-title>Motivo y valores</mat-card-title>
-    </mat-card-header>
-    <mat-card-content>
-      <div class="grid-2">
-        <mat-form-field appearance="outline">
-          <mat-label>Motivo *</mat-label>
-          <mat-select
-            [ngModel]="motivo()"
-            (ngModelChange)="motivo.set($event)"
-            [disabled]="isViewMode()"
-            required
-          >
-            @for (item of motivosDisponibles(); track item.codigo) {
-              <mat-option [value]="item.codigo">{{ item.etiqueta }}</mat-option>
-            }
-          </mat-select>
-          <mat-hint>Catálogo pendiente de integración</mat-hint>
-          @if (mostrarValidaciones() && !motivo()) {
-            <mat-error>Campo requerido (visual)</mat-error>
-          }
-        </mat-form-field>
-
-        <mat-form-field appearance="outline">
-          <mat-label>Neto</mat-label>
-          <input
-            matInput
-            type="number"
-            min="0"
-            [ngModel]="neto()"
-            (ngModelChange)="neto.set($event)"
-            [disabled]="isViewMode()"
-          />
-          <mat-hint>Neto a pagar calculado en la funcionalidad</mat-hint>
-          <mat-error>Debe ser mayor o igual a 0 (validación pendiente)</mat-error>
-        </mat-form-field>
-      </div>
-    </mat-card-content>
-  </mat-card>
-
-  <mat-card appearance="outlined">
-    <mat-card-header>
-      <mat-card-title>Auditoría</mat-card-title>
-    </mat-card-header>
-    <mat-card-content>
-      <div class="grid-3">
-        <mat-form-field appearance="outline">
-          <mat-label>Estado</mat-label>
-          <mat-select
-            [ngModel]="estado()"
-            (ngModelChange)="estado.set($event)"
-            [disabled]="isViewMode()"
-          >
-            @for (item of estadosDisponibles(); track $index) {
-              <mat-option [value]="item">{{ item }}</mat-option>
-            }
-          </mat-select>
-          <mat-hint>Catálogo pendiente de integración</mat-hint>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline">
-          <mat-label>fechaRegistro</mat-label>
-          <input matInput [ngModel]="fechaRegistro()" disabled />
-        </mat-form-field>
-
-        <mat-form-field appearance="outline">
-          <mat-label>usuarioRegistro</mat-label>
-          <input matInput [ngModel]="usuarioRegistro()" disabled />
-        </mat-form-field>
-      </div>
-    </mat-card-content>
-  </mat-card>
-</div>
-
-<div class="dialog-actions">
-  <button mat-stroked-button (click)="cerrar()">{{ isViewMode() ? 'Cerrar' : 'Cancelar' }}</button>
-  <button mat-raised-button color="primary" (click)="guardar()" [disabled]="isViewMode()">
-    <mat-icon>save</mat-icon>
-    Guardar
-  </button>
+      @if (esNuevo()) {
+        <button mat-stroked-button type="button" (click)="simular()" [disabled]="ocupado()">
+          <mat-icon>calculate</mat-icon>
+          Simular
+        </button>
+        <button mat-raised-button color="primary" type="button" (click)="calcular()"
+                [disabled]="ocupado()"
+                matTooltip="Guarda el finiquito y su desglose">
+          <mat-icon>save</mat-icon>
+          Calcular y guardar
+        </button>
+      } @else {
+        <button mat-stroked-button type="button" (click)="ejecutar('aprobar')"
+                [disabled]="ocupado() || !acciones().has('aprobar')"
+                [matTooltip]="acciones().has('aprobar') ? 'Deja el finiquito listo para ejecutarse' : motivo('aprobar')">
+          <mat-icon>how_to_reg</mat-icon>
+          Aprobar
+        </button>
+        <button mat-stroked-button type="button" (click)="ejecutar('contabilizar')"
+                [disabled]="ocupado() || !acciones().has('contabilizar')"
+                [matTooltip]="acciones().has('contabilizar') ? 'Emite el asiento del finiquito' : motivo('contabilizar')">
+          <mat-icon>receipt_long</mat-icon>
+          Contabilizar
+        </button>
+        <button mat-raised-button color="warn" type="button" (click)="ejecutar('ejecutarSalida')"
+                [disabled]="ocupado() || !acciones().has('ejecutarSalida')"
+                [matTooltip]="acciones().has('ejecutarSalida') ? 'Cierra el contrato y pasa al colaborador a CESANTE' : motivo('ejecutarSalida')">
+          <mat-icon>logout</mat-icon>
+          Ejecutar salida
+        </button>
+      }
+    </footer>
+  }
 </div>

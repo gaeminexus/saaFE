@@ -1,0 +1,233 @@
+<div class="rrh-page">
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-icon">
+        <mat-icon>assignment_late</mat-icon>
+      </div>
+      <div class="header-text">
+        <h1>Novedades del mes</h1>
+        <p class="subtitle">
+          Lo que hay que reportar al IESS, con su plazo. Un mes no se cierra debiendo novedades.
+        </p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <mat-form-field appearance="outline" class="selector-anio">
+        <mat-label>Ejercicio</mat-label>
+        <mat-select [ngModel]="anio()" (ngModelChange)="onAnioChange($event)">
+          @for (a of anios; track a) {
+            <mat-option [value]="a">{{ a }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="selector-periodo">
+        <mat-label>Período</mat-label>
+        <mat-select [ngModel]="periodoSeleccionado()" (ngModelChange)="onPeriodoChange($event)">
+          @for (p of periodos(); track p.codigo) {
+            <mat-option [value]="p.codigo">{{ etiquetaPeriodo(p) }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
+  </div>
+
+  @if (periodos().length === 0) {
+    <div class="aviso">
+      <mat-icon>event_busy</mat-icon>
+      <span>No hay períodos de nómina creados para {{ anio() }}.</span>
+    </div>
+  } @else if (periodoSeleccionado() === null) {
+    <div class="aviso">
+      <mat-icon>event</mat-icon>
+      <span>Seleccione un período para ver sus novedades ante el IESS.</span>
+    </div>
+  } @else {
+    <!--
+      El semáforo del mes. Es lo que el backend mira para dejar cerrar, dicho antes de intentarlo:
+      llegar al cierre y que lo rechacen es la forma cara de enterarse.
+    -->
+    @if (!puedeCerrarse()) {
+      <div class="aviso aviso-error">
+        <mat-icon>report_problem</mat-icon>
+        <span>
+          <strong>{{ pendientes() }}</strong> novedad(es) sin declarar al IESS.
+          @if (vencidas() > 0) {
+            <strong>{{ vencidas() }}</strong> fuera de plazo.
+          }
+          El período no se puede cerrar hasta que no quede ninguna: cerrarlo debiendo novedades
+          es lo que hizo que marzo declarara a dos personas que ya no estaban.
+        </span>
+      </div>
+    } @else if (filas().length > 0) {
+      <div class="aviso aviso-ok">
+        <mat-icon>task_alt</mat-icon>
+        <span>
+          Ninguna novedad pendiente. Por este lado el período se puede cerrar.
+        </span>
+      </div>
+    }
+
+    <!-- Acciones sobre la novedad elegida en la tabla -->
+    <div class="barra-acciones">
+      <span class="elegida">
+        @if (seleccionada(); as n) {
+          Novedad {{ n.codigo }} seleccionada
+        } @else {
+          Pulse el lápiz de una fila para actuar sobre ella
+        }
+      </span>
+
+      <button
+        mat-stroked-button
+        type="button"
+        (click)="ejecutar('marcarEnviada')"
+        [disabled]="!puede('marcarEnviada')"
+        [matTooltip]="puede('marcarEnviada') ? 'Registra que se envió al IESS, con la fecha de hoy' : motivo('marcarEnviada')"
+      >
+        <mat-icon>send</mat-icon>
+        Marcar enviada
+      </button>
+
+      <button
+        mat-stroked-button
+        type="button"
+        (click)="ejecutar('marcarAceptada')"
+        [disabled]="!puede('marcarAceptada')"
+        [matTooltip]="puede('marcarAceptada') ? 'El IESS la aceptó' : motivo('marcarAceptada')"
+      >
+        <mat-icon>check_circle</mat-icon>
+        Aceptada
+      </button>
+
+      <button
+        mat-stroked-button
+        color="warn"
+        type="button"
+        (click)="ejecutar('marcarRechazada')"
+        [disabled]="!puede('marcarRechazada')"
+        [matTooltip]="puede('marcarRechazada') ? 'El IESS la devolvió: se pide el motivo' : motivo('marcarRechazada')"
+      >
+        <mat-icon>cancel</mat-icon>
+        Rechazada
+      </button>
+
+      <button
+        mat-stroked-button
+        type="button"
+        (click)="ejecutar('anular')"
+        [disabled]="!puede('anular')"
+        [matTooltip]="puede('anular') ? 'Descarta la novedad sin borrarla' : motivo('anular')"
+      >
+        <mat-icon>block</mat-icon>
+        Anular
+      </button>
+
+      <span class="separador"></span>
+
+      <!--
+        Alta manual. Las novedades que el motor no genera solo —licencias, reintegros— sólo pueden
+        entrar por aquí, y sin ellas el mes no se puede declarar completo.
+      -->
+      <button
+        mat-stroked-button
+        type="button"
+        (click)="nueva()"
+        [disabled]="ocupado()"
+        matTooltip="Registra una novedad que el motor no genera automáticamente"
+      >
+        <mat-icon>add</mat-icon>
+        Nueva novedad
+      </button>
+
+
+      <!--
+        Un archivo por tipo, que es como el IESS los recibe. El menú solo ofrece los tipos que
+        el mes tiene: un batch vacío no existe.
+      -->
+      <button
+        mat-raised-button
+        color="primary"
+        type="button"
+        [matMenuTriggerFor]="menuBatch"
+        [disabled]="ocupado() || tiposDelPeriodo().length === 0"
+        matTooltip="Genera el archivo de carga masiva, un archivo por tipo de novedad"
+      >
+        <mat-icon>download</mat-icon>
+        Exportar batch
+      </button>
+      <mat-menu #menuBatch="matMenu">
+        @for (tipo of tiposDelPeriodo(); track tipo.codigo) {
+          <button mat-menu-item type="button" (click)="exportar(tipo)">
+            {{ tipo.nombre }}
+          </button>
+        }
+      </mat-menu>
+    </div>
+
+    <!-- Las que no viajan en ningún archivo: si nadie las sube a mano, se quedan sin declarar -->
+    @if (deRegistroEnPortal() > 0) {
+      <div class="aviso">
+        <mat-icon>open_in_new</mat-icon>
+        <span>
+          <strong>{{ deRegistroEnPortal() }}</strong> de estas novedades no se envían por archivo:
+          hay que registrarlas en el portal del IESS una por una y volver aquí a marcarlas como
+          enviadas.
+        </span>
+      </div>
+    }
+
+    <!--
+      El exportador se negó. El mensaje va entero: enumera novedad por novedad qué dato falta, y
+      es lo único que dice qué hay que configurar antes de poder declarar el mes.
+    -->
+    @if (fallaExportacion(); as falla) {
+      <div class="aviso aviso-error">
+        <mat-icon>block</mat-icon>
+        <div>
+          <strong>No se generó el archivo.</strong>
+          <p>{{ falla }}</p>
+        </div>
+      </div>
+    }
+
+    <!--
+      El archivo se generó, pero el servidor advierte algo sobre él. `noSubir` es el caso grave:
+      salió bien formado y aun así no debe subirse al portal. En rojo, porque un archivo que
+      parece correcto y no lo es engaña más que uno que falla.
+    -->
+    @if (avisoDelArchivo(); as advertencia) {
+      <div class="aviso" [class.aviso-error]="advertencia.noSubir">
+        <mat-icon>{{ advertencia.noSubir ? 'warning' : 'info' }}</mat-icon>
+        <div>
+          @if (advertencia.noSubir) {
+            <strong>Este archivo NO se sube al portal del IESS.</strong>
+          }
+          <p>{{ advertencia.texto }}</p>
+        </div>
+      </div>
+    }
+
+    <!-- Por qué el IESS devolvió la elegida: es lo que hay que corregir antes de reenviarla -->
+    @if (respuestaDelIess(); as respuesta) {
+      <div class="aviso aviso-error">
+        <mat-icon>feedback</mat-icon>
+        <div>
+          <strong>El IESS devolvió esta novedad:</strong>
+          <p>{{ respuesta }}</p>
+        </div>
+      </div>
+    }
+
+    <app-tabla-rrh
+      [columnas]="columnas"
+      [filas]="filas()"
+      [cargando]="cargando()"
+      [permiteEditar]="true"
+      [permiteBorrar]="false"
+      mensajeVacio="Este período no tiene novedades que reportar al IESS."
+      (editar)="seleccionar($event)"
+    >
+    </app-tabla-rrh>
+  }
+</div>

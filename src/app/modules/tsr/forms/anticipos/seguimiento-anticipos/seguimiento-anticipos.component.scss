@@ -1,0 +1,278 @@
+.seguimiento-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.page-card {
+  width: 100%;
+
+  mat-card-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  mat-card-header {
+    position: relative;
+  }
+}
+
+.acciones-cabecera {
+  position: absolute;
+  right: 0;
+  top: 0;
+  display: flex;
+  gap: 8px;
+}
+
+.barra-superior {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.titular-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #f1f8f3;
+  border: 1px solid #cfe6d6;
+  border-radius: 6px;
+  padding: 10px 14px;
+
+  .icon-ok {
+    color: #2e7d32;
+  }
+
+  .titular-info {
+    display: flex;
+    flex-direction: column;
+
+    .titular-nombre {
+      font-weight: 600;
+    }
+
+    .titular-id {
+      font-size: 0.82rem;
+      color: #667085;
+    }
+  }
+}
+
+.cargando {
+  display: flex;
+  justify-content: center;
+  padding: 24px;
+}
+
+.msg-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-top: 12px;
+  font-size: 0.9rem;
+
+  &.msg-warn {
+    background: #fdf3e2;
+    color: #8a5a00;
+  }
+
+  &.msg-error {
+    background: #fdecec;
+    color: #a02020;
+  }
+}
+
+// ── Totales ────────────────────────────────────────────────────────────────
+.tarjetas-totales {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+
+  .tarjeta {
+    background: #fff;
+    border: 1px solid #e0e5ec;
+    border-radius: 8px;
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    .lbl {
+      font-size: 0.78rem;
+      color: #667085;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+
+    .val {
+      font-size: 1.25rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    &.tarjeta-alerta {
+      border-color: #f0c36d;
+      background: #fffaf0;
+    }
+  }
+
+  .ico-ok {
+    color: #2e7d32;
+  }
+
+  .ico-warn {
+    color: #b26a00;
+  }
+}
+
+.val-cruzado {
+  color: #12508f;
+}
+
+.val-saldo {
+  color: #1b5e20;
+}
+
+// ── Tablas ─────────────────────────────────────────────────────────────────
+.tabla-scroll {
+  overflow-x: auto;
+}
+
+.tabla-anticipos {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+
+  th,
+  td {
+    padding: 6px 10px;
+    text-align: left;
+    border-bottom: 1px solid #eef1f5;
+    white-space: nowrap;
+  }
+
+  th {
+    background: #f5f7fa;
+    color: #667085;
+    font-weight: 600;
+  }
+
+  .num {
+    text-align: right;
+  }
+
+  .fila-anticipo:hover {
+    background: #fafbfc;
+  }
+
+  .fila-anulada {
+    opacity: 0.6;
+    text-decoration: line-through;
+  }
+
+  .fila-detalle > td {
+    background: #f7f9fb;
+    padding: 0 10px 10px 46px;
+    white-space: normal;
+  }
+}
+
+.detalle-cruces {
+  h4 {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 10px 0 6px;
+    font-size: 0.9rem;
+    color: #344054;
+  }
+}
+
+.tabla-cruces {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+  background: #fff;
+  border: 1px solid #e0e5ec;
+  border-radius: 6px;
+
+  th,
+  td {
+    padding: 5px 8px;
+    text-align: left;
+    border-bottom: 1px solid #f0f2f5;
+  }
+
+  th {
+    background: #eef2f6;
+    color: #667085;
+    font-weight: 600;
+  }
+
+  .num {
+    text-align: right;
+  }
+
+  .cruce-reversado {
+    opacity: 0.65;
+    text-decoration: line-through;
+  }
+
+  .obs {
+    max-width: 320px;
+    white-space: normal;
+  }
+}
+
+.chip {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.chip-ingresado {
+  background: #fff4e0;
+  color: #8a5a00;
+}
+
+.chip-confirmado {
+  background: #e8f5e9;
+  color: #1b5e20;
+}
+
+.chip-anulado {
+  background: #ffebee;
+  color: #b71c1c;
+}
+
+.chip-otro {
+  background: #eef2f6;
+  color: #475467;
+}
+
+.mono {
+  font-family: 'Roboto Mono', Consolas, monospace;
+}
+
+.tenue {
+  color: #98a2b3;
+}
+
+.vacio {
+  color: #667085;
+  padding: 8px 0;
+}

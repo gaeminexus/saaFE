@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, CUSTOM_ELEMENTS_SCHEMA, ElementRef, Inject, OnInit, signal, ViewChild } from '@angular/core';
+import { Component, computed, ElementRef, Inject, OnInit, signal, ViewChild } from '@angular/core';
 import { UntypedFormControl } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
@@ -16,7 +16,6 @@ export interface AporteRetencionFormData {
   selector: 'app-aporte-retencion-form',
   standalone: true,
   imports: [CommonModule, MaterialFormModule],
-  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './aporte-retencion-form.component.html',
   styleUrls: ['./aporte-retencion-form.component.scss'],
 })

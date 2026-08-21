@@ -1,0 +1,73 @@
+<div class="rrh-page">
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-icon">
+        <mat-icon>summarize</mat-icon>
+      </div>
+      <div class="header-text">
+        <h1>Reportes de nómina</h1>
+        <p class="subtitle">Salidas internas del período</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <mat-form-field appearance="outline" class="selector-anio">
+        <mat-label>Ejercicio</mat-label>
+        <mat-select [ngModel]="anio()" (ngModelChange)="onAnioChange($event)">
+          @for (a of anios; track a) {
+            <mat-option [value]="a">{{ a }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="selector-periodo">
+        <mat-label>Período</mat-label>
+        <mat-select
+          [ngModel]="periodoSeleccionado()"
+          (ngModelChange)="periodoSeleccionado.set($event)"
+        >
+          @for (p of periodos(); track p.codigo) {
+            <mat-option [value]="p.codigo">{{ etiquetaPeriodo(p) }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="selector-formato">
+        <mat-label>Formato</mat-label>
+        <mat-select [ngModel]="formato()" (ngModelChange)="formato.set($event)">
+          @for (f of formatos; track f) {
+            <mat-option [value]="f">{{ f }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
+  </div>
+
+  @if (periodos().length === 0) {
+    <div class="mensaje-vacio">No hay períodos de nómina creados para {{ anio() }}.</div>
+  } @else {
+    @if (periodoSeleccionado() === null) {
+      <div class="mensaje-vacio">Seleccione un período para generar sus reportes.</div>
+    }
+
+    <div class="grid-reportes">
+      @for (reporte of reportes; track reporte.plantilla) {
+        <div class="panel tarjeta-reporte">
+          <div class="tarjeta-cabecera">
+            <mat-icon>{{ reporte.icono }}</mat-icon>
+            <h2>{{ reporte.titulo }}</h2>
+          </div>
+          <p class="tarjeta-descripcion">{{ reporte.descripcion }}</p>
+          <button
+            mat-flat-button
+            color="primary"
+            (click)="generar(reporte)"
+            [disabled]="periodoSeleccionado() === null || generando() !== null"
+          >
+            <mat-icon>download</mat-icon>
+            {{ generando() === reporte.plantilla ? 'Generando…' : 'Generar ' + formato() }}
+          </button>
+        </div>
+      }
+    </div>
+  }
+</div>

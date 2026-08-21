@@ -24,6 +24,7 @@ import { ConciliacionContableService } from '../../../service/conciliacion-conta
 import { ControlExtractoBancarioService } from '../../../service/control-extracto-bancario.service';
 import { GrupoConciliacionAsientoService } from '../../../service/grupo-conciliacion-asiento.service';
 import { GrupoConciliacionExtractoService } from '../../../service/grupo-conciliacion-extracto.service';
+import { textoDeError } from '../texto-error';
 
 const TOLERANCIA_MONETARIA = 0.01;
 
@@ -162,7 +163,7 @@ export class ConciliacionContableComponent implements OnInit {
         this.isLoadingResumen = false;
         this.resumenCuentas = [];
         this.snackBar.open(
-          `Error al obtener el resumen del período: ${error?.error || error?.message || error}`,
+          `Error al obtener el resumen del período: ${textoDeError(error)}`,
           'Cerrar',
           { duration: 6000 }
         );
@@ -235,7 +236,7 @@ export class ConciliacionContableComponent implements OnInit {
       },
       error: (error) => {
         this.isCerrandoMes = false;
-        this.snackBar.open(`Error al cerrar el mes: ${error?.error || error?.message || error}`, 'Cerrar', {
+        this.snackBar.open(`Error al cerrar el mes: ${textoDeError(error)}`, 'Cerrar', {
           duration: 8000,
         });
       },
@@ -260,7 +261,7 @@ export class ConciliacionContableComponent implements OnInit {
       },
       error: (error) => {
         this.isReabriendoMes = false;
-        this.snackBar.open(`Error al reabrir el mes: ${error?.error || error?.message || error}`, 'Cerrar', {
+        this.snackBar.open(`Error al reabrir el mes: ${textoDeError(error)}`, 'Cerrar', {
           duration: 6000,
         });
       },
@@ -344,7 +345,7 @@ export class ConciliacionContableComponent implements OnInit {
       },
       error: (error) => {
         this.isLoadingDatos = false;
-        this.snackBar.open(`Error al obtener la conciliación: ${error?.error || error?.message || error}`, 'Cerrar', {
+        this.snackBar.open(`Error al obtener la conciliación: ${textoDeError(error)}`, 'Cerrar', {
           duration: 6000,
         });
       },
@@ -460,7 +461,7 @@ export class ConciliacionContableComponent implements OnInit {
         },
         error: (error) => {
           this.isConciliando = false;
-          this.snackBar.open(`Error al conciliar: ${error?.error || error?.message || error}`, 'Cerrar', {
+          this.snackBar.open(`Error al conciliar: ${textoDeError(error)}`, 'Cerrar', {
             duration: 6000,
           });
         },
@@ -482,7 +483,7 @@ export class ConciliacionContableComponent implements OnInit {
       },
       error: (error) => {
         this.isSugiriendo = false;
-        this.snackBar.open(`Error al sugerir coincidencias: ${error?.error || error?.message || error}`, 'Cerrar', {
+        this.snackBar.open(`Error al sugerir coincidencias: ${textoDeError(error)}`, 'Cerrar', {
           duration: 6000,
         });
       },
@@ -509,7 +510,7 @@ export class ConciliacionContableComponent implements OnInit {
           this.cargarDatos();
         },
         error: (error) => {
-          this.snackBar.open(`Error al confirmar: ${error?.error || error?.message || error}`, 'Cerrar', {
+          this.snackBar.open(`Error al confirmar: ${textoDeError(error)}`, 'Cerrar', {
             duration: 6000,
           });
         },
@@ -617,7 +618,7 @@ export class ConciliacionContableComponent implements OnInit {
       error: (error) => {
         this.detalleGrupoExtracto = [];
         this.snackBar.open(
-          `Error al obtener detalle de extracto del grupo: ${error?.error || error?.message || error}`,
+          `Error al obtener detalle de extracto del grupo: ${textoDeError(error)}`,
           'Cerrar',
           { duration: 6000 }
         );
@@ -632,7 +633,7 @@ export class ConciliacionContableComponent implements OnInit {
         this.detalleGrupoAsiento = [];
         this.isLoadingDetalleGrupo = false;
         this.snackBar.open(
-          `Error al obtener detalle de asiento del grupo: ${error?.error || error?.message || error}`,
+          `Error al obtener detalle de asiento del grupo: ${textoDeError(error)}`,
           'Cerrar',
           { duration: 6000 }
         );
@@ -654,7 +655,7 @@ export class ConciliacionContableComponent implements OnInit {
         this.cargarDatos();
       },
       error: (error) => {
-        this.snackBar.open(`Error al deshacer: ${error?.error || error?.message || error}`, 'Cerrar', {
+        this.snackBar.open(`Error al deshacer: ${textoDeError(error)}`, 'Cerrar', {
           duration: 6000,
         });
       },
@@ -672,7 +673,7 @@ export class ConciliacionContableComponent implements OnInit {
         this.cargarDatos();
       },
       error: (error) => {
-        this.snackBar.open(`Error al verificar: ${error?.error || error?.message || error}`, 'Cerrar', {
+        this.snackBar.open(`Error al verificar: ${textoDeError(error)}`, 'Cerrar', {
           duration: 6000,
         });
       },

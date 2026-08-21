@@ -1,0 +1,62 @@
+<div class="vista">
+  <!-- Cabecera persistente: de quién es el contrato no se pierde al bajar por el formulario -->
+  <header class="contexto">
+    <button mat-icon-button type="button" (click)="volver()" matTooltip="Volver a la lista de contratos">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+
+    <div class="quien">
+      <span class="colaborador">{{ nombreEmpleado() }}</span>
+      <h1>{{ titulo() }}</h1>
+    </div>
+
+  </header>
+
+  @if (cargando()) {
+    <div class="cargando">
+      <mat-spinner diameter="32"></mat-spinner>
+      <span>Cargando el contrato…</span>
+    </div>
+  } @else {
+    <!-- Lo único que scrollea -->
+    <form [formGroup]="formulario" class="cuerpo">
+      @for (grupo of grupos(); track grupo.titulo) {
+        <section class="grupo">
+          <h2>{{ grupo.titulo }}</h2>
+          <div class="campos">
+            @for (campo of grupo.campos; track campo.name) {
+              <app-campo-formulario
+                [campo]="campo"
+                [formulario]="formulario"
+                disposicion="izquierda"
+                [class.campo-completo]="campo.ancho === 'completo'"
+              >
+              </app-campo-formulario>
+            }
+          </div>
+        </section>
+      }
+    </form>
+
+    <!-- Fuera del scroll: no pueden salirse de la pantalla -->
+    <footer class="acciones">
+      <span class="pista">
+        @if (formulario.dirty) {
+          Hay cambios sin guardar
+        }
+      </span>
+      <button mat-stroked-button type="button" (click)="volver()" [disabled]="guardando()">
+        Cancelar
+      </button>
+      <button mat-raised-button color="primary" type="button" (click)="guardar()"
+              [disabled]="guardando()">
+        @if (guardando()) {
+          <mat-spinner diameter="18"></mat-spinner>
+        } @else {
+          <mat-icon>save</mat-icon>
+        }
+        {{ esAlta() ? 'Crear contrato' : 'Guardar cambios' }}
+      </button>
+    </footer>
+  }
+</div>

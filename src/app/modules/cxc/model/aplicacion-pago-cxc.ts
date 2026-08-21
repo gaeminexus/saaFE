@@ -24,6 +24,36 @@ export interface CruceAnticipoCxcRequest {
   observacion?: string;
 }
 
+/** Una línea del cruce: de qué anticipo sale el dinero y cuánto. */
+export interface LineaCruceAnticipo {
+  idAnticipo: number;
+  valor: number;
+}
+
+/**
+ * Body de POST /aplc/anticipos: cruce contra anticipos específicos. Cada línea
+ * genera su propia aplicación con su propio asiento, que es lo que permite
+ * deshacer exactamente esos abonos si el anticipo se anula.
+ */
+export interface CruceAnticiposCxcRequest {
+  idFactura: number;
+  anticipos: LineaCruceAnticipo[];
+  fechaAplicacion?: string;
+  idEmpresa: number;
+  idUsuario: number;
+  observacion?: string;
+}
+
+/** Detalle que devuelve el backend por cada anticipo cruzado. */
+export interface LineaResultadoCruce {
+  aplicacion: number;
+  idAnticipo: number;
+  numeroDocAnticipo?: string;
+  montoAplicado: number;
+  saldoAnticipo: number;
+  asiento?: string;
+}
+
 /**
  * Body de POST /aplc/cobroTransferencia. A diferencia de CXP, esta acción
  * contabiliza y genera el movimiento bancario en el momento de la llamada.
@@ -48,4 +78,8 @@ export interface ResultadoAplicacionCxc extends SaldoFactura {
   asiento?: string;
   /** Solo en el cruce de anticipo: saldo que le queda al cliente. */
   saldoAnticipos?: number;
+  /** Una línea por anticipo consumido; presente en el cruce multi-anticipo. */
+  lineas?: LineaResultadoCruce[];
+  /** Suma de todas las líneas del cruce. */
+  totalCruzado?: number;
 }

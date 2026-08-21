@@ -1,0 +1,64 @@
+@use '../../../../../../styles/abstracts/colors' as *;
+@use '../../../../../../styles/abstracts/variables' as *;
+
+.seccion {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.encabezado {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $spacing-md;
+  flex-wrap: wrap;
+
+  h2 {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    margin: 0;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-semibold;
+    color: $text-primary;
+
+    mat-icon {
+      color: $primary-color;
+    }
+  }
+
+  .proposito {
+    margin: $spacing-xs 0 0;
+    font-size: $font-size-sm;
+    color: $text-secondary;
+    max-width: $breakpoint-md;
+  }
+}
+
+.aviso {
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  border-radius: $border-radius-sm;
+  background: $background-tertiary;
+  border-left: $border-width-md solid $info-color;
+  font-size: $font-size-sm;
+  color: $text-secondary;
+
+  &.aviso-error {
+    border-left-color: $error-color;
+    color: $error-color;
+  }
+}
+
+.formulario {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(#{$breakpoint-sm * 0.35}, 1fr));
+  gap: $spacing-sm $spacing-md;
+
+  .campo-completo {
+    grid-column: 1 / -1;
+  }
+}

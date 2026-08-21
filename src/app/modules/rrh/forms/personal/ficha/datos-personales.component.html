@@ -1,0 +1,42 @@
+<form [formGroup]="formulario" class="datos-personales">
+  <header class="encabezado">
+    <div class="titulos">
+      <h2>
+        <mat-icon>person</mat-icon>
+        Datos personales
+      </h2>
+      <p class="proposito">
+        La discapacidad, la enfermedad catastrófica y las cargas cambian el tope de gastos
+        personales; la región decide el período del décimo cuarto.
+      </p>
+    </div>
+    <button mat-raised-button color="primary" type="button" (click)="guardar()"
+            [disabled]="guardando() || formulario.pristine">
+      @if (guardando()) {
+        <mat-spinner diameter="18"></mat-spinner>
+      } @else {
+        <mat-icon>save</mat-icon>
+      }
+      Guardar cambios
+    </button>
+  </header>
+
+  @for (seccion of secciones; track seccion.titulo) {
+    <section class="bloque">
+      <h3 class="bloque-titulo">
+        <mat-icon>{{ seccion.icono }}</mat-icon>
+        {{ seccion.titulo }}
+      </h3>
+      <div class="campos">
+        @for (campo of seccion.campos; track campo.name) {
+          <app-campo-formulario
+            [campo]="campo"
+            [formulario]="formulario"
+            [class.campo-completo]="campo.ancho === 'completo'"
+          >
+          </app-campo-formulario>
+        }
+      </div>
+    </section>
+  }
+</form>

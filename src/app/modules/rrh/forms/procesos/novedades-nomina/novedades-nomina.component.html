@@ -1,0 +1,62 @@
+<div class="rrh-page">
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-icon">
+        <mat-icon>playlist_add</mat-icon>
+      </div>
+      <div class="header-text">
+        <h1>Novedades del período</h1>
+        <p class="subtitle">
+          Ingresos y descuentos puntuales, y la carga manual de la nómina histórica
+        </p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <mat-form-field appearance="outline" class="selector-anio">
+        <mat-label>Ejercicio</mat-label>
+        <mat-select [ngModel]="anio()" (ngModelChange)="onAnioChange($event)">
+          @for (a of anios; track a) {
+            <mat-option [value]="a">{{ a }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="selector-periodo">
+        <mat-label>Período</mat-label>
+        <mat-select [ngModel]="periodoSeleccionado()" (ngModelChange)="onPeriodoChange($event)">
+          @for (p of periodos(); track p.codigo) {
+            <mat-option [value]="p.codigo">{{ etiquetaPeriodo(p) }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
+  </div>
+
+  @if (periodos().length === 0) {
+    <div class="aviso">
+      <mat-icon>event_busy</mat-icon>
+      <span>
+        No hay períodos de nómina creados para {{ anio() }}. Las novedades cuelgan de un período,
+        así que hay que crearlo primero.
+      </span>
+    </div>
+  } @else if (periodoSeleccionado() === null) {
+    <div class="aviso">
+      <mat-icon>event</mat-icon>
+      <span>Seleccione un período para cargar o revisar sus novedades.</span>
+    </div>
+  } @else if (pendientes() > 0) {
+    <div class="aviso aviso-error">
+      <mat-icon>pending_actions</mat-icon>
+      <span>
+        {{ pendientes() }} novedad(es) sin aprobar. Las novedades no aprobadas no entran en el
+        cálculo del período.
+      </span>
+    </div>
+  }
+
+  @if (tableConfig) {
+    <app-table-basic-hijos [configTable]="tableConfig" (emiteError)="onTableError($event)">
+    </app-table-basic-hijos>
+  }
+</div>

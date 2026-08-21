@@ -1,0 +1,40 @@
+@if (abierto) {
+  <div class="fondo" (click)="alPulsarFondo()"></div>
+
+  <aside class="panel" role="dialog" aria-modal="true" [attr.aria-label]="titulo">
+    <header class="cabecera">
+      <div class="titulos">
+        <h2>{{ titulo }}</h2>
+        @if (subtitulo) {
+          <p>{{ subtitulo }}</p>
+        }
+      </div>
+      <button mat-icon-button type="button" (click)="cerrar.emit()" [disabled]="guardando"
+              matTooltip="Cerrar sin guardar" aria-label="Cerrar">
+        <mat-icon>close</mat-icon>
+      </button>
+    </header>
+
+    <!-- Lo único que scrollea. El pie queda fuera, y por eso no se puede perder de vista. -->
+    <div class="cuerpo">
+      <ng-content></ng-content>
+    </div>
+
+    <footer class="pie">
+      <button mat-stroked-button type="button" (click)="cerrar.emit()" [disabled]="guardando">
+        Cancelar
+      </button>
+      @if (!soloLectura) {
+        <button mat-raised-button color="primary" type="button" (click)="guardar.emit()"
+                [disabled]="guardando">
+          @if (guardando) {
+            <mat-spinner diameter="18"></mat-spinner>
+          } @else {
+            <mat-icon>save</mat-icon>
+          }
+          {{ etiquetaGuardar }}
+        </button>
+      }
+    </footer>
+  </aside>
+}

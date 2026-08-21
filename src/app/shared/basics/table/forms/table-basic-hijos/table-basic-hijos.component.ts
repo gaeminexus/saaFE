@@ -287,7 +287,16 @@ export class TableBasicHijosComponent implements OnInit, OnChanges, AfterViewIni
 
   add(): void {
     const dialogRef = this.dialog.open(AddTableDialogComponent, {
+      // `autoFocus: dialog` en vez del primer campo enfocable, y es una guarda funcional, no
+      // visual. Si el foco cae en el primer autocomplete, su panel se abre solo y se dibuja
+      // **encima** de los campos de abajo: el siguiente clic —dirigido al segundo campo— aterriza
+      // en la primera opcion de la lista y `seleccion()` la escribe en el control, cambiando una
+      // referencia que el usuario no toco y sin avisar de nada. Verificado el 2026-08-21 en
+      // Novedades del periodo: al abrir la edicion de Cossio, `document.elementFromPoint` sobre el
+      // campo Concepto devolvia la opcion «BARCENAS BERMEO», y teclear ahi cambiaba el empleado de
+      // 50 a 44.
       disableClose: true,
+      autoFocus: 'dialog',
       data: {
         regConfig: this.regConfig,
         entidad: this.entidad,
@@ -304,7 +313,16 @@ export class TableBasicHijosComponent implements OnInit, OnChanges, AfterViewIni
 
   edit(registro: any): void {
     const dialogRef = this.dialog.open(EditTableDialogComponent, {
+      // `autoFocus: dialog` en vez del primer campo enfocable, y es una guarda funcional, no
+      // visual. Si el foco cae en el primer autocomplete, su panel se abre solo y se dibuja
+      // **encima** de los campos de abajo: el siguiente clic —dirigido al segundo campo— aterriza
+      // en la primera opcion de la lista y `seleccion()` la escribe en el control, cambiando una
+      // referencia que el usuario no toco y sin avisar de nada. Verificado el 2026-08-21 en
+      // Novedades del periodo: al abrir la edicion de Cossio, `document.elementFromPoint` sobre el
+      // campo Concepto devolvia la opcion «BARCENAS BERMEO», y teclear ahi cambiaba el empleado de
+      // 50 a 44.
       disableClose: true,
+      autoFocus: 'dialog',
       data: {
         regConfig: this.regConfig,
         entidad: this.entidad,
@@ -333,10 +351,14 @@ export class TableBasicHijosComponent implements OnInit, OnChanges, AfterViewIni
   }
 
   async ejecuta(opcion: number, result: any): Promise<void> {
-    // Aplicar transformación onBeforeSave si existe
-    const datosAEnviar = this.configTable?.onBeforeSave
-      ? this.configTable.onBeforeSave(result)
-      : result;
+    // Aplicar transformación onBeforeSave si existe.
+    // En REMOVE no: ahí `result` es el codigo del registro, no el cuerpo. Pasarlo por
+    // onBeforeSave lo envuelve en un objeto y la URL sale como /rest/tabla/[object Object],
+    // que responde 404 sin borrar nada. Verificado contra el desplegado el 2026-08-20.
+    const datosAEnviar =
+      this.configTable?.onBeforeSave && opcion !== AccionesGrid.REMOVE
+        ? this.configTable.onBeforeSave(result)
+        : result;
 
     try {
       // Ejecutar la operación principal y capturar el resultado

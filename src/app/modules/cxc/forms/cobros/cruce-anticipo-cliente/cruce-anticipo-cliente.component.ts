@@ -12,6 +12,9 @@ import { Titular } from '../../../../tsr/model/titular';
 import { ResultadoAplicacionCxc } from '../../../model/aplicacion-pago-cxc';
 import { FacturaEmitir } from '../../../model/factura-emitir';
 import { AplicacionPagoCxcService } from '../../../service/aplicacion-pago-cxc.service';
+import { FacturaEmitirService } from '../../../service/emitir/factura-emitir.service';
+import { AnticipoDisponible, AnticipoService } from '../../../../tsr/service/anticipo.service';
+import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 
 /**
  * Cruce de un anticipo ya recibido del cliente contra una factura de venta
@@ -27,6 +30,9 @@ import { AplicacionPagoCxcService } from '../../../service/aplicacion-pago-cxc.s
 })
 export class CruceAnticipoClienteComponent implements OnInit {
   private aplicacionPagoS = inject(AplicacionPagoCxcService);
+  private anticipoS = inject(AnticipoService);
+  private facturaS = inject(FacturaEmitirService);
+  private funcionesDatos = inject(FuncionesDatosService);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
   private route = inject(ActivatedRoute);
@@ -37,7 +43,6 @@ export class CruceAnticipoClienteComponent implements OnInit {
   idFactura: number | null = null;
   cliente = signal<Titular | null>(null);
   facturaElegida = signal<FacturaEmitir | null>(null);
-  formValor = '';
   formFecha: Date | null = new Date();
   formObservacion = '';
 
@@ -52,7 +57,27 @@ export class CruceAnticipoClienteComponent implements OnInit {
     if (id) {
       this.idFactura = +id;
       this.cargarSaldo();
+      // Al llegar desde la factura no viene el cliente, y sin él no se puede
+      // listar de qué anticipos cruzar: se resuelve leyendo la factura.
+      this.resolverClienteDeFactura(id);
     }
+  }
+
+  private resolverClienteDeFactura(idFactura: string): void {
+    this.facturaS.getById(idFactura).subscribe({
+      next: (factura: FacturaEmitir | null) => {
+        const titular = (factura as any)?.titular;
+        if (titular?.codigo) {
+          this.cliente.set(titular);
+          this.facturaElegida.set(factura);
+          this.cargarAnticipos();
+        }
+      },
+      error: () => {
+        this.error.set('No se pudo leer la factura para conocer el cliente. '
+          + 'Búsquelo manualmente para elegir los anticipos.');
+      },
+    });
   }
 
   /** Paso 1: elegir el cliente. Al elegirlo se encadena la búsqueda de facturas. */
@@ -65,6 +90,7 @@ export class CruceAnticipoClienteComponent implements OnInit {
       if (!titular) return;
       this.cliente.set(titular);
       this.limpiarFactura();
+      this.cargarAnticipos();
       this.buscarFactura();
     });
   }
@@ -124,9 +150,91 @@ export class CruceAnticipoClienteComponent implements OnInit {
     });
   }
 
-  get valorNumerico(): number {
-    const v = parseFloat(String(this.formValor).replace(',', '.'));
-    return Number.isFinite(v) ? v : 0;
+  // ── Anticipos disponibles ────────────────────────────────────────────────
+  // El cruce ya no es "por valor contra el saldo global": el usuario elige de
+  // qué anticipo sale cada abono, y el backend genera una aplicación por
+  // anticipo. Eso es lo que permite anular un anticipo y deshacer exactamente
+  // sus abonos.
+
+  anticipos = signal<AnticipoDisponible[]>([]);
+  cargandoAnticipos = signal(false);
+  /** Monto a aplicar por anticipo, indexado por id. Vacío = no se usa. */
+  montos: Record<number, string> = {};
+
+  private cargarAnticipos(): void {
+    const titular = this.cliente();
+    if (!titular?.codigo) return;
+
+    this.cargandoAnticipos.set(true);
+    this.anticipos.set([]);
+    this.montos = {};
+
+    this.anticipoS.disponiblesCliente(titular.codigo, this.idEmpresaSesion()).subscribe({
+      next: (lista) => {
+        this.anticipos.set(lista ?? []);
+        this.cargandoAnticipos.set(false);
+      },
+      error: (err: Error) => {
+        this.cargandoAnticipos.set(false);
+        this.anticipos.set([]);
+        this.error.set(err.message);
+      },
+    });
+  }
+
+  montoDe(anticipo: AnticipoDisponible): number {
+    const v = parseFloat(String(this.montos[anticipo.id] ?? '').replace(',', '.'));
+    return Number.isFinite(v) && v > 0 ? v : 0;
+  }
+
+  excedeAnticipo(anticipo: AnticipoDisponible): boolean {
+    return this.montoDe(anticipo) > Number(anticipo.saldo ?? 0) + 0.001;
+  }
+
+  get totalSeleccionado(): number {
+    return this.anticipos().reduce((suma, a) => suma + this.montoDe(a), 0);
+  }
+
+  get haySeleccion(): boolean {
+    return this.totalSeleccionado > 0;
+  }
+
+  get algunAnticipoExcedido(): boolean {
+    return this.anticipos().some((a) => this.excedeAnticipo(a));
+  }
+
+  get saldoAnticiposTotal(): number {
+    return this.anticipos().reduce((suma, a) => suma + Number(a.saldo ?? 0), 0);
+  }
+
+  /** Usa el anticipo completo en esa fila. */
+  aplicarTodoDe(anticipo: AnticipoDisponible): void {
+    this.montos[anticipo.id] = String(Number(anticipo.saldo ?? 0).toFixed(2));
+  }
+
+  limpiarSeleccion(): void {
+    this.montos = {};
+  }
+
+  /**
+   * Reparte el saldo pendiente de la factura entre los anticipos disponibles,
+   * del más antiguo al más nuevo. Es un atajo: el usuario puede ajustar
+   * cualquier línea después.
+   */
+  repartirAutomatico(): void {
+    const pendiente = Number(this.saldo()?.saldoPendiente ?? 0);
+    if (pendiente <= 0) return;
+
+    this.montos = {};
+    let porCubrir = pendiente;
+    for (const a of this.anticipos()) {
+      if (porCubrir <= 0.001) break;
+      const disponible = Number(a.saldo ?? 0);
+      if (disponible <= 0.001) continue;
+      const toma = Math.min(disponible, porCubrir);
+      this.montos[a.id] = String(toma.toFixed(2));
+      porCubrir = +(porCubrir - toma).toFixed(2);
+    }
   }
 
   /**
@@ -135,27 +243,32 @@ export class CruceAnticipoClienteComponent implements OnInit {
    */
   get puedeConfirmar(): boolean {
     if (!this.idFactura || this.procesando()) return false;
-    if (this.valorNumerico <= 0) return false;
+    if (!this.haySeleccion) return false;
+    if (this.algunAnticipoExcedido) return false;
     const pendiente = this.saldo()?.saldoPendiente;
-    if (pendiente != null && this.valorNumerico > pendiente) return false;
+    if (pendiente != null && this.totalSeleccionado > pendiente + 0.001) return false;
     return true;
   }
 
   get excedeSaldo(): boolean {
     const pendiente = this.saldo()?.saldoPendiente;
-    return pendiente != null && this.valorNumerico > pendiente;
+    return pendiente != null && this.totalSeleccionado > pendiente + 0.001;
   }
 
   confirmar(): void {
     if (!this.puedeConfirmar || !this.idFactura) return;
 
+    const lineas = this.anticipos()
+      .filter((a) => this.montoDe(a) > 0)
+      .map((a) => ({ idAnticipo: a.id, valor: this.montoDe(a) }));
+
     this.procesando.set(true);
     this.error.set('');
     this.resultado.set(null);
 
-    this.aplicacionPagoS.cruzarAnticipo({
+    this.aplicacionPagoS.cruzarAnticipos({
       idFactura: this.idFactura,
-      valor: this.valorNumerico,
+      anticipos: lineas,
       fechaAplicacion: this.fechaISO(),
       idEmpresa: this.idEmpresaSesion(),
       idUsuario: this.idUsuarioSesion(),
@@ -173,8 +286,10 @@ export class CruceAnticipoClienteComponent implements OnInit {
           saldoPendiente: resp.saldoPendiente,
           estadoPago: resp.estadoPago,
         });
-        this.formValor = '';
         this.formObservacion = '';
+        // Los saldos de los anticipos cambiaron: se recargan para que la
+        // siguiente operación parta de la realidad, no de la pantalla vieja.
+        this.cargarAnticipos();
         this.snackBar.open(resp.mensaje ?? 'Anticipo cruzado correctamente.', 'Cerrar', { duration: 5000 });
       },
       error: (err: Error) => {
@@ -182,6 +297,12 @@ export class CruceAnticipoClienteComponent implements OnInit {
         this.error.set(err.message);
       },
     });
+  }
+
+  formatearFecha(fecha: any): string {
+    const d = this.funcionesDatos.convertirFechaDesdeBackend(fecha);
+    if (!d) return '—';
+    return d.toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' });
   }
 
   volverAAbonos(): void {

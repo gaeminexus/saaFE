@@ -1,0 +1,53 @@
+@use '../../../../../../styles/abstracts/colors' as *;
+@use '../../../../../../styles/abstracts/variables' as *;
+@use '../../../styles/pantalla-rrh' as *;
+
+.rrh-page {
+  @include pantalla-rrh;
+
+  .selector-anio {
+    min-width: $breakpoint-sm * 0.25;
+  }
+
+  .selector-periodo,
+  .selector-formato {
+    min-width: $breakpoint-sm * 0.28;
+  }
+
+  .grid-reportes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax($breakpoint-sm * 0.6, 1fr));
+    gap: $spacing-md;
+  }
+
+  .tarjeta-reporte {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+    align-items: flex-start;
+  }
+
+  .tarjeta-cabecera {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+
+    mat-icon {
+      color: $primary-color;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: $font-size-base;
+      font-weight: $font-weight-semibold;
+      color: $text-primary;
+    }
+  }
+
+  .tarjeta-descripcion {
+    margin: 0;
+    flex: 1;
+    font-size: $font-size-sm;
+    color: $text-secondary;
+  }
+}

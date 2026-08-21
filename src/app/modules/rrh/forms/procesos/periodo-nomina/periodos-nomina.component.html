@@ -1,0 +1,40 @@
+<div class="rrh-page">
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-icon">
+        <mat-icon>event_note</mat-icon>
+      </div>
+      <div class="header-text">
+        <h1>Períodos de nómina</h1>
+        <p class="subtitle">Seleccione un período para abrir su panel de proceso</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <mat-form-field appearance="outline" class="selector-anio">
+        <mat-label>Ejercicio</mat-label>
+        <mat-select [ngModel]="anio()" (ngModelChange)="onAnioChange($event)">
+          @for (a of anios; track a) {
+            <mat-option [value]="a">{{ a }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
+  </div>
+
+  <div class="aviso">
+    <mat-icon>touch_app</mat-icon>
+    <span>
+      Pulse un período para validar, calcular, aprobar, contabilizar y cerrar. El modo del
+      período decide si la contabilización emite asiento.
+    </span>
+  </div>
+
+  @if (tableConfig) {
+    <app-table-basic-hijos
+      [configTable]="tableConfig"
+      (emiteRegistro)="abrirPanel($event)"
+      (emiteError)="onTableError($event)"
+    >
+    </app-table-basic-hijos>
+  }
+</div>

@@ -1,0 +1,35 @@
+<div class="rrh-page">
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-icon">
+        <mat-icon>groups</mat-icon>
+      </div>
+      <div class="header-text">
+        <h1>Colaboradores</h1>
+        <p class="subtitle">Seleccione un colaborador para abrir su ficha completa</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button mat-stroked-button (click)="exportarCsv()" [disabled]="exportData().length === 0">
+        <mat-icon>description</mat-icon>
+        CSV
+      </button>
+    </div>
+  </div>
+
+  <div class="aviso">
+    <mat-icon>touch_app</mat-icon>
+    <span>Pulse una fila para abrir la ficha del colaborador y editar todos sus datos.</span>
+  </div>
+
+  @if (tableConfig) {
+    <app-table-basic-hijos
+      [configTable]="tableConfig"
+      (emiteRegistro)="abrirFicha($event)"
+      (emiteError)="onTableError($event)"
+    >
+    </app-table-basic-hijos>
+  } @else if (cargando()) {
+    <div class="mensaje-vacio">Cargando colaboradores…</div>
+  }
+</div>

@@ -1,0 +1,109 @@
+@use '../../../../styles/abstracts/colors' as *;
+@use '../../../../styles/abstracts/variables' as *;
+
+/**
+ * Cascarón común de las pantallas de Recursos Humanos: cabecera con icono, título y acciones,
+ * más los paneles de contenido. Cada componente lo incluye con `@include pantalla-rrh;` y añade
+ * encima solo lo suyo. Sin colores ni medidas literales: todo sale de los abstracts.
+ */
+@mixin pantalla-rrh {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+  color: $text-primary;
+
+  .page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: $spacing-sm;
+    padding: $spacing-md;
+    border-radius: $border-radius-md;
+    background: $background-primary;
+    border: $border-width solid $border-light;
+    box-shadow: 0 $spacing-xs $spacing-sm $shadow-color-light;
+  }
+
+  .header-content {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+  }
+
+  .header-icon mat-icon {
+    color: $primary-color;
+    font-size: $font-size-2xl;
+    width: $font-size-2xl;
+    height: $font-size-2xl;
+  }
+
+  .header-text {
+    h1 {
+      margin: 0;
+      font-size: $font-size-xl;
+      font-weight: $font-weight-semibold;
+      color: $text-primary;
+    }
+
+    .subtitle {
+      margin: 0;
+      font-size: $font-size-sm;
+      color: $text-secondary;
+    }
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    flex-wrap: wrap;
+  }
+
+  .panel {
+    padding: $spacing-md;
+    border-radius: $border-radius-md;
+    background: $background-primary;
+    border: $border-width solid $border-light;
+    box-shadow: 0 $spacing-xs $spacing-sm $shadow-color-light;
+  }
+
+  .panel-titulo {
+    margin: 0 0 $spacing-sm;
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+    color: $secondary-color;
+    border-bottom: $border-width solid $border-light;
+    padding-bottom: $spacing-xs;
+  }
+
+  .grid-campos {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax($breakpoint-sm * 0.35, 1fr));
+    gap: $spacing-sm $spacing-md;
+  }
+
+  .mensaje-vacio {
+    padding: $spacing-lg;
+    text-align: center;
+    color: $text-muted;
+    font-size: $font-size-sm;
+  }
+
+  .aviso {
+    display: flex;
+    align-items: flex-start;
+    gap: $spacing-sm;
+    padding: $spacing-sm $spacing-md;
+    border-radius: $border-radius-sm;
+    background: $background-tertiary;
+    border-left: $border-width-md solid $info-color;
+    font-size: $font-size-sm;
+    color: $text-secondary;
+  }
+
+  .aviso.aviso-error {
+    border-left-color: $error-color;
+    color: $error-color;
+  }
+}

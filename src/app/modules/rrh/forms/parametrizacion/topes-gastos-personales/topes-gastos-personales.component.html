@@ -1,0 +1,46 @@
+<div class="rrh-page">
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-icon">
+        <mat-icon>savings</mat-icon>
+      </div>
+      <div class="header-text">
+        <h1>Topes de gastos personales</h1>
+        <p class="subtitle">Canastas básicas deducibles según el número de cargas familiares</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <mat-form-field appearance="outline" class="selector-anio">
+        <mat-label>Ejercicio</mat-label>
+        <mat-select [ngModel]="anio()" (ngModelChange)="onAnioChange($event)">
+          @for (a of anios; track a) {
+            <mat-option [value]="a">{{ a }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
+  </div>
+
+  @if (faltaParametro()) {
+    <div class="aviso aviso-error">
+      <mat-icon>report_problem</mat-icon>
+      <span>
+        No hay canasta familiar básica cargada para {{ anio() }} en los parámetros anuales. Sin
+        ella no se puede calcular el tope en dólares ni la rebaja del impuesto.
+      </span>
+    </div>
+  } @else {
+    <div class="aviso">
+      <mat-icon>info</mat-icon>
+      <span>
+        Canasta básica de {{ anio() }}: USD {{ canasta() | number: '1.2-2' }} · rebaja del
+        {{ porcentajeRebaja() | number: '1.0-2' }} % sobre el gasto deducible.
+      </span>
+    </div>
+  }
+
+  @if (tableConfig) {
+    <app-table-basic-hijos [configTable]="tableConfig" (emiteError)="onTableError($event)">
+    </app-table-basic-hijos>
+  }
+</div>

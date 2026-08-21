@@ -4,7 +4,7 @@
       <mat-icon class="title-icon">assignment_ind</mat-icon>
       <mat-card-title>{{ getTitle() }}</mat-card-title>
       @if (formTipoPermiso()) {
-        <mat-card-subtitle>{{ getModalidadDescripcion() }}</mat-card-subtitle>
+        <mat-card-subtitle>{{ getSubtitulo() }}</mat-card-subtitle>
       }
     </mat-card-header>
 
@@ -56,9 +56,6 @@
             @for (tipo of tiposPermiso(); track tipo.codigo) {
               <mat-option [value]="tipo">
                 {{ tipo.nombre }}
-                <small class="modalidad-indicator">
-                  ({{ tipo.modalidad === 'D' ? 'Días' : 'Horas' }})
-                </small>
               </mat-option>
             }
           </mat-select>
@@ -67,23 +64,17 @@
           }
         </mat-form-field>
 
-        @if (formTipoPermiso()?.modalidad) {
+        @if (formTipoPermiso()) {
           <div class="info-card">
             <mat-icon color="primary">info</mat-icon>
             <div class="info-content">
               <p>
-                <strong>Modalidad:</strong>
-                {{
-                  formTipoPermiso()?.modalidad === 'D' ? 'Por días completos' : 'Por horas del día'
-                }}
-              </p>
-              <p>
                 <strong>Requiere documento:</strong>
-                {{ formTipoPermiso()?.requiereDocumento ? 'Sí' : 'No' }}
+                {{ formTipoPermiso()?.requiereDocumento === 'S' ? 'Sí' : 'No' }}
               </p>
               <p>
                 <strong>Con goce por defecto:</strong>
-                {{ formTipoPermiso()?.conGocePorDefecto ? 'Sí' : 'No' }}
+                {{ formTipoPermiso()?.conGoce === 'S' ? 'Sí' : 'No' }}
               </p>
             </div>
           </div>
@@ -128,85 +119,79 @@
           </div>
         }
 
-        <!-- Campos para modalidad por DÍAS -->
-        @if (formTipoPermiso()?.modalidad === 'D') {
-          <mat-form-field appearance="outline" class="half-width">
-            <mat-label>Fecha de Fin *</mat-label>
+        <!-- Fecha de fin del permiso -->
+        <mat-form-field appearance="outline" class="half-width">
+          <mat-label>Fecha de Fin *</mat-label>
+          <input
+            #fechaFinInput
+            matInput
+            [matDatepicker]="pickerFin"
+            [formControl]="formFechaFinControl"
+            placeholder="dd/mm/aaaa"
+            [required]="!isReadonly()"
+            name="fechaFin"
+            (input)="capturarFechaFinRaw($event)"
+            (dateChange)="onFechaFinPickerChange($event.value)"
+            (blur)="syncFechaFinFromRaw($event)"
+          />
+          <mat-datepicker-toggle
+            matSuffix
+            [for]="pickerFin"
+            [disabled]="isReadonly()"
+          ></mat-datepicker-toggle>
+          <mat-datepicker #pickerFin></mat-datepicker>
+          @if (fechaFinRequerida()) {
+            <mat-error>La fecha de fin es obligatoria</mat-error>
+          }
+        </mat-form-field>
+
+        @if (formDias() !== null) {
+          <div class="calculated-field">
+            <mat-icon color="primary">calculate</mat-icon>
+            <span class="calculated-label">Días calculados:</span>
+            <span class="calculated-value">{{ formDias() }} días</span>
+          </div>
+        }
+
+        <!-- Horas del permiso (opcional: permisos de parte del día) -->
+        <div class="hora-container">
+          <mat-form-field appearance="outline" class="quarter-width">
+            <mat-label>Hora Inicio</mat-label>
             <input
-              #fechaFinInput
               matInput
-              [matDatepicker]="pickerFin"
-              [formControl]="formFechaFinControl"
-              placeholder="dd/mm/aaaa"
-              [required]="!isReadonly()"
-              name="fechaFin"
-              (input)="capturarFechaFinRaw($event)"
-              (dateChange)="onFechaFinPickerChange($event.value)"
-              (blur)="syncFechaFinFromRaw($event)"
-            />
-            <mat-datepicker-toggle
-              matSuffix
-              [for]="pickerFin"
+              type="time"
+              [ngModel]="formHoraInicio()"
+              (ngModelChange)="formHoraInicio.set($event)"
               [disabled]="isReadonly()"
-            ></mat-datepicker-toggle>
-            <mat-datepicker #pickerFin></mat-datepicker>
-            @if (fechaFinRequerida()) {
-              <mat-error>La fecha de fin es obligatoria</mat-error>
+              name="horaInicio"
+            />
+            @if (horasRequeridas()) {
+              <mat-error>Informe la hora de inicio y la de fin, o ninguna</mat-error>
             }
           </mat-form-field>
 
-          @if (formDias() !== null) {
-            <div class="calculated-field">
-              <mat-icon color="primary">calculate</mat-icon>
-              <span class="calculated-label">Días calculados:</span>
-              <span class="calculated-value">{{ formDias() }} días</span>
-            </div>
-          }
-        }
+          <mat-form-field appearance="outline" class="quarter-width">
+            <mat-label>Hora Fin</mat-label>
+            <input
+              matInput
+              type="time"
+              [ngModel]="formHoraFin()"
+              (ngModelChange)="formHoraFin.set($event)"
+              [disabled]="isReadonly()"
+              name="horaFin"
+            />
+            @if (horasRequeridas()) {
+              <mat-error>Informe la hora de inicio y la de fin, o ninguna</mat-error>
+            }
+          </mat-form-field>
+        </div>
 
-        <!-- Campos para modalidad por HORAS -->
-        @if (formTipoPermiso()?.modalidad === 'H') {
-          <div class="hora-container">
-            <mat-form-field appearance="outline" class="quarter-width">
-              <mat-label>Hora Inicio *</mat-label>
-              <input
-                matInput
-                type="time"
-                [ngModel]="formHoraInicio()"
-                (ngModelChange)="formHoraInicio.set($event)"
-                [disabled]="isReadonly()"
-                [required]="!isReadonly()"
-                name="horaInicio"
-              />
-              @if (horasRequeridas()) {
-                <mat-error>La hora de inicio es obligatoria</mat-error>
-              }
-            </mat-form-field>
-
-            <mat-form-field appearance="outline" class="quarter-width">
-              <mat-label>Hora Fin *</mat-label>
-              <input
-                matInput
-                type="time"
-                [ngModel]="formHoraFin()"
-                (ngModelChange)="formHoraFin.set($event)"
-                [disabled]="isReadonly()"
-                [required]="!isReadonly()"
-                name="horaFin"
-              />
-              @if (horasRequeridas()) {
-                <mat-error>La hora de fin es obligatoria</mat-error>
-              }
-            </mat-form-field>
+        @if (formHoras() !== null) {
+          <div class="calculated-field">
+            <mat-icon color="primary">calculate</mat-icon>
+            <span class="calculated-label">Horas calculadas:</span>
+            <span class="calculated-value">{{ formHoras() }} horas</span>
           </div>
-
-          @if (formHoras() !== null) {
-            <div class="calculated-field">
-              <mat-icon color="primary">calculate</mat-icon>
-              <span class="calculated-label">Horas calculadas:</span>
-              <span class="calculated-value">{{ formHoras() }} horas</span>
-            </div>
-          }
         }
 
         <!-- Configuración Adicional -->
@@ -225,7 +210,7 @@
           Con Goce de Sueldo
         </mat-slide-toggle>
 
-        @if (formTipoPermiso()?.requiereDocumento) {
+        @if (formTipoPermiso()?.requiereDocumento === 'S') {
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Número de Documento *</mat-label>
             <input

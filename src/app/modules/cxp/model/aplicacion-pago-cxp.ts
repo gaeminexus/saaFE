@@ -23,6 +23,36 @@ export interface CruceAnticipoCxpRequest {
   observacion?: string;
 }
 
+/** Una línea del cruce: de qué anticipo sale el dinero y cuánto. */
+export interface LineaCruceAnticipo {
+  idAnticipo: number;
+  valor: number;
+}
+
+/**
+ * Body de POST /aplp/anticipos: cruce contra anticipos específicos. Cada línea
+ * genera su propia aplicación con su propio asiento, que es lo que permite
+ * deshacer exactamente esos abonos si el anticipo se anula.
+ */
+export interface CruceAnticiposCxpRequest {
+  idFacturaCompra: number;
+  anticipos: LineaCruceAnticipo[];
+  fechaAplicacion?: string;
+  idEmpresa: number;
+  idUsuario: number;
+  observacion?: string;
+}
+
+/** Detalle que devuelve el backend por cada anticipo cruzado. */
+export interface LineaResultadoCruce {
+  aplicacion: number;
+  idAnticipo: number;
+  numeroDocAnticipo?: string;
+  montoAplicado: number;
+  saldoAnticipo: number;
+  asiento?: string;
+}
+
 /**
  * Respuesta de POST /aplp/anticipo. Incluye el saldo actualizado de la
  * factura, así que no hace falta volver a pedir /saldo tras la acción.
@@ -34,4 +64,8 @@ export interface ResultadoAplicacionCxp extends SaldoFactura {
   asiento?: string;
   /** Saldo de anticipos que le queda al proveedor tras el cruce. */
   saldoAnticipos?: number;
+  /** Una línea por anticipo consumido; presente en el cruce multi-anticipo. */
+  lineas?: LineaResultadoCruce[];
+  /** Suma de todas las líneas del cruce. */
+  totalCruzado?: number;
 }

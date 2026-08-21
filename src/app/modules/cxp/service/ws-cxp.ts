@@ -77,6 +77,9 @@ export class ServiciosCxp {
   public static RS_APLP = `${API_URL}/aplp`; // AplicacionPagoCxp (abonos y saldo de factura)
   public static RS_PGTR = `${API_URL}/pgtr`; // PagoProgramado / LotePago (transferencias)
 
+  // Reembolso de gastos
+  public static RS_RMBF = `${API_URL}/rmbf`; // ReembolsoFacturaCompra (reembolso de gastos)
+
 
 
 

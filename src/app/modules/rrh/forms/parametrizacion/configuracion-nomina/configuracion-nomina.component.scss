@@ -1,0 +1,50 @@
+@use '../../../../../../styles/abstracts/colors' as *;
+@use '../../../../../../styles/abstracts/variables' as *;
+@use '../../../styles/pantalla-rrh' as *;
+
+.rrh-page {
+  @include pantalla-rrh;
+
+  form {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-md;
+  }
+
+  .panel-titulo {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+  }
+
+  .nota {
+    margin: 0 0 $spacing-sm;
+    font-size: $font-size-sm;
+    color: $text-muted;
+  }
+
+  .fila-asiento {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    flex-wrap: wrap;
+
+    .nombre-proceso {
+      flex-basis: 100%;
+      font-size: $font-size-sm;
+      font-weight: $font-weight-medium;
+      color: $text-secondary;
+    }
+
+    mat-form-field {
+      flex: 1 1 $spacing-xl * 4;
+    }
+  }
+
+  .lista-banderas {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+    margin-top: $spacing-sm;
+  }
+}

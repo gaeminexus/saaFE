@@ -1,0 +1,55 @@
+<h2 mat-dialog-title>Nueva novedad al IESS</h2>
+
+<mat-dialog-content>
+  <form [formGroup]="formulario" class="campos">
+    @for (campo of camposComunes(); track campo.name) {
+      <app-campo-formulario
+        [campo]="campo"
+        [formulario]="formulario"
+        disposicion="encima"
+        [class.campo-completo]="campo.ancho === 'completo'"
+      >
+      </app-campo-formulario>
+    }
+  </form>
+
+  <!--
+    Este tipo no viaja en el archivo. Se dice aquí, al elegirlo, y no al intentar exportar:
+    enterarse después de registrarla es enterarse tarde.
+  -->
+  @if (seRegistraEnElPortal()) {
+    <div class="aviso-dialogo aviso-portal">
+      <mat-icon>open_in_new</mat-icon>
+      <span>
+        Este tipo <strong>no se envía por archivo batch</strong>: hay que registrarlo en el portal
+        del IESS uno por uno y después marcarlo como enviado aquí.
+      </span>
+    </div>
+  }
+
+  <!-- Lo que además exige el tipo elegido, aparte para que se vea que depende de él -->
+  @if (camposDelTipo().length > 0) {
+    <h3 class="titulo-tipo">Datos que exige este tipo</h3>
+    <form [formGroup]="formulario" class="campos">
+      @for (campo of camposDelTipo(); track campo.name) {
+        <app-campo-formulario [campo]="campo" [formulario]="formulario" disposicion="encima">
+        </app-campo-formulario>
+      }
+    </form>
+  }
+
+  @if (aviso(); as texto) {
+    <div class="aviso-dialogo">
+      <mat-icon>report_problem</mat-icon>
+      <span>{{ texto }}</span>
+    </div>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-stroked-button type="button" [mat-dialog-close]="null">Cancelar</button>
+  <button mat-raised-button color="primary" type="button" (click)="guardar()">
+    <mat-icon>save</mat-icon>
+    Registrar
+  </button>
+</mat-dialog-actions>

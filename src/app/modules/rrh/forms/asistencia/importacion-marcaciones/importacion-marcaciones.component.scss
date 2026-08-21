@@ -1,0 +1,136 @@
+@use 'sass:color';
+@use '../../../../../../styles/abstracts/colors' as *;
+@use '../../../../../../styles/abstracts/variables' as *;
+@use '../../../styles/pantalla-rrh' as *;
+
+.rrh-page {
+  @include pantalla-rrh;
+
+  .fila-carga {
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+    flex-wrap: wrap;
+  }
+
+  .selector-formato {
+    min-width: $breakpoint-sm * 0.5;
+  }
+
+  .nombre-archivo {
+    font-size: $font-size-sm;
+    color: $text-secondary;
+  }
+
+  .explicacion {
+    margin: 0 0 $spacing-sm;
+    font-size: $font-size-sm;
+    color: $text-secondary;
+  }
+
+  .resultado {
+    margin-top: $spacing-md;
+  }
+
+  .contadores {
+    display: flex;
+    gap: $spacing-md;
+    flex-wrap: wrap;
+  }
+
+  .contador {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: $breakpoint-sm * 0.18;
+    padding: $spacing-sm $spacing-md;
+    border-radius: $border-radius-md;
+    background: $background-tertiary;
+
+    .valor {
+      font-size: $font-size-2xl;
+      font-weight: $font-weight-semibold;
+      color: $text-primary;
+    }
+
+    .etiqueta {
+      font-size: $font-size-xs;
+      color: $text-secondary;
+      text-align: center;
+    }
+
+    &.ok {
+      background: rgba($success-color, 0.14);
+      .valor { color: color.adjust($success-color, $lightness: -10%); }
+    }
+
+    &.duplicadas {
+      background: rgba($warning-color, 0.16);
+      .valor { color: color.adjust($warning-color, $lightness: -20%); }
+    }
+
+    &.error {
+      background: rgba($error-color, 0.12);
+      .valor { color: color.adjust($error-color, $lightness: -8%); }
+    }
+  }
+
+  .rango {
+    margin: $spacing-sm 0 0;
+    font-size: $font-size-sm;
+    color: $text-secondary;
+  }
+
+  .log {
+    margin-top: $spacing-md;
+
+    h3 {
+      margin: 0 0 $spacing-xs;
+      font-size: $font-size-sm;
+      font-weight: $font-weight-semibold;
+      color: $text-primary;
+    }
+
+    ul {
+      margin: 0;
+      padding-left: $spacing-lg;
+      max-height: $breakpoint-sm * 0.5;
+      overflow-y: auto;
+      font-size: $font-size-xs;
+      color: $text-secondary;
+    }
+  }
+
+  .tabla-scroll {
+    overflow-x: auto;
+  }
+
+  .centro {
+    text-align: center;
+  }
+
+  .chip-ok,
+  .chip-dup,
+  .chip-err {
+    display: inline-block;
+    margin: 0 $spacing-xs * 0.5;
+    padding: 0 $spacing-sm;
+    border-radius: $border-radius-lg;
+    font-size: $font-size-xs;
+  }
+
+  .chip-ok {
+    background: rgba($success-color, 0.14);
+    color: color.adjust($success-color, $lightness: -10%);
+  }
+
+  .chip-dup {
+    background: rgba($warning-color, 0.16);
+    color: color.adjust($warning-color, $lightness: -20%);
+  }
+
+  .chip-err {
+    background: rgba($error-color, 0.12);
+    color: color.adjust($error-color, $lightness: -8%);
+  }
+}

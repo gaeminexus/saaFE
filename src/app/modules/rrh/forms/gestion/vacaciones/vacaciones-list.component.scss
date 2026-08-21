@@ -1,3 +1,6 @@
+@use '../../../../../../styles/abstracts/colors' as *;
+@use '../../../../../../styles/abstracts/variables' as *;
+
 .rrh-vacaciones {
   padding: 16px;
 }
@@ -124,4 +127,12 @@
   .vacaciones-layout {
     grid-template-columns: 1fr;
   }
+}
+
+/* Fila que muestra `*matNoDataRow` cuando la consulta no devuelve resultados. */
+.fila-vacia {
+  padding: $spacing-lg;
+  text-align: center;
+  color: $text-muted;
+  font-size: $font-size-sm;
 }

@@ -1,0 +1,263 @@
+<div class="rrh-page">
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-icon">
+        <mat-icon>payments</mat-icon>
+      </div>
+      <div class="header-text">
+        <h1>Órdenes de pago</h1>
+        <p class="subtitle">Transferencia de la nómina del período a las cuentas del personal</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <mat-form-field appearance="outline" class="selector-anio">
+        <mat-label>Ejercicio</mat-label>
+        <mat-select [ngModel]="anio()" (ngModelChange)="onAnioChange($event)">
+          @for (a of anios; track a) {
+            <mat-option [value]="a">{{ a }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="selector-periodo">
+        <mat-label>Período</mat-label>
+        <mat-select [ngModel]="periodoSeleccionado()" (ngModelChange)="onPeriodoChange($event)">
+          @for (p of periodos(); track p.codigo) {
+            <mat-option [value]="p.codigo">{{ etiquetaPeriodo(p) }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
+  </div>
+
+  @if (periodoSeleccionado() !== null) {
+    <div class="panel barra-generar">
+      <mat-form-field appearance="outline" class="selector-cuenta">
+        <mat-label>Cuenta de la que sale el pago</mat-label>
+        <mat-select
+          [ngModel]="cuentaSeleccionada()"
+          (ngModelChange)="cuentaSeleccionada.set($event)"
+        >
+          @for (c of cuentas(); track c.codigo) {
+            <mat-option [value]="c.codigo">{{ etiquetaCuenta(c) }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <button
+        mat-raised-button
+        color="primary"
+        (click)="generar()"
+        [disabled]="!puedeGenerar() || ocupado()"
+        matTooltip="Arma la orden y su detalle a partir de las nóminas del período"
+      >
+        <mat-icon>playlist_add</mat-icon>
+        Generar orden
+      </button>
+
+      @if (!puedeGenerar() && cuentaSeleccionada() === null) {
+        <span class="pista">Seleccione la cuenta de origen para poder generar.</span>
+      }
+    </div>
+  }
+
+  @if (periodoSeleccionado() === null) {
+    <div class="mensaje-vacio">Seleccione un período para ver sus órdenes de pago.</div>
+  } @else if (cargando()) {
+    <div class="mensaje-vacio">Cargando órdenes…</div>
+  } @else if (ordenes().length === 0) {
+    <div class="mensaje-vacio">
+      El período todavía no tiene órdenes de pago. Genere una con la cuenta de origen.
+    </div>
+  } @else {
+    <div class="panel">
+      <div class="tabla-scroll">
+        <table mat-table [dataSource]="ordenes()">
+          <ng-container matColumnDef="numero">
+            <th mat-header-cell *matHeaderCellDef>Número</th>
+            <td mat-cell *matCellDef="let o">{{ o.numero || '—' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="emision">
+            <th mat-header-cell *matHeaderCellDef>Emisión</th>
+            <td mat-cell *matCellDef="let o">{{ o.fechaEmision | date: 'dd/MM/yyyy' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="cuenta">
+            <th mat-header-cell *matHeaderCellDef>Cuenta de origen</th>
+            <td mat-cell *matCellDef="let o">{{ o.cuentaLabel }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="empleados">
+            <th mat-header-cell *matHeaderCellDef class="centro">Personas</th>
+            <td mat-cell *matCellDef="let o" class="centro">{{ o.numeroEmpleados }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="total">
+            <th mat-header-cell *matHeaderCellDef class="derecha">Total</th>
+            <td mat-cell *matCellDef="let o" class="derecha total">
+              {{ (o.total || 0) | number: '1.2-2' }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="estado">
+            <th mat-header-cell *matHeaderCellDef>Estado</th>
+            <td mat-cell *matCellDef="let o">
+              <span class="badge-estado" [class.acreditada]="o.acreditada">
+                {{ o.estadoLabel }}
+              </span>
+              @if (o.acreditada) {
+                <span class="fecha-acreditacion">
+                  acreditada el {{ o.fechaAcreditacion | date: 'dd/MM/yyyy' }}
+                </span>
+              }
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="acciones">
+            <th mat-header-cell *matHeaderCellDef>Acciones</th>
+            <td mat-cell *matCellDef="let o">
+              <button mat-icon-button (click)="verDetalle(o)" matTooltip="Ver el detalle por colaborador">
+                <mat-icon>list</mat-icon>
+              </button>
+              <button
+                mat-icon-button
+                (click)="descargarArchivo(o)"
+                [disabled]="ocupado()"
+                matTooltip="Descargar el archivo para la banca electrónica"
+              >
+                <mat-icon>download</mat-icon>
+              </button>
+              <button
+                mat-icon-button
+                (click)="confirmar(o)"
+                [disabled]="ocupado() || o.acreditada"
+                [matTooltip]="
+                  o.acreditada
+                    ? 'La acreditación ya está confirmada'
+                    : 'Confirmar que el banco acreditó el pago'
+                "
+              >
+                <mat-icon>task_alt</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="columnasOrden"></tr>
+          <tr mat-row *matRowDef="let o; columns: columnasOrden"></tr>
+        </table>
+      </div>
+
+      <div class="fila-confirmacion">
+        <mat-form-field appearance="outline" class="campo-fecha">
+          <mat-label>Fecha de acreditación</mat-label>
+          <input
+            matInput
+            type="date"
+            [ngModel]="fechaAcreditacion()"
+            (ngModelChange)="fechaAcreditacion.set($event)"
+          />
+        </mat-form-field>
+        <span class="pista">
+          Es la fecha en que el banco acreditó de verdad, no la de emisión de la orden.
+        </span>
+      </div>
+    </div>
+  }
+
+  @if (ordenAbierta(); as orden) {
+    <div class="panel">
+      <div class="cabecera-detalle">
+        <h2 class="panel-titulo">Detalle de la orden {{ orden.numero }}</h2>
+        <div class="acciones-detalle">
+          <button mat-stroked-button (click)="exportarCsv()" [disabled]="detalle().length === 0">
+            <mat-icon>description</mat-icon>
+            CSV
+          </button>
+          <button mat-icon-button (click)="cerrarDetalle()" matTooltip="Cerrar el detalle">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+      </div>
+
+      <div class="aviso">
+        <mat-icon>photo_camera</mat-icon>
+        <span>
+          Los datos bancarios de abajo son la <strong>constancia de a qué cuenta se ordenó
+          pagar</strong>: se copiaron al generar la orden y no se releen de la ficha del
+          colaborador. Si alguien cambió de banco después, aquí sigue el dato del pago.
+        </span>
+      </div>
+
+      @if (rechazados() > 0) {
+        <div class="aviso aviso-error">
+          <mat-icon>report_problem</mat-icon>
+          <span>{{ rechazados() }} pago(s) marcados como rechazados por el banco.</span>
+        </div>
+      }
+
+      @if (detalle().length === 0) {
+        <div class="mensaje-vacio">La orden no tiene líneas.</div>
+      } @else {
+        <div class="tabla-scroll">
+          <table mat-table [dataSource]="detalle()">
+            <ng-container matColumnDef="beneficiario">
+              <th mat-header-cell *matHeaderCellDef>Beneficiario</th>
+              <td mat-cell *matCellDef="let d">{{ d.nombreBeneficiario }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="identificacion">
+              <th mat-header-cell *matHeaderCellDef>Identificación</th>
+              <td mat-cell *matCellDef="let d">{{ d.identificacion }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="banco">
+              <th mat-header-cell *matHeaderCellDef>Banco</th>
+              <td mat-cell *matCellDef="let d">{{ d.banco }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="cuenta">
+              <th mat-header-cell *matHeaderCellDef>Cuenta</th>
+              <td mat-cell *matCellDef="let d">
+                {{ d.numeroCuenta }}
+                <span class="tipo-cuenta">{{ d.tipoCuentaLabel }}</span>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="valor">
+              <th mat-header-cell *matHeaderCellDef class="derecha">Valor</th>
+              <td mat-cell *matCellDef="let d" class="derecha total">
+                {{ (d.valor || 0) | number: '1.2-2' }}
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="situacion">
+              <th mat-header-cell *matHeaderCellDef>Situación</th>
+              <td mat-cell *matCellDef="let d">
+                @if (d.rechazado === 'S') {
+                  <span class="badge-rechazo" [matTooltip]="d.motivoRechazo || ''">
+                    <mat-icon>block</mat-icon>
+                    Rechazado
+                  </span>
+                } @else {
+                  <span class="badge-ok">Ordenado</span>
+                }
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="columnasDetalle"></tr>
+            <tr
+              mat-row
+              *matRowDef="let d; columns: columnasDetalle"
+              [class.fila-rechazada]="d.rechazado === 'S'"
+            ></tr>
+          </table>
+        </div>
+
+        <p class="resumen">
+          {{ detalle().length }} línea(s) · total {{ totalDetalle() | number: '1.2-2' }}
+        </p>
+      }
+    </div>
+  }
+</div>

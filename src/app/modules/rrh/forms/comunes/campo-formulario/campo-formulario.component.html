@@ -1,0 +1,78 @@
+<ng-template #plantillaControl>
+  <mat-form-field appearance="outline" [formGroup]="formulario" [hideRequiredMarker]="true">
+    @if (disposicion === 'encima') {
+      <mat-label>{{ campo.label }}</mat-label>
+    }
+
+    @switch (campo.tipo) {
+      @case ('rubro') {
+        <mat-select [formControlName]="campo.name" [attr.aria-label]="campo.label">
+          <mat-option [value]="null">Sin especificar</mat-option>
+          @for (detalle of detallesRubro; track detalle.codigoAlterno) {
+            <mat-option [value]="detalle.codigoAlterno">{{ detalle.descripcion }}</mat-option>
+          }
+        </mat-select>
+      }
+      @case ('siNo') {
+        <mat-select [formControlName]="campo.name" [attr.aria-label]="campo.label">
+          @for (opcion of opcionesSiNo; track opcion.codigo) {
+            <mat-option [value]="opcion.codigo">{{ opcion.descripcion }}</mat-option>
+          }
+        </mat-select>
+      }
+      @case ('estado') {
+        <mat-select [formControlName]="campo.name" [attr.aria-label]="campo.label">
+          @for (opcion of opcionesEstado; track opcion.codigo) {
+            <mat-option [value]="opcion.codigo">{{ opcion.descripcion }}</mat-option>
+          }
+        </mat-select>
+      }
+      @case ('referencia') {
+        <input matInput [formControlName]="campo.name" [matAutocomplete]="auto"
+               [attr.aria-label]="campo.label" placeholder="Escriba para buscar"
+               (input)="alTeclear($any($event.target).value)" />
+        <mat-autocomplete #auto="matAutocomplete" [displayWith]="etiquetaDe">
+          @for (fila of sugerencias(); track fila.codigo) {
+            <mat-option [value]="fila">{{ etiquetaDe(fila) }}</mat-option>
+          }
+        </mat-autocomplete>
+      }
+      @case ('numero') {
+        <input matInput type="number" [formControlName]="campo.name" [attr.aria-label]="campo.label" />
+      }
+      @case ('fecha') {
+        <input matInput type="date" [formControlName]="campo.name" [attr.aria-label]="campo.label" />
+      }
+      @default {
+        <input matInput type="text" [formControlName]="campo.name" [attr.aria-label]="campo.label"
+               [style.text-transform]="campo.mayusculas ? 'uppercase' : null" />
+      }
+    }
+
+    @if (campo.ayuda && !invalido && disposicion === 'encima') {
+      <mat-hint>{{ campo.ayuda }}</mat-hint>
+    }
+    @if (control?.hasError('required')) {
+      <mat-error>{{ campo.label }} es obligatorio</mat-error>
+    }
+  </mat-form-field>
+</ng-template>
+
+@if (disposicion === 'izquierda') {
+  <div class="fila">
+    <span class="etiqueta">
+      {{ campo.label }}
+      @if (campo.requerido) {
+        <span class="marca-obligatorio" aria-hidden="true">*</span>
+      }
+      @if (campo.ayuda) {
+        <small class="ayuda">{{ campo.ayuda }}</small>
+      }
+    </span>
+    <div class="valor">
+      <ng-container [ngTemplateOutlet]="plantillaControl"></ng-container>
+    </div>
+  </div>
+} @else {
+  <ng-container [ngTemplateOutlet]="plantillaControl"></ng-container>
+}

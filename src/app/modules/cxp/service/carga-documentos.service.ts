@@ -3,6 +3,7 @@ import { Injectable } from '@angular/core';
 import { Observable, catchError, of, throwError } from 'rxjs';
 import { DocumentoCxp } from '../model/documento-cxp';
 import { DetalleCargaTxt } from '../model/detalle-carga-txt';
+import { CuadraturaReembolso } from '../model/reembolso-factura-compra';
 import { environment } from '../../../../environments/environment';
 
 const PROCESS_URL = `${environment.apiUrl}/carga-documentos`;
@@ -67,6 +68,7 @@ export class CargaDocumentosService {
   cargarXml(idDocumentoCxp: number, payload: {
     contenidoXml: string;
     idUsuario: number;
+    esReembolso?: number;
   }): Observable<DocumentoCxp | null> {
     return this.http.post<DocumentoCxp>(`${PROCESS_URL}/cargarXml/${idDocumentoCxp}`, payload, this.httpOptions).pipe(catchError(this.handleError));
   }
@@ -93,6 +95,7 @@ export class CargaDocumentosService {
     accion: 'MANTENER' | 'REEMPLAZAR';
     contenidoXml?: string;
     idUsuario: number;
+    esReembolso?: number;
   }): Observable<any> {
     return this.http.post<any>(`${PROCESS_URL}/resolverNovedad/${idDocumentoCxp}`, payload, this.httpOptions).pipe(catchError(this.handleError));
   }
@@ -100,6 +103,36 @@ export class CargaDocumentosService {
   /** FASE 5 — Revierte un documento ya registrado en BD */
   revertir(idDocumentoCxp: number, idUsuario: number): Observable<any> {
     return this.http.post<any>(`${PROCESS_URL}/revertir/${idDocumentoCxp}`, { idUsuario }, this.httpOptions).pipe(catchError(this.handleError));
+  }
+
+  // ─── REEMBOLSO DE GASTOS ────────────────────────────────
+
+  /** Marca/desmarca un documento como factura de reembolso de gastos. */
+  marcarReembolso(idDocumentoCxp: number, esReembolso: boolean, idUsuario: number): Observable<any> {
+    return this.http.post(`${PROCESS_URL}/marcarReembolso/${idDocumentoCxp}`,
+      { esReembolso: esReembolso ? 1 : 0, idUsuario }, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
+
+  /** Contabiliza una factura de reembolso pendiente (requiere sustentos clasificados y cuadratura). */
+  contabilizarReembolso(idFacturaCompra: number, idEmpresa: number, idUsuario: number): Observable<any> {
+    return this.http.post(`${PROCESS_URL}/contabilizarReembolso/${idFacturaCompra}`,
+      { idEmpresa, idUsuario }, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
+
+  /** Recalcula y persiste en la cabecera los totales de los sustentos; devuelve la cuadratura. */
+  recalcularTotalesReembolso(idFacturaCompra: number): Observable<CuadraturaReembolso | null> {
+    return this.http.post<CuadraturaReembolso>(
+      `${PROCESS_URL}/recalcularTotalesReembolso/${idFacturaCompra}`, {}, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
+
+  /** Crea un producto en el grupo POR CLASIFICAR para asignar a un sustento. */
+  crearProductoPorClasificar(nombre: string, codigo: string | null, idEmpresa: number): Observable<any> {
+    return this.http.post(`${PROCESS_URL}/crearProductoPorClasificar`,
+      { nombre, codigo, idEmpresa }, this.httpOptions)
+      .pipe(catchError(this.handleError));
   }
 
   private handleError(error: HttpErrorResponse): Observable<null> {
