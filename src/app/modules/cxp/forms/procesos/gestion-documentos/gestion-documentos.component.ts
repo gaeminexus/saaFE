@@ -1,12 +1,15 @@
 import { CommonModule } from '@angular/common';
-import { AfterViewInit, Component, ElementRef, OnInit, ViewChild, inject, signal } from '@angular/core';
+import { AfterViewInit, Component, DestroyRef, ElementRef, OnDestroy, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule, UntypedFormControl } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
+import { MatCheckboxChange } from '@angular/material/checkbox';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableDataSource } from '@angular/material/table';
 import { MatTabsModule } from '@angular/material/tabs';
+import { Subscription, catchError, of, switchMap, timer } from 'rxjs';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { TitularSelectorDialogComponent } from '../../../../../shared/components/titular-selector-dialog/titular-selector-dialog.component';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
@@ -16,9 +19,14 @@ import { TipoDatosBusqueda as TipoDatos } from '../../../../../shared/model/dato
 import { Periodo } from '../../../../cnt/model/periodo';
 import { PeriodoService } from '../../../../cnt/service/periodo.service';
 import { Titular } from '../../../../tsr/model/titular';
+import { CargaArchivoTxt } from '../../../model/carga-archivo-txt';
 import { DocumentoCxp } from '../../../model/documento-cxp';
-import { CargaDocumentosService, GrupoProducto, ProductoNuevo } from '../../../service/carga-documentos.service';
+import { ErrorBloqueante } from '../../../model/error-bloqueante';
+import { ProgresoLote } from '../../../model/progreso-lote';
+import { CargaArchivoTxtService } from '../../../service/carga-archivo-txt.service';
+import { CargaDocumentosService } from '../../../service/carga-documentos.service';
 import { DocumentoCxpService } from '../../../service/documento-cxp.service';
+import { ClasificarProductosDialogComponent, ClasificarProductosDialogResult } from '../dialogs/clasificar-productos-dialog/clasificar-productos-dialog.component';
 import { SubirXmlDialogComponent, SubirXmlDialogResult } from '../dialogs/subir-xml-dialog/subir-xml-dialog.component';
 import { ReembolsosFacturaComponent } from '../reembolsos-factura/reembolsos-factura.component';
 
@@ -139,17 +147,17 @@ export class XmlValidacionErrorDialogComponent {
 }
 
 // ─── Dialog: condiciones bloqueantes al registrar factura ────────────────────
-export interface ErrorBloqueante {
-  tipo: string;
-  detalle: string;
-  productos?: string[];
-  grupos?: string[];
-}
+// La forma de ErrorBloqueante vive en model/error-bloqueante.ts: la comparten el 422 de
+// registrarBD y el progresoLote del lote (§6.3).
 
 const TIPO_LABELS: Record<string, { label: string; icon: string }> = {
-  PROVEEDOR_SIN_CUENTA:       { label: 'Proveedor sin cuenta contable CxP',  icon: 'account_balance' },
-  PRODUCTOS_SIN_CLASIFICAR:   { label: 'Productos sin grupo asignado',        icon: 'category' },
-  GRUPOS_SIN_CUENTA_CONTABLE: { label: 'Grupos sin cuenta contable',          icon: 'folder_open' },
+  PROVEEDOR_SIN_CUENTA:         { label: 'Proveedor sin cuenta contable CxP',           icon: 'account_balance' },
+  PRODUCTOS_SIN_CLASIFICAR:     { label: 'Productos sin grupo asignado',                 icon: 'category' },
+  GRUPOS_SIN_CUENTA_CONTABLE:   { label: 'Grupos sin cuenta contable',                   icon: 'folder_open' },
+  TIPO_ASIENTO_NO_CONFIGURADO:  { label: 'Tipo de asiento no configurado',               icon: 'receipt_long' },
+  CODIGOS_RETENCION_SIN_CUENTA: { label: 'Códigos de retención sin cuenta contable',     icon: 'percent' },
+  FACTURA_VENTA_NO_ENCONTRADA:  { label: 'Factura de venta del sustento no encontrada',  icon: 'search_off' },
+  RETENCION_MULTIDOCUMENTO:     { label: 'Retención con varios documentos sustento',     icon: 'call_split' },
 };
 
 @Component({
@@ -376,6 +384,9 @@ export class ReembolsosFacturaDialogComponent {
   onContabilizado(): void { this.cambios = true; this.ref.close(true); }
 }
 
+/** Contadores de §6.3 que se pueden usar como filtro rápido de la grilla. */
+export type FiltroLote = 'sinXml' | 'conXml' | 'registrados' | 'requierenAtencion' | 'conError' | 'fueraVentana';
+
 @Component({
   selector: 'app-gestion-documentos',
   standalone: true,
@@ -383,13 +394,15 @@ export class ReembolsosFacturaDialogComponent {
   templateUrl: './gestion-documentos.component.html',
   styleUrl: './gestion-documentos.component.scss',
 })
-export class GestionDocumentosComponent implements OnInit, AfterViewInit {
+export class GestionDocumentosComponent implements OnInit, AfterViewInit, OnDestroy {
   private snackBar = inject(MatSnackBar);
   private docService = inject(DocumentoCxpService);
   private processService = inject(CargaDocumentosService);
+  private cargaTxtService = inject(CargaArchivoTxtService);
   private dialog = inject(MatDialog);
   private funcionesDatos = inject(FuncionesDatosService);
   private periodoService = inject(PeriodoService);
+  private destroyRef = inject(DestroyRef);
 
   // Periodos contables
   periodos = signal<Periodo[]>([]);
@@ -417,7 +430,7 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit {
   todosDocumentos: DocumentoCxp[] = [];   // todos los estados (para tabla)
   dsDocumentos   = new MatTableDataSource<DocumentoCxp>([]);   // pendientes (≠ 3)
   dsRegistrados  = new MatTableDataSource<DocumentoCxp>([]);   // procesados (= 3)
-  columnas = ['id', 'tipoComprobante', 'rucEmisor', 'razonSocialEmisor', 'serieComprobante', 'claveAcceso', 'fechaEmision', 'valorSinImpuestos', 'iva', 'importeTotal', 'estadoDocumento', 'novedad', 'acciones'];
+  columnas = ['id', 'tipoComprobante', 'reembolso', 'rucEmisor', 'razonSocialEmisor', 'serieComprobante', 'claveAcceso', 'fechaEmision', 'valorSinImpuestos', 'iva', 'importeTotal', 'estadoDocumento', 'novedad', 'acciones'];
 
   // Totales (calculados sobre el conjunto filtrado por texto/fecha, antes del filtro de estado)
   totalesRegistrados = signal({ subtotal: 0, iva: 0, total: 0, count: 0 });
@@ -428,11 +441,38 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit {
   filtroProveedor = '';
   filtroTipo = '';
 
-  // Productos pendientes
-  requiereProductos = signal(false);
-  documentoCxpPendiente: DocumentoCxp | null = null;
-  productosNuevos: ProductoNuevo[] = [];
-  gruposProducto: GrupoProducto[] = [];
+  // Documentos con una llamada de marcado de reembolso en curso (evita el doble clic por fila)
+  private idsReembolsoEnCurso = signal<ReadonlySet<number>>(new Set<number>());
+
+  // ─── LOTE POR CARGA TXT ───────────────────────────────────────────────────
+  // Los botones son POR CARGA, no por período: dentro de un período conviven TXT de facturas
+  // y de retenciones (decisión (b) del usuario, §3 del plan).
+  /** Fase 3 pendiente en el backend: /registrarLote aún no existe. */
+  readonly REGISTRO_LOTE_DISPONIBLE = false;
+
+  cargasTxt = signal<CargaArchivoTxt[]>([]);
+  cargaTxtSeleccionada = signal<number | null>(null);
+  progreso = signal<ProgresoLote | null>(null);
+  /** Optimista: pasa a true con el 202/409 y solo lo baja un progreso con enCurso=false. */
+  loteEnCurso = signal(false);
+  /** POST de arranque en vuelo (aún no sabemos si el lote arrancó). */
+  lanzandoLote = signal(false);
+  filtroLote = signal<FiltroLote | null>(null);
+
+  private pollingSub: Subscription | null = null;
+  private erroresPolling = 0;
+  /** Último procesados/total leídos con el lote en curso, para el resumen al terminar */
+  private ultimoAvance = { procesados: 0, total: 0 };
+  private readonly MAX_ERRORES_POLLING = 3;
+  private readonly INTERVALO_POLLING_MS = 2000;
+
+  porcentajeLote = computed(() => {
+    const p = this.progreso();
+    if (!p || !p.total) return 0;
+    return Math.min(100, Math.round((p.procesados / p.total) * 100));
+  });
+
+  loteBloqueado = computed(() => this.loteEnCurso() || this.lanzandoLote() || !this.cargaTxtSeleccionada());
 
   private get idEmpresa(): number { return Number(localStorage.getItem('empresaCodigo') || localStorage.getItem('empresaId') || 1); }
   private get idUsuario(): number { try { const u = JSON.parse(localStorage.getItem('usuario') || sessionStorage.getItem('usuario') || '{}'); return u.codigo || u.id || 1; } catch { return 1; } }
@@ -444,6 +484,10 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit {
 
   ngAfterViewInit(): void {
     // Inicialización después de que las vistas estén disponibles
+  }
+
+  ngOnDestroy(): void {
+    this.detenerPolling();
   }
 
   // ─── PERIODOS ────────────────────────────────────────────
@@ -463,7 +507,230 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit {
     this.dsDocumentos.data = [];
     this.rawDatos = [];
     this.todosDocumentos = [];
-    if (idPeriodo) { this.cargar(); }
+    this.limpiarEstadoLote();
+    this.cargasTxt.set([]);
+    if (idPeriodo) { this.cargar(); this.cargarCargasTxt(idPeriodo); }
+  }
+
+  // ─── CARGAS TXT DEL PERÍODO ─────────────────────────────
+
+  private cargarCargasTxt(idPeriodo: number): void {
+    const criterios: DatosBusqueda[] = [];
+    const dbEmpresa = new DatosBusqueda();
+    dbEmpresa.asignaValorConCampoPadre(TipoDatos.LONG, 'empresa', 'codigo', String(this.idEmpresa), TipoComandosBusqueda.IGUAL);
+    criterios.push(dbEmpresa);
+    const dbPeriodo = new DatosBusqueda();
+    dbPeriodo.asignaValorConCampoPadre(TipoDatos.LONG, 'periodoContable', 'codigo', String(idPeriodo), TipoComandosBusqueda.IGUAL);
+    criterios.push(dbPeriodo);
+    this.cargaTxtService.selectByCriteria(criterios).subscribe({
+      next: (data) => this.cargasTxt.set((data || []).sort((a, b) => b.id - a.id)),
+      error: () => { this.cargasTxt.set([]); this.mostrarError('No se pudieron cargar los archivos TXT del período'); },
+    });
+  }
+
+  seleccionarCargaTxt(idCargaTxt: number | null): void {
+    this.limpiarEstadoLote();
+    this.cargaTxtSeleccionada.set(idCargaTxt);
+    // Una sola consulta al elegir la carga: muestra los contadores y engancha el polling si el
+    // lote ya venía corriendo (otra pestaña, o la pantalla se cerró a media ejecución).
+    if (idCargaTxt) { this.consultarProgreso(idCargaTxt, true); }
+  }
+
+  private limpiarEstadoLote(): void {
+    this.detenerPolling();
+    this.cargaTxtSeleccionada.set(null);
+    this.progreso.set(null);
+    this.loteEnCurso.set(false);
+    this.lanzandoLote.set(false);
+    if (this.filtroLote() !== null) { this.filtroLote.set(null); this.aplicarFiltrosBusqueda(); }
+  }
+
+  // ─── BOTONES DE LOTE (§6.1 y §6.2) ──────────────────────
+
+  /** §6.1 — Baja del SRI los XML que todavía sirva para esta carga. */
+  descargarXmlLote(): void {
+    const idCarga = this.cargaTxtSeleccionada();
+    if (!idCarga) { this.mostrarError('Seleccione una carga TXT.'); return; }
+    this.lanzandoLote.set(true);
+    this.processService.descargarXmlLote(idCarga, { idEmpresa: this.idEmpresa, idUsuario: this.idUsuario }).subscribe({
+      next: (resp: any) => {
+        this.lanzandoLote.set(false);
+        const detalle = resp?.aProcesar != null
+          ? ` ${resp.aProcesar} de ${resp.total} documento(s); ${resp.yaConXml ?? 0} ya tenían XML.`
+          : '';
+        this.mostrarExito(`${resp?.mensaje || 'Descarga iniciada.'}${detalle}`);
+        this.arrancarLote(idCarga);
+      },
+      error: (err) => this.manejarErrorArranqueLote(err, idCarga, 'No se pudo iniciar la descarga'),
+    });
+  }
+
+  /** §6.2 — Registra y contabiliza toda la carga, en el orden que impone el backend. */
+  registrarLote(): void {
+    const idCarga = this.cargaTxtSeleccionada();
+    if (!idCarga) { this.mostrarError('Seleccione una carga TXT.'); return; }
+    this.lanzandoLote.set(true);
+    this.processService.registrarLote(idCarga, { idEmpresa: this.idEmpresa, idUsuario: this.idUsuario }).subscribe({
+      next: (resp: any) => {
+        this.lanzandoLote.set(false);
+        const detalle = resp?.aProcesar != null
+          ? ` ${resp.aProcesar} documento(s); ${resp.sinXml ?? 0} sin XML, ${resp.yaRegistrados ?? 0} ya registrados.`
+          : '';
+        this.mostrarExito(`${resp?.mensaje || 'Registro iniciado.'}${detalle}`);
+        this.arrancarLote(idCarga);
+      },
+      error: (err) => this.manejarErrorArranqueLote(err, idCarga, 'No se pudo iniciar el registro'),
+    });
+  }
+
+  private arrancarLote(idCarga: number): void {
+    this.loteEnCurso.set(true);   // optimista: el 202 confirma que el lote arrancó
+    this.iniciarPolling(idCarga);
+  }
+
+  /** El 409 no es un fallo: ya hay un lote corriendo para esta carga, nos enganchamos a él. */
+  private manejarErrorArranqueLote(err: any, idCarga: number, titulo: string): void {
+    this.lanzandoLote.set(false);
+    if (err?.httpStatus === 409) {
+      this.mostrarAdvertencia(this.extraerMensajeError(err));
+      this.arrancarLote(idCarga);
+      return;
+    }
+    this.mostrarErrorDialog(titulo, this.extraerMensajeError(err));
+  }
+
+  // ─── CLASIFICACIÓN MASIVA DE PRODUCTOS (§6.4, §6.5) ─────
+
+  /**
+   * Último prerequisito del registro por lote: en una carga de 50 documentos, muchos se bloquean
+   * por PRODUCTOS_SIN_CLASIFICAR y hoy resolverlos es de uno en uno desde otra pantalla.
+   */
+  abrirClasificacionProductos(): void {
+    const idCarga = this.cargaTxtSeleccionada();
+    if (!idCarga) { this.mostrarError('Seleccione una carga TXT.'); return; }
+    const ref = this.dialog.open(ClasificarProductosDialogComponent, {
+      data: { idCargaTxt: idCarga, idEmpresa: this.idEmpresa },
+      width: '1100px',
+      maxWidth: '97vw',
+    });
+    ref.afterClosed().subscribe((huboCambios: ClasificarProductosDialogResult | undefined) => {
+      if (huboCambios) { this.consultarProgreso(idCarga, false); }
+    });
+  }
+
+  // ─── PROGRESO DEL LOTE (§6.3) ───────────────────────────
+
+  private iniciarPolling(idCarga: number): void {
+    this.detenerPolling();
+    this.erroresPolling = 0;
+    this.ultimoAvance = { procesados: 0, total: 0 };
+    // El error se absorbe DENTRO del switchMap: si se dejara subir al subscriber terminaría la
+    // suscripción y el polling moriría en silencio en el primer fallo de red, dejando el lote
+    // marcado como en curso y los dos botones deshabilitados para siempre.
+    // Con esto el stream sobrevive y aplicarProgreso recibe null, que es lo que espera.
+    this.pollingSub = timer(this.INTERVALO_POLLING_MS, this.INTERVALO_POLLING_MS).pipe(
+      switchMap(() => this.processService.progresoLote(idCarga).pipe(catchError(() => of(null)))),
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe((p) => this.aplicarProgreso(p));
+  }
+
+  private detenerPolling(): void {
+    this.pollingSub?.unsubscribe();
+    this.pollingSub = null;
+  }
+
+  /**
+   * Lectura suelta del progreso (al elegir carga): no arranca el polling salvo que haya lote.
+   * progresoLote siempre responde 200 —corra o no un lote, y aunque la carga no exista (§6.3)—,
+   * así que cualquier error aquí es de transporte y se le muestra al usuario tal cual.
+   */
+  private consultarProgreso(idCarga: number, engancharSiEnCurso: boolean): void {
+    this.processService.progresoLote(idCarga).subscribe({
+      next: (p) => {
+        if (!p) return;
+        this.progreso.set(p);
+        if (p.enCurso && engancharSiEnCurso) {
+          this.loteEnCurso.set(true);
+          this.iniciarPolling(idCarga);
+        }
+      },
+      error: (err) => this.mostrarError(`No se pudo consultar el estado de la carga: ${this.extraerMensajeError(err)}`),
+    });
+  }
+
+  private aplicarProgreso(p: ProgresoLote | null): void {
+    if (!p) { this.falloPolling(); return; }
+    this.erroresPolling = 0;
+    const veniaEnCurso = this.loteEnCurso();
+    this.progreso.set(p);
+    if (p.enCurso) {
+      // total y procesados los mantiene el orquestador y vuelven a 0 al terminar el lote
+      // (§11 decisión 16): se guarda el último avance visto para poder resumirlo al cerrar.
+      this.ultimoAvance = { procesados: p.procesados, total: p.total };
+      return;
+    }
+    // El 202 garantiza que el indicador ya estaba levantado (§6.1), así que una sola lectura con
+    // enCurso=false después de haber estado en curso significa terminado.
+    this.detenerPolling();
+    this.loteEnCurso.set(false);
+    if (veniaEnCurso) {
+      const avance = p.total > 0 ? { procesados: p.procesados, total: p.total } : this.ultimoAvance;
+      this.mostrarExito(`Lote terminado: ${avance.procesados} de ${avance.total} documento(s) procesado(s).`);
+      this.cargar();
+    }
+  }
+
+  private falloPolling(): void {
+    this.erroresPolling++;
+    if (this.erroresPolling < this.MAX_ERRORES_POLLING) { return; }
+    this.detenerPolling();
+    this.loteEnCurso.set(false);
+    this.mostrarError('Se perdió el seguimiento del lote. El proceso puede seguir corriendo en el servidor: actualice para ver el resultado.');
+  }
+
+  // ─── FILTRO POR CONTADOR DEL LOTE ───────────────────────
+
+  setFiltroLote(filtro: FiltroLote): void {
+    this.filtroLote.set(this.filtroLote() === filtro ? null : filtro);
+    this.aplicarFiltrosBusqueda();
+  }
+
+  /**
+   * Mismos criterios que los contadores de §6.3, para que el chip y la grilla digan lo mismo.
+   *
+   * Los cinco primeros reparten SOLO por estadoDocumento: así son disjuntos y suman total por
+   * construcción. Mirar pathXml rompía el cierre, porque revertirDocumento deja estado 6 sin
+   * limpiarlo y ese documento no caía en ningún chip (§11 decisión 11).
+   * fueraVentana es la excepción declarada: subconjunto de sinXml, no una categoría aparte.
+   */
+  private cumpleFiltroLote(d: DocumentoCxp, filtro: FiltroLote): boolean {
+    const estado = d.estadoDocumento;
+    switch (filtro) {
+      // Cajón de pendientes de procesar (se rotula "Pendientes"): incluye los revertidos.
+      case 'sinXml':            return estado == null || (estado !== 2 && estado !== 3 && estado !== 4);
+      case 'conXml':            return estado === 2 && !d.observacion;
+      case 'requierenAtencion': return estado === 2 && !!d.observacion;
+      case 'registrados':       return estado === 3;
+      case 'conError':          return estado === 4;
+      case 'fueraVentana':      return d.resultadoSri === 'FUERA_VENTANA';
+      default:                  return true;
+    }
+  }
+
+  /** Ids de la carga según el último progreso; null si todavía no hay progreso que acotar. */
+  private idsDeLaCarga(): ReadonlySet<number> | null {
+    const docs = this.progreso()?.documentos;
+    return docs?.length ? new Set(docs.map(d => d.id)) : null;
+  }
+
+  /** Bloqueantes que el último progreso reportó para un documento (§6.3). */
+  bloqueantesDe(doc: DocumentoCxp): ErrorBloqueante[] {
+    return this.progreso()?.documentos?.find(d => d.id === doc.id)?.bloqueantes ?? [];
+  }
+
+  verBloqueantes(doc: DocumentoCxp): void {
+    const bloqueantes = this.bloqueantesDe(doc);
+    if (bloqueantes.length > 0) { this.mostrarBloqueantes(bloqueantes); }
   }
 
   // ─── CARGA Y FILTROS ────────────────────────────────────
@@ -547,10 +814,22 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit {
         ? paraPendientes.filter(d => d.estadoDocumento === 5 && !!d.novedad)
         : paraPendientes.filter(d => d.estadoDocumento === estado);
     }
-    this.dsDocumentos.data = paraPendientes;
 
     // 4. Tabla de procesados (= 3), aplica solo filtros de texto/fecha
-    this.dsRegistrados.data = filtradosTodos.filter(d => d.estadoDocumento === 3);
+    let paraRegistrados = filtradosTodos.filter(d => d.estadoDocumento === 3);
+
+    // 5. Chip de contador del lote: acota AMBAS tablas y, si hay progreso, se limita a los
+    //    documentos de la carga seleccionada para que el número del chip cuadre con la grilla.
+    const chip = this.filtroLote();
+    if (chip !== null) {
+      const idsCarga = this.idsDeLaCarga();
+      const cumple = (d: DocumentoCxp) => this.cumpleFiltroLote(d, chip) && (!idsCarga || idsCarga.has(d.id));
+      paraPendientes  = paraPendientes.filter(cumple);
+      paraRegistrados = paraRegistrados.filter(cumple);
+    }
+
+    this.dsDocumentos.data  = paraPendientes;
+    this.dsRegistrados.data = paraRegistrados;
   }
 
   private calcularTotales(docs: DocumentoCxp[]): void {
@@ -735,19 +1014,11 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit {
         this.procesando.set(false);
         if (Array.isArray(resp?.bloqueantes) && resp.bloqueantes.length > 0) {
           this.mostrarBloqueantes(resp.bloqueantes);
-        } else if (resp?.requiereProductos) {
-          this.documentoCxpPendiente = doc;
-          this.productosNuevos = (resp.productosNuevos || []).map((p: ProductoNuevo) => ({ ...p, idGrupo: undefined }));
-          this.requiereProductos.set(true);
-          this.processService.getGruposProducto().subscribe({
-            next: (grupos) => { this.gruposProducto = grupos || []; },
-            error: () => { this.gruposProducto = []; },
-          });
         } else if (resp?.error === 'TITULAR_NO_ENCONTRADO') {
           this.mostrarErrorDialog(`Proveedor no encontrado`, `RUC: ${resp.rucEmisor}\nEl proveedor no existe en el sistema. Créelo en TSR primero.`);
         } else if (resp?.exito === false || (resp?.error && resp.error !== 'TITULAR_NO_ENCONTRADO')) {
           this.mostrarErrorDialog(resp?.mensaje || resp?.error || 'Error al registrar la factura');
-        } else if (!resp?.idDocumentoBD && !resp?.requiereProductos && resp?.mensaje) {
+        } else if (!resp?.idDocumentoBD && resp?.mensaje) {
           this.mostrarErrorDialog(resp.mensaje);
         } else if (resp?.mensaje?.includes('PENDIENTE DE CLASIFICAR')) {
           this.mostrarAdvertencia(resp.mensaje);
@@ -767,23 +1038,6 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit {
       },
     });
   }
-
-  confirmarProductosYRegistrar(): void {
-    if (!this.documentoCxpPendiente) return;
-    if (this.productosNuevos.some(p => !p.idGrupo)) { this.mostrarError('Asigne un grupo a todos los productos.'); return; }
-    this.procesando.set(true);
-    this.processService.crearProductosYRegistrar(this.documentoCxpPendiente.id, {
-      idEmpresa: this.idEmpresa, idUsuario: this.idUsuario, productosConGrupo: this.productosNuevos,
-    }).subscribe({
-      next: (resp) => {
-        this.procesando.set(false); this.requiereProductos.set(false); this.documentoCxpPendiente = null;
-        this.mostrarExito(`Registrado: ${resp?.mensaje || 'OK'}`); this.cargar();
-      },
-      error: (err) => { this.procesando.set(false); this.mostrarError('Error: ' + this.extraerMensajeError(err)); },
-    });
-  }
-
-  cancelarProductos(): void { this.requiereProductos.set(false); this.documentoCxpPendiente = null; this.productosNuevos = []; }
 
   // ─── RESOLVER NOVEDAD ───────────────────────────────────
 
@@ -822,16 +1076,65 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit {
 
   // ─── MARCAR / DESMARCAR REEMBOLSO ───────────────────────
 
-  toggleReembolso(doc: DocumentoCxp): void {
-    if (doc.estadoDocumento === 3) { this.mostrarError('No se puede marcar reembolso en un documento ya registrado'); return; }
-    const esMarcado = doc.esReembolso === 1;
-    const accion = esMarcado ? 'desmarcar' : 'marcar como';
-    if (!confirm(`¿Desea ${accion} reembolso de gastos el documento ${doc.serieComprobante}?`)) return;
-    this.procesando.set(true);
-    this.processService.marcarReembolso(doc.id, !esMarcado, this.idUsuario).subscribe({
-      next: () => { this.procesando.set(false); this.mostrarExito(esMarcado ? 'Reembolso desmarcado' : 'Documento marcado como reembolso'); this.cargar(); },
-      error: (err) => { this.procesando.set(false); this.mostrarError(this.extraerMensajeError(err)); },
+  /** ¿Hay una llamada de marcado en curso para esta fila? */
+  reembolsoEnCurso(doc: DocumentoCxp): boolean { return this.idsReembolsoEnCurso().has(doc.id); }
+
+  private setReembolsoEnCurso(id: number, enCurso: boolean): void {
+    const ids = new Set(this.idsReembolsoEnCurso());
+    if (enCurso) { ids.add(id); } else { ids.delete(id); }
+    this.idsReembolsoEnCurso.set(ids);
+  }
+
+  /**
+   * Checkbox de la grilla. El marcado de reembolso es un paso masivo previo al registro
+   * (50+ documentos por lote), así que NO lleva confirmación por fila: se aplica optimista y se
+   * revierte el check si el backend lo rechaza.
+   *
+   * Excepción: en estado 3 (REGISTRADO) sí se confirma, porque el backend anula el asiento
+   * contable y devuelve el documento a estado 2 pendiente de contabilizar. Es la única ruta para
+   * corregir una factura de reembolso que se registró mal.
+   */
+  onToggleReembolso(doc: DocumentoCxp, event: MatCheckboxChange): void {
+    const nuevoValor = event.checked;
+    const estadoPrevio = doc.estadoDocumento;
+    const valorPrevio = doc.esReembolso === 1;
+
+    if (estadoPrevio === 3 && !confirm(
+      `El documento ${doc.serieComprobante} ya está REGISTRADO.\n\n` +
+      `Al ${nuevoValor ? 'marcarlo' : 'desmarcarlo'} como reembolso de gastos se ANULA su asiento contable ` +
+      `y la factura vuelve al estado XML CARGADO, pendiente de contabilizar.\n\n¿Desea continuar?`)) {
+      event.source.checked = valorPrevio;   // el usuario canceló: el check vuelve a su estado real
+      return;
+    }
+
+    doc.esReembolso = nuevoValor ? 1 : 0;   // optimista: la grilla responde sin esperar al backend
+    this.setReembolsoEnCurso(doc.id, true);
+    this.processService.marcarReembolso(doc.id, nuevoValor, this.idUsuario).subscribe({
+      next: (resp: any) => {
+        this.setReembolsoEnCurso(doc.id, false);
+        if (resp?.esReembolso != null) { doc.esReembolso = Number(resp.esReembolso) ? 1 : 0; }
+        if (resp?.idFacturaCompra) { doc.idDocumentoBD = resp.idFacturaCompra; }
+        this.mostrarExito(`${doc.serieComprobante}: ${nuevoValor ? 'marcado como reembolso de gastos' : 'reembolso desmarcado'}`);
+        // Si el backend movió el documento de estado (3 → 2 al anular el asiento) la fila cambia de
+        // pestaña y hay que recargar. En el marcado masivo el estado no cambia y no se recarga nada.
+        if (resp?.estadoDocumento != null && Number(resp.estadoDocumento) !== estadoPrevio) { this.cargar(); }
+      },
+      error: (err) => {
+        this.setReembolsoEnCurso(doc.id, false);
+        doc.esReembolso = valorPrevio ? 1 : 0;   // el backend rechazó: revertimos el check
+        event.source.checked = valorPrevio;
+        this.mostrarError(this.mensajeErrorReembolso(err, doc));
+      },
     });
+  }
+
+  /**
+   * El 422 es una regla de negocio del backend (pagos aplicados, sustentos activos, tabla destino
+   * no soportada): su texto se muestra tal cual, sin envolverlo en un mensaje genérico.
+   */
+  private mensajeErrorReembolso(err: any, doc: DocumentoCxp): string {
+    const mensaje = this.extraerMensajeError(err);
+    return err?.httpStatus === 422 ? mensaje : `${doc.serieComprobante}: ${mensaje}`;
   }
 
   // ─── DIÁLOGO DOCUMENTOS DE REEMBOLSO ────────────────────
@@ -877,6 +1180,27 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit {
   estadoColor(estado: number): string {
     const colors: Record<number, string> = { 1: 'badge-leido', 2: 'badge-xml', 3: 'badge-registrado', 4: 'badge-error', 5: 'badge-novedad', 6: 'badge-revertido' };
     return colors[estado] || '';
+  }
+
+  tipoLoteLabel(tipo: 'DESCARGA' | 'REGISTRO' | null): string {
+    if (tipo === 'DESCARGA') return 'Descarga de XML del SRI';
+    if (tipo === 'REGISTRO')  return 'Registro y contabilización';
+    return 'Último lote';
+  }
+
+  /**
+   * Tooltip único de la celda de estado (§11 decisión 6): explica el distintivo FUERA DE VENTANA
+   * —el SRI solo sirve comprobantes del último mes, así que esos documentos solo se completan
+   * subiendo el XML a mano— y muestra el mensajeSri cuando viene con valor.
+   * Va en la celda y no en la fila para no superponerse con los tooltips de las otras columnas.
+   */
+  tooltipEstado(doc: DocumentoCxp): string {
+    if (doc.resultadoSri === 'FUERA_VENTANA') {
+      const base = 'El SRI solo devuelve comprobantes emitidos en el último mes y este documento quedó '
+        + 'fuera de esa ventana: ya no se puede descargar. Suba el XML manualmente con el botón «Subir XML».';
+      return doc.mensajeSri ? `${base} — SRI: ${doc.mensajeSri}` : base;
+    }
+    return doc.mensajeSri || '';
   }
 
   toDate(value: any): Date | null {

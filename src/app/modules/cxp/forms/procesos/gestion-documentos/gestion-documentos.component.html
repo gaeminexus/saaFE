@@ -34,6 +34,90 @@
 
     @if (periodoSeleccionado()) {
 
+    <!-- ══ LOTE POR CARGA TXT: descarga del SRI y registro masivo ══════════════ -->
+    <div class="lote-panel">
+      <div class="lote-acciones">
+        <mat-form-field appearance="outline" class="carga-field">
+          <mat-label><mat-icon>description</mat-icon> Carga TXT del SRI</mat-label>
+          <mat-select [value]="cargaTxtSeleccionada()" (selectionChange)="seleccionarCargaTxt($event.value)" [disabled]="loteEnCurso()">
+            <mat-option [value]="null">— Seleccione una carga —</mat-option>
+            @for (c of cargasTxt(); track c.id) {
+              <mat-option [value]="c.id">
+                #{{ c.id }} · {{ c.nombreArchivo }} · {{ toDate(c.fechaCarga) | date:'dd/MM/yyyy HH:mm' }} · {{ c.totalRegistros }} reg.
+              </mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <button mat-raised-button color="primary" (click)="descargarXmlLote()" [disabled]="loteBloqueado()"
+                matTooltip="Baja del SRI los XML de esta carga que todavía estén dentro de la ventana de un mes">
+          <mat-icon>cloud_download</mat-icon> Descargar XML del SRI
+        </button>
+        <button mat-stroked-button color="primary" (click)="abrirClasificacionProductos()" [disabled]="loteBloqueado()"
+                matTooltip="Asigna grupo a todos los productos de la carga que siguen en POR CLASIFICAR">
+          <mat-icon>category</mat-icon> Clasificar productos
+        </button>
+        @if (REGISTRO_LOTE_DISPONIBLE) {
+          <button mat-raised-button color="accent" (click)="registrarLote()" [disabled]="loteBloqueado()"
+                  matTooltip="Registra y contabiliza todos los documentos de la carga que ya tengan XML">
+            <mat-icon>playlist_add_check</mat-icon> Registrar y contabilizar
+          </button>
+        }
+        @if (lanzandoLote()) { <mat-spinner diameter="24"></mat-spinner> }
+      </div>
+
+      @if (cargasTxt().length === 0) {
+        <span class="lote-hint"><mat-icon class="hint-icon">info</mat-icon> Este período no tiene cargas TXT registradas.</span>
+      } @else if (!cargaTxtSeleccionada()) {
+        <span class="lote-hint"><mat-icon class="hint-icon">info</mat-icon> Seleccione la carga TXT sobre la que quiere trabajar: los botones actúan sobre una carga, no sobre todo el período.</span>
+      }
+
+      <!-- Progreso del lote (§6.3) -->
+      @if (progreso(); as p) {
+        <div class="lote-progreso">
+          <div class="lote-progreso-cabecera">
+            <span class="lote-progreso-titulo">
+              @if (p.enCurso) { <mat-spinner diameter="16"></mat-spinner> } @else { <mat-icon class="lote-icono-ok">check_circle</mat-icon> }
+              {{ tipoLoteLabel(p.tipoLote) }}
+            </span>
+            <!-- procesados/total son del lote en curso; totalCarga es el tamaño de la carga TXT -->
+            <span class="lote-progreso-cifras">
+              @if (p.enCurso) { <strong>{{ p.procesados }} / {{ p.total }}</strong> ({{ porcentajeLote() }}%) · }
+              {{ p.totalCarga }} documento(s) en la carga
+            </span>
+          </div>
+          <!-- La barra es del lote en curso (procesados/total); sin lote no hay nada que medir -->
+          @if (p.enCurso) {
+            <mat-progress-bar mode="determinate" [value]="porcentajeLote()"></mat-progress-bar>
+          }
+
+          <div class="lote-chips">
+            <span class="lote-chips-label">Filtrar la grilla:</span>
+            <button mat-stroked-button class="chip-lote" [class.filtro-active]="filtroLote() === 'sinXml'" (click)="setFiltroLote('sinXml')"
+                    matTooltip="Pendientes de XML o revertidos: todo lo que todavía necesita acción para avanzar">
+              <span class="chip-num">{{ p.contadores.sinXml }}</span> Pendientes
+            </button>
+            <button mat-stroked-button class="chip-lote" [class.filtro-active]="filtroLote() === 'conXml'" (click)="setFiltroLote('conXml')">
+              <span class="chip-num">{{ p.contadores.conXml }}</span> Con XML
+            </button>
+            <button mat-stroked-button class="chip-lote" [class.filtro-active]="filtroLote() === 'registrados'" (click)="setFiltroLote('registrados')">
+              <span class="chip-num">{{ p.contadores.registrados }}</span> Registrados
+            </button>
+            <button mat-stroked-button class="chip-lote chip-atencion" [class.filtro-active]="filtroLote() === 'requierenAtencion'" (click)="setFiltroLote('requierenAtencion')">
+              <span class="chip-num">{{ p.contadores.requierenAtencion }}</span> Requieren atención
+            </button>
+            <button mat-stroked-button class="chip-lote chip-error" [class.filtro-active]="filtroLote() === 'conError'" (click)="setFiltroLote('conError')">
+              <span class="chip-num">{{ p.contadores.conError }}</span> Con error
+            </button>
+            <button mat-stroked-button class="chip-lote chip-ventana" [class.filtro-active]="filtroLote() === 'fueraVentana'" (click)="setFiltroLote('fueraVentana')"
+                    matTooltip="El SRI no los devuelve: hay que subir el XML a mano">
+              <span class="chip-num">{{ p.contadores.fueraVentana }}</span> Fuera de ventana
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+
     <!-- Filtros de búsqueda -->
     <mat-expansion-panel class="filtros-panel">
       <mat-expansion-panel-header>
@@ -146,49 +230,6 @@
           @if (procesando()) { <mat-spinner diameter="24"></mat-spinner> }
         </div>
 
-        <!-- Panel de productos pendientes -->
-        @if (requiereProductos()) {
-          <mat-card class="productos-card">
-            <mat-card-header>
-              <mat-card-title><mat-icon color="warn">inventory_2</mat-icon> Productos nuevos — Asigne un grupo</mat-card-title>
-            </mat-card-header>
-            <mat-card-content>
-              <table mat-table [dataSource]="productosNuevos" class="table-productos">
-                <ng-container matColumnDef="nombre">
-                  <th mat-header-cell *matHeaderCellDef>Nombre</th>
-                  <td mat-cell *matCellDef="let p">{{ p.nombre }}</td>
-                </ng-container>
-                <ng-container matColumnDef="codigo">
-                  <th mat-header-cell *matHeaderCellDef>Código</th>
-                  <td mat-cell *matCellDef="let p" class="font-mono">{{ p.codigo }}</td>
-                </ng-container>
-                <ng-container matColumnDef="precio">
-                  <th mat-header-cell *matHeaderCellDef>Precio Unit.</th>
-                  <td mat-cell *matCellDef="let p" class="text-right">{{ p.precioUnitario | number:'1.2-2' }}</td>
-                </ng-container>
-                <ng-container matColumnDef="grupo">
-                  <th mat-header-cell *matHeaderCellDef>Grupo *</th>
-                  <td mat-cell *matCellDef="let p">
-                    <mat-select [(ngModel)]="p.idGrupo" placeholder="Seleccione grupo">
-                      @for (g of gruposProducto; track g.id) {
-                        <mat-option [value]="g.id">{{ g.nombre }}</mat-option>
-                      }
-                    </mat-select>
-                  </td>
-                </ng-container>
-                <tr mat-header-row *matHeaderRowDef="['nombre','codigo','precio','grupo']"></tr>
-                <tr mat-row *matRowDef="let row; columns: ['nombre','codigo','precio','grupo'];"></tr>
-              </table>
-            </mat-card-content>
-            <mat-card-actions align="end">
-              <button mat-button (click)="cancelarProductos()">Cancelar</button>
-              <button mat-raised-button color="primary" (click)="confirmarProductosYRegistrar()" [disabled]="procesando()">
-                <mat-icon>save</mat-icon> Crear y registrar
-              </button>
-            </mat-card-actions>
-          </mat-card>
-        }
-
         <!-- Tabla pendientes -->
         @if (cargando()) {
           <div class="loading-container"><mat-spinner></mat-spinner></div>
@@ -209,7 +250,19 @@
                 <th mat-header-cell *matHeaderCellDef>Tipo</th>
                 <td mat-cell *matCellDef="let d">
                   <span class="tipo-badge">{{ decodeHtml(d.tipoComprobante) }}</span>
-                  @if (d.esReembolso === 1) { <span class="badge badge-reembolso">REEMBOLSO</span> }
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="reembolso">
+                <th mat-header-cell *matHeaderCellDef matTooltip="Marcar las facturas de reembolso de gastos antes de registrarlas">Reemb.</th>
+                <td mat-cell *matCellDef="let d" class="reembolso-cell">
+                  <mat-checkbox
+                    [checked]="d.esReembolso === 1"
+                    [disabled]="reembolsoEnCurso(d)"
+                    (change)="onToggleReembolso(d, $event)"
+                    [matTooltip]="d.estadoDocumento === 3
+                      ? 'Documento ya registrado: cambiar el marcado anula el asiento contable'
+                      : (d.esReembolso === 1 ? 'Desmarcar reembolso de gastos' : 'Marcar como reembolso de gastos')">
+                  </mat-checkbox>
                 </td>
               </ng-container>
               <ng-container matColumnDef="rucEmisor">
@@ -248,8 +301,13 @@
               </ng-container>
               <ng-container matColumnDef="estadoDocumento">
                 <th mat-header-cell *matHeaderCellDef>Estado</th>
-                <td mat-cell *matCellDef="let d">
+                <td mat-cell *matCellDef="let d" [matTooltip]="tooltipEstado(d)" [matTooltipDisabled]="!tooltipEstado(d)">
                   <span class="badge" [ngClass]="estadoColor(d.estadoDocumento)">{{ estadoLabel(d.estadoDocumento) }}</span>
+                  @if (d.resultadoSri === 'FUERA_VENTANA') {
+                    <span class="badge badge-fuera-ventana">
+                      <mat-icon class="badge-icon">event_busy</mat-icon> FUERA DE VENTANA
+                    </span>
+                  }
                 </td>
               </ng-container>
               <ng-container matColumnDef="novedad">
@@ -293,14 +351,14 @@
                     @if (d.estadoDocumento === 4) {
                       <span class="badge badge-error" [matTooltip]="d.novedad">ERROR</span>
                     }
-                    @if (d.estadoDocumento !== 3) {
-                      <button mat-icon-button [color]="d.esReembolso === 1 ? 'primary' : ''" (click)="toggleReembolso(d)" [disabled]="procesando()" [matTooltip]="d.esReembolso === 1 ? 'Desmarcar reembolso' : 'Marcar como reembolso de gastos'">
-                        <mat-icon>receipt_long</mat-icon>
-                      </button>
-                    }
                     @if (puedeGestionarReembolsos(d)) {
                       <button mat-icon-button color="accent" (click)="abrirDialogoReembolsos(d)" [disabled]="procesando()" matTooltip="Documentos de reembolso">
                         <mat-icon>fact_check</mat-icon>
+                      </button>
+                    }
+                    @if (bloqueantesDe(d).length > 0) {
+                      <button mat-icon-button color="warn" (click)="verBloqueantes(d)" matTooltip="Ver por qué el lote no pudo registrar este documento">
+                        <mat-icon>block</mat-icon>
                       </button>
                     }
                   </div>
@@ -311,6 +369,7 @@
               <tr mat-row *matRowDef="let row; columns: columnas;"
                   [class.fila-novedad]="row.estadoDocumento === 5"
                   [class.fila-error]="row.estadoDocumento === 4"
+                  [class.fila-fuera-ventana]="row.resultadoSri === 'FUERA_VENTANA'"
                   [class.fila-revertido]="row.estadoDocumento === 6">
               </tr>
               <tr class="mat-row" *matNoDataRow>
@@ -355,7 +414,19 @@
                 <th mat-header-cell *matHeaderCellDef>Tipo</th>
                 <td mat-cell *matCellDef="let d">
                   <span class="tipo-badge">{{ decodeHtml(d.tipoComprobante) }}</span>
-                  @if (d.esReembolso === 1) { <span class="badge badge-reembolso">REEMBOLSO</span> }
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="reembolso">
+                <th mat-header-cell *matHeaderCellDef matTooltip="Marcar las facturas de reembolso de gastos antes de registrarlas">Reemb.</th>
+                <td mat-cell *matCellDef="let d" class="reembolso-cell">
+                  <mat-checkbox
+                    [checked]="d.esReembolso === 1"
+                    [disabled]="reembolsoEnCurso(d)"
+                    (change)="onToggleReembolso(d, $event)"
+                    [matTooltip]="d.estadoDocumento === 3
+                      ? 'Documento ya registrado: cambiar el marcado anula el asiento contable'
+                      : (d.esReembolso === 1 ? 'Desmarcar reembolso de gastos' : 'Marcar como reembolso de gastos')">
+                  </mat-checkbox>
                 </td>
               </ng-container>
               <ng-container matColumnDef="rucEmisor">
@@ -394,8 +465,13 @@
               </ng-container>
               <ng-container matColumnDef="estadoDocumento">
                 <th mat-header-cell *matHeaderCellDef>Estado</th>
-                <td mat-cell *matCellDef="let d">
+                <td mat-cell *matCellDef="let d" [matTooltip]="tooltipEstado(d)" [matTooltipDisabled]="!tooltipEstado(d)">
                   <span class="badge" [ngClass]="estadoColor(d.estadoDocumento)">{{ estadoLabel(d.estadoDocumento) }}</span>
+                  @if (d.resultadoSri === 'FUERA_VENTANA') {
+                    <span class="badge badge-fuera-ventana">
+                      <mat-icon class="badge-icon">event_busy</mat-icon> FUERA DE VENTANA
+                    </span>
+                  }
                 </td>
               </ng-container>
               <ng-container matColumnDef="novedad">
@@ -419,6 +495,11 @@
                     @if (puedeGestionarReembolsos(d)) {
                       <button mat-icon-button color="accent" (click)="abrirDialogoReembolsos(d)" [disabled]="procesando()" matTooltip="Documentos de reembolso">
                         <mat-icon>fact_check</mat-icon>
+                      </button>
+                    }
+                    @if (bloqueantesDe(d).length > 0) {
+                      <button mat-icon-button color="warn" (click)="verBloqueantes(d)" matTooltip="Ver por qué el lote no pudo registrar este documento">
+                        <mat-icon>block</mat-icon>
                       </button>
                     }
                   </div>

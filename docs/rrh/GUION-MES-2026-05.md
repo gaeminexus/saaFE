@@ -13,6 +13,19 @@ contra la corrida del 2026-08-21, que cerró con **diferencia cero** contra el r
 **Resultado que hay que obtener:** 20 nóminas · ingresos **21 034,34** · descuentos **4 999,13** ·
 líquido **16 035,21** · patronal **2 498,04**. Cliente: 16 035,21. **Diferencia cero en el total.**
 
+> **⚠ Este total es PREDICCIÓN, no observación. Añadido el 2026-08-23.** La única corrida de mayo
+> que existe es la de **local con el motor anterior** a `CNTENRIR`, que dio **16 015,04** con
+> **−20,17** contra el cliente. El **16 035,21** sale de devolverle el IR de Robayo que el motor
+> final ya no genera. **Mismo caso que abril**, y misma consecuencia: si el total no sale clavado,
+> el primer sospechoso es esa suma y no la réplica, y **el discriminador es el bloque 2** —tres
+> filas, Manosalvas ×2 y Muñoz ×1, y **ninguna de Robayo**—, nunca el total.
+>
+> **Actualización del 2026-08-23: la derivación ya se validó una vez, en abril.** Allí la misma
+> resta —16 069,05 del motor viejo más los 20,17 de Robayo = 16 089,22— **salió clavada contra
+> producción**. Eso sube la confianza en el 16 035,21 de mayo, **pero no lo convierte en
+> observación**: sigue sin existir un mayo calculado con el motor final. La regla de parada no
+> cambia, y el discriminador sigue siendo el bloque 2.
+
 > El bloque 2 saca **tres filas**. El par de vacaciones ya no está desde marzo, y los 175,00 de
 > Calderón no se arrastran a mayo. §8.
 
@@ -49,7 +62,20 @@ enseña el desplegable vacío. Se crea desde `Períodos de nómina` → *Agregar
 | Tipo de período | **MENSUAL** |
 | Modo | **1 · HISTÓRICO SIN CONTABILIZAR** |
 
-**El modo no se puede corregir después sin rehacer el mes.** En modo 2 el período exige asiento
+**Elegir bien el modo, pero NO rehacer el mes si se falla.** Este guion decía «el modo no se puede
+corregir después sin rehacer el mes», y **es más caro de lo que hace falta** — verificado en fuente
+el 2026-08-23: `getModo()` se lee en **exactamente dos sitios**, los dos `esHistorico()`, uno en
+`contabilizarRol` (`ContabilizacionNominaServiceImpl:1128`) y otro en la regla de cierre
+(`ProcesoNominaServiceImpl:673`). **`calcularPeriodo` no lo mira nunca.**
+
+- **Si se detecta ANTES de contabilizar** —y la comprobación de rango de aquí abajo lo saca en la
+  primera consulta—, el modo es una columna inerte: se corrige y se sigue. Nada de lo calculado
+  depende de él. Corregirlo y **volver a correr la consulta de rango** para verlo en la base, no en
+  la pantalla.
+- **Sólo si ya se contabilizó en modo 2** hay daño de verdad, y no es el modo: es el **asiento
+  contable que nació**. Ahí sí hay que deshacer.
+
+En modo 2 el período exige asiento
 contable y `contabilizarRol` se negaría; de enero a julio ninguno lleva contabilidad, porque ya la
 hizo el cliente a mano.
 
@@ -74,18 +100,30 @@ Va **antes** de registrar la primera novedad. Con un rango que no sea el mes, `c
 revienta: calcula, y prorratea a todo el mundo por los días del rango.
 
 ```sql
-SELECT PRDNCDGO, PRDNANOO, PRDNMSEE, PRDNFCHI, PRDNFCHF, PRDNMODO,
-       CASE WHEN EXTRACT(MONTH FROM PRDNFCHI) = PRDNMSEE
+SELECT PRDNCDGO, PRDNANOO AS ANIO, PRDNMSEE AS MES, PRDNFCHI, PRDNFCHF,
+       PRDNMODO AS MODO, PRDNTPNM AS TIPO, PRDNESTD AS ESTADO,
+       CASE WHEN PRDNMODO IS NULL THEN '*** MODO NULO: CORREGIR ANTES DE CERRAR, NO BORRAR ***'
+            WHEN PRDNMODO <> 1    THEN '*** MODO ' || PRDNMODO || ', NO ES HISTORICO: CORREGIR EN SITIO ***'
+            WHEN PRDNTPNM <> 1    THEN '*** TIPO ' || PRDNTPNM || ', NO ES MENSUAL: CORREGIR EN SITIO ***'
+            WHEN EXTRACT(MONTH FROM PRDNFCHI) = PRDNMSEE
              AND EXTRACT(MONTH FROM PRDNFCHF) = PRDNMSEE
              AND EXTRACT(YEAR  FROM PRDNFCHI) = PRDNANOO
              AND EXTRACT(YEAR  FROM PRDNFCHF) = PRDNANOO
-             AND PRDNMODO = 1
-            THEN 'OK' ELSE '*** REVISAR: BORRAR EL PERIODO Y REHACERLO ***' END AS VEREDICTO
-  FROM RHH.PRDN ORDER BY PRDNANOO, PRDNMSEE;
+            THEN 'OK'
+            ELSE '*** RANGO MALO: BORRAR EL PERIODO Y REHACERLO ***' END AS VEREDICTO
+  FROM RHH.PRDN
+ WHERE PRDNANOO = 2026
+ ORDER BY PRDNMSEE;
 ```
 
-**Se corrige borrando el período y creándolo de nuevo**, no editando las fechas: si ya se calculó
-algo sobre el rango malo, la edición deja nóminas de un rango y cabecera de otro.
+**Los cuatro veredictos no se arreglan igual, y confundirlos cuesta el mes entero:**
+
+- **`RANGO MALO`** → **borrar el período y crearlo de nuevo**, no editar las fechas: si ya se
+  calculó algo sobre el rango malo, la edición deja nóminas de un rango y cabecera de otro.
+- **`MODO NULO` o `MODO n`** → **corregir en sitio, no borrar nada.** `calcularPeriodo` no lee el
+  modo, así que no hay nada calculado que dependa de él. Se corrige y se vuelve a correr esta
+  consulta. Sólo hay daño si ya se contabilizó en modo 2, y entonces el problema es el asiento.
+- **`TIPO n`** → **corregir en sitio, no borrar nada**, igual que el modo. Y anotarlo: **`PRDNTPNM` no lo lee NADIE** —verificado el 2026-08-23: `getTipoPeriodo()` no tiene un solo llamador—, así que un tipo equivocado **no cambia ni una cifra y no bloquea ningún paso**. Por eso es el más traicionero de los tres: el modo al menos muerde al cerrar, y el rango descuadra los días; **el tipo se quedaría mal para siempre en el registro y nada lo notaría jamás**. En una carga histórica, que es el archivo permanente del cliente, un período mensual rotulado QUINCENAL es un dato falso sin ningún control detrás.
 
 ### El combo de Período no se llena hasta re-elegir el ejercicio
 
@@ -199,8 +237,18 @@ Ya pasó en febrero. **No es un error de carga y no se reporta como tal.**
 destapa algo con el período en 3, se arregla recalculando; con el período cerrado habría que
 reabrirlo, que es el **punto 6** y `reabrirPeriodo` no avisa.
 
-1. `UPDATE RHH.CTRL_PARAM SET MES = 5; COMMIT;` y comprobarlo — **con el parámetro en otro mes
-   todos los bloques salen vacíos y se leen como que cuadra.**
+1. `UPDATE RHH.CTRL_PARAM SET MES = 5; COMMIT;` **y comprobarlo, sin saltarse este paso ni aunque
+   el ESTADO diga que ya está puesto** — el 2026-08-23 lo decía y estaba en otro mes.
+   **El parámetro equivocado falla en dos direcciones, y sólo una es la que avisaba este guion:**
+   - **Adelantado** —el mes aún sin calcular— todos los bloques salen **vacíos**, y un vacío se lee
+     como que cuadra.
+   - **Atrasado** —un mes anterior ya cerrado— no vacía nada: el instrumento **contrasta ese otro
+     mes**, con su `CTRL` y su `NMNA` completos, y sale **verde al céntimo**. Es el caso peor: un
+     verde entero y plausible del mes equivocado no tiene nada que lo delate.
+
+   Por eso los siete bloques imprimen **`PERIODO_LEIDO`** desde el 2026-08-23. **Es lo primero que
+   se mira en cada bloque, antes que ninguna cifra.** Si no dice `2026-05`, se para: da igual lo
+   bien que se vea todo lo demás.
 2. `CONTRASTE_MES_CONTRA_ROL_REAL.sql`, **bloque 4 primero**, luego 3, luego 1 y 2, y el 1B aunque
    todo cuadre.
 3. Contra [`ESPERADO-CONTRASTE-MAYO.md`](ESPERADO-CONTRASTE-MAYO.md). El §8 explica las
@@ -367,3 +415,79 @@ el control 3 de mayo, es hallazgo.**
   sentencia siguiente en SQL\*Plus; para ese camino está `CONTRASTE_MES_CONTRA_ROL_REAL.sqlplus.bak`.
 - **Todos los scripts viven en `saaBE/docs/logica-negocio/rhh/sql/`**, nunca en el repositorio del
   frontend.
+
+---
+
+# Lo que enseñó ejecutarlo — 2026-08-23
+
+> Mayo se replicó en producción el **2026-08-23** —`PRDN` **42**— y cerró en **16 035,21**, con
+> **diferencia cero**. Es el quinto y último mes de la calibración. *Escrito por la sesión que lo
+> ejecutó.*
+
+## El rodeo del mes anterior fue el que casi rompe éste
+
+Abril dejó escrito que los `mat-select` y los autocompletes se manejan **con teclado**, porque el
+clic automatizado no prendía. En mayo ese mismo rodeo eligió **la opción equivocada** en los dos
+combos del diálogo de períodos:
+
+```
+Tipo de período = [QUINCENAL]                    ← debía ser MENSUAL
+Modo            = [PRODUCTIVO CONTABILIZA]       ← debía ser HISTORICO SIN CONTABILIZAR
+```
+
+**La causa:** en Novedades la cédula había dejado **un solo candidato** en la lista, así que `Down`
+bajaba a él. Aquí los combos se abren **sin filtrar y con la primera opción ya activa**, y `Down`
+baja a **la segunda**.
+
+**La regla, corregida:** teclear siempre hasta que quede **una sola** opción, comprobarlo
+—`document.querySelectorAll('.cdk-overlay-container mat-option')` debe devolver un elemento— y sólo
+entonces `Down` + `Enter`. Y releer el `value`, que es lo que lo cazó.
+
+> **La lección, que vale para toda la réplica:** **el rodeo no es la comprobación.** Un rodeo es una
+> vía de entrada y puede fallar de forma nueva en cada pantalla. **La comprobación es releer el
+> DOM**, y es lo único que ha cazado las cuatro cosas distintas de estos dos meses: el combo que no
+> prende, el importe en el campo equivocado, la opción de al lado y el campo que nadie mira.
+
+## De los dos combos mal elegidos, el peligroso no era el que parecía
+
+| Campo | Cuándo se nota | Quién lo caza |
+|---|---|---|
+| Rango de fechas | al calcular | los días ≠ 30 |
+| **Modo** | en `contabilizarRol` o al cerrar | revienta, o emite asiento donde no debía |
+| **Tipo (`PRDNTPNM`)** | **nunca** | **nadie** |
+
+**Nadie lee `PRDNTPNM`**: `getTipoPeriodo()` no tiene un solo llamador. Un `QUINCENAL` no habría
+movido una cifra ni habría mordido al cerrar — se habría quedado mal **para siempre** en el registro
+histórico del cliente. **Que no rompa nada es lo que lo hace el peor de los tres.** El control de
+rango lleva desde entonces **cuatro** veredictos, no tres.
+
+## Lo que mayo confirmó del resto
+
+- **La derivación del total se sostuvo por segunda vez.** Mayo también era predicción —16 015,04 del
+  motor viejo más los 20,17 de Robayo— y salió clavado, como abril.
+- **El filo de Calderón cayó del lado bueno.** Su neto aterriza en **0,00 exacto**
+  (700,00 − 66,15 − 14,04 − 619,81) y el único concepto recortable de los cuatro suyos es el
+  anticipo. Un céntimo de desvío habría bajado el subtotal a 1 869,80 y lo habrían visto **los dos**
+  detectores a la vez. Se verificó por tres vías independientes: subtotal 1 869,81, bloque 1 vacío y
+  Calderón ausente del bloque 2.
+- **D17 no se reprodujo, por segunda vez.** Tres intentos en total, dos limpios. **No es «no
+  reproducible»: es intermitente**, y archivarlo como lo primero es peor que no haberlo anotado.
+- **Ocho novedades, no diez**, y las tres diferencias contra abril se respetaron: ni Viteri ni
+  Robayo en quirografarios, Calderón en 14,04, y **Pazmiño Jaramillo dos veces** —la única persona
+  repetida de la lista y la única con homónimo—. En las dos filas se leyó el overlay antes de
+  elegir: **un solo candidato las dos veces**.
+
+## Y un defecto nuevo que salió de navegar, no de cargar
+
+**D25**: una URL profunda no sobrevive a una recarga. Rebota por `/Saa/login` y aterriza en
+`/Saa/menu`. **La sesión no se pierde** —`logged` sigue en `true`—; lo que se pierde es el destino.
+Se combina mal con **D21**: si el `PRDNCDGO` sólo se lee de la URL y la URL no se puede recargar ni
+compartir, el dato existe y **no hay forma de llegar a él dos veces**.
+
+## Al terminar mayo
+
+**Cinco meses cerrados y contrastados en producción, cuatro con diferencia cero** y abril con sus
++175,00 identificados y abiertos con el cliente. **La migración visual y el motor siguieron
+congelados los cinco meses**: todo lo encontrado se anotó y se esquivó, y nada de lo anotado alteró
+un número. Junio y julio quedan pendientes de la conversación con el cliente; ninguna de las
+correcciones del motor los bloquea.

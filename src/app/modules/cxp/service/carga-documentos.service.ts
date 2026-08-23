@@ -4,6 +4,10 @@ import { Observable, catchError, of, throwError } from 'rxjs';
 import { DocumentoCxp } from '../model/documento-cxp';
 import { DetalleCargaTxt } from '../model/detalle-carga-txt';
 import { CuadraturaReembolso } from '../model/reembolso-factura-compra';
+import { ProgresoLote } from '../model/progreso-lote';
+import { ClasificarProductosLotePayload, ProductosSinClasificarLote, ResultadoClasificacion } from '../model/productos-sin-clasificar';
+import { PlanCuenta } from '../../cnt/model/plan-cuenta';
+import { Empresa } from '../../../shared/model/empresa';
 import { environment } from '../../../../environments/environment';
 
 const PROCESS_URL = `${environment.apiUrl}/carga-documentos`;
@@ -13,9 +17,22 @@ export interface ResumenCarga {
   lineas: DetalleCargaTxt[];
 }
 
+/**
+ * Lo que devuelve /gruposProducto: la entidad completa, con el identificador en `codigo`
+ * (NO `id`) — verificado contra el endpoint real. Ojo al consumirla:
+ *  · trae los grupos de TODAS las empresas y sin filtrar estado → filtrar por
+ *    empresa.codigo y estado === 1;
+ *  · rubroTipoGrupoH === 3 es el grupo POR CLASIFICAR, del que hay que sacar los productos;
+ *  · planCuenta puede venir null, y ese grupo no destraba nada: solo cambia el bloqueante
+ *    PRODUCTOS_SIN_CLASIFICAR por GRUPOS_SIN_CUENTA_CONTABLE.
+ */
 export interface GrupoProducto {
-  id: number;
+  codigo: number;
   nombre: string;
+  rubroTipoGrupoH: number;
+  planCuenta: PlanCuenta | null;
+  estado: number;
+  empresa: Empresa;
 }
 
 export interface ProductoNuevo {
@@ -105,13 +122,57 @@ export class CargaDocumentosService {
     return this.http.post<any>(`${PROCESS_URL}/revertir/${idDocumentoCxp}`, { idUsuario }, this.httpOptions).pipe(catchError(this.handleError));
   }
 
+  // ─── LOTES POR CARGA TXT (§6.1, §6.2, §6.3) ─────────────
+  // Los tres usan handleErrorConEstado: la pantalla necesita el 409 (ya hay un lote corriendo)
+  // para engancharse al lote existente en vez de tratarlo como un error cualquiera.
+
+  /**
+   * §6.1 — Descarga desde el SRI los XML de la carga. Asíncrono.
+   * 202: {idCargaTxt, total, aProcesar, yaConXml, mensaje} · 409: {error}
+   */
+  descargarXmlLote(idCargaTxt: number, payload: { idEmpresa: number; idUsuario: number }): Observable<any> {
+    return this.http.post<any>(`${PROCESS_URL}/descargarXmlLote/${idCargaTxt}`, payload, this.httpOptions)
+      .pipe(catchError(this.handleErrorConEstado));
+  }
+
+  /**
+   * §6.2 — Registra y contabiliza toda la carga. Asíncrono.
+   * 202: {idCargaTxt, aProcesar, sinXml, yaRegistrados, mensaje} · 409: {error}
+   */
+  registrarLote(idCargaTxt: number, payload: { idEmpresa: number; idUsuario: number }): Observable<any> {
+    return this.http.post<any>(`${PROCESS_URL}/registrarLote/${idCargaTxt}`, payload, this.httpOptions)
+      .pipe(catchError(this.handleErrorConEstado));
+  }
+
+  /** §6.3 — Progreso en vivo de la carga; sirve a los dos lotes. Se consulta cada 2 s mientras enCurso. */
+  progresoLote(idCargaTxt: number): Observable<ProgresoLote | null> {
+    return this.http.get<ProgresoLote>(`${PROCESS_URL}/progresoLote/${idCargaTxt}`)
+      .pipe(catchError(this.handleErrorConEstado));
+  }
+
+  /** §6.5 — Productos de la carga que siguen en POR CLASIFICAR, con los documentos que los usan. */
+  productosSinClasificarLote(idCargaTxt: number): Observable<ProductosSinClasificarLote | null> {
+    return this.http.get<ProductosSinClasificarLote>(`${PROCESS_URL}/productosSinClasificarLote/${idCargaTxt}`)
+      .pipe(catchError(this.handleErrorConEstado));
+  }
+
+  /** §6.4 — Asigna grupo a varios productos en un solo viaje. 200: {actualizados, noEncontrados} */
+  clasificarProductosLote(payload: ClasificarProductosLotePayload): Observable<ResultadoClasificacion | null> {
+    return this.http.post<ResultadoClasificacion>(`${PROCESS_URL}/clasificarProductosLote`, payload, this.httpOptions)
+      .pipe(catchError(this.handleErrorConEstado));
+  }
+
   // ─── REEMBOLSO DE GASTOS ────────────────────────────────
 
-  /** Marca/desmarca un documento como factura de reembolso de gastos. */
+  /**
+   * Marca/desmarca un documento como factura de reembolso de gastos.
+   * Usa handleErrorConEstado porque la pantalla necesita distinguir el 422 (regla de negocio:
+   * pagos aplicados / sustentos activos) de un error genérico para mostrar su texto tal cual.
+   */
   marcarReembolso(idDocumentoCxp: number, esReembolso: boolean, idUsuario: number): Observable<any> {
     return this.http.post(`${PROCESS_URL}/marcarReembolso/${idDocumentoCxp}`,
       { esReembolso: esReembolso ? 1 : 0, idUsuario }, this.httpOptions)
-      .pipe(catchError(this.handleError));
+      .pipe(catchError(this.handleErrorConEstado));
   }
 
   /** Contabiliza una factura de reembolso pendiente (requiere sustentos clasificados y cuadratura). */
@@ -138,5 +199,18 @@ export class CargaDocumentosService {
   private handleError(error: HttpErrorResponse): Observable<null> {
     if (+error.status === 200) { return of(null); }
     return throwError(() => error.error);
+  }
+
+  /**
+   * Igual que handleError pero agrega httpStatus al cuerpo lanzado, sin quitarle ninguna clave:
+   * los llamadores que solo leen mensaje/message/error siguen funcionando igual.
+   */
+  private handleErrorConEstado(error: HttpErrorResponse): Observable<null> {
+    if (+error.status === 200) { return of(null); }
+    const cuerpo = error.error;
+    if (cuerpo && typeof cuerpo === 'object') {
+      return throwError(() => ({ ...cuerpo, httpStatus: error.status }));
+    }
+    return throwError(() => ({ mensaje: cuerpo || error.message, httpStatus: error.status }));
   }
 }
