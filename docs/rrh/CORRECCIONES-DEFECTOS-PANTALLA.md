@@ -14,6 +14,14 @@ que decía la ficha—, **qué se cambió**, **por qué ése es el arreglo** y *
 > de siempre: los rodeos de los guiones **siguen siendo válidos y obligatorios** mientras no se
 > publique.
 
+> **⚠ Aviso para quien despliegue: la rama lleva más de lo que dice este documento.** El commit
+> `a5ad484` «Cambios» —de `xeonpotato`, 2026-08-23— quedó **sobre esta rama y no sobre `main`**, y
+> trae unas 2 800 líneas ajenas: la carga automática del SRI de CXP y los `.md` de la réplica y del
+> `ESTADO`, que tienen otros dos escritores. **No es mío y no lo he tocado.** Lo anoto porque
+> publicar esta rama tal cual publicaría también todo eso, que es justo lo que el encargo pedía
+> mantener separado. Los commits míos son `14eff13`, `8fe8f46`, `25ff86f` y `c7f1003`; si hace
+> falta, se dejan solos.
+
 ## Cómo se comprobó, en general
 
 | Comprobación | Resultado |
