@@ -112,6 +112,29 @@ manda el nulo explícito, así que el valor por defecto no se dispara nunca. Una
 `NVNMESTD` nulo **se descarta en el cálculo sin un solo aviso** — y en la pantalla se ve idéntica a
 una buena, porque el usuario sólo mira «Aprobada».
 
+### ⛔ Las dos columnas se cuentan POR SEPARADO, y no es una cuestión de estilo
+
+**Reescrito el 2026-08-23.** Esta sección decía «son cuatro maneras de nacer invisible» —las dos
+columnas × nulo o default— y esa frase **es el error**, no un resumen de él. Contadas juntas, la
+pregunta siguiente es *«¿y cuál es el default bueno?»*, y desde ahí `DEFAULT 'S'` está a un paso.
+Contadas por separado, esa pregunta ni se plantea. Sólo una de las dos es un defecto:
+
+| | Qué quiso el DDL | Veredicto |
+|---|---|---|
+| **`NVNMESTD`** `DEFAULT 1` | Que la fila naciera **visible** | **Sí es defecto.** La intención es correcta y **el mecanismo la traiciona**: JPA manda el nulo explícito, el default no se dispara nunca, y `null = 1` es `NULL`, no `TRUE`. Se arregla arreglando el mecanismo |
+| **`NVNMAPRB`** `DEFAULT 'N'` | Que la fila naciera **sin aprobar** | **No es defecto: hace exactamente lo que debe.** `'N'` es el valor **seguro** de una bandera de aprobación — lo contrario sería que aprobar fuese *opt-out*, y `DEFAULT 'S'` metería novedades sin aprobar en la nómina. **No hay nada que arreglar en el DDL** |
+
+**Lo que le falta a `NVNMAPRB` no está en la columna, está alrededor: nada obliga a resolverla y
+nada avisa si se queda sin resolver.** Hoy eso lo cubren el defecto 6 de pantalla —que sólo mira el
+estado— y la comprobación de aquí abajo. Basta mientras se corra.
+
+> **Y la lección general, que es el reverso del catálogo de la cabecera del ESTADO.** Allí se
+> coleccionan cosas que **parecían un dato y eran un fallo** —un cero calculado mal con formato de
+> número—. Ésta es la simétrica: **un valor por defecto seguro parece un defecto desde el lado de
+> quien está buscando por qué algo no salió**, y el «arreglo» evidente **quita la protección**.
+> Cuando se aborden las 16, esta forma va a reaparecer: antes de cambiar un default, preguntar de
+> qué protege, no sólo qué impidió hoy.
+
 Es la trampa que casi se lleva enero en producción. La comprobación va **antes de calcular**:
 
 ```sql

@@ -86,6 +86,79 @@ La regla 4 de siempre. **Méndez ya no sale** desde abril, y no debe volver.
 
 **Una fila:** Robayo, concepto **21** (impuesto a la renta), `NO ESTA EN EL ROL`.
 
+> **⚠ CORRECCIÓN DEL 2026-08-23: con el motor final este bloque sale VACÍO** —el renglón de IR de
+> Robayo ya no se genera—, **y en mayo el bloque 1 deja de ser un trámite: es el único detector de
+> una cosa que ningún otro bloque ve.**
+>
+> **Calderón aterriza en neto CERO EXACTO:** `700,00 − 66,15 − 14,04 − 619,81 = 0,00`. Su anticipo
+> está puesto para agotarle el neto al céntimo, así que su fila está **en el borde de la protección
+> de neto negativo** (pasos 13 y 14). Si el neto saliera `−0,01`, `recortaDescuentos` recortaría un
+> céntimo del egreso recortable de mayor `CPNMORDN`, imprimiría un `System.out` y **seguiría sin
+> fallar**.
+>
+> **Y el bloque 2 es CIEGO a eso, que es lo que lo hace peligroso.** El recorte existe justamente
+> para llevar el neto a 0,00, que es lo que el rol del cliente también dice — así que `LIQUIDO`
+> coincidiría en los dos mundos. Y `DESCUENTOS` también: el recorte compensa exactamente el céntimo
+> de más que lo provocó. **Las tres filas del bloque 2 saldrían idénticas y el total seguiría en
+> cero.** El recorte no vive en la cabecera: vive un nivel más abajo.
+>
+> **El detector es UNO, y no es el bloque 2. Los dos no están al mismo nivel** —precisado el
+> 2026-08-23 tras corrección del agente de backend, sobre una redacción anterior que los daba por
+> independientes y no lo son—:
+>
+> 1. **El detector de verdad: `BLOQUE 1 VACÍO`.** Vale caiga donde caiga el recorte. Y es directo,
+>    no inferencia: `CTRL` de mayo **sí trae las filas por concepto de Calderón** —sueldo 700,00 ·
+>    aporte 66,15 · concepto 23 en 14,04 · concepto 25 en **619,81**—, así que cualquier concepto
+>    suyo que se desvíe un céntimo sale como fila propia.
+> 2. **El subtotal de anticipos en 1 869,81 dice DÓNDE MIRAR PRIMERO, no si pasó.** Descansa en una
+>    suposición: que el recortable de mayor `CPNMORDN` sea el anticipo. **Si esa suposición es
+>    falsa, el recorte aterriza en otro concepto, el anticipo sigue en 1 869,81 y el subtotal sale
+>    limpio con el mes igual de tocado.** El control 6 de `sql/VERIFICACION_POSCALCULO_MAYO.sql`
+>    cubre los roles 12, 13 y 14, así que atrapa el recorte si cae en cualquiera de los tres
+>    préstamos o el anticipo — pero no es un segundo detector independiente, es el mismo mirado por
+>    una rendija. **Qué conceptos son recortables lo dice el control 5 de
+>    `sql/VERIFICACION_NOVEDADES_MAYO.sql`, y hasta correrlo la suposición no está comprobada.**
+>
+> **✅ SUPOSICIÓN COMPROBADA EN PRODUCCIÓN EL 2026-08-23, y sale a favor.** El control 5 leyó
+> `CPNMRCRT` y `CPNMORDN` de los cuatro conceptos de Calderón:
+>
+> | Alterno | Concepto | Orden | Recortable |
+> |---|---|---:|:---:|
+> | 20 | Aporte personal IESS | 100 | **N** |
+> | 23 | Préstamo quirografario IESS | 110 | **N** |
+> | 24 | Préstamo hipotecario IESS | 111 | **N** |
+> | **25** | **Anticipo de sueldo** | **120** | **S** |
+>
+> **El anticipo es el único recortable y además el de mayor orden**, así que si el recorte se
+> disparara **sólo puede caer ahí**. Tres consecuencias, y conviene tenerlas escritas antes de
+> calcular:
+>
+> - **El subtotal de anticipos SÍ es detector válido en mayo**, y ya no por suposición sino porque
+>   la suposición está comprobada. `1 869,81` → `1 869,80` es la firma exacta.
+> - **Los dos detectores apuntan a la misma fila**, que es lo mejor que puede pasar sobre un borde:
+>   el bloque 1 sacaría el concepto 25 de Calderón y el subtotal bajaría un céntimo. Si sólo saltara
+>   uno de los dos, eso ya sería otra cosa y habría que pararse.
+> - **El final de la excepción queda descartado.** Hay algo recortable, y el faltante posible —un
+>   céntimo o dos— está muy por debajo de los 619,81. El mes no se va a caer por aquí; si algo pasa,
+>   pasa en silencio, que es el final que hay que vigilar.
+>
+> **La lección, que es la de siempre en este módulo:** un control que sólo funciona si una hipótesis
+> se cumple no es independiente del control que comparte esa hipótesis. **Leer el bloque 1 primero,
+> y el subtotal después, para saber dónde cayó.**
+>
+> **El precedente dice que el borde se toca sin cruzarse**, y está en la base: en **febrero**
+> Calderón cerró igual en líquido cero —ingresos 729,17 / descuentos 729,17, con el par de
+> vacaciones metiendo 29,17 por los dos lados y por debajo `66,15 + 14,33 + 619,52 = 700,00`
+> exacto—, `CTRL` febrero también traía sus filas por concepto, y **el bloque 1 salió vacío**. La
+> rama no se disparó. Mayo repite la configuración con un mes más de anticipo.
+>
+> **Hay un segundo final, y su ruido es el opuesto:** si **ninguno** de los conceptos fuera
+> recortable, el método no encuentra qué recortar y **lanza excepción** — el mes entero se cae
+> nombrando a Calderón. Imposible de no ver. **El final ruidoso es el inofensivo; el silencioso es
+> el que se cuela en un mes que cuadra.** Y el `System.out` del recorte tampoco es autoridad de que
+> ocurriera: en un `@Stateless` se imprime **antes** del commit. Cuál de los dos finales tocaría se
+> sabe de antemano con el control 5 de `sql/VERIFICACION_NOVEDADES_MAYO.sql`, que lee `CPNMRCRT`.
+
 ### Lo que este mes prueba de verdad: los quirografarios
 
 | | Esperado |
