@@ -1,5 +1,8 @@
 # Guion de enero de 2026 — réplica en producción
 
+> **Dónde vive cada cosa:** los `.sql` que este guion cita viven **sólo** en
+> `saaBE/docs/logica-negocio/rhh/sql/`. Los `.md` sí están espejados en `saaFE/docs/rrh/`.
+
 **Para qué es este documento.** Reproducir enero en otra base **siguiendo una lista**, sin volver a
 razonar cómo se llegó a cada cifra. Todo lo de aquí está verificado contra la corrida del
 2026-08-21, que cerró con **diferencia cero** contra el rol del cliente.
@@ -13,7 +16,7 @@ líquido **16 476,92** · patronal **2 400,41**. Cliente: 16 476,92. **Diferenci
 
 > **Diferencia cero en el total no quiere decir bloque 2 vacío.** El contraste sacará **46 filas**
 > por persona, y las 46 son esperadas: 44 del par de vacaciones del rol y 2 de medio centavo. Está
-> explicado en el **§8**, y conviene leerlo *antes* de correr el contraste para no confundirlo con
+> explicado en el **§9**, y conviene leerlo *antes* de correr el contraste para no confundirlo con
 > un fallo.
 
 ---
@@ -21,7 +24,8 @@ líquido **16 476,92** · patronal **2 400,41**. Cliente: 16 476,92. **Diferenci
 ## 0. Antes de empezar: el orden no es negociable
 
 ```
-fichas → liquidaciones → novedades → calcular → aprobar → contabilizar rol → cerrar
+fichas → crear el período → liquidaciones → novedades → calcular → contrastar → aprobar →
+contabilizar rol → cerrar
 ```
 
 Tres razones, todas aprendidas a base de romperlo:
@@ -56,8 +60,74 @@ En la corrida de agosto esto lo hizo `sql/48`. Su contrario, `sql/49`, la devuel
 > mano entre meses.
 
 ---
+## 2. Crear el período — el paso que ningún guion traía
 
-## 2. Las dos liquidaciones, aprobadas y con la salida ejecutada
+**Sin período no hay dónde registrar novedades**, y la pantalla de Novedades no dice qué falta:
+enseña el desplegable vacío. Se crea desde `Períodos de nómina` → *Agregar Registro*.
+
+| Campo | Valor para enero |
+|---|---|
+| Año / Mes | **2026 / 1** |
+| Fecha de inicio | **01-01-2026** |
+| Fecha de fin | **31-01-2026** |
+| Tipo de período | **MENSUAL** |
+| Modo | **1 · HISTÓRICO SIN CONTABILIZAR** |
+
+**El modo no se puede corregir después sin rehacer el mes.** En modo 2 el período exige asiento
+contable y `contabilizarRol` se negaría; de enero a julio ninguno lleva contabilidad, porque ya la
+hizo el cliente a mano.
+
+### Cómo se teclean las fechas
+
+| Pantalla | Formato |
+|---|---|
+| Diálogo de **períodos** | `dd/mm/yyyy` |
+| **Finiquito**, campo *Fecha de salida* | `mm/dd/yyyy` |
+
+**En el diálogo de períodos, equivocarse no da error: da la fecha de HOY** (defecto D15). El control
+no se marca en rojo ni se queda vacío — se rellena solo con un valor plausible y el formulario se ve
+perfectamente relleno.
+
+**Teclear primero la fecha de fin.** `31-01-2026` sólo es legible en `dd/mm`, así que si el campo la
+acepta sin convertirla en la fecha de hoy, **el formato queda demostrado antes de teclear el día 1**,
+que es el ambiguo. El mes se autovalida.
+
+### La comprobación del rango, inmediatamente después de guardar
+
+Va **antes** de registrar la primera novedad. Con un rango que no sea el mes, `calcularPeriodo` no
+revienta: calcula, y prorratea a todo el mundo por los días del rango.
+
+```sql
+SELECT PRDNCDGO, PRDNANOO, PRDNMSEE, PRDNFCHI, PRDNFCHF, PRDNMODO,
+       CASE WHEN EXTRACT(MONTH FROM PRDNFCHI) = PRDNMSEE
+             AND EXTRACT(MONTH FROM PRDNFCHF) = PRDNMSEE
+             AND EXTRACT(YEAR  FROM PRDNFCHI) = PRDNANOO
+             AND EXTRACT(YEAR  FROM PRDNFCHF) = PRDNANOO
+             AND PRDNMODO = 1
+            THEN 'OK' ELSE '*** REVISAR: BORRAR EL PERIODO Y REHACERLO ***' END AS VEREDICTO
+  FROM RHH.PRDN ORDER BY PRDNANOO, PRDNMSEE;
+```
+
+**Se corrige borrando el período y creándolo de nuevo**, no editando las fechas: si ya se calculó
+algo sobre el rango malo, la edición deja nóminas de un rango y cabecera de otro.
+
+### El combo de Período no se llena hasta re-elegir el ejercicio
+
+Defecto D17. Tras crear el período, si el desplegable de novedades sigue vacío, hay que volver a
+elegir el año. No es que el período no exista.
+
+### Anotar la base de asientos, antes de nada
+
+```sql
+SELECT MAX(ASNTCDGO) AS BASE FROM CNT.ASNT;
+```
+
+Se usa en el §7. **Anotarlo ahora**, no al final.
+
+---
+
+
+## 3. Las dos liquidaciones, aprobadas y con la salida ejecutada
 
 Las dos son **anteriores al cálculo**. Sus titulares no deben aparecer en la nómina de enero: el
 mes de la salida lo paga el finiquito, no el rol.
@@ -78,30 +148,72 @@ Al ejecutarla nacen solas las dos novedades del IESS del paso 5.
 
 ---
 
-## 3. Novedades del período: cinco, todas préstamos del IESS
+## 4. Novedades del período: cinco, todas préstamos del IESS
 
 Enero **no lleva anticipos como novedad**: los de Calderón y Pardo vienen de `CTDS`, la tabla de
 cuotas, y el motor los aplica solo (350,00 a cada uno). Registrar además una novedad de anticipo
 los cobraría dos veces.
 
-| Concepto | Colaborador | Valor |
-|---|---|---:|
-| 23 · Préstamo quirografario IESS | CALDERON PARRAGA LAURA CECILIA | **14,42** |
-| 23 · Préstamo quirografario IESS | MANOSALVAS LLERENA FERNANDO PAUL | **157,21** |
-| 24 · Préstamo hipotecario IESS | COSSIO CAICEDO EIMY | **490,00** |
-| 24 · Préstamo hipotecario IESS | MANOSALVAS LLERENA FERNANDO PAUL | **379,85** |
-| 24 · Préstamo hipotecario IESS | PAZMIÑO JARAMILLO EDGAR ALBERTO | **145,29** |
-| | **quirografarios** | **171,63** |
-| | **hipotecarios** | **1 015,14** |
+| Concepto (alterno) | Cédula | Colaborador | Valor |
+|---|---|---|---:|
+| 23 · Préstamo quirografario IESS | 1719624809 | CALDERON PARRAGA LAURA CECILIA | **14,42** |
+| 23 · Préstamo quirografario IESS | 1716120769 | MANOSALVAS LLERENA FERNANDO PAUL | **157,21** |
+| 24 · Préstamo hipotecario IESS | 1715156574 | COSSIO CAICEDO EIMY | **490,00** |
+| 24 · Préstamo hipotecario IESS | 1716120769 | MANOSALVAS LLERENA FERNANDO PAUL | **379,85** |
+| 24 · Préstamo hipotecario IESS | **0909917759** | PAZMIÑO JARAMILLO EDGAR ALBERTO | **145,29** |
+| | | **quirografarios** | **171,63** |
+| | | **hipotecarios** | **1 015,14** |
 
 **Las cinco con «Aprobada para el cálculo» = Sí.** Una novedad sin aprobar se ignora sin decir nada.
 
 > **Ojo con el combo de concepto:** elegir de la lista, no teclear y salir. Un combo a medias viaja
 > como texto y el backend responde un 400 que no explica nada.
 
+
+> **Las cédulas están en la fila a propósito, y elegir por cédula es obligatorio, no cómodo.** Hay
+> **dos Pazmiños** —Jaramillo `0909917759` y Moreno `2100192463`—. El combo de contrato **no acota
+> por colaborador** (defecto D9), y teclear la cédula es lo único que deja un solo candidato.
+
+> **23, 24 y 25 son `CPNMALTR`, no `CPNMCDGO`.** Una consulta de verificación contra
+> `CPNMCDGO = 23` devuelve **otro concepto**. Filtrar siempre por `CPNMALTR`.
+
+> **Elegir de la lista, no teclear y salir.** Si el control se queda con la cadena, el cuerpo viaja
+> como `{ codigo: '...' }` y el backend responde **400** —o **ORA-02291**—. **La comprobación que lo
+> caza es releer el input**: si no contiene el guion separador, no se eligió de la lista. Y el
+> filtro **distingue mayúsculas** (D14): teclear en mayúsculas.
+
+> **El combo de colaborador ofrece a los CESANTES** (D18): Torres Chávez, Benítez Montes, Castro
+> Arce y Cevallos Alemán siguen en la lista. Una novedad para ellos quedaría huérfana y el motor no
+> la leería jamás, pero es suciedad que nadie revisa después.
+
+### Antes de calcular: comprobar que todas van a entrar
+
+El motor exige **dos** condiciones, no una — `NovedadNominaDaoServiceImpl:58-59`:
+
+```
+and t.aprobada = 'S'   and t.estado = 1
+```
+
+`NVNMESTD` lleva `DEFAULT 1` en el DDL, **pero el default de columna no llega a aplicarse**: JPA
+manda el nulo explícito. Una novedad con estado nulo **se descarta en el cálculo sin un solo
+aviso**. `/rest/nvnm/getAll` expone `estado`, así que se comprueba desde la propia pantalla.
+
+```sql
+SELECT n.NVNMCDGO, m.MPLDIDNT, m.MPLDAPLL, n.NVNMVLRR AS VALOR,
+       n.NVNMAPRB AS APROBADA, n.NVNMESTD AS ESTADO,
+       CASE WHEN n.NVNMAPRB = 'S' AND n.NVNMESTD = 1 THEN 'ENTRA'
+            ELSE '*** LA IGNORA: PARAR ***' END AS VEREDICTO
+  FROM RHH.NVNM n
+  JOIN RHH.PRDN p ON p.PRDNCDGO = n.PRDNCDGO
+  JOIN RHH.MPLD m ON m.MPLDCDGO = n.MPLDCDGO
+ WHERE p.PRDNANOO = 2026 AND p.PRDNMSEE = 1
+ ORDER BY n.NVNMCDGO;
+-- Cinco filas, todas ENTRA.
+```
+
 ---
 
-## 4. Calcular, y comprobar **antes** de mirar el total
+## 5. Calcular, contrastar, y comprobar **antes** de mirar el total
 
 El total puede cuadrar por compensación. Estas cuatro se miran primero:
 
@@ -134,9 +246,25 @@ Y la que ninguna otra sustituye:
 > dos cálculos, la cabecera baja y el detalle no, y **las dos cifras divergen en silencio**. Es el
 > punto 9. Cruzarlas es barato y es lo único que lo detecta.
 
+
+### Y entonces contrastar, con el período todavía en estado 3
+
+**Antes de aprobar, no después.** El contraste lee `NMNA`, `RNGL`, `PVNM` y `CTRL`, y **no lee
+`ACMN`**, que es lo único que escribe `cerrarPeriodo`: da el mismo resultado en 3 que en 7. Si
+destapa algo con el período en 3, se arregla recalculando; con el período cerrado habría que
+reabrirlo, que es el **punto 6** y `reabrirPeriodo` no avisa.
+
+1. `UPDATE RHH.CTRL_PARAM SET MES = 1; COMMIT;` y comprobarlo — **con el parámetro en otro mes
+   todos los bloques salen vacíos y se leen como que cuadra.**
+2. `CONTRASTE_MES_CONTRA_ROL_REAL.sql`, **bloque 4 primero**, luego 3, luego 1 y 2, y el 1B aunque
+   todo cuadre.
+3. Contra [`ESPERADO-CONTRASTE-ENERO.md`](ESPERADO-CONTRASTE-ENERO.md). El §9 explica las
+   diferencias que este mes **debe** sacar.
+
+**Sólo con el contraste en verde: aprobar → contabilizar rol → cerrar.**
 ---
 
-## 5. Cerrar: enero avisa, y el aviso es la evidencia
+## 6. Cerrar: enero avisa, y el aviso es la evidencia
 
 `cerrarPeriodo` enumera las novedades del IESS sin declarar. En **modo histórico avisa y deja
 cerrar**; en productivo bloquea.
@@ -161,7 +289,7 @@ quedar con la misma historia.
 
 ---
 
-## 6. Qué debe quedar
+## 7. Qué debe quedar
 
 **Cabecera de `PRDN`**
 
@@ -175,8 +303,56 @@ quedar con la misma historia.
 | Patronal | 2 400,41 |
 | `asientoRol` / `asientoProvisiones` / `asientoPago` | **null / null / null** |
 
-**`ACMN`**: 132 filas · **22 personas** · tipos 1, 2, 3, 5, 8 y 10 con 22 cada uno · **tipo 9
-(IR) vacío** · **suma del tipo 8 = 1 866,98**, que es el concepto 20 del cliente al centavo.
+**`ACMN` — contar SIEMPRE filtrando por el período.** 132 filas · **22 personas** · tipos 1, 2, 3,
+5, 8 y 10 con 22 cada uno · **tipo 9 (IR) vacío** · **suma del tipo 8 = 1 866,98**, que es el
+concepto 20 del cliente al centavo.
+
+> **Enero crece por dos sitios a la vez, y por eso un conteo sin filtrar engaña.** Además del
+> período, **las dos salidas del 15 y el 16 escriben sus propios acumulados**:
+> `escribeAcumuladosDelFiniquito` graba tres por liquidación —`GRAVADO_IR`, `APORTE_PERSONAL`,
+> `IMPONIBLE_IESS`— **sin período**, y sólo los distintos de cero.
+>
+> **Ojo: los de apertura TAMBIEN van sin período.** `ACMNAPRT = 'S'` los distingue, y sin ese
+> filtro el conteo engaña.
+>
+> Al cerrar enero el total debe ser **172 filas**: 132 del período + **34 de la apertura** +
+> **6 de los dos finiquitos**. Verificado en producción el 2026-08-21.
+
+```sql
+-- Los del período. 132 filas, 22 personas, tipo 9 vacio.
+SELECT a.ACMNTPAC AS TIPO, COUNT(*) AS FILAS,
+       COUNT(DISTINCT a.MPLDCDGO) AS PERSONAS, SUM(a.ACMNVLOR) AS VALOR
+  FROM RHH.ACMN a
+  JOIN RHH.PRDN p ON p.PRDNCDGO = a.PRDNCDGO
+ WHERE p.PRDNANOO = 2026 AND p.PRDNMSEE = 1
+ GROUP BY a.ACMNTPAC ORDER BY 1;
+
+-- Y los de los dos finiquitos. TRES por persona, ninguno en cero.
+-- Sin esto Torres Chavez cobro 7.556,41 y para el RDEP no cobro nada.
+SELECT m.MPLDIDNT, m.MPLDAPLL, a.ACMNTPAC AS TIPO, a.ACMNVLOR AS VALOR
+  FROM RHH.ACMN a JOIN RHH.MPLD m ON m.MPLDCDGO = a.MPLDCDGO
+ WHERE a.PRDNCDGO IS NULL AND a.ACMNANOO = 2026
+   AND NVL(a.ACMNAPRT, 'N') <> 'S'          -- excluye los de APERTURA, que tambien van sin periodo
+   AND m.MPLDIDNT IN ('0602237265', '1714531405')
+ ORDER BY m.MPLDAPLL, a.ACMNTPAC;
+-- Seis filas: tipos 1, 2 y 8 para cada una.
+-- SIN el filtro de ACMNAPRT saldrian tambien los de apertura y el conteo enganaria:
+-- Castro Arce y Cevallos Aleman tienen DOS filas de apertura cada uno.
+```
+
+**La prueba de que no se contabilizó nada.** Los tres campos de asiento en `null` dicen que *el
+período* no tiene asiento; **no dicen que no haya nacido uno suelto**.
+
+> **El censo total de `CNT.ASNT` NO vale en producción**, y está comprobado: otros módulos escriben
+> en paralelo. Durante el cierre de febrero nacieron cinco asientos ajenos entre que se fijó la base
+> y se aprobó — un censo total los habría leído como contabilización de la nómina. **Un control que
+> no distingue quién escribió no es un control.**
+
+```sql
+-- La base se anotó en el §2. Ninguno de los nuevos puede ser de RRHH.
+SELECT ASNTCDGO, ASNTFCHA, ASNTNMRO, ASNTUSRO, SUBSTR(ASNTOBSR, 1, 80) AS OBSERVACION
+  FROM CNT.ASNT WHERE ASNTCDGO > :BASE ORDER BY ASNTCDGO;
+```
 
 **Las 22 nóminas**
 
@@ -232,7 +408,7 @@ trabajaron el mes entero.
 
 ---
 
-## 7. Las cuatro cosas que hacen fallar enero
+## 8. Las cuatro cosas que hacen fallar enero
 
 | Síntoma | Causa | Qué mirar |
 |---|---|---|
@@ -245,11 +421,11 @@ Las cuatro se ven **antes** de mirar el total, que es la razón de que el paso 4
 
 ---
 
-## 8. Diferencias que no son defecto
+## 9. Diferencias que no son defecto
 
 **El total cierra en cero. Las filas por persona no están vacías.** Son dos cosas distintas y
 conviene no confundirlas: leer un total cancelado como si no hubiera filas debajo es exactamente el
-error que advierte el §4.
+error que advierte el §5.
 
 El contraste del bloque 2 de enero saca **46 filas**, y las 46 son esperadas:
 
@@ -297,3 +473,26 @@ clasifica. Pregunta abierta con Steven.
 - Contraste: `CONTRASTE_MES_CONTRA_ROL_REAL.sql` con `CTRL_PARAM` en el mes 1.
 - Correcciones del motor que hacen falta: prorrateo `30 − d + 1`, `CNTENRIR` de Robayo y selección
   de nómina por contrato vigente. Sin las tres, enero no da 16 476,92.
+- **En DBeaver el contraste se corre tal cual.** Sus renglones `--` sueltos sólo se tragan la
+  sentencia siguiente en SQL\*Plus; para ese camino está `CONTRASTE_MES_CONTRA_ROL_REAL.sqlplus.bak`.
+- **Todos los scripts viven en `saaBE/docs/logica-negocio/rhh/sql/`**, nunca en el repositorio del
+  frontend.
+
+---
+
+## Ejecutado en producción el 2026-08-21 — diferencia cero
+
+Este guion **ya se corrió**, y salió. `PRDN 1` · estado 7 · modo 1 · neto **16 476,92** contra
+16 476,92 del cliente. Los cinco bloques del contraste exactamente como los fijaba el esperado.
+
+**Dos cosas que hicieron falta y que este guion no anticipaba**, resueltas y anotadas para el
+próximo cliente:
+
+- **`sql/53b`** — el `sql/05` había corrido dos veces en producción y `PRDN`, `NMNA` y `LQDC` se
+  habían quedado sin su columna de estado. Sin eso no se podía crear ni el primer finiquito.
+- **`sql/54`** — `CPNMROLM` 17–22 en nulo, así que las provisiones se escribían sin concepto y sin
+  cuenta contable. Lo destapó el bloque 1B del contraste, que sacó **una** fila de provisión con el
+  nombre en blanco donde local saca cuatro.
+
+**Las dos son la misma familia:** un `UPDATE` o un `ADD` que no encuentra lo que espera **no da
+error**. Es la regla operativa 2, y en esta réplica mordió tres veces.

@@ -1,85 +1,131 @@
 # Estado del módulo RRHH
 
-**Última actualización:** 2026-08-21 · febrero cerrado · las tres correcciones de décimos y vacaciones, publicadas y verificadas; marzo en curso
+**Última actualización:** 2026-08-21 · **enero CERRADO y contrastado en PRODUCCIÓN, diferencia cero** · febrero en curso · cinco meses calibrados en local · junio y julio pendientes
 
 > Este archivo existe para que una sesión nueva de cualquier agente recupere el estado sin
 > depender del historial de conversación. **Actualízalo al terminar cada fase.**
 > Si algo de aquí contradice al código, gana el código: corrige el archivo.
 > Vive en `saaBE/docs/logica-negocio/rhh/` con espejo en `saaFE/docs/rrh/`. Si lo editas en
-> uno, cópialo al otro.
+> uno, cópialo al otro. **Los `.sql` NO se espejan: viven sólo en `saaBE/docs/logica-negocio/rhh/sql/`.**
 
-## Dónde estamos — 2026-08-20, fin del día
+## Dónde estamos — 2026-08-21
 
 > **Esta cabecera es lo único que hace falta leer para retomar.** Todo lo de abajo es historia
-> que respalda lo de aquí. Se reescribió al cerrar las tres sesiones del día —dueño del modelo,
-> backend y frontend— para que las tres nuevas arranquen del mismo punto.
+> que respalda lo de aquí.
 
 ### En una frase
 
-**Enero, febrero y marzo de 2026 están calculados, contrastados contra los datos reales de ASOPREP
-y CERRADOS, con todas las diferencias atribuidas.** Enero cerró en **16 501,34**, febrero en
-**17 504,94** y marzo en **17 570,95**, los tres al centavo de lo previsto a mano. En `LIQUIDO`
-siguen las mismas **tres personas** —Robayo por el IR, Manosalvas y Muñoz por medio centavo— y
-ninguna causa nueva en tres meses.
+**La calibración en local está cerrada de enero a mayo, y en PRODUCCIÓN enero ya está cerrado y
+contrastado con diferencia cero.** Los cinco meses cuadran contra los roles reales de ASOPREP: enero, febrero, marzo y
+mayo con **diferencia cero**, abril con **+175,00** que son los OTROS sin clasificar de Calderón y
+es pregunta abierta con el cliente. Junio y julio tienen sus datos cargados (`sql/50`, `sql/51`)
+pero **no se han corrido todavía**.
 
-**Marzo cerrado el 2026-08-21 (`PRDN 30` en estado 7, modo 1, sin asiento, igual que 28 y 29).**
-Era el mes difícil y salió exacto: los cinco bloques del contraste tal como los fijaba
-`ESPERADO-CONTRASTE-MARZO.md` escrito de antemano, con la discrepancia del plan §3.4 —Castro Arce
-y Cevallos Alemán en la planilla y sin nómina, 99,29 cada uno— apareciendo donde debía. Por el
-camino se corrigieron cuatro cosas que ningún mes anterior había destapado: el finiquito con
-acumulados (A+B+C), el literal `'CERRADO'` contra el CHECK `CK_CNTRESTD` (D), las dos nóminas
-huérfanas del recálculo (`sql/39`) y el CHECK de las banderas de `CPNM` (`sql/38`, escrito, sin
-ejecutar). La lista de fin de calibración pasó de seis puntos a **diez**.
+| Mes | Local | Neto | Contra el cliente |
+|---|---|---|---|
+| Enero | cerrado | **16 476,92** | **0,00** |
+| Febrero | cerrado | 17 504,94 | 0,00 |
+| Marzo | cerrado | **17 570,95** | 0,00 |
+| Abril | cerrado | 16 089,22 | **+175,00** (OTROS de Calderón) |
+| Mayo | cerrado | **16 035,21** | 0,00 |
+| Junio · Julio | datos cargados, **sin correr** | — | — |
 
-**`ACMN` del PRDN 30 verificado: 121 filas, 20 personas** (enero y febrero: 133 y 22 — la
-diferencia exacta de las dos salidas). Ni una fila de los empleados 48 y 49. Cuadra al centavo con
-la cabecera: 20 793,34 − 474,34 de décimos mensualizados = **20 319,00**, que es el tipo 1, y
-20 319,00 × 9,45 % = **1 920,15**, que es el tipo 8. El tipo 9 con **una sola fila** es correcto:
-es la retención de IR de Robayo, el único que la tiene.
+> El neto de enero es **16 476,92**, no el 16 501,34 que dice más abajo la sección histórica:
+> aquel valor es anterior a las correcciones de décimos y vacaciones y al prorrateo de días.
+> **Gana esta tabla.**
 
+### 🟢 DÓNDE ESTÁ PRODUCCIÓN — punto de corte del 2026-08-21
 
-### ⛔ PUNTO DE CORTE — 2026-08-20 ~21:10 (reinicio de la máquina). Leer esto primero.
+**Decisión del día:** el cliente confirmó que nadie más escribe en RRHH, Mike **respaldó la base y
+la versión anterior del sistema**, commiteó backend y frontend, y desplegó. Si algo sale mal con
+Steven, se devuelve la base a este punto. Se carga **de enero a mayo**; junio y julio quedan
+pendientes.
 
-**Marzo está a medias y hay una dependencia de orden que no se puede saltar.** Estado exacto al
-apagar:
-
-| Qué | Estado |
+| Qué | Estado en producción |
 |---|---|
-| PRDN 30 (marzo, histórico) | Creado. Seis cuotas IESS cargadas (hipot. 1 015,15 · quirog. 266,92; Castro Arce 14,79 **no** se registra). **Calculado una vez con 22 nóminas (18 443,85) — resultado inválido**, porque las dos salidas no estaban ejecutadas |
-| LQDC 23 (Castro Arce) y LQDC 24 (Cevallos Alemán) | **RECALCULADAS Y VERIFICADAS — 2026-08-21. Paso 2 cerrado.** Las dos en **393,16 / 9,11 / 384,05**, estado 2 CALCULADA, sin aprobar y sin asiento. Los cinco renglones cuadran al centavo en las dos (96,40 · −9,11 · 13.º 118,40 **sobre base acumulada 1 420,76** · 14.º 119,16 · vac. 59,20), ninguno sobrante. `RHH.LQDC` sigue con 4 filas y los códigos 23/24 conservados: `calculaFiniquito` reescribe en sitio vía `localizaLiquidacion` y sólo se niega sobre APROBADA (`LiquidacionHaberes:559`), así que **no hizo falta anular**. Verificado con `sql/verifica_lqdc_23_24.sql`. Antes: 122,68 con 13.º 8,03 · 14.º 8,03 · vac. 19,33 |
-| **Código backend D** (`CNTEESTD` = `'CERRADO'`, no `'TERMINADO'`) | **ESCRITO 2026-08-21, SIN COMPILAR NI PUBLICAR. Es lo que bloquea el paso 3.** `ejecutarSalida` escribía el literal `'TERMINADO'` en `CNTE.CNTEESTD` y el CHECK `RHH.CK_CNTRESTD` lo rechaza (**ORA-02290**), tumbando el commit entero. Cambiado a `'CERRADO'` en `LiquidacionHaberesServiceImpl` (constante :103, uso :243; vocabulario completo del esquema en [`REFERENCIA-CHECKS-RHH.md`](REFERENCIA-CHECKS-RHH.md)). **Comprobación tras publicar:** `javap -c -p …/serviceImpl/LiquidacionHaberesServiceImpl.class \| grep -c CERRADO` → debe dar ≥ 1, y `grep -c TERMINADO` → **0** |
-| Código backend A+B+C (finiquito con acumulados, `sumaDiasRango`, `aplicaAcumulado` ×12) | **PUBLICADO Y VERIFICADO — 2026-08-20 21:20.** La nota anterior («no compilado, no publicado») era una lectura estancada: Eclipse sí recompiló a las **21:07** y WildFly desplegó a las **21:14:31** tras el reinicio (`SaaBE.war.deployed` 21:12, `WFLYSRV0010: Deployed "SaaBE.war"`). Tres comprobaciones con `javap -c -p` sobre `WEB-INF/classes/com/saa/ejb/rhh/`: `LiquidacionHaberesServiceImpl` → 3 llamadas a `sumaDiasRango` + 1 a `sumaValorRango`; `AcumuladoNominaDaoServiceImpl` → declara `sumaDiasRango(Long,Long,Integer,Integer,Integer,Integer)`; `BeneficioSocialServiceImpl` → 1 `sumaDiasRango` + 2 `sumaValorRango`. Coincide renglón por renglón con el fuente. **No republicar** |
-| `sql/36` (CTRL marzo) | **Ejecutado.** `sql/37` (base 13.º apertura ×12) **ejecutado una vez, 17 filas, DT Castro 118,40. NO reejecutar** (ver aviso en el script) |
-| `RHH.CTRL_PARAM` | **Ya está en `2026 / 3`** (verificado 2026-08-21). No queda pendiente de nadie. Ningún `.java` lee esta tabla — sólo los scripts de contraste—, así que tenerla en marzo no afecta al motor |
-| Frontend | Defectos 1–6 corregidos (`tsc` limpio, **sin commitear**). **Escritos en este ESTADO el 2026-08-21** y verificados en fuente tras el reinicio: ver «Los seis defectos de pantalla» justo debajo. **Defectos de pantalla 7 y 8 abiertos y sin corregir** (vista que no se refresca tras calcular · fecha cruda en el combo de contrato): migración visual congelada. Regla nueva: **liquidar → aprobar → ejecutar salida → y sólo después calcular el período** |
+| WAR | **Desplegado.** Lleva el prorrateo de días entero (`30−d+1`), el literal `'CERRADO'`, A+B+C de finiquitos y el selector de contratos corregido |
+| Scripts `01`–`52` | **Corridos**, con dos excepciones deliberadas |
+| `sql/37` | **❌ NO se corre en producción.** El WAR nuevo ya multiplica por 12 en `aplicaAcumulado`; correrlo daría 168 906,24 |
+| `sql/43` | **❌ No se corrió.** Anulado por decisión: el RUC lo lee RRHH del facturador (`sql/45`) |
+| `sql/45` | **NO aplica en producción**, y la cabecera decía «Corrido» por error. El `45` es sólo `DROP COLUMN CFNMRUCC`; como el `43` no corrió, esa columna nunca existió allí y el `DROP` sólo puede haber fallado con ORA-00904. Sin riesgo: el WAR ya no mapea `CFNMRUCC` |
+| ⚠ `CFNMSCIE` y `CFNMSGSC` | **PENDIENTES en producción.** Los cargaba el `43`, que no corrió. No bloquean la nómina; **bloquean el exportador del IESS**. `UPDATE RHH.CFNM SET CFNMSCIE = '0001', CFNMSGSC = 'R' WHERE PJRQCDGO = 1236; COMMIT;` |
+| `sql/39` | **NO debía correrse en producción** (el plan lo marca ❌) y la cabecera lo daba por corrido. Lleva `PRDNCDGO = 30 AND MPLDCDGO IN (48,49)` escritos a mano, que son códigos de LOCAL. Inofensivo mientras `PRDN` estuvo vacío —la guarda del `53b` dio 0·0·0—, pero **no volver a ejecutarlo jamás**: ahora sí hay períodos |
+| Saldos de apertura | **Aplicados y verificados.** `SLAP` 57 todos en `aplicado = S`, `SLDV` 22, `ACMN` de apertura 34 (17+17), tipo 3 = **14 075,52** correcto, tipo 4 = 2 225,96 |
+| `sql/52` (anticipo de Pardo) | **Corrido.** `DSRC` 2 · `CTDS` 4 |
+| `RHH.CTRL` | Cuadra con local en los siete meses (mes 1: ROL 123 / PLANILLA 24 … mes 7: ROL 125 / sin planilla) |
+| `CTRL_PARAM` | En **2026 · 2**, movido tras cerrar el contraste de enero |
+| Fichas | Méndez **241 / 2 / 20** (media jornada, como enero–marzo). Robayo `CNTENRIR = 'S'` |
+| `PRDNESTD`, `NMNAESTD`, `LQDCESTD` | **Repuestas el 2026-08-21** (`sql/53` / `sql/53b`). El `sql/05` corrió dos veces: su `DROP`+`ADD` de quince columnas muere entero con ORA-01430 en la segunda pasada y deja las tres columnas de estado sin reponer. **No reejecutar el `05`** |
+| `CPNMROLM` 17–22 | **Repuestos el 2026-08-21** (`sql/54`). El bloque de `UPDATE` del `sql/11` nunca surtió efecto en producción y no dio error; las provisiones se escribían sin concepto y por tanto sin cuenta contable. El `54` además rellena las ya escritas, porque **en producción los meses no se recalculan** |
+| **Enero** | ✅ **CERRADO Y CONTRASTADO EN PRODUCCIÓN** — `PRDN 1`, estado 7, modo 1, neto **16 476,92** contra 16 476,92 del cliente. **Diferencia cero.** Los cinco bloques exactos |
+| Febrero | Período creado, ocho novedades cargadas, **detenido justo antes de «Calcular»** |
 
-**Orden para retomar marzo, sin saltos:**
-1. ~~Mike: Eclipse refresca + compila + publica. Dueño del modelo: tres comprobaciones (`sumaDiasRango`).~~ **HECHO 2026-08-20 21:20** — el WAR ya estaba publicado; las tres comprobaciones pasan.
-2. ~~Frontend: recalcular LQDC 23 y 24 desde la pantalla. Verificar 384,05 y el desglose.~~ **HECHO 2026-08-21** — las dos en 384,05, los cinco renglones al centavo. No hizo falta anular: `POST /rest/lqdc/calcular` reescribe en sitio. Desde pantalla es «Nuevo finiquito» con los mismos datos.
-3. Frontend: aprobar → ejecutar salida en las dos. **`aprobar` no pide confirmación; sólo `ejecutarSalida` lanza un `confirm()` nativo** (`liquidacion-form.component.ts:226`), que bloquea la extensión del navegador: se acuerda antes cómo se acepta. Seguro escrito de antemano por si hay que retroceder: [`sql/rollback_salida_48_49.sql`](sql/rollback_salida_48_49.sql).
-   → **Aprobar: HECHO 2026-08-20 23:15.** LQDC 23 y 24 en estado 3 APROBADA. Ojo: a partir de aquí `calculaFiniquito` ya **no** las recalcula (se niega sobre APROBADA); si hiciera falta, el `rollback` las devuelve a 2.
-   → **Ejecutar salida: FALLÓ en LQDC 23 con ORA-02290 y la transacción hizo rollback completo.** Verificado en BD: CNTE 48/49 en `ACTIVO` sin fecha de terminación, MPLD 48/49 en estado 1, SLDV 126/130 sin caducar, 0 filas en NVIS. **Nada quedó a medias; el `rollback` no hizo falta.** Causa: el literal `'TERMINADO'` contra el CHECK — ver la fila «Código backend D». **Bloqueado hasta que Mike publique D.**
-   → **Trampa que dejó, y es la lección del paso:** el `System.out` «Salida ejecutada para 1720245735: contrato cerrado, empleado CESANTE, 0 descuento(s)…» **sí se imprimió**, con los números correctos, y aun así no hubo salida. Se imprime dentro del método, antes del commit. **La traza de un `@Stateless` no es prueba de que la transacción cerró: sólo la BD lo es.**
-4. Frontend: recalcular PRDN 30 → deben quedar **20 nóminas**, líquido esperado **17 570,95**.
-   → **HECHO 2026-08-21, con residuo.** La **cabecera** quedó correcta (20 empleados · 20 793,34 · 3 222,39 · neto **17 570,95**), pero `RHH.NMNA` se quedó con **22 filas** sumando 18 443,85: las nóminas 89 y 90 de los empleados 48 y 49, del cálculo viejo, mes completo de 30 días. **Nadie borra la nómina de quien dejó de estar activo** — `calcularPeriodo` acumula los totales de la cabecera en memoria sobre el bucle de contratos activos, y `eliminaGeneradosByNomina` sólo visita las que procesa. Diferencia exacta: 436,45 × 2 = 872,90.
-   → **Se limpia con [`sql/39`](sql/39_LIMPIEZA_NOMINAS_HUERFANAS_PRDN30.sql), y es obligatorio ANTES del paso 5.** Se borra, no se anula: ni el bloque 2 ni el 3 del contraste filtran por `NMNAESTD`, así que una nómina anulada seguiría apareciendo, y adaptar el contraste para ignorarla sería ajustar el control al dato — regla 6. Con las huérfanas dentro, el bloque 3 mostraría a Castro Arce y Cevallos Alemán como `IMPORTE DISTINTO` en vez de `EN LA PLANILLA Y SIN NÓMINA`, que es justo lo que marzo existe para demostrar. Alcance verificado: sólo `RNGL` tiene hijas (10 filas); `DRPG`, `PRTE` y `RLPG` en cero; **`ACMN` del período 30 con 0 personas**, así que ningún acumulado quedó contaminado.
-5. Backend: contraste canónico (`CTRL_PARAM` ya está en 3, no queda nada que hacer antes). Bloque 4: 22 personas en CTRL contra 20 nóminas **es lo correcto**; bloque 3 debe mostrar a Castro Arce y Cevallos Alemán EN LA PLANILLA Y SIN NÓMINA con 99,29 (198,58 total): la discrepancia esperada del plan §3.4. En LIQUIDO sólo Robayo −20,17, Manosalvas +0,01, Muñoz −0,01.
-   → **HECHO 2026-08-21 05:04 UTC. MARZO CUADRA: los cinco bloques salieron exactamente como los fijaba `ESPERADO-CONTRASTE-MARZO.md`, ni una fila de más ni una de menos.** Precondición verificada antes de empezar: `NMNA` del PRDN 30 en **20** filas (`sql/39` surtió efecto). Bloque 4: 134 filas / **22 personas esperadas** / **20 nóminas** / 113 renglones / estado 3. Bloque 3: **4 filas** — Castro Arce y Cevallos Alemán `EN LA PLANILLA Y SIN NOMINA` con −99,29 cada uno, Méndez Torres −0,01 y Muñoz +0,01. Bloque 1: **1 fila**, Robayo IR 20,17 `NO ESTA EN EL ROL`. Bloque 2: **5 filas** — Robayo `DESCUENTOS` +20,17 y `LIQUIDO` −20,17, Manosalvas `INGRESOS` y `LIQUIDO` +0,01, Muñoz `LIQUIDO` −0,01. Bloque 1B: patronales 20/20/20 (2 265,57 · 101,60 · 101,60), provisiones 17/17/20/1, y **el descuadre `NMNATTPT = NMNAAPPT + NMNAIESC` vacío**. Ninguna cuarta persona en `LIQUIDO`, ningún `OJO: n RENGLONES`, ningún hallazgo nuevo.
-   → **Cómo se corrió, que importa para repetirlo:** el instrumento tiene 18 líneas de comentario vacías `--`, y en SQL\*Plus una línea acabada en guion es continuación y **se traga la sentencia siguiente en silencio** — un bloque se leería vacío, es decir «cuadra». Se ejecutó despojando los comentarios (`grep -vE '^\s*--'`) y sentencia por sentencia, verificando que ninguna quedara sin salida. Contra la BD local por `docker exec saa-oracle-23ai sqlplus SCP/SCP@localhost:1521/FREEPDB1`.
-   → **El esperado completo, fila por fila y bloque por bloque, está fijado por escrito de antemano en [`ESPERADO-CONTRASTE-MARZO.md`](ESPERADO-CONTRASTE-MARZO.md) (2026-08-21, antes de ejecutar nada).** Se lee esa hoja *antes* de correr el script; lo que no esté en ella es hallazgo nuevo y se reporta sin interpretarlo. Añade dos filas acompañantes que la línea de arriba no nombra —Robayo `DESCUENTOS` +20,17 y Manosalvas `INGRESOS` +0,01, que son el mismo hecho visto desde el otro renglón— y dos más en el bloque 3: Muñoz +0,01 y Méndez Torres −0,01 en `TOTAL_IESS`.
-   → **HECHO 2026-08-21. MARZO CUADRA.** Los cinco bloques exactos contra la hoja: bloque 4 con 22/20 · bloque 3 con las **cuatro** filas (Castro Arce y Cevallos Alemán `EN LA PLANILLA Y SIN NÓMINA` −99,29 cada uno; Méndez −0,01; Muñoz +0,01) · bloque 1 con la **única** de Robayo (IR 20,17, `NO ESTÁ EN EL ROL`) · bloque 2 con las **cinco** · patronales 20/20/20 y descuadre `NMNATTPT` vacío. Ninguna cuarta persona en `LIQUIDO`, ningún `OJO: n RENGLONES`. **Los bloques 2 y 3 se reprodujeron de forma independiente por el dueño del modelo con el mismo instrumento: idénticos.**
-6. Si cuadra: aprobar → **contabilizar rol** → cerrar marzo por pantalla; backend verifica `ACMN` (20 personas). **Marzo va en `PRDNMODO = 1` (histórico), igual que enero y febrero**, así que `contabilizarRol` toma la rama histórica de `ContabilizacionNominaServiceImpl:173-184`: no genera asiento, pone `PRDNASNT` a null **a propósito** y pasa a CONTABILIZADO — por eso `cerrarPeriodo`, que exige CONTABILIZADO o PAGADO, los deja cerrar. Verificado: los tres asientos (`PRDNASNT`, `PRDNASPR`, `PRDNASPG`) en null en 28 y 29, y **0 asientos de RRHH en `CNT`**. **NO pulsar «contabilizar provisiones»**: enero y febrero no lo hicieron y en modo histórico sale por `return null` sin tocar nada — no pulsarlo deja los tres meses con historia idéntica también en el log. Aviso: `contabilizarRol` **pisa `PRDNOBSR`** con la cadena genérica y se pierde el texto de calibración de marzo; nadie lee ese campo, pero si importa, copiarlo antes. Después, abril (**`sql/40`** — el 38 se lo llevó el CHECK de las banderas de `CPNM` y el 39 la limpieza de las nóminas huérfanas; lo escribe el dueño del modelo; Méndez pasa a tiempo completo 482 por adenda 01-04; Viteri con dos quirografarios 420,23; IESS sigue cobrando Castro 14,79).
-   → **HECHO. MARZO CERRADO Y VERIFICADO — 2026-08-21.** `PRDN 30` en estado **7**, igual que 28 y 29. Verificación de `ACMN` del backend, **en verde**: **121 filas y 20 personas** (enero y febrero: 133 y 22). Reparto por tipo, idéntico en forma al de febrero: tipos 1 · 2 · 3 · 5 (imponible IESS, gravado IR, base 13.º, base FR) con **20 filas y 20 319,00** cada uno; tipo 8 (aporte personal) 20 filas y **1 920,15**; tipo 9 (retención IR) **1 fila, 20,17** — Robayo, el único; tipo 10 (días trabajados) 20 filas y **600 días**. Tres controles cruzados, los tres vacíos: **empleados 48 y 49 sin una sola fila** en `ACMN`; el conjunto de personas de `ACMN` **coincide exactamente** con el de `NMNA` (ni sobra ni falta nadie); y la cabecera del período cuadra con los acumulados —`NMNABSIE` suma **20 319,00**, el mismo número que el `ACMN` tipo 1, y `1 920,15 = 20 319,00 × 9,45 %` al centavo—.
-   → **Observación, no hallazgo:** el tipo 4 (`BASE_DECIMO_CUARTO`) **no se escribe en ningún cierre mensual** — sólo existen las 17 filas de la apertura (2 225,96 · 1 705 días) y en enero y febrero tampoco aparece. Es coherente con la corrección B: el décimo cuarto se calcula con los **días** del tipo 10 más la fila de apertura del tipo 4, no con un valor mensual del tipo 4. Se deja anotado porque un lector futuro puede leer la ausencia como pérdida de datos.
+**El orden de lo que queda, y el `CTRL_PARAM` es la única palanca:**
 
-**Decisiones tomadas hoy que no se rediscuten:** Muñoz va con 51,98 / 498,03 (lo que el libro muestra, REF-06 §17); anticipos se registran como diferencia contra lo que el motor genera solo; vacaciones del finiquito se valoran **por tramo**, no a la tarifa ponderada; A, B y C se corrigieron ya porque ningún mes calculado pasa por ahí (verificado: `BeneficioSocialService` no lo llama `ProcesoNomina` ni `Liquidacion`).
+1. ~~Enero → contraste~~ ✅ **hecho el 2026-08-21**, diferencia cero. `CTRL_PARAM` en **2**
+2. Febrero → contraste → a **3**
+3. Marzo → contraste → **`sql/49`** (Méndez a tiempo completo). **Su guarda es un `SELECT` con veredicto, NO se niega sola**: hay que mirarla y comprobar que enero, febrero y marzo están en estado 7 → a **4**
+4. Abril → contraste → a **5**
+5. Mayo → contraste → **fin**. Junio y julio quedan para después de ver a Steven
 
-**Lista de fin de calibración:** ~~1 prorrateo de ingreso `30−d+1`~~ **APLICADO 2026-08-21** (ver arriba); 2 proyección IR del que entra a mitad de mes; 3 patronal del finiquito rol 32; 4 `RhhTipoDescuentoRecurrente` 6 y 7 sin rol; 5 **rangos de `CPNMCDGO` (1–45) y `CPNMALTR` (1–68) solapados** — mover alternos a ≥100 o validar FK como entidad; 6 `reabrirPeriodo` no avisa si hay un período posterior calculado; **7 `cancelaDescuentos` (en `ejecutarSalida`) escribe `fechaFin = LocalDate.now()` en vez de la fecha de salida del finiquito** — no muerde en LQDC 23 y 24 porque no tienen filas en `DSRC` y devuelve 0, pero deja una fecha falsa en cuanto se liquide a alguien con descuentos vivos; **8 `ProcesoNominaServiceImpl:1368` pisa incondicionalmente la guarda `setImponible(NO)` de :1352** —que existe por el `NOT NULL` de `RNGL.RNGLIMPN`— y la deja como código muerto: hacerla condicional al no-nulo, y sólo entonces poner `NOT NULL` a las tres banderas de `CPNM`. **El CHECK de vocabulario no espera a la lista: va ahora en [`sql/38`](sql/38_CHECK_BANDERAS_CPNM.sql)**, porque cierra la muerte por ORA-02290 con riesgo cero y sin tocar código congelado; **9 `calcularPeriodo` deja nóminas huérfanas** — al recalcular un período no borra las nóminas de quien dejó de estar activo, y además acumula los totales de la cabecera en memoria en vez de releerlos de `NMNA`, así que cabecera y detalle divergen en silencio y la cabecera es la que acierta. Las dos mitades se arreglan juntas: barrer las nóminas sin contrato activo al inicio del recálculo, y derivar los totales de `NMNA`; **10 la provisión de fondos de reserva no comprueba el año de servicio, y la mensualización sí** — `ProcesoNominaServiceImpl` paso 8: la rama `MENSUALIZADO` va guardada por `superaUnAnio(empleado, contrato, hasta)`, la rama `ACUMULADO_EN_EL_IESS` **no lleva guarda ninguna**. Consecuencia verificada en marzo: 19 contratos en modalidad 1 y **uno en modalidad 2, Viteri López (ingreso 2025-06-25, nueve meses de servicio)**, que recibe provisión de FR de **183,26 al mes desde enero** mientras los otros 19, con la misma antigüedad o menos, no reciben nada. **Dos personas con idéntica antigüedad tratadas distinto sólo por su modalidad**: sea cual sea el criterio correcto —provisionar desde el día uno o desde el mes 13—, no puede aplicarse a una rama y no a la otra. Poner la misma guarda en las dos. **RESUELTO POR LOS DATOS 2026-08-21: la planilla FR del cliente empieza el día que Viteri cumple el año (25-06), prorrateada — la guarda es la correcta.** **Sin efecto sobre ningún número cerrado**: `PVNM` no entra en los totales de la nómina (la suya es 2 200,00 / 207,90 / 1 992,10 y el líquido del mes cuadra) y en modo histórico las provisiones nunca se contabilizaron. **Pregunta abierta para Steven**, junto a Robayo y al anticipo de Calderón: ¿ASOPREP provisiona fondos de reserva antes del primer año? → ya no hace falta preguntar; **11 jornada parcial modelada con el sueldo partido** — `CNTESLRB` debe ser el **referencial de 30 días** y los días declarados `TRUNC(horas/día × 30/8)` (`CNTEDIAD`, `sql/41`); imponible = referencial × días/30; más el **seguro de salud TP = (SBU − imponible) × 4,41 %** patronal. Méndez marzo: 482 / 15 / 10,63 contra nuestros 241 / 30 / nada. **Bloqueante de la planilla, va antes de replicar.**; **12 el paso 12 de `calcularPeriodo` aplica la cuota pero nunca la marca** — descuenta el importe y ahí se acaba: `CTDSESTD` se queda en PENDIENTE, `CTDSVLDS` en cero y `DSRCSLDD` no baja. Verificado en la base: las cuatro cuotas de los anticipos de **Pardo Calle** y **Calderón Párraga** se cobraron de verdad —están en los renglones de enero y febrero, 350 cada una— y las cuatro siguen en estado 1 con `CTDSVLDS = 0`, `cuotasPagadas = 0` y saldo 700. **No amenaza los recálculos**, y por eso no ha dado la cara en cinco meses: `selectPendientesPorVencer` filtra por vencimiento y cada cuota dispara en un solo mes. **Pero deja el mecanismo inservible para agosto**: un préstamo del IESS de doce cuotas nunca bajaría de saldo y la pantalla lo mostraría intacto tras un año pagándolo. Con dos cuotas y un anticipo la mentira es invisible; con doce y un préstamo, no. Al cerrar el período hay que **marcar la cuota, descontar el saldo y subir `cuotasPagadas`**, y **eso va ANTES de cargar ningún préstamo por `DSRC`/`CTDS`** — es prerrequisito de la decisión de agosto (`PLAN-PASO-A-PRODUCCION` §5 bis).; **13 `CNTEESTD` se queda en `ACTIVO` en las salidas anteriores a la corrección D** — Torres Chávez y Benítez Montes tienen fecha de terminación puesta y el empleado en CESANTE, pero su contrato sigue diciendo `ACTIVO` porque sus salidas se ejecutaron antes de que `ejecutarSalida` escribiera `CERRADO`. **No afecta a ningún cálculo** —el selector no mira `CNTEESTD`— pero **rompe la comprobación 1 del guion de carga**, que cuenta contratos activos. Se arregla con un `UPDATE` de dato, no de código; en producción no ocurrirá si las salidas se ejecutan con el WAR final.; **14 el sueldo no tiene vigencia por fecha, así que recalcular un mes pasado usa la ficha de HOY** — `sql/40` cambió a Méndez Torres a 482 por la adenda del 01-04 sin fecha de vigencia, y al recalcular enero el motor lee `CNTESLRB` actual y le paga 482 sobre 30 días en vez de 241: `241,00 − 22,77 = 218,23`, que es el desvío observado. **Es el hallazgo de la planilla —«un mes pasado lee el contrato de hoy»— pero en el cálculo, y ahí es más grave: una planilla se regenera, un mes cerrado con el sueldo equivocado se replica a producción.** Parche por datos: `sql/48` y `sql/49` bailan la ficha al ritmo de los meses. **Solución de fondo: sueldo con vigencia por fecha, de modo que el motor lea el que regía en el período**; `RHH.HSTR` ya existe para el historial del empleado y podría ser el sitio. Mientras no exista, **todo recálculo de un mes pasado tiene que comprobar antes que ninguna ficha haya cambiado desde entonces** — regla de operación, escrita en `PLAN-PASO-A-PRODUCCION` §4 bis, porque en producción nadie tendrá este contexto.; **15 el aviso de novedades sin declarar sobrevive SÓLO porque `contabilizarRol` va antes que `cerrarPeriodo`** — `contabilizarRol` **pisa `PRDNOBSR`** con su cadena genérica, y el aviso lo escribe el cierre. Con la secuencia actual funciona; **invertida, el aviso se perdería en silencio**, que es una vuelta más adentro de lo que la regla venía a evitar. **Misma familia que el punto 6** (`reabrirPeriodo` no avisa si hay un período posterior calculado) y que el orden salidas→período de marzo: **cosas que sólo funcionan porque la secuencia es la que es, y nada la vigila.** La solución no es documentar mejor el orden sino que el código lo exija —o que el aviso no viva en un campo que otro proceso pisa—.
+**Y el contraste va en estado 3 CALCULADO, ANTES de aprobar.** Verificado el 2026-08-22: el
+instrumento lee `NMNA`, `RNGL`, `PVNM` y `CTRL`, y **no lee `ACMN`**, que es lo único que escribe
+`cerrarPeriodo`. Da el mismo resultado en 3 que en 7. En enero se hizo al revés y salió bien por
+suerte: si el contraste hubiera destapado algo, el mes ya estaba cerrado y habría hecho falta
+reabrirlo, que es el **punto 6**. En estado 3 un fallo se arregla recalculando.
 
-> **Menor, del mismo saco y sin número propio:** `localizaLiquidacion` hace `getResultList()` y se
-> queda con `get(0)`. Si algún día hubiera dos liquidaciones del mismo contrato y fecha, elegiría
-> una en silencio. Hoy hay una por contrato — verificado el 2026-08-21.
+**Orden dentro de cada mes:** fichas → crear el período → liquidaciones y salidas → novedades →
+calcular → **contrastar** → aprobar → contabilizar rol → cerrar.
 
+**No adelantar `CTRL_PARAM`.** Si se mueve mientras el backend contrasta un mes, sus bloques salen
+vacíos y eso **parece un éxito**.
+
+### 🐞 Los defectos que va encontrando la réplica — bitácora viva
+
+**El frontend anota en [`DEFECTOS-PANTALLA-REPLICA-PRODUCCION.md`](DEFECTOS-PANTALLA-REPLICA-PRODUCCION.md)
+cada fallo que se encuentra cargando en producción, con cómo lo esquivó.** Espejado en los dos repos.
+La numeración **D9 en adelante continúa la serie** de los ocho defectos de pantalla anteriores, así que las
+dos listas se leen seguidas y no hay dos «D9» distintos.
+
+Anotados hasta ahora, **D9 a D18**: el combo de Contrato no acota por colaborador · la fecha del
+contrato se pinta cruda · la vista no se refresca tras «Calcular y guardar» · el listado de
+finiquitos no resuelve el nombre · el campo de fecha pide `mm/dd/yyyy` · el filtro de los combos
+distingue mayúsculas · **una fecha inválida se sustituye en silencio por la de HOY (D15)** · dos
+formatos de fecha distintos en el mismo módulo · el combo de Período no se llena hasta re-elegir el
+ejercicio · el combo de colaborador de Novedades ofrece a los CESANTES (D18).
+
+**D15 es el más peligroso de los diez**, y su lado de backend está en el **punto 16** de la lista:
+`PeriodoNominaServiceImpl.saveSingle` no valida el rango del período. Un período del 1 de enero al
+21 de agosto no revienta: calcula, con 21 días para todo el mundo.
+
+**Ninguno bloquea la carga y ninguno se corrige ahora**: son de pantalla, van con el motor al final
+de la calibración. El valor de la bitácora es que **cada uno lleva escrito el rodeo con que se
+esquivó**, que es lo que hace repetible la carga de los meses siguientes y lo que evita que el
+mismo tropiezo cueste dos veces.
+
+**D11 es el que más cuidado pide**, y por eso está la regla de operación de siempre: **verificar
+contra la base de datos, nunca contra la pantalla.** Una vista que no se refresca puede mostrar el
+resultado anterior y dar por bueno un mes que no se calculó.
+
+### Lo que hay que preguntarle a Steven
+
+- **Los tres a quienes se descontó de menos en julio no son los que dice su informe.** Son
+  **Caiza Remache (1,52)**, **Nieto Conde (2,84)** y **Pardo Calle (8,82)** — no Calderón ni
+  Cevallos Montenegro, cuyos aportes están correctos. Causa: el aporte se calculó sobre los días
+  trabajados, dejando fuera la parte de vacaciones, y por eso golpeó exactamente a los tres que
+  las tomaron. **Si ajusta según su informe, cobra de más a dos personas y deja debiendo a otras dos.**
+- ✅ **RESUELTO el 2026-08-22 — Robayo.** Steven confirma que **ASOPREP sí tiene los respaldos**: la
+  copia certificada de la proyección presentada al otro empleador. Con ella, la retención en cero
+  está en regla (art. 43 LRTI) y `CNTENRIR = 'S'` es la representación correcta, no un apaño.
+  **No cambia ningún cálculo** —ya estaba puesto y enero y febrero cerraron con cero renglones de
+  IR—; lo que cambia es que el motivo del contrato decía «Pendiente de Steven» y **declaraba un
+  incumplimiento que ya no existe**. Lo reescribe [`sql/55`](sql/55_ROBAYO_RESPALDO_CONFIRMADO.sql).
+  Texto original de la pregunta:
+- ~~¿Tiene ASOPREP la copia certificada de la proyección de Robayo presentada al otro empleador?~~
+  Con ella, la retención en cero está en regla (art. 43 LRTI). Sin ella hay incumplimiento y
+  responsabilidad patronal. Lo resuelve el cliente, no el sistema.
+- Los **175,00** y los **0,10** de OTROS de Calderón, sin clasificar.
+- Los cuatro **D:OTROS** de julio.
 ### Los seis defectos de pantalla del 2026-08-20 — verificados en fuente el 2026-08-21
 
 Corregidos antes del reinicio, **`tsc --noEmit -p tsconfig.app.json` limpio (exit 0), sin
@@ -112,7 +158,7 @@ Se dejan sin tocar porque la migración visual sigue congelada — decisión del
 | 7 | La vista no se refresca tras calcular | `rrh/forms/procesos/liquidacion/liquidacion-form.component.ts:105-108` | `calcular()` navega de `/liquidacion/nuevo` a `/liquidacion/{id}` con el **mismo componente**; Angular reutiliza la instancia y `ngOnInit` no vuelve a correr. Como el id se lee de `route.snapshot.paramMap` una sola vez, la pantalla se queda en «Nuevo finiquito» enseñando el desglose **simulado** y los botones Simular / Calcular y guardar, aunque el finiquito ya esté persistido | Engaña sobre lo que hay guardado, igual que la traza del `System.out`. Hay que volver a la lista y entrar de nuevo para ver lo real. **Mientras siga así, lo persistido se confirma por REST o BD, nunca por lo que enseña esta pantalla** |
 | 8 | Fecha cruda en el combo de contrato | `rrh/forms/procesos/liquidacion/liquidacion.campos.ts:33` (`buscarPor: ['numero','fechaInicio']`) | La opción se pinta `CT-1720245735 · 2025,12,8`: el `LocalDateTime` de Java llega como arreglo y se concatena sin pasar por `FuncionesDatosService.convertirFechaDesdeBackend()` | Sólo cosmético. No afecta a lo que se envía: el combo guarda el objeto de la fila |
 
-### 🔧 LAS DOS CORRECCIONES DEL MOTOR — escritas y compiladas el 2026-08-21, pendientes de publicar
+### 🔧 LAS DOS CORRECCIONES DEL MOTOR — escritas el 2026-08-21. ✅ PUBLICADAS Y EN PRODUCCIÓN; el «pendientes de publicar» original quedó obsoleto
 
 **Primera vez que se toca el motor congelado por decisión del dueño del modelo.** Con esto,
 enero–mayo se recalculan y se cargan en producción como definitivos. **Junio pausado.**
@@ -245,6 +291,48 @@ SELECT m.MPLDIDNT, m.MPLDAPLL, n.NMNADITR
 **Los cinco esperados están reescritos** (`ESPERADO-CONTRASTE-{ENERO..MAYO}.md`); enero y febrero
 son nuevos, los otros tres llevan el bloque de reescritura al principio y conservan lo anterior
 como historia.
+
+### ✅ ENERO CUADRA EN PRODUCCIÓN — contraste del 2026-08-21
+
+**Primer mes de ASOPREP que existe en producción, y cuadra al centavo.** Los cinco bloques
+exactamente como los fijaba [`ESPERADO-CONTRASTE-ENERO.md`](ESPERADO-CONTRASTE-ENERO.md), escrito
+antes de ejecutar nada.
+
+| Bloque | Esperado | Salió |
+|---|---|---|
+| **4** | 147 filas · 24 personas · 22 nóminas | **147 · 24 / 22** ✔ |
+| **3** | 4 filas | **4** ✔ Torres Chávez −206,00 y Benítez Montes −76,91 `EN LA PLANILLA Y SIN NOMINA` · Méndez −0,01 · Muñoz +0,01 |
+| **2** | 46 filas | **46** ✔ 44 del par de vacaciones —**823,19 exacto por lado**— + Manosalvas `LIQUIDO` +0,01 y Muñoz −0,01 |
+| **1** | vacío | **vacío** ✔ |
+| **1B** | patronales 22 · FR en 1 | 2 202,83 + 98,79 + 98,79 = **2 400,41**, la patronal de la cabecera ✔ · provisiones **19 / 19 / 22 / 1** ✔ · descuadre patronal vacío ✔ |
+
+**Neto 16 476,92 contra 16 476,92 del cliente. Diferencia cero.**
+
+**Lo que enero probaba de verdad, y salió: las cuatro familias que tenían que desaparecer no
+están.** Robayo sin fila de `LIQUIDO` —`CNTENRIR` surtió efecto—; Bravo Caiza y Cevallos
+Montenegro sólo con su par de vacaciones, sin los 44,59 del prorrateo; Méndez sin los +218,22,
+así que `sql/48` está bien puesto. **Verificado por ausencia, que es lo que un total nunca dice.**
+
+> **Confirmación cruzada que no se buscaba:** la provisión de vacaciones da **823,19**, el mismo
+> número que los ingresos del par de vacaciones del bloque 2. Las dos son la base entre 24, así que
+> coincidir al centavo significa que **nuestra base de vacaciones es la misma que usó el cliente**.
+
+**Dos hallazgos de producción, los dos de la misma familia — un `UPDATE` que no encuentra filas no
+da error:**
+
+- **`sql/53b`**: el `sql/05` corrió dos veces y dejó `PRDN`, `NMNA` y `LQDC` sin su columna de
+  estado. Su `DROP`+`ADD` de quince columnas muere entero con ORA-01430 en la segunda pasada.
+  **`MPLD` se salvó la columna pero no el dato**: usa la forma suelta, así que el segundo `ADD`
+  funcionó y reseteó todos los estados a 1. Hoy es inocuo, y es una razón más para no reejecutarlo.
+- **`sql/54`**: `CPNMROLM` 17–22 en nulo, porque el bloque de `UPDATE` del `sql/11` no surtió
+  efecto. **Las provisiones se escribían sin concepto y por tanto sin cuenta contable**, y
+  `generaProvision` acepta el concepto nulo sin decir nada. Inofensivo de enero a julio —modo
+  histórico, sin asiento— y **no** a partir de agosto. El `54` rellena además las ya escritas,
+  porque en producción los meses no se recalculan.
+
+> **`VERIFICACION_CATALOGO_PROD_VS_LOCAL.sql` no mira `CPNMROLM`**, y por eso no lo cazó. Una
+> columna que gobierna once ramas del motor y puede quedarse nula sin ruido tiene que estar en ese
+> cotejo. **Pendiente de añadir.**
 
 ### ✅ MAYO CUADRA — contraste canónico del 2026-08-21 09:26 UTC
 
@@ -754,7 +842,7 @@ después**, y crear-probar-borrar en la misma operación.
 | **Base de datos** | Scripts 01–09 y deltas 10 a **35** ejecutados en local (1236); el 31 y el 35 recargados con Muñoz en 51,98 / 498,03. Producción sólo tiene hasta la apertura | Ninguno pendiente |
 | **Backend** | Fases 0–9 completas. Motor congelado salvo `AcreditacionVacacionesService` y `LiquidacionHaberesServiceImpl`, levantados por defectos atribuidos. Todo publicado y verificado con las tres comprobaciones a las 18:18 | Enero y febrero cerrados y en verde. **Correcciones A, B y C —décimos del finiquito, `sumaDiasRango`, apertura del 13.º— publicadas y verificadas el 2026-08-21 21:20** · símbolo del `javap`: `sumaDiasRango` · los dos finiquitos del 06-03 esperados en **384,05** cada uno |
 | **Frontend** | Fases 0–9 construidas. Migración visual **congelada**; lo nuevo sin `table-basic-hijos`. Sin commitear, 225 archivos | Febrero cerrado (133 `ACMN`). **Marzo**: período, novedades, y las dos liquidaciones del 06-03 —contrastarlas contra los 384,05 antes de aprobarlas— |
-| **Cliente** | Todo lo de enero a julio entregado y volcado a `C:\Docs\Clientes\Asoprep\rrhh\REsumen`. **Steven devolvió 2 confirmaciones + 4 novedades + la cédula de Bravo Caiza (2026-08-21)** | Preguntas abiertas para Steven: Robayo y el IR desde agosto · el anticipo de 269,52 de Calderón en febrero · **¿provisiona FR antes del primer año?** (punto 10) |
+| **Cliente** | Todo lo de enero a julio entregado y volcado a `C:\Docs\Clientes\Asoprep\rrhh\REsumen`. **Steven devolvió 2 confirmaciones + 4 novedades + la cédula de Bravo Caiza (2026-08-21)** | Preguntas abiertas para Steven: el anticipo de 269,52 de Calderón en febrero · los 175,00 y los 0,10 de OTROS de Calderón · los cuatro D:OTROS de julio. **Robayo RESUELTO el 2026-08-22** (tiene los respaldos) y **el punto 10 resuelto por los datos**, no por Steven |
 
 **Lo que devolvió Steven el 2026-08-21, y qué hacemos con cada cosa** — verificado contra la BD antes de responder:
 
@@ -1059,19 +1147,62 @@ recurrentes. Causal 11 «Terminación en periodo de prueba» —`DSHC=N · DSPD=
 > `acreditacionVacacionesService` queda inyectado y sin usar en esta clase a la espera de esa
 > decisión.
 
-### Correcciones del motor que se aplican juntas al final de la calibración
+### LA LISTA DE CORRECCIONES DEL MOTOR — la referencia única
 
-No antes, para que los seis meses estén calculados con las mismas reglas:
+**Escrita el 2026-08-22, y hasta esa fecha NO EXISTÍA.** Los documentos llevaban semanas citando
+«el punto 10», «el punto 12», «las 11 correcciones», y la única lista escrita tenía **cinco**
+puntos. Esto la reconstruye.
 
-1. **Prorrateo de ingreso a mitad de mes:** `30 − día + 1` sobre mes de 30, no fracción de 31.
-   Respaldado por planilla, acta de Torres y el cierre exacto de 49,25.
-2. **Proyección anual del IR de quien entra a mitad de mes:** multiplica el sueldo por los
-   meses restantes sin descontar que el primero es parcial (Cevallos M.: 24 000 en vez de
-   ~22 839). Misma causa raíz. Hoy no cambia resultados porque la rebaja lo cubre.
-3. **Patronal del finiquito:** rol 32 y su rama en `calculaFiniquito`, igual que el 31.
-4. **`RhhTipoDescuentoRecurrente` 6 y 7 sin rol equivalente.** `rolDelDescuento` lanza excepción
-   ante un descuento de seguro privado o de «otros»: el concepto 27 existe en `CPNM` pero sin
-   `CPNMROLM`. Hoy no molesta porque ASOPREP no los usa.
+> **Los números son estables y no se renumeran.** Están citados desde `PLAN-PASO-A-PRODUCCION.md`,
+> los cinco guiones, `NORMATIVA-IESS-NOVEDADES.md` y los esperados. Los huecos **5, 8, 13 y 15**
+> quedan vacíos a propósito: se usaron alguna vez en conversación y **no tienen referente
+> recuperable en ningún documento**. No se reutilizan — un número reciclado haría que una
+> referencia vieja apuntara a otra cosa sin que nada avisara.
+
+> **Regla que gobierna la lista: se aplican JUNTAS al final de la calibración**, para que los siete
+> meses queden calculados con las mismas reglas. La excepción son las cuatro de abajo, que se
+> publicaron antes por decisión expresa del dueño del modelo.
+
+#### Ya publicadas y verificadas en producción — 2026-08-21
+
+| | Qué | Cómo se comprobó |
+|---|---|---|
+| **A** | **Prorrateo comercial `30 − d + 1`** (`calculaDiasTrabajados`). Es el **punto 1** de la lista | Días enteros en enero: Bravo Caiza 16 y Cevallos Montenegro 12, sin decimales |
+| **B** | **`CNTENRIR` — «este empleador no retiene IR a este trabajador»** (art. 43 LRTI) | Cero renglones de IR en enero, y Robayo sin fila en el bloque 2 |
+| **C** | **`selectActivosEnPeriodo` ya no pierde a quien salió DESPUÉS del mes** | Enero con 22 y no 20; Castro y Cevallos dentro |
+| **D** | **`exigeNovedadesIessReportadas` bifurca por modo**: bloquea en productivo, avisa en histórico | `PRDNOBSR` de enero con el aviso de las dos NVIS |
+
+#### Pendientes
+
+| # | Qué | Dónde | Estado |
+|---|---|---|---|
+| **1** | Prorrateo de ingreso a mitad de mes: `30 − día + 1` sobre mes de 30, no fracción de 31 | `calculaDiasTrabajados` | ✅ **HECHA** — es la A |
+| **2** | **Proyección anual del IR de quien entra a mitad de mes** multiplica el sueldo por los meses restantes sin descontar que el primero es parcial (Cevallos M.: 24 000 en vez de ~22 839). Misma causa raíz que el 1 | paso 11 de `calcularPeriodo` | Hoy no cambia resultados: la rebaja lo cubre |
+| **3** | **Patronal del finiquito**: falta el rol 32 y su rama en `calculaFiniquito`, igual que el 31 | `LiquidacionHaberesServiceImpl` | `CPNMROLM` 32 no existe en el catálogo. Verificado en producción el 2026-08-21 |
+| **4** | **`RhhTipoDescuentoRecurrente` 6 y 7 sin rol equivalente**: `rolDelDescuento` lanza excepción ante un descuento de seguro privado o de «otros» | `ProcesoNominaServiceImpl` | Hoy no molesta: ASOPREP no los usa |
+| **5** | *(hueco — sin referente recuperable, no reutilizar)* | | |
+| **6** | **`reabrirPeriodo` no avisa cuando hay un mes posterior ya calculado.** Los acumulados del posterior quedan viejos en silencio | `ProcesoNominaServiceImpl` | Es la razón de contrastar **en estado 3**, antes de cerrar |
+| **7** | **`cancelaDescuentos` escribe `fechaFin = LocalDate.now()`**, no la fecha de salida del finiquito. En una carga histórica eso deja el descuento «vigente» desde el mes real hasta hoy | `LiquidacionHaberesServiceImpl:783` | Inofensivo hoy: a quien sale no le queda nómina. Rompería cualquier consulta por rango de fechas |
+| **8** | *(hueco — sin referente recuperable, no reutilizar)* | | |
+| **9** | **La cabecera del período se acumula EN MEMORIA sobre los contratos procesados, no desde `NMNA`.** Si alguien deja de estar activo entre dos cálculos, la cabecera baja y el detalle no, y las dos divergen sin ruido | `calcularPeriodo` | Mitigado por la C —hoy no quedan huérfanas—, pero la raíz sigue. Lo detecta el cruce cabecera↔detalle de los guiones |
+| **10** | **Fondos de reserva sin la guarda de antigüedad** (`superaUnAnio`) en la rama `ACUMULADO_EN_EL_IESS`: provisionamos desde el primer mes; el cliente y el IESS empiezan al cumplir el año | paso 8 de `calcularPeriodo` | **Resuelto por los datos, sin Steven**: la única planilla FR del cliente es la de Viteri en junio, base 366,67 = 2 200 × 5/30, los cinco días desde el 25-06. Corregirlo nos ACERCA al cliente |
+| **11** | **`ContratoEmpleado` no tiene historia de vigencias**, así que la jornada parcial se modela partiendo el sueldo (Méndez 241 / 30 días) cuando el IESS pide **referencial 482 / 15 días / seguro TP 10,63** | `ContratoEmpleado` | **Bloqueante de la planilla del IESS.** Mientras no exista, el contrato se baila a mano entre meses con `sql/48` y `sql/49` |
+| **12** | **La cuota de `CTDS` se aplica pero no se marca**: `CTDSESTD` se queda PENDIENTE, `CTDSVLDS` en cero y `DSRCSLDD` no baja | paso 12 de `calcularPeriodo` | **Prerrequisito de agosto**, cuando los préstamos del IESS pasen de `NVNM` a `DSRC`/`CTDS`. Un préstamo de doce cuotas nunca bajaría de saldo |
+| **13** | *(hueco — sin referente recuperable, no reutilizar)* | | |
+| **14** | **El motor lee `CNTESLRB` de HOY al recalcular un mes pasado.** No falla, no avisa, y el mes queda cerrado con un sueldo que nunca se pagó | `calculaSueldoPeriodo` | Costó los 218,22 de Méndez. Mientras no se arregle, rige el detector del `PLAN-PASO-A-PRODUCCION` §4 bis, **antes** de recalcular |
+| **15** | *(hueco — sin referente recuperable, no reutilizar)* | | |
+| **16** | **`PeriodoNominaServiceImpl.saveSingle` no valida NADA**: ni que las fechas correspondan al año/mes declarados, ni que el rango sea un mes. Es un paso directo al DAO | `PeriodoNominaServiceImpl:96` | **Nuevo del 2026-08-21, destapado por D15.** Un período del 1 de enero al 21 de agosto habría dado **21 días a las 22 personas** y habría perdido a quien sale más tarde, sin un solo error. Lo cazó la comprobación 2 del guion, no el motor |
+| **17** | **`generaProvision` acepta el concepto nulo sin decir nada** y escribe `PVNM.CPNMCDGO` en nulo: la provisión queda **sin cuenta contable** | `ProcesoNominaServiceImpl:1591` | **Nuevo del 2026-08-21.** Es lo que destapó el 1B de enero en producción. El dato se reparó con `sql/54`; la guarda del motor no |
+| **18** | **Se puede registrar una novedad a quien no está en el período.** Nada comprueba que el empleado tenga contrato vigente en la ventana | `NovedadNominaService` | **Nuevo del 2026-08-22 (D18).** Inofensivo: `calcularPeriodo` pregunta `selectAprobadas` una vez por contrato procesado, así que la fila queda huérfana y no se lee jamás. No puede alterar ningún número |
+| **19** | **`/rest/lqdc/calcular` y `/simular` reciben SÓLO `idContrato`**, así que el backend no puede validar que el contrato pertenezca al colaborador elegido en pantalla — no recibe el colaborador | `LiquidacionRest:147,167` | **Nuevo del 2026-08-21 (D9).** El registro sale internamente coherente, así que **ninguna comprobación de datos lo detecta**: la pantalla enseña un nombre y el finiquito liquida al dueño del contrato |
+
+**Son 14 pendientes, no 11.** Cualquier documento que diga «las 11 correcciones» está desactualizado.
+
+**Tres de los pendientes —16, 17 y 18— son la misma familia**, y merece verse junta: **un valor que
+el motor traga sin protestar y cuyo daño aparece meses después, lejos de su causa.** Un rango de
+fechas absurdo, un concepto nulo, una novedad de nadie. Ninguno lanza excepción, ninguno deja
+traza, y los tres se cazaron por un control externo —el guion, el contraste— y no por el motor.
+Cuando se aborden, la guarda importa tanto como el arreglo.
 
 ### Lo que falta en los documentos del cliente
 

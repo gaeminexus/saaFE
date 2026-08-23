@@ -90,3 +90,62 @@ texto libre no vale como fuente: éste era exactamente el caso.
 Y si de verdad hiciera falta un valor nuevo, la vía es ampliar el CHECK con un script numerado en
 `sql/`, no elegir un sinónimo que quepa. Cuatro valores para un contrato y un quinto que significa
 lo mismo que `CERRADO` es como se degrada un vocabulario.
+
+---
+
+## Pariente cercano: las condiciones que el motor exige y el DDL no impone
+
+Un CHECK dice lo que la base acepta. **Esto es lo contrario: valores que la base admite sin
+protestar y que el motor descarta en silencio.** Se descubren igual de tarde y por la misma vía —
+un total que no cuadra sin causa visible.
+
+### `NVNM` — una novedad necesita DOS condiciones, no una
+
+`NovedadNominaDaoServiceImpl.selectAprobadas:58-59`:
+
+```
+and t.aprobada = 'S'   and t.estado = 1
+```
+
+`NVNMESTD` lleva `DEFAULT 1` en el DDL, **pero el default de columna no llega a aplicarse**: JPA
+manda el nulo explícito, así que el valor por defecto no se dispara nunca. Una novedad con
+`NVNMESTD` nulo **se descarta en el cálculo sin un solo aviso** — y en la pantalla se ve idéntica a
+una buena, porque el usuario sólo mira «Aprobada».
+
+Es la trampa que casi se lleva enero en producción. La comprobación va **antes de calcular**:
+
+```sql
+SELECT n.NVNMCDGO, m.MPLDIDNT, m.MPLDAPLL, n.NVNMVLRR AS VALOR,
+       n.NVNMAPRB AS APROBADA, n.NVNMESTD AS ESTADO,
+       CASE WHEN n.NVNMAPRB = 'S' AND n.NVNMESTD = 1 THEN 'ENTRA'
+            ELSE '*** LA IGNORA: PARAR ***' END AS VEREDICTO
+  FROM RHH.NVNM n
+  JOIN RHH.PRDN p ON p.PRDNCDGO = n.PRDNCDGO
+  JOIN RHH.MPLD m ON m.MPLDCDGO = n.MPLDCDGO
+ WHERE p.PRDNANOO = :ANIO AND p.PRDNMSEE = :MES
+ ORDER BY n.NVNMCDGO;
+```
+
+### `CPNM.CPNMROLM` — la columna que gobierna once ramas del motor y puede quedarse nula
+
+No tiene CHECK, no tiene `NOT NULL`, y `conceptoPorRol` devuelve `null` cuando no encuentra el rol.
+A partir de ahí cada llamador decide en silencio: unos no generan el renglón (`if (concepto !=
+null)`), y **`generaProvision` escribe la provisión con el concepto en nulo**, es decir, sin cuenta
+contable.
+
+En producción los roles **17 a 22** —los seis de provisión— quedaron nulos porque el bloque de
+`UPDATE` del `sql/11` no surtió efecto, y **un `UPDATE` que no encuentra filas no da error**. Se
+reparó con [`sql/54`](sql/54_ROLES_PROVISION_EN_PRODUCCION.sql). El censo:
+
+```sql
+SELECT CPNMROLM, CPNMALTR, CPNMNMBR
+  FROM RHH.CPNM WHERE PJRQCDGO = :EMPRESA AND CPNMROLM IS NOT NULL
+ ORDER BY CPNMROLM;
+-- 31 filas, del 1 al 31, sin huecos ni repetidos. El 32 no existe todavia (punto 3 de la lista).
+```
+
+### La regla que dejan las dos
+
+**Antes de dar por buena una carga, comprobar no sólo que la fila existe, sino que el motor la va a
+mirar.** Un dato que la base acepta y el motor ignora es indistinguible de un dato ausente en todo
+menos en el total — y el total llega tarde.

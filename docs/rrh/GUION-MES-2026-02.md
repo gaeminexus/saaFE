@@ -1,5 +1,8 @@
 # Guion de febrero de 2026 — réplica en producción
 
+> **Dónde vive cada cosa:** los `.sql` que este guion cita viven **sólo** en
+> `saaBE/docs/logica-negocio/rhh/sql/`. Los `.md` sí están espejados en `saaFE/docs/rrh/`.
+
 **Para qué es este documento.** Reproducir febrero en otra base **siguiendo una lista**. Verificado
 contra la corrida del 2026-08-21, que cerró con **diferencia cero** contra el rol del cliente.
 
@@ -11,17 +14,23 @@ contra la corrida del 2026-08-21, que cerró con **diferencia cero** contra el r
 líquido **17 525,11** · patronal **2 585,89**. Cliente: 17 525,11. **Diferencia cero en el total.**
 
 > **Diferencia cero en el total no quiere decir bloque 2 vacío.** El contraste sacará **46 filas**
-> por persona, y las 46 son esperadas: 44 del par de vacaciones del rol y 2 de medio centavo. §7.
+> por persona, y las 46 son esperadas: 44 del par de vacaciones del rol y 2 de medio centavo. §8.
 
 ---
 
 ## 0. El orden
 
 ```
-fichas → novedades → calcular → aprobar → contabilizar rol → cerrar
+fichas → crear el período → novedades → calcular → aprobar → contabilizar rol → cerrar
 ```
 
 Sin liquidaciones: febrero no tiene ninguna salida.
+
+**«Validar» se puede pulsar sin miedo**: `validarPeriodo` sólo lee —comprueba que exista `PRNM` del
+año, conceptos activos y contratos que se solapen— y no deja huella. **«Contabilizar rol» hay que
+pulsarlo aunque no se contabilice nada**: en modo histórico no emite asiento y sólo mueve el estado
+a CONTABILIZADO, y `cerrarPeriodo` **se niega** si el período no está en CONTABILIZADO o PAGADO.
+**«Contabilizar provisiones» no se pulsa nunca**: ninguno de los cinco meses lo hizo.
 
 ---
 
@@ -41,23 +50,97 @@ hasta que enero, febrero y marzo estén cerrados.**
 
 ---
 
-## 2. Novedades del período: ocho
+## 2. Crear el período — el paso que ningún guion traía
 
-**Dos anticipos y seis préstamos.** Todas con «Aprobada para el cálculo» = **Sí**.
+**Sin período no hay dónde registrar novedades**, y la pantalla de Novedades no dice qué falta:
+enseña el desplegable vacío. Se crea desde `Períodos de nómina` → *Agregar Registro*.
 
-| Concepto | Colaborador | Valor |
-|---|---|---:|
-| 23 · Quirografario IESS | CALDERON PARRAGA LAURA CECILIA | **14,33** |
-| 23 · Quirografario IESS | CASTRO ARCE LESLY MARICELA | **14,79** |
-| 23 · Quirografario IESS | MANOSALVAS LLERENA FERNANDO PAUL | **157,21** |
-| 24 · Hipotecario IESS | COSSIO CAICEDO EIMY | **490,00** |
-| 24 · Hipotecario IESS | MANOSALVAS LLERENA FERNANDO PAUL | **379,84** |
-| 24 · Hipotecario IESS | PAZMIÑO JARAMILLO EDGAR ALBERTO | **145,29** |
-| 25 · Anticipo de sueldo | CALDERON PARRAGA LAURA CECILIA | **269,52** |
-| 25 · Anticipo de sueldo | ZAMBRANO MIELES TANYA GISSELA | **50,00** |
-| | **quirografarios** | **186,33** |
-| | **hipotecarios** | **1 015,13** |
-| | **anticipos** | **319,52** |
+| Campo | Valor para febrero |
+|---|---|
+| Año / Mes | **2026 / 2** |
+| Fecha de inicio | **01-02-2026** |
+| Fecha de fin | **28-02-2026** |
+| Tipo de período | **MENSUAL** |
+| Modo | **1 · HISTÓRICO SIN CONTABILIZAR** |
+
+**El modo no se puede corregir después sin rehacer el mes.** En modo 2 el período exige asiento
+contable y `contabilizarRol` se negaría; de enero a julio ninguno lleva contabilidad, porque ya la
+hizo el cliente a mano.
+
+### Cómo se teclean las fechas, y por qué importa más en febrero que en ningún mes
+
+**El módulo usa dos formatos distintos según la pantalla**, y no hay ninguna pista en pantalla de
+cuál toca:
+
+| Pantalla | Formato |
+|---|---|
+| Diálogo de **períodos** | `dd/mm/yyyy` |
+| **Finiquito**, campo *Fecha de salida* | `mm/dd/yyyy` |
+
+**Y en el diálogo de períodos, equivocarse no da error: da la fecha de HOY** (defecto D15). El
+control no se marca en rojo ni se queda vacío — se rellena solo con un valor plausible y el
+formulario se ve perfectamente relleno.
+
+> **Febrero es el mes donde ese fallo es invisible.** `01/02` y `02/01` son las dos fechas válidas:
+> 1 de febrero y 2 de enero. No hay nada que parsee mal, así que ni siquiera salta la sustitución
+> por la fecha de hoy — simplemente se crea el período equivocado. **Teclear y releer.**
+
+### La comprobación del rango, inmediatamente después de guardar
+
+Va **antes** de registrar la primera novedad. Con un rango que no sea el mes, `calcularPeriodo` no
+revienta: calcula. Un período del 1 de enero al 21 de agosto habría dado **21 días a las 22
+personas** y habría perdido a quien sale más tarde, sin un solo error en pantalla.
+
+```sql
+SELECT PRDNCDGO, PRDNANOO, PRDNMSEE, PRDNFCHI, PRDNFCHF, PRDNMODO,
+       CASE WHEN EXTRACT(MONTH FROM PRDNFCHI) = PRDNMSEE
+             AND EXTRACT(MONTH FROM PRDNFCHF) = PRDNMSEE
+             AND EXTRACT(YEAR  FROM PRDNFCHI) = PRDNANOO
+             AND EXTRACT(YEAR  FROM PRDNFCHF) = PRDNANOO
+             AND PRDNMODO = 1
+            THEN 'OK' ELSE '*** REVISAR: BORRAR EL PERIODO Y REHACERLO ***' END AS VEREDICTO
+  FROM RHH.PRDN ORDER BY PRDNANOO, PRDNMSEE;
+```
+
+**Se corrige borrando el período y creándolo de nuevo**, no editando las fechas: si ya se calculó
+algo sobre el rango malo, la edición deja nóminas de un rango y cabecera de otro.
+
+### El combo de Período no se llena hasta re-elegir el ejercicio
+
+Defecto D17. Tras crear el período, si el desplegable de la pantalla de novedades sigue vacío, hay
+que volver a elegir el año. No es que el período no exista.
+
+---
+
+## 3. Novedades del período: ocho
+
+**Dos anticipos y seis préstamos.** Todas con «Aprobada para el cálculo» = **Sí** — y, además,
+con **estado = 1**; ver el aviso al final de la sección.
+
+| Concepto (alterno) | Cédula | Colaborador | Valor |
+|---|---|---|---:|
+| 23 · Quirografario IESS | 1719624809 | CALDERON PARRAGA LAURA CECILIA | **14,33** |
+| 23 · Quirografario IESS | 1720245735 | CASTRO ARCE LESLY MARICELA | **14,79** |
+| 23 · Quirografario IESS | 1716120769 | MANOSALVAS LLERENA FERNANDO PAUL | **157,21** |
+| 24 · Hipotecario IESS | 1715156574 | COSSIO CAICEDO EIMY | **490,00** |
+| 24 · Hipotecario IESS | 1716120769 | MANOSALVAS LLERENA FERNANDO PAUL | **379,84** |
+| 24 · Hipotecario IESS | **0909917759** | PAZMIÑO JARAMILLO EDGAR ALBERTO | **145,29** |
+| 25 · Anticipo de sueldo | 1719624809 | CALDERON PARRAGA LAURA CECILIA | **269,52** |
+| 25 · Anticipo de sueldo | 1307779064 | ZAMBRANO MIELES TANYA GISSELA | **50,00** |
+| | | **quirografarios** | **186,33** |
+| | | **hipotecarios** | **1 015,13** |
+| | | **anticipos** | **319,52** |
+
+> **Las cédulas están en la fila a propósito, y elegir por cédula es obligatorio, no cómodo.** Hay
+> **dos Pazmiños** —Jaramillo `0909917759` y Moreno `2100192463`— y el de febrero es Jaramillo. El
+> combo de contrato **no acota por colaborador** (defecto D9): ofrece los contratos de todos, y
+> teclear la cédula es lo único que deja un solo candidato.
+
+> **23, 24 y 25 son `CPNMALTR`, no `CPNMCDGO`.** El combo enseña «Prestamo quirografario IESS - 23»
+> porque pinta el alterno; en la base la PK del quirografario es otra. Una consulta de verificación
+> contra `CPNMCDGO = 23` devuelve **otro concepto**. Es la misma trampa que grabó el hipotecario de
+> alterna 24 como el concepto 24 «Seguro privado» — el defecto de pantalla 1. Filtrar siempre por
+> `CPNMALTR`.
 
 **Tres cosas que no son erratas:**
 
@@ -71,9 +154,40 @@ hasta que enero, febrero y marzo estén cerrados.**
 Además, **las cuotas de `CTDS` de enero cobran su segunda mitad**: Calderón y Pardo llevan 350,00
 cada uno sin que haya que registrar nada. Vencen el 28-02 y el motor las aplica solo.
 
+### Antes de calcular: comprobar que las ocho van a entrar
+
+El motor exige **dos** condiciones, no una — `NovedadNominaDaoServiceImpl:58-59`:
+
+```
+and t.aprobada = 'S'   and t.estado = 1
+```
+
+`NVNMESTD` lleva `DEFAULT 1` en el DDL, **pero el default de columna no llega a aplicarse**: JPA
+manda el nulo explícito. Una novedad con estado nulo **se descarta en el cálculo sin un solo
+aviso**. `/rest/nvnm/getAll` expone `estado`, así que se comprueba desde la propia pantalla, sin
+consulta.
+
+> **Febrero lo necesita más que enero.** En enero el anclaje de Calderón (269,43) delataba
+> cualquier novedad que no disparase. Aquí son ocho, y una que se caiga se diluye en el total.
+
+Y si se prefiere mirarlo en la base:
+
+```sql
+SELECT n.NVNMCDGO, m.MPLDIDNT, m.MPLDAPLL, n.NVNMVLRR AS VALOR,
+       n.NVNMAPRB AS APROBADA, n.NVNMESTD AS ESTADO,
+       CASE WHEN n.NVNMAPRB = 'S' AND n.NVNMESTD = 1 THEN 'ENTRA'
+            ELSE '*** LA IGNORA: PARAR ***' END AS VEREDICTO
+  FROM RHH.NVNM n
+  JOIN RHH.PRDN p ON p.PRDNCDGO = n.PRDNCDGO
+  JOIN RHH.MPLD m ON m.MPLDCDGO = n.MPLDCDGO
+ WHERE p.PRDNANOO = 2026 AND p.PRDNMSEE = 2
+ ORDER BY n.NVNMCDGO;
+-- Ocho filas, las ocho ENTRA.
+```
+
 ---
 
-## 3. Calcular, y comprobar antes del total
+## 4. Calcular, contrastar, y comprobar antes del total
 
 | # | Comprobación | Esperado |
 |---|---|---|
@@ -94,12 +208,31 @@ partidos significan que el prorrateo está tocando a quien no debe.
 | CALDERON PARRAGA | **700,00** = 66,15 + 14,33 + 269,52 + **350,00** | **0,00** |
 | PARDO CALLE | 416,15 = 66,15 + **350,00** | **283,85** |
 
-> **Calderón en líquido cero es correcto.** Sus descuentos igualan su sueldo al céntimo. Vuelve a
-> pasar en mayo. No es un error de carga.
+> **Calderón en líquido cero es EL ANCLAJE DE FEBRERO, y es más sensible que cualquier total.**
+> Sus cuatro descuentos —66,15 + 14,33 + 269,52 + 350,00— igualan su sueldo al céntimo, así que
+> **basta con que uno solo no entre para que el cero se rompa**. Es lo que sustituye al anclaje de
+> los 269,43 de enero. Se mira **antes** que el neto del mes. Vuelve a pasar en mayo, y no es un
+> error de carga.
 
+
+### Y entonces contrastar, con el período todavía en estado 3
+
+**Antes de aprobar, no después.** El contraste lee `NMNA`, `RNGL`, `PVNM` y `CTRL`, y **no lee
+`ACMN`**, que es lo único que escribe `cerrarPeriodo`: da el mismo resultado en 3 que en 7. Si
+destapa algo con el período en 3, se arregla recalculando; con el período cerrado habría que
+reabrirlo, que es el **punto 6** y `reabrirPeriodo` no avisa.
+
+1. `UPDATE RHH.CTRL_PARAM SET MES = 2; COMMIT;` y comprobarlo — **con el parámetro en otro mes
+   todos los bloques salen vacíos y se leen como que cuadra.**
+2. `CONTRASTE_MES_CONTRA_ROL_REAL.sql`, **bloque 4 primero**, luego 3, luego 1 y 2, y el 1B aunque
+   todo cuadre.
+3. Contra [`ESPERADO-CONTRASTE-FEBRERO.md`](ESPERADO-CONTRASTE-FEBRERO.md). El §8 explica las
+   diferencias que este mes **debe** sacar.
+
+**Sólo con el contraste en verde: aprobar → contabilizar rol → cerrar.**
 ---
 
-## 4. Cerrar
+## 5. Cerrar
 
 **Febrero no debe avisar.** No tiene ninguna NVIS en su ventana: los avisos de Torres y Benítez son
 del 15 y 16 de **enero**, y los de Castro y Cevallos del 6 de **marzo**.
@@ -117,7 +250,7 @@ Calculado sin contabilizacion (carga historica).
 
 ---
 
-## 5. Qué debe quedar
+## 6. Qué debe quedar
 
 **Cabecera de `PRDN`**
 
@@ -131,8 +264,46 @@ Calculado sin contabilizacion (carga historica).
 | Patronal | 2 585,89 |
 | Asientos | **null / null / null** |
 
-**`ACMN`**: 132 filas · **22 personas** · tipos 1, 2, 3, 5, 8 y 10 con 22 cada uno · **tipo 9 (IR)
-vacío** · **suma del tipo 8 = 2 011,25**, que es el concepto 20 del cliente al centavo.
+**`ACMN` — contar SIEMPRE filtrando por el período.** 132 filas · **22 personas** · tipos 1, 2, 3,
+5, 8 y 10 con 22 cada uno · **tipo 9 (IR) vacío** · **suma del tipo 8 = 2 011,25**, que es el
+concepto 20 del cliente al centavo.
+
+> **Un conteo sin filtrar da un número que no se parece a nada y parece un fallo.** `RHH.ACMN`
+> acumula todo el año: al cerrar febrero habrá **304 filas** en total —132 de enero, 132 de
+> febrero, **34 de la apertura** y **6 de los dos finiquitos de enero**, 3 por liquidación—. Las 40
+> que no tienen período no se mueven en febrero, porque este mes no tiene salidas; en **enero y
+> marzo sí crecen**, y ahí forman parte de lo esperado.
+
+```sql
+SELECT a.ACMNTPAC AS TIPO, COUNT(*) AS FILAS,
+       COUNT(DISTINCT a.MPLDCDGO) AS PERSONAS, SUM(a.ACMNVLOR) AS VALOR
+  FROM RHH.ACMN a
+  JOIN RHH.PRDN p ON p.PRDNCDGO = a.PRDNCDGO
+ WHERE p.PRDNANOO = 2026 AND p.PRDNMSEE = 2
+ GROUP BY a.ACMNTPAC ORDER BY 1;
+```
+
+**La prueba de que no se contabilizó nada.** Los tres campos de asiento en `null` dicen que *el
+período* no tiene asiento; **no dicen que no haya nacido uno suelto**.
+
+> **Corregido el 2026-08-22, y la corrección importa.** La primera versión de este control comparaba
+> el **censo total** de `CNT.ASNT` antes y después. **En producción eso no vale**: otros módulos
+> escriben en paralelo. Entre el cierre de enero y el cálculo de febrero nacieron seis asientos
+> —cinco de T-EGRESOS y uno de CXP—, **ninguno de RRHH**, y un censo total los habría leído como
+> contabilización de la nómina. **Un control que no distingue quién escribió no es un control.**
+
+Lo que sí vale: anotar el **código máximo** antes de empezar el mes y mirar después **sólo los que
+lo superen**.
+
+```sql
+-- ANTES de empezar el mes. Anotar el número.
+SELECT MAX(ASNTCDGO) AS BASE FROM CNT.ASNT;
+
+-- DESPUÉS de cerrar. Los que nacieron entre medias, con su origen.
+-- Ninguno puede ser de RRHH: en modo histórico la nómina no genera asiento.
+SELECT ASNTCDGO, ASNTFCHA, ASNTNMRO, ASNTUSRO, SUBSTR(ASNTOBSR, 1, 80) AS OBSERVACION
+  FROM CNT.ASNT WHERE ASNTCDGO > :BASE ORDER BY ASNTCDGO;
+```
 
 **Las 22 nóminas**
 
@@ -183,7 +354,7 @@ entero. **Torres Chávez y Benítez Montes no**, porque salieron en enero.
 
 ---
 
-## 6. Lo que hace fallar febrero
+## 7. Lo que hace fallar febrero
 
 | Síntoma | Causa | Qué mirar |
 |---|---|---|
@@ -195,7 +366,7 @@ entero. **Torres Chávez y Benítez Montes no**, porque salieron en enero.
 
 ---
 
-## 7. Diferencias que no son defecto
+## 8. Diferencias que no son defecto
 
 **El total cierra en cero. Las filas por persona no están vacías.** El bloque 2 saca **46 filas**:
 
@@ -232,3 +403,8 @@ Se cancelan en el total. **No se ajustan.**
 - Correcciones del motor necesarias: prorrateo `30 − d + 1`, `CNTENRIR` de Robayo y selección de
   nómina por contrato vigente. **La tercera no cambia febrero, lo protege**: sin ella, recalcularlo
   perdería a Castro y Cevallos y se irían otros 872,90.
+- **En DBeaver el contraste se corre tal cual.** Sus renglones `--` sueltos sólo se tragan la
+  sentencia siguiente en SQL\*Plus, donde el `-` final actúa como continuación; para ese camino
+  está `CONTRASTE_MES_CONTRA_ROL_REAL.sqlplus.bak`.
+- **Todos los scripts viven en `saaBE/docs/logica-negocio/rhh/sql/`**, nunca en el repositorio del
+  frontend.

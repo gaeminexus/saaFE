@@ -44,7 +44,8 @@ primera se documentó bien — ver §4.
 | **`33`** | Causal de período de prueba + 2 correcciones `CSTR` | ✅ **Sí**, normativa. Idempotente (`NOT EXISTS`) |
 | **`34`** | Gastos personales 2026 (datos de ASOPREP) | ✅ **Sí** — sin él, a seis personas les sale IR |
 | **`35`, `36`, `40`** | `CTRL` febrero, marzo, abril | ✅ **Sí** — ver §3. **El `40` además lleva el `UPDATE` de la adenda de Méndez**, que es dato y es obligatorio |
-| **`37`** | Corrección de la base del 13.º en la apertura (`ACMN`) | ✅ **Sí, y una sola vez** — producción tiene la apertura del `26`, así que tiene el mismo defecto |
+| **`37`** | Corrección de la base del 13.º en la apertura | ❌ **NO va a producción.** Era un parche retroactivo para datos creados con el WAR viejo. Con el WAR final, `aplicarSaldosApertura` ya multiplica por 12 (corrección C, `aplicaAcumulado`): en producción el tipo 3 sale directo en **14 075,52**. Correrlo daría 168 906,24 |
+| **`52`** | Anticipo de Pardo Calle (`DSRC` + `CTDS`) | ✅ **Sí**, después de aplicar la apertura y antes de calcular enero. No viene del corte porque nació el 01-01-2026, pero el rol lo descuenta en enero y febrero |
 | **`38`** | CHECK de banderas de `CPNM` | ✅ **Sí**, estructura |
 | **`39`** | Limpieza de nóminas huérfanas del PRDN 30 | ❌ **NO.** Es cirugía sobre un residuo de local. Producción no lo tendrá si calcula en el orden correcto (salidas antes del período) |
 | **`41`** | DDL de novedades IESS + rubros | ✅ **Sí**, estructura y normativa |
