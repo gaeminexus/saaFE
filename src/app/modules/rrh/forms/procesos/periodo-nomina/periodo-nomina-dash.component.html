@@ -8,7 +8,14 @@
         @if (periodo(); as p) {
           <h1>Período {{ p.mes }}/{{ p.anio }}</h1>
           <p class="subtitle">
-            {{ tipoLabel() }} · estado <strong>{{ estadoLabel() }}</strong>
+            <!--
+              `PRDNCDGO` a la vista. Es el código con el que van todas las consultas de
+              verificación —`NMNA`, `ACMN`, `NVNM`— y hasta ahora sólo se podía leer del último
+              segmento de la barra de direcciones. No es deducible: en producción los períodos
+              son 1, 2, 21 y 41.
+            -->
+            <strong>PRDN {{ p.codigo }}</strong> · {{ tipoLabel() }} ·
+            estado <strong>{{ estadoLabel() }}</strong>
           </p>
         } @else {
           <h1>Período de nómina</h1>

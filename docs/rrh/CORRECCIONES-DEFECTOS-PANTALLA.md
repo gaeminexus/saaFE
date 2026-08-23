@@ -27,7 +27,8 @@ que decía la ficha—, **qué se cambió**, **por qué ése es el arreglo** y *
 | `periodos-nomina.component.spec.ts` | **6 de 6** · D15, D20, D21 |
 | `liquidacion-form.component.spec.ts` | **10 de 10** · D9, D11, D24 |
 | `liquidacion-list.component.spec.ts` | **8 de 8** · D24 |
-| **Total propio** | **50 de 50** |
+| `login.destino.spec.ts` | **13 de 13** · D25 |
+| **Total propio** | **63 de 63** |
 
 **Todo defecto corregido tiene un test que lo cubre**, salvo la mitad de D14 que ya estaba bien.
 D12 no lleva ninguno porque **no hay defecto**: se cerró comprobando que no se reproduce.
@@ -381,7 +382,7 @@ lee un humano, en vez de por `2025,6,25`.
 
 ---
 
-# Los seis que aparecieron mientras se corregía
+# Los siete que aparecieron mientras se corregía
 
 `D19` a `D22` se anotaron en la ficha **después** de recibir el encargo, que llegaba hasta D18.
 Están hechos porque caen en los mismos dos archivos que ya estaban abiertos y ninguno pasa de
@@ -395,6 +396,9 @@ que la mutación persista.
 `D24` salió de la misma pantalla que cerró D12, y llegó también autorizado y con el alcance ya
 acotado por el árbitro: **desambiguar la columna mirando el contrato, sin esperar al backend**. El
 arreglo de fondo es del motor.
+
+`D25` lo levantó la réplica después, y **se corrige junto con la mitad que le faltaba a D21**:
+sueltos son dos molestias; juntos dejan un dato sin forma de alcanzarse dos veces.
 
 ## D19 · La rejilla de Novedades no enseñaba el campo que decide si la novedad entra
 
@@ -429,9 +433,15 @@ año **exactamente donde se teclea el mes**, que es lo que pedía la ficha.
 
 **Qué se cambió.** Columna `Nº` con `PRDNCDGO` en la rejilla de períodos.
 
-**Por qué en la rejilla y no en la cabecera del panel.** Es el sitio donde se elige, y todas las
-consultas de verificación de los guiones —`NMNA`, `ACMN`, `NVNM`— van por ese código. En producción
-los períodos son 1, 2, 21, 41: no hay serie que deducir.
+**Por qué en la rejilla, que es donde se elige.** Todas las consultas de verificación de los
+guiones —`NMNA`, `ACMN`, `NVNM`— van por ese código. En producción los períodos son 1, 2, 21, 41:
+no hay serie que deducir.
+
+**Y también en la cabecera del panel, añadido con D25.** La ficha ofrecía las dos opciones con un
+«o»; hacen falta las dos, y por motivos distintos. La columna sirve para **elegir** sin abrir nada;
+la cabecera, para **confirmar** sobre qué período se ha aterrizado al seguir un enlace. Con D25
+arreglado esa URL ya se puede compartir y recargar, así que aterrizar en ella deja de ser un
+accidente y pasa a ser un camino normal.
 
 ## D22 · «Aprobada para el cálculo» nacía en `No`
 
@@ -573,16 +583,96 @@ bloqueo antes de eso, es una línea en `accionesDisponibles` y se pone.
 
 ---
 
+## D25 · La URL de un período rebotaba por el login y perdía el destino — **con D21**
+
+**Los dos juntos, porque por separado ninguno cuenta la historia entera.** D21 decía que
+`PRDNCDGO` sólo se lee de la barra de direcciones. D25 dice que esa barra de direcciones no se
+puede usar dos veces. **El resultado combinado es un dato que existe y no tiene forma de
+alcanzarse**: no se puede recargar la página, ni pegar el enlace en un mensaje, ni volver mañana al
+mismo período por donde se llegó hoy.
+
+**Qué era en realidad, y el reparto de culpa no es el que parece.** `authGuard`
+(`shared/guard/auth.guard.ts`) hace su parte bien y la hacía desde siempre:
+
+```ts
+router.navigate(['/login'], { queryParams: { returnUrl: state.url } });
+```
+
+**El destino se manda. Lo que faltaba era que alguien lo leyera.** `login.component.ts` tenía
+**cinco salidas** y las cinco navegaban a `/menu` sin mirar la query: la de sesión ya viva, las tres
+de la restauración desde `localStorage` —incluida la de error— y la del login tecleado.
+
+**Por qué se lee como un problema de sesión sin serlo.** El camino real es abrir la URL en una
+pestaña nueva o desde un enlace compartido. Ahí `sessionStorage` está vacío —es por pestaña—, la
+guarda deniega, y el login **restaura la sesión desde `localStorage` sin pedir nada**: el usuario
+ve un parpadeo por la pantalla de login y aparece en el menú, con su sesión intacta. Todo apunta a
+la sesión, y la sesión no tuvo nada que ver. **Lo que se perdió fue el destino, y se perdió después
+de que la guarda lo hubiera puesto a salvo.**
+
+**Qué se cambió.**
+
+- `irAlDestino()` sustituye a las cinco navegaciones a `/menu`, y va al `returnUrl` cuando lo hay.
+- `destinoPedido()` lo valida antes de usarlo.
+- Y la otra mitad de D21: **`PRDN 41` en la cabecera del panel**, junto al «Período 4/2026». La
+  columna del listado ya estaba; esto es lo que se ve al **aterrizar** siguiendo la URL, que es
+  justo el momento en que hace falta confirmar sobre qué período se ha caído.
+
+**La validación no es celo de más.** Un `returnUrl` viaja en la barra de direcciones y lo escribe
+quien quiera; sólo se acepta una ruta absoluta de este mismo origen —nada de `//host`, nada de
+`esquema://`, nada relativo— y se rechaza `/login` para no hacer un bucle. **No se corrige la
+navegación de una aplicación abriendo un salto a otro sitio al lado**, y menos en un sistema cuya
+revisión de arquitectura ya tiene abierta la autenticación.
+
+**Cómo se comprobó.** Trece tests ejecutados, y **seis fallan si se revierte D25** —comprobado
+revirtiéndolo, y hubo que comprobarlo dos veces: el primer intento de revertir **no llegó a
+aplicarse** y los trece siguieron en verde. Un revert que no revierte convierte la comprobación en
+un sello de goma, así que la segunda vez el script aborta si el texto que busca no está.
+
+Los seis que caen son los que llevan al destino: la pestaña nueva con la sesión compartida, esa
+misma sin usuario, esa misma con la carga de datos fallando, la sesión ya viva, el login tecleado,
+y la ruta interna con query propia. Los otros siete —los seis `returnUrl` rechazados y el caso sin
+`returnUrl`— **pasan en los dos mundos, y es lo correcto**: son guardas contra aceptar de más, no
+contra aceptar de menos. Igual que en D24, lo digo para que nadie los cuente como prueba.
+
+> **Esto arregla el rebote, no la autenticación.** Que la sesión se restaure sola desde
+> `localStorage` sin pedir credenciales es otra cosa, está en la revisión de arquitectura (F2/H2) y
+> **no se toca aquí**: con la calibración cerrada y el despliegue pendiente, cambiar cuándo se pide
+> la contraseña no es una corrección de pantalla.
+
+---
+
 # Lo que se deja sin tocar, y por qué
 
 | Qué | Por qué |
 |---|---|
 | **D12** | **Cerrado el 2026-08-23: no se reproduce.** El JSON crudo trae los nombres. Ver arriba. |
-| **Quitar el botón «Ejecutar salida» (D24)** | Es una deducción de efectos, no un estado: si falla, bloquea una salida legítima sin explicar por qué. El bloqueo va con el punto 21 del motor. Ver D24. |
+| **Quitar el botón «Ejecutar salida» (D24)** | **Decidido en firme el 2026-08-23: no se pone, y no se pone tampoco si alguien lo pide.** Ver abajo. |
+| **La restauración de sesión sin credenciales (D25)** | Que `localStorage` reviva la sesión sin pedir contraseña es la revisión de arquitectura F2/H2, no una corrección de pantalla. D25 arregla el rebote, no la autenticación. |
 | **La mitad de mayúsculas de D14** | Ya estaba bien en los dos componentes. Sólo se hizo la parte de los acentos. |
 | **`EsDateAdapter.parse` devolviendo `null`** | **Aplazado por el árbitro a después de julio, con el despliegue.** Ver abajo. |
 | **La suite de tests, 284 fallos** | Rota de antes y ajena: `NG0201` de HTTP en los specs generados por el CLI, más dos de `cnt`. |
 | **Los dos cambios de guion** | **No se hacen todavía**, y la razón es de fondo: ver abajo. |
+
+## Decisión en firme · el botón «Ejecutar salida» NO se deshabilita
+
+**Y esto va escrito aquí, y no sólo en la entrada de D24, para que sobreviva a que alguien lo pida
+un mal día.** La tentación es evidente: si sabemos que la salida ya está ejecutada, quitar el botón
+parece la protección de verdad.
+
+**No lo es, y hay precedente escrito en el catálogo del `ESTADO-RRHH.md`**: la fila del botón de
+reabrir deshabilitado sobre un período `CERRADO`. Allí la pantalla impedía algo que estaba
+permitido, y **nadie lo investigó nunca — porque nadie investiga un botón gris**. Un bloqueo mal
+deducido repetiría ese fallo exacto, y esta vez sobre una acción que sí hay que poder hacer.
+
+La diferencia está en cómo degrada cada opción cuando la deducción se equivoca:
+
+| | Si la deducción acierta | Si se equivoca |
+|---|---|---|
+| **Aviso en la confirmación** | frena el segundo clic | el usuario lo lee, ve que no aplica y sigue |
+| **Botón deshabilitado** | frena el segundo clic | **acción legítima imposible, sin explicación y sin recurso** |
+
+**Cuando el punto 21 del motor esté hecho habrá un estado de verdad**, y entonces el botón se
+retira sin adivinar nada. Hasta ese día, aviso; nunca bloqueo.
 
 ## Aplazado a después de julio · `EsDateAdapter.parse`
 
