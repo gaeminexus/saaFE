@@ -6,6 +6,9 @@
 Una entrada por defecto, con lo mismo en las cuatro: **qué era en realidad** —que no siempre es lo
 que decía la ficha—, **qué se cambió**, **por qué ése es el arreglo** y **cómo se comprobó**.
 
+> **Espejado en `saaBE/docs/logica-negocio/rhh/`.** El original es éste, el de saaFE, y lo mantengo
+> yo; la copia la lleva el árbitro. No edito ningún otro `.md` de `docs/rrh/`.
+
 > **Nada de esto está desplegado.** Va en la rama `correccion/defectos-pantalla-rrhh`, y ahí se
 > queda hasta que el árbitro dé la orden. La réplica de 2026 sigue corriendo contra el desplegado
 > de siempre: los rodeos de los guiones **siguen siendo válidos y obligatorios** mientras no se
@@ -17,14 +20,22 @@ que decía la ficha—, **qué se cambió**, **por qué ése es el arreglo** y *
 |---|---|
 | `npx tsc --noEmit -p tsconfig.app.json` | **salida 0** |
 | `npx ng build --configuration development` | **completa** (sólo avisos de `sass` de `cxp`, ajenos) |
-| `npx ng test --include='**/campo-formulario.component.spec.ts'` | **7 de 7** |
-| `npx ng test --include='**/date.component.spec.ts'` | **3 de 3** |
+| `campo-formulario.component.spec.ts` | **7 de 7** · D9, D10, D14, D15, D16 |
+| `date.component.spec.ts` | **3 de 3** · D15 |
+| `table-basic-hijos.regconfig.spec.ts` | **4 de 4** · D23 |
+| `novedades-nomina.component.spec.ts` | **12 de 12** · D17, D18, D19, D22 |
+| `periodos-nomina.component.spec.ts` | **6 de 6** · D15, D20, D21 |
+| `liquidacion-form.component.spec.ts` | **8 de 8** · D9, D11 |
+| **Total propio** | **40 de 40** |
 
-**La suite completa está rota de antes y sigue igual: 284 fallos de 309.** 282 son el mismo
-`NG0201: No provider found for HttpClient` de los `*.service.spec.ts` generados por el CLI, que
-nunca declararon proveedor de HTTP; los otros dos son de `MayorizacionProcesoComponent`, del
-módulo `cnt`. **Ninguno de los archivos tocados aquí está entre ellos**, y los dos specs que sí los
-cubren pasan enteros. No se ha intentado arreglar el resto: no es de este encargo.
+**Todo defecto corregido tiene ahora un test que lo cubre**, salvo D12 —bloqueado— y la mitad de
+D14 que ya estaba bien. La primera tanda dejó seis de ellos sólo razonados en fuente; ya no.
+
+**La suite completa está rota de antes y sigue igual: 284 fallos de 309** contando sólo lo ajeno.
+282 son el mismo `NG0201: No provider found for HttpClient` de los `*.service.spec.ts` generados
+por el CLI, que nunca declararon proveedor de HTTP; los otros dos son de
+`MayorizacionProcesoComponent`, del módulo `cnt`. **Ninguno de los archivos tocados aquí está entre
+ellos.** No se ha intentado arreglar el resto: no es de este encargo.
 
 ---
 
@@ -78,6 +89,8 @@ indistinguible de «el botón está roto».
 > formato antes de teclear el día 1** deja de ser necesario cuando esto se publique: el campo dice
 > ahora su patrón en la etiqueta y un texto ilegible se queda vacío y en rojo en vez de rellenarse
 > con la fecha de hoy. **Mientras no se publique, el rodeo sigue siendo obligatorio.**
+>
+> **El guion no se actualiza todavía**, y no es pereza: ver «los dos cambios de guion» al final.
 
 ---
 
@@ -113,9 +126,19 @@ backend no puede validar la pertenencia: `/rest/lqdc/calcular` y `/rest/lqdc/sim
 **sólo `idContrato`**, y el colaborador de pantalla no viaja. Verificado otra vez aquí en
 `LiquidacionRest.java`. Todo lo que se puede hacer se hace en el cliente.
 
-**Cómo se comprobó.** Spec ejecutado: se monta el combo con dos contratos, se sustituye el `campo`
-por uno con la colección acotada a uno, y **sin teclear nada** `sugerencias()` pasa de 2 a 1 y el
-que queda es el correcto. Antes del cambio ese test da 2.
+**Cómo se comprobó.** Dos niveles, los dos ejecutados.
+
+En `campo-formulario`: se monta el combo con dos contratos, se sustituye el `campo` por uno con la
+colección acotada a uno, y **sin teclear nada** `sugerencias()` pasa de 2 a 1 y el que queda es el
+correcto. Antes del cambio ese test da 2.
+
+En `liquidacion-form`, sobre la pantalla entera y con dos personas —Torres Chávez y Castro Arce—
+que tienen un contrato cada una: elegir a Torres deja la lista en `CT-1701020304` y sólo ése;
+elegir colaborador limpia el contrato que hubiera puesto; y con el contrato de Castro puesto a
+nombre de Torres, **ni `calcular` ni `simular` llegan a llamarse** y el aviso nombra a CASTRO ARCE.
+El último caso comprueba el camino bueno: con su propio contrato, `calcular` se llama con
+`(2, '2026-01-15', 3, null)` — que de paso verifica el contrato de datos de D16, la fecha viajando
+como cadena `yyyy-MM-dd`.
 
 ---
 
@@ -140,9 +163,19 @@ delante del combo es «¿a quién tiene sentido registrarle una novedad de este 
 respuesta correcta es «a quien el cálculo va a procesar». Cualquier criterio propio se
 desincronizaría de `ContratoEmpleadoDaoServiceImpl` en la siguiente corrección del motor.
 
-**Cómo se comprobó.** Compila y construye. **Sin datos reales no está ejecutado**: el filtro se
-razonó contra la consulta JPQL de `selectActivosEnPeriodo`, línea por línea, pero **no se ha
-corrido contra una base**. Es la comprobación que le falta a esta entrada.
+**Cómo se comprobó.** Seis tests ejecutados sobre los datos de la réplica —febrero de 2026, con
+Torres Chávez y Benítez Montes de baja el 15 y el 16 de enero—: en febrero no se ofrecen y Bravo
+Caiza sí; quien se va en marzo sí aparece en febrero; un cesante **sin** fecha de terminación en el
+contrato queda fuera siempre, que es la red de seguridad; y con los contratos vacíos se ofrece la
+lista entera en vez de ninguna.
+
+> **Y el test corrigió al arreglo, o más bien a lo que yo esperaba de él.** Escribí primero un caso
+> que daba por hecho que Torres seguía ofreciéndose **en enero**, el mes de su salida. Falla, y
+> tiene que fallar: `selectActivosEnPeriodo` compara con `> :hasta`, no con `>= :desde`, porque
+> **el mes de la salida no va por nómina, lo paga el finiquito**. `ESTADO-RRHH.md` ya lo tenía
+> verificado contra los datos —enero sale con 22 y ellos no están—. El código estaba bien y la
+> expectativa mal; el caso se invirtió y quedó documentado, porque es justo el matiz que alguien
+> «arreglaría» dentro de seis meses creyendo que corrige un olvido.
 
 ---
 
@@ -170,8 +203,17 @@ abrirlo; en abril no. Es una carrera, no un evento que falta, y por eso «no se 
 justamente la mentira que lleva a crear un segundo período del mismo mes. El arreglo de la carrera
 sin el arreglo del mensaje deja el daño intacto para la próxima vez que la red vaya lenta.
 
-**Cómo se comprobó.** Compila y construye, y la lectura del `forkJoin` es directa. **No está
-ejecutado contra el desplegado**: reproducir una carrera de red no se hace desde aquí.
+**Cómo se comprobó.** La carrera **sí se reproduce en un test**, que es lo bueno de tenerla
+aislada: se dejan colgando los tres `getAll` del `forkJoin` y se emite sólo la lista de períodos.
+Con eso, `periodos()` trae los dos y `cargandoPeriodos()` ya es falso — antes del cambio el
+desplegable seguía vacío. Un segundo test lee el texto de la pantalla: mientras carga dice
+*«Cargando los períodos»* y **no** dice *«No hay períodos de nómina creados»*; cuando la lista
+llega vacía de verdad, entonces sí.
+
+Y un tercero cubre el hueco que este arreglo podía abrir: elegir período **antes** de que lleguen
+las colecciones deja el combo de colaborador vacío un instante, y la relectura de `ngOnInit` rehace
+la tabla cuando el `forkJoin` aterriza. Sin ese test, adelantar los períodos habría cambiado un
+defecto por otro.
 
 ---
 
@@ -190,9 +232,15 @@ seguiría enseñando el pie *«Simulación: todavía no se ha guardado nada»*, 
 que la ficha señala como lo contrario de lo que acaba de ocurrir. El id nuevo por sí solo arregla
 la cabecera y deja el pie mintiendo.
 
-**Cómo se comprobó.** Compila y construye. **No está ejecutado**: hace falta un backend con datos.
-La regla de la réplica —confirmar lo persistido por REST y no por esta pantalla— **sigue siendo la
-buena** hasta que alguien lo vea funcionar.
+**Cómo se comprobó.** Tres tests ejecutados que empujan el `paramMap` a mano, que es exactamente lo
+que hace el router al navegar sobre el mismo componente: de `nuevo` a `1`, la pantalla deja de ser
+«Nuevo finiquito», el título pasa a «Finiquito 1» y la cabecera abandona «Sin calcular». El
+segundo simula primero, comprueba que el pie dice *«Simulación: todavía no se ha guardado nada»*, y
+que tras el cambio de ruta **ya no lo dice**. El tercero navega de vuelta a `nuevo` y verifica que
+el detalle se limpia.
+
+> **La regla de la réplica sigue siendo la buena igualmente**: confirmar lo persistido por REST y
+> no por esta pantalla. Un test no sustituye a ver el desplegado, y esto no está desplegado.
 
 ---
 
@@ -293,6 +341,8 @@ formatea a mano en lugar de `toISOString()`, por lo mismo.
 > `01/15/2026` y pide `15/01/2026`, como el resto. **Las fechas convertidas a mano de los guiones
 > quedan al revés**, y ésa es la línea que hay que revisar en los cinco. Hasta entonces, la
 > conversión a mano sigue siendo obligatoria.
+>
+> **El guion no se actualiza todavía**, y no es pereza: ver «los dos cambios de guion» al final.
 
 ---
 
@@ -316,11 +366,16 @@ lee un humano, en vez de por `2025,6,25`.
 
 ---
 
-# Los cuatro que aparecieron mientras se corregía
+# Los cinco que aparecieron mientras se corregía
 
 `D19` a `D22` se anotaron en la ficha **después** de recibir el encargo, que llegaba hasta D18.
 Están hechos porque caen en los mismos dos archivos que ya estaban abiertos y ninguno pasa de
 unas líneas. **Van marcados aparte para que el árbitro pueda separarlos si quiere.**
+
+`D23` es distinto: salió de esta revisión, lo verificó el árbitro —y corrigió mi descripción— y
+llegó **autorizado**, con tres condiciones que se cumplen: en la rama y sin desplegar, con un test
+que prueba que Agregar tras Editar abre limpio, y con la comprobación previa de que nada dependa de
+que la mutación persista.
 
 ## D19 · La rejilla de Novedades no enseñaba el campo que decide si la novedad entra
 
@@ -337,7 +392,10 @@ cabecera pasa a contar lo mismo: donde decía «N novedades sin aprobar» —med
 usuario a saber que 1 es ACTIVO y que hay una segunda condición. La pregunta que tiene es si la
 fila va a entrar; la columna la contesta.
 
-**Cómo se comprobó.** Compila y construye. **No ejecutado**: no hay spec de esta pantalla.
+**Cómo se comprobó.** Tres tests ejecutados con las tres filas que importan: aprobada `S` y estado
+`1` → `Sí`; aprobada `N` → `No · sin aprobar`; y **aprobada `S` con estado nulo → `No · sin
+estado`**, que es la que en la rejilla vieja se veía idéntica a la buena. Más que la columna existe
+y que el aviso de cabecera cuenta **dos** y no una, que es lo que contaba el contador anterior.
 
 ## D20 · El diálogo de períodos no decía a qué ejercicio iba el período
 
@@ -367,9 +425,73 @@ nómina, que es peor. Lo que faltaba no era otro valor por defecto: era que **al
 responder**. Con el `required` —y con la línea añadida al `else` de `grabar()`, ver D15— el
 diálogo no se cierra sin respuesta.
 
-**Cómo se comprobó.** Compila y construye. Verificado además que **no rompe la edición**: al editar,
+**Cómo se comprobó.** Test ejecutado: el campo llega con `value` en nulo y con una validación
+`required` entre las suyas. Verificado además que **no rompe la edición**: al editar,
 `EditTableDialogComponent` escribe la cadena `'S'`/`'N'` en el control, y `Validators.required` la
 da por buena.
+
+---
+
+---
+
+## D23 · «Agregar Registro» tras «Editar» abría precargado con la fila editada
+
+**Autorizado por el árbitro el 2026-08-23**, que además corrigió mi primera descripción. La había
+contado como «los dos diálogos comparten el array», y es peor que eso.
+
+**Qué es en realidad.** No es que se comparta el array: es que
+`EditTableDialogComponent.asignaValoresaForm` (`edit-table-dialog.component.ts:27`) **escribe
+dentro de los `FieldConfig`** —`val.value` y `val.selected`—. La mutación es sobre **los objetos**,
+así que **sobrevive a cualquier reasignación del array**: `this.regConfig = this.configTable.regConfig`
+en `ngOnChanges` y en `ngOnInit` no la deshace, porque los objetos son los mismos. Corregir el
+array y no los objetos habría dado un arreglo que parece funcionar y no funciona.
+
+**Qué se cambió.** `configParaDialogo()` en `table-basic-hijos.component.ts`, una copia superficial
+por apertura, en `add()` y en `edit()`:
+
+```ts
+private configParaDialogo(): FieldConfig[] {
+  return this.regConfig.map((campo) => ({ ...campo }));
+}
+```
+
+**Superficial y no profunda a propósito.** `collections` se comparte —son las listas de los combos,
+que en Novedades son la plantilla entera y los conceptos de nómina, y nadie las muta por fila— y lo
+que se separa es exactamente lo que los diálogos escriben. Una copia profunda por apertura pagaría
+miles de objetos por cada clic sin arreglar nada más.
+
+**La condición previa, que era comprobar que nada dependa de que la mutación persista.** Se
+verificó antes de tocar, y no depende nada:
+
+| Quién | Qué hace | Alcance |
+|---|---|---|
+| `AddTableDialogComponent.asignaValoresaForm` | escribe `val.value` | su propio diálogo |
+| `EditTableDialogComponent.asignaValoresaForm` | escribe `val.value`, `val.selected` | su propio diálogo |
+| `AutocompleteComponent.ngOnInit` | escribe `field.collections` en los combos de rubro | su propio diálogo |
+| `DynamicFormComponent.createControl` | **lee** `field.value` | mismo diálogo, después de la escritura |
+| `AutocompleteComponent.ngOnInit` | **lee** `field.value`, `field.selected` | mismo diálogo, después de la escritura |
+| `EditTableDialogComponent.asignaValoresaRegistro` | lee `val.name` y toma el valor de `this.form.value` | **no** lee `val.value` |
+
+Fuera de `shared/basics/table`, `grep` de `regConfig` sobre `src/app` devuelve **sólo asignaciones**
+—los módulos suministran la configuración y ninguno lee de vuelta valores mutados— y no hay ninguna
+comparación por identidad de objetos `FieldConfig`. La única consecuencia observable del cambio es
+que la caché de `collections` de los combos de rubro se escribe ahora en la copia; da igual, porque
+`getDetallesByParent` es una lectura síncrona de caché que se rehace en cada apertura.
+
+**Cómo se comprobó.** Cuatro tests ejecutados, y **tres de ellos fallan si se revierte el
+arreglo** —comprobado revirtiéndolo y volviendo a correrlos—:
+
+1. Se edita una fila con descripción, importe y aprobación; se abre el alta y **se deja que el
+   diálogo haga lo suyo**; los tres campos llegan vacíos. Este detalle importa: `asignaValoresaForm`
+   del alta **respeta** cualquier valor no nulo, así que si la contaminación llegara hasta ahí no la
+   limpiaría, la tomaría por un valor por defecto.
+2. Cada apertura recibe objetos propios, distintos de los del `configTable` y distintos entre sí.
+3. Las `collections` siguen siendo **la misma instancia**.
+4. Editar ya no contamina el `configTable` de la pantalla.
+
+> **Sigue en la rama y sin desplegar**, como las demás. Y mientras no se publique, el rodeo vale y
+> es nuevo: **releer el DOM del diálogo de Agregar también cuando se acaba de editar una fila**. Es
+> un caso que la comprobación de la ficha ya cubre, pero que nadie tenía motivo para sospechar.
 
 ---
 
@@ -379,11 +501,11 @@ da por buena.
 |---|---|
 | **D12** | La causa que describe la ficha no está en el código. Hace falta el JSON crudo de `/rest/lqdc/getAll` antes de escribir nada. Ver arriba. |
 | **La mitad de mayúsculas de D14** | Ya estaba bien en los dos componentes. Sólo se hizo la parte de los acentos. |
-| **`EsDateAdapter.parse` devolviendo `null`** | Vive en `shared/providers/`, y **cambiarlo afecta a toda la aplicación, no sólo a RRHH**. Ver la propuesta de abajo. |
-| **El `regConfig` compartido entre Agregar y Editar** | Defecto nuevo encontrado de paso. Ver abajo. |
+| **`EsDateAdapter.parse` devolviendo `null`** | **Aplazado por el árbitro a después de julio, con el despliegue.** Ver abajo. |
 | **La suite de tests, 284 fallos** | Rota de antes y ajena: `NG0201` de HTTP en los specs generados por el CLI, más dos de `cnt`. |
+| **Los dos cambios de guion** | **No se hacen todavía**, y la razón es de fondo: ver abajo. |
 
-## Propuesta para el árbitro · `EsDateAdapter.parse`
+## Aplazado a después de julio · `EsDateAdapter.parse`
 
 Devuelve `null` para un texto ilegible, y `null` es lo mismo que devuelve para un campo vacío. La
 consecuencia es que **Material nunca activa su error `matDatepickerParse`** y un texto imposible es
@@ -395,20 +517,17 @@ return new Date(NaN);   // en vez de `return null`
 ```
 
 Con `TouchedErrorStateMatcher` ya puesto, el error sólo aparecería **al salir del campo**, nunca
-mientras se teclea a medias, que es lo que el comentario original quería evitar. **Toca `shared/` y
-alcanza a todos los módulos, así que no se hace sin orden.**
+mientras se teclea a medias, que es lo que el comentario original quería evitar.
 
-## Defecto nuevo, encontrado de paso · el `regConfig` se comparte entre Agregar y Editar
+**Decisión del árbitro del 2026-08-23: no ahora.** Toca `shared/providers/` y alcanza a todos los
+módulos, no sólo a RRHH; va con el despliegue de después de julio, no antes. El rodeo que hay en
+`campo-formulario` cubre las pantallas de este módulo mientras tanto.
 
-`table-basic-hijos` pasa **la misma instancia** de `regConfig` a los dos diálogos, y
-`EditTableDialogComponent.asignaValoresaForm` **escribe en ella** (`val.value = valorActual`). Lo
-que deja: **después de editar una fila, el siguiente «Agregar Registro» abre precargado con los
-valores de la fila editada.** Es la misma familia de D15 y de D22 —el formulario se ve completo y
-correcto, y lleva un valor que nadie puso—, con el agravante de que el valor es de otro registro
-real y por tanto perfectamente plausible.
+## Y los dos cambios de guion tampoco se tocan todavía
 
-**No se corrige aquí**: está en `shared/` y no es una guarda de una línea. Se deja anotado con su
-sitio exacto —`table-basic-hijos.component.ts`, `regConfig: this.regConfig` en `add()` y en
-`edit()`— para que el árbitro decida. Mientras tanto, y esto vale ya para la réplica: **releer el
-DOM del diálogo de Agregar también cuando se acaba de editar una fila**, que es un caso que la
-comprobación de la ficha cubre pero que nadie tenía motivo para sospechar.
+Los dos efectos anotados arriba —que el rodeo del día 30 deja de hacer falta, y que *Nuevo
+finiquito* pasa a pedir `15/01/2026`— **se escriben en los guiones el mismo día que se despliega,
+no antes**. Decisión del árbitro, y el motivo es el que hace que importe: si se actualizan ya,
+**quien replique junio seguiría el rodeo nuevo contra la aplicación vieja**, tecleando `15/01/2026`
+en un campo que todavía lee `mm/dd`. Eso no da error: da el 1 de mayo. Adelantar la documentación
+sería introducir exactamente el defecto que se está corrigiendo.
