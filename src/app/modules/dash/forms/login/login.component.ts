@@ -13,7 +13,7 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { AppConfig } from '../../../../app.config';
 
 import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
@@ -84,6 +84,7 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
     private usuarioService: UsuarioService,
     private appStateService: AppStateService,
     private naturalezaCuentaService: NaturalezaCuentaService,
+    private route: ActivatedRoute,
     private router: Router,
     private dialog: MatDialog,
     @Inject(PLATFORM_ID) private platformId: Object
@@ -91,11 +92,49 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
 
   ngOnInit(): void {
     if (sessionStorage.getItem('logged') === 'true') {
-      this.router.navigate(['/menu']);
+      this.irAlDestino();
       return;
     }
 
     this.tryAutoRestoreFromSharedSession();
+  }
+
+  /**
+   * A dónde ir cuando el login termina: al sitio al que el usuario **quería** ir.
+   *
+   * `authGuard` ya manda el destino en `returnUrl` —y lo hacía desde siempre—; lo que faltaba era
+   * que alguien lo leyera. Las cinco salidas del login navegaban a `/menu` sin mirarlo, así que
+   * abrir la URL de un período en una pestaña nueva rebotaba por aquí, **restauraba la sesión de
+   * `localStorage` sin pedir nada** y aterrizaba en el menú. Se lee como un problema de sesión
+   * —hubo un paso por el login— y no lo es: la sesión estaba entera y lo que se perdió fue el
+   * destino. Con `PRDNCDGO` sólo legible de la barra de direcciones, eso deja un dato que existe
+   * sin forma de alcanzarse dos veces: la URL no se puede recargar ni compartir.
+   */
+  private irAlDestino(): void {
+    this.router.navigateByUrl(this.destinoPedido() ?? '/menu');
+  }
+
+  /**
+   * El `returnUrl` de la query, **sólo si es una ruta interna de esta aplicación**.
+   *
+   * Un `returnUrl` viaja en la barra de direcciones y lo escribe quien quiera, así que se acepta
+   * únicamente una ruta absoluta de este mismo origen: nada de `//host`, nada de `esquema://`, y
+   * nada que no empiece por una sola barra. Sin esta comprobación, un enlace preparado convertiría
+   * la pantalla de login en un salto a otro sitio — y no se corrige la navegación de una
+   * aplicación abriendo un agujero al lado.
+   */
+  private destinoPedido(): string | null {
+    const crudo = this.route.snapshot.queryParamMap.get('returnUrl');
+    if (!crudo) return null;
+
+    const destino = crudo.trim();
+    if (!destino.startsWith('/')) return null;
+    if (destino.startsWith('//')) return null;
+    if (destino.includes('://')) return null;
+    // Volver al propio login sería un bucle
+    if (destino === '/login' || destino.startsWith('/login?')) return null;
+
+    return destino;
   }
 
   private tryAutoRestoreFromSharedSession(): void {
@@ -122,7 +161,7 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     if (!sharedUsername) {
-      this.router.navigate(['/menu']);
+      this.irAlDestino();
       return;
     }
 
@@ -132,10 +171,10 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
 
     this.appStateService.inicializarApp(EMPRESA, normalizedUser).subscribe({
       next: () => {
-        this.router.navigate(['/menu']);
+        this.irAlDestino();
       },
       error: () => {
-        this.router.navigate(['/menu']);
+        this.irAlDestino();
       },
     });
   }
@@ -202,7 +241,7 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
     // Usar AppStateService para cargar datos globales
     this.appStateService.inicializarApp(EMPRESA, this.username).subscribe({
       next: (appData) => {
-        this.router.navigate(['/menu']);
+        this.irAlDestino();
       },
       error: (error) => {
         console.error('Error al cargar datos globales:', error);

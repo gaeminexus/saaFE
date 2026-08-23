@@ -89,6 +89,10 @@ export class PeriodosNominaComponent implements OnInit {
       titulo: `Períodos de ${this.anio()}`,
       registros: this.formatear(registros),
       fields: [
+        // El código es lo que piden todas las consultas de verificación (NMNA, ACMN, NVNM) y no
+        // es deducible: en producción los períodos son 1, 2, 21, 41. Sin esta columna sólo se
+        // podía leer del último segmento de la URL.
+        { column: 'codigo', header: 'Nº', fWidth: '7%', fAlign: 'aC' },
         { column: 'mes', header: 'Mes', fWidth: '8%', fAlign: 'aC' },
         { column: 'tipoLabel', header: 'Tipo', fWidth: '16%' },
         { column: 'estadoLabel', header: 'Estado', fWidth: '16%' },
@@ -99,15 +103,44 @@ export class PeriodosNominaComponent implements OnInit {
       regConfig: [
         {
           type: 'input',
+          // El ejercicio no es un campo del diálogo: sale del selector de la cabecera, que el
+          // propio diálogo tapa mientras se teclea. Va en la etiqueta del mes para que el año
+          // esté a la vista justo donde se decide.
           name: 'mes',
-          label: 'Mes (1 a 12)',
+          label: `Mes (1 a 12) del ejercicio ${this.anio()}`,
           inputType: 'number',
           validations: [
             { name: 'required', validator: Validators.required, message: 'El mes es requerido' },
           ],
         },
-        { type: 'date', name: 'fechaInicio', label: 'Fecha de inicio' },
-        { type: 'date', name: 'fechaFin', label: 'Fecha de fin' },
+        // Las dos fechas son obligatorias a propósito. El datepicker deja el control **vacío**
+        // cuando el texto no parsea —ya no lo rellena con la fecha de hoy—, así que sin este
+        // `required` una fecha mal tecleada viajaría como nulo sin que nada lo frene. Y el
+        // patrón va en la etiqueta porque el control no lo dice por ningún otro sitio.
+        {
+          type: 'date',
+          name: 'fechaInicio',
+          label: 'Fecha de inicio (dd/mm/aaaa)',
+          validations: [
+            {
+              name: 'required',
+              validator: Validators.required,
+              message: 'La fecha de inicio es requerida, en formato dd/mm/aaaa',
+            },
+          ],
+        },
+        {
+          type: 'date',
+          name: 'fechaFin',
+          label: 'Fecha de fin (dd/mm/aaaa)',
+          validations: [
+            {
+              name: 'required',
+              validator: Validators.required,
+              message: 'La fecha de fin es requerida, en formato dd/mm/aaaa',
+            },
+          ],
+        },
         {
           type: 'autocomplete',
           name: 'tipoPeriodo',

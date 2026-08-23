@@ -32,7 +32,17 @@
     </div>
   </div>
 
-  @if (periodos().length === 0) {
+  <!--
+    El orden importa: mientras los períodos se están pidiendo, el desplegable está vacío y
+    «No hay períodos creados» sería mentira — y es la mentira que lleva a crear un período
+    duplicado del mismo mes.
+  -->
+  @if (cargandoPeriodos()) {
+    <div class="aviso">
+      <mat-icon>hourglass_top</mat-icon>
+      <span>Cargando los períodos de {{ anio() }}…</span>
+    </div>
+  } @else if (periodos().length === 0) {
     <div class="aviso">
       <mat-icon>event_busy</mat-icon>
       <span>
@@ -45,12 +55,12 @@
       <mat-icon>event</mat-icon>
       <span>Seleccione un período para cargar o revisar sus novedades.</span>
     </div>
-  } @else if (pendientes() > 0) {
+  } @else if (fueraDelCalculo() > 0) {
     <div class="aviso aviso-error">
       <mat-icon>pending_actions</mat-icon>
       <span>
-        {{ pendientes() }} novedad(es) sin aprobar. Las novedades no aprobadas no entran en el
-        cálculo del período.
+        {{ fueraDelCalculo() }} novedad(es) que el cálculo NO va a mirar. El motor exige las dos
+        cosas —aprobada «Sí» y estado activo—; mire la columna «¿Entra al cálculo?».
       </span>
     </div>
   }

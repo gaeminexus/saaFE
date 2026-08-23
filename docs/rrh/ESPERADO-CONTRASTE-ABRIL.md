@@ -30,7 +30,7 @@ es **hallazgo nuevo** y se reporta sin interpretarlo.
 - **Datos esperados:** `sql/40_CARGA_CONTRASTE_ABRIL.sql`, ya ejecutado.
 - **Precondición:** `RHH.CTRL_PARAM` en `2026 / 4`. Con el parámetro en otro mes todos los bloques
   salen vacíos y **parecen un éxito**.
-- **Precondición:** `NMNA` del PRDN 31 en **20** filas. En marzo el recálculo dejó dos huérfanas y
+- **Precondición:** `NMNA` del período de abril en **20** filas —filtrando por `PRDNANOO = 2026 AND PRDNMSEE = 4`, **nunca por el código del período**: el 31 es el de LOCAL y en producción abril tendrá otro (allí enero es 1, febrero 2 y marzo 21)—. En marzo el recálculo dejó dos huérfanas y
   la cabecera no lo delató; se comprueba antes de leer nada.
 - **Cómo se ejecuta:** despojando los comentarios (`grep -vE '^\s*--'`) y sentencia por sentencia.
   Las 18 líneas `--` del instrumento acaban en guion, y en SQL\*Plus **un guion final se traga la

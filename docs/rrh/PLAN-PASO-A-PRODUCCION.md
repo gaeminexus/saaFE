@@ -241,6 +241,26 @@ La que nos costó los 218,22 de Méndez. Va **antes**, no después: después, el
 
 Crear → aprobar → **ejecutar la salida**. Las tres, no sólo las dos primeras.
 
+> **⛔ DEPENDENCIA DURA, no recomendación: el WAR final se publica ANTES de ejecutar ninguna
+> salida.** Añadido el 2026-08-22, verificado sobre local.
+>
+> `escribeAcumuladosDelFiniquito` es el paso 6 de `ejecutarSalida`, y **sólo escribe la salida que
+> se ejecuta con el WAR nuevo ya publicado. No rellena hacia atrás.** Si alguien ejecuta las
+> salidas con un WAR anterior, esos finiquitos **no existirán nunca para el RDEP y nada lo
+> avisará**: el declarativo saldrá con menos gente y cuadrará consigo mismo.
+>
+> **Local es la demostración**, y por eso conviene tenerla escrita: allí las cuatro salidas están
+> ejecutadas y los cuatro empleados en CESANTE, pero **no hay un solo acumulado de finiquito** —se
+> ejecutaron antes de publicar el cambio—. `generarRdep(2026)` sobre local declara **22** y deja
+> fuera a Torres Chávez (7 556,41) y Benítez Montes (493,64). Producción, donde el orden fue el
+> correcto, declara **24**.
+>
+> **Y no se arregla reejecutando la salida.** `ejecutarSalida` admite reejecución desde APROBADA,
+> pero `generarAvisoSalida` **crea una `NovedadIess` nueva sin comprobar si ya existe**
+> (`NovedadIessServiceImpl:144-153`): duplicaría el aviso al IESS. Es una asimetría con la novedad
+> 6, que sí es idempotente. **La reparación de una instalación en ese estado es por datos, no
+> reejecutando** — y va anotada como el punto 20 de la lista de correcciones del motor.
+
 **Dos consecuencias que el guion debe anticipar, porque las dos parecen errores y no lo son:**
 
 - **Las salidas regeneran las cuatro `NVIS`**, así que enero y marzo volverán a cerrar con el aviso

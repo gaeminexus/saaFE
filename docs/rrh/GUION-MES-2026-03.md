@@ -65,7 +65,20 @@ enseña el desplegable vacío. Se crea desde `Períodos de nómina` → *Agregar
 | Tipo de período | **MENSUAL** |
 | Modo | **1 · HISTÓRICO SIN CONTABILIZAR** |
 
-**El modo no se puede corregir después sin rehacer el mes.** En modo 2 el período exige asiento
+**Elegir bien el modo, pero NO rehacer el mes si se falla.** Este guion decía «el modo no se puede
+corregir después sin rehacer el mes», y **es más caro de lo que hace falta** — verificado en fuente
+el 2026-08-23: `getModo()` se lee en **exactamente dos sitios**, los dos `esHistorico()`, uno en
+`contabilizarRol` (`ContabilizacionNominaServiceImpl:1128`) y otro en la regla de cierre
+(`ProcesoNominaServiceImpl:673`). **`calcularPeriodo` no lo mira nunca.**
+
+- **Si se detecta ANTES de contabilizar** —y la comprobación de rango de aquí abajo lo saca en la
+  primera consulta—, el modo es una columna inerte: se corrige y se sigue. Nada de lo calculado
+  depende de él. Corregirlo y **volver a correr la consulta de rango** para verlo en la base, no en
+  la pantalla.
+- **Sólo si ya se contabilizó en modo 2** hay daño de verdad, y no es el modo: es el **asiento
+  contable que nació**. Ahí sí hay que deshacer.
+
+En modo 2 el período exige asiento
 contable y `contabilizarRol` se negaría; de enero a julio ninguno lleva contabilidad, porque ya la
 hizo el cliente a mano.
 
@@ -102,18 +115,30 @@ Va **antes** de registrar la primera novedad. Con un rango que no sea el mes, `c
 revienta: calcula.
 
 ```sql
-SELECT PRDNCDGO, PRDNANOO, PRDNMSEE, PRDNFCHI, PRDNFCHF, PRDNMODO,
-       CASE WHEN EXTRACT(MONTH FROM PRDNFCHI) = PRDNMSEE
+SELECT PRDNCDGO, PRDNANOO AS ANIO, PRDNMSEE AS MES, PRDNFCHI, PRDNFCHF,
+       PRDNMODO AS MODO, PRDNTPNM AS TIPO, PRDNESTD AS ESTADO,
+       CASE WHEN PRDNMODO IS NULL THEN '*** MODO NULO: CORREGIR ANTES DE CERRAR, NO BORRAR ***'
+            WHEN PRDNMODO <> 1    THEN '*** MODO ' || PRDNMODO || ', NO ES HISTORICO: CORREGIR EN SITIO ***'
+            WHEN PRDNTPNM <> 1    THEN '*** TIPO ' || PRDNTPNM || ', NO ES MENSUAL: CORREGIR EN SITIO ***'
+            WHEN EXTRACT(MONTH FROM PRDNFCHI) = PRDNMSEE
              AND EXTRACT(MONTH FROM PRDNFCHF) = PRDNMSEE
              AND EXTRACT(YEAR  FROM PRDNFCHI) = PRDNANOO
              AND EXTRACT(YEAR  FROM PRDNFCHF) = PRDNANOO
-             AND PRDNMODO = 1
-            THEN 'OK' ELSE '*** REVISAR: BORRAR EL PERIODO Y REHACERLO ***' END AS VEREDICTO
-  FROM RHH.PRDN ORDER BY PRDNANOO, PRDNMSEE;
+            THEN 'OK'
+            ELSE '*** RANGO MALO: BORRAR EL PERIODO Y REHACERLO ***' END AS VEREDICTO
+  FROM RHH.PRDN
+ WHERE PRDNANOO = 2026
+ ORDER BY PRDNMSEE;
 ```
 
-**Se corrige borrando el período y creándolo de nuevo**, no editando las fechas: si ya se calculó
-algo sobre el rango malo, la edición deja nóminas de un rango y cabecera de otro.
+**Los cuatro veredictos no se arreglan igual, y confundirlos cuesta el mes entero:**
+
+- **`RANGO MALO`** → **borrar el período y crearlo de nuevo**, no editar las fechas: si ya se
+  calculó algo sobre el rango malo, la edición deja nóminas de un rango y cabecera de otro.
+- **`MODO NULO` o `MODO n`** → **corregir en sitio, no borrar nada.** `calcularPeriodo` no lee el
+  modo, así que no hay nada calculado que dependa de él. Se corrige y se vuelve a correr esta
+  consulta. Sólo hay daño si ya se contabilizó en modo 2, y entonces el problema es el asiento.
+- **`TIPO n`** → **corregir en sitio, no borrar nada**, igual que el modo. Y anotarlo: **`PRDNTPNM` no lo lee NADIE** —verificado el 2026-08-23: `getTipoPeriodo()` no tiene un solo llamador—, así que un tipo equivocado **no cambia ni una cifra y no bloquea ningún paso**. Por eso es el más traicionero de los tres: el modo al menos muerde al cerrar, y el rango descuadra los días; **el tipo se quedaría mal para siempre en el registro y nada lo notaría jamás**. En una carga histórica, que es el archivo permanente del cliente, un período mensual rotulado QUINCENAL es un dato falso sin ningún control detrás.
 
 > **En marzo el rango tiene una consecuencia extra**, y por eso este control importa aquí más que
 > en febrero: `selectActivosEnPeriodo` decide quién entra comparando `fechaTerminacion > fechaFin`.
@@ -278,8 +303,18 @@ huérfanas. Diferencia exacta **872,90** = 436,45 × 2. Hace falta limpiar las d
 destapa algo con el período en 3, se arregla recalculando; con el período cerrado habría que
 reabrirlo, que es el **punto 6** y `reabrirPeriodo` no avisa.
 
-1. `UPDATE RHH.CTRL_PARAM SET MES = 3; COMMIT;` y comprobarlo — **con el parámetro en otro mes
-   todos los bloques salen vacíos y se leen como que cuadra.**
+1. `UPDATE RHH.CTRL_PARAM SET MES = 3; COMMIT;` **y comprobarlo, sin saltarse este paso ni aunque
+   el ESTADO diga que ya está puesto** — el 2026-08-23 lo decía y estaba en otro mes.
+   **El parámetro equivocado falla en dos direcciones, y sólo una es la que avisaba este guion:**
+   - **Adelantado** —el mes aún sin calcular— todos los bloques salen **vacíos**, y un vacío se lee
+     como que cuadra.
+   - **Atrasado** —un mes anterior ya cerrado— no vacía nada: el instrumento **contrasta ese otro
+     mes**, con su `CTRL` y su `NMNA` completos, y sale **verde al céntimo**. Es el caso peor: un
+     verde entero y plausible del mes equivocado no tiene nada que lo delate.
+
+   Por eso los siete bloques imprimen **`PERIODO_LEIDO`** desde el 2026-08-23. **Es lo primero que
+   se mira en cada bloque, antes que ninguna cifra.** Si no dice `2026-03`, se para: da igual lo
+   bien que se vea todo lo demás.
 2. `CONTRASTE_MES_CONTRA_ROL_REAL.sql`, **bloque 4 primero**, luego 3, luego 1 y 2, y el 1B aunque
    todo cuadre.
 3. Contra [`ESPERADO-CONTRASTE-MARZO.md`](ESPERADO-CONTRASTE-MARZO.md). El §8 explica las dos
@@ -469,3 +504,54 @@ Se cancelan en el total. **No se ajustan.**
 - **Al cerrar marzo, y sólo entonces, `sql/49`** (Méndez a tiempo completo desde la adenda del
   01-04). Su guarda es un `SELECT` con veredicto: **no se niega sola**, hay que mirarla y comprobar
   que enero, febrero y marzo están en estado 7.
+
+---
+
+# Lo que enseñó ejecutarlo — 2026-08-23
+
+> Marzo se replicó en producción el **2026-08-22** y cerró en 17 591,12 con **diferencia cero**.
+> *Reconstruido de la bitácora de defectos y del `ESTADO-RRHH.md`.*
+
+## El orden del §0 no era un consejo: fue la diferencia entre reparar y no tener que reparar
+
+**Marzo salió con 20 filas a la primera.** En local costó una tarde: allí se calculó **antes** de
+ejecutar las salidas, quedaron dos nóminas huérfanas y hubo que limpiarlas con el `sql/39`.
+
+En producción, con las dos salidas ejecutadas **antes** de calcular, no hizo falta ningún
+equivalente del `39`. **El mismo mes, el mismo motor y los mismos datos dieron dos trabajos
+distintos, y lo único que cambió fue el orden.** Es la justificación entera del §0.
+
+> Y el `sql/39` quedó marcado como **no ejecutable nunca más**: lleva `PRDNCDGO = 30` y
+> `MPLDCDGO IN (48,49)` escritos a mano, que son códigos de **local**. Fue inofensivo mientras
+> `PRDN` estuvo vacío; ahora hay períodos.
+
+## Lo que sólo marzo pudo enseñar
+
+- **El `+0,01` de ingresos de Manosalvas apareció como fila propia.** En enero y febrero venía
+  absorbido dentro de su fila del par de vacaciones; al desaparecer el par, se quedó solo. **Es el
+  mismo céntimo de siempre, visible por primera vez** — y otra razón por la que el esperado se fija
+  fila a fila.
+- **El cierre avisó, y el aviso era la evidencia.** Las dos NVIS del 06-03 quedan en PENDIENTE para
+  siempre: no se marcan enviadas —sería afirmar ante el IESS una fecha que no ocurrió— ni se anulan
+  —sí correspondían—. **En modo histórico el cierre avisa y deja cerrar.** Son la prueba de los
+  208,22 declarados de más.
+- **Los dos números del sobredeclarado son los dos correctos:** **198,58** = `482 × 20,60 % × 2`
+  (sólo aportes, que es lo que enseñan el bloque 3 y la planilla) y **208,22** = `482 × 21,60 % × 2`
+  (aportes más IECE y SECAP). **Ninguno es un error de transcripción**, y los documentos usan los
+  dos según qué midan.
+
+## Los códigos de este guion son de LOCAL
+
+**`LQDC` 23 y 24 del §3 son de local.** En producción, Castro Arce salió con el **21** y Cevallos
+Alemán con el **22**. Y **`PRDN` en producción es el 21**, no el 30 que usa el `sql/39`.
+
+## Y los cuatro finiquitos quedan en un estado que la pantalla no sabe leer (D24)
+
+Al cerrar marzo, los cuatro finiquitos del año están **ejecutados**. Pero `ejecutarSalida` **no
+cambia `LQDCESTD` al terminar**, así que aprobada, ejecutada y contabilizada son el mismo **`3`**, y
+el listado de Liquidación los muestra a los cuatro como **«APROBADA»** — junto al botón *Ejecutar
+salida*, que no se deshace y cuyo `generarAvisoSalida` **no es idempotente**: un segundo clic
+duplica el aviso al IESS.
+
+**Quien replique marzo en otra base termina con esa pantalla en ese estado.** Se comprueba por los
+efectos —contrato `CERRADO`, empleado en estado 4, saldos caducados—, **nunca por la columna**.

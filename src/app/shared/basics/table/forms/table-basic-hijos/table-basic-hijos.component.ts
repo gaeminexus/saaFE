@@ -285,6 +285,27 @@ export class TableBasicHijosComponent implements OnInit, OnChanges, AfterViewIni
     this.changeDetectorRefs.detectChanges();
   }
 
+  /**
+   * Copia superficial del `regConfig` para cada apertura de diálogo.
+   *
+   * Los dos diálogos **escriben dentro de los `FieldConfig`** —`asignaValoresaForm` asigna
+   * `val.value` y `val.selected`—, así que con la instancia compartida la edición de una fila
+   * dejaba sus valores pegados en la configuración: el siguiente «Agregar Registro» abría
+   * precargado con los datos del registro que se acababa de editar. Y como la mutación es sobre
+   * el objeto, sobrevivía a cualquier reasignación del array.
+   *
+   * Es la misma forma que el defecto de la fecha de hoy y el de «Aprobada» en `No`: **el
+   * formulario se ve completo y correcto, y lleva un valor que nadie puso**. Peor aquí, porque el
+   * valor es de un registro real y por tanto perfectamente plausible.
+   *
+   * Superficial y no profunda a propósito: `collections` se comparte —son las listas de los
+   * combos, que pueden ser miles de filas y no se mutan por fila— y lo que se separa es
+   * exactamente lo que los diálogos escriben.
+   */
+  private configParaDialogo(): FieldConfig[] {
+    return this.regConfig.map((campo) => ({ ...campo }));
+  }
+
   add(): void {
     const dialogRef = this.dialog.open(AddTableDialogComponent, {
       // `autoFocus: dialog` en vez del primer campo enfocable, y es una guarda funcional, no
@@ -298,7 +319,7 @@ export class TableBasicHijosComponent implements OnInit, OnChanges, AfterViewIni
       disableClose: true,
       autoFocus: 'dialog',
       data: {
-        regConfig: this.regConfig,
+        regConfig: this.configParaDialogo(),
         entidad: this.entidad,
         accion: AccionesGrid.ADD,
         onSave: async (datos: any) => {
@@ -324,7 +345,7 @@ export class TableBasicHijosComponent implements OnInit, OnChanges, AfterViewIni
       disableClose: true,
       autoFocus: 'dialog',
       data: {
-        regConfig: this.regConfig,
+        regConfig: this.configParaDialogo(),
         entidad: this.entidad,
         accion: AccionesGrid.EDIT,
         registro,

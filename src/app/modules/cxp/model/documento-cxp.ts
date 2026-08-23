@@ -35,4 +35,13 @@ export interface DocumentoCxp {
   usuarioReversion: number;
   /** Marcado como factura de reembolso de gastos: 0=No 1=Sí */
   esReembolso?: number;
+  // ─── Carga automática desde el SRI (§5.1 del PLAN-CARGA-AUTOMATICA-SRI) ───
+  /** DCXPORXM — 1=Manual 2=SRI. Null en los históricos */
+  origenXml?: number;
+  /** DCXPRSRI — DESCARGADO · FUERA_VENTANA · NO_ENCONTRADO · NO_AUTORIZADO · ERROR_CONEXION */
+  resultadoSri?: string;
+  /** DCXPMSRI — mensaje devuelto por el SRI o el motivo calculado */
+  mensajeSri?: string;
+  /** DCXPFDSC — fecha del último intento de descarga (ISO LocalDateTime) */
+  fechaDescargaSri?: string;
 }

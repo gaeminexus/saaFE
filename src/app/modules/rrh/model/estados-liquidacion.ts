@@ -54,6 +54,74 @@ export function estadoEn(liquidacion: Liquidacion | null, estados: number[]): bo
   return estados.includes(Number(liquidacion.estado));
 }
 
+// ─── Si la salida ya se ejecutó ──────────────────────────────────────────────
+
+/** `CNTEESTD` con el que `ejecutarSalida` cierra el contrato. */
+export const CONTRATO_CERRADO = 'CERRADO';
+
+/** `MPLDESTD` 4: la situación a la que `ejecutarSalida` pasa al colaborador. */
+export const EMPLEADO_CESANTE = 4;
+
+/**
+ * Tres respuestas, no dos: la tercera es no saberlo.
+ *
+ * Se deduce de los efectos, no del estado, y una deducción puede quedarse sin datos. Decir «no
+ * ejecutada» cuando lo que pasa es que no llegó el contrato sería peor que no decir nada, porque
+ * es justo la lectura que invita a pulsar el botón.
+ */
+export type SalidaEjecutada = 'si' | 'no' | 'desconocido';
+
+/**
+ * Si la salida de un finiquito ya se ejecutó, mirando lo que el proceso deja hecho.
+ *
+ * **En `LQDC` no se puede distinguir.** `ejecutarSalida` exige `APROBADA` de entrada y **no mueve
+ * el estado al terminar**, así que aprobada, ejecutada y contabilizada son el mismo 3: los cuatro
+ * finiquitos de producción están en `LQDCESTD` 3 y los cuatro tienen la salida hecha. Lo que sí
+ * cambia son los efectos —`LiquidacionHaberesServiceImpl` cierra el contrato y pasa al empleado a
+ * CESANTE—, y los dos viajan en el mismo `getAll` porque son `@ManyToOne`.
+ *
+ * **Se exigen las dos señales.** Un contrato cerrado sin el empleado cesante, o al revés, no es
+ * una salida a medias que se pueda afirmar: es un dato del que no se puede concluir, y se
+ * responde `desconocido`.
+ *
+ * El arreglo de fondo es del motor —que `ejecutarSalida` deje su propio estado— y no de aquí.
+ * Esto es lo que se puede hacer desde la pantalla mientras tanto.
+ */
+export function salidaEjecutada(liquidacion: any): SalidaEjecutada {
+  const contrato = liquidacion?.contratoEmpleado;
+  const empleado = liquidacion?.empleado;
+
+  const estadoContrato = contrato?.estado;
+  const estadoEmpleado = empleado?.estado;
+  if (estadoContrato == null || estadoEmpleado == null) return 'desconocido';
+
+  const cerrado = String(estadoContrato).trim().toUpperCase() === CONTRATO_CERRADO;
+  const cesante = Number(estadoEmpleado) === EMPLEADO_CESANTE;
+
+  if (cerrado && cesante) return 'si';
+  if (!cerrado && !cesante) return 'no';
+  return 'desconocido';
+}
+
+/**
+ * La etiqueta del estado, desambiguada cuando el rubro no basta.
+ *
+ * Sólo se añade el matiz sobre `APROBADA`, que es donde los tres momentos se confunden. En los
+ * demás estados el rubro ya dice lo que hay y añadirle texto sería ruido.
+ */
+export function etiquetaEstadoLiquidacion(liquidacion: any, etiquetaRubro: string): string {
+  if (Number(liquidacion?.estado) !== EstadoLiquidacion.APROBADA) return etiquetaRubro;
+
+  switch (salidaEjecutada(liquidacion)) {
+    case 'si':
+      return `${etiquetaRubro} · salida ejecutada`;
+    case 'no':
+      return `${etiquetaRubro} · salida pendiente`;
+    default:
+      return etiquetaRubro;
+  }
+}
+
 /** Qué acciones admite el finiquito en su estado actual. */
 export function accionesDisponibles(liquidacion: Liquidacion | null): Set<AccionLiquidacion> {
   const acciones = new Set<AccionLiquidacion>();

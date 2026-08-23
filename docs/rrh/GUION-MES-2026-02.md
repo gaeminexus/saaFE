@@ -63,7 +63,20 @@ enseña el desplegable vacío. Se crea desde `Períodos de nómina` → *Agregar
 | Tipo de período | **MENSUAL** |
 | Modo | **1 · HISTÓRICO SIN CONTABILIZAR** |
 
-**El modo no se puede corregir después sin rehacer el mes.** En modo 2 el período exige asiento
+**Elegir bien el modo, pero NO rehacer el mes si se falla.** Este guion decía «el modo no se puede
+corregir después sin rehacer el mes», y **es más caro de lo que hace falta** — verificado en fuente
+el 2026-08-23: `getModo()` se lee en **exactamente dos sitios**, los dos `esHistorico()`, uno en
+`contabilizarRol` (`ContabilizacionNominaServiceImpl:1128`) y otro en la regla de cierre
+(`ProcesoNominaServiceImpl:673`). **`calcularPeriodo` no lo mira nunca.**
+
+- **Si se detecta ANTES de contabilizar** —y la comprobación de rango de aquí abajo lo saca en la
+  primera consulta—, el modo es una columna inerte: se corrige y se sigue. Nada de lo calculado
+  depende de él. Corregirlo y **volver a correr la consulta de rango** para verlo en la base, no en
+  la pantalla.
+- **Sólo si ya se contabilizó en modo 2** hay daño de verdad, y no es el modo: es el **asiento
+  contable que nació**. Ahí sí hay que deshacer.
+
+En modo 2 el período exige asiento
 contable y `contabilizarRol` se negaría; de enero a julio ninguno lleva contabilidad, porque ya la
 hizo el cliente a mano.
 
@@ -92,18 +105,30 @@ revienta: calcula. Un período del 1 de enero al 21 de agosto habría dado **21 
 personas** y habría perdido a quien sale más tarde, sin un solo error en pantalla.
 
 ```sql
-SELECT PRDNCDGO, PRDNANOO, PRDNMSEE, PRDNFCHI, PRDNFCHF, PRDNMODO,
-       CASE WHEN EXTRACT(MONTH FROM PRDNFCHI) = PRDNMSEE
+SELECT PRDNCDGO, PRDNANOO AS ANIO, PRDNMSEE AS MES, PRDNFCHI, PRDNFCHF,
+       PRDNMODO AS MODO, PRDNTPNM AS TIPO, PRDNESTD AS ESTADO,
+       CASE WHEN PRDNMODO IS NULL THEN '*** MODO NULO: CORREGIR ANTES DE CERRAR, NO BORRAR ***'
+            WHEN PRDNMODO <> 1    THEN '*** MODO ' || PRDNMODO || ', NO ES HISTORICO: CORREGIR EN SITIO ***'
+            WHEN PRDNTPNM <> 1    THEN '*** TIPO ' || PRDNTPNM || ', NO ES MENSUAL: CORREGIR EN SITIO ***'
+            WHEN EXTRACT(MONTH FROM PRDNFCHI) = PRDNMSEE
              AND EXTRACT(MONTH FROM PRDNFCHF) = PRDNMSEE
              AND EXTRACT(YEAR  FROM PRDNFCHI) = PRDNANOO
              AND EXTRACT(YEAR  FROM PRDNFCHF) = PRDNANOO
-             AND PRDNMODO = 1
-            THEN 'OK' ELSE '*** REVISAR: BORRAR EL PERIODO Y REHACERLO ***' END AS VEREDICTO
-  FROM RHH.PRDN ORDER BY PRDNANOO, PRDNMSEE;
+            THEN 'OK'
+            ELSE '*** RANGO MALO: BORRAR EL PERIODO Y REHACERLO ***' END AS VEREDICTO
+  FROM RHH.PRDN
+ WHERE PRDNANOO = 2026
+ ORDER BY PRDNMSEE;
 ```
 
-**Se corrige borrando el período y creándolo de nuevo**, no editando las fechas: si ya se calculó
-algo sobre el rango malo, la edición deja nóminas de un rango y cabecera de otro.
+**Los cuatro veredictos no se arreglan igual, y confundirlos cuesta el mes entero:**
+
+- **`RANGO MALO`** → **borrar el período y crearlo de nuevo**, no editar las fechas: si ya se
+  calculó algo sobre el rango malo, la edición deja nóminas de un rango y cabecera de otro.
+- **`MODO NULO` o `MODO n`** → **corregir en sitio, no borrar nada.** `calcularPeriodo` no lee el
+  modo, así que no hay nada calculado que dependa de él. Se corrige y se vuelve a correr esta
+  consulta. Sólo hay daño si ya se contabilizó en modo 2, y entonces el problema es el asiento.
+- **`TIPO n`** → **corregir en sitio, no borrar nada**, igual que el modo. Y anotarlo: **`PRDNTPNM` no lo lee NADIE** —verificado el 2026-08-23: `getTipoPeriodo()` no tiene un solo llamador—, así que un tipo equivocado **no cambia ni una cifra y no bloquea ningún paso**. Por eso es el más traicionero de los tres: el modo al menos muerde al cerrar, y el rango descuadra los días; **el tipo se quedaría mal para siempre en el registro y nada lo notaría jamás**. En una carga histórica, que es el archivo permanente del cliente, un período mensual rotulado QUINCENAL es un dato falso sin ningún control detrás.
 
 ### El combo de Período no se llena hasta re-elegir el ejercicio
 
@@ -222,8 +247,18 @@ partidos significan que el prorrateo está tocando a quien no debe.
 destapa algo con el período en 3, se arregla recalculando; con el período cerrado habría que
 reabrirlo, que es el **punto 6** y `reabrirPeriodo` no avisa.
 
-1. `UPDATE RHH.CTRL_PARAM SET MES = 2; COMMIT;` y comprobarlo — **con el parámetro en otro mes
-   todos los bloques salen vacíos y se leen como que cuadra.**
+1. `UPDATE RHH.CTRL_PARAM SET MES = 2; COMMIT;` **y comprobarlo, sin saltarse este paso ni aunque
+   el ESTADO diga que ya está puesto** — el 2026-08-23 lo decía y estaba en otro mes.
+   **El parámetro equivocado falla en dos direcciones, y sólo una es la que avisaba este guion:**
+   - **Adelantado** —el mes aún sin calcular— todos los bloques salen **vacíos**, y un vacío se lee
+     como que cuadra.
+   - **Atrasado** —un mes anterior ya cerrado— no vacía nada: el instrumento **contrasta ese otro
+     mes**, con su `CTRL` y su `NMNA` completos, y sale **verde al céntimo**. Es el caso peor: un
+     verde entero y plausible del mes equivocado no tiene nada que lo delate.
+
+   Por eso los siete bloques imprimen **`PERIODO_LEIDO`** desde el 2026-08-23. **Es lo primero que
+   se mira en cada bloque, antes que ninguna cifra.** Si no dice `2026-02`, se para: da igual lo
+   bien que se vea todo lo demás.
 2. `CONTRASTE_MES_CONTRA_ROL_REAL.sql`, **bloque 4 primero**, luego 3, luego 1 y 2, y el 1B aunque
    todo cuadre.
 3. Contra [`ESPERADO-CONTRASTE-FEBRERO.md`](ESPERADO-CONTRASTE-FEBRERO.md). El §8 explica las
@@ -408,3 +443,57 @@ Se cancelan en el total. **No se ajustan.**
   está `CONTRASTE_MES_CONTRA_ROL_REAL.sqlplus.bak`.
 - **Todos los scripts viven en `saaBE/docs/logica-negocio/rhh/sql/`**, nunca en el repositorio del
   frontend.
+
+---
+
+# Lo que enseñó ejecutarlo — 2026-08-23
+
+> Febrero se replicó en producción el **2026-08-22** y cerró en 17 525,11 con **diferencia cero**.
+> *Reconstruido de la bitácora de defectos y del `ESTADO-RRHH.md`.*
+
+## Fue el primer mes con el §2, y el §2 funcionó
+
+Febrero **estrenó el paso de crear el período**, que enero tuvo que inventar sobre la marcha. Salió
+a la primera. Es el primer indicio de que el guion había dejado de tener huecos de procedimiento y
+los que quedaban eran de **pantalla**.
+
+## Y estrenó el camino canónico del contraste
+
+**Contraste en estado 3 CALCULADO, antes de aprobar.** Enero lo hizo al revés y salió bien por
+suerte. Desde febrero es la norma, y desde entonces se ha aplicado en marzo, abril y mayo sin una
+sola incidencia. **Un fallo en estado 3 se arregla recalculando; en estado 7 hay que reabrir, y
+`reabrirPeriodo` no avisa.**
+
+## El control de asientos se validó a sí mismo, y por accidente
+
+**Entre fijar la base 8174 y aprobar febrero nacieron cinco asientos ajenos** —de T-EGRESOS y CXP—.
+No los escribió la nómina: los escribieron otros módulos, en paralelo, mientras se replicaba.
+
+**Un censo total de `CNT.ASNT` los habría leído como contabilización de la nómina**, y el mes habría
+parecido roto sin estarlo. La corrección —acotar a `ASNTCDGO > :BASE`— entró a los cinco guiones ese
+mismo día. **Es la única comprobación de la serie que se demostró necesaria mientras se usaba**, no
+en teoría.
+
+> Y en abril quedó la contraprueba: el ciclo entero —aprobar, contabilizar y cerrar— **no movió la
+> base ni un número**. La rama histórica no escribe un solo asiento, que es exactamente lo que debía
+> pasar.
+
+## Defecto nuevo: D18, y su gravedad resultó ser menor de lo que parecía
+
+El combo de colaborador **ofrece a los CESANTES**: Torres Chávez y Benítez Montes, que causaron baja
+en enero, seguían en la lista al cargar las novedades de febrero.
+
+**Confirmado después por el backend y es baja:** `calcularPeriodo` pregunta `selectAprobadas` **una
+vez por cada contrato que procesa**, así que a quien no está en el período no se le pregunta nunca.
+Una novedad para un cesante quedaría huérfana y **no puede alterar ningún número**. Es suciedad de
+datos, no error de cálculo. **Se anota la gravedad real, no la primera impresión.**
+
+## El par de vacaciones: la comprobación que confirmó el modelo sin buscarlo
+
+Los **886,80** del bloque 2 descomponen exactamente como el esperado predecía: Cevallos Montenegro
+pasa de 33,33 a 83,33 y Bravo Caiza de 15,56 a 29,17 —los dos que entraron a mitad de enero— y
+**nadie más se mueve**. `823,19 + 63,61 = 886,80`.
+
+Coincidir al céntimo con la provisión de vacaciones significa que **nuestra base de vacaciones es la
+misma que usó el cliente**. No se buscaba: salió sola de mirar el bloque fila a fila. **Es el
+argumento de por qué el esperado se fija por filas y nunca por totales.**

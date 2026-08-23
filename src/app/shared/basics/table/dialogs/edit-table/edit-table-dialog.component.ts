@@ -71,6 +71,9 @@ export class EditTableDialogComponent implements OnInit {
       } catch (error) {
         // Aquí podrías mostrar un mensaje de error al usuario
       }
+    } else {
+      // Sin esto, «Guardar» sobre un formulario inválido no hace nada y no marca nada.
+      this.form.validateAllFormFields(this.form.control);
     }
   }
 }

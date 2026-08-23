@@ -87,7 +87,10 @@ export class DateComponent implements OnInit, OnDestroy, DynamicFormComponent {
   }
 
   onFechaPickerChange(date: Date | null | undefined): void {
-    const d = date || new Date();
+    // Una fecha que no parsea NUNCA se sustituye por la de hoy: se deja el control como lo dejó
+    // Material —vacío y con el error `matDatepickerParse`—, que es lo que bloquea «Guardar».
+    if (!(date instanceof Date) || isNaN(date.getTime())) return;
+    const d = date;
     this.group.get(this.field.name)?.setValue(d, { emitEvent: false });
     const formatted = this.funcionesDatosService.formatoFecha(d, FuncionesDatosService.SOLO_FECHA) || '';
     setTimeout(() => {
