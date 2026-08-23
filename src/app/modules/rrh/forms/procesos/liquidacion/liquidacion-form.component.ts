@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, computed, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -64,6 +65,7 @@ export class LiquidacionFormComponent implements OnInit {
 
   formulario: FormGroup = new FormGroup({});
 
+  private readonly destroyRef = inject(DestroyRef);
   private contratosPorEmpleado = new Map<number, any[]>();
   private todosLosContratos: any[] = [];
 
@@ -102,12 +104,28 @@ export class LiquidacionFormComponent implements OnInit {
     private snackBar: MatSnackBar,
   ) {}
 
+  /**
+   * El id se lee del flujo de la ruta, no de `snapshot`.
+   *
+   * `calcular()` navega de `/liquidacion/nuevo` a `/liquidacion/{id}` con **este mismo
+   * componente**: Angular reutiliza la instancia y `ngOnInit` no vuelve a correr. Con el id leído
+   * una sola vez del `snapshot`, la pantalla se quedaba en «Nuevo finiquito», con la cabecera en
+   * «Sin calcular» y el pie diciendo «todavía no se ha guardado nada» — lo contrario de lo que
+   * acababa de pasar—, e invitaba a pulsar otra vez.
+   */
   ngOnInit(): void {
-    const id = this.route.snapshot.paramMap.get('codigo');
-    this.cargar(id && id !== 'nuevo' ? Number(id) : null);
+    this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
+      const id = params.get('codigo');
+      this.cargar(id && id !== 'nuevo' ? Number(id) : null);
+    });
   }
 
   private cargar(idLiquidacion: number | null): void {
+    this.cargando.set(true);
+    // Lo simulado pertenece a la pantalla anterior: no puede sobrevivir a un cambio de finiquito
+    this.simulacion.set(null);
+    this.detalle.set([]);
+
     const sinFallo = (fuente: Observable<any[] | null>): Observable<any[]> =>
       fuente.pipe(
         map((filas) => filas ?? []),
@@ -263,7 +281,30 @@ export class LiquidacionFormComponent implements OnInit {
       this.avisar('Indique colaborador, contrato, fecha de salida y causal.', true);
       return false;
     }
-    return true;
+    return this.contratoEsDelColaborador();
+  }
+
+  /**
+   * Última red: el finiquito lo liquida **el dueño del contrato**, no el colaborador de pantalla.
+   *
+   * `/rest/lqdc/calcular` y `/rest/lqdc/simular` reciben sólo `idContrato`; el backend saca la
+   * persona de `contrato.getEmpleado()`. Un contrato de otro no da error ni deja rastro: el
+   * registro sale internamente coherente y sólo se ve mirando a quién se liquidó, cuando la
+   * salida ya está ejecutada. Acotar la lista lo hace difícil; esto lo hace imposible.
+   */
+  private contratoEsDelColaborador(): boolean {
+    const { empleado, contrato } = this.formulario.getRawValue();
+    const elegido = empleado?.codigo;
+    const dueno = contrato?.empleado?.codigo;
+    if (elegido == null || dueno == null || Number(elegido) === Number(dueno)) return true;
+
+    const nombre = `${contrato.empleado.apellidos ?? ''} ${contrato.empleado.nombres ?? ''}`.trim();
+    this.avisar(
+      `El contrato ${contrato.numero ?? ''} es de ${nombre || 'otro colaborador'}, no de ` +
+        `${this.nombreColaborador()}. El finiquito liquidaría al dueño del contrato: elija uno suyo.`,
+      true,
+    );
+    return false;
   }
 
   // ─── Presentación ──────────────────────────────────────────────────────────

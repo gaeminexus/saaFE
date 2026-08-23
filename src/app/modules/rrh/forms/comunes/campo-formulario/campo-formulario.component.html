@@ -41,7 +41,19 @@
         <input matInput type="number" [formControlName]="campo.name" [attr.aria-label]="campo.label" />
       }
       @case ('fecha') {
-        <input matInput type="date" [formControlName]="campo.name" [attr.aria-label]="campo.label" />
+        <!--
+          Datepicker de Material, no `input type="date"`.
+          El nativo se pinta en el idioma del navegador —mm/dd/yyyy— mientras el resto del módulo
+          usa dd/mm/yyyy, así que el 15 de enero se tecleaba `01/15/2026` en una pantalla y
+          `15/01/2026` en la de al lado, y ninguna de las dos decía cuál era la suya. El
+          `placeholder` lleva ahora el patrón, que es lo que hace innecesario el rodeo de teclear
+          primero el día 30 para averiguarlo.
+        -->
+        <input matInput [matDatepicker]="selectorFecha" [formControl]="controlFecha"
+               [attr.aria-label]="campo.label" placeholder="dd/mm/aaaa"
+               (input)="alTeclearFecha()" (blur)="alSalirDeFecha($event)" />
+        <mat-datepicker-toggle matSuffix [for]="selectorFecha"></mat-datepicker-toggle>
+        <mat-datepicker #selectorFecha></mat-datepicker>
       }
       @default {
         <input matInput type="text" [formControlName]="campo.name" [attr.aria-label]="campo.label"
@@ -52,7 +64,13 @@
     @if (campo.ayuda && !invalido && disposicion === 'encima') {
       <mat-hint>{{ campo.ayuda }}</mat-hint>
     }
-    @if (control?.hasError('required')) {
+    @if (campo.tipo === 'fecha') {
+      @if (controlFecha.hasError('fechaIlegible')) {
+        <mat-error>Fecha no válida. Use el calendario o teclee dd/mm/aaaa</mat-error>
+      } @else if (controlFecha.hasError('required')) {
+        <mat-error>{{ campo.label }} es obligatorio</mat-error>
+      }
+    } @else if (control?.hasError('required')) {
       <mat-error>{{ campo.label }} es obligatorio</mat-error>
     }
   </mat-form-field>
