@@ -16,7 +16,9 @@ import { Liquidacion } from '../../../model/Liquidacion';
 import {
   AccionLiquidacion,
   accionesDisponibles,
+  etiquetaEstadoLiquidacion,
   motivoNoDisponible,
+  salidaEjecutada,
 } from '../../../model/estados-liquidacion';
 import { ResultadoLiquidacion } from '../../../model/resultados-nomina';
 import { RubrosRrh } from '../../../model/rubros-rrh';
@@ -82,13 +84,22 @@ export class LiquidacionFormComponent implements OnInit {
   readonly etiquetaEstado = computed(() => {
     const l = this.liquidacion();
     if (!l) return 'Sin calcular';
-    return (
+    return etiquetaEstadoLiquidacion(
+      l,
       this.detalleRubroService.getDescripcionByParentAndAlterno(
         RubrosRrh.ESTADO_LIQUIDACION,
         Number(l.estado),
-      ) || '—'
+      ) || '—',
     );
   });
+
+  /**
+   * Si la salida ya está ejecutada, deducido de sus efectos.
+   *
+   * Aquí importa más que en el listado: ésta es la pantalla donde está el botón que la ejecuta,
+   * y `generarAvisoSalida` **no es idempotente** —un segundo clic duplica el aviso al IESS—.
+   */
+  readonly salidaYaEjecutada = computed(() => salidaEjecutada(this.liquidacion()));
 
   constructor(
     private fb: FormBuilder,
@@ -241,7 +252,8 @@ export class LiquidacionFormComponent implements OnInit {
     const l = this.liquidacion();
     if (!l) return;
 
-    if (accion === 'ejecutarSalida' && !confirm(textoConfirmacionSalida(this.nombreColaborador()))) {
+    const confirmacion = textoConfirmacionSalida(this.nombreColaborador(), this.salidaYaEjecutada());
+    if (accion === 'ejecutarSalida' && !confirm(confirmacion)) {
       return;
     }
 

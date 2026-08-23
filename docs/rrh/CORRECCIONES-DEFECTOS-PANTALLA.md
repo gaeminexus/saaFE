@@ -25,11 +25,12 @@ que decía la ficha—, **qué se cambió**, **por qué ése es el arreglo** y *
 | `table-basic-hijos.regconfig.spec.ts` | **4 de 4** · D23 |
 | `novedades-nomina.component.spec.ts` | **12 de 12** · D17, D18, D19, D22 |
 | `periodos-nomina.component.spec.ts` | **6 de 6** · D15, D20, D21 |
-| `liquidacion-form.component.spec.ts` | **8 de 8** · D9, D11 |
-| **Total propio** | **40 de 40** |
+| `liquidacion-form.component.spec.ts` | **10 de 10** · D9, D11, D24 |
+| `liquidacion-list.component.spec.ts` | **8 de 8** · D24 |
+| **Total propio** | **50 de 50** |
 
-**Todo defecto corregido tiene ahora un test que lo cubre**, salvo D12 —bloqueado— y la mitad de
-D14 que ya estaba bien. La primera tanda dejó seis de ellos sólo razonados en fuente; ya no.
+**Todo defecto corregido tiene un test que lo cubre**, salvo la mitad de D14 que ya estaba bien.
+D12 no lleva ninguno porque **no hay defecto**: se cerró comprobando que no se reproduce.
 
 **La suite completa está rota de antes y sigue igual: 284 fallos de 309** contando sólo lo ajeno.
 282 son el mismo `NG0201: No provider found for HttpClient` de los `*.service.spec.ts` generados
@@ -244,7 +245,17 @@ el detalle se limpia.
 
 ---
 
-## D12 · El listado que «no resuelve el nombre del colaborador» — NO ERA ESO
+## D12 · El listado que «no resuelve el nombre del colaborador» — CERRADO: NO SE REPRODUCE
+
+> **Resuelto el 2026-08-23.** El agente de réplica trajo el JSON crudo de `/rest/lqdc/getAll`: **el
+> nombre viene en los cuatro finiquitos**. Y además abrió el listado: la pantalla los pinta
+> completos, con su cédula. **No se reproduce, y no había nada que arreglar.** La ficha se queda
+> marcada, no borrada — un defecto que se investigó y resultó no existir vale documentado, porque
+> es lo que impide que alguien vuelva a abrirlo dentro de tres meses con el mismo síntoma mal leído.
+>
+> Lo que sigue es el análisis que se hizo antes de tener el JSON, y se conserva porque **es la
+> razón por la que no se escribió código**: la causa que describía la ficha no estaba en el
+> código, y arreglarla habría sido escribir un cruce contra `mpld` para un fallo inexistente.
 
 **No se ha tocado nada, y ésta es la razón.** La ficha, ya corregida una vez, afirma que *«el
 consumidor busca `apellido` y `nombre` en singular»* y que *«el arreglo es de una línea»*. **Las
@@ -264,11 +275,15 @@ Del lado del backend tampoco aparece el motivo: `Liquidacion.empleado` es un `@M
 proyección ni DTO, y `Empleado` declara `apellidos` y `nombres` como `@Basic` normales, sin
 `@JsonIgnore`.
 
-**Qué haría falta para cerrarlo, y no lo puedo hacer yo.** Que quien replica vuelva a capturar el
-JSON crudo de `/rest/lqdc/getAll` —el JSON, no la pantalla— y pegue en la ficha el objeto
-`empleado` de una fila. Si trae `apellidos`, el defecto ya no existe y hay que cerrarlo; si no los
-trae, la causa está en la serialización y no en el consumidor, y es del backend. **Arreglar lo que
-la ficha describe sería escribir código contra un fallo que no está ahí.**
+**Qué hacía falta para cerrarlo, y no lo podía hacer yo.** Que quien replica capturara el JSON
+crudo de `/rest/lqdc/getAll` —el JSON, no la pantalla—. Lo hizo, y trae los nombres: **el análisis
+de arriba era correcto y el defecto no existe**. Se cierra sin tocar código.
+
+**Lo que deja como lección, y es la de siempre una vuelta más adentro.** El síntoma —una columna
+que se lee vacía— era real para quien lo anotó; la causa que se le atribuyó no. Entre las dos hubo
+una redacción intermedia que ya se había corregido una vez. **La regla de verificar contra el JSON
+y no contra la pantalla vale también para diagnosticar, no sólo para leer valores**: el primer sitio
+donde había que mirar era la respuesta cruda, y es el último al que se llegó.
 
 ---
 
@@ -366,7 +381,7 @@ lee un humano, en vez de por `2025,6,25`.
 
 ---
 
-# Los cinco que aparecieron mientras se corregía
+# Los seis que aparecieron mientras se corregía
 
 `D19` a `D22` se anotaron en la ficha **después** de recibir el encargo, que llegaba hasta D18.
 Están hechos porque caen en los mismos dos archivos que ya estaban abiertos y ninguno pasa de
@@ -376,6 +391,10 @@ unas líneas. **Van marcados aparte para que el árbitro pueda separarlos si qui
 llegó **autorizado**, con tres condiciones que se cumplen: en la rama y sin desplegar, con un test
 que prueba que Agregar tras Editar abre limpio, y con la comprobación previa de que nada dependa de
 que la mutación persista.
+
+`D24` salió de la misma pantalla que cerró D12, y llegó también autorizado y con el alcance ya
+acotado por el árbitro: **desambiguar la columna mirando el contrato, sin esperar al backend**. El
+arreglo de fondo es del motor.
 
 ## D19 · La rejilla de Novedades no enseñaba el campo que decide si la novedad entra
 
@@ -495,11 +514,71 @@ arreglo** —comprobado revirtiéndolo y volviendo a correrlos—:
 
 ---
 
+## D24 · Aprobada, ejecutada y contabilizada eran el mismo 3
+
+**Salió de la misma pantalla que cerró D12**, y llegó autorizado con el alcance acotado: la
+columna, sin esperar al backend.
+
+**Qué es.** `ejecutarSalida` **exige `APROBADA` de entrada y no mueve el estado al terminar**, así
+que en `LQDC` los tres momentos son el mismo `LQDCESTD` 3. Los cuatro finiquitos de producción —1
+Torres, 2 Benítez, 21 Castro y 22 Cevallos— están los cuatro en 3 **con la salida ya ejecutada**, y
+el listado los enseñaba como si les faltara ese paso.
+
+**Por qué no es sólo cosmético.** Es la pantalla desde la que se abre el finiquito para pulsar
+«Ejecutar salida», que no se deshace. Una ambigüedad de datos leída ahí se convierte en invitación
+a pulsar dos veces, y hay daño detrás: **`generarAvisoSalida` no es idempotente** — un segundo clic
+no reescribe la novedad del IESS, genera otra.
+
+**Qué se cambió.** `salidaEjecutada()` en `model/estados-liquidacion.ts`, que deduce de **los
+efectos** lo que el estado no dice: contrato en `CNTEESTD = 'CERRADO'` y empleado en `MPLDESTD` 4
+CESANTE. Los dos son `@ManyToOne` y viajan en el mismo `getAll`, así que no hace falta una llamada
+más. Con eso:
+
+| Dónde | Antes | Ahora |
+|---|---|---|
+| Columna del listado | `Aprobada` | `Aprobada · salida ejecutada` / `· salida pendiente` |
+| Pastilla | naranja en los tres casos | **aviso sólo si está pendiente**; ejecutada en neutro |
+| Cabecera del finiquito | `Aprobada` | el mismo matiz, en la pantalla del botón |
+| Confirmación de la salida | el texto de siempre | encabezado con el aviso de duplicación del IESS |
+
+**Tres respuestas y no dos, que es la decisión de diseño que importa.** `salidaEjecutada` devuelve
+`si`, `no` o **`desconocido`**, y exige **las dos señales de acuerdo**. Si falta el contrato en la
+respuesta, o si el contrato está cerrado pero el colaborador sigue activo, **no se afirma nada** y
+la etiqueta vuelve a ser el `Aprobada` de siempre. Decir «pendiente» por no tener el dato sería
+peor que callarse: es exactamente la lectura que invita a pulsar el botón.
+
+**Lo que NO se hizo, a propósito: quitar el botón.** Sería la protección de verdad, y por eso hay
+que decir por qué no. Es una deducción a partir de efectos, no un estado; si la deducción falla, el
+usuario se queda **sin manera de ejecutar una salida legítima y sin que la pantalla le explique por
+qué**. Un aviso que se puede leer y seguir adelante degrada bien cuando se equivoca; un bloqueo, no.
+**El arreglo de fondo —que `ejecutarSalida` deje su propio estado— es el punto 21 del motor**, y con
+un estado de verdad el botón sí se puede retirar sin adivinar nada. Si el árbitro prefiere el
+bloqueo antes de eso, es una línea en `accionesDisponibles` y se pone.
+
+**Cómo se comprobó.** Diez tests ejecutados —ocho en el listado, dos en el finiquito—, y
+**cuatro de ellos fallan si se revierte D24**, comprobado revirtiéndolo:
+
+1. El listado distingue `Aprobada · salida ejecutada` de `· salida pendiente`.
+2. La pastilla reserva el aviso para el que todavía tiene el paso pendiente.
+3. Con el contrato ausente en la respuesta, **no se afirma nada** y la pastilla vuelve a aviso.
+4. Con las dos señales contradiciéndose, tampoco.
+5. `PAGADA` y `ANULADA` quedan intactas: añadirles el matiz sería ruido.
+6. La confirmación lleva el aviso de duplicación sólo cuando la salida ya parece ejecutada, y
+   **conserva** todo lo que decía antes.
+7. La cabecera del finiquito dice lo mismo que la columna.
+
+> Los casos 3 y 4 pasan también con D24 revertido, y es lo correcto: son guardas contra
+> **afirmar de más**, no contra afirmar de menos. Lo digo para que nadie los cuente como prueba
+> del arreglo.
+
+---
+
 # Lo que se deja sin tocar, y por qué
 
 | Qué | Por qué |
 |---|---|
-| **D12** | La causa que describe la ficha no está en el código. Hace falta el JSON crudo de `/rest/lqdc/getAll` antes de escribir nada. Ver arriba. |
+| **D12** | **Cerrado el 2026-08-23: no se reproduce.** El JSON crudo trae los nombres. Ver arriba. |
+| **Quitar el botón «Ejecutar salida» (D24)** | Es una deducción de efectos, no un estado: si falla, bloquea una salida legítima sin explicar por qué. El bloqueo va con el punto 21 del motor. Ver D24. |
 | **La mitad de mayúsculas de D14** | Ya estaba bien en los dos componentes. Sólo se hizo la parte de los acentos. |
 | **`EsDateAdapter.parse` devolviendo `null`** | **Aplazado por el árbitro a después de julio, con el despliegue.** Ver abajo. |
 | **La suite de tests, 284 fallos** | Rota de antes y ajena: `NG0201` de HTTP en los specs generados por el CLI, más dos de `cnt`. |

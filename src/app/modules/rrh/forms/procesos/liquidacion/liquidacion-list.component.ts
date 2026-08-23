@@ -7,7 +7,11 @@ import { Router } from '@angular/router';
 import { DetalleRubroService } from '../../../../../shared/services/detalle-rubro.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { RubrosRrh } from '../../../model/rubros-rrh';
-import { EstadoLiquidacion } from '../../../model/estados-liquidacion';
+import {
+  EstadoLiquidacion,
+  etiquetaEstadoLiquidacion,
+  salidaEjecutada,
+} from '../../../model/estados-liquidacion';
 import { LiquidacionService } from '../../../service/liquidacion.service';
 import { EstadoLista, EstadoListaService } from '../../comunes/estado-lista.service';
 import { mensajeDeError } from '../../comunes/mensajes';
@@ -86,20 +90,32 @@ export class LiquidacionListComponent implements OnInit {
       colaborador: `${fila.empleado?.apellidos ?? ''} ${fila.empleado?.nombres ?? ''}`.trim(),
       identificacion: fila.empleado?.identificacion ?? '—',
       causalLabel: fila.causalTerminacion?.nombre ?? '—',
-      estadoLabel:
+      estadoLabel: etiquetaEstadoLiquidacion(
+        fila,
         this.detalleRubroService.getDescripcionByParentAndAlterno(
           RubrosRrh.ESTADO_LIQUIDACION,
           Number(fila.estado),
         ) || '—',
+      ),
     }));
   }
 
-  /** Anulada en rojo, pagada en verde, el resto neutro: el color no sustituye a la etiqueta. */
+  /**
+   * Anulada en rojo, pagada en verde, el resto neutro: el color no sustituye a la etiqueta.
+   *
+   * **`APROBADA` se parte en dos**, y el color va con el trabajo pendiente, no con el avance:
+   * el aviso se reserva para el finiquito cuya salida **todavía no se ha ejecutado**, que es el
+   * único sobre el que el botón irreversible hace algo. Una salida ya ejecutada es un hecho
+   * consumado y va en neutro. Mientras las tres cosas eran el mismo naranja, la pastilla decía
+   * «te falta algo» sobre cuatro finiquitos a los que no les faltaba nada.
+   */
   private tonoEstado(fila: any): TonoPastilla {
     const estado = Number(fila.estado);
     if (estado === EstadoLiquidacion.ANULADA) return 'error';
     if (estado === EstadoLiquidacion.PAGADA) return 'ok';
-    if (estado === EstadoLiquidacion.APROBADA) return 'aviso';
+    if (estado === EstadoLiquidacion.APROBADA) {
+      return salidaEjecutada(fila) === 'si' ? 'neutro' : 'aviso';
+    }
     return 'neutro';
   }
 

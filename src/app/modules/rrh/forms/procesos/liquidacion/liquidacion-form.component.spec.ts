@@ -134,6 +134,38 @@ describe('LiquidacionFormComponent', () => {
     });
   });
 
+  describe('D24 · la salida ya ejecutada, en la pantalla donde está el botón', () => {
+    it('la cabecera lo dice, en vez de un «Aprobada» que no distingue nada', () => {
+      liquidacionService.getById = () => of({
+        ...FINIQUITO_1,
+        estado: 3,
+        empleado: { ...TORRES, estado: 4 },
+        contratoEmpleado: { ...CONTRATO_DE_TORRES, estado: 'CERRADO' },
+      });
+
+      parametros$.next(convertToParamMap({ codigo: '1' }));
+      fixture.detectChanges();
+
+      expect(componente.salidaYaEjecutada()).toBe('si');
+      expect(componente.etiquetaEstado()).toBe('CALCULADA · salida ejecutada');
+    });
+
+    it('y no lo dice cuando el contrato sigue abierto', () => {
+      liquidacionService.getById = () => of({
+        ...FINIQUITO_1,
+        estado: 3,
+        empleado: { ...TORRES, estado: 1 },
+        contratoEmpleado: { ...CONTRATO_DE_TORRES, estado: 'ACTIVO' },
+      });
+
+      parametros$.next(convertToParamMap({ codigo: '1' }));
+      fixture.detectChanges();
+
+      expect(componente.salidaYaEjecutada()).toBe('no');
+      expect(componente.etiquetaEstado()).toBe('CALCULADA · salida pendiente');
+    });
+  });
+
   describe('D9 · el contrato tiene que ser del colaborador', () => {
     it('acota la lista de contratos al elegir colaborador', () => {
       componente.formulario.get('empleado')!.setValue(TORRES);
