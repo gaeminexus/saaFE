@@ -129,6 +129,13 @@ export class DevolucionAportesComponent {
    */
   deudaVigente = signal<DeudaVigenteParticipe | null>(null);
 
+  /**
+   * `true` cuando `GET /dvap/deudaVigente` falló o respondió `exito: false`: hay que
+   * distinguirlo de "no tiene deuda" (§6.5 del plan, ratificado por el árbitro). Tampoco
+   * bloquea nada: es una tercera línea informativa en el diálogo de confirmación.
+   */
+  deudaConsultaFallida = signal(false);
+
   fecha = signal<Date>(new Date());
   motivo = '';
   debitoAutomatico = false;
@@ -243,6 +250,7 @@ export class DevolucionAportesComponent {
     this.cuentaParticipeSeleccionada = null;
     this.filtroCuentaParticipe = '';
     this.deudaVigente.set(null);
+    this.deudaConsultaFallida.set(false);
     this.historial.set([]);
     this.motivo = '';
     this.referencia = '';
@@ -288,13 +296,27 @@ export class DevolucionAportesComponent {
    * Préstamos sin cancelar del partícipe. Va en paralelo con los saldos: son dos consultas
    * independientes y ninguna espera a la otra.
    *
-   * Es solo para avisar en el diálogo de confirmación. Si falla se queda sin el aviso y la
-   * pantalla sigue funcionando igual: el registro NUNCA se bloquea porque este dato no cargó,
-   * y el backend tampoco lo valida.
+   * Es solo para avisar en el diálogo de confirmación: el registro NUNCA se bloquea porque este
+   * dato no cargó, y el backend tampoco lo valida. Pero "no se pudo consultar" y "no tiene
+   * deuda" no pueden verse iguales (§6.5 del plan, ratificado por el árbitro): si la respuesta
+   * viene con `exito: false` o el HTTP falla, se marca `deudaConsultaFallida` para que el
+   * diálogo de confirmación muestre la línea gris en vez de quedarse mudo.
    */
   private cargarDeudaVigente(codigoEntidad: number): void {
-    this.devolucionService.deudaVigente(codigoEntidad).subscribe((resp) => {
-      this.deudaVigente.set(resp.exito ? (resp.resultado ?? null) : null);
+    this.deudaConsultaFallida.set(false);
+    this.devolucionService.deudaVigente(codigoEntidad).subscribe({
+      next: (resp) => {
+        if (resp.exito) {
+          this.deudaVigente.set(resp.resultado ?? null);
+        } else {
+          this.deudaVigente.set(null);
+          this.deudaConsultaFallida.set(true);
+        }
+      },
+      error: () => {
+        this.deudaVigente.set(null);
+        this.deudaConsultaFallida.set(true);
+      },
     });
   }
 
@@ -534,6 +556,7 @@ export class DevolucionAportesComponent {
           total: this.totalADevolver(),
           // Aviso, no condición: el diálogo lo muestra y el botón de confirmar sigue habilitado.
           deuda: this.deudaVigente(),
+          deudaConsultaFallida: this.deudaConsultaFallida(),
         },
         width: '760px',
         maxWidth: '96vw',

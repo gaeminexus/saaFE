@@ -34,6 +34,12 @@ export interface ConfirmarDevolucionData {
    * `null` cuando no hay deuda que mostrar o cuando la consulta no llegó.
    */
   deuda: DeudaVigenteParticipe | null;
+  /**
+   * `true` cuando `GET /dvap/deudaVigente` falló o respondió `exito: false`. Distingue "no se
+   * pudo consultar" de "no tiene deuda" (§6.5 del plan): sin esto ambos casos se ven idénticos
+   * desde la silla del operador. Tampoco bloquea nada.
+   */
+  deudaConsultaFallida: boolean;
 }
 
 /**
@@ -105,6 +111,16 @@ export interface ConfirmarDevolucionData {
             </table>
           }
         </div>
+      } @else if (data.deudaConsultaFallida) {
+        <!--
+          Tercer estado del aviso de deuda (§6.5 del plan, ratificado por el árbitro): si la
+          consulta no se pudo resolver, no puede verse igual que "no tiene deuda". Línea gris
+          tenue, sin bloquear nada.
+        -->
+        <p class="deuda-desconocida">
+          <mat-icon>help_outline</mat-icon>
+          No se pudo consultar la deuda vigente del partícipe.
+        </p>
       }
 
       <div class="datos">
@@ -218,6 +234,14 @@ export interface ConfirmarDevolucionData {
         td.con-mora { font-weight: 700; color: #dc2626; }
         .da-id { color: #b91c1c; opacity: 0.75; font-size: 11px; margin-left: 3px; }
       }
+    }
+
+    /* Tercer estado del aviso de deuda: no se pudo consultar. Gris tenue a propósito, no rojo. */
+    .deuda-desconocida {
+      display: flex; align-items: center; gap: 0.5rem;
+      color: #94a3b8; font-size: 0.78rem; font-style: italic;
+      margin: 0 0 1.1rem;
+      mat-icon { font-size: 18px; width: 18px; height: 18px; flex-shrink: 0; }
     }
 
     .datos {

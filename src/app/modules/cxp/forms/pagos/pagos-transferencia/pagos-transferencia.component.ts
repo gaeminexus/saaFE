@@ -29,6 +29,7 @@ import { CuentaBancariaService } from '../../../../tsr/service/cuenta-bancaria.s
 import { CuentaBancariaTitularService } from '../../../../tsr/service/cuenta-bancaria-titular.service';
 import { FacturaCompraSelectorDialogComponent } from '../../../dialog/factura-compra-selector-dialog/factura-compra-selector-dialog.component';
 import { FacturaCompra } from '../../../model/factura-compra';
+import { etiquetaOrigenPagoExterno } from '../../../model/origen-pago-externo';
 import { FacturaCompraService } from '../../../service/factura-compra.service';
 import {
   AsientoDePago,
@@ -1087,10 +1088,25 @@ export class PagosTransferenciaComponent implements OnInit {
 
   /**
    * Los pagos de egresos de tesorería no tienen factura: su concepto es la
-   * descripción del egreso (TSR.EGRS).
+   * descripción del egreso (TSR.EGRS). Los de origen externo (§7.1 de
+   * docs/crd/PLAN-DEVOLUCION-APORTES.md) tampoco: su concepto es la etiqueta legible del
+   * origen más el id del documento que lo generó en el módulo origen.
    */
   conceptoPago(pago: PagoProgramado): string {
+    if (pago.origenExterno) {
+      const etiqueta = etiquetaOrigenPagoExterno(pago.origenExterno);
+      return pago.idOrigen != null ? `${etiqueta} #${pago.idOrigen}` : etiqueta;
+    }
     return pago.facturaCompra?.numero || pago.egreso?.descripcion || '—';
+  }
+
+  /**
+   * Nombre para la columna "Proveedor". En un pago de origen externo el destinatario puede no
+   * estar en el maestro de titulares (`titular` null): cae al beneficiario ocasional que CXP
+   * guarda denormalizado (§3.1 del plan).
+   */
+  nombreBeneficiario(pago: PagoProgramado): string {
+    return pago.titular?.nombre || pago.beneficiarioNombre || '—';
   }
 
   private fechaISO(fecha: Date | null): string | undefined {

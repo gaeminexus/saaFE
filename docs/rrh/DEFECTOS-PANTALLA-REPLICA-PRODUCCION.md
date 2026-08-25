@@ -797,10 +797,51 @@ rompa nada es exactamente lo que lo hace el peor de los tres.**
 
 ---
 
+## D27 · El hueco del footer vive en el archivo que `angular.json` no compila — confirmado por estructura, no por pantalla
+
+**Dónde:** global, cualquier pantalla con contenido largo. Confirmado el 2026-08-25.
+
+**Qué pasa:** `angular.json` declara `"styles"` en sus dos configuraciones —build (línea 40) y
+test (línea 113)— y las dos apuntan sólo a `"src/styles/styles.scss"`. `src/styles.scss` (suelto,
+en la raíz de `src/`) no aparece en ninguna de las dos listas, ni en ningún `@use`/`@import` de
+otra hoja: nadie lo compila. Y es justo ahí, en la línea 132, donde vivía el único
+`body { padding-bottom: 35px !important; }` de la aplicación — el hueco reservado para el footer
+`fixed`. El propio archivo lo dice en su cabecera desde el 2026-08-25: *«ESTE ARCHIVO NO SE
+COMPILA. NADA DE LO QUE HAY AQUÍ SE APLICA.»*
+
+**Verificado en vivo, no sólo por lectura de código:** en producción,
+`getComputedStyle(document.body).paddingBottom` da **`"0px"`**. El footer real es
+`footer.footer-bottom` —`position: fixed`, alto **34,99 px**, `z-index: 20`—, exactamente el
+elemento que la regla muerta pretendía compensar. Sin el hueco, cualquier contenido que llegue
+hasta el borde inferior de la pantalla queda debajo de él.
+
+**Por qué no hace falta una lista larga para darlo por cierto:** la pregunta no es «¿se ve tapada
+una fila hoy?», es «¿existe la regla en el CSS que llega al navegador?» — y la respuesta, leyendo
+`angular.json` y el archivo que sí compila, es no. Una regla en un archivo que el build no incluye
+no existe para el navegador, la vea alguien tapada o no.
+
+**Intento de demostración visual, el 2026-08-25 — no se pudo enseñar con los datos de hoy:** se
+buscó el listado sin paginar más largo disponible en RRHH. `Colaboradores` (24 filas, forzando 25
+items/página para vencer la paginación de 10) y `Roles de pago` de 5/2026 (20 filas, el período más
+lleno de producción) fueron los dos candidatos. Medido por DOM en `Roles de pago`: el footer fijo
+empieza en `top: 1427,65 px`, la última fila (Cevallos Montenegro Johnny Steven) termina en
+`bottom: 1371,46 px` — quedan **56 px** de hueco libre entre los dos, sin superposición. La ventana
+usada es más ancha y alta que un portátil típico, y ninguno de los datos vivos de hoy llena la
+pantalla lo suficiente para desbordarla. **Esto no revoca la confirmación del punto anterior**: es
+una regla que falta, comprobada por su ausencia estructural; que hoy no haya una pantalla lo
+bastante larga para verla morder es un dato aparte, no una absolución.
+
+**Arreglo esperado:** mover (o replicar) la regla `body { padding-bottom: 35px }` a
+`src/styles/styles.scss`, que es el único archivo que `angular.json` compila. Es de pantalla, va
+con el lote D9–D26 y lo aplica el agente de corrección — no se toca desde la réplica.
+
+---
+
 ## ⚠ TRES COSAS ABIERTAS AL PUNTO DE CORTE DEL 2026-08-25
 
 Anotadas por el árbitro antes de reiniciar las sesiones, para que no vivan sólo en la memoria de un
-agente. Las tres salieron del cierre de **D26** y ninguna es de pantalla.
+agente. Las tres salieron del cierre de **D26**. Ninguna era de pantalla **al anotarlas** — la 2
+sí lo es ahora que se confirmó y pasó a tener ficha propia, **D27**.
 
 ### 1 · D25 NO ESTÁ VERIFICADO, y lo levantó el propio corrector
 
@@ -816,16 +857,17 @@ de verdad**, y el script tiene que **abortar** si no encuentra el texto en vez d
 > que existe y no se ejecuta.** Igual que la regla del `z-index` en el `styles.scss` huérfano, y que
 > `CPNMROLM` fuera del cotejo de catálogos.
 
-### 2 · Un defecto probable escondido en el archivo muerto: el footer se monta sobre el contenido
+### 2 · Cerrado con número: el footer se monta sobre el contenido — ver D27
 
-`src/styles.scss` —el que **`angular.json` no compila**— lleva `body { padding-bottom: 35px }`, que
-es el hueco para el footer `fixed` de 35 px. **Si esa regla nunca se ha aplicado, el footer se monta
-sobre el final de cualquier pantalla larga.**
-
-**No se abre ficha todavía, y el corrector hizo bien en no abrirla: no lo ha observado.** Pero es
-comprobable en un minuto y **le toca a quien replica**: bajar del todo en una pantalla larga —el
-listado de novedades con las once de junio sirve— y mirar si el footer tapa la última fila. **Si la
-tapa, es defecto con número; si no, se anota que se miró.**
+Lo que aquí estaba abierto como «defecto probable» quedó **confirmado por estructura** el
+2026-08-25 y tiene ficha propia: **D27**. No hizo falta encontrar una pantalla que lo enseñe —
+`angular.json` no compila `src/styles.scss`, que es donde vivía el único
+`body { padding-bottom: 35px }` de la aplicación, y en producción `getComputedStyle(document.body)
+.paddingBottom` da `"0px"`. Se intentó además la demostración visual que pedía esta misma entrada
+—bajar del todo en una lista larga—, y con los datos de hoy no se consiguió reproducir (`Roles de
+pago` de mayo, 20 filas sin paginar, deja 56 px de hueco antes del footer fijo). **Eso no cambia el
+veredicto**: la confirmación es del archivo que compila, no de si una pantalla de hoy alcanza a
+desbordar. Detalle completo, con las dos verificaciones, en **D27**.
 
 ### 3 · La frontera de `avisos.ts`, y por qué no se cruzó
 

@@ -49,6 +49,29 @@ export interface PagoProgramado {
   observacion?: string | null;
   usuario?: { codigo: number; nombre: string } | null;
   fechaRegistro?: any;
+
+  // ---- origen externo (§7.1 de docs/crd/PLAN-DEVOLUCION-APORTES.md) ----
+  /**
+   * Etiqueta opaca del proceso externo que originó el pago (p. ej.
+   * `'CRD_DEVOLUCION_APORTE'`); `null`/`undefined` en los pagos propios de
+   * CXP. CXP no la resuelve: solo la guarda y la devuelve.
+   */
+  origenExterno?: string | null;
+  /** Id del documento en el módulo origen. Informativo: CXP no lo resuelve. */
+  idOrigen?: number | null;
+  /**
+   * Beneficiario ocasional: se usa cuando `titular` es `null` porque el
+   * destinatario no está en el maestro de titulares de TSR.
+   */
+  beneficiarioNombre?: string | null;
+  beneficiarioIdentificacion?: string | null;
+  beneficiarioCuenta?: string | null;
+  /**
+   * Asiento del pago de origen externo. Los demás orígenes cuelgan el suyo de
+   * su propio documento (`egreso.asiento`, `anticipo.asiento`,
+   * `aplicacion.asiento`); este es el único que va directo en el pago.
+   */
+  asiento?: AsientoDePago | null;
 }
 
 /** Body de POST /pgtr. */

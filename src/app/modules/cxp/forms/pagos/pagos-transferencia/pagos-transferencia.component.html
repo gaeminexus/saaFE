@@ -277,7 +277,7 @@
 
                 <ng-container matColumnDef="proveedor">
                   <th mat-header-cell *matHeaderCellDef>Proveedor</th>
-                  <td mat-cell *matCellDef="let p">{{ p.titular?.nombre || '—' }}</td>
+                  <td mat-cell *matCellDef="let p">{{ nombreBeneficiario(p) }}</td>
                 </ng-container>
 
                 <ng-container matColumnDef="factura">
@@ -519,7 +519,7 @@
 
                 <ng-container matColumnDef="proveedor">
                   <th mat-header-cell *matHeaderCellDef>Proveedor</th>
-                  <td mat-cell *matCellDef="let p">{{ p.titular?.nombre || '—' }}</td>
+                  <td mat-cell *matCellDef="let p">{{ nombreBeneficiario(p) }}</td>
                 </ng-container>
 
                 <ng-container matColumnDef="factura">
@@ -721,7 +721,7 @@
 
                 <ng-container matColumnDef="proveedor">
                   <th mat-header-cell *matHeaderCellDef>Proveedor</th>
-                  <td mat-cell *matCellDef="let p">{{ p.titular?.nombre || '—' }}</td>
+                  <td mat-cell *matCellDef="let p">{{ nombreBeneficiario(p) }}</td>
                 </ng-container>
 
                 <ng-container matColumnDef="factura">
