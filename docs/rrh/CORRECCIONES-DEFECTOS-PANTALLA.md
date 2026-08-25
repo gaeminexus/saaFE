@@ -22,6 +22,37 @@ que decía la ficha—, **qué se cambió**, **por qué ése es el arreglo** y *
 > mantener separado. Los commits míos son `14eff13`, `8fe8f46`, `25ff86f` y `c7f1003`; si hace
 > falta, se dejan solos.
 
+> **⚠ Hallazgo del 2026-08-25, previo a cualquier otro trabajo de esta sesión: la rama no compila,
+> y no es cosa mía.** `npx tsc --noEmit -p tsconfig.app.json`, `npx ng build --configuration
+> development` y **cualquier** `npx ng test` —da igual qué spec se filtre con `--include`, porque
+> `tsconfig.spec.json` incluye `src/**/*.ts` entero— fallan con `TS2307` sobre dos módulos que
+> `gestion-documentos.component.ts` y `carga-documentos.service.ts` (`modules/cxp`) importan y que
+> **nunca se llegaron a comitear**: `dialogs/clasificar-productos-dialog/clasificar-productos-
+> dialog.component.ts` y `model/productos-sin-clasificar.ts`. Confirmado que ya estaba así en el
+> commit `a5ad484` —el ajeno de CXP citado arriba— con el árbol limpio y sin ningún cambio mío:
+> `git show a5ad484:...` trae el import, `git ls-tree -r a5ad484` no trae los dos archivos. No es
+> una regresión de esta sesión ni de D25; estaba roto desde el 23 y nadie lo había necesitado
+> compilar entero hasta ahora.
+>
+> **Por qué esto no es "otro tema, no me toca" sin más:** bloquea *todo* — no se puede correr un
+> solo test de RRHH mientras estos dos archivos falten, porque `login.component.ts` importa
+> `AppConfig` de `app.config.ts`, que hace `provideRouter(routes)` de `app.routes.ts`, que registra
+> `gestion-documentos.component.ts` entre las rutas eager de CXP. No hay spec de este módulo que
+> escape a esa cadena.
+>
+> **Qué se hizo para poder verificar D25 sin tocar el trabajo de otro:** dos archivos *stub*,
+> minúsculos y sin lógica —una interfaz vacía y un componente standalone con plantilla en blanco—,
+> creados **sin comitear**, sólo para que `tsc`/`ng build`/`ng test` tuvieran algo que resolver.
+> Con ellos puestos, `tsc --noEmit` vuelve a 0. Se usaron para correr los tests de D25 (ver abajo) y
+> **se borraron los dos antes de tocar nada más**; el árbol quedó otra vez idéntico a `HEAD`,
+> comprobado con `git status --porcelain`. No se creó ni se dejó ningún archivo de CXP.
+>
+> **No lo arreglo yo.** No es de RRHH, no sé qué debía hacer el diálogo de clasificación de
+> productos, y completarlo de verdad es del agente o la persona que dejó `abrirClasificacionProductos()`
+> a medias en `gestion-documentos.component.ts:608-619`. Lo que sí digo, para quien lo lea antes que
+> yo: **mientras esos dos archivos no existan, nadie puede correr `ng test` ni `ng build` en esta
+> rama**, ni siquiera sobre código que no tiene nada que ver con CXP.
+
 ## Cómo se comprobó, en general
 
 | Comprobación | Resultado |
@@ -648,6 +679,39 @@ contra aceptar de menos. Igual que en D24, lo digo para que nadie los cuente com
 > **no se toca aquí**: con la calibración cerrada y el despliegue pendiente, cambiar cuándo se pide
 > la contraseña no es una corrección de pantalla.
 
+> **Re-verificado de verdad el 2026-08-25 — la sesión anterior lo había dejado como "comprobado" sin
+> serlo.** El script de reversión que se usó entonces no se comiteó —vivía fuera del repo, en un
+> scratchpad de esa sesión— y esta sesión no tiene memoria de él, así que se rehízo desde cero, esta
+> vez guardando el porqué en vez de dar por buena una afirmación de una sesión que ya no está.
+>
+> El script nuevo hace una única sustitución de texto, exacta, sobre `login.component.ts:114`:
+> `this.router.navigateByUrl(this.destinoPedido() ?? '/menu');` ⇄
+> `this.router.navigateByUrl('/menu');`. **Aborta con código de salida 1 si el texto que busca no
+> está**, en cualquiera de las dos direcciones — se probó primero pidiéndole un `restore` sobre el
+> archivo ya arreglado, y abortó, que es la prueba de que la comprobación de aquí no es un sello de
+> goma. Revertir sólo esa línea es fiel al pre-D25: en el commit `a5ad484` —el padre real de
+> `c7f1003`, D25— las cinco salidas hacían `this.router.navigate(['/menu'])` sin mirar el
+> `returnUrl`, y las cinco pasan hoy por `irAlDestino()`, así que revertir la única línea de
+> `irAlDestino()` reproduce el mismo comportamiento en las cinco sin tocarlas una por una.
+>
+> **Resultado, con `login.destino.spec.ts` corrido de verdad en Chrome Headless, no supuesto:**
+>
+> | Estado del código | Resultado |
+> |---|---|
+> | Con el arreglo (`HEAD`) | **13 de 13** |
+> | Revertido (una línea) | **6 FAILED, 7 SUCCESS** |
+> | Restaurado | **13 de 13**, y `git diff` sobre el archivo vacío |
+>
+> Y los seis que caen son exactamente los seis que dice el párrafo de arriba, nombre por nombre en
+> el reporte de Karma: las tres de la pestaña nueva, la sesión ya viva, el login tecleado y la ruta
+> interna con query propia. Los siete que sobreviven al revert —el caso sin `returnUrl` y los seis
+> rechazados— también sobreviven aquí, que es lo que tenían que hacer.
+>
+> El script se corrió con dos stubs de CXP puestos y sin comitear —ver el aviso del principio del
+> documento— y se retiraron los dos antes de dar esto por cerrado. **D25 pasa de "comprobado" a
+> "comprobado y reproducido"**, y el script queda descrito aquí, no en el repo, por si hace falta
+> una tercera vez.
+
 ---
 
 ## D26 · El aviso de error se dibujaba detrás del header
@@ -758,6 +822,56 @@ puede querer aplicar de verdad, y un archivo borrado no lo encuentra un `grep` �
 quien ya sabe que existió. El daño real era que el próximo lo editara creyendo que sirve, y eso lo
 cierra la cabecera. **Si el árbitro prefiere borrarlo, es un `git rm` y el inventario de arriba ya
 conserva lo que había dentro.**
+
+---
+
+## La frontera de `avisos.ts` — hasta dónde llega y por qué se paró ahí
+
+**`avisos.ts` centraliza RRHH, y sólo RRHH.** Las 43 configuraciones que D26 unificó eran las 43
+del módulo; fuera de `modules/rrh/` siguen naciendo `snackBar.open` sueltos, cada uno con su propio
+literal de duración y de `panelClass`, exactamente el patrón que D26 describe como el que deja el
+defecto latente en la primera copia que nadie toque. Contado hoy, `grep -rl "snackBar.open"
+src/app/modules/ --include="*.ts"` fuera de `rrh/`:
+
+| Módulo | Archivos con `snackBar.open` crudo |
+|---|---:|
+| `crd` | 36 |
+| `tsr` | 19 |
+| `cnt` | 18 |
+| `cxc` | 17 |
+| `cxp` | 16 |
+| `dash` | 1 |
+| **Total ajeno a RRHH** | **107** |
+
+**El de `crd/prestamo-consulta` que menciona el encargo es real** —`prestamo-consulta.component.ts`
+tiene cuatro, en las líneas 164, 192, 685 y 723— y es uno más de los 36 de `crd`, no un caso
+aislado.
+
+**Por qué se paró en la frontera del módulo, y no es pereza ni descuido:**
+
+1. **El encargo es RRHH.** `avisos.ts` vive en `modules/rrh/forms/comunes/` a propósito: es la
+   configuración de *este* módulo, no un servicio compartido. Moverlo a `shared/` para que otros
+   módulos lo usen es una decisión de arquitectura que toca código de fuera de RRHH y de fuera de
+   lo que se me encargó — la clase de cambio que la regla 2 de este encargo pide consultar antes,
+   no decidir sola.
+2. **El arreglo de fondo de D26 —el `z-index` del `.cdk-overlay-container`— ya es global**, está en
+   `src/styles/styles.scss` y no en `avisos.ts`. Eso significa que **los 107 avisos ajenos ya se ven
+   por delante del header**, aunque cada uno siga con su propia duración y sin el escalado por
+   longitud. El defecto que abrió D26 —el aviso invisible— no sigue abierto fuera de RRHH; lo que
+   sigue abierto es la duplicación de configuración, que es un defecto de mantenimiento, no de
+   pantalla.
+3. **107 sitios en 6 módulos no es una línea de guarda funcional.** Centralizarlos de verdad
+   implicaría decidir un `avisos.ts` compartido —o seis copias, una por módulo, que sería repetir el
+   problema que D26 cerró— y tocar entre 16 y 36 archivos por módulo. Es trabajo real de otro
+   alcance, no algo que quepa en "guarda de una línea" ni en esta rama de defectos de pantalla.
+
+**Qué haría falta para mover la frontera, si alguna vez toca:** sacar `opcionesAviso()` y
+`duracionError()` de `modules/rrh/forms/comunes/avisos.ts` a un sitio compartido —`shared/` es el
+candidato obvio, pero decidir su forma final no es de esta ficha—, y repetir por módulo el
+mismo barrido que hizo D26 dentro de RRHH: localizar cada `snackBar.open`, sustituirlo por
+`this.snackBar.open(mensaje, 'Cerrar', opcionesAviso(esError, mensaje))`, y un spec por módulo que
+comprueba que sigue habiendo alguna llamada cruda. Se anota aquí para que quien lo retome no
+tenga que redescubrir el inventario.
 
 ---
 
