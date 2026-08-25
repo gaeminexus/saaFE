@@ -22,36 +22,42 @@ que decía la ficha—, **qué se cambió**, **por qué ése es el arreglo** y *
 > mantener separado. Los commits míos son `14eff13`, `8fe8f46`, `25ff86f` y `c7f1003`; si hace
 > falta, se dejan solos.
 
-> **⚠ Hallazgo del 2026-08-25, previo a cualquier otro trabajo de esta sesión: la rama no compila,
-> y no es cosa mía.** `npx tsc --noEmit -p tsconfig.app.json`, `npx ng build --configuration
-> development` y **cualquier** `npx ng test` —da igual qué spec se filtre con `--include`, porque
-> `tsconfig.spec.json` incluye `src/**/*.ts` entero— fallan con `TS2307` sobre dos módulos que
-> `gestion-documentos.component.ts` y `carga-documentos.service.ts` (`modules/cxp`) importan y que
-> **nunca se llegaron a comitear**: `dialogs/clasificar-productos-dialog/clasificar-productos-
-> dialog.component.ts` y `model/productos-sin-clasificar.ts`. Confirmado que ya estaba así en el
-> commit `a5ad484` —el ajeno de CXP citado arriba— con el árbol limpio y sin ningún cambio mío:
-> `git show a5ad484:...` trae el import, `git ls-tree -r a5ad484` no trae los dos archivos. No es
-> una regresión de esta sesión ni de D25; estaba roto desde el 23 y nadie lo había necesitado
-> compilar entero hasta ahora.
+> **⚠ Hallazgo del 2026-08-25, corregido el mismo día: el diagnóstico inicial acertó el síntoma y
+> falló la causa.** Primera lectura: `npx tsc --noEmit`, `npx ng build` y cualquier `npx ng test`
+> fallaban con `TS2307` sobre dos módulos que `gestion-documentos.component.ts` y
+> `carga-documentos.service.ts` (`modules/cxp`) importan —`dialogs/clasificar-productos-dialog/
+> clasificar-productos-dialog.component.ts` y `model/productos-sin-clasificar.ts`— y lo escrito
+> aquí decía que **«nunca se llegaron a comitear»**. **Eso es falso.** Los cuatro archivos
+> —`.ts`/`.html`/`.scss` del diálogo más el modelo— estaban comiteados en `main`, en `1aa8c0e`
+> «Commit del frontend», hecho el mismo 2026-08-25. Lo que pasaba es que **esta rama
+> —`correccion/defectos-pantalla-rrhh`— se ramificó de un `main` anterior a ese commit** y nunca lo
+> trajo: el import resolvía en `main` y no en la rama, y eso se lee exactamente igual que un
+> archivo que nunca existió si sólo se mira una rama. `git ls-tree -r --name-only main | grep
+> clasificar-productos` lo confirma en un solo comando.
 >
-> **Por qué esto no es "otro tema, no me toca" sin más:** bloquea *todo* — no se puede correr un
-> solo test de RRHH mientras estos dos archivos falten, porque `login.component.ts` importa
-> `AppConfig` de `app.config.ts`, que hace `provideRouter(routes)` de `app.routes.ts`, que registra
-> `gestion-documentos.component.ts` entre las rutas eager de CXP. No hay spec de este módulo que
-> escape a esa cadena.
+> Con el merge de `correccion/defectos-pantalla-rrhh` a `main` —hecho el 2026-08-25 por Mike, junto
+> con el de `correccion/reportes-jasper-rrhh`— `main` tiene los cuatro archivos de CXP **y** D9–D26
+> juntos por primera vez, y compila: `tsc --noEmit` en 0, `ng build --configuration development`
+> completa con sólo los avisos de `sass` de siempre, y `login.destino.spec.ts` en **13 de 13**. Los
+> tres, re-verificados sobre `main` en `3c05a98`, después del merge.
 >
-> **Qué se hizo para poder verificar D25 sin tocar el trabajo de otro:** dos archivos *stub*,
-> minúsculos y sin lógica —una interfaz vacía y un componente standalone con plantilla en blanco—,
-> creados **sin comitear**, sólo para que `tsc`/`ng build`/`ng test` tuvieran algo que resolver.
-> Con ellos puestos, `tsc --noEmit` vuelve a 0. Se usaron para correr los tests de D25 (ver abajo) y
-> **se borraron los dos antes de tocar nada más**; el árbol quedó otra vez idéntico a `HEAD`,
-> comprobado con `git status --porcelain`. No se creó ni se dejó ningún archivo de CXP.
+> **La regla que deja, y que hizo falta aprender por las malas:** con siete sesiones trabajando
+> sobre el mismo árbol, **ante un import que no resuelve, se mira `main` antes de concluir que
+> falta el archivo.** Diagnosticar sobre una sola rama es diagnosticar sobre media foto — el
+> archivo podía estar a un `git fetch`/`merge` de distancia y nada en el mensaje de error lo dice.
 >
-> **No lo arreglo yo.** No es de RRHH, no sé qué debía hacer el diálogo de clasificación de
-> productos, y completarlo de verdad es del agente o la persona que dejó `abrirClasificacionProductos()`
-> a medias en `gestion-documentos.component.ts:608-619`. Lo que sí digo, para quien lo lea antes que
-> yo: **mientras esos dos archivos no existan, nadie puede correr `ng test` ni `ng build` en esta
-> rama**, ni siquiera sobre código que no tiene nada que ver con CXP.
+> **Y la segunda regla, más incómoda:** el estado de un repositorio compartido es una **foto**, no
+> un hecho. Lo que se escribió arriba era cierto en el momento de escribirlo y dejó de serlo poco
+> después, sin que yo hiciera nada — otra sesión (Mike) hizo el merge mientras esta conversación
+> seguía abierta. Un reporte de estado de git en un árbol compartido debe decir **a qué hora se
+> leyó**, porque «ahora mismo» y «cuando lo reporto» pueden ser dos fotos distintas.
+>
+> **Lo que sí se hizo bien, y se deja escrito porque el método sigue siendo válido para la próxima
+> vez que algo no compile de verdad:** antes de tener el diagnóstico correcto, se usaron dos
+> archivos *stub* sin comitear —una interfaz vacía y un componente standalone con plantilla en
+> blanco— sólo para poder correr `login.destino.spec.ts` con el árbol de entonces. Se borraron los
+> dos antes de seguir, y el árbol quedó idéntico a `HEAD` de esa rama, comprobado con `git status
+> --porcelain`. No se tocó ni se dejó ningún archivo de CXP.
 
 ## Cómo se comprobó, en general
 
