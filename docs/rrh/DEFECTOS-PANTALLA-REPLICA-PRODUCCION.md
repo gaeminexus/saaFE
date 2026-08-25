@@ -559,6 +559,47 @@ back*.
 
 ---
 
+## Candidato a defecto, sin numerar todavía · El diálogo de Novedades se quedó abierto tras guardar
+
+**2026-08-24, reapertura de abril.** No se numera porque **falta una observación para separar dos
+causas**, y numerar una que envejezca mal es peor que esperar. Lo que sí va aquí es la **secuencia
+cruda**, que es reproducible por quien la lea.
+
+**Lo que pasó, en orden, guardando la novedad de los 175,00:**
+
+1. Primer clic en *Guardar registro*: **ningún `POST /rest/nvnm` en el panel de red**, el diálogo
+   siguió abierto y la base seguía en **10** novedades para `PRDN 41`. El clic no salió.
+2. Segundo clic: **`POST /rest/nvnm` → 201**, y la base pasó a **11** con la fila de OTROS
+   (`NVNM 61`).
+3. **Y el diálogo siguió abierto, con los cinco campos rellenos**, en dos lecturas separadas por
+   varias llamadas. El paginador ya decía `1 - 10 de 11`: **el registro estaba guardado y el
+   formulario seguía invitando a guardarlo**.
+4. Se cerró con **Cancelar**. La base siguió en 11 y **con una sola fila de OTROS**: no se duplicó
+   nada.
+
+**Por qué importa más que el D11 del que es pariente:** en `Nuevo finiquito`, `calculaFiniquito`
+**reescribe en sitio** y un segundo clic no duplica. **Aquí sí duplicaría**: cada `POST` a `/nvnm`
+crea una novedad nueva, y dos novedades de 175,00 sobre el mismo concepto **se suman sin protestar**
+—el motor no comprueba duplicados—. Abril habría quedado en 15 739,22 y el bloque 2 habría sacado a
+Calderón con signo contrario.
+
+**Lo que falta para numerarlo**, y es una sola observación: en abril y en mayo, **dieciocho altas**,
+el diálogo se cerró solo cada vez. Así que o esto es **específico de guardar sobre un período
+reabierto**, o fue un cierre lento que la relectura pilló a medias.
+
+> **El discriminador, para la próxima alta de novedad:** contar
+> `document.querySelectorAll('mat-dialog-container').length` **inmediatamente después del `201`** y
+> otra vez **cinco segundos más tarde, sin tocar nada**. Si sigue en 1, es defecto y se numera. Si
+> cae a 0, era latencia y esta nota se borra.
+
+**Regla mientras tanto, y no es opcional:** **después de cada Guardar se cuenta contra la base, no
+contra la pantalla** —`/rest/nvnm/getAll` filtrado por período—, y **si el diálogo sigue abierto se
+cierra con Cancelar, nunca con un segundo Guardar**. El formulario relleno después de un guardado
+correcto es indistinguible del formulario relleno antes de uno fallido: **sólo la base los
+distingue**.
+
+---
+
 ## Registro de la réplica
 
 | Fecha | Qué se hizo | Defectos que salieron |
@@ -589,6 +630,11 @@ back*.
 | 2026-08-23 | Mayo · **calculado** en `PRDN` 42: 20 colaboradores · 21 034,34 · 4 999,13 · **16 035,21** · patronal 2 498,04, las cinco iguales a la predicción. **Calderón aterriza en 0,00 exacto** (700,00 − 66,15 − 14,04 − 619,81), el filo del céntimo cayó del lado bueno | ninguno nuevo |
 | 2026-08-23 | Mayo · contrastado en estado 3, **cierra en CERO** —el primero desde marzo sin diferencia conocida—. Bloque 2 con **tres** filas, ninguna de Robayo ni de Calderón; bloque 1 vacío; subtotal 1 869,81; 114 renglones. Aprobado → **contabilizar rol** → cerrado, sin saltos. **No se pulsó «Contabilizar provisiones»** | ninguno nuevo |
 | 2026-08-23 | **D23 cerrado por el lado de la réplica**: en **dieciocho altas** de abril y mayo **no se editó ni una sola fila**, así que el diálogo precargado no llegó a dispararse. `NVNMCDGO` 37–44 consecutivos tras las diez de abril, sin huecos. **No mordió por casualidad, no por precaución**: si se hubiera corregido una fila desde la rejilla, la siguiente alta habría salido precargada con datos de un registro real | D23 (ajeno a la réplica) |
+| 2026-08-24 | **Abril reabierto** —`PRDN` 41, primera vez que se usa la pantalla de reapertura—. El diálogo *Reabrir el período* es de Material, con textarea y **`Confirmar` deshabilitado hasta que haya motivo**: no hay `confirm` nativo, así que no bloquea la sesión. Motivo tecleado y **releído del DOM**, dos líneas, literal al guion. Tras confirmar: **estado 3 CALCULADO**, sin diálogo pendiente | ninguno nuevo |
+| 2026-08-24 | Abril · **novedad de los 175,00** en `PRDN` 41: Calderón por cédula, **`Otros descuentos - 31`** —alterno 31, `CPNMCDGO` **116**, que nunca se teclea—, valor 175,00, descripción del guion. **D22 mordió como estaba previsto**: el desplegable venía con `No` **seleccionado**, se subió a `Sí` con teclado. Verificado en la base: `NVNM` **61** · `aprobada = 'S'` · `estado = 1`, las dos condiciones que exige el motor | ver el candidato sin numerar del final |
+| 2026-08-24 | Abril · **recalculado**. Ingresos **21 034,34 sin cambio**, descuentos **5 120,12**, neto **15 914,22**, patronal 2 498,04 · **Calderón 700,00 / 605,28 / 94,72** · 20 filas y **ninguna con días ≠ 30**, así que el recálculo no reescribió el sueldo de nadie. Todo leído por REST, no de la cabecera | ninguno nuevo |
+| 2026-08-24 | Abril · contrastado en estado 3 tras la reapertura y **cerrado en 15 914,22 · diferencia CERO**. Bloque 2 de **cinco filas a tres** —las dos de Calderón desaparecen, que es la prueba de la operación—, bloque 1 vacío gracias a la contraparte del `sql/57`, **117 renglones y 137 filas**, y 1B intacto: el concepto 31 lleva las siete banderas en `N` y no toca ninguna base. Aprobado → **contabilizar rol** → cerrado, sin pulsar «Contabilizar provisiones» | ninguno nuevo |
+| 2026-08-24 | Abril · **verificado por REST tras cerrar**: estado **7** · 20 colaboradores · 21 034,34 / 5 120,12 / **15 914,22** / 2 498,04 · los tres asientos en `null` · `PRDNOBSR` = `Calculado sin contabilizacion (carga historica).` — **`contabilizarRol` escribió y `cerrarPeriodo` no lo pisó**, que es la prueba de que no hubo aviso. **Con esto los cinco meses quedan en cero**: abril era el único con diferencia | ninguno nuevo |
 
 ## Falsa alarma, anotada para que no se repita
 
@@ -748,3 +794,55 @@ rompa nada es exactamente lo que lo hace el peor de los tres.**
 > vale por lo que costaría descubrirlo mal, no por lo que rompe hoy**. Los que no rompen nada son
 > los que hay que mirar con más cuidado, porque son los únicos que ningún control posterior va a
 > corregir.
+
+---
+
+## ⚠ TRES COSAS ABIERTAS AL PUNTO DE CORTE DEL 2026-08-25
+
+Anotadas por el árbitro antes de reiniciar las sesiones, para que no vivan sólo en la memoria de un
+agente. Las tres salieron del cierre de **D26** y ninguna es de pantalla.
+
+### 1 · D25 NO ESTÁ VERIFICADO, y lo levantó el propio corrector
+
+El script con el que se revierte un arreglo para comprobar que sus tests fallan **no se aplicó en
+D25 y no protestó**: siguió adelante sin encontrar el texto que iba a sustituir, y **trece tests
+quedaron en verde fingiendo que probaban algo**.
+
+**Un test que pasa con el arreglo y sin él no prueba nada**, y trece de ellos dan una sensación de
+cobertura que es exactamente al revés de la realidad. **D25 hay que volver a verificarlo revirtiendo
+de verdad**, y el script tiene que **abortar** si no encuentra el texto en vez de seguir.
+
+> Es la enfermedad de esta semana otra vez, y esta vez sobre el instrumento de verificación: **algo
+> que existe y no se ejecuta.** Igual que la regla del `z-index` en el `styles.scss` huérfano, y que
+> `CPNMROLM` fuera del cotejo de catálogos.
+
+### 2 · Un defecto probable escondido en el archivo muerto: el footer se monta sobre el contenido
+
+`src/styles.scss` —el que **`angular.json` no compila**— lleva `body { padding-bottom: 35px }`, que
+es el hueco para el footer `fixed` de 35 px. **Si esa regla nunca se ha aplicado, el footer se monta
+sobre el final de cualquier pantalla larga.**
+
+**No se abre ficha todavía, y el corrector hizo bien en no abrirla: no lo ha observado.** Pero es
+comprobable en un minuto y **le toca a quien replica**: bajar del todo en una pantalla larga —el
+listado de novedades con las once de junio sirve— y mirar si el footer tapa la última fila. **Si la
+tapa, es defecto con número; si no, se anota que se miró.**
+
+### 3 · La frontera de `avisos.ts`, y por qué no se cruzó
+
+`comunes/avisos.ts` centralizó las **43** configuraciones de aviso de RRHH que estaban sueltas en 35
+archivos con ocho duraciones distintas. **Fuera de RRHH siguen naciendo `snackBar.open` crudos** —
+hay uno entrando ahora mismo en `crd/prestamo-consulta`, en trabajo de otro proyecto.
+
+**Se paró en el borde de RRHH a propósito**: la migración visual está congelada fuera del módulo, y
+cruzar la frontera habría metido 84 archivos de tres proyectos en un mismo cambio. **Queda escrito
+para que quien la cruce sepa que la cruza**, y para que nadie lea «centralizado» como si valiera
+para toda la aplicación: un módulo centralizado rodeado de módulos que no lo están vuelve a
+divergir.
+
+### Y una corrección que el corrector se hizo a sí mismo, que conviene no perder
+
+El primer arreglo del error de reportes cambiaba `JRJdtCompiler` por **`JRJaninoCompiler`**, y **las
+dos clases son inexistentes en JasperReports 7.0.3**: por eso el error volvió idéntico cambiando
+sólo el nombre. **Lo que sí acertó era el diagnóstico** —`compiler.class` cortocircuita a
+`compiler.java`—; lo que falló fue la conclusión. **La respuesta no estaba en la propiedad: estaba
+en que el `.jasper` existiera.** Ver `CLAUDE.md` y la cabecera de `jasperreports.properties`.

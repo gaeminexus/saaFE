@@ -333,6 +333,58 @@ Al cerrar el período hay que **marcar la cuota, descontar el saldo y subir `cuo
 —se dijo aquí y era falso—. Son anticipos reales, ya cobrados, y activarlas no duplicaría nada.
 **Lo que sí es cierto es que su saldo miente.**
 
+## 5 ter. ⚖️ EL MOTOR RESPONDE A LA NORMA; LA CARGA HISTÓRICA, A LO QUE PASÓ
+
+**Fijado el 2026-08-24, y es la regla que hay que leer antes de instalar a cualquier cliente nuevo.**
+
+Una carga histórica pone en tensión dos cosas que parecen la misma: que el motor calcule bien, y que
+el sistema contenga lo que la empresa pagó. **Cuando el cliente hizo algo distinto de lo que dice la
+norma, no pueden cumplirse las dos**, y hay que saber de antemano cuál cede.
+
+**La pregunta correcta ante cada diferencia no es «¿qué hizo el cliente?» sino «¿qué dice la norma?»**
+
+| Quién está equivocado | Qué se hace | Por qué |
+|---|---|---|
+| **El motor** | **Se arregla el motor** | Es el producto. Un parche por datos para que este cliente cuadre **viaja al siguiente**, y allí nadie sabrá por qué está |
+| **El cliente, o no se puede saber** | **Va por datos, con el motor intacto** | Lo que se pagó es un hecho y hay que registrarlo; doblar el motor para reproducir el error de una empresa lo mete en el producto |
+
+**Los tres casos reales de ASOPREP, que sirven de plantilla:**
+
+- **El motor estaba mal:** el fondo de reserva se devenga desde el aniversario y nace a partir del
+  mes 13. Nuestro motor pagaba el mes entero y provisionaba desde el mes 1. **Se arregló el motor**
+  (puntos 22 y 10). Que el cliente tuviera razón no lo convirtió en la fuente: **lo convirtió en una
+  pista para ir a mirar la norma.**
+- **No se podía saber:** los 175,00 de la columna OTROS del rol. Nadie sabe qué son y se descontaron.
+  **Concepto genérico y novedad**, sin tocar el motor.
+- **El cliente estaba mal:** los aportes de julio, calculados sobre días trabajados dejando fuera las
+  vacaciones. **Nuestro motor acierta y aun así se registra lo pagado**, por datos.
+
+> **El corolario que más cuesta:** que el cliente coincida con nosotros no prueba que tengamos razón.
+> Los cinco primeros meses de ASOPREP cerraron en **diferencia cero con dos defectos dentro del
+> motor** — no salieron porque nadie cumplía el año antes de junio. **Un contraste en verde mide el
+> acuerdo, no la corrección.**
+
+### Cómo se registra lo que va por datos
+
+**El ajuste entra DESPUÉS de calcular y ANTES de cerrar:**
+
+```
+crear período → novedades → calcular → AJUSTE → contrastar → aprobar → contabilizar → cerrar
+```
+
+`cerrarPeriodo` escribe los `ACMN` **a partir de `NMNA`**. Con el ajuste antes del cierre, los
+acumulados salen coherentes solos; **después del cierre quedan acumulados que no corresponden a la
+nómina y nada lo avisa.**
+
+**Y nunca es un solo `UPDATE`:** tocar un renglón obliga a tocar los totales de `NMNA` y la cabecera
+de `PRDN` en el mismo movimiento, o cabecera y detalle divergen — el **punto 9**, que la cabecera no
+delata sola. Va como documento revisable, con los `SELECT` de control antes y después.
+
+**Y un mes ya cerrado no se recalcula porque el motor se haya corregido.** Contiene lo que se pagó,
+que es lo que debe contener. La corrección rige desde el mes siguiente al que se publicó.
+
+---
+
 ## 6. Qué NO hacer
 
 - **No copiar tablas de datos calculados de local a producción** (`NMNA`, `RNGL`, `ACMN`, `PVNM`,

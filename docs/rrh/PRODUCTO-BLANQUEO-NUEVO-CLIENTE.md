@@ -138,6 +138,75 @@ Es justo lo que un préstamo del IESS necesita: su cuota deriva mes a mes (Calde
 
 ---
 
+## 4 bis. Ningún código de estos documentos sirve en la base nueva
+
+**Escrito el 2026-08-23, al cerrar la calibración de los cinco meses en producción.** Es la lección
+que más cara sale y la que ningún documento decía: **la nómina de ASOPREP se replicó dos veces —en
+local y en producción— y casi ningún identificador coincidió entre las dos.**
+
+La prueba, con los `PRDNCDGO` de los cinco meses:
+
+| | Enero | Febrero | Marzo | Abril | Mayo |
+|---|---:|---:|---:|---:|---:|
+| Local | 1 | 2 | **30** | — | — |
+| **Producción** | **1** | **2** | **21** | **41** | **42** |
+
+**No es una serie, no tiene lógica y no se deduce de nada.** Enero y febrero coincidieron por azar,
+y ese azar es justo lo que hace peligroso el hábito: se copia un código de un guion, funciona dos
+veces, y a la tercera apunta a otra cosa **sin dar error**.
+
+### Qué no se transcribe nunca, y qué sí
+
+| Identificador | ¿Se transcribe? | Por qué |
+|---|---|---|
+| `PRDNCDGO`, `LQDCCDGO`, `NVNMCDGO`, `NVISCDGO` | **NUNCA** | Surrogates por instalación. Los que aparecen en los cinco guiones son **de local** |
+| `MPLDCDGO`, `CNTECDGO` | **NUNCA** | Ídem. Se llega a la persona **por cédula**, nunca por código |
+| `ASNTCDGO` (base del censo) | **NUNCA** | Es una marca de agua del momento: se lee **al empezar el mes**, no se hereda |
+| **`CPNMALTR`** | **SÍ** | Es **vocabulario del motor**, normativa, y viaja con el producto (§1). Los alternos 23, 24 y 25 son préstamo quirografario, hipotecario y anticipo **en toda instalación** |
+| `CPNMCDGO` | **NUNCA, y es el más traicionero** | En producción, alterno **23 → código 20 · 24 → 21 · 25 → 22**. Consultar por código **no da error: devuelve otros tres conceptos**, con nombres plausibles y valores plausibles |
+
+> **La regla, en una línea: se filtra por alterno, jamás por código.** Y lo mismo con las personas:
+> **por cédula**, jamás por `MPLDCDGO`.
+
+### Cómo se obtiene cada uno en la base nueva
+
+| Hace falta | Dónde está |
+|---|---|
+| `PRDNCDGO` del mes | **Sólo en la URL** del panel de proceso —`…/procesos/periodos-nomina/42`—, o preguntándoselo a `RHH.PRDN` por año y mes. **La rejilla no lo enseña** |
+| `LQDCCDGO` de un finiquito | La columna **Nº** del listado de Liquidación **sí** lo enseña. Es la única de las dos pantallas que lo hace |
+| `CPNMCDGO` de un concepto | `SELECT CPNMCDGO FROM RHH.CPNM WHERE CPNMALTR = :alterno AND PJRQCDGO = :empresa`. **Nunca al revés** |
+| Base de asientos del mes | `SELECT MAX(ASNTCDGO) FROM CNT.ASNT` **antes de empezar**, y el censo del cierre acotado a `> :BASE`. Un censo total **no vale**: otros módulos escriben en paralelo |
+| Una persona o un contrato | Por **cédula** en los combos, que es además lo único que desempata a dos homónimos |
+
+### Qué defectos abiertos lo hacen más difícil
+
+Los cuatro que convierten esto de incomodidad en trampa. Fichas completas en
+[`DEFECTOS-PANTALLA-REPLICA-PRODUCCION.md`](DEFECTOS-PANTALLA-REPLICA-PRODUCCION.md):
+
+- **D21** — el `PRDNCDGO` **sólo se puede leer de la URL**. Ni la rejilla ni la cabecera del panel
+  lo escriben.
+- **D25** — y esa URL **no sobrevive a una recarga**: rebota al menú. Sumado a D21, **el dato existe
+  y no hay forma de llegar a él dos veces**, ni de enseñárselo a nadie con un enlace.
+- **D9 · D14 · D18** — los combos no acotan por colaborador, **distinguen mayúsculas** y ofrecen a
+  los **cesantes**. Teclear la cédula en mayúsculas es lo único que deja un solo candidato, y hay
+  que **comprobar que de verdad quedó uno** antes de elegir.
+- **D24** — `LQDCESTD` vale `3` para aprobada, ejecutada y contabilizada a la vez, y el listado las
+  muestra a todas como «APROBADA». **El código del finiquito se ve; su situación real, no.**
+
+### Dónde está el detalle
+
+**No se repite aquí.** Cada mes tiene su sección **«Lo que enseñó ejecutarlo»** al final de su
+guion, con los códigos reales que salieron y de dónde salieron:
+[`GUION-MES-2026-01`](GUION-MES-2026-01.md) · [`02`](GUION-MES-2026-02.md) ·
+[`03`](GUION-MES-2026-03.md) · [`04`](GUION-MES-2026-04.md) · [`05`](GUION-MES-2026-05.md).
+
+> **Y una advertencia sobre cómo leerlos:** enero a marzo van marcados como **reconstruidos** de la
+> bitácora y del `ESTADO-RRHH.md`; abril y mayo, como **de primera mano**. La procedencia está
+> escrita a propósito — un registro que no dice de dónde sale envejece como si fuera una fuente, y
+> no lo es.
+
+---
+
 ## 5. Lo que este ejercicio de ASOPREP le deja al producto — y no se borra
 
 Vale la pena decirlo porque es lo que se vende:

@@ -157,6 +157,31 @@ se calcula.
 
 - Derecho **a partir del mes 13** con el mismo empleador; 8,33 % del sueldo; mensualizado en el rol
   salvo que el afiliado pida acumulación.
+
+> **⚖️ EL PRIMER MES SE PRORRATEA, Y LA CUENTA DE DÍAS ES `30 − d`. Fijado el 2026-08-24 contra la
+> planilla real, no contra el rol.**
+>
+> **La prueba, y es un solo dato:** Viteri López ingresó el **25-06-2025**, así que su aniversario es
+> el **25-06-2026**, y **la planilla del IESS le da 5 días** con base 366,67 = 2 200 × 5/30. Del 25 al
+> 30 hay **6** días; del **26** al 30 hay **5**. **El IESS cuenta desde el día siguiente al
+> aniversario**, que es lo que significa *«a partir del mes 13»*: el mes 12 se completa **el día** del
+> aniversario y el derecho nace después.
+>
+> **⛔ NO se reutiliza la convención de días trabajados (`30 − d + 1`).** Allí el día de ingreso sí se
+> trabaja y por eso es inclusivo. Aquí no. **Son dos convenciones parecidas para cosas distintas, y
+> copiar la primera propaga el error con aspecto de coherencia** — el prorrateo va en su propio
+> método, con su nombre y su JavaDoc.
+>
+> **De dónde salió esto y por qué importa que lo dijera el cliente:** en junio de 2026 el cliente pagó
+> **un día de más** a las cuatro personas que cumplían el año, porque contaba el aniversario como *el
+> día anterior a la misma fecha del año siguiente* —ingreso 01-01-2025 → aniversario 31-12-2025—.
+> **Lo detectó él mismo al armar la planilla del IESS**, que usa la misma fecha del año siguiente, y
+> **devolvió el día de más en julio**: son los D:OTROS de julio, 1,95 · 1,53 · 2,50 · 1,95, que son
+> exactamente `sueldo / 360` de cada uno.
+>
+> **El 8,33 % es del IESS; el 1/12 es del rol.** La planilla de Viteri es `366,67 × 8,33 % = 30,54`,
+> mientras el rol usa `440 / 12 = 36,67`. `PRNMFNRS = 8.33` **está bien y no se toca**: la diferencia
+> con el doceavo son céntimos y son residuo, como los ±0,01 de Manosalvas y Muñoz.
 - **Verificado con datos:** la única planilla FR del cliente es de Viteri, período junio, base
   366,67 = 2 200 × 5/30: **los cinco días desde que cumplió el año (25-06-2026)**, prorrateado.
 - Nuestro motor le provisiona 183,26 **desde enero** (punto 10). **Los datos confirman la guarda
