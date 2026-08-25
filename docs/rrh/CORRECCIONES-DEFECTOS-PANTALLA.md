@@ -59,6 +59,27 @@ que decía la ficha—, **qué se cambió**, **por qué ése es el arreglo** y *
 > dos antes de seguir, y el árbol quedó idéntico a `HEAD` de esa rama, comprobado con `git status
 > --porcelain`. No se tocó ni se dejó ningún archivo de CXP.
 
+## Reglas de operación de este documento
+
+**El espejo se rompió dos días sin que nadie lo notara — salió en una auditoría del árbitro, no
+porque algo fallara.** Ese episodio deja tres reglas, y las tres son para releer, no para el
+archivo:
+
+1. **Si edito un `.md` de `docs/rrh/`, lo copio a `saaBE/docs/logica-negocio/rhh/` en el mismo
+   cambio.** No al final de la sesión, no «cuando toque»: en el mismo cambio que edita el original.
+   Los `.sql` **no** se espejan — viven sólo en `saaBE`.
+2. **Se verifica, no se supone**, cada vez que se termina de tocar un `.md`:
+   ```
+   diff <(tr -d '\r' < saaFE/docs/rrh/X.md) <(tr -d '\r' < saaBE/docs/logica-negocio/rhh/X.md)
+   ```
+   El `tr -d '\r'` **no es opcional**: los dos repos usan finales de línea distintos, y un `diff`
+   crudo sale entero en rojo aunque el contenido sea idéntico — un falso positivo que enseña
+   exactamente lo contrario de lo que hay que ver.
+3. **El estado del espejo no se deduce de la fecha de los archivos.** Todos los `.md` de este
+   repositorio llevan la fecha de la última copia en bloque en su cabecera, así que «el más
+   reciente gana» da la respuesta **equivocada** — los dos archivos pueden decir la misma fecha y
+   tener contenido distinto, o al revés. Se compara **contenido**, con el `diff` de arriba, siempre.
+
 ## Cómo se comprobó, en general
 
 | Comprobación | Resultado |
