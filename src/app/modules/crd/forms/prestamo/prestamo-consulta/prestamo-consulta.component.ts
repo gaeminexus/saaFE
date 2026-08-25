@@ -1,6 +1,15 @@
 import { animate, style, transition, trigger } from '@angular/animations';
 import { CommonModule } from '@angular/common';
-import { Component, ElementRef, OnInit, ViewChild, signal } from '@angular/core';
+import {
+  AfterViewInit,
+  Component,
+  ElementRef,
+  OnDestroy,
+  OnInit,
+  ViewChild,
+  signal,
+} from '@angular/core';
+import { toObservable } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -17,7 +26,8 @@ import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router } from '@angular/router';
-import { forkJoin } from 'rxjs';
+import { Observable, Subject, forkJoin, from, of } from 'rxjs';
+import { catchError, filter, map, mergeMap, take, takeUntil } from 'rxjs/operators';
 
 import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
@@ -28,16 +38,32 @@ import {
   TipoFormatoFechaBackend,
 } from '../../../../../shared/services/funciones-datos.service';
 import { PrestamoDetalleDialogComponent } from '../../../dialog/prestamo-detalle-dialog/prestamo-detalle-dialog.component';
+import { DetallePrestamo } from '../../../model/detalle-prestamo';
+import {
+  CodigoEstadoCuota,
+  obtenerCodigoEstadoCuota,
+} from '../../../model/estado-cuota-prestamo';
 import { EstadoParticipe } from '../../../model/estado-participe';
 import { EstadoPrestamo } from '../../../model/estado-prestamo';
 import { Filial } from '../../../model/filial';
 import { Prestamo } from '../../../model/prestamo';
 import { Producto } from '../../../model/producto';
+import { DetallePrestamoService } from '../../../service/detalle-prestamo.service';
 import { EstadoParticipeService } from '../../../service/estado-participe.service';
 import { EstadoPrestamoService } from '../../../service/estado-prestamo.service';
 import { FilialService } from '../../../service/filial.service';
 import { PrestamoService } from '../../../service/prestamo.service';
 import { ProductoService } from '../../../service/producto.service';
+
+/**
+ * Peticiones simultáneas de cuotas al backend. No existe un endpoint que devuelva el conteo
+ * agregado, así que la columna "Cuotas en Mora" pide la tabla de amortización préstamo por
+ * préstamo; el tope evita saturar el backend al paginar de a 100 filas o al exportar.
+ */
+const CONCURRENCIA_CUOTAS_MORA = 6;
+
+/** Conteo de cuotas en mora de un préstamo, o el estado de su carga. */
+type EstadoCuotasMora = 'cargando' | 'error' | number;
 
 @Component({
   selector: 'app-prestamo-consulta.component',
@@ -69,7 +95,7 @@ import { ProductoService } from '../../../service/producto.service';
     ]),
   ],
 })
-export class PrestamoConsultaComponent implements OnInit {
+export class PrestamoConsultaComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
   @ViewChild('fechaDesdeInput', { read: ElementRef }) fechaDesdeInputRef!: ElementRef<HTMLInputElement>;
@@ -80,6 +106,16 @@ export class PrestamoConsultaComponent implements OnInit {
   loading = signal<boolean>(false);
   error = signal<string>('');
   busquedaRealizada = signal<boolean>(false);
+
+  /**
+   * Cuotas vencidas impagas por código de préstamo. Se llena bajo demanda: solo se consultan
+   * los préstamos que la tabla está renderizando (página y orden actuales) y los que falten
+   * al momento de exportar.
+   */
+  cuotasMora = signal<Map<number, EstadoCuotasMora>>(new Map());
+  private readonly cuotasMora$ = toObservable(this.cuotasMora);
+  private readonly destroy$ = new Subject<void>();
+  calculandoCuotasMoraExport = signal<boolean>(false);
 
   filialesOptions = signal<Filial[]>([]);
   productosOptions = signal<Producto[]>([]);
@@ -99,6 +135,7 @@ export class PrestamoConsultaComponent implements OnInit {
     'producto',
     'fecha',
     'estadoPrestamo',
+    'cuotasMora',
     'montoSolicitado',
     'totalPagado',
     'saldoTotal',
@@ -136,6 +173,7 @@ export class PrestamoConsultaComponent implements OnInit {
     private productoService: ProductoService,
     private estadoPrestamoService: EstadoPrestamoService,
     private estadoParticipeService: EstadoParticipeService,
+    private detallePrestamoService: DetallePrestamoService,
     private exportService: ExportService,
     private funcionesDatos: FuncionesDatosService,
     private snackBar: MatSnackBar,
@@ -145,6 +183,21 @@ export class PrestamoConsultaComponent implements OnInit {
 
   ngOnInit(): void {
     this.cargarOpciones();
+  }
+
+  ngAfterViewInit(): void {
+    // `connect()` emite las filas realmente renderizadas (ya ordenadas y paginadas), así que
+    // basta escucharlo para cargar el conteo de la página visible cuando el usuario pagina,
+    // ordena o lanza una búsqueda nueva.
+    this.dataSource
+      .connect()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((filas) => this.cargarCuotasMora(filas));
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   private cargarOpciones(): void {
@@ -177,6 +230,7 @@ export class PrestamoConsultaComponent implements OnInit {
     this.prestamoService.selectByCriteria(criterios).subscribe({
       next: (result) => {
         const prestamos = (result || []).map((p) => this.normalizarPrestamo(p));
+        this.cuotasMora.set(new Map());
         this.prestamos.set(prestamos);
         this.dataSource.data = prestamos;
         this.dataSource.paginator = this.paginator;
@@ -525,6 +579,7 @@ export class PrestamoConsultaComponent implements OnInit {
     });
     this.prestamos.set([]);
     this.dataSource.data = [];
+    this.cuotasMora.set(new Map());
     this.busquedaRealizada.set(false);
   }
 
@@ -679,6 +734,156 @@ export class PrestamoConsultaComponent implements OnInit {
     return 'estado-desconocido';
   }
 
+  // ===================== Cuotas en mora =====================
+
+  /**
+   * Resuelve el conteo de cuotas en mora de los préstamos que todavía no lo tengan.
+   *
+   * El backend no expone un agregado, así que se pide la tabla de amortización de cada
+   * préstamo y se cuenta en el cliente. Solo se consultan los préstamos que se van a
+   * mostrar, para no traer las cuotas de todo el resultado de la búsqueda.
+   */
+  private cargarCuotasMora(prestamos: readonly Prestamo[]): void {
+    const actual = this.cuotasMora();
+    const pendientes = Array.from(
+      new Set(
+        prestamos
+          .map((prestamo) => prestamo?.codigo)
+          .filter((codigo): codigo is number => codigo != null && !actual.has(codigo)),
+      ),
+    );
+
+    if (!pendientes.length) {
+      return;
+    }
+
+    const enCurso = new Map(actual);
+    pendientes.forEach((codigo) => enCurso.set(codigo, 'cargando'));
+    this.cuotasMora.set(enCurso);
+
+    from(pendientes)
+      .pipe(
+        mergeMap(
+          (codigo) => this.consultarCuotasEnMora(codigo).pipe(map((total) => ({ codigo, total }))),
+          CONCURRENCIA_CUOTAS_MORA,
+        ),
+        takeUntil(this.destroy$),
+      )
+      .subscribe(({ codigo, total }) => {
+        const actualizado = new Map(this.cuotasMora());
+        actualizado.set(codigo, total);
+        this.cuotasMora.set(actualizado);
+      });
+  }
+
+  private consultarCuotasEnMora(codigoPrestamo: number): Observable<EstadoCuotasMora> {
+    const criterio = new DatosBusqueda();
+    criterio.asignaValorConCampoPadre(
+      TipoDatos.LONG,
+      'prestamo',
+      'codigo',
+      String(codigoPrestamo),
+      TipoComandosBusqueda.IGUAL,
+    );
+
+    return this.detallePrestamoService.selectByCriteria([criterio]).pipe(
+      map((detalles) => this.contarCuotasEnMora(detalles || [])),
+      catchError(() => of<EstadoCuotasMora>('error')),
+    );
+  }
+
+  /**
+   * Cuota en mora = vence antes de hoy y no está PAGADA ni CANCELADA_ANTICIPADA.
+   *
+   * Es el mismo criterio de la corrida de mora del backend (`selectCuotasVencidasByPrestamo`),
+   * y no el estado EN_MORA de la cuota: una cuota vencida con abono queda en PARCIAL y la
+   * corrida no la sobreescribe, pero sigue estando en mora.
+   */
+  private contarCuotasEnMora(detalles: DetallePrestamo[]): number {
+    const corte = new Date();
+    corte.setHours(0, 0, 0, 0);
+
+    return detalles.filter((detalle) => {
+      const estado = obtenerCodigoEstadoCuota(detalle);
+      if (
+        estado === CodigoEstadoCuota.PAGADA ||
+        estado === CodigoEstadoCuota.CANCELADA_ANTICIPADA
+      ) {
+        return false;
+      }
+      const vencimiento = this.convertirFecha(detalle.fechaVencimiento);
+      return !!vencimiento && vencimiento.getTime() < corte.getTime();
+    }).length;
+  }
+
+  cuotasMoraCargando(p: Prestamo): boolean {
+    const valor = p?.codigo != null ? this.cuotasMora().get(p.codigo) : undefined;
+    return valor === undefined || valor === 'cargando';
+  }
+
+  cuotasMoraConError(p: Prestamo): boolean {
+    return p?.codigo != null && this.cuotasMora().get(p.codigo) === 'error';
+  }
+
+  cuotasEnMora(p: Prestamo): number {
+    const valor = p?.codigo != null ? this.cuotasMora().get(p.codigo) : undefined;
+    return typeof valor === 'number' ? valor : 0;
+  }
+
+  claseCuotasMora(p: Prestamo): string {
+    return this.cuotasEnMora(p) > 0 ? 'cuotas-mora-atraso' : 'cuotas-mora-al-dia';
+  }
+
+  tooltipCuotasMora(p: Prestamo): string {
+    const total = this.cuotasEnMora(p);
+    if (total === 0) {
+      return 'Sin cuotas vencidas pendientes de pago';
+    }
+    return total === 1
+      ? '1 cuota vencida pendiente de pago'
+      : `${total} cuotas vencidas pendientes de pago`;
+  }
+
+  /**
+   * Ejecuta `continuar` cuando todos los préstamos indicados ya tienen resuelto su conteo.
+   *
+   * La tabla solo consulta la página visible, así que al exportar hay que completar el resto:
+   * es una petición por préstamo, por eso se avisa al usuario mientras terminan.
+   */
+  private conCuotasMoraResueltas(prestamos: Prestamo[], continuar: () => void): void {
+    this.cargarCuotasMora(prestamos);
+
+    const codigos = prestamos
+      .map((prestamo) => prestamo?.codigo)
+      .filter((codigo): codigo is number => codigo != null);
+
+    const resueltas = (mapa: Map<number, EstadoCuotasMora>) =>
+      codigos.every((codigo) => {
+        const valor = mapa.get(codigo);
+        return valor !== undefined && valor !== 'cargando';
+      });
+
+    if (resueltas(this.cuotasMora())) {
+      continuar();
+      return;
+    }
+
+    this.calculandoCuotasMoraExport.set(true);
+    this.snackBar.open('Calculando cuotas en mora para la exportación...', 'Cerrar', {
+      duration: 3000,
+    });
+
+    this.cuotasMora$.pipe(filter(resueltas), take(1), takeUntil(this.destroy$)).subscribe(() => {
+      this.calculandoCuotasMoraExport.set(false);
+      continuar();
+    });
+  }
+
+  /** En la exportación una consulta fallida va vacía, para no confundirla con un cero real. */
+  private valorExportCuotasMora(p: Prestamo): number | string {
+    return this.cuotasMoraConError(p) ? '' : this.cuotasEnMora(p);
+  }
+
   exportarCSV(): void {
     const data = this.prestamos();
     if (!data.length) {
@@ -686,6 +891,10 @@ export class PrestamoConsultaComponent implements OnInit {
       return;
     }
 
+    this.conCuotasMoraResueltas(data, () => this.generarCSV(data));
+  }
+
+  private generarCSV(data: Prestamo[]): void {
     const rows = data.map((p) => ({
       Codigo: p.codigo,
       NumeroPrestamo: p.idAsoprep,
@@ -693,6 +902,7 @@ export class PrestamoConsultaComponent implements OnInit {
       Identificacion: p.entidad?.numeroIdentificacion || '',
       EstadoParticipe: this.obtenerEstadoParticipe(p),
       EstadoPrestamo: this.obtenerEstadoPrestamo(p),
+      CuotasEnMora: this.valorExportCuotasMora(p),
       Producto: p.producto?.nombre || '',
       Fecha: p.fecha ? new Date(p.fecha).toLocaleDateString('es-ES') : '',
       MontoSolicitado: p.montoSolicitado || 0,
@@ -707,6 +917,7 @@ export class PrestamoConsultaComponent implements OnInit {
       'Identificacion',
       'EstadoParticipe',
       'EstadoPrestamo',
+      'CuotasEnMora',
       'Producto',
       'Fecha',
       'MontoSolicitado',
@@ -724,12 +935,17 @@ export class PrestamoConsultaComponent implements OnInit {
       return;
     }
 
+    this.conCuotasMoraResueltas(data, () => this.generarPDF(data));
+  }
+
+  private generarPDF(data: Prestamo[]): void {
     const rows = data.map((p) => ({
       codigo: String(p.codigo || ''),
       numero: String(p.idAsoprep || ''),
       entidad: p.entidad?.razonSocial || p.entidad?.nombreComercial || '',
       estadoParticipe: this.obtenerEstadoParticipe(p),
       estadoPrestamo: this.obtenerEstadoPrestamo(p),
+      cuotasMora: String(this.valorExportCuotasMora(p)),
       producto: p.producto?.nombre || '',
       fecha: p.fecha ? new Date(p.fecha).toLocaleDateString('es-ES') : '',
       monto: String(p.montoSolicitado || 0),
@@ -742,12 +958,24 @@ export class PrestamoConsultaComponent implements OnInit {
       'Entidad',
       'Estado Partícipe',
       'Estado Préstamo',
+      'Cuotas Mora',
       'Producto',
       'Fecha',
       'Monto',
       'Saldo',
     ];
-    const keys = ['codigo', 'numero', 'entidad', 'estadoParticipe', 'estadoPrestamo', 'producto', 'fecha', 'monto', 'saldo'];
+    const keys = [
+      'codigo',
+      'numero',
+      'entidad',
+      'estadoParticipe',
+      'estadoPrestamo',
+      'cuotasMora',
+      'producto',
+      'fecha',
+      'monto',
+      'saldo',
+    ];
     this.exportService.exportToPDF(
       rows,
       'prestamos-consulta',

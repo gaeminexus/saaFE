@@ -115,6 +115,23 @@ export class EntidadParticipeInfoComponent implements OnInit {
   estadosCivilOptions = signal<EstadoCivil[]>([]);
   tiposAporteOptions = signal<TipoAporte[]>([]);
   bancoExternosOptions = signal<BancoExterno[]>([]);
+  /** Texto del buscador que vive dentro del combo de bancos. */
+  filtroBancoExterno = signal<string>('');
+  /**
+   * Bancos que coinciden con el buscador del combo. BEXT no tiene más identificador propio que
+   * su código (los otros campos son `tarjeta`, `estado` y `fechaIngreso`), así que la búsqueda
+   * va contra el nombre y contra el código.
+   */
+  bancoExternosFiltrados = computed<BancoExterno[]>(() => {
+    const filtro = this.filtroBancoExterno().trim().toLowerCase();
+    const bancos = this.bancoExternosOptions();
+    if (!filtro) return bancos;
+    return bancos.filter(
+      (banco) =>
+        (banco.nombre || '').toLowerCase().includes(filtro) ||
+        String(banco.codigo ?? '').includes(filtro)
+    );
+  });
   tiposCuentaBancaria = signal<DetalleRubro[]>([]);
 
   loadingFiliales = signal<boolean>(false);

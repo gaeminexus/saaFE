@@ -1,6 +1,6 @@
 # Estado del módulo RRHH
 
-**Última actualización:** 2026-08-23 · 🏁 **CALIBRACIÓN EN PRODUCCIÓN COMPLETA: ENERO A MAYO CERRADOS Y CONTRASTADOS** · cuatro con diferencia cero, abril con los +175,00 de Calderón · **junio y julio quedan para después de ver a Steven**
+**Última actualización:** 2026-08-25 · 🏁 **ENERO A MAYO CERRADOS EN PRODUCCIÓN, LOS CINCO EN DIFERENCIA CERO** · ⏳ **WAR con el 22 y el 10 publicado en local, PENDIENTE de subir a producción** · **junio es el siguiente y tiene guion propio** · julio cierra la carga histórica
 
 > Este archivo existe para que una sesión nueva de cualquier agente recupere el estado sin
 > depender del historial de conversación. **Actualízalo al terminar cada fase.**
@@ -26,7 +26,7 @@ han corrido todavía**.
 | Enero | ✅ cerrado y contrastado **en PRODUCCIÓN** | **16 476,92** | **0,00** |
 | Febrero | ✅ cerrado y contrastado **en PRODUCCIÓN** | **17 525,11** | **0,00** |
 | Marzo | ✅ cerrado y contrastado **en PRODUCCIÓN** | **17 591,12** | **0,00** |
-| Abril | ✅ **CERRADO Y CONTRASTADO en PRODUCCIÓN** el 2026-08-23 · `PRDN 41` · 20 colaboradores · contrastado en estado **3**, antes de aprobar | **16 089,22** | **+175,00** (OTROS de Calderón) |
+| Abril | ✅ **CERRADO, REABIERTO Y VUELTO A CERRAR** el 2026-08-24 · `PRDN 41` · 20 colaboradores. Se cerró primero en 16 089,22 con +175,00; **se reabrió por decisión del cliente** para registrar los OTROS de Calderón como concepto **31**, y cerró en cero. Ver [`GUION-REAPERTURA-ABRIL.md`](GUION-REAPERTURA-ABRIL.md) | **15 914,22** | **0,00** |
 | Mayo | ✅ **CERRADO Y CONTRASTADO en PRODUCCIÓN** el 2026-08-23 · `PRDN 42` · 20 colaboradores · contrastado en estado **3**, antes de aprobar | **16 035,21** | **0,00** |
 | Junio · Julio | datos cargados, **sin correr** | — | — |
 
@@ -84,7 +84,7 @@ pendientes.
 1. ~~Enero → contraste~~ ✅ **hecho el 2026-08-21**, diferencia cero. `CTRL_PARAM` en **2**
 2. ~~Febrero → contraste~~ ✅ **hecho el 2026-08-22**, diferencia cero
 3. ~~Marzo → contraste~~ ✅ **hecho el 2026-08-22**, diferencia cero → **`sql/49`** corrido con marzo en 7 → **`CTRL_PARAM` se queda en 3**: se mueve a 4 en el paso 1 del §4 del guion, al contrastar, no antes
-4. ~~Abril → contraste → aprobar → contabilizar → cerrar~~ ✅ **CERRADO el 2026-08-23**, `PRDN` **41** en estado 7, `PRDNOBSR` con el texto exacto de la carga histórica, los tres asientos en nulo, **120 `ACMN`** del período y **550** en el año. `CTRL_PARAM` quedó en **4**
+4. ~~Abril → contraste → aprobar → contabilizar → cerrar~~ ✅ **CERRADO**, y **reabierto y vuelto a cerrar el 2026-08-24** con los OTROS de Calderón: `PRDN` **41** en estado 7, **diferencia CERO**, `PRDNOBSR` con el texto de la carga histórica, los tres asientos en nulo, **120 `ACMN`** del período y **670** en el año. `CTRL_PARAM` quedó en **4**
 5. ~~Mayo → contraste → aprobar → contabilizar → cerrar~~ ✅ **CERRADO el 2026-08-23**, `PRDN` **42** en estado 7, **diferencia cero** con las tres filas del bloque 2 exactas, `PRDNOBSR` con el texto de la carga histórica, los tres asientos en nulo, **120 `ACMN`** del período y **670** en el año. `CTRL_PARAM` quedó en **5**
 
 **🏁 Con mayo cierra la calibración en producción: enero a mayo, los cinco cerrados y contrastados.**
@@ -93,7 +93,76 @@ Steven y no un fallo de cálculo. **Junio y julio quedan para después de verle*
 correcciones del motor los bloquea — el punto 10 parecía candidato porque junio es cuando Viteri
 cumple el año, pero **las provisiones no se contrastan contra el cliente**, así que no toca lo que el
 instrumento mide. **El motor sigue congelado sin coste.**
-6. Junio y julio quedan para después de ver a Steven
+6. **JUNIO — el siguiente**, y ya no espera a Steven: espera a que el WAR esté en producción. Tiene guion propio, [`GUION-MES-2026-06.md`](GUION-MES-2026-06.md), escrito **antes** de correrlo
+7. Julio → **fin de la carga histórica**. Después, agosto en modo 2
+
+### 🚦 EL PUNTO DE CORTE DEL 2026-08-25 — lo primero que hay que comprobar al retomar
+
+**Se reinició la máquina y todas las sesiones son nuevas.** Esto es lo que estaba a medias:
+
+| Qué | Estado exacto |
+|---|---|
+| **WAR con el 22 y el 10** | **Publicado en LOCAL y verificado con `javap`** —salen `fechaAniversarioFondosReserva` y `baseFondosReservaProrrateada`, y `superaUnAnio` ya no está—. **PENDIENTE de subir a producción** |
+| **Los siete `.jasper` de `rhh`** | ✅ **Compilados y probados.** Eran el fallo de los reportes: `rhh` tenía 7 `.jrxml` y **0** `.jasper`, y el respaldo de compilar en runtime **está muerto en JR 7.0.3**. Ver `CLAUDE.md` y `jasperreports.properties` |
+| **Correcciones de pantalla D9–D26** | En la rama `correccion/defectos-pantalla-rrhh` de saaFE, **sin desplegar**. Los cinco guiones **ya están actualizados** para la aplicación nueva |
+| **Los cinco guiones** | ✅ Actualizados el 2026-08-25 con la convención de fecha única `dd/mm/aaaa`. **Si el frontend NO se despliega, los guiones van por delante de la aplicación** — cada uno lleva el aviso de qué hacer en ese caso |
+| **Junio** | Guion escrito, `sql/50` y `sql/57` cargados. **No arranca hasta que el WAR esté en producción** |
+| **Línea base de producción, tomada antes de subir** | Provisiones de FR: **cinco meses, 1 persona, 183,26 cada uno**. Después de subir tiene que dar lo mismo |
+
+**Las dos comprobaciones después de subir, y ninguna es opcional:**
+
+1. **`javap`** sobre el `.class` desplegado buscando **`baseFondosReservaProrrateada`**.
+2. **La consulta de provisiones**, que tiene que seguir dando las cinco filas de 183,26. Es la única
+   que ve un recálculo de un mes cerrado, porque con el WAR nuevo eso **cambia el bloque 1B sin
+   tocar el neto**.
+
+### ⚖️ LA REGLA QUE GOBIERNA TODO LO DEMÁS — fijada el 2026-08-24
+
+**El motor responde a la norma. Los datos de enero a julio responden a lo que pasó. Son dos cosas
+distintas y llevábamos meses mezclándolas.**
+
+Hasta aquí, el criterio de aceptación era «el motor reproduce el rol del cliente», y eso empuja a
+doblar el motor para que coincida con las peculiaridades de una empresa. **El módulo se
+comercializa**: un parche puesto para que ASOPREP cuadre **viaja al siguiente cliente**.
+
+**La pregunta correcta ante cada diferencia no es «¿qué hizo el cliente?» sino «¿qué dice la
+norma?»**, y la respuesta reparte el trabajo en dos:
+
+| Quién está equivocado | Qué se hace | Ejemplos ya resueltos |
+|---|---|---|
+| **Nuestro motor** | **Se arregla el motor.** Es el producto y responde a la ley. Parchearlo por datos deja el defecto dentro del producto | **Puntos 22 y 10**: el fondo de reserva se devenga desde el aniversario y empieza al cumplir el año. Pagábamos el mes entero y provisionábamos desde el mes 1. **El cliente tenía razón, y eso no lo convierte en la fuente: lo convierte en una pista** |
+| **El cliente, o no se puede saber** | **Va por datos, con el motor intacto** | Los **175,00** de OTROS de Calderón —nadie sabe qué son—. Y los aportes de julio: Caiza 1,52 · Nieto 2,84 · Pardo 8,82 de menos, porque el cliente calculó sobre días trabajados dejando fuera las vacaciones. **Eso está mal según la norma, nuestro motor acierta, y aun así hay que registrar lo que se pagó** |
+
+> **El corolario que más cuesta aceptar:** que el cliente coincida con nosotros no prueba que
+> tengamos razón, y que discrepe no prueba que la tengamos nosotros. Los cinco meses cerraron en
+> cero **y el motor tenía dos defectos dentro** — no salieron porque nadie cumplía el año antes de
+> junio. **Un contraste en verde mide el acuerdo, no la corrección.**
+
+**Cómo se registra lo que va por datos, y el orden no es negociable:**
+
+**El ajuste entra DESPUÉS de calcular y ANTES de cerrar.** `cerrarPeriodo` escribe los `ACMN` **a
+partir de `NMNA`**: si el ajuste entra antes del cierre, los acumulados salen coherentes solos; si
+entra después, quedan acumulados que no corresponden a la nómina **y nada lo avisa**.
+
+**Y nunca es un solo `UPDATE`.** Tocar un renglón obliga a tocar los totales de `NMNA` y la cabecera
+de `PRDN` en el mismo movimiento, o cabecera y detalle divergen — que es el **punto 9**, y la
+cabecera no lo delata sola. Va como documento revisable: los `SELECT` de control, el `UPDATE`, y los
+`SELECT` de después.
+
+```
+crear período → novedades → calcular → AJUSTE → contrastar → aprobar → contabilizar → cerrar
+```
+
+**Y los meses ya cerrados no se recalculan.** Contienen lo que se pagó, que es lo que deben
+contener. El motor corregido rige **de junio en adelante**; corregirlo no es motivo para reabrir
+enero a mayo.
+
+> **⚠ Desde el WAR del 2026-08-24 esa regla tiene DOS motivos independientes, no uno.** Al primero
+> —el punto 14, el sueldo de Méndez— se le suma que **las provisiones de fondos de reserva de Viteri
+> de enero a mayo desaparecerían**: 183,26 cada una, porque antes de junio no tenía derecho. Y es de
+> la peor clase para detectarlo: **viven en `PVNM`, no en el rol, así que no moverían el líquido.**
+> Cambiarían el bloque 1B **sin tocar el neto** — que es exactamente la forma en que ese defecto
+> lleva cinco meses pasando desapercibido delante de cinco contrastes en verde.
 
 **Y el contraste va en estado 3 CALCULADO, ANTES de aprobar.** Verificado el 2026-08-22: el
 instrumento lee `NMNA`, `RNGL`, `PVNM` y `CTRL`, y **no lee `ACMN`**, que es lo único que escribe
@@ -381,7 +450,46 @@ ingresos 21 034,34 · descuentos 4 999,13 · **neto 16 035,21** · patronal 2 49
 - **Bloque 1 vacío por primera vez con el motor final.** El esperado viejo pedía una fila, el IR de
   Robayo, y ya no se genera.
 
-### ✅ ABRIL CUADRA Y CIERRA EN PRODUCCIÓN — contraste del 2026-08-23 en estado 3, cerrado el mismo día
+### ✅ ABRIL REABIERTO Y CERRADO EN CERO — 2026-08-24
+
+**El único mes que se ha reabierto, y el que cierra la calibración: con él los CINCO quedan en cero.**
+Decisión del cliente del 2026-08-23 — la carga histórica guarda **lo que se pagó**—, así que los
+**175,00 de OTROS de Calderón** dejaron de ser una diferencia documentada y pasaron a ser un dato
+registrado. Cobró **94,72**, no 269,72.
+
+| | Antes | Después |
+|---|---:|---:|
+| Descuentos | 4 945,12 | **5 120,12** |
+| **Neto** | 16 089,22 | **15 914,22** = cliente |
+| **Diferencia** | +175,00 | **0,00** |
+| Bloque 2 | 5 filas | **3** — las dos de Calderón desaparecen |
+| Renglones | 116 | **117** |
+| `CTRL` filas esperadas | 136 | **137** |
+
+**Cómo se hizo, y por qué no descongeló nada:** `sql/56` creó el concepto **31 · Otros descuentos**
+—EGRESO, recortable, orden 140, **sin rol de motor**— y `sql/57` completó las filas de `CTRL` en
+abril, junio y julio. Se registró como **novedad del período**, que no pasa por `rolDelDescuento`,
+así que **el punto 4 no se rozó**. El motor sigue congelado.
+
+**Lo que esta operación probó, y no se podía saber antes:**
+
+- **El bloque 1B no se movió ni un céntimo**, como estaba predicho: el concepto lleva las siete
+  banderas en `N`, así que no toca ninguna base. Predicción escrita antes de ejecutar, cumplida.
+- **El punto 6 no mordió, y está comprobado y no supuesto.** Se reabrió abril con mayo ya cerrado, y
+  los `ACMN` de mayo salieron **idénticos** —seis tipos de 20, tipo 9 ausente, aporte 1 942,93, 600
+  días, bases en 20 560,00—. Por la misma razón: ninguno de los seis tipos de acumulado depende de
+  un concepto con todas las banderas en `N`.
+- **El control de asientos acotado se ganó el sueldo por segunda vez.** Sobre la base 8179 habían
+  nacido **16 asientos ajenos** —pagos a proveedores de CXP y movimientos de tesorería, usuarios
+  `SISTEMA` y `ALALANGUI`, con fechas de julio y agosto—. **Un censo total los habría leído como que
+  RRHH contabilizó abril.** La autoridad real es que los tres campos de asiento del período están en
+  nulo.
+- **`CTRL` estaba incompleto y nadie lo sabía.** No traía los 175,00 como fila de concepto —sólo
+  dentro del total de descuentos—, así que sin el `sql/57` abril habría cerrado con el bloque 2
+  limpio y **una fila fabricada en el bloque 1**. El mismo control destapó un segundo hueco en julio:
+  los **183,26** de retención de fondo de reserva de Viteri, que `CTRL` sólo carga como ingreso.
+
+### ✅ ABRIL CUADRA EN PRODUCCIÓN — primer cierre, contraste del 2026-08-23 en estado 3
 
 **Cuarto mes seguido sin causas nuevas, y el primero cuyo resultado nadie había visto nunca.** Los
 cinco bloques exactamente como los fijaba [`ESPERADO-CONTRASTE-ABRIL.md`](ESPERADO-CONTRASTE-ABRIL.md)
@@ -1400,8 +1508,9 @@ puntos. Esto la reconstruye.
 | **19** | **`/rest/lqdc/calcular` y `/simular` reciben SÓLO `idContrato`**, así que el backend no puede validar que el contrato pertenezca al colaborador elegido en pantalla — no recibe el colaborador | `LiquidacionRest:147,167` | **Nuevo del 2026-08-21 (D9).** El registro sale internamente coherente, así que **ninguna comprobación de datos lo detecta**: la pantalla enseña un nombre y el finiquito liquida al dueño del contrato |
 | **20** | **`generarAvisoSalida` NO es idempotente**: crea una `NovedadIess` nueva sin comprobar si ya existe una para esa liquidación | `NovedadIessServiceImpl:144-153` | **Nuevo del 2026-08-22.** Asimetría con la novedad 6, que sí lo es. **Y su alcanzabilidad, añadida el 2026-08-23: no es un problema de instalaciones viejas, es un doble clic.** `ejecutarSalida` exige APROBADA de entrada y **no mueve el estado al terminar**, así que nada impide pulsar dos veces, y la pantalla tampoco puede protegerlo porque no tiene de dónde leer que ya se ejecutó. Repasados los seis pasos, **cinco aguantan la repetición** —contrato y empleado se reescriben con lo mismo, `cancelaDescuentos` y `caducaSaldosVacaciones` ya no encuentran filas vigentes, y los `ACMN` son idempotentes por clave vía `selectByClave`—. **El único que no es éste.** Arreglar el 20 cubre el daño real sin tocar la máquina de estados |
 | **21** | **La liquidación no deja constancia de que la salida se ejecutó.** `LQDCESTD` colapsa **tres hitos distintos en el mismo 3**: aprobada, salida ejecutada y contabilizada. Ni `ejecutarSalida` ni `contabilizarLiquidacion` mueven el estado | `LiquidacionHaberesServiceImpl:219` · `RhhEstadoLiquidacion` | **Nuevo del 2026-08-23.** Es el 20 por su otro lado, y **tiene precedente en casa**: `contabilizarLiquidacion` sí se protege de la doble ejecución, pero con `getAsiento() != null`, no con el estado — ésa es la forma que le falta a `ejecutarSalida`. Coste ya pagado: una casilla del registro de réplica rellenada con «estado 4» leyendo un vocabulario que no existe. Los estados **4 `REGISTRADA_EN_SUT`, 5 `PAGADA` y 6 `ANULADA` están declarados y no los escribe nadie**: `setEstado` sobre `Liquidacion` aparece **dos veces** en todo el proyecto, CALCULADA y APROBADA. **No es de la familia de 16/17/18** —no hay valor tragado en silencio— sino un campo que no responde la pregunta que se le hace |
+| **22** | **La rama MENSUALIZADO de fondos de reserva paga el MES COMPLETO el primer mes, sin prorratear desde el aniversario.** Y la rama ACUMULADO ni siquiera comprueba el aniversario, que es el **punto 10**: **son la misma cuenta escrita dos veces en el mismo bloque de veinte líneas, y se arreglan JUNTOS** | paso 8 de `calcularPeriodo` | **DESCONGELADO el 2026-08-24, el único de los 17.** No para que junio cuadre, sino porque **la norma lo dice**: el fondo de reserva se devenga desde el aniversario y nace *«a partir del mes 13»*. **La fórmula es `30 − d`, NO `30 − d + 1`** — fijada contra la planilla real del IESS de Viteri: ingresó el **25-06-2025** y el IESS le da **5 días** con base 366,67, o sea del **26** al 30. El mes 12 se completa **el día** del aniversario, así que el fondo empieza al siguiente. **No reutilizar `calculaDiasTrabajados`**: allí el día de ingreso sí se trabaja, y son dos convenciones parecidas para cosas distintas. **Enero a mayo NO se recalculan.** La prueba es falsable: junio debe salir **44,60 por debajo** del cliente —**7,93** de los cuatro días de más al 8,33 %, más **36,67** del fondo de Viteri— y los D:OTROS de julio suman **44,60**: **los dos meses se anulan EXACTOS**. El 44,59 que se calculó primero salía del doceavo y era el número equivocado |
 
-**Son 16 pendientes, no 11** —el 21 nació el 2026-08-23—. Cualquier documento que diga «las 11 correcciones» o «las 15» está desactualizado.
+**Son 17 pendientes, no 11** —el 21 nació el 2026-08-23 y el 22 el 2026-08-24—. Cualquier documento que diga «las 11 correcciones», «las 15» o «las 16» está desactualizado.
 
 **Tres de los pendientes —16, 17 y 18— son la misma familia**, y merece verse junta: **un valor que
 el motor traga sin protestar y cuyo daño aparece meses después, lejos de su causa.** Un rango de

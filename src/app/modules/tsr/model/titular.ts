@@ -1,4 +1,4 @@
-import { Pais } from "../../crd/model/pais";
+import { Pais } from "../../../shared/model/pais";
 
 /**
  * Modelo de Titular para el módulo de Tesorería (TSR).

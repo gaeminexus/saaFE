@@ -87,16 +87,34 @@ cuál toca:
 
 | Pantalla | Formato |
 |---|---|
-| Diálogo de **períodos** | `dd/mm/yyyy` |
-| **Finiquito**, campo *Fecha de salida* | `mm/dd/yyyy` |
+| **Todas las pantallas del módulo** | **`dd/mm/aaaa`**, una sola convención |
 
-**Y en el diálogo de períodos, equivocarse no da error: da la fecha de HOY** (defecto D15). El
-control no se marca en rojo ni se queda vacío — se rellena solo con un valor plausible y el
-formulario se ve perfectamente relleno.
+> **⚠ ESTO CAMBIÓ AL PUBLICAR EL 2026-08-25. Antes eran DOS formatos y ninguno lo decía.**
+> El diálogo de períodos leía `dd/mm/yyyy` y *Nuevo finiquito* leía **`mm/dd/yyyy`**, porque aquél
+> usaba el datepicker de Material y éste un `input type="date"` nativo, que atiende al navegador y
+> no a la aplicación. **Los dos usan ya el mismo control**, con el patrón escrito en el
+> `placeholder` y en la etiqueta.
+>
+> **Si estás replicando contra una instalación ANTERIOR a ese despliegue, no uses esta tabla:**
+> allí el finiquito sigue pidiendo `mm/dd/yyyy` y hay que teclear `01/15/2026` para decir 15 de
+> enero. **Teclear `15/01/2026` en un campo que lee `mm/dd` no da error: da el 1 de mayo.**
+> Compruébalo antes de fiarte, tecleando un día mayor que 12 y releyendo el control.
 
-> **Febrero es el mes donde ese fallo es invisible.** `01/02` y `02/01` son las dos fechas válidas:
-> 1 de febrero y 2 de enero. No hay nada que parsee mal, así que ni siquiera salta la sustitución
-> por la fecha de hoy — simplemente se crea el período equivocado. **Teclear y releer.**
+**El diálogo de períodos ya no inventa fechas.** Hasta el despliegue del 2026-08-25, teclear algo
+ilegible **no daba error, no marcaba el campo en rojo y no lo dejaba vacío: lo rellenaba con la fecha
+de HOY** (defecto D15). Ahora un texto que no llega a ser fecha **deja el campo inválido, con el
+mensaje «Fecha no válida. Use el calendario o teclee dd/mm/aaaa», y Guardar no pasa** — y los dos
+campos son además obligatorios.
+
+> **⚠ PERO FEBRERO NO SE SALVA CON ESO, Y ES EL ÚNICO MES ASÍ.** El arreglo caza lo que **no se
+> puede leer**; en febrero **las dos lecturas son válidas**: `01/02` es 1 de febrero en `dd/mm` y 2
+> de enero en `mm/dd`, y `02/01` al revés. **No hay nada que parsee mal**, así que ni el aviso nuevo
+> ni el viejo relleno con la fecha de hoy llegan a dispararse — **simplemente se crea el período
+> equivocado y el formulario se ve perfecto.**
+>
+> **Teclear y releer sigue siendo obligatorio aquí**, y la comprobación del rango de aquí abajo es
+> lo único que lo caza. Es el mes que demuestra que **una validación de formato no sustituye a una
+> comprobación de valor.**
 
 ### La comprobación del rango, inmediatamente después de guardar
 

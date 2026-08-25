@@ -524,6 +524,50 @@
   }
 }
 
+.cuotas-mora-cell {
+  text-align: center;
+
+  .mat-mdc-progress-spinner {
+    display: inline-block;
+    vertical-align: middle;
+  }
+}
+
+.cuotas-mora-badge {
+  display: inline-block;
+  min-width: 2.25rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 16px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+
+  // Con cuotas vencidas impagas (rojo, mismo tono que el estado VENCIDO/MORA)
+  &.cuotas-mora-atraso {
+    background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+    color: white;
+
+    &:hover {
+      box-shadow: 0 4px 8px rgba(220, 38, 38, 0.4);
+      transform: translateY(-1px);
+    }
+  }
+
+  // Al día (verde suave, para que el rojo sea lo que resalte)
+  &.cuotas-mora-al-dia {
+    background: #e8f5e9;
+    color: #2e7d32;
+  }
+
+  // Consulta fallida
+  &.cuotas-mora-error {
+    background: #eceff1;
+    color: #607d8b;
+  }
+}
+
 .loading-container,
 .error-container,
 .empty-state-inline {

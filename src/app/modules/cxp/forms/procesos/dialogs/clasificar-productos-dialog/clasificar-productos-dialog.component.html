@@ -1,0 +1,125 @@
+<h2 mat-dialog-title class="cp-titulo">
+  <mat-icon>category</mat-icon>
+  Clasificar productos de la carga #{{ data.idCargaTxt }}
+</h2>
+
+<mat-dialog-content class="cp-content">
+
+  <p class="cp-descripcion">
+    Estos productos están en <strong>POR CLASIFICAR</strong> y bloquean el registro de los documentos
+    que los usan. Asigne el grupo de cada uno y guarde: se envían todos en un solo paso.
+  </p>
+
+  @if (cargando()) {
+    <div class="cp-cargando"><mat-spinner diameter="36"></mat-spinner></div>
+  } @else if (filas().length === 0) {
+    <div class="cp-vacio">
+      <mat-icon>check_circle</mat-icon>
+      <span>No hay productos sin clasificar en esta carga.</span>
+    </div>
+  } @else {
+
+    @if (noEncontrados().length > 0) {
+      <div class="cp-no-encontrados">
+        <mat-icon>error_outline</mat-icon>
+        <div>
+          <strong>{{ noEncontrados().length }} producto(s) no se encontraron</strong> y no se clasificaron:
+          <span class="cp-lista-faltantes">{{ noEncontrados().join(', ') }}</span>
+        </div>
+      </div>
+    }
+
+    <div class="cp-tabla-wrapper">
+      <table mat-table [dataSource]="filas()" class="cp-tabla">
+
+        <ng-container matColumnDef="nombre">
+          <th mat-header-cell *matHeaderCellDef>Producto</th>
+          <td mat-cell *matCellDef="let f">
+            <span class="cp-nombre">{{ f.nombre }}</span>
+            <span class="cp-grupo-actual">{{ f.grupoActual }}</span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="codigo">
+          <th mat-header-cell *matHeaderCellDef>Código</th>
+          <td mat-cell *matCellDef="let f" class="font-mono">{{ f.codigo || '—' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="documentos">
+          <th mat-header-cell *matHeaderCellDef>Documentos que lo usan</th>
+          <td mat-cell *matCellDef="let f">
+            <div class="cp-documentos">
+              @for (s of f.documentos; track s) {
+                <span class="cp-doc-chip">{{ s }}</span>
+              }
+              @if (!f.documentos || f.documentos.length === 0) { <span class="cp-sin-dato">—</span> }
+            </div>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="grupo">
+          <th mat-header-cell *matHeaderCellDef>Grupo a asignar *</th>
+          <td mat-cell *matCellDef="let f">
+            <mat-form-field appearance="outline" class="cp-select-field" subscriptSizing="dynamic">
+              <mat-select [value]="f.idGrupo"
+                          (selectionChange)="asignar(f, $event.value)"
+                          (openedChange)="onPanelGrupos($event)"
+                          placeholder="Seleccione grupo">
+                <!-- Buscador del combo: filtra por nombre y por cuenta contable -->
+                <div class="cp-buscador" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
+                  <mat-icon class="cp-buscador-icono">search</mat-icon>
+                  <input type="text" class="cp-buscador-input"
+                         placeholder="Buscar por nombre o cuenta contable"
+                         [value]="filtroGrupo()"
+                         (input)="aplicarFiltro($any($event.target).value)" />
+                </div>
+                @for (g of gruposFiltrados(); track g.codigo) {
+                  <mat-option [value]="g.codigo">
+                    <span class="cp-op-nombre">{{ g.nombre }}</span>
+                    @if (g.planCuenta) {
+                      <span class="cp-op-cuenta">{{ g.planCuenta.cuentaContable }}</span>
+                    } @else {
+                      <span class="cp-op-sin-cuenta">
+                        <mat-icon class="cp-op-icono">warning</mat-icon> sin cuenta contable
+                      </span>
+                    }
+                  </mat-option>
+                }
+                @if (gruposFiltrados().length === 0) {
+                  <div class="cp-sin-opciones">Ningún grupo coincide con «{{ filtroGrupo() }}»</div>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            @if (f.idGrupo != null) {
+              @if (sinCuenta(f.idGrupo)) {
+                <span class="cp-aviso-sin-cuenta" matTooltip="Asignar aquí no destraba el lote: el bloqueante pasa a ser GRUPOS_SIN_CUENTA_CONTABLE">
+                  <mat-icon class="cp-op-icono">warning</mat-icon> no destraba
+                </span>
+              } @else {
+                <span class="cp-cuenta-asignada">{{ cuentaDe(f.idGrupo) }}</span>
+              }
+            }
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="columnas"></tr>
+        <tr mat-row *matRowDef="let row; columns: columnas;" [class.cp-fila-asignada]="row.idGrupo != null"></tr>
+      </table>
+    </div>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end" class="cp-acciones">
+  <span class="cp-resumen">
+    {{ asignados() }} de {{ filas().length }} asignado(s)
+    @if (asignadosSinCuenta() > 0) {
+      <span class="cp-resumen-aviso">· {{ asignadosSinCuenta() }} sin cuenta contable</span>
+    }
+  </span>
+  @if (guardando()) { <mat-spinner diameter="24"></mat-spinner> }
+  <button mat-button (click)="cerrar()" [disabled]="guardando()">Cerrar</button>
+  <button mat-raised-button color="primary" (click)="guardar()" [disabled]="guardando() || asignados() === 0">
+    <mat-icon>save</mat-icon> Guardar clasificación
+  </button>
+</mat-dialog-actions>

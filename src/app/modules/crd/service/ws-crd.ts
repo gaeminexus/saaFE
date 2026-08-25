@@ -86,6 +86,7 @@ export class ServiciosCrd {
   public static RS_CNBP = `${API_URL}/cnbp`; // Cuenta Bancaria Partícipe
   public static RS_EVPR = `${API_URL}/evpr`; // EventoPrestamo — historial de operaciones de pago
   public static RS_HDTP = `${API_URL}/hdtp`; // HistDetallePrestamo — cuotas historizadas por abono a capital
+  public static RS_DVAP = `${API_URL}/dvap`; // DevolucionAporte — devolución de aportes al partícipe
 }
 /*
 export class ServiciosCrd {

@@ -1,4 +1,4 @@
-import { Pais } from "./pais";
+import { Pais } from "../../../shared/model/pais";
 
 export interface Provincia {
     codigo: number;          // Código de la provincia

@@ -1,0 +1,375 @@
+<div class="dva-container">
+
+  <div class="search-header">
+    <div class="header-title">
+      <mat-icon class="header-icon">undo</mat-icon>
+      <h1>Devolución de Aportes</h1>
+    </div>
+    <div class="search-box">
+      <mat-form-field appearance="fill" class="search-field">
+        <mat-label>Número de identificación</mat-label>
+        <input matInput [(ngModel)]="criterioIdentificacion" (keyup.enter)="buscar()" />
+      </mat-form-field>
+      <mat-form-field appearance="fill" class="search-field">
+        <mat-label>Rol Petrocomercial</mat-label>
+        <input matInput [(ngModel)]="criterioRolPetro" (keyup.enter)="buscar()" />
+      </mat-form-field>
+      <mat-form-field appearance="fill" class="search-field">
+        <mat-label>Nombre</mat-label>
+        <input matInput [(ngModel)]="criterioNombre" (keyup.enter)="buscar()" />
+      </mat-form-field>
+      <button mat-raised-button color="primary" class="search-button" (click)="buscar()" [disabled]="buscando()">
+        @if (buscando()) {
+          <mat-spinner diameter="20"></mat-spinner>
+        } @else {
+          <ng-container><mat-icon>search</mat-icon> Buscar</ng-container>
+        }
+      </button>
+    </div>
+  </div>
+
+  @if (mostrandoResultados()) {
+    <mat-card class="resultados-card">
+      <mat-card-header>
+        <mat-card-title>Resultados de búsqueda</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        @if (resultados().length === 0) {
+          <p class="texto-vacio">No se encontraron coincidencias.</p>
+        } @else {
+          <table mat-table [dataSource]="resultados()" class="tabla-resultados">
+            <ng-container matColumnDef="nombre">
+              <th mat-header-cell *matHeaderCellDef>Nombre</th>
+              <td mat-cell *matCellDef="let e">{{ e.razonSocial }}</td>
+            </ng-container>
+            <ng-container matColumnDef="ci">
+              <th mat-header-cell *matHeaderCellDef>C.I.</th>
+              <td mat-cell *matCellDef="let e">{{ e.numeroIdentificacion }}</td>
+            </ng-container>
+            <ng-container matColumnDef="rolPetro">
+              <th mat-header-cell *matHeaderCellDef>Rol Petrocomercial</th>
+              <td mat-cell *matCellDef="let e">{{ e.rolPetroComercial }}</td>
+            </ng-container>
+            <tr mat-header-row *matHeaderRowDef="['nombre', 'ci', 'rolPetro']"></tr>
+            <tr mat-row *matRowDef="let row; columns: ['nombre', 'ci', 'rolPetro'];" class="fila-clicable" (click)="seleccionarEntidad(row)"></tr>
+          </table>
+        }
+      </mat-card-content>
+    </mat-card>
+  }
+
+  @if (entidadSeleccionada(); as entidad) {
+    <div class="participante-section">
+
+      <mat-card class="entidad-card">
+        <mat-card-header>
+          <mat-icon mat-card-avatar class="avatar-icon">account_circle</mat-icon>
+          <mat-card-title>{{ entidad.razonSocial }}</mat-card-title>
+          <mat-card-subtitle>C.I. {{ entidad.numeroIdentificacion }} &middot; Rol Petrocomercial {{ entidad.rolPetroComercial }}</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <button mat-stroked-button (click)="volverABuscar()">
+            <mat-icon>search</mat-icon> Buscar otra persona
+          </button>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Barra de totales, fija mientras se arma el desglose. -->
+      <div class="totales-bar" [class.activa]="totalADevolver() > 0.004" [class.over]="hayExcesoEnAlgunTipo()">
+        <div class="tb-item">
+          <span class="tb-label">Saldo disponible</span>
+          <span class="tb-value">{{ formatMoneda(saldoDisponibleTotal()) }}</span>
+        </div>
+        <div class="tb-item">
+          <span class="tb-label">Total a devolver</span>
+          <span class="tb-value">{{ formatMoneda(totalADevolver()) }}</span>
+        </div>
+        <div class="tb-item">
+          <span class="tb-label">Saldo restante (proyectado)</span>
+          <span class="tb-value">{{ formatMoneda(saldoDisponibleTotal() - totalADevolver()) }}</span>
+        </div>
+      </div>
+
+      <!-- ============ Paso 1: saldos por tipo de aporte ============ -->
+      <div class="section-label">
+        1 &middot; Saldo de aportes por tipo
+        <span class="count">({{ formatMoneda(saldoDisponibleTotal()) }} en total)</span>
+      </div>
+
+      @if (cargandoSaldos()) {
+        <div class="loading-spinner-container"><mat-spinner diameter="40" color="primary"></mat-spinner></div>
+      } @else if (!saldos.length) {
+        <mat-card class="vacio-card">
+          <mat-card-content class="vacio-body">
+            <mat-icon>savings</mat-icon>
+            <p>Este partícipe no tiene saldo disponible en ningún tipo de aporte, así que no hay nada que devolver.</p>
+          </mat-card-content>
+        </mat-card>
+      } @else {
+        <div class="saldos-acciones">
+          <button mat-stroked-button (click)="devolverTodoElSaldo()">
+            <mat-icon>done_all</mat-icon> Devolver todo el saldo
+          </button>
+          <button mat-stroked-button (click)="limpiarMontos()">
+            <mat-icon>backspace</mat-icon> Limpiar
+          </button>
+        </div>
+
+        <div class="saldos-grid">
+          @for (f of saldos; track f.idTipoAporte) {
+            <mat-card class="saldo-card" [class.activo]="montoDe(f) > 0.004">
+              <mat-card-content>
+                <div class="sc-name"><mat-icon>savings</mat-icon> {{ f.nombre }}</div>
+                <div class="sc-amount">{{ formatMoneda(f.saldo) }}</div>
+                <div class="sc-amount-label">Saldo disponible</div>
+                <div class="saldo-input-row">
+                  <mat-form-field appearance="outline" class="saldo-monto-field" subscriptSizing="dynamic">
+                    <mat-label>Monto a devolver</mat-label>
+                    <span matTextPrefix>$&nbsp;</span>
+                    <input matInput inputmode="decimal" [(ngModel)]="f.texto"
+                           (ngModelChange)="onMontoCambio()" (blur)="onMontoBlur(f)" placeholder="0.00" />
+                  </mat-form-field>
+                  <button mat-button class="usar-max-btn" (click)="devolverTodoDeUnTipo(f)">Devolver todo</button>
+                </div>
+                @if (montoDe(f) > 0.004) {
+                  <div class="sc-restante">
+                    Queda <b>{{ formatMoneda(f.saldo - montoDe(f)) }}</b> en {{ f.nombre }}
+                  </div>
+                }
+              </mat-card-content>
+            </mat-card>
+          }
+        </div>
+      }
+
+      <!-- ============ Paso 2: destino y origen del dinero ============ -->
+      <div class="section-label">2 &middot; Destino y origen del dinero</div>
+
+      @if (participeSinCuentaActiva()) {
+        <mat-card class="bloqueo-card">
+          <mat-card-content class="bloqueo-body">
+            <mat-icon>account_balance</mat-icon>
+            <div>
+              <b>El partícipe no tiene ninguna cuenta bancaria activa registrada.</b>
+              <p>
+                No se puede registrar una devolución sin una cuenta a la que transferir el dinero.
+                Cargue la cuenta bancaria del partícipe en su ficha (Partícipe &rsaquo; Cuentas
+                bancarias) y vuelva a esta pantalla.
+              </p>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      }
+
+      <mat-card class="destino-card">
+        <mat-card-content>
+          <div class="campos-grid">
+
+            <mat-form-field appearance="outline">
+              <mat-label>Cuenta del partícipe (destino)</mat-label>
+              <mat-select [(ngModel)]="cuentaParticipeSeleccionada"
+                          [disabled]="cargandoCuentasParticipe() || !cuentasParticipe().length"
+                          panelClass="select-con-buscador"
+                          (openedChange)="!$event && (filtroCuentaParticipe = '')">
+                <mat-option class="select-search-option"
+                            (mousedown)="$event.preventDefault(); $event.stopPropagation()"
+                            (click)="$event.stopPropagation()">
+                  <input class="select-search-input" placeholder="Buscar por banco o número de cuenta..."
+                         [value]="filtroCuentaParticipe"
+                         (mousedown)="$event.stopPropagation()"
+                         (click)="$event.stopPropagation()"
+                         (keydown)="$event.stopPropagation()"
+                         (input)="filtroCuentaParticipe = $any($event.target).value" />
+                </mat-option>
+                @for (c of cuentasParticipeFiltradas; track c.codigo) {
+                  <mat-option [value]="c">{{ etiquetaCuentaParticipe(c) }}</mat-option>
+                }
+              </mat-select>
+              <mat-hint>Solo se muestran los últimos 4 dígitos de la cuenta.</mat-hint>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Cuenta bancaria propia (origen)</mat-label>
+              <mat-select [(ngModel)]="cuentaOrigenSeleccionada"
+                          panelClass="select-con-buscador"
+                          (openedChange)="!$event && (filtroCuentaOrigen = '')">
+                <mat-option class="select-search-option"
+                            (mousedown)="$event.preventDefault(); $event.stopPropagation()"
+                            (click)="$event.stopPropagation()">
+                  <input class="select-search-input" placeholder="Buscar por banco, número o titular..."
+                         [value]="filtroCuentaOrigen"
+                         (mousedown)="$event.stopPropagation()"
+                         (click)="$event.stopPropagation()"
+                         (keydown)="$event.stopPropagation()"
+                         (input)="filtroCuentaOrigen = $any($event.target).value" />
+                </mat-option>
+                @for (c of cuentasPropiasFiltradas; track c.codigo) {
+                  <mat-option [value]="c">{{ etiquetaCuentaPropia(c) }}</mat-option>
+                }
+              </mat-select>
+              <mat-hint>De aquí sale el dinero de la orden de pago.</mat-hint>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Fecha de la devolución</mat-label>
+              <input matInput [matDatepicker]="pickerDev" [max]="hoy"
+                     [ngModel]="fecha()" (ngModelChange)="fecha.set($event)" />
+              <mat-datepicker-toggle matSuffix [for]="pickerDev"></mat-datepicker-toggle>
+              <mat-datepicker #pickerDev></mat-datepicker>
+              <mat-hint>No puede ser posterior a hoy.</mat-hint>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="ancho-total">
+              <mat-label>Motivo / observación</mat-label>
+              <textarea matInput rows="2" maxlength="2000" [(ngModel)]="motivo"
+                        placeholder="Por ejemplo: devolución por desafiliación"></textarea>
+            </mat-form-field>
+
+          </div>
+
+          <div class="fila-debito">
+            <mat-checkbox [(ngModel)]="debitoAutomatico">
+              Es débito automático (el banco ya debitó la cuenta)
+            </mat-checkbox>
+            @if (debitoAutomatico) {
+              <mat-form-field appearance="outline" class="referencia-field" subscriptSizing="dynamic">
+                <mat-label>Referencia del débito</mat-label>
+                <input matInput [(ngModel)]="referencia" maxlength="100" />
+              </mat-form-field>
+            }
+          </div>
+
+          <div class="confirm-actions">
+            <button mat-stroked-button (click)="limpiarMontos()" [disabled]="registrando()">
+              <mat-icon>backspace</mat-icon> Limpiar montos
+            </button>
+            <button mat-raised-button color="primary" (click)="registrar()" [disabled]="!puedeRegistrar()">
+              @if (registrando()) {
+                <mat-spinner diameter="20"></mat-spinner>
+              } @else {
+                <ng-container>
+                  <mat-icon>undo</mat-icon> Registrar devolución de {{ formatMoneda(totalADevolver()) }}
+                </ng-container>
+              }
+            </button>
+          </div>
+
+          @if (hayExcesoEnAlgunTipo()) {
+            <div class="aviso error">
+              <mat-icon>error_outline</mat-icon>
+              Hay un tipo de aporte con un monto mayor a su saldo disponible. Corríjalo antes de registrar.
+            </div>
+          }
+        </mat-card-content>
+      </mat-card>
+
+      <!-- ============ Paso 3: historial ============ -->
+      <div class="section-label">
+        3 &middot; Devoluciones registradas
+        <span class="count">({{ historial().length }})</span>
+        <button mat-icon-button class="btn-refrescar" (click)="refrescarHistorial()"
+                [disabled]="cargandoHistorial()" matTooltip="Actualizar historial">
+          <mat-icon>refresh</mat-icon>
+        </button>
+      </div>
+
+      @if (cargandoHistorial()) {
+        <div class="loading-spinner-container"><mat-spinner diameter="40" color="primary"></mat-spinner></div>
+      } @else if (!historial().length) {
+        <mat-card class="vacio-card">
+          <mat-card-content class="vacio-body">
+            <mat-icon>history</mat-icon>
+            <p>Este partícipe no tiene devoluciones registradas.</p>
+          </mat-card-content>
+        </mat-card>
+      } @else {
+        @for (d of historial(); track d.idDevolucion) {
+          <mat-card class="devolucion-card" [class]="claseEstado(d.estado)">
+            <mat-card-content>
+              <div class="dev-head">
+                <div class="dev-left">
+                  <span class="chip-estado" [class]="claseEstado(d.estado)">
+                    <mat-icon>{{ iconoEstado(d.estado) }}</mat-icon>
+                    {{ d.estadoTexto || nombreEstado(d.estado) }}
+                  </span>
+                  <div>
+                    <div class="dev-title">Devolución #{{ d.idDevolucion }}</div>
+                    <div class="dev-meta">
+                      {{ formatFecha(d.fecha) }}
+                      @if (d.cuentaDestino) { &middot; {{ d.cuentaDestino }} }
+                    </div>
+                  </div>
+                </div>
+                <div class="dev-right">
+                  <div class="dev-stat">
+                    <div class="v">{{ formatMoneda(d.valorTotal) }}</div>
+                    <div class="l">Valor devuelto</div>
+                  </div>
+                  @if (puedeAnular(d)) {
+                    <button mat-stroked-button color="warn" class="btn-anular"
+                            (click)="anular(d)" [disabled]="anulandoId() === d.idDevolucion">
+                      @if (anulandoId() === d.idDevolucion) {
+                        <mat-spinner diameter="18"></mat-spinner>
+                      } @else {
+                        <ng-container><mat-icon>block</mat-icon> Anular</ng-container>
+                      }
+                    </button>
+                  }
+                </div>
+              </div>
+
+              <div class="dev-datos">
+                <div class="dd-item">
+                  <span class="l">Orden de pago (CXP)</span>
+                  <span class="v">{{ d.idPagoProgramado ? '#' + d.idPagoProgramado : '—' }}</span>
+                </div>
+                <div class="dd-item">
+                  <span class="l">Asiento contable</span>
+                  <span class="v">{{ d.numeroAsiento ? '#' + d.numeroAsiento : '—' }}</span>
+                </div>
+                <div class="dd-item">
+                  <span class="l">Fecha de pago</span>
+                  <span class="v">{{ d.fechaPago ? formatFecha(d.fechaPago) : '—' }}</span>
+                </div>
+                @if (d.motivo) {
+                  <div class="dd-item ancho-total">
+                    <span class="l">Motivo</span>
+                    <span class="v">{{ d.motivo }}</span>
+                  </div>
+                }
+              </div>
+
+              <!-- El desglose es obligatorio en el contrato, pero se comprueba igual: una
+                   respuesta sin él no debe dejar la pantalla en blanco. -->
+              @if (d.detalle && d.detalle.length) {
+                <table class="tabla-detalle">
+                  <thead>
+                    <tr>
+                      <th>Tipo de aporte</th>
+                      <th class="num">Valor</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (l of d.detalle; track l.idTipoAporte) {
+                      <tr>
+                        <td>{{ l.nombreTipoAporte }}</td>
+                        <td class="num">{{ formatMoneda(l.valor) }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              }
+            </mat-card-content>
+          </mat-card>
+        }
+      }
+
+    </div>
+  } @else if (!mostrandoResultados()) {
+    <div class="initial-message">
+      <mat-icon class="message-icon">undo</mat-icon>
+      <p>Busque un partícipe para registrar la devolución de sus aportes.</p>
+    </div>
+  }
+
+</div>

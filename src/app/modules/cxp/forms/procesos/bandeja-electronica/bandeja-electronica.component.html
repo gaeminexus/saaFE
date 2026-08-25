@@ -202,8 +202,8 @@
                 <th mat-header-cell *matHeaderCellDef>Grupo *</th>
                 <td mat-cell *matCellDef="let p">
                   <mat-select [(ngModel)]="p.idGrupo" placeholder="Seleccione grupo">
-                    @for (g of gruposProducto; track g.id) {
-                      <mat-option [value]="g.id">{{ g.nombre }}</mat-option>
+                    @for (g of gruposProducto; track g.codigo) {
+                      <mat-option [value]="g.codigo">{{ g.nombre }}</mat-option>
                     }
                   </mat-select>
                 </td>

@@ -1,6 +1,7 @@
 import { HttpHeaders, HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, catchError, of } from 'rxjs';
+import { DatosBusqueda } from '../../../shared/model/datos-busqueda/datos-busqueda';
 import { CuentaBancariaParticipe } from '../model/cuenta-bancaria-participe';
 import { ServiciosCrd } from './ws-crd';
 
@@ -13,6 +14,17 @@ export class CuentaBancariaParticipeService {
 
   getByParent(idEntidad: number): Observable<CuentaBancariaParticipe[] | null> {
     return this.http.get<CuentaBancariaParticipe[]>(`${ServiciosCrd.RS_CNBP}/getByParent/${idEntidad}`).pipe(catchError(this.handleError));
+  }
+
+  /**
+   * Búsqueda por criterios genéricos. La usa la pantalla de devolución de aportes para traer
+   * solo las cuentas activas del partícipe (`entidad.codigo` + `estado = 1`), que es la cuenta a
+   * la que se transfiere el dinero.
+   */
+  selectByCriteria(datos: DatosBusqueda[]): Observable<CuentaBancariaParticipe[] | null> {
+    return this.http
+      .post<CuentaBancariaParticipe[]>(`${ServiciosCrd.RS_CNBP}/selectByCriteria/`, datos, this.httpOptions)
+      .pipe(catchError(this.handleError));
   }
 
   add(datos: any): Observable<CuentaBancariaParticipe | null> {

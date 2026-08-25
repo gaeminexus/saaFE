@@ -19,6 +19,9 @@ export class ServiciosShare {
   public static RS_USRO = `${API_URL}/usro`;
   public static RS_PDTR = `${API_URL}/pdtr`;
   public static RS_FILE = `${API_URL}/file`;
+  // País: el catálogo dejó de vivir en `crd`, pero el backend conservó su `@Path("psss")`.
+  // La URL es exactamente la misma que tenía `ServiciosCrd.RS_PSSS`: ningún request cambia.
+  public static RS_PSSS = `${API_URL}/psss`;
 
 
 }

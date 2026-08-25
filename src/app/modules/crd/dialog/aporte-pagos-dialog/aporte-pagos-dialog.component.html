@@ -1,0 +1,155 @@
+<div class="dialog-container">
+  <div class="dialog-header">
+    <h2 mat-dialog-title>
+      <mat-icon>savings</mat-icon>
+      Pagos del Aporte
+    </h2>
+    <button mat-icon-button (click)="cerrar()" class="btn-cerrar" matTooltip="Cerrar">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <mat-dialog-content>
+    <!-- Datos del aporte -->
+    <div class="info-section">
+      <h3 class="section-title">
+        <mat-icon>info</mat-icon>
+        {{ tipoAporte }}
+      </h3>
+
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="label">Código del Aporte:</span>
+          <span class="value">{{ aporte.codigo }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Fecha Transacción:</span>
+          <span class="value">{{ formatearFecha(aporte.fechaTransaccion) }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Valor:</span>
+          <span class="value highlight">${{ aporte.valor || 0 | number : '1.2-2' }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Estado:</span>
+          <span class="value">
+            <span class="estado-badge" [ngClass]="data.estadoClase || 'estado-desconocido'">
+              {{ data.estadoTexto || 'SIN ESTADO' }}
+            </span>
+          </span>
+        </div>
+        <div class="info-item">
+          <span class="label">Valor Pagado:</span>
+          <span class="value">${{ aporte.valorPagado || 0 | number : '1.2-2' }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Saldo:</span>
+          <span class="value">${{ aporte.saldo || 0 | number : '1.2-2' }}</span>
+        </div>
+        <div class="info-item glosa-item">
+          <span class="label">Glosa:</span>
+          <span class="value">{{ aporte.glosa || '-' }}</span>
+        </div>
+      </div>
+    </div>
+
+    <mat-divider></mat-divider>
+
+    @if (loading) {
+      <div class="loading-container">
+        <mat-spinner diameter="50"></mat-spinner>
+        <p>Cargando pagos...</p>
+      </div>
+    } @else if (error) {
+      <div class="error-container">
+        <mat-icon>error_outline</mat-icon>
+        <p>{{ error }}</p>
+      </div>
+    } @else if (pagos.length === 0) {
+      <div class="empty-container">
+        <mat-icon>receipt_long</mat-icon>
+        <p>Este aporte todavía no registra pagos.</p>
+      </div>
+    } @else {
+      <div class="pagos-section">
+        <h3 class="section-title">
+          <mat-icon>payments</mat-icon>
+          Pagos Registrados ({{ pagos.length }})
+        </h3>
+
+        <div class="totales">
+          <div class="total-item">
+            <span class="label">Total Pagado (vigentes):</span>
+            <span class="value pagado">${{ totalPagado | number : '1.2-2' }}</span>
+          </div>
+          @if (totalAnulado !== 0) {
+            <div class="total-item">
+              <span class="label">Anulado:</span>
+              <span class="value anulado">${{ totalAnulado | number : '1.2-2' }}</span>
+            </div>
+          }
+          @if (descuadre !== 0) {
+            <div
+              class="total-item descuadre"
+              matTooltip="Los pagos vigentes de PGAP no cuadran con el valor pagado del aporte"
+            >
+              <span class="label">Diferencia vs. Valor Pagado:</span>
+              <span class="value">${{ descuadre | number : '1.2-2' }}</span>
+            </div>
+          }
+        </div>
+
+        <div class="table-container">
+          <table mat-table [dataSource]="pagos" class="pagos-table">
+            <ng-container matColumnDef="fechaContable">
+              <th mat-header-cell *matHeaderCellDef>Fecha Contable</th>
+              <td mat-cell *matCellDef="let pago">{{ formatearFecha(pago.fecha) }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="concepto">
+              <th mat-header-cell *matHeaderCellDef>Concepto</th>
+              <td mat-cell *matCellDef="let pago" class="concepto-column">
+                {{ pago.concepto || '-' }}
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="numeroAsiento">
+              <th mat-header-cell *matHeaderCellDef>N° Asiento</th>
+              <td mat-cell *matCellDef="let pago">{{ pago.numeroAsiento || '-' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="valor">
+              <th mat-header-cell *matHeaderCellDef class="number-column">Valor</th>
+              <td mat-cell *matCellDef="let pago" class="number-column">
+                ${{ pago.valor || 0 | number : '1.2-2' }}
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="estado">
+              <th mat-header-cell *matHeaderCellDef>Estado</th>
+              <td mat-cell *matCellDef="let pago">
+                <span class="estado-badge" [class.vigente]="pago.vigente" [class.anulado]="!pago.vigente">
+                  {{ pago.vigente ? 'Vigente' : 'Anulado' }}
+                </span>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr
+              mat-row
+              *matRowDef="let row; columns: displayedColumns"
+              [class.fila-anulada]="!row.vigente"
+            ></tr>
+          </table>
+        </div>
+      </div>
+    }
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-raised-button color="primary" (click)="cerrar()">
+      <mat-icon>close</mat-icon>
+      Cerrar
+    </button>
+  </mat-dialog-actions>
+</div>

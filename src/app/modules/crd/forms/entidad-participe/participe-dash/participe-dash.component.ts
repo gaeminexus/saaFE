@@ -7,6 +7,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, Router } from '@angular/router';
 
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { AportePagosDialogComponent } from '../../../dialog/aporte-pagos-dialog/aporte-pagos-dialog.component';
 import { PdfParticipeDetalleDialogComponent } from '../../../dialog/pdf-participe-detalle-dialog/pdf-participe-detalle-dialog.component';
 import { PrestamoPagosDialogComponent } from '../../../dialog/prestamo-pagos-dialog/prestamo-pagos-dialog.component';
 
@@ -70,8 +71,6 @@ interface AportesPorTipo {
   estadoTipo: number; // Estado del TipoAporte
   aportes: MatTableDataSource<Aporte>;
   totalValor: number;
-  totalPagado: number;
-  totalSaldo: number;
   /** Aportes con valor > 0 (ingresos). */
   conteoPositivos: number;
   /** Aportes con valor < 0 (reversos/descuentos). */
@@ -643,16 +642,15 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
                 const fecha = this.convertirFecha(aporte.fechaTransaccion);
                 return [
                   this.fmtFecha(fecha),
-                  `$${(aporte.valor || 0).toFixed(2)}`,
-                  `$${(aporte.valorPagado || 0).toFixed(2)}`,
-                  `$${(aporte.saldo || 0).toFixed(2)}`,
+                  aporte.glosa || 'N/A',
+                  `${(aporte.valor || 0).toFixed(2)}`,
                 ];
               });
 
               if (doc.autoTable) {
                 doc.autoTable({
                   startY: yPosition,
-                  head: [['Fecha', 'Glosa', 'Valor', 'Pagado', 'Saldo']],
+                  head: [['Fecha', 'Glosa', 'Valor']],
                   body: aportesData,
                   theme: 'striped',
                   styles: { fontSize: 8, cellPadding: 2 },
@@ -665,10 +663,8 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
                   margin: { left: 20, right: 14 },
                   columnStyles: {
                     0: { cellWidth: 25 },
-                    1: { cellWidth: 80 },
-                    2: { cellWidth: 25 },
-                    3: { cellWidth: 25 },
-                    4: { cellWidth: 25 },
+                    1: { cellWidth: 105 },
+                    2: { cellWidth: 30, halign: 'right' },
                   },
                 });
                 yPosition = (doc as any).lastAutoTable.finalY + 8;
@@ -1303,8 +1299,6 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
         tipoAporte: tipoAporte.tipoAporte,
         glosa: aporte.glosa || '',
         valor: aporte.valor || 0,
-        valorPagado: aporte.valorPagado || 0,
-        saldo: aporte.saldo || 0,
       };
     });
 
@@ -1312,8 +1306,8 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
     this.exportService.exportToCSV(
       rows,
       filename,
-      ['Fecha Transacción', 'Tipo Aporte', 'Glosa', 'Valor', 'Valor Pagado', 'Saldo'],
-      ['fechaTransaccion', 'tipoAporte', 'glosa', 'valor', 'valorPagado', 'saldo']
+      ['Fecha Transacción', 'Tipo Aporte', 'Glosa', 'Valor'],
+      ['fechaTransaccion', 'tipoAporte', 'glosa', 'valor']
     );
 
     this.snackBar.open('CSV exportado exitosamente', 'Cerrar', { duration: 3000 });
@@ -1394,11 +1388,7 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
           doc.setTextColor(0, 0, 0);
           doc.setFont(undefined, 'normal');
 
-          doc.text(`Total Valor: $${tipoAporte.totalValor.toFixed(2)}`, 14, yPosition);
-          yPosition += 6;
-          doc.text(`Total Pagado: $${tipoAporte.totalPagado.toFixed(2)}`, 14, yPosition);
-          yPosition += 6;
-          doc.text(`Total Saldo: $${tipoAporte.totalSaldo.toFixed(2)}`, 14, yPosition);
+          doc.text(`Total Valor: ${tipoAporte.totalValor.toFixed(2)}`, 14, yPosition);
           yPosition += 6;
           doc.text(`Cantidad de Aportes: ${tipoAporte.aportes.data.length}`, 14, yPosition);
           yPosition += 12;
@@ -1420,16 +1410,14 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
               return [
                 fechaStr,
                 aporte.glosa || 'N/A',
-                `$${(aporte.valor || 0).toFixed(2)}`,
-                `$${(aporte.valorPagado || 0).toFixed(2)}`,
-                `$${(aporte.saldo || 0).toFixed(2)}`,
+                `${(aporte.valor || 0).toFixed(2)}`,
               ];
             });
 
             if (doc.autoTable) {
               doc.autoTable({
                 startY: yPosition,
-                head: [['Fecha', 'Glosa', 'Valor', 'Pagado', 'Saldo']],
+                head: [['Fecha', 'Glosa', 'Valor']],
                 body: aportesData,
                 theme: 'striped',
                 styles: { fontSize: 8, cellPadding: 2 },
@@ -1441,10 +1429,8 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
                 },
                 columnStyles: {
                   0: { cellWidth: 30 },
-                  1: { cellWidth: 85 },
-                  2: { cellWidth: 25, halign: 'right' },
-                  3: { cellWidth: 25, halign: 'right' },
-                  4: { cellWidth: 25, halign: 'right' },
+                  1: { cellWidth: 110 },
+                  2: { cellWidth: 30, halign: 'right' },
                 },
               });
               yPosition = (doc as any).lastAutoTable.finalY + 10;
@@ -1461,17 +1447,8 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
             doc.setFont(undefined, 'normal');
 
             const totalValor = tipoAporte.aportes.data.reduce((sum: number, a: Aporte) => sum + (a.valor || 0), 0);
-            const totalPagado = tipoAporte.aportes.data.reduce(
-              (sum: number, a: Aporte) => sum + (a.valorPagado || 0),
-              0
-            );
-            const totalSaldo = tipoAporte.aportes.data.reduce((sum: number, a: Aporte) => sum + (a.saldo || 0), 0);
 
-            doc.text(`Total Valor: $${totalValor.toFixed(2)}`, 14, yPosition);
-            yPosition += 6;
-            doc.text(`Total Pagado: $${totalPagado.toFixed(2)}`, 14, yPosition);
-            yPosition += 6;
-            doc.text(`Total Saldo: $${totalSaldo.toFixed(2)}`, 14, yPosition);
+            doc.text(`Total Valor: ${totalValor.toFixed(2)}`, 14, yPosition);
           } else {
             doc.setFontSize(10);
             doc.setTextColor(128, 128, 128);
@@ -1539,16 +1516,14 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
       tipoAporte: tipo.tipoAporte,
       cantidad: tipo.aportes.data.length,
       totalValor: tipo.totalValor,
-      totalPagado: tipo.totalPagado,
-      totalSaldo: tipo.totalSaldo,
     }));
 
     const filename = `Resumen_Aportes_${this.entidadEncontrada.numeroIdentificacion}`;
     this.exportService.exportToCSV(
       rows,
       filename,
-      ['Tipo de Aporte', 'Cantidad', 'Total Valor', 'Total Pagado', 'Total Saldo'],
-      ['tipoAporte', 'cantidad', 'totalValor', 'totalPagado', 'totalSaldo']
+      ['Tipo de Aporte', 'Cantidad', 'Total Valor'],
+      ['tipoAporte', 'cantidad', 'totalValor']
     );
 
     this.snackBar.open('CSV exportado exitosamente', 'Cerrar', { duration: 3000 });
@@ -1660,16 +1635,14 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
             return [
               tipo.tipoAporte,
               tipo.aportes.data.length.toString(),
-              `$${tipo.totalValor.toFixed(2)}`,
-              `$${tipo.totalPagado.toFixed(2)}`,
-              `$${tipo.totalSaldo.toFixed(2)}`,
+              `${tipo.totalValor.toFixed(2)}`,
             ];
           });
 
           if (doc.autoTable) {
             doc.autoTable({
               startY: yPosition,
-              head: [['Tipo de Aporte', 'Cantidad', 'Total Valor', 'Total Pagado', 'Total Saldo']],
+              head: [['Tipo de Aporte', 'Cantidad', 'Total Valor']],
               body: tiposData,
               theme: 'striped',
               styles: { fontSize: 9, cellPadding: 3 },
@@ -1680,11 +1653,9 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
                 fontStyle: 'bold',
               },
               columnStyles: {
-                0: { cellWidth: 70 },
-                1: { cellWidth: 25, halign: 'center' },
-                2: { cellWidth: 30, halign: 'right' },
-                3: { cellWidth: 30, halign: 'right' },
-                4: { cellWidth: 30, halign: 'right' },
+                0: { cellWidth: 95 },
+                1: { cellWidth: 30, halign: 'center' },
+                2: { cellWidth: 40, halign: 'right' },
               },
               footStyles: {
                 fillColor: [246, 173, 85],
@@ -1695,9 +1666,7 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
                 [
                   'TOTALES',
                   totalAportes.toString(),
-                  `$${this.aportesPorTipo.reduce((sum, t) => sum + t.totalValor, 0).toFixed(2)}`,
-                  `$${this.aportesPorTipo.reduce((sum, t) => sum + t.totalPagado, 0).toFixed(2)}`,
-                  `$${this.aportesPorTipo.reduce((sum, t) => sum + t.totalSaldo, 0).toFixed(2)}`,
+                  `${this.aportesPorTipo.reduce((sum, t) => sum + t.totalValor, 0).toFixed(2)}`,
                 ],
               ],
             });
@@ -2270,8 +2239,6 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
           estadoTipo: estadoTipo,
           aportes: dataSource,
           totalValor: 0,
-          totalPagado: 0,
-          totalSaldo: 0,
           conteoPositivos: 0,
           conteoNegativos: 0,
           fechaUltimoAporte: null,
@@ -2284,8 +2251,6 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
       const grupo = tiposMap.get(codigoTipo)!;
       grupo.aportes.data.push(aporte);
       grupo.totalValor += aporte.valor || 0;
-      grupo.totalPagado += aporte.valorPagado || 0;
-      grupo.totalSaldo += aporte.saldo || 0;
 
       const valor = aporte.valor || 0;
       const fecha = this.funcionesDatos.convertirFechaDesdeBackend(aporte.fechaTransaccion);
@@ -3121,6 +3086,34 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
     }
 
     return { texto: 'SIN ESTADO', clase: 'estado-desconocido' };
+  }
+
+  /**
+   * Abre el detalle de los pagos (PGAP) de un aporte.
+   *
+   * El diálogo consulta PGAP por su cuenta filtrando por el aporte; acá solo se le pasa el
+   * estado ya resuelto contra el catálogo, que es lo que antes mostraba la columna "Estado"
+   * de la tabla.
+   */
+  verPagosAporte(aporte: Aporte, event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+
+    const estado = this.obtenerEstadoAporte(aporte);
+
+    this.dialog.open(AportePagosDialogComponent, {
+      width: '900px',
+      maxWidth: '96vw',
+      maxHeight: '90vh',
+      autoFocus: false,
+      data: {
+        aporte,
+        tipoAporte: aporte.tipoAporte?.nombre,
+        estadoTexto: estado.texto,
+        estadoClase: estado.clase,
+      },
+    });
   }
 
   /**

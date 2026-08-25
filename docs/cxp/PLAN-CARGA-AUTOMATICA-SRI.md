@@ -796,3 +796,22 @@ pero pasa a ser defensa para una empresa mal configurada, no un bloqueante.
 > no puede toparse con ese camino. Y la contabilidad de lo que sí se usa nunca
 > estuvo comprometida: con el tipo 3 existente, el camino normal siempre
 > funcionó.
+
+### 20 — Se cierra la fase 1 sin probar los caminos restantes (2026-08-23)
+
+Decisión del usuario: se da por buena la funcionalidad con lo verificado y se
+asume el riesgo de los caminos sin ejercitar, priorizando el paso a producción
+con la configuración correcta.
+
+La lista de verificación previa al despliegue está en
+`PRODUCCION-CARGA-AUTOMATICA-SRI.md`, y lo más importante de ella es que en
+producción **no hay que configurar el directorio de subidas: hay que no
+tocarlo.** `DCXPPXML` guarda ruta absoluta y producción usa hoy el respaldo
+`{user.home}\saa-uploads\` con el servicio corriendo como `Administrator`.
+Definir `saa.upload.dir` o `SAA_UPLOAD_DIR`, o cambiar la cuenta de servicio,
+dejaría ilegibles todos los XML históricos de golpe.
+
+El fallo de los tres documentos de la carga 46 en la prueba local se explica por
+eso mismo y **no es un defecto**: son documentos de una copia de la base del
+servidor, con rutas de `Administrator`, leídos desde un entorno donde
+`SAA_UPLOAD_DIR = C:\saaUploads`.

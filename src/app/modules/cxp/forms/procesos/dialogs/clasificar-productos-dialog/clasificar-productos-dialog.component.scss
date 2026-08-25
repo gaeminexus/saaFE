@@ -1,0 +1,187 @@
+.cp-titulo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cp-content {
+  min-width: 1000px;
+  max-width: 96vw;
+}
+
+.cp-descripcion {
+  margin: 0 0 14px;
+  font-size: 0.88rem;
+  color: #555;
+}
+
+.cp-cargando {
+  display: flex;
+  justify-content: center;
+  padding: 40px 0;
+}
+
+.cp-vacio {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 28px 0;
+  color: #2e7d32;
+  font-size: 0.92rem;
+}
+
+.cp-no-encontrados {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: #ffebee;
+  border-left: 4px solid #c62828;
+  border-radius: 4px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  font-size: 0.85rem;
+  color: #444;
+
+  mat-icon { color: #c62828; flex-shrink: 0; }
+
+  .cp-lista-faltantes {
+    font-family: 'Roboto Mono', monospace;
+    margin-left: 4px;
+    word-break: break-all;
+  }
+}
+
+.cp-tabla-wrapper {
+  max-height: 55vh;
+  overflow: auto;
+}
+
+.cp-tabla {
+  width: 100%;
+  font-size: 0.84rem;
+
+  th { font-weight: 600; }
+  td { padding: 8px 10px; vertical-align: top; }
+}
+
+.cp-fila-asignada { background-color: #f1f8e9; }
+
+.cp-nombre {
+  display: block;
+  font-weight: 500;
+  color: #333;
+}
+
+.cp-grupo-actual {
+  display: block;
+  font-size: 0.74rem;
+  color: #9e9e9e;
+  font-style: italic;
+}
+
+.cp-documentos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-width: 320px;
+}
+
+.cp-doc-chip {
+  background: #eceff1;
+  border-radius: 10px;
+  padding: 1px 8px;
+  font-size: 0.72rem;
+  font-family: 'Roboto Mono', monospace;
+  color: #37474f;
+}
+
+.cp-sin-dato { color: #9e9e9e; }
+
+.cp-select-field {
+  width: 260px;
+}
+
+// ── Buscador dentro del panel del combo ────────────────────────────────
+.cp-buscador {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-bottom: 1px solid #e0e0e0;
+  background: #fafafa;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+
+  .cp-buscador-icono {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    color: #757575;
+  }
+
+  .cp-buscador-input {
+    flex: 1;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 0.84rem;
+    padding: 4px 0;
+    color: #333;
+  }
+}
+
+.cp-sin-opciones {
+  padding: 12px;
+  font-size: 0.82rem;
+  color: #9e9e9e;
+  text-align: center;
+}
+
+.cp-op-nombre { margin-right: 8px; }
+
+.cp-op-cuenta {
+  font-family: 'Roboto Mono', monospace;
+  font-size: 0.75rem;
+  color: #1565c0;
+}
+
+.cp-op-sin-cuenta,
+.cp-aviso-sin-cuenta {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.72rem;
+  color: #e65100;
+}
+
+.cp-op-icono {
+  font-size: 14px;
+  width: 14px;
+  height: 14px;
+}
+
+.cp-cuenta-asignada {
+  display: block;
+  margin-top: 2px;
+  font-family: 'Roboto Mono', monospace;
+  font-size: 0.72rem;
+  color: #2e7d32;
+}
+
+.cp-aviso-sin-cuenta {
+  margin-top: 2px;
+}
+
+.cp-acciones {
+  gap: 10px;
+  padding: 8px 16px 12px;
+}
+
+.cp-resumen {
+  margin-right: auto;
+  font-size: 0.82rem;
+  color: #555;
+
+  .cp-resumen-aviso { color: #e65100; }
+}

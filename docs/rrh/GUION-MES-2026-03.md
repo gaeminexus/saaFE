@@ -93,17 +93,33 @@ cuál toca:
 
 | Pantalla | Formato |
 |---|---|
-| Diálogo de **períodos** | `dd/mm/yyyy` |
-| **Finiquito**, campo *Fecha de salida* | `mm/dd/yyyy` |
+| **Todas las pantallas del módulo** | **`dd/mm/aaaa`**, una sola convención |
 
-**Y en el diálogo de períodos, equivocarse no da error: da la fecha de HOY** (defecto D15). El
-control no se marca en rojo ni se queda vacío — se rellena solo con un valor plausible y el
-formulario se ve perfectamente relleno.
+> **⚠ ESTO CAMBIÓ AL PUBLICAR EL 2026-08-25. Antes eran DOS formatos y ninguno lo decía.**
+> El diálogo de períodos leía `dd/mm/yyyy` y *Nuevo finiquito* leía **`mm/dd/yyyy`**, porque aquél
+> usaba el datepicker de Material y éste un `input type="date"` nativo, que atiende al navegador y
+> no a la aplicación. **Los dos usan ya el mismo control**, con el patrón escrito en el
+> `placeholder` y en la etiqueta.
+>
+> **Si estás replicando contra una instalación ANTERIOR a ese despliegue, no uses esta tabla:**
+> allí el finiquito sigue pidiendo `mm/dd/yyyy` y hay que teclear `01/15/2026` para decir 15 de
+> enero. **Teclear `15/01/2026` en un campo que lee `mm/dd` no da error: da el 1 de mayo.**
+> Compruébalo antes de fiarte, tecleando un día mayor que 12 y releyendo el control.
 
-**Teclear primero la fecha de fin.** `31-03-2026` sólo es legible en `dd/mm` —no hay mes 31—, así
-que si el campo la acepta sin convertirla en la fecha de hoy, **el formato queda demostrado antes
-de teclear el 01-03**, que es el ambiguo. El mes se autovalida. Vale para todos los meses salvo los
-que terminan el 12.
+**El diálogo de períodos ya no inventa fechas.** Hasta el despliegue del 2026-08-25, teclear algo
+ilegible **no daba error, no marcaba el campo en rojo y no lo dejaba vacío: lo rellenaba con la fecha
+de HOY** (defecto D15). Ahora un texto que no llega a ser fecha **deja el campo inválido, con el
+mensaje «Fecha no válida. Use el calendario o teclee dd/mm/aaaa», y Guardar no pasa** — y los dos
+campos son además obligatorios.
+
+> **El rodeo de teclear primero la fecha de fin —`31-03-2026`, que sólo es legible en `dd/mm` porque
+> no hay mes 31— deja de hacer falta**, porque el patrón está escrito en el campo. **Se conserva
+> escrito a propósito:** si replicas contra una instalación anterior a ese despliegue, es la única
+> defensa que hay.
+>
+> **Y la comprobación del rango sigue siendo obligatoria en los dos casos.** Que la pantalla ya no
+> invente una fecha no prueba que la que tecleaste sea la que querías — **marzo no es ambiguo, pero
+> las salidas del 06-03 sí lo son en los dos formatos**, y eso el arreglo no lo toca.
 
 > **Y las salidas del 06-03 son ambiguas en los dos formatos**: `06/03` es 6 de marzo en `dd/mm` y
 > 3 de junio en `mm/dd`. En la pantalla de finiquito, que pide `mm/dd/yyyy`, va **`03/06/2026`**.

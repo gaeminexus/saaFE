@@ -831,10 +831,25 @@
                   <div class="form-row">
                     <mat-form-field appearance="outline" class="half-width">
                       <mat-label>Banco *</mat-label>
-                      <mat-select formControlName="bancoExterno" [compareWith]="compararPorCodigo">
+                      <mat-select formControlName="bancoExterno" [compareWith]="compararPorCodigo"
+                                  panelClass="select-con-buscador"
+                                  (openedChange)="!$event && filtroBancoExterno.set('')">
+                        <mat-option class="select-search-option"
+                                    (mousedown)="$event.preventDefault(); $event.stopPropagation()"
+                                    (click)="$event.stopPropagation()">
+                          <input class="select-search-input" placeholder="Buscar por nombre o código..."
+                                 [value]="filtroBancoExterno()"
+                                 (mousedown)="$event.stopPropagation()"
+                                 (click)="$event.stopPropagation()"
+                                 (keydown)="$event.stopPropagation()"
+                                 (input)="filtroBancoExterno.set($any($event.target).value)" />
+                        </mat-option>
                         <mat-option [value]="null">-- Seleccionar --</mat-option>
-                        @for (b of bancoExternosOptions(); track b.codigo) {
+                        @for (b of bancoExternosFiltrados(); track b.codigo) {
                           <mat-option [value]="b">{{ b.nombre }}</mat-option>
+                        }
+                        @if (bancoExternosFiltrados().length === 0) {
+                          <mat-option disabled>Sin coincidencias</mat-option>
                         }
                       </mat-select>
                       <mat-icon matSuffix>account_balance</mat-icon>

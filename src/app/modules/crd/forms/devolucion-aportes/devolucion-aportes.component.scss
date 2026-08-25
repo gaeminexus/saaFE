@@ -1,0 +1,278 @@
+/*
+ * Devolución de aportes. Sigue el mismo lenguaje visual que Cruce de Valores para que las dos
+ * pantallas del partícipe se lean igual, con un acento ámbar donde hay dinero saliendo.
+ *
+ * Regla táctil: 44px de alto mínimo en todo control interactivo (la pantalla se usa en tablet).
+ */
+
+.dva-container {
+  padding: 24px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  min-height: 100%;
+}
+
+.search-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  color: #fff;
+  margin-bottom: 1.5rem;
+
+  .header-title {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.9rem;
+
+    h1 { font-size: 1.8rem; font-weight: 600; margin: 0; }
+    .header-icon { font-size: 30px; width: 30px; height: 30px; }
+  }
+
+  .search-box {
+    display: flex;
+    gap: 0.85rem;
+    align-items: flex-start;
+    flex-wrap: wrap;
+
+    .search-field {
+      flex: 1;
+      min-width: 220px;
+      ::ng-deep .mat-mdc-text-field-wrapper { background: #fff; border-radius: 0.5rem; }
+    }
+
+    .search-button { height: 56px; margin-top: 4px; }
+  }
+}
+
+mat-card { border-radius: 12px !important; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1) !important; margin-bottom: 1.5rem !important; }
+
+.resultados-card, .entidad-card {
+  mat-card-header {
+    border-bottom: 3px solid #667eea;
+    background: linear-gradient(90deg, #f7fafc 0%, #edf2f7 100%);
+    padding: 18px 22px;
+    margin: -16px -16px 16px -16px;
+  }
+}
+
+.texto-vacio { color: #718096; font-style: italic; font-size: 0.86rem; }
+
+.fila-clicable { cursor: pointer; &:hover { background: rgba(102, 126, 234, 0.08); } }
+
+table.tabla-resultados {
+  width: 100%;
+  th { background: #667eea; color: #fff; font-weight: 600; text-transform: uppercase; font-size: 12px; letter-spacing: 0.03em; }
+  td { font-size: 14px; }
+}
+
+.loading-spinner-container { display: flex; justify-content: center; padding: 2rem 0; }
+
+/* ---------- barra de totales ---------- */
+.totales-bar {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: center;
+  background: #fff; border-radius: 10px; padding: 0.75rem 1.1rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12); margin-bottom: 1.25rem;
+
+  .tb-item { display: flex; flex-direction: column; gap: 1px; }
+  .tb-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.05em; color: #718096; font-weight: 700; }
+  .tb-value { font-size: 16px; font-weight: 600; font-family: 'Roboto Mono', monospace; font-variant-numeric: tabular-nums; color: #1a202c; }
+
+  /* El monto que sale se pinta en ámbar; un exceso sobre el saldo, en rojo. */
+  &.activa .tb-item:nth-child(2) .tb-value { color: #b45309; }
+  &.over .tb-item:nth-child(2) .tb-value,
+  &.over .tb-item:nth-child(3) .tb-value { color: #dc2626; }
+}
+
+.section-label {
+  display: flex; align-items: center; gap: 0.4rem;
+  font-size: 0.92rem; font-weight: 700; color: #2d3748; margin: 1.4rem 0.15rem 0.6rem;
+
+  .count { font-weight: 500; color: #718096; font-size: 0.8rem; }
+  .btn-refrescar { color: #667eea; min-width: 44px; min-height: 44px; }
+}
+
+/* ---------- saldos por tipo de aporte ---------- */
+.saldos-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.9rem;
+
+  button { min-height: 44px; border-radius: 10px; font-weight: 600; }
+}
+
+/* Los tipos de aporte los define el backend: la grilla se adapta a cuántos vengan. */
+.saldos-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; }
+
+.vacio-card .vacio-body {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  color: #718096;
+  font-size: 0.88rem;
+
+  mat-icon { font-size: 34px; width: 34px; height: 34px; color: #cbd5e0; flex-shrink: 0; }
+  p { margin: 0; }
+}
+
+.saldo-card {
+  transition: box-shadow 0.15s, border-color 0.15s;
+  border: 2px solid transparent;
+
+  &.activo { border-color: #f59e0b; }
+
+  .sc-name {
+    display: flex; align-items: center; gap: 0.5rem; font-weight: 700; font-size: 0.95rem; color: #1a202c;
+    mat-icon { color: #667eea; }
+  }
+  .sc-amount {
+    font-size: 17px; font-weight: 600; margin: 0.5rem 0 0.1rem;
+    font-family: 'Roboto Mono', monospace; letter-spacing: 0.3px; color: #1a202c;
+  }
+  .sc-amount-label { font-size: 11.5px; color: #718096; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; }
+
+  .saldo-input-row {
+    margin-top: 0.9rem; padding-top: 0.9rem; border-top: 1px dashed #e2e8f0;
+    display: flex; align-items: flex-start; gap: 0.6rem;
+
+    .saldo-monto-field {
+      flex: 1;
+      input { font-weight: 600; font-family: 'Roboto Mono', monospace; font-variant-numeric: tabular-nums; }
+    }
+    .usar-max-btn { margin-top: 4px; min-height: 44px; color: #b45309; font-size: 0.78rem; white-space: nowrap; }
+  }
+
+  .sc-restante {
+    margin-top: 0.7rem; font-size: 0.78rem; color: #718096;
+    b { color: #b45309; font-family: 'Roboto Mono', monospace; }
+  }
+}
+
+/* ---------- bloqueo por falta de cuenta bancaria ---------- */
+.bloqueo-card {
+  border-left: 4px solid #dc2626;
+
+  .bloqueo-body {
+    display: flex; align-items: flex-start; gap: 0.8rem; color: #7f1d1d; font-size: 0.86rem;
+
+    mat-icon { font-size: 32px; width: 32px; height: 32px; color: #dc2626; flex-shrink: 0; }
+    b { display: block; margin-bottom: 0.25rem; }
+    p { margin: 0; color: #991b1b; line-height: 1.45; }
+  }
+}
+
+/* ---------- destino y origen ---------- */
+.destino-card {
+  .campos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 0.4rem 1rem;
+
+    .ancho-total { grid-column: 1 / -1; }
+  }
+
+  .fila-debito {
+    display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+    margin: 0.4rem 0 0.2rem; min-height: 44px;
+
+    .referencia-field { min-width: 240px; }
+  }
+}
+
+.confirm-actions {
+  display: flex; justify-content: flex-end; gap: 0.7rem; margin-top: 1rem; flex-wrap: wrap;
+  button { min-height: 48px; border-radius: 10px; font-weight: 600; }
+}
+
+.aviso {
+  display: flex; align-items: flex-start; gap: 0.5rem;
+  background: #fff6e0; color: #92600d; border-radius: 8px; padding: 0.6rem 0.85rem;
+  font-size: 0.82rem; margin-top: 0.9rem;
+
+  mat-icon { font-size: 19px; width: 19px; height: 19px; flex-shrink: 0; }
+  &.error { background: #fef2f2; color: #dc2626; }
+}
+
+/* ---------- historial ---------- */
+.devolucion-card {
+  border-left: 4px solid #cbd5e0;
+
+  &.est-registrada { border-left-color: #667eea; }
+  &.est-en-pago { border-left-color: #b45309; }
+  &.est-pagada { border-left-color: #0d7a4f; }
+  &.est-rechazada { border-left-color: #dc2626; }
+  &.est-anulada { border-left-color: #a0aec0; }
+}
+
+.dev-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
+
+  .dev-left { display: flex; align-items: center; gap: 0.85rem; }
+  .dev-title { font-weight: 700; font-size: 0.95rem; color: #1a202c; }
+  .dev-meta { font-size: 12px; color: #718096; margin-top: 2px; }
+
+  .dev-right { display: flex; align-items: center; gap: 1.2rem; flex-wrap: wrap; }
+  .dev-stat {
+    text-align: right;
+    .v { font-weight: 600; font-size: 16px; font-family: 'Roboto Mono', monospace; font-variant-numeric: tabular-nums; color: #b45309; }
+    .l { font-size: 10.5px; color: #718096; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; }
+  }
+  .btn-anular { min-height: 44px; border-radius: 10px; font-weight: 600; }
+}
+
+.chip-estado {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em;
+  padding: 0.3rem 0.65rem; border-radius: 999px; white-space: nowrap;
+  background: #edf2f7; color: #4a5568; border: 1px solid #e2e8f0;
+
+  mat-icon { font-size: 15px; width: 15px; height: 15px; }
+
+  &.est-registrada { background: rgba(102, 126, 234, 0.12); color: #3c4a9c; border-color: #c3cbf0; }
+  &.est-en-pago { background: #fff6e0; color: #92600d; border-color: #f5d896; }
+  &.est-pagada { background: #e3f9ec; color: #0d7a4f; border-color: #a7e6c4; }
+  &.est-rechazada { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
+  &.est-anulada { background: #edf2f7; color: #718096; border-color: #e2e8f0; }
+}
+
+.dev-datos {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 0.5rem 1rem; margin-top: 1rem; padding-top: 0.9rem; border-top: 1px dashed #e2e8f0;
+
+  .dd-item { display: flex; flex-direction: column; gap: 1px; }
+  .ancho-total { grid-column: 1 / -1; }
+  .l { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.05em; color: #718096; font-weight: 700; }
+  .v { font-size: 13.5px; color: #1a202c; font-variant-numeric: tabular-nums; }
+}
+
+table.tabla-detalle {
+  width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 0.9rem;
+
+  thead th {
+    background: #edf2f7; color: #2d3748; font-size: 10.5px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.03em; padding: 7px 10px; text-align: left;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  td { padding: 7px 10px; border-bottom: 1px solid #e2e8f0; }
+}
+
+/* Con entrada táctil las filas y los objetivos se agrandan. */
+@media (pointer: coarse) {
+  table.tabla-detalle td { padding: 12px 10px; }
+  .dev-head { padding: 0.35rem 0; }
+}
+
+@media (max-width: 700px) {
+  .dva-container { padding: 12px; }
+  .confirm-actions button { flex: 1 1 auto; }
+  .destino-card .fila-debito .referencia-field { width: 100%; }
+}
+
+.initial-message {
+  text-align: center; padding: 3.5rem 1rem; color: #718096;
+  .message-icon { font-size: 42px; width: 42px; height: 42px; opacity: 0.55; margin-bottom: 0.6rem; }
+  p { font-size: 0.9rem; margin: 0; }
+}

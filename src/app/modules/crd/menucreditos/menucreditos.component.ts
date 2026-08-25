@@ -230,6 +230,11 @@ export class MenucreditosComponent {
           route: '/menucreditos/cruce-de-valores',
         },
         {
+          displayName: 'Devolución de Aportes',
+          iconName: 'undo',
+          route: '/menucreditos/devolucion-aportes',
+        },
+        {
           displayName: 'Cobros Personales',
           iconName: 'point_of_sale',
           route: '/menucreditos/cobros-personales',

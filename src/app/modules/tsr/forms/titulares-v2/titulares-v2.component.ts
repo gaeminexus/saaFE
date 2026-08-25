@@ -33,8 +33,8 @@ import { ConfirmDialogComponent } from '../../../../shared/basics/confirm-dialog
 import { DetalleRubro } from '../../../../shared/model/detalle-rubro';
 import { Empresa } from '../../../../shared/model/empresa';
 import { PlanCuenta } from '../../../cnt/model/plan-cuenta';
-import { Pais } from '../../../crd/model/pais';
-import { PaisService } from '../../../crd/service/pais.service';
+import { Pais } from '../../../../shared/model/pais';
+import { PaisService } from '../../../../shared/services/pais.service';
 import { ExportService } from '../../../../shared/services/export.service';
 import { BancoExterno } from '../../model/banco-externo.model';
 import { CuentaBancariaTitular } from '../../model/cuenta-bancaria-titular';

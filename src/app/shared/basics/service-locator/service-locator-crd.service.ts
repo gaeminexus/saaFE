@@ -78,7 +78,7 @@ import { MoraPrestamoService } from '../../../modules/crd/service/mora-prestamo.
 import { NovedadCargaService } from '../../../modules/crd/service/novedad-carga.service';
 import { PagoAporteService } from '../../../modules/crd/service/pago-aporte.service';
 import { PagoPrestamoService } from '../../../modules/crd/service/pago-prestamo.service';
-import { PaisService } from '../../../modules/crd/service/pais.service';
+import { PaisService } from '../../services/pais.service';
 import { ParroquiaService } from '../../../modules/crd/service/parroquia.service';
 import { ParticipeService } from '../../../modules/crd/service/participe.service';
 import { ParticipeXCargaArchivoService } from '../../../modules/crd/service/participe-x-carga-archivo.service';
@@ -126,7 +126,7 @@ import { MoraPrestamo } from '../../../modules/crd/model/mora-prestamo';
 import { NovedadCarga } from '../../../modules/crd/model/novedad-carga';
 import { PagoAporte } from '../../../modules/crd/model/pago-aporte';
 import { PagoPrestamo } from '../../../modules/crd/model/pago-prestamo';
-import { Pais } from '../../../modules/crd/model/pais';
+import { Pais } from '../../model/pais';
 import { Parroquia } from '../../../modules/crd/model/parroquia';
 import { Participe } from '../../../modules/crd/model/participe';
 import { ParticipeXCargaArchivo } from '../../../modules/crd/model/participe-x-carga-archivo';
