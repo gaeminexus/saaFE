@@ -20,6 +20,7 @@ import {
   DefinicionCatalogo,
   definicionCatalogo,
 } from './catalogos-rrh.config';
+import { opcionesAviso } from '../../comunes/avisos';
 
 /**
  * Pantalla genérica de los catálogos de parametrización de RRHH que ya existían: cargos,
@@ -138,10 +139,7 @@ export class CatalogoRrhComponent implements OnInit {
     const exito =
       errorData.codigoHttp != null && errorData.codigoHttp >= 200 && errorData.codigoHttp < 300;
     this.snackBar.open(errorData.mensaje, 'Cerrar', {
-      duration: exito ? 4000 : 8000,
-      panelClass: [exito ? 'snackbar-success' : 'snackbar-error'],
-      horizontalPosition: 'end',
-      verticalPosition: 'top',
+      ...opcionesAviso(!exito, errorData.mensaje),
     });
   }
 

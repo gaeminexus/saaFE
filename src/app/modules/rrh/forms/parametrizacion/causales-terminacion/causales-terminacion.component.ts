@@ -21,6 +21,7 @@ import {
   OPCIONES_SI_NO,
   referenciaEmpresa,
 } from '../utiles-parametrizacion';
+import { opcionesAviso } from '../../comunes/avisos';
 
 /** Banderas de efecto de la causal: determinan qué rubros entran en el finiquito. */
 const BANDERAS = [
@@ -167,10 +168,7 @@ export class CausalesTerminacionComponent implements OnInit {
     const exito =
       errorData.codigoHttp != null && errorData.codigoHttp >= 200 && errorData.codigoHttp < 300;
     this.snackBar.open(errorData.mensaje, 'Cerrar', {
-      duration: exito ? 4000 : 8000,
-      panelClass: [exito ? 'snackbar-success' : 'snackbar-error'],
-      horizontalPosition: 'end',
-      verticalPosition: 'top',
+      ...opcionesAviso(!exito, errorData.mensaje),
     });
   }
 

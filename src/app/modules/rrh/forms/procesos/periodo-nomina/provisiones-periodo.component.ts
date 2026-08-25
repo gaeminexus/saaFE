@@ -18,6 +18,7 @@ import {
   filasProvisiones,
   totalesPorTipoProvision,
 } from './export-periodo';
+import { opcionesAviso } from '../../comunes/avisos';
 
 /**
  * Provisiones del período (RHH.PVNM).
@@ -145,10 +146,7 @@ export class ProvisionesPeriodoComponent implements OnChanges {
 
   private avisar(mensaje: string): void {
     this.snackBar.open(mensaje, 'Cerrar', {
-      duration: 8000,
-      panelClass: ['snackbar-error'],
-      horizontalPosition: 'end',
-      verticalPosition: 'top',
+      ...opcionesAviso(true, mensaje),
     });
   }
 }

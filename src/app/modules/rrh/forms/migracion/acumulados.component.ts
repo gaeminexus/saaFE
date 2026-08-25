@@ -24,6 +24,7 @@ import {
   criteriosPorEmpresa,
   filtrarPorAnio,
 } from '../parametrizacion/utiles-parametrizacion';
+import { opcionesAviso } from '../comunes/avisos';
 
 const MESES = [
   'Enero',
@@ -178,10 +179,7 @@ export class AcumuladosComponent implements OnInit {
 
   private avisar(mensaje: string): void {
     this.snackBar.open(mensaje, 'Cerrar', {
-      duration: 8000,
-      panelClass: ['snackbar-error'],
-      horizontalPosition: 'end',
-      verticalPosition: 'top',
+      ...opcionesAviso(true, mensaje),
     });
   }
 }

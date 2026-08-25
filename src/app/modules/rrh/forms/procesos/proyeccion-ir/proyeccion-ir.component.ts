@@ -21,6 +21,7 @@ import {
   filtrarPorAnio,
 } from '../../parametrizacion/utiles-parametrizacion';
 import { RENGLONES_PROYECCION } from './proyeccion-ir.renglones';
+import { opcionesAviso } from '../../comunes/avisos';
 
 /**
  * Proyección anual del impuesto a la renta (RHH.PYIR).
@@ -188,10 +189,7 @@ export class ProyeccionIrComponent implements OnInit {
 
   private avisar(mensaje: string, esError = false): void {
     this.snackBar.open(mensaje, 'Cerrar', {
-      duration: esError ? 8000 : 4000,
-      panelClass: [esError ? 'snackbar-error' : 'snackbar-success'],
-      horizontalPosition: 'end',
-      verticalPosition: 'top',
+      ...opcionesAviso(esError, mensaje),
     });
   }
 }

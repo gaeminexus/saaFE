@@ -17,6 +17,7 @@ import { mensajeDeError } from '../../comunes/mensajes';
 import { ColumnaTabla } from '../../comunes/modelo-formulario';
 import { TablaRrhComponent } from '../../comunes/tabla-rrh/tabla-rrh.component';
 import { aniosDisponibles, filtrarPorAnio } from '../../parametrizacion/utiles-parametrizacion';
+import { opcionesAviso } from '../../comunes/avisos';
 
 /**
  * Reparto anual de utilidades.
@@ -146,10 +147,7 @@ export class UtilidadesComponent implements OnInit {
 
   private avisar(mensaje: string, esError = false): void {
     this.snackBar.open(mensaje, 'Cerrar', {
-      duration: esError ? 8000 : 4000,
-      panelClass: [esError ? 'snackbar-error' : 'snackbar-success'],
-      horizontalPosition: 'end',
-      verticalPosition: 'top',
+      ...opcionesAviso(esError, mensaje),
     });
   }
 }

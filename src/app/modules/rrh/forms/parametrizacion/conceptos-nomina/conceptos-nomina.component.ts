@@ -26,6 +26,7 @@ import {
   referenciaEmpresa,
 } from '../utiles-parametrizacion';
 import { camposConceptoNomina } from './conceptos-nomina.campos';
+import { opcionesAviso } from '../../comunes/avisos';
 
 /**
  * Catálogo de conceptos de nómina (RHH.CPNM).
@@ -176,10 +177,7 @@ export class ConceptosNominaComponent implements OnInit {
     const exito =
       errorData.codigoHttp != null && errorData.codigoHttp >= 200 && errorData.codigoHttp < 300;
     this.snackBar.open(errorData.mensaje, 'Cerrar', {
-      duration: exito ? 4000 : 8000,
-      panelClass: [exito ? 'snackbar-success' : 'snackbar-error'],
-      horizontalPosition: 'end',
-      verticalPosition: 'top',
+      ...opcionesAviso(!exito, errorData.mensaje),
     });
   }
 

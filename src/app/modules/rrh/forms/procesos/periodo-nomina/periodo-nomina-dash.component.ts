@@ -24,6 +24,7 @@ import { MotivoDialogComponent } from './motivo-dialog.component';
 import { NominasPeriodoComponent } from './nominas-periodo.component';
 import { PrevisualizacionAsientoDialogComponent } from './previsualizacion-asiento-dialog.component';
 import { ProvisionesPeriodoComponent } from './provisiones-periodo.component';
+import { opcionesAviso } from '../../comunes/avisos';
 
 /** Tipos de asiento que acepta `previsualizarAsiento/{idPeriodo}/{tipo}`. */
 const TIPO_ASIENTO_ROL = 1;
@@ -340,10 +341,7 @@ export class PeriodoNominaDashComponent implements OnInit {
 
   private avisar(mensaje: string, esError = false): void {
     this.snackBar.open(mensaje, 'Cerrar', {
-      duration: esError ? 8000 : 4000,
-      panelClass: [esError ? 'snackbar-error' : 'snackbar-success'],
-      horizontalPosition: 'end',
-      verticalPosition: 'top',
+      ...opcionesAviso(esError, mensaje),
     });
   }
 }

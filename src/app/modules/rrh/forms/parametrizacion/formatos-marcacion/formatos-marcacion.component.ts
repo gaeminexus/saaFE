@@ -27,6 +27,7 @@ import {
   referenciaEmpresa,
 } from '../utiles-parametrizacion';
 import { camposDetalleFormato, camposFormato } from './formatos-marcacion.campos';
+import { opcionesAviso } from '../../comunes/avisos';
 
 /**
  * Formatos del archivo del reloj biométrico (RHH.FMRC) y su mapeo campo a campo (RHH.DFMR).
@@ -201,10 +202,7 @@ export class FormatosMarcacionComponent implements OnInit {
     const exito =
       errorData.codigoHttp != null && errorData.codigoHttp >= 200 && errorData.codigoHttp < 300;
     this.snackBar.open(errorData.mensaje, 'Cerrar', {
-      duration: exito ? 4000 : 8000,
-      panelClass: [exito ? 'snackbar-success' : 'snackbar-error'],
-      horizontalPosition: 'end',
-      verticalPosition: 'top',
+      ...opcionesAviso(!exito, errorData.mensaje),
     });
   }
 

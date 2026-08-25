@@ -1,3 +1,57 @@
+// ============================================================================
+//  ⚠️  ESTE ARCHIVO NO SE COMPILA. NADA DE LO QUE HAY AQUÍ SE APLICA.
+// ============================================================================
+//
+//  El build usa  ►  src/styles/styles.scss  ◄  y sólo ése. Está declarado así en
+//  `angular.json`, en las dos configuraciones (build y test), junto al tema
+//  prebuilt `@angular/material/prebuilt-themes/indigo-pink.css`. Este archivo no
+//  lo referencia nadie: ni `angular.json`, ni `karma.conf.js`, ni ningún `@use`
+//  de otra hoja. Comprobado el 2026-08-25.
+//
+//  SI HAS VENIDO A EDITAR ALGO AQUÍ, PÁRATE: tu cambio no hará nada.
+//  Lo que buscas vive en `src/styles/styles.scss`.
+//
+//  ── Por qué esto no es una curiosidad, sino un defecto que ya costó caro ──
+//
+//  La línea 83 de este archivo, `.cdk-overlay-container { z-index: 10000 }`,
+//  se escribió el 2026-07-13 para que los overlays de Material dejaran de
+//  quedar por detrás del header. Nunca se ejecutó. Mes y medio después, el
+//  mismo defecto se reportó otra vez como D26 —los avisos de error de los
+//  reportes de nómina, invisibles detrás del header— y hubo que volver a
+//  diagnosticarlo entero.
+//
+//  **Un arreglo que existe y no se ejecuta es peor que uno que no se hizo**:
+//  quien lo busca lo encuentra, lo da por resuelto y deja de buscar.
+//
+//  ── Qué hay aquí que HOY no está aplicado ──
+//
+//  Inventariado el 2026-08-25 contra `src/styles/styles.scss`. Se deja escrito
+//  aquí y en `docs/rrh/CORRECCIONES-DEFECTOS-PANTALLA.md` (entrada D26):
+//
+//    · El TEMA MATERIAL ENTERO — `mat.core()`, paletas, densidad y una escala
+//      tipográfica completa de 12 niveles. La aplicación usa el prebuilt
+//      indigo-pink, así que esta tipografía nunca ha estado en efecto.
+//    · `body { padding-bottom: 35px }` — el hueco reservado para el footer,
+//      que es `position: fixed` y mide 35 px. Sin esto, el footer se monta
+//      sobre el final del contenido. Es la misma familia que D26.
+//    · `html, body { overflow: hidden }`, `body { height/width: 100vh/vw }`
+//      y `app-root { ... }` — el reset compilado pone `height: 100%` pero no
+//      el resto.
+//    · `.cdk-overlay-container` y `.mat-mdc-snack-bar-container` — YA NO: se
+//      trasladaron a `src/styles/styles.scss` al corregir D26.
+//
+//  Lo demás —los cuatro `*-snackbar` y la fuente de iconos— sí está duplicado
+//  en la hoja buena, así que ahí no falta nada.
+//
+//  ── Por qué se conserva en vez de borrarse ──
+//
+//  Porque el tema y la escala tipográfica son una decisión de diseño que
+//  alguien puede querer aplicar de verdad, y borrado no lo encuentra un `grep`.
+//  Se queda como registro, neutralizado por esta cabecera. **No se traslada
+//  nada más sin orden**: mover estas reglas cambiaría el aspecto de la
+//  aplicación de golpe y la migración visual sigue congelada.
+// ============================================================================
+
 @use '@angular/material' as mat;
 
 // Importar variables de diseño del sistema

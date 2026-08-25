@@ -15,6 +15,7 @@ import { EntidadesRrh } from '../../../model/entidades-rrh';
 import { RubrosRrh } from '../../../model/rubros-rrh';
 import { EmpleadoService } from '../../../service/empleado.service';
 import { criteriosPorEmpresa, referenciaEmpresa } from '../../parametrizacion/utiles-parametrizacion';
+import { opcionesAviso } from '../../comunes/avisos';
 
 /**
  * Listado de colaboradores. Es la puerta de entrada a la ficha: al pulsar una fila se abre su
@@ -149,10 +150,7 @@ export class ColaboradoresComponent implements OnInit {
     const exito =
       errorData.codigoHttp != null && errorData.codigoHttp >= 200 && errorData.codigoHttp < 300;
     this.snackBar.open(errorData.mensaje, 'Cerrar', {
-      duration: exito ? 4000 : 8000,
-      panelClass: [exito ? 'snackbar-success' : 'snackbar-error'],
-      horizontalPosition: 'end',
-      verticalPosition: 'top',
+      ...opcionesAviso(!exito, errorData.mensaje),
     });
   }
 

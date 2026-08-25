@@ -20,6 +20,7 @@ import {
   filtrarPorAnio,
 } from '../../parametrizacion/utiles-parametrizacion';
 import { usuarioSesion } from '../../../../../shared/services/usuario-sesion';
+import { opcionesAviso } from '../../comunes/avisos';
 
 export interface VacacionesFormData {
   mode: 'new' | 'edit' | 'view';
@@ -341,10 +342,7 @@ export class VacacionesFormComponent implements OnInit {
             return;
           }
           this.snackBar.open('Solicitud guardada', 'Cerrar', {
-            duration: 3500,
-            panelClass: ['success-snackbar'],
-            horizontalPosition: 'right',
-            verticalPosition: 'top',
+            ...opcionesAviso(false, 'Solicitud guardada'),
           });
           this.dialogRef.close(true);
         },
@@ -607,10 +605,7 @@ export class VacacionesFormComponent implements OnInit {
 
   private showError(message: string): void {
     this.snackBar.open(message, 'Cerrar', {
-      duration: 5000,
-      panelClass: ['error-snackbar'],
-      horizontalPosition: 'right',
-      verticalPosition: 'top',
+      ...opcionesAviso(true, message),
     });
   }
 }

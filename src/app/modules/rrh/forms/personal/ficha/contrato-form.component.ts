@@ -22,6 +22,7 @@ import { mensajeDeError } from '../../comunes/mensajes';
 import { CampoFormulario } from '../../comunes/modelo-formulario';
 import { aValorDeInput } from './formato-ficha';
 import { seccionesFicha } from './secciones-ficha.config';
+import { opcionesAviso } from '../../comunes/avisos';
 
 interface GrupoCampos {
   titulo: string;
@@ -225,10 +226,7 @@ export class ContratoFormComponent implements OnInit {
 
   private avisar(mensaje: string, esError = false): void {
     this.snackBar.open(mensaje, 'Cerrar', {
-      duration: esError ? 8000 : 4000,
-      panelClass: [esError ? 'snackbar-error' : 'snackbar-success'],
-      horizontalPosition: 'end',
-      verticalPosition: 'top',
+      ...opcionesAviso(esError, mensaje),
     });
   }
 }

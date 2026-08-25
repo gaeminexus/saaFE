@@ -25,6 +25,7 @@ import { ResumenNominaService } from '../../../service/resumen-nomina.service';
 import { criteriosPorEmpresa } from '../../parametrizacion/utiles-parametrizacion';
 import { CAMPOS_ASISTENCIA_PERSISTEN, rangoPorDefecto } from '../utiles-asistencia';
 import { CorreccionResumenDialogComponent } from './correccion-resumen-dialog.component';
+import { opcionesAviso } from '../../comunes/avisos';
 
 /**
  * Resumen diario de asistencia (RHH.RSMN).
@@ -295,10 +296,7 @@ export class ResumenDiarioComponent implements OnInit {
 
   private avisar(mensaje: string, esError = false): void {
     this.snackBar.open(mensaje, 'Cerrar', {
-      duration: esError ? 8000 : 4000,
-      panelClass: [esError ? 'snackbar-error' : 'snackbar-success'],
-      horizontalPosition: 'end',
-      verticalPosition: 'top',
+      ...opcionesAviso(esError, mensaje),
     });
   }
 }

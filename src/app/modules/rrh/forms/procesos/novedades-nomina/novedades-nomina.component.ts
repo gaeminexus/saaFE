@@ -31,6 +31,7 @@ import {
 } from '../../parametrizacion/utiles-parametrizacion';
 import { referencia, sinAdornos } from '../../comunes/cuerpo-entidad';
 import { registrarEjercicios } from '../../comunes/ejercicios';
+import { opcionesAviso } from '../../comunes/avisos';
 
 /**
  * Novedades del período (RHH.NVNM).
@@ -387,10 +388,7 @@ export class NovedadesNominaComponent implements OnInit {
     const exito =
       errorData.codigoHttp != null && errorData.codigoHttp >= 200 && errorData.codigoHttp < 300;
     this.snackBar.open(errorData.mensaje, 'Cerrar', {
-      duration: exito ? 4000 : 8000,
-      panelClass: [exito ? 'snackbar-success' : 'snackbar-error'],
-      horizontalPosition: 'end',
-      verticalPosition: 'top',
+      ...opcionesAviso(!exito, errorData.mensaje),
     });
   }
 

@@ -22,6 +22,7 @@ import {
 import { VacacionesAprobacionDialogComponent } from './vacaciones-aprobacion-dialog.component';
 import { VacacionesFormComponent } from './vacaciones-form.component';
 import { usuarioSesion } from '../../../../../shared/services/usuario-sesion';
+import { opcionesAviso } from '../../comunes/avisos';
 
 @Component({
   selector: 'app-vacaciones-list',
@@ -719,19 +720,13 @@ export class VacacionesListComponent implements OnInit {
 
   private showSuccess(message: string): void {
     this.snackBar.open(message, 'Cerrar', {
-      duration: 3500,
-      panelClass: ['success-snackbar'],
-      horizontalPosition: 'right',
-      verticalPosition: 'top',
+      ...opcionesAviso(false, message),
     });
   }
 
   private showError(message: string): void {
     this.snackBar.open(message, 'Cerrar', {
-      duration: 5000,
-      panelClass: ['error-snackbar'],
-      horizontalPosition: 'right',
-      verticalPosition: 'top',
+      ...opcionesAviso(true, message),
     });
   }
 }

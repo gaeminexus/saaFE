@@ -24,6 +24,7 @@ import {
   descripcionRubro,
   rangoPorDefecto,
 } from '../utiles-asistencia';
+import { opcionesAviso } from '../../comunes/avisos';
 
 /**
  * Registro manual y corrección de marcaciones (RHH.MRCC).
@@ -222,10 +223,7 @@ export class MarcacionesComponent implements OnInit {
     const exito =
       errorData.codigoHttp != null && errorData.codigoHttp >= 200 && errorData.codigoHttp < 300;
     this.snackBar.open(errorData.mensaje, 'Cerrar', {
-      duration: exito ? 4000 : 8000,
-      panelClass: [exito ? 'snackbar-success' : 'snackbar-error'],
-      horizontalPosition: 'end',
-      verticalPosition: 'top',
+      ...opcionesAviso(!exito, errorData.mensaje),
     });
   }
 

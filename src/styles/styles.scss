@@ -340,3 +340,38 @@ tr.cuota-desconocida .mat-mdc-cell { background-color: #f3f4f6 !important; borde
     color: #aaa;
   }
 }
+
+// ===== Apilamiento de los overlays de Material =====
+//
+// El contenedor de overlays del CDK —donde viven snackbars, diálogos, menús y los paneles de
+// los autocompletar— trae `z-index: 1000` de fábrica. En esta aplicación queda por debajo de
+// casi todo lo que tiene posición propia:
+//
+//   header (sticky, arriba) ................ 9999
+//   panel lateral de la ficha .............. 1050  ($z-index-modal)
+//   pie de acciones del finiquito (abajo) .. 1020  ($z-index-sticky)
+//   overlay del CDK ........................ 1000  ← aquí
+//   footer (fixed, abajo, 35px) ............   20
+//
+// Por eso un aviso arriba a la derecha se dibujaba DETRÁS del header y no lo veía nadie: la
+// información existía y no llegaba a los ojos. Y bajarlo no bastaba, porque abajo lo tapaban el
+// pie de acciones y el panel lateral —justo la pantalla desde la que más errores se muestran—.
+//
+// Esta regla existía ya, escrita palabra por palabra, en `src/styles.scss`… que **`angular.json`
+// no compila**: el build usa `src/styles/styles.scss`, este archivo. Ver la nota del final.
+.cdk-overlay-container {
+  z-index: 10000;
+}
+
+// El footer es `position: fixed` y mide 35 px. Un aviso abajo se dibujaría encima de él —está
+// por delante, así que no lo tapa a él, pero se le monta—. Se le deja el hueco justo.
+.mat-mdc-snack-bar-container {
+  margin-bottom: 43px;
+
+  // Un mensaje de error del backend puede ser largo: el de una plantilla Jasper que no existe
+  // trae la ruta entera del `.jrxml`. Que se lea entero es la mitad del arreglo.
+  .mat-mdc-snack-bar-label {
+    white-space: pre-line;
+    word-break: break-word;
+  }
+}

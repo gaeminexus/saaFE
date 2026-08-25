@@ -23,6 +23,7 @@ import {
   ENCABEZADOS_DETALLE,
   filasDetalleRenglones,
 } from './export-periodo';
+import { opcionesAviso } from '../../comunes/avisos';
 
 /**
  * Detalle por colaborador del período: totales por persona y, al desplegar una fila, los
@@ -262,10 +263,7 @@ export class NominasPeriodoComponent implements OnChanges {
 
   private avisar(mensaje: string): void {
     this.snackBar.open(mensaje, 'Cerrar', {
-      duration: 8000,
-      panelClass: ['snackbar-error'],
-      horizontalPosition: 'end',
-      verticalPosition: 'top',
+      ...opcionesAviso(true, mensaje),
     });
   }
 }

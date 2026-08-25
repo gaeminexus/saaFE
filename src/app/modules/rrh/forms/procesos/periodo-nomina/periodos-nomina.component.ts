@@ -24,6 +24,7 @@ import {
 } from '../../parametrizacion/utiles-parametrizacion';
 import { PeriodoNominaService } from '../../../service/periodo-nomina.service';
 import { registrarEjercicios } from '../../comunes/ejercicios';
+import { opcionesAviso } from '../../comunes/avisos';
 
 /**
  * Listado de períodos de nómina por ejercicio. Es la entrada al panel del período, donde vive
@@ -203,10 +204,7 @@ export class PeriodosNominaComponent implements OnInit {
     const exito =
       errorData.codigoHttp != null && errorData.codigoHttp >= 200 && errorData.codigoHttp < 300;
     this.snackBar.open(errorData.mensaje, 'Cerrar', {
-      duration: exito ? 4000 : 8000,
-      panelClass: [exito ? 'snackbar-success' : 'snackbar-error'],
-      horizontalPosition: 'end',
-      verticalPosition: 'top',
+      ...opcionesAviso(!exito, errorData.mensaje),
     });
   }
 

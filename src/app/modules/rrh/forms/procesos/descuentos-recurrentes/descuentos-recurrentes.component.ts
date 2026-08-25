@@ -27,6 +27,7 @@ import { EmpleadoService } from '../../../service/empleado.service';
 import { criteriosPorEmpresa, extraerCodigo } from '../../parametrizacion/utiles-parametrizacion';
 import { referencia, sinAdornos } from '../../comunes/cuerpo-entidad';
 import { camposCuota, camposDescuento } from './descuentos-recurrentes.campos';
+import { opcionesAviso } from '../../comunes/avisos';
 
 /**
  * Descuentos recurrentes del colaborador (RHH.DSRC) y su tabla de amortización (RHH.CTDS).
@@ -222,10 +223,7 @@ export class DescuentosRecurrentesComponent implements OnInit {
     const exito =
       errorData.codigoHttp != null && errorData.codigoHttp >= 200 && errorData.codigoHttp < 300;
     this.snackBar.open(errorData.mensaje, 'Cerrar', {
-      duration: exito ? 4000 : 8000,
-      panelClass: [exito ? 'snackbar-success' : 'snackbar-error'],
-      horizontalPosition: 'end',
-      verticalPosition: 'top',
+      ...opcionesAviso(!exito, errorData.mensaje),
     });
   }
 
