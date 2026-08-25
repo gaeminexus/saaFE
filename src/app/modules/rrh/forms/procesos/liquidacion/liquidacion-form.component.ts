@@ -33,6 +33,7 @@ import { CampoFormulario } from '../../comunes/modelo-formulario';
 import { criteriosPorEmpresa } from '../../parametrizacion/utiles-parametrizacion';
 import { MENSAJE_EXITO, textoConfirmacionSalida } from './liquidacion.acciones';
 import { camposLiquidacion, criteriosDetalleLiquidacion } from './liquidacion.campos';
+import { opcionesAviso } from '../../comunes/avisos';
 
 /**
  * Finiquito de un colaborador, en vista propia.
@@ -344,10 +345,7 @@ export class LiquidacionFormComponent implements OnInit {
 
   private avisar(mensaje: string, esError = false): void {
     this.snackBar.open(mensaje, 'Cerrar', {
-      duration: esError ? 8000 : 4000,
-      panelClass: [esError ? 'snackbar-error' : 'snackbar-success'],
-      horizontalPosition: 'end',
-      verticalPosition: 'top',
+      ...opcionesAviso(esError, mensaje),
     });
   }
 }

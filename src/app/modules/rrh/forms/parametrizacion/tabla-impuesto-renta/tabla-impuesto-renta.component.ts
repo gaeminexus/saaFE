@@ -21,6 +21,7 @@ import {
   referenciaEmpresa,
 } from '../utiles-parametrizacion';
 import { verificarCoherencia } from './coherencia-tramos';
+import { opcionesAviso } from '../../comunes/avisos';
 
 /**
  * Tabla del impuesto a la renta por año y tramo (RHH.TBIR).
@@ -187,10 +188,7 @@ export class TablaImpuestoRentaComponent implements OnInit {
     const exito =
       errorData.codigoHttp != null && errorData.codigoHttp >= 200 && errorData.codigoHttp < 300;
     this.snackBar.open(errorData.mensaje, 'Cerrar', {
-      duration: exito ? 4000 : 8000,
-      panelClass: [exito ? 'snackbar-success' : 'snackbar-error'],
-      horizontalPosition: 'end',
-      verticalPosition: 'top',
+      ...opcionesAviso(!exito, errorData.mensaje),
     });
   }
 

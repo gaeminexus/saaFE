@@ -25,6 +25,7 @@ import {
   criteriosPorEmpresa,
 } from '../../parametrizacion/utiles-parametrizacion';
 import { APROBACION_HORAS_EXTRA_DISPONIBLE } from '../compuertas';
+import { opcionesAviso } from '../../comunes/avisos';
 
 /**
  * Bandeja de aprobación de horas extra (RHH.HREX).
@@ -211,10 +212,7 @@ export class HorasExtraComponent implements OnInit {
 
   private avisar(mensaje: string, esError = false): void {
     this.snackBar.open(mensaje, 'Cerrar', {
-      duration: esError ? 8000 : 4000,
-      panelClass: [esError ? 'snackbar-error' : 'snackbar-success'],
-      horizontalPosition: 'end',
-      verticalPosition: 'top',
+      ...opcionesAviso(esError, mensaje),
     });
   }
 }

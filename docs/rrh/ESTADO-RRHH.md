@@ -104,10 +104,12 @@ instrumento mide. **El motor sigue congelado sin coste.**
 |---|---|
 | **WAR con el 22 y el 10** | **Publicado en LOCAL y verificado con `javap`** —salen `fechaAniversarioFondosReserva` y `baseFondosReservaProrrateada`, y `superaUnAnio` ya no está—. **PENDIENTE de subir a producción** |
 | **Los siete `.jasper` de `rhh`** | ✅ **Compilados y probados.** Eran el fallo de los reportes: `rhh` tenía 7 `.jrxml` y **0** `.jasper`, y el respaldo de compilar en runtime **está muerto en JR 7.0.3**. Ver `CLAUDE.md` y `jasperreports.properties` |
-| **Correcciones de pantalla D9–D26** | En la rama `correccion/defectos-pantalla-rrhh` de saaFE, **sin desplegar**. Los cinco guiones **ya están actualizados** para la aplicación nueva |
+| **Correcciones de pantalla D9–D26** | ✅ **Mergeadas a `main` de saaFE el 2026-08-25**, junto con el fix del blob URL de la descarga de reportes (`correccion/reportes-jasper-rrhh`). **Siguen sin desplegar**: van en el mismo build que la devolución de aportes. Los cinco guiones **ya están actualizados** para la aplicación nueva |
 | **Los cinco guiones** | ✅ Actualizados el 2026-08-25 con la convención de fecha única `dd/mm/aaaa`. **Si el frontend NO se despliega, los guiones van por delante de la aplicación** — cada uno lleva el aviso de qué hacer en ese caso |
-| **Junio** | Guion escrito, `sql/50` y `sql/57` cargados. **No arranca hasta que el WAR esté en producción** |
+| **Junio** | Guion escrito, `sql/50` cargado en las dos bases. **`sql/57` sólo en PRODUCCIÓN** — ver la fila de abajo. **No arranca hasta que el WAR esté en producción** |
 | **Línea base de producción, tomada antes de subir** | Provisiones de FR: **cinco meses, 1 persona, 183,26 cada uno**. Después de subir tiene que dar lo mismo |
+| ⚠ **`sql/57` NO corrió en LOCAL** | Medido el 2026-08-25: `CTRL` de junio trae **141** filas en local y **142** en producción, y la que falta es exactamente la de `sql/57` —concepto **31**, Calderón **0,10**, cargada en producción el 23-08—. **No bloquea nada**, porque junio se calcula en producción; pero **un ensayo de junio en local daría 0,10 de diferencia** y parecería un hallazgo del motor |
+| ⚠ **`CTRL_PARAM` de producción está en `2026 · 4`, NO en 5** | Leído en la base el 2026-08-25. Esta cabecera decía «quedó en **5**» tras cerrar mayo y **es falso**. **Es la avería en la dirección peor** —el instrumento atrasado no vacía nada: contrastaría **abril**, con su `CTRL` y su `NMNA` completos, y saldría **verde al céntimo del mes equivocado**. No bloquea junio porque el paso 1 del §5 del guion lo mueve a 6 y lo comprueba; lo que estaba roto era el documento, que invitaba a saltarse ese paso. **Local está en 5** |
 
 **Las dos comprobaciones después de subir, y ninguna es opcional:**
 
@@ -115,6 +117,29 @@ instrumento mide. **El motor sigue congelado sin coste.**
 2. **La consulta de provisiones**, que tiene que seguir dando las cinco filas de 183,26. Es la única
    que ve un recálculo de un mes cerrado, porque con el WAR nuevo eso **cambia el bloque 1B sin
    tocar el neto**.
+
+**Las dos están escritas y corridas.** La 1 vive en este documento; la 2 en
+[`sql/58_CHECK_PUNTO_DE_CORTE.sql`](sql/58_CHECK_PUNTO_DE_CORTE.sql), que además trae las
+precondiciones de junio y el `CTRL_PARAM`.
+
+> **⚠ La consulta del §7 del guion de junio NO servía para lo que decía medir, y el `58` la
+> sustituye.** Llevaba un `GROUP BY p.PRDNMSEE` a secas. Pero el fallo que busca **no cambia el
+> importe de la fila: la borra** —`calcularPeriodo` llama a `eliminaByPeriodo` antes de reescribir
+> (`ProcesoNominaServiceImpl:342`) y `generaProvision` no escribe nada con valor 0 (línea 1618)—, y
+> un `GROUP BY` **omite el mes entero en silencio**. Habrías visto cuatro filas correctas y ninguna
+> alarma. El `58` levanta los cinco meses desde `DUAL` con `LEFT JOIN`, así que un mes recalculado
+> sale como `FILAS = 0`.
+
+### ✅ RESULTADO DE LAS DOS COMPROBACIONES — 2026-08-25
+
+| Comprobación | Local | Producción |
+|---|---|---|
+| **1 · `javap`** | ✅ salen `fechaAniversarioFondosReserva` y `baseFondosReservaProrrateada`; `superaUnAnio` **no está**. `.class` del 25-08 00:03, cuatro minutos posterior al `.java`, y `target/classes` con la misma marca. Los **7 `.jasper` de `rhh`** están en el WAR desplegado | ⏳ **pendiente** — el WAR aún no ha subido |
+| **2 · Provisiones de FR** | ✅ cinco meses · Viteri López · base 2 200 · **183,26** cada uno | ✅ los cinco **`INTACTO`**, mismos importes |
+
+**Ningún mes cerrado se ha recalculado en ninguna de las dos bases.** La precondición «enero a mayo
+intactos» de junio está cumplida, y la línea base de producción queda fijada para volver a medirla
+después de subir el WAR.
 
 ### ⚖️ LA REGLA QUE GOBIERNA TODO LO DEMÁS — fijada el 2026-08-24
 

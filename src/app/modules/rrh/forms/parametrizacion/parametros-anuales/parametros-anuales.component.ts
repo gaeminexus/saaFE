@@ -28,6 +28,7 @@ import {
   SECCIONES_PARAMETROS,
   SeccionParametros,
 } from './parametros-anuales.secciones';
+import { opcionesAviso } from '../../comunes/avisos';
 
 /**
  * Parámetros normativos por año (RHH.PRNM).
@@ -175,10 +176,7 @@ export class ParametrosAnualesComponent implements OnInit {
 
   private avisar(mensaje: string, esError = false): void {
     this.snackBar.open(mensaje, 'Cerrar', {
-      duration: esError ? 8000 : 4000,
-      panelClass: [esError ? 'snackbar-error' : 'snackbar-success'],
-      horizontalPosition: 'end',
-      verticalPosition: 'top',
+      ...opcionesAviso(esError, mensaje),
     });
   }
 }

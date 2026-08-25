@@ -30,6 +30,7 @@ import {
 } from '../../parametrizacion/utiles-parametrizacion';
 import { guardarArchivo } from '../descarga-reporte';
 import { aValorDeInput } from '../../asistencia/utiles-asistencia';
+import { opcionesAviso } from '../../comunes/avisos';
 
 /**
  * Órdenes de pago de la nómina (RHH.RDPG) y su detalle por colaborador (RHH.DRPG).
@@ -341,10 +342,7 @@ export class OrdenesPagoComponent implements OnInit {
 
   private avisar(mensaje: string, esError = false): void {
     this.snackBar.open(mensaje, 'Cerrar', {
-      duration: esError ? 9000 : 4000,
-      panelClass: [esError ? 'snackbar-error' : 'snackbar-success'],
-      horizontalPosition: 'end',
-      verticalPosition: 'top',
+      ...opcionesAviso(esError, mensaje),
     });
   }
 }

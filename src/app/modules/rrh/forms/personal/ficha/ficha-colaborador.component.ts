@@ -31,6 +31,7 @@ import { DatosPersonalesComponent } from './datos-personales.component';
 import { SeccionFichaComponent } from './seccion-ficha.component';
 import { ClaveSeccion, ColeccionesFicha, SeccionFicha, seccionesFicha } from './secciones-ficha.config';
 import { resumenDelColaborador, PastillaFicha } from './resumen-colaborador';
+import { opcionesAviso } from '../../comunes/avisos';
 
 /** La sección abierta: los datos personales o una de las tablas hijas. */
 type Vista = 'datos-personales' | ClaveSeccion;
@@ -266,10 +267,7 @@ export class FichaColaboradorComponent implements OnInit {
 
   private avisar(mensaje: string, esError = false): void {
     this.snackBar.open(mensaje, 'Cerrar', {
-      duration: esError ? 8000 : 4000,
-      panelClass: [esError ? 'snackbar-error' : 'snackbar-success'],
-      horizontalPosition: 'end',
-      verticalPosition: 'top',
+      ...opcionesAviso(esError, mensaje),
     });
   }
 }

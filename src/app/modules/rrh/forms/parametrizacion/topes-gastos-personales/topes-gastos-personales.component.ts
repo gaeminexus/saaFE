@@ -22,6 +22,7 @@ import {
   OPCIONES_ESTADO,
   referenciaEmpresa,
 } from '../utiles-parametrizacion';
+import { opcionesAviso } from '../../comunes/avisos';
 
 /**
  * Topes de gastos personales deducibles según cargas familiares (RHH.TPGP).
@@ -177,10 +178,7 @@ export class TopesGastosPersonalesComponent implements OnInit {
     const exito =
       errorData.codigoHttp != null && errorData.codigoHttp >= 200 && errorData.codigoHttp < 300;
     this.snackBar.open(errorData.mensaje, 'Cerrar', {
-      duration: exito ? 4000 : 8000,
-      panelClass: [exito ? 'snackbar-success' : 'snackbar-error'],
-      horizontalPosition: 'end',
-      verticalPosition: 'top',
+      ...opcionesAviso(!exito, errorData.mensaje),
     });
   }
 

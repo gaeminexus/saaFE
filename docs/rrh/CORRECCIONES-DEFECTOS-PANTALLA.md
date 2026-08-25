@@ -22,6 +22,37 @@ que decía la ficha—, **qué se cambió**, **por qué ése es el arreglo** y *
 > mantener separado. Los commits míos son `14eff13`, `8fe8f46`, `25ff86f` y `c7f1003`; si hace
 > falta, se dejan solos.
 
+> **⚠ Hallazgo del 2026-08-25, previo a cualquier otro trabajo de esta sesión: la rama no compila,
+> y no es cosa mía.** `npx tsc --noEmit -p tsconfig.app.json`, `npx ng build --configuration
+> development` y **cualquier** `npx ng test` —da igual qué spec se filtre con `--include`, porque
+> `tsconfig.spec.json` incluye `src/**/*.ts` entero— fallan con `TS2307` sobre dos módulos que
+> `gestion-documentos.component.ts` y `carga-documentos.service.ts` (`modules/cxp`) importan y que
+> **nunca se llegaron a comitear**: `dialogs/clasificar-productos-dialog/clasificar-productos-
+> dialog.component.ts` y `model/productos-sin-clasificar.ts`. Confirmado que ya estaba así en el
+> commit `a5ad484` —el ajeno de CXP citado arriba— con el árbol limpio y sin ningún cambio mío:
+> `git show a5ad484:...` trae el import, `git ls-tree -r a5ad484` no trae los dos archivos. No es
+> una regresión de esta sesión ni de D25; estaba roto desde el 23 y nadie lo había necesitado
+> compilar entero hasta ahora.
+>
+> **Por qué esto no es "otro tema, no me toca" sin más:** bloquea *todo* — no se puede correr un
+> solo test de RRHH mientras estos dos archivos falten, porque `login.component.ts` importa
+> `AppConfig` de `app.config.ts`, que hace `provideRouter(routes)` de `app.routes.ts`, que registra
+> `gestion-documentos.component.ts` entre las rutas eager de CXP. No hay spec de este módulo que
+> escape a esa cadena.
+>
+> **Qué se hizo para poder verificar D25 sin tocar el trabajo de otro:** dos archivos *stub*,
+> minúsculos y sin lógica —una interfaz vacía y un componente standalone con plantilla en blanco—,
+> creados **sin comitear**, sólo para que `tsc`/`ng build`/`ng test` tuvieran algo que resolver.
+> Con ellos puestos, `tsc --noEmit` vuelve a 0. Se usaron para correr los tests de D25 (ver abajo) y
+> **se borraron los dos antes de tocar nada más**; el árbol quedó otra vez idéntico a `HEAD`,
+> comprobado con `git status --porcelain`. No se creó ni se dejó ningún archivo de CXP.
+>
+> **No lo arreglo yo.** No es de RRHH, no sé qué debía hacer el diálogo de clasificación de
+> productos, y completarlo de verdad es del agente o la persona que dejó `abrirClasificacionProductos()`
+> a medias en `gestion-documentos.component.ts:608-619`. Lo que sí digo, para quien lo lea antes que
+> yo: **mientras esos dos archivos no existan, nadie puede correr `ng test` ni `ng build` en esta
+> rama**, ni siquiera sobre código que no tiene nada que ver con CXP.
+
 ## Cómo se comprobó, en general
 
 | Comprobación | Resultado |
@@ -36,7 +67,8 @@ que decía la ficha—, **qué se cambió**, **por qué ése es el arreglo** y *
 | `liquidacion-form.component.spec.ts` | **10 de 10** · D9, D11, D24 |
 | `liquidacion-list.component.spec.ts` | **8 de 8** · D24 |
 | `login.destino.spec.ts` | **13 de 13** · D25 |
-| **Total propio** | **63 de 63** |
+| `avisos.spec.ts` | **9 de 9** · D26 |
+| **Total propio** | **72 de 72** |
 
 **Todo defecto corregido tiene un test que lo cubre**, salvo la mitad de D14 que ya estaba bien.
 D12 no lleva ninguno porque **no hay defecto**: se cerró comprobando que no se reproduce.
@@ -390,7 +422,7 @@ lee un humano, en vez de por `2025,6,25`.
 
 ---
 
-# Los siete que aparecieron mientras se corregía
+# Los ocho que aparecieron mientras se corregía
 
 `D19` a `D22` se anotaron en la ficha **después** de recibir el encargo, que llegaba hasta D18.
 Están hechos porque caen en los mismos dos archivos que ya estaban abiertos y ninguno pasa de
@@ -646,6 +678,200 @@ contra aceptar de menos. Igual que en D24, lo digo para que nadie los cuente com
 > `localStorage` sin pedir credenciales es otra cosa, está en la revisión de arquitectura (F2/H2) y
 > **no se toca aquí**: con la calibración cerrada y el despliegue pendiente, cambiar cuándo se pide
 > la contraseña no es una corrección de pantalla.
+
+> **Re-verificado de verdad el 2026-08-25 — la sesión anterior lo había dejado como "comprobado" sin
+> serlo.** El script de reversión que se usó entonces no se comiteó —vivía fuera del repo, en un
+> scratchpad de esa sesión— y esta sesión no tiene memoria de él, así que se rehízo desde cero, esta
+> vez guardando el porqué en vez de dar por buena una afirmación de una sesión que ya no está.
+>
+> El script nuevo hace una única sustitución de texto, exacta, sobre `login.component.ts:114`:
+> `this.router.navigateByUrl(this.destinoPedido() ?? '/menu');` ⇄
+> `this.router.navigateByUrl('/menu');`. **Aborta con código de salida 1 si el texto que busca no
+> está**, en cualquiera de las dos direcciones — se probó primero pidiéndole un `restore` sobre el
+> archivo ya arreglado, y abortó, que es la prueba de que la comprobación de aquí no es un sello de
+> goma. Revertir sólo esa línea es fiel al pre-D25: en el commit `a5ad484` —el padre real de
+> `c7f1003`, D25— las cinco salidas hacían `this.router.navigate(['/menu'])` sin mirar el
+> `returnUrl`, y las cinco pasan hoy por `irAlDestino()`, así que revertir la única línea de
+> `irAlDestino()` reproduce el mismo comportamiento en las cinco sin tocarlas una por una.
+>
+> **Resultado, con `login.destino.spec.ts` corrido de verdad en Chrome Headless, no supuesto:**
+>
+> | Estado del código | Resultado |
+> |---|---|
+> | Con el arreglo (`HEAD`) | **13 de 13** |
+> | Revertido (una línea) | **6 FAILED, 7 SUCCESS** |
+> | Restaurado | **13 de 13**, y `git diff` sobre el archivo vacío |
+>
+> Y los seis que caen son exactamente los seis que dice el párrafo de arriba, nombre por nombre en
+> el reporte de Karma: las tres de la pestaña nueva, la sesión ya viva, el login tecleado y la ruta
+> interna con query propia. Los siete que sobreviven al revert —el caso sin `returnUrl` y los seis
+> rechazados— también sobreviven aquí, que es lo que tenían que hacer.
+>
+> El script se corrió con dos stubs de CXP puestos y sin comitear —ver el aviso del principio del
+> documento— y se retiraron los dos antes de dar esto por cerrado. **D25 pasa de "comprobado" a
+> "comprobado y reproducido"**, y el script queda descrito aquí, no en el repo, por si hace falta
+> una tercera vez.
+
+---
+
+## D26 · El aviso de error se dibujaba detrás del header
+
+**Qué es.** Cuando falla la generación de un reporte, el backend manda el motivo y la aplicación
+lo enseña en una galleta roja arriba a la derecha… **por detrás del header**. El usuario ve que no
+pasa nada y no ve por qué. Es la familia entera de este módulo otra vez: no es que falte la
+información, es que existe y no llega a los ojos de nadie. Y un error invisible se lee como «el
+botón no hace nada», que es el diagnóstico equivocado.
+
+**Qué era en realidad — y bajarlo NO bastaba.** El apilamiento real, leído de los `.scss`:
+
+| Elemento | `z-index` | Dónde |
+|---|---:|---|
+| Header | **9999** | sticky, arriba |
+| Panel lateral de la ficha | 1050 | fixed, derecha, de arriba abajo |
+| Pie de acciones del finiquito | 1020 | sticky, abajo |
+| **Contenedor de overlays del CDK** | **1000** | ← aquí vive el snackbar |
+| Footer | 20 | fixed, abajo, 35 px |
+
+El overlay del CDK trae `z-index: 1000` de fábrica y **está por debajo de casi todo lo que tiene
+posición propia**. Arriba lo tapa el header; abajo lo habrían tapado el pie de acciones del
+finiquito y el panel lateral de la ficha —**justo la pantalla desde la que más errores se
+muestran**—. Mover la posición sin subir el `z-index` habría cambiado un escondite por otro.
+
+**Qué se cambió — tres cosas, y las tres hacen falta.**
+
+1. **`z-index: 10000` en `.cdk-overlay-container`**, en `src/styles/styles.scss`. Es lo que pone al
+   snackbar por delante del header y de todo lo demás.
+2. **Posición abajo y centrada**, y `margin-bottom: 43px` para que no se monte sobre el footer
+   fijo de 35 px.
+3. **Un solo sitio para toda la configuración**: `modules/rrh/forms/comunes/avisos.ts`.
+
+**Sobre el punto 3, que es el que evita la recaída.** Había **43 configuraciones sueltas repetidas
+en 35 archivos**, con **ocho duraciones distintas** y cinco `panelClass` distintas. Las 43 pasan
+ahora por `opcionesAviso()`. Arreglarlo pantalla por pantalla habría dejado el defecto latente en
+la primera copia que nadie tocara — y con 43 copias, esa copia existe seguro.
+
+**La duración también era parte del defecto.** Un error que se va antes de leerse es tan invisible
+como uno que no se muestra. Ahora escala con la longitud: 5 s de tiempo base más 30 ms por
+carácter, con suelo de 8 s y techo de 20 s.
+
+> **Y aquí el test corrigió a la implementación, no al revés.** La primera fórmula era 18 ms por
+> carácter y sin tiempo base. El test «un error largo permanece más que uno corto» falló: hacían
+> falta **444 caracteres** para superar el suelo de 8 s, y ningún mensaje real llega a eso, así que
+> el escalado no se activaba nunca y la fórmula sólo *parecía* hacer algo. Es la misma clase de
+> defecto que el archivo huérfano de abajo —código que existe y no se ejecuta—, esta vez cazado
+> antes de salir.
+
+**Cómo se comprobó.** Nueve tests ejecutados, uno por cada cosa que el árbitro pidió comprobar y no
+suponer:
+
+| Lo que había que comprobar | Test |
+|---|---|
+| Que se ve | posición `bottom` / `center`, y la misma para éxito y error |
+| Que se ve **entero** | `white-space: pre-line` + `word-break: break-word` en el `label` |
+| Cuánto permanece | el mensaje de Jasper **supera** el suelo, no se queda en él; techo de 20 s |
+| Que no lo tapa nada abajo | `z-index` por encima de las cuatro capas de la tabla; `margin-bottom` sobre el footer |
+| Que no rompe los avisos de éxito | conserva `snackbar-success` y sus 4 s; sólo cambia de sitio |
+
+Más `tsc` en 0, build completa y los ocho specs anteriores del módulo sin tocarse.
+
+---
+
+## Hallazgo de D26 · `src/styles.scss` no lo compila nadie, y llevaba un arreglo dentro
+
+**Esto vale más que la corrección.** `angular.json` compila **`src/styles/styles.scss`** en sus dos
+configuraciones. Existe además un **`src/styles.scss` huérfano** —3 384 bytes, del 2026-07-13— que
+**no referencia nadie**: ni `angular.json`, ni `karma.conf.js`, ni ningún `@use` de otra hoja.
+
+Y en su línea 83 estaba, escrita palabra por palabra, la regla que arregla D26:
+
+```scss
+.cdk-overlay-container { z-index: 10000 !important; }
+```
+
+**Alguien corrigió este mismo defecto hace mes y medio, en un archivo que el build no toca.** Nunca
+se ejecutó. Un mes y medio después el defecto se reporta otra vez y hay que diagnosticarlo entero
+desde cero.
+
+> **Un arreglo que existe y no se ejecuta es peor que uno que no se hizo**: quien lo busca lo
+> encuentra, lo da por resuelto y deja de buscar.
+
+### Qué más hay ahí dentro sin aplicarse
+
+Inventariado regla por regla contra la hoja compilada. **No se ha movido nada de esto** —trasladarlo
+cambiaría el aspecto de la aplicación de golpe y la migración visual sigue congelada—; se reporta:
+
+| Regla del huérfano | ¿Aplicada hoy? |
+|---|---|
+| **El tema Material entero** — `mat.core()`, paletas, densidad y una **escala tipográfica de 12 niveles** | **NO.** La aplicación usa el prebuilt `indigo-pink` de `angular.json`. Esa tipografía no ha estado nunca en efecto |
+| `body { padding-bottom: 35px }` — hueco para el footer fijo | **NO.** Sin él, el footer de 35 px se monta sobre el final del contenido. **Es la misma familia que D26** y probablemente sea un defecto por derecho propio |
+| `html, body { overflow: hidden }`, `body { height/width: 100vh/vw }`, `app-root { … }` | **NO.** El reset compilado pone `height: 100%` y nada más |
+| `.cdk-overlay-container` y `.mat-mdc-snack-bar-container` | Ya no aplica: **trasladadas** a la hoja buena al corregir D26 |
+| Los cuatro `*-snackbar` y la fuente de iconos | **Sí**, duplicados en la hoja compilada. Ahí no falta nada |
+
+**El segundo de la lista es el que merece ficha propia**: un footer `position: fixed` sin hueco
+reservado tapa el final de cualquier pantalla larga. No lo abro yo porque no lo he visto en uso —
+lo dejo señalado para quien replica.
+
+### Qué se hizo con el archivo
+
+**Se conserva, neutralizado con una cabecera**, en vez de borrarlo. La cabecera dice, en el primer
+sitio donde mira quien lo abra, que **nada de lo que hay ahí se aplica** y dónde vive la hoja buena.
+
+**Por qué no se borra:** el tema y la escala tipográfica son una decisión de diseño que alguien
+puede querer aplicar de verdad, y un archivo borrado no lo encuentra un `grep` — sólo lo encuentra
+quien ya sabe que existió. El daño real era que el próximo lo editara creyendo que sirve, y eso lo
+cierra la cabecera. **Si el árbitro prefiere borrarlo, es un `git rm` y el inventario de arriba ya
+conserva lo que había dentro.**
+
+---
+
+## La frontera de `avisos.ts` — hasta dónde llega y por qué se paró ahí
+
+**`avisos.ts` centraliza RRHH, y sólo RRHH.** Las 43 configuraciones que D26 unificó eran las 43
+del módulo; fuera de `modules/rrh/` siguen naciendo `snackBar.open` sueltos, cada uno con su propio
+literal de duración y de `panelClass`, exactamente el patrón que D26 describe como el que deja el
+defecto latente en la primera copia que nadie toque. Contado hoy, `grep -rl "snackBar.open"
+src/app/modules/ --include="*.ts"` fuera de `rrh/`:
+
+| Módulo | Archivos con `snackBar.open` crudo |
+|---|---:|
+| `crd` | 36 |
+| `tsr` | 19 |
+| `cnt` | 18 |
+| `cxc` | 17 |
+| `cxp` | 16 |
+| `dash` | 1 |
+| **Total ajeno a RRHH** | **107** |
+
+**El de `crd/prestamo-consulta` que menciona el encargo es real** —`prestamo-consulta.component.ts`
+tiene cuatro, en las líneas 164, 192, 685 y 723— y es uno más de los 36 de `crd`, no un caso
+aislado.
+
+**Por qué se paró en la frontera del módulo, y no es pereza ni descuido:**
+
+1. **El encargo es RRHH.** `avisos.ts` vive en `modules/rrh/forms/comunes/` a propósito: es la
+   configuración de *este* módulo, no un servicio compartido. Moverlo a `shared/` para que otros
+   módulos lo usen es una decisión de arquitectura que toca código de fuera de RRHH y de fuera de
+   lo que se me encargó — la clase de cambio que la regla 2 de este encargo pide consultar antes,
+   no decidir sola.
+2. **El arreglo de fondo de D26 —el `z-index` del `.cdk-overlay-container`— ya es global**, está en
+   `src/styles/styles.scss` y no en `avisos.ts`. Eso significa que **los 107 avisos ajenos ya se ven
+   por delante del header**, aunque cada uno siga con su propia duración y sin el escalado por
+   longitud. El defecto que abrió D26 —el aviso invisible— no sigue abierto fuera de RRHH; lo que
+   sigue abierto es la duplicación de configuración, que es un defecto de mantenimiento, no de
+   pantalla.
+3. **107 sitios en 6 módulos no es una línea de guarda funcional.** Centralizarlos de verdad
+   implicaría decidir un `avisos.ts` compartido —o seis copias, una por módulo, que sería repetir el
+   problema que D26 cerró— y tocar entre 16 y 36 archivos por módulo. Es trabajo real de otro
+   alcance, no algo que quepa en "guarda de una línea" ni en esta rama de defectos de pantalla.
+
+**Qué haría falta para mover la frontera, si alguna vez toca:** sacar `opcionesAviso()` y
+`duracionError()` de `modules/rrh/forms/comunes/avisos.ts` a un sitio compartido —`shared/` es el
+candidato obvio, pero decidir su forma final no es de esta ficha—, y repetir por módulo el
+mismo barrido que hizo D26 dentro de RRHH: localizar cada `snackBar.open`, sustituirlo por
+`this.snackBar.open(mensaje, 'Cerrar', opcionesAviso(esError, mensaje))`, y un spec por módulo que
+comprueba que sigue habiendo alguna llamada cruda. Se anota aquí para que quien lo retome no
+tenga que redescubrir el inventario.
 
 ---
 

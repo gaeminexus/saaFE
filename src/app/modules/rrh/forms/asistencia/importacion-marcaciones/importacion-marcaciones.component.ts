@@ -16,6 +16,7 @@ import { CargaMarcacionesService } from '../../../service/carga-marcaciones.serv
 import { FormatoMarcacionService } from '../../../service/formato-marcacion.service';
 import { criteriosPorEmpresa } from '../../parametrizacion/utiles-parametrizacion';
 import { MotivoDialogComponent } from '../../procesos/periodo-nomina/motivo-dialog.component';
+import { opcionesAviso } from '../../comunes/avisos';
 
 /**
  * Importación del archivo del reloj biométrico (RHH.CRMR).
@@ -184,10 +185,7 @@ export class ImportacionMarcacionesComponent implements OnInit {
 
   private avisar(mensaje: string, esError = false): void {
     this.snackBar.open(mensaje, 'Cerrar', {
-      duration: esError ? 9000 : 4000,
-      panelClass: [esError ? 'snackbar-error' : 'snackbar-success'],
-      horizontalPosition: 'end',
-      verticalPosition: 'top',
+      ...opcionesAviso(esError, mensaje),
     });
   }
 }

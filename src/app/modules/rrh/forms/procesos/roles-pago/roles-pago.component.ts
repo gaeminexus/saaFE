@@ -28,6 +28,7 @@ import {
 import { guardarArchivo, mensajeReporteFallido, ReportesNomina } from '../descarga-reporte';
 import { SeleccionFilas } from '../seleccion-filas';
 import { admiteRecepcion, etiquetaEstadoRol, estadoRol } from './estado-rol';
+import { opcionesAviso } from '../../comunes/avisos';
 
 /**
  * Roles de pago del período (RHH.RLPG).
@@ -338,10 +339,7 @@ export class RolesPagoComponent implements OnInit {
 
   private avisar(mensaje: string, esError = false): void {
     this.snackBar.open(mensaje, 'Cerrar', {
-      duration: esError ? 8000 : 4000,
-      panelClass: [esError ? 'snackbar-error' : 'snackbar-success'],
-      horizontalPosition: 'end',
-      verticalPosition: 'top',
+      ...opcionesAviso(esError, mensaje),
     });
   }
 }

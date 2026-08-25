@@ -133,9 +133,41 @@ es dónde mirar primero: **el subtotal del concepto 31 en 0,10**, y sólo despu�
 
 | | |
 |---|---:|
-| Cuatro días de más que el cliente pagó — Bárcenas 1,94 · Muñoz 1,53 · Nieto 2,50 · Pardo 1,95 | **7,93** |
+| Cuatro días de más que el cliente pagó — Bárcenas **1,95** · Muñoz 1,53 · Nieto 2,50 · Pardo 1,95 | **7,93** |
 | Viteri: el cliente le paga 36,67 en el rol, nosotros la provisionamos porque está en ACUMULADO | **36,67** |
 | **Total** | **44,60** |
+
+> **⚠ Corregido el 2026-08-25: aquí decía Bárcenas 1,94 y los cuatro sumaban 7,92, no 7,93.**
+> Con ese dígito la descomposición daba **44,59** — que es exactamente el número que el ESTADO
+> marca como *«el que se calculó primero, salía del doceavo y era el equivocado»*. Quien
+> comprobara la suma habría aterrizado en el número desacreditado y habría parado un mes correcto.
+> **El bueno es 1,95**, y coincide con `sql/51`, que lo trae de los D:OTROS de julio.
+>
+> **De dónde sale 1,95 y por qué no es «un día de fondo de reserva»:** la diferencia no es el día
+> suelto redondeado, es la **resta de dos importes redondeados por separado**. Bárcenas cumple el
+> año el 26-06, así que el cliente le paga 5 días (26 al 30) y nosotros 4 (27 al 30, porque el día
+> del aniversario cierra el mes doce y no devenga):
+>
+> ```
+> cliente   700 × 5/30 = 116,6667 → × 8,33 % = 9,7167 → 9,72
+> nuestro   700 × 4/30 =  93,3333 → × 8,33 % = 7,7747 → 7,77
+> diferencia                                              1,95     (no 9,72 − 7,77 ≈ 1,94)
+> ```
+>
+> Verificado el 2026-08-25 ejecutando la aritmética exacta de `RedondeoNomina`
+> (`BigDecimal.valueOf` + `HALF_UP`, y `porcentaje()` = `base × p / 100` redondeado):
+>
+> | | días | base | nuestro | cliente | dif |
+> |---|---:|---:|---:|---:|---:|
+> | Bárcenas | 4 | 93,33 | 7,77 | 9,72 | **1,95** |
+> | Muñoz | 5 | 91,67 | 7,64 | 9,17 | **1,53** |
+> | Nieto | 5 | 150,00 | 12,50 | 15,00 | **2,50** |
+> | Pardo | 5 | 116,67 | 9,72 | 11,67 | **1,95** |
+> | Viteri | 5 | 366,67 | 30,54 *(provisión, no entra al rol)* | 36,67 | **36,67** |
+> | | | | **37,63** | **82,23** | **44,60** |
+>
+> Los **30,54** de Viteri sobre base **366,67** son, al céntimo, lo que su planilla del IESS de
+> junio declara. **Ese es el contraste que vale para ella**, no el rol.
 
 **Y los D:OTROS de julio suman exactamente 44,60**, porque son la devolución de esto mismo. **Los
 dos meses se anulan.**

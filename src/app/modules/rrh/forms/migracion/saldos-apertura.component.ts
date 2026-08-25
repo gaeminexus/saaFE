@@ -20,6 +20,7 @@ import { SaldoApertura } from '../../model/saldo-apertura';
 import { SaldoAperturaService } from '../../service/saldo-apertura.service';
 import { criteriosPorEmpresa } from '../parametrizacion/utiles-parametrizacion';
 import { mensajeDeError } from '../comunes/mensajes';
+import { opcionesAviso } from '../comunes/avisos';
 
 /**
  * Asistente de migración de saldos de apertura (RHH.SLAP).
@@ -226,10 +227,7 @@ export class SaldosAperturaComponent {
 
   private avisar(mensaje: string, esError = false): void {
     this.snackBar.open(mensaje, 'Cerrar', {
-      duration: esError ? 8000 : 4000,
-      panelClass: [esError ? 'snackbar-error' : 'snackbar-success'],
-      horizontalPosition: 'end',
-      verticalPosition: 'top',
+      ...opcionesAviso(esError, mensaje),
     });
   }
 }

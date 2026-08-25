@@ -13,6 +13,7 @@ import { usuarioSesion } from '../../../../../shared/services/usuario-sesion';
 import { ConfiguracionNomina } from '../../../model/configuracion-nomina';
 import { ConfiguracionNominaService } from '../../../service/configuracion-nomina.service';
 import { criteriosPorEmpresa, referenciaEmpresa } from '../utiles-parametrizacion';
+import { opcionesAviso } from '../../comunes/avisos';
 
 /** Códigos alternos de plantilla y tipo de asiento, agrupados por proceso contable. */
 const ASIENTOS = [
@@ -152,10 +153,7 @@ export class ConfiguracionNominaComponent implements OnInit {
 
   private avisar(mensaje: string, esError = false): void {
     this.snackBar.open(mensaje, 'Cerrar', {
-      duration: esError ? 8000 : 4000,
-      panelClass: [esError ? 'snackbar-error' : 'snackbar-success'],
-      horizontalPosition: 'end',
-      verticalPosition: 'top',
+      ...opcionesAviso(esError, mensaje),
     });
   }
 }

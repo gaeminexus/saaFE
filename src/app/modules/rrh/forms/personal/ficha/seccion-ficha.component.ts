@@ -19,6 +19,7 @@ import { PanelLateralComponent } from '../../comunes/panel-lateral/panel-lateral
 import { TablaRrhComponent } from '../../comunes/tabla-rrh/tabla-rrh.component';
 import { aValorDeInput, formatearFilas } from './formato-ficha';
 import { SeccionFicha } from './secciones-ficha.config';
+import { opcionesAviso } from '../../comunes/avisos';
 
 type ModoPanel = 'nuevo' | 'editar' | 'borrar';
 
@@ -285,10 +286,7 @@ export class SeccionFichaComponent implements OnChanges {
 
   private avisar(mensaje: string, esError = false): void {
     this.snackBar.open(mensaje, 'Cerrar', {
-      duration: esError ? 8000 : 4000,
-      panelClass: [esError ? 'snackbar-error' : 'snackbar-success'],
-      horizontalPosition: 'end',
-      verticalPosition: 'top',
+      ...opcionesAviso(esError, mensaje),
     });
   }
 }

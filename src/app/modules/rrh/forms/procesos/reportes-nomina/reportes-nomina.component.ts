@@ -17,6 +17,7 @@ import {
   filtrarPorAnio,
 } from '../../parametrizacion/utiles-parametrizacion';
 import { guardarArchivo, mensajeReporteFallido, ReportesNomina } from '../descarga-reporte';
+import { opcionesAviso } from '../../comunes/avisos';
 
 interface ReporteDisponible {
   plantilla: string;
@@ -154,10 +155,7 @@ export class ReportesNominaComponent implements OnInit {
 
   private avisar(mensaje: string, esError = false): void {
     this.snackBar.open(mensaje, 'Cerrar', {
-      duration: esError ? 8000 : 4000,
-      panelClass: [esError ? 'snackbar-error' : 'snackbar-success'],
-      horizontalPosition: 'end',
-      verticalPosition: 'top',
+      ...opcionesAviso(esError, mensaje),
     });
   }
 }

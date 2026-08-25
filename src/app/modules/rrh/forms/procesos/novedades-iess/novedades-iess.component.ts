@@ -41,6 +41,7 @@ import {
 import { guardarArchivo } from '../descarga-reporte';
 import { MotivoDialogComponent } from '../periodo-nomina/motivo-dialog.component';
 import { NuevaNovedadDialogComponent } from './nueva-novedad-dialog.component';
+import { opcionesAviso } from '../../comunes/avisos';
 
 /** Lo que se le dice al usuario cuando cada acción termina bien. */
 const MENSAJE_EXITO: Record<AccionNovedad, string> = {
@@ -591,10 +592,7 @@ export class NovedadesIessComponent implements OnInit {
 
   private avisar(mensaje: string, esError = false): void {
     this.snackBar.open(mensaje, 'Cerrar', {
-      duration: esError ? 10000 : 4000,
-      panelClass: [esError ? 'snackbar-error' : 'snackbar-success'],
-      horizontalPosition: 'end',
-      verticalPosition: 'top',
+      ...opcionesAviso(esError, mensaje),
     });
   }
 }

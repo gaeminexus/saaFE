@@ -23,6 +23,7 @@ import { CampoFormularioComponent } from '../../comunes/campo-formulario/campo-f
 import { mensajeDeError } from '../../comunes/mensajes';
 import { aValorDeInput } from './formato-ficha';
 import { CAMPOS_DATOS_PERSONALES, SECCIONES_DATOS_PERSONALES } from './datos-personales.secciones';
+import { opcionesAviso } from '../../comunes/avisos';
 
 /**
  * Datos personales del colaborador (RHH.MPLD).
@@ -121,10 +122,7 @@ export class DatosPersonalesComponent implements OnChanges {
 
   private avisar(mensaje: string, esError = false): void {
     this.snackBar.open(mensaje, 'Cerrar', {
-      duration: esError ? 8000 : 4000,
-      panelClass: [esError ? 'snackbar-error' : 'snackbar-success'],
-      horizontalPosition: 'end',
-      verticalPosition: 'top',
+      ...opcionesAviso(esError, mensaje),
     });
   }
 }

@@ -18,6 +18,7 @@ import { ColumnaTabla, TonoPastilla } from '../../comunes/modelo-formulario';
 import { TablaRrhComponent } from '../../comunes/tabla-rrh/tabla-rrh.component';
 import { aniosDisponibles } from '../../parametrizacion/utiles-parametrizacion';
 import { guardarArchivo } from '../descarga-reporte';
+import { opcionesAviso } from '../../comunes/avisos';
 
 /**
  * Salidas a los organismos: RDEP y 107 al SRI, planilla al IESS, formularios del MDT.
@@ -189,10 +190,7 @@ export class SalidasOficialesComponent implements OnInit {
 
   private avisar(mensaje: string, esError = false): void {
     this.snackBar.open(mensaje, 'Cerrar', {
-      duration: esError ? 8000 : 4000,
-      panelClass: [esError ? 'snackbar-error' : 'snackbar-success'],
-      horizontalPosition: 'end',
-      verticalPosition: 'top',
+      ...opcionesAviso(esError, mensaje),
     });
   }
 }
