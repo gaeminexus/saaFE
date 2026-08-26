@@ -6,6 +6,7 @@ import {
   ConfirmDialogComponent,
   ConfirmDialogData,
 } from '../../../shared/basics/confirm-dialog/confirm-dialog.component';
+import { guardarArchivo } from '../../../shared/services/descarga-reporte';
 import {
   GeneracionArchivoPetro,
   ResultadoEliminacionPetro,
@@ -64,7 +65,7 @@ export class AccionesGeneracionPetroService {
         const nombre = archivo.nombreArchivo
           || gen.nombreArchivo
           || `DESCUENTOS_PETRO_${codigo}.txt`;
-        this.guardarBlob(archivo.blob, nombre);
+        guardarArchivo(archivo.blob, nombre);
         this.snackBar.open('Archivo descargado', 'Cerrar', { duration: 3000 });
 
         // La generación quedó marcada: hay que releerla o el botón Eliminar
@@ -128,16 +129,5 @@ export class AccionesGeneracionPetroService {
           );
         })
       );
-  }
-
-  private guardarBlob(blob: Blob, nombreArchivo: string): void {
-    const url = window.URL.createObjectURL(blob);
-    const enlace = document.createElement('a');
-    enlace.href = url;
-    enlace.download = nombreArchivo;
-    document.body.appendChild(enlace);
-    enlace.click();
-    enlace.remove();
-    window.URL.revokeObjectURL(url);
   }
 }

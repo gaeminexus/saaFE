@@ -653,6 +653,77 @@
     padding: 8px 0 4px;
   }
 
+  // ========================================
+  // Certificado bancario (cuentas bancarias)
+  // ========================================
+  .certificado-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    .certificado-label {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #4a5568;
+    }
+  }
+
+  .certificado-dropzone {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+    padding: 10px 16px;
+    border: 1.5px dashed rgba(102, 126, 234, 0.35);
+    border-radius: 10px;
+    background: rgba(102, 126, 234, 0.03);
+    cursor: pointer;
+    transition: border-color 0.2s ease, background 0.2s ease;
+
+    mat-icon { color: #667eea; flex-shrink: 0; }
+
+    .certificado-nombre {
+      font-size: 0.85rem;
+      color: #4a5568;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    &:hover {
+      border-color: rgba(102, 126, 234, 0.6);
+      background: rgba(102, 126, 234, 0.06);
+    }
+
+    &.cargado {
+      border-style: solid;
+      border-color: #667eea;
+      background: rgba(102, 126, 234, 0.08);
+
+      .certificado-nombre { color: #1a202c; font-weight: 600; }
+    }
+  }
+
+  .certificado-aviso {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: rgba(220, 38, 38, 0.06);
+    color: #b91c1c;
+    font-size: 0.78rem;
+    line-height: 1.4;
+
+    mat-icon { font-size: 18px; width: 18px; height: 18px; flex-shrink: 0; }
+  }
+
+  .sin-certificado {
+    color: #a0aec0;
+    font-size: 0.82rem;
+    font-style: italic;
+  }
+
   .sub-table {
     width: 100%;
     border-collapse: collapse;

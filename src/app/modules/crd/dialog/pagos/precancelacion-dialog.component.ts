@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
+import { FuncionesDatosService } from '../../../../shared/services/funciones-datos.service';
 import { usuarioSesion } from '../../../../shared/services/usuario-sesion';
 import { TOLERANCIA_MONTO } from '../../model/pagos/catalogos-pago';
 import { SaldoAporte, SimulacionPrecancelacion } from '../../model/pagos/operaciones-pago';
@@ -50,6 +51,7 @@ interface RenglonFondo {
 export class PrecancelacionDialogComponent {
   private servicio = inject(OperacionesPagoPrestamoService);
   private comprobantes = inject(ComprobanteCobroService);
+  private funcionesDatos = inject(FuncionesDatosService);
   private dialog = inject(MatDialog);
 
   /** Bloque de respaldo. Se renderiza siempre: recalcular no debe perder el comprobante cargado. */
@@ -427,6 +429,16 @@ export class PrecancelacionDialogComponent {
   }
 
   // ================= utilidades =================
+
+  /**
+   * `fechaVencimiento` llega como arreglo `[y,m,d,h,mi]` (Jackson descarta el offset en vez de
+   * convertirlo): se normaliza SIEMPRE con `FuncionesDatosService`, nunca con el pipe `date` a
+   * secas, que interpretaría el arreglo como fecha inválida (§10.4 de
+   * docs/crd/PLAN-SIMULADORES-PRESTAMOS.md).
+   */
+  formatFecha(fecha: unknown): string {
+    return this.funcionesDatos.formatoFecha(fecha, 2) || '—';
+  }
 
   formatMoneda(n: number | null | undefined): string {
     return '$' + (n ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });

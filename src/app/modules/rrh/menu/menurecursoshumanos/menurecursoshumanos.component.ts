@@ -235,12 +235,35 @@ export class MenurecursoshumanosComponent {
           idPermiso: PermisosRrh.REPORTES_NOMINA,
           route: '/menurecursoshumanos/procesos/reportes-nomina',
         },
-        {
-          displayName: 'Aportes y retenciones',
-          iconName: 'account_balance_wallet',
-          idPermiso: PermisosRrh.APORTES_RETENCIONES,
-          route: '/menurecursoshumanos/procesos/aportes',
-        },
+        // RETIRADA DEL MENU EL 2026-08-26, por decisión de Mike, hasta nueva orden.
+        //
+        // No es una pantalla rota: es un andamio que nunca se terminó. Sus dos
+        // `TODO` lo dicen —«cargar catálogo de tipos para filtro y formulario» y
+        // «construir criterios y consumir AporteRetencionesService.selectByCriteria»—,
+        // así que los combos salen vacíos y el filtro no consulta nada.
+        //
+        // Y por debajo no hay contra qué consultar: NO EXISTE NINGUNA ENTIDAD
+        // AporteRetencion EN EL BACKEND. Ni tabla, ni servicio, ni endpoint.
+        //
+        // Su modelo está copiado de otra pantalla sin limpiar —los comentarios de
+        // `aportes-retenciones.ts` hablan de adjuntos, referencias bancarias y
+        // partícipes—, pero los nombres de campo que sí son suyos, `fechaAnexo`,
+        // `nuevoSalario` y `nuevaFechaFin`, apuntan a ANEXOS DE CONTRATO: cambios
+        // de sueldo o de fecha de fin. Que es justo lo que hoy se hace a mano con
+        // `sql/48` y `sql/49`, y lo que la CORRECCIÓN 11 —historia de vigencias del
+        // contrato— resuelve de raíz.
+        //
+        // Por eso se RETIRA y no se borra: si esa lectura es correcta, esto no es
+        // una pantalla huérfana sino la mitad de pantalla de la corrección 11.
+        // El componente, el modelo, el servicio y la ruta se quedan donde están.
+        // Volver a colgarla del menú es descomentar este bloque.
+        //
+        // {
+        //   displayName: 'Aportes y retenciones',
+        //   iconName: 'account_balance_wallet',
+        //   idPermiso: PermisosRrh.APORTES_RETENCIONES,
+        //   route: '/menurecursoshumanos/procesos/aportes',
+        // },
         {
           displayName: 'Liquidación',
           iconName: 'assignment_turned_in',

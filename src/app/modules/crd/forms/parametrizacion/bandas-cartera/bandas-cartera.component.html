@@ -1,0 +1,512 @@
+<div class="bandas-container">
+  <!-- Header -->
+  <div class="page-header">
+    <div class="header-content">
+      <h1 class="page-title">
+        <mat-icon>account_tree</mat-icon>
+        Bandas de cartera por producto
+      </h1>
+      <div class="header-actions">
+        <mat-form-field appearance="outline" class="fecha-eval-field">
+          <mat-label>Vigencia evaluada al</mat-label>
+          <input
+            matInput
+            [matDatepicker]="pickerEval"
+            [(ngModel)]="fechaEvaluacion"
+            (dateChange)="onFechaEvaluacionChange()"
+            placeholder="Hoy"
+          />
+          <mat-datepicker-toggle matSuffix [for]="pickerEval"></mat-datepicker-toggle>
+          <mat-datepicker #pickerEval></mat-datepicker>
+        </mat-form-field>
+        <button
+          mat-stroked-button
+          (click)="cargarListado()"
+          [disabled]="cargando"
+          matTooltip="Recargar listado"
+        >
+          <mat-icon>refresh</mat-icon>
+          Recargar
+        </button>
+      </div>
+    </div>
+    <div class="info-banner">
+      <mat-icon>info</mat-icon>
+      <span>
+        Los rangos en días los calcula el backend a partir de los períodos de 30 días. La
+        última banda de cada configuración es abierta ("Resto"). El cambio normativo se hace
+        con "Nueva vigencia", nunca editando una vigencia ya iniciada.
+      </span>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading-container" *ngIf="cargando">
+    <mat-spinner diameter="40"></mat-spinner>
+    <p>Cargando parametrización…</p>
+  </div>
+
+  <!-- Error de carga -->
+  <div class="error-state" *ngIf="!cargando && errorCarga">
+    <mat-icon class="error-icon">error_outline</mat-icon>
+    <h3>No se pudo cargar la parametrización</h3>
+    <p>{{ errorCarga }}</p>
+    <button mat-raised-button color="primary" (click)="cargarListado()">
+      <mat-icon>refresh</mat-icon>
+      Reintentar
+    </button>
+  </div>
+
+  <!-- Contenido -->
+  <div class="content-layout" *ngIf="!cargando && !errorCarga">
+    <!-- Panel maestro: productos -->
+    <div class="maestro-panel">
+      <mat-card class="productos-card">
+        <mat-card-header>
+          <mat-card-title>
+            <mat-icon>inventory_2</mat-icon>
+            Productos de crédito
+          </mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="empty-state" *ngIf="productos.length === 0">
+            <mat-icon class="empty-icon">inventory_2</mat-icon>
+            <p>No hay productos de crédito registrados.</p>
+          </div>
+
+          <div class="productos-lista">
+            <div
+              *ngFor="let p of productos; trackBy: trackProducto"
+              class="producto-item"
+              [class.selected]="productoSel?.idProducto === p.idProducto"
+              [class.inactivo]="p.estadoProducto !== 1"
+              (click)="seleccionarProducto(p)"
+            >
+              <div class="producto-info">
+                <div class="producto-nombre">
+                  {{ p.nombreProducto }}
+                  <span class="badge badge-inactivo" *ngIf="p.estadoProducto !== 1"
+                    >Inactivo</span
+                  >
+                </div>
+                <div class="producto-meta">
+                  <span class="chip-sbs">{{ p.codigoSBS }}</span>
+                  <span class="tipo-prestamo">{{ p.nombreTipoPrestamo }}</span>
+                </div>
+              </div>
+              <div class="producto-config-flags">
+                <span
+                  class="dot"
+                  [class.on]="p.porVencer"
+                  matTooltip="{{ p.porVencer ? 'Por vencer configurado' : 'Por vencer sin configurar' }}"
+                  >PV</span
+                >
+                <span
+                  class="dot"
+                  [class.on]="p.vencido"
+                  matTooltip="{{ p.vencido ? 'Vencido configurado' : 'Vencido sin configurar' }}"
+                  >V</span
+                >
+              </div>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    <!-- Panel detalle -->
+    <div class="detalle-panel" *ngIf="productoSel">
+      <mat-card class="detalle-card">
+        <mat-card-header>
+          <mat-card-title>
+            {{ productoSel.nombreProducto }}
+            <span class="badge badge-inactivo" *ngIf="productoSel.estadoProducto !== 1"
+              >Inactivo</span
+            >
+          </mat-card-title>
+          <mat-card-subtitle>
+            {{ productoSel.codigoSBS }} · {{ productoSel.nombreTipoPrestamo }}
+          </mat-card-subtitle>
+        </mat-card-header>
+
+        <mat-tab-group
+          [selectedIndex]="tabIndex"
+          (selectedIndexChange)="onTabChange($event)"
+          animationDuration="0ms"
+        >
+          <mat-tab label="Por vencer"></mat-tab>
+          <mat-tab label="Vencido"></mat-tab>
+        </mat-tab-group>
+
+        <mat-card-content>
+          <!-- ============ MODO VER ============ -->
+          <ng-container *ngIf="!editando">
+            <!-- Sin configuración -->
+            <div class="empty-state config-vacia" *ngIf="!configSel">
+              <mat-icon class="empty-icon">rule_folder</mat-icon>
+              <h3>Sin configuración de bandas</h3>
+              <p>
+                Este producto no tiene configuración de cartera
+                <strong>{{ tipoCarteraSel === TIPO_CARTERA.POR_VENCER ? 'por vencer' : 'vencida' }}</strong>
+                a la fecha evaluada.
+              </p>
+              <button mat-raised-button color="primary" (click)="crearConfiguracion()">
+                <mat-icon>add</mat-icon>
+                Crear configuración
+              </button>
+            </div>
+
+            <!-- Con configuración -->
+            <ng-container *ngIf="configSel as config">
+              <div class="vigencia-bar">
+                <div class="vigencia-info">
+                  <span class="vigencia-label">Vigencia:</span>
+                  <span class="vigencia-valor">
+                    desde {{ formatoFechaArray(config.fechaDesde) }}
+                    <ng-container *ngIf="config.fechaHasta"
+                      >hasta {{ formatoFechaArray(config.fechaHasta) }}</ng-container
+                    >
+                    <span class="badge badge-abierta" *ngIf="!config.fechaHasta">abierta</span>
+                  </span>
+                  <span class="badge badge-futura" *ngIf="config.editable" matTooltip="La vigencia todavía no empieza">
+                    aún no vigente
+                  </span>
+                </div>
+                <div class="vigencia-acciones">
+                  <button
+                    mat-stroked-button
+                    color="primary"
+                    *ngIf="config.editable"
+                    (click)="editarConfiguracion()"
+                    matTooltip="Editar en el lugar (la vigencia todavía no empieza)"
+                  >
+                    <mat-icon>edit</mat-icon>
+                    Editar
+                  </button>
+                  <button
+                    mat-stroked-button
+                    (click)="iniciarNuevaVigencia()"
+                    matTooltip="Cierra esta vigencia y crea una nueva desde una fecha"
+                  >
+                    <mat-icon>event_repeat</mat-icon>
+                    Nueva vigencia
+                  </button>
+                </div>
+              </div>
+
+              <table class="bandas-table">
+                <thead>
+                  <tr>
+                    <th class="col-num">Nº</th>
+                    <th class="col-periodos">Períodos (30 d)</th>
+                    <th class="col-rango">Rango en días</th>
+                    <th class="col-cuenta">Cuenta contable</th>
+                    <th class="col-estado">Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let b of config.bandas">
+                    <td class="col-num">{{ b.numero }}</td>
+                    <td class="col-periodos">
+                      <span *ngIf="b.periodos != null">{{ b.periodos }}</span>
+                      <span class="badge badge-resto" *ngIf="b.periodos == null">Resto</span>
+                    </td>
+                    <td class="col-rango">{{ b.etiqueta }}</td>
+                    <td class="col-cuenta">
+                      <span class="cuenta-codigo">{{ b.cuentaContable }}</span>
+                      <span class="cuenta-nombre">{{ b.nombreCuenta }}</span>
+                    </td>
+                    <td class="col-estado">
+                      <span
+                        class="badge"
+                        [ngClass]="b.estado === 1 ? 'est-activo' : 'est-inactivo'"
+                        >{{ b.estado === 1 ? 'Activo' : 'Inactivo' }}</span
+                      >
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </ng-container>
+          </ng-container>
+
+          <!-- ============ MODO EDICIÓN ============ -->
+          <ng-container *ngIf="editando">
+            <div class="edicion-header">
+              <h3>
+                <mat-icon>{{ modo === 'nueva-vigencia' ? 'event_repeat' : (modo === 'crear' ? 'add_circle' : 'edit') }}</mat-icon>
+                <span [ngSwitch]="modo">
+                  <span *ngSwitchCase="'crear'">Nueva configuración</span>
+                  <span *ngSwitchCase="'editar'">Editar configuración</span>
+                  <span *ngSwitchCase="'nueva-vigencia'">Nueva vigencia</span>
+                </span>
+                — {{ tipoCarteraSel === TIPO_CARTERA.POR_VENCER ? 'Por vencer' : 'Vencido' }}
+              </h3>
+            </div>
+
+            <!-- Fechas de vigencia -->
+            <div class="vigencia-form">
+              <ng-container *ngIf="modo !== 'nueva-vigencia'">
+                <mat-form-field appearance="outline">
+                  <mat-label>Fecha desde *</mat-label>
+                  <input matInput [matDatepicker]="pickerDesde" [(ngModel)]="fechaDesdeEdit" />
+                  <mat-datepicker-toggle matSuffix [for]="pickerDesde"></mat-datepicker-toggle>
+                  <mat-datepicker #pickerDesde></mat-datepicker>
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Fecha hasta (opcional)</mat-label>
+                  <input matInput [matDatepicker]="pickerHasta" [(ngModel)]="fechaHastaEdit" />
+                  <mat-datepicker-toggle matSuffix [for]="pickerHasta"></mat-datepicker-toggle>
+                  <mat-datepicker #pickerHasta></mat-datepicker>
+                  <mat-hint>Vacío = vigencia abierta</mat-hint>
+                </mat-form-field>
+              </ng-container>
+              <ng-container *ngIf="modo === 'nueva-vigencia'">
+                <mat-form-field appearance="outline">
+                  <mat-label>Nueva vigencia desde *</mat-label>
+                  <input matInput [matDatepicker]="pickerNueva" [(ngModel)]="fechaDesdeNueva" />
+                  <mat-datepicker-toggle matSuffix [for]="pickerNueva"></mat-datepicker-toggle>
+                  <mat-datepicker #pickerNueva></mat-datepicker>
+                  <mat-hint>Debe ser posterior al inicio de la vigencia actual</mat-hint>
+                </mat-form-field>
+                <div class="nota-cierre">
+                  <mat-icon>info</mat-icon>
+                  La vigencia actual se cerrará automáticamente el día anterior a esta fecha.
+                </div>
+              </ng-container>
+            </div>
+
+            <!-- Tabla editable de bandas -->
+            <table class="bandas-table editable">
+              <thead>
+                <tr>
+                  <th class="col-num">Nº</th>
+                  <th class="col-periodos">Períodos (30 d)</th>
+                  <th class="col-rango">Rango en días</th>
+                  <th class="col-cuenta">Cuenta contable *</th>
+                  <th class="col-orden">Orden</th>
+                  <th class="col-acc"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let b of bandasEdit; let i = index" [class.fila-resto]="b.esResto">
+                  <td class="col-num">{{ numeroBanda(i) }}</td>
+                  <td class="col-periodos">
+                    <span class="badge badge-resto" *ngIf="b.esResto">Resto</span>
+                    <mat-form-field appearance="outline" class="periodos-field" *ngIf="!b.esResto">
+                      <input
+                        matInput
+                        type="number"
+                        min="1"
+                        step="1"
+                        [(ngModel)]="b.periodos"
+                        (ngModelChange)="validar()"
+                      />
+                    </mat-form-field>
+                  </td>
+                  <td class="col-rango rango-edit">
+                    <span class="rango-hint">se calcula al guardar</span>
+                  </td>
+                  <td class="col-cuenta">
+                    <mat-form-field appearance="outline" class="cuenta-field">
+                      <input
+                        matInput
+                        [matAutocomplete]="autoCuenta"
+                        [ngModel]="b.busquedaCuenta"
+                        (ngModelChange)="onBuscarCuenta(b, $event)"
+                        placeholder="Nº de cuenta o nombre (mín. 3)"
+                        autocomplete="off"
+                      />
+                      <mat-spinner
+                        matSuffix
+                        diameter="16"
+                        *ngIf="b.buscandoCuenta"
+                      ></mat-spinner>
+                      <mat-autocomplete
+                        #autoCuenta="matAutocomplete"
+                        (optionSelected)="onCuentaSeleccionada(b, $event.option.value)"
+                      >
+                        <mat-option *ngFor="let c of b.opcionesCuenta" [value]="c">
+                          <strong>{{ c.cuentaContable }}</strong> — {{ c.nombre }}
+                        </mat-option>
+                      </mat-autocomplete>
+                    </mat-form-field>
+                    <div class="cuenta-elegida" *ngIf="b.idPlanCuenta != null">
+                      <mat-icon>check_circle</mat-icon>
+                      {{ b.cuentaContable }} — {{ b.nombreCuenta }}
+                    </div>
+                    <div class="cuenta-faltante" *ngIf="b.idPlanCuenta == null">
+                      Seleccione una cuenta
+                    </div>
+                  </td>
+                  <td class="col-orden">
+                    <button
+                      mat-icon-button
+                      *ngIf="!b.esResto"
+                      [disabled]="i === 0 || bandasEdit[i - 1].esResto"
+                      (click)="subirBanda(i)"
+                      matTooltip="Subir"
+                    >
+                      <mat-icon>arrow_upward</mat-icon>
+                    </button>
+                    <button
+                      mat-icon-button
+                      *ngIf="!b.esResto"
+                      [disabled]="i >= bandasEdit.length - 1 || bandasEdit[i + 1].esResto"
+                      (click)="bajarBanda(i)"
+                      matTooltip="Bajar"
+                    >
+                      <mat-icon>arrow_downward</mat-icon>
+                    </button>
+                  </td>
+                  <td class="col-acc">
+                    <button
+                      mat-icon-button
+                      color="warn"
+                      *ngIf="!b.esResto"
+                      (click)="quitarBanda(i)"
+                      matTooltip="Quitar banda"
+                    >
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div class="edicion-add">
+              <button mat-stroked-button color="primary" (click)="agregarBanda()">
+                <mat-icon>add</mat-icon>
+                Agregar banda
+              </button>
+            </div>
+
+            <!-- Errores de validación -->
+            <div class="validacion-errores" *ngIf="erroresValidacion.length > 0">
+              <mat-icon>warning</mat-icon>
+              <ul>
+                <li *ngFor="let e of erroresValidacion">{{ e }}</li>
+              </ul>
+            </div>
+
+            <!-- Acciones de edición -->
+            <div class="edicion-acciones">
+              <button mat-button (click)="cancelarEdicion()" [disabled]="guardando">
+                Cancelar
+              </button>
+              <button
+                mat-raised-button
+                color="primary"
+                (click)="guardar()"
+                [disabled]="!puedeGuardar"
+              >
+                <mat-icon *ngIf="!guardando">save</mat-icon>
+                <mat-spinner diameter="18" *ngIf="guardando"></mat-spinner>
+                {{ modo === 'nueva-vigencia' ? 'Crear nueva vigencia' : 'Guardar' }}
+              </button>
+            </div>
+          </ng-container>
+
+          <!-- ============ HISTORIAL ============ -->
+          <div class="historial-section" *ngIf="!editando">
+            <mat-divider></mat-divider>
+            <button mat-button color="primary" class="historial-toggle" (click)="toggleHistorial()">
+              <mat-icon>{{ mostrarHistorial ? 'expand_less' : 'history' }}</mat-icon>
+              {{ mostrarHistorial ? 'Ocultar historial' : 'Ver historial de configuraciones' }}
+            </button>
+
+            <div class="historial-contenido" *ngIf="mostrarHistorial">
+              <div class="loading-inline" *ngIf="cargandoHistorial">
+                <mat-spinner diameter="24"></mat-spinner>
+                <span>Cargando historial…</span>
+              </div>
+
+              <div class="empty-state pequeno" *ngIf="!cargandoHistorial && historial.length === 0">
+                <p>Esta terna (producto / cartera) nunca se parametrizó.</p>
+              </div>
+
+              <div
+                class="historial-config"
+                *ngFor="let h of historial"
+                [class.es-vigente]="!h.fechaHasta"
+              >
+                <div class="historial-config-header">
+                  <span class="badge" [ngClass]="!h.fechaHasta ? 'badge-abierta' : 'badge-cerrada'">
+                    {{ !h.fechaHasta ? 'Vigente' : 'Cerrada' }}
+                  </span>
+                  <span class="historial-vigencia">
+                    {{ formatoFechaArray(h.fechaDesde) }} →
+                    {{ h.fechaHasta ? formatoFechaArray(h.fechaHasta) : 'abierta' }}
+                  </span>
+                </div>
+                <table class="bandas-table compacta">
+                  <thead>
+                    <tr>
+                      <th class="col-num">Nº</th>
+                      <th>Rango</th>
+                      <th>Cuenta</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let b of h.bandas">
+                      <td class="col-num">{{ b.numero }}</td>
+                      <td>{{ b.etiqueta }}</td>
+                      <td>{{ b.cuentaContable }} — {{ b.nombreCuenta }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- ============ PROBADOR DE CLASIFICACIÓN ============ -->
+          <div class="probador-section" *ngIf="!editando && configSel">
+            <mat-divider></mat-divider>
+            <h4 class="probador-titulo">
+              <mat-icon>science</mat-icon>
+              Probador de clasificación
+            </h4>
+            <p class="probador-ayuda">
+              Verifica qué banda y cuenta corresponden a una antigüedad en días según la
+              parametrización vigente.
+            </p>
+            <form [formGroup]="probadorForm" class="probador-form" (ngSubmit)="clasificar()">
+              <mat-form-field appearance="outline" class="dias-field">
+                <mat-label>Días</mat-label>
+                <input matInput type="number" min="1" formControlName="dias" />
+                <mat-error *ngIf="probadorForm.get('dias')?.hasError('required')"
+                  >Los días son obligatorios</mat-error
+                >
+                <mat-error *ngIf="probadorForm.get('dias')?.hasError('min')"
+                  >Debe ser mayor o igual a 1</mat-error
+                >
+              </mat-form-field>
+              <button
+                mat-raised-button
+                color="primary"
+                type="submit"
+                [disabled]="clasificando"
+              >
+                <mat-icon *ngIf="!clasificando">play_arrow</mat-icon>
+                <mat-spinner diameter="18" *ngIf="clasificando"></mat-spinner>
+                Clasificar
+              </button>
+            </form>
+
+            <div class="probador-resultado" *ngIf="resultadoClasificacion as r">
+              <mat-icon class="ok-icon">check_circle</mat-icon>
+              <span>
+                {{ r.dias }} días → banda <strong>{{ r.banda.numero }}</strong>
+                ({{ r.banda.etiqueta }}) → cuenta
+                <strong>{{ r.banda.cuentaContable }}</strong> — {{ r.banda.nombreCuenta }}
+              </span>
+            </div>
+            <div class="probador-error" *ngIf="errorProbador">
+              <mat-icon>error_outline</mat-icon>
+              <span>{{ errorProbador }}</span>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+</div>

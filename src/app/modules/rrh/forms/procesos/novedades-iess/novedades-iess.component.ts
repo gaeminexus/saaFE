@@ -10,6 +10,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Observable, catchError, forkJoin, of } from 'rxjs';
+import { guardarArchivo } from '../../../../../shared/services/descarga-reporte';
 import { DetalleRubroService } from '../../../../../shared/services/detalle-rubro.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import {
@@ -38,7 +39,6 @@ import {
   extraerCodigo,
   filtrarPorAnio,
 } from '../../parametrizacion/utiles-parametrizacion';
-import { guardarArchivo } from '../descarga-reporte';
 import { MotivoDialogComponent } from '../periodo-nomina/motivo-dialog.component';
 import { NuevaNovedadDialogComponent } from './nueva-novedad-dialog.component';
 import { opcionesAviso } from '../../comunes/avisos';

@@ -7,6 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { guardarArchivo, mensajeReporteFallido } from '../../../../../shared/services/descarga-reporte';
 import { JasperReportesService } from '../../../../../shared/services/jasper-reportes.service';
 import { usuarioSesion } from '../../../../../shared/services/usuario-sesion';
 import { PeriodoNomina } from '../../../model/periodo-nomina';
@@ -16,7 +17,7 @@ import {
   criteriosPorEmpresa,
   filtrarPorAnio,
 } from '../../parametrizacion/utiles-parametrizacion';
-import { guardarArchivo, mensajeReporteFallido, ReportesNomina } from '../descarga-reporte';
+import { ReportesNomina } from '../descarga-reporte';
 import { opcionesAviso } from '../../comunes/avisos';
 
 interface ReporteDisponible {

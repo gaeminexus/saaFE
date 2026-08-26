@@ -872,8 +872,36 @@
                       <mat-icon matSuffix>credit_card</mat-icon>
                     </mat-form-field>
                   </div>
+                  @if (modoCuentaBancariaForm() === 'nuevo') {
+                    <div class="form-row">
+                      <div class="certificado-field full-width">
+                        <label class="certificado-label">Certificado bancario (PDF) *</label>
+                        <div class="certificado-dropzone" [class.cargado]="!!certificadoCuentaBancaria()"
+                             (click)="certificadoCuentaBancariaInput.click()">
+                          <mat-icon>{{ certificadoCuentaBancaria() ? 'task' : 'upload_file' }}</mat-icon>
+                          <span class="certificado-nombre">
+                            {{ certificadoCuentaBancaria()?.name || 'Adjuntar certificado bancario (PDF, máx. 10 MB)' }}
+                          </span>
+                        </div>
+                        @if (certificadoCuentaBancaria()) {
+                          <button mat-button type="button" (click)="quitarCertificadoCuentaBancaria()">
+                            <mat-icon>close</mat-icon> Quitar
+                          </button>
+                        }
+                        <input #certificadoCuentaBancariaInput type="file" accept=".pdf" hidden
+                               (change)="onCertificadoCuentaBancariaSeleccionado($event)" />
+                        @if (faltaCertificadoCuentaBancaria) {
+                          <div class="certificado-aviso">
+                            <mat-icon>info</mat-icon>
+                            <span>No se puede registrar una cuenta bancaria sin adjuntar el certificado bancario en PDF.</span>
+                          </div>
+                        }
+                      </div>
+                    </div>
+                  }
                   <div class="form-actions-inline">
-                    <button mat-raised-button color="accent" (click)="guardarCuentaBancaria()" [disabled]="cuentaBancariaParticipeForm.invalid || savingSubEntidad()">
+                    <button mat-raised-button color="accent" (click)="guardarCuentaBancaria()"
+                            [disabled]="cuentaBancariaParticipeForm.invalid || savingSubEntidad() || faltaCertificadoCuentaBancaria">
                       <mat-icon>save</mat-icon> Guardar
                     </button>
                     <button mat-button (click)="cancelarCuentaBancaria()">Cancelar</button>
@@ -899,13 +927,29 @@
                 <p class="empty-msg">No hay cuentas bancarias registradas.</p>
               } @else {
                 <table class="sub-table">
-                  <thead><tr><th>Banco</th><th>Número de Cuenta</th><th>Tipo</th><th>Acciones</th></tr></thead>
+                  <thead><tr><th>Banco</th><th>Número de Cuenta</th><th>Tipo</th><th>Certificado</th><th>Acciones</th></tr></thead>
                   <tbody>
                     @for (cb of cuentasBancariasParticipe(); track cb.codigo) {
                       <tr>
                         <td>{{ cb.bancoExterno.nombre }}</td>
                         <td>{{ cb.numeroCuenta }}</td>
                         <td>{{ getNombreTipoCuenta(cb.tipoCuenta) }}</td>
+                        <td>
+                          @if (certificadosPorCuenta()[cb.codigo]) {
+                            <button mat-button color="primary"
+                                    [disabled]="descargandoCertificado() === cb.codigo"
+                                    (click)="descargarCertificadoCuentaBancaria(cb)">
+                              @if (descargandoCertificado() === cb.codigo) {
+                                <mat-spinner diameter="16"></mat-spinner>
+                              } @else {
+                                <mat-icon>picture_as_pdf</mat-icon>
+                              }
+                              Ver certificado
+                            </button>
+                          } @else {
+                            <span class="sin-certificado">Sin certificado</span>
+                          }
+                        </td>
                         <td>
                           <button mat-icon-button color="primary" (click)="editarCuentaBancaria(cb)"><mat-icon>edit</mat-icon></button>
                           <button mat-icon-button color="warn" (click)="eliminarCuentaBancaria(cb.codigo)"><mat-icon>delete</mat-icon></button>

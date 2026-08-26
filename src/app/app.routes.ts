@@ -132,10 +132,15 @@ import { AportesPorRevisarComponent } from './modules/crd/forms/historicos/aport
 import { BaseInicialParticipesComponent } from './modules/crd/forms/historicos/base-inicial-participes/base-inicial-participes.component';
 import { ExtersComponent } from './modules/crd/forms/historicos/exters/exters.component';
 import { PagoCuotasComponent } from './modules/crd/forms/pago-cuotas/pago-cuotas.component';
+import { SimuladorCreditoComponent } from './modules/crd/forms/simulador-credito/simulador-credito.component';
+import { SimuladorPrestamoComponent } from './modules/crd/forms/simulador-prestamo/simulador-prestamo.component';
 import { EstadosCrdComponent } from './modules/crd/forms/parametrizacion/estados-crd/estados-crd.component';
 import { InformacionGeneralFondoComponent } from './modules/crd/forms/parametrizacion/informacion-general-fondo/informacion-general-fondo.component';
 import { ListadosCrdComponent } from './modules/crd/forms/parametrizacion/listados-crd/listados-crd.component';
 import { TiposCrdComponent } from './modules/crd/forms/parametrizacion/tipos-crd/tipos-crd.component';
+import { BandasCarteraComponent } from './modules/crd/forms/parametrizacion/bandas-cartera/bandas-cartera.component';
+import { CierreCarteraComponent } from './modules/crd/forms/cierre-cartera/cierre-cartera.component';
+import { usuarioUnoGuard } from './shared/guard/usuario-uno.guard';
 import { AsignacionSegurosComponent } from './modules/crd/forms/asignacion-seguros/asignacion-seguros.component';
 import { CuotaConsultaComponent } from './modules/crd/forms/prestamo/cuota-consulta/cuota-consulta.component';
 import { PrestamoConsultaComponent } from './modules/crd/forms/prestamo/prestamo-consulta/prestamo-consulta.component';
@@ -1139,6 +1144,8 @@ export const routes: Routes = [
       { path: 'cruce-valores', component: CruceValoresComponent },
       { path: 'cruce-de-valores', component: CruceDeValoresComponent },
       { path: 'devolucion-aportes', component: DevolucionAportesComponent },
+      { path: 'simulador-credito', component: SimuladorCreditoComponent },
+      { path: 'simulador-prestamo', component: SimuladorPrestamoComponent },
       { path: 'pago-cuotas', component: PagoCuotasComponent },
       { path: 'cobros-personales', component: CobrosPersonalesComponent },
       {
@@ -1222,6 +1229,20 @@ export const routes: Routes = [
         path: 'informacion-general-fondo',
         component: InformacionGeneralFondoComponent,
         canActivate: [authGuard],
+      },
+      {
+        // TODO TEMPORAL: restringida al USUARIO 1 vía usuarioUnoGuard hasta que
+        // exista el esquema de permisos definitivo (ver shared/guard/usuario-uno.guard.ts).
+        path: 'bandas-cartera',
+        component: BandasCarteraComponent,
+        canActivate: [authGuard, usuarioUnoGuard],
+      },
+      {
+        // TODO TEMPORAL: misma restricción a USUARIO 1 que bandas-cartera (usuarioUnoGuard),
+        // hasta que exista el esquema de permisos definitivo.
+        path: 'cierre-cartera',
+        component: CierreCarteraComponent,
+        canActivate: [authGuard, usuarioUnoGuard],
       },
       // Rutas de Contratos
       {

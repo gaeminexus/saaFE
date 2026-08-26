@@ -1,0 +1,359 @@
+<div class="cierre-container">
+  <!-- Header -->
+  <div class="page-header">
+    <h1 class="page-title">
+      <mat-icon>event_available</mat-icon>
+      Cierre mensual de cartera
+    </h1>
+    <p class="page-subtitle">
+      Calcula y contabiliza los seis sub-procesos del cierre. Previsualice, revise y ejecute.
+    </p>
+  </div>
+
+  <!-- Selección de período -->
+  <mat-card class="seleccion-card">
+    <mat-card-content>
+      <div class="seleccion-row">
+        <mat-form-field appearance="outline" class="anio-field">
+          <mat-label>Año a cerrar</mat-label>
+          <input matInput type="number" min="2000" max="2100" [(ngModel)]="anio" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="mes-field">
+          <mat-label>Mes a cerrar</mat-label>
+          <mat-select [(ngModel)]="mes">
+            @for (m of MESES; track m.valor) {
+              <mat-option [value]="m.valor">{{ m.nombre }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <div class="seleccion-acciones">
+          <button
+            mat-raised-button
+            color="primary"
+            (click)="previsualizar()"
+            [disabled]="ocupado() || idEmpresa == null"
+          >
+            @if (previsualizando()) {
+              <mat-spinner diameter="18"></mat-spinner>
+            } @else {
+              <mat-icon>visibility</mat-icon>
+            }
+            Previsualizar
+          </button>
+          <button mat-stroked-button (click)="consultar()" [disabled]="ocupado() || idEmpresa == null">
+            @if (consultando()) {
+              <mat-spinner diameter="18"></mat-spinner>
+            } @else {
+              <mat-icon>fact_check</mat-icon>
+            }
+            Consultar lo contabilizado
+          </button>
+          <button mat-button (click)="toggleHistorial()" [disabled]="idEmpresa == null">
+            <mat-icon>history</mat-icon>
+            {{ mostrarHistorial() ? 'Ocultar corridas' : 'Ver corridas' }}
+          </button>
+        </div>
+      </div>
+      <p class="seleccion-hint">
+        <mat-icon>info</mat-icon>
+        El período se identifica por el <strong>mes que se cierra</strong>. Las tres fechas del
+        proceso se derivan de él y las calcula el backend.
+      </p>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Error -->
+  @if (error()) {
+    <div class="error-banner">
+      <mat-icon>error_outline</mat-icon>
+      <span>{{ error() }}</span>
+    </div>
+  }
+
+  <!-- Indicador de proceso largo -->
+  @if (previsualizando() || ejecutando()) {
+    <div class="proceso-largo">
+      <mat-spinner diameter="36"></mat-spinner>
+      <p>{{ ejecutando() ? 'Ejecutando y contabilizando el cierre…' : 'Calculando la previsualización…' }} Puede tardar varios segundos.</p>
+    </div>
+  }
+
+  <!-- Historial de corridas -->
+  @if (mostrarHistorial()) {
+    <mat-card class="corridas-card">
+      <mat-card-header>
+        <mat-card-title><mat-icon>history</mat-icon> Corridas de la empresa</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        @if (cargandoCorridas()) {
+          <div class="loading-inline"><mat-spinner diameter="24"></mat-spinner><span>Cargando…</span></div>
+        } @else if (corridas().length === 0) {
+          <p class="vacio">No hay corridas registradas para esta empresa.</p>
+        } @else {
+          <table class="corridas-table">
+            <thead>
+              <tr>
+                <th>Corrida</th><th>Período</th><th>Corte</th><th>Estado</th>
+                <th>Observación</th><th>Registro</th><th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (c of corridas(); track trackCorrida($index, c)) {
+                <tr>
+                  <td>{{ c.codigo }}</td>
+                  <td>{{ nombreMes(c.mes) }} {{ c.anio }}</td>
+                  <td>{{ formatoFechaArray(c.fechaCorte) }}</td>
+                  <td>
+                    <span class="badge" [ngClass]="claseEstado(c.idEstado)">
+                      {{ nombreEstadoCorrida(c.idEstado) }}
+                    </span>
+                  </td>
+                  <td class="obs">{{ c.observacion || '—' }}</td>
+                  <td>{{ formatoFechaHoraArray(c.fechaRegistro) }}<br /><small>{{ c.usuarioRegistro }}</small></td>
+                  <td>
+                    @if (c.idEstado === ESTADO_CORRIDA.EJECUTADA) {
+                      <button
+                        mat-stroked-button
+                        color="warn"
+                        (click)="reversar(c)"
+                        [disabled]="ocupado()"
+                        matTooltip="Anula los asientos de esta corrida"
+                      >
+                        <mat-icon>undo</mat-icon> Reversar
+                      </button>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </mat-card-content>
+    </mat-card>
+  }
+
+  <!-- Resultado (previsualización / ejecución / consulta) -->
+  @if (resultado(); as res) {
+    <mat-card class="resultado-card">
+      <!-- Encabezado de origen -->
+      <div class="resultado-header" [ngClass]="origen()">
+        <div class="origen-info">
+          @switch (origen()) {
+            @case ('previsualizacion') {
+              <span class="origen-badge prev"><mat-icon>visibility</mat-icon> Previsualización — cálculo de hoy, sin grabar</span>
+            }
+            @case ('ejecucion') {
+              <span class="origen-badge ejec"><mat-icon>check_circle</mat-icon> Ejecutada — asientos contabilizados</span>
+            }
+            @case ('consulta') {
+              <span class="origen-badge cons"><mat-icon>fact_check</mat-icon> Consulta — lo que quedó grabado</span>
+            }
+          }
+          <span class="periodo-label">{{ nombreMes(res.mes) }} {{ res.anio }}</span>
+          @if (res.idCorrida != null) {
+            <span class="corrida-label">Corrida {{ res.idCorrida }}</span>
+          }
+          @if (res.idEstado != null) {
+            <span class="badge" [ngClass]="claseEstado(res.idEstado)">{{ res.nombreEstado || nombreEstadoCorrida(res.idEstado) }}</span>
+          }
+        </div>
+        @if (puedeEjecutar) {
+          <button mat-raised-button color="primary" (click)="ejecutar()" [disabled]="ocupado()">
+            @if (ejecutando()) { <mat-spinner diameter="18"></mat-spinner> } @else { <mat-icon>play_circle</mat-icon> }
+            Ejecutar y contabilizar
+          </button>
+        }
+      </div>
+
+      @if (origen() === 'consulta') {
+        <p class="aviso-consulta">
+          <mat-icon>info</mat-icon>
+          Esto es <strong>lo contabilizado</strong>. Puede no coincidir con la previsualización de
+          hoy: los pagos y entregas del mes cambian el cálculo, y eso es normal.
+        </p>
+      }
+
+      <!-- Las tres fechas -->
+      <div class="fechas-grid">
+        <div class="fecha-item" matTooltip="Último día del mes cerrado. Filtro de cuotas pendientes y fecha del asiento de neteo.">
+          <span class="fecha-label">Fecha de corte</span>
+          <span class="fecha-valor">{{ formatoFechaArray(res.fechaCorte) }}</span>
+          <span class="fecha-desc">último día del mes cerrado</span>
+        </div>
+        <div class="fecha-item" matTooltip="Primer día del mes siguiente. Fecha de cinco de los seis asientos y fecha con la que se resuelve la banda vigente.">
+          <span class="fecha-label">Fecha de proceso</span>
+          <span class="fecha-valor">{{ formatoFechaArray(res.fechaProceso) }}</span>
+          <span class="fecha-desc">primer día del mes siguiente</span>
+        </div>
+        <div class="fecha-item" matTooltip="Último día del mes que se abre. Hasta ahí factura la apertura.">
+          <span class="fecha-label">Corte de apertura</span>
+          <span class="fecha-valor">{{ formatoFechaArray(res.fechaCorteApertura) }}</span>
+          <span class="fecha-desc">último día del mes que se abre</span>
+        </div>
+        <div class="fecha-item total">
+          <span class="fecha-label">Capital total de cartera</span>
+          <span class="fecha-valor">$ {{ money(res.capitalTotal) }}</span>
+          <span class="fecha-desc">al {{ formatoFechaArray(res.fechaCorte) }}</span>
+        </div>
+      </div>
+
+      <!-- Advertencias (arriba y visibles) -->
+      @if (res.advertencias?.length) {
+        <div class="advertencias">
+          <div class="adv-titulo"><mat-icon>warning</mat-icon> Advertencias — léalas antes de ejecutar</div>
+          <ul>
+            @for (a of res.advertencias; track $index) {
+              <li>{{ a }}</li>
+            }
+          </ul>
+        </div>
+      }
+
+      <!-- Sub-procesos -->
+      <div class="subprocesos">
+        @for (sp of res.subProcesos; track trackSubProceso($index, sp)) {
+          <div class="subproceso" [class.omitido]="sp.omitido">
+            <div class="sp-header">
+              <div class="sp-titulo">
+                <span class="sp-ref">{{ sp.referencia }}</span>
+                <span class="sp-nombre">{{ sp.nombre }}</span>
+                @if (sp.fecha) { <span class="sp-fecha">· {{ formatoFechaArray(sp.fecha) }}</span> }
+              </div>
+              <div class="sp-estado">
+                @if (sp.omitido) {
+                  <span class="badge badge-omitido">Omitido</span>
+                } @else {
+                  <span class="badge" [ngClass]="cuadra(sp) ? 'badge-cuadra' : 'badge-descuadra'">
+                    <mat-icon>{{ cuadra(sp) ? 'check' : 'priority_high' }}</mat-icon>
+                    {{ cuadra(sp) ? 'Cuadra D = H' : 'No cuadra' }}
+                  </span>
+                }
+                @if (sp.numeroAsiento) {
+                  <span class="badge badge-asiento" matTooltip="Asiento contable generado">Asiento #{{ sp.numeroAsiento }}</span>
+                }
+              </div>
+            </div>
+
+            @if (sp.glosa) { <p class="sp-glosa">{{ sp.glosa }}</p> }
+
+            @if (sp.omitido) {
+              <p class="sp-omitido-motivo">
+                <mat-icon>block</mat-icon>
+                {{ sp.motivoOmision || 'Sin nada que contabilizar en este período.' }}
+              </p>
+            } @else if (sp.lineas?.length) {
+              <div class="tabla-scroll">
+                <table class="lineas-table">
+                  <thead>
+                    <tr>
+                      <th class="c-cuenta">Cuenta</th>
+                      <th class="c-desc">Descripción</th>
+                      <th class="c-num">Debe</th>
+                      <th class="c-num">Haber</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (l of sp.lineas; track $index) {
+                      <tr>
+                        <td class="c-cuenta">
+                          <span class="cta-codigo">{{ l.cuenta }}</span>
+                          @if (l.nombreCuenta) { <span class="cta-nombre">{{ l.nombreCuenta }}</span> }
+                        </td>
+                        <td class="c-desc">
+                          {{ l.descripcion }}
+                          @if (l.numeroBanda != null) {
+                            <span class="chip-banda" matTooltip="{{ nombreTipoCartera(l.tipoCartera) }}">banda {{ l.numeroBanda }}</span>
+                          }
+                        </td>
+                        <td class="c-num">{{ l.debe ? money(l.debe) : '' }}</td>
+                        <td class="c-num">{{ l.haber ? money(l.haber) : '' }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td colspan="2" class="tot-label">Totales</td>
+                      <td class="c-num tot">{{ money(sp.totalDebe) }}</td>
+                      <td class="c-num tot">{{ money(sp.totalHaber) }}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            } @else {
+              <!-- Consulta: los sub-procesos vienen sin líneas (están en el asiento contable) -->
+              <div class="sp-solo-totales">
+                <span>Debe <strong>$ {{ money(sp.totalDebe) }}</strong></span>
+                <span>Haber <strong>$ {{ money(sp.totalHaber) }}</strong></span>
+                <span class="nota">Las líneas están en el asiento contable, no duplicadas aquí.</span>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- Desviaciones -->
+      <div class="desviaciones">
+        <mat-divider></mat-divider>
+        <div class="desv-titulo">
+          <mat-icon>insights</mat-icon>
+          Desviaciones
+          <span class="desv-total">Total: $ {{ money(res.totalDesviacion) }}</span>
+        </div>
+        <p class="desv-ayuda">
+          No son errores: es lo que movieron pagos y entregas durante el mes (diferencia entre el
+          snapshot anterior y lo recalculado a esa fecha).
+        </p>
+        @if (res.desviaciones?.length) {
+          <div class="desv-lista">
+            @for (d of res.desviaciones; track $index) {
+              <div class="desv-item">
+                @for (e of entradasDesviacion(d); track e.clave) {
+                  <span class="desv-campo"><strong>{{ e.clave }}:</strong> {{ e.valor }}</span>
+                }
+              </div>
+            }
+          </div>
+        } @else {
+          <p class="desv-vacio">Sin desviaciones.</p>
+        }
+      </div>
+
+      <!-- Snapshot -->
+      @if (res.snapshot?.length) {
+        <div class="snapshot">
+          <mat-divider></mat-divider>
+          <button mat-button color="primary" class="snapshot-toggle" (click)="mostrarSnapshot.set(!mostrarSnapshot())">
+            <mat-icon>{{ mostrarSnapshot() ? 'expand_less' : 'table_chart' }}</mat-icon>
+            {{ mostrarSnapshot() ? 'Ocultar' : 'Ver' }} snapshot de cartera ({{ res.snapshot?.length }} filas)
+          </button>
+          @if (mostrarSnapshot()) {
+            <div class="tabla-scroll">
+              <table class="snapshot-table">
+                <thead>
+                  <tr>
+                    <th>Producto</th><th>Cartera</th><th>Banda</th><th>Cuenta</th>
+                    <th class="c-num">Capital</th><th class="c-num">Cant.</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (s of res.snapshot; track $index) {
+                    <tr>
+                      <td>{{ s.nombreProducto }}</td>
+                      <td>{{ s.nombreTipoCartera }}</td>
+                      <td>{{ s.numeroBanda }} <small>({{ s.etiquetaBanda }})</small></td>
+                      <td>{{ s.cuenta }} <small>{{ s.nombreCuenta }}</small></td>
+                      <td class="c-num">{{ money(s.capital) }}</td>
+                      <td class="c-num">{{ s.cantidad }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+      }
+    </mat-card>
+  }
+</div>

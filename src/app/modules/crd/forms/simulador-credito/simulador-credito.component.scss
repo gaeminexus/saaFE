@@ -1,0 +1,116 @@
+/*
+ * Simulador de crédito nuevo. Mismo lenguaje visual que Devolución de Aportes / Cruce de Valores
+ * para que las pantallas del módulo se lean igual.
+ *
+ * Regla táctil: 44px de alto mínimo en todo control interactivo (la pantalla se usa en tablet).
+ */
+
+.sim-container {
+  padding: 24px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  min-height: 100%;
+}
+
+.search-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  color: #fff;
+  margin-bottom: 1.25rem;
+
+  .header-title {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+
+    h1 { font-size: 1.8rem; font-weight: 600; margin: 0; }
+    .header-icon { font-size: 30px; width: 30px; height: 30px; }
+  }
+}
+
+mat-card { border-radius: 12px !important; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1) !important; margin-bottom: 1.5rem !important; }
+
+/* ---------- aviso de simulación: siempre visible, no solo en el PDF ---------- */
+.aviso {
+  display: flex; align-items: flex-start; gap: 0.5rem;
+  background: #fff6e0; color: #92600d; border-radius: 8px; padding: 0.6rem 0.85rem;
+  font-size: 0.82rem; margin-bottom: 1.25rem;
+
+  mat-icon { font-size: 19px; width: 19px; height: 19px; flex-shrink: 0; }
+  &.error { background: #fef2f2; color: #dc2626; }
+
+  &.simulacion {
+    background: #eef2ff; color: #3c4a9c; border: 1px dashed #c3cbf0;
+    b { color: #2d3785; }
+  }
+  &.simulacion.pie { margin-top: 1rem; margin-bottom: 0; }
+}
+
+/* ---------- formulario ---------- */
+.datos-card {
+  .campos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 0.4rem 1rem;
+  }
+
+  .fila-check { min-height: 44px; display: flex; align-items: center; margin: 0.4rem 0 0.2rem; }
+}
+
+.acciones {
+  display: flex; justify-content: flex-end; gap: 0.7rem; margin-top: 1rem; flex-wrap: wrap;
+  button { min-height: 48px; border-radius: 10px; font-weight: 600; }
+}
+
+/* ---------- totales ---------- */
+.section-label {
+  display: flex; align-items: center; gap: 0.4rem;
+  font-size: 0.92rem; font-weight: 700; color: #2d3748; margin: 1.4rem 0.15rem 0.6rem;
+
+  .count { font-weight: 500; color: #718096; font-size: 0.8rem; }
+}
+
+.totales-bar {
+  display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: center;
+  background: #fff; border-radius: 10px; padding: 0.75rem 1.1rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12); margin-bottom: 1.25rem;
+
+  .tb-item { display: flex; flex-direction: column; gap: 1px; }
+  .tb-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.05em; color: #718096; font-weight: 700; }
+  .tb-value { font-size: 16px; font-weight: 600; font-family: 'Roboto Mono', monospace; font-variant-numeric: tabular-nums; color: #1a202c; }
+
+  .tb-item.destacado .tb-value { color: #667eea; }
+}
+
+/* ---------- tabla de amortización ---------- */
+.tabla-scroll { overflow-x: auto; background: #fff; border-radius: 10px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1); }
+
+table.tabla-amortizacion {
+  width: 100%;
+
+  th { background: #667eea; color: #fff; font-weight: 600; text-transform: uppercase; font-size: 12px; letter-spacing: 0.03em; }
+  td { font-size: 13.5px; font-variant-numeric: tabular-nums; }
+  th.num, td.num { text-align: right; }
+
+  tr[mat-footer-row] td {
+    background: #edf2f7; font-weight: 700; color: #2d3748;
+    border-top: 2px solid #cbd5e0;
+  }
+}
+
+/* Con entrada táctil las filas se agrandan. */
+@media (pointer: coarse) {
+  table.tabla-amortizacion td { padding: 12px 10px; }
+}
+
+@media (max-width: 700px) {
+  .sim-container { padding: 12px; }
+  .acciones button { flex: 1 1 auto; }
+}
+
+.initial-message {
+  text-align: center; padding: 3.5rem 1rem; color: #718096;
+  .message-icon { font-size: 42px; width: 42px; height: 42px; opacity: 0.55; margin-bottom: 0.6rem; }
+  p { font-size: 0.9rem; margin: 0; }
+}

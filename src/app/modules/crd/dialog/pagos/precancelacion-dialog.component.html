@@ -110,7 +110,7 @@
               @for (e of sim.exigibles; track e.idCuota) {
                 <tr>
                   <td>{{ e.numeroCuota }}</td>
-                  <td>{{ e.fechaVencimiento | date: 'dd/MM/yyyy' }}</td>
+                  <td>{{ formatFecha(e.fechaVencimiento) }}</td>
                   <td class="num">{{ formatMoneda(e.pendiente) }}</td>
                 </tr>
               }

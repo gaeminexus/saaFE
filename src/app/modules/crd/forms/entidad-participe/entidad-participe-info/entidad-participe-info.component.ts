@@ -23,7 +23,7 @@ import { Direccion } from '../../../model/direccion';
 import { Conyuge } from '../../../model/conyuge';
 import { ReferenciaFamiliar } from '../../../model/referencia-familiar';
 import { ReferenciaPersonal } from '../../../model/referencia-personal';
-import { CuentaBancariaParticipe } from '../../../model/cuenta-bancaria-participe';
+import { AdjuntoCertificadoCnbp, CuentaBancariaParticipe } from '../../../model/cuenta-bancaria-participe';
 import { BancoExterno } from '../../../../tsr/model/banco-externo.model';
 
 import { EntidadService } from '../../../service/entidad.service';
@@ -42,6 +42,8 @@ import { CuentaBancariaParticipeService } from '../../../service/cuenta-bancaria
 import { BancoExternoService } from '../../../../tsr/service/banco-externo.service';
 import { DetalleRubroService } from '../../../../../shared/services/detalle-rubro.service';
 import { DetalleRubro } from '../../../../../shared/model/detalle-rubro';
+import { guardarArchivo } from '../../../../../shared/services/descarga-reporte';
+import { FileService } from '../../../../../shared/services/file.service';
 import { FuncionesDatosService, TipoFormatoFechaBackend } from '../../../../../shared/services/funciones-datos.service';
 import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoDatosBusqueda as TipoDatos } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
@@ -86,6 +88,7 @@ export class EntidadParticipeInfoComponent implements OnInit {
   private referenciaPersonalService = inject(ReferenciaPersonalService);
   private cuentaBancariaParticipeService = inject(CuentaBancariaParticipeService);
   private bancoExternoService = inject(BancoExternoService);
+  private fileService = inject(FileService);
   private detalleRubroService = inject(DetalleRubroService);
   private funcionesDatosService = inject(FuncionesDatosService);
   private snackBar = inject(MatSnackBar);
@@ -158,6 +161,21 @@ export class EntidadParticipeInfoComponent implements OnInit {
   modoCuentaBancariaForm = signal<'nuevo' | 'editar' | null>(null);
 
   savingSubEntidad = signal<boolean>(false);
+
+  /**
+   * Certificado bancario (PDF) adjuntado al registrar una cuenta nueva. Obligatorio: no se puede
+   * registrar una cuenta bancaria sin él. Solo se usa en modo 'nuevo' — editar una cuenta ya
+   * registrada no vuelve a pedir el certificado, usa el `update()` de siempre.
+   */
+  certificadoCuentaBancaria = signal<File | null>(null);
+  /** Código de la cuenta cuyo certificado se está descargando, o `null` si ninguna. */
+  descargandoCertificado = signal<number | null>(null);
+  /**
+   * Metadatos del certificado de cada cuenta, por código de cuenta (`GET /cnbp/{id}/certificado`).
+   * `null` significa "esta cuenta no tiene certificado" (404, respuesta esperada) o "todavía no se
+   * consultó" — en ambos casos la pantalla no muestra el enlace "Ver certificado".
+   */
+  certificadosPorCuenta = signal<Record<number, AdjuntoCertificadoCnbp | null>>({});
 
   // Formularios
   entidadForm!: FormGroup;
@@ -433,6 +451,7 @@ export class EntidadParticipeInfoComponent implements OnInit {
         this.referenciasFamiliares.set(data.referenciasFamiliares || []);
         this.referenciasPersonales.set(data.referenciasPersonales || []);
         this.cuentasBancariasParticipe.set(data.cuentasBancarias || []);
+        this.cargarCertificadosCuentasBancarias(data.cuentasBancarias || []);
 
         this.loading.set(false);
       },
@@ -767,30 +786,86 @@ export class EntidadParticipeInfoComponent implements OnInit {
   // ─── CUENTAS BANCARIAS PARTÍCIPE ────────────────────────────
   nuevaCuentaBancaria(): void {
     this.cuentaBancariaParticipeForm.reset({ estado: 1 });
+    this.certificadoCuentaBancaria.set(null);
     this.modoCuentaBancariaForm.set('nuevo');
   }
 
   editarCuentaBancaria(cb: CuentaBancariaParticipe): void {
     this.cuentaBancariaParticipeForm.patchValue({ ...cb });
+    // Editar no vuelve a pedir el certificado: ya quedó archivado al registrar la cuenta.
+    this.certificadoCuentaBancaria.set(null);
     this.modoCuentaBancariaForm.set('editar');
+  }
+
+  /**
+   * No se puede registrar una cuenta bancaria sin certificado. Solo aplica al alta: editar sigue
+   * usando `update()`, que no toca el certificado ya archivado.
+   */
+  get faltaCertificadoCuentaBancaria(): boolean {
+    return this.modoCuentaBancariaForm() === 'nuevo' && !this.certificadoCuentaBancaria();
+  }
+
+  /** Se valida al elegir el archivo, no al guardar: así el mensaje aparece de inmediato. */
+  onCertificadoCuentaBancariaSeleccionado(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+
+    if (file) {
+      const problema = this.problemaDelCertificadoCuentaBancaria(file);
+      if (problema) {
+        input.value = '';
+        this.snackBar.open(problema, 'Cerrar', { duration: 5000 });
+        return;
+      }
+    }
+
+    this.certificadoCuentaBancaria.set(file);
+  }
+
+  quitarCertificadoCuentaBancaria(): void {
+    this.certificadoCuentaBancaria.set(null);
+  }
+
+  /** Solo PDF, máximo 10 MB (el mismo tope que ya valida `FileService` del lado del cliente). */
+  private problemaDelCertificadoCuentaBancaria(file: File): string | null {
+    if (!/\.pdf$/i.test(file.name)) {
+      return 'El certificado bancario debe ser un archivo PDF (.pdf).';
+    }
+    if (!this.fileService.validateFileSize(file.size)) {
+      return `El certificado bancario supera el tamaño máximo de ${this.fileService.formatFileSize(this.fileService.getMaxFileSize())}.`;
+    }
+    return null;
   }
 
   guardarCuentaBancaria(): void {
     if (this.cuentaBancariaParticipeForm.invalid) return;
     const entidad = this.entidadActual();
     if (!entidad) return;
+
+    const esNuevo = this.modoCuentaBancariaForm() === 'nuevo';
+    const certificado = this.certificadoCuentaBancaria();
+    // El botón ya queda deshabilitado sin certificado; esto es el guardarraíl del lado del código.
+    if (esNuevo && !certificado) return;
+
     this.savingSubEntidad.set(true);
     const data = { ...this.cuentaBancariaParticipeForm.getRawValue(), entidad };
+
+    // Alta: multipart con certificado, POST /cnbp/conCertificado (POST /cnbp de siempre quedó
+    // bloqueado para creación del lado del backend). Edición: sigue igual, PUT /cnbp de siempre
+    // — no lleva certificado.
     const obs = data.codigo
       ? this.cuentaBancariaParticipeService.update(data)
-      : this.cuentaBancariaParticipeService.add(data);
+      : this.cuentaBancariaParticipeService.addConCertificado(data, certificado!, this.getNombreUsuario());
+
     obs.subscribe({
       next: () => {
         this.cuentaBancariaParticipeService.getByParent(entidad.codigo).subscribe(list => {
           this.cuentasBancariasParticipe.set(list || []);
+          this.cargarCertificadosCuentasBancarias(list || []);
         });
         this.actualizarAuditoria();
         this.modoCuentaBancariaForm.set(null);
+        this.certificadoCuentaBancaria.set(null);
         this.savingSubEntidad.set(false);
       },
       error: () => this.savingSubEntidad.set(false)
@@ -801,11 +876,57 @@ export class EntidadParticipeInfoComponent implements OnInit {
     if (!confirm('¿Eliminar esta cuenta bancaria?')) return;
     this.cuentaBancariaParticipeService.delete(id).subscribe(() => {
       this.cuentasBancariasParticipe.update(list => list.filter(c => c.codigo !== id));
+      this.certificadosPorCuenta.update(mapa => {
+        const { [id]: _omitido, ...resto } = mapa;
+        return resto;
+      });
       this.actualizarAuditoria();
     });
   }
 
-  cancelarCuentaBancaria(): void { this.modoCuentaBancariaForm.set(null); }
+  cancelarCuentaBancaria(): void {
+    this.modoCuentaBancariaForm.set(null);
+    this.certificadoCuentaBancaria.set(null);
+  }
+
+  /**
+   * Consulta los metadatos del certificado de cada cuenta en paralelo (`GET
+   * /cnbp/{id}/certificado`), para decidir por fila si se muestra "Ver certificado". El propio
+   * servicio ya traduce el 404 esperado ("sin certificado") a `null` — acá no hay nada que
+   * ramificar por error.
+   */
+  private cargarCertificadosCuentasBancarias(cuentas: CuentaBancariaParticipe[]): void {
+    if (!cuentas.length) {
+      this.certificadosPorCuenta.set({});
+      return;
+    }
+    forkJoin(
+      cuentas.map(cb =>
+        this.cuentaBancariaParticipeService.obtenerCertificado(cb.codigo)
+      )
+    ).subscribe(resultados => {
+      const mapa: Record<number, AdjuntoCertificadoCnbp | null> = {};
+      cuentas.forEach((cb, i) => { mapa[cb.codigo] = resultados[i]; });
+      this.certificadosPorCuenta.set(mapa);
+    });
+  }
+
+  /** Ver/descargar el certificado bancario de una cuenta ya registrada. */
+  descargarCertificadoCuentaBancaria(cb: CuentaBancariaParticipe): void {
+    const certificado = this.certificadosPorCuenta()[cb.codigo];
+    if (!certificado || this.descargandoCertificado() != null) return;
+    this.descargandoCertificado.set(cb.codigo);
+    this.cuentaBancariaParticipeService.descargarCertificado(cb.codigo).subscribe({
+      next: (blob) => {
+        this.descargandoCertificado.set(null);
+        guardarArchivo(blob, certificado.nombreArchivo || `certificado-cuenta-${cb.codigo}.pdf`);
+      },
+      error: () => {
+        this.descargandoCertificado.set(null);
+        this.snackBar.open('No se pudo descargar el certificado bancario.', 'Cerrar', { duration: 5000 });
+      },
+    });
+  }
 
   // ─── PATRÓN DATEPICKER ESTÁNDAR ─────────────────────────────
   /** Captura el texto tal como lo escribe el usuario antes de que Material lo procese */

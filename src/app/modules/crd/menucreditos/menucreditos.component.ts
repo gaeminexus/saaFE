@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { SideMenuCustomComponent } from '../../../shared/basics/menu/forms/side-menu-custom/side-menu-custom.component';
 import { NavItem } from '../../../shared/basics/menu/model/nav-item';
+import { esUsuarioUno } from '../../../shared/guard/usuario-uno.guard';
 
 @Component({
   selector: 'app-menucreditos',
@@ -60,6 +61,8 @@ export class MenucreditosComponent {
         },
       ],
     },
+    // La opción "Bandas de Cartera" se agrega en el constructor solo para el USUARIO 1
+    // (ver TODO temporal en shared/guard/usuario-uno.guard.ts).
     {
       displayName: 'Participes',
       iconName: 'person',
@@ -246,5 +249,40 @@ export class MenucreditosComponent {
         },
       ],
     },
+    {
+      displayName: 'Simuladores',
+      iconName: 'calculate',
+      route: '/menucreditos/parametrizacion',
+      children: [
+        {
+          displayName: 'Crédito Nuevo',
+          iconName: 'calculate',
+          route: '/menucreditos/simulador-credito',
+        },
+        {
+          displayName: 'Préstamo Existente',
+          iconName: 'rule_settings',
+          route: '/menucreditos/simulador-prestamo',
+        },
+      ],
+    },
   ];
+
+  constructor() {
+    // TODO TEMPORAL: mostrar "Bandas de Cartera" solo al USUARIO 1 mientras se
+    // implementa el esquema de permisos definitivo (shared/guard/usuario-uno.guard.ts).
+    if (esUsuarioUno()) {
+      const paramNode = this.navItems.find((n) => n.displayName === 'Parametrización');
+      paramNode?.children?.push({
+        displayName: 'Bandas de Cartera',
+        iconName: 'account_tree',
+        route: '/menucreditos/bandas-cartera',
+      });
+      paramNode?.children?.push({
+        displayName: 'Cierre de Cartera',
+        iconName: 'event_available',
+        route: '/menucreditos/cierre-cartera',
+      });
+    }
+  }
 }

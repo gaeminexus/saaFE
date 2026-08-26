@@ -196,7 +196,7 @@
           @for (c of sim.tablaProyectada; track c.numeroCuota) {
             <tr>
               <td>{{ c.numeroCuota }}</td>
-              <td>{{ c.fechaVencimiento | date: 'dd/MM/yyyy' }}</td>
+              <td>{{ formatFecha(c.fechaVencimiento) }}</td>
               <td class="num">{{ formatMoneda(c.capital) }}</td>
               <td class="num">{{ formatMoneda(c.interes) }}</td>
               <td class="num"><b>{{ formatMoneda(c.cuota) }}</b></td>
@@ -217,6 +217,13 @@
         La operación queda registrada y puede anularse después desde el historial del préstamo.
       </span>
     </div>
+
+    @if (errorPdf(); as error) {
+      <div class="pg-aviso error">
+        <mat-icon>error_outline</mat-icon>
+        <span>{{ error }}</span>
+      </div>
+    }
   }
 
   <!-- ============ Respaldo del cobro ============
@@ -248,6 +255,18 @@
   } @else {
     <button mat-stroked-button (click)="volverADatos()">
       <mat-icon>arrow_back</mat-icon> Cambiar monto
+    </button>
+    <button
+      mat-stroked-button
+      [disabled]="!exportarPdfHabilitado || !simulacion() || exportandoPdf()"
+      matTooltip="Exportar la simulación del abono en PDF"
+      (click)="exportarPdf()">
+      @if (exportandoPdf()) {
+        <mat-spinner diameter="18"></mat-spinner>
+      } @else {
+        <mat-icon>picture_as_pdf</mat-icon>
+      }
+      Exportar PDF
     </button>
     <button mat-raised-button color="accent" [disabled]="!puedeAplicar()" (click)="aplicar()">
       @if (aplicando() || simulando()) {

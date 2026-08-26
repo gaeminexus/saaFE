@@ -27,6 +27,7 @@ import { TipoAporte } from '../../../model/tipo-aporte';
 import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
+import { guardarArchivo } from '../../../../../shared/services/descarga-reporte';
 import { ExportService } from '../../../../../shared/services/export.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { JasperReportesService } from '../../../../../shared/services/jasper-reportes.service';
@@ -936,12 +937,7 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
 
     this.jasperReportes.generar('crd', 'RPRT_TBLA_ACML', parametros, 'PDF').subscribe({
       next: (blob) => {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `tabla-amortizacion-${prestamo.idAsoprep}.pdf`;
-        a.click();
-        setTimeout(() => URL.revokeObjectURL(url), 2000);
+        guardarArchivo(blob, `tabla-amortizacion-${prestamo.idAsoprep}.pdf`);
         this.snackBar.open('✅ Reporte generado exitosamente', 'Cerrar', { duration: 3000 });
       },
       error: () => {
@@ -974,12 +970,7 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
 
     this.jasperReportes.generar('crd', 'RPRT_MVMN_APXT', parametros, 'PDF').subscribe({
       next: (blob) => {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `movimientos-aportes-${tipoAporte.tipoAporte.replace(/\s+/g, '-')}.pdf`;
-        a.click();
-        setTimeout(() => URL.revokeObjectURL(url), 2000);
+        guardarArchivo(blob, `movimientos-aportes-${tipoAporte.tipoAporte.replace(/\s+/g, '-')}.pdf`);
         this.snackBar.open('✅ Reporte generado exitosamente', 'Cerrar', { duration: 3000 });
       },
       error: () => {
@@ -1017,12 +1008,7 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
 
     this.jasperReportes.generar('crd', 'RPRT_ESCT_APRT', parametros, 'PDF').subscribe({
       next: (blob) => {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `estado-cuenta-aportes-${this.entidadEncontrada?.numeroIdentificacion || this.entidadEncontrada?.codigo}.pdf`;
-        a.click();
-        setTimeout(() => URL.revokeObjectURL(url), 2000);
+        guardarArchivo(blob, `estado-cuenta-aportes-${this.entidadEncontrada?.numeroIdentificacion || this.entidadEncontrada?.codigo}.pdf`);
         this.snackBar.open('✅ Reporte generado exitosamente', 'Cerrar', { duration: 3000 });
       },
       error: () => {

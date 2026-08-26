@@ -17,8 +17,8 @@ import { mensajeDeError } from '../../comunes/mensajes';
 import { ColumnaTabla, TonoPastilla } from '../../comunes/modelo-formulario';
 import { TablaRrhComponent } from '../../comunes/tabla-rrh/tabla-rrh.component';
 import { aniosDisponibles } from '../../parametrizacion/utiles-parametrizacion';
-import { guardarArchivo } from '../descarga-reporte';
 import { opcionesAviso } from '../../comunes/avisos';
+import { guardarArchivo } from '../../../../../shared/services/descarga-reporte';
 
 /**
  * Salidas a los organismos: RDEP y 107 al SRI, planilla al IESS, formularios del MDT.

@@ -21,6 +21,15 @@ import {
   SimulacionPrecancelacion,
 } from '../model/pagos/operaciones-pago';
 import { RespuestaPago } from '../model/pagos/respuesta-pago';
+import {
+  ParametrosAmortizacion,
+  ResultadoSimulacionCreditoNuevo,
+} from '../model/simuladores/simulador-credito-nuevo';
+import {
+  ParametrosReestructuracion,
+  ResultadoSimulacionReestructuracion,
+} from '../model/simuladores/simulador-prestamo-existente';
+import { SolicitudReporteSimulacion } from '../model/simuladores/reporte-simulacion';
 import { ServiciosCrd } from './ws-crd';
 
 /**
@@ -191,6 +200,70 @@ export class OperacionesPagoPrestamoService {
     return this.http
       .post<RespuestaPago<ResultadoAnulacion>>(url, this.limpiar(req), this.httpOptions)
       .pipe(catchError((e: HttpErrorResponse) => of(this.normalizarError(e))));
+  }
+
+  // ===================== Simulador de crédito nuevo (§7 de docs/crd/PLAN-SIMULADORES-PRESTAMOS.md) =====================
+
+  /**
+   * Simula la tabla de amortización de un crédito que todavía NO existe: no recibe un
+   * `idPrestamo` porque no hace falta que el préstamo esté guardado (§4.1/§4.8 y §6 del plan). No
+   * escribe nada en `CRD.PRST` ni en `CRD.DTPR`.
+   *
+   * ⚠️ El backend de este contrato todavía no existe al momento de escribir esta pantalla
+   * (fase 4 del plan, adelantada contra el contrato de la §7). Si la forma real de la respuesta
+   * difiere de `ResultadoSimulacionCreditoNuevo`, hay que ajustar el modelo, no adivinar acá.
+   */
+  simularCreditoNuevo(
+    parametros: ParametrosAmortizacion
+  ): Observable<RespuestaPago<ResultadoSimulacionCreditoNuevo>> {
+    const url = `${ServiciosCrd.RS_PRST}/simularCreditoNuevo`;
+    return this.http
+      .post<RespuestaPago<ResultadoSimulacionCreditoNuevo>>(url, this.limpiar(parametros), this.httpOptions)
+      .pipe(catchError((e: HttpErrorResponse) => of(this.normalizarError(e))));
+  }
+
+  // ===================== Simulador sobre préstamo existente (fase 5 de docs/crd/PLAN-SIMULADORES-PRESTAMOS.md) =====================
+
+  /**
+   * Simula una reestructuración con las cuatro palancas combinables (§4 decisión 2 del plan):
+   * capitalizar mora e interés vencido, cambiar la tasa, ampliar el plazo, y período de gracia.
+   * No escribe nada — es la misma calculadora sembrada con el estado actual del préstamo.
+   *
+   * ⚠️ El backend de este contrato todavía no existe al momento de escribir esta pantalla (fase
+   * 5, adelantada contra el contrato de la §7). La forma de la respuesta es un INFERIDO — ver el
+   * comentario en `ResultadoSimulacionReestructuracion`.
+   */
+  simularReestructuracion(
+    parametros: ParametrosReestructuracion
+  ): Observable<RespuestaPago<ResultadoSimulacionReestructuracion>> {
+    const url = `${ServiciosCrd.RS_PRST}/simularReestructuracion`;
+    return this.http
+      .post<RespuestaPago<ResultadoSimulacionReestructuracion>>(url, this.limpiar(parametros), this.httpOptions)
+      .pipe(catchError((e: HttpErrorResponse) => of(this.normalizarError(e))));
+  }
+
+  // ===================== Reporte PDF de las simulaciones (fase 3 de docs/crd/PLAN-SIMULADORES-PRESTAMOS.md) =====================
+
+  /**
+   * PDF de una simulación (crédito nuevo, abono a capital o reestructuración). A diferencia del
+   * resto de los métodos de este servicio, la respuesta NO viene envuelta en `RespuestaPago`: es
+   * el PDF crudo (`responseType: 'blob'`), igual que `JasperReportesService.generar()`.
+   *
+   * El backend **recalcula** desde `solicitud`, nunca recibe la tabla que se mostró en pantalla:
+   * así el PDF no puede diferir de lo que vio el operador ni ser manipulado desde el cliente
+   * (§7 del plan).
+   *
+   * El error también llega como `Blob` con JSON adentro — leerlo con `mensajeReporteFallido()` de
+   * `shared/services/descarga-reporte.ts`, **nunca ramificar por código HTTP**: un reporte
+   * inexistente responde 500, no 404 (mismo comportamiento que los reportes de nómina).
+   *
+   * ⚠️ Fase 3 del backend en curso al escribir esto, y los 3 `.jasper` todavía no están
+   * compilados (§11.11.4 del plan): llamarlo hoy da 500. Los botones que lo usan quedan
+   * deshabilitados a propósito — ver cada pantalla.
+   */
+  reporteSimulacion(solicitud: SolicitudReporteSimulacion): Observable<Blob> {
+    const url = `${ServiciosCrd.RS_PRST}/simulacion/reporte`;
+    return this.http.post(url, solicitud, { responseType: 'blob' });
   }
 
   // ===================== Cálculo de mora =====================

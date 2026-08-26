@@ -87,6 +87,9 @@ export class ServiciosCrd {
   public static RS_EVPR = `${API_URL}/evpr`; // EventoPrestamo — historial de operaciones de pago
   public static RS_HDTP = `${API_URL}/hdtp`; // HistDetallePrestamo — cuotas historizadas por abono a capital
   public static RS_DVAP = `${API_URL}/dvap`; // DevolucionAporte — devolución de aportes al partícipe
+  public static RS_CBPR = `${API_URL}/cbpr`; // ConfiguracionBandaProducto — bandas de cartera por producto
+  public static RS_BNDP = `${API_URL}/bndp`; // BandaProducto — bandas de una configuración
+  public static RS_CIERRE_CARTERA = `${API_URL}/cierrecartera`; // Cierre mensual de cartera (Fase 2)
 }
 /*
 export class ServiciosCrd {

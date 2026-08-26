@@ -190,7 +190,18 @@ dos meses se anulan.**
   hallazgo, y en particular **el 31 de Calderón NO debe salir**: si sale, se recortó.
 - **Bloque 2**: Calderón no debe aparecer. Los centavos de Manosalvas y Muñoz **desaparecen en
   junio** — el `sql/50` lo dice: es el primer mes que cuadra consigo mismo.
-- **Bloque 3**: sin novedades esperadas.
+- **Bloque 3**: **una fila, la de Muñoz de siempre** — `113,31` nuestro contra `113,30` del cliente,
+  `+0,01`. **No es un hallazgo y no es de junio**: sale idéntica en enero, abril y mayo, y está
+  registrada como esperada en los tres. Es aritmética, no un defecto: `550 × 20,60 %` da `113,30`
+  exacto si se aplica la tasa combinada una vez, y `113,31` si se calcula cada aporte por separado y
+  se redondea cada uno —`51,975 → 51,98` más `61,325 → 61,33`—, que es lo que hace `RedondeoNomina`
+  por regla del módulo. **No toca el líquido**: el aporte personal que se descuenta son los 51,98, y
+  ésos coinciden con el cliente. Sólo vive en el total de la planilla.
+
+  > **⚠ Corregido el 2026-08-25: aquí decía «sin novedades esperadas».** Con esa frase, la fila de
+  > Muñoz —que sale todos los meses— parece un hallazgo de junio, y la instrucción de este guion es
+  > parar ante lo que no esté escrito. **Un esperado incompleto convierte lo normal en alarma**, que
+  > es el mismo daño que un esperado equivocado.
 - **Bloque 1B**: la provisión de FR pasa a **1 persona con la base prorrateada de Viteri**, no los
   183,26 de siempre. **Ese cambio es la señal de que el punto 10 se corrigió.**
 

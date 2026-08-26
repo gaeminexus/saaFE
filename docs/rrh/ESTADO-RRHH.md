@@ -1,6 +1,6 @@
 # Estado del módulo RRHH
 
-**Última actualización:** 2026-08-25 · 🏁 **ENERO A MAYO CERRADOS EN PRODUCCIÓN, LOS CINCO EN DIFERENCIA CERO** · ⏳ **WAR con el 22 y el 10 publicado en local, PENDIENTE de subir a producción** · **junio es el siguiente y tiene guion propio** · julio cierra la carga histórica
+**Última actualización:** 2026-08-25 · 🏁 **CARGA HISTÓRICA DE 2026 COMPLETA: ENERO A JULIO CERRADOS EN PRODUCCIÓN** · cinco meses en diferencia cero, junio y julio en −44,60 y +44,60 anulándose exactos · **lo siguiente es agosto en modo 2, y descongelar las 15 correcciones del motor**
 
 > Este archivo existe para que una sesión nueva de cualquier agente recupere el estado sin
 > depender del historial de conversación. **Actualízalo al terminar cada fase.**
@@ -28,7 +28,181 @@ han corrido todavía**.
 | Marzo | ✅ cerrado y contrastado **en PRODUCCIÓN** | **17 591,12** | **0,00** |
 | Abril | ✅ **CERRADO, REABIERTO Y VUELTO A CERRAR** el 2026-08-24 · `PRDN 41` · 20 colaboradores. Se cerró primero en 16 089,22 con +175,00; **se reabrió por decisión del cliente** para registrar los OTROS de Calderón como concepto **31**, y cerró en cero. Ver [`GUION-REAPERTURA-ABRIL.md`](GUION-REAPERTURA-ABRIL.md) | **15 914,22** | **0,00** |
 | Mayo | ✅ **CERRADO Y CONTRASTADO en PRODUCCIÓN** el 2026-08-23 · `PRDN 42` · 20 colaboradores · contrastado en estado **3**, antes de aprobar | **16 035,21** | **0,00** |
-| Junio · Julio | datos cargados, **sin correr** | — | — |
+| Junio | ✅ **CERRADO Y CONTRASTADO en PRODUCCIÓN** el 2026-08-25 · `PRDN 61` · 20 colaboradores · contrastado en estado **3**, antes de aprobar | **15 772,84** | **−44,60**, atribuidos al céntimo antes de correrlo y **por diseño**: julio los devuelve |
+| Julio | ✅ **CERRADO en PRODUCCIÓN** el 2026-08-25 · `PRDN 62` · 20 colaboradores · contrastado **dos veces**, antes y después del ajuste | **16 328,30** | **+44,60**, espejo exacto del −44,60 de junio |
+
+## 🔒 DECISIÓN DEL CLIENTE — 2026-08-25: ENERO A JULIO NO SE TOCAN
+
+**Steven revisó los datos y la decisión es que no se cambia nada de enero a julio.** El foco pasa a
+agosto y a que el módulo funcione bien de aquí en adelante.
+
+**Qué cierra esta decisión, y llevaba días abierto:**
+
+| Asunto | Queda |
+|---|---|
+| Los **175,00** de OTROS de Calderón en abril | **Como están.** No se reclasifican ni se reversan |
+| Los **44,60** de junio y julio | **Como están.** Se anulan entre sí y el año cierra correcto |
+| El céntimo del fondo de reserva de Muñoz en julio | **Como está** |
+| La composición de las vacaciones de julio, y los 700,10 de Calderón | **Como están.** Eran sólo composición, nunca movieron un líquido |
+| Reabrir cualquier mes cerrado | **Descartado** |
+
+**Y los 13,18 de aportes de julio: RESUELTOS, y por la vía correcta.** Se distinguió a tiempo que
+«no cambiar los datos de julio» **no era lo mismo que** «no cobrar los 13,18»: lo primero es
+registro, lo segundo es dinero que el IESS no recibió. **Se recuperan como novedades de descuento
+de AGOSTO** —decisión del cliente, 2026-08-25—, lo que no modifica julio y por tanto es compatible
+con la decisión de arriba.
+
+> **⚠ El riesgo de esa recuperación no son los importes, son los NOMBRES.** El informe interno del
+> cliente atribuye dos de los tres a quien no corresponde. Los buenos, verificados contra el propio
+> rol de julio: **Caiza Remache 1,52 · NIETO CONDE 2,84 · PARDO CALLE 8,82** — **no** Calderón
+> Parraga ni Cevallos Montenegro, que tienen su aporte correcto. Registrarlas mal cobra de más a dos
+> personas y deja a otras dos debiendo. Está advertido en el punto 4.2 del documento entregado a
+> contabilidad.
+
+**Efecto sobre el plan de correcciones:** bajan de prioridad las que sólo mordían al recalcular un
+mes cerrado — la **14** (el motor lee el sueldo de hoy) y la **6** (`reabrirPeriodo` no avisa) —,
+porque en producción ya no se va a recalcular ningún mes pasado. Las demás no cambian.
+
+> **Lo que esta decisión NO prohíbe: el recálculo de los siete meses EN LOCAL.** No es un cambio de
+> datos, es el banco de pruebas — y es justamente lo que protege a los meses cerrados de que una
+> corrección del motor los estropee. Producción no se toca; local es donde se comprueba que una
+> corrección no mueve lo que no debe. Sin él, cada corrección se subiría a ciegas.
+
+## 📌 DÓNDE ESTÁ TODO AL CERRAR EL 2026-08-25
+
+**La carga histórica terminó y el módulo pasó a manos del cliente.** Esto es lo que hay:
+
+| | |
+|---|---|
+| **Enero a julio** | Cerrados en producción, `PRDN` 1 · 2 · 21 · 41 · 42 · 61 · 62, los siete en estado **7** y modo **1**. Cabecera y detalle cuadran en los siete |
+| **Agosto** | ✅ **Creado — `PRDN 81`, estado 1, MODO 2 · PRODUCTIVO**, del 01-08 al 31-08, fecha contable 31-08, totales en cero. Creado con [`sql/67`](sql/67_CREA_PERIODO_AGOSTO.sql) por script y no por pantalla, para que el modo no quedara nulo |
+| **Configuración contable** | ✅ Verificada con [`sql/66`](sql/66_PREVIA_AGOSTO_CONTABILIZACION.sql): `CFNM` completa, tres plantillas activas con sus 32 líneas, todas las cuentas existen, ninguna línea con la marcadora |
+| **Andamio del contraste** | Retirado de producción con [`sql/68`](sql/68_RETIRA_ANDAMIO_CONTRASTE_PRODUCCION.sql), con respaldo en `RHH.CTRL_RESPALDO_20260825`. **En LOCAL no se toca**: es el banco de regresión de las correcciones |
+| **Quién opera agosto** | **El cliente.** Registra novedades, calcula, aprueba, contabiliza y cierra |
+| **Documento entregado** | `Entrega-Nomina-2026-ASOPREP.docx`, seis páginas, dirigido a contabilidad |
+| **Las 15 correcciones** | 🔧 **DESCONGELADAS el 2026-08-25.** Orden en [`PLAN-CORRECCIONES-MOTOR.md`](PLAN-CORRECCIONES-MOTOR.md): **fase 1 = 16 · 12 · 19 · 20** |
+| **Corrección 16** | ✅ **Escrita y desplegada a producción el 2026-08-25**, dentro del WAR que habilita a Steven. `PeriodoNominaServiceImpl.saveSingle` ya valida año/mes, fechas dentro del mes declarado, inicio ≤ fin, modo, tipo, empresa y duplicado por **(empresa, año, mes, tipo)** |
+| **Corrección 12** | 📋 Encargo escrito y **en cola**. No arranca hasta que la 16 se verifique en local |
+
+> **⚠ La 16 subió a producción SIN la verificación en local que el plan exige.** Decisión del
+> 2026-08-25: agosto no podía esperar. **Lo que sí se verificó antes de subir, y era el riesgo
+> real:** que la pantalla de períodos de saaFE envía los seis campos que la validación nueva exige
+> —`periodos-nomina.component.ts:172-177`: `empresa`, `tipoPeriodo`, `modo`, más año, mes y
+> fechas— y que **los ocho períodos existentes pasan la validación**, los siete históricos y agosto.
+> Así que no puede bloquear ni a Steven ni a ningún registro que ya exista.
+>
+> **Queda pendiente en local**, y conviene hacerlo aunque ya esté arriba:
+> [`prueba-validacion-periodo.ps1`](prueba-validacion-periodo.ps1) —los ocho casos más el válido—
+> y el recálculo de los siete meses. **Ese recálculo no prueba la 16** —no toca `calcularPeriodo`,
+> así que el cero movimiento es por construcción— **prueba el banco de pruebas**, y es la única
+> corrección de las quince en la que sabemos de antemano que el resultado tiene que ser idéntico.
+> Si el banco enseña movimiento ahí, el roto es el banco.
+
+> **Por qué esperar a agosto es seguro, y no sólo cómodo.** Las dos correcciones de la fase 1 que el
+> cliente podía alcanzar **no le llegan en agosto**: la **16** —validación del rango del período— no
+> le toca porque **agosto ya se lo creamos por script**, y sólo la alcanzaría al crear septiembre; y
+> la **12** —la cuota de `CTDS` que no se marca— sólo muerde **cuando los préstamos del IESS pasen
+> de `NVNM` a `DSRC`/`CTDS`**, y en agosto seguirán registrándose como novedades, igual que los
+> siete meses anteriores. **Septiembre sí las alcanza las dos.**
+
+## 🏁 LA CARGA HISTÓRICA DE 2026 ESTÁ COMPLETA — 2026-08-25
+
+**Siete meses cerrados y contrastados en producción.** Cinco en diferencia cero; junio y julio en
+**−44,60 y +44,60**, que **se anulan exactos** y dejan el año correcto.
+
+| | `ACMN` del mes | |
+|---|---:|---|
+| Enero · Febrero | 132 | 22 colaboradores |
+| Marzo a Julio | 120 | 20 colaboradores |
+| Sin período | 12 | apertura y finiquitos |
+| **Total 2026** | **876** | |
+
+**Las siete provisiones de fondo de reserva cuentan la historia del punto 10 en una sola columna:**
+
+| Mes | Base | Valor | |
+|---|---:|---:|---|
+| Enero a mayo | 2 200,00 | 183,26 | provisionaba **sin derecho** — el defecto |
+| **Junio** | **366,67** | **30,54** | prorrateo desde el aniversario — la corrección |
+| **Julio** | 2 200,00 | 183,26 | mes completo, ya con derecho |
+
+**Y la comprobación que cierra el círculo:** el `ACMN` tipo 8 de julio guarda **44,03 · 82,21 ·
+57,33** —lo que se descontó— y no los 45,55 · 85,05 · 66,15 que calculó el motor. El ajuste por
+datos llegó hasta el acumulado del año, que es lo que se reconcilia contra el IESS.
+
+### La lección de julio, que costó dos scripts
+
+**`NMNA` guarda totalizadores propios además de los renglones, y `cerrarPeriodo` escribe los `ACMN`
+desde ELLOS, no desde `RNGL`.** El [`sql/64`](sql/64_AJUSTE_JULIO.sql) actualizó `NMNATING`,
+`NMNATDSC` y `NMNANETO` y se dejó **`NMNAAPPR`** y **`NMNAFNRS`**. El total del período salía
+correcto —**+44,60 exacto**— y el acumulado habría quedado con los valores del motor.
+
+**Lo destapó el bloque 3 del segundo contraste**, que lee `NMNAAPPR` y seguía enseñando a Nieto con
+85,05. Lo arregló el [`sql/65`](sql/65_AJUSTE_JULIO_TOTALIZADORES_NMNA.sql).
+
+> **Regla para cualquier ajuste por datos futuro:** tocar un renglón obliga a tocar **tres capas**,
+> no dos — `RNGL` → los totalizadores de `NMNA` (`NMNATING`/`NMNATDSC`/`NMNANETO` **y**
+> `NMNAAPPR`/`NMNAFNRS`/`NMNABSIE`/… según lo que se toque) → la cabecera de `PRDN`. Y **el total
+> del período no lo delata**: es exactamente el «un total puede cuadrar con dos errores que se
+> compensan» aplicado al propio script de ajuste.
+
+### 🔧 JULIO — PRIMER CONTRASTE Y AJUSTE, 2026-08-25
+
+**Primer contraste (prueba el motor): `+31,43`, y el bloque 1 trajo las 17 filas al concepto** —
+3 sueldo · 2 fondo de reserva · 3 vacaciones · 3 aporte · 1 anticipo · 5 otros descuentos—,
+idénticas a la derivación hecha **antes de que julio existiera**. Detector del motor en verde:
+Rodríguez Valencia en **27,21**, no 58,31. `1B` con **una** persona y **183,26** sobre base 2 200.
+
+> **El bloque 3 no salió vacío: salió con 20 filas `CON NOMINA Y SIN PLANILLA`.** Julio no tiene
+> planilla del IESS cargada, así que el bloque está **apagado** — pero el instrumento **dice por
+> qué** en vez de callárselo, que es lo que impide leer una ausencia como un cuadre.
+
+**Ajuste aplicado con [`sql/64`](sql/64_AJUSTE_JULIO.sql):**
+
+| | antes | después |
+|---|---:|---:|
+| Ingresos | 21 298,96 | **21 298,95** |
+| Descuentos | 4 983,83 | **4 970,65** |
+| Neto | 16 315,13 | **16 328,30** |
+
+Cuatro renglones —`RNGL` **1255**, **1312**, **1314**, **1320**— y sus cuatro nóminas y la cabecera.
+**Control 3B vacío y 3C en `0 · 0 · 0`**: cabecera y detalle no divergieron en ninguna de las veinte
+nóminas. `16 328,30 − 16 283,70 = **+44,60**`.
+
+> **El céntimo de Muñoz, confirmado por el propio rol del cliente:** sus ingresos antes del ajuste
+> eran **595,82** = `550 + 45,82`, que es **el total que su rol imprime**, mientras su línea de
+> fondo de reserva dice 45,81. Nuestro motor coincidía con su total, no con su línea. El dato ahora
+> guarda lo que se pagó y la explicación queda escrita.
+
+### ✅ PREVIA DE JULIO — `sql/62` corrido en producción el 2026-08-25
+
+| Bloque | Resultado |
+|---|---|
+| **1 · Rodríguez Valencia** | ingreso **16-07-2025** · aniversario 16-07-2026 · **`DIAS_MOTOR` 14** · modalidad 1 · sueldo 700 · `ACTIVO`. Sus **27,21** se sostienen |
+| **2 · barrido de julio 2025** | **una sola persona**, él. **No hay séptimo fondo de reserva** |
+| **3 · el filtro del motor** | **20** colaboradores, los mismos de junio |
+| **4 · ausencias no remuneradas** | ✅ **vacío**. `diasTrabajados` = 30 para todos, que es lo que hace que el sueldo entero cuadre con «sueldo por días + vacaciones» del cliente |
+| **5 · los seis contratos** | `CNTEFCHF` y `CNTEFCTR` **nulas** en los seis · `CNTETPRL` = **1** en los seis · sueldos 700 / 550 / 900 / 700 / 700 / 2 200 · Viteri la única en modalidad **2** |
+
+### ⚖️ JULIO LLEVA AJUSTE POR DATOS, Y ES EL PRIMERO QUE LO LLEVA ASÍ
+
+**Decisión de Mike, 2026-08-25, reafirmando la regla:** se prueba que el motor calcula según la
+norma **y después se llevan los datos a lo que se pagó**. Julio no se cierra con la diferencia
+atribuida y ya: se ajusta.
+
+Ver [`AJUSTE-JULIO-2026.md`](AJUSTE-JULIO-2026.md). **Dos contrastes, no uno**: el de antes prueba
+el motor, el de después prueba los datos.
+
+- **Se ajusta** lo que cambia lo que la persona recibió: los aportes de Caiza, Nieto y Pardo
+  (**13,18**, y van a `ACMN` tipo 8) y el céntimo del fondo de reserva de Muñoz.
+- **No se toca** lo que sólo cambia la composición: los 183,26 de Viteri cobrados y retenidos, las
+  vacaciones, y los 700,10 de Calderón. Mismo líquido por los dos caminos.
+- **Los 44,60 quedan fuera de los dos meses.** Fidelidad **por el par junio+julio**, no mes a mes:
+  junio en −44,60 y julio en +44,60, anulándose exactos. **Coste aceptado:** ninguno de los dos
+  meses coincide por separado con su rol pagado; el par sí, y el año también. La alternativa era
+  reabrir junio y se descartó.
+
+**Comprobación que se verifica sola: tras el ajuste julio queda en +44,60 exacto.** Ni 31,43 ni
+cero. Si da otra cosa, el ajuste está mal y se deshace con los valores del control de antes.
 
 > El neto de enero es **16 476,92**, no el 16 501,34 que dice más abajo la sección histórica:
 > aquel valor es anterior a las correcciones de décimos y vacaciones y al prorrateo de días.
@@ -211,6 +385,91 @@ esa comparación tiene algo real que comparar. Con los dos en 8,33 —medido— 
 > **237,49**— y Viteri **no** genera provisión prorrateada. Con el WAR **nuevo** cobran **37,63**
 > entre los cuatro. **No hay forma de confundir 237,49 con 37,63**, así que el contraste de junio
 > hace de `javap` sin coste. Está escrito en el prompt de arranque como condición de parada.
+>
+> **✅ RESUELTO el 2026-08-25: el EAR de producción lleva el motor corregido.** Junio calculó
+> **7,77 · 7,64 · 12,50 · 9,72**, los cuatro exactos, y Viteri con provisión prorrateada de base
+> **366,67** y valor **30,54**, única persona con esa provisión. El `javap` que no se pudo correr
+> queda sustituido por una medición mejor: no dice que el bytecode contiene un método, dice que el
+> motor **produjo el número correcto**.
+
+### 🟢 JUNIO CALCULADO — `PRDN 61`, estado 3, 2026-08-25
+
+**Primer mes que no cierra en cero por diseño, y salió clavado en lo que el guion atribuyó antes de
+correrlo.**
+
+| | Nuestro | Del cliente | Diferencia |
+|---|---:|---:|---:|
+| Ingresos | **21 071,97** | 21 116,57 | −44,60 |
+| Descuentos | **5 299,13** | 5 299,13 | **0,00** |
+| **Líquido** | **15 772,84** | 15 817,44 | **−44,60** |
+
+Los tres importes **exactos**, no aproximados —el guion los daba con `~` y no hacía falta—. Fondo de
+reserva de los cuatro mensualizados en 37,63, Viteri en `PVNM` con 366,67 / 30,54, Calderón en neto
+**0,00 exacto** sin que `recortaDescuentos` tuviera que tocar nada, y las once novedades las once en
+`aprobada = 'S'`.
+
+### ✅ JUNIO CONTRASTADO — 2026-08-25, en estado 3, antes de aprobar
+
+`CTRL_PARAM` movido a **6** con el [`sql/61`](sql/61_CONTRASTAR_JUNIO.sql) y comprobado.
+
+| Bloque | Esperado | Salió |
+|---|---|---|
+| **4** | `PERIODO_LEIDO` 2026-06 · 20/20 | ✔ `2026-06` · 142 filas · **20 / 20** · **121 renglones** · estado **3**. Los 121 son los **114 de mayo + 4** renglones de fondo de reserva **+ 3** novedades más: junio tiene once y mayo ocho |
+| **1** | cinco filas y sólo ésas | ✔ **exactamente cinco**, y suman **−44,60** al céntimo: Viteri −36,67 `EL SISTEMA NO LO GENERO` · Nieto −2,50 · **Bárcenas −1,95** · Pardo −1,95 · Muñoz −1,53. **El 31 de Calderón NO sale** → no hubo recorte |
+| **1B** | FR pasa a 1 persona con base prorrateada | ✔ **`Provision fondos de reserva · 1 · 30,54`**, contra los 183,26 de los cinco meses anteriores. **Ésta es la señal de que el punto 10 se corrigió.** Patronales y demás provisiones idénticas a abril y mayo: 2 292,44 · 102,80 · 102,80 · 1 359,49 · 682,89 · 856,68. Descuadre patronal **vacío** |
+| **2** | Calderón fuera, centavos idos | ✔ **diez filas**, las cinco personas del FR por `INGRESOS` y `LIQUIDO`. Calderón y Robayo ausentes; **los centavos de Manosalvas y Muñoz desaparecen**, como anunciaba el `sql/50`. Ninguna fila de `DESCUENTOS`: cuadran exactos |
+| **3** | 1 fila, la de Muñoz de siempre | ✔ **1 fila**, 113,31 vs 113,30 |
+
+**La descomposición coincide persona por persona con la aritmética calculada el 2026-08-25 antes de
+que junio existiera**, Bárcenas en **1,95** incluida — que era el dígito corregido esa misma mañana.
+El esperado no se confirmó por el total: se confirmó fila a fila.
+
+### 🏁 JUNIO CERRADO — `PRDN 61` en estado 7, 2026-08-25
+
+Aprobar **no lanzó `IncomeException`**: los porcentajes coincidían, como estaba medido. `PRDNOBSR` en
+`Calculado sin contabilizacion (carga historica).` carácter por carácter, los **tres asientos en
+nulo**, y **«Contabilizar provisiones» sin pulsar**. Todo verificado por REST, nada por pantalla.
+
+**Las seis provisiones de FR, que es la comprobación que importa:** enero a mayo **intactas** en
+183,26 sobre base 2 200, y junio con **30,54 sobre base 366,67**. Ningún mes cerrado se recalculó.
+
+**Los `ACMN`: 120 en junio, y es correcto.** Enero y febrero dan 132 porque tenían 22 colaboradores;
+marzo a junio, 120. **El fondo de reserva no añade ninguna fila, y eso no es un olvido:**
+`cerrarPeriodo` hace ocho llamadas a `escribeAcumulado` por persona, de las cuales **seis escriben y
+dos no**, todos los meses por igual —`escribeAcumulado` sale sin escribir cuando valor y días son
+cero—:
+
+| Se escriben (6) | No se escriben, y por qué |
+|---|---|
+| `IMPONIBLE_IESS` · `GRAVADO_IR` · `BASE_DECIMO_TERCERO` · **`BASE_FONDOS_DE_RESERVA`** · `APORTE_PERSONAL` · `DIAS_TRABAJADOS` | `BASE_DECIMO_CUARTO`: el concepto de Sueldo tiene `BSDC = 'N'`, así que esa base es cero para todos. `RETENCION_IR`: este empleador no retiene |
+
+**`BASE_FONDOS_DE_RESERVA` ya se escribía desde enero**, porque es la base `APFR` —el sueldo—, no el
+derecho al fondo. Por eso junio no cambia el conteo: 6 × 20 = **120**.
+
+**Cierre verificado con el `sql/58` reescrito:** seis meses en `INTACTO` —enero a mayo en 183,26 y
+junio en 30,54—, bloque 1 BIS **vacío**, los seis períodos en estado **7** y `CTRL_PARAM` en
+**2026 · 6**.
+
+> **⚠ `PRDNOBSR` NO es igual en los seis meses, y está bien así. NO LO «CORRIJAS».**
+> Enero (`PRDN 1`) y marzo (`PRDN 21`) dicen
+> `Cerrado con 2 novedad(es) del IESS sin declarar (periodo historico, plazo vencido).`
+> en vez del texto de la carga histórica. **Lo escribe el motor al cerrar y sobrescribe a propósito**
+> lo que hubiera —`ProcesoNominaServiceImpl:733`, con el comentario *«un cierre que ignora algo en
+> silencio es lo que la regla venía a evitar»*—. Son justamente los dos meses con salidas: enero con
+> Torres y Benítez, marzo con Castro Arce y Cevallos Alemán, **2 + 2 = las 4 `NVIS`** que el ESTADO
+> registra como prueba de los 208,22 declarados de más. **Reescribir esas dos observaciones para que
+> «cuadren» con las otras cuatro sería borrar la evidencia.** Y la instrucción de los guiones —
+> `PRDNOBSR` en `Calculado sin contabilizacion (carga historica).`— sólo aplica a los meses **sin**
+> `NVIS` pendientes.
+
+> **El clic por coordenadas no es fiable en las sesiones con navegador, y NO es un defecto de la
+> aplicación.** La réplica aterrizó dos veces en marzo (`PRDN 21`) al pulsar la fila de junio
+> (`PRDN 61`), y lo resolvió pulsando por DOM sobre el `<tr>`. La causa es el desajuste de escala
+> entre la captura (1568×753) y el viewport real (2899×1393): las coordenadas se calculan sobre una
+> imagen reducida a la mitad. **Hizo bien en no darlo de alta como defecto numerado.** Queda como
+> regla de operación: **en estas sesiones se pulsa por DOM, no por coordenadas**, y se verifica el
+> destino por la URL resultante. Aterrizar en un período equivocado y no notarlo es exactamente la
+> familia de fallos del `CTRL_PARAM` atrasado.
 
 ### ⚖️ LA REGLA QUE GOBIERNA TODO LO DEMÁS — fijada el 2026-08-24
 
@@ -1606,7 +1865,9 @@ puntos. Esto la reconstruye.
 | **21** | **La liquidación no deja constancia de que la salida se ejecutó.** `LQDCESTD` colapsa **tres hitos distintos en el mismo 3**: aprobada, salida ejecutada y contabilizada. Ni `ejecutarSalida` ni `contabilizarLiquidacion` mueven el estado | `LiquidacionHaberesServiceImpl:219` · `RhhEstadoLiquidacion` | **Nuevo del 2026-08-23.** Es el 20 por su otro lado, y **tiene precedente en casa**: `contabilizarLiquidacion` sí se protege de la doble ejecución, pero con `getAsiento() != null`, no con el estado — ésa es la forma que le falta a `ejecutarSalida`. Coste ya pagado: una casilla del registro de réplica rellenada con «estado 4» leyendo un vocabulario que no existe. Los estados **4 `REGISTRADA_EN_SUT`, 5 `PAGADA` y 6 `ANULADA` están declarados y no los escribe nadie**: `setEstado` sobre `Liquidacion` aparece **dos veces** en todo el proyecto, CALCULADA y APROBADA. **No es de la familia de 16/17/18** —no hay valor tragado en silencio— sino un campo que no responde la pregunta que se le hace |
 | **22** | **La rama MENSUALIZADO de fondos de reserva paga el MES COMPLETO el primer mes, sin prorratear desde el aniversario.** Y la rama ACUMULADO ni siquiera comprueba el aniversario, que es el **punto 10**: **son la misma cuenta escrita dos veces en el mismo bloque de veinte líneas, y se arreglan JUNTOS** | paso 8 de `calcularPeriodo` | **DESCONGELADO el 2026-08-24, el único de los 17.** No para que junio cuadre, sino porque **la norma lo dice**: el fondo de reserva se devenga desde el aniversario y nace *«a partir del mes 13»*. **La fórmula es `30 − d`, NO `30 − d + 1`** — fijada contra la planilla real del IESS de Viteri: ingresó el **25-06-2025** y el IESS le da **5 días** con base 366,67, o sea del **26** al 30. El mes 12 se completa **el día** del aniversario, así que el fondo empieza al siguiente. **No reutilizar `calculaDiasTrabajados`**: allí el día de ingreso sí se trabaja, y son dos convenciones parecidas para cosas distintas. **Enero a mayo NO se recalculan.** La prueba es falsable: junio debe salir **44,60 por debajo** del cliente —**7,93** de los cuatro días de más al 8,33 %, más **36,67** del fondo de Viteri— y los D:OTROS de julio suman **44,60**: **los dos meses se anulan EXACTOS**. El 44,59 que se calculó primero salía del doceavo y era el número equivocado |
 
-**Son 17 pendientes, no 11** —el 21 nació el 2026-08-23 y el 22 el 2026-08-24—. Cualquier documento que diga «las 11 correcciones», «las 15» o «las 16» está desactualizado.
+| **23** | **La aprobación de una novedad no deja autor ni momento.** El modelo tiene `NVNMUSAP` —usuario que aprueba— y `NVNMFCAP` —fecha de aprobación— **desde el principio, y NADIE LOS ESCRIBE JAMÁS**: `setUsuarioAprueba` y `setFechaAprobacion` sólo aparecen en la propia entidad. Aprobar es editar `NVNMAPRB` en el mismo formulario de captura, como cualquier otro campo | `NovedadNominaService` · pantalla de Novedades | **Nuevo del 2026-08-25**, abierto por decisión expresa de Mike. Lo levantó él preguntando *«¿no deberían ser dos pantallas, la de ingreso y la de aprobación?»*, y el agente de frontend llegó a la misma frontera por el otro lado al diseñar la captura rápida. **No es un hueco de pantalla: es de control interno.** Hoy un descuento aplicado al sueldo de alguien no puede responder «quién lo autorizó y cuándo», y quien captura es quien aprueba, en el mismo acto. Para un módulo que **se comercializa** eso viaja al siguiente cliente. **Y es de la familia del 16/17/18**: un valor que cambia sin dejar rastro. El arreglo tiene tres partes y la segunda es la que se olvida — (a) una operación `aprobar(ids, usuario)` que escriba los tres campos a la vez, (b) que `saveSingle` **no deje cambiar `NVNMAPRB` por la puerta de atrás** sin mover los otros dos, o el hueco se reabre solo, y (c) el permiso separado de la captura |
+
+**Son 16 pendientes, no 11** —el 21 nació el 2026-08-23, el 22 el 2026-08-24 y el 23 el 2026-08-25; y el 16 se cerró el 2026-08-25—. Cualquier documento que diga «las 11 correcciones», «las 15» o «las 17» está desactualizado.
 
 **Tres de los pendientes —16, 17 y 18— son la misma familia**, y merece verse junta: **un valor que
 el motor traga sin protestar y cuyo daño aparece meses después, lejos de su causa.** Un rango de

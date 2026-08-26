@@ -12,6 +12,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
+import { guardarArchivo } from '../../../../../shared/services/descarga-reporte';
 import { DetalleRubroService } from '../../../../../shared/services/detalle-rubro.service';
 import { ExportService } from '../../../../../shared/services/export.service';
 import { CuentaBancaria } from '../../../../tsr/model/cuenta-bancaria';
@@ -28,7 +29,6 @@ import {
   criteriosPorEmpresa,
   filtrarPorAnio,
 } from '../../parametrizacion/utiles-parametrizacion';
-import { guardarArchivo } from '../descarga-reporte';
 import { aValorDeInput } from '../../asistencia/utiles-asistencia';
 import { opcionesAviso } from '../../comunes/avisos';
 

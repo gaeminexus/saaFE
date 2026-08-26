@@ -1,0 +1,490 @@
+<div class="simp-container">
+
+  <div class="search-header">
+    <div class="header-title">
+      <mat-icon class="header-icon">calculate</mat-icon>
+      <h1>Simulador sobre Préstamo Existente</h1>
+    </div>
+    <div class="search-box">
+      <mat-form-field appearance="fill" class="search-field">
+        <mat-label>Número de identificación</mat-label>
+        <input matInput [(ngModel)]="criterioIdentificacion" (keyup.enter)="buscar()" />
+      </mat-form-field>
+      <mat-form-field appearance="fill" class="search-field">
+        <mat-label>Rol Petrocomercial</mat-label>
+        <input matInput [(ngModel)]="criterioRolPetro" (keyup.enter)="buscar()" />
+      </mat-form-field>
+      <mat-form-field appearance="fill" class="search-field">
+        <mat-label>ID Préstamo ASOPREP</mat-label>
+        <input matInput [(ngModel)]="criterioIdPrestamoAsoprep" (keyup.enter)="buscar()" />
+      </mat-form-field>
+      <mat-form-field appearance="fill" class="search-field">
+        <mat-label>Nombre</mat-label>
+        <input matInput [(ngModel)]="criterioNombre" (keyup.enter)="buscar()" />
+      </mat-form-field>
+      <button mat-raised-button color="primary" class="search-button" (click)="buscar()" [disabled]="buscando()">
+        @if (buscando()) {
+          <mat-spinner diameter="20"></mat-spinner>
+        } @else {
+          <ng-container><mat-icon>search</mat-icon> Buscar</ng-container>
+        }
+      </button>
+    </div>
+  </div>
+
+  @if (mostrandoResultados()) {
+    <mat-card class="resultados-card">
+      <mat-card-header>
+        <mat-card-title>Resultados de búsqueda</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        @if (resultados().length === 0) {
+          <p class="texto-vacio">No se encontraron coincidencias.</p>
+        } @else {
+          <table mat-table [dataSource]="resultados()" class="tabla-resultados">
+            <ng-container matColumnDef="nombre">
+              <th mat-header-cell *matHeaderCellDef>Nombre</th>
+              <td mat-cell *matCellDef="let e">{{ e.razonSocial }}</td>
+            </ng-container>
+            <ng-container matColumnDef="ci">
+              <th mat-header-cell *matHeaderCellDef>C.I.</th>
+              <td mat-cell *matCellDef="let e">{{ e.numeroIdentificacion }}</td>
+            </ng-container>
+            <ng-container matColumnDef="rolPetro">
+              <th mat-header-cell *matHeaderCellDef>Rol Petrocomercial</th>
+              <td mat-cell *matCellDef="let e">{{ e.rolPetroComercial }}</td>
+            </ng-container>
+            <tr mat-header-row *matHeaderRowDef="['nombre', 'ci', 'rolPetro']"></tr>
+            <tr mat-row *matRowDef="let row; columns: ['nombre', 'ci', 'rolPetro'];" class="fila-clicable" (click)="seleccionarEntidad(row)"></tr>
+          </table>
+        }
+      </mat-card-content>
+    </mat-card>
+  }
+
+  @if (entidadSeleccionada(); as entidad) {
+    <div class="participante-section">
+
+      <mat-card class="entidad-card">
+        <mat-card-header>
+          <mat-icon mat-card-avatar class="avatar-icon">account_circle</mat-icon>
+          <mat-card-title>{{ entidad.razonSocial }}</mat-card-title>
+          <mat-card-subtitle>C.I. {{ entidad.numeroIdentificacion }} &middot; Rol Petrocomercial {{ entidad.rolPetroComercial }}</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <button mat-stroked-button (click)="volverABuscar()">
+            <mat-icon>search</mat-icon> Buscar otra persona
+          </button>
+        </mat-card-content>
+      </mat-card>
+
+      @if (cargandoPrestamos()) {
+        <div class="loading-spinner-container"><mat-spinner diameter="40" color="primary"></mat-spinner></div>
+      } @else if (!prestamosOperables().length) {
+        <mat-card class="vacio-card">
+          <mat-card-content class="vacio-body">
+            <mat-icon>info</mat-icon>
+            <p>Este partícipe no tiene préstamos que admitan simulación.</p>
+          </mat-card-content>
+        </mat-card>
+      } @else {
+
+        @if (prestamosOperables().length > 1) {
+          <div class="selector-prestamos">
+            <span class="sp-label">Este partícipe tiene {{ prestamosOperables().length }} créditos activos:</span>
+            @for (p of prestamosOperables(); track p.codigo) {
+              <button type="button" class="sp-chip" [class.activo]="prestamoSeleccionado()?.codigo === p.codigo"
+                      (click)="seleccionarPrestamo(p)">
+                #{{ p.idAsoprep }} · {{ formatMoneda(p.saldoCapital) }}
+              </button>
+            }
+          </div>
+        }
+
+        @if (prestamoSeleccionado(); as prestamo) {
+
+          <mat-card class="prestamo-card">
+            <mat-card-header>
+              <mat-card-title>Préstamo #{{ prestamo.idAsoprep }} &middot; {{ estadoPrestamoTexto(prestamo) }}</mat-card-title>
+            </mat-card-header>
+            <mat-card-content>
+              <div class="datos-grid">
+                <div class="dato">
+                  <span class="l">Saldo de capital</span>
+                  <span class="v">{{ formatMoneda(prestamo.saldoCapital) }}</span>
+                </div>
+                <div class="dato">
+                  <span class="l">Saldo total</span>
+                  <span class="v">{{ formatMoneda(prestamo.saldoTotal) }}</span>
+                </div>
+                <div class="dato">
+                  <span class="l">Plazo</span>
+                  <span class="v">{{ prestamo.plazo }} cuotas</span>
+                </div>
+                <div class="dato">
+                  <span class="l">Tasa anual</span>
+                  <span class="v">{{ prestamo.tasa }}%</span>
+                </div>
+                <div class="dato">
+                  <span class="l">Cuota actual</span>
+                  <span class="v">{{ formatMoneda(prestamo.valorCuota) }}</span>
+                </div>
+              </div>
+            </mat-card-content>
+          </mat-card>
+
+          <!-- Cartel de simulación, siempre visible, no solo en el PDF. -->
+          <div class="aviso simulacion">
+            <mat-icon>info</mat-icon>
+            <span>
+              Esta es una <b>simulación referencial</b>, sin valor contractual. No constituye una
+              aprobación de crédito ni compromete al fondo ni al socio.
+            </span>
+          </div>
+
+          <div class="tabs-header">
+            <button type="button" class="tab-btn" [class.activo]="pestana() === 'abono'" (click)="cambiarPestana('abono')">
+              <mat-icon>trending_down</mat-icon> Abono a capital
+            </button>
+            <button type="button" class="tab-btn" [class.activo]="pestana() === 'reestructuracion'" (click)="cambiarPestana('reestructuracion')">
+              <mat-icon>rule_settings</mat-icon> Reestructuración
+            </button>
+          </div>
+
+          <!-- ==================== Pestaña: abono a capital ==================== -->
+          @if (pestana() === 'abono') {
+            <mat-card class="tab-card">
+              <mat-card-content>
+
+                <div class="campos-grid">
+                  <mat-form-field appearance="outline">
+                    <mat-label>Valor del abono</mat-label>
+                    <span matTextPrefix>$&nbsp;</span>
+                    <input matInput inputmode="decimal" [(ngModel)]="montoAbonoTexto" (blur)="onValorAbonoBlur()" placeholder="0.00" />
+                  </mat-form-field>
+                </div>
+
+                <div class="seccion-label">¿Qué se recalcula con el abono?</div>
+                <mat-radio-group class="modalidades"
+                                 [ngModel]="modalidadAbono()" (ngModelChange)="modalidadAbono.set($event)">
+                  <mat-radio-button [value]="ModalidadAbono.REDUCIR_PLAZO">
+                    <div class="modalidad-titulo">Terminar antes</div>
+                    <div class="modalidad-desc">Mantiene la cuota, reduce el plazo.</div>
+                  </mat-radio-button>
+                  <mat-radio-button [value]="ModalidadAbono.REDUCIR_CUOTA">
+                    <div class="modalidad-titulo">Pagar menos por mes</div>
+                    <div class="modalidad-desc">Mantiene el plazo, reduce la cuota.</div>
+                  </mat-radio-button>
+                </mat-radio-group>
+
+                @if (errorAbono(); as error) {
+                  <div class="aviso error">
+                    <mat-icon>error_outline</mat-icon>
+                    <span>{{ error }}</span>
+                  </div>
+                }
+
+                @if (errorPdfAbono(); as error) {
+                  <div class="aviso error">
+                    <mat-icon>error_outline</mat-icon>
+                    <span>{{ error }}</span>
+                  </div>
+                }
+
+                <div class="acciones">
+                  <button
+                    mat-stroked-button
+                    [disabled]="!exportarPdfHabilitado || !resultadoAbono() || exportandoPdfAbono()"
+                    matTooltip="Exportar la simulación del abono en PDF"
+                    (click)="exportarPdfAbono()">
+                    @if (exportandoPdfAbono()) {
+                      <mat-spinner diameter="18"></mat-spinner>
+                    } @else {
+                      <mat-icon>picture_as_pdf</mat-icon>
+                    }
+                    Exportar PDF
+                  </button>
+                  <button mat-raised-button color="primary" [disabled]="!puedeSimularAbono" (click)="simularAbono()">
+                    @if (simulandoAbono()) {
+                      <mat-spinner diameter="20"></mat-spinner>
+                    } @else {
+                      <ng-container><mat-icon>calculate</mat-icon> Simular abono</ng-container>
+                    }
+                  </button>
+                </div>
+
+                @if (resultadoAbono(); as sim) {
+                  <div class="comparativa-grid">
+                    <div class="cp-item">
+                      <span class="l">Plazo</span>
+                      <span class="v"><span class="antes">{{ sim.plazoActual }}</span> <mat-icon>arrow_forward</mat-icon> <span class="despues">{{ sim.plazoNuevo }}</span></span>
+                    </div>
+                    <div class="cp-item">
+                      <span class="l">Valor de cuota</span>
+                      <span class="v"><span class="antes">{{ formatMoneda(sim.cuotaActual) }}</span> <mat-icon>arrow_forward</mat-icon> <span class="despues">{{ formatMoneda(sim.cuotaNueva) }}</span></span>
+                    </div>
+                    <div class="cp-item destacado">
+                      <span class="l">Ahorro en intereses</span>
+                      <span class="v">{{ formatMoneda(sim.ahorroIntereses) }}</span>
+                    </div>
+                  </div>
+
+                  <div class="section-label">
+                    Tabla de amortización proyectada
+                    <span class="count">({{ sim.tablaProyectada.length }} cuotas)</span>
+                  </div>
+
+                  <div class="tabla-scroll">
+                    <table class="tabla-amortizacion">
+                      <thead>
+                        <tr>
+                          <th>N°</th><th>Vencimiento</th>
+                          <th class="num">Capital</th><th class="num">Interés</th>
+                          <th class="num">Cuota</th><th class="num">Total cuota</th><th class="num">Saldo capital</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (c of sim.tablaProyectada; track c.numeroCuota) {
+                          <tr>
+                            <td>{{ c.numeroCuota }}</td>
+                            <td>{{ formatFecha(c.fechaVencimiento) }}</td>
+                            <td class="num">{{ formatMoneda(c.capital) }}</td>
+                            <td class="num">{{ formatMoneda(c.interes) }}</td>
+                            <td class="num">{{ formatMoneda(c.cuota) }}</td>
+                            <td class="num"><b>{{ formatMoneda(c.total ?? c.cuota) }}</b></td>
+                            <td class="num">{{ formatMoneda(c.saldoCapital) }}</td>
+                          </tr>
+                        }
+                        @empty {
+                          <tr><td colspan="7" class="vacio">La simulación no devolvió cuotas proyectadas.</td></tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div class="aviso simulacion pie">
+                    <mat-icon>info</mat-icon>
+                    <span>Simulación referencial, sin valor contractual. No constituye aprobación de crédito.</span>
+                  </div>
+                }
+
+              </mat-card-content>
+            </mat-card>
+          }
+
+          <!-- ==================== Pestaña: reestructuración ==================== -->
+          @if (pestana() === 'reestructuracion') {
+            <mat-card class="tab-card">
+              <mat-card-content>
+
+                <div class="campos-grid">
+                  <mat-form-field appearance="outline">
+                    <mat-label>Nueva tasa anual (%)</mat-label>
+                    <input matInput type="number" min="0" step="0.01" [(ngModel)]="nuevaTasaAnual" placeholder="Mantener actual" />
+                    <mat-hint>Vacío = mantener la tasa actual</mat-hint>
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline">
+                    <mat-label>Nuevo plazo (meses)</mat-label>
+                    <input matInput type="number" min="1" step="1" [(ngModel)]="nuevoPlazo" placeholder="Mantener actual" />
+                    <mat-hint>Vacío = mantener el plazo actual</mat-hint>
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline">
+                    <mat-label>Meses de gracia</mat-label>
+                    <input matInput type="number" min="0" step="1" [(ngModel)]="mesesGracia" />
+                  </mat-form-field>
+                </div>
+
+                <div class="fila-check">
+                  <mat-checkbox [(ngModel)]="capitalizarVencido">
+                    Capitalizar mora e interés vencido al capital
+                  </mat-checkbox>
+                </div>
+
+                @if (errorReestructuracion(); as error) {
+                  <div class="aviso error">
+                    <mat-icon>error_outline</mat-icon>
+                    <span>{{ error }}</span>
+                  </div>
+                }
+
+                @if (errorPdfReestructuracion(); as error) {
+                  <div class="aviso error">
+                    <mat-icon>error_outline</mat-icon>
+                    <span>{{ error }}</span>
+                  </div>
+                }
+
+                <div class="acciones">
+                  <button
+                    mat-stroked-button
+                    [disabled]="!exportarPdfHabilitado || !capitalReestructuracionValido(resultadoReestructuracion()) || exportandoPdfReestructuracion()"
+                    matTooltip="Exportar la simulación de la reestructuración en PDF"
+                    (click)="exportarPdfReestructuracion()">
+                    @if (exportandoPdfReestructuracion()) {
+                      <mat-spinner diameter="18"></mat-spinner>
+                    } @else {
+                      <mat-icon>picture_as_pdf</mat-icon>
+                    }
+                    Exportar PDF
+                  </button>
+                  <button mat-raised-button color="primary" [disabled]="!puedeSimularReestructuracion" (click)="simularReestructuracion()">
+                    @if (simulandoReestructuracion()) {
+                      <mat-spinner diameter="20"></mat-spinner>
+                    } @else {
+                      <ng-container><mat-icon>calculate</mat-icon> Simular reestructuración</ng-container>
+                    }
+                  </button>
+                </div>
+
+                @if (resultadoReestructuracion(); as sim) {
+                  @if (!capitalReestructuracionValido(sim)) {
+                    <!--
+                      Guarda: un capitalDeArranque/saldoCapitalPendiente en 0 o nulo no es una
+                      simulación válida — es que el backend no pudo determinar el capital
+                      pendiente del préstamo. Dibujar la tabla y la comparativa igual haría leer
+                      ese 0 como un dato real. El backend va a empezar a rechazar esto con un
+                      error explícito, pero la guarda de pantalla vale igual: es dinero.
+                    -->
+                    <div class="aviso error">
+                      <mat-icon>error_outline</mat-icon>
+                      <span>
+                        No se pudo determinar el capital pendiente del préstamo: la simulación
+                        vino con capital de arranque en $0.00. Revise el préstamo antes de
+                        continuar — no se muestra la comparativa ni la tabla de amortización.
+                      </span>
+                    </div>
+                  } @else {
+                  <div class="comparativa-grid">
+                    <div class="cp-item">
+                      <span class="l">Tipo de amortización</span>
+                      <span class="v">{{ nombreAmortizacion(sim.tipoAmortizacion) }}</span>
+                    </div>
+                    @if (sim.tasaActual != null && sim.tasaNueva != null) {
+                      <div class="cp-item">
+                        <span class="l">Tasa anual</span>
+                        <span class="v"><span class="antes">{{ sim.tasaActual }}%</span> <mat-icon>arrow_forward</mat-icon> <span class="despues">{{ sim.tasaNueva }}%</span></span>
+                      </div>
+                    }
+                    <div class="cp-item">
+                      <span class="l">Plazo</span>
+                      <span class="v"><span class="antes">{{ sim.plazoActual }}</span> <mat-icon>arrow_forward</mat-icon> <span class="despues">{{ sim.plazoNuevo }}</span></span>
+                    </div>
+                    <div class="cp-item">
+                      <span class="l">Valor de cuota</span>
+                      <span class="v"><span class="antes">{{ formatMoneda(sim.cuotaActual) }}</span> <mat-icon>arrow_forward</mat-icon> <span class="despues">{{ formatMoneda(sim.cuotaNueva) }}</span></span>
+                    </div>
+                    <div class="cp-item">
+                      <span class="l">Capital de arranque</span>
+                      <span class="v">{{ formatMoneda(sim.capitalDeArranque) }}</span>
+                      <span class="cp-nota">Saldo pendiente {{ formatMoneda(sim.saldoCapitalPendiente) }}</span>
+                    </div>
+                    @if (sim.mesesGracia != null && sim.mesesGracia > 0) {
+                      <div class="cp-item">
+                        <span class="l">Período de gracia</span>
+                        <span class="v">{{ sim.mesesGracia }} mes(es)</span>
+                      </div>
+                    }
+                  </div>
+
+                  @if (sim.capitalizarVencido) {
+                    <!--
+                      Desglosado a propósito (§7.1 del plan): capitalizar es la palanca que más
+                      plata mueve, y el socio tiene que ver de qué se compone. No se suman en un
+                      solo número.
+                    -->
+                    <div class="comparativa-grid capitalizado">
+                      <div class="cp-item">
+                        <span class="l">Mora capitalizada</span>
+                        <span class="v">{{ formatMoneda(sim.moraCapitalizada) }}</span>
+                      </div>
+                      <div class="cp-item">
+                        <span class="l">Interés vencido capitalizado</span>
+                        <span class="v">{{ formatMoneda(sim.interesVencidoCapitalizado) }}</span>
+                      </div>
+                    </div>
+                  }
+
+                  <!-- La comparativa que da sentido a la pantalla (§7.1 del plan): destacada. -->
+                  <div class="total-comparativa">
+                    <div class="tc-item">
+                      <span class="l">Total a pagar &middot; tabla actual</span>
+                      <span class="v">{{ formatMoneda(sim.totalAPagarActual) }}</span>
+                    </div>
+                    <mat-icon>arrow_forward</mat-icon>
+                    <div class="tc-item destacado">
+                      <span class="l">Total a pagar &middot; tabla nueva</span>
+                      <span class="v">{{ formatMoneda(sim.totalAPagarNuevo) }}</span>
+                    </div>
+                  </div>
+
+                  @if (!sim.capitalizarVencido) {
+                    <div class="aviso alerta">
+                      <mat-icon>warning_amber</mat-icon>
+                      <span>
+                        No marcó capitalizar mora e interés vencido: esa deuda <b>no entra en la
+                        tabla nueva</b>, pero tampoco desaparece — sigue debiéndose por fuera de
+                        esta reestructuración. El total a pagar de la tabla actual ya la incluye,
+                        así que la diferencia contra el total nuevo no es un ahorro real de esa
+                        parte.
+                      </span>
+                    </div>
+                  }
+
+                  <div class="section-label">
+                    Tabla de amortización proyectada
+                    <span class="count">({{ sim.tablaProyectada.length }} cuotas)</span>
+                  </div>
+
+                  <div class="tabla-scroll">
+                    <table class="tabla-amortizacion">
+                      <thead>
+                        <tr>
+                          <th>N°</th><th>Vencimiento</th>
+                          <th class="num">Capital</th><th class="num">Interés</th>
+                          <th class="num">Cuota</th><th class="num">Total cuota</th><th class="num">Saldo capital</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (c of sim.tablaProyectada; track c.numeroCuota) {
+                          <tr>
+                            <td>{{ c.numeroCuota }}</td>
+                            <td>{{ formatFecha(c.fechaVencimiento) }}</td>
+                            <td class="num">{{ formatMoneda(c.capital) }}</td>
+                            <td class="num">{{ formatMoneda(c.interes) }}</td>
+                            <td class="num">{{ formatMoneda(c.cuota) }}</td>
+                            <td class="num"><b>{{ formatMoneda(c.total ?? c.cuota) }}</b></td>
+                            <td class="num">{{ formatMoneda(c.saldoCapital) }}</td>
+                          </tr>
+                        }
+                        @empty {
+                          <tr><td colspan="7" class="vacio">La simulación no devolvió cuotas proyectadas.</td></tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div class="aviso simulacion pie">
+                    <mat-icon>info</mat-icon>
+                    <span>Simulación referencial, sin valor contractual. No constituye aprobación de crédito.</span>
+                  </div>
+                  }
+                }
+
+              </mat-card-content>
+            </mat-card>
+          }
+
+        }
+      }
+
+    </div>
+  } @else if (!mostrandoResultados()) {
+    <div class="initial-message">
+      <mat-icon class="message-icon">calculate</mat-icon>
+      <p>Busque un partícipe para simular un abono a capital o una reestructuración sobre su préstamo.</p>
+    </div>
+  }
+
+</div>

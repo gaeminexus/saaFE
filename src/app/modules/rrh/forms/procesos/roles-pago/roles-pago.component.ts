@@ -12,6 +12,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
+import { guardarArchivo, mensajeReporteFallido } from '../../../../../shared/services/descarga-reporte';
 import { ExportService } from '../../../../../shared/services/export.service';
 import { JasperReportesService } from '../../../../../shared/services/jasper-reportes.service';
 import { usuarioSesion } from '../../../../../shared/services/usuario-sesion';
@@ -25,7 +26,7 @@ import {
   filtrarPorAnio,
   criteriosPorEmpresa,
 } from '../../parametrizacion/utiles-parametrizacion';
-import { guardarArchivo, mensajeReporteFallido, ReportesNomina } from '../descarga-reporte';
+import { ReportesNomina } from '../descarga-reporte';
 import { SeleccionFilas } from '../seleccion-filas';
 import { admiteRecepcion, etiquetaEstadoRol, estadoRol } from './estado-rol';
 import { opcionesAviso } from '../../comunes/avisos';

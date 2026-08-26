@@ -4,6 +4,7 @@ import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/materia
 import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
+import { guardarArchivo } from '../../../../shared/services/descarga-reporte';
 import { JasperReportesService } from '../../../../shared/services/jasper-reportes.service';
 import {
   CLASE_ESTADO_CUOTA,
@@ -185,12 +186,7 @@ export class ReciboOperacionDialogComponent {
 
       this.jasperReportes.generar('crd', 'RPRT_CMPB_PGCT', parametros, 'PDF').subscribe({
         next: (blob) => {
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `comprobante-cuota-${cuota.numeroCuota}.pdf`;
-          a.click();
-          setTimeout(() => URL.revokeObjectURL(url), 2000);
+          guardarArchivo(blob, `comprobante-cuota-${cuota.numeroCuota}.pdf`);
         },
         error: () => {
           this.snackBar.open(

@@ -573,10 +573,20 @@ adelantado, en silencio.
 
 Reconcilia antes de responder. → **200** con `resultado: [...]`, cada elemento:
 
+> ⚠ **Corregido el 2026-08-25.** Las fechas de SALIDA de este endpoint son `LocalDate` en
+> `ResumenDevolucionAporte` (`private LocalDate fecha` / `fechaPago`), así que Jackson las
+> serializa como **arreglo `[año, mes, día]`**, no como string. El ejemplo de abajo las
+> mostraba como `"2026-08-24"` y era incorrecto: lo correcto es `[2026, 8, 24]`. No se pudo
+> capturar de una respuesta real porque la BD de desarrollo no tiene ninguna devolución
+> registrada; se determinó leyendo el tipo del DTO. Las fechas de ENTRADA (§6.1) sí son
+> string `"yyyy-MM-dd"`, que es lo que Jackson acepta al deserializar. En el frontend, el
+> tipo `DevolucionListado.fecha: string` debe pasar a aceptar el arreglo (el render ya lo
+> tolera vía `FuncionesDatosService.convertirFechaDesdeBackend`).
+
 ```json
-{ "idDevolucion": 51, "fecha": "2026-08-24", "valorTotal": 4700.00,
+{ "idDevolucion": 51, "fecha": [2026, 8, 24], "valorTotal": 4700.00,
   "estado": 3, "estadoTexto": "PAGADA",
-  "idPagoProgramado": 337, "numeroAsiento": 90211, "fechaPago": "2026-08-26",
+  "idPagoProgramado": 337, "numeroAsiento": 90211, "fechaPago": [2026, 8, 26],
   "motivo": "Devolución por desafiliación",
   "cuentaDestino": "PICHINCHA · AHORROS · 2200****91",
   "detalle": [ { "idTipoAporte": 11, "nombreTipoAporte": "APORTE CESANTIA", "valor": 3200.00 } ] }

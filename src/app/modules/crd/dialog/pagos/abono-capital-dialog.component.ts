@@ -4,10 +4,13 @@ import { FormsModule } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
+import { guardarArchivo, mensajeReporteFallido } from '../../../../shared/services/descarga-reporte';
+import { FuncionesDatosService } from '../../../../shared/services/funciones-datos.service';
 import { usuarioSesion } from '../../../../shared/services/usuario-sesion';
 import { ModalidadAbono, NOMBRE_TIPO_AMORTIZACION } from '../../model/pagos/catalogos-pago';
 import { SimulacionAbonoCapital } from '../../model/pagos/operaciones-pago';
 import { mensajeDeRespuesta } from '../../model/pagos/respuesta-pago';
+import { SolicitudReporteSimulacion } from '../../model/simuladores/reporte-simulacion';
 import { ComprobanteCobroService } from '../../service/comprobante-cobro.service';
 import { OperacionesPagoPrestamoService } from '../../service/operaciones-pago-prestamo.service';
 import { ContextoPrestamo, SalidaDialogoPago } from './contexto-prestamo';
@@ -37,6 +40,7 @@ type Paso = 'datos' | 'comparativa';
 export class AbonoCapitalDialogComponent {
   private servicio = inject(OperacionesPagoPrestamoService);
   private comprobantes = inject(ComprobanteCobroService);
+  private funcionesDatos = inject(FuncionesDatosService);
   private dialog = inject(MatDialog);
 
   /** Bloque de respaldo. Se renderiza siempre, así que la consulta resuelve tras la primera vista. */
@@ -58,6 +62,18 @@ export class AbonoCapitalDialogComponent {
   /** Mensaje de error del backend + el código, para poder ofrecer la derivación correcta. */
   errorMensaje = signal<string | null>(null);
   errorCodigo = signal<string | null>(null);
+
+  /**
+   * Bandera única para habilitar "Exportar PDF" (fase 6 del plan).
+   *
+   * Habilitada el 2026-08-25, cuando se cumplieron sus dos precondiciones: el WAR con
+   * `POST /prst/simulacion/reporte` (fase 3) desplegado, y los 3 `.jasper` compilados y
+   * commiteados (fase 3b). Antes de eso el endpoint devolvía 500 — ver §9 de
+   * docs/crd/PLAN-SIMULADORES-PRESTAMOS.md.
+   */
+  readonly exportarPdfHabilitado = true;
+  exportandoPdf = signal(false);
+  errorPdf = signal<string | null>(null);
 
   valor = computed(() => this.parseMoneda(this.valorTexto()));
   valorValido = computed(() => this.valor() > 0.004);
@@ -161,6 +177,38 @@ export class AbonoCapitalDialogComponent {
 
   volverADatos(): void {
     this.paso.set('datos');
+  }
+
+  /**
+   * PDF de la simulación contra `POST /prst/simulacion/reporte` (§7 del plan). El backend
+   * recalcula desde `idPrestamo`/`valor`/`modalidad` de la simulación ya confirmada — no se le
+   * manda la tabla que se ve en pantalla.
+   */
+  exportarPdf(): void {
+    const sim = this.simulacion();
+    if (!this.exportarPdfHabilitado || !sim || this.exportandoPdf()) return;
+
+    this.errorPdf.set(null);
+    this.exportandoPdf.set(true);
+
+    const solicitud: SolicitudReporteSimulacion = {
+      tipo: 'ABONO_CAPITAL',
+      idPrestamo: this.data.idPrestamo,
+      valorAbono: sim.valorAbono,
+      modalidadAbono: sim.modalidad,
+      nombreSocio: this.data.participante ?? undefined,
+    };
+
+    this.servicio.reporteSimulacion(solicitud).subscribe({
+      next: (blob) => {
+        this.exportandoPdf.set(false);
+        guardarArchivo(blob, `simulacion-abono-prestamo-${this.data.idPrestamo}.pdf`);
+      },
+      error: (err) => {
+        this.exportandoPdf.set(false);
+        mensajeReporteFallido(err).then((mensaje) => this.errorPdf.set(mensaje));
+      },
+    });
   }
 
   // ================= paso 2: aplicar =================
@@ -313,6 +361,16 @@ export class AbonoCapitalDialogComponent {
   }
 
   // ================= utilidades =================
+
+  /**
+   * `fechaVencimiento` llega como arreglo `[y,m,d,h,mi]` (Jackson descarta el offset en vez de
+   * convertirlo): se normaliza SIEMPRE con `FuncionesDatosService`, nunca con el pipe `date` a
+   * secas, que interpretaría el arreglo como fecha inválida (§10.4 de
+   * docs/crd/PLAN-SIMULADORES-PRESTAMOS.md).
+   */
+  formatFecha(fecha: unknown): string {
+    return this.funcionesDatos.formatoFecha(fecha, 2) || '—';
+  }
 
   formatMoneda(n: number | null | undefined): string {
     return '$' + (n ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });

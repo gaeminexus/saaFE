@@ -123,14 +123,32 @@ export type ResultadoPagoConAportes = ResultadoPagoCuota;
 
 // ===================== §6 GET /prst/simularAbonoCapital/{idPrestamo} =====================
 
-/** Fila de la tabla de amortización proyectada. No se persiste. */
+/**
+ * Fila de la tabla de amortización proyectada. No se persiste.
+ *
+ * ⚠️ `fechaVencimiento` es un `LocalDateTime` que el backend serializa con Jackson como arreglo
+ * (`[y,m,d,h,mi]`), nunca como ISO. Normalizar SIEMPRE con `FuncionesDatosService.formatoFecha()`
+ * / `convertirFechaDesdeBackend()`, nunca con el pipe `date` de Angular a secas: un arreglo pasado
+ * directo da `Invalid Date` (hallazgo de la §10.4 de `docs/crd/PLAN-SIMULADORES-PRESTAMOS.md`).
+ */
 export interface CuotaProyectada {
   numeroCuota: number;
-  fechaVencimiento: string;
+  fechaVencimiento: string | number[] | Date;
   capital: number;
   interes: number;
   cuota: number;
   saldoCapital: number;
+  /**
+   * Desgravamen, seguro de incendio y total de la cuota (decisión 15 de
+   * `docs/crd/PLAN-SIMULADORES-PRESTAMOS.md`). `total = cuota + desgravamen + seguroIncendio`,
+   * el mismo invariante que `DTPRTTLL` en la tabla real. Opcionales y aditivos: hoy
+   * `simularAbonoCapital` en producción los devuelve `null` (la calculadora todavía no los
+   * llena ahí) — el llamador tiene que caer a `cuota` cuando `total` no vino, nunca asumir que
+   * está presente.
+   */
+  desgravamen?: number | null;
+  seguroIncendio?: number | null;
+  total?: number | null;
 }
 
 export interface SimulacionAbonoCapital {
@@ -183,11 +201,16 @@ export interface ResultadoAbonoCapital {
 
 // ===================== §8 GET /prst/simularPrecancelacion/{idPrestamo} =====================
 
-/** Cuota con vencimiento hasta la fecha de corte que entra en la deuda exigible. */
+/**
+ * Cuota con vencimiento hasta la fecha de corte que entra en la deuda exigible.
+ *
+ * ⚠️ Mismo caso que `CuotaProyectada.fechaVencimiento`: llega como arreglo `[y,m,d,h,mi]`, nunca
+ * con el pipe `date` de Angular a secas.
+ */
 export interface CuotaExigible {
   idCuota: number;
   numeroCuota: number;
-  fechaVencimiento: string;
+  fechaVencimiento: string | number[] | Date;
   pendiente: number;
 }
 

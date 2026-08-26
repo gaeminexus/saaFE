@@ -10,6 +10,7 @@ import {
 } from '../../model/pagos/catalogos-pago';
 import { DetallePrestamo } from '../../model/detalle-prestamo';
 import { PagoPrestamo, pagoVigente } from '../../model/pago-prestamo';
+import { guardarArchivo } from '../../../../shared/services/descarga-reporte';
 import { JasperReportesService } from '../../../../shared/services/jasper-reportes.service';
 
 export interface PrestamoPagosDialogData {
@@ -333,12 +334,7 @@ export class PrestamoPagosDialogComponent {
 
     this.jasperReportes.generar('crd', 'RPRT_CMPB_PGCT', parametros, 'PDF').subscribe({
       next: (blob) => {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `comprobante-cuota-${d.numeroCuota}.pdf`;
-        a.click();
-        setTimeout(() => URL.revokeObjectURL(url), 2000);
+        guardarArchivo(blob, `comprobante-cuota-${d.numeroCuota}.pdf`);
         this.snackBar.open('✅ Comprobante generado exitosamente', 'Cerrar', { duration: 3000 });
       },
       error: () => {

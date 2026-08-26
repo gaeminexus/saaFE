@@ -1,0 +1,230 @@
+/*
+ * Simulador sobre préstamo existente. Mismo lenguaje visual que las demás pantallas de crd:
+ * cabecera de búsqueda en degradé, tarjetas con sombra, cartel de simulación en violeta tenue.
+ *
+ * Regla táctil: 44px de alto mínimo en todo control interactivo (la pantalla se usa en tablet).
+ */
+
+.simp-container {
+  padding: 24px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  min-height: 100%;
+}
+
+.search-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  color: #fff;
+  margin-bottom: 1.5rem;
+
+  .header-title {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.9rem;
+
+    h1 { font-size: 1.8rem; font-weight: 600; margin: 0; }
+    .header-icon { font-size: 30px; width: 30px; height: 30px; }
+  }
+
+  .search-box {
+    display: flex;
+    gap: 0.85rem;
+    align-items: flex-start;
+    flex-wrap: wrap;
+
+    .search-field {
+      flex: 1;
+      min-width: 200px;
+      ::ng-deep .mat-mdc-text-field-wrapper { background: #fff; border-radius: 0.5rem; }
+    }
+
+    .search-button { height: 56px; margin-top: 4px; }
+  }
+}
+
+mat-card { border-radius: 12px !important; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1) !important; margin-bottom: 1.5rem !important; }
+
+.resultados-card, .entidad-card {
+  mat-card-header {
+    border-bottom: 3px solid #667eea;
+    background: linear-gradient(90deg, #f7fafc 0%, #edf2f7 100%);
+    padding: 18px 22px;
+    margin: -16px -16px 16px -16px;
+  }
+}
+
+.texto-vacio { color: #718096; font-style: italic; font-size: 0.86rem; }
+.fila-clicable { cursor: pointer; &:hover { background: rgba(102, 126, 234, 0.08); } }
+
+table.tabla-resultados {
+  width: 100%;
+  th { background: #667eea; color: #fff; font-weight: 600; text-transform: uppercase; font-size: 12px; letter-spacing: 0.03em; }
+  td { font-size: 14px; }
+}
+
+.loading-spinner-container { display: flex; justify-content: center; padding: 2rem 0; }
+
+.vacio-card .vacio-body {
+  display: flex; align-items: center; gap: 0.8rem; color: #718096; font-size: 0.88rem;
+  mat-icon { font-size: 30px; width: 30px; height: 30px; color: #cbd5e0; flex-shrink: 0; }
+  p { margin: 0; }
+}
+
+/* ---------- selector de préstamos ---------- */
+.selector-prestamos {
+  display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 1.1rem;
+
+  .sp-label { font-size: 0.8rem; color: #4a5568; font-weight: 600; }
+  .sp-chip {
+    border: 2px solid #cbd5e0; background: #fff; border-radius: 999px; padding: 0.5rem 1rem;
+    font-size: 0.8rem; font-weight: 600; color: #4a5568; cursor: pointer; min-height: 40px;
+    transition: border-color 0.15s, color 0.15s;
+
+    &.activo { border-color: #667eea; color: #4c51bf; background: rgba(102, 126, 234, 0.08); }
+    &:hover { border-color: #a0aec0; }
+  }
+}
+
+.prestamo-card {
+  .datos-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.8rem 1rem;
+
+    .dato { display: flex; flex-direction: column; gap: 2px; }
+    .l { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.05em; color: #718096; font-weight: 700; }
+    .v { font-size: 15px; font-weight: 600; font-family: 'Roboto Mono', monospace; color: #1a202c; }
+  }
+}
+
+/* ---------- aviso de simulación ---------- */
+.aviso {
+  display: flex; align-items: flex-start; gap: 0.5rem;
+  background: #fff6e0; color: #92600d; border-radius: 8px; padding: 0.6rem 0.85rem;
+  font-size: 0.82rem; margin-bottom: 1.1rem;
+
+  mat-icon { font-size: 19px; width: 19px; height: 19px; flex-shrink: 0; }
+  &.error { background: #fef2f2; color: #dc2626; }
+
+  &.simulacion {
+    background: #eef2ff; color: #3c4a9c; border: 1px dashed #c3cbf0;
+    b { color: #2d3785; }
+  }
+  &.simulacion.pie { margin-top: 1rem; margin-bottom: 0; }
+}
+
+/* ---------- pestañas propias (no mat-tab-group: cada una tiene su propio estado) ---------- */
+.tabs-header {
+  display: flex; gap: 0.5rem; margin-bottom: 1.1rem; flex-wrap: wrap;
+
+  .tab-btn {
+    display: flex; align-items: center; gap: 0.4rem;
+    border: none; background: rgba(255, 255, 255, 0.6); color: #4a5568;
+    border-radius: 10px 10px 0 0; padding: 0.7rem 1.2rem; font-weight: 600; font-size: 0.86rem;
+    cursor: pointer; min-height: 44px; border-bottom: 3px solid transparent;
+
+    &.activo { background: #fff; color: #4c51bf; border-bottom-color: #667eea; }
+    &:hover:not(.activo) { background: rgba(255, 255, 255, 0.85); }
+  }
+}
+
+.tab-card {
+  .campos-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.4rem 1rem;
+  }
+  .fila-check { min-height: 44px; display: flex; align-items: center; margin: 0.4rem 0 0.2rem; }
+}
+
+.seccion-label, .section-label {
+  font-size: 0.85rem; font-weight: 700; color: #2d3748; margin: 1.1rem 0.1rem 0.6rem;
+  .count { font-weight: 500; color: #718096; font-size: 0.8rem; }
+}
+
+.modalidades {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.8rem;
+  margin-bottom: 0.5rem;
+
+  mat-radio-button {
+    border: 1px solid #e2e8f0; border-radius: 10px; padding: 0.7rem 0.9rem; display: block;
+  }
+  .modalidad-titulo { font-weight: 700; font-size: 0.86rem; color: #1a202c; }
+  .modalidad-desc { font-size: 0.76rem; color: #718096; margin-top: 2px; }
+}
+
+.acciones {
+  display: flex; justify-content: flex-end; gap: 0.7rem; margin-top: 1rem; flex-wrap: wrap;
+  button { min-height: 48px; border-radius: 10px; font-weight: 600; }
+}
+
+/* ---------- comparativa antes/después ---------- */
+.comparativa-grid {
+  display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: center;
+  background: #fff; border-radius: 10px; padding: 0.85rem 1.1rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1); margin-top: 1.1rem;
+
+  .cp-item { display: flex; flex-direction: column; gap: 2px; }
+  .l { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.05em; color: #718096; font-weight: 700; }
+  .v {
+    font-size: 15px; font-weight: 600; font-family: 'Roboto Mono', monospace;
+    display: flex; align-items: center; gap: 0.3rem; color: #1a202c;
+    mat-icon { font-size: 16px; width: 16px; height: 16px; color: #a0aec0; }
+    .antes { color: #a0aec0; }
+    .despues { color: #1a202c; font-weight: 700; }
+  }
+  .cp-item.destacado .v { color: #0d7a4f; }
+  .cp-nota { font-size: 11px; color: #a0aec0; margin-top: 1px; }
+
+  /* Desglose de lo capitalizado: mismo bloque pero con menos margen arriba, va pegado al primero. */
+  &.capitalizado { margin-top: 0.6rem; }
+}
+
+/* ---------- total a pagar antes/después: la comparativa que da sentido a la pantalla ---------- */
+.total-comparativa {
+  display: flex; align-items: center; justify-content: center; gap: 1.2rem; flex-wrap: wrap;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.08));
+  border-radius: 10px; padding: 1rem 1.3rem; margin-top: 1.1rem;
+  border-left: 4px solid #667eea;
+
+  mat-icon { color: #667eea; }
+
+  .tc-item {
+    display: flex; flex-direction: column; gap: 2px; text-align: center;
+
+    .l { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.05em; color: #718096; font-weight: 700; }
+    .v { font-size: 19px; font-weight: 700; font-family: 'Roboto Mono', monospace; color: #4a5568; }
+
+    &.destacado .v { color: #4c51bf; font-size: 21px; }
+  }
+}
+
+/* ---------- tabla de amortización ---------- */
+.tabla-scroll { overflow-x: auto; background: #fff; border-radius: 10px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1); }
+
+table.tabla-amortizacion {
+  width: 100%; border-collapse: collapse; font-size: 13px;
+
+  thead th {
+    background: #667eea; color: #fff; font-weight: 600; text-transform: uppercase;
+    font-size: 11px; letter-spacing: 0.03em; padding: 8px 10px; text-align: left;
+  }
+  th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  td { padding: 8px 10px; border-bottom: 1px solid #e2e8f0; }
+  td.vacio { text-align: center; color: #718096; font-style: italic; }
+}
+
+/* Con entrada táctil las filas se agrandan. */
+@media (pointer: coarse) {
+  table.tabla-amortizacion td { padding: 12px 10px; }
+}
+
+@media (max-width: 700px) {
+  .simp-container { padding: 12px; }
+  .acciones button { flex: 1 1 auto; }
+}
+
+.initial-message {
+  text-align: center; padding: 3.5rem 1rem; color: #718096;
+  .message-icon { font-size: 42px; width: 42px; height: 42px; opacity: 0.55; margin-bottom: 0.6rem; }
+  p { font-size: 0.9rem; margin: 0; }
+}
