@@ -952,18 +952,71 @@ REST:
 `tsc`, `ng build` y 9+6+9 tests propios en 0. Verificado en Chrome contra los períodos reales de
 enero a junio de 2026: tarjetas, colores por estado, navegación al panel, todo correcto.
 
+## Descuentos recurrentes — hecho
+
+Deja de colgar de `app-table-basic-hijos` cuatro veces (dos tablas, sus dos modales); se borra
+`descuentos-recurrentes.campos.ts`, el `FieldConfig` de ese patrón, que ya no usa nadie.
+
+**La idea central no era quitar los diálogos: es que la tabla de amortización se genera, no se
+teclea.** El bug real que lo motivó —le pasó a Mike la mañana del 26—: un anticipo se registró, no
+apareció en el cálculo, y la causa era que no existía ninguna cuota. El motor no busca «el
+descuento de esta persona»: busca la cuota que vence dentro del período. Sin cuotas no hay nada que
+descontar, y tecleando doce cuotas a mano —número, fecha, total, capital, interés, saldo— es fácil
+que falte alguna.
+
+Nuevo `comunes/amortizacion.ts`: `generarCuotas()` reparte el valor total en N partes iguales, con
+la última absorbiendo el redondeo —la suma siempre da exacto—, sin interés por defecto.
+`recomputarSaldos()` recalcula cuando el usuario ajusta capital o interés a mano, en línea, antes
+de confirmar. Los endpoints son los de siempre —se generan las filas en cliente y se envían una por
+una con `add()`—, sin backend nuevo.
+
+Si el descuento se crea pero una cuota falla a mitad de camino, la pantalla lo dice tal cual —«el
+descuento se creó, revise sus cuotas»—, no lo esconde: es la misma clase de estado a medias que
+causó el bug real, y ocultarlo sería reproducirlo con otro nombre.
+
+`DescuentoRecurrente.saldo` se muestra tal cual llega de la base, con un aviso fijo de que el
+seguimiento de saldo está pendiente en el motor (corrección 12) — no se inventa un número en
+cliente que después no calce con el dato real. Los cuatro estados de cuota —PENDIENTE, DESCONTADA,
+PARCIAL, ANULADA— con forma, incluida PARCIAL, que el motor todavía no escribe nunca pero que la
+pantalla ya sabe pintar.
+
+`tsc` y `ng build` en 0. 8 tests de `amortizacion`, 10 del componente. **Sin pasada en Chrome esta
+vez**: la sesión volvió a expirar sin credenciales para reentrar.
+
+## El encargo se amplió: todas las pantallas de `rrh/forms/procesos`
+
+**Confirmado el alcance el 2026-08-26**, tras preguntar: no es todo el sistema, es esta carpeta —el
+resto de RRHH y los demás módulos (`crd`, `cxc`, `cxp`, `tsr`, `cnt`) quedan fuera—. Hechas:
+Novedades, Períodos, Descuentos Recurrentes. Quedan, en el orden en que están en la carpeta:
+
+`aportes-retenciones`, `horas-extra`, `liquidacion`, `novedades-iess`, `ordenes-pago`,
+`proyeccion-ir`, `reportes-nomina`, `roles-pago`, `salidas-oficiales`, `utilidades`.
+
+No todas necesariamente usan `app-table-basic-hijos` ni necesitan el mismo tratamiento — antes de
+tocar cada una hace falta el mismo primer paso que en las tres anteriores: leer el código, entender
+qué hace de verdad, y sólo entonces decidir qué «ultra moderno e intuitivo» significa ahí. Sigue la
+misma cadencia: una pantalla, se muestra, se corrige lo que haga falta, recién entonces la
+siguiente.
+
 ## Lo que sigue pendiente y no puedo hacer yo: la pasada de alta contra el sandbox
 
-Ni en Novedades ni en Períodos pude probar el **alta** contra el período de diciembre aislado
-(`sql/69_PERIODO_SANDBOX_LOCAL.sql`) — no tengo cliente de Oracle en este entorno, ni `sqlplus` ni
-`sqlcl`, así que no puedo correr ese script; hace falta que lo corra quien tenga acceso a la base
-local. **Y de paso, algo que conviene mirar antes de correrlo**: el backend local que sí alcanzo
-por REST (`127.0.0.1:8080`) tiene los períodos de 2026 en los códigos **28 a 32 y 51**, meses 1 a
-6, **sin julio** — no los códigos `1, 2, 21, 41, 42, 61, 62` que el comentario del script da por
-sentado para «local». Puede que sean instancias distintas, o que a ésta le falte julio por cargar;
-no lo puedo distinguir desde aquí, pero quien corra el script debería confirmarlo antes de fiarse
-de que el bloque 0 (la guarda «esto es local, no producción») está comprobando lo que cree que
-comprueba.
+Ni en Novedades, ni en Períodos, ni en Descuentos pude probar el **alta** contra el período de
+diciembre aislado (`sql/69_PERIODO_SANDBOX_LOCAL.sql`) — no tengo cliente de Oracle en este
+entorno, ni `sqlplus` ni `sqlcl`, así que no puedo correr ese script; hace falta que lo corra quien
+tenga acceso a la base local. **Y de paso, algo que conviene mirar antes de correrlo**: el backend
+local que sí alcanzo por REST (`127.0.0.1:8080`) tiene los períodos de 2026 en los códigos **28 a
+32 y 51**, meses 1 a 6, **sin julio** — no los códigos `1, 2, 21, 41, 42, 61, 62` que el comentario
+del script da por sentado para «local». Puede que sean instancias distintas, o que a ésta le falte
+julio por cargar; no lo puedo distinguir desde aquí, pero quien corra el script debería confirmarlo
+antes de fiarse de que el bloque 0 (la guarda «esto es local, no producción») está comprobando lo
+que cree que comprueba.
+
+**Y la sesión del navegador se ha vuelto un problema recurrente**: expiró a mitad de verificación
+en la última vuelta de Novedades, y de nuevo en toda la de Descuentos, sin que yo tenga
+credenciales para volver a entrar. Novedades y Períodos sí se alcanzaron a verificar en vivo antes
+de que expirara; Descuentos se queda con `tsc`/`ng build`/tests solamente. Si hay una cuenta de
+prueba que se me pueda dar, o alguien puede iniciar sesión y dejarla abierta antes de que yo
+retome, ayudaría a que esto no sea un lanzamiento de moneda cada vez.
 
 ---
 
