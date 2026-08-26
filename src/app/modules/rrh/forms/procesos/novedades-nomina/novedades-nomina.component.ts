@@ -468,8 +468,13 @@ export class NovedadesNominaComponent implements OnInit {
         this.guardandoBorrador.set(false);
         if (creada) {
           // El dato que se ve viene siempre de lo que el servidor devolvió, nunca del tecleo — D11.
-          this.novedades.set([...this.novedades(), creada]);
-          this.ofrecerDeshacer(creada.codigo);
+          // Pero «lo que el servidor devolvió» del POST no es lo mismo que trae selectByCriteria:
+          // aquí empleado/conceptoNomina llegan como {codigo}, sin apellidos ni nombre — el POST
+          // no hace el mismo fetch con join que la lista. Sin esto, colaborador y concepto se ven
+          // vacíos en la fila recién creada aunque el alta fue perfecta.
+          const filaCompleta = this.hidratarRelaciones(creada, fila.empleado, fila.conceptoNomina);
+          this.novedades.set([...this.novedades(), filaCompleta]);
+          this.ofrecerDeshacer(filaCompleta.codigo);
         } else {
           // El backend respondió sin cuerpo; se relee el período para no enseñar un dato inventado.
           this.recargarNovedades();
@@ -570,8 +575,10 @@ export class NovedadesNominaComponent implements OnInit {
       next: (actualizada) => {
         this.guardandoEdicion.set(false);
         if (actualizada) {
+          // Mismo motivo que en el alta: el PUT no re-hidrata empleado/conceptoNomina.
+          const filaCompleta = this.hidratarRelaciones(actualizada, fila.empleado, fila.conceptoNomina);
           this.novedades.set(
-            this.novedades().map((n) => (n.codigo === codigo ? actualizada : n)),
+            this.novedades().map((n) => (n.codigo === codigo ? filaCompleta : n)),
           );
         } else {
           this.recargarNovedades();
@@ -628,16 +635,20 @@ export class NovedadesNominaComponent implements OnInit {
     this.aprobando.set(true);
     forkJoin(
       filas.map((fila) =>
-        this.novedadNominaService.update({
-          ...fila,
-          empleado: referencia(fila.empleado),
-          conceptoNomina: referencia(fila.conceptoNomina),
-          periodoNomina: referencia(fila.periodoNomina),
-          aprobada: 'S',
-          estado: ESTADO_ACTIVO,
-          usuarioAprueba: usuario,
-          fechaAprobacion: ahora,
-        }),
+        this.novedadNominaService
+          .update({
+            ...fila,
+            empleado: referencia(fila.empleado),
+            conceptoNomina: referencia(fila.conceptoNomina),
+            periodoNomina: referencia(fila.periodoNomina),
+            aprobada: 'S',
+            estado: ESTADO_ACTIVO,
+            usuarioAprueba: usuario,
+            fechaAprobacion: ahora,
+          })
+          // El PUT tampoco re-hidrata empleado/conceptoNomina: se completan con los de `fila`,
+          // que sí los trae —vienen de selectByCriteria, que hace el fetch con join—.
+          .pipe(map((actualizada) => (actualizada ? this.hidratarRelaciones(actualizada, fila.empleado, fila.conceptoNomina) : null))),
       ),
     ).subscribe({
       next: (actualizadas) => {
@@ -653,6 +664,21 @@ export class NovedadesNominaComponent implements OnInit {
         this.recargarNovedades();
       },
     });
+  }
+
+  /**
+   * `add()`/`update()` devuelven la fila persistida, pero `empleado`/`conceptoNomina` llegan como
+   * `{ codigo }` — el POST/PUT no hace el mismo fetch con join que `selectByCriteria`. Sin esto,
+   * colaborador y concepto se ven vacíos justo después de guardar, aunque el guardado fue
+   * perfecto: es la referencia ya hidratada —del combo, o de la fila que ya se tenía cargada— la
+   * que rellena lo que el servidor no reenvía.
+   */
+  private hidratarRelaciones(
+    respuesta: NovedadNomina,
+    empleado: Empleado | any,
+    conceptoNomina: ConceptoNomina | any,
+  ): NovedadNomina {
+    return { ...respuesta, empleado, conceptoNomina };
   }
 
   private recargarNovedades(): void {

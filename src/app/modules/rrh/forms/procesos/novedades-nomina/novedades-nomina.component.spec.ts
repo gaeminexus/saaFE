@@ -226,7 +226,7 @@ describe('NovedadesNominaComponent', () => {
 
     it('la fila que se ve es la que devolvió el servidor, no la tecleada — D11', async () => {
       // El servidor redondea o corrige algo del lado suyo: lo que se ve debe ser lo suyo.
-      const creada = { codigo: 99, aprobada: 'N', estado: 1, valor: 999, empleado: ACTIVA, conceptoNomina: QUIROGRAFARIO };
+      const creada = { codigo: 99, aprobada: 'N', estado: 1, valor: 999, empleado: { codigo: ACTIVA.codigo }, conceptoNomina: { codigo: QUIROGRAFARIO.codigo } };
       novedadNominaService.add.and.returnValue(of(creada));
       await conPeriodo(2);
 
@@ -236,6 +236,27 @@ describe('NovedadesNominaComponent', () => {
       componente.confirmarBorrador();
 
       expect(componente.novedades().find((n) => n.codigo === 99)?.valor).toBe(999);
+    });
+
+    /**
+     * El bug que reportó Mike en vivo: tras agregar, Colaborador y Concepto se veían vacíos. La
+     * causa: `add()`/`update()` devuelven `empleado`/`conceptoNomina` como `{ codigo }` —el
+     * POST/PUT no hace el mismo fetch con join que `selectByCriteria`—, y la fila se armaba
+     * directo con lo que el servidor mandó. Este test falla si se revierte `hidratarRelaciones`.
+     */
+    it('el POST no re-hidrata empleado/conceptoNomina, pero la fila se sigue viendo completa', async () => {
+      const creada = { codigo: 99, aprobada: 'N', estado: 1, valor: 45, empleado: { codigo: ACTIVA.codigo }, conceptoNomina: { codigo: QUIROGRAFARIO.codigo } };
+      novedadNominaService.add.and.returnValue(of(creada));
+      await conPeriodo(2);
+
+      componente.onBorradorCampo('empleado', ACTIVA);
+      componente.onBorradorConceptoChange(QUIROGRAFARIO);
+      componente.onBorradorCampo('valor', 45);
+      componente.confirmarBorrador();
+
+      const fila = componente.novedades().find((n) => n.codigo === 99)!;
+      expect(componente.etiquetaEmpleado(fila.empleado)).toContain('BRAVO CAIZA');
+      expect(componente.nombreConcepto(fila)).toBe('Préstamo quirografario IESS');
     });
 
     it('si el servidor rechaza, la fila NO se pierde ni se vacía', async () => {
@@ -294,6 +315,24 @@ describe('NovedadesNominaComponent', () => {
 
       expect(novedadNominaService.delete).toHaveBeenCalledWith(99);
       expect(componente.novedades().length).toBe(0);
+    });
+  });
+
+  describe('Edición en sitio — el PUT tampoco re-hidrata empleado/conceptoNomina', () => {
+    it('tras editar, la fila se sigue viendo con colaborador y concepto', async () => {
+      const original = { codigo: 5, aprobada: 'N', estado: 1, valor: 100, empleado: ACTIVA, conceptoNomina: QUIROGRAFARIO, periodoNomina: { codigo: 2 } };
+      const actualizada = { codigo: 5, aprobada: 'N', estado: 1, valor: 200, empleado: { codigo: ACTIVA.codigo }, conceptoNomina: { codigo: QUIROGRAFARIO.codigo } };
+      novedadNominaService.update.and.returnValue(of(actualizada));
+      await conPeriodo(2, [original]);
+
+      componente.editarFila(componente.novedades()[0]);
+      componente.onEdicionCampo('valor', 200);
+      componente.confirmarEdicion();
+
+      const fila = componente.novedades().find((n) => n.codigo === 5)!;
+      expect(fila.valor).toBe(200); // lo que devolvió el servidor
+      expect(componente.etiquetaEmpleado(fila.empleado)).toContain('BRAVO CAIZA');
+      expect(componente.nombreConcepto(fila)).toBe('Préstamo quirografario IESS');
     });
   });
 
@@ -409,6 +448,20 @@ describe('NovedadesNominaComponent', () => {
       componente.aprobarSeleccionadas();
 
       expect(componente.novedades().find((n) => n.codigo === 2)?.aprobada).toBe('N');
+    });
+
+    it('tras aprobar, la fila se sigue viendo con colaborador y concepto — el PUT tampoco los re-hidrata', async () => {
+      // El fake echoa la petición, que ya manda empleado/conceptoNomina como {codigo} —igual que
+      // el backend real—: es la misma condición que reportó Mike en "Por aprobar".
+      novedadNominaService.update.and.callFake((datos: any) => of({ ...datos, codigo: datos.codigo }));
+      await conPeriodo(2, [SIN_APROBAR_1, SIN_APROBAR_2, YA_APROBADA]);
+
+      componente.alternarSeleccion(1);
+      componente.aprobarSeleccionadas();
+
+      const fila = componente.novedades().find((n) => n.codigo === 1)!;
+      expect(componente.etiquetaEmpleado(fila.empleado)).toContain('BRAVO CAIZA');
+      expect(componente.nombreConcepto(fila)).toBe('Préstamo quirografario IESS');
     });
 
     it('seleccionar todas las pendientes no incluye la ya aprobada', async () => {
