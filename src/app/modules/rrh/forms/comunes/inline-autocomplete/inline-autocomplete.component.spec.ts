@@ -21,9 +21,35 @@ describe('InlineAutocompleteComponent', () => {
 
     fixture = TestBed.createComponent(InlineAutocompleteComponent);
     componente = fixture.componentInstance;
-    componente.opciones = OPCIONES;
+    fixture.componentRef.setInput('opciones', OPCIONES);
     componente.etiqueta = (item) => item?.nombre ?? '';
     fixture.detectChanges();
+  });
+
+  /**
+   * El bug que reportó Mike: al entrar a la pantalla, el clic en Período no desplegaba nada —
+   * salvo que se tecleara algo primero. La causa no era el clic ni el foco: `opciones` llegaba
+   * después de que `filtradas()` ya se hubiera evaluado una vez con la lista vacía —Período se
+   * carga por HTTP, así que en el primer render real casi siempre está vacío—, y un `computed()`
+   * que lee un `@Input()` normal no se entera cuando ese `@Input()` cambia después. Aquí se
+   * reproduce la carrera sin esperar ningún HTTP: se lee `filtradas()` con la lista vacía —tal
+   * como hace la plantilla en el primer render— y **después** llega `opciones`, sin tocar el
+   * texto para nada.
+   */
+  it('si las opciones llegan después del primer render, igual se ven — sin necesidad de teclear', () => {
+    const fresco = TestBed.createComponent(InlineAutocompleteComponent);
+    const propio = fresco.componentInstance;
+    propio.etiqueta = (item) => item?.nombre ?? '';
+    fresco.detectChanges();
+
+    // Lo que hace la plantilla en cuanto se monta: leer filtradas() con la lista aún vacía.
+    expect(propio.filtradas()).toEqual([]);
+
+    // Las opciones llegan tarde —el HTTP del período resolviendo después del primer render—.
+    fresco.componentRef.setInput('opciones', OPCIONES);
+    fresco.detectChanges();
+
+    expect(propio.filtradas().map((o: any) => o.nombre)).toEqual(['Peñafiel', 'Núñez', 'Torres Chávez']);
   });
 
   it('filtra sin importar mayúsculas ni acentos (D14)', () => {

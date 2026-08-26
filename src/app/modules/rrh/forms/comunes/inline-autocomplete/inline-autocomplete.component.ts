@@ -7,6 +7,7 @@ import {
   Output,
   ViewChild,
   computed,
+  input,
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -42,7 +43,17 @@ export class InlineAutocompleteComponent {
   @Input() modo: 'celda' | 'campo' = 'celda';
   /** Etiqueta flotante del `mat-form-field`; sólo se usa en `modo="campo"`. */
   @Input() etiquetaCampo = '';
-  @Input() opciones: any[] = [];
+  /**
+   * `input()` de señal, no `@Input()` de decorador — a propósito. `filtradas` es un `computed()`
+   * y sólo se recalcula cuando cambia una **señal** que lee. Con `@Input() opciones: any[]`, un
+   * `computed()` que hace `this.opciones` no se entera de nada: si el período se abre antes de
+   * que `periodos()` termine de cargar en el padre —la carrera de D17, aquí una vuelta más
+   * adentro—, `filtradas()` se evalúa una vez con la lista vacía, la cachea, y el clic en el
+   * campo abre un panel vacío para siempre. Escribir algo lo arregla porque `texto` sí es señal
+   * y fuerza el recálculo, que entonces lee `opciones` ya lleno — de ahí que «si tecleo, sí
+   * funciona» fuera la pista.
+   */
+  opciones = input<any[]>([]);
   @Input() etiqueta: (item: any) => string = (item) => String(item ?? '');
   /** Partes por las que se puede buscar; por defecto, sólo la etiqueta. */
   @Input() buscarPor: (item: any) => string[] = (item) => [this.etiqueta(item)];
@@ -64,10 +75,11 @@ export class InlineAutocompleteComponent {
 
   filtradas = computed(() => {
     const termino = this.texto();
+    const opciones = this.opciones();
     if (!termino || (this._valor && this.etiqueta(this._valor) === termino)) {
-      return this.opciones.slice(0, 50);
+      return opciones.slice(0, 50);
     }
-    return this.opciones
+    return opciones
       .filter((item) => this.buscarPor(item).some((parte) => coincideTexto(parte, termino)))
       .slice(0, 50);
   });
