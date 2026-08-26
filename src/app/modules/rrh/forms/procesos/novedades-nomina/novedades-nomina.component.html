@@ -32,11 +32,6 @@
     </div>
   </div>
 
-  <!--
-    El orden importa: mientras los períodos se están pidiendo, el desplegable está vacío y
-    «No hay períodos creados» sería mentira — y es la mentira que lleva a crear un período
-    duplicado del mismo mes.
-  -->
   @if (cargandoPeriodos()) {
     <div class="aviso">
       <mat-icon>hourglass_top</mat-icon>
@@ -55,18 +50,286 @@
       <mat-icon>event</mat-icon>
       <span>Seleccione un período para cargar o revisar sus novedades.</span>
     </div>
-  } @else if (fueraDelCalculo() > 0) {
-    <div class="aviso aviso-error">
-      <mat-icon>pending_actions</mat-icon>
-      <span>
-        {{ fueraDelCalculo() }} novedad(es) que el cálculo NO va a mirar. El motor exige las dos
-        cosas —aprobada «Sí» y estado activo—; mire la columna «¿Entra al cálculo?».
-      </span>
-    </div>
-  }
+  } @else {
+    @if (fueraDelCalculo() > 0) {
+      <div class="aviso aviso-error">
+        <mat-icon>pending_actions</mat-icon>
+        <span>
+          {{ fueraDelCalculo() }} novedad(es) que el cálculo NO va a mirar. El motor exige las dos
+          cosas —aprobada «Sí» y estado activo—; mire la columna «Entra».
+        </span>
+      </div>
+    }
 
-  @if (tableConfig) {
-    <app-table-basic-hijos [configTable]="tableConfig" (emiteError)="onTableError($event)">
-    </app-table-basic-hijos>
+    <!-- Totales vivos: se ven sin buscarlos. -->
+    <div class="totales">
+      <span class="chip chip-neutro">{{ novedades().length }} novedad(es)</span>
+      <span class="chip chip-ok">{{ entranAlCalculo() }} entran</span>
+      @if (fueraDelCalculo() > 0) {
+        <span class="chip chip-alerta">{{ fueraDelCalculo() }} no entran</span>
+      }
+      @for (c of totalesPorConcepto(); track c.nombre) {
+        <span class="chip chip-concepto">{{ c.nombre }}: {{ c.total | number: '1.2-2' }}</span>
+      }
+    </div>
+
+    <!-- Aprobación en lote — Corrección 3: separada de la captura, con firma propia. -->
+    <div class="panel panel-aprobacion">
+      <div class="panel-titulo">
+        Por aprobar
+        <span class="chip chip-alerta">{{ pendientesAprobar().length }}</span>
+      </div>
+      @if (pendientesAprobar().length === 0) {
+        <p class="mensaje-vacio">No hay novedades pendientes de aprobar.</p>
+      } @else {
+        <div class="acciones-aprobacion">
+          <button mat-stroked-button type="button" (click)="seleccionarTodasPendientes()">
+            Seleccionar todas las pendientes
+          </button>
+          @if (seleccionAprobar().size > 0) {
+            <button mat-stroked-button type="button" (click)="limpiarSeleccion()">
+              Quitar selección
+            </button>
+          }
+          <button
+            mat-flat-button
+            color="primary"
+            type="button"
+            [disabled]="seleccionAprobar().size === 0 || aprobando()"
+            (click)="aprobarSeleccionadas()"
+          >
+            @if (aprobando()) {
+              Aprobando…
+            } @else {
+              Aprobar seleccionadas ({{ seleccionAprobar().size }})
+            }
+          </button>
+        </div>
+        <ul class="lista-pendientes">
+          @for (n of pendientesAprobar(); track n.codigo) {
+            <li>
+              <mat-checkbox
+                [checked]="seleccionadaParaAprobar(n.codigo)"
+                (change)="alternarSeleccion(n.codigo)"
+              >
+                {{ etiquetaEmpleado(n.empleado) }} · {{ nombreConcepto(n) }} ·
+                {{ n.valor | number: '1.2-2' }}
+              </mat-checkbox>
+            </li>
+          }
+        </ul>
+      }
+    </div>
+
+    @if (deshacer(); as pendiente) {
+      <div class="aviso aviso-deshacer">
+        <mat-icon>check_circle</mat-icon>
+        <span>Fila agregada.</span>
+        <button mat-button type="button" (click)="deshacerUltimaFila()">Deshacer</button>
+      </div>
+    }
+
+    <!-- Captura en línea: Tab entre campos, Enter confirma y deja el foco listo, Esc descarta. -->
+    <div class="panel panel-tabla">
+      @if (cargandoNovedades()) {
+        <p class="mensaje-vacio">Cargando novedades…</p>
+      } @else {
+        <table class="tabla-novedades">
+          <thead>
+            <tr>
+              <th class="col-colaborador">Colaborador</th>
+              <th class="col-concepto">Concepto</th>
+              <th class="col-cantidad">Cantidad</th>
+              <th class="col-valor">Valor</th>
+              <th class="col-descripcion">Descripción</th>
+              <th class="col-entra">Entra</th>
+              <th class="col-acciones"></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (fila of novedades(); track fila.codigo) {
+              @if (editando() === fila.codigo) {
+                <tr class="fila-edicion" (keydown.escape)="cancelarEdicion()">
+                  <td>
+                    <app-inline-autocomplete
+                      [opciones]="empleadosDelPeriodo()"
+                      [etiqueta]="etiquetaEmpleado"
+                      [buscarPor]="buscarPorEmpleado"
+                      [valor]="edicion().empleado"
+                      (valorChange)="onEdicionCampo('empleado', $event)"
+                      placeholder="Colaborador"
+                    />
+                  </td>
+                  <td>
+                    <app-inline-autocomplete
+                      [opciones]="conceptos"
+                      [etiqueta]="etiquetaConcepto"
+                      [buscarPor]="buscarPorConcepto"
+                      [valor]="edicion().conceptoNomina"
+                      (valorChange)="onEdicionConceptoChange($event)"
+                      placeholder="Concepto"
+                    />
+                  </td>
+                  <td>
+                    <input
+                      class="celda-input"
+                      type="number"
+                      [ngModel]="edicion().cantidad"
+                      (ngModelChange)="onEdicionCampo('cantidad', $event)"
+                      (keydown.enter)="confirmarEdicion()"
+                    />
+                  </td>
+                  <td>
+                    <input
+                      class="celda-input"
+                      type="number"
+                      [ngModel]="edicion().valor"
+                      (ngModelChange)="onEdicionCampo('valor', $event)"
+                      (keydown.enter)="confirmarEdicion()"
+                    />
+                  </td>
+                  <td>
+                    <input
+                      class="celda-input"
+                      type="text"
+                      [ngModel]="edicion().descripcion"
+                      (ngModelChange)="onEdicionCampo('descripcion', $event)"
+                      (keydown.enter)="confirmarEdicion()"
+                    />
+                  </td>
+                  <td class="col-entra">
+                    <span class="pill" [class.pill-ok]="entra(fila)">{{ calculoLabel(fila) }}</span>
+                  </td>
+                  <td class="col-acciones">
+                    <button mat-icon-button type="button" [disabled]="guardandoEdicion()" (click)="confirmarEdicion()" matTooltip="Guardar (Enter)">
+                      <mat-icon>check</mat-icon>
+                    </button>
+                    <button mat-icon-button type="button" (click)="cancelarEdicion()" matTooltip="Cancelar (Esc)">
+                      <mat-icon>close</mat-icon>
+                    </button>
+                  </td>
+                </tr>
+                @if (errorEdicion(); as error) {
+                  <tr class="fila-error">
+                    <td colspan="7">
+                      <mat-icon>error</mat-icon>
+                      {{ error }}
+                    </td>
+                  </tr>
+                }
+              } @else {
+                <tr class="fila-datos" (click)="editarFila(fila)" tabindex="0" (keydown.enter)="editarFila(fila)">
+                  <td>{{ etiquetaEmpleado(fila.empleado) }}</td>
+                  <td>{{ nombreConcepto(fila) }}</td>
+                  <td class="col-cantidad">{{ fila.cantidad }}</td>
+                  <td class="col-valor">{{ fila.valor | number: '1.2-2' }}</td>
+                  <td>{{ fila.descripcion }}</td>
+                  <td class="col-entra">
+                    <span class="pill" [class.pill-ok]="entra(fila)">{{ calculoLabel(fila) }}</span>
+                  </td>
+                  <td class="col-acciones">
+                    <button
+                      mat-icon-button
+                      type="button"
+                      (click)="eliminarFila(fila); $event.stopPropagation()"
+                      matTooltip="Eliminar"
+                    >
+                      <mat-icon>delete_outline</mat-icon>
+                    </button>
+                  </td>
+                </tr>
+              }
+            }
+
+            <!-- La fila en blanco, siempre al final: no hace falta abrir nada para dar de alta. -->
+            <tr class="fila-borrador" (keydown.escape)="cancelarBorrador()">
+              <td>
+                <app-inline-autocomplete
+                  id="borrador-empleado"
+                  [opciones]="empleadosDelPeriodo()"
+                  [etiqueta]="etiquetaEmpleado"
+                  [buscarPor]="buscarPorEmpleado"
+                  [valor]="borrador().empleado"
+                  [invalido]="intentoConfirmar() && !borrador().empleado"
+                  (valorChange)="onBorradorCampo('empleado', $event)"
+                  placeholder="Colaborador…"
+                />
+              </td>
+              <td>
+                <app-inline-autocomplete
+                  id="borrador-conceptoNomina"
+                  [opciones]="conceptos"
+                  [etiqueta]="etiquetaConcepto"
+                  [buscarPor]="buscarPorConcepto"
+                  [valor]="borrador().conceptoNomina"
+                  [invalido]="intentoConfirmar() && !borrador().conceptoNomina"
+                  (valorChange)="onBorradorConceptoChange($event)"
+                  placeholder="Concepto…"
+                />
+              </td>
+              <td>
+                <input
+                  id="borrador-cantidad"
+                  class="celda-input"
+                  type="number"
+                  placeholder="Cant."
+                  [ngModel]="borrador().cantidad"
+                  (ngModelChange)="onBorradorCampo('cantidad', $event)"
+                  (keydown.enter)="confirmarBorrador()"
+                />
+              </td>
+              <td>
+                <input
+                  id="borrador-valor"
+                  class="celda-input"
+                  [class.invalido]="intentoConfirmar() && (borrador().valor === null || borrador().valor === undefined)"
+                  type="number"
+                  placeholder="Valor"
+                  [ngModel]="borrador().valor"
+                  (ngModelChange)="onBorradorCampo('valor', $event)"
+                  (keydown.enter)="confirmarBorrador()"
+                />
+              </td>
+              <td>
+                <input
+                  id="borrador-descripcion"
+                  class="celda-input"
+                  type="text"
+                  placeholder="Descripción"
+                  [ngModel]="borrador().descripcion"
+                  (ngModelChange)="onBorradorCampo('descripcion', $event)"
+                  (keydown.enter)="confirmarBorrador()"
+                />
+              </td>
+              <td class="col-entra">
+                <span class="pill pill-pendiente" matTooltip="Se aprueba después, en el panel de arriba">
+                  Nace sin aprobar
+                </span>
+              </td>
+              <td class="col-acciones">
+                <button
+                  mat-icon-button
+                  type="button"
+                  color="primary"
+                  [disabled]="guardandoBorrador()"
+                  (click)="confirmarBorrador()"
+                  matTooltip="Agregar (Enter)"
+                >
+                  <mat-icon>add_circle</mat-icon>
+                </button>
+              </td>
+            </tr>
+            @if (errorBorrador(); as error) {
+              <tr class="fila-error">
+                <td colspan="7">
+                  <mat-icon>error</mat-icon>
+                  {{ error }}
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
   }
 </div>

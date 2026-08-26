@@ -1,55 +1,46 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, signal } from '@angular/core';
-import { FormsModule, Validators } from '@angular/forms';
+import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { forkJoin, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
-import { ServiceLocatorRrhService } from '../../../../../shared/basics/service-locator/service-locator-rrh.service';
-import { TableBasicHijosComponent } from '../../../../../shared/basics/table/forms/table-basic-hijos/table-basic-hijos.component';
-import { TableConfig } from '../../../../../shared/basics/table/model/table-interface';
+import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
+import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
+import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { usuarioSesion } from '../../../../../shared/services/usuario-sesion';
 import { ConceptoNomina } from '../../../model/concepto-nomina';
 import { ContratoEmpleado } from '../../../model/contrato-empleado';
 import { Empleado } from '../../../model/empleado';
-import { EntidadesRrh } from '../../../model/entidades-rrh';
 import { NovedadNomina } from '../../../model/novedad-nomina';
 import { PeriodoNomina } from '../../../model/periodo-nomina';
 import { ConceptoNominaService } from '../../../service/concepto-nomina.service';
 import { ContratoEmpleadoService } from '../../../service/contrato-empleado.service';
 import { EmpleadoService } from '../../../service/empleado.service';
+import { NovedadNominaService } from '../../../service/novedad-nomina.service';
 import { PeriodoNominaService } from '../../../service/periodo-nomina.service';
-import {
-  aniosDisponibles,
-  filtrarPorAnio,
-  criteriosPorEmpresa,
-  extraerCodigo,
-  OPCIONES_SI_NO,
-} from '../../parametrizacion/utiles-parametrizacion';
-import { referencia, sinAdornos } from '../../comunes/cuerpo-entidad';
+import { aniosDisponibles, filtrarPorAnio, criteriosPorEmpresa } from '../../parametrizacion/utiles-parametrizacion';
+import { referencia } from '../../comunes/cuerpo-entidad';
 import { registrarEjercicios } from '../../comunes/ejercicios';
 import { opcionesAviso } from '../../comunes/avisos';
+import { InlineAutocompleteComponent } from '../../comunes/inline-autocomplete/inline-autocomplete.component';
 
 /**
- * Novedades del período (RHH.NVNM).
+ * Novedades del período (RHH.NVNM) — captura en línea.
  *
- * Es la vía de carga manual de la nómina histórica de enero–julio de 2026: mientras no haya
- * biométrico, los días trabajados y las horas extra entran por aquí. Por eso la pantalla está
- * pensada para carga rápida —seleccionar período y añadir filas seguidas— y no para navegar.
- *
- * Solo las novedades aprobadas entran en el cálculo, así que el contador de pendientes está a la
- * vista: una novedad cargada y sin aprobar no aparece en el rol y nadie se entera.
+ * Rediseño de 2026-08-25: deja de colgar de `app-table-basic-hijos`. Es la vía de carga manual de
+ * la nómina histórica de enero–julio de 2026, pensada para carga rápida —seleccionar período y
+ * añadir filas seguidas—, así que la captura vive en la propia tabla: Tab entre campos, Enter
+ * confirma la fila y deja el foco listo para la siguiente, Esc la descarta. Nunca se sale de la
+ * tabla a un diálogo.
  */
-/**
- * Estado con el que nace una novedad. `NVNMESTD` lleva `DEFAULT 1` en el DDL y su comentario
- * dice 1=ACTIVO, pero el valor por defecto de la columna no llega a aplicarse: JPA manda el
- * nulo explícito. Y el motor solo recoge las novedades con `estado = 1`
- * (`NovedadNominaDaoServiceImpl.selectAprobadas`), así que una novedad con estado nulo se
- * ignora en el cálculo **sin un solo aviso**. Verificado contra el desplegado el 2026-08-20.
- */
+
+/** `NVNMESTD` con `DEFAULT 1` en el DDL que JPA nunca aplica: se manda explícito. */
 const ESTADO_ACTIVO = 1;
 
 /** `MPLDESTD` = 4. El mismo valor con el que `selectActivosEnPeriodo` descarta a una persona. */
@@ -57,16 +48,13 @@ const ESTADO_EMPLEADO_CESANTE = 4;
 
 /**
  * Si el motor va a mirar esta novedad. Las dos condiciones de `selectAprobadas`, no una.
- *
- * `NovedadNominaDaoServiceImpl` pide `aprobada = 'S' and estado = 1`. La rejilla enseñaba sólo
- * la primera, y esa mitad salía bien: una novedad con el estado nulo se veía idéntica a una
- * buena.
+ * Sin cambios desde antes del rediseño — D19.
  */
 function entraEnElCalculo(novedad: NovedadNomina): boolean {
   return novedad?.aprobada === 'S' && Number(novedad?.estado) === ESTADO_ACTIVO;
 }
 
-/** Por qué no entra, que es más útil que un «No» a secas. */
+/** Por qué no entra, que es más útil que un «No» a secas. D19. */
 function motivoFueraDelCalculo(novedad: NovedadNomina): string {
   if (novedad?.aprobada !== 'S') return 'No · sin aprobar';
   return 'No · sin estado';
@@ -93,6 +81,22 @@ function aFecha(valor: any): Date | null {
   return null;
 }
 
+/** La fila en captura: nada todavía tiene código, y `aprobada` no se pregunta aquí — Corrección 3. */
+interface FilaBorrador {
+  empleado: Empleado | null;
+  conceptoNomina: ConceptoNomina | null;
+  cantidad: number | null;
+  valor: number | null;
+  descripcion: string;
+}
+
+function filaVacia(): FilaBorrador {
+  return { empleado: null, conceptoNomina: null, cantidad: null, valor: null, descripcion: '' };
+}
+
+/** Campos del borrador, en el orden en que se tabula. Sirve para saber cuál falla primero. */
+const CAMPOS_BORRADOR = ['empleado', 'conceptoNomina', 'valor'] as const;
+
 @Component({
   selector: 'app-novedades-nomina',
   standalone: true,
@@ -100,10 +104,12 @@ function aFecha(valor: any): Date | null {
     CommonModule,
     FormsModule,
     MatButtonModule,
+    MatCheckboxModule,
     MatFormFieldModule,
     MatIconModule,
     MatSelectModule,
-    TableBasicHijosComponent,
+    MatTooltipModule,
+    InlineAutocompleteComponent,
   ],
   templateUrl: './novedades-nomina.component.html',
   styleUrls: ['./novedades-nomina.component.scss'],
@@ -114,21 +120,58 @@ export class NovedadesNominaComponent implements OnInit {
   periodos = signal<PeriodoNomina[]>([]);
   periodoSeleccionado = signal<number | null>(null);
   novedades = signal<NovedadNomina[]>([]);
-  /** Mientras esto sea cierto, un desplegable vacío significa «todavía no sé», no «no hay». */
+  /** Mientras esto sea cierto, un desplegable vacío significa «todavía no sé», no «no hay». D17. */
   cargandoPeriodos = signal<boolean>(true);
-  tableConfig?: TableConfig;
+  cargandoNovedades = signal<boolean>(false);
 
+  // ─── Captura en línea ──────────────────────────────────────────────────
+  borrador = signal<FilaBorrador>(filaVacia());
+  guardandoBorrador = signal<boolean>(false);
+  /** Si el servidor rechazó la fila: se queda escrita, marcada, con el motivo a la vista. D15/D22 son la misma familia — nunca perder el dato tecleado. */
+  errorBorrador = signal<string | null>(null);
+  /** Se puso a `true` en el primer Enter que no pasó la validación: recién ahí se pinta en rojo. */
+  intentoConfirmar = signal<boolean>(false);
+  /** El concepto de la última fila confirmada: menos tecleo si la siguiente es igual. */
+  ultimoConcepto = signal<ConceptoNomina | null>(null);
+  /** Fila recién agregada, con temporizador para poder deshacerla sin ir a buscarla. */
+  deshacer = signal<{ codigo: number; venceEn: number } | null>(null);
+  private temporizadorDeshacer: ReturnType<typeof setTimeout> | null = null;
+
+  // ─── Edición en sitio de filas existentes ─────────────────────────────
+  editando = signal<number | null>(null);
+  edicion = signal<FilaBorrador>(filaVacia());
+  guardandoEdicion = signal<boolean>(false);
+  errorEdicion = signal<string | null>(null);
+
+  // ─── Aprobación en lote — Corrección 3 ─────────────────────────────────
   /**
-   * Novedades que el motor no va a mirar: le falta la aprobación o le falta el estado.
-   *
-   * Sustituye al contador de «sin aprobar», que sólo miraba la mitad de la condición.
+   * Captura y aprobación se separan a propósito: el modelo ya tiene `usuarioAprueba`/
+   * `fechaAprobacion` (NVNMUSAP/NVNMFCAP) y hoy nadie los escribe con sentido, porque aprobar era
+   * responder un campo del mismo formulario de alta. Aquí se escriben de verdad, en el momento en
+   * que alguien aprueba, no en el momento en que alguien teclea. No hay pantalla ni permiso propio
+   * todavía —eso es backend y va por otra vía— pero el flujo ya vive separado de la captura, listo
+   * para que el día que haya permiso, sea mover este bloque, no rehacerlo.
    */
-  fueraDelCalculo = computed(
-    () => this.novedades().filter((n) => !entraEnElCalculo(n)).length,
-  );
+  seleccionAprobar = signal<Set<number>>(new Set());
+  aprobando = signal<boolean>(false);
 
-  private empleados: Empleado[] = [];
-  private conceptos: ConceptoNomina[] = [];
+  /** Totales vivos: se ven sin buscarlos. */
+  fueraDelCalculo = computed(() => this.novedades().filter((n) => !entraEnElCalculo(n)).length);
+  entranAlCalculo = computed(() => this.novedades().length - this.fueraDelCalculo());
+  pendientesAprobar = computed(() => this.novedades().filter((n) => n.aprobada !== 'S'));
+  totalesPorConcepto = computed(() => {
+    const mapa = new Map<string, number>();
+    for (const n of this.novedades()) {
+      const nombre = (n.conceptoNomina as any)?.nombre ?? 'Sin concepto';
+      mapa.set(nombre, (mapa.get(nombre) ?? 0) + (Number(n.valor) || 0));
+    }
+    return Array.from(mapa.entries())
+      .map(([nombre, total]) => ({ nombre, total }))
+      .sort((a, b) => b.total - a.total);
+  });
+
+  empleados: Empleado[] = [];
+  conceptos: ConceptoNomina[] = [];
   private contratos: ContratoEmpleado[] = [];
 
   constructor(
@@ -136,18 +179,14 @@ export class NovedadesNominaComponent implements OnInit {
     private empleadoService: EmpleadoService,
     private conceptoService: ConceptoNominaService,
     private contratoService: ContratoEmpleadoService,
-    private locatorRrh: ServiceLocatorRrhService,
+    private novedadNominaService: NovedadNominaService,
     private snackBar: MatSnackBar,
   ) {}
 
   /**
-   * Los períodos se piden **de entrada y por su cuenta**.
-   *
-   * Antes colgaban del `forkJoin` de colaboradores y conceptos —dos `getAll` completos—, así que
-   * hasta que ésos no volvían el desplegable de *Período* estaba vacío. Un desplegable vacío en
-   * esta pantalla se lee como «el período no está creado», y el siguiente paso natural es ir a
-   * crearlo otra vez: dos períodos del mismo mes es exactamente el dato duplicado que después
-   * nadie distingue.
+   * Los períodos se piden **de entrada y por su cuenta** — D17. Antes colgaban del `forkJoin` de
+   * colaboradores y conceptos, así que hasta que ésos no volvían el desplegable de Período estaba
+   * vacío, y un desplegable vacío aquí se lee como «el período no está creado».
    */
   ngOnInit(): void {
     this.cargarPeriodos();
@@ -166,15 +205,13 @@ export class NovedadesNominaComponent implements OnInit {
       this.empleados = datos.empleados;
       this.conceptos = datos.conceptos;
       this.contratos = datos.contratos;
-      // La tabla pudo construirse antes de que llegaran las colecciones de los combos
-      if (this.periodoSeleccionado() !== null) this.onPeriodoChange(this.periodoSeleccionado());
     });
   }
 
   onAnioChange(anio: number): void {
     this.anio.set(anio);
     this.periodoSeleccionado.set(null);
-    this.tableConfig = undefined;
+    this.novedades.set([]);
     this.cargarPeriodos();
   }
 
@@ -182,7 +219,6 @@ export class NovedadesNominaComponent implements OnInit {
     this.cargandoPeriodos.set(true);
     this.periodoService.selectByCriteria(criteriosPorEmpresa('mes')).subscribe({
       next: (data) => {
-        // El piso de los selectores de ejercicio se aprende del dato, igual que en el listado
         registrarEjercicios(data ?? []);
         this.anios = aniosDisponibles();
         this.periodos.set(filtrarPorAnio(data, this.anio()));
@@ -191,157 +227,54 @@ export class NovedadesNominaComponent implements OnInit {
       error: () => {
         this.periodos.set([]);
         this.cargandoPeriodos.set(false);
-        this.avisar('No se pudieron cargar los períodos de nómina');
+        this.avisar('No se pudieron cargar los períodos de nómina', true);
       },
     });
   }
 
   onPeriodoChange(codigo: number | null): void {
     this.periodoSeleccionado.set(codigo);
-    this.locatorRrh.filtroPeriodo = codigo;
+    this.reiniciarBorrador();
+    this.editando.set(null);
+    this.seleccionAprobar.set(new Set());
 
     if (codigo === null) {
-      this.tableConfig = undefined;
       this.novedades.set([]);
       return;
     }
 
-    this.locatorRrh
-      .recargarValores(EntidadesRrh.NOVEDAD_NOMINA)
-      .then((data) => this.construirTabla(Array.isArray(data) ? data : []))
-      .catch(() => {
-        this.avisar('No se pudieron cargar las novedades del período');
-        this.construirTabla([]);
-      });
-  }
-
-  private construirTabla(registros: NovedadNomina[]): void {
-    this.novedades.set(registros);
-
-    this.tableConfig = {
-      entidad: EntidadesRrh.NOVEDAD_NOMINA,
-      titulo: 'Novedades del período',
-      registros: this.formatear(registros),
-      fields: [
-        { column: 'empleadoLabel', header: 'Colaborador', fWidth: '28%' },
-        { column: 'conceptoLabel', header: 'Concepto', fWidth: '24%' },
-        { column: 'cantidad', header: 'Cantidad', fWidth: '12%', fAlign: 'aR' },
-        { column: 'valor', header: 'Valor', fWidth: '14%', fType: 2, fAlign: 'aR' },
-        { column: 'descripcion', header: 'Descripción', fWidth: '12%' },
-        { column: 'aprobadaLabel', header: 'Aprobada', fWidth: '9%', fAlign: 'aC' },
-        // El motor exige LAS DOS condiciones —`aprobada = 'S'` y `estado = 1`— y la rejilla sólo
-        // enseñaba la primera. Una novedad con el estado nulo se veía igual que una buena y el
-        // cálculo la descartaba sin un aviso. Esta columna responde la pregunta que el usuario
-        // tiene de verdad: si la fila va a entrar o no.
-        { column: 'calculoLabel', header: '¿Entra al cálculo?', fWidth: '13%', fAlign: 'aC' },
-      ],
-      regConfig: [
-        {
-          type: 'autocomplete',
-          name: 'empleado',
-          label: 'Colaborador',
-          autocompleteType: 1,
-          // Combo de tabla: busca por identificación y por apellidos
-          selectField: ['identificacion', 'apellidos'],
-          collections: this.empleadosDelPeriodo(),
-        },
-        {
-          type: 'autocomplete',
-          name: 'conceptoNomina',
-          label: 'Concepto de nómina',
-          autocompleteType: 1,
-          // Combo de tabla: busca por nombre y por código alterno
-          selectField: ['nombre', 'codigoAlterno'],
-          collections: this.conceptos,
-        },
-        { type: 'input', name: 'cantidad', label: 'Cantidad (horas, días, unidades)', inputType: 'number' },
-        {
-          type: 'input',
-          name: 'valor',
-          label: 'Valor',
-          inputType: 'number',
-          validations: [
-            { name: 'required', validator: Validators.required, message: 'El valor es requerido' },
-          ],
-        },
-        { type: 'input', name: 'descripcion', label: 'Descripción', inputType: 'text' },
-        {
-          // Nace **sin valor** y es obligatorio, a propósito.
-          //
-          // Con `No` puesto de arranque, guardar sin tocarlo era un camino normal y sin
-          // fricción: la fila se guardaba, se veía en la rejilla como cualquier otra y
-          // `selectAprobadas` —`aprobada = 'S' and estado = 1`— no la miraba nunca. El mes salía
-          // con un descuento de menos y ninguna cifra decía de quién.
-          //
-          // El arreglo no es poner `Sí` por defecto: `'N'` es el valor correcto para una bandera
-          // de aprobación. Lo que faltaba era que alguien tuviera que responder.
-          type: 'select',
-          name: 'aprobada',
-          label: 'Aprobada para el cálculo',
-          value: null,
-          autocompleteType: 1,
-          selectField: ['descripcion'],
-          collections: OPCIONES_SI_NO,
-          validations: [
-            {
-              name: 'required',
-              validator: Validators.required,
-              message: 'Diga si la novedad entra al cálculo: sin «Sí» el motor no la mira',
-            },
-          ],
-        },
-      ],
-      add: true,
-      edit: true,
-      remove: true,
-      paginator: true,
-      filter: true,
-      fSize: 'em-1',
-      row_size: 's08',
-      onBeforeSave: (datos: any) => {
-        const aprobada = extraerCodigo(datos.aprobada);
-        return {
-          ...sinAdornos(datos),
-          periodoNomina: { codigo: this.periodoSeleccionado() },
-          empleado: referencia(datos.empleado),
-          conceptoNomina: referencia(datos.conceptoNomina),
-          aprobada,
-          estado: datos.estado ?? ESTADO_ACTIVO,
-          usuarioAprueba: aprobada === 'S' ? usuarioSesion() : null,
-          usuarioRegistro: usuarioSesion(),
-        };
-      },
-      onDataUpdate: (data: NovedadNomina[]) => {
+    this.cargandoNovedades.set(true);
+    this.novedadNominaService.selectByCriteria(this.criteriosDelPeriodo(codigo)).subscribe({
+      next: (data) => {
         this.novedades.set(data ?? []);
-        return this.formatear(data ?? []);
+        this.cargandoNovedades.set(false);
       },
-    };
+      error: () => {
+        this.novedades.set([]);
+        this.cargandoNovedades.set(false);
+        this.avisar('No se pudieron cargar las novedades del período', true);
+      },
+    });
   }
 
-  private formatear(registros: NovedadNomina[]): any[] {
-    return registros.map((row) => ({
-      ...row,
-      empleadoLabel: this.etiquetaEmpleado(row.empleado as any),
-      conceptoLabel: (row.conceptoNomina as any)?.nombre ?? '—',
-      aprobadaLabel: row.aprobada === 'S' ? 'Sí' : 'No',
-      calculoLabel: entraEnElCalculo(row) ? 'Sí' : motivoFueraDelCalculo(row),
-    }));
+  private criteriosDelPeriodo(codigo: number): DatosBusqueda[] {
+    const db = new DatosBusqueda();
+    db.asignaValorConCampoPadre(
+      TipoDatosBusqueda.LONG,
+      'periodoNomina',
+      'codigo',
+      codigo.toString(),
+      TipoComandosBusqueda.IGUAL,
+    );
+    return [db];
   }
 
   /**
-   * Colaboradores a los que tiene sentido registrarle una novedad de **este** período.
-   *
-   * Mismo criterio que `selectActivosEnPeriodo`, que es quien decide a quién procesa el motor:
-   * contrato empezado antes de que acabe el período, no vencido antes de que empiece, y —la
-   * asimetría deliberada— si el contrato tiene fecha de terminación se mira **sólo la fecha**,
-   * porque el mes de la salida no va por nómina, lo paga el finiquito; si no la tiene, se mira
-   * el estado del empleado. Sin esto la lista ofrecía a los cesantes, y una novedad para quien
-   * no está en el período queda huérfana: no se lee jamás y nadie la ve.
-   *
-   * Mientras no haya período elegido o no hayan llegado los contratos, se ofrece la lista
-   * completa: es preferible a un combo vacío que se lea como «no hay nadie».
+   * Colaboradores a los que tiene sentido registrarle una novedad de **este** período — D18.
+   * Sin cambios desde antes del rediseño: mismo criterio que `selectActivosEnPeriodo`, la
+   * asimetría incluida (el mes de la salida no va por nómina, lo paga el finiquito).
    */
-  private empleadosDelPeriodo(): Empleado[] {
+  empleadosDelPeriodo(): Empleado[] {
     const periodo = this.periodos().find((p) => p.codigo === this.periodoSeleccionado());
     if (!periodo || this.contratos.length === 0) return this.empleados;
 
@@ -375,24 +308,316 @@ export class NovedadesNominaComponent implements OnInit {
     return propios.length > 0 ? propios : this.empleados;
   }
 
-  etiquetaEmpleado(empleado: any): string {
-    if (!empleado) return '—';
+  etiquetaEmpleado = (empleado: any): string => {
+    if (!empleado) return '';
     return `${empleado.identificacion ?? ''} — ${empleado.apellidos ?? ''} ${empleado.nombres ?? ''}`.trim();
-  }
+  };
+
+  buscarPorEmpleado = (empleado: any): string[] => [
+    empleado?.identificacion ?? '',
+    empleado?.apellidos ?? '',
+    empleado?.nombres ?? '',
+  ];
+
+  etiquetaConcepto = (concepto: any): string => concepto?.nombre ?? '';
+
+  buscarPorConcepto = (concepto: any): string[] => [
+    concepto?.nombre ?? '',
+    concepto?.codigoAlterno != null ? String(concepto.codigoAlterno) : '',
+  ];
 
   etiquetaPeriodo(periodo: PeriodoNomina): string {
     return `${periodo.mes}/${periodo.anio}`;
   }
 
-  onTableError(errorData: { mensaje: string; codigoHttp?: number }): void {
-    const exito =
-      errorData.codigoHttp != null && errorData.codigoHttp >= 200 && errorData.codigoHttp < 300;
-    this.snackBar.open(errorData.mensaje, 'Cerrar', {
-      ...opcionesAviso(!exito, errorData.mensaje),
+  calculoLabel(n: NovedadNomina): string {
+    return entraEnElCalculo(n) ? 'Sí' : motivoFueraDelCalculo(n);
+  }
+
+  /** Envuelve la función de módulo — D19 sin tocar — para que la plantilla pueda llamarla. */
+  entra(n: NovedadNomina): boolean {
+    return entraEnElCalculo(n);
+  }
+
+  /** `conceptoNomina` es `ConceptoNomina | { codigo }` según venga del backend o de un borrador local. */
+  nombreConcepto(n: NovedadNomina): string {
+    return (n?.conceptoNomina as any)?.nombre ?? '';
+  }
+
+  // ─── Captura en línea ──────────────────────────────────────────────────
+
+  private reiniciarBorrador(): void {
+    const vacia = filaVacia();
+    // Menos tecleo: si la fila anterior fue de este concepto, seguramente la siguiente también.
+    const concepto = this.ultimoConcepto();
+    if (concepto) {
+      vacia.conceptoNomina = concepto;
+      if (concepto.valor !== null && concepto.valor !== undefined) vacia.valor = concepto.valor;
+    }
+    this.borrador.set(vacia);
+    this.errorBorrador.set(null);
+    this.intentoConfirmar.set(false);
+  }
+
+  onBorradorConceptoChange(item: ConceptoNomina | null): void {
+    const actual = this.borrador();
+    // Si el concepto elegido es de valor fijo, se propone: menos tecleo, y se puede corregir.
+    const valor =
+      item && item.valor !== null && item.valor !== undefined ? item.valor : actual.valor;
+    this.borrador.set({ ...actual, conceptoNomina: item, valor });
+  }
+
+  onBorradorCampo(campo: keyof FilaBorrador, valor: any): void {
+    this.borrador.set({ ...this.borrador(), [campo]: valor });
+  }
+
+  /** Primer campo del borrador que le falta, en el orden en que se tabula, o `null` si está listo. */
+  campoBorradorInvalido(): (typeof CAMPOS_BORRADOR)[number] | null {
+    const fila = this.borrador();
+    if (!fila.empleado) return 'empleado';
+    if (!fila.conceptoNomina) return 'conceptoNomina';
+    if (fila.valor === null || fila.valor === undefined || Number.isNaN(Number(fila.valor))) {
+      return 'valor';
+    }
+    return null;
+  }
+
+  /** Enter en cualquier campo de la fila en captura: confirma, o se queda si algo falta. */
+  confirmarBorrador(): void {
+    if (this.guardandoBorrador()) return;
+
+    const invalido = this.campoBorradorInvalido();
+    if (invalido) {
+      this.intentoConfirmar.set(true);
+      this.errorBorrador.set(null);
+      document.getElementById(`borrador-${invalido}`)?.focus();
+      return;
+    }
+
+    const fila = this.borrador();
+    const cuerpo = {
+      periodoNomina: { codigo: this.periodoSeleccionado() },
+      empleado: referencia(fila.empleado),
+      conceptoNomina: referencia(fila.conceptoNomina),
+      cantidad: fila.cantidad,
+      valor: fila.valor,
+      descripcion: fila.descripcion || null,
+      // Corrección 3: la captura no pregunta «Aprobada» fila por fila. Nace sin aprobar y sin
+      // firma; la firma de verdad se escribe al aprobar, no al capturar.
+      aprobada: 'N',
+      estado: ESTADO_ACTIVO,
+      usuarioAprueba: null,
+      fechaAprobacion: null,
+      usuarioRegistro: usuarioSesion(),
+    };
+
+    this.guardandoBorrador.set(true);
+    this.errorBorrador.set(null);
+    this.novedadNominaService.add(cuerpo).subscribe({
+      next: (creada) => {
+        this.guardandoBorrador.set(false);
+        if (creada) {
+          // El dato que se ve viene siempre de lo que el servidor devolvió, nunca del tecleo — D11.
+          this.novedades.set([...this.novedades(), creada]);
+          this.ofrecerDeshacer(creada.codigo);
+        } else {
+          // El backend respondió sin cuerpo; se relee el período para no enseñar un dato inventado.
+          this.recargarNovedades();
+        }
+        this.ultimoConcepto.set(fila.conceptoNomina);
+        this.reiniciarBorrador();
+        document.getElementById('borrador-empleado')?.focus();
+      },
+      error: (err) => {
+        this.guardandoBorrador.set(false);
+        // La fila NO se pierde ni se vacía: se queda tecleada, con el motivo a la vista.
+        this.errorBorrador.set(this.mensajeDeError(err));
+      },
     });
   }
 
-  private avisar(mensaje: string): void {
-    this.onTableError({ mensaje });
+  cancelarBorrador(): void {
+    this.reiniciarBorrador();
+  }
+
+  private ofrecerDeshacer(codigo: number): void {
+    if (this.temporizadorDeshacer) clearTimeout(this.temporizadorDeshacer);
+    const SEGUNDOS = 8;
+    this.deshacer.set({ codigo, venceEn: SEGUNDOS });
+    this.temporizadorDeshacer = setTimeout(() => this.deshacer.set(null), SEGUNDOS * 1000);
+  }
+
+  deshacerUltimaFila(): void {
+    const pendiente = this.deshacer();
+    if (!pendiente) return;
+    if (this.temporizadorDeshacer) clearTimeout(this.temporizadorDeshacer);
+    this.deshacer.set(null);
+
+    this.novedadNominaService.delete(pendiente.codigo).subscribe({
+      next: () => {
+        this.novedades.set(this.novedades().filter((n) => n.codigo !== pendiente.codigo));
+        this.avisar('Fila deshecha.');
+      },
+      error: (err) => this.avisar(this.mensajeDeError(err, 'No se pudo deshacer la fila.'), true),
+    });
+  }
+
+  // ─── Edición en sitio ──────────────────────────────────────────────────
+
+  editarFila(fila: NovedadNomina): void {
+    if (this.editando() === fila.codigo) return;
+    this.editando.set(fila.codigo);
+    this.edicion.set({
+      empleado: (fila.empleado as any) ?? null,
+      conceptoNomina: (fila.conceptoNomina as any) ?? null,
+      cantidad: fila.cantidad ?? null,
+      valor: fila.valor ?? null,
+      descripcion: fila.descripcion ?? '',
+    });
+    this.errorEdicion.set(null);
+  }
+
+  onEdicionConceptoChange(item: ConceptoNomina | null): void {
+    this.edicion.set({ ...this.edicion(), conceptoNomina: item });
+  }
+
+  onEdicionCampo(campo: keyof FilaBorrador, valor: any): void {
+    this.edicion.set({ ...this.edicion(), [campo]: valor });
+  }
+
+  cancelarEdicion(): void {
+    this.editando.set(null);
+    this.errorEdicion.set(null);
+  }
+
+  confirmarEdicion(): void {
+    const codigo = this.editando();
+    if (codigo === null || this.guardandoEdicion()) return;
+
+    const fila = this.edicion();
+    if (!fila.empleado || !fila.conceptoNomina || fila.valor === null || fila.valor === undefined) {
+      this.errorEdicion.set('Falta colaborador, concepto o valor.');
+      return;
+    }
+
+    const original = this.novedades().find((n) => n.codigo === codigo);
+    if (!original) return;
+
+    const cuerpo = {
+      ...original,
+      empleado: referencia(fila.empleado),
+      conceptoNomina: referencia(fila.conceptoNomina),
+      cantidad: fila.cantidad,
+      valor: fila.valor,
+      descripcion: fila.descripcion || null,
+      periodoNomina: referencia(original.periodoNomina),
+    };
+
+    this.guardandoEdicion.set(true);
+    this.errorEdicion.set(null);
+    this.novedadNominaService.update(cuerpo).subscribe({
+      next: (actualizada) => {
+        this.guardandoEdicion.set(false);
+        if (actualizada) {
+          this.novedades.set(
+            this.novedades().map((n) => (n.codigo === codigo ? actualizada : n)),
+          );
+        } else {
+          this.recargarNovedades();
+        }
+        this.editando.set(null);
+      },
+      error: (err) => {
+        this.guardandoEdicion.set(false);
+        // La edición tampoco se pierde: se queda abierta, con el motivo a la vista.
+        this.errorEdicion.set(this.mensajeDeError(err));
+      },
+    });
+  }
+
+  eliminarFila(fila: NovedadNomina): void {
+    this.novedadNominaService.delete(fila.codigo).subscribe({
+      next: () => {
+        this.novedades.set(this.novedades().filter((n) => n.codigo !== fila.codigo));
+        if (this.editando() === fila.codigo) this.editando.set(null);
+      },
+      error: (err) => this.avisar(this.mensajeDeError(err, 'No se pudo eliminar la fila.'), true),
+    });
+  }
+
+  // ─── Aprobación en lote ────────────────────────────────────────────────
+
+  seleccionadaParaAprobar(codigo: number): boolean {
+    return this.seleccionAprobar().has(codigo);
+  }
+
+  alternarSeleccion(codigo: number): void {
+    const set = new Set(this.seleccionAprobar());
+    if (set.has(codigo)) set.delete(codigo);
+    else set.add(codigo);
+    this.seleccionAprobar.set(set);
+  }
+
+  seleccionarTodasPendientes(): void {
+    this.seleccionAprobar.set(new Set(this.pendientesAprobar().map((n) => n.codigo)));
+  }
+
+  limpiarSeleccion(): void {
+    this.seleccionAprobar.set(new Set());
+  }
+
+  aprobarSeleccionadas(): void {
+    const codigos = Array.from(this.seleccionAprobar());
+    if (codigos.length === 0 || this.aprobando()) return;
+
+    const filas = this.novedades().filter((n) => codigos.includes(n.codigo));
+    const usuario = usuarioSesion();
+    const ahora = new Date();
+
+    this.aprobando.set(true);
+    forkJoin(
+      filas.map((fila) =>
+        this.novedadNominaService.update({
+          ...fila,
+          empleado: referencia(fila.empleado),
+          conceptoNomina: referencia(fila.conceptoNomina),
+          periodoNomina: referencia(fila.periodoNomina),
+          aprobada: 'S',
+          estado: ESTADO_ACTIVO,
+          usuarioAprueba: usuario,
+          fechaAprobacion: ahora,
+        }),
+      ),
+    ).subscribe({
+      next: (actualizadas) => {
+        this.aprobando.set(false);
+        const porCodigo = new Map(actualizadas.filter(Boolean).map((n) => [n!.codigo, n!]));
+        this.novedades.set(this.novedades().map((n) => porCodigo.get(n.codigo) ?? n));
+        this.limpiarSeleccion();
+        this.avisar(`${actualizadas.filter(Boolean).length} novedad(es) aprobada(s).`);
+      },
+      error: (err) => {
+        this.aprobando.set(false);
+        this.avisar(this.mensajeDeError(err, 'No se pudieron aprobar las novedades seleccionadas.'), true);
+        this.recargarNovedades();
+      },
+    });
+  }
+
+  private recargarNovedades(): void {
+    const codigo = this.periodoSeleccionado();
+    if (codigo === null) return;
+    this.novedadNominaService.selectByCriteria(this.criteriosDelPeriodo(codigo)).subscribe({
+      next: (data) => this.novedades.set(data ?? []),
+    });
+  }
+
+  private mensajeDeError(error: any, generico = 'El proceso no se pudo completar.'): string {
+    if (typeof error === 'string' && error.trim()) return error;
+    return error?.mensaje || error?.message || generico;
+  }
+
+  private avisar(mensaje: string, esError = false): void {
+    this.snackBar.open(mensaje, 'Cerrar', { ...opcionesAviso(esError, mensaje) });
   }
 }

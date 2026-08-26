@@ -13,6 +13,7 @@ import { DetalleRubroService } from '../../../../../shared/services/detalle-rubr
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { OPCIONES_ESTADO, OPCIONES_SI_NO } from '../../parametrizacion/utiles-parametrizacion';
 import { CampoFormulario } from '../modelo-formulario';
+import { normalizar } from '../normalizar';
 
 /**
  * Pinta un `CampoFormulario` contra un control de un `FormGroup` ya construido.
@@ -254,18 +255,4 @@ function aCadenaIso(fecha: Date | null): string | null {
   const mes = String(fecha.getMonth() + 1).padStart(2, '0');
   const dia = String(fecha.getDate()).padStart(2, '0');
   return `${fecha.getFullYear()}-${mes}-${dia}`;
-}
-
-/**
- * Texto comparable: sin mayúsculas, sin acentos y sin espacios de sobra.
- *
- * Sin quitar los diacríticos, teclear `Nunez` no encuentra `Núñez` y `Peñafiel` obliga a saber
- * dónde está la eñe en el teclado. Los dos lados del `includes` pasan por aquí.
- */
-function normalizar(texto: string): string {
-  return (texto ?? '')
-    .trim()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase();
 }

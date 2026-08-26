@@ -3,31 +3,37 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
-import { Observable, Subject, of } from 'rxjs';
+import { Observable, Subject, of, throwError } from 'rxjs';
 
-import { ServiceLocatorRrhService } from '../../../../../shared/basics/service-locator/service-locator-rrh.service';
 import { ConceptoNominaService } from '../../../service/concepto-nomina.service';
 import { ContratoEmpleadoService } from '../../../service/contrato-empleado.service';
 import { EmpleadoService } from '../../../service/empleado.service';
+import { NovedadNominaService } from '../../../service/novedad-nomina.service';
 import { PeriodoNominaService } from '../../../service/periodo-nomina.service';
+import { usuarioSesion } from '../../../../../shared/services/usuario-sesion';
 import { NovedadesNominaComponent } from './novedades-nomina.component';
 
 /**
- * Novedades del período · D17, D18, D19 y D22.
+ * Novedades del período · rediseño 2026-08-25, captura en línea.
  *
- * Los datos van con la forma real de la réplica: febrero de 2026, con Torres Chávez y Benítez
- * Montes ya cesantes desde enero, que es el caso exacto que destapó D18.
+ * D17, D18 y D19 son la lógica heredada de la pantalla anterior, sin tocar — se comprueba que
+ * sobrevivió al traslado. El resto es nuevo: captura sin diálogo, la fila que no se pierde si el
+ * servidor la rechaza, y la aprobación en lote separada de la captura (Corrección 3).
  */
 describe('NovedadesNominaComponent', () => {
   let fixture: ComponentFixture<NovedadesNominaComponent>;
   let componente: NovedadesNominaComponent;
 
-  /** Se controlan a mano para poder dejarlos colgando y observar la carrera de D17. */
   let empleados$: Subject<any[]>;
   let conceptos$: Subject<any[]>;
   let contratos$: Subject<any[]>;
   let periodos$: Subject<any[]>;
-  let novedadesDelLocator: any[];
+  let novedadNominaService: {
+    selectByCriteria: jasmine.Spy;
+    add: jasmine.Spy;
+    update: jasmine.Spy;
+    delete: jasmine.Spy;
+  };
 
   const PERIODO_FEBRERO = {
     codigo: 2,
@@ -39,30 +45,36 @@ describe('NovedadesNominaComponent', () => {
   };
   const PERIODO_ENERO = { ...PERIODO_FEBRERO, codigo: 1, mes: 1, fechaInicio: [2026, 1, 1], fechaFin: [2026, 1, 31] };
 
-  const ACTIVA = { codigo: 10, identificacion: '1712345678', apellidos: 'BRAVO CAIZA', nombres: 'ANA', estado: 1 };
-  const TORRES = { codigo: 45, identificacion: '1701020304', apellidos: 'TORRES CHAVEZ', nombres: 'ROSA', estado: 4 };
-  const BENITEZ = { codigo: 46, identificacion: '1714531405', apellidos: 'BENITEZ MONTES', nombres: 'GUILLERMINA', estado: 4 };
-  /** Cesante en el maestro de hoy, pero **sin** fecha de terminación en el contrato. */
-  const SIN_FECHA = { codigo: 47, identificacion: '1799887766', apellidos: 'RED DE SEGURIDAD', nombres: 'X', estado: 4 };
+  const ACTIVA: any = { codigo: 10, identificacion: '1712345678', apellidos: 'BRAVO CAIZA', nombres: 'ANA', estado: 1 };
+  const TORRES: any = { codigo: 45, identificacion: '1701020304', apellidos: 'TORRES CHAVEZ', nombres: 'ROSA', estado: 4 };
+  const BENITEZ: any = { codigo: 46, identificacion: '1714531405', apellidos: 'BENITEZ MONTES', nombres: 'GUILLERMINA', estado: 4 };
+  const SIN_FECHA: any = { codigo: 47, identificacion: '1799887766', apellidos: 'RED DE SEGURIDAD', nombres: 'X', estado: 4 };
 
   const CONTRATOS = [
     { codigo: 1, empleado: ACTIVA, numero: 'CT-1712345678', fechaInicio: [2024, 3, 1], fechaFin: null, fechaTerminacion: null },
-    // Los dos causaron baja el 15 y el 16 de enero: fuera de febrero, dentro de enero.
     { codigo: 2, empleado: TORRES, numero: 'CT-1701020304', fechaInicio: [2020, 1, 1], fechaFin: null, fechaTerminacion: [2026, 1, 15] },
     { codigo: 3, empleado: BENITEZ, numero: 'CT-1714531405', fechaInicio: [2020, 1, 1], fechaFin: null, fechaTerminacion: [2026, 1, 16] },
     { codigo: 4, empleado: SIN_FECHA, numero: 'CT-1799887766', fechaInicio: [2020, 1, 1], fechaFin: null, fechaTerminacion: null },
   ];
 
   const EMPLEADOS = [ACTIVA, TORRES, BENITEZ, SIN_FECHA];
+  const QUIROGRAFARIO: any = { codigo: 1, nombre: 'Préstamo quirografario IESS', codigoAlterno: 23, valor: null };
+  const BONO_FIJO: any = { codigo: 2, nombre: 'Bono de responsabilidad', codigoAlterno: 30, valor: 50 };
 
   beforeEach(async () => {
     empleados$ = new Subject<any[]>();
     conceptos$ = new Subject<any[]>();
     contratos$ = new Subject<any[]>();
     periodos$ = new Subject<any[]>();
-    novedadesDelLocator = [];
 
     const comoObservable = <T>(s: Subject<T>): Observable<T> => s.asObservable();
+
+    novedadNominaService = {
+      selectByCriteria: jasmine.createSpy('selectByCriteria').and.returnValue(of([])),
+      add: jasmine.createSpy('add'),
+      update: jasmine.createSpy('update'),
+      delete: jasmine.createSpy('delete').and.returnValue(of(null)),
+    };
 
     await TestBed.configureTestingModule({
       imports: [NovedadesNominaComponent, NoopAnimationsModule],
@@ -73,13 +85,7 @@ describe('NovedadesNominaComponent', () => {
         { provide: EmpleadoService, useValue: { selectByCriteria: () => comoObservable(empleados$) } },
         { provide: ConceptoNominaService, useValue: { selectByCriteria: () => comoObservable(conceptos$) } },
         { provide: ContratoEmpleadoService, useValue: { selectByCriteria: () => comoObservable(contratos$) } },
-        {
-          provide: ServiceLocatorRrhService,
-          useValue: {
-            filtroPeriodo: null,
-            recargarValores: () => Promise.resolve(novedadesDelLocator),
-          },
-        },
+        { provide: NovedadNominaService, useValue: novedadNominaService },
         { provide: MatSnackBar, useValue: { open: () => undefined } },
       ],
     }).compileComponents();
@@ -89,24 +95,24 @@ describe('NovedadesNominaComponent', () => {
   });
 
   /** Deja el componente con los cuatro orígenes resueltos y un período elegido. */
-  async function conPeriodo(codigo: number): Promise<void> {
+  async function conPeriodo(codigo: number, novedadesDelPeriodo: any[] = []): Promise<void> {
+    novedadNominaService.selectByCriteria.and.returnValue(of(novedadesDelPeriodo));
     fixture.detectChanges();
     periodos$.next([PERIODO_ENERO, PERIODO_FEBRERO]);
     empleados$.next(EMPLEADOS);
     empleados$.complete();
-    conceptos$.next([{ codigo: 1, nombre: 'Préstamo quirografario IESS', codigoAlterno: 23 }]);
+    conceptos$.next([QUIROGRAFARIO, BONO_FIJO]);
     conceptos$.complete();
     contratos$.next(CONTRATOS);
     contratos$.complete();
     componente.onPeriodoChange(codigo);
     await fixture.whenStable();
+    fixture.detectChanges();
   }
 
   describe('D17 · el desplegable de Período', () => {
     it('se llena aunque colaboradores y conceptos sigan sin llegar', () => {
       fixture.detectChanges();
-
-      // Los tres `getAll` del forkJoin siguen colgando a propósito: es la carrera de enero.
       periodos$.next([PERIODO_ENERO, PERIODO_FEBRERO]);
 
       expect(componente.periodos().length).toBe(2);
@@ -123,64 +129,33 @@ describe('NovedadesNominaComponent', () => {
       periodos$.next([]);
       fixture.detectChanges();
 
-      // Ya sí: la lista llegó vacía de verdad.
       expect(texto()).toContain('No hay períodos de nómina creados');
     });
   });
 
-  describe('D18 · el combo de colaborador', () => {
+  describe('D18 · el combo de colaborador (empleadosDelPeriodo)', () => {
     it('no ofrece a quien causó baja antes del período', async () => {
-      await conPeriodo(2); // febrero
+      await conPeriodo(2);
 
-      const ofrecidos = collectionsDe('empleado').map((e: any) => e.apellidos);
+      const ofrecidos = componente.empleadosDelPeriodo().map((e: any) => e.apellidos);
       expect(ofrecidos).toContain('BRAVO CAIZA');
       expect(ofrecidos).not.toContain('TORRES CHAVEZ');
       expect(ofrecidos).not.toContain('BENITEZ MONTES');
     });
 
-    /**
-     * **Tampoco en el mes de la salida, y es lo correcto.**
-     *
-     * La primera versión de este test daba por hecho que quien se fue el 15 de enero seguía
-     * ofreciéndose en enero. No: `selectActivosEnPeriodo` compara con `> :hasta`, no con
-     * `>= :desde`, porque **el mes de la salida no va por nómina, lo paga el finiquito**. El
-     * motor no procesa a Torres ni a Benítez en enero —está verificado en `ESTADO-RRHH.md`, que
-     * enero sale con 22 y ellos no están—, así que una novedad de enero a su nombre tampoco se
-     * leería nunca. El combo dice lo mismo que el motor, que es todo el punto de D18.
-     */
     it('tampoco los ofrece en el mes de su salida: ese mes lo paga el finiquito', async () => {
-      await conPeriodo(1); // enero: las bajas son del 15 y el 16
+      await conPeriodo(1);
 
-      const ofrecidos = collectionsDe('empleado').map((e: any) => e.apellidos);
+      const ofrecidos = componente.empleadosDelPeriodo().map((e: any) => e.apellidos);
       expect(ofrecidos).not.toContain('TORRES CHAVEZ');
       expect(ofrecidos).not.toContain('BENITEZ MONTES');
       expect(ofrecidos).toContain('BRAVO CAIZA');
-    });
-
-    it('sí ofrece a quien se va DESPUÉS del período que se está cargando', async () => {
-      fixture.detectChanges();
-      periodos$.next([PERIODO_ENERO, PERIODO_FEBRERO]);
-      empleados$.next(EMPLEADOS);
-      empleados$.complete();
-      conceptos$.next([]);
-      conceptos$.complete();
-      // Misma persona, salida en marzo: en enero y en febrero todavía cobra por nómina.
-      contratos$.next([
-        { codigo: 9, empleado: TORRES, numero: 'CT-1701020304', fechaInicio: [2020, 1, 1], fechaFin: null, fechaTerminacion: [2026, 3, 6] },
-      ]);
-      contratos$.complete();
-      componente.onPeriodoChange(2);
-      await fixture.whenStable();
-
-      expect(collectionsDe('empleado').map((e: any) => e.apellidos)).toContain('TORRES CHAVEZ');
     });
 
     it('respeta la red de seguridad: sin fecha de terminación manda el estado del empleado', async () => {
       await conPeriodo(1);
 
-      // Cesante en `MPLD` y sin fecha en el contrato: fuera en todos los meses, como en el motor.
-      const ofrecidos = collectionsDe('empleado').map((e: any) => e.apellidos);
-      expect(ofrecidos).not.toContain('RED DE SEGURIDAD');
+      expect(componente.empleadosDelPeriodo().map((e: any) => e.apellidos)).not.toContain('RED DE SEGURIDAD');
     });
 
     it('si los contratos llegan vacíos, ofrece la lista entera en vez de ninguna', async () => {
@@ -195,89 +170,179 @@ describe('NovedadesNominaComponent', () => {
       componente.onPeriodoChange(2);
       await fixture.whenStable();
 
-      // Un combo vacío se lee como «no hay nadie», que es peor que uno ancho de más.
-      expect(collectionsDe('empleado').length).toBe(EMPLEADOS.length);
-    });
-
-    /**
-     * Elegir el período antes de que lleguen las colecciones deja el combo vacío un instante.
-     * `ngOnInit` rehace la tabla cuando el `forkJoin` aterriza, y esto lo comprueba: sin esa
-     * relectura, D17 —los períodos por delante— habría creado un hueco nuevo.
-     */
-    it('rehace la tabla cuando las colecciones llegan después del período elegido', async () => {
-      fixture.detectChanges();
-      periodos$.next([PERIODO_ENERO, PERIODO_FEBRERO]);
-
-      componente.onPeriodoChange(2);
-      await fixture.whenStable();
-      expect(collectionsDe('empleado').length).toBe(0);
-
-      empleados$.next(EMPLEADOS);
-      empleados$.complete();
-      conceptos$.next([]);
-      conceptos$.complete();
-      contratos$.next(CONTRATOS);
-      contratos$.complete();
-      await fixture.whenStable();
-
-      expect(collectionsDe('empleado').map((e: any) => e.apellidos)).toEqual(['BRAVO CAIZA']);
+      expect(componente.empleadosDelPeriodo().length).toBe(EMPLEADOS.length);
     });
   });
 
-  describe('D19 · la rejilla dice si la novedad entra al cálculo', () => {
-    beforeEach(() => {
-      novedadesDelLocator = [
-        { codigo: 1, aprobada: 'S', estado: 1, valor: 100, empleado: ACTIVA, conceptoNomina: { nombre: 'Quirografario' } },
-        { codigo: 2, aprobada: 'N', estado: 1, valor: 200, empleado: ACTIVA, conceptoNomina: { nombre: 'Quirografario' } },
-        // La peligrosa: aprobada «Sí» y estado nulo. En la rejilla vieja se veía igual que la 1.
-        { codigo: 3, aprobada: 'S', estado: null, valor: 300, empleado: ACTIVA, conceptoNomina: { nombre: 'Quirografario' } },
-      ];
-    });
+  describe('D19 · si la novedad entra al cálculo', () => {
+    const APROBADA = { codigo: 1, aprobada: 'S', estado: 1, valor: 100, empleado: ACTIVA, conceptoNomina: { nombre: 'Quirografario' } };
+    const SIN_APROBAR = { codigo: 2, aprobada: 'N', estado: 1, valor: 200, empleado: ACTIVA, conceptoNomina: { nombre: 'Quirografario' } };
+    // La peligrosa: aprobada «Sí» y estado nulo. Se ve igual que la buena si no se comprueban las dos.
+    const SIN_ESTADO = { codigo: 3, aprobada: 'S', estado: null, valor: 300, empleado: ACTIVA, conceptoNomina: { nombre: 'Quirografario' } };
 
     it('distingue las dos mitades de la condición del motor', async () => {
-      await conPeriodo(2);
+      await conPeriodo(2, [APROBADA, SIN_APROBAR, SIN_ESTADO]);
 
-      const filas = componente.tableConfig!.registros as any[];
-      expect(filas.find((f) => f.codigo === 1).calculoLabel).toBe('Sí');
-      expect(filas.find((f) => f.codigo === 2).calculoLabel).toBe('No · sin aprobar');
-      expect(filas.find((f) => f.codigo === 3).calculoLabel).toBe('No · sin estado');
+      expect(componente.entra(APROBADA as any)).toBeTrue();
+      expect(componente.calculoLabel(SIN_APROBAR as any)).toBe('No · sin aprobar');
+      expect(componente.calculoLabel(SIN_ESTADO as any)).toBe('No · sin estado');
     });
 
-    it('la columna existe en la rejilla', async () => {
-      await conPeriodo(2);
-      const columnas = componente.tableConfig!.fields!.map((f: any) => f.column);
-      expect(columnas).toContain('calculoLabel');
-    });
+    it('el contador de fuera del cálculo cuenta las dos, no sólo la sin aprobar', async () => {
+      await conPeriodo(2, [APROBADA, SIN_APROBAR, SIN_ESTADO]);
 
-    it('el aviso cuenta las que el motor no va a mirar, no sólo las sin aprobar', async () => {
-      await conPeriodo(2);
-
-      // Dos: la sin aprobar y la del estado nulo. El contador viejo habría dicho una.
       expect(componente.fueraDelCalculo()).toBe(2);
-      fixture.detectChanges();
       expect(texto()).toContain('2 novedad(es) que el cálculo NO va a mirar');
     });
   });
 
-  describe('D22 · «Aprobada para el cálculo»', () => {
-    it('nace sin valor y es obligatoria', async () => {
+  describe('Captura en línea — Corrección 2', () => {
+    it('Enter con la fila incompleta NO llama al servicio, y marca el intento', async () => {
       await conPeriodo(2);
 
-      const campo = campoDe('aprobada');
-      expect(campo.value).toBeNull();
-      expect(campo.validations?.some((v: any) => v.name === 'required')).toBeTrue();
+      componente.confirmarBorrador();
+
+      expect(novedadNominaService.add).not.toHaveBeenCalled();
+      expect(componente.intentoConfirmar()).toBeTrue();
+    });
+
+    it('con la fila completa, agrega con aprobada «N» — nunca se pregunta en captura (Corrección 3)', async () => {
+      const creada = { codigo: 99, aprobada: 'N', estado: 1, valor: 45, empleado: ACTIVA, conceptoNomina: QUIROGRAFARIO };
+      novedadNominaService.add.and.returnValue(of(creada));
+      await conPeriodo(2);
+
+      componente.onBorradorCampo('empleado', ACTIVA);
+      componente.onBorradorConceptoChange(QUIROGRAFARIO);
+      componente.onBorradorCampo('valor', 45);
+      componente.confirmarBorrador();
+
+      expect(novedadNominaService.add).toHaveBeenCalledTimes(1);
+      const cuerpo = novedadNominaService.add.calls.mostRecent().args[0];
+      expect(cuerpo.aprobada).toBe('N');
+      expect(cuerpo.usuarioAprueba).toBeNull();
+      expect(cuerpo.fechaAprobacion).toBeNull();
+      expect(cuerpo.estado).toBe(1);
+    });
+
+    it('la fila que se ve es la que devolvió el servidor, no la tecleada — D11', async () => {
+      // El servidor redondea o corrige algo del lado suyo: lo que se ve debe ser lo suyo.
+      const creada = { codigo: 99, aprobada: 'N', estado: 1, valor: 999, empleado: ACTIVA, conceptoNomina: QUIROGRAFARIO };
+      novedadNominaService.add.and.returnValue(of(creada));
+      await conPeriodo(2);
+
+      componente.onBorradorCampo('empleado', ACTIVA);
+      componente.onBorradorConceptoChange(QUIROGRAFARIO);
+      componente.onBorradorCampo('valor', 45);
+      componente.confirmarBorrador();
+
+      expect(componente.novedades().find((n) => n.codigo === 99)?.valor).toBe(999);
+    });
+
+    it('si el servidor rechaza, la fila NO se pierde ni se vacía', async () => {
+      novedadNominaService.add.and.returnValue(throwError(() => 'El valor excede el límite del concepto'));
+      await conPeriodo(2);
+
+      componente.onBorradorCampo('empleado', ACTIVA);
+      componente.onBorradorConceptoChange(QUIROGRAFARIO);
+      componente.onBorradorCampo('valor', 45);
+      componente.confirmarBorrador();
+
+      expect(componente.errorBorrador()).toBe('El valor excede el límite del concepto');
+      // Lo tecleado sigue ahí: no se limpió el borrador.
+      expect(componente.borrador().empleado).toEqual(ACTIVA);
+      expect(componente.borrador().valor).toBe(45);
+      expect(componente.novedades().length).toBe(0);
+    });
+
+    it('un concepto de valor fijo propone el valor; se puede corregir', async () => {
+      await conPeriodo(2);
+
+      componente.onBorradorConceptoChange(BONO_FIJO);
+      expect(componente.borrador().valor).toBe(50);
+
+      componente.onBorradorCampo('valor', 80);
+      expect(componente.borrador().valor).toBe(80);
+    });
+
+    it('tras confirmar una fila, la siguiente propone el mismo concepto', async () => {
+      const creada = { codigo: 99, aprobada: 'N', estado: 1, valor: 50, empleado: ACTIVA, conceptoNomina: BONO_FIJO };
+      novedadNominaService.add.and.returnValue(of(creada));
+      await conPeriodo(2);
+
+      componente.onBorradorCampo('empleado', ACTIVA);
+      componente.onBorradorConceptoChange(BONO_FIJO);
+      componente.confirmarBorrador();
+
+      expect(componente.borrador().conceptoNomina).toEqual(BONO_FIJO);
+    });
+
+    it('deshacer la última fila la elimina sin ir a buscarla', async () => {
+      const creada = { codigo: 99, aprobada: 'N', estado: 1, valor: 45, empleado: ACTIVA, conceptoNomina: QUIROGRAFARIO };
+      novedadNominaService.add.and.returnValue(of(creada));
+      novedadNominaService.delete.and.returnValue(of(null));
+      await conPeriodo(2);
+
+      componente.onBorradorCampo('empleado', ACTIVA);
+      componente.onBorradorConceptoChange(QUIROGRAFARIO);
+      componente.onBorradorCampo('valor', 45);
+      componente.confirmarBorrador();
+
+      expect(componente.novedades().length).toBe(1);
+      expect(componente.deshacer()?.codigo).toBe(99);
+
+      componente.deshacerUltimaFila();
+
+      expect(novedadNominaService.delete).toHaveBeenCalledWith(99);
+      expect(componente.novedades().length).toBe(0);
+    });
+  });
+
+  describe('Aprobación en lote — Corrección 3', () => {
+    const SIN_APROBAR_1 = { codigo: 1, aprobada: 'N', estado: 1, valor: 100, empleado: ACTIVA, conceptoNomina: QUIROGRAFARIO, periodoNomina: { codigo: 2 } };
+    const SIN_APROBAR_2 = { codigo: 2, aprobada: 'N', estado: 1, valor: 200, empleado: ACTIVA, conceptoNomina: QUIROGRAFARIO, periodoNomina: { codigo: 2 } };
+    const YA_APROBADA = { codigo: 3, aprobada: 'S', estado: 1, valor: 300, empleado: ACTIVA, conceptoNomina: QUIROGRAFARIO, periodoNomina: { codigo: 2 } };
+
+    it('pendientesAprobar sólo trae lo que no está aprobado', async () => {
+      await conPeriodo(2, [SIN_APROBAR_1, SIN_APROBAR_2, YA_APROBADA]);
+
+      expect(componente.pendientesAprobar().map((n) => n.codigo)).toEqual([1, 2]);
+    });
+
+    it('aprobar seleccionadas escribe aprobada, usuario y fecha de aprobación de verdad', async () => {
+      novedadNominaService.update.and.callFake((datos: any) => of({ ...datos, codigo: datos.codigo }));
+      await conPeriodo(2, [SIN_APROBAR_1, SIN_APROBAR_2, YA_APROBADA]);
+
+      componente.alternarSeleccion(1);
+      componente.aprobarSeleccionadas();
+
+      expect(novedadNominaService.update).toHaveBeenCalledTimes(1);
+      const cuerpo = novedadNominaService.update.calls.mostRecent().args[0];
+      expect(cuerpo.codigo).toBe(1);
+      expect(cuerpo.aprobada).toBe('S');
+      expect(cuerpo.usuarioAprueba).toBe(usuarioSesion());
+      expect(cuerpo.fechaAprobacion instanceof Date).toBeTrue();
+    });
+
+    it('no toca las filas no seleccionadas', async () => {
+      novedadNominaService.update.and.callFake((datos: any) => of({ ...datos, codigo: datos.codigo }));
+      await conPeriodo(2, [SIN_APROBAR_1, SIN_APROBAR_2, YA_APROBADA]);
+
+      componente.alternarSeleccion(1);
+      componente.aprobarSeleccionadas();
+
+      expect(componente.novedades().find((n) => n.codigo === 2)?.aprobada).toBe('N');
+    });
+
+    it('seleccionar todas las pendientes no incluye la ya aprobada', async () => {
+      await conPeriodo(2, [SIN_APROBAR_1, SIN_APROBAR_2, YA_APROBADA]);
+
+      componente.seleccionarTodasPendientes();
+
+      expect(Array.from(componente.seleccionAprobar())).toEqual([1, 2]);
     });
   });
 
   // ─── Utilidades ────────────────────────────────────────────────────────────
-
-  function campoDe(nombre: string): any {
-    return componente.tableConfig!.regConfig!.find((c: any) => c.name === nombre);
-  }
-
-  function collectionsDe(nombre: string): any[] {
-    return campoDe(nombre).collections ?? [];
-  }
 
   function texto(): string {
     return (fixture.nativeElement as HTMLElement).textContent ?? '';

@@ -106,4 +106,65 @@
     border-left-color: $error-color;
     color: $error-color;
   }
+
+  .aviso.aviso-deshacer {
+    align-items: center;
+    border-left-color: $success-color;
+    justify-content: space-between;
+  }
+
+  /**
+   * Estado con forma, no sólo con texto — la lección de D19 y D24: una columna de texto se lee
+   * igual de lejos que de cerca de un vistazo sólo si además tiene color y borde propios.
+   */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    padding: $spacing-xs $spacing-sm;
+    border-radius: $border-radius-lg;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    background: $background-tertiary;
+    color: $text-secondary;
+    white-space: nowrap;
+
+    &.chip-ok {
+      background: rgba($success-color, 0.12);
+      color: $success-color;
+    }
+
+    &.chip-alerta {
+      background: rgba($error-color, 0.12);
+      color: $error-color;
+    }
+
+    &.chip-concepto {
+      background: rgba($primary-color, 0.1);
+      color: $secondary-color;
+    }
+  }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    padding: $spacing-xs $spacing-sm;
+    border-radius: $border-radius-sm;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    background: rgba($error-color, 0.1);
+    color: $error-color;
+    border: $border-width solid rgba($error-color, 0.3);
+
+    &.pill-ok {
+      background: rgba($success-color, 0.1);
+      color: $success-color;
+      border-color: rgba($success-color, 0.3);
+    }
+
+    &.pill-pendiente {
+      background: $background-tertiary;
+      color: $text-muted;
+      border-color: $border-medium;
+    }
+  }
 }

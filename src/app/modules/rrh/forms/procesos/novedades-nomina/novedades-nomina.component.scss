@@ -12,4 +12,140 @@
   .selector-periodo {
     min-width: $breakpoint-sm * 0.3;
   }
+
+  .totales {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-sm;
+    align-items: center;
+  }
+
+  .panel-aprobacion {
+    .panel-titulo {
+      display: flex;
+      align-items: center;
+      gap: $spacing-sm;
+    }
+
+    .acciones-aprobacion {
+      display: flex;
+      flex-wrap: wrap;
+      gap: $spacing-sm;
+      margin-bottom: $spacing-sm;
+    }
+
+    .lista-pendientes {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: $spacing-xs;
+      max-height: $breakpoint-sm * 0.4;
+      overflow-y: auto;
+    }
+  }
+
+  .panel-tabla {
+    padding: 0;
+    overflow-x: auto;
+  }
+
+  .tabla-novedades {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: $font-size-sm;
+
+    th {
+      text-align: left;
+      padding: $spacing-sm $spacing-md;
+      background: $background-tertiary;
+      color: $text-secondary;
+      font-weight: $font-weight-semibold;
+      position: sticky;
+      top: 0;
+      z-index: $z-index-dropdown;
+    }
+
+    td {
+      padding: $spacing-xs $spacing-sm;
+      border-bottom: $border-width solid $border-light;
+      vertical-align: middle;
+    }
+
+    .col-cantidad,
+    .col-valor {
+      text-align: right;
+    }
+
+    .col-entra {
+      text-align: center;
+    }
+
+    .col-acciones {
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .fila-datos {
+      cursor: text;
+      transition: background $transition-quick;
+
+      &:hover,
+      &:focus {
+        background: $background-secondary;
+        outline: none;
+      }
+    }
+
+    .fila-edicion {
+      background: rgba($primary-color, 0.05);
+    }
+
+    .fila-borrador {
+      background: $background-secondary;
+
+      td {
+        border-bottom: $border-width-md solid $primary-color;
+      }
+    }
+
+    .fila-error td {
+      padding: $spacing-xs $spacing-md;
+      color: $error-color;
+      background: rgba($error-color, 0.06);
+      font-size: $font-size-xs;
+      display: flex;
+      align-items: center;
+      gap: $spacing-xs;
+
+      mat-icon {
+        font-size: $font-size-base;
+        width: $font-size-base;
+        height: $font-size-base;
+      }
+    }
+  }
+
+  .celda-input {
+    width: 100%;
+    border: $border-width solid transparent;
+    border-radius: $border-radius-sm;
+    padding: $spacing-xs $spacing-sm;
+    font-size: $font-size-sm;
+    font-family: inherit;
+    color: $text-primary;
+    background: transparent;
+    outline: none;
+    box-sizing: border-box;
+
+    &:focus {
+      border-color: $primary-color;
+      background: $background-primary;
+    }
+
+    &.invalido {
+      border-color: $error-color;
+    }
+  }
 }

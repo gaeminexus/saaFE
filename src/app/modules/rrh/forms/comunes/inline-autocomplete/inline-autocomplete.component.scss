@@ -1,0 +1,23 @@
+@use '../../../../../../styles/abstracts/colors' as *;
+@use '../../../../../../styles/abstracts/variables' as *;
+
+.celda-input {
+  width: 100%;
+  border: $border-width solid transparent;
+  border-radius: $border-radius-sm;
+  padding: $spacing-xs $spacing-sm;
+  font-size: $font-size-sm;
+  color: $text-primary;
+  background: transparent;
+  outline: none;
+  box-sizing: border-box;
+
+  &:focus {
+    border-color: $primary-color;
+    background: $background-primary;
+  }
+
+  &.invalido {
+    border-color: $error-color;
+  }
+}
