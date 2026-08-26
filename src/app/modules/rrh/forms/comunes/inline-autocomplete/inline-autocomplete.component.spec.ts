@@ -1,5 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { MatAutocompleteTrigger } from '@angular/material/autocomplete';
 import { InlineAutocompleteComponent } from './inline-autocomplete.component';
 
 describe('InlineAutocompleteComponent', () => {
@@ -67,6 +69,35 @@ describe('InlineAutocompleteComponent', () => {
   it('asignar `valor` desde fuera precarga el texto', () => {
     componente.valor = OPCIONES[1];
     expect(componente.texto()).toBe('Núñez');
+  });
+
+  describe('el panel se abre al enfocar/pinchar, no sólo al teclear (Mike, 2026-08-25)', () => {
+    /**
+     * `MatAutocomplete` sólo abre el panel con un evento `input` por defecto. Un clic en el
+     * campo de Período no dispara eso, así que sin abrir el panel a mano en foco/clic, la lista
+     * no aparece hasta que se teclea algo — que es exactamente lo que reportó Mike.
+     */
+    function trigger(): MatAutocompleteTrigger {
+      return fixture.debugElement.query(By.directive(MatAutocompleteTrigger)).injector.get(MatAutocompleteTrigger);
+    }
+
+    it('el foco abre el panel', () => {
+      const abrir = spyOn(trigger(), 'openPanel');
+      const input: HTMLInputElement = fixture.nativeElement.querySelector('input');
+
+      input.dispatchEvent(new Event('focus'));
+
+      expect(abrir).toHaveBeenCalled();
+    });
+
+    it('el clic abre el panel', () => {
+      const abrir = spyOn(trigger(), 'openPanel');
+      const input: HTMLInputElement = fixture.nativeElement.querySelector('input');
+
+      input.dispatchEvent(new Event('click'));
+
+      expect(abrir).toHaveBeenCalled();
+    });
   });
 
   describe('modo="campo" — los combos de cabecera (Ejercicio, Período)', () => {

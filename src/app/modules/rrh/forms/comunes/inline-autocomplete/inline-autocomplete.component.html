@@ -3,12 +3,15 @@
     <mat-label>{{ etiquetaCampo }}</mat-label>
     <input
       #input
+      #trigger="matAutocompleteTrigger"
       matInput
       [id]="id"
       [matAutocomplete]="auto"
       [ngModel]="texto()"
       (ngModelChange)="onTexto($event)"
       (blur)="onBlur()"
+      (focus)="trigger.openPanel()"
+      (click)="trigger.openPanel()"
       [placeholder]="placeholder"
       autocomplete="off"
     />
@@ -16,6 +19,7 @@
 } @else {
   <input
     #input
+    #trigger="matAutocompleteTrigger"
     matInput
     [id]="id"
     class="celda-input"
@@ -24,6 +28,8 @@
     [ngModel]="texto()"
     (ngModelChange)="onTexto($event)"
     (blur)="onBlur()"
+    (focus)="trigger.openPanel()"
+    (click)="trigger.openPanel()"
     [placeholder]="placeholder"
     autocomplete="off"
   />
