@@ -902,6 +902,51 @@ tenga que redescubrir el inventario.
 
 ---
 
+# El rediseño de Novedades y Períodos — encargo aparte del catálogo de defectos
+
+**Abierto el 2026-08-25.** No es un defecto de pantalla: es el encargo de Mike de sacar Novedades y
+Períodos de `app-table-basic-hijos` y rediseñarlas — captura en línea para Novedades, vista de año
+para Períodos. Los diez defectos de la lista de arriba que tocan estas dos pantallas se resuelven
+por construcción en el rediseño, no se parchean; están marcados donde corresponde con una nota que
+apunta aquí.
+
+## Novedades del período — hecho, pendiente de la pasada en navegador
+
+Captura en línea completa: autocompletado por teclado en los cuatro combos de la pantalla —
+Colaborador, Concepto, **y también Ejercicio y Período**, que en la primera vuelta se dejaron como
+`mat-select` planos y Mike los devolvió con razón—, foco que salta solo a Colaborador al elegir
+período, al pulsar «Nueva línea» y al confirmar cada fila, placeholders que anuncian que se puede
+buscar. `tsc`, `ng build` y 26+8+3+5 tests propios en 0.
+
+**Lo que falta y no puedo hacer yo:** la pasada real en Chrome contra el período de diciembre
+aislado (`sql/69_PERIODO_SANDBOX_LOCAL.sql`). No tengo cliente de Oracle en este entorno —ni
+`sqlplus` ni `sqlcl`— así que no puedo correr ese script; hace falta que lo corra quien tenga
+acceso a la base local. **Y de paso, algo que conviene mirar antes de correrlo**: el backend local
+que sí alcanzo por REST (`127.0.0.1:8080`) tiene los períodos de 2026 en los códigos **28 a 32 y
+51**, meses 1 a 6, **sin julio** — no los códigos `1, 2, 21, 41, 42, 61, 62` que el comentario del
+script da por sentado para «local». Puede que sean instancias distintas, o que a ésta le falte
+julio por cargar; no lo puedo distinguir desde aquí, pero quien corra el script debería
+confirmarlo antes de fiarse de que el bloque 0 (la guarda «esto es local, no producción») está
+comprobando lo que cree que comprueba.
+
+## Corrección 1 — Períodos con varios por mes, según el tipo
+
+Anotado, no aplicado todavía: un mes es un contenedor de 0, 1 o varios períodos, cada uno con su
+tipo a la vista, porque la unicidad real es `(empresa, año, mes, tipo)` y no `(empresa, año, mes)`.
+Entra en el diseño de la pantalla de Períodos cuando se aborde.
+
+## Aviso de novedades sin aprobar antes de Calcular — pendiente para Pantalla 2
+
+**Hueco nuevo que abrió la Corrección 3 (aprobación en lote), levantado por Mike.** Con toda
+novedad naciendo sin aprobar, es posible capturar veinte, aprobar dieciocho y calcular el período
+sin que las otras dos entren — sin error y sin aviso. Comprobado: `validarPeriodo` no mira las
+novedades; sus comprobaciones son de infraestructura del período (fechas, tipo, contratos), no de
+lo que hay cargado. Cuando se haga la pantalla de Períodos, el botón **Calcular** tiene que avisar
+antes, contando cuántas novedades del período siguen sin aprobar y que no van a entrar. Cliente
+puro —los mismos datos que ya trae `NovedadNomina.aprobada`—, no toca backend.
+
+---
+
 # Lo que se deja sin tocar, y por qué
 
 | Qué | Por qué |
