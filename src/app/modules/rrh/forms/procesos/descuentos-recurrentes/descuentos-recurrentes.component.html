@@ -12,53 +12,309 @@
       </div>
     </div>
     <div class="header-actions">
-      <mat-form-field appearance="outline" class="selector-empleado">
-        <mat-label>Colaborador</mat-label>
-        <mat-select
-          [ngModel]="empleadoSeleccionado()"
-          (ngModelChange)="onEmpleadoChange($event)"
-        >
-          @for (emp of empleados(); track emp.codigo) {
-            <mat-option [value]="emp.codigo">{{ etiquetaEmpleado(emp) }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
+      <div class="selector-empleado">
+        <app-inline-autocomplete
+          modo="campo"
+          etiquetaCampo="Colaborador"
+          [opciones]="empleados"
+          [etiqueta]="etiquetaEmpleado"
+          [buscarPor]="buscarPorEmpleado"
+          [valor]="empleadoSeleccionado()"
+          (valorChange)="onEmpleadoSeleccionado($event)"
+          placeholder="Escriba cédula o nombre…"
+        />
+      </div>
     </div>
   </div>
 
-  @if (empleados().length === 0) {
-    <div class="aviso">
-      <mat-icon>person_off</mat-icon>
-      <span>
-        No hay colaboradores registrados en esta empresa. Regístrelos antes de cargar sus
-        descuentos.
-      </span>
-    </div>
-  } @else if (empleadoSeleccionado() === null) {
+  @if (!empleadoSeleccionado()) {
     <div class="aviso">
       <mat-icon>person_search</mat-icon>
-      <span>
-        Los descuentos cuelgan del colaborador, no de la empresa: seleccione uno para verlos.
-      </span>
+      <span>Los descuentos cuelgan del colaborador, no de la empresa: seleccione uno para verlos.</span>
     </div>
-  }
+  } @else {
+    <!-- ─── Descuentos del colaborador ─────────────────────────────────── -->
+    <div class="panel">
+      <div class="panel-titulo panel-titulo-tabla">
+        <span>Descuentos</span>
+        @if (!creando()) {
+          <button mat-stroked-button type="button" (click)="abrirCreacion()">
+            <mat-icon>add</mat-icon>
+            Nuevo descuento
+          </button>
+        }
+      </div>
 
-  @if (configDescuentos) {
-    <app-table-basic-hijos
-      [configTable]="configDescuentos"
-      (emiteRegistro)="onSeleccionDescuento($event)"
-      (emiteError)="onTableError($event)"
-    >
-    </app-table-basic-hijos>
-  }
+      @if (cargandoDescuentos()) {
+        <p class="mensaje-vacio">Cargando descuentos…</p>
+      } @else {
+        @if (descuentos().length === 0 && !creando()) {
+          <p class="mensaje-vacio">Este colaborador no tiene descuentos registrados.</p>
+        }
 
-  @if (configCuotas) {
-    <app-table-basic-hijos [configTable]="configCuotas" (emiteError)="onTableError($event)">
-    </app-table-basic-hijos>
-  } @else if (configDescuentos) {
-    <div class="aviso">
-      <mat-icon>touch_app</mat-icon>
-      <span>Pulse un descuento para ver y editar su tabla de amortización.</span>
+        <div class="grid-descuentos">
+          @for (d of descuentos(); track d.codigo) {
+            <div
+              class="tarjeta-descuento"
+              [class.seleccionada]="descuentoSeleccionado()?.codigo === d.codigo"
+              tabindex="0"
+              (click)="seleccionarDescuento(d)"
+              (keydown.enter)="seleccionarDescuento(d)"
+            >
+              <div class="tarjeta-cabecera">
+                <span class="tipo">{{ tipoLabel(d) }}</span>
+                <span class="pill pill-estado-{{ d.estado === 1 ? 'abierto' : (d.estado === 2 ? 'cerrado' : 'desconocido') }}">
+                  {{ estadoLabel(d) }}
+                </span>
+              </div>
+              @if (d.numero) {
+                <div class="referencia">Ref. {{ d.numero }}</div>
+              }
+              <div class="concepto">{{ conceptoLabel(d) }}</div>
+              <div class="montos">
+                <span>Monto: <strong>{{ d.valor | number: '1.2-2' }}</strong></span>
+                <span>
+                  Saldo: <strong>{{ d.saldo | number: '1.2-2' }}</strong>
+                  <mat-icon
+                    class="icono-aviso"
+                    matTooltip="El seguimiento de saldo está pendiente en el motor (corrección 12): esta cifra puede no reflejar los descuentos ya aplicados."
+                  >info</mat-icon>
+                </span>
+              </div>
+              @if (d.numeroCuotas) {
+                <div class="progreso">
+                  {{ d.cuotasPagadas ?? 0 }} / {{ d.numeroCuotas }} cuotas
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+
+      @if (creando()) {
+        <form class="formulario-creacion" [formGroup]="formulario!">
+          <div class="formulario-titulo">Nuevo descuento de {{ etiquetaEmpleado(empleadoSeleccionado()) }}</div>
+
+          <div class="grid-campos">
+            <app-inline-autocomplete
+              modo="campo"
+              etiquetaCampo="Tipo de descuento"
+              [opciones]="tipos"
+              [etiqueta]="etiquetaTipo"
+              [buscarPor]="buscarPorTipo"
+              [valor]="formulario!.get('tipoDescuento')?.value"
+              (valorChange)="formulario!.get('tipoDescuento')?.setValue($event)"
+              placeholder="Escriba el tipo…"
+            />
+            <app-inline-autocomplete
+              modo="campo"
+              etiquetaCampo="Concepto con el que se descuenta"
+              [opciones]="conceptos"
+              [etiqueta]="etiquetaConcepto"
+              [buscarPor]="buscarPorConcepto"
+              [valor]="formulario!.get('conceptoNomina')?.value"
+              (valorChange)="formulario!.get('conceptoNomina')?.setValue($event)"
+              placeholder="Escriba el nombre o código…"
+            />
+            <mat-form-field appearance="outline">
+              <mat-label>Número de referencia</mat-label>
+              <input matInput formControlName="numero" />
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Monto total</mat-label>
+              <input matInput type="number" formControlName="valor" />
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Número de cuotas</mat-label>
+              <input matInput type="number" formControlName="numeroCuotas" />
+            </mat-form-field>
+            <app-date [field]="campoFechaInicio" [group]="formulario!" [accion]="0"></app-date>
+            <mat-form-field appearance="outline">
+              <mat-label>Beneficiario</mat-label>
+              <input matInput formControlName="beneficiario" />
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Observación</mat-label>
+              <input matInput formControlName="observacion" />
+            </mat-form-field>
+          </div>
+
+          @if (!cuotasPropuestas()) {
+            <div class="formulario-acciones">
+              <button mat-flat-button color="primary" type="button" (click)="generarPropuesta()">
+                <mat-icon>auto_fix_high</mat-icon>
+                Generar cuotas
+              </button>
+              <button mat-stroked-button type="button" (click)="cancelarCreacion()">Cancelar</button>
+            </div>
+          } @else {
+            <!--
+              La tabla de amortización se genera, no se teclea: cuatro campos arriba proponen las
+              N cuotas ya calculadas. Aquí sólo se revisa y se ajusta lo que haga falta.
+            -->
+            <div class="panel-titulo">Cuotas propuestas — revise y ajuste antes de confirmar</div>
+            <table class="tabla-cuotas">
+              <thead>
+                <tr>
+                  <th>Cuota</th>
+                  <th>Vence</th>
+                  <th>Capital</th>
+                  <th>Interés</th>
+                  <th>Total</th>
+                  <th>Saldo</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (fila of cuotasPropuestas()!; track fila.numeroCuota; let i = $index) {
+                  <tr [class.fila-negativa]="fila.saldo < 0">
+                    <td>{{ fila.numeroCuota }}</td>
+                    <td>{{ fila.fechaVencimiento | date: 'dd/MM/yyyy' }}</td>
+                    <td>
+                      <input
+                        class="celda-input"
+                        type="number"
+                        [ngModel]="fila.capital"
+                        [ngModelOptions]="{ standalone: true }"
+                        (ngModelChange)="onCapitalCuota(i, $event)"
+                      />
+                    </td>
+                    <td>
+                      <input
+                        class="celda-input"
+                        type="number"
+                        [ngModel]="fila.interes"
+                        [ngModelOptions]="{ standalone: true }"
+                        (ngModelChange)="onInteresCuota(i, $event)"
+                      />
+                    </td>
+                    <td>{{ fila.total | number: '1.2-2' }}</td>
+                    <td>{{ fila.saldo | number: '1.2-2' }}</td>
+                  </tr>
+                }
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="4">Suma de las cuotas</td>
+                  <td colspan="2">{{ totalPropuesto() | number: '1.2-2' }}</td>
+                </tr>
+              </tfoot>
+            </table>
+
+            @if (errorCreacion(); as error) {
+              <div class="fila-error">
+                <mat-icon>error</mat-icon>
+                {{ error }}
+              </div>
+            }
+
+            <div class="formulario-acciones">
+              <button mat-flat-button color="primary" type="button" [disabled]="guardando()" (click)="confirmarCreacion()">
+                @if (guardando()) {
+                  Creando…
+                } @else {
+                  Confirmar y crear
+                }
+              </button>
+              <button mat-stroked-button type="button" (click)="cuotasPropuestas.set(null)">
+                Volver a la cabecera
+              </button>
+              <button mat-stroked-button type="button" (click)="cancelarCreacion()">Cancelar</button>
+            </div>
+          }
+        </form>
+      }
     </div>
+
+    <!-- ─── Cuotas del descuento elegido ───────────────────────────────── -->
+    @if (descuentoSeleccionado(); as d) {
+      <div class="panel">
+        <div class="panel-titulo">Cuotas de {{ d.numero || tipoLabel(d) }}</div>
+
+        @if (cargandoCuotas()) {
+          <p class="mensaje-vacio">Cargando cuotas…</p>
+        } @else if (cuotas().length === 0) {
+          <div class="aviso aviso-error">
+            <mat-icon>warning</mat-icon>
+            <span>
+              Este descuento no tiene ninguna cuota. El motor no lo va a descontar nunca: busca la
+              cuota que vence dentro del período, no el descuento en sí.
+            </span>
+          </div>
+        } @else {
+          <table class="tabla-cuotas">
+            <thead>
+              <tr>
+                <th>Cuota</th>
+                <th>Vence</th>
+                <th>Capital</th>
+                <th>Interés</th>
+                <th>Total</th>
+                <th>Saldo</th>
+                <th>Estado</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (c of cuotas(); track c.codigo) {
+                @if (editandoCuota() === c.codigo) {
+                  <tr class="fila-edicion" [formGroup]="edicionCuota!">
+                    <td>{{ c.numeroCuota }}</td>
+                    <td><app-date [field]="campoFechaCuota" [group]="edicionCuota!" [accion]="0"></app-date></td>
+                    <td>
+                      <input class="celda-input" type="number" formControlName="capital" />
+                    </td>
+                    <td>
+                      <input class="celda-input" type="number" formControlName="interes" />
+                    </td>
+                    <td>
+                      <input class="celda-input" type="number" formControlName="total" />
+                    </td>
+                    <td>
+                      <input class="celda-input" type="number" formControlName="saldo" />
+                    </td>
+                    <td colspan="2">
+                      <button mat-icon-button type="button" [disabled]="guardandoEdicion()" (click)="confirmarEdicionCuota()" matTooltip="Guardar">
+                        <mat-icon>check</mat-icon>
+                      </button>
+                      <button mat-icon-button type="button" (click)="cancelarEdicionCuota()" matTooltip="Cancelar">
+                        <mat-icon>close</mat-icon>
+                      </button>
+                    </td>
+                  </tr>
+                  @if (errorEdicion(); as error) {
+                    <tr class="fila-error">
+                      <td colspan="8">
+                        <mat-icon>error</mat-icon>
+                        {{ error }}
+                      </td>
+                    </tr>
+                  }
+                } @else {
+                  <tr (click)="editarCuota(c)" tabindex="0" (keydown.enter)="editarCuota(c)">
+                    <td>{{ c.numeroCuota }}</td>
+                    <td>{{ c.fechaVencimiento | date: 'dd/MM/yyyy' }}</td>
+                    <td>{{ c.capital | number: '1.2-2' }}</td>
+                    <td>{{ c.interes | number: '1.2-2' }}</td>
+                    <td>{{ c.total | number: '1.2-2' }}</td>
+                    <td>{{ c.saldo | number: '1.2-2' }}</td>
+                    <td>
+                      <span class="pill pill-{{ claseEstadoCuota(c.estado) }}">
+                        <mat-icon>{{ iconoEstadoCuota(c.estado) }}</mat-icon>
+                        {{ etiquetaEstadoCuota(c.estado) }}
+                      </span>
+                    </td>
+                    <td>
+                      <button mat-icon-button type="button" (click)="eliminarCuota(c); $event.stopPropagation()" matTooltip="Eliminar">
+                        <mat-icon>delete_outline</mat-icon>
+                      </button>
+                    </td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
+        }
+      </div>
+    }
   }
 </div>

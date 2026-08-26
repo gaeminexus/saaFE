@@ -8,4 +8,192 @@
   .selector-empleado {
     min-width: $breakpoint-sm * 0.6;
   }
+
+  .grid-descuentos {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax($breakpoint-sm * 0.4, 1fr));
+    gap: $spacing-sm;
+    margin-bottom: $spacing-md;
+  }
+
+  .tarjeta-descuento {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+    padding: $spacing-sm;
+    border-radius: $border-radius-sm;
+    border: $border-width-md solid $border-light;
+    background: $background-secondary;
+    cursor: pointer;
+    transition: border-color $transition-quick, box-shadow $transition-quick;
+
+    &:hover,
+    &:focus {
+      border-color: $primary-color;
+      box-shadow: 0 $spacing-xs $spacing-sm $shadow-color-light;
+      outline: none;
+    }
+
+    &.seleccionada {
+      border-color: $primary-color;
+      background: $background-primary;
+    }
+  }
+
+  .tarjeta-cabecera {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-xs;
+
+    .tipo {
+      font-size: $font-size-sm;
+      font-weight: $font-weight-semibold;
+      color: $text-primary;
+    }
+  }
+
+  .referencia {
+    font-size: $font-size-xs;
+    color: $text-muted;
+  }
+
+  .concepto {
+    font-size: $font-size-sm;
+    color: $text-secondary;
+  }
+
+  .montos {
+    display: flex;
+    justify-content: space-between;
+    font-size: $font-size-xs;
+    color: $text-secondary;
+
+    .icono-aviso {
+      font-size: $font-size-sm;
+      width: $font-size-sm;
+      height: $font-size-sm;
+      vertical-align: middle;
+      color: $warning-color;
+      cursor: help;
+    }
+  }
+
+  .progreso {
+    font-size: $font-size-xs;
+    color: $text-muted;
+  }
+
+  .formulario-creacion {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+    padding: $spacing-sm;
+    margin-top: $spacing-sm;
+    border-radius: $border-radius-sm;
+    border: $border-width-md solid $primary-color;
+    background: $background-primary;
+
+    mat-form-field {
+      width: 100%;
+    }
+  }
+
+  .formulario-titulo {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $secondary-color;
+  }
+
+  .formulario-acciones {
+    display: flex;
+    gap: $spacing-sm;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+
+  .tabla-cuotas {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: $font-size-sm;
+
+    th {
+      text-align: left;
+      padding: $spacing-sm;
+      background: $background-tertiary;
+      color: $text-secondary;
+      font-weight: $font-weight-semibold;
+    }
+
+    td {
+      padding: $spacing-xs $spacing-sm;
+      border-bottom: $border-width solid $border-light;
+      vertical-align: middle;
+    }
+
+    tfoot td {
+      font-weight: $font-weight-semibold;
+      border-top: $border-width-md solid $border-medium;
+      border-bottom: none;
+    }
+
+    tr:not(.fila-edicion):not(.fila-error) {
+      cursor: pointer;
+
+      &:hover {
+        background: $background-secondary;
+      }
+    }
+
+    .fila-negativa td {
+      color: $error-color;
+    }
+
+    .fila-edicion {
+      background: rgba($primary-color, 0.05);
+    }
+
+    .pill mat-icon {
+      font-size: $font-size-base;
+      width: $font-size-base;
+      height: $font-size-base;
+      vertical-align: middle;
+      margin-right: 2px;
+    }
+  }
+
+  .celda-input {
+    width: 100%;
+    border: $border-width solid transparent;
+    border-radius: $border-radius-sm;
+    padding: $spacing-xs $spacing-sm;
+    font-size: $font-size-sm;
+    font-family: inherit;
+    color: $text-primary;
+    background: transparent;
+    outline: none;
+    box-sizing: border-box;
+
+    &:focus {
+      border-color: $primary-color;
+      background: $background-primary;
+    }
+  }
+
+  .fila-error {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: $spacing-xs $spacing-sm;
+    border-radius: $border-radius-sm;
+    background: rgba($error-color, 0.08);
+    color: $error-color;
+    font-size: $font-size-xs;
+
+    mat-icon {
+      font-size: $font-size-base;
+      width: $font-size-base;
+      height: $font-size-base;
+    }
+  }
 }

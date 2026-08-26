@@ -59,3 +59,44 @@ export const ESTADOS_CUOTA = [
   { codigo: 3, descripcion: 'Parcial' },
   { codigo: 4, descripcion: 'Anulada' },
 ];
+
+/**
+ * Estado con forma, no sólo con texto — la misma idea que el rubro 182 de los períodos.
+ *
+ * PARCIAL existe porque el motor puede recortar un descuento cuando el neto se iría a negativo;
+ * hoy no se escribe nunca —es la corrección 12 pendiente—, pero la pantalla tiene que saber
+ * pintarlo para cuando el motor empiece a usarlo, no añadirlo después como una sorpresa.
+ */
+export function claseEstadoCuota(estado: number | null | undefined): string {
+  switch (Number(estado)) {
+    case 1:
+      return 'cuota-pendiente';
+    case 2:
+      return 'cuota-descontada';
+    case 3:
+      return 'cuota-parcial';
+    case 4:
+      return 'cuota-anulada';
+    default:
+      return 'cuota-desconocida';
+  }
+}
+
+export function iconoEstadoCuota(estado: number | null | undefined): string {
+  switch (Number(estado)) {
+    case 1:
+      return 'schedule';
+    case 2:
+      return 'check_circle';
+    case 3:
+      return 'incomplete_circle';
+    case 4:
+      return 'cancel';
+    default:
+      return 'help_outline';
+  }
+}
+
+export function etiquetaEstadoCuota(estado: number | null | undefined): string {
+  return ESTADOS_CUOTA.find((e) => e.codigo === Number(estado))?.descripcion ?? 'Desconocido';
+}

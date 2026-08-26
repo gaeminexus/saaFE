@@ -77,6 +77,24 @@
     padding-bottom: $spacing-xs;
   }
 
+  /** Título de panel con una acción a la derecha — «Nueva línea», «Nuevo descuento», etc. */
+  .panel-titulo-tabla {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 0 0 $spacing-sm;
+    padding-bottom: $spacing-xs;
+    border-bottom: $border-width solid $border-light;
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+    color: $secondary-color;
+
+    button mat-icon {
+      vertical-align: middle;
+      margin-right: $spacing-xs;
+    }
+  }
+
   .grid-campos {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax($breakpoint-sm * 0.35, 1fr));
@@ -207,6 +225,40 @@
     }
 
     &.pill-estado-desconocido {
+      background: $background-tertiary;
+      color: $text-muted;
+      border-color: $border-medium;
+    }
+
+    // Estado de una cuota de amortización (RHH.CTDS) — no es un rubro, pero la misma lógica de
+    // «forma, no sólo texto» aplica igual.
+    &.pill-cuota-pendiente {
+      background: $background-tertiary;
+      color: $text-secondary;
+      border-color: $border-medium;
+    }
+
+    &.pill-cuota-descontada {
+      background: rgba($success-color, 0.12);
+      color: $success-color;
+      border-color: rgba($success-color, 0.35);
+    }
+
+    // PARCIAL no se escribe todavía —corrección 12 pendiente en el motor—, pero la pantalla ya
+    // sabe pintarlo: el día que el motor la use, no hace falta tocar esto.
+    &.pill-cuota-parcial {
+      background: rgba($accent-color, 0.18);
+      color: #8a5a1a;
+      border-color: rgba($accent-color, 0.45);
+    }
+
+    &.pill-cuota-anulada {
+      background: rgba($error-color, 0.1);
+      color: $error-color;
+      border-color: rgba($error-color, 0.3);
+    }
+
+    &.pill-cuota-desconocida {
       background: $background-tertiary;
       color: $text-muted;
       border-color: $border-medium;
