@@ -39,7 +39,18 @@ import { coincideTexto } from '../normalizar';
   styleUrl: './inline-autocomplete.component.scss',
 })
 export class InlineAutocompleteComponent {
-  @Input() id = '';
+  /**
+   * `controlId`, no `id`. `id` es un atributo HTML global: aunque el componente declare
+   * `@Input() id`, Angular NO lo retira del elemento anfitrión —lo deja puesto ahí, además de
+   * pasarlo al `@Input()—, así que `<app-inline-autocomplete id="x">` deja **dos** elementos con
+   * `id="x"` en el DOM: el propio `<app-inline-autocomplete>` y el `<input>` de dentro.
+   * `document.getElementById('x')` devuelve el primero en el orden del documento —el anfitrión,
+   * que no es enfocable—, y `.focus()` sobre él no hace nada, en silencio, sin error. Fue el bug
+   * real detrás de «Nueva línea no hace nada»: el foco llevaba semanas apuntando al componente,
+   * nunca al campo. `controlId` no colisiona con ningún atributo nativo, así que sólo existe una
+   * vez, en el `<input>`.
+   */
+  @Input() controlId = '';
   @Input() modo: 'celda' | 'campo' = 'celda';
   /** Etiqueta flotante del `mat-form-field`; sólo se usa en `modo="campo"`. */
   @Input() etiquetaCampo = '';

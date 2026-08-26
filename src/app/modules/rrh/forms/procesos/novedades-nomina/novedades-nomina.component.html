@@ -270,7 +270,7 @@
             <tr class="fila-borrador" (keydown.escape)="cancelarBorrador()">
               <td>
                 <app-inline-autocomplete
-                  id="borrador-empleado"
+                  controlId="borrador-empleado"
                   [opciones]="empleadosDelPeriodo()"
                   [etiqueta]="etiquetaEmpleado"
                   [buscarPor]="buscarPorEmpleado"
@@ -282,7 +282,7 @@
               </td>
               <td>
                 <app-inline-autocomplete
-                  id="borrador-conceptoNomina"
+                  controlId="borrador-conceptoNomina"
                   [opciones]="conceptos"
                   [etiqueta]="etiquetaConcepto"
                   [buscarPor]="buscarPorConcepto"

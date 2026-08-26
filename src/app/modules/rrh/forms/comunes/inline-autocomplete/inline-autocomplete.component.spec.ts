@@ -26,6 +26,39 @@ describe('InlineAutocompleteComponent', () => {
     fixture.detectChanges();
   });
 
+  describe('controlId no duplica el id en el DOM (Mike, 2026-08-25: «Nueva línea no hace nada»)', () => {
+    /**
+     * `id` es un atributo HTML global: aunque el componente declarara `@Input() id`, Angular NO
+     * lo retira del elemento anfitrión, así que `<app-inline-autocomplete id="x">` dejaba DOS
+     * elementos con `id="x"` — el propio `<app-inline-autocomplete>`, no enfocable, y el
+     * `<input>` de dentro. `document.getElementById('x')` devolvía el primero, y `.focus()`
+     * sobre él no hacía nada, sin error: el bug real detrás de «Nueva línea no hace nada» — el
+     * botón sí llamaba a `focus()`, pero sobre el elemento equivocado. `controlId` no es un
+     * atributo nativo, así que no colisiona.
+     */
+    it('sólo el <input> real lleva el id — nada más en toda la página', () => {
+      const fresco = TestBed.createComponent(InlineAutocompleteComponent);
+      fresco.componentInstance.controlId = 'campo-de-prueba';
+      fresco.detectChanges();
+
+      const coincidencias = fresco.nativeElement.querySelectorAll('#campo-de-prueba');
+      expect(coincidencias.length).toBe(1);
+      expect(coincidencias[0].tagName).toBe('INPUT');
+    });
+
+    it('document.getElementById encuentra el <input> enfocable, no el anfitrión', () => {
+      const fresco = TestBed.createComponent(InlineAutocompleteComponent);
+      fresco.componentInstance.controlId = 'campo-enfocable';
+      document.body.appendChild(fresco.nativeElement);
+      fresco.detectChanges();
+
+      const encontrado = document.getElementById('campo-enfocable');
+      expect(encontrado?.tagName).toBe('INPUT');
+
+      document.body.removeChild(fresco.nativeElement);
+    });
+  });
+
   /**
    * El bug que reportó Mike: al entrar a la pantalla, el clic en Período no desplegaba nada —
    * salvo que se tecleara algo primero. La causa no era el clic ni el foco: `opciones` llegaba

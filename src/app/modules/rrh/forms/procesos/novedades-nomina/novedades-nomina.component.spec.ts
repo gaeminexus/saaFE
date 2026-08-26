@@ -371,6 +371,10 @@ describe('NovedadesNominaComponent', () => {
     function espiarFocoDeColaborador(): jasmine.Spy {
       const elemento = document.getElementById('borrador-empleado') as HTMLElement;
       expect(elemento).not.toBeNull();
+      // No basta con que exista: tiene que ser el <input> de verdad. El bug real era que
+      // getElementById encontraba <app-inline-autocomplete>, no enfocable, porque `id` —a
+      // diferencia de `controlId`— se duplicaba en el anfitrión y en el input de dentro.
+      expect(elemento.tagName).toBe('INPUT');
       return spyOn(elemento, 'focus');
     }
 

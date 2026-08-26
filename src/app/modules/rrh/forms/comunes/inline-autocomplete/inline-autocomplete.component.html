@@ -5,7 +5,7 @@
       #input
       #trigger="matAutocompleteTrigger"
       matInput
-      [id]="id"
+      [id]="controlId"
       [matAutocomplete]="auto"
       [ngModel]="texto()"
       (ngModelChange)="onTexto($event)"
@@ -21,7 +21,7 @@
     #input
     #trigger="matAutocompleteTrigger"
     matInput
-    [id]="id"
+    [id]="controlId"
     class="celda-input"
     [class.invalido]="invalido"
     [matAutocomplete]="auto"
