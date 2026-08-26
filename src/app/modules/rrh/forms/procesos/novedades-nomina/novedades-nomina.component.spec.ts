@@ -297,6 +297,84 @@ describe('NovedadesNominaComponent', () => {
     });
   });
 
+  describe('Todo combo se busca tecleando — cabecera (Mike, 2026-08-25)', () => {
+    it('Período se busca por mes, por el nombre del mes y por el código PRDN', () => {
+      const periodo = { codigo: 41, mes: 4, anio: 2026 };
+      expect(componente.buscarPorPeriodo(periodo)).toEqual(
+        jasmine.arrayContaining(['4', 'Abril', '41', 'PRDN 41']),
+      );
+    });
+
+    it('la etiqueta del período muestra el nombre del mes y el PRDN, no sólo mes/año', () => {
+      const periodo = { codigo: 41, mes: 4, anio: 2026 };
+      expect(componente.etiquetaPeriodo(periodo)).toBe('Abril 2026 · PRDN 41');
+    });
+
+    it('elegir un ejercicio inválido (blur sin elegir de la lista) no rompe el año actual', () => {
+      componente.onEjercicioSeleccionado(null);
+      expect(componente.anio()).toBe(new Date().getFullYear());
+    });
+
+    it('elegir un ejercicio de la lista sí cambia el año y recarga períodos', () => {
+      fixture.detectChanges();
+      componente.onEjercicioSeleccionado(2025);
+      expect(componente.anio()).toBe(2025);
+    });
+  });
+
+  describe('El foco no toca el ratón (Mike, 2026-08-25)', () => {
+    /**
+     * `document.activeElement` no sirve aquí: Karma corre en una ventana de Chrome sin foco de
+     * sistema operativo, y ahí `HTMLElement.focus()` no mueve `activeElement` aunque funcione
+     * perfectamente en un navegador real. Se espía `focus()` sobre el elemento exacto en vez de
+     * preguntarle al DOM quién quedó activo.
+     */
+    function espiarFocoDeColaborador(): jasmine.Spy {
+      const elemento = document.getElementById('borrador-empleado') as HTMLElement;
+      expect(elemento).not.toBeNull();
+      return spyOn(elemento, 'focus');
+    }
+
+    it('al elegir un período, el foco salta solo a Colaborador', async () => {
+      // Se llega con un período ya elegido para que exista el elemento a espiar; luego se elige
+      // de nuevo, que es la acción que el encargo pide comprobar.
+      await conPeriodo(2);
+      const foco = espiarFocoDeColaborador();
+
+      componente.onPeriodoChange(2);
+      await fixture.whenStable();
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(foco).toHaveBeenCalled();
+    });
+
+    it('el botón «Nueva línea» lleva el foco a Colaborador', async () => {
+      await conPeriodo(2);
+      const foco = espiarFocoDeColaborador();
+
+      componente.nuevaFila();
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(foco).toHaveBeenCalled();
+    });
+
+    it('tras confirmar una fila, el foco vuelve a Colaborador de la siguiente', async () => {
+      const creada = { codigo: 99, aprobada: 'N', estado: 1, valor: 45, empleado: ACTIVA, conceptoNomina: QUIROGRAFARIO };
+      novedadNominaService.add.and.returnValue(of(creada));
+      await conPeriodo(2);
+      const foco = espiarFocoDeColaborador();
+
+      componente.onBorradorCampo('empleado', ACTIVA);
+      componente.onBorradorConceptoChange(QUIROGRAFARIO);
+      componente.onBorradorCampo('valor', 45);
+      componente.confirmarBorrador();
+      fixture.detectChanges();
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(foco).toHaveBeenCalled();
+    });
+  });
+
   describe('Aprobación en lote — Corrección 3', () => {
     const SIN_APROBAR_1 = { codigo: 1, aprobada: 'N', estado: 1, valor: 100, empleado: ACTIVA, conceptoNomina: QUIROGRAFARIO, periodoNomina: { codigo: 2 } };
     const SIN_APROBAR_2 = { codigo: 2, aprobada: 'N', estado: 1, valor: 200, empleado: ACTIVA, conceptoNomina: QUIROGRAFARIO, periodoNomina: { codigo: 2 } };

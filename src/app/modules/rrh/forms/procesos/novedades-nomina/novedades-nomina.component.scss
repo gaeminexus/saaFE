@@ -49,6 +49,20 @@
   .panel-tabla {
     padding: 0;
     overflow-x: auto;
+
+    .panel-titulo-tabla {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: $spacing-sm $spacing-md;
+      margin: 0;
+      border-bottom: $border-width solid $border-light;
+
+      button mat-icon {
+        vertical-align: middle;
+        margin-right: $spacing-xs;
+      }
+    }
   }
 
   .tabla-novedades {

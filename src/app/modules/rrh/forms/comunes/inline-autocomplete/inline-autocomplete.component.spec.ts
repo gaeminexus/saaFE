@@ -68,4 +68,33 @@ describe('InlineAutocompleteComponent', () => {
     componente.valor = OPCIONES[1];
     expect(componente.texto()).toBe('Núñez');
   });
+
+  describe('modo="campo" — los combos de cabecera (Ejercicio, Período)', () => {
+    it('por defecto es "celda": sin mat-form-field ni mat-label', () => {
+      expect(fixture.nativeElement.querySelector('mat-form-field')).toBeNull();
+    });
+
+    it('con modo="campo" envuelve en mat-form-field con la etiqueta flotante', () => {
+      componente.modo = 'campo';
+      componente.etiquetaCampo = 'Ejercicio';
+      fixture.detectChanges();
+
+      const formField = fixture.nativeElement.querySelector('mat-form-field');
+      expect(formField).not.toBeNull();
+      expect((fixture.nativeElement as HTMLElement).textContent).toContain('Ejercicio');
+    });
+
+    it('sigue filtrando y emitiendo igual en modo="campo"', () => {
+      componente.modo = 'campo';
+      fixture.detectChanges();
+      const emitidos: any[] = [];
+      componente.valorChange.subscribe((v) => emitidos.push(v));
+
+      componente.onTexto('nunez');
+      expect(componente.filtradas().map((o) => o.nombre)).toEqual(['Núñez']);
+
+      componente.seleccionar({ option: { value: OPCIONES[1] } } as any);
+      expect(emitidos).toEqual([OPCIONES[1]]);
+    });
+  });
 });

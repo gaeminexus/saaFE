@@ -28,6 +28,7 @@ import { aniosDisponibles, filtrarPorAnio, criteriosPorEmpresa } from '../../par
 import { referencia } from '../../comunes/cuerpo-entidad';
 import { registrarEjercicios } from '../../comunes/ejercicios';
 import { opcionesAviso } from '../../comunes/avisos';
+import { nombreMes } from '../../comunes/meses';
 import { InlineAutocompleteComponent } from '../../comunes/inline-autocomplete/inline-autocomplete.component';
 
 /**
@@ -215,6 +216,25 @@ export class NovedadesNominaComponent implements OnInit {
     this.cargarPeriodos();
   }
 
+  /**
+   * El combo de Ejercicio se busca tecleando: si se sale del campo sin haber elegido un año de
+   * la lista, `InlineAutocompleteComponent` emite `null` — y aquí se ignora. La pantalla siempre
+   * necesita un ejercicio válido; no hay «sin ejercicio» como sí lo hay «sin período».
+   */
+  onEjercicioSeleccionado(anio: number | null): void {
+    if (anio !== null) this.onAnioChange(anio);
+  }
+
+  /** El combo de Período es de objetos, no de códigos: aquí se destapa el `codigo` para reusar `onPeriodoChange`. */
+  onPeriodoSeleccionado(periodo: PeriodoNomina | null): void {
+    this.onPeriodoChange(periodo?.codigo ?? null);
+  }
+
+  /** El objeto período seleccionado, para precargar el autocompletado de la cabecera. */
+  periodoActual(): PeriodoNomina | null {
+    return this.periodos().find((p) => p.codigo === this.periodoSeleccionado()) ?? null;
+  }
+
   private cargarPeriodos(): void {
     this.cargandoPeriodos.set(true);
     this.periodoService.selectByCriteria(criteriosPorEmpresa('mes')).subscribe({
@@ -248,6 +268,8 @@ export class NovedadesNominaComponent implements OnInit {
       next: (data) => {
         this.novedades.set(data ?? []);
         this.cargandoNovedades.set(false);
+        // Al elegir el período, el foco salta solo a Colaborador: listo para teclear la primera fila.
+        this.enfocarColaborador();
       },
       error: () => {
         this.novedades.set([]);
@@ -255,6 +277,21 @@ export class NovedadesNominaComponent implements OnInit {
         this.avisar('No se pudieron cargar las novedades del período', true);
       },
     });
+  }
+
+  /**
+   * El recorrido de teclado que pide el encargo: entrar, elegir período y quedar en Colaborador
+   * sin un clic de por medio. `setTimeout` deja que la tabla —oculta hasta que hay período— se
+   * pinte antes de buscar el elemento; sin él, el `focus()` cae sobre un nodo que todavía no
+   * existe en el DOM.
+   */
+  private enfocarColaborador(): void {
+    setTimeout(() => document.getElementById('borrador-empleado')?.focus());
+  }
+
+  /** El botón «Nueva línea»: mismo destino que tras confirmar una fila, por si el foco se perdió. */
+  nuevaFila(): void {
+    this.enfocarColaborador();
   }
 
   private criteriosDelPeriodo(codigo: number): DatosBusqueda[] {
@@ -326,9 +363,22 @@ export class NovedadesNominaComponent implements OnInit {
     concepto?.codigoAlterno != null ? String(concepto.codigoAlterno) : '',
   ];
 
-  etiquetaPeriodo(periodo: PeriodoNomina): string {
-    return `${periodo.mes}/${periodo.anio}`;
-  }
+  /** El nombre del mes entra en la etiqueta a propósito: es una de las tres formas de buscarlo. */
+  etiquetaPeriodo = (periodo: any): string => {
+    if (!periodo) return '';
+    return `${nombreMes(periodo.mes)} ${periodo.anio} · PRDN ${periodo.codigo}`;
+  };
+
+  /** Se busca por mes, por el nombre del mes y por el código PRDN — no sólo por la etiqueta. */
+  buscarPorPeriodo = (periodo: any): string[] => [
+    String(periodo?.mes ?? ''),
+    nombreMes(periodo?.mes),
+    periodo?.codigo != null ? String(periodo.codigo) : '',
+    periodo?.codigo != null ? `PRDN ${periodo.codigo}` : '',
+  ];
+
+  etiquetaEjercicio = (anio: any): string => String(anio ?? '');
+  buscarPorEjercicio = (anio: any): string[] => [String(anio ?? '')];
 
   calculoLabel(n: NovedadNomina): string {
     return entraEnElCalculo(n) ? 'Sí' : motivoFueraDelCalculo(n);
@@ -426,7 +476,8 @@ export class NovedadesNominaComponent implements OnInit {
         }
         this.ultimoConcepto.set(fila.conceptoNomina);
         this.reiniciarBorrador();
-        document.getElementById('borrador-empleado')?.focus();
+        // Al terminar una fila, el foco vuelve a Colaborador de la siguiente — sin tocar el ratón.
+        this.enfocarColaborador();
       },
       error: (err) => {
         this.guardandoBorrador.set(false);

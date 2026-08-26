@@ -1,16 +1,33 @@
-<input
-  #input
-  matInput
-  [id]="id"
-  class="celda-input"
-  [class.invalido]="invalido"
-  [matAutocomplete]="auto"
-  [ngModel]="texto()"
-  (ngModelChange)="onTexto($event)"
-  (blur)="onBlur()"
-  [placeholder]="placeholder"
-  autocomplete="off"
-/>
+@if (modo === 'campo') {
+  <mat-form-field appearance="outline">
+    <mat-label>{{ etiquetaCampo }}</mat-label>
+    <input
+      #input
+      matInput
+      [id]="id"
+      [matAutocomplete]="auto"
+      [ngModel]="texto()"
+      (ngModelChange)="onTexto($event)"
+      (blur)="onBlur()"
+      [placeholder]="placeholder"
+      autocomplete="off"
+    />
+  </mat-form-field>
+} @else {
+  <input
+    #input
+    matInput
+    [id]="id"
+    class="celda-input"
+    [class.invalido]="invalido"
+    [matAutocomplete]="auto"
+    [ngModel]="texto()"
+    (ngModelChange)="onTexto($event)"
+    (blur)="onBlur()"
+    [placeholder]="placeholder"
+    autocomplete="off"
+  />
+}
 <mat-autocomplete #auto="matAutocomplete" (optionSelected)="seleccionar($event)">
   @for (item of filtradas(); track item) {
     <mat-option [value]="item">{{ etiqueta(item) }}</mat-option>

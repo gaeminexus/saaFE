@@ -12,23 +12,36 @@
       </div>
     </div>
     <div class="header-actions">
-      <mat-form-field appearance="outline" class="selector-anio">
-        <mat-label>Ejercicio</mat-label>
-        <mat-select [ngModel]="anio()" (ngModelChange)="onAnioChange($event)">
-          @for (a of anios; track a) {
-            <mat-option [value]="a">{{ a }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
+      <!--
+        Todo combo de la pantalla se busca tecleando, sin excepción — Ejercicio y Período eran
+        los dos que faltaban: eran los primeros que se tocan al entrar, y un mat-select plano no
+        anuncia que se puede buscar.
+      -->
+      <div class="selector-anio">
+        <app-inline-autocomplete
+          modo="campo"
+          etiquetaCampo="Ejercicio"
+          [opciones]="anios"
+          [etiqueta]="etiquetaEjercicio"
+          [buscarPor]="buscarPorEjercicio"
+          [valor]="anio()"
+          (valorChange)="onEjercicioSeleccionado($event)"
+          placeholder="Escriba el año…"
+        />
+      </div>
 
-      <mat-form-field appearance="outline" class="selector-periodo">
-        <mat-label>Período</mat-label>
-        <mat-select [ngModel]="periodoSeleccionado()" (ngModelChange)="onPeriodoChange($event)">
-          @for (p of periodos(); track p.codigo) {
-            <mat-option [value]="p.codigo">{{ etiquetaPeriodo(p) }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
+      <div class="selector-periodo">
+        <app-inline-autocomplete
+          modo="campo"
+          etiquetaCampo="Período"
+          [opciones]="periodos()"
+          [etiqueta]="etiquetaPeriodo"
+          [buscarPor]="buscarPorPeriodo"
+          [valor]="periodoActual()"
+          (valorChange)="onPeriodoSeleccionado($event)"
+          placeholder="Escriba el mes, su nombre o el PRDN…"
+        />
+      </div>
     </div>
   </div>
 
@@ -131,6 +144,18 @@
 
     <!-- Captura en línea: Tab entre campos, Enter confirma y deja el foco listo, Esc descarta. -->
     <div class="panel panel-tabla">
+      <div class="panel-titulo panel-titulo-tabla">
+        <span>Captura</span>
+        <button
+          mat-stroked-button
+          type="button"
+          (click)="nuevaFila()"
+          matTooltip="Salta a Colaborador, listo para teclear"
+        >
+          <mat-icon>add</mat-icon>
+          Nueva línea
+        </button>
+      </div>
       @if (cargandoNovedades()) {
         <p class="mensaje-vacio">Cargando novedades…</p>
       } @else {
@@ -157,7 +182,7 @@
                       [buscarPor]="buscarPorEmpleado"
                       [valor]="edicion().empleado"
                       (valorChange)="onEdicionCampo('empleado', $event)"
-                      placeholder="Colaborador"
+                      placeholder="Escriba cédula o nombre…"
                     />
                   </td>
                   <td>
@@ -167,7 +192,7 @@
                       [buscarPor]="buscarPorConcepto"
                       [valor]="edicion().conceptoNomina"
                       (valorChange)="onEdicionConceptoChange($event)"
-                      placeholder="Concepto"
+                      placeholder="Escriba el nombre o código…"
                     />
                   </td>
                   <td>
@@ -252,7 +277,7 @@
                   [valor]="borrador().empleado"
                   [invalido]="intentoConfirmar() && !borrador().empleado"
                   (valorChange)="onBorradorCampo('empleado', $event)"
-                  placeholder="Colaborador…"
+                  placeholder="Escriba cédula o nombre…"
                 />
               </td>
               <td>
@@ -264,7 +289,7 @@
                   [valor]="borrador().conceptoNomina"
                   [invalido]="intentoConfirmar() && !borrador().conceptoNomina"
                   (valorChange)="onBorradorConceptoChange($event)"
-                  placeholder="Concepto…"
+                  placeholder="Escriba el nombre o código…"
                 />
               </td>
               <td>
