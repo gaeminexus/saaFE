@@ -910,40 +910,60 @@ para Períodos. Los diez defectos de la lista de arriba que tocan estas dos pant
 por construcción en el rediseño, no se parchean; están marcados donde corresponde con una nota que
 apunta aquí.
 
-## Novedades del período — hecho, pendiente de la pasada en navegador
+## Novedades del período — hecho, con dos bugs reales encontrados y arreglados en el camino
 
 Captura en línea completa: autocompletado por teclado en los cuatro combos de la pantalla —
-Colaborador, Concepto, **y también Ejercicio y Período**, que en la primera vuelta se dejaron como
-`mat-select` planos y Mike los devolvió con razón—, foco que salta solo a Colaborador al elegir
-período, al pulsar «Nueva línea» y al confirmar cada fila, placeholders que anuncian que se puede
-buscar. `tsc`, `ng build` y 26+8+3+5 tests propios en 0.
+Colaborador, Concepto, Ejercicio y Período—, foco que salta solo a Colaborador al elegir período,
+al pulsar «Nueva línea» y al confirmar cada fila, placeholders que anuncian que se puede buscar.
 
-**Lo que falta y no puedo hacer yo:** la pasada real en Chrome contra el período de diciembre
-aislado (`sql/69_PERIODO_SANDBOX_LOCAL.sql`). No tengo cliente de Oracle en este entorno —ni
-`sqlplus` ni `sqlcl`— así que no puedo correr ese script; hace falta que lo corra quien tenga
-acceso a la base local. **Y de paso, algo que conviene mirar antes de correrlo**: el backend local
-que sí alcanzo por REST (`127.0.0.1:8080`) tiene los períodos de 2026 en los códigos **28 a 32 y
-51**, meses 1 a 6, **sin julio** — no los códigos `1, 2, 21, 41, 42, 61, 62` que el comentario del
-script da por sentado para «local». Puede que sean instancias distintas, o que a ésta le falte
-julio por cargar; no lo puedo distinguir desde aquí, pero quien corra el script debería
-confirmarlo antes de fiarse de que el bloque 0 (la guarda «esto es local, no producción») está
-comprobando lo que cree que comprueba.
+**Dos bugs reales que reportó Mike en vivo, y no eran lo que parecían a primera vista:**
 
-## Corrección 1 — Períodos con varios por mes, según el tipo
+1. **El desplegable de Período no se abría con clic, sólo tecleando.** No era el clic ni el foco:
+   `filtradas` era un `computed()` leyendo un `@Input()` normal —Período llega por HTTP después del
+   primer render, así que el `computed()` se cacheaba vacío y nunca se enteraba de que `opciones`
+   había cambiado—. `opciones` pasó de `@Input()` a `input()` de señal.
+2. **«Nueva línea» no llevaba el foco a ningún lado.** `id` es un atributo HTML global: aunque
+   `InlineAutocompleteComponent` declarara `@Input() id`, Angular no lo retira del elemento
+   anfitrión, así que `<app-inline-autocomplete id="x">` dejaba **dos** elementos con `id="x"` en
+   el DOM, y `document.getElementById` encontraba el anfitrión —no enfocable— en vez del `<input>`.
+   `@Input() id` pasó a `@Input() controlId`, que no colisiona.
 
-Anotado, no aplicado todavía: un mes es un contenedor de 0, 1 o varios períodos, cada uno con su
-tipo a la vista, porque la unicidad real es `(empresa, año, mes, tipo)` y no `(empresa, año, mes)`.
-Entra en el diseño de la pantalla de Períodos cuando se aborde.
+Los dos, verificados en la app real con `javascript_tool` y clics reales, no sólo en Karma —el
+segundo en particular tenía un test que daba verde sin probar nada: comprobaba que *algo* llamara a
+`focus()`, no que fuera el elemento correcto. `tsc`, `ng build` y 29+13+3 tests propios en 0.
 
-## Aviso de novedades sin aprobar antes de Calcular — pendiente para Pantalla 2
+## Períodos de nómina — hecho
 
-**Hueco nuevo que abrió la Corrección 3 (aprobación en lote), levantado por Mike.** Con toda
-novedad naciendo sin aprobar, es posible capturar veinte, aprobar dieciocho y calcular el período
-sin que las otras dos entren — sin error y sin aviso. Comprobado: `validarPeriodo` no mira las
-novedades; sus comprobaciones son de infraestructura del período (fechas, tipo, contratos), no de
-lo que hay cargado. Cuando se haga la pantalla de Períodos, el botón **Calcular** tiene que avisar
-antes, contando cuántas novedades del período siguen sin aprobar y que no van a entrar. Cliente
-puro —los mismos datos que ya trae `NovedadNomina.aprobada`—, no toca backend.
+Doce meses, cada uno un contenedor de cero, una o varias tarjetas — la Corrección 1: la unicidad
+real es `(empresa, año, mes, tipo)`, no `(empresa, año, mes)`, y está desplegada en producción.
+Cada tarjeta trae PRDN, tipo, estado con forma (píldora de color + icono, una por cada uno de los
+ocho valores del rubro 182) y el distintivo productivo/histórico. Alta en línea dentro del propio
+contenedor del mes, sin diálogo — mes y año ya dados por el contexto, D20 imposible por
+construcción—, con `DateComponent` y `InlineAutocompleteComponent` reutilizados tal cual.
+
+Los otros dos añadidos, en el panel del período, sin tocar `accionesDisponibles` ni el contrato
+REST:
+
+- **`motivoBloqueado()`** (`estados-nomina.ts`): el texto junto a cada botón gris —«Requiere el
+  período Calculado»— en vez de mudo.
+- **El aviso antes de Calcular**: cuenta las novedades sin aprobar del período —confirmado que
+  `validarPeriodo` no las mira— y avisa, sin bloquear.
+
+`tsc`, `ng build` y 9+6+9 tests propios en 0. Verificado en Chrome contra los períodos reales de
+enero a junio de 2026: tarjetas, colores por estado, navegación al panel, todo correcto.
+
+## Lo que sigue pendiente y no puedo hacer yo: la pasada de alta contra el sandbox
+
+Ni en Novedades ni en Períodos pude probar el **alta** contra el período de diciembre aislado
+(`sql/69_PERIODO_SANDBOX_LOCAL.sql`) — no tengo cliente de Oracle en este entorno, ni `sqlplus` ni
+`sqlcl`, así que no puedo correr ese script; hace falta que lo corra quien tenga acceso a la base
+local. **Y de paso, algo que conviene mirar antes de correrlo**: el backend local que sí alcanzo
+por REST (`127.0.0.1:8080`) tiene los períodos de 2026 en los códigos **28 a 32 y 51**, meses 1 a
+6, **sin julio** — no los códigos `1, 2, 21, 41, 42, 61, 62` que el comentario del script da por
+sentado para «local». Puede que sean instancias distintas, o que a ésta le falte julio por cargar;
+no lo puedo distinguir desde aquí, pero quien corra el script debería confirmarlo antes de fiarse
+de que el bloque 0 (la guarda «esto es local, no producción») está comprobando lo que cree que
+comprueba.
 
 ---
 
