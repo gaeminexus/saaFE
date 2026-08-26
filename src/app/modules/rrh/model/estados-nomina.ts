@@ -160,3 +160,92 @@ export function accionesDisponibles(periodo: PeriodoNomina | null): Set<AccionPe
 export function esHistorico(periodo: PeriodoNomina | null): boolean {
   return Number(periodo?.modo) === ModoPeriodo.HISTORICO_SIN_CONTABILIZAR;
 }
+
+/**
+ * Por qué una acción está deshabilitada, o `null` si no lo está.
+ *
+ * No es una segunda fuente de verdad: se apoya en `accionesDisponibles`, que sigue siendo quien
+ * decide qué se puede pulsar. Esto sólo pone en palabras la razón, para el botón gris y mudo que
+ * hoy le cuesta una llamada a Steven cada vez.
+ */
+export function motivoBloqueado(periodo: PeriodoNomina | null, accion: AccionPeriodo): string | null {
+  if (!periodo) return null;
+  if (accionesDisponibles(periodo).has(accion)) return null;
+
+  const estado = Number(periodo.estado);
+
+  switch (accion) {
+    case 'validar':
+    case 'calcular':
+      return 'Requiere el período Abierto o En cálculo.';
+    case 'aprobar':
+      return 'Requiere el período Calculado.';
+    case 'contabilizar':
+    case 'contabilizarProvisiones':
+      return 'Requiere el período Aprobado, o ya Contabilizado si falta el asiento de provisiones.';
+    case 'cerrar':
+      return 'Requiere el período Contabilizado o Pagado.';
+    case 'reabrir':
+      if (estado === EstadoPeriodo.PAGADO) return 'Un período Pagado no se reabre: el dinero ya salió.';
+      if (estado === EstadoPeriodo.ANULADO) return 'Un período Anulado no se reabre.';
+      if (periodo.asientoRol) {
+        return 'Ya tiene un asiento del rol emitido; reabrir exigiría reversar contabilidad primero.';
+      }
+      return null;
+    default:
+      return null;
+  }
+}
+
+/**
+ * Estado con forma, no sólo con texto — D19/D24 otra vez, aquí para el rubro 182.
+ *
+ * Sin colores literales: son las clases que ya trae `_pantalla-rrh.scss` (`.pill`, `.chip`) más
+ * las nuevas de este archivo, para que la hoja de estilos sea la única que decide el color real.
+ */
+export function claseEstado(estado: number | null | undefined): string {
+  switch (Number(estado)) {
+    case EstadoPeriodo.ABIERTO:
+      return 'estado-abierto';
+    case EstadoPeriodo.EN_CALCULO:
+      return 'estado-en-calculo';
+    case EstadoPeriodo.CALCULADO:
+      return 'estado-calculado';
+    case EstadoPeriodo.APROBADO:
+      return 'estado-aprobado';
+    case EstadoPeriodo.CONTABILIZADO:
+      return 'estado-contabilizado';
+    case EstadoPeriodo.PAGADO:
+      return 'estado-pagado';
+    case EstadoPeriodo.CERRADO:
+      return 'estado-cerrado';
+    case EstadoPeriodo.ANULADO:
+      return 'estado-anulado';
+    default:
+      return 'estado-desconocido';
+  }
+}
+
+/** Ícono por estado, para leerlo de un vistazo antes que el texto. */
+export function iconoEstado(estado: number | null | undefined): string {
+  switch (Number(estado)) {
+    case EstadoPeriodo.ABIERTO:
+      return 'edit_note';
+    case EstadoPeriodo.EN_CALCULO:
+      return 'hourglass_top';
+    case EstadoPeriodo.CALCULADO:
+      return 'calculate';
+    case EstadoPeriodo.APROBADO:
+      return 'how_to_reg';
+    case EstadoPeriodo.CONTABILIZADO:
+      return 'receipt_long';
+    case EstadoPeriodo.PAGADO:
+      return 'paid';
+    case EstadoPeriodo.CERRADO:
+      return 'lock';
+    case EstadoPeriodo.ANULADO:
+      return 'cancel';
+    default:
+      return 'help_outline';
+  }
+}

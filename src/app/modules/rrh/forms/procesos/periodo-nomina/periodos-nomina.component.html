@@ -6,35 +6,127 @@
       </div>
       <div class="header-text">
         <h1>Períodos de nómina</h1>
-        <p class="subtitle">Seleccione un período para abrir su panel de proceso</p>
+        <p class="subtitle">El año entero, de un vistazo. Pulse una tarjeta para abrir su panel de proceso</p>
       </div>
     </div>
     <div class="header-actions">
-      <mat-form-field appearance="outline" class="selector-anio">
-        <mat-label>Ejercicio</mat-label>
-        <mat-select [ngModel]="anio()" (ngModelChange)="onAnioChange($event)">
-          @for (a of anios; track a) {
-            <mat-option [value]="a">{{ a }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
+      <div class="selector-anio">
+        <app-inline-autocomplete
+          modo="campo"
+          etiquetaCampo="Ejercicio"
+          [opciones]="anios"
+          [etiqueta]="etiquetaEjercicio"
+          [buscarPor]="buscarPorEjercicio"
+          [valor]="anio()"
+          (valorChange)="onEjercicioSeleccionado($event)"
+          placeholder="Escriba el año…"
+        />
+      </div>
     </div>
   </div>
 
-  <div class="aviso">
-    <mat-icon>touch_app</mat-icon>
-    <span>
-      Pulse un período para validar, calcular, aprobar, contabilizar y cerrar. El modo del
-      período decide si la contabilización emite asiento.
-    </span>
-  </div>
+  @if (cargando()) {
+    <div class="aviso">
+      <mat-icon>hourglass_top</mat-icon>
+      <span>Cargando los períodos de {{ anio() }}…</span>
+    </div>
+  } @else {
+    <div class="grid-meses">
+      @for (mes of meses; track mes) {
+        <div class="mes-contenedor">
+          <div class="mes-titulo">{{ nombreMes(mes) }}</div>
 
-  @if (tableConfig) {
-    <app-table-basic-hijos
-      [configTable]="tableConfig"
-      (emiteRegistro)="abrirPanel($event)"
-      (emiteError)="onTableError($event)"
-    >
-    </app-table-basic-hijos>
+          @for (p of periodosDelMes(mes); track p.codigo) {
+            <div
+              class="tarjeta-periodo"
+              tabindex="0"
+              (click)="abrirPanel(p)"
+              (keydown.enter)="abrirPanel(p)"
+            >
+              <div class="tarjeta-cabecera">
+                <span class="prdn">PRDN {{ p.codigo }}</span>
+                <span class="pill pill-{{ claseEstado(p.estado) }}">
+                  <mat-icon>{{ iconoEstado(p.estado) }}</mat-icon>
+                  {{ estadoLabel(p) }}
+                </span>
+              </div>
+              <!--
+                El tipo va a la vista, no dentro de un campo escondido: la unicidad real es
+                (empresa, año, mes, tipo), así que un MENSUAL y un DÉCIMO TERCERO del mismo mes
+                coexisten legítimos y hay que poder distinguirlos sin abrir nada.
+              -->
+              <div class="tarjeta-tipo">{{ tipoLabel(p) }}</div>
+              <span class="etiqueta-modo" [class.modo-historico]="esHistorico(p)">
+                <mat-icon>{{ esHistorico(p) ? 'history' : 'account_balance' }}</mat-icon>
+                {{ modoLabel(p) }}
+              </span>
+              <div class="tarjeta-stats">
+                <span>{{ p.numeroEmpleados ?? 0 }} colab.</span>
+                <span>{{ p.totalNeto ?? 0 | number: '1.2-2' }}</span>
+              </div>
+            </div>
+          }
+
+          @if (creandoEnMes() === mes) {
+            <form class="formulario-creacion" [formGroup]="formulario!" (ngSubmit)="confirmarCreacion()">
+              <div class="formulario-titulo">Nuevo período de {{ nombreMes(mes) }} {{ anio() }}</div>
+
+              <app-inline-autocomplete
+                modo="campo"
+                etiquetaCampo="Tipo de período"
+                [opciones]="tipos"
+                [etiqueta]="etiquetaTipo"
+                [buscarPor]="buscarPorTipo"
+                [valor]="formulario!.get('tipoPeriodo')?.value"
+                (valorChange)="formulario!.get('tipoPeriodo')?.setValue($event)"
+                placeholder="Escriba el tipo…"
+              />
+
+              <app-inline-autocomplete
+                modo="campo"
+                etiquetaCampo="Modo"
+                [opciones]="modos"
+                [etiqueta]="etiquetaTipo"
+                [buscarPor]="buscarPorTipo"
+                [valor]="formulario!.get('modo')?.value"
+                (valorChange)="formulario!.get('modo')?.setValue($event)"
+                placeholder="Histórico o productivo…"
+              />
+
+              <app-date [field]="campoFechaInicio" [group]="formulario!" [accion]="0"></app-date>
+              <app-date [field]="campoFechaFin" [group]="formulario!" [accion]="0"></app-date>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Observaciones</mat-label>
+                <input matInput formControlName="observaciones" />
+              </mat-form-field>
+
+              @if (errorCreacion(); as error) {
+                <div class="fila-error">
+                  <mat-icon>error</mat-icon>
+                  {{ error }}
+                </div>
+              }
+
+              <div class="formulario-acciones">
+                <button mat-flat-button color="primary" type="submit" [disabled]="guardando()">
+                  @if (guardando()) {
+                    Creando…
+                  } @else {
+                    Crear período
+                  }
+                </button>
+                <button mat-stroked-button type="button" (click)="cancelarCreacion()">Cancelar</button>
+              </div>
+            </form>
+          } @else {
+            <button class="tarjeta-fantasma" type="button" (click)="abrirCreacion(mes)">
+              <mat-icon>add</mat-icon>
+              Crear período
+            </button>
+          }
+        </div>
+      }
+    </div>
   }
 </div>

@@ -8,4 +8,146 @@
   .selector-anio {
     min-width: $breakpoint-sm * 0.25;
   }
+
+  .grid-meses {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax($breakpoint-sm * 0.42, 1fr));
+    gap: $spacing-md;
+  }
+
+  .mes-contenedor {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+    padding: $spacing-md;
+    border-radius: $border-radius-md;
+    background: $background-primary;
+    border: $border-width solid $border-light;
+  }
+
+  .mes-titulo {
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+    color: $secondary-color;
+    text-transform: capitalize;
+  }
+
+  // Un mes es un contenedor: cero, una o varias tarjetas — nunca se asume una sola.
+  .tarjeta-periodo {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+    padding: $spacing-sm;
+    border-radius: $border-radius-sm;
+    border: $border-width solid $border-light;
+    background: $background-secondary;
+    cursor: pointer;
+    transition: box-shadow $transition-quick, border-color $transition-quick;
+
+    &:hover,
+    &:focus {
+      border-color: $primary-color;
+      box-shadow: 0 $spacing-xs $spacing-sm $shadow-color-light;
+      outline: none;
+    }
+  }
+
+  .tarjeta-cabecera {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-xs;
+
+    .prdn {
+      font-size: $font-size-xs;
+      font-weight: $font-weight-semibold;
+      color: $text-muted;
+    }
+
+    .pill mat-icon {
+      font-size: $font-size-base;
+      width: $font-size-base;
+      height: $font-size-base;
+      vertical-align: middle;
+      margin-right: 2px;
+    }
+  }
+
+  .tarjeta-tipo {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $text-primary;
+  }
+
+  .tarjeta-stats {
+    display: flex;
+    justify-content: space-between;
+    font-size: $font-size-xs;
+    color: $text-secondary;
+  }
+
+  .tarjeta-fantasma {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-xs;
+    padding: $spacing-sm;
+    border-radius: $border-radius-sm;
+    border: $border-width-md dashed $border-medium;
+    background: transparent;
+    color: $text-muted;
+    font-size: $font-size-sm;
+    cursor: pointer;
+    transition: border-color $transition-quick, color $transition-quick;
+
+    &:hover,
+    &:focus {
+      border-color: $primary-color;
+      color: $primary-color;
+      outline: none;
+    }
+  }
+
+  .formulario-creacion {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+    padding: $spacing-sm;
+    border-radius: $border-radius-sm;
+    border: $border-width-md solid $primary-color;
+    background: $background-primary;
+
+    mat-form-field {
+      width: 100%;
+    }
+  }
+
+  .formulario-titulo {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $secondary-color;
+  }
+
+  .formulario-acciones {
+    display: flex;
+    gap: $spacing-sm;
+    justify-content: flex-end;
+  }
+
+  .fila-error {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: $spacing-xs $spacing-sm;
+    border-radius: $border-radius-sm;
+    background: rgba($error-color, 0.08);
+    color: $error-color;
+    font-size: $font-size-xs;
+
+    mat-icon {
+      font-size: $font-size-base;
+      width: $font-size-base;
+      height: $font-size-base;
+    }
+  }
 }

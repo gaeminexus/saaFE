@@ -166,5 +166,74 @@
       color: $text-muted;
       border-color: $border-medium;
     }
+
+    // Rubro 182, estado del período de nómina — un color por punto del ciclo, no sólo dos.
+    &.pill-estado-abierto {
+      background: $background-tertiary;
+      color: $text-secondary;
+      border-color: $border-medium;
+    }
+
+    &.pill-estado-en-calculo,
+    &.pill-estado-calculado {
+      background: rgba($info-color, 0.12);
+      color: $info-color;
+      border-color: rgba($info-color, 0.35);
+    }
+
+    &.pill-estado-aprobado {
+      background: rgba($accent-color, 0.18);
+      color: #8a5a1a;
+      border-color: rgba($accent-color, 0.45);
+    }
+
+    &.pill-estado-contabilizado {
+      background: rgba($secondary-color, 0.12);
+      color: $secondary-color;
+      border-color: rgba($secondary-color, 0.35);
+    }
+
+    &.pill-estado-pagado,
+    &.pill-estado-cerrado {
+      background: rgba($success-color, 0.12);
+      color: $success-color;
+      border-color: rgba($success-color, 0.35);
+    }
+
+    &.pill-estado-anulado {
+      background: rgba($error-color, 0.1);
+      color: $error-color;
+      border-color: rgba($error-color, 0.3);
+    }
+
+    &.pill-estado-desconocido {
+      background: $background-tertiary;
+      color: $text-muted;
+      border-color: $border-medium;
+    }
+  }
+
+  /** Productivo genera asientos; histórico no. Es la diferencia más consecuente del módulo. */
+  .etiqueta-modo {
+    display: inline-flex;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: $spacing-xs $spacing-sm;
+    border-radius: $border-radius-sm;
+    background: $background-tertiary;
+    color: $text-secondary;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+
+    mat-icon {
+      font-size: $font-size-base;
+      width: $font-size-base;
+      height: $font-size-base;
+    }
+  }
+
+  .etiqueta-modo.modo-historico {
+    background: $background-secondary;
+    color: $warning-color;
   }
 }

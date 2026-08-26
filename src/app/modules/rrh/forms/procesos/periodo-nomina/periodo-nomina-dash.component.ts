@@ -7,7 +7,11 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Observable } from 'rxjs';
+import { Observable, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
+import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
+import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
+import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { DetalleRubroService } from '../../../../../shared/services/detalle-rubro.service';
 import {
   AccionPeriodo,
@@ -16,9 +20,11 @@ import {
   accionesDisponibles,
   esHistorico,
   estadoEn,
+  motivoBloqueado,
 } from '../../../model/estados-nomina';
 import { PeriodoNomina } from '../../../model/periodo-nomina';
 import { RubrosRrh } from '../../../model/rubros-rrh';
+import { NovedadNominaService } from '../../../service/novedad-nomina.service';
 import { PeriodoNominaService } from '../../../service/periodo-nomina.service';
 import { MotivoDialogComponent } from './motivo-dialog.component';
 import { NominasPeriodoComponent } from './nominas-periodo.component';
@@ -70,6 +76,17 @@ export class PeriodoNominaDashComponent implements OnInit {
   /** Cambia al recalcular para que la tabla de colaboradores vuelva a pedir sus datos. */
   versionDatos = signal<number>(0);
 
+  /**
+   * Cuántas novedades del período siguen sin aprobar — Corrección 3, sobre la Corrección 3.
+   *
+   * La aprobación en lote de Novedades dejó un hueco: capturar veinte, aprobar dieciocho y
+   * calcular sin las otras dos no da ni un aviso hoy — `validarPeriodo` no mira las novedades,
+   * sus seis comprobaciones son de infraestructura del período (fechas, tipo, contratos).
+   * Verificado en el backend. El aviso es cliente puro: mismos datos que ya trae
+   * `NovedadNomina.aprobada`.
+   */
+  novedadesSinAprobar = signal<number>(0);
+
   acciones = computed(() => accionesDisponibles(this.periodo()));
   historico = computed(() => esHistorico(this.periodo()));
 
@@ -89,6 +106,7 @@ export class PeriodoNominaDashComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private periodoService: PeriodoNominaService,
+    private novedadNominaService: NovedadNominaService,
     private detalleRubroService: DetalleRubroService,
     private dialog: MatDialog,
     private snackBar: MatSnackBar,
@@ -118,6 +136,7 @@ export class PeriodoNominaDashComponent implements OnInit {
           return;
         }
         this.periodo.set(data);
+        this.cargarNovedadesSinAprobar(codigo);
       },
       error: () => {
         this.cargando.set(false);
@@ -125,6 +144,28 @@ export class PeriodoNominaDashComponent implements OnInit {
         this.volver();
       },
     });
+  }
+
+  private cargarNovedadesSinAprobar(codigo: number): void {
+    const db = new DatosBusqueda();
+    db.asignaValorConCampoPadre(
+      TipoDatosBusqueda.LONG,
+      'periodoNomina',
+      'codigo',
+      codigo.toString(),
+      TipoComandosBusqueda.IGUAL,
+    );
+    this.novedadNominaService
+      .selectByCriteria([db])
+      .pipe(catchError(() => of([])))
+      .subscribe((novedades) => {
+        this.novedadesSinAprobar.set((novedades ?? []).filter((n) => n.aprobada !== 'S').length);
+      });
+  }
+
+  /** Por qué una acción está gris, en vez de dejarla muda. */
+  motivo(accion: AccionPeriodo): string | null {
+    return motivoBloqueado(this.periodo(), accion);
   }
 
   puede(accion: AccionPeriodo): boolean {

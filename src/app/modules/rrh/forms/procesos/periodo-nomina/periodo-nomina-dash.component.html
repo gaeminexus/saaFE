@@ -51,17 +51,52 @@
       </div>
     }
 
+    <!--
+      El aviso antes de Calcular, no después: capturar veinte novedades, aprobar dieciocho y
+      calcular sin las otras dos no da ni un error hoy — validarPeriodo no las mira.
+    -->
+    @if (novedadesSinAprobar() > 0) {
+      <div class="aviso aviso-error">
+        <mat-icon>pending_actions</mat-icon>
+        <span>
+          Este período tiene {{ novedadesSinAprobar() }} novedad(es) sin aprobar; no entrarán en
+          el cálculo.
+        </span>
+      </div>
+    }
+
     <!-- Barra que refleja la máquina de estados -->
     <div class="panel barra-acciones">
-      <button mat-raised-button color="primary" (click)="validar()" [disabled]="!puede('validar')">
+      <button
+        mat-raised-button
+        color="primary"
+        (click)="validar()"
+        [disabled]="!puede('validar')"
+        [matTooltip]="motivo('validar') ?? ''"
+        [matTooltipDisabled]="!motivo('validar')"
+      >
         <mat-icon>fact_check</mat-icon>
         Validar
       </button>
-      <button mat-raised-button color="primary" (click)="calcular()" [disabled]="!puede('calcular')">
+      <button
+        mat-raised-button
+        color="primary"
+        (click)="calcular()"
+        [disabled]="!puede('calcular')"
+        [matTooltip]="motivo('calcular') ?? ''"
+        [matTooltipDisabled]="!motivo('calcular')"
+      >
         <mat-icon>calculate</mat-icon>
         Calcular
       </button>
-      <button mat-raised-button color="primary" (click)="aprobar()" [disabled]="!puede('aprobar')">
+      <button
+        mat-raised-button
+        color="primary"
+        (click)="aprobar()"
+        [disabled]="!puede('aprobar')"
+        [matTooltip]="motivo('aprobar') ?? ''"
+        [matTooltipDisabled]="!motivo('aprobar')"
+      >
         <mat-icon>how_to_reg</mat-icon>
         Aprobar
       </button>
@@ -70,7 +105,7 @@
         color="primary"
         (click)="contabilizar()"
         [disabled]="!puede('contabilizar')"
-        matTooltip="Emite el asiento del rol de pagos"
+        [matTooltip]="motivo('contabilizar') ?? 'Emite el asiento del rol de pagos'"
       >
         <mat-icon>receipt_long</mat-icon>
         Contabilizar rol
@@ -80,12 +115,19 @@
         color="primary"
         (click)="contabilizarProvisiones()"
         [disabled]="!puede('contabilizarProvisiones')"
-        matTooltip="Emite el asiento de provisiones, que es distinto del rol y se guarda aparte"
+        [matTooltip]="motivo('contabilizarProvisiones') ?? 'Emite el asiento de provisiones, que es distinto del rol y se guarda aparte'"
       >
         <mat-icon>savings</mat-icon>
         Contabilizar provisiones
       </button>
-      <button mat-raised-button color="primary" (click)="cerrar()" [disabled]="!puede('cerrar')">
+      <button
+        mat-raised-button
+        color="primary"
+        (click)="cerrar()"
+        [disabled]="!puede('cerrar')"
+        [matTooltip]="motivo('cerrar') ?? ''"
+        [matTooltipDisabled]="!motivo('cerrar')"
+      >
         <mat-icon>lock</mat-icon>
         Cerrar
       </button>
@@ -111,7 +153,14 @@
         Ver asiento de provisiones
       </button>
       <span class="separador"></span>
-      <button mat-stroked-button color="warn" (click)="reabrir()" [disabled]="!puede('reabrir')">
+      <button
+        mat-stroked-button
+        color="warn"
+        (click)="reabrir()"
+        [disabled]="!puede('reabrir')"
+        [matTooltip]="motivo('reabrir') ?? ''"
+        [matTooltipDisabled]="!motivo('reabrir')"
+      >
         <mat-icon>lock_open</mat-icon>
         Reabrir
       </button>
