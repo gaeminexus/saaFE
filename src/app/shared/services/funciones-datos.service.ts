@@ -187,6 +187,26 @@ export class FuncionesDatosService {
         );
       }
 
+      /**
+       * `LocalDate` puro o columna String con solo fecha (`"yyyy-MM-dd"`, sin hora): NO cae al
+       * fallback de abajo. `new Date("yyyy-MM-dd")` es el único caso en que el constructor de
+       * `Date` de JavaScript interpreta un string ISO como **UTC** en vez de hora local (a
+       * diferencia de `"yyyy-MM-ddTHH:mm:ss"` sin `Z`, que sí se interpreta local) — con
+       * Ecuador en UTC-5, la medianoche UTC cae el día anterior en hora local, y
+       * `.getDate()`/`.getMonth()`/`.getFullYear()` devuelven ese día de menos. Reproducido y
+       * confirmado contra `Entidad.fechaNacimiento` (ENTDFCNC, mapeada como `String` en el
+       * backend — devuelve exactamente lo que se escribió): un solo guardado con
+       * `SOLO_FECHA` alcanza para que el próximo `GET` se muestre y se vuelva a grabar un día
+       * antes, y el corrimiento se acumula guardado tras guardado. Se arma con los componentes
+       * numéricos del string, igual que el resto de esta función — nunca con el string crudo.
+       */
+      const regexSoloFecha = /^(\d{4})-(\d{2})-(\d{2})$/;
+      const matchSoloFecha = fechaLimpia.match(regexSoloFecha);
+      if (matchSoloFecha) {
+        const [, year, month, day] = matchSoloFecha;
+        return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      }
+
       // Fallback: parseo estándar
       const fechaConvertida = new Date(fechaLimpia);
       if (!isNaN(fechaConvertida.getTime())) {

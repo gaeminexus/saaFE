@@ -68,6 +68,9 @@ export class PermisosRrh {
    */
   public static readonly NOVEDADES_IESS = 894;
 
+  /** Anticipos a trabajadores (PROMPT 08). */
+  public static readonly ANTICIPOS_TRABAJADORES = 895;
+
   // Parametrización de la fase 6
   public static readonly FORMATOS_ARCHIVO_BANCARIO = 862;
 

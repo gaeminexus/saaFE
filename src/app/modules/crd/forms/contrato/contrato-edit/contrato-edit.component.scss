@@ -29,7 +29,7 @@
     }
   }
 
-  .loading-container {
+  .loading-container, .error-container {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -41,6 +41,135 @@
 
     mat-icon { font-size: 4rem; width: 4rem; height: 4rem; color: #667eea; }
     p { margin: 1rem 0; font-size: 1.1rem; color: #64748b; }
+  }
+
+  .error-container mat-icon { color: #dc3545; }
+
+  .vigencias-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+
+    .form-section {
+      border-radius: 12px;
+      overflow: hidden;
+
+      mat-card-header {
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        padding: 1.5rem;
+        mat-icon[mat-card-avatar] { width: 40px; height: 40px; font-size: 40px; color: #667eea; }
+        mat-card-title { font-weight: 600; color: #1e293b; }
+        mat-card-subtitle { color: #64748b; }
+      }
+
+      mat-card-content { padding: 1.5rem; }
+    }
+
+    .montos-vigentes {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1rem;
+
+      .monto-vigente-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+        padding: 1rem;
+        background: #f8fafc;
+        border-radius: 10px;
+        border-left: 4px solid #667eea;
+
+        .mv-label {
+          display: flex;
+          align-items: center;
+          gap: 0.4rem;
+          font-size: 0.8rem;
+          font-weight: 600;
+          color: #64748b;
+          text-transform: uppercase;
+          letter-spacing: 0.3px;
+          mat-icon { font-size: 1.1rem; width: 1.1rem; height: 1.1rem; color: #667eea; }
+        }
+
+        .mv-monto { font-size: 1.6rem; font-weight: 700; color: #1e293b; }
+        .mv-detalle { font-size: 0.85rem; color: #94a3b8; }
+      }
+    }
+
+    .sin-vigencias { color: #94a3b8; margin: 0; }
+
+    .vigencias-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+
+      th {
+        text-align: left;
+        padding: 0.6rem 0.75rem;
+        color: #64748b;
+        font-weight: 600;
+        border-bottom: 2px solid #e2e8f0;
+        &.num { text-align: right; }
+      }
+
+      td {
+        padding: 0.6rem 0.75rem;
+        border-bottom: 1px solid #f1f5f9;
+        color: #475569;
+        &.num { text-align: right; }
+        &.obs { color: #94a3b8; font-style: italic; max-width: 220px; }
+      }
+
+      tr.vigente td { font-weight: 600; color: #1e293b; background: #f0fdf4; }
+
+      .chip-vigente {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.15rem 0.6rem;
+        border-radius: 12px;
+        background: #d1fae5;
+        color: #10b981;
+        font-size: 0.78rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        mat-icon { font-size: 0.95rem; width: 0.95rem; height: 0.95rem; }
+      }
+    }
+
+    .btn-nueva-vigencia { margin-top: 1rem; }
+
+    .nueva-vigencia-card {
+      border: 2px solid #667eea;
+
+      .form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+
+        mat-form-field { width: 100%; }
+        .full-width { grid-column: span 2; }
+      }
+
+      .modo-toggle-field {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+        justify-content: center;
+
+        .modo-label {
+          font-size: 0.75rem;
+          font-weight: 600;
+          color: #64748b;
+          text-transform: uppercase;
+        }
+
+        .modo-motivo {
+          font-size: 0.78rem;
+          color: #dc3545;
+        }
+      }
+    }
   }
 
   .form-container {

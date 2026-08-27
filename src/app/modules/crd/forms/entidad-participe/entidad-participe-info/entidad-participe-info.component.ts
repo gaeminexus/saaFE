@@ -45,6 +45,7 @@ import { DetalleRubro } from '../../../../../shared/model/detalle-rubro';
 import { guardarArchivo } from '../../../../../shared/services/descarga-reporte';
 import { FileService } from '../../../../../shared/services/file.service';
 import { FuncionesDatosService, TipoFormatoFechaBackend } from '../../../../../shared/services/funciones-datos.service';
+import { usuarioSesion } from '../../../../../shared/services/usuario-sesion';
 import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoDatosBusqueda as TipoDatos } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
@@ -498,13 +499,13 @@ export class EntidadParticipeInfoComponent implements OnInit {
       ipModificacion: entidad.ipModificacion || ''
     });
 
-    // Actualizar signal de última modificación
-    if (entidad.usuarioModificacion) {
-      this.ultimaModif.set({
-        usuario: entidad.usuarioModificacion,
-        fecha: entidad.fechaModificacion ? new Date(entidad.fechaModificacion) : null
-      });
-    }
+    // Última actualización (pedido 9): la sella el backend sobre ENTD y la trae `GET /entd/getId`
+    // como `ultimaActualizacion`/`usuarioUltimaActualizacion` — no los campos legados
+    // `fechaModificacion`/`usuarioModificacion`, que nunca se llegaron a escribir.
+    this.ultimaModif.set({
+      usuario: entidad.usuarioUltimaActualizacion || '',
+      fecha: this.funcionesDatosService.convertirFechaDesdeBackend(entidad.ultimaActualizacion)
+    });
   }
 
   private cargarDatosEnFormularioParticipe(participe: Participe): void {
@@ -557,18 +558,19 @@ export class EntidadParticipeInfoComponent implements OnInit {
     this.saving.set(true);
 
     const entidadData = this.prepararDatosEntidad();
+    const usuario = usuarioSesion();
 
     const entidadObservable = this.modoEdicion()
-      ? this.entidadService.update(entidadData)
-      : this.entidadService.add(entidadData);
+      ? this.entidadService.update(entidadData, usuario)
+      : this.entidadService.add(entidadData, usuario);
 
     entidadObservable.subscribe({
       next: (entidadGuardada: Entidad | null) => {
         if (entidadGuardada) {
           const participeData = this.prepararDatosParticipe(entidadGuardada);
           const participeObservable = this.modoEdicion()
-            ? this.participeService.update(participeData)
-            : this.participeService.add(participeData);
+            ? this.participeService.update(participeData, usuario)
+            : this.participeService.add(participeData, usuario);
 
           participeObservable.subscribe({
             next: () => {
@@ -598,23 +600,29 @@ export class EntidadParticipeInfoComponent implements OnInit {
     if (!tieneDatos) {
       this.saving.set(false);
       this.mostrarExito();
+      this.refrescarUltimaActualizacion();
       return;
     }
 
-    const dirData = { ...dirFormValue, entidad, porDefecto: 1, trabajo: 0 };
+    // Solo el código: ver el comentario de `prepararDatosParticipe()` — mandar la Entidad
+    // completa como FK anidada rompe la deserialización de Jackson (confirmado con un PUT real).
+    const dirData = { ...dirFormValue, entidad: { codigo: entidad.codigo }, porDefecto: 1, trabajo: 0 };
+    const usuario = usuarioSesion();
     const dirObs = dirFormValue.codigo
-      ? this.direccionService.update(dirData)
-      : this.direccionService.add(dirData);
+      ? this.direccionService.update(dirData, usuario)
+      : this.direccionService.add(dirData, usuario);
 
     dirObs.subscribe({
       next: (dir) => {
         if (dir) this.direccionActual.set(dir);
         this.saving.set(false);
         this.mostrarExito();
+        this.refrescarUltimaActualizacion();
       },
       error: () => {
         this.saving.set(false);
         this.mostrarExito(); // igual mostramos éxito aunque la dirección falle
+        this.refrescarUltimaActualizacion();
       }
     });
   }
@@ -623,25 +631,27 @@ export class EntidadParticipeInfoComponent implements OnInit {
     return localStorage.getItem('userName') || localStorage.getItem('usuario') || 'sistema';
   }
 
-  /** Registra usuarioModificacion en la entidad y actualiza el signal local */
-  private actualizarAuditoria(): void {
+  /**
+   * Refresca "última actualización" leyendo `GET /entd/getId` (pedido 9).
+   *
+   * Antes esto hacía un `PUT /entd` aparte con `{...entidadActual(), usuarioModificacion}` para
+   * sellar la auditoría a mano. Ya no hace falta: cada guardado de esta pantalla manda `?usuario=`
+   * en su propio POST/PUT (Entidad, Partícipe, Dirección, Cónyuge, Referencias, Cuenta bancaria) y
+   * el backend sella `ultimaActualizacion`/`usuarioUltimaActualizacion` sobre ENTD en la misma
+   * transacción de ESE guardado — un PUT extra encima solo duplicaba trabajo y, peor, reenviaba
+   * una foto vieja de `entidadActual()` que podía pisar campos que otra pestaña ya había cambiado.
+   * Sigue haciendo falta después de un DELETE (cónyuge/referencias), que no lleva `?usuario=`.
+   */
+  private refrescarUltimaActualizacion(): void {
     const entidad = this.entidadActual();
     if (!entidad) return;
-    const usuario = this.getNombreUsuario();
-    const ahora = new Date();
-    // Sólo enviamos los campos de auditoría para no sobrescribir otros datos
-    const payload = { ...entidad, usuarioModificacion: usuario };
-    this.entidadService.update(payload).subscribe({
-      next: (ent) => {
-        if (ent) {
-          this.entidadActual.set(ent);
-        }
-        this.ultimaModif.set({ usuario, fecha: ahora });
-      },
-      error: () => {
-        // Actualizamos el signal local aunque falle el servicio
-        this.ultimaModif.set({ usuario, fecha: ahora });
-      }
+    this.entidadService.getById(String(entidad.codigo)).subscribe((fresca) => {
+      if (!fresca) return;
+      this.entidadActual.set(fresca);
+      this.ultimaModif.set({
+        usuario: fresca.usuarioUltimaActualizacion || '',
+        fecha: this.funcionesDatosService.convertirFechaDesdeBackend(fresca.ultimaActualizacion)
+      });
     });
   }
 
@@ -670,16 +680,18 @@ export class EntidadParticipeInfoComponent implements OnInit {
     const entidad = this.entidadActual();
     if (!entidad) return;
     this.savingSubEntidad.set(true);
-    const data = { ...this.conyugeForm.getRawValue(), entidad };
+    // Solo el código de la entidad — ver el comentario de `prepararDatosParticipe()`.
+    const data = { ...this.conyugeForm.getRawValue(), entidad: { codigo: entidad.codigo } };
+    const usuario = usuarioSesion();
     const obs = data.codigo
-      ? this.conyugeService.update(data)
-      : this.conyugeService.add(data);
+      ? this.conyugeService.update(data, usuario)
+      : this.conyugeService.add(data, usuario);
     obs.subscribe({
       next: () => {
         this.conyugeService.getByParent(entidad.codigo).subscribe(list => {
           this.conyuges.set(list || []);
         });
-        this.actualizarAuditoria();
+        this.refrescarUltimaActualizacion();
         this.modoConyugeForm.set(null);
         this.savingSubEntidad.set(false);
       },
@@ -691,7 +703,7 @@ export class EntidadParticipeInfoComponent implements OnInit {
     if (!confirm('¿Eliminar este cónyuge?')) return;
     this.conyugeService.delete(id).subscribe(() => {
       this.conyuges.update(list => list.filter(c => c.codigo !== id));
-      this.actualizarAuditoria();
+      this.refrescarUltimaActualizacion();
     });
   }
 
@@ -713,16 +725,18 @@ export class EntidadParticipeInfoComponent implements OnInit {
     const entidad = this.entidadActual();
     if (!entidad) return;
     this.savingSubEntidad.set(true);
-    const data = { ...this.referenciaFamiliarForm.getRawValue(), entidad };
+    // Solo el código de la entidad — ver el comentario de `prepararDatosParticipe()`.
+    const data = { ...this.referenciaFamiliarForm.getRawValue(), entidad: { codigo: entidad.codigo } };
+    const usuario = usuarioSesion();
     const obs = data.codigo
-      ? this.referenciaFamiliarService.update(data)
-      : this.referenciaFamiliarService.add(data);
+      ? this.referenciaFamiliarService.update(data, usuario)
+      : this.referenciaFamiliarService.add(data, usuario);
     obs.subscribe({
       next: () => {
         this.referenciaFamiliarService.getByParent(entidad.codigo).subscribe(list => {
           this.referenciasFamiliares.set(list || []);
         });
-        this.actualizarAuditoria();
+        this.refrescarUltimaActualizacion();
         this.modoRefFamiliarForm.set(null);
         this.savingSubEntidad.set(false);
       },
@@ -734,7 +748,7 @@ export class EntidadParticipeInfoComponent implements OnInit {
     if (!confirm('¿Eliminar esta referencia familiar?')) return;
     this.referenciaFamiliarService.delete(id).subscribe(() => {
       this.referenciasFamiliares.update(list => list.filter(r => r.codigo !== id));
-      this.actualizarAuditoria();
+      this.refrescarUltimaActualizacion();
     });
   }
 
@@ -756,16 +770,18 @@ export class EntidadParticipeInfoComponent implements OnInit {
     const entidad = this.entidadActual();
     if (!entidad) return;
     this.savingSubEntidad.set(true);
-    const data = { ...this.referenciaPersonalForm.getRawValue(), entidad };
+    // Solo el código de la entidad — ver el comentario de `prepararDatosParticipe()`.
+    const data = { ...this.referenciaPersonalForm.getRawValue(), entidad: { codigo: entidad.codigo } };
+    const usuario = usuarioSesion();
     const obs = data.codigo
-      ? this.referenciaPersonalService.update(data)
-      : this.referenciaPersonalService.add(data);
+      ? this.referenciaPersonalService.update(data, usuario)
+      : this.referenciaPersonalService.add(data, usuario);
     obs.subscribe({
       next: () => {
         this.referenciaPersonalService.getByParent(entidad.codigo).subscribe(list => {
           this.referenciasPersonales.set(list || []);
         });
-        this.actualizarAuditoria();
+        this.refrescarUltimaActualizacion();
         this.modoRefPersonalForm.set(null);
         this.savingSubEntidad.set(false);
       },
@@ -777,7 +793,7 @@ export class EntidadParticipeInfoComponent implements OnInit {
     if (!confirm('¿Eliminar esta referencia personal?')) return;
     this.referenciaPersonalService.delete(id).subscribe(() => {
       this.referenciasPersonales.update(list => list.filter(r => r.codigo !== id));
-      this.actualizarAuditoria();
+      this.refrescarUltimaActualizacion();
     });
   }
 
@@ -848,13 +864,15 @@ export class EntidadParticipeInfoComponent implements OnInit {
     if (esNuevo && !certificado) return;
 
     this.savingSubEntidad.set(true);
-    const data = { ...this.cuentaBancariaParticipeForm.getRawValue(), entidad };
+    // Solo el código de la entidad — ver el comentario de `prepararDatosParticipe()`. No afecta a
+    // `addConCertificado()`: arma su propio FormData y ya extraía solo `.entidad.codigo`.
+    const data = { ...this.cuentaBancariaParticipeForm.getRawValue(), entidad: { codigo: entidad.codigo } };
 
     // Alta: multipart con certificado, POST /cnbp/conCertificado (POST /cnbp de siempre quedó
     // bloqueado para creación del lado del backend). Edición: sigue igual, PUT /cnbp de siempre
     // — no lleva certificado.
     const obs = data.codigo
-      ? this.cuentaBancariaParticipeService.update(data)
+      ? this.cuentaBancariaParticipeService.update(data, usuarioSesion())
       : this.cuentaBancariaParticipeService.addConCertificado(data, certificado!, this.getNombreUsuario());
 
     obs.subscribe({
@@ -863,7 +881,7 @@ export class EntidadParticipeInfoComponent implements OnInit {
           this.cuentasBancariasParticipe.set(list || []);
           this.cargarCertificadosCuentasBancarias(list || []);
         });
-        this.actualizarAuditoria();
+        this.refrescarUltimaActualizacion();
         this.modoCuentaBancariaForm.set(null);
         this.certificadoCuentaBancaria.set(null);
         this.savingSubEntidad.set(false);
@@ -880,7 +898,7 @@ export class EntidadParticipeInfoComponent implements OnInit {
         const { [id]: _omitido, ...resto } = mapa;
         return resto;
       });
-      this.actualizarAuditoria();
+      this.refrescarUltimaActualizacion();
     });
   }
 
@@ -1046,6 +1064,23 @@ export class EntidadParticipeInfoComponent implements OnInit {
     formValue.tieneCorreoTrabajo  = formValue.tieneCorreoTrabajo  ? 1 : 0;
     formValue.tieneTelefono       = formValue.tieneTelefono       ? 1 : 0;
 
+    /**
+     * `TipoHidrocarburifica` es el único catálogo del formulario con una relación anidada:
+     * `TipoHidrocarburifica.java` mapea `@ManyToOne private Entidad entidad` pero expone el
+     * getter/setter como `getCodigoEntidad()`/`setCodigoEntidad()` (verificado en
+     * saaBE — Jackson serializa por el nombre del getter, no del campo), así que el combo trae
+     * el objeto completo bajo la clave `codigoEntidad`: una `Entidad` entera anidada (p. ej. la
+     * "PETROECUADOR" de la hidrocarburífera), con sus propias fechas en formato no-ISO
+     * (`"2000-12-27 0:00:00"`, sin `T`). Reenviar eso tal cual rompía la deserialización de
+     * Jackson en el PUT/POST de `/entd` con 400 "Not able to deserialize data provided." para
+     * cualquier partícipe migrado con `tipoHidrocarburifica` poblado — el botón "Actualizar"
+     * quedaba muerto para esos casos. El backend solo necesita el `codigo` para resolver la
+     * referencia (`@ManyToOne` + JPA `merge`), así que se manda recortado.
+     */
+    if (formValue.tipoHidrocarburifica?.codigo != null) {
+      formValue.tipoHidrocarburifica = { codigo: formValue.tipoHidrocarburifica.codigo };
+    }
+
     // Formatear fechas
     const datosFormateados = this.funcionesDatosService.formatearFechasParaBackend(formValue, [
       { campo: 'fechaNacimiento', tipo: TipoFormatoFechaBackend.SOLO_FECHA },
@@ -1058,8 +1093,14 @@ export class EntidadParticipeInfoComponent implements OnInit {
   private prepararDatosParticipe(entidad: Entidad): any {
     const formValue = this.participeForm.getRawValue();
 
-    // Asignar la entidad guardada
-    formValue.entidad = entidad;
+    /**
+     * Solo el código: `Participe.entidad` es un `@ManyToOne` que JPA resuelve por FK, y mandar
+     * la `Entidad` completa (la que acaba de devolver el PUT de `/entd`, con su propio grafo
+     * anidado) rompe la deserialización de Jackson en `/prtc` con el mismo 400 "Not able to
+     * deserialize data provided." que tenía `tipoHidrocarburifica.codigoEntidad` — confirmado
+     * probando el PUT real: con la `Entidad` completa falla, con `{ codigo }` responde 200.
+     */
+    formValue.entidad = { codigo: entidad.codigo };
 
     // Formatear fechas
     const datosFormateados = this.funcionesDatosService.formatearFechasParaBackend(formValue, [

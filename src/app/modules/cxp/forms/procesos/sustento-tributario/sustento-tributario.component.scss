@@ -1,0 +1,92 @@
+.sustento-tributario {
+  .contador-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+    max-width: 640px;
+  }
+  .contador-item {
+    display: flex;
+    flex-direction: column;
+    padding: 10px 14px;
+    border-radius: 6px;
+    background: #f5f7fa;
+
+    .label {
+      font-size: 0.75rem;
+      color: #555;
+    }
+    .value {
+      font-size: 1.4rem;
+      font-weight: 600;
+    }
+
+    &.contador-ok .value {
+      color: #1e4620;
+    }
+    &.contador-alerta .value {
+      color: #7a5c00;
+    }
+  }
+
+  .filters {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+
+  .table-wrapper {
+    overflow: auto;
+  }
+  .full-width {
+    width: 100%;
+  }
+  .empty-state {
+    padding: 20px;
+    text-align: center;
+    color: #777;
+  }
+
+  .aviso {
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin-bottom: 12px;
+    font-size: 0.9rem;
+  }
+  .aviso-error {
+    background: #fdecea;
+    color: #611a15;
+  }
+
+  .proveedor-nombre {
+    font-weight: 500;
+  }
+  .proveedor-id {
+    font-size: 0.75rem;
+    color: #777;
+  }
+
+  .sustento-select {
+    width: 90px;
+
+    ::ng-deep .mat-mdc-form-field-subscript-wrapper {
+      display: none;
+    }
+  }
+
+  .icono-guardado {
+    color: #1e4620;
+  }
+  .icono-error {
+    color: #c62828;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+
+  tr.fila-guardada {
+    background: #f3faf5;
+  }
+}

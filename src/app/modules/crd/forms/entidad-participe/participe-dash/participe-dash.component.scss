@@ -825,6 +825,38 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
             }
           }
         }
+
+        .placeholder-content {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 0.75rem;
+          padding: 1.5rem 1rem;
+
+          .placeholder-icon {
+            font-size: 2.5rem;
+            width: 2.5rem;
+            height: 2.5rem;
+            color: $saa-text-secondary;
+          }
+
+          p {
+            color: $saa-text-secondary;
+            font-size: 0.95rem;
+            margin: 0;
+            text-align: center;
+          }
+
+          &.error {
+            .placeholder-icon {
+              color: $saa-error;
+            }
+
+            p {
+              color: $saa-error;
+            }
+          }
+        }
       }
 
       mat-card-actions {
@@ -1569,6 +1601,16 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
           color: $saa-text-secondary;
           font-size: 1.1rem;
           margin: 0;
+        }
+
+        &.error {
+          .placeholder-icon {
+            color: $saa-error;
+          }
+
+          p {
+            color: $saa-error;
+          }
         }
       }
     }

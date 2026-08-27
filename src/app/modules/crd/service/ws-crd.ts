@@ -90,6 +90,8 @@ export class ServiciosCrd {
   public static RS_CBPR = `${API_URL}/cbpr`; // ConfiguracionBandaProducto — bandas de cartera por producto
   public static RS_BNDP = `${API_URL}/bndp`; // BandaProducto — bandas de una configuración
   public static RS_CIERRE_CARTERA = `${API_URL}/cierrecartera`; // Cierre mensual de cartera (Fase 2)
+  public static RS_CNFG = `${API_URL}/cnfg`; // ConfiguracionRest — flag de contabilidad de CRD (§4.3 del plan de devengo)
+  public static RS_VGCN = `${API_URL}/vgcn`; // VigenciaContrato — historial de vigencias (§4.1 del plan de devengo)
 }
 /*
 export class ServiciosCrd {

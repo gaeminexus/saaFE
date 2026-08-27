@@ -283,6 +283,11 @@ export class MenucreditosComponent {
         iconName: 'event_available',
         route: '/menucreditos/cierre-cartera',
       });
+      paramNode?.children?.push({
+        displayName: 'Contabilidad de CRD',
+        iconName: 'account_balance',
+        route: '/menucreditos/interruptor-contabilidad',
+      });
     }
   }
 }

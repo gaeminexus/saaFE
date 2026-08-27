@@ -1,0 +1,234 @@
+<div class="conciliacion-cierre">
+  <mat-card>
+    <mat-card-title>Conciliación · Cierre con partidas en tránsito</mat-card-title>
+    <mat-card-content>
+      <div class="filters">
+        <mat-form-field appearance="outline">
+          <mat-label>Cuenta bancaria</mat-label>
+          <mat-select [ngModel]="cuentaSeleccionada()" (ngModelChange)="cuentaSeleccionada.set($event)">
+            @for (c of cuentas(); track c.codigo) {
+              <mat-option [value]="c">{{ c.banco?.nombre }} — {{ c.numeroCuenta }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Período</mat-label>
+          <mat-select [ngModel]="periodoSeleccionado()" (ngModelChange)="periodoSeleccionado.set($event)">
+            @for (p of periodos(); track p.codigo) {
+              <mat-option [value]="p">{{ p.nombre || (p.mes + '/' + p.anio) }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <button mat-raised-button color="primary" (click)="prepararCierre()" [disabled]="!puedePreparar()">
+          @if (preparando()) {
+            <mat-spinner diameter="18"></mat-spinner>
+          } @else {
+            <mat-icon>fact_check</mat-icon>
+          }
+          Preparar cierre
+        </button>
+      </div>
+
+      @if (errorMsg()) {
+        <div class="aviso aviso-error">{{ errorMsg() }}</div>
+      }
+      @if (successMsg()) {
+        <div class="aviso aviso-exito">{{ successMsg() }}</div>
+      }
+    </mat-card-content>
+  </mat-card>
+
+  @if (preparado(); as prep) {
+    <!-- Bloque 1: conciliados del mes (informativo) -->
+    <mat-card>
+      <mat-card-title>Conciliados del mes ({{ prep.conciliadosDelMes.length }})</mat-card-title>
+      <mat-card-content>
+        @if (prep.conciliadosDelMes.length === 0) {
+          <div class="empty-state">No hay grupos conciliados en este período.</div>
+        } @else {
+          <div class="table-wrapper">
+            <table mat-table [dataSource]="prep.conciliadosDelMes" class="mat-elevation-z1 full-width">
+              <ng-container matColumnDef="idGrupo">
+                <th mat-header-cell *matHeaderCellDef>Grupo</th>
+                <td mat-cell *matCellDef="let r">{{ r.idGrupo }}</td>
+              </ng-container>
+              <ng-container matColumnDef="fecha">
+                <th mat-header-cell *matHeaderCellDef>Fecha</th>
+                <td mat-cell *matCellDef="let r">{{ fechaDisplay(r.fechaConciliacion) }}</td>
+              </ng-container>
+              <ng-container matColumnDef="valorAsiento">
+                <th mat-header-cell *matHeaderCellDef>Valor asiento</th>
+                <td mat-cell *matCellDef="let r">{{ r.valorAsiento | number: '1.2-2' }}</td>
+              </ng-container>
+              <ng-container matColumnDef="valorExtracto">
+                <th mat-header-cell *matHeaderCellDef>Valor extracto</th>
+                <td mat-cell *matCellDef="let r">{{ r.valorExtracto | number: '1.2-2' }}</td>
+              </ng-container>
+              <ng-container matColumnDef="usuario">
+                <th mat-header-cell *matHeaderCellDef>Usuario</th>
+                <td mat-cell *matCellDef="let r">{{ r.usuarioConcilia }}</td>
+              </ng-container>
+              <tr mat-header-row *matHeaderRowDef="columnasConciliados"></tr>
+              <tr mat-row *matRowDef="let row; columns: columnasConciliados"></tr>
+            </table>
+          </div>
+        }
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Bloque 2: pendientes, para clasificar -->
+    <mat-card>
+      <mat-card-title>Pendientes ({{ filas().length }})</mat-card-title>
+      <mat-card-content>
+        @if (filas().length === 0) {
+          <div class="empty-state">No hay movimientos pendientes en este período.</div>
+        } @else {
+          <div class="table-wrapper">
+            <table mat-table [dataSource]="filas()" class="mat-elevation-z1 full-width">
+              <ng-container matColumnDef="declarar">
+                <th mat-header-cell *matHeaderCellDef>Declarar</th>
+                <td mat-cell *matCellDef="let r">
+                  @if (r.declarable) {
+                    <mat-checkbox
+                      [ngModel]="estadoDe(r.key)?.declarada"
+                      (ngModelChange)="toggleDeclarada(r.key, $event)"
+                    ></mat-checkbox>
+                  } @else {
+                    <mat-icon matTooltip="No tiene movimiento bancario asociado; hay que conciliarla o investigarla.">block</mat-icon>
+                  }
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="origen">
+                <th mat-header-cell *matHeaderCellDef>Origen</th>
+                <td mat-cell *matCellDef="let r">
+                  {{ origenLabel(r.origen) }}
+                  @if (r.esArrastrada) {
+                    <span class="badge-arrastrada" [class.badge-arrastrada-antigua]="esArrastradaAntigua(r)"
+                          matTooltip="Declarada en un cierre anterior, sigue sin saldarse">
+                      Arrastrada · {{ diasArrastrada(r) }}d
+                    </span>
+                  }
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="fecha">
+                <th mat-header-cell *matHeaderCellDef>Fecha</th>
+                <td mat-cell *matCellDef="let r">{{ fechaDisplay(r.fecha) }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="descripcion">
+                <th mat-header-cell *matHeaderCellDef>Descripción</th>
+                <td mat-cell *matCellDef="let r">{{ r.descripcion }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="valor">
+                <th mat-header-cell *matHeaderCellDef>Valor</th>
+                <td mat-cell *matCellDef="let r">{{ r.valor | number: '1.2-2' }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="tipo">
+                <th mat-header-cell *matHeaderCellDef>Tipo de tránsito</th>
+                <td mat-cell *matCellDef="let r">
+                  <mat-select
+                    [ngModel]="estadoDe(r.key)?.tipo"
+                    (ngModelChange)="cambiarTipo(r.key, $event)"
+                    [disabled]="!r.declarable || !estadoDe(r.key)?.declarada"
+                    class="tipo-select"
+                  >
+                    @for (t of tipoTransitoOptions; track t.codigo) {
+                      <mat-option [value]="t.codigo">{{ t.texto }}</mat-option>
+                    }
+                  </mat-select>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="observacion">
+                <th mat-header-cell *matHeaderCellDef>Observación</th>
+                <td mat-cell *matCellDef="let r">
+                  <input
+                    matInput
+                    class="obs-input"
+                    [ngModel]="estadoDe(r.key)?.observacion"
+                    (ngModelChange)="cambiarObservacion(r.key, $event)"
+                    [disabled]="!r.declarable || !estadoDe(r.key)?.declarada"
+                    placeholder="Por qué quedó en tránsito"
+                  />
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="columnasPendientes"></tr>
+              <tr mat-row *matRowDef="let row; columns: columnasPendientes" [class.fila-arrastrada-antigua]="esArrastradaAntigua(row)" [class.fila-no-declarable]="!row.declarable"></tr>
+            </table>
+          </div>
+          @if (!todoDeclarado()) {
+            <div class="aviso aviso-advertencia">
+              <mat-icon>info</mat-icon>
+              <span>Quedan partidas declarables sin marcar. El backend exige que todo lo declarable esté declarado antes de cerrar.</span>
+            </div>
+          }
+        }
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Bloque 3: la ecuación en vivo -->
+    <mat-card class="ecuacion-card">
+      <mat-card-title>Ecuación de cierre</mat-card-title>
+      <mat-card-content>
+        <div class="ecuacion-grid">
+          <div class="ecuacion-item">
+            <span class="label">Saldo libros</span>
+            <span class="value">{{ prep.saldoLibros | number: '1.2-2' }}</span>
+          </div>
+          <div class="ecuacion-signo">±</div>
+          <div class="ecuacion-item">
+            <span class="label">Partidas declaradas</span>
+            <span class="value" [class.positivo]="sumaDeclaradas() >= 0" [class.negativo]="sumaDeclaradas() < 0">
+              {{ sumaDeclaradas() >= 0 ? '+' : '' }}{{ sumaDeclaradas() | number: '1.2-2' }}
+            </span>
+          </div>
+          <div class="ecuacion-signo">=</div>
+          <div class="ecuacion-item">
+            <mat-form-field appearance="outline" class="saldo-extracto-field">
+              <mat-label>Saldo extracto</mat-label>
+              <input matInput type="number" step="0.01" [ngModel]="saldoExtracto()" (ngModelChange)="saldoExtracto.set($event)" />
+            </mat-form-field>
+            @if (prep.saldoExtractoSugerido == null) {
+              <span class="hint">Sin sugerencia del backend — ingréselo del extracto físico.</span>
+            }
+          </div>
+        </div>
+
+        @if (saldoExtracto() == null) {
+          <div class="diferencia-box diferencia-pendiente">
+            <mat-icon>info</mat-icon>
+            <span>Ingrese el saldo del extracto para calcular la diferencia.</span>
+          </div>
+        } @else {
+          <div class="diferencia-box" [class.diferencia-ok]="cuadra()" [class.diferencia-error]="!cuadra()">
+            @if (cuadra()) {
+              <mat-icon>check_circle</mat-icon>
+              <span>La ecuación cuadra. Se puede cerrar el mes.</span>
+            } @else {
+              <mat-icon>error_outline</mat-icon>
+              <span>Diferencia: {{ diferenciaViva() | number: '1.2-2' }} — faltan {{ faltaParaCuadrar }} para cuadrar.</span>
+            }
+          </div>
+        }
+
+        <div class="actions">
+          <button mat-raised-button color="primary" [disabled]="!puedeCerrar()" (click)="cerrarConciliacion()">
+            @if (cerrando()) {
+              <mat-spinner diameter="18"></mat-spinner>
+            } @else {
+              <mat-icon>lock</mat-icon>
+            }
+            Cerrar conciliación
+          </button>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  }
+</div>

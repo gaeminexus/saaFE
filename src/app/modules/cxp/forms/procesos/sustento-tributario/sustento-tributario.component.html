@@ -1,0 +1,140 @@
+<div class="sustento-tributario">
+  <mat-card>
+    <mat-card-title>Sustento tributario (ATS)</mat-card-title>
+    <mat-card-content>
+      <div class="contador-grid">
+        <div class="contador-item">
+          <span class="label">Total pendientes cargadas</span>
+          <span class="value">{{ totalFacturas() }}</span>
+        </div>
+        <div class="contador-item contador-ok">
+          <span class="label">Resueltas</span>
+          <span class="value">{{ totalResueltas() }}</span>
+        </div>
+        <div class="contador-item" [class.contador-alerta]="totalFaltan() > 0">
+          <span class="label">Faltan</span>
+          <span class="value">{{ totalFaltan() }}</span>
+        </div>
+      </div>
+
+      <div class="filters">
+        <mat-form-field appearance="outline">
+          <mat-label>Sustento</mat-label>
+          <mat-select [ngModel]="filtroSustento()" (ngModelChange)="filtroSustento.set($event)">
+            <mat-option [value]="null">Todos</mat-option>
+            @for (o of catalogoOpciones(); track o.codigo) {
+              <mat-option [value]="o.codigo" [matTooltip]="o.descripcion">{{ o.codigo }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Desde</mat-label>
+          <input matInput type="date" [ngModel]="filtroDesde()" (ngModelChange)="filtroDesde.set($event)" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Hasta</mat-label>
+          <input matInput type="date" [ngModel]="filtroHasta()" (ngModelChange)="filtroHasta.set($event)" />
+        </mat-form-field>
+
+        <button mat-stroked-button (click)="limpiarFiltros()">
+          <mat-icon>refresh</mat-icon>
+          Limpiar filtros
+        </button>
+        <button mat-stroked-button color="primary" (click)="cargar()" [disabled]="cargando()">
+          <mat-icon>sync</mat-icon>
+          Recargar
+        </button>
+      </div>
+
+      @if (errorCarga()) {
+        <div class="aviso aviso-error">{{ errorCarga() }}</div>
+      }
+
+      @if (cargando()) {
+        <div style="text-align: center; padding: 20px">
+          <mat-spinner diameter="36"></mat-spinner>
+        </div>
+      } @else if (filtradas().length === 0) {
+        <div class="empty-state">No hay facturas pendientes de sustento con estos filtros.</div>
+      } @else {
+        <div class="table-wrapper">
+          <table mat-table [dataSource]="filtradas()" class="mat-elevation-z1 full-width">
+            <ng-container matColumnDef="numero">
+              <th mat-header-cell *matHeaderCellDef>Número</th>
+              <td mat-cell *matCellDef="let f">{{ f.numero }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="fecha">
+              <th mat-header-cell *matHeaderCellDef>Fecha</th>
+              <td mat-cell *matCellDef="let f">{{ fechaDisplay(f.fecha) }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="proveedor">
+              <th mat-header-cell *matHeaderCellDef>Proveedor</th>
+              <td mat-cell *matCellDef="let f">
+                <div class="proveedor-nombre">{{ f.proveedor }}</div>
+                <div class="proveedor-id">{{ f.identificacion }}</div>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="total">
+              <th mat-header-cell *matHeaderCellDef>Total</th>
+              <td mat-cell *matCellDef="let f">{{ f.total | number: '1.2-2' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="iva">
+              <th mat-header-cell *matHeaderCellDef>IVA</th>
+              <td mat-cell *matCellDef="let f">{{ f.iva | number: '1.2-2' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="sustento">
+              <th mat-header-cell *matHeaderCellDef>Sustento</th>
+              <td mat-cell *matCellDef="let f">
+                <mat-form-field appearance="outline" class="sustento-select">
+                  <mat-select
+                    [ngModel]="estadoDe(f.id)?.sustento"
+                    (ngModelChange)="cambiarSustento(f.id, $event)"
+                    [matTooltip]="descripcionCatalogo(estadoDe(f.id)?.sustento ?? null)"
+                  >
+                    @for (o of catalogoOpciones(); track o.codigo) {
+                      <mat-option [value]="o.codigo" [matTooltip]="o.descripcion">{{ o.codigo }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="acciones">
+              <th mat-header-cell *matHeaderCellDef>Acciones</th>
+              <td mat-cell *matCellDef="let f">
+                <button
+                  mat-icon-button
+                  color="primary"
+                  matTooltip="Guardar sustento"
+                  [disabled]="!estadoDe(f.id)?.sustento || estadoDe(f.id)?.guardando"
+                  (click)="guardarFila(f)"
+                >
+                  @if (estadoDe(f.id)?.guardando) {
+                    <mat-spinner diameter="18"></mat-spinner>
+                  } @else if (estadoDe(f.id)?.guardado) {
+                    <mat-icon class="icono-guardado">check_circle</mat-icon>
+                  } @else {
+                    <mat-icon>save</mat-icon>
+                  }
+                </button>
+                @if (estadoDe(f.id)?.error) {
+                  <mat-icon class="icono-error" [matTooltip]="estadoDe(f.id)?.error || ''">error_outline</mat-icon>
+                }
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="columnas"></tr>
+            <tr mat-row *matRowDef="let row; columns: columnas" [class.fila-guardada]="estadoDe(row.id)?.guardado"></tr>
+          </table>
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+</div>

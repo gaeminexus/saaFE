@@ -282,6 +282,12 @@ export class MenurecursoshumanosComponent {
           idPermiso: PermisosRrh.UTILIDADES,
           route: '/menurecursoshumanos/procesos/utilidades',
         },
+        {
+          displayName: 'Anticipos a trabajadores',
+          iconName: 'request_quote',
+          idPermiso: PermisosRrh.ANTICIPOS_TRABAJADORES,
+          route: '/menurecursoshumanos/procesos/anticipos',
+        },
       ],
     },
     {

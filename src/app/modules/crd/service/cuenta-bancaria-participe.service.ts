@@ -1,4 +1,4 @@
-import { HttpErrorResponse, HttpHeaders, HttpClient } from '@angular/common/http';
+import { HttpErrorResponse, HttpHeaders, HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, catchError, of } from 'rxjs';
 import { DatosBusqueda } from '../../../shared/model/datos-busqueda/datos-busqueda';
@@ -39,8 +39,10 @@ export class CuentaBancariaParticipeService {
     return this.http.post<CuentaBancariaParticipe>(ServiciosCrd.RS_CNBP, datos, this.httpOptions).pipe(catchError(this.handleError));
   }
 
-  update(datos: any): Observable<CuentaBancariaParticipe | null> {
-    return this.http.put<CuentaBancariaParticipe>(ServiciosCrd.RS_CNBP, datos, this.httpOptions).pipe(catchError(this.handleError));
+  /** `usuario` (opcional): sella la auditoría de ENTD (pedido 9). Solo el PUT lo acepta; el alta va por `addConCertificado()`. */
+  update(datos: any, usuario?: string): Observable<CuentaBancariaParticipe | null> {
+    const params = usuario ? new HttpParams().set('usuario', usuario) : new HttpParams();
+    return this.http.put<CuentaBancariaParticipe>(ServiciosCrd.RS_CNBP, datos, { ...this.httpOptions, params }).pipe(catchError(this.handleError));
   }
 
   /**

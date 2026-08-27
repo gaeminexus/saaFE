@@ -184,6 +184,16 @@ export class ConsultaGeneracionArchivoComponent implements OnInit {
     return mes?.nombre || 'N/A';
   }
 
+  /**
+   * Pedido 4: distingue las tarjetas de Petrocomercial y ARCH, que hoy solo traen el código de
+   * filial. Cae al código mientras el backend no agregue `nombreFilial` al DTO de consulta.
+   */
+  getNombreFilial(row: GeneracionArchivoPetro): string {
+    if (row.nombreFilial) return row.nombreFilial;
+    if (row.filial?.codigo != null) return `Filial ${row.filial.codigo}`;
+    return 'N/A';
+  }
+
   limpiarFiltros(): void {
     this.anioSeleccionado = null;
     this.mesSeleccionado = null;

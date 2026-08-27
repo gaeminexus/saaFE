@@ -9,6 +9,8 @@ import { NavItem } from '../../../../shared/basics/menu/model/nav-item';
 import { AppStateService } from '../../../../shared/services/app-state.service';
 import { SaldoCajaChica } from '../../model/saldo-caja-chica';
 import { CajaChicaService } from '../../service/caja-chica.service';
+import { PartidaTransitoAntigua } from '../../model/conciliacion-cierre';
+import { ConciliacionCierreService } from '../../service/conciliacion-cierre.service';
 
 @Component({
   selector: 'app-menutesoreria',
@@ -23,20 +25,38 @@ export class MenutesoreriaComponent implements OnInit {
   /** Cajas chicas cuyo saldo cayó por debajo de su umbral de alerta (T6). */
   cajasEnAlerta = signal<SaldoCajaChica[]>([]);
 
+  /** Partidas en tránsito con más de 60 días sin saldarse (§8 del diseño de conciliación). */
+  transitoAntiguo = signal<PartidaTransitoAntigua[]>([]);
+
+  /** true cuando no se pudo determinar la empresa de la sesión — antes esto dejaba los banners vacíos sin decir por qué. */
+  sinEmpresa = signal(false);
+
   constructor(
     private cajaChicaS: CajaChicaService,
+    private conciliacionCierreS: ConciliacionCierreService,
     private appState: AppStateService,
   ) {}
 
   ngOnInit(): void {
     const idEmpresa = this.appState.getEmpresa()?.codigo;
-    if (!idEmpresa) return;
+    if (!idEmpresa) {
+      this.sinEmpresa.set(true);
+      return;
+    }
 
     // El banner es un aviso secundario del shell: si falla, no debe romper
     // la navegación de todo el módulo de tesorería.
     this.cajaChicaS.saldos(idEmpresa).subscribe({
       next: (data) => this.cajasEnAlerta.set((data ?? []).filter((c) => c.alerta)),
       error: () => this.cajasEnAlerta.set([]),
+    });
+
+    // Igual criterio: si el endpoint todavía no existe en el backend (ver
+    // ConciliacionCierreService), este banner simplemente no aparece — no
+    // rompe el resto del menú.
+    this.conciliacionCierreS.transitoAntiguas(idEmpresa, 60).subscribe({
+      next: (data) => this.transitoAntiguo.set(Array.isArray(data) ? data : []),
+      error: () => this.transitoAntiguo.set([]),
     });
   }
 
@@ -369,44 +389,6 @@ export class MenutesoreriaComponent implements OnInit {
           ],
         },
         {
-          displayName: 'Movimientos Bancarios',
-          iconName: 'account_balance',
-          idPermiso: 830,
-          children: [
-            {
-              displayName: 'Débitos',
-              iconName: 'arrow_downward',
-              idPermiso: 830,
-              route: '/menutesoreria/procesos/movimientos-bancarios/debitos',
-            },
-            {
-              displayName: 'Créditos',
-              iconName: 'arrow_upward',
-              idPermiso: 830,
-              route: '/menutesoreria/procesos/movimientos-bancarios/creditos',
-            },
-            {
-              displayName: 'Transferencias',
-              iconName: 'swap_horiz',
-              idPermiso: 830,
-              route: '/menutesoreria/procesos/movimientos-bancarios/transferencias',
-            },
-          ],
-        },
-        {
-          displayName: 'Generales',
-          iconName: 'menu_book',
-          idPermiso: 830,
-          children: [
-            {
-              displayName: 'RIED',
-              iconName: 'folder_shared',
-              idPermiso: 830,
-              route: '/menutesoreria/procesos/generales/ried',
-            },
-          ],
-        },
-        {
           displayName: 'Extractos Bancarios',
           iconName: 'receipt_long',
           idPermiso: 830,
@@ -428,6 +410,12 @@ export class MenutesoreriaComponent implements OnInit {
               iconName: 'fact_check',
               idPermiso: 830,
               route: '/menutesoreria/procesos/conciliacion-contable',
+            },
+            {
+              displayName: 'Conciliación — Cierre',
+              iconName: 'lock',
+              idPermiso: 830,
+              route: '/menutesoreria/procesos/conciliacion/cierre',
             },
             {
               displayName: 'Tablero de Cumplimiento',

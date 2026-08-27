@@ -1,0 +1,35 @@
+.w-100 {
+  width: 100%;
+}
+
+.resumen {
+  color: #444;
+  margin-bottom: 12px;
+}
+
+.fila-check {
+  margin-bottom: 12px;
+
+  .radio-label {
+    display: block;
+    font-size: 0.8rem;
+    color: #555;
+    margin-bottom: 4px;
+  }
+
+  mat-radio-button {
+    margin-right: 16px;
+  }
+}
+
+.aviso {
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  font-size: 0.9rem;
+}
+
+.aviso-error {
+  background: #fdecea;
+  color: #611a15;
+}

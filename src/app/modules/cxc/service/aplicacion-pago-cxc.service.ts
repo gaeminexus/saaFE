@@ -4,9 +4,11 @@ import { Observable, catchError, throwError } from 'rxjs';
 import { MotivoRequest, SaldoFactura } from '../../../shared/model/pagos-cobros/catalogos-aplicacion-pago';
 import {
   AplicacionPagoCxc,
+  CobroListado,
   CobroTransferenciaRequest,
   CruceAnticipoCxcRequest,
   CruceAnticiposCxcRequest,
+  FiltrosListarCobros,
   ResultadoAplicacionCxc,
 } from '../model/aplicacion-pago-cxc';
 import { ServiciosCxc } from './ws-cxc';
@@ -30,6 +32,19 @@ export class AplicacionPagoCxcService {
   getByFactura(idFactura: number, soloActivas = true): Observable<AplicacionPagoCxc[]> {
     const params = new HttpParams().set('soloActivas', soloActivas);
     return this.http.get<AplicacionPagoCxc[]>(`${ServiciosCxc.RS_APLC}/factura/${idFactura}`, { params }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /** Cobros registrados (GET /aplc/listar), con filtros opcionales salvo idEmpresa. */
+  listar(filtros: FiltrosListarCobros): Observable<CobroListado[]> {
+    let params = new HttpParams().set('idEmpresa', filtros.idEmpresa);
+    if (filtros.idTitular != null) params = params.set('idTitular', filtros.idTitular);
+    if (filtros.desde) params = params.set('desde', filtros.desde);
+    if (filtros.hasta) params = params.set('hasta', filtros.hasta);
+    if (filtros.formaPago != null) params = params.set('formaPago', filtros.formaPago);
+    if (filtros.estado != null) params = params.set('estado', filtros.estado);
+    return this.http.get<CobroListado[]>(`${ServiciosCxc.RS_APLC}/listar`, { params }).pipe(
       catchError(this.handleError)
     );
   }

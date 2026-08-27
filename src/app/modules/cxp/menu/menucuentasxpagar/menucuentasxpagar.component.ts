@@ -64,6 +64,11 @@ export class MenucuentaxpagarComponent {
           iconName: 'payment',
           route: '/menucuentaxpagar/procesos/proposicion-pago',
         },
+        {
+          displayName: 'Sustento tributario (ATS)',
+          iconName: 'fact_check',
+          route: '/menucuentaxpagar/procesos/sustento-tributario',
+        },
       ],
     },
     {

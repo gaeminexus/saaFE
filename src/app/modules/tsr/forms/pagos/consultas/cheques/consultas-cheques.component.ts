@@ -86,10 +86,17 @@ export class ConsultasChequesComponent implements OnInit {
   }
 
   buscar(): void {
+    const idEmpresa = this.appState.getEmpresa()?.codigo;
+    if (!idEmpresa) {
+      this.rows.set([]);
+      this.snackBar.open('No se pudo determinar la empresa de la sesión', 'Cerrar', { duration: 6000 });
+      return;
+    }
+
     this.loading.set(true);
     this.chequeService
       .listar({
-        idEmpresa: this.appState.getEmpresa()?.codigo ?? undefined,
+        idEmpresa,
         idCuenta: this.idCuentaFiltro() ?? undefined,
         estado: this.estadoFiltro() ?? undefined,
         desde: this.desde() || undefined,

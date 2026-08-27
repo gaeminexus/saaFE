@@ -167,7 +167,8 @@
 
             <mat-form-field appearance="outline">
               <mat-label>Cuenta del partícipe (destino)</mat-label>
-              <mat-select [(ngModel)]="cuentaParticipeSeleccionada"
+              <mat-select [ngModel]="cuentaParticipeSeleccionada()"
+                          (ngModelChange)="cuentaParticipeSeleccionada.set($event)"
                           [disabled]="cargandoCuentasParticipe() || !cuentasParticipe().length"
                           panelClass="select-con-buscador"
                           (openedChange)="!$event && (filtroCuentaParticipe = '')">
@@ -190,7 +191,8 @@
 
             <mat-form-field appearance="outline">
               <mat-label>Cuenta bancaria propia (origen)</mat-label>
-              <mat-select [(ngModel)]="cuentaOrigenSeleccionada"
+              <mat-select [ngModel]="cuentaOrigenSeleccionada()"
+                          (ngModelChange)="cuentaOrigenSeleccionada.set($event)"
                           panelClass="select-con-buscador"
                           (openedChange)="!$event && (filtroCuentaOrigen = '')">
                 <mat-option class="select-search-option"
@@ -258,6 +260,12 @@
             <div class="aviso error">
               <mat-icon>error_outline</mat-icon>
               Hay un tipo de aporte con un monto mayor a su saldo disponible. Corríjalo antes de registrar.
+            </div>
+          }
+          @if (motivoNoPuedeRegistrar(); as motivo) {
+            <div class="aviso">
+              <mat-icon>info_outline</mat-icon>
+              {{ motivo }}
             </div>
           }
         </mat-card-content>
@@ -350,7 +358,7 @@
                     </tr>
                   </thead>
                   <tbody>
-                    @for (l of d.detalle; track l.idTipoAporte) {
+                    @for (l of d.detalle; track $index) {
                       <tr>
                         <td>{{ l.nombreTipoAporte }}</td>
                         <td class="num">{{ formatMoneda(l.valor) }}</td>

@@ -1,0 +1,57 @@
+<div class="interruptor-container">
+  <div class="header">
+    <mat-icon class="header-icon">account_balance</mat-icon>
+    <div>
+      <h1>Contabilidad de créditos (CRD)</h1>
+      <p class="subtitle">Restringido a administrador. Afecta a todos los procesos del módulo.</p>
+    </div>
+  </div>
+
+  <mat-card class="estado-card" [class]="estadoClase()">
+    <mat-card-content>
+      <div class="estado-fila">
+        <div class="estado-info">
+          <span class="estado-etiqueta">Estado actual</span>
+          <span class="estado-valor">
+            <mat-icon>{{ estadoClase() === 'encendida' ? 'toggle_on' : estadoClase() === 'apagada' ? 'toggle_off' : 'help_outline' }}</mat-icon>
+            {{ estadoTexto() }}
+          </span>
+        </div>
+
+        <mat-slide-toggle
+          [checked]="activa() === true"
+          [disabled]="cargando() || cambiando()"
+          (change)="solicitarCambio()"
+          color="primary">
+        </mat-slide-toggle>
+      </div>
+
+      @if (motivo()) {
+        <div class="motivo-fila">
+          <mat-icon>notes</mat-icon>
+          <div>
+            <span class="motivo-etiqueta">Motivo del último cambio</span>
+            <p class="motivo-texto">{{ motivo() }}</p>
+          </div>
+        </div>
+      }
+
+      @if (activa() === null && !cargando()) {
+        <div class="aviso-desconocido">
+          <mat-icon>error_outline</mat-icon>
+          No se pudo consultar el estado real. No se asume "apagada" ni "encendida" — verifique la
+          conexión con el backend antes de decidir si cambiarlo.
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+
+  <div class="explicacion">
+    <mat-icon>info_outline</mat-icon>
+    <p>
+      Con la contabilidad apagada, los procesos de créditos se ejecutan y calculan normalmente pero
+      <b>no generan asientos contables</b>. Es global: afecta a todos los procesos del módulo, no a
+      uno en particular.
+    </p>
+  </div>
+</div>

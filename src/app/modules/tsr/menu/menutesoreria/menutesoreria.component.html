@@ -1,4 +1,12 @@
 <app-side-menu-custom [title]="titulo" [navItems]="navItems">
+  @if (sinEmpresa()) {
+    <div top-banner class="alertas-caja-chica">
+      <span class="chip-alerta chip-error">
+        <mat-icon>error_outline</mat-icon>
+        <span>No se pudo determinar la empresa de la sesión — los avisos de caja chica y conciliación no se cargaron.</span>
+      </span>
+    </div>
+  }
   @if (cajasEnAlerta().length > 0) {
     <div top-banner class="alertas-caja-chica">
       @for (c of cajasEnAlerta(); track c.idCaja) {
@@ -11,6 +19,18 @@
           <span>Caja chica {{ c.nombre }} al {{ c.porcentaje | number: '1.0-0' }}% — reponer</span>
         </a>
       }
+    </div>
+  }
+  @if (transitoAntiguo().length > 0) {
+    <div top-banner class="alertas-caja-chica">
+      <a
+        class="chip-alerta"
+        routerLink="/menutesoreria/procesos/conciliacion/cierre"
+        matTooltip="Partidas en tránsito sin saldar hace más de 60 días"
+      >
+        <mat-icon>warning</mat-icon>
+        <span>{{ transitoAntiguo().length }} partida(s) en tránsito con más de 60 días sin saldarse</span>
+      </a>
     </div>
   }
 </app-side-menu-custom>

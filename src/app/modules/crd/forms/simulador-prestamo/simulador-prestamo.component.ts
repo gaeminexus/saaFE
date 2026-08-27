@@ -9,6 +9,7 @@ import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
 import { guardarArchivo, mensajeReporteFallido } from '../../../../shared/services/descarga-reporte';
 import { FuncionesDatosService } from '../../../../shared/services/funciones-datos.service';
+import { formatearMoneda } from '../../../../shared/utils/moneda.util';
 
 import { Entidad } from '../../model/entidad';
 import {
@@ -416,7 +417,7 @@ export class SimuladorPrestamoComponent {
   }
 
   formatMoneda(n: number | null | undefined): string {
-    return '$' + (n ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return formatearMoneda(n);
   }
 
   private parseMoneda(texto: string | null | undefined): number {

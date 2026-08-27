@@ -4,8 +4,8 @@
       <mat-icon>arrow_back</mat-icon>
     </button>
     <h1>
-      <mat-icon>{{ editMode() ? 'edit' : 'note_add' }}</mat-icon>
-      {{ editMode() ? 'Editar Contrato' : 'Nuevo Contrato' }}
+      <mat-icon>{{ editMode() ? 'badge' : 'note_add' }}</mat-icon>
+      {{ editMode() ? 'Contrato de Adhesión' : 'Nuevo Contrato' }}
     </h1>
   </div>
 
@@ -16,7 +16,209 @@
     </div>
   }
 
-  @if (!loading()) {
+  @if (editMode() && error() && !loading()) {
+    <div class="error-container">
+      <mat-icon>error_outline</mat-icon>
+      <p>{{ error() }}</p>
+      <button mat-raised-button color="primary" (click)="cargarCabecera()">
+        <mat-icon>refresh</mat-icon> Reintentar
+      </button>
+    </div>
+  }
+
+  @if (editMode() && !loading() && !error() && cabecera(); as cab) {
+    <div class="vigencias-container">
+      <!-- Cabecera de solo lectura -->
+      <mat-card class="form-section">
+        <mat-card-header>
+          <mat-icon mat-card-avatar>person</mat-icon>
+          <mat-card-title>{{ entidadReal()?.razonSocial || 'Partícipe' }}</mat-card-title>
+          <mat-card-subtitle>
+            C.I./RUC {{ entidadReal()?.numeroIdentificacion || '—' }} &middot; Contrato #{{ cab.idContrato }}
+            &middot; Estado: {{ cab.estado || '—' }}
+          </mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="montos-vigentes">
+            <div class="monto-vigente-item">
+              <span class="mv-label"><mat-icon>elderly</mat-icon> Jubilación (vigente)</span>
+              <span class="mv-monto">{{ formatMonto(cab.montoJubilacion) }}</span>
+              <span class="mv-detalle">
+                {{ formatPorcentaje(cab.porcentajeJubilacion) }} de {{ formatMonto(cab.remuneracionUnificada) }}
+              </span>
+            </div>
+            <div class="monto-vigente-item">
+              <span class="mv-label"><mat-icon>work_off</mat-icon> Cesantía (vigente)</span>
+              <span class="mv-monto">{{ formatMonto(cab.montoCesantia) }}</span>
+              <span class="mv-detalle">
+                {{ formatPorcentaje(cab.porcentajeCesantia) }} de {{ formatMonto(cab.remuneracionUnificada) }}
+              </span>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Historial de vigencias, agrupado por tipo de aporte -->
+      @for (grupo of [
+        { titulo: 'Jubilación', icono: 'elderly', lista: vigenciasJubilacion(), tipo: ID_TIPO_APORTE.JUBILACION },
+        { titulo: 'Cesantía', icono: 'work_off', lista: vigenciasCesantia(), tipo: ID_TIPO_APORTE.CESANTIA }
+      ]; track grupo.tipo) {
+        <mat-card class="form-section">
+          <mat-card-header>
+            <mat-icon mat-card-avatar>{{ grupo.icono }}</mat-icon>
+            <mat-card-title>Historial de {{ grupo.titulo }}</mat-card-title>
+            <mat-card-subtitle>{{ grupo.lista.length }} vigencia(s)</mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            @if (!grupo.lista.length) {
+              <p class="sin-vigencias">Este partícipe no tiene vigencias de {{ grupo.titulo | lowercase }}.</p>
+            } @else {
+              <table class="vigencias-table">
+                <thead>
+                  <tr>
+                    <th>Desde</th>
+                    <th>Hasta</th>
+                    <th class="num">Monto</th>
+                    <th class="num">Porcentaje</th>
+                    <th class="num">Remuneración</th>
+                    <th>Modo</th>
+                    <th>Observación</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (v of grupo.lista; track v.idVigencia) {
+                    <tr [class.vigente]="esVigente(v)">
+                      <td>{{ formatFecha(v.fechaInicio) }}</td>
+                      <td>
+                        @if (esVigente(v)) {
+                          <span class="chip-vigente"><mat-icon>check_circle</mat-icon> Vigente</span>
+                        } @else {
+                          {{ formatFecha(v.fechaFin) }}
+                        }
+                      </td>
+                      <td class="num">{{ formatMonto(v.monto) }}</td>
+                      <td class="num">{{ formatPorcentaje(v.porcentaje) }}</td>
+                      <td class="num">{{ formatMonto(v.remuneracion) }}</td>
+                      <td>{{ v.modoTexto }}</td>
+                      <td class="obs">{{ v.observacion || '—' }}</td>
+                      <td>
+                        @if (esVigente(v)) {
+                          <button mat-icon-button color="warn" matTooltip="Anular esta vigencia"
+                                  [disabled]="anulandoIdVigencia() === v.idVigencia"
+                                  (click)="anularVigencia(v)">
+                            @if (anulandoIdVigencia() === v.idVigencia) {
+                              <mat-spinner diameter="18"></mat-spinner>
+                            } @else {
+                              <mat-icon>block</mat-icon>
+                            }
+                          </button>
+                        }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+
+            <button mat-stroked-button color="primary" class="btn-nueva-vigencia"
+                    (click)="abrirFormNuevaVigencia(grupo.tipo)">
+              <mat-icon>add</mat-icon> Nueva vigencia de {{ grupo.titulo }}
+            </button>
+          </mat-card-content>
+        </mat-card>
+      }
+
+      <!-- Formulario "nueva vigencia" -->
+      @if (mostrarFormNuevaVigencia()) {
+        <mat-card class="form-section nueva-vigencia-card">
+          <mat-card-header>
+            <mat-icon mat-card-avatar>add_circle</mat-icon>
+            <mat-card-title>Nueva vigencia</mat-card-title>
+            <mat-card-subtitle>
+              No edita el monto vigente: cierra la actual y abre una nueva desde la fecha elegida.
+            </mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            <form [formGroup]="formVigencia" class="form-grid">
+              <mat-form-field appearance="outline">
+                <mat-label>Tipo de aporte</mat-label>
+                <mat-select formControlName="idTipoAporte">
+                  @for (tipo of tiposAporte; track tipo.id) {
+                    <mat-option [value]="tipo.id">{{ tipo.nombre }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Fecha de inicio</mat-label>
+                <input matInput [matDatepicker]="pickerVigencia" formControlName="fechaInicio" required>
+                <mat-datepicker-toggle matIconSuffix [for]="pickerVigencia"></mat-datepicker-toggle>
+                <mat-datepicker #pickerVigencia></mat-datepicker>
+                @if (vigenciaAbiertaDelTipoElegido(); as abierta) {
+                  <mat-hint>No puede ser anterior al {{ formatFecha(abierta.fechaInicio) }} (inicio de la vigencia actual).</mat-hint>
+                }
+              </mat-form-field>
+
+              <div class="modo-toggle-field">
+                <span class="modo-label">Modo</span>
+                <mat-button-toggle-group formControlName="modo">
+                  <mat-button-toggle [value]="MODO_VIGENCIA.CALCULADO" [disabled]="!puedeUsarModoCalculado()">
+                    Calculado
+                  </mat-button-toggle>
+                  <mat-button-toggle [value]="MODO_VIGENCIA.FIJO">Fijo</mat-button-toggle>
+                </mat-button-toggle-group>
+                @if (!puedeUsarModoCalculado()) {
+                  <span class="modo-motivo">El partícipe no tiene remuneración registrada: solo se puede FIJO.</span>
+                }
+              </div>
+
+              @if (formVigencia.get('modo')?.value === MODO_VIGENCIA.CALCULADO) {
+                <mat-form-field appearance="outline">
+                  <mat-label>Porcentaje</mat-label>
+                  <input matInput type="number" formControlName="porcentaje" min="0" max="100" step="0.01">
+                  <span matTextSuffix>%</span>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Monto (calculado)</mat-label>
+                  <input matInput formControlName="monto" readonly>
+                  <span matTextPrefix>$&nbsp;</span>
+                </mat-form-field>
+              } @else {
+                <mat-form-field appearance="outline">
+                  <mat-label>Monto</mat-label>
+                  <input matInput type="number" formControlName="monto" min="0.01" step="0.01">
+                  <span matTextPrefix>$&nbsp;</span>
+                </mat-form-field>
+              }
+
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Observación</mat-label>
+                <textarea matInput formControlName="observacion" rows="2"></textarea>
+              </mat-form-field>
+            </form>
+          </mat-card-content>
+          <div class="form-actions">
+            <button mat-stroked-button type="button" (click)="cerrarFormNuevaVigencia()" [disabled]="guardandoVigencia()">
+              <mat-icon>cancel</mat-icon> Cancelar
+            </button>
+            <button mat-raised-button color="primary" type="button" (click)="guardarNuevaVigencia()"
+                    [disabled]="formVigencia.invalid || guardandoVigencia()">
+              @if (guardandoVigencia()) {
+                <mat-spinner diameter="20"></mat-spinner>
+              } @else {
+                <mat-icon>save</mat-icon>
+              }
+              Guardar vigencia
+            </button>
+          </div>
+        </mat-card>
+      }
+    </div>
+  }
+
+  @if (!editMode() && !loading()) {
     <form [formGroup]="form" class="form-container">
       <!-- Sección Básica -->
       <mat-card class="form-section">

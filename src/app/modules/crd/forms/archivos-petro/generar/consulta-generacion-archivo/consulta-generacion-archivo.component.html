@@ -56,7 +56,7 @@
           Generación {{ getMesNombre(row.mesPeriodo) }} {{ row.anioPeriodo }}
         </mat-card-title>
         <mat-card-subtitle>
-          Código #{{ row.codigo }}
+          {{ getNombreFilial(row) }} &middot; Código #{{ row.codigo }}
         </mat-card-subtitle>
       </mat-card-header>
 

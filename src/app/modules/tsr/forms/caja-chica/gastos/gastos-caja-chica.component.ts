@@ -145,7 +145,10 @@ export class GastosCajaChicaComponent implements OnInit {
 
   private cargarCajas(): void {
     const idEmpresa = this.appState.getEmpresa()?.codigo;
-    if (!idEmpresa) return;
+    if (!idEmpresa) {
+      this.snackBar.open('No se pudo determinar la empresa de la sesión', 'Cerrar', { duration: 5000 });
+      return;
+    }
     this.cajaChicaS.activas(idEmpresa).subscribe({
       next: (data) => this.cajas.set(Array.isArray(data) ? data : []),
       error: () => {

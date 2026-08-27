@@ -87,11 +87,18 @@ export class ChequesImpresosProcComponent implements OnInit {
   }
 
   buscar(): void {
+    const idEmpresa = this.appState.getEmpresa()?.codigo;
+    if (!idEmpresa) {
+      this.rows.set([]);
+      this.snackBar.open('No se pudo determinar la empresa de la sesión', 'Cerrar', { duration: 6000 });
+      return;
+    }
+
     this.loading.set(true);
     this.seleccionados.set(new Set());
     this.chequeService
       .listar({
-        idEmpresa: this.appState.getEmpresa()?.codigo ?? undefined,
+        idEmpresa,
         idCuenta: this.idCuentaFiltro() ?? undefined,
         estado: ESTADO_IMPRESO,
         desde: this.desde() || undefined,

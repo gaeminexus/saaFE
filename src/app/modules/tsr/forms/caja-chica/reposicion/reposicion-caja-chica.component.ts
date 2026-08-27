@@ -101,6 +101,7 @@ export class ReposicionCajaChicaComponent implements OnInit {
     const idEmpresa = this.appState.getEmpresa()?.codigo;
     if (!idEmpresa) {
       this.cajas.set([]);
+      this.error.set('No se pudo determinar la empresa de la sesión');
       return;
     }
     this.cargandoCajas.set(true);

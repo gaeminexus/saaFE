@@ -212,8 +212,14 @@
                 <td mat-cell *matCellDef="let p">{{ formatMoneda(saldoTotalPrestamo()) }}</td>
               </ng-container>
               <ng-container matColumnDef="saldoCapital">
-                <th mat-header-cell *matHeaderCellDef>Saldo capital</th>
+                <th mat-header-cell *matHeaderCellDef>Saldo de capital por cubrir</th>
                 <td mat-cell *matCellDef="let p">{{ formatMoneda(saldoCapitalPrestamo()) }}</td>
+              </ng-container>
+              <ng-container matColumnDef="saldoTablaAmortizacion">
+                <th mat-header-cell *matHeaderCellDef>Saldo en tabla de amortización</th>
+                <td mat-cell *matCellDef="let p">
+                  {{ hayTablaAmortizacion() ? formatMoneda(saldoTablaAmortizacion()) : '—' }}
+                </td>
               </ng-container>
               <ng-container matColumnDef="monto">
                 <th mat-header-cell *matHeaderCellDef>Monto asignado</th>
@@ -233,9 +239,18 @@
                   </button>
                 </td>
               </ng-container>
-              <tr mat-header-row *matHeaderRowDef="['chk','idAsoprep','saldo','saldoCapital','monto','detalle']"></tr>
-              <tr mat-row *matRowDef="let row; columns: ['chk','idAsoprep','saldo','saldoCapital','monto','detalle'];"></tr>
+              <tr mat-header-row *matHeaderRowDef="['chk','idAsoprep','saldo','saldoCapital','saldoTablaAmortizacion','monto','detalle']"></tr>
+              <tr mat-row *matRowDef="let row; columns: ['chk','idAsoprep','saldo','saldoCapital','saldoTablaAmortizacion','monto','detalle'];"></tr>
             </table>
+
+            <div class="aviso-pendiente nota-saldos">
+              <mat-icon>info</mat-icon>
+              <span>
+                <b>Saldo de capital por cubrir</b> es lo que falta pagar para cancelar el crédito
+                hoy, incluida la cuota en curso. <b>Saldo en tabla de amortización</b> es el saldo
+                que queda <i>después</i> de cubrir la cuota en curso — el número del cronograma.
+              </span>
+            </div>
 
             @if (detallePrestamoAbierto()) {
               <div class="detalle-panel">

@@ -168,7 +168,13 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
   isLoadingPagos: boolean = false;
   isOrdenando: boolean = false;
   isLoadingAportes: boolean = false;
+  isLoadingPrestamos: boolean = false;
   isLoadingDashboard: boolean = false;
+
+  // Distingue "sin registros" de "error real" (pedido 1): un backend que devuelve
+  // 500 por lista vacía no puede pintarse igual que una caída genuina.
+  errorAportes: string | null = null;
+  errorPrestamos: string | null = null;
 
   constructor(
     private entidadService: EntidadService,
@@ -2013,26 +2019,15 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
       return;
     }
 
-    const criterioConsultaArray: DatosBusqueda[] = [];
+    this.isLoadingPrestamos = true;
+    this.errorPrestamos = null;
 
-    let criterio = new DatosBusqueda();
-    criterio.asignaValorConCampoPadre(
-      TipoDatosBusqueda.LONG,
-      'entidad',
-      'codigo',
-      this.entidadEncontrada.codigo.toString(),
-      TipoComandosBusqueda.IGUAL
-    );
-    criterioConsultaArray.push(criterio);
-
-    criterio = new DatosBusqueda();
-    criterio.orderBy('codigo');
-    criterioConsultaArray.push(criterio);
-
-    this.prestamoService.selectByCriteria(criterioConsultaArray).subscribe({
+    this.prestamoService.porEntidad(this.entidadEncontrada.codigo).subscribe({
       next: (prestamos: any) => {
         if (!prestamos) {
           this.prestamos = [];
+          this.isLoadingPrestamos = false;
+          if (onComplete) onComplete();
           return;
         }
 
@@ -2079,11 +2074,16 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
         } else {
           this.prestamos = [];
         }
+        this.isLoadingPrestamos = false;
         if (onComplete) onComplete();
       },
       error: (error) => {
         console.error('Error al cargar préstamos:', error);
-        this.snackBar.open('Error al cargar préstamos', 'Cerrar', { duration: 3000 });
+        this.prestamos = [];
+        this.isLoadingPrestamos = false;
+        const mensaje = error?.mensaje || 'No se pudo cargar los préstamos';
+        this.errorPrestamos = mensaje;
+        this.snackBar.open(mensaje, 'Cerrar', { duration: 3000 });
         if (onComplete) onComplete();
       },
     });
@@ -2122,6 +2122,7 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
     criterioConsultaArray.push(criterio);
 
     this.isLoadingAportes = true;
+    this.errorAportes = null;
 
     this.aporteService.selectByCriteria(criterioConsultaArray).subscribe({
       next: (aportes: any) => {
@@ -2164,9 +2165,12 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
       error: (error) => {
         console.error('Error al cargar aportes:', error);
         this.aportes = [];
+        this.aportesPorTipo = [];
         this.totalAportes = 0;
         this.isLoadingAportes = false;
-        this.snackBar.open('Error al cargar aportes', 'Cerrar', { duration: 3000 });
+        const mensaje = error?.mensaje || 'No se pudo cargar los aportes';
+        this.errorAportes = mensaje;
+        this.snackBar.open(mensaje, 'Cerrar', { duration: 3000 });
         if (onComplete) onComplete();
       },
     });

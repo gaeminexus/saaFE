@@ -25,6 +25,7 @@ import { TipoParticipeService } from '../../../service/tipo-participe.service';
 import { CodigoEstadoParticipe, EstadoParticipe, esEstadoVigente } from '../../../model/estado-participe';
 import { EstadoParticipeService } from '../../../service/estado-participe.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
+import { usuarioSesion } from '../../../../../shared/services/usuario-sesion';
 
 /**
  * Componente reutilizable para gestión de entidades.
@@ -446,10 +447,19 @@ export class EntidadEditComponent implements OnInit, OnChanges, OnDestroy {
       urlFotoLogo: entidad.urlFotoLogo,
       usuarioIngreso: entidad.usuarioIngreso,
       fechaIngreso: this.convertirFecha(entidad.fechaIngreso) || entidad.fechaIngreso,
-      usuarioModificacion: entidad.usuarioModificacion,
+      // Pedido 9: una sola marca para toda la ficha, sellada por el backend sobre ENTD.
+      // Si viene null es que nadie modificó al partícipe desde el cambio — se muestra "—",
+      // nunca la fecha de creación.
+      usuarioModificacion: entidad.usuarioUltimaActualizacion || '—',
+      fechaModificacion: this.formatearUltimaActualizacion(entidad.ultimaActualizacion),
       ipIngreso: entidad.ipIngreso,
       ipModificacion: entidad.ipModificacion
     });
+  }
+
+  /** Pedido 9: formatea `ultimaActualizacion` a texto legible; nunca cae a la fecha de creación. */
+  private formatearUltimaActualizacion(fecha: string | number[] | null | undefined): string {
+    return this.funcionesDatosService.formatoFecha(fecha, FuncionesDatosService.FECHA_HORA) || '—';
   }
 
   private cargarParticipePorEntidad(codigoEntidad: number): void {
@@ -515,10 +525,11 @@ export class EntidadEditComponent implements OnInit, OnChanges, OnDestroy {
 
       const formValue = this.entidadForm.getRawValue();
       const entidadData = this.prepararDatosEntidad(formValue);
+      const usuario = usuarioSesion();
 
       const operacionEntidad = this.modoEdicion()
-        ? this.entidadService.update(entidadData)
-        : this.entidadService.add(entidadData);
+        ? this.entidadService.update(entidadData, usuario)
+        : this.entidadService.add(entidadData, usuario);
 
       operacionEntidad.subscribe({
         next: (entidadGuardada) => {
@@ -532,8 +543,8 @@ export class EntidadEditComponent implements OnInit, OnChanges, OnDestroy {
           const codigoParticipe = this.participeActual()?.codigo;
 
           const operacionParticipe = codigoParticipe
-            ? this.participeService.update({ ...participeData, codigo: codigoParticipe })
-            : this.participeService.add(participeData);
+            ? this.participeService.update({ ...participeData, codigo: codigoParticipe }, usuario)
+            : this.participeService.add(participeData, usuario);
 
           operacionParticipe.subscribe({
             next: (participeGuardado) => {

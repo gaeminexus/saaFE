@@ -1,0 +1,159 @@
+@use '../../../../../../styles/abstracts/colors' as c;
+
+.interruptor-container {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px 20px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 24px;
+  background: c.$background-gradient;
+  border-radius: 12px;
+  color: c.$text-light;
+
+  .header-icon {
+    font-size: 2.5rem;
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: 1.4rem;
+  }
+
+  .subtitle {
+    margin: 4px 0 0;
+    opacity: 0.9;
+    font-size: 0.9rem;
+  }
+}
+
+.estado-card {
+  border-left: 6px solid c.$border-medium;
+
+  &.encendida {
+    border-left-color: c.$success-color;
+  }
+
+  &.apagada {
+    border-left-color: c.$text-muted;
+  }
+
+  &.desconocido {
+    border-left-color: c.$error-color;
+  }
+
+  &.cargando {
+    border-left-color: c.$info-color;
+  }
+}
+
+.estado-fila {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.estado-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.estado-etiqueta {
+  font-size: 0.8rem;
+  color: c.$text-muted;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.estado-valor {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: c.$text-primary;
+
+  mat-icon {
+    font-size: 1.6rem;
+    width: 1.6rem;
+    height: 1.6rem;
+  }
+}
+
+.motivo-fila {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid c.$border-light;
+  color: c.$text-secondary;
+
+  mat-icon {
+    font-size: 1.2rem;
+    width: 1.2rem;
+    height: 1.2rem;
+    margin-top: 2px;
+  }
+}
+
+.motivo-etiqueta {
+  font-size: 0.8rem;
+  color: c.$text-muted;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.motivo-texto {
+  margin: 2px 0 0;
+}
+
+.aviso-desconocido {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 12px 14px;
+  background: rgba(c.$error-color, 0.08);
+  color: c.$error-color;
+  border-radius: 8px;
+  font-size: 0.88rem;
+
+  mat-icon {
+    font-size: 1.1rem;
+    width: 1.1rem;
+    height: 1.1rem;
+    flex-shrink: 0;
+  }
+}
+
+.explicacion {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 16px;
+  background: c.$background-tertiary;
+  border-radius: 8px;
+  color: c.$text-secondary;
+  font-size: 0.88rem;
+
+  mat-icon {
+    color: c.$info-color;
+    flex-shrink: 0;
+  }
+
+  p {
+    margin: 0;
+  }
+}

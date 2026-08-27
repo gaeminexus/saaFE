@@ -425,34 +425,6 @@ export const routes: Routes = [
         data: { title: 'Procesos - Cheques Entregados' },
       },
 
-      // Procesos - Movimientos Bancarios
-      {
-        path: 'procesos/movimientos-bancarios/debitos',
-        loadComponent: () => import('./modules/tsr/forms/movimientos-bancarios/debitos/debitos.component').then((m) => m.DebitosComponent),
-        canActivate: [authGuard],
-        data: { title: 'Movimientos Bancarios - Débitos' },
-      },
-      {
-        path: 'procesos/movimientos-bancarios/creditos',
-        loadComponent: () => import('./modules/tsr/forms/movimientos-bancarios/creditos/creditos.component').then((m) => m.CreditosComponent),
-        canActivate: [authGuard],
-        data: { title: 'Movimientos Bancarios - Créditos' },
-      },
-      {
-        path: 'procesos/movimientos-bancarios/transferencias',
-        loadComponent: () => import('./modules/tsr/forms/movimientos-bancarios/transferencias/transferencias.component').then((m) => m.TransferenciasComponent),
-        canActivate: [authGuard],
-        data: { title: 'Movimientos Bancarios - Transferencias' },
-      },
-
-      // Procesos - Generales
-      {
-        path: 'procesos/generales/ried',
-        loadComponent: () => import('./modules/tsr/forms/generales/ried/ried.component').then((m) => m.RiedComponent),
-        canActivate: [authGuard],
-        data: { title: 'RIED' },
-      },
-
       // Procesos - Extractos Bancarios
       {
         path: 'procesos/extractos-bancarios/cargar',
@@ -483,6 +455,12 @@ export const routes: Routes = [
         loadComponent: () => import('./modules/tsr/forms/generales/conciliacion-contable/conciliacion-contable.component').then((m) => m.ConciliacionContableComponent),
         canActivate: [authGuard],
         data: { title: 'Conciliación Contable' },
+      },
+      {
+        path: 'procesos/conciliacion/cierre',
+        loadComponent: () => import('./modules/tsr/forms/generales/conciliacion-cierre/conciliacion-cierre.component').then((m) => m.ConciliacionCierreComponent),
+        canActivate: [authGuard],
+        data: { title: 'Conciliación — Cierre' },
       },
     ],
   },
@@ -808,6 +786,15 @@ export const routes: Routes = [
         data: { title: 'Reparto de utilidades' },
       },
       {
+        path: 'procesos/anticipos',
+        loadComponent: () =>
+          import('./modules/rrh/forms/procesos/anticipos/anticipos.component').then(
+            (m) => m.AnticiposComponent,
+          ),
+        canActivate: [authGuard],
+        data: { title: 'Anticipos a trabajadores' },
+      },
+      {
         path: 'procesos/liquidacion',
         loadComponent: () =>
           import('./modules/rrh/forms/procesos/liquidacion/liquidacion-list.component').then(
@@ -913,6 +900,11 @@ export const routes: Routes = [
         canActivate: [authGuard],
       },
       {
+        path: 'cobros/consulta',
+        loadComponent: () => import('./modules/cxc/forms/cobros/consulta-cobros/consulta-cobros.component').then((m) => m.ConsultaCobrosComponent),
+        canActivate: [authGuard],
+      },
+      {
         path: 'reportes/dash-ventas',
         loadComponent: () => import('./modules/cxc/reportes/dash-ventas').then((m) => m.DashVentasComponent),
         canActivate: [authGuard],
@@ -953,6 +945,12 @@ export const routes: Routes = [
         path: 'procesos/consulta-documentos',
         loadComponent: () => import('./modules/cxp/forms/procesos/consulta-documentos/consulta-documentos.component').then((m) => m.ConsultaDocumentosComponent),
         canActivate: [authGuard],
+      },
+      {
+        path: 'procesos/sustento-tributario',
+        loadComponent: () => import('./modules/cxp/forms/procesos/sustento-tributario/sustento-tributario.component').then((m) => m.SustentoTributarioComponent),
+        canActivate: [authGuard],
+        data: { title: 'Sustento tributario (ATS)' },
       },
       {
         path: 'pagos/cruce-anticipo',
@@ -1098,6 +1096,14 @@ export const routes: Routes = [
         // hasta que exista el esquema de permisos definitivo.
         path: 'cierre-cartera',
         loadComponent: () => import('./modules/crd/forms/cierre-cartera/cierre-cartera.component').then((m) => m.CierreCarteraComponent),
+        canActivate: [authGuard, usuarioUnoGuard],
+      },
+      {
+        // TODO TEMPORAL: misma restricción a USUARIO 1 que bandas-cartera (usuarioUnoGuard),
+        // hasta que exista el esquema de permisos definitivo de "administrador" (§4.3 del plan
+        // de devengo de aportes pide "restringido a administrador").
+        path: 'interruptor-contabilidad',
+        loadComponent: () => import('./modules/crd/forms/parametrizacion/interruptor-contabilidad/interruptor-contabilidad.component').then((m) => m.InterruptorContabilidadComponent),
         canActivate: [authGuard, usuarioUnoGuard],
       },
       // Rutas de Contratos

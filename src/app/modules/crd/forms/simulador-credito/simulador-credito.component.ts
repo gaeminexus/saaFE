@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
 import { guardarArchivo, mensajeReporteFallido } from '../../../../shared/services/descarga-reporte';
 import { FuncionesDatosService, TipoFormatoFechaBackend } from '../../../../shared/services/funciones-datos.service';
+import { formatearMoneda } from '../../../../shared/utils/moneda.util';
 import { NOMBRE_TIPO_AMORTIZACION } from '../../model/pagos/catalogos-pago';
 import { mensajeDeRespuesta } from '../../model/pagos/respuesta-pago';
 import { SolicitudReporteSimulacion } from '../../model/simuladores/reporte-simulacion';
@@ -175,7 +176,7 @@ export class SimuladorCreditoComponent {
   }
 
   formatMoneda(n: number | null | undefined): string {
-    return '$' + (n ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return formatearMoneda(n);
   }
 
   /**

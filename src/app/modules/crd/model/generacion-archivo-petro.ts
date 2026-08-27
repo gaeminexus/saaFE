@@ -27,6 +27,11 @@ export interface GeneracionArchivoPetro {
   usuarioDescarga?: string | null;
   observaciones?: string;
   filial?: Filial;
+  /**
+   * Nombre de la filial (pedido 4): hasta que el backend lo agregue al DTO de consulta, llega
+   * `filial: { codigo }` sin nombre. Con `nombreFilial` ausente la tarjeta cae al código.
+   */
+  nombreFilial?: string;
   usuarioIngreso?: string;
   fechaIngreso?: string;
   usuarioModificacion?: string;

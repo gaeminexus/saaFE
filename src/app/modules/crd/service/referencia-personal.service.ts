@@ -1,4 +1,4 @@
-import { HttpHeaders, HttpClient } from '@angular/common/http';
+import { HttpHeaders, HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, catchError, of } from 'rxjs';
 import { ReferenciaPersonal } from '../model/referencia-personal';
@@ -15,12 +15,18 @@ export class ReferenciaPersonalService {
     return this.http.get<ReferenciaPersonal[]>(`${ServiciosCrd.RS_RRPP}/getByParent/${idEntidad}`).pipe(catchError(this.handleError));
   }
 
-  add(datos: any): Observable<ReferenciaPersonal | null> {
-    return this.http.post<ReferenciaPersonal>(ServiciosCrd.RS_RRPP, datos, this.httpOptions).pipe(catchError(this.handleError));
+  /** `usuario` (opcional): sella la auditoría de ENTD (pedido 9). */
+  add(datos: any, usuario?: string): Observable<ReferenciaPersonal | null> {
+    return this.http.post<ReferenciaPersonal>(ServiciosCrd.RS_RRPP, datos, { ...this.httpOptions, params: this.paramsUsuario(usuario) }).pipe(catchError(this.handleError));
   }
 
-  update(datos: any): Observable<ReferenciaPersonal | null> {
-    return this.http.put<ReferenciaPersonal>(ServiciosCrd.RS_RRPP, datos, this.httpOptions).pipe(catchError(this.handleError));
+  /** `usuario` (opcional): ver `add()`. */
+  update(datos: any, usuario?: string): Observable<ReferenciaPersonal | null> {
+    return this.http.put<ReferenciaPersonal>(ServiciosCrd.RS_RRPP, datos, { ...this.httpOptions, params: this.paramsUsuario(usuario) }).pipe(catchError(this.handleError));
+  }
+
+  private paramsUsuario(usuario?: string): HttpParams {
+    return usuario ? new HttpParams().set('usuario', usuario) : new HttpParams();
   }
 
   delete(id: number): Observable<any> {

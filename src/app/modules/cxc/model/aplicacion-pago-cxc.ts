@@ -70,6 +70,51 @@ export interface CobroTransferenciaRequest {
   observacion?: string;
 }
 
+/** Documento que un cobro afecta, tal como lo devuelve GET /aplc/listar. */
+export interface DocumentoAfectadoListado {
+  tipo: 'FACTURA' | 'LIQUIDACION_COMPRA';
+  id: number;
+  numero: string;
+}
+
+/**
+ * Forma de pago de GET /aplc/listar. OJO: NO es el mismo catálogo que
+ * `FormaPagoAplicacion` de CXP (`catalogos-aplicacion-pago.ts`) — ahí el
+ * código 4 es Débito automático; aquí, según el contrato de
+ * AplicacionPagoCxcRest, es Tarjeta. No reutilizar esas etiquetas.
+ */
+export const FORMA_PAGO_COBRO_LABELS: Record<number, string> = {
+  1: 'Efectivo',
+  2: 'Transferencia',
+  3: 'Cheque',
+  4: 'Tarjeta',
+};
+
+/** Una fila de GET /aplc/listar: un cobro registrado, con su documento y estado. */
+export interface CobroListado {
+  id: number;
+  fecha: string;
+  titular: { codigo: number; nombre: string };
+  documentoAfectado: DocumentoAfectadoListado;
+  tipoDocPago: string;
+  /** Nula en datos ya registrados sin forma de pago capturada (verificado contra datos reales: 6 de 7 filas hoy). */
+  formaPago: number | null;
+  valor: number;
+  asiento: { id: number; numeroAlterno: string } | null;
+  /** Ver EstadoAplicacion: 1 Activo, 2 Reversado. */
+  estado: number;
+}
+
+/** Query params de GET /aplc/listar. Todos opcionales salvo idEmpresa. */
+export interface FiltrosListarCobros {
+  idEmpresa: number;
+  idTitular?: number;
+  desde?: string;
+  hasta?: string;
+  formaPago?: number;
+  estado?: number;
+}
+
 /** Respuesta de POST /aplc/anticipo y POST /aplc/cobroTransferencia. */
 export interface ResultadoAplicacionCxc extends SaldoFactura {
   exito: boolean;

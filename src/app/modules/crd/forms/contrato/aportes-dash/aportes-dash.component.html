@@ -7,7 +7,7 @@
     <div class="header-content">
       <h1>
         <mat-icon>account_balance_wallet</mat-icon>
-        Dashboard de Aportes
+        Estado de Cuenta de Aportes
       </h1>
       @if (entidad()) {
         <p class="subtitle">
@@ -21,25 +21,45 @@
   <div class="filters-section">
     <h3><mat-icon>filter_list</mat-icon> Filtros</h3>
     <form [formGroup]="filtrosForm" class="filters-form">
-      <mat-form-field appearance="outline">
-        <mat-label>Año</mat-label>
-        <mat-select formControlName="anio">
-          <mat-option [value]="null">Todos</mat-option>
-          @for (anio of anios; track anio) {
-            <mat-option [value]="anio">{{ anio }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
+      <div class="rango-periodo">
+        <span class="rango-label">Desde</span>
+        <mat-form-field appearance="outline">
+          <mat-label>Mes</mat-label>
+          <mat-select formControlName="mesDesde">
+            @for (mes of meses; track mes.value) {
+              <mat-option [value]="mes.value">{{ mes.nombre }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Año</mat-label>
+          <mat-select formControlName="anioDesde">
+            @for (anio of anios; track anio) {
+              <mat-option [value]="anio">{{ anio }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      </div>
 
-      <mat-form-field appearance="outline">
-        <mat-label>Mes</mat-label>
-        <mat-select formControlName="mes">
-          <mat-option [value]="null">Todos</mat-option>
-          @for (mes of meses; track mes.value) {
-            <mat-option [value]="mes.value">{{ mes.nombre }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
+      <div class="rango-periodo">
+        <span class="rango-label">Hasta</span>
+        <mat-form-field appearance="outline">
+          <mat-label>Mes</mat-label>
+          <mat-select formControlName="mesHasta">
+            @for (mes of meses; track mes.value) {
+              <mat-option [value]="mes.value">{{ mes.nombre }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Año</mat-label>
+          <mat-select formControlName="anioHasta">
+            @for (anio of anios; track anio) {
+              <mat-option [value]="anio">{{ anio }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      </div>
 
       <mat-form-field appearance="outline">
         <mat-label>Tipo Aporte</mat-label>
@@ -56,7 +76,7 @@
           <mat-icon>search</mat-icon> Aplicar
         </button>
         <button mat-stroked-button (click)="limpiarFiltros()" [disabled]="loading()">
-          <mat-icon>clear</mat-icon> Limpiar
+          <mat-icon>clear</mat-icon> Últimos 12 meses
         </button>
       </div>
     </form>
@@ -73,62 +93,26 @@
     <div class="error-container">
       <mat-icon>error_outline</mat-icon>
       <p>{{ error() }}</p>
-      <button mat-raised-button color="primary" (click)="cargarAportes()">
+      <button mat-raised-button color="primary" (click)="cargarEstadoCuenta()">
         <mat-icon>refresh</mat-icon> Reintentar
       </button>
     </div>
   }
 
   @if (!loading() && !error()) {
-    <!-- Totales Generales -->
+    <!-- Deuda de aportes -->
     <div class="totals-section">
-      <mat-card class="total-card">
-        <mat-icon>receipt_long</mat-icon>
-        <div class="total-value">{{ totalAportes() }}</div>
-        <div class="total-label">Total Aportes</div>
-      </mat-card>
-      <mat-card class="total-card">
-        <mat-icon>payments</mat-icon>
-        <div class="total-value">{{ totalMonto() | currency }}</div>
-        <div class="total-label">Monto Total</div>
+      <mat-card class="total-card" [class.con-deuda]="totalFaltante() > 0.004">
+        <mat-icon>account_balance_wallet</mat-icon>
+        <div class="total-value">{{ totalFaltante() | currency }}</div>
+        <div class="total-label">Deuda de aportes</div>
       </mat-card>
     </div>
 
-    <!-- Aportes por Tipo -->
-    <div class="tipos-section">
-      <h3><mat-icon>category</mat-icon> Clasificación por Tipo de Aporte</h3>
-      <div class="tipos-grid">
-        @for (tipo of aportesPorTipo(); track tipo.tipo.codigo) {
-          <mat-card class="tipo-card">
-            <mat-card-header>
-              <mat-card-title>{{ tipo.tipo.nombre }}</mat-card-title>
-              <mat-card-subtitle>Código: {{ tipo.tipo.codigo }}</mat-card-subtitle>
-            </mat-card-header>
-            <mat-card-content>
-              <div class="tipo-stats">
-                <div class="stat">
-                  <span class="stat-label">Cantidad</span>
-                  <span class="stat-value">{{ tipo.total }}</span>
-                </div>
-                <div class="stat">
-                  <span class="stat-label">Monto Total</span>
-                  <span class="stat-value">{{ tipo.totalMonto | currency }}</span>
-                </div>
-                <div class="stat">
-                  <span class="stat-label">% del Total</span>
-                  <span class="stat-value">{{ getTipoPorcentaje(tipo.total) | number:'1.1-1' }}%</span>
-                </div>
-              </div>
-            </mat-card-content>
-          </mat-card>
-        }
-      </div>
-    </div>
-
-    <!-- Tabla Detallada -->
+    <!-- Vista principal: una fila por periodo y tipo -->
     <div class="table-section">
       <div class="table-header">
-        <h3><mat-icon>table_chart</mat-icon> Detalle de Aportes</h3>
+        <h3><mat-icon>event_note</mat-icon> Por periodo de devengo</h3>
         <div class="export-actions">
           <button mat-stroked-button (click)="exportarCSV()">
             <mat-icon>file_download</mat-icon> CSV
@@ -138,35 +122,113 @@
           </button>
         </div>
       </div>
-      <div class="table-container">
-        <table mat-table [dataSource]="aportes()" class="aportes-table">
-          <ng-container matColumnDef="codigo">
-            <th mat-header-cell *matHeaderCellDef>Código</th>
-            <td mat-cell *matCellDef="let aporte">{{ aporte.codigo }}</td>
-          </ng-container>
-          <ng-container matColumnDef="fecha">
-            <th mat-header-cell *matHeaderCellDef>Fecha</th>
-            <td mat-cell *matCellDef="let aporte">{{ aporte.fechaTransaccion }}</td>
-          </ng-container>
-          <ng-container matColumnDef="monto">
-            <th mat-header-cell *matHeaderCellDef>Monto</th>
-            <td mat-cell *matCellDef="let aporte">{{ aporte.valor | currency }}</td>
-          </ng-container>
-          <ng-container matColumnDef="tipo">
-            <th mat-header-cell *matHeaderCellDef>Tipo Aporte</th>
-            <td mat-cell *matCellDef="let aporte">{{ aporte.tipoAporte.codigo }}</td>
-          </ng-container>
-          <ng-container matColumnDef="estado">
-            <th mat-header-cell *matHeaderCellDef>Estado</th>
-            <td mat-cell *matCellDef="let aporte">
-              <span class="badge">{{ aporte.estado || 'Activo' }}</span>
-            </td>
-          </ng-container>
-          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-        </table>
-      </div>
+
+      @if (filasConPeriodo().length === 0) {
+        <div class="sin-filas">
+          <mat-icon>info_outline</mat-icon>
+          <p>No hay periodos en el rango seleccionado.</p>
+        </div>
+      } @else {
+        <div class="periodos-lista">
+          @for (fila of filasConPeriodo(); track claveFila(fila)) {
+            <div class="periodo-fila" [class]="claseEstado(fila.estado)">
+              <div class="periodo-resumen" (click)="toggleFila(fila)">
+                <mat-icon class="expand-icon">{{ estaExpandida(fila) ? 'expand_less' : 'expand_more' }}</mat-icon>
+                <span class="col-periodo">{{ nombrePeriodo(fila.periodo) }}</span>
+                <span class="col-tipo">{{ fila.nombreTipoAporte }}</span>
+                <span class="col-monto"><span class="col-etiqueta">Esperado</span>{{ fila.esperado | currency }}</span>
+                <span class="col-monto"><span class="col-etiqueta">Aportado</span>{{ fila.aportado | currency }}</span>
+                <span class="col-monto"><span class="col-etiqueta">Faltante</span>{{ fila.faltante | currency }}</span>
+                <span class="estado-badge">
+                  <mat-icon>{{ iconoEstado(fila.estado) }}</mat-icon>
+                  {{ fila.estado }}
+                </span>
+              </div>
+
+              @if (estaExpandida(fila)) {
+                <div class="periodo-detalle">
+                  @if (!fila.movimientos.length) {
+                    <p class="detalle-vacio">Sin movimientos.</p>
+                  } @else {
+                    <table class="detalle-table">
+                      <thead>
+                        <tr>
+                          <th>Fecha de cobro</th>
+                          <th>Tipo de movimiento</th>
+                          <th>Glosa</th>
+                          <th class="num">Valor</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (mov of fila.movimientos; track mov.idAporte) {
+                          <tr>
+                            <td>
+                              {{ formatearFecha(mov.fechaTransaccion) }}
+                              @if (indicadorCobroFueraDePeriodo(fila.periodo, mov.fechaTransaccion); as indicador) {
+                                <span class="indicador-fuera-periodo">({{ indicador }})</span>
+                              }
+                            </td>
+                            <td>{{ mov.tipoMovimientoTexto }}</td>
+                            <td>{{ mov.glosa || '-' }}</td>
+                            <td class="num" [class.negativo]="mov.valor < 0">{{ mov.valor | currency }}</td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  }
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
     </div>
+
+    <!-- Bloque aparte: históricos sin devengo y retiros de saldo -->
+    @if (filasSinPeriodo().length > 0) {
+      <div class="table-section sin-periodo-section">
+        <div class="table-header">
+          <h3><mat-icon>history</mat-icon> Sin periodo (histórico / retiros de saldo)</h3>
+        </div>
+        <div class="periodos-lista">
+          @for (fila of filasSinPeriodo(); track claveFila(fila)) {
+            <div class="periodo-fila estado-sin-periodo">
+              <div class="periodo-resumen" (click)="toggleFila(fila)">
+                <mat-icon class="expand-icon">{{ estaExpandida(fila) ? 'expand_less' : 'expand_more' }}</mat-icon>
+                <span class="col-periodo">Sin periodo</span>
+                <span class="col-tipo">{{ fila.nombreTipoAporte }}</span>
+                <span class="col-monto"><span class="col-etiqueta">Total</span>{{ fila.aportado | currency }}</span>
+              </div>
+
+              @if (estaExpandida(fila)) {
+                <div class="periodo-detalle">
+                  <table class="detalle-table">
+                    <thead>
+                      <tr>
+                        <th>Fecha de cobro</th>
+                        <th>Tipo de movimiento</th>
+                        <th>Glosa</th>
+                        <th class="num">Valor</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (mov of fila.movimientos; track mov.idAporte) {
+                        <tr>
+                          <td>{{ formatearFecha(mov.fechaTransaccion) }}</td>
+                          <td>{{ mov.tipoMovimientoTexto }}</td>
+                          <td>{{ mov.glosa || '-' }}</td>
+                          <td class="num" [class.negativo]="mov.valor < 0">{{ mov.valor | currency }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    }
   }
 
   @if (isScrolled()) {

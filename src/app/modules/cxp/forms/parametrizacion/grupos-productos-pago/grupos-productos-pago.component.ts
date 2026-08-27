@@ -259,21 +259,25 @@ export class GruposProductosPagoComponent implements OnInit {
   }
 
   cargarGrupos(): void {
+    if (!this.empresa) {
+      this.grupos.set([]);
+      this.dataSource.data = [];
+      this.mostrarError('No se pudo determinar la empresa de la sesión');
+      return;
+    }
+
     this.cargando.set(true);
 
     const criterios: DatosBusqueda[] = [];
-
-    if (this.empresa) {
-      const dbEmpresa = new DatosBusqueda();
-      dbEmpresa.asignaValorConCampoPadre(
-        TipoDatos.LONG,
-        'empresa',
-        'codigo',
-        this.empresa.codigo.toString(),
-        TipoComandosBusqueda.IGUAL
-      );
-      criterios.push(dbEmpresa);
-    }
+    const dbEmpresa = new DatosBusqueda();
+    dbEmpresa.asignaValorConCampoPadre(
+      TipoDatos.LONG,
+      'empresa',
+      'codigo',
+      this.empresa.codigo.toString(),
+      TipoComandosBusqueda.IGUAL
+    );
+    criterios.push(dbEmpresa);
 
     this.grupoService.selectByCriteria(criterios).subscribe({
       next: (grupos) => {

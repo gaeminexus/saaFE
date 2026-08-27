@@ -1,0 +1,58 @@
+.w-100 {
+  width: 100%;
+}
+
+.search-grid {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+
+  mat-form-field {
+    flex: 1;
+  }
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  align-items: center;
+}
+
+.cuota-preview {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: #f0f4f8;
+
+  .label {
+    font-size: 0.75rem;
+    color: #555;
+  }
+
+  .value {
+    font-size: 1.1rem;
+    font-weight: 600;
+  }
+}
+
+.aviso {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  font-size: 0.9rem;
+}
+
+.aviso-error {
+  background: #fdecea;
+  color: #611a15;
+}
+
+.aviso-info {
+  background: #e8f0fe;
+  color: #1a3a6b;
+}

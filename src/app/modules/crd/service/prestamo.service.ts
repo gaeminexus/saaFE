@@ -44,6 +44,15 @@ export class PrestamoService {
     return this.http.post<any>(url, datos, this.httpOptions).pipe(catchError(this.handleError));
   }
 
+  /**
+   * Devuelve 200 con `[]` cuando la entidad no tiene préstamos — a diferencia de
+   * `selectByCriteria`, "sin préstamos" no depende de interpretar un error.
+   */
+  porEntidad(idEntidad: number): Observable<Prestamo[] | null> {
+    const url = `${ServiciosCrd.RS_PRST}/porEntidad/${idEntidad}`;
+    return this.http.get<Prestamo[]>(url).pipe(catchError(this.handleError));
+  }
+
   delete(datos: any): Observable<Prestamo | null> {
     const wsGetById = '/' + datos;
     const url = `${ServiciosCrd.RS_PRST}${wsGetById}`;

@@ -128,9 +128,15 @@ export class CierreCajaChicaComponent implements OnInit {
   }
 
   private cargarCajas(): void {
-    this.cargandoCajas.set(true);
     const idEmpresa = this.appState.getEmpresa()?.codigo;
-    this.cajaS.activas(idEmpresa ?? 0).subscribe({
+    if (!idEmpresa) {
+      this.cajas.set([]);
+      this.errorMsg.set('No se pudo determinar la empresa de la sesión');
+      return;
+    }
+
+    this.cargandoCajas.set(true);
+    this.cajaS.activas(idEmpresa).subscribe({
       next: (data) => {
         this.cajas.set(Array.isArray(data) ? data : []);
         this.cargandoCajas.set(false);

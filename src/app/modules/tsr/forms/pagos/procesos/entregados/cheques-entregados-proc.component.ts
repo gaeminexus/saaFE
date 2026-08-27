@@ -81,10 +81,17 @@ export class ChequesEntregadosProcComponent implements OnInit {
   }
 
   buscar(): void {
+    const idEmpresa = this.appState.getEmpresa()?.codigo;
+    if (!idEmpresa) {
+      this.rows.set([]);
+      this.snackBar.open('No se pudo determinar la empresa de la sesión', 'Cerrar', { duration: 6000 });
+      return;
+    }
+
     this.loading.set(true);
     this.chequeService
       .listar({
-        idEmpresa: this.appState.getEmpresa()?.codigo ?? undefined,
+        idEmpresa,
         idCuenta: this.idCuentaFiltro() ?? undefined,
         estado: ESTADO_ENTREGADO,
         desde: this.desde() || undefined,

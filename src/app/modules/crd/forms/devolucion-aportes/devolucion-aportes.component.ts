@@ -114,11 +114,17 @@ export class DevolucionAportesComponent {
   // ---- destino y origen del dinero ----
   cargandoCuentasParticipe = signal(false);
   cuentasParticipe = signal<CuentaBancariaParticipe[]>([]);
-  cuentaParticipeSeleccionada: CuentaBancariaParticipe | null = null;
+  // Signals, no propiedades planas: `puedeRegistrar()` las lee dentro de un `computed()` y
+  // solo una escritura por signal.set() lo invalida. Con una propiedad plana mutada por
+  // [(ngModel)] el computed queda con el valor cacheado de la última vez que SÍ cambió algún
+  // signal (p. ej. al escribir el monto) y el botón "Registrar" se queda deshabilitado para
+  // siempre aunque el usuario ya haya elegido cuenta destino y origen — el defecto real detrás
+  // del pedido 5.
+  cuentaParticipeSeleccionada = signal<CuentaBancariaParticipe | null>(null);
   filtroCuentaParticipe = '';
 
   cuentasPropias = signal<CuentaBancaria[]>([]);
-  cuentaOrigenSeleccionada: CuentaBancaria | null = null;
+  cuentaOrigenSeleccionada = signal<CuentaBancaria | null>(null);
   filtroCuentaOrigen = '';
 
   private tiposCuentaBancaria = signal<DetalleRubro[]>([]);
@@ -187,10 +193,27 @@ export class DevolucionAportesComponent {
       this.totalADevolver() > 0.004 &&
       !this.hayExcesoEnAlgunTipo() &&
       !this.participeSinCuentaActiva() &&
-      !!this.cuentaParticipeSeleccionada &&
-      !!this.cuentaOrigenSeleccionada &&
+      !!this.cuentaParticipeSeleccionada() &&
+      !!this.cuentaOrigenSeleccionada() &&
       !this.registrando()
   );
+
+  /**
+   * Por qué "Registrar" está deshabilitado, para mostrar junto al botón (pedido 5): un botón
+   * muerto sin explicación es el mismo defecto que uno que no reacciona. Los dos casos con
+   * tarjeta propia (sin cuenta activa, monto por encima del saldo) no se repiten acá.
+   */
+  motivoNoPuedeRegistrar = computed<string | null>(() => {
+    if (this.registrando() || !this.entidadSeleccionada()) return null;
+    if (this.participeSinCuentaActiva() || this.hayExcesoEnAlgunTipo()) return null;
+
+    const faltantes: string[] = [];
+    if (this.totalADevolver() <= 0.004) faltantes.push('ingrese el monto a devolver');
+    if (!this.cuentaParticipeSeleccionada()) faltantes.push('elija la cuenta del partícipe (destino)');
+    if (!this.cuentaOrigenSeleccionada()) faltantes.push('elija la cuenta bancaria propia (origen)');
+
+    return faltantes.length ? 'Para registrar la devolución, ' + faltantes.join(' y ') + '.' : null;
+  });
 
   // ================= búsqueda =================
 
@@ -247,7 +270,8 @@ export class DevolucionAportesComponent {
     this.saldos = [];
     this.saldosVersion.update((v) => v + 1);
     this.cuentasParticipe.set([]);
-    this.cuentaParticipeSeleccionada = null;
+    this.cuentaParticipeSeleccionada.set(null);
+    this.cuentaOrigenSeleccionada.set(null);
     this.filtroCuentaParticipe = '';
     this.deudaVigente.set(null);
     this.deudaConsultaFallida.set(false);
@@ -336,7 +360,7 @@ export class DevolucionAportesComponent {
         // servidor, una cuenta inactiva no puede terminar ofrecida como destino del dinero.
         const activas = (cuentas ?? []).filter((c) => Number(c.estado) === 1);
         this.cuentasParticipe.set(activas);
-        this.cuentaParticipeSeleccionada = activas.length === 1 ? activas[0] : null;
+        this.cuentaParticipeSeleccionada.set(activas.length === 1 ? activas[0] : null);
       },
       error: () => {
         this.cargandoCuentasParticipe.set(false);
@@ -511,8 +535,8 @@ export class DevolucionAportesComponent {
     if (!this.puedeRegistrar()) return;
 
     const entidad = this.entidadSeleccionada();
-    const cuentaDestino = this.cuentaParticipeSeleccionada;
-    const cuentaOrigen = this.cuentaOrigenSeleccionada;
+    const cuentaDestino = this.cuentaParticipeSeleccionada();
+    const cuentaOrigen = this.cuentaOrigenSeleccionada();
     if (!entidad || !cuentaDestino || !cuentaOrigen) return;
 
     const idEmpresa = this.idEmpresaSesion();

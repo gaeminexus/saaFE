@@ -3,8 +3,10 @@ import { BehaviorSubject, Observable, forkJoin, of } from 'rxjs';
 import { catchError, filter, tap } from 'rxjs/operators';
 import { DetalleRubro } from '../model/detalle-rubro';
 import { Empresa } from '../model/empresa';
+import { Jerarquia } from '../model/jerarquia';
 import { Usuario } from '../model/usuario';
 import { DetalleRubroService } from './detalle-rubro.service';
+import { empresaSesionCodigo } from './empresa-sesion';
 import { UsuarioService } from './usuario.service';
 
 export interface AppData {
@@ -251,11 +253,46 @@ export class AppStateService {
   }
 
   /**
-   * Obtiene la empresa actual de forma síncrona
-   * @returns Empresa o null si no está cargada
+   * Obtiene la empresa actual de forma síncrona.
+   *
+   * `datosGlobales$` se puebla de forma ASÍNCRONA (`restaurarDesdeSesion()`
+   * espera la respuesta HTTP de `detalleRubroService.inicializar()`), así
+   * que puede seguir en `null` un rato después del arranque aunque la
+   * sesión sí tenga empresa en storage — la misma carrera que ya tenía
+   * resuelta `getIdUsuario()` más abajo, con el mismo respaldo por storage,
+   * solo que a este método se le había quedado sin aplicar.
+   *
+   * Capas del respaldo, de mejor a peor dato disponible:
+   *  1. `datosGlobales$` ya poblado — el objeto real, completo.
+   *  2. El JSON completo bajo la clave `empresa` de session/localStorage
+   *     (lo escribe `sincronizarEmpresaEnStorage`) — mismos campos que 1,
+   *     por si `datosGlobales$` no llegó pero el storage sí.
+   *  3. Solo el código numérico, vía `empresaSesionCodigo()` (mismas claves
+   *     que usa `normalizarContextoEmpresa()`, sin duplicar esa lógica) —
+   *     se arma una `Empresa` parcial con el resto de campos en su valor
+   *     neutro. Es peor dato que 1/2, pero mejor que `null`: la inmensa
+   *     mayoría de los llamadores solo usan `.codigo`, y devolver `null`
+   *     aquí es exactamente el bug que este respaldo corrige.
    */
   getEmpresa(): Empresa | null {
-    return this.datosGlobales$.value?.empresa || null;
+    const enMemoria = this.datosGlobales$.value?.empresa;
+    if (enMemoria) return enMemoria;
+
+    const empresaStr = sessionStorage.getItem('empresa') || localStorage.getItem('empresa');
+    if (empresaStr) {
+      try {
+        const empresa = JSON.parse(empresaStr) as Empresa;
+        if (empresa?.codigo) return empresa;
+      } catch {
+        // JSON inválido: seguir al respaldo por código suelto.
+      }
+    }
+
+    const codigo = empresaSesionCodigo();
+    if (codigo == null) return null;
+
+    const nombre = sessionStorage.getItem('empresaName') || localStorage.getItem('empresaName') || 'Empresa';
+    return { codigo, nombre, jerarquia: {} as Jerarquia, nivel: 0, codigoPadre: 0, ingresado: 0 };
   }
 
   /**

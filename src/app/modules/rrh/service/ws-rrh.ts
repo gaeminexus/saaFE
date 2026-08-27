@@ -73,5 +73,8 @@ export class ServiciosRhh {
   // Importación del biométrico (fase 7). La consolidación cuelga de RS_RSMN, ya declarado
   public static RS_CRMR = `${API_URL}/crmr`;
 
+  // Anticipos a trabajadores (PROMPT 08)
+  public static RS_ANTE = `${API_URL}/ante`;
+
   // Agregar más endpoints de RRHH acá según necesidades
 }

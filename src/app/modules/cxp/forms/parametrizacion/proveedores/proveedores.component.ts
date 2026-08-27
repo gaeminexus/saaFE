@@ -172,23 +172,27 @@ export class ProveedoresComponent implements OnInit {
   // ════════════════════════════════════════════════════════════════════════════
 
   cargarProveedores(): void {
+    if (!this.empresa) {
+      this.proveedores.set([]);
+      this.dataSource.data = [];
+      this.mostrarError('No se pudo determinar la empresa de la sesión');
+      return;
+    }
+
     this.cargando.set(true);
 
     // Criterio: buscar personas con rol "Proveedor" (código 2 en rubro 55)
     const criterios: DatosBusqueda[] = [];
 
-    // Buscar por empresa
-    if (this.empresa) {
-      const dbEmpresa = new DatosBusqueda();
-      dbEmpresa.asignaUnCampoSinTrunc(
-        TipoDatos.LONG,
-        'empresa',
-        this.empresa.toString(),
-        TipoComandosBusqueda.IGUAL
-      );
-      dbEmpresa.setNumeroCampoRepetido(0);
-      criterios.push(dbEmpresa);
-    }
+    const dbEmpresa = new DatosBusqueda();
+    dbEmpresa.asignaUnCampoSinTrunc(
+      TipoDatos.LONG,
+      'empresa',
+      this.empresa.toString(),
+      TipoComandosBusqueda.IGUAL
+    );
+    dbEmpresa.setNumeroCampoRepetido(0);
+    criterios.push(dbEmpresa);
 
     this.titularService.selectByCriteria(criterios).subscribe({
       next: (titulares) => {
@@ -332,7 +336,12 @@ export class ProveedoresComponent implements OnInit {
    * Asigna el rol de proveedor a un titular recién creado
    */
   private asignarRolProveedor(idTitular: number): void {
-    if (!this.empresa) return;
+    if (!this.empresa) {
+      this.mostrarError('Titular creado, pero no se pudo asignar el rol de proveedor: no se determinó la empresa de la sesión');
+      this.cargarProveedores();
+      this.cancelar();
+      return;
+    }
 
     const personaRol: any = {
       empresa: this.empresa,

@@ -57,18 +57,28 @@ export class EntidadService {
     );
   }
 
-  /** POST: add new record */
-  add(datos: any): Observable<Entidad | null> {
-    return this.http.post<Entidad>(ServiciosCrd.RS_ENTD, datos, this.httpOptions).pipe(
+  /**
+   * POST: add new record.
+   *
+   * `usuario` (opcional): el backend sella `usuarioModificacion`/`fechaModificacion` de ENTD con
+   * este valor en la misma transacción (pedido 9). Sin él, el guardado funciona igual pero la
+   * "última actualización" queda sin usuario.
+   */
+  add(datos: any, usuario?: string): Observable<Entidad | null> {
+    return this.http.post<Entidad>(ServiciosCrd.RS_ENTD, datos, { ...this.httpOptions, params: this.paramsUsuario(usuario) }).pipe(
       catchError(this.handleError)
     );
   }
 
-  /** PUT: update record */
-  update(datos: any): Observable<Entidad | null> {
-    return this.http.put<Entidad>(ServiciosCrd.RS_ENTD, datos, this.httpOptions).pipe(
+  /** PUT: update record. `usuario` (opcional): ver `add()`. */
+  update(datos: any, usuario?: string): Observable<Entidad | null> {
+    return this.http.put<Entidad>(ServiciosCrd.RS_ENTD, datos, { ...this.httpOptions, params: this.paramsUsuario(usuario) }).pipe(
       catchError(this.handleError)
     );
+  }
+
+  private paramsUsuario(usuario?: string): HttpParams {
+    return usuario ? new HttpParams().set('usuario', usuario) : new HttpParams();
   }
 
   selectByCriteria(datos: any): Observable<Entidad[] | null> {

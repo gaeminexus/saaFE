@@ -1,4 +1,4 @@
-import { HttpHeaders, HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpHeaders, HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, catchError, of, throwError } from 'rxjs';
 import { Participe } from '../model/participe';
@@ -33,18 +33,22 @@ export class ParticipeService {
     );
   }
 
-  /** POST: add new record */
-  add(datos: any): Observable<Participe | null> {
-    return this.http.post<Participe>(ServiciosCrd.RS_PRTC, datos, this.httpOptions).pipe(
+  /** POST: add new record. `usuario` (opcional): sella la auditoría de ENTD (pedido 9). */
+  add(datos: any, usuario?: string): Observable<Participe | null> {
+    return this.http.post<Participe>(ServiciosCrd.RS_PRTC, datos, { ...this.httpOptions, params: this.paramsUsuario(usuario) }).pipe(
       catchError(this.handleError)
     );
   }
 
-  /** PUT: update record */
-  update(datos: any): Observable<Participe | null> {
-    return this.http.put<Participe>(ServiciosCrd.RS_PRTC, datos, this.httpOptions).pipe(
+  /** PUT: update record. `usuario` (opcional): ver `add()`. */
+  update(datos: any, usuario?: string): Observable<Participe | null> {
+    return this.http.put<Participe>(ServiciosCrd.RS_PRTC, datos, { ...this.httpOptions, params: this.paramsUsuario(usuario) }).pipe(
       catchError(this.handleError)
     );
+  }
+
+  private paramsUsuario(usuario?: string): HttpParams {
+    return usuario ? new HttpParams().set('usuario', usuario) : new HttpParams();
   }
 
   selectByCriteria(datos: any): Observable<Participe[] | null> {

@@ -1,3 +1,4 @@
+// MAQUETA SIN BACKEND — fuera del menú desde 2026-08-27
 import { CommonModule } from '@angular/common';
 import { Component, computed, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';

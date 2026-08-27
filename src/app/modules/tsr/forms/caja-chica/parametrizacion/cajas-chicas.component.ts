@@ -75,7 +75,10 @@ export class CajasChicasComponent implements OnInit {
 
   cargarCajas(): void {
     const idEmpresa = this.idEmpresa();
-    if (!idEmpresa) return;
+    if (!idEmpresa) {
+      this.snackBar.open('No se pudo determinar la empresa de la sesión', 'Cerrar', { duration: 5000 });
+      return;
+    }
 
     this.loading.set(true);
 

@@ -303,6 +303,20 @@ export class CobrosPersonalesComponent implements OnDestroy {
   saldoCapitalPrestamo = computed(() => this.saldoCapitalDe(this.prestamoVigente()));
 
   /**
+   * Saldo de capital tal como lo muestra la tabla de amortización: el `DTPRSLCP` de la mínima
+   * cuota no pagada ni cancelada anticipada (`proximaCuota()`), sin sumar nada más.
+   *
+   * Es un número distinto a propósito de `saldoCapitalPrestamo()` (pedido 6, decidido por el
+   * usuario): `saldoCapitalPrestamo()` es lo que falta pagar para cancelar el crédito HOY,
+   * cuota en curso incluida — el capital pendiente sumado de TODAS las cuotas no liquidadas.
+   * `DTPRSLCP` es, en cambio, el saldo que queda DESPUÉS de cubrir la cuota en curso: el número
+   * que trae el cronograma impreso y el que el usuario tiene en la cabeza al mirar la tabla.
+   * `null` cuando no hay ninguna cuota pendiente (crédito liquidado) — no hay "saldo en tabla"
+   * que mostrar.
+   */
+  saldoTablaAmortizacion = computed<number | null>(() => this.proximaCuota()?.saldoCapital ?? null);
+
+  /**
    * Valor de la cuota que se cobra a continuación, tomado del campo `total` de la cuota. Solo si no
    * hay tabla de amortización se cae a `Prestamo.valorCuota`, que no incluye desgravamen ni seguro.
    */

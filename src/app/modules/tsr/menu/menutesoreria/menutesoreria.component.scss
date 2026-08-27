@@ -197,4 +197,14 @@
   &:hover {
     background: #fed7aa;
   }
+
+  &.chip-error {
+    background: #fdecea;
+    color: #611a15;
+    cursor: default;
+
+    &:hover {
+      background: #fdecea;
+    }
+  }
 }

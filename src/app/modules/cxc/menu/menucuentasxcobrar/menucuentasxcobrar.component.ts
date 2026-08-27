@@ -48,6 +48,11 @@ export class MenucuentasxcobrarComponent {
           iconName: 'savings',
           route: '/menucuentasxcobrar/cobros/cruce-anticipo',
         },
+        {
+          displayName: 'Consulta de Cobros',
+          iconName: 'search',
+          route: '/menucuentasxcobrar/cobros/consulta',
+        },
       ],
     },
     {

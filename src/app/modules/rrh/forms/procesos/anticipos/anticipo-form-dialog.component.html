@@ -1,0 +1,86 @@
+<h2 mat-dialog-title>Nuevo anticipo</h2>
+
+<mat-dialog-content>
+  <div class="search-grid">
+    <mat-form-field appearance="outline" class="w-100">
+      <mat-label>Buscar empleado (identificación)</mat-label>
+      <input matInput [ngModel]="formEmpleadoBusqueda()" (ngModelChange)="formEmpleadoBusqueda.set($event)" />
+    </mat-form-field>
+    <button mat-stroked-button color="primary" (click)="onBuscarEmpleados()" [disabled]="cargandoEmpleados()">
+      <mat-icon>search</mat-icon>
+      Buscar
+    </button>
+  </div>
+
+  <mat-form-field appearance="outline" class="w-100">
+    <mat-label>Empleado</mat-label>
+    <mat-select [ngModel]="formEmpleado()" (ngModelChange)="onEmpleadoChange($event)" [compareWith]="compareEmpleado">
+      @for (emp of empleados(); track emp.codigo) {
+        <mat-option [value]="emp">{{ empleadoLabel(emp) }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+
+  @if (consultandoVigente()) {
+    <div class="aviso aviso-info">Consultando si el empleado ya tiene un anticipo abierto...</div>
+  }
+
+  @if (anticipoVigente(); as vigente) {
+    <div class="aviso aviso-error">
+      <mat-icon>block</mat-icon>
+      <span>
+        Este empleado ya tiene un anticipo abierto (código {{ vigente.codigo }}, estado
+        {{ vigente.estado }}). Solo puede tener uno a la vez — no se puede solicitar otro hasta que
+        ese se cancele o anule.
+      </span>
+    </div>
+  }
+
+  <div class="form-grid">
+    <mat-form-field appearance="outline">
+      <mat-label>Valor</mat-label>
+      <input matInput type="number" min="0.01" step="0.01" [ngModel]="valor()" (ngModelChange)="valor.set($event)" />
+      <span matTextSuffix>$</span>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Número de cuotas</mat-label>
+      <input matInput type="number" min="1" step="1" [ngModel]="numeroCuotas()" (ngModelChange)="numeroCuotas.set($event)" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Mes de inicio del descuento</mat-label>
+      <input matInput type="month" [ngModel]="mesInicioDescuento()" (ngModelChange)="mesInicioDescuento.set($event)" />
+    </mat-form-field>
+
+    <div class="cuota-preview">
+      <span class="label">Valor de cuota (se descontará del rol)</span>
+      <span class="value">{{ valorCuota() | number: '1.2-2' }}</span>
+    </div>
+  </div>
+
+  <mat-form-field appearance="outline" class="w-100">
+    <mat-label>Motivo</mat-label>
+    <textarea matInput rows="2" [ngModel]="motivo()" (ngModelChange)="motivo.set($event)"></textarea>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="w-100">
+    <mat-label>Observación</mat-label>
+    <textarea matInput rows="2" [ngModel]="observacion()" (ngModelChange)="observacion.set($event)"></textarea>
+  </mat-form-field>
+
+  @if (errorMsg()) {
+    <div class="aviso aviso-error">{{ errorMsg() }}</div>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="cancelar()">Cancelar</button>
+  <button mat-raised-button color="primary" [disabled]="!puedeGuardar()" (click)="guardar()">
+    @if (guardando()) {
+      <mat-spinner diameter="18"></mat-spinner>
+    } @else {
+      Solicitar anticipo
+    }
+  </button>
+</mat-dialog-actions>

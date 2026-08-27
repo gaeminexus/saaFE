@@ -37,6 +37,15 @@ export interface Entidad {
     ipModificacion: string;     // ENTDIPMD - IP modificación (opcional)
     usuarioModificacion: string;// ENTDUSMD - Usuario modificación (opcional)
     fechaModificacion?: Date;   // Fecha última modificación (si la envía el backend)
+    /**
+     * Pedido 9 (plan de devengo, §3.4): la columna de fecha de modificación existe en ENTD pero
+     * hasta ahora ninguna línea de código la escribía ni la mapeaba. El backend la sella en cada
+     * guardado de la ficha del partícipe y la expone con estos dos nombres, distintos de
+     * `usuarioModificacion`/`fechaModificacion` de arriba. `null` = nadie ha modificado al
+     * partícipe desde el cambio; no cae a la fecha de creación.
+     */
+    ultimaActualizacion?: string | number[] | null;
+    usuarioUltimaActualizacion?: string | null;
     idEstado: number;            // ENTDIDST - ID Estado
     urlFotoLogo: string;        // ENTDURFL - URL Foto Logo (opcional)
     rolPetroComercial: number; // ENTDRLPC - Rol Petro Comercial
