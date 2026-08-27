@@ -82,7 +82,7 @@ export class EstadoCuentaTitularComponent implements OnInit {
   // ─── Grilla ──────────────────────────────────────────────
   expandido = signal<string | null>(null);
   readonly columnas = [
-    'expandir', 'tipo', 'numero', 'fecha', 'origen',
+    'expandir', 'tipo', 'numero', 'fecha', 'origen', 'estadoDoc',
     'total', 'aplicado', 'saldo', 'estado', 'asiento',
   ];
   readonly columnasAbono = ['fecha', 'tipo', 'documento', 'monto', 'estado', 'asiento'];
@@ -235,9 +235,9 @@ export class EstadoCuentaTitularComponent implements OnInit {
 
   private pasaFiltros(d: DocumentoEstadoCuenta): boolean {
     // Un documento anulado no forma parte del estado de cuenta: no suma en las
-    // tarjetas de resumen, no aparece en la grilla ni se exporta. Convención
-    // del proyecto: estado 1 = activo; cualquier otro (2 = anulado/inactivo)
-    // queda fuera. Los que no traen estado propio (null) sí pasan.
+    // tarjetas de resumen, no aparece en la grilla ni se exporta. Cada fuente
+    // trae su propio ciclo de estados (ver estadosAnulados en el servicio);
+    // `anulado` ya viene resuelto por documento.
     if (this.esAnulado(d)) return false;
 
     const tipos = this.fTipos();
@@ -264,11 +264,14 @@ export class EstadoCuentaTitularComponent implements OnInit {
 
     // El estado de pago solo existe en facturas y anticipos; el resto de
     // documentos se aplica entero, así que un filtro de estado los excluye.
+    // Una factura sin saldo porque falló su consulta (saldoDesconocido) no se
+    // excluye: no se puede clasificar, pero sigue siendo parte del estado de
+    // cuenta y se muestra con saldo "—".
     const estado = this.fEstado();
-    if (estado !== 'TODOS') {
+    if (estado !== 'TODOS' && !d.saldoDesconocido) {
+      if (d.saldoPendiente == null) return false;
       const saldo = Number(d.saldoPendiente ?? 0);
       const aplicado = Number(d.totalAplicado ?? 0);
-      if (d.saldoPendiente == null) return false;
       if (estado === 'PENDIENTE' && !(aplicado <= 0 && saldo > 0)) return false;
       if (estado === 'PARCIAL' && !(aplicado > 0 && saldo > 0)) return false;
       if (estado === 'PAGADA' && saldo > 0.005) return false;
@@ -284,14 +287,9 @@ export class EstadoCuentaTitularComponent implements OnInit {
     );
   }
 
-  /**
-   * Un documento está anulado cuando trae estado propio y no es el activo.
-   * Convención del proyecto para documentos SRI y anticipos: 1 = activo,
-   * 2 = anulado/inactivo. Los documentos sin estado propio (null) no se
-   * consideran anulados.
-   */
+  /** Ya resuelto por el servicio según el ciclo de estados de la fuente del documento. */
   private esAnulado(d: DocumentoEstadoCuenta): boolean {
-    return d.estado != null && Number(d.estado) !== 1;
+    return d.anulado === true;
   }
 
   tipoActivo(tipo: TipoDocumentoEstadoCuenta): boolean {

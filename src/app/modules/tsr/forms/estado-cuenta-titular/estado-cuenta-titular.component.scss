@@ -350,6 +350,15 @@
     }
   }
 
+  .chip-estado-doc {
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    background: #f8fafc;
+    color: #64748b;
+    font-size: 0.75rem;
+    white-space: nowrap;
+  }
+
   .monto-resta { color: #b91c1c; }
   .monto-pendiente { color: #b45309; }
   .sin-valor { color: #cbd5e1; font-size: 0.8rem; }

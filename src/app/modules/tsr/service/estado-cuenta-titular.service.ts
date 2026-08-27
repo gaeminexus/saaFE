@@ -29,7 +29,24 @@ interface FuenteDocumento {
   campoFecha: string;
   campoNumero: string;
   campoTotal: string;
+  /**
+   * Valores de `estado` que marcan un documento de esta fuente como anulado.
+   * OJO: en CXC y CXP anulado es `Estado.INACTIVO` = **0**, no 2 — ver
+   * com/saa/rubros/Estado.java y *ServiceImpl#anular*(Factura|NotaCredito|
+   * NotaDebito|RetencionV2|Retencion) en saaBE. En CXC además el 6
+   * ("devuelta"/no autorizada por el SRI) cuenta como anulado: nunca fue un
+   * documento válido. No "corregir" esto de vuelta a `[2]`.
+   */
+  estadosAnulados: number[];
+  /** Familia de catálogo de `estado`, para elegir el mapa de etiquetas. */
+  familiaEstado: 'CXC' | 'CXP' | 'ANTICIPO';
 }
+
+const ETIQUETAS_ESTADO: Record<FuenteDocumento['familiaEstado'], Record<number, string>> = {
+  CXC: { 0: 'Anulada', 1: 'Ingresada', 3: 'Firmada', 4: 'Enviada', 5: 'Autorizada', 6: 'No autorizada' },
+  CXP: { 0: 'Anulada', 1: 'Activa' },
+  ANTICIPO: { 1: 'Ingresado', 2: 'Confirmado', 3: 'Anulado', 4: 'Migrado' },
+};
 
 /**
  * Estado de cuenta de un titular: reúne en una sola consulta los documentos
@@ -65,21 +82,34 @@ export class EstadoCuentaTitularService {
           etiqueta: 'Facturas de venta', url: ServiciosCxc.RS_FCTR, campoTitular: 'titular',
           tipo: TipoDocumentoEstadoCuenta.FACTURA, origen: 'EMITIDO',
           campoFecha: 'fecha', campoNumero: 'numero', campoTotal: 'total',
+          estadosAnulados: [0, 6], familiaEstado: 'CXC',
         },
         {
           etiqueta: 'Notas de crédito', url: ServiciosCxc.RS_NTCR, campoTitular: 'titular',
           tipo: TipoDocumentoEstadoCuenta.NOTA_CREDITO, origen: 'EMITIDO',
           campoFecha: 'fecha', campoNumero: 'numero', campoTotal: 'total',
+          estadosAnulados: [0, 6], familiaEstado: 'CXC',
         },
         {
           etiqueta: 'Notas de débito', url: ServiciosCxc.RS_NTDB, campoTitular: 'titular',
           tipo: TipoDocumentoEstadoCuenta.NOTA_DEBITO, origen: 'EMITIDO',
           campoFecha: 'fecha', campoNumero: 'numero', campoTotal: 'total',
+          estadosAnulados: [0, 6], familiaEstado: 'CXC',
+        },
+        {
+          // CBR.RCV2: la retención que el cliente le hace a la empresa sobre su
+          // factura de venta. El modelo referencia al titular por `proveedor`
+          // (nombre de campo heredado del lado de compras), no por `titular`.
+          etiqueta: 'Retenciones recibidas', url: ServiciosCxp.RS_RCV2, campoTitular: 'proveedor',
+          tipo: TipoDocumentoEstadoCuenta.RETENCION, origen: 'RECIBIDO',
+          campoFecha: 'fecha', campoNumero: 'numero', campoTotal: 'total',
+          estadosAnulados: [0], familiaEstado: 'CXP',
         },
         {
           etiqueta: 'Anticipos de cliente', url: ServiciosTsr.RS_ANTC, campoTitular: 'titular',
           tipo: TipoDocumentoEstadoCuenta.ANTICIPO, origen: 'RECIBIDO',
           campoFecha: 'fechaAnticipo', campoNumero: 'numeroDoc', campoTotal: 'valor',
+          estadosAnulados: [3], familiaEstado: 'ANTICIPO',
         },
       ];
     }
@@ -89,16 +119,19 @@ export class EstadoCuentaTitularService {
         etiqueta: 'Facturas de compra', url: ServiciosCxp.RS_FCTC, campoTitular: 'titular',
         tipo: TipoDocumentoEstadoCuenta.FACTURA, origen: 'RECIBIDO',
         campoFecha: 'fecha', campoNumero: 'numero', campoTotal: 'total',
+        estadosAnulados: [0], familiaEstado: 'CXP',
       },
       {
         etiqueta: 'Notas de crédito de compra', url: ServiciosCxp.RS_NTCC, campoTitular: 'titular',
         tipo: TipoDocumentoEstadoCuenta.NOTA_CREDITO, origen: 'RECIBIDO',
         campoFecha: 'fecha', campoNumero: 'numero', campoTotal: 'total',
+        estadosAnulados: [0], familiaEstado: 'CXP',
       },
       {
         etiqueta: 'Notas de débito de compra', url: ServiciosCxp.RS_NTDC, campoTitular: 'titular',
         tipo: TipoDocumentoEstadoCuenta.NOTA_DEBITO, origen: 'RECIBIDO',
         campoFecha: 'fecha', campoNumero: 'numero', campoTotal: 'total',
+        estadosAnulados: [0], familiaEstado: 'CXP',
       },
       {
         // CBR.RTV2: la retención que la empresa le emite al proveedor y que se
@@ -107,11 +140,13 @@ export class EstadoCuentaTitularService {
         etiqueta: 'Retenciones emitidas', url: ServiciosCxc.RS_RTV2, campoTitular: 'proveedor',
         tipo: TipoDocumentoEstadoCuenta.RETENCION, origen: 'EMITIDO',
         campoFecha: 'fecha', campoNumero: 'numero', campoTotal: 'total',
+        estadosAnulados: [0, 6], familiaEstado: 'CXC',
       },
       {
         etiqueta: 'Anticipos a proveedor', url: ServiciosTsr.RS_ANTP, campoTitular: 'titular',
         tipo: TipoDocumentoEstadoCuenta.ANTICIPO, origen: 'EMITIDO',
         campoFecha: 'fechaAnticipo', campoNumero: 'numeroDoc', campoTotal: 'valor',
+        estadosAnulados: [3], familiaEstado: 'ANTICIPO',
       },
     ];
   }
@@ -182,6 +217,18 @@ export class EstadoCuentaTitularService {
     // El anticipo es el único documento que lleva su propio saldo disponible.
     const esAnticipo = fuente.tipo === TipoDocumentoEstadoCuenta.ANTICIPO;
 
+    // `0` es un estado válido (INACTIVO/anulado) en CXC y CXP, así que no se
+    // puede usar Number(null) === 0 para decidir "sin estado": eso marcaría
+    // como anulado cualquier documento que no traiga el campo.
+    const estadoCrudo = fila?.estado;
+    const estadoNum = estadoCrudo === null || estadoCrudo === undefined || estadoCrudo === ''
+      ? null
+      : Number(estadoCrudo);
+    const anulado = estadoNum !== null && !Number.isNaN(estadoNum) && fuente.estadosAnulados.includes(estadoNum);
+    const etiquetaEstado = estadoNum !== null && !Number.isNaN(estadoNum)
+      ? (ETIQUETAS_ESTADO[fuente.familiaEstado][estadoNum] ?? `Estado ${estadoNum}`)
+      : '—';
+
     return {
       clave: `${fuente.tipo}-${id}`,
       id,
@@ -195,6 +242,8 @@ export class EstadoCuentaTitularService {
       saldoPendiente: esAnticipo ? Number(fila?.saldo ?? 0) : null,
       estadoPago: fila?.estadoPago ?? null,
       estado: fila?.estado ?? null,
+      anulado,
+      etiquetaEstado,
       observacion: fila?.observacion ?? fila?.observaciones ?? null,
       asiento: this.asientoDe(fila?.asiento, 'Documento'),
       abonosCargados: false,
@@ -229,11 +278,17 @@ export class EstadoCuentaTitularService {
 
     return from(facturas).pipe(
       mergeMap((factura) => this.saldoDeFactura(factura.id, rol).pipe(
-        map((saldo) => ({ factura, saldo }))
+        map((resultado) => ({ factura, ...resultado }))
       ), this.CONCURRENCIA_SALDOS),
       toArray(),
       map((resultados) => {
-        resultados.forEach(({ factura, saldo }) => {
+        resultados.forEach(({ factura, saldo, fallo }) => {
+          if (fallo) {
+            // La consulta de saldo falló: no se sabe el estado de pago, pero
+            // el documento sigue siendo parte del estado de cuenta.
+            factura.saldoDesconocido = true;
+            return;
+          }
           if (!saldo) return;
           factura.totalAplicado = Number(saldo.totalAplicado ?? 0);
           factura.saldoPendiente = Number(saldo.saldoPendiente ?? 0);
@@ -248,9 +303,15 @@ export class EstadoCuentaTitularService {
     );
   }
 
-  private saldoDeFactura(idFactura: number, rol: RolTitular): Observable<SaldoDocumento | null> {
+  private saldoDeFactura(
+    idFactura: number,
+    rol: RolTitular
+  ): Observable<{ saldo: SaldoDocumento | null; fallo: boolean }> {
     const base = rol === RolTitular.CLIENTE ? ServiciosCxc.RS_APLC : ServiciosCxp.RS_APLP;
-    return this.http.get<SaldoDocumento>(`${base}/saldo/${idFactura}`).pipe(catchError(() => of(null)));
+    return this.http.get<SaldoDocumento>(`${base}/saldo/${idFactura}`).pipe(
+      map((saldo) => ({ saldo, fallo: false })),
+      catchError(() => of({ saldo: null, fallo: true }))
+    );
   }
 
   /**

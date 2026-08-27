@@ -85,6 +85,16 @@ export interface DocumentoEstadoCuenta {
   estadoPago?: number | null;
   /** Estado propio del documento (anulado, etc.). */
   estado?: number | null;
+  /** Si el documento está anulado según el ciclo de estados de su fuente. */
+  anulado: boolean;
+  /** Etiqueta legible del `estado` crudo, según el catálogo de su fuente (CXC/CXP/Anticipo). */
+  etiquetaEstado: string;
+  /**
+   * true cuando la factura no trae saldo porque falló la consulta a
+   * aplc/aplp (no porque el documento no lleve saldo propio). Evita que un
+   * fallo de red la saque de los filtros por estado de pago.
+   */
+  saldoDesconocido?: boolean;
   observacion?: string | null;
   asiento?: AsientoRelacionado | null;
   /** Abonos del documento; se cargan al expandir la fila. */
