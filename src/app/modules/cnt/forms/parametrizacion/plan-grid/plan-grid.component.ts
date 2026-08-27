@@ -10,6 +10,7 @@ import {
   ViewChild,
 } from '@angular/core';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
 import { MatDialog } from '@angular/material/dialog';
 import { MatPaginator } from '@angular/material/paginator';
 import { MatSort } from '@angular/material/sort';
@@ -244,12 +245,13 @@ export class PlanGridComponent implements OnInit, AfterViewInit {
   }
 
   private handleLoadError(err: any): void {
-    if (err.error?.message?.includes('ORA-00942')) {
+    const mensaje = mensajeDeError(err, 'Error desconocido');
+    if (mensaje.includes('ORA-00942')) {
       this.error.set('Error de Base de Datos: Tabla CNT.PLNN no existe. Contactar administrador.');
     } else if (err.status === 0) {
       this.error.set('Backend no disponible. Verificar que esté ejecutándose en localhost:8080');
     } else {
-      this.error.set(`Error del servidor: ${err.status} - ${err.message || 'Error desconocido'}`);
+      this.error.set(`Error del servidor: ${err.status} - ${mensaje}`);
     }
   }
 
@@ -485,8 +487,8 @@ export class PlanGridComponent implements OnInit, AfterViewInit {
         this.loading.set(false);
         let errorMsg = 'No se pudo eliminar la cuenta.';
 
-        if (err.error?.message) {
-          errorMsg += `\n${err.error.message}`;
+        if (err.error?.mensaje || err.error?.message) {
+          errorMsg += `\n${mensajeDeError(err)}`;
         } else if (err.status === 0) {
           errorMsg += '\nBackend no disponible.';
         } else if (err.status === 409) {

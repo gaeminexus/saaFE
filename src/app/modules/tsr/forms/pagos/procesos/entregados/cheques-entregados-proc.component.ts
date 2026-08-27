@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -14,7 +15,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { AppStateService } from '../../../../../../shared/services/app-state.service';
 import { DetalleRubroService } from '../../../../../../shared/services/detalle-rubro.service';
 import { FuncionesDatosService } from '../../../../../../shared/services/funciones-datos.service';
-import { ChequeListado } from '../../../../model/cheque-listado';
+import { ChequeListado, destinoVerPago } from '../../../../model/cheque-listado';
 import { CuentaBancaria } from '../../../../model/cuenta-bancaria';
 import { ChequeService } from '../../../../service/cheque.service';
 import { CuentaBancariaService } from '../../../../service/cuenta-bancaria.service';
@@ -53,6 +54,7 @@ export class ChequesEntregadosProcComponent implements OnInit {
   private appState = inject(AppStateService);
   private funcionesDatos = inject(FuncionesDatosService);
   private snackBar = inject(MatSnackBar);
+  private router = inject(Router);
 
   cuentas = signal<CuentaBancaria[]>([]);
   idCuentaFiltro = signal<number | null>(null);
@@ -130,5 +132,16 @@ export class ChequesEntregadosProcComponent implements OnInit {
 
   cuentaBanco(row: ChequeListado): string {
     return [row.numeroCuenta, row.banco].filter((v) => !!v).join(' — ') || '—';
+  }
+
+  /** true cuando "Ver pago" tiene a dónde navegar (no aplica a EXTERNO). */
+  tieneDestinoVerPago(row: ChequeListado): boolean {
+    return destinoVerPago(row.tipoPago, row.idDocumento) != null;
+  }
+
+  verPago(row: ChequeListado): void {
+    const destino = destinoVerPago(row.tipoPago, row.idDocumento);
+    if (!destino) return;
+    this.router.navigate([destino.ruta], { queryParams: destino.queryParams });
   }
 }

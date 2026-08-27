@@ -9,16 +9,14 @@ import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda
 import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
+import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
 import { Empleado } from '../../../model/empleado';
 import { SaldoVacaciones } from '../../../model/saldo-vacaciones';
 import { SolicitudVacaciones } from '../../../model/solicitud-vacaciones';
 import { EmpleadoService } from '../../../service/empleado.service';
 import { SaldoVacacionesService } from '../../../service/saldo-vacaciones.service';
 import { SolicitudVacacionesService } from '../../../service/solicitud-vacaciones.service';
-import {
-  criteriosPorEmpresa,
-  filtrarPorAnio,
-} from '../../parametrizacion/utiles-parametrizacion';
+import { criteriosPorEmpresa } from '../../parametrizacion/utiles-parametrizacion';
 import { VacacionesAprobacionDialogComponent } from './vacaciones-aprobacion-dialog.component';
 import { VacacionesFormComponent } from './vacaciones-form.component';
 import { usuarioSesion } from '../../../../../shared/services/usuario-sesion';
@@ -94,7 +92,9 @@ export class VacacionesListComponent implements OnInit {
 
   saldoEmpleadoBusqueda = signal<string>('');
   saldoEmpleado = signal<Empleado | null>(null);
-  saldoAnio = signal<number>(new Date().getFullYear());
+  /** Total no caducado de GET /sldv/disponible/{id} — lo que realmente se puede solicitar. */
+  saldoDisponibleTotal = signal<number>(0);
+  /** Desglose por año (todas las filas de selectByCriteria), ascendente: se consume el más antiguo primero. */
   saldoData = signal<SaldoVacaciones[]>([]);
   saldoLoading = signal<boolean>(false);
   saldoError = signal<string>('');
@@ -362,7 +362,7 @@ export class VacacionesListComponent implements OnInit {
           this.saldoLoading.set(false);
           return;
         }
-        this.loadSaldo(first.codigo, this.saldoAnio());
+        this.loadSaldo(first.codigo);
       },
       error: (err) => {
         this.saldoError.set(this.extractError(err) || 'Error al buscar empleado');
@@ -372,18 +372,15 @@ export class VacacionesListComponent implements OnInit {
     });
   }
 
-  onSaldoAnioChange(value: string): void {
-    const year = Number(value);
-    if (!Number.isFinite(year)) return;
-    this.saldoAnio.set(year);
-    const empleado = this.saldoEmpleado();
-    if (empleado?.codigo) {
-      this.loadSaldo(empleado.codigo, year);
-    }
-  }
-
-  private loadSaldo(empleadoCodigo: number, anio: number): void {
+  /** Total disponible (todos los años no caducados, FIFO) + desglose por año ascendente. */
+  private loadSaldo(empleadoCodigo: number): void {
     this.saldoLoading.set(true);
+
+    this.saldoService.disponible(empleadoCodigo).subscribe({
+      next: (disponible) => this.saldoDisponibleTotal.set(this.toNumeroSeguro(disponible)),
+      error: () => this.saldoDisponibleTotal.set(0),
+    });
+
     const criterios: DatosBusqueda[] = [];
 
     const dbEmpleado = new DatosBusqueda();
@@ -398,12 +395,15 @@ export class VacacionesListComponent implements OnInit {
 
     const order = new DatosBusqueda();
     order.orderBy('anio');
-    order.setTipoOrden(DatosBusqueda.ORDER_DESC);
+    order.setTipoOrden(DatosBusqueda.ORDER_ASC);
     criterios.push(order);
 
     this.saldoService.selectByCriteria(criterios).subscribe({
       next: (rows: SaldoVacaciones[] | null) => {
-        this.saldoData.set(filtrarPorAnio(this.extractRows(rows), anio));
+        const items = this.extractRows(rows)
+          .slice()
+          .sort((a, b) => Number(a.anio) - Number(b.anio));
+        this.saldoData.set(items);
         this.saldoLoading.set(false);
       },
       error: (err) => {
@@ -412,6 +412,20 @@ export class VacacionesListComponent implements OnInit {
         this.saldoLoading.set(false);
       },
     });
+  }
+
+  /** GET /sldv/disponible/{id} puede volver como número crudo o envuelto en un objeto. */
+  private toNumeroSeguro(value: unknown): number {
+    if (typeof value === 'number') {
+      return Number.isFinite(value) ? value : 0;
+    }
+    if (value && typeof value === 'object') {
+      const obj = value as Record<string, unknown>;
+      const candidato = obj['disponible'] ?? obj['total'] ?? obj['dias'] ?? obj['value'];
+      if (candidato !== undefined) return Number(candidato) || 0;
+    }
+    const n = Number(value);
+    return Number.isFinite(n) ? n : 0;
   }
 
   private openAprobacionDialog(
@@ -709,13 +723,7 @@ export class VacacionesListComponent implements OnInit {
   }
 
   private extractError(error: unknown): string {
-    if (!error) return '';
-    if (typeof error === 'string') return error;
-    const err = error as { message?: string; error?: any };
-    if (typeof err?.message === 'string') return err.message;
-    if (typeof err?.error === 'string') return err.error;
-    if (typeof err?.error?.message === 'string') return err.error.message;
-    return '';
+    return mensajeDeError(error, '');
   }
 
   private showSuccess(message: string): void {

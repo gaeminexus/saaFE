@@ -3,6 +3,7 @@ import { Component, OnInit, signal, computed } from '@angular/core';
 import { forkJoin, Observable, of } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
+import { mensajeDeError } from '../../../../shared/utils/mensaje-error.util';
 import { UsuarioService } from '../../../../shared/services/usuario.service';
 import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
@@ -291,7 +292,7 @@ export class ReportesSuperBancosComponent implements OnInit {
       },
       error: (err) => {
         this.ejecutando.set(false);
-        this.errorMsg.set(err?.error ?? err?.message ?? 'Error inesperado al generar los reportes.');
+        this.errorMsg.set(mensajeDeError(err, 'Error inesperado al generar los reportes.'));
         console.error('[ReportesSuperBancos] Error ejecutar:', err);
       },
     });

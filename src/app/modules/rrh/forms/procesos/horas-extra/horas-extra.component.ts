@@ -11,6 +11,7 @@ import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { DetalleRubroService } from '../../../../../shared/services/detalle-rubro.service';
 import { ExportService } from '../../../../../shared/services/export.service';
+import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
 import { HoraExtra } from '../../../model/hora-extra';
 import { PeriodoNomina } from '../../../model/periodo-nomina';
 import { RubrosRrh } from '../../../model/rubros-rrh';
@@ -187,7 +188,7 @@ export class HorasExtraComponent implements OnInit {
       },
       error: (err) => {
         this.ocupado.set(false);
-        this.avisar(typeof err === 'string' ? err : err?.message || 'No se pudo aprobar', true);
+        this.avisar(mensajeDeError(err, 'No se pudo aprobar'), true);
       },
     });
   }

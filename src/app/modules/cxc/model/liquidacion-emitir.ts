@@ -37,4 +37,14 @@ export interface LiquidacionEmitir {
   fechaAutorizacion: string;
   estado: number;
   estadoEmision: number;
+  /** 1 Pendiente, 2 Pagada parcial, 3 Pagada total. Lo recalcula el backend desde CBR.APLC. */
+  estadoPago?: number | null;
+  asiento?: { codigo: number; numeroAlterno?: string } | null;
+  /**
+   * Documento CXP (PGS.LQCC) creado al autorizarse por el SRI — ahí viven la
+   * cuenta por pagar y el asiento de recepción. Null hasta que
+   * `crearDocumentoCxp` corre (dentro de `procesarCompleta`, o a mano si
+   * quedó pendiente). Determina si el botón "Crear documento CXP" se muestra.
+   */
+  documentoCxp?: { id: number } | null;
 }

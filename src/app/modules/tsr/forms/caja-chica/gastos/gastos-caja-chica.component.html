@@ -1,0 +1,329 @@
+<div class="pagina-gastos-caja-chica">
+
+  <div class="titulo-barra">
+    <div class="titulo">
+      <mat-icon>point_of_sale</mat-icon>
+      <span>Caja Chica — Gastos</span>
+    </div>
+  </div>
+
+  <mat-card class="panel">
+    <mat-card-content>
+      <div class="fila-campos">
+        <mat-form-field appearance="outline" class="campo-ancho">
+          <mat-label>Caja chica</mat-label>
+          <mat-select [ngModel]="cajaSeleccionada()" (ngModelChange)="onCambioCaja($event)" name="caja">
+            <mat-option [value]="null">Seleccione ...</mat-option>
+            @for (c of cajas(); track c.codigo) {
+              <mat-option [value]="c">{{ c.nombre }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      </div>
+
+      @if (cajaSeleccionada()) {
+        @if (cargandoSaldo()) {
+          <div class="estado-linea">
+            <mat-spinner diameter="20"></mat-spinner>
+            <span>Consultando saldo...</span>
+          </div>
+        } @else if (saldo(); as s) {
+          <div class="resumen-saldo">
+            <div class="item">
+              <span class="etiqueta">Fondo</span>
+              <span class="valor">{{ s.fondo | number: '1.2-2' }}</span>
+            </div>
+            <div class="item">
+              <span class="etiqueta">Saldo disponible</span>
+              <span class="valor" [class.pendiente]="s.alerta">{{ s.saldo | number: '1.2-2' }}</span>
+            </div>
+            <div class="item">
+              <span class="etiqueta">% disponible</span>
+              <span class="valor">{{ s.porcentaje | number: '1.0-0' }}%</span>
+            </div>
+          </div>
+          @if (s.alerta) {
+            <div class="mensaje-advertencia">
+              <mat-icon>warning</mat-icon>
+              <span>
+                Esta caja está al {{ s.porcentaje | number: '1.0-0' }}% de su fondo — considere
+                reponerla. Monto sugerido: {{ s.montoSugeridoReposicion | number: '1.2-2' }}.
+              </span>
+            </div>
+          }
+        }
+      }
+    </mat-card-content>
+  </mat-card>
+
+  @if (cajaSeleccionada()) {
+    <mat-card class="panel">
+      <mat-card-content>
+        <h3>Registrar gasto</h3>
+
+        @if (cargandoCatalogos()) {
+          <div class="estado-linea">
+            <mat-spinner diameter="20"></mat-spinner>
+            <span>Cargando productos...</span>
+          </div>
+        }
+
+        <div class="fila-campos">
+          <mat-form-field appearance="outline">
+            <mat-label>Fecha</mat-label>
+            <input matInput [matDatepicker]="pickerFecha" [(ngModel)]="formFecha" name="formFecha" />
+            <mat-datepicker-toggle matSuffix [for]="pickerFecha"></mat-datepicker-toggle>
+            <mat-datepicker #pickerFecha></mat-datepicker>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Valor</mat-label>
+            <input matInput type="number" min="0" step="0.01" [(ngModel)]="formValor" name="formValor" />
+          </mat-form-field>
+        </div>
+
+        <div class="fila-campos">
+          <mat-form-field appearance="outline">
+            <mat-label>Grupo de producto</mat-label>
+            <input matInput readonly [value]="etiquetaGrupo(formGrupo)"
+                   placeholder="Busque por número de cuenta o nombre" (click)="buscarGrupo()" />
+            <button mat-icon-button matSuffix type="button" matTooltip="Buscar grupo de producto"
+                    (click)="buscarGrupo()">
+              <mat-icon>search</mat-icon>
+            </button>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Producto</mat-label>
+            <mat-select [(ngModel)]="formIdProducto" name="formIdProducto" [disabled]="!formIdGrupo"
+                        panelClass="select-con-buscador"
+                        (openedChange)="!$event && (filtroProducto = '')">
+              <mat-option class="select-search-option"
+                          (mousedown)="$event.preventDefault(); $event.stopPropagation()"
+                          (click)="$event.stopPropagation()">
+                <input class="select-search-input" placeholder="Buscar producto..."
+                       [value]="filtroProducto"
+                       (mousedown)="$event.stopPropagation()"
+                       (click)="$event.stopPropagation()"
+                       (keydown)="$event.stopPropagation()"
+                       (input)="filtroProducto = $any($event.target).value" />
+              </mat-option>
+              @for (p of productosFiltrados; track p.id) {
+                <mat-option [value]="p.id">{{ p.nombre }}</mat-option>
+              }
+            </mat-select>
+            @if (!formIdGrupo) {
+              <mat-hint>Elija primero el grupo</mat-hint>
+            }
+          </mat-form-field>
+        </div>
+
+        <mat-form-field appearance="outline" class="campo-ancho">
+          <mat-label>Concepto</mat-label>
+          <input matInput [(ngModel)]="formDescripcion" name="formDescripcion" maxlength="500" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="campo-ancho">
+          <mat-label>Observación</mat-label>
+          <textarea matInput rows="2" [(ngModel)]="formObservacion" name="formObservacion" maxlength="2000"
+                     placeholder="Obligatoria"></textarea>
+        </mat-form-field>
+
+        <div class="fila-campos">
+          <mat-form-field appearance="outline">
+            <mat-label>Beneficiario</mat-label>
+            <input matInput readonly [value]="nombreBeneficiario()" placeholder="Opcional" />
+            @if (formBeneficiario()) {
+              <button mat-icon-button matSuffix type="button" matTooltip="Quitar beneficiario"
+                      (click)="quitarBeneficiario()">
+                <mat-icon>close</mat-icon>
+              </button>
+            } @else {
+              <button mat-icon-button matSuffix type="button" matTooltip="Buscar beneficiario"
+                      (click)="buscarBeneficiario()">
+                <mat-icon>search</mat-icon>
+              </button>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>N° de comprobante</mat-label>
+            <input matInput [(ngModel)]="formNumeroDocumento" name="formNumeroDocumento" maxlength="50" />
+          </mat-form-field>
+        </div>
+
+        <div class="fila-adjunto">
+          <label class="radio-label">Comprobante adjunto (opcional)</label>
+          @if (archivoSeleccionado) {
+            <div class="archivo-elegido">
+              <mat-icon>attach_file</mat-icon>
+              <span>{{ archivoSeleccionado.name }}</span>
+              <button mat-icon-button matTooltip="Quitar" (click)="quitarArchivo()">
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
+          } @else {
+            <button mat-stroked-button type="button" (click)="inputArchivo.click()">
+              <mat-icon>attach_file</mat-icon>
+              Adjuntar comprobante
+            </button>
+          }
+          <input #inputArchivo type="file" hidden (change)="onArchivoSeleccionado($event)" />
+        </div>
+
+        @if (motivoExcedeTope) {
+          <div class="mensaje-error">
+            <mat-icon>error_outline</mat-icon>
+            <span>{{ motivoExcedeTope }}</span>
+          </div>
+        }
+
+        @if (error()) {
+          <div class="mensaje-error">
+            <mat-icon>error_outline</mat-icon>
+            <span>{{ error() }}</span>
+          </div>
+        }
+
+        @if (exito()) {
+          <div class="mensaje-exito">
+            <mat-icon>check_circle</mat-icon>
+            <span>{{ exito() }}</span>
+          </div>
+        }
+
+        <div class="acciones">
+          <button mat-raised-button class="btn-confirmar" [disabled]="!puedeGuardar" (click)="registrarGasto()">
+            @if (guardando()) {
+              <mat-spinner diameter="20"></mat-spinner>
+            } @else {
+              <mat-icon>save</mat-icon>
+            }
+            Registrar gasto
+          </button>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="panel">
+      <mat-card-content>
+        <h3>Movimientos de la caja</h3>
+
+        <div class="fila-campos">
+          <mat-form-field appearance="outline">
+            <mat-label>Desde</mat-label>
+            <input matInput [matDatepicker]="pDesde" [(ngModel)]="filtroDesde" name="filtroDesde" />
+            <mat-datepicker-toggle matSuffix [for]="pDesde"></mat-datepicker-toggle>
+            <mat-datepicker #pDesde></mat-datepicker>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Hasta</mat-label>
+            <input matInput [matDatepicker]="pHasta" [(ngModel)]="filtroHasta" name="filtroHasta" />
+            <mat-datepicker-toggle matSuffix [for]="pHasta"></mat-datepicker-toggle>
+            <mat-datepicker #pHasta></mat-datepicker>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Tipo</mat-label>
+            <mat-select [(ngModel)]="filtroTipo" name="filtroTipo">
+              <mat-option [value]="null">Todos</mat-option>
+              @for (t of tiposMovimiento; track t.valor) {
+                <mat-option [value]="t.valor">{{ t.texto }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        </div>
+
+        <div class="acciones-filtros">
+          <button mat-stroked-button (click)="limpiarFiltrosMovimientos()">
+            <mat-icon>filter_alt_off</mat-icon>
+            Limpiar
+          </button>
+          <button mat-stroked-button (click)="cargarMovimientos()">
+            <mat-icon>refresh</mat-icon>
+            Actualizar
+          </button>
+        </div>
+
+        @if (cargandoMovimientos()) {
+          <div class="estado-linea">
+            <mat-spinner diameter="24"></mat-spinner>
+            <span>Cargando movimientos...</span>
+          </div>
+        } @else if (movimientos().length === 0) {
+          <div class="sin-datos">
+            <mat-icon>inbox</mat-icon>
+            <span>No hay movimientos para los filtros seleccionados.</span>
+          </div>
+        } @else {
+          <div class="tabla-scroll">
+            <table mat-table [dataSource]="movimientos()">
+
+              <ng-container matColumnDef="fecha">
+                <th mat-header-cell *matHeaderCellDef>Fecha</th>
+                <td mat-cell *matCellDef="let m">{{ formatearFecha(m.fecha) }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="tipo">
+                <th mat-header-cell *matHeaderCellDef>Tipo</th>
+                <td mat-cell *matCellDef="let m">
+                  <span class="badge badge-neutro">
+                    <mat-icon inline>{{ infoTipo(m).icono }}</mat-icon>
+                    {{ infoTipo(m).texto }}
+                  </span>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="descripcion">
+                <th mat-header-cell *matHeaderCellDef>Concepto</th>
+                <td mat-cell *matCellDef="let m">{{ m.descripcion || '—' }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="beneficiario">
+                <th mat-header-cell *matHeaderCellDef>Beneficiario</th>
+                <td mat-cell *matCellDef="let m">{{ nombreBeneficiarioFila(m) }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="valor">
+                <th mat-header-cell *matHeaderCellDef class="col-monto">Valor</th>
+                <td mat-cell *matCellDef="let m" class="col-monto">{{ m.valor | number: '1.2-2' }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="estado">
+                <th mat-header-cell *matHeaderCellDef>Estado</th>
+                <td mat-cell *matCellDef="let m">
+                  <span class="badge" [ngClass]="estaActivo(m) ? 'badge-pagada' : 'badge-anulado'">
+                    {{ estaActivo(m) ? 'Activo' : 'Anulado' }}
+                  </span>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="acciones">
+                <th mat-header-cell *matHeaderCellDef class="col-acciones">Acciones</th>
+                <td mat-cell *matCellDef="let m" class="col-acciones">
+                  <button mat-icon-button matTooltip="Adjuntos" (click)="verAdjuntos(m)">
+                    <mat-icon>attach_file</mat-icon>
+                  </button>
+                  @if (puedeAnular(m)) {
+                    <button mat-icon-button color="warn" matTooltip="Anular gasto"
+                            [disabled]="anulandoId() === m.codigo" (click)="confirmarAnulacion(m)">
+                      @if (anulandoId() === m.codigo) {
+                        <mat-spinner diameter="18"></mat-spinner>
+                      } @else {
+                        <mat-icon>block</mat-icon>
+                      }
+                    </button>
+                  }
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="columnasMovimientos"></tr>
+              <tr mat-row *matRowDef="let fila; columns: columnasMovimientos"></tr>
+            </table>
+          </div>
+        }
+      </mat-card-content>
+    </mat-card>
+  }
+</div>

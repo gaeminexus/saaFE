@@ -1,162 +1,18 @@
 import { Routes } from '@angular/router';
-import { MayorizacionProcesoComponent } from './modules/cnt/forms/mayorizacion-proceso/mayorizacion-proceso.component';
-import { CentroArbolComponent } from './modules/cnt/forms/parametrizacion/centro-arbol/centro-arbol.component';
-import { CentroGridComponent } from './modules/cnt/forms/parametrizacion/centro-grid/centro-grid.component';
-import { PeriodoContableComponent } from './modules/cnt/forms/parametrizacion/periodo-contable/periodo-contable.component';
-import { PlanArbolComponent } from './modules/cnt/forms/parametrizacion/plan-arbol/plan-arbol.component';
-import { PlanGridComponent } from './modules/cnt/forms/parametrizacion/plan-grid/plan-grid.component';
-import { PlantillaGeneralComponent } from './modules/cnt/forms/parametrizacion/plantilla-general/plantilla-general.component';
-import { ReportesContablesComponent } from './modules/cnt/forms/parametrizacion/reportes-contables/reportes-contables.component';
-import { TipoAsientoGeneralGridComponent } from './modules/cnt/forms/parametrizacion/tipo-asiento-general-grid/tipo-asiento-general-grid.component';
-import { TipoAsientoSistemaGridComponent } from './modules/cnt/forms/parametrizacion/tipo-asiento-sistema-grid/tipo-asiento-sistema-grid.component';
-import { ReporteBalanceGeneralComponent } from './modules/cnt/forms/reporte-balance-general/reporte-balance-general.component';
-import { ReporteListadoAsientosComponent } from './modules/cnt/forms/reporte-listado-asientos/reporte-listado-asientos.component';
-import { ReporteMayorAnaliticoComponent } from './modules/cnt/forms/reporte-mayor-analitico/reporte-mayor-analitico.component';
-import { MenuContabilidadComponent } from './modules/cnt/menu/menucontabilidad/menucontabilidad.component';
 import { NaturalezaCuentaResolverService } from './modules/cnt/resolver/naturaleza-cuenta-resolver.service';
-import { AportesDashComponent } from './modules/crd/forms/contrato/aportes-dash/aportes-dash.component';
-import { ContratoConsultaComponent } from './modules/crd/forms/contrato/contrato-consulta/contrato-consulta.component';
-import { ContratoDashComponent } from './modules/crd/forms/contrato/contrato-dash/contrato-dash.component';
-import { ContratoEditComponent } from './modules/crd/forms/contrato/contrato-edit/contrato-edit.component';
-import { MenucreditosComponent } from './modules/crd/menucreditos/menucreditos.component';
-import { ParametrizacionCreditosComponent } from './modules/crd/menucreditos/parametrizacion-creditos.component';
-import { GruposProductosCobroComponent } from './modules/cxc/forms/parametrizacion/grupos-productos-cobro/grupos-productos-cobro.component';
-import { DatosFacturadorComponent } from './modules/cxc/forms/parametrizacion/datos-facturador/datos-facturador.component';
-import { DatosSriComponent } from './modules/cxc/forms/parametrizacion/datos-sri/datos-sri.component';
-import { FacturasIngresoComponent } from './modules/cxc/forms/emitir/facturas-ingreso/facturas-ingreso.component';
-import { NotasCreditoComponent } from './modules/cxc/forms/emitir/notas-credito/notas-credito.component';
-import { NotasDebitoComponent } from './modules/cxc/forms/emitir/notas-debito/notas-debito.component';
-import { LiquidacionesComponent } from './modules/cxc/forms/emitir/liquidaciones/liquidaciones.component';
-import { Retencionesv2Component } from './modules/cxc/forms/emitir/retencionesv2';
-import { AnticipoComponent } from './modules/cxc/forms/gestionar/anticipo/anticipo.component';
-import { ConsultaFacturasComponent } from './modules/cxc/forms/gestionar/consulta-facturas/consulta-facturas.component';
-import { ConsultaDocumentosElectronicosComponent } from './modules/cxc/forms/gestionar/consulta-documentos-electronicos/consulta-documentos-electronicos.component';
-import { FinanciarFacturaComponent } from './modules/cxc/forms/gestionar/financiar-factura/financiar-factura.component';
-import { AbonosFacturaComponent } from './modules/cxc/forms/cobros/abonos-factura/abonos-factura.component';
-import { RegistrarCobroComponent } from './modules/cxc/forms/cobros/registrar-cobro/registrar-cobro.component';
-import { CruceAnticipoClienteComponent } from './modules/cxc/forms/cobros/cruce-anticipo-cliente/cruce-anticipo-cliente.component';
-import { DashVentasComponent } from './modules/cxc/reportes/dash-ventas';
-import { MenucuentasxcobrarComponent } from './modules/cxc/menu/menucuentasxcobrar/menucuentasxcobrar.component';
-import { MenucuentaxpagarComponent } from './modules/cxp/menu/menucuentasxpagar/menucuentasxpagar.component';
-import { GruposProductosPagoComponent } from './modules/cxp/forms/parametrizacion/grupos-productos-pago/grupos-productos-pago.component';
-import { ProveedoresComponent } from './modules/cxp/forms/parametrizacion/proveedores/proveedores.component';
-import { DatosSriCxpComponent } from './modules/cxp/forms/parametrizacion/datos-sri-cxp/datos-sri-cxp.component';
-import { BandejaElectronicaComponent } from './modules/cxp/forms/procesos/bandeja-electronica/bandeja-electronica.component';
-import { GestionDocumentosComponent } from './modules/cxp/forms/procesos/gestion-documentos/gestion-documentos.component';
-import { ConsultaDocumentosComponent } from './modules/cxp/forms/procesos/consulta-documentos/consulta-documentos.component';
-import { CruceAnticipoProveedorComponent } from './modules/cxp/forms/pagos/cruce-anticipo-proveedor/cruce-anticipo-proveedor.component';
-import { PagosTransferenciaComponent } from './modules/cxp/forms/pagos/pagos-transferencia/pagos-transferencia.component';
-import { NegociacionesComponent } from './modules/cxp/forms/negociaciones/negociaciones.component';
-import { DetalleNegociacionComponent } from './modules/cxp/forms/negociaciones/detalle-negociacion/detalle-negociacion.component';
-import { DashboardCxpComponent } from './modules/cxp/forms/reportes/dashboard-cxp/dashboard-cxp.component';
 import { LoginComponent } from './modules/dash/forms/login/login.component';
 import { MenuComponent } from './modules/dash/menu/menu.component';
 import { ReportesSuperBancosComponent } from './modules/rpr/forms/reportes-super-bancos/reportes-super-bancos.component';
 import { InformesMensualesCreditoComponent } from './modules/rpr/forms/informes-mensuales-credito/informes-mensuales-credito.component';
 import { MenureportesComponent } from './modules/rpr/menu/menureportes/menureportes.component';
-import { MenurecursoshumanosComponent } from './modules/rrh/menu/menurecursoshumanos/menurecursoshumanos.component';
-// RRHH demo components
-import { VacacionesListComponent } from './modules/rrh/forms/gestion/vacaciones/vacaciones-list.component';
-import { AporteRetencionListComponent } from './modules/rrh/forms/procesos/aportes-retenciones/aporte-retencion-list.component';
-import { BancosNacionalesExtranjerosComponent } from './modules/tsr/forms/bancos/bancos-nacionales-extranjeros.component';
-import { BancosComponent } from './modules/tsr/forms/bancos/bancos.component';
-import { CajasFisicasComponent } from './modules/tsr/forms/cajas-logicas/cajas-fisicas/cajas-fisicas.component';
-import { CajasPorGrupoComponent } from './modules/tsr/forms/cajas-logicas/cajas-por-grupo/cajas-por-grupo.component';
-import { GruposCajasComponent } from './modules/tsr/forms/cajas-logicas/grupos/grupos-cajas.component';
-import { ChequeraComponent } from './modules/tsr/forms/chequeras/chequera/chequera.component';
-import { RecepcionChequeraComponent } from './modules/tsr/forms/chequeras/recepcion-chequera/recepcion-chequera.component';
-import { SolicitudChequeraComponent } from './modules/tsr/forms/chequeras/solicitud-chequera/solicitud-chequera.component';
-import { CierreCajaComponent } from './modules/tsr/forms/cobros/cierre-caja/cierre-caja.component';
-import { ConsultasCierresComponent } from './modules/tsr/forms/cobros/consultas/cierres/consultas-cierres.component';
-import { ConsultasCobrosComponent } from './modules/tsr/forms/cobros/consultas/cobros/consultas-cobros.component';
-import { EnvioDepositosComponent } from './modules/tsr/forms/cobros/depositos/envio/envio-depositos.component';
-import { RatificacionDepositosComponent } from './modules/tsr/forms/cobros/depositos/ratificacion/ratificacion-depositos.component';
-import { CobrosIngresarComponent } from './modules/tsr/forms/cobros/ingresar/cobros-ingresar.component';
-import { ProcesosCierresComponent } from './modules/tsr/forms/cobros/procesos/procesos-cierres.component';
-import { ProcesosCobrosComponent } from './modules/tsr/forms/cobros/procesos/procesos-cobros.component';
-import { ProcesosDepositosComponent } from './modules/tsr/forms/cobros/procesos/procesos-depositos.component';
-import { ProcesosRatificacionDepositosComponent } from './modules/tsr/forms/cobros/procesos/procesos-ratificacion-depositos.component';
-import { CuentasBancariasComponent } from './modules/tsr/forms/cuentas-bancarias/cuentas-bancarias.component';
-import { ConciliacionComponent } from './modules/tsr/forms/generales/conciliacion/conciliacion.component';
-import { ConsultaConciliacionComponent } from './modules/tsr/forms/generales/consulta-conciliacion/consulta-conciliacion.component';
-import { RiedComponent } from './modules/tsr/forms/generales/ried/ried.component';
-import { CargarExtractoBancarioComponent } from './modules/tsr/forms/generales/cargar-extracto-bancario/cargar-extracto-bancario.component';
-import { ConsultaExtractosBancariosComponent } from './modules/tsr/forms/generales/consulta-extractos-bancarios/consulta-extractos-bancarios.component';
-import { DetalleExtractoBancarioComponent } from './modules/tsr/forms/generales/detalle-extracto-bancario/detalle-extracto-bancario.component';
-import { TableroCumplimientoExtractosComponent } from './modules/tsr/forms/generales/tablero-cumplimiento-extractos/tablero-cumplimiento-extractos.component';
-import { ConciliacionContableComponent } from './modules/tsr/forms/generales/conciliacion-contable/conciliacion-contable.component';
-import { CreditosComponent } from './modules/tsr/forms/movimientos-bancarios/creditos/creditos.component';
-import { DebitosComponent } from './modules/tsr/forms/movimientos-bancarios/debitos/debitos.component';
-import { TransferenciasComponent } from './modules/tsr/forms/movimientos-bancarios/transferencias/transferencias.component';
-import { ConsultasChequesComponent } from './modules/tsr/forms/pagos/consultas/cheques/consultas-cheques.component';
-import { ConsultasPagosComponent } from './modules/tsr/forms/pagos/consultas/pagos/consultas-pagos.component';
-import { PagosIngresarComponent } from './modules/tsr/forms/pagos/ingresar/pagos-ingresar.component';
-import { ChequesEntregadosProcComponent } from './modules/tsr/forms/pagos/procesos/entregados/cheques-entregados-proc.component';
-import { ChequesGeneradosComponent } from './modules/tsr/forms/pagos/procesos/generados/cheques-generados.component';
-import { ChequesImpresosProcComponent } from './modules/tsr/forms/pagos/procesos/impresos/cheques-impresos-proc.component';
-import { SolicitudPagosComponent } from './modules/tsr/forms/pagos/procesos/solicitud/solicitud-pagos.component';
-import { TsrPlaceholderComponent } from './modules/tsr/forms/placeholder/tsr-placeholder.component';
-import { TitularesV2Component } from './modules/tsr/forms/titulares-v2/titulares-v2.component';
-import { MenutesoreriaComponent } from './modules/tsr/menu/menutesoreria/menutesoreria.component';
 import { authGuard } from './shared/guard/auth.guard';
 import { canDeactivateGuard } from './shared/guard/can-deactivate.guard';
-// Reemplazamos placeholder EXTR por componente grid paginado
-import { AsientosContablesDinamico } from './modules/cnt/forms/asientos-contables-dinamico/asientos-contables-dinamico';
-import { DetalleMayorizacionComponent } from './modules/cnt/forms/detalle-mayorizacion/detalle-mayorizacion.component';
-import { ListadoAsientosComponent } from './modules/cnt/forms/listado-asientos/listado-asientos.component';
-import { MayorizacionComponent } from './modules/cnt/forms/mayorizacion/mayorizacion.component';
-import { NaturalezaDeCuentasComponent } from './modules/cnt/forms/parametrizacion/naturaleza-cuentas/naturaleza-cuentas.component';
-import { CargaAporteBackComponent } from './modules/crd/forms/archivos-petro/carga/carga-aporte-back/carga-aporte-back.component';
-import { CargaAportesComponent } from './modules/crd/forms/archivos-petro/carga/carga-aportes/carga-aportes.component';
-import { ConsultaArchivosPetroComponent } from './modules/crd/forms/archivos-petro/carga/consulta-archivos-petro/consulta-archivos-petro.component';
-import { DetalleConsultaCargaComponent } from './modules/crd/forms/archivos-petro/carga/detalle-consulta-carga/detalle-consulta-carga.component';
-import { ConsultaGeneracionArchivoComponent } from './modules/crd/forms/archivos-petro/generar/consulta-generacion-archivo/consulta-generacion-archivo.component';
-import { DetalleGeneracionArchivoComponent } from './modules/crd/forms/archivos-petro/generar/detalle-generacion-archivo/detalle-generacion-archivo.component';
-import { GenerarArchivoPetroComponent } from './modules/crd/forms/archivos-petro/generar/generar-archivo-petro/generar-archivo-petro.component';
-import { CobrosPersonalesComponent } from './modules/crd/forms/cobros-personales/cobros-personales.component';
-import { CruceDeValoresComponent } from './modules/crd/forms/cruce-de-valores/cruce-de-valores.component';
-import { CruceValoresComponent } from './modules/crd/forms/cruce-valores/cruce-valores.component';
-import { DevolucionAportesComponent } from './modules/crd/forms/devolucion-aportes/devolucion-aportes.component';
-import { EntidadConsultaComponent } from './modules/crd/forms/entidad-participe/entidad-consulta/entidad-consulta.component';
-import { EntidadEditComponent } from './modules/crd/forms/entidad-participe/entidad-edit/entidad-edit.component';
-import { EntidadParticipeInfoComponent } from './modules/crd/forms/entidad-participe/entidad-participe-info/entidad-participe-info.component';
-import { ProcesoPagoJubiladosComponent } from './modules/crd/forms/entidad-participe/jubilados/proceso-pago-jubilados/proceso-pago-jubilados.component';
-import { JubilarParticipeComponent } from './modules/crd/forms/entidad-participe/jubilados/jubilar-participe/jubilar-participe.component';
-import { NavegacionCascadaComponent } from './modules/crd/forms/entidad-participe/navegacion-cascada/navegacion-cascada.component';
-import { ConsolidadoComponent } from './modules/crd/forms/entidad-participe/consolidado/consolidado.component';
-import { ParticipeDashComponent } from './modules/crd/forms/entidad-participe/participe-dash/participe-dash.component';
-import { ParticipeInfoComponent } from './modules/crd/forms/entidad-participe/participe-info/participe-info.component';
-import { AportesPorRevisarComponent } from './modules/crd/forms/historicos/aportes-por-revisar/aportes-por-revisar.component';
-import { BaseInicialParticipesComponent } from './modules/crd/forms/historicos/base-inicial-participes/base-inicial-participes.component';
-import { ExtersComponent } from './modules/crd/forms/historicos/exters/exters.component';
-import { PagoCuotasComponent } from './modules/crd/forms/pago-cuotas/pago-cuotas.component';
-import { SimuladorCreditoComponent } from './modules/crd/forms/simulador-credito/simulador-credito.component';
-import { SimuladorPrestamoComponent } from './modules/crd/forms/simulador-prestamo/simulador-prestamo.component';
-import { EstadosCrdComponent } from './modules/crd/forms/parametrizacion/estados-crd/estados-crd.component';
-import { InformacionGeneralFondoComponent } from './modules/crd/forms/parametrizacion/informacion-general-fondo/informacion-general-fondo.component';
-import { ListadosCrdComponent } from './modules/crd/forms/parametrizacion/listados-crd/listados-crd.component';
-import { TiposCrdComponent } from './modules/crd/forms/parametrizacion/tipos-crd/tipos-crd.component';
-import { BandasCarteraComponent } from './modules/crd/forms/parametrizacion/bandas-cartera/bandas-cartera.component';
-import { CierreCarteraComponent } from './modules/crd/forms/cierre-cartera/cierre-cartera.component';
 import { usuarioUnoGuard } from './shared/guard/usuario-uno.guard';
-import { AsignacionSegurosComponent } from './modules/crd/forms/asignacion-seguros/asignacion-seguros.component';
-import { CuotaConsultaComponent } from './modules/crd/forms/prestamo/cuota-consulta/cuota-consulta.component';
-import { PrestamoConsultaComponent } from './modules/crd/forms/prestamo/prestamo-consulta/prestamo-consulta.component';
-import { PrestamoDashComponent } from './modules/crd/forms/prestamo/prestamo-dash/prestamo-dash.component';
-import { PrestamoEditComponent } from './modules/crd/forms/prestamo/prestamo-edit/prestamo-edit.component';
-import { RepoteValoresInsolutosComponent } from './modules/crd/forms/prestamo/repote-valores-insolutos/repote-valores-insolutos.component';
-import { EntidadCreditosComponent } from './modules/crd/menucreditos/entidad-creditos.component';
 import { ConsultaCargaArchivoResolverService } from './modules/crd/resolver/consulta-carga-archivo-resolver.service';
 import { entidadEditResolver } from './modules/crd/resolver/entidad-edit.resolver';
 import { EstadosResolverService } from './modules/crd/resolver/estados-resolver.service';
 import { ListadosCrdResolverService } from './modules/crd/resolver/listados-crd-resolver.service';
 import { TiposCrdResolverService } from './modules/crd/resolver/tipos-crd-resolver.service';
-import { AnticiposClientesComponent } from './modules/tsr/forms/anticipos/anticipos-clientes/anticipos-clientes.component';
-import { AnticiposProveedoresComponent } from './modules/tsr/forms/anticipos/anticipos-proveedores/anticipos-proveedores.component';
-import { SeguimientoAnticiposComponent } from './modules/tsr/forms/anticipos/seguimiento-anticipos/seguimiento-anticipos.component';
-import { EstadoCuentaTitularComponent } from './modules/tsr/forms/estado-cuenta-titular/estado-cuenta-titular.component';
-import { RegistroIngresoComponent } from './modules/tsr/forms/registrar/registro-ingreso/registro-ingreso.component';
-import { RegistroEgresoComponent } from './modules/tsr/forms/registrar/registro-egreso/registro-egreso.component';
 
 export const routes: Routes = [
   { path: '', component: LoginComponent },
@@ -185,16 +41,16 @@ export const routes: Routes = [
   },
   {
     path: 'menucontabilidad',
-    component: MenuContabilidadComponent,
+    loadComponent: () => import('./modules/cnt/menu/menucontabilidad/menucontabilidad.component').then((m) => m.MenuContabilidadComponent),
     canActivate: [authGuard],
     children: [
       {
         path: 'naturaleza-cuentas',
-        component: NaturalezaDeCuentasComponent,
+        loadComponent: () => import('./modules/cnt/forms/parametrizacion/naturaleza-cuentas/naturaleza-cuentas.component').then((m) => m.NaturalezaDeCuentasComponent),
       },
       {
         path: 'naturaleza-cuentas1',
-        component: NaturalezaDeCuentasComponent,
+        loadComponent: () => import('./modules/cnt/forms/parametrizacion/naturaleza-cuentas/naturaleza-cuentas.component').then((m) => m.NaturalezaDeCuentasComponent),
         canDeactivate: [canDeactivateGuard],
         resolve: {
           naturalezaCuentas: NaturalezaCuentaResolverService,
@@ -202,94 +58,94 @@ export const routes: Routes = [
       },
       {
         path: 'plan-cuentas',
-        component: PlanArbolComponent,
+        loadComponent: () => import('./modules/cnt/forms/parametrizacion/plan-arbol/plan-arbol.component').then((m) => m.PlanArbolComponent),
       },
       {
         path: 'plan-grid',
-        component: PlanGridComponent,
+        loadComponent: () => import('./modules/cnt/forms/parametrizacion/plan-grid/plan-grid.component').then((m) => m.PlanGridComponent),
       },
       {
         path: 'centro-costos/arbol',
-        component: CentroArbolComponent,
+        loadComponent: () => import('./modules/cnt/forms/parametrizacion/centro-arbol/centro-arbol.component').then((m) => m.CentroArbolComponent),
       },
       {
         path: 'centro-costos/grid',
-        component: CentroGridComponent,
+        loadComponent: () => import('./modules/cnt/forms/parametrizacion/centro-grid/centro-grid.component').then((m) => m.CentroGridComponent),
       },
       {
         path: 'tipos-asientos/general',
-        component: TipoAsientoGeneralGridComponent,
+        loadComponent: () => import('./modules/cnt/forms/parametrizacion/tipo-asiento-general-grid/tipo-asiento-general-grid.component').then((m) => m.TipoAsientoGeneralGridComponent),
       },
       {
         path: 'tipos-asientos/sistema',
-        component: TipoAsientoSistemaGridComponent,
+        loadComponent: () => import('./modules/cnt/forms/parametrizacion/tipo-asiento-sistema-grid/tipo-asiento-sistema-grid.component').then((m) => m.TipoAsientoSistemaGridComponent),
       },
       {
         path: 'plantillas/general',
-        component: PlantillaGeneralComponent,
+        loadComponent: () => import('./modules/cnt/forms/parametrizacion/plantilla-general/plantilla-general.component').then((m) => m.PlantillaGeneralComponent),
         canDeactivate: [canDeactivateGuard],
         data: { sistema: 0 },
       },
       {
         path: 'plantillas/sistema',
-        component: PlantillaGeneralComponent,
+        loadComponent: () => import('./modules/cnt/forms/parametrizacion/plantilla-general/plantilla-general.component').then((m) => m.PlantillaGeneralComponent),
         canDeactivate: [canDeactivateGuard],
         data: { sistema: 1 },
       },
       {
         path: 'parametrizacion/reportes-contables',
-        component: ReportesContablesComponent,
+        loadComponent: () => import('./modules/cnt/forms/parametrizacion/reportes-contables/reportes-contables.component').then((m) => m.ReportesContablesComponent),
       },
       {
         path: 'periodo-contable',
-        component: PeriodoContableComponent,
+        loadComponent: () => import('./modules/cnt/forms/parametrizacion/periodo-contable/periodo-contable.component').then((m) => m.PeriodoContableComponent),
         canDeactivate: [canDeactivateGuard],
       },
       {
         path: 'procesos/asientos-dinamico',
-        component: AsientosContablesDinamico,
+        loadComponent: () => import('./modules/cnt/forms/asientos-contables-dinamico/asientos-contables-dinamico').then((m) => m.AsientosContablesDinamico),
         canDeactivate: [canDeactivateGuard],
       },
       {
         path: 'procesos/asientos-dinamico/:id',
-        component: AsientosContablesDinamico,
+        loadComponent: () => import('./modules/cnt/forms/asientos-contables-dinamico/asientos-contables-dinamico').then((m) => m.AsientosContablesDinamico),
         canDeactivate: [canDeactivateGuard],
       },
       {
         path: 'procesos/mayorizacion',
-        component: MayorizacionComponent,
+        loadComponent: () => import('./modules/cnt/forms/mayorizacion/mayorizacion.component').then((m) => m.MayorizacionComponent),
         canActivate: [authGuard],
       },
       {
         path: 'procesos/detalle-mayorizacion',
-        component: DetalleMayorizacionComponent,
+        loadComponent: () => import('./modules/cnt/forms/detalle-mayorizacion/detalle-mayorizacion.component').then((m) => m.DetalleMayorizacionComponent),
         canActivate: [authGuard],
       },
       {
         path: 'listado-asientos',
-        component: ListadoAsientosComponent,
+        loadComponent: () => import('./modules/cnt/forms/listado-asientos/listado-asientos.component').then((m) => m.ListadoAsientosComponent),
         canActivate: [authGuard],
       },
       {
         path: 'mayorizacion-proceso',
-        component: MayorizacionProcesoComponent,
+        loadComponent: () => import('./modules/cnt/forms/mayorizacion-proceso/mayorizacion-proceso.component').then((m) => m.MayorizacionProcesoComponent),
         canDeactivate: [canDeactivateGuard],
       },
       {
         path: 'reportes/balance-general',
-        component: ReporteBalanceGeneralComponent,
+        loadComponent: () => import('./modules/cnt/forms/reporte-balance-general/reporte-balance-general.component').then((m) => m.ReporteBalanceGeneralComponent),
         canActivate: [authGuard],
         data: { title: 'Balance General' },
       },
       {
         path: 'reportes/mayor-analitico',
-        component: ReporteMayorAnaliticoComponent,
+        loadComponent: () => import('./modules/cnt/forms/reporte-mayor-analitico/reporte-mayor-analitico.component').then((m) => m.ReporteMayorAnaliticoComponent),
         canActivate: [authGuard],
         data: { title: 'Mayor Analítico' },
       },
       {
         path: 'reportes/listado-asientos',
-        component: ReporteListadoAsientosComponent,
+        loadComponent: () => import('./modules/cnt/forms/reporte-listado-asientos/reporte-listado-asientos.component').then((m) => m.ReporteListadoAsientosComponent),
         canActivate: [authGuard],
         data: { title: 'Listado de Asientos' },
       },
@@ -298,79 +154,85 @@ export const routes: Routes = [
   },
   {
     path: 'menutesoreria',
-    component: MenutesoreriaComponent,
+    loadComponent: () => import('./modules/tsr/menu/menutesoreria/menutesoreria.component').then((m) => m.MenutesoreriaComponent),
     canActivate: [authGuard],
     children: [
       // Parametrización
       {
         path: 'parametrizacion/bancos',
-        component: TsrPlaceholderComponent,
+        loadComponent: () => import('./modules/tsr/forms/placeholder/tsr-placeholder.component').then((m) => m.TsrPlaceholderComponent),
         canActivate: [authGuard],
         data: { title: 'Bancos' },
       },
       {
         path: 'parametrizacion/cajas/logicas',
-        component: TsrPlaceholderComponent,
+        loadComponent: () => import('./modules/tsr/forms/placeholder/tsr-placeholder.component').then((m) => m.TsrPlaceholderComponent),
         canActivate: [authGuard],
         data: { title: 'Cajas Lógicas' },
       },
       {
         path: 'parametrizacion/cajas/fisicas',
-        component: CajasFisicasComponent,
+        loadComponent: () => import('./modules/tsr/forms/cajas-logicas/cajas-fisicas/cajas-fisicas.component').then((m) => m.CajasFisicasComponent),
         canActivate: [authGuard],
         data: { title: 'Cajas Físicas' },
       },
       {
         path: 'parametrizacion/bancos/nacionales-extranjeros',
-        component: BancosNacionalesExtranjerosComponent,
+        loadComponent: () => import('./modules/tsr/forms/bancos/bancos-nacionales-extranjeros.component').then((m) => m.BancosNacionalesExtranjerosComponent),
         canActivate: [authGuard],
         data: { title: 'Nacionales y Extranjeros' },
       },
       {
         path: 'parametrizacion/bancos/mis-bancos/bancos',
-        component: BancosComponent,
+        loadComponent: () => import('./modules/tsr/forms/bancos/bancos.component').then((m) => m.BancosComponent),
         canActivate: [authGuard],
         data: { title: 'Mis Bancos - Bancos' },
       },
       {
         path: 'parametrizacion/bancos/mis-bancos/cuentas-bancarias',
-        component: CuentasBancariasComponent,
+        loadComponent: () => import('./modules/tsr/forms/cuentas-bancarias/cuentas-bancarias.component').then((m) => m.CuentasBancariasComponent),
         canActivate: [authGuard],
         data: { title: 'Mis Bancos - Cuentas Bancarias' },
       },
       {
+        path: 'parametrizacion/caja-chica',
+        loadComponent: () => import('./modules/tsr/forms/caja-chica/parametrizacion/cajas-chicas.component').then((m) => m.CajasChicasComponent),
+        canActivate: [authGuard],
+        data: { title: 'Cajas Chicas' },
+      },
+      {
         path: 'parametrizacion/bancos/mis-bancos/chequeras/solicitud',
-        component: SolicitudChequeraComponent,
+        loadComponent: () => import('./modules/tsr/forms/chequeras/solicitud-chequera/solicitud-chequera.component').then((m) => m.SolicitudChequeraComponent),
         canActivate: [authGuard],
         data: { title: 'Solicitud Chequera' },
       },
       {
         path: 'parametrizacion/bancos/mis-bancos/chequeras/chequera',
-        component: ChequeraComponent,
+        loadComponent: () => import('./modules/tsr/forms/chequeras/chequera/chequera.component').then((m) => m.ChequeraComponent),
         canActivate: [authGuard],
         data: { title: 'Chequera' },
       },
       {
         path: 'parametrizacion/bancos/mis-bancos/chequeras/recepcion',
-        component: RecepcionChequeraComponent,
+        loadComponent: () => import('./modules/tsr/forms/chequeras/recepcion-chequera/recepcion-chequera.component').then((m) => m.RecepcionChequeraComponent),
         canActivate: [authGuard],
         data: { title: 'Recepción Chequera' },
       },
       {
         path: 'parametrizacion/bancos/mis-bancos/chequeras/cheques',
-        component: ChequeraComponent,
+        loadComponent: () => import('./modules/tsr/forms/chequeras/chequera/chequera.component').then((m) => m.ChequeraComponent),
         canActivate: [authGuard],
         data: { title: 'Cheques' },
       },
       {
         path: 'parametrizacion/cajas/logicas/grupos',
-        component: GruposCajasComponent,
+        loadComponent: () => import('./modules/tsr/forms/cajas-logicas/grupos/grupos-cajas.component').then((m) => m.GruposCajasComponent),
         canActivate: [authGuard],
         data: { title: 'Grupos' },
       },
       {
         path: 'parametrizacion/cajas/logicas/cajas-por-grupo',
-        component: CajasPorGrupoComponent,
+        loadComponent: () => import('./modules/tsr/forms/cajas-logicas/cajas-por-grupo/cajas-por-grupo.component').then((m) => m.CajasPorGrupoComponent),
         canActivate: [authGuard],
         data: { title: 'Cajas por Grupo' },
       },
@@ -387,7 +249,7 @@ export const routes: Routes = [
       },
       {
         path: 'parametrizacion/titulares',
-        component: TitularesV2Component,
+        loadComponent: () => import('./modules/tsr/forms/titulares-v2/titulares-v2.component').then((m) => m.TitularesV2Component),
         canActivate: [authGuard],
         data: { title: 'Titulares' },
       },
@@ -400,25 +262,25 @@ export const routes: Routes = [
       // Procesos - Anticipos
       {
         path: 'procesos/anticipos/clientes',
-        component: AnticiposClientesComponent,
+        loadComponent: () => import('./modules/tsr/forms/anticipos/anticipos-clientes/anticipos-clientes.component').then((m) => m.AnticiposClientesComponent),
         canActivate: [authGuard],
         data: { title: 'Anticipos - Clientes' },
       },
       {
         path: 'procesos/anticipos/proveedores',
-        component: AnticiposProveedoresComponent,
+        loadComponent: () => import('./modules/tsr/forms/anticipos/anticipos-proveedores/anticipos-proveedores.component').then((m) => m.AnticiposProveedoresComponent),
         canActivate: [authGuard],
         data: { title: 'Anticipos - Proveedores' },
       },
       {
         path: 'procesos/anticipos/seguimiento',
-        component: SeguimientoAnticiposComponent,
+        loadComponent: () => import('./modules/tsr/forms/anticipos/seguimiento-anticipos/seguimiento-anticipos.component').then((m) => m.SeguimientoAnticiposComponent),
         canActivate: [authGuard],
         data: { title: 'Seguimiento de Anticipos' },
       },
       {
         path: 'procesos/estado-cuenta-titular',
-        component: EstadoCuentaTitularComponent,
+        loadComponent: () => import('./modules/tsr/forms/estado-cuenta-titular/estado-cuenta-titular.component').then((m) => m.EstadoCuentaTitularComponent),
         canActivate: [authGuard],
         data: { title: 'Estado de Cuenta de Titular' },
       },
@@ -426,13 +288,13 @@ export const routes: Routes = [
       // Procesos - Registrar
       {
         path: 'procesos/registrar/ingresos',
-        component: RegistroIngresoComponent,
+        loadComponent: () => import('./modules/tsr/forms/registrar/registro-ingreso/registro-ingreso.component').then((m) => m.RegistroIngresoComponent),
         canActivate: [authGuard],
         data: { title: 'Registrar - Ingresos' },
       },
       {
         path: 'procesos/registrar/egresos',
-        component: RegistroEgresoComponent,
+        loadComponent: () => import('./modules/tsr/forms/registrar/registro-egreso/registro-egreso.component').then((m) => m.RegistroEgresoComponent),
         canActivate: [authGuard],
         data: { title: 'Registrar - Egresos' },
       },
@@ -440,105 +302,125 @@ export const routes: Routes = [
       // Procesos - Cobros
       {
         path: 'procesos/cobros/ingresar',
-        component: CobrosIngresarComponent,
+        loadComponent: () => import('./modules/tsr/forms/cobros/ingresar/cobros-ingresar.component').then((m) => m.CobrosIngresarComponent),
         canActivate: [authGuard],
         data: { title: 'Cobros - Ingresar' },
       },
       {
         path: 'procesos/cobros/cierre-caja',
-        component: CierreCajaComponent,
+        loadComponent: () => import('./modules/tsr/forms/cobros/cierre-caja/cierre-caja.component').then((m) => m.CierreCajaComponent),
         canActivate: [authGuard],
         data: { title: 'Cobros - Cierre de Caja' },
       },
       {
         path: 'procesos/cobros/depositos/envio',
-        component: EnvioDepositosComponent,
+        loadComponent: () => import('./modules/tsr/forms/cobros/depositos/envio/envio-depositos.component').then((m) => m.EnvioDepositosComponent),
         canActivate: [authGuard],
         data: { title: 'Cobros - Depósitos Envío' },
       },
       {
         path: 'procesos/cobros/depositos/ratificacion',
-        component: RatificacionDepositosComponent,
+        loadComponent: () => import('./modules/tsr/forms/cobros/depositos/ratificacion/ratificacion-depositos.component').then((m) => m.RatificacionDepositosComponent),
         canActivate: [authGuard],
         data: { title: 'Cobros - Depósitos Ratificación' },
       },
       {
         path: 'procesos/cobros/consultas/cobros',
-        component: ConsultasCobrosComponent,
+        loadComponent: () => import('./modules/tsr/forms/cobros/consultas/cobros/consultas-cobros.component').then((m) => m.ConsultasCobrosComponent),
         canActivate: [authGuard],
         data: { title: 'Consultas - Cobros' },
       },
       {
         path: 'procesos/cobros/consultas/cierres',
-        component: ConsultasCierresComponent,
+        loadComponent: () => import('./modules/tsr/forms/cobros/consultas/cierres/consultas-cierres.component').then((m) => m.ConsultasCierresComponent),
         canActivate: [authGuard],
         data: { title: 'Consultas - Cierres' },
       },
       {
         path: 'procesos/cobros/procesos/cobros',
-        component: ProcesosCobrosComponent,
+        loadComponent: () => import('./modules/tsr/forms/cobros/procesos/procesos-cobros.component').then((m) => m.ProcesosCobrosComponent),
         canActivate: [authGuard],
         data: { title: 'Procesos - Cobros' },
       },
       {
         path: 'procesos/cobros/procesos/cierres',
-        component: ProcesosCierresComponent,
+        loadComponent: () => import('./modules/tsr/forms/cobros/procesos/procesos-cierres.component').then((m) => m.ProcesosCierresComponent),
         canActivate: [authGuard],
         data: { title: 'Procesos - Cierres' },
       },
       {
         path: 'procesos/cobros/procesos/depositos',
-        component: ProcesosDepositosComponent,
+        loadComponent: () => import('./modules/tsr/forms/cobros/procesos/procesos-depositos.component').then((m) => m.ProcesosDepositosComponent),
         canActivate: [authGuard],
         data: { title: 'Procesos - Depósitos' },
       },
       {
         path: 'procesos/cobros/procesos/ratificacion-depositos',
-        component: ProcesosRatificacionDepositosComponent,
+        loadComponent: () => import('./modules/tsr/forms/cobros/procesos/procesos-ratificacion-depositos.component').then((m) => m.ProcesosRatificacionDepositosComponent),
         canActivate: [authGuard],
         data: { title: 'Procesos - Ratificación Depósitos' },
+      },
+
+      // Procesos - Caja Chica
+      {
+        path: 'procesos/caja-chica/gastos',
+        loadComponent: () => import('./modules/tsr/forms/caja-chica/gastos/gastos-caja-chica.component').then((m) => m.GastosCajaChicaComponent),
+        canActivate: [authGuard],
+        data: { title: 'Caja Chica - Gastos' },
+      },
+      {
+        path: 'procesos/caja-chica/reposicion',
+        loadComponent: () => import('./modules/tsr/forms/caja-chica/reposicion/reposicion-caja-chica.component').then((m) => m.ReposicionCajaChicaComponent),
+        canActivate: [authGuard],
+        data: { title: 'Caja Chica - Reposición' },
+      },
+      {
+        path: 'procesos/caja-chica/cierre',
+        loadComponent: () => import('./modules/tsr/forms/caja-chica/cierre/cierre-caja-chica.component').then((m) => m.CierreCajaChicaComponent),
+        canActivate: [authGuard],
+        data: { title: 'Caja Chica - Cierre' },
       },
 
       // Procesos - Pagos
       {
         path: 'procesos/pagos/ingreso',
-        component: PagosIngresarComponent,
+        loadComponent: () => import('./modules/tsr/forms/pagos/ingresar/pagos-ingresar.component').then((m) => m.PagosIngresarComponent),
         canActivate: [authGuard],
         data: { title: 'Pagos - Ingreso' },
       },
       {
         path: 'procesos/pagos/consulta/pagos',
-        component: ConsultasPagosComponent,
+        loadComponent: () => import('./modules/tsr/forms/pagos/consultas/pagos/consultas-pagos.component').then((m) => m.ConsultasPagosComponent),
         canActivate: [authGuard],
         data: { title: 'Consulta - Pagos' },
       },
       {
         path: 'procesos/pagos/consulta/cheques',
-        component: ConsultasChequesComponent,
+        loadComponent: () => import('./modules/tsr/forms/pagos/consultas/cheques/consultas-cheques.component').then((m) => m.ConsultasChequesComponent),
         canActivate: [authGuard],
         data: { title: 'Consulta - Cheques' },
       },
       {
         path: 'procesos/pagos/procesos/solicitud-pagos',
-        component: SolicitudPagosComponent,
+        loadComponent: () => import('./modules/tsr/forms/pagos/procesos/solicitud/solicitud-pagos.component').then((m) => m.SolicitudPagosComponent),
         canActivate: [authGuard],
         data: { title: 'Procesos - Solicitud Pagos' },
       },
       {
         path: 'procesos/pagos/procesos/cheques-generados',
-        component: ChequesGeneradosComponent,
+        loadComponent: () => import('./modules/tsr/forms/pagos/procesos/generados/cheques-generados.component').then((m) => m.ChequesGeneradosComponent),
         canActivate: [authGuard],
         data: { title: 'Procesos - Cheques Generados' },
       },
       {
         path: 'procesos/pagos/procesos/cheques-impresos',
-        component: ChequesImpresosProcComponent,
+        loadComponent: () => import('./modules/tsr/forms/pagos/procesos/impresos/cheques-impresos-proc.component').then((m) => m.ChequesImpresosProcComponent),
         canActivate: [authGuard],
         data: { title: 'Procesos - Cheques Impresos' },
       },
       {
         path: 'procesos/pagos/procesos/cheques-entregados',
-        component: ChequesEntregadosProcComponent,
+        loadComponent: () => import('./modules/tsr/forms/pagos/procesos/entregados/cheques-entregados-proc.component').then((m) => m.ChequesEntregadosProcComponent),
         canActivate: [authGuard],
         data: { title: 'Procesos - Cheques Entregados' },
       },
@@ -546,39 +428,27 @@ export const routes: Routes = [
       // Procesos - Movimientos Bancarios
       {
         path: 'procesos/movimientos-bancarios/debitos',
-        component: DebitosComponent,
+        loadComponent: () => import('./modules/tsr/forms/movimientos-bancarios/debitos/debitos.component').then((m) => m.DebitosComponent),
         canActivate: [authGuard],
         data: { title: 'Movimientos Bancarios - Débitos' },
       },
       {
         path: 'procesos/movimientos-bancarios/creditos',
-        component: CreditosComponent,
+        loadComponent: () => import('./modules/tsr/forms/movimientos-bancarios/creditos/creditos.component').then((m) => m.CreditosComponent),
         canActivate: [authGuard],
         data: { title: 'Movimientos Bancarios - Créditos' },
       },
       {
         path: 'procesos/movimientos-bancarios/transferencias',
-        component: TransferenciasComponent,
+        loadComponent: () => import('./modules/tsr/forms/movimientos-bancarios/transferencias/transferencias.component').then((m) => m.TransferenciasComponent),
         canActivate: [authGuard],
         data: { title: 'Movimientos Bancarios - Transferencias' },
       },
 
       // Procesos - Generales
       {
-        path: 'procesos/generales/conciliacion',
-        component: ConciliacionComponent,
-        canActivate: [authGuard],
-        data: { title: 'Conciliación' },
-      },
-      {
-        path: 'procesos/generales/consulta-conciliacion',
-        component: ConsultaConciliacionComponent,
-        canActivate: [authGuard],
-        data: { title: 'Consulta Conciliación' },
-      },
-      {
         path: 'procesos/generales/ried',
-        component: RiedComponent,
+        loadComponent: () => import('./modules/tsr/forms/generales/ried/ried.component').then((m) => m.RiedComponent),
         canActivate: [authGuard],
         data: { title: 'RIED' },
       },
@@ -586,31 +456,31 @@ export const routes: Routes = [
       // Procesos - Extractos Bancarios
       {
         path: 'procesos/extractos-bancarios/cargar',
-        component: CargarExtractoBancarioComponent,
+        loadComponent: () => import('./modules/tsr/forms/generales/cargar-extracto-bancario/cargar-extracto-bancario.component').then((m) => m.CargarExtractoBancarioComponent),
         canActivate: [authGuard],
         data: { title: 'Cargar Extracto Bancario' },
       },
       {
         path: 'procesos/extractos-bancarios/consulta',
-        component: ConsultaExtractosBancariosComponent,
+        loadComponent: () => import('./modules/tsr/forms/generales/consulta-extractos-bancarios/consulta-extractos-bancarios.component').then((m) => m.ConsultaExtractosBancariosComponent),
         canActivate: [authGuard],
         data: { title: 'Consulta de Extractos Bancarios' },
       },
       {
         path: 'procesos/extractos-bancarios/detalle',
-        component: DetalleExtractoBancarioComponent,
+        loadComponent: () => import('./modules/tsr/forms/generales/detalle-extracto-bancario/detalle-extracto-bancario.component').then((m) => m.DetalleExtractoBancarioComponent),
         canActivate: [authGuard],
         data: { title: 'Detalle de Extracto Bancario' },
       },
       {
         path: 'procesos/extractos-bancarios/tablero',
-        component: TableroCumplimientoExtractosComponent,
+        loadComponent: () => import('./modules/tsr/forms/generales/tablero-cumplimiento-extractos/tablero-cumplimiento-extractos.component').then((m) => m.TableroCumplimientoExtractosComponent),
         canActivate: [authGuard],
         data: { title: 'Tablero de Cumplimiento de Extractos' },
       },
       {
         path: 'procesos/conciliacion-contable',
-        component: ConciliacionContableComponent,
+        loadComponent: () => import('./modules/tsr/forms/generales/conciliacion-contable/conciliacion-contable.component').then((m) => m.ConciliacionContableComponent),
         canActivate: [authGuard],
         data: { title: 'Conciliación Contable' },
       },
@@ -618,7 +488,7 @@ export const routes: Routes = [
   },
   {
     path: 'menurecursoshumanos',
-    component: MenurecursoshumanosComponent,
+    loadComponent: () => import('./modules/rrh/menu/menurecursoshumanos/menurecursoshumanos.component').then((m) => m.MenurecursoshumanosComponent),
     canActivate: [authGuard],
     children: [
       // Parametrización
@@ -767,7 +637,7 @@ export const routes: Routes = [
         canActivate: [authGuard],
         data: { title: 'Ficha del colaborador' },
       },
-      { path: 'gestion/vacaciones', component: VacacionesListComponent, canActivate: [authGuard] },
+      { path: 'gestion/vacaciones', loadComponent: () => import('./modules/rrh/forms/gestion/vacaciones/vacaciones-list.component').then((m) => m.VacacionesListComponent), canActivate: [authGuard] },
       {
         path: 'gestion/permisos-licencias',
         loadComponent: () =>
@@ -916,7 +786,7 @@ export const routes: Routes = [
       },
       {
         path: 'procesos/aportes',
-        component: AporteRetencionListComponent,
+        loadComponent: () => import('./modules/rrh/forms/procesos/aportes-retenciones/aporte-retencion-list.component').then((m) => m.AporteRetencionListComponent),
         canActivate: [authGuard],
       },
       {
@@ -959,218 +829,218 @@ export const routes: Routes = [
   },
   {
     path: 'menucuentasxcobrar',
-    component: MenucuentasxcobrarComponent,
+    loadComponent: () => import('./modules/cxc/menu/menucuentasxcobrar/menucuentasxcobrar.component').then((m) => m.MenucuentasxcobrarComponent),
     canActivate: [authGuard],
     children: [
       {
         path: 'parametrizacion/grupos-productos',
-        component: GruposProductosCobroComponent,
+        loadComponent: () => import('./modules/cxc/forms/parametrizacion/grupos-productos-cobro/grupos-productos-cobro.component').then((m) => m.GruposProductosCobroComponent),
         canActivate: [authGuard],
       },
       {
         path: 'parametrizacion/datos-facturador',
-        component: DatosFacturadorComponent,
+        loadComponent: () => import('./modules/cxc/forms/parametrizacion/datos-facturador/datos-facturador.component').then((m) => m.DatosFacturadorComponent),
         canActivate: [authGuard],
       },
       {
         path: 'parametrizacion/datos-sri',
-        component: DatosSriComponent,
+        loadComponent: () => import('./modules/cxc/forms/parametrizacion/datos-sri/datos-sri.component').then((m) => m.DatosSriComponent),
         canActivate: [authGuard],
       },
       {
         path: 'emitir/facturas',
-        component: FacturasIngresoComponent,
+        loadComponent: () => import('./modules/cxc/forms/emitir/facturas-ingreso/facturas-ingreso.component').then((m) => m.FacturasIngresoComponent),
         canActivate: [authGuard],
       },
       {
         path: 'emitir/notas-credito',
-        component: NotasCreditoComponent,
+        loadComponent: () => import('./modules/cxc/forms/emitir/notas-credito/notas-credito.component').then((m) => m.NotasCreditoComponent),
         canActivate: [authGuard],
       },
       {
         path: 'emitir/notas-debito',
-        component: NotasDebitoComponent,
+        loadComponent: () => import('./modules/cxc/forms/emitir/notas-debito/notas-debito.component').then((m) => m.NotasDebitoComponent),
         canActivate: [authGuard],
       },
       {
         path: 'emitir/liquidaciones',
-        component: LiquidacionesComponent,
+        loadComponent: () => import('./modules/cxc/forms/emitir/liquidaciones/liquidaciones.component').then((m) => m.LiquidacionesComponent),
         canActivate: [authGuard],
       },
       {
         path: 'emitir/retenciones',
-        component: Retencionesv2Component,
+        loadComponent: () => import('./modules/cxc/forms/emitir/retencionesv2').then((m) => m.Retencionesv2Component),
         canActivate: [authGuard],
       },
       {
         path: 'emitir/retenciones-v2',
-        component: Retencionesv2Component,
+        loadComponent: () => import('./modules/cxc/forms/emitir/retencionesv2').then((m) => m.Retencionesv2Component),
         canActivate: [authGuard],
       },
       {
         path: 'gestionar/facturas',
-        component: ConsultaFacturasComponent,
+        loadComponent: () => import('./modules/cxc/forms/gestionar/consulta-facturas/consulta-facturas.component').then((m) => m.ConsultaFacturasComponent),
         canActivate: [authGuard],
       },
       {
         path: 'gestionar/documentos-electronicos',
-        component: ConsultaDocumentosElectronicosComponent,
+        loadComponent: () => import('./modules/cxc/forms/gestionar/consulta-documentos-electronicos/consulta-documentos-electronicos.component').then((m) => m.ConsultaDocumentosElectronicosComponent),
         canActivate: [authGuard],
       },
       {
         path: 'gestionar/anticipos',
-        component: AnticipoComponent,
+        loadComponent: () => import('./modules/cxc/forms/gestionar/anticipo/anticipo.component').then((m) => m.AnticipoComponent),
         canActivate: [authGuard],
       },
       {
         path: 'gestionar/financiar-factura',
-        component: FinanciarFacturaComponent,
+        loadComponent: () => import('./modules/cxc/forms/gestionar/financiar-factura/financiar-factura.component').then((m) => m.FinanciarFacturaComponent),
         canActivate: [authGuard],
       },
       {
         path: 'cobros/abonos-factura',
-        component: AbonosFacturaComponent,
+        loadComponent: () => import('./modules/cxc/forms/cobros/abonos-factura/abonos-factura.component').then((m) => m.AbonosFacturaComponent),
         canActivate: [authGuard],
       },
       {
         path: 'cobros/registrar',
-        component: RegistrarCobroComponent,
+        loadComponent: () => import('./modules/cxc/forms/cobros/registrar-cobro/registrar-cobro.component').then((m) => m.RegistrarCobroComponent),
         canActivate: [authGuard],
       },
       {
         path: 'cobros/cruce-anticipo',
-        component: CruceAnticipoClienteComponent,
+        loadComponent: () => import('./modules/cxc/forms/cobros/cruce-anticipo-cliente/cruce-anticipo-cliente.component').then((m) => m.CruceAnticipoClienteComponent),
         canActivate: [authGuard],
       },
       {
         path: 'reportes/dash-ventas',
-        component: DashVentasComponent,
+        loadComponent: () => import('./modules/cxc/reportes/dash-ventas').then((m) => m.DashVentasComponent),
         canActivate: [authGuard],
       },
     ],
   },
   {
     path: 'menucuentaxpagar',
-    component: MenucuentaxpagarComponent,
+    loadComponent: () => import('./modules/cxp/menu/menucuentasxpagar/menucuentasxpagar.component').then((m) => m.MenucuentaxpagarComponent),
     canActivate: [authGuard],
     children: [
       {
         path: 'parametrizacion/grupos-productos',
-        component: GruposProductosPagoComponent,
+        loadComponent: () => import('./modules/cxp/forms/parametrizacion/grupos-productos-pago/grupos-productos-pago.component').then((m) => m.GruposProductosPagoComponent),
         canActivate: [authGuard],
       },
       {
         path: 'parametrizacion/datos-sri',
-        component: DatosSriCxpComponent,
+        loadComponent: () => import('./modules/cxp/forms/parametrizacion/datos-sri-cxp/datos-sri-cxp.component').then((m) => m.DatosSriCxpComponent),
         canActivate: [authGuard],
       },
       {
         path: 'parametrizacion/proveedores',
-        component: ProveedoresComponent,
+        loadComponent: () => import('./modules/cxp/forms/parametrizacion/proveedores/proveedores.component').then((m) => m.ProveedoresComponent),
         canActivate: [authGuard],
       },
       {
         path: 'procesos/bandeja-electronica',
-        component: BandejaElectronicaComponent,
+        loadComponent: () => import('./modules/cxp/forms/procesos/bandeja-electronica/bandeja-electronica.component').then((m) => m.BandejaElectronicaComponent),
         canActivate: [authGuard],
       },
       {
         path: 'procesos/gestion-documentos',
-        component: GestionDocumentosComponent,
+        loadComponent: () => import('./modules/cxp/forms/procesos/gestion-documentos/gestion-documentos.component').then((m) => m.GestionDocumentosComponent),
         canActivate: [authGuard],
       },
       {
         path: 'procesos/consulta-documentos',
-        component: ConsultaDocumentosComponent,
+        loadComponent: () => import('./modules/cxp/forms/procesos/consulta-documentos/consulta-documentos.component').then((m) => m.ConsultaDocumentosComponent),
         canActivate: [authGuard],
       },
       {
         path: 'pagos/cruce-anticipo',
-        component: CruceAnticipoProveedorComponent,
+        loadComponent: () => import('./modules/cxp/forms/pagos/cruce-anticipo-proveedor/cruce-anticipo-proveedor.component').then((m) => m.CruceAnticipoProveedorComponent),
         canActivate: [authGuard],
       },
       {
         path: 'pagos/transferencias',
-        component: PagosTransferenciaComponent,
+        loadComponent: () => import('./modules/cxp/forms/pagos/pagos-transferencia/pagos-transferencia.component').then((m) => m.PagosTransferenciaComponent),
         canActivate: [authGuard],
       },
       {
         path: 'negociaciones',
-        component: NegociacionesComponent,
+        loadComponent: () => import('./modules/cxp/forms/negociaciones/negociaciones.component').then((m) => m.NegociacionesComponent),
         canActivate: [authGuard],
       },
       {
         path: 'negociaciones/detalle/:id',
-        component: DetalleNegociacionComponent,
+        loadComponent: () => import('./modules/cxp/forms/negociaciones/detalle-negociacion/detalle-negociacion.component').then((m) => m.DetalleNegociacionComponent),
         canActivate: [authGuard],
       },
       {
         path: 'reportes/dashboard',
-        component: DashboardCxpComponent,
+        loadComponent: () => import('./modules/cxp/forms/reportes/dashboard-cxp/dashboard-cxp.component').then((m) => m.DashboardCxpComponent),
         canActivate: [authGuard],
       },
     ],
   },
   {
     path: 'menucreditos',
-    component: MenucreditosComponent,
+    loadComponent: () => import('./modules/crd/menucreditos/menucreditos.component').then((m) => m.MenucreditosComponent),
     canActivate: [authGuard],
     children: [
-      { path: 'parametrizacion', component: ParametrizacionCreditosComponent },
-      { path: 'extr', component: ExtersComponent },
-      { path: 'aportes-revisar', component: AportesPorRevisarComponent },
-      { path: 'participe-inicial', component: BaseInicialParticipesComponent },
-      { path: 'entidad', component: EntidadCreditosComponent },
-      { path: 'navegacion-cascada', component: NavegacionCascadaComponent },
-      { path: 'participe-dash', component: ParticipeDashComponent },
-      { path: 'consolidado', component: ConsolidadoComponent },
-      { path: 'jubilados', component: ProcesoPagoJubiladosComponent },
-      { path: 'jubilar-participe', component: JubilarParticipeComponent },
-      { path: 'participe-info', component: ParticipeInfoComponent },
-      { path: 'cruce-valores', component: CruceValoresComponent },
-      { path: 'cruce-de-valores', component: CruceDeValoresComponent },
-      { path: 'devolucion-aportes', component: DevolucionAportesComponent },
-      { path: 'simulador-credito', component: SimuladorCreditoComponent },
-      { path: 'simulador-prestamo', component: SimuladorPrestamoComponent },
-      { path: 'pago-cuotas', component: PagoCuotasComponent },
-      { path: 'cobros-personales', component: CobrosPersonalesComponent },
+      { path: 'parametrizacion', loadComponent: () => import('./modules/crd/menucreditos/parametrizacion-creditos.component').then((m) => m.ParametrizacionCreditosComponent) },
+      { path: 'extr', loadComponent: () => import('./modules/crd/forms/historicos/exters/exters.component').then((m) => m.ExtersComponent) },
+      { path: 'aportes-revisar', loadComponent: () => import('./modules/crd/forms/historicos/aportes-por-revisar/aportes-por-revisar.component').then((m) => m.AportesPorRevisarComponent) },
+      { path: 'participe-inicial', loadComponent: () => import('./modules/crd/forms/historicos/base-inicial-participes/base-inicial-participes.component').then((m) => m.BaseInicialParticipesComponent) },
+      { path: 'entidad', loadComponent: () => import('./modules/crd/menucreditos/entidad-creditos.component').then((m) => m.EntidadCreditosComponent) },
+      { path: 'navegacion-cascada', loadComponent: () => import('./modules/crd/forms/entidad-participe/navegacion-cascada/navegacion-cascada.component').then((m) => m.NavegacionCascadaComponent) },
+      { path: 'participe-dash', loadComponent: () => import('./modules/crd/forms/entidad-participe/participe-dash/participe-dash.component').then((m) => m.ParticipeDashComponent) },
+      { path: 'consolidado', loadComponent: () => import('./modules/crd/forms/entidad-participe/consolidado/consolidado.component').then((m) => m.ConsolidadoComponent) },
+      { path: 'jubilados', loadComponent: () => import('./modules/crd/forms/entidad-participe/jubilados/proceso-pago-jubilados/proceso-pago-jubilados.component').then((m) => m.ProcesoPagoJubiladosComponent) },
+      { path: 'jubilar-participe', loadComponent: () => import('./modules/crd/forms/entidad-participe/jubilados/jubilar-participe/jubilar-participe.component').then((m) => m.JubilarParticipeComponent) },
+      { path: 'participe-info', loadComponent: () => import('./modules/crd/forms/entidad-participe/participe-info/participe-info.component').then((m) => m.ParticipeInfoComponent) },
+      { path: 'cruce-valores', loadComponent: () => import('./modules/crd/forms/cruce-valores/cruce-valores.component').then((m) => m.CruceValoresComponent) },
+      { path: 'cruce-de-valores', loadComponent: () => import('./modules/crd/forms/cruce-de-valores/cruce-de-valores.component').then((m) => m.CruceDeValoresComponent) },
+      { path: 'devolucion-aportes', loadComponent: () => import('./modules/crd/forms/devolucion-aportes/devolucion-aportes.component').then((m) => m.DevolucionAportesComponent) },
+      { path: 'simulador-credito', loadComponent: () => import('./modules/crd/forms/simulador-credito/simulador-credito.component').then((m) => m.SimuladorCreditoComponent) },
+      { path: 'simulador-prestamo', loadComponent: () => import('./modules/crd/forms/simulador-prestamo/simulador-prestamo.component').then((m) => m.SimuladorPrestamoComponent) },
+      { path: 'pago-cuotas', loadComponent: () => import('./modules/crd/forms/pago-cuotas/pago-cuotas.component').then((m) => m.PagoCuotasComponent) },
+      { path: 'cobros-personales', loadComponent: () => import('./modules/crd/forms/cobros-personales/cobros-personales.component').then((m) => m.CobrosPersonalesComponent) },
       {
         path: 'entidad-edit',
-        component: EntidadEditComponent,
+        loadComponent: () => import('./modules/crd/forms/entidad-participe/entidad-edit/entidad-edit.component').then((m) => m.EntidadEditComponent),
         canDeactivate: [canDeactivateGuard],
         resolve: { data: entidadEditResolver },
       },
-      { path: 'entidad-consulta', component: EntidadConsultaComponent },
+      { path: 'entidad-consulta', loadComponent: () => import('./modules/crd/forms/entidad-participe/entidad-consulta/entidad-consulta.component').then((m) => m.EntidadConsultaComponent) },
       {
         path: 'archivos-petro/carga/carga-aportes',
-        component: CargaAportesComponent,
+        loadComponent: () => import('./modules/crd/forms/archivos-petro/carga/carga-aportes/carga-aportes.component').then((m) => m.CargaAportesComponent),
         canDeactivate: [canDeactivateGuard],
       },
       {
         path: 'archivos-petro/carga/carga-aportes-back',
-        component: CargaAporteBackComponent,
+        loadComponent: () => import('./modules/crd/forms/archivos-petro/carga/carga-aporte-back/carga-aporte-back.component').then((m) => m.CargaAporteBackComponent),
         canDeactivate: [canDeactivateGuard],
       },
       {
         path: 'archivos-petro/carga/consulta',
-        component: ConsultaArchivosPetroComponent,
+        loadComponent: () => import('./modules/crd/forms/archivos-petro/carga/consulta-archivos-petro/consulta-archivos-petro.component').then((m) => m.ConsultaArchivosPetroComponent),
         resolve: { cargas: ConsultaCargaArchivoResolverService },
       },
       {
         path: 'archivos-petro/carga/detalle/:id',
-        component: DetalleConsultaCargaComponent,
+        loadComponent: () => import('./modules/crd/forms/archivos-petro/carga/detalle-consulta-carga/detalle-consulta-carga.component').then((m) => m.DetalleConsultaCargaComponent),
       },
       {
         path: 'archivos-petro/generar/proceso',
-        component: GenerarArchivoPetroComponent,
+        loadComponent: () => import('./modules/crd/forms/archivos-petro/generar/generar-archivo-petro/generar-archivo-petro.component').then((m) => m.GenerarArchivoPetroComponent),
       },
       {
         path: 'archivos-petro/generar/consulta',
-        component: ConsultaGeneracionArchivoComponent,
+        loadComponent: () => import('./modules/crd/forms/archivos-petro/generar/consulta-generacion-archivo/consulta-generacion-archivo.component').then((m) => m.ConsultaGeneracionArchivoComponent),
       },
       {
         path: 'archivos-petro/generar/detalle/:id',
-        component: DetalleGeneracionArchivoComponent,
+        loadComponent: () => import('./modules/crd/forms/archivos-petro/generar/detalle-generacion-archivo/detalle-generacion-archivo.component').then((m) => m.DetalleGeneracionArchivoComponent),
       },
       {
         path: 'carga-aportes',
@@ -1192,101 +1062,101 @@ export const routes: Routes = [
         redirectTo: 'archivos-petro/carga/detalle/:id',
         pathMatch: 'full',
       },
-      { path: 'entidad-participe-info', component: EntidadParticipeInfoComponent },
+      { path: 'entidad-participe-info', loadComponent: () => import('./modules/crd/forms/entidad-participe/entidad-participe-info/entidad-participe-info.component').then((m) => m.EntidadParticipeInfoComponent) },
       {
         path: 'estadosCrd',
-        component: EstadosCrdComponent,
+        loadComponent: () => import('./modules/crd/forms/parametrizacion/estados-crd/estados-crd.component').then((m) => m.EstadosCrdComponent),
         canDeactivate: [canDeactivateGuard],
         resolve: { estados: EstadosResolverService },
       },
       {
         path: 'tiposCrd',
-        component: TiposCrdComponent,
+        loadComponent: () => import('./modules/crd/forms/parametrizacion/tipos-crd/tipos-crd.component').then((m) => m.TiposCrdComponent),
         canDeactivate: [canDeactivateGuard],
         resolve: { tipos: TiposCrdResolverService },
       },
       {
         path: 'listadosCrd',
-        component: ListadosCrdComponent,
+        loadComponent: () => import('./modules/crd/forms/parametrizacion/listados-crd/listados-crd.component').then((m) => m.ListadosCrdComponent),
         canDeactivate: [canDeactivateGuard],
         resolve: { listados: ListadosCrdResolverService },
       },
       {
         path: 'informacion-general-fondo',
-        component: InformacionGeneralFondoComponent,
+        loadComponent: () => import('./modules/crd/forms/parametrizacion/informacion-general-fondo/informacion-general-fondo.component').then((m) => m.InformacionGeneralFondoComponent),
         canActivate: [authGuard],
       },
       {
         // TODO TEMPORAL: restringida al USUARIO 1 vía usuarioUnoGuard hasta que
         // exista el esquema de permisos definitivo (ver shared/guard/usuario-uno.guard.ts).
         path: 'bandas-cartera',
-        component: BandasCarteraComponent,
+        loadComponent: () => import('./modules/crd/forms/parametrizacion/bandas-cartera/bandas-cartera.component').then((m) => m.BandasCarteraComponent),
         canActivate: [authGuard, usuarioUnoGuard],
       },
       {
         // TODO TEMPORAL: misma restricción a USUARIO 1 que bandas-cartera (usuarioUnoGuard),
         // hasta que exista el esquema de permisos definitivo.
         path: 'cierre-cartera',
-        component: CierreCarteraComponent,
+        loadComponent: () => import('./modules/crd/forms/cierre-cartera/cierre-cartera.component').then((m) => m.CierreCarteraComponent),
         canActivate: [authGuard, usuarioUnoGuard],
       },
       // Rutas de Contratos
       {
         path: 'contrato-dash',
-        component: ContratoDashComponent,
+        loadComponent: () => import('./modules/crd/forms/contrato/contrato-dash/contrato-dash.component').then((m) => m.ContratoDashComponent),
         canActivate: [authGuard],
       },
       {
         path: 'aportes-dash/:codigoEntidad',
-        component: AportesDashComponent,
+        loadComponent: () => import('./modules/crd/forms/contrato/aportes-dash/aportes-dash.component').then((m) => m.AportesDashComponent),
         canActivate: [authGuard],
       },
       {
         path: 'contrato-consulta',
-        component: ContratoConsultaComponent,
+        loadComponent: () => import('./modules/crd/forms/contrato/contrato-consulta/contrato-consulta.component').then((m) => m.ContratoConsultaComponent),
         canActivate: [authGuard],
       },
       {
         path: 'contrato-edit',
-        component: ContratoEditComponent,
+        loadComponent: () => import('./modules/crd/forms/contrato/contrato-edit/contrato-edit.component').then((m) => m.ContratoEditComponent),
         canActivate: [authGuard],
         canDeactivate: [canDeactivateGuard],
       },
       {
         path: 'contrato-edit/:id',
-        component: ContratoEditComponent,
+        loadComponent: () => import('./modules/crd/forms/contrato/contrato-edit/contrato-edit.component').then((m) => m.ContratoEditComponent),
         canActivate: [authGuard],
         canDeactivate: [canDeactivateGuard],
       },
       {
         path: 'prestamo-edit',
-        component: PrestamoEditComponent,
+        loadComponent: () => import('./modules/crd/forms/prestamo/prestamo-edit/prestamo-edit.component').then((m) => m.PrestamoEditComponent),
         canActivate: [authGuard],
         canDeactivate: [canDeactivateGuard],
       },
       {
         path: 'prestamo-consulta',
-        component: PrestamoConsultaComponent,
+        loadComponent: () => import('./modules/crd/forms/prestamo/prestamo-consulta/prestamo-consulta.component').then((m) => m.PrestamoConsultaComponent),
         canActivate: [authGuard],
       },
       {
         path: 'prestamo-dash',
-        component: PrestamoDashComponent,
+        loadComponent: () => import('./modules/crd/forms/prestamo/prestamo-dash/prestamo-dash.component').then((m) => m.PrestamoDashComponent),
         canActivate: [authGuard],
       },
       {
         path: 'asignacion-seguros',
-        component: AsignacionSegurosComponent,
+        loadComponent: () => import('./modules/crd/forms/asignacion-seguros/asignacion-seguros.component').then((m) => m.AsignacionSegurosComponent),
         canActivate: [authGuard],
       },
       {
         path: 'repote-valores-insolutos',
-        component: RepoteValoresInsolutosComponent,
+        loadComponent: () => import('./modules/crd/forms/prestamo/repote-valores-insolutos/repote-valores-insolutos.component').then((m) => m.RepoteValoresInsolutosComponent),
         canActivate: [authGuard],
       },
       {
         path: 'cuota-consulta',
-        component: CuotaConsultaComponent,
+        loadComponent: () => import('./modules/crd/forms/prestamo/cuota-consulta/cuota-consulta.component').then((m) => m.CuotaConsultaComponent),
         canActivate: [authGuard],
       },
     ],

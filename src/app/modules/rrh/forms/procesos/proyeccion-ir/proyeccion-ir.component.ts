@@ -13,6 +13,7 @@ import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/ti
 import { ExportService } from '../../../../../shared/services/export.service';
 import { Empleado } from '../../../model/empleado';
 import { ProyeccionImpuestoRenta } from '../../../model/proyeccion-impuesto-renta';
+import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
 import { EmpleadoService } from '../../../service/empleado.service';
 import { ProyeccionImpuestoRentaService } from '../../../service/proyeccion-impuesto-renta.service';
 import {
@@ -183,8 +184,7 @@ export class ProyeccionIrComponent implements OnInit {
   }
 
   private mensajeDeError(error: any): string {
-    if (typeof error === 'string') return error;
-    return error?.message || 'No se pudo ejecutar la proyección';
+    return mensajeDeError(error, 'No se pudo ejecutar la proyección');
   }
 
   private avisar(mensaje: string, esError = false): void {

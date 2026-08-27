@@ -12,6 +12,7 @@ import { DetalleRubroService } from '../../../../../shared/services/detalle-rubr
 import { empresaSesionCodigo } from '../../../../../shared/services/empresa-sesion';
 import { ExportService } from '../../../../../shared/services/export.service';
 import { usuarioSesion } from '../../../../../shared/services/usuario-sesion';
+import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
 import { ConceptoNomina } from '../../../model/concepto-nomina';
 import { EntidadesRrh } from '../../../model/entidades-rrh';
 import { RubrosRrh } from '../../../model/rubros-rrh';
@@ -224,7 +225,6 @@ export class ConceptosNominaComponent implements OnInit {
   }
 
   private mensajeDeError(error: any): string {
-    if (typeof error === 'string') return error;
-    return error?.message || 'No se pudieron cargar los conceptos de nómina';
+    return mensajeDeError(error, 'No se pudieron cargar los conceptos de nómina');
   }
 }

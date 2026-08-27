@@ -128,21 +128,31 @@
   </div>
 
   <div class="saldo-panel">
-    <div class="saldo-title">Saldo disponible ({{ saldoAnio() }})</div>
-    <div class="saldo-grid">
-      <div>
-        <span>Asignados</span>
-        <strong>{{ saldoData()?.diasAsignados ?? 0 }}</strong>
-      </div>
-      <div>
-        <span>Tomados</span>
-        <strong>{{ saldoData()?.diasUsados ?? 0 }}</strong>
-      </div>
-      <div>
-        <span>Pendientes</span>
-        <strong>{{ saldoData()?.diasPendientes ?? 0 }}</strong>
-      </div>
+    <div class="saldo-title">
+      Saldo disponible <strong>{{ saldoDisponibleTotal() }}</strong> días
     </div>
+    @if (saldoDesglose().length) {
+      <table class="saldo-desglose">
+        <thead>
+          <tr>
+            <th>Año</th>
+            <th>Asignados</th>
+            <th>Usados</th>
+            <th>Pendientes</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (fila of saldoDesglose(); track fila.codigo) {
+            <tr [class.caducado]="fila.caducado === 'S'">
+              <td>{{ fila.anio }}</td>
+              <td>{{ fila.diasAsignados }}</td>
+              <td>{{ fila.diasUsados }}</td>
+              <td>{{ fila.diasPendientes }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
   </div>
 
   @if (formAprobador()) {

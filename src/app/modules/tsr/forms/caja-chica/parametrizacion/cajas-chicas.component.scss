@@ -1,0 +1,194 @@
+@use '../../../../../../styles/abstracts/colors' as *;
+@use '../../../../../../styles/abstracts/variables' as *;
+
+.cajas-chicas-page {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+.page-header {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: $spacing-md;
+  padding: $spacing-sm $spacing-md;
+  border: $border-width solid $border-light;
+  border-radius: $border-radius-md;
+  background: $background-primary;
+  box-shadow: 0 2px 6px $shadow-color-light;
+}
+
+.icon-wrap {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: $background-gradient;
+  color: $text-light;
+}
+
+.title-wrap .title {
+  margin: 0;
+  font-size: 20px;
+}
+
+.title-wrap .subtitle {
+  margin: 0;
+  font-size: 13px;
+  color: $text-secondary;
+}
+
+.table-card {
+  border: $border-width solid $border-dark;
+  border-radius: $border-radius-md;
+  background: $background-primary;
+  position: relative;
+
+  table {
+    width: 100%;
+  }
+}
+
+.cajas-table {
+  thead .mat-mdc-header-row .mat-mdc-header-cell,
+  .mat-header-row .mat-header-cell {
+    background: $background-gradient;
+    color: $text-light;
+    font-weight: 600;
+  }
+}
+
+.fila-clicable {
+  cursor: pointer;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.04);
+  }
+}
+
+.spinner-wrap {
+  text-align: center;
+  padding: $spacing-lg;
+}
+
+.sin-datos {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-lg;
+  color: $text-secondary;
+
+  mat-icon {
+    font-size: 32px;
+    width: 32px;
+    height: 32px;
+  }
+}
+
+.barra-disponible {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  min-width: 140px;
+
+  span {
+    font-size: 12px;
+    color: $text-secondary;
+    white-space: nowrap;
+  }
+}
+
+.barra-fondo {
+  flex: 1;
+  height: 8px;
+  border-radius: 4px;
+  background: #e5e7eb;
+  overflow: hidden;
+}
+
+.barra-relleno {
+  height: 100%;
+  background: #16a34a;
+  transition: width 0.2s ease;
+
+  &.alerta {
+    background: #d97706;
+  }
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+
+  mat-icon {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+  }
+
+  &.badge-ok {
+    background: #dcfce7;
+    color: #166534;
+  }
+
+  &.badge-alerta {
+    background: #fef3c7;
+    color: #92400e;
+  }
+}
+
+.form-card {
+  border: $border-width solid $border-light;
+  border-radius: $border-radius-md;
+  padding: $spacing-md;
+  background: $background-primary;
+  box-shadow: 0 2px 6px $shadow-color-light;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-sm $spacing-md;
+  margin: calc(-1 * $spacing-md) calc(-1 * $spacing-md) $spacing-sm;
+  border-radius: $border-radius-md $border-radius-md 0 0;
+  background: $background-gradient;
+  color: $text-light;
+
+  h3 {
+    margin: 0;
+  }
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $spacing-sm;
+
+  .span-2 {
+    grid-column: span 2;
+  }
+}
+
+.form-actions {
+  display: flex;
+  gap: $spacing-sm;
+  justify-content: flex-end;
+
+  button mat-spinner {
+    display: inline-block;
+    margin-right: 6px;
+  }
+}

@@ -31,6 +31,7 @@ import { EstadoPrestamoService } from '../../../service/estado-prestamo.service'
 import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
+import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
 
 // Enum para los niveles de navegación
 enum NivelNavegacion {
@@ -214,19 +215,8 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
       })).pipe(
       catchError(err => {
         console.error('Error cargando entidades:', err);
-        let errorMessage = 'Error al cargar entidades';
-        if (err && typeof err === 'object') {
-          if (err.message) {
-            errorMessage += ': ' + err.message;
-          } else if (err.error && err.error.message) {
-            errorMessage += ': ' + err.error.message;
-          } else if (err.statusText) {
-            errorMessage += ': ' + err.statusText;
-          }
-        } else if (typeof err === 'string') {
-          errorMessage += ': ' + err;
-        }
-        this.errorMsg.set(errorMessage);
+        const detalle = mensajeDeError(err, '') || err?.statusText || '';
+        this.errorMsg.set(detalle ? `Error al cargar entidades: ${detalle}` : 'Error al cargar entidades');
         return of([]);
       }),
       finalize(() => this.loading.set(false))
@@ -309,7 +299,7 @@ export class NavegacionCascadaComponent implements OnInit, AfterViewInit {
         return this.productoService.getAll();
       }),
       catchError(err => {
-        this.errorMsg.set('Error al cargar productos: ' + (typeof err === 'string' ? err : err?.message || ''));
+        this.errorMsg.set('Error al cargar productos: ' + mensajeDeError(err, ''));
         return of([]);
       }),
       finalize(() => this.loading.set(false))

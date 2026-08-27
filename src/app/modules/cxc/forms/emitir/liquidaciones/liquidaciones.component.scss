@@ -1,1 +1,25 @@
 @use '../documento-base';
+
+.sin-clasificar {
+  color: var(--mat-sys-error, #b3261e);
+  font-style: italic;
+}
+
+.advertencia-banner {
+  margin: 12px 0;
+  padding: 10px 14px;
+  border-radius: 6px;
+  background: #fdecea;
+  color: #611a15;
+  font-size: 0.9rem;
+
+  ul {
+    margin: 6px 0 0;
+    padding-left: 18px;
+  }
+
+  &.advertencia-ok {
+    background: #e6f4ea;
+    color: #1e4620;
+  }
+}

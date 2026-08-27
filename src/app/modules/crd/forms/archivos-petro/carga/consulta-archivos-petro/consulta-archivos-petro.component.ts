@@ -5,6 +5,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
 import { MaterialFormModule } from '../../../../../../shared/modules/material-form.module';
+import { mensajeDeError } from '../../../../../../shared/utils/mensaje-error.util';
 import { CargaArchivo } from '../../../../model/carga-archivo';
 import { CargaArchivoService } from '../../../../service/carga-archivo.service';
 import { ServiciosAsoprepService } from '../../../../../asoprep/service/servicios-asoprep.service';
@@ -310,7 +311,7 @@ export class ConsultaArchivosPetroComponent implements OnInit {
           const actualizado = new Set(this.procesandoCodigos());
           actualizado.delete(carga.codigo!);
           this.procesandoCodigos.set(actualizado);
-          const mensaje = err?.message || err?.mensaje || 'Error al procesar la carga';
+          const mensaje = mensajeDeError(err, 'Error al procesar la carga');
           this.snackBar.open(`Error: ${mensaje}`, 'Cerrar', { duration: 5000 });
         }
       });

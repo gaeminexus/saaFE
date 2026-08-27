@@ -18,6 +18,7 @@ import { AppConfig } from '../../../../app.config';
 
 import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
+import { mensajeDeError } from '../../../../shared/utils/mensaje-error.util';
 import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
 import { AppStateService } from '../../../../shared/services/app-state.service';
@@ -206,7 +207,7 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
       },
       error: (error: any) => {
         this.isLoading = false;
-        const errorMessage = error.error?.message || 'Error al intentar iniciar sesión';
+        const errorMessage = mensajeDeError(error, 'Error al intentar iniciar sesión');
         this.loginMessage = errorMessage;
         this.loginMessageType = 'error';
         console.error('Error al validar usuario:', error);

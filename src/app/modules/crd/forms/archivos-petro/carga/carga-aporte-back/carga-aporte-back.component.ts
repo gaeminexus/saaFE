@@ -5,6 +5,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { Router } from '@angular/router';
 
 import { MaterialFormModule } from '../../../../../../shared/modules/material-form.module';
+import { mensajeDeError } from '../../../../../../shared/utils/mensaje-error.util';
 import { Filial } from '../../../../model/filial';
 import { CargaArchivo } from '../../../../model/carga-archivo';
 import { DetalleCargaArchivo } from '../../../../model/detalle-carga-archivo';
@@ -519,7 +520,7 @@ export class CargaAporteBackComponent implements OnInit {
       error: (error: any) => {
         this.isUploadingFile.set(false);
         this.snackBar.open(
-          `Error al guardar archivo: ${error.message || error}`,
+          `Error al guardar archivo: ${mensajeDeError(error)}`,
           'Cerrar',
           { duration: 6000 }
         );
@@ -679,7 +680,7 @@ export class CargaAporteBackComponent implements OnInit {
       error: (error: any) => {
         this.isLoadingData.set(false);
         this.archivoProcesado.set(false);
-        this.snackBar.open(`Error al procesar archivo: ${error?.message || error?.mensaje || 'Error inesperado'}`, 'Cerrar', { duration: 6000 });
+        this.snackBar.open(`Error al procesar archivo: ${mensajeDeError(error, 'Error inesperado')}`, 'Cerrar', { duration: 6000 });
       }
     });
   }

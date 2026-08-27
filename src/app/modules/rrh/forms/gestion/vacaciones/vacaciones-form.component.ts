@@ -9,16 +9,14 @@ import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda
 import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
+import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
 import { Empleado } from '../../../model/empleado';
 import { SaldoVacaciones } from '../../../model/saldo-vacaciones';
 import { SolicitudVacaciones } from '../../../model/solicitud-vacaciones';
 import { EmpleadoService } from '../../../service/empleado.service';
 import { SaldoVacacionesService } from '../../../service/saldo-vacaciones.service';
 import { SolicitudVacacionesService } from '../../../service/solicitud-vacaciones.service';
-import {
-  criteriosPorEmpresa,
-  filtrarPorAnio,
-} from '../../parametrizacion/utiles-parametrizacion';
+import { criteriosPorEmpresa } from '../../parametrizacion/utiles-parametrizacion';
 import { usuarioSesion } from '../../../../../shared/services/usuario-sesion';
 import { opcionesAviso } from '../../comunes/avisos';
 
@@ -56,11 +54,16 @@ export class VacacionesFormComponent implements OnInit {
   formFechaAprobacion = signal<string>('');
 
   empleados = signal<Empleado[]>([]);
-  saldoData = signal<SaldoVacaciones | null>(null);
-  saldoAnio = signal<number>(new Date().getFullYear());
+  /** Total no caducado de GET /sldv/disponible/{id} — lo que realmente se puede solicitar. */
+  saldoDisponibleTotal = signal<number>(0);
+  /** Desglose por año (todas las filas de selectByCriteria), ascendente: se consume el más antiguo primero. */
+  saldoDesglose = signal<SaldoVacaciones[]>([]);
 
   loading = signal<boolean>(false);
   errorMsg = signal<string>('');
+
+  /** Cuál de los dos campos editó el usuario por última vez, para que fecha fin y días no se pisen entre sí. */
+  private ultimoCampoTocado: 'fin' | 'dias' = 'fin';
 
   isView = computed(() => this.data.mode === 'view');
 
@@ -102,10 +105,11 @@ export class VacacionesFormComponent implements OnInit {
     }
 
     if (this.formEmpleado()) {
-      const year = this.getYearFromDate(this.formFechaInicio());
-      this.saldoAnio.set(year);
-      this.loadSaldo(this.formEmpleado()!.codigo, year);
+      this.loadSaldo(this.formEmpleado()!.codigo);
     }
+
+    // Combo de empleados: cargar la lista de activos de la empresa al abrir, no esperar a que se teclee algo.
+    this.onBuscarEmpleados();
 
     if (this.isView()) {
       this.formFechaInicioControl.disable({ emitEvent: false });
@@ -120,21 +124,21 @@ export class VacacionesFormComponent implements OnInit {
     this.dialogRef.close(false);
   }
 
+  /**
+   * Carga los empleados activos de la empresa (sin exigir texto: se llama ya al abrir la
+   * pantalla). El texto de `formEmpleadoBusqueda` se manda como filtro adicional por
+   * identificación cuando existe; con el campo vacío trae la lista completa de la empresa.
+   */
   onBuscarEmpleados(): void {
-    const busqueda = this.formEmpleadoBusqueda().trim();
-    if (!busqueda) {
-      this.errorMsg.set('Ingrese una identificacion para buscar');
-      this.empleados.set([]);
-      return;
-    }
-
     this.loading.set(true);
     this.errorMsg.set('');
 
+    const busqueda = this.formEmpleadoBusqueda().trim();
     const criterios = this.buildEmpleadoCriteria(busqueda);
     this.empleadoService.selectByCriteria(criterios).subscribe({
       next: (rows: Empleado[] | null) => {
-        this.empleados.set(this.extractRows(rows));
+        const activos = this.extractRows(rows).filter((e) => this.isEmpleadoActivo(e.estado));
+        this.empleados.set(activos);
         this.loading.set(false);
       },
       error: (err) => {
@@ -147,25 +151,22 @@ export class VacacionesFormComponent implements OnInit {
   onEmpleadoChange(empleado: Empleado | null): void {
     this.formEmpleado.set(empleado);
     if (empleado?.codigo) {
-      const year = this.getYearFromDate(this.formFechaInicio());
-      this.saldoAnio.set(year);
-      this.loadSaldo(empleado.codigo, year);
+      this.loadSaldo(empleado.codigo);
     }
   }
 
   onFechaInicioChange(value: string): void {
     this.formFechaInicio.set(value);
-    this.updateDiasSolicitados();
-    const empleado = this.formEmpleado();
-    if (empleado?.codigo) {
-      const year = this.getYearFromDate(value);
-      this.saldoAnio.set(year);
-      this.loadSaldo(empleado.codigo, year);
+    if (this.ultimoCampoTocado === 'dias') {
+      this.recalcularFechaFinDesdeDias();
+    } else {
+      this.updateDiasSolicitados();
     }
   }
 
   onFechaFinChange(value: string): void {
     this.formFechaFin.set(value);
+    this.ultimoCampoTocado = 'fin';
     this.updateDiasSolicitados();
   }
 
@@ -243,6 +244,28 @@ export class VacacionesFormComponent implements OnInit {
   onDiasSolicitadosChange(value: string): void {
     const parsed = Number(value);
     this.formDiasSolicitados.set(Number.isFinite(parsed) ? parsed : 0);
+    this.ultimoCampoTocado = 'dias';
+    this.recalcularFechaFinDesdeDias();
+  }
+
+  /** Fecha fin = fecha inicio + (días - 1), misma convención inclusiva que updateDiasSolicitados. */
+  private recalcularFechaFinDesdeDias(): void {
+    const inicio = this.formFechaInicio();
+    const dias = this.formDiasSolicitados();
+    if (!inicio || !Number.isFinite(dias) || dias <= 0) return;
+
+    const start = this.toDateValue(inicio);
+    if (!start) return;
+
+    const fin = new Date(start);
+    fin.setDate(fin.getDate() + dias - 1);
+
+    this.formFechaFin.set(this.toISODate(fin));
+    this.formFechaFinControl.setValue(fin, { emitEvent: false });
+    const formatted = this.funcionesDatosS.formatoFecha(fin, FuncionesDatosService.SOLO_FECHA) || '';
+    setTimeout(() => {
+      if (this.fechaFinInputRef?.nativeElement) this.fechaFinInputRef.nativeElement.value = formatted;
+    });
   }
 
   onGuardar(): void {
@@ -318,10 +341,7 @@ export class VacacionesFormComponent implements OnInit {
     this.loading.set(true);
     this.errorMsg.set('');
 
-    const inicioMs = this.toDateValue(fechaInicio);
-    const anioSolicitud = inicioMs ? new Date(inicioMs).getFullYear() : this.saldoAnio();
-
-    this.validarSaldo(empleado.codigo, anioSolicitud, diasSolicitados)
+    this.validarSaldo(empleado.codigo, diasSolicitados)
       .pipe(
         switchMap((okSaldo) => {
           if (!okSaldo) return of(false);
@@ -377,28 +397,21 @@ export class VacacionesFormComponent implements OnInit {
     this.formDiasSolicitados.set(diff);
   }
 
-  private validarSaldo(empleadoCodigo: number, anio: number, diasSolicitados: number) {
-    const criterios: DatosBusqueda[] = [];
-    const dbEmpleado = new DatosBusqueda();
-    dbEmpleado.asignaValorConCampoPadre(
-      TipoDatosBusqueda.LONG,
-      'empleado',
-      'codigo',
-      String(empleadoCodigo),
-      TipoComandosBusqueda.IGUAL,
-    );
-    criterios.push(dbEmpleado);
-
-    return this.saldoService.selectByCriteria(criterios).pipe(
-      map((rows: SaldoVacaciones[] | null) => {
-        const items = filtrarPorAnio(this.extractRows(rows), anio);
-        const saldo = items[0] ?? null;
-        this.saldoData.set(saldo);
-        if (!saldo) {
-          this.errorMsg.set('No se encontro saldo para el empleado');
+  /**
+   * Compara los días solicitados contra el total disponible del empleado (todos los años no
+   * caducados, FIFO), no contra el saldo de un año — una solicitud de 2026 puede consumir
+   * saldo acumulado en 2025.
+   */
+  private validarSaldo(empleadoCodigo: number, diasSolicitados: number) {
+    return this.saldoService.disponible(empleadoCodigo).pipe(
+      map((disponible) => {
+        const total = this.toNumeroSeguro(disponible);
+        this.saldoDisponibleTotal.set(total);
+        if (total <= 0) {
+          this.errorMsg.set('No se encontro saldo disponible para el empleado');
           return false;
         }
-        if (saldo.diasPendientes < diasSolicitados) {
+        if (diasSolicitados > total) {
           this.errorMsg.set('Dias solicitados exceden el saldo disponible');
           return false;
         }
@@ -461,7 +474,13 @@ export class VacacionesFormComponent implements OnInit {
     return start <= rowFin && rowInicio <= end;
   }
 
-  private loadSaldo(empleadoCodigo: number, anio: number): void {
+  /** Total disponible (para el resumen y la validación) + desglose por año ascendente (consumo FIFO). */
+  private loadSaldo(empleadoCodigo: number): void {
+    this.saldoService.disponible(empleadoCodigo).subscribe({
+      next: (disponible) => this.saldoDisponibleTotal.set(this.toNumeroSeguro(disponible)),
+      error: () => this.saldoDisponibleTotal.set(0),
+    });
+
     const criterios: DatosBusqueda[] = [];
     const dbEmpleado = new DatosBusqueda();
     dbEmpleado.asignaValorConCampoPadre(
@@ -475,13 +494,27 @@ export class VacacionesFormComponent implements OnInit {
 
     this.saldoService.selectByCriteria(criterios).subscribe({
       next: (rows: SaldoVacaciones[] | null) => {
-        const items = filtrarPorAnio(this.extractRows(rows), anio);
-        this.saldoData.set(items[0] ?? null);
+        const items = this.extractRows(rows)
+          .slice()
+          .sort((a, b) => Number(a.anio) - Number(b.anio));
+        this.saldoDesglose.set(items);
       },
-      error: () => {
-        this.saldoData.set(null);
-      },
+      error: () => this.saldoDesglose.set([]),
     });
+  }
+
+  /** GET /sldv/disponible/{id} puede volver como número crudo o envuelto en un objeto. */
+  private toNumeroSeguro(value: unknown): number {
+    if (typeof value === 'number') {
+      return Number.isFinite(value) ? value : 0;
+    }
+    if (value && typeof value === 'object') {
+      const obj = value as Record<string, unknown>;
+      const candidato = obj['disponible'] ?? obj['total'] ?? obj['dias'] ?? obj['value'];
+      if (candidato !== undefined) return Number(candidato) || 0;
+    }
+    const n = Number(value);
+    return Number.isFinite(n) ? n : 0;
   }
 
   private buildEmpleadoCriteria(busqueda: string): DatosBusqueda[] {
@@ -554,13 +587,6 @@ export class VacacionesFormComponent implements OnInit {
     return date.getTime();
   }
 
-  private getYearFromDate(value: string): number {
-    if (!value) return new Date().getFullYear();
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return new Date().getFullYear();
-    return date.getFullYear();
-  }
-
   private formatDate(value: string | Date | null | undefined): string {
     if (!value) return '';
     const date = value instanceof Date ? value : new Date(value);
@@ -594,13 +620,7 @@ export class VacacionesFormComponent implements OnInit {
   }
 
   private extractError(error: unknown): string {
-    if (!error) return '';
-    if (typeof error === 'string') return error;
-    const err = error as { message?: string; error?: any };
-    if (typeof err?.message === 'string') return err.message;
-    if (typeof err?.error === 'string') return err.error;
-    if (typeof err?.error?.message === 'string') return err.error.message;
-    return '';
+    return mensajeDeError(error, '');
   }
 
   private showError(message: string): void {

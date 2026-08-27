@@ -34,6 +34,18 @@ export class SaldoVacacionesService {
     );
   }
 
+  /**
+   * Total de días disponibles del empleado sumando todos los años no caducados
+   * (SaldoVacacionesDaoServiceImpl.selectDisponibles, consumo FIFO por año). No filtrar
+   * por año de la solicitud: el saldo se acumula y se consume del más antiguo primero.
+   */
+  disponible(idEmpleado: number): Observable<number> {
+    const url = `${ServiciosRhh.RS_SLDV}/disponible/${idEmpleado}`;
+    return this.http.get<number>(url).pipe(
+      catchError(() => of(0))
+    );
+  }
+
   /** POST: add new record */
   add(datos: any): Observable<SaldoVacaciones | null> {
     return this.http.post<SaldoVacaciones>(ServiciosRhh.RS_SLDV, datos, this.httpOptions).pipe(

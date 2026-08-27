@@ -15,6 +15,7 @@ import {
   Validators,
 } from '@angular/forms';
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
+import { mensajeDeError } from '../../../../shared/utils/mensaje-error.util';
 import { MatDialog } from '@angular/material/dialog';
 import { MatPaginator } from '@angular/material/paginator';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -913,7 +914,7 @@ export class AsientosContablesDinamico implements OnInit {
       },
       error: (error) => {
         this.loading = false;
-        const errorMsg = error?.error?.message || error?.message || 'Error desconocido';
+        const errorMsg = mensajeDeError(error, 'Error desconocido');
         this.snackBar.open(`Error al guardar cabecera: ${errorMsg}`, 'Cerrar', {
           duration: 5000,
           horizontalPosition: 'center',
@@ -1041,7 +1042,7 @@ export class AsientosContablesDinamico implements OnInit {
         this.grabarDetallesDelAsiento(response.codigo);
       },
       error: (error) => {        this.loading = false;
-        const errorMsg = error?.error?.message || error?.message || 'Error desconocido al guardar';
+        const errorMsg = mensajeDeError(error, 'Error desconocido al guardar');
         this.snackBar.open(`❌ Error al crear asiento: ${errorMsg}`, 'Cerrar', {
           duration: 5000,
           horizontalPosition: 'center',
@@ -2383,7 +2384,7 @@ export class AsientosContablesDinamico implements OnInit {
       },
       error: (error: any) => {
         this.loading = false;
-        const errorMsg = error?.error?.message || error?.message || 'Error desconocido';
+        const errorMsg = mensajeDeError(error, 'Error desconocido');
         this.snackBar.open(`❌ Error al confirmar asiento: ${errorMsg}`, 'Cerrar', {
           duration: 5000,
           panelClass: ['error-snackbar']
@@ -2448,7 +2449,7 @@ export class AsientosContablesDinamico implements OnInit {
       },
       error: (error: any) => {
         this.loading = false;
-        const errorMsg = error?.error?.message || error?.message || 'Error desconocido';
+        const errorMsg = mensajeDeError(error, 'Error desconocido');
         this.snackBar.open(`❌ Error al anular asiento: ${errorMsg}`, 'Cerrar', {
           duration: 5000,
           panelClass: ['error-snackbar']
@@ -2499,7 +2500,7 @@ export class AsientosContablesDinamico implements OnInit {
         },
         error: (error: any) => {
           this.loading = false;
-          const errorMsg = error?.error?.message || error?.message || 'Error desconocido';
+          const errorMsg = mensajeDeError(error, 'Error desconocido');
           this.snackBar.open(`❌ Error al copiar asiento: ${errorMsg}`, 'Cerrar', {
             duration: 5000,
             panelClass: ['error-snackbar'],

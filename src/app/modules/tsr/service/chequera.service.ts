@@ -1,8 +1,10 @@
 import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, catchError, of, throwError } from 'rxjs';
+import { mensajeDeError } from '../../../shared/utils/mensaje-error.util';
 import {
   Chequera,
+  ChequeraAnularResponse,
   ChequeraRegistrarRecepcionRequest,
   ChequeraResumen,
   ChequeraSugerirInicio,
@@ -97,8 +99,8 @@ export class ChequeraService {
   }
 
   /** Anula la chequera completa (y con ella todos sus cheques disponibles). `motivo` es texto libre. */
-  anular(id: number, motivo: string, idUsuario: number): Observable<Chequera> {
-    return this.http.post<Chequera>(
+  anular(id: number, motivo: string, idUsuario: number): Observable<ChequeraAnularResponse> {
+    return this.http.post<ChequeraAnularResponse>(
       `${ServiciosTsr.RS_CHQR}/anular/${id}`,
       { motivo, idUsuario },
       this.httpOptions
@@ -107,7 +109,7 @@ export class ChequeraService {
 
   /** Lee `{"mensaje": "..."}` (MensajeErrorJsonFilter) o el mensaje del HttpErrorResponse. */
   static mensajeError(error: any): string {
-    return error?.error?.mensaje ?? error?.message ?? 'Error desconocido';
+    return mensajeDeError(error);
   }
 
   /**

@@ -58,21 +58,28 @@
   margin-bottom: 8px;
 }
 
-.saldo-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-  text-align: center;
-}
-
-.saldo-grid span {
-  display: block;
+.saldo-desglose {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 8px;
   font-size: 12px;
-  color: #64748b;
 }
 
-.saldo-grid strong {
-  font-size: 16px;
+.saldo-desglose th {
+  text-align: left;
+  color: #64748b;
+  font-weight: 600;
+  padding: 4px 8px;
+}
+
+.saldo-desglose td {
+  padding: 4px 8px;
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.saldo-desglose tr.caducado td {
+  color: #94a3b8;
+  text-decoration: line-through;
 }
 
 .aprobacion-info {

@@ -311,7 +311,7 @@
       <mat-card-header>
         <mat-icon class="title-icon">schedule</mat-icon>
         <mat-card-title>Saldo de vacaciones</mat-card-title>
-        <mat-card-subtitle>Consulta por empleado y anio</mat-card-subtitle>
+        <mat-card-subtitle>Consulta por empleado — saldo acumulado, consumo por año más antiguo primero</mat-card-subtitle>
       </mat-card-header>
 
       <mat-card-content>
@@ -330,16 +330,6 @@
           </button>
         </div>
 
-        <mat-form-field appearance="outline" class="w-100">
-          <mat-label>Anio</mat-label>
-          <input
-            matInput
-            type="number"
-            [ngModel]="saldoAnio()"
-            (ngModelChange)="onSaldoAnioChange($event)"
-          />
-        </mat-form-field>
-
         @if (saldoError()) {
           <div class="error-msg">
             <mat-icon>error</mat-icon>
@@ -351,6 +341,10 @@
           <div class="saldo-row">
             <span>Empleado:</span>
             <strong>{{ saldoEmpleadoLabel(saldoEmpleado()) }}</strong>
+          </div>
+          <div class="saldo-row">
+            <span>Disponible (todos los años no caducados):</span>
+            <strong>{{ saldoDisponibleTotal() }} días</strong>
           </div>
         </div>
 

@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, ElementRef, HostListener, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
 import { FormsModule, ReactiveFormsModule, UntypedFormControl } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableDataSource } from '@angular/material/table';
@@ -12,6 +13,7 @@ import { PortapapelesService } from '../../../../../shared/services/portapapeles
 import { RetencionV2Emitir } from '../../../model/retencion-v2-emitir';
 import { DetalleRetencionV2Emitir } from '../../../model/detalle-retencion-v2-emitir';
 import { Titular } from '../../../../tsr/model/titular';
+import { TitularService } from '../../../../tsr/service/titular.service';
 import { Facturador } from '../../../model/facturador';
 import { PuntoEmision } from '../../../model/puntos-emision';
 import { DetalleSri } from '../../../model/detalle-sri';
@@ -54,6 +56,18 @@ export class Retencionesv2Component implements OnInit {
   private detalleSriService = inject(DetalleSriService);
   private funcionesDatosS = inject(FuncionesDatosService);
   private jasperReportes = inject(JasperReportesService);
+  private titularService = inject(TitularService);
+  private route = inject(ActivatedRoute);
+
+  /**
+   * Sustento precargado desde una liquidación de compra (botón "Emitir
+   * retención" en emitir/liquidaciones): codDocSustento=03, numDocSustento,
+   * fechaEmisionDocSustento (yyyy-MM-dd) e idProveedor en los query params.
+   * '03' no está en `tipoCompraDelDocumento()` (no hay tabla CXP equivalente
+   * para liquidación), así que estos campos se precargan directo, sin pasar
+   * por `buscarDocumentoRetenido()`.
+   */
+  private prefillSustento: { codDocSustento: string; numDocSustento: string; fechaEmisionDocSustento: string; idProveedor: string } | null = null;
 
   cargando = signal(false);
   guardando = signal(false);
@@ -114,11 +128,59 @@ export class Retencionesv2Component implements OnInit {
   onResize(): void { this.responsive(window.innerWidth); }
 
   ngOnInit(): void {
+    this.leerSustentoDeQueryParams();
     this.cargarSesion();
     this.setFecha();
     this.responsive(window.innerWidth);
     this.cargarCatalogos();
     this.cargarFacturadorYPtoEmision();
+    if (this.prefillSustento?.idProveedor) {
+      this.cargarProveedorPrefill(this.prefillSustento.idProveedor);
+    }
+  }
+
+  private leerSustentoDeQueryParams(): void {
+    const params = this.route.snapshot.queryParamMap;
+    const codDocSustento = params.get('codDocSustento');
+    const numDocSustento = params.get('numDocSustento');
+    if (!codDocSustento || !numDocSustento) return;
+    this.prefillSustento = {
+      codDocSustento,
+      numDocSustento,
+      fechaEmisionDocSustento: params.get('fechaEmisionDocSustento') || '',
+      idProveedor: params.get('idProveedor') || '',
+    };
+  }
+
+  private cargarProveedorPrefill(idProveedor: string): void {
+    this.titularService.getById(idProveedor).subscribe({
+      next: (proveedor) => {
+        if (proveedor) this.personaSeleccionada.set(proveedor);
+      },
+    });
+  }
+
+  /** Aplica el sustento precargado una vez que `tablaTiposDoc` ya trajo el código '03'. */
+  private aplicarSustentoPrefill(): void {
+    const datos = this.prefillSustento;
+    if (!datos) return;
+    const tipoDoc = this.tablaTiposDoc.find((t) => t.codigo === datos.codDocSustento);
+    if (tipoDoc) this.idDocumento = tipoDoc;
+    this.numDocReten = datos.numDocSustento;
+    if (datos.fechaEmisionDocSustento) {
+      const [anio, mes, dia] = datos.fechaEmisionDocSustento.split('-').map(Number);
+      if (anio && mes && dia) {
+        const fecha = new Date(anio, mes - 1, dia);
+        this.fechaEmiDocControl.setValue(fecha, { emitEvent: false });
+        setTimeout(() => {
+          if (this.fechaEmiDocV2InputRef?.nativeElement) {
+            this.fechaEmiDocV2InputRef.nativeElement.value =
+              this.funcionesDatosS.formatoFecha(fecha, FuncionesDatosService.SOLO_FECHA) || '';
+          }
+        });
+      }
+    }
+    this.prefillSustento = null;
   }
 
   get accionPrincipal(): string {
@@ -633,6 +695,7 @@ export class Retencionesv2Component implements OnInit {
         if (this.tablaImpuestos.length) { this.idImpuesto = this.tablaImpuestos[0]; this.onCambioImpuesto(); }
         const fpDefault = this.tablaFormasPago.find((x) => x.codigo === '20');
         if (fpDefault) this.idFormaPago = fpDefault;
+        this.aplicarSustentoPrefill();
       },
     });
   }

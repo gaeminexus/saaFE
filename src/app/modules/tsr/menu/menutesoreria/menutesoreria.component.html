@@ -1,1 +1,16 @@
-<app-side-menu-custom [title]="titulo" [navItems]="navItems"> </app-side-menu-custom>
+<app-side-menu-custom [title]="titulo" [navItems]="navItems">
+  @if (cajasEnAlerta().length > 0) {
+    <div top-banner class="alertas-caja-chica">
+      @for (c of cajasEnAlerta(); track c.idCaja) {
+        <a
+          class="chip-alerta"
+          routerLink="/menutesoreria/procesos/caja-chica/reposicion"
+          matTooltip="Saldo disponible: {{ c.saldo | number: '1.2-2' }} de {{ c.fondo | number: '1.2-2' }}"
+        >
+          <mat-icon>warning</mat-icon>
+          <span>Caja chica {{ c.nombre }} al {{ c.porcentaje | number: '1.0-0' }}% — reponer</span>
+        </a>
+      }
+    </div>
+  }
+</app-side-menu-custom>

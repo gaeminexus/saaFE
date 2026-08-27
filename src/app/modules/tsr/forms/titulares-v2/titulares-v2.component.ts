@@ -43,6 +43,7 @@ import { CuentaBancariaTitularService } from '../../service/cuenta-bancaria-titu
 import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoDatosBusqueda as TipoDatos } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
+import { mensajeDeError } from '../../../../shared/utils/mensaje-error.util';
 
 type Vista = 'lista' | 'editar';
 
@@ -527,9 +528,39 @@ export class TitularesV2Component implements OnInit {
         this.estadoGuardado.set('guardado');
       },
       error: (err) => {
-        this.snackBar.open('Error al guardar', 'Cerrar', { duration: 3000 });
         this.estadoGuardado.set('error');
+
+        // El backend usa MensajeErrorJsonFilter: en un 409 por identificación
+        // duplicada, err (ya extraído por TitularService.handleError) trae
+        // { mensaje, titularExistente: { codigo, identificacion, nombre } }.
+        const titularExistente = err?.titularExistente ?? err?.error?.titularExistente;
+        if (titularExistente?.codigo) {
+          const mensaje = mensajeDeError(err, 'Ya existe un titular con esa identificación.');
+          const ref = this.snackBar.open(
+            `${mensaje} Puede usar el registro existente y agregarle el rol que necesite.`,
+            'Usar el titular existente',
+            { duration: 15000 }
+          );
+          ref.onAction().subscribe(() => this.usarTitularExistente(titularExistente.codigo));
+          return;
+        }
+
+        this.snackBar.open(mensajeDeError(err, 'Error al guardar'), 'Cerrar', { duration: 3000 });
       },
+    });
+  }
+
+  /** Carga el titular duplicado que devolvió el backend y abre su edición, en vez de crear otro registro. */
+  private usarTitularExistente(codigo: number): void {
+    this.titularService.getById(String(codigo)).subscribe({
+      next: (titular) => {
+        if (titular) {
+          this.abrirEdicion(titular);
+        } else {
+          this.snackBar.open('No se pudo cargar el titular existente', 'Cerrar', { duration: 3000 });
+        }
+      },
+      error: () => this.snackBar.open('No se pudo cargar el titular existente', 'Cerrar', { duration: 3000 }),
     });
   }
 

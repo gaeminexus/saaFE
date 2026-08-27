@@ -8,6 +8,7 @@ import { MatSort } from '@angular/material/sort';
 import { MatTableDataSource } from '@angular/material/table';
 import { ConfirmDialogComponent } from '../../../../../shared/basics/confirm-dialog/confirm-dialog.component';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
 import { EstadoPeriodo, Periodo } from '../../../model/periodo';
 import { PeriodoService } from '../../../service/periodo.service';
 
@@ -445,7 +446,7 @@ export class PeriodoContableComponent implements OnInit {
             }, 300);
           },
           error: (error) => {
-            const errorMsg = error?.error || error?.message || 'Error al eliminar período';
+            const errorMsg = mensajeDeError(error, 'Error al eliminar período');
 
             // Delay también para errores
             setTimeout(() => {

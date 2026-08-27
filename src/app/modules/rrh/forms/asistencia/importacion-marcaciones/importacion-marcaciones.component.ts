@@ -17,6 +17,7 @@ import { FormatoMarcacionService } from '../../../service/formato-marcacion.serv
 import { criteriosPorEmpresa } from '../../parametrizacion/utiles-parametrizacion';
 import { MotivoDialogComponent } from '../../procesos/periodo-nomina/motivo-dialog.component';
 import { opcionesAviso } from '../../comunes/avisos';
+import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
 
 /**
  * Importación del archivo del reloj biométrico (RHH.CRMR).
@@ -120,7 +121,7 @@ export class ImportacionMarcacionesComponent implements OnInit {
       error: (err) => {
         this.ocupado.set(false);
         this.previsualizacion.set(null);
-        this.avisar(this.mensajeDeError(err, 'No se pudo previsualizar el archivo.'), true);
+        this.avisar(mensajeDeError(err, 'No se pudo previsualizar el archivo.'), true);
       },
     });
   }
@@ -139,7 +140,7 @@ export class ImportacionMarcacionesComponent implements OnInit {
       },
       error: (err) => {
         this.ocupado.set(false);
-        this.avisar(this.mensajeDeError(err, 'No se pudo confirmar la importación.'), true);
+        this.avisar(mensajeDeError(err, 'No se pudo confirmar la importación.'), true);
       },
     });
   }
@@ -167,7 +168,7 @@ export class ImportacionMarcacionesComponent implements OnInit {
           },
           error: (err) => {
             this.ocupado.set(false);
-            this.avisar(this.mensajeDeError(err, 'No se pudo anular la carga.'), true);
+            this.avisar(mensajeDeError(err, 'No se pudo anular la carga.'), true);
           },
         });
       });
@@ -176,11 +177,6 @@ export class ImportacionMarcacionesComponent implements OnInit {
   etiquetaFormato(formato: any): string {
     if (!formato) return '—';
     return formato.nombre ?? `#${formato.codigo}`;
-  }
-
-  private mensajeDeError(error: any, generico: string): string {
-    if (typeof error === 'string' && error.trim()) return error;
-    return error?.mensaje || error?.message || generico;
   }
 
   private avisar(mensaje: string, esError = false): void {

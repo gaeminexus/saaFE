@@ -146,7 +146,7 @@ export class BandejaElectronicaComponent implements OnInit {
         },
         error: (err) => {
           this.procesando.set(false);
-          this.mostrarError('Error al procesar el TXT: ' + (err?.message || err || 'Error desconocido'));
+          this.mostrarError('Error al procesar el TXT: ' + this.extraerMensajeError(err));
         },
       });
     };
@@ -219,7 +219,7 @@ export class BandejaElectronicaComponent implements OnInit {
           this.mostrarExito('XML subido correctamente');
           this.recargarDetalle();
         },
-        error: (err) => { this.procesando.set(false); this.mostrarError('Error al subir el XML: ' + (err?.message || err)); },
+        error: (err) => { this.procesando.set(false); this.mostrarError('Error al subir el XML: ' + this.extraerMensajeError(err)); },
       });
     };
     reader.readAsText(file, 'UTF-8');
@@ -249,7 +249,7 @@ export class BandejaElectronicaComponent implements OnInit {
           this.recargarDetalle();
         }
       },
-      error: (err) => { this.procesando.set(false); this.mostrarError('Error al registrar: ' + (err?.message || err)); },
+      error: (err) => { this.procesando.set(false); this.mostrarError('Error al registrar: ' + this.extraerMensajeError(err)); },
     });
   }
 
@@ -272,7 +272,7 @@ export class BandejaElectronicaComponent implements OnInit {
         this.mostrarExito(`Registrado: ${resp?.mensaje || 'OK'}`);
         this.recargarDetalle();
       },
-      error: (err) => { this.procesando.set(false); this.mostrarError('Error al registrar: ' + (err?.message || err)); },
+      error: (err) => { this.procesando.set(false); this.mostrarError('Error al registrar: ' + this.extraerMensajeError(err)); },
     });
   }
 
@@ -301,7 +301,7 @@ export class BandejaElectronicaComponent implements OnInit {
       this.procesando.set(true);
       this.processService.resolverNovedad(idDocumentoCxp, { accion: 'MANTENER', idUsuario: this.idUsuario }).subscribe({
         next: () => { this.procesando.set(false); this.mostrarExito('Documento mantenido sin cambios'); this.recargarDetalle(); },
-        error: (err) => { this.procesando.set(false); this.mostrarError(err?.message || 'Error al resolver'); },
+        error: (err) => { this.procesando.set(false); this.mostrarError(this.extraerMensajeError(err) || 'Error al resolver'); },
       });
     } else if (xmlFile) {
       this.procesando.set(true);
@@ -310,7 +310,7 @@ export class BandejaElectronicaComponent implements OnInit {
         const contenidoXml = (e.target?.result as string) || '';
         this.processService.resolverNovedad(idDocumentoCxp, { accion: 'REEMPLAZAR', contenidoXml, idUsuario: this.idUsuario }).subscribe({
           next: (resp) => { this.procesando.set(false); this.mostrarExito(resp?.mensaje || 'Reemplazado correctamente'); this.recargarDetalle(); },
-          error: (err) => { this.procesando.set(false); this.mostrarError(err?.message || 'Error al reemplazar'); },
+          error: (err) => { this.procesando.set(false); this.mostrarError(this.extraerMensajeError(err)); },
         });
       };
       reader.readAsText(xmlFile, 'UTF-8');
@@ -344,7 +344,7 @@ export class BandejaElectronicaComponent implements OnInit {
     this.procesando.set(true);
     this.processService.revertir(detalle.documento.id, this.idUsuario).subscribe({
       next: () => { this.procesando.set(false); this.mostrarExito('Documento revertido'); this.recargarDetalle(); },
-      error: (err) => { this.procesando.set(false); this.mostrarError('Error al revertir: ' + (err?.message || err)); },
+      error: (err) => { this.procesando.set(false); this.mostrarError('Error al revertir: ' + this.extraerMensajeError(err)); },
     });
   }
 

@@ -9,6 +9,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 
+import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
 import { CentroCosto } from '../../../model/centro-costo';
 import { CentroCostoService } from '../../../service/centro-costo.service';
 
@@ -184,7 +185,7 @@ export class CentroArbolFormComponent implements OnInit {
         error: (error: any) => {
           this.loading = false;
           console.error('[CentroArbolForm] Error al actualizar:', error);
-          const errorMsg = error?.error?.message || error?.message || '';
+          const errorMsg = mensajeDeError(error, '');
           this.error = errorMsg || 'Error al actualizar el centro de costo';
         },
       });
@@ -242,7 +243,7 @@ export class CentroArbolFormComponent implements OnInit {
           console.error('[CentroArbolForm] Error al crear:', error);
 
           // Detectar error de duplicado
-          const errorMsg = error?.error?.message || error?.message || '';
+          const errorMsg = mensajeDeError(error, '');
           if (errorMsg.includes('ORA-00001') || errorMsg.includes('restricción única')) {
             this.error = `El número ${raw.numero} ya existe para este nivel. Por favor, use un número diferente.`;
           } else {

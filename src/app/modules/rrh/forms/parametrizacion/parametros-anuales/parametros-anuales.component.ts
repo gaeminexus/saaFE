@@ -15,6 +15,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { usuarioSesion } from '../../../../../shared/services/usuario-sesion';
+import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
 import { ParametroNomina } from '../../../model/parametro-nomina';
 import { ParametroNominaService } from '../../../service/parametro-nomina.service';
 import {
@@ -170,8 +171,7 @@ export class ParametrosAnualesComponent implements OnInit {
   }
 
   private mensajeDeError(error: any): string {
-    if (typeof error === 'string') return error;
-    return error?.message || 'No se pudieron guardar los parámetros';
+    return mensajeDeError(error, 'No se pudieron guardar los parámetros');
   }
 
   private avisar(mensaje: string, esError = false): void {

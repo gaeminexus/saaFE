@@ -10,6 +10,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { usuarioSesion } from '../../../../../shared/services/usuario-sesion';
+import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
 import { ConfiguracionNomina } from '../../../model/configuracion-nomina';
 import { ConfiguracionNominaService } from '../../../service/configuracion-nomina.service';
 import { criteriosPorEmpresa, referenciaEmpresa } from '../utiles-parametrizacion';
@@ -146,7 +147,7 @@ export class ConfiguracionNominaComponent implements OnInit {
       },
       error: (err) => {
         this.guardando.set(false);
-        this.avisar(typeof err === 'string' ? err : err?.message || 'No se pudo guardar', true);
+        this.avisar(mensajeDeError(err, 'No se pudo guardar'), true);
       },
     });
   }

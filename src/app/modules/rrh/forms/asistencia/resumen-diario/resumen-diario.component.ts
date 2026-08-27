@@ -17,6 +17,7 @@ import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/ti
 import { DetalleRubroService } from '../../../../../shared/services/detalle-rubro.service';
 import { ExportService } from '../../../../../shared/services/export.service';
 import { usuarioSesion } from '../../../../../shared/services/usuario-sesion';
+import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
 import { Empleado } from '../../../model/empleado';
 import { ResumenNomina } from '../../../model/resumen-nomina';
 import { RubrosRrh } from '../../../model/rubros-rrh';
@@ -201,7 +202,7 @@ export class ResumenDiarioComponent implements OnInit {
         this.consultar();
       },
       error: (err) =>
-        this.avisar(typeof err === 'string' ? err : err?.message || 'No se pudo guardar', true),
+        this.avisar(mensajeDeError(err, 'No se pudo guardar'), true),
     });
   }
 

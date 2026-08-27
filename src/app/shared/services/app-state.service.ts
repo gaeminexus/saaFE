@@ -267,6 +267,17 @@ export class AppStateService {
   }
 
   /**
+   * Id del usuario actual, listo para mandar como `idUsuario` en un payload.
+   * Respaldo en `sessionStorage` si el usuario todavía no cargó en memoria.
+   * OJO con el orden: `Number(sessionStorage.getItem('idUsuario'))` da `NaN`
+   * cuando la clave no existe (a diferencia de `Number(null)`, que da `0`), y
+   * `??` no atrapa `NaN` — por eso el fallback final es `|| 0`, no `?? 0`.
+   */
+  getIdUsuario(): number {
+    return (this.getUsuario()?.codigo ?? Number(sessionStorage.getItem('idUsuario'))) || 0;
+  }
+
+  /**
    * Obtiene los detalles de rubro de forma síncrona
    * @returns Array de DetalleRubro o array vacío si no están cargados
    */

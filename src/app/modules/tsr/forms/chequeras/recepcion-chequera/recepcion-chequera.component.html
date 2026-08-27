@@ -88,12 +88,12 @@
         <div class="row">
           <mat-form-field appearance="outline">
             <mat-label>Fecha de entrega</mat-label>
-            <input matInput type="date" [(ngModel)]="fechaEntrega" />
+            <input matInput type="date" [ngModel]="fechaEntrega()" (ngModelChange)="fechaEntrega.set($event)" />
           </mat-form-field>
 
           <mat-form-field appearance="outline">
             <mat-label>Hora de entrega</mat-label>
-            <input matInput type="time" [(ngModel)]="horaEntrega" />
+            <input matInput type="time" [ngModel]="horaEntrega()" (ngModelChange)="horaEntrega.set($event)" />
           </mat-form-field>
         </div>
 

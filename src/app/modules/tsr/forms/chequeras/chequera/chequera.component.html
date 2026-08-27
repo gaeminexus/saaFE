@@ -109,7 +109,7 @@
               mat-icon-button
               color="warn"
               (click)="anularChequera(row); $event.stopPropagation()"
-              [disabled]="!chequeraEstaActiva(row)"
+              [disabled]="!chequeraEstaActiva(row) || loading()"
               matTooltip="Anular chequera"
             >
               <mat-icon>cancel</mat-icon>
@@ -217,7 +217,7 @@
                 mat-icon-button
                 color="warn"
                 (click)="anularCheque(row)"
-                [disabled]="!chequeEstaActivo(row)"
+                [disabled]="!chequeEstaActivo(row) || loading()"
                 matTooltip="Anular cheque"
               >
                 <mat-icon>cancel</mat-icon>

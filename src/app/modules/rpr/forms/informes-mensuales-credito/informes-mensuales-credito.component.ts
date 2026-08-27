@@ -5,6 +5,7 @@ import { LOGO_ASOPREP_BASE64 } from './logo-asoprep.const';
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
 import { UsuarioService } from '../../../../shared/services/usuario.service';
 import { ExportService } from '../../../../shared/services/export.service';
+import { mensajeDeError } from '../../../../shared/utils/mensaje-error.util';
 import { EjccService, EjecutarReporteCarteraRequest } from '../../service/ejcc.service';
 import { CprmService } from '../../service/cprm.service';
 import { CjbmService } from '../../service/cjbm.service';
@@ -210,7 +211,7 @@ export class InformesMensualesCreditoComponent implements OnInit {
       },
       error: (err: any) => {
         this.consultando.set(false);
-        this.errorMsg.set('Error al consultar: ' + (err?.message ?? 'Error desconocido'));
+        this.errorMsg.set('Error al consultar: ' + mensajeDeError(err));
       },
     });
   }
@@ -250,7 +251,7 @@ export class InformesMensualesCreditoComponent implements OnInit {
       },
       error: (err: any) => {
         this.ejecutando.set(false);
-        this.errorMsg.set('Error al generar: ' + (err?.message ?? 'Error desconocido'));
+        this.errorMsg.set('Error al generar: ' + mensajeDeError(err));
       },
     });
   }
@@ -272,7 +273,7 @@ export class InformesMensualesCreditoComponent implements OnInit {
       },
       error: (err: any) => {
         this.eliminando.set(false);
-        this.errorMsg.set('Error al eliminar la ejecución: ' + (err?.message ?? 'Error desconocido'));
+        this.errorMsg.set('Error al eliminar la ejecución: ' + mensajeDeError(err));
       },
     });
   }
@@ -317,7 +318,7 @@ export class InformesMensualesCreditoComponent implements OnInit {
       },
       error: (err: any) => {
         this.cargandoReg.set(false);
-        this.errorRegistros.set('Error al cargar: ' + (err?.message ?? 'Error desconocido'));
+        this.errorRegistros.set('Error al cargar: ' + mensajeDeError(err));
       },
     });
   }

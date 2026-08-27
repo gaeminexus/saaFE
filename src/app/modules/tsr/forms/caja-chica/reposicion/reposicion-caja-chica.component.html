@@ -1,0 +1,169 @@
+<div class="reposicion-page">
+  <div class="page-header">
+    <div class="icon-wrap"><mat-icon>savings</mat-icon></div>
+    <div class="title-wrap">
+      <h2 class="title">Reposición de Caja Chica</h2>
+      <p class="subtitle">Repone el fondo de una caja, o hace su primer fondeo</p>
+    </div>
+  </div>
+
+  <div class="form-card">
+    <header class="panel-header"><h3>Caja</h3></header>
+
+    <div class="row">
+      <mat-form-field appearance="outline">
+        <mat-label>Caja chica</mat-label>
+        <mat-select [(ngModel)]="cajaSeleccionada" name="caja" (ngModelChange)="onCambioCaja()">
+          @for (c of cajas(); track c.codigo) {
+            <mat-option [value]="c">{{ c.nombre }}</mat-option>
+          }
+        </mat-select>
+        @if (cargandoCajas()) {
+          <mat-hint>Cargando cajas...</mat-hint>
+        }
+      </mat-form-field>
+    </div>
+
+    @if (cargandoSaldo()) {
+      <div style="text-align: center; padding: 12px">
+        <mat-spinner diameter="28"></mat-spinner>
+      </div>
+    } @else if (saldo(); as s) {
+      <div class="resumen-grid">
+        <div class="resumen-item">
+          <span class="label">Fondo</span>
+          <span class="value">{{ s.fondo | number: '1.2-2' }}</span>
+        </div>
+        <div class="resumen-item">
+          <span class="label">Saldo actual</span>
+          <span class="value">{{ s.saldo | number: '1.2-2' }}</span>
+        </div>
+        <div class="resumen-item destacado">
+          <span class="label">Sugerido a reponer</span>
+          <span class="value">{{ s.montoSugeridoReposicion | number: '1.2-2' }}</span>
+        </div>
+      </div>
+    }
+  </div>
+
+  @if (cajaSeleccionada && saldo()) {
+    <div class="form-card">
+      <header class="panel-header"><h3>{{ esApertura ? 'Apertura' : 'Reposición' }}</h3></header>
+
+      <div class="row">
+        <mat-form-field appearance="outline">
+          <mat-label>Valor a {{ esApertura ? 'aperturar' : 'reponer' }}</mat-label>
+          <input matInput type="text" [(ngModel)]="valor" (blur)="ajustarAlSugerido()" name="valor" />
+          <span matTextSuffix>$</span>
+          @if (excedeSugerido) {
+            <mat-hint class="hint-error">No puede superar el sugerido ({{ saldo()?.montoSugeridoReposicion | number: '1.2-2' }})</mat-hint>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Fecha</mat-label>
+          <input matInput [matDatepicker]="pickerFecha" [(ngModel)]="fecha" name="fecha" />
+          <mat-datepicker-toggle matSuffix [for]="pickerFecha"></mat-datepicker-toggle>
+          <mat-datepicker #pickerFecha></mat-datepicker>
+        </mat-form-field>
+      </div>
+
+      <div class="row">
+        <mat-form-field appearance="outline">
+          <mat-label>Cuenta bancaria de origen</mat-label>
+          <mat-select [(ngModel)]="cuentaOrigen" name="cuentaOrigen" (ngModelChange)="onCambioCuentaOrigen()">
+            @for (c of cuentasBancarias(); track c.codigo) {
+              <mat-option [value]="c">{{ c.banco?.nombre }} — {{ c.numeroCuenta }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Descripción</mat-label>
+          <input matInput [(ngModel)]="descripcion" name="descripcion" />
+        </mat-form-field>
+      </div>
+
+      <div class="fila-check">
+        <label class="radio-label">Forma de pago</label>
+        <mat-radio-group [ngModel]="regFormaPago()" name="regFormaPago"
+                          (ngModelChange)="regFormaPago.set($event); onCambioFormaPago()">
+          <mat-radio-button [value]="FormaPagoAplicacion.DEBITO_AUTOMATICO">Débito automático</mat-radio-button>
+          @if (cuentaOrigenManejaChequera) {
+            <mat-radio-button [value]="FormaPagoAplicacion.CHEQUE">Cheque</mat-radio-button>
+          }
+        </mat-radio-group>
+      </div>
+
+      @if (regFormaPago() === FormaPagoAplicacion.CHEQUE) {
+        @if (regChequeError()) {
+          <div class="mensaje-error">
+            <mat-icon>error_outline</mat-icon>
+            <span>{{ regChequeError() }}</span>
+          </div>
+        } @else if (regChequeSiguiente() != null) {
+          <div class="mensaje-info">
+            <mat-icon>receipt_long</mat-icon>
+            <span>Se girará el cheque N° {{ regChequeSiguiente() }}.</span>
+          </div>
+        }
+      } @else {
+        <div class="row">
+          <mat-form-field appearance="outline">
+            <mat-label>Referencia</mat-label>
+            <input matInput [(ngModel)]="referencia" name="referencia" placeholder="N° de transacción o convenio" />
+          </mat-form-field>
+        </div>
+      }
+
+      @if (regFormaPago() === FormaPagoAplicacion.DEBITO_AUTOMATICO) {
+        <div class="mensaje-info">
+          <mat-icon>info</mat-icon>
+          <span>El pago se confirma y contabiliza de inmediato.</span>
+        </div>
+      }
+
+      <div class="form-actions">
+        <button mat-raised-button color="primary" (click)="guardar()" [disabled]="!puedeGuardar">
+          @if (procesando()) {
+            <mat-spinner diameter="18"></mat-spinner>
+          } @else {
+            <mat-icon>{{ esApertura ? 'lock_open' : 'savings' }}</mat-icon>
+          }
+          {{ esApertura ? 'Aperturar' : 'Reponer' }}
+        </button>
+        <span class="msg err" *ngIf="error()">{{ error() }}</span>
+      </div>
+    </div>
+  }
+
+  @if (resultado(); as r) {
+    <div class="table-card resumen-card">
+      <header class="panel-header"><h3>Resultado</h3></header>
+      <div class="resumen-grid">
+        <div class="resumen-item">
+          <span class="label">Movimiento</span>
+          <span class="value">#{{ r.idMovimiento }}</span>
+        </div>
+        @if (r.idPago != null) {
+          <div class="resumen-item">
+            <span class="label">Pago</span>
+            <span class="value">#{{ r.idPago }}</span>
+          </div>
+        }
+        @if (r.estadoPago != null) {
+          <div class="resumen-item">
+            <span class="label">Estado del pago</span>
+            <span class="value">{{ r.estadoPago }}</span>
+          </div>
+        }
+        @if (r.numeroCheque != null) {
+          <div class="resumen-item">
+            <span class="label">Cheque</span>
+            <span class="value">N° {{ r.numeroCheque }}</span>
+          </div>
+        }
+      </div>
+    </div>
+  }
+</div>

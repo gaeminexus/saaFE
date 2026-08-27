@@ -1,6 +1,7 @@
 import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, catchError, throwError } from 'rxjs';
+import { mensajeDeError } from '../../../shared/utils/mensaje-error.util';
 import { ServiciosTsr } from './ws-tsr';
 
 export interface AnticipoRequest {
@@ -235,17 +236,9 @@ export class AnticipoService {
     ).pipe(catchError(this.handleError));
   }
   private handleError(error: HttpErrorResponse): Observable<never> {
-    let mensaje = 'Error al procesar el anticipo';
-    if (error.error) {
-      if (typeof error.error === 'string') {
-        mensaje = error.error;
-      } else if (error.error.error) {
-        mensaje = error.error.error;
-      } else if (error.error.message) {
-        mensaje = error.error.message;
-      }
-    }
-    return throwError(() => new Error(mensaje));
+    // OJO: nunca leía `.mensaje` (lo que envía MensajeErrorJsonFilter), solo
+    // `.error`/`.message` — cualquier error real del backend caía al genérico.
+    return throwError(() => new Error(mensajeDeError(error, 'Error al procesar el anticipo')));
   }
 }
 

@@ -8,6 +8,7 @@ import { Observable } from 'rxjs';
 import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
+import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { usuarioSesion } from '../../../../../shared/services/usuario-sesion';
@@ -448,16 +449,7 @@ export class PermisosLicenciasFormComponent implements OnInit {
   }
 
   private extractError(error: any): string | null {
-    if (typeof error === 'string') {
-      return error;
-    }
-    if (error?.message) {
-      return error.message;
-    }
-    if (error?.error?.message) {
-      return error.error.message;
-    }
-    return null;
+    return mensajeDeError(error, '') || null;
   }
 
   private showSuccess(message: string): void {

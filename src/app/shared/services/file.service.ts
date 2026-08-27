@@ -4,6 +4,7 @@ import { Observable, throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { ServiciosShare } from './ws-share';
 import { ServiciosCrd } from '../../modules/crd/service/ws-crd';
+import { mensajeDeError } from '../utils/mensaje-error.util';
 import { DetallePrestamo } from '../../modules/crd/model/detalle-prestamo';
 
 // Interfaces para las respuestas del servidor
@@ -335,7 +336,7 @@ export class FileService {
     } else {
       // Error del lado del servidor
       if (error.error && typeof error.error === 'object') {
-        errorMessage = error.error.message || `Error ${error.status}: ${error.statusText}`;
+        errorMessage = mensajeDeError(error, `Error ${error.status}: ${error.statusText}`);
       } else if (typeof error.error === 'string') {
         errorMessage = error.error;
       } else {

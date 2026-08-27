@@ -1,0 +1,271 @@
+<div class="cierre-page">
+  <div class="page-header">
+    <div class="icon-wrap"><mat-icon>fact_check</mat-icon></div>
+    <div class="title-wrap">
+      <h2 class="title">Cierre de Caja Chica</h2>
+      <p class="subtitle">Prepare el arqueo, compare contra lo contado y confirme el cierre</p>
+    </div>
+  </div>
+
+  <div class="form-card">
+    <header class="panel-header"><h3>Caja chica</h3></header>
+    <div class="row">
+      <mat-form-field appearance="outline">
+        <mat-label>Caja</mat-label>
+        <mat-select
+          [value]="selectedCajaId()"
+          [disabled]="cargandoCajas()"
+          (selectionChange)="onCajaChange($event.value)"
+        >
+          <mat-option [value]="null">Seleccione ...</mat-option>
+          @for (caja of cajas(); track caja.codigo) {
+            <mat-option [value]="caja.codigo">{{ caja.nombre }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
+    @if (errorMsg()) {
+      <div class="msg err">{{ errorMsg() }}</div>
+    }
+    @if (successMsg()) {
+      <div class="msg ok">{{ successMsg() }}</div>
+    }
+  </div>
+
+  @if (selectedCajaId()) {
+    <div class="table-card">
+      <header class="panel-header">
+        <h3>Histórico de cierres</h3>
+        <button mat-raised-button color="primary" (click)="abrirNuevo()" [disabled]="mostrarNuevo()">
+          <mat-icon>add</mat-icon>
+          Nuevo cierre
+        </button>
+      </header>
+
+      @if (cargandoHistorico()) {
+        <div style="text-align: center; padding: 16px">
+          <mat-spinner diameter="32"></mat-spinner>
+        </div>
+      } @else if (cierres().length === 0) {
+        <div class="sin-datos">Esta caja todavía no tiene cierres registrados.</div>
+      } @else {
+        <div class="table-scroll">
+          <table class="historico-table">
+            <thead>
+              <tr>
+                <th></th>
+                <th>Fecha</th>
+                <th>Saldo libros</th>
+                <th>Saldo físico</th>
+                <th>Diferencia</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (c of cierres(); track c.codigo) {
+                <tr>
+                  <td>
+                    <button mat-icon-button (click)="toggleMovimientos(c)" matTooltip="Ver movimientos">
+                      <mat-icon>{{ verMovimientosDe() === c.codigo ? 'expand_less' : 'expand_more' }}</mat-icon>
+                    </button>
+                  </td>
+                  <td>{{ formatearFecha(c.fecha) }}</td>
+                  <td class="col-monto">{{ formatearMonto(c.saldoLibros) }}</td>
+                  <td class="col-monto">{{ c.saldoFisico != null ? formatearMonto(c.saldoFisico) : '—' }}</td>
+                  <td class="col-monto" [class.monto-resta]="(c.diferencia || 0) < 0">
+                    {{ c.diferencia != null ? formatearMonto(c.diferencia) : '—' }}
+                  </td>
+                  <td>
+                    <span class="badge" [ngClass]="claseEstadoCierre(c)">{{ etiquetaEstadoCierre(c) }}</span>
+                  </td>
+                  <td>
+                    @if (puedeAnular(c)) {
+                      <button
+                        mat-icon-button
+                        color="warn"
+                        (click)="anularCierre(c)"
+                        [disabled]="anulando() === c.codigo"
+                        matTooltip="Anular cierre"
+                      >
+                        @if (anulando() === c.codigo) {
+                          <mat-spinner diameter="18"></mat-spinner>
+                        } @else {
+                          <mat-icon>cancel</mat-icon>
+                        }
+                      </button>
+                    }
+                  </td>
+                </tr>
+                @if (verMovimientosDe() === c.codigo) {
+                  <tr class="fila-detalle">
+                    <td [attr.colspan]="7">
+                      @if (cargandoMovimientosDe() === c.codigo) {
+                        <div style="text-align: center; padding: 8px">
+                          <mat-spinner diameter="24"></mat-spinner>
+                        </div>
+                      } @else if (movimientosDe(c).length === 0) {
+                        <div class="sin-datos">Este cierre no tiene movimientos asociados.</div>
+                      } @else {
+                        <table class="movimientos-table">
+                          <thead>
+                            <tr>
+                              <th>Fecha</th>
+                              <th>Tipo</th>
+                              <th>Descripción</th>
+                              <th>Valor</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            @for (m of movimientosDe(c); track m.codigo) {
+                              <tr>
+                                <td>{{ formatearFecha(m.fecha) }}</td>
+                                <td>
+                                  <mat-icon class="tipo-icono">{{ iconoTipoMovimiento(m) }}</mat-icon>
+                                  {{ etiquetaTipoMovimiento(m) }}
+                                </td>
+                                <td>{{ m.descripcion || '—' }}</td>
+                                <td class="col-monto">{{ formatearMonto(m.valor) }}</td>
+                              </tr>
+                            }
+                          </tbody>
+                        </table>
+                      }
+                    </td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  }
+
+  @if (mostrarNuevo()) {
+    <div class="form-card nuevo-cierre">
+      <header class="panel-header"><h3>Nuevo cierre</h3></header>
+
+      @if (!cierreActual()) {
+        <div class="row">
+          <mat-form-field appearance="outline">
+            <mat-label>Fecha de cierre</mat-label>
+            <input matInput type="date" [ngModel]="fechaCierre()" (ngModelChange)="fechaCierre.set($event)" />
+          </mat-form-field>
+        </div>
+        <div class="form-actions">
+          <button
+            mat-raised-button
+            color="primary"
+            (click)="prepararCierre()"
+            [disabled]="!fechaCierre() || preparando()"
+          >
+            @if (preparando()) {
+              <mat-spinner diameter="18" style="display:inline-block;margin-right:6px"></mat-spinner>
+            } @else {
+              <mat-icon>calculate</mat-icon>
+            }
+            Preparar cierre
+          </button>
+          <button mat-stroked-button color="warn" (click)="cancelarNuevo()">
+            <mat-icon>cancel</mat-icon>
+            Cancelar
+          </button>
+        </div>
+      } @else {
+        <div class="resumen-grid">
+          <div class="resumen-item"><span class="label">Período</span><span class="value">{{ formatearFecha(cierreActual()!.fecha) }}</span></div>
+          <div class="resumen-item"><span class="label">Saldo inicial</span><span class="value">{{ formatearMonto(cierreActual()!.saldoInicial) }}</span></div>
+          <div class="resumen-item"><span class="label">Total gastos</span><span class="value">{{ formatearMonto(cierreActual()!.totalGastos) }}</span></div>
+          <div class="resumen-item"><span class="label">Total reposiciones</span><span class="value">{{ formatearMonto(cierreActual()!.totalReposiciones) }}</span></div>
+          <div class="resumen-item destacado"><span class="label">Saldo en libros</span><span class="value">{{ formatearMonto(cierreActual()!.saldoLibros) }}</span></div>
+        </div>
+
+        <div class="table-scroll movimientos-periodo">
+          @if (movimientosCierre().length === 0) {
+            <div class="sin-datos">No hay movimientos en este período.</div>
+          } @else {
+            <table class="movimientos-table">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Tipo</th>
+                  <th>Descripción</th>
+                  <th>Valor</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (m of movimientosCierre(); track m.codigo) {
+                  <tr>
+                    <td>{{ formatearFecha(m.fecha) }}</td>
+                    <td>
+                      <mat-icon class="tipo-icono">{{ iconoTipoMovimiento(m) }}</mat-icon>
+                      {{ etiquetaTipoMovimiento(m) }}
+                    </td>
+                    <td>{{ m.descripcion || '—' }}</td>
+                    <td class="col-monto">{{ formatearMonto(m.valor) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+        </div>
+
+        <div class="row">
+          <mat-form-field appearance="outline">
+            <mat-label>Saldo físico contado</mat-label>
+            <input matInput type="text" [ngModel]="saldoFisico()" (ngModelChange)="saldoFisico.set($event)" placeholder="0.00" />
+            <span matTextSuffix>$</span>
+          </mat-form-field>
+
+          <div class="diferencia-wrap">
+            @if (diferencia != null) {
+              <span class="diferencia-label">Diferencia</span>
+              <span class="diferencia-valor" [class.positiva]="diferencia > 0.005" [class.negativa]="diferencia < -0.005">
+                {{ formatearMonto(diferencia) }}
+              </span>
+            }
+          </div>
+        </div>
+
+        @if (requiereCuentaDiferencia) {
+          <div class="aviso-ajuste">
+            <mat-icon color="warn">warning</mat-icon>
+            <div>
+              <div class="texto-ajuste">{{ textoAjuste }}</div>
+              <button mat-stroked-button color="primary" (click)="elegirCuentaDiferencia()">
+                <mat-icon>account_balance</mat-icon>
+                {{ cuentaDiferencia() ? (cuentaDiferencia()!.cuentaContable + ' — ' + cuentaDiferencia()!.nombre) : 'Elegir cuenta contable del ajuste' }}
+              </button>
+            </div>
+          </div>
+        }
+
+        <mat-form-field appearance="outline" class="span-2">
+          <mat-label>Observación</mat-label>
+          <textarea matInput rows="2" [(ngModel)]="observacionConfirmar"></textarea>
+        </mat-form-field>
+
+        <div class="form-actions">
+          <button
+            mat-raised-button
+            color="primary"
+            (click)="confirmarCierre()"
+            [disabled]="!puedeConfirmar"
+          >
+            @if (confirmando()) {
+              <mat-spinner diameter="18" style="display:inline-block;margin-right:6px"></mat-spinner>
+            } @else {
+              <mat-icon>check_circle</mat-icon>
+            }
+            Confirmar cierre
+          </button>
+          <button mat-stroked-button color="warn" (click)="cancelarNuevo()" [disabled]="confirmando()">
+            <mat-icon>cancel</mat-icon>
+            Cancelar
+          </button>
+        </div>
+      }
+    </div>
+  }
+</div>

@@ -10,6 +10,7 @@ import { ReporteBalanceService } from '../../service/reporte-balance.service';
 import { ReporteContableService } from '../../service/reporte-contable.service';
 import { FuncionesDatosService, TipoFormatoFechaBackend } from '../../../../shared/services/funciones-datos.service';
 import { ExportService } from '../../../../shared/services/export.service';
+import { mensajeDeError } from '../../../../shared/utils/mensaje-error.util';
 import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoDatosBusqueda as TipoDatos } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
@@ -163,14 +164,14 @@ export class ReporteBalanceGeneralComponent implements OnInit, OnDestroy {
           // Fallback: intentar getAll si selectByCriteria no devuelve datos
           this.reporteContableService.getAll().subscribe({
             next: (all) => this.reportes.set(all ?? []),
-            error: (err) => this.errorMsg.set('No se pudieron cargar los tipos de reporte: ' + (err?.message ?? ''))
+            error: (err) => this.errorMsg.set('No se pudieron cargar los tipos de reporte: ' + mensajeDeError(err, ''))
           });
         }
       },
       error: () => {
         this.reporteContableService.getAll().subscribe({
           next: (all) => this.reportes.set(all ?? []),
-          error: (err) => this.errorMsg.set('No se pudieron cargar los tipos de reporte: ' + (err?.message ?? ''))
+          error: (err) => this.errorMsg.set('No se pudieron cargar los tipos de reporte: ' + mensajeDeError(err, ''))
         });
       }
     });

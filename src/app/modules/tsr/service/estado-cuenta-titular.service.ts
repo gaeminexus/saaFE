@@ -5,6 +5,7 @@ import { DatosBusqueda } from '../../../shared/model/datos-busqueda/datos-busque
 import { TipoComandosBusqueda } from '../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda } from '../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { FilaAbono } from '../../../shared/model/pagos-cobros/catalogos-aplicacion-pago';
+import { mensajeDeError } from '../../../shared/utils/mensaje-error.util';
 import { ServiciosCxc } from '../../cxc/service/ws-cxc';
 import { ServiciosCxp } from '../../cxp/service/ws-cxp';
 import {
@@ -201,9 +202,7 @@ export class EstadoCuentaTitularService {
   }
 
   private esRespuestaVacia(error: any): boolean {
-    const cuerpo = error?.error;
-    const texto = typeof cuerpo === 'string' ? cuerpo : (cuerpo?.message ?? cuerpo?.error ?? '');
-    return typeof texto === 'string' && texto.toLowerCase().includes('no devolvio ningun registro');
+    return mensajeDeError(error, '').toLowerCase().includes('no devolvio ningun registro');
   }
 
   private normalizar(fila: any, fuente: FuenteDocumento): DocumentoEstadoCuenta {

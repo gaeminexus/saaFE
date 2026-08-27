@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { MaterialFormModule } from '../../../../../../shared/modules/material-form.module';
+import { mensajeDeError } from '../../../../../../shared/utils/mensaje-error.util';
 import { Filial } from '../../../../model/filial';
 import { CargaArchivo } from '../../../../model/carga-archivo';
 import { FilialService } from '../../../../service/filial.service';
@@ -526,7 +527,7 @@ export class CargaAportesComponent implements OnInit {
       error: (error: any) => {
         this.isUploadingFile = false;
         this.snackBar.open(
-          `Error al procesar la carga: ${error.message || error}`,
+          `Error al procesar la carga: ${mensajeDeError(error)}`,
           'Cerrar',
           { duration: 6000 }
         );

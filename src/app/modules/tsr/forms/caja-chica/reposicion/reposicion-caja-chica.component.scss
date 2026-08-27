@@ -1,0 +1,158 @@
+@use '../../../../../../styles/abstracts/colors' as *;
+@use '../../../../../../styles/abstracts/variables' as *;
+
+.reposicion-page {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+.page-header {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: $spacing-md;
+  padding: $spacing-sm $spacing-md;
+  border: $border-width solid $border-light;
+  border-radius: $border-radius-md;
+  background: $background-primary;
+  box-shadow: 0 2px 6px $shadow-color-light;
+}
+
+.icon-wrap {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: $background-gradient;
+  color: $text-light;
+}
+
+.title-wrap .title {
+  margin: 0;
+  font-size: 20px;
+}
+
+.title-wrap .subtitle {
+  margin: 0;
+  font-size: 13px;
+  color: $text-secondary;
+}
+
+.form-card,
+.table-card {
+  border: $border-width solid $border-light;
+  border-radius: $border-radius-md;
+  padding: $spacing-md;
+  background: $background-primary;
+  box-shadow: 0 2px 6px $shadow-color-light;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-sm $spacing-md;
+  margin: calc(-1 * $spacing-md) calc(-1 * $spacing-md) $spacing-sm;
+  border-radius: $border-radius-md $border-radius-md 0 0;
+  background: $background-gradient;
+  color: $text-light;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $spacing-sm;
+}
+
+.fila-check {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.radio-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: $text-secondary;
+}
+
+mat-radio-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.5rem;
+}
+
+.mensaje-info,
+.mensaje-error {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  border-radius: $border-radius-sm;
+}
+
+.mensaje-info {
+  background: #e8f4fd;
+  color: #0c5a8a;
+}
+
+.mensaje-error {
+  background: #fdecea;
+  color: #b91c1c;
+}
+
+.hint-error {
+  color: #b91c1c;
+}
+
+.form-actions {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  margin-top: $spacing-sm;
+
+  .msg.err {
+    color: #b91c1c;
+  }
+}
+
+.resumen-card {
+  padding: $spacing-md;
+}
+
+.resumen-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: $spacing-sm;
+}
+
+.resumen-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: $spacing-sm;
+  border: $border-width solid $border-light;
+  border-radius: $border-radius-sm;
+
+  &.destacado {
+    border-color: #1976d2;
+    background: #e3f2fd;
+  }
+
+  .label {
+    font-size: 12px;
+    color: $text-secondary;
+    text-transform: uppercase;
+  }
+
+  .value {
+    font-size: 18px;
+    font-weight: 600;
+  }
+}

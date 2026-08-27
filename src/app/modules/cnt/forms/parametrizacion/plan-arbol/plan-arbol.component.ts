@@ -10,6 +10,7 @@ import {
   ViewChild,
 } from '@angular/core';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
 import { MatDialog } from '@angular/material/dialog';
 import { PageEvent } from '@angular/material/paginator';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -178,7 +179,8 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
       },
       error: (err) => {
         console.error('❌ Error al cargar datos (getAll):', err);
-        if (err?.error?.message?.includes('ORA-00942')) {
+        const mensajeErr = mensajeDeError(err, 'Error desconocido');
+        if (mensajeErr.includes('ORA-00942')) {
           this.error.set(
             'Error de Base de Datos: Tabla CNT.PLNN no existe. Contactar administrador.',
           );
@@ -188,7 +190,7 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
           );
         } else {
           this.error.set(
-            `Error del servidor: ${err?.status} - ${err?.message || 'Error desconocido'}`,
+            `Error del servidor: ${err?.status} - ${mensajeErr}`,
           );
         }
         this.planCuentas = [];
@@ -222,7 +224,8 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
         console.error('❌ Error al cargar datos del backend (fallback):', err);
 
         // Proporcionar información específica del error
-        if (err.error?.message?.includes('ORA-00942')) {
+        const mensajeErr = mensajeDeError(err, 'Error desconocido');
+        if (mensajeErr.includes('ORA-00942')) {
           this.error.set(
             'Error BD: Las tablas CNT.PLNN/CNT.NTRL no existen. Ejecutar scripts de creación de BD.',
           );
@@ -232,7 +235,7 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
           );
         } else {
           this.error.set(
-            `Error del servidor: ${err.status} - ${err.message || 'Error desconocido'}`,
+            `Error del servidor: ${err.status} - ${mensajeErr}`,
           );
         }
 
@@ -819,7 +822,7 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
         },
         error: (err) => {
           console.error('Error al eliminar cuenta:', err);
-          const mensaje = err?.error?.message || err?.message || 'Error al eliminar la cuenta';
+          const mensaje = mensajeDeError(err, 'Error al eliminar la cuenta');
           this.snackBar.open(`✗ Error: ${mensaje}`, 'Cerrar', {
             duration: 5000,
             horizontalPosition: 'center',

@@ -6,6 +6,7 @@ import {
   Validators,
 } from '@angular/forms';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
 import { MatDialog } from '@angular/material/dialog';
 import { MatPaginator } from '@angular/material/paginator';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -427,8 +428,8 @@ export class PlantillaGeneralComponent implements OnInit {
           if (httpErrorResponse?.status === 400) {
             if (typeof httpErrorResponse.error === 'string') {
               errorMessage = `Error de datos: ${httpErrorResponse.error}`;
-            } else if (httpErrorResponse.error && httpErrorResponse.error.message) {
-              errorMessage = `Error: ${httpErrorResponse.error.message}`;
+            } else if (httpErrorResponse.error?.mensaje || httpErrorResponse.error?.message) {
+              errorMessage = `Error: ${mensajeDeError(httpErrorResponse)}`;
             } else {
               errorMessage = 'Error 400: Datos inválidos. Revise los campos del formulario.';
             }
@@ -464,8 +465,8 @@ export class PlantillaGeneralComponent implements OnInit {
           if (httpErrorResponse?.status === 400) {
             if (typeof httpErrorResponse.error === 'string') {
               errorMessage = `Error de datos: ${httpErrorResponse.error}`;
-            } else if (httpErrorResponse.error && httpErrorResponse.error.message) {
-              errorMessage = `Error: ${httpErrorResponse.error.message}`;
+            } else if (httpErrorResponse.error?.mensaje || httpErrorResponse.error?.message) {
+              errorMessage = `Error: ${mensajeDeError(httpErrorResponse)}`;
             } else {
               errorMessage = 'Error 400: Datos inválidos. Revise los campos del formulario.';
             }

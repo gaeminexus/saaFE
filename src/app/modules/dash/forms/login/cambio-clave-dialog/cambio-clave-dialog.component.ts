@@ -15,6 +15,7 @@ import { Router } from '@angular/router';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { AppStateService } from '../../../../../shared/services/app-state.service';
 import { UsuarioService } from '../../../../../shared/services/usuario.service';
+import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
 
 export interface CambioClaveData {
   idUsuario: string;
@@ -153,10 +154,10 @@ export class CambioClaveDialogComponent implements OnInit {
       },
       error: (error: any) => {
         this.loading.set(false);
-        const errorMessage =
-          error.error?.message ||
-          error.message ||
-          'Error al cambiar la contraseña. Verifique que la contraseña actual sea correcta.';
+        const errorMessage = mensajeDeError(
+          error,
+          'Error al cambiar la contraseña. Verifique que la contraseña actual sea correcta.'
+        );
         this.errorMsg.set(errorMessage);
         console.error('Error al cambiar contraseña:', error);
       },

@@ -51,3 +51,32 @@ export interface ChequeSiguiente {
   idCheque: number;
   numero: number;
 }
+
+/** A dónde navega el botón "Ver pago" de las pantallas de cheques. */
+export interface DestinoVerPago {
+  ruta: string;
+  queryParams?: Record<string, any>;
+}
+
+/**
+ * Resuelve el destino de "Ver pago" según `tipoPago`. Ninguna de las tres
+ * pantallas de destino tiene hoy un mecanismo para abrir directamente el
+ * registro puntual por id (no son pantallas de detalle por query param, son
+ * pantallas de búsqueda/registro): por eso esto navega al módulo correcto y
+ * no a un deep-link del documento — `idDocumento` igual se manda como query
+ * param por si esas pantallas aprenden a leerlo más adelante, pero hoy no lo
+ * consumen. `EXTERNO` no tiene pantalla en este frontend: se resuelve null.
+ */
+export function destinoVerPago(tipoPago: TipoPagoCheque | null, idDocumento: number | null): DestinoVerPago | null {
+  const queryParams = idDocumento != null ? { id: idDocumento } : undefined;
+  switch (tipoPago) {
+    case 'FACTURA':
+      return { ruta: '/menucuentaxpagar/procesos/consulta-documentos', queryParams: idDocumento != null ? { idFactura: idDocumento } : undefined };
+    case 'EGRESO':
+      return { ruta: '/menutesoreria/procesos/registrar/egresos', queryParams };
+    case 'ANTICIPO':
+      return { ruta: '/menutesoreria/procesos/anticipos/proveedores', queryParams };
+    default:
+      return null;
+  }
+}

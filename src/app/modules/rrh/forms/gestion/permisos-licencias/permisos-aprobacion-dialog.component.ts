@@ -3,6 +3,7 @@ import { Component, Inject, signal } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
 import { PermisoLicencia } from '../../../model/permiso-licencia';
 import { PermisoLicenciaService } from '../../../service/permiso-licencia.service';
 
@@ -282,16 +283,7 @@ export class PermisosAprobacionDialogComponent {
   }
 
   private extractError(error: any): string | null {
-    if (typeof error === 'string') {
-      return error;
-    }
-    if (error?.message) {
-      return error.message;
-    }
-    if (error?.error?.message) {
-      return error.error.message;
-    }
-    return null;
+    return mensajeDeError(error, '') || null;
   }
 
   private showSuccess(message: string): void {

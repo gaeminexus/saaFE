@@ -33,6 +33,11 @@ export interface ChequeraRegistrarRecepcionRequest {
     idUsuario: number;
 }
 
+/** Respuesta de POST /chqr/anular/{id}. */
+export interface ChequeraAnularResponse {
+    mensaje: string;
+}
+
 /** Respuesta de GET /chqr/resumen/{idChequera}. */
 export interface ChequeraResumen {
     comienza: number;

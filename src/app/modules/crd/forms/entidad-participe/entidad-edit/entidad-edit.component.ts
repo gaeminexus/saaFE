@@ -6,6 +6,7 @@ import { Location } from '@angular/common';
 import { Subscription } from 'rxjs';
 
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
 import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
@@ -412,7 +413,7 @@ export class EntidadEditComponent implements OnInit, OnChanges, OnDestroy {
       },
       error: (error) => {
         this.loading.set(false);
-        this.mostrarError(`Error al cargar entidad: ${error.message}`);
+        this.mostrarError(`Error al cargar entidad: ${mensajeDeError(error)}`);
       }
     });
   }
@@ -551,13 +552,13 @@ export class EntidadEditComponent implements OnInit, OnChanges, OnDestroy {
             },
             error: (error) => {
               this.saving.set(false);
-              this.mostrarError(`Error al guardar partícipe: ${error?.message || 'Error desconocido'}`);
+              this.mostrarError(`Error al guardar partícipe: ${mensajeDeError(error)}`);
             },
           });
         },
         error: (error) => {
           this.saving.set(false);
-          this.mostrarError(`Error al guardar entidad: ${error?.message || 'Error desconocido'}`);
+          this.mostrarError(`Error al guardar entidad: ${mensajeDeError(error)}`);
         },
       });
     } else {

@@ -1,0 +1,52 @@
+@use '../../../../../../styles/components/pagos-cobros' as pc;
+
+.pagina-gastos-caja-chica {
+  padding: 1.5rem 2rem;
+
+  @include pc.pagos-cobros-layout;
+
+  .titulo-barra .titulo mat-icon {
+    color: #15803d;
+  }
+
+  .panel {
+    margin-top: 1.25rem;
+  }
+
+  h3 {
+    margin: 0 0 1rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1e293b;
+  }
+
+  .acciones-filtros {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.6rem;
+    margin: 0.5rem 0 1rem;
+  }
+
+  .fila-adjunto {
+    margin: 0.5rem 0 1rem;
+
+    .archivo-elegido {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.4rem 0.75rem;
+      background: #f1f5f9;
+      border-radius: 8px;
+      width: fit-content;
+    }
+  }
+
+  .badge mat-icon[inline] {
+    font-size: 1rem;
+    height: 1rem;
+    width: 1rem;
+    vertical-align: text-bottom;
+    margin-right: 0.15rem;
+  }
+}

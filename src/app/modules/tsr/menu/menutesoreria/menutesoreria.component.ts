@@ -1,16 +1,44 @@
-import { Component } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { Component, OnInit, signal } from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { RouterLink } from '@angular/router';
 import { SideMenuCustomComponent } from '../../../../shared/basics/menu/forms/side-menu-custom/side-menu-custom.component';
 import { NavItem } from '../../../../shared/basics/menu/model/nav-item';
+import { AppStateService } from '../../../../shared/services/app-state.service';
+import { SaldoCajaChica } from '../../model/saldo-caja-chica';
+import { CajaChicaService } from '../../service/caja-chica.service';
 
 @Component({
   selector: 'app-menutesoreria',
   standalone: true,
-  imports: [SideMenuCustomComponent],
+  imports: [CommonModule, MatButtonModule, MatIconModule, MatTooltipModule, RouterLink, SideMenuCustomComponent],
   templateUrl: './menutesoreria.component.html',
   styleUrls: ['./menutesoreria.component.scss'],
 })
-export class MenutesoreriaComponent {
+export class MenutesoreriaComponent implements OnInit {
   titulo = 'Tesorería';
+
+  /** Cajas chicas cuyo saldo cayó por debajo de su umbral de alerta (T6). */
+  cajasEnAlerta = signal<SaldoCajaChica[]>([]);
+
+  constructor(
+    private cajaChicaS: CajaChicaService,
+    private appState: AppStateService,
+  ) {}
+
+  ngOnInit(): void {
+    const idEmpresa = this.appState.getEmpresa()?.codigo;
+    if (!idEmpresa) return;
+
+    // El banner es un aviso secundario del shell: si falla, no debe romper
+    // la navegación de todo el módulo de tesorería.
+    this.cajaChicaS.saldos(idEmpresa).subscribe({
+      next: (data) => this.cajasEnAlerta.set((data ?? []).filter((c) => c.alerta)),
+      error: () => this.cajasEnAlerta.set([]),
+    });
+  }
 
   navItems: NavItem[] = [
     {
@@ -112,6 +140,12 @@ export class MenutesoreriaComponent {
           iconName: 'account_box',
           idPermiso: 830,
           route: '/menutesoreria/parametrizacion/titulares',
+        },
+        {
+          displayName: 'Cajas Chicas',
+          iconName: 'savings',
+          idPermiso: 830,
+          route: '/menutesoreria/parametrizacion/caja-chica',
         },
       ],
     },
@@ -259,6 +293,31 @@ export class MenutesoreriaComponent {
           ],
         },
         {
+          displayName: 'Caja Chica',
+          iconName: 'savings',
+          idPermiso: 830,
+          children: [
+            {
+              displayName: 'Gastos',
+              iconName: 'point_of_sale',
+              idPermiso: 830,
+              route: '/menutesoreria/procesos/caja-chica/gastos',
+            },
+            {
+              displayName: 'Reposición',
+              iconName: 'sync',
+              idPermiso: 830,
+              route: '/menutesoreria/procesos/caja-chica/reposicion',
+            },
+            {
+              displayName: 'Cierre',
+              iconName: 'fact_check',
+              idPermiso: 830,
+              route: '/menutesoreria/procesos/caja-chica/cierre',
+            },
+          ],
+        },
+        {
           displayName: 'Pagos',
           iconName: 'payments',
           idPermiso: 830,
@@ -339,18 +398,6 @@ export class MenutesoreriaComponent {
           iconName: 'menu_book',
           idPermiso: 830,
           children: [
-            {
-              displayName: 'Conciliación',
-              iconName: 'compare_arrows',
-              idPermiso: 830,
-              route: '/menutesoreria/procesos/generales/conciliacion',
-            },
-            {
-              displayName: 'Consulta Conciliación',
-              iconName: 'search',
-              idPermiso: 830,
-              route: '/menutesoreria/procesos/generales/consulta-conciliacion',
-            },
             {
               displayName: 'RIED',
               iconName: 'folder_shared',

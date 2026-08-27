@@ -68,8 +68,8 @@ export class RecepcionChequeraComponent implements OnInit {
   comienza = signal<number | null>(null);
   finaliza = signal<number | null>(null);
   cantidad = signal<number | null>(null);
-  fechaEntrega = '';
-  horaEntrega = '00:00';
+  fechaEntrega = signal<string>('');
+  horaEntrega = signal<string>('00:00');
 
   loading = signal<boolean>(false);
   cargandoSugerido = signal<boolean>(false);
@@ -82,7 +82,7 @@ export class RecepcionChequeraComponent implements OnInit {
   formListo = computed(() => {
     const c = this.comienza();
     const f = this.finaliza();
-    return !!this.selectedCuentaId() && !!c && !!f && f >= c && !!this.fechaEntrega;
+    return !!this.selectedCuentaId() && !!c && !!f && f >= c && !!this.fechaEntrega();
   });
 
   constructor(
@@ -187,16 +187,12 @@ export class RecepcionChequeraComponent implements OnInit {
     this.comienza.set(null);
     this.finaliza.set(null);
     this.cantidad.set(null);
-    this.fechaEntrega = '';
-    this.horaEntrega = '00:00';
+    this.fechaEntrega.set('');
+    this.horaEntrega.set('00:00');
     this.errorMsg.set('');
     this.successMsg.set('');
     this.chequeraRegistrada.set(null);
     this.resumen.set(null);
-  }
-
-  private idUsuario(): number {
-    return this.appState.getUsuario()?.codigo ?? Number(sessionStorage.getItem('idUsuario')) ?? 0;
   }
 
   registrarRecepcion(): void {
@@ -204,18 +200,18 @@ export class RecepcionChequeraComponent implements OnInit {
     const comienza = this.comienza();
     const finaliza = this.finaliza();
 
-    if (!idCuenta || !comienza || !finaliza || finaliza < comienza || !this.fechaEntrega) {
+    if (!idCuenta || !comienza || !finaliza || finaliza < comienza || !this.fechaEntrega()) {
       this.errorMsg.set('Complete cuenta, rango de cheques y fecha de entrega');
       return;
     }
 
-    const hora = this.horaEntrega || '00:00';
+    const hora = this.horaEntrega() || '00:00';
     const payload = {
       idCuentaBancaria: idCuenta,
       comienza,
       finaliza,
-      fechaEntrega: `${this.fechaEntrega}T${hora}:00`,
-      idUsuario: this.idUsuario(),
+      fechaEntrega: `${this.fechaEntrega()}T${hora}:00`,
+      idUsuario: this.appState.getIdUsuario(),
     };
 
     this.loading.set(true);

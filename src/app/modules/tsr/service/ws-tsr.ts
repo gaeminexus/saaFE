@@ -67,4 +67,8 @@ export class ServiciosTsr {
   public static RS_ANTP = `${API_URL}/antp`; // Anticipo Proveedores
   public static RS_EGRS = `${API_URL}/egrs`; // Egreso de tesorería (sin documento físico)
   public static RS_INGR = `${API_URL}/ingr`; // Ingreso de tesorería (sin documento físico)
+  public static RS_CJCH = `${API_URL}/cjch`; // CajaChica
+  public static RS_MVCH = `${API_URL}/mvch`; // MovimientoCajaChica
+  public static RS_CRCH = `${API_URL}/crch`; // CierreCajaChica
+  public static RS_PTCH = `${API_URL}/ptch`; // PathCajaChica (adjuntos)
 }

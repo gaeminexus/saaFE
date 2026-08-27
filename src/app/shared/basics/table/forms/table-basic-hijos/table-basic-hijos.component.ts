@@ -18,6 +18,7 @@ import { FieldFormat } from '../../model/field-format-interface';
 import { FooterOperations } from '../../model/fields-constants';
 import { TableConfig } from '../../model/table-interface';
 import { MaterialFormModule } from '../../../../modules/material-form.module';
+import { mensajeDeError } from '../../../../utils/mensaje-error.util';
 import { Injectable } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FuncionesTableService } from '../../service/funciones-table.service';
@@ -418,7 +419,7 @@ export class TableBasicHijosComponent implements OnInit, OnChanges, AfterViewIni
       // Emitir el resultado al componente padre con información de error
       this.emiteResultadoOperacion.emit({
         operacion: opcion,
-        resultado: error?.message || 'Error desconocido',
+        resultado: mensajeDeError(error, 'Error desconocido'),
         datosEnviados: datosAEnviar,
         exitoso: false,
         codigoHttp: error?.status || 500
@@ -611,13 +612,16 @@ export class TableBasicHijosComponent implements OnInit, OnChanges, AfterViewIni
             mensajeError = error.error;
           }
           // Caso 2: error.error es un objeto con propiedades
+          // OJO: `mensaje` se comprueba primero porque MensajeErrorJsonFilter
+          // envuelve TODOS los errores REST del backend como {"mensaje": "..."}
+          // — `message`/`error` son formas de otras fuentes, no del backend propio.
           else if (typeof error.error === 'object') {
-            if (error.error.message) {
+            if (error.error.mensaje) {
+              mensajeError = error.error.mensaje;
+            } else if (error.error.message) {
               mensajeError = error.error.message;
             } else if (error.error.error) {
               mensajeError = error.error.error;
-            } else if (error.error.mensaje) {
-              mensajeError = error.error.mensaje;
             } else if (error.error.msg) {
               mensajeError = error.error.msg;
             } else if (error.error.description) {

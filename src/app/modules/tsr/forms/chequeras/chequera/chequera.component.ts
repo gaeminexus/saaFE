@@ -263,10 +263,6 @@ export class ChequeraComponent implements OnInit {
     });
   }
 
-  private idUsuario(): number {
-    return this.appState.getUsuario()?.codigo ?? Number(sessionStorage.getItem('idUsuario')) ?? 0;
-  }
-
   chequeraEstaActiva(chequera: Chequera): boolean {
     return chequera.rubroEstadoChequeraH === ESTADO_CHEQUERA_ACTIVA;
   }
@@ -287,7 +283,7 @@ export class ChequeraComponent implements OnInit {
       if (!motivo) return;
 
       this.loading.set(true);
-      this.chequeraService.anular(chequera.codigo, motivo, this.idUsuario()).subscribe({
+      this.chequeraService.anular(chequera.codigo, motivo, this.appState.getIdUsuario()).subscribe({
         next: () => {
           this.loading.set(false);
           this.snackBar.open('✓ Chequera anulada correctamente', 'Cerrar', {
@@ -331,8 +327,10 @@ export class ChequeraComponent implements OnInit {
       .subscribe((motivo: number | null) => {
         if (motivo == null) return;
 
-        this.chequeService.anular(cheque.codigo, motivo, this.idUsuario()).subscribe({
+        this.loading.set(true);
+        this.chequeService.anular(cheque.codigo, motivo, this.appState.getIdUsuario()).subscribe({
           next: () => {
+            this.loading.set(false);
             this.snackBar.open('✓ Cheque anulado correctamente', 'Cerrar', {
               duration: 3000,
               panelClass: ['snackbar-success'],
@@ -345,6 +343,7 @@ export class ChequeraComponent implements OnInit {
           },
           error: (err) => {
             console.error('Error al anular cheque:', err);
+            this.loading.set(false);
             this.snackBar.open('✗ ' + ChequeService.mensajeError(err), 'Cerrar', {
               duration: 6000,
               panelClass: ['snackbar-error'],

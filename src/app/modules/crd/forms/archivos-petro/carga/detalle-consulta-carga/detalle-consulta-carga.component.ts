@@ -4,6 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { MatSort } from '@angular/material/sort';
 import { MatTableDataSource } from '@angular/material/table';
 import { MaterialFormModule } from '../../../../../../shared/modules/material-form.module';
+import { mensajeDeError } from '../../../../../../shared/utils/mensaje-error.util';
 import { CargaArchivo } from '../../../../model/carga-archivo';
 import { DetalleCargaArchivo } from '../../../../model/detalle-carga-archivo';
 import { ParticipeXCargaArchivo } from '../../../../model/participe-x-carga-archivo';
@@ -942,7 +943,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
           },
           error: (err) => {
             this.archivoYaProcesado.set(false);
-            const mensaje = err?.message || err?.mensaje || 'Error al procesar el archivo';
+            const mensaje = mensajeDeError(err, 'Error al procesar el archivo');
             this.snackBar.open(`Error: ${mensaje}`, 'Cerrar', { duration: 5000 });
           }
         });

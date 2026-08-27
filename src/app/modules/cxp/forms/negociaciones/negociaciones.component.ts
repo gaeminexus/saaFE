@@ -10,6 +10,7 @@ import { MatTableDataSource } from '@angular/material/table';
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
 import { TitularSelectorDialogComponent } from '../../../../shared/components/titular-selector-dialog/titular-selector-dialog.component';
 import { FuncionesDatosService } from '../../../../shared/services/funciones-datos.service';
+import { mensajeDeError } from '../../../../shared/utils/mensaje-error.util';
 import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoDatosBusqueda as TipoDatos } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
@@ -221,7 +222,7 @@ export class NegociacionesComponent implements OnInit, AfterViewInit {
           this.router.navigate(['/menucuentaxpagar/negociaciones/detalle', resp.id]);
         }
       },
-      error: (err: any) => this.mostrarError('Error al guardar: ' + (err?.message || JSON.stringify(err))),
+      error: (err: any) => this.mostrarError('Error al guardar: ' + mensajeDeError(err, JSON.stringify(err))),
     });
   }
 

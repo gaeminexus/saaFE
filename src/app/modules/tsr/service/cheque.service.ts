@@ -1,6 +1,7 @@
 import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, catchError, of, throwError } from 'rxjs';
+import { mensajeDeError } from '../../../shared/utils/mensaje-error.util';
 import { Cheque } from '../model/cheque';
 import { ChequeListado, ChequeListadoFiltro, ChequeSiguiente } from '../model/cheque-listado';
 import { ServiciosTsr } from './ws-tsr';
@@ -109,7 +110,7 @@ export class ChequeService {
 
   /** Lee `{"mensaje": "..."}` (MensajeErrorJsonFilter) o el mensaje del HttpErrorResponse. */
   static mensajeError(error: any): string {
-    return error?.error?.mensaje ?? error?.message ?? 'Error desconocido';
+    return mensajeDeError(error);
   }
 
   /**

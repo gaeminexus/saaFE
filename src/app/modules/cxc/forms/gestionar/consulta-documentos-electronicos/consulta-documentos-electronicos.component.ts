@@ -15,6 +15,9 @@ import { FacturaEmitirService } from '../../../service/emitir/factura-emitir.ser
 import { NotaCreditoEmitirService } from '../../../service/emitir/nota-credito-emitir.service';
 import { NotaDebitoEmitirService } from '../../../service/emitir/nota-debito-emitir.service';
 import { RetencionV2EmitirService } from '../../../service/emitir/retencion-v2-emitir.service';
+import { LiquidacionEmitirService } from '../../../service/emitir/liquidacion-emitir.service';
+import { PathLiquidacionCompraService } from '../../../service/emitir/path-liquidacion-compra.service';
+import { FileService } from '../../../../../shared/services/file.service';
 import { DetalleSriService } from '../../../service/detalle-sri.service';
 import { MotivoAnulacionDialogComponent } from '../motivo-anulacion-dialog/motivo-anulacion-dialog.component';
 import { ActualizarEstadoResultadoDialogComponent } from '../actualizar-estado-resultado-dialog/actualizar-estado-resultado-dialog.component';
@@ -24,7 +27,7 @@ import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-
 import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 
-export type TipoDocumento = 'TODOS' | 'FACTURA' | 'NOTA_CREDITO' | 'NOTA_DEBITO' | 'RETENCION';
+export type TipoDocumento = 'TODOS' | 'FACTURA' | 'NOTA_CREDITO' | 'NOTA_DEBITO' | 'RETENCION' | 'LIQUIDACION';
 
 export interface DocumentoElectronico {
   id: number;
@@ -58,6 +61,9 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
   private ncService         = inject(NotaCreditoEmitirService);
   private ndService         = inject(NotaDebitoEmitirService);
   private retService        = inject(RetencionV2EmitirService);
+  private liquidacionService = inject(LiquidacionEmitirService);
+  private pathLiquidacionService = inject(PathLiquidacionCompraService);
+  private fileService = inject(FileService);
   private detalleSriService = inject(DetalleSriService);
   private jasperReportes    = inject(JasperReportesService);
   private exportService     = inject(ExportService);
@@ -97,6 +103,7 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
     { value: 'NOTA_CREDITO', label: 'Nota de Crédito' },
     { value: 'NOTA_DEBITO',  label: 'Nota de Débito' },
     { value: 'RETENCION',    label: 'Retención' },
+    { value: 'LIQUIDACION',  label: 'Liquidación de compra' },
   ];
 
   columnas = [
@@ -169,15 +176,18 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
       ? this.ndService.getAll().pipe(catchError(() => of(null)))      : of(null);
     const cargarRet        = (this.tipoDocumento === 'TODOS' || this.tipoDocumento === 'RETENCION')
       ? this.retService.getAll().pipe(catchError(() => of(null)))     : of(null);
+    const cargarLiq        = (this.tipoDocumento === 'TODOS' || this.tipoDocumento === 'LIQUIDACION')
+      ? this.liquidacionService.getAll().pipe(catchError(() => of(null))) : of(null);
 
-    forkJoin([cargarFacturas, cargarNC, cargarND, cargarRet]).subscribe({
-      next: ([facturas, notasC, notasD, retenciones]) => {
+    forkJoin([cargarFacturas, cargarNC, cargarND, cargarRet, cargarLiq]).subscribe({
+      next: ([facturas, notasC, notasD, retenciones, liquidaciones]) => {
         const docs: DocumentoElectronico[] = [];
 
         (facturas || []).forEach((f: any) => docs.push(this.normalizarFactura(f)));
         (notasC   || []).forEach((n: any) => docs.push(this.normalizarNotaCredito(n)));
         (notasD   || []).forEach((n: any) => docs.push(this.normalizarNotaDebito(n)));
         (retenciones || []).forEach((r: any) => docs.push(this.normalizarRetencion(r)));
+        (liquidaciones || []).forEach((l: any) => docs.push(this.normalizarLiquidacion(l)));
 
         const filtrados = this.aplicarFiltros(docs)
           .sort((a, b) => {
@@ -286,6 +296,13 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
       case 'NOTA_CREDITO': reporte = 'RPRT_RIDE_NOTA_CREDITO';  parametros = { P_ID_NOTA_CREDITO: row.id };  break;
       case 'NOTA_DEBITO':  reporte = 'RPRT_RIDE_NOTA_DEBITO';   parametros = { P_ID_NOTA_DEBITO: row.id };   break;
       case 'RETENCION':    reporte = 'RPRT_RIDE_RETENCION_V2';   parametros = { P_ID_RETENCION_V2: row.id };   break;
+      case 'LIQUIDACION':
+        // El .jasper de RIDE para liquidación aún no está compilado en el backend
+        // (ver docs/logica-negocio/cxc/LIQUIDACION-COMPRA-EMISION.md en saaBE) — no
+        // hay un nombre de reporte confirmado que invocar aquí. En su lugar se
+        // descarga el XML/RIDE ya generado desde CBR.PTLC, igual que en emitir/liquidaciones.
+        this.imprimirLiquidacion(row);
+        return;
       default: this.mostrarError('Tipo de documento sin reporte configurado'); return;
     }
 
@@ -302,6 +319,23 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
     });
   }
 
+  private imprimirLiquidacion(row: DocumentoElectronico): void {
+    this.imprimiendo.set(true);
+    this.pathLiquidacionService.selectByCriteria({ liquidacion: { id: row.id } }).subscribe({
+      next: (paths) => {
+        this.imprimiendo.set(false);
+        const lista = paths ?? [];
+        if (!lista.length) { this.mostrarInfo('No hay archivos generados para esta liquidación todavía'); return; }
+        lista.forEach((p) => {
+          if (!p.path) return;
+          const nombre = p.path.split('/').pop() || `liquidacion-${row.id}`;
+          this.fileService.downloadAndSaveFile(p.path, nombre);
+        });
+      },
+      error: () => { this.imprimiendo.set(false); this.mostrarError('No se pudo consultar los archivos de la liquidación'); },
+    });
+  }
+
   // ─── Acciones por fila ──────────────────────────────────────────────────
 
   autorizar(row: DocumentoElectronico): void {
@@ -315,6 +349,7 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
         case 'NOTA_CREDITO': return this.ncService.reintentarAutorizacion({ idNotaCredito: row.id });
         case 'NOTA_DEBITO':  return this.ndService.reintentarAutorizacion({ idNotaDebito: row.id });
         case 'RETENCION':    return this.retService.reintentarAutorizacion({ idRetencion: row.id });
+        case 'LIQUIDACION':  return this.liquidacionService.reintentarAutorizacion(row.id);
         default: return of(null);
       }
     })();
@@ -343,6 +378,7 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
         case 'NOTA_CREDITO': return this.ncService.reenviarEmail({ idNotaCredito: row.id, destinatarios: dest });
         case 'NOTA_DEBITO':  return this.ndService.reenviarEmail({ idNotaDebito: row.id, destinatarios: dest });
         case 'RETENCION':    return this.retService.reenviarEmail({ idRetencion: row.id, destinatarios: dest });
+        case 'LIQUIDACION':  return this.liquidacionService.reenviarEmail({ idLiquidacion: row.id, destinatarios: dest });
         default: return of(null);
       }
     })();
@@ -380,6 +416,7 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
             case 'NOTA_CREDITO': return this.ncService.anular({ idNotaCredito: row.id, usuario, motivo });
             case 'NOTA_DEBITO':  return this.ndService.anular({ idNotaDebito: row.id, usuario, motivo });
             case 'RETENCION':    return this.retService.anular({ idRetencion: row.id, usuario, motivo });
+            case 'LIQUIDACION':  return this.liquidacionService.anular({ idLiquidacion: row.id, usuario, motivo });
             default: return of(null);
           }
         })();
@@ -424,6 +461,7 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
         case 'NOTA_CREDITO': return this.ncService.consultarYActualizarEstado(row.id);
         case 'NOTA_DEBITO':  return this.ndService.consultarYActualizarEstado(row.id);
         case 'RETENCION':    return this.retService.consultarYActualizarEstado(row.id);
+        case 'LIQUIDACION':  return this.liquidacionService.consultarYActualizarEstado(row.id);
         default: return of(null);
       }
     })();
@@ -604,6 +642,25 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
       total:                 this.toNum(r.total || r.totalRetenido),
       estadoEmision:         r.estadoEmision,
       ambiente:              Number(r.ambiente || 1),
+    };
+  }
+
+  private normalizarLiquidacion(l: any): DocumentoElectronico {
+    return {
+      id:                    l.id,
+      tipo:                  'LIQUIDACION',
+      tipoLabel:             'Liquidación de compra',
+      numero:                l.numero || '',
+      clienteIdentificacion: l.titular?.identificacion || '',
+      clienteNombre:         l.titular?.razonSocial || l.titular?.nombre || '',
+      fecha:                 l.fecha,
+      autorizacion:          l.autorizacion || l.clave || '',
+      subtotal:              this.toNum(l.subtotal),
+      subcero:               this.toNum(l.subcero),
+      vIVA:                  this.toNum(l.vIVA),
+      total:                 this.toNum(l.total),
+      estadoEmision:         l.estadoEmision,
+      ambiente:              Number(l.ambiente || 1),
     };
   }
 
