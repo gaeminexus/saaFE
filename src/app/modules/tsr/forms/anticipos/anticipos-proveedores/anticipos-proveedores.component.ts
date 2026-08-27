@@ -7,14 +7,17 @@ import { MaterialFormModule } from '../../../../../shared/modules/material-form.
 import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda as TipoDatos } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
+import { FormaPagoAplicacion, FORMA_PAGO_LABELS } from '../../../../../shared/model/pagos-cobros/catalogos-aplicacion-pago';
 import { TitularSelectorDialogComponent } from '../../../../../shared/components/titular-selector-dialog/titular-selector-dialog.component';
 import { Titular } from '../../../model/titular';
 import { CuentaBancaria } from '../../../model/cuenta-bancaria';
 import { CuentaBancariaTitular } from '../../../model/cuenta-bancaria-titular';
+import { ChequeSiguiente } from '../../../model/cheque-listado';
 import { PersonaCuentaContableService } from '../../../service/persona-cuenta-contable.service';
 import { PersonaRolService } from '../../../service/persona-rol.service';
 import { CuentaBancariaService } from '../../../service/cuenta-bancaria.service';
 import { CuentaBancariaTitularService } from '../../../service/cuenta-bancaria-titular.service';
+import { ChequeService } from '../../../service/cheque.service';
 import { AnticipoService, VerificacionAnulacionAnticipo } from '../../../service/anticipo.service';
 import { AnularAnticipoDialogComponent, AnularAnticipoDialogResult } from '../dialogs/anular-anticipo-dialog/anular-anticipo-dialog.component';
 import { JasperReportesService } from '../../../../../shared/services/jasper-reportes.service';
@@ -34,6 +37,7 @@ export class AnticiposProveedoresComponent {
   private cuentaContableS = inject(PersonaCuentaContableService);
   private cuentaBancariaS = inject(CuentaBancariaService);
   private cuentaTitularS = inject(CuentaBancariaTitularService);
+  private chequeS = inject(ChequeService);
   private anticipoS = inject(AnticipoService);
   private jasperReportes = inject(JasperReportesService);
   private snackBar = inject(MatSnackBar);
@@ -73,6 +77,19 @@ export class AnticiposProveedoresComponent {
   formFecha: Date | null = new Date();
   formNumeroDoc = '';
   formObservacion = '';
+
+  // ── Forma de pago (transferencia / débito automático / cheque) ─────────
+  readonly FormaPagoAplicacion = FormaPagoAplicacion;
+  readonly FORMA_PAGO_LABELS = FORMA_PAGO_LABELS;
+  formaPago = signal<number>(FormaPagoAplicacion.TRANSFERENCIA);
+  chequeSiguiente = signal<ChequeSiguiente | null>(null);
+  cargandoCheque = signal(false);
+  errorCheque = signal('');
+
+  /** Cheque solo se ofrece si la cuenta de origen elegida maneja chequera. */
+  get puedePagarConCheque(): boolean {
+    return Number(this.formCuentaBancaria?.manejaChequera) === 1;
+  }
 
   abrirBusqueda(): void {
     const ref = this.dialog.open(TitularSelectorDialogComponent, {
@@ -184,9 +201,45 @@ export class AnticiposProveedoresComponent {
     this.formFecha = new Date();
     this.formNumeroDoc = '';
     this.formObservacion = '';
+    this.formaPago.set(FormaPagoAplicacion.TRANSFERENCIA);
+    this.chequeSiguiente.set(null);
+    this.errorCheque.set('');
     this.mostrarFormulario.set(true);
     this.cargarCuentasBancarias();
     this.cargarCuentasDestino();
+  }
+
+  /** Cambió la cuenta de origen: si estaba en Cheque y la nueva no maneja chequera, vuelve a Transferencia. */
+  onCambioCuentaOrigen(): void {
+    if (this.formaPago() === FormaPagoAplicacion.CHEQUE && !this.puedePagarConCheque) {
+      this.formaPago.set(FormaPagoAplicacion.TRANSFERENCIA);
+    }
+    this.actualizarChequeSiguiente();
+  }
+
+  onCambioFormaPago(): void {
+    if (this.formaPago() !== FormaPagoAplicacion.TRANSFERENCIA) {
+      this.formCuentaDestino = null;
+    }
+    this.actualizarChequeSiguiente();
+  }
+
+  private actualizarChequeSiguiente(): void {
+    this.chequeSiguiente.set(null);
+    this.errorCheque.set('');
+    if (this.formaPago() !== FormaPagoAplicacion.CHEQUE || !this.formCuentaBancaria) return;
+
+    this.cargandoCheque.set(true);
+    this.chequeS.siguiente(this.formCuentaBancaria.codigo).subscribe({
+      next: (r) => {
+        this.cargandoCheque.set(false);
+        this.chequeSiguiente.set(r);
+      },
+      error: (err) => {
+        this.cargandoCheque.set(false);
+        this.errorCheque.set(ChequeService.mensajeError(err));
+      },
+    });
   }
 
   /**
@@ -298,8 +351,13 @@ export class AnticiposProveedoresComponent {
       this.errorProceso.set('El valor debe ser un número mayor a cero.');
       return;
     }
-    if (!this.formCuentaDestino) {
+    const esTransferencia = this.formaPago() === FormaPagoAplicacion.TRANSFERENCIA;
+    if (esTransferencia && !this.formCuentaDestino) {
       this.errorProceso.set('Seleccione la cuenta bancaria del proveedor para el pago.');
+      return;
+    }
+    if (this.formaPago() === FormaPagoAplicacion.CHEQUE && (this.errorCheque() || !this.chequeSiguiente())) {
+      this.errorProceso.set(this.errorCheque() || 'No hay cheques disponibles para girar.');
       return;
     }
 
@@ -313,12 +371,16 @@ export class AnticiposProveedoresComponent {
       idTitular: titular.codigo,
       valor,
       idCuentaBancaria: this.formCuentaBancaria.codigo,
-      idCuentaDestinoTitular: this.formCuentaDestino,
+      idCuentaDestinoTitular: esTransferencia ? this.formCuentaDestino ?? undefined : undefined,
       idEmpresa,
       idUsuario,
       fechaAnticipo: fecha,
       numeroDoc: this.formNumeroDoc.trim(),
       observacion: this.formObservacion.trim(),
+      formaPago: this.formaPago(),
+      // Booleano real: AnticipoProveedorRest.getBoolean() hace
+      // Boolean.parseBoolean(valor), que con "1" da false.
+      debitoAutomatico: this.formaPago() === FormaPagoAplicacion.DEBITO_AUTOMATICO,
     };
 
     this.procesando.set(true);
@@ -329,7 +391,12 @@ export class AnticiposProveedoresComponent {
       next: (resp) => {
         console.log('[AnticipoProveedor] Respuesta del backend:', resp);
         const id = resp?.['id'] ?? resp?.['codigo'] ?? resp?.['antpCodigo'] ?? resp?.['idAnticipo'] ?? null;
-        this.exitoProceso.set('Anticipo registrado correctamente.');
+        const numeroCheque = resp?.['numeroCheque'];
+        this.exitoProceso.set(
+          numeroCheque
+            ? `Anticipo registrado correctamente. Se giró el cheque N° ${numeroCheque}.`
+            : 'Anticipo registrado correctamente.'
+        );
         this.procesando.set(false);
         this.cargarSaldo(titular);
         this.verAnticipos(false);
@@ -392,6 +459,17 @@ export class AnticiposProveedoresComponent {
     const valor = Number(a?.valor ?? 0);
     const estado = Number(a?.estado ?? 0);
     return valor > 0 && estado !== this.ESTADO_ANULADO;
+  }
+
+  /**
+   * AnticipoProveedor no tiene un campo propio de número de cheque:
+   * AnticipoProveedorServiceImpl lo escribe dentro de `referencia` con el
+   * formato "CHQ-1051" cuando `formaPago` es Cheque (ver línea ~321).
+   */
+  numeroChequeDeAnticipo(a: any): string | null {
+    if (Number(a?.formaPago) !== FormaPagoAplicacion.CHEQUE) return null;
+    const match = /^CHQ-(\d+)$/.exec(String(a?.referencia ?? '').trim());
+    return match ? match[1] : null;
   }
 
   etiquetaEstado(a: any): string {

@@ -91,6 +91,7 @@ export class CuentasBancariasComponent implements OnInit {
   email = '';
   estadoSeleccionado: DetalleRubro | null = null;
   cobroCredito = false;
+  manejaChequera = false;
   codigoEdicion: number | null = null; // null = crear, número = editar
 
   // Variable para capturar el valor raw de la fecha antes del blur
@@ -113,6 +114,7 @@ export class CuentasBancariasComponent implements OnInit {
     'fIngreso',
     'fDesactiva',
     'estado',
+    'chequera',
   ];
 
   hasBanco = computed(() => !!this.bancoSeleccionado());
@@ -421,6 +423,9 @@ export class CuentasBancariasComponent implements OnInit {
     // Cobro de crédito
     payload.cobroCredito = this.cobroCredito ? 1 : 0;
 
+    // Maneja chequera (habilita chequeras y forma de pago Cheque)
+    payload.manejaChequera = this.manejaChequera ? 1 : 0;
+
     // Fecha de ingreso - siempre la fecha actual
     const now = new Date();
     const fechaActual = now.toISOString().substring(0, 19); // Formato: YYYY-MM-DDTHH:mm:ss
@@ -470,6 +475,7 @@ export class CuentasBancariasComponent implements OnInit {
     this.estadoSeleccionado = estadoPorDefecto ?? null;
 
     this.cobroCredito = false;
+    this.manejaChequera = false;
     this.codigoEdicion = null;
     this.modoEdicion.set(false);
     this.errorMsg.set('');
@@ -531,6 +537,7 @@ export class CuentasBancariasComponent implements OnInit {
       this.estadosCuenta().find((e) => e.codigoAlterno === codigoEstado) ?? null;
 
     this.cobroCredito = (row as any).cobroCredito === 1;
+    this.manejaChequera = (row as any).manejaChequera === 1;
 
     // Buscar la cuenta contable en la lista cargada (por codigo)
     const planCuentaRaw = this.obtenerCuentaContableRegistro(row);
@@ -654,6 +661,9 @@ export class CuentasBancariasComponent implements OnInit {
 
     // Cobro de crédito
     payload.cobroCredito = this.cobroCredito ? 1 : 0;
+
+    // Maneja chequera (habilita chequeras y forma de pago Cheque)
+    payload.manejaChequera = this.manejaChequera ? 1 : 0;
 
     this.loading.set(true);
     this.errorMsg.set('');

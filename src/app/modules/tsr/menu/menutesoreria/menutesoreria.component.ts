@@ -264,41 +264,10 @@ export class MenutesoreriaComponent {
           idPermiso: 830,
           children: [
             {
-              displayName: 'Ingreso',
-              iconName: 'login',
-              idPermiso: 830,
-              route: '/menutesoreria/procesos/pagos/ingreso',
-            },
-            {
-              displayName: 'Cheques',
-              iconName: 'receipt_long',
-              idPermiso: 830,
-              children: [
-                {
-                  displayName: 'Impresión',
-                  iconName: 'print',
-                  idPermiso: 830,
-                  route: '/menutesoreria/procesos/pagos/cheques/impresion',
-                },
-                {
-                  displayName: 'Entrega',
-                  iconName: 'assignment_turned_in',
-                  idPermiso: 830,
-                  route: '/menutesoreria/procesos/pagos/cheques/entrega',
-                },
-              ],
-            },
-            {
               displayName: 'Consulta',
               iconName: 'manage_search',
               idPermiso: 830,
               children: [
-                {
-                  displayName: 'Pagos',
-                  iconName: 'payments',
-                  idPermiso: 830,
-                  route: '/menutesoreria/procesos/pagos/consulta/pagos',
-                },
                 {
                   displayName: 'Cheques',
                   iconName: 'receipt_long',

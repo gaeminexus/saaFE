@@ -14,6 +14,15 @@ export interface AnticipoRequest {
   fechaAnticipo: string;
   numeroDoc: string;
   observacion: string;
+  /** Ver FormaPagoAplicacion (2 transferencia, 3 cheque, 4 débito automático). */
+  formaPago?: number;
+  /**
+   * Se mantiene por compatibilidad junto a `formaPago`. Debe ser booleano:
+   * AnticipoProveedorRest.getBoolean() hace Boolean.parseBoolean(valor), que
+   * con un "1" numérico da false — un 0/1 aquí deja el pago sin marcar como
+   * débito automático aunque el usuario lo haya elegido.
+   */
+  debitoAutomatico?: boolean;
 }
 
 export interface AnticipoResponse {

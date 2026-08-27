@@ -13,16 +13,31 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
+import { DetalleRubro } from '../../../../../shared/model/detalle-rubro';
+import { AppStateService } from '../../../../../shared/services/app-state.service';
+import { DetalleRubroService } from '../../../../../shared/services/detalle-rubro.service';
 import { ExportService } from '../../../../../shared/services/export.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
+import {
+  MotivoDialogComponent,
+  MotivoDialogData,
+} from '../../../../../shared/components/motivo-dialog/motivo-dialog.component';
 import { Banco } from '../../../model/banco';
 import { Cheque } from '../../../model/cheque';
-import { Chequera } from '../../../model/chequera';
+import { Chequera, ChequeraResumen } from '../../../model/chequera';
 import { CuentaBancaria } from '../../../model/cuenta-bancaria';
 import { BancoService } from '../../../service/banco.service';
 import { ChequeService } from '../../../service/cheque.service';
 import { ChequeraService } from '../../../service/chequera.service';
 import { CuentaBancariaService } from '../../../service/cuenta-bancaria.service';
+import { AnularChequeDialogComponent } from './anular-cheque-dialog.component';
+
+/** Rubro 26: estado de cheque. Rubro 25: estado de chequera. Rubro 38: motivo de anulación de cheque. */
+const RUBRO_ESTADO_CHEQUE = 26;
+const RUBRO_ESTADO_CHEQUERA = 25;
+const RUBRO_MOTIVO_ANULACION_CHEQUE = 38;
+const ESTADO_CHEQUE_ACTIVO = 1;
+const ESTADO_CHEQUERA_ACTIVA = 1;
 
 @Component({
   selector: 'app-chequera',
@@ -47,6 +62,10 @@ export class ChequeraComponent implements OnInit {
   // Catálogos
   bancos = signal<Banco[]>([]);
   cuentas = signal<CuentaBancaria[]>([]);
+  estadosCheque = signal<DetalleRubro[]>([]);
+  estadosChequera = signal<DetalleRubro[]>([]);
+  /** Rubro 38, códigos 1 y 2: los únicos que se ofrecen al anular un cheque a mano. */
+  motivosAnulacionCheque = signal<DetalleRubro[]>([]);
 
   // Filtros
   selectedBancoId = signal<number | null>(null);
@@ -55,6 +74,7 @@ export class ChequeraComponent implements OnInit {
   // Tablas
   chequeras = signal<Chequera[]>([]);
   cheques = signal<Cheque[]>([]);
+  resumen = signal<ChequeraResumen | null>(null);
 
   // Estados
   loading = signal<boolean>(false);
@@ -63,38 +83,23 @@ export class ChequeraComponent implements OnInit {
   successMsg = signal<string>('');
 
   // Selección
-  chequeraSeleccionada: Chequera | null = null;
-  chequeSeleccionado: Cheque | null = null;
-
-  // Estados de rubros (constantes del backend)
-  readonly ESTADO_ACTIVA = 1;
-  readonly ESTADO_SOLICITADA = 3;
-  readonly ESTADO_ANULADA = 2;
-  readonly ESTADO_CHEQUE_ACTIVO = 1;
-  readonly ESTADO_CHEQUE_ANULADO = 2;
-  readonly MOTIVO_CHEQUERA_ANULADA = 2;
+  chequeraSeleccionada = signal<Chequera | null>(null);
 
   chequerasColumns = [
-    'fechaSolicitud',
     'fechaEntrega',
-    'numeroCheques',
     'comienza',
     'finaliza',
     'estado',
     'acciones',
   ];
   chequesColumns = [
-    'cheque',
-    'egreso',
+    'numero',
+    'estado',
+    'valor',
+    'beneficiario',
     'fechaUso',
     'fechaImpresion',
     'fechaEntrega',
-    'asiento',
-    'beneficiario',
-    'monto',
-    'fechaCaduca',
-    'fechaAnulacion',
-    'estado',
     'acciones',
   ];
 
@@ -104,6 +109,8 @@ export class ChequeraComponent implements OnInit {
     private cuentaBancariaService: CuentaBancariaService,
     private chequeraService: ChequeraService,
     private chequeService: ChequeService,
+    private detalleRubroService: DetalleRubroService,
+    private appState: AppStateService,
     private funcionesDatos: FuncionesDatosService,
     private dialog: MatDialog,
     private snackBar: MatSnackBar,
@@ -112,6 +119,17 @@ export class ChequeraComponent implements OnInit {
   ngOnInit(): void {
     this.cargarBancos();
     this.cargarCuentas();
+    this.cargarRubros();
+  }
+
+  private cargarRubros(): void {
+    this.estadosCheque.set(this.detalleRubroService.getDetallesByParent(RUBRO_ESTADO_CHEQUE));
+    this.estadosChequera.set(this.detalleRubroService.getDetallesByParent(RUBRO_ESTADO_CHEQUERA));
+    this.motivosAnulacionCheque.set(
+      this.detalleRubroService
+        .getDetallesByParent(RUBRO_MOTIVO_ANULACION_CHEQUE)
+        .filter((m) => m.codigoAlterno === 1 || m.codigoAlterno === 2)
+    );
   }
 
   private cargarBancos(): void {
@@ -146,44 +164,35 @@ export class ChequeraComponent implements OnInit {
     this.selectedCuentaId.set(null);
     this.chequeras.set([]);
     this.cheques.set([]);
+    this.chequeraSeleccionada.set(null);
+    this.resumen.set(null);
   }
 
   onCuentaChange(id: number | null): void {
     this.selectedCuentaId.set(id);
+    this.chequeraSeleccionada.set(null);
+    this.cheques.set([]);
+    this.resumen.set(null);
+    if (id) this.buscarChequeras();
   }
 
   buscarChequeras(): void {
-    if (!this.selectedCuentaId()) {
+    const idCuenta = this.selectedCuentaId();
+    if (!idCuenta) {
       this.snackBar.open('Debe seleccionar un banco y una cuenta', 'Cerrar', { duration: 3000 });
       return;
     }
-
-    const datosBusqueda: DatosBusqueda[] = [];
-
-    // Filtro por cuenta bancaria
-    const dbCuenta = new DatosBusqueda();
-    dbCuenta.asignaValorConCampoPadre(
-      TipoDatosBusqueda.LONG,
-      'cuentaBancaria',
-      'codigo',
-      this.selectedCuentaId()!.toString(),
-      TipoComandosBusqueda.IGUAL,
-    );
-    dbCuenta.setNumeroCampoRepetido(0);
-    datosBusqueda.push(dbCuenta);
 
     this.loading.set(true);
     this.errorMsg.set('');
     this.successMsg.set('');
 
-    this.chequeraService.selectByCriteria(datosBusqueda).subscribe({
+    this.chequeraService.porCuenta(idCuenta).subscribe({
       next: (data) => {
         this.loading.set(false);
-        if (data && data.length > 0) {
-          this.chequeras.set(data);
-          this.successMsg.set(`Se encontraron ${data.length} chequeras`);
-        } else {
-          this.chequeras.set([]);
+        const items = Array.isArray(data) ? data : [];
+        this.chequeras.set(items);
+        if (!items.length) {
           this.cheques.set([]);
           this.errorMsg.set('No se encontraron chequeras para esta cuenta');
         }
@@ -191,7 +200,7 @@ export class ChequeraComponent implements OnInit {
       error: (err) => {
         console.error('Error al buscar chequeras:', err);
         this.loading.set(false);
-        this.errorMsg.set('Error al buscar chequeras');
+        this.errorMsg.set(ChequeraService.mensajeError(err));
       },
     });
   }
@@ -203,14 +212,24 @@ export class ChequeraComponent implements OnInit {
     this.cheques.set([]);
     this.errorMsg.set('');
     this.successMsg.set('');
-    this.chequeraSeleccionada = null;
-    this.chequeSeleccionado = null;
+    this.chequeraSeleccionada.set(null);
+    this.resumen.set(null);
   }
 
   seleccionarChequera(chequera: Chequera): void {
-    this.chequeraSeleccionada = chequera;
-    this.chequeSeleccionado = null;
+    this.chequeraSeleccionada.set(chequera);
     this.cargarCheques(chequera.codigo);
+    this.cargarResumen(chequera.codigo);
+  }
+
+  private cargarResumen(idChequera: number): void {
+    this.chequeraService.resumen(idChequera).subscribe({
+      next: (r) => this.resumen.set(r),
+      error: (err) => {
+        console.error('Error al cargar resumen de chequera', err);
+        this.resumen.set(null);
+      },
+    });
   }
 
   cargarCheques(idChequera: number): void {
@@ -232,335 +251,166 @@ export class ChequeraComponent implements OnInit {
     this.chequeService.selectByCriteria(datosBusqueda).subscribe({
       next: (data) => {
         this.loadingCheques.set(false);
-        if (data && data.length > 0) {
-          this.cheques.set(data);
-        } else {
-          this.cheques.set([]);
-        }
+        const items = Array.isArray(data) ? data : [];
+        items.sort((a, b) => (a.numero ?? 0) - (b.numero ?? 0));
+        this.cheques.set(items);
       },
       error: (err) => {
-        console.warn('[Chequera] selectByCriteria falló, usando getAll()', err);
-        // Fallback: getAll y filtrado local
-        this.chequeService.getAll().subscribe({
-          next: (allData) => {
-            this.loadingCheques.set(false);
-            if (allData && allData.length > 0) {
-              const filtered = allData.filter((ch) => ch.chequera?.codigo === idChequera);
-              this.cheques.set(filtered);
-            } else {
-              this.cheques.set([]);
-            }
-          },
-          error: (err2) => {
-            console.error('Error al cargar todos los cheques:', err2);
-            this.loadingCheques.set(false);
-            this.cheques.set([]);
-          },
-        });
+        console.error('Error al cargar cheques:', err);
+        this.loadingCheques.set(false);
+        this.cheques.set([]);
       },
     });
   }
 
+  private idUsuario(): number {
+    return this.appState.getUsuario()?.codigo ?? Number(sessionStorage.getItem('idUsuario')) ?? 0;
+  }
+
+  chequeraEstaActiva(chequera: Chequera): boolean {
+    return chequera.rubroEstadoChequeraH === ESTADO_CHEQUERA_ACTIVA;
+  }
+
   anularChequera(chequera: Chequera): void {
-    // Validar que esté ACTIVA
-    if (chequera.rubroEstadoChequeraH !== this.ESTADO_ACTIVA) {
+    if (!this.chequeraEstaActiva(chequera)) {
       this.snackBar.open('Solo se pueden anular chequeras ACTIVAS', 'Cerrar', { duration: 3000 });
       return;
     }
 
-    // Confirmar anulación
-    if (
-      !confirm(
-        '¿Está seguro de anular esta chequera? Esta acción anulará todos los cheques asociados.',
-      )
-    ) {
-      return;
-    }
-
-    const payload = {
-      codigo: chequera.codigo,
-      rubroEstadoChequeraH: this.ESTADO_ANULADA,
-      cuentaBancaria: chequera.cuentaBancaria,
-      fechaSolicitud: chequera.fechaSolicitud,
-      numeroCheques: chequera.numeroCheques,
-      comienza: chequera.comienza,
-      finaliza: chequera.finaliza,
+    const data: MotivoDialogData = {
+      titulo: `Anular chequera (cheques ${chequera.comienza}–${chequera.finaliza})`,
+      advertencia: 'Se anulará la chequera y todos los cheques que aún estén disponibles en ella.',
+      textoConfirmar: 'Sí, anular chequera',
     };
 
-    this.loading.set(true);
+    this.dialog.open(MotivoDialogComponent, { width: '480px', data }).afterClosed().subscribe((motivo) => {
+      if (!motivo) return;
 
-    this.chequeraService.update(payload).subscribe({
-      next: () => {
-        this.loading.set(false);
-        this.snackBar.open('✓ Chequera anulada correctamente', 'Cerrar', {
-          duration: 3000,
-          panelClass: ['snackbar-success'],
-        });
-
-        // Anular todos los cheques de la chequera
-        this.anularTodosCheques(chequera.codigo);
-
-        // Recargar tabla
-        if (this.selectedCuentaId()) {
+      this.loading.set(true);
+      this.chequeraService.anular(chequera.codigo, motivo, this.idUsuario()).subscribe({
+        next: () => {
+          this.loading.set(false);
+          this.snackBar.open('✓ Chequera anulada correctamente', 'Cerrar', {
+            duration: 3000,
+            panelClass: ['snackbar-success'],
+          });
           this.buscarChequeras();
-        }
-      },
-      error: (err) => {
-        console.error('Error al anular chequera:', err);
-        this.loading.set(false);
-        this.snackBar.open('✗ Error al anular chequera', 'Cerrar', {
-          duration: 3000,
-          panelClass: ['snackbar-error'],
-        });
-      },
+          if (this.chequeraSeleccionada()?.codigo === chequera.codigo) {
+            this.cargarCheques(chequera.codigo);
+            this.cargarResumen(chequera.codigo);
+          }
+        },
+        error: (err) => {
+          console.error('Error al anular chequera:', err);
+          this.loading.set(false);
+          this.snackBar.open('✗ ' + ChequeraService.mensajeError(err), 'Cerrar', {
+            duration: 6000,
+            panelClass: ['snackbar-error'],
+          });
+        },
+      });
     });
   }
 
-  anularTodosCheques(idChequera: number): void {
-    // Obtener todos los cheques de la chequera
-    const datosBusqueda: DatosBusqueda[] = [];
-    const db = new DatosBusqueda();
-    db.asignaValorConCampoPadre(
-      TipoDatosBusqueda.LONG,
-      'chequera',
-      'codigo',
-      idChequera.toString(),
-      TipoComandosBusqueda.IGUAL,
-    );
-    db.setNumeroCampoRepetido(0);
-    datosBusqueda.push(db);
-
-    this.chequeService.selectByCriteria(datosBusqueda).subscribe({
-      next: (cheques) => {
-        if (cheques && cheques.length > 0) {
-          // Anular cada cheque
-          cheques.forEach((cheque) => {
-            if (cheque.rubroEstadoChequeH === this.ESTADO_CHEQUE_ACTIVO) {
-              this.anularChequeInterno(cheque.codigo, this.MOTIVO_CHEQUERA_ANULADA);
-            }
-          });
-        }
-      },
-      error: (err) => {
-        console.error('Error al obtener cheques para anular:', err);
-      },
-    });
+  chequeEstaActivo(cheque: Cheque): boolean {
+    return cheque.rubroEstadoChequeH === ESTADO_CHEQUE_ACTIVO;
   }
 
   anularCheque(cheque: Cheque): void {
-    // Validar que esté ACTIVO
-    if (cheque.rubroEstadoChequeH !== this.ESTADO_CHEQUE_ACTIVO) {
+    if (!this.chequeEstaActivo(cheque)) {
       this.snackBar.open('Solo se pueden anular cheques ACTIVOS', 'Cerrar', { duration: 3000 });
       return;
     }
 
-    // Confirmar anulación
-    if (!confirm('¿Está seguro de anular este cheque?')) {
-      return;
-    }
+    this.dialog
+      .open(AnularChequeDialogComponent, {
+        width: '440px',
+        data: { numeroCheque: cheque.numero, motivos: this.motivosAnulacionCheque() },
+      })
+      .afterClosed()
+      .subscribe((motivo: number | null) => {
+        if (motivo == null) return;
 
-    // TODO: Mostrar dialog para seleccionar motivo de anulación
-    // Por ahora usamos un motivo genérico (1)
-    const motivoAnulacion = 1;
-
-    this.anularChequeInterno(cheque.codigo, motivoAnulacion);
-  }
-
-  private anularChequeInterno(idCheque: number, motivoAnulacion: number): void {
-    const payload = {
-      codigo: idCheque,
-      rubroEstadoChequeH: this.ESTADO_CHEQUE_ANULADO,
-      rubroMotivoAnulacionH: motivoAnulacion,
-      fechaAnulacion: new Date().toISOString(),
-    };
-
-    this.chequeService.update(payload).subscribe({
-      next: () => {
-        this.snackBar.open('✓ Cheque anulado correctamente', 'Cerrar', {
-          duration: 3000,
-          panelClass: ['snackbar-success'],
+        this.chequeService.anular(cheque.codigo, motivo, this.idUsuario()).subscribe({
+          next: () => {
+            this.snackBar.open('✓ Cheque anulado correctamente', 'Cerrar', {
+              duration: 3000,
+              panelClass: ['snackbar-success'],
+            });
+            const chequera = this.chequeraSeleccionada();
+            if (chequera) {
+              this.cargarCheques(chequera.codigo);
+              this.cargarResumen(chequera.codigo);
+            }
+          },
+          error: (err) => {
+            console.error('Error al anular cheque:', err);
+            this.snackBar.open('✗ ' + ChequeService.mensajeError(err), 'Cerrar', {
+              duration: 6000,
+              panelClass: ['snackbar-error'],
+            });
+          },
         });
-
-        // Recargar cheques
-        if (this.chequeraSeleccionada) {
-          this.cargarCheques(this.chequeraSeleccionada.codigo);
-        }
-      },
-      error: (err) => {
-        console.error('Error al anular cheque:', err);
-        this.snackBar.open('✗ Error al anular cheque', 'Cerrar', {
-          duration: 3000,
-          panelClass: ['snackbar-error'],
-        });
-      },
-    });
+      });
   }
 
-  getEstadoChequera(estado: number): string {
-    switch (estado) {
-      case this.ESTADO_ACTIVA:
-        return 'ACTIVA';
-      case this.ESTADO_ANULADA:
-        return 'ANULADA';
-      case this.ESTADO_SOLICITADA:
-        return 'SOLICITADA';
-      default:
-        return 'DESCONOCIDO';
-    }
+  etiquetaEstadoChequera(chequera: Chequera): string {
+    const found = this.estadosChequera().find((e) => e.codigoAlterno === chequera.rubroEstadoChequeraH);
+    return found?.descripcion ?? `Estado ${chequera.rubroEstadoChequeraH ?? '—'}`;
   }
 
-  getEstadoCheque(estado: number): string {
-    switch (estado) {
-      case this.ESTADO_CHEQUE_ACTIVO:
-        return 'ACTIVO';
-      case this.ESTADO_CHEQUE_ANULADO:
-        return 'ANULADO';
-      default:
-        return 'DESCONOCIDO';
-    }
+  etiquetaEstadoCheque(cheque: Cheque): string {
+    const found = this.estadosCheque().find((e) => e.codigoAlterno === cheque.rubroEstadoChequeH);
+    return found?.descripcion ?? `Estado ${cheque.rubroEstadoChequeH ?? '—'}`;
   }
 
   formatearFecha(fecha: any): string {
-    if (!fecha) return '';
+    if (!fecha) return '—';
     return this.funcionesDatos.formatoFecha(fecha, FuncionesDatosService.SOLO_FECHA);
   }
 
   // Exportaciones
-  exportChequerasCSV(): void {
-    const headers = [
-      'Fecha Solicitud',
-      'Fecha Entrega',
-      'Nº Cheques',
-      'Cheque Desde',
-      'Cheque Hasta',
-      'Estado',
-    ];
-    const rows = this.chequeras().map((r) => ({
-      fechaSolicitud: this.formatearFecha(r.fechaSolicitud),
-      fechaEntrega: this.formatearFecha(r.fechaEntrega),
-      numeroCheques: r.numeroCheques ?? '',
-      chequeDesde: r.comienza ?? '',
-      chequeHasta: r.finaliza ?? '',
-      estado: this.getEstadoChequera(r.rubroEstadoChequeraH),
-    }));
-    this.exportService.exportToCSV(rows, 'chequeras', headers, [
-      'fechaSolicitud',
-      'fechaEntrega',
-      'numeroCheques',
-      'chequeDesde',
-      'chequeHasta',
-      'estado',
-    ]);
-  }
-
-  exportChequerasPDF(): void {
-    const headers = [
-      'Fecha Solicitud',
-      'Fecha Entrega',
-      'Nº Cheques',
-      'Cheque Desde',
-      'Cheque Hasta',
-      'Estado',
-    ];
-    const rows = this.chequeras().map((r) => ({
-      fechaSolicitud: this.formatearFecha(r.fechaSolicitud),
-      fechaEntrega: this.formatearFecha(r.fechaEntrega),
-      numeroCheques: r.numeroCheques ?? '',
-      chequeDesde: r.comienza ?? '',
-      chequeHasta: r.finaliza ?? '',
-      estado: this.getEstadoChequera(r.rubroEstadoChequeraH),
-    }));
-    this.exportService.exportToPDF(rows, 'chequeras', 'Chequeras', headers, [
-      'fechaSolicitud',
-      'fechaEntrega',
-      'numeroCheques',
-      'chequeDesde',
-      'chequeHasta',
-      'estado',
-    ]);
-  }
-
   exportChequesCSV(): void {
-    const headers = [
-      'Cheque',
-      'Nº Egreso',
-      'F. Uso',
-      'F. Impresión',
-      'F. Entrega',
-      'Asiento',
-      'Beneficiario',
-      'Monto',
-      'F. Caducidad',
-      'F. Anulación',
-      'Estado',
-    ];
+    const headers = ['Cheque', 'Estado', 'Valor', 'Beneficiario', 'F. Uso', 'F. Impresión', 'F. Entrega'];
     const rows = this.cheques().map((r) => ({
-      cheque: r.codigo ?? '',
-      egreso: r.egreso ?? '',
+      numero: r.numero ?? '',
+      estado: this.etiquetaEstadoCheque(r),
+      valor: r.valor ?? '',
+      beneficiario: r.beneficiario ?? '',
       fechaUso: this.formatearFecha(r.fechaUso),
       fechaImpresion: this.formatearFecha(r.fechaImpresion),
       fechaEntrega: this.formatearFecha(r.fechaEntrega),
-      asiento: r.asiento?.numero ?? '',
-      beneficiario: r.beneficiario ?? '',
-      monto: r.valor ?? '',
-      fechaCaduca: this.formatearFecha(r.fechaCaduca),
-      fechaAnulacion: this.formatearFecha(r.fechaAnulacion),
-      estado: this.getEstadoCheque(r.rubroEstadoChequeH),
     }));
     this.exportService.exportToCSV(rows, 'cheques', headers, [
-      'cheque',
-      'egreso',
+      'numero',
+      'estado',
+      'valor',
+      'beneficiario',
       'fechaUso',
       'fechaImpresion',
       'fechaEntrega',
-      'asiento',
-      'beneficiario',
-      'monto',
-      'fechaCaduca',
-      'fechaAnulacion',
-      'estado',
     ]);
   }
 
   exportChequesPDF(): void {
-    const headers = [
-      'Cheque',
-      'Nº Egreso',
-      'F. Uso',
-      'F. Impresión',
-      'F. Entrega',
-      'Asiento',
-      'Beneficiario',
-      'Monto',
-      'F. Caducidad',
-      'F. Anulación',
-      'Estado',
-    ];
+    const headers = ['Cheque', 'Estado', 'Valor', 'Beneficiario', 'F. Uso', 'F. Impresión', 'F. Entrega'];
     const rows = this.cheques().map((r) => ({
-      cheque: r.codigo ?? '',
-      egreso: r.egreso ?? '',
+      numero: r.numero ?? '',
+      estado: this.etiquetaEstadoCheque(r),
+      valor: r.valor ?? '',
+      beneficiario: r.beneficiario ?? '',
       fechaUso: this.formatearFecha(r.fechaUso),
       fechaImpresion: this.formatearFecha(r.fechaImpresion),
       fechaEntrega: this.formatearFecha(r.fechaEntrega),
-      asiento: r.asiento?.numero ?? '',
-      beneficiario: r.beneficiario ?? '',
-      monto: r.valor ?? '',
-      fechaCaduca: this.formatearFecha(r.fechaCaduca),
-      fechaAnulacion: this.formatearFecha(r.fechaAnulacion),
-      estado: this.getEstadoCheque(r.rubroEstadoChequeH),
     }));
     this.exportService.exportToPDF(rows, 'cheques', 'Cheques', headers, [
-      'cheque',
-      'egreso',
+      'numero',
+      'estado',
+      'valor',
+      'beneficiario',
       'fechaUso',
       'fechaImpresion',
       'fechaEntrega',
-      'asiento',
-      'beneficiario',
-      'monto',
-      'fechaCaduca',
-      'fechaAnulacion',
-      'estado',
     ]);
   }
 }

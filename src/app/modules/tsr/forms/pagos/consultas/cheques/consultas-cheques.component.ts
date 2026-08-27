@@ -1,107 +1,140 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
-import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { AppStateService } from '../../../../../../shared/services/app-state.service';
+import { DetalleRubro } from '../../../../../../shared/model/detalle-rubro';
+import { DetalleRubroService } from '../../../../../../shared/services/detalle-rubro.service';
+import { FuncionesDatosService } from '../../../../../../shared/services/funciones-datos.service';
+import { ChequeListado } from '../../../../model/cheque-listado';
+import { CuentaBancaria } from '../../../../model/cuenta-bancaria';
+import { ChequeService } from '../../../../service/cheque.service';
+import { CuentaBancariaService } from '../../../../service/cuenta-bancaria.service';
 
-interface ChequeRow {
-  numero: string;
-  beneficiario: string;
-  banco: string;
-  cuenta: string;
-  valor: number;
-  fecha: string; // ISO
-  estado: 'PENDIENTE' | 'IMPRESO' | 'ENTREGADO' | 'ANULADO';
-}
+const RUBRO_ESTADO_CHEQUE = 26;
 
+/**
+ * Consulta de cheques en cualquier estado, con filtros de cuenta, estado y
+ * rango de fechas. Antes tenía filas hardcodeadas; ahora consulta
+ * GET /dtch/listar.
+ */
 @Component({
   selector: 'app-consultas-cheques',
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     MatFormFieldModule,
     MatInputModule,
-    MatDatepickerModule,
     MatSelectModule,
     MatButtonModule,
     MatIconModule,
     MatCardModule,
     MatTableModule,
+    MatProgressSpinnerModule,
+    MatTooltipModule,
+    MatSnackBarModule,
   ],
   templateUrl: './consultas-cheques.component.html',
   styleUrls: ['./consultas-cheques.component.scss'],
 })
-export class ConsultasChequesComponent {
-  // Filtros
-  fechaInicio = signal<Date | null>(null);
-  fechaFin = signal<Date | null>(null);
-  beneficiario = signal<string>('');
-  banco = signal<string>('');
-  cuenta = signal<string>('');
-  estado = signal<'PENDIENTE' | 'IMPRESO' | 'ENTREGADO' | 'ANULADO' | ''>('');
+export class ConsultasChequesComponent implements OnInit {
+  private chequeService = inject(ChequeService);
+  private cuentaService = inject(CuentaBancariaService);
+  private detalleRubroService = inject(DetalleRubroService);
+  private appState = inject(AppStateService);
+  private funcionesDatos = inject(FuncionesDatosService);
+  private snackBar = inject(MatSnackBar);
 
-  rows = signal<ChequeRow[]>([
-    {
-      numero: '000120',
-      beneficiario: 'Proveedor A',
-      banco: 'Banco Uno',
-      cuenta: '100-001',
-      valor: 320.5,
-      fecha: new Date().toISOString().slice(0, 10),
-      estado: 'PENDIENTE',
-    },
-    {
-      numero: '000121',
-      beneficiario: 'Proveedor B',
-      banco: 'Banco Dos',
-      cuenta: '200-002',
-      valor: 880,
-      fecha: new Date().toISOString().slice(0, 10),
-      estado: 'IMPRESO',
-    },
-    {
-      numero: '000122',
-      beneficiario: 'Proveedor C',
-      banco: 'Banco Uno',
-      cuenta: '100-001',
-      valor: 1500,
-      fecha: new Date().toISOString().slice(0, 10),
-      estado: 'ENTREGADO',
-    },
-  ]);
+  cuentas = signal<CuentaBancaria[]>([]);
+  estados = signal<DetalleRubro[]>([]);
 
-  filtered = computed(() => {
-    const fi = this.fechaInicio();
-    const ff = this.fechaFin();
-    const ben = this.beneficiario().toLowerCase();
-    const b = this.banco().toLowerCase();
-    const c = this.cuenta().toLowerCase();
-    const es = this.estado();
-    return this.rows().filter((r) => {
-      const inRange =
-        (!fi || r.fecha >= fi.toISOString().slice(0, 10)) &&
-        (!ff || r.fecha <= ff.toISOString().slice(0, 10));
-      const matchBen = !ben || r.beneficiario.toLowerCase().includes(ben);
-      const matchBanco = !b || r.banco.toLowerCase().includes(b);
-      const matchCta = !c || r.cuenta.toLowerCase().includes(c);
-      const matchEst = !es || r.estado === es;
-      return inRange && matchBen && matchBanco && matchCta && matchEst;
+  idCuentaFiltro = signal<number | null>(null);
+  estadoFiltro = signal<number | null>(null);
+  desde = signal<string>('');
+  hasta = signal<string>('');
+
+  rows = signal<ChequeListado[]>([]);
+  loading = signal(false);
+
+  total = computed(() => this.rows().reduce((s, r) => s + (Number(r.valor) || 0), 0));
+
+  readonly columnas = ['numero', 'beneficiario', 'cuenta', 'fecha', 'tipoPago', 'referencia', 'valor', 'estado', 'acciones'];
+
+  ngOnInit(): void {
+    this.cargarCuentas();
+    this.estados.set(this.detalleRubroService.getDetallesByParent(RUBRO_ESTADO_CHEQUE));
+    this.buscar();
+  }
+
+  private cargarCuentas(): void {
+    this.cuentaService.getAll().subscribe({
+      next: (data) => this.cuentas.set(Array.isArray(data) ? (data as CuentaBancaria[]) : []),
+      error: () => this.cuentas.set([]),
     });
-  });
+  }
 
-  total = computed(() => this.filtered().reduce((s, r) => s + r.valor, 0));
+  buscar(): void {
+    this.loading.set(true);
+    this.chequeService
+      .listar({
+        idEmpresa: this.appState.getEmpresa()?.codigo ?? undefined,
+        idCuenta: this.idCuentaFiltro() ?? undefined,
+        estado: this.estadoFiltro() ?? undefined,
+        desde: this.desde() || undefined,
+        hasta: this.hasta() || undefined,
+      })
+      .subscribe({
+        next: (data) => {
+          this.rows.set(Array.isArray(data) ? data : []);
+          this.loading.set(false);
+        },
+        error: (err) => {
+          this.loading.set(false);
+          this.rows.set([]);
+          this.snackBar.open(ChequeService.mensajeError(err), 'Cerrar', { duration: 6000 });
+        },
+      });
+  }
 
-  limpiar(): void {
-    this.fechaInicio.set(null);
-    this.fechaFin.set(null);
-    this.beneficiario.set('');
-    this.banco.set('');
-    this.cuenta.set('');
-    this.estado.set('');
+  limpiarFiltros(): void {
+    this.idCuentaFiltro.set(null);
+    this.estadoFiltro.set(null);
+    this.desde.set('');
+    this.hasta.set('');
+    this.buscar();
+  }
+
+  etiquetaEstado(estado: number): string {
+    return this.detalleRubroService.getDescripcionByParentAndAlterno(RUBRO_ESTADO_CHEQUE, estado) || `Estado ${estado}`;
+  }
+
+  etiquetaTipoPago(tipo: ChequeListado['tipoPago']): string {
+    switch (tipo) {
+      case 'FACTURA': return 'Factura';
+      case 'EGRESO': return 'Egreso';
+      case 'ANTICIPO': return 'Anticipo';
+      case 'EXTERNO': return 'Externo';
+      default: return '—';
+    }
+  }
+
+  fechaGiro(row: ChequeListado): string {
+    const fecha = row.fechaUso ?? row.fechaImpresion ?? row.fechaEntrega ?? null;
+    if (!fecha) return '—';
+    return this.funcionesDatos.formatoFecha(fecha, FuncionesDatosService.SOLO_FECHA);
+  }
+
+  cuentaBanco(row: ChequeListado): string {
+    return [row.numeroCuenta, row.banco].filter((v) => !!v).join(' — ') || '—';
   }
 }

@@ -44,14 +44,15 @@
           <div class="fila-campos">
             <mat-form-field appearance="outline">
               <mat-label>Cuenta bancaria de origen</mat-label>
-              <mat-select [(ngModel)]="regCuentaOrigen" name="regCuentaOrigen">
+              <mat-select [(ngModel)]="regCuentaOrigen" name="regCuentaOrigen"
+                          (selectionChange)="onCambioCuentaOrigenReg()">
                 @for (c of cuentasBancarias(); track c.codigo) {
                   <mat-option [value]="c">{{ etiquetaCuenta(c) }}</mat-option>
                 }
               </mat-select>
             </mat-form-field>
 
-            @if (!regDebitoAutomatico) {
+            @if (regFormaPago() === FormaPagoAplicacion.TRANSFERENCIA) {
               <mat-form-field appearance="outline">
                 <mat-label>Cuenta destino del proveedor</mat-label>
                 <mat-select [(ngModel)]="regIdCuentaDestino" name="regIdCuentaDestino"
@@ -70,20 +71,43 @@
                   <mat-hint>Obligatorio para la transferencia</mat-hint>
                 }
               </mat-form-field>
-            } @else {
+            } @else if (regFormaPago() === FormaPagoAplicacion.DEBITO_AUTOMATICO) {
               <mat-form-field appearance="outline">
                 <mat-label>Referencia del débito</mat-label>
                 <input matInput [(ngModel)]="regReferencia" name="regReferencia" maxlength="200" />
                 <mat-hint>Opcional; nota de débito o número de convenio</mat-hint>
               </mat-form-field>
+            } @else {
+              <div class="aviso-cheque">
+                @if (cargandoChequeSiguiente()) {
+                  <mat-spinner diameter="18"></mat-spinner>
+                  <span>Consultando el siguiente cheque disponible...</span>
+                } @else if (regChequeError()) {
+                  <mat-icon color="warn">error_outline</mat-icon>
+                  <span class="hint-error">{{ regChequeError() }}</span>
+                } @else if (regChequeSiguiente(); as ch) {
+                  <mat-icon>receipt_long</mat-icon>
+                  <span>Se girará el cheque N° {{ ch.numero }}</span>
+                }
+              </div>
             }
           </div>
 
-          <div class="fila-check">
-            <mat-checkbox [(ngModel)]="regDebitoAutomatico" name="regDebitoAutomatico"
-                          (change)="onCambioDebitoAutomatico()">
-              Es débito automático (el banco ya debitó la cuenta)
-            </mat-checkbox>
+          <div class="fila-campos">
+            <mat-form-field appearance="outline">
+              <mat-label>Forma de pago</mat-label>
+              <mat-select [ngModel]="regFormaPago()" (ngModelChange)="regFormaPago.set($event); onCambioFormaPago()"
+                          name="regFormaPago">
+                <mat-option [value]="FormaPagoAplicacion.TRANSFERENCIA">Transferencia</mat-option>
+                <mat-option [value]="FormaPagoAplicacion.DEBITO_AUTOMATICO">Débito automático</mat-option>
+                @if (cuentaOrigenManejaChequera) {
+                  <mat-option [value]="FormaPagoAplicacion.CHEQUE">Cheque</mat-option>
+                }
+              </mat-select>
+              @if (!cuentaOrigenManejaChequera) {
+                <mat-hint>Elija una cuenta origen que maneje chequera para pagar con cheque</mat-hint>
+              }
+            </mat-form-field>
           </div>
 
           <div class="fila-campos">
@@ -117,11 +141,11 @@
             </mat-form-field>
 
             <mat-form-field appearance="outline">
-              <mat-label>{{ regDebitoAutomatico ? 'Fecha del débito' : 'Fecha programada' }}</mat-label>
+              <mat-label>{{ regFormaPago() === FormaPagoAplicacion.TRANSFERENCIA ? 'Fecha programada' : 'Fecha del pago' }}</mat-label>
               <input matInput [matDatepicker]="pickerReg" [(ngModel)]="regFecha" name="regFecha" />
               <mat-datepicker-toggle matSuffix [for]="pickerReg"></mat-datepicker-toggle>
               <mat-datepicker #pickerReg></mat-datepicker>
-              @if (regDebitoAutomatico) {
+              @if (regFormaPago() !== FormaPagoAplicacion.TRANSFERENCIA) {
                 <mat-hint>Es la fecha del asiento contable</mat-hint>
               }
             </mat-form-field>
@@ -132,7 +156,7 @@
             <textarea matInput rows="2" [(ngModel)]="regObservacion" name="regObservacion"></textarea>
           </mat-form-field>
 
-          @if (regDebitoAutomatico) {
+          @if (regFormaPago() === FormaPagoAplicacion.DEBITO_AUTOMATICO) {
             <div class="mensaje-advertencia">
               <mat-icon>bolt</mat-icon>
               <span>
@@ -140,6 +164,15 @@
                 contable y el movimiento bancario en este momento. No se envía al banco ni
                 pasa por el archivo de transferencias. Para deshacerlo hay que revertirlo
                 desde Seguimiento.
+              </span>
+            </div>
+          } @else if (regFormaPago() === FormaPagoAplicacion.CHEQUE) {
+            <div class="mensaje-advertencia">
+              <mat-icon>receipt_long</mat-icon>
+              <span>
+                El pago se contabiliza al registrarlo: se gira el cheque, se abona la factura y
+                se genera el asiento contable en este momento. Para deshacerlo hay que revertirlo
+                desde Seguimiento (el cheque queda anulado).
               </span>
             </div>
           } @else {
@@ -169,14 +202,14 @@
             </div>
           }
 
-          @if (!regDebitoAutomatico && proveedorSinCuentaDestino) {
+          @if (regFormaPago() === FormaPagoAplicacion.TRANSFERENCIA && proveedorSinCuentaDestino) {
             <div class="mensaje-error">
               <mat-icon>account_balance</mat-icon>
               <span>
                 <strong>{{ nombreProveedorRegistro() }}</strong> no tiene ninguna cuenta bancaria activa
                 registrada, así que no se le puede transferir. Regístrela en Tesorería → Titulares
                 (pestaña Cuentas bancarias) y vuelva a elegir el proveedor. Si en cambio el banco ya
-                debitó la cuenta por convenio, marque «Es débito automático».
+                debitó la cuenta por convenio o va a pagarse con cheque, cambie la forma de pago.
               </span>
             </div>
           }
@@ -208,9 +241,9 @@
               @if (registrando()) {
                 <mat-spinner diameter="20"></mat-spinner>
               } @else {
-                <mat-icon>{{ regDebitoAutomatico ? 'bolt' : 'save' }}</mat-icon>
+                <mat-icon>{{ regFormaPago() === FormaPagoAplicacion.TRANSFERENCIA ? 'save' : (regFormaPago() === FormaPagoAplicacion.CHEQUE ? 'receipt_long' : 'bolt') }}</mat-icon>
               }
-              {{ regDebitoAutomatico ? 'Registrar y contabilizar' : 'Registrar pago' }}
+              {{ regFormaPago() === FormaPagoAplicacion.TRANSFERENCIA ? 'Registrar pago' : 'Registrar y contabilizar' }}
             </button>
           </div>
 
@@ -732,10 +765,14 @@
                 <ng-container matColumnDef="tipo">
                   <th mat-header-cell *matHeaderCellDef>Tipo</th>
                   <td mat-cell *matCellDef="let p">
-                    @if (esDebitoAutomatico(p)) {
-                      <span class="badge badge-debito">Débito automático</span>
+                    @if (esCheque(p)) {
+                      <span class="badge badge-cheque">
+                        {{ textoTipo(p) }}@if (p.cheque?.numero) { &nbsp;N° {{ p.cheque?.numero }} }
+                      </span>
+                    } @else if (esDebitoAutomatico(p)) {
+                      <span class="badge badge-debito">{{ textoTipo(p) }}</span>
                     } @else {
-                      <span class="badge badge-neutro">Transferencia</span>
+                      <span class="badge badge-neutro">{{ textoTipo(p) }}</span>
                     }
                   </td>
                 </ng-container>

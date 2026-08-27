@@ -182,6 +182,22 @@
     &.badge-rechazado { background: #fee2e2; color: #b91c1c; }
     &.badge-anulado   { background: #e5e7eb; color: #6b7280; }
     &.badge-debito    { background: #e0e7ff; color: #4338ca; }
+    &.badge-cheque    { background: #fae8ff; color: #86198f; }
+  }
+
+  // Etiqueta del mat-radio-group de forma de pago (Transferencia/Débito/Cheque)
+  .radio-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #64748b;
+    margin-bottom: 0.35rem;
+  }
+
+  mat-radio-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1.5rem;
   }
 
   // ===== TABLAS =====

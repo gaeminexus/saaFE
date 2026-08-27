@@ -103,6 +103,15 @@
           <td mat-cell *matCellDef="let row">{{ mostrarEstado(row) }}</td>
         </ng-container>
 
+        <ng-container matColumnDef="chequera">
+          <th mat-header-cell *matHeaderCellDef>CHEQUERA</th>
+          <td mat-cell *matCellDef="let row">
+            <mat-icon [matTooltip]="row.manejaChequera === 1 ? 'Maneja chequera' : 'No maneja chequera'">
+              {{ row.manejaChequera === 1 ? 'check_circle' : 'remove_circle_outline' }}
+            </mat-icon>
+          </td>
+        </ng-container>
+
         <tr mat-header-row *matHeaderRowDef="displayedColumnsCuentas"></tr>
         <tr
           mat-row
@@ -252,6 +261,19 @@
             Cobro de Crédito
           </mat-checkbox>
         </div>
+      </div>
+
+      <div class="row">
+        <div class="checkbox-field">
+          <mat-checkbox
+            [(ngModel)]="manejaChequera"
+            [disabled]="!modoEdicion()"
+            matTooltip="Habilita el registro de chequeras y la forma de pago Cheque para esta cuenta"
+          >
+            Maneja chequera
+          </mat-checkbox>
+        </div>
+        <div></div>
       </div>
 
       <div class="row row-4">

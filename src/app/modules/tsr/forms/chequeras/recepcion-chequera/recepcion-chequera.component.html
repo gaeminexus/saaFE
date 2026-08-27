@@ -3,22 +3,12 @@
     <div class="icon-wrap"><mat-icon>assignment_turned_in</mat-icon></div>
     <div class="title-wrap">
       <h2 class="title">Recepción de Chequera</h2>
-      <p class="subtitle">Filtra por banco y cuenta, revisa solicitudes</p>
-    </div>
-    <div class="actions">
-      <button mat-stroked-button color="primary" (click)="exportSolicitudesCSV()">
-        <mat-icon>table_rows</mat-icon>
-        CSV
-      </button>
-      <button mat-stroked-button color="primary" (click)="exportSolicitudesPDF()">
-        <mat-icon>picture_as_pdf</mat-icon>
-        PDF
-      </button>
+      <p class="subtitle">Elija la cuenta y registre el rango de cheques recibido físicamente</p>
     </div>
   </div>
 
   <div class="form-card">
-    <header class="panel-header"><h3>Filtro de cuentas</h3></header>
+    <header class="panel-header"><h3>Cuenta bancaria</h3></header>
 
     <div class="row">
       <mat-form-field appearance="outline">
@@ -39,133 +29,109 @@
           (selectionChange)="onCuentaChange($event.value)"
         >
           <mat-option [value]="null">Seleccione ...</mat-option>
-          @for (cuenta of cuentas(); track cuenta.codigo) {
-            @if (cuenta.banco?.codigo === selectedBancoId()) {
-              <mat-option [value]="cuenta.codigo">{{ cuenta.numeroCuenta }}</mat-option>
-            }
+          @for (cuenta of cuentasDisponibles(); track cuenta.codigo) {
+            <mat-option [value]="cuenta.codigo">{{ cuenta.numeroCuenta }}</mat-option>
           }
         </mat-select>
+        <mat-hint *ngIf="selectedBancoId() && cuentasDisponibles().length === 0">
+          Este banco no tiene cuentas con "Maneja chequera" activado
+        </mat-hint>
       </mat-form-field>
     </div>
-
-    <div class="form-actions">
-      <button
-        mat-raised-button
-        color="primary"
-        (click)="buscarChequeras()"
-        [disabled]="!selectedCuentaId() || loading()"
-      >
-        <mat-icon>search</mat-icon>
-        Buscar Chequeras
-      </button>
-      <span class="msg ok" *ngIf="successMsg()">{{ successMsg() }}</span>
-      <span class="msg err" *ngIf="errorMsg()">{{ errorMsg() }}</span>
-    </div>
   </div>
 
-  <div class="table-card">
-    <header class="panel-header"><h3>Chequeras solicitadas</h3></header>
-
-    @if (loading()) {
-      <div style="text-align: center; padding: 20px">
-        <mat-spinner diameter="40"></mat-spinner>
-      </div>
-    }
-
-    <div class="table-scroll">
-      <table
-        mat-table
-        [dataSource]="filteredSolicitudes()"
-        class="mat-elevation-z0 solicitudes-table"
-      >
-        <!-- Banco -->
-        <ng-container matColumnDef="banco">
-          <th mat-header-cell *matHeaderCellDef>BANCO</th>
-          <td mat-cell *matCellDef="let row">{{ row.cuentaBancaria?.banco?.nombre }}</td>
-        </ng-container>
-
-        <!-- Cuenta Bancaria -->
-        <ng-container matColumnDef="cuentaBancaria">
-          <th mat-header-cell *matHeaderCellDef>CUENTA BANCARIA</th>
-          <td mat-cell *matCellDef="let row">{{ row.cuentaBancaria?.numeroCuenta }}</td>
-        </ng-container>
-
-        <!-- Fecha Solicitud -->
-        <ng-container matColumnDef="fechaSolicitud">
-          <th mat-header-cell *matHeaderCellDef>FECHA SOLICITUD</th>
-          <td mat-cell *matCellDef="let row">{{ formatearFecha(row.fechaSolicitud) }}</td>
-        </ng-container>
-
-        <!-- Número de Cheques -->
-        <ng-container matColumnDef="numeroCheques">
-          <th mat-header-cell *matHeaderCellDef>N° CHEQUES</th>
-          <td mat-cell *matCellDef="let row">{{ row.numeroCheques }}</td>
-        </ng-container>
-
-        <!-- Acciones -->
-        <ng-container matColumnDef="acciones">
-          <th mat-header-cell *matHeaderCellDef>ACCIONES</th>
-          <td mat-cell *matCellDef="let row">
-            <button
-              mat-icon-button
-              color="primary"
-              (click)="seleccionarChequera(row)"
-              matTooltip="Recibir chequera"
-            >
-              <mat-icon>check_circle</mat-icon>
-            </button>
-          </td>
-        </ng-container>
-
-        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-        <tr
-          mat-row
-          *matRowDef="let row; columns: displayedColumns"
-          [class.selected]="chequeraSeleccionada?.codigo === row.codigo"
-          (click)="seleccionarChequera(row)"
-        ></tr>
-      </table>
-    </div>
-  </div>
-
-  <!-- Formulario de recepción -->
-  @if (chequeraSeleccionada) {
+  @if (selectedCuentaId()) {
     <div class="form-card recepcion-form">
       <header class="panel-header"><h3>Recepción de chequera</h3></header>
 
-      <div class="resumen-chequera">
-        <p><strong>Banco:</strong> {{ chequeraSeleccionada.cuentaBancaria?.banco?.nombre }}</p>
-        <p><strong>Cuenta:</strong> {{ chequeraSeleccionada.cuentaBancaria?.numeroCuenta }}</p>
-        <p>
-          <strong>Fecha solicitud:</strong>
-          {{ formatearFecha(chequeraSeleccionada.fechaSolicitud) }}
-        </p>
-        <p><strong>Número de cheques:</strong> {{ chequeraSeleccionada.numeroCheques }}</p>
+      @if (cargandoSugerido()) {
+        <div style="text-align: center; padding: 12px">
+          <mat-spinner diameter="28"></mat-spinner>
+        </div>
+      } @else {
+        <div class="row row-3">
+          <mat-form-field appearance="outline">
+            <mat-label>Comienza en</mat-label>
+            <input
+              matInput
+              type="number"
+              min="1"
+              [ngModel]="comienza()"
+              (ngModelChange)="onComienzaChange($event)"
+            />
+            <mat-hint>Sugerido por el sistema; puede corregirse</mat-hint>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Cantidad de cheques</mat-label>
+            <input
+              matInput
+              type="number"
+              min="1"
+              [ngModel]="cantidad()"
+              (ngModelChange)="onCantidadChange($event)"
+            />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Termina en</mat-label>
+            <input
+              matInput
+              type="number"
+              min="1"
+              [ngModel]="finaliza()"
+              (ngModelChange)="onFinalizaChange($event)"
+            />
+          </mat-form-field>
+        </div>
+
+        <div class="row">
+          <mat-form-field appearance="outline">
+            <mat-label>Fecha de entrega</mat-label>
+            <input matInput type="date" [(ngModel)]="fechaEntrega" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Hora de entrega</mat-label>
+            <input matInput type="time" [(ngModel)]="horaEntrega" />
+          </mat-form-field>
+        </div>
+
+        <div class="form-actions">
+          <button
+            mat-raised-button
+            color="primary"
+            (click)="registrarRecepcion()"
+            [disabled]="!formListo() || loading()"
+          >
+            <mat-icon>save</mat-icon>
+            Registrar recepción
+          </button>
+          <span class="msg ok" *ngIf="successMsg()">{{ successMsg() }}</span>
+          <span class="msg err" *ngIf="errorMsg()">{{ errorMsg() }}</span>
+        </div>
+      }
+    </div>
+  }
+
+  @if (resumen(); as r) {
+    <div class="table-card resumen-card">
+      <header class="panel-header"><h3>Resumen de la chequera registrada</h3></header>
+      <div class="resumen-grid">
+        <div class="resumen-item"><span class="label">Rango</span><span class="value">{{ r.comienza }} – {{ r.finaliza }}</span></div>
+        <div class="resumen-item"><span class="label">Total</span><span class="value">{{ r.total }}</span></div>
+        <div class="resumen-item"><span class="label">Disponibles</span><span class="value">{{ r.disponibles }}</span></div>
+        <div class="resumen-item"><span class="label">Generados</span><span class="value">{{ r.generados }}</span></div>
+        <div class="resumen-item"><span class="label">Impresos</span><span class="value">{{ r.impresos }}</span></div>
+        <div class="resumen-item"><span class="label">Entregados</span><span class="value">{{ r.entregados }}</span></div>
+        <div class="resumen-item"><span class="label">Anulados</span><span class="value">{{ r.anulados }}</span></div>
+        <div class="resumen-item"><span class="label">Siguiente</span><span class="value">{{ r.siguiente }}</span></div>
       </div>
-
-      <div class="row">
-        <mat-form-field appearance="outline">
-          <mat-label>Fecha de entrega</mat-label>
-          <input matInput type="date" [(ngModel)]="fechaEntrega" />
-        </mat-form-field>
-
-        <mat-form-field appearance="outline">
-          <mat-label>Cheque inicial</mat-label>
-          <input matInput type="number" min="1" [(ngModel)]="chequeInicial" />
-        </mat-form-field>
-      </div>
-
       <div class="form-actions">
-        <button mat-raised-button color="primary" (click)="recibirChequera()">
-          <mat-icon>save</mat-icon>
-          Guardar recepción
+        <button mat-stroked-button color="primary" (click)="registrarOtra()">
+          <mat-icon>add</mat-icon>
+          Registrar otra chequera para esta cuenta
         </button>
-        <button mat-raised-button color="warn" (click)="cancelarRecepcion()">
-          <mat-icon>cancel</mat-icon>
-          Cancelar
-        </button>
-        <span class="msg ok" *ngIf="successMsg()">{{ successMsg() }}</span>
-        <span class="msg err" *ngIf="errorMsg()">{{ errorMsg() }}</span>
       </div>
     </div>
   }

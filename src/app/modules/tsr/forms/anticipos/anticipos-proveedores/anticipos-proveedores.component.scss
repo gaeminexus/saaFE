@@ -127,6 +127,22 @@
   mat-form-field { width: 100%; }
 }
 
+.cheque-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: #e8f5e9;
+  border-left: 4px solid #2e7d32;
+  border-radius: 4px;
+  font-size: 0.88rem;
+  color: #1b5e20;
+
+  mat-icon { color: #2e7d32; }
+
+  .msg-error { margin: 0; flex: 1; background: transparent; border: none; padding: 0; }
+}
+
 .msg-error {
   margin-top: 12px;
   padding: 10px 14px;

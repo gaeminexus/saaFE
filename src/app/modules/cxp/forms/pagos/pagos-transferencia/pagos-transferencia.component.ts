@@ -13,6 +13,8 @@ import { TitularSelectorDialogComponent } from '../../../../../shared/components
 import {
   ESTADO_PAGO_PROGRAMADO_LABELS,
   EstadoPagoProgramado,
+  FormaPagoAplicacion,
+  FORMA_PAGO_LABELS,
   SaldoFactura,
 } from '../../../../../shared/model/pagos-cobros/catalogos-aplicacion-pago';
 import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
@@ -27,6 +29,8 @@ import { CuentaBancariaTitular } from '../../../../tsr/model/cuenta-bancaria-tit
 import { Titular } from '../../../../tsr/model/titular';
 import { CuentaBancariaService } from '../../../../tsr/service/cuenta-bancaria.service';
 import { CuentaBancariaTitularService } from '../../../../tsr/service/cuenta-bancaria-titular.service';
+import { ChequeService } from '../../../../tsr/service/cheque.service';
+import { ChequeSiguiente } from '../../../../tsr/model/cheque-listado';
 import { FacturaCompraSelectorDialogComponent } from '../../../dialog/factura-compra-selector-dialog/factura-compra-selector-dialog.component';
 import { FacturaCompra } from '../../../model/factura-compra';
 import { etiquetaOrigenPagoExterno } from '../../../model/origen-pago-externo';
@@ -59,6 +63,7 @@ export class PagosTransferenciaComponent implements OnInit {
   private aplicacionS = inject(AplicacionPagoCxpService);
   private cuentaBancariaS = inject(CuentaBancariaService);
   private cuentaTitularS = inject(CuentaBancariaTitularService);
+  private chequeS = inject(ChequeService);
   private facturaS = inject(FacturaCompraService);
   private funcionesDatos = inject(FuncionesDatosService);
   private detalleRubroS = inject(DetalleRubroService);
@@ -83,7 +88,12 @@ export class PagosTransferenciaComponent implements OnInit {
   /** Catálogo de tipos de cuenta bancaria (rubro 23) para etiquetar cada cuenta. */
   private tiposCuentaBancaria = signal<DetalleRubro[]>([]);
   cargandoCuentasDestino = signal(false);
-  regDebitoAutomatico = false;
+  /** Transferencia (2, por defecto), Débito automático (4) o Cheque (3, solo si la cuenta origen maneja chequera). */
+  regFormaPago = signal<number>(FormaPagoAplicacion.TRANSFERENCIA);
+  readonly FormaPagoAplicacion = FormaPagoAplicacion;
+  regChequeSiguiente = signal<ChequeSiguiente | null>(null);
+  regChequeError = signal<string>('');
+  cargandoChequeSiguiente = signal(false);
   regReferencia = '';
   /** Saldo de la factura elegida: precarga el valor y le pone tope. */
   regSaldo = signal<SaldoFactura | null>(null);
@@ -152,7 +162,15 @@ export class PagosTransferenciaComponent implements OnInit {
   readonly tiposPagoFiltro = [
     { valor: 0, texto: 'Transferencia' },
     { valor: 1, texto: 'Débito automático' },
+    { valor: 2, texto: 'Cheque' },
   ];
+
+  /** Código del filtro de tipo (0 transferencia, 1 débito, 2 cheque) para un pago dado. */
+  private codigoTipoPago(pago: PagoProgramado): number {
+    if (this.esCheque(pago)) return 2;
+    if (this.esDebitoAutomatico(pago)) return 1;
+    return 0;
+  }
 
   readonly estadosFiltro = [
     { valor: EstadoPagoProgramado.REGISTRADO, texto: 'Registrado' },
@@ -414,17 +432,67 @@ export class PagosTransferenciaComponent implements OnInit {
 
   /**
    * En un débito automático el dinero no se transfiere: el banco debita la
-   * cuenta propia por convenio, así que la cuenta del titular no se pide.
+   * cuenta propia por convenio. En un cheque tampoco: se gira contra la
+   * cuenta origen. En ambos casos no se pide la cuenta del titular.
    */
-  onCambioDebitoAutomatico(): void {
-    if (this.regDebitoAutomatico) {
+  onCambioFormaPago(): void {
+    const forma = this.regFormaPago();
+    if (forma === FormaPagoAplicacion.CHEQUE) {
       this.regIdCuentaDestino = null;
+      this.consultarChequeSiguiente();
+    } else if (forma === FormaPagoAplicacion.DEBITO_AUTOMATICO) {
+      this.regIdCuentaDestino = null;
+      this.regChequeSiguiente.set(null);
+      this.regChequeError.set('');
     } else {
       this.regReferencia = '';
+      this.regChequeSiguiente.set(null);
+      this.regChequeError.set('');
       this.autoSeleccionarCuentaDestino();
     }
     this.regError.set('');
     this.regExito.set('');
+  }
+
+  /**
+   * La cuenta origen decide si Cheque sigue siendo una opción válida. Si el
+   * usuario tenía Cheque elegido y cambia a una cuenta sin chequera, se
+   * vuelve a Transferencia para no dejar una forma de pago inválida.
+   */
+  onCambioCuentaOrigenReg(): void {
+    if (this.regFormaPago() === FormaPagoAplicacion.CHEQUE && !this.cuentaOrigenManejaChequera) {
+      this.regFormaPago.set(FormaPagoAplicacion.TRANSFERENCIA);
+      this.onCambioFormaPago();
+      return;
+    }
+    if (this.regFormaPago() === FormaPagoAplicacion.CHEQUE) {
+      this.consultarChequeSiguiente();
+    }
+  }
+
+  get cuentaOrigenManejaChequera(): boolean {
+    return Number((this.regCuentaOrigen as any)?.manejaChequera) === 1;
+  }
+
+  /** Consulta el próximo cheque disponible de la cuenta origen; bloquea el guardado si falla. */
+  private consultarChequeSiguiente(): void {
+    const idCuenta = this.regCuentaOrigen?.codigo;
+    if (!idCuenta) return;
+
+    this.cargandoChequeSiguiente.set(true);
+    this.regChequeSiguiente.set(null);
+    this.regChequeError.set('');
+
+    this.chequeS.siguiente(idCuenta).subscribe({
+      next: (r) => {
+        this.cargandoChequeSiguiente.set(false);
+        this.regChequeSiguiente.set(r);
+      },
+      error: (err) => {
+        this.cargandoChequeSiguiente.set(false);
+        this.regChequeError.set(ChequeService.mensajeError(err));
+      },
+    });
   }
 
   get regValorNumerico(): number {
@@ -462,11 +530,17 @@ export class PagosTransferenciaComponent implements OnInit {
   }
 
   get puedeRegistrar(): boolean {
+    const forma = this.regFormaPago();
+    const requiereCuentaDestino = forma === FormaPagoAplicacion.TRANSFERENCIA;
+    const chequeListo = forma !== FormaPagoAplicacion.CHEQUE
+      || (!!this.regChequeSiguiente() && !this.regChequeError());
+
     return !!this.regIdFactura
       && !!this.regCuentaOrigen
-      // En un débito automático el banco debita por convenio y no hay
-      // transferencia: solo ahí se puede registrar sin cuenta de destino.
-      && (this.regDebitoAutomatico || this.regIdCuentaDestino != null)
+      // Solo la transferencia exige la cuenta del proveedor; débito
+      // automático y cheque salen contra la cuenta origen.
+      && (!requiereCuentaDestino || this.regIdCuentaDestino != null)
+      && chequeListo
       && this.regValorNumerico > 0
       && !this.regExcedeSaldo
       && !this.registrando();
@@ -479,29 +553,37 @@ export class PagosTransferenciaComponent implements OnInit {
     this.regError.set('');
     this.regExito.set('');
 
-    const esDebito = this.regDebitoAutomatico;
+    const forma = this.regFormaPago();
+    const esDebito = forma === FormaPagoAplicacion.DEBITO_AUTOMATICO;
+    const esCheque = forma === FormaPagoAplicacion.CHEQUE;
+    const esTransferencia = forma === FormaPagoAplicacion.TRANSFERENCIA;
 
     this.pagoS.registrar({
       idFacturaCompra: this.regIdFactura,
       idCuentaBancariaOrigen: this.regCuentaOrigen.codigo,
-      idCuentaDestinoTitular: esDebito ? undefined : (this.regIdCuentaDestino ?? undefined),
+      idCuentaDestinoTitular: esTransferencia ? (this.regIdCuentaDestino ?? undefined) : undefined,
       valor: this.regValorNumerico,
       fechaProgramada: this.fechaISO(this.regFecha),
       idEmpresa: this.idEmpresaSesion(),
       idUsuario: this.idUsuarioSesion(),
       observacion: this.regObservacion.trim(),
+      formaPago: forma,
       debitoAutomatico: esDebito,
       referencia: esDebito ? this.regReferencia.trim() || undefined : undefined,
     }).subscribe({
       next: (resp) => {
         this.registrando.set(false);
 
-        // En un débito automático el backend ya abonó la factura y generó el
-        // asiento, así que el mensaje lo dice y no hay nada que enviar al banco.
+        // En un débito automático o un cheque el backend ya abonó la factura
+        // y generó el asiento, así que el mensaje lo dice y no hay nada que
+        // enviar al banco.
         let mensaje = resp.mensaje
           ?? 'Pago registrado. Aparecerá en la pantalla de selección para el próximo archivo.';
         if (resp.debitoAutomatico && resp.asiento) {
           mensaje += ` Asiento N° ${resp.asiento}.`;
+        }
+        if (esCheque && resp.numeroCheque != null) {
+          mensaje += ` Se giró el cheque N° ${resp.numeroCheque}.`;
         }
         this.regExito.set(mensaje);
 
@@ -525,7 +607,8 @@ export class PagosTransferenciaComponent implements OnInit {
         // El pago recién registrado ya compromete saldo: sin refrescar esto se
         // podía volver a registrar el mismo valor sobre la misma factura.
         if (this.regIdFactura) this.cargarComprometidoFactura(this.regIdFactura);
-        if (!this.regDebitoAutomatico) this.autoSeleccionarCuentaDestino();
+        if (esTransferencia) this.autoSeleccionarCuentaDestino();
+        if (esCheque) this.consultarChequeSiguiente();
         this.cargarSeguimiento();
         this.snackBar.open(mensaje, 'Cerrar', { duration: 6000 });
       },
@@ -551,7 +634,9 @@ export class PagosTransferenciaComponent implements OnInit {
     this.regSaldo.set(null);
     this.regComprometido.set(0);
     this.pagosComprometidos.set([]);
-    this.regDebitoAutomatico = false;
+    this.regFormaPago.set(FormaPagoAplicacion.TRANSFERENCIA);
+    this.regChequeSiguiente.set(null);
+    this.regChequeError.set('');
     this.regReferencia = '';
     this.regValor = '';
     this.regFecha = new Date();
@@ -594,7 +679,12 @@ export class PagosTransferenciaComponent implements OnInit {
   get pagosFiltrados(): PagoProgramado[] {
     const cuenta = this.selCuentaOrigen;
     if (!cuenta) return [];
-    return this.pagosRegistrados().filter((p) => p.cuentaBancaria?.codigo === cuenta.codigo);
+    // Un pago con cheque no va en un archivo bancario: el cheque ya se giró
+    // al registrarlo, igual que el débito automático nunca pasa por lote.
+    return this.pagosRegistrados().filter(
+      (p) => p.cuentaBancaria?.codigo === cuenta.codigo
+        && p.formaPago !== FormaPagoAplicacion.CHEQUE
+    );
   }
 
   onCambioCuentaOrigen(): void {
@@ -884,7 +974,9 @@ export class PagosTransferenciaComponent implements OnInit {
 
   /** Texto de la columna Tipo; se reutiliza en la celda y en el filtro. */
   textoTipo(pago: PagoProgramado): string {
-    return this.esDebitoAutomatico(pago) ? 'Débito automático' : 'Transferencia';
+    if (this.esCheque(pago)) return FORMA_PAGO_LABELS[FormaPagoAplicacion.CHEQUE];
+    if (this.esDebitoAutomatico(pago)) return FORMA_PAGO_LABELS[FormaPagoAplicacion.DEBITO_AUTOMATICO];
+    return FORMA_PAGO_LABELS[FormaPagoAplicacion.TRANSFERENCIA];
   }
 
   /** Nombre del proveedor elegido en el filtro (chip del panel superior). */
@@ -924,7 +1016,7 @@ export class PagosTransferenciaComponent implements OnInit {
     return this.pagosSeguimiento().filter((p) => {
       if (proveedor && p.titular?.codigo !== proveedor.codigo) return false;
       if (concepto && !this.conceptoPago(p).toLowerCase().includes(concepto)) return false;
-      if (tipos.length && !tipos.includes(this.esDebitoAutomatico(p) ? 1 : 0)) return false;
+      if (tipos.length && !tipos.includes(this.codigoTipoPago(p))) return false;
       if (desde || hasta) {
         const f = this.funcionesDatos.convertirFechaDesdeBackend(p.fechaProgramada);
         if (!f) return false;
@@ -971,6 +1063,10 @@ export class PagosTransferenciaComponent implements OnInit {
   /** El banco lo debitó por convenio: nació confirmado y sin lote. */
   esDebitoAutomatico(pago: PagoProgramado): boolean {
     return Number(pago.debitoAutomatico) === 1;
+  }
+
+  esCheque(pago: PagoProgramado): boolean {
+    return pago.formaPago === FormaPagoAplicacion.CHEQUE;
   }
 
   /** Solo se anula lo que el banco todavía no confirmó. */

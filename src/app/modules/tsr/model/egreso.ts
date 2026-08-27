@@ -46,6 +46,10 @@ export interface Egreso {
   estado: number;
   /** 0 = transferencia, 1 = débito automático (columna EGRSDBAT). */
   debitoAutomatico?: number | null;
+  /** Ver FormaPagoAplicacion (2 transferencia, 3 cheque, 4 débito automático). */
+  formaPago?: number | null;
+  /** Solo cuando `formaPago = 3` (cheque). Campo plano, no un objeto anidado. */
+  numeroCheque?: number | null;
   /** Asiento del pago; nulo mientras el egreso está pendiente. */
   asiento?: Asiento | null;
   observacion?: string | null;
@@ -71,6 +75,8 @@ export interface RegistrarEgresoRequest {
   referencia?: string;
   observacion?: string;
   idUsuario: number;
+  /** Ver FormaPagoAplicacion (2 transferencia, 3 cheque, 4 débito automático). */
+  formaPago?: number;
 }
 
 /**
@@ -88,6 +94,8 @@ export interface RegistrarEgresoResponse {
   debitoAutomatico?: boolean;
   /** Solo en débito automático: número alterno del asiento contable. */
   asiento?: string;
+  /** Solo cuando se pagó con cheque: el número girado. */
+  numeroCheque?: number | string;
 }
 
 /** Respuesta de POST /egrs/anular/{id}. */

@@ -88,8 +88,6 @@ import { ConciliacionContableComponent } from './modules/tsr/forms/generales/con
 import { CreditosComponent } from './modules/tsr/forms/movimientos-bancarios/creditos/creditos.component';
 import { DebitosComponent } from './modules/tsr/forms/movimientos-bancarios/debitos/debitos.component';
 import { TransferenciasComponent } from './modules/tsr/forms/movimientos-bancarios/transferencias/transferencias.component';
-import { ChequesEntregaComponent } from './modules/tsr/forms/pagos/cheques/entrega/cheques-entrega.component';
-import { ChequesImpresionComponent } from './modules/tsr/forms/pagos/cheques/impresion/cheques-impresion.component';
 import { ConsultasChequesComponent } from './modules/tsr/forms/pagos/consultas/cheques/consultas-cheques.component';
 import { ConsultasPagosComponent } from './modules/tsr/forms/pagos/consultas/pagos/consultas-pagos.component';
 import { PagosIngresarComponent } from './modules/tsr/forms/pagos/ingresar/pagos-ingresar.component';
@@ -507,18 +505,6 @@ export const routes: Routes = [
         component: PagosIngresarComponent,
         canActivate: [authGuard],
         data: { title: 'Pagos - Ingreso' },
-      },
-      {
-        path: 'procesos/pagos/cheques/impresion',
-        component: ChequesImpresionComponent,
-        canActivate: [authGuard],
-        data: { title: 'Pagos - Cheques Impresión' },
-      },
-      {
-        path: 'procesos/pagos/cheques/entrega',
-        component: ChequesEntregaComponent,
-        canActivate: [authGuard],
-        data: { title: 'Pagos - Cheques Entrega' },
       },
       {
         path: 'procesos/pagos/consulta/pagos',

@@ -42,6 +42,10 @@ export interface PagoProgramado {
   cuentaDestino?: { id: number; numero: string; banco?: { nombre: string } } | null;
   /** 0 = transferencia normal, 1 = débito automático (no pasa por lote). */
   debitoAutomatico?: number | null;
+  /** Ver FormaPagoAplicacion (2 transferencia, 3 cheque, 4 débito automático). */
+  formaPago?: number | null;
+  /** Solo cuando `formaPago = 3` (cheque). */
+  cheque?: { numero: number } | null;
   valor: number;
   fechaProgramada: any;
   /** Ver EstadoPagoProgramado en shared/model/pagos-cobros. */
@@ -92,6 +96,8 @@ export interface RegistrarPagoRequest {
   debitoAutomatico?: boolean;
   /** Nota de débito o número de convenio; solo aplica al débito automático. */
   referencia?: string;
+  /** Ver FormaPagoAplicacion (2 transferencia, 3 cheque, 4 débito automático). */
+  formaPago?: number;
 }
 
 /**
@@ -108,6 +114,8 @@ export interface RegistrarPagoResponse extends SaldoFactura {
   aplicacion?: number;
   /** Solo en débito automático: número alterno del asiento contable. */
   asiento?: string;
+  /** Solo cuando se pagó con cheque: el número girado. */
+  numeroCheque?: number | string;
 }
 
 /** Body de POST /pgtr/lote. Todos los pagos deben compartir la cuenta de origen. */

@@ -1,7 +1,12 @@
 import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, catchError, of, throwError } from 'rxjs';
-import { Chequera } from '../model/chequera';
+import {
+  Chequera,
+  ChequeraRegistrarRecepcionRequest,
+  ChequeraResumen,
+  ChequeraSugerirInicio,
+} from '../model/chequera';
 import { ServiciosTsr } from './ws-tsr';
 
 @Injectable({
@@ -66,6 +71,43 @@ export class ChequeraService {
     const wsDelete = '/' + id;
     const url = `${ServiciosTsr.RS_CHQR}${wsDelete}`;
     return this.http.delete<Chequera>(url, this.httpOptions).pipe(catchError(this.handleError));
+  }
+
+  /**
+   * Siguiente número de cheque sugerido para iniciar una chequera nueva de
+   * esta cuenta (continúa donde terminó la última recibida).
+   */
+  sugerirInicio(idCuenta: number): Observable<ChequeraSugerirInicio> {
+    return this.http.get<ChequeraSugerirInicio>(`${ServiciosTsr.RS_CHQR}/sugerirInicio/${idCuenta}`);
+  }
+
+  /** Registra la recepción física de una chequera nueva y la deja ACTIVA. */
+  registrarRecepcion(datos: ChequeraRegistrarRecepcionRequest): Observable<Chequera> {
+    return this.http.post<Chequera>(`${ServiciosTsr.RS_CHQR}/registrarRecepcion`, datos, this.httpOptions);
+  }
+
+  /** Conteo de cheques por estado de una chequera (para el panel de resumen). */
+  resumen(idChequera: number): Observable<ChequeraResumen> {
+    return this.http.get<ChequeraResumen>(`${ServiciosTsr.RS_CHQR}/resumen/${idChequera}`);
+  }
+
+  /** Chequeras (cualquier estado) de una cuenta bancaria. */
+  porCuenta(idCuenta: number): Observable<Chequera[]> {
+    return this.http.get<Chequera[]>(`${ServiciosTsr.RS_CHQR}/porCuenta/${idCuenta}`);
+  }
+
+  /** Anula la chequera completa (y con ella todos sus cheques disponibles). `motivo` es texto libre. */
+  anular(id: number, motivo: string, idUsuario: number): Observable<Chequera> {
+    return this.http.post<Chequera>(
+      `${ServiciosTsr.RS_CHQR}/anular/${id}`,
+      { motivo, idUsuario },
+      this.httpOptions
+    );
+  }
+
+  /** Lee `{"mensaje": "..."}` (MensajeErrorJsonFilter) o el mensaje del HttpErrorResponse. */
+  static mensajeError(error: any): string {
+    return error?.error?.mensaje ?? error?.message ?? 'Error desconocido';
   }
 
   /**

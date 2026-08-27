@@ -27,4 +27,5 @@ export interface CuentaBancaria {
     fechaInactivo: string;             // Fecha en que fue inactivada (LocalDateTime → ISO string)
     cuentaApertura: PlanCuenta;        // Cuenta contable usada en la apertura
     cobroCredito: number;              // Indica si la cuenta se usa para cobro de crédito (1 = Sí, 0 = No)
+    manejaChequera?: number;           // 1 = la cuenta emite cheques (habilita chequeras y forma de pago Cheque), 0/undefined = no
 }
