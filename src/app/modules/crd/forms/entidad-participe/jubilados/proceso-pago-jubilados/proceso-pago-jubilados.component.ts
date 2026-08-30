@@ -8,6 +8,7 @@ import { Router } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
 
 import { MaterialFormModule } from '../../../../../../shared/modules/material-form.module';
+import { FuncionesDatosService } from '../../../../../../shared/services/funciones-datos.service';
 import { DatosBusqueda } from '../../../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda } from '../../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
@@ -38,6 +39,7 @@ export class ProcesoPagoJubiladosComponent implements OnInit, OnDestroy {
   private entidadService = inject(EntidadService);
   private aporteService = inject(AporteService);
   private valorPagoService = inject(ValorPagoPensionComplementariaService);
+  private funcionesDatos = inject(FuncionesDatosService);
   private router = inject(Router);
   private snackBar = inject(MatSnackBar);
 
@@ -224,7 +226,8 @@ export class ProcesoPagoJubiladosComponent implements OnInit, OnDestroy {
       valorSeguro,
       estado: ProcesoPagoJubiladosComponent.ESTADO_REGISTRO_ACTIVO,
       usuarioModificacion: 'frontend',
-      fechaModificacion: new Date().toISOString(),
+      // LocalDateTime en el backend; nunca `.toISOString()` (UTC, termina en "Z" — regla de CLAUDE.md).
+      fechaModificacion: this.funcionesDatos.formatearFechaParaBackend(new Date()) ?? undefined,
     };
 
     const existente = this.asignaciones().find((item) => item.entidad?.codigo === entidad.codigo);
@@ -255,7 +258,7 @@ export class ProcesoPagoJubiladosComponent implements OnInit, OnDestroy {
       .add({
         ...payloadBase,
         usuarioIngreso: 'frontend',
-        fechaIngreso: new Date().toISOString(),
+        fechaIngreso: this.funcionesDatos.formatearFechaParaBackend(new Date()) ?? undefined,
       })
       .subscribe({
         next: () => {

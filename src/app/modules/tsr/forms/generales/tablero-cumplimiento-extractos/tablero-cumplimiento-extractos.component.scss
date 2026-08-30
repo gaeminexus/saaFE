@@ -49,6 +49,46 @@
   padding: 32px;
 }
 
+.aviso-transito-card {
+  border-radius: 12px;
+  border-left: 4px solid #b26a00;
+  background: #fff8e1;
+}
+
+.aviso-transito-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: #7a5c00;
+  margin-bottom: 12px;
+
+  mat-icon {
+    color: #b26a00;
+  }
+}
+
+.tabla-scroll {
+  overflow-x: auto;
+}
+
+.tabla-transito {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+
+  th,
+  td {
+    text-align: left;
+    padding: 6px 10px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  }
+
+  .num {
+    text-align: right;
+  }
+}
+
 .tablero-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));

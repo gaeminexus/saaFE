@@ -5,11 +5,17 @@
  * contables. Refleja rubro 237 / detalle 1 (`CRD_PARAMETROS_CONTABILIDAD`).
  */
 
-/** Respuesta de GET /rest/cnfg/contabilidadCrd. El contrato solo garantiza `activa`. */
+/**
+ * Respuesta de GET /rest/cnfg/contabilidadCrd. El contrato congelado (§4.3) solo garantiza
+ * `activa`; los otros tres campos no están en el contrato pero el backend real los devuelve —
+ * verificado contra el backend desplegado el 2026-08-27: `{ activa, usuarioUltimoCambio,
+ * fechaUltimoCambio, motivoUltimoCambio }`. Se consumen con esos nombres tal cual llegan.
+ */
 export interface EstadoContabilidadCrd {
   activa: boolean;
-  /** No está en el contrato congelado; si el backend lo agrega más adelante, se muestra igual. */
-  motivo?: string | null;
+  usuarioUltimoCambio?: string | null;
+  fechaUltimoCambio?: string | number[] | null;
+  motivoUltimoCambio?: string | null;
 }
 
 export interface ActualizarContabilidadCrd {

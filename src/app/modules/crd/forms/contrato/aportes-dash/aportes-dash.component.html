@@ -168,7 +168,7 @@
                                 <span class="indicador-fuera-periodo">({{ indicador }})</span>
                               }
                             </td>
-                            <td>{{ mov.tipoMovimientoTexto }}</td>
+                            <td>{{ mov.tipoMovimientoTexto || '—' }}</td>
                             <td>{{ mov.glosa || '-' }}</td>
                             <td class="num" [class.negativo]="mov.valor < 0">{{ mov.valor | currency }}</td>
                           </tr>
@@ -215,7 +215,7 @@
                       @for (mov of fila.movimientos; track mov.idAporte) {
                         <tr>
                           <td>{{ formatearFecha(mov.fechaTransaccion) }}</td>
-                          <td>{{ mov.tipoMovimientoTexto }}</td>
+                          <td>{{ mov.tipoMovimientoTexto || '—' }}</td>
                           <td>{{ mov.glosa || '-' }}</td>
                           <td class="num" [class.negativo]="mov.valor < 0">{{ mov.valor | currency }}</td>
                         </tr>

@@ -8,7 +8,9 @@ import { Periodo } from '../../../../cnt/model/periodo';
 import { PeriodoService } from '../../../../cnt/service/periodo.service';
 import { ControlExtractoBancario } from '../../../model/control-extracto-bancario';
 import { DetalleCumplimientoCuenta } from '../../../model/detalle-cumplimiento-cuenta';
+import { PartidaTransitoAntigua, TIPO_TRANSITO_LABELS } from '../../../model/conciliacion-cierre';
 import { ControlExtractoBancarioService } from '../../../service/control-extracto-bancario.service';
+import { ConciliacionCierreService } from '../../../service/conciliacion-cierre.service';
 import { textoDeError } from '../texto-error';
 
 @Component({
@@ -32,8 +34,19 @@ export class TableroCumplimientoExtractosComponent implements OnInit {
   detalleCuentas: DetalleCumplimientoCuenta[] = [];
   isLoadingDetalle: boolean = false;
 
+  /**
+   * Aviso de partidas en tránsito con más de 60 días sin saldarse (Fase 4 de
+   * docs/logica-negocio/tsr/DISENO-CONCILIACION-PARTIDAS-EN-TRANSITO.md en
+   * saaBE, §9/§10.3). Independiente del período seleccionado arriba: es un
+   * corte "a hoy" por cuenta, no por mes.
+   */
+  partidasAntiguas: PartidaTransitoAntigua[] = [];
+  isLoadingPartidasAntiguas: boolean = false;
+  readonly TIPO_TRANSITO_LABELS = TIPO_TRANSITO_LABELS;
+
   constructor(
     private controlExtractoBancarioService: ControlExtractoBancarioService,
+    private conciliacionCierreService: ConciliacionCierreService,
     private periodoService: PeriodoService,
     private appStateService: AppStateService,
     private snackBar: MatSnackBar,
@@ -43,6 +56,33 @@ export class TableroCumplimientoExtractosComponent implements OnInit {
   ngOnInit(): void {
     this.cargarControles();
     this.cargarPeriodos();
+    this.cargarPartidasAntiguas();
+  }
+
+  cargarPartidasAntiguas(): void {
+    const idEmpresa = this.appStateService.getEmpresa()?.codigo;
+    if (!idEmpresa) {
+      return;
+    }
+    this.isLoadingPartidasAntiguas = true;
+    this.conciliacionCierreService.transitoAntiguas(idEmpresa).subscribe({
+      next: (data) => {
+        this.partidasAntiguas = Array.isArray(data) ? data : [];
+        this.isLoadingPartidasAntiguas = false;
+      },
+      error: () => {
+        this.partidasAntiguas = [];
+        this.isLoadingPartidasAntiguas = false;
+      },
+    });
+  }
+
+  get totalValorPartidasAntiguas(): number {
+    return this.partidasAntiguas.reduce((suma, p) => suma + (Number(p.valor) || 0), 0);
+  }
+
+  tipoTransitoLabel(tipo: number): string {
+    return TIPO_TRANSITO_LABELS[tipo] || `Tipo ${tipo}`;
   }
 
   /**

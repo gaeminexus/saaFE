@@ -1,0 +1,221 @@
+.paso1-card {
+  margin-bottom: 24px;
+}
+
+.paso1-loading,
+.paso1-error {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 0;
+}
+
+.paso1-error {
+  color: #c62828;
+}
+
+// ── Totales ──────────────────────────────────────────────────────────────
+.paso1-totales {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 16px;
+
+  .pt-item {
+    flex: 1 1 200px;
+    background: #f5f5f7;
+    border-radius: 8px;
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    .pt-label {
+      font-size: 0.8rem;
+      color: #616161;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+
+    .pt-valor {
+      font-size: 1.4rem;
+      font-weight: 700;
+    }
+
+    &.pt-cuadra .pt-valor {
+      color: #2e7d32;
+    }
+
+    &.pt-descuadre {
+      background: #fdecea;
+
+      .pt-valor {
+        color: #c62828;
+      }
+    }
+  }
+}
+
+// ── Aviso de confirmación ────────────────────────────────────────────────
+.paso1-aviso {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+
+  span {
+    flex: 1;
+  }
+
+  &.confirmado {
+    background: #e8f5e9;
+    color: #1b5e20;
+
+    mat-icon {
+      color: #2e7d32;
+    }
+  }
+}
+
+// ── Sección / tabla ──────────────────────────────────────────────────────
+.paso1-seccion-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  margin: 16px 0 8px;
+
+  .paso1-btn-nueva {
+    margin-left: auto;
+  }
+}
+
+.paso1-toggle {
+  cursor: pointer;
+  user-select: none;
+}
+
+.paso1-vacio {
+  color: #757575;
+  font-style: italic;
+  padding: 8px 0;
+}
+
+.paso1-tabla-scroll {
+  overflow-x: auto;
+}
+
+.paso1-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+
+  th, td {
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid #e0e0e0;
+    white-space: nowrap;
+  }
+
+  th {
+    color: #616161;
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+  }
+
+  td.num, th.num {
+    text-align: right;
+  }
+
+  td.paso1-obs {
+    white-space: normal;
+    max-width: 220px;
+  }
+
+  tr.anulada {
+    opacity: 0.55;
+    text-decoration: line-through;
+  }
+
+  .paso1-sub {
+    color: #9e9e9e;
+    font-size: 0.8rem;
+  }
+}
+
+.chip-vigente,
+.chip-anulada {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.chip-vigente {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.chip-anulada {
+  background: #eeeeee;
+  color: #757575;
+}
+
+// ── Formulario nueva transferencia ──────────────────────────────────────
+.paso1-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 8px;
+
+  mat-form-field {
+    flex: 1 1 220px;
+  }
+
+  .paso1-ancho-total {
+    flex: 1 1 100%;
+  }
+}
+
+.paso1-form-acciones {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin: 8px 0 16px;
+}
+
+// ── Confirmar recepción ─────────────────────────────────────────────────
+.paso1-confirmar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e0e0e0;
+
+  .paso1-ancho-total {
+    width: 100%;
+  }
+
+  button {
+    align-self: flex-start;
+  }
+}
+
+.paso1-motivo-bloqueo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: #fff3e0;
+  color: #e65100;
+
+  mat-icon {
+    color: #ef6c00;
+  }
+}

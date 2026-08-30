@@ -25,13 +25,10 @@ import { ProductoPago } from '../../../../cxp/model/producto_pago';
 import { GrupoProductoPagoService } from '../../../../cxp/service/grupo-producto-pago.service';
 import { ProductoPagoService } from '../../../../cxp/service/producto-pago.service';
 
-import { CuentaBancaria } from '../../../model/cuenta-bancaria';
 import { CuentaBancariaTitular } from '../../../model/cuenta-bancaria-titular';
 import { ESTADO_EGRESO_LABELS, Egreso, EstadoEgresoTesoreria } from '../../../model/egreso';
 import { Titular } from '../../../model/titular';
-import { ChequeService } from '../../../service/cheque.service';
 import { CuentaBancariaTitularService } from '../../../service/cuenta-bancaria-titular.service';
-import { CuentaBancariaService } from '../../../service/cuenta-bancaria.service';
 import { EgresoService } from '../../../service/egreso.service';
 
 /**
@@ -56,8 +53,6 @@ import { EgresoService } from '../../../service/egreso.service';
 })
 export class RegistroEgresoComponent implements OnInit {
   private egresoS = inject(EgresoService);
-  private chequeS = inject(ChequeService);
-  private cuentaBancariaS = inject(CuentaBancariaService);
   private cuentaTitularS = inject(CuentaBancariaTitularService);
   private grupoProductoS = inject(GrupoProductoPagoService);
   private productoS = inject(ProductoPagoService);
@@ -74,18 +69,15 @@ export class RegistroEgresoComponent implements OnInit {
 
   // ─── Catálogos ─────────────────────────────────────────
   cargandoCatalogos = signal(false);
-  cuentasBancarias = signal<CuentaBancaria[]>([]);
   gruposProducto = signal<GrupoProductoPago[]>([]);
   private todosProductos = signal<ProductoPago[]>([]);
 
   // ─── a) Registrar ──────────────────────────────────────
-  regCuentaOrigen: CuentaBancaria | null = null;
   regIdGrupo: number | null = null;
   /** Grupo elegido en el diálogo; se conserva para mostrar cuenta + nombre. */
   regGrupo: GrupoProductoPago | null = null;
   regIdProducto: number | null = null;
-  /** Filtros de texto de los combos largos (buscador interno del mat-select). */
-  filtroCuentaOrigen = '';
+  /** Filtro de texto del combo de producto (buscador interno del mat-select). */
   filtroProducto = '';
   regBeneficiario = signal<Titular | null>(null);
   /** Cuentas CTBN del beneficiario: el archivo del banco necesita el destino. */
@@ -94,10 +86,6 @@ export class RegistroEgresoComponent implements OnInit {
   private tiposCuentaBancaria = signal<DetalleRubro[]>([]);
   cargandoCuentasDestino = signal(false);
   regIdCuentaDestino: number | null = null;
-  regFormaPago = signal<number>(FormaPagoAplicacion.TRANSFERENCIA);
-  /** Cheque que se girará si `regFormaPago() === CHEQUE`; null mientras no se conoce o falló la consulta. */
-  regChequeSiguiente = signal<number | null>(null);
-  regChequeError = signal<string>('');
   regDescripcion = '';
   regValor = '';
   regFecha: Date | null = new Date();
@@ -122,14 +110,6 @@ export class RegistroEgresoComponent implements OnInit {
     const lista = this.productosDelGrupo;
     if (!q) return lista;
     return lista.filter((p) => (p.nombre ?? '').toLowerCase().includes(q));
-  }
-
-  /** Cuentas propias de origen ya aplicado el buscador interno del combo. */
-  get cuentasBancariasFiltradas(): CuentaBancaria[] {
-    const q = this.filtroCuentaOrigen.trim().toLowerCase();
-    const lista = this.cuentasBancarias();
-    if (!q) return lista;
-    return lista.filter((c) => this.etiquetaCuenta(c).toLowerCase().includes(q));
   }
 
   /** Etiqueta del grupo: número de cuenta contable + nombre. */
@@ -207,14 +187,6 @@ export class RegistroEgresoComponent implements OnInit {
     this.cargandoCatalogos.set(true);
     this.cargarTiposCuentaBancaria();
 
-    this.cuentaBancariaS.getAll().subscribe({
-      next: (data) => this.cuentasBancarias.set(data ?? []),
-      error: () => {
-        this.cuentasBancarias.set([]);
-        this.snackBar.open('No se pudieron cargar las cuentas bancarias.', 'Cerrar', { duration: 5000 });
-      },
-    });
-
     this.grupoProductoS.getAll().subscribe({
       next: (data) => this.gruposProducto.set((data ?? []).filter((g) => g.estado === 1)),
       error: () => this.gruposProducto.set([]),
@@ -250,57 +222,6 @@ export class RegistroEgresoComponent implements OnInit {
       this.regIdGrupo = grupo.codigo;
       this.regIdProducto = null;
       this.filtroProducto = '';
-    });
-  }
-
-  /** La cuenta de origen elegida maneja chequera: solo ahí se ofrece pagar con Cheque. */
-  get cuentaOrigenManejaChequera(): boolean {
-    return Number(this.regCuentaOrigen?.manejaChequera) === 1;
-  }
-
-  /** Cambiar de cuenta origen puede dejar sin sentido una forma de pago Cheque ya elegida. */
-  onCambioCuentaOrigen(): void {
-    if (this.regFormaPago() === FormaPagoAplicacion.CHEQUE && !this.cuentaOrigenManejaChequera) {
-      this.regFormaPago.set(FormaPagoAplicacion.TRANSFERENCIA);
-    }
-    this.onCambioFormaPago();
-  }
-
-  /**
-   * En un débito automático el banco debita la cuenta propia por convenio: no
-   * hay transferencia, así que ni la cuenta del beneficiario hace falta. En un
-   * pago con Cheque tampoco: el cheque físico es el destino.
-   */
-  onCambioFormaPago(): void {
-    const formaPago = this.regFormaPago();
-    this.regChequeSiguiente.set(null);
-    this.regChequeError.set('');
-
-    if (formaPago === FormaPagoAplicacion.DEBITO_AUTOMATICO) {
-      this.regIdCuentaDestino = null;
-    } else if (formaPago === FormaPagoAplicacion.CHEQUE) {
-      this.regIdCuentaDestino = null;
-      this.regReferencia = '';
-      this.cargarChequeSiguiente();
-    } else {
-      this.regReferencia = '';
-      this.autoSeleccionarCuentaDestino();
-    }
-    this.regError.set('');
-    this.regExito.set('');
-  }
-
-  private cargarChequeSiguiente(): void {
-    if (!this.regCuentaOrigen) return;
-    this.chequeS.siguiente(this.regCuentaOrigen.codigo).subscribe({
-      next: (r) => {
-        this.regChequeSiguiente.set(r?.numero ?? null);
-        this.regChequeError.set('');
-      },
-      error: (err) => {
-        this.regChequeSiguiente.set(null);
-        this.regChequeError.set(ChequeService.mensajeError(err));
-      },
     });
   }
 
@@ -385,61 +306,39 @@ export class RegistroEgresoComponent implements OnInit {
   }
 
   get puedeRegistrar(): boolean {
-    const formaPago = this.regFormaPago();
-    // Débito automático no necesita beneficiario ni cuenta destino; Cheque no
-    // necesita cuenta destino (el cheque físico es el destino) pero sí
-    // beneficiario, y además exige que haya un cheque disponible para girar.
-    const beneficiarioOk = formaPago === FormaPagoAplicacion.DEBITO_AUTOMATICO || !!this.regBeneficiario();
-    const cuentaDestinoOk = formaPago !== FormaPagoAplicacion.TRANSFERENCIA || this.regIdCuentaDestino != null;
-    const chequeOk = formaPago !== FormaPagoAplicacion.CHEQUE
-      || (this.regChequeSiguiente() != null && !this.regChequeError());
-
-    return !!this.regCuentaOrigen
-      && this.regIdProducto != null
+    return this.regIdProducto != null
       && !!this.regDescripcion.trim()
       && this.regValorNumerico > 0
-      && beneficiarioOk
-      && cuentaDestinoOk
-      && chequeOk
       && !this.registrando();
   }
 
+  /**
+   * El egreso nace `POR_APROBAR`, sin cuenta bancaria de origen ni forma de
+   * pago (docs/logica-negocio/pagos/PLAN-REDISENO-APROBACION-PAGOS.md §3.1
+   * en saaBE): eso se elige al aprobar en lote, en
+   * Tesorería → Procesos → Aprobación de pagos.
+   */
   registrar(): void {
-    if (!this.puedeRegistrar || !this.regCuentaOrigen || this.regIdProducto == null) return;
+    if (!this.puedeRegistrar || this.regIdProducto == null) return;
 
     this.registrando.set(true);
     this.regError.set('');
     this.regExito.set('');
 
-    const formaPago = this.regFormaPago();
-    const esDebito = formaPago === FormaPagoAplicacion.DEBITO_AUTOMATICO;
-    const esCheque = formaPago === FormaPagoAplicacion.CHEQUE;
-
     this.egresoS.procesar({
       idEmpresa: this.idEmpresaSesion(),
-      idTitular: esDebito ? undefined : (this.regBeneficiario()?.codigo ?? undefined),
+      idTitular: this.regBeneficiario()?.codigo ?? undefined,
       idProductoPago: this.regIdProducto,
       descripcion: this.regDescripcion.trim(),
       valor: this.regValorNumerico,
       fecha: this.fechaISO(this.regFecha),
-      idCuentaBancariaOrigen: this.regCuentaOrigen.codigo,
-      idCuentaDestinoTitular: (esDebito || esCheque) ? undefined : (this.regIdCuentaDestino ?? undefined),
-      debitoAutomatico: esDebito,
-      formaPago,
-      referencia: this.regReferencia.trim() || undefined,
+      idCuentaDestinoTitular: this.regIdCuentaDestino ?? undefined,
       observacion: this.regObservacion.trim() || undefined,
       idUsuario: this.idUsuarioSesion(),
     }).subscribe({
       next: (resp) => {
         this.registrando.set(false);
-
-        let mensaje = resp.mensaje ?? 'Egreso registrado.';
-        if (resp.debitoAutomatico && resp.asiento) {
-          mensaje += ` Asiento N° ${resp.asiento}.`;
-        }
-        if (resp.numeroCheque != null) {
-          mensaje += ` Cheque N° ${resp.numeroCheque}.`;
-        }
+        const mensaje = resp.mensaje ?? 'Egreso registrado. Queda pendiente de aprobación en tesorería.';
         this.regExito.set(mensaje);
         this.limpiar();
         this.cargarEgresos();
@@ -452,7 +351,7 @@ export class RegistroEgresoComponent implements OnInit {
     });
   }
 
-  /** Se conservan la cuenta de origen y el grupo: se cargan varios seguidos. */
+  /** Se conserva el grupo: se cargan varios seguidos. */
   limpiar(): void {
     this.regIdProducto = null;
     this.regBeneficiario.set(null);
@@ -460,34 +359,23 @@ export class RegistroEgresoComponent implements OnInit {
     this.regIdCuentaDestino = null;
     this.regDescripcion = '';
     this.regValor = '';
-    this.regReferencia = '';
     this.regObservacion = '';
     this.regFecha = new Date();
-    // El cheque sugerido ya se usó: si se sigue pagando con Cheque hay que
-    // refrescarlo antes del próximo registro.
-    if (this.regFormaPago() === FormaPagoAplicacion.CHEQUE) {
-      this.cargarChequeSiguiente();
-    }
   }
 
-  /** Empieza un registro nuevo desde cero: borra todo, incluidos cuenta y grupo. */
+  /** Empieza un registro nuevo desde cero: borra todo, incluido el grupo. */
   nuevo(): void {
     this.limpiar();
-    this.regCuentaOrigen = null;
     this.regGrupo = null;
     this.regIdGrupo = null;
-    this.regFormaPago.set(FormaPagoAplicacion.TRANSFERENCIA);
-    this.regChequeSiguiente.set(null);
-    this.regChequeError.set('');
-    this.filtroCuentaOrigen = '';
     this.filtroProducto = '';
     this.regError.set('');
     this.regExito.set('');
   }
 
-  /** El pago del egreso se sigue desde la pantalla de pagos por transferencia. */
+  /** El pago del egreso se aprueba desde la pantalla de aprobación de pagos. */
   irAPagos(): void {
-    this.router.navigate(['/menucuentaxpagar/pagos/transferencias']);
+    this.router.navigate(['/menutesoreria/procesos/aprobacion-pagos']);
   }
 
   // ═══ b) CONSULTA ════════════════════════════════════════
@@ -648,10 +536,6 @@ export class RegistroEgresoComponent implements OnInit {
 
   etiquetaEstado(estado: number): { texto: string; clase: string } {
     return ESTADO_EGRESO_LABELS[Number(estado)] ?? { texto: `Estado ${estado}`, clase: 'badge-neutro' };
-  }
-
-  etiquetaCuenta(cuenta: CuentaBancaria): string {
-    return `${cuenta.banco?.nombre ?? 'Banco'} — ${cuenta.numeroCuenta}`;
   }
 
   nombreTitularFila(egreso: Egreso): string {

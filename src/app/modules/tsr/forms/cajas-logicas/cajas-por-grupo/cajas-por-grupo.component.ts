@@ -262,7 +262,8 @@ export class CajasPorGrupoComponent implements OnInit {
       grupoCaja: { codigo: this.selectedRow.grupoCaja.codigo },
       planCuenta: { codigo: this.selectedRow.planCuenta.codigo },
       fechaIngreso: this.selectedRow.fechaIngreso,
-      fechaInactivo: new Date().toISOString(),
+      // LocalDateTime en el backend; nunca `.toISOString()` (UTC, termina en "Z" — regla de CLAUDE.md).
+      fechaInactivo: this.funcionesDatos.formatearFechaParaBackend(new Date()),
       estado: this.ESTADO_INACTIVO,
     };
 
@@ -326,7 +327,7 @@ export class CajasPorGrupoComponent implements OnInit {
       nombre: nombre,
       grupoCaja: { codigo: this.selectedRow!.grupoCaja.codigo },
       planCuenta: { codigo: this.selectedRow!.planCuenta.codigo },
-      fechaIngreso: esNuevo ? new Date().toISOString() : this.selectedRow!.fechaIngreso,
+      fechaIngreso: esNuevo ? this.funcionesDatos.formatearFechaParaBackend(new Date()) : this.selectedRow!.fechaIngreso,
       estado: this.selectedRow!.estado,
     };
 

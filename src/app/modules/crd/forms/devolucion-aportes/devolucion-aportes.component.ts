@@ -16,8 +16,6 @@ import { MaterialFormModule } from '../../../../shared/modules/material-form.mod
 import { DetalleRubroService } from '../../../../shared/services/detalle-rubro.service';
 import { FuncionesDatosService } from '../../../../shared/services/funciones-datos.service';
 import { usuarioSesion } from '../../../../shared/services/usuario-sesion';
-import { CuentaBancaria } from '../../../tsr/model/cuenta-bancaria';
-import { CuentaBancariaService } from '../../../tsr/service/cuenta-bancaria.service';
 
 import { CuentaBancariaParticipe } from '../../model/cuenta-bancaria-participe';
 import {
@@ -86,7 +84,6 @@ export class DevolucionAportesComponent {
   private operaciones = inject(OperacionesPagoPrestamoService);
   private devolucionService = inject(DevolucionAporteService);
   private cuentaParticipeService = inject(CuentaBancariaParticipeService);
-  private cuentaBancariaService = inject(CuentaBancariaService);
   private detalleRubroService = inject(DetalleRubroService);
   private funcionesDatos = inject(FuncionesDatosService);
   private snackBar = inject(MatSnackBar);
@@ -111,21 +108,21 @@ export class DevolucionAportesComponent {
   // que este contador es el que fuerza a los computed() a recalcular.
   private saldosVersion = signal(0);
 
-  // ---- destino y origen del dinero ----
+  // ---- destino del dinero ----
+  //
+  // La cuenta de ORIGEN (de dónde sale el dinero) ya no se elige acá: la decide Tesorería al
+  // aprobar el pago en Cuentas por Pagar, no crédito al registrar la devolución. Pedirla acá
+  // hacía que la devolución naciera con la cuenta ya asignada y se saltara la bandeja de
+  // aprobación de Tesorería sin que nadie lo notara (decisión del usuario).
   cargandoCuentasParticipe = signal(false);
   cuentasParticipe = signal<CuentaBancariaParticipe[]>([]);
-  // Signals, no propiedades planas: `puedeRegistrar()` las lee dentro de un `computed()` y
-  // solo una escritura por signal.set() lo invalida. Con una propiedad plana mutada por
-  // [(ngModel)] el computed queda con el valor cacheado de la última vez que SÍ cambió algún
-  // signal (p. ej. al escribir el monto) y el botón "Registrar" se queda deshabilitado para
-  // siempre aunque el usuario ya haya elegido cuenta destino y origen — el defecto real detrás
-  // del pedido 5.
+  // Signal, no propiedad plana: `puedeRegistrar()` la lee dentro de un `computed()` y solo una
+  // escritura por signal.set() lo invalida. Con una propiedad plana mutada por [(ngModel)] el
+  // computed queda con el valor cacheado de la última vez que SÍ cambió algún signal (p. ej. al
+  // escribir el monto) y el botón "Registrar" se queda deshabilitado para siempre aunque el
+  // usuario ya haya elegido la cuenta destino — el defecto real detrás del pedido 5.
   cuentaParticipeSeleccionada = signal<CuentaBancariaParticipe | null>(null);
   filtroCuentaParticipe = '';
-
-  cuentasPropias = signal<CuentaBancaria[]>([]);
-  cuentaOrigenSeleccionada = signal<CuentaBancaria | null>(null);
-  filtroCuentaOrigen = '';
 
   private tiposCuentaBancaria = signal<DetalleRubro[]>([]);
 
@@ -155,7 +152,6 @@ export class DevolucionAportesComponent {
   anulandoId = signal<number | null>(null);
 
   constructor() {
-    this.cargarCuentasPropias();
     this.cargarTiposCuentaBancaria();
   }
 
@@ -194,7 +190,6 @@ export class DevolucionAportesComponent {
       !this.hayExcesoEnAlgunTipo() &&
       !this.participeSinCuentaActiva() &&
       !!this.cuentaParticipeSeleccionada() &&
-      !!this.cuentaOrigenSeleccionada() &&
       !this.registrando()
   );
 
@@ -210,7 +205,6 @@ export class DevolucionAportesComponent {
     const faltantes: string[] = [];
     if (this.totalADevolver() <= 0.004) faltantes.push('ingrese el monto a devolver');
     if (!this.cuentaParticipeSeleccionada()) faltantes.push('elija la cuenta del partícipe (destino)');
-    if (!this.cuentaOrigenSeleccionada()) faltantes.push('elija la cuenta bancaria propia (origen)');
 
     return faltantes.length ? 'Para registrar la devolución, ' + faltantes.join(' y ') + '.' : null;
   });
@@ -271,7 +265,6 @@ export class DevolucionAportesComponent {
     this.saldosVersion.update((v) => v + 1);
     this.cuentasParticipe.set([]);
     this.cuentaParticipeSeleccionada.set(null);
-    this.cuentaOrigenSeleccionada.set(null);
     this.filtroCuentaParticipe = '';
     this.deudaVigente.set(null);
     this.deudaConsultaFallida.set(false);
@@ -370,29 +363,6 @@ export class DevolucionAportesComponent {
     });
   }
 
-  /**
-   * Cuentas propias del fondo, filtradas por la empresa de la sesión del lado del cliente, que es
-   * como lo resuelve hoy `pagos-transferencia.component.ts`.
-   *
-   * Se descartan además las cuentas dadas de baja. El estado nulo cuenta como activa: hay cuentas
-   * antiguas sin `CNBCESTD` y esconderlas dejaría al usuario sin ninguna cuenta de origen.
-   */
-  private cargarCuentasPropias(): void {
-    const idEmpresa = this.idEmpresaSesion();
-    this.cuentaBancariaService.getAll().subscribe({
-      next: (data) => {
-        let lista = Array.isArray(data) ? data : [];
-        if (idEmpresa) {
-          lista = lista.filter(
-            (c: any) => c.banco?.empresa?.codigo === idEmpresa || c.empresa?.codigo === idEmpresa
-          );
-        }
-        this.cuentasPropias.set(lista.filter((c) => c.estado == null || Number(c.estado) !== 0));
-      },
-      error: () => this.cuentasPropias.set([]),
-    });
-  }
-
   /** Tipos de cuenta bancaria (rubro 23). Los códigos los define el catálogo, no son fijos. */
   private cargarTiposCuentaBancaria(): void {
     const enMemoria = this.detalleRubroService.getDetallesByParent(RUBRO_TIPO_CUENTA_BANCARIA);
@@ -483,22 +453,11 @@ export class DevolucionAportesComponent {
     return lista.filter((c) => this.textoBusquedaCuentaParticipe(c).includes(q));
   }
 
-  get cuentasPropiasFiltradas(): CuentaBancaria[] {
-    const q = this.filtroCuentaOrigen.trim().toLowerCase();
-    const lista = this.cuentasPropias();
-    if (!q) return lista;
-    return lista.filter((c) => this.textoBusquedaCuentaPropia(c).includes(q));
-  }
-
   /** Se busca por banco Y por número completo, aunque en pantalla el número vaya enmascarado. */
   private textoBusquedaCuentaParticipe(cuenta: CuentaBancariaParticipe): string {
     const banco = cuenta.bancoExterno?.nombre ?? '';
     const tipo = this.nombreTipoCuentaBancaria(cuenta.tipoCuenta);
     return `${banco} ${tipo} ${cuenta.numeroCuenta ?? ''}`.toLowerCase();
-  }
-
-  private textoBusquedaCuentaPropia(cuenta: CuentaBancaria): string {
-    return `${cuenta.banco?.nombre ?? ''} ${cuenta.numeroCuenta ?? ''} ${cuenta.titular ?? ''}`.toLowerCase();
   }
 
   /** Etiqueta del combo de destino: banco · tipo · número ENMASCARADO. */
@@ -508,11 +467,6 @@ export class DevolucionAportesComponent {
     const tipo = this.nombreTipoCuentaBancaria(cuenta.tipoCuenta);
     const numero = this.enmascararCuenta(cuenta.numeroCuenta);
     return tipo ? `${banco} · ${tipo} · ${numero}` : `${banco} · ${numero}`;
-  }
-
-  etiquetaCuentaPropia(cuenta: CuentaBancaria | null): string {
-    if (!cuenta) return '';
-    return `${cuenta.banco?.nombre ?? 'Banco'} — ${cuenta.numeroCuenta}`;
   }
 
   private nombreTipoCuentaBancaria(tipo: number | null | undefined): string {
@@ -536,8 +490,7 @@ export class DevolucionAportesComponent {
 
     const entidad = this.entidadSeleccionada();
     const cuentaDestino = this.cuentaParticipeSeleccionada();
-    const cuentaOrigen = this.cuentaOrigenSeleccionada();
-    if (!entidad || !cuentaDestino || !cuentaOrigen) return;
+    if (!entidad || !cuentaDestino) return;
 
     const idEmpresa = this.idEmpresaSesion();
     const idUsuario = this.idUsuarioSesion();
@@ -571,7 +524,6 @@ export class DevolucionAportesComponent {
           participe: entidad.razonSocial,
           identificacion: entidad.numeroIdentificacion,
           cuentaDestino: this.etiquetaCuentaParticipe(cuentaDestino),
-          cuentaOrigen: this.etiquetaCuentaPropia(cuentaOrigen),
           fecha: this.formatFecha(this.fecha()),
           motivo: this.motivo.trim(),
           debitoAutomatico: this.debitoAutomatico,
@@ -589,7 +541,7 @@ export class DevolucionAportesComponent {
       .afterClosed()
       .subscribe((confirmado?: boolean) => {
         if (confirmado) {
-          this.enviarDevolucion(entidad, cuentaDestino, cuentaOrigen, fechaTexto, idEmpresa, idUsuario);
+          this.enviarDevolucion(entidad, cuentaDestino, fechaTexto, idEmpresa, idUsuario);
         }
       });
   }
@@ -597,7 +549,6 @@ export class DevolucionAportesComponent {
   private enviarDevolucion(
     entidad: Entidad,
     cuentaDestino: CuentaBancariaParticipe,
-    cuentaOrigen: CuentaBancaria,
     fechaTexto: string,
     idEmpresa: number,
     idUsuario: number
@@ -611,7 +562,8 @@ export class DevolucionAportesComponent {
     const solicitud: SolicitudDevolucion = {
       idEntidad: entidad.codigo,
       idCuentaBancariaParticipe: cuentaDestino.codigo,
-      idCuentaBancariaOrigen: cuentaOrigen.codigo,
+      // La cuenta de origen la asigna Tesorería al aprobar el pago, no crédito: no se manda (o va
+      // en null, según lo que el backend termine esperando). Ver comentario en el modelo.
       idEmpresa,
       idUsuario,
       usuario: usuarioSesion(),

@@ -68,7 +68,7 @@ export class InterruptorContabilidadComponent {
           return;
         }
         this.activa.set(!!estado.activa);
-        this.motivo.set(estado.motivo ?? null);
+        this.motivo.set(estado.motivoUltimoCambio ?? null);
       },
       error: () => {
         this.cargando.set(false);
@@ -115,7 +115,7 @@ export class InterruptorContabilidadComponent {
           return;
         }
         this.activa.set(!!resultado.activa);
-        this.motivo.set(resultado.motivo ?? motivo);
+        this.motivo.set(resultado.motivoUltimoCambio ?? motivo);
         this.snackBar.open(
           resultado.activa ? 'Contabilidad de CRD encendida.' : 'Contabilidad de CRD apagada.',
           'Cerrar',

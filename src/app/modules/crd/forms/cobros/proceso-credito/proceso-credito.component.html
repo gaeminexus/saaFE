@@ -1,0 +1,202 @@
+<div class="proceso-container">
+
+  <div class="header">
+    <div class="header-title">
+      <mat-icon class="header-icon">rule</mat-icon>
+      <h1>Proceso de Crédito</h1>
+    </div>
+    <button mat-icon-button (click)="cargar()" [disabled]="cargando()" matTooltip="Actualizar">
+      <mat-icon>refresh</mat-icon>
+    </button>
+  </div>
+
+  @if (cargando()) {
+    <div class="loading-spinner-container"><mat-spinner diameter="40"></mat-spinner></div>
+  } @else if (cobroEnEdicion(); as cobro) {
+
+    <!-- ============ Edición de un rechazado ============ -->
+    <mat-card class="edicion-card">
+      <mat-card-content>
+        <button mat-stroked-button type="button" class="btn-volver" (click)="cerrarEdicion()">
+          <mat-icon>arrow_back</mat-icon> Volver a la lista
+        </button>
+
+        <h2>Corregir y reenviar &middot; Cobro #{{ cobro.codigo }}</h2>
+
+        <div class="motivo-rechazo">
+          <mat-icon>report</mat-icon>
+          <div>
+            <span class="mr-titulo">Motivo del rechazo</span>
+            <p>{{ cobro.motivoRechazo || 'Sin motivo registrado.' }}</p>
+          </div>
+        </div>
+
+        <div class="ed-datos">
+          <div class="ed-item">
+            <span class="l">Partícipe</span>
+            <span class="v">{{ cobro.entidad?.razonSocial }}</span>
+          </div>
+          <div class="ed-item">
+            <span class="l">Tipo de operación</span>
+            <span class="v">{{ nombreTipoOperacionCobro(cobro.tipoOperacion) }}</span>
+          </div>
+        </div>
+
+        @if (errorEdicion(); as error) {
+          <div class="error-text bloque"><mat-icon>error_outline</mat-icon><span>{{ error }}</span></div>
+        }
+
+        <div class="field-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Cuenta ASOPREP destino</mat-label>
+            <mat-select [ngModel]="editCuentaBancaria()" (ngModelChange)="editCuentaBancaria.set($event)" [compareWith]="compararCuenta">
+              @for (c of cuentasBancarias(); track c.codigo) {
+                <mat-option [value]="c">{{ c.banco?.nombre }} &middot; {{ c.numeroCuenta }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Número de referencia</mat-label>
+            <input matInput maxlength="50" [ngModel]="editReferencia()" (ngModelChange)="editReferencia.set($event)" />
+          </mat-form-field>
+        </div>
+
+        <div class="field-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Valor</mat-label>
+            <span matTextPrefix>$&nbsp;</span>
+            <input matInput [ngModel]="editValorTexto()" (ngModelChange)="editValorTexto.set($event)"
+                   [disabled]="!editEsUnaLinea()" />
+            @if (!editEsUnaLinea()) {
+              <mat-hint>Varias líneas: el valor queda fijo en la suma del detalle.</mat-hint>
+            }
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Fecha</mat-label>
+            <input matInput [matDatepicker]="pickerEd" [max]="hoy"
+                   [ngModel]="editFecha()" (ngModelChange)="editFecha.set($event)" />
+            <mat-datepicker-toggle matSuffix [for]="pickerEd"></mat-datepicker-toggle>
+            <mat-datepicker #pickerEd></mat-datepicker>
+          </mat-form-field>
+        </div>
+
+        <mat-form-field appearance="outline" class="full">
+          <mat-label>Observación (opcional)</mat-label>
+          <input matInput [(ngModel)]="editObservacion" />
+        </mat-form-field>
+
+        @if (!editEsUnaLinea() && cobro.detalles?.length) {
+          <div class="section-label">Detalle (solo lectura)</div>
+          <table class="tabla-detalle">
+            <thead><tr><th>Préstamo / tipo aporte</th><th class="num">Valor</th></tr></thead>
+            <tbody>
+              @for (d of cobro.detalles; track $index) {
+                <tr>
+                  <td>{{ d.idPrestamo ? 'Préstamo #' + d.idPrestamo : (d.idTipoAporte ? 'Tipo aporte #' + d.idTipoAporte : '—') }}</td>
+                  <td class="num">{{ formatMoneda(d.valor) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+
+        <div class="section-label">Comprobante</div>
+        @if (!editArchivoNuevo()) {
+          <app-comprobante-viewer [ruta]="cobro.rutaRespaldo"></app-comprobante-viewer>
+        }
+        <div class="field">
+          <label class="dropzone-label">{{ editArchivoNuevo() ? 'Nuevo comprobante' : 'Reemplazar comprobante (opcional)' }}</label>
+          <div class="dropzone" (click)="archivoInputEd.click()">
+            <mat-icon>upload_file</mat-icon>
+            {{ editArchivoNuevo() ? editArchivoNuevo()!.name : 'Adjuntar PDF o imagen' }}
+          </div>
+          <input #archivoInputEd type="file" [accept]="extensionesComprobante" style="display:none" (change)="onArchivoEdicionSeleccionado($event)" />
+        </div>
+
+        <div class="ed-acciones">
+          <button mat-stroked-button color="warn" (click)="anular(cobro)" [disabled]="anulandoId() === cobro.codigo">
+            <mat-icon>block</mat-icon> Anular
+          </button>
+          <button mat-raised-button color="primary" [disabled]="!puedeGuardarEdicion()" (click)="guardarYReenviar()">
+            @if (guardandoEdicion()) {
+              <mat-spinner diameter="18"></mat-spinner>
+            } @else {
+              <ng-container><mat-icon>send</mat-icon> Guardar y reenviar a contabilidad</ng-container>
+            }
+          </button>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+  } @else {
+
+    <!-- ============ Listas ============ -->
+    <div class="section-label">Aprobados &middot; listos para procesar ({{ aprobados().length }})</div>
+    @if (!aprobados().length) {
+      <p class="texto-vacio">No hay cobros aprobados esperando proceso.</p>
+    } @else {
+      @for (cobro of aprobados(); track cobro.codigo) {
+        <mat-card class="cobro-card">
+          <mat-card-content>
+            <div class="cc-head">
+              <div>
+                <div class="cc-titulo">{{ cobro.entidad?.razonSocial }}</div>
+                <div class="cc-meta">
+                  {{ nombreTipoOperacionCobro(cobro.tipoOperacion) }} &middot; {{ formatFecha(cobro.fecha) }}
+                  &middot; Ref. {{ cobro.referencia || 'No registrada' }}
+                </div>
+              </div>
+              <div class="cc-valor">{{ formatMoneda(cobro.valor) }}</div>
+            </div>
+            <div class="cc-acciones">
+              <button mat-stroked-button color="warn" (click)="anular(cobro)" [disabled]="anulandoId() === cobro.codigo">
+                @if (anulandoId() === cobro.codigo) {
+                  <mat-spinner diameter="16"></mat-spinner>
+                } @else {
+                  <ng-container><mat-icon>block</mat-icon> Anular</ng-container>
+                }
+              </button>
+              <button mat-raised-button color="primary" (click)="procesar(cobro)" [disabled]="procesandoId() === cobro.codigo">
+                @if (procesandoId() === cobro.codigo) {
+                  <mat-spinner diameter="18"></mat-spinner>
+                } @else {
+                  <ng-container><mat-icon>play_arrow</mat-icon> Procesar</ng-container>
+                }
+              </button>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      }
+    }
+
+    <div class="section-label rechazados-label">Rechazados &middot; corregir y reenviar ({{ rechazados().length }})</div>
+    @if (!rechazados().length) {
+      <p class="texto-vacio">No hay cobros rechazados pendientes de corrección.</p>
+    } @else {
+      @for (cobro of rechazados(); track cobro.codigo) {
+        <mat-card class="cobro-card rechazado">
+          <mat-card-content>
+            <div class="cc-head">
+              <div>
+                <div class="cc-titulo">{{ cobro.entidad?.razonSocial }}</div>
+                <div class="cc-meta">{{ nombreTipoOperacionCobro(cobro.tipoOperacion) }} &middot; {{ formatFecha(cobro.fecha) }}</div>
+                <div class="cc-motivo">{{ cobro.motivoRechazo }}</div>
+              </div>
+              <div class="cc-valor">{{ formatMoneda(cobro.valor) }}</div>
+            </div>
+            <div class="cc-acciones">
+              <button mat-stroked-button color="warn" (click)="anular(cobro)" [disabled]="anulandoId() === cobro.codigo">
+                <mat-icon>block</mat-icon> Anular
+              </button>
+              <button mat-raised-button color="accent" (click)="abrirEdicion(cobro)">
+                <mat-icon>edit</mat-icon> Corregir y reenviar
+              </button>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      }
+    }
+
+  }
+
+</div>

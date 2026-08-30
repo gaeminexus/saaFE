@@ -214,7 +214,7 @@ export class ContratoEditComponent implements OnInit, CanComponentDeactivate {
           return;
         }
         this.entidadReal.set(contrato.entidad);
-        this.vigenciaContratoService.porEntidad(contrato.entidad.codigo, this.codigoContrato).subscribe({
+        this.vigenciaContratoService.porEntidad(contrato.entidad.codigo).subscribe({
           next: (data) => {
             this.loading.set(false);
             if (!data) {

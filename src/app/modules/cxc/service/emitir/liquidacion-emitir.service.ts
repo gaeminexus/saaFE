@@ -1,6 +1,7 @@
 import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, catchError, of, throwError } from 'rxjs';
+import { MovimientoRelacionado } from '../../../../shared/model/pagos-cobros/movimiento-relacionado';
 import { LiquidacionEmitir } from '../../model/liquidacion-emitir';
 import { DetalleLiquidacionEmitir } from '../../model/detalle-liquidacion-emitir';
 import { FormaPagoLiquidacion } from '../../model/forma-pago-liquidacion';
@@ -48,10 +49,17 @@ export interface ResultadoProcesoLiquidacion {
   [key: string]: unknown;
 }
 
+/**
+ * `LiquidacionCompra` (cxc, esta liquidación EMITIDA) sí cascadea — a diferencia de
+ * `LiquidacionCompraCompra` (cxp, la RECIBIDA de un proveedor), que no tiene nada que
+ * cascadear. Mismo nombre parecido, comportamiento opuesto — no confundir al rutear.
+ */
 export interface AnularLiquidacionRequest {
   idLiquidacion: number;
   motivo: string;
   usuario: string;
+  idUsuario: number;
+  anularEnCascada: boolean;
 }
 
 export interface ReenviarEmailLiquidacionRequest {
@@ -139,10 +147,19 @@ export class LiquidacionEmitirService {
     );
   }
 
-  /** Body: {idLiquidacion, motivo, usuario} — NO /anular/{id}. */
+  /** Body: {idLiquidacion, motivo, usuario, idUsuario, anularEnCascada} — NO /anular/{id}. */
   anular(datos: AnularLiquidacionRequest): Observable<ResultadoProcesoLiquidacion> {
     return this.http.post<ResultadoProcesoLiquidacion>(
       `${ServiciosCxc.RS_LQCS}/anular`, datos, this.httpOptions
+    );
+    // Sin catchError, igual que procesarCompleta: el 409/400 también trae un body útil
+    // (mensaje) que el componente lee directo del HttpErrorResponse.
+  }
+
+  /** Cobros/notas/retenciones cruzados con esta liquidación — consultar antes de anular (ítem 14). */
+  movimientosRelacionados(id: number): Observable<MovimientoRelacionado[]> {
+    return this.http.get<MovimientoRelacionado[]>(
+      `${ServiciosCxc.RS_LQCS}/movimientosRelacionados/${id}`
     );
   }
 

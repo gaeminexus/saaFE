@@ -181,6 +181,18 @@
           <td mat-footer-cell *matFooterCellDef class="num">{{ formatMoneda(res.totalInteres) }}</td>
         </ng-container>
 
+        <ng-container matColumnDef="desgravamen">
+          <th mat-header-cell *matHeaderCellDef class="num">Desgravamen</th>
+          <td mat-cell *matCellDef="let c" class="num">{{ formatMoneda(c.desgravamen) }}</td>
+          <td mat-footer-cell *matFooterCellDef class="num">{{ formatMoneda(res.totalDesgravamen) }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="seguroIncendio">
+          <th mat-header-cell *matHeaderCellDef class="num">Seguro de incendio</th>
+          <td mat-cell *matCellDef="let c" class="num">{{ formatMoneda(c.seguroIncendio) }}</td>
+          <td mat-footer-cell *matFooterCellDef class="num">{{ formatMoneda(res.totalSeguro) }}</td>
+        </ng-container>
+
         <ng-container matColumnDef="cuota">
           <th mat-header-cell *matHeaderCellDef class="num">Cuota</th>
           <td mat-cell *matCellDef="let c" class="num">{{ formatMoneda(c.cuota) }}</td>

@@ -114,6 +114,11 @@ export class MenucuentasxcobrarComponent {
           iconName: 'chart_data',
           route: '/menucuentasxcobrar/reportes/dash-ventas',
         },
+        {
+          displayName: 'ATS y Cuadre 103/104',
+          iconName: 'summarize',
+          route: '/menucuentasxcobrar/reportes/ats',
+        },
       ],
     },
   ];

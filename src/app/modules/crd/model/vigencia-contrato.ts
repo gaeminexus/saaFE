@@ -40,13 +40,24 @@ export interface VigenciaDTO {
   observacion: string | null;
 }
 
-/** GET /rest/cntr/porEntidad/{idEntidad}. */
+/**
+ * GET /rest/cntr/porEntidad/{idEntidad}.
+ *
+ * El contrato congelado (§4.1) no especifica el tipo de `estado`. El backend real lo devuelve
+ * numérico (`1`, no `"ACTIVO"` como asumía el mock anterior de este servicio) — verificado contra
+ * `/rest/cntr/porEntidad/3728`, 2026-08-27. `estadoTexto` tampoco está en el contrato congelado,
+ * pero `ContratoRest.porEntidad` (línea 174) ya lo agrega con el texto traducido
+ * ("Activo"/"Inactivo" — el contrato solo maneja esos dos estados, `com.saa.rubros.Estado` 0/1)
+ * — confirmado por saabe-4b el 2026-08-29. Se muestra ese campo; `estado` (el número) queda solo
+ * como fallback si `estadoTexto` viniera null.
+ */
 export interface ContratoPorEntidadDTO {
   idContrato: number;
   idEntidad: number;
   identificacion: string;
   razonSocial: string;
-  estado: string;
+  estado: number;
+  estadoTexto?: string | null;
   /** Espejo de la vigencia abierta; null cuando no hay vigencia de ese tipo. */
   montoJubilacion: number | null;
   montoCesantia: number | null;

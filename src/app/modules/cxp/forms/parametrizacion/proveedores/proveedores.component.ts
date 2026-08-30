@@ -20,6 +20,7 @@ import { PersonaRol } from '../../../../tsr/model/persona-rol';
 import { PersonaCuentaContable } from '../../../../tsr/model/persona-cuenta-contable';
 import { PlanCuenta } from '../../../../cnt/model/plan-cuenta';
 import { DetalleRubro } from '../../../../../shared/model/detalle-rubro';
+import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
 
 import { TitularService } from '../../../../tsr/service/titular.service';
 import { PersonaRolService } from '../../../../tsr/service/persona-rol.service';
@@ -326,9 +327,55 @@ export class ProveedoresComponent implements OnInit {
       },
       error: (err) => {
         console.error('Error al guardar proveedor:', err);
-        this.mostrarError('Error al guardar proveedor');
         this.guardando.set(false);
+
+        // TitularServiceImpl.saveSingle lanza IncomeException con texto
+        // plano en el duplicado: "Ya existe un titular activo con la
+        // identificación X: NOMBRE (código N)" — sin campo estructurado
+        // aparte. En este modelo no hay tabla de proveedores propia: un
+        // titular acumula rol de cliente y/o proveedor, así que un
+        // duplicado casi siempre significa reutilizar el registro y
+        // agregarle el rol que falte, no crear otro.
+        const mensaje = mensajeDeError(err, 'Error al guardar proveedor');
+        const codigoExistente = this.extraerCodigoTitularExistente(mensaje);
+        if (codigoExistente != null) {
+          const ref = this.snackBar.open(
+            `${mensaje} Puede usar el registro existente y agregarle el rol que necesite.`,
+            'Usar el titular existente',
+            { duration: 15000, horizontalPosition: 'end', verticalPosition: 'top' },
+          );
+          ref.onAction().subscribe(() => this.usarTitularExistente(codigoExistente));
+          return;
+        }
+
+        this.mostrarError(mensaje);
       },
+    });
+  }
+
+  /**
+   * Extrae el código del titular existente del mensaje de duplicado
+   * ("... (código N)"). Regex tolerante a acento/mayúsculas/espacios — si no
+   * matchea, no hay botón: nunca uno que no funcione.
+   */
+  private extraerCodigoTitularExistente(mensaje: string): number | null {
+    const match = /\(\s*c[oó]digo\s+(\d+)\s*\)/i.exec(mensaje);
+    if (!match) return null;
+    const codigo = Number(match[1]);
+    return Number.isFinite(codigo) ? codigo : null;
+  }
+
+  /** Carga el titular duplicado en modo edición, en vez de obligar a cancelar y buscarlo a mano. */
+  private usarTitularExistente(codigo: number): void {
+    this.titularService.getById(String(codigo)).subscribe({
+      next: (titular) => {
+        if (titular) {
+          this.editarProveedor(titular);
+        } else {
+          this.mostrarError('No se pudo cargar el titular existente');
+        }
+      },
+      error: () => this.mostrarError('No se pudo cargar el titular existente'),
     });
   }
 

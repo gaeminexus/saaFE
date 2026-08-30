@@ -7,7 +7,14 @@ import { ServiciosTsr } from './ws-tsr';
 export interface AnticipoRequest {
   idTitular: number;
   valor: number;
-  idCuentaBancaria: number;
+  /**
+   * Opcional para el anticipo a PROVEEDOR desde el rediseño de aprobación
+   * (docs/logica-negocio/pagos/PLAN-REDISENO-APROBACION-PAGOS.md §3.1/§3.2/§7
+   * en saaBE): sin cuenta, el pago nace `POR_APROBAR` y la cuenta + forma de
+   * pago se eligen al aprobar en lote. El anticipo a CLIENTE (`procesarCliente`)
+   * no pasa por ese circuito y sigue mandándola siempre.
+   */
+  idCuentaBancaria?: number;
   /** Cuenta bancaria del proveedor (CTBN) hacia donde se transfiere el anticipo. */
   idCuentaDestinoTitular?: number;
   idEmpresa: number;
@@ -71,6 +78,24 @@ export interface AnularAnticipoRequest {
   idUsuario: number;
   /** true = el usuario aceptó eliminar los abonos que el anticipo hizo a facturas. */
   confirmarReversionCruces: boolean;
+}
+
+/**
+ * Body de POST /antc/solicitarDevolucion — propuesta del ítem 3 del rediseño de
+ * aprobación de pagos (CXC_DEVOLUCION_CLIENTE), SIN confirmar contra el backend
+ * todavía: el path y la forma exacta pueden diferir de esto una vez que el
+ * equipo de backend entregue el endpoint real.
+ */
+export interface SolicitarDevolucionAnticipoRequest {
+  idAnticipo: number;
+  valor: number;
+  usuario: number;
+}
+
+export interface SolicitarDevolucionAnticipoResponse {
+  exito?: boolean;
+  mensaje?: string;
+  [key: string]: any;
 }
 
 /** Un anticipo con saldo, tal como lo devuelve /disponibles. */
@@ -203,6 +228,20 @@ export class AnticipoService {
   anularProveedor(id: number, payload: AnularAnticipoRequest): Observable<VerificacionAnulacionAnticipo> {
     return this.http.post<VerificacionAnulacionAnticipo>(
       `${ServiciosTsr.RS_ANTP}/anular/${id}`, payload, this.httpOptions
+    ).pipe(catchError(this.handleError));
+  }
+
+  /**
+   * Solicita la devolución de un anticipo de cliente con saldo a favor (§ítem 3
+   * del rediseño de aprobación de pagos): crea el pago con origen
+   * `CXC_DEVOLUCION_CLIENTE` en el circuito de aprobación en lote de CxP.
+   * Endpoint propuesto, no confirmado — ver {@link SolicitarDevolucionAnticipoRequest}.
+   */
+  solicitarDevolucionCliente(
+    payload: SolicitarDevolucionAnticipoRequest
+  ): Observable<SolicitarDevolucionAnticipoResponse> {
+    return this.http.post<SolicitarDevolucionAnticipoResponse>(
+      `${ServiciosTsr.RS_ANTC}/solicitarDevolucion`, payload, this.httpOptions
     ).pipe(catchError(this.handleError));
   }
 

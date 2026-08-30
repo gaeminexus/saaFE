@@ -17,8 +17,14 @@ export interface SolicitudDevolucion {
   idEntidad: number;
   /** CRD.CNBP a la que se transfiere. Obligatoria salvo débito automático. */
   idCuentaBancariaParticipe: number | null;
-  /** TSR.CNBC: la cuenta propia de la que sale el dinero. */
-  idCuentaBancariaOrigen: number;
+  /**
+   * TSR.CNBC: la cuenta propia de la que sale el dinero. Ya NO la elige crédito al registrar: la
+   * asigna Tesorería al aprobar el pago en Cuentas por Pagar. Mandarla desde acá hacía que la
+   * devolución naciera con la cuenta ya asignada y se saltara la bandeja de aprobación de
+   * Tesorería sin que nadie se enterara (decisión del usuario, ver `devolucion-aportes.component.ts`).
+   * El backend la ignora/asigna en null si llega; el frontend simplemente no la manda.
+   */
+  idCuentaBancariaOrigen?: number | null;
   idEmpresa: number;
   idUsuario: number;
   usuario: string;

@@ -748,10 +748,10 @@
     }
   }
 
-  // ─── Info de auditoría en cabecera del partícipe ───
+  // ─── Info de auditoría en cabecera de la pantalla (última modificación) ───
   .audit-info {
-    margin-left: auto;
-    display: flex;
+    margin-top: 10px;
+    display: inline-flex;
     align-items: center;
     gap: 6px;
     background: #f0f4ff;

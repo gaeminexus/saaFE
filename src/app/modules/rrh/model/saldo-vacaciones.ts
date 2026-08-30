@@ -27,3 +27,31 @@ export interface SaldoVacaciones {
   fechaRegistro: Date; // SLDVFCHR
   usuarioRegistro: string; // SLDVUSRR
 }
+
+/**
+ * Body de POST /sldv/acreditar — el proceso anual que genera el saldo de
+ * vacaciones de todos los empleados que cumplieron un año de servicio hasta
+ * `fechaCorte`, arrastrando lo no gozado del período anterior y marcando
+ * caducados los saldos que superan el plazo configurado. Sin este proceso
+ * no existe ningún saldo nuevo — no se genera solo.
+ */
+export interface AcreditarVacacionesRequest {
+  idEmpresa: number;
+  /** yyyy-MM-dd. */
+  fechaCorte: string;
+  usuarioRegistro: string;
+}
+
+/**
+ * Body de POST /sldv/revertirAcreditacion — contraparte de {@link AcreditarVacacionesRequest}.
+ * Contrato confirmado por backend el 2026-08-27: borra los `SaldoVacaciones` de
+ * `(idEmpresa, anio)` — no es por id de acreditación, no existe como entidad propia. Todo o
+ * nada: si algún empleado ya usó o le pagaron días de ese saldo (`diasUsados`/`diasPagados` > 0)
+ * o el saldo viene de migración, el backend rechaza la reversión completa nombrando al empleado
+ * bloqueante (500, texto plano).
+ */
+export interface RevertirAcreditacionVacacionesRequest {
+  idEmpresa: number;
+  anio: number;
+  usuarioRegistro: string;
+}

@@ -1,0 +1,152 @@
+.ats-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  .header-icon {
+    font-size: 36px;
+    width: 36px;
+    height: 36px;
+    color: #667eea;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: 22px;
+  }
+
+  .subtitle {
+    margin: 0;
+    color: rgba(0, 0, 0, 0.6);
+    max-width: 720px;
+  }
+}
+
+.filtros-card,
+.generar-card,
+.cuadres-card {
+  border-radius: 12px;
+}
+
+.filtros-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+
+  mat-form-field {
+    min-width: 280px;
+  }
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.aviso {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  font-size: 0.9rem;
+}
+.aviso-error {
+  background: #fdecea;
+  color: #611a15;
+}
+.aviso-validador {
+  background: #e8eaf6;
+  color: #283593;
+}
+
+.resumen-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.resumen-item {
+  display: flex;
+  flex-direction: column;
+  padding: 10px 14px;
+  border-radius: 6px;
+  background: #f5f7fa;
+
+  .label {
+    font-size: 0.75rem;
+    color: #555;
+  }
+  .value {
+    font-size: 1.2rem;
+    font-weight: 600;
+  }
+}
+
+.avisos-box,
+.no-disponibles-box {
+  margin: 12px 0;
+  padding: 12px;
+  border-radius: 6px;
+  background: #fff8e1;
+  border: 1px solid #ffe082;
+}
+.no-disponibles-box {
+  background: #f5f5f5;
+  border-color: #ddd;
+}
+.avisos-titulo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: #7a5c00;
+  margin-bottom: 8px;
+}
+.lista-avisos {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 0.9rem;
+
+  li {
+    margin-bottom: 4px;
+  }
+}
+
+h3 {
+  margin: 20px 0 8px;
+  font-size: 1rem;
+}
+
+.tabla-scroll {
+  overflow-x: auto;
+}
+
+.tabla-cuadre {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+
+  th,
+  td {
+    text-align: left;
+    padding: 6px 10px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  }
+
+  .num {
+    text-align: right;
+  }
+  .mono {
+    font-family: monospace;
+  }
+}

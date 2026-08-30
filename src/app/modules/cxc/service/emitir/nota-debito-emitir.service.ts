@@ -1,6 +1,9 @@
 import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, catchError, of, throwError } from 'rxjs';
+import { mensajeDeError } from '../../../../shared/utils/mensaje-error.util';
+import { MovimientoRelacionado } from '../../../../shared/model/pagos-cobros/movimiento-relacionado';
+import { AnularDocumentoVentaResponse, AnularNotaDebitoVentaRequest } from '../../model/anulacion-documento-venta';
 import { NotaDebitoEmitir } from '../../model/nota-debito-emitir';
 import { ServiciosCxc } from '../ws-cxc';
 
@@ -72,10 +75,16 @@ export class NotaDebitoEmitirService {
       .pipe(catchError(this.handleError));
   }
 
-  anular(datos: { idNotaDebito: number; usuario: string; motivo: string }): Observable<any | null> {
+  anular(datos: AnularNotaDebitoVentaRequest): Observable<AnularDocumentoVentaResponse> {
     return this.http
-      .post<any>(`${ServiciosCxc.RS_NTDB}/anular`, datos, this.httpOptions)
-      .pipe(catchError(this.handleError));
+      .post<AnularDocumentoVentaResponse>(`${ServiciosCxc.RS_NTDB}/anular`, datos, this.httpOptions)
+      .pipe(catchError(this.handleErrorAnulacion));
+  }
+
+  movimientosRelacionados(id: number): Observable<MovimientoRelacionado[]> {
+    return this.http
+      .get<MovimientoRelacionado[]>(`${ServiciosCxc.RS_NTDB}/movimientosRelacionados/${id}`)
+      .pipe(catchError(this.handleErrorAnulacion));
   }
 
   consultarYActualizarEstado(idNotaDebito: number): Observable<any | null> {
@@ -89,5 +98,11 @@ export class NotaDebitoEmitirService {
       return of(null);
     }
     return throwError(() => error.error);
+  }
+
+  private handleErrorAnulacion(error: HttpErrorResponse): Observable<never> {
+    const e = new Error(mensajeDeError(error, 'No se pudo completar la operación')) as Error & { status?: number };
+    e.status = error.status;
+    return throwError(() => e);
   }
 }

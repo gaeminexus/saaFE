@@ -225,16 +225,16 @@ export class MenutesoreriaComponent implements OnInit {
           ],
         },
         {
+          displayName: 'Aprobación de pagos',
+          iconName: 'checklist',
+          idPermiso: 830,
+          route: '/menutesoreria/procesos/aprobacion-pagos',
+        },
+        {
           displayName: 'Cobros',
           iconName: 'attach_money',
           idPermiso: 830,
           children: [
-            {
-              displayName: 'Ingresar',
-              iconName: 'login',
-              idPermiso: 830,
-              route: '/menutesoreria/procesos/cobros/ingresar',
-            },
             {
               displayName: 'Cierre de Caja',
               iconName: 'lock',

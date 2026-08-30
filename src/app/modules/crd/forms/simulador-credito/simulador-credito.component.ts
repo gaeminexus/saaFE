@@ -44,7 +44,7 @@ export class SimuladorCreditoComponent {
     texto,
   }));
 
-  readonly columnasTabla = ['numeroCuota', 'fechaVencimiento', 'capital', 'interes', 'cuota', 'totalCuota', 'saldoCapital'];
+  readonly columnasTabla = ['numeroCuota', 'fechaVencimiento', 'capital', 'interes', 'desgravamen', 'seguroIncendio', 'cuota', 'totalCuota', 'saldoCapital'];
 
   // ---- formulario: los 6 primeros son obligatorios, los 2 últimos no (§7 del plan) ----
   monto: number | null = null;

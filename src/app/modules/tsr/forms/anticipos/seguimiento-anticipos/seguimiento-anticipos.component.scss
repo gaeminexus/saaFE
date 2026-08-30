@@ -144,6 +144,15 @@
   color: #1b5e20;
 }
 
+.col-acciones {
+  white-space: nowrap;
+
+  > * {
+    vertical-align: middle;
+    margin-right: 4px;
+  }
+}
+
 // ── Tablas ─────────────────────────────────────────────────────────────────
 .tabla-scroll {
   overflow-x: auto;

@@ -101,6 +101,30 @@ export interface ResultadoPagoCuota {
   cuotasAfectadas: CuotaAfectada[];
 }
 
+// ===================== §4b POST /prst/pagarMultiplesCuotas =====================
+
+/**
+ * Cobra varios préstamos del MISMO partícipe en una sola operación, con un solo comprobante
+ * (pedido del usuario tras el bug de cobros-personales que borraba el monto cargado al cambiar de
+ * préstamo). Es UNA SOLA TRANSACCIÓN todo-o-nada: si falla cualquiera de los `pagos`, el backend no
+ * deja aplicado ninguno — la pantalla no debe mostrar progreso parcial ("2 de 3 aplicados").
+ *
+ * Cada renglón de `pagos` es el mismo `PagoCuotaRequest` de `/pagarCuota`; el `rutaDocumentoRespaldo`
+ * es el mismo comprobante único repetido en todos los renglones.
+ */
+export interface PagoMultipleRequest {
+  pagos: PagoCuotaRequest[];
+}
+
+export interface ResultadoPagoMultiple {
+  /** Uno por préstamo, en el MISMO ORDEN en que se mandaron en `pagos`. */
+  resultados: ResultadoPagoCuota[];
+  /** Suma de `valorAplicado` de todos los `resultados`. */
+  valorTotalAplicado: number;
+  idEntidad: number;
+  nombreEntidad: string;
+}
+
 // ===================== §5 POST /prst/pagarConAportes =====================
 
 export interface PagoConAportesRequest {

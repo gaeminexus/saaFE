@@ -65,6 +65,8 @@ export type CodigoErrorPago =
   | 'PRESTAMO_NO_AL_DIA'
   | 'ABONO_CUBRE_CAPITAL'
   | 'CUOTA_NO_CUBRE_INTERES'
+  | 'PARTICIPES_DISTINTOS'
+  | 'PRESTAMO_REPETIDO'
   | 'ERROR_INTERNO';
 
 /**
@@ -94,6 +96,8 @@ export const MENSAJE_ERROR_PAGO: Record<string, string> = {
   PRESTAMO_NO_AL_DIA: 'El préstamo tiene cuotas vencidas o parciales: regularícelas antes de abonar a capital.',
   ABONO_CUBRE_CAPITAL: 'El abono cubre todo el capital pendiente. Corresponde una precancelación.',
   CUOTA_NO_CUBRE_INTERES: 'Con esa modalidad la cuota no alcanza a cubrir el interés. Pruebe reduciendo el valor de la cuota.',
+  PARTICIPES_DISTINTOS: 'Los préstamos incluidos no son todos del mismo partícipe. Recargue la pantalla e intente de nuevo.',
+  PRESTAMO_REPETIDO: 'El mismo préstamo está incluido más de una vez en el cobro.',
   ERROR_INTERNO: 'Ocurrió un error inesperado en el servidor. Intente nuevamente.',
 };
 

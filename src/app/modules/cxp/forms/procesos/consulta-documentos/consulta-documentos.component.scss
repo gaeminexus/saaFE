@@ -92,6 +92,33 @@
   gap: 12px;
   flex-wrap: wrap;
   margin-bottom: 16px;
+
+  .btn-anular {
+    margin-left: auto;
+  }
+}
+
+.aviso-anulado {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  background: #fdecea;
+  color: #611a15;
+  margin-bottom: 16px;
+
+  .aviso-anulado-titulo {
+    font-weight: 600;
+  }
+  .aviso-anulado-detalle {
+    font-size: 0.85rem;
+    opacity: 0.85;
+  }
+  .aviso-anulado-motivo {
+    margin-top: 4px;
+    font-size: 0.9rem;
+  }
 }
 
 .detalle-card {

@@ -48,15 +48,21 @@ export interface GastoCajaChicaRequest {
   idUsuario: number;
 }
 
-/** Body de POST /mvch/reposicion y de POST /mvch/apertura. */
+/**
+ * Body de POST /mvch/reposicion y de POST /mvch/apertura. Desde 2026-08-30 la
+ * cuenta origen y la forma de pago las asigna tesorería al aprobar en su
+ * bandeja (/menutesoreria/procesos/aprobacion-pagos); esta pantalla ya no las
+ * envía. Quedan opcionales solo por compatibilidad de tipo con requests
+ * previos.
+ */
 export interface ReposicionCajaChicaRequest {
   idCaja: number;
   valor: number;
-  idCuentaBancariaOrigen: number;
+  idCuentaBancariaOrigen?: number;
   /** Ver FormaPagoAplicacion (2 transferencia, 3 cheque, 4 débito automático). */
-  formaPago: number;
+  formaPago?: number;
   /** Se mantiene por compatibilidad junto a `formaPago`. */
-  debitoAutomatico: boolean;
+  debitoAutomatico?: boolean;
   referencia?: string;
   /** yyyy-MM-dd. */
   fecha: string;

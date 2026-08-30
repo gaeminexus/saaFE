@@ -298,14 +298,14 @@ export const routes: Routes = [
         canActivate: [authGuard],
         data: { title: 'Registrar - Egresos' },
       },
+      {
+        path: 'procesos/aprobacion-pagos',
+        loadComponent: () => import('./modules/tsr/forms/procesos/aprobacion-pagos/aprobacion-pagos.component').then((m) => m.AprobacionPagosComponent),
+        canActivate: [authGuard],
+        data: { title: 'Aprobación de pagos' },
+      },
 
       // Procesos - Cobros
-      {
-        path: 'procesos/cobros/ingresar',
-        loadComponent: () => import('./modules/tsr/forms/cobros/ingresar/cobros-ingresar.component').then((m) => m.CobrosIngresarComponent),
-        canActivate: [authGuard],
-        data: { title: 'Cobros - Ingresar' },
-      },
       {
         path: 'procesos/cobros/cierre-caja',
         loadComponent: () => import('./modules/tsr/forms/cobros/cierre-caja/cierre-caja.component').then((m) => m.CierreCajaComponent),
@@ -795,6 +795,15 @@ export const routes: Routes = [
         data: { title: 'Anticipos a trabajadores' },
       },
       {
+        path: 'procesos/acreditar-vacaciones',
+        loadComponent: () =>
+          import('./modules/rrh/forms/procesos/acreditar-vacaciones/acreditar-vacaciones.component').then(
+            (m) => m.AcreditarVacacionesComponent,
+          ),
+        canActivate: [authGuard],
+        data: { title: 'Acreditar vacaciones' },
+      },
+      {
         path: 'procesos/liquidacion',
         loadComponent: () =>
           import('./modules/rrh/forms/procesos/liquidacion/liquidacion-list.component').then(
@@ -905,6 +914,12 @@ export const routes: Routes = [
         canActivate: [authGuard],
       },
       {
+        path: 'reportes/ats',
+        loadComponent: () => import('./modules/cxc/reportes/ats').then((m) => m.AtsComponent),
+        canActivate: [authGuard],
+        data: { title: 'ATS y Cuadre 103/104' },
+      },
+      {
         path: 'reportes/dash-ventas',
         loadComponent: () => import('./modules/cxc/reportes/dash-ventas').then((m) => m.DashVentasComponent),
         canActivate: [authGuard],
@@ -995,13 +1010,14 @@ export const routes: Routes = [
       { path: 'jubilados', loadComponent: () => import('./modules/crd/forms/entidad-participe/jubilados/proceso-pago-jubilados/proceso-pago-jubilados.component').then((m) => m.ProcesoPagoJubiladosComponent) },
       { path: 'jubilar-participe', loadComponent: () => import('./modules/crd/forms/entidad-participe/jubilados/jubilar-participe/jubilar-participe.component').then((m) => m.JubilarParticipeComponent) },
       { path: 'participe-info', loadComponent: () => import('./modules/crd/forms/entidad-participe/participe-info/participe-info.component').then((m) => m.ParticipeInfoComponent) },
-      { path: 'cruce-valores', loadComponent: () => import('./modules/crd/forms/cruce-valores/cruce-valores.component').then((m) => m.CruceValoresComponent) },
       { path: 'cruce-de-valores', loadComponent: () => import('./modules/crd/forms/cruce-de-valores/cruce-de-valores.component').then((m) => m.CruceDeValoresComponent) },
       { path: 'devolucion-aportes', loadComponent: () => import('./modules/crd/forms/devolucion-aportes/devolucion-aportes.component').then((m) => m.DevolucionAportesComponent) },
       { path: 'simulador-credito', loadComponent: () => import('./modules/crd/forms/simulador-credito/simulador-credito.component').then((m) => m.SimuladorCreditoComponent) },
       { path: 'simulador-prestamo', loadComponent: () => import('./modules/crd/forms/simulador-prestamo/simulador-prestamo.component').then((m) => m.SimuladorPrestamoComponent) },
       { path: 'pago-cuotas', loadComponent: () => import('./modules/crd/forms/pago-cuotas/pago-cuotas.component').then((m) => m.PagoCuotasComponent) },
       { path: 'cobros-personales', loadComponent: () => import('./modules/crd/forms/cobros-personales/cobros-personales.component').then((m) => m.CobrosPersonalesComponent) },
+      { path: 'bandeja-contabilidad', loadComponent: () => import('./modules/crd/forms/cobros/bandeja-contabilidad/bandeja-contabilidad.component').then((m) => m.BandejaContabilidadComponent) },
+      { path: 'proceso-credito', loadComponent: () => import('./modules/crd/forms/cobros/proceso-credito/proceso-credito.component').then((m) => m.ProcesoCreditoComponent) },
       {
         path: 'entidad-edit',
         loadComponent: () => import('./modules/crd/forms/entidad-participe/entidad-edit/entidad-edit.component').then((m) => m.EntidadEditComponent),
@@ -1061,6 +1077,7 @@ export const routes: Routes = [
         pathMatch: 'full',
       },
       { path: 'entidad-participe-info', loadComponent: () => import('./modules/crd/forms/entidad-participe/entidad-participe-info/entidad-participe-info.component').then((m) => m.EntidadParticipeInfoComponent) },
+      { path: 'certificados-participe', loadComponent: () => import('./modules/crd/forms/certificados-participe/certificados-participe.component').then((m) => m.CertificadosParticipeComponent) },
       {
         path: 'estadosCrd',
         loadComponent: () => import('./modules/crd/forms/parametrizacion/estados-crd/estados-crd.component').then((m) => m.EstadosCrdComponent),

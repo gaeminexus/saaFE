@@ -5,8 +5,11 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableDataSource } from '@angular/material/table';
 import { forkJoin, of, Observable } from 'rxjs';
-import { catchError, switchMap } from 'rxjs/operators';
+import { catchError } from 'rxjs/operators';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { AppStateService } from '../../../../../shared/services/app-state.service';
+import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
+import { MovimientoRelacionado } from '../../../../../shared/model/pagos-cobros/movimiento-relacionado';
 import { ExportService } from '../../../../../shared/services/export.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { JasperReportesService } from '../../../../../shared/services/jasper-reportes.service';
@@ -19,13 +22,12 @@ import { LiquidacionEmitirService } from '../../../service/emitir/liquidacion-em
 import { PathLiquidacionCompraService } from '../../../service/emitir/path-liquidacion-compra.service';
 import { FileService } from '../../../../../shared/services/file.service';
 import { DetalleSriService } from '../../../service/detalle-sri.service';
-import { MotivoAnulacionDialogComponent } from '../motivo-anulacion-dialog/motivo-anulacion-dialog.component';
 import { ActualizarEstadoResultadoDialogComponent } from '../actualizar-estado-resultado-dialog/actualizar-estado-resultado-dialog.component';
-import { AdvertenciaNcDialogComponent } from '../advertencia-nc-dialog/advertencia-nc-dialog.component';
 import { ConsultaSriDialogComponent } from '../consulta-sri-dialog/consulta-sri-dialog.component';
-import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
-import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
-import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
+import {
+  AnularDocumentoCompraDialogComponent,
+  AnularDocumentoCompraDialogResult,
+} from '../../../../cxp/forms/procesos/dialogs/anular-documento-compra-dialog/anular-documento-compra-dialog.component';
 
 export type TipoDocumento = 'TODOS' | 'FACTURA' | 'NOTA_CREDITO' | 'NOTA_DEBITO' | 'RETENCION' | 'LIQUIDACION';
 
@@ -71,6 +73,7 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
   private snackBar          = inject(MatSnackBar);
   private dialog            = inject(MatDialog);
   private portapapeles      = inject(PortapapelesService);
+  private appState          = inject(AppStateService);
 
   cargando    = signal(false);
   imprimiendo = signal(false);
@@ -388,68 +391,80 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
     });
   }
 
+  /**
+   * Anulación en cascada (ítem 14, 2026-08-28): antes de preguntar el motivo, consulta si el
+   * documento tiene movimientos relacionados (cobros, notas, retenciones, anticipos cruzados —
+   * o, para una retención, facturas de COMPRA afectadas) y, si los tiene, exige confirmación
+   * explícita de cascada. Reemplaza el aviso ad-hoc que solo miraba NCs de una factura
+   * (`AdvertenciaNcDialogComponent`, ya no se llama desde acá): ahora cubre los 5 tipos con el
+   * mismo mecanismo real que usa el backend para bloquear (409) si no se confirma la cascada.
+   */
   anular(row: DocumentoElectronico): void {
     if (Number(row.estadoEmision) === 3) {
       this.mostrarInfo('El documento ya está anulado'); return;
     }
     const tipoLabel = row.tipoLabel || 'Documento';
 
-    // Si es factura, verificar si tiene NCs relacionadas antes de abrir el diálogo
-    const preCheck$: Observable<boolean> = row.tipo === 'FACTURA'
-      ? this._verificarNotasCreditoRelacionadas(row)
-      : of(true);
+    this.anulando.set(true);
+    this.movimientosRelacionadosDe(row).subscribe({
+      next: (movs) => {
+        this.anulando.set(false);
+        this.abrirDialogoAnular(row, tipoLabel, movs || []);
+      },
+      error: (err: Error) => {
+        this.anulando.set(false);
+        this.mostrarError(mensajeDeError(err, 'No se pudieron consultar los movimientos relacionados'));
+      },
+    });
+  }
 
-    preCheck$.subscribe(continuar => {
-      if (!continuar) return;
+  private movimientosRelacionadosDe(row: DocumentoElectronico): Observable<MovimientoRelacionado[]> {
+    switch (row.tipo) {
+      case 'FACTURA':      return this.facturaService.movimientosRelacionados(row.id);
+      case 'NOTA_CREDITO':  return this.ncService.movimientosRelacionados(row.id);
+      case 'NOTA_DEBITO':   return this.ndService.movimientosRelacionados(row.id);
+      case 'RETENCION':     return this.retService.movimientosRelacionados(row.id);
+      case 'LIQUIDACION':   return this.liquidacionService.movimientosRelacionados(row.id);
+      default: return of([]);
+    }
+  }
 
-      const dialogRef = this.dialog.open(MotivoAnulacionDialogComponent, {
-        width: '480px', disableClose: true,
-        data: { numero: row.numero || String(row.id), tipoLabel },
-      });
-      dialogRef.afterClosed().subscribe((motivo: string | null) => {
-        if (!motivo) return;
-        this.anulando.set(true);
-        const usuario = this.usuarioSesion;
-        const req$ = (() => {
-          switch (row.tipo) {
-            case 'FACTURA':      return this.facturaService.anularFactura({ idFactura: row.id, usuario, motivo });
-            case 'NOTA_CREDITO': return this.ncService.anular({ idNotaCredito: row.id, usuario, motivo });
-            case 'NOTA_DEBITO':  return this.ndService.anular({ idNotaDebito: row.id, usuario, motivo });
-            case 'RETENCION':    return this.retService.anular({ idRetencion: row.id, usuario, motivo });
-            case 'LIQUIDACION':  return this.liquidacionService.anular({ idLiquidacion: row.id, usuario, motivo });
-            default: return of(null);
-          }
-        })();
-        req$.subscribe({
-          next: () => { this.anulando.set(false); this.mostrarExito(`${tipoLabel} anulada correctamente`); this.buscar(); },
-          error: () => { this.anulando.set(false); this.mostrarError(`No se pudo anular el documento`); },
-        });
+  private abrirDialogoAnular(row: DocumentoElectronico, tipoLabel: string, movimientos: MovimientoRelacionado[]): void {
+    this.dialog.open(AnularDocumentoCompraDialogComponent, {
+      width: '560px', disableClose: true,
+      data: { tipoLabel, numero: row.numero || String(row.id), movimientos },
+    }).afterClosed().subscribe((result: AnularDocumentoCompraDialogResult | null) => {
+      if (!result) return;
+
+      this.anulando.set(true);
+      const usuario = this.usuarioSesion;
+      const idUsuario = this.appState.getIdUsuario();
+      const { motivo, anularEnCascada } = result;
+      const req$: Observable<any> = (() => {
+        switch (row.tipo) {
+          case 'FACTURA':      return this.facturaService.anularFactura({ idFactura: row.id, usuario, idUsuario, motivo, anularEnCascada });
+          case 'NOTA_CREDITO': return this.ncService.anular({ idNotaCredito: row.id, usuario, idUsuario, motivo, anularEnCascada });
+          case 'NOTA_DEBITO':  return this.ndService.anular({ idNotaDebito: row.id, usuario, idUsuario, motivo, anularEnCascada });
+          case 'RETENCION':    return this.retService.anular({ idRetencion: row.id, usuario, idUsuario, motivo, anularEnCascada });
+          case 'LIQUIDACION':  return this.liquidacionService.anular({ idLiquidacion: row.id, usuario, idUsuario, motivo, anularEnCascada });
+          default: return of(null);
+        }
+      })();
+      req$.subscribe({
+        next: (resp: any) => {
+          this.anulando.set(false);
+          this.mostrarExito(resp?.mensaje || `${tipoLabel} anulada correctamente`);
+          this.buscar();
+        },
+        error: (err: Error) => {
+          this.anulando.set(false);
+          this.mostrarError(mensajeDeError(err, 'No se pudo anular el documento'));
+        },
       });
     });
   }
 
   /** Busca NCs relacionadas con la factura. Si existen, abre advertencia y retorna Observable<boolean>. */
-  private _verificarNotasCreditoRelacionadas(row: DocumentoElectronico): Observable<boolean> {
-    const criterio = new DatosBusqueda();
-    criterio.asignaValorConCampoPadre(
-      TipoDatosBusqueda.LONG, 'factura', 'id', String(row.id), TipoComandosBusqueda.IGUAL
-    );
-    return this.ncService.selectByCriteria([criterio]).pipe(
-      catchError(() => of([])),
-      switchMap(lista => {
-        const ncs = (lista || []).filter(nc => nc.estadoEmision !== 3); // excluir ya anuladas
-        if (ncs.length === 0) return of(true);
-        const numerosNC = ncs.map(nc => nc.numero || String(nc.id));
-        const advertenciaRef = this.dialog.open(AdvertenciaNcDialogComponent, {
-          width: '520px',
-          disableClose: true,
-          data: { numeroFactura: row.numero || String(row.id), numerosNC },
-        });
-        return advertenciaRef.afterClosed() as Observable<boolean>;
-      })
-    );
-  }
-
   consultarYActualizarEstado(row: DocumentoElectronico): void {
     if (!row.autorizacion) {
       this.mostrarInfo('Este documento no tiene clave de acceso disponible');

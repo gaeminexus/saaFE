@@ -6,29 +6,7 @@
     {{ data.anticipo.numeroCuotas }} cuota(s)
   </p>
 
-  <mat-form-field appearance="outline" class="w-100">
-    <mat-label>Cuenta bancaria de origen</mat-label>
-    <mat-select [ngModel]="cuentaOrigen()" (ngModelChange)="cuentaOrigen.set($event); onCambioCuentaOrigen()">
-      @for (c of cuentas(); track c.codigo) {
-        <mat-option [value]="c">{{ c.banco?.nombre }} — {{ c.numeroCuenta }}</mat-option>
-      }
-    </mat-select>
-  </mat-form-field>
-
-  <div class="fila-check">
-    <label class="radio-label">Forma de pago</label>
-    <mat-radio-group [ngModel]="formaPago()" (ngModelChange)="formaPago.set($event)">
-      <mat-radio-button [value]="FormaPagoAplicacion.DEBITO_AUTOMATICO">Débito automático</mat-radio-button>
-      @if (cuentaOrigenManejaChequera) {
-        <mat-radio-button [value]="FormaPagoAplicacion.CHEQUE">Cheque</mat-radio-button>
-      }
-    </mat-radio-group>
-  </div>
-
-  <mat-form-field appearance="outline" class="w-100">
-    <mat-label>Referencia</mat-label>
-    <input matInput [ngModel]="referencia()" (ngModelChange)="referencia.set($event)" placeholder="N° de transacción o convenio" />
-  </mat-form-field>
+  <p class="resumen">El pago queda pendiente de aprobación en la bandeja de tesorería.</p>
 
   @if (errorMsg()) {
     <div class="aviso aviso-error">{{ errorMsg() }}</div>
@@ -41,7 +19,7 @@
     @if (guardando()) {
       <mat-spinner diameter="18"></mat-spinner>
     } @else {
-      Aprobar y pagar
+      Aprobar
     }
   </button>
 </mat-dialog-actions>

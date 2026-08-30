@@ -81,7 +81,13 @@ export interface PagoProgramado {
 /** Body de POST /pgtr. */
 export interface RegistrarPagoRequest {
   idFacturaCompra: number;
-  idCuentaBancariaOrigen: number;
+  /**
+   * Opcional desde el rediseño de aprobación (docs/logica-negocio/pagos/PLAN-REDISENO-APROBACION-PAGOS.md
+   * §3.1/§3.2/§7 en saaBE): sin cuenta, el pago nace `POR_APROBAR` y la
+   * cuenta + forma de pago se eligen al aprobar en lote (`aprobar()` más
+   * abajo), no al registrar. Las pantallas de origen dejaron de pedirla.
+   */
+  idCuentaBancariaOrigen?: number;
   /** Opcional; si se envía debe ser una cuenta del mismo proveedor de la factura. */
   idCuentaDestinoTitular?: number;
   valor: number;
@@ -188,4 +194,95 @@ export interface RevertirPagoResponse extends SaldoFactura {
   mensaje: string;
   pago?: number;
   aplicacion?: number;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// Aprobación en lote (PLAN-REDISENO-APROBACION-PAGOS.md §3/§7 en saaBE) —
+// la solicitud nace sin cuenta ni forma de pago (`POR_APROBAR`); tesorería
+// elige cuenta y forma de pago acá, para el lote completo.
+// ═══════════════════════════════════════════════════════════════════════
+
+/** Ver OrigenPagoExterno / documentos propios de CXP, §7.1 del plan. */
+export type OrigenPago =
+  | 'FACTURA_COMPRA'
+  | 'EGRESO_TESORERIA'
+  | 'ANTICIPO_PROVEEDOR'
+  | 'CRD_DEVOLUCION_APORTE'
+  | 'TSR_CAJA_CHICA'
+  | 'RHH_ANTICIPO_EMPLEADO'
+  | 'CXC_DEVOLUCION_CLIENTE';
+
+export const ORIGEN_PAGO_LABELS: Record<OrigenPago, string> = {
+  FACTURA_COMPRA: 'Factura de compra',
+  EGRESO_TESORERIA: 'Egreso de tesorería',
+  ANTICIPO_PROVEEDOR: 'Anticipo a proveedor',
+  CRD_DEVOLUCION_APORTE: 'Devolución de aportes',
+  TSR_CAJA_CHICA: 'Caja chica',
+  RHH_ANTICIPO_EMPLEADO: 'Anticipo a trabajador',
+  CXC_DEVOLUCION_CLIENTE: 'Devolución a cliente',
+};
+
+/** Fila de GET /pgtr/porAprobar — proyección `PagoPorAprobar`, no la entidad. */
+export interface PagoPorAprobar {
+  id: number;
+  origen: OrigenPago;
+  beneficiario: string;
+  concepto: string;
+  valor: number;
+  fechaSolicitada: unknown;
+}
+
+/** Query params de GET /pgtr/porAprobar. Solo `idEmpresa` es obligatorio. */
+export interface FiltrosPorAprobar {
+  idEmpresa: number;
+  origen?: OrigenPago;
+  desde?: string;
+  hasta?: string;
+}
+
+/** Body de POST /pgtr/aprobar. `formaPago`: 2 Transferencia, 3 Cheque, 4 Débito automático — 1 Efectivo no se soporta. */
+export interface AprobarPagosRequest {
+  idsPagos: number[];
+  idCuentaBancaria: number;
+  formaPago: number;
+  /** yyyy-MM-dd. Opcional — vacío/omitido = hoy. */
+  fechaPago?: string;
+  idUsuario: number;
+}
+
+export interface ChequeAprobado {
+  pago: number;
+  numeroCheque: string;
+  asiento: string;
+}
+
+/**
+ * Respuesta de POST /pgtr/aprobar. Con transferencia (`formaPago=2`) los
+ * pagos quedan en `registrados` y `cheques` no viene. Con cheque
+ * (`formaPago=3`) quedan en `confirmados` y `cheques` sí viene. Con débito
+ * automático (`formaPago=4`) quedan en `confirmados` igual que cheque, pero
+ * sin `cheques`.
+ */
+export interface AprobarPagosResponse {
+  exito: boolean;
+  idCuentaBancaria: number;
+  formaPago: number;
+  totalAprobado: number;
+  pagosAprobados: number;
+  registrados: number[];
+  confirmados: number[];
+  cheques?: ChequeAprobado[];
+  mensaje: string;
+}
+
+/**
+ * Respuesta de GET /pgtr/disponibilidad/{idCuenta} (§3.3/§7 del plan). `disponible` = `saldo` −
+ * `comprometido` (pagos ya aprobados de esa cuenta que aún no confirma el banco). Si el GET falla,
+ * no hay valor por defecto razonable: mostrar "desconocida", nunca 0 (mismo criterio que el
+ * interruptor de contabilidad de CRD).
+ */
+export interface DisponibilidadCuenta {
+  saldo: number;
+  comprometido: number;
+  disponible: number;
 }

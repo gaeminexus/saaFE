@@ -17,7 +17,7 @@ import { AnticipoService, VerificacionAnulacionAnticipo } from '../../../service
 import { AnularAnticipoDialogComponent, AnularAnticipoDialogResult } from '../dialogs/anular-anticipo-dialog/anular-anticipo-dialog.component';
 import { JasperReportesService } from '../../../../../shared/services/jasper-reportes.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
+import { FuncionesDatosService, TipoFormatoFechaBackend } from '../../../../../shared/services/funciones-datos.service';
 
 @Component({
   selector: 'app-anticipos-clientes',
@@ -251,8 +251,9 @@ export class AnticiposClientesComponent {
 
     const idEmpresa = +(sessionStorage.getItem('idEmpresa') || localStorage.getItem('idEmpresa') || '0');
     const idUsuario = +(sessionStorage.getItem('idUsuario') || localStorage.getItem('idUsuario') || '0');
+    // `.toISOString()` es siempre UTC; con Ecuador en UTC−5 puede dar el día anterior (regla de CLAUDE.md).
     const fecha = this.formFecha instanceof Date
-      ? this.formFecha.toISOString().substring(0, 10)
+      ? this.funcionesDatos.formatearFechaParaBackend(this.formFecha, TipoFormatoFechaBackend.SOLO_FECHA)!
       : String(this.formFecha);
 
     const payload = {

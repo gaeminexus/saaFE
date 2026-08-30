@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, ElementRef, OnInit, ViewChild, inject, signal } from '@angular/core';
 import { FormsModule, ReactiveFormsModule, UntypedFormControl } from '@angular/forms';
+import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableDataSource } from '@angular/material/table';
 import { Observable, forkJoin, of } from 'rxjs';
@@ -9,10 +10,17 @@ import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-
 import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda as TipoDatos } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { AppStateService } from '../../../../../shared/services/app-state.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
+import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
 import { DocumentoCxp } from '../../../model/documento-cxp';
+import { AnularDocumentoCompraRequest, MovimientoRelacionadoCompra } from '../../../model/anulacion-documento-compra';
 import { HistorialAbonosFacturaComponent } from '../../pagos/historial-abonos-factura/historial-abonos-factura.component';
 import { ReembolsosFacturaComponent } from '../reembolsos-factura/reembolsos-factura.component';
+import {
+  AnularDocumentoCompraDialogComponent,
+  AnularDocumentoCompraDialogResult,
+} from '../dialogs/anular-documento-compra-dialog/anular-documento-compra-dialog.component';
 import { DetalleFacturaCompraService } from '../../../service/detalle-factura-compra.service';
 import { DetalleLiquidacionCompraCompraService } from '../../../service/detalle-liquidacion-compra-compra.service';
 import { DetalleNotaCreditoCompraService } from '../../../service/detalle-nota-credito-compra.service';
@@ -28,6 +36,11 @@ import { NotaCreditoCompraService } from '../../../service/nota-credito-compra.s
 import { NotaDebitoCompraService } from '../../../service/nota-debito-compra.service';
 import { RetencionCompraService } from '../../../service/retencion-compra.service';
 import { RetencionCompraV2Service } from '../../../service/retencion-compra-v2.service';
+
+/** Tablas destino de compra que sí admiten anulación (ítem 12/13, 2026-08-28). Las retenciones quedan fuera: sin endpoint. */
+const TABLAS_ANULABLES = ['FACTURA_COMPRA', 'LIQUIDACION_COMPRA', 'LIQUIDACION_COMPRA_COMPRA', 'NOTA_CREDITO_COMPRA', 'NOTA_DEBITO_COMPRA'];
+/** La liquidación de compra no tiene movimientos que cascadear — anulación simple, sin consulta previa. */
+const TABLAS_LIQUIDACION = ['LIQUIDACION_COMPRA', 'LIQUIDACION_COMPRA_COMPRA'];
 
 /**
  * Columnas del detalle de una retención (RTCM/DRCM y RCV2/DRC2 comparten los
@@ -50,6 +63,8 @@ export class ConsultaDocumentosComponent implements OnInit {
 
   private snackBar = inject(MatSnackBar);
   private funcionesDatosS = inject(FuncionesDatosService);
+  private dialog = inject(MatDialog);
+  private appState = inject(AppStateService);
 
   private _rawFiltroFechaDesde = '';
   private _rawFiltroFechaHasta = '';
@@ -94,6 +109,10 @@ export class ConsultaDocumentosComponent implements OnInit {
   detallesDoc = new MatTableDataSource<any>([]);
   formasPagoDoc: any[] = [];
   columnasDetalle: string[] = [];
+
+  // Anulación (ítem 12/13, 2026-08-28)
+  consultandoMovimientos = signal(false);
+  anulando = signal(false);
 
   private get idEmpresa(): number { return Number(localStorage.getItem('empresaCodigo') || localStorage.getItem('empresaId') || 1); }
 
@@ -265,6 +284,124 @@ export class ConsultaDocumentosComponent implements OnInit {
   }
 
   volverLista(): void { this.vista = 'lista'; this.docSeleccionado = null; this.docReal = null; }
+
+  // ─── ANULACIÓN (ítem 12/13, 2026-08-28) ────────────────
+
+  /** Solo factura/liquidación/NC/ND de compra admiten anulación — las retenciones no tienen endpoint. */
+  esDocumentoAnulable(): boolean {
+    return TABLAS_ANULABLES.includes(this.docSeleccionado?.tipoTablaDestino || '');
+  }
+
+  get documentoAnulado(): boolean {
+    return Number(this.docReal?.estadoEmision) === 3;
+  }
+
+  get puedeAnularDocumento(): boolean {
+    return !!this.docReal && this.esDocumentoAnulable() && !this.documentoAnulado
+      && !this.consultandoMovimientos() && !this.anulando();
+  }
+
+  private numeroDocumento(): string {
+    if (this.docReal?.numero) return this.docReal.numero;
+    const { numEstablecimiento, numPtoEmision, secuencial } = this.docReal ?? {};
+    if (numEstablecimiento && numPtoEmision && secuencial) {
+      return `${numEstablecimiento}-${numPtoEmision}-${secuencial}`;
+    }
+    return this.docSeleccionado?.serieComprobante || String(this.docReal?.id ?? '');
+  }
+
+  /**
+   * Antes de preguntar, hay que saber si el documento tiene movimientos relacionados
+   * (pagos/notas/retenciones/anticipos cruzados) — la liquidación de compra es la única
+   * excepción, no tiene nada que cascadear (verificado en backend, sin FK que la relacione).
+   */
+  anularDocumento(): void {
+    const doc = this.docSeleccionado;
+    const real = this.docReal;
+    if (!doc || !real || !this.puedeAnularDocumento) return;
+
+    const tipo = doc.tipoTablaDestino;
+    if (TABLAS_LIQUIDACION.includes(tipo)) {
+      this.abrirDialogoAnular(tipo, real.id, null);
+      return;
+    }
+
+    this.consultandoMovimientos.set(true);
+    this.servicioConMovimientos(tipo).movimientosRelacionados(real.id).subscribe({
+      next: (movs) => {
+        this.consultandoMovimientos.set(false);
+        this.abrirDialogoAnular(tipo, real.id, movs || []);
+      },
+      error: (err: Error) => {
+        this.consultandoMovimientos.set(false);
+        this.snackBar.open(
+          mensajeDeError(err, 'No se pudieron consultar los movimientos relacionados'),
+          'Cerrar', { duration: 6000 },
+        );
+      },
+    });
+  }
+
+  private servicioConMovimientos(tipo: string): FacturaCompraService | NotaCreditoCompraService | NotaDebitoCompraService {
+    if (tipo === 'NOTA_CREDITO_COMPRA') return this.ncService;
+    if (tipo === 'NOTA_DEBITO_COMPRA') return this.ndService;
+    return this.facturaService;
+  }
+
+  private abrirDialogoAnular(tipo: string, id: number, movimientos: MovimientoRelacionadoCompra[] | null): void {
+    this.dialog.open(AnularDocumentoCompraDialogComponent, {
+      width: '560px',
+      disableClose: true,
+      data: { tipoLabel: this.tipoTablaLabel(tipo), numero: this.numeroDocumento(), movimientos },
+    }).afterClosed().subscribe((result: AnularDocumentoCompraDialogResult | null) => {
+      if (!result) return;
+      this.ejecutarAnulacion(tipo, id, result);
+    });
+  }
+
+  private usuarioSesion(): string {
+    try {
+      const u = sessionStorage.getItem('usuario') || localStorage.getItem('usuario');
+      if (u) return JSON.parse(u)?.username || JSON.parse(u)?.nombre || JSON.parse(u)?.login || 'sistema';
+    } catch { /* */ }
+    return 'sistema';
+  }
+
+  private ejecutarAnulacion(tipo: string, id: number, resultado: AnularDocumentoCompraDialogResult): void {
+    this.anulando.set(true);
+    const usuario = this.usuarioSesion();
+
+    const obs$ = TABLAS_LIQUIDACION.includes(tipo)
+      ? this.liqService.anular(id, { motivo: resultado.motivo, usuario })
+      : this.servicioConMovimientos(tipo).anular(id, {
+          motivo: resultado.motivo,
+          usuario,
+          idUsuario: this.appState.getIdUsuario(),
+          anularEnCascada: resultado.anularEnCascada,
+        } as AnularDocumentoCompraRequest);
+
+    obs$.subscribe({
+      next: (resp) => {
+        this.anulando.set(false);
+        if (!resp.exito) {
+          this.snackBar.open(resp.mensaje || 'No se pudo anular el documento', 'Cerrar', { duration: 6000 });
+          return;
+        }
+        this.snackBar.open(resp.mensaje || 'Documento anulado correctamente', 'Cerrar', { duration: 5000 });
+        // Recarga el detalle para reflejar estadoEmision y los campos de auditoría nuevos.
+        if (this.docSeleccionado) this.verDetalle(this.docSeleccionado);
+      },
+      error: (err: Error & { status?: number }) => {
+        this.anulando.set(false);
+        // 409 = el documento tenía movimientos relacionados y se llamó sin cascada (carrera con
+        // la consulta previa) — mismo mensaje que ya trae el backend, con más tiempo en pantalla.
+        this.snackBar.open(
+          mensajeDeError(err, 'No se pudo anular el documento'),
+          'Cerrar', { duration: err.status === 409 ? 10000 : 6000, panelClass: err.status === 409 ? ['snackbar-error'] : [] },
+        );
+      },
+    });
+  }
 
   tieneFormasPago(): boolean { return ['FACTURA_COMPRA', 'LIQUIDACION_COMPRA', 'LIQUIDACION_COMPRA_COMPRA'].includes(this.docSeleccionado?.tipoTablaDestino || ''); }
 

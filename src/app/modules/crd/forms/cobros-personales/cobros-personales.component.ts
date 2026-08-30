@@ -27,18 +27,18 @@ import { Entidad } from '../../model/entidad';
 import { HistoricoDesgloseAporteParticipe } from '../../model/historico-desglose-aporte-participe';
 import {
   CLASES_ESTADO_CUOTA,
-  CodigoEstadoCuota,
   NOMBRES_ESTADO_CUOTA,
   obtenerCodigoEstadoCuota,
 } from '../../model/estado-cuota-prestamo';
 import { NOMBRE_ESTADO_PRESTAMO, admiteOperaciones } from '../../model/pagos/catalogos-pago';
 import {
+  PagoCuotaRequest,
   ResultadoPagoCuota,
+  ResultadoPagoMultiple,
   ResultadoRegistroAporte,
   SaldoAporte,
 } from '../../model/pagos/operaciones-pago';
 import { MovimientoAporte, RespuestaPago, mensajeDeRespuesta } from '../../model/pagos/respuesta-pago';
-import { pagoVigente } from '../../model/pago-prestamo';
 import { Prestamo } from '../../model/prestamo';
 import { PagoPrestamoService } from '../../service/pago-prestamo.service';
 import { DetallePrestamoService } from '../../service/detalle-prestamo.service';
@@ -47,19 +47,10 @@ import { ComprobanteCobroService } from '../../service/comprobante-cobro.service
 import { HistoricoDesgloseAporteParticipeService } from '../../service/historico-desglose-aporte-participe.service';
 import { OperacionesPagoPrestamoService } from '../../service/operaciones-pago-prestamo.service';
 import { PrestamoService } from '../../service/prestamo.service';
+import { ComponentesPagados, SaldoPrestamoService } from '../../service/saldo-prestamo.service';
 
 type CuentaKey = 'prestamo' | 'cesantia' | 'jubilacion';
 type MetodoPago = 'debito' | 'transferencia' | 'deposito';
-
-/** Componentes de una cuota ya cubiertos por pagos vigentes de CRD.PGPR. */
-interface ComponentesPagados {
-  capital: number;
-  interes: number;
-  desgravamen: number;
-  mora: number;
-  interesVencido: number;
-  seguroIncendio: number;
-}
 
 interface AsignacionCuota {
   cuota: DetallePrestamo;
@@ -149,6 +140,7 @@ export class CobrosPersonalesComponent implements OnDestroy {
   private historicoService = inject(HistoricoDesgloseAporteParticipeService);
   private cuentaBancariaService = inject(CuentaBancariaService);
   private operaciones = inject(OperacionesPagoPrestamoService);
+  private saldoPrestamo = inject(SaldoPrestamoService);
   private funcionesDatos = inject(FuncionesDatosService);
   private comprobantes = inject(ComprobanteCobroService);
   private snackBar = inject(MatSnackBar);
@@ -344,8 +336,13 @@ export class CobrosPersonalesComponent implements OnDestroy {
   estadoPrestamoTexto = computed(() => {
     const idEstado = this.prestamoVigente()?.idEstado;
     if (idEstado == null) return '—';
-    return NOMBRE_ESTADO_PRESTAMO[Number(idEstado)] ?? `Estado ${idEstado}`;
+    return this.nombreEstadoPrestamo(Number(idEstado));
   });
+
+  /** Nombre de un estado de préstamo por su código, para pantallas que no tienen un `Prestamo` a mano. */
+  nombreEstadoPrestamo(idEstado: number): string {
+    return NOMBRE_ESTADO_PRESTAMO[idEstado] ?? `Estado ${idEstado}`;
+  }
 
   // ---- monto del pago y asignación por cuenta ----
   montoTotalTexto = signal('$0.00');
@@ -357,12 +354,8 @@ export class CobrosPersonalesComponent implements OnDestroy {
 
   detallePrestamoAbierto = signal(false);
 
-  asignado = computed(() => {
-    this.cuentaMontoVersion();
-    return (['prestamo', 'cesantia', 'jubilacion'] as CuentaKey[])
-      .filter((k) => this.cuentaChecked[k])
-      .reduce((s, k) => s + this.parseMoneda(this.cuentaMontoTexto[k]), 0);
-  });
+  /** Asignado en TODA la operación: todos los préstamos incluidos (uno o varios) + aportes del socio. */
+  asignado = computed(() => +(this.montoTotalPrestamosIncluidos() + this.montoAportesSocio()).toFixed(2));
   restante = computed(() => +(this.montoTotal() - this.asignado()).toFixed(2));
   completamenteAsignado = computed(() => Math.abs(this.restante()) < 0.005);
 
@@ -464,19 +457,13 @@ export class CobrosPersonalesComponent implements OnDestroy {
     return fecha.getTime() <= limite.getTime();
   });
 
-  /**
-   * ¿El cobro incluye una parte que va contra el préstamo?
-   *
-   * La lectura de `cuentaMontoVersion()` va primero y suelta: `cuentaChecked` es un objeto plano, y
-   * si se dejara que el `&&` cortara antes de llegar a `montoPrestamo()`, con el préstamo desmarcado
-   * este `computed` quedaría sin ninguna dependencia registrada —y un `computed` sin productores no
-   * se vuelve a evaluar nunca, así que se congelaba en `false` y el botón de confirmar no se
-   * habilitaba aunque después se marcara el préstamo y se le asignara el monto completo.
-   */
-  cobraPrestamo = computed(() => {
-    this.cuentaMontoVersion();
-    return this.cuentaChecked.prestamo && this.montoPrestamo() > 0.004;
-  });
+  /** ¿El cobro incluye al menos un préstamo? Uno o varios, da igual: `prestamosIncluidos()` cubre ambos. */
+  cobraPrestamo = computed(() => this.prestamosIncluidos().length > 0);
+
+  /** Préstamos incluidos que NO admiten operaciones de pago (estado terminal). Para `motivosNoConfirmar`. */
+  private prestamosNoAdmitenOperaciones = computed(() =>
+    this.prestamosIncluidos().filter((item) => !admiteOperaciones(item.prestamo.idEstado))
+  );
 
   /**
    * Qué falta para poder confirmar. Es la lista que se muestra junto al botón: un botón de cobro
@@ -492,10 +479,17 @@ export class CobrosPersonalesComponent implements OnDestroy {
     const motivos: string[] = [];
 
     if (!this.cobraPrestamo() && this.montoAportesSocio() <= 0.004) {
-      motivos.push('Marque el préstamo o una cuenta de aportes y asígnele un monto mayor a cero.');
+      motivos.push('Cargue un monto mayor a cero en al menos un préstamo o en una cuenta de aportes.');
     }
-    if (this.cobraPrestamo() && !this.prestamoAdmiteOperaciones()) {
-      motivos.push(`El préstamo está en estado «${this.estadoPrestamoTexto()}» y no admite operaciones de pago.`);
+    const noAdmiten = this.prestamosNoAdmitenOperaciones();
+    if (noAdmiten.length === 1) {
+      const p = noAdmiten[0].prestamo;
+      motivos.push(`El préstamo #${p.idAsoprep} está en estado «${this.nombreEstadoPrestamo(Number(p.idEstado))}» y no admite operaciones de pago.`);
+    } else if (noAdmiten.length > 1) {
+      motivos.push(`${noAdmiten.length} de los préstamos incluidos no admiten operaciones de pago: revise sus estados.`);
+    }
+    if (this.metodoPago() === 'debito' && this.prestamosIncluidos().length > 1) {
+      motivos.push('El débito de cuenta de aportes no está disponible para cobrar varios préstamos juntos: use transferencia o depósito.');
     }
     if (!this.completamenteAsignado()) {
       const restante = this.restante();
@@ -756,7 +750,24 @@ export class CobrosPersonalesComponent implements OnDestroy {
     });
   }
 
+  /**
+   * Check/monto ya cargados para el préstamo, por código: cuando el partícipe tiene varios créditos
+   * operables, el operador puede ir cargando montos en más de uno antes de confirmar (préstamo por
+   * préstamo, ver `registrarCobro`) y necesita encontrar lo que ya escribió al volver a uno.
+   */
+  private prestamoAsignacionGuardada: Record<number, { checked: boolean; montoTexto: string }> = {};
+
   seleccionarPrestamo(prestamo: Prestamo): void {
+    // Se guarda lo que el operador ya cargó para el préstamo que se deja: antes esto se borraba al
+    // cambiar de crédito, lo que impedía cargar valores en más de uno antes de confirmar.
+    const anterior = this.prestamoVigente();
+    if (anterior) {
+      this.prestamoAsignacionGuardada[anterior.codigo] = {
+        checked: this.cuentaChecked.prestamo,
+        montoTexto: this.cuentaMontoTexto.prestamo,
+      };
+    }
+
     this.prestamoVigente.set(prestamo);
     // Las cuotas y los pagos de todos los créditos operables ya se cargaron; solo se repite el
     // pedido si el elegido todavía no está en el cache (p. ej. porque su llamada falló).
@@ -765,10 +776,79 @@ export class CobrosPersonalesComponent implements OnDestroy {
       this.cargandoPagos.set(true);
       this.cargarPagos(prestamo);
     }
-    if (this.cuentaChecked.prestamo) {
-      this.cuentaMontoTexto.prestamo = '';
-      this.cuentaMontoVersion.update((v) => v + 1);
+
+    const guardado = this.prestamoAsignacionGuardada[prestamo.codigo];
+    this.cuentaChecked.prestamo = guardado?.checked ?? false;
+    this.cuentaMontoTexto.prestamo = guardado?.montoTexto ?? '';
+    this.cuentaMontoVersion.update((v) => v + 1);
+  }
+
+  /**
+   * Monto cargado para este préstamo específico, esté vigente o no: para el vigente lee el estado
+   * en vivo (`cuentaChecked.prestamo`/`cuentaMontoTexto.prestamo`); para los demás, lo que quedó en
+   * `prestamoAsignacionGuardada` la última vez que se dejó de mirar. Es 0 si no está marcado.
+   */
+  montoIncluidoDe(prestamo: Prestamo): number {
+    this.cuentaMontoVersion();
+    if (this.prestamoVigente()?.codigo === prestamo.codigo) {
+      return this.cuentaChecked.prestamo ? this.parseMoneda(this.cuentaMontoTexto.prestamo) : 0;
     }
+    const guardado = this.prestamoAsignacionGuardada[prestamo.codigo];
+    return guardado?.checked ? this.parseMoneda(guardado.montoTexto) : 0;
+  }
+
+  /**
+   * Préstamos del partícipe con un monto cargado (marcados y con valor > 0), sea el vigente o
+   * cualquier otro que el operador haya dejado con datos al cambiar de crédito. Es la base del
+   * bloque de confirmación de la operación completa: 0, 1 o varios préstamos, todos con el mismo
+   * botón (ver `registrarCobro`).
+   */
+  prestamosIncluidos = computed<{ prestamo: Prestamo; monto: number }[]>(() => {
+    this.cuentaMontoVersion();
+    return this.prestamosOperables()
+      .map((prestamo) => ({ prestamo, monto: this.montoIncluidoDe(prestamo) }))
+      .filter((item) => item.monto > 0.004);
+  });
+
+  /** Suma de `prestamosIncluidos()`: la parte de la operación que va a préstamos. */
+  montoTotalPrestamosIncluidos = computed(() => +this.prestamosIncluidos().reduce((s, item) => s + item.monto, 0).toFixed(2));
+
+  /** Quita un préstamo de la operación sin tener que seleccionarlo primero. */
+  quitarPrestamoIncluido(prestamo: Prestamo): void {
+    if (this.prestamoVigente()?.codigo === prestamo.codigo) {
+      this.cuentaChecked.prestamo = false;
+      this.cuentaMontoTexto.prestamo = '';
+    } else {
+      delete this.prestamoAsignacionGuardada[prestamo.codigo];
+    }
+    this.cuentaMontoVersion.update((v) => v + 1);
+  }
+
+  /** Desglose que devolvió `pagarMultiplesCuotas`, para mostrarlo completo mientras no exista un impreso multi-préstamo. */
+  resultadoMultiple = signal<ResultadoPagoMultiple | null>(null);
+
+  /**
+   * Deja en pantalla el desglose completo que devolvió el backend —préstamo por préstamo, cuota por
+   * cuota— mientras no exista un comprobante impreso para varios préstamos (RPRT_CMPB_PGCT es de
+   * una sola cuota). Recarga los préstamos del partícipe y limpia el formulario para el próximo cobro.
+   */
+  private mostrarResultadoMultiple(resultado: ResultadoPagoMultiple): void {
+    this.resultadoMultiple.set(resultado);
+    this.recargarPrestamo();
+    this.resetAsignacion();
+    this.montoTotalTexto.set('$0.00');
+    this.numeroReferencia.set('');
+    this.observacion = '';
+    this.archivoComprobante.set(null);
+  }
+
+  cerrarResultadoMultiple(): void {
+    this.resultadoMultiple.set(null);
+  }
+
+  /** ID visible (idAsoprep) del préstamo con ese código, para rotular el desglose del resultado múltiple. */
+  idAsopreDe(idPrestamo: number): number | string {
+    return this.prestamosOperables().find((p) => p.codigo === idPrestamo)?.idAsoprep ?? idPrestamo;
   }
 
   /**
@@ -840,25 +920,7 @@ export class CobrosPersonalesComponent implements OnDestroy {
     this.pagosEnVuelo++;
     this.pagoPrestamoService.selectByCriteria([criterioPrestamo]).subscribe({
       next: (pagos) => {
-        const acumulado: Record<number, ComponentesPagados> = {};
-        for (const pago of pagos ?? []) {
-          const codigoCuota = pago.detallePrestamo?.codigo;
-          if (codigoCuota == null || !pagoVigente(pago)) continue;
-          const actual = (acumulado[codigoCuota] ??= {
-            capital: 0,
-            interes: 0,
-            desgravamen: 0,
-            mora: 0,
-            interesVencido: 0,
-            seguroIncendio: 0,
-          });
-          actual.capital += pago.capitalPagado ?? 0;
-          actual.interes += pago.interesPagado ?? 0;
-          actual.desgravamen += pago.desgravamen ?? 0;
-          actual.mora += pago.moraPagada ?? 0;
-          actual.interesVencido += pago.interesVencidoPagado ?? 0;
-          actual.seguroIncendio += pago.valorSeguroIncendio ?? 0;
-        }
+        const acumulado = this.saldoPrestamo.acumularPagosPorCuota(pagos);
 
         this.pagosPorCuota.update((mapa) => ({ ...mapa, ...acumulado }));
         this.prestamosConPagos.update((codigos) =>
@@ -910,28 +972,16 @@ export class CobrosPersonalesComponent implements OnDestroy {
   }
 
   /**
-   * ¿La cuota ya no admite aplicación de pagos? Mismo criterio que
-   * `DetallePrestamoDaoServiceImpl.selectCuotasPendientes`: PAGADA (4) y CANCELADA_ANTICIPADA (7)
-   * quedan fuera, y el estado nulo de los datos legados cuenta como pendiente.
+   * ¿La cuota ya no admite aplicación de pagos? Delegado en `SaldoPrestamoService` para que
+   * cobros-personales y cruce-de-valores compartan el mismo criterio.
    */
   private esCuotaLiquidada(cuota: DetallePrestamo): boolean {
-    const estado = obtenerCodigoEstadoCuota(cuota);
-    return estado === CodigoEstadoCuota.PAGADA || estado === CodigoEstadoCuota.CANCELADA_ANTICIPADA;
+    return this.saldoPrestamo.esCuotaLiquidada(cuota);
   }
 
-  /**
-   * Capital que sigue vivo en la cuota.
-   *
-   * Una cuota PAGADA o CANCELADA_ANTICIPADA se da por cubierta en su totalidad: su estado es la
-   * conclusión de la validación, así que no se vuelve a contrastar contra lo pagado. En las demás se
-   * descuenta el capital imputado por los pagos vigentes de PGPR —NO `DetallePrestamo.capitalPagado`,
-   * que en los créditos migrados viene igualado al capital programado de la cuota y dejaba el saldo
-   * de capital en $0.00 con el crédito entero por cobrar.
-   */
+  /** Capital que sigue vivo en la cuota. Ver `SaldoPrestamoService.capitalPendienteDe`. */
   private capitalPendienteDe(cuota: DetallePrestamo): number {
-    if (this.esCuotaLiquidada(cuota)) return 0;
-    const pagado = this.pagosPorCuota()[cuota.codigo];
-    return Math.max((cuota.capital ?? 0) - (pagado?.capital ?? 0), 0);
+    return this.saldoPrestamo.capitalPendienteDe(cuota, this.pagosPorCuota());
   }
 
   /**
@@ -953,60 +1003,9 @@ export class CobrosPersonalesComponent implements OnDestroy {
     ).toFixed(2);
   }
 
-  /**
-   * Todo lo que se debe por una cuota que no registra ningún pago.
-   *
-   * Es `DTPRTTLL + interés vencido`, exactamente lo que hace
-   * `MotorPagoPrestamoServiceImpl.calcularSaldosRealesCuota()` en su rama «sin pagos». La mora NO se
-   * suma aparte: `ProcesoMoraPrestamoServiceImpl` la escribe ya incluida dentro de DTPRTTLL
-   * (recompone el total como `total − moraAnterior + moraNueva`), así que agregarla otra vez la
-   * cobraría dos veces. Solo el interés vencido queda fuera del total.
-   */
-  private totalCuotaDe(cuota: DetallePrestamo): number {
-    if (cuota.total != null) return +(cuota.total + (cuota.interesVencido ?? 0)).toFixed(2);
-    // Dato legado sin DTPRTTLL: suma de los seis componentes, igual que el respaldo del motor.
-    return +(
-      (cuota.desgravamen ?? 0) +
-      (cuota.mora ?? 0) +
-      (cuota.interesVencido ?? 0) +
-      (cuota.interes ?? 0) +
-      (cuota.capital ?? 0) +
-      (cuota.valorSeguroIncendio ?? 0)
-    ).toFixed(2);
-  }
-
-  /**
-   * Deuda que queda en la cuota, con el mismo criterio que
-   * `MotorPagoPrestamoServiceImpl.calcularSaldosRealesCuota()`, que es el que va a aplicar el cobro:
-   *
-   * - PAGADA o CANCELADA_ANTICIPADA → 0. El estado es la conclusión de la validación y además es el
-   *   filtro con el que `selectCuotasPendientes` decide qué cuotas puede tocar el motor: una cuota
-   *   fuera de esa lista no se cobra, así que tampoco se pide.
-   * - Sin pagos vigentes en PGPR → se debe la cuota entera (ver `totalCuotaDe`).
-   * - Con pagos → se descuenta componente por componente, sin dejar que un excedente en uno tape
-   *   lo que falta en otro (por eso el `max(0, …)` va por componente y no sobre el total).
-   *
-   * Ya NO se lee DTPRSLDO ni las columnas «pagado» de DTPR. En los créditos migrados de
-   * Petrocomercial esas columnas vienen precargadas con el valor programado de la cuota y DTPRSLDO
-   * en 0 —incluso en cuotas que vencen dentro de años—, así que la pantalla daba por cubierto todo
-   * el crédito salvo la primera cuota vencida y el valor para ponerse al día salía por una sola
-   * cuota. PGPR es la única fuente que registra pagos de verdad.
-   */
+  /** Deuda que queda en la cuota. Ver `SaldoPrestamoService.saldoPendienteDe`. */
   private saldoPendienteDe(cuota: DetallePrestamo): number {
-    if (this.esCuotaLiquidada(cuota)) return 0;
-
-    const pagado = this.pagosPorCuota()[cuota.codigo];
-    if (!pagado) return Math.max(this.totalCuotaDe(cuota), 0);
-
-    const pendientePorComponente =
-      Math.max((cuota.desgravamen ?? 0) - pagado.desgravamen, 0) +
-      Math.max((cuota.mora ?? 0) - pagado.mora, 0) +
-      Math.max((cuota.interesVencido ?? 0) - pagado.interesVencido, 0) +
-      Math.max((cuota.interes ?? 0) - pagado.interes, 0) +
-      Math.max((cuota.capital ?? 0) - pagado.capital, 0) +
-      Math.max((cuota.valorSeguroIncendio ?? 0) - pagado.seguroIncendio, 0);
-
-    return +Math.max(pendientePorComponente, 0).toFixed(2);
+    return this.saldoPrestamo.saldoPendienteDe(cuota, this.pagosPorCuota());
   }
 
   /** Cuotas ya descargadas del préstamo, o `undefined` si su pedido todavía no volvió. */
@@ -1020,34 +1019,16 @@ export class CobrosPersonalesComponent implements OnDestroy {
   }
 
   /**
-   * ¿Se puede recalcular el saldo del crédito desde sus cuotas? Hacen falta las dos consultas: la
-   * tabla de amortización y los pagos. Con una sola el número saldría mal, no incompleto.
-   */
-  private saldosRecalculables(prestamo: Prestamo | null): boolean {
-    return !!this.cuotasDe(prestamo) && this.pagosCargadosDe(prestamo);
-  }
-
-  /**
-   * Saldo total vigente. Mientras las cuotas y los pagos no hayan llegado se muestra el valor
-   * almacenado en PRST para no dejar la celda en $0.00, aunque ese valor puede estar viejo.
+   * Saldo total vigente. Ver `SaldoPrestamoService.saldoTotalDe`: mientras las cuotas y los pagos
+   * no hayan llegado se muestra el valor almacenado en PRST para no dejar la celda en $0.00.
    */
   saldoTotalDe(prestamo: Prestamo | null): number {
-    const cuotas = this.cuotasDe(prestamo);
-    if (!cuotas || !this.saldosRecalculables(prestamo)) return prestamo?.saldoTotal ?? 0;
-    return +cuotas
-      .filter((c) => !this.esCuotaLiquidada(c))
-      .reduce((s, c) => s + this.saldoPendienteDe(c), 0)
-      .toFixed(2);
+    return this.saldoPrestamo.saldoTotalDe(prestamo, this.cuotasDe(prestamo), this.pagosPorCuota(), this.pagosCargadosDe(prestamo));
   }
 
-  /** Saldo de capital vigente: Σ (capital − capital pagado en PGPR) de las cuotas no liquidadas. */
+  /** Saldo de capital vigente. Ver `SaldoPrestamoService.saldoCapitalDe`. */
   saldoCapitalDe(prestamo: Prestamo | null): number {
-    const cuotas = this.cuotasDe(prestamo);
-    if (!cuotas || !this.saldosRecalculables(prestamo)) return prestamo?.saldoCapital ?? 0;
-    return +cuotas
-      .filter((c) => !this.esCuotaLiquidada(c))
-      .reduce((s, c) => s + this.capitalPendienteDe(c), 0)
-      .toFixed(2);
+    return this.saldoPrestamo.saldoCapitalDe(prestamo, this.cuotasDe(prestamo), this.pagosPorCuota(), this.pagosCargadosDe(prestamo));
   }
 
   /** Pendiente de una cuota, para mostrarlo en la plantilla. */
@@ -1146,6 +1127,7 @@ export class CobrosPersonalesComponent implements OnDestroy {
   private resetAsignacion(): void {
     this.cuentaChecked = { prestamo: false, cesantia: false, jubilacion: false };
     this.cuentaMontoTexto = { prestamo: '', cesantia: '', jubilacion: '' };
+    this.prestamoAsignacionGuardada = {};
     this.detallePrestamoAbierto.set(false);
     this.metodoPago.set('transferencia');
     this.errorOperacion.set(null);
@@ -1277,34 +1259,36 @@ export class CobrosPersonalesComponent implements OnDestroy {
       return;
     }
 
-    const prestamo = this.cobraPrestamo() ? this.prestamoVigente() : null;
-    if (this.cobraPrestamo() && !prestamo) return;
+    // Uno, varios o ninguno: el mismo botón cubre los tres casos (ver `registrarCobro`).
+    const prestamos = this.cobraPrestamo() ? this.prestamosIncluidos() : [];
 
     this.registrando.set(true);
-    this.subirComprobante(prestamo?.codigo ?? null, entidad.codigo, (ruta, exito) => {
+    this.subirComprobante(prestamos, entidad.codigo, (ruta, exito) => {
       if (!exito) {
         this.registrando.set(false);
         return;
       }
-      this.registrarCobro(entidad, prestamo, aportes, ruta);
+      this.registrarCobro(entidad, prestamos, aportes, ruta);
     });
   }
 
   /**
-   * Registra el cobro completo con el comprobante ya archivado: la parte que va al préstamo y la
-   * que el socio aporta a sus propias cuentas. Son transacciones distintas del backend, así que se
-   * encadenan en ese orden.
+   * Registra el cobro completo con el comprobante ya archivado: la parte que va a los préstamos y
+   * la que el socio aporta a sus propias cuentas. Son transacciones distintas del backend, así que
+   * se encadenan en ese orden.
    *
-   * - Préstamo: `pagarCuota` (efectivo, transferencia o depósito) o `pagarConAportes` (débito del
-   *   saldo de aportes); ambos aplican la misma cascada y prelación del lado del servidor.
-   * - Aportes del socio: un `registrarAporte` por tipo (cesantía, jubilación).
+   * - Ningún préstamo: solo aportes del socio.
+   * - Un préstamo: `pagarCuota` (efectivo, transferencia o depósito) o `pagarConAportes` (débito
+   *   del saldo de aportes) — igual que siempre.
+   * - Varios préstamos: `pagarMultiplesCuotas`, una sola operación todo-o-nada (no admite débito:
+   *   ese endpoint no tiene desglose de aportes, por eso el método de pago lo bloquea antes).
    *
-   * Si el pago del préstamo falla no se registra ningún aporte: el usuario corrige el monto y
-   * reintenta el cobro entero sin haber dejado movimientos sueltos a medio camino.
+   * Si el pago del/los préstamo(s) falla no se registra ningún aporte: el usuario corrige el monto
+   * y reintenta el cobro entero sin haber dejado movimientos sueltos a medio camino.
    */
   private registrarCobro(
     entidad: Entidad,
-    prestamo: Prestamo | null,
+    prestamos: { prestamo: Prestamo; monto: number }[],
     aportes: { clave: 'cesantia' | 'jubilacion'; idTipoAporte: number; valor: number }[],
     rutaDocumentoRespaldo: string | null
   ): void {
@@ -1313,7 +1297,7 @@ export class CobrosPersonalesComponent implements OnDestroy {
     const observacion = this.armarObservacion();
 
     // Cobro solo de aportes: no hay préstamo de por medio.
-    if (!prestamo) {
+    if (!prestamos.length) {
       this.registrarAportesDelSocio(entidad.codigo, aportes, usuario, observacion, fecha, rutaDocumentoRespaldo, (registrados) => {
         this.registrando.set(false);
         this.mostrarRecibo('REGISTRO_APORTE', undefined, fecha, undefined, [], registrados, rutaDocumentoRespaldo);
@@ -1321,7 +1305,40 @@ export class CobrosPersonalesComponent implements OnDestroy {
       return;
     }
 
-    const monto = +this.montoPrestamo().toFixed(2);
+    const seguirConAportes = (continuar: (registrados: ResultadoRegistroAporte[]) => void): void => {
+      this.registrarAportesDelSocio(entidad.codigo, aportes, usuario, observacion, fecha, rutaDocumentoRespaldo, continuar);
+    };
+
+    if (prestamos.length > 1) {
+      const pagos: PagoCuotaRequest[] = prestamos.map(({ prestamo, monto }) => ({
+        idPrestamo: prestamo.codigo,
+        valor: +monto.toFixed(2),
+        usuario,
+        observacion,
+        fechaPago: fecha,
+        rutaDocumentoRespaldo,
+      }));
+
+      this.operaciones.pagarMultiplesCuotas({ pagos }).subscribe((resp) => {
+        if (!resp.exito || !resp.resultado) {
+          this.registrando.set(false);
+          this.registrarError(resp.error, mensajeDeRespuesta(resp));
+          // La transacción es todo-o-nada: si falló, no quedó nada aplicado.
+          this.descartarComprobanteHuerfano(rutaDocumentoRespaldo);
+          return;
+        }
+        const resultado = resp.resultado;
+        seguirConAportes(() => {
+          this.registrando.set(false);
+          this.mostrarResultadoMultiple(resultado);
+        });
+      });
+      return;
+    }
+
+    // Un solo préstamo: comportamiento idéntico al de siempre.
+    const prestamo = prestamos[0].prestamo;
+    const monto = +prestamos[0].monto.toFixed(2);
 
     const alPagar = (
       tipo: 'PAGO_MANUAL' | 'PAGO_APORTES',
@@ -1340,7 +1357,7 @@ export class CobrosPersonalesComponent implements OnDestroy {
       }
       const pago = resp.resultado;
       const movimientos = resp.movimientosAporte ?? [];
-      this.registrarAportesDelSocio(entidad.codigo, aportes, usuario, observacion, fecha, rutaDocumentoRespaldo, (registrados) => {
+      seguirConAportes((registrados) => {
         this.registrando.set(false);
         this.mostrarRecibo(tipo, resp.mensaje, fecha, pago, movimientos, registrados, rutaDocumentoRespaldo);
       });
@@ -1386,7 +1403,7 @@ export class CobrosPersonalesComponent implements OnDestroy {
    * @param idPrestamo `null` en un cobro que es solo de aportes: ahí no hay carpeta de préstamo.
    */
   private subirComprobante(
-    idPrestamo: number | null,
+    prestamos: { prestamo: Prestamo; monto: number }[],
     idEntidad: number,
     continuar: (ruta: string | null, exito: boolean) => void
   ): void {
@@ -1397,10 +1414,17 @@ export class CobrosPersonalesComponent implements OnDestroy {
     }
 
     const carpeta =
-      idPrestamo != null
-        ? this.comprobantes.carpetaDePrestamo(idPrestamo)
-        : this.comprobantes.carpetaDeAportes(idEntidad);
-    const nombreBase = idPrestamo != null ? `${idPrestamo}` : `ENTD-${idEntidad}`;
+      prestamos.length === 1
+        ? this.comprobantes.carpetaDePrestamo(prestamos[0].prestamo.codigo)
+        : prestamos.length > 1
+          ? this.comprobantes.carpetaDeCobroMultiple(idEntidad)
+          : this.comprobantes.carpetaDeAportes(idEntidad);
+    const nombreBase =
+      prestamos.length === 1
+        ? `${prestamos[0].prestamo.codigo}`
+        : prestamos.length > 1
+          ? `MULTI-${idEntidad}`
+          : `ENTD-${idEntidad}`;
 
     this.comprobantes.archivar(archivo, carpeta, nombreBase).subscribe((resultado) => {
       if (resultado.error || !resultado.ruta) {

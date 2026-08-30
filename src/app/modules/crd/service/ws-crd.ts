@@ -25,6 +25,7 @@ export class ServiciosCrd {
   public static RS_APRT = `${API_URL}/aprt`;
   public static RS_HDAP = `${API_URL}/hdap`;
   public static RS_CNTR = `${API_URL}/cntr`;
+  public static RS_CRTF = `${API_URL}/crtf`; // CertificadoRest — certificados de partícipe (docs/crd/API-CERTIFICADOS-PARTICIPE.md)
   public static RS_PRTC = `${API_URL}/prtc`;
   public static RS_TPPC = `${API_URL}/tppc`;
   public static RS_TPCN = `${API_URL}/tpcn`;
@@ -92,6 +93,7 @@ export class ServiciosCrd {
   public static RS_CIERRE_CARTERA = `${API_URL}/cierrecartera`; // Cierre mensual de cartera (Fase 2)
   public static RS_CNFG = `${API_URL}/cnfg`; // ConfiguracionRest — flag de contabilidad de CRD (§4.3 del plan de devengo)
   public static RS_VGCN = `${API_URL}/vgcn`; // VigenciaContrato — historial de vigencias (§4.1 del plan de devengo)
+  public static RS_CBCR = `${API_URL}/cbcr`; // CobroCredito — cobros con aprobación de contabilidad (docs/crd/API-COBROS-APROBACION-CONTABILIDAD.md)
 }
 /*
 export class ServiciosCrd {

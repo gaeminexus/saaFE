@@ -74,7 +74,7 @@ export class PagoDialogComponent {
     const fecha = this.toISO(this.fechaPagoControl.value);
     const payload: Partial<PagoNegociacion> = {
       formaPago: { id: this.data.cuota.id } as any,
-      fechaPago: fecha || new Date().toISOString().substring(0, 10),
+      fechaPago: fecha || this.toISO(new Date()),
       valorPago: this.form.valorPago,
       tipoPago: this.form.tipoPago,
       descripcion: this.form.descripcion || undefined,
@@ -84,7 +84,12 @@ export class PagoDialogComponent {
       refComprobante: this.form.refComprobante || undefined,
       estado: 1,
       usuario: { codigo: this.data.idUsuario } as any,
-      fechaRegistro: new Date().toISOString(),
+      /**
+       * `fechaRegistro` es `LocalDateTime` en el backend. `new Date().toISOString()` es siempre
+       * UTC y termina en "Z" — el backend descarta el offset y el dato queda 5 horas corrido en
+       * Ecuador (UTC−5), sin ningún error (regla de CLAUDE.md).
+       */
+      fechaRegistro: this.funcionesDatos.formatearFechaParaBackend(new Date()),
     };
     this.guardando = true;
     this.pagoService.add(payload).subscribe({

@@ -1,1 +1,14 @@
-<app-side-menu-custom [title]="titulo" [navItems]="navItems"> </app-side-menu-custom>
+<app-side-menu-custom [title]="titulo" [navItems]="navItems">
+  @if (faltaAcreditarAnioActual()) {
+    <div top-banner class="alertas-rrhh">
+      <a
+        class="chip-alerta"
+        routerLink="/menurecursoshumanos/procesos/acreditar-vacaciones"
+        matTooltip="Sin este proceso no existe saldo de vacaciones del año en curso para ningún empleado"
+      >
+        <mat-icon>warning</mat-icon>
+        <span>No se ha acreditado el período de vacaciones de {{ anioActual }}. Vaya a Procesos → Acreditar vacaciones.</span>
+      </a>
+    </div>
+  }
+</app-side-menu-custom>

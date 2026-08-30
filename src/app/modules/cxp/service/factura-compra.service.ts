@@ -1,7 +1,13 @@
 import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, catchError, of, throwError } from 'rxjs';
+import { mensajeDeError } from '../../../shared/utils/mensaje-error.util';
 import { FacturaCompra } from '../model/factura-compra';
+import {
+  AnularDocumentoCompraRequest,
+  AnularDocumentoCompraResponse,
+  MovimientoRelacionadoCompra,
+} from '../model/anulacion-documento-compra';
 import { ServiciosCxp } from './ws-cxp';
 
 @Injectable({ providedIn: 'root' })
@@ -35,8 +41,32 @@ export class FacturaCompraService {
     return this.http.delete<FacturaCompra>(`${ServiciosCxp.RS_FCTC}/${id}`, this.httpOptions).pipe(catchError(this.handleError));
   }
 
+  /** Pagos/notas/retenciones/anticipos cruzados con esta factura — consultar antes de anular (§13). */
+  movimientosRelacionados(id: number): Observable<MovimientoRelacionadoCompra[]> {
+    return this.http.get<MovimientoRelacionadoCompra[]>(`${ServiciosCxp.RS_FCTC}/movimientosRelacionados/${id}`).pipe(
+      catchError(this.handleErrorAnulacion),
+    );
+  }
+
+  /**
+   * 409 si tiene movimientos relacionados y se llama sin `anularEnCascada: true` — el error
+   * emitido conserva `.status` (ver `handleErrorAnulacion`) para que el componente lo distinga
+   * de un error genérico.
+   */
+  anular(id: number, datos: AnularDocumentoCompraRequest): Observable<AnularDocumentoCompraResponse> {
+    return this.http.post<AnularDocumentoCompraResponse>(`${ServiciosCxp.RS_FCTC}/anular/${id}`, datos, this.httpOptions).pipe(
+      catchError(this.handleErrorAnulacion),
+    );
+  }
+
   private handleError(error: HttpErrorResponse): Observable<null> {
     if (+error.status === 200) { return of(null); }
     return throwError(() => error.error);
+  }
+
+  private handleErrorAnulacion(error: HttpErrorResponse): Observable<never> {
+    const e = new Error(mensajeDeError(error, 'No se pudo completar la operación')) as Error & { status?: number };
+    e.status = error.status;
+    return throwError(() => e);
   }
 }

@@ -1,0 +1,98 @@
+<div class="acreditar-vacaciones">
+  <mat-card>
+    <mat-card-title>Acreditar vacaciones</mat-card-title>
+    <mat-card-content>
+      <p class="explicacion">
+        Proceso anual: genera el saldo de vacaciones del período a los empleados que cumplieron
+        un año de servicio, arrastrando lo no gozado del período anterior y marcando caducados los
+        saldos que superan el plazo configurado. Sin correrlo, no existe ningún saldo nuevo.
+      </p>
+
+      @if (resultado() == null) {
+        <div class="form-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Fecha de corte</mat-label>
+            <input matInput type="date" [ngModel]="fechaCorte()" (ngModelChange)="fechaCorte.set($event)" />
+          </mat-form-field>
+        </div>
+
+        @if (error()) {
+          <div class="aviso aviso-error">{{ error() }}</div>
+        }
+
+        <div class="actions">
+          <button mat-raised-button color="primary" [disabled]="!fechaCorte() || acreditando()" (click)="confirmarYAcreditar()">
+            @if (acreditando()) {
+              <mat-spinner diameter="18"></mat-spinner>
+            } @else {
+              <mat-icon>event_available</mat-icon>
+            }
+            Acreditar
+          </button>
+        </div>
+      } @else {
+        <div class="resultado-box">
+          <mat-icon>check_circle</mat-icon>
+          <div>
+            <div class="resultado-numero">{{ resultado() }} empleado(s) acreditado(s)</div>
+            <div class="resultado-detalle">Fecha de corte: {{ fechaCorte() }}</div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button mat-stroked-button (click)="nuevaAcreditacion()">
+            <mat-icon>refresh</mat-icon>
+            Correr otra acreditación
+          </button>
+        </div>
+      }
+
+      <div class="seccion-revertir">
+        <h3>Revertir acreditación</h3>
+        <p class="explicacion">
+          Borra los saldos de vacaciones de un año para todo el personal. Se rechaza completa si
+          algún empleado ya usó o le pagaron días de ese saldo, o si viene de la migración.
+        </p>
+
+        @if (resultadoRevertir() == null) {
+          <div class="form-grid">
+            <mat-form-field appearance="outline">
+              <mat-label>Año a revertir</mat-label>
+              <input matInput type="number" [ngModel]="anioRevertir()" (ngModelChange)="anioRevertir.set($event)" />
+            </mat-form-field>
+          </div>
+
+          @if (errorRevertir()) {
+            <div class="aviso aviso-error">{{ errorRevertir() }}</div>
+          }
+
+          <div class="actions">
+            <button mat-stroked-button color="warn" [disabled]="!anioRevertir() || revirtiendo()" (click)="confirmarYRevertir()">
+              @if (revirtiendo()) {
+                <mat-spinner diameter="18"></mat-spinner>
+              } @else {
+                <mat-icon>undo</mat-icon>
+              }
+              Revertir acreditación
+            </button>
+          </div>
+        } @else {
+          <div class="resultado-box">
+            <mat-icon>check_circle</mat-icon>
+            <div>
+              <div class="resultado-numero">{{ resultadoRevertir() }} saldo(s) revertido(s)</div>
+              <div class="resultado-detalle">Año: {{ anioRevertir() }}</div>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button mat-stroked-button (click)="nuevaReversion()">
+              <mat-icon>refresh</mat-icon>
+              Revertir otro año
+            </button>
+          </div>
+        }
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

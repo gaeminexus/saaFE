@@ -8,6 +8,7 @@ import { MaterialFormModule } from '../../../../shared/modules/material-form.mod
 import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
+import { FuncionesDatosService } from '../../../../shared/services/funciones-datos.service';
 import { usuarioSesion } from '../../../../shared/services/usuario-sesion';
 
 import { AbonoCapitalDialogComponent } from '../../dialog/pagos/abono-capital-dialog.component';
@@ -25,7 +26,9 @@ import { Prestamo } from '../../model/prestamo';
 import { DetallePrestamoService } from '../../service/detalle-prestamo.service';
 import { EntidadService } from '../../service/entidad.service';
 import { OperacionesPagoPrestamoService } from '../../service/operaciones-pago-prestamo.service';
+import { PagoPrestamoService } from '../../service/pago-prestamo.service';
 import { PrestamoService } from '../../service/prestamo.service';
+import { ComponentesPagados, SaldoPrestamoService } from '../../service/saldo-prestamo.service';
 
 /** Fondo disponible del partícipe y cuánto decide usar de él en este cruce. */
 interface FondoAporte {
@@ -56,6 +59,17 @@ interface PrestamoCruce {
   idEvento: number | null;
   resultado: ResultadoPagoCuota | null;
   movimientos: MovimientoAporte[];
+  /**
+   * Tabla de amortización COMPLETA del préstamo (todas las cuotas, no solo las de saldo > 0),
+   * para reconstruir `saldoTotalDe()` con el mismo criterio que Cobros Personales. `cuotas` (arriba)
+   * NO sirve para esto: se filtra en el criterio de búsqueda por `DTPRSLDO > 0`, que en créditos
+   * migrados de Petrocomercial puede venir en 0 en cuotas que en realidad siguen pendientes.
+   */
+  cuotasCompletas: DetallePrestamo[];
+  /** ¿Ya volvió la consulta de `cuotasCompletas`? Distingue «vacío» de «todavía no llegó». */
+  cuotasCompletasCargadas: boolean;
+  /** ¿Ya volvieron los pagos vigentes de PGPR de este préstamo? Ver `saldoTotalDe()`. */
+  pagosCargados: boolean;
 }
 
 /**
@@ -82,9 +96,19 @@ export class CruceDeValoresComponent {
   private entidadService = inject(EntidadService);
   private prestamoService = inject(PrestamoService);
   private detallePrestamoService = inject(DetallePrestamoService);
+  private pagoPrestamoService = inject(PagoPrestamoService);
   private operaciones = inject(OperacionesPagoPrestamoService);
+  private saldoPrestamo = inject(SaldoPrestamoService);
+  private funcionesDatos = inject(FuncionesDatosService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
+
+  /**
+   * Lo realmente cobrado a cada cuota, acumulado desde CRD.PGPR e indexado por
+   * `DetallePrestamo.codigo` (los códigos de cuota son únicos entre créditos). Junto con
+   * `cuotasCompletas` de cada `PrestamoCruce`, alimenta `saldoTotalDe()`.
+   */
+  private pagosPorCuota = signal<Record<number, ComponentesPagados>>({});
 
   readonly hoy = new Date();
 
@@ -287,9 +311,16 @@ export class CruceDeValoresComponent {
             idEvento: null,
             resultado: null,
             movimientos: [],
+            cuotasCompletas: [],
+            cuotasCompletasCargadas: false,
+            pagosCargados: false,
           }));
         this.prestamosCruce.set(wrappers);
-        wrappers.forEach((pc) => this.cargarCuotas(pc));
+        wrappers.forEach((pc) => {
+          this.cargarCuotas(pc);
+          this.cargarCuotasCompletas(pc);
+          this.cargarPagosPrestamo(pc);
+        });
       },
       error: () => {
         this.cargandoPrestamos.set(false);
@@ -338,11 +369,82 @@ export class CruceDeValoresComponent {
 
     this.detallePrestamoService.selectByCriteria([criterioPrestamo, criterioSaldo, criterioOrdenCuota]).subscribe({
       next: (cuotas) => {
-        pc.cuotas = (cuotas ?? []).filter((c) => (c.saldo ?? 0) > 0.004);
+        // `fechaVencimiento` llega como arreglo `[y,m,d,h,mi]`; sin normalizar, el pipe `date` de la
+        // proyección de cobertura tira NG02100 (ver AbonoCapitalDialogComponent.formatFecha).
+        pc.cuotas = (cuotas ?? [])
+          .filter((c) => (c.saldo ?? 0) > 0.004)
+          .map((c) => ({
+            ...c,
+            fechaVencimiento: this.funcionesDatos.convertirFechaDesdeBackend(c.fechaVencimiento) as Date,
+          }));
         this.bump();
       },
       error: () => this.snackBar.open(`No se pudo cargar el detalle de cuotas del préstamo #${pc.prestamo.idAsoprep}.`, 'Cerrar', { duration: 4000 }),
     });
+  }
+
+  /**
+   * Tabla de amortización COMPLETA del préstamo (sin el filtro `DTPRSLDO > 0` de `cargarCuotas`),
+   * para poder reconstruir el saldo vigente igual que Cobros Personales — ver `saldoTotalDe()`.
+   */
+  private cargarCuotasCompletas(pc: PrestamoCruce): void {
+    const criterioPrestamo = new DatosBusqueda();
+    criterioPrestamo.asignaValorConCampoPadre(TipoDatosBusqueda.LONG, 'prestamo', 'codigo', String(pc.prestamo.codigo), TipoComandosBusqueda.IGUAL);
+
+    const criterioOrdenCuota = new DatosBusqueda();
+    criterioOrdenCuota.orderBy('numeroCuota');
+    criterioOrdenCuota.setTipoOrden(DatosBusqueda.ORDER_ASC);
+
+    this.detallePrestamoService.selectByCriteria([criterioPrestamo, criterioOrdenCuota]).subscribe({
+      next: (cuotas) => {
+        pc.cuotasCompletas = cuotas ?? [];
+        pc.cuotasCompletasCargadas = true;
+        this.bump();
+      },
+      // Sin este dato el saldo vigente simplemente cae al `Prestamo.saldoTotal` crudo (ver saldoTotalDe).
+      error: () => {},
+    });
+  }
+
+  /** Pagos vigentes de PGPR del préstamo, acumulados por cuota — ver `saldoTotalDe()`. */
+  private cargarPagosPrestamo(pc: PrestamoCruce): void {
+    const criterioPrestamo = new DatosBusqueda();
+    criterioPrestamo.asignaValorConCampoPadre(TipoDatosBusqueda.LONG, 'prestamo', 'codigo', String(pc.prestamo.codigo), TipoComandosBusqueda.IGUAL);
+
+    this.pagoPrestamoService.selectByCriteria([criterioPrestamo]).subscribe({
+      next: (pagos) => {
+        const acumulado = this.saldoPrestamo.acumularPagosPorCuota(pagos);
+        this.pagosPorCuota.update((mapa) => ({ ...mapa, ...acumulado }));
+        pc.pagosCargados = true;
+        this.bump();
+      },
+      error: () => {},
+    });
+  }
+
+  /**
+   * Saldo total vigente del préstamo, reconstruido desde su tabla de amortización y sus pagos —
+   * el mismo criterio que `CobrosPersonalesComponent.saldoTotalPrestamo`. Cae al `saldoTotal`
+   * crudo de PRST mientras las dos consultas de arriba no hayan vuelto.
+   */
+  saldoTotalDe(pc: PrestamoCruce): number {
+    this.version();
+    return this.saldoPrestamo.saldoTotalDe(
+      pc.prestamo,
+      pc.cuotasCompletasCargadas ? pc.cuotasCompletas : undefined,
+      this.pagosPorCuota(),
+      pc.pagosCargados,
+    );
+  }
+
+  /** Saldo de capital vigente del préstamo, reconstruido igual que `saldoTotalDe()`. */
+  private saldoCapitalDe(pc: PrestamoCruce): number {
+    return this.saldoPrestamo.saldoCapitalDe(
+      pc.prestamo,
+      pc.cuotasCompletasCargadas ? pc.cuotasCompletas : undefined,
+      this.pagosPorCuota(),
+      pc.pagosCargados,
+    );
   }
 
   // ================= fondos de aportes =================
@@ -426,11 +528,11 @@ export class CruceDeValoresComponent {
     return this.parseMoneda(pc.montoTexto);
   }
 
-  /** Máximo asignable a este préstamo: su saldo, acotado por lo que queda del fondo compartido. */
+  /** Máximo asignable a este préstamo: su saldo vigente, acotado por lo que queda del fondo compartido. */
   private maxParaPrestamo(pc: PrestamoCruce): number {
     const usadoPorOtros = this.fondoUtilizadoTotal() - this.parseMoneda(pc.montoTexto);
     const presupuesto = this.fondoDisponibleTotal() - usadoPorOtros;
-    return Math.max(Math.min(pc.prestamo.saldoTotal ?? 0, presupuesto), 0);
+    return Math.max(Math.min(this.saldoTotalDe(pc), presupuesto), 0);
   }
 
   onMontoPrestamoBlur(pc: PrestamoCruce): void {
@@ -439,7 +541,7 @@ export class CruceDeValoresComponent {
     const v = +Math.min(bruto, max).toFixed(2);
 
     if (bruto > max + TOLERANCIA_MONTO) {
-      const saldo = pc.prestamo.saldoTotal ?? 0;
+      const saldo = this.saldoTotalDe(pc);
       pc.nota =
         max < saldo - TOLERANCIA_MONTO
           ? `El fondo disponible solo alcanza para ${this.formatMoneda(max)} en este préstamo.`
@@ -457,7 +559,7 @@ export class CruceDeValoresComponent {
       this.snackBar.open('Primero indique cuánto va a usar de cada fondo de aportes.', 'Cerrar', { duration: 3000 });
       return;
     }
-    const saldoTotal = pc.prestamo.saldoTotal ?? 0;
+    const saldoTotal = this.saldoTotalDe(pc);
     const max = this.maxParaPrestamo(pc);
     const v = +Math.min(saldoTotal, max).toFixed(2);
     pc.montoTexto = v > 0.004 ? this.formatMoneda(v) : '';
@@ -666,6 +768,8 @@ export class CruceDeValoresComponent {
     this.cargarSaldos(entidad.codigo);
     for (const pc of this.prestamosCruce()) {
       this.cargarCuotas(pc);
+      this.cargarCuotasCompletas(pc);
+      this.cargarPagosPrestamo(pc);
     }
   }
 
@@ -703,8 +807,19 @@ export class CruceDeValoresComponent {
 
   // ================= operaciones individuales del préstamo =================
 
+  /**
+   * Contexto para los diálogos, con `saldoTotal`/`saldoCapital` recalculados desde las cuotas —
+   * mismo patrón que `CobrosPersonalesComponent.contextoActual()`. `contextoDesdePrestamo` por sí
+   * sola copia esos dos campos de PRST, que quedan congelados entre cargas de Petrocomercial: si se
+   * pasaran tal cual, el chip "Saldo total" de `PagoPrestamoDialogComponent` ofrecería cobrar un
+   * monto viejo y ese monto se manda al backend sin que nadie lo revalide.
+   */
   private contextoDe(pc: PrestamoCruce): ContextoPrestamo {
-    return contextoDesdePrestamo(pc.prestamo, this.entidadSeleccionada()?.razonSocial);
+    return {
+      ...contextoDesdePrestamo(pc.prestamo, this.entidadSeleccionada()?.razonSocial),
+      saldoTotal: this.saldoTotalDe(pc),
+      saldoCapital: this.saldoCapitalDe(pc),
+    };
   }
 
   tituloDe(pc: PrestamoCruce): string {

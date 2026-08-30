@@ -427,8 +427,16 @@ export class CuentasBancariasComponent implements OnInit {
     payload.manejaChequera = this.manejaChequera ? 1 : 0;
 
     // Fecha de ingreso - siempre la fecha actual
+    /**
+     * `now.toISOString()` es siempre UTC — con Ecuador en UTC−5, cortar la "Z" y quedarse con
+     * los primeros 19 caracteres da una hora que PARECE local pero son los valores UTC: todo
+     * `fechaIngreso` quedaba grabado 5 horas adelantado, siempre, sin ningún error (regla de
+     * CLAUDE.md). Se arma a mano con componentes locales, mismo formato "T" que ya esperaba
+     * este campo.
+     */
     const now = new Date();
-    const fechaActual = now.toISOString().substring(0, 19); // Formato: YYYY-MM-DDTHH:mm:ss
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const fechaActual = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`; // Formato: YYYY-MM-DDTHH:mm:ss, hora local
     payload.fechaIngreso = fechaActual;
 
     this.loading.set(true);

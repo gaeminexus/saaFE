@@ -1,0 +1,293 @@
+.certif-container {
+  padding: 24px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.certif-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+
+  h1 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.5rem;
+    margin: 0;
+  }
+}
+
+// ── Selector de tipo ──────────────────────────────────────────────────────
+.certif-tipos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.certif-tipo-chip {
+  border: 1px solid #c5cae9;
+  background: #fff;
+  border-radius: 20px;
+  padding: 10px 18px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #3949ab;
+  transition: all 0.15s ease;
+
+  &:hover { background: #f0f4ff; }
+
+  &.activo {
+    background: #3949ab;
+    color: #fff;
+    border-color: #3949ab;
+  }
+}
+
+.certif-loading, .certif-error {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 0;
+}
+
+.certif-error {
+  color: #c62828;
+}
+
+.certif-vacio {
+  color: #757575;
+  font-style: italic;
+}
+
+// ── Tarjetas genéricas ─────────────────────────────────────────────────────
+.certif-card {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  padding: 18px 20px;
+  margin-bottom: 18px;
+}
+
+.certif-seccion-label {
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin-bottom: 12px;
+  color: #37474f;
+}
+
+.certif-persona {
+  display: flex;
+  gap: 32px;
+
+  .l { display: block; font-size: 0.75rem; text-transform: uppercase; color: #90a4ae; }
+  .v { font-weight: 600; }
+}
+
+// ── Tabla genérica (préstamos, listado) ────────────────────────────────────
+.certif-tabla {
+  width: 100%;
+  border-collapse: collapse;
+
+  th, td {
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 1px solid #eceff1;
+  }
+
+  th { font-size: 0.75rem; text-transform: uppercase; color: #78909c; }
+
+  tr.no-elegible { opacity: 0.55; }
+  tr.anulado { opacity: 0.6; text-decoration: line-through; }
+}
+
+.certif-nota {
+  font-size: 0.8rem;
+  color: #9e9e9e;
+  font-style: italic;
+}
+
+// ── Liquidaciones / calidad: chips ──────────────────────────────────────────
+.certif-liquidaciones, .certif-calidad-grupos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.certif-liq-chip, .certif-calidad-chip {
+  border: 1px solid #cfd8dc;
+  background: #fafafa;
+  border-radius: 8px;
+  padding: 8px 14px;
+  cursor: pointer;
+  font-size: 0.85rem;
+
+  &.activo {
+    border-color: #3949ab;
+    background: #eef1fb;
+    color: #3949ab;
+    font-weight: 600;
+  }
+}
+
+// ── Bloqueos: sin botón de emitir, motivos a la vista ──────────────────────
+.certif-bloqueos {
+  background: #fdecea;
+  border: 1px solid #f5c6cb;
+  border-radius: 10px;
+  padding: 16px 20px;
+  margin-bottom: 18px;
+}
+
+.certif-bloqueos-titulo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  color: #c62828;
+  margin-bottom: 10px;
+
+  mat-icon { color: #c62828; }
+}
+
+.certif-bloqueo-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 0;
+  border-top: 1px solid #f5c6cb;
+
+  &:first-child { border-top: none; }
+}
+
+.certif-bloqueo-codigo {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #b71c1c;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.certif-bloqueo-detalle {
+  font-size: 0.8rem;
+  color: #8d4444;
+}
+
+// ── Campos con origen ────────────────────────────────────────────────────
+.certif-campos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.certif-campo {
+  border: 1px solid #eceff1;
+  border-radius: 8px;
+  padding: 12px 14px;
+
+  &.faltante {
+    border-color: #ffb74d;
+    background: #fff8ef;
+  }
+}
+
+.certif-campo-cabecera {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.certif-campo-label {
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.certif-origen {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+
+  mat-icon { font-size: 14px; width: 14px; height: 14px; }
+
+  // Tres orígenes, tres colores bien distintos — a propósito, sin excepción (§6).
+  &.origen-sistema { background: #e8f5e9; color: #2e7d32; }
+  &.origen-manual_requerido { background: #fff3e0; color: #e65100; }
+  &.origen-manual_editado { background: #e3f2fd; color: #1565c0; }
+}
+
+.certif-campo-fuente {
+  display: block;
+  font-size: 0.7rem;
+  color: #b0bec5;
+  margin-bottom: 6px;
+}
+
+.certif-campo-valor {
+  font-weight: 500;
+}
+
+.certif-campo-aviso {
+  display: block;
+  font-size: 0.75rem;
+  color: #e65100;
+  margin-top: 4px;
+}
+
+.certif-fijos {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px dashed #cfd8dc;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+  font-size: 0.75rem;
+  color: #90a4ae;
+}
+
+// ── Emitir / resultado ───────────────────────────────────────────────────
+.certif-emitir {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 18px;
+}
+
+.certif-resultado {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #e8f5e9;
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin-bottom: 18px;
+
+  mat-icon { color: #2e7d32; }
+  span { flex: 1; }
+}
+
+// ── Listado ──────────────────────────────────────────────────────────────
+.chip-vigente, .chip-anulado {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.chip-vigente { background: #e8f5e9; color: #2e7d32; }
+.chip-anulado { background: #eeeeee; color: #757575; }
+
+.certif-listado-acciones {
+  white-space: nowrap;
+}

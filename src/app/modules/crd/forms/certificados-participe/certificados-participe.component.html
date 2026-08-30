@@ -1,0 +1,268 @@
+<div class="certif-container">
+
+  <div class="certif-header">
+    <button mat-icon-button (click)="volver()" matTooltip="Volver">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+    <h1>
+      <mat-icon>verified</mat-icon>
+      Impresión de certificados
+    </h1>
+  </div>
+
+  <!-- ══════════════════════ Selector de tipo ══════════════════════ -->
+  <div class="certif-tipos">
+    @for (op of opcionesTipo; track op.tipo) {
+      <button type="button" class="certif-tipo-chip" [class.activo]="tipoSeleccionado() === op.tipo"
+              (click)="seleccionarTipo(op.tipo)">
+        {{ op.nombre }}
+      </button>
+    }
+  </div>
+
+  @if (cargandoPrecarga()) {
+    <div class="certif-loading">
+      <mat-spinner diameter="36"></mat-spinner>
+      <span>Cargando…</span>
+    </div>
+  }
+
+  @if (error()) {
+    <div class="certif-error">
+      <mat-icon>error_outline</mat-icon>
+      <span>{{ error() }}</span>
+    </div>
+  }
+
+  <!-- ══════════════════════ Tipo 3: elegir préstamo primero ══════════════════════ -->
+  @if (tipoSeleccionado() === TIPO_CERTIFICADO.NO_ADEUDAR_CREDITO && !prestamoSeleccionado() && precarga(); as pPrestamos) {
+    <div class="certif-card">
+      <div class="certif-seccion-label">Elija el préstamo — solo los cancelados se pueden certificar</div>
+      @if (!pPrestamos.prestamos.length) {
+        <p class="certif-vacio">Este partícipe no tiene préstamos.</p>
+      } @else {
+        <table class="certif-tabla">
+          <thead>
+            <tr><th>N° crédito</th><th>Producto</th><th>Estado</th><th></th></tr>
+          </thead>
+          <tbody>
+            @for (p of pPrestamos.prestamos; track p.idPrestamo) {
+              <tr [class.no-elegible]="!p.cancelado">
+                <td>{{ p.numeroCredito }}</td>
+                <td>{{ p.productoTexto }}</td>
+                <td>{{ p.estadoTexto }}</td>
+                <td>
+                  @if (p.cancelado) {
+                    <button mat-stroked-button color="primary" (click)="elegirPrestamo(p)">Elegir</button>
+                  } @else {
+                    <span class="certif-nota">no cancelado</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  }
+
+  <!-- ══════════════════════ Precarga cargada: bloqueos, calidad, campos ══════════════════════ -->
+  @if (precarga(); as p) {
+    @if (tipoSeleccionado() !== TIPO_CERTIFICADO.NO_ADEUDAR_CREDITO || prestamoSeleccionado()) {
+
+      <div class="certif-card certif-persona">
+        <div><span class="l">Partícipe</span><span class="v">{{ p.nombre }}</span></div>
+        <div><span class="l">Cédula</span><span class="v">{{ p.cedula }}</span></div>
+      </div>
+
+      <!-- Liquidaciones (tipos 2 y 5), cuando hay varias -->
+      @if (p.liquidaciones.length > 1) {
+        <div class="certif-card">
+          <div class="certif-seccion-label">Liquidación a usar — se aplicó la más reciente</div>
+          <div class="certif-liquidaciones">
+            @for (l of p.liquidaciones; track l.idLiquidacion) {
+              <button type="button" class="certif-liq-chip" [class.activo]="liquidacionSeleccionada() === l.idLiquidacion || (!liquidacionSeleccionada() && $first)"
+                      (click)="elegirLiquidacion(l.idLiquidacion)">
+                {{ l.tipoTexto }} · {{ formatFecha(l.fechaPago) }} · {{ formatMonto(l.valor) }}
+              </button>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Bloqueos — sin botón de emitir, motivos a la vista (§6) -->
+      @if (p.bloqueos.length) {
+        <div class="certif-bloqueos">
+          <div class="certif-bloqueos-titulo">
+            <mat-icon>block</mat-icon>
+            No se puede emitir este certificado
+          </div>
+          @for (b of p.bloqueos; track b.codigo + (b.idPrestamo ?? '')) {
+            <div class="certif-bloqueo-item">
+              <span class="certif-bloqueo-codigo">{{ b.codigo }}</span>
+              <span>{{ b.mensaje }}</span>
+              @if (b.numeroCredito) {
+                <span class="certif-bloqueo-detalle">Préstamo N° {{ b.numeroCredito }} ({{ b.producto }}) — {{ b.estadoTexto }}</span>
+              }
+            </div>
+          }
+        </div>
+      } @else {
+
+        <!-- Calidad del partícipe: se propone, no se impone (§6) -->
+        <div class="certif-card">
+          <div class="certif-seccion-label">Calidad del partícipe (propuesta: {{ p.calidadSistemaTexto }})</div>
+          <div class="certif-calidad-grupos">
+            @for (g of grupos; track g.label) {
+              <button type="button" class="certif-calidad-chip" [class.activo]="grupoCalidadActual()?.label === g.label"
+                      (click)="elegirGrupoCalidad(g)">
+                {{ g.label }}
+              </button>
+            }
+          </div>
+        </div>
+
+        <!-- Campos del certificado: cada uno con su ORIGEN visible (§6, sin excepción) -->
+        <div class="certif-card">
+          <div class="certif-seccion-label">Datos que se van a imprimir</div>
+          <div class="certif-campos">
+            @for (entry of (p.campos | keyvalue); track entry.key) {
+              @if (!clavesFijas.includes(entry.key)) {
+                <div class="certif-campo" [class.faltante]="entry.value.origen === 'MANUAL_REQUERIDO' && !valoresEditados()[entry.key]">
+                  <div class="certif-campo-cabecera">
+                    <span class="certif-campo-label">{{ claveLabel(entry.key) }}</span>
+                    <span class="certif-origen" [class]="'origen-' + entry.value.origen.toLowerCase()">
+                      @switch (entry.value.origen) {
+                        @case ('SISTEMA') { <mat-icon>verified_user</mat-icon> Sistema }
+                        @case ('MANUAL_REQUERIDO') { <mat-icon>edit_note</mat-icon> Manual — no lo tenía el sistema }
+                        @case ('MANUAL_EDITADO') { <mat-icon>edit</mat-icon> Manual — corregido }
+                      }
+                    </span>
+                  </div>
+                  @if (entry.value.fuente) {
+                    <span class="certif-campo-fuente">{{ entry.value.fuente }}</span>
+                  }
+
+                  @if (!entry.value.editable) {
+                    <div class="certif-campo-valor">{{ entry.value.valorTexto || '—' }}</div>
+                  } @else {
+                    @switch (claveTipo(entry.key)) {
+                      @case ('boolean') {
+                        <mat-radio-group [ngModel]="valoresEditados()[entry.key]" (ngModelChange)="actualizarValor(entry.key, $event)">
+                          <mat-radio-button [value]="true">Sí</mat-radio-button>
+                          <mat-radio-button [value]="false">No</mat-radio-button>
+                        </mat-radio-group>
+                      }
+                      @case ('tipoCuenta') {
+                        <mat-radio-group [ngModel]="valoresEditados()[entry.key]" (ngModelChange)="actualizarValor(entry.key, $event)">
+                          <mat-radio-button [value]="1">Corriente</mat-radio-button>
+                          <mat-radio-button [value]="2">Ahorros</mat-radio-button>
+                        </mat-radio-group>
+                      }
+                      @case ('numero') {
+                        <mat-form-field appearance="outline">
+                          <input matInput type="number" [ngModel]="valoresEditados()[entry.key]" (ngModelChange)="actualizarValor(entry.key, $event)">
+                        </mat-form-field>
+                      }
+                      @case ('fecha') {
+                        <mat-form-field appearance="outline">
+                          <input matInput [matDatepicker]="pickerCampo" [ngModel]="valorFecha(entry.key)" (ngModelChange)="actualizarValorFecha(entry.key, $event)">
+                          <mat-datepicker-toggle matIconSuffix [for]="pickerCampo"></mat-datepicker-toggle>
+                          <mat-datepicker #pickerCampo></mat-datepicker>
+                        </mat-form-field>
+                      }
+                      @default {
+                        <mat-form-field appearance="outline">
+                          <input matInput [ngModel]="valoresEditados()[entry.key]" (ngModelChange)="actualizarValor(entry.key, $event)">
+                        </mat-form-field>
+                      }
+                    }
+                    @if (entry.value.origen === 'MANUAL_REQUERIDO' && !valoresEditados()[entry.key]) {
+                      <span class="certif-campo-aviso">Falta capturar este dato — el sistema no lo tenía.</span>
+                    }
+                  }
+                </div>
+              }
+            }
+          </div>
+
+          <div class="certif-fijos">
+            @for (entry of (p.campos | keyvalue); track entry.key) {
+              @if (clavesFijas.includes(entry.key)) {
+                <span class="certif-fijo-item">{{ claveLabel(entry.key) || entry.key }}: {{ entry.value.valorTexto }}</span>
+              }
+            }
+          </div>
+        </div>
+
+        <div class="certif-emitir">
+          <button mat-raised-button color="accent" [disabled]="!puedeEmitirAhora() || emitiendo()" (click)="confirmarEmision()">
+            @if (emitiendo()) {
+              <mat-spinner diameter="20"></mat-spinner>
+            } @else {
+              <mat-icon>print</mat-icon>
+            }
+            Emitir certificado
+          </button>
+        </div>
+
+        @if (resultadoEmision(); as r) {
+          <div class="certif-resultado">
+            <mat-icon>check_circle</mat-icon>
+            <span>Certificado <b>{{ r.numeroAlterno }}</b> emitido el {{ formatFecha(r.fechaEmision) }}.</span>
+            <button mat-stroked-button (click)="abrirPdf(r.idCertificado)">
+              <mat-icon>picture_as_pdf</mat-icon> Ver PDF
+            </button>
+          </div>
+        }
+      }
+    }
+  }
+
+  <!-- ══════════════════════ Listado de certificados emitidos (§3.3) ══════════════════════ -->
+  <div class="certif-card certif-listado">
+    <div class="certif-seccion-label">Certificados emitidos</div>
+    @if (cargandoListado()) {
+      <div class="certif-loading"><mat-spinner diameter="28"></mat-spinner></div>
+    } @else if (!certificados().length) {
+      <p class="certif-vacio">Este partícipe todavía no tiene certificados emitidos.</p>
+    } @else {
+      <table class="certif-tabla">
+        <thead>
+          <tr><th>N°</th><th>Tipo</th><th>Fecha</th><th>Estado</th><th></th></tr>
+        </thead>
+        <tbody>
+          @for (c of certificados(); track c.codigo) {
+            <tr [class.anulado]="c.estado === ESTADO_CERTIFICADO.ANULADO">
+              <td>{{ c.numeroAlterno }}</td>
+              <td>{{ nombreTipoCertificado(c.tipoCertificado) }}</td>
+              <td>{{ formatFecha(c.fechaEmision) }}</td>
+              <td>
+                @if (c.estado === ESTADO_CERTIFICADO.VIGENTE) {
+                  <span class="chip-vigente">Vigente</span>
+                } @else {
+                  <span class="chip-anulado">Anulado</span>
+                }
+              </td>
+              <td class="certif-listado-acciones">
+                <button mat-icon-button matTooltip="Reimprimir" (click)="reimprimir(c)">
+                  <mat-icon>picture_as_pdf</mat-icon>
+                </button>
+                @if (puedeAnular(c)) {
+                  <button mat-icon-button color="warn" matTooltip="Anular" [disabled]="anulandoId() === c.codigo" (click)="anular(c)">
+                    @if (anulandoId() === c.codigo) {
+                      <mat-spinner diameter="18"></mat-spinner>
+                    } @else {
+                      <mat-icon>block</mat-icon>
+                    }
+                  </button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </div>
+
+</div>

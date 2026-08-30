@@ -1,7 +1,6 @@
 import { HttpHeaders, HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable, catchError, delay, of, throwError } from 'rxjs';
-import { environment } from '../../../../environments/environment';
+import { Observable, catchError, of, throwError } from 'rxjs';
 import { Aporte } from '../model/aporte';
 import {
   AporteDashFiltros,
@@ -11,7 +10,6 @@ import {
   AporteTopMovimientoDTO,
 } from '../model/aporte-dashboard';
 import { EstadoCuentaAportes } from '../model/estado-cuenta-aportes';
-import { construirMockEstadoCuenta } from '../model/estado-cuenta-aportes.mock';
 import { ServiciosCrd } from './ws-crd';
 
 @Injectable({
@@ -116,17 +114,11 @@ export class AporteService {
   // ── Estado de cuenta por devengo (§4.2 del plan de devengo) ────────────
 
   /**
-   * Estado de cuenta por periodo de devengo. El backend todavía no publica
-   * `/rest/aprt/estadoCuenta/{idEntidad}`: mientras `environment.mockDevengoContratos` esté en
-   * `true`, se simula acá contra el contrato congelado. Apagar el flag hace que llame al backend
-   * real sin tocar el componente.
-   *
-   * `desde`/`hasta` van en `yyyy-MM` (mes de devengo), no fechas completas.
+   * Estado de cuenta por periodo de devengo (§4.2 de `docs/crd/PLAN-APORTES-DEVENGO-CONTRATOS.md`
+   * — contrato de API congelado). `desde`/`hasta` van en `yyyy-MM` (mes de devengo), no fechas
+   * completas.
    */
   obtenerEstadoCuenta(idEntidad: number, desde: string, hasta: string): Observable<EstadoCuentaAportes | null> {
-    if (environment.mockDevengoContratos) {
-      return of(construirMockEstadoCuenta(idEntidad, desde, hasta)).pipe(delay(300));
-    }
     const params = new HttpParams().set('desde', desde).set('hasta', hasta);
     return this.http
       .get<EstadoCuentaAportes>(`${ServiciosCrd.RS_APRT}/estadoCuenta/${idEntidad}`, { params })

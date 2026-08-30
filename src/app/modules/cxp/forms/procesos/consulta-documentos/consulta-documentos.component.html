@@ -184,6 +184,18 @@
         <span class="chip-tabla" [ngClass]="tipoTablaColor(docSeleccionado.tipoTablaDestino)">{{ tipoTablaLabel(docSeleccionado.tipoTablaDestino) }}</span>
         {{ docSeleccionado.serieComprobante }}
       </span>
+      @if (esDocumentoAnulable() && docReal) {
+        <button mat-stroked-button color="warn" class="btn-anular"
+                [disabled]="!puedeAnularDocumento" (click)="anularDocumento()"
+                [matTooltip]="documentoAnulado ? 'El documento ya está anulado' : 'Anular documento'">
+          @if (consultandoMovimientos() || anulando()) {
+            <mat-spinner diameter="18"></mat-spinner>
+          } @else {
+            <mat-icon>block</mat-icon>
+          }
+          Anular
+        </button>
+      }
     </div>
 
     @if (cargandoDetalle()) {
@@ -201,6 +213,22 @@
           </mat-card-title>
         </mat-card-header>
         <mat-card-content>
+          @if (documentoAnulado) {
+            <div class="aviso-anulado">
+              <mat-icon>block</mat-icon>
+              <div>
+                <div class="aviso-anulado-titulo">Documento anulado</div>
+                <div class="aviso-anulado-detalle">
+                  {{ docReal.fechaAnulacion ? (toDate(docReal.fechaAnulacion) | date:'dd/MM/yyyy HH:mm') : '' }}
+                  @if (docReal.usuarioAnulacion) { · {{ docReal.usuarioAnulacion }} }
+                </div>
+                @if (docReal.motivoAnulacion) {
+                  <div class="aviso-anulado-motivo">{{ docReal.motivoAnulacion }}</div>
+                }
+              </div>
+            </div>
+          }
+
           <div class="info-grid">
             <div class="info-item">
               <span class="info-label">Tipo Comprobante</span>

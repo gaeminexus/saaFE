@@ -64,11 +64,16 @@ export interface SolicitarAnticipoRequest {
   idUsuario: number;
 }
 
-/** Body de POST /ante/aprobar/{codigo}. formaPago: solo 3 (Cheque) o 4 (Débito automático). */
+/**
+ * Body de POST /ante/aprobar/{codigo}. Desde 2026-08-30 el pago lo arma
+ * tesorería al aprobar en la bandeja (ver /menutesoreria/procesos/aprobacion-pagos):
+ * este diálogo ya no elige cuenta origen ni forma de pago. Los campos quedan
+ * opcionales solo por compatibilidad de tipo con requests previos; no se envían.
+ */
 export interface AprobarAnticipoRequest {
-  idCuentaBancariaOrigen: number;
-  formaPago: number;
-  debitoAutomatico: boolean;
+  idCuentaBancariaOrigen?: number;
+  formaPago?: number;
+  debitoAutomatico?: boolean;
   referencia?: string;
   idUsuario: number;
 }

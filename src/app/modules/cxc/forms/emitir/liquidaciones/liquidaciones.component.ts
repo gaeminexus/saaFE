@@ -8,15 +8,17 @@ import { Router } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
 import { finalize } from 'rxjs/operators';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { AppStateService } from '../../../../../shared/services/app-state.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { PortapapelesService } from '../../../../../shared/services/portapapeles.service';
 import { FileService } from '../../../../../shared/services/file.service';
 import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
+import { MovimientoRelacionado } from '../../../../../shared/model/pagos-cobros/movimiento-relacionado';
 import { Usuario } from '../../../../../shared/model/usuario';
 import {
-  MotivoDialogComponent,
-  MotivoDialogData,
-} from '../../../../../shared/components/motivo-dialog/motivo-dialog.component';
+  AnularDocumentoCompraDialogComponent,
+  AnularDocumentoCompraDialogResult,
+} from '../../../../cxp/forms/procesos/dialogs/anular-documento-compra-dialog/anular-documento-compra-dialog.component';
 import { GrupoProductoSelectorDialogComponent } from '../../../../../shared/components/grupo-producto-selector-dialog/grupo-producto-selector-dialog.component';
 import { TitularSelectorDialogComponent } from '../../../../../shared/components/titular-selector-dialog/titular-selector-dialog.component';
 import { DetalleLiquidacionEmitir } from '../../../model/detalle-liquidacion-emitir';
@@ -69,6 +71,7 @@ export class LiquidacionesComponent implements OnInit {
   private router = inject(Router);
   private fileService = inject(FileService);
   private service = inject(LiquidacionEmitirService);
+  private appState = inject(AppStateService);
   private detalleService = inject(DetalleLiquidacionEmitirService);
   private pathService = inject(PathLiquidacionCompraService);
   private facturadorService = inject(FacturadorService);
@@ -694,23 +697,48 @@ export class LiquidacionesComponent implements OnInit {
       });
   }
 
+  /**
+   * Anulación en cascada (ítem 14, 2026-08-28): a diferencia de `LiquidacionCompraCompra` (cxp,
+   * la RECIBIDA de un proveedor, sin nada que cascadear), esta liquidación EMITIDA sí puede
+   * tener cobros cruzados — se consultan antes de preguntar y, si los hay, se exige confirmar
+   * la cascada explícitamente (si no, el backend responde 409). Reemplaza la advertencia
+   * genérica anterior ("no se verifica si ya está pagado") por la verificación real.
+   */
   anularLiquidacion(): void {
     const doc = this.documentoActual();
     if (!doc?.id) return;
 
-    const data: MotivoDialogData = {
-      titulo: `Anular liquidación N° ${doc.numero || doc.id}`,
-      advertencia: 'Se anulará el asiento y el documento CXP asociado, si existen. No se verifica si el documento ya está pagado (limitación conocida del módulo CXP: hoy no hay circuito de pago para liquidaciones recibidas).',
-      textoConfirmar: 'Sí, anular',
-    };
+    this.procesandoAccion.set(true);
+    this.service.movimientosRelacionados(doc.id).subscribe({
+      next: (movs) => {
+        this.procesandoAccion.set(false);
+        this.abrirDialogoAnularLiquidacion(doc.id, doc.numero, movs || []);
+      },
+      error: (err) => {
+        this.procesandoAccion.set(false);
+        this.errorAccion(err, 'No se pudieron consultar los movimientos relacionados');
+      },
+    });
+  }
 
-    this.dialog.open(MotivoDialogComponent, { width: '520px', data }).afterClosed().subscribe((motivo: string | null) => {
-      if (!motivo) return;
+  private abrirDialogoAnularLiquidacion(id: number, numero: string | undefined, movimientos: MovimientoRelacionado[]): void {
+    this.dialog.open(AnularDocumentoCompraDialogComponent, {
+      width: '560px',
+      disableClose: true,
+      data: { tipoLabel: 'Liquidación', numero: numero || String(id), movimientos },
+    }).afterClosed().subscribe((result: AnularDocumentoCompraDialogResult | null) => {
+      if (!result) return;
       this.procesandoAccion.set(true);
-      this.service.anular({ idLiquidacion: doc.id, motivo, usuario: this.nombreUsuarioSesion() })
+      this.service.anular({
+        idLiquidacion: id,
+        motivo: result.motivo,
+        usuario: this.nombreUsuarioSesion(),
+        idUsuario: this.appState.getIdUsuario(),
+        anularEnCascada: result.anularEnCascada,
+      })
         .pipe(finalize(() => this.procesandoAccion.set(false)))
         .subscribe({
-          next: (resultado) => this.aplicarResultadoAccion(doc.id, resultado, 'Liquidación anulada'),
+          next: (resultado) => this.aplicarResultadoAccion(id, resultado, 'Liquidación anulada'),
           error: (err) => this.errorAccion(err, 'No se pudo anular la liquidación'),
         });
     });

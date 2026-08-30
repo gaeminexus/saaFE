@@ -157,7 +157,19 @@
                       } @else { <span class="tenue">—</span> }
                     </td>
                     <td class="tenue">{{ formatearFechaHora(a.fechaRegistro) }}</td>
-                    <td>
+                    <td class="col-acciones">
+                      @if (puedeSolicitarDevolucion(a)) {
+                        <button mat-icon-button color="primary" matTooltip="Solicitar devolución"
+                                [disabled]="solicitandoDevolucionId() === a.id" (click)="solicitarDevolucion(a)">
+                          @if (solicitandoDevolucionId() === a.id) {
+                            <mat-spinner diameter="18"></mat-spinner>
+                          } @else {
+                            <mat-icon>assignment_return</mat-icon>
+                          }
+                        </button>
+                      } @else if (yaSolicitoDevolucion(a)) {
+                        <span class="tenue" matTooltip="Ya se envió a la bandeja de aprobación de pagos">Devolución solicitada</span>
+                      }
                       @if (puedeAnular(a)) {
                         <button mat-icon-button color="warn" matTooltip="Anular anticipo"
                                 [disabled]="anulandoId() === a.id" (click)="anular(a)">

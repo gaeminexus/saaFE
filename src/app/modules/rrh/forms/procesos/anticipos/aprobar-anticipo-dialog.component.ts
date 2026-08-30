@@ -1,13 +1,10 @@
 import { CommonModule } from '@angular/common';
-import { Component, Inject, OnInit, inject, signal } from '@angular/core';
+import { Component, Inject, inject, signal } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { AppStateService } from '../../../../../shared/services/app-state.service';
 import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
-import { FormaPagoAplicacion } from '../../../../../shared/model/pagos-cobros/catalogos-aplicacion-pago';
-import { CuentaBancaria } from '../../../../tsr/model/cuenta-bancaria';
-import { CuentaBancariaService } from '../../../../tsr/service/cuenta-bancaria.service';
 import { opcionesAviso } from '../../comunes/avisos';
 import { AnticipoTrabajador, AprobarAnticipoRequest, ResultadoAprobarAnticipo } from '../../../model/anticipo-trabajador';
 import { AnticipoTrabajadorService } from '../../../service/anticipo-trabajador.service';
@@ -17,9 +14,10 @@ export interface AprobarAnticipoDialogData {
 }
 
 /**
- * Aprobar un anticipo: el pago nace CONFIRMADO en la misma llamada (igual
- * que caja chica), así que solo se ofrece Cheque o Débito automático — no
- * hay datos bancarios del empleado capturados para armar una transferencia.
+ * Aprobar un anticipo: desde 2026-08-30 esto solo autoriza el anticipo.
+ * El pago lo arma tesorería al aprobarlo en su bandeja
+ * (/menutesoreria/procesos/aprobacion-pagos) — este diálogo ya no captura
+ * cuenta origen ni forma de pago.
  */
 @Component({
   selector: 'app-aprobar-anticipo-dialog',
@@ -28,26 +26,14 @@ export interface AprobarAnticipoDialogData {
   templateUrl: './aprobar-anticipo-dialog.component.html',
   styleUrls: ['./aprobar-anticipo-dialog.component.scss'],
 })
-export class AprobarAnticipoDialogComponent implements OnInit {
+export class AprobarAnticipoDialogComponent {
   private dialogRef = inject(MatDialogRef<AprobarAnticipoDialogComponent, ResultadoAprobarAnticipo | null>);
-  private cuentaBancariaService = inject(CuentaBancariaService);
   private anticipoService = inject(AnticipoTrabajadorService);
   private appState = inject(AppStateService);
   private snackBar = inject(MatSnackBar);
 
-  readonly FormaPagoAplicacion = FormaPagoAplicacion;
-
-  cuentas = signal<CuentaBancaria[]>([]);
-  cuentaOrigen = signal<CuentaBancaria | null>(null);
-  formaPago = signal<number>(FormaPagoAplicacion.DEBITO_AUTOMATICO);
-  referencia = signal<string>('');
-
   guardando = signal<boolean>(false);
   errorMsg = signal<string>('');
-
-  get cuentaOrigenManejaChequera(): boolean {
-    return Number(this.cuentaOrigen()?.manejaChequera) === 1;
-  }
 
   empleadoNombre(): string {
     const empleado = this.data.anticipo.empleado;
@@ -56,35 +42,15 @@ export class AprobarAnticipoDialogComponent implements OnInit {
   }
 
   get puedeAprobar(): boolean {
-    if (!this.cuentaOrigen() || this.guardando()) return false;
-    if (this.formaPago() === FormaPagoAplicacion.CHEQUE && !this.cuentaOrigenManejaChequera) return false;
-    return true;
+    return !this.guardando();
   }
 
   constructor(@Inject(MAT_DIALOG_DATA) public data: AprobarAnticipoDialogData) {}
 
-  ngOnInit(): void {
-    this.cuentaBancariaService.getAll().subscribe({
-      next: (data) => this.cuentas.set(Array.isArray(data) ? (data as CuentaBancaria[]) : []),
-      error: () => this.cuentas.set([]),
-    });
-  }
-
-  onCambioCuentaOrigen(): void {
-    if (this.formaPago() === FormaPagoAplicacion.CHEQUE && !this.cuentaOrigenManejaChequera) {
-      this.formaPago.set(FormaPagoAplicacion.DEBITO_AUTOMATICO);
-    }
-  }
-
   aprobar(): void {
-    const cuenta = this.cuentaOrigen();
-    if (!this.puedeAprobar || !cuenta) return;
+    if (!this.puedeAprobar) return;
 
     const payload: AprobarAnticipoRequest = {
-      idCuentaBancariaOrigen: cuenta.codigo,
-      formaPago: this.formaPago(),
-      debitoAutomatico: this.formaPago() === FormaPagoAplicacion.DEBITO_AUTOMATICO,
-      referencia: this.referencia().trim() || undefined,
       idUsuario: this.appState.getIdUsuario(),
     };
 
@@ -93,7 +59,8 @@ export class AprobarAnticipoDialogComponent implements OnInit {
     this.anticipoService.aprobar(this.data.anticipo.codigo, payload).subscribe({
       next: (resultado) => {
         this.guardando.set(false);
-        this.snackBar.open('Anticipo aprobado y pagado', 'Cerrar', opcionesAviso(false, 'Anticipo aprobado y pagado'));
+        const mensaje = 'Anticipo aprobado. Queda pendiente de pago en tesorería.';
+        this.snackBar.open(mensaje, 'Cerrar', opcionesAviso(false, mensaje));
         this.dialogRef.close(resultado);
       },
       error: (err) => {

@@ -240,6 +240,7 @@
                         <tr>
                           <th>N°</th><th>Vencimiento</th>
                           <th class="num">Capital</th><th class="num">Interés</th>
+                          <th class="num">Desgravamen</th><th class="num">Seguro de incendio</th>
                           <th class="num">Cuota</th><th class="num">Total cuota</th><th class="num">Saldo capital</th>
                         </tr>
                       </thead>
@@ -250,13 +251,15 @@
                             <td>{{ formatFecha(c.fechaVencimiento) }}</td>
                             <td class="num">{{ formatMoneda(c.capital) }}</td>
                             <td class="num">{{ formatMoneda(c.interes) }}</td>
+                            <td class="num">{{ formatMoneda(c.desgravamen) }}</td>
+                            <td class="num">{{ formatMoneda(c.seguroIncendio) }}</td>
                             <td class="num">{{ formatMoneda(c.cuota) }}</td>
                             <td class="num"><b>{{ formatMoneda(c.total ?? c.cuota) }}</b></td>
                             <td class="num">{{ formatMoneda(c.saldoCapital) }}</td>
                           </tr>
                         }
                         @empty {
-                          <tr><td colspan="7" class="vacio">La simulación no devolvió cuotas proyectadas.</td></tr>
+                          <tr><td colspan="9" class="vacio">La simulación no devolvió cuotas proyectadas.</td></tr>
                         }
                       </tbody>
                     </table>
@@ -391,17 +394,32 @@
                   @if (sim.capitalizarVencido) {
                     <!--
                       Desglosado a propósito (§7.1 del plan): capitalizar es la palanca que más
-                      plata mueve, y el socio tiene que ver de qué se compone. No se suman en un
-                      solo número.
+                      plata mueve, y el socio tiene que ver de qué se compone. Se muestra como
+                      ecuación (saldo + mora + interés vencido = capital de arranque) para que se
+                      vea que las tres partes SUMAN al total de la tarjeta de arriba, no como tres
+                      números sueltos — pedido explícito del usuario. Si vienen en $0.00 con el
+                      check encendido (préstamo sin mora ni interés vencido) se muestran igual: es
+                      información ("no tiene mora"), no se esconde.
                     -->
-                    <div class="comparativa-grid capitalizado">
-                      <div class="cp-item">
-                        <span class="l">Mora capitalizada</span>
+                    <div class="desglose-capitalizacion">
+                      <div class="dc-item">
+                        <span class="l">Saldo de capital pendiente</span>
+                        <span class="v">{{ formatMoneda(sim.saldoCapitalPendiente) }}</span>
+                      </div>
+                      <span class="dc-signo">+</span>
+                      <div class="dc-item">
+                        <span class="l">Interés en mora</span>
                         <span class="v">{{ formatMoneda(sim.moraCapitalizada) }}</span>
                       </div>
-                      <div class="cp-item">
-                        <span class="l">Interés vencido capitalizado</span>
+                      <span class="dc-signo">+</span>
+                      <div class="dc-item">
+                        <span class="l">Interés vencido</span>
                         <span class="v">{{ formatMoneda(sim.interesVencidoCapitalizado) }}</span>
+                      </div>
+                      <span class="dc-signo">=</span>
+                      <div class="dc-item dc-total">
+                        <span class="l">Capital de arranque</span>
+                        <span class="v">{{ formatMoneda(sim.capitalDeArranque) }}</span>
                       </div>
                     </div>
                   }
@@ -443,6 +461,7 @@
                         <tr>
                           <th>N°</th><th>Vencimiento</th>
                           <th class="num">Capital</th><th class="num">Interés</th>
+                          <th class="num">Desgravamen</th><th class="num">Seguro de incendio</th>
                           <th class="num">Cuota</th><th class="num">Total cuota</th><th class="num">Saldo capital</th>
                         </tr>
                       </thead>
@@ -453,13 +472,15 @@
                             <td>{{ formatFecha(c.fechaVencimiento) }}</td>
                             <td class="num">{{ formatMoneda(c.capital) }}</td>
                             <td class="num">{{ formatMoneda(c.interes) }}</td>
+                            <td class="num">{{ formatMoneda(c.desgravamen) }}</td>
+                            <td class="num">{{ formatMoneda(c.seguroIncendio) }}</td>
                             <td class="num">{{ formatMoneda(c.cuota) }}</td>
                             <td class="num"><b>{{ formatMoneda(c.total ?? c.cuota) }}</b></td>
                             <td class="num">{{ formatMoneda(c.saldoCapital) }}</td>
                           </tr>
                         }
                         @empty {
-                          <tr><td colspan="7" class="vacio">La simulación no devolvió cuotas proyectadas.</td></tr>
+                          <tr><td colspan="9" class="vacio">La simulación no devolvió cuotas proyectadas.</td></tr>
                         }
                       </tbody>
                     </table>

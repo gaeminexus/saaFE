@@ -142,8 +142,8 @@
         </div>
       }
 
-      <!-- ============ Paso 2: destino y origen del dinero ============ -->
-      <div class="section-label">2 &middot; Destino y origen del dinero</div>
+      <!-- ============ Paso 2: destino del dinero ============ -->
+      <div class="section-label">2 &middot; Destino del dinero</div>
 
       @if (participeSinCuentaActiva()) {
         <mat-card class="bloqueo-card">
@@ -187,29 +187,6 @@
                 }
               </mat-select>
               <mat-hint>Solo se muestran los últimos 4 dígitos de la cuenta.</mat-hint>
-            </mat-form-field>
-
-            <mat-form-field appearance="outline">
-              <mat-label>Cuenta bancaria propia (origen)</mat-label>
-              <mat-select [ngModel]="cuentaOrigenSeleccionada()"
-                          (ngModelChange)="cuentaOrigenSeleccionada.set($event)"
-                          panelClass="select-con-buscador"
-                          (openedChange)="!$event && (filtroCuentaOrigen = '')">
-                <mat-option class="select-search-option"
-                            (mousedown)="$event.preventDefault(); $event.stopPropagation()"
-                            (click)="$event.stopPropagation()">
-                  <input class="select-search-input" placeholder="Buscar por banco, número o titular..."
-                         [value]="filtroCuentaOrigen"
-                         (mousedown)="$event.stopPropagation()"
-                         (click)="$event.stopPropagation()"
-                         (keydown)="$event.stopPropagation()"
-                         (input)="filtroCuentaOrigen = $any($event.target).value" />
-                </mat-option>
-                @for (c of cuentasPropiasFiltradas; track c.codigo) {
-                  <mat-option [value]="c">{{ etiquetaCuentaPropia(c) }}</mat-option>
-                }
-              </mat-select>
-              <mat-hint>De aquí sale el dinero de la orden de pago.</mat-hint>
             </mat-form-field>
 
             <mat-form-field appearance="outline">

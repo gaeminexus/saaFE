@@ -9,12 +9,13 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableDataSource } from '@angular/material/table';
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
 import { TitularSelectorDialogComponent } from '../../../../shared/components/titular-selector-dialog/titular-selector-dialog.component';
-import { FuncionesDatosService } from '../../../../shared/services/funciones-datos.service';
+import { FuncionesDatosService, TipoFormatoFechaBackend } from '../../../../shared/services/funciones-datos.service';
 import { mensajeDeError } from '../../../../shared/utils/mensaje-error.util';
 import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoDatosBusqueda as TipoDatos } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { Titular } from '../../../tsr/model/titular';
+import { Empresa } from '../../../../shared/model/empresa';
 import { NegociacionProveedor } from '../../model/negociacion-proveedor';
 import { NegociacionProveedorService } from '../../service/negociacion-proveedor.service';
 
@@ -189,11 +190,27 @@ export class NegociacionesComponent implements OnInit, AfterViewInit {
     if (!this.form.descripcion.trim()) { this.mostrarError('Ingrese la descripción'); return; }
     if (!this.form.valorTotal || this.form.valorTotal <= 0) { this.mostrarError('Ingrese el valor total'); return; }
 
-    const now = new Date().toISOString();
+    /**
+     * `fechaRegistro`/`fechaModif` son `LocalDateTime` en el backend — nunca un string terminado
+     * en "Z". `new Date().toISOString()` SIEMPRE es UTC (a diferencia de `dateToISO()`, definido
+     * más abajo en este archivo, que arma el string con componentes locales): con Ecuador en
+     * UTC-5, mandar ese string hacía que el backend descartara el offset y el dato quedara 5
+     * horas corrido, sin ningún error — la regla está en CLAUDE.md. `formatearFechaParaBackend`
+     * arma "yyyy-MM-dd HH:mm:ss" en hora local, que es lo que el backend espera.
+     */
+    const now = this.funcionesDatos.formatearFechaParaBackend(new Date())!;
     const payload: Partial<NegociacionProveedor> = {
       ...(this.form.id ? { id: this.form.id } : {}),
-      empresa: this.empresa,
-      titular: this.form.titular as Titular,
+      /**
+       * Solo el código: `NegociacionProveedor.empresa`/`.titular` son `@ManyToOne` que JPA
+       * resuelve por FK — mandar el objeto completo (acá `this.empresa` viene de
+       * `sessionStorage`/`localStorage` y `this.form.titular` del selector, ambos con su propio
+       * grafo anidado) arriesga el mismo 400 "Not able to deserialize data provided." que tenía
+       * `entidad-participe-info.component.ts`. `usuario`/`usuarioModif` unas líneas abajo ya usan
+       * el patrón correcto.
+       */
+      empresa: { codigo: this.empresa?.codigo } as Empresa,
+      titular: { codigo: this.form.titular?.codigo } as Titular,
       fechaNegociacion: this.dateToISO(this.fechaNegControl.value) || now.substring(0, 10),
       fechaInicio: this.dateToISO(this.fechaIniControl.value),
       fechaFin: this.dateToISO(this.fechaFinControl.value),

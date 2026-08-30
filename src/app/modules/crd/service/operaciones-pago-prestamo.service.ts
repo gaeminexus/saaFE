@@ -7,12 +7,14 @@ import {
   AnulacionRequest,
   PagoConAportesRequest,
   PagoCuotaRequest,
+  PagoMultipleRequest,
   PrecancelacionRequest,
   RegistroAporteRequest,
   ResultadoAbonoCapital,
   ResultadoAnulacion,
   ResultadoPagoConAportes,
   ResultadoPagoCuota,
+  ResultadoPagoMultiple,
   ResultadoCalculoMora,
   ResultadoPrecancelacion,
   ResultadoRegistroAporte,
@@ -96,6 +98,23 @@ export class OperacionesPagoPrestamoService {
     const url = `${ServiciosCrd.RS_PRST}/pagarCuota`;
     return this.http
       .post<RespuestaPago<ResultadoPagoCuota>>(url, this.limpiar(req), this.httpOptions)
+      .pipe(catchError((e: HttpErrorResponse) => of(this.normalizarError(e))));
+  }
+
+  // ===================== §4b Pago de varios préstamos en una sola operación =====================
+
+  /**
+   * Cobra varios préstamos del mismo partícipe en una única transacción todo-o-nada, con un solo
+   * comprobante repetido en cada renglón de `req.pagos`. Ver `PagoMultipleRequest`.
+   *
+   * A diferencia de `limpiar()` en el resto de los métodos, acá NO se limpia cada renglón de
+   * `pagos` individualmente (mismo criterio que `precancelar`/`pagarConAportes` con sus arreglos
+   * anidados): cada `PagoCuotaRequest` ya se arma completo desde el llamador.
+   */
+  pagarMultiplesCuotas(req: PagoMultipleRequest): Observable<RespuestaPago<ResultadoPagoMultiple>> {
+    const url = `${ServiciosCrd.RS_PRST}/pagarMultiplesCuotas`;
+    return this.http
+      .post<RespuestaPago<ResultadoPagoMultiple>>(url, req, this.httpOptions)
       .pipe(catchError((e: HttpErrorResponse) => of(this.normalizarError(e))));
   }
 

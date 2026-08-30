@@ -3,12 +3,21 @@ export const environment = {
   production: false,
   apiUrl: '/SaaBE/rest', // Usa proxy de desarrollo (proxy.conf.json mapea /SaaBE/*)
   /**
-   * Endpoints del plan de devengo de aportes (§4 de docs/crd/PLAN-APORTES-DEVENGO-CONTRATOS.md)
-   * que el backend todavía no publica: /rest/cnfg, /rest/vgcn, /rest/cntr/porEntidad,
-   * /rest/aprt/estadoCuenta. Mientras esté en `true`, los servicios correspondientes devuelven
-   * datos simulados contra el contrato congelado en vez de llamar al backend. Apagarlo (o que el
-   * backend publique y se borre este flag) hace que llamen al backend real sin tocar ningún
-   * componente — la rama vive entera dentro de cada servicio.
+   * Endpoints del contrato de cobro de Petro en dos pasos
+   * (`docs/crd/API-COBRO-PETRO-DOS-PASOS.md` §2) que el backend todavía no publica: /rest/asgn/
+   * transferencias, /rest/asgn/confirmarRecepcion, /rest/asgn/reversarRecepcion,
+   * /rest/asgn/estadoContable. Mientras esté en `true`, `ServiciosAsoprepService` simula esos
+   * cuatro endpoints en memoria contra el contrato congelado. Apagarlo (o que el backend
+   * publique y se borre este flag) hace que llamen al backend real sin tocar los componentes.
    */
-  mockDevengoContratos: true,
+  mockCobroPetro: true,
+  /**
+   * Endpoints de certificados de partícipe (`docs/crd/API-CERTIFICADOS-PARTICIPE.md`) que el
+   * backend todavía no publica: /rest/crtf/precarga, /rest/crtf/emitir, /rest/crtf/getByEntidad,
+   * /rest/crtf/getByAnio, /rest/crtf/anular. Mientras esté en `true`,
+   * `CertificadoParticipeService` simula los 6 tipos en memoria contra el contrato congelado.
+   * Apagarlo (o que el backend publique y se borre este flag) hace que llame al backend real sin
+   * tocar los componentes.
+   */
+  mockCertificadosParticipe: true,
 };

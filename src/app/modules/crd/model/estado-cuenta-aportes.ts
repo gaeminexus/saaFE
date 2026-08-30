@@ -7,14 +7,23 @@
 
 export type EstadoPeriodoAporte = 'COMPLETO' | 'PARCIAL' | 'SIN APORTE' | 'ANTICIPADO' | 'SIN PERIODO';
 
-/** Un movimiento dentro de un periodo. `valor` viene con signo: nunca se muestra en absoluto. */
+/**
+ * Un movimiento dentro de un periodo. `valor` viene con signo: nunca se muestra en absoluto.
+ *
+ * `tipoMovimiento`/`tipoMovimientoTexto` no están tipados como opcionales en el contrato
+ * congelado (§4.2), pero el backend real los devuelve `null` en la mayoría de los movimientos
+ * migrados/históricos (verificado contra `/rest/aprt/estadoCuenta/3728`, 2026-08-27: solo la
+ * primera fila trae `tipoMovimiento`/`tipoMovimientoTexto`, el resto viene `null` con `glosa`
+ * como único texto). Se tipan nullable para reflejar lo que llega — no se inventa un texto de
+ * reemplazo del lado del cliente.
+ */
 export interface MovimientoEstadoCuentaAporte {
   idAporte: number;
   /** Fecha de caja — "Fecha de cobro" en pantalla, distinta del periodo que agrupa. */
   fechaTransaccion: string | number[];
   valor: number;
-  tipoMovimiento: number;
-  tipoMovimientoTexto: string;
+  tipoMovimiento: number | null;
+  tipoMovimientoTexto: string | null;
   glosa: string;
 }
 

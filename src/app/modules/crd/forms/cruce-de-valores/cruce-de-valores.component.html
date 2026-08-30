@@ -169,7 +169,7 @@
             </div>
             <div class="ph-right">
               <div class="ph-stat">
-                <div class="v">{{ formatMoneda(pc.prestamo.saldoTotal) }}</div>
+                <div class="v">{{ formatMoneda(saldoTotalDe(pc)) }}</div>
                 <div class="l">Saldo total</div>
               </div>
               @if (montoAplicadoPrestamo(pc) > 0.004) {
@@ -211,7 +211,7 @@
                   <button mat-stroked-button (click)="aplicarCuotas(pc, 3)">3 cuotas</button>
                   <button mat-stroked-button (click)="aplicarCuotas(pc, 6)">6 cuotas</button>
                   <button mat-stroked-button (click)="cancelarSaldoTotal(pc)">
-                    <mat-icon>done_all</mat-icon> Saldo total ({{ formatMoneda(pc.prestamo.saldoTotal) }})
+                    <mat-icon>done_all</mat-icon> Saldo total ({{ formatMoneda(saldoTotalDe(pc)) }})
                   </button>
                   @if (montoAplicadoPrestamo(pc) > 0.004) {
                     <button mat-button (click)="quitarCruce(pc)">Quitar</button>
@@ -280,7 +280,7 @@
                 </div>
                 <div class="lms-item">
                   <div class="l">Nuevo saldo del préstamo</div>
-                  <div class="v">{{ formatMoneda((pc.prestamo.saldoTotal || 0) - montoAplicadoPrestamo(pc)) }}</div>
+                  <div class="v">{{ formatMoneda(saldoTotalDe(pc) - montoAplicadoPrestamo(pc)) }}</div>
                 </div>
               </div>
 

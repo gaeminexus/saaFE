@@ -5,6 +5,9 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableDataSource } from '@angular/material/table';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { AppStateService } from '../../../../../shared/services/app-state.service';
+import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
+import { MovimientoRelacionado } from '../../../../../shared/model/pagos-cobros/movimiento-relacionado';
 import { FacturaEmitir } from '../../../model/factura-emitir';
 import { FacturaEmitirService } from '../../../service/emitir/factura-emitir.service';
 import { DetalleSriService } from '../../../service/detalle-sri.service';
@@ -12,7 +15,10 @@ import { DetalleSri } from '../../../model/detalle-sri';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { JasperReportesService } from '../../../../../shared/services/jasper-reportes.service';
 import { PortapapelesService } from '../../../../../shared/services/portapapeles.service';
-import { MotivoAnulacionDialogComponent } from '../motivo-anulacion-dialog/motivo-anulacion-dialog.component';
+import {
+  AnularDocumentoCompraDialogComponent,
+  AnularDocumentoCompraDialogResult,
+} from '../../../../cxp/forms/procesos/dialogs/anular-documento-compra-dialog/anular-documento-compra-dialog.component';
 import { Router } from '@angular/router';
 
 @Component({
@@ -34,6 +40,8 @@ export class ConsultaFacturasComponent implements OnInit {
   private portapapeles = inject(PortapapelesService);
   private dialog = inject(MatDialog);
   private router = inject(Router);
+  private appState = inject(AppStateService);
+  anulandoMovimientos = signal(false);
 
   private get usuarioSesion(): string {
     try {
@@ -208,31 +216,51 @@ export class ConsultaFacturasComponent implements OnInit {
     });
   }
 
+  /**
+   * Anulación en cascada (ítem 14, 2026-08-28): antes de preguntar el motivo, consulta si la
+   * factura tiene cobros/notas/retenciones/anticipos cruzados. Si los tiene, el diálogo pide
+   * confirmación explícita para reversarlos todos junto con la factura — sin esa confirmación
+   * el backend responde 409 y no anula nada.
+   */
   anular(row: FacturaEmitir): void {
     if (Number(row.estadoEmision) === 3) {
       this.mostrarInfo('La factura ya está anulada');
       return;
     }
 
-    const dialogRef = this.dialog.open(MotivoAnulacionDialogComponent, {
-      width: '480px',
-      disableClose: true,
-      data: { numero: row.numero || String(row.id) },
+    this.anulandoMovimientos.set(true);
+    this.facturaService.movimientosRelacionados(Number(row.id)).subscribe({
+      next: (movs) => {
+        this.anulandoMovimientos.set(false);
+        this.abrirDialogoAnular(row, movs || []);
+      },
+      error: (err: Error) => {
+        this.anulandoMovimientos.set(false);
+        this.mostrarError(mensajeDeError(err, 'No se pudieron consultar los movimientos relacionados'));
+      },
     });
+  }
 
-    dialogRef.afterClosed().subscribe((motivo: string | null) => {
-      if (!motivo) return;
+  private abrirDialogoAnular(row: FacturaEmitir, movimientos: MovimientoRelacionado[]): void {
+    this.dialog.open(AnularDocumentoCompraDialogComponent, {
+      width: '560px',
+      disableClose: true,
+      data: { tipoLabel: 'Factura', numero: row.numero || String(row.id), movimientos },
+    }).afterClosed().subscribe((result: AnularDocumentoCompraDialogResult | null) => {
+      if (!result) return;
 
       this.facturaService.anularFactura({
         idFactura: Number(row.id),
         usuario: this.usuarioSesion,
-        motivo,
+        idUsuario: this.appState.getIdUsuario(),
+        motivo: result.motivo,
+        anularEnCascada: result.anularEnCascada,
       }).subscribe({
-        next: () => {
-          this.mostrarExito('Factura anulada correctamente');
+        next: (resp) => {
+          this.mostrarExito(resp.mensaje || 'Factura anulada correctamente');
           this.buscar();
         },
-        error: () => this.mostrarError('No se pudo anular la factura'),
+        error: (err: Error) => this.mostrarError(mensajeDeError(err, 'No se pudo anular la factura')),
       });
     });
   }

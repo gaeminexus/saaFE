@@ -5,12 +5,13 @@ import { CanActivateFn, Router } from '@angular/router';
  * ⚠️ TODO TEMPORAL — restricción de acceso provisional.
  *
  * Las pantallas de bandas de cartera y de cierre de cartera deben quedar accesibles
- * ÚNICAMENTE para el usuario "USUARIO 1" mientras se define el esquema de permisos
+ * ÚNICAMENTE para los usuarios en `NOMBRES_PERMITIDOS` (hoy "USUARIO 1" y "GROBAYO",
+ * agregado el 2026-08-28 a pedido puntual) mientras se define el esquema de permisos
  * definitivo. Este archivo es el ÚNICO lugar donde vive esa regla: el guard bloquea la
  * navegación directa por URL y `esUsuarioUno()` se reutiliza para ocultar la opción de
  * menú. Cuando exista el sistema de permisos real, sustituir `esUsuarioUno()` por la
- * verificación de permiso correspondiente y eliminar este guard (no ampliar esta lógica
- * ad hoc).
+ * verificación de permiso correspondiente y eliminar este guard (no seguir ampliando
+ * esta lista a mano).
  *
  * ────────────────────────────────────────────────────────────────────────────────────
  * CORREGIDO el 2026-08-25. La versión anterior comparaba contra el CÓDIGO 1
@@ -28,10 +29,11 @@ import { CanActivateFn, Router } from '@angular/router';
  * ────────────────────────────────────────────────────────────────────────────────────
  */
 
-const NOMBRE_USUARIO_PERMITIDO = 'USUARIO 1';
+/** Nombres exactos (normalizados) con acceso permitido mientras dure esta restricción. */
+const NOMBRES_PERMITIDOS = ['USUARIO 1', 'GROBAYO'];
 
 /**
- * true solo si el usuario logueado es "USUARIO 1".
+ * true solo si el usuario logueado está en `NOMBRES_PERMITIDOS`.
  *
  * Claves de sesión realmente escritas (verificado en el código, no supuesto):
  *  - `AppStateService.inicializarApp` escribe `usuario` (objeto `Usuario` serializado,
@@ -44,7 +46,7 @@ const NOMBRE_USUARIO_PERMITIDO = 'USUARIO 1';
  */
 export function esUsuarioUno(): boolean {
   const nombre = obtenerNombreUsuario();
-  return nombre !== null && nombre === NOMBRE_USUARIO_PERMITIDO;
+  return nombre !== null && NOMBRES_PERMITIDOS.includes(nombre);
 }
 
 /**

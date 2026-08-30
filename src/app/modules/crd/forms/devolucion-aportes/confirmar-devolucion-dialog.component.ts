@@ -18,8 +18,6 @@ export interface ConfirmarDevolucionData {
   identificacion: string;
   /** Cuenta del partícipe a la que se transfiere, ya enmascarada. */
   cuentaDestino: string;
-  /** Cuenta propia de la que sale el dinero. */
-  cuentaOrigen: string;
   /** Fecha de negocio, ya formateada para mostrar. */
   fecha: string;
   motivo: string;
@@ -138,7 +136,7 @@ export interface ConfirmarDevolucionData {
         </div>
         <div class="dato">
           <span class="l">Sale de</span>
-          <span class="v">{{ data.cuentaOrigen }}</span>
+          <span class="v v-pendiente">La asigna Tesorería al aprobar el pago</span>
         </div>
         <div class="dato">
           <span class="l">Fecha</span>
@@ -252,6 +250,7 @@ export interface ConfirmarDevolucionData {
       .ancho-total { grid-column: 1 / -1; }
       .l { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.05em; color: #718096; font-weight: 700; }
       .v { font-size: 13.5px; color: #1a202c; }
+      .v-pendiente { color: #94a3b8; font-style: italic; }
     }
 
     table.tabla-desglose {

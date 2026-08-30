@@ -7,6 +7,50 @@
     </div>
   </div>
 
+  @if (isLoadingPartidasAntiguas) {
+    <div class="spinner-container">
+      <mat-spinner diameter="28"></mat-spinner>
+    </div>
+  } @else if (partidasAntiguas.length > 0) {
+    <mat-card class="aviso-transito-card">
+      <mat-card-content>
+        <div class="aviso-transito-header">
+          <mat-icon>warning</mat-icon>
+          <span>
+            {{ partidasAntiguas.length }} partida(s) en tránsito con más de 60 días sin saldarse —
+            total {{ totalValorPartidasAntiguas | number: '1.2-2' }}
+          </span>
+        </div>
+        <div class="tabla-scroll">
+          <table class="tabla-transito">
+            <thead>
+              <tr>
+                <th>Cuenta bancaria</th>
+                <th>Tipo</th>
+                <th class="num">Valor</th>
+                <th class="num">Días</th>
+                <th>Declarada en</th>
+                <th>Observación</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (p of partidasAntiguas; track p.idPartida) {
+                <tr>
+                  <td>{{ p.cuentaBancaria }}</td>
+                  <td>{{ tipoTransitoLabel(p.tipo) }}</td>
+                  <td class="num">{{ p.valor | number: '1.2-2' }}</td>
+                  <td class="num">{{ p.diasEnTransito }}</td>
+                  <td>{{ formatearFechaHora(p.declaradaEn) }}</td>
+                  <td>{{ p.observacion }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  }
+
   <mat-card class="generar-card">
     <mat-card-content>
       <div class="generar-row">

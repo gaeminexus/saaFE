@@ -5,7 +5,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableDataSource } from '@angular/material/table';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
-import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
+import { FuncionesDatosService, TipoFormatoFechaBackend } from '../../../../../shared/services/funciones-datos.service';
 import { TitularSelectorDialogComponent } from '../../../../../shared/components/titular-selector-dialog/titular-selector-dialog.component';
 import { Empresa } from '../../../../../shared/model/empresa';
 import { Usuario } from '../../../../../shared/model/usuario';
@@ -239,7 +239,12 @@ export class AnticipoComponent implements OnInit {
       fechaAnticipo: this.fechaAnticipo,
       fechaRecepcion: this.fechaRecepcion,
       usuario: this.usuarioSesion(),
-      fechaRegistro: new Date().toISOString(),
+      /**
+       * Nunca `new Date().toISOString()`: siempre UTC, y con Ecuador en UTC−5 el backend
+       * descarta el offset y el dato queda 5 horas corrido (regla de CLAUDE.md). Se arma en hora
+       * local con el mismo helper que ya usa este archivo para mostrar fechas.
+       */
+      fechaRegistro: this.funcionesDatosS.formatearFechaParaBackend(new Date()) ?? undefined,
       numeroDoc: this.numeroDoc.trim(),
       valor: Number(this.valor),
       estado,
@@ -278,13 +283,20 @@ export class AnticipoComponent implements OnInit {
     return Number.isNaN(date.getTime()) ? new Date() : date;
   }
 
+  /**
+   * `fechaAnticipo`/`fechaRecepcion` van al backend (ver `armarPayload`/similar más arriba) — un
+   * `date.toISOString().slice(0, 10)` arma la fecha en UTC y con Ecuador en UTC−5 puede quedar un
+   * día antes de la fecha local real (el mismo bug documentado en
+   * docs/patrones/FECHA-SOLO-DIA-CORRIMIENTO-UTC.md). Se arma con el helper compartido, en hora
+   * local.
+   */
   private hoyISO(): string {
-    return new Date().toISOString().slice(0, 10);
+    return this.funcionesDatosS.formatearFechaParaBackend(new Date(), TipoFormatoFechaBackend.SOLO_FECHA)!;
   }
 
   private aplicarFechaAnticipo(date: Date): void {
     this.fechaAnticipoControl.setValue(date, { emitEvent: false });
-    this.fechaAnticipo = date.toISOString().slice(0, 10);
+    this.fechaAnticipo = this.funcionesDatosS.formatearFechaParaBackend(date, TipoFormatoFechaBackend.SOLO_FECHA)!;
     const formatted = this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
     setTimeout(() => {
       if (this.fechaAnticipoInputRef?.nativeElement) this.fechaAnticipoInputRef.nativeElement.value = formatted;
@@ -293,7 +305,7 @@ export class AnticipoComponent implements OnInit {
 
   private aplicarFechaRecepcion(date: Date): void {
     this.fechaRecepcionControl.setValue(date, { emitEvent: false });
-    this.fechaRecepcion = date.toISOString().slice(0, 10);
+    this.fechaRecepcion = this.funcionesDatosS.formatearFechaParaBackend(date, TipoFormatoFechaBackend.SOLO_FECHA)!;
     const formatted = this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
     setTimeout(() => {
       if (this.fechaRecepcionInputRef?.nativeElement) this.fechaRecepcionInputRef.nativeElement.value = formatted;

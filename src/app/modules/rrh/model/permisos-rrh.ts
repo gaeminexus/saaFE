@@ -71,6 +71,9 @@ export class PermisosRrh {
   /** Anticipos a trabajadores (PROMPT 08). */
   public static readonly ANTICIPOS_TRABAJADORES = 895;
 
+  /** Acreditar vacaciones — proceso anual, ya en producción, sin pantalla hasta ahora. */
+  public static readonly ACREDITAR_VACACIONES = 896;
+
   // Parametrización de la fase 6
   public static readonly FORMATOS_ARCHIVO_BANCARIO = 862;
 

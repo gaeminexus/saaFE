@@ -3,24 +3,20 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
-import { FORMA_PAGO_LABELS, FormaPagoAplicacion } from '../../../../../shared/model/pagos-cobros/catalogos-aplicacion-pago';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { AppStateService } from '../../../../../shared/services/app-state.service';
 
 import { CajaChica } from '../../../model/caja-chica';
-import { CuentaBancaria } from '../../../model/cuenta-bancaria';
-import { ReposicionCajaChicaResponse } from '../../../model/movimiento-caja-chica';
+import { ReposicionCajaChicaRequest, ReposicionCajaChicaResponse } from '../../../model/movimiento-caja-chica';
 import { SaldoCajaChica } from '../../../model/saldo-caja-chica';
 import { CajaChicaService } from '../../../service/caja-chica.service';
-import { ChequeService } from '../../../service/cheque.service';
-import { CuentaBancariaService } from '../../../service/cuenta-bancaria.service';
 import { MovimientoCajaChicaService } from '../../../service/movimiento-caja-chica.service';
 
 /**
  * Reposición (o apertura, cuando la caja todavía no tiene saldo) de una caja
- * chica: transfiere/gira desde una cuenta bancaria hacia el fondo. Misma
- * lógica de forma de pago + cheque que registro-egreso, sin beneficiario:
- * el destino es la caja, no un tercero.
+ * chica. Desde 2026-08-30 esta pantalla solo registra el pedido: la cuenta
+ * bancaria de origen y la forma de pago las asigna tesorería al aprobar en
+ * su bandeja (/menutesoreria/procesos/aprobacion-pagos).
  */
 @Component({
   selector: 'app-reposicion-caja-chica',
@@ -32,13 +28,8 @@ import { MovimientoCajaChicaService } from '../../../service/movimiento-caja-chi
 export class ReposicionCajaChicaComponent implements OnInit {
   private cajaS = inject(CajaChicaService);
   private movimientoS = inject(MovimientoCajaChicaService);
-  private chequeS = inject(ChequeService);
-  private cuentaBancariaS = inject(CuentaBancariaService);
   private appState = inject(AppStateService);
   private snackBar = inject(MatSnackBar);
-
-  readonly FormaPagoAplicacion = FormaPagoAplicacion;
-  readonly FORMA_PAGO_LABELS = FORMA_PAGO_LABELS;
 
   cajas = signal<CajaChica[]>([]);
   cargandoCajas = signal(false);
@@ -47,31 +38,13 @@ export class ReposicionCajaChicaComponent implements OnInit {
   saldo = signal<SaldoCajaChica | null>(null);
   cargandoSaldo = signal(false);
 
-  cuentasBancarias = signal<CuentaBancaria[]>([]);
-  cuentaOrigen: CuentaBancaria | null = null;
-
-  /**
-   * Transferencia no aplica aquí: la caja chica no tiene cuenta bancaria de
-   * destino, así que el backend siempre la rechaza. Solo Débito automático o
-   * Cheque (ver `cuentaOrigenManejaChequera`) son formas de pago válidas para
-   * reponer/aperturar una caja.
-   */
-  regFormaPago = signal<number>(FormaPagoAplicacion.DEBITO_AUTOMATICO);
-  regChequeSiguiente = signal<number | null>(null);
-  regChequeError = signal<string>('');
-
   valor = '';
-  referencia = '';
   fecha: Date | null = new Date();
   descripcion = '';
 
   procesando = signal(false);
   error = signal('');
   resultado = signal<ReposicionCajaChicaResponse | null>(null);
-
-  get cuentaOrigenManejaChequera(): boolean {
-    return Number(this.cuentaOrigen?.manejaChequera) === 1;
-  }
 
   /**
    * `SaldoCajaChica` no dice si la caja "nunca tuvo movimientos" — solo su
@@ -94,7 +67,6 @@ export class ReposicionCajaChicaComponent implements OnInit {
 
   ngOnInit(): void {
     this.cargarCajas();
-    this.cargarCuentasBancarias();
   }
 
   private cargarCajas(): void {
@@ -114,13 +86,6 @@ export class ReposicionCajaChicaComponent implements OnInit {
         this.cajas.set([]);
         this.cargandoCajas.set(false);
       },
-    });
-  }
-
-  private cargarCuentasBancarias(): void {
-    this.cuentaBancariaS.getAll().subscribe({
-      next: (data) => this.cuentasBancarias.set(Array.isArray(data) ? (data as CuentaBancaria[]) : []),
-      error: () => this.cuentasBancarias.set([]),
     });
   }
 
@@ -148,39 +113,6 @@ export class ReposicionCajaChicaComponent implements OnInit {
     });
   }
 
-  /** Cambiar de cuenta origen puede dejar sin sentido una forma de pago Cheque ya elegida. */
-  onCambioCuentaOrigen(): void {
-    if (this.regFormaPago() === FormaPagoAplicacion.CHEQUE && !this.cuentaOrigenManejaChequera) {
-      this.regFormaPago.set(FormaPagoAplicacion.DEBITO_AUTOMATICO);
-    }
-    this.onCambioFormaPago();
-  }
-
-  onCambioFormaPago(): void {
-    this.regChequeSiguiente.set(null);
-    this.regChequeError.set('');
-    if (this.regFormaPago() === FormaPagoAplicacion.CHEQUE) {
-      this.cargarChequeSiguiente();
-    } else {
-      this.referencia = '';
-    }
-    this.error.set('');
-  }
-
-  private cargarChequeSiguiente(): void {
-    if (!this.cuentaOrigen) return;
-    this.chequeS.siguiente(this.cuentaOrigen.codigo).subscribe({
-      next: (r) => {
-        this.regChequeSiguiente.set(r?.numero ?? null);
-        this.regChequeError.set('');
-      },
-      error: (err) => {
-        this.regChequeSiguiente.set(null);
-        this.regChequeError.set(ChequeService.mensajeError(err));
-      },
-    });
-  }
-
   /** El valor no puede superar lo sugerido; se recorta al salir del campo. */
   ajustarAlSugerido(): void {
     const sugerido = this.saldo()?.montoSugeridoReposicion;
@@ -190,14 +122,10 @@ export class ReposicionCajaChicaComponent implements OnInit {
   }
 
   get puedeGuardar(): boolean {
-    const chequeOk = this.regFormaPago() !== FormaPagoAplicacion.CHEQUE
-      || (this.regChequeSiguiente() != null && !this.regChequeError());
     return !!this.cajaSeleccionada
-      && !!this.cuentaOrigen
       && this.valorNumerico > 0
       && !this.excedeSugerido
       && !!this.fecha
-      && chequeOk
       && !this.procesando();
   }
 
@@ -209,20 +137,15 @@ export class ReposicionCajaChicaComponent implements OnInit {
   }
 
   guardar(): void {
-    if (!this.puedeGuardar || !this.cajaSeleccionada || !this.cuentaOrigen) return;
+    if (!this.puedeGuardar || !this.cajaSeleccionada) return;
 
     this.procesando.set(true);
     this.error.set('');
     this.resultado.set(null);
 
-    const forma = this.regFormaPago();
-    const payload = {
+    const payload: ReposicionCajaChicaRequest = {
       idCaja: this.cajaSeleccionada.codigo,
       valor: this.valorNumerico,
-      idCuentaBancariaOrigen: this.cuentaOrigen.codigo,
-      formaPago: forma,
-      debitoAutomatico: forma === FormaPagoAplicacion.DEBITO_AUTOMATICO,
-      referencia: this.referencia.trim() || undefined,
       fecha: this.fechaISO(this.fecha),
       descripcion: this.descripcion.trim() || undefined,
       idUsuario: this.appState.getIdUsuario(),
@@ -234,13 +157,7 @@ export class ReposicionCajaChicaComponent implements OnInit {
       next: (resp) => {
         this.procesando.set(false);
         this.resultado.set(resp);
-        this.snackBar.open(
-          resp.numeroCheque != null
-            ? `Operación registrada. Se giró el cheque N° ${resp.numeroCheque}.`
-            : 'Operación registrada.',
-          'Cerrar',
-          { duration: 6000 },
-        );
+        this.snackBar.open('Operación registrada. Queda pendiente de aprobación en tesorería.', 'Cerrar', { duration: 6000 });
         if (this.cajaSeleccionada) this.cargarSaldo(this.cajaSeleccionada.codigo);
       },
       error: (err) => {

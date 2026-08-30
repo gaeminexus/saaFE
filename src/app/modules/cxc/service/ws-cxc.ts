@@ -38,6 +38,10 @@ public static RS_NXPE = `${API_URL}/nxpe`;  // Numeración por Punto de Emisión
 public static RS_LSRI = `${API_URL}/lsri`;  // Listados SRI
 public static RS_TSRI = `${API_URL}/tsri`;  // Detalle SRI
 
+// ATS y cuadre 103/104 (com.saa.ejb.sri, paquete nuevo en saaBE — no mapea a una tabla de 4 letras)
+public static RS_ATS = `${API_URL}/ats`;
+public static RS_CUADRESRI = `${API_URL}/cuadresri`;
+
 // Emisión Documentos Tributarios
 public static RS_FCTR = `${API_URL}/fctr`;  // Factura
 public static RS_ANTC = `${API_URL}/antc`;  // Anticipo cliente

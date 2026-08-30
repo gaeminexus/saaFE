@@ -55,6 +55,11 @@ describe('usuarioUnoGuard / esUsuarioUno', () => {
     expect(esUsuarioUno()).toBeFalse();
   });
 
+  it('GROBAYO tambien tiene acceso (agregado 2026-08-28, no reemplaza a USUARIO 1)', () => {
+    sessionStorage.setItem('usuario', JSON.stringify({ codigo: 1240, nombre: 'GROBAYO' }));
+    expect(esUsuarioUno()).toBeTrue();
+  });
+
   it('el codigo 1 por si solo YA NO da acceso (era el defecto)', () => {
     sessionStorage.setItem('idUsuario', '1');
     expect(esUsuarioUno()).toBeFalse();

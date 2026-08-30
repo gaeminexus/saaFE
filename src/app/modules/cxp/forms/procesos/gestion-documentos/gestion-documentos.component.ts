@@ -447,8 +447,11 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit, OnDest
   // ─── LOTE POR CARGA TXT ───────────────────────────────────────────────────
   // Los botones son POR CARGA, no por período: dentro de un período conviven TXT de facturas
   // y de retenciones (decisión (b) del usuario, §3 del plan).
-  /** Fase 3 pendiente en el backend: /registrarLote aún no existe. */
-  readonly REGISTRO_LOTE_DISPONIBLE = false;
+  /**
+   * `POST /registrarLote` (Fase 3 de docs/logica-negocio/cxp/PLAN-CARGA-AUTOMATICA-SRI.md §10 en
+   * saaBE) activado — confirmado directamente por el usuario el 2026-08-28.
+   */
+  readonly REGISTRO_LOTE_DISPONIBLE = true;
 
   cargasTxt = signal<CargaArchivoTxt[]>([]);
   cargaTxtSeleccionada = signal<number | null>(null);

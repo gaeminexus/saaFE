@@ -1,0 +1,187 @@
+.aprobacion-pagos {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  .filters {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+
+  .table-wrapper {
+    overflow: auto;
+  }
+  .full-width {
+    width: 100%;
+  }
+  .empty-state {
+    padding: 20px;
+    text-align: center;
+    color: #777;
+  }
+
+  .aviso {
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin-top: 12px;
+    font-size: 0.9rem;
+  }
+  .aviso-error {
+    background: #fdecea;
+    color: #611a15;
+    white-space: pre-line;
+  }
+
+  .totals {
+    margin-top: 10px;
+    font-weight: 500;
+  }
+
+  tr.fila-seleccionada {
+    background: #f0f7ff;
+  }
+
+  .aprobar-card {
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(220px, 1fr));
+      gap: 12px;
+      align-items: center;
+    }
+
+    .fila-check {
+      .radio-label {
+        display: block;
+        font-size: 0.8rem;
+        color: #555;
+        margin-bottom: 4px;
+      }
+      mat-radio-button {
+        margin-right: 16px;
+      }
+    }
+
+    .estado-linea {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+      color: #555;
+      font-size: 0.9rem;
+    }
+
+    .disponibilidad-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .disponibilidad-item {
+      display: flex;
+      flex-direction: column;
+      padding: 10px 14px;
+      border-radius: 6px;
+      background: #f5f7fa;
+
+      .label {
+        font-size: 0.75rem;
+        color: #555;
+      }
+      .value {
+        font-size: 1.1rem;
+        font-weight: 600;
+      }
+
+      &.excede {
+        background: #fdecea;
+        .value {
+          color: #611a15;
+        }
+      }
+    }
+
+    .aviso-advertencia {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      background: #fff8e1;
+      color: #7a5c00;
+      border: 1px solid #ffe082;
+    }
+
+    .actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 12px;
+    }
+  }
+
+  .resultado-card {
+    .resultado-mensaje {
+      font-weight: 500;
+      margin-bottom: 12px;
+    }
+
+    .resumen-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .resumen-item {
+      display: flex;
+      flex-direction: column;
+      padding: 10px 14px;
+      border-radius: 6px;
+      background: #f5f7fa;
+
+      .label {
+        font-size: 0.75rem;
+        color: #555;
+      }
+      .value {
+        font-size: 1.2rem;
+        font-weight: 600;
+      }
+    }
+
+    .cheques-box {
+      margin: 12px 0;
+      padding: 12px;
+      border-radius: 6px;
+      background: #fff8e1;
+      border: 1px solid #ffe082;
+    }
+    .cheques-titulo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+      color: #7a5c00;
+      margin-bottom: 8px;
+    }
+    .cheques-tabla {
+      width: 100%;
+      border-collapse: collapse;
+
+      th, td {
+        text-align: left;
+        padding: 6px 10px;
+        border-bottom: 1px solid #ffe082;
+      }
+      .numero-cheque {
+        font-weight: 700;
+        font-family: monospace;
+        font-size: 1.05rem;
+      }
+    }
+
+    .actions {
+      display: flex;
+      justify-content: flex-end;
+    }
+  }
+}

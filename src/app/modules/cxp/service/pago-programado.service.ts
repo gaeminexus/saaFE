@@ -4,10 +4,15 @@ import { Observable, catchError, throwError } from 'rxjs';
 import { MotivoRequest } from '../../../shared/model/pagos-cobros/catalogos-aplicacion-pago';
 import {
   AnularPagoResponse,
+  AprobarPagosRequest,
+  AprobarPagosResponse,
   ConfirmarManualRequest,
   ConfirmarManualResponse,
+  DisponibilidadCuenta,
+  FiltrosPorAprobar,
   GenerarLoteRequest,
   LoteGeneradoResponse,
+  PagoPorAprobar,
   PagoProgramado,
   RegistrarPagoRequest,
   RegistrarPagoResponse,
@@ -94,6 +99,37 @@ export class PagoProgramadoService {
     return this.http.post<RevertirPagoResponse>(
       `${ServiciosCxp.RS_PGTR}/revertirConfirmado/${idPago}`, datos, this.httpOptions
     ).pipe(catchError(this.handleError));
+  }
+
+  /** Bandeja de pagos POR_APROBAR (§7.1 del plan de rediseño). Solo `idEmpresa` es obligatorio. */
+  porAprobar(filtros: FiltrosPorAprobar): Observable<PagoPorAprobar[]> {
+    let params = new HttpParams().set('idEmpresa', filtros.idEmpresa);
+    if (filtros.origen) params = params.set('origen', filtros.origen);
+    if (filtros.desde) params = params.set('desde', filtros.desde);
+    if (filtros.hasta) params = params.set('hasta', filtros.hasta);
+    return this.http.get<PagoPorAprobar[]>(`${ServiciosCxp.RS_PGTR}/porAprobar`, { params }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * Aprueba un lote: todo o nada — si un solo pago de `idsPagos` no está
+   * POR_APROBAR, el backend rechaza el lote completo con el detalle de
+   * cuáles (§7.2 del plan).
+   */
+  aprobar(datos: AprobarPagosRequest): Observable<AprobarPagosResponse> {
+    return this.http.post<AprobarPagosResponse>(`${ServiciosCxp.RS_PGTR}/aprobar`, datos, this.httpOptions).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /** Saldo, comprometido y disponible real de una cuenta a una fecha (§3.3/§7 del plan de rediseño). */
+  disponibilidad(idCuenta: number, fecha?: string): Observable<DisponibilidadCuenta> {
+    let params = new HttpParams();
+    if (fecha) params = params.set('fecha', fecha);
+    return this.http.get<DisponibilidadCuenta>(`${ServiciosCxp.RS_PGTR}/disponibilidad/${idCuenta}`, { params }).pipe(
+      catchError(this.handleError)
+    );
   }
 
   private handleError(error: HttpErrorResponse): Observable<never> {

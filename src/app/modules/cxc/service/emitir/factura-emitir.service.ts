@@ -1,6 +1,9 @@
 import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, catchError, of, throwError } from 'rxjs';
+import { mensajeDeError } from '../../../../shared/utils/mensaje-error.util';
+import { MovimientoRelacionado } from '../../../../shared/model/pagos-cobros/movimiento-relacionado';
+import { AnularDocumentoVentaResponse, AnularFacturaVentaRequest } from '../../model/anulacion-documento-venta';
 import { FacturaEmitir } from '../../model/factura-emitir';
 import { FormaPagoFactura } from '../../model/forma-pago-factura';
 import { ServiciosCxc } from '../ws-cxc';
@@ -19,11 +22,8 @@ interface GuardarFormaPagoFacturaRequest {
   formaPagosFactura: FormaPagoFactura[];
 }
 
-export interface AnularFacturaRequest {
-  idFactura: number;
-  usuario: string;
-  motivo: string;
-}
+/** @deprecated usar {@link AnularFacturaVentaRequest} — se mantiene el nombre para no romper imports existentes. */
+export type AnularFacturaRequest = AnularFacturaVentaRequest;
 
 @Injectable({
   providedIn: 'root',
@@ -101,10 +101,17 @@ export class FacturaEmitirService {
       .pipe(catchError(this.handleError));
   }
 
-  anularFactura(datos: AnularFacturaRequest): Observable<any | null> {
+  anularFactura(datos: AnularFacturaVentaRequest): Observable<AnularDocumentoVentaResponse> {
     return this.http
-      .post<any>(`${ServiciosCxc.RS_FCTR}/anular`, datos, this.httpOptions)
-      .pipe(catchError(this.handleError));
+      .post<AnularDocumentoVentaResponse>(`${ServiciosCxc.RS_FCTR}/anular`, datos, this.httpOptions)
+      .pipe(catchError(this.handleErrorAnulacion));
+  }
+
+  /** Cobros/notas/retenciones/anticipos cruzados con esta factura — consultar antes de anular (ítem 14). */
+  movimientosRelacionados(id: number): Observable<MovimientoRelacionado[]> {
+    return this.http
+      .get<MovimientoRelacionado[]>(`${ServiciosCxc.RS_FCTR}/movimientosRelacionados/${id}`)
+      .pipe(catchError(this.handleErrorAnulacion));
   }
 
   consultarYActualizarEstado(idFactura: number): Observable<any | null> {
@@ -118,5 +125,12 @@ export class FacturaEmitirService {
       return of(null);
     }
     return throwError(() => error.error);
+  }
+
+  /** Preserva `.status` (para distinguir 409 de un error genérico) — `handleError` lo descarta. */
+  private handleErrorAnulacion(error: HttpErrorResponse): Observable<never> {
+    const e = new Error(mensajeDeError(error, 'No se pudo completar la operación')) as Error & { status?: number };
+    e.status = error.status;
+    return throwError(() => e);
   }
 }

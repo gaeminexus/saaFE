@@ -1,0 +1,236 @@
+<div class="aprobacion-pagos">
+  <mat-card>
+    <mat-card-title>Aprobación de pagos</mat-card-title>
+    <mat-card-content>
+      <div class="filters">
+        <mat-form-field appearance="outline">
+          <mat-label>Origen</mat-label>
+          <mat-select [ngModel]="filtroOrigen()" (ngModelChange)="filtroOrigen.set($event); buscar()">
+            <mat-option [value]="null">Todos</mat-option>
+            @for (o of origenOptions; track o.codigo) {
+              <mat-option [value]="o.codigo">{{ o.texto }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Desde</mat-label>
+          <input matInput type="date" [ngModel]="filtroDesde()" (ngModelChange)="filtroDesde.set($event)" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Hasta</mat-label>
+          <input matInput type="date" [ngModel]="filtroHasta()" (ngModelChange)="filtroHasta.set($event)" />
+        </mat-form-field>
+
+        <button mat-raised-button color="primary" (click)="buscar()" [disabled]="cargando()">
+          <mat-icon>search</mat-icon>
+          Buscar
+        </button>
+        <button mat-stroked-button (click)="limpiarFiltros()">
+          <mat-icon>refresh</mat-icon>
+          Limpiar
+        </button>
+      </div>
+
+      @if (errorCarga()) {
+        <div class="aviso aviso-error">{{ errorCarga() }}</div>
+      }
+
+      @if (cargando()) {
+        <div style="text-align: center; padding: 20px">
+          <mat-spinner diameter="36"></mat-spinner>
+        </div>
+      } @else if (pagos().length === 0) {
+        <div class="empty-state">No hay pagos por aprobar con estos filtros.</div>
+      } @else {
+        <div class="table-wrapper">
+          <table mat-table [dataSource]="pagos()" class="mat-elevation-z1 full-width">
+            <ng-container matColumnDef="sel">
+              <th mat-header-cell *matHeaderCellDef>
+                <mat-checkbox [ngModel]="todosSeleccionados" (ngModelChange)="toggleTodos($event)"></mat-checkbox>
+              </th>
+              <td mat-cell *matCellDef="let p">
+                <mat-checkbox [ngModel]="estaSeleccionado(p.id)" (ngModelChange)="toggleSeleccion(p.id, $event)"></mat-checkbox>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="origen">
+              <th mat-header-cell *matHeaderCellDef>Origen</th>
+              <td mat-cell *matCellDef="let p">{{ origenLabel(p.origen) }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="beneficiario">
+              <th mat-header-cell *matHeaderCellDef>Beneficiario</th>
+              <td mat-cell *matCellDef="let p">{{ p.beneficiario }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="concepto">
+              <th mat-header-cell *matHeaderCellDef>Concepto</th>
+              <td mat-cell *matCellDef="let p">{{ p.concepto }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="valor">
+              <th mat-header-cell *matHeaderCellDef>Valor</th>
+              <td mat-cell *matCellDef="let p">{{ p.valor | number: '1.2-2' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="fechaSolicitada">
+              <th mat-header-cell *matHeaderCellDef>Fecha solicitada</th>
+              <td mat-cell *matCellDef="let p">{{ p.fechaSolicitada | date: 'dd/MM/yyyy' }}</td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="columnas"></tr>
+            <tr mat-row *matRowDef="let row; columns: columnas" [class.fila-seleccionada]="estaSeleccionado(row.id)"></tr>
+          </table>
+        </div>
+
+        <div class="totals">
+          Seleccionados: <strong>{{ seleccionados().size }}</strong> — Total:
+          <strong>{{ totalSeleccionado() | number: '1.2-2' }}</strong>
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+
+  @if (resultado(); as res) {
+    <mat-card class="resultado-card">
+      <mat-card-title>Resultado de la aprobación</mat-card-title>
+      <mat-card-content>
+        <p class="resultado-mensaje">{{ res.mensaje }}</p>
+        <div class="resumen-grid">
+          <div class="resumen-item">
+            <span class="label">Pagos aprobados</span>
+            <span class="value">{{ res.pagosAprobados }}</span>
+          </div>
+          <div class="resumen-item">
+            <span class="label">Total aprobado</span>
+            <span class="value">{{ res.totalAprobado | number: '1.2-2' }}</span>
+          </div>
+          @if (res.registrados.length > 0) {
+            <div class="resumen-item">
+              <span class="label">Registrados (a transferir)</span>
+              <span class="value">{{ res.registrados.length }}</span>
+            </div>
+          }
+          @if (res.confirmados.length > 0) {
+            <div class="resumen-item">
+              <span class="label">Confirmados</span>
+              <span class="value">{{ res.confirmados.length }}</span>
+            </div>
+          }
+        </div>
+
+        @if (res.cheques && res.cheques.length > 0) {
+          <div class="cheques-box">
+            <div class="cheques-titulo">
+              <mat-icon>receipt_long</mat-icon>
+              <span>Cheques girados — anótelos para la emisión física</span>
+            </div>
+            <table class="cheques-tabla">
+              <thead>
+                <tr>
+                  <th>Pago</th>
+                  <th>N° de cheque</th>
+                  <th>Asiento</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (c of res.cheques; track c.pago) {
+                  <tr>
+                    <td>{{ c.pago }}</td>
+                    <td class="numero-cheque">{{ c.numeroCheque }}</td>
+                    <td>{{ c.asiento }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+
+        <div class="actions">
+          <button mat-stroked-button (click)="cerrarResultado()">Cerrar</button>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  }
+
+  <mat-card class="aprobar-card">
+    <mat-card-title>Aprobar seleccionados</mat-card-title>
+    <mat-card-content>
+      <div class="form-grid">
+        <mat-form-field appearance="outline">
+          <mat-label>Cuenta bancaria</mat-label>
+          <mat-select [ngModel]="cuentaSeleccionada()" (ngModelChange)="cuentaSeleccionada.set($event); onCambioCuenta()">
+            @for (c of cuentas(); track c.codigo) {
+              <mat-option [value]="c">{{ c.banco?.nombre }} — {{ c.numeroCuenta }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <div class="fila-check">
+          <label class="radio-label">Forma de pago</label>
+          <mat-radio-group [ngModel]="formaPago()" (ngModelChange)="formaPago.set($event)">
+            <mat-radio-button [value]="FormaPagoAplicacion.TRANSFERENCIA">Transferencia</mat-radio-button>
+            <mat-radio-button [value]="FormaPagoAplicacion.DEBITO_AUTOMATICO">Débito automático</mat-radio-button>
+            @if (cuentaManejaChequera) {
+              <mat-radio-button [value]="FormaPagoAplicacion.CHEQUE">Cheque</mat-radio-button>
+            }
+          </mat-radio-group>
+        </div>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Fecha de pago</mat-label>
+          <input matInput type="date" [ngModel]="fechaPago()" (ngModelChange)="fechaPago.set($event)" placeholder="Hoy si se deja vacío" />
+        </mat-form-field>
+      </div>
+
+      @if (cuentaSeleccionada()) {
+        @if (cargandoDisponibilidad()) {
+          <div class="estado-linea">
+            <mat-spinner diameter="18"></mat-spinner>
+            <span>Consultando disponibilidad…</span>
+          </div>
+        } @else if (disponibilidadDesconocida()) {
+          <div class="aviso aviso-error">Disponibilidad desconocida — no se pudo consultar la cuenta.</div>
+        } @else if (disponibilidad(); as disp) {
+          <div class="disponibilidad-grid">
+            <div class="disponibilidad-item">
+              <span class="label">Saldo contable</span>
+              <span class="value">{{ disp.saldo | number: '1.2-2' }}</span>
+            </div>
+            <div class="disponibilidad-item">
+              <span class="label">Comprometido (pagos ya aprobados sin confirmar)</span>
+              <span class="value">{{ disp.comprometido | number: '1.2-2' }}</span>
+            </div>
+            <div class="disponibilidad-item" [class.excede]="excedeDisponible()">
+              <span class="label">Disponible real</span>
+              <span class="value">{{ disp.disponible | number: '1.2-2' }}</span>
+            </div>
+          </div>
+          @if (excedeDisponible()) {
+            <div class="aviso aviso-advertencia">
+              <mat-icon>warning</mat-icon>
+              <span>El total seleccionado ({{ totalSeleccionado() | number: '1.2-2' }}) supera el disponible real de esta cuenta. El backend rechazará la aprobación si no ajusta la selección o elige otra cuenta.</span>
+            </div>
+          }
+        }
+      }
+
+      @if (errorAprobar()) {
+        <div class="aviso aviso-error">{{ errorAprobar() }}</div>
+      }
+
+      <div class="actions">
+        <button mat-raised-button color="primary" [disabled]="!puedeAprobar()" (click)="aprobar()">
+          @if (aprobando()) {
+            <mat-spinner diameter="18"></mat-spinner>
+          } @else {
+            <mat-icon>check_circle</mat-icon>
+          }
+          Aprobar {{ seleccionados().size }} pago(s) — {{ totalSeleccionado() | number: '1.2-2' }}
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

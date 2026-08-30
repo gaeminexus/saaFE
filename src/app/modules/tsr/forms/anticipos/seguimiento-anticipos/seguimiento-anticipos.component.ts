@@ -57,6 +57,15 @@ export class SeguimientoAnticiposComponent {
   /** Ids de los anticipos con el detalle de cruces desplegado. */
   expandidos = signal<Set<number>>(new Set());
 
+  solicitandoDevolucionId = signal<number | null>(null);
+  /**
+   * Solo de la sesión de pantalla: el backend todavía no distingue un estado
+   * "devolución en curso" para el anticipo (§ítem 3 del rediseño de
+   * aprobación de pagos, endpoint sin confirmar) — esto es nada más para no
+   * dejar pedir la misma devolución dos veces sin recargar.
+   */
+  private devolucionesSolicitadas = signal<Set<number>>(new Set());
+
   cambiarTipo(tipo: TipoTitular): void {
     if (this.tipo() === tipo) return;
     this.tipo.set(tipo);
@@ -218,6 +227,51 @@ export class SeguimientoAnticiposComponent {
       },
       error: (err: Error) => {
         this.anulandoId.set(null);
+        this.snackBar.open(err.message, 'Cerrar', { duration: 6000 });
+      },
+    });
+  }
+
+  // ── Devolución (CXC_DEVOLUCION_CLIENTE, §ítem 3 del rediseño de aprobación de pagos) ──────
+
+  puedeSolicitarDevolucion(a: AnticipoSeguimiento): boolean {
+    return this.tipo() === 'cliente'
+      && Number(a?.saldo ?? 0) > 0
+      && Number(a?.estado ?? 0) !== this.ESTADO_ANULADO
+      && !this.devolucionesSolicitadas().has(a.id);
+  }
+
+  yaSolicitoDevolucion(a: AnticipoSeguimiento): boolean {
+    return this.devolucionesSolicitadas().has(a.id);
+  }
+
+  /**
+   * POST /antc/solicitarDevolucion — endpoint propuesto por el prompt de
+   * rediseño de aprobación de pagos, NO confirmado contra el backend. Si el
+   * path o el contrato difieren, esto va a fallar con un error legible (vía
+   * `mensajeDeError`), no silenciosamente.
+   */
+  solicitarDevolucion(a: AnticipoSeguimiento): void {
+    const id = Number(a?.id ?? 0);
+    const valor = Number(a?.saldo ?? 0);
+    if (!id || valor <= 0) return;
+
+    this.solicitandoDevolucionId.set(id);
+    this.anticipoS.solicitarDevolucionCliente({
+      idAnticipo: id,
+      valor,
+      usuario: this.idUsuarioSesion(),
+    }).subscribe({
+      next: (resp) => {
+        this.solicitandoDevolucionId.set(null);
+        this.devolucionesSolicitadas.update((set) => new Set(set).add(id));
+        this.snackBar.open(
+          resp?.mensaje || 'Devolución solicitada. Se aprueba desde Tesorería → Procesos → Aprobación de pagos.',
+          'Cerrar', { duration: 6000 },
+        );
+      },
+      error: (err: Error) => {
+        this.solicitandoDevolucionId.set(null);
         this.snackBar.open(err.message, 'Cerrar', { duration: 6000 });
       },
     });

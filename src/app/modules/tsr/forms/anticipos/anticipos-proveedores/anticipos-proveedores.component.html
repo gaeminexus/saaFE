@@ -83,57 +83,28 @@
           </mat-form-field>
 
           <mat-form-field appearance="outline">
-            <mat-label>Cuenta Bancaria (Origen) *</mat-label>
-            <mat-select [(ngModel)]="formCuentaBancaria" (ngModelChange)="onCambioCuentaOrigen()">
+            <mat-label>Cuenta Bancaria del Proveedor</mat-label>
+            <mat-select [(ngModel)]="formCuentaDestino"
+                        [disabled]="cargandoCuentasDestino() || cuentasDestino().length === 0">
               <mat-option [value]="null">-- Seleccione --</mat-option>
-              @for (cb of cuentasBancarias(); track cb.codigo) {
-                <mat-option [value]="cb">{{ cb.numeroCuenta }} — {{ $any(cb.banco)?.nombre }}</mat-option>
+              @for (cd of cuentasDestino(); track cd.codigo) {
+                <mat-option [value]="cd.codigo">{{ etiquetaCuentaDestino(cd) }}</mat-option>
               }
             </mat-select>
+            @if (cargandoCuentasDestino()) {
+              <mat-hint>Cargando cuentas del proveedor…</mat-hint>
+            } @else if (cuentasDestino().length === 0) {
+              <mat-hint class="hint-warn">El proveedor no tiene cuentas bancarias registradas.</mat-hint>
+            } @else {
+              <mat-hint>Necesaria si termina pagándose por transferencia</mat-hint>
+            }
           </mat-form-field>
 
-          <mat-form-field appearance="outline">
-            <mat-label>Forma de pago *</mat-label>
-            <mat-select [ngModel]="formaPago()" (ngModelChange)="formaPago.set($event); onCambioFormaPago()">
-              <mat-option [value]="FormaPagoAplicacion.TRANSFERENCIA">{{ FORMA_PAGO_LABELS[FormaPagoAplicacion.TRANSFERENCIA] }}</mat-option>
-              <mat-option [value]="FormaPagoAplicacion.DEBITO_AUTOMATICO">{{ FORMA_PAGO_LABELS[FormaPagoAplicacion.DEBITO_AUTOMATICO] }}</mat-option>
-              @if (puedePagarConCheque) {
-                <mat-option [value]="FormaPagoAplicacion.CHEQUE">{{ FORMA_PAGO_LABELS[FormaPagoAplicacion.CHEQUE] }}</mat-option>
-              }
-            </mat-select>
-          </mat-form-field>
-
-          @if (formaPago() === FormaPagoAplicacion.TRANSFERENCIA) {
-            <mat-form-field appearance="outline">
-              <mat-label>Cuenta Bancaria del Proveedor *</mat-label>
-              <mat-select [(ngModel)]="formCuentaDestino"
-                          [disabled]="cargandoCuentasDestino() || cuentasDestino().length === 0">
-                <mat-option [value]="null">-- Seleccione --</mat-option>
-                @for (cd of cuentasDestino(); track cd.codigo) {
-                  <mat-option [value]="cd.codigo">{{ etiquetaCuentaDestino(cd) }}</mat-option>
-                }
-              </mat-select>
-              @if (cargandoCuentasDestino()) {
-                <mat-hint>Cargando cuentas del proveedor…</mat-hint>
-              } @else if (cuentasDestino().length === 0) {
-                <mat-hint class="hint-warn">El proveedor no tiene cuentas bancarias registradas.</mat-hint>
-              }
-            </mat-form-field>
-          }
-
-          @if (formaPago() === FormaPagoAplicacion.CHEQUE) {
-            <div class="span-2 cheque-info">
-              @if (cargandoCheque()) {
-                <mat-spinner diameter="18" style="display:inline-block;margin-right:6px"></mat-spinner>
-                Consultando el siguiente cheque disponible…
-              } @else if (chequeSiguiente(); as ch) {
-                <mat-icon>check_circle</mat-icon>
-                Se girará el cheque N° {{ ch.numero }}
-              } @else if (errorCheque()) {
-                <span class="msg-error">{{ errorCheque() }}</span>
-              }
-            </div>
-          }
+          <div class="span-2 msg-info">
+            La solicitud queda pendiente de aprobación: la cuenta bancaria de origen y la forma de
+            pago (transferencia, cheque o débito automático) se eligen en
+            Tesorería → Procesos → Aprobación de pagos, donde tesorería aprueba en lote.
+          </div>
 
           <mat-form-field appearance="outline">
             <mat-label>Fecha de Anticipo *</mat-label>
@@ -172,7 +143,7 @@
 
       <mat-card-actions class="card-acciones">
         <button mat-flat-button color="primary" (click)="procesarAnticipo()"
-                [disabled]="procesando() || !!exitoProceso() || (formaPago() === FormaPagoAplicacion.CHEQUE && (!chequeSiguiente() || !!errorCheque()))">
+                [disabled]="procesando() || !!exitoProceso()">
           @if (procesando()) { <mat-spinner diameter="18" style="display:inline-block;margin-right:6px"></mat-spinner> }
           <mat-icon>save</mat-icon>
           Guardar Anticipo

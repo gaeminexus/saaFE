@@ -16,7 +16,6 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { AppStateService } from '../../../../../shared/services/app-state.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
-import { usuarioSesion } from '../../../../../shared/services/usuario-sesion';
 import { Periodo } from '../../../../cnt/model/periodo';
 import { PeriodoService } from '../../../../cnt/service/periodo.service';
 import { CuentaBancaria } from '../../../model/cuenta-bancaria';
@@ -38,12 +37,18 @@ const TOLERANCIA_DIFERENCIA = 0.01;
  * Fila unificada para la tabla de pendientes. El backend las devuelve en dos
  * arrays separados (`pendientesAsiento`/`pendientesExtracto`, con distintos
  * campos de id cada uno) — se combinan acá solo para pintar una tabla, pero
- * el payload de cierre sigue mandando cada una por su campo real
- * (`idMovimientoBanco` o `idDetalleExtracto`, nunca ambos).
+ * el payload de cierre sigue mandando cada una por su campo real: las de
+ * origen LIBROS anclan en `idDetalleAsiento` (siempre presente),
+ * `idMovimientoBanco` viaja aparte como dato informativo opcional; las de
+ * origen EXTRACTO anclan en `idDetalleExtracto`. Toda fila es declarable
+ * desde la corrección del 2026-08-27 (§7bis/§10.4 en saaBE) — ya no existe
+ * el caso de una línea de libros sin `MovimientoBanco` que no se pueda
+ * declarar.
  */
 interface FilaPendiente {
   key: string;
   origen: 'LIBROS' | 'EXTRACTO';
+  idDetalleAsiento: number | null;
   idMovimientoBanco: number | null;
   idDetalleExtracto: number | null;
   fecha: unknown;
@@ -51,8 +56,6 @@ interface FilaPendiente {
   valor: number;
   esArrastrada: boolean;
   tipoSugerido: number | null;
-  /** false cuando la línea de libros no tiene MovimientoBanco asociado — no se puede declarar (§10.2 en saaBE). */
-  declarable: boolean;
 }
 
 /** Estado de clasificación de una fila pendiente, editable por el usuario. */
@@ -164,10 +167,10 @@ export class ConciliacionCierreComponent implements OnInit {
     return d != null && Math.abs(d) <= TOLERANCIA_DIFERENCIA;
   });
 
-  /** Ningún pendiente declarable puede quedar sin declarar — igual que exige `verificar()` en el backend (§10.2). */
+  /** Ningún pendiente puede quedar sin declarar — igual que exige `verificar()` en el backend (§10.2). */
   todoDeclarado = computed(() => {
     const estados = this.estadoFilas();
-    return this.filas().every((f) => !f.declarable || estados[f.key]?.declarada);
+    return this.filas().every((f) => estados[f.key]?.declarada);
   });
 
   puedeCerrar = computed(() => !!this.preparado() && this.cuadra() && this.todoDeclarado() && !this.cerrando());
@@ -230,6 +233,7 @@ export class ConciliacionCierreComponent implements OnInit {
         const filasAsiento: FilaPendiente[] = (resp.pendientesAsiento ?? []).map((p) => ({
           key: `asiento-${p.idDetalleAsiento}`,
           origen: 'LIBROS',
+          idDetalleAsiento: p.idDetalleAsiento,
           idMovimientoBanco: p.idMovimientoBanco,
           idDetalleExtracto: null,
           fecha: p.fecha,
@@ -237,11 +241,11 @@ export class ConciliacionCierreComponent implements OnInit {
           valor: p.valor,
           esArrastrada: p.esArrastrada,
           tipoSugerido: p.tipoSugerido,
-          declarable: p.idMovimientoBanco != null,
         }));
         const filasExtracto: FilaPendiente[] = (resp.pendientesExtracto ?? []).map((p) => ({
           key: `extracto-${p.idDetalleExtracto}`,
           origen: 'EXTRACTO',
+          idDetalleAsiento: null,
           idMovimientoBanco: null,
           idDetalleExtracto: p.idDetalleExtracto,
           fecha: p.fecha,
@@ -249,7 +253,6 @@ export class ConciliacionCierreComponent implements OnInit {
           valor: p.valor,
           esArrastrada: p.esArrastrada,
           tipoSugerido: p.tipoSugerido,
-          declarable: true,
         }));
         const todasLasFilas = [...filasAsiento, ...filasExtracto];
         this.filas.set(todasLasFilas);
@@ -258,7 +261,7 @@ export class ConciliacionCierreComponent implements OnInit {
         for (const f of todasLasFilas) {
           estados[f.key] = {
             // Proponer marcada con el tipo sugerido: el usuario no debería clasificar a mano.
-            declarada: f.declarable && f.tipoSugerido != null,
+            declarada: f.tipoSugerido != null,
             tipo: f.tipoSugerido ?? TipoTransito.DEPOSITO_EN_TRANSITO,
             observacion: '',
           };
@@ -310,7 +313,8 @@ export class ConciliacionCierreComponent implements OnInit {
     const partidas: PartidaDeclarada[] = this.filas()
       .filter((f) => estados[f.key]?.declarada)
       .map((f) => ({
-        idMovimientoBanco: f.origen === 'LIBROS' ? f.idMovimientoBanco : undefined,
+        idDetalleAsiento: f.origen === 'LIBROS' ? f.idDetalleAsiento : undefined,
+        idMovimientoBanco: f.origen === 'LIBROS' ? (f.idMovimientoBanco ?? undefined) : undefined,
         idDetalleExtracto: f.origen === 'EXTRACTO' ? f.idDetalleExtracto : undefined,
         tipo: estados[f.key].tipo,
         observacion: estados[f.key].observacion.trim() || undefined,
@@ -321,7 +325,7 @@ export class ConciliacionCierreComponent implements OnInit {
       idPeriodo: periodo.codigo,
       partidas,
       saldoExtracto,
-      usuario: usuarioSesion(),
+      idUsuario: this.appState.getIdUsuario(),
     };
 
     this.cerrando.set(true);

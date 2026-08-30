@@ -174,9 +174,23 @@ table.tabla-resultados {
   }
   .cp-item.destacado .v { color: #0d7a4f; }
   .cp-nota { font-size: 11px; color: #a0aec0; margin-top: 1px; }
+}
 
-  /* Desglose de lo capitalizado: mismo bloque pero con menos margen arriba, va pegado al primero. */
-  &.capitalizado { margin-top: 0.6rem; }
+/* ---------- desglose de lo capitalizado, como ecuación: saldo + mora + interés vencido = capital de arranque ---------- */
+.desglose-capitalizacion {
+  display: flex; gap: 0.8rem; flex-wrap: wrap; align-items: center;
+  background: #fff; border-radius: 10px; padding: 0.85rem 1.1rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1); margin-top: 0.6rem;
+
+  .dc-item { display: flex; flex-direction: column; gap: 2px; }
+  .dc-signo { font-size: 18px; font-weight: 700; color: #a0aec0; }
+  .l { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.05em; color: #718096; font-weight: 700; }
+  .v { font-size: 15px; font-weight: 600; font-family: 'Roboto Mono', monospace; color: #1a202c; }
+
+  .dc-item.dc-total {
+    .l { color: #667eea; }
+    .v { color: #667eea; font-weight: 700; }
+  }
 }
 
 /* ---------- total a pagar antes/después: la comparativa que da sentido a la pantalla ---------- */

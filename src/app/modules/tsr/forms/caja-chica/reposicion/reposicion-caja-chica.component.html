@@ -70,58 +70,15 @@
 
       <div class="row">
         <mat-form-field appearance="outline">
-          <mat-label>Cuenta bancaria de origen</mat-label>
-          <mat-select [(ngModel)]="cuentaOrigen" name="cuentaOrigen" (ngModelChange)="onCambioCuentaOrigen()">
-            @for (c of cuentasBancarias(); track c.codigo) {
-              <mat-option [value]="c">{{ c.banco?.nombre }} — {{ c.numeroCuenta }}</mat-option>
-            }
-          </mat-select>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline">
           <mat-label>Descripción</mat-label>
           <input matInput [(ngModel)]="descripcion" name="descripcion" />
         </mat-form-field>
       </div>
 
-      <div class="fila-check">
-        <label class="radio-label">Forma de pago</label>
-        <mat-radio-group [ngModel]="regFormaPago()" name="regFormaPago"
-                          (ngModelChange)="regFormaPago.set($event); onCambioFormaPago()">
-          <mat-radio-button [value]="FormaPagoAplicacion.DEBITO_AUTOMATICO">Débito automático</mat-radio-button>
-          @if (cuentaOrigenManejaChequera) {
-            <mat-radio-button [value]="FormaPagoAplicacion.CHEQUE">Cheque</mat-radio-button>
-          }
-        </mat-radio-group>
+      <div class="mensaje-info">
+        <mat-icon>info</mat-icon>
+        <span>La cuenta de origen y la forma de pago las asigna tesorería al aprobar en su bandeja.</span>
       </div>
-
-      @if (regFormaPago() === FormaPagoAplicacion.CHEQUE) {
-        @if (regChequeError()) {
-          <div class="mensaje-error">
-            <mat-icon>error_outline</mat-icon>
-            <span>{{ regChequeError() }}</span>
-          </div>
-        } @else if (regChequeSiguiente() != null) {
-          <div class="mensaje-info">
-            <mat-icon>receipt_long</mat-icon>
-            <span>Se girará el cheque N° {{ regChequeSiguiente() }}.</span>
-          </div>
-        }
-      } @else {
-        <div class="row">
-          <mat-form-field appearance="outline">
-            <mat-label>Referencia</mat-label>
-            <input matInput [(ngModel)]="referencia" name="referencia" placeholder="N° de transacción o convenio" />
-          </mat-form-field>
-        </div>
-      }
-
-      @if (regFormaPago() === FormaPagoAplicacion.DEBITO_AUTOMATICO) {
-        <div class="mensaje-info">
-          <mat-icon>info</mat-icon>
-          <span>El pago se confirma y contabiliza de inmediato.</span>
-        </div>
-      }
 
       <div class="form-actions">
         <button mat-raised-button color="primary" (click)="guardar()" [disabled]="!puedeGuardar">

@@ -134,7 +134,8 @@ export class GruposCajasComponent implements OnInit {
       codigo: this.selectedRow.codigo,
       nombre: this.selectedRow.nombre,
       fechaIngreso: this.selectedRow.fechaIngreso,
-      fechaInactivo: new Date().toISOString(),
+      // LocalDateTime en el backend; nunca `.toISOString()` (UTC, termina en "Z" — regla de CLAUDE.md).
+      fechaInactivo: this.funcionesDatos.formatearFechaParaBackend(new Date()),
       estado: this.ESTADO_INACTIVO,
       empresa: this.selectedRow.empresa,
     };
@@ -188,7 +189,7 @@ export class GruposCajasComponent implements OnInit {
     const payload = {
       codigo: esNuevo ? undefined : this.selectedRow!.codigo,
       nombre: nombre,
-      fechaIngreso: esNuevo ? new Date().toISOString() : this.selectedRow!.fechaIngreso,
+      fechaIngreso: esNuevo ? this.funcionesDatos.formatearFechaParaBackend(new Date()) : this.selectedRow!.fechaIngreso,
       estado: this.selectedRow!.estado,
       empresa: { codigo: parseInt(localStorage.getItem('empresaId') || '1') },
     };

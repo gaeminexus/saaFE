@@ -223,11 +223,6 @@ export class MenucreditosComponent {
           route: '/menucreditos/pago-cuotas',
         },
         {
-          displayName: 'Cruce Valores',
-          iconName: 'repeat_on',
-          route: '/menucreditos/cruce-valores',
-        },
-        {
           displayName: 'Cruce de Valores',
           iconName: 'sync_alt',
           route: '/menucreditos/cruce-de-valores',
@@ -241,6 +236,16 @@ export class MenucreditosComponent {
           displayName: 'Cobros Personales',
           iconName: 'point_of_sale',
           route: '/menucreditos/cobros-personales',
+        },
+        {
+          displayName: 'Bandeja de Contabilidad',
+          iconName: 'fact_check',
+          route: '/menucreditos/bandeja-contabilidad',
+        },
+        {
+          displayName: 'Proceso de Crédito',
+          iconName: 'rule',
+          route: '/menucreditos/proceso-credito',
         },
         {
           displayName: 'Dash',

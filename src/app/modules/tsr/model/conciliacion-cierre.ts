@@ -8,6 +8,13 @@
  * array `pendientes` con campo `origen`), que resultó incorrecto en casi
  * todos los detalles salvo el concepto general. Ver también §3/§10.2 para
  * la fórmula corregida.
+ *
+ * §10.4 (mismo día) corrigió el §10.3 inicial en tres puntos: el ancla de
+ * `PartidaDeclarada` para tipo 1/2 pasó de `idMovimientoBanco` a
+ * `idDetalleAsiento` (toda línea de libros es declarable, no solo el ~8%
+ * con `MovimientoBanco`), `tipoSugerido` dejó de venir `null`, y `usuario`
+ * (texto) pasó a `idUsuario` (numérico) en `cerrar`/`anular`. Este archivo
+ * ya refleja esa segunda corrección.
  */
 
 export enum TipoTransito {
@@ -76,12 +83,17 @@ export interface PendienteExtracto {
 export interface PendienteAsiento {
   idDetalleAsiento: number;
   idAsiento: number;
-  /** null = esta línea NO se puede declarar en tránsito (sin MovimientoBanco asociado, ver §10.2). */
+  /**
+   * Informativo únicamente (corregido el 2026-08-27, §7bis/§10.4): el ancla real para declarar
+   * es `idDetalleAsiento`, que siempre existe. `idMovimientoBanco` puede venir `null` (~92% de
+   * los casos) sin que eso impida declarar la línea.
+   */
   idMovimientoBanco: number | null;
   fecha: unknown;
   descripcion: string;
   valor: number;
   esArrastrada: boolean;
+  /** Ya no viene `null` desde la corrección del 2026-08-27: se deduce siempre del signo del detalle. */
   tipoSugerido: number | null;
 }
 
@@ -97,8 +109,15 @@ export interface PrepararCierreResponse {
   diferenciaSugerida: number | null;
 }
 
-/** Una partida declarada, dentro del body de POST /cnct/transito/cerrar. Exactamente uno de idMovimientoBanco/idDetalleExtracto va poblado; el backend calcula `valor` a partir de la referencia, no se manda desde el frontend. */
+/**
+ * Una partida declarada, dentro del body de POST /cnct/transito/cerrar. Corregido el 2026-08-27
+ * (§7bis/§10.4): el ancla de tipo 1/2 es `idDetalleAsiento` (siempre presente en una línea de
+ * libros); `idMovimientoBanco` es informativo opcional, se manda solo si se conoce, nunca es
+ * obligatorio. Tipo 3/4 usa `idDetalleExtracto`. El backend calcula `valor` a partir de la
+ * referencia, no se manda desde el frontend.
+ */
 export interface PartidaDeclarada {
+  idDetalleAsiento?: number | null;
   idMovimientoBanco?: number | null;
   idDetalleExtracto?: number | null;
   tipo: number;
@@ -110,8 +129,8 @@ export interface CerrarConciliacionRequest {
   idPeriodo: number;
   partidas: PartidaDeclarada[];
   saldoExtracto: number;
-  /** Nombre de usuario (string) — este endpoint puntual no pide idUsuario numérico. */
-  usuario: string;
+  /** Numérico (SCP.PJRQ) — corregido el 2026-08-27, la primera versión pedía un nombre en texto. */
+  idUsuario: number;
 }
 
 export interface CerrarConciliacionResponse {
@@ -129,7 +148,8 @@ export interface CerrarConciliacionResponse {
 
 export interface AnularCierreRequest {
   motivo: string;
-  usuario: string;
+  /** Numérico (SCP.PJRQ) — mismo criterio que {@link CerrarConciliacionRequest.idUsuario}. */
+  idUsuario: number;
 }
 
 /** Fila de GET /cnct/transito/antiguas/{idEmpresa} — el backend ya trae los días calculados. */

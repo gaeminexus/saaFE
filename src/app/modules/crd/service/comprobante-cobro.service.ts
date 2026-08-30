@@ -44,6 +44,22 @@ export class ComprobanteCobroService {
   }
 
   /**
+   * Carpeta del comprobante de un cobro del circuito de aprobación de contabilidad (CRD.CBCR),
+   * al corregirlo desde "Proceso de crédito" para reenviarlo. Mismo formato de ejemplo que trae
+   * el contrato (`cobros/2026/08/...`, ver docs/crd/API-COBROS-APROBACION-CONTABILIDAD.md §4).
+   */
+  carpetaDeCobroCredito(idCobro: number, fecha: Date = new Date()): string {
+    const anio = fecha.getFullYear();
+    const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+    return `cobros/${anio}/${mes}/${idCobro}`;
+  }
+
+  /** Carpeta del comprobante único de un cobro que cubre varios préstamos del mismo partícipe. */
+  carpetaDeCobroMultiple(idEntidad: number): string {
+    return `CRD/PAGOS/MULTIPLE/${idEntidad}`;
+  }
+
+  /**
    * Devuelve el motivo por el que el archivo no sirve como comprobante, o `null` si está bien.
    *
    * El `accept` del input es solo un filtro sugerido en el diálogo del sistema —el usuario puede

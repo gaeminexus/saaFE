@@ -1,0 +1,72 @@
+.acreditar-vacaciones {
+  .explicacion {
+    color: #444;
+    margin-bottom: 16px;
+    max-width: 640px;
+  }
+
+  .form-grid {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .aviso {
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin-bottom: 12px;
+    font-size: 0.9rem;
+  }
+  .aviso-error {
+    background: #fdecea;
+    color: #611a15;
+  }
+
+  .actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .actions-secundarias {
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid #e0e0e0;
+  }
+
+  .seccion-revertir {
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid #e0e0e0;
+
+    h3 {
+      margin: 0 0 4px;
+      font-size: 1rem;
+    }
+  }
+
+  .resultado-box {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    border-radius: 8px;
+    background: #e6f4ea;
+    color: #1e4620;
+    margin-bottom: 16px;
+
+    mat-icon {
+      font-size: 32px;
+      width: 32px;
+      height: 32px;
+    }
+
+    .resultado-numero {
+      font-size: 1.3rem;
+      font-weight: 700;
+    }
+    .resultado-detalle {
+      font-size: 0.85rem;
+      opacity: 0.85;
+    }
+  }
+}

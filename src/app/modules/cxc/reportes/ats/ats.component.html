@@ -1,0 +1,234 @@
+<div class="ats-container">
+  <div class="page-header">
+    <mat-icon class="header-icon">summarize</mat-icon>
+    <div>
+      <h1>ATS y Cuadre 103/104</h1>
+      <p class="subtitle">
+        Genera el Anexo Transaccional Simplificado y da los totales de apoyo para contrastar
+        contra los formularios 103/104 del SRI. No genera esos formularios — se llenan en el
+        portal del SRI.
+      </p>
+    </div>
+  </div>
+
+  <mat-card class="filtros-card">
+    <mat-card-content>
+      <div class="filtros-row">
+        <mat-form-field appearance="outline">
+          <mat-label>Facturador</mat-label>
+          <mat-select [ngModel]="facturadorSeleccionado()" (ngModelChange)="facturadorSeleccionado.set($event)">
+            @for (f of facturadores(); track f.id) {
+              <mat-option [value]="f">{{ etiquetaFacturador(f) }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Período</mat-label>
+          <input matInput type="month" [ngModel]="periodoMes()" (ngModelChange)="periodoMes.set($event)" />
+        </mat-form-field>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="generar-card">
+    <mat-card-title>Generar ATS</mat-card-title>
+    <mat-card-content>
+      <div class="actions">
+        <button mat-raised-button color="primary" [disabled]="!puedeGenerar()" (click)="generarAts()">
+          @if (generando()) {
+            <mat-spinner diameter="20"></mat-spinner>
+          } @else {
+            <mat-icon>description</mat-icon>
+          }
+          Generar ATS
+        </button>
+      </div>
+
+      @if (errorGeneracion()) {
+        <div class="aviso aviso-error">
+          <mat-icon>error_outline</mat-icon>
+          <span>{{ errorGeneracion() }}</span>
+        </div>
+      }
+
+      @if (resultadoGeneracion(); as res) {
+        <div class="resumen-grid">
+          <div class="resumen-item">
+            <span class="label">Compras</span>
+            <span class="value">{{ res.totalCompras }}</span>
+          </div>
+          <div class="resumen-item">
+            <span class="label">Ventas</span>
+            <span class="value">{{ res.totalVentas }}</span>
+          </div>
+          <div class="resumen-item">
+            <span class="label">Anulados</span>
+            <span class="value">{{ res.totalAnulados }}</span>
+          </div>
+          <div class="resumen-item">
+            <span class="label">Total ventas declarado</span>
+            <span class="value">{{ res.totalVentasDeclarado | number: '1.2-2' }}</span>
+          </div>
+        </div>
+
+        @if (res.avisos && res.avisos.length > 0) {
+          <div class="avisos-box">
+            <div class="avisos-titulo">
+              <mat-icon>warning</mat-icon>
+              <span>{{ res.avisos.length }} aviso(s) — revisar antes de enviar el ZIP al SRI</span>
+            </div>
+            <ul class="lista-avisos">
+              @for (a of res.avisos; track a) {
+                <li>{{ a }}</li>
+              }
+            </ul>
+          </div>
+        }
+
+        <div class="aviso aviso-validador">
+          <mat-icon>info</mat-icon>
+          <span>
+            Este ZIP no se ha validado contra el validador oficial del SRI. Verifíquelo ahí antes
+            de presentarlo.
+          </span>
+        </div>
+
+        <div class="actions">
+          <button mat-stroked-button (click)="descargarZip()">
+            <mat-icon>download</mat-icon>
+            Descargar {{ res.nombreArchivo }}
+          </button>
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="cuadres-card">
+    <mat-card-title>Cuadre de apoyo 103/104</mat-card-title>
+    <mat-card-content>
+      <div class="actions">
+        <button mat-raised-button (click)="consultarCuadres()" [disabled]="!puedeConsultarCuadres()">
+          @if (cargandoCuadre104() || cargandoCuadre103()) {
+            <mat-spinner diameter="20"></mat-spinner>
+          } @else {
+            <mat-icon>fact_check</mat-icon>
+          }
+          Consultar cuadre
+        </button>
+      </div>
+
+      <!-- 104 -->
+      <h3>Formulario 104 — IVA</h3>
+      @if (errorCuadre104()) {
+        <div class="aviso aviso-error">
+          <mat-icon>error_outline</mat-icon>
+          <span>{{ errorCuadre104() }}</span>
+        </div>
+      }
+      @if (cuadre104(); as c104) {
+        <div class="tabla-scroll">
+          <table class="tabla-cuadre">
+            <thead>
+              <tr>
+                <th>Casilla</th>
+                <th>Concepto</th>
+                <th class="num">Bruto</th>
+                <th class="num">Neto</th>
+                <th class="num">Impuesto</th>
+                <th class="num">Valor</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (c of c104.casillas; track c.casilla) {
+                <tr>
+                  <td class="mono">{{ c.casilla }}</td>
+                  <td>{{ c.concepto }}</td>
+                  <td class="num">{{ c.bruto != null ? (c.bruto | number: '1.2-2') : '—' }}</td>
+                  <td class="num">{{ c.neto != null ? (c.neto | number: '1.2-2') : '—' }}</td>
+                  <td class="num">{{ c.impuesto != null ? (c.impuesto | number: '1.2-2') : '—' }}</td>
+                  <td class="num">{{ c.valor != null ? (c.valor | number: '1.2-2') : '—' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        @if (c104.noDisponibles && c104.noDisponibles.length > 0) {
+          <div class="no-disponibles-box">
+            <div class="avisos-titulo">
+              <mat-icon>block</mat-icon>
+              <span>Casillas que el sistema no puede calcular</span>
+            </div>
+            <ul class="lista-avisos">
+              @for (n of c104.noDisponibles; track n.casilla) {
+                <li><strong>{{ n.casilla }}</strong> — {{ n.motivo }}</li>
+              }
+            </ul>
+          </div>
+        }
+
+        @if (c104.avisos && c104.avisos.length > 0) {
+          <div class="avisos-box">
+            <div class="avisos-titulo">
+              <mat-icon>warning</mat-icon>
+              <span>Avisos</span>
+            </div>
+            <ul class="lista-avisos">
+              @for (a of c104.avisos; track a) {
+                <li>{{ a }}</li>
+              }
+            </ul>
+          </div>
+        }
+      }
+
+      <!-- 103 -->
+      <h3>Formulario 103 — Retenciones en la fuente</h3>
+      @if (errorCuadre103()) {
+        <div class="aviso aviso-error">
+          <mat-icon>error_outline</mat-icon>
+          <span>{{ errorCuadre103() }}</span>
+        </div>
+      }
+      @if (cuadre103(); as c103) {
+        <div class="tabla-scroll">
+          <table class="tabla-cuadre">
+            <thead>
+              <tr>
+                <th>Código de retención</th>
+                <th>Casilla sugerida</th>
+                <th class="num">Base imponible</th>
+                <th class="num">Valor retenido</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (p of c103.porCodigo; track p.codRetencion) {
+                <tr>
+                  <td class="mono">{{ p.codRetencion }}</td>
+                  <td class="mono">{{ p.casillaSugerida ?? '—' }}</td>
+                  <td class="num">{{ p.baseImponible | number: '1.2-2' }}</td>
+                  <td class="num">{{ p.valorRetenido | number: '1.2-2' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        @if (c103.avisos && c103.avisos.length > 0) {
+          <div class="avisos-box">
+            <div class="avisos-titulo">
+              <mat-icon>warning</mat-icon>
+              <span>Avisos</span>
+            </div>
+            <ul class="lista-avisos">
+              @for (a of c103.avisos; track a) {
+                <li>{{ a }}</li>
+              }
+            </ul>
+          </div>
+        }
+      }
+    </mat-card-content>
+  </mat-card>
+</div>

@@ -67,8 +67,14 @@ export interface RegistrarEgresoRequest {
   valor: number;
   /** yyyy-MM-dd. Fecha programada del pago, o del débito si es automático. */
   fecha?: string;
-  idCuentaBancariaOrigen: number;
-  /** Obligatorio salvo en débito automático. Cuenta CTBN del beneficiario. */
+  /**
+   * Opcional desde el rediseño de aprobación (docs/logica-negocio/pagos/PLAN-REDISENO-APROBACION-PAGOS.md
+   * §3.1/§3.2/§7 en saaBE): sin cuenta, el pago nace `POR_APROBAR` y la
+   * cuenta + forma de pago se eligen al aprobar en lote (CxP → Procesos →
+   * Aprobación de pagos), no al registrar el egreso.
+   */
+  idCuentaBancariaOrigen?: number;
+  /** Cuenta CTBN del beneficiario, si se conoce ya (útil para la transferencia eventual). */
   idCuentaDestinoTitular?: number;
   /** true cuando el banco ya debitó la cuenta: contabiliza en esta llamada. */
   debitoAutomatico?: boolean;

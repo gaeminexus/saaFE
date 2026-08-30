@@ -349,6 +349,24 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
   }
 
   /**
+   * Abre la pantalla de impresión de certificados del partícipe (docs/crd/API-CERTIFICADOS-PARTICIPE.md).
+   * Solo necesita el código de entidad, no el de partícipe.
+   */
+  abrirCertificados(): void {
+    if (!this.entidadEncontrada || !this.entidadEncontrada.codigo) {
+      this.snackBar.open('No hay información de entidad para emitir certificados', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    this.router.navigate(['/menucreditos/certificados-participe'], {
+      queryParams: {
+        codigoEntidad: this.entidadEncontrada.codigo,
+        returnUrl: `/menucreditos/participe-dash`,
+      },
+    });
+  }
+
+  /**
    * Genera el PDF según la opción seleccionada
    */
   private generarPDFConDetalles(conDetalles: boolean): void {

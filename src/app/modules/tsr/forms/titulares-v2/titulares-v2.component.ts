@@ -530,24 +530,45 @@ export class TitularesV2Component implements OnInit {
       error: (err) => {
         this.estadoGuardado.set('error');
 
-        // El backend usa MensajeErrorJsonFilter: en un 409 por identificación
-        // duplicada, err (ya extraído por TitularService.handleError) trae
-        // { mensaje, titularExistente: { codigo, identificacion, nombre } }.
-        const titularExistente = err?.titularExistente ?? err?.error?.titularExistente;
-        if (titularExistente?.codigo) {
-          const mensaje = mensajeDeError(err, 'Ya existe un titular con esa identificación.');
+        // TitularServiceImpl.saveSingle solo lanza un IncomeException de
+        // TEXTO PLANO, pero la capa REST que lo captura (ws/rest/tsr/
+        // TitularRest.java:148-173) lo enriquece: el 409 trae además
+        // `titularExistente: { codigo, identificacion, nombre }`. El campo
+        // estructurado lo agrega TitularRest, no el Service — de ahí venía
+        // el error de creer que no existía. Se lee ese campo primero; el
+        // regex sobre el texto queda como fallback para la rama de
+        // TitularRest (líneas 165-172) donde no puede re-consultar el
+        // titular y solo devuelve `mensaje`.
+        const mensaje = mensajeDeError(err, 'Error al guardar');
+        const titularExistente = err?.error?.titularExistente as
+          | { codigo?: number; identificacion?: string; nombre?: string }
+          | undefined;
+        const codigoExistente = titularExistente?.codigo ?? this.extraerCodigoTitularExistente(mensaje);
+        if (codigoExistente != null) {
           const ref = this.snackBar.open(
             `${mensaje} Puede usar el registro existente y agregarle el rol que necesite.`,
             'Usar el titular existente',
             { duration: 15000 }
           );
-          ref.onAction().subscribe(() => this.usarTitularExistente(titularExistente.codigo));
+          ref.onAction().subscribe(() => this.usarTitularExistente(codigoExistente));
           return;
         }
 
-        this.snackBar.open(mensajeDeError(err, 'Error al guardar'), 'Cerrar', { duration: 3000 });
+        this.snackBar.open(mensaje, 'Cerrar', { duration: 3000 });
       },
     });
+  }
+
+  /**
+   * Extrae el código del titular existente del mensaje de duplicado
+   * ("... (código N)"). Regex tolerante a acento/mayúsculas/espacios — si no
+   * matchea, no hay botón: nunca uno que no funcione (§2 del pedido).
+   */
+  private extraerCodigoTitularExistente(mensaje: string): number | null {
+    const match = /\(\s*c[oó]digo\s+(\d+)\s*\)/i.exec(mensaje);
+    if (!match) return null;
+    const codigo = Number(match[1]);
+    return Number.isFinite(codigo) ? codigo : null;
   }
 
   /** Carga el titular duplicado que devolvió el backend y abre su edición, en vez de crear otro registro. */

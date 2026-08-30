@@ -1089,6 +1089,14 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
                 font-weight: 600;
               }
             }
+
+            &.process-info-bloqueo {
+              background: #fff3e0;
+              border-left-color: #ef6c00;
+
+              mat-icon { color: #ef6c00; }
+              p strong, p { color: #e65100; }
+            }
           }
 
           .process-button {

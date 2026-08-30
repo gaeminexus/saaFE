@@ -118,9 +118,12 @@
               <div class="selector-prestamos">
                 <span class="sp-label">Este partícipe tiene {{ prestamosOperables().length }} créditos activos:</span>
                 @for (p of prestamosOperables(); track p.codigo) {
-                  <button type="button" class="sp-chip" [class.activo]="p.codigo === prestamo.codigo"
+                  <button type="button" class="sp-chip" [class.activo]="p.codigo === prestamo.codigo" [class.con-monto]="montoIncluidoDe(p) > 0.004"
                           (click)="seleccionarPrestamo(p)">
                     #{{ p.idAsoprep }} · {{ formatMoneda(saldoTotalDe(p)) }}
+                    @if (montoIncluidoDe(p) > 0.004) {
+                      <span class="sp-monto-badge">{{ formatMoneda(montoIncluidoDe(p)) }}</span>
+                    }
                   </button>
                 }
               </div>
@@ -389,12 +392,59 @@
         </mat-card-content>
       </mat-card>
 
-      <mat-card class="confirmacion-card">
-        <mat-card-header><mat-card-title>Confirmar Pago</mat-card-title></mat-card-header>
+      @if (resultadoMultiple(); as resultado) {
+        <mat-card class="cuenta-card resumen-multiple resultado-multiple">
+          <mat-card-header><mat-card-title>Cobro registrado &middot; {{ resultado.resultados.length }} préstamos</mat-card-title></mat-card-header>
+          <mat-card-content>
+            <div class="aviso-pendiente ok">
+              <mat-icon>check_circle</mat-icon>
+              <span>
+                Se aplicó un total de <b>{{ formatMoneda(resultado.valorTotalAplicado) }}</b> sobre
+                {{ resultado.resultados.length }} préstamos de {{ resultado.nombreEntidad }}. Todavía no hay un
+                comprobante impreso para varios préstamos: este desglose es el respaldo de la operación.
+              </span>
+            </div>
+            @for (pago of resultado.resultados; track pago.idPrestamo) {
+              <div class="resultado-prestamo">
+                <div class="rp-cabecera">
+                  <span class="rp-titulo">Préstamo #{{ idAsopreDe(pago.idPrestamo) }}</span>
+                  <span class="rp-monto">{{ formatMoneda(pago.valorAplicado) }}</span>
+                </div>
+                <div class="rp-meta">
+                  Evento #{{ pago.idEvento }} &middot; Estado final: {{ nombreEstadoPrestamo(pago.estadoFinalPrestamo) }}
+                  @if (pago.prestamoCancelado) { &middot; <b>préstamo cancelado</b> }
+                  @if (pago.excedenteNoAplicado > 0.004) {
+                    &middot; <span class="rp-alerta">excedente sin aplicar: {{ formatMoneda(pago.excedenteNoAplicado) }}</span>
+                  }
+                </div>
+                <table class="tabla-resumen-prestamos rp-cuotas">
+                  <thead>
+                    <tr><th>Cuota</th><th>Estado</th><th class="num">Aplicado</th></tr>
+                  </thead>
+                  <tbody>
+                    @for (cuota of pago.cuotasAfectadas; track cuota.idCuota) {
+                      <tr>
+                        <td>{{ cuota.numeroCuota }}</td>
+                        <td>{{ nombreEstadoCuota(cuota.estadoNuevo) }}</td>
+                        <td class="num">{{ formatMoneda(cuota.totalAplicado) }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+            <button mat-raised-button color="primary" type="button" (click)="cerrarResultadoMultiple()">
+              Cerrar
+            </button>
+          </mat-card-content>
+        </mat-card>
+      } @else {
+        <mat-card class="confirmacion-card">
+          <mat-card-header><mat-card-title>Confirmar Pago</mat-card-title></mat-card-header>
 
           <mat-card-content>
-            @if (!cuentaChecked.prestamo && !cuentaChecked.cesantia && !cuentaChecked.jubilacion) {
-              <p class="texto-vacio">Selecciona al menos una cuenta (préstamo, cesantía o jubilación) para continuar.</p>
+            @if (!cobraPrestamo() && !cuentaChecked.cesantia && !cuentaChecked.jubilacion) {
+              <p class="texto-vacio">Selecciona al menos un préstamo o una cuenta de aportes para continuar.</p>
             }
 
             @if (errorOperacion(); as error) {
@@ -413,9 +463,44 @@
               </div>
             }
 
+            <!--
+              Bloque DE LA OPERACIÓN, no del crédito en pantalla: la lista de préstamos y los tres
+              totales de acá reflejan TODO lo cargado (uno o varios créditos), no solo el que se ve
+              arriba. Es el mismo bloque con 1 préstamo o con 5 — nunca dos formularios compitiendo.
+            -->
+            @if (prestamosIncluidos().length) {
+              <div class="section-label">Préstamos incluidos en el cobro</div>
+              <table class="tabla-resumen-prestamos">
+                <thead><tr><th>Préstamo</th><th class="num">Monto</th><th></th></tr></thead>
+                <tbody>
+                  @for (item of prestamosIncluidos(); track item.prestamo.codigo) {
+                    <tr>
+                      <td>#{{ item.prestamo.idAsoprep }}</td>
+                      <td class="num">{{ formatMoneda(item.monto) }}</td>
+                      <td>
+                        <button mat-icon-button type="button" (click)="quitarPrestamoIncluido(item.prestamo)" matTooltip="Quitar del cobro">
+                          <mat-icon>close</mat-icon>
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+
+            <div class="operacion-totales">
+              @if (prestamosIncluidos().length) {
+                <div class="ot-linea"><span>Total en préstamos</span><b>{{ formatMoneda(montoTotalPrestamosIncluidos()) }}</b></div>
+              }
+              @if (montoAportesSocio() > 0.004) {
+                <div class="ot-linea"><span>Aportes del socio (cesantía/jubilación)</span><b>{{ formatMoneda(montoAportesSocio()) }}</b></div>
+              }
+              <div class="ot-linea ot-total"><span>Total de la operación</span><b>{{ formatMoneda(asignado()) }}</b></div>
+            </div>
+
             <div class="section-label">Método de pago</div>
             <mat-radio-group [ngModel]="metodoPago()" (ngModelChange)="metodoPago.set($event)" class="metodo-select">
-              @if (cuentaChecked.prestamo) {
+              @if (cobraPrestamo() && prestamosIncluidos().length <= 1) {
                 <mat-radio-button value="debito" class="metodo-option">
                   <div class="m-title">Débito de Cuenta de Aportes</div>
                   <div class="m-desc">Descuenta del saldo acumulado de cesantía o jubilación del socio.</div>
@@ -430,6 +515,9 @@
                 <div class="m-desc">El socio presenta comprobante de depósito en ventanilla o cajero.</div>
               </mat-radio-button>
             </mat-radio-group>
+            @if (cobraPrestamo() && prestamosIncluidos().length > 1) {
+              <p class="nota-metodo">El débito de cuenta de aportes no está disponible cobrando varios préstamos juntos.</p>
+            }
 
             <div class="field-grid">
               <mat-form-field appearance="outline">
@@ -454,11 +542,11 @@
                     <mat-option value="cesantia">Cesantía — saldo disponible {{ formatMoneda(saldoCesantia()) }}</mat-option>
                     <mat-option value="jubilacion">Jubilación — saldo disponible {{ formatMoneda(saldoJubilacion()) }}</mat-option>
                   </mat-select>
-                  <mat-hint>Se debitan {{ formatMoneda(montoPrestamo()) }}: solo la parte destinada al préstamo</mat-hint>
+                  <mat-hint>Se debitan {{ formatMoneda(montoTotalPrestamosIncluidos()) }}: solo la parte destinada al préstamo</mat-hint>
                 </mat-form-field>
                 <div class="resumen-callout">
                   <span>Saldo disponible tras el débito</span>
-                  <b>{{ formatMoneda(saldoAporteOrigen() - montoPrestamo() > 0 ? saldoAporteOrigen() - montoPrestamo() : 0) }}</b>
+                  <b>{{ formatMoneda(saldoAporteOrigen() - montoTotalPrestamosIncluidos() > 0 ? saldoAporteOrigen() - montoTotalPrestamosIncluidos() : 0) }}</b>
                 </div>
                 @if (saldoDebitoInsuficiente()) {
                   <div class="error-text">
@@ -485,7 +573,7 @@
                     <mat-label>Número de referencia</mat-label>
                     <input matInput maxlength="50" [ngModel]="numeroReferencia()"
                            (ngModelChange)="numeroReferencia.set($event)" placeholder="Ej.: 004512873" />
-                    <mat-hint>El número del comprobante bancario</mat-hint>
+                    <mat-hint>El número del comprobante bancario &middot; único para toda la operación</mat-hint>
                   </mat-form-field>
                   <div class="field">
                     <label class="dropzone-label">Comprobante</label>
@@ -515,7 +603,8 @@
 
               @if (cobraPrestamo() && montoAportesSocio() > 0.004) {
                 <div class="allocation-note">
-                  Se registrarán {{ formatMoneda(montoPrestamo()) }} en el préstamo
+                  Se registrarán {{ formatMoneda(montoTotalPrestamosIncluidos()) }}
+                  {{ prestamosIncluidos().length > 1 ? 'en los préstamos' : 'en el préstamo' }}
                   y {{ formatMoneda(montoAportesSocio()) }} como aporte del socio, en operaciones separadas.
                 </div>
               }
@@ -526,13 +615,14 @@
                 } @else {
                   <ng-container>
                     <mat-icon>check_circle</mat-icon>
-                    Confirmar cobro de {{ formatMoneda(montoPrestamo() + montoAportesSocio()) }}
+                    Confirmar cobro de {{ formatMoneda(asignado()) }}
                   </ng-container>
                 }
               </button>
             </div>
           </mat-card-content>
-      </mat-card>
+        </mat-card>
+      }
 
     </div>
   }

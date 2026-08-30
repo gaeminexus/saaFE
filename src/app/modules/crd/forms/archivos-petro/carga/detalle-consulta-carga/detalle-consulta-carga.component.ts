@@ -46,6 +46,7 @@ import { NovedadParticipeCarga } from '../../../../model/novedad-participe-carga
 import { Usuario } from '../../../../../../shared/model/usuario';
 import { forkJoin, of, catchError, map } from 'rxjs';
 import { AfectacionFinancieraCuotasDialogComponent } from '../../../../dialog/afectacion-financiera-cuotas-dialog/afectacion-financiera-cuotas-dialog.component';
+import { CobroPetroPaso1Component } from './cobro-petro-paso1/cobro-petro-paso1.component';
 
 const RUBRO_ESTADOS_CARGA = 166;
 const RUBRO_NOVEDADES_CARGA = 169;
@@ -88,7 +89,7 @@ interface PrestamoAfectable {
 @Component({
   selector: 'app-detalle-consulta-carga.component',
   standalone: true,
-  imports: [CommonModule, MaterialFormModule],
+  imports: [CommonModule, MaterialFormModule, CobroPetroPaso1Component],
   templateUrl: './detalle-consulta-carga.component.html',
   styleUrl: './detalle-consulta-carga.component.scss'
 })

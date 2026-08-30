@@ -10,7 +10,7 @@ import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda
 import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
-import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
+import { FuncionesDatosService, TipoFormatoFechaBackend } from '../../../../../shared/services/funciones-datos.service';
 import { usuarioSesion } from '../../../../../shared/services/usuario-sesion';
 import { Empleado } from '../../../model/empleado';
 import { PermisoLicencia, TipoPermiso } from '../../../model/permiso-licencia';
@@ -420,17 +420,23 @@ export class PermisosLicenciasFormComponent implements OnInit {
     const tipo = this.formTipoPermiso()!;
     const fechaInicio = this.formFechaInicio()!;
 
+    /**
+     * `.toISOString()` es siempre UTC y termina en "Z" — con Ecuador en UTC−5 el backend
+     * descarta el offset y la fecha queda corrida (regla de CLAUDE.md). `RHH.PTCN` mapea estos
+     * tres campos como `LocalDate` (bare, sin hora); se arman en hora local con el helper
+     * compartido.
+     */
     const datos: any = {
       empleado: { codigo: empleado.codigo },
       tipoPermiso: { codigo: tipo.codigo },
-      fechaInicio: fechaInicio.toISOString(),
+      fechaInicio: this.funcionesDatosS.formatearFechaParaBackend(fechaInicio, TipoFormatoFechaBackend.SOLO_FECHA),
       conGoce: this.formConGoce(),
       observacion: this.formObservacion().trim() || null,
       numeroDocumento: this.formNumeroDocumento().trim() || null,
       estado: 'SOLICITADA', // RHH.PTCN guarda el estado como texto
       usuarioRegistro: usuarioSesion(),
-      fechaRegistro: new Date().toISOString(),
-      fechaFin: this.formFechaFin()!.toISOString(),
+      fechaRegistro: this.funcionesDatosS.formatearFechaParaBackend(new Date(), TipoFormatoFechaBackend.SOLO_FECHA),
+      fechaFin: this.funcionesDatosS.formatearFechaParaBackend(this.formFechaFin()!, TipoFormatoFechaBackend.SOLO_FECHA),
       dias: this.formDias(),
       horaInicio: this.formHoraInicio() || null,
       horaFin: this.formHoraFin() || null,

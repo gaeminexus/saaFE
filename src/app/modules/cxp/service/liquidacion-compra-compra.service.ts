@@ -1,7 +1,9 @@
 import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, catchError, of, throwError } from 'rxjs';
+import { mensajeDeError } from '../../../shared/utils/mensaje-error.util';
 import { LiquidacionCompraCompra } from '../model/liquidacion-compra-compra';
+import { AnularDocumentoCompraResponse, AnularLiquidacionCompraRequest } from '../model/anulacion-documento-compra';
 import { ServiciosCxp } from './ws-cxp';
 
 @Injectable({ providedIn: 'root' })
@@ -35,8 +37,25 @@ export class LiquidacionCompraCompraService {
     return this.http.delete<LiquidacionCompraCompra>(`${ServiciosCxp.RS_LQCC}/${id}`, this.httpOptions).pipe(catchError(this.handleError));
   }
 
+  /**
+   * A diferencia de factura/NC/ND, la liquidación de compra no tiene movimientos que cascadear
+   * (sin FK ni query que la relacione con pagos, verificado en backend) — no hay
+   * `movimientosRelacionados` ni `anularEnCascada` para esta tabla, solo motivo + usuario.
+   */
+  anular(id: number, datos: AnularLiquidacionCompraRequest): Observable<AnularDocumentoCompraResponse> {
+    return this.http.post<AnularDocumentoCompraResponse>(`${ServiciosCxp.RS_LQCC}/anular/${id}`, datos, this.httpOptions).pipe(
+      catchError(this.handleErrorAnulacion),
+    );
+  }
+
   private handleError(error: HttpErrorResponse): Observable<null> {
     if (+error.status === 200) { return of(null); }
     return throwError(() => error.error);
+  }
+
+  private handleErrorAnulacion(error: HttpErrorResponse): Observable<never> {
+    const e = new Error(mensajeDeError(error, 'No se pudo completar la operación')) as Error & { status?: number };
+    e.status = error.status;
+    return throwError(() => e);
   }
 }

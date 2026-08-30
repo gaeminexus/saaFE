@@ -1,0 +1,271 @@
+<mat-card class="paso1-card">
+  <mat-card-header>
+    <mat-icon mat-card-avatar>account_balance</mat-icon>
+    <mat-card-title>Paso 1 — Recepción del cobro Petro</mat-card-title>
+    <mat-card-subtitle>
+      Registre las transferencias con las que Petro pagó y confirme que el dinero entró al banco.
+    </mat-card-subtitle>
+  </mat-card-header>
+
+  <mat-card-content>
+    @if (cargando()) {
+      <div class="paso1-loading">
+        <mat-spinner diameter="36"></mat-spinner>
+        <span>Cargando transferencias…</span>
+      </div>
+    } @else if (error()) {
+      <div class="paso1-error">
+        <mat-icon>error_outline</mat-icon>
+        <span>{{ error() }}</span>
+      </div>
+    } @else if (estado(); as est) {
+
+      <!-- Totales — SIEMPRE visibles, la diferencia decide todo -->
+      <div class="paso1-totales">
+        <div class="pt-item">
+          <span class="pt-label">Total del archivo</span>
+          <span class="pt-valor">{{ formatMonto(est.totalArchivo) }}</span>
+        </div>
+        <div class="pt-item">
+          <span class="pt-label">Total transferencias</span>
+          <span class="pt-valor">{{ formatMonto(est.totalTransferencias) }}</span>
+        </div>
+        <div class="pt-item" [class.pt-cuadra]="est.cuadra" [class.pt-descuadre]="!est.cuadra">
+          <span class="pt-label">Diferencia</span>
+          <span class="pt-valor">
+            {{ est.diferencia > 0 ? '+' : '' }}{{ formatMonto(est.diferencia) }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Estado de confirmación -->
+      @if (est.confirmada) {
+        <div class="paso1-aviso confirmado">
+          <mat-icon>lock</mat-icon>
+          <span>
+            Recepción confirmada por <b>{{ est.usuarioConfirma }}</b>
+            @if (est.fechaConfirmacion) { el {{ formatFechaHora(est.fechaConfirmacion) }} }.
+            Las transferencias quedan congeladas: para corregir, reverse primero.
+          </span>
+          <button mat-stroked-button color="warn" [disabled]="reversando()" (click)="reversarConfirmacion()">
+            @if (reversando()) {
+              <mat-spinner diameter="18"></mat-spinner>
+            } @else {
+              <mat-icon>undo</mat-icon>
+            }
+            Reversar confirmación
+          </button>
+        </div>
+      }
+
+      <!-- Tabla de transferencias -->
+      <div class="paso1-seccion-label">
+        Transferencias ({{ est.transferencias.length }})
+        @if (!est.confirmada) {
+          <button mat-stroked-button color="primary" class="paso1-btn-nueva" (click)="abrirFormNueva()">
+            <mat-icon>add</mat-icon> Nueva transferencia
+          </button>
+        }
+      </div>
+
+      @if (!est.transferencias.length) {
+        <p class="paso1-vacio">Todavía no se registró ninguna transferencia para esta carga.</p>
+      } @else {
+        <div class="paso1-tabla-scroll">
+          <table class="paso1-tabla">
+            <thead>
+              <tr>
+                <th>Cuenta propia</th>
+                <th>Banco externo</th>
+                <th>Cuenta origen</th>
+                <th>Número</th>
+                <th class="num">Valor</th>
+                <th>Fecha</th>
+                <th>Observación</th>
+                <th>Estado</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (t of est.transferencias; track t.idTransferencia) {
+                <tr [class.anulada]="t.estado === 0">
+                  <td>{{ t.cuentaBancaria }} <span class="paso1-sub">({{ t.nombreBanco }})</span></td>
+                  <td>{{ t.nombreBancoExterno }}</td>
+                  <td>{{ t.cuentaOrigen }}</td>
+                  <td>{{ t.numero }}</td>
+                  <td class="num">{{ formatMonto(t.valor) }}</td>
+                  <td>{{ formatFecha(t.fecha) }}</td>
+                  <td class="paso1-obs">{{ t.observacion || '—' }}</td>
+                  <td>
+                    @if (t.estado === 1) {
+                      <span class="chip-vigente">Vigente</span>
+                    } @else {
+                      <span class="chip-anulada">Anulada</span>
+                    }
+                  </td>
+                  <td>
+                    @if (t.estado === 1 && !est.confirmada) {
+                      <button mat-icon-button color="warn" matTooltip="Anular esta transferencia"
+                              [disabled]="anulandoId() === t.idTransferencia"
+                              (click)="anularTransferencia(t)">
+                        @if (anulandoId() === t.idTransferencia) {
+                          <mat-spinner diameter="18"></mat-spinner>
+                        } @else {
+                          <mat-icon>block</mat-icon>
+                        }
+                      </button>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+      <!-- Formulario nueva transferencia -->
+      @if (mostrarFormNueva()) {
+        <form [formGroup]="formNueva" class="paso1-form">
+          <mat-form-field appearance="outline">
+            <mat-label>Cuenta propia (destino)</mat-label>
+            <mat-select formControlName="idCuentaBancaria">
+              @for (c of cuentasBancarias(); track c.codigo) {
+                <mat-option [value]="c.codigo">{{ etiquetaCuenta(c) }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Banco externo (Petro)</mat-label>
+            <mat-select formControlName="idBancoExterno">
+              @for (b of bancosExternos(); track b.codigo) {
+                <mat-option [value]="b.codigo">{{ b.nombre }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Cuenta origen</mat-label>
+            <input matInput formControlName="cuentaOrigen" maxlength="50">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Número</mat-label>
+            <input matInput formControlName="numero" maxlength="50">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Valor</mat-label>
+            <span matTextPrefix>$&nbsp;</span>
+            <input matInput type="number" formControlName="valor" min="0.01" step="0.01">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Fecha</mat-label>
+            <input matInput [matDatepicker]="pickerTransferencia" formControlName="fecha" [max]="hoy">
+            <mat-datepicker-toggle matIconSuffix [for]="pickerTransferencia"></mat-datepicker-toggle>
+            <mat-datepicker #pickerTransferencia></mat-datepicker>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="paso1-ancho-total">
+            <mat-label>Observación (opcional)</mat-label>
+            <input matInput formControlName="observacion" maxlength="200">
+          </mat-form-field>
+        </form>
+        <div class="paso1-form-acciones">
+          <button mat-stroked-button type="button" (click)="cerrarFormNueva()" [disabled]="guardandoTransferencia()">
+            Cancelar
+          </button>
+          <button mat-raised-button color="primary" type="button" (click)="guardarTransferencia()"
+                  [disabled]="formNueva.invalid || guardandoTransferencia()">
+            @if (guardandoTransferencia()) {
+              <mat-spinner diameter="20"></mat-spinner>
+            } @else {
+              <mat-icon>save</mat-icon>
+            }
+            Guardar transferencia
+          </button>
+        </div>
+      }
+
+      <!-- Confirmar recepción -->
+      @if (!est.confirmada) {
+        <div class="paso1-confirmar">
+          <mat-form-field appearance="outline" class="paso1-ancho-total">
+            <mat-label>Observación de la confirmación (opcional)</mat-label>
+            <textarea matInput rows="2" maxlength="300" [(ngModel)]="observacionConfirmar"
+                      [ngModelOptions]="{standalone: true}"></textarea>
+          </mat-form-field>
+
+          @if (!est.cuadra) {
+            <div class="paso1-motivo-bloqueo">
+              <mat-icon>block</mat-icon>
+              <span>
+                No se puede confirmar: la suma de las transferencias no cuadra con el total del
+                archivo. Diferencia de {{ formatMonto(est.diferencia) }}.
+              </span>
+            </div>
+          }
+
+          <button mat-raised-button color="accent"
+                  [disabled]="!est.cuadra || confirmando()"
+                  (click)="confirmarRecepcion()">
+            @if (confirmando()) {
+              <mat-spinner diameter="20"></mat-spinner>
+            } @else {
+              <mat-icon>check_circle</mat-icon>
+            }
+            Confirmar recepción del dinero
+          </button>
+        </div>
+      }
+
+      <!-- Estado contable (§2.4) -->
+      <div class="paso1-seccion-label paso1-toggle" (click)="toggleEstadoContable()">
+        <mat-icon>{{ mostrarEstadoContable() ? 'expand_less' : 'expand_more' }}</mat-icon>
+        Estado contable de la carga
+      </div>
+
+      @if (mostrarEstadoContable()) {
+        @if (cargandoAsientos()) {
+          <div class="paso1-loading">
+            <mat-spinner diameter="28"></mat-spinner>
+            <span>Cargando asientos…</span>
+          </div>
+        } @else if (!asientos().length) {
+          <p class="paso1-vacio">Todavía no se contabilizó nada para esta carga.</p>
+        } @else {
+          <div class="paso1-tabla-scroll">
+            <table class="paso1-tabla">
+              <thead>
+                <tr>
+                  <th>Tipo</th><th>N° asiento</th><th>Fecha</th>
+                  <th class="num">Valor</th><th class="num">Líneas</th><th>Estado</th><th>Usuario</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (a of asientos(); track a.idAsiento) {
+                  <tr [class.anulada]="a.estado === 0">
+                    <td>{{ a.tipoTexto }}</td>
+                    <td>{{ a.numeroAsiento }}</td>
+                    <td>{{ formatFecha(a.fecha) }}</td>
+                    <td class="num">{{ formatMonto(a.valor) }}</td>
+                    <td class="num">{{ a.lineas }}</td>
+                    <td>
+                      @if (a.estado === 1) {
+                        <span class="chip-vigente">Vigente</span>
+                      } @else {
+                        <span class="chip-anulada">Reversado</span>
+                      }
+                    </td>
+                    <td>{{ a.usuarioRegistro }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      }
+    }
+  </mat-card-content>
+</mat-card>

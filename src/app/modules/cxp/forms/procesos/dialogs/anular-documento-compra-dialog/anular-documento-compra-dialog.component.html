@@ -1,0 +1,80 @@
+<h2 mat-dialog-title>
+  <mat-icon color="warn">block</mat-icon>
+  Anular {{ data.tipoLabel }} N° {{ data.numero }}
+</h2>
+
+<mat-dialog-content>
+  @if (hayMovimientos) {
+    <div class="msg-box msg-warn">
+      <mat-icon>warning</mat-icon>
+      <span>
+        Este documento tiene {{ movimientos.length }} movimiento(s) relacionado(s) (pagos, notas,
+        retenciones o anticipos cruzados). No se puede anular sin resolverlos primero.
+      </span>
+    </div>
+
+    <h3 class="seccion-titulo">Movimientos relacionados ({{ movimientos.length }})</h3>
+    <div class="tabla-movimientos">
+      <table>
+        <thead>
+          <tr>
+            <th>Tipo</th>
+            <th class="num">Monto</th>
+            <th>Fecha</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (m of movimientos; track m.idAplicacion) {
+            <tr>
+              <td>{{ etiquetaMovimiento(m) }}</td>
+              <td class="num font-mono">{{ m.montoAplicado | number:'1.2-2' }}</td>
+              <td>{{ m.fechaAplicacion || '—' }}</td>
+            </tr>
+          }
+        </tbody>
+        <tfoot>
+          <tr>
+            <td>Total</td>
+            <td class="num font-mono">{{ totalMovimientos | number:'1.2-2' }}</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <mat-checkbox [(ngModel)]="aceptaCascada" color="warn" class="check-cascada">
+      Acepto anular también estos {{ movimientos.length }} movimiento(s) junto con el documento.
+    </mat-checkbox>
+
+    @if (!aceptaCascada) {
+      <div class="msg-box msg-info">
+        <mat-icon>info</mat-icon>
+        <span>
+          Si no acepta, debe anular esos movimientos uno por uno primero y volver a intentar
+          anular este documento.
+        </span>
+      </div>
+    }
+  } @else {
+    <p class="texto-simple">
+      ¿Está seguro de anular este documento? Esta acción no se puede deshacer.
+    </p>
+  }
+
+  <mat-form-field appearance="outline" class="campo-motivo">
+    <mat-label>Motivo de la anulación *</mat-label>
+    <textarea matInput rows="3" [(ngModel)]="motivo"
+              placeholder="Indique por qué se anula el documento"></textarea>
+  </mat-form-field>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-stroked-button (click)="cancelar()">
+    <mat-icon>close</mat-icon>
+    Cancelar
+  </button>
+  <button mat-flat-button color="warn" [disabled]="!puedeAceptar" (click)="aceptar()">
+    <mat-icon>block</mat-icon>
+    Anular {{ data.tipoLabel }}
+  </button>
+</mat-dialog-actions>

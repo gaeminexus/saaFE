@@ -95,7 +95,6 @@ export class TitularesComponent implements OnInit {
   totalRegistros = computed(() => this.titulares().length);
   totalFiltrados = computed(() => this.titularesFiltrados().length);
   esNuevo = computed(() => !this.titularSeleccionado() || this.titularSeleccionado()!.codigo === 0);
-  tieneCambios = computed(() => this.formTitular?.dirty || false);
 
   // Computed para filtrar titulares con detalles (roles y cuentas)
   titularesFiltradosConDetalles = computed(() => {
@@ -672,6 +671,17 @@ export class TitularesComponent implements OnInit {
   }
 
   // ==================== NAVEGACIÓN DE VISTAS ====================
+
+  /**
+   * Método regular, no `computed()`: `formTitular.dirty` es una propiedad mutable normal, no un
+   * signal — un `computed()` que la lee no se invalida cuando el form se ensucia y se queda
+   * pegado al valor de la primera evaluación (`false`), lo que dejaba este diálogo de "cambios
+   * sin guardar" sin dispararse nunca. Mismo defecto que el botón de devolución de aportes,
+   * documentado en docs/patrones/REACTIVIDAD-SIGNALS-FORMGROUP.md.
+   */
+  tieneCambios(): boolean {
+    return this.formTitular?.dirty || false;
+  }
 
   volverALista(): void {
     if (this.tieneCambios()) {

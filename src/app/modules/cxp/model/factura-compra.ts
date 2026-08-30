@@ -44,6 +44,9 @@ export interface FacturaCompra {
   estadoEmision: number;
   /** Estado de pago (1=Pendiente, 2=Parcial, 3=Pagada). Lo informa el flujo de abonos (/aplp). */
   estadoPago?: number;
+  motivoAnulacion?: string | null;
+  fechaAnulacion?: string | null;
+  usuarioAnulacion?: string | null;
   /** Reembolso de gastos: 0=No 1=Sí (SRI codDoc 41 / bloque <reembolsos>) */
   esReembolso?: number;
   codDocReembolso?: string;

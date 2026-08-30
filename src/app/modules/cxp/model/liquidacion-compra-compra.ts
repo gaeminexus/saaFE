@@ -37,4 +37,7 @@ export interface LiquidacionCompraCompra {
   fechaAutorizacion: string; // ISO LocalDateTime
   estado: number;
   estadoEmision: number;
+  motivoAnulacion?: string | null;
+  fechaAnulacion?: string | null;
+  usuarioAnulacion?: string | null;
 }

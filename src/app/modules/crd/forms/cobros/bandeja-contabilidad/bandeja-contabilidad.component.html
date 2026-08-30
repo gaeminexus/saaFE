@@ -1,0 +1,121 @@
+<div class="bandeja-container">
+
+  <div class="header">
+    <div class="header-title">
+      <mat-icon class="header-icon">fact_check</mat-icon>
+      <h1>Bandeja de Contabilidad</h1>
+    </div>
+    <button mat-icon-button (click)="cargar()" [disabled]="cargando()" matTooltip="Actualizar">
+      <mat-icon>refresh</mat-icon>
+    </button>
+  </div>
+
+  @if (cargando()) {
+    <div class="loading-spinner-container"><mat-spinner diameter="40"></mat-spinner></div>
+  } @else if (!filas().length) {
+    <mat-card class="vacio-card">
+      <mat-card-content class="vacio-body">
+        <mat-icon>task_alt</mat-icon>
+        <p>No hay cobros ni cargas pendientes de aprobación.</p>
+      </mat-card-content>
+    </mat-card>
+  } @else {
+    <div class="split">
+
+      <!-- Lista -->
+      <mat-card class="lista-card">
+        <mat-card-content>
+          <div class="lista-titulo">Pendientes ({{ totalPendientes() }})</div>
+          <div class="lista-scroll">
+            @for (fila of filas(); track fila.tipo + '-' + fila.id) {
+              <button type="button" class="fila-item"
+                      [class.activa]="filaSeleccionada() === fila"
+                      (click)="seleccionar(fila)">
+                <span class="fi-tipo" [class.petro]="fila.tipo === 'CARGA_PETRO'">
+                  {{ fila.tipo === 'CARGA_PETRO' ? 'Carga Petro' : 'Cobro' }}
+                </span>
+                <span class="fi-desc">{{ fila.descripcion }}</span>
+                <span class="fi-valor">{{ formatMoneda(fila.valor) }}</span>
+                <span class="fi-meta">{{ fila.usuarioRegistro }} &middot; {{ formatFecha(fila.fechaRegistro) }}</span>
+              </button>
+            }
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Detalle -->
+      <mat-card class="detalle-card">
+        <mat-card-content>
+          @if (!filaSeleccionada()) {
+            <p class="texto-vacio">Elija un renglón de la lista para ver su comprobante y decidir.</p>
+          } @else if (filaSeleccionada()!.tipo === 'CARGA_PETRO') {
+            <div class="aviso-pendiente">
+              <mat-icon>info</mat-icon>
+              <span>
+                <b>{{ filaSeleccionada()!.descripcion }}</b> &middot; {{ formatMoneda(filaSeleccionada()!.valor) }}<br />
+                La aprobación de cargas Petro desde esta bandeja todavía no tiene el endpoint de detalle
+                ni de aprobar/rechazar definido en el contrato — está reportado, pendiente de que backend
+                lo confirme. Por ahora esta fila es solo informativa.
+              </span>
+            </div>
+          } @else if (cargandoDetalle()) {
+            <div class="loading-spinner-container"><mat-spinner diameter="36"></mat-spinner></div>
+          } @else if (errorDetalle(); as error) {
+            <div class="error-text"><mat-icon>error_outline</mat-icon><span>{{ error }}</span></div>
+          } @else if (detalle(); as cobro) {
+            <div class="dc-datos">
+              <div class="dc-item">
+                <span class="l">Partícipe</span>
+                <span class="v">{{ cobro.entidad?.razonSocial }}</span>
+              </div>
+              <div class="dc-item">
+                <span class="l">Tipo de operación</span>
+                <span class="v">{{ nombreTipoOperacionCobro(cobro.tipoOperacion) }}</span>
+              </div>
+              <div class="dc-item">
+                <span class="l">Valor</span>
+                <span class="v">{{ formatMoneda(cobro.valor) }}</span>
+              </div>
+              <div class="dc-item">
+                <span class="l">Fecha</span>
+                <span class="v">{{ formatFecha(cobro.fecha) }}</span>
+              </div>
+              <div class="dc-item">
+                <span class="l">Referencia</span>
+                <span class="v">{{ cobro.referencia || 'No registrada' }}</span>
+              </div>
+              <div class="dc-item">
+                <span class="l">Cuenta destino</span>
+                <span class="v">{{ cobro.cuentaBancaria?.banco?.nombre }} &middot; {{ cobro.cuentaBancaria?.numeroCuenta }}</span>
+              </div>
+              @if (cobro.observacion) {
+                <div class="dc-item ancho-total">
+                  <span class="l">Observación</span>
+                  <span class="v">{{ cobro.observacion }}</span>
+                </div>
+              }
+            </div>
+
+            <div class="section-label">Comprobante</div>
+            <app-comprobante-viewer [ruta]="cobro.rutaRespaldo"></app-comprobante-viewer>
+
+            <div class="dc-acciones">
+              <button mat-stroked-button color="warn" [disabled]="procesando()" (click)="rechazar()">
+                <mat-icon>block</mat-icon> Rechazar
+              </button>
+              <button mat-raised-button color="primary" [disabled]="procesando()" (click)="aprobar()">
+                @if (procesando()) {
+                  <mat-spinner diameter="18"></mat-spinner>
+                } @else {
+                  <ng-container><mat-icon>check_circle</mat-icon> Aprobar</ng-container>
+                }
+              </button>
+            </div>
+          }
+        </mat-card-content>
+      </mat-card>
+
+    </div>
+  }
+
+</div>

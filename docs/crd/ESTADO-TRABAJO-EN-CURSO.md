@@ -1,7 +1,19 @@
 # ESTADO DEL TRABAJO EN CURSO — punto de retomada
 
-**Última actualización: 2026-08-25.** Documento de traspaso entre sesiones. Cuando el árbitro
-o un agente retoma después de un reinicio, **este es el primer archivo que se lee**.
+> ⛔ **DOCUMENTO SUPERADO — NO ES LA FUENTE DE ESTADO. Congelado el 2026-08-29.**
+>
+> **El estado vigente de `crd` está en `docs/logica-negocio/ESTADO-CRD.md`.** Empezar por ahí.
+>
+> Este documento decía ser "el primer archivo que se lee" y lo fue hasta el 2026-08-25, pero
+> quedó atrás: no menciona la ola de Devengo de Aportes, ni la alimentación contable, ni nada
+> de lo hecho el 28 y 29 de agosto. **Su §0 afirma que "nada de esto está compilado ni
+> desplegado" — falso desde el 2026-08-29: los frentes A a E están en producción.**
+>
+> Se conserva porque sus §2 (`Pais` fuera de `crd`), §3 (detalle técnico del fix de mora) y §5
+> (decisiones cerradas) siguen siendo la mejor explicación de esos tres temas. **Leerlo como
+> referencia histórica de esos puntos, nunca como tablero de estado.**
+
+**Última actualización: 2026-08-25.** Documento de traspaso entre sesiones.
 
 Espejado en `saaFE/docs/crd/ESTADO-TRABAJO-EN-CURSO.md`. El del backend es el autoritativo.
 

@@ -79,14 +79,19 @@ export class AdendumDialogComponent {
       ...(this.form.id ? { id: this.form.id } : {}),
       negociacion: { id: this.data.negociacion.id } as any,
       numAdendum: this.form.numAdendum || undefined,
-      fechaAdendum: this.toISO(this.fechaControl.value) || new Date().toISOString().substring(0, 10),
+      fechaAdendum: this.toISO(this.fechaControl.value) || this.toISO(new Date()),
       descripcion: this.form.descripcion,
       valorAjuste: Number(this.form.valorAjuste) || 0,
       valorTotalResultante: this.valorResultante,
       observacion: this.form.observacion || undefined,
       estado: 1,
       usuario: { codigo: this.data.idUsuario } as any,
-      fechaRegistro: new Date().toISOString(),
+      /**
+       * `fechaRegistro` es `LocalDateTime` en el backend. `new Date().toISOString()` es siempre
+       * UTC y termina en "Z" — el backend descarta el offset y el dato queda 5 horas corrido en
+       * Ecuador (UTC−5), sin ningún error (regla de CLAUDE.md).
+       */
+      fechaRegistro: this.funcionesDatos.formatearFechaParaBackend(new Date()),
     };
     this.guardando = true;
     const op$ = this.modoEdicion ? this.adendumService.update(payload) : this.adendumService.add(payload);

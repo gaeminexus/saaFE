@@ -113,9 +113,83 @@ Los dos sitios que sí persisten una entidad con `SOLO_FECHA`:
 - `entidad-participe-info.component.ts:1086` → `Entidad.fechaNacimiento` — confirmado, corregido,
   verificado con guardados reales.
 - `contrato-edit.component.ts:327` → `VigenciaContrato.fechaInicio`, dentro del trabajo de
-  vigencias de contrato (§4.1 del plan de devengo) — hoy detrás de
-  `environment.mockDevengoContratos`, no llega todavía a un backend real. Cuando el endpoint se
-  publique, esta pantalla ya está protegida por el fix del helper compartido.
+  vigencias de contrato (§4.1 del plan de devengo) — ya contra el backend real (el flag
+  `environment.mockDevengoContratos` se retiró al conectar la pantalla al endpoint publicado).
+  Protegida por el fix del helper compartido.
+
+## Barrido completo por escritura — 2026-08-27
+
+El fix de `convertirFechaDesdeBackend()` protege todo lo que **lee**. Faltaba barrer el lado que
+**escribe**: código que arma una fecha a mano para mandarla al backend sin pasar por
+`FuncionesDatosService.formatearFechaParaBackend()`/`formatearFechasParaBackend()`. Ahí aparecen
+dos variantes del mismo bug, además de una tercera que no se había documentado:
+
+- **`new Date().toISOString()`** (o `.slice(0,10)`/`.substring(0,10)` sobre el resultado): siempre
+  UTC. Con Ecuador en UTC−5, el string completo (termina en `"Z"`) hace que el backend descarte el
+  offset y el dato quede 5 horas corrido — **siempre**, no solo cerca de medianoche. El recorte a
+  solo fecha (`.slice(0,10)`) hereda además el corrimiento de día ya documentado arriba.
+- **Un objeto `Date` crudo puesto directo en el payload** (sin ningún `.toISOString()` explícito):
+  `HttpClient` serializa el body con `JSON.stringify`, que internamente llama a
+  `Date.prototype.toJSON()` — que es `.toISOString()` por dentro. Mismo bug, sin que el código lo
+  deje ver a simple vista. Encontrado en `cobros-ingresar.component.ts:270`
+  (`fecha: this.fecha() ?? new Date()`, `TempCobro.fecha` es `LocalDateTime`).
+
+**Corregidos** (todos verificados contra el tipo real del campo en el backend — `LocalDate`/
+`LocalDateTime` — antes de aplicar el fix; ninguno se probó en navegador, la verificación
+funcional queda pendiente):
+
+| Archivo | Campo(s) | Backend |
+|---|---|---|
+| `cxp/forms/negociaciones/negociaciones.component.ts` | `fechaRegistro`/`fechaModif` (vía `now`), fallback de `fechaNegociacion` | `NegociacionProveedor.fechaRegistro`/`fechaModif` `LocalDateTime` |
+| `cxc/forms/gestionar/anticipo/anticipo.component.ts` | `fechaRegistro`, `fechaAnticipo`, `fechaRecepcion` | `LocalDateTime`/`LocalDate` (AnticipoCliente) |
+| `cxp/forms/negociaciones/dialogs/pago-dialog/pago-dialog.component.ts` | fallback de `fechaPago`, `fechaRegistro` | `PagoNegociacion` |
+| `cxp/forms/negociaciones/dialogs/adendum-dialog/adendum-dialog.component.ts` | fallback de `fechaAdendum`, `fechaRegistro` | `AdendumNegociacion` |
+| `tsr/forms/cuentas-bancarias/cuentas-bancarias.component.ts` | `fechaIngreso` (creación) | `CuentaBancaria.fechaIngreso` |
+| `rrh/forms/gestion/permisos-licencias/permisos-licencias-form.component.ts` | `fechaInicio`, `fechaFin`, `fechaRegistro` | `Peticiones` (RHH.PTCN) — todos `LocalDate` |
+| `tsr/forms/cajas-logicas/grupos/grupos-cajas.component.ts` | `fechaInactivo`, `fechaIngreso` (alta) | `GrupoCaja` `LocalDateTime` |
+| `tsr/forms/cajas-logicas/cajas-por-grupo/cajas-por-grupo.component.ts` | ídem | `CajaLogica` `LocalDateTime` |
+| `tsr/forms/cajas-logicas/cajas-fisicas/cajas-fisicas.component.ts` | ídem | `CajaFisica` `LocalDateTime` |
+| `tsr/forms/anticipos/anticipos-proveedores/anticipos-proveedores.component.ts` | `fechaAnticipo` | vía `AnticipoService.procesarProveedor` |
+| `tsr/forms/anticipos/anticipos-clientes/anticipos-clientes.component.ts` | `fechaAnticipo` | vía `AnticipoService.procesarCliente` |
+| `crd/forms/entidad-participe/jubilados/proceso-pago-jubilados/proceso-pago-jubilados.component.ts` | `fechaModificacion`, `fechaIngreso` | `ValorPagoPensionComplementaria` `LocalDateTime` |
+| `tsr/forms/cobros/ingresar/cobros-ingresar.component.ts` | `fecha` (objeto `Date` crudo, no `.toISOString()` explícito) | `TempCobro.fecha` `LocalDateTime` |
+
+**Encontrados, NO corregidos — reportados para que se verifiquen antes de tocarlos** (mismo patrón
+superficial, pero con una duda concreta que hace que "corregirlo a ciegas" pueda cambiar el bug en
+vez de arreglarlo):
+
+- `cxp/forms/procesos/proposicion-pago/proposicion-pago.component.ts:397-398` — `fechaPago`,
+  `fechaIngreso: new Date()`. `ProposicionPagoXCuota.fechaPago`/`.fechaIngreso` en el backend son
+  `java.util.Date`, **no** `LocalDate`/`LocalDateTime` — Jackson serializa `java.util.Date` distinto
+  (por defecto, timestamp epoch, salvo que el `ObjectMapper` global esté configurado con un formato
+  ISO) y no se verificó esa configuración. Aplicar el mismo fix sin confirmarlo podría cambiar un
+  bug por otro.
+- `cxc/forms/emitir/retencionesv2/retencionesv2.component.ts:415` — `fechaReg: new Date()`, dentro
+  de un objeto de detalle local (`DetalleRetencionV2Emitir`) — no se rastreó si este valor
+  sobrevive hasta el guardado final o se recalcula antes, como sí pasa en otros formularios de esta
+  ola (`grupos-cajas.component.ts`, por ejemplo).
+- `cnt/forms/parametrizacion/plantilla-general/plantilla-general.component.ts` (`fechaCreacion`,
+  `fechaInactivo` ×2, `fechaDesde`/`fechaHasta` ×2), `cnt/forms/parametrizacion/centro-arbol/centro-arbol-form.component.ts:231`
+  (`fechaIngreso`), `cnt/forms/asientos-contables-dinamico/asientos-contables-dinamico.ts:808,1024`
+  (`fechaIngreso`), `crd/forms/archivos-petro/carga/detalle-consulta-carga/detalle-consulta-carga.component.ts:1993`
+  (`fechaAfectacion`) — mismo patrón de objeto `Date` crudo en un payload, confirmados como
+  pantallas con guardado real (no mock), pero no se verificó el tipo del campo backend
+  correspondiente antes de escribir esto — queda pendiente de revisión.
+
+**Descartados — pantallas mock/placeholder, sin guardado real todavía** (0 llamadas `.subscribe()`
+en el flujo de guardado, datos de muestra hardcodeados tipo "Juan Pérez"/"Banco Uno"): `tsr/forms/movimientos-bancarios/{transferencias,debitos,creditos}`,
+`tsr/forms/generales/ried`, `tsr/forms/cobros/procesos/{procesos-depositos,procesos-cierres,procesos-cobros}`,
+`tsr/forms/cobros/depositos/ratificacion/ratificacion-depositos`, `tsr/forms/pagos/ingresar/pagos-ingresar`,
+`tsr/forms/pagos/cheques/{impresion,entrega}`, `tsr/forms/cobros/consultas/{cobros,cierres}`. No
+representan riesgo de corrupción hoy — cuando se conecten a un backend real, revisar de nuevo.
+
+**Barrido 1 (Signals que leen un FormGroup) y Barrido 2 (objetos anidados en PUT/POST)** — mismo
+día, mismo formato de reporte — están documentados en el reporte de sesión, no en este archivo:
+Barrido 1 encontró y corrigió `tsr/forms/titulares/titulares.component.ts:98` (`tieneCambios`);
+Barrido 2 encontró y corrigió `negociaciones.component.ts` (`empresa`/`titular` sin narrow) y
+descartó por verificación directa contra el backend la familia de emisión SRI (`liquidaciones`,
+`facturas-ingreso`, `retenciones`, `retencionesv2`, `notas-credito`, `notas-debito`), que sí
+necesita el objeto completo para generar el XML.
 
 ## Cómo detectarlo en revisión
 
@@ -126,3 +200,10 @@ Los dos sitios que sí persisten una entidad con `SOLO_FECHA`:
   ningún formato fijo — ambos devuelven fecha sin hora, tarde o temprano.
 - Si agregás un nuevo caso de parseo de fecha en cualquier parte del proyecto, no reimplementes
   esto: usá `FuncionesDatosService.convertirFechaDesdeBackend()`, que ya lo maneja.
+- **Del lado de escritura**: nunca armes a mano una fecha para mandarla al backend
+  (`new Date().toISOString()`, `.slice(0,10)`/`.substring(0,10)` sobre eso, o un objeto `Date`
+  puesto directo en un payload). Usá siempre
+  `FuncionesDatosService.formatearFechaParaBackend()`/`formatearFechasParaBackend()`. Un objeto
+  `Date` crudo en un payload es tan peligroso como el `.toISOString()` explícito: `HttpClient` lo
+  serializa vía `Date.prototype.toJSON()`, que por dentro es `.toISOString()` — el bug no se ve en
+  el código a simple vista.

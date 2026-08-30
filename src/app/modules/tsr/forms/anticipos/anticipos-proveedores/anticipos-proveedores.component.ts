@@ -10,19 +10,15 @@ import { TipoDatosBusqueda as TipoDatos } from '../../../../../shared/model/dato
 import { FormaPagoAplicacion, FORMA_PAGO_LABELS } from '../../../../../shared/model/pagos-cobros/catalogos-aplicacion-pago';
 import { TitularSelectorDialogComponent } from '../../../../../shared/components/titular-selector-dialog/titular-selector-dialog.component';
 import { Titular } from '../../../model/titular';
-import { CuentaBancaria } from '../../../model/cuenta-bancaria';
 import { CuentaBancariaTitular } from '../../../model/cuenta-bancaria-titular';
-import { ChequeSiguiente } from '../../../model/cheque-listado';
 import { PersonaCuentaContableService } from '../../../service/persona-cuenta-contable.service';
 import { PersonaRolService } from '../../../service/persona-rol.service';
-import { CuentaBancariaService } from '../../../service/cuenta-bancaria.service';
 import { CuentaBancariaTitularService } from '../../../service/cuenta-bancaria-titular.service';
-import { ChequeService } from '../../../service/cheque.service';
 import { AnticipoService, VerificacionAnulacionAnticipo } from '../../../service/anticipo.service';
 import { AnularAnticipoDialogComponent, AnularAnticipoDialogResult } from '../dialogs/anular-anticipo-dialog/anular-anticipo-dialog.component';
 import { JasperReportesService } from '../../../../../shared/services/jasper-reportes.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
+import { FuncionesDatosService, TipoFormatoFechaBackend } from '../../../../../shared/services/funciones-datos.service';
 
 @Component({
   selector: 'app-anticipos-proveedores',
@@ -35,9 +31,7 @@ export class AnticiposProveedoresComponent {
   private dialog = inject(MatDialog);
   private personaRolS = inject(PersonaRolService);
   private cuentaContableS = inject(PersonaCuentaContableService);
-  private cuentaBancariaS = inject(CuentaBancariaService);
   private cuentaTitularS = inject(CuentaBancariaTitularService);
-  private chequeS = inject(ChequeService);
   private anticipoS = inject(AnticipoService);
   private jasperReportes = inject(JasperReportesService);
   private snackBar = inject(MatSnackBar);
@@ -59,7 +53,6 @@ export class AnticiposProveedoresComponent {
   ultimoAnticipoId = signal<number | null>(null);
   errorProceso = signal<string>('');
   exitoProceso = signal<string>('');
-  cuentasBancarias = signal<CuentaBancaria[]>([]);
   // Cuentas bancarias del proveedor (tabla CTBN) hacia donde se transfiere el anticipo
   cuentasDestino = signal<CuentaBancariaTitular[]>([]);
   cargandoCuentasDestino = signal(false);
@@ -72,24 +65,14 @@ export class AnticiposProveedoresComponent {
   anulandoId = signal<number | null>(null);
 
   formValor = '';
-  formCuentaBancaria: CuentaBancaria | null = null;
   formCuentaDestino: number | null = null;
   formFecha: Date | null = new Date();
   formNumeroDoc = '';
   formObservacion = '';
 
-  // ── Forma de pago (transferencia / débito automático / cheque) ─────────
+  // La forma de pago histórica del anticipo se sigue mostrando en el listado.
   readonly FormaPagoAplicacion = FormaPagoAplicacion;
   readonly FORMA_PAGO_LABELS = FORMA_PAGO_LABELS;
-  formaPago = signal<number>(FormaPagoAplicacion.TRANSFERENCIA);
-  chequeSiguiente = signal<ChequeSiguiente | null>(null);
-  cargandoCheque = signal(false);
-  errorCheque = signal('');
-
-  /** Cheque solo se ofrece si la cuenta de origen elegida maneja chequera. */
-  get puedePagarConCheque(): boolean {
-    return Number(this.formCuentaBancaria?.manejaChequera) === 1;
-  }
 
   abrirBusqueda(): void {
     const ref = this.dialog.open(TitularSelectorDialogComponent, {
@@ -196,50 +179,12 @@ export class AnticiposProveedoresComponent {
     this.errorProceso.set('');
     this.exitoProceso.set('');
     this.formValor = '';
-    this.formCuentaBancaria = null;
     this.formCuentaDestino = null;
     this.formFecha = new Date();
     this.formNumeroDoc = '';
     this.formObservacion = '';
-    this.formaPago.set(FormaPagoAplicacion.TRANSFERENCIA);
-    this.chequeSiguiente.set(null);
-    this.errorCheque.set('');
     this.mostrarFormulario.set(true);
-    this.cargarCuentasBancarias();
     this.cargarCuentasDestino();
-  }
-
-  /** Cambió la cuenta de origen: si estaba en Cheque y la nueva no maneja chequera, vuelve a Transferencia. */
-  onCambioCuentaOrigen(): void {
-    if (this.formaPago() === FormaPagoAplicacion.CHEQUE && !this.puedePagarConCheque) {
-      this.formaPago.set(FormaPagoAplicacion.TRANSFERENCIA);
-    }
-    this.actualizarChequeSiguiente();
-  }
-
-  onCambioFormaPago(): void {
-    if (this.formaPago() !== FormaPagoAplicacion.TRANSFERENCIA) {
-      this.formCuentaDestino = null;
-    }
-    this.actualizarChequeSiguiente();
-  }
-
-  private actualizarChequeSiguiente(): void {
-    this.chequeSiguiente.set(null);
-    this.errorCheque.set('');
-    if (this.formaPago() !== FormaPagoAplicacion.CHEQUE || !this.formCuentaBancaria) return;
-
-    this.cargandoCheque.set(true);
-    this.chequeS.siguiente(this.formCuentaBancaria.codigo).subscribe({
-      next: (r) => {
-        this.cargandoCheque.set(false);
-        this.chequeSiguiente.set(r);
-      },
-      error: (err) => {
-        this.cargandoCheque.set(false);
-        this.errorCheque.set(ChequeService.mensajeError(err));
-      },
-    });
   }
 
   /**
@@ -325,24 +270,15 @@ export class AnticiposProveedoresComponent {
     });
   }
 
-  private cargarCuentasBancarias(): void {
-    if (this.cuentasBancarias().length > 0) return;
-    const idEmpresa = +(sessionStorage.getItem('idEmpresa') || localStorage.getItem('idEmpresa') || '0');
-    this.cuentaBancariaS.getAll().subscribe({
-      next: (data) => {
-        let lista = Array.isArray(data) ? data : [];
-        if (idEmpresa) {
-          lista = lista.filter((c: any) => c.banco?.empresa?.codigo === idEmpresa || c.empresa?.codigo === idEmpresa);
-        }
-        this.cuentasBancarias.set(lista);
-      },
-      error: () => {},
-    });
-  }
-
+  /**
+   * El pago del anticipo nace `POR_APROBAR`, sin cuenta bancaria de origen ni
+   * forma de pago (docs/logica-negocio/pagos/PLAN-REDISENO-APROBACION-PAGOS.md
+   * §3.1 en saaBE): eso se elige al aprobar en lote, en
+   * Tesorería → Procesos → Aprobación de pagos.
+   */
   procesarAnticipo(): void {
     const titular = this.titularSeleccionado();
-    if (!titular || !this.formValor || !this.formCuentaBancaria || !this.formFecha) {
+    if (!titular || !this.formValor || !this.formFecha) {
       this.errorProceso.set('Complete todos los campos obligatorios.');
       return;
     }
@@ -351,36 +287,23 @@ export class AnticiposProveedoresComponent {
       this.errorProceso.set('El valor debe ser un número mayor a cero.');
       return;
     }
-    const esTransferencia = this.formaPago() === FormaPagoAplicacion.TRANSFERENCIA;
-    if (esTransferencia && !this.formCuentaDestino) {
-      this.errorProceso.set('Seleccione la cuenta bancaria del proveedor para el pago.');
-      return;
-    }
-    if (this.formaPago() === FormaPagoAplicacion.CHEQUE && (this.errorCheque() || !this.chequeSiguiente())) {
-      this.errorProceso.set(this.errorCheque() || 'No hay cheques disponibles para girar.');
-      return;
-    }
 
     const idEmpresa = +(sessionStorage.getItem('idEmpresa') || localStorage.getItem('idEmpresa') || '0');
     const idUsuario = +(sessionStorage.getItem('idUsuario') || localStorage.getItem('idUsuario') || '0');
+    // `.toISOString()` es siempre UTC; con Ecuador en UTC−5 puede dar el día anterior (regla de CLAUDE.md).
     const fecha = this.formFecha instanceof Date
-      ? this.formFecha.toISOString().substring(0, 10)
+      ? this.funcionesDatos.formatearFechaParaBackend(this.formFecha, TipoFormatoFechaBackend.SOLO_FECHA)!
       : String(this.formFecha);
 
     const payload = {
       idTitular: titular.codigo,
       valor,
-      idCuentaBancaria: this.formCuentaBancaria.codigo,
-      idCuentaDestinoTitular: esTransferencia ? this.formCuentaDestino ?? undefined : undefined,
+      idCuentaDestinoTitular: this.formCuentaDestino ?? undefined,
       idEmpresa,
       idUsuario,
       fechaAnticipo: fecha,
       numeroDoc: this.formNumeroDoc.trim(),
       observacion: this.formObservacion.trim(),
-      formaPago: this.formaPago(),
-      // Booleano real: AnticipoProveedorRest.getBoolean() hace
-      // Boolean.parseBoolean(valor), que con "1" da false.
-      debitoAutomatico: this.formaPago() === FormaPagoAplicacion.DEBITO_AUTOMATICO,
     };
 
     this.procesando.set(true);
