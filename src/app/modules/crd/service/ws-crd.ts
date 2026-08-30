@@ -94,6 +94,7 @@ export class ServiciosCrd {
   public static RS_CNFG = `${API_URL}/cnfg`; // ConfiguracionRest — flag de contabilidad de CRD (§4.3 del plan de devengo)
   public static RS_VGCN = `${API_URL}/vgcn`; // VigenciaContrato — historial de vigencias (§4.1 del plan de devengo)
   public static RS_CBCR = `${API_URL}/cbcr`; // CobroCredito — cobros con aprobación de contabilidad (docs/crd/API-COBROS-APROBACION-CONTABILIDAD.md)
+  public static RS_ACCN = `${API_URL}/accn`; // AcuerdoCondonacion — acuerdos de pago con condonación (docs/crd/API-ACUERDOS-CONDONACION.md)
 }
 /*
 export class ServiciosCrd {

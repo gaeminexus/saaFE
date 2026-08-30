@@ -46,7 +46,6 @@ import { NovedadParticipeCarga } from '../../../../model/novedad-participe-carga
 import { Usuario } from '../../../../../../shared/model/usuario';
 import { forkJoin, of, catchError, map } from 'rxjs';
 import { AfectacionFinancieraCuotasDialogComponent } from '../../../../dialog/afectacion-financiera-cuotas-dialog/afectacion-financiera-cuotas-dialog.component';
-import { CobroPetroPaso1Component } from './cobro-petro-paso1/cobro-petro-paso1.component';
 
 const RUBRO_ESTADOS_CARGA = 166;
 const RUBRO_NOVEDADES_CARGA = 169;
@@ -89,7 +88,7 @@ interface PrestamoAfectable {
 @Component({
   selector: 'app-detalle-consulta-carga.component',
   standalone: true,
-  imports: [CommonModule, MaterialFormModule, CobroPetroPaso1Component],
+  imports: [CommonModule, MaterialFormModule],
   templateUrl: './detalle-consulta-carga.component.html',
   styleUrl: './detalle-consulta-carga.component.scss'
 })
@@ -331,12 +330,28 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
 
         // Cargar detalles
         this.cargarDetalles(idCarga);
+        this.cargarConfirmadaPetro(idCarga);
       },
       error: (error) => {
         this.isLoading = false;
         this.snackBar.open('Error al cargar datos de la carga', 'Cerrar', { duration: 3000 });
         this.volverAtras();
       }
+    });
+  }
+
+  /**
+   * ¿Ya se hizo el paso 1 del cobro de Petro (confirmación de recepción)? La confirmación en sí
+   * se mueve a la Bandeja de Contabilidad (docs/crd/API-COBROS-APROBACION-CONTABILIDAD.md §5.1) —
+   * acá solo se necesita SABER si ya está confirmada, para seguir bloqueando "Procesar Archivo"
+   * (paso 2) hasta que lo esté. Consulta liviana, no reimplementa el paso 1 completo.
+   */
+  confirmadaPetro = signal(false);
+
+  private cargarConfirmadaPetro(idCarga: number): void {
+    this.serviciosAsoprepService.obtenerTransferencias(idCarga).subscribe({
+      next: (data) => this.confirmadaPetro.set(data?.confirmada ?? false),
+      error: () => this.confirmadaPetro.set(false),
     });
   }
 

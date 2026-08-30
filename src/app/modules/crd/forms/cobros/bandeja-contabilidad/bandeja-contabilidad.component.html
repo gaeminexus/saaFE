@@ -49,15 +49,16 @@
           @if (!filaSeleccionada()) {
             <p class="texto-vacio">Elija un renglón de la lista para ver su comprobante y decidir.</p>
           } @else if (filaSeleccionada()!.tipo === 'CARGA_PETRO') {
-            <div class="aviso-pendiente">
-              <mat-icon>info</mat-icon>
-              <span>
-                <b>{{ filaSeleccionada()!.descripcion }}</b> &middot; {{ formatMoneda(filaSeleccionada()!.valor) }}<br />
-                La aprobación de cargas Petro desde esta bandeja todavía no tiene el endpoint de detalle
-                ni de aprobar/rechazar definido en el contrato — está reportado, pendiente de que backend
-                lo confirme. Por ahora esta fila es solo informativa.
-              </span>
+            <div class="carga-petro-titulo">
+              <b>{{ filaSeleccionada()!.descripcion }}</b> &middot; {{ formatMoneda(filaSeleccionada()!.valor) }}
             </div>
+            <!--
+              Paso 1 del cobro de Petro (docs/crd/API-COBRO-PETRO-DOS-PASOS.md): transferencias,
+              confirmar recepción (equivale a "aprobar") y reversar (equivale a "lo contrario de
+              aprobar" — nunca "rechazar", son ciclos distintos). El componente se autoabastece con
+              `idCarga`; no hay botones Aprobar/Rechazar propios de esta pantalla para este tipo.
+            -->
+            <app-cobro-petro-paso1 [idCarga]="filaSeleccionada()!.id"></app-cobro-petro-paso1>
           } @else if (cargandoDetalle()) {
             <div class="loading-spinner-container"><mat-spinner diameter="36"></mat-spinner></div>
           } @else if (errorDetalle(); as error) {

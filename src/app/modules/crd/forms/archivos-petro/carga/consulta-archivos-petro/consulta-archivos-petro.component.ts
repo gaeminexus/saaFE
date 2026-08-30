@@ -262,14 +262,6 @@ export class ConsultaArchivosPetroComponent implements OnInit {
   }
 
   /**
-   * Aprueba la carga para contabilidad
-   */
-  aprobarContabilidad(carga: CargaArchivo): void {
-    console.log('Aprobar contabilidad para carga:', carga.codigo);
-    // TODO: Implementar lógica de aprobación contable
-  }
-
-  /**
    * Procesa la carga petrocomercial llamando al backend
    */
   procesarCarga(carga: CargaArchivo): void {

@@ -1,0 +1,273 @@
+<div class="acuerdo-container">
+
+  <div class="header">
+    <div class="header-title">
+      <mat-icon class="header-icon">handshake</mat-icon>
+      <h1>Acuerdo de Pago con Condonación</h1>
+    </div>
+  </div>
+
+  <mat-card class="pago-card">
+    <mat-card-content class="search-box">
+      <mat-form-field appearance="fill" class="search-field">
+        <mat-label>Número de identificación</mat-label>
+        <input matInput [(ngModel)]="criterioIdentificacion" (keyup.enter)="buscar()" />
+      </mat-form-field>
+      <mat-form-field appearance="fill" class="search-field">
+        <mat-label>Rol Petrocomercial</mat-label>
+        <input matInput [(ngModel)]="criterioRolPetro" (keyup.enter)="buscar()" />
+      </mat-form-field>
+      <mat-form-field appearance="fill" class="search-field">
+        <mat-label>Nombre</mat-label>
+        <input matInput [(ngModel)]="criterioNombre" (keyup.enter)="buscar()" />
+      </mat-form-field>
+      <button mat-raised-button color="primary" (click)="buscar()" [disabled]="buscando()">
+        @if (buscando()) { <mat-spinner diameter="20"></mat-spinner> } @else { <ng-container><mat-icon>search</mat-icon> Buscar</ng-container> }
+      </button>
+    </mat-card-content>
+  </mat-card>
+
+  @if (mostrandoResultados()) {
+    <mat-card class="resultados-card">
+      <mat-card-header><mat-card-title>Resultados de búsqueda</mat-card-title></mat-card-header>
+      <mat-card-content>
+        @if (!resultados().length) {
+          <p class="texto-vacio">No se encontraron coincidencias.</p>
+        } @else {
+          <table class="tabla-resultados">
+            <thead><tr><th>Nombre</th><th>C.I.</th><th>Rol Petrocomercial</th></tr></thead>
+            <tbody>
+              @for (e of resultados(); track e.codigo) {
+                <tr class="fila-clicable" (click)="seleccionarEntidad(e)">
+                  <td>{{ e.razonSocial }}</td>
+                  <td>{{ e.numeroIdentificacion }}</td>
+                  <td>{{ e.rolPetroComercial }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </mat-card-content>
+    </mat-card>
+  }
+
+  @if (entidadSeleccionada(); as entidad) {
+    <mat-card class="entidad-card">
+      <mat-card-header>
+        <mat-icon mat-card-avatar class="avatar-icon">account_circle</mat-icon>
+        <mat-card-title>{{ entidad.razonSocial }}</mat-card-title>
+        <mat-card-subtitle>C.I. {{ entidad.numeroIdentificacion }}</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <button mat-stroked-button (click)="volverABuscar()"><mat-icon>search</mat-icon> Buscar otra persona</button>
+      </mat-card-content>
+    </mat-card>
+
+    @if (resultado(); as acuerdo) {
+
+      <!-- ============ Acuerdo registrado ============ -->
+      <mat-card class="cuenta-card resultado-card">
+        <mat-card-content>
+          <div class="aviso-pendiente ok">
+            <mat-icon>check_circle</mat-icon>
+            <span>
+              Acuerdo #{{ acuerdo.codigo }} registrado &middot; a pagar {{ formatMoneda(acuerdo.valorPagar) }},
+              a condonar {{ formatMoneda(acuerdo.valorCondonar) }}. El cobro <b>#{{ acuerdo.cobroCredito.codigo }}</b>
+              quedó en la bandeja de contabilidad — el préstamo se cancela recién cuando ese cobro se procese.
+            </span>
+          </div>
+          <button mat-raised-button color="primary" type="button" (click)="nuevoAcuerdo()">
+            <mat-icon>add</mat-icon> Registrar otro acuerdo
+          </button>
+        </mat-card-content>
+      </mat-card>
+
+    } @else {
+
+      <!-- ============ Selección de préstamo ============ -->
+      <mat-card class="cuenta-card">
+        <mat-card-header><mat-card-title>1 &middot; Préstamo</mat-card-title></mat-card-header>
+        <mat-card-content>
+          @if (cargandoPrestamos()) {
+            <div class="loading-spinner-container"><mat-spinner diameter="32"></mat-spinner></div>
+          } @else if (!prestamosElegibles().length) {
+            <p class="texto-vacio">
+              Este partícipe no tiene préstamos en mora o de plazo vencido: no hay ninguno que admita
+              un acuerdo de condonación.
+            </p>
+          } @else {
+            <div class="selector-prestamos">
+              @for (p of prestamosElegibles(); track p.codigo) {
+                <button type="button" class="sp-chip" [class.activo]="prestamoSeleccionado()?.codigo === p.codigo"
+                        (click)="seleccionarPrestamo(p)">
+                  #{{ p.idAsoprep }} &middot; {{ nombreEstadoPrestamo(p.idEstado) }}
+                </button>
+              }
+            </div>
+          }
+        </mat-card-content>
+      </mat-card>
+
+      @if (prestamoSeleccionado()) {
+
+        <!-- ============ Previsualización — el control ============ -->
+        <mat-card class="cuenta-card">
+          <mat-card-header><mat-card-title>2 &middot; Previsualización de los 5 conceptos</mat-card-title></mat-card-header>
+          <mat-card-content>
+
+            <div class="field-grid">
+              <mat-form-field appearance="outline">
+                <mat-label>Fecha</mat-label>
+                <input matInput [matDatepicker]="pickerAcuerdo" [max]="hoy"
+                       [ngModel]="fecha()" (ngModelChange)="onFechaCambio($event)" />
+                <mat-datepicker-toggle matSuffix [for]="pickerAcuerdo"></mat-datepicker-toggle>
+                <mat-datepicker #pickerAcuerdo></mat-datepicker>
+                <mat-hint>La mora se recalcula a esta fecha.</mat-hint>
+              </mat-form-field>
+              <button mat-stroked-button type="button" (click)="previsualizar()" [disabled]="cargandoDesglose()">
+                @if (cargandoDesglose()) {
+                  <mat-spinner diameter="18"></mat-spinner>
+                } @else {
+                  <ng-container><mat-icon>refresh</mat-icon> Previsualizar</ng-container>
+                }
+              </button>
+            </div>
+
+            @if (errorDesglose(); as error) {
+              <div class="error-text"><mat-icon>error_outline</mat-icon><span>{{ error }}</span></div>
+            }
+
+            @if (!desgloseVigente() && filas()) {
+              <div class="aviso-pendiente">
+                <mat-icon>info</mat-icon>
+                <span>La fecha cambió: vuelva a previsualizar antes de confirmar.</span>
+              </div>
+            }
+
+            @if (filas(); as conceptos) {
+              <table class="tabla-conceptos">
+                <thead>
+                  <tr><th>Concepto</th><th class="num">Adeudado</th><th class="num">A pagar</th><th class="num">Condonado</th></tr>
+                </thead>
+                <tbody>
+                  @for (fila of conceptos; track fila.concepto) {
+                    <tr [class.fila-condonable]="fila.condonable">
+                      <td>{{ fila.nombre }} @if (!fila.condonable) { <span class="nota-fijo">(se paga al 100%)</span> }</td>
+                      <td class="num">{{ formatMoneda(fila.adeudado) }}</td>
+                      <td class="num">
+                        @if (fila.condonable) {
+                          <mat-form-field appearance="outline" class="monto-cuenta-field" subscriptSizing="dynamic">
+                            <input matInput [ngModel]="fila.pagadoTexto" (ngModelChange)="onPagadoCambio(fila, $event)"
+                                   (blur)="onPagadoBlur(fila)" />
+                          </mat-form-field>
+                        } @else {
+                          {{ formatMoneda(fila.adeudado) }}
+                        }
+                      </td>
+                      <td class="num" [class.con-condonacion]="condonadoDe(fila) > 0.004">{{ formatMoneda(condonadoDe(fila)) }}</td>
+                    </tr>
+                  }
+                  <tr class="fila-total">
+                    <td><b>Total</b></td>
+                    <td class="num"><b>{{ formatMoneda(totalAdeudado()) }}</b></td>
+                    <td class="num"><b>{{ formatMoneda(totalPagar()) }}</b></td>
+                    <td class="num"><b>{{ formatMoneda(totalCondonar()) }}</b></td>
+                  </tr>
+                </tbody>
+              </table>
+            }
+          </mat-card-content>
+        </mat-card>
+
+        <!-- ============ Datos del cobro ============ -->
+        <mat-card class="confirmacion-card">
+          <mat-card-header><mat-card-title>3 &middot; Datos del cobro</mat-card-title></mat-card-header>
+          <mat-card-content>
+            @if (errorRegistro(); as error) {
+              <div class="error-text bloque"><mat-icon>error_outline</mat-icon><span>{{ error }}</span></div>
+            }
+
+            <div class="field-grid">
+              <mat-form-field appearance="outline">
+                <mat-label>Cuenta ASOPREP destino</mat-label>
+                <mat-select [ngModel]="cuentaBancaria()" (ngModelChange)="cuentaBancaria.set($event)">
+                  @for (c of cuentasBancarias(); track c.codigo) {
+                    <mat-option [value]="c">{{ c.banco.nombre }} &middot; {{ c.numeroCuenta }}</mat-option>
+                  }
+                </mat-select>
+                <mat-hint>Solo cuentas vigentes habilitadas para cobro de crédito</mat-hint>
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Número de referencia</mat-label>
+                <input matInput maxlength="50" [ngModel]="referencia()" (ngModelChange)="referencia.set($event)" />
+              </mat-form-field>
+            </div>
+
+            <mat-form-field appearance="outline" class="full">
+              <mat-label>Observación (opcional)</mat-label>
+              <input matInput [(ngModel)]="observacion" />
+            </mat-form-field>
+
+            <div class="field">
+              <label class="dropzone-label">Comprobante</label>
+              <div class="dropzone" (click)="archivoInput.click()">
+                <mat-icon>upload_file</mat-icon>
+                {{ archivoComprobante() ? archivoComprobante()!.name : 'Adjuntar PDF o imagen' }}
+              </div>
+              <input #archivoInput type="file" [accept]="extensionesComprobante" style="display:none" (change)="onArchivoSeleccionado($event)" />
+            </div>
+
+            <div class="confirm-actions">
+              @if (motivosNoConfirmar().length) {
+                <div class="motivos-bloqueo">
+                  <div class="mb-titulo"><mat-icon>info</mat-icon> Para confirmar el acuerdo falta:</div>
+                  <ul>
+                    @for (motivo of motivosNoConfirmar(); track motivo) { <li>{{ motivo }}</li> }
+                  </ul>
+                </div>
+              }
+
+              <button mat-raised-button color="accent" [disabled]="!puedeConfirmar()" (click)="confirmar()">
+                @if (registrando()) {
+                  <mat-spinner diameter="18"></mat-spinner>
+                } @else {
+                  <ng-container>
+                    <mat-icon>check_circle</mat-icon>
+                    Confirmar acuerdo &middot; paga {{ formatMoneda(totalPagar()) }}, condona {{ formatMoneda(totalCondonar()) }}
+                  </ng-container>
+                }
+              </button>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      }
+    }
+
+    <!-- ============ Historial ============ -->
+    <div class="section-label">
+      Acuerdos de este partícipe
+      <span class="count">({{ historial().length }})</span>
+    </div>
+    @if (cargandoHistorial()) {
+      <div class="loading-spinner-container"><mat-spinner diameter="32"></mat-spinner></div>
+    } @else if (!historial().length) {
+      <p class="texto-vacio">Este partícipe no tiene acuerdos de condonación registrados.</p>
+    } @else {
+      @for (a of historial(); track a.codigo) {
+        <mat-card class="historial-card">
+          <mat-card-content>
+            <div class="hc-head">
+              <span class="chip-estado">{{ nombreEstadoAcuerdo(a.estado) }}</span>
+              <span class="hc-titulo">Préstamo #{{ a.prestamo.idAsoprep }} &middot; {{ formatFecha(a.fecha) }}</span>
+              <span class="hc-valor">Pagó {{ formatMoneda(a.valorPagar) }} &middot; condonó {{ formatMoneda(a.valorCondonar) }}</span>
+            </div>
+            @if (a.motivoRechazo) {
+              <div class="hc-anulado"><mat-icon>block</mat-icon> Anulado: {{ a.motivoRechazo }}</div>
+            }
+          </mat-card-content>
+        </mat-card>
+      }
+    }
+  }
+
+</div>

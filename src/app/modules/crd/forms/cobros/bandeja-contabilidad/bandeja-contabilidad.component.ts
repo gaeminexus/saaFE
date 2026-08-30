@@ -12,6 +12,7 @@ import { nombreTipoOperacionCobro } from '../../../model/cobros/catalogos-cobro'
 import { CobroCredito, FilaBandejaAprobacion } from '../../../model/cobros/cobro-credito';
 import { CobroCreditoService } from '../../../service/cobro-credito.service';
 import { ComprobanteViewerComponent } from '../../../dialog/cobros/comprobante-viewer.component';
+import { CobroPetroPaso1Component } from '../../archivos-petro/carga/detalle-consulta-carga/cobro-petro-paso1/cobro-petro-paso1.component';
 
 /**
  * Bandeja de contabilidad (§5.1 de docs/crd/API-COBROS-APROBACION-CONTABILIDAD.md).
@@ -28,7 +29,7 @@ import { ComprobanteViewerComponent } from '../../../dialog/cobros/comprobante-v
 @Component({
   selector: 'app-bandeja-contabilidad',
   standalone: true,
-  imports: [CommonModule, FormsModule, MaterialFormModule, ComprobanteViewerComponent],
+  imports: [CommonModule, FormsModule, MaterialFormModule, ComprobanteViewerComponent, CobroPetroPaso1Component],
   templateUrl: './bandeja-contabilidad.component.html',
   styleUrl: './bandeja-contabilidad.component.scss',
 })
@@ -72,8 +73,11 @@ export class BandejaContabilidadComponent {
     this.errorDetalle.set(null);
 
     if (fila.tipo === 'CARGA_PETRO') {
-      // No hay endpoint de detalle/aprobación de carga Petro en este contrato todavía — ver reporte
-      // a saabe-4b. Se muestra la fila igual (no se oculta de la lista) pero sin acciones.
+      // Detalle y acciones (transferencias, confirmar recepción, reversar) los resuelve el propio
+      // `CobroPetroPaso1Component` embebido en la plantilla — se le pasa `fila.id` como `idCarga`
+      // y se autoabastece (docs/crd/API-COBRO-PETRO-DOS-PASOS.md). No hay "rechazar" simétrico acá:
+      // en una fila pendiente la única acción es confirmar; si contabilidad no está de acuerdo,
+      // simplemente no confirma.
       return;
     }
 

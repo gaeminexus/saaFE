@@ -24,9 +24,18 @@ frontend (`saafe-f6`). **Última actualización: 2026-08-29.**
 > el staleness reubicado al proceso reusando `procesado:false`, y la anulación en cascada.
 > **Contrato congelado:** `crd/API-ACUERDOS-CONDONACION.md`, espejado.
 >
-> **Falta:** la pantalla (no asignada a propósito — el frontend está con la pieza grande del
-> circuito de cobros y no conviene abrirle un segundo frente), correr el DDL en producción, y
-> desplegar. **Nada de esto está en producción.**
+> **Base de datos: ✅ EJECUTADO EN PRODUCCIÓN el 2026-08-30** —
+> `DDL-ACUERDOS-PAGO-CONDONACION.sql` y `80_PLANTILLA_25_GASTO_CONDONACION.sql` (cuenta de gasto
+> **PLNNCDGO 9743**, resuelta por `DTPLAXL1 = 70`, cambiable desde la pantalla de plantillas sin
+> redesplegar).
+>
+> **Falta:** la pantalla (en construcción al 2026-08-30) y desplegar el WAR.
+>
+> ⚠️ **Dos controles de esos scripts que hay que confirmar** (ver §5.4 del DDL y bloque 1 del 80):
+> que las secuencias `SCP.SQ_PRBRCDGO`/`SQ_PDTRCDGO` hayan quedado por ENCIMA de 248/1177 — si no,
+> el próximo rubro creado desde la aplicación muere por PK duplicada, en una pantalla sin relación
+> aparente; y que el INSERT de la plantilla haya devuelto **1 fila** (0 en la primera corrida
+> significa que plantilla y cuenta están en jerarquías distintas).
 >
 > ### Circuito de cobros — backend EN PRODUCCIÓN sin pantallas
 >

@@ -248,6 +248,11 @@ export class MenucreditosComponent {
           route: '/menucreditos/proceso-credito',
         },
         {
+          displayName: 'Acuerdos de Pago con Condonación',
+          iconName: 'handshake',
+          route: '/menucreditos/acuerdo-condonacion',
+        },
+        {
           displayName: 'Dash',
           iconName: 'finance',
           // route: '/menucreditos/participe-dash'

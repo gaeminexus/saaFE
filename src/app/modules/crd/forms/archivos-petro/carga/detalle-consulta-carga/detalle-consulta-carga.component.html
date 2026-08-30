@@ -647,15 +647,11 @@
       }
 
       <!--
-        Paso 1 del cobro de Petro en dos pasos (docs/crd/API-COBRO-PETRO-DOS-PASOS.md, §1): el
-        paso 2 (Procesar Archivo, abajo) no puede ejecutarse si el paso 1 no está confirmado.
-        Envuelve también la tarjeta de "Procesar Archivo" para que `#pasoUnoPetro` esté en su
-        alcance — una referencia de plantilla declarada dentro de un `@if` no es visible en un
-        `@if` hermano, solo en sus descendientes.
+        La confirmación del paso 1 del cobro de Petro (docs/crd/API-COBRO-PETRO-DOS-PASOS.md, §1)
+        se mueve a la Bandeja de Contabilidad (docs/crd/API-COBROS-APROBACION-CONTABILIDAD.md §5.1):
+        acá solo se lee `confirmadaPetro()` para seguir bloqueando el paso 2 hasta que esté hecha.
       -->
       @if (cargaArchivo.codigo) {
-        <app-cobro-petro-paso1 #pasoUnoPetro [idCarga]="cargaArchivo.codigo"></app-cobro-petro-paso1>
-
         <!-- Tarjeta para procesar archivo -->
         @if (mostrarProcesar()) {
           <div class="process-file-section">
@@ -683,12 +679,12 @@
                       </p>
                     </div>
 
-                    @if (!pasoUnoPetro.confirmada()) {
+                    @if (!confirmadaPetro()) {
                       <div class="process-info process-info-bloqueo">
                         <mat-icon>lock</mat-icon>
                         <p>
-                          No se puede procesar el archivo todavía: falta confirmar el <b>paso 1</b>
-                          (recepción del cobro Petro) más arriba.
+                          No se puede procesar el archivo todavía: falta que Contabilidad confirme
+                          la recepción del cobro Petro desde la Bandeja de Contabilidad.
                         </p>
                       </div>
                     }
@@ -697,7 +693,7 @@
                       mat-raised-button
                       color="accent"
                       class="process-button"
-                      [disabled]="aporteAgrupados.length === 0 || !pasoUnoPetro.confirmada()"
+                      [disabled]="aporteAgrupados.length === 0 || !confirmadaPetro()"
                       (click)="procesarArchivo()">
                       <mat-icon>send</mat-icon>
                       <span>Procesar Archivo</span>

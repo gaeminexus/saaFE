@@ -54,6 +54,17 @@ export class ComprobanteCobroService {
     return `cobros/${anio}/${mes}/${idCobro}`;
   }
 
+  /**
+   * Carpeta del comprobante de un acuerdo de pago con condonación (CRD.ACCN), al registrarlo.
+   * Mismo formato de ejemplo del contrato (`acuerdos/2026/08/...`, ver
+   * docs/crd/API-ACUERDOS-CONDONACION.md §3).
+   */
+  carpetaDeAcuerdo(idPrestamo: number, fecha: Date = new Date()): string {
+    const anio = fecha.getFullYear();
+    const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+    return `acuerdos/${anio}/${mes}/${idPrestamo}`;
+  }
+
   /** Carpeta del comprobante único de un cobro que cubre varios préstamos del mismo partícipe. */
   carpetaDeCobroMultiple(idEntidad: number): string {
     return `CRD/PAGOS/MULTIPLE/${idEntidad}`;

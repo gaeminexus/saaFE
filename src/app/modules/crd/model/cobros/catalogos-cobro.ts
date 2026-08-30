@@ -57,9 +57,21 @@ export function puedeAnularseCobro(estado: number | null | undefined): boolean {
  *
  * `ACUERDO_CONDONACION` NO se incluye a propósito: existe en el catálogo del backend pero la rama
  * de `procesarCobro()` todavía no está construida y sus tablas no existen en producción (§7 del
- * contrato). No ofrecerlo en ninguna pantalla hasta que el backend avise que ya es operativo.
+ * contrato).
+ *
+ * `ACUERDO_CONDONACION` SÍ se incluye ahora (2026-08-30): docs/crd/API-ACUERDOS-CONDONACION.md
+ * describe el circuito completo — el registro de un acuerdo crea su cobro en CBCR con este tipo en
+ * el mismo acto, así que puede aparecer en la bandeja y en proceso de crédito como cualquier otro.
+ * Esta pantalla de cobros no lo CONSTRUYE (no arma un `SolicitudRegistroCobro` con este tipo) — solo
+ * necesita reconocerlo para mostrarlo bien cuando lo vea.
  */
-export type TipoOperacionCobro = 'PAGO_CUOTA' | 'PAGO_MULTIPLE' | 'ABONO_CAPITAL' | 'PRECANCELACION' | 'REGISTRO_APORTE';
+export type TipoOperacionCobro =
+  | 'PAGO_CUOTA'
+  | 'PAGO_MULTIPLE'
+  | 'ABONO_CAPITAL'
+  | 'PRECANCELACION'
+  | 'REGISTRO_APORTE'
+  | 'ACUERDO_CONDONACION';
 
 export const NOMBRE_TIPO_OPERACION_COBRO: Record<string, string> = {
   PAGO_CUOTA: 'Pago de cuota',
