@@ -14,6 +14,9 @@ import { PortapapelesService } from '../../../../../shared/services/portapapeles
 import { JasperReportesService } from '../../../../../shared/services/jasper-reportes.service';
 import { FileService } from '../../../../../shared/services/file.service';
 import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
+import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
+import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
+import { TipoDatosBusqueda as TipoDatos } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { MovimientoRelacionado } from '../../../../../shared/model/pagos-cobros/movimiento-relacionado';
 import { Usuario } from '../../../../../shared/model/usuario';
 import {
@@ -775,7 +778,18 @@ export class LiquidacionesComponent implements OnInit {
       return;
     }
 
-    this.pathService.selectByCriteria({ liquidacion: { id } }).subscribe({
+    // ⚠️ `/ptlc/selectByCriteria` recibe `List<DatosBusqueda>`, NO un objeto de filtros.
+    // Acá se mandaba `{ liquidacion: { id } }` y Jackson respondía 400 con
+    // «Cannot deserialize value of type ArrayList<DatosBusqueda> from Object value»,
+    // así que este botón nunca funcionó. Mismo patrón que usa
+    // `factura-compra-selector-dialog.cargarFacturas()`.
+    const criterio = new DatosBusqueda();
+    criterio.asignaValorConCampoPadre(
+      TipoDatos.LONG, 'liquidacion', 'id', String(id), TipoComandosBusqueda.IGUAL
+    );
+    criterio.setNumeroCampoRepetido(0);
+
+    this.pathService.selectByCriteria([criterio]).subscribe({
       next: (paths) => {
         const lista = paths ?? [];
         this.pathsDocumento.set(lista);
