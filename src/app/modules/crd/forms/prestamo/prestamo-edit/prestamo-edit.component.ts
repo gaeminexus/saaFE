@@ -6,6 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -16,6 +17,10 @@ import { MatTableModule } from '@angular/material/table';
 import { Router } from '@angular/router';
 import { finalize, forkJoin } from 'rxjs';
 
+import {
+  ConfirmDialogComponent,
+  ConfirmDialogData,
+} from '../../../../../shared/basics/confirm-dialog/confirm-dialog.component';
 import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
@@ -62,6 +67,7 @@ interface ParticipeOption {
     MatDatepickerModule,
     MatProgressSpinnerModule,
     MatTableModule,
+    MatDialogModule,
   ],
   templateUrl: './prestamo-edit.component.html',
   styleUrl: './prestamo-edit.component.scss',
@@ -72,6 +78,7 @@ export class PrestamoEditComponent implements OnInit {
   private _rawFechaInicio = '';
   private fb = inject(FormBuilder);
   private funcionesDatosS = inject(FuncionesDatosService);
+  private dialog = inject(MatDialog);
 
   loading = signal<boolean>(false);
 
@@ -486,9 +493,35 @@ export class PrestamoEditComponent implements OnInit {
       return;
     }
 
+    const cuotasExistentes = this.detallePrestamoRaw().length;
+    if (cuotasExistentes === 0) {
+      this.ejecutarGeneracionTabla(idPrestamo, false);
+      return;
+    }
+
+    const data: ConfirmDialogData = {
+      title: 'Regenerar tabla de amortización',
+      message:
+        `El préstamo ya tiene ${cuotasExistentes} cuota${cuotasExistentes === 1 ? '' : 's'} generada` +
+        `${cuotasExistentes === 1 ? '' : 's'}. Se van a reemplazar todas y la operación no se puede deshacer.`,
+      confirmText: 'Regenerar',
+      type: 'danger',
+    };
+
+    this.dialog
+      .open(ConfirmDialogComponent, { data, width: '560px' })
+      .afterClosed()
+      .subscribe((confirmado) => {
+        if (confirmado) {
+          this.ejecutarGeneracionTabla(idPrestamo, true);
+        }
+      });
+  }
+
+  private ejecutarGeneracionTabla(idPrestamo: number, regenerar: boolean): void {
     this.generandoTabla.set(true);
     this.prestamoService
-      .generarTablaAmortizacion(idPrestamo, this.tieneCuotaCero())
+      .generarTablaAmortizacion(idPrestamo, this.tieneCuotaCero(), regenerar)
       .pipe(finalize(() => this.generandoTabla.set(false)))
       .subscribe({
         next: () => {

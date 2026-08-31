@@ -67,31 +67,15 @@ export class PrestamoService {
     return this.http.post<Prestamo>(url, formData).pipe(catchError(this.handleError));
   }
 
-  generarTablaAmortizacion(id: number, tieneCuotaCero: boolean = false): Observable<Prestamo | null> {
+  generarTablaAmortizacion(
+    id: number,
+    tieneCuotaCero: boolean = false,
+    regenerar: boolean = false,
+  ): Observable<Prestamo | null> {
     const cuotaCero = tieneCuotaCero ? 1 : 0;
-    const body = {
-      idPrestamo: id,
-      codigoPrestamo: id,
-      prestamo: id,
-      id,
-      tieneCuotaCero,
-    };
+    const url = `${ServiciosCrd.RS_PRST}/generarTablaAmortizacion/${id}/${cuotaCero}?regenerar=${regenerar}`;
 
-    const urlPrstCamelPath = `${ServiciosCrd.RS_PRST}/generarTablaAmortizacion/${id}/${cuotaCero}`;
-    const urlPrstSnakePath = `${ServiciosCrd.RS_PRST}/generar_tabla_amortizacion/${id}/${cuotaCero}`;
-    const urlPrstSnakeBody = `${ServiciosCrd.RS_PRST}/generar_tabla_amortizacion`;
-    const urlPrstCamelBody = `${ServiciosCrd.RS_PRST}/generarTablaAmortizacion`;
-    const urlDtprSnakePath = `${ServiciosCrd.RS_DTPR}/generar_tabla_amortizacion/${id}/${cuotaCero}`;
-    const urlDtprSnakeBody = `${ServiciosCrd.RS_DTPR}/generar_tabla_amortizacion`;
-
-    return this.http.post<Prestamo>(urlPrstCamelPath, null, this.httpOptions).pipe(
-      catchError(() => this.http.post<Prestamo>(urlPrstSnakePath, null, this.httpOptions)),
-      catchError(() => this.http.post<Prestamo>(urlPrstSnakeBody, body, this.httpOptions)),
-      catchError(() => this.http.post<Prestamo>(urlPrstCamelBody, body, this.httpOptions)),
-      catchError(() => this.http.post<Prestamo>(urlDtprSnakePath, null, this.httpOptions)),
-      catchError(() => this.http.post<Prestamo>(urlDtprSnakeBody, body, this.httpOptions)),
-      catchError(this.handleError),
-    );
+    return this.http.post<Prestamo>(url, null, this.httpOptions).pipe(catchError(this.handleError));
   }
 
   private handleError(error: HttpErrorResponse): Observable<null> {
