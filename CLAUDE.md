@@ -21,6 +21,37 @@ npm test                 # tests unitarios con Karma/Jasmine
 ng test --include='**/mi-componente.spec.ts'   # ejecutar un solo archivo de spec
 ```
 
+> ## ⚠️ Antes del primer `npm run build`: verificá la versión de Node y que estén las dependencias
+>
+> **Agregado el 2026-08-31, después de perderse un rato con esto.** Los comandos de arriba son
+> correctos, pero **no corren en cualquier máquina tal cual**, y los dos fallos posibles se parecen
+> a un error de código sin serlo:
+>
+> ```bash
+> node -v          # Angular 20 necesita Node >= v20.19
+> ls node_modules  # si no existe, ningún script de npm va a llegar a compilar
+> ```
+>
+> - Si `node -v` responde una versión vieja, `npm run build` muere con
+>   **`Cannot find module 'node:path'`** o **`Angular CLI requires Node >= v20.19`**. Verificado el
+>   2026-08-31 en la máquina OMEN: el `node` activo del sistema era **v12.11.0** (vía nvm-windows,
+>   con el symlink en `C:\Program Files\nodejs`).
+> - Si falta `node_modules`, hay que instalar. El lockfile tiene un **conflicto de peer deps
+>   preexistente** entre `@angular/core` y `@angular/service-worker`, así que la instalación necesita
+>   `npm ci --legacy-peer-deps`. **No es un problema de tu cambio** y no hay que "arreglarlo".
+>
+> **Ninguno de esos dos errores es un defecto del código: son del entorno.** Que nadie salga a
+> corregir fuentes por eso.
+>
+> ⚠️ **Si hay varias sesiones de Claude trabajando en la misma máquina, no cambies la versión activa
+> de Node** (`nvm use` mueve el symlink global y se lo cambia a todos). Instalá la versión que
+> necesitás con `nvm install` —que solo la agrega— e invocá ese `node`/`npm` apuntando directo a su
+> carpeta. Es lo que se hizo el 2026-08-31 con Node 22.12.0.
+>
+> **Donde el build corra, corrélo antes de dar por entregado cualquier cambio**, y pegá la salida
+> cruda en el reporte. Donde no corra, decilo explícitamente en vez de omitirlo: es la única
+> verificación automática que existe de este lado.
+
 No existe ningún script `lint`, `format:check`, `test:ci`, `analyze` ni `e2e` en `package.json`. **`.github/workflows/ci-cd.yml` existe pero no está conectado a este repositorio** — invoca esos cinco scripts inexistentes más una ejecución de e2e con Cypress y un paso de despliegue a Heroku, ninguno de los cuales tiene configuración correspondiente en el repositorio (sin configuración de ESLint, sin configuración de Cypress, el destino de despliegue real es WildFly vía `build-production.ps1`). Fallaría en su primer paso si se activara. No trates su presencia como evidencia de que lint/tests/e2e se ejecutan automáticamente en algún lugar — no es así.
 
 Backend local para el proxy de desarrollo: `proxy.conf.js`/`proxy.conf.json` redirigen `/api` (o `/SaaBE`, ver ambos archivos) a `http://127.0.0.1:8080`, donde se espera un despliegue de WildFly + `saaBE` ejecutándose localmente. `start-with-proxy.ps1` verifica si ese backend es alcanzable antes de iniciar `ng serve`.
