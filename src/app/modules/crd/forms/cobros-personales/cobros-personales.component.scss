@@ -484,50 +484,6 @@ table.tabla-aportes {
   }
 }
 
-.resumen-multiple {
-  .tabla-resumen-prestamos {
-    width: 100%;
-    border-collapse: collapse;
-    margin-bottom: 0.9rem;
-
-    th { text-align: left; font-size: 0.75rem; color: #718096; padding: 0.35rem 0.5rem; }
-    td { padding: 0.4rem 0.5rem; font-size: 0.85rem; border-top: 1px solid #edf2f7; }
-    .num { text-align: right; font-variant-numeric: tabular-nums; }
-    .fila-total td { border-top: 2px solid #cbd5e0; }
-  }
-
-  .aviso-pendiente.ok {
-    background: rgba(56, 161, 105, 0.1);
-    color: #276749;
-  }
-}
-
-.resultado-prestamo {
-  border: 1px solid #edf2f7;
-  border-radius: 10px;
-  padding: 0.75rem 0.9rem;
-  margin-bottom: 0.9rem;
-
-  .rp-cabecera {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    font-weight: 600;
-  }
-
-  .rp-monto { font-variant-numeric: tabular-nums; color: #276749; }
-
-  .rp-meta {
-    font-size: 0.78rem;
-    color: #718096;
-    margin: 0.2rem 0 0.6rem;
-  }
-
-  .rp-alerta { color: #c05621; font-weight: 600; }
-
-  .rp-cuotas th, .rp-cuotas td { padding: 0.25rem 0.5rem; font-size: 0.8rem; }
-}
-
 /* Barra de operaciones del préstamo: objetivos de 44px para uso con el dedo en tablet. */
 .acciones-prestamo {
   display: flex;

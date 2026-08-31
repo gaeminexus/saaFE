@@ -42,16 +42,44 @@ export interface DetalleAcuerdoCondonacion {
   valorCondonado: number;
 }
 
+/** Renglón de `aportes`: de qué tipo de aporte del socio sale, y cuánto (se CONSUME — el saldo baja). */
+export interface AporteAcuerdoCondonacion {
+  idTipoAporte: number;
+  valor: number;
+}
+
+/**
+ * El monto a pagar (agregado 2026-08-30) sale de DOS fuentes que deben sumar exacto `valorPagar`
+ * del detalle (tolerancia $0.01): cruce de saldos de aportes del socio, y depósito/transferencia.
+ *
+ * ⚠️ `idCuentaBancaria`/`referencia`/`rutaRespaldo` son CONDICIONALES a `valorPagarDeposito`:
+ * obligatorios si es `> 0`, y el backend los RECHAZA si es `0` — no se mandan en absoluto (ni
+ * vacíos ni null) cuando el pago es 100% con aportes.
+ *
+ * ⚠️ Cuál fuente se usa cambia CUÁNDO se aplica el acuerdo (§3 del contrato):
+ * - `valorPagarDeposito > 0`: crea un `CBCR` por ESE monto (no por `valorPagar`); el acuerdo queda
+ *   VIGENTE esperando aprobación de contabilidad — el préstamo no se toca todavía.
+ * - `valorPagarDeposito = 0` (100% aportes): no hay `CBCR` ni aprobación — se aplica EN EL ACTO del
+ *   registro y vuelve ya APLICADO, préstamo cancelado, `cobroCredito: null`.
+ */
 export interface SolicitudRegistroAcuerdo {
   idPrestamo: number;
   /** `yyyy-MM-dd`. MISMA fecha con la que se previsualizó — el backend valida los adeudados contra ella. */
   fecha: string;
   observacion?: string | null;
   usuario: string;
-  /** Cuenta de la institución donde entra la parte no condonada. */
-  idCuentaBancaria: number;
-  referencia: string;
-  rutaRespaldo: string;
+
+  /** Fuente 1: cruce con saldos de aportes del socio (se consumen). */
+  valorPagarAportes: number;
+  aportes: AporteAcuerdoCondonacion[];
+
+  /** Fuente 2: depósito/transferencia. `0` si el pago es 100% con aportes. */
+  valorPagarDeposito: number;
+  /** Cuenta de la institución donde entra la parte en depósito. Solo si `valorPagarDeposito > 0`. */
+  idCuentaBancaria?: number;
+  referencia?: string;
+  rutaRespaldo?: string;
+
   /** Los 5 conceptos, siempre, en el orden de `ORDEN_CONCEPTOS`. */
   detalles: DetalleAcuerdoCondonacion[];
 }
@@ -70,9 +98,14 @@ export interface AcuerdoCondonacion {
   codigo: number;
   entidad: Entidad;
   prestamo: Prestamo;
+  /** `1` VIGENTE (con depósito, esperando proceso) o `2` APLICADO (100% aportes, ya aplicado). */
   estado: number;
   /** Calculado por el backend sumando el detalle — nunca se envía al registrar. */
   valorPagar: number;
+  /** Parte de `valorPagar` cubierta con saldos de aportes del socio. */
+  valorPagarAportes: number;
+  /** Parte de `valorPagar` cubierta con depósito/transferencia. `0` si fue 100% aportes. */
+  valorPagarDeposito: number;
   /** Calculado por el backend sumando el detalle — nunca se envía al registrar. */
   valorCondonar: number;
   fecha: string | number[] | Date;
@@ -81,8 +114,8 @@ export interface AcuerdoCondonacion {
   fechaRegistro: string | number[] | Date | null;
   /** `null` hasta que se procesa el cobro asociado (K11: el préstamo se cancela recién ahí). */
   eventoPrestamo: { codigo: number } | null;
-  /** El cobro de `CRD.CBCR` creado en el mismo acto del registro — de ahí sale hacia la bandeja. */
-  cobroCredito: CobroCredito;
+  /** El cobro de `CRD.CBCR`, creado solo si hubo depósito (`valorPagarDeposito > 0`). */
+  cobroCredito: CobroCredito | null;
 
   /** ⚠️ Es ANULACIÓN, no rechazo — ver comentario de la interfaz. */
   usuarioRechazo?: string | null;

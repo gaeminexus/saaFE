@@ -63,42 +63,57 @@
             <div class="loading-spinner-container"><mat-spinner diameter="36"></mat-spinner></div>
           } @else if (errorDetalle(); as error) {
             <div class="error-text"><mat-icon>error_outline</mat-icon><span>{{ error }}</span></div>
-          } @else if (detalle(); as cobro) {
+          } @else if (detalle(); as resp) {
             <div class="dc-datos">
               <div class="dc-item">
                 <span class="l">Partícipe</span>
-                <span class="v">{{ cobro.entidad?.razonSocial }}</span>
+                <span class="v">{{ resp.cabecera.entidad?.razonSocial }}</span>
               </div>
               <div class="dc-item">
                 <span class="l">Tipo de operación</span>
-                <span class="v">{{ nombreTipoOperacionCobro(cobro.tipoOperacion) }}</span>
+                <span class="v">{{ nombreTipoOperacionCobro(resp.cabecera.tipoOperacion) }}</span>
               </div>
               <div class="dc-item">
                 <span class="l">Valor</span>
-                <span class="v">{{ formatMoneda(cobro.valor) }}</span>
+                <span class="v">{{ formatMoneda(resp.cabecera.valor) }}</span>
               </div>
               <div class="dc-item">
                 <span class="l">Fecha</span>
-                <span class="v">{{ formatFecha(cobro.fecha) }}</span>
+                <span class="v">{{ formatFecha(resp.cabecera.fecha) }}</span>
               </div>
               <div class="dc-item">
                 <span class="l">Referencia</span>
-                <span class="v">{{ cobro.referencia || 'No registrada' }}</span>
+                <span class="v">{{ resp.cabecera.referencia || 'No registrada' }}</span>
               </div>
               <div class="dc-item">
                 <span class="l">Cuenta destino</span>
-                <span class="v">{{ cobro.cuentaBancaria?.banco?.nombre }} &middot; {{ cobro.cuentaBancaria?.numeroCuenta }}</span>
+                <span class="v">{{ resp.cabecera.cuentaBancaria?.banco?.nombre }} &middot; {{ resp.cabecera.cuentaBancaria?.numeroCuenta }}</span>
               </div>
-              @if (cobro.observacion) {
+              @if (resp.cabecera.observacion) {
                 <div class="dc-item ancho-total">
                   <span class="l">Observación</span>
-                  <span class="v">{{ cobro.observacion }}</span>
+                  <span class="v">{{ resp.cabecera.observacion }}</span>
                 </div>
               }
             </div>
 
+            @if (resp.detalle.length > 1) {
+              <div class="section-label">Detalle</div>
+              <table class="tabla-detalle">
+                <thead><tr><th>Préstamo / tipo de aporte</th><th class="num">Valor</th></tr></thead>
+                <tbody>
+                  @for (linea of resp.detalle; track $index) {
+                    <tr>
+                      <td>{{ nombreLineaDetalle(linea) }}</td>
+                      <td class="num">{{ formatMoneda(linea.valor) }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+
             <div class="section-label">Comprobante</div>
-            <app-comprobante-viewer [ruta]="cobro.rutaRespaldo"></app-comprobante-viewer>
+            <app-comprobante-viewer [ruta]="resp.cabecera.rutaRespaldo"></app-comprobante-viewer>
 
             <div class="dc-acciones">
               <button mat-stroked-button color="warn" [disabled]="procesando()" (click)="rechazar()">

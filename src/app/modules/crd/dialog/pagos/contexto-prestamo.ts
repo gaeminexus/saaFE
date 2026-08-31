@@ -73,6 +73,12 @@ export function contextoDesdePrestamo(prestamo: Prestamo, participante?: string 
 export type SalidaDialogoPago =
   | { accion: 'aplicado'; recargarTabla: boolean; abono?: ResultadoAbonoCapital; precancelacion?: ResultadoPrecancelacion }
   | { accion: 'anulado'; recargarTabla: boolean; anulacion: ResultadoAnulacion }
+  /**
+   * El cobro quedó REGISTRADO en CRD.CBCR, pendiente de aprobación de contabilidad — a diferencia de
+   * `aplicado`, el préstamo NO cambió: no hay nada que recargar. `PAGO_CUOTA` en modo efectivo de
+   * `PagoPrestamoDialogComponent` (docs/crd/PLAN-CUTOVER-COBROS-POR-CONTABILIDAD.md).
+   */
+  | { accion: 'registrado' }
   | { accion: 'ir-a-pagar' }
   | { accion: 'ir-a-precancelar' }
   | { accion: 'ir-a-abonar' };

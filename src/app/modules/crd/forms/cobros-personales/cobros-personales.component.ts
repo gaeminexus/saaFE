@@ -16,12 +16,15 @@ import { CuentaBancaria } from '../../../tsr/model/cuenta-bancaria';
 import { CuentaBancariaService } from '../../../tsr/service/cuenta-bancaria.service';
 
 import { AbonoCapitalDialogComponent } from '../../dialog/pagos/abono-capital-dialog.component';
+import { CobroRegistradoDetalleLinea, CobroRegistradoDialogComponent } from '../../dialog/pagos/cobro-registrado-dialog.component';
 import { ContextoPrestamo, SalidaDialogoPago, contextoDesdePrestamo } from '../../dialog/pagos/contexto-prestamo';
 import { HistorialOperacionesDialogComponent } from '../../dialog/pagos/historial-operaciones-dialog.component';
 import { PagoPrestamoDialogComponent } from '../../dialog/pagos/pago-prestamo-dialog.component';
 import { PrecancelacionDialogComponent } from '../../dialog/pagos/precancelacion-dialog.component';
 import { ReciboOperacionDialogComponent } from '../../dialog/pagos/recibo-operacion-dialog.component';
 import { MetodoCobro } from '../../dialog/pagos/respaldo-cobro.component';
+import { DetalleCobroCredito } from '../../model/cobros/cobro-credito';
+import { TipoOperacionCobro } from '../../model/cobros/catalogos-cobro';
 import { DetallePrestamo } from '../../model/detalle-prestamo';
 import { Entidad } from '../../model/entidad';
 import { HistoricoDesgloseAporteParticipe } from '../../model/historico-desglose-aporte-participe';
@@ -32,15 +35,14 @@ import {
 } from '../../model/estado-cuota-prestamo';
 import { NOMBRE_ESTADO_PRESTAMO, admiteOperaciones } from '../../model/pagos/catalogos-pago';
 import {
-  PagoCuotaRequest,
   ResultadoPagoCuota,
-  ResultadoPagoMultiple,
   ResultadoRegistroAporte,
   SaldoAporte,
 } from '../../model/pagos/operaciones-pago';
-import { MovimientoAporte, RespuestaPago, mensajeDeRespuesta } from '../../model/pagos/respuesta-pago';
+import { MovimientoAporte, mensajeDeRespuesta } from '../../model/pagos/respuesta-pago';
 import { Prestamo } from '../../model/prestamo';
 import { PagoPrestamoService } from '../../service/pago-prestamo.service';
+import { CobroCreditoService } from '../../service/cobro-credito.service';
 import { DetallePrestamoService } from '../../service/detalle-prestamo.service';
 import { EntidadService } from '../../service/entidad.service';
 import { ComprobanteCobroService } from '../../service/comprobante-cobro.service';
@@ -140,6 +142,7 @@ export class CobrosPersonalesComponent implements OnDestroy {
   private historicoService = inject(HistoricoDesgloseAporteParticipeService);
   private cuentaBancariaService = inject(CuentaBancariaService);
   private operaciones = inject(OperacionesPagoPrestamoService);
+  private cobroCreditoService = inject(CobroCreditoService);
   private saldoPrestamo = inject(SaldoPrestamoService);
   private funcionesDatos = inject(FuncionesDatosService);
   private comprobantes = inject(ComprobanteCobroService);
@@ -824,32 +827,6 @@ export class CobrosPersonalesComponent implements OnDestroy {
     this.cuentaMontoVersion.update((v) => v + 1);
   }
 
-  /** Desglose que devolvió `pagarMultiplesCuotas`, para mostrarlo completo mientras no exista un impreso multi-préstamo. */
-  resultadoMultiple = signal<ResultadoPagoMultiple | null>(null);
-
-  /**
-   * Deja en pantalla el desglose completo que devolvió el backend —préstamo por préstamo, cuota por
-   * cuota— mientras no exista un comprobante impreso para varios préstamos (RPRT_CMPB_PGCT es de
-   * una sola cuota). Recarga los préstamos del partícipe y limpia el formulario para el próximo cobro.
-   */
-  private mostrarResultadoMultiple(resultado: ResultadoPagoMultiple): void {
-    this.resultadoMultiple.set(resultado);
-    this.recargarPrestamo();
-    this.resetAsignacion();
-    this.montoTotalTexto.set('$0.00');
-    this.numeroReferencia.set('');
-    this.observacion = '';
-    this.archivoComprobante.set(null);
-  }
-
-  cerrarResultadoMultiple(): void {
-    this.resultadoMultiple.set(null);
-  }
-
-  /** ID visible (idAsoprep) del préstamo con ese código, para rotular el desglose del resultado múltiple. */
-  idAsopreDe(idPrestamo: number): number | string {
-    return this.prestamosOperables().find((p) => p.codigo === idPrestamo)?.idAsoprep ?? idPrestamo;
-  }
 
   /**
    * Saldos por tipo de aporte agregados en la base de datos. Sustituye a la descarga completa de
@@ -1273,18 +1250,16 @@ export class CobrosPersonalesComponent implements OnDestroy {
   }
 
   /**
-   * Registra el cobro completo con el comprobante ya archivado: la parte que va a los préstamos y
-   * la que el socio aporta a sus propias cuentas. Son transacciones distintas del backend, así que
-   * se encadenan en ese orden.
+   * Registra el cobro completo con el comprobante ya archivado.
    *
-   * - Ningún préstamo: solo aportes del socio.
-   * - Un préstamo: `pagarCuota` (efectivo, transferencia o depósito) o `pagarConAportes` (débito
-   *   del saldo de aportes) — igual que siempre.
-   * - Varios préstamos: `pagarMultiplesCuotas`, una sola operación todo-o-nada (no admite débito:
-   *   ese endpoint no tiene desglose de aportes, por eso el método de pago lo bloquea antes).
-   *
-   * Si el pago del/los préstamo(s) falla no se registra ningún aporte: el usuario corrige el monto
-   * y reintenta el cobro entero sin haber dejado movimientos sueltos a medio camino.
+   * - Ningún préstamo: solo aportes del socio. `REGISTRO_APORTE` no migró todavía a CBCR — sigue
+   *   aplicando en el acto con `registrarAporte`.
+   * - Débito de cuenta de aportes (solo con un préstamo — el método de pago lo bloquea con varios):
+   *   no entra dinero al banco, queda fuera del circuito por decisión del usuario del 2026-08-18
+   *   (docs/crd/PLAN-CUTOVER-COBROS-POR-CONTABILIDAD.md §1) — sigue con `pagarConAportes`.
+   * - Todo lo demás —un préstamo, varios, con o sin aportes combinados, en efectivo/transferencia/
+   *   depósito— es dinero real entrando al banco: ya pasa por `CRD.CBCR` (`PAGO_CUOTA`/
+   *   `PAGO_MULTIPLE`/`COBRO_MIXTO` según el caso).
    */
   private registrarCobro(
     entidad: Entidad,
@@ -1305,65 +1280,9 @@ export class CobrosPersonalesComponent implements OnDestroy {
       return;
     }
 
-    const seguirConAportes = (continuar: (registrados: ResultadoRegistroAporte[]) => void): void => {
-      this.registrarAportesDelSocio(entidad.codigo, aportes, usuario, observacion, fecha, rutaDocumentoRespaldo, continuar);
-    };
-
-    if (prestamos.length > 1) {
-      const pagos: PagoCuotaRequest[] = prestamos.map(({ prestamo, monto }) => ({
-        idPrestamo: prestamo.codigo,
-        valor: +monto.toFixed(2),
-        usuario,
-        observacion,
-        fechaPago: fecha,
-        rutaDocumentoRespaldo,
-      }));
-
-      this.operaciones.pagarMultiplesCuotas({ pagos }).subscribe((resp) => {
-        if (!resp.exito || !resp.resultado) {
-          this.registrando.set(false);
-          this.registrarError(resp.error, mensajeDeRespuesta(resp));
-          // La transacción es todo-o-nada: si falló, no quedó nada aplicado.
-          this.descartarComprobanteHuerfano(rutaDocumentoRespaldo);
-          return;
-        }
-        const resultado = resp.resultado;
-        seguirConAportes(() => {
-          this.registrando.set(false);
-          this.mostrarResultadoMultiple(resultado);
-        });
-      });
-      return;
-    }
-
-    // Un solo préstamo: comportamiento idéntico al de siempre.
-    const prestamo = prestamos[0].prestamo;
-    const monto = +prestamos[0].monto.toFixed(2);
-
-    const alPagar = (
-      tipo: 'PAGO_MANUAL' | 'PAGO_APORTES',
-      resp: RespuestaPago<ResultadoPagoCuota>
-    ): void => {
-      if (!resp.exito || !resp.resultado) {
-        this.registrando.set(false);
-        this.registrarError(resp.error, mensajeDeRespuesta(resp));
-        if (resp.error === 'SALDO_APORTES_INSUFICIENTE' || resp.error === 'TIPO_APORTE_NO_VIGENTE') {
-          this.cargarSaldosAporte(entidad.codigo);
-        }
-        // El comprobante ya subido queda huérfano: no lo referencia ningún pago, así que se borra
-        // para no dejar basura acumulándose en la carpeta del préstamo con cada reintento.
-        this.descartarComprobanteHuerfano(rutaDocumentoRespaldo);
-        return;
-      }
-      const pago = resp.resultado;
-      const movimientos = resp.movimientosAporte ?? [];
-      seguirConAportes((registrados) => {
-        this.registrando.set(false);
-        this.mostrarRecibo(tipo, resp.mensaje, fecha, pago, movimientos, registrados, rutaDocumentoRespaldo);
-      });
-    };
-
     if (this.metodoPago() === 'debito') {
+      const prestamo = prestamos[0].prestamo;
+      const monto = +prestamos[0].monto.toFixed(2);
       const idTipoAporte = this.idTipoAportePara(this.cuentaOrigenAporte());
       if (idTipoAporte == null) {
         this.registrando.set(false);
@@ -1382,13 +1301,142 @@ export class CobrosPersonalesComponent implements OnDestroy {
           rutaDocumentoRespaldo,
           aportes: [{ idTipoAporte, valor: monto }],
         })
-        .subscribe((resp) => alPagar('PAGO_APORTES', resp));
+        .subscribe((resp) => {
+          if (!resp.exito || !resp.resultado) {
+            this.registrando.set(false);
+            this.registrarError(resp.error, mensajeDeRespuesta(resp));
+            if (resp.error === 'SALDO_APORTES_INSUFICIENTE' || resp.error === 'TIPO_APORTE_NO_VIGENTE') {
+              this.cargarSaldosAporte(entidad.codigo);
+            }
+            this.descartarComprobanteHuerfano(rutaDocumentoRespaldo);
+            return;
+          }
+          const pago = resp.resultado;
+          const movimientos = resp.movimientosAporte ?? [];
+          this.registrarAportesDelSocio(entidad.codigo, aportes, usuario, observacion, fecha, rutaDocumentoRespaldo, (registrados) => {
+            this.registrando.set(false);
+            this.mostrarRecibo('PAGO_APORTES', resp.mensaje, fecha, pago, movimientos, registrados, rutaDocumentoRespaldo);
+          });
+        });
       return;
     }
 
-    this.operaciones
-      .pagarCuota({ idPrestamo: prestamo.codigo, valor: monto, usuario, observacion, fechaPago: fecha, rutaDocumentoRespaldo })
-      .subscribe((resp) => alPagar('PAGO_MANUAL', resp));
+    this.registrarCobroCreditoUnificado(entidad, prestamos, aportes, usuario, observacion, fecha, rutaDocumentoRespaldo);
+  }
+
+  /**
+   * Dinero real entrando al banco, a través de CRD.CBCR: cubre `PAGO_CUOTA` (un préstamo, sin
+   * aportes), `PAGO_MULTIPLE` (varios préstamos, sin aportes) y `COBRO_MIXTO` (uno o varios
+   * préstamos MÁS aportes del socio en el mismo depósito) —
+   * docs/crd/PLAN-CUTOVER-COBROS-POR-CONTABILIDAD.md y docs/crd/API-COBROS-APROBACION-CONTABILIDAD.md
+   * §2. El cobro queda REGISTRADO, pendiente de aprobación: ningún préstamo se modifica y ningún
+   * aporte se acredita todavía, así que el diálogo de resultado muestra el detalle completo
+   * —préstamos y aportes por separado— pero encabezado como REGISTRADO, no como aplicado.
+   */
+  private registrarCobroCreditoUnificado(
+    entidad: Entidad,
+    prestamos: { prestamo: Prestamo; monto: number }[],
+    aportes: { clave: 'cesantia' | 'jubilacion'; idTipoAporte: number; valor: number }[],
+    usuario: string,
+    observacion: string | null,
+    fecha: string | null,
+    rutaDocumentoRespaldo: string | null
+  ): void {
+    const cuenta = this.cuentaAsopropDestino();
+    // Defensivo: `motivosNoConfirmar()` ya exige cuenta, referencia, comprobante y fecha antes de
+    // habilitar el botón — no debería poder llegar acá sin ellos.
+    if (!cuenta || !fecha || !rutaDocumentoRespaldo) {
+      this.registrando.set(false);
+      this.errorOperacion.set('Faltan datos del respaldo del cobro. Intente nuevamente.');
+      this.descartarComprobanteHuerfano(rutaDocumentoRespaldo);
+      return;
+    }
+
+    const tipoOperacion: TipoOperacionCobro = aportes.length
+      ? 'COBRO_MIXTO'
+      : prestamos.length > 1
+        ? 'PAGO_MULTIPLE'
+        : 'PAGO_CUOTA';
+
+    // periodoDevengo: primer día del mes de la fecha del pago (docs/crd/PLAN-APORTES-DEVENGO-CONTRATOS.md
+    // D3). Esta pantalla todavía no tiene un selector de período —el devengo es un frente aparte, en
+    // curso— así que se asume que el aporte es del mes en que se recibe: es el caso normal de
+    // ventanilla, y el único que esta pantalla puede expresar hoy.
+    const periodoDevengo = `${(fecha ?? '').slice(0, 7)}-01`;
+
+    const detalles: DetalleCobroCredito[] = [
+      ...prestamos.map(({ prestamo, monto }) => ({ idPrestamo: prestamo.codigo, valor: +monto.toFixed(2) })),
+      ...aportes.map((a) => ({ idTipoAporte: a.idTipoAporte, periodoDevengo, valor: +a.valor.toFixed(2) })),
+    ];
+    const valorTotal = +detalles.reduce((s, d) => s + d.valor, 0).toFixed(2);
+
+    this.cobroCreditoService
+      .registrar({
+        idEntidad: entidad.codigo,
+        tipoOperacion,
+        idCuentaBancaria: cuenta.codigo,
+        referencia: this.numeroReferencia().trim(),
+        rutaRespaldo: rutaDocumentoRespaldo,
+        valor: valorTotal,
+        fecha,
+        observacion,
+        usuario,
+        detalles,
+      })
+      .subscribe((resp) => {
+        this.registrando.set(false);
+        if (!resp.exito || !resp.resultado) {
+          this.errorOperacion.set(resp.mensaje ?? 'No se pudo registrar el cobro.');
+          this.descartarComprobanteHuerfano(rutaDocumentoRespaldo);
+          return;
+        }
+
+        const registro = resp.resultado;
+        const lineasDetalle: CobroRegistradoDetalleLinea[] = [
+          ...prestamos.map(({ prestamo, monto }) => ({
+            tipo: 'prestamo' as const,
+            etiqueta: `Préstamo #${prestamo.idAsoprep ?? prestamo.codigo}`,
+            valor: +monto.toFixed(2),
+          })),
+          ...aportes.map((a) => ({
+            tipo: 'aporte' as const,
+            etiqueta: this.nombreAporte(a.idTipoAporte, a.clave),
+            valor: +a.valor.toFixed(2),
+          })),
+        ];
+        const esMultilinea = prestamos.length > 1 || aportes.length > 0;
+
+        this.dialog.open(CobroRegistradoDialogComponent, {
+          data: {
+            tipoOperacion,
+            idCobro: registro.idCobro,
+            valor: registro.valor,
+            contabilidadActiva: registro.contabilidadActiva,
+            tituloPrestamo: prestamos.length === 1 && !esMultilinea ? this.tituloPrestamo() : undefined,
+            participante: entidad.razonSocial,
+            fecha,
+            referencia: this.numeroReferencia().trim(),
+            detalles: esMultilinea ? lineasDetalle : undefined,
+          },
+          width: esMultilinea ? '760px' : '640px',
+          maxWidth: '96vw',
+          autoFocus: false,
+        });
+
+        this.resetAsignacion();
+        this.montoTotalTexto.set('$0.00');
+        this.numeroReferencia.set('');
+        this.observacion = '';
+        this.archivoComprobante.set(null);
+      });
+  }
+
+  /** Nombre del tipo de aporte, para el detalle del diálogo de resultado. */
+  private nombreAporte(idTipoAporte: number, clave: 'cesantia' | 'jubilacion'): string {
+    return (
+      this.saldosAporte().find((a) => a.idTipoAporte === idTipoAporte)?.nombre ??
+      (clave === 'cesantia' ? 'Cesantía' : 'Jubilación')
+    );
   }
 
   /**

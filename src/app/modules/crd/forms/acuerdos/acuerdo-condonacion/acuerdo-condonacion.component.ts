@@ -13,11 +13,13 @@ import { CuentaBancaria } from '../../../../tsr/model/cuenta-bancaria';
 import { CuentaBancariaService } from '../../../../tsr/service/cuenta-bancaria.service';
 import {
   AcuerdoCondonacion,
+  AporteAcuerdoCondonacion,
   DetalleAcuerdoCondonacion,
   SolicitudRegistroAcuerdo,
 } from '../../../model/acuerdos/acuerdo-condonacion';
 import {
   ConceptoPrestamo,
+  EstadoAcuerdo,
   NOMBRE_CONCEPTO_PRESTAMO,
   ORDEN_CONCEPTOS,
   TOLERANCIA_ACUERDO,
@@ -27,10 +29,12 @@ import {
 } from '../../../model/acuerdos/catalogos-acuerdo';
 import { Entidad } from '../../../model/entidad';
 import { NOMBRE_ESTADO_PRESTAMO } from '../../../model/pagos/catalogos-pago';
+import { SaldoAporte } from '../../../model/pagos/operaciones-pago';
 import { Prestamo } from '../../../model/prestamo';
 import { AcuerdoCondonacionService } from '../../../service/acuerdo-condonacion.service';
 import { ComprobanteCobroService } from '../../../service/comprobante-cobro.service';
 import { EntidadService } from '../../../service/entidad.service';
+import { OperacionesPagoPrestamoService } from '../../../service/operaciones-pago-prestamo.service';
 import { PrestamoService } from '../../../service/prestamo.service';
 
 /** Fila del desglose en pantalla: un concepto con sus tres montos y si el operador lo puede tocar. */
@@ -41,6 +45,20 @@ interface FilaConcepto {
   adeudado: number;
   /** Editable solo si `condonable`; si no, siempre igual a `adeudado` (K3: los seguros se pagan al 100%). */
   pagadoTexto: string;
+}
+
+/**
+ * Renglón del reparto entre las dos fuentes del pago: un tipo de aporte del socio (se CONSUME, el
+ * saldo baja) o el depósito/transferencia (`idTipoAporte: null`). Mismo patrón que el reparto de
+ * `PrecancelacionDialogComponent` — acá con dos fuentes en vez de N+1, pero misma lógica de cuadre.
+ */
+interface RenglonFondoAcuerdo {
+  clave: string;
+  nombre: string;
+  idTipoAporte: number | null;
+  /** `Infinity` para el depósito; el saldo disponible para un tipo de aporte. */
+  disponible: number;
+  texto: string;
 }
 
 /**
@@ -67,6 +85,7 @@ export class AcuerdoCondonacionComponent {
   private cuentaBancariaService = inject(CuentaBancariaService);
   private acuerdos = inject(AcuerdoCondonacionService);
   private comprobantes = inject(ComprobanteCobroService);
+  private operaciones = inject(OperacionesPagoPrestamoService);
   private funcionesDatos = inject(FuncionesDatosService);
   private snackBar = inject(MatSnackBar);
 
@@ -97,7 +116,14 @@ export class AcuerdoCondonacionComponent {
   /** Fecha con la que se pidió la previsualización vigente. Cambiar `fecha()` la invalida. */
   private fechaDesglose: string | null = null;
 
-  // ---- datos del cobro (se crea junto con el acuerdo) ----
+  // ---- reparto entre aportes (se consumen) y depósito ----
+  cargandoSaldosAporte = signal(false);
+  saldosAporte = signal<SaldoAporte[]>([]);
+  /** Renglones del reparto; se mutan directamente, por eso el contador de versión. */
+  fondos: RenglonFondoAcuerdo[] = [];
+  private fondosVersion = signal(0);
+
+  // ---- datos del depósito (solo si el reparto incluye depósito > 0) ----
   cargandoCuentas = signal(false);
   cuentasBancarias = signal<CuentaBancaria[]>([]);
   cuentaBancaria = signal<CuentaBancaria | null>(null);
@@ -130,15 +156,63 @@ export class AcuerdoCondonacionComponent {
   /** ¿La fecha actual sigue siendo la que se usó para previsualizar? Si no, hay que previsualizar de nuevo. */
   desgloseVigente = computed(() => this.filas() !== null && this.fechaDesglose === this.acuerdos.formatearFecha(this.fecha()));
 
+  // ---- reparto: aportes (se consumen) + depósito, deben sumar exacto totalPagar() ----
+
+  montoDeposito = computed(() => {
+    this.fondosVersion();
+    const f = this.fondos.find((x) => x.idTipoAporte == null);
+    return +this.parseMoneda(f?.texto).toFixed(2);
+  });
+
+  montoAportes = computed(() => {
+    this.fondosVersion();
+    return +this.fondos
+      .filter((x) => x.idTipoAporte != null)
+      .reduce((s, x) => s + this.parseMoneda(x.texto), 0)
+      .toFixed(2);
+  });
+
+  repartido = computed(() => +(this.montoAportes() + this.montoDeposito()).toFixed(2));
+  diferenciaReparto = computed(() => +(this.totalPagar() - this.repartido()).toFixed(2));
+  repartoCuadra = computed(() => Math.abs(this.diferenciaReparto()) <= TOLERANCIA_ACUERDO);
+
+  hayExcesoEnAlgunAporte = computed(() => {
+    this.fondosVersion();
+    return this.fondos.some(
+      (f) => f.idTipoAporte != null && this.parseMoneda(f.texto) > f.disponible + TOLERANCIA_ACUERDO
+    );
+  });
+
+  /**
+   * ¿El pago necesita depósito? Si `montoDeposito() > 0`, el acuerdo queda VIGENTE esperando
+   * aprobación de contabilidad y exige cuenta/referencia/comprobante. Si es `0` (100% aportes), se
+   * aplica en el acto y esos tres campos ni se piden — el backend los rechaza si se mandan.
+   */
+  requiereRespaldoDeposito = computed(() => this.montoDeposito() > 0.004);
+
   motivosNoConfirmar = computed<string[]>(() => {
     if (this.registrando()) return ['Registrando el acuerdo…'];
     const motivos: string[] = [];
 
     if (!this.prestamoSeleccionado()) motivos.push('elija un préstamo');
     if (!this.filas() || !this.desgloseVigente()) motivos.push('previsualice el desglose para la fecha elegida');
-    if (!this.cuentaBancaria()) motivos.push('seleccione la cuenta de ASOPREP a la que ingresó el dinero');
-    if (!this.referencia().trim()) motivos.push('ingrese el número de referencia');
-    if (!this.archivoComprobante()) motivos.push('adjunte el comprobante de respaldo');
+
+    if (!this.repartoCuadra()) {
+      const dif = this.diferenciaReparto();
+      motivos.push(
+        dif > 0
+          ? `falta repartir ${this.formatMoneda(dif)} entre aportes y depósito`
+          : `hay ${this.formatMoneda(-dif)} de más repartidos entre aportes y depósito: ajuste los montos`
+      );
+    }
+    if (this.hayExcesoEnAlgunAporte()) {
+      motivos.push('algún tipo de aporte supera su saldo disponible');
+    }
+    if (this.requiereRespaldoDeposito()) {
+      if (!this.cuentaBancaria()) motivos.push('seleccione la cuenta de ASOPREP a la que ingresó el depósito');
+      if (!this.referencia().trim()) motivos.push('ingrese el número de referencia del depósito');
+      if (!this.archivoComprobante()) motivos.push('adjunte el comprobante del depósito');
+    }
 
     return motivos;
   });
@@ -192,6 +266,7 @@ export class AcuerdoCondonacionComponent {
     this.prestamosElegibles.set([]);
     this.cargarPrestamos(entidad.codigo);
     this.cargarHistorial(entidad.codigo);
+    this.cargarSaldosAporte(entidad.codigo);
   }
 
   volverABuscar(): void {
@@ -227,6 +302,76 @@ export class AcuerdoCondonacionComponent {
     });
   }
 
+  /**
+   * Saldos de aportes del partícipe, para el reparto: cuánto de cada tipo se puede consumir. Se
+   * carga una vez por partícipe (no en cada previsualización) — mismo endpoint que usa el cruce de
+   * saldos de aportes en cobros personales / precancelación.
+   */
+  private cargarSaldosAporte(idEntidad: number): void {
+    this.cargandoSaldosAporte.set(true);
+    this.operaciones.saldosPorEntidad(idEntidad).subscribe((resp) => {
+      this.cargandoSaldosAporte.set(false);
+      // Una lista vacía es 200 con []: el partícipe simplemente no tiene aportes.
+      const disponibles = (resp.exito ? resp.resultado ?? [] : []).filter((a) => (a.saldo ?? 0) > 0.004);
+      this.saldosAporte.set(disponibles);
+      this.construirFondos(true);
+    });
+  }
+
+  /**
+   * Arma los renglones del reparto: un renglón por tipo de aporte disponible, más el depósito.
+   *
+   * @param precargarDeposito En `true` (préstamo recién seleccionado, o saldos recién cargados)
+   * arranca con todo en depósito — es el caso más común y el comportamiento de siempre antes de que
+   * existiera el cruce con aportes. En `false` (p.ej. al recalcular tras cambiar la fecha) conserva
+   * lo que el usuario ya había repartido.
+   */
+  private construirFondos(precargarDeposito: boolean): void {
+    const textoPrevio = new Map(this.fondos.map((f) => [f.clave, f.texto]));
+    const texto = (clave: string, porDefecto = '') => (precargarDeposito ? porDefecto : textoPrevio.get(clave) ?? porDefecto);
+
+    this.fondos = [
+      ...this.saldosAporte().map((a) => ({
+        clave: `aporte-${a.idTipoAporte}`,
+        nombre: a.nombre,
+        idTipoAporte: a.idTipoAporte,
+        disponible: +(a.saldo ?? 0).toFixed(2),
+        texto: texto(`aporte-${a.idTipoAporte}`),
+      })),
+      {
+        clave: 'deposito',
+        nombre: 'Depósito / transferencia',
+        idTipoAporte: null,
+        disponible: Number.POSITIVE_INFINITY,
+        texto: texto('deposito', this.formatMoneda(this.totalPagar())),
+      },
+    ];
+    this.fondosVersion.update((v) => v + 1);
+  }
+
+  onFondoBlur(fondo: RenglonFondoAcuerdo): void {
+    let v = Math.max(this.parseMoneda(fondo.texto), 0);
+    if (fondo.idTipoAporte != null && v > fondo.disponible + TOLERANCIA_ACUERDO) v = fondo.disponible;
+    v = +v.toFixed(2);
+    fondo.texto = v > 0.004 ? this.formatMoneda(v) : '';
+    this.fondosVersion.update((n) => n + 1);
+  }
+
+  /** Asigna a este fondo lo que falta para cuadrar, sin pasarse de su disponible. */
+  completarConEsteFondo(fondo: RenglonFondoAcuerdo): void {
+    const yaPuesto = this.parseMoneda(fondo.texto);
+    const objetivo = yaPuesto + this.diferenciaReparto();
+    const tope = fondo.idTipoAporte != null ? fondo.disponible : Number.POSITIVE_INFINITY;
+    const v = +Math.max(Math.min(objetivo, tope), 0).toFixed(2);
+    fondo.texto = v > 0.004 ? this.formatMoneda(v) : '';
+    this.fondosVersion.update((n) => n + 1);
+  }
+
+  montoDe(fondo: RenglonFondoAcuerdo): number {
+    this.fondosVersion();
+    return this.parseMoneda(fondo.texto);
+  }
+
   private cargarCuentasBancarias(): void {
     const criterioEstado = new DatosBusqueda();
     criterioEstado.asignaUnCampoSinTrunc(TipoDatosBusqueda.LONG, 'estado', '1', TipoComandosBusqueda.IGUAL);
@@ -253,6 +398,8 @@ export class AcuerdoCondonacionComponent {
     this.filas.set(null);
     this.fechaDesglose = null;
     this.errorDesglose.set(null);
+    // Préstamo distinto: el reparto anterior no aplica, que arranque de nuevo (todo en depósito).
+    this.fondos = [];
     this.previsualizar();
   }
 
@@ -301,6 +448,9 @@ export class AcuerdoCondonacionComponent {
         })
       );
       this.fechaDesglose = fechaTexto;
+      // El total a repartir recién ahora se conoce: si es la primera vez que se ve este préstamo,
+      // arranca todo en depósito; si es un recálculo, conserva lo que el usuario ya había repartido.
+      this.construirFondos(this.fondos.length === 0);
     });
   }
 
@@ -336,56 +486,102 @@ export class AcuerdoCondonacionComponent {
 
   // ================= confirmar =================
 
+  /**
+   * Confirma el acuerdo. Dos caminos según si el reparto incluye depósito:
+   *
+   * - Con depósito: se archiva el comprobante primero —su ruta viaja DENTRO del request— y recién
+   *   con el archivo en el servidor se registra. El acuerdo queda VIGENTE, esperando aprobación de
+   *   contabilidad; el préstamo no se toca todavía.
+   * - 100% aportes (depósito en 0): no hay nada que archivar, se registra directo. El acuerdo se
+   *   aplica EN EL ACTO y el préstamo queda cancelado — no hay marcha atrás de "esperar a ver si el
+   *   depósito llega", porque acá no hay depósito que pueda no llegar.
+   */
   confirmar(): void {
     if (!this.puedeConfirmar()) return;
     const prestamo = this.prestamoSeleccionado();
     const filas = this.filas();
-    const cuenta = this.cuentaBancaria();
-    const archivo = this.archivoComprobante();
     const fechaTexto = this.fechaDesglose;
-    if (!prestamo || !filas || !cuenta || !archivo || !fechaTexto) return;
+    if (!prestamo || !filas || !fechaTexto) return;
 
     this.errorRegistro.set(null);
     this.registrando.set(true);
 
-    this.comprobantes
-      .archivar(archivo, this.comprobantes.carpetaDeAcuerdo(prestamo.codigo), `${prestamo.codigo}-acuerdo`)
-      .subscribe((resultadoArchivo) => {
-        if (resultadoArchivo.error || !resultadoArchivo.ruta) {
-          this.registrando.set(false);
-          this.errorRegistro.set(this.comprobantes.mensajeDeFallo(resultadoArchivo.error ?? ''));
-          return;
-        }
+    const montoDeposito = this.montoDeposito();
 
-        const detalles: DetalleAcuerdoCondonacion[] = filas.map((f) => ({
-          concepto: f.concepto,
-          valorAdeudado: f.adeudado,
-          valorPagado: this.parseMoneda(f.pagadoTexto),
-          valorCondonado: this.condonadoDe(f),
-        }));
-
-        const solicitud: SolicitudRegistroAcuerdo = {
-          idPrestamo: prestamo.codigo,
-          fecha: fechaTexto,
-          observacion: this.observacion.trim() || null,
-          usuario: usuarioSesion(),
-          idCuentaBancaria: cuenta.codigo,
-          referencia: this.referencia().trim(),
-          rutaRespaldo: resultadoArchivo.ruta!,
-          detalles,
-        };
-
-        this.acuerdos.registrar(solicitud).subscribe((resp) => {
-          this.registrando.set(false);
-          if (!resp.exito || !resp.resultado) {
-            this.errorRegistro.set(resp.mensaje ?? 'No se pudo registrar el acuerdo.');
-            this.comprobantes.descartar(resultadoArchivo.ruta ?? null);
+    if (montoDeposito > 0.004) {
+      const cuenta = this.cuentaBancaria();
+      const archivo = this.archivoComprobante();
+      if (!cuenta || !archivo) {
+        // Defensivo: `motivosNoConfirmar()` ya exige los tres — no debería poder llegar acá sin ellos.
+        this.registrando.set(false);
+        return;
+      }
+      this.comprobantes
+        .archivar(archivo, this.comprobantes.carpetaDeAcuerdo(prestamo.codigo), `${prestamo.codigo}-acuerdo`)
+        .subscribe((resultadoArchivo) => {
+          if (resultadoArchivo.error || !resultadoArchivo.ruta) {
+            this.registrando.set(false);
+            this.errorRegistro.set(this.comprobantes.mensajeDeFallo(resultadoArchivo.error ?? ''));
             return;
           }
-          this.resultado.set(resp.resultado);
-          this.snackBar.open('Acuerdo registrado. El cobro quedó en la bandeja de contabilidad.', 'Cerrar', { duration: 6000 });
+          this.enviarRegistro(prestamo, filas, fechaTexto, cuenta, resultadoArchivo.ruta);
         });
-      });
+      return;
+    }
+
+    this.enviarRegistro(prestamo, filas, fechaTexto, null, null);
+  }
+
+  private enviarRegistro(
+    prestamo: Prestamo,
+    filas: FilaConcepto[],
+    fechaTexto: string,
+    cuenta: CuentaBancaria | null,
+    rutaRespaldo: string | null
+  ): void {
+    const detalles: DetalleAcuerdoCondonacion[] = filas.map((f) => ({
+      concepto: f.concepto,
+      valorAdeudado: f.adeudado,
+      valorPagado: this.parseMoneda(f.pagadoTexto),
+      valorCondonado: this.condonadoDe(f),
+    }));
+
+    const aportes: AporteAcuerdoCondonacion[] = this.fondos
+      .filter((f) => f.idTipoAporte != null && this.parseMoneda(f.texto) > 0.004)
+      .map((f) => ({ idTipoAporte: f.idTipoAporte as number, valor: +this.parseMoneda(f.texto).toFixed(2) }));
+
+    const solicitud: SolicitudRegistroAcuerdo = {
+      idPrestamo: prestamo.codigo,
+      fecha: fechaTexto,
+      observacion: this.observacion.trim() || null,
+      usuario: usuarioSesion(),
+      valorPagarAportes: this.montoAportes(),
+      aportes,
+      valorPagarDeposito: this.montoDeposito(),
+      // Los tres campos de depósito NO se mandan en absoluto si no hubo depósito — el backend los
+      // rechaza si vienen en 0/vacíos (§3 del contrato).
+      ...(cuenta && rutaRespaldo
+        ? { idCuentaBancaria: cuenta.codigo, referencia: this.referencia().trim(), rutaRespaldo }
+        : {}),
+      detalles,
+    };
+
+    this.acuerdos.registrar(solicitud).subscribe((resp) => {
+      this.registrando.set(false);
+      if (!resp.exito || !resp.resultado) {
+        this.errorRegistro.set(resp.mensaje ?? 'No se pudo registrar el acuerdo.');
+        this.comprobantes.descartar(rutaRespaldo);
+        return;
+      }
+      this.resultado.set(resp.resultado);
+      this.snackBar.open(
+        resp.resultado.estado === EstadoAcuerdo.APLICADO
+          ? 'Acuerdo aplicado: el préstamo quedó cancelado.'
+          : 'Acuerdo registrado. El cobro quedó en la bandeja de contabilidad.',
+        'Cerrar',
+        { duration: 6000 }
+      );
+    });
   }
 
   nuevoAcuerdo(): void {
@@ -394,6 +590,8 @@ export class AcuerdoCondonacionComponent {
     if (entidad) {
       this.cargarPrestamos(entidad.codigo);
       this.cargarHistorial(entidad.codigo);
+      // El acuerdo recién confirmado pudo haber consumido saldo de aportes: refrescar.
+      this.cargarSaldosAporte(entidad.codigo);
     }
   }
 
@@ -403,6 +601,8 @@ export class AcuerdoCondonacionComponent {
     this.fechaDesglose = null;
     this.errorDesglose.set(null);
     this.fecha.set(new Date());
+    this.fondos = [];
+    this.fondosVersion.update((v) => v + 1);
     this.cuentaBancaria.set(null);
     this.referencia.set('');
     this.observacion = '';

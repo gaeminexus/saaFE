@@ -64,6 +64,9 @@ export function puedeAnularseCobro(estado: number | null | undefined): boolean {
  * el mismo acto, así que puede aparecer en la bandeja y en proceso de crédito como cualquier otro.
  * Esta pantalla de cobros no lo CONSTRUYE (no arma un `SolicitudRegistroCobro` con este tipo) — solo
  * necesita reconocerlo para mostrarlo bien cuando lo vea.
+ *
+ * `COBRO_MIXTO` se agrega el 2026-08-30 (docs/crd/API-COBROS-APROBACION-CONTABILIDAD.md §2): un
+ * depósito repartido entre aportes y uno o varios préstamos del mismo partícipe, en un solo cobro.
  */
 export type TipoOperacionCobro =
   | 'PAGO_CUOTA'
@@ -71,7 +74,8 @@ export type TipoOperacionCobro =
   | 'ABONO_CAPITAL'
   | 'PRECANCELACION'
   | 'REGISTRO_APORTE'
-  | 'ACUERDO_CONDONACION';
+  | 'ACUERDO_CONDONACION'
+  | 'COBRO_MIXTO';
 
 export const NOMBRE_TIPO_OPERACION_COBRO: Record<string, string> = {
   PAGO_CUOTA: 'Pago de cuota',
@@ -80,6 +84,7 @@ export const NOMBRE_TIPO_OPERACION_COBRO: Record<string, string> = {
   PRECANCELACION: 'Precancelación',
   REGISTRO_APORTE: 'Registro de aporte',
   ACUERDO_CONDONACION: 'Acuerdo con condonación',
+  COBRO_MIXTO: 'Cobro mixto (préstamos y aportes)',
 };
 
 export function nombreTipoOperacionCobro(tipo: string | null | undefined): string {

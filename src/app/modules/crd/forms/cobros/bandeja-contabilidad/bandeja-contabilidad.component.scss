@@ -115,6 +115,17 @@
 
   .section-label { font-size: 0.85rem; font-weight: 600; color: #4a5568; margin: 0.8rem 0 0.4rem; }
 
+  .tabla-detalle {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 0.8rem;
+    font-size: 0.85rem;
+
+    th { text-align: left; color: #718096; font-size: 0.72rem; text-transform: uppercase; padding: 0.3rem 0.5rem; }
+    td { padding: 0.35rem 0.5rem; border-top: 1px solid #edf2f7; }
+    .num { text-align: right; font-variant-numeric: tabular-nums; }
+  }
+
   .dc-acciones {
     display: flex;
     justify-content: flex-end;

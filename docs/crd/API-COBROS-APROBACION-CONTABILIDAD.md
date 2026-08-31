@@ -49,9 +49,86 @@ la cuenta destino, no la distribución entre cuotas.
 | `PAGO_CUOTA` | Pago de cuota de un préstamo | 1 línea con `idPrestamo` |
 | `PAGO_MULTIPLE` | Un pago repartido entre varios préstamos del mismo partícipe | N líneas con `idPrestamo` |
 | `ABONO_CAPITAL` | Abono a capital | 1 línea con `idPrestamo` **y `modalidad` obligatoria** |
-| `PRECANCELACION` | Precancelación total | 1 línea con `idPrestamo` |
+| `PRECANCELACION` | Precancelación total | 1 línea con `idPrestamo`, y **opcionalmente `aportes`** — ver abajo |
 | `REGISTRO_APORTE` | Aporte recibido | N líneas con `idTipoAporte` y `periodoDevengo` |
 | `ACUERDO_CONDONACION` | Cobro de un acuerdo de pago con condonación | 1 línea con `idAcuerdo`. **Todavía no operativo** — ver §7 |
+| `COBRO_MIXTO` | **Un depósito repartido entre aportes Y varios préstamos** | N líneas, cada una con `idPrestamo` **XOR** `idTipoAporte` |
+
+### `PRECANCELACION` mixta — depósito + consumo de aportes
+
+En la práctica **no existe la precancelación 100% efectivo**: siempre mezcla saldos de aportes del
+socio con un depósito o transferencia. La línea lo representa así:
+
+```jsonc
+{
+  "idEntidad": 123, "tipoOperacion": "PRECANCELACION",
+  "idCuentaBancaria": 5, "referencia": "TRF-990", "rutaRespaldo": "...",
+  "valor": 800.00,                 // SOLO la parte de depósito
+  "fecha": "2026-08-30", "usuario": "GROBAYO",
+  "detalles": [{
+    "idPrestamo": 67830,
+    "valor": 800.00,               // el depósito, obligatorio > 0
+    "aportes": [ { "idTipoAporte": 11, "valor": 300.00 },
+                 { "idTipoAporte": 9,  "valor": 250.00 } ]
+  }]
+}
+```
+
+- **`valor` es SOLO el depósito**, no el total de la precancelación. El total **nunca se guarda**:
+  se recalcula fresco al registrar y al procesar.
+- **`aportes` es válido SOLO en `PRECANCELACION`.** Se rechaza en los otros seis tipos.
+- **El depósito es obligatorio y > 0.** Si el socio cubre **todo** con aportes, la operación **no
+  va por este circuito**: usa el endpoint directo de precancelación de siempre. No entra plata de
+  afuera, así que no hay nada que contabilidad pueda verificar — misma regla que deja fuera a
+  `pagarConAportes`.
+
+### ⛔ `aportes` en PRECANCELACION ≠ línea de aporte en COBRO_MIXTO
+
+Es la confusión más cara posible en este contrato, porque **el dinero va en direcciones opuestas**:
+
+| | Qué significa | El saldo del socio |
+|---|---|---|
+| Línea con `idTipoAporte` en **`COBRO_MIXTO`** | El socio **ENTREGA** plata que se le acredita | **SUBE** |
+| `aportes` dentro de la línea de **`PRECANCELACION`** | Se **CONSUME** saldo que ya tenía | **BAJA** |
+
+Por eso son estructuras distintas y no un mismo campo reutilizado. **No las mezcles**: un cobro
+mixto no lleva `aportes` en sus líneas, y una precancelación no lleva líneas de aporte.
+
+⚠️ **El saldo se revalida al PROCESAR, no al registrar.** Entre los dos momentos pasa la aprobación
+de contabilidad, y el socio pudo haber usado ese saldo. Si ya no alcanza, el proceso devuelve
+`procesado: false` con el tipo de aporte y el monto que faltó.
+
+### `COBRO_MIXTO` — por qué existe
+
+Un depósito puede ir a aportes **y** a varios préstamos a la vez: es lo que hace la pantalla de
+cobros personales. Sin este tipo habría que partirlo en **dos cobros** — y eso significa dos
+aprobaciones de contabilidad para un solo depósito, y un reverso que deja la mitad aplicada.
+Ocurrió en producción el 2026-08-30 y es lo que motivó el tipo.
+
+**La regla que lo gobierna: un depósito = un cobro = una aprobación = un reverso.**
+
+```jsonc
+{
+  "idEntidad": 123, "tipoOperacion": "COBRO_MIXTO",
+  "idCuentaBancaria": 5, "referencia": "TRF-889", "rutaRespaldo": "...",
+  "valor": 350.00, "fecha": "2026-08-30", "usuario": "GROBAYO",
+  "detalles": [
+    { "idPrestamo": 111, "valor": 150.00, "observacion": "..." },
+    { "idPrestamo": 222, "valor": 100.00 },
+    { "idTipoAporte": 9, "periodoDevengo": "2026-08-01", "valor": 100.00 }
+  ]
+}
+```
+
+- Cada línea trae **`idPrestamo` XOR `idTipoAporte`** — nunca los dos, nunca ninguno.
+- La de préstamo **no** lleva `idTipoAporte` ni `periodoDevengo`; la de aporte **no** lleva
+  `idPrestamo`.
+- **Ninguna línea admite `modalidad` ni `idAcuerdo`.** `COBRO_MIXTO` no abona capital.
+- El tipo de aporte debe ser **contabilizable** (tener cuenta en la plantilla 21). Se rechaza en el
+  registro, no al procesar: mejor que falle antes que con el dinero ya adentro.
+- `valor` de la cabecera cuadra con la suma del detalle (tolerancia $0.01).
+
+**No hay endpoints nuevos:** aprobar, rechazar, reenviar, procesar y anular son los mismos.
 
 **`modalidad`** (solo `ABONO_CAPITAL`, obligatoria ahí y **rechazada en todos los demás tipos**):
 
@@ -67,7 +144,7 @@ la cuenta destino, no la distribución entre cuotas.
 | Verbo | Ruta | Devuelve |
 |---|---|---|
 | `GET` | `/rest/cbcr/getAll` | Todos. Para diagnóstico, no para pantalla |
-| `GET` | `/rest/cbcr/getId/{id}` | Un cobro con su detalle |
+| `GET` | `/rest/cbcr/getId/{id}` | **`{ cabecera, detalle }`** — ⚠️ viene ENVUELTO, ver abajo |
 | `GET` | `/rest/cbcr/bandeja/{estado}` | Los cobros en ese estado. `1` para la bandeja de contabilidad, `2` para la de proceso de crédito |
 | `GET` | `/rest/cbcr/bandejaAprobacion` | **La bandeja combinada de contabilidad**: cobros de crédito + cargas Petro pendientes, en una sola lista |
 | `GET` | `/rest/cbcr/porEntidad/{idEntidad}` | Historial de cobros de un partícipe |
@@ -180,9 +257,31 @@ La única excepción es **HTTP 400 "Not able to deserialize data provided"**, qu
 antes de entrar al método cuando el cuerpo trae un campo desconocido. Ese es un bug del cliente, no
 un error de negocio — conviene distinguirlo en `normalizarError()`.
 
-### Respuesta de lectura
+### ⛔ `getId` NO devuelve un `CobroCredito` — viene envuelto
 
-Es la entidad `CobroCredito` serializada directa (no hay capa de DTO). Campos de interés:
+```jsonc
+{
+  "cabecera": { /* la entidad CobroCredito completa */ },
+  "detalle":  [ /* List<DetalleCobroCredito> — las líneas del cobro */ ]
+}
+```
+
+**`CobroCredito` NO tiene la lista de detalles mapeada como relación**, así que la entidad sola
+**no trae las líneas**: el REST las consulta aparte y las devuelve al lado. Leer la respuesta como
+si fuera un `CobroCredito` deja `rutaRespaldo` en `undefined` y el detalle vacío — la pantalla se
+ve sin comprobante y sin valores, sin ningún error.
+
+Fue exactamente el defecto reportado el 2026-08-30 en la bandeja de contabilidad, y la causa fue
+este documento: decía "un cobro con su detalle" y más abajo que las lecturas devuelven la entidad
+directa. **Las demás lecturas sí la devuelven directa; `getId` no.**
+
+Cada línea de `detalle` trae `prestamo`, `tipoAporte`, `periodoDevengo`, `valor`, `modalidad`,
+`eventoPrestamo`, `pagoAporte` y `acuerdoCondonacion` según corresponda a su tipo.
+
+### Respuesta de las demás lecturas
+
+`getAll`, `bandeja/{estado}` y `porEntidad/{id}` sí devuelven la entidad `CobroCredito`
+serializada directa (no hay capa de DTO), **sin las líneas de detalle**. Campos de interés:
 `codigo`, `entidad`, `tipoOperacion`, `estado`, `cuentaBancaria`, `referencia`, `rutaRespaldo`,
 `valor`, `fecha`, `observacion`, los seis pares `usuario*`/`fecha*` de la traza
 (registro/aprobación/rechazo/proceso/anulación), `motivoRechazo`, `motivoAnulacion`,

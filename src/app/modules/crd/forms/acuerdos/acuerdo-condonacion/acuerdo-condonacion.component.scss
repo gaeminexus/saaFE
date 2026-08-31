@@ -3,7 +3,12 @@
  * conceptos van siempre completos y visibles, nunca colapsados — el acento visual va en distinguir
  * lo condonable (editable) de lo que se paga al 100% (desgravamen/seguro), y en el condonado
  * resultante, que se lee en un tono ámbar cuando hay algo perdonado.
+ *
+ * El reparto entre aportes y depósito (2026-08-30) reusa el lenguaje visual de
+ * `PrecancelacionDialogComponent` — mismo problema (repartir un total fijo entre varias fuentes,
+ * con saldo disponible por fuente) — así que se importa `pagos-shared.scss` en vez de reescribirlo.
  */
+@use '../../../dialog/pagos/pagos-shared.scss' as *;
 
 .acuerdo-container {
   padding: 24px;
@@ -123,6 +128,16 @@ mat-form-field.full { width: 100%; }
   &.ok { background: #e3f9ec; color: #0d7a4f; align-items: center; }
 }
 
+/* Dirección del dinero, no solo el concepto: acá los aportes se CONSUMEN (baja el saldo), al
+   revés que en un cobro mixto (sube). Rojo suave, no ámbar — es plata que el socio pierde de su
+   cuenta, aunque sea para pagar su propia deuda. */
+.fondo-consume {
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.pgp-fondo-icono { color: $pg-primario; }
+
 table.tabla-conceptos {
   width: 100%;
   border-collapse: collapse;
@@ -134,7 +149,9 @@ table.tabla-conceptos {
     text-transform: uppercase; letter-spacing: 0.03em; padding: 7px 10px; text-align: left;
     border-bottom: 1px solid #e2e8f0;
   }
-  th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  /* Ancho pensado para montos de cartera reales, con separador de miles y dos decimales
+     (p.ej. 1,234,567.89) — no para el caso mínimo que se reportó. */
+  th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; min-width: 132px; }
   td { padding: 7px 10px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
 
   tr.fila-condonable td { background: rgba(102, 126, 234, 0.03); }
@@ -149,10 +166,19 @@ table.tabla-conceptos {
     padding-top: 10px;
     font-size: 14.5px;
   }
+
+  /* Lo que pierde ASOPREP: desde que no hay segunda aprobación, esta es la pantalla que decide —
+     tiene que leerse de un vistazo. Colores literales (la app no tiene tema oscuro), contraste alto. */
+  td.celda-condonado-total {
+    background: #fef3c7;
+    color: #92400e;
+    border-radius: 6px;
+    font-size: 15.5px;
+  }
 }
 
 .monto-cuenta-field {
-  width: 110px;
+  width: 150px;
 
   ::ng-deep .mat-mdc-form-field-infix { min-height: 0; padding-top: 6px; padding-bottom: 6px; }
 

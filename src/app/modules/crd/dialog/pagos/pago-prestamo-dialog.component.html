@@ -1,6 +1,6 @@
 <h2 mat-dialog-title class="pg-titulo">
   <mat-icon>payments</mat-icon>
-  Pagar cuotas
+  {{ modo() === 'efectivo' ? 'Registrar pago de cuotas' : 'Pagar cuotas' }}
   <span class="pg-titulo-sub">{{ data.titulo }}</span>
 </h2>
 
@@ -36,7 +36,7 @@
       <div class="pg-dato-nota">Incluye desgravamen y seguro</div>
     </div>
     <div class="pg-dato destacado">
-      <div class="pg-dato-label">Se va a pagar</div>
+      <div class="pg-dato-label">{{ modo() === 'efectivo' ? 'Se va a registrar' : 'Se va a pagar' }}</div>
       <div class="pg-dato-valor">{{ formatMoneda(montoAPagar()) }}</div>
     </div>
   </div>
@@ -89,6 +89,14 @@
         }
       </div>
     }
+
+    <div class="pg-aviso info">
+      <mat-icon>schedule</mat-icon>
+      <span>
+        Este cobro se registra para aprobación de contabilidad: <b>el préstamo no se modifica todavía</b>.
+        El saldo baja recién cuando se apruebe y se procese desde Proceso de Crédito.
+      </span>
+    </div>
   }
 
   <!-- ==================== Aportes ==================== -->
@@ -197,7 +205,10 @@
     @if (registrando()) {
       <mat-spinner diameter="18"></mat-spinner>
     } @else {
-      <ng-container><mat-icon>check_circle</mat-icon> Registrar pago de {{ formatMoneda(montoAPagar()) }}</ng-container>
+      <ng-container>
+        <mat-icon>check_circle</mat-icon>
+        {{ modo() === 'efectivo' ? 'Registrar cobro de ' + formatMoneda(montoAPagar()) : 'Pagar ' + formatMoneda(montoAPagar()) + ' con aportes' }}
+      </ng-container>
     }
   </button>
 </mat-dialog-actions>

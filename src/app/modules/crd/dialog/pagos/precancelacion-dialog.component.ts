@@ -10,7 +10,9 @@ import { TOLERANCIA_MONTO } from '../../model/pagos/catalogos-pago';
 import { SaldoAporte, SimulacionPrecancelacion } from '../../model/pagos/operaciones-pago';
 import { DesgloseAporte, mensajeDeRespuesta } from '../../model/pagos/respuesta-pago';
 import { ComprobanteCobroService } from '../../service/comprobante-cobro.service';
+import { CobroCreditoService } from '../../service/cobro-credito.service';
 import { OperacionesPagoPrestamoService } from '../../service/operaciones-pago-prestamo.service';
+import { CobroRegistradoDialogComponent } from './cobro-registrado-dialog.component';
 import { ContextoPrestamo, SalidaDialogoPago } from './contexto-prestamo';
 import { ReciboOperacionDialogComponent } from './recibo-operacion-dialog.component';
 import { RespaldoCobroComponent } from './respaldo-cobro.component';
@@ -51,6 +53,7 @@ interface RenglonFondo {
 export class PrecancelacionDialogComponent {
   private servicio = inject(OperacionesPagoPrestamoService);
   private comprobantes = inject(ComprobanteCobroService);
+  private cobroCreditoService = inject(CobroCreditoService);
   private funcionesDatos = inject(FuncionesDatosService);
   private dialog = inject(MatDialog);
 
@@ -98,6 +101,17 @@ export class PrecancelacionDialogComponent {
     return this.fondos.some(
       (f) => f.idTipoAporte != null && this.parseMoneda(f.texto) > f.disponible + TOLERANCIA_MONTO
     );
+  });
+
+  /**
+   * ¿El reparto usa algo de saldo de aportes? Si es 100% efectivo/transferencia, la precancelación
+   * pasa por CRD.CBCR y queda pendiente de aprobación en vez de aplicarse en el acto — ver
+   * `enviarPrecancelacion`. La plantilla lo usa para no prometer "cancelado" cuando en realidad
+   * queda registrado.
+   */
+  usaAportes = computed(() => {
+    this.fondosVersion();
+    return this.fondos.some((f) => f.idTipoAporte != null && this.parseMoneda(f.texto) > 0.004);
   });
 
   /** Lo que se cobra en efectivo/transferencia: la parte que entra por fuera del sistema. */
@@ -322,6 +336,21 @@ export class PrecancelacionDialogComponent {
 
     const fecha = this.servicio.formatearFecha(this.fechaCorte());
 
+    // 100% efectivo/transferencia: pasa por CRD.CBCR como el resto del cutover
+    // (docs/crd/PLAN-CUTOVER-COBROS-POR-CONTABILIDAD.md). Si hay aportes de por medio —débito del
+    // propio saldo del socio, mezclado con la parte en efectivo en una sola precancelación— se
+    // sigue aplicando en el acto con el endpoint de siempre: `PRECANCELACION` en CBCR es de una
+    // sola línea (§2 del contrato) y no tiene forma de representar ese reparto. Es el mismo "caso
+    // combinado" que se dejó afuera en cobros-personales — no adivinar cómo modelarlo.
+    if (!aportes.length) {
+      this.registrarPrecancelacionEnContabilidad(
+        +this.parseMoneda(efectivo?.texto).toFixed(2),
+        fecha,
+        rutaDocumentoRespaldo
+      );
+      return;
+    }
+
     this.servicio
       .precancelar({
         idPrestamo: this.data.idPrestamo,
@@ -381,6 +410,70 @@ export class PrecancelacionDialogComponent {
         if (resp.error === 'SALDO_APORTES_INSUFICIENTE' || resp.error === 'TIPO_APORTE_NO_VIGENTE') {
           this.cargarSaldos(false);
         }
+      });
+  }
+
+  /**
+   * `PRECANCELACION` 100% en efectivo/transferencia, a través de CRD.CBCR: el cobro queda
+   * REGISTRADO, pendiente de aprobación — el préstamo no se cancela todavía.
+   */
+  private registrarPrecancelacionEnContabilidad(
+    valorEfectivo: number,
+    fecha: string | null,
+    rutaDocumentoRespaldo: string | null
+  ): void {
+    const respaldo = this.respaldo()?.datos();
+    const cuenta = respaldo?.cuenta;
+
+    // Defensivo: `respaldoListo()` ya exige cuenta, referencia y comprobante antes de habilitar el
+    // botón cuando hay parte en efectivo — no debería poder llegar acá sin ellos.
+    if (!cuenta || !fecha || !rutaDocumentoRespaldo) {
+      this.aplicando.set(false);
+      this.errorMensaje.set('Faltan datos del respaldo del cobro. Intente nuevamente.');
+      this.comprobantes.descartar(rutaDocumentoRespaldo);
+      return;
+    }
+
+    this.cobroCreditoService
+      .registrar({
+        idEntidad: this.data.idEntidad ?? 0,
+        tipoOperacion: 'PRECANCELACION',
+        idCuentaBancaria: cuenta.codigo,
+        referencia: respaldo.referencia,
+        rutaRespaldo: rutaDocumentoRespaldo,
+        valor: valorEfectivo,
+        fecha,
+        observacion: this.observacion.trim() || null,
+        usuario: usuarioSesion(),
+        detalles: [{ idPrestamo: this.data.idPrestamo, valor: valorEfectivo }],
+      })
+      .subscribe((resp) => {
+        this.aplicando.set(false);
+        if (!resp.exito || !resp.resultado) {
+          this.errorCodigo.set(resp.errorCliente ? 'ERROR_CLIENTE' : '');
+          this.errorMensaje.set(resp.mensaje ?? 'No se pudo registrar el cobro.');
+          this.comprobantes.descartar(rutaDocumentoRespaldo);
+          return;
+        }
+
+        const registro = resp.resultado;
+        this.dialog.open(CobroRegistradoDialogComponent, {
+          data: {
+            tipoOperacion: 'PRECANCELACION',
+            idCobro: registro.idCobro,
+            valor: registro.valor,
+            contabilidadActiva: registro.contabilidadActiva,
+            tituloPrestamo: this.data.titulo,
+            participante: this.data.participante ?? undefined,
+            fecha,
+            referencia: respaldo.referencia,
+          },
+          width: '640px',
+          maxWidth: '96vw',
+          autoFocus: false,
+        });
+
+        this.dialogRef.close({ accion: 'registrado' });
       });
   }
 

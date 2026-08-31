@@ -1,5 +1,7 @@
 import { CuentaBancaria } from '../../../tsr/model/cuenta-bancaria';
 import { Entidad } from '../entidad';
+import { Prestamo } from '../prestamo';
+import { TipoAporte } from '../tipo-aporte';
 import { TipoFilaBandejaAprobacion, TipoOperacionCobro } from './catalogos-cobro';
 
 /**
@@ -18,9 +20,9 @@ export interface DetalleCobroCredito {
   valor: number;
   /** Solo `ABONO_CAPITAL`, obligatoria ahí; rechazada en todos los demás tipos. */
   modalidad?: number | null;
-  /** Solo `REGISTRO_APORTE`. */
+  /** Solo `REGISTRO_APORTE`/`COBRO_MIXTO`. En `COBRO_MIXTO`, XOR con `idPrestamo` en cada línea. */
   idTipoAporte?: number | null;
-  /** Solo `REGISTRO_APORTE`. `yyyy-MM-dd`, primer día del mes. */
+  /** Solo `REGISTRO_APORTE`/`COBRO_MIXTO`. `yyyy-MM-dd`, primer día del mes. */
   periodoDevengo?: string | null;
   observacion?: string | null;
 }
@@ -96,9 +98,11 @@ export interface ResultadoProcesoCobro {
 // ══════════════ Lectura: GET /cbcr/getAll · getId · bandeja · porEntidad ══════════════
 
 /**
- * Entidad `CobroCredito` serializada directa (sin capa de DTO). El contrato no confirma el nombre
- * exacto del campo de detalle en la lectura (el de escritura es `detalles`, plural) — se tipa como
- * `detalles?` opcional y se ajusta contra la respuesta real la primera vez que se vea en vivo.
+ * Entidad `CobroCredito` serializada directa (sin capa de DTO) — es lo que devuelven `getAll`,
+ * `bandeja/{estado}` y `porEntidad/{id}`. ⚠️ NUNCA trae las líneas de detalle: `detalles` queda
+ * siempre `undefined` en estos tres endpoints (no es un campo con otro nombre, directamente no
+ * viaja). Para el detalle línea por línea hay que pedir `getId/{id}` aparte — ver
+ * `RespuestaCobroCreditoDetalle` más abajo, que es la única lectura que SÍ lo trae.
  */
 export interface CobroCredito {
   codigo: number;
@@ -112,6 +116,7 @@ export interface CobroCredito {
   /** `LocalDate` → string `yyyy-MM-dd` (o array `[y,m,d]` según cómo serialice Jackson este endpoint). */
   fecha: string | number[] | Date;
   observacion: string | null;
+  /** ⚠️ Siempre `undefined` viniendo de `getAll`/`bandeja`/`porEntidad` — ver el comentario de la interfaz. */
   detalles?: DetalleCobroCredito[];
 
   motivoRechazo: string | null;
@@ -131,6 +136,36 @@ export interface CobroCredito {
   fechaProceso?: string | number[] | Date | null;
   usuarioAnulacion?: string | null;
   fechaAnulacion?: string | number[] | Date | null;
+}
+
+/**
+ * Una línea del detalle en LECTURA (`GET .../getId/{id}`) — objetos completos, no solo ids como en
+ * `DetalleCobroCredito` (el de escritura). `prestamo` XOR `tipoAporte` según el tipo de línea, igual
+ * que en la escritura de `COBRO_MIXTO`/`REGISTRO_APORTE`.
+ */
+export interface DetalleCobroCreditoLectura {
+  codigo?: number;
+  prestamo?: Prestamo | null;
+  tipoAporte?: TipoAporte | null;
+  /** `LocalDate` → string `yyyy-MM-dd` (o array `[y,m,d]`). Solo en líneas de aporte. */
+  periodoDevengo?: string | number[] | Date | null;
+  valor: number;
+  /** Solo en la línea de un `ABONO_CAPITAL`. */
+  modalidad?: number | null;
+  eventoPrestamo?: { codigo: number } | null;
+  pagoAporte?: { codigo: number } | null;
+  acuerdoCondonacion?: { codigo: number } | null;
+}
+
+/**
+ * `GET /cbcr/getId/{id}`. ⚠️ NO es un `CobroCredito` directo — viene envuelto, porque
+ * `CobroCredito` no tiene el detalle mapeado como relación y el backend lo arma aparte. Confundirlo
+ * con `CobroCredito` deja `rutaRespaldo` en `undefined` y el detalle vacío, sin ningún error
+ * (defecto real, reportado el 2026-08-30 — docs/crd/API-COBROS-APROBACION-CONTABILIDAD.md §4).
+ */
+export interface RespuestaCobroCreditoDetalle {
+  cabecera: CobroCredito;
+  detalle: DetalleCobroCreditoLectura[];
 }
 
 // ══════════════ GET /cbcr/bandejaAprobacion ══════════════

@@ -12,9 +12,10 @@ import { SimulacionAbonoCapital } from '../../model/pagos/operaciones-pago';
 import { mensajeDeRespuesta } from '../../model/pagos/respuesta-pago';
 import { SolicitudReporteSimulacion } from '../../model/simuladores/reporte-simulacion';
 import { ComprobanteCobroService } from '../../service/comprobante-cobro.service';
+import { CobroCreditoService } from '../../service/cobro-credito.service';
 import { OperacionesPagoPrestamoService } from '../../service/operaciones-pago-prestamo.service';
+import { CobroRegistradoDialogComponent } from './cobro-registrado-dialog.component';
 import { ContextoPrestamo, SalidaDialogoPago } from './contexto-prestamo';
-import { ReciboOperacionDialogComponent } from './recibo-operacion-dialog.component';
 import { RespaldoCobroComponent } from './respaldo-cobro.component';
 
 type Paso = 'datos' | 'comparativa';
@@ -40,6 +41,7 @@ type Paso = 'datos' | 'comparativa';
 export class AbonoCapitalDialogComponent {
   private servicio = inject(OperacionesPagoPrestamoService);
   private comprobantes = inject(ComprobanteCobroService);
+  private cobroCreditoService = inject(CobroCreditoService);
   private funcionesDatos = inject(FuncionesDatosService);
   private dialog = inject(MatDialog);
 
@@ -261,83 +263,71 @@ export class AbonoCapitalDialogComponent {
       });
   }
 
+  /**
+   * `ABONO_CAPITAL` ya pasa por CRD.CBCR (docs/crd/PLAN-CUTOVER-COBROS-POR-CONTABILIDAD.md): el
+   * cobro queda REGISTRADO, pendiente de aprobación de contabilidad. La simulación de arriba se
+   * queda igual —sigue siendo la comparativa de siempre—; lo único que cambia es qué se hace al
+   * confirmar: ya no se aplica el abono en el acto, así que la tabla de amortización NO se
+   * regenera todavía (recién cuando el cobro se procese).
+   */
   private enviarAbono(sim: SimulacionAbonoCapital, rutaDocumentoRespaldo: string | null): void {
     const fecha = this.servicio.formatearFecha(this.fecha());
+    const respaldo = this.respaldo()?.datos();
+    const cuenta = respaldo?.cuenta;
 
-    this.servicio
-      .abonarCapital({
-        idPrestamo: this.data.idPrestamo,
+    // Defensivo: `respaldoListo()` ya exige cuenta, referencia y comprobante antes de habilitar el
+    // botón — no debería poder llegar acá sin ellos.
+    if (!cuenta || !fecha || !rutaDocumentoRespaldo) {
+      this.aplicando.set(false);
+      this.errorMensaje.set('Faltan datos del respaldo del cobro. Intente nuevamente.');
+      this.comprobantes.descartar(rutaDocumentoRespaldo);
+      return;
+    }
+
+    this.cobroCreditoService
+      .registrar({
+        idEntidad: this.data.idEntidad ?? 0,
+        tipoOperacion: 'ABONO_CAPITAL',
+        idCuentaBancaria: cuenta.codigo,
+        referencia: respaldo.referencia,
+        rutaRespaldo: rutaDocumentoRespaldo,
         valor: sim.valorAbono,
-        // Del resultado de la simulación, nunca del signal: es lo que el usuario acaba de ver.
-        modalidad: sim.modalidad,
-        usuario: usuarioSesion(),
-        observacion: this.armarObservacion(),
         fecha,
-        rutaDocumentoRespaldo,
+        observacion: this.observacion.trim() || null,
+        usuario: usuarioSesion(),
+        // Del resultado de la simulación, nunca del signal: es lo que el usuario acaba de ver.
+        detalles: [{ idPrestamo: this.data.idPrestamo, valor: sim.valorAbono, modalidad: sim.modalidad }],
       })
       .subscribe((resp) => {
         this.aplicando.set(false);
-        if (resp.exito && resp.resultado) {
-          const resultado = resp.resultado;
-          this.dialog.open(ReciboOperacionDialogComponent, {
-            data: {
-              tipo: 'ABONO_CAPITAL',
-              tituloPrestamo: this.data.titulo,
-              participante: this.data.participante ?? undefined,
-              mensaje: resp.mensaje,
-              fecha: fecha ?? undefined,
-              abono: resultado,
-              detalleExtra: [
-                { label: 'Ahorro en intereses', valor: this.formatMoneda(sim.ahorroIntereses) },
-                {
-                  label: 'Modalidad',
-                  valor:
-                    sim.modalidad === ModalidadAbono.REDUCIR_PLAZO
-                      ? 'Mantener cuota y reducir plazo'
-                      : 'Mantener plazo y reducir cuota',
-                },
-                ...this.detalleDelRespaldo(rutaDocumentoRespaldo),
-              ],
-            },
-            width: '760px',
-            maxWidth: '95vw',
-            autoFocus: false,
-          });
-          // La tabla de amortización se regeneró: los códigos de cuota cacheados quedaron inválidos.
-          this.dialogRef.close({ accion: 'aplicado', recargarTabla: true, abono: resultado });
-        } else {
-          this.errorCodigo.set(String(resp.error ?? ''));
-          this.errorMensaje.set(mensajeDeRespuesta(resp));
-          // El comprobante ya subido queda huérfano: no lo referencia ningún pago, así que se borra
+        if (!resp.exito || !resp.resultado) {
+          this.errorCodigo.set(resp.errorCliente ? 'ERROR_CLIENTE' : '');
+          this.errorMensaje.set(resp.mensaje ?? 'No se pudo registrar el cobro.');
+          // El comprobante ya subido queda huérfano: no lo referencia ningún cobro, así que se borra
           // para no dejar basura acumulándose en la carpeta del préstamo con cada reintento.
           this.comprobantes.descartar(rutaDocumentoRespaldo);
+          return;
         }
+
+        const registro = resp.resultado;
+        this.dialog.open(CobroRegistradoDialogComponent, {
+          data: {
+            tipoOperacion: 'ABONO_CAPITAL',
+            idCobro: registro.idCobro,
+            valor: registro.valor,
+            contabilidadActiva: registro.contabilidadActiva,
+            tituloPrestamo: this.data.titulo,
+            participante: this.data.participante ?? undefined,
+            fecha,
+            referencia: respaldo.referencia,
+          },
+          width: '640px',
+          maxWidth: '96vw',
+          autoFocus: false,
+        });
+
+        this.dialogRef.close({ accion: 'registrado' });
       });
-  }
-
-  /**
-   * El backend guarda una sola observación por operación: el método, la referencia y la cuenta
-   * receptora se anexan a la que escribió el usuario porque son el dato con el que después se
-   * concilia el movimiento contra el extracto bancario. `PGPROBSR` admite 200 caracteres.
-   */
-  private armarObservacion(): string | null {
-    const partes: string[] = [];
-    const propia = this.observacion.trim();
-    if (propia) partes.push(propia);
-    const resumen = this.respaldo()?.resumen();
-    if (resumen) partes.push(resumen);
-    const texto = partes.join(' · ');
-    return texto ? texto.slice(0, 200) : null;
-  }
-
-  /** Filas del recibo que dejan constancia de qué comprobante respalda la operación. */
-  private detalleDelRespaldo(ruta: string | null): { label: string; valor: string }[] {
-    if (!ruta) return [];
-    const datos = this.respaldo()?.datos();
-    return [
-      { label: 'Comprobante adjunto', valor: datos?.archivo?.name ?? '—' },
-      { label: 'Archivado en', valor: ruta },
-    ];
   }
 
   // ================= derivaciones que sugiere la guía =================

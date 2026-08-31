@@ -9,7 +9,9 @@ import { TOLERANCIA_MONTO } from '../../model/pagos/catalogos-pago';
 import { ResultadoPagoCuota, SaldoAporte } from '../../model/pagos/operaciones-pago';
 import { DesgloseAporte, MovimientoAporte, mensajeDeRespuesta } from '../../model/pagos/respuesta-pago';
 import { ComprobanteCobroService } from '../../service/comprobante-cobro.service';
+import { CobroCreditoService } from '../../service/cobro-credito.service';
 import { OperacionesPagoPrestamoService } from '../../service/operaciones-pago-prestamo.service';
+import { CobroRegistradoDialogComponent } from './cobro-registrado-dialog.component';
 import { ContextoPrestamo, SalidaDialogoPago } from './contexto-prestamo';
 import { ReciboOperacionDialogComponent } from './recibo-operacion-dialog.component';
 import { RespaldoCobroComponent } from './respaldo-cobro.component';
@@ -50,6 +52,7 @@ interface RenglonAporte {
 export class PagoPrestamoDialogComponent {
   private servicio = inject(OperacionesPagoPrestamoService);
   private comprobantes = inject(ComprobanteCobroService);
+  private cobroCreditoService = inject(CobroCreditoService);
   private dialog = inject(MatDialog);
 
   /** Bloque de respaldo. Se renderiza siempre, así que cambiar de modo no pierde lo ya cargado. */
@@ -267,30 +270,69 @@ export class PagoPrestamoDialogComponent {
       });
   }
 
+  /**
+   * `PAGO_CUOTA` en efectivo/transferencia/depósito ya pasa por CRD.CBCR en vez del endpoint
+   * directo (docs/crd/PLAN-CUTOVER-COBROS-POR-CONTABILIDAD.md): el cobro queda REGISTRADO,
+   * pendiente de aprobación de contabilidad — el préstamo no se modifica todavía.
+   */
   private enviarPagoEfectivo(rutaDocumentoRespaldo: string | null): void {
     const fechaPago = this.servicio.formatearFecha(this.fechaPago());
     // Se redondea acá y no en el blur: confirmar con Enter no dispara el blur del campo.
     const valor = +this.valorEfectivo().toFixed(2);
+    const respaldo = this.respaldo()?.datos();
+    const cuenta = respaldo?.cuenta;
 
-    this.servicio
-      .pagarCuota({
-        idPrestamo: this.data.idPrestamo,
+    // Defensivo: `respaldoListo()` ya exige cuenta, referencia y comprobante antes de habilitar el
+    // botón — no debería poder llegar acá sin ellos.
+    if (!cuenta || !fechaPago || !rutaDocumentoRespaldo) {
+      this.registrando.set(false);
+      this.manejarError(undefined, 'Faltan datos del respaldo del cobro. Intente nuevamente.');
+      this.comprobantes.descartar(rutaDocumentoRespaldo);
+      return;
+    }
+
+    this.cobroCreditoService
+      .registrar({
+        idEntidad: this.data.idEntidad ?? 0,
+        tipoOperacion: 'PAGO_CUOTA',
+        idCuentaBancaria: cuenta.codigo,
+        referencia: respaldo.referencia,
+        rutaRespaldo: rutaDocumentoRespaldo,
         valor,
+        fecha: fechaPago,
+        observacion: this.observacion.trim() || null,
         usuario: usuarioSesion(),
-        observacion: this.armarObservacion(),
-        fechaPago,
-        rutaDocumentoRespaldo,
+        detalles: [{ idPrestamo: this.data.idPrestamo, valor }],
       })
       .subscribe((resp) => {
         this.registrando.set(false);
-        if (resp.exito && resp.resultado) {
-          this.mostrarRecibo('PAGO_MANUAL', resp.mensaje, fechaPago, resp.resultado, [], rutaDocumentoRespaldo);
-        } else {
-          this.manejarError(resp.error, mensajeDeRespuesta(resp));
-          // El comprobante ya subido queda huérfano: no lo referencia ningún pago, así que se borra
+        if (!resp.exito || !resp.resultado) {
+          this.manejarError(resp.errorCliente ? 'ERROR_CLIENTE' : undefined, resp.mensaje ?? 'No se pudo registrar el cobro.');
+          // El comprobante ya subido queda huérfano: no lo referencia ningún cobro, así que se borra
           // para no dejar basura acumulándose en la carpeta del préstamo con cada reintento.
           this.comprobantes.descartar(rutaDocumentoRespaldo);
+          return;
         }
+
+        const registro = resp.resultado;
+        this.dialog.open(CobroRegistradoDialogComponent, {
+          data: {
+            tipoOperacion: 'PAGO_CUOTA',
+            idCobro: registro.idCobro,
+            valor: registro.valor,
+            contabilidadActiva: registro.contabilidadActiva,
+            tituloPrestamo: this.data.titulo,
+            participante: this.data.participante ?? undefined,
+            fecha: fechaPago,
+            referencia: respaldo.referencia,
+          },
+          width: '640px',
+          maxWidth: '96vw',
+          autoFocus: false,
+        });
+
+        // A diferencia de un pago aplicado, acá no cambió nada del préstamo: no hay tabla que recargar.
+        this.dialogRef.close({ accion: 'registrado' });
       });
   }
 

@@ -1,0 +1,100 @@
+<h2 mat-dialog-title class="pg-titulo pendiente">
+  <mat-icon>schedule</mat-icon>
+  Cobro registrado
+  @if (data.tituloPrestamo) { <span class="pg-titulo-sub">{{ data.tituloPrestamo }}</span> }
+</h2>
+
+<mat-dialog-content class="pg-contenido">
+
+  <div class="pg-aviso alerta">
+    <mat-icon>info</mat-icon>
+    <span>
+      Este cobro quedó <b>pendiente de aprobación de contabilidad</b>. <b>El préstamo todavía no se
+      modificó</b> — el saldo baja recién cuando contabilidad lo apruebe y crédito lo procese, en la
+      pantalla de Proceso de Crédito. No vuelva a registrar este pago mientras espera esa aprobación.
+    </span>
+  </div>
+
+  <div class="pg-grid">
+    <div class="pg-dato destacado">
+      <div class="pg-dato-label">Cobro N°</div>
+      <div class="pg-dato-valor">#{{ data.idCobro }}</div>
+      <div class="pg-dato-nota">{{ nombreTipoOperacionCobro(data.tipoOperacion) }}</div>
+    </div>
+    <div class="pg-dato">
+      <div class="pg-dato-label">Valor registrado</div>
+      <div class="pg-dato-valor">{{ formatMoneda(data.valor) }}</div>
+    </div>
+    @if (data.participante) {
+      <div class="pg-dato">
+        <div class="pg-dato-label">Partícipe</div>
+        <div class="pg-dato-valor nombre">{{ data.participante }}</div>
+      </div>
+    }
+    @if (data.fecha) {
+      <div class="pg-dato">
+        <div class="pg-dato-label">Fecha</div>
+        <div class="pg-dato-valor nombre">{{ data.fecha }}</div>
+      </div>
+    }
+    @if (data.referencia) {
+      <div class="pg-dato">
+        <div class="pg-dato-label">Referencia</div>
+        <div class="pg-dato-valor nombre">{{ data.referencia }}</div>
+      </div>
+    }
+  </div>
+
+  @if (lineasPrestamo.length) {
+    <div class="pg-seccion-label">Préstamos incluidos — registrados, todavía sin aplicar</div>
+    <table class="pg-tabla">
+      <thead><tr><th>Préstamo</th><th class="num">Valor</th></tr></thead>
+      <tbody>
+        @for (l of lineasPrestamo; track l.etiqueta) {
+          <tr><td>{{ l.etiqueta }}</td><td class="num">{{ formatMoneda(l.valor) }}</td></tr>
+        }
+      </tbody>
+    </table>
+  }
+
+  @if (lineasAporte.length) {
+    <div class="seccion-aportes-registrados">
+      <div class="sar-titulo">
+        <mat-icon>savings</mat-icon>
+        Aportes del socio — también quedaron registrados aparte
+      </div>
+      <p class="sar-nota">
+        Esta plata <b>no es un pago a ningún préstamo</b>: si se aprueba, queda a favor del socio en
+        su saldo de aportes.
+      </p>
+      <table class="pg-tabla">
+        <thead><tr><th>Tipo de aporte</th><th class="num">Valor</th></tr></thead>
+        <tbody>
+          @for (l of lineasAporte; track l.etiqueta) {
+            <tr><td>{{ l.etiqueta }}</td><td class="num">{{ formatMoneda(l.valor) }}</td></tr>
+          }
+        </tbody>
+        <tfoot>
+          <tr><td>Total aportes</td><td class="num">{{ formatMoneda(totalAportesDetalle) }}</td></tr>
+        </tfoot>
+      </table>
+    </div>
+  }
+
+  @if (!data.contabilidadActiva) {
+    <div class="pg-aviso info">
+      <mat-icon>info</mat-icon>
+      <span>
+        La contabilización automática de CRD está desactivada: este cobro no generó asiento
+        transitorio. Igual se puede aprobar y procesar desde las pantallas de contabilidad y crédito.
+      </span>
+    </div>
+  }
+
+</mat-dialog-content>
+
+<mat-dialog-actions align="end" class="pg-acciones">
+  <button mat-raised-button color="primary" cdkFocusInitial (click)="cerrar()">
+    <mat-icon>check</mat-icon> Entendido
+  </button>
+</mat-dialog-actions>

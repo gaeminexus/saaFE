@@ -236,6 +236,16 @@
        comparativa destruiría el bloque y se perdería el archivo ya seleccionado. -->
   <app-respaldo-cobro [monto]="valor()" [inicial]="data.respaldoSugerido ?? null"></app-respaldo-cobro>
 
+  @if (paso() === 'comparativa') {
+    <div class="pg-aviso info">
+      <mat-icon>schedule</mat-icon>
+      <span>
+        Este abono se registra para aprobación de contabilidad: <b>el préstamo no se modifica todavía</b>
+        (la tabla de amortización no se regenera hasta que se procese).
+      </span>
+    </div>
+  }
+
   @if (!fechaValida()) {
     <div class="pg-aviso alerta">
       <mat-icon>event_busy</mat-icon>
@@ -277,7 +287,7 @@
       @if (aplicando() || simulando()) {
         <mat-spinner diameter="18"></mat-spinner>
       } @else {
-        <ng-container><mat-icon>check_circle</mat-icon> Confirmar y aplicar abono</ng-container>
+        <ng-container><mat-icon>check_circle</mat-icon> Registrar abono</ng-container>
       }
     </button>
   }

@@ -85,15 +85,17 @@
           <input matInput [(ngModel)]="editObservacion" />
         </mat-form-field>
 
-        @if (!editEsUnaLinea() && cobro.detalles?.length) {
+        @if (cargandoDetalleEdicion()) {
+          <div class="loading-spinner-container"><mat-spinner diameter="28"></mat-spinner></div>
+        } @else if (!editEsUnaLinea() && editDetalleLineas().length) {
           <div class="section-label">Detalle (solo lectura)</div>
           <table class="tabla-detalle">
-            <thead><tr><th>Préstamo / tipo aporte</th><th class="num">Valor</th></tr></thead>
+            <thead><tr><th>Préstamo / tipo de aporte</th><th class="num">Valor</th></tr></thead>
             <tbody>
-              @for (d of cobro.detalles; track $index) {
+              @for (l of editDetalleLineas(); track $index) {
                 <tr>
-                  <td>{{ d.idPrestamo ? 'Préstamo #' + d.idPrestamo : (d.idTipoAporte ? 'Tipo aporte #' + d.idTipoAporte : '—') }}</td>
-                  <td class="num">{{ formatMoneda(d.valor) }}</td>
+                  <td>{{ nombreLineaDetalle(l) }}</td>
+                  <td class="num">{{ formatMoneda(l.valor) }}</td>
                 </tr>
               }
             </tbody>

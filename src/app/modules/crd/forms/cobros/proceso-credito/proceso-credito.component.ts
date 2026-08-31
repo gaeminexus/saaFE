@@ -14,7 +14,7 @@ import { usuarioSesion } from '../../../../../shared/services/usuario-sesion';
 import { CuentaBancaria } from '../../../../tsr/model/cuenta-bancaria';
 import { CuentaBancariaService } from '../../../../tsr/service/cuenta-bancaria.service';
 import { EstadoCobro, nombreTipoOperacionCobro } from '../../../model/cobros/catalogos-cobro';
-import { CobroCredito, DetalleCobroCredito } from '../../../model/cobros/cobro-credito';
+import { CobroCredito, DetalleCobroCredito, DetalleCobroCreditoLectura } from '../../../model/cobros/cobro-credito';
 import { CobroCreditoService } from '../../../service/cobro-credito.service';
 import { ComprobanteCobroService } from '../../../service/comprobante-cobro.service';
 import { ComprobanteViewerComponent } from '../../../dialog/cobros/comprobante-viewer.component';
@@ -71,13 +71,23 @@ export class ProcesoCreditoComponent {
   guardandoEdicion = signal(false);
   errorEdicion = signal<string | null>(null);
 
+  /**
+   * Líneas reales del cobro en edición, pedidas aparte con `getId` — `bandeja/{estado}` (de donde
+   * sale `cobroEnEdicion`) NUNCA trae el detalle, así que `cobro.detalles` acá siempre viene
+   * `undefined` (docs/crd/API-COBROS-APROBACION-CONTABILIDAD.md §4).
+   */
+  editDetalleLineas = signal<DetalleCobroCreditoLectura[]>([]);
+  cargandoDetalleEdicion = signal(false);
+
   /** Cobros de una sola línea: el valor total se puede editar libre. Con varias, queda fijo en la suma. */
-  editEsUnaLinea = computed(() => (this.cobroEnEdicion()?.detalles?.length ?? 0) <= 1);
+  editEsUnaLinea = computed(() => this.editDetalleLineas().length <= 1);
 
   editValor = computed(() => this.parseMoneda(this.editValorTexto()));
 
   puedeGuardarEdicion = computed(() => {
     if (this.guardandoEdicion()) return false;
+    if (this.cargandoDetalleEdicion()) return false;
+    if (!this.editDetalleLineas().length) return false;
     if (!this.editCuentaBancaria()) return false;
     if (!this.editReferencia().trim()) return false;
     if (this.editValor() <= 0.004) return false;
@@ -197,10 +207,23 @@ export class ProcesoCreditoComponent {
     this.editFecha.set(this.funcionesDatos.convertirFechaDesdeBackend(cobro.fecha as never) as Date | null);
     this.editObservacion = cobro.observacion ?? '';
     this.editArchivoNuevo.set(null);
+    this.editDetalleLineas.set([]);
 
     const cuentaActual = cobro.cuentaBancaria;
     const encontrada = this.cuentasBancarias().find((c) => c.codigo === cuentaActual?.codigo);
     this.editCuentaBancaria.set(encontrada ?? cuentaActual ?? null);
+
+    // `bandeja/{estado}` no trae el detalle: se pide aparte con `getId` antes de poder decidir si
+    // el valor se edita libre (una línea) o queda fijo en la suma (varias).
+    this.cargandoDetalleEdicion.set(true);
+    this.cobros.getId(cobro.codigo).subscribe((resp) => {
+      this.cargandoDetalleEdicion.set(false);
+      if (!resp || !resp.detalle.length) {
+        this.errorEdicion.set('No se pudo cargar el detalle de este cobro. Vuelva a intentarlo antes de reenviar.');
+        return;
+      }
+      this.editDetalleLineas.set(resp.detalle);
+    });
   }
 
   cerrarEdicion(): void {
@@ -248,15 +271,18 @@ export class ProcesoCreditoComponent {
 
   private enviarReenvio(cobro: CobroCredito, rutaRespaldo: string): void {
     const cuenta = this.editCuentaBancaria();
-    if (!cuenta) {
+    const lineas = this.editDetalleLineas();
+    if (!cuenta || !lineas.length) {
       this.guardandoEdicion.set(false);
       return;
     }
 
     const valorTotal = this.editValor();
+    // Una línea: el valor editado la reemplaza. Varias: de solo lectura, se reenvían con su
+    // propio monto (el total ya viene fijo en la suma — ver `editEsUnaLinea`).
     const detalles: DetalleCobroCredito[] = this.editEsUnaLinea()
-      ? (cobro.detalles ?? []).map((d) => ({ ...d, valor: valorTotal }))
-      : (cobro.detalles ?? []);
+      ? [this.aDetalleEscritura(lineas[0], valorTotal)]
+      : lineas.map((l) => this.aDetalleEscritura(l, l.valor));
 
     this.cobros
       .reenviar(cobro.codigo, {
@@ -279,6 +305,31 @@ export class ProcesoCreditoComponent {
         this.cerrarEdicion();
         this.cargar();
       });
+  }
+
+  /**
+   * Convierte una línea de LECTURA (`getId`, con `prestamo`/`tipoAporte` como objetos completos) a
+   * la forma de ESCRITURA que espera `reenviar` (`idPrestamo`/`idTipoAporte` sueltos).
+   */
+  private aDetalleEscritura(linea: DetalleCobroCreditoLectura, valor: number): DetalleCobroCredito {
+    const periodo = linea.periodoDevengo;
+    return {
+      idPrestamo: linea.prestamo?.codigo ?? null,
+      idTipoAporte: linea.tipoAporte?.codigo ?? null,
+      periodoDevengo:
+        periodo != null
+          ? this.cobros.formatearFecha(this.funcionesDatos.convertirFechaDesdeBackend(periodo as never) as Date | null)
+          : null,
+      modalidad: linea.modalidad ?? null,
+      valor,
+    };
+  }
+
+  /** Préstamo #idAsoprep, o el tipo de aporte, según a cuál corresponda la línea. Para el detalle de solo lectura. */
+  nombreLineaDetalle(linea: DetalleCobroCreditoLectura): string {
+    if (linea.prestamo) return `Préstamo #${linea.prestamo.idAsoprep ?? linea.prestamo.codigo}`;
+    if (linea.tipoAporte) return linea.tipoAporte.nombre;
+    return '—';
   }
 
   // ================= utilidades =================

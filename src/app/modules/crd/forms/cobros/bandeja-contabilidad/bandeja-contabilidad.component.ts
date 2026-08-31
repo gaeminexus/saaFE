@@ -9,7 +9,7 @@ import { MaterialFormModule } from '../../../../../shared/modules/material-form.
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { usuarioSesion } from '../../../../../shared/services/usuario-sesion';
 import { nombreTipoOperacionCobro } from '../../../model/cobros/catalogos-cobro';
-import { CobroCredito, FilaBandejaAprobacion } from '../../../model/cobros/cobro-credito';
+import { FilaBandejaAprobacion, RespuestaCobroCreditoDetalle } from '../../../model/cobros/cobro-credito';
 import { CobroCreditoService } from '../../../service/cobro-credito.service';
 import { ComprobanteViewerComponent } from '../../../dialog/cobros/comprobante-viewer.component';
 import { CobroPetroPaso1Component } from '../../archivos-petro/carga/detalle-consulta-carga/cobro-petro-paso1/cobro-petro-paso1.component';
@@ -44,7 +44,7 @@ export class BandejaContabilidadComponent {
   filaSeleccionada = signal<FilaBandejaAprobacion | null>(null);
 
   cargandoDetalle = signal(false);
-  detalle = signal<CobroCredito | null>(null);
+  detalle = signal<RespuestaCobroCreditoDetalle | null>(null);
   errorDetalle = signal<string | null>(null);
 
   procesando = signal(false);
@@ -82,14 +82,21 @@ export class BandejaContabilidadComponent {
     }
 
     this.cargandoDetalle.set(true);
-    this.cobros.getId(fila.id).subscribe((cobro) => {
+    this.cobros.getId(fila.id).subscribe((resp) => {
       this.cargandoDetalle.set(false);
-      if (!cobro) {
+      if (!resp) {
         this.errorDetalle.set('No se pudo cargar el detalle de este cobro.');
         return;
       }
-      this.detalle.set(cobro);
+      this.detalle.set(resp);
     });
+  }
+
+  /** Préstamo #idAsoprep, o el tipo de aporte, según a cuál corresponda la línea. */
+  nombreLineaDetalle(linea: RespuestaCobroCreditoDetalle['detalle'][number]): string {
+    if (linea.prestamo) return `Préstamo #${linea.prestamo.idAsoprep ?? linea.prestamo.codigo}`;
+    if (linea.tipoAporte) return linea.tipoAporte.nombre;
+    return '—';
   }
 
   aprobar(): void {

@@ -16,10 +16,19 @@ acto. El préstamo queda **liquidado**.
 operador ve exactamente qué se perdona por concepto antes de confirmar. Lo que sí se aprueba,
 después, es que **el dinero haya entrado**, por la bandeja de contabilidad como cualquier cobro.
 
+**Lo que se paga puede salir de dos fuentes**: cruce con los saldos de aportes del socio, y/o
+depósito o transferencia. **Solo la parte de depósito pasa por contabilidad**, y eso cambia el
+flujo:
+
 ```
-Crédito previsualiza y CONFIRMA  →  acuerdo VIGENTE + cobro en CBCR (mismo acto)
-Contabilidad APRUEBA el cobro    →  la plata está verificada
-Crédito PROCESA el cobro         →  cuotas cerradas, condonación, préstamo CANCELADO
+CON DEPÓSITO (valorPagarDeposito > 0)
+  Crédito previsualiza y CONFIRMA  →  acuerdo VIGENTE + cobro en CBCR por la parte del depósito
+  Contabilidad APRUEBA el cobro    →  la plata está verificada
+  Crédito PROCESA el cobro         →  cruce de aportes, cuotas cerradas, condonación, CANCELADO
+
+TODO CON APORTES (valorPagarDeposito = 0)
+  Crédito previsualiza y CONFIRMA  →  se aplica en el acto: acuerdo APLICADO, préstamo CANCELADO
+                                      Sin CBCR y sin aprobación: no hay depósito que verificar
 ```
 
 ⚠️ **La pantalla del acuerdo NO tiene botón de procesar.** El acuerdo se registra acá; se aplica
@@ -62,7 +71,7 @@ una validación cosmética: el backend la rechaza, y la base tiene un `CHECK` qu
 | Verbo | Ruta | Devuelve |
 |---|---|---|
 | `GET` | `/rest/accn/previsualizar/{idPrestamo}?fecha=yyyy-MM-dd` | `DesgloseConceptosPrestamo`. `fecha` opcional, default hoy |
-| `POST` | `/rest/accn/registrar` | **201** + la entidad `AcuerdoCondonacion` con su `cobroCredito` ya enlazado |
+| `POST` | `/rest/accn/registrar` | **201** + la entidad `AcuerdoCondonacion`. Con depósito viene VIGENTE y con `cobroCredito`; sin depósito viene ya APLICADO y `cobroCredito: null` |
 | `GET` | `/rest/accn/getId/{id}` | `{ cabecera, detalle }` |
 | `GET` | `/rest/accn/bandeja/{estado}` | Lista por estado (1/2/3) |
 | `GET` | `/rest/accn/porPrestamo/{idPrestamo}` | Historial del préstamo |
@@ -89,15 +98,29 @@ control en un trámite.
 
 ### `POST /registrar`
 
+⚠️ **El monto a pagar se compone de DOS FUENTES** (agregado el 2026-08-30): lo que se cubre
+cruzando saldos de aportes del socio, y lo que se cubre con depósito o transferencia. Suman exacto
+`valorPagar` (tolerancia $0.01).
+
 ```jsonc
 {
   "idPrestamo": 67830,
   "fecha": "2026-08-30",
   "observacion": "",
   "usuario": "GROBAYO",
+
+  // --- Fuente 1: cruce con saldos de aportes del socio ---
+  "valorPagarAportes": 400.00,
+  "aportes": [ { "idTipoAporte": 11, "valor": 250.00 },
+               { "idTipoAporte": 9,  "valor": 150.00 } ],
+
+  // --- Fuente 2: depósito o transferencia. Los tres campos de abajo son
+  //     OBLIGATORIOS si valorPagarDeposito > 0, y se RECHAZAN si es 0 ---
+  "valorPagarDeposito": 890.30,
   "idCuentaBancaria": 7,
   "referencia": "TRF-1204",
   "rutaRespaldo": "acuerdos/2026/08/comprobante.pdf",
+
   "detalles": [
     { "concepto": 1, "valorAdeudado": 1250.00, "valorPagado": 1250.00, "valorCondonado": 0.00 },
     { "concepto": 2, "valorAdeudado": 84.30,   "valorPagado": 34.30,   "valorCondonado": 50.00 },
@@ -108,8 +131,24 @@ control en un trámite.
 }
 ```
 
-**`idCuentaBancaria`, `referencia` y `rutaRespaldo` son obligatorios**: el registro crea el acuerdo
-**y su cobro en `CBCR` en el mismo acto**, y ese cobro necesita su respaldo como cualquier otro.
+### ⛔ Las dos fuentes cambian CUÁNDO se aplica el acuerdo
+
+| `valorPagarDeposito` | Qué pasa |
+|---|---|
+| **> 0** | Se crea un `CBCR` **por el monto del depósito, no por `valorPagar`**. El acuerdo queda **VIGENTE** esperando que contabilidad apruebe ese cobro; se aplica al procesarlo |
+| **= 0** (todo con aportes) | **No hay `CBCR` ni aprobación de contabilidad.** El acuerdo se aplica **en el mismo acto del registro** y vuelve ya **APLICADO**, con `cobroCredito: null` |
+
+**Por qué la diferencia, y no es una excepción arbitraria:** la regla de esperar (K11) existe porque
+**el depósito podría no llegar nunca** — cancelar el préstamo antes de verificarlo dejaría una deuda
+condonada contra dinero inexistente. Cuando todo sale de saldos que **ya están en el sistema**, no
+hay nada que pueda no llegar, y esperar no protegería de nada.
+
+El control sobre el perdón es el mismo en los dos caminos: la condonación **nunca** tuvo aprobación
+(K4 derogada), contabilidad solo verifica el dinero.
+
+⚠️ **El saldo de aportes se revalida al PROCESAR, no al registrar.** Entre los dos momentos puede
+pasar la aprobación de contabilidad, y el socio pudo haber gastado ese saldo. Si falla, el error
+nombra el tipo de aporte y el monto que faltó.
 
 ⚠️ **`valorAdeudado` NO es una decisión del operador, es un hecho del préstamo.** Mandá exactamente
 lo que devolvió `previsualizar` **para la misma `fecha`** que enviás en el registro. Si previsualizás
@@ -117,9 +156,9 @@ con una fecha y registrás con otra, los adeudados no van a corresponder.
 
 ### Respuesta de `registrar`
 
-La entidad `AcuerdoCondonacion` completa: `codigo`, `entidad`, `prestamo`, `estado` (1),
-`valorPagar`, `valorCondonar`, `fecha`, `observacion`, `usuarioRegistro`, `fechaRegistro`,
-`eventoPrestamo` (null hasta procesar), y **`cobroCredito` ya enlazado** — de ahí sale el
+La entidad `AcuerdoCondonacion` completa: `codigo`, `entidad`, `prestamo`, `estado` (1 VIGENTE con depósito, 2 APLICADO sin él),
+`valorPagar`, `valorPagarAportes`, `valorPagarDeposito`, `valorCondonar`, `fecha`, `observacion`, `usuarioRegistro`, `fechaRegistro`,
+`eventoPrestamo` (null hasta procesar), y **`cobroCredito` enlazado solo si hubo depósito** — de ahí sale el
 `codigo` del cobro que va a aparecer en la bandeja de contabilidad.
 
 ⚠️ **`valorPagar` y `valorCondonar` NO se envían: el backend los calcula sumando el detalle.** No

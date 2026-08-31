@@ -126,6 +126,27 @@ montos **prospectivos** (nunca reconocidos como cuenta por cobrar — no hay pé
 el acuerdo condona montos **ya devengados**, que están en los libros. Darlos de baja **es un
 castigo contable**.
 
+### K12 — De qué bandas sale el capital condonado (decisión del usuario, 2026-08-30)
+
+El operador decide cuánto se condona **por concepto**, no por cuota. Pero el haber del asiento se
+clasifica por **banda de morosidad**, así que hay que decidir de qué cuotas sale ese capital.
+
+**Sale de las ÚLTIMAS bandas: se consume desde la de MAYOR mora hacia atrás.** Se agota el capital
+pendiente de la cuota más vencida, después la siguiente, y así hasta cubrir el monto condonado.
+Las bandas se numeran desde 1 ascendiendo en días (`diaFin(k) = 30 * SUM(periodos 1..k)`), así que
+"las últimas" son las de **más días de mora**, no las primeras de la lista.
+
+**Por qué, y no proporcional** (que era la convención provisional del backend): el capital más
+vencido es el **más provisionado**. Castigarlo primero hace que la liberación de provisión compense
+la pérdida, que es como se da de baja una cartera deteriorada. Repartir proporcionalmente tocaría
+todas las bandas por igual y dejaría castigado capital de bandas tempranas —poco provisionadas—
+mientras sobrevive capital de las bandas viejas.
+
+⚠️ **Esto NO es una convención más:** cambia a qué cuentas contables va el dinero y cuánta provisión
+se libera. Al tocar el reparto, revisar este párrafo antes.
+
+---
+
 - Plantilla **alterno 25**, con una línea nueva para la cuenta de gasto (K5).
 - El asiento debe cuadrar D=H **incluyendo** la línea de gasto: lo condonado no desaparece, se
   reconoce como pérdida.
@@ -194,7 +215,35 @@ de fila, no un tercer mecanismo), visor del comprobante, edición, anulación.
 
 ---
 
+### K13 — El saldo de aportes NO se reserva al registrar (usuario, 2026-08-30)
+
+Cuando un acuerdo (o una precancelación mixta) se cubre en parte con aportes, el saldo se
+**revalida al PROCESAR**, no se reserva al registrar. Entre los dos momentos pasa la aprobación de
+contabilidad.
+
+**Se evaluó reservar el saldo** —marcarlo como comprometido para que nadie más lo use— y **se
+descartó**. Razón del usuario: *"los aportes pueden seguir aumentando independientemente de si se
+pagó un préstamo con ellos o no"*. El saldo tiende a crecer con los aportes mensuales, así que en
+la práctica la carrera es poco probable.
+
+**Lo que queda vivo, y es aceptable:** si el socio **reduce** ese saldo en el medio —otra
+operación, una devolución— el proceso **falla** con el depósito ya hecho y aprobado. No se pierde
+nada: el error nombra el tipo de aporte y el monto que faltó, y crédito corrige y reenvía.
+**No agregar un mecanismo de reserva sin que el usuario lo pida.**
+
+---
+
 ## 6. ⏳ Lo que NO está decidido
+
+0. **Si vuelve la aprobación de la condonación (K4).** Reabierto el 2026-08-30, cuando el usuario
+   vio la pantalla y pidió resaltar el total condonado como pérdida para ASOPREP. Decisión:
+   **dejarlo como está hasta confirmarlo con el USUARIO FINAL** — no volver a proponerlo hasta que
+   él lo traiga.
+   Estado hoy: **una sola persona de crédito puede condonar cualquier monto y queda firme.**
+   Contabilidad verifica que el dinero entró, no cuánto se perdonó. El único registro de quién
+   autorizó el perdón es `ACCNUSRG`.
+   Si se repone: el backend **no se borró** (así se le pidió al agente el 2026-08-30 justamente por
+   esto). Es reactivar un estado intermedio + bandeja de acuerdos pendientes, no reconstruir.
 
 1. **Nombres de tabla.** No se llegaron a elegir. Al proponerlos, verificar que el código de 4
    letras no colisione **en todo el proyecto**, no solo en `crd` — ya pasó con `CBRO`, que existía

@@ -5,6 +5,7 @@ import { Observable, catchError, map, of } from 'rxjs';
 import {
   CobroCredito,
   FilaBandejaAprobacion,
+  RespuestaCobroCreditoDetalle,
   ResultadoProcesoCobro,
   ResultadoRegistroCobro,
   SolicitudAprobacionCobro,
@@ -46,10 +47,14 @@ export class CobroCreditoService {
 
   // ===================== Lectura =====================
 
-  /** Un cobro con su detalle. */
-  getId(id: number): Observable<CobroCredito | null> {
+  /**
+   * Un cobro con su detalle. ⚠️ Envuelto — `{ cabecera: CobroCredito, detalle: [...] }` — NO es un
+   * `CobroCredito` directo, a diferencia de `bandeja`/`porEntidad`/`getAll`. Ver el comentario de
+   * `RespuestaCobroCreditoDetalle`.
+   */
+  getId(id: number): Observable<RespuestaCobroCreditoDetalle | null> {
     const url = `${ServiciosCrd.RS_CBCR}/getId/${id}`;
-    return this.http.get<CobroCredito>(url).pipe(catchError(() => of(null)));
+    return this.http.get<RespuestaCobroCreditoDetalle>(url).pipe(catchError(() => of(null)));
   }
 
   /** Cobros en un estado dado. `1` = bandeja de contabilidad, `2` = aprobados (proceso de crédito), `4` = rechazados. */

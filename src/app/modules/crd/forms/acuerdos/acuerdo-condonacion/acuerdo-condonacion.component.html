@@ -68,14 +68,29 @@
       <!-- ============ Acuerdo registrado ============ -->
       <mat-card class="cuenta-card resultado-card">
         <mat-card-content>
-          <div class="aviso-pendiente ok">
-            <mat-icon>check_circle</mat-icon>
-            <span>
-              Acuerdo #{{ acuerdo.codigo }} registrado &middot; a pagar {{ formatMoneda(acuerdo.valorPagar) }},
-              a condonar {{ formatMoneda(acuerdo.valorCondonar) }}. El cobro <b>#{{ acuerdo.cobroCredito.codigo }}</b>
-              quedó en la bandeja de contabilidad — el préstamo se cancela recién cuando ese cobro se procese.
-            </span>
-          </div>
+          @if (acuerdo.cobroCredito) {
+            <div class="aviso-pendiente ok">
+              <mat-icon>schedule</mat-icon>
+              <span>
+                Acuerdo #{{ acuerdo.codigo }} <b>VIGENTE</b>, esperando aprobación de contabilidad &middot;
+                a pagar {{ formatMoneda(acuerdo.valorPagar) }} ({{ formatMoneda(acuerdo.valorPagarAportes) }} de
+                aportes + {{ formatMoneda(acuerdo.valorPagarDeposito) }} de depósito), a condonar
+                {{ formatMoneda(acuerdo.valorCondonar) }}. El cobro <b>#{{ acuerdo.cobroCredito.codigo }}</b>
+                quedó en la bandeja de contabilidad — <b>el préstamo todavía no se modificó</b>, se cancela
+                recién cuando ese cobro se procese.
+              </span>
+            </div>
+          } @else {
+            <div class="aviso-pendiente ok">
+              <mat-icon>task_alt</mat-icon>
+              <span>
+                Acuerdo #{{ acuerdo.codigo }} <b>APLICADO</b> &middot; pagado
+                {{ formatMoneda(acuerdo.valorPagar) }} íntegramente con saldo de aportes del socio, condonado
+                {{ formatMoneda(acuerdo.valorCondonar) }}. <b>El préstamo quedó cancelado</b> en el mismo acto —
+                no pasa por contabilidad, porque no hubo depósito que verificar.
+              </span>
+            </div>
+          }
           <button mat-raised-button color="primary" type="button" (click)="nuevoAcuerdo()">
             <mat-icon>add</mat-icon> Registrar otro acuerdo
           </button>
@@ -171,7 +186,7 @@
                     <td><b>Total</b></td>
                     <td class="num"><b>{{ formatMoneda(totalAdeudado()) }}</b></td>
                     <td class="num"><b>{{ formatMoneda(totalPagar()) }}</b></td>
-                    <td class="num"><b>{{ formatMoneda(totalCondonar()) }}</b></td>
+                    <td class="num celda-condonado-total"><b>{{ formatMoneda(totalCondonar()) }}</b></td>
                   </tr>
                 </tbody>
               </table>
@@ -179,43 +194,109 @@
           </mat-card-content>
         </mat-card>
 
-        <!-- ============ Datos del cobro ============ -->
+        <!-- ============ Reparto: de dónde sale el pago ============ -->
         <mat-card class="confirmacion-card">
-          <mat-card-header><mat-card-title>3 &middot; Datos del cobro</mat-card-title></mat-card-header>
+          <mat-card-header><mat-card-title>3 &middot; ¿De dónde sale el pago?</mat-card-title></mat-card-header>
           <mat-card-content>
             @if (errorRegistro(); as error) {
               <div class="error-text bloque"><mat-icon>error_outline</mat-icon><span>{{ error }}</span></div>
             }
 
-            <div class="field-grid">
-              <mat-form-field appearance="outline">
-                <mat-label>Cuenta ASOPREP destino</mat-label>
-                <mat-select [ngModel]="cuentaBancaria()" (ngModelChange)="cuentaBancaria.set($event)">
-                  @for (c of cuentasBancarias(); track c.codigo) {
-                    <mat-option [value]="c">{{ c.banco.nombre }} &middot; {{ c.numeroCuenta }}</mat-option>
-                  }
-                </mat-select>
-                <mat-hint>Solo cuentas vigentes habilitadas para cobro de crédito</mat-hint>
-              </mat-form-field>
-              <mat-form-field appearance="outline">
-                <mat-label>Número de referencia</mat-label>
-                <input matInput maxlength="50" [ngModel]="referencia()" (ngModelChange)="referencia.set($event)" />
-              </mat-form-field>
-            </div>
-
-            <mat-form-field appearance="outline" class="full">
-              <mat-label>Observación (opcional)</mat-label>
-              <input matInput [(ngModel)]="observacion" />
-            </mat-form-field>
-
-            <div class="field">
-              <label class="dropzone-label">Comprobante</label>
-              <div class="dropzone" (click)="archivoInput.click()">
-                <mat-icon>upload_file</mat-icon>
-                {{ archivoComprobante() ? archivoComprobante()!.name : 'Adjuntar PDF o imagen' }}
+            @if (cargandoSaldosAporte()) {
+              <div class="loading-spinner-container"><mat-spinner diameter="28"></mat-spinner></div>
+            } @else {
+              <div class="pg-fondos">
+                @for (f of fondos; track f.clave) {
+                  <div class="pg-fondo" [class.activo]="montoDe(f) > 0.004">
+                    <mat-icon class="pgp-fondo-icono">{{ f.idTipoAporte == null ? 'account_balance' : 'savings' }}</mat-icon>
+                    <div class="pg-fondo-nombre">
+                      {{ f.nombre }}
+                      @if (f.idTipoAporte != null) {
+                        <div class="pg-fondo-saldo">
+                          Disponible {{ formatMoneda(f.disponible) }} &middot;
+                          <span class="fondo-consume">se consumirá — su saldo disminuye</span>
+                        </div>
+                      } @else {
+                        <div class="pg-fondo-saldo">Dinero que el socio entrega ahora, por fuera del sistema</div>
+                      }
+                    </div>
+                    <mat-form-field appearance="outline" class="pg-fondo-input" subscriptSizing="dynamic">
+                      <span matTextPrefix>$&nbsp;</span>
+                      <input matInput inputmode="decimal" [(ngModel)]="f.texto" (blur)="onFondoBlur(f)" placeholder="0.00" />
+                    </mat-form-field>
+                    <button mat-stroked-button type="button" class="pgp-max" (click)="completarConEsteFondo(f)">Completar</button>
+                  </div>
+                }
               </div>
-              <input #archivoInput type="file" [accept]="extensionesComprobante" style="display:none" (change)="onArchivoSeleccionado($event)" />
-            </div>
+
+              @if (hayExcesoEnAlgunAporte()) {
+                <div class="error-text"><mat-icon>warning</mat-icon><span>Un tipo de aporte supera su saldo disponible.</span></div>
+              }
+
+              <div class="pg-cuadre"
+                   [class.ok]="repartoCuadra()"
+                   [class.falta]="!repartoCuadra() && diferenciaReparto() > 0"
+                   [class.excede]="!repartoCuadra() && diferenciaReparto() < 0">
+                <span>Repartido {{ formatMoneda(repartido()) }} de {{ formatMoneda(totalPagar()) }}</span>
+                @if (repartoCuadra()) {
+                  <span><mat-icon>check_circle</mat-icon> El reparto cuadra</span>
+                } @else if (diferenciaReparto() > 0) {
+                  <span>Falta {{ formatMoneda(diferenciaReparto()) }}</span>
+                } @else {
+                  <span>Sobran {{ formatMoneda(-diferenciaReparto()) }}</span>
+                }
+              </div>
+
+              @if (montoDeposito() > 0.004) {
+                <div class="aviso-pendiente">
+                  <mat-icon>schedule</mat-icon>
+                  <span>
+                    Hay {{ formatMoneda(montoDeposito()) }} en depósito: el acuerdo va a quedar
+                    <b>VIGENTE</b>, esperando que contabilidad apruebe ese cobro. El préstamo no se
+                    modifica todavía.
+                  </span>
+                </div>
+
+                <div class="field-grid">
+                  <mat-form-field appearance="outline">
+                    <mat-label>Cuenta ASOPREP destino</mat-label>
+                    <mat-select [ngModel]="cuentaBancaria()" (ngModelChange)="cuentaBancaria.set($event)">
+                      @for (c of cuentasBancarias(); track c.codigo) {
+                        <mat-option [value]="c">{{ c.banco.nombre }} &middot; {{ c.numeroCuenta }}</mat-option>
+                      }
+                    </mat-select>
+                    <mat-hint>Solo cuentas vigentes habilitadas para cobro de crédito</mat-hint>
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Número de referencia</mat-label>
+                    <input matInput maxlength="50" [ngModel]="referencia()" (ngModelChange)="referencia.set($event)" />
+                  </mat-form-field>
+                </div>
+
+                <div class="field">
+                  <label class="dropzone-label">Comprobante del depósito</label>
+                  <div class="dropzone" (click)="archivoInput.click()">
+                    <mat-icon>upload_file</mat-icon>
+                    {{ archivoComprobante() ? archivoComprobante()!.name : 'Adjuntar PDF o imagen' }}
+                  </div>
+                  <input #archivoInput type="file" [accept]="extensionesComprobante" style="display:none" (change)="onArchivoSeleccionado($event)" />
+                </div>
+              } @else if (repartoCuadra()) {
+                <div class="aviso-pendiente ok">
+                  <mat-icon>task_alt</mat-icon>
+                  <span>
+                    Todo el pago sale de saldo de aportes: al confirmar, el acuerdo se
+                    <b>aplica de inmediato</b> y el préstamo queda <b>cancelado en el acto</b> — no
+                    pasa por contabilidad, no hay nada que aprobar después.
+                  </span>
+                </div>
+              }
+
+              <mat-form-field appearance="outline" class="full">
+                <mat-label>Observación (opcional)</mat-label>
+                <input matInput [(ngModel)]="observacion" />
+              </mat-form-field>
+            }
 
             <div class="confirm-actions">
               @if (motivosNoConfirmar().length) {
@@ -227,13 +308,18 @@
                 </div>
               }
 
-              <button mat-raised-button color="accent" [disabled]="!puedeConfirmar()" (click)="confirmar()">
+              <button mat-raised-button [color]="montoDeposito() > 0.004 ? 'accent' : 'primary'" [disabled]="!puedeConfirmar()" (click)="confirmar()">
                 @if (registrando()) {
                   <mat-spinner diameter="18"></mat-spinner>
+                } @else if (montoDeposito() > 0.004) {
+                  <ng-container>
+                    <mat-icon>schedule</mat-icon>
+                    Registrar acuerdo &middot; condona {{ formatMoneda(totalCondonar()) }}
+                  </ng-container>
                 } @else {
                   <ng-container>
-                    <mat-icon>check_circle</mat-icon>
-                    Confirmar acuerdo &middot; paga {{ formatMoneda(totalPagar()) }}, condona {{ formatMoneda(totalCondonar()) }}
+                    <mat-icon>task_alt</mat-icon>
+                    Aplicar acuerdo ahora &middot; condona {{ formatMoneda(totalCondonar()) }}
                   </ng-container>
                 }
               </button>
