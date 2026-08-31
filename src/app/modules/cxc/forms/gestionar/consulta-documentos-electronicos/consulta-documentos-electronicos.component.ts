@@ -19,8 +19,6 @@ import { NotaCreditoEmitirService } from '../../../service/emitir/nota-credito-e
 import { NotaDebitoEmitirService } from '../../../service/emitir/nota-debito-emitir.service';
 import { RetencionV2EmitirService } from '../../../service/emitir/retencion-v2-emitir.service';
 import { LiquidacionEmitirService } from '../../../service/emitir/liquidacion-emitir.service';
-import { PathLiquidacionCompraService } from '../../../service/emitir/path-liquidacion-compra.service';
-import { FileService } from '../../../../../shared/services/file.service';
 import { DetalleSriService } from '../../../service/detalle-sri.service';
 import { ActualizarEstadoResultadoDialogComponent } from '../actualizar-estado-resultado-dialog/actualizar-estado-resultado-dialog.component';
 import { ConsultaSriDialogComponent } from '../consulta-sri-dialog/consulta-sri-dialog.component';
@@ -64,8 +62,6 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
   private ndService         = inject(NotaDebitoEmitirService);
   private retService        = inject(RetencionV2EmitirService);
   private liquidacionService = inject(LiquidacionEmitirService);
-  private pathLiquidacionService = inject(PathLiquidacionCompraService);
-  private fileService = inject(FileService);
   private detalleSriService = inject(DetalleSriService);
   private jasperReportes    = inject(JasperReportesService);
   private exportService     = inject(ExportService);
@@ -299,13 +295,17 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
       case 'NOTA_CREDITO': reporte = 'RPRT_RIDE_NOTA_CREDITO';  parametros = { P_ID_NOTA_CREDITO: row.id };  break;
       case 'NOTA_DEBITO':  reporte = 'RPRT_RIDE_NOTA_DEBITO';   parametros = { P_ID_NOTA_DEBITO: row.id };   break;
       case 'RETENCION':    reporte = 'RPRT_RIDE_RETENCION_V2';   parametros = { P_ID_RETENCION_V2: row.id };   break;
-      case 'LIQUIDACION':
-        // El .jasper de RIDE para liquidación aún no está compilado en el backend
-        // (ver docs/logica-negocio/cxc/LIQUIDACION-COMPRA-EMISION.md en saaBE) — no
-        // hay un nombre de reporte confirmado que invocar aquí. En su lugar se
-        // descarga el XML/RIDE ya generado desde CBR.PTLC, igual que en emitir/liquidaciones.
-        this.imprimirLiquidacion(row);
-        return;
+      // El comentario que estuvo acá decía que el .jasper de RIDE de liquidación "aún no
+      // está compilado en el backend" y por eso caía a descargar los archivos de CBR.PTLC.
+      // Verificado el 2026-08-31: RPRT_RIDE_LIQUIDACION.jasper SÍ existe en
+      // saaBE/src/main/resources/rep/cxc/ y el backend ya lo invoca con P_ID_LIQUIDACION
+      // (LiquidacionCompraServiceImpl.generarPDFLiquidacion). El comentario era cierto
+      // cuando se escribió y quedó viejo.
+      //
+      // El fallback no era inofensivo: PTLC sólo tiene archivos si la liquidación llegó a
+      // autorizarse, así que para una liquidación emitida y no autorizada la pantalla decía
+      // "No hay archivos generados todavía" y no había forma de ver el RIDE.
+      case 'LIQUIDACION':  reporte = 'RPRT_RIDE_LIQUIDACION';  parametros = { P_ID_LIQUIDACION: row.id };  break;
       default: this.mostrarError('Tipo de documento sin reporte configurado'); return;
     }
 
@@ -322,22 +322,10 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
     });
   }
 
-  private imprimirLiquidacion(row: DocumentoElectronico): void {
-    this.imprimiendo.set(true);
-    this.pathLiquidacionService.selectByCriteria({ liquidacion: { id: row.id } }).subscribe({
-      next: (paths) => {
-        this.imprimiendo.set(false);
-        const lista = paths ?? [];
-        if (!lista.length) { this.mostrarInfo('No hay archivos generados para esta liquidación todavía'); return; }
-        lista.forEach((p) => {
-          if (!p.path) return;
-          const nombre = p.path.split('/').pop() || `liquidacion-${row.id}`;
-          this.fileService.downloadAndSaveFile(p.path, nombre);
-        });
-      },
-      error: () => { this.imprimiendo.set(false); this.mostrarError('No se pudo consultar los archivos de la liquidación'); },
-    });
-  }
+  // imprimirLiquidacion() se eliminó el 2026-08-31: descargaba los archivos de CBR.PTLC como
+  // sustituto del RIDE, y el RIDE real ya se genera arriba con RPRT_RIDE_LIQUIDACION. El XML
+  // firmado y el autorizado siguen estando disponibles desde la pantalla de emisión
+  // (emitir/liquidaciones → descargarRideXml), que es donde tiene sentido buscarlos.
 
   // ─── Acciones por fila ──────────────────────────────────────────────────
 

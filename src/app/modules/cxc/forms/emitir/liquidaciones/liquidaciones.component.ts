@@ -11,6 +11,7 @@ import { MaterialFormModule } from '../../../../../shared/modules/material-form.
 import { AppStateService } from '../../../../../shared/services/app-state.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { PortapapelesService } from '../../../../../shared/services/portapapeles.service';
+import { JasperReportesService } from '../../../../../shared/services/jasper-reportes.service';
 import { FileService } from '../../../../../shared/services/file.service';
 import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
 import { MovimientoRelacionado } from '../../../../../shared/model/pagos-cobros/movimiento-relacionado';
@@ -68,6 +69,7 @@ export class LiquidacionesComponent implements OnInit {
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
   private portapapeles = inject(PortapapelesService);
+  private jasperReportes = inject(JasperReportesService);
   private router = inject(Router);
   private fileService = inject(FileService);
   private service = inject(LiquidacionEmitirService);
@@ -825,24 +827,36 @@ export class LiquidacionesComponent implements OnInit {
     return `${yyyy}-${mm}-${dd}`;
   }
 
+  /**
+   * Imprime el RIDE — el PDF oficial del comprobante, generado por Jasper.
+   *
+   * Hasta el 2026-08-31 este botón imprimía el `innerHTML` de la vista previa en pantalla
+   * (`#ticket-liquidacion`), que **no es el RIDE**: es una maqueta del formulario, sin el
+   * formato ni los datos que el SRI exige en la representación impresa. El RIDE real ya se
+   * generaba en el backend al emitir (`LiquidacionCompraServiceImpl.generarPDFLiquidacion`,
+   * plantilla `RPRT_RIDE_LIQUIDACION`), pero sólo se adjuntaba al correo — no había forma de
+   * pedirlo desde la pantalla.
+   *
+   * Mismo patrón que `facturas-ingreso.imprimeFactura()`.
+   */
   imprimirDocumento(): void {
-    const contenido = document.getElementById('ticket-liquidacion')?.innerHTML;
-    if (!contenido) {
-      this.mostrarError('No existe contenido para imprimir');
+    const id = this.documentoActual()?.id;
+    if (!id) {
+      this.mostrarError('Primero debe emitir el documento');
       return;
     }
 
-    const ventana = window.open('', '_blank');
-    if (!ventana) {
-      this.mostrarError('No se pudo abrir la ventana de impresión');
-      return;
-    }
-
-    ventana.document.write(contenido);
-    ventana.document.close();
-    ventana.focus();
-    ventana.print();
-    ventana.close();
+    this.jasperReportes.generar('cxc', 'RPRT_RIDE_LIQUIDACION', { P_ID_LIQUIDACION: id }, 'PDF').subscribe({
+      next: (blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.target = '_blank';
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+      },
+      error: () => this.mostrarError('No se pudo generar el RIDE de la liquidación'),
+    });
   }
 
   copiarAutorizacion(): void {
