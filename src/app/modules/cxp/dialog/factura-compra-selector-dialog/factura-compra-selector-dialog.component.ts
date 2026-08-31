@@ -23,12 +23,15 @@ import { NotaDebitoCompra } from '../../model/nota-debito-compra';
 import { FacturaCompraService } from '../../service/factura-compra.service';
 import { NotaCreditoCompraService } from '../../service/nota-credito-compra.service';
 import { NotaDebitoCompraService } from '../../service/nota-debito-compra.service';
+import { LiquidacionEmitirService } from '../../../cxc/service/emitir/liquidacion-emitir.service';
+import { LiquidacionEmitir } from '../../../cxc/model/liquidacion-emitir';
 
 /** Documentos de compra que se pueden elegir desde este selector. */
-export type TipoDocumentoCompra = 'FACTURA' | 'NOTA_CREDITO' | 'NOTA_DEBITO';
+export type TipoDocumentoCompra = 'FACTURA' | 'NOTA_CREDITO' | 'NOTA_DEBITO' | 'LIQUIDACION';
 
 /** Cualquiera de los documentos de compra que devuelve el selector. */
-export type DocumentoCompraSeleccionable = FacturaCompra | NotaCreditoCompra | NotaDebitoCompra;
+export type DocumentoCompraSeleccionable =
+  FacturaCompra | NotaCreditoCompra | NotaDebitoCompra | LiquidacionEmitir;
 
 export interface FacturaCompraSelectorDialogData {
   codigoTitular: number;
@@ -43,6 +46,7 @@ const ETIQUETAS: Record<TipoDocumentoCompra, { titulo: string; singular: string;
   FACTURA: { titulo: 'Seleccionar Factura de Compra', singular: 'factura', plural: 'facturas' },
   NOTA_CREDITO: { titulo: 'Seleccionar Nota de Crédito de Compra', singular: 'nota de crédito', plural: 'notas de crédito' },
   NOTA_DEBITO: { titulo: 'Seleccionar Nota de Débito de Compra', singular: 'nota de débito', plural: 'notas de débito' },
+  LIQUIDACION: { titulo: 'Seleccionar Liquidación de Compra', singular: 'liquidación de compra', plural: 'liquidaciones de compra' },
 };
 
 /**
@@ -87,6 +91,7 @@ export class FacturaCompraSelectorDialogComponent implements OnInit {
     private facturaService: FacturaCompraService,
     private notaCreditoService: NotaCreditoCompraService,
     private notaDebitoService: NotaDebitoCompraService,
+    private liquidacionService: LiquidacionEmitirService,
   ) {}
 
   get tipo(): TipoDocumentoCompra {
@@ -151,6 +156,13 @@ export class FacturaCompraSelectorDialogComponent implements OnInit {
         return this.notaCreditoService.selectByCriteria(criterios);
       case 'NOTA_DEBITO':
         return this.notaDebitoService.selectByCriteria(criterios);
+      // ⚠️ LIQUIDACION consulta CBR.LQCS (cxc), NO PGS.LQCC (cxp), y la diferencia importa.
+      // En este sistema cxc/cxp clasifica por QUIÉN EMITE el documento ante el SRI, no por si
+      // entra o sale plata: la liquidación de compra la emite ASOPREP —por eso vive en cxc— aunque
+      // documente una compra. Sobre esa liquidación emitida es sobre la que se retiene.
+      // PGS.LQCC es la liquidación que ASOPREP recibe de un tercero, y está vacía en producción.
+      case 'LIQUIDACION':
+        return this.liquidacionService.selectByCriteria(criterios);
       default:
         return this.facturaService.selectByCriteria(criterios);
     }

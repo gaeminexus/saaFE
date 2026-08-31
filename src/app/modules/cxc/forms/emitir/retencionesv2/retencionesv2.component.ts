@@ -20,6 +20,7 @@ import { DetalleSri } from '../../../model/detalle-sri';
 import { FacturaCompra } from '../../../../cxp/model/factura-compra';
 import { NotaDebitoCompra } from '../../../../cxp/model/nota-debito-compra';
 import { NotaCreditoCompra } from '../../../../cxp/model/nota-credito-compra';
+import { LiquidacionEmitir } from '../../../model/liquidacion-emitir';
 import { RetencionV2EmitirService } from '../../../service/emitir/retencion-v2-emitir.service';
 import { FacturadorService } from '../../../service/facturador.service';
 import { PuntoEmisionService } from '../../../service/punto-emision.service';
@@ -63,9 +64,13 @@ export class Retencionesv2Component implements OnInit {
    * Sustento precargado desde una liquidación de compra (botón "Emitir
    * retención" en emitir/liquidaciones): codDocSustento=03, numDocSustento,
    * fechaEmisionDocSustento (yyyy-MM-dd) e idProveedor en los query params.
-   * '03' no está en `tipoCompraDelDocumento()` (no hay tabla CXP equivalente
-   * para liquidación), así que estos campos se precargan directo, sin pasar
-   * por `buscarDocumentoRetenido()`.
+   * Desde el 2026-08-31 el '03' **sí** está en `tipoCompraDelDocumento()` y se puede buscar con
+   * `buscarDocumentoRetenido()`. La razón que daba este comentario para excluirlo —"no hay tabla
+   * CXP equivalente para liquidación"— era correcta y a la vez engañosa: no la hay en **CXP**,
+   * pero sí en **CXC** (`CBR.LQCS`), porque la liquidación de compra la emite ASOPREP.
+   *
+   * Los dos caminos conviven a propósito: este precarga cuando se llega desde la liquidación ya
+   * emitida, y el buscador sirve cuando el usuario entra directo a emitir la retención.
    */
   private prefillSustento: { codDocSustento: string; numDocSustento: string; fechaEmisionDocSustento: string; idProveedor: string } | null = null;
 
@@ -105,7 +110,7 @@ export class Retencionesv2Component implements OnInit {
   txtValorReten = 0;
 
   // Documento CXP que se retiene; se elige desde el diálogo de búsqueda.
-  documentoRetenidoSeleccionado: (FacturaCompra | NotaDebitoCompra | NotaCreditoCompra) | null = null;
+  documentoRetenidoSeleccionado: (FacturaCompra | NotaDebitoCompra | NotaCreditoCompra | LiquidacionEmitir) | null = null;
 
   docResTSinImpuestos = 0;
   docResIVACero = 0;
@@ -217,12 +222,19 @@ export class Retencionesv2Component implements OnInit {
   }
 
   /**
-   * Solo estos tipos del SRI tienen su tabla equivalente en CXP; para el
+   * Solo estos tipos del SRI tienen su tabla equivalente en el sistema; para el
    * resto el usuario captura el documento a mano.
+   *
+   * El `03` (liquidación de compra) se agregó el 2026-08-31. A diferencia de los otros tres, su
+   * tabla **no** está en CXP sino en CXC (`CBR.LQCS`): es el documento que **ASOPREP emite** al
+   * proveedor que no puede facturar, y sobre esa liquidación es sobre la que se retiene. La
+   * liquidación *recibida* de un tercero (`PGS.LQCC`, cxp) es otra cosa y está vacía en
+   * producción — ver el comentario en `factura-compra-selector-dialog.consultaPorTipo()`.
    */
   private tipoCompraDelDocumento(): TipoDocumentoCompra | null {
     switch (this.idDocumento?.codigo) {
       case '01': return 'FACTURA';
+      case '03': return 'LIQUIDACION';
       case '04': return 'NOTA_CREDITO';
       case '05': return 'NOTA_DEBITO';
       default: return null;
@@ -253,7 +265,7 @@ export class Retencionesv2Component implements OnInit {
 
     const tipo = this.tipoCompraDelDocumento();
     if (!tipo) {
-      this.mostrarError('Seleccione un tipo de documento que exista en el sistema (factura, nota de crédito o nota de débito)');
+      this.mostrarError('Seleccione un tipo de documento que exista en el sistema (factura, liquidación de compra, nota de crédito o nota de débito)');
       return;
     }
 
@@ -265,7 +277,7 @@ export class Retencionesv2Component implements OnInit {
         soloPendientes: true,
         tipoDocumento: tipo,
       },
-    }).afterClosed().subscribe((doc: FacturaCompra | NotaCreditoCompra | NotaDebitoCompra | null) => {
+    }).afterClosed().subscribe((doc: FacturaCompra | NotaCreditoCompra | NotaDebitoCompra | LiquidacionEmitir | null) => {
       if (!doc) return;
       this.documentoRetenidoSeleccionado = doc;
       this.onSelectDocumentoRetenido(doc);
@@ -277,7 +289,7 @@ export class Retencionesv2Component implements OnInit {
     this.limpiarCamposDocRetenido();
   }
 
-  onSelectDocumentoRetenido(doc: FacturaCompra | NotaDebitoCompra | NotaCreditoCompra | null): void {
+  onSelectDocumentoRetenido(doc: FacturaCompra | NotaDebitoCompra | NotaCreditoCompra | LiquidacionEmitir | null): void {
     if (!doc) { this.limpiarCamposDocRetenido(); return; }
     this.numDocReten = doc.numero || '';
     this.drAutorizacion = (doc as FacturaCompra).autorizacion || (doc as FacturaCompra).clave || '';
@@ -312,16 +324,24 @@ export class Retencionesv2Component implements OnInit {
     }
   }
 
-  displayDocumento(doc: FacturaCompra | NotaDebitoCompra | NotaCreditoCompra): string {
+  displayDocumento(doc: FacturaCompra | NotaDebitoCompra | NotaCreditoCompra | LiquidacionEmitir): string {
     const num = doc.numero || `ID:${doc.id}`;
     const fecha = this.parseIsoArrayDate(doc.fecha);
     const fechaStr = `${String(fecha.getDate()).padStart(2,'0')}/${String(fecha.getMonth()+1).padStart(2,'0')}/${fecha.getFullYear()}`;
     return `${num}  |  ${fechaStr}  |  $${Number(doc.total || 0).toFixed(2)}`;
   }
 
-  /** Convierte fecha ISO o array LocalDateTime del backend a Date. */
-  parseIsoArrayDate(value: string | null | undefined): Date {
+  /**
+   * Convierte fecha ISO o array LocalDateTime del backend a Date.
+   *
+   * Acepta `Date` además de `string` porque los modelos no son uniformes: los documentos de compra
+   * declaran `fecha: string` y `LiquidacionEmitir` la declara `fecha: Date`, aunque por el cable
+   * las dos llegan igual — como el arreglo de Jackson (`[2026,8,31]`), que es lo que resuelve la
+   * rama del `includes(',')`. La declaración del modelo no dice lo que de verdad viaja.
+   */
+  parseIsoArrayDate(value: string | Date | number[] | null | undefined): Date {
     if (!value) return new Date();
+    if (value instanceof Date) return isNaN(value.getTime()) ? new Date() : value;
     const str = String(value).trim();
     if (str.includes(',')) {
       const parts = str.split(',').map(Number);
