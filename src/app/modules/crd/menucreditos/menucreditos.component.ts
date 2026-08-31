@@ -303,6 +303,11 @@ export class MenucreditosComponent {
         iconName: 'account_balance',
         route: '/menucreditos/interruptor-contabilidad',
       });
+      paramNode?.children?.push({
+        displayName: 'Cuentas por Tipo de Aporte',
+        iconName: 'account_balance_wallet',
+        route: '/menucreditos/cuentas-tipo-aporte',
+      });
     }
   }
 }

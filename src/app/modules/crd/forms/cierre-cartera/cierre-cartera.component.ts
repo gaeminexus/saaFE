@@ -84,6 +84,37 @@ export class CierreCarteraComponent implements OnInit {
   readonly ESTADO_CORRIDA = ESTADO_CORRIDA;
   readonly MESES = MESES;
 
+  /**
+   * El combo muestra "Cierre Jul / Apertura Ago" en vez de solo "Julio": el proceso cierra un
+   * mes Y abre el siguiente en el mismo acto, y los asientos que genera salen con DOS fechas
+   * distintas (casi todos con el último día del mes que se cierra, el de apertura con el día 1
+   * del siguiente) — con el combo mostrando un solo mes no se entendía cuál de los dos era
+   * (pedido explícito del usuario, 2026-08-31).
+   *
+   * ⚠️ Cambia SOLO la etiqueta. El valor que viaja en `SolicitudCierreCartera` sigue siendo el
+   * mes/año que se CIERRA (el primero de los dos) — ver `construirSolicitud()`. Tocar esa
+   * semántica correría todos los asientos un mes, en silencio.
+   *
+   * En diciembre, "Apertura" cae en el año siguiente — la etiqueta lo muestra (`Cierre Dic 2026 /
+   * Apertura Ene 2027`) solo ahí, que es el único caso donde el año podría no ser obvio.
+   */
+  get opcionesMes(): { valor: number; etiqueta: string }[] {
+    return MESES.map((m) => {
+      const esDiciembre = m.valor === 12;
+      const siguiente = esDiciembre ? MESES[0] : MESES[m.valor];
+      const sufijoCierre = esDiciembre ? ` ${this.anio}` : '';
+      const sufijoApertura = esDiciembre ? ` ${this.anio + 1}` : '';
+      return {
+        valor: m.valor,
+        etiqueta: `Cierre ${this.abreviarMes(m.nombre)}${sufijoCierre} / Apertura ${this.abreviarMes(siguiente.nombre)}${sufijoApertura}`,
+      };
+    });
+  }
+
+  private abreviarMes(nombre: string): string {
+    return nombre.slice(0, 3);
+  }
+
   private cierreService = inject(CierreCarteraService);
   private usuarioService = inject(UsuarioService);
   private snackBar = inject(MatSnackBar);

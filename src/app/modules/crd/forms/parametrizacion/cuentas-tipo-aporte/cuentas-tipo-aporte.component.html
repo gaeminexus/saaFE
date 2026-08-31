@@ -1,0 +1,209 @@
+<div class="ctap-container">
+
+  <div class="header">
+    <div class="header-title">
+      <mat-icon class="header-icon">account_balance</mat-icon>
+      <h1>Cuentas por Tipo de Aporte</h1>
+    </div>
+    @if (modo() === 'lista') {
+      <button mat-raised-button color="primary" (click)="abrirCrear()" [disabled]="idEmpresa == null">
+        <mat-icon>add</mat-icon> Nueva configuración
+      </button>
+    }
+  </div>
+
+  @if (idEmpresa == null) {
+    <div class="error-text">
+      <mat-icon>error_outline</mat-icon>
+      <span>No se pudo determinar la empresa de la sesión. Vuelva a iniciar sesión y reintente.</span>
+    </div>
+  } @else if (modo() === 'lista') {
+
+    <div class="aviso-explicacion">
+      <mat-icon>info</mat-icon>
+      <span>
+        Por cada tipo de aporte, la <b>cuenta de pasivo</b> es el DEBE del asiento de devolución y la
+        <b>cuenta de liquidación</b> es el HABER — y también la que debita Cuentas por Pagar al confirmar el pago.
+        Un tipo de aporte sin fila activa acá no se puede devolver.
+      </span>
+    </div>
+
+    <mat-checkbox [checked]="soloActivas()" (change)="soloActivas.set($event.checked)" class="filtro-activas">
+      Mostrar solo activas
+    </mat-checkbox>
+
+    @if (cargando()) {
+      <div class="loading-spinner-container"><mat-spinner diameter="40"></mat-spinner></div>
+    } @else if (!filasVisibles().length) {
+      <p class="texto-vacio">
+        @if (soloActivas() && filas().length) {
+          No hay configuraciones activas. Desmarque "Mostrar solo activas" para ver las inactivas.
+        } @else {
+          Todavía no hay ninguna configuración para esta empresa.
+        }
+      </p>
+    } @else {
+      <div class="table-container">
+        <table class="tabla-ctap">
+          <thead>
+            <tr>
+              <th>Tipo de aporte</th>
+              <th>Cuenta de pasivo (DEBE)</th>
+              <th>Cuenta de liquidación (HABER)</th>
+              <th>Estado</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (fila of filasVisibles(); track fila.codigo) {
+              <tr [class.inactiva]="fila.estado !== 1">
+                <td>{{ fila.tipoAporte?.nombre || '—' }}</td>
+                <td>{{ etiquetaCuenta(fila.cuentaPasivo) }}</td>
+                <td>{{ etiquetaCuenta(fila.cuentaLiquidacion) }}</td>
+                <td>
+                  <span class="badge-estado" [class.activo]="fila.estado === 1" [class.inactivo]="fila.estado !== 1">
+                    {{ fila.estado === 1 ? 'Activo' : 'Inactivo' }}
+                  </span>
+                </td>
+                <td class="col-acciones">
+                  @if (fila.estado === 1) {
+                    <button mat-stroked-button (click)="abrirEditar(fila)">
+                      <mat-icon>edit</mat-icon> Editar
+                    </button>
+                    <button mat-stroked-button color="warn" [disabled]="procesandoCodigo() === fila.codigo" (click)="desactivar(fila)">
+                      @if (procesandoCodigo() === fila.codigo) {
+                        <mat-spinner diameter="16"></mat-spinner>
+                      } @else {
+                        <ng-container><mat-icon>block</mat-icon> Desactivar</ng-container>
+                      }
+                    </button>
+                  } @else {
+                    <button mat-stroked-button color="primary" [disabled]="procesandoCodigo() === fila.codigo" (click)="activar(fila)">
+                      @if (procesandoCodigo() === fila.codigo) {
+                        <mat-spinner diameter="16"></mat-spinner>
+                      } @else {
+                        <ng-container><mat-icon>check_circle</mat-icon> Reactivar</ng-container>
+                      }
+                    </button>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+  } @else {
+
+    <!-- ================= alta / edición ================= -->
+    <mat-card class="form-card">
+      <mat-card-header>
+        <mat-card-title>{{ modo() === 'crear' ? 'Nueva configuración' : 'Editar configuración' }}</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+
+        @if (modo() === 'crear') {
+          <mat-form-field appearance="outline" class="campo-tipo-aporte">
+            <mat-label>Tipo de aporte</mat-label>
+            <mat-select [ngModel]="tipoAporteSeleccionado()" (ngModelChange)="tipoAporteSeleccionado.set($event)">
+              @for (tipo of tiposAporte(); track tipo.codigo) {
+                <mat-option [value]="tipo">{{ tipo.nombre }}</mat-option>
+              }
+            </mat-select>
+            <mat-hint>Se ofrecen los 25 tipos del catálogo; el operador decide cuál configurar.</mat-hint>
+          </mat-form-field>
+        } @else {
+          <div class="dc-item">
+            <span class="l">Tipo de aporte</span>
+            <span class="v">{{ filaEnEdicion?.tipoAporte?.nombre }}</span>
+          </div>
+          <p class="allocation-note">
+            El tipo de aporte no se puede cambiar acá: para reasignarlo, desactive esta fila y cree una nueva.
+          </p>
+        }
+
+        <!-- Cuenta de pasivo -->
+        <div class="selector-cuenta">
+          <div class="selector-cuenta-titulo">Cuenta de pasivo (DEBE)</div>
+          <div class="selector-cuenta-actual">Seleccionada: <b>{{ etiquetaCuenta(cuentaPasivoSeleccionada()) }}</b></div>
+          <mat-form-field appearance="outline" class="campo-busqueda">
+            <mat-label>Buscar por número o nombre</mat-label>
+            <input matInput [(ngModel)]="filtroPasivo" placeholder="Ej.: 2.1.02.05 o JUBILACION" />
+          </mat-form-field>
+          <button mat-stroked-button (click)="buscarEnTodoElPlan('pasivo')" [disabled]="cargandoPasivo()">
+            Buscar en todo el plan de cuentas
+          </button>
+          @if (cargandoPasivo()) {
+            <div class="loading-spinner-container"><mat-spinner diameter="28"></mat-spinner></div>
+          } @else {
+            <div class="lista-candidatos">
+              @for (c of candidatosPasivoFiltrados(); track c.codigo) {
+                <button type="button" class="candidato-item"
+                        [class.activo]="cuentaPasivoSeleccionada()?.codigo === c.codigo"
+                        (click)="seleccionarCuenta('pasivo', c)">
+                  <span class="cc-numero">{{ c.cuentaContable }}</span>
+                  <span class="cc-nombre">{{ c.nombre }}</span>
+                </button>
+              } @empty {
+                <p class="texto-vacio">Ninguna cuenta coincide. Pruebe "Buscar en todo el plan de cuentas".</p>
+              }
+            </div>
+          }
+        </div>
+
+        <!-- Cuenta de liquidación -->
+        <div class="selector-cuenta">
+          <div class="selector-cuenta-titulo">Cuenta de liquidación (HABER)</div>
+          <div class="selector-cuenta-actual">Seleccionada: <b>{{ etiquetaCuenta(cuentaLiquidacionSeleccionada()) }}</b></div>
+          <mat-form-field appearance="outline" class="campo-busqueda">
+            <mat-label>Buscar por número o nombre</mat-label>
+            <input matInput [(ngModel)]="filtroLiquidacion" placeholder="Ej.: 2.3.01.10 o PAGAR" />
+          </mat-form-field>
+          <button mat-stroked-button (click)="buscarEnTodoElPlan('liquidacion')" [disabled]="cargandoLiquidacion()">
+            Buscar en todo el plan de cuentas
+          </button>
+          @if (cargandoLiquidacion()) {
+            <div class="loading-spinner-container"><mat-spinner diameter="28"></mat-spinner></div>
+          } @else {
+            <div class="lista-candidatos">
+              @for (c of candidatosLiquidacionFiltrados(); track c.codigo) {
+                <button type="button" class="candidato-item"
+                        [class.activo]="cuentaLiquidacionSeleccionada()?.codigo === c.codigo"
+                        (click)="seleccionarCuenta('liquidacion', c)">
+                  <span class="cc-numero">{{ c.cuentaContable }}</span>
+                  <span class="cc-nombre">{{ c.nombre }}</span>
+                </button>
+              } @empty {
+                <p class="texto-vacio">Ninguna cuenta coincide. Pruebe "Buscar en todo el plan de cuentas".</p>
+              }
+            </div>
+          }
+        </div>
+
+        <div class="aviso-explicacion aviso-advertencia">
+          <mat-icon>warning</mat-icon>
+          <span>
+            La cuenta de liquidación tiene que coincidir con la del producto de pago de Cuentas por Pagar de este
+            tipo de aporte. Si no coinciden, los dos asientos cuadran igual y nadie lo nota. Se le va a pedir
+            confirmar esto explícitamente al guardar.
+          </span>
+        </div>
+
+        <div class="form-acciones">
+          <button mat-stroked-button (click)="cancelarEdicion()" [disabled]="guardando()">Cancelar</button>
+          <button mat-raised-button color="primary" [disabled]="!puedeGuardar()" (click)="guardar()">
+            @if (guardando()) {
+              <mat-spinner diameter="18"></mat-spinner>
+            } @else {
+              <ng-container><mat-icon>save</mat-icon> Guardar</ng-container>
+            }
+          </button>
+        </div>
+
+      </mat-card-content>
+    </mat-card>
+
+  }
+
+</div>

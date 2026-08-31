@@ -22,8 +22,8 @@
         <mat-form-field appearance="outline" class="mes-field">
           <mat-label>Mes a cerrar</mat-label>
           <mat-select [(ngModel)]="mes">
-            @for (m of MESES; track m.valor) {
-              <mat-option [value]="m.valor">{{ m.nombre }}</mat-option>
+            @for (m of opcionesMes; track m.valor) {
+              <mat-option [value]="m.valor">{{ m.etiqueta }}</mat-option>
             }
           </mat-select>
         </mat-form-field>

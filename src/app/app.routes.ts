@@ -1125,6 +1125,15 @@ export const routes: Routes = [
         loadComponent: () => import('./modules/crd/forms/parametrizacion/interruptor-contabilidad/interruptor-contabilidad.component').then((m) => m.InterruptorContabilidadComponent),
         canActivate: [authGuard, usuarioUnoGuard],
       },
+      {
+        // TODO TEMPORAL: misma restricción a USUARIO 1 que bandas-cartera/cierre-cartera —
+        // configura qué cuenta contable se debita/acredita, mismo riesgo si se toca sin permiso.
+        // No estaba en el contrato de la pantalla; lo agrego por el mismo criterio que ya aplica
+        // a las otras pantallas de parametrización contable de este mismo menú.
+        path: 'cuentas-tipo-aporte',
+        loadComponent: () => import('./modules/crd/forms/parametrizacion/cuentas-tipo-aporte/cuentas-tipo-aporte.component').then((m) => m.CuentasTipoAporteComponent),
+        canActivate: [authGuard, usuarioUnoGuard],
+      },
       // Rutas de Contratos
       {
         path: 'contrato-dash',
