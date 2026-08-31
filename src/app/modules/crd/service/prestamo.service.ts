@@ -78,6 +78,20 @@ export class PrestamoService {
     return this.http.post<Prestamo>(url, null, this.httpOptions).pipe(catchError(this.handleError));
   }
 
+  aprobar(id: number, usuario: string, observacion: string = ''): Observable<Prestamo | null> {
+    const url = `${ServiciosCrd.RS_PRST}/aprobar/${id}`;
+    return this.http
+      .post<Prestamo>(url, { usuario, observacion }, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
+
+  rechazar(id: number, usuario: string, observacion: string = ''): Observable<Prestamo | null> {
+    const url = `${ServiciosCrd.RS_PRST}/rechazar/${id}`;
+    return this.http
+      .post<Prestamo>(url, { usuario, observacion }, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
+
   private handleError(error: HttpErrorResponse): Observable<null> {
     if (+error.status === 200) {
       return of(null);

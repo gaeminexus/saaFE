@@ -122,7 +122,13 @@
               style="display:none"
               (change)="onArchivoExcelSeleccionado($event)"
             />
-            <button mat-raised-button color="primary" type="button" (click)="guardar()">
+            <button
+              mat-raised-button
+              color="primary"
+              type="button"
+              (click)="guardar()"
+              [disabled]="guardarDeshabilitado"
+            >
               <mat-icon>save</mat-icon>
               Guardar
             </button>
@@ -137,7 +143,7 @@
               color="accent"
               type="button"
               (click)="generarTablaAmortizacion()"
-              [disabled]="generandoTabla() || !ultimoPrestamoId()"
+              [disabled]="generandoTabla() || !ultimoPrestamoId() || !puedeGenerarTabla"
             >
               <mat-icon>table_chart</mat-icon>
               Generar Tabla Amortizacion
@@ -156,6 +162,36 @@
               }
               Cargar desde Excel
             </button>
+            @if (mostrarAprobarRechazar) {
+              <button
+                mat-raised-button
+                color="primary"
+                type="button"
+                (click)="aprobarPrestamo()"
+                [disabled]="aprobando() || rechazando() || !puedeAprobar"
+              >
+                @if (aprobando()) {
+                  <mat-spinner diameter="18" style="display:inline-block;margin-right:6px"></mat-spinner>
+                } @else {
+                  <mat-icon>check_circle</mat-icon>
+                }
+                Aprobar
+              </button>
+              <button
+                mat-raised-button
+                color="warn"
+                type="button"
+                (click)="rechazarPrestamo()"
+                [disabled]="aprobando() || rechazando() || !puedeRechazar"
+              >
+                @if (rechazando()) {
+                  <mat-spinner diameter="18" style="display:inline-block;margin-right:6px"></mat-spinner>
+                } @else {
+                  <mat-icon>cancel</mat-icon>
+                }
+                Rechazar
+              </button>
+            }
             <button mat-raised-button type="button" (click)="limpiar()">
               <mat-icon>clear</mat-icon>
               Limpiar
@@ -171,6 +207,9 @@
           <div class="detalle-header">
             <h3>Detalle Prestamo generado</h3>
             <span>Prestamo ID: {{ ultimoPrestamoId() }}</span>
+            @if (textoEstadoPrestamo) {
+              <span class="estado-badge" [ngClass]="claseEstadoPrestamo">{{ textoEstadoPrestamo }}</span>
+            }
             @if (tieneCuotasCanceladas) {
               <button mat-stroked-button type="button" (click)="toggleMostrarCanceladas()" style="margin-left:auto">
                 <mat-icon>{{ mostrarCanceladas() ? 'visibility_off' : 'visibility' }}</mat-icon>

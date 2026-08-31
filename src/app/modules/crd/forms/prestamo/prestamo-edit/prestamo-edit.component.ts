@@ -41,6 +41,7 @@ import { ParticipeService } from '../../../service/participe.service';
 import { PrestamoService } from '../../../service/prestamo.service';
 import { ProductoService } from '../../../service/producto.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
+import { usuarioSesion } from '../../../../../shared/services/usuario-sesion';
 
 interface ParticipeOption {
   codigoParticipe: number;
@@ -49,6 +50,32 @@ interface ParticipeOption {
   nombre: string;
   label: string;
 }
+
+/**
+ * Códigos de negocio del estado operativo del préstamo (`Prestamo.idEstado` = PRSTIDST).
+ * ⚠️ No confundir con `Prestamo.estadoPrestamo` (ESPSCDGO): esa es la FK al catálogo,
+ * no el estado del ciclo de otorgamiento. Contrato: docs/crd/API-CICLO-OTORGAMIENTO.md.
+ */
+enum CodigoEstadoPrestamo {
+  PENDIENTE_DE_APROBACION = 6,
+  GENERADO = 1,
+  VIGENTE = 2,
+  RECHAZADO = 7,
+}
+
+const NOMBRES_ESTADO_PRESTAMO: Record<number, string> = {
+  [CodigoEstadoPrestamo.PENDIENTE_DE_APROBACION]: 'Pendiente de aprobación',
+  [CodigoEstadoPrestamo.GENERADO]: 'Generado',
+  [CodigoEstadoPrestamo.VIGENTE]: 'Vigente',
+  [CodigoEstadoPrestamo.RECHAZADO]: 'Rechazado',
+};
+
+const CLASES_ESTADO_PRESTAMO: Record<number, string> = {
+  [CodigoEstadoPrestamo.PENDIENTE_DE_APROBACION]: 'prestamo-pendiente',
+  [CodigoEstadoPrestamo.GENERADO]: 'prestamo-generado',
+  [CodigoEstadoPrestamo.VIGENTE]: 'prestamo-vigente',
+  [CodigoEstadoPrestamo.RECHAZADO]: 'prestamo-rechazado',
+};
 
 @Component({
   selector: 'app-prestamo-edit.component',
@@ -95,9 +122,54 @@ export class PrestamoEditComponent implements OnInit {
   detallePrestamoRaw = signal<DetallePrestamo[]>([]);
   mostrarCanceladas = signal<boolean>(false);
   modoEdicionPrestamo = signal<boolean>(false);
+  idEstadoPrestamo = signal<number | null>(null);
+  aprobando = signal<boolean>(false);
+  rechazando = signal<boolean>(false);
   private codigoEntidadFija: number | null = null;
   private prestamoDesdeConsulta: Prestamo | null = null;
   private enfocarGenerarTabla = false;
+
+  /** Expuesto para el template: ver `docs/crd/API-CICLO-OTORGAMIENTO.md`. */
+  readonly CodigoEstadoPrestamo = CodigoEstadoPrestamo;
+
+  get textoEstadoPrestamo(): string {
+    const estado = this.idEstadoPrestamo();
+    return estado != null ? (NOMBRES_ESTADO_PRESTAMO[estado] ?? `Estado ${estado}`) : '';
+  }
+
+  get claseEstadoPrestamo(): string {
+    const estado = this.idEstadoPrestamo();
+    return estado != null ? (CLASES_ESTADO_PRESTAMO[estado] ?? 'prestamo-desconocido') : '';
+  }
+
+  /** Generar (sin tabla) o regenerar (con tabla) — nunca en VIGENTE ni RECHAZADO. */
+  get puedeGenerarTabla(): boolean {
+    const estado = this.idEstadoPrestamo();
+    return (
+      estado === CodigoEstadoPrestamo.PENDIENTE_DE_APROBACION || estado === CodigoEstadoPrestamo.GENERADO
+    );
+  }
+
+  /** Aprobar y rechazar solo aparecen si hay una transición válida desde el estado actual. */
+  get mostrarAprobarRechazar(): boolean {
+    const estado = this.idEstadoPrestamo();
+    return (
+      estado === CodigoEstadoPrestamo.PENDIENTE_DE_APROBACION || estado === CodigoEstadoPrestamo.GENERADO
+    );
+  }
+
+  /** Sin tabla (PENDIENTE) no hay nada que aprobar todavía. */
+  get puedeAprobar(): boolean {
+    return this.idEstadoPrestamo() === CodigoEstadoPrestamo.GENERADO;
+  }
+
+  get puedeRechazar(): boolean {
+    return this.mostrarAprobarRechazar;
+  }
+
+  get guardarDeshabilitado(): boolean {
+    return this.idEstadoPrestamo() === CodigoEstadoPrestamo.RECHAZADO;
+  }
 
   displayedColumnsDetalle: string[] = [
     'numeroCuota',
@@ -299,6 +371,7 @@ export class PrestamoEditComponent implements OnInit {
     );
 
     this.ultimoPrestamoId.set(prestamo.codigo || null);
+    this.idEstadoPrestamo.set(prestamo.idEstado ?? null);
     if (prestamo.codigo) {
       this.cargarDetallePrestamo(prestamo.codigo);
     }
@@ -361,6 +434,10 @@ export class PrestamoEditComponent implements OnInit {
       return;
     }
 
+    if (this.guardarDeshabilitado) {
+      return;
+    }
+
     const v = this.form.getRawValue();
     const codigoEntidad = this.modoEdicionPrestamo()
       ? this.codigoEntidadFija
@@ -377,11 +454,20 @@ export class PrestamoEditComponent implements OnInit {
       return;
     }
 
+    const idPrestamoExistente = this.ultimoPrestamoId();
+    if (idPrestamoExistente) {
+      this.guardarEdicion(idPrestamoExistente, v, producto);
+    } else {
+      this.guardarAlta(v, codigoEntidad, producto);
+    }
+  }
+
+  private guardarAlta(v: ReturnType<typeof this.form.getRawValue>, codigoEntidad: number, producto: Producto): void {
     const now = new Date();
     const fechaFin = new Date(now);
     fechaFin.setMonth(fechaFin.getMonth() + Number(v.plazo || 0));
 
-    const username = localStorage.getItem('userName') || 'SYSTEM';
+    const username = usuarioSesion();
     const tipoAmortizacionLabel =
       this.tipoAmortizacionOptions.find((t) => t.value === v.tipoAmortizacion)?.label || 'Francesa';
 
@@ -436,8 +522,10 @@ export class PrestamoEditComponent implements OnInit {
       interesVariable: 0,
       ajusteAportes: 0,
       mesesACobrar: 0,
-      idEstado: 1,
       firmadoTitular: 0,
+      // idEstado: NO se manda. El backend lo fuerza a PENDIENTE_DE_APROBACION en el alta
+      // (PrestamoServiceImpl.saveSingle, cuando codigo == null) sin mirar lo que llegue acá.
+      // La pantalla nunca decide el estado — ver docs/crd/API-CICLO-OTORGAMIENTO.md.
     };
 
     // Compatibilidad: evitar enviar campo legado "estado" en creación de préstamo.
@@ -450,13 +538,11 @@ export class PrestamoEditComponent implements OnInit {
       next: (res) => {
         this.loading.set(false);
         const nuevoPrestamoId = res?.codigo || null;
-        const prestamoAnteriorId = this.ultimoPrestamoId();
 
         this.ultimoPrestamoId.set(nuevoPrestamoId);
-        if (prestamoAnteriorId !== nuevoPrestamoId) {
-          this.detallePrestamo.set([]);
-          this.detallePrestamoRaw.set([]);
-        }
+        this.idEstadoPrestamo.set(res?.idEstado ?? null);
+        this.detallePrestamo.set([]);
+        this.detallePrestamoRaw.set([]);
 
         this.snackBar.open('Préstamo guardado correctamente', 'Cerrar', { duration: 3000 });
       },
@@ -470,6 +556,86 @@ export class PrestamoEditComponent implements OnInit {
     });
   }
 
+  /**
+   * Edición de un préstamo existente. El PUT del backend hace `entityManager.merge()`
+   * del objeto completo que llega en el body — sin re-fetch, sin saltar nulos (confirmado
+   * contra `PrestamoRest.put` → `PrestamoServiceImpl.saveSingle` → `EntityDaoImpl.save`).
+   * Cualquier campo que no viaje en el payload se graba como NULL en la fila real, FKs
+   * incluidas. Por eso se relee el préstamo completo del backend justo antes de guardar
+   * y se sobrescriben solo los campos que este formulario realmente edita; el resto —
+   * incluido `idEstado`, que la pantalla nunca decide— viaja tal cual se acaba de leer.
+   */
+  private guardarEdicion(idPrestamo: number, v: ReturnType<typeof this.form.getRawValue>, producto: Producto): void {
+    this.loading.set(true);
+    this.prestamoService.getById(String(idPrestamo)).subscribe({
+      next: (prestamoActual) => {
+        if (!prestamoActual) {
+          this.loading.set(false);
+          this.snackBar.open('No se pudo leer el préstamo antes de guardar; intente nuevamente', 'Cerrar', {
+            duration: 5000,
+            panelClass: ['error-snackbar'],
+          });
+          return;
+        }
+
+        const now = new Date();
+        const fechaFin = new Date(now);
+        fechaFin.setMonth(fechaFin.getMonth() + Number(v.plazo || 0));
+        const username = usuarioSesion();
+        const tipoAmortizacionLabel =
+          this.tipoAmortizacionOptions.find((t) => t.value === v.tipoAmortizacion)?.label || 'Francesa';
+
+        const payload: any = {
+          ...prestamoActual,
+          idAsoprep: v.idasoprep ?? 0,
+          producto: { codigo: v.producto },
+          filial: { codigo: producto.filial?.codigo || prestamoActual.filial?.codigo || 1 },
+          tipoAmortizacion: v.tipoAmortizacion || 1,
+          amortizacion: tipoAmortizacionLabel.toUpperCase(),
+          fecha: v.fechaInicio || prestamoActual.fecha,
+          fechaInicio: v.fechaInicio || prestamoActual.fechaInicio,
+          fechaFin,
+          interesNominal: v.tasa || 0,
+          tasa: v.tasa || 0,
+          tasaNominal: v.tasa || 0,
+          tasaEfectiva: v.tasa || 0,
+          montoSolicitado: v.monto || 0,
+          plazo: v.plazo || 0,
+          fechaModificacion: now,
+          usuarioModificacion: username,
+        };
+
+        if ('estado' in payload) {
+          delete payload.estado;
+        }
+
+        this.prestamoService.update(payload).subscribe({
+          next: (res) => {
+            this.loading.set(false);
+            this.ultimoPrestamoId.set(res?.codigo ?? idPrestamo);
+            this.idEstadoPrestamo.set(res?.idEstado ?? prestamoActual.idEstado ?? null);
+            this.snackBar.open('Préstamo actualizado correctamente', 'Cerrar', { duration: 3000 });
+          },
+          error: (err) => {
+            this.loading.set(false);
+            this.snackBar.open(this.extraerMensajeError(err, 'Error al actualizar el préstamo'), 'Cerrar', {
+              duration: 6000,
+              panelClass: ['error-snackbar'],
+            });
+          },
+        });
+      },
+      error: (err) => {
+        this.loading.set(false);
+        this.snackBar.open(
+          this.extraerMensajeError(err, 'No se pudo leer el préstamo antes de guardar'),
+          'Cerrar',
+          { duration: 6000, panelClass: ['error-snackbar'] },
+        );
+      },
+    });
+  }
+
   limpiar(): void {
     this.form.reset({
       idasoprep: null,
@@ -479,6 +645,7 @@ export class PrestamoEditComponent implements OnInit {
     });
     this.participeQuery.set('');
     this.ultimoPrestamoId.set(null);
+    this.idEstadoPrestamo.set(null);
     this.detallePrestamo.set([]);
     this.detallePrestamoRaw.set([]);
     this.mostrarCanceladas.set(false);
@@ -490,6 +657,10 @@ export class PrestamoEditComponent implements OnInit {
       this.snackBar.open('Primero debe guardar el préstamo para generar la tabla', 'Cerrar', {
         duration: 3500,
       });
+      return;
+    }
+
+    if (!this.puedeGenerarTabla) {
       return;
     }
 
@@ -524,7 +695,10 @@ export class PrestamoEditComponent implements OnInit {
       .generarTablaAmortizacion(idPrestamo, this.tieneCuotaCero(), regenerar)
       .pipe(finalize(() => this.generandoTabla.set(false)))
       .subscribe({
-        next: () => {
+        next: (res) => {
+          if (res?.idEstado != null) {
+            this.idEstadoPrestamo.set(res.idEstado);
+          }
           this.snackBar.open('Tabla de amortización generada correctamente', 'Cerrar', {
             duration: 3000,
           });
@@ -536,6 +710,93 @@ export class PrestamoEditComponent implements OnInit {
             panelClass: ['error-snackbar'],
           });
         },
+      });
+  }
+
+  aprobarPrestamo(): void {
+    const idPrestamo = this.ultimoPrestamoId();
+    if (!idPrestamo || !this.puedeAprobar) {
+      return;
+    }
+
+    const data: ConfirmDialogData = {
+      title: 'Aprobar préstamo',
+      message:
+        'Se va a aprobar el préstamo. La tabla de amortización queda congelada a partir de este momento, ' +
+        'aunque todavía no tenga pagos registrados. La operación no se puede deshacer.',
+      confirmText: 'Aprobar',
+      type: 'warning',
+    };
+
+    this.dialog
+      .open(ConfirmDialogComponent, { data, width: '560px' })
+      .afterClosed()
+      .subscribe((confirmado) => {
+        if (!confirmado) {
+          return;
+        }
+
+        this.aprobando.set(true);
+        this.prestamoService
+          .aprobar(idPrestamo, usuarioSesion())
+          .pipe(finalize(() => this.aprobando.set(false)))
+          .subscribe({
+            next: (res) => {
+              if (res?.idEstado != null) {
+                this.idEstadoPrestamo.set(res.idEstado);
+              }
+              this.snackBar.open('Préstamo aprobado correctamente', 'Cerrar', { duration: 3000 });
+            },
+            error: (err) => {
+              this.snackBar.open(this.extraerMensajeError(err, 'Error al aprobar el préstamo'), 'Cerrar', {
+                duration: 6000,
+                panelClass: ['error-snackbar'],
+              });
+            },
+          });
+      });
+  }
+
+  rechazarPrestamo(): void {
+    const idPrestamo = this.ultimoPrestamoId();
+    if (!idPrestamo || !this.puedeRechazar) {
+      return;
+    }
+
+    const data: ConfirmDialogData = {
+      title: 'Rechazar préstamo',
+      message:
+        'Se va a rechazar el préstamo. Esta acción es terminal: el préstamo no se puede reactivar después.',
+      confirmText: 'Rechazar',
+      type: 'danger',
+    };
+
+    this.dialog
+      .open(ConfirmDialogComponent, { data, width: '560px' })
+      .afterClosed()
+      .subscribe((confirmado) => {
+        if (!confirmado) {
+          return;
+        }
+
+        this.rechazando.set(true);
+        this.prestamoService
+          .rechazar(idPrestamo, usuarioSesion())
+          .pipe(finalize(() => this.rechazando.set(false)))
+          .subscribe({
+            next: (res) => {
+              if (res?.idEstado != null) {
+                this.idEstadoPrestamo.set(res.idEstado);
+              }
+              this.snackBar.open('Préstamo rechazado', 'Cerrar', { duration: 3000 });
+            },
+            error: (err) => {
+              this.snackBar.open(this.extraerMensajeError(err, 'Error al rechazar el préstamo'), 'Cerrar', {
+                duration: 6000,
+                panelClass: ['error-snackbar'],
+              });
+            },
+          });
       });
   }
 

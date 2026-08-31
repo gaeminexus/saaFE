@@ -162,6 +162,11 @@
   &.cuota-vencida    { background: rgba(220, 38, 38,.12); color: #b91c1c;  border: 1px solid rgba(220, 38, 38,.3); }
   &.cuota-plazo-vencido { background: rgba(136, 19, 55,.12); color: #9f1239; border: 1px solid rgba(136, 19, 55,.3); }
   &.cuota-desconocida { background: rgba(156,163,175,.12); color: #6b7280; border: 1px solid rgba(156,163,175,.3); }
+
+  &.prestamo-pendiente  { background: rgba(202,138,  4,.12); color: #a16207;  border: 1px solid rgba(202,138,  4,.3);  }
+  &.prestamo-generado   { background: rgba(29, 78,216,.12);  color: #1d4ed8;  border: 1px solid rgba(29, 78,216,.3);   }
+  &.prestamo-vigente    { background: rgba(22,163, 74,.15);  color: #15803d;  border: 1px solid rgba(22,163, 74,.3);   }
+  &.prestamo-rechazado  { background: rgba(220, 38, 38,.12); color: #b91c1c;  border: 1px solid rgba(220, 38, 38,.3);  }
 }
 
 @media (max-width: 768px) {
