@@ -105,6 +105,7 @@ cruzando saldos de aportes del socio, y lo que se cubre con depósito o transfer
 ```jsonc
 {
   "idPrestamo": 67830,
+  "idEmpresa": 1236,               // OBLIGATORIO, siempre — ver abajo
   "fecha": "2026-08-30",
   "observacion": "",
   "usuario": "GROBAYO",
@@ -130,6 +131,19 @@ cruzando saldos de aportes del socio, y lo que se cubre con depósito o transfer
   ]
 }
 ```
+
+### ⛔ `idEmpresa` es OBLIGATORIO, con y sin depósito
+
+Agregado el 2026-08-30. **Sin él, `registrar` falla.**
+
+**Por qué no se deriva:** la contabilización necesita la empresa, y un acuerdo cubierto 100% con
+aportes **no tiene cobro** del cual sacarla. No hay otra fuente — ni el préstamo, ni el producto,
+ni la entidad, ni la filial la tienen. Se guarda en el acuerdo (`ACCN.PJRQCDGO`) y **los dos
+caminos la leen de ahí**, nunca del cobro: así no pueden divergir.
+
+⚠️ **Si mandás depósito, la empresa tiene que ser la misma de la cuenta bancaria elegida.** Si
+difieren, el registro se rechaza — es el único momento en que esa incoherencia se puede detectar
+barato; detectarla al contabilizar es tarde.
 
 ### ⛔ Las dos fuentes cambian CUÁNDO se aplica el acuerdo
 

@@ -53,6 +53,22 @@ export class PrestamoService {
     return this.http.get<Prestamo[]>(url).pipe(catchError(this.handleError));
   }
 
+  /**
+   * Préstamo por su número de operación en ASOPREP (`idAsoprep`). ⚠️ NO es el mismo campo que
+   * `Aporte.idAsoprep` (ese dice de qué carga Petro salió el aporte) — mismo nombre, significado
+   * distinto.
+   *
+   * `404` es el resultado normal de una búsqueda por un número que no existe (el operador tipeó
+   * mal), no un error — se resuelve a `null`, igual que "no encontrado". Cualquier otro código sí
+   * es un error real y se propaga.
+   */
+  porIdAsoprep(idAsoprep: number): Observable<Prestamo | null> {
+    const url = `${ServiciosCrd.RS_PRST}/porIdAsoprep/${idAsoprep}`;
+    return this.http.get<Prestamo>(url).pipe(
+      catchError((error: HttpErrorResponse) => (error.status === 404 ? of(null) : throwError(() => error)))
+    );
+  }
+
   delete(datos: any): Observable<Prestamo | null> {
     const wsGetById = '/' + datos;
     const url = `${ServiciosCrd.RS_PRST}${wsGetById}`;

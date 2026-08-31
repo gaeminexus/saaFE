@@ -248,7 +248,12 @@ export class MenucreditosComponent {
           route: '/menucreditos/proceso-credito',
         },
         {
-          displayName: 'Acuerdos de Pago con Condonación',
+          displayName: 'Consulta de Cobros',
+          iconName: 'history',
+          route: '/menucreditos/consulta-cobros',
+        },
+        {
+          displayName: 'Condonación de Valores',
           iconName: 'handshake',
           route: '/menucreditos/acuerdo-condonacion',
         },

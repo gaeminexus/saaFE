@@ -43,6 +43,14 @@ mat-card { border-radius: 12px !important; box-shadow: 0 4px 16px rgba(0, 0, 0, 
   .search-field { flex: 1; min-width: 220px; }
 }
 
+.search-box-atajo {
+  padding-top: 0 !important;
+  align-items: center;
+
+  .search-o { color: #a0aec0; font-size: 0.85rem; font-style: italic; }
+  .search-field { flex: 0 1 240px; min-width: 200px; }
+}
+
 .resultados-card, .entidad-card {
   mat-card-header {
     border-bottom: 3px solid #667eea;

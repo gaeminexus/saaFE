@@ -1,0 +1,156 @@
+<div class="bandeja-container">
+
+  <div class="header">
+    <div class="header-title">
+      <mat-icon class="header-icon">history</mat-icon>
+      <h1>Consulta de Cobros — Procesados / Anulados</h1>
+    </div>
+    <button mat-icon-button (click)="cargar()" [disabled]="cargando()" matTooltip="Actualizar">
+      <mat-icon>refresh</mat-icon>
+    </button>
+  </div>
+
+  <div class="filtros">
+    <mat-form-field appearance="outline" class="filtro-texto">
+      <mat-label>Buscar por partícipe, referencia o código</mat-label>
+      <input matInput [(ngModel)]="filtroTexto" placeholder="Ej.: Pérez, TRF-1204, 41" />
+    </mat-form-field>
+    <mat-button-toggle-group [value]="filtroEstado()" (change)="filtroEstado.set($event.value)">
+      <mat-button-toggle [value]="null">Todos</mat-button-toggle>
+      <mat-button-toggle [value]="EstadoCobro.PROCESADO">Procesados</mat-button-toggle>
+      <mat-button-toggle [value]="EstadoCobro.ANULADO">Anulados</mat-button-toggle>
+    </mat-button-toggle-group>
+  </div>
+
+  @if (cargando()) {
+    <div class="loading-spinner-container"><mat-spinner diameter="40"></mat-spinner></div>
+  } @else if (!totalCargado()) {
+    <mat-card class="vacio-card">
+      <mat-card-content class="vacio-body">
+        <mat-icon>task_alt</mat-icon>
+        <p>No hay cobros procesados ni anulados todavía.</p>
+      </mat-card-content>
+    </mat-card>
+  } @else {
+    <div class="split">
+
+      <!-- Lista -->
+      <mat-card class="lista-card">
+        <mat-card-content>
+          <div class="lista-titulo">{{ filasFiltradas().length }} de {{ totalCargado() }}</div>
+          <div class="lista-scroll">
+            @for (fila of filasFiltradas(); track fila.codigo) {
+              <button type="button" class="fila-item"
+                      [class.activa]="filaSeleccionada() === fila"
+                      (click)="seleccionar(fila)">
+                <span class="fi-tipo" [class.anulado]="fila.estado === EstadoCobro.ANULADO">
+                  {{ nombreEstadoCobro(fila.estado) }}
+                </span>
+                <span class="fi-desc">{{ fila.entidad?.razonSocial || '—' }} · {{ nombreTipoOperacionCobro(fila.tipoOperacion) }}</span>
+                <span class="fi-valor">{{ formatMoneda(fila.valor) }}</span>
+                <span class="fi-meta">#{{ fila.codigo }} · {{ formatFecha(fila.fecha) }}</span>
+              </button>
+            } @empty {
+              <p class="texto-vacio">Ningún cobro coincide con el filtro.</p>
+            }
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Detalle -->
+      <mat-card class="detalle-card">
+        <mat-card-content>
+          @if (!filaSeleccionada()) {
+            <p class="texto-vacio">Elija un renglón de la lista para ver el detalle y el comprobante.</p>
+          } @else if (cargandoDetalle()) {
+            <div class="loading-spinner-container"><mat-spinner diameter="36"></mat-spinner></div>
+          } @else if (errorDetalle(); as error) {
+            <div class="error-text"><mat-icon>error_outline</mat-icon><span>{{ error }}</span></div>
+          } @else if (detalle(); as resp) {
+            <div class="dc-datos">
+              <div class="dc-item">
+                <span class="l">Estado</span>
+                <span class="v">{{ nombreEstadoCobro(resp.cabecera.estado) }}</span>
+              </div>
+              <div class="dc-item">
+                <span class="l">Partícipe</span>
+                <span class="v">{{ resp.cabecera.entidad?.razonSocial }}</span>
+              </div>
+              <div class="dc-item">
+                <span class="l">Tipo de operación</span>
+                <span class="v">{{ nombreTipoOperacionCobro(resp.cabecera.tipoOperacion) }}</span>
+              </div>
+              <div class="dc-item">
+                <span class="l">Valor</span>
+                <span class="v">{{ formatMoneda(resp.cabecera.valor) }}</span>
+              </div>
+              <div class="dc-item">
+                <span class="l">Fecha</span>
+                <span class="v">{{ formatFecha(resp.cabecera.fecha) }}</span>
+              </div>
+              <div class="dc-item">
+                <span class="l">Referencia</span>
+                <span class="v">{{ resp.cabecera.referencia || 'No registrada' }}</span>
+              </div>
+              <div class="dc-item">
+                <span class="l">Cuenta destino</span>
+                <span class="v">{{ resp.cabecera.cuentaBancaria?.banco?.nombre }} &middot; {{ resp.cabecera.cuentaBancaria?.numeroCuenta }}</span>
+              </div>
+
+              @if (resp.cabecera.estado === EstadoCobro.PROCESADO) {
+                <div class="dc-item">
+                  <span class="l">Procesado por</span>
+                  <span class="v">{{ resp.cabecera.usuarioProceso || '—' }} · {{ formatFecha(resp.cabecera.fechaProceso) }}</span>
+                </div>
+                @if (resp.cabecera.asientoDefinitivo) {
+                  <div class="dc-item">
+                    <span class="l">Asiento definitivo</span>
+                    <span class="v">{{ resp.cabecera.asientoDefinitivo }}</span>
+                  </div>
+                }
+              }
+
+              @if (resp.cabecera.estado === EstadoCobro.ANULADO) {
+                <div class="dc-item ancho-total">
+                  <span class="l">Anulado por</span>
+                  <span class="v">{{ resp.cabecera.usuarioAnulacion || '—' }} · {{ formatFecha(resp.cabecera.fechaAnulacion) }}</span>
+                </div>
+                <div class="dc-item ancho-total">
+                  <span class="l">Motivo de anulación</span>
+                  <span class="v">{{ resp.cabecera.motivoAnulacion || '—' }}</span>
+                </div>
+              }
+
+              @if (resp.cabecera.observacion) {
+                <div class="dc-item ancho-total">
+                  <span class="l">Observación</span>
+                  <span class="v">{{ resp.cabecera.observacion }}</span>
+                </div>
+              }
+            </div>
+
+            @if (resp.detalle.length > 1) {
+              <div class="section-label">Detalle</div>
+              <table class="tabla-detalle">
+                <thead><tr><th>Préstamo / tipo de aporte</th><th class="num">Valor</th></tr></thead>
+                <tbody>
+                  @for (linea of resp.detalle; track $index) {
+                    <tr>
+                      <td>{{ nombreLineaDetalle(linea) }}</td>
+                      <td class="num">{{ formatMoneda(linea.valor) }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+
+            <div class="section-label">Comprobante</div>
+            <app-comprobante-viewer [ruta]="resp.cabecera.rutaRespaldo"></app-comprobante-viewer>
+          }
+        </mat-card-content>
+      </mat-card>
+
+    </div>
+  }
+
+</div>

@@ -88,6 +88,18 @@
         <div class="loading-spinner-container">
           <mat-spinner diameter="48" color="primary"></mat-spinner>
         </div>
+      } @else if (errorDeudaVigente(); as errorDeuda) {
+        <mat-card class="cuenta-card">
+          <mat-card-content>
+            <div class="error-text">
+              <mat-icon>error_outline</mat-icon>
+              <span>{{ errorDeuda }}</span>
+            </div>
+            <button mat-stroked-button (click)="reintentarDeudaVigente()">
+              <mat-icon>refresh</mat-icon> Reintentar
+            </button>
+          </mat-card-content>
+        </mat-card>
       } @else {
 
         <mat-card class="saldo-card">
@@ -137,8 +149,8 @@
                       <td mat-cell *matCellDef="let a">{{ formatMoneda(a.prestamo.montoSolicitado) }}</td>
                     </ng-container>
                     <ng-container matColumnDef="saldoTotal">
-                      <th mat-header-cell *matHeaderCellDef>Saldo total</th>
-                      <td mat-cell *matCellDef="let a">{{ formatMoneda(a.prestamo.saldoTotal) }}</td>
+                      <th mat-header-cell *matHeaderCellDef>Saldo pendiente</th>
+                      <td mat-cell *matCellDef="let a">{{ formatMoneda(saldoPendienteDe(a.prestamo)) }}</td>
                     </ng-container>
                     <ng-container matColumnDef="aplicado">
                       <th mat-header-cell *matHeaderCellDef>Aplicado</th>
@@ -250,26 +262,49 @@
                 <mat-form-field appearance="outline">
                   <mat-label>Retiro efectivo</mat-label>
                   <span matTextPrefix>$&nbsp;</span>
-                  <input matInput [(ngModel)]="montoRetiroEfectivoTexto" (blur)="onMontoAllocationBlur('retiro')" />
+                  <input matInput [(ngModel)]="montoRetiroEfectivoTexto" (blur)="onMontoAllocationBlur()" />
                 </mat-form-field>
-                <mat-form-field appearance="outline">
-                  <mat-label>Pensión complementaria (mensual)</mat-label>
-                  <span matTextPrefix>$&nbsp;</span>
-                  <input matInput [(ngModel)]="montoPensionTexto" (blur)="onMontoAllocationBlur('pension')" />
-                </mat-form-field>
-                @if (parseMoneda(montoPensionTexto()) > 0) {
-                  <mat-form-field appearance="outline" class="full">
-                    <mat-label>Número de cuotas (opcional)</mat-label>
-                    <input matInput [(ngModel)]="numeroCuotasPensionTexto" />
-                  </mat-form-field>
-                }
               </div>
-              <div class="allocation-live"
-                   [class.ok]="completamenteAsignadoAllocation() && asignadoAllocation() > 0"
-                   [class.over]="restanteAllocation() < -0.004"
-                   [class.under]="restanteAllocation() > 0.004">
-                Asignado: <b>{{ formatMoneda(asignadoAllocation()) }}</b> de {{ formatMoneda(saldoRemanenteJubilacion()) }}
-                &middot; Restante: <b>{{ formatMoneda(restanteAllocation() < 0 ? -restanteAllocation() : restanteAllocation()) }}{{ restanteAllocation() < -0.004 ? ' (excedido)' : '' }}</b>
+
+              @if (requiereCuentaParticipe()) {
+                <mat-form-field appearance="outline" class="full">
+                  <mat-label>Cuenta del partícipe (destino del retiro)</mat-label>
+                  <mat-select [ngModel]="cuentaParticipeSeleccionada()"
+                              (ngModelChange)="cuentaParticipeSeleccionada.set($event)"
+                              [disabled]="cargandoCuentasParticipe() || !cuentasParticipe().length"
+                              panelClass="select-con-buscador"
+                              (openedChange)="!$event && (filtroCuentaParticipe = '')">
+                    <mat-option class="select-search-option"
+                                (mousedown)="$event.preventDefault(); $event.stopPropagation()"
+                                (click)="$event.stopPropagation()">
+                      <input class="select-search-input" placeholder="Buscar por banco o número de cuenta..."
+                             [value]="filtroCuentaParticipe"
+                             (mousedown)="$event.stopPropagation()"
+                             (click)="$event.stopPropagation()"
+                             (keydown)="$event.stopPropagation()"
+                             (input)="filtroCuentaParticipe = $any($event.target).value" />
+                    </mat-option>
+                    @for (c of cuentasParticipeFiltradas; track c.codigo) {
+                      <mat-option [value]="c">{{ etiquetaCuentaParticipe(c) }}</mat-option>
+                    }
+                  </mat-select>
+                  <mat-hint>Solo se muestran los últimos 4 dígitos de la cuenta.</mat-hint>
+                </mat-form-field>
+                @if (!cargandoCuentasParticipe() && !cuentasParticipe().length) {
+                  <p class="texto-vacio">
+                    El partícipe no tiene una cuenta bancaria activa registrada. Cárguela en su ficha
+                    (Partícipe &rsaquo; Cuentas bancarias) o baje el retiro efectivo a $0.00 para dejar todo en pensión complementaria.
+                  </p>
+                }
+              }
+
+              <div class="allocation-live ok">
+                Pasa a pensión complementaria automáticamente: <b>{{ formatMoneda(montoPensionComplementaria()) }}</b>
+                <br />
+                <span class="allocation-note">
+                  No es una elección: se traslada automáticamente TODO lo que no se retire en efectivo. No es un
+                  plan de pagos con cuotas — es un traslado de saldo, en un solo movimiento.
+                </span>
               </div>
             }
           </mat-card-content>
@@ -280,16 +315,13 @@
 
           @if (!jubilacionRegistrada()) {
             <mat-card-content>
+              @if (errorOrquestacion(); as error) {
+                <div class="error-text">
+                  <mat-icon>error_outline</mat-icon>
+                  <span>{{ error }}</span>
+                </div>
+              }
               <div class="confirm-actions">
-                @if (!completamenteAsignadoAllocation() && saldoRemanenteJubilacion() > 0) {
-                  <div class="allocation-note">
-                    @if (restanteAllocation() > 0.004) {
-                      Falta asignar {{ formatMoneda(restanteAllocation()) }} del saldo remanente antes de poder jubilar.
-                    } @else {
-                      Se ha asignado {{ formatMoneda(-restanteAllocation()) }} de más — ajusta los montos antes de continuar.
-                    }
-                  </div>
-                }
                 <button mat-raised-button color="accent" [disabled]="!puedeJubilar()" (click)="confirmarJubilacion()">
                   @if (registrando()) {
                     <mat-spinner diameter="18"></mat-spinner>
@@ -304,6 +336,58 @@
               <mat-icon class="check-icon">check_circle</mat-icon>
               <h3>Partícipe jubilado</h3>
               <p>El proceso de jubilación se registró correctamente.</p>
+              @if (resultadoJubilacion(); as resultado) {
+                <div class="resultado-jubilacion">
+                  @if (resultado.valorCesantiaTrasladado > 0) {
+                    <div>Cesantía trasladada: <b>{{ formatMoneda(resultado.valorCesantiaTrasladado) }}</b></div>
+                  }
+                  @if (resultado.valorJubilacionTrasladado > 0) {
+                    <div>Jubilación trasladada: <b>{{ formatMoneda(resultado.valorJubilacionTrasladado) }}</b></div>
+                  }
+                  <div>Total a pensión complementaria: <b>{{ formatMoneda(resultado.valorTotalTrasladado) }}</b></div>
+                </div>
+
+                @if (resultado.valorTotalTrasladado > 0.004) {
+                  <div class="config-pension">
+                    @if (!configuracionPensionGuardada()) {
+                      <h4>Paso 4 — Configurar el pago mensual</h4>
+                      <p class="allocation-note">
+                        Sin esto, el proceso mensual de pago de pensiones no va a incluir a este partícipe: no
+                        falla, simplemente no lo ve.
+                      </p>
+                      <div class="field-grid">
+                        <mat-form-field appearance="outline">
+                          <mat-label>Valor de pensión mensual</mat-label>
+                          <span matTextPrefix>$&nbsp;</span>
+                          <input matInput [(ngModel)]="valorPagarPensionTexto" />
+                        </mat-form-field>
+                        <mat-form-field appearance="outline">
+                          <mat-label>Número de cuotas (opcional)</mat-label>
+                          <input matInput [(ngModel)]="numeroCuotasPensionTexto" />
+                        </mat-form-field>
+                        <mat-form-field appearance="outline">
+                          <mat-label>Valor del seguro (opcional)</mat-label>
+                          <span matTextPrefix>$&nbsp;</span>
+                          <input matInput [(ngModel)]="valorSeguroPensionTexto" />
+                        </mat-form-field>
+                        <mat-checkbox [(ngModel)]="tienePrestamoPension">Tiene préstamo</mat-checkbox>
+                      </div>
+                      <button mat-raised-button color="primary" [disabled]="guardandoConfiguracionPension()" (click)="guardarConfiguracionPension()">
+                        @if (guardandoConfiguracionPension()) {
+                          <mat-spinner diameter="18"></mat-spinner>
+                        } @else {
+                          <ng-container><mat-icon>event_repeat</mat-icon> Guardar configuración de pago</ng-container>
+                        }
+                      </button>
+                    } @else {
+                      <div class="error-text" style="color:#0d7a4f">
+                        <mat-icon>check_circle</mat-icon>
+                        <span>Configuración de pago mensual registrada.</span>
+                      </div>
+                    }
+                  </div>
+                }
+              }
               <button mat-stroked-button (click)="cerrarConfirmacion()">Jubilar otro partícipe</button>
             </mat-card-content>
           }

@@ -8,6 +8,7 @@ import { MaterialFormModule } from '../../../../shared/modules/material-form.mod
 import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
+import { empresaSesionCodigo } from '../../../../shared/services/empresa-sesion';
 import { FuncionesDatosService } from '../../../../shared/services/funciones-datos.service';
 import { usuarioSesion } from '../../../../shared/services/usuario-sesion';
 
@@ -651,6 +652,17 @@ export class CruceDeValoresComponent {
    */
   confirmarCruce(): void {
     if (!this.puedeConfirmar()) return;
+
+    const idEmpresa = empresaSesionCodigo();
+    if (idEmpresa == null) {
+      this.snackBar.open(
+        'No se pudo determinar la empresa de la sesión. Vuelva a iniciar sesión y reintente.',
+        'Cerrar',
+        { duration: 5000 }
+      );
+      return;
+    }
+
     this.registrando.set(true);
     this.resumenCruce.set(null);
 
@@ -669,14 +681,15 @@ export class CruceDeValoresComponent {
     }
     this.bump();
 
-    this.procesarSiguiente(cola, 0, pozo, { exitosos: 0, fallidos: 0 });
+    this.procesarSiguiente(cola, 0, pozo, { exitosos: 0, fallidos: 0 }, idEmpresa);
   }
 
   private procesarSiguiente(
     cola: PrestamoCruce[],
     indice: number,
     pozo: { idTipoAporte: number; nombre: string; restante: number }[],
-    conteo: { exitosos: number; fallidos: number }
+    conteo: { exitosos: number; fallidos: number },
+    idEmpresa: number
   ): void {
     if (indice >= cola.length) {
       this.registrando.set(false);
@@ -706,7 +719,7 @@ export class CruceDeValoresComponent {
       pc.mensaje = 'No quedó saldo de aportes disponible para este préstamo.';
       conteo.fallidos++;
       this.bump();
-      this.procesarSiguiente(cola, indice + 1, pozo, conteo);
+      this.procesarSiguiente(cola, indice + 1, pozo, conteo, idEmpresa);
       return;
     }
 
@@ -724,6 +737,7 @@ export class CruceDeValoresComponent {
 
     this.operaciones
       .pagarConAportes({
+        idEmpresa,
         idPrestamo: pc.prestamo.codigo,
         usuario: usuarioSesion(),
         observacion: this.observacion.trim() || null,
@@ -750,7 +764,7 @@ export class CruceDeValoresComponent {
           }
         }
         this.bump();
-        this.procesarSiguiente(cola, indice + 1, pozo, conteo);
+        this.procesarSiguiente(cola, indice + 1, pozo, conteo, idEmpresa);
       });
   }
 

@@ -33,6 +33,8 @@ export interface SaldoAporte {
  * inversa a `pagarConAportes`: acá el partícipe ENTREGA dinero y su saldo sube.
  */
 export interface RegistroAporteRequest {
+  /** Empresa contable (SCP.PJRQ) sobre la que se genera el asiento. Obligatorio. */
+  idEmpresa: number;
   /** Código del partícipe (ENTD.ENTDCDGO), NO el del préstamo. */
   idEntidad: number;
   idTipoAporte: number;
@@ -61,6 +63,8 @@ export interface ResultadoRegistroAporte {
 // ===================== §4 POST /prst/pagarCuota =====================
 
 export interface PagoCuotaRequest {
+  /** Empresa contable (SCP.PJRQ) sobre la que se genera el asiento. Obligatorio. */
+  idEmpresa: number;
   idPrestamo: number;
   valor: number;
   usuario: string;
@@ -113,6 +117,8 @@ export interface ResultadoPagoCuota {
  * es el mismo comprobante único repetido en todos los renglones.
  */
 export interface PagoMultipleRequest {
+  /** Empresa contable (SCP.PJRQ) sobre la que se genera el asiento. Obligatorio. */
+  idEmpresa: number;
   pagos: PagoCuotaRequest[];
 }
 
@@ -128,6 +134,8 @@ export interface ResultadoPagoMultiple {
 // ===================== §5 POST /prst/pagarConAportes =====================
 
 export interface PagoConAportesRequest {
+  /** Empresa contable (SCP.PJRQ) sobre la que se genera el asiento. Obligatorio. */
+  idEmpresa: number;
   idPrestamo: number;
   usuario: string;
   observacion?: string | null;
@@ -196,6 +204,8 @@ export interface SimulacionAbonoCapital {
 // ===================== §7 POST /prst/abonarCapital =====================
 
 export interface AbonoCapitalRequest {
+  /** Empresa contable (SCP.PJRQ) sobre la que se genera el asiento. Obligatorio. */
+  idEmpresa: number;
   idPrestamo: number;
   valor: number;
   /** 1 = reduce plazo (mantiene cuota) · 2 = reduce cuota (mantiene plazo). */
@@ -254,6 +264,8 @@ export interface SimulacionPrecancelacion {
 // ===================== §9 POST /prst/precancelar =====================
 
 export interface PrecancelacionRequest {
+  /** Empresa contable (SCP.PJRQ) sobre la que se genera el asiento. Obligatorio. */
+  idEmpresa: number;
   idPrestamo: number;
   /** Default 0. No puede ser negativo. */
   valorEfectivo?: number;
@@ -285,6 +297,8 @@ export interface ResultadoPrecancelacion {
 // ===================== §10 POST /prst/anularOperacion =====================
 
 export interface AnulacionRequest {
+  /** Empresa contable (SCP.PJRQ) sobre la que se genera el asiento. Obligatorio. */
+  idEmpresa: number;
   idEvento: number;
   usuario: string;
   /** Obligatorio; queda en la auditoría. */

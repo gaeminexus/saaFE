@@ -9,6 +9,7 @@ import { MaterialFormModule } from '../../../../shared/modules/material-form.mod
 import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
+import { empresaSesionCodigo } from '../../../../shared/services/empresa-sesion';
 import { FuncionesDatosService } from '../../../../shared/services/funciones-datos.service';
 import { usuarioSesion } from '../../../../shared/services/usuario-sesion';
 
@@ -1273,7 +1274,14 @@ export class CobrosPersonalesComponent implements OnDestroy {
 
     // Cobro solo de aportes: no hay préstamo de por medio.
     if (!prestamos.length) {
-      this.registrarAportesDelSocio(entidad.codigo, aportes, usuario, observacion, fecha, rutaDocumentoRespaldo, (registrados) => {
+      const idEmpresa = empresaSesionCodigo();
+      if (idEmpresa == null) {
+        this.registrando.set(false);
+        this.errorOperacion.set('No se pudo determinar la empresa de la sesión. Vuelva a iniciar sesión y reintente.');
+        this.descartarComprobanteHuerfano(rutaDocumentoRespaldo);
+        return;
+      }
+      this.registrarAportesDelSocio(idEmpresa, entidad.codigo, aportes, usuario, observacion, fecha, rutaDocumentoRespaldo, (registrados) => {
         this.registrando.set(false);
         this.mostrarRecibo('REGISTRO_APORTE', undefined, fecha, undefined, [], registrados, rutaDocumentoRespaldo);
       });
@@ -1281,6 +1289,14 @@ export class CobrosPersonalesComponent implements OnDestroy {
     }
 
     if (this.metodoPago() === 'debito') {
+      const idEmpresa = empresaSesionCodigo();
+      if (idEmpresa == null) {
+        this.registrando.set(false);
+        this.errorOperacion.set('No se pudo determinar la empresa de la sesión. Vuelva a iniciar sesión y reintente.');
+        this.descartarComprobanteHuerfano(rutaDocumentoRespaldo);
+        return;
+      }
+
       const prestamo = prestamos[0].prestamo;
       const monto = +prestamos[0].monto.toFixed(2);
       const idTipoAporte = this.idTipoAportePara(this.cuentaOrigenAporte());
@@ -1294,6 +1310,7 @@ export class CobrosPersonalesComponent implements OnDestroy {
 
       this.operaciones
         .pagarConAportes({
+          idEmpresa,
           idPrestamo: prestamo.codigo,
           usuario,
           observacion,
@@ -1313,7 +1330,7 @@ export class CobrosPersonalesComponent implements OnDestroy {
           }
           const pago = resp.resultado;
           const movimientos = resp.movimientosAporte ?? [];
-          this.registrarAportesDelSocio(entidad.codigo, aportes, usuario, observacion, fecha, rutaDocumentoRespaldo, (registrados) => {
+          this.registrarAportesDelSocio(idEmpresa, entidad.codigo, aportes, usuario, observacion, fecha, rutaDocumentoRespaldo, (registrados) => {
             this.registrando.set(false);
             this.mostrarRecibo('PAGO_APORTES', resp.mensaje, fecha, pago, movimientos, registrados, rutaDocumentoRespaldo);
           });
@@ -1520,6 +1537,7 @@ export class CobrosPersonalesComponent implements OnDestroy {
    * que se avisa aparte cuáles no se pudieron registrar.
    */
   private registrarAportesDelSocio(
+    idEmpresa: number,
     idEntidad: number,
     renglones: { clave: 'cesantia' | 'jubilacion'; idTipoAporte: number; valor: number }[],
     usuario: string,
@@ -1535,6 +1553,7 @@ export class CobrosPersonalesComponent implements OnDestroy {
 
     const llamadas = renglones.map((r) =>
       this.operaciones.registrarAporte({
+        idEmpresa,
         idEntidad,
         idTipoAporte: r.idTipoAporte,
         valor: r.valor,

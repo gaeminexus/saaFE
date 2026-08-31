@@ -5,6 +5,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { MotivoDialogComponent } from '../../../../shared/components/motivo-dialog/motivo-dialog.component';
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
+import { empresaSesionCodigo } from '../../../../shared/services/empresa-sesion';
 import { FuncionesDatosService } from '../../../../shared/services/funciones-datos.service';
 import { usuarioSesion } from '../../../../shared/services/usuario-sesion';
 import {
@@ -118,8 +119,15 @@ export class HistorialOperacionesDialogComponent {
     this.anulando.set(evento.codigo);
     this.avisoAnulacion.set(null);
 
+    const idEmpresa = empresaSesionCodigo();
+    if (idEmpresa == null) {
+      this.anulando.set(null);
+      this.avisoAnulacion.set('No se pudo determinar la empresa de la sesión. Vuelva a iniciar sesión y reintente.');
+      return;
+    }
+
     this.operaciones
-      .anularOperacion({ idEvento: evento.codigo, usuario: usuarioSesion(), motivo })
+      .anularOperacion({ idEmpresa, idEvento: evento.codigo, usuario: usuarioSesion(), motivo })
       .subscribe((resp) => {
         this.anulando.set(null);
 

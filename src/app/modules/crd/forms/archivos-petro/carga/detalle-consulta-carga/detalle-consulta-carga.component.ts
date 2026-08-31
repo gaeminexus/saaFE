@@ -33,7 +33,10 @@ import {
   obtenerCodigoEstadoCuota as leerCodigoEstadoCuota,
   obtenerNombreEstadoCuota,
 } from '../../../../model/estado-cuota-prestamo';
-import { AfectacionValoresParticipeCarga } from '../../../../model/afectacion-valores-participe-carga';
+import {
+  AfectacionValoresParticipeCarga,
+  OpcionAporteExcedente,
+} from '../../../../model/afectacion-valores-participe-carga';
 import { ExportService } from '../../../../../../shared/services/export.service';
 import { FuncionesDatosService } from '../../../../../../shared/services/funciones-datos.service';
 import { AppStateService } from '../../../../../../shared/services/app-state.service';
@@ -198,6 +201,14 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
   detalleCuotaEnEdicion = signal<Set<number>>(new Set());
   isLoadingAfectacionFinanciera = signal<boolean>(false);
   isSavingAfectacionFinanciera = signal<boolean>(false);
+
+  // Excedente aplicado a un aporte (docs/crd/API-EXCEDENTE-PETRO-A-APORTES.md)
+  opcionesAporteExcedente = signal<OpcionAporteExcedente[]>([]);
+  /** Solo con `opcionesAporteExcedente()` vacío: "no hay tipos de aporte vigentes para <mes> <año>". */
+  mensajeOpcionesAporteVacio = signal<string | null>(null);
+  valoresAporteEditados = signal<Record<number, number>>({});
+  aporteEnEdicion = signal<Set<number>>(new Set());
+  isLoadingOpcionesAporte = signal<boolean>(false);
 
   constructor(
     private route: ActivatedRoute,
@@ -1454,8 +1465,15 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
     return this.redondear(total);
   }
 
+  get totalValorAportarActual(): number {
+    const total = Object.values(this.valoresAporteEditados()).reduce((sum, valor) => sum + (Number(valor) || 0), 0);
+    return this.redondear(total);
+  }
+
   get saldoPendienteAfectacion(): number {
-    return this.redondear(this.montoDisponibleAfectacion - this.totalValorAfectarActual);
+    return this.redondear(
+      this.montoDisponibleAfectacion - this.totalValorAfectarActual - this.totalValorAportarActual
+    );
   }
 
   private normalizarMontoPetro(valor: number | string | null | undefined): number | null {
@@ -1544,12 +1562,22 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
         isLoadingAfectacionFinanciera: () => this.isLoadingAfectacionFinanciera(),
         isSavingAfectacionFinanciera: () => this.isSavingAfectacionFinanciera(),
         formatearFecha: (fecha: Date | string | null) => this.formatearFecha(fecha),
-        onGuardarAfectaciones: () => this.guardarAfectacionesFinancieras()
+        onGuardarAfectaciones: () => this.guardarAfectacionesFinancieras(),
+        // Excedente aplicado a un aporte (docs/crd/API-EXCEDENTE-PETRO-A-APORTES.md)
+        getOpcionesAporte: () => this.opcionesAporteExcedente(),
+        getMensajeOpcionesAporteVacio: () => this.mensajeOpcionesAporteVacio(),
+        isLoadingOpcionesAporte: () => this.isLoadingOpcionesAporte(),
+        getValorAporteEditado: (idTipoAporte: number) => this.getValorAporteEditado(idTipoAporte),
+        onValorAporteChange: (idTipoAporte: number, valor: string | number) => this.onValorAporteChange(idTipoAporte, valor),
+        onValorAporteFocus: (idTipoAporte: number) => this.onValorAporteFocus(idTipoAporte),
+        onValorAporteBlur: (idTipoAporte: number) => this.onValorAporteBlur(idTipoAporte),
+        getTotalValorAportarActual: () => this.totalValorAportarActual,
       }
     });
 
     dialogRef.afterOpened().subscribe(() => {
       this.cargarContextoAfectacionFinanciera(novedad);
+      this.cargarOpcionesAporte(novedad);
     });
 
     dialogRef.afterClosed().subscribe(() => {
@@ -1565,6 +1593,11 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
     this.detalleCuotaEnEdicion.set(new Set());
     this.isLoadingAfectacionFinanciera.set(false);
     this.isSavingAfectacionFinanciera.set(false);
+    this.opcionesAporteExcedente.set([]);
+    this.mensajeOpcionesAporteVacio.set(null);
+    this.valoresAporteEditados.set({});
+    this.aporteEnEdicion.set(new Set());
+    this.isLoadingOpcionesAporte.set(false);
   }
 
   onValorAfectarFocus(detalle: DetallePrestamo): void {
@@ -1604,9 +1637,11 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
       return;
     }
 
-    const totalSinActual = Object.entries(this.valoresAfectarEditados())
-      .filter(([codigo]) => Number(codigo) !== detalleCodigo)
-      .reduce((sum, [, current]) => sum + (Number(current) || 0), 0);
+    const totalSinActual =
+      this.totalValorAportarActual +
+      Object.entries(this.valoresAfectarEditados())
+        .filter(([codigo]) => Number(codigo) !== detalleCodigo)
+        .reduce((sum, [, current]) => sum + (Number(current) || 0), 0);
 
     const saldoDisponible = this.redondear(this.montoDisponibleAfectacion - this.redondear(totalSinActual));
     if (saldoDisponible <= 0) {
@@ -1642,9 +1677,11 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
       return;
     }
 
-    const totalSinActual = Object.entries(this.valoresAfectarEditados())
-      .filter(([codigo]) => Number(codigo) !== detalleCodigo)
-      .reduce((sum, [, current]) => sum + (Number(current) || 0), 0);
+    const totalSinActual =
+      this.totalValorAportarActual +
+      Object.entries(this.valoresAfectarEditados())
+        .filter(([codigo]) => Number(codigo) !== detalleCodigo)
+        .reduce((sum, [, current]) => sum + (Number(current) || 0), 0);
 
     const totalConActual = this.redondear(totalSinActual + valorNumerico);
     const montoDisponible = this.redondear(this.montoDisponibleAfectacion);
@@ -1677,6 +1714,107 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
     return this.formatearMontoDosDecimales(valorRedondeado);
   }
 
+  // ================= excedente aplicado a un aporte =================
+
+  private cargarOpcionesAporte(novedad: NovedadParticipeCarga): void {
+    if (!novedad.codigo) {
+      this.opcionesAporteExcedente.set([]);
+      this.mensajeOpcionesAporteVacio.set(null);
+      return;
+    }
+
+    this.isLoadingOpcionesAporte.set(true);
+    this.afectacionValoresParticipeCargaService.opcionesAporte(novedad.codigo).subscribe({
+      next: (resp) => {
+        this.isLoadingOpcionesAporte.set(false);
+        const opciones = resp?.opciones ?? [];
+        this.opcionesAporteExcedente.set(opciones);
+        // opciones: [] no es un error — el partícipe no tiene tipo vigente en el mes de la CARGA
+        // (mes/año de la respuesta, no los de hoy). Sin esto la pantalla solo ofrece préstamo.
+        this.mensajeOpcionesAporteVacio.set(
+          opciones.length || !resp
+            ? null
+            : `No hay tipos de aporte vigentes para ${this.nombreMes(resp.mes)} ${resp.anio}.`
+        );
+      },
+      error: () => {
+        this.isLoadingOpcionesAporte.set(false);
+        this.opcionesAporteExcedente.set([]);
+        this.mensajeOpcionesAporteVacio.set(null);
+        this.snackBar.open('No se pudieron cargar las opciones de aporte para el excedente.', 'Cerrar', {
+          duration: 4000,
+        });
+      },
+    });
+  }
+
+  private nombreMes(mes: number): string {
+    return this.meses.find((m) => m.valor === mes)?.nombre.toLowerCase() ?? String(mes);
+  }
+
+  onValorAporteFocus(idTipoAporte: number): void {
+    const edicion = new Set(this.aporteEnEdicion());
+    edicion.add(idTipoAporte);
+    this.aporteEnEdicion.set(edicion);
+  }
+
+  onValorAporteBlur(idTipoAporte: number): void {
+    const edicion = new Set(this.aporteEnEdicion());
+    edicion.delete(idTipoAporte);
+    this.aporteEnEdicion.set(edicion);
+
+    const valorActual = this.valoresAporteEditados()[idTipoAporte] || 0;
+    this.valoresAporteEditados.update((actual) => ({
+      ...actual,
+      [idTipoAporte]: this.redondear(Number(valorActual) || 0),
+    }));
+  }
+
+  /**
+   * Mismo tope compartido que las cuotas de préstamo: la suma de TODO lo asignado (cuotas +
+   * aportes) no puede superar el excedente de la novedad — es un solo pozo, no dos.
+   */
+  onValorAporteChange(idTipoAporte: number, valor: string | number): void {
+    const valorNumerico = this.redondear(this.parsearMontoEntrada(valor));
+
+    if (Number.isNaN(valorNumerico) || valorNumerico < 0) {
+      this.valoresAporteEditados.update((actual) => ({ ...actual, [idTipoAporte]: 0 }));
+      return;
+    }
+
+    const totalSinActual =
+      this.totalValorAfectarActual +
+      Object.entries(this.valoresAporteEditados())
+        .filter(([codigo]) => Number(codigo) !== idTipoAporte)
+        .reduce((sum, [, current]) => sum + (Number(current) || 0), 0);
+
+    const totalConActual = this.redondear(totalSinActual + valorNumerico);
+    const montoDisponible = this.redondear(this.montoDisponibleAfectacion);
+
+    if (totalConActual > montoDisponible) {
+      this.snackBar.open('La suma de valores a cruzar no puede superar el valor recibido desde Petro', 'Cerrar', {
+        duration: 4000,
+      });
+      return;
+    }
+
+    this.valoresAporteEditados.update((actual) => ({
+      ...actual,
+      [idTipoAporte]: valorNumerico,
+    }));
+  }
+
+  getValorAporteEditado(idTipoAporte: number): string {
+    const valor = Number(this.valoresAporteEditados()[idTipoAporte] || 0);
+    const valorRedondeado = this.redondear(valor);
+
+    if (this.aporteEnEdicion().has(idTipoAporte)) {
+      return String(valorRedondeado).replace('.', ',');
+    }
+
+    return this.formatearMontoDosDecimales(valorRedondeado);
+  }
+
   guardarAfectacionesFinancieras(): void {
     const novedad = this.novedadFinancieraSeleccionada();
     const usuario = this.obtenerUsuarioActual();
@@ -1691,7 +1829,10 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
       return;
     }
 
-    if (this.redondear(this.totalValorAfectarActual) > this.redondear(this.montoDisponibleAfectacion)) {
+    if (
+      this.redondear(this.totalValorAfectarActual + this.totalValorAportarActual) >
+      this.redondear(this.montoDisponibleAfectacion)
+    ) {
       this.snackBar.open('La suma de valores a cruzar supera el valor recibido desde Petro', 'Cerrar', {
         duration: 4000,
       });
@@ -1755,18 +1896,76 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
       }
     });
 
-    if (operaciones.length === 0) {
+    // Excedente a un aporte: filas separadas (tipoAporte, sin prestamo/detallePrestamo — CK_AVPC_
+    // PRST_XOR_TPAP) que se guardan con /batch, no con add/update. Igual que arriba: valor 0 borra
+    // una fila que ya existía, y las que desaparecieron del mapa actual también se borran.
+    const existentesAporte = new Map<number, AfectacionValoresParticipeCarga>();
+    this.afectacionesRegistradas().forEach((item) => {
+      const idTipoAporte = item.tipoAporte?.codigo;
+      if (idTipoAporte) {
+        existentesAporte.set(idTipoAporte, item);
+      }
+    });
+
+    const actualesAporte = this.valoresAporteEditados();
+    const filasAporteParaBatch: AfectacionValoresParticipeCarga[] = [];
+
+    Object.entries(actualesAporte).forEach(([idTipoAporteTexto, valor]) => {
+      const idTipoAporte = Number(idTipoAporteTexto);
+      const valorAfectar = this.redondear(Number(valor || 0));
+      const existente = existentesAporte.get(idTipoAporte);
+
+      if (valorAfectar > 0) {
+        filasAporteParaBatch.push(
+          this.construirPayloadAfectacionAporte(novedad, idTipoAporte, valorAfectar, usuario, existente)
+        );
+      } else if (existente?.codigo) {
+        operaciones.push(this.afectacionValoresParticipeCargaService.delete(existente.codigo));
+      }
+    });
+
+    this.afectacionesRegistradas().forEach((item) => {
+      const idTipoAporte = item.tipoAporte?.codigo;
+      if (!idTipoAporte || idTipoAporte in actualesAporte) {
+        return;
+      }
+
+      if (item.codigo) {
+        operaciones.push(this.afectacionValoresParticipeCargaService.delete(item.codigo));
+      }
+    });
+
+    if (operaciones.length === 0 && filasAporteParaBatch.length === 0) {
       this.snackBar.open('No hay cambios por guardar en las afectaciones', 'Cerrar', { duration: 3000 });
       return;
     }
 
     this.isSavingAfectacionFinanciera.set(true);
 
-    forkJoin(operaciones).subscribe({
-      next: () => {
+    forkJoin({
+      prestamos: operaciones.length ? forkJoin(operaciones) : of(null),
+      aportes: filasAporteParaBatch.length
+        ? this.afectacionValoresParticipeCargaService.batch(filasAporteParaBatch)
+        : of(null),
+    }).subscribe({
+      next: ({ aportes }) => {
         this.isSavingAfectacionFinanciera.set(false);
-        this.snackBar.open('Afectaciones financieras registradas correctamente', 'Cerrar', { duration: 3500 });
+
+        // Aviso, no error: el backend ya guardó todo (cada fila es su propia transacción) — esto
+        // es la MISMA regla que va a bloquear el proceso del archivo si nadie completa el reparto
+        // (docs/crd/API-EXCEDENTE-PETRO-A-APORTES.md §3).
+        const advertencias = aportes?.advertenciasReparto ?? [];
+        if (advertencias.length) {
+          const texto = advertencias.map((a) => a.mensaje).join(' · ');
+          this.snackBar.open(`Afectaciones guardadas, pero el reparto no cuadra: ${texto}`, 'Cerrar', {
+            duration: 10000,
+          });
+        } else {
+          this.snackBar.open('Afectaciones financieras registradas correctamente', 'Cerrar', { duration: 3500 });
+        }
+
         this.cargarContextoAfectacionFinanciera(novedad);
+        this.cargarOpcionesAporte(novedad);
       },
       error: () => {
         this.isSavingAfectacionFinanciera.set(false);
@@ -1809,6 +2008,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
       this.prestamosAfectables.set([]);
       this.afectacionesRegistradas.set([]);
       this.valoresAfectarEditados.set({});
+      this.valoresAporteEditados.set({});
       return;
     }
 
@@ -1830,6 +2030,10 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
       next: (afectacionesData) => {
         const afectaciones = Array.isArray(afectacionesData) ? afectacionesData : afectacionesData ? [afectacionesData] : [];
         this.afectacionesRegistradas.set(afectaciones);
+        // A diferencia de valoresAfectarEditados (depende de qué cuotas terminen siendo
+        // afectables), esto es una función pura de `afectaciones`: no hace falta repetirlo en
+        // cada rama del árbol de abajo.
+        this.valoresAporteEditados.set(this.construirMapaValoresAportados(afectaciones));
 
         const criteriosEntidad: DatosBusqueda[] = [];
         const dbCodigoPetro = new DatosBusqueda();
@@ -1961,6 +2165,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
         this.afectacionesRegistradas.set([]);
         this.prestamosAfectables.set([]);
         this.valoresAfectarEditados.set({});
+        this.valoresAporteEditados.set({});
         this.snackBar.open('No se pudieron cargar las afectaciones registradas', 'Cerrar', { duration: 4000 });
       }
     });
@@ -1971,6 +2176,16 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
       const detalleCodigo = item.detallePrestamo?.codigo;
       if (detalleCodigo) {
         acc[detalleCodigo] = Number(item.valorAfectar || 0);
+      }
+      return acc;
+    }, {} as Record<number, number>);
+  }
+
+  private construirMapaValoresAportados(afectaciones: AfectacionValoresParticipeCarga[]): Record<number, number> {
+    return afectaciones.reduce((acc, item) => {
+      const idTipoAporte = item.tipoAporte?.codigo;
+      if (idTipoAporte) {
+        acc[idTipoAporte] = Number(item.valorAfectar || 0);
       }
       return acc;
     }, {} as Record<number, number>);
@@ -2010,6 +2225,34 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
       usuarioRegistro: usuario.nombre || usuario.codigo?.toString() || '',
       fechaCreacionRegistro: existente?.fechaCreacionRegistro || new Date(),
       observaciones: `Afectación registrada para novedad ${novedad.codigo}`,
+      estado: 1,
+    };
+  }
+
+  /**
+   * Fila del excedente aplicada a un aporte, para `/batch` — nunca lleva `prestamo`/
+   * `detallePrestamo` (CK_AVPC_PRST_XOR_TPAP). Sin campos de cuota (valorCuotaOriginal,
+   * capitalCuotaOriginal, etc.): no aplican y el backend los deja en null sin problema
+   * (`calcularDiferencias()` solo actúa si el par original/afectar no es null).
+   */
+  private construirPayloadAfectacionAporte(
+    novedad: NovedadParticipeCarga,
+    idTipoAporte: number,
+    valorAfectar: number,
+    usuario: Usuario,
+    existente?: AfectacionValoresParticipeCarga
+  ): AfectacionValoresParticipeCarga {
+    return {
+      codigo: existente?.codigo,
+      novedadParticipeCarga: novedad,
+      prestamo: null,
+      detallePrestamo: null,
+      tipoAporte: { codigo: idTipoAporte },
+      valorAfectar,
+      fechaAfectacion: new Date(),
+      usuarioRegistro: usuario.nombre || usuario.codigo?.toString() || '',
+      fechaCreacionRegistro: existente?.fechaCreacionRegistro || new Date(),
+      observaciones: `Excedente de la novedad ${novedad.codigo} aplicado a aporte`,
       estado: 1,
     };
   }

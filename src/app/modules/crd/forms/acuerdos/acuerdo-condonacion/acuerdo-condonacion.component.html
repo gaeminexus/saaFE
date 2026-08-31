@@ -25,6 +25,18 @@
         @if (buscando()) { <mat-spinner diameter="20"></mat-spinner> } @else { <ng-container><mat-icon>search</mat-icon> Buscar</ng-container> }
       </button>
     </mat-card-content>
+
+    <mat-card-content class="search-box search-box-atajo">
+      <span class="search-o">o</span>
+      <mat-form-field appearance="fill" class="search-field">
+        <mat-label>Número de préstamo (ASOPREP)</mat-label>
+        <input matInput inputmode="numeric" [(ngModel)]="criterioAsoprep" (keyup.enter)="buscarPorAsoprep()" placeholder="Ej.: 70942" />
+        <mat-hint>Salta directo al préstamo, sin buscar al partícipe primero</mat-hint>
+      </mat-form-field>
+      <button mat-stroked-button color="primary" (click)="buscarPorAsoprep()" [disabled]="buscandoAsoprep()">
+        @if (buscandoAsoprep()) { <mat-spinner diameter="20"></mat-spinner> } @else { <ng-container><mat-icon>bolt</mat-icon> Ir al préstamo</ng-container> }
+      </button>
+    </mat-card-content>
   </mat-card>
 
   @if (mostrandoResultados()) {

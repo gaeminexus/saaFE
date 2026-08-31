@@ -61,9 +61,15 @@ export interface AporteAcuerdoCondonacion {
  *   VIGENTE esperando aprobación de contabilidad — el préstamo no se toca todavía.
  * - `valorPagarDeposito = 0` (100% aportes): no hay `CBCR` ni aprobación — se aplica EN EL ACTO del
  *   registro y vuelve ya APLICADO, préstamo cancelado, `cobroCredito: null`.
+ *
+ * ⚠️ `idEmpresa` es OBLIGATORIO siempre, con y sin depósito (agregado 2026-08-30) — no se deriva de
+ * nada más porque un acuerdo 100% con aportes no tiene cobro del cual sacarla. Se toma de la
+ * sesión (`empresaSesionCodigo()`), nunca se le pide al operador. Si se manda depósito, tiene que
+ * ser la misma empresa de `idCuentaBancaria` — si difieren, el backend rechaza el registro.
  */
 export interface SolicitudRegistroAcuerdo {
   idPrestamo: number;
+  idEmpresa: number;
   /** `yyyy-MM-dd`. MISMA fecha con la que se previsualizó — el backend valida los adeudados contra ella. */
   fecha: string;
   observacion?: string | null;

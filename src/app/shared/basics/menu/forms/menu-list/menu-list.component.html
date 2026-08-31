@@ -1,5 +1,6 @@
 <a mat-list-item [ngStyle]="{'padding-left': (depth * 12) + 'px'}" (click)="onItemSelected(item)"
    [ngClass]="{'active': item.route && isRouteActive(item.route), 'expanded': expanded}"
+   [title]="item.displayName"
    class="menu-list-item">
   <mat-icon style = "color: coral;" class="routeIcon material-symbols-outlined">{{item.iconName}}</mat-icon>
   <span class="menu-text">{{item.displayName}}</span>

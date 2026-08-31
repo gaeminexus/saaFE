@@ -224,6 +224,31 @@ table.detalle-table {
 
 .allocation-note { font-size: 0.78rem; color: #92600d; }
 
+.resultado-jubilacion {
+  font-size: 0.85rem;
+  color: #2d3748;
+  background: #f7fafc;
+  border-radius: 8px;
+  padding: 0.6rem 1rem;
+  margin: 0.5rem 0 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.config-pension {
+  text-align: left;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1rem;
+  margin: 0 0 1.2rem;
+
+  h4 { margin: 0 0 0.4rem; font-size: 0.95rem; }
+  .field-grid { margin: 0.6rem 0; }
+
+  button { margin-top: 0.4rem; }
+}
+
 .success-view {
   text-align: center;
   padding: 1rem 0.5rem 1.5rem;

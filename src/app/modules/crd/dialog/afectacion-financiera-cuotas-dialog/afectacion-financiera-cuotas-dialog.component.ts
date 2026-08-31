@@ -5,7 +5,7 @@ import { MaterialFormModule } from '../../../../shared/modules/material-form.mod
 import { NovedadParticipeCarga } from '../../model/novedad-participe-carga';
 import { Prestamo } from '../../model/prestamo';
 import { DetallePrestamo } from '../../model/detalle-prestamo';
-import { AfectacionValoresParticipeCarga } from '../../model/afectacion-valores-participe-carga';
+import { AfectacionValoresParticipeCarga, OpcionAporteExcedente } from '../../model/afectacion-valores-participe-carga';
 
 interface PrestamoAfectable {
   prestamo: Prestamo;
@@ -31,6 +31,20 @@ interface DialogData {
   isSavingAfectacionFinanciera: () => boolean;
   formatearFecha: (fecha: Date | string | null) => string;
   onGuardarAfectaciones: () => void;
+
+  /**
+   * Excedente aplicado a un aporte de jubilación/cesantía (docs/crd/API-EXCEDENTE-PETRO-A-APORTES.md).
+   * `getOpcionesAporte()` vacío + `getMensajeOpcionesAporteVacio()` con texto = el partícipe no
+   * tiene ningún tipo vigente en el mes de la carga: no es un error, no se ofrece la opción.
+   */
+  getOpcionesAporte: () => OpcionAporteExcedente[];
+  getMensajeOpcionesAporteVacio: () => string | null;
+  isLoadingOpcionesAporte: () => boolean;
+  getValorAporteEditado: (idTipoAporte: number) => string;
+  onValorAporteChange: (idTipoAporte: number, valor: string | number) => void;
+  onValorAporteFocus: (idTipoAporte: number) => void;
+  onValorAporteBlur: (idTipoAporte: number) => void;
+  getTotalValorAportarActual: () => number;
 }
 
 @Component({

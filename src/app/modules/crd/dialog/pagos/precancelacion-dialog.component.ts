@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
+import { empresaSesionCodigo } from '../../../../shared/services/empresa-sesion';
 import { FuncionesDatosService } from '../../../../shared/services/funciones-datos.service';
 import { usuarioSesion } from '../../../../shared/services/usuario-sesion';
 import { TOLERANCIA_MONTO } from '../../model/pagos/catalogos-pago';
@@ -42,6 +43,11 @@ interface RenglonFondo {
  * en cuanto ese renglón tiene valor, el bloque de respaldo (banco, referencia y comprobante
  * digitalizado) pasa a ser obligatorio y su ruta se estampa en los pagos que genere la operación.
  * Un reparto cubierto íntegramente con saldo de aportes no necesita respaldo externo.
+ *
+ * Ese mismo renglón (¿hay depósito?) decide el ruteo (docs/crd/API-COBROS-APROBACION-CONTABILIDAD.md
+ * §2): con depósito —100% efectivo o mezclado con aportes— pasa por CRD.CBCR y queda REGISTRADO,
+ * pendiente de aprobación de contabilidad; sin depósito (100% aportes) no hay nada que contabilidad
+ * pueda verificar, así que se sigue aplicando en el acto con el endpoint directo de siempre.
  */
 @Component({
   selector: 'app-precancelacion-dialog',
@@ -103,17 +109,6 @@ export class PrecancelacionDialogComponent {
     );
   });
 
-  /**
-   * ¿El reparto usa algo de saldo de aportes? Si es 100% efectivo/transferencia, la precancelación
-   * pasa por CRD.CBCR y queda pendiente de aprobación en vez de aplicarse en el acto — ver
-   * `enviarPrecancelacion`. La plantilla lo usa para no prometer "cancelado" cuando en realidad
-   * queda registrado.
-   */
-  usaAportes = computed(() => {
-    this.fondosVersion();
-    return this.fondos.some((f) => f.idTipoAporte != null && this.parseMoneda(f.texto) > 0.004);
-  });
-
   /** Lo que se cobra en efectivo/transferencia: la parte que entra por fuera del sistema. */
   montoEfectivo = computed(() => {
     this.fondosVersion();
@@ -121,6 +116,13 @@ export class PrecancelacionDialogComponent {
     return +this.parseMoneda(efectivo?.texto).toFixed(2);
   });
 
+  /**
+   * Doble rol: gatea el bloque de respaldo (comprobante/referencia obligatorios) Y decide el
+   * ruteo — cualquier reparto con depósito, sea 100% efectivo o mixto con aportes, pasa por
+   * CRD.CBCR pendiente de aprobación; 100% aportes (sin depósito) se aplica en el acto por el
+   * endpoint directo, porque no hay nada que contabilidad pueda verificar. Es la misma pregunta
+   * ("¿entró plata de afuera?") respondida una sola vez — ver `enviarPrecancelacion` y la plantilla.
+   */
   requiereRespaldo = computed(() => this.montoEfectivo() > 0.004);
 
   respaldoListo = computed(() => !this.requiereRespaldo() || (this.respaldo()?.completo() ?? false));
@@ -335,26 +337,33 @@ export class PrecancelacionDialogComponent {
       .map((f) => ({ idTipoAporte: f.idTipoAporte as number, valor: +this.parseMoneda(f.texto).toFixed(2) }));
 
     const fecha = this.servicio.formatearFecha(this.fechaCorte());
+    const montoEfectivo = +this.parseMoneda(efectivo?.texto).toFixed(2);
 
-    // 100% efectivo/transferencia: pasa por CRD.CBCR como el resto del cutover
-    // (docs/crd/PLAN-CUTOVER-COBROS-POR-CONTABILIDAD.md). Si hay aportes de por medio —débito del
-    // propio saldo del socio, mezclado con la parte en efectivo en una sola precancelación— se
-    // sigue aplicando en el acto con el endpoint de siempre: `PRECANCELACION` en CBCR es de una
-    // sola línea (§2 del contrato) y no tiene forma de representar ese reparto. Es el mismo "caso
-    // combinado" que se dejó afuera en cobros-personales — no adivinar cómo modelarlo.
-    if (!aportes.length) {
-      this.registrarPrecancelacionEnContabilidad(
-        +this.parseMoneda(efectivo?.texto).toFixed(2),
-        fecha,
-        rutaDocumentoRespaldo
-      );
+    // Cualquier reparto CON depósito —100% efectivo/transferencia o mezclado con aportes— pasa por
+    // CRD.CBCR: el desglose de aportes CONSUMIDOS viaja en detalles[0].aportes
+    // (`DetalleRegistroCobroDTO.aportes`, backend, agregado 2026-08-30). Solo el 100% aportes (sin
+    // depósito) se sigue aplicando en el acto con el endpoint directo de siempre: sin depósito no
+    // hay nada que contabilidad pueda verificar.
+    if (montoEfectivo > 0.004) {
+      this.registrarPrecancelacionEnContabilidad(montoEfectivo, aportes, fecha, rutaDocumentoRespaldo);
+      return;
+    }
+
+    // 100% aportes: sigue siendo el único caso que llama al endpoint directo, así que sigue siendo
+    // el único que necesita idEmpresa acá (CBCR no lo lleva — lo deriva de idCuentaBancaria).
+    const idEmpresa = empresaSesionCodigo();
+    if (idEmpresa == null) {
+      this.aplicando.set(false);
+      this.errorMensaje.set('No se pudo determinar la empresa de la sesión. Vuelva a iniciar sesión y reintente.');
+      this.comprobantes.descartar(rutaDocumentoRespaldo);
       return;
     }
 
     this.servicio
       .precancelar({
+        idEmpresa,
         idPrestamo: this.data.idPrestamo,
-        valorEfectivo: +this.parseMoneda(efectivo?.texto).toFixed(2),
+        valorEfectivo: montoEfectivo,
         aportes: aportes.length ? aportes : undefined,
         usuario: usuarioSesion(),
         observacion: this.armarObservacion(),
@@ -414,11 +423,13 @@ export class PrecancelacionDialogComponent {
   }
 
   /**
-   * `PRECANCELACION` 100% en efectivo/transferencia, a través de CRD.CBCR: el cobro queda
-   * REGISTRADO, pendiente de aprobación — el préstamo no se cancela todavía.
+   * `PRECANCELACION` con depósito, a través de CRD.CBCR: el cobro queda REGISTRADO, pendiente de
+   * aprobación — el préstamo no se cancela todavía. `valorEfectivo` es SOLO la parte de depósito
+   * (nunca el total); si además hay aportes consumidos, viajan en `detalles[0].aportes`.
    */
   private registrarPrecancelacionEnContabilidad(
     valorEfectivo: number,
+    aportes: DesgloseAporte[],
     fecha: string | null,
     rutaDocumentoRespaldo: string | null
   ): void {
@@ -445,7 +456,13 @@ export class PrecancelacionDialogComponent {
         fecha,
         observacion: this.observacion.trim() || null,
         usuario: usuarioSesion(),
-        detalles: [{ idPrestamo: this.data.idPrestamo, valor: valorEfectivo }],
+        detalles: [
+          {
+            idPrestamo: this.data.idPrestamo,
+            valor: valorEfectivo,
+            aportes: aportes.length ? aportes : undefined,
+          },
+        ],
       })
       .subscribe((resp) => {
         this.aplicando.set(false);
@@ -461,6 +478,8 @@ export class PrecancelacionDialogComponent {
           data: {
             tipoOperacion: 'PRECANCELACION',
             idCobro: registro.idCobro,
+            // Recordatorio: `registro.valor` es SOLO el depósito — si hubo aportes consumidos,
+            // el total real de la precancelación es mayor. El diálogo ya avisa que nada se aplicó.
             valor: registro.valor,
             contabilidadActiva: registro.contabilidadActiva,
             tituloPrestamo: this.data.titulo,

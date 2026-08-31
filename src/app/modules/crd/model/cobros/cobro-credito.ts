@@ -1,5 +1,6 @@
 import { CuentaBancaria } from '../../../tsr/model/cuenta-bancaria';
 import { Entidad } from '../entidad';
+import { DesgloseAporte } from '../pagos/respuesta-pago';
 import { Prestamo } from '../prestamo';
 import { TipoAporte } from '../tipo-aporte';
 import { TipoFilaBandejaAprobacion, TipoOperacionCobro } from './catalogos-cobro';
@@ -25,6 +26,16 @@ export interface DetalleCobroCredito {
   /** Solo `REGISTRO_APORTE`/`COBRO_MIXTO`. `yyyy-MM-dd`, primer día del mes. */
   periodoDevengo?: string | null;
   observacion?: string | null;
+  /**
+   * Aportes que se CONSUMEN (saldo baja) para cubrir parte de la precancelación, junto con `valor`
+   * (que en ese caso es SOLO la parte de depósito, nunca el total). Agregado 2026-08-30
+   * (`DetalleRegistroCobroDTO.aportes`, backend). Solo válido en `PRECANCELACION` — se rechaza en
+   * cualquier otro tipo, sobre todo `COBRO_MIXTO`, donde una línea con `idTipoAporte` significa lo
+   * OPUESTO (el socio ENTREGA plata, su saldo SUBE; acá se CONSUME, su saldo BAJA). Los valores
+   * siempre viajan positivos — el signo lo interpreta el backend según `tipoOperacion`, nunca el
+   * cliente.
+   */
+  aportes?: DesgloseAporte[];
 }
 
 // ══════════════ POST /cbcr/registrar ══════════════

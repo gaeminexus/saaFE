@@ -194,20 +194,20 @@
       </div>
     }
 
-    @if (usaAportes()) {
-      <div class="pg-aviso alerta">
-        <mat-icon>warning_amber</mat-icon>
-        <span>
-          Al confirmar, el préstamo queda <b>cancelado anticipadamente</b> y no admite más operaciones de pago.
-          Las {{ sim.cuotasAAnular }} cuota(s) futura(s) quedan como constancia en estado "Cancelada anticipada".
-        </span>
-      </div>
-    } @else {
+    @if (requiereRespaldo()) {
       <div class="pg-aviso info">
         <mat-icon>schedule</mat-icon>
         <span>
           Esta precancelación se registra para aprobación de contabilidad: <b>el préstamo no se cancela
           todavía</b>. Queda cancelado recién cuando se apruebe y se procese desde Proceso de Crédito.
+        </span>
+      </div>
+    } @else {
+      <div class="pg-aviso alerta">
+        <mat-icon>warning_amber</mat-icon>
+        <span>
+          Al confirmar, el préstamo queda <b>cancelado anticipadamente</b> y no admite más operaciones de pago.
+          Las {{ sim.cuotasAAnular }} cuota(s) futura(s) quedan como constancia en estado "Cancelada anticipada".
         </span>
       </div>
     }
@@ -240,7 +240,7 @@
       @if (aplicando()) {
         <mat-spinner diameter="18"></mat-spinner>
       } @else {
-        <ng-container><mat-icon>check_circle</mat-icon> {{ usaAportes() ? 'Confirmar precancelación' : 'Registrar precancelación' }}</ng-container>
+        <ng-container><mat-icon>check_circle</mat-icon> {{ requiereRespaldo() ? 'Registrar precancelación' : 'Confirmar precancelación' }}</ng-container>
       }
     </button>
   }

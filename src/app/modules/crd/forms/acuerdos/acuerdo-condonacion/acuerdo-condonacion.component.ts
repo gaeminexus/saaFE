@@ -7,6 +7,7 @@ import { MaterialFormModule } from '../../../../../shared/modules/material-form.
 import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
+import { empresaSesionCodigo } from '../../../../../shared/services/empresa-sesion';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { usuarioSesion } from '../../../../../shared/services/usuario-sesion';
 import { CuentaBancaria } from '../../../../tsr/model/cuenta-bancaria';
@@ -102,6 +103,10 @@ export class AcuerdoCondonacionComponent {
   mostrandoResultados = signal(false);
   entidadSeleccionada = signal<Entidad | null>(null);
 
+  // ---- atajo: buscar directo por número de préstamo de ASOPREP ----
+  criterioAsoprep = '';
+  buscandoAsoprep = signal(false);
+
   // ---- préstamos elegibles (EN_MORA u DE_PLAZO_VENCIDO — §4 del contrato) ----
   cargandoPrestamos = signal(false);
   prestamosElegibles = signal<Prestamo[]>([]);
@@ -194,6 +199,11 @@ export class AcuerdoCondonacionComponent {
     if (this.registrando()) return ['Registrando el acuerdo…'];
     const motivos: string[] = [];
 
+    if (empresaSesionCodigo() == null) {
+      // Sin esto el registro va a fallar seguro del lado del backend, y con un error que el
+      // operador no va a saber interpretar — se bloquea acá, con un mensaje que sí dice qué pasa.
+      motivos.push('no se pudo determinar la empresa de la sesión: vuelva a iniciar sesión e intente de nuevo');
+    }
     if (!this.prestamoSeleccionado()) motivos.push('elija un préstamo');
     if (!this.filas() || !this.desgloseVigente()) motivos.push('previsualice el desglose para la fecha elegida');
 
@@ -255,6 +265,48 @@ export class AcuerdoCondonacionComponent {
       error: () => {
         this.buscando.set(false);
         this.snackBar.open('Ocurrió un error al buscar. Intente nuevamente.', 'Cerrar', { duration: 4000 });
+      },
+    });
+  }
+
+  /**
+   * Atajo: el operador llega con el número de préstamo de ASOPREP en la mano, no con el partícipe.
+   * Salta directo al préstamo — sin pasar por la lista de resultados de partícipe — si existe y
+   * admite un acuerdo.
+   */
+  buscarPorAsoprep(): void {
+    const numero = Number(this.criterioAsoprep.trim());
+    if (!this.criterioAsoprep.trim() || !Number.isFinite(numero) || numero <= 0) {
+      this.snackBar.open('Ingrese un número de préstamo de ASOPREP válido.', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    this.buscandoAsoprep.set(true);
+    this.prestamoService.porIdAsoprep(numero).subscribe({
+      next: (prestamo) => {
+        this.buscandoAsoprep.set(false);
+        if (!prestamo) {
+          // 404 es el resultado normal de un número que no existe (el operador tipeó mal) — no es
+          // una falla, así que no se muestra como error.
+          this.snackBar.open(`No se encontró ningún préstamo con el número ${numero} en ASOPREP.`, 'Cerrar', { duration: 4000 });
+          return;
+        }
+        if (!admiteAcuerdo(prestamo.idEstado)) {
+          this.snackBar.open(
+            `El préstamo #${prestamo.idAsoprep} está en estado «${this.nombreEstadoPrestamo(prestamo.idEstado)}» y no admite un acuerdo de condonación.`,
+            'Cerrar',
+            { duration: 6000 }
+          );
+          return;
+        }
+        this.mostrandoResultados.set(false);
+        this.resultados.set([]);
+        this.seleccionarEntidad(prestamo.entidad);
+        this.seleccionarPrestamo(prestamo);
+      },
+      error: () => {
+        this.buscandoAsoprep.set(false);
+        this.snackBar.open('Ocurrió un error al buscar el préstamo. Intente nuevamente.', 'Cerrar', { duration: 4000 });
       },
     });
   }
@@ -501,7 +553,8 @@ export class AcuerdoCondonacionComponent {
     const prestamo = this.prestamoSeleccionado();
     const filas = this.filas();
     const fechaTexto = this.fechaDesglose;
-    if (!prestamo || !filas || !fechaTexto) return;
+    const idEmpresa = empresaSesionCodigo();
+    if (!prestamo || !filas || !fechaTexto || idEmpresa == null) return;
 
     this.errorRegistro.set(null);
     this.registrando.set(true);
@@ -524,18 +577,19 @@ export class AcuerdoCondonacionComponent {
             this.errorRegistro.set(this.comprobantes.mensajeDeFallo(resultadoArchivo.error ?? ''));
             return;
           }
-          this.enviarRegistro(prestamo, filas, fechaTexto, cuenta, resultadoArchivo.ruta);
+          this.enviarRegistro(prestamo, filas, fechaTexto, idEmpresa, cuenta, resultadoArchivo.ruta);
         });
       return;
     }
 
-    this.enviarRegistro(prestamo, filas, fechaTexto, null, null);
+    this.enviarRegistro(prestamo, filas, fechaTexto, idEmpresa, null, null);
   }
 
   private enviarRegistro(
     prestamo: Prestamo,
     filas: FilaConcepto[],
     fechaTexto: string,
+    idEmpresa: number,
     cuenta: CuentaBancaria | null,
     rutaRespaldo: string | null
   ): void {
@@ -552,6 +606,7 @@ export class AcuerdoCondonacionComponent {
 
     const solicitud: SolicitudRegistroAcuerdo = {
       idPrestamo: prestamo.codigo,
+      idEmpresa,
       fecha: fechaTexto,
       observacion: this.observacion.trim() || null,
       usuario: usuarioSesion(),

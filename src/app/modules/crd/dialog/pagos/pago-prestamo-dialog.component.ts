@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
+import { empresaSesionCodigo } from '../../../../shared/services/empresa-sesion';
 import { usuarioSesion } from '../../../../shared/services/usuario-sesion';
 import { TOLERANCIA_MONTO } from '../../model/pagos/catalogos-pago';
 import { ResultadoPagoCuota, SaldoAporte } from '../../model/pagos/operaciones-pago';
@@ -337,6 +338,13 @@ export class PagoPrestamoDialogComponent {
   }
 
   private enviarPagoConAportes(): void {
+    const idEmpresa = empresaSesionCodigo();
+    if (idEmpresa == null) {
+      this.registrando.set(false);
+      this.manejarError(undefined, 'No se pudo determinar la empresa de la sesión. Vuelva a iniciar sesión y reintente.');
+      return;
+    }
+
     const fechaPago = this.servicio.formatearFecha(this.fechaPago());
     const aportes: DesgloseAporte[] = this.renglones
       .filter((r) => this.parseMoneda(r.texto) > 0.004)
@@ -344,6 +352,7 @@ export class PagoPrestamoDialogComponent {
 
     this.servicio
       .pagarConAportes({
+        idEmpresa,
         idPrestamo: this.data.idPrestamo,
         usuario: usuarioSesion(),
         observacion: this.observacion.trim() || null,

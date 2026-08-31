@@ -1,6 +1,6 @@
 import { HttpHeaders, HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable, catchError, of, throwError } from 'rxjs';
+import { Observable, catchError, map, of, throwError } from 'rxjs';
 import { Aporte } from '../model/aporte';
 import {
   AporteDashFiltros,
@@ -10,6 +10,7 @@ import {
   AporteTopMovimientoDTO,
 } from '../model/aporte-dashboard';
 import { EstadoCuentaAportes } from '../model/estado-cuenta-aportes';
+import { RespuestaJubilacion, ResultadoJubilacion, SolicitudProcesarJubilacion } from '../model/jubilacion';
 import { ServiciosCrd } from './ws-crd';
 
 @Injectable({
@@ -123,6 +124,37 @@ export class AporteService {
     return this.http
       .get<EstadoCuentaAportes>(`${ServiciosCrd.RS_APRT}/estadoCuenta/${idEntidad}`, { params })
       .pipe(catchError(this.handleError));
+  }
+
+  // ── Jubilación ───────────────────────────────────────────────────────────
+
+  /**
+   * `POST /rest/aprt/procesarJubilacion` — traslada el remanente de cesantía/jubilación del
+   * partícipe a pensión complementaria y cambia su estado. NO orquesta el cruce contra préstamos
+   * ni la devolución en efectivo: esos van ANTES, por separado, con lo que resulte se llama acá.
+   * Responde 201 en éxito; en error, ya viene armado como `{exito:false, etapa, mensaje, error}`.
+   */
+  procesarJubilacion(solicitud: SolicitudProcesarJubilacion): Observable<RespuestaJubilacion<ResultadoJubilacion>> {
+    const url = `${ServiciosCrd.RS_APRT}/procesarJubilacion`;
+    return this.http.post<RespuestaJubilacion<ResultadoJubilacion>>(url, solicitud, this.httpOptions).pipe(
+      map((cuerpo) => ({ ...cuerpo, exito: true })),
+      catchError((e: HttpErrorResponse) => of(this.normalizarErrorJubilacion(e)))
+    );
+  }
+
+  private normalizarErrorJubilacion(e: HttpErrorResponse): RespuestaJubilacion<never> {
+    const cuerpo = e.error;
+    if (cuerpo && typeof cuerpo === 'object' && 'exito' in cuerpo) {
+      return { ...(cuerpo as RespuestaJubilacion<never>), exito: false, httpStatus: e.status };
+    }
+    return {
+      exito: false,
+      mensaje:
+        e.status === 0
+          ? 'No se pudo contactar al servidor. Verifique su conexión e intente nuevamente.'
+          : `Error inesperado del servidor (HTTP ${e.status}).`,
+      httpStatus: e.status,
+    };
   }
 
   private buildDashParams(filtros?: AporteDashFiltros): HttpParams {
