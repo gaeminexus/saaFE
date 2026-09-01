@@ -71,6 +71,30 @@
       </mat-card>
     </div>
 
+    <!--
+      Aviso informativo, mismo tono que "deuda vigente" en el diálogo de confirmación de
+      devolución de aportes: NO deshabilita nada. Distingue "no se pudo consultar" de "no tiene
+      cuotas pendientes" — sin esto los dos casos se ven idénticos (caso medido 2026-09-01,
+      préstamo 7991: EN MORA con 47 cuotas pendientes, invisible acá sin ningún aviso).
+    -->
+    @if (data.getErroresCargaPrestamos().length > 0) {
+      <div style="display: flex; align-items: flex-start; gap: 0.6rem; background: #fef2f2; border: 1px solid #fecaca; border-left: 4px solid #dc2626; border-radius: 8px; padding: 0.75rem 0.9rem; margin-bottom: 1rem; color: #7f1d1d; font-size: 0.83rem;">
+        <mat-icon style="color: #dc2626; font-size: 22px; width: 22px; height: 22px; flex-shrink: 0;">report_problem</mat-icon>
+        <div>
+          <b style="display: block; margin-bottom: 0.2rem;">
+            No se pudieron cargar las cuotas de
+            {{ data.getErroresCargaPrestamos().length === 1 ? 'este préstamo' : 'estos préstamos' }}:
+          </b>
+          <p style="margin: 0; line-height: 1.45;">
+            @for (error of data.getErroresCargaPrestamos(); track error.prestamo.codigo; let last = $last) {
+              Préstamo {{ error.prestamo.idAsoprep || error.prestamo.codigo }}{{ last ? '' : ', ' }}
+            }
+            — puede tener cuotas pendientes que no se están mostrando. Intente nuevamente antes de continuar.
+          </p>
+        </div>
+      </div>
+    }
+
     @if (data.isLoadingAfectacionFinanciera() && data.getPrestamosAfectables().length > 0) {
       <div class="recarga-indicador">
         <mat-spinner diameter="16"></mat-spinner>
