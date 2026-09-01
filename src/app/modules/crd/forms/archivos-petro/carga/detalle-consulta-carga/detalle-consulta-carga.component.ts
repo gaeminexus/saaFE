@@ -92,6 +92,18 @@ interface PrestamoAfectable {
   cuotas: DetallePrestamo[];
 }
 
+/**
+ * Préstamo cuyas cuotas o pagos NO se pudieron cargar al armar la lista de afectables — a
+ * diferencia de un préstamo que sí cargó pero no tiene cuotas pendientes, este es un fallo de
+ * consulta, no un dato real. Sin esto, los dos casos se veían idénticos en pantalla: la lista
+ * simplemente no incluía el préstamo, sin ningún aviso (caso medido 2026-09-01, partícipe 401,
+ * préstamo 7991 — EN MORA con 47 cuotas pendientes, invisible en el diálogo de afectación).
+ */
+interface PrestamoErrorCarga {
+  prestamo: Prestamo;
+  motivo: string;
+}
+
 @Component({
   selector: 'app-detalle-consulta-carga.component',
   standalone: true,
@@ -211,6 +223,12 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
    * usuario de que una cuota PARCIAL solo deje asignar su saldo, no su valor total.
    */
   pagosPorCuotaAfectacion = signal<Record<number, ComponentesPagados>>({});
+  /**
+   * Préstamos que pasaron el filtro de estado pero cuyas cuotas/pagos no se pudieron consultar
+   * (ver `PrestamoErrorCarga`). Informativo, como `deudaConsultaFallida` en devolución de aportes:
+   * no bloquea nada, solo evita que un fallo de red se lea igual que "no tiene cuotas pendientes".
+   */
+  erroresCargaPrestamos = signal<PrestamoErrorCarga[]>([]);
   detalleCuotaEnEdicion = signal<Set<number>>(new Set());
   isLoadingAfectacionFinanciera = signal<boolean>(false);
   isSavingAfectacionFinanciera = signal<boolean>(false);
@@ -1675,6 +1693,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
       data: {
         novedad,
         getPrestamosAfectables: () => this.prestamosAfectables(),
+        getErroresCargaPrestamos: () => this.erroresCargaPrestamos(),
         getAfectacionesRegistradas: () => this.afectacionesRegistradas(),
         getValoresAfectarEditados: () => this.valoresAfectarEditados(),
         onValorAfectarChange: (detalle: DetallePrestamo, valor: string | number) => this.onValorAfectarChange(detalle, valor),
@@ -2328,6 +2347,10 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
   }
 
   private cargarContextoAfectacionFinanciera(novedad: NovedadParticipeCarga): void {
+    // Se resetea al arrancar, no en cada rama de salida: es una carga nueva, así que un aviso de
+    // "no se pudo cargar" de la novedad/partícipe anterior no puede sobrevivir a este llamado.
+    this.erroresCargaPrestamos.set([]);
+
     const codigoPetro = novedad.participeXCargaArchivo?.codigoPetro;
 
     if (!codigoPetro) {
@@ -2471,8 +2494,25 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
                     pagos: this.pagoPrestamoService.selectByCriteria([criterioPagos]),
                   }).pipe(
                     map(({ detalleData, pagos }) => {
-                      const detalles = Array.isArray(detalleData) ? detalleData : detalleData ? [detalleData] : [];
-                      const listaPagos = Array.isArray(pagos) ? pagos : pagos ? [pagos] : [];
+                      // `null` (a diferencia de `[]`) NO significa "sin cuotas/pagos": es lo que
+                      // devuelve el `handleError` compartido de estos servicios cuando Angular no
+                      // pudo interpretar la respuesta aunque el HTTP haya sido 200
+                      // (`if (+error.status === 200) return of(null)`, en 316 servicios del
+                      // frontend). Colapsarlo junto con `[]` es exactamente lo que hacía
+                      // indistinguible "no tiene cuotas pendientes" de "no se pudo consultar" —
+                      // caso medido 2026-09-01, préstamo 7991 del partícipe 401 (EN MORA, 47
+                      // cuotas pendientes, invisible en el diálogo). Se marca `cargaFallida` en vez
+                      // de tratarlo como una lista vacía real.
+                      if (detalleData == null || pagos == null) {
+                        return {
+                          item: { prestamo, cuotas: [] } as PrestamoAfectable,
+                          pagosPorCuota: {} as Record<number, ComponentesPagados>,
+                          cargaFallida: true,
+                        };
+                      }
+
+                      const detalles = Array.isArray(detalleData) ? detalleData : [detalleData];
+                      const listaPagos = Array.isArray(pagos) ? pagos : [pagos];
                       return {
                         item: {
                           prestamo,
@@ -2482,23 +2522,43 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
                             .sort((a, b) => this.obtenerFechaOrdenCuota(a) - this.obtenerFechaOrdenCuota(b)),
                         } as PrestamoAfectable,
                         pagosPorCuota: this.saldoPrestamo.acumularPagosPorCuota(listaPagos),
+                        cargaFallida: false,
                       };
                     }),
-                    catchError(() => of({ item: { prestamo, cuotas: [] } as PrestamoAfectable, pagosPorCuota: {} as Record<number, ComponentesPagados> }))
+                    // Fallo real de RxJS (p. ej. un HTTP no-200 genuino) para ESTE préstamo: mismo
+                    // tratamiento que el `null` de arriba, no una lista vacía silenciosa.
+                    catchError(() =>
+                      of({
+                        item: { prestamo, cuotas: [] } as PrestamoAfectable,
+                        pagosPorCuota: {} as Record<number, ComponentesPagados>,
+                        cargaFallida: true,
+                      })
+                    )
                   );
                 });
 
                 forkJoin(requests).subscribe({
                   next: (resultados) => {
+                    // Los `cargaFallida` no entran a `prestamosConCuotas` porque sus `cuotas`
+                    // siempre vienen vacías (no se llegó a consultar), así que el `.filter` de
+                    // abajo ya los saca solo — pero se listan aparte para avisar, en vez de
+                    // desaparecer sin dejar rastro.
                     const prestamosConCuotas = resultados.map((r) => r.item).filter((item) => item.cuotas.length > 0);
                     const prestamosOrdenados = this.ordenarPrestamosPorProductoObjetivo(prestamosConCuotas, novedad);
                     const pagosPorCuotaTotal = resultados.reduce<Record<number, ComponentesPagados>>(
                       (acc, r) => ({ ...acc, ...r.pagosPorCuota }),
                       {}
                     );
+                    const erroresCarga: PrestamoErrorCarga[] = resultados
+                      .filter((r) => r.cargaFallida)
+                      .map((r) => ({
+                        prestamo: r.item.prestamo,
+                        motivo: 'No se pudieron cargar sus cuotas o pagos.',
+                      }));
 
                     this.pagosPorCuotaAfectacion.set(pagosPorCuotaTotal);
                     this.prestamosAfectables.set(prestamosOrdenados);
+                    this.erroresCargaPrestamos.set(erroresCarga);
                     this.valoresAfectarEditados.set(this.construirMapaValoresAfectados(afectaciones));
                     this.isLoadingAfectacionFinanciera.set(false);
                   },

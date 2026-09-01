@@ -12,9 +12,20 @@ interface PrestamoAfectable {
   cuotas: DetallePrestamo[];
 }
 
+/**
+ * Préstamo cuyas cuotas o pagos no se pudieron cargar (ver el mismo tipo en
+ * `detalle-consulta-carga.component.ts`, de donde sale el dato). Informativo: no bloquea nada,
+ * solo evita que un fallo de consulta se vea igual que "no tiene cuotas pendientes".
+ */
+interface PrestamoErrorCarga {
+  prestamo: Prestamo;
+  motivo: string;
+}
+
 interface DialogData {
   novedad: NovedadParticipeCarga;
   getPrestamosAfectables: () => PrestamoAfectable[];
+  getErroresCargaPrestamos: () => PrestamoErrorCarga[];
   getAfectacionesRegistradas: () => AfectacionValoresParticipeCarga[];
   getValoresAfectarEditados: () => Record<number, number>;
   onValorAfectarChange: (detalle: DetallePrestamo, valor: string | number) => void;

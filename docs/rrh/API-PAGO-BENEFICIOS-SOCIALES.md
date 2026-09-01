@@ -105,7 +105,28 @@ combinación. Se devuelve el id de la existente para que la pantalla pueda ofrec
 { "exito": false, "idOrdenExistente": 9, "mensaje": "Ya existe la orden 9 en estado GENERADA." }
 ```
 
-**500** — `"Error al generar la orden: {mensaje}"`, texto plano. Estilo de la casa.
+**500** — ⚠️ **NO llega como texto plano, aunque el REST lo escriba así.**
+
+El servidor arma `Response.status(500).entity("Error al generar la orden: " + e.getMessage())`, que
+es el estilo de la casa. Pero existe un **filtro global** —`com.saa.ws.rest.MensajeErrorJsonFilter`,
+un `@Provider ContainerResponseFilter`— que intercepta **toda** respuesta con status **≥ 400** cuya
+entidad sea un `String` y cuyo tipo declarado sea JSON, y la envuelve:
+
+```json
+{ "mensaje": "Error al generar la orden: ..." }
+```
+
+Sólo la deja pasar si el texto ya empieza con `{` o `[` (para no esconder el mensaje un nivel más
+abajo). O sea que **las respuestas de error de este contrato llegan siempre como objeto JSON**, no
+como cadena suelta.
+
+**No afecta a los 409 de este documento**, que ya devuelven un `Map` (`{exito, mensaje}`) y por lo
+tanto el filtro ni los toca. Afecta sólo a los 500.
+
+*Corregido el 2026-09-01: este párrafo decía «texto plano, estilo de la casa» y era falso. El
+frontend no se rompió porque `shared/utils/mensaje-error.util` ya prueba `cuerpo?.mensaje` entre sus
+candidatos — pero el documento inducía al error. Avisado por el árbitro de `lap-saa-1`, que perdió
+una lectura de contrato con esto, y verificado leyendo el filtro.*
 
 ### 1.3 `GET /rest/odbs/detalle/{id}` — las liquidaciones de una orden
 
