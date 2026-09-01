@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
@@ -15,6 +16,7 @@ import { DetalleRubro } from '../../../../shared/model/detalle-rubro';
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
 import { DetalleRubroService } from '../../../../shared/services/detalle-rubro.service';
 import { FuncionesDatosService } from '../../../../shared/services/funciones-datos.service';
+import { JasperReportesService } from '../../../../shared/services/jasper-reportes.service';
 import { usuarioSesion } from '../../../../shared/services/usuario-sesion';
 
 import { CuentaBancariaParticipe } from '../../model/cuenta-bancaria-participe';
@@ -43,6 +45,13 @@ import {
   ConfirmarDevolucionDialogComponent,
   LineaConfirmacionDevolucion,
 } from './confirmar-devolucion-dialog.component';
+import {
+  InformeNecesidadPagoDialogComponent,
+  InformeNecesidadPagoDialogResultado,
+} from './informe-necesidad-pago-dialog.component';
+
+/** Nombre del reporte Jasper y módulo, fijos por contrato (`API-INFORME-NECESIDAD-PAGO.md`). */
+const REPORTE_INFORME_NECESIDAD_PAGO = 'RPRT_INFR_DVAP';
 
 /** Saldo disponible de un tipo de aporte y cuánto se decide devolver de él. */
 interface SaldoDevolucion {
@@ -86,6 +95,7 @@ export class DevolucionAportesComponent {
   private cuentaParticipeService = inject(CuentaBancariaParticipeService);
   private detalleRubroService = inject(DetalleRubroService);
   private funcionesDatos = inject(FuncionesDatosService);
+  private jasperReportes = inject(JasperReportesService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
 
@@ -150,6 +160,9 @@ export class DevolucionAportesComponent {
   cargandoHistorial = signal(false);
   historial = signal<DevolucionListado[]>([]);
   anulandoId = signal<number | null>(null);
+
+  /** Id de la devolución para la que se está generando el informe de necesidad de pago. */
+  generandoInformeId = signal<number | null>(null);
 
   constructor() {
     this.cargarTiposCuentaBancaria();
@@ -580,7 +593,17 @@ export class DevolucionAportesComponent {
       this.registrando.set(false);
 
       if (resp.exito) {
-        this.snackBar.open(resp.mensaje ?? 'Devolución registrada.', 'Cerrar', { duration: 7000 });
+        const idDevolucionNueva = resp.resultado?.idDevolucion ?? null;
+        // Se lee antes de limpiar el formulario: es la fecha con la que se registró esta
+        // devolución, no la que quede en pantalla después.
+        const anioDevolucionNueva = this.fecha().getFullYear();
+
+        const accion = idDevolucionNueva ? 'Imprimir informe' : 'Cerrar';
+        const ref = this.snackBar.open(resp.mensaje ?? 'Devolución registrada.', accion, { duration: 10000 });
+        if (idDevolucionNueva) {
+          ref.onAction().subscribe(() => this.imprimirInformeNecesidadPago(idDevolucionNueva, anioDevolucionNueva));
+        }
+
         this.limpiarMontos();
         this.motivo = '';
         this.referencia = '';
@@ -653,6 +676,74 @@ export class DevolucionAportesComponent {
             this.cargarHistorial(entidad.codigo);
           });
       });
+  }
+
+  // ================= informe de necesidad de pago =================
+
+  /**
+   * Abre el diálogo de parámetros y, si el operador confirma, genera el PDF
+   * (`docs/crd/API-INFORME-NECESIDAD-PAGO.md`). Un solo método para los dos puntos de entrada
+   * (al registrar y desde el histórico): no se duplica la lógica de armado del reporte.
+   */
+  imprimirInformeNecesidadPago(idDevolucion: number, anioDevolucion: number): void {
+    this.dialog
+      .open(InformeNecesidadPagoDialogComponent, {
+        data: { anio: anioDevolucion },
+        width: '520px',
+        maxWidth: '96vw',
+        autoFocus: false,
+      })
+      .afterClosed()
+      .subscribe((resultado?: InformeNecesidadPagoDialogResultado) => {
+        if (resultado) this.generarInformeNecesidadPago(idDevolucion, resultado);
+      });
+  }
+
+  /** Año de la devolución de una fila del histórico, para precargar "Fecha desde" en el diálogo. */
+  anioDeDevolucion(fechaBackend: string | null | undefined): number {
+    const fecha = this.funcionesDatos.convertirFechaDesdeBackend(fechaBackend);
+    return fecha ? fecha.getFullYear() : new Date().getFullYear();
+  }
+
+  private generarInformeNecesidadPago(
+    idDevolucion: number,
+    resultado: InformeNecesidadPagoDialogResultado
+  ): void {
+    // `resultado.fechaDesde` ya es un Date local (del datepicker del diálogo): formatearFecha()
+    // arma el string a partir de sus componentes, nunca reparseando un string ya existente.
+    const fechaDesdeTexto = this.devolucionService.formatearFecha(resultado.fechaDesde);
+    const parametros = {
+      P_ID_DEVOLUCION: idDevolucion,
+      P_NUMERO_INFORME: resultado.numeroInforme,
+      P_OBSERVACIONES: resultado.observaciones,
+      P_FECHA_DESDE: fechaDesdeTexto,
+    };
+
+    this.generandoInformeId.set(idDevolucion);
+    this.jasperReportes.generar('crd', REPORTE_INFORME_NECESIDAD_PAGO, parametros, 'PDF').subscribe({
+      next: (blob) => {
+        this.generandoInformeId.set(null);
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+        // No se revoca en el mismo tick: la pestaña nueva recién va a pedir el contenido de la
+        // URL `blob:` después de abrirse (mismo cuidado que `guardarArchivo()`).
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+      },
+      error: async (err: HttpErrorResponse) => {
+        this.generandoInformeId.set(null);
+        // El endpoint responde blob cuando sale bien y JSON cuando falla; con
+        // `responseType: 'blob'` el error TAMBIÉN llega como blob (§5 del contrato).
+        let mensaje = 'No se pudo generar el informe.';
+        if (err?.error instanceof Blob) {
+          try {
+            mensaje = JSON.parse(await err.error.text())?.mensaje ?? mensaje;
+          } catch {
+            /* deja el mensaje genérico */
+          }
+        }
+        this.snackBar.open(mensaje, 'Cerrar', { duration: 7000 });
+      },
+    });
   }
 
   // ================= presentación del historial =================

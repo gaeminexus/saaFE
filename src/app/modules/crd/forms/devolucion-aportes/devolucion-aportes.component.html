@@ -290,6 +290,15 @@
                     <div class="v">{{ formatMoneda(d.valorTotal) }}</div>
                     <div class="l">Valor devuelto</div>
                   </div>
+                  <button mat-stroked-button class="btn-imprimir-informe"
+                          (click)="imprimirInformeNecesidadPago(d.idDevolucion, anioDeDevolucion(d.fecha))"
+                          [disabled]="generandoInformeId() === d.idDevolucion">
+                    @if (generandoInformeId() === d.idDevolucion) {
+                      <mat-spinner diameter="18"></mat-spinner>
+                    } @else {
+                      <ng-container><mat-icon>picture_as_pdf</mat-icon> Imprimir informe</ng-container>
+                    }
+                  </button>
                   @if (puedeAnular(d)) {
                     <button mat-stroked-button color="warn" class="btn-anular"
                             (click)="anular(d)" [disabled]="anulandoId() === d.idDevolucion">
