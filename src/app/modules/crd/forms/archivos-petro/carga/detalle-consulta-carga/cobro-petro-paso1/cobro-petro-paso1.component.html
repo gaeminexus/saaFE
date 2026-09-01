@@ -91,7 +91,7 @@
                 <tr [class.anulada]="t.estado === 0">
                   <td>{{ t.cuentaBancaria }} <span class="paso1-sub">({{ t.nombreBanco }})</span></td>
                   <td>{{ t.nombreBancoExterno }}</td>
-                  <td>{{ t.cuentaOrigen }}</td>
+                  <td>{{ t.cuentaOrigen || '—' }}</td>
                   <td>{{ t.numero }}</td>
                   <td class="num">{{ formatMonto(t.valor) }}</td>
                   <td>{{ formatFecha(t.fecha) }}</td>
@@ -145,7 +145,7 @@
           </mat-form-field>
 
           <mat-form-field appearance="outline">
-            <mat-label>Cuenta origen</mat-label>
+            <mat-label>Cuenta origen (opcional)</mat-label>
             <input matInput formControlName="cuentaOrigen" maxlength="50">
           </mat-form-field>
 

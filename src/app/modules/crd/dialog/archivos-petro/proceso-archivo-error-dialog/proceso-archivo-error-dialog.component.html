@@ -1,0 +1,94 @@
+<div class="paed-root">
+  <h2 mat-dialog-title class="paed-title">
+    <mat-icon color="warn">error_outline</mat-icon>
+    No se pudo procesar el archivo
+  </h2>
+
+  <mat-dialog-content>
+    <div class="paed-mensaje">
+      {{ data.mensaje }}
+    </div>
+
+    @if (estadisticas(); as est) {
+      <div class="paed-resumen">
+        <div class="paed-resumen-item">
+          <span class="paed-resumen-valor">{{ est.totalNovedades }}</span>
+          <span class="paed-resumen-label">Novedades en la carga</span>
+        </div>
+        <div class="paed-resumen-item">
+          <span class="paed-resumen-valor">{{ formatMonto(est.totalDiferenciasMonetarias) }}</span>
+          <span class="paed-resumen-label">Diferencia monetaria total</span>
+        </div>
+      </div>
+    }
+
+    @if (cargando()) {
+      <div class="paed-loading">
+        <mat-spinner diameter="28"></mat-spinner>
+        <span>Cargando el detalle completo de novedades…</span>
+      </div>
+    } @else if (errorCarga()) {
+      <div class="paed-error">
+        <mat-icon>warning</mat-icon>
+        <span>{{ errorCarga() }}</span>
+      </div>
+    } @else if (total() === 0) {
+      <div class="paed-error">
+        <mat-icon>info</mat-icon>
+        <span>El servidor no listó ninguna novedad para esta carga.</span>
+      </div>
+    } @else {
+      <div class="paed-tabla-container">
+        <table mat-table [dataSource]="novedades()" class="paed-tabla">
+          <ng-container matColumnDef="codigoPetro">
+            <th mat-header-cell *matHeaderCellDef>Código Petro</th>
+            <td mat-cell *matCellDef="let n">{{ n.participeXCargaArchivo?.codigoPetro || '-' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="participe">
+            <th mat-header-cell *matHeaderCellDef>Partícipe</th>
+            <td mat-cell *matCellDef="let n">{{ n.participeXCargaArchivo?.nombre || '-' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="descripcion">
+            <th mat-header-cell *matHeaderCellDef>Novedad</th>
+            <td mat-cell *matCellDef="let n">{{ n.descripcion || '-' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="codigoPrestamo">
+            <th mat-header-cell *matHeaderCellDef style="text-align: right;">Préstamo</th>
+            <td mat-cell *matCellDef="let n" style="text-align: right;">{{ n.codigoPrestamo || '-' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="montoEsperado">
+            <th mat-header-cell *matHeaderCellDef style="text-align: right;">Esperado</th>
+            <td mat-cell *matCellDef="let n" style="text-align: right;">{{ n.montoEsperado | number:'1.2-2' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="montoRecibido">
+            <th mat-header-cell *matHeaderCellDef style="text-align: right;">Recibido</th>
+            <td mat-cell *matCellDef="let n" style="text-align: right;">{{ n.montoRecibido | number:'1.2-2' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="montoDiferencia">
+            <th mat-header-cell *matHeaderCellDef style="text-align: right;">Diferencia</th>
+            <td mat-cell *matCellDef="let n" style="text-align: right;" [class.paed-negativo]="(n.montoDiferencia || 0) < 0" [class.paed-positivo]="(n.montoDiferencia || 0) > 0">
+              {{ n.montoDiferencia | number:'1.2-2' }}
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="['codigoPetro', 'participe', 'descripcion', 'codigoPrestamo', 'montoEsperado', 'montoRecibido', 'montoDiferencia']; sticky: true"></tr>
+          <tr mat-row *matRowDef="let row; columns: ['codigoPetro', 'participe', 'descripcion', 'codigoPrestamo', 'montoEsperado', 'montoRecibido', 'montoDiferencia'];"></tr>
+        </table>
+      </div>
+    }
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button type="button" [disabled]="cargando() || total() === 0" (click)="descargarCSV()">
+      <mat-icon>download</mat-icon>
+      Descargar CSV ({{ total() }})
+    </button>
+    <button mat-raised-button color="primary" type="button" (click)="cerrar()">Cerrar</button>
+  </mat-dialog-actions>
+</div>

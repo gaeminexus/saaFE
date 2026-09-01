@@ -32,8 +32,12 @@
       </div>
     </div>
 
-    <!-- Resumen de afectación -->
-    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
+    <!--
+      Resumen de afectación — pedido del usuario 2026-09-01: "que el número que persigue esté
+      siempre a la vista sin scrollear". Con las cuotas sin tope de 5, la lista puede ser larga;
+      sticky mantiene el saldo pendiente visible mientras el operador scrollea por las cuotas.
+    -->
+    <div class="resumen-afectacion" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
       <mat-card style="padding: 1rem; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
         <div style="font-size: 12px; color: #666;">Valor recibido Petro</div>
         <div style="font-size: 18px; font-weight: bold; color: #1976d2;">
@@ -48,14 +52,40 @@
       </mat-card>
       <mat-card style="padding: 1rem; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
         <div style="font-size: 12px; color: #666;">Saldo pendiente</div>
-        <div style="font-size: 18px; font-weight: bold;" [style.color]="data.getSaldoPendienteAfectacion() < 0 ? '#d32f2f' : '#2e7d32'">
-          {{ data.getSaldoPendienteAfectacion() | number:'1.2-2' }}
-        </div>
+        @if (data.getSaldoPendienteAfectacion() < -0.004) {
+          <div style="font-size: 18px; font-weight: bold; color: #d32f2f; display: flex; align-items: center; justify-content: center; gap: 0.3rem;">
+            <mat-icon style="font-size: 18px; width: 18px; height: 18px;">error</mat-icon>
+            {{ data.getSaldoPendienteAfectacion() | number:'1.2-2' }} (sobra)
+          </div>
+        } @else if (data.getSaldoPendienteAfectacion() > 0.004) {
+          <div style="font-size: 18px; font-weight: bold; color: #f57c00; display: flex; align-items: center; justify-content: center; gap: 0.3rem;">
+            <mat-icon style="font-size: 18px; width: 18px; height: 18px;">hourglass_top</mat-icon>
+            {{ data.getSaldoPendienteAfectacion() | number:'1.2-2' }} (falta)
+          </div>
+        } @else {
+          <div style="font-size: 18px; font-weight: bold; color: #2e7d32; display: flex; align-items: center; justify-content: center; gap: 0.3rem;">
+            <mat-icon style="font-size: 18px; width: 18px; height: 18px;">check_circle</mat-icon>
+            Completo
+          </div>
+        }
       </mat-card>
     </div>
 
-    <!-- Loading state -->
-    @if (data.isLoadingAfectacionFinanciera()) {
+    @if (data.isLoadingAfectacionFinanciera() && data.getPrestamosAfectables().length > 0) {
+      <div class="recarga-indicador">
+        <mat-spinner diameter="16"></mat-spinner>
+        Actualizando…
+      </div>
+    }
+
+    <!--
+      Loading state — SOLO en la primera carga (sin datos todavía). Una recarga con la lista ya
+      poblada (p. ej. justo después de "Guardar") NO la tapa con este bloque: eso hacía que toda la
+      lista desapareciera y volviera a aparecer un instante después —el "salto" que el usuario pidió
+      evitar 2026-09-01— y el operador perdía el lugar en el que estaba scrolleando. En su lugar,
+      `.recarga-indicador` (más abajo) avisa sin mover nada de sitio.
+    -->
+    @if (data.isLoadingAfectacionFinanciera() && data.getPrestamosAfectables().length === 0) {
       <div class="compact-loading-state">
         <mat-spinner diameter="28"></mat-spinner>
         <div>
@@ -93,14 +123,44 @@
                   <strong>Tipo:</strong> {{ getTipoPrestamoNombre(item.prestamo) }} (Cod: {{ item.prestamo.producto.codigo || '-' }})
                 </p>
               </div>
+
+              <!--
+                Reparto automático: check "todo el sobrante" + valor de cabecera (misma operación).
+                Deshabilitados durante una recarga (pedido del árbitro 2026-09-01): un valor tipeado
+                que se pisa en silencio con la respuesta del servidor es peor que un control
+                deshabilitado medio segundo — en una pantalla que persigue llegar a cero exacto,
+                un número que cambia solo no avisa a nadie.
+              -->
+              <div class="reparto-cabecera" (click)="$event.stopPropagation()">
+                <mat-checkbox
+                  [checked]="data.isAplicarTodoElSobranteActivo(item)"
+                  [disabled]="data.isLoadingAfectacionFinanciera()"
+                  (change)="data.onToggleAplicarTodoElSobrante(item, $event.checked)">
+                  Aplicar todo el sobrante
+                </mat-checkbox>
+                <mat-form-field appearance="outline" class="reparto-cabecera-input">
+                  <mat-label>Valor por préstamo</mat-label>
+                  <input
+                    matInput
+                    type="text"
+                    inputmode="decimal"
+                    autocomplete="off"
+                    placeholder="0,00"
+                    [disabled]="data.isLoadingAfectacionFinanciera()"
+                    [value]="data.getValorRepartoPrestamoTexto(item)"
+                    (input)="data.onValorRepartoPrestamoInput(item, $any($event.target).value)"
+                    (blur)="data.onValorRepartoPrestamoBlur(item)"
+                    (click)="$event.stopPropagation()">
+                </mat-form-field>
+              </div>
             </div>
           </mat-card-header>
 
-          <!-- Tabla de cuotas -->
+          <!-- Tabla de cuotas: TODAS, sin tope de 5 — con scroll cuando el partícipe debe muchas -->
           @if (isPrestamoExpandido(item.prestamo.codigo)) {
           <mat-card-content style="padding-top: 0.5rem;">
-            <div class="table-container">
-              <table mat-table [dataSource]="item.cuotas" class="cuotas-table">
+            <div class="table-container cuotas-scroll">
+              <table mat-table [dataSource]="item.cuotas" [trackBy]="trackByCuota" class="cuotas-table">
                 <!-- Columna: Número de cuota -->
                 <ng-container matColumnDef="numeroCuota">
                   <th mat-header-cell *matHeaderCellDef style="width: 80px;">Cuota</th>
@@ -131,11 +191,11 @@
                   </td>
                 </ng-container>
 
-                <!-- Columna: Saldo -->
+                <!-- Columna: Saldo pendiente REAL (CRD.PGPR) — no `cuota.saldo`, que en migradas viene en 0 -->
                 <ng-container matColumnDef="saldoCuota">
-                  <th mat-header-cell *matHeaderCellDef style="width: 120px; text-align: right;">Saldo</th>
+                  <th mat-header-cell *matHeaderCellDef style="width: 120px; text-align: right;">Saldo pendiente</th>
                   <td mat-cell *matCellDef="let cuota" style="text-align: right;">
-                    {{ cuota.saldo | number:'1.2-2' }}
+                    {{ data.getSaldoPendienteCuota(cuota) | number:'1.2-2' }}
                   </td>
                 </ng-container>
 
@@ -150,6 +210,7 @@
                         inputmode="decimal"
                         autocomplete="off"
                         title="Doble click para autocompletar"
+                        [disabled]="data.isLoadingAfectacionFinanciera()"
                         [value]="data.getValorAfectarEditado(cuota.codigo)"
                         (focus)="data.onValorAfectarFocus(cuota)"
                         (input)="data.onValorAfectarChange(cuota, $any($event.target).value)"
@@ -160,7 +221,7 @@
                 </ng-container>
 
                 <!-- Row definitions -->
-                <tr mat-header-row *matHeaderRowDef="['numeroCuota', 'fechaVencimiento', 'estadoCuota', 'valorCuota', 'saldoCuota', 'valorAfectar']"></tr>
+                <tr mat-header-row *matHeaderRowDef="['numeroCuota', 'fechaVencimiento', 'estadoCuota', 'valorCuota', 'saldoCuota', 'valorAfectar']; sticky: true"></tr>
                 <tr mat-row *matRowDef="let row; columns: ['numeroCuota', 'fechaVencimiento', 'estadoCuota', 'valorCuota', 'saldoCuota', 'valorAfectar'];"></tr>
               </table>
             </div>
@@ -213,6 +274,7 @@
                   type="text"
                   inputmode="decimal"
                   autocomplete="off"
+                  [disabled]="data.isLoadingOpcionesAporte()"
                   [value]="data.getValorAporteEditado(opcion.idTipoAporte)"
                   (focus)="data.onValorAporteFocus(opcion.idTipoAporte)"
                   (input)="data.onValorAporteChange(opcion.idTipoAporte, $any($event.target).value)"

@@ -13,10 +13,55 @@
   }
 }
 
+.recarga-indicador {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 12.5px;
+  color: #757575;
+  margin: -0.5rem 0 0.75rem 0;
+}
+
+.resumen-afectacion {
+  position: sticky;
+  top: -1px;
+  z-index: 5;
+  background: #fff;
+  padding: 0.5rem 0 0.75rem 0;
+}
+
+.reparto-cabecera {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+
+  .reparto-cabecera-input {
+    width: 160px;
+
+    ::ng-deep .mat-mdc-form-field-infix {
+      min-height: unset;
+      padding-top: 8px;
+      padding-bottom: 8px;
+    }
+  }
+}
+
 .table-container {
   overflow-x: auto;
   border: 1px solid #e0e0e0;
   border-radius: 4px;
+
+  &.cuotas-scroll {
+    max-height: 360px;
+    overflow-y: auto;
+
+    thead th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+  }
 
   table.cuotas-table {
     width: 100%;

@@ -19,7 +19,8 @@ export interface TransferenciaDTO {
   nombreBanco: string;
   idBancoExterno: number;
   nombreBancoExterno: string;
-  cuentaOrigen: string;
+  /** Opcional desde 2026-09-01: Petro nunca la manda, puede venir vacía o `null`. */
+  cuentaOrigen: string | null;
   numero: string;
   valor: number;
   /** `LocalDate` del backend: string ISO o arreglo `[y,m,d]` — normalizar con FuncionesDatosService. */
@@ -57,7 +58,12 @@ export interface NuevaTransferenciaRequest {
   idCuentaBancaria: number;
   idBanco: number;
   idBancoExterno: number;
-  cuentaOrigen: string;
+  /**
+   * Opcional (pedido del usuario 2026-09-01): Petro nunca la manda y el backend nunca la exigió
+   * (`CobroPetroContableServiceImpl.registrarTransferencia` no la valida) — la obligatoriedad era
+   * solo del formulario de saaFE. `null`, no ausente, cuando el operador la deja vacía.
+   */
+  cuentaOrigen: string | null;
   numero: string;
   valor: number;
   /** `yyyy-MM-dd`. Nunca un `Date` crudo ni nada terminado en `Z`. */

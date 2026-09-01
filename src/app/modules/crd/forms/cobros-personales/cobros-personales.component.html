@@ -562,6 +562,18 @@
                 </div>
               }
 
+              @if (requiereComprobante()) {
+                <div class="aviso-pendiente">
+                  <mat-icon>schedule</mat-icon>
+                  <span>
+                    Este cobro se registra para aprobación de contabilidad: <b>no se aplica en el
+                    acto</b>. El saldo sube recién cuando contabilidad lo apruebe y crédito lo procese,
+                    en la pantalla de Proceso de Crédito. No vuelva a registrar este cobro mientras
+                    espera esa aprobación.
+                  </span>
+                </div>
+              }
+
               <button mat-raised-button color="accent" id="cp-boton-confirmar" [disabled]="!puedeConfirmar()" (click)="confirmarPago()">
                 @if (registrando()) {
                   <mat-spinner diameter="18"></mat-spinner>

@@ -1253,14 +1253,15 @@ export class CobrosPersonalesComponent implements OnDestroy {
   /**
    * Registra el cobro completo con el comprobante ya archivado.
    *
-   * - Ningún préstamo: solo aportes del socio. `REGISTRO_APORTE` no migró todavía a CBCR — sigue
-   *   aplicando en el acto con `registrarAporte`.
    * - Débito de cuenta de aportes (solo con un préstamo — el método de pago lo bloquea con varios):
    *   no entra dinero al banco, queda fuera del circuito por decisión del usuario del 2026-08-18
    *   (docs/crd/PLAN-CUTOVER-COBROS-POR-CONTABILIDAD.md §1) — sigue con `pagarConAportes`.
-   * - Todo lo demás —un préstamo, varios, con o sin aportes combinados, en efectivo/transferencia/
-   *   depósito— es dinero real entrando al banco: ya pasa por `CRD.CBCR` (`PAGO_CUOTA`/
-   *   `PAGO_MULTIPLE`/`COBRO_MIXTO` según el caso).
+   * - Todo lo demás —ningún préstamo (solo aportes del socio), un préstamo, varios, con o sin
+   *   aportes combinados, en efectivo/transferencia/depósito— es dinero real entrando al banco: ya
+   *   pasa por `CRD.CBCR` (`REGISTRO_APORTE`/`PAGO_CUOTA`/`PAGO_MULTIPLE`/`COBRO_MIXTO` según el
+   *   caso). Hasta el 2026-08-31 el caso "ningún préstamo" se saltaba CBCR entero llamando a
+   *   `registrarAporte` directo: el aporte entraba pero no generaba contabilidad ni aparecía en
+   *   ninguna bandeja de aprobación — reporte del usuario, corregido unificándolo con el resto.
    */
   private registrarCobro(
     entidad: Entidad,
@@ -1271,22 +1272,6 @@ export class CobrosPersonalesComponent implements OnDestroy {
     const usuario = usuarioSesion();
     const fecha = this.operaciones.formatearFecha(this.fechaPago());
     const observacion = this.armarObservacion();
-
-    // Cobro solo de aportes: no hay préstamo de por medio.
-    if (!prestamos.length) {
-      const idEmpresa = empresaSesionCodigo();
-      if (idEmpresa == null) {
-        this.registrando.set(false);
-        this.errorOperacion.set('No se pudo determinar la empresa de la sesión. Vuelva a iniciar sesión y reintente.');
-        this.descartarComprobanteHuerfano(rutaDocumentoRespaldo);
-        return;
-      }
-      this.registrarAportesDelSocio(idEmpresa, entidad.codigo, aportes, usuario, observacion, fecha, rutaDocumentoRespaldo, (registrados) => {
-        this.registrando.set(false);
-        this.mostrarRecibo('REGISTRO_APORTE', undefined, fecha, undefined, [], registrados, rutaDocumentoRespaldo);
-      });
-      return;
-    }
 
     if (this.metodoPago() === 'debito') {
       const idEmpresa = empresaSesionCodigo();
@@ -1369,11 +1354,17 @@ export class CobrosPersonalesComponent implements OnDestroy {
       return;
     }
 
-    const tipoOperacion: TipoOperacionCobro = aportes.length
-      ? 'COBRO_MIXTO'
-      : prestamos.length > 1
-        ? 'PAGO_MULTIPLE'
-        : 'PAGO_CUOTA';
+    // Sin préstamos: REGISTRO_APORTE (líneas de idTipoAporte solas — mismo caso que ya cubrían
+    // las líneas de aporte de COBRO_MIXTO, ahora también sin ningún préstamo al lado). Antes esto
+    // no llegaba acá: se saltaba CBCR entero por `registrarAporte` directo (2026-08-31, reporte
+    // del usuario — el aporte entraba y no generaba contabilidad ni aparecía en ninguna bandeja).
+    const tipoOperacion: TipoOperacionCobro = !prestamos.length
+      ? 'REGISTRO_APORTE'
+      : aportes.length
+        ? 'COBRO_MIXTO'
+        : prestamos.length > 1
+          ? 'PAGO_MULTIPLE'
+          : 'PAGO_CUOTA';
 
     // periodoDevengo: primer día del mes de la fecha del pago (docs/crd/PLAN-APORTES-DEVENGO-CONTRATOS.md
     // D3). Esta pantalla todavía no tiene un selector de período —el devengo es un frente aparte, en

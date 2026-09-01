@@ -80,7 +80,11 @@ export class CobroPetroPaso1Component implements OnInit {
   formNueva: FormGroup = this.fb.group({
     idCuentaBancaria: [null as number | null, Validators.required],
     idBancoExterno: [null as number | null, Validators.required],
-    cuentaOrigen: ['', [Validators.required, Validators.maxLength(50)]],
+    // No es requerido (pedido del usuario 2026-09-01): Petro nunca lo manda. Verificado que el
+    // backend tampoco lo exige — `CobroPetroContableServiceImpl.registrarTransferencia` valida
+    // idCarga/idCuentaBancaria/valor/fecha, nunca cuentaOrigen — así que la obligatoriedad era
+    // pura cosecha propia del formulario, forzando a inventar un valor donde no había ninguno.
+    cuentaOrigen: ['', Validators.maxLength(50)],
     numero: ['', [Validators.required, Validators.maxLength(50)]],
     valor: [0, [Validators.required, Validators.min(0.01)]],
     fecha: [new Date() as Date | null, Validators.required],
@@ -194,7 +198,9 @@ export class CobroPetroPaso1Component implements OnInit {
       idCuentaBancaria: cuenta.codigo,
       idBanco: cuenta.banco.codigo,
       idBancoExterno: idBancoExterno!,
-      cuentaOrigen: cuentaOrigen!.trim(),
+      // `null`, no ausente: el backend la acepta opcional pero espera la clave — un `undefined`
+      // se cae en el JSON.stringify de HttpClient y no es lo mismo que "no la mandaron".
+      cuentaOrigen: cuentaOrigen?.trim() || null,
       numero: numero!.trim(),
       valor: +valor!,
       fecha: fechaTexto,

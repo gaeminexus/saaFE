@@ -1184,3 +1184,176 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
     }
   }
 }
+
+.acciones-sin-excedente {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: #9e9e9e;
+  font-size: 12px;
+  font-style: italic;
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
+}
+
+// ================= familia de novedades (docs/crd/API-FAMILIA-NOVEDADES-CARGA.md) =================
+
+.familia-gate {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.65rem 1rem;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  margin-bottom: 0.6rem;
+
+  mat-icon {
+    flex-shrink: 0;
+  }
+
+  &--bloqueante {
+    background: #fdecea;
+    color: #611a15;
+    border: 1px solid #f5c6cb;
+
+    mat-icon { color: #d32f2f; }
+  }
+
+  &--ok {
+    background: #e8f5e9;
+    color: #1b5e20;
+    border: 1px solid #c8e6c9;
+
+    mat-icon { color: #2e7d32; }
+  }
+
+  &--anomalia {
+    background: #fff8e1;
+    color: #7a5c00;
+    border: 1px solid #ffe082;
+
+    mat-icon { color: #f9a825; }
+  }
+}
+
+.familia-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 12px;
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+
+  mat-icon {
+    font-size: 15px;
+    width: 15px;
+    height: 15px;
+  }
+
+  &--bloqueante {
+    background: #fdecea;
+    color: #c62828;
+  }
+
+  &--cobranza {
+    background: #fff3e0;
+    color: #e65100;
+  }
+
+  &--informativa {
+    background: #e8f5e9;
+    color: #2e7d32;
+  }
+
+  &--sin-clasificar {
+    background: #eceff1;
+    color: #546e7a;
+  }
+}
+
+tr.fila-bloqueante {
+  border-left: 3px solid #d32f2f;
+}
+
+tr.fila-cobranza {
+  border-left: 3px solid #f57c00;
+}
+
+tr.fila-informativa {
+  border-left: 3px solid #66bb6a;
+  opacity: 0.85;
+}
+
+tr.fila-sin-clasificar {
+  border-left: 3px solid #90a4ae;
+  background: #fafafa;
+}
+
+.familia-gate {
+  &--bloqueante {
+    justify-content: space-between;
+  }
+
+  &--filtro-activo {
+    background: #d32f2f;
+    color: #fff;
+    border-color: #b71c1c;
+
+    mat-icon { color: #fff; }
+  }
+}
+
+.familia-gate-btn {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.familia-gate--filtro-activo .familia-gate-btn {
+  border-color: #fff;
+  color: #fff;
+}
+
+.chip-filtro-activo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 12px;
+  background: #d32f2f;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+
+  mat-icon {
+    font-size: 15px;
+    width: 15px;
+    height: 15px;
+  }
+
+  &:hover {
+    background: #b71c1c;
+  }
+}
+
+.chip-filtro-activo-x {
+  margin-left: 0.1rem;
+}
+
+// Contenedor acotado para la tabla de novedades de descuentos — ver comentario en el HTML.
+.descuentos-scroll {
+  max-height: 520px;
+  overflow-y: auto;
+
+  thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+}

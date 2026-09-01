@@ -23,6 +23,8 @@ interface DialogData {
   onAutocompletarValorCuota: (detalle: DetallePrestamo) => void;
   getValorAfectarEditado: (detalleCodigo: number | undefined) => string;
   getValorCuotaOriginal: (detalle: DetallePrestamo | null | undefined) => number;
+  /** Saldo pendiente REAL de la cuota (reconstruido desde CRD.PGPR) — no confundir con su valor total. */
+  getSaldoPendienteCuota: (detalle: DetallePrestamo | null | undefined) => number;
   getEstadoCuotaTexto: (detalle: DetallePrestamo | null | undefined) => string;
   getMontoDisponibleAfectacion: () => number;
   getTotalValorAfectarActual: () => number;
@@ -45,6 +47,17 @@ interface DialogData {
   onValorAporteFocus: (idTipoAporte: number) => void;
   onValorAporteBlur: (idTipoAporte: number) => void;
   getTotalValorAportarActual: () => number;
+
+  /**
+   * Reparto automático por préstamo: check "aplicar todo el sobrante" y el valor de cabecera son
+   * la misma operación con distinta fuente de monto — ver `aplicarRepartoAutomaticoPrestamo` en el
+   * componente padre.
+   */
+  isAplicarTodoElSobranteActivo: (item: PrestamoAfectable) => boolean;
+  onToggleAplicarTodoElSobrante: (item: PrestamoAfectable, marcado: boolean) => void;
+  getValorRepartoPrestamoTexto: (item: PrestamoAfectable) => string;
+  onValorRepartoPrestamoInput: (item: PrestamoAfectable, valor: string) => void;
+  onValorRepartoPrestamoBlur: (item: PrestamoAfectable) => void;
 }
 
 @Component({
@@ -61,6 +74,18 @@ export class AfectacionFinancieraCuotasDialogComponent {
     public dialogRef: MatDialogRef<AfectacionFinancieraCuotasDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: DialogData
   ) {}
+
+  /**
+   * `trackBy` de la tabla de cuotas por `codigo` (pedido del usuario 2026-09-01: "que el foco no
+   * salte"). Sin esto, cada recarga de `prestamosAfectables` (p. ej. justo después de "Guardar")
+   * trae objetos `DetallePrestamo` con identidad nueva aunque representen la misma cuota, y el
+   * `mat-table` por defecto compara por identidad: destruye y recrea TODAS las filas, incluido el
+   * `<input>` que el operador tenía enfocado en ese momento — foco perdido a mitad de tipeo. Con
+   * `trackBy` por `codigo`, CDK reconoce que es la misma fila y reutiliza el DOM.
+   */
+  trackByCuota(_index: number, cuota: DetallePrestamo): number {
+    return cuota.codigo;
+  }
 
   togglePrestamo(prestamoCodigo: number | undefined): void {
     if (!prestamoCodigo) {

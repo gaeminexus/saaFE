@@ -4,6 +4,18 @@ import { Observable, catchError, of, throwError } from 'rxjs';
 import { NovedadParticipeCarga } from '../model/novedad-participe-carga';
 import { ServiciosCrd } from './ws-crd';
 
+/**
+ * Respuesta de `GET /rest/nvpc/estadisticas/{idCarga}` (`NovedadParticipeCargaRest.getEstadisticas`,
+ * verificado leyendo el Java): `novedadesPorTipo` llega como objeto JSON con las claves de
+ * `tipoNovedad` serializadas como STRING (es un `Map<Long, Integer>` de Java pasado por Jackson).
+ */
+export interface EstadisticasNovedadesCarga {
+  idCarga: number;
+  totalNovedades: number;
+  novedadesPorTipo: Record<string, number>;
+  totalDiferenciasMonetarias: number;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -47,6 +59,22 @@ export class NovedadParticipeCargaService {
     const ws = '/selectByCriteria/';
     const url = `${ServiciosCrd.RS_NVPC}${ws}`;
     return this.http.post<NovedadParticipeCarga[]>(url, datos, this.httpOptions).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /** Todas las novedades de una carga, sin el truncamiento a 20 del mensaje de error del proceso. */
+  getByCargaArchivo(idCarga: number): Observable<NovedadParticipeCarga[] | null> {
+    const url = `${ServiciosCrd.RS_NVPC}/getByCargaArchivo/${idCarga}`;
+    return this.http.get<NovedadParticipeCarga[]>(url).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /** Conteos agregados de las novedades de una carga. */
+  estadisticas(idCarga: number): Observable<EstadisticasNovedadesCarga | null> {
+    const url = `${ServiciosCrd.RS_NVPC}/estadisticas/${idCarga}`;
+    return this.http.get<EstadisticasNovedadesCarga>(url).pipe(
       catchError(this.handleError)
     );
   }

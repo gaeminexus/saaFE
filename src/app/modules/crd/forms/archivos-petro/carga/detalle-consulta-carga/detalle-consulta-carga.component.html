@@ -470,6 +470,49 @@
                     }
 
                     @if (!isLoadingNovedadesDescuentos() && novedadesDescuentos().length > 0) {
+                      <!--
+                        Estado del gate: cuántas BLOQUEANTE quedan en TODA la carga — llegar a cero es
+                        la condición para procesar. Este total NUNCA se filtra (ni por tipo ni por
+                        "ver solo bloqueantes"): si se moviera con el filtro dejaría de significar lo
+                        que significa. El banner mismo es el disparador del filtro (pedido del
+                        usuario 2026-09-01): es donde ya está mirando cuando le surge la necesidad.
+                      -->
+                      @if (totalNovedadesBloqueantes > 0) {
+                        <div class="familia-gate familia-gate--bloqueante" [class.familia-gate--filtro-activo]="mostrarSoloBloqueantes()">
+                          <mat-icon>{{ mostrarSoloBloqueantes() ? 'filter_alt' : 'block' }}</mat-icon>
+                          <span>
+                            <strong>{{ totalNovedadesBloqueantes }}</strong>
+                            novedad{{ totalNovedadesBloqueantes === 1 ? '' : 'es' }} BLOQUEANTE{{ totalNovedadesBloqueantes === 1 ? '' : 'S' }}
+                            pendiente{{ totalNovedadesBloqueantes === 1 ? '' : 's' }}: hay que repartirlas con «Afectar cuotas» antes de poder procesar el archivo.
+                            @if (mostrarSoloBloqueantes()) {
+                              <b>&nbsp;— mostrando solo estas.</b>
+                            }
+                          </span>
+                          <button
+                            mat-stroked-button
+                            type="button"
+                            class="familia-gate-btn"
+                            (click)="toggleSoloBloqueantes()">
+                            <mat-icon>{{ mostrarSoloBloqueantes() ? 'close' : 'visibility' }}</mat-icon>
+                            {{ mostrarSoloBloqueantes() ? 'Ver todas' : 'Ver solo estas' }}
+                          </button>
+                        </div>
+                      } @else {
+                        <div class="familia-gate familia-gate--ok">
+                          <mat-icon>check_circle</mat-icon>
+                          <span>Sin novedades bloqueantes pendientes.</span>
+                        </div>
+                      }
+                      @if (totalNovedadesSinFamilia > 0) {
+                        <div class="familia-gate familia-gate--anomalia">
+                          <mat-icon>warning</mat-icon>
+                          <span>
+                            <strong>{{ totalNovedadesSinFamilia }}</strong>
+                            novedad{{ totalNovedadesSinFamilia === 1 ? '' : 'es' }} sin clasificar: el servidor no mandó `familia`. Repórtelo — no se adivina por el signo del monto.
+                          </span>
+                        </div>
+                      }
+
                       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; gap: 1rem; flex-wrap: wrap;">
                         <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
                           <mat-form-field appearance="outline" style="min-width: 280px; margin: 0;">
@@ -494,6 +537,18 @@
                             <span class="clear-filter-text">Limpiar filtro</span>
                           </button>
 
+                          @if (!mostrarSoloBloqueantes()) {
+                            <!-- Sin sentido con "ver solo bloqueantes" activo: las informativas ya están excluidas -->
+                            <button
+                              mat-stroked-button
+                              type="button"
+                              matTooltip="Las informativas no son accionables: colapsadas por defecto"
+                              (click)="toggleMostrarInformativas()">
+                              <mat-icon>{{ mostrarInformativas() ? 'visibility_off' : 'visibility' }}</mat-icon>
+                              {{ mostrarInformativas() ? 'Ocultar' : 'Mostrar' }} informativas ({{ novedadesInformativasFiltradas.length }})
+                            </button>
+                          }
+
                           <button
                             mat-flat-button
                             color="primary"
@@ -507,16 +562,41 @@
                           </button>
                         </div>
 
-                        <div style="font-size: 0.9rem; color: #666;">
-                          Registros filtrados: <strong>{{ totalNovedadesDescuentosFiltradas }}</strong>
+                        <div style="font-size: 0.9rem; color: #666; display: flex; align-items: center; gap: 0.6rem;">
+                          @if (mostrarSoloBloqueantes()) {
+                            <span class="chip-filtro-activo" (click)="toggleSoloBloqueantes()" title="Quitar filtro">
+                              <mat-icon>filter_alt</mat-icon>
+                              Solo bloqueantes
+                              <mat-icon class="chip-filtro-activo-x">close</mat-icon>
+                            </span>
+                          }
+                          Mostrando: <strong>{{ novedadesTablaOrdenadas.length }}</strong>
                         </div>
                       </div>
                     }
 
-                    <!-- Tabla de descuentos -->
-                    @if (!isLoadingNovedadesDescuentos() && novedadesDescuentosFiltradas.length > 0) {
-                      <div class="table-container">
-                        <table mat-table [dataSource]="novedadesDescuentosFiltradas" class="descuentos-table">
+                    <!--
+                      Tabla de descuentos: agrupada BLOQUEANTE → COBRANZA → sin clasificar →
+                      INFORMATIVA (si se pidió mostrarlas). Contenedor con alto acotado y scroll
+                      propio (2026-09-01, aviso del árbitro: DESCUENTOS_INCOMPLETOS va a sumar
+                      cientos de filas de COBRANZA por carga) — sin esto la página crecía sin límite
+                      con cada fila nueva. Las BLOQUEANTE siempre van primero en el array, así que
+                      quedan arriba del todo sin importar cuántas COBRANZA haya debajo.
+                    -->
+                    @if (!isLoadingNovedadesDescuentos() && novedadesTablaOrdenadas.length > 0) {
+                      <div class="table-container descuentos-scroll">
+                        <table mat-table [dataSource]="novedadesTablaOrdenadas" class="descuentos-table">
+                          <!-- Familia: BLOQUEANTE/COBRANZA/INFORMATIVA, sale del servidor (docs/crd/API-FAMILIA-NOVEDADES-CARGA.md) -->
+                          <ng-container matColumnDef="familia">
+                            <th mat-header-cell *matHeaderCellDef>Familia</th>
+                            <td mat-cell *matCellDef="let element">
+                              <span class="familia-chip" [class]="'familia-chip--' + (element.familia || 'sin-clasificar').toLowerCase()">
+                                <mat-icon>{{ familiaIcono(element) }}</mat-icon>
+                                {{ familiaEtiqueta(element) }}
+                              </span>
+                            </td>
+                          </ng-container>
+
                           <!-- Código Petro -->
                           <ng-container matColumnDef="codigoPetro">
                             <th mat-header-cell *matHeaderCellDef>Código Petro</th>
@@ -585,22 +665,45 @@
                             </td>
                           </ng-container>
 
-                          <!-- Acciones -->
+                          <!--
+                            Acciones — contrato docs/crd/API-FAMILIA-NOVEDADES-CARGA.md §4: solo
+                            BLOQUEANTE ofrece "Afectar cuotas". COBRANZA es gestión de cobranza que NO
+                            se resuelve acá; INFORMATIVA y "sin clasificar" no ofrecen ninguna acción.
+                            El campo sale del servidor — NUNCA se deriva del signo de montoDiferencia.
+                          -->
                           <ng-container matColumnDef="acciones">
                             <th mat-header-cell *matHeaderCellDef>Acciones</th>
                             <td mat-cell *matCellDef="let element">
-                              <button
-                                mat-stroked-button
-                                color="primary"
-                                (click)="togglePanelAfectacionFinanciera(element)">
-                                <mat-icon>account_balance</mat-icon>
-                                Afectar cuotas
-                              </button>
+                              @if (element.familia === 'BLOQUEANTE') {
+                                <button
+                                  mat-stroked-button
+                                  color="primary"
+                                  (click)="togglePanelAfectacionFinanciera(element)">
+                                  <mat-icon>account_balance</mat-icon>
+                                  Afectar cuotas
+                                </button>
+                              } @else if (element.familia === 'COBRANZA') {
+                                <span class="acciones-sin-excedente" title="Gestión de cobranza: no se resuelve en esta pantalla.">
+                                  <mat-icon>campaign</mat-icon>
+                                  Gestión de cobranza
+                                </span>
+                              } @else {
+                                <span class="acciones-sin-excedente" title="No es accionable en esta pantalla.">
+                                  <mat-icon>info</mat-icon>
+                                  Sin acción
+                                </span>
+                              }
                             </td>
                           </ng-container>
 
-                          <tr mat-header-row *matHeaderRowDef="['codigoPetro', 'participe', 'tipoNovedad', 'descripcion', 'codigoProducto', 'codigoPrestamo', 'idAsoprepPrestamo', 'codigoCuota', 'montoEsperado', 'montoRecibido', 'montoDiferencia', 'acciones']; sticky: true"></tr>
-                          <tr mat-row *matRowDef="let row; columns: ['codigoPetro', 'participe', 'tipoNovedad', 'descripcion', 'codigoProducto', 'codigoPrestamo', 'idAsoprepPrestamo', 'codigoCuota', 'montoEsperado', 'montoRecibido', 'montoDiferencia', 'acciones'];"></tr>
+                          <tr mat-header-row *matHeaderRowDef="['familia', 'codigoPetro', 'participe', 'tipoNovedad', 'descripcion', 'codigoProducto', 'codigoPrestamo', 'idAsoprepPrestamo', 'codigoCuota', 'montoEsperado', 'montoRecibido', 'montoDiferencia', 'acciones']; sticky: true"></tr>
+                          <tr
+                            mat-row
+                            *matRowDef="let row; columns: ['familia', 'codigoPetro', 'participe', 'tipoNovedad', 'descripcion', 'codigoProducto', 'codigoPrestamo', 'idAsoprepPrestamo', 'codigoCuota', 'montoEsperado', 'montoRecibido', 'montoDiferencia', 'acciones'];"
+                            [class.fila-bloqueante]="row.familia === 'BLOQUEANTE'"
+                            [class.fila-cobranza]="row.familia === 'COBRANZA'"
+                            [class.fila-informativa]="row.familia === 'INFORMATIVA'"
+                            [class.fila-sin-clasificar]="row.familia == null"></tr>
                         </table>
                       </div>
 

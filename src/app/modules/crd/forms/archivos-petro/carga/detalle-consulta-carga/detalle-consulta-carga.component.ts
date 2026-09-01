@@ -44,11 +44,14 @@ import { UsuarioService } from '../../../../../../shared/services/usuario.servic
 import { NovedadParticipeCargaService } from '../../../../service/novedad-participe-carga.service';
 import { PrestamoService } from '../../../../service/prestamo.service';
 import { DetallePrestamoService } from '../../../../service/detalle-prestamo.service';
+import { PagoPrestamoService } from '../../../../service/pago-prestamo.service';
+import { ComponentesPagados, SaldoPrestamoService } from '../../../../service/saldo-prestamo.service';
 import { AfectacionValoresParticipeCargaService } from '../../../../service/afectacion-valores-participe-carga.service';
 import { NovedadParticipeCarga } from '../../../../model/novedad-participe-carga';
 import { Usuario } from '../../../../../../shared/model/usuario';
 import { forkJoin, of, catchError, map } from 'rxjs';
 import { AfectacionFinancieraCuotasDialogComponent } from '../../../../dialog/afectacion-financiera-cuotas-dialog/afectacion-financiera-cuotas-dialog.component';
+import { ProcesoArchivoErrorDialogComponent } from '../../../../dialog/archivos-petro/proceso-archivo-error-dialog/proceso-archivo-error-dialog.component';
 
 const RUBRO_ESTADOS_CARGA = 166;
 const RUBRO_NOVEDADES_CARGA = 169;
@@ -198,9 +201,30 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
   prestamosAfectables = signal<PrestamoAfectable[]>([]);
   afectacionesRegistradas = signal<AfectacionValoresParticipeCarga[]>([]);
   valoresAfectarEditados = signal<Record<number, number>>({});
+  /**
+   * Lo realmente cobrado a cada cuota (CRD.PGPR), para reconstruir el saldo pendiente real —
+   * ver `getValorMaximoAfectarCuota()`. `DetallePrestamo.saldo` (DTPRSLDO) NO sirve para esto: en
+   * los créditos migrados de Petrocomercial viene en 0 aunque la cuota no tenga ningún pago
+   * (mismo hallazgo documentado en `cobros-personales.component.ts`, que es de donde sale este
+   * cálculo — `SaldoPrestamoService.saldoPendienteDe()`). Verificado 2026-08-31 tras el pedido del
+   * usuario de que una cuota PARCIAL solo deje asignar su saldo, no su valor total.
+   */
+  pagosPorCuotaAfectacion = signal<Record<number, ComponentesPagados>>({});
   detalleCuotaEnEdicion = signal<Set<number>>(new Set());
   isLoadingAfectacionFinanciera = signal<boolean>(false);
   isSavingAfectacionFinanciera = signal<boolean>(false);
+
+  /**
+   * Reparto automático por préstamo (motor único, pedido del usuario 2026-08-31): "aplicar todo el
+   * sobrante" (checkbox) y "valor por préstamo" (input de cabecera) son la MISMA operación —
+   * repartir un monto sobre las cuotas del préstamo, de la más antigua a la más nueva, cada cuota
+   * hasta su pendiente y la última absorbiendo el resto — con distinta fuente para el monto. Ver
+   * `aplicarRepartoAutomaticoPrestamo()`. El set solo controla el estado visual del checkbox: una
+   * edición manual posterior de una cuota individual lo desmarca (ya no representa "todo aplicado").
+   */
+  prestamosConTodoAplicado = signal<Set<number>>(new Set());
+  /** Texto del input "valor por préstamo" en la cabecera de cada tarjeta, por código de préstamo. */
+  valorRepartoPrestamoTexto: Record<number, string> = {};
 
   // Excedente aplicado a un aporte (docs/crd/API-EXCEDENTE-PETRO-A-APORTES.md)
   opcionesAporteExcedente = signal<OpcionAporteExcedente[]>([]);
@@ -222,6 +246,8 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
     private entidadService: EntidadService,
     private prestamoService: PrestamoService,
     private detallePrestamoService: DetallePrestamoService,
+    private pagoPrestamoService: PagoPrestamoService,
+    private saldoPrestamo: SaldoPrestamoService,
     private exportService: ExportService,
     private funcionesDatos: FuncionesDatosService,
     private appStateService: AppStateService,
@@ -971,7 +997,13 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
           error: (err) => {
             this.archivoYaProcesado.set(false);
             const mensaje = mensajeDeError(err, 'Error al procesar el archivo');
-            this.snackBar.open(`Error: ${mensaje}`, 'Cerrar', { duration: 5000 });
+            this.dialog.open(ProcesoArchivoErrorDialogComponent, {
+              width: '760px',
+              maxWidth: '95vw',
+              maxHeight: '90vh',
+              autoFocus: false,
+              data: { idCarga: this.cargaArchivo!.codigo!, mensaje },
+            });
           }
         });
       }
@@ -1534,6 +1566,101 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
     return this.novedadesDescuentosFiltradas.reduce((sum, item) => sum + Number(item.montoDiferencia || 0), 0);
   }
 
+  // ================= familia (docs/crd/API-FAMILIA-NOVEDADES-CARGA.md) =================
+  //
+  // Dos secciones/colores (BLOQUEANTE detiene el proceso, COBRANZA no) + INFORMATIVA colapsada por
+  // defecto: no son accionables, solo hacen ruido. El campo viene del servidor —`familia` es
+  // READ_ONLY— y NUNCA se deriva del signo de `montoDiferencia` acá: esa fue la condición interina
+  // que reemplaza este contrato, justamente para que no haya dos criterios que puedan divergir.
+
+  mostrarInformativas = signal(false);
+  /**
+   * Filtro "ver solo bloqueantes" (pedido del usuario 2026-09-01, disparado desde el propio banner
+   * rojo: "es donde el operador ya está mirando cuando le surge la necesidad"). Convive con el
+   * filtro por tipo —se aplica DESPUÉS, no lo reemplaza— y el contador del banner NUNCA se calcula
+   * sobre esto: sigue leyendo `novedadesDescuentos()` completo, sin filtrar, porque es el gate real
+   * para procesar y no puede moverse según lo que el operador esté mirando en ese momento.
+   */
+  mostrarSoloBloqueantes = signal(false);
+
+  get novedadesBloqueantesFiltradas(): NovedadParticipeCarga[] {
+    return this.novedadesDescuentosFiltradas.filter((n) => n.familia === 'BLOQUEANTE');
+  }
+
+  get novedadesCobranzaFiltradas(): NovedadParticipeCarga[] {
+    return this.novedadesDescuentosFiltradas.filter((n) => n.familia === 'COBRANZA');
+  }
+
+  get novedadesInformativasFiltradas(): NovedadParticipeCarga[] {
+    return this.novedadesDescuentosFiltradas.filter((n) => n.familia === 'INFORMATIVA');
+  }
+
+  /**
+   * `familia` ausente donde se esperaba: NO se adivina por signo (pedido explícito del árbitro,
+   * 2026-09-01). Se muestra aparte, como anomalía a reportar, nunca mezclada en BLOQUEANTE/COBRANZA.
+   */
+  get novedadesSinFamiliaFiltradas(): NovedadParticipeCarga[] {
+    return this.novedadesDescuentosFiltradas.filter((n) => n.familia == null);
+  }
+
+  /** Cuántas BLOQUEANTE quedan en TODA la carga (no solo el filtro de tipo actual): es el gate real para procesar. */
+  get totalNovedadesBloqueantes(): number {
+    return this.novedadesDescuentos().filter((n) => n.familia === 'BLOQUEANTE').length;
+  }
+
+  /** Anomalía: cuántas novedades llegaron sin `familia` en toda la carga. Debería ser siempre 0. */
+  get totalNovedadesSinFamilia(): number {
+    return this.novedadesDescuentos().filter((n) => n.familia == null).length;
+  }
+
+  toggleMostrarInformativas(): void {
+    this.mostrarInformativas.update((v) => !v);
+  }
+
+  toggleSoloBloqueantes(): void {
+    this.mostrarSoloBloqueantes.update((v) => !v);
+  }
+
+  /**
+   * Fila única para la tabla, agrupada por familia (BLOQUEANTE → COBRANZA → sin clasificar →
+   * INFORMATIVA), en vez de tres tablas idénticas: mismo resultado visual ("dos secciones" +
+   * colores por fila), sin triplicar los `matColumnDef`. INFORMATIVA solo entra si el operador la
+   * pidió con el toggle — no son accionables y por defecto solo hacen ruido.
+   *
+   * Con "ver solo bloqueantes" activo, se corta acá: ni COBRANZA, ni sin clasificar, ni
+   * INFORMATIVA aparecen, sin importar el toggle de informativas (que además queda oculto en el
+   * HTML mientras este filtro está activo — no tiene nada que hacer).
+   */
+  get novedadesTablaOrdenadas(): NovedadParticipeCarga[] {
+    if (this.mostrarSoloBloqueantes()) {
+      return this.novedadesBloqueantesFiltradas;
+    }
+    return [
+      ...this.novedadesBloqueantesFiltradas,
+      ...this.novedadesCobranzaFiltradas,
+      ...this.novedadesSinFamiliaFiltradas,
+      ...(this.mostrarInformativas() ? this.novedadesInformativasFiltradas : []),
+    ];
+  }
+
+  familiaEtiqueta(n: NovedadParticipeCarga): string {
+    switch (n.familia) {
+      case 'BLOQUEANTE': return 'Bloqueante';
+      case 'COBRANZA': return 'Cobranza';
+      case 'INFORMATIVA': return 'Informativa';
+      default: return 'Sin clasificar';
+    }
+  }
+
+  familiaIcono(n: NovedadParticipeCarga): string {
+    switch (n.familia) {
+      case 'BLOQUEANTE': return 'block';
+      case 'COBRANZA': return 'campaign';
+      case 'INFORMATIVA': return 'check_circle';
+      default: return 'help_outline';
+    }
+  }
+
   togglePanelAfectacionFinanciera(novedad: NovedadParticipeCarga): void {
     this.resetAfectacionFinancieraState();
     this.novedadFinancieraSeleccionada.set(novedad);
@@ -1555,6 +1682,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
         onAutocompletarValorCuota: (detalle: DetallePrestamo) => this.onAutocompletarValorCuota(detalle),
         getValorAfectarEditado: (detalleCodigo: number | undefined) => this.getValorAfectarEditado(detalleCodigo),
         getValorCuotaOriginal: (detalle: DetallePrestamo | null | undefined) => this.getValorCuotaOriginal(detalle),
+        getSaldoPendienteCuota: (detalle: DetallePrestamo | null | undefined) => this.getValorMaximoAfectarCuota(detalle),
         getEstadoCuotaTexto: (detalle: DetallePrestamo | null | undefined) => this.getEstadoCuotaTexto(detalle),
         getMontoDisponibleAfectacion: () => this.montoDisponibleAfectacion,
         getTotalValorAfectarActual: () => this.totalValorAfectarActual,
@@ -1563,6 +1691,12 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
         isSavingAfectacionFinanciera: () => this.isSavingAfectacionFinanciera(),
         formatearFecha: (fecha: Date | string | null) => this.formatearFecha(fecha),
         onGuardarAfectaciones: () => this.guardarAfectacionesFinancieras(),
+        // Reparto automático por préstamo: check "aplicar todo el sobrante" + valor de cabecera
+        isAplicarTodoElSobranteActivo: (item: PrestamoAfectable) => this.isAplicarTodoElSobranteActivo(item),
+        onToggleAplicarTodoElSobrante: (item: PrestamoAfectable, marcado: boolean) => this.onToggleAplicarTodoElSobrante(item, marcado),
+        getValorRepartoPrestamoTexto: (item: PrestamoAfectable) => this.getValorRepartoPrestamoTexto(item),
+        onValorRepartoPrestamoInput: (item: PrestamoAfectable, valor: string) => this.onValorRepartoPrestamoInput(item, valor),
+        onValorRepartoPrestamoBlur: (item: PrestamoAfectable) => this.onValorRepartoPrestamoBlur(item),
         // Excedente aplicado a un aporte (docs/crd/API-EXCEDENTE-PETRO-A-APORTES.md)
         getOpcionesAporte: () => this.opcionesAporteExcedente(),
         getMensajeOpcionesAporteVacio: () => this.mensajeOpcionesAporteVacio(),
@@ -1588,6 +1722,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
   private resetAfectacionFinancieraState(): void {
     this.novedadFinancieraSeleccionada.set(null);
     this.prestamosAfectables.set([]);
+    this.pagosPorCuotaAfectacion.set({});
     this.afectacionesRegistradas.set([]);
     this.valoresAfectarEditados.set({});
     this.detalleCuotaEnEdicion.set(new Set());
@@ -1598,6 +1733,8 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
     this.valoresAporteEditados.set({});
     this.aporteEnEdicion.set(new Set());
     this.isLoadingOpcionesAporte.set(false);
+    this.prestamosConTodoAplicado.set(new Set());
+    this.valorRepartoPrestamoTexto = {};
   }
 
   onValorAfectarFocus(detalle: DetallePrestamo): void {
@@ -1626,6 +1763,31 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
     }));
   }
 
+  /** El préstamo (con su lista de cuotas ya ordenada de la más antigua a la más nueva) que contiene esta cuota. */
+  private itemDeCuota(detalleCodigo: number): PrestamoAfectable | null {
+    return this.prestamosAfectables().find((item) => item.cuotas.some((c) => c.codigo === detalleCodigo)) ?? null;
+  }
+
+  /**
+   * Prelación obligatoria (pedido del usuario 2026-08-31, mismo criterio que ya usa
+   * `cobros-personales.component.ts`): de la cuota más antigua a la más nueva, sin huecos. Devuelve
+   * la primera cuota de este préstamo, anterior a `detalleCodigo`, que todavía no está cubierta del
+   * todo — o `null` si no hay ninguna (la asignación es válida).
+   *
+   * El backend también valida esto (`saabe-c1`); que la UI lo haga imposible es mejor que dejar
+   * pasar el hueco y mostrar el rechazo del servidor después de cargado el resto del formulario.
+   */
+  private cuotaAnteriorSinCubrir(item: PrestamoAfectable, detalleCodigo: number): DetallePrestamo | null {
+    for (const cuota of item.cuotas) {
+      if (cuota.codigo === detalleCodigo) return null;
+      const max = this.redondear(this.getValorMaximoAfectarCuota(cuota));
+      if (max <= 0) continue;
+      const asignado = this.redondear(this.valoresAfectarEditados()[cuota.codigo] || 0);
+      if (asignado < max - 0.004) return cuota;
+    }
+    return null;
+  }
+
   onAutocompletarValorCuota(detalle: DetallePrestamo): void {
     const detalleCodigo = detalle.codigo;
     if (!detalleCodigo) {
@@ -1634,6 +1796,17 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
 
     const valorMaximoCuota = this.redondear(this.getValorMaximoAfectarCuota(detalle));
     if (valorMaximoCuota <= 0) {
+      return;
+    }
+
+    const item = this.itemDeCuota(detalleCodigo);
+    const anterior = item ? this.cuotaAnteriorSinCubrir(item, detalleCodigo) : null;
+    if (anterior) {
+      this.snackBar.open(
+        `Complete primero la cuota N° ${anterior.numeroCuota} antes de asignar esta: la prelación va de la más antigua a la más nueva.`,
+        'Cerrar',
+        { duration: 4500 }
+      );
       return;
     }
 
@@ -1672,9 +1845,23 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
     }
 
     if (valorNumerico > valorMaximoCuota) {
-      this.snackBar.open('El valor a cruzar no puede superar el saldo de la cuota', 'Cerrar', { duration: 3500 });
+      this.snackBar.open('El valor a cruzar no puede superar el saldo pendiente de la cuota', 'Cerrar', { duration: 3500 });
       this.valoresAfectarEditados.update((actual) => ({ ...actual, [detalleCodigo]: valorMaximoCuota }));
       return;
+    }
+
+    if (valorNumerico > 0.004) {
+      const item = this.itemDeCuota(detalleCodigo);
+      const anterior = item ? this.cuotaAnteriorSinCubrir(item, detalleCodigo) : null;
+      if (anterior) {
+        this.snackBar.open(
+          `Complete primero la cuota N° ${anterior.numeroCuota} antes de asignar esta: la prelación va de la más antigua a la más nueva.`,
+          'Cerrar',
+          { duration: 4500 }
+        );
+        this.valoresAfectarEditados.update((actual) => ({ ...actual, [detalleCodigo]: 0 }));
+        return;
+      }
     }
 
     const totalSinActual =
@@ -1691,6 +1878,17 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
         duration: 4000,
       });
       return;
+    }
+
+    // Edición manual de una sola cuota: ya no representa "todo el sobrante aplicado" en este préstamo.
+    const itemDelCambio = this.itemDeCuota(detalleCodigo);
+    if (itemDelCambio?.prestamo.codigo != null) {
+      this.prestamosConTodoAplicado.update((actual) => {
+        if (!actual.has(itemDelCambio.prestamo.codigo)) return actual;
+        const copia = new Set(actual);
+        copia.delete(itemDelCambio.prestamo.codigo);
+        return copia;
+      });
     }
 
     this.valoresAfectarEditados.update((actual) => ({
@@ -1712,6 +1910,129 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
     }
 
     return this.formatearMontoDosDecimales(valorRedondeado);
+  }
+
+  // ================= reparto automático por préstamo =================
+  //
+  // Motor único (pedido del usuario 2026-08-31): "aplicar todo el sobrante a este préstamo"
+  // (checkbox) y "valor por préstamo" (input de cabecera) son la MISMA operación —repartir un
+  // monto sobre las cuotas del préstamo, de la más antigua a la más nueva, cada cuota hasta su
+  // pendiente y la última absorbiendo el resto— con distinta fuente para el monto. Se escribe una
+  // sola vez en `aplicarRepartoAutomaticoPrestamo` y ambas entradas la llaman.
+
+  /** Lo que YA está asignado a las cuotas de este préstamo específico (no de otros). */
+  private montoAsignadoActualEnPrestamo(item: PrestamoAfectable): number {
+    const codigos = new Set(item.cuotas.map((c) => c.codigo).filter((c): c is number => c != null));
+    return this.redondear(
+      Object.entries(this.valoresAfectarEditados())
+        .filter(([codigo]) => codigos.has(Number(codigo)))
+        .reduce((sum, [, valor]) => sum + (Number(valor) || 0), 0)
+    );
+  }
+
+  /**
+   * Tope de lo que se puede repartir sobre ESTE préstamo: el pozo compartido es uno solo (mismo
+   * criterio que el diálogo de excedente Petro a un aporte), así que lo que ya asignaron otros
+   * préstamos u otros aportes reduce lo disponible acá. Se suma de vuelta lo que este préstamo YA
+   * tiene asignado porque el reparto automático lo reemplaza entero, no lo agrega encima.
+   */
+  private topeRepartoPrestamo(item: PrestamoAfectable): number {
+    return this.redondear(this.saldoPendienteAfectacion + this.montoAsignadoActualEnPrestamo(item));
+  }
+
+  /** El motor: reparte `monto` sobre `item.cuotas` (ya ordenadas de la más antigua a la más nueva). */
+  private aplicarRepartoAutomaticoPrestamo(item: PrestamoAfectable, monto: number): void {
+    let restante = this.redondear(Math.max(monto, 0));
+    const nuevosValores: Record<number, number> = {};
+
+    for (const cuota of item.cuotas) {
+      if (cuota.codigo == null) continue;
+      const max = this.redondear(this.getValorMaximoAfectarCuota(cuota));
+      if (max <= 0) {
+        nuevosValores[cuota.codigo] = 0;
+        continue;
+      }
+      const aplicado = restante >= max - 0.004 ? max : Math.max(restante, 0);
+      nuevosValores[cuota.codigo] = this.redondear(aplicado);
+      restante = this.redondear(Math.max(restante - aplicado, 0));
+    }
+
+    this.valoresAfectarEditados.update((actual) => ({ ...actual, ...nuevosValores }));
+  }
+
+  /** Estado visual del checkbox "aplicar todo el sobrante a este préstamo". */
+  isAplicarTodoElSobranteActivo(item: PrestamoAfectable): boolean {
+    const codigo = item.prestamo.codigo;
+    return codigo != null && this.prestamosConTodoAplicado().has(codigo);
+  }
+
+  onToggleAplicarTodoElSobrante(item: PrestamoAfectable, marcado: boolean): void {
+    const codigo = item.prestamo.codigo;
+    if (codigo == null) return;
+
+    this.prestamosConTodoAplicado.update((actual) => {
+      const copia = new Set(actual);
+      if (marcado) {
+        copia.add(codigo);
+      } else {
+        copia.delete(codigo);
+      }
+      return copia;
+    });
+
+    // Marcado: reparte todo lo disponible sobre este préstamo. Desmarcado: libera lo que tenía
+    // asignado (vuelve el sobrante al pozo compartido) en vez de dejarlo a medias y sin indicar nada.
+    this.aplicarRepartoAutomaticoPrestamo(item, marcado ? this.topeRepartoPrestamo(item) : 0);
+    delete this.valorRepartoPrestamoTexto[codigo];
+  }
+
+  getValorRepartoPrestamoTexto(item: PrestamoAfectable): string {
+    const codigo = item.prestamo.codigo;
+    if (codigo == null) return '';
+    if (this.valorRepartoPrestamoTexto[codigo] !== undefined) return this.valorRepartoPrestamoTexto[codigo];
+    const asignado = this.montoAsignadoActualEnPrestamo(item);
+    return asignado > 0.004 ? this.formatearMontoDosDecimales(asignado) : '';
+  }
+
+  onValorRepartoPrestamoInput(item: PrestamoAfectable, valor: string): void {
+    const codigo = item.prestamo.codigo;
+    if (codigo == null) return;
+    this.valorRepartoPrestamoTexto[codigo] = valor;
+  }
+
+  /** Al salir del input de cabecera: aplica el reparto, topado al pozo disponible para este préstamo. */
+  onValorRepartoPrestamoBlur(item: PrestamoAfectable): void {
+    const codigo = item.prestamo.codigo;
+    if (codigo == null) return;
+
+    const texto = this.valorRepartoPrestamoTexto[codigo];
+    delete this.valorRepartoPrestamoTexto[codigo];
+    if (texto === undefined || texto.trim() === '') return;
+
+    const solicitado = this.redondear(this.parsearMontoEntrada(texto));
+    if (Number.isNaN(solicitado) || solicitado < 0) return;
+
+    const tope = this.topeRepartoPrestamo(item);
+    const monto = Math.min(solicitado, tope);
+    if (monto < solicitado - 0.004) {
+      this.snackBar.open('El valor ingresado supera lo disponible para este préstamo: se ajustó al máximo posible.', 'Cerrar', {
+        duration: 4000,
+      });
+    }
+
+    this.aplicarRepartoAutomaticoPrestamo(item, monto);
+
+    // Un valor manual de cabecera no necesariamente agota el sobrante: el checkbox solo queda
+    // marcado si de hecho coincide con "todo el sobrante disponible".
+    const quedoCompleto = this.redondear(monto) >= this.redondear(tope) - 0.004 && tope > 0.004;
+    this.prestamosConTodoAplicado.update((actual) => {
+      const yaEstaba = actual.has(codigo);
+      if (quedoCompleto === yaEstaba) return actual;
+      const copia = new Set(actual);
+      if (quedoCompleto) copia.add(codigo);
+      else copia.delete(codigo);
+      return copia;
+    });
   }
 
   // ================= excedente aplicado a un aporte =================
@@ -1982,17 +2303,22 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
     return Number(detalle.totalConSeguro ?? detalle.total ?? detalle.cuota ?? detalle.saldo ?? detalle.capital ?? 0);
   }
 
-  private getValorMaximoAfectarCuota(detalle: DetallePrestamo | null | undefined): number {
+  /**
+   * Tope real de lo que se puede cruzar contra esta cuota: su saldo pendiente, NO su valor total.
+   *
+   * `DetallePrestamo.saldo` (DTPRSLDO) no sirve para esto — mismo hallazgo que documentó
+   * `cobros-personales.component.ts`: en los créditos migrados de Petrocomercial viene en 0 aunque
+   * la cuota no tenga ningún pago real. El cálculo correcto reconstruye el pendiente desde los
+   * pagos vigentes de CRD.PGPR (`pagosPorCuotaAfectacion`), con la MISMA fórmula que ya usa el resto
+   * del sistema (`SaldoPrestamoService.saldoPendienteDe`) — así una cuota PARCIAL (con un pago
+   * previo, sea de Petro o manual) solo ofrece lo que de verdad le falta, no su total.
+   */
+  getValorMaximoAfectarCuota(detalle: DetallePrestamo | null | undefined): number {
     if (!detalle) {
       return 0;
     }
 
-    const saldo = this.redondear(Number(detalle.saldo || 0));
-    if (saldo > 0) {
-      return saldo;
-    }
-
-    return this.redondear(this.getValorCuotaOriginal(detalle));
+    return this.redondear(this.saldoPrestamo.saldoPendienteDe(detalle, this.pagosPorCuotaAfectacion()));
   }
 
   getEstadoCuotaTexto(detalle: DetallePrestamo | null | undefined): string {
@@ -2006,6 +2332,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
     if (!codigoPetro) {
       this.snackBar.open('No se encontró el código Petro del partícipe', 'Cerrar', { duration: 3500 });
       this.prestamosAfectables.set([]);
+      this.pagosPorCuotaAfectacion.set({});
       this.afectacionesRegistradas.set([]);
       this.valoresAfectarEditados.set({});
       this.valoresAporteEditados.set({});
@@ -2013,7 +2340,12 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
     }
 
     this.isLoadingAfectacionFinanciera.set(true);
-    this.prestamosAfectables.set([]);
+    // NO blanquea `prestamosAfectables` acá: en una recarga (p. ej. justo después de "Guardar")
+    // la lista ya tiene datos, y limpiarla de entrada hacía que todo desapareciera y volviera a
+    // aparecer un instante después — el "salto" que el usuario pidió evitar (2026-09-01). Se
+    // reemplaza recién cuando llega la respuesta nueva, más abajo. Los caminos de "no hay nada que
+    // mostrar" (sin código Petro, sin entidad, sin préstamos, error) sí la vacían explícitamente,
+    // porque ahí es un dato real, no una recarga en vuelo.
 
     const criteriosAfectaciones: DatosBusqueda[] = [];
     const dbNovedad = new DatosBusqueda();
@@ -2053,6 +2385,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
             if (!entidad?.codigo) {
               this.isLoadingAfectacionFinanciera.set(false);
               this.prestamosAfectables.set([]);
+              this.pagosPorCuotaAfectacion.set({});
               this.valoresAfectarEditados.set(this.construirMapaValoresAfectados(afectaciones));
               this.snackBar.open('No se encontró la entidad del partícipe para consultar préstamos', 'Cerrar', {
                 duration: 4000,
@@ -2088,6 +2421,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
                 if (prestamos.length === 0) {
                   this.isLoadingAfectacionFinanciera.set(false);
                   this.prestamosAfectables.set([]);
+                  this.pagosPorCuotaAfectacion.set({});
                   this.valoresAfectarEditados.set(this.construirMapaValoresAfectados(afectaciones));
                   return;
                 }
@@ -2109,33 +2443,57 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
                   dbOrdenDetalle.setTipoOrden(DatosBusqueda.ORDER_ASC);
                   criteriosDetalle.push(dbOrdenDetalle);
 
-                  return this.detallePrestamoService.selectByCriteria(criteriosDetalle).pipe(
-                    map((detalleData) => {
+                  const criterioPagos = new DatosBusqueda();
+                  criterioPagos.asignaValorConCampoPadre(
+                    TipoDatosBusqueda.LONG,
+                    'prestamo',
+                    'codigo',
+                    String(prestamo.codigo),
+                    TipoComandosBusqueda.IGUAL
+                  );
+
+                  // Todas las cuotas pendientes, sin tope: el tope de 5 anterior era de presentación,
+                  // no del backend (selectByCriteria no pagina del lado del servidor) — cortaba la
+                  // pantalla cuando el partícipe debía más de 5 cuotas, pedido del usuario 2026-08-31.
+                  return forkJoin({
+                    detalleData: this.detallePrestamoService.selectByCriteria(criteriosDetalle),
+                    pagos: this.pagoPrestamoService.selectByCriteria([criterioPagos]),
+                  }).pipe(
+                    map(({ detalleData, pagos }) => {
                       const detalles = Array.isArray(detalleData) ? detalleData : detalleData ? [detalleData] : [];
+                      const listaPagos = Array.isArray(pagos) ? pagos : pagos ? [pagos] : [];
                       return {
-                        prestamo,
-                        cuotas: detalles
-                          .map((detalle) => this.normalizarDetallePrestamo(detalle))
-                          .filter((detalle) => !this.esCuotaPagadaOCancelada(detalle))
-                          .sort((a, b) => this.obtenerFechaOrdenCuota(a) - this.obtenerFechaOrdenCuota(b))
-                          .slice(0, 5),
-                      } as PrestamoAfectable;
+                        item: {
+                          prestamo,
+                          cuotas: detalles
+                            .map((detalle) => this.normalizarDetallePrestamo(detalle))
+                            .filter((detalle) => !this.esCuotaPagadaOCancelada(detalle))
+                            .sort((a, b) => this.obtenerFechaOrdenCuota(a) - this.obtenerFechaOrdenCuota(b)),
+                        } as PrestamoAfectable,
+                        pagosPorCuota: this.saldoPrestamo.acumularPagosPorCuota(listaPagos),
+                      };
                     }),
-                    catchError(() => of({ prestamo, cuotas: [] } as PrestamoAfectable))
+                    catchError(() => of({ item: { prestamo, cuotas: [] } as PrestamoAfectable, pagosPorCuota: {} as Record<number, ComponentesPagados> }))
                   );
                 });
 
                 forkJoin(requests).subscribe({
-                  next: (prestamosAfectables) => {
-                    const prestamosConCuotas = prestamosAfectables.filter((item) => item.cuotas.length > 0);
+                  next: (resultados) => {
+                    const prestamosConCuotas = resultados.map((r) => r.item).filter((item) => item.cuotas.length > 0);
                     const prestamosOrdenados = this.ordenarPrestamosPorProductoObjetivo(prestamosConCuotas, novedad);
+                    const pagosPorCuotaTotal = resultados.reduce<Record<number, ComponentesPagados>>(
+                      (acc, r) => ({ ...acc, ...r.pagosPorCuota }),
+                      {}
+                    );
 
+                    this.pagosPorCuotaAfectacion.set(pagosPorCuotaTotal);
                     this.prestamosAfectables.set(prestamosOrdenados);
                     this.valoresAfectarEditados.set(this.construirMapaValoresAfectados(afectaciones));
                     this.isLoadingAfectacionFinanciera.set(false);
                   },
                   error: () => {
                     this.prestamosAfectables.set([]);
+                    this.pagosPorCuotaAfectacion.set({});
                     this.valoresAfectarEditados.set(this.construirMapaValoresAfectados(afectaciones));
                     this.isLoadingAfectacionFinanciera.set(false);
                     this.snackBar.open('No se pudieron cargar las cuotas afectables', 'Cerrar', { duration: 4000 });
@@ -2145,6 +2503,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
               error: () => {
                 this.isLoadingAfectacionFinanciera.set(false);
                 this.prestamosAfectables.set([]);
+                this.pagosPorCuotaAfectacion.set({});
                 this.valoresAfectarEditados.set(this.construirMapaValoresAfectados(afectaciones));
                 this.snackBar.open('No se pudieron cargar los préstamos activos del partícipe', 'Cerrar', {
                   duration: 4000,
@@ -2155,6 +2514,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
           error: () => {
             this.isLoadingAfectacionFinanciera.set(false);
             this.prestamosAfectables.set([]);
+            this.pagosPorCuotaAfectacion.set({});
             this.valoresAfectarEditados.set(this.construirMapaValoresAfectados(afectaciones));
             this.snackBar.open('No se pudo consultar la entidad del partícipe', 'Cerrar', { duration: 4000 });
           }
@@ -2164,6 +2524,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
         this.isLoadingAfectacionFinanciera.set(false);
         this.afectacionesRegistradas.set([]);
         this.prestamosAfectables.set([]);
+        this.pagosPorCuotaAfectacion.set({});
         this.valoresAfectarEditados.set({});
         this.valoresAporteEditados.set({});
         this.snackBar.open('No se pudieron cargar las afectaciones registradas', 'Cerrar', { duration: 4000 });
