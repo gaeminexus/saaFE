@@ -46,6 +46,7 @@ import { PrestamoService } from '../../../../service/prestamo.service';
 import { DetallePrestamoService } from '../../../../service/detalle-prestamo.service';
 import { PagoPrestamoService } from '../../../../service/pago-prestamo.service';
 import { ComponentesPagados, SaldoPrestamoService } from '../../../../service/saldo-prestamo.service';
+import { EstadoPrestamoOperativo } from '../../../../model/pagos/catalogos-pago';
 import { AfectacionValoresParticipeCargaService } from '../../../../service/afectacion-valores-participe-carga.service';
 import { NovedadParticipeCarga } from '../../../../model/novedad-participe-carga';
 import { Usuario } from '../../../../../../shared/model/usuario';
@@ -2404,10 +2405,6 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
             );
             criteriosPrestamos.push(dbEntidad);
 
-            const dbSaldo = new DatosBusqueda();
-            dbSaldo.asignaUnCampoSinTrunc(TipoDatosBusqueda.DOUBLE, 'saldoTotal', '0', TipoComandosBusqueda.MAYOR);
-            criteriosPrestamos.push(dbSaldo);
-
             const dbOrdenPrestamo = new DatosBusqueda();
             dbOrdenPrestamo.orderBy('fechaInicio');
             dbOrdenPrestamo.setTipoOrden(DatosBusqueda.ORDER_ASC);
@@ -2415,8 +2412,22 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
 
             this.prestamoService.selectByCriteria(criteriosPrestamos).subscribe({
               next: (prestamosData) => {
+                // Se filtra por ESTADO (`idEstado`, PRSTIDST), no por `saldoTotal` (PRSTSLTT): esa
+                // columna no la actualiza nadie en todo el backend (`Prestamo.setSaldoTotal()`
+                // existe y no tiene llamadores) y quedó congelada en el valor migrado — un
+                // préstamo en mora con `PRSTSLTT` en 0/NULL desaparecía de la lista, deba lo que
+                // deba. `cobros-personales.component.ts:292` documenta el mismo problema y ya
+                // había abandonado `saldoTotal`/`saldoCapital` de PRST a favor de calcular desde
+                // cuotas y pagos (`SaldoPrestamoService`, igual que acá abajo).
+                //
+                // Solo VIGENTE y EN_MORA: decisión explícita del usuario (2026-09-01).
+                // DE_PLAZO_VENCIDO NO entra.
                 const prestamos = (Array.isArray(prestamosData) ? prestamosData : prestamosData ? [prestamosData] : [])
-                  .filter((prestamo) => Number(prestamo?.saldoTotal || 0) > 0);
+                  .filter(
+                    (prestamo) =>
+                      prestamo?.idEstado === EstadoPrestamoOperativo.VIGENTE ||
+                      prestamo?.idEstado === EstadoPrestamoOperativo.EN_MORA
+                  );
 
                 if (prestamos.length === 0) {
                   this.isLoadingAfectacionFinanciera.set(false);
