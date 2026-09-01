@@ -58,6 +58,7 @@
           <mat-form-field appearance="outline">
             <mat-label>Número de referencia</mat-label>
             <input matInput maxlength="50" [ngModel]="editReferencia()" (ngModelChange)="editReferencia.set($event)" />
+            <mat-hint>Obligatoria y única: no se puede repetir. Si no tiene el número del comprobante, ingrese 9.</mat-hint>
           </mat-form-field>
         </div>
 

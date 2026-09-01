@@ -59,7 +59,7 @@
         <mat-label>Número de referencia</mat-label>
         <input matInput maxlength="50" [ngModel]="referencia()" (ngModelChange)="referencia.set($event)"
                placeholder="Ej.: 004512873" />
-        <mat-hint>El número del comprobante bancario</mat-hint>
+        <mat-hint>Obligatoria y única: no se puede repetir. Si no tiene el número del comprobante, ingrese 9.</mat-hint>
       </mat-form-field>
 
       <div class="rc-archivo">
