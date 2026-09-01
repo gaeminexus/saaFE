@@ -146,7 +146,52 @@ Lo que la pantalla muestra al abrir la orden.
 
 **200 con `exito: false`** si el id no existe.
 
-### 1.4 `POST /rest/odbs/enviarATesoreria/{id}` — registrar el pago en la bandeja
+### 1.3bis `GET /rest/odbs/listar` — la bandeja de órdenes
+
+**Agregado el 2026-09-01**, corrigiendo un hueco que detectó el frontend al revisar este contrato.
+
+**Por qué no alcanzan los endpoints estándar.** `getAll`/`selectByCriteria` devuelven la entidad
+cruda, cuya fila sólo trae `ODBSESTD` (1-4). Con eso **la lista no distingue dos situaciones muy
+distintas que comparten el estado `2 ENVIADA_A_TESORERIA`**: la orden que todavía espera aprobación
+de tesorería, y la que tesorería **ya pagó** pero RRHH aún no contabilizó — donde la provisión sigue
+viva. Hoy esa diferencia sólo se ve abriendo la orden (`estadoPago` del §1.3), y una bandeja que no
+la muestra induce al usuario a creer que no queda nada por hacer.
+
+Es una **proyección**, no la entidad — ver `docs/estandar/ESTANDAR-PROYECCIONES-EN-LISTADOS.md` y
+`com.saa.model.cxp.PagoPorAprobar`, que es el precedente exacto.
+
+**Query params:** `idEmpresa` (obligatorio) · `anio` · `tipoBeneficio` · `estado` (todos opcionales).
+
+**200** — arreglo de filas:
+```json
+[
+  {
+    "idOrden": 12,
+    "numero": "ODBS-2026-0001",
+    "tipoBeneficio": 1,
+    "tipoBeneficioTexto": "DECIMO TERCERO",
+    "anio": 2026,
+    "region": null,
+    "total": 18450.75,
+    "numeroEmpleados": 37,
+    "fechaEmision": "2026-12-20",
+    "fechaPago": null,
+    "estado": 2,
+    "estadoTexto": "ENVIADA_A_TESORERIA",
+    "idPagoProgramado": 451,
+    "estadoPago": 4,
+    "estadoPagoTexto": "CONFIRMADO",
+    "idAsiento": null
+  }
+]
+```
+
+⚠️ **`estadoPago` e `idAsiento` son los dos campos que hacen útil esta proyección.** Sin ellos la
+fila no puede pintar el estado intermedio del §3.2. `estadoPago` es `null` mientras la orden no se
+haya enviado a tesorería.
+
+**`numeroEmpleados` es columna persistida** (`ODBSNMEM`), no un calculado de la respuesta de
+`generar`: se escribe al armar la orden y no cambia después. Se puede confiar en ella en la lista.
 
 **Body**
 ```json
@@ -249,6 +294,20 @@ Efectos, en este orden:
 2. **El pago no contabiliza; contabiliza RRHH.** Confirmar el pago en la bandeja de tesorería
    **no** genera el asiento. Hasta que no se llame `confirmarPago`, la provisión sigue viva. Una
    pantalla que muestre la orden como cerrada al ver el pago confirmado estaría mintiendo.
+
+   **Cómo se representa — decidido el 2026-09-01, sobre la propuesta del frontend.** Son **tres**
+   estados visuales, no dos, y no se pueden derivar de un solo booleano:
+
+   | Situación | `estado` / `estadoPago` | Cómo se muestra |
+   |---|---|---|
+   | Esperando a tesorería | `2` / `POR_APROBAR` | badge neutro — «Enviada a tesorería» |
+   | **Pagada, sin contabilizar** | `2` / `CONFIRMADO` | **badge ámbar** — «Pagado por tesorería · pendiente de contabilizar». **Nunca verde** |
+   | Cerrada | `3 PAGADA` | badge verde, con `numeroAsiento` |
+
+   En el detalle, aviso persistente mientras dure el estado intermedio: *«Tesorería confirmó el
+   pago. La provisión sigue viva hasta "Confirmar pago"»*, con el botón de `confirmarPago`
+   destacado. ⛔ **No usar un booleano tipo `acreditada`** (el patrón de `ordenes-pago`, que deriva
+   de `!!fechaAcreditacion`): ahí hay dos estados y acá hay tres.
 3. **Sin desglose no hay movimiento bancario.** Estos pagos no aparecen en `MovimientoBanco`. Es
    consecuencia aceptada de la decisión D1, no un defecto a reportar.
 4. **`region` sólo aplica al décimo cuarto.** Mandarla en los otros tipos debe rechazarse, no
