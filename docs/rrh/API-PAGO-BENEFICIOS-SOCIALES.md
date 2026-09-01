@@ -124,6 +124,7 @@ Lo que la pantalla muestra al abrir la orden.
   "estadoTexto": "ENVIADA_A_TESORERIA",
   "idPagoProgramado": 451,
   "estadoPago": 2,
+  "estadoPagoTexto": "POR_APROBAR",
   "fechaPago": null,
   "idAsiento": null,
   "detalle": [
@@ -192,6 +193,8 @@ haya enviado a tesorería.
 
 **`numeroEmpleados` es columna persistida** (`ODBSNMEM`), no un calculado de la respuesta de
 `generar`: se escribe al armar la orden y no cambia después. Se puede confiar en ella en la lista.
+
+### 1.4 `POST /rest/odbs/enviarATesoreria/{id}` — registrar el pago en la bandeja
 
 **Body**
 ```json
@@ -324,3 +327,31 @@ Efectos, en este orden:
   como `GET /rest/odbs/reporteMdt/{id}`.
 - **Vacaciones, jubilación patronal y desahucio.** Sus provisiones se dan de baja por otro camino;
   pendiente de levantamiento (§4.1 del diseño).
+
+---
+
+## 5. Anexo — cambio en `/rdpg` (frente 2, órdenes de pago de nómina)
+
+**No es parte de `odbs`**, pero va acá porque este archivo es el que se espeja al frontend y el
+cambio hay que hacerlo en los dos lados a la vez.
+
+Cuando la orden de pago de nómina pase por la bandeja de tesorería, `GeneracionOrdenPagoServiceImpl`
+necesita un **`idUsuario` numérico**: `registrarPagoDeOrigenExterno` lo usa como FK real
+(`em.find(Usuario.class, idUsuario)`). Hoy sólo llega `usuarioRegistro`, que es texto libre.
+
+| Endpoint | Body |
+|---|---|
+| `POST /rest/rdpg/generar` | `{idPeriodo, idCuentaBancaria, usuarioRegistro, `**`idUsuario`**`}` |
+| `POST /rest/rdpg/confirmar/{id}` | `{fechaAcreditacion, usuarioRegistro, `**`idUsuario`**`}` |
+
+- **`usuarioRegistro` se mantiene**: sigue alimentando las columnas de auditoría `*USRR`, que son
+  texto. El campo nuevo se suma, no lo reemplaza.
+- **De dónde sale `idUsuario` en el frontend:** del getter de `AppStateService:307-314`, cuyo
+  Javadoc dice *«Id del usuario actual, listo para mandar como `idUsuario` en un payload»*. Ya lo
+  usan otras pantallas.
+- ⛔ **No resolver el usuario por nombre en el backend.** `usuarioSesion()`
+  (`shared/services/usuario-sesion.ts:11-23`) devuelve el literal `'SYSTEM'` cuando ninguna de las
+  siete claves de storage está poblada, y eso no es un usuario de la base: buscar por ese texto
+  haría fallar `generar()` de nómina entera según por dónde se haya inicializado la sesión.
+- **`idUsuario` ausente o nulo** debe dar un error explícito de integración, no un
+  `NullPointerException` ni una resolución por nombre.
