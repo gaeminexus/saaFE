@@ -266,6 +266,12 @@ export class MenurecursoshumanosComponent implements OnInit {
           route: '/menurecursoshumanos/procesos/ordenes-pago',
         },
         {
+          displayName: 'Pago de beneficios sociales',
+          iconName: 'volunteer_activism',
+          idPermiso: PermisosRrh.PAGO_BENEFICIOS_SOCIALES,
+          route: '/menurecursoshumanos/procesos/pago-beneficios-sociales',
+        },
+        {
           displayName: 'Reportes de nómina',
           iconName: 'summarize',
           idPermiso: PermisosRrh.REPORTES_NOMINA,

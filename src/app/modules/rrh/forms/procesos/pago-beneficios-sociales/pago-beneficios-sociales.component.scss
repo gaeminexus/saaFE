@@ -1,0 +1,137 @@
+@use 'sass:color';
+@use '../../../../../../styles/abstracts/colors' as *;
+@use '../../../../../../styles/abstracts/variables' as *;
+@use '../../../styles/pantalla-rrh' as *;
+
+.rrh-page {
+  @include pantalla-rrh;
+
+  .selector-anio {
+    min-width: $breakpoint-sm * 0.25;
+  }
+
+  .selector-tipo {
+    min-width: $breakpoint-sm * 0.4;
+  }
+
+  .selector-region {
+    min-width: $breakpoint-sm * 0.35;
+  }
+
+  .barra-generar {
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+    flex-wrap: wrap;
+  }
+
+  .fila-confirmacion {
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+    flex-wrap: wrap;
+    margin-top: $spacing-sm;
+  }
+
+  .campo-fecha {
+    min-width: $breakpoint-sm * 0.4;
+  }
+
+  .pista {
+    font-size: $font-size-sm;
+    color: $text-muted;
+  }
+
+  .cabecera-detalle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-md;
+    flex-wrap: wrap;
+  }
+
+  .tabla-scroll {
+    overflow-x: auto;
+  }
+
+  .derecha {
+    text-align: right;
+  }
+
+  .centro {
+    text-align: center;
+  }
+
+  .total {
+    font-weight: $font-weight-semibold;
+  }
+
+  .enlace-numero {
+    color: $primary-color;
+    cursor: pointer;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  .resumen {
+    margin: $spacing-sm 0 0;
+    text-align: right;
+    font-size: $font-size-sm;
+    color: $text-secondary;
+  }
+
+  /**
+   * Los tres estados visuales de la trampa 2 del contrato (§3.2): «esperando tesorería» y
+   * «pagada» ya existían como par binario en otras pantallas de rrh (ver `ordenes-pago`), pero acá
+   * hace falta un tercero, intermedio, entre esos dos — pagada por tesorería pero sin contabilizar
+   * — y ese tercero es el que más fácil se le escapa al usuario si no tiene su propio color.
+   */
+  .badge-estado {
+    display: inline-flex;
+    align-items: center;
+    padding: $spacing-xs $spacing-sm;
+    border-radius: $border-radius-lg;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    background: $background-tertiary;
+    color: $text-secondary;
+
+    &.estado-esperando-tesoreria {
+      background: rgba($info-color, 0.12);
+      color: $info-color;
+    }
+
+    // Ámbar, deliberadamente distinto del verde de «pagada»: la provisión sigue viva.
+    &.estado-pagada-sin-contabilizar {
+      background: rgba($accent-color, 0.2);
+      color: #8a5a1a;
+      font-weight: $font-weight-semibold;
+    }
+
+    &.estado-pagada {
+      background: rgba($success-color, 0.15);
+      color: color.adjust($success-color, $lightness: -8%);
+    }
+
+    &.estado-anulada {
+      background: rgba($error-color, 0.12);
+      color: color.adjust($error-color, $lightness: -5%);
+    }
+  }
+
+  .pista-estado {
+    display: block;
+    margin-top: $spacing-xs * 0.5;
+    font-size: $font-size-xs;
+    color: $text-muted;
+  }
+
+  .aviso.aviso-intermedio {
+    border-left-color: $accent-color;
+    background: rgba($accent-color, 0.12);
+    color: #8a5a1a;
+    font-weight: $font-weight-medium;
+  }
+}

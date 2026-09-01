@@ -76,5 +76,10 @@ export class ServiciosRhh {
   // Anticipos a trabajadores (PROMPT 08)
   public static RS_ANTE = `${API_URL}/ante`;
 
+  // Pago de beneficios sociales / décimos acumulados (docs/rrh/API-PAGO-BENEFICIOS-SOCIALES.md).
+  // OJO: la ruta '/odbs' está pendiente de confirmar libre contra la base — si cambia, es esta
+  // única línea la que hay que tocar, no los componentes que la consumen.
+  public static RS_ODBS = `${API_URL}/odbs`;
+
   // Agregar más endpoints de RRHH acá según necesidades
 }

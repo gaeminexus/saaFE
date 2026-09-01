@@ -755,6 +755,15 @@ export const routes: Routes = [
         data: { title: 'Órdenes de pago' },
       },
       {
+        path: 'procesos/pago-beneficios-sociales',
+        loadComponent: () =>
+          import(
+            './modules/rrh/forms/procesos/pago-beneficios-sociales/pago-beneficios-sociales.component'
+          ).then((m) => m.PagoBeneficiosSocialesComponent),
+        canActivate: [authGuard],
+        data: { title: 'Pago de beneficios sociales' },
+      },
+      {
         path: 'procesos/reportes-nomina',
         loadComponent: () =>
           import('./modules/rrh/forms/procesos/reportes-nomina/reportes-nomina.component').then(

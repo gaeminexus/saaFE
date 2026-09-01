@@ -72,10 +72,15 @@ export class OrdenPagoNominaService {
    *
    * **Un colaborador sin cuenta bancaria activa detiene la orden entera**, y el backend devuelve
    * su nombre en el mensaje: es un error accionable, no un fallo genérico.
+   *
+   * `idUsuario` (contrato §5 de `docs/rrh/API-PAGO-BENEFICIOS-SOCIALES.md`): cuando la orden pasa
+   * por la bandeja de tesorería, `registrarPagoDeOrigenExterno` lo usa como FK real
+   * (`em.find(Usuario.class, idUsuario)`). `usuarioRegistro` se mantiene aparte: alimenta las
+   * columnas de auditoría de texto, no reemplaza a `idUsuario`.
    */
-  generar(idPeriodo: number, idCuentaBancaria: number): Observable<OrdenPagoNomina> {
+  generar(idPeriodo: number, idCuentaBancaria: number, idUsuario: number): Observable<OrdenPagoNomina> {
     const url = `${ServiciosRhh.RS_RDPG}/generar`;
-    const cuerpo = { idPeriodo, idCuentaBancaria, usuarioRegistro: usuarioSesion() };
+    const cuerpo = { idPeriodo, idCuentaBancaria, usuarioRegistro: usuarioSesion(), idUsuario };
     return this.http
       .post<OrdenPagoNomina>(url, cuerpo, this.httpOptions)
       .pipe(catchError((error) => throwError(() => error.error || error)));
@@ -92,10 +97,14 @@ export class OrdenPagoNominaService {
     return this.http.get(url, { responseType: 'blob' });
   }
 
-  /** POST /rest/rdpg/confirmar/{id} — registra la fecha real de acreditación. */
-  confirmar(idOrden: number, fechaAcreditacion: string): Observable<OrdenPagoNomina> {
+  /**
+   * POST /rest/rdpg/confirmar/{id} — registra la fecha real de acreditación.
+   *
+   * `idUsuario`: mismo motivo que en `generar()` — ver contrato §5.
+   */
+  confirmar(idOrden: number, fechaAcreditacion: string, idUsuario: number): Observable<OrdenPagoNomina> {
     const url = `${ServiciosRhh.RS_RDPG}/confirmar/${idOrden}`;
-    const cuerpo = { fechaAcreditacion, usuarioRegistro: usuarioSesion() };
+    const cuerpo = { fechaAcreditacion, usuarioRegistro: usuarioSesion(), idUsuario };
     return this.http
       .post<OrdenPagoNomina>(url, cuerpo, this.httpOptions)
       .pipe(catchError((error) => throwError(() => error.error || error)));

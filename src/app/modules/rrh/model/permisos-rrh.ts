@@ -74,6 +74,9 @@ export class PermisosRrh {
   /** Acreditar vacaciones — proceso anual, ya en producción, sin pantalla hasta ahora. */
   public static readonly ACREDITAR_VACACIONES = 896;
 
+  /** Pago de beneficios sociales (décimos acumulados, fondos de reserva) — docs/rrh/API-PAGO-BENEFICIOS-SOCIALES.md. */
+  public static readonly PAGO_BENEFICIOS_SOCIALES = 897;
+
   // Parametrización de la fase 6
   public static readonly FORMATOS_ARCHIVO_BANCARIO = 862;
 

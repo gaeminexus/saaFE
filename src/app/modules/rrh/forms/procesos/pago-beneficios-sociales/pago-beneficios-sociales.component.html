@@ -1,0 +1,261 @@
+<div class="rrh-page">
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-icon">
+        <mat-icon>volunteer_activism</mat-icon>
+      </div>
+      <div class="header-text">
+        <h1>Pago de beneficios sociales</h1>
+        <p class="subtitle">
+          Décimos acumulados y fondos de reserva: agrupar liquidaciones, enviar a tesorería y
+          contabilizar la baja de provisión
+        </p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <mat-form-field appearance="outline" class="selector-anio">
+        <mat-label>Año</mat-label>
+        <mat-select [ngModel]="anio()" (ngModelChange)="onAnioChange($event)">
+          @for (a of anios; track a) {
+            <mat-option [value]="a">{{ a }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="selector-tipo">
+        <mat-label>Beneficio</mat-label>
+        <mat-select [ngModel]="tipoBeneficio()" (ngModelChange)="onTipoBeneficioChange($event)">
+          @for (t of tiposBeneficio; track t.codigo) {
+            <mat-option [value]="t.codigo">{{ t.texto }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
+  </div>
+
+  @if (tipoBeneficio() !== null) {
+    <div class="panel barra-generar">
+      @if (tipoBeneficio() === TipoBeneficioSocial.DECIMO_CUARTO) {
+        <mat-form-field appearance="outline" class="selector-region">
+          <mat-label>Región</mat-label>
+          <mat-select [ngModel]="region()" (ngModelChange)="region.set($event)">
+            @for (r of regiones(); track r.codigo) {
+              <mat-option [value]="r.codigoAlterno">{{ r.descripcion }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      }
+
+      <button
+        mat-raised-button
+        color="primary"
+        (click)="generar()"
+        [disabled]="!puedeGenerar()"
+        matTooltip="Agrupa las liquidaciones sueltas del año y tipo seleccionados en una orden nueva"
+      >
+        <mat-icon>playlist_add</mat-icon>
+        Generar orden
+      </button>
+
+      @if (tipoBeneficio() === TipoBeneficioSocial.DECIMO_CUARTO && region() === null) {
+        <span class="pista">Seleccione la región para poder generar el décimo cuarto.</span>
+      }
+    </div>
+  }
+
+  @if (tipoBeneficio() === null) {
+    <div class="mensaje-vacio">Seleccione un tipo de beneficio para ver sus órdenes.</div>
+  } @else if (cargando()) {
+    <div class="mensaje-vacio">Cargando órdenes…</div>
+  } @else if (ordenes().length === 0) {
+    <div class="mensaje-vacio">
+      No hay órdenes de este tipo para {{ anio() }}. Genere una con el botón de arriba.
+    </div>
+  } @else {
+    <div class="panel">
+      <div class="tabla-scroll">
+        <table mat-table [dataSource]="ordenes()">
+          <ng-container matColumnDef="numero">
+            <th mat-header-cell *matHeaderCellDef>Número</th>
+            <td mat-cell *matCellDef="let o">
+              <a class="enlace-numero" (click)="verDetalle(o)">{{ o.numero || '—' }}</a>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="region">
+            <th mat-header-cell *matHeaderCellDef>Región</th>
+            <td mat-cell *matCellDef="let o">{{ regionLabel(o.region) }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="emision">
+            <th mat-header-cell *matHeaderCellDef>Emisión</th>
+            <td mat-cell *matCellDef="let o">{{ fechaDisplay(o.fechaEmision) }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="empleados">
+            <th mat-header-cell *matHeaderCellDef class="centro">Personas</th>
+            <td mat-cell *matCellDef="let o" class="centro">{{ o.numeroEmpleados }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="total">
+            <th mat-header-cell *matHeaderCellDef class="derecha">Total</th>
+            <td mat-cell *matCellDef="let o" class="derecha total">{{ formatoMoneda(o.total) }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="estado">
+            <th mat-header-cell *matHeaderCellDef>Estado</th>
+            <td mat-cell *matCellDef="let o">
+              <span
+                class="badge-estado"
+                [class]="'estado-' + estadoVisual(o.estado, o.estadoPagoTexto)"
+              >
+                {{ estadoVisualLabel(o.estado, o.estadoPagoTexto) }}
+              </span>
+              @if (estadoVisual(o.estado, o.estadoPagoTexto) === 'pagada-sin-contabilizar') {
+                <span class="pista-estado">La provisión sigue viva — falta "Confirmar pago".</span>
+              }
+              @if (o.idAsiento) {
+                <span class="pista-estado">asiento {{ o.idAsiento }}</span>
+              }
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="acciones">
+            <th mat-header-cell *matHeaderCellDef>Acciones</th>
+            <td mat-cell *matCellDef="let o">
+              <button mat-icon-button (click)="verDetalle(o)" matTooltip="Ver liquidaciones de la orden">
+                <mat-icon>list</mat-icon>
+              </button>
+              <button
+                mat-icon-button
+                (click)="enviarATesoreria(o)"
+                [disabled]="!puedeEnviarATesoreria(o) || procesando() !== null"
+                [matTooltip]="
+                  puedeEnviarATesoreria(o)
+                    ? 'Registrar el pago en la bandeja de tesorería'
+                    : 'Solo disponible en estado Generada'
+                "
+              >
+                <mat-icon>send</mat-icon>
+              </button>
+              <button
+                mat-icon-button
+                (click)="confirmarPago(o)"
+                [disabled]="!puedeConfirmarPago(o) || procesando() !== null"
+                [matTooltip]="
+                  puedeConfirmarPago(o)
+                    ? 'Cerrar el ciclo: contabiliza la baja de provisión'
+                    : 'Solo disponible cuando tesorería ya confirmó el pago'
+                "
+              >
+                <mat-icon>task_alt</mat-icon>
+              </button>
+              <button
+                mat-icon-button
+                (click)="anular(o)"
+                [disabled]="!puedeAnular(o) || procesando() !== null"
+                [matTooltip]="puedeAnular(o) ? 'Anular la orden' : 'No se puede anular en este estado'"
+              >
+                <mat-icon>block</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="columnasOrden"></tr>
+          <tr mat-row *matRowDef="let o; columns: columnasOrden"></tr>
+        </table>
+      </div>
+
+      <div class="fila-confirmacion">
+        <mat-form-field appearance="outline" class="campo-fecha">
+          <mat-label>Fecha de pago (contabilización)</mat-label>
+          <input matInput type="date" [ngModel]="fechaPago()" (ngModelChange)="fechaPago.set($event)" />
+        </mat-form-field>
+        <span class="pista">
+          Se usa al presionar "Confirmar pago" — es la fecha con la que se contabiliza la baja de
+          provisión, no la de emisión de la orden.
+        </span>
+      </div>
+    </div>
+  }
+
+  @if (filaAbierta(); as fila) {
+    <div class="panel">
+      <div class="cabecera-detalle">
+        <h2 class="panel-titulo">
+          Orden {{ fila.numero }} — {{ fila.tipoBeneficioTexto }} {{ fila.anio }}
+        </h2>
+        <button mat-icon-button (click)="cerrarDetalle()" matTooltip="Cerrar el detalle">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+
+      @if (ordenAbierta(); as orden) {
+        @switch (estadoVisual(orden.estado, fila.estadoPagoTexto)) {
+          @case ('pagada-sin-contabilizar') {
+            <div class="aviso aviso-intermedio">
+              <mat-icon>warning</mat-icon>
+              <span>
+                Tesorería confirmó el pago. <strong>La provisión sigue viva</strong> hasta
+                presionar "Confirmar pago" — esta orden todavía no está cerrada.
+              </span>
+            </div>
+          }
+          @case ('pagada') {
+            <div class="aviso aviso-deshacer">
+              <mat-icon>check_circle</mat-icon>
+              <span>Pago confirmado y provisión dada de baja — asiento {{ orden.idAsiento }}.</span>
+            </div>
+          }
+        }
+
+        @if (cargandoDetalle()) {
+          <div class="mensaje-vacio">Cargando liquidaciones…</div>
+        } @else if (orden.detalle.length === 0) {
+          <div class="mensaje-vacio">La orden no tiene liquidaciones.</div>
+        } @else {
+          <div class="tabla-scroll">
+            <table mat-table [dataSource]="orden.detalle">
+              <ng-container matColumnDef="empleado">
+                <th mat-header-cell *matHeaderCellDef>Empleado</th>
+                <td mat-cell *matCellDef="let d">{{ empleadoLabel(d.nombreEmpleado, d.identificacion) }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="periodo">
+                <th mat-header-cell *matHeaderCellDef>Período</th>
+                <td mat-cell *matCellDef="let d">{{ periodoLiquidacion(d.fechaInicio, d.fechaFin) }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="baseCalculo">
+                <th mat-header-cell *matHeaderCellDef class="derecha">Base de cálculo</th>
+                <td mat-cell *matCellDef="let d" class="derecha">{{ formatoMoneda(d.baseCalculo) }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="dias">
+                <th mat-header-cell *matHeaderCellDef class="centro">Días</th>
+                <td mat-cell *matCellDef="let d" class="centro">{{ d.dias }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="valor">
+                <th mat-header-cell *matHeaderCellDef class="derecha">Valor</th>
+                <td mat-cell *matCellDef="let d" class="derecha total">{{ formatoMoneda(d.valor) }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="situacion">
+                <th mat-header-cell *matHeaderCellDef>Situación</th>
+                <td mat-cell *matCellDef="let d">{{ estadoLiquidacionLabel(d.estado) }}</td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="columnasDetalle"></tr>
+              <tr mat-row *matRowDef="let d; columns: columnasDetalle"></tr>
+            </table>
+          </div>
+
+          <p class="resumen">{{ orden.detalle.length }} liquidación(es) · total {{ formatoMoneda(orden.total) }}</p>
+        }
+      } @else if (cargandoDetalle()) {
+        <div class="mensaje-vacio">Cargando…</div>
+      }
+    </div>
+  }
+</div>

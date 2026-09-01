@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, computed, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -12,6 +12,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
+import { AppStateService } from '../../../../../shared/services/app-state.service';
 import { guardarArchivo } from '../../../../../shared/services/descarga-reporte';
 import { DetalleRubroService } from '../../../../../shared/services/detalle-rubro.service';
 import { ExportService } from '../../../../../shared/services/export.service';
@@ -60,6 +61,8 @@ import { opcionesAviso } from '../../comunes/avisos';
   styleUrls: ['./ordenes-pago.component.scss'],
 })
 export class OrdenesPagoComponent implements OnInit {
+  private appState = inject(AppStateService);
+
   columnasOrden = ['numero', 'emision', 'cuenta', 'empleados', 'total', 'estado', 'acciones'];
   columnasDetalle = ['beneficiario', 'identificacion', 'banco', 'cuenta', 'valor', 'situacion'];
 
@@ -170,9 +173,15 @@ export class OrdenesPagoComponent implements OnInit {
   generar(): void {
     if (!this.puedeGenerar() || this.ocupado()) return;
 
+    const idUsuario = this.appState.getIdUsuario();
+    if (!idUsuario) {
+      this.avisar('No se pudo determinar el usuario de la sesión.', true);
+      return;
+    }
+
     this.ocupado.set(true);
     this.ordenService
-      .generar(this.periodoSeleccionado()!, this.cuentaSeleccionada()!)
+      .generar(this.periodoSeleccionado()!, this.cuentaSeleccionada()!, idUsuario)
       .subscribe({
         next: (orden) => {
           this.ocupado.set(false);
@@ -207,8 +216,14 @@ export class OrdenesPagoComponent implements OnInit {
       return;
     }
 
+    const idUsuario = this.appState.getIdUsuario();
+    if (!idUsuario) {
+      this.avisar('No se pudo determinar el usuario de la sesión.', true);
+      return;
+    }
+
     this.ocupado.set(true);
-    this.ordenService.confirmar(orden.codigo, this.fechaAcreditacion()).subscribe({
+    this.ordenService.confirmar(orden.codigo, this.fechaAcreditacion(), idUsuario).subscribe({
       next: () => {
         this.ocupado.set(false);
         this.avisar('Acreditación confirmada.');
