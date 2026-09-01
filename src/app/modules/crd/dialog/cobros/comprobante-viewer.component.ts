@@ -12,7 +12,15 @@ import { ServiciosShare } from '../../../../shared/services/ws-share';
  * de docs/crd/API-COBROS-APROBACION-CONTABILIDAD.md), así que va directo en el panel de detalle en
  * vez de exigir un clic extra para abrirlo.
  *
- * No hay capa de autenticación delante de `/file/download` (igual que el resto de comprobantes de
+ * ⚠️ Usa `GET /file/view`, NUNCA `/file/download`. `/download` siempre responde
+ * `Content-Type: application/octet-stream` (nunca el real) y `Content-Disposition: attachment`
+ * —fuerza la descarga— así que un `<img>`/`<iframe>` apuntándole no muestra nada: el navegador
+ * intenta descargar el archivo en vez de renderizarlo. `/view` es el endpoint que arma
+ * `FileRest.java` específicamente para este caso (`Content-Type` real por extensión,
+ * `Content-Disposition: inline`) — verificado 2026-08-31 tras el reporte de que el preview no se
+ * veía en la bandeja de contabilidad.
+ *
+ * No hay capa de autenticación delante de `/file/view` (igual que el resto de comprobantes de
  * este módulo), así que la URL se arma directa para `<img>`/`<iframe>` sin pasar por un blob.
  */
 @Component({
@@ -81,7 +89,7 @@ export class ComprobanteViewerComponent {
 
   url = computed(() => {
     const r = this.ruta();
-    return r ? `${ServiciosShare.RS_FILE}/download?filePath=${encodeURIComponent(r)}` : '';
+    return r ? `${ServiciosShare.RS_FILE}/view?filePath=${encodeURIComponent(r)}` : '';
   });
 
   urlSegura = computed<SafeResourceUrl>(() => this.sanitizer.bypassSecurityTrustResourceUrl(this.url()));
