@@ -38,8 +38,6 @@ interface DialogData {
   getSaldoPendienteCuota: (detalle: DetallePrestamo | null | undefined) => number;
   getEstadoCuotaTexto: (detalle: DetallePrestamo | null | undefined) => string;
   getMontoDisponibleAfectacion: () => number;
-  /** "Excedente a repartir" cuando la novedad tiene excedente real, "Valor recibido Petro" si no. */
-  getEtiquetaMontoDisponibleAfectacion: () => string;
   getTotalValorAfectarActual: () => number;
   getSaldoPendienteAfectacion: () => number;
   isLoadingAfectacionFinanciera: () => boolean;

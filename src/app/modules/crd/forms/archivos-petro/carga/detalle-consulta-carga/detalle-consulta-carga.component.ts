@@ -1507,56 +1507,17 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
     return 'Sin descripción';
   }
 
-  /**
-   * `true` cuando la novedad tiene excedente real (`montoDiferencia > 0.01`, mismo umbral que
-   * `AfectacionValoresParticipeCargaServiceImpl.diferenciaReparto()` en el backend, líneas
-   * 99-104: por debajo de eso el backend NO valida el reparto — `excedente <= 0.01 → return
-   * 0.0`). Decide tanto el monto disponible como su etiqueta en pantalla.
-   */
-  private get hayExcedenteParaRepartir(): boolean {
-    const montoDiferencia = this.normalizarMontoPetro(this.novedadFinancieraSeleccionada()?.montoDiferencia);
-    return montoDiferencia !== null && montoDiferencia > 0.01;
-  }
-
-  /**
-   * Con excedente, el disponible tiene que ser `montoDiferencia`, no `montoRecibido`: lo
-   * esperado ya se aplicó solo a la cuota por el flujo automático, y lo único que el operador
-   * tiene que ubicar es lo que sobra — es justo lo que el backend valida
-   * (`diferenciaReparto`, ver `hayExcedenteParaRepartir`). Ofrecer `montoRecibido` para repartir
-   * hacía que el operador completara de más, exactamente por `montoEsperado`: medido en la carga
-   * 449, caso BUSTOS ALMEIDA (novedad 43883) — recibido 586,38, esperado 128,20, diferencia
-   * 458,18; la pantalla pedía repartir 586,38, el backend exigía 458,18, descuadre de 128,20 (el
-   * esperado). Se repitió en ~78 novedades con el mismo patrón, medido 2026-09-02.
-   *
-   * Sin excedente (diferencia ≤ 0.01, incluida negativa o nula) el comportamiento NO cambia: es
-   * la rama que usan las novedades tipo 5 y 6, la mayoría de la carga, y el backend no valida
-   * nada ahí — tocarla sin necesidad es exactamente lo que no hay que hacer hoy.
-   */
   get montoDisponibleAfectacion(): number {
     const novedad = this.novedadFinancieraSeleccionada();
     if (!novedad) {
       return 0;
     }
 
-    const montoDiferencia = this.normalizarMontoPetro(novedad.montoDiferencia);
-    if (this.hayExcedenteParaRepartir) {
-      return this.redondear(montoDiferencia ?? 0);
-    }
-
     const montoRecibido = this.normalizarMontoPetro(novedad.montoRecibido);
+    const montoDiferencia = this.normalizarMontoPetro(novedad.montoDiferencia);
     const montoEsperado = this.normalizarMontoPetro(novedad.montoEsperado);
 
     return this.redondear(montoRecibido ?? montoDiferencia ?? montoEsperado ?? 0);
-  }
-
-  /** Etiqueta del primer tile del resumen de afectación — ver `hayExcedenteParaRepartir`. */
-  get etiquetaMontoDisponibleAfectacion(): string {
-    return this.hayExcedenteParaRepartir ? 'Excedente a repartir' : 'Valor recibido Petro';
-  }
-
-  /** Texto de los avisos de "te pasaste del disponible" — ver `hayExcedenteParaRepartir`. */
-  private get nombreMontoDisponibleAfectacion(): string {
-    return this.hayExcedenteParaRepartir ? 'el excedente a repartir' : 'el valor recibido desde Petro';
   }
 
   get totalValorAfectarActual(): number {
@@ -1753,7 +1714,6 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
         getSaldoPendienteCuota: (detalle: DetallePrestamo | null | undefined) => this.getValorMaximoAfectarCuota(detalle),
         getEstadoCuotaTexto: (detalle: DetallePrestamo | null | undefined) => this.getEstadoCuotaTexto(detalle),
         getMontoDisponibleAfectacion: () => this.montoDisponibleAfectacion,
-        getEtiquetaMontoDisponibleAfectacion: () => this.etiquetaMontoDisponibleAfectacion,
         getTotalValorAfectarActual: () => this.totalValorAfectarActual,
         getSaldoPendienteAfectacion: () => this.saldoPendienteAfectacion,
         isLoadingAfectacionFinanciera: () => this.isLoadingAfectacionFinanciera(),
@@ -1943,7 +1903,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
     const montoDisponible = this.redondear(this.montoDisponibleAfectacion);
 
     if (totalConActual > montoDisponible) {
-      this.snackBar.open(`La suma de valores a cruzar no puede superar ${this.nombreMontoDisponibleAfectacion}`, 'Cerrar', {
+      this.snackBar.open('La suma de valores a cruzar no puede superar el valor recibido desde Petro', 'Cerrar', {
         duration: 4000,
       });
       return;
@@ -2182,7 +2142,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
     const montoDisponible = this.redondear(this.montoDisponibleAfectacion);
 
     if (totalConActual > montoDisponible) {
-      this.snackBar.open(`La suma de valores a cruzar no puede superar ${this.nombreMontoDisponibleAfectacion}`, 'Cerrar', {
+      this.snackBar.open('La suma de valores a cruzar no puede superar el valor recibido desde Petro', 'Cerrar', {
         duration: 4000,
       });
       return;
@@ -2223,7 +2183,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
       this.redondear(this.totalValorAfectarActual + this.totalValorAportarActual) >
       this.redondear(this.montoDisponibleAfectacion)
     ) {
-      this.snackBar.open(`La suma de valores a cruzar supera ${this.nombreMontoDisponibleAfectacion}`, 'Cerrar', {
+      this.snackBar.open('La suma de valores a cruzar supera el valor recibido desde Petro', 'Cerrar', {
         duration: 4000,
       });
       return;
