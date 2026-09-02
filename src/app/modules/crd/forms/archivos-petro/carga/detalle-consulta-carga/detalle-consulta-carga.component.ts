@@ -1,4 +1,4 @@
-﻿import { Component, OnInit, signal, ViewChild, AfterViewInit, QueryList, ViewChildren } from '@angular/core';
+import { Component, OnInit, signal, ViewChild, AfterViewInit, QueryList, ViewChildren } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatSort } from '@angular/material/sort';
@@ -50,7 +50,7 @@ import { EstadoPrestamoOperativo } from '../../../../model/pagos/catalogos-pago'
 import { AfectacionValoresParticipeCargaService } from '../../../../service/afectacion-valores-participe-carga.service';
 import { NovedadParticipeCarga } from '../../../../model/novedad-participe-carga';
 import { Usuario } from '../../../../../../shared/model/usuario';
-import { forkJoin, of, catchError, map, switchMap, Observable } from 'rxjs';
+import { forkJoin, of, catchError, map } from 'rxjs';
 import { AfectacionFinancieraCuotasDialogComponent } from '../../../../dialog/afectacion-financiera-cuotas-dialog/afectacion-financiera-cuotas-dialog.component';
 import { ProcesoArchivoErrorDialogComponent } from '../../../../dialog/archivos-petro/proceso-archivo-error-dialog/proceso-archivo-error-dialog.component';
 
@@ -2469,12 +2469,9 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
                   return;
                 }
 
-                // Encadenado, no en paralelo: hace falta saber qué cuotas quedaron pendientes
-                // ANTES de pedir los pagos, para acotar la segunda consulta a esas — ver
-                // `consultarPagosDeCuotas()`. Todas las cuotas pendientes, sin tope: el tope de 5
-                // anterior era de presentación, no del backend (selectByCriteria no pagina del
-                // lado del servidor) — cortaba la pantalla cuando el partícipe debía más de 5
-                // cuotas, pedido del usuario 2026-08-31.
+                // Todas las cuotas pendientes, sin tope: el tope de 5 anterior era de presentación,
+                // no del backend (selectByCriteria no pagina del lado del servidor) — cortaba la
+                // pantalla cuando el partícipe debía más de 5 cuotas, pedido del usuario 2026-08-31.
                 const requests = prestamos.map((prestamo) => {
                   const criteriosDetalle: DatosBusqueda[] = [];
                   const dbPrestamo = new DatosBusqueda();
@@ -2492,88 +2489,96 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
                   dbOrdenDetalle.setTipoOrden(DatosBusqueda.ORDER_ASC);
                   criteriosDetalle.push(dbOrdenDetalle);
 
-                  return this.detallePrestamoService.selectByCriteria(criteriosDetalle).pipe(
-                    switchMap((detalleData): Observable<ResultadoCargaPrestamo> => {
-                      // `null` (a diferencia de `[]`) NO significa "sin cuotas": es lo que
-                      // devuelve el `handleError` compartido de estos servicios cuando Angular no
-                      // pudo interpretar la respuesta aunque el HTTP haya sido 200
-                      // (`if (+error.status === 200) return of(null)`, en 316 servicios del
-                      // frontend). Colapsarlo junto con `[]` es exactamente lo que hacía
-                      // indistinguible "no tiene cuotas pendientes" de "no se pudo consultar" —
-                      // caso medido 2026-09-01, préstamo 7991 del partícipe 401 (EN MORA, 47
-                      // cuotas pendientes, invisible en el diálogo). Si esto falla, ni siquiera se
-                      // llega a pedir pagos: no hay cuotas que mostrar igual.
+                  const criterioPagos = new DatosBusqueda();
+                  criterioPagos.asignaValorConCampoPadre(
+                    TipoDatosBusqueda.LONG,
+                    'prestamo',
+                    'codigo',
+                    String(prestamo.codigo),
+                    TipoComandosBusqueda.IGUAL
+                  );
+
+                  // `catchError` PROPIO en cada consulta, no uno compartido envolviendo el
+                  // `forkJoin`: si no fuera así, un 400 real de `pagos` (ver más abajo) tira todo
+                  // el `forkJoin` de una — RxJS no deja que uno de los dos falle sin matar al
+                  // otro — y el `map` de abajo nunca llega a correr. `null` (a diferencia de `[]`)
+                  // en `detalleData`/`pagos` significa "no se pudo saber", nunca "sin resultados":
+                  // parte porque `handleError` devuelve `null` cuando Angular no pudo interpretar
+                  // un 200 (`if (+error.status === 200) return of(null)`, en 316 servicios del
+                  // frontend), y parte por lo que arma `detalleData$`/`pagos$` acá abajo.
+                  const detalleData$ = this.detallePrestamoService
+                    .selectByCriteria(criteriosDetalle)
+                    .pipe(catchError(() => of(null)));
+
+                  // Puente temporal, no la solución (§6 del registro de deuda técnica): la
+                  // solución real es de backend — que `selectByCriteria` devuelva `[]` en vez de
+                  // lanzar cuando no hay resultados, tanto en `PagoPrestamoServiceImpl` como en
+                  // `DetallePrestamoServiceImpl` (mismo patrón `if (result.isEmpty()) throw` en
+                  // los dos, confirmado 2026-09-02) — pero eso es un cambio de convención de
+                  // Service que toca todo el proyecto y necesita WAR nuevo. Mientras tanto, acá se
+                  // lee el TEXTO del error para no tratar "el préstamo no tiene pagos" (caso
+                  // normal — todo crédito recién otorgado está así) igual que un fallo real.
+                  const pagos$ = this.pagoPrestamoService.selectByCriteria([criterioPagos]).pipe(
+                    map((pagos) => ({ pagos, sinRegistros: false })),
+                    catchError((error) => of({ pagos: null, sinRegistros: this.esErrorPagosSinRegistros(error) }))
+                  );
+
+                  return forkJoin({ detalleData: detalleData$, pagos: pagos$ }).pipe(
+                    map(({ detalleData, pagos }): ResultadoCargaPrestamo => {
+                      // Sin cuotas no hay nada que afectar de este préstamo, sea porque de verdad
+                      // no tiene ninguna o porque la consulta falló — los dos casos se tratan
+                      // igual acá (a diferencia de pagos, más abajo, donde SÍ importa cuál fue).
                       if (detalleData == null) {
-                        return of({
+                        return {
                           item: { prestamo, cuotas: [] } as PrestamoAfectable,
                           pagosPorCuota: {},
                           cargaFallida: true,
                           motivo: 'No se pudieron cargar sus cuotas.',
-                        });
+                        };
                       }
 
-                      const cuotasPendientes = (Array.isArray(detalleData) ? detalleData : [detalleData])
+                      const cuotas = (Array.isArray(detalleData) ? detalleData : [detalleData])
                         .map((detalle) => this.normalizarDetallePrestamo(detalle))
                         .filter((detalle) => !this.esCuotaPagadaOCancelada(detalle))
                         .sort((a, b) => this.obtenerFechaOrdenCuota(a) - this.obtenerFechaOrdenCuota(b));
 
-                      if (cuotasPendientes.length === 0) {
-                        // Préstamo real sin nada pendiente (ya cargó, no es un fallo): no hace
-                        // falta pedir pagos de cuotas que no se van a mostrar.
-                        return of({
-                          item: { prestamo, cuotas: [] } as PrestamoAfectable,
+                      if (pagos.pagos == null) {
+                        // El préstamo SE MUESTRA igual: sin pagos, `saldoPendienteDe()` devuelve
+                        // el total de cada cuota, que es lo correcto cuando de verdad no hay
+                        // pagos. `sinRegistros` viene del texto del error (ver `pagos$` arriba):
+                        // si el backend dijo específicamente "no encontró pagos", ese total ES el
+                        // saldo real y no hace falta ningún aviso — mostrarlo igual sería ruido
+                        // en el caso más común (todo crédito recién otorgado). Cualquier OTRO
+                        // motivo de fallo si necesita aviso: no se puede distinguir "sin pagos" de
+                        // "la consulta se rompió" y en ese caso el total mostrado podría estar
+                        // inflado.
+                        return {
+                          item: { prestamo, cuotas } as PrestamoAfectable,
                           pagosPorCuota: {},
                           cargaFallida: false,
-                        });
+                          motivo:
+                            !pagos.sinRegistros && cuotas.length > 0
+                              ? 'No se pudieron cargar sus pagos: los saldos mostrados pueden estar por encima de lo real. Verifique antes de cruzar.'
+                              : undefined,
+                        };
                       }
 
-                      return this.consultarPagosDeCuotas(
-                        prestamo,
-                        cuotasPendientes.map((c) => c.codigo)
-                      ).pipe(
-                        map((pagos): ResultadoCargaPrestamo => {
-                          if (pagos == null) {
-                            // Las cuotas sí cargaron pero los pagos no: si se mostraran las cuotas
-                            // igual, `saldoPendienteDe` las calcularía como si nada estuviera
-                            // pagado — un saldo inflado es peor que no mostrar el préstamo. Se
-                            // descarta `cuotas` acá para que el filtro de abajo lo saque del
-                            // listado, igual que los demás `cargaFallida`.
-                            return {
-                              item: { prestamo, cuotas: [] } as PrestamoAfectable,
-                              pagosPorCuota: {},
-                              cargaFallida: true,
-                              motivo: 'No se pudieron cargar sus pagos.',
-                            };
-                          }
-
-                          return {
-                            item: { prestamo, cuotas: cuotasPendientes } as PrestamoAfectable,
-                            pagosPorCuota: this.saldoPrestamo.acumularPagosPorCuota(pagos),
-                            cargaFallida: false,
-                          };
-                        })
-                      );
-                    }),
-                    // Fallo real de RxJS (p. ej. un HTTP no-200 genuino) en cualquier punto de la
-                    // cadena para ESTE préstamo: mismo tratamiento que un `null`, no una lista
-                    // vacía silenciosa.
-                    catchError(() =>
-                      of<ResultadoCargaPrestamo>({
-                        item: { prestamo, cuotas: [] } as PrestamoAfectable,
-                        pagosPorCuota: {},
-                        cargaFallida: true,
-                        motivo: 'No se pudieron cargar sus cuotas o pagos.',
-                      })
-                    )
+                      const listaPagos = Array.isArray(pagos.pagos) ? pagos.pagos : [pagos.pagos];
+                      return {
+                        item: { prestamo, cuotas } as PrestamoAfectable,
+                        pagosPorCuota: this.saldoPrestamo.acumularPagosPorCuota(listaPagos),
+                        cargaFallida: false,
+                      };
+                    })
                   );
                 });
 
                 forkJoin(requests).subscribe({
                   next: (resultados) => {
-                    // Los `cargaFallida` no entran a `prestamosConCuotas` porque sus `cuotas`
-                    // siempre vienen vacías (no se llegó a consultar), así que el `.filter` de
-                    // abajo ya los saca solo — pero se listan aparte para avisar, en vez de
-                    // desaparecer sin dejar rastro.
+                    // Los `cargaFallida` (cuotas) no entran a `prestamosConCuotas` porque sus
+                    // `cuotas` siempre vienen vacías, así que el `.filter` de abajo ya los saca
+                    // solo. Los que solo fallaron en pagos SÍ tienen `cuotas` y entran igual —
+                    // ambos casos se listan aparte para avisar, con su propio motivo.
                     const prestamosConCuotas = resultados.map((r) => r.item).filter((item) => item.cuotas.length > 0);
                     const prestamosOrdenados = this.ordenarPrestamosPorProductoObjetivo(prestamosConCuotas, novedad);
                     const pagosPorCuotaTotal = resultados.reduce<Record<number, ComponentesPagados>>(
@@ -2581,11 +2586,8 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
                       {}
                     );
                     const erroresCarga: PrestamoErrorCarga[] = resultados
-                      .filter((r) => r.cargaFallida)
-                      .map((r) => ({
-                        prestamo: r.item.prestamo,
-                        motivo: r.motivo ?? 'No se pudieron cargar sus cuotas o pagos.',
-                      }));
+                      .filter((r): r is ResultadoCargaPrestamo & { motivo: string } => !!r.motivo)
+                      .map((r) => ({ prestamo: r.item.prestamo, motivo: r.motivo }));
 
                     this.pagosPorCuotaAfectacion.set(pagosPorCuotaTotal);
                     this.prestamosAfectables.set(prestamosOrdenados);
@@ -2725,6 +2727,32 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
     return leerCodigoEstadoCuota(detalle);
   }
 
+  /**
+   * ¿El error de `pagoPrestamoService.selectByCriteria` es el 400 de "no hay pagos" y no otra
+   * cosa? `PagoPrestamoServiceImpl.selectByCriteria` lanza `IncomeException("Busqueda por
+   * criterio PagoPrestamo no devolvio ningun registro")` cuando el resultado viene vacío
+   * (líneas 90-92), `PagoPrestamoRest` lo convierte en 400 (`entity(e.getMessage())`), y
+   * `MensajeErrorJsonFilter` lo envuelve en `{"mensaje": "..."}` antes de que llegue acá — así
+   * que en el `catchError` de `pagos$` el valor recibido ya es ese objeto (`handleError` de
+   * `PagoPrestamoService` hace `throwError(() => error.error)`, no la respuesta completa).
+   *
+   * Comparar por texto es frágil — no hay un código de error estable para esto, a diferencia de
+   * `CodigoErrorDevolucion` en devolución de aportes — pero es lo que hay hasta que el backend
+   * cambie la convención. Si el cuerpo no viene con el texto esperado (por cualquier motivo:
+   * cambió el mensaje, vino vacío, es otro tipo de error), se responde `false` a propósito: mejor
+   * un aviso de más que un saldo inflado en silencio.
+   */
+  private esErrorPagosSinRegistros(error: unknown): boolean {
+    const mensaje = typeof error === 'string' ? error : (error as { mensaje?: unknown })?.mensaje;
+    if (typeof mensaje !== 'string') return false;
+
+    const normalizado = mensaje
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+    return normalizado.includes('no devolvio ningun registro');
+  }
+
   private esCuotaPagadaOCancelada(detalle: DetallePrestamo | null | undefined): boolean {
     const codigoEstado = this.obtenerCodigoEstadoCuota(detalle);
     return (
@@ -2744,80 +2772,6 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
 
   private obtenerFechaOrdenCuota(detalle: DetallePrestamo): number {
     return this.convertirFecha(detalle.fechaVencimiento)?.getTime() || Number.MAX_SAFE_INTEGER;
-  }
-
-  /** Oracle no admite más de 1.000 elementos en un `IN`; PGPR ya se consulta en bloques de 500 en
-   *  el backend (`saaBE/docs/logica-negocio/petro/REGLAS-GENERALES-PETRO.md` §9.7). */
-  private static readonly TAMANIO_BLOQUE_PAGOS = 500;
-
-  /**
-   * Pagos de una lista puntual de cuotas (no de todo el préstamo), en bloques de
-   * `TAMANIO_BLOQUE_PAGOS`. Acota la consulta a las cuotas que la pantalla realmente va a mostrar
-   * — pedido del árbitro 2026-09-02, hipótesis de volumen sobre el préstamo 71177 —, algo seguro
-   * porque `SaldoPrestamoService.saldoPendienteDe()` busca los pagos por `cuota.codigo`, uno por
-   * uno: los pagos de una cuota PAGADA/CANCELADA nunca se leen para calcular el saldo de una
-   * PENDIENTE, así que no hace falta traerlos.
-   *
-   * Si CUALQUIER bloque falla (`null` o error), se devuelve `null` para el préstamo entero:
-   * mezclar los bloques que sí llegaron con silencio sobre los que no dejaría un saldo pendiente
-   * calculado con datos incompletos — inflado, no vacío, y sin ningún aviso. Es peor que marcar
-   * `cargaFallida` y no mostrar el préstamo.
-   */
-  private consultarPagosDeCuotas(prestamo: Prestamo, codigosCuota: number[]) {
-    const bloques: number[][] = [];
-    for (let i = 0; i < codigosCuota.length; i += DetalleConsultaCargaComponent.TAMANIO_BLOQUE_PAGOS) {
-      bloques.push(codigosCuota.slice(i, i + DetalleConsultaCargaComponent.TAMANIO_BLOQUE_PAGOS));
-    }
-
-    const consultasBloque = bloques.map((bloque) =>
-      this.pagoPrestamoService.selectByCriteria(this.construirCriteriosPagosPorCuotas(prestamo, bloque))
-    );
-
-    return forkJoin(consultasBloque).pipe(
-      map((resultadosBloque) => {
-        if (resultadosBloque.some((r) => r == null)) return null;
-        return resultadosBloque.flatMap((r) => (Array.isArray(r) ? r : r ? [r] : []));
-      }),
-      catchError(() => of(null))
-    );
-  }
-
-  /**
-   * `prestamo.codigo = X AND (detallePrestamo.codigo = c1 OR detallePrestamo.codigo = c2 OR ...)`.
-   * El DSL de `DatosBusqueda` no tiene operador `IN` — mismo patrón de OR-chain entre paréntesis
-   * que ya usa `prestamo-dash.component.ts` para IDs de entidad/estado.
-   */
-  private construirCriteriosPagosPorCuotas(prestamo: Prestamo, codigosCuota: number[]): DatosBusqueda[] {
-    const criterios: DatosBusqueda[] = [];
-
-    const dbPrestamo = new DatosBusqueda();
-    dbPrestamo.asignaValorConCampoPadre(
-      TipoDatosBusqueda.LONG,
-      'prestamo',
-      'codigo',
-      String(prestamo.codigo),
-      TipoComandosBusqueda.IGUAL
-    );
-    criterios.push(dbPrestamo);
-
-    const dbOpen = new DatosBusqueda();
-    dbOpen.usaParentesis(TipoComandosBusqueda.ABRE_PARENTESIS);
-    criterios.push(dbOpen);
-
-    codigosCuota.forEach((codigo, index) => {
-      const c = new DatosBusqueda();
-      c.asignaValorConCampoPadre(TipoDatosBusqueda.LONG, 'detallePrestamo', 'codigo', String(codigo), TipoComandosBusqueda.IGUAL);
-      if (index > 0) {
-        c.setTipoOperadorLogico(TipoComandosBusqueda.OR);
-      }
-      criterios.push(c);
-    });
-
-    const dbClose = new DatosBusqueda();
-    dbClose.usaParentesis(TipoComandosBusqueda.CIERRA_PARENTESIS);
-    criterios.push(dbClose);
-
-    return criterios;
   }
 
   private redondear(valor: number): number {
