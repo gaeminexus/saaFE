@@ -1,9 +1,20 @@
 @use '../../../../../styles/abstracts/colors' as *;
 @use '../../../../../styles/abstracts/variables' as *;
+
+/**
+ * Mismo look de grid con gradiente que ya usa el resto de `tsr` (ver Naturaleza de Cuentas) — no
+ * es una paleta nueva, es la que ya existía en esta pantalla antes de la migración. Se conserva
+ * porque es una convención transversal del módulo, no algo que esta migración deba "corregir"
+ * para que se parezca a `rrh`.
+ */
+$banco-gradiente: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+$banco-acento: #667eea;
+
 .bancos-page {
   display: flex;
   flex-direction: column;
   gap: $spacing-md;
+  padding: $spacing-md;
   color: $text-primary;
 }
 
@@ -11,6 +22,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: $spacing-sm;
   padding: $spacing-md;
   border-radius: $border-radius-md;
@@ -26,274 +38,196 @@
 }
 
 .header-icon mat-icon {
-  color: #667eea;
+  color: $banco-acento;
   font-size: 28px;
 }
 
-.header-text h1 {
-  margin: 0;
-  font-family: 'Montserrat', Arial, sans-serif;
-  font-size: 1.5rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-}
-
-.header-text .subtitle {
-  margin: 0;
-  color: #4b5563;
-  font-size: 0.95rem;
-}
-
-.form-card {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-sm;
-  border: $border-width solid $border-light;
-  border-radius: $border-radius-md;
-  padding: $spacing-md;
-  background: $background-primary;
-  box-shadow: 0 2px 6px $shadow-color-light;
-}
-
-.form-row {
-  display: grid;
-  grid-template-columns: 1.5fr 1.5fr 1fr 1fr auto auto;
-  gap: $spacing-sm;
-  align-items: end;
-
-  button {
-    height: 56px;
+.header-text {
+  h1 {
+    margin: 0;
+    font-family: 'Montserrat', Arial, sans-serif;
+    font-size: 1.5rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    background: $banco-gradiente;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
   }
 
-  mat-checkbox {
-    padding-top: 20px;
+  .subtitle {
+    margin: 0;
+    color: $text-secondary;
+    font-size: 0.95rem;
   }
-}
-
-.filter-field {
-  width: 320px;
-}
-
-.table-card {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-sm;
-  border: $border-width solid $border-light;
-  border-radius: $border-radius-md;
-  padding: $spacing-sm;
-  background: $background-primary;
-  box-shadow: 0 2px 6px $shadow-color-light;
-}
-
-.spinner {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.error {
-  color: $error-color;
 }
 
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: $spacing-sm;
+  flex-wrap: wrap;
 
-  .export-buttons {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
+  button[mat-stroked-button] {
+    color: $banco-acento;
+    border-color: $banco-acento;
 
-    button[mat-stroked-button] {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      color: #667eea;
-      border-color: #667eea;
-      min-width: 80px;
-
-      &:hover {
-        background-color: rgba(102, 126, 234, 0.1);
-        border-color: #764ba2;
-        color: #764ba2;
-      }
-
-      &:disabled {
-        opacity: 0.5;
-        color: #9ca3af;
-        border-color: #9ca3af;
-      }
-
-      mat-icon {
-        font-size: 1.1rem;
-        width: 1.1rem;
-        height: 1.1rem;
-      }
+    &:hover {
+      background-color: rgba(102, 126, 234, 0.1);
+      border-color: #764ba2;
+      color: #764ba2;
     }
   }
 }
 
-// Estilos del grid con gradiente y efectos
-::ng-deep .bancos-page {
-  // Headers con gradiente
-  .mat-mdc-table .mat-mdc-header-cell,
-  table thead th {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-    color: #ffffff !important;
-    font-weight: 600 !important;
-    letter-spacing: 0.5px !important;
-    text-transform: uppercase !important;
-    padding: 10px 16px !important;
-    font-size: 0.875rem !important;
-  }
-
-  // Border radius en primera y última columna
-  .mat-mdc-table .mat-mdc-header-cell:first-child,
-  table thead th:first-child {
-    border-top-left-radius: 8px !important;
-  }
-
-  .mat-mdc-table .mat-mdc-header-cell:last-child,
-  table thead th:last-child {
-    border-top-right-radius: 8px !important;
-  }
-
-  // Sticky header
-  .mat-mdc-table .mat-mdc-header-row,
-  table thead {
-    position: sticky !important;
-    top: 0 !important;
-    z-index: 3 !important;
-  }
-
-  // Hover effect en filas
-  .mat-mdc-table .mat-mdc-row:hover .mat-mdc-cell,
-  table tbody tr:hover td {
-    background-color: rgba(102, 126, 234, 0.08) !important;
-    transition: background-color 0.2s ease;
-  }
-
-  // Estilo de celdas - altura reducida
-  .mat-mdc-table .mat-mdc-cell,
-  table tbody td {
-    padding: 8px 16px !important;
-    border-bottom: 1px solid rgba(118, 75, 162, 0.1) !important;
-    color: #374151;
-    font-size: 0.9rem;
-  }
-
-  // Alternancia de filas (opcional)
-  .mat-mdc-table .mat-mdc-row:nth-child(even),
-  table tbody tr:nth-child(even) {
-    background-color: rgba(102, 126, 234, 0.02);
-  }
-
-  // Columna de acciones
-  .mat-mdc-table .mat-column-acciones,
-  table td:last-child,
-  table th:last-child {
-    text-align: center;
-    width: 120px;
-  }
-
-  // Botones de acciones en línea
-  .mat-mdc-table .mat-column-acciones {
-    td,
-    .mat-mdc-cell {
-      display: flex !important;
-      align-items: center !important;
-      justify-content: center !important;
-      gap: 4px !important;
-    }
-
-    .mdc-icon-button,
-    button[mat-icon-button] {
-      margin: 0 !important;
-    }
-  }
-}
-
-.form-card {
+.formulario-creacion {
   display: flex;
   flex-direction: column;
   gap: $spacing-sm;
-  border: $border-width solid $border-light;
-  border-radius: $border-radius-md;
-  padding: $spacing-md;
-  background: $background-primary;
-  box-shadow: 0 2px 6px $shadow-color-light;
-}
-
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr auto 160px auto;
-  gap: $spacing-sm;
-  align-items: end;
-}
-
-.filter-field {
-  width: 320px;
-}
-
-.table-card {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-sm;
-  border: $border-width solid $border-light;
-  border-radius: $border-radius-md;
   padding: $spacing-sm;
+  border-radius: $border-radius-md;
+  border: $border-width-md solid $banco-acento;
+  background: $background-primary;
+
+  mat-form-field {
+    width: 100%;
+  }
+}
+
+.grid-campos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax($breakpoint-sm * 0.3, 1fr));
+  gap: $spacing-sm $spacing-md;
+}
+
+.formulario-acciones {
+  display: flex;
+  gap: $spacing-sm;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  padding: $spacing-sm;
+  border-radius: $border-radius-md;
+  border: $border-width solid $border-light;
   background: $background-primary;
   box-shadow: 0 2px 6px $shadow-color-light;
 }
 
-.spinner {
+.campo-filtro {
+  width: min(320px, 100%);
+}
+
+.mensaje-vacio {
+  padding: $spacing-lg;
+  text-align: center;
+  color: $text-muted;
+  font-size: $font-size-sm;
+}
+
+.tabla-bancos {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: $font-size-sm;
+
+  th {
+    text-align: left;
+    padding: 10px 16px;
+    background: $banco-gradiente;
+    color: #fff;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+
+    &:first-child {
+      border-top-left-radius: 8px;
+    }
+
+    &:last-child {
+      border-top-right-radius: 8px;
+    }
+  }
+
+  td {
+    padding: 8px 16px;
+    border-bottom: 1px solid rgba(118, 75, 162, 0.1);
+    vertical-align: middle;
+  }
+
+  tr:not(.fila-edicion):not(.fila-error) {
+    cursor: pointer;
+
+    &:hover td {
+      background-color: rgba(102, 126, 234, 0.06);
+    }
+
+    &:nth-child(even) td {
+      background-color: rgba(102, 126, 234, 0.02);
+    }
+  }
+
+  .fila-edicion {
+    background: rgba(102, 126, 234, 0.08);
+  }
+}
+
+.celda-input {
+  width: 100%;
+  border: $border-width solid transparent;
+  border-radius: $border-radius-sm;
+  padding: $spacing-xs $spacing-sm;
+  font-size: $font-size-sm;
+  font-family: inherit;
+  color: $text-primary;
+  background: transparent;
+  outline: none;
+  box-sizing: border-box;
+
+  &:focus {
+    border-color: $banco-acento;
+    background: $background-primary;
+  }
+}
+
+.celda-select {
+  width: 100%;
+  font-size: $font-size-sm;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: $spacing-xs $spacing-sm;
+  border-radius: $border-radius-lg;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  background: $background-tertiary;
+  color: $text-secondary;
+
+  &.pill-ok {
+    background: rgba($success-color, 0.12);
+    color: $success-color;
+  }
+}
+
+.fila-error {
   display: flex;
   align-items: center;
-  gap: $spacing-sm;
-}
-
-.error {
+  gap: $spacing-xs;
+  padding: $spacing-xs $spacing-sm;
+  border-radius: $border-radius-sm;
+  background: rgba($error-color, 0.08);
   color: $error-color;
-}
+  font-size: $font-size-xs;
 
-// Estilos del grid para igualar Naturaleza de Cuentas
-::ng-deep {
-  .mat-mdc-table {
-    // Header cells con gradiente y texto blanco
-    .mdc-data-table__header-cell,
-    .mat-mdc-header-cell {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: #ffffff;
-      font-weight: 600;
-      letter-spacing: 0.5px;
-      text-transform: uppercase;
-      padding: 16px;
-
-      &:first-child {
-        border-top-left-radius: 8px;
-      }
-
-      &:last-child {
-        border-top-right-radius: 8px;
-      }
-    }
-
-    // Filas hover suaves al estilo Naturaleza
-    .mdc-data-table__row:hover .mdc-data-table__cell,
-    .mat-mdc-row:hover .mat-mdc-cell {
-      background-color: rgba(102, 126, 234, 0.05);
-    }
-
-    // Separadores y padding de celdas
-    .mdc-data-table__cell,
-    .mat-mdc-cell {
-      padding: 16px;
-      border-bottom: 1px solid rgba(118, 75, 162, 0.1);
-    }
+  mat-icon {
+    font-size: $font-size-base;
+    width: $font-size-base;
+    height: $font-size-base;
   }
 }

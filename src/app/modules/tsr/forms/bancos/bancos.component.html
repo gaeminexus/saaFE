@@ -1,41 +1,165 @@
-﻿<div class="bancos-page">
-  <!-- Header -->
-  <div class="page-header">
+<div class="bancos-page">
+  <header class="page-header">
     <div class="header-content">
       <div class="header-icon">
         <mat-icon>account_balance</mat-icon>
       </div>
       <div class="header-text">
         <h1>Bancos</h1>
-        <p class="subtitle">Gestión de bancos y clasificación</p>
+        <p class="subtitle">Gestión de bancos y su clasificación</p>
       </div>
     </div>
     <div class="header-actions">
-      <div class="export-buttons">
-        <button
-          mat-stroked-button
-          (click)="exportToCSV()"
-          [disabled]="exportData().length === 0"
-        >
-          <mat-icon>description</mat-icon>
-          CSV
+      <button mat-stroked-button type="button" (click)="exportarCsv()" [disabled]="bancos().length === 0">
+        <mat-icon>description</mat-icon>
+        CSV
+      </button>
+      <button mat-stroked-button type="button" (click)="exportarPdf()" [disabled]="bancos().length === 0">
+        <mat-icon>picture_as_pdf</mat-icon>
+        PDF
+      </button>
+      @if (!creando()) {
+        <button mat-raised-button color="primary" type="button" (click)="abrirCreacion()">
+          <mat-icon>add</mat-icon>
+          Nuevo banco
         </button>
-        <button
-          mat-stroked-button
-          (click)="exportToPDF()"
-          [disabled]="exportData().length === 0"
-        >
-          <mat-icon>picture_as_pdf</mat-icon>
-          PDF
-        </button>
-      </div>
+      }
     </div>
-  </div>
+  </header>
 
-  <!-- Tabla gestionada por TableBasicHijosComponent -->
-  <app-table-basic-hijos
-    *ngIf="tableConfig"
-    [configTable]="tableConfig"
-    (emiteError)="onTableError($event)">
-  </app-table-basic-hijos>
+  @if (creando()) {
+    <form class="formulario-creacion" [formGroup]="formulario!">
+      <div class="grid-campos">
+        <mat-form-field appearance="outline">
+          <mat-label>Descripción</mat-label>
+          <input matInput formControlName="nombre" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Tipo de banco</mat-label>
+          <mat-select formControlName="tipo">
+            @for (t of tipos; track t.codigo) {
+              <mat-option [value]="t.codigoAlterno">{{ t.descripcion }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Permite descuadre</mat-label>
+          <mat-select formControlName="concilia">
+            @for (o of opcionesConcilia; track o.codigo) {
+              <mat-option [value]="o.codigo">{{ o.descripcion }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Estado</mat-label>
+          <mat-select formControlName="estado">
+            @for (e of estados; track e.codigo) {
+              <mat-option [value]="e.codigo">{{ e.descripcion }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      </div>
+
+      @if (errorCreacion(); as error) {
+        <div class="fila-error">
+          <mat-icon>error</mat-icon>
+          {{ error }}
+        </div>
+      }
+
+      <div class="formulario-acciones">
+        <button mat-flat-button color="primary" type="button" [disabled]="guardando()" (click)="confirmarCreacion()">
+          @if (guardando()) {
+            Creando…
+          } @else {
+            Crear
+          }
+        </button>
+        <button mat-stroked-button type="button" (click)="cancelarCreacion()">Cancelar</button>
+      </div>
+    </form>
+  }
+
+  <div class="panel">
+    <mat-form-field appearance="outline" class="campo-filtro">
+      <mat-icon matPrefix>search</mat-icon>
+      <input matInput [ngModel]="filtro()" (ngModelChange)="filtro.set($event)" placeholder="Filtrar por descripción" />
+    </mat-form-field>
+
+    @if (cargando()) {
+      <p class="mensaje-vacio">Cargando bancos…</p>
+    } @else if (visibles().length === 0) {
+      <p class="mensaje-vacio">Sin bancos registrados.</p>
+    } @else {
+      <table class="tabla-bancos">
+        <thead>
+          <tr>
+            <th>Descripción</th>
+            <th>Tipo</th>
+            <th>Permite descuadre</th>
+            <th>Estado</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (b of visibles(); track b.codigo) {
+            @if (editando() === b.codigo) {
+              <tr class="fila-edicion" [formGroup]="edicion!">
+                <td><input class="celda-input" formControlName="nombre" /></td>
+                <td>
+                  <mat-select class="celda-select" formControlName="tipo">
+                    @for (t of tipos; track t.codigo) {
+                      <mat-option [value]="t.codigoAlterno">{{ t.descripcion }}</mat-option>
+                    }
+                  </mat-select>
+                </td>
+                <td>
+                  <mat-select class="celda-select" formControlName="concilia">
+                    @for (o of opcionesConcilia; track o.codigo) {
+                      <mat-option [value]="o.codigo">{{ o.descripcion }}</mat-option>
+                    }
+                  </mat-select>
+                </td>
+                <td>
+                  <mat-select class="celda-select" formControlName="estado">
+                    @for (e of estados; track e.codigo) {
+                      <mat-option [value]="e.codigo">{{ e.descripcion }}</mat-option>
+                    }
+                  </mat-select>
+                </td>
+                <td>
+                  <button mat-icon-button type="button" [disabled]="guardandoEdicion()" (click)="confirmarEdicion()" matTooltip="Guardar">
+                    <mat-icon>check</mat-icon>
+                  </button>
+                  <button mat-icon-button type="button" (click)="cancelarEdicion()" matTooltip="Cancelar">
+                    <mat-icon>close</mat-icon>
+                  </button>
+                </td>
+              </tr>
+              @if (errorEdicion(); as error) {
+                <tr class="fila-error">
+                  <td colspan="5">
+                    <mat-icon>error</mat-icon>
+                    {{ error }}
+                  </td>
+                </tr>
+              }
+            } @else {
+              <tr (click)="editar(b)" tabindex="0" (keydown.enter)="editar(b)">
+                <td>{{ b.nombre }}</td>
+                <td>{{ tipoLabel(b.rubroTipoBancoH) }}</td>
+                <td>{{ b.conciliaDescuadre ? 'Sí' : 'No' }}</td>
+                <td>
+                  <span class="pill" [class.pill-ok]="b.estado === 1">
+                    {{ b.estado === 1 ? 'Activo' : 'Inactivo' }}
+                  </span>
+                </td>
+                <td></td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    }
+  </div>
 </div>
