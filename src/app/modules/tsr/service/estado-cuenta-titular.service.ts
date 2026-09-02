@@ -41,6 +41,17 @@ interface FuenteDocumento {
   estadosAnulados: number[];
   /** Familia de catálogo de `estado`, para elegir el mapa de etiquetas. */
   familiaEstado: 'CXC' | 'CXP' | 'ANTICIPO';
+  /**
+   * Si esta fuente tiene saldo consultable en /aplp o /aplc. Obligatorio y
+   * sin default a propósito: un default habría dejado que la próxima fuente
+   * lo omita y herede el comportamiento equivocado en silencio — que es
+   * justo cómo nació el defecto de Liquidaciones de compra (su id de LQCC
+   * se mandaba como si fuera un id de FCTC, con `em.find` devolviendo el
+   * saldo de una factura ajena o tirando, según coincidiera el número).
+   * `false` solo cuando la entidad no tiene aplicaciones que rastrear
+   * (verificado contra `PGS.APLP` en saaBE: no tiene FK a LQCC).
+   */
+  consultaSaldo: boolean;
 }
 
 const ETIQUETAS_ESTADO: Record<FuenteDocumento['familiaEstado'], Record<number, string>> = {
@@ -83,19 +94,19 @@ export class EstadoCuentaTitularService {
           etiqueta: 'Facturas de venta', url: ServiciosCxc.RS_FCTR, campoTitular: 'titular',
           tipo: TipoDocumentoEstadoCuenta.FACTURA, origen: 'EMITIDO',
           campoFecha: 'fecha', campoNumero: 'numero', campoTotal: 'total',
-          estadosAnulados: [0, 6], familiaEstado: 'CXC',
+          estadosAnulados: [0, 6], familiaEstado: 'CXC', consultaSaldo: true,
         },
         {
           etiqueta: 'Notas de crédito', url: ServiciosCxc.RS_NTCR, campoTitular: 'titular',
           tipo: TipoDocumentoEstadoCuenta.NOTA_CREDITO, origen: 'EMITIDO',
           campoFecha: 'fecha', campoNumero: 'numero', campoTotal: 'total',
-          estadosAnulados: [0, 6], familiaEstado: 'CXC',
+          estadosAnulados: [0, 6], familiaEstado: 'CXC', consultaSaldo: false,
         },
         {
           etiqueta: 'Notas de débito', url: ServiciosCxc.RS_NTDB, campoTitular: 'titular',
           tipo: TipoDocumentoEstadoCuenta.NOTA_DEBITO, origen: 'EMITIDO',
           campoFecha: 'fecha', campoNumero: 'numero', campoTotal: 'total',
-          estadosAnulados: [0, 6], familiaEstado: 'CXC',
+          estadosAnulados: [0, 6], familiaEstado: 'CXC', consultaSaldo: false,
         },
         {
           // CBR.RCV2: la retención que el cliente le hace a la empresa sobre su
@@ -104,13 +115,13 @@ export class EstadoCuentaTitularService {
           etiqueta: 'Retenciones recibidas', url: ServiciosCxp.RS_RCV2, campoTitular: 'proveedor',
           tipo: TipoDocumentoEstadoCuenta.RETENCION, origen: 'RECIBIDO',
           campoFecha: 'fecha', campoNumero: 'numero', campoTotal: 'total',
-          estadosAnulados: [0], familiaEstado: 'CXP',
+          estadosAnulados: [0], familiaEstado: 'CXP', consultaSaldo: false,
         },
         {
           etiqueta: 'Anticipos de cliente', url: ServiciosTsr.RS_ANTC, campoTitular: 'titular',
           tipo: TipoDocumentoEstadoCuenta.ANTICIPO, origen: 'RECIBIDO',
           campoFecha: 'fechaAnticipo', campoNumero: 'numeroDoc', campoTotal: 'valor',
-          estadosAnulados: [3], familiaEstado: 'ANTICIPO',
+          estadosAnulados: [3], familiaEstado: 'ANTICIPO', consultaSaldo: false,
         },
       ];
     }
@@ -120,19 +131,32 @@ export class EstadoCuentaTitularService {
         etiqueta: 'Facturas de compra', url: ServiciosCxp.RS_FCTC, campoTitular: 'titular',
         tipo: TipoDocumentoEstadoCuenta.FACTURA, origen: 'RECIBIDO',
         campoFecha: 'fecha', campoNumero: 'numero', campoTotal: 'total',
-        estadosAnulados: [0], familiaEstado: 'CXP',
+        estadosAnulados: [0], familiaEstado: 'CXP', consultaSaldo: true,
+      },
+      {
+        // PGS.LQCC. `fecha` es LocalDateTime (a diferencia de FCTC, que es
+        // LocalDate) — puede traer hora al ordenar/formatear, no es un bug.
+        // consultaSaldo: false — PGS.APLP no tiene FK a LQCC, la liquidación
+        // de compra no tiene aplicaciones que rastrear; su saldo pendiente es
+        // su total. Mandarla por /aplp/saldo (como una FCTC) le pisaba el
+        // total/saldo con los de una factura ajena que coincidiera en id, o
+        // tiraba 500 — los dos ids son IDENTITY de tabla, independientes.
+        etiqueta: 'Liquidaciones de compra', url: ServiciosCxp.RS_LQCC, campoTitular: 'titular',
+        tipo: TipoDocumentoEstadoCuenta.FACTURA, origen: 'RECIBIDO',
+        campoFecha: 'fecha', campoNumero: 'numero', campoTotal: 'total',
+        estadosAnulados: [0], familiaEstado: 'CXP', consultaSaldo: false,
       },
       {
         etiqueta: 'Notas de crédito de compra', url: ServiciosCxp.RS_NTCC, campoTitular: 'titular',
         tipo: TipoDocumentoEstadoCuenta.NOTA_CREDITO, origen: 'RECIBIDO',
         campoFecha: 'fecha', campoNumero: 'numero', campoTotal: 'total',
-        estadosAnulados: [0], familiaEstado: 'CXP',
+        estadosAnulados: [0], familiaEstado: 'CXP', consultaSaldo: false,
       },
       {
         etiqueta: 'Notas de débito de compra', url: ServiciosCxp.RS_NTDC, campoTitular: 'titular',
         tipo: TipoDocumentoEstadoCuenta.NOTA_DEBITO, origen: 'RECIBIDO',
         campoFecha: 'fecha', campoNumero: 'numero', campoTotal: 'total',
-        estadosAnulados: [0], familiaEstado: 'CXP',
+        estadosAnulados: [0], familiaEstado: 'CXP', consultaSaldo: false,
       },
       {
         // CBR.RTV2: la retención que la empresa le emite al proveedor y que se
@@ -141,13 +165,13 @@ export class EstadoCuentaTitularService {
         etiqueta: 'Retenciones emitidas', url: ServiciosCxc.RS_RTV2, campoTitular: 'proveedor',
         tipo: TipoDocumentoEstadoCuenta.RETENCION, origen: 'EMITIDO',
         campoFecha: 'fecha', campoNumero: 'numero', campoTotal: 'total',
-        estadosAnulados: [0, 6], familiaEstado: 'CXC',
+        estadosAnulados: [0, 6], familiaEstado: 'CXC', consultaSaldo: false,
       },
       {
         etiqueta: 'Anticipos a proveedor', url: ServiciosTsr.RS_ANTP, campoTitular: 'titular',
         tipo: TipoDocumentoEstadoCuenta.ANTICIPO, origen: 'EMITIDO',
         campoFecha: 'fechaAnticipo', campoNumero: 'numeroDoc', campoTotal: 'valor',
-        estadosAnulados: [3], familiaEstado: 'ANTICIPO',
+        estadosAnulados: [3], familiaEstado: 'ANTICIPO', consultaSaldo: false,
       },
     ];
   }
@@ -247,6 +271,7 @@ export class EstadoCuentaTitularService {
       asiento: this.asientoDe(fila?.asiento, 'Documento'),
       abonosCargados: false,
       cargandoAbonos: false,
+      consultaSaldo: fuente.consultaSaldo,
       original: fila,
     };
   }
@@ -265,12 +290,27 @@ export class EstadoCuentaTitularService {
   /**
    * Solo las facturas tienen saldo calculado por el flujo de abonos; el resto
    * de documentos se aplica entero y no arrastra saldo propio.
+   *
+   * Dentro de "factura" hay una excepción: `consultaSaldo: false` marca las
+   * fuentes tipo FACTURA sin flujo de aplicación de pagos detrás (hoy,
+   * liquidación de compra). Para esas no se consulta /aplp|/aplc — su saldo
+   * pendiente es directamente su total, sin aplicado y sin marcar
+   * `saldoDesconocido` (no es que falló la consulta: no hay consulta).
    */
   private completarSaldos(
     documentos: DocumentoEstadoCuenta[],
     rol: RolTitular
   ): Observable<DocumentoEstadoCuenta[]> {
-    const facturas = documentos.filter((d) => d.tipo === TipoDocumentoEstadoCuenta.FACTURA && d.id > 0);
+    documentos
+      .filter((d) => d.tipo === TipoDocumentoEstadoCuenta.FACTURA && !d.consultaSaldo)
+      .forEach((d) => {
+        d.totalAplicado = 0;
+        d.saldoPendiente = d.total;
+      });
+
+    const facturas = documentos.filter(
+      (d) => d.tipo === TipoDocumentoEstadoCuenta.FACTURA && d.consultaSaldo && d.id > 0
+    );
     if (!facturas.length) {
       return of(documentos);
     }

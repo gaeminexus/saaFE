@@ -95,6 +95,13 @@ export interface DocumentoEstadoCuenta {
    * fallo de red la saque de los filtros por estado de pago.
    */
   saldoDesconocido?: boolean;
+  /**
+   * Si la fuente de este documento tiene saldo consultable en /aplp o /aplc.
+   * `false` en documentos "factura-like" sin flujo de aplicación de pagos
+   * detrás (p. ej. liquidación de compra: PGS.APLP no tiene FK a LQCC) — su
+   * saldo pendiente es su total, no se consulta ni se marca `saldoDesconocido`.
+   */
+  consultaSaldo: boolean;
   observacion?: string | null;
   asiento?: AsientoRelacionado | null;
   /** Abonos del documento; se cargan al expandir la fila. */
