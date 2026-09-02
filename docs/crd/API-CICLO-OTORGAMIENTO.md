@@ -60,7 +60,7 @@ Cuerpo, los dos iguales:
 Devuelven el `Prestamo` actualizado, con `idEstado` ya movido y los campos de auditoría llenos
 (`usuarioAprobacion`/`fechaAprobacion`, o `usuarioRechazo`/`fechaRechazo`).
 
-**Errores:** `HTTP 500` con el mensaje en texto plano, como todo el proyecto. Si la transición no
+**Errores:** `HTTP 500`. ⚠️ **El cuerpo NO es texto plano, aunque el REST lo escriba así:** hay un `@Provider` global (`com.saa.ws.rest.MensajeErrorJsonFilter`) que envuelve toda respuesta ≥400 cuya entidad sea un `String` y cuyo tipo sea JSON, y la entrega como `{"mensaje": "..."}`. Leé `error.mensaje` primero, con el texto crudo como respaldo — que es lo que ya hace `extraerMensajeError`. Si la transición no
 aplica —por ejemplo aprobar un préstamo que todavía no tiene tabla— el mensaje **nombra el estado
 actual**. Mostralo tal cual con `extraerMensajeError`; no lo reemplaces por un texto genérico.
 
