@@ -8,8 +8,12 @@ import { TitularSelectorDialogComponent } from '../../../../../shared/components
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { SaldoFactura } from '../../../../../shared/model/pagos-cobros/catalogos-aplicacion-pago';
 import { Titular } from '../../../../tsr/model/titular';
-import { FacturaCompraSelectorDialogComponent } from '../../../dialog/factura-compra-selector-dialog/factura-compra-selector-dialog.component';
-import { ResultadoAplicacionCxp } from '../../../model/aplicacion-pago-cxp';
+import {
+  DocumentoCruceProveedor,
+  DocumentoCruceSelectorDialogComponent,
+  TipoDocumentoCruceProveedor,
+} from '../../../dialog/documento-cruce-selector-dialog/documento-cruce-selector-dialog.component';
+import { CruceAnticiposCxpRequest, ResultadoAplicacionCxp } from '../../../model/aplicacion-pago-cxp';
 import { FacturaCompra } from '../../../model/factura-compra';
 import { AplicacionPagoCxpService } from '../../../service/aplicacion-pago-cxp.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
@@ -40,9 +44,12 @@ export class CruceAnticipoProveedorComponent implements OnInit {
 
   private readonly ROL_PROVEEDOR = 2;
 
-  idFactura: number | null = null;
+  /** Id del documento elegido — factura de compra o liquidación, según `tipoDocumento`. */
+  idDocumento: number | null = null;
+  /** Facturas por el deep-link de `?idFactura=` de ngOnInit; el selector puede elegir liquidación. */
+  tipoDocumento: TipoDocumentoCruceProveedor = 'FACTURA';
   proveedor = signal<Titular | null>(null);
-  facturaElegida = signal<FacturaCompra | null>(null);
+  documentoElegido = signal<DocumentoCruceProveedor | null>(null);
   formFecha: Date | null = new Date();
   formObservacion = '';
 
@@ -55,7 +62,8 @@ export class CruceAnticipoProveedorComponent implements OnInit {
   ngOnInit(): void {
     const id = this.route.snapshot.queryParamMap.get('idFactura');
     if (id) {
-      this.idFactura = +id;
+      this.idDocumento = +id;
+      this.tipoDocumento = 'FACTURA';
       this.cargarSaldo();
       // Al llegar desde la factura no viene el proveedor, y sin él no se puede
       // listar de qué anticipos cruzar: se resuelve leyendo la factura.
@@ -67,9 +75,16 @@ export class CruceAnticipoProveedorComponent implements OnInit {
     this.facturaS.getById(idFactura).subscribe({
       next: (factura: FacturaCompra | null) => {
         const titular = (factura as any)?.titular;
-        if (titular?.codigo) {
+        if (titular?.codigo && factura) {
           this.proveedor.set(titular);
-          this.facturaElegida.set(factura);
+          this.documentoElegido.set({
+            tipo: 'FACTURA',
+            id: factura.id,
+            numero: factura.numero,
+            fecha: factura.fecha,
+            total: Number(factura.total ?? 0),
+            estadoPago: factura.estadoPago ?? null,
+          });
           this.cargarAnticipos();
         }
       },
@@ -89,21 +104,21 @@ export class CruceAnticipoProveedorComponent implements OnInit {
     }).afterClosed().subscribe((titular: Titular | null) => {
       if (!titular) return;
       this.proveedor.set(titular);
-      this.limpiarFactura();
+      this.limpiarDocumento();
       this.cargarAnticipos();
-      this.buscarFactura();
+      this.buscarDocumento();
     });
   }
 
-  /** Paso 2: elegir una factura pendiente del proveedor ya seleccionado. */
-  buscarFactura(): void {
+  /** Paso 2: elegir una factura o liquidación pendiente del proveedor ya seleccionado. */
+  buscarDocumento(): void {
     const titular = this.proveedor();
     if (!titular?.codigo) {
       this.snackBar.open('Primero seleccione un proveedor', 'Cerrar', { duration: 3000 });
       return;
     }
 
-    this.dialog.open(FacturaCompraSelectorDialogComponent, {
+    this.dialog.open(DocumentoCruceSelectorDialogComponent, {
       width: '900px',
       maxWidth: '98vw',
       data: {
@@ -111,10 +126,11 @@ export class CruceAnticipoProveedorComponent implements OnInit {
         nombreTitular: this.nombreProveedor(),
         soloPendientes: true,
       },
-    }).afterClosed().subscribe((factura: FacturaCompra | null) => {
-      if (!factura) return;
-      this.facturaElegida.set(factura);
-      this.idFactura = factura.id;
+    }).afterClosed().subscribe((doc: DocumentoCruceProveedor | null) => {
+      if (!doc) return;
+      this.documentoElegido.set(doc);
+      this.idDocumento = doc.id;
+      this.tipoDocumento = doc.tipo;
       this.cargarSaldo();
     });
   }
@@ -125,20 +141,28 @@ export class CruceAnticipoProveedorComponent implements OnInit {
     return t.razonSocial || t.nombre || t.identificacion || `Titular ${t.codigo}`;
   }
 
-  private limpiarFactura(): void {
-    this.facturaElegida.set(null);
-    this.idFactura = null;
+  private limpiarDocumento(): void {
+    this.documentoElegido.set(null);
+    this.idDocumento = null;
+    this.tipoDocumento = 'FACTURA';
     this.saldo.set(null);
     this.resultado.set(null);
   }
 
   cargarSaldo(): void {
-    if (!this.idFactura) return;
+    if (!this.idDocumento) return;
     this.cargandoSaldo.set(true);
     this.error.set('');
     this.saldo.set(null);
 
-    this.aplicacionPagoS.getSaldo(this.idFactura).subscribe({
+    // ⛔ La liquidación NO usa /saldo/{id}: ese endpoint hace em.find(FacturaCompra, id) y FCTC/LQCC
+    // tienen numeraciones IDENTITY independientes — devolvería el saldo de una factura ajena que
+    // coincida en número, sin ningún error (docs/logica-negocio/cxp/DISENO-CRUCE-ANTICIPO-CONTRA-LIQUIDACION.md).
+    const saldo$ = this.tipoDocumento === 'LIQUIDACION_COMPRA'
+      ? this.aplicacionPagoS.getSaldoLiquidacion(this.idDocumento)
+      : this.aplicacionPagoS.getSaldo(this.idDocumento);
+
+    saldo$.subscribe({
       next: (saldo) => {
         this.saldo.set(saldo);
         this.cargandoSaldo.set(false);
@@ -242,7 +266,7 @@ export class CruceAnticipoProveedorComponent implements OnInit {
    * revalida todo (saldo de cada anticipo, saldo de la factura, estados).
    */
   get puedeConfirmar(): boolean {
-    if (!this.idFactura || this.procesando()) return false;
+    if (!this.idDocumento || this.procesando()) return false;
     if (!this.haySeleccion) return false;
     if (this.algunAnticipoExcedido) return false;
     const pendiente = this.saldo()?.saldoPendiente;
@@ -256,7 +280,7 @@ export class CruceAnticipoProveedorComponent implements OnInit {
   }
 
   confirmar(): void {
-    if (!this.puedeConfirmar || !this.idFactura) return;
+    if (!this.puedeConfirmar || !this.idDocumento) return;
 
     const lineas = this.anticipos()
       .filter((a) => this.montoDe(a) > 0)
@@ -266,14 +290,21 @@ export class CruceAnticipoProveedorComponent implements OnInit {
     this.error.set('');
     this.resultado.set(null);
 
-    this.aplicacionPagoS.cruzarAnticipos({
-      idFacturaCompra: this.idFactura,
+    // Exactamente uno de los dos — mandar los dos da 400 en vez de "gana el primero".
+    const referenciaDocumento = this.tipoDocumento === 'LIQUIDACION_COMPRA'
+      ? { idLiquidacionCompra: this.idDocumento }
+      : { idFacturaCompra: this.idDocumento };
+
+    const payload: CruceAnticiposCxpRequest = {
+      ...referenciaDocumento,
       anticipos: lineas,
       fechaAplicacion: this.fechaISO(),
       idEmpresa: this.idEmpresaSesion(),
       idUsuario: this.idUsuarioSesion(),
       observacion: this.formObservacion.trim(),
-    }).subscribe({
+    };
+
+    this.aplicacionPagoS.cruzarAnticipos(payload).subscribe({
       next: (resp) => {
         this.procesando.set(false);
         this.resultado.set(resp);

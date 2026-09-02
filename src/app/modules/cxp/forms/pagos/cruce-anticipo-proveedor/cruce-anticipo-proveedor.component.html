@@ -25,19 +25,23 @@
         </mat-form-field>
 
         <mat-form-field appearance="outline" class="campo-selector">
-          <mat-label>Factura de compra</mat-label>
-          <input matInput readonly [value]="facturaElegida()?.numero || ''" placeholder="Seleccione una factura" />
+          <mat-label>Documento a cruzar</mat-label>
+          <input matInput readonly [value]="documentoElegido()?.numero || ''" placeholder="Seleccione una factura o liquidación" />
           <button
             mat-icon-button
             matSuffix
             type="button"
-            matTooltip="Buscar factura pendiente"
+            matTooltip="Buscar factura o liquidación pendiente"
             [disabled]="!proveedor()"
-            (click)="buscarFactura()">
+            (click)="buscarDocumento()">
             <mat-icon>receipt_long</mat-icon>
           </button>
           @if (!proveedor()) {
             <mat-hint>Elija primero el proveedor</mat-hint>
+          } @else if (documentoElegido()) {
+            <mat-hint [class.hint-liquidacion]="documentoElegido()!.tipo === 'LIQUIDACION_COMPRA'">
+              {{ documentoElegido()!.tipo === 'LIQUIDACION_COMPRA' ? 'Liquidación de compra' : 'Factura de compra' }}
+            </mat-hint>
           }
         </mat-form-field>
       </div>
@@ -45,14 +49,14 @@
       @if (cargandoSaldo()) {
         <div class="estado-linea">
           <mat-spinner diameter="24"></mat-spinner>
-          <span>Consultando saldo de la factura...</span>
+          <span>Consultando saldo del documento...</span>
         </div>
       }
 
       @if (saldo(); as s) {
         <div class="resumen-saldo">
           <div class="item">
-            <span class="etiqueta">Factura</span>
+            <span class="etiqueta">{{ documentoElegido()?.tipo === 'LIQUIDACION_COMPRA' ? 'Liquidación' : 'Factura' }}</span>
             <span class="valor">{{ s.numeroFactura }}</span>
           </div>
           <div class="item">
@@ -180,7 +184,7 @@
       @if (excedeSaldo) {
         <div class="mensaje-advertencia">
           <mat-icon>warning</mat-icon>
-          <span>El total a cruzar no puede superar el saldo pendiente de la factura.</span>
+          <span>El total a cruzar no puede superar el saldo pendiente del documento.</span>
         </div>
       }
 

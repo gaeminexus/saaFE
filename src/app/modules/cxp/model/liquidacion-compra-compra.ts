@@ -37,6 +37,12 @@ export interface LiquidacionCompraCompra {
   fechaAutorizacion: string; // ISO LocalDateTime
   estado: number;
   estadoEmision: number;
+  /**
+   * Estado de pago (1=Pendiente, 2=Parcial, 3=Pagada), columna LQCCEPAG.
+   * Nuevo — antes la liquidación no tenía pagos que rastrear (ver
+   * docs/logica-negocio/cxp/DISENO-CRUCE-ANTICIPO-CONTRA-LIQUIDACION.md en saaBE).
+   */
+  estadoPago?: number;
   motivoAnulacion?: string | null;
   fechaAnulacion?: string | null;
   usuarioAnulacion?: string | null;

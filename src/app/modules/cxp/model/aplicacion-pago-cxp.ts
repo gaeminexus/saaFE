@@ -13,9 +13,14 @@ export interface AplicacionPagoCxp extends FilaAbono {
   facturaCompra?: DocumentoRelacionado | null;
 }
 
-/** Body de POST /aplp/anticipo. */
+/**
+ * Body de POST /aplp/anticipo. `idFacturaCompra`/`idLiquidacionCompra` son ALTERNATIVOS, nunca
+ * los dos juntos (400 si van ambos, 400 si no va ninguno) — ver
+ * docs/logica-negocio/cxp/DISENO-CRUCE-ANTICIPO-CONTRA-LIQUIDACION.md en saaBE.
+ */
 export interface CruceAnticipoCxpRequest {
-  idFacturaCompra: number;
+  idFacturaCompra?: number;
+  idLiquidacionCompra?: number;
   valor: number;
   fechaAplicacion?: string;
   idEmpresa: number;
@@ -33,9 +38,13 @@ export interface LineaCruceAnticipo {
  * Body de POST /aplp/anticipos: cruce contra anticipos específicos. Cada línea
  * genera su propia aplicación con su propio asiento, que es lo que permite
  * deshacer exactamente esos abonos si el anticipo se anula.
+ *
+ * `idFacturaCompra`/`idLiquidacionCompra` son ALTERNATIVOS, mismo criterio que
+ * `CruceAnticipoCxpRequest` — exactamente uno de los dos.
  */
 export interface CruceAnticiposCxpRequest {
-  idFacturaCompra: number;
+  idFacturaCompra?: number;
+  idLiquidacionCompra?: number;
   anticipos: LineaCruceAnticipo[];
   fechaAplicacion?: string;
   idEmpresa: number;

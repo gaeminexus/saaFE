@@ -11,6 +11,13 @@
   }
 }
 
+// Distingue visiblemente si el documento elegido es factura o liquidación — una y otra del
+// mismo proveedor pueden tener números parecidos.
+.hint-liquidacion {
+  color: #86198f;
+  font-weight: 600;
+}
+
 // ── Selección de anticipos a cruzar ───────────────────────────────────────
 .bloque-anticipos {
   margin: 16px 0;
