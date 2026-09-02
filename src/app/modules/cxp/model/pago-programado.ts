@@ -298,3 +298,14 @@ export interface DisponibilidadCuenta {
   comprometido: number;
   disponible: number;
 }
+
+/**
+ * Respuesta de GET /pgtr/facturasComprometidas/{idTitular}. `idsFacturas` son las facturas de
+ * ese proveedor cuyo saldo pendiente ya está íntegramente comprometido por pagos vigentes
+ * (incluye POR_APROBAR, no solo confirmados) — la regla la aplica el servidor, el frontend solo
+ * excluye esos ids de los combos de "facturas pendientes por pagar".
+ */
+export interface FacturasComprometidasResponse {
+  idTitular: number;
+  idsFacturas: number[];
+}

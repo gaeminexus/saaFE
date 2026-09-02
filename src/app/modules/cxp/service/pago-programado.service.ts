@@ -9,6 +9,7 @@ import {
   ConfirmarManualRequest,
   ConfirmarManualResponse,
   DisponibilidadCuenta,
+  FacturasComprometidasResponse,
   FiltrosPorAprobar,
   GenerarLoteRequest,
   LoteGeneradoResponse,
@@ -128,6 +129,17 @@ export class PagoProgramadoService {
     let params = new HttpParams();
     if (fecha) params = params.set('fecha', fecha);
     return this.http.get<DisponibilidadCuenta>(`${ServiciosCxp.RS_PGTR}/disponibilidad/${idCuenta}`, { params }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * Facturas de un proveedor cuyo saldo ya está íntegramente comprometido por pagos vigentes
+   * (incluidos los POR_APROBAR). Se usa para sacarlas de los combos de "facturas pendientes por
+   * pagar" — la regla la valida el servidor, esto es solo para no ofrecer la opción.
+   */
+  facturasComprometidas(idTitular: number): Observable<FacturasComprometidasResponse> {
+    return this.http.get<FacturasComprometidasResponse>(`${ServiciosCxp.RS_PGTR}/facturasComprometidas/${idTitular}`).pipe(
       catchError(this.handleError)
     );
   }

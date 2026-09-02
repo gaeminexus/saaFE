@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, Inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Observable } from 'rxjs';
+import { Observable, catchError, forkJoin, map, of } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -23,6 +23,7 @@ import { NotaDebitoCompra } from '../../model/nota-debito-compra';
 import { FacturaCompraService } from '../../service/factura-compra.service';
 import { NotaCreditoCompraService } from '../../service/nota-credito-compra.service';
 import { NotaDebitoCompraService } from '../../service/nota-debito-compra.service';
+import { PagoProgramadoService } from '../../service/pago-programado.service';
 import { LiquidacionEmitirService } from '../../../cxc/service/emitir/liquidacion-emitir.service';
 import { LiquidacionEmitir } from '../../../cxc/model/liquidacion-emitir';
 
@@ -92,6 +93,7 @@ export class FacturaCompraSelectorDialogComponent implements OnInit {
     private notaCreditoService: NotaCreditoCompraService,
     private notaDebitoService: NotaDebitoCompraService,
     private liquidacionService: LiquidacionEmitirService,
+    private pagoProgramadoService: PagoProgramadoService,
   ) {}
 
   get tipo(): TipoDocumentoCompra {
@@ -130,14 +132,33 @@ export class FacturaCompraSelectorDialogComponent implements OnInit {
     );
     cTitular.setNumeroCampoRepetido(0);
 
-    this.consultaPorTipo([cTitular]).subscribe({
-      next: (data) => {
-        let lista = ((data || []) as DocumentoCompraSeleccionable[])
+    // Facturas cuyo saldo ya está íntegramente comprometido por pagos vigentes (incluye
+    // POR_APROBAR): no deben ofrecerse para registrar un pago nuevo — ya no hay saldo libre.
+    // Solo aplica a FACTURA con soloPendientes: el endpoint es sobre facturas (idsFacturas), y
+    // esta pantalla también se usa para elegir notas/liquidación (soloPendientes true igual) por
+    // otras rutas donde este chequeo no corresponde. Si el GET falla se sigue mostrando la fila
+    // — el backend ya rechaza el pago duplicado si se fuerza, esto es solo para no ofrecerlo.
+    const idsComprometidas$ = (this.tipo === 'FACTURA' && this.data.soloPendientes)
+      ? this.pagoProgramadoService.facturasComprometidas(this.data.codigoTitular).pipe(
+          map((r) => new Set(r?.idsFacturas || [])),
+          catchError(() => of(new Set<number>())),
+        )
+      : of(new Set<number>());
+
+    forkJoin({
+      documentos: this.consultaPorTipo([cTitular]),
+      comprometidas: idsComprometidas$,
+    }).subscribe({
+      next: ({ documentos, comprometidas }) => {
+        let lista = ((documentos || []) as DocumentoCompraSeleccionable[])
           .sort((a, b) => (b.id || 0) - (a.id || 0));
         if (this.data.soloPendientes) {
           // Si el backend no informa estadoPago se conserva la fila: no se puede
           // afirmar que esté pagada.
           lista = lista.filter((f) => (f as FacturaCompra).estadoPago !== EstadoPagoFactura.PAGADA);
+        }
+        if (comprometidas.size > 0) {
+          lista = lista.filter((f) => !comprometidas.has(f.id));
         }
         this.todasLasFacturas = lista;
         this.dataSource.data = [...lista];
