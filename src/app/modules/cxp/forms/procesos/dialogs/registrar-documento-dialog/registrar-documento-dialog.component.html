@@ -1,0 +1,56 @@
+<h2 mat-dialog-title>
+  <mat-icon>fact_check</mat-icon> Registrar documento en BD
+</h2>
+
+<mat-dialog-content>
+  <p class="confirm-texto">¿Registrar en BD el documento <strong>{{ data.documento.serieComprobante }}</strong>?</p>
+
+  <div class="intermediario-row">
+    <mat-checkbox [ngModel]="esIntermediario" (ngModelChange)="onToggleIntermediario($event)">
+      Factura de intermediario
+    </mat-checkbox>
+
+    @if (esIntermediario) {
+      <p class="intermediario-hint">
+        El total de la factura se contabiliza contra la cuenta del grupo del producto elegido.
+        No se registran ni el detalle ni el IVA.
+      </p>
+
+      <mat-form-field appearance="outline" class="full-w">
+        <mat-label>Producto *</mat-label>
+        <input
+          matInput
+          [(ngModel)]="productoBusqueda"
+          (ngModelChange)="filtrarProductos()"
+          [matAutocomplete]="autoProd"
+          [disabled]="cargandoProductos"
+          placeholder="Buscar por nombre o código..."
+        />
+        <mat-icon matSuffix>search</mat-icon>
+        <mat-autocomplete #autoProd="matAutocomplete">
+          @if (cargandoProductos) {
+            <mat-option disabled>Cargando productos…</mat-option>
+          }
+          @for (p of productosFiltrados; track p.id) {
+            <mat-option [value]="p.nombre + ' (' + p.codigo + ')'" (onSelectionChange)="$event.source.selected && seleccionarProducto(p)">
+              {{ p.nombre }} <span class="prod-cod">({{ p.codigo }})</span>
+              @if (p.grupoProducto?.nombre) {
+                <span class="prod-grupo"> · {{ p.grupoProducto.nombre }}</span>
+              }
+            </mat-option>
+          }
+        </mat-autocomplete>
+        @if (idProducto != null) {
+          <mat-hint>Seleccionado: {{ productoSeleccionadoNombre }}</mat-hint>
+        }
+      </mat-form-field>
+    }
+  </div>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-stroked-button (click)="cancelar()">Cancelar</button>
+  <button mat-raised-button color="primary" (click)="confirmar()" [disabled]="!puedeConfirmar">
+    <mat-icon>check</mat-icon> Registrar
+  </button>
+</mat-dialog-actions>

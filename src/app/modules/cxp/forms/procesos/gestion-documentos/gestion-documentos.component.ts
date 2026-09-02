@@ -27,6 +27,7 @@ import { CargaArchivoTxtService } from '../../../service/carga-archivo-txt.servi
 import { CargaDocumentosService } from '../../../service/carga-documentos.service';
 import { DocumentoCxpService } from '../../../service/documento-cxp.service';
 import { ClasificarProductosDialogComponent, ClasificarProductosDialogResult } from '../dialogs/clasificar-productos-dialog/clasificar-productos-dialog.component';
+import { RegistrarDocumentoDialogComponent, RegistrarDocumentoDialogResult } from '../dialogs/registrar-documento-dialog/registrar-documento-dialog.component';
 import { SubirXmlDialogComponent, SubirXmlDialogResult } from '../dialogs/subir-xml-dialog/subir-xml-dialog.component';
 import { ReembolsosFacturaComponent } from '../reembolsos-factura/reembolsos-factura.component';
 
@@ -1010,9 +1011,24 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit, OnDest
   // ─── REGISTRAR EN BD ────────────────────────────────────
 
   registrar(doc: DocumentoCxp): void {
-    if (!confirm(`¿Registrar en BD el documento ${doc.serieComprobante}?`)) return;
+    const ref = this.dialog.open(RegistrarDocumentoDialogComponent, {
+      data: { documento: doc },
+      width: '520px',
+      maxWidth: '95vw',
+    });
+    ref.afterClosed().subscribe((result: RegistrarDocumentoDialogResult | null) => {
+      if (result) this.confirmarRegistro(doc, result);
+    });
+  }
+
+  private confirmarRegistro(doc: DocumentoCxp, opciones: RegistrarDocumentoDialogResult): void {
     this.procesando.set(true);
-    this.processService.registrarBD(doc.id, { idEmpresa: this.idEmpresa, idUsuario: this.idUsuario }).subscribe({
+    this.processService.registrarBD(doc.id, {
+      idEmpresa: this.idEmpresa,
+      idUsuario: this.idUsuario,
+      esIntermediario: opciones.esIntermediario || undefined,
+      idProductoIntermediario: opciones.esIntermediario ? (opciones.idProductoIntermediario ?? undefined) : undefined,
+    }).subscribe({
       next: (resp) => {
         this.procesando.set(false);
         if (Array.isArray(resp?.bloqueantes) && resp.bloqueantes.length > 0) {

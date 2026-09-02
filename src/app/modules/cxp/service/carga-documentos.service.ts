@@ -90,10 +90,18 @@ export class CargaDocumentosService {
     return this.http.post<DocumentoCxp>(`${PROCESS_URL}/cargarXml/${idDocumentoCxp}`, payload, this.httpOptions).pipe(catchError(this.handleError));
   }
 
-  /** FASE 3 — Registra el documento en las tablas CXP */
+  /**
+   * FASE 3 — Registra el documento en las tablas CXP.
+   * `esIntermediario`/`idProductoIntermediario`: docs/logica-negocio/cxp/DISENO-FACTURA-INTERMEDIARIO.md
+   * en saaBE. `esIntermediario` opcional — si no viene, el backend lo trata como `false` (mismo
+   * criterio que `agruparEnUnCheque` en tsr/aprobación de pagos); `idProductoIntermediario`
+   * obligatorio solo cuando `esIntermediario` va en `true`, el backend responde 422 si falta.
+   */
   registrarBD(idDocumentoCxp: number, payload: {
     idEmpresa: number;
     idUsuario: number;
+    esIntermediario?: boolean;
+    idProductoIntermediario?: number;
   }): Observable<any> {
     return this.http.post<any>(`${PROCESS_URL}/registrarBD/${idDocumentoCxp}`, payload, this.httpOptions).pipe(catchError(this.handleError));
   }
