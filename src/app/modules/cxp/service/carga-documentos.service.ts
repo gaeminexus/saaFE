@@ -106,6 +106,26 @@ export class CargaDocumentosService {
     return this.http.post<any>(`${PROCESS_URL}/registrarBD/${idDocumentoCxp}`, payload, this.httpOptions).pipe(catchError(this.handleError));
   }
 
+  /**
+   * Anula solo el asiento contable de un documento REGISTRADO_BD(3) — la factura queda intacta.
+   * docs/cxp/API-ANULAR-RECONTABILIZAR-DOCUMENTO-CXP.md. 409 si no está en ese estado o si hay
+   * pagos programados vigentes; el cuerpo del error es `{error}`, mostrarlo tal cual.
+   */
+  anularContabilidad(idDocumentoCxp: number, payload: { motivo: string; idUsuario: number }): Observable<any> {
+    return this.http.post<any>(`${PROCESS_URL}/anularContabilidad/${idDocumentoCxp}`, payload, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
+
+  /**
+   * Regenera el asiento de un documento XML_CARGADO(2) que viene de `anularContabilidad`. 409 si
+   * no está en ese estado, si no es FACTURA_COMPRA, o si el asiento no se puede generar — en ese
+   * caso el documento NO vuelve solo a REGISTRADO_BD, queda en XML_CARGADO para reintentar.
+   */
+  recontabilizar(idDocumentoCxp: number, payload: { idUsuario: number }): Observable<any> {
+    return this.http.post<any>(`${PROCESS_URL}/recontabilizar/${idDocumentoCxp}`, payload, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
+
   /** FASE 3b — Crea productos faltantes y registra en BD */
   crearProductosYRegistrar(idDocumentoCxp: number, payload: {
     idEmpresa: number;

@@ -340,6 +340,11 @@
                         <mat-icon>save</mat-icon> Registrar
                       </button>
                     }
+                    @if (esDecontabilizado(d)) {
+                      <button mat-stroked-button color="primary" (click)="recontabilizar(d)" [disabled]="procesando()" matTooltip="Regenerar el asiento contable de este documento">
+                        <mat-icon>receipt_long</mat-icon> Recontabilizar
+                      </button>
+                    }
                     @if (d.estadoDocumento === 5) {
                       <button mat-stroked-button (click)="resolverNovedad(d, 'MANTENER')" [disabled]="procesando()">
                         <mat-icon>check_circle</mat-icon> Mantener
@@ -491,6 +496,9 @@
                   <div class="acciones-fila">
                     <button mat-stroked-button color="warn" (click)="revertir(d)" [disabled]="procesando()" matTooltip="Revertir registro">
                       <mat-icon>undo</mat-icon> Revertir
+                    </button>
+                    <button mat-stroked-button (click)="anularContabilidad(d)" [disabled]="procesando()" matTooltip="Anular solo el asiento contable — la factura queda intacta">
+                      <mat-icon>remove_circle_outline</mat-icon> Anular contabilidad
                     </button>
                     @if (puedeGestionarReembolsos(d)) {
                       <button mat-icon-button color="accent" (click)="abrirDialogoReembolsos(d)" [disabled]="procesando()" matTooltip="Documentos de reembolso">

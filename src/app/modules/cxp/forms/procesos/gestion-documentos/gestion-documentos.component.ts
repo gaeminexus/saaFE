@@ -11,6 +11,7 @@ import { MatTableDataSource } from '@angular/material/table';
 import { MatTabsModule } from '@angular/material/tabs';
 import { Subscription, catchError, of, switchMap, timer } from 'rxjs';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { MotivoDialogComponent, MotivoDialogData } from '../../../../../shared/components/motivo-dialog/motivo-dialog.component';
 import { TitularSelectorDialogComponent } from '../../../../../shared/components/titular-selector-dialog/titular-selector-dialog.component';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
@@ -1054,6 +1055,68 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit, OnDest
         } else {
           this.mostrarErrorDialog('Error al registrar', this.extraerMensajeError(err));
         }
+      },
+    });
+  }
+
+  // ─── ANULAR CONTABILIDAD / RECONTABILIZAR ───────────────
+  // docs/cxp/API-ANULAR-RECONTABILIZAR-DOCUMENTO-CXP.md. No confundir con
+  // `revertir()`: esos dos endpoints no borran la factura, solo su asiento.
+
+  /**
+   * Un documento REGISTRADO_BD(3) muestra "Anular contabilidad" en la pestaña de registrados —
+   * esa pestaña ya filtra por ese estado, no hace falta repetir la condición acá.
+   */
+  anularContabilidad(doc: DocumentoCxp): void {
+    const data: MotivoDialogData = {
+      titulo: `Anular contabilidad de ${doc.serieComprobante}`,
+      advertencia: 'Se elimina el asiento contable del documento; la factura queda intacta. '
+        + 'El documento vuelve a XML_CARGADO y podrá regenerar el asiento con Recontabilizar.',
+      textoConfirmar: 'Anular contabilidad',
+    };
+    this.dialog.open(MotivoDialogComponent, { width: '520px', data }).afterClosed().subscribe((motivo: string | null) => {
+      if (!motivo) return;
+      this.procesando.set(true);
+      this.processService.anularContabilidad(doc.id, { motivo, idUsuario: this.idUsuario }).subscribe({
+        next: (resp) => {
+          this.procesando.set(false);
+          this.mostrarExito(resp?.mensaje || 'Contabilidad anulada');
+          this.cargar();
+        },
+        error: (err) => {
+          this.procesando.set(false);
+          // 409 legítimo (estado equivocado o pagos vigentes): mostrar el mensaje del servidor
+          // tal cual, no es un fallo que haya que reformular.
+          this.mostrarErrorDialog('No se pudo anular la contabilidad', this.extraerMensajeError(err));
+        },
+      });
+    });
+  }
+
+  /**
+   * Solo tiene sentido en XML_CARGADO(2) que viene de una anulación de contabilidad, no en un
+   * documento nuevo sin registrar todavía — ese sigue mostrando "Registrar". La única señal que
+   * la fila trae para distinguirlos es la observación (§4.3 del contrato): un documento nunca
+   * registrado no la tiene con ese prefijo.
+   */
+  esDecontabilizado(doc: DocumentoCxp): boolean {
+    return doc.estadoDocumento === 2 && !!doc.observacion?.startsWith('CONTABILIDAD ANULADA');
+  }
+
+  recontabilizar(doc: DocumentoCxp): void {
+    if (!confirm(`¿Recontabilizar el documento ${doc.serieComprobante}? Se generará un asiento contable nuevo.`)) return;
+    this.procesando.set(true);
+    this.processService.recontabilizar(doc.id, { idUsuario: this.idUsuario }).subscribe({
+      next: (resp) => {
+        this.procesando.set(false);
+        this.mostrarExito(resp?.mensaje || 'Documento recontabilizado');
+        this.cargar();
+      },
+      error: (err) => {
+        this.procesando.set(false);
+        // Si falla, el documento queda en XML_CARGADO (no vuelve solo a REGISTRADO_BD) — el
+        // mensaje del servidor ya lo explica, no hay que agregar nada.
+        this.mostrarErrorDialog('No se pudo recontabilizar', this.extraerMensajeError(err));
       },
     });
   }
