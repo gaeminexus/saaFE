@@ -248,20 +248,32 @@ export interface AprobarPagosRequest {
   /** yyyy-MM-dd. Opcional — vacío/omitido = hoy. */
   fechaPago?: string;
   idUsuario: number;
+  /**
+   * Solo tiene efecto con `formaPago = CHEQUE`; con cualquier otra forma el
+   * backend lo ignora. Por defecto `false` — sin mandarlo, el comportamiento
+   * es el de un cheque por pago (docs/tsr/API-UN-CHEQUE-VARIOS-PAGOS.md).
+   */
+  agruparEnUnCheque?: boolean;
 }
 
+/**
+ * Una entrada por CHEQUE, no por pago. `pagos` y `asientos` son listas
+ * siempre, también cuando el cheque cubre un solo pago (§6 del contrato).
+ */
 export interface ChequeAprobado {
-  pago: number;
   numeroCheque: string;
-  asiento: string;
+  valor: number;
+  pagos: number[];
+  asientos: string[];
 }
 
 /**
  * Respuesta de POST /pgtr/aprobar. Con transferencia (`formaPago=2`) los
  * pagos quedan en `registrados` y `cheques` no viene. Con cheque
- * (`formaPago=3`) quedan en `confirmados` y `cheques` sí viene. Con débito
- * automático (`formaPago=4`) quedan en `confirmados` igual que cheque, pero
- * sin `cheques`.
+ * (`formaPago=3`) quedan en `confirmados` y `cheques` sí viene — una entrada
+ * por cheque, con la lista de pagos que agrupa. Con débito automático
+ * (`formaPago=4`) quedan en `confirmados` igual que cheque, pero sin
+ * `cheques`.
  */
 export interface AprobarPagosResponse {
   exito: boolean;

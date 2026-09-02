@@ -112,6 +112,23 @@
       border: 1px solid #ffe082;
     }
 
+    .aviso-info {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      background: #e8f0fe;
+      color: #1a3d7c;
+      border: 1px solid #c3d7f7;
+    }
+
+    .agrupar-cheque {
+      margin-top: 4px;
+
+      .aviso {
+        margin-top: 8px;
+      }
+    }
+
     .actions {
       display: flex;
       justify-content: flex-end;

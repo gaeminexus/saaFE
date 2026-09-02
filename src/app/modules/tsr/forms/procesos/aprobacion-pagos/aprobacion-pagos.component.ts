@@ -105,6 +105,32 @@ export class AprobacionPagosComponent implements OnInit {
   formaPago = signal<number>(FormaPagoAplicacion.TRANSFERENCIA);
   fechaPago = signal<string>('');
 
+  /**
+   * «Un solo cheque para varios pagos» — solo aplica con CHEQUE y solo si
+   * todos los seleccionados son del mismo beneficiario (docs/tsr/API-UN-CHEQUE-VARIOS-PAGOS.md §2 D1).
+   */
+  agruparEnUnCheque = signal<boolean>(false);
+
+  mostrarAgruparEnUnCheque = computed(() => this.formaPago() === FormaPagoAplicacion.CHEQUE);
+
+  beneficiariosSeleccionados = computed(() => {
+    const sel = this.seleccionados();
+    return new Set(this.pagos().filter((p) => sel.has(p.id)).map((p) => p.beneficiario));
+  });
+
+  hayBeneficiariosDistintos = computed(() => this.beneficiariosSeleccionados().size > 1);
+
+  puedeMarcarAgruparEnUnCheque = computed(
+    () => this.mostrarAgruparEnUnCheque() && !this.hayBeneficiariosDistintos(),
+  );
+
+  /** Mantiene la casilla coherente con lo que se puede marcar de verdad — se llama en cada cambio que afecta la condición. */
+  private sincronizarAgrupacion(): void {
+    if (!this.puedeMarcarAgruparEnUnCheque()) {
+      this.agruparEnUnCheque.set(false);
+    }
+  }
+
   get cuentaManejaChequera(): boolean {
     return Number(this.cuentaSeleccionada()?.manejaChequera) === 1;
   }
@@ -198,6 +224,7 @@ export class AprobacionPagosComponent implements OnInit {
       else nuevo.delete(id);
       return nuevo;
     });
+    this.sincronizarAgrupacion();
   }
 
   get todosSeleccionados(): boolean {
@@ -206,12 +233,19 @@ export class AprobacionPagosComponent implements OnInit {
 
   toggleTodos(marcado: boolean): void {
     this.seleccionados.set(marcado ? new Set(this.pagos().map((p) => p.id)) : new Set());
+    this.sincronizarAgrupacion();
+  }
+
+  onCambioFormaPago(valor: number): void {
+    this.formaPago.set(valor);
+    this.sincronizarAgrupacion();
   }
 
   onCambioCuenta(): void {
     if (this.formaPago() === FormaPagoAplicacion.CHEQUE && !this.cuentaManejaChequera) {
       this.formaPago.set(FormaPagoAplicacion.TRANSFERENCIA);
     }
+    this.sincronizarAgrupacion();
     this.consultarDisponibilidad();
   }
 
@@ -254,6 +288,7 @@ export class AprobacionPagosComponent implements OnInit {
       formaPago: this.formaPago(),
       fechaPago: this.fechaPago() || undefined,
       idUsuario: this.appState.getIdUsuario(),
+      agruparEnUnCheque: (this.puedeMarcarAgruparEnUnCheque() && this.agruparEnUnCheque()) || undefined,
     }).subscribe({
       next: (resp) => {
         this.aprobando.set(false);

@@ -130,17 +130,19 @@
             <table class="cheques-tabla">
               <thead>
                 <tr>
-                  <th>Pago</th>
                   <th>N° de cheque</th>
-                  <th>Asiento</th>
+                  <th>Valor</th>
+                  <th>Pagos</th>
+                  <th>Asientos</th>
                 </tr>
               </thead>
               <tbody>
-                @for (c of res.cheques; track c.pago) {
+                @for (c of res.cheques; track c.numeroCheque) {
                   <tr>
-                    <td>{{ c.pago }}</td>
                     <td class="numero-cheque">{{ c.numeroCheque }}</td>
-                    <td>{{ c.asiento }}</td>
+                    <td>{{ c.valor | number: '1.2-2' }}</td>
+                    <td>{{ c.pagos.join(', ') }}</td>
+                    <td>{{ c.asientos.join(', ') }}</td>
                   </tr>
                 }
               </tbody>
@@ -170,7 +172,7 @@
 
         <div class="fila-check">
           <label class="radio-label">Forma de pago</label>
-          <mat-radio-group [ngModel]="formaPago()" (ngModelChange)="formaPago.set($event)">
+          <mat-radio-group [ngModel]="formaPago()" (ngModelChange)="onCambioFormaPago($event)">
             <mat-radio-button [value]="FormaPagoAplicacion.TRANSFERENCIA">Transferencia</mat-radio-button>
             <mat-radio-button [value]="FormaPagoAplicacion.DEBITO_AUTOMATICO">Débito automático</mat-radio-button>
             @if (cuentaManejaChequera) {
@@ -184,6 +186,30 @@
           <input matInput type="date" [ngModel]="fechaPago()" (ngModelChange)="fechaPago.set($event)" placeholder="Hoy si se deja vacío" />
         </mat-form-field>
       </div>
+
+      @if (mostrarAgruparEnUnCheque()) {
+        <div class="fila-check agrupar-cheque">
+          <mat-checkbox
+            [ngModel]="agruparEnUnCheque()"
+            (ngModelChange)="agruparEnUnCheque.set($event)"
+            [disabled]="!puedeMarcarAgruparEnUnCheque()"
+          >
+            Girar un solo cheque para todos los pagos seleccionados
+          </mat-checkbox>
+
+          @if (hayBeneficiariosDistintos()) {
+            <div class="aviso aviso-advertencia">
+              <mat-icon>warning</mat-icon>
+              <span>Los pagos seleccionados tienen beneficiarios distintos — un cheque físico solo puede girarse a un único beneficiario. Ajuste la selección para poder agruparlos.</span>
+            </div>
+          } @else if (agruparEnUnCheque()) {
+            <div class="aviso aviso-info">
+              <mat-icon>info</mat-icon>
+              <span>Se girará un solo cheque por el valor total de los pagos seleccionados. Un cheque agrupado puede requerir conciliación bancaria manual.</span>
+            </div>
+          }
+        </div>
+      }
 
       @if (cuentaSeleccionada()) {
         @if (cargandoDisponibilidad()) {
