@@ -45,3 +45,23 @@ export function aValorDeInput(fecha: Date): string {
   const dia = String(fecha.getDate()).padStart(2, '0');
   return `${fecha.getFullYear()}-${mes}-${dia}`;
 }
+
+/**
+ * `LocalDateTime` como ISO local, sin zona — para campos donde la hora importa de verdad
+ * (`Marcaciones.fechaHora`, `MRCCFCHH`, sin `@JsonFormat`: Jackson exige el separador `T`).
+ *
+ * Nunca `.toISOString()`: usa UTC y termina en `Z`, así que Jackson descarta el offset y una
+ * marcación de las 08:30 en Ecuador queda grabada a las 13:30 (la trampa del §0 de los contratos
+ * de este módulo). Tampoco sirve `TipoFormatoFechaBackend.FECHA_HORA_ISO` de
+ * `FuncionesDatosService`: usa el separador correcto pero fija la hora en `00:00:00`, pensado para
+ * fechas sin hora real. Esta función arma el mismo formato con la hora que sí trae la fecha.
+ */
+export function fechaHoraLocalISO(fecha: Date): string {
+  const anio = fecha.getFullYear();
+  const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+  const dia = String(fecha.getDate()).padStart(2, '0');
+  const horas = String(fecha.getHours()).padStart(2, '0');
+  const minutos = String(fecha.getMinutes()).padStart(2, '0');
+  const segundos = String(fecha.getSeconds()).padStart(2, '0');
+  return `${anio}-${mes}-${dia}T${horas}:${minutos}:${segundos}`;
+}

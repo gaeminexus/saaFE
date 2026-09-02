@@ -7,12 +7,123 @@
 
   .filtros {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
+    gap: $spacing-md;
+    flex-wrap: wrap;
+
+    app-inline-autocomplete {
+      min-width: $breakpoint-sm * 0.6;
+    }
+  }
+
+  .formulario-creacion {
+    display: flex;
+    flex-direction: column;
     gap: $spacing-sm;
+    padding: $spacing-sm;
+    margin-bottom: $spacing-sm;
+    border-radius: $border-radius-sm;
+    border: $border-width-md solid $primary-color;
+    background: $background-primary;
+
+    mat-form-field {
+      width: 100%;
+    }
+  }
+
+  .grid-campos {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax($breakpoint-sm * 0.35, 1fr));
+    gap: $spacing-sm $spacing-md;
+  }
+
+  .formulario-acciones {
+    display: flex;
+    gap: $spacing-sm;
+    justify-content: flex-end;
     flex-wrap: wrap;
   }
 
-  .selector-empleado {
-    min-width: $breakpoint-sm * 0.6;
+  .tabla-marcaciones {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: $font-size-sm;
+
+    th {
+      text-align: left;
+      padding: $spacing-sm;
+      background: $background-tertiary;
+      color: $text-secondary;
+      font-weight: $font-weight-semibold;
+    }
+
+    td {
+      padding: $spacing-xs $spacing-sm;
+      border-bottom: $border-width solid $border-light;
+      vertical-align: middle;
+    }
+
+    tr:not(.fila-edicion):not(.fila-error) {
+      cursor: pointer;
+
+      &:hover {
+        background: $background-secondary;
+      }
+    }
+
+    .fila-edicion {
+      background: rgba($primary-color, 0.05);
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      padding: $spacing-xs $spacing-sm;
+      border-radius: $border-radius-lg;
+      font-size: $font-size-xs;
+      font-weight: $font-weight-medium;
+      background: $background-tertiary;
+      color: $text-secondary;
+
+      &.pill-ok {
+        background: rgba($success-color, 0.12);
+        color: $success-color;
+      }
+    }
+  }
+
+  .celda-input {
+    width: 100%;
+    border: $border-width solid transparent;
+    border-radius: $border-radius-sm;
+    padding: $spacing-xs $spacing-sm;
+    font-size: $font-size-sm;
+    font-family: inherit;
+    color: $text-primary;
+    background: transparent;
+    outline: none;
+    box-sizing: border-box;
+
+    &:focus {
+      border-color: $primary-color;
+      background: $background-primary;
+    }
+  }
+
+  .fila-error {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: $spacing-xs $spacing-sm;
+    border-radius: $border-radius-sm;
+    background: rgba($error-color, 0.08);
+    color: $error-color;
+    font-size: $font-size-xs;
+
+    mat-icon {
+      font-size: $font-size-base;
+      width: $font-size-base;
+      height: $font-size-base;
+    }
   }
 }
