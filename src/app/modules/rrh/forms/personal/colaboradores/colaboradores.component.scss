@@ -1,7 +1,88 @@
 @use '../../../../../../styles/abstracts/colors' as *;
 @use '../../../../../../styles/abstracts/variables' as *;
-@use '../../../styles/pantalla-rrh' as *;
 
-.rrh-page {
-  @include pantalla-rrh;
+.pantalla {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+  padding: $spacing-md;
+  color: $text-primary;
+}
+
+.cabecera {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $spacing-md;
+  flex-wrap: wrap;
+
+  h1 {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    margin: 0;
+    font-size: $font-size-xl;
+    font-weight: $font-weight-semibold;
+
+    mat-icon {
+      color: $primary-color;
+    }
+  }
+
+  p {
+    margin: $spacing-xs 0 0;
+    max-width: $breakpoint-md;
+    font-size: $font-size-sm;
+    color: $text-secondary;
+  }
+}
+
+.acciones-cabecera {
+  display: flex;
+  gap: $spacing-sm;
+  flex-wrap: wrap;
+}
+
+.formulario-creacion {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  padding: $spacing-sm;
+  border-radius: $border-radius-sm;
+  border: $border-width-md solid $primary-color;
+  background: $background-primary;
+
+  mat-form-field {
+    width: 100%;
+  }
+}
+
+.grid-campos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax($breakpoint-sm * 0.3, 1fr));
+  gap: $spacing-sm $spacing-md;
+}
+
+.formulario-acciones {
+  display: flex;
+  gap: $spacing-sm;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.fila-error {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-xs $spacing-sm;
+  border-radius: $border-radius-sm;
+  background: rgba($error-color, 0.08);
+  color: $error-color;
+  font-size: $font-size-xs;
+
+  mat-icon {
+    font-size: $font-size-base;
+    width: $font-size-base;
+    height: $font-size-base;
+  }
 }

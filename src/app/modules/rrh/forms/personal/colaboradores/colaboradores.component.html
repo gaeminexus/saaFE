@@ -1,35 +1,72 @@
-<div class="rrh-page">
-  <div class="page-header">
-    <div class="header-content">
-      <div class="header-icon">
+<div class="pantalla">
+  <header class="cabecera">
+    <div class="titulos">
+      <h1>
         <mat-icon>groups</mat-icon>
-      </div>
-      <div class="header-text">
-        <h1>Colaboradores</h1>
-        <p class="subtitle">Seleccione un colaborador para abrir su ficha completa</p>
-      </div>
+        Colaboradores
+      </h1>
+      <p>Pulse una fila para abrir la ficha del colaborador y editar todos sus datos.</p>
     </div>
-    <div class="header-actions">
-      <button mat-stroked-button (click)="exportarCsv()" [disabled]="exportData().length === 0">
+    <div class="acciones-cabecera">
+      <button mat-stroked-button type="button" (click)="exportarCsv()" [disabled]="filas().length === 0">
         <mat-icon>description</mat-icon>
         CSV
       </button>
+      @if (!creando()) {
+        <button mat-raised-button color="primary" type="button" (click)="abrirCreacion()">
+          <mat-icon>person_add</mat-icon>
+          Nuevo colaborador
+        </button>
+      }
     </div>
-  </div>
+  </header>
 
-  <div class="aviso">
-    <mat-icon>touch_app</mat-icon>
-    <span>Pulse una fila para abrir la ficha del colaborador y editar todos sus datos.</span>
-  </div>
+  @if (creando()) {
+    <form class="formulario-creacion" [formGroup]="formulario!">
+      <div class="grid-campos">
+        <mat-form-field appearance="outline">
+          <mat-label>Identificación</mat-label>
+          <input matInput formControlName="identificacion" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Apellidos</mat-label>
+          <input matInput formControlName="apellidos" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Nombres</mat-label>
+          <input matInput formControlName="nombres" />
+        </mat-form-field>
+      </div>
 
-  @if (tableConfig) {
-    <app-table-basic-hijos
-      [configTable]="tableConfig"
-      (emiteRegistro)="abrirFicha($event)"
-      (emiteError)="onTableError($event)"
-    >
-    </app-table-basic-hijos>
-  } @else if (cargando()) {
-    <div class="mensaje-vacio">Cargando colaboradores…</div>
+      @if (errorCreacion(); as error) {
+        <div class="fila-error">
+          <mat-icon>error</mat-icon>
+          {{ error }}
+        </div>
+      }
+
+      <div class="formulario-acciones">
+        <button mat-flat-button color="primary" type="button" [disabled]="guardando()" (click)="confirmarCreacion()">
+          @if (guardando()) {
+            Creando…
+          } @else {
+            Crear y abrir ficha
+          }
+        </button>
+        <button mat-stroked-button type="button" (click)="cancelarCreacion()">Cancelar</button>
+      </div>
+    </form>
   }
+
+  <app-tabla-rrh
+    [columnas]="columnas"
+    [filas]="filas()"
+    [cargando]="cargando()"
+    [permiteBorrar]="false"
+    [estadoInicial]="estadoLista"
+    mensajeVacio="Todavía no hay colaboradores registrados."
+    (editar)="abrir($event)"
+    (estadoCambia)="recordarEstado($event)"
+  >
+  </app-tabla-rrh>
 </div>
