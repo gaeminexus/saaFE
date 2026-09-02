@@ -50,7 +50,7 @@ import { EstadoPrestamoOperativo } from '../../../../model/pagos/catalogos-pago'
 import { AfectacionValoresParticipeCargaService } from '../../../../service/afectacion-valores-participe-carga.service';
 import { NovedadParticipeCarga } from '../../../../model/novedad-participe-carga';
 import { Usuario } from '../../../../../../shared/model/usuario';
-import { forkJoin, of, catchError, map } from 'rxjs';
+import { forkJoin, of, catchError, map, switchMap, Observable } from 'rxjs';
 import { AfectacionFinancieraCuotasDialogComponent } from '../../../../dialog/afectacion-financiera-cuotas-dialog/afectacion-financiera-cuotas-dialog.component';
 import { ProcesoArchivoErrorDialogComponent } from '../../../../dialog/archivos-petro/proceso-archivo-error-dialog/proceso-archivo-error-dialog.component';
 
@@ -102,6 +102,15 @@ interface PrestamoAfectable {
 interface PrestamoErrorCarga {
   prestamo: Prestamo;
   motivo: string;
+}
+
+/** Resultado de cargar un préstamo del listado de afectables — ver `PrestamoErrorCarga`. */
+interface ResultadoCargaPrestamo {
+  item: PrestamoAfectable;
+  pagosPorCuota: Record<number, ComponentesPagados>;
+  cargaFallida: boolean;
+  /** Solo con `cargaFallida: true` — distingue si falló la consulta de cuotas o la de pagos. */
+  motivo?: string;
 }
 
 @Component({
@@ -2460,6 +2469,12 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
                   return;
                 }
 
+                // Encadenado, no en paralelo: hace falta saber qué cuotas quedaron pendientes
+                // ANTES de pedir los pagos, para acotar la segunda consulta a esas — ver
+                // `consultarPagosDeCuotas()`. Todas las cuotas pendientes, sin tope: el tope de 5
+                // anterior era de presentación, no del backend (selectByCriteria no pagina del
+                // lado del servidor) — cortaba la pantalla cuando el partícipe debía más de 5
+                // cuotas, pedido del usuario 2026-08-31.
                 const requests = prestamos.map((prestamo) => {
                   const criteriosDetalle: DatosBusqueda[] = [];
                   const dbPrestamo = new DatosBusqueda();
@@ -2477,61 +2492,77 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
                   dbOrdenDetalle.setTipoOrden(DatosBusqueda.ORDER_ASC);
                   criteriosDetalle.push(dbOrdenDetalle);
 
-                  const criterioPagos = new DatosBusqueda();
-                  criterioPagos.asignaValorConCampoPadre(
-                    TipoDatosBusqueda.LONG,
-                    'prestamo',
-                    'codigo',
-                    String(prestamo.codigo),
-                    TipoComandosBusqueda.IGUAL
-                  );
-
-                  // Todas las cuotas pendientes, sin tope: el tope de 5 anterior era de presentación,
-                  // no del backend (selectByCriteria no pagina del lado del servidor) — cortaba la
-                  // pantalla cuando el partícipe debía más de 5 cuotas, pedido del usuario 2026-08-31.
-                  return forkJoin({
-                    detalleData: this.detallePrestamoService.selectByCriteria(criteriosDetalle),
-                    pagos: this.pagoPrestamoService.selectByCriteria([criterioPagos]),
-                  }).pipe(
-                    map(({ detalleData, pagos }) => {
-                      // `null` (a diferencia de `[]`) NO significa "sin cuotas/pagos": es lo que
+                  return this.detallePrestamoService.selectByCriteria(criteriosDetalle).pipe(
+                    switchMap((detalleData): Observable<ResultadoCargaPrestamo> => {
+                      // `null` (a diferencia de `[]`) NO significa "sin cuotas": es lo que
                       // devuelve el `handleError` compartido de estos servicios cuando Angular no
                       // pudo interpretar la respuesta aunque el HTTP haya sido 200
                       // (`if (+error.status === 200) return of(null)`, en 316 servicios del
                       // frontend). Colapsarlo junto con `[]` es exactamente lo que hacía
                       // indistinguible "no tiene cuotas pendientes" de "no se pudo consultar" —
                       // caso medido 2026-09-01, préstamo 7991 del partícipe 401 (EN MORA, 47
-                      // cuotas pendientes, invisible en el diálogo). Se marca `cargaFallida` en vez
-                      // de tratarlo como una lista vacía real.
-                      if (detalleData == null || pagos == null) {
-                        return {
+                      // cuotas pendientes, invisible en el diálogo). Si esto falla, ni siquiera se
+                      // llega a pedir pagos: no hay cuotas que mostrar igual.
+                      if (detalleData == null) {
+                        return of({
                           item: { prestamo, cuotas: [] } as PrestamoAfectable,
-                          pagosPorCuota: {} as Record<number, ComponentesPagados>,
+                          pagosPorCuota: {},
                           cargaFallida: true,
-                        };
+                          motivo: 'No se pudieron cargar sus cuotas.',
+                        });
                       }
 
-                      const detalles = Array.isArray(detalleData) ? detalleData : [detalleData];
-                      const listaPagos = Array.isArray(pagos) ? pagos : [pagos];
-                      return {
-                        item: {
-                          prestamo,
-                          cuotas: detalles
-                            .map((detalle) => this.normalizarDetallePrestamo(detalle))
-                            .filter((detalle) => !this.esCuotaPagadaOCancelada(detalle))
-                            .sort((a, b) => this.obtenerFechaOrdenCuota(a) - this.obtenerFechaOrdenCuota(b)),
-                        } as PrestamoAfectable,
-                        pagosPorCuota: this.saldoPrestamo.acumularPagosPorCuota(listaPagos),
-                        cargaFallida: false,
-                      };
+                      const cuotasPendientes = (Array.isArray(detalleData) ? detalleData : [detalleData])
+                        .map((detalle) => this.normalizarDetallePrestamo(detalle))
+                        .filter((detalle) => !this.esCuotaPagadaOCancelada(detalle))
+                        .sort((a, b) => this.obtenerFechaOrdenCuota(a) - this.obtenerFechaOrdenCuota(b));
+
+                      if (cuotasPendientes.length === 0) {
+                        // Préstamo real sin nada pendiente (ya cargó, no es un fallo): no hace
+                        // falta pedir pagos de cuotas que no se van a mostrar.
+                        return of({
+                          item: { prestamo, cuotas: [] } as PrestamoAfectable,
+                          pagosPorCuota: {},
+                          cargaFallida: false,
+                        });
+                      }
+
+                      return this.consultarPagosDeCuotas(
+                        prestamo,
+                        cuotasPendientes.map((c) => c.codigo)
+                      ).pipe(
+                        map((pagos): ResultadoCargaPrestamo => {
+                          if (pagos == null) {
+                            // Las cuotas sí cargaron pero los pagos no: si se mostraran las cuotas
+                            // igual, `saldoPendienteDe` las calcularía como si nada estuviera
+                            // pagado — un saldo inflado es peor que no mostrar el préstamo. Se
+                            // descarta `cuotas` acá para que el filtro de abajo lo saque del
+                            // listado, igual que los demás `cargaFallida`.
+                            return {
+                              item: { prestamo, cuotas: [] } as PrestamoAfectable,
+                              pagosPorCuota: {},
+                              cargaFallida: true,
+                              motivo: 'No se pudieron cargar sus pagos.',
+                            };
+                          }
+
+                          return {
+                            item: { prestamo, cuotas: cuotasPendientes } as PrestamoAfectable,
+                            pagosPorCuota: this.saldoPrestamo.acumularPagosPorCuota(pagos),
+                            cargaFallida: false,
+                          };
+                        })
+                      );
                     }),
-                    // Fallo real de RxJS (p. ej. un HTTP no-200 genuino) para ESTE préstamo: mismo
-                    // tratamiento que el `null` de arriba, no una lista vacía silenciosa.
+                    // Fallo real de RxJS (p. ej. un HTTP no-200 genuino) en cualquier punto de la
+                    // cadena para ESTE préstamo: mismo tratamiento que un `null`, no una lista
+                    // vacía silenciosa.
                     catchError(() =>
-                      of({
+                      of<ResultadoCargaPrestamo>({
                         item: { prestamo, cuotas: [] } as PrestamoAfectable,
-                        pagosPorCuota: {} as Record<number, ComponentesPagados>,
+                        pagosPorCuota: {},
                         cargaFallida: true,
+                        motivo: 'No se pudieron cargar sus cuotas o pagos.',
                       })
                     )
                   );
@@ -2553,7 +2584,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
                       .filter((r) => r.cargaFallida)
                       .map((r) => ({
                         prestamo: r.item.prestamo,
-                        motivo: 'No se pudieron cargar sus cuotas o pagos.',
+                        motivo: r.motivo ?? 'No se pudieron cargar sus cuotas o pagos.',
                       }));
 
                     this.pagosPorCuotaAfectacion.set(pagosPorCuotaTotal);
@@ -2713,6 +2744,80 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
 
   private obtenerFechaOrdenCuota(detalle: DetallePrestamo): number {
     return this.convertirFecha(detalle.fechaVencimiento)?.getTime() || Number.MAX_SAFE_INTEGER;
+  }
+
+  /** Oracle no admite más de 1.000 elementos en un `IN`; PGPR ya se consulta en bloques de 500 en
+   *  el backend (`saaBE/docs/logica-negocio/petro/REGLAS-GENERALES-PETRO.md` §9.7). */
+  private static readonly TAMANIO_BLOQUE_PAGOS = 500;
+
+  /**
+   * Pagos de una lista puntual de cuotas (no de todo el préstamo), en bloques de
+   * `TAMANIO_BLOQUE_PAGOS`. Acota la consulta a las cuotas que la pantalla realmente va a mostrar
+   * — pedido del árbitro 2026-09-02, hipótesis de volumen sobre el préstamo 71177 —, algo seguro
+   * porque `SaldoPrestamoService.saldoPendienteDe()` busca los pagos por `cuota.codigo`, uno por
+   * uno: los pagos de una cuota PAGADA/CANCELADA nunca se leen para calcular el saldo de una
+   * PENDIENTE, así que no hace falta traerlos.
+   *
+   * Si CUALQUIER bloque falla (`null` o error), se devuelve `null` para el préstamo entero:
+   * mezclar los bloques que sí llegaron con silencio sobre los que no dejaría un saldo pendiente
+   * calculado con datos incompletos — inflado, no vacío, y sin ningún aviso. Es peor que marcar
+   * `cargaFallida` y no mostrar el préstamo.
+   */
+  private consultarPagosDeCuotas(prestamo: Prestamo, codigosCuota: number[]) {
+    const bloques: number[][] = [];
+    for (let i = 0; i < codigosCuota.length; i += DetalleConsultaCargaComponent.TAMANIO_BLOQUE_PAGOS) {
+      bloques.push(codigosCuota.slice(i, i + DetalleConsultaCargaComponent.TAMANIO_BLOQUE_PAGOS));
+    }
+
+    const consultasBloque = bloques.map((bloque) =>
+      this.pagoPrestamoService.selectByCriteria(this.construirCriteriosPagosPorCuotas(prestamo, bloque))
+    );
+
+    return forkJoin(consultasBloque).pipe(
+      map((resultadosBloque) => {
+        if (resultadosBloque.some((r) => r == null)) return null;
+        return resultadosBloque.flatMap((r) => (Array.isArray(r) ? r : r ? [r] : []));
+      }),
+      catchError(() => of(null))
+    );
+  }
+
+  /**
+   * `prestamo.codigo = X AND (detallePrestamo.codigo = c1 OR detallePrestamo.codigo = c2 OR ...)`.
+   * El DSL de `DatosBusqueda` no tiene operador `IN` — mismo patrón de OR-chain entre paréntesis
+   * que ya usa `prestamo-dash.component.ts` para IDs de entidad/estado.
+   */
+  private construirCriteriosPagosPorCuotas(prestamo: Prestamo, codigosCuota: number[]): DatosBusqueda[] {
+    const criterios: DatosBusqueda[] = [];
+
+    const dbPrestamo = new DatosBusqueda();
+    dbPrestamo.asignaValorConCampoPadre(
+      TipoDatosBusqueda.LONG,
+      'prestamo',
+      'codigo',
+      String(prestamo.codigo),
+      TipoComandosBusqueda.IGUAL
+    );
+    criterios.push(dbPrestamo);
+
+    const dbOpen = new DatosBusqueda();
+    dbOpen.usaParentesis(TipoComandosBusqueda.ABRE_PARENTESIS);
+    criterios.push(dbOpen);
+
+    codigosCuota.forEach((codigo, index) => {
+      const c = new DatosBusqueda();
+      c.asignaValorConCampoPadre(TipoDatosBusqueda.LONG, 'detallePrestamo', 'codigo', String(codigo), TipoComandosBusqueda.IGUAL);
+      if (index > 0) {
+        c.setTipoOperadorLogico(TipoComandosBusqueda.OR);
+      }
+      criterios.push(c);
+    });
+
+    const dbClose = new DatosBusqueda();
+    dbClose.usaParentesis(TipoComandosBusqueda.CIERRA_PARENTESIS);
+    criterios.push(dbClose);
+
+    return criterios;
   }
 
   private redondear(valor: number): number {
