@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { AfterViewInit, Component, ViewChild, computed, inject, signal } from '@angular/core';
+import { AfterViewInit, AfterViewChecked, Component, ViewChild, computed, inject, signal } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatPaginator } from '@angular/material/paginator';
 import { MatTableDataSource } from '@angular/material/table';
@@ -29,7 +29,7 @@ interface DetalleAsientoVista extends DetalleAsiento {
   templateUrl: './mayor-analitico-asiento-dialog.component.html',
   styleUrls: ['./mayor-analitico-asiento-dialog.component.scss'],
 })
-export class MayorAnaliticoAsientoDialogComponent implements AfterViewInit {
+export class MayorAnaliticoAsientoDialogComponent implements AfterViewInit, AfterViewChecked {
   private readonly DEBUG_MATCH = true;
 
   private data = inject<DialogData>(MAT_DIALOG_DATA);
@@ -97,7 +97,23 @@ export class MayorAnaliticoAsientoDialogComponent implements AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    this.dataSource.paginator = this.paginator;
+    // La tabla (con su paginador) vive detrás de `@else` de `@if (loading())`, y `loading` arranca
+    // en `true` — acá todavía está en `true` (el `constructor` recién disparó la carga async), así
+    // que el paginador no existe en el DOM y `ViewChild` resuelve `undefined`. `ngAfterViewInit`
+    // corre una sola vez, así que esta asignación por sí sola nunca se repite cuando `loading()`
+    // pasa a `false`. La reconexión real está en `ngAfterViewChecked`.
+    this.conectarPaginador();
+  }
+
+  ngAfterViewChecked(): void {
+    this.conectarPaginador();
+  }
+
+  /** Idempotente: solo reasigna cuando la referencia cambió, para no forzar trabajo en cada check. */
+  private conectarPaginador(): void {
+    if (this.paginator && this.dataSource.paginator !== this.paginator) {
+      this.dataSource.paginator = this.paginator;
+    }
   }
 
   cerrar(): void {
