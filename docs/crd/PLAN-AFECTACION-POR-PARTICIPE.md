@@ -153,3 +153,28 @@ Orden en la cola del FE: el botón «¿dónde está la diferencia?» primero, es
 - **La pestaña de descuentos y el resumen de la carga.**
 - **`topeRepartoPrestamo` / `aplicarRepartoAutomaticoPrestamo`**: la lógica de reparto sobre las
   cuotas está bien y ya se verificó. Lo único que cambió alguna vez fue de dónde sale el pozo.
+
+---
+
+## 9. Arranca YA, y el retiro pasa a ser una comparación — decisión del usuario, 2026-09-03
+
+> *«Sí, soltá el FE con la pantalla nueva en este momento, para poder comparar en cuál me resulta más
+> cómodo procesar las novedades.»*
+
+**Cambia el «cuándo» del §6 y el «cómo se decide» del §5.**
+
+- **Cuándo:** arranca ahora, no al cerrar la carga 449. El riesgo que justificaba esperar era tocar la
+  pantalla en uso — y no se toca: se construye aparte. Y comparar **con la carga real abierta** es
+  mucho mejor que comparar contra una descripción.
+- **Cómo se decide el retiro:** el §5 argumentaba que retirar la vieja no era opcional. **Sigue siendo
+  cierto como principio** —dos pantallas para la misma pregunta divergen— **pero la elección de cuál
+  sobrevive es del usuario, después de usar las dos con datos reales.** No se retira nada por
+  argumento; se retira lo que él decida al comparar.
+
+⛔ **Mientras dure la comparación, la pantalla actual NO se toca ni un poco.** Es la que está usando
+para procesar en producción. Cualquier arreglo que aparezca durante la construcción de la nueva se
+reporta, no se aplica sobre la vieja.
+
+**Y el criterio de la comparación es el suyo, no el mío:** en cuál le resulta más cómodo procesar. No
+en cuál tiene mejor arquitectura ni menos clics. Si la vieja gana, el §5 queda sin efecto y la nueva
+se descarta — y eso es un resultado válido, no un fracaso.
