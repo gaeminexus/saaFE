@@ -175,6 +175,31 @@ export const TIPO_CARTERA_BANDA: Record<number, string> = {
   2: 'Vencido',
 };
 
+/**
+ * Segundo nivel del resumen jerárquico: cuenta contable + banda combinadas (§ "Las DOS vistas").
+ * Sin CNT conectado, `cuentaContable`/`nombreCuenta` vienen `null` y agrupa solo por banda.
+ */
+export interface DetalleJerarquico {
+  cuentaContable: string | null;
+  nombreCuenta: string | null;
+  idBanda: number | null;
+  banda: string | null;
+  valor: number;
+  filas: number;
+}
+
+/**
+ * Primer nivel del resumen jerárquico — por CONCEPTO, nunca por cuenta contable (§3 del plan: la
+ * mora y el interés ordinario comparten cuenta y se fusionarían). Calculado sobre el conjunto
+ * FILTRADO completo, no sobre la página — igual que `totalValorFiltrado`/`resumenPorConcepto`.
+ */
+export interface ResumenJerarquicoConcepto {
+  concepto: ConceptoDistribucion;
+  valor: number;
+  filas: number;
+  detalle: DetalleJerarquico[];
+}
+
 export interface RespuestaDetalleDistribucion {
   totalFilas: number;
   pagina: number;
@@ -182,6 +207,13 @@ export interface RespuestaDetalleDistribucion {
   totalValorFiltrado: number;
   resumenPorConcepto: ResumenPorConcepto[];
   filas: FilaDistribucionBanda[];
+  /**
+   * `undefined` mientras el backend no lo publique (en despacho al 2026-09-02) — la pantalla
+   * debe tratar su ausencia como "vista resumen no disponible todavía", nunca aproximarlo desde
+   * la página cargada: sería inventar un número que no coincide con el total filtrado real,
+   * mismo error que ya se evitó con `recibido`/`diferencia` nulos.
+   */
+  resumenJerarquico?: ResumenJerarquicoConcepto[];
 }
 
 /** `GET /dsbn/origenes` — alimenta el selector. Es un filtro más, no el eje de la pantalla. */

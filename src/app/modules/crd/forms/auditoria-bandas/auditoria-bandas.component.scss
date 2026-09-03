@@ -309,35 +309,153 @@
   mat-form-field { width: 190px; }
 }
 
-// ---------------- resumen por concepto ----------------
+// ---------------- selector de vista ----------------
 
-.ab-resumen-conceptos {
+.ab-vista-toolbar {
   display: flex;
-  gap: 0.75rem;
-  overflow-x: auto;
-  padding-bottom: 0.3rem;
-  margin-bottom: 1.1rem;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-bottom: 0.9rem;
 }
 
-.ab-resumen-tile {
-  flex: 0 0 auto;
-  min-width: 150px;
-  border-radius: 12px !important;
-  padding: 0.75rem 0.95rem;
+.ab-vista-selector {
+  display: flex;
+  gap: 0.3rem;
+  background: #edf2f7;
+  border-radius: 10px;
+  padding: 3px;
+}
+
+.ab-vista-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: none;
+  background: transparent;
+  color: #718096;
+  font-weight: 600;
+  font-size: 13px;
+  border-radius: 8px;
+  padding: 0.4rem 0.9rem;
+  cursor: pointer;
+  transition: all 0.15s;
+
+  mat-icon { font-size: 18px; width: 18px; height: 18px; }
+
+  &.activo {
+    background: #fff;
+    color: #4c51bf;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  }
+}
+
+.ab-vista-total {
+  font-size: 12.5px;
+  color: #718096;
+  b { color: #2d3748; font-family: 'Roboto Mono', monospace; }
+}
+
+// ---------------- vista resumen (árbol concepto → cuenta + banda) ----------------
+
+.ab-resumen-card { padding: 0.25rem; }
+
+.ab-arbol-concepto { border-bottom: 1px solid #edf2f7; &:last-child { border-bottom: none; } }
+
+.ab-arbol-concepto-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  border: none;
+  background: transparent;
+  padding: 0.75rem 0.4rem;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s;
+
+  &:hover { background: #f7fafc; }
+}
+
+.ab-arbol-caret { color: #a0aec0; flex-shrink: 0; }
+
+.ab-arbol-concepto-nombre { font-weight: 700; color: #2d3748; font-size: 14px; }
+
+.ab-arbol-concepto-filas {
+  margin-left: auto;
+  font-size: 11.5px;
+  color: #a0aec0;
+}
+
+.ab-arbol-concepto-participacion {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #667eea;
+  background: #ebf4ff;
+  border-radius: 999px;
+  padding: 2px 8px;
+  min-width: 44px;
+  text-align: center;
+}
+
+.ab-arbol-concepto-valor {
+  font-family: 'Roboto Mono', monospace;
+  font-weight: 700;
+  font-size: 15px;
+  color: #2d3748;
+  min-width: 120px;
+  text-align: right;
+}
+
+.ab-arbol-detalle {
+  padding: 0 0.4rem 0.5rem 2.3rem;
   display: flex;
   flex-direction: column;
   gap: 2px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.07) !important;
-
-  .l { font-size: 11px; color: #718096; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
-  .v { font-size: 17px; font-weight: 700; color: #2d3748; font-family: 'Roboto Mono', monospace; }
-  .f { font-size: 11px; color: #a0aec0; }
-
-  &.total {
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.12), rgba(118, 75, 162, 0.1));
-    .v { color: #5a67d8; }
-  }
 }
+
+.ab-arbol-detalle-fila {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  border: none;
+  background: #f7fafc;
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s, transform 0.1s;
+  font-size: 12.5px;
+
+  &:hover { background: #ebf4ff; transform: translateX(2px); }
+}
+
+.ab-arbol-cuenta {
+  font-family: 'Roboto Mono', monospace;
+  color: #2d3748;
+  font-weight: 600;
+
+  .nombre { font-family: inherit; font-weight: 400; color: #a0aec0; margin-left: 4px; }
+  .sin-cnt { font-family: inherit; font-style: italic; color: #a0aec0; font-weight: 400; }
+}
+
+.ab-arbol-banda { color: #4a5568; }
+
+.ab-arbol-detalle-filas { margin-left: auto; color: #a0aec0; white-space: nowrap; }
+
+.ab-arbol-detalle-valor {
+  font-family: 'Roboto Mono', monospace;
+  font-weight: 600;
+  color: #4a5568;
+  min-width: 100px;
+  text-align: right;
+}
+
+.ab-arbol-ir { color: #a0aec0; font-size: 16px; width: 16px; height: 16px; flex-shrink: 0; }
+
+.ab-chip-count { opacity: 0.75; font-size: 10.5px; margin-left: 2px; }
 
 // ---------------- tabla de detalle ----------------
 

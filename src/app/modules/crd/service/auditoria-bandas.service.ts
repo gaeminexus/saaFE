@@ -4,12 +4,14 @@ import { Observable, catchError, delay, of, throwError } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import {
   CuadreDistribucionBandas,
+  DetalleJerarquico,
   ErrorAuditoriaBandas,
   FilaDistribucionBanda,
   FiltroDetalleDistribucion,
   FiltroOrigenes,
   OrigenListado,
   RespuestaDetalleDistribucion,
+  ResumenJerarquicoConcepto,
 } from '../model/auditoria-bandas';
 import { ServiciosCrd } from './ws-crd';
 
@@ -204,7 +206,49 @@ export class AuditoriaBandasService {
       totalValorFiltrado,
       resumenPorConcepto,
       filas,
+      // Sobre `filtradas` (el conjunto filtrado COMPLETO), no sobre `filas` (la página) — el
+      // punto entero de calcularlo en el servidor es que no dependa de qué página esté abierta.
+      resumenJerarquico: this.calcularResumenJerarquicoMock(filtradas),
     });
+  }
+
+  /**
+   * Vista RESUMEN (`docs/crd/API-AUDITORIA-BANDAS.md` § "Las DOS vistas"): primer nivel por
+   * CONCEPTO (nunca por cuenta — la mora y el interés ordinario comparten cuenta y se
+   * fusionarían), segundo nivel por cuenta contable + banda combinadas.
+   */
+  private calcularResumenJerarquicoMock(filtradas: FilaDistribucionBanda[]): ResumenJerarquicoConcepto[] {
+    const porConcepto = new Map<string, ResumenJerarquicoConcepto>();
+
+    for (const f of filtradas) {
+      let concepto = porConcepto.get(f.concepto);
+      if (!concepto) {
+        concepto = { concepto: f.concepto, valor: 0, filas: 0, detalle: [] };
+        porConcepto.set(f.concepto, concepto);
+      }
+      concepto.valor = +(concepto.valor + f.valor).toFixed(2);
+      concepto.filas += 1;
+
+      const claveDetalle = `${f.cuentaContable ?? '—'}|${f.idBanda ?? '—'}`;
+      let detalle = concepto.detalle.find(
+        (d) => `${d.cuentaContable ?? '—'}|${d.idBanda ?? '—'}` === claveDetalle
+      ) as (DetalleJerarquico | undefined);
+      if (!detalle) {
+        detalle = {
+          cuentaContable: f.cuentaContable,
+          nombreCuenta: f.nombreCuenta,
+          idBanda: f.idBanda,
+          banda: f.banda,
+          valor: 0,
+          filas: 0,
+        };
+        concepto.detalle.push(detalle);
+      }
+      detalle.valor = +(detalle.valor + f.valor).toFixed(2);
+      detalle.filas += 1;
+    }
+
+    return Array.from(porConcepto.values());
   }
 
   private mockOrigenes(filtro?: FiltroOrigenes): Observable<OrigenListado[]> {

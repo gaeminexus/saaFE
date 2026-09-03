@@ -191,20 +191,21 @@
           </div>
         </div>
 
-        @if (bandasDisponibles().length) {
+        @if (bandasAgrupadas().length) {
         <div class="ab-filtro-grupo">
           <span class="ab-filtro-label">
             Banda
-            <span class="ab-filtro-hint">(solo aplica a Capital — catálogo de este origen)</span>
+            <span class="ab-filtro-hint">(solo aplica a Capital — por rótulo; cada producto tiene su propia banda)</span>
           </span>
           <div class="ab-chips-filtro">
-            @for (banda of bandasDisponibles(); track banda.idBanda) {
+            @for (grupo of bandasAgrupadas(); track trackByEtiquetaBanda($index, grupo)) {
               <button
                 type="button"
                 class="ab-chip-toggle"
-                [class.activo]="bandasSeleccionadas().has(banda.idBanda)"
-                (click)="toggleBanda(banda.idBanda)">
-                {{ banda.etiqueta }}
+                [class.activo]="grupoBandaActivo(grupo.ids)"
+                (click)="toggleGrupoBanda(grupo.ids)">
+                {{ grupo.etiqueta }}
+                @if (grupo.ids.length > 1) { <span class="ab-chip-count">×{{ grupo.ids.length }}</span> }
               </button>
             }
           </div>
@@ -262,7 +263,23 @@
       </mat-card-content>
     </mat-card>
 
-    <!-- ============ 3. Detalle: resumen por concepto + tabla ============ -->
+    <!-- ============ 3. Selector de vista — las DOS conviven, no una en lugar de la otra ============ -->
+    <div class="ab-vista-toolbar">
+      <div class="ab-vista-selector">
+        <button type="button" class="ab-vista-btn" [class.activo]="vista() === 'RESUMEN'" (click)="cambiarVista('RESUMEN')">
+          <mat-icon>account_tree</mat-icon> Resumen
+        </button>
+        <button type="button" class="ab-vista-btn" [class.activo]="vista() === 'DETALLE'" (click)="cambiarVista('DETALLE')">
+          <mat-icon>table_rows</mat-icon> Detalle
+        </button>
+      </div>
+      @if (detalle(); as dCabecera) {
+        <span class="ab-vista-total">
+          Total filtrado: <b>{{ formatMoneda(dCabecera.totalValorFiltrado) }}</b> · {{ dCabecera.totalFilas }} {{ dCabecera.totalFilas === 1 ? 'fila' : 'filas' }}
+        </span>
+      }
+    </div>
+
     @if (cargandoDetalle()) {
       <div class="ab-cuadre-loading"><mat-spinner diameter="32"></mat-spinner> Consultando detalle...</div>
     } @else if (errorDetalle()) {
@@ -280,23 +297,65 @@
       </mat-card>
     } @else if (detalle(); as d) {
 
-      @if (d.resumenPorConcepto.length) {
-        <div class="ab-resumen-conceptos">
-          @for (r of d.resumenPorConcepto; track r.concepto) {
-            <mat-card class="ab-resumen-tile">
-              <span class="l">{{ nombreConcepto[r.concepto] }}</span>
-              <span class="v">{{ formatMoneda(r.valor) }}</span>
-              <span class="f">{{ r.filas }} {{ r.filas === 1 ? 'fila' : 'filas' }}</span>
-            </mat-card>
-          }
-          <mat-card class="ab-resumen-tile total">
-            <span class="l">Total filtrado</span>
-            <span class="v">{{ formatMoneda(d.totalValorFiltrado) }}</span>
-            <span class="f">{{ d.totalFilas }} {{ d.totalFilas === 1 ? 'fila' : 'filas' }} en total</span>
-          </mat-card>
-        </div>
+      <!-- ============ Vista RESUMEN — concepto → cuenta + banda, en dos clics al detalle ============ -->
+      @if (vista() === 'RESUMEN') {
+        <mat-card class="ab-card ab-resumen-card">
+          <mat-card-content>
+            @if (!d.resumenJerarquico) {
+              <div class="ab-vacio-detalle">
+                <mat-icon>hourglass_empty</mat-icon>
+                <p>
+                  La vista Resumen todavía no está disponible: el backend no publica el cálculo agregado para este origen.
+                  Mientras tanto, use la vista Detalle.
+                </p>
+                <button mat-stroked-button (click)="cambiarVista('DETALLE')">Ir a Detalle</button>
+              </div>
+            } @else if (!d.resumenJerarquico.length) {
+              <div class="ab-vacio-detalle">
+                <mat-icon>info</mat-icon>
+                <p>No hay distribución registrada para este origen con los filtros actuales.</p>
+              </div>
+            } @else {
+              <div class="ab-arbol-resumen">
+                @for (r of d.resumenJerarquico; track r.concepto) {
+                  <div class="ab-arbol-concepto">
+                    <button type="button" class="ab-arbol-concepto-header" (click)="toggleConceptoExpandido(r.concepto)">
+                      <mat-icon class="ab-arbol-caret">{{ conceptoExpandido(r.concepto) ? 'expand_more' : 'chevron_right' }}</mat-icon>
+                      <span class="ab-arbol-concepto-nombre">{{ nombreConcepto[r.concepto] }}</span>
+                      <span class="ab-arbol-concepto-filas">{{ r.filas }} {{ r.filas === 1 ? 'fila' : 'filas' }}</span>
+                      <span class="ab-arbol-concepto-participacion">{{ participacion(r.valor) }}</span>
+                      <span class="ab-arbol-concepto-valor">{{ formatMoneda(r.valor) }}</span>
+                    </button>
+
+                    @if (conceptoExpandido(r.concepto)) {
+                      <div class="ab-arbol-detalle">
+                        @for (det of r.detalle; track (det.cuentaContable ?? '') + '-' + (det.idBanda ?? '')) {
+                          <button type="button" class="ab-arbol-detalle-fila" (click)="irADetalleDesdeResumen(r.concepto, det)">
+                            <span class="ab-arbol-cuenta">
+                              @if (det.cuentaContable) {
+                                {{ det.cuentaContable }} <span class="nombre">{{ det.nombreCuenta }}</span>
+                              } @else {
+                                <span class="sin-cnt">Sin cuenta (contabilidad desconectada)</span>
+                              }
+                            </span>
+                            <span class="ab-arbol-banda">{{ det.banda || '—' }}</span>
+                            <span class="ab-arbol-detalle-filas">{{ det.filas }} {{ det.filas === 1 ? 'fila' : 'filas' }}</span>
+                            <span class="ab-arbol-detalle-valor">{{ formatMoneda(det.valor) }}</span>
+                            <mat-icon class="ab-arbol-ir">arrow_forward</mat-icon>
+                          </button>
+                        }
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            }
+          </mat-card-content>
+        </mat-card>
       }
 
+      <!-- ============ Vista DETALLE — la tabla plana, paginada ============ -->
+      @if (vista() === 'DETALLE') {
       <mat-card class="ab-card ab-tabla-card">
         <mat-card-content>
           @if (!d.filas.length) {
@@ -399,6 +458,7 @@
           }
         </mat-card-content>
       </mat-card>
+      }
     }
   }
 

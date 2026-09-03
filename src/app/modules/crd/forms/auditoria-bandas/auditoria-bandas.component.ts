@@ -8,9 +8,11 @@ import { ExportService } from '../../../../shared/services/export.service';
 import { FuncionesDatosService } from '../../../../shared/services/funciones-datos.service';
 
 import {
+  BandaFiltroDistribucion,
   CONCEPTOS_DISTRIBUCION,
   ConceptoDistribucion,
   CuadreDistribucionBandas,
+  DetalleJerarquico,
   ErrorAuditoriaBandas,
   FilaDistribucionBanda,
   FiltroDetalleDistribucion,
@@ -38,6 +40,11 @@ const TAMANIOS_PAGINA = [25, 50, 100];
  *    muestra todo el resto igual (escenario de venta separada del sistema contable).
  * 4. Los errores de `AuditoriaBandasService` NUNCA se muestran como "sin datos" — el servicio no
  *    usa el `handleError` compartido justamente para que un fallo real se vea como fallo.
+ *
+ * Dos vistas sobre los mismos datos (decisión del usuario 2026-09-02, § "Las DOS vistas"), no una
+ * en lugar de la otra: RESUMEN (jerárquica, concepto → cuenta+banda, abre por defecto) y DETALLE
+ * (la tabla plana con paginación). Los mismos filtros alimentan a las dos. Abrir un renglón del
+ * resumen salta a Detalle con ese filtro ya aplicado.
  */
 @Component({
   selector: 'app-auditoria-bandas',
@@ -63,6 +70,27 @@ export class AuditoriaBandasComponent implements OnInit {
    * bandas que de verdad aparecen en la distribución de este origen (verificado 2026-09-02).
    */
   bandasDisponibles = computed(() => this.cuadre()?.bandas ?? []);
+
+  /**
+   * Cada producto y cada tipo de cartera trae su PROPIA fila de banda con el mismo rótulo — el
+   * usuario vio ~20 chips con "1 - 30" repetido cinco veces y no podía saber cuál era cuál
+   * (2026-09-02). Se agrupa por `etiqueta`: un chip por rótulo distinto, que al activarse filtra
+   * por TODOS los `idBanda` que comparten ese texto (el filtro ya es OR interno, así que sumar
+   * ids no cambia el significado).
+   */
+  bandasAgrupadas = computed(() => {
+    const grupos = new Map<string, number[]>();
+    for (const b of this.bandasDisponibles()) {
+      const ids = grupos.get(b.etiqueta) ?? [];
+      ids.push(b.idBanda);
+      grupos.set(b.etiqueta, ids);
+    }
+    return Array.from(grupos.entries()).map(([etiqueta, ids]) => ({ etiqueta, ids }));
+  });
+
+  // ---- vista: RESUMEN (jerárquica, por defecto) o DETALLE (tabla plana) ----
+  vista = signal<'RESUMEN' | 'DETALLE'>('RESUMEN');
+  conceptosExpandidos = signal<Set<ConceptoDistribucion>>(new Set());
 
   // ---- selector de origen ----
   cargandoOrigenes = signal(false);
@@ -157,6 +185,8 @@ export class AuditoriaBandasComponent implements OnInit {
     this.origenSeleccionado.set(origen);
     this.limpiarFiltros(false);
     this.pagina.set(0);
+    this.vista.set('RESUMEN');
+    this.conceptosExpandidos.set(new Set());
     this.cargarCuadre();
     this.cargarDetalle();
   }
@@ -263,10 +293,16 @@ export class AuditoriaBandasComponent implements OnInit {
     this.aplicarFiltros();
   }
 
-  toggleBanda(idBanda: number): void {
+  /** El chip es por ETIQUETA, no por `idBanda` individual — puede agrupar varios ids (ver `bandasAgrupadas`). */
+  grupoBandaActivo(ids: number[]): boolean {
+    const actuales = this.bandasSeleccionadas();
+    return ids.some((id) => actuales.has(id));
+  }
+
+  toggleGrupoBanda(ids: number[]): void {
     const actuales = new Set(this.bandasSeleccionadas());
-    if (actuales.has(idBanda)) actuales.delete(idBanda);
-    else actuales.add(idBanda);
+    const activo = ids.some((id) => actuales.has(id));
+    ids.forEach((id) => (activo ? actuales.delete(id) : actuales.add(id)));
     this.bandasSeleccionadas.set(actuales);
     this.aplicarFiltros();
   }
@@ -284,6 +320,35 @@ export class AuditoriaBandasComponent implements OnInit {
     if (pagina < 0 || pagina >= this.totalPaginas()) return;
     this.pagina.set(pagina);
     this.cargarDetalle();
+  }
+
+  // ================= vista resumen / detalle =================
+
+  cambiarVista(vista: 'RESUMEN' | 'DETALLE'): void {
+    this.vista.set(vista);
+  }
+
+  conceptoExpandido(concepto: ConceptoDistribucion): boolean {
+    return this.conceptosExpandidos().has(concepto);
+  }
+
+  toggleConceptoExpandido(concepto: ConceptoDistribucion): void {
+    const actuales = new Set(this.conceptosExpandidos());
+    if (actuales.has(concepto)) actuales.delete(concepto);
+    else actuales.add(concepto);
+    this.conceptosExpandidos.set(actuales);
+  }
+
+  /**
+   * Abrir un renglón del resumen salta a Detalle con ESE filtro ya aplicado (§ "Las DOS vistas":
+   * contabilidad tiene que responder "por qué fue este saldo a esta cuenta" en dos clics).
+   */
+  irADetalleDesdeResumen(concepto: ConceptoDistribucion, detalle: DetalleJerarquico): void {
+    this.conceptosSeleccionados.set(new Set([concepto]));
+    this.bandasSeleccionadas.set(detalle.idBanda != null ? new Set([detalle.idBanda]) : new Set());
+    this.cuentasContablesTexto = detalle.cuentaContable ?? '';
+    this.vista.set('DETALLE');
+    this.aplicarFiltros();
   }
 
   // ================= exportar =================
@@ -326,6 +391,21 @@ export class AuditoriaBandasComponent implements OnInit {
 
   formatMoneda(n: number | null | undefined): string {
     return '$' + (n ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  /** Participación de un valor sobre el total filtrado, para el árbol de la vista Resumen. */
+  participacion(valor: number): string {
+    const total = this.detalle()?.totalValorFiltrado ?? 0;
+    if (total <= 0.004) return '—';
+    return (100 * valor / total).toFixed(1) + '%';
+  }
+
+  trackByEtiquetaBanda(_index: number, grupo: { etiqueta: string; ids: number[] }): string {
+    return grupo.etiqueta;
+  }
+
+  trackByBandaCatalogo(_index: number, banda: BandaFiltroDistribucion): number {
+    return banda.idBanda;
   }
 
   trackByFila(_index: number, fila: FilaDistribucionBanda): number {
