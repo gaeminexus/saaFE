@@ -388,52 +388,121 @@
                       <mat-icon>error_outline</mat-icon>
                       <span>No se pudo verificar. El endpoint todavía no está disponible o falló la consulta — no se muestra una aproximación.</span>
                     </div>
-                  } @else if (prevueloAfectacion()) {
-                    @if (prevueloAfectacion()!.participesConExceso === 0) {
-                      <div class="prevuelo-estado prevuelo-estado--ok">
-                        <mat-icon>check_circle</mat-icon>
-                        <span>Ningún partícipe excede lo descontado en sus afectaciones manuales.</span>
-                      </div>
-                    } @else {
-                      <div class="prevuelo-resumen">
-                        {{ prevueloAfectacion()!.participesConExceso }} partícipe(s) con exceso — total
-                        {{ prevueloAfectacion()!.excesoTotal | number:'1.2-2' }}
-                      </div>
-                      <div class="prevuelo-table-wrap">
-                        <table mat-table [dataSource]="prevueloAfectacion()!.detalle" class="prevuelo-table">
-                          <ng-container matColumnDef="codigoPetro">
-                            <th mat-header-cell *matHeaderCellDef>Código Petro</th>
-                            <td mat-cell *matCellDef="let p">{{ p.codigoPetro }}</td>
-                          </ng-container>
-                          <ng-container matColumnDef="cedula">
-                            <th mat-header-cell *matHeaderCellDef>Cédula</th>
-                            <td mat-cell *matCellDef="let p">{{ p.cedula }}</td>
-                          </ng-container>
-                          <ng-container matColumnDef="participe">
-                            <th mat-header-cell *matHeaderCellDef>Partícipe</th>
-                            <td mat-cell *matCellDef="let p">{{ p.participe }}</td>
-                          </ng-container>
-                          <ng-container matColumnDef="disponible">
-                            <th mat-header-cell *matHeaderCellDef>Disponible</th>
-                            <td mat-cell *matCellDef="let p">{{ p.disponible | number:'1.2-2' }}</td>
-                          </ng-container>
-                          <ng-container matColumnDef="afectado">
-                            <th mat-header-cell *matHeaderCellDef>Afectado</th>
-                            <td mat-cell *matCellDef="let p">{{ p.afectado | number:'1.2-2' }}</td>
-                          </ng-container>
-                          <ng-container matColumnDef="exceso">
-                            <th mat-header-cell *matHeaderCellDef>Exceso</th>
-                            <td mat-cell *matCellDef="let p" class="prevuelo-exceso">{{ p.exceso | number:'1.2-2' }}</td>
-                          </ng-container>
-                          <ng-container matColumnDef="avpc">
-                            <th mat-header-cell *matHeaderCellDef>AVPC</th>
-                            <td mat-cell *matCellDef="let p">{{ p.avpc.join(', ') }}</td>
-                          </ng-container>
-                          <tr mat-header-row *matHeaderRowDef="prevueloAfectacionColumnas"></tr>
-                          <tr mat-row *matRowDef="let row; columns: prevueloAfectacionColumnas"></tr>
-                        </table>
-                      </div>
-                    }
+                  } @else if (prevueloAfectacion(); as p) {
+                    <!--
+                      Dos listas SEPARADAS, nunca combinadas en una con signo (§14 del contrato):
+                      son dos acciones OPUESTAS para el operador — a los de exceso hay que
+                      BAJARLES la afectación, a los de faltante hay que SUBÍRSELA/completarla.
+                      Mismo peso visual para las dos, siempre las dos visibles.
+                    -->
+
+                    <!-- ── Excesos: hay que BAJAR la afectación ── -->
+                    <div class="prevuelo-seccion">
+                      @if (p.participesConExceso === 0) {
+                        <div class="prevuelo-estado prevuelo-estado--ok">
+                          <mat-icon>check_circle</mat-icon>
+                          <span>Ningún partícipe excede lo descontado en sus afectaciones manuales.</span>
+                        </div>
+                      } @else {
+                        <div class="prevuelo-resumen prevuelo-resumen--exceso">
+                          <mat-icon>arrow_downward</mat-icon>
+                          {{ p.participesConExceso }} partícipe(s) con exceso — hay que BAJARLES la afectación · total
+                          {{ p.excesoTotal | number:'1.2-2' }}
+                        </div>
+                        <div class="prevuelo-table-wrap">
+                          <table mat-table [dataSource]="p.detalle" class="prevuelo-table">
+                            <ng-container matColumnDef="codigoPetro">
+                              <th mat-header-cell *matHeaderCellDef>Código Petro</th>
+                              <td mat-cell *matCellDef="let f">{{ f.codigoPetro }}</td>
+                            </ng-container>
+                            <ng-container matColumnDef="cedula">
+                              <th mat-header-cell *matHeaderCellDef>Cédula</th>
+                              <td mat-cell *matCellDef="let f">{{ f.cedula }}</td>
+                            </ng-container>
+                            <ng-container matColumnDef="participe">
+                              <th mat-header-cell *matHeaderCellDef>Partícipe</th>
+                              <td mat-cell *matCellDef="let f">{{ f.participe }}</td>
+                            </ng-container>
+                            <ng-container matColumnDef="disponible">
+                              <th mat-header-cell *matHeaderCellDef>Disponible</th>
+                              <td mat-cell *matCellDef="let f">{{ f.disponible | number:'1.2-2' }}</td>
+                            </ng-container>
+                            <ng-container matColumnDef="afectado">
+                              <th mat-header-cell *matHeaderCellDef>Afectado</th>
+                              <td mat-cell *matCellDef="let f">{{ f.afectado | number:'1.2-2' }}</td>
+                            </ng-container>
+                            <ng-container matColumnDef="exceso">
+                              <th mat-header-cell *matHeaderCellDef>Exceso</th>
+                              <td mat-cell *matCellDef="let f" class="prevuelo-exceso">{{ f.exceso | number:'1.2-2' }}</td>
+                            </ng-container>
+                            <ng-container matColumnDef="avpc">
+                              <th mat-header-cell *matHeaderCellDef>AVPC</th>
+                              <td mat-cell *matCellDef="let f">{{ f.avpc.join(', ') }}</td>
+                            </ng-container>
+                            <ng-container matColumnDef="mensaje">
+                              <th mat-header-cell *matHeaderCellDef>Acción</th>
+                              <td mat-cell *matCellDef="let f" class="prevuelo-mensaje">{{ f.mensaje }}</td>
+                            </ng-container>
+                            <tr mat-header-row *matHeaderRowDef="prevueloAfectacionColumnas"></tr>
+                            <tr mat-row *matRowDef="let row; columns: prevueloAfectacionColumnas"></tr>
+                          </table>
+                        </div>
+                      }
+                    </div>
+
+                    <!-- ── Faltantes: hay que SUBIR/completar la afectación (§14) ── -->
+                    <div class="prevuelo-seccion">
+                      @if (p.participesConFaltante === 0) {
+                        <div class="prevuelo-estado prevuelo-estado--ok">
+                          <mat-icon>check_circle</mat-icon>
+                          <span>Ningún partícipe con afectación manual tiene pozo sin repartir.</span>
+                        </div>
+                      } @else {
+                        <div class="prevuelo-resumen prevuelo-resumen--faltante">
+                          <mat-icon>arrow_upward</mat-icon>
+                          {{ p.participesConFaltante }} partícipe(s) con faltante — hay que COMPLETARLES la afectación · total
+                          {{ p.faltanteTotal | number:'1.2-2' }}
+                        </div>
+                        <div class="prevuelo-table-wrap">
+                          <table mat-table [dataSource]="p.detalleFaltante" class="prevuelo-table">
+                            <ng-container matColumnDef="codigoPetro">
+                              <th mat-header-cell *matHeaderCellDef>Código Petro</th>
+                              <td mat-cell *matCellDef="let f">{{ f.codigoPetro }}</td>
+                            </ng-container>
+                            <ng-container matColumnDef="cedula">
+                              <th mat-header-cell *matHeaderCellDef>Cédula</th>
+                              <td mat-cell *matCellDef="let f">{{ f.cedula }}</td>
+                            </ng-container>
+                            <ng-container matColumnDef="participe">
+                              <th mat-header-cell *matHeaderCellDef>Partícipe</th>
+                              <td mat-cell *matCellDef="let f">{{ f.participe }}</td>
+                            </ng-container>
+                            <ng-container matColumnDef="disponible">
+                              <th mat-header-cell *matHeaderCellDef>Disponible</th>
+                              <td mat-cell *matCellDef="let f">{{ f.disponible | number:'1.2-2' }}</td>
+                            </ng-container>
+                            <ng-container matColumnDef="afectado">
+                              <th mat-header-cell *matHeaderCellDef>Afectado</th>
+                              <td mat-cell *matCellDef="let f">{{ f.afectado | number:'1.2-2' }}</td>
+                            </ng-container>
+                            <ng-container matColumnDef="faltante">
+                              <th mat-header-cell *matHeaderCellDef>Faltante</th>
+                              <td mat-cell *matCellDef="let f" class="prevuelo-faltante">{{ f.faltante | number:'1.2-2' }}</td>
+                            </ng-container>
+                            <ng-container matColumnDef="avpc">
+                              <th mat-header-cell *matHeaderCellDef>AVPC</th>
+                              <td mat-cell *matCellDef="let f">{{ f.avpc.join(', ') }}</td>
+                            </ng-container>
+                            <ng-container matColumnDef="mensaje">
+                              <th mat-header-cell *matHeaderCellDef>Acción</th>
+                              <td mat-cell *matCellDef="let f" class="prevuelo-mensaje">{{ f.mensaje }}</td>
+                            </ng-container>
+                            <tr mat-header-row *matHeaderRowDef="prevueloFaltanteColumnas"></tr>
+                            <tr mat-row *matRowDef="let row; columns: prevueloFaltanteColumnas"></tr>
+                          </table>
+                        </div>
+                      }
+                    </div>
                   }
                 </mat-card>
               }

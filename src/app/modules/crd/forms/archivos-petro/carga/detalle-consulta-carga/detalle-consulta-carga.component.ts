@@ -255,20 +255,28 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
   topeAfectacionConsultaFallida = signal(false);
 
   /**
-   * El prevuelo (`GET /asgn/prevueloAfectacion`, `VALIDACION-TOPE-AFECTACION-MANUAL.md` §9): corre
-   * en seco, sobre toda la carga, la misma validación que bloquea al procesar — para que el
-   * operador vea el descuadre MIENTRAS reparte, no recién al intentar procesar. Solo lectura, no
-   * bloquea nada.
+   * El prevuelo (`GET /asgn/prevueloAfectacion`, `VALIDACION-TOPE-AFECTACION-MANUAL.md` §9 y
+   * §14): corre en seco, sobre toda la carga, la misma validación que bloquea al procesar — para
+   * que el operador vea el descuadre MIENTRAS reparte, no recién al intentar procesar (o, para
+   * los faltantes, no recién cuando la red final frena la carga después de 20+ minutos). Solo
+   * lectura, no bloquea nada.
    *
-   * ⛔ Alcance: solo ve el exceso de afectaciones MANUALES. No proyecta lo que el flujo automático
-   * vaya a aplicar encima del tope manual — el panel lo dice explícito en pantalla.
+   * Dos listas SEPARADAS (§14) — nunca combinadas en una con signo: `detalle` (excesos, hay que
+   * BAJAR la afectación) y `detalleFaltante` (hay que SUBIRLA/completarla). Los mensajes de cada
+   * fila son del backend tal cual, nunca redactados acá — deben leerse igual en pantalla y en el
+   * error del proceso.
+   *
+   * ⛔ Alcance: solo ve exceso/faltante de afectaciones MANUALES. No proyecta lo que el flujo
+   * automático vaya a aplicar encima del tope manual — el panel lo dice explícito en pantalla.
    */
   prevueloAfectacion = signal<PrevueloAfectacionCarga | null>(null);
   prevueloAfectacionCargando = signal(false);
   /** El endpoint puede no estar desplegado todavía — no se aproxima, se dice explícito. */
   prevueloAfectacionNoDisponible = signal(false);
   prevueloAfectacionPanelAbierto = signal(false);
-  readonly prevueloAfectacionColumnas = ['codigoPetro', 'cedula', 'participe', 'disponible', 'afectado', 'exceso', 'avpc'];
+  readonly prevueloAfectacionColumnas = ['codigoPetro', 'cedula', 'participe', 'disponible', 'afectado', 'exceso', 'avpc', 'mensaje'];
+  /** Faltantes (§14) — misma forma que la de excesos, con `faltante` en vez de `exceso`. */
+  readonly prevueloFaltanteColumnas = ['codigoPetro', 'cedula', 'participe', 'disponible', 'afectado', 'faltante', 'avpc', 'mensaje'];
 
   /**
    * Reparto automático por préstamo (motor único, pedido del usuario 2026-08-31): "aplicar todo el

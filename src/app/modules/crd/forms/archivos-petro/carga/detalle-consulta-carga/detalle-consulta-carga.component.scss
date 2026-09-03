@@ -805,9 +805,34 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
       }
     }
 
+    .prevuelo-seccion {
+      border-top: 1px solid #e0e0e0;
+
+      &:first-of-type {
+        border-top: none;
+      }
+    }
+
     .prevuelo-resumen {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
       padding: 0.5rem 1rem 0;
       font-weight: 600;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+
+      &--exceso {
+        color: #c62828;
+      }
+
+      &--faltante {
+        color: #e65100;
+      }
     }
 
     .prevuelo-table-wrap {
@@ -822,6 +847,20 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
     .prevuelo-exceso {
       color: #c62828;
       font-weight: 600;
+    }
+
+    .prevuelo-faltante {
+      color: #e65100;
+      font-weight: 600;
+    }
+
+    .prevuelo-mensaje {
+      min-width: 320px;
+      max-width: 480px;
+      white-space: normal;
+      line-height: 1.35;
+      font-size: 0.82rem;
+      color: #555;
     }
   }
 
