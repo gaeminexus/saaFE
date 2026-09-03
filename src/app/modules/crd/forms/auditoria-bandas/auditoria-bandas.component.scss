@@ -192,6 +192,30 @@
   .ab-cuadre-sub { font-size: 12px; color: #718096; }
 }
 
+// ---------------- recalcular distribución (único control que escribe) ----------------
+
+.ab-btn-recalcular {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-left: auto;
+  border: 1.5px solid #3182ce;
+  background: #fff;
+  color: #2b6cb0;
+  font-weight: 700;
+  font-size: 12.5px;
+  border-radius: 8px;
+  padding: 0.5rem 0.9rem;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+
+  &:hover:not(:disabled) { background: #ebf8ff; }
+  &:disabled { opacity: 0.7; cursor: default; }
+  mat-icon { font-size: 18px; width: 18px; height: 18px; }
+  mat-spinner { display: inline-block; }
+}
+
 .ab-cuadre.descuadra .ab-cuadre-titulo mat-icon { color: #e53e3e; }
 .ab-cuadre:not(.descuadra) .ab-cuadre-titulo mat-icon { color: #38a169; }
 

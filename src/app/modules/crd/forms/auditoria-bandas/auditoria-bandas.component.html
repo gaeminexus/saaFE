@@ -5,7 +5,7 @@
       <mat-icon class="ab-header-icon">account_balance</mat-icon>
       <div>
         <h1>Auditoría de distribución en bandas</h1>
-        <p>Por qué se mandó cada saldo a cada cuenta contable — solo lectura.</p>
+        <p>Por qué se mandó cada saldo a cada cuenta contable — de consulta, con una acción para reconstruir su propio dato.</p>
       </div>
     </div>
   </div>
@@ -100,6 +100,18 @@
               <h2>{{ c.descripcionOrigen }}</h2>
               <span class="ab-cuadre-sub">{{ nombreOrigen[c.origen] }} · {{ c.origen }} #{{ c.idOrigen }}</span>
             </div>
+            <button type="button" class="ab-btn-recalcular"
+                    [disabled]="recalculandoDistribucion()"
+                    (click)="confirmarYRecalcularDistribucion()"
+                    matTooltip="Reconstruye la distribución de este origen a partir de los pagos y aportes actuales">
+              @if (recalculandoDistribucion()) {
+                <mat-spinner diameter="16"></mat-spinner>
+                Recalculando...
+              } @else {
+                <mat-icon>refresh</mat-icon>
+                Recalcular distribución
+              }
+            </button>
           </div>
 
           @if (c.cuadra === null) {

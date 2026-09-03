@@ -1,9 +1,11 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
+import { ConfirmDialogComponent } from '../../../../shared/basics/confirm-dialog/confirm-dialog.component';
 import { ExportService } from '../../../../shared/services/export.service';
 import { FuncionesDatosService } from '../../../../shared/services/funciones-datos.service';
 
@@ -29,8 +31,8 @@ import { AuditoriaBandasService } from '../../service/auditoria-bandas.service';
 const TAMANIOS_PAGINA = [25, 50, 100];
 
 /**
- * Auditoría de distribución en bandas (`docs/crd/API-AUDITORIA-BANDAS.md`). Pantalla de solo
- * lectura para contabilidad: revisa por qué se mandaron ciertos saldos a ciertas cuentas.
+ * Auditoría de distribución en bandas (`docs/crd/API-AUDITORIA-BANDAS.md`). Pantalla de consulta
+ * para contabilidad: revisa por qué se mandaron ciertos saldos a ciertas cuentas.
  *
  * Cuatro reglas del contrato que esta pantalla respeta a propósito:
  * 1. El cuadre se pinta primero, arriba, y la diferencia distinta de cero se resalta en rojo —
@@ -41,6 +43,11 @@ const TAMANIOS_PAGINA = [25, 50, 100];
  *    muestra todo el resto igual (escenario de venta separada del sistema contable).
  * 4. Los errores de `AuditoriaBandasService` NUNCA se muestran como "sin datos" — el servicio no
  *    usa el `handleError` compartido justamente para que un fallo real se vea como fallo.
+ *
+ * ⚠️ La pantalla dejó de ser 100% de sólo lectura: «Recalcular distribución» (más abajo) ESCRIBE
+ * — reconstruye `CRD.DSBN` de un origen ya procesado. Sigue siendo una pantalla de consulta, no
+ * de captura: la única escritura que tiene es reconstruir su propio dato, con confirmación previa
+ * y sin tocar nada del resto del sistema (asientos, pagos, aportes, cuotas).
  *
  * Dos vistas sobre los mismos datos (decisión del usuario 2026-09-02, § "Las DOS vistas"), no una
  * en lugar de la otra: RESUMEN (jerárquica, concepto → cuenta+banda, abre por defecto) y DETALLE
@@ -59,6 +66,7 @@ export class AuditoriaBandasComponent implements OnInit {
   private funcionesDatos = inject(FuncionesDatosService);
   private exportService = inject(ExportService);
   private snackBar = inject(MatSnackBar);
+  private dialog = inject(MatDialog);
 
   readonly nombreOrigen = NOMBRE_ORIGEN_DISTRIBUCION;
   readonly nombreConcepto = NOMBRE_CONCEPTO_DISTRIBUCION;
@@ -105,6 +113,15 @@ export class AuditoriaBandasComponent implements OnInit {
   cargandoCuadre = signal(false);
   cuadre = signal<CuadreDistribucionBandas | null>(null);
   errorCuadre = signal<string | null>(null);
+
+  /**
+   * «Recalcular distribución» — único control de esta pantalla que ESCRIBE (el resto es de sólo
+   * lectura). Reconstruye `CRD.DSBN` de un origen ya procesado a partir de los pagos/aportes
+   * actuales, sin tocar asientos, pagos, aportes ni cuotas. Pensado para el caso del WAR
+   * desplegado después de procesar: la tabla de auditoría queda incompleta y hoy la única forma
+   * de arreglarlo era reprocesar la carga entera.
+   */
+  recalculandoDistribucion = signal(false);
 
   // ---- detalle filtrable ----
   cargandoDetalle = signal(false);
@@ -231,6 +248,56 @@ export class AuditoriaBandasComponent implements OnInit {
 
   reintentarCuadre(): void {
     this.cargarCuadre();
+  }
+
+  /**
+   * Confirma, recalcula y recarga cuadre + detalle. El botón se deshabilita mientras corre —
+   * puede tardar sobre una carga de miles de pagos. Un fallo no deja la pantalla en un estado
+   * ambiguo: se muestra el mensaje del backend y el cuadre/detalle en pantalla quedan como
+   * estaban antes (el recálculo borra y reescribe en una sola transacción, así que si falló no
+   * hay datos a medias que recargar).
+   */
+  confirmarYRecalcularDistribucion(): void {
+    const origen = this.origenSeleccionado();
+    if (!origen || this.recalculandoDistribucion()) return;
+
+    const ref = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: 'Recalcular distribución',
+        message:
+          'Va a reconstruir la distribución en bandas de este origen a partir de los pagos y aportes ' +
+          'actuales. No modifica asientos, pagos, aportes ni cuotas — solo reescribe la tabla de ' +
+          'auditoría (CRD.DSBN) de este origen.',
+        details: [
+          { label: 'Origen', value: `${this.nombreOrigen[origen.origen]} · ${origen.origen} #${origen.idOrigen}` },
+        ],
+        confirmText: 'Recalcular',
+        type: 'warning',
+      },
+    });
+
+    ref.afterClosed().subscribe((confirmado) => {
+      if (confirmado) this.recalcularDistribucion(origen);
+    });
+  }
+
+  private recalcularDistribucion(origen: OrigenListado): void {
+    this.recalculandoDistribucion.set(true);
+
+    this.auditoriaBandasService.recalcularDistribucion(origen.origen, origen.idOrigen).subscribe({
+      next: () => {
+        this.recalculandoDistribucion.set(false);
+        this.snackBar.open('Distribución recalculada. Actualizando cuadre y detalle...', 'Cerrar', { duration: 3000 });
+        // El botón existe para ver el resultado nuevo — recargar es parte de la acción, no un
+        // paso aparte que el operador tenga que hacer a mano.
+        this.cargarCuadre();
+        this.cargarDetalle();
+      },
+      error: (err: ErrorAuditoriaBandas) => {
+        this.recalculandoDistribucion.set(false);
+        this.snackBar.open(`No se pudo recalcular: ${err.mensaje}`, 'Cerrar', { duration: 6000 });
+      },
+    });
   }
 
   // ================= ¿dónde está la diferencia? =================

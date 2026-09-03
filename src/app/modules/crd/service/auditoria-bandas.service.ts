@@ -13,6 +13,7 @@ import {
   FiltroOrigenes,
   OrigenDistribucion,
   OrigenListado,
+  RecalculoDistribucionBanda,
   RespuestaDetalleDistribucion,
   ResumenJerarquicoConcepto,
 } from '../model/auditoria-bandas';
@@ -66,6 +67,26 @@ export class AuditoriaBandasService {
     const params = new HttpParams().set('origen', origen).set('idOrigen', String(idOrigen));
     return this.http
       .get<DiferenciaOrigen>(`${ServiciosCrd.RS_DSBN}/diferencia`, { params })
+      .pipe(catchError((error: HttpErrorResponse) => throwError(() => this.normalizarError(error))));
+  }
+
+  /**
+   * Recalcula `CRD.DSBN` de un origen ya procesado, leyendo los pagos/aportes que ya están en la
+   * base — no toca asientos, pagos, aportes ni cuotas. Único control de esta pantalla que
+   * ESCRIBE; el resto es de sólo lectura.
+   *
+   * ⚠️ **Path asumido, no confirmado.** El backend está construyendo este endpoint y el árbitro
+   * pasa el path exacto cuando lo publique — mientras tanto se sigue la convención del resto de
+   * `DistribucionBandaRest` (`@Path("dsbn")`, query params `origen`/`idOrigen`) con un verbo de
+   * escritura (`POST`, no `GET`, porque reescribe datos). Si el path real difiere, este es el
+   * único lugar que hay que tocar. Si el endpoint no responde (todavía no desplegado, o
+   * cualquier otro fallo), el componente lo trata igual que cualquier otro error de este
+   * servicio: nunca se aproxima ni se inventa un resultado.
+   */
+  recalcularDistribucion(origen: string, idOrigen: number): Observable<RecalculoDistribucionBanda> {
+    const params = new HttpParams().set('origen', origen).set('idOrigen', String(idOrigen));
+    return this.http
+      .post<RecalculoDistribucionBanda>(`${ServiciosCrd.RS_DSBN}/recalcular`, null, { params })
       .pipe(catchError((error: HttpErrorResponse) => throwError(() => this.normalizarError(error))));
   }
 
