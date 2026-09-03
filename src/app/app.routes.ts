@@ -607,6 +607,15 @@ export const routes: Routes = [
         data: { title: 'Contrato del colaborador' },
       },
       {
+        path: 'personal/ficha/:codigo/cuentas-bancarias/:codigoCuenta',
+        loadComponent: () =>
+          import('./modules/rrh/forms/personal/ficha/cuenta-bancaria-form.component').then(
+            (m) => m.CuentaBancariaFormComponent,
+          ),
+        canActivate: [authGuard],
+        data: { title: 'Cuenta bancaria del colaborador' },
+      },
+      {
         path: 'personal/ficha/:codigo',
         loadComponent: () =>
           import('./modules/rrh/forms/personal/ficha/ficha-colaborador.component').then(

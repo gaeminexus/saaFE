@@ -1,0 +1,124 @@
+@use '../../../../../../styles/abstracts/colors' as *;
+@use '../../../../../../styles/abstracts/variables' as *;
+
+/**
+ * Vista completa: tres franjas —contexto, cuerpo y acciones—, calcada de `contrato-form`. La
+ * cabecera se pega arriba y la barra de acciones abajo, así que ninguna de las dos se pierde al
+ * recorrer el formulario, tenga los campos que tenga.
+ */
+.vista {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  color: $text-primary;
+}
+
+.contexto {
+  flex: 0 0 auto;
+  position: sticky;
+  top: 0;
+  z-index: $z-index-sticky;
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  background: $background-primary;
+  border-bottom: $border-width solid $border-light;
+
+  .quien {
+    display: flex;
+    flex-direction: column;
+    line-height: $line-height-tight;
+    min-width: 0;
+  }
+
+  .colaborador {
+    font-size: $font-size-xs;
+    color: $text-muted;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-semibold;
+  }
+}
+
+.cuerpo {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: $spacing-md;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+.grupo {
+  padding: $spacing-md;
+  border-radius: $border-radius-md;
+  background: $background-primary;
+  border: $border-width solid $border-light;
+
+  h2 {
+    margin: 0 0 $spacing-sm;
+    padding-bottom: $spacing-xs;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: $secondary-color;
+    border-bottom: $border-width solid $border-light;
+  }
+}
+
+.campos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 $spacing-xl;
+
+  .campo-completo {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: $breakpoint-md) {
+  .campos {
+    grid-template-columns: 1fr;
+  }
+}
+
+.acciones {
+  flex: 0 0 auto;
+  position: sticky;
+  bottom: 0;
+  z-index: $z-index-sticky;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  background: $background-secondary;
+  border-top: $border-width solid $border-light;
+
+  .pista {
+    margin-right: auto;
+    font-size: $font-size-sm;
+    color: $text-secondary;
+  }
+
+  mat-spinner {
+    margin-right: $spacing-xs;
+  }
+}
+
+.cargando {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-sm;
+  color: $text-muted;
+  font-size: $font-size-sm;
+}

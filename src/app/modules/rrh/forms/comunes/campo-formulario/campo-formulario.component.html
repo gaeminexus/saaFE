@@ -6,23 +6,35 @@
 
     @switch (campo.tipo) {
       @case ('rubro') {
-        <mat-select [formControlName]="campo.name" [attr.aria-label]="campo.label">
+        <mat-select [formControlName]="campo.name" [attr.aria-label]="campo.label" (openedChange)="alAbrirSelect($event)">
+          <div class="filtro-select" (click)="$event.stopPropagation()">
+            <input matInput type="text" placeholder="Buscar…" [value]="busqueda()"
+                   (input)="alTeclear($any($event.target).value)" (keydown)="$event.stopPropagation()" />
+          </div>
           <mat-option [value]="null">Sin especificar</mat-option>
-          @for (detalle of detallesRubro; track detalle.codigoAlterno) {
+          @for (detalle of detallesRubroFiltrados(); track detalle.codigoAlterno) {
             <mat-option [value]="detalle.codigoAlterno">{{ detalle.descripcion }}</mat-option>
           }
         </mat-select>
       }
       @case ('siNo') {
-        <mat-select [formControlName]="campo.name" [attr.aria-label]="campo.label">
-          @for (opcion of opcionesSiNo; track opcion.codigo) {
+        <mat-select [formControlName]="campo.name" [attr.aria-label]="campo.label" (openedChange)="alAbrirSelect($event)">
+          <div class="filtro-select" (click)="$event.stopPropagation()">
+            <input matInput type="text" placeholder="Buscar…" [value]="busqueda()"
+                   (input)="alTeclear($any($event.target).value)" (keydown)="$event.stopPropagation()" />
+          </div>
+          @for (opcion of opcionesSiNoFiltradas(); track opcion.codigo) {
             <mat-option [value]="opcion.codigo">{{ opcion.descripcion }}</mat-option>
           }
         </mat-select>
       }
       @case ('estado') {
-        <mat-select [formControlName]="campo.name" [attr.aria-label]="campo.label">
-          @for (opcion of opcionesEstado; track opcion.codigo) {
+        <mat-select [formControlName]="campo.name" [attr.aria-label]="campo.label" (openedChange)="alAbrirSelect($event)">
+          <div class="filtro-select" (click)="$event.stopPropagation()">
+            <input matInput type="text" placeholder="Buscar…" [value]="busqueda()"
+                   (input)="alTeclear($any($event.target).value)" (keydown)="$event.stopPropagation()" />
+          </div>
+          @for (opcion of opcionesEstadoFiltradas(); track opcion.codigo) {
             <mat-option [value]="opcion.codigo">{{ opcion.descripcion }}</mat-option>
           }
         </mat-select>

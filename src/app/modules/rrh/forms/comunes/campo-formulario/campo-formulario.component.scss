@@ -45,6 +45,31 @@ mat-form-field {
   min-width: 0;
 }
 
+/**
+ * Buscador dentro del panel de un `mat-select` (rubro, sí/no, estado). Angular CDK saca el panel
+ * del árbol del componente hacia el overlay global, pero al estar declarado en esta plantilla el
+ * elemento conserva el atributo de encapsulación y esta regla sin `:host` le sigue aplicando
+ * donde termine renderizado.
+ */
+.filtro-select {
+  padding: $spacing-xs $spacing-sm;
+  position: sticky;
+  top: 0;
+  background: $background-primary;
+  z-index: 1;
+  border-bottom: $border-width solid $border-light;
+
+  input {
+    width: 100%;
+    border: none;
+    outline: none;
+    padding: $spacing-xs 0;
+    font: inherit;
+    color: $text-primary;
+    background: transparent;
+  }
+}
+
 /* Sin ancho para dos bloques, la etiqueta se pone encima sola */
 @media (max-width: $breakpoint-sm) {
   .fila {

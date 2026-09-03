@@ -86,8 +86,8 @@ export class CampoFormularioComponent implements OnInit, DoCheck {
 
   private readonly destroyRef = inject(DestroyRef);
 
-  /** Texto tecleado en el autocompletar de una referencia. */
-  private busqueda = signal<string>('');
+  /** Texto tecleado en el buscador — el de `referencia`, y ahora el de `rubro`/`siNo`/`estado`. */
+  readonly busqueda = signal<string>('');
 
   readonly sugerencias = computed(() => {
     const texto = normalizar(this.busqueda());
@@ -95,6 +95,27 @@ export class CampoFormularioComponent implements OnInit, DoCheck {
     if (!texto) return filas.slice(0, 50);
     return filas.filter((fila) => this.coincide(fila, texto)).slice(0, 50);
   });
+
+  /**
+   * Mismo filtro de `sugerencias`, para los tres combos que hasta ahora eran `mat-select` sin
+   * buscador (`rubro`, `siNo`, `estado`). No cambian de mecanismo: el control sigue guardando el
+   * `codigoAlterno`/`value` como número, nunca un objeto — solo se filtra qué opciones se ven en
+   * el panel. `busqueda` es el mismo signal que ya usaba `referencia`; se limpia al cerrar el
+   * panel (`alAbrirSelect`) para que un combo no quede filtrado en silencio la próxima vez.
+   */
+  readonly detallesRubroFiltrados = computed(() => this.filtrarPorLabel(this.detallesRubro, (d) => d.descripcion));
+  readonly opcionesSiNoFiltradas = computed(() => this.filtrarPorLabel(this.opcionesSiNo, (o) => o.descripcion));
+  readonly opcionesEstadoFiltradas = computed(() => this.filtrarPorLabel(this.opcionesEstado, (o) => o.descripcion));
+
+  private filtrarPorLabel<T>(opciones: T[], etiqueta: (o: T) => string): T[] {
+    const texto = normalizar(this.busqueda());
+    if (!texto) return opciones;
+    return opciones.filter((o) => normalizar(etiqueta(o)).includes(texto));
+  }
+
+  alAbrirSelect(abierto: boolean): void {
+    if (!abierto) this.busqueda.set('');
+  }
 
   constructor(
     private detalleRubroService: DetalleRubroService,
