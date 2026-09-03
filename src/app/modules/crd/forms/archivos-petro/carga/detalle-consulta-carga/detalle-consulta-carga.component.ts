@@ -50,6 +50,7 @@ import { EstadoPrestamoOperativo } from '../../../../model/pagos/catalogos-pago'
 import { AfectacionValoresParticipeCargaService } from '../../../../service/afectacion-valores-participe-carga.service';
 import { NovedadParticipeCarga } from '../../../../model/novedad-participe-carga';
 import { TopeAfectacionManual } from '../../../../model/tope-afectacion-manual';
+import { PrevueloAfectacionCarga } from '../../../../model/prevuelo-afectacion';
 import { Usuario } from '../../../../../../shared/model/usuario';
 import { forkJoin, of, catchError, map } from 'rxjs';
 import { AfectacionFinancieraCuotasDialogComponent } from '../../../../dialog/afectacion-financiera-cuotas-dialog/afectacion-financiera-cuotas-dialog.component';
@@ -252,6 +253,22 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
   topeAfectacionParticipe = signal<TopeAfectacionManual | null>(null);
   /** Distingue "no se pudo consultar" de "no hay tope que mostrar" — mismo patrón que `deudaConsultaFallida`. */
   topeAfectacionConsultaFallida = signal(false);
+
+  /**
+   * El prevuelo (`GET /asgn/prevueloAfectacion`, `VALIDACION-TOPE-AFECTACION-MANUAL.md` §9): corre
+   * en seco, sobre toda la carga, la misma validación que bloquea al procesar — para que el
+   * operador vea el descuadre MIENTRAS reparte, no recién al intentar procesar. Solo lectura, no
+   * bloquea nada.
+   *
+   * ⛔ Alcance: solo ve el exceso de afectaciones MANUALES. No proyecta lo que el flujo automático
+   * vaya a aplicar encima del tope manual — el panel lo dice explícito en pantalla.
+   */
+  prevueloAfectacion = signal<PrevueloAfectacionCarga | null>(null);
+  prevueloAfectacionCargando = signal(false);
+  /** El endpoint puede no estar desplegado todavía — no se aproxima, se dice explícito. */
+  prevueloAfectacionNoDisponible = signal(false);
+  prevueloAfectacionPanelAbierto = signal(false);
+  readonly prevueloAfectacionColumnas = ['codigoPetro', 'cedula', 'participe', 'disponible', 'afectado', 'exceso', 'avpc'];
 
   /**
    * Reparto automático por préstamo (motor único, pedido del usuario 2026-08-31): "aplicar todo el
@@ -2697,6 +2714,43 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
         this.topeAfectacionConsultaFallida.set(true);
       },
     });
+  }
+
+  /**
+   * Botón «Verificar antes de procesar» (§9 del plan). Sin bloquear nada — el operador decide si
+   * corrige o procesa igual, la validación que impide aplicar sigue siendo la del proceso. Si el
+   * endpoint todavía no está desplegado o falla por cualquier motivo, se dice explícito en vez de
+   * aproximar con datos viejos o parciales.
+   */
+  verificarAntesDeProcesar(): void {
+    const idCarga = this.cargaArchivo?.codigo;
+    if (!idCarga) {
+      return;
+    }
+
+    this.prevueloAfectacionPanelAbierto.set(true);
+    this.prevueloAfectacionCargando.set(true);
+    this.prevueloAfectacionNoDisponible.set(false);
+    this.prevueloAfectacion.set(null);
+
+    this.serviciosAsoprepService.prevueloAfectacion(idCarga).subscribe({
+      next: (resultado) => {
+        this.prevueloAfectacionCargando.set(false);
+        if (resultado) {
+          this.prevueloAfectacion.set(resultado);
+        } else {
+          this.prevueloAfectacionNoDisponible.set(true);
+        }
+      },
+      error: () => {
+        this.prevueloAfectacionCargando.set(false);
+        this.prevueloAfectacionNoDisponible.set(true);
+      },
+    });
+  }
+
+  cerrarPrevueloAfectacion(): void {
+    this.prevueloAfectacionPanelAbierto.set(false);
   }
 
   private construirMapaValoresAfectados(afectaciones: AfectacionValoresParticipeCarga[]): Record<number, number> {

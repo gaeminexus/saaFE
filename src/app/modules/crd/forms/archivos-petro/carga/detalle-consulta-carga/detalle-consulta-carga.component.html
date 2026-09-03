@@ -354,6 +354,91 @@
             <mat-card-subtitle>Registros que requieren atención o corrección</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
+            <!-- Prevuelo: ver el descuadre ANTES de procesar (VALIDACION-TOPE-AFECTACION-MANUAL.md §9) -->
+            <div class="prevuelo-afectacion">
+              <button mat-stroked-button color="primary" type="button"
+                      class="prevuelo-afectacion-btn"
+                      (click)="verificarAntesDeProcesar()"
+                      [disabled]="prevueloAfectacionCargando()">
+                @if (prevueloAfectacionCargando()) {
+                  <mat-spinner diameter="18" class="prevuelo-spinner"></mat-spinner>
+                } @else {
+                  <mat-icon>fact_check</mat-icon>
+                }
+                Verificar antes de procesar
+              </button>
+
+              @if (prevueloAfectacionPanelAbierto()) {
+                <mat-card class="prevuelo-panel">
+                  <div class="prevuelo-panel-header">
+                    <mat-icon>info</mat-icon>
+                    <span>Verifica las afectaciones manuales; no proyecta lo que aplicará el proceso automático.</span>
+                    <button mat-icon-button type="button" (click)="cerrarPrevueloAfectacion()" matTooltip="Cerrar">
+                      <mat-icon>close</mat-icon>
+                    </button>
+                  </div>
+
+                  @if (prevueloAfectacionCargando()) {
+                    <div class="prevuelo-estado">
+                      <mat-spinner diameter="32"></mat-spinner>
+                      <span>Verificando...</span>
+                    </div>
+                  } @else if (prevueloAfectacionNoDisponible()) {
+                    <div class="prevuelo-estado prevuelo-estado--error">
+                      <mat-icon>error_outline</mat-icon>
+                      <span>No se pudo verificar. El endpoint todavía no está disponible o falló la consulta — no se muestra una aproximación.</span>
+                    </div>
+                  } @else if (prevueloAfectacion()) {
+                    @if (prevueloAfectacion()!.participesConExceso === 0) {
+                      <div class="prevuelo-estado prevuelo-estado--ok">
+                        <mat-icon>check_circle</mat-icon>
+                        <span>Ningún partícipe excede lo descontado en sus afectaciones manuales.</span>
+                      </div>
+                    } @else {
+                      <div class="prevuelo-resumen">
+                        {{ prevueloAfectacion()!.participesConExceso }} partícipe(s) con exceso — total
+                        {{ prevueloAfectacion()!.excesoTotal | number:'1.2-2' }}
+                      </div>
+                      <div class="prevuelo-table-wrap">
+                        <table mat-table [dataSource]="prevueloAfectacion()!.detalle" class="prevuelo-table">
+                          <ng-container matColumnDef="codigoPetro">
+                            <th mat-header-cell *matHeaderCellDef>Código Petro</th>
+                            <td mat-cell *matCellDef="let p">{{ p.codigoPetro }}</td>
+                          </ng-container>
+                          <ng-container matColumnDef="cedula">
+                            <th mat-header-cell *matHeaderCellDef>Cédula</th>
+                            <td mat-cell *matCellDef="let p">{{ p.cedula }}</td>
+                          </ng-container>
+                          <ng-container matColumnDef="participe">
+                            <th mat-header-cell *matHeaderCellDef>Partícipe</th>
+                            <td mat-cell *matCellDef="let p">{{ p.participe }}</td>
+                          </ng-container>
+                          <ng-container matColumnDef="disponible">
+                            <th mat-header-cell *matHeaderCellDef>Disponible</th>
+                            <td mat-cell *matCellDef="let p">{{ p.disponible | number:'1.2-2' }}</td>
+                          </ng-container>
+                          <ng-container matColumnDef="afectado">
+                            <th mat-header-cell *matHeaderCellDef>Afectado</th>
+                            <td mat-cell *matCellDef="let p">{{ p.afectado | number:'1.2-2' }}</td>
+                          </ng-container>
+                          <ng-container matColumnDef="exceso">
+                            <th mat-header-cell *matHeaderCellDef>Exceso</th>
+                            <td mat-cell *matCellDef="let p" class="prevuelo-exceso">{{ p.exceso | number:'1.2-2' }}</td>
+                          </ng-container>
+                          <ng-container matColumnDef="avpc">
+                            <th mat-header-cell *matHeaderCellDef>AVPC</th>
+                            <td mat-cell *matCellDef="let p">{{ p.avpc.join(', ') }}</td>
+                          </ng-container>
+                          <tr mat-header-row *matHeaderRowDef="prevueloAfectacionColumnas"></tr>
+                          <tr mat-row *matRowDef="let row; columns: prevueloAfectacionColumnas"></tr>
+                        </table>
+                      </div>
+                    }
+                  }
+                </mat-card>
+              }
+            </div>
+
             <div class="novedades-section">
               <mat-tab-group
                 class="novedades-tabs"

@@ -758,6 +758,73 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
     }
   }
 
+  .prevuelo-afectacion {
+    margin-bottom: 1rem;
+
+    .prevuelo-afectacion-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .prevuelo-spinner {
+      display: inline-block;
+    }
+  }
+
+  .prevuelo-panel {
+    margin-top: 0.75rem;
+    border-left: 4px solid #3f51b5;
+
+    .prevuelo-panel-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1rem;
+      background: #eef1fb;
+      font-size: 0.85rem;
+      color: #333;
+
+      span {
+        flex: 1;
+      }
+    }
+
+    .prevuelo-estado {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 1rem;
+
+      &--error {
+        color: #c62828;
+      }
+
+      &--ok {
+        color: #2e7d32;
+      }
+    }
+
+    .prevuelo-resumen {
+      padding: 0.5rem 1rem 0;
+      font-weight: 600;
+    }
+
+    .prevuelo-table-wrap {
+      overflow-x: auto;
+      padding: 0.5rem 1rem 1rem;
+    }
+
+    .prevuelo-table {
+      width: 100%;
+    }
+
+    .prevuelo-exceso {
+      color: #c62828;
+      font-weight: 600;
+    }
+  }
+
   .novedades-section {
     padding: 0;
   }

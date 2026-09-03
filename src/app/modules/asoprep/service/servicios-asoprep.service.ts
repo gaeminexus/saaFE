@@ -5,6 +5,7 @@ import { ServiciosAsoprep } from './ws-asgn';
 import { CargaArchivo } from '../../crd/model/carga-archivo';
 import { ParticipeXCargaArchivo } from '../../crd/model/participe-x-carga-archivo';
 import { TopeAfectacionManual } from '../../crd/model/tope-afectacion-manual';
+import { PrevueloAfectacionCarga } from '../../crd/model/prevuelo-afectacion';
 import { environment } from '../../../../environments/environment';
 import {
   AnulacionTransferenciaResponse,
@@ -113,6 +114,16 @@ export class ServiciosAsoprepService {
     const url = `${ServiciosAsoprep.RS_ASGN}/topeAfectacion`;
     const params = new HttpParams().set('idCarga', String(idCarga)).set('codigoPetro', String(codigoPetro));
     return this.http.get<TopeAfectacionManual>(url, { params }).pipe(catchError(this.handleError));
+  }
+
+  /**
+   * El prevuelo — ve el descuadre ANTES de procesar (`VALIDACION-TOPE-AFECTACION-MANUAL.md` §9).
+   * Sólo lectura, corre la misma validación en seco sobre toda la carga. No bloquea nada.
+   */
+  prevueloAfectacion(idCarga: number): Observable<PrevueloAfectacionCarga | null> {
+    const url = `${ServiciosAsoprep.RS_ASGN}/prevueloAfectacion`;
+    const params = new HttpParams().set('idCarga', String(idCarga));
+    return this.http.get<PrevueloAfectacionCarga>(url, { params }).pipe(catchError(this.handleError));
   }
 
   // ═══════════════ Cobro de Petro en dos pasos — §2 del contrato congelado ═══════════════
