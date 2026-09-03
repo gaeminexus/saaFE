@@ -49,6 +49,7 @@ import { ComponentesPagados, SaldoPrestamoService } from '../../../../service/sa
 import { EstadoPrestamoOperativo } from '../../../../model/pagos/catalogos-pago';
 import { AfectacionValoresParticipeCargaService } from '../../../../service/afectacion-valores-participe-carga.service';
 import { NovedadParticipeCarga } from '../../../../model/novedad-participe-carga';
+import { TopeAfectacionManual } from '../../../../model/tope-afectacion-manual';
 import { Usuario } from '../../../../../../shared/model/usuario';
 import { forkJoin, of, catchError, map } from 'rxjs';
 import { AfectacionFinancieraCuotasDialogComponent } from '../../../../dialog/afectacion-financiera-cuotas-dialog/afectacion-financiera-cuotas-dialog.component';
@@ -241,6 +242,16 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
   detalleCuotaEnEdicion = signal<Set<number>>(new Set());
   isLoadingAfectacionFinanciera = signal<boolean>(false);
   isSavingAfectacionFinanciera = signal<boolean>(false);
+
+  /**
+   * Tope de afectación manual del partícipe en esta carga (`GET /asgn/topeAfectacion`,
+   * `VALIDACION-TOPE-AFECTACION-MANUAL.md` §8) — de sólo lectura, informa mientras el operador
+   * trabaja. NO bloquea nada acá: la validación real que impide procesar sigue siendo la del
+   * backend al aplicar (§4 del plan) — esto es prevención, no la última línea de defensa.
+   */
+  topeAfectacionParticipe = signal<TopeAfectacionManual | null>(null);
+  /** Distingue "no se pudo consultar" de "no hay tope que mostrar" — mismo patrón que `deudaConsultaFallida`. */
+  topeAfectacionConsultaFallida = signal(false);
 
   /**
    * Reparto automático por préstamo (motor único, pedido del usuario 2026-08-31): "aplicar todo el
@@ -1703,6 +1714,8 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
         novedad,
         getPrestamosAfectables: () => this.prestamosAfectables(),
         getErroresCargaPrestamos: () => this.erroresCargaPrestamos(),
+        getTopeAfectacionParticipe: () => this.topeAfectacionParticipe(),
+        getTopeAfectacionConsultaFallida: () => this.topeAfectacionConsultaFallida(),
         getAfectacionesRegistradas: () => this.afectacionesRegistradas(),
         getValoresAfectarEditados: () => this.valoresAfectarEditados(),
         onValorAfectarChange: (detalle: DetallePrestamo, valor: string | number) => this.onValorAfectarChange(detalle, valor),
@@ -2359,6 +2372,8 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
     // Se resetea al arrancar, no en cada rama de salida: es una carga nueva, así que un aviso de
     // "no se pudo cargar" de la novedad/partícipe anterior no puede sobrevivir a este llamado.
     this.erroresCargaPrestamos.set([]);
+    this.topeAfectacionParticipe.set(null);
+    this.topeAfectacionConsultaFallida.set(false);
 
     const codigoPetro = novedad.participeXCargaArchivo?.codigoPetro;
 
@@ -2371,6 +2386,9 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
       this.valoresAporteEditados.set({});
       return;
     }
+
+    // Independiente del resto de esta función: no bloquea ni gatea nada, es solo un aviso.
+    this.cargarTopeAfectacion(codigoPetro);
 
     this.isLoadingAfectacionFinanciera.set(true);
     // NO blanquea `prestamosAfectables` acá: en una recarga (p. ej. justo después de "Guardar")
@@ -2633,6 +2651,39 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
         this.valoresAporteEditados.set({});
         this.snackBar.open('No se pudieron cargar las afectaciones registradas', 'Cerrar', { duration: 4000 });
       }
+    });
+  }
+
+  /**
+   * Tope de afectación manual del partícipe — informativo, no bloquea nada (§8 del plan). Se
+   * pide en paralelo con el resto de `cargarContextoAfectacionFinanciera`, nunca gatea ni retrasa
+   * el resto de la carga.
+   */
+  private cargarTopeAfectacion(codigoPetro: number): void {
+    const idCarga = this.cargaArchivo?.codigo;
+    if (!idCarga) {
+      this.topeAfectacionParticipe.set(null);
+      this.topeAfectacionConsultaFallida.set(false);
+      return;
+    }
+
+    this.topeAfectacionConsultaFallida.set(false);
+    this.serviciosAsoprepService.topeAfectacion(idCarga, codigoPetro).subscribe({
+      next: (tope) => {
+        if (tope) {
+          this.topeAfectacionParticipe.set(tope);
+        } else {
+          // El `handleError` compartido convierte un fallo de parseo en `null` — acá no es
+          // "sin tope que mostrar", es "no se pudo consultar" (mismo matiz que `deudaVigente`
+          // en devolución de aportes).
+          this.topeAfectacionParticipe.set(null);
+          this.topeAfectacionConsultaFallida.set(true);
+        }
+      },
+      error: () => {
+        this.topeAfectacionParticipe.set(null);
+        this.topeAfectacionConsultaFallida.set(true);
+      },
     });
   }
 

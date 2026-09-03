@@ -6,6 +6,7 @@ import { NovedadParticipeCarga } from '../../model/novedad-participe-carga';
 import { Prestamo } from '../../model/prestamo';
 import { DetallePrestamo } from '../../model/detalle-prestamo';
 import { AfectacionValoresParticipeCarga, OpcionAporteExcedente } from '../../model/afectacion-valores-participe-carga';
+import { TopeAfectacionManual } from '../../model/tope-afectacion-manual';
 
 interface PrestamoAfectable {
   prestamo: Prestamo;
@@ -26,6 +27,13 @@ interface DialogData {
   novedad: NovedadParticipeCarga;
   getPrestamosAfectables: () => PrestamoAfectable[];
   getErroresCargaPrestamos: () => PrestamoErrorCarga[];
+  /**
+   * Tope de afectación manual del partícipe, TODAS sus novedades en esta carga — informativo, no
+   * bloquea (`VALIDACION-TOPE-AFECTACION-MANUAL.md` §8). `null` mientras carga o si no se pudo
+   * consultar; ver `getTopeAfectacionConsultaFallida` para distinguir el segundo caso.
+   */
+  getTopeAfectacionParticipe: () => TopeAfectacionManual | null;
+  getTopeAfectacionConsultaFallida: () => boolean;
   getAfectacionesRegistradas: () => AfectacionValoresParticipeCarga[];
   getValoresAfectarEditados: () => Record<number, number>;
   onValorAfectarChange: (detalle: DetallePrestamo, valor: string | number) => void;

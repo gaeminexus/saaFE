@@ -33,6 +33,38 @@
     </div>
 
     <!--
+      Tope de afectación manual del partícipe (VALIDACION-TOPE-AFECTACION-MANUAL.md §8) —
+      TODAS sus novedades en esta carga, no solo la que se está afectando acá. Informativo: no
+      deshabilita nada, no bloquea el guardado — la validación real es la del backend al
+      procesar. Es prevención para que el operador vea el límite mientras trabaja.
+    -->
+    @if (data.getTopeAfectacionParticipe(); as tope) {
+      <div
+        style="display: flex; align-items: center; gap: 0.75rem; border-radius: 8px; padding: 0.65rem 0.9rem; margin-bottom: 1rem; font-size: 0.83rem;"
+        [style.background]="tope.exceso > 0.004 ? '#fef2f2' : '#f0f9ff'"
+        [style.border]="tope.exceso > 0.004 ? '1px solid #fecaca' : '1px solid #bae6fd'"
+        [style.color]="tope.exceso > 0.004 ? '#7f1d1d' : '#0c4a6e'">
+        <mat-icon [style.color]="tope.exceso > 0.004 ? '#dc2626' : '#0284c7'">
+          {{ tope.exceso > 0.004 ? 'report_problem' : 'account_balance_wallet' }}
+        </mat-icon>
+        <div style="flex: 1;">
+          @if (tope.exceso > 0.004) {
+            <b>Este partícipe ya tiene afectado {{ tope.afectado | number:'1.2-2' }} sobre un disponible de {{ tope.disponible | number:'1.2-2' }} — se pasó por {{ tope.exceso | number:'1.2-2' }}.</b>
+            <span> Contando TODAS sus novedades de esta carga, no solo esta.</span>
+          } @else {
+            Tope del partícipe en esta carga (todas sus novedades): disponible {{ tope.disponible | number:'1.2-2' }},
+            afectado {{ tope.afectado | number:'1.2-2' }}, <b>restante {{ tope.restante | number:'1.2-2' }}</b>.
+          }
+        </div>
+      </div>
+    } @else if (data.getTopeAfectacionConsultaFallida()) {
+      <p style="display: flex; align-items: center; gap: 0.5rem; color: #94a3b8; font-size: 0.78rem; font-style: italic; margin: 0 0 1rem;">
+        <mat-icon style="font-size: 18px; width: 18px; height: 18px;">help_outline</mat-icon>
+        No se pudo consultar el tope de afectación del partícipe.
+      </p>
+    }
+
+    <!--
       Resumen de afectación — pedido del usuario 2026-09-01: "que el número que persigue esté
       siempre a la vista sin scrollear". Con las cuotas sin tope de 5, la lista puede ser larga;
       sticky mantiene el saldo pendiente visible mientras el operador scrollea por las cuotas.

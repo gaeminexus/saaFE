@@ -4,6 +4,7 @@ import { Observable, catchError, delay, of, throwError } from 'rxjs';
 import { ServiciosAsoprep } from './ws-asgn';
 import { CargaArchivo } from '../../crd/model/carga-archivo';
 import { ParticipeXCargaArchivo } from '../../crd/model/participe-x-carga-archivo';
+import { TopeAfectacionManual } from '../../crd/model/tope-afectacion-manual';
 import { environment } from '../../../../environments/environment';
 import {
   AnulacionTransferenciaResponse,
@@ -101,6 +102,17 @@ export class ServiciosAsoprepService {
     const wsEndpoint = `/aplicarPagosArchivoPetro/${idCargaArchivo}`;
     const url = `${ServiciosAsoprep.RS_ASGN}${wsEndpoint}`;
     return this.http.post<any>(url, {}).pipe(catchError(this.handleError));
+  }
+
+  /**
+   * Tope de afectación manual por partícipe — solo lectura, informa (`VALIDACION-TOPE-
+   * AFECTACION-MANUAL.md` §8). No reimplementa la regla: consulta la misma fórmula que el
+   * backend usa para bloquear al procesar.
+   */
+  topeAfectacion(idCarga: number, codigoPetro: number): Observable<TopeAfectacionManual | null> {
+    const url = `${ServiciosAsoprep.RS_ASGN}/topeAfectacion`;
+    const params = new HttpParams().set('idCarga', String(idCarga)).set('codigoPetro', String(codigoPetro));
+    return this.http.get<TopeAfectacionManual>(url, { params }).pipe(catchError(this.handleError));
   }
 
   // ═══════════════ Cobro de Petro en dos pasos — §2 del contrato congelado ═══════════════
