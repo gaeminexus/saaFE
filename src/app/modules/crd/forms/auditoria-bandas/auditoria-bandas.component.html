@@ -334,8 +334,17 @@
                             <span class="ab-arbol-cuenta">
                               @if (det.cuentaContable) {
                                 {{ det.cuentaContable }} <span class="nombre">{{ det.nombreCuenta }}</span>
-                              } @else {
+                              } @else if (!cuadre()?.contabilidadConectada) {
                                 <span class="sin-cnt">Sin cuenta (contabilidad desconectada)</span>
+                              } @else {
+                                <!--
+                                  `cuentaContable` solo se resuelve vía la banda (banda.planCuenta,
+                                  backend `DistribucionBandaServiceImpl.aFilaDto`) — los conceptos
+                                  sin banda (todo salvo CAPITAL) SIEMPRE vienen sin cuenta acá,
+                                  incluso con contabilidad conectada. No es lo mismo que CNT
+                                  desconectado: no hay que decir eso cuando no es la causa.
+                                -->
+                                <span class="sin-cnt">Sin banda asociada a este concepto</span>
                               }
                             </span>
                             <span class="ab-arbol-banda">{{ det.banda || '—' }}</span>

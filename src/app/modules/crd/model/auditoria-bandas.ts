@@ -208,10 +208,11 @@ export interface RespuestaDetalleDistribucion {
   resumenPorConcepto: ResumenPorConcepto[];
   filas: FilaDistribucionBanda[];
   /**
-   * `undefined` mientras el backend no lo publique (en despacho al 2026-09-02) — la pantalla
-   * debe tratar su ausencia como "vista resumen no disponible todavía", nunca aproximarlo desde
-   * la página cargada: sería inventar un número que no coincide con el total filtrado real,
-   * mismo error que ya se evitó con `recibido`/`diferencia` nulos.
+   * Publicado por el backend 2026-09-02 (`saaBE` commit `6ceb969`), calculado con un GROUP BY
+   * propio sobre el conjunto filtrado COMPLETO, sin paginar. Sigue opcional en el tipo por las
+   * dudas — si algún origen viejo llegara a responder sin este campo, la pantalla debe tratar su
+   * ausencia como "vista resumen no disponible todavía" y nunca aproximarlo desde la página
+   * cargada: sería inventar un número que no coincide con el total filtrado real.
    */
   resumenJerarquico?: ResumenJerarquicoConcepto[];
 }
