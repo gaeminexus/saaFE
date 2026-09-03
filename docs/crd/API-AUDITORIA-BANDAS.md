@@ -64,8 +64,28 @@ son fijos**, y dos productos pueden tener bandas distintas.
 Se devuelven **sólo las bandas que aparecen en la distribución de ese origen**, para que el filtro no
 ofrezca opciones que no van a dar ninguna fila.
 
+⛔ **`recibido`, `diferencia` y `cuadra` son NULLABLE** — corregido el 2026-09-02 contra
+`ResultadoCuadreDistribucionBanda.java`, que los declara `Double`/`Boolean`. Vienen en null cuando
+ese origen **todavía no tiene una fuente de «recibido» independiente conectada**, y hoy **sólo
+`CARGA_PETRO` la tiene**. El ejemplo de arriba muestra el caso Petro; los otros tres orígenes van a
+traer null.
+
+Entonces el encabezado tiene **tres** estados, no dos:
+
+| Estado | Cuándo | Cómo se ve |
+|---|---|---|
+| Cuadra | `cuadra: true` | verde |
+| **No cuadra** | `cuadra: false` | **rojo, arriba** |
+| Sin verificación disponible | `cuadra: null` | informativo, mismo trato que `contabilidadConectada: false` |
+
+**Sin el tercer estado, `COBRO_INDIVIDUAL` y `EVENTO_PRESTAMO` se mostrarían como «no cuadra» con un
+`$0,00` inventado** — peor que no mostrar nada, porque inventa un descuadre que nadie tiene.
+(Lo levantó el agente FE al implementar; el error era de este documento.)
+
 ⛔ `diferencia != 0` se muestra **en rojo y arriba**, nunca en un total al pie. Es el defecto que
 costó una jornada entera encontrar precisamente porque no estaba a la vista.
+
+`cuadra` de `/dsbn/origenes` es nullable por la misma razón.
 
 ⚠️ `contabilidadConectada: false` **no es un error**: es el escenario de venta separada. La pantalla
 oculta las columnas de cuenta y asiento y **sigue mostrando todo el resto**.
@@ -113,7 +133,7 @@ AND entre sí:
       "fechaAplicacion": "2026-08-31",
       "idProducto": 12, "producto": "...", "idTipoPrestamo": 1,
       "idTipoAporte": null,
-      "tipoCartera": "POR_VENCER", "dias": 45,
+      "tipoCartera": 1, "dias": 45,
       "idBanda": 3, "banda": "DE 31 A 90 DIAS",
       "cuentaContable": "1.3.01.10", "nombreCuenta": "...",
       "idAsiento": 37
@@ -170,3 +190,42 @@ JavaScript ni nada terminado en `Z`.
 fallo de parseo termina indistinguible de «sin datos». **En esta pantalla eso es inaceptable**: es
 una herramienta de auditoría; mostrar cero donde hubo un error es peor que mostrar el error. Manejar
 el fallo explícitamente y **decir que falló**.
+
+---
+
+## Correcciones del contrato — 2026-09-02
+
+Las dos las levantó el agente FE leyendo los DTO reales del backend, y **las dos eran errores de este
+documento**, no del código. Quedan escritas para que nadie vuelva a confiar en la versión anterior.
+
+### `tipoCartera` es un CÓDIGO NUMÉRICO, no un texto
+
+`FilaDistribucionBanda.java` lo declara `Long`. Los valores salen de
+`com.saa.rubros.TipoCarteraBanda`:
+
+| Código | Significado |
+|---|---|
+| `1` | POR_VENCER |
+| `2` | VENCIDO |
+
+**No existe un tercer código «al día».** Este documento mostraba `"tipoCartera": "POR_VENCER"` como
+string; con datos reales el frontend habría pintado el número crudo, y cualquier manipulación de
+texto sobre un número habría roto el render en ejecución. La traducción a etiqueta la hace el
+frontend contra ese enum, verificada — no adivinada.
+
+### El cuadre puede no existir
+
+Ver el tercer estado en la sección de `/dsbn/cuadre`. `recibido`, `diferencia` y `cuadra` son
+nullables y hoy sólo `CARGA_PETRO` los trae con valor.
+
+### ⚠️ Estado real de las escrituras, y no coincide con el vocabulario
+
+El vocabulario declara cuatro orígenes y la pantalla los ofrece los cuatro, pero **hoy sólo
+`CARGA_PETRO` tiene alguien escribiendo filas** (`CobroPetroContableServiceImpl`). Los otros tres
+—`COBRO_INDIVIDUAL`, `EVENTO_PRESTAMO`, `PAGO_PENSION`— están contratados y **sin implementar**: por
+esos filtros la pantalla va a devolver vacío siempre, hagan los procesos lo que hagan.
+
+**Es un hueco del despacho, no del código**: el §2 del plan pide transversalidad desde el día uno y
+quedó cumplida en la estructura de la tabla y en la pantalla, pero no en las escrituras. Está en cola
+para cerrarse, y hasta entonces la pantalla no debería ofrecer un filtro que nunca puede tener datos
+sin decir por qué.
