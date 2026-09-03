@@ -119,10 +119,6 @@ AND entre sí:
 {
   "totalFilas": 1093, "pagina": 0, "tamanio": 50,
   "totalValorFiltrado": 150939.84,
-  "resumenPorConcepto": [
-    { "concepto": "CAPITAL", "valor": 150939.84, "filas": 1093 },
-    { "concepto": "INTERES_MORA", "valor": 1284.42, "filas": 200 }
-  ],
   "filas": [
     {
       "id": 88123,
@@ -229,6 +225,22 @@ esos filtros la pantalla va a devolver vacío siempre, hagan los procesos lo que
 quedó cumplida en la estructura de la tabla y en la pantalla, pero no en las escrituras. Está en cola
 para cerrarse, y hasta entonces la pantalla no debería ofrecer un filtro que nunca puede tener datos
 sin decir por qué.
+
+### ⚠️ `totalValorFiltrado` sumaba la PÁGINA, no el filtro — corregido 2026-09-03
+
+Defecto real, visto en pantalla por el usuario: el encabezado mostraba «Total filtrado: $30.111,46 ·
+3448 filas» — el importe era la suma de las 50 filas de la página que trajo `selectDetalleFiltrado`
+(paginado), pero el conteo sí era del total. El frontend usa `totalValorFiltrado` como denominador
+del % de participación en el árbol del resumen, y con ese desfase salían porcentajes como 505,0%.
+
+Corregido: `totalValorFiltrado` ahora se deriva de la suma de `resumenJerarquico` (que ya corre su
+propio `GROUP BY` sin paginar) — no de sumar `filas` de la página. Sin consulta nueva.
+
+**`resumenPorConcepto` NO se tocó — sigue siendo la suma de la página, pese al nombre.** Se mantiene
+por compatibilidad con quien ya lo consuma, pero **no usarlo como total ni como denominador de
+porcentajes**: para eso está el primer nivel de `resumenJerarquico`, que además trae cuenta
+contable/banda. Si el frontend no tiene otro consumidor de `resumenPorConcepto`, es candidato a
+eliminarse en una limpieza futura — no se borró acá por no tener esa confirmación.
 
 ---
 
@@ -338,3 +350,19 @@ que recibieron de más arriba y en rojo; los de menos, después.
 
 ⛔ **No es una pantalla nueva ni un filtro más:** es la respuesta a «¿y ahora a quién miro?», que hoy
 sólo se puede contestar escribiendo SQL.
+
+---
+
+## `resumenPorConcepto` se elimina — 2026-09-03
+
+**Confirmado que nadie lo consume** (el agente FE lo verificó con un barrido completo de `crd/`: la
+vista Resumen usa exclusivamente `resumenJerarquico`). Sale de la respuesta.
+
+**Por qué no se deja «por las dudas»:** era la **suma de la página**, no un total, pese al nombre. Y
+convivía con `totalValorFiltrado` en el mismo objeto. **Dos totales que significan cosas distintas
+en la misma respuesta es una trampa**, y no es hipotética: el `totalValorFiltrado` calculado sobre la
+página ya produjo porcentajes de **505%** en la pantalla del usuario. Un campo con ese nombre y ese
+alcance vuelve a morder al primero que lo use sin leer el javadoc.
+
+Queda `resumenJerarquico`, que se calcula sobre el conjunto filtrado completo — y `totalValorFiltrado`
+ahora se deriva de él, así que **no pueden discrepar**.
