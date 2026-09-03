@@ -181,7 +181,7 @@ se descarta — y eso es un resultado válido, no un fracaso.
 
 ---
 
-### 9.1 ⛔ Excepción puntual al "no se toca" — dos defectos que corrompen datos, 2026-09-03
+### 9.1 ⛔ Excepción puntual al "no se toca" — tres defectos que corrompen datos, 2026-09-03
 
 **El §9 dice que `detalle-consulta-carga` no se toca ni un poco mientras dure la comparación.** Se
 levantó esa restricción, **solo para estos dos defectos**, porque el usuario siguió trabajando en la
@@ -204,6 +204,29 @@ producción.
    406,73). Arreglo de una línea: `tope.disponible - tope.afectado + valorPersistidoNovedadAlCargar`,
    sin el clamp intermedio — da idéntico al caso normal (sin exceso) y correcto en exceso.
 
+3. **La pantalla no podía detectar que una cuota tuviera afectaciones bajo DOS novedades del mismo
+   partícipe** — porque carga las afectaciones ya guardadas escaneadas a UNA sola novedad (la que
+   está abierta). Si el operador tenía la novedad B abierta y cargaba un valor sobre una cuota que
+   ya tenía una fila bajo la novedad A, la pantalla no la veía, la trataba como "sin existente" y
+   creaba una fila nueva — la A quedaba intacta pero invisible desde esa sesión. Es un mecanismo
+   plausible para cómo apareció alguna fila "de más" sin que nadie la pidiera conscientemente.
+
+   **Arreglo, con un límite explícito y deliberado:** antes de guardar, se pide (en un fetch
+   dedicado, aparte) el conjunto completo de novedades del partícipe y sus afectaciones, SOLO para
+   verificar si hay conflicto — nunca para alimentar lo que la pantalla muestra o calcula.
+   `montoDisponibleAfectacion`, los totales, el mapa de valores, el reparto automático: todos
+   siguen leyendo exactamente lo mismo que antes, con el alcance de una sola novedad. Si hay
+   conflicto, se frena TODO el guardado con un mensaje que dice qué hacer — "esta pantalla no
+   puede editar esta cuota, use Afectación por partícipe" — en vez de adivinar cuál novedad se
+   queda con el valor.
+
+   **Por qué el límite, y no ampliar todo el alcance de la pantalla:** si el fetch ampliado
+   alimentara el display, cualquier error ahí se vería como números raros en la pantalla que el
+   usuario usa en producción ahora mismo. Alimentando solo la guarda previa, el peor caso es que
+   se frene un guardado de más — molesto y visible, nunca silencioso. Verificado por lectura de
+   código que un partícipe SIN conflicto no cambia ni un número en pantalla: el fetch nuevo no
+   escribe en ningún signal que la plantilla lea, solo en variables locales del propio chequeo.
+
 **Nada más de esa pantalla se tocó.** Cualquier otra mejora que aparezca ahí durante la comparación
-se sigue reportando, no aplicando — esta excepción es puntual a estos dos defectos, no una apertura
+se sigue reportando, no aplicando — esta excepción es puntual a estos tres defectos, no una apertura
 general.

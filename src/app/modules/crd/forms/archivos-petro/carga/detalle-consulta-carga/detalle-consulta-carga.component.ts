@@ -52,7 +52,7 @@ import { NovedadParticipeCarga } from '../../../../model/novedad-participe-carga
 import { TopeAfectacionManual } from '../../../../model/tope-afectacion-manual';
 import { PrevueloAfectacionCarga } from '../../../../model/prevuelo-afectacion';
 import { Usuario } from '../../../../../../shared/model/usuario';
-import { forkJoin, of, catchError, map } from 'rxjs';
+import { forkJoin, of, catchError, map, switchMap, Observable } from 'rxjs';
 import { AfectacionFinancieraCuotasDialogComponent } from '../../../../dialog/afectacion-financiera-cuotas-dialog/afectacion-financiera-cuotas-dialog.component';
 import { RevalidarCargaDialogComponent } from '../../../../dialog/revalidar-carga-dialog/revalidar-carga-dialog.component';
 import { ProcesoArchivoErrorDialogComponent } from '../../../../dialog/archivos-petro/proceso-archivo-error-dialog/proceso-archivo-error-dialog.component';
@@ -2250,6 +2250,120 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
       return;
     }
 
+    // §9.1 del plan, tercer caso (2026-09-03): esta pantalla carga las afectaciones YA GUARDADAS
+    // de UNA sola novedad (la abierta) — nunca ve si una MISMA cuota tiene también una fila bajo
+    // OTRA novedad del mismo partícipe. Antes de escribir nada, se pide (solo para esta
+    // verificación, nunca para lo que la pantalla muestra) el conjunto completo de novedades del
+    // partícipe y sus afectaciones, y se frena si hay conflicto — "parar y avisar" del §4, no
+    // adivinar cuál novedad se queda con el valor.
+    this.isSavingAfectacionFinanciera.set(true);
+    this.verificarConflictosDeNovedadAntesDeGuardar(novedad).subscribe({
+      next: (conflictos) => {
+        if (conflictos.length > 0) {
+          this.isSavingAfectacionFinanciera.set(false);
+          this.snackBar.open(
+            `No se guardó nada: ${conflictos.join(' · ')}. Esta pantalla no puede editarla — use "Afectación por partícipe", que ve todas sus novedades juntas.`,
+            'Cerrar',
+            { duration: 14000 }
+          );
+          return;
+        }
+        this.ejecutarGuardadoAfectacionesFinancieras(novedad, usuario);
+      },
+      error: () => {
+        this.isSavingAfectacionFinanciera.set(false);
+        this.snackBar.open('No se pudo verificar si esta cuota tiene afectaciones bajo otra novedad. Intente de nuevo.', 'Cerrar', { duration: 5000 });
+      },
+    });
+  }
+
+  /**
+   * Fetch DEDICADO, solo para `detectarConflictosDeNovedad` — nunca alimenta
+   * `afectacionesRegistradas`, `montoDisponibleAfectacion`, el reparto ni ningún signal que la
+   * pantalla lea. Verificado (2026-09-03) que con esto un partícipe SIN conflicto no cambia ni un
+   * número en pantalla: es el límite explícito que pidió el árbitro al ampliar el alcance acá.
+   */
+  private verificarConflictosDeNovedadAntesDeGuardar(novedadAbierta: NovedadParticipeCarga): Observable<string[]> {
+    const codigoPetro = novedadAbierta.participeXCargaArchivo?.codigoPetro;
+    const codigoCarga = this.cargaArchivo?.codigo;
+    if (!codigoPetro || !codigoCarga) {
+      return of([]);
+    }
+
+    const criteriosCarga: DatosBusqueda[] = [];
+    const dbCarga = new DatosBusqueda();
+    dbCarga.asignaUnCampoSinTrunc(TipoDatosBusqueda.LONG, 'codigoCargaArchivo', String(codigoCarga), TipoComandosBusqueda.IGUAL);
+    criteriosCarga.push(dbCarga);
+
+    return this.novedadParticipeCargaService.selectByCriteria(criteriosCarga).pipe(
+      map((novedadesData) => (novedadesData || []).filter((n) => n.participeXCargaArchivo?.codigoPetro === codigoPetro)),
+      switchMap((novedadesDelParticipe) => {
+        // Con 0 o 1 novedad no hay con qué entrar en conflicto — no hace falta pedir AVPC.
+        if (novedadesDelParticipe.length <= 1) {
+          return of([] as { novedadOrigen: NovedadParticipeCarga; fila: AfectacionValoresParticipeCarga }[]);
+        }
+
+        const consultas = novedadesDelParticipe
+          .filter((n) => n.codigo != null)
+          .map((n) => {
+            const criterios: DatosBusqueda[] = [];
+            const db = new DatosBusqueda();
+            db.asignaValorConCampoPadre(TipoDatosBusqueda.LONG, 'novedadParticipeCarga', 'codigo', String(n.codigo), TipoComandosBusqueda.IGUAL);
+            criterios.push(db);
+            return this.afectacionValoresParticipeCargaService.selectByCriteria(criterios).pipe(
+              map((data) => (Array.isArray(data) ? data : data ? [data] : []).map((fila) => ({ novedadOrigen: n, fila }))),
+              catchError(() => of([] as { novedadOrigen: NovedadParticipeCarga; fila: AfectacionValoresParticipeCarga }[]))
+            );
+          });
+
+        return forkJoin(consultas.length ? consultas : [of([])]).pipe(map((listas) => listas.flat()));
+      }),
+      map((filasEtiquetadas) => this.detectarConflictosDeNovedad(filasEtiquetadas))
+    );
+  }
+
+  /** Misma lógica que `AfectacionParticipeDialogComponent.detectarConflictosDeNovedad` — ver ese comentario para el porqué. */
+  private detectarConflictosDeNovedad(
+    filasEtiquetadas: { novedadOrigen: NovedadParticipeCarga; fila: AfectacionValoresParticipeCarga }[]
+  ): string[] {
+    const conflictos: string[] = [];
+
+    const porCuota = new Map<number, { novedadOrigen: NovedadParticipeCarga; fila: AfectacionValoresParticipeCarga }[]>();
+    const porTipoAporte = new Map<number, { novedadOrigen: NovedadParticipeCarga; fila: AfectacionValoresParticipeCarga }[]>();
+    filasEtiquetadas.forEach((item) => {
+      const detalleCodigo = item.fila.detallePrestamo?.codigo;
+      if (detalleCodigo != null) {
+        const lista = porCuota.get(detalleCodigo) ?? [];
+        lista.push(item);
+        porCuota.set(detalleCodigo, lista);
+      }
+      const idTipoAporte = item.fila.tipoAporte?.codigo;
+      if (idTipoAporte != null) {
+        const lista = porTipoAporte.get(idTipoAporte) ?? [];
+        lista.push(item);
+        porTipoAporte.set(idTipoAporte, lista);
+      }
+    });
+
+    porCuota.forEach((items, detalleCodigo) => {
+      const novedadesDistintas = new Set(items.map((i) => i.novedadOrigen.codigo));
+      if (novedadesDistintas.size > 1) {
+        const numeroCuota = items[0].fila.detallePrestamo?.numeroCuota;
+        conflictos.push(`la cuota ${numeroCuota ?? detalleCodigo} tiene afectaciones registradas bajo ${novedadesDistintas.size} novedades distintas de este partícipe`);
+      }
+    });
+
+    porTipoAporte.forEach((items, idTipoAporte) => {
+      const novedadesDistintas = new Set(items.map((i) => i.novedadOrigen.codigo));
+      if (novedadesDistintas.size > 1) {
+        conflictos.push(`el aporte ${items[0].fila.tipoAporte?.nombre ?? idTipoAporte} tiene afectaciones registradas bajo ${novedadesDistintas.size} novedades distintas de este partícipe`);
+      }
+    });
+
+    return conflictos;
+  }
+
+  private ejecutarGuardadoAfectacionesFinancieras(novedad: NovedadParticipeCarga, usuario: Usuario): void {
     const cuotasDisponibles = new Map<number, { prestamo: Prestamo; detalle: DetallePrestamo }>();
     this.prestamosAfectables().forEach((item) => {
       item.cuotas.forEach((detalle) => cuotasDisponibles.set(detalle.codigo, { prestamo: item.prestamo, detalle }));
@@ -2322,11 +2436,10 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
     });
 
     if (operaciones.length === 0 && filasAporteParaBatch.length === 0) {
+      this.isSavingAfectacionFinanciera.set(false);
       this.snackBar.open('No hay cambios por guardar en las afectaciones', 'Cerrar', { duration: 3000 });
       return;
     }
-
-    this.isSavingAfectacionFinanciera.set(true);
 
     forkJoin({
       prestamos: operaciones.length ? forkJoin(operaciones) : of(null),
