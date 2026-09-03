@@ -83,6 +83,20 @@
     width: 18px;
     height: 18px;
   }
+
+  &.exceso {
+    background: #fef2f2;
+  }
+
+  &.exceso .v {
+    color: #c53030;
+  }
+
+  &.exceso mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
 }
 
 .apd-motivos {

@@ -447,15 +447,25 @@ export class AfectacionParticipeDialogComponent implements OnInit {
 
   // ================= tope por partícipe =================
 
+  /**
+   * El POZO real — `disponible` de `/asgn/topeAfectacion`, sin ningún ajuste. Hasta el
+   * 2026-09-03 este getter hacía `tope.restante + valorPersistidoAlCargar` ("agregar de vuelta lo
+   * ya persistido, porque restante ya lo descuenta") — una fórmula que tenía sentido cuando el
+   * fan-out de afectaciones estaba limitado a una sola novedad (necesitaba reconciliar una vista
+   * PARCIAL contra un número GLOBAL) pero se volvió activamente peligrosa acá: con el fan-out ya
+   * ampliado a TODAS las novedades del partícipe, `valorPersistidoAlCargar` es el `afectado`
+   * completo, y sumarlo a `restante` (que ya vale 0 cuando hay exceso) da el `afectado`, no el
+   * `disponible` — la pantalla mostraba "Disponible $439,59" para un partícipe cuyo pozo real es
+   * $298,19, exactamente al revés. Caso real, 2026-09-03: SANCHEZ (rol 7508), disponible 298,19,
+   * afectado 439,59 (145+149+336) — con la fórmula vieja "Disponible" mostraba 439,59.
+   *
+   * Ya no hace falta el ajuste: el fan-out completo + `verificarConsistenciaAfectado` garantizan
+   * que la sesión ve TODO lo persistido, así que comparar el total de la sesión (que arranca
+   * sembrado con eso) contra el pozo crudo es correcto y mucho más simple.
+   */
   get montoDisponibleAfectacion(): number {
     const tope = this.topeAfectacionParticipe();
-    if (!tope) return 0;
-    return this.redondear(tope.restante + this.valorPersistidoAlCargar);
-  }
-
-  /** Todo lo que este partícipe YA tiene guardado, en CUALQUIERA de sus novedades — no solo una. */
-  private get valorPersistidoAlCargar(): number {
-    return this.redondear(this.afectacionesRegistradas().reduce((sum, a) => sum + (Number(a.valorAfectar) || 0), 0));
+    return tope ? this.redondear(tope.disponible) : 0;
   }
 
   get totalValorAfectarActual(): number {
@@ -466,6 +476,7 @@ export class AfectacionParticipeDialogComponent implements OnInit {
     return this.redondear(Object.values(this.valoresAporteEditados()).reduce((sum, v) => sum + (Number(v) || 0), 0));
   }
 
+  /** Puede ser NEGATIVO — significa exceso, no "falta". El HTML lo etiqueta según el signo, nunca "Restante" fijo. */
   get saldoPendienteAfectacion(): number {
     return this.redondear(this.montoDisponibleAfectacion - this.totalValorAfectarActual - this.totalValorAportarActual);
   }
@@ -1004,18 +1015,28 @@ export class AfectacionParticipeDialogComponent implements OnInit {
     });
   }
 
+  /**
+   * ⛔ SUMA, no sobreescribe (bug real encontrado 2026-09-03, SANCHEZ rol 7508: AVPC 145 y 149
+   * cuelgan de la MISMA cuota 512966 — 141,40 y 273,63). Con `acc[detalleCodigo] = valor`, la
+   * segunda fila pisaba a la primera: el input mostraba solo una de las dos y "asignado ahora"
+   * salía mal, y el guardado (ver `guardarAfectaciones`) actualizaba solo la que sobrevivió en el
+   * mapa dejando a la otra huérfana para siempre — invisible, no editable, pero seguía sumando en
+   * el `afectado` real del backend. Una cuota puede tener más de un AVPC (una fila por cascada);
+   * el input tiene que reflejar el TOTAL para poder corregirlo.
+   */
   private construirMapaValoresAfectados(afectaciones: AfectacionValoresParticipeCarga[]): Record<number, number> {
     return afectaciones.reduce((acc, item) => {
       const detalleCodigo = item.detallePrestamo?.codigo;
-      if (detalleCodigo) acc[detalleCodigo] = Number(item.valorAfectar || 0);
+      if (detalleCodigo) acc[detalleCodigo] = this.redondear((acc[detalleCodigo] || 0) + (Number(item.valorAfectar) || 0));
       return acc;
     }, {} as Record<number, number>);
   }
 
+  /** Misma corrección que `construirMapaValoresAfectados` — suma, no sobreescribe, por si un tipo de aporte llega a tener más de una fila. */
   private construirMapaValoresAportados(afectaciones: AfectacionValoresParticipeCarga[]): Record<number, number> {
     return afectaciones.reduce((acc, item) => {
       const idTipoAporte = item.tipoAporte?.codigo;
-      if (idTipoAporte) acc[idTipoAporte] = Number(item.valorAfectar || 0);
+      if (idTipoAporte) acc[idTipoAporte] = this.redondear((acc[idTipoAporte] || 0) + (Number(item.valorAfectar) || 0));
       return acc;
     }, {} as Record<number, number>);
   }

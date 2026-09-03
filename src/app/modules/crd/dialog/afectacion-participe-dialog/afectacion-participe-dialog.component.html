@@ -36,14 +36,21 @@
           <span class="v">{{ formatMoneda(montoDisponibleAfectacion) }}</span>
         </div>
         <div class="apd-pozo-tile">
-          <span class="l">Asignado ahora</span>
+          <span class="l">Afectado</span>
           <span class="v">{{ formatMoneda(totalValorAfectarActual + totalValorAportarActual) }}</span>
         </div>
-        <div class="apd-pozo-tile" [class.completo]="saldoPendienteAfectacion <= 0.004" [class.pendiente]="saldoPendienteAfectacion > 0.004">
-          <span class="l">Restante</span>
+        <!--
+          El tercer recuadro cambia de ETIQUETA según el signo, nunca dice "Restante" fijo (bug
+          real 2026-09-03: con exceso, "Restante 141,40" en rojo llevaba al operador a afectar
+          TODAVÍA MÁS, exactamente al revés de lo que hacía falta). saldoPendienteAfectacion
+          negativo = exceso (sobra, hay que BAJAR); positivo = restante (falta, se puede subir).
+        -->
+        <div class="apd-pozo-tile" [class.completo]="saldoPendienteAfectacion >= -0.004 && saldoPendienteAfectacion <= 0.004" [class.pendiente]="saldoPendienteAfectacion > 0.004" [class.exceso]="saldoPendienteAfectacion < -0.004">
+          <span class="l">{{ saldoPendienteAfectacion < -0.004 ? 'Exceso' : 'Restante' }}</span>
           <span class="v">
-            @if (saldoPendienteAfectacion <= 0.004) { <mat-icon>check_circle</mat-icon> }
-            {{ formatMoneda(saldoPendienteAfectacion) }}
+            @if (saldoPendienteAfectacion >= -0.004 && saldoPendienteAfectacion <= 0.004) { <mat-icon>check_circle</mat-icon> }
+            @if (saldoPendienteAfectacion < -0.004) { <mat-icon>warning</mat-icon> }
+            {{ formatMoneda(saldoPendienteAfectacion < 0 ? -saldoPendienteAfectacion : saldoPendienteAfectacion) }}
           </span>
         </div>
       </div>
