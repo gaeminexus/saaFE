@@ -295,6 +295,18 @@ y un CSV que parece bien y está truncado. Siempre el valor explícito de `total
 Las dos opciones exportan **exactamente las mismas columnas**; lo único que cambia es cuántas filas.
 Si divergen, el usuario no puede comparar dos CSV del mismo tablero.
 
+**La fecha de vencimiento de la cuota va junto al número de cuota**, en la tabla y en el CSV
+(pedido del usuario 2026-09-03). El backend **ya la devuelve** como `fechaVencimiento` en cada fila
+—no hace falta tocarlo— pero no se estaba mostrando en ninguno de los dos lados.
+
+⛔ **Formato de fecha en el cable: verificarlo, no asumirlo.** Quien serializa es **Jackson**
+(`CLAUDE.md` § Serialización), que emite `LocalDate` como **arreglo** `[2026,7,31]`, no como
+`"2026-07-31"`. El ejemplo de este mismo documento muestra la forma string, y el modelo del FE
+declara `fechaVencimiento: string | null` — **al menos uno de los dos está desactualizado**. Si
+llega como arreglo y se vuelca crudo al CSV, la celda sale `2026,7,31` y además rompe el CSV por las
+comas. `fechaAplicacion` ya se exporta hoy y tiene exactamente el mismo riesgo: **las dos fechas se
+formatean con el mismo helper**, no una sí y otra no.
+
 Costo: el `resumenJerarquico` y el `totalValorFiltrado` se calculan sobre el conjunto filtrado
 completo en **las dos** llamadas (`construirResumenJerarquico`, sin paginar), así que pedir
 `totalFilas` filas no agrega consultas — agrega el tamaño de la respuesta y el armado del CSV en el
