@@ -132,7 +132,13 @@ export class ConfiguracionNominaComponent implements OnInit {
     for (const b of BANDERAS) {
       payload[b.name] = valores[b.name] ? 'S' : 'N';
     }
-    if (this.registro?.codigo) payload.codigo = this.registro.codigo;
+    if (this.registro?.codigo) {
+      payload.codigo = this.registro.codigo;
+      // El sellado de auditoría del backend (EntidadAuditableFecha) solo actúa en el alta —
+      // EntityDaoImpl.save() lo dispara nada más cuando el id es null—; en la edición, si esta
+      // clave no viaja, el merge desnudo la graba null. Se preserva del registro cargado.
+      payload.fechaRegistro = this.registro.fechaRegistro;
+    }
 
     this.guardando.set(true);
     const peticion = this.registro?.codigo

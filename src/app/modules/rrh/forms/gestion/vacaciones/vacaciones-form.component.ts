@@ -333,6 +333,9 @@ export class VacacionesFormComponent implements OnInit {
       payload.fechaRegistro = current?.fechaRegistro ?? undefined;
       payload.usuarioRegistro = current?.usuarioRegistro ?? undefined;
       payload.usuarioAprobacion = current?.usuarioAprobacion ?? undefined;
+      // SLCTFHAP: sin esto la clave queda ausente del JSON y el merge desnudo de
+      // EntityDaoImpl.save() la graba null en cada edición de una solicitud ya aprobada.
+      payload.fechaAprobacion = current?.fechaAprobacion ?? undefined;
     } else {
       payload.fechaRegistro = new Date();
       payload.usuarioRegistro = usuarioSesion();

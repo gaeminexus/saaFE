@@ -433,7 +433,7 @@ export class PermisosLicenciasFormComponent implements OnInit {
       conGoce: this.formConGoce(),
       observacion: this.formObservacion().trim() || null,
       numeroDocumento: this.formNumeroDocumento().trim() || null,
-      estado: 'SOLICITADA', // RHH.PTCN guarda el estado como texto
+      estado: 'SOLICITADA', // Solo rige en alta — en edición se pisa abajo con el estado real
       usuarioRegistro: usuarioSesion(),
       fechaRegistro: this.funcionesDatosS.formatearFechaParaBackend(new Date(), TipoFormatoFechaBackend.SOLO_FECHA),
       fechaFin: this.funcionesDatosS.formatearFechaParaBackend(this.formFechaFin()!, TipoFormatoFechaBackend.SOLO_FECHA),
@@ -445,6 +445,17 @@ export class PermisosLicenciasFormComponent implements OnInit {
 
     if (this.formData.mode === 'edit' && this.formData.data) {
       datos.codigo = this.formData.data.codigo;
+      // `motivo` (PTCN.motivo) no tiene control en este formulario: si no se preserva del
+      // registro original, la clave queda ausente del JSON y `EntityDaoImpl.save()` la graba
+      // `null` en cada edición — la trampa del merge desnudo que documenta el contrato de rrh.
+      datos.motivo = this.formData.data.motivo ?? null;
+      // `estado`: este formulario es para EDITAR la solicitud, no para decidirla — `cambiarEstado`
+      // (aprobar/rechazar/cancelar) es quien tiene que moverlo, y manda por este mismo PUT. Sin
+      // esto, cada edición devolvía el permiso a SOLICITADA y borraba la decisión ya tomada.
+      datos.estado = this.formData.data.estado;
+      // `usuarioAprobacion` → `PTCN.usuarioAprobador` (lo traduce `mapToBackendFormat`). Mismo
+      // motivo que `motivo`: sin control en pantalla, se pierde si no se preserva.
+      datos.usuarioAprobacion = this.formData.data.usuarioAprobacion ?? null;
     }
 
     return datos;

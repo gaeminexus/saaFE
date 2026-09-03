@@ -460,6 +460,10 @@ export class VacacionesListComponent implements OnInit {
       estado,
       observacion: observacion ?? row.observacion ?? undefined,
       usuarioAprobacion: usuarioSesion(),
+      // SLCTFHAP: falta desde siempre en esta acción — es justo la fecha de la decisión que se
+      // está tomando acá (aprobar/rechazar/anular), así que se sella igual que usuarioAprobacion,
+      // no se preserva de `row`.
+      fechaAprobacion: new Date(),
       fechaRegistro: row.fechaRegistro,
       usuarioRegistro: row.usuarioRegistro,
     };
