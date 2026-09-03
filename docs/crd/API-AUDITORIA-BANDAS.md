@@ -6,8 +6,9 @@
 
 Plan de fondo: `PLAN-AUDITORIA-BANDAS.md`. Ante una diferencia, manda el plan.
 
-**Todo lo de este contrato es de sólo lectura.** Ningún endpoint escribe: la pantalla audita lo que
-ya ocurrió y no cambia ni un valor.
+**Casi todo este contrato es de sólo lectura** — la pantalla audita lo que
+ya ocurrió y no cambia ni un valor. **La única excepción es `/dsbn/recalcularDistribucion`**, que
+reescribe la tabla de auditoría de un origen (y sólo esa tabla) — ver su sección más abajo.
 
 ---
 
@@ -366,3 +367,35 @@ alcance vuelve a morder al primero que lo use sin leer el javadoc.
 
 Queda `resumenJerarquico`, que se calcula sobre el conjunto filtrado completo — y `totalValorFiltrado`
 ahora se deriva de él, así que **no pueden discrepar**.
+
+---
+
+## 5. `POST /rest/dsbn/recalcularDistribucion` — el único endpoint que escribe
+
+**Query params:** `origen` (sólo `CARGA_PETRO`), `idOrigen`, `usuario` (opcional).
+**Respuesta:** `{ "idCarga": 449, "pagosClasificados": 1167 }`
+
+Reconstruye la distribución de un origen **ya procesado**, releyendo los pagos y aportes que ya están
+en la base. Llama al **mismo** método que el procesamiento normal, así que no puede dar un resultado
+distinto del que habría dado en su momento.
+
+⛔ **Sólo reescribe `CRD.DSBN`.** No toca asientos, ni pagos, ni aportes, ni cuotas. Idempotente:
+correrlo dos veces deja el mismo resultado.
+
+### Para qué sirve — y para qué NO
+
+**Sirve** cuando una carga **ya cerrada** quedó con la auditoría incompleta: típicamente porque el WAR
+se desplegó *después* de procesarla. Sin esto, la única salida era reprocesar la carga entera —
+veinte minutos y asientos regenerados en producción— para poblar una tabla de auditoría.
+
+**También sirve como backfill**, una carga a la vez: reconstruir cargas viejas verificando cada una
+contra su asiento antes de seguir. **No hay versión por lote a propósito** — el ritmo lo controla
+quien verifica.
+
+⚠️ **NO sirve para la carga que se está iterando.** Si el ciclo es procesar → ver que salió mal →
+restaurar la base → reprocesar, recalcular la auditoría de una carga que se va a descartar no aporta
+nada. Para ese caso la defensa es otra: **que el proceso no permita terminar si el asiento no va a
+cuadrar** (ver `VALIDACION-TOPE-AFECTACION-MANUAL.md` §11). Este endpoint es para lo ya cerrado.
+
+**En la pantalla:** botón «Recalcular distribución» en el panel de cuadre, **con confirmación previa**
+— es el único control de esa pantalla que escribe, y conviene que se note.
