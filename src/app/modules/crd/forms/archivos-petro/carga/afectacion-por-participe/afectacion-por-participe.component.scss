@@ -168,6 +168,13 @@
   white-space: nowrap;
 }
 
+.apc-fila-estado {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+}
+
 .apc-badge {
   display: inline-flex;
   align-items: center;
@@ -199,6 +206,12 @@
     color: #52525b;
     font-weight: 500;
   }
+}
+
+.apc-desglose {
+  font-size: 0.72rem;
+  color: #a0aec0;
+  white-space: nowrap;
 }
 
 .apc-fila-chevron {

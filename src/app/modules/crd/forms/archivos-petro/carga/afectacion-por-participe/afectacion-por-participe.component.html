@@ -42,7 +42,7 @@
 
     <mat-form-field appearance="outline" class="apc-buscar">
       <mat-label>Buscar partícipe</mat-label>
-      <input matInput [(ngModel)]="filtroTexto" placeholder="Nombre o código Petro..." />
+      <input matInput [ngModel]="filtroTexto()" (ngModelChange)="filtroTexto.set($event)" placeholder="Nombre o código Petro..." />
       <mat-icon matSuffix>search</mat-icon>
     </mat-form-field>
 
@@ -67,8 +67,24 @@
               } @else if (p.estado === 'FALTANTE') {
                 <span class="apc-badge apc-badge--faltante"><mat-icon>arrow_upward</mat-icon> Faltante {{ formatMoneda(p.monto) }}</span>
               } @else {
-                <span class="apc-badge apc-badge--neutral">Disponible {{ formatMoneda(p.disponible) }} · ver detalle</span>
+                <span class="apc-badge apc-badge--neutral">Sin exceso ni faltante — abrir para confirmar</span>
               }
+              <!--
+                Dos números de lo mismo, con la relación explícita (regla general 2026-09-03: un
+                número correcto mostrado sin su contexto es tan confuso como uno mal calculado —
+                caso SANCHEZ: descontado 406,73, pero solo 298,19 necesitan reparto manual, el
+                resto (PE+AH) se aplica solo). `aRepartir` es SIEMPRE el mismo campo que usa el
+                diálogo (`topeAfectacion`/prevuelo) — nunca una cuenta propia.
+              -->
+              <span class="apc-desglose">
+                @if (p.aRepartir === undefined) {
+                  Descontado {{ formatMoneda(p.totalDescontado) }} · calculando pozo real...
+                } @else if (p.seAplicaSolo! > 0.004) {
+                  Descontado {{ formatMoneda(p.totalDescontado) }} · A repartir {{ formatMoneda(p.aRepartir) }} · Se aplica solo {{ formatMoneda(p.seAplicaSolo) }}
+                } @else {
+                  Descontado {{ formatMoneda(p.totalDescontado) }} — todo a repartir
+                }
+              </span>
             </div>
             <mat-icon class="apc-fila-chevron">chevron_right</mat-icon>
           </button>

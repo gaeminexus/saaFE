@@ -42,8 +42,18 @@ export interface AfectacionParticipeDialogData {
   idCarga: number;
   codigoPetro: number;
   nombreParticipe: string;
-  /** Ya cargadas por la pantalla de listado — no se vuelven a pedir acá. */
+  /**
+   * TODAS las novedades del partícipe en esta carga, SIN filtrar por `tipoNovedad` — se usan para
+   * el fan-out de afectaciones ya guardadas y para decidir de qué novedad cuelga cada destino.
+   *
+   * ⛔ Filtrarlas antes de pasarlas acá fue el origen de un bug real (2026-09-03, caso SANCHEZ
+   * 7508): el listado solo pasaba las novedades `tipoNovedad > 3` ("motivo"), y una novedad
+   * `tipoNovedad <= 3` con afectaciones ya guardadas quedaba fuera del fan-out — "asignado ahora"
+   * contaba de menos, y el operador podía terminar afectando dos veces lo mismo.
+   */
   novedades: NovedadParticipeCarga[];
+  /** Solo las que se muestran como "MOTIVOS" en pantalla (`tipoNovedad > 3`) — subconjunto de `novedades`. */
+  motivos: NovedadParticipeCarga[];
 }
 
 interface PrestamoAfectable {
@@ -106,6 +116,16 @@ export class AfectacionParticipeDialogComponent implements OnInit {
 
   topeAfectacionParticipe = signal<TopeAfectacionManual | null>(null);
   topeAfectacionConsultaFallida = signal(false);
+
+  /**
+   * Red de seguridad (2026-09-03, caso SANCHEZ 7508): compara lo que ESTA pantalla pudo juntar de
+   * `afectacionesRegistradas` contra el `afectado` que ya calcula `/asgn/topeAfectacion` — el
+   * mismo número que usa la validación real. Si no coinciden, esta pantalla está viendo MENOS de
+   * lo que en verdad hay afectado (por ejemplo, un destino que no sabe mostrar) y dejar editar
+   * arriesgaría afectar dos veces la misma plata. No intenta adivinar la causa: bloquea y avisa el
+   * monto exacto, en vez de aproximar. `null` = todo cuadra, se puede editar.
+   */
+  bloqueadoPorInconsistencia = signal<string | null>(null);
 
   prestamosAfectables = signal<PrestamoAfectable[]>([]);
   erroresCargaPrestamos = signal<PrestamoErrorCarga[]>([]);
@@ -185,14 +205,16 @@ export class AfectacionParticipeDialogComponent implements OnInit {
       const afectaciones = listas.flat();
       this.afectacionesRegistradas.set(afectaciones);
       this.valoresAporteEditados.set(this.construirMapaValoresAportados(afectaciones));
+      this.verificarConsistenciaAfectado();
       // El auto-asignado de novedad para aporte se recalcula DESPUÉS de que `prestamosAfectables`
       // esté listo (dentro de `cargarPrestamosAfectables`) — antes de eso, `pozoRestantePorNovedad`
       // no puede descontar lo que ya consumen los préstamos y el pozo por novedad quedaría inflado.
       this.cargarPrestamosAfectables(afectaciones);
     });
 
-    if (this.data.novedades[0]?.codigo) {
-      this.cargarOpcionesAporte(this.data.novedades[0].codigo);
+    const novedadParaOpcionesAporte = this.data.motivos[0]?.codigo ?? this.data.novedades[0]?.codigo;
+    if (novedadParaOpcionesAporte) {
+      this.cargarOpcionesAporte(novedadParaOpcionesAporte);
     }
   }
 
@@ -202,6 +224,7 @@ export class AfectacionParticipeDialogComponent implements OnInit {
       next: (tope) => {
         if (tope) {
           this.topeAfectacionParticipe.set(tope);
+          this.verificarConsistenciaAfectado();
         } else {
           this.topeAfectacionParticipe.set(null);
           this.topeAfectacionConsultaFallida.set(true);
@@ -212,6 +235,29 @@ export class AfectacionParticipeDialogComponent implements OnInit {
         this.topeAfectacionConsultaFallida.set(true);
       },
     });
+  }
+
+  /**
+   * Ver el comentario de `bloqueadoPorInconsistencia`. Se llama después de CADA pieza que hace
+   * falta para el chequeo (el tope y el fan-out de afectaciones) — es barato y evita depender de
+   * cuál de las dos termine última.
+   */
+  private verificarConsistenciaAfectado(): void {
+    const tope = this.topeAfectacionParticipe();
+    if (!tope) return; // se re-evalúa cuando el tope llegue; si falla del todo, montoDisponibleAfectacion ya cae a 0 y guardarAfectaciones lo frena igual
+
+    const calculado = this.redondear(this.afectacionesRegistradas().reduce((sum, a) => sum + (Number(a.valorAfectar) || 0), 0));
+    const backend = this.redondear(tope.afectado);
+
+    if (Math.abs(calculado - backend) > 0.01) {
+      this.bloqueadoPorInconsistencia.set(
+        `El sistema registra ${this.formatMoneda(backend)} ya afectados para este partícipe, pero esta pantalla solo pudo confirmar ` +
+          `${this.formatMoneda(calculado)} en los destinos que sabe mostrar. Para no arriesgar una afectación duplicada, no se puede ` +
+          `editar ni guardar hasta confirmarlo — use la pantalla de novedades actual para este partícipe mientras tanto, y avise al equipo.`
+      );
+    } else {
+      this.bloqueadoPorInconsistencia.set(null);
+    }
   }
 
   private cargarPrestamosAfectables(afectaciones: AfectacionEtiquetada[]): void {
@@ -832,6 +878,11 @@ export class AfectacionParticipeDialogComponent implements OnInit {
   // ================= guardar =================
 
   guardarAfectaciones(): void {
+    if (this.bloqueadoPorInconsistencia()) {
+      this.snackBar.open('No se puede guardar: los números de este partícipe no coinciden con el sistema. Ver el aviso arriba.', 'Cerrar', { duration: 5000 });
+      return;
+    }
+
     const usuario = this.obtenerUsuarioActual();
     if (!usuario) {
       this.snackBar.open('No se pudo identificar el usuario actual', 'Cerrar', { duration: 3500 });

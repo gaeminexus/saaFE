@@ -13,6 +13,13 @@
     </button>
   </div>
 
+  @if (bloqueadoPorInconsistencia(); as motivo) {
+    <div class="apd-bloqueo">
+      <mat-icon>block</mat-icon>
+      <span>{{ motivo }}</span>
+    </div>
+  }
+
   <!-- ── Pozo del partícipe — un total, un estado (§4 del plan) ── -->
   <div class="apd-pozo">
     @if (topeAfectacionConsultaFallida()) {
@@ -47,10 +54,10 @@
   <div class="apd-motivos">
     <div class="apd-motivos-titulo">
       <mat-icon>report_problem</mat-icon>
-      MOTIVOS ({{ data.novedades.length }} {{ data.novedades.length === 1 ? 'novedad' : 'novedades' }})
+      MOTIVOS ({{ data.motivos.length }} {{ data.motivos.length === 1 ? 'novedad' : 'novedades' }})
     </div>
     <ul>
-      @for (n of data.novedades; track n.codigo) {
+      @for (n of data.motivos; track n.codigo) {
         <li>{{ n.descripcion }} @if (n.codigoPrestamo) {— préstamo {{ n.codigoPrestamo }}}</li>
       }
     </ul>
@@ -87,8 +94,8 @@
             @if (item.novedadOrigen) {
               <span class="apd-prestamo-novedad">se registra en: {{ item.novedadOrigen.descripcion }}</span>
             } @else {
-              <span class="apd-prestamo-sin-novedad">
-                <mat-icon>block</mat-icon> sin novedad que lo respalde — no se puede afectar desde acá
+              <span class="apd-prestamo-auto">
+                <mat-icon>info</mat-icon> se aplica automáticamente, no requiere afectación desde acá
               </span>
             }
           </div>
@@ -98,14 +105,14 @@
               <div class="apd-reparto-header">
                 <mat-checkbox
                   [checked]="isAplicarTodoElSobranteActivo(item)"
-                  [disabled]="!item.novedadOrigen"
+                  [disabled]="!item.novedadOrigen || !!bloqueadoPorInconsistencia()"
                   (change)="onToggleAplicarTodoElSobrante(item, $event.checked)">
                   Aplicar todo el sobrante a este préstamo
                 </mat-checkbox>
                 <mat-form-field appearance="outline" class="apd-reparto-input">
                   <mat-label>Valor por préstamo</mat-label>
                   <input matInput
-                         [disabled]="!item.novedadOrigen"
+                         [disabled]="!item.novedadOrigen || !!bloqueadoPorInconsistencia()"
                          [value]="getValorRepartoPrestamoTexto(item)"
                          (input)="onValorRepartoPrestamoInput(item, $any($event.target).value)"
                          (blur)="onValorRepartoPrestamoBlur(item)" />
@@ -134,12 +141,12 @@
                   <td mat-cell *matCellDef="let c">
                     <div class="apd-valor-cuota">
                       <input matInput
-                             [disabled]="!item.novedadOrigen"
+                             [disabled]="!item.novedadOrigen || !!bloqueadoPorInconsistencia()"
                              [value]="getValorAfectarEditado(c.codigo)"
                              (focus)="onValorAfectarFocus(c)"
                              (blur)="onValorAfectarBlur(c)"
                              (change)="onValorAfectarChange(c, $any($event.target).value)" />
-                      <button mat-icon-button type="button" [disabled]="!item.novedadOrigen"
+                      <button mat-icon-button type="button" [disabled]="!item.novedadOrigen || !!bloqueadoPorInconsistencia()"
                               (click)="onAutocompletarValorCuota(c)" matTooltip="Completar con el máximo disponible">
                         <mat-icon>bolt</mat-icon>
                       </button>
@@ -167,6 +174,7 @@
               <mat-form-field appearance="outline" class="apd-reparto-input">
                 <mat-label>Valor a aportar</mat-label>
                 <input matInput
+                       [disabled]="!!bloqueadoPorInconsistencia()"
                        [value]="getValorAporteEditado(op.idTipoAporte)"
                        (focus)="onValorAporteFocus(op.idTipoAporte)"
                        (blur)="onValorAporteBlur(op.idTipoAporte)"
@@ -201,7 +209,7 @@
 
   <div class="apd-footer">
     <button mat-button (click)="cerrar()" [disabled]="guardando()">Cancelar</button>
-    <button mat-raised-button color="primary" (click)="guardarAfectaciones()" [disabled]="guardando() || cargando()">
+    <button mat-raised-button color="primary" (click)="guardarAfectaciones()" [disabled]="guardando() || cargando() || !!bloqueadoPorInconsistencia()">
       @if (guardando()) {
         <mat-spinner diameter="18" class="apd-spinner"></mat-spinner> Guardando...
       } @else {
