@@ -50,4 +50,20 @@
     font-size: $font-size-sm;
     color: $text-secondary;
   }
+
+  .tarjeta-f107 {
+    margin-top: $spacing-md;
+    align-items: stretch;
+  }
+
+  .selectores-f107 {
+    display: flex;
+    gap: $spacing-md;
+    flex-wrap: wrap;
+
+    app-inline-autocomplete {
+      flex: 1;
+      min-width: $breakpoint-sm * 0.5;
+    }
+  }
 }

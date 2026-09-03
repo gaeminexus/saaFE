@@ -157,6 +157,12 @@
           <mat-icon>logout</mat-icon>
           Ejecutar salida
         </button>
+        <button mat-stroked-button type="button" (click)="descargarActa()"
+                [disabled]="!puedeDescargarActa() || descargandoActa()"
+                [matTooltip]="puedeDescargarActa() ? 'Descarga el acta de finiquito en PDF' : 'El acta se habilita al aprobar el finiquito: antes las cifras todavía pueden cambiar'">
+          <mat-icon>description</mat-icon>
+          Descargar acta
+        </button>
       }
     </footer>
   }

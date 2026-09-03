@@ -26,4 +26,17 @@ export class ReportesNomina {
   public static readonly ROL_CONSOLIDADO = 'RPRT_ROLL_CNSL';
   public static readonly PROVISIONES = 'RPRT_PRVS_PRDO';
   public static readonly RESUMEN_APORTES = 'RPRT_APRT_RSMN';
+
+  /**
+   * Los tres agregados el 2026-09-03, verificados contra `saaBE/src/main/resources/rep/rhh/`
+   * (los `.jrxml` reales, no de memoria — un nombre equivocado no falla al compilar, da 404 en
+   * tiempo de ejecución).
+   *
+   * `ACTA_FINIQUITO` pide `P_LQDC_CODIGO`; `FORMULARIO_107` pide `P_MPLD_CODIGO` + `P_ANIO`;
+   * `CONTROL_IESS` pide `P_PRDN_CODIGO` — el mismo parámetro de período que `ROL_CONSOLIDADO`,
+   * `PROVISIONES` y `RESUMEN_APORTES`, pese al nombre.
+   */
+  public static readonly ACTA_FINIQUITO = 'RPRT_ACTA_FNQT';
+  public static readonly FORMULARIO_107 = 'RPRT_F107_INDV';
+  public static readonly CONTROL_IESS = 'RPRT_IESS_CNTR';
 }

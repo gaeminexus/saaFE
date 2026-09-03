@@ -10,7 +10,9 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { guardarArchivo, mensajeReporteFallido } from '../../../../../shared/services/descarga-reporte';
 import { JasperReportesService } from '../../../../../shared/services/jasper-reportes.service';
 import { usuarioSesion } from '../../../../../shared/services/usuario-sesion';
+import { Empleado } from '../../../model/empleado';
 import { PeriodoNomina } from '../../../model/periodo-nomina';
+import { EmpleadoService } from '../../../service/empleado.service';
 import { PeriodoNominaService } from '../../../service/periodo-nomina.service';
 import {
   aniosDisponibles,
@@ -18,6 +20,7 @@ import {
   filtrarPorAnio,
 } from '../../parametrizacion/utiles-parametrizacion';
 import { ReportesNomina } from '../descarga-reporte';
+import { InlineAutocompleteComponent } from '../../comunes/inline-autocomplete/inline-autocomplete.component';
 import { opcionesAviso } from '../../comunes/avisos';
 
 interface ReporteDisponible {
@@ -56,6 +59,13 @@ const REPORTES: ReporteDisponible[] = [
     icono: 'account_balance',
     archivo: 'resumen-aportes',
   },
+  {
+    plantilla: ReportesNomina.CONTROL_IESS,
+    titulo: 'Control IESS',
+    descripcion: 'Verificado el 2026-09-03: pide período de nómina, igual que los tres de arriba.',
+    icono: 'fact_check',
+    archivo: 'control-iess',
+  },
 ];
 
 /**
@@ -78,6 +88,7 @@ const REPORTES: ReporteDisponible[] = [
     MatIconModule,
     MatSelectModule,
     MatTooltipModule,
+    InlineAutocompleteComponent,
   ],
   templateUrl: './reportes-nomina.component.html',
   styleUrls: ['./reportes-nomina.component.scss'],
@@ -93,14 +104,39 @@ export class ReportesNominaComponent implements OnInit {
   formato = signal<string>('PDF');
   generando = signal<string | null>(null);
 
+  /**
+   * Formulario 107 individual: pide `P_MPLD_CODIGO` + `P_ANIO`, no período — por eso vive aparte
+   * del `REPORTES[]` de arriba, con su propio selector de colaborador y de año.
+   */
+  empleados: Empleado[] = [];
+  empleadoF107 = signal<Empleado | null>(null);
+  anioF107 = signal<number>(new Date().getFullYear());
+  generandoF107 = signal<boolean>(false);
+
+  readonly etiquetaEmpleado = (e: Empleado | null): string =>
+    e ? `${e.identificacion ?? ''} — ${e.apellidos ?? ''} ${e.nombres ?? ''}`.trim() : '';
+  readonly buscarPorEmpleado = (e: Empleado | null): string[] => [
+    e?.identificacion != null ? String(e.identificacion) : '',
+    e?.apellidos ?? '',
+    e?.nombres ?? '',
+  ];
+
   constructor(
     private periodoService: PeriodoNominaService,
+    private empleadoService: EmpleadoService,
     private jasperService: JasperReportesService,
     private snackBar: MatSnackBar,
   ) {}
 
   ngOnInit(): void {
     this.cargarPeriodos();
+    this.empleadoService.selectByCriteria(criteriosPorEmpresa('apellidos')).subscribe({
+      next: (data) => (this.empleados = data ?? []),
+      error: () => {
+        this.empleados = [];
+        this.avisar('No se pudo cargar la lista de colaboradores', true);
+      },
+    });
   }
 
   onAnioChange(anio: number): void {
@@ -141,6 +177,30 @@ export class ReportesNominaComponent implements OnInit {
         },
         error: (err) => {
           this.generando.set(null);
+          mensajeReporteFallido(err).then((mensaje) => this.avisar(mensaje, true));
+        },
+      });
+  }
+
+  generarF107(): void {
+    const empleado = this.empleadoF107();
+    if (!empleado || this.generandoF107()) return;
+
+    this.generandoF107.set(true);
+    this.jasperService
+      .generar(
+        'rhh',
+        ReportesNomina.FORMULARIO_107,
+        { P_MPLD_CODIGO: empleado.codigo, P_ANIO: this.anioF107(), P_USUARIO: usuarioSesion() },
+        this.formato(),
+      )
+      .subscribe({
+        next: (blob) => {
+          this.generandoF107.set(false);
+          guardarArchivo(blob, `formulario-107-${empleado.identificacion}-${this.anioF107()}.${this.extension()}`);
+        },
+        error: (err) => {
+          this.generandoF107.set(false);
           mensajeReporteFallido(err).then((mensaje) => this.avisar(mensaje, true));
         },
       });

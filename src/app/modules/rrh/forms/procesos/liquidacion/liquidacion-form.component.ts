@@ -10,12 +10,17 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Observable, forkJoin, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
+import { guardarArchivo, mensajeReporteFallido } from '../../../../../shared/services/descarga-reporte';
 import { DetalleRubroService } from '../../../../../shared/services/detalle-rubro.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
+import { JasperReportesService } from '../../../../../shared/services/jasper-reportes.service';
+import { usuarioSesion } from '../../../../../shared/services/usuario-sesion';
 import { Liquidacion } from '../../../model/Liquidacion';
 import {
   AccionLiquidacion,
+  ESTADOS_EN_FIRME,
   accionesDisponibles,
+  estadoEn,
   etiquetaEstadoLiquidacion,
   motivoNoDisponible,
   salidaEjecutada,
@@ -31,6 +36,7 @@ import { CampoFormularioComponent } from '../../comunes/campo-formulario/campo-f
 import { mensajeDeError } from '../../comunes/mensajes';
 import { CampoFormulario } from '../../comunes/modelo-formulario';
 import { criteriosPorEmpresa } from '../../parametrizacion/utiles-parametrizacion';
+import { ReportesNomina } from '../descarga-reporte';
 import { MENSAJE_EXITO, textoConfirmacionSalida } from './liquidacion.acciones';
 import { camposLiquidacion, criteriosDetalleLiquidacion } from './liquidacion.campos';
 import { opcionesAviso } from '../../comunes/avisos';
@@ -76,6 +82,15 @@ export class LiquidacionFormComponent implements OnInit {
 
   readonly acciones = computed(() => accionesDisponibles(this.liquidacion()));
 
+  /**
+   * El acta es un documento legal que se firma y se registra ante el Ministerio de Trabajo: si se
+   * pudiera descargar desde un borrador, alguien la imprimiría y la haría firmar con cifras que
+   * todavía pueden cambiar. Se habilita desde `APROBADA` en adelante — cuando el finiquito «ya es
+   * un hecho y no un borrador en curso» (`ESTADOS_EN_FIRME`) —, no desde que el registro existe.
+   */
+  readonly puedeDescargarActa = computed(() => estadoEn(this.liquidacion(), ESTADOS_EN_FIRME));
+  readonly descargandoActa = signal<boolean>(false);
+
   readonly titulo = computed(() => {
     const l = this.liquidacion();
     if (!l) return 'Nuevo finiquito';
@@ -107,6 +122,7 @@ export class LiquidacionFormComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private liquidacionService: LiquidacionService,
+    private jasperService: JasperReportesService,
     private detalleLiquidacionService: DetalleLiquidacionService,
     private empleadoService: EmpleadoService,
     private contratoService: ContratoEmpleadoService,
@@ -276,6 +292,29 @@ export class LiquidacionFormComponent implements OnInit {
         this.avisar(mensajeDeError(err, 'El proceso no se pudo completar.'), true);
       },
     });
+  }
+
+  /** Descarga el acta de finiquito en PDF, por `POST /rest/rprt/generar` con `modulo: 'rhh'`. */
+  descargarActa(): void {
+    const l = this.liquidacion();
+    if (!l || !this.puedeDescargarActa() || this.descargandoActa()) return;
+
+    this.descargandoActa.set(true);
+    this.jasperService
+      .generar('rhh', ReportesNomina.ACTA_FINIQUITO, {
+        P_LQDC_CODIGO: l.codigo,
+        P_USUARIO: usuarioSesion(),
+      })
+      .subscribe({
+        next: (blob) => {
+          this.descargandoActa.set(false);
+          guardarArchivo(blob, `acta-finiquito-${l.codigo}.pdf`);
+        },
+        error: (err) => {
+          this.descargandoActa.set(false);
+          mensajeReporteFallido(err).then((mensaje) => this.avisar(mensaje, true));
+        },
+      });
   }
 
   private recargar(idLiquidacion: number): void {

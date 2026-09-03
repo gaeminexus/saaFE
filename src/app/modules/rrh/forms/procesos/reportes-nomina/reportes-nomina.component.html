@@ -70,4 +70,44 @@
       }
     </div>
   }
+
+  <!-- Formulario 107: pide empleado + año, no período — vive aparte del resto -->
+  <div class="panel tarjeta-reporte tarjeta-f107">
+    <div class="tarjeta-cabecera">
+      <mat-icon>badge</mat-icon>
+      <h2>Formulario 107 individual</h2>
+    </div>
+    <p class="tarjeta-descripcion">Retenciones en la fuente por relación de dependencia, por colaborador y año.</p>
+
+    <div class="selectores-f107">
+      <app-inline-autocomplete
+        modo="campo"
+        etiquetaCampo="Colaborador"
+        [opciones]="empleados"
+        [etiqueta]="etiquetaEmpleado"
+        [buscarPor]="buscarPorEmpleado"
+        [valor]="empleadoF107()"
+        (valorChange)="empleadoF107.set($event)"
+        placeholder="Escriba cédula o nombre…"
+      />
+      <mat-form-field appearance="outline" class="selector-anio">
+        <mat-label>Año</mat-label>
+        <mat-select [ngModel]="anioF107()" (ngModelChange)="anioF107.set($event)">
+          @for (a of anios; track a) {
+            <mat-option [value]="a">{{ a }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
+
+    <button
+      mat-flat-button
+      color="primary"
+      (click)="generarF107()"
+      [disabled]="!empleadoF107() || generandoF107()"
+    >
+      <mat-icon>download</mat-icon>
+      {{ generandoF107() ? 'Generando…' : 'Generar ' + formato() }}
+    </button>
+  </div>
 </div>
