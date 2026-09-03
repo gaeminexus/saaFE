@@ -13,7 +13,7 @@ import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda
 import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { DetalleRubroService } from '../../../../../shared/services/detalle-rubro.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
-import { BancoService } from '../../../../tsr/service/banco.service';
+import { BancoExternoService } from '../../../../tsr/service/banco-externo.service';
 import { Empleado } from '../../../model/empleado';
 import { ESTADOS_EN_FIRME } from '../../../model/estados-liquidacion';
 import { Liquidacion } from '../../../model/Liquidacion';
@@ -94,7 +94,7 @@ export class FichaColaboradorComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private empleadoService: EmpleadoService,
-    private bancoService: BancoService,
+    private bancoService: BancoExternoService,
     private conceptoNominaService: ConceptoNominaService,
     private tipoContratoService: TipoContratoEmpleadoService,
     private causalService: CausalTerminacionService,

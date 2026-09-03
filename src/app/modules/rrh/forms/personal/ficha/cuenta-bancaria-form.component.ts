@@ -12,7 +12,7 @@ import { catchError, map } from 'rxjs/operators';
 import { DetalleRubroService } from '../../../../../shared/services/detalle-rubro.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { usuarioSesion } from '../../../../../shared/services/usuario-sesion';
-import { BancoService } from '../../../../tsr/service/banco.service';
+import { BancoExternoService } from '../../../../tsr/service/banco-externo.service';
 import { CuentaBancariaEmpleadoService } from '../../../service/cuenta-bancaria-empleado.service';
 import { EmpleadoService } from '../../../service/empleado.service';
 import { CampoFormularioComponent } from '../../comunes/campo-formulario/campo-formulario.component';
@@ -33,10 +33,11 @@ interface GrupoCampos {
  * `contrato-form.component.ts`, mismo motivo: reemplaza al panel lateral para esta sección sin
  * tocar `PanelLateralComponent` ni las otras seis secciones de la ficha, que lo siguen usando.
  *
- * **El combo de banco sigue leyendo `TSR.BNCO` (bancos internos) a propósito** — cambiarlo a
- * bancos externos (`TSR.BEXT`) está bloqueado hasta que el backend actualice la FK de
- * `RHH.CBEM.BNCOCDGO`; hacerlo antes rompería el guardado con `ORA-02291`, igual que el defecto
- * ya diagnosticado en productos de cobro de `cxc`.
+ * **El combo de banco lee `TSR.BEXT` (bancos externos), no `TSR.BNCO`.** El DDL que cambió
+ * `RHH.CBEM.BNCOCDGO` por `BEXTCDGO` ya se aplicó (2026-09-03) y la entidad del backend
+ * (`CuentaBancariaEmpleado.java`) ya apunta a `BancoExterno` — verificado con el campo `banco`
+ * sin renombrar, solo retipado, así que la clave del JSON sigue siendo `banco`. Antes de este
+ * cambio esto leía `BancoService` (`TSR.BNCO`) a propósito, mientras el DDL no existía.
  */
 @Component({
   selector: 'app-cuenta-bancaria-form',
@@ -84,7 +85,7 @@ export class CuentaBancariaFormComponent implements OnInit {
     private router: Router,
     private empleadoService: EmpleadoService,
     private cuentaService: CuentaBancariaEmpleadoService,
-    private bancoService: BancoService,
+    private bancoService: BancoExternoService,
     private detalleRubroService: DetalleRubroService,
     private funcionesDatosS: FuncionesDatosService,
     private snackBar: MatSnackBar,

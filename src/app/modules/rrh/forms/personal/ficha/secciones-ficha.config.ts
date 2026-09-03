@@ -293,7 +293,8 @@ export function seccionesFicha(col: ColeccionesFicha): SeccionFicha[] {
           label: 'Banco',
           tipo: 'referencia',
           coleccion: col.bancos,
-          // TSR.BNCO solo expone el nombre como campo propio buscable
+          // TSR.BEXT (bancos externos, desde el DDL del 2026-09-03) solo expone el nombre
+          // como campo propio buscable
           buscarPor: ['nombre'],
           grupo: 'Cuenta',
         },
