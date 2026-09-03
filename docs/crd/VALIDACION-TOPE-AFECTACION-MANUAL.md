@@ -149,7 +149,7 @@ Un endpoint **de sólo lectura** que devuelva el tope ya calculado, **reusando e
 la validación —no una copia—:
 
 ```
-GET /rest/{...}/topeAfectacion?idCarga=449&codigoPetro=7508
+GET /rest/asgn/topeAfectacion?idCarga=449&codigoPetro=7508
 
 { "codigoPetro": 7508, "disponible": 406.73, "afectado": 439.59,
   "exceso": 32.86, "restante": 0.00 }
@@ -170,3 +170,7 @@ El disponible **sí** descuenta lo ya guardado al reabrir el diálogo: `cargarCo
 corre en `afterOpened()` y después de cada guardado, y todas sus ramas terminan releyendo las
 afectaciones persistidas de esa novedad. **Dentro de una novedad el control es sólido.** El agujero
 es, y siempre fue, que el tope nunca fue del partícipe.
+
+**Path publicado (2026-09-02, commit `998fd91`):** `GET /rest/asgn/topeAfectacion?idCarga=&codigoPetro=`
+— en `AsoprepGenerales`, junto a `/valoresSinDestino`. La fórmula `excesoYRestante` quedó extraída y
+**compartida** con `validarTopeAfectacionManualPorParticipe`: una sola regla, dos consumidores.
