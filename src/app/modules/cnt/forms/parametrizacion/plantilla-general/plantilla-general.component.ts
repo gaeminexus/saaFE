@@ -113,13 +113,27 @@ export class PlantillaGeneralComponent implements OnInit {
   }
 
   ngAfterViewInit(): void {
-    if (this.detallesPaginator) {
+    // La tabla de detalles (con su paginador) vive dentro de `*ngIf="isEditing"` (detalle-panel),
+    // falso al cargar la pantalla — acá el paginador todavía no existe en el DOM y `ViewChild`
+    // resuelve `undefined`. `ngAfterViewInit` corre una sola vez, así que esta asignación por sí
+    // sola nunca se repite cuando `isEditing` pasa a `true` más tarde: el paginador quedaba
+    // desconectado del data source para siempre y mostraba "0 of 0" con la tabla ya llena. La
+    // reconexión real está en `ngAfterViewChecked`.
+    this.conectarPaginadorYOrden();
+  }
+
+  ngAfterViewChecked(): void {
+    this.conectarPaginadorYOrden();
+  }
+
+  /** Idempotente: solo reasigna cuando la referencia cambió, para no forzar trabajo en cada check. */
+  private conectarPaginadorYOrden(): void {
+    if (this.detallesPaginator && this.dataSourceDetalles.paginator !== this.detallesPaginator) {
       this.dataSourceDetalles.paginator = this.detallesPaginator;
     }
-    if (this.sort) {
+    if (this.sort && this.dataSourceDetalles.sort !== this.sort) {
       this.dataSourceDetalles.sort = this.sort;
     }
-    // No se requiere lógica adicional tras la vista
   }
 
   /**
