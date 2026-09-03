@@ -24,6 +24,7 @@ import { NovedadParticipeCargaService } from '../../../../service/novedad-partic
 import { ServiciosAsoprepService } from '../../../../../asoprep/service/servicios-asoprep.service';
 
 import { AfectacionParticipeDialogComponent } from '../../../../dialog/afectacion-participe-dialog/afectacion-participe-dialog.component';
+import { RevalidarCargaDialogComponent } from '../../../../dialog/revalidar-carga-dialog/revalidar-carga-dialog.component';
 
 type EstadoParticipe = 'EXCESO' | 'FALTANTE' | 'SIN_DATO';
 
@@ -423,6 +424,15 @@ export class AfectacionPorParticipeComponent implements OnInit {
         // el chip de exceso/faltante (que sale del prevuelo) quede al día.
         this.cargarTodo();
       }
+    });
+  }
+
+  abrirRevalidarCarga(): void {
+    const ref = this.dialog.open(RevalidarCargaDialogComponent, { width: '480px', data: { idCarga: this.idCarga } });
+    ref.afterClosed().subscribe((revalidado) => {
+      // Después de revalidar los pozos cambian — recargar es parte de la acción, no un paso
+      // aparte que el operador tenga que acordarse de hacer.
+      if (revalidado) this.cargarTodo();
     });
   }
 

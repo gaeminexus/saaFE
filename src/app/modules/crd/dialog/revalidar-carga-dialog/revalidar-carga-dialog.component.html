@@ -1,0 +1,96 @@
+<div class="rvc-dialog">
+
+  @if (estado() === 'CONFIRMAR') {
+    <div class="rvc-header rvc-header--info">
+      <mat-icon>sync</mat-icon>
+      <h2>Revalidar carga</h2>
+    </div>
+    <div class="rvc-contenido">
+      <p>
+        Recalcula las novedades de esta carga a partir de los datos que ya están cargados.
+      </p>
+      <ul class="rvc-lista-no">
+        <li>No vuelve a leer el archivo.</li>
+        <li>No aplica pagos ni genera asientos.</li>
+        <li><strong>No borra las afectaciones que ya registró.</strong> Si una novedad ya no corresponde pero tiene afectaciones guardadas, se conserva.</li>
+      </ul>
+    </div>
+    <div class="rvc-acciones">
+      <button mat-button (click)="cancelar()">Cancelar</button>
+      <button mat-raised-button color="primary" (click)="confirmarRevalidacion()">Revalidar</button>
+    </div>
+  }
+
+  @if (estado() === 'REVALIDANDO') {
+    <div class="rvc-header rvc-header--info">
+      <mat-icon>sync</mat-icon>
+      <h2>Revalidar carga</h2>
+    </div>
+    <div class="rvc-contenido rvc-cargando">
+      <mat-spinner diameter="32"></mat-spinner>
+      <span>Revalidando novedades...</span>
+    </div>
+  }
+
+  @if (estado() === 'RESULTADO' && resultado(); as r) {
+    <div class="rvc-header rvc-header--ok">
+      <mat-icon>check_circle</mat-icon>
+      <h2>Revalidación completa</h2>
+    </div>
+    <div class="rvc-contenido">
+      <div class="rvc-resumen-grid">
+        <div class="rvc-resumen-tile">
+          <span class="l">Actualizadas</span>
+          <span class="v">{{ r.novedadesActualizadas }}</span>
+        </div>
+        <div class="rvc-resumen-tile">
+          <span class="l">Creadas</span>
+          <span class="v">{{ r.novedadesCreadas }}</span>
+        </div>
+        <div class="rvc-resumen-tile">
+          <span class="l">Sin cambios</span>
+          <span class="v">{{ r.novedadesSinCambios }}</span>
+        </div>
+      </div>
+
+      @if (r.novedadesActualizadas === 0 && r.novedadesCreadas === 0) {
+        <p class="rvc-nota">No cambió nada. Si esperaba un resultado distinto, el problema es otro — no tiene sentido volver a revalidar esperando algo diferente.</p>
+      }
+
+      @if (r.detalleConservadasPorAvpc.length) {
+        <div class="rvc-conservadas">
+          <div class="rvc-conservadas-titulo">
+            <mat-icon>shield</mat-icon>
+            {{ r.detalleConservadasPorAvpc.length }} {{ r.detalleConservadasPorAvpc.length === 1 ? 'novedad se conservó' : 'novedades se conservaron' }} porque tienen afectaciones registradas
+          </div>
+          <ul>
+            @for (n of r.detalleConservadasPorAvpc; track n.codigo) {
+              <li>
+                {{ n.descripcion || ('Novedad ' + n.codigo) }}
+                @if (n.participe) {— {{ n.participe }}}
+                @if (n.codigoPetro) {(rol {{ n.codigoPetro }})}
+              </li>
+            }
+          </ul>
+        </div>
+      }
+    </div>
+    <div class="rvc-acciones">
+      <button mat-raised-button color="primary" (click)="cerrarConResultado()">Cerrar y actualizar</button>
+    </div>
+  }
+
+  @if (estado() === 'ERROR') {
+    <div class="rvc-header rvc-header--error">
+      <mat-icon>error_outline</mat-icon>
+      <h2>No se pudo revalidar</h2>
+    </div>
+    <div class="rvc-contenido">
+      <p>{{ errorMensaje() }}</p>
+    </div>
+    <div class="rvc-acciones">
+      <button mat-button (click)="cancelar()">Cerrar</button>
+    </div>
+  }
+
+</div>

@@ -54,6 +54,7 @@ import { PrevueloAfectacionCarga } from '../../../../model/prevuelo-afectacion';
 import { Usuario } from '../../../../../../shared/model/usuario';
 import { forkJoin, of, catchError, map } from 'rxjs';
 import { AfectacionFinancieraCuotasDialogComponent } from '../../../../dialog/afectacion-financiera-cuotas-dialog/afectacion-financiera-cuotas-dialog.component';
+import { RevalidarCargaDialogComponent } from '../../../../dialog/revalidar-carga-dialog/revalidar-carga-dialog.component';
 import { ProcesoArchivoErrorDialogComponent } from '../../../../dialog/archivos-petro/proceso-archivo-error-dialog/proceso-archivo-error-dialog.component';
 
 const RUBRO_ESTADOS_CARGA = 166;
@@ -2759,6 +2760,21 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
 
   cerrarPrevueloAfectacion(): void {
     this.prevueloAfectacionPanelAbierto.set(false);
+  }
+
+  /**
+   * «Revalidar carga» — mismo diálogo que la pantalla nueva de afectación por partícipe (decisión
+   * del usuario 2026-09-03: va en las dos). Solo el botón y esta llamada; nada más de esta
+   * pantalla se toca.
+   */
+  abrirRevalidarCarga(): void {
+    const idCarga = this.cargaArchivo?.codigo;
+    if (!idCarga) return;
+
+    const ref = this.dialog.open(RevalidarCargaDialogComponent, { width: '480px', data: { idCarga } });
+    ref.afterClosed().subscribe((revalidado) => {
+      if (revalidado) this.cargarDatos(idCarga);
+    });
   }
 
   private construirMapaValoresAfectados(afectaciones: AfectacionValoresParticipeCarga[]): Record<number, number> {

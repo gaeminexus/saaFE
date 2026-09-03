@@ -13,6 +13,10 @@
         }
       </p>
     </div>
+    <button mat-stroked-button color="primary" (click)="abrirRevalidarCarga()" [disabled]="cargando()">
+      <mat-icon>sync</mat-icon>
+      Revalidar carga
+    </button>
     <button mat-icon-button (click)="recargar()" [disabled]="cargando()" matTooltip="Actualizar">
       <mat-icon>refresh</mat-icon>
     </button>

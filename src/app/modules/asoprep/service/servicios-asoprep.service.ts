@@ -6,6 +6,7 @@ import { CargaArchivo } from '../../crd/model/carga-archivo';
 import { ParticipeXCargaArchivo } from '../../crd/model/participe-x-carga-archivo';
 import { TopeAfectacionManual } from '../../crd/model/tope-afectacion-manual';
 import { PrevueloAfectacionCarga } from '../../crd/model/prevuelo-afectacion';
+import { ResumenRevalidacionCarga } from '../../crd/model/revalidacion-carga';
 import { environment } from '../../../../environments/environment';
 import {
   AnulacionTransferenciaResponse,
@@ -124,6 +125,16 @@ export class ServiciosAsoprepService {
     const url = `${ServiciosAsoprep.RS_ASGN}/prevueloAfectacion`;
     const params = new HttpParams().set('idCarga', String(idCarga));
     return this.http.get<PrevueloAfectacionCarga>(url, { params }).pipe(catchError(this.handleError));
+  }
+
+  /**
+   * Recalcula las novedades de la carga a partir de los datos ya cargados (path publicado,
+   * `ec048e2`). No relee el archivo, no aplica pagos, no genera asientos, no borra afectaciones
+   * ya guardadas — ver el contrato completo en `ResumenRevalidacionCarga`.
+   */
+  revalidarCarga(idCargaArchivo: number): Observable<ResumenRevalidacionCarga | null> {
+    const url = `${ServiciosAsoprep.RS_ASGN}/revalidarCarga/${idCargaArchivo}`;
+    return this.http.post<ResumenRevalidacionCarga>(url, {}).pipe(catchError(this.handleError));
   }
 
   // ═══════════════ Cobro de Petro en dos pasos — §2 del contrato congelado ═══════════════

@@ -368,6 +368,11 @@
                 Verificar antes de procesar
               </button>
 
+              <button mat-stroked-button color="primary" type="button" (click)="abrirRevalidarCarga()">
+                <mat-icon>sync</mat-icon>
+                Revalidar carga
+              </button>
+
               @if (prevueloAfectacionPanelAbierto()) {
                 <mat-card class="prevuelo-panel">
                   <div class="prevuelo-panel-header">
