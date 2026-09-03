@@ -229,3 +229,59 @@ esos filtros la pantalla va a devolver vacío siempre, hagan los procesos lo que
 quedó cumplida en la estructura de la tabla y en la pantalla, pero no en las escrituras. Está en cola
 para cerrarse, y hasta entonces la pantalla no debería ofrecer un filtro que nunca puede tener datos
 sin decir por qué.
+
+---
+
+## Las DOS vistas — decisión del usuario, 2026-09-02
+
+> *«que me dé las dos opciones en pantalla, las dos opciones de clasificación de información»*
+
+La pantalla ofrece **las dos formas de leer los mismos datos**, con un selector, y **los mismos
+filtros alimentan a las dos**. No es una en lugar de la otra.
+
+### Vista RESUMEN (nueva, la que abre por defecto)
+
+Jerárquica, de arriba hacia abajo, porque es la que responde la pregunta de contabilidad
+—«¿por qué fue este saldo a esta cuenta?»— **en dos clics** en vez de en 69 páginas:
+
+```
+CUADRE        Recibido vs Distribuido, con la diferencia real
+
+RESUMEN       Concepto → cuenta contable → banda, con su total y su participación
+              ▸ Capital                  $150.939,84
+                  1.3.01.05  DE 1 A 30 DIAS      $ 42.110,20
+                  1.3.01.10  DE 31 A 90 DIAS     $ 38.004,55
+              ▸ Interés ordinario         $73.740,69
+              ▸ Interés de mora              $965,99
+              ▸ Aportes                  $116.857,06
+```
+
+Al abrir una banda o una cuenta se salta a la vista DETALLE **con ese filtro ya aplicado**.
+
+### Vista DETALLE (la que existe hoy)
+
+La tabla plana, fila por fila, con paginación y exportación a CSV. Es la correcta para el caso
+puntual: «quiero ver los pagos de este partícipe en esta banda». **No se toca, sólo deja de ser
+la única.**
+
+### Qué agrega el backend
+
+`POST /rest/dsbn/detalle` suma un `resumenJerarquico` calculado sobre **el conjunto filtrado
+completo, no sobre la página**:
+
+```json
+"resumenJerarquico": [
+  { "concepto": "CAPITAL", "valor": 150939.84, "filas": 1093,
+    "detalle": [
+      { "cuentaContable": "1.3.01.05", "nombreCuenta": "DE 1 A 30 DIAS",
+        "idBanda": 3, "banda": "DE 1 A 30 DIAS", "valor": 42110.20, "filas": 312 }
+    ] }
+]
+```
+
+⛔ **Agrupado por CONCEPTO en el primer nivel, no por cuenta** — la regla del §3 del plan sigue
+mandando: mora e interés ordinario comparten cuenta contable y se fusionarían. La cuenta es el
+**segundo** nivel.
+
+⚠️ Sin CNT conectado, `cuentaContable` y `nombreCuenta` vienen null y el segundo nivel agrupa sólo
+por banda. La vista sigue funcionando.
