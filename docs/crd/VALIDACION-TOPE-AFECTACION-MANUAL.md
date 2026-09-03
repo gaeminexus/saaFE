@@ -296,3 +296,57 @@ van a discrepar y nadie va a saber cuál creer.**
 2. Un partícipe que mueve entre productos **dentro de lo bloqueado** debe seguir pasando sin novedad.
    Si lo bloquea, la regla quedó implementada como «por producto» y está mal, igual que antes.
 3. Reprocesada sin violaciones, el cuadre de la auditoría debe dar **0** — no 79,44.
+
+---
+
+## 12. El dinero sin destino se vuelve novedad bloqueante — decisión del usuario, 2026-09-03
+
+> *«Si hay dinero no repartido, debe decir exactamente qué dinero no se ha repartido y permitirle al
+> usuario repartir ese dinero dentro del partícipe que tenga el sobrante. Se supone que para eso
+> creamos todos los controles.»*
+
+### El hueco que cierra
+
+Hoy, cuando el devengo de aportes no puede aplicar todo lo recibido —el partícipe no tiene vigencia
+que cubra ese mes, o la tiene en $0— el proceso **deja el sobrante sin aplicar con una advertencia**.
+Se decidió así para no abortar una carga de 2.500 personas por un jubilado al que Petro le siguió
+descontando.
+
+Pero eso choca de frente con la regla del propio usuario —*todo el dinero recibido se debe
+repartir*— y es la mitad negativa del descuadre de la carga 449: cuatro partícipes con **−29,09**
+entre todos.
+
+### La decisión
+
+**El sobrante genera una novedad BLOQUEANTE**, con el monto exacto que quedó sin aplicar y el
+partícipe al que pertenece. Ni advertencia silenciosa ni bloqueo mudo: **bloqueo accionable**.
+
+### ⛔ Lo que hace que esto no requiera nada nuevo
+
+Las piezas ya existen y encajan solas:
+
+1. La novedad bloqueante **aparece en la pantalla de afectación**, que es donde se reparte.
+2. Por la regla corregida del §10, el tope manual es *«lo descontado en los productos **con novedad
+   bloqueante**»* — así que **ese sobrante pasa automáticamente a estar disponible** para afectar.
+3. El operador lo reparte **dentro del partícipe**, entre sus préstamos y aportes, con el pozo ya
+   calculado y topado.
+4. El cuadre final del §11 deja de fallar, porque ya no queda dinero sin destino.
+
+**No hace falta un mecanismo nuevo. Hacía falta conectar los que ya están.**
+
+### Simetría, que es la razón de fondo
+
+Cuando el dinero se aplicaba **de más**, se decidió que bloquee. Que **de menos** sólo advirtiera era
+la asimetría que dejó el hueco abierto — y es exactamente por donde se coló la mitad del descuadre.
+Ahora las dos direcciones se tratan igual: **si no cuadra, no procesa, y el operador tiene dónde
+arreglarlo.**
+
+### Cuidados
+
+- **El monto de la novedad tiene que ser el sobrante exacto**, no el total del producto: es lo que
+  define el pozo que verá el operador.
+- **No duplicar**: si ese producto ya tiene una novedad bloqueante, el sobrante forma parte de ese
+  pozo, no de uno nuevo.
+- **El mensaje tiene que decir por qué sobró** —sin vigencia que cubra el mes, vigencia en $0— o el
+  operador va a repartirlo sin entender qué pasó, y el mes que viene va a pasar lo mismo.
+- El caso de **contrato inexistente sigue abortando** como hoy: ahí falta un dato, no sobra plata.
