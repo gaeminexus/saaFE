@@ -42,6 +42,25 @@ servidor **revalida que el documento pertenezca a ese titular** — no alcanza c
 haya abierto el selector filtrado. *Una validación sólo protege el camino que pasa por ella, y la
 pantalla no es un camino: es una comodidad.*
 
+### `idProducto` pasa a ser condicionalmente obligatorio (ítem 28)
+
+**Sin documento** (gasto suelto de siempre): **sigue obligatorio**, exactamente como hoy. De ahí
+sale la cuenta contable del gasto (`producto.grupoProducto.planCuenta`).
+
+**Con documento: ya no lo elige el usuario.** Decisión del usuario: *«el gasto que paga factura ya
+no debe escoger producto, el producto lo toma de la factura»*. La razón de fondo es que en ese
+camino la contabilidad va contra la cuenta del proveedor (DEBE cuentas por pagar), no contra la
+del producto — el campo pasa a ser sólo informativo, no insumo del asiento.
+
+El servidor lo **deriva de las líneas del documento** cuando es inequívoco: si todas coinciden en
+un mismo producto, lo usa; **si hay más de uno distinto, o el documento no clasifica sus líneas
+por producto, queda en `null`**. No elige la primera línea ni la de mayor monto — *inventar un
+dato plausible es peor que dejarlo vacío: el vacío se ve, la invención se cree.*
+
+**El frontend puede seguir enviando `idProducto` con documento; el servidor lo ignora.** No hace
+falta que la pantalla condicione el envío del campo, pero si simplifica ocultar el selector de
+producto cuando hay documento elegido, adelante — el dato que se vería ahí ya no es el que se usa.
+
 ### ⚠️ Lo comprometido, que es lo que evita un doble pago
 
 Para `tipoDocumento = "FACTURA"` el servidor llama a `validaValorContraSaldo`
