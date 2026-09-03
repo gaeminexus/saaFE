@@ -1574,13 +1574,23 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
    * viejo cálculo por novedad — eso reintroduciría el defecto en silencio. El operador ve por qué
    * (banner de "confirmando tope" / "no se pudo consultar") en vez de un número que parece sano
    * pero no lo es.
+   *
+   * ⛔ CORREGIDO 2026-09-03: usa `tope.disponible - tope.afectado`, NO `tope.restante` directo.
+   * `restante` viene clampeado a `max(0, disponible - afectado)` (ver el modelo) — cuando el
+   * partícipe está en EXCESO, `restante` vale 0 y la fórmula devolvía el persistido pelado (caso
+   * real, SANCHEZ rol 7508: disponible 406,73, afectado 439,59 → con el clamp la pantalla mostraba
+   * 439,59 como "disponible", el mismo número inflado que se corrigió en el diálogo por partícipe,
+   * por un camino distinto). Sin el clamp: 406,73 − 439,59 + 439,59 = 406,73 ✔. Cuando NO hay
+   * exceso da idéntico a antes (`disponible - afectado` = `restante` en ese caso) — por eso el
+   * defecto estuvo latente sin romper el caso normal. Autorización y motivo en
+   * `docs/crd/PLAN-AFECTACION-POR-PARTICIPE.md` §9.1.
    */
   get montoDisponibleAfectacion(): number {
     const tope = this.topeAfectacionParticipe();
     if (!tope) {
       return 0;
     }
-    return this.redondear(tope.restante + this.valorPersistidoNovedadAlCargar);
+    return this.redondear(tope.disponible - tope.afectado + this.valorPersistidoNovedadAlCargar);
   }
 
   get totalValorAfectarActual(): number {

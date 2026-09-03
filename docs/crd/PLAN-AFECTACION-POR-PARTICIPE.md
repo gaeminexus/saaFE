@@ -178,3 +178,32 @@ reporta, no se aplica sobre la vieja.
 **Y el criterio de la comparación es el suyo, no el mío:** en cuál le resulta más cómodo procesar. No
 en cuál tiene mejor arquitectura ni menos clics. Si la vieja gana, el §5 queda sin efecto y la nueva
 se descarta — y eso es un resultado válido, no un fracaso.
+
+---
+
+### 9.1 ⛔ Excepción puntual al "no se toca" — dos defectos que corrompen datos, 2026-09-03
+
+**El §9 dice que `detalle-consulta-carga` no se toca ni un poco mientras dure la comparación.** Se
+levantó esa restricción, **solo para estos dos defectos**, porque el usuario siguió trabajando en la
+pantalla vieja mientras la nueva se estabilizaba, y los dos podían llevarlo a afectar de más sin que
+se diera cuenta — no es una diferencia de comodidad, es corrupción de datos activa en la pantalla de
+producción.
+
+1. **Guardado que duplicaba afectaciones por cuota.** Cuando una cuota tenía más de un AVPC (caso
+   real, SANCHEZ rol 7508: AVPC 145 y 149 en la misma cuota 512966, por cascada), el mapa de
+   "existentes" del guardado —indexado por código de cuota, asumiendo a lo sumo una fila por
+   cuota— solo recordaba la última fila procesada. El guardado actualizaba esa y dejaba a la otra
+   huérfana para siempre: invisible, no editable, pero seguía sumando en el `afectado` real. Arreglo:
+   los mapas pasan a `Map<clave, fila[]>` y una regla explícita —una cuota, una afectación— consolida
+   varias filas existentes en una sola en vez de dejarlas acumular.
+
+2. **`montoDisponibleAfectacion` mostraba el afectado en vez del pozo, cuando el partícipe estaba en
+   exceso.** La fórmula sumaba `tope.restante + valorPersistidoNovedadAlCargar`, y `restante` viene
+   clampeado a `max(0, disponible - afectado)` — en exceso, `restante` vale 0 y la fórmula devolvía
+   el persistido pelado (para SANCHEZ: 439,59, el mismo número inflado que el disponible real de
+   406,73). Arreglo de una línea: `tope.disponible - tope.afectado + valorPersistidoNovedadAlCargar`,
+   sin el clamp intermedio — da idéntico al caso normal (sin exceso) y correcto en exceso.
+
+**Nada más de esa pantalla se tocó.** Cualquier otra mejora que aparezca ahí durante la comparación
+se sigue reportando, no aplicando — esta excepción es puntual a estos dos defectos, no una apertura
+general.
