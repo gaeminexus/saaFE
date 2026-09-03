@@ -136,6 +136,14 @@
                 </span>
               </div>
             </div>
+
+            @if (c.cuadra === false) {
+              <!-- "¿dónde está la diferencia?" (VALIDACION-TOPE.../API-AUDITORIA-BANDAS.md §4) -->
+              <button type="button" class="ab-btn-diferencia" (click)="toggleDiferencia()">
+                <mat-icon>{{ mostrandoDiferencia() ? 'expand_less' : 'travel_explore' }}</mat-icon>
+                {{ mostrandoDiferencia() ? 'Ocultar' : '¿Dónde está la diferencia?' }}
+              </button>
+            }
           }
 
           <!-- contabilidadConectada: false NO es un error — informativo, sin ícono de alarma. -->
@@ -161,6 +169,96 @@
           </div>
         </mat-card-content>
       </mat-card>
+
+      @if (mostrandoDiferencia()) {
+        <mat-card class="ab-card ab-diferencia-card">
+          <mat-card-content>
+            @if (cargandoDiferencia()) {
+              <div class="ab-loading-inline"><mat-spinner diameter="24"></mat-spinner> Buscando a quién le corresponde la diferencia...</div>
+            } @else if (errorDiferencia()) {
+              <div class="ab-error-block">
+                <mat-icon>report_problem</mat-icon>
+                <div>
+                  <b>No se pudo cargar la diferencia por partícipe.</b>
+                  <p>{{ errorDiferencia() }}</p>
+                </div>
+                <button mat-raised-button color="warn" (click)="reintentarDiferencia()">Reintentar</button>
+              </div>
+            } @else if (diferenciaOrigen(); as dif) {
+              <div class="ab-diferencia-header">
+                <div class="ab-diferencia-titulo">
+                  <mat-icon>travel_explore</mat-icon>
+                  <span>¿Dónde está la diferencia?</span>
+                </div>
+                <div class="ab-diferencia-resumen">
+                  {{ dif.participesConDiferencia }} {{ dif.participesConDiferencia === 1 ? 'partícipe' : 'partícipes' }} —
+                  {{ dif.recibieronDeMas }} de más, {{ dif.recibieronDeMenos }} de menos ·
+                  total {{ formatMoneda(dif.diferenciaTotal) }}
+                </div>
+              </div>
+
+              @if (diferenciaNoExplicada(); as resto) {
+                <div class="ab-hallazgo">
+                  <mat-icon>report_problem</mat-icon>
+                  <span>
+                    La suma de estos casos ({{ formatMoneda(dif.diferenciaTotal) }}) no explica toda la diferencia del cuadre
+                    ({{ formatMoneda(cuadre()?.diferencia) }}) — faltan {{ formatMoneda(resto) }} sin identificar. Es un hallazgo, no un redondeo.
+                  </span>
+                </div>
+              }
+
+              @if (!dif.detalle.length) {
+                <p class="ab-texto-vacio">El endpoint no encontró partícipes con diferencia — pero el cuadre dice que no cuadra: revisar con el plan de fondo.</p>
+              } @else {
+                <div class="ab-tabla-scroll">
+                  <table class="ab-tabla-diferencia">
+                    <thead>
+                      <tr>
+                        <th>Rol Petro</th>
+                        <th>Partícipe</th>
+                        <th class="num">Descontado</th>
+                        <th class="num">Aplicado préstamos</th>
+                        <th class="num">Aplicado aportes</th>
+                        <th class="num">Aplicado total</th>
+                        <th class="num">Diferencia</th>
+                        <th class="num">Manual</th>
+                        <th class="num">Automático</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (p of dif.detalle; track p.codigoPetro) {
+                        <tr [class.recibio-de-mas]="p.diferencia > 0.004">
+                          <td>
+                            <button type="button" class="ab-copiar-rol" (click)="copiarCodigoPetro(p.codigoPetro)" matTooltip="Copiar rol Petro">
+                              {{ p.codigoPetro }} <mat-icon>content_copy</mat-icon>
+                            </button>
+                          </td>
+                          <td>
+                            <div class="ab-participe">
+                              <span class="nombre">{{ p.participe || '—' }}</span>
+                              <span class="cedula">{{ p.cedula || '—' }}</span>
+                            </div>
+                          </td>
+                          <td class="num">{{ formatMoneda(p.descontado) }}</td>
+                          <td class="num">{{ formatMoneda(p.aplicadoPrestamos) }}</td>
+                          <td class="num">{{ formatMoneda(p.aplicadoAportes) }}</td>
+                          <td class="num">{{ formatMoneda(p.aplicadoTotal) }}</td>
+                          <td class="num ab-diferencia-valor">
+                            @if (p.diferencia > 0.004) { <mat-icon>arrow_upward</mat-icon> }
+                            {{ formatMoneda(p.diferencia) }}
+                          </td>
+                          <td class="num">{{ formatMoneda(p.aplicadoManual) }}</td>
+                          <td class="num">{{ formatMoneda(p.aplicadoAutomatico) }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              }
+            }
+          </mat-card-content>
+        </mat-card>
+      }
     }
 
     <!-- ============ 2. Filtros — dinámicos, combinables ============ -->

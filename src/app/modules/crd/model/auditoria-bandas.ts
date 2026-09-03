@@ -217,6 +217,40 @@ export interface RespuestaDetalleDistribucion {
   resumenJerarquico?: ResumenJerarquicoConcepto[];
 }
 
+/**
+ * Una fila de `GET /dsbn/diferencia` — un partícipe cuyo aplicado no coincide con lo descontado.
+ * `aplicadoManual`/`aplicadoAutomatico` es la columna que más importa: dice POR DÓNDE entró el
+ * defecto (afectación manual mal cargada vs. flujo automático) — nunca ocultarla detrás de un
+ * expandir.
+ */
+export interface DiferenciaParticipe {
+  codigoPetro: number;
+  cedula: string | null;
+  participe: string | null;
+  descontado: number;
+  aplicadoPrestamos: number;
+  aplicadoAportes: number;
+  aplicadoTotal: number;
+  /** `aplicadoTotal - descontado`. Positiva = recibió de más (son las que importan). */
+  diferencia: number;
+  aplicadoManual: number;
+  aplicadoAutomatico: number;
+}
+
+/**
+ * `GET /dsbn/diferencia` — "¿dónde está la diferencia?" (§4 del contrato). El cuadre ya dice QUE
+ * hay diferencia; esto dice DE QUIÉN. Ordenado por `diferencia` descendente por el propio backend.
+ */
+export interface DiferenciaOrigen {
+  origen: OrigenDistribucion;
+  idOrigen: number;
+  diferenciaTotal: number;
+  participesConDiferencia: number;
+  recibieronDeMas: number;
+  recibieronDeMenos: number;
+  detalle: DiferenciaParticipe[];
+}
+
 /** `GET /dsbn/origenes` — alimenta el selector. Es un filtro más, no el eje de la pantalla. */
 export interface OrigenListado {
   origen: OrigenDistribucion;

@@ -13,6 +13,7 @@ import {
   ConceptoDistribucion,
   CuadreDistribucionBandas,
   DetalleJerarquico,
+  DiferenciaOrigen,
   ErrorAuditoriaBandas,
   FilaDistribucionBanda,
   FiltroDetalleDistribucion,
@@ -110,6 +111,16 @@ export class AuditoriaBandasComponent implements OnInit {
   detalle = signal<RespuestaDetalleDistribucion | null>(null);
   errorDetalle = signal<string | null>(null);
 
+  /**
+   * "¿Dónde está la diferencia?" (§4, `GET /dsbn/diferencia`) — el botón solo existe cuando
+   * `cuadre().cuadra === false`. Se pide bajo demanda (no en cada carga del origen): es una
+   * consulta puntual para el momento en que alguien la necesita, no parte del flujo normal.
+   */
+  mostrandoDiferencia = signal(false);
+  cargandoDiferencia = signal(false);
+  diferenciaOrigen = signal<DiferenciaOrigen | null>(null);
+  errorDiferencia = signal<string | null>(null);
+
   // ---- filtros ----
   conceptosSeleccionados = signal<Set<ConceptoDistribucion>>(new Set());
   bandasSeleccionadas = signal<Set<number>>(new Set());
@@ -187,6 +198,9 @@ export class AuditoriaBandasComponent implements OnInit {
     this.pagina.set(0);
     this.vista.set('RESUMEN');
     this.conceptosExpandidos.set(new Set());
+    this.mostrandoDiferencia.set(false);
+    this.diferenciaOrigen.set(null);
+    this.errorDiferencia.set(null);
     this.cargarCuadre();
     this.cargarDetalle();
   }
@@ -217,6 +231,63 @@ export class AuditoriaBandasComponent implements OnInit {
 
   reintentarCuadre(): void {
     this.cargarCuadre();
+  }
+
+  // ================= ¿dónde está la diferencia? =================
+
+  /** Botón del panel de cuadre, solo visible cuando `cuadra === false`. Bajo demanda, no automático. */
+  toggleDiferencia(): void {
+    const abriendo = !this.mostrandoDiferencia();
+    this.mostrandoDiferencia.set(abriendo);
+    if (abriendo && !this.diferenciaOrigen() && !this.cargandoDiferencia()) {
+      this.cargarDiferencia();
+    }
+  }
+
+  private cargarDiferencia(): void {
+    const origen = this.origenSeleccionado();
+    if (!origen) return;
+
+    this.cargandoDiferencia.set(true);
+    this.errorDiferencia.set(null);
+    this.diferenciaOrigen.set(null);
+
+    this.auditoriaBandasService.obtenerDiferencia(origen.origen, origen.idOrigen).subscribe({
+      next: (diferencia) => {
+        this.cargandoDiferencia.set(false);
+        this.diferenciaOrigen.set(diferencia);
+      },
+      error: (err: ErrorAuditoriaBandas) => {
+        this.cargandoDiferencia.set(false);
+        this.errorDiferencia.set(err.mensaje);
+      },
+    });
+  }
+
+  reintentarDiferencia(): void {
+    this.cargarDiferencia();
+  }
+
+  /**
+   * ⚠️ El contrato exige que `diferenciaTotal` coincida con `diferencia` del cuadre — si no, hay
+   * casos que el endpoint no ve (partícipes sin PXCA, aportes que no emparejan) y es un HALLAZGO,
+   * no un redondeo. Se muestra explícito, nunca se disimula.
+   */
+  diferenciaNoExplicada(): number | null {
+    const cuadre = this.cuadre();
+    const dif = this.diferenciaOrigen();
+    if (!cuadre || cuadre.diferencia == null || !dif) return null;
+    const resto = this.redondear(cuadre.diferencia - dif.diferenciaTotal);
+    return Math.abs(resto) > 0.01 ? resto : null;
+  }
+
+  copiarCodigoPetro(codigoPetro: number): void {
+    navigator.clipboard
+      ?.writeText(String(codigoPetro))
+      .then(() => this.snackBar.open(`Rol Petro ${codigoPetro} copiado.`, 'Cerrar', { duration: 2000 }))
+      .catch(() => {
+        /* portapapeles no disponible (contexto sin HTTPS, permiso denegado) — no es crítico */
+      });
   }
 
   // ================= detalle =================
@@ -391,6 +462,10 @@ export class AuditoriaBandasComponent implements OnInit {
 
   formatMoneda(n: number | null | undefined): string {
     return '$' + (n ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  private redondear(n: number): number {
+    return Math.round((Number(n) || 0) * 100) / 100;
   }
 
   /** Participación de un valor sobre el total filtrado, para el árbol de la vista Resumen. */

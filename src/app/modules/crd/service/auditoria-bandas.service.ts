@@ -5,10 +5,13 @@ import { environment } from '../../../../environments/environment';
 import {
   CuadreDistribucionBandas,
   DetalleJerarquico,
+  DiferenciaOrigen,
+  DiferenciaParticipe,
   ErrorAuditoriaBandas,
   FilaDistribucionBanda,
   FiltroDetalleDistribucion,
   FiltroOrigenes,
+  OrigenDistribucion,
   OrigenListado,
   RespuestaDetalleDistribucion,
   ResumenJerarquicoConcepto,
@@ -50,6 +53,22 @@ export class AuditoriaBandasService {
       .pipe(catchError((error: HttpErrorResponse) => throwError(() => this.normalizarError(error))));
   }
 
+  /**
+   * "¿Dónde está la diferencia?" (§4). El endpoint todavía no existe en el backend (despachado
+   * 2026-09-02) — con el mock apagado, la llamada real va a fallar y el componente debe mostrarlo
+   * como "no se pudo cargar" con reintentar, nunca aproximar la lista desde otro lado.
+   */
+  obtenerDiferencia(origen: string, idOrigen: number): Observable<DiferenciaOrigen> {
+    if (environment.mockAuditoriaBandas) {
+      return this.mockDiferencia(origen, idOrigen).pipe(delay(250));
+    }
+
+    const params = new HttpParams().set('origen', origen).set('idOrigen', String(idOrigen));
+    return this.http
+      .get<DiferenciaOrigen>(`${ServiciosCrd.RS_DSBN}/diferencia`, { params })
+      .pipe(catchError((error: HttpErrorResponse) => throwError(() => this.normalizarError(error))));
+  }
+
   obtenerOrigenes(filtro?: FiltroOrigenes): Observable<OrigenListado[]> {
     if (environment.mockAuditoriaBandas) {
       return this.mockOrigenes(filtro).pipe(delay(250));
@@ -85,6 +104,69 @@ export class AuditoriaBandasService {
   // escenarios que exige el plan sin esperar al backend.
 
   private mockFilasCache: FilaDistribucionBanda[] | null = null;
+
+  /**
+   * "¿Dónde está la diferencia?" (§4) — solo para CARGA_PETRO/449, para que sea coherente con la
+   * `diferencia: 2906.52` del mock de `mockCuadre` (el contrato exige que las dos coincidan). La
+   * fila de rol 7508 reproduce el ejemplo TEXTUAL del contrato (SANCHEZ PRADO, el caso real que
+   * motivó el endpoint); el resto son inventadas para que el total cierre y se vean los dos
+   * sentidos (recibieron de más / de menos) y las dos rutas (manual / automático).
+   */
+  private mockDiferencia(origen: string, idOrigen: number): Observable<DiferenciaOrigen> {
+    if (origen !== 'CARGA_PETRO' || idOrigen !== 449) {
+      return of({
+        origen: origen as OrigenDistribucion,
+        idOrigen,
+        diferenciaTotal: 0,
+        participesConDiferencia: 0,
+        recibieronDeMas: 0,
+        recibieronDeMenos: 0,
+        detalle: [],
+      });
+    }
+
+    const fila = (
+      codigoPetro: number,
+      cedula: string,
+      participe: string,
+      descontado: number,
+      aplicadoPrestamos: number,
+      aplicadoManual: number
+    ): DiferenciaParticipe => {
+      const aplicadoTotal = +aplicadoPrestamos.toFixed(2);
+      return {
+        codigoPetro,
+        cedula,
+        participe,
+        descontado: +descontado.toFixed(2),
+        aplicadoPrestamos: aplicadoTotal,
+        aplicadoAportes: 0,
+        aplicadoTotal,
+        diferencia: +(aplicadoTotal - descontado).toFixed(2),
+        aplicadoManual: +aplicadoManual.toFixed(2),
+        aplicadoAutomatico: +(aplicadoTotal - aplicadoManual).toFixed(2),
+      };
+    };
+
+    const detalle: DiferenciaParticipe[] = [
+      fila(2210, '1305544332', 'ZAMBRANO LEON JORGE ENRIQUE', 1200.0, 4100.0, 4100.0),
+      fila(7508, '1708887508', 'SANCHEZ PRADO WILLIAN', 406.73, 464.52, 406.73),
+      fila(9001, '1798887001', 'FLORES ANDRADE PAOLA ELIZABETH', 100.0, 94.0, 0),
+      fila(5501, '1712345678', 'TORRES MEJIA CARLOS ANDRES', 200.0, 189.73, 0),
+      fila(3387, '1102233445', 'ROMERO CASTILLO ANA LUCIA', 300.0, 285.0, 0),
+      fila(1234, '1709988776', 'PONCE VIVANCO MARIA FERNANDA', 500.0, 480.0, 0),
+    ];
+
+    return of({
+      origen: 'CARGA_PETRO',
+      idOrigen: 449,
+      diferenciaTotal: +detalle.reduce((sum, d) => sum + d.diferencia, 0).toFixed(2),
+      participesConDiferencia: detalle.length,
+      recibieronDeMas: detalle.filter((d) => d.diferencia > 0.004).length,
+      recibieronDeMenos: detalle.filter((d) => d.diferencia < -0.004).length,
+      detalle,
+    });
+  }
 
   private mockCuadre(origen: string, idOrigen: number): Observable<CuadreDistribucionBandas> {
     if (origen === 'CARGA_PETRO' && idOrigen === 449) {
