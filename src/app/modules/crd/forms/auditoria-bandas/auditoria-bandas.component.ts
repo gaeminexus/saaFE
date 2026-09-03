@@ -551,21 +551,30 @@ export class AuditoriaBandasComponent implements OnInit {
   /** Mismas columnas para las dos opciones — si divergen, el usuario no puede comparar dos CSV del mismo tablero. */
   private construirYExportarCsv(filas: FilaDistribucionBanda[], sufijoArchivo: string): void {
     const contabilidadConectada = this.cuadre()?.contabilidadConectada ?? true;
+    // Fecha de vencimiento junto a la cuota (pedido del usuario 2026-09-03), mismas columnas que
+    // la tabla y en el mismo orden.
     const headers = [
-      'Concepto', 'Valor', 'Partícipe', 'Cédula', 'Préstamo', 'Cuota', 'Producto',
+      'Concepto', 'Valor', 'Partícipe', 'Cédula', 'Préstamo', 'Cuota', 'Fecha vencimiento', 'Producto',
       'Tipo de cartera', 'Días', 'Banda', 'Fecha aplicación',
       ...(contabilidadConectada ? ['Cuenta contable', 'Nombre cuenta', 'Asiento'] : []),
     ];
     const dataKeys = [
-      'concepto', 'valor', 'participe', 'cedula', 'idPrestamo', 'numeroCuota', 'producto',
+      'concepto', 'valor', 'participe', 'cedula', 'idPrestamo', 'numeroCuota', 'fechaVencimiento', 'producto',
       'tipoCartera', 'dias', 'banda', 'fechaAplicacion',
       ...(contabilidadConectada ? ['cuentaContable', 'nombreCuenta', 'idAsiento'] : []),
     ];
 
+    // ⛔ `fechaVencimiento`/`fechaAplicacion` llegan del backend como arreglo `[2026,7,31]`
+    // (Jackson) — volcarlas crudas al CSV las rompe (`String([2026,7,31])` da `"2026,7,31"`,
+    // ilegible y con comas que confunden a cualquier lector de CSV que no respete el delimitador
+    // detectado). Las dos se formatean con el MISMO helper que ya usa la tabla (`formatFecha`) —
+    // encontrado 2026-09-03: `fechaAplicacion` ya se exportaba cruda sin que nadie lo notara.
     const filasParaExportar = filas.map((f) => ({
       ...f,
       concepto: this.nombreConcepto[f.concepto],
       tipoCartera: this.nombreTipoCartera(f.tipoCartera),
+      fechaVencimiento: this.formatFecha(f.fechaVencimiento),
+      fechaAplicacion: this.formatFecha(f.fechaAplicacion),
     }));
 
     const origen = this.origenSeleccionado();

@@ -545,7 +545,8 @@
                       </td>
                       <td>
                         @if (f.idPrestamo) {
-                          #{{ f.idPrestamo }} @if (f.numeroCuota) { · cuota {{ f.numeroCuota }} }
+                          #{{ f.idPrestamo }}
+                          @if (f.numeroCuota) { · cuota {{ f.numeroCuota }} @if (f.fechaVencimiento) { ({{ formatFecha(f.fechaVencimiento) }}) } }
                         } @else if (f.idTipoAporte) {
                           Aporte tipo {{ f.idTipoAporte }}
                         } @else {

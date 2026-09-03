@@ -144,8 +144,15 @@ export interface FilaDistribucionBanda {
   codigoAsoprep: number | null;
   idPrestamo: number | null;
   numeroCuota: number | null;
-  fechaVencimiento: string | null;
-  fechaAplicacion: string | null;
+  /**
+   * `LocalDate` del backend (Jackson) — llega como arreglo `[2026,7,31]`, NO como string
+   * `"2026-07-31"` (verificado 2026-09-03 contra `FilaDistribucionBanda.java`: el campo es
+   * `java.time.LocalDate`, y `saaBE/CLAUDE.md` § Serialización confirma sobre el cable que Jackson
+   * emite `LocalDate` como arreglo). Nunca volcar crudo a una tabla o a un CSV — las comas del
+   * arreglo rompen el CSV. Siempre pasar por `FuncionesDatosService.convertirFechaDesdeBackend()`.
+   */
+  fechaVencimiento: string | number[] | Date | null;
+  fechaAplicacion: string | number[] | Date | null;
   idProducto: number | null;
   producto: string | null;
   idTipoPrestamo: number | null;
