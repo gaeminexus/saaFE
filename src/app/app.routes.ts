@@ -171,12 +171,6 @@ export const routes: Routes = [
         data: { title: 'Cajas Lógicas' },
       },
       {
-        path: 'parametrizacion/cajas/fisicas',
-        loadComponent: () => import('./modules/tsr/forms/cajas-logicas/cajas-fisicas/cajas-fisicas.component').then((m) => m.CajasFisicasComponent),
-        canActivate: [authGuard],
-        data: { title: 'Cajas Físicas' },
-      },
-      {
         path: 'parametrizacion/bancos/nacionales-extranjeros',
         loadComponent: () => import('./modules/tsr/forms/bancos/bancos-nacionales-extranjeros.component').then((m) => m.BancosNacionalesExtranjerosComponent),
         canActivate: [authGuard],
@@ -223,24 +217,6 @@ export const routes: Routes = [
         loadComponent: () => import('./modules/tsr/forms/chequeras/chequera/chequera.component').then((m) => m.ChequeraComponent),
         canActivate: [authGuard],
         data: { title: 'Cheques' },
-      },
-      {
-        path: 'parametrizacion/cajas/logicas/grupos',
-        loadComponent: () => import('./modules/tsr/forms/cajas-logicas/grupos/grupos-cajas.component').then((m) => m.GruposCajasComponent),
-        canActivate: [authGuard],
-        data: { title: 'Grupos' },
-      },
-      {
-        path: 'parametrizacion/cajas/logicas/cajas-por-grupo',
-        loadComponent: () => import('./modules/tsr/forms/cajas-logicas/cajas-por-grupo/cajas-por-grupo.component').then((m) => m.CajasPorGrupoComponent),
-        canActivate: [authGuard],
-        data: { title: 'Cajas por Grupo' },
-      },
-      // Redirect old nested path to new flat path
-      {
-        path: 'parametrizacion/cajas/logicas/grupo/cajas-por-grupo',
-        redirectTo: 'parametrizacion/cajas/logicas/cajas-por-grupo',
-        pathMatch: 'full',
       },
       {
         path: 'parametrizacion/personas',

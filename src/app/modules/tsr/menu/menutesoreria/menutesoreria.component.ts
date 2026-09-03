@@ -123,47 +123,11 @@ export class MenutesoreriaComponent implements OnInit {
             },
           ],
         },
-        // RETIRADO DEL MENÚ EL 2026-09-03, a pedido del usuario: quedan "Titulares" y
-        // "Cajas Chicas" nada más. Las rutas y los componentes NO se borraron, solo esta entrada
-        // — las tres pantallas de abajo siguen alcanzables por URL directa, sin puerta desde acá:
-        //   /menutesoreria/parametrizacion/cajas/logicas/grupos
-        //   /menutesoreria/parametrizacion/cajas/logicas/cajas-por-grupo
-        //   /menutesoreria/parametrizacion/cajas/fisicas
-        // El `idPermiso: 830` que usaban es el mismo que usa el resto de este menú (no es
-        // exclusivo de "Cajas"): no queda ningún permiso sin uso por este retiro.
-        // Reponer la entrada es descomentar este bloque, tal cual.
-        // {
-        //   displayName: 'Cajas',
-        //   iconName: 'inventory_2',
-        //   idPermiso: 830,
-        //   children: [
-        //     {
-        //       displayName: 'Lógicas',
-        //       iconName: 'category',
-        //       idPermiso: 830,
-        //       children: [
-        //         {
-        //           displayName: 'Grupos',
-        //           iconName: 'group_work',
-        //           idPermiso: 830,
-        //           route: '/menutesoreria/parametrizacion/cajas/logicas/grupos',
-        //         },
-        //         {
-        //           displayName: 'Cajas por Grupo',
-        //           iconName: 'view_module',
-        //           idPermiso: 830,
-        //           route: '/menutesoreria/parametrizacion/cajas/logicas/cajas-por-grupo',
-        //         },
-        //       ],
-        //     },
-        //     {
-        //       displayName: 'Físicas',
-        //       iconName: 'warehouse',
-        //       idPermiso: 830,
-        //       route: '/menutesoreria/parametrizacion/cajas/fisicas',
-        //     },
-        //   ],
-        // },
+        // "Cajas" (Lógicas → Grupos / Cajas por Grupo, y Físicas) se dio de baja definitiva el
+        // 2026-09-03 por decisión del usuario — pantallas, componentes y rutas borrados, no solo
+        // esta entrada de menú. El estado anterior (entrada de menú retirada pero pantallas
+        // vivas) quedó en el commit cc794d8; las pantallas completas están en su historial, antes
+        // de ese commit.
         {
           displayName: 'Titulares',
           iconName: 'account_box',
