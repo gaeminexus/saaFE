@@ -277,6 +277,30 @@ La tabla plana, fila por fila, con paginación y exportación a CSV. Es la corre
 puntual: «quiero ver los pagos de este partícipe en esta banda». **No se toca, sólo deja de ser
 la única.**
 
+#### Exportar a CSV: la página o todo el filtro
+
+> **Origen, usuario 2026-09-03:** *«que el botón exportar a csv dé la opción de exportar todos los
+> registros, o solo el número de registros que indique el paginador. O sino les toca estar
+> exportando de página en página y son cientos de páginas»*.
+
+**No hace falta ningún endpoint nuevo, y no se agrega uno.** `POST /rest/dsbn/detalle` ya acepta
+`tamanio`, y la respuesta ya trae `totalFilas`. Exportar todo es **la misma llamada, con los mismos
+filtros**, pidiendo `pagina: 0` y `tamanio: totalFilas`.
+
+⛔ **`tamanio: 0` NO significa «todo».** `DistribucionBandaServiceImpl:662` es
+`getTamanio() != null && getTamanio() > 0 ? getTamanio() : 50` — un `0`, un negativo o un `null`
+caen al default de **50**, en silencio. Mandar `0` esperando el conjunto completo devuelve 50 filas
+y un CSV que parece bien y está truncado. Siempre el valor explícito de `totalFilas`.
+
+Las dos opciones exportan **exactamente las mismas columnas**; lo único que cambia es cuántas filas.
+Si divergen, el usuario no puede comparar dos CSV del mismo tablero.
+
+Costo: el `resumenJerarquico` y el `totalValorFiltrado` se calculan sobre el conjunto filtrado
+completo en **las dos** llamadas (`construirResumenJerarquico`, sin paginar), así que pedir
+`totalFilas` filas no agrega consultas — agrega el tamaño de la respuesta y el armado del CSV en el
+navegador. Con miles de filas eso se nota: la opción de exportar todo va con indicador de progreso y
+el botón deshabilitado mientras corre.
+
 ### Qué agrega el backend
 
 `POST /rest/dsbn/detalle` suma un `resumenJerarquico` calculado sobre **el conjunto filtrado
