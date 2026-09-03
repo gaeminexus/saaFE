@@ -143,7 +143,11 @@ $chip-gap: 12px;
 
 .rm-panel--detail {
   max-height: 60vh;
-  overflow-y: auto;
+  // `.rm-panel` fija overflow:hidden en los dos ejes; acá hace falta pisar los dos, no solo el
+  // vertical, porque la tabla de movimientos no tiene ancho de columna fijo y puede superar el
+  // ancho del panel (la columna de observación llega a 680px) — sin esto, las columnas que no
+  // entran quedaban cortadas sin ninguna barra para llegar a ellas.
+  overflow: auto;
 }
 
 .rm-table {
