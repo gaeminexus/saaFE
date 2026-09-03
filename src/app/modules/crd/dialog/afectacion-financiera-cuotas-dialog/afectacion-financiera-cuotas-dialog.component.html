@@ -34,9 +34,11 @@
 
     <!--
       Tope de afectación manual del partícipe (VALIDACION-TOPE-AFECTACION-MANUAL.md §8) —
-      TODAS sus novedades en esta carga, no solo la que se está afectando acá. Informativo: no
-      deshabilita nada, no bloquea el guardado — la validación real es la del backend al
-      procesar. Es prevención para que el operador vea el límite mientras trabaja.
+      TODAS sus novedades en esta carga, no solo la que se está afectando acá. Corregido
+      2026-09-02 (caso SANCHEZ, rol 7508): el pozo (`getMontoDisponibleAfectacion()`) sale de
+      ESTE tope, no del monto de la novedad — mientras no esté confirmado, el pozo es 0 y los
+      controles de reparto quedan deshabilitados más abajo. No cae en silencio al cálculo viejo
+      por novedad: eso reintroduciría el defecto sin que nadie se entere.
     -->
     @if (data.getTopeAfectacionParticipe(); as tope) {
       <div
@@ -58,10 +60,15 @@
         </div>
       </div>
     } @else if (data.getTopeAfectacionConsultaFallida()) {
-      <p style="display: flex; align-items: center; gap: 0.5rem; color: #94a3b8; font-size: 0.78rem; font-style: italic; margin: 0 0 1rem;">
-        <mat-icon style="font-size: 18px; width: 18px; height: 18px;">help_outline</mat-icon>
-        No se pudo consultar el tope de afectación del partícipe.
-      </p>
+      <div style="display: flex; align-items: center; gap: 0.6rem; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 0.65rem 0.9rem; margin-bottom: 1rem; color: #7f1d1d; font-size: 0.83rem;">
+        <mat-icon style="color: #dc2626;">error_outline</mat-icon>
+        <span>No se pudo consultar el tope de afectación del partícipe. No se puede repartir hasta confirmarlo — cierre y reabra el diálogo para reintentar.</span>
+      </div>
+    } @else {
+      <div style="display: flex; align-items: center; gap: 0.6rem; color: #718096; font-size: 0.8rem; margin-bottom: 1rem;">
+        <mat-spinner diameter="16"></mat-spinner>
+        Confirmando el tope disponible del partícipe...
+      </div>
     }
 
     <!--
@@ -191,7 +198,7 @@
               <div class="reparto-cabecera" (click)="$event.stopPropagation()">
                 <mat-checkbox
                   [checked]="data.isAplicarTodoElSobranteActivo(item)"
-                  [disabled]="data.isLoadingAfectacionFinanciera()"
+                  [disabled]="data.isLoadingAfectacionFinanciera() || !data.getTopeAfectacionParticipe()"
                   (change)="data.onToggleAplicarTodoElSobrante(item, $event.checked)">
                   Aplicar todo el sobrante
                 </mat-checkbox>
@@ -203,7 +210,7 @@
                     inputmode="decimal"
                     autocomplete="off"
                     placeholder="0,00"
-                    [disabled]="data.isLoadingAfectacionFinanciera()"
+                    [disabled]="data.isLoadingAfectacionFinanciera() || !data.getTopeAfectacionParticipe()"
                     [value]="data.getValorRepartoPrestamoTexto(item)"
                     (input)="data.onValorRepartoPrestamoInput(item, $any($event.target).value)"
                     (blur)="data.onValorRepartoPrestamoBlur(item)"
@@ -267,7 +274,7 @@
                         inputmode="decimal"
                         autocomplete="off"
                         title="Doble click para autocompletar"
-                        [disabled]="data.isLoadingAfectacionFinanciera()"
+                        [disabled]="data.isLoadingAfectacionFinanciera() || !data.getTopeAfectacionParticipe()"
                         [value]="data.getValorAfectarEditado(cuota.codigo)"
                         (focus)="data.onValorAfectarFocus(cuota)"
                         (input)="data.onValorAfectarChange(cuota, $any($event.target).value)"
@@ -331,7 +338,7 @@
                   type="text"
                   inputmode="decimal"
                   autocomplete="off"
-                  [disabled]="data.isLoadingOpcionesAporte()"
+                  [disabled]="data.isLoadingOpcionesAporte() || !data.getTopeAfectacionParticipe()"
                   [value]="data.getValorAporteEditado(opcion.idTipoAporte)"
                   (focus)="data.onValorAporteFocus(opcion.idTipoAporte)"
                   (input)="data.onValorAporteChange(opcion.idTipoAporte, $any($event.target).value)"

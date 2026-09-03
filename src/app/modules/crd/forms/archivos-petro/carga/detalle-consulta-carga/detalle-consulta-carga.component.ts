@@ -1518,17 +1518,43 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
     return 'Sin descripción';
   }
 
+  /**
+   * Lo persistido de la novedad ABIERTA, tal como se cargó del backend (`afectacionesRegistradas`,
+   * sembrado una vez por apertura/guardado en `cargarContextoAfectacionFinanciera` — no cambia con
+   * cada tecla que el operador tipea, a diferencia de `totalValorAfectarActual`). Es el término que
+   * hay que sumarle de vuelta a `restante`: el backend ya lo restó del disponible del partícipe
+   * porque es una novedad más, pero DENTRO de este diálogo es reasignable, no gastado — mismo
+   * principio que `topeRepartoPrestamo` usa un nivel más abajo, por préstamo en vez de por novedad.
+   */
+  private get valorPersistidoNovedadAlCargar(): number {
+    return this.redondear(this.afectacionesRegistradas().reduce((sum, a) => sum + (Number(a.valorAfectar) || 0), 0));
+  }
+
+  /**
+   * ⚠️ Sale del tope POR PARTÍCIPE (`GET /asgn/topeAfectacion`, `VALIDACION-TOPE-AFECTACION-
+   * MANUAL.md` §8), no del monto de la novedad abierta — corregido 2026-09-02 tras el caso
+   * SANCHEZ (rol 7508): con el pozo por novedad, dos novedades del mismo partícipe podían
+   * ofrecer cada una "todo el sobrante" hasta agotar su propio monto, sumando más de lo que el
+   * partícipe tenía disponible en total ($439,59 afectados contra $406,73 disponibles).
+   *
+   * `restante` que manda el backend ya excluye TODAS las novedades del partícipe, incluida esta —
+   * hay que sumarle de vuelta `valorPersistidoNovedadAlCargar()` porque, dentro de este diálogo,
+   * lo que ya está afectado acá es reasignable (mover entre cuotas/préstamos/aportes de la MISMA
+   * novedad), no un gasto nuevo. Sin esa suma, se resta dos veces lo mismo — una vez porque el
+   * backend ya lo descontó del `restante`, otra porque `totalValorAfectarActual`/
+   * `totalValorAportarActual` también lo incluyen — y el pozo queda corto en vez de bien calculado.
+   *
+   * `null` mientras el tope no llegó o si la consulta falló: devuelve 0 a propósito. NO cae al
+   * viejo cálculo por novedad — eso reintroduciría el defecto en silencio. El operador ve por qué
+   * (banner de "confirmando tope" / "no se pudo consultar") en vez de un número que parece sano
+   * pero no lo es.
+   */
   get montoDisponibleAfectacion(): number {
-    const novedad = this.novedadFinancieraSeleccionada();
-    if (!novedad) {
+    const tope = this.topeAfectacionParticipe();
+    if (!tope) {
       return 0;
     }
-
-    const montoRecibido = this.normalizarMontoPetro(novedad.montoRecibido);
-    const montoDiferencia = this.normalizarMontoPetro(novedad.montoDiferencia);
-    const montoEsperado = this.normalizarMontoPetro(novedad.montoEsperado);
-
-    return this.redondear(montoRecibido ?? montoDiferencia ?? montoEsperado ?? 0);
+    return this.redondear(tope.restante + this.valorPersistidoNovedadAlCargar);
   }
 
   get totalValorAfectarActual(): number {
@@ -1545,20 +1571,6 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
     return this.redondear(
       this.montoDisponibleAfectacion - this.totalValorAfectarActual - this.totalValorAportarActual
     );
-  }
-
-  private normalizarMontoPetro(valor: number | string | null | undefined): number | null {
-    if (valor === null || valor === undefined) {
-      return null;
-    }
-
-    const texto = String(valor).trim();
-    if (!texto) {
-      return null;
-    }
-
-    const numero = Number(texto.replace(',', '.'));
-    return Number.isFinite(numero) ? numero : null;
   }
 
   /**
