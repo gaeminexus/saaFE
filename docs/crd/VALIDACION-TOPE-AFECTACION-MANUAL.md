@@ -243,3 +243,56 @@ Cuando la afectación pase a organizarse por partícipe
 (`PLAN-AFECTACION-POR-PARTICIPE.md`), este panel es candidato natural a integrarse ahí, y **desde la
 carga debería poder saltarse a su auditoría** — el usuario buscó el botón de la diferencia en la
 pantalla de novedades, que es donde le resultaba natural encontrarlo.
+
+---
+
+## 10. ⛔ La regla del §3 estaba MAL. Corregida con datos, 2026-09-03
+
+**La hipótesis quedó probada por la pantalla, sin un solo SQL** — el botón «¿dónde está la
+diferencia?» la mostró en una fila:
+
+| SANCHEZ PRADO · rol 7508 | |
+|---|---|
+| Descontado | 406,73 |
+| **Aplicado MANUAL** | **406,73** ← consumió el tope entero |
+| **Aplicado AUTOMÁTICO** | **57,79** (préstamo) **+ 50,75** (aporte) |
+| Diferencia | **+108,54** |
+
+`57,79 + 50,75 = 108,54`, exacto.
+
+### Por qué la regla del §3 fallaba
+
+Su descuento fue **PH 282,77 + HS 15,42 + PE 57,79 + AH 50,75 = 406,73**, y la novedad bloqueante era
+**sólo del PH**. Entonces el operador tenía en sus manos **298,19** (PH + HS): el PE y el AH los iba a
+aplicar el proceso automático, porque no estaban bloqueados.
+
+Pero el tope se puso en **406,73** —el total del partícipe— así que lo dejó afectar plata que el
+automático ya tenía asignada. **`406,73 − 298,19 = 108,54`.**
+
+> **La regla no era falsa, era incompleta.** «El tope es por partícipe» sigue siendo cierto en lo que
+> el usuario decidió —se puede mover entre préstamos y aportes— pero el universo no es *todo* lo
+> descontado: es **lo que el operador está repartiendo de verdad**.
+
+### La regla corregida
+
+**Tope manual = lo descontado en los productos que tienen novedad bloqueante.**
+
+Equivalentemente: `total descontado − lo que el flujo automático va a aplicar`. El automático aplica
+los productos **sin** novedad bloqueante, y esa plata no está disponible para afectar a mano.
+
+Se conserva intacto lo que el usuario decidió: **dentro de ese universo puede mover entre préstamos y
+aportes como quiera**. Lo que deja de poder es tomar plata que ya tiene destino.
+
+### ⛔ Los tres consumidores se corrigen juntos
+
+La validación que bloquea, el tope por partícipe de la pantalla (§8) y el prevuelo (§9) comparten un
+solo método **a propósito**. Cambia ahí, y los tres cambian. **Si alguno queda con la regla vieja,
+van a discrepar y nadie va a saber cuál creer.**
+
+### Verificación
+
+1. Con los datos de la 449: el rol 7508 debe pasar a tope **298,19**, no 406,73 — y sus afectaciones
+   actuales (406,73) deben dar **exceso 108,54**.
+2. Un partícipe que mueve entre productos **dentro de lo bloqueado** debe seguir pasando sin novedad.
+   Si lo bloquea, la regla quedó implementada como «por producto» y está mal, igual que antes.
+3. Reprocesada sin violaciones, el cuadre de la auditoría debe dar **0** — no 79,44.
