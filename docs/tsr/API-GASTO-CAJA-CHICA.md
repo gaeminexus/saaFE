@@ -126,3 +126,28 @@ ORA-00904**, no sólo la de caja chica. Y no se mergea el mapeo a `main` hasta q
 **La anulación del gasto reversa la aplicación.** Ver §6 del plan: la anulación ya existe y ya
 valida que el gasto no esté incluido en un cierre. Esa validación **el reverso por el lado de los
 abonos no la conoce**, así que el camino válido es anular el gasto.
+
+---
+
+## 4. Prueba manual cuando esté desplegado
+
+**Nada de esto se probó contra un servidor real.** Las dos mitades compilan y el contrato de tipos
+cierra, pero eso no es haberlo ejecutado. No hay suite de tests en el proyecto, así que esta pasada
+es la única verificación que va a existir.
+
+| # | Qué hacer | Qué tiene que pasar |
+|---|---|---|
+| 1 | Gasto **sin** documento, como siempre | Se graba igual que antes. **El camino viejo es el que más importa que no se haya roto** |
+| 2 | Gasto que paga una factura **por menos** que su saldo | La factura queda con saldo pendiente por la diferencia, y el gasto aparece con su documento en la lista de movimientos |
+| 3 | El mismo caso, pero **por el total** | La factura queda saldada |
+| 4 | Igual que el 2 pero contra una **liquidación de compra** | Mismo resultado. Verifica que no se haya cruzado la confusión `LQCS`/`LQCC` |
+| 5 | Intentar pagar **más** que el saldo | Error legible con **saldo y comprometido como dos números**, y el gasto **no** se graba |
+| 6 | Factura con un pago **`POR_APROBAR`** en la bandeja, pagarla con caja chica | **Debe rechazarla.** Es el doble pago que motivó toda la validación — si esto pasa, algo falló |
+| 7 | Anular un gasto que pagó una factura | Vuelve el saldo a la factura y se reversa el asiento |
+| 8 | Los dos estados de cuenta | El del proveedor muestra el abono; el de la caja, el gasto |
+
+**El 6 es el que no se puede saltear.** Los demás fallan de forma visible; ése falla pagando dos
+veces, y se nota semanas después.
+
+**Si el 1 falla, parar todo:** significa que se rompió el gasto suelto, que es el uso normal de la
+pantalla y el que ya funcionaba.
