@@ -96,6 +96,7 @@ export class AuditoriaBandasService {
         cuadra: false,
         contabilidadConectada: true,
         asientos: [{ idAsiento: 36, tipo: 'TRANSITORIO', fecha: '2026-08-31', estado: 'ACTIVO' }],
+        bandas: this.mockBandasCatalogo(),
       });
     }
 
@@ -104,12 +105,16 @@ export class AuditoriaBandasService {
         origen: 'COBRO_INDIVIDUAL',
         idOrigen: 87,
         descripcionOrigen: 'Cobro individual #87',
-        recibido: 842.5,
+        // Solo CARGA_PETRO tiene hoy una fuente de "recibido" independiente conectada
+        // (`ResultadoCuadreDistribucionBanda.java`, verificado 2026-09-02) — los demás orígenes
+        // no pueden decir si cuadran, así que estos tres van `null`, no un valor inventado.
+        recibido: null,
         distribuido: 842.5,
-        diferencia: 0,
-        cuadra: true,
+        diferencia: null,
+        cuadra: null,
         contabilidadConectada: false,
         asientos: [],
+        bandas: [],
       });
     }
 
@@ -118,12 +123,13 @@ export class AuditoriaBandasService {
         origen: 'EVENTO_PRESTAMO',
         idOrigen: 12,
         descripcionOrigen: 'Abono a capital #12',
-        recibido: 0,
+        recibido: null,
         distribuido: 0,
-        diferencia: 0,
-        cuadra: true,
+        diferencia: null,
+        cuadra: null,
         contabilidadConectada: true,
         asientos: [],
+        bandas: [],
       });
     }
 
@@ -204,8 +210,8 @@ export class AuditoriaBandasService {
   private mockOrigenes(filtro?: FiltroOrigenes): Observable<OrigenListado[]> {
     let origenes: OrigenListado[] = [
       { origen: 'CARGA_PETRO', idOrigen: 449, descripcion: 'Carga Petro 8/2026', fecha: '2026-08-31', distribuido: 351584.85, cuadra: false },
-      { origen: 'COBRO_INDIVIDUAL', idOrigen: 87, descripcion: 'Cobro individual #87', fecha: '2026-08-28', distribuido: 842.5, cuadra: true },
-      { origen: 'EVENTO_PRESTAMO', idOrigen: 12, descripcion: 'Abono a capital #12', fecha: '2026-08-20', distribuido: 0, cuadra: true },
+      { origen: 'COBRO_INDIVIDUAL', idOrigen: 87, descripcion: 'Cobro individual #87', fecha: '2026-08-28', distribuido: 842.5, cuadra: null },
+      { origen: 'EVENTO_PRESTAMO', idOrigen: 12, descripcion: 'Abono a capital #12', fecha: '2026-08-20', distribuido: 0, cuadra: null },
     ];
 
     if (filtro?.origen) {
@@ -237,6 +243,21 @@ export class AuditoriaBandasService {
     return [];
   }
 
+  /**
+   * Catálogo de bandas del mock — mismos `idBanda` que usan las filas de `filasCargaPetroMock`.
+   * En el backend real esto sale de `ClasificadorBandaService.derivarRangos`, por producto y por
+   * empresa; acá es fijo solo porque es un mock de una única carga/producto.
+   */
+  private mockBandasCatalogo(): { idBanda: number; numero: number; etiqueta: string; diaInicio: number | null; diaFin: number | null }[] {
+    return [
+      { idBanda: 1, numero: 1, etiqueta: 'de 1 a 30 dias', diaInicio: 1, diaFin: 30 },
+      { idBanda: 2, numero: 2, etiqueta: 'de 31 a 60 dias', diaInicio: 31, diaFin: 60 },
+      { idBanda: 3, numero: 3, etiqueta: 'de 61 a 90 dias', diaInicio: 61, diaFin: 90 },
+      { idBanda: 4, numero: 4, etiqueta: 'de 91 a 180 dias', diaInicio: 91, diaFin: 180 },
+      { idBanda: 5, numero: 5, etiqueta: 'mas de 180 (resto)', diaInicio: 181, diaFin: null },
+    ];
+  }
+
   /** Contabilidad desconectada: cuenta/asiento vienen null, el resto de la fila va completo. */
   private filasCobroIndividualMock(): FilaDistribucionBanda[] {
     return [
@@ -245,7 +266,7 @@ export class AuditoriaBandasService {
         idEntidad: 5501, participe: 'TORRES MEJIA CARLOS ANDRES', cedula: '1712345678', codigoAsoprep: 5501,
         idPrestamo: 8102, numeroCuota: 4, fechaVencimiento: '2026-08-28', fechaAplicacion: '2026-08-28',
         idProducto: 12, producto: 'CREDITO ORDINARIO', idTipoPrestamo: 1, idTipoAporte: null,
-        tipoCartera: 'AL_DIA', dias: 0, idBanda: 1, banda: 'AL DÍA',
+        tipoCartera: 1, dias: 5, idBanda: 1, banda: 'de 1 a 30 dias',
         cuentaContable: null, nombreCuenta: null, idAsiento: null,
       },
       {
@@ -253,7 +274,7 @@ export class AuditoriaBandasService {
         idEntidad: 5501, participe: 'TORRES MEJIA CARLOS ANDRES', cedula: '1712345678', codigoAsoprep: 5501,
         idPrestamo: 8102, numeroCuota: 4, fechaVencimiento: '2026-08-28', fechaAplicacion: '2026-08-28',
         idProducto: 12, producto: 'CREDITO ORDINARIO', idTipoPrestamo: 1, idTipoAporte: null,
-        tipoCartera: 'AL_DIA', dias: 0, idBanda: null, banda: null,
+        tipoCartera: 1, dias: 5, idBanda: null, banda: null,
         cuentaContable: null, nombreCuenta: null, idAsiento: null,
       },
     ];
@@ -269,12 +290,14 @@ export class AuditoriaBandasService {
       { idEntidad: 3387, participe: 'ROMERO CASTILLO ANA LUCIA', cedula: '1102233445', codigoAsoprep: 3387, idPrestamo: 8021 },
     ];
 
-    const bandas: { idBanda: number; banda: string; tipoCartera: string; dias: number }[] = [
-      { idBanda: 1, banda: 'AL DÍA', tipoCartera: 'AL_DIA', dias: 0 },
-      { idBanda: 2, banda: 'DE 1 A 30 DÍAS', tipoCartera: 'POR_VENCER', dias: 15 },
-      { idBanda: 3, banda: 'DE 31 A 90 DÍAS', tipoCartera: 'POR_VENCER', dias: 45 },
-      { idBanda: 4, banda: 'DE 91 A 180 DÍAS', tipoCartera: 'VENCIDA', dias: 120 },
-      { idBanda: 5, banda: 'MÁS DE 180 DÍAS', tipoCartera: 'VENCIDA', dias: 210 },
+    // `tipoCartera`: 1 = POR_VENCER, 2 = VENCIDO (com.saa.rubros.TipoCarteraBanda) — no hay un
+    // tercer código "al día", el enum real solo tiene dos valores.
+    const bandas: { idBanda: number; banda: string; tipoCartera: number; dias: number }[] = [
+      { idBanda: 1, banda: 'de 1 a 30 dias', tipoCartera: 1, dias: 15 },
+      { idBanda: 2, banda: 'de 31 a 60 dias', tipoCartera: 1, dias: 45 },
+      { idBanda: 3, banda: 'de 61 a 90 dias', tipoCartera: 1, dias: 75 },
+      { idBanda: 4, banda: 'de 91 a 180 dias', tipoCartera: 2, dias: 120 },
+      { idBanda: 5, banda: 'mas de 180 (resto)', tipoCartera: 2, dias: 210 },
     ];
 
     const cuentasPorConcepto: Record<string, { cuenta: string; nombre: string }> = {
@@ -316,7 +339,7 @@ export class AuditoriaBandasService {
           idEntidad: p.idEntidad, participe: p.participe, cedula: p.cedula, codigoAsoprep: p.codigoAsoprep,
           idPrestamo: p.idPrestamo, numeroCuota: 10, fechaVencimiento: '2026-07-31', fechaAplicacion: '2026-08-31',
           idProducto: 12, producto: 'CREDITO ORDINARIO', idTipoPrestamo: (ip % 2) + 1, idTipoAporte: null,
-          tipoCartera: 'POR_VENCER', dias: 45, idBanda: null, banda: null,
+          tipoCartera: 1, dias: 45, idBanda: null, banda: null,
           cuentaContable: cuenta.cuenta, nombreCuenta: cuenta.nombre, idAsiento,
         });
       });
@@ -330,7 +353,7 @@ export class AuditoriaBandasService {
           idEntidad: p.idEntidad, participe: p.participe, cedula: p.cedula, codigoAsoprep: p.codigoAsoprep,
           idPrestamo: p.idPrestamo, numeroCuota: 10, fechaVencimiento: '2026-07-31', fechaAplicacion: '2026-08-31',
           idProducto: 12, producto: 'CREDITO ORDINARIO', idTipoPrestamo: (ip % 2) + 1, idTipoAporte: null,
-          tipoCartera: 'POR_VENCER', dias: 45, idBanda: null, banda: null,
+          tipoCartera: 1, dias: 45, idBanda: null, banda: null,
           cuentaContable: cuenta.cuenta, nombreCuenta: cuenta.nombre, idAsiento,
         });
       });

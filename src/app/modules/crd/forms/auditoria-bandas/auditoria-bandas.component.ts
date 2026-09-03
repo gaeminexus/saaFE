@@ -19,21 +19,9 @@ import {
   OrigenDistribucion,
   OrigenListado,
   RespuestaDetalleDistribucion,
+  TIPO_CARTERA_BANDA,
 } from '../../model/auditoria-bandas';
 import { AuditoriaBandasService } from '../../service/auditoria-bandas.service';
-
-/**
- * Catálogo de bandas para el filtro. Solo aplica a CAPITAL (§ "Banda" del contrato) — fijo acá
- * hasta que el backend exponga un catálogo propio; los ids coinciden con los que arma el mock de
- * `AuditoriaBandasService` mientras los endpoints no estén publicados.
- */
-const BANDAS_FILTRO: { idBanda: number; nombre: string }[] = [
-  { idBanda: 1, nombre: 'AL DÍA' },
-  { idBanda: 2, nombre: 'DE 1 A 30 DÍAS' },
-  { idBanda: 3, nombre: 'DE 31 A 90 DÍAS' },
-  { idBanda: 4, nombre: 'DE 91 A 180 DÍAS' },
-  { idBanda: 5, nombre: 'MÁS DE 180 DÍAS' },
-];
 
 const TAMANIOS_PAGINA = [25, 50, 100];
 
@@ -67,8 +55,14 @@ export class AuditoriaBandasComponent implements OnInit {
   readonly nombreOrigen = NOMBRE_ORIGEN_DISTRIBUCION;
   readonly nombreConcepto = NOMBRE_CONCEPTO_DISTRIBUCION;
   readonly conceptosDisponibles = CONCEPTOS_DISTRIBUCION;
-  readonly bandasDisponibles = BANDAS_FILTRO;
   readonly tamaniosPagina = TAMANIOS_PAGINA;
+
+  /**
+   * ⛔ NO hardcodear: `CRD.BNDP` no tiene columna de etiqueta, el rango y el nombre los deriva
+   * el backend por producto y por empresa — el catálogo sale de `cuadre().bandas`, solo las
+   * bandas que de verdad aparecen en la distribución de este origen (verificado 2026-09-02).
+   */
+  bandasDisponibles = computed(() => this.cuadre()?.bandas ?? []);
 
   // ---- selector de origen ----
   cargandoOrigenes = signal(false);
@@ -316,6 +310,7 @@ export class AuditoriaBandasComponent implements OnInit {
     const filasParaExportar = filas.map((f) => ({
       ...f,
       concepto: this.nombreConcepto[f.concepto],
+      tipoCartera: this.nombreTipoCartera(f.tipoCartera),
     }));
 
     const origen = this.origenSeleccionado();
@@ -335,6 +330,16 @@ export class AuditoriaBandasComponent implements OnInit {
 
   trackByFila(_index: number, fila: FilaDistribucionBanda): number {
     return fila.id;
+  }
+
+  /** `tipoCartera` es un código (`TipoCarteraBanda`: 1/2), no el texto que muestra el contrato. */
+  nombreTipoCartera(codigo: number | null): string {
+    if (codigo == null) return '—';
+    return TIPO_CARTERA_BANDA[codigo] ?? `Código ${codigo}`;
+  }
+
+  claseTipoCartera(codigo: number | null): string {
+    return codigo != null ? 'tc-' + codigo : '';
   }
 
   private parsearListaNumeros(texto: string): number[] {

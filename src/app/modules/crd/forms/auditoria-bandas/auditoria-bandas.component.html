@@ -53,13 +53,13 @@
               type="button"
               class="ab-origen-chip"
               [class.activo]="origenSeleccionado()?.origen === o.origen && origenSeleccionado()?.idOrigen === o.idOrigen"
-              [class.no-cuadra]="!o.cuadra"
+              [class.no-cuadra]="o.cuadra === false"
               (click)="seleccionarOrigen(o)">
               <span class="ab-origen-chip-tipo">{{ nombreOrigen[o.origen] }}</span>
               <span class="ab-origen-chip-desc">{{ o.descripcion }}</span>
               <span class="ab-origen-chip-meta">
                 {{ formatFecha(o.fecha) }} · {{ formatMoneda(o.distribuido) }}
-                @if (!o.cuadra) { <mat-icon class="ab-origen-chip-warn">warning</mat-icon> }
+                @if (o.cuadra === false) { <mat-icon class="ab-origen-chip-warn">warning</mat-icon> }
               </span>
             </button>
           }
@@ -92,33 +92,51 @@
         </mat-card-content>
       </mat-card>
     } @else if (cuadre(); as c) {
-      <mat-card class="ab-card ab-cuadre" [class.descuadra]="!c.cuadra">
+      <mat-card class="ab-card ab-cuadre" [class.descuadra]="c.cuadra === false">
         <mat-card-content>
           <div class="ab-cuadre-titulo">
-            <mat-icon>{{ c.cuadra ? 'check_circle' : 'error' }}</mat-icon>
+            <mat-icon>{{ c.cuadra === false ? 'error' : (c.cuadra === true ? 'check_circle' : 'help_outline') }}</mat-icon>
             <div>
               <h2>{{ c.descripcionOrigen }}</h2>
               <span class="ab-cuadre-sub">{{ nombreOrigen[c.origen] }} · {{ c.origen }} #{{ c.idOrigen }}</span>
             </div>
           </div>
 
-          <div class="ab-cuadre-grid">
-            <div class="ab-cuadre-tile">
-              <span class="l">Recibido</span>
-              <span class="v">{{ formatMoneda(c.recibido) }}</span>
+          @if (c.cuadra === null) {
+            <!--
+              Este origen todavía no tiene una fuente de "recibido" independiente conectada (hoy
+              solo CARGA_PETRO la tiene) — es una limitación de cobertura, no un error: no se
+              puede decir "no cuadra" con un dato que no existe.
+            -->
+            <div class="ab-sin-contabilidad ab-sin-cuadre">
+              <mat-icon>info</mat-icon>
+              Este origen todavía no tiene una verificación de cuadre disponible (falta la fuente de "recibido"). Se muestra igual la distribución completa abajo.
             </div>
-            <div class="ab-cuadre-tile">
-              <span class="l">Distribuido</span>
-              <span class="v">{{ formatMoneda(c.distribuido) }}</span>
+            <div class="ab-cuadre-grid ab-cuadre-grid-simple">
+              <div class="ab-cuadre-tile">
+                <span class="l">Distribuido</span>
+                <span class="v">{{ formatMoneda(c.distribuido) }}</span>
+              </div>
             </div>
-            <div class="ab-cuadre-tile diferencia" [class.mal]="!c.cuadra">
-              <span class="l">Diferencia</span>
-              <span class="v">
-                @if (!c.cuadra) { <mat-icon>warning</mat-icon> }
-                {{ formatMoneda(c.diferencia) }}
-              </span>
+          } @else {
+            <div class="ab-cuadre-grid">
+              <div class="ab-cuadre-tile">
+                <span class="l">Recibido</span>
+                <span class="v">{{ formatMoneda(c.recibido) }}</span>
+              </div>
+              <div class="ab-cuadre-tile">
+                <span class="l">Distribuido</span>
+                <span class="v">{{ formatMoneda(c.distribuido) }}</span>
+              </div>
+              <div class="ab-cuadre-tile diferencia" [class.mal]="c.cuadra === false">
+                <span class="l">Diferencia</span>
+                <span class="v">
+                  @if (c.cuadra === false) { <mat-icon>warning</mat-icon> }
+                  {{ formatMoneda(c.diferencia) }}
+                </span>
+              </div>
             </div>
-          </div>
+          }
 
           <!-- contabilidadConectada: false NO es un error — informativo, sin ícono de alarma. -->
           <div class="ab-cuadre-asientos">
@@ -173,23 +191,25 @@
           </div>
         </div>
 
+        @if (bandasDisponibles().length) {
         <div class="ab-filtro-grupo">
           <span class="ab-filtro-label">
             Banda
-            <span class="ab-filtro-hint">(solo aplica a Capital)</span>
+            <span class="ab-filtro-hint">(solo aplica a Capital — catálogo de este origen)</span>
           </span>
           <div class="ab-chips-filtro">
-            @for (banda of bandasDisponibles; track banda.idBanda) {
+            @for (banda of bandasDisponibles(); track banda.idBanda) {
               <button
                 type="button"
                 class="ab-chip-toggle"
                 [class.activo]="bandasSeleccionadas().has(banda.idBanda)"
                 (click)="toggleBanda(banda.idBanda)">
-                {{ banda.nombre }}
+                {{ banda.etiqueta }}
               </button>
             }
           </div>
         </div>
+        }
 
         <div class="ab-filtros-fila">
           <mat-form-field appearance="outline">
@@ -344,9 +364,9 @@
                       </td>
                       <td>{{ f.producto || '—' }}</td>
                       <td>
-                        @if (f.tipoCartera) {
-                          <span class="ab-cartera-badge" [class]="'tc-' + f.tipoCartera.toLowerCase()">
-                            {{ f.tipoCartera }}{{ f.dias != null ? ' · ' + f.dias + 'd' : '' }}
+                        @if (f.tipoCartera != null) {
+                          <span class="ab-cartera-badge" [class]="claseTipoCartera(f.tipoCartera)">
+                            {{ nombreTipoCartera(f.tipoCartera) }}{{ f.dias != null ? ' · ' + f.dias + 'd' : '' }}
                           </span>
                         } @else { — }
                       </td>

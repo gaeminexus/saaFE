@@ -21,12 +21,11 @@ export const environment = {
    */
   mockCertificadosParticipe: true,
   /**
-   * Endpoints de auditoría de distribución en bandas (`docs/crd/API-AUDITORIA-BANDAS.md`) que el
-   * backend todavía no publica: GET /rest/dsbn/cuadre, POST /rest/dsbn/detalle,
-   * GET /rest/dsbn/origenes. Mientras esté en `true`, `AuditoriaBandasService` simula los tres
-   * contra el contrato congelado (carga Petro 449, la misma de los ejemplos del contrato).
-   * Apagarlo (o que el backend publique y se borre este flag) hace que llamen al backend real sin
-   * tocar los componentes.
+   * Auditoría de distribución en bandas (`docs/crd/API-AUDITORIA-BANDAS.md`): el backend ya
+   * publicó los tres endpoints (2026-09-02, `saaBE` commit `c52a850` y posteriores) — por eso
+   * queda en `false`. `AuditoriaBandasService` conserva la simulación contra el contrato
+   * congelado (carga Petro 449) por si hace falta desarrollar sin backend disponible; poner en
+   * `true` la reactiva sin tocar el componente.
    */
-  mockAuditoriaBandas: true,
+  mockAuditoriaBandas: false,
 };

@@ -62,21 +62,44 @@ export interface AsientoResumenDistribucion {
   estado: string;
 }
 
+/**
+ * Una banda del catálogo REAL presente en la distribución de un origen — alimenta el filtro.
+ * ⛔ NO hardcodear: `CRD.BNDP` no tiene columna de etiqueta, el rango y el nombre los deriva
+ * `ClasificadorBandaService.derivarRangos` desde `numero`/`periodos`, y las bandas se configuran
+ * por producto y por empresa (verificado contra `BandaProductoDetalle.java` 2026-09-02) — ni la
+ * cantidad ni los rótulos son fijos.
+ */
+export interface BandaFiltroDistribucion {
+  idBanda: number;
+  numero: number;
+  etiqueta: string;
+  diaInicio: number | null;
+  diaFin: number | null;
+}
+
 /** `GET /dsbn/cuadre` — el encabezado. Se pinta primero, antes que nada del detalle. */
 export interface CuadreDistribucionBandas {
   origen: OrigenDistribucion;
   idOrigen: number;
   descripcionOrigen: string;
-  recibido: number;
+  /**
+   * `null` cuando este origen todavía no tiene una fuente de "recibido" independiente conectada
+   * — verificado contra `ResultadoCuadreDistribucionBanda.java` 2026-09-02: hoy solo
+   * `CARGA_PETRO` la tiene. Es una limitación de cobertura, no un error — la pantalla no puede
+   * mostrar "no cuadra" ahí, tiene que decir "sin verificación disponible".
+   */
+  recibido: number | null;
   distribuido: number;
-  diferencia: number;
-  cuadra: boolean;
+  diferencia: number | null;
+  cuadra: boolean | null;
   /**
    * `false` = venta separada, contabilidad desconectada. NO es un error: oculta las columnas de
    * cuenta/asiento y el resto de la pantalla se muestra igual.
    */
   contabilidadConectada: boolean;
   asientos: AsientoResumenDistribucion[];
+  /** Solo las bandas que aparecen en la distribución de este origen — ver `BandaFiltroDistribucion`. */
+  bandas: BandaFiltroDistribucion[];
 }
 
 /** `POST /dsbn/detalle` — cuerpo del filtro. Los arreglos son OR interno, AND entre sí. */
@@ -127,7 +150,14 @@ export interface FilaDistribucionBanda {
   producto: string | null;
   idTipoPrestamo: number | null;
   idTipoAporte: number | null;
-  tipoCartera: string | null;
+  /**
+   * Código, NO texto — a diferencia de lo que muestra el ejemplo del contrato
+   * (`"tipoCartera": "POR_VENCER"`). Verificado contra `DistribucionBanda.java`/
+   * `FilaDistribucionBanda.java` del backend 2026-09-02: el campo real es `Long`, valores de
+   * `com.saa.rubros.TipoCarteraBanda` (`1` = POR_VENCER, `2` = VENCIDO). Ver
+   * `TIPO_CARTERA_BANDA` para la traducción — reportado al árbitro para corregir el contrato.
+   */
+  tipoCartera: number | null;
   dias: number | null;
   idBanda: number | null;
   banda: string | null;
@@ -135,6 +165,15 @@ export interface FilaDistribucionBanda {
   nombreCuenta: string | null;
   idAsiento: number | null;
 }
+
+/**
+ * Traducción verificada de `com.saa.rubros.TipoCarteraBanda` (backend, valores `1`/`2` — no hay
+ * un tercer código "al día" en el enum real, a diferencia del ejemplo del contrato).
+ */
+export const TIPO_CARTERA_BANDA: Record<number, string> = {
+  1: 'Por vencer',
+  2: 'Vencido',
+};
 
 export interface RespuestaDetalleDistribucion {
   totalFilas: number;
@@ -152,7 +191,8 @@ export interface OrigenListado {
   descripcion: string;
   fecha: string;
   distribuido: number;
-  cuadra: boolean;
+  /** `null` cuando este origen no tiene fuente de "recibido" — mismo caso que en el cuadre. */
+  cuadra: boolean | null;
 }
 
 export interface FiltroOrigenes {
