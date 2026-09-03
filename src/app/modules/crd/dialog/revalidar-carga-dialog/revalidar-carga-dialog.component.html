@@ -38,6 +38,7 @@
       <h2>Revalidación completa</h2>
     </div>
     <div class="rvc-contenido">
+      <p class="rvc-revisados">{{ r.participesRevisados }} partícipe(s) revisado(s).</p>
       <div class="rvc-resumen-grid">
         <div class="rvc-resumen-tile">
           <span class="l">Actualizadas</span>
@@ -48,12 +49,12 @@
           <span class="v">{{ r.novedadesCreadas }}</span>
         </div>
         <div class="rvc-resumen-tile">
-          <span class="l">Sin cambios</span>
-          <span class="v">{{ r.novedadesSinCambios }}</span>
+          <span class="l">Desactivadas</span>
+          <span class="v">{{ r.novedadesDesactivadas }}</span>
         </div>
       </div>
 
-      @if (r.novedadesActualizadas === 0 && r.novedadesCreadas === 0) {
+      @if (r.novedadesActualizadas === 0 && r.novedadesCreadas === 0 && r.novedadesDesactivadas === 0) {
         <p class="rvc-nota">No cambió nada. Si esperaba un resultado distinto, el problema es otro — no tiene sentido volver a revalidar esperando algo diferente.</p>
       }
 
@@ -64,12 +65,22 @@
             {{ r.detalleConservadasPorAvpc.length }} {{ r.detalleConservadasPorAvpc.length === 1 ? 'novedad se conservó' : 'novedades se conservaron' }} porque tienen afectaciones registradas
           </div>
           <ul>
-            @for (n of r.detalleConservadasPorAvpc; track n.codigo) {
-              <li>
-                {{ n.descripcion || ('Novedad ' + n.codigo) }}
-                @if (n.participe) {— {{ n.participe }}}
-                @if (n.codigoPetro) {(rol {{ n.codigoPetro }})}
-              </li>
+            @for (n of r.detalleConservadasPorAvpc; track n.novedad) {
+              <li>Novedad {{ n.novedad }} (tipo {{ n.tipoNovedad }}) — {{ n.participe }} (rol {{ n.codigoPetro }}) · {{ n.avpc }} {{ n.avpc === 1 ? 'afectación' : 'afectaciones' }}</li>
+            }
+          </ul>
+        </div>
+      }
+
+      @if (r.errores.length) {
+        <div class="rvc-errores">
+          <div class="rvc-errores-titulo">
+            <mat-icon>warning</mat-icon>
+            {{ r.errores.length }} {{ r.errores.length === 1 ? 'partícipe falló' : 'partícipes fallaron' }} al revalidar — el resto sí se procesó
+          </div>
+          <ul>
+            @for (e of r.errores; track $index) {
+              <li>{{ e }}</li>
             }
           </ul>
         </div>

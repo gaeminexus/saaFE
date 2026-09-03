@@ -50,6 +50,45 @@
   padding: 1rem 0;
 }
 
+.rvc-revisados {
+  margin: 0 0 0.6rem;
+  font-size: 0.8rem;
+  color: #718096;
+}
+
+.rvc-errores {
+  margin-top: 0.75rem;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 0.75rem;
+
+  .rvc-errores-titulo {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-weight: 700;
+    color: #c05621;
+    font-size: 0.85rem;
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+  }
+
+  ul {
+    margin: 0.5rem 0 0;
+    padding-left: 1.2rem;
+    font-size: 0.82rem;
+    max-height: 160px;
+    overflow-y: auto;
+
+    li {
+      margin-bottom: 0.25rem;
+    }
+  }
+}
+
 .rvc-resumen-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
