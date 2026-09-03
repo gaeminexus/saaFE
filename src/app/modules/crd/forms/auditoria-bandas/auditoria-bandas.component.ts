@@ -499,14 +499,57 @@ export class AuditoriaBandasComponent implements OnInit {
   }
 
   // ================= exportar =================
+  //
+  // Dos opciones, mismas columnas — pedido del usuario 2026-09-03 (docs/crd/API-AUDITORIA-
+  // BANDAS.md § "Exportar a CSV: la página o todo el filtro"): exportar de a 50-100 filas con
+  // miles de registros son cientos de exportaciones. "Todo el filtro" es la MISMA llamada que ya
+  // hace `cargarDetalle` (mismos filtros activos), pidiendo `pagina: 0` y `tamanio: totalFilas` —
+  // ningún endpoint nuevo.
 
-  exportarCsv(): void {
+  exportandoTodo = signal(false);
+
+  exportarPaginaActual(): void {
     const filas = this.detalle()?.filas ?? [];
     if (!filas.length) {
       this.snackBar.open('No hay filas en esta página para exportar.', 'Cerrar', { duration: 3000 });
       return;
     }
+    this.construirYExportarCsv(filas, `pag${this.pagina() + 1}`);
+  }
 
+  exportarTodoElFiltro(): void {
+    const filtroBase = this.construirFiltro();
+    const totalFilas = this.detalle()?.totalFilas ?? 0;
+    if (!filtroBase || totalFilas <= 0) {
+      this.snackBar.open('No hay filas en este filtro para exportar.', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    // ⛔ `tamanio: 0` NO es "todo" — el backend lo interpreta como "sin especificar" y cae al
+    // default de 50 filas, en silencio (docs/crd/API-AUDITORIA-BANDAS.md, la trampa documentada).
+    // Siempre el valor explícito de `totalFilas`, nunca 0 ni omitido.
+    const filtroCompleto: FiltroDetalleDistribucion = { ...filtroBase, pagina: 0, tamanio: totalFilas };
+
+    this.exportandoTodo.set(true);
+    this.auditoriaBandasService.obtenerDetalle(filtroCompleto).subscribe({
+      next: (respuesta) => {
+        this.exportandoTodo.set(false);
+        const filas = respuesta?.filas ?? [];
+        if (!filas.length) {
+          this.snackBar.open('No hay filas en este filtro para exportar.', 'Cerrar', { duration: 3000 });
+          return;
+        }
+        this.construirYExportarCsv(filas, 'todo');
+      },
+      error: (err: ErrorAuditoriaBandas) => {
+        this.exportandoTodo.set(false);
+        this.snackBar.open(`No se pudo exportar: ${err.mensaje}`, 'Cerrar', { duration: 5000 });
+      },
+    });
+  }
+
+  /** Mismas columnas para las dos opciones — si divergen, el usuario no puede comparar dos CSV del mismo tablero. */
+  private construirYExportarCsv(filas: FilaDistribucionBanda[], sufijoArchivo: string): void {
     const contabilidadConectada = this.cuadre()?.contabilidadConectada ?? true;
     const headers = [
       'Concepto', 'Valor', 'Partícipe', 'Cédula', 'Préstamo', 'Cuota', 'Producto',
@@ -526,7 +569,7 @@ export class AuditoriaBandasComponent implements OnInit {
     }));
 
     const origen = this.origenSeleccionado();
-    const nombreArchivo = `auditoria-bandas-${origen?.origen ?? 'origen'}-${origen?.idOrigen ?? ''}-pag${this.pagina() + 1}`;
+    const nombreArchivo = `auditoria-bandas-${origen?.origen ?? 'origen'}-${origen?.idOrigen ?? ''}-${sufijoArchivo}`;
     this.exportService.exportToCSV(filasParaExportar, nombreArchivo, headers, dataKeys);
   }
 

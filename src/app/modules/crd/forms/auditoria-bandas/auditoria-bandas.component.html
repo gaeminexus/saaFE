@@ -496,9 +496,21 @@
                     }
                   </mat-select>
                 </mat-form-field>
-                <button mat-stroked-button (click)="exportarCsv()">
-                  <mat-icon>download</mat-icon> Exportar CSV
+                <button mat-stroked-button [matMenuTriggerFor]="menuExportar" [disabled]="exportandoTodo()">
+                  @if (exportandoTodo()) {
+                    <ng-container><mat-spinner diameter="16" class="ab-export-spinner"></mat-spinner> Exportando...</ng-container>
+                  } @else {
+                    <ng-container><mat-icon>download</mat-icon> Exportar CSV</ng-container>
+                  }
                 </button>
+                <mat-menu #menuExportar="matMenu">
+                  <button mat-menu-item (click)="exportarPaginaActual()">
+                    Exportar esta página ({{ detalle()?.filas?.length ?? 0 }} filas)
+                  </button>
+                  <button mat-menu-item (click)="exportarTodoElFiltro()" [disabled]="!(detalle()?.totalFilas ?? 0)">
+                    Exportar todo el filtro ({{ detalle()?.totalFilas ?? 0 }} filas)
+                  </button>
+                </mat-menu>
               </div>
             </div>
 
