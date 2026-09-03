@@ -8,6 +8,7 @@ import { MaterialFormModule } from '../../../../shared/modules/material-form.mod
 import { ConfirmDialogComponent } from '../../../../shared/basics/confirm-dialog/confirm-dialog.component';
 import { ExportService } from '../../../../shared/services/export.service';
 import { FuncionesDatosService } from '../../../../shared/services/funciones-datos.service';
+import { UsuarioService } from '../../../../shared/services/usuario.service';
 
 import {
   BandaFiltroDistribucion,
@@ -67,6 +68,7 @@ export class AuditoriaBandasComponent implements OnInit {
   private exportService = inject(ExportService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
+  private usuarioService = inject(UsuarioService);
 
   readonly nombreOrigen = NOMBRE_ORIGEN_DISTRIBUCION;
   readonly nombreConcepto = NOMBRE_CONCEPTO_DISTRIBUCION;
@@ -283,11 +285,18 @@ export class AuditoriaBandasComponent implements OnInit {
 
   private recalcularDistribucion(origen: OrigenListado): void {
     this.recalculandoDistribucion.set(true);
+    const usuario = this.usuarioService.getUsuarioLog()?.nombre;
 
-    this.auditoriaBandasService.recalcularDistribucion(origen.origen, origen.idOrigen).subscribe({
-      next: () => {
+    this.auditoriaBandasService.recalcularDistribucion(origen.origen, origen.idOrigen, usuario).subscribe({
+      next: (resultado) => {
         this.recalculandoDistribucion.set(false);
-        this.snackBar.open('Distribución recalculada. Actualizando cuadre y detalle...', 'Cerrar', { duration: 3000 });
+        // `pagosClasificados` le da al operador algo con qué contrastar si el resultado le
+        // parece raro, en vez de un "listo" a secas.
+        this.snackBar.open(
+          `Distribución reconstruida a partir de ${resultado.pagosClasificados} pagos. Actualizando cuadre y detalle...`,
+          'Cerrar',
+          { duration: 4000 }
+        );
         // El botón existe para ver el resultado nuevo — recargar es parte de la acción, no un
         // paso aparte que el operador tenga que hacer a mano.
         this.cargarCuadre();

@@ -279,17 +279,13 @@ export interface ErrorAuditoriaBandas {
 }
 
 /**
- * Respuesta de `POST /rest/dsbn/recalcular` (o el path que el backend termine publicando — ver
- * el comentario del método `recalcularDistribucion` en `AuditoriaBandasService`). Recalcula
- * `CRD.DSBN` de un origen ya procesado leyendo los pagos/aportes actuales — no toca asientos,
- * pagos, aportes ni cuotas. El único campo que se usa de verdad es que la llamada haya
- * terminado sin error: el resultado real se ve recargando cuadre y detalle, no leyendo esta
- * respuesta. Los demás campos son opcionales a propósito, porque la forma exacta todavía no
- * está publicada.
+ * Respuesta de `POST /rest/dsbn/recalcularDistribucion?origen=&idOrigen=&usuario=` (path real,
+ * publicado por el backend en `adcc6b3`). Recalcula `CRD.DSBN` de un origen ya procesado leyendo
+ * los pagos/aportes actuales — no toca asientos, pagos, aportes ni cuotas. Solo `CARGA_PETRO`;
+ * cualquier otro origen responde 422.
  */
 export interface RecalculoDistribucionBanda {
-  origen?: OrigenDistribucion;
-  idOrigen?: number;
-  filasRegeneradas?: number;
-  mensaje?: string;
+  idCarga: number;
+  /** Cuántos pagos se leyeron para reconstruir la distribución — para contrastar el resultado. */
+  pagosClasificados: number;
 }
