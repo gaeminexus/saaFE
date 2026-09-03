@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, AfterViewInit, AfterViewChecked, ViewChild } from '@angular/core';
 import { FormControl } from '@angular/forms';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { MatDialog } from '@angular/material/dialog';
@@ -23,7 +23,7 @@ import { CentroGridFormComponent } from './centro-grid-form.component';
   templateUrl: './centro-grid.component.html',
   styleUrls: ['./centro-grid.component.scss'],
 })
-export class CentroGridComponent implements OnInit {
+export class CentroGridComponent implements OnInit, AfterViewInit, AfterViewChecked {
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
 
@@ -76,35 +76,59 @@ export class CentroGridComponent implements OnInit {
   }
 
   ngAfterViewInit(): void {
-    this.dataSource.paginator = this.paginator;
-    this.dataSource.sort = this.sort;
+    // La tabla (con su paginador y su matSort) vive dentro de `*ngIf="!loading && !error"`, y
+    // `loading` se pone en `true` de forma síncrona en `loadData()`, llamado desde `ngOnInit` —
+    // que corre antes que `ngAfterViewInit`. Acá el contenedor ya está oculto: el paginador y el
+    // sort todavía no existen en el DOM y `ViewChild` resuelve `undefined` (con el código viejo,
+    // `this.sort.sort(...)` de más abajo tiraba sobre `undefined`). `ngAfterViewInit` corre una
+    // sola vez, así que esta asignación por sí sola nunca se repite cuando el contenedor aparece
+    // más tarde. La reconexión real está en `ngAfterViewChecked`.
+    this.conectarPaginadorYOrden();
+  }
 
-    // Configurar ordenamiento personalizado para códigos jerárquicos
-    this.dataSource.sortingDataAccessor = (data: CentroCosto, sortHeaderId: string) => {
-      switch (sortHeaderId) {
-        case 'numero':
-          // Construir código jerárquico y convertirlo a formato ordenable (1, 1.1, 1.1.1, etc.)
-          const codigoJerarquico = this.buildCodigoStrForCentro(data);
-          return this.centroUtils.getCodigoForSorting(codigoJerarquico);
-        case 'nombre':
-          return data.nombre.toLowerCase();
-        case 'tipo':
-          return data.tipo;
-        case 'fechaIngreso':
-          return data.fechaIngreso ? new Date(data.fechaIngreso).getTime() : 0;
-        case 'fechaInactivo':
-          return data.fechaInactivo ? new Date(data.fechaInactivo).getTime() : 0;
-        default:
-          return '';
-      }
-    };
+  ngAfterViewChecked(): void {
+    this.conectarPaginadorYOrden();
+  }
 
-    // Establecer ordenamiento por defecto por número jerárquico
-    this.sort.sort({
-      id: 'numero',
-      start: 'asc',
-      disableClear: false,
-    });
+  /**
+   * Idempotente: solo reasigna cuando la referencia cambió, para no forzar trabajo en cada check.
+   * El ordenamiento personalizado y el orden por defecto se configuran una sola vez, justo cuando
+   * el sort se conecta de verdad — no en cada check.
+   */
+  private conectarPaginadorYOrden(): void {
+    if (this.paginator && this.dataSource.paginator !== this.paginator) {
+      this.dataSource.paginator = this.paginator;
+    }
+    if (this.sort && this.dataSource.sort !== this.sort) {
+      this.dataSource.sort = this.sort;
+
+      // Configurar ordenamiento personalizado para códigos jerárquicos
+      this.dataSource.sortingDataAccessor = (data: CentroCosto, sortHeaderId: string) => {
+        switch (sortHeaderId) {
+          case 'numero':
+            // Construir código jerárquico y convertirlo a formato ordenable (1, 1.1, 1.1.1, etc.)
+            const codigoJerarquico = this.buildCodigoStrForCentro(data);
+            return this.centroUtils.getCodigoForSorting(codigoJerarquico);
+          case 'nombre':
+            return data.nombre.toLowerCase();
+          case 'tipo':
+            return data.tipo;
+          case 'fechaIngreso':
+            return data.fechaIngreso ? new Date(data.fechaIngreso).getTime() : 0;
+          case 'fechaInactivo':
+            return data.fechaInactivo ? new Date(data.fechaInactivo).getTime() : 0;
+          default:
+            return '';
+        }
+      };
+
+      // Establecer ordenamiento por defecto por número jerárquico
+      this.sort.sort({
+        id: 'numero',
+        start: 'asc',
+        disableClear: false,
+      });
+    }
   }
 
   loadData(): void {

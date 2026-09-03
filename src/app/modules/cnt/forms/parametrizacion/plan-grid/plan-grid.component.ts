@@ -1,6 +1,7 @@
 import { SelectionModel } from '@angular/cdk/collections';
 import { CommonModule } from '@angular/common';
 import {
+  AfterViewChecked,
   AfterViewInit,
   Component,
   CUSTOM_ELEMENTS_SCHEMA,
@@ -39,7 +40,7 @@ import { PlanCuentaService } from '../../../service/plan-cuenta.service';
   templateUrl: './plan-grid.component.html',
   styleUrls: ['./plan-grid.component.scss'],
 })
-export class PlanGridComponent implements OnInit, AfterViewInit {
+export class PlanGridComponent implements OnInit, AfterViewInit, AfterViewChecked {
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
   @ViewChild('tableContainer') tableContainer!: ElementRef;
@@ -100,8 +101,13 @@ export class PlanGridComponent implements OnInit, AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    this.dataSource.paginator = this.paginator;
-    this.dataSource.sort = this.sort;
+    // La tabla (con su matSort y su paginador) vive dentro de `@if (!loading() && !error())`, y
+    // `loading` se pone en `true` de forma síncrona en `loadData()`, llamado desde `ngOnInit` —
+    // que corre antes que `ngAfterViewInit`. Acá el contenedor ya está oculto: el paginador y el
+    // sort todavía no existen en el DOM y `ViewChild` resuelve `undefined`. `ngAfterViewInit`
+    // corre una sola vez, así que esta asignación por sí sola nunca se repite cuando el
+    // contenedor aparece más tarde. La reconexión real está en `ngAfterViewChecked`.
+    this.conectarPaginadorYOrden();
 
     // Configurar scroll detection
     if (this.tableContainer) {
@@ -145,6 +151,20 @@ export class PlanGridComponent implements OnInit, AfterViewInit {
 
       return searchTerms.every((term) => searchableText.includes(term));
     };
+  }
+
+  ngAfterViewChecked(): void {
+    this.conectarPaginadorYOrden();
+  }
+
+  /** Idempotente: solo reasigna cuando la referencia cambió, para no forzar trabajo en cada check. */
+  private conectarPaginadorYOrden(): void {
+    if (this.paginator && this.dataSource.paginator !== this.paginator) {
+      this.dataSource.paginator = this.paginator;
+    }
+    if (this.sort && this.dataSource.sort !== this.sort) {
+      this.dataSource.sort = this.sort;
+    }
   }
 
   setupScrollDetection(): void {

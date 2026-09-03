@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, OnInit, AfterViewInit, AfterViewChecked, ViewChild } from '@angular/core';
 import { FormControl, UntypedFormControl } from '@angular/forms';
 import { FuncionesDatosService } from '../../../../shared/services/funciones-datos.service';
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
@@ -27,7 +27,7 @@ import { AsientoService } from '../../service/asiento.service';
   templateUrl: './listado-asientos.component.html',
   styleUrls: ['./listado-asientos.component.scss'],
 })
-export class ListadoAsientosComponent implements OnInit {
+export class ListadoAsientosComponent implements OnInit, AfterViewInit, AfterViewChecked {
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
 
@@ -178,8 +178,26 @@ export class ListadoAsientosComponent implements OnInit {
   }
 
   ngAfterViewInit(): void {
-    this.dataSource.paginator = this.paginator;
-    this.dataSource.sort = this.sort;
+    // El `<mat-paginator>` vive detrás de `*ngIf="dataSource.data.length > 0"`, falso hasta que
+    // `loadAsientos()` resuelve — acá todavía no existe en el DOM y `ViewChild` resuelve
+    // `undefined`. `ngAfterViewInit` corre una sola vez, así que esta asignación por sí sola nunca
+    // se repite cuando el paginador aparece más tarde. La reconexión real está en
+    // `ngAfterViewChecked`.
+    this.conectarPaginadorYOrden();
+  }
+
+  ngAfterViewChecked(): void {
+    this.conectarPaginadorYOrden();
+  }
+
+  /** Idempotente: solo reasigna cuando la referencia cambió, para no forzar trabajo en cada check. */
+  private conectarPaginadorYOrden(): void {
+    if (this.paginator && this.dataSource.paginator !== this.paginator) {
+      this.dataSource.paginator = this.paginator;
+    }
+    if (this.sort && this.dataSource.sort !== this.sort) {
+      this.dataSource.sort = this.sort;
+    }
   }
 
   /**

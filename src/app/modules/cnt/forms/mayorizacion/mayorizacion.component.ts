@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, ViewChild, computed, signal } from '@angular/core';
+import { Component, OnInit, AfterViewInit, AfterViewChecked, ViewChild, computed, signal } from '@angular/core';
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
 import { MatPaginator } from '@angular/material/paginator';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -19,7 +19,7 @@ import { PeriodoService } from '../../service/periodo.service';
   templateUrl: './mayorizacion.component.html',
   styleUrl: './mayorizacion.component.scss',
 })
-export class MayorizacionComponent implements OnInit {
+export class MayorizacionComponent implements OnInit, AfterViewInit, AfterViewChecked {
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
 
@@ -41,8 +41,27 @@ export class MayorizacionComponent implements OnInit {
   }
 
   ngAfterViewInit(): void {
-    this.dataSource.paginator = this.paginator;
-    this.dataSource.sort = this.sort;
+    // `ngOnInit` llama a `cargarPeriodos()`, que pone `loading` en `true` de forma síncrona —
+    // y `ngOnInit` corre antes que `ngAfterViewInit`. El contenedor de la tabla vive detrás de
+    // `*ngIf="!loading()"`, así que acá ya está en falso: el paginador todavía no existe en el DOM
+    // y `ViewChild` resuelve `undefined`. `ngAfterViewInit` corre una sola vez, así que esta
+    // asignación por sí sola nunca se repite cuando `loading()` vuelve a `false`. La reconexión
+    // real está en `ngAfterViewChecked`.
+    this.conectarPaginadorYOrden();
+  }
+
+  ngAfterViewChecked(): void {
+    this.conectarPaginadorYOrden();
+  }
+
+  /** Idempotente: solo reasigna cuando la referencia cambió, para no forzar trabajo en cada check. */
+  private conectarPaginadorYOrden(): void {
+    if (this.paginator && this.dataSource.paginator !== this.paginator) {
+      this.dataSource.paginator = this.paginator;
+    }
+    if (this.sort && this.dataSource.sort !== this.sort) {
+      this.dataSource.sort = this.sort;
+    }
   }
 
   cargarPeriodos(): void {

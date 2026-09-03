@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, AfterViewInit, AfterViewChecked, ViewChild } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { MatPaginator } from '@angular/material/paginator';
@@ -22,7 +22,7 @@ import { PeriodoService } from '../../../service/periodo.service';
   templateUrl: './periodo-contable.component.html',
   styleUrl: './periodo-contable.component.scss',
 })
-export class PeriodoContableComponent implements OnInit {
+export class PeriodoContableComponent implements OnInit, AfterViewInit, AfterViewChecked {
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
 
@@ -80,8 +80,28 @@ export class PeriodoContableComponent implements OnInit {
   }
 
   ngAfterViewInit(): void {
-    this.dataSource.paginator = this.paginator;
-    this.dataSource.sort = this.sort;
+    // La tabla (con su matSort) vive dentro de `*ngIf="!loading"`, y `loading` se pone en `true`
+    // de forma síncrona en `loadPeriodos()`, llamado desde `ngOnInit` — que corre antes que
+    // `ngAfterViewInit`. Y el `<mat-paginator>` tiene además su propio
+    // `*ngIf="dataSource.data.length > 0"`, aparte. En los dos casos el elemento todavía no existe
+    // en el DOM acá y `ViewChild` resuelve `undefined`. `ngAfterViewInit` corre una sola vez, así
+    // que esta asignación por sí sola nunca se repite cuando cualquiera de los dos aparece más
+    // tarde. La reconexión real está en `ngAfterViewChecked`.
+    this.conectarPaginadorYOrden();
+  }
+
+  ngAfterViewChecked(): void {
+    this.conectarPaginadorYOrden();
+  }
+
+  /** Idempotente: solo reasigna cuando la referencia cambió, para no forzar trabajo en cada check. */
+  private conectarPaginadorYOrden(): void {
+    if (this.paginator && this.dataSource.paginator !== this.paginator) {
+      this.dataSource.paginator = this.paginator;
+    }
+    if (this.sort && this.dataSource.sort !== this.sort) {
+      this.dataSource.sort = this.sort;
+    }
   }
 
   createForm(): FormGroup {

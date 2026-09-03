@@ -7,7 +7,7 @@ import {
 import { Observable } from 'rxjs';
 import { map, startWith } from 'rxjs/operators';
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, AfterViewInit, AfterViewChecked, ViewChild, ElementRef } from '@angular/core';
 import {
   FormArray,
   FormBuilder,
@@ -72,7 +72,7 @@ interface CuentaItem {
   templateUrl: './asientos-contables-dinamico.html',
   styleUrl: './asientos-contables-dinamico.scss',
 })
-export class AsientosContablesDinamico implements OnInit {
+export class AsientosContablesDinamico implements OnInit, AfterViewInit, AfterViewChecked {
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
   @ViewChild('fechaAsientoInput', { read: ElementRef }) fechaAsientoInputRef!: ElementRef<HTMLInputElement>;
@@ -1513,8 +1513,26 @@ export class AsientosContablesDinamico implements OnInit {
    * Configurar paginador y ordenamiento después de la vista inicializada
    */
   ngAfterViewInit(): void {
-    this.detalleDataSource.paginator = this.paginator;
-    this.detalleDataSource.sort = this.sort;
+    // El grid de detalles (con su paginador y su matSort) vive dentro de
+    // `*ngIf="detalleDataSource.data.length > 0"`, falso al cargar la pantalla — acá el paginador
+    // todavía no existe en el DOM y `ViewChild` resuelve `undefined`. `ngAfterViewInit` corre una
+    // sola vez, así que esta asignación por sí sola nunca se repite cuando el grid pasa a tener
+    // filas más tarde. La reconexión real está en `ngAfterViewChecked`.
+    this.conectarPaginadorYOrden();
+  }
+
+  ngAfterViewChecked(): void {
+    this.conectarPaginadorYOrden();
+  }
+
+  /** Idempotente: solo reasigna cuando la referencia cambió, para no forzar trabajo en cada check. */
+  private conectarPaginadorYOrden(): void {
+    if (this.paginator && this.detalleDataSource.paginator !== this.paginator) {
+      this.detalleDataSource.paginator = this.paginator;
+    }
+    if (this.sort && this.detalleDataSource.sort !== this.sort) {
+      this.detalleDataSource.sort = this.sort;
+    }
   }
 
   /**
