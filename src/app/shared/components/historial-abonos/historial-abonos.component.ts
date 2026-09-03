@@ -34,6 +34,13 @@ export class HistorialAbonosComponent {
   /** Etiqueta del botón de pago/cobro, que cambia entre CXP y CXC. */
   @Input() textoBotonPago = 'Ir a Pagos';
   @Input() mostrarAcciones = true;
+  /**
+   * Aparte de `mostrarAcciones`, que apaga las dos acciones y "revertir" juntas: hay pantallas de
+   * destino (`pagos-transferencia` en CXP, hoy) que no saben qué hacer con el id de un documento
+   * que no sea factura. En vez de mandar ahí y que falle, este botón se apaga solo, sin tocar
+   * "Cruzar anticipo" ni "Revertir", que sí sirven para cualquier tipo de documento.
+   */
+  @Input() mostrarBotonPagos = true;
 
   @Output() revertir = new EventEmitter<FilaAbono>();
   @Output() cruzarAnticipo = new EventEmitter<void>();

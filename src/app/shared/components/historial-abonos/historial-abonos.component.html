@@ -28,10 +28,12 @@
             <mat-icon>savings</mat-icon>
             Cruzar anticipo
           </button>
-          <button mat-raised-button class="btn-accion" (click)="irAPagos.emit()">
-            <mat-icon>account_balance</mat-icon>
-            {{ textoBotonPago }}
-          </button>
+          @if (mostrarBotonPagos) {
+            <button mat-raised-button class="btn-accion" (click)="irAPagos.emit()">
+              <mat-icon>account_balance</mat-icon>
+              {{ textoBotonPago }}
+            </button>
+          }
         </div>
       }
     </div>

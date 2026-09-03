@@ -408,8 +408,16 @@ export class ConsultaDocumentosComponent implements OnInit {
   /** Las retenciones no llevan subtotales ni IVA propios: sólo base y valor retenido. */
   esRetencion(): boolean { return ['RETENCION_COMPRA', 'RETENCION_COMPRA_V2'].includes(this.docSeleccionado?.tipoTablaDestino || ''); }
 
-  /** El historial de abonos (/aplp) solo aplica a facturas de compra. */
   esFacturaCompra(): boolean { return this.docSeleccionado?.tipoTablaDestino === 'FACTURA_COMPRA'; }
+
+  /**
+   * El historial de abonos (/aplp) aplica a facturas y a liquidaciones de compra — antes solo
+   * mostraba la tarjeta para `esFacturaCompra()`, y una liquidación con anticipos cruzados no
+   * tenía dónde verlo, aunque el cálculo del backend sí lo tuviera al día.
+   */
+  esLiquidacionCompra(): boolean {
+    return TABLAS_LIQUIDACION.includes(this.docSeleccionado?.tipoTablaDestino || '');
+  }
 
   // ─── HELPERS ──────────────────────────────────────────
 

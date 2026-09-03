@@ -52,6 +52,19 @@ export class AplicacionPagoCxpService {
     );
   }
 
+  /**
+   * Historial de abonos de una LIQUIDACIÓN de compra. Ruta distinta a propósito, mismo motivo
+   * que `getSaldoLiquidacion()`: `/factura/{id}` resuelve contra `FacturaCompra`, y `FCTC`/`LQCC`
+   * tienen numeraciones `IDENTITY` independientes. No reusar `getByFactura()` con un id de
+   * liquidación por ningún motivo — devolvería el historial de una factura ajena, sin error.
+   */
+  getByLiquidacion(idLiquidacion: number, soloActivas = true): Observable<AplicacionPagoCxp[]> {
+    const params = new HttpParams().set('soloActivas', soloActivas);
+    return this.http.get<AplicacionPagoCxp[]>(`${ServiciosCxp.RS_APLP}/liquidacion/${idLiquidacion}`, { params }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
   /** Reversa un abono. Requiere motivo; tras el 200 hay que refrescar saldo e historial. */
   revertir(idAplicacion: number, datos: MotivoRequest): Observable<any> {
     return this.http.post<any>(`${ServiciosCxp.RS_APLP}/revertir/${idAplicacion}`, datos, this.httpOptions).pipe(
