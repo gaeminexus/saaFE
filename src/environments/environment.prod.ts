@@ -5,4 +5,5 @@ export const environment = {
   // Nunca simular en producción, aunque el backend todavía no haya publicado el endpoint.
   mockCobroPetro: false,
   mockCertificadosParticipe: false,
+  mockAuditoriaBandas: false,
 };

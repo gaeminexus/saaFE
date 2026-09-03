@@ -1,0 +1,385 @@
+<div class="ab-container">
+
+  <div class="ab-header">
+    <div class="ab-header-title">
+      <mat-icon class="ab-header-icon">account_balance</mat-icon>
+      <div>
+        <h1>Auditoría de distribución en bandas</h1>
+        <p>Por qué se mandó cada saldo a cada cuenta contable — solo lectura.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ Selector de origen — un filtro más, no el eje de la pantalla ============ -->
+  <mat-card class="ab-card ab-origen-card">
+    <mat-card-content>
+      <div class="ab-origen-toolbar">
+        <mat-form-field appearance="outline" class="ab-origen-tipo">
+          <mat-label>Tipo de origen</mat-label>
+          <mat-select [ngModel]="filtroOrigenTipo()" (ngModelChange)="filtroOrigenTipo.set($event); onCambioTipoOrigen()">
+            <mat-option value="TODOS">Todos</mat-option>
+            <mat-option value="CARGA_PETRO">{{ nombreOrigen.CARGA_PETRO }}</mat-option>
+            <mat-option value="COBRO_INDIVIDUAL">{{ nombreOrigen.COBRO_INDIVIDUAL }}</mat-option>
+            <mat-option value="EVENTO_PRESTAMO">{{ nombreOrigen.EVENTO_PRESTAMO }}</mat-option>
+            <mat-option value="PAGO_PENSION">{{ nombreOrigen.PAGO_PENSION }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="ab-origen-buscar">
+          <mat-label>Buscar origen</mat-label>
+          <input matInput [(ngModel)]="filtroOrigenTexto" placeholder="Descripción o número..." />
+          <mat-icon matSuffix>search</mat-icon>
+        </mat-form-field>
+
+        <button mat-icon-button (click)="cargarOrigenes()" [disabled]="cargandoOrigenes()" matTooltip="Actualizar lista de orígenes">
+          <mat-icon>refresh</mat-icon>
+        </button>
+      </div>
+
+      @if (cargandoOrigenes()) {
+        <div class="ab-loading-inline"><mat-spinner diameter="24"></mat-spinner> Cargando orígenes...</div>
+      } @else if (errorOrigenes()) {
+        <div class="ab-error-inline">
+          <mat-icon>error_outline</mat-icon>
+          No se pudo cargar la lista de orígenes: {{ errorOrigenes() }}
+          <button mat-button (click)="cargarOrigenes()">Reintentar</button>
+        </div>
+      } @else if (!origenesFiltrados.length) {
+        <p class="ab-texto-vacio">No hay orígenes con distribución registrada para este filtro.</p>
+      } @else {
+        <div class="ab-origenes-lista">
+          @for (o of origenesFiltrados; track o.origen + '-' + o.idOrigen) {
+            <button
+              type="button"
+              class="ab-origen-chip"
+              [class.activo]="origenSeleccionado()?.origen === o.origen && origenSeleccionado()?.idOrigen === o.idOrigen"
+              [class.no-cuadra]="!o.cuadra"
+              (click)="seleccionarOrigen(o)">
+              <span class="ab-origen-chip-tipo">{{ nombreOrigen[o.origen] }}</span>
+              <span class="ab-origen-chip-desc">{{ o.descripcion }}</span>
+              <span class="ab-origen-chip-meta">
+                {{ formatFecha(o.fecha) }} · {{ formatMoneda(o.distribuido) }}
+                @if (!o.cuadra) { <mat-icon class="ab-origen-chip-warn">warning</mat-icon> }
+              </span>
+            </button>
+          }
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+
+  @if (!origenSeleccionado()) {
+    <div class="ab-initial-message">
+      <mat-icon>fact_check</mat-icon>
+      <p>Elija un origen arriba para ver su cuadre y el detalle de la distribución.</p>
+    </div>
+  } @else {
+
+    <!-- ============ 1. EL CUADRE — primero, arriba, la diferencia en rojo ============ -->
+    @if (cargandoCuadre()) {
+      <div class="ab-cuadre-loading"><mat-spinner diameter="32"></mat-spinner> Calculando cuadre...</div>
+    } @else if (errorCuadre()) {
+      <mat-card class="ab-card ab-cuadre-error">
+        <mat-card-content>
+          <div class="ab-error-block">
+            <mat-icon>report_problem</mat-icon>
+            <div>
+              <b>No se pudo calcular el cuadre.</b>
+              <p>{{ errorCuadre() }}</p>
+            </div>
+            <button mat-raised-button color="warn" (click)="reintentarCuadre()">Reintentar</button>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    } @else if (cuadre(); as c) {
+      <mat-card class="ab-card ab-cuadre" [class.descuadra]="!c.cuadra">
+        <mat-card-content>
+          <div class="ab-cuadre-titulo">
+            <mat-icon>{{ c.cuadra ? 'check_circle' : 'error' }}</mat-icon>
+            <div>
+              <h2>{{ c.descripcionOrigen }}</h2>
+              <span class="ab-cuadre-sub">{{ nombreOrigen[c.origen] }} · {{ c.origen }} #{{ c.idOrigen }}</span>
+            </div>
+          </div>
+
+          <div class="ab-cuadre-grid">
+            <div class="ab-cuadre-tile">
+              <span class="l">Recibido</span>
+              <span class="v">{{ formatMoneda(c.recibido) }}</span>
+            </div>
+            <div class="ab-cuadre-tile">
+              <span class="l">Distribuido</span>
+              <span class="v">{{ formatMoneda(c.distribuido) }}</span>
+            </div>
+            <div class="ab-cuadre-tile diferencia" [class.mal]="!c.cuadra">
+              <span class="l">Diferencia</span>
+              <span class="v">
+                @if (!c.cuadra) { <mat-icon>warning</mat-icon> }
+                {{ formatMoneda(c.diferencia) }}
+              </span>
+            </div>
+          </div>
+
+          <!-- contabilidadConectada: false NO es un error — informativo, sin ícono de alarma. -->
+          <div class="ab-cuadre-asientos">
+            @if (!c.contabilidadConectada) {
+              <div class="ab-sin-contabilidad">
+                <mat-icon>info</mat-icon>
+                Contabilidad desconectada para este origen: no hay cuenta ni asiento que mostrar, el resto de la distribución sigue completa abajo.
+              </div>
+            } @else if (!c.asientos.length) {
+              <div class="ab-sin-contabilidad">
+                <mat-icon>info</mat-icon>
+                Todavía no hay asiento generado para este origen.
+              </div>
+            } @else {
+              <div class="ab-asientos-lista">
+                <span class="l">Asiento{{ c.asientos.length > 1 ? 's' : '' }}:</span>
+                @for (a of c.asientos; track a.idAsiento) {
+                  <span class="ab-asiento-chip">#{{ a.idAsiento }} · {{ a.tipo }} · {{ formatFecha(a.fecha) }} · {{ a.estado }}</span>
+                }
+              </div>
+            }
+          </div>
+        </mat-card-content>
+      </mat-card>
+    }
+
+    <!-- ============ 2. Filtros — dinámicos, combinables ============ -->
+    <mat-card class="ab-card ab-filtros">
+      <mat-card-content>
+        <div class="ab-filtros-header">
+          <mat-icon>tune</mat-icon>
+          <span>Filtros</span>
+          @if (hayFiltrosActivos()) {
+            <button mat-button class="ab-limpiar-btn" (click)="limpiarFiltros()">
+              <mat-icon>backspace</mat-icon> Limpiar
+            </button>
+          }
+        </div>
+
+        <div class="ab-filtro-grupo">
+          <span class="ab-filtro-label">Concepto</span>
+          <div class="ab-chips-filtro">
+            @for (concepto of conceptosDisponibles; track concepto) {
+              <button
+                type="button"
+                class="ab-chip-toggle"
+                [class.activo]="conceptosSeleccionados().has(concepto)"
+                (click)="toggleConcepto(concepto)">
+                {{ nombreConcepto[concepto] }}
+              </button>
+            }
+          </div>
+        </div>
+
+        <div class="ab-filtro-grupo">
+          <span class="ab-filtro-label">
+            Banda
+            <span class="ab-filtro-hint">(solo aplica a Capital)</span>
+          </span>
+          <div class="ab-chips-filtro">
+            @for (banda of bandasDisponibles; track banda.idBanda) {
+              <button
+                type="button"
+                class="ab-chip-toggle"
+                [class.activo]="bandasSeleccionadas().has(banda.idBanda)"
+                (click)="toggleBanda(banda.idBanda)">
+                {{ banda.nombre }}
+              </button>
+            }
+          </div>
+        </div>
+
+        <div class="ab-filtros-fila">
+          <mat-form-field appearance="outline">
+            <mat-label>Fecha desde</mat-label>
+            <input matInput [matDatepicker]="pickerDesde" [max]="hoy"
+                   [ngModel]="fechaDesde()" (ngModelChange)="fechaDesde.set($event); aplicarFiltros()" />
+            <mat-datepicker-toggle matSuffix [for]="pickerDesde"></mat-datepicker-toggle>
+            <mat-datepicker #pickerDesde></mat-datepicker>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Fecha hasta</mat-label>
+            <input matInput [matDatepicker]="pickerHasta" [max]="hoy"
+                   [ngModel]="fechaHasta()" (ngModelChange)="fechaHasta.set($event); aplicarFiltros()" />
+            <mat-datepicker-toggle matSuffix [for]="pickerHasta"></mat-datepicker-toggle>
+            <mat-datepicker #pickerHasta></mat-datepicker>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Partícipe (código)</mat-label>
+            <input matInput [(ngModel)]="idsEntidadTexto" (change)="aplicarFiltros()"
+                   placeholder="Ej. 1234, 5501" />
+            <mat-hint>Códigos separados por coma</mat-hint>
+          </mat-form-field>
+
+          @if (cuadre()?.contabilidadConectada) {
+            <mat-form-field appearance="outline">
+              <mat-label>Cuenta contable</mat-label>
+              <input matInput [(ngModel)]="cuentasContablesTexto" (change)="aplicarFiltros()"
+                     placeholder="Ej. 1.3.01.10" />
+              <mat-hint>Separadas por coma</mat-hint>
+            </mat-form-field>
+          }
+
+          <mat-form-field appearance="outline">
+            <mat-label>Ordenar por</mat-label>
+            <mat-select [ngModel]="ordenarPor()" (ngModelChange)="ordenarPor.set($event); onCambioOrden()">
+              <mat-option value="valor">Valor</mat-option>
+              <mat-option value="fechaAplicacion">Fecha de aplicación</mat-option>
+              <mat-option value="concepto">Concepto</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <button mat-icon-button
+                  [matTooltip]="orden() === 'desc' ? 'Descendente' : 'Ascendente'"
+                  (click)="orden.set(orden() === 'desc' ? 'asc' : 'desc'); onCambioOrden()">
+            <mat-icon>{{ orden() === 'desc' ? 'arrow_downward' : 'arrow_upward' }}</mat-icon>
+          </button>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- ============ 3. Detalle: resumen por concepto + tabla ============ -->
+    @if (cargandoDetalle()) {
+      <div class="ab-cuadre-loading"><mat-spinner diameter="32"></mat-spinner> Consultando detalle...</div>
+    } @else if (errorDetalle()) {
+      <mat-card class="ab-card ab-cuadre-error">
+        <mat-card-content>
+          <div class="ab-error-block">
+            <mat-icon>report_problem</mat-icon>
+            <div>
+              <b>No se pudo cargar el detalle.</b>
+              <p>{{ errorDetalle() }}</p>
+            </div>
+            <button mat-raised-button color="warn" (click)="reintentarDetalle()">Reintentar</button>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    } @else if (detalle(); as d) {
+
+      @if (d.resumenPorConcepto.length) {
+        <div class="ab-resumen-conceptos">
+          @for (r of d.resumenPorConcepto; track r.concepto) {
+            <mat-card class="ab-resumen-tile">
+              <span class="l">{{ nombreConcepto[r.concepto] }}</span>
+              <span class="v">{{ formatMoneda(r.valor) }}</span>
+              <span class="f">{{ r.filas }} {{ r.filas === 1 ? 'fila' : 'filas' }}</span>
+            </mat-card>
+          }
+          <mat-card class="ab-resumen-tile total">
+            <span class="l">Total filtrado</span>
+            <span class="v">{{ formatMoneda(d.totalValorFiltrado) }}</span>
+            <span class="f">{{ d.totalFilas }} {{ d.totalFilas === 1 ? 'fila' : 'filas' }} en total</span>
+          </mat-card>
+        </div>
+      }
+
+      <mat-card class="ab-card ab-tabla-card">
+        <mat-card-content>
+          @if (!d.filas.length) {
+            <div class="ab-vacio-detalle">
+              <mat-icon>info</mat-icon>
+              <p>No hay distribución registrada para este origen con los filtros actuales.</p>
+            </div>
+          } @else {
+            <div class="ab-tabla-toolbar">
+              <span class="ab-tabla-contador">
+                Mostrando {{ d.filas.length }} de {{ d.totalFilas }} filas · página {{ pagina() + 1 }} de {{ totalPaginas() }}
+              </span>
+              <div class="ab-tabla-acciones">
+                <mat-form-field appearance="outline" subscriptSizing="dynamic" class="ab-tamanio-field">
+                  <mat-label>Filas</mat-label>
+                  <mat-select [ngModel]="tamanio()" (ngModelChange)="tamanio.set($event); onCambioTamanio()">
+                    @for (t of tamaniosPagina; track t) {
+                      <mat-option [value]="t">{{ t }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+                <button mat-stroked-button (click)="exportarCsv()">
+                  <mat-icon>download</mat-icon> Exportar CSV
+                </button>
+              </div>
+            </div>
+
+            <div class="ab-tabla-scroll">
+              <table class="ab-tabla-detalle">
+                <thead>
+                  <tr>
+                    <th>Concepto</th>
+                    <th class="num">Valor</th>
+                    <th>Partícipe</th>
+                    <th>Préstamo / cuota</th>
+                    <th>Producto</th>
+                    <th>Cartera</th>
+                    <th>Banda</th>
+                    <th>Fecha aplicación</th>
+                    @if (cuadre()?.contabilidadConectada) {
+                      <th>Cuenta contable</th>
+                      <th>Asiento</th>
+                    }
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (f of d.filas; track trackByFila($index, f)) {
+                    <tr>
+                      <td><span class="ab-concepto-badge">{{ nombreConcepto[f.concepto] }}</span></td>
+                      <td class="num">{{ formatMoneda(f.valor) }}</td>
+                      <td>
+                        <div class="ab-participe">
+                          <span class="nombre">{{ f.participe || '—' }}</span>
+                          <span class="cedula">{{ f.cedula || '—' }} @if (f.codigoAsoprep) { · Rol {{ f.codigoAsoprep }} }</span>
+                        </div>
+                      </td>
+                      <td>
+                        @if (f.idPrestamo) {
+                          #{{ f.idPrestamo }} @if (f.numeroCuota) { · cuota {{ f.numeroCuota }} }
+                        } @else if (f.idTipoAporte) {
+                          Aporte tipo {{ f.idTipoAporte }}
+                        } @else {
+                          —
+                        }
+                      </td>
+                      <td>{{ f.producto || '—' }}</td>
+                      <td>
+                        @if (f.tipoCartera) {
+                          <span class="ab-cartera-badge" [class]="'tc-' + f.tipoCartera.toLowerCase()">
+                            {{ f.tipoCartera }}{{ f.dias != null ? ' · ' + f.dias + 'd' : '' }}
+                          </span>
+                        } @else { — }
+                      </td>
+                      <td>{{ f.banda || '—' }}</td>
+                      <td>{{ formatFecha(f.fechaAplicacion) }}</td>
+                      @if (cuadre()?.contabilidadConectada) {
+                        <td>
+                          @if (f.cuentaContable) {
+                            <span class="ab-cuenta">{{ f.cuentaContable }}</span>
+                            <span class="ab-cuenta-nombre">{{ f.nombreCuenta }}</span>
+                          } @else { — }
+                        </td>
+                        <td>{{ f.idAsiento ? '#' + f.idAsiento : '—' }}</td>
+                      }
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+
+            <div class="ab-paginador">
+              <button mat-icon-button [disabled]="pagina() === 0" (click)="irAPagina(pagina() - 1)">
+                <mat-icon>chevron_left</mat-icon>
+              </button>
+              <span>Página {{ pagina() + 1 }} de {{ totalPaginas() }}</span>
+              <button mat-icon-button [disabled]="pagina() + 1 >= totalPaginas()" (click)="irAPagina(pagina() + 1)">
+                <mat-icon>chevron_right</mat-icon>
+              </button>
+            </div>
+          }
+        </mat-card-content>
+      </mat-card>
+    }
+  }
+
+</div>

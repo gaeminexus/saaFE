@@ -1089,6 +1089,7 @@ export const routes: Routes = [
       },
       { path: 'entidad-participe-info', loadComponent: () => import('./modules/crd/forms/entidad-participe/entidad-participe-info/entidad-participe-info.component').then((m) => m.EntidadParticipeInfoComponent) },
       { path: 'certificados-participe', loadComponent: () => import('./modules/crd/forms/certificados-participe/certificados-participe.component').then((m) => m.CertificadosParticipeComponent) },
+      { path: 'auditoria-bandas', loadComponent: () => import('./modules/crd/forms/auditoria-bandas/auditoria-bandas.component').then((m) => m.AuditoriaBandasComponent) },
       {
         path: 'estadosCrd',
         loadComponent: () => import('./modules/crd/forms/parametrizacion/estados-crd/estados-crd.component').then((m) => m.EstadosCrdComponent),

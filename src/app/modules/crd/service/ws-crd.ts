@@ -19,6 +19,8 @@ export class ServiciosCrd {
   public static RS_PRST = `${API_URL}/prst`;
   public static RS_DTPR = `${API_URL}/dtpr`;
   public static RS_PGPR = `${API_URL}/pgpr`;
+  /** Auditoría de distribución en bandas (`docs/crd/API-AUDITORIA-BANDAS.md`). */
+  public static RS_DSBN = `${API_URL}/dsbn`;
   public static RS_TPVV = `${API_URL}/tpvv`;
   public static RS_TPHD = `${API_URL}/tphd`;
   public static RS_TPDN = `${API_URL}/tpdn`;

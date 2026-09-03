@@ -243,6 +243,11 @@ export class MenucreditosComponent {
           route: '/menucreditos/bandeja-contabilidad',
         },
         {
+          displayName: 'Auditoría de Bandas',
+          iconName: 'account_balance',
+          route: '/menucreditos/auditoria-bandas',
+        },
+        {
           displayName: 'Proceso de Crédito',
           iconName: 'rule',
           route: '/menucreditos/proceso-credito',

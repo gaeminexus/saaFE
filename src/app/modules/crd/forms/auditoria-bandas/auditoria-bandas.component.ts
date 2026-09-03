@@ -1,0 +1,365 @@
+import { CommonModule } from '@angular/common';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { MatSnackBar } from '@angular/material/snack-bar';
+
+import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
+import { ExportService } from '../../../../shared/services/export.service';
+import { FuncionesDatosService } from '../../../../shared/services/funciones-datos.service';
+
+import {
+  CONCEPTOS_DISTRIBUCION,
+  ConceptoDistribucion,
+  CuadreDistribucionBandas,
+  ErrorAuditoriaBandas,
+  FilaDistribucionBanda,
+  FiltroDetalleDistribucion,
+  NOMBRE_CONCEPTO_DISTRIBUCION,
+  NOMBRE_ORIGEN_DISTRIBUCION,
+  OrigenDistribucion,
+  OrigenListado,
+  RespuestaDetalleDistribucion,
+} from '../../model/auditoria-bandas';
+import { AuditoriaBandasService } from '../../service/auditoria-bandas.service';
+
+/**
+ * Catálogo de bandas para el filtro. Solo aplica a CAPITAL (§ "Banda" del contrato) — fijo acá
+ * hasta que el backend exponga un catálogo propio; los ids coinciden con los que arma el mock de
+ * `AuditoriaBandasService` mientras los endpoints no estén publicados.
+ */
+const BANDAS_FILTRO: { idBanda: number; nombre: string }[] = [
+  { idBanda: 1, nombre: 'AL DÍA' },
+  { idBanda: 2, nombre: 'DE 1 A 30 DÍAS' },
+  { idBanda: 3, nombre: 'DE 31 A 90 DÍAS' },
+  { idBanda: 4, nombre: 'DE 91 A 180 DÍAS' },
+  { idBanda: 5, nombre: 'MÁS DE 180 DÍAS' },
+];
+
+const TAMANIOS_PAGINA = [25, 50, 100];
+
+/**
+ * Auditoría de distribución en bandas (`docs/crd/API-AUDITORIA-BANDAS.md`). Pantalla de solo
+ * lectura para contabilidad: revisa por qué se mandaron ciertos saldos a ciertas cuentas.
+ *
+ * Cuatro reglas del contrato que esta pantalla respeta a propósito:
+ * 1. El cuadre se pinta primero, arriba, y la diferencia distinta de cero se resalta en rojo —
+ *    nunca en un total al pie (fue el defecto que costó una jornada entera encontrar).
+ * 2. El detalle se agrupa por CONCEPTO, no por cuenta contable — la mora y el interés ordinario
+ *    van a la misma cuenta y se fusionarían si se agrupara por cuenta.
+ * 3. `contabilidadConectada: false` no es un error: oculta las columnas de cuenta/asiento y
+ *    muestra todo el resto igual (escenario de venta separada del sistema contable).
+ * 4. Los errores de `AuditoriaBandasService` NUNCA se muestran como "sin datos" — el servicio no
+ *    usa el `handleError` compartido justamente para que un fallo real se vea como fallo.
+ */
+@Component({
+  selector: 'app-auditoria-bandas',
+  standalone: true,
+  imports: [CommonModule, FormsModule, MaterialFormModule],
+  templateUrl: './auditoria-bandas.component.html',
+  styleUrl: './auditoria-bandas.component.scss',
+})
+export class AuditoriaBandasComponent implements OnInit {
+  private auditoriaBandasService = inject(AuditoriaBandasService);
+  private funcionesDatos = inject(FuncionesDatosService);
+  private exportService = inject(ExportService);
+  private snackBar = inject(MatSnackBar);
+
+  readonly nombreOrigen = NOMBRE_ORIGEN_DISTRIBUCION;
+  readonly nombreConcepto = NOMBRE_CONCEPTO_DISTRIBUCION;
+  readonly conceptosDisponibles = CONCEPTOS_DISTRIBUCION;
+  readonly bandasDisponibles = BANDAS_FILTRO;
+  readonly tamaniosPagina = TAMANIOS_PAGINA;
+
+  // ---- selector de origen ----
+  cargandoOrigenes = signal(false);
+  origenes = signal<OrigenListado[]>([]);
+  origenSeleccionado = signal<OrigenListado | null>(null);
+  errorOrigenes = signal<string | null>(null);
+  filtroOrigenTexto = '';
+  filtroOrigenTipo = signal<OrigenDistribucion | 'TODOS'>('TODOS');
+
+  // ---- cuadre (arriba, siempre lo primero que se ve) ----
+  cargandoCuadre = signal(false);
+  cuadre = signal<CuadreDistribucionBandas | null>(null);
+  errorCuadre = signal<string | null>(null);
+
+  // ---- detalle filtrable ----
+  cargandoDetalle = signal(false);
+  detalle = signal<RespuestaDetalleDistribucion | null>(null);
+  errorDetalle = signal<string | null>(null);
+
+  // ---- filtros ----
+  conceptosSeleccionados = signal<Set<ConceptoDistribucion>>(new Set());
+  bandasSeleccionadas = signal<Set<number>>(new Set());
+  fechaDesde = signal<Date | null>(null);
+  fechaHasta = signal<Date | null>(null);
+  idsEntidadTexto = '';
+  cuentasContablesTexto = '';
+  ordenarPor = signal<'valor' | 'fechaAplicacion' | 'concepto'>('valor');
+  orden = signal<'asc' | 'desc'>('desc');
+  pagina = signal(0);
+  tamanio = signal(50);
+
+  readonly hoy = new Date();
+
+  hayFiltrosActivos = computed(
+    () =>
+      this.conceptosSeleccionados().size > 0 ||
+      this.bandasSeleccionadas().size > 0 ||
+      !!this.fechaDesde() ||
+      !!this.fechaHasta() ||
+      this.idsEntidadTexto.trim().length > 0 ||
+      this.cuentasContablesTexto.trim().length > 0
+  );
+
+  totalPaginas = computed(() => {
+    const d = this.detalle();
+    if (!d || d.tamanio <= 0) return 1;
+    return Math.max(1, Math.ceil(d.totalFilas / d.tamanio));
+  });
+
+  ngOnInit(): void {
+    this.cargarOrigenes();
+  }
+
+  // ================= origen =================
+
+  cargarOrigenes(): void {
+    this.cargandoOrigenes.set(true);
+    this.errorOrigenes.set(null);
+    const tipo = this.filtroOrigenTipo();
+    const filtro = tipo === 'TODOS' ? undefined : { origen: tipo };
+    this.auditoriaBandasService.obtenerOrigenes(filtro).subscribe({
+      next: (origenes) => {
+        this.cargandoOrigenes.set(false);
+        this.origenes.set(origenes ?? []);
+        // Al abrir la pantalla (o al cambiar el filtro de tipo), se para en el más reciente:
+        // es lo que el operador casi siempre quiere revisar primero.
+        if (!this.origenSeleccionado() && origenes?.length) {
+          this.seleccionarOrigen(origenes[0]);
+        }
+      },
+      error: (err: ErrorAuditoriaBandas) => {
+        this.cargandoOrigenes.set(false);
+        this.origenes.set([]);
+        this.errorOrigenes.set(err.mensaje);
+      },
+    });
+  }
+
+  get origenesFiltrados(): OrigenListado[] {
+    const q = this.filtroOrigenTexto.trim().toLowerCase();
+    if (!q) return this.origenes();
+    return this.origenes().filter(
+      (o) => o.descripcion.toLowerCase().includes(q) || String(o.idOrigen).includes(q)
+    );
+  }
+
+  onCambioTipoOrigen(): void {
+    this.cargarOrigenes();
+  }
+
+  seleccionarOrigen(origen: OrigenListado): void {
+    this.origenSeleccionado.set(origen);
+    this.limpiarFiltros(false);
+    this.pagina.set(0);
+    this.cargarCuadre();
+    this.cargarDetalle();
+  }
+
+  // ================= cuadre =================
+
+  private cargarCuadre(): void {
+    const origen = this.origenSeleccionado();
+    if (!origen) return;
+
+    this.cargandoCuadre.set(true);
+    this.errorCuadre.set(null);
+    this.cuadre.set(null);
+
+    this.auditoriaBandasService.obtenerCuadre(origen.origen, origen.idOrigen).subscribe({
+      next: (cuadre) => {
+        this.cargandoCuadre.set(false);
+        this.cuadre.set(cuadre);
+      },
+      error: (err: ErrorAuditoriaBandas) => {
+        this.cargandoCuadre.set(false);
+        // No se muestra "sin datos": el error queda visible aparte hasta que el operador
+        // reintente — es la regla no negociable del contrato para esta pantalla.
+        this.errorCuadre.set(err.mensaje);
+      },
+    });
+  }
+
+  reintentarCuadre(): void {
+    this.cargarCuadre();
+  }
+
+  // ================= detalle =================
+
+  private construirFiltro(): FiltroDetalleDistribucion | null {
+    const origen = this.origenSeleccionado();
+    if (!origen) return null;
+
+    const idsEntidad = this.parsearListaNumeros(this.idsEntidadTexto);
+    const cuentasContables = this.parsearListaTexto(this.cuentasContablesTexto);
+
+    return {
+      origen: origen.origen,
+      idOrigen: origen.idOrigen,
+      conceptos: this.conceptosSeleccionados().size ? Array.from(this.conceptosSeleccionados()) : undefined,
+      idsBanda: this.bandasSeleccionadas().size ? Array.from(this.bandasSeleccionadas()) : undefined,
+      idsEntidad: idsEntidad.length ? idsEntidad : undefined,
+      cuentasContables: cuentasContables.length ? cuentasContables : undefined,
+      fechaDesde: this.formatearFechaFiltro(this.fechaDesde()),
+      fechaHasta: this.formatearFechaFiltro(this.fechaHasta()),
+      pagina: this.pagina(),
+      tamanio: this.tamanio(),
+      ordenarPor: this.ordenarPor(),
+      orden: this.orden(),
+    };
+  }
+
+  private cargarDetalle(): void {
+    const filtro = this.construirFiltro();
+    if (!filtro) return;
+
+    this.cargandoDetalle.set(true);
+    this.errorDetalle.set(null);
+    this.detalle.set(null);
+
+    this.auditoriaBandasService.obtenerDetalle(filtro).subscribe({
+      next: (respuesta) => {
+        this.cargandoDetalle.set(false);
+        this.detalle.set(respuesta);
+      },
+      error: (err: ErrorAuditoriaBandas) => {
+        this.cargandoDetalle.set(false);
+        this.errorDetalle.set(err.mensaje);
+      },
+    });
+  }
+
+  reintentarDetalle(): void {
+    this.cargarDetalle();
+  }
+
+  aplicarFiltros(): void {
+    this.pagina.set(0);
+    this.cargarDetalle();
+  }
+
+  limpiarFiltros(recargar = true): void {
+    this.conceptosSeleccionados.set(new Set());
+    this.bandasSeleccionadas.set(new Set());
+    this.fechaDesde.set(null);
+    this.fechaHasta.set(null);
+    this.idsEntidadTexto = '';
+    this.cuentasContablesTexto = '';
+    this.ordenarPor.set('valor');
+    this.orden.set('desc');
+    if (recargar) this.aplicarFiltros();
+  }
+
+  toggleConcepto(concepto: ConceptoDistribucion): void {
+    const actuales = new Set(this.conceptosSeleccionados());
+    if (actuales.has(concepto)) actuales.delete(concepto);
+    else actuales.add(concepto);
+    this.conceptosSeleccionados.set(actuales);
+    this.aplicarFiltros();
+  }
+
+  toggleBanda(idBanda: number): void {
+    const actuales = new Set(this.bandasSeleccionadas());
+    if (actuales.has(idBanda)) actuales.delete(idBanda);
+    else actuales.add(idBanda);
+    this.bandasSeleccionadas.set(actuales);
+    this.aplicarFiltros();
+  }
+
+  onCambioOrden(): void {
+    this.aplicarFiltros();
+  }
+
+  onCambioTamanio(): void {
+    this.pagina.set(0);
+    this.cargarDetalle();
+  }
+
+  irAPagina(pagina: number): void {
+    if (pagina < 0 || pagina >= this.totalPaginas()) return;
+    this.pagina.set(pagina);
+    this.cargarDetalle();
+  }
+
+  // ================= exportar =================
+
+  exportarCsv(): void {
+    const filas = this.detalle()?.filas ?? [];
+    if (!filas.length) {
+      this.snackBar.open('No hay filas en esta página para exportar.', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    const contabilidadConectada = this.cuadre()?.contabilidadConectada ?? true;
+    const headers = [
+      'Concepto', 'Valor', 'Partícipe', 'Cédula', 'Préstamo', 'Cuota', 'Producto',
+      'Tipo de cartera', 'Días', 'Banda', 'Fecha aplicación',
+      ...(contabilidadConectada ? ['Cuenta contable', 'Nombre cuenta', 'Asiento'] : []),
+    ];
+    const dataKeys = [
+      'concepto', 'valor', 'participe', 'cedula', 'idPrestamo', 'numeroCuota', 'producto',
+      'tipoCartera', 'dias', 'banda', 'fechaAplicacion',
+      ...(contabilidadConectada ? ['cuentaContable', 'nombreCuenta', 'idAsiento'] : []),
+    ];
+
+    const filasParaExportar = filas.map((f) => ({
+      ...f,
+      concepto: this.nombreConcepto[f.concepto],
+    }));
+
+    const origen = this.origenSeleccionado();
+    const nombreArchivo = `auditoria-bandas-${origen?.origen ?? 'origen'}-${origen?.idOrigen ?? ''}-pag${this.pagina() + 1}`;
+    this.exportService.exportToCSV(filasParaExportar, nombreArchivo, headers, dataKeys);
+  }
+
+  // ================= presentación =================
+
+  formatFecha(fecha: unknown): string {
+    return this.funcionesDatos.formatoFecha(fecha, 2) || '—';
+  }
+
+  formatMoneda(n: number | null | undefined): string {
+    return '$' + (n ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  trackByFila(_index: number, fila: FilaDistribucionBanda): number {
+    return fila.id;
+  }
+
+  private parsearListaNumeros(texto: string): number[] {
+    return texto
+      .split(',')
+      .map((t) => Number(t.trim()))
+      .filter((n) => Number.isFinite(n) && n > 0);
+  }
+
+  private parsearListaTexto(texto: string): string[] {
+    return texto
+      .split(',')
+      .map((t) => t.trim())
+      .filter((t) => t.length > 0);
+  }
+
+  /**
+   * `LocalDate` como `yyyy-MM-dd` armado desde los componentes del `Date` local — nunca
+   * `toISOString()` ni un `Date` crudo: el backend descarta el offset en vez de convertirlo y la
+   * fecha queda corrida (mismo cuidado que en el resto de `crd`).
+   */
+  private formatearFechaFiltro(fecha: Date | null): string | undefined {
+    if (!fecha) return undefined;
+    const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+    const dia = String(fecha.getDate()).padStart(2, '0');
+    return `${fecha.getFullYear()}-${mes}-${dia}`;
+  }
+}
