@@ -2310,21 +2310,39 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
             const db = new DatosBusqueda();
             db.asignaValorConCampoPadre(TipoDatosBusqueda.LONG, 'novedadParticipeCarga', 'codigo', String(n.codigo), TipoComandosBusqueda.IGUAL);
             criterios.push(db);
+            // ⛔ SIN catchError acá (2026-09-03, corrección del árbitro): esto es una guarda de
+            // seguridad, no una consulta de display. Un `catchError(() => of([]))` haría que un
+            // fallo de red en la novedad A se lea como "A no tiene afectaciones" — la guarda no
+            // vería el conflicto real y el guardado pasaría igual. El error sube al `error:` del
+            // `subscribe` de `guardarAfectacionesFinancieras`, que ya frena y avisa "no se pudo
+            // verificar, intente de nuevo" — frenar por un fallo de red es visible; escribir por
+            // un fallo de red es silencioso, y es exactamente lo que esta guarda existe para evitar.
             return this.afectacionValoresParticipeCargaService.selectByCriteria(criterios).pipe(
-              map((data) => (Array.isArray(data) ? data : data ? [data] : []).map((fila) => ({ novedadOrigen: n, fila }))),
-              catchError(() => of([] as { novedadOrigen: NovedadParticipeCarga; fila: AfectacionValoresParticipeCarga }[]))
+              map((data) => (Array.isArray(data) ? data : data ? [data] : []).map((fila) => ({ novedadOrigen: n, fila })))
             );
           });
 
         return forkJoin(consultas.length ? consultas : [of([])]).pipe(map((listas) => listas.flat()));
       }),
-      map((filasEtiquetadas) => this.detectarConflictosDeNovedad(filasEtiquetadas))
+      map((filasEtiquetadas) => this.detectarConflictosDeNovedad(filasEtiquetadas, novedadAbierta))
     );
   }
 
-  /** Misma lógica que `AfectacionParticipeDialogComponent.detectarConflictosDeNovedad` — ver ese comentario para el porqué. */
+  /**
+   * Dos preguntas distintas, las dos hacen falta (corrección del árbitro 2026-09-03: la primera
+   * versión solo hacía la primera, y el primer duplicado se seguía creando igual):
+   *
+   * 1. "¿Esto ya está roto?" — alguna cuota o tipo de aporte con filas YA GUARDADAS bajo más de
+   *    una novedad. Cubre lo que ya existe en la base.
+   * 2. "¿Lo que estoy por escribir lo rompe?" — una cuota o tipo de aporte con valor > 0 en lo que
+   *    el operador editó, que YA tiene una fila existente bajo una novedad DISTINTA de la abierta.
+   *    Aunque sea una sola fila y hoy no haya conflicto entre existentes: escribir bajo la novedad
+   *    abierta sin verlo crearía una segunda fila fantasma — el mismo defecto que el guardado
+   *    anterior corregía, pero llegando un guardado tarde si solo se hace la pregunta 1.
+   */
   private detectarConflictosDeNovedad(
-    filasEtiquetadas: { novedadOrigen: NovedadParticipeCarga; fila: AfectacionValoresParticipeCarga }[]
+    filasEtiquetadas: { novedadOrigen: NovedadParticipeCarga; fila: AfectacionValoresParticipeCarga }[],
+    novedadAbierta: NovedadParticipeCarga
   ): string[] {
     const conflictos: string[] = [];
 
@@ -2345,6 +2363,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
       }
     });
 
+    // Pregunta 1: ¿ya está roto?
     porCuota.forEach((items, detalleCodigo) => {
       const novedadesDistintas = new Set(items.map((i) => i.novedadOrigen.codigo));
       if (novedadesDistintas.size > 1) {
@@ -2352,11 +2371,38 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
         conflictos.push(`la cuota ${numeroCuota ?? detalleCodigo} tiene afectaciones registradas bajo ${novedadesDistintas.size} novedades distintas de este partícipe`);
       }
     });
-
     porTipoAporte.forEach((items, idTipoAporte) => {
       const novedadesDistintas = new Set(items.map((i) => i.novedadOrigen.codigo));
       if (novedadesDistintas.size > 1) {
         conflictos.push(`el aporte ${items[0].fila.tipoAporte?.nombre ?? idTipoAporte} tiene afectaciones registradas bajo ${novedadesDistintas.size} novedades distintas de este partícipe`);
+      }
+    });
+
+    // Pregunta 2: ¿lo que se está por escribir choca con una fila existente de otra novedad?
+    const cuotasConValorPositivo = new Set(
+      Object.entries(this.valoresAfectarEditados())
+        .filter(([, valor]) => this.redondear(Number(valor) || 0) > 0.004)
+        .map(([detalleCodigo]) => Number(detalleCodigo))
+    );
+    porCuota.forEach((items, detalleCodigo) => {
+      if (!cuotasConValorPositivo.has(detalleCodigo)) return;
+      const filaDeOtraNovedad = items.find((i) => i.novedadOrigen.codigo !== novedadAbierta.codigo);
+      if (filaDeOtraNovedad) {
+        const numeroCuota = filaDeOtraNovedad.fila.detallePrestamo?.numeroCuota;
+        conflictos.push(`la cuota ${numeroCuota ?? detalleCodigo} ya tiene una afectación registrada bajo otra novedad de este partícipe`);
+      }
+    });
+
+    const tiposAporteConValorPositivo = new Set(
+      Object.entries(this.valoresAporteEditados())
+        .filter(([, valor]) => this.redondear(Number(valor) || 0) > 0.004)
+        .map(([idTipoAporte]) => Number(idTipoAporte))
+    );
+    porTipoAporte.forEach((items, idTipoAporte) => {
+      if (!tiposAporteConValorPositivo.has(idTipoAporte)) return;
+      const filaDeOtraNovedad = items.find((i) => i.novedadOrigen.codigo !== novedadAbierta.codigo);
+      if (filaDeOtraNovedad) {
+        conflictos.push(`el aporte ${filaDeOtraNovedad.fila.tipoAporte?.nombre ?? idTipoAporte} ya tiene una afectación registrada bajo otra novedad de este partícipe`);
       }
     });
 

@@ -906,7 +906,18 @@ export class AfectacionParticipeDialogComponent implements OnInit {
     // sin reasignar plata entre novedades (cambia en qué paso del proceso se aplica cada una —
     // `CargaArchivoPetroServiceImpl` lee las afectaciones POR novedad, cinco veces). Se frena todo
     // el guardado en vez de adivinar.
-    const conflictos = this.detectarConflictosDeNovedad();
+    //
+    // Necesita `cuotasDisponibles` (détalle → `novedadOrigen`) ANTES de construir nada más, para
+    // poder responder también "¿lo que estoy por escribir choca con una fila existente de otra
+    // novedad?" — no solo "¿ya está roto?" (corrección del árbitro 2026-09-03: la primera versión
+    // solo hacía la primera pregunta, y el primer duplicado se seguía creando igual).
+    const cuotasDisponiblesParaConflicto = new Map<number, { prestamo: Prestamo; detalle: DetallePrestamo; novedadOrigen: NovedadParticipeCarga }>();
+    this.prestamosAfectables().forEach((item) => {
+      if (!item.novedadOrigen) return;
+      item.cuotas.forEach((detalle) => cuotasDisponiblesParaConflicto.set(detalle.codigo, { prestamo: item.prestamo, detalle, novedadOrigen: item.novedadOrigen! }));
+    });
+
+    const conflictos = this.detectarConflictosDeNovedad(cuotasDisponiblesParaConflicto);
     if (conflictos.length > 0) {
       this.snackBar.open(
         `No se guardó nada: ${conflictos.join(' · ')} — esta pantalla no puede decidir sola cuál novedad debe quedarse con el valor. Avise al equipo.`,
@@ -936,11 +947,7 @@ export class AfectacionParticipeDialogComponent implements OnInit {
       return;
     }
 
-    const cuotasDisponibles = new Map<number, { prestamo: Prestamo; detalle: DetallePrestamo; novedadOrigen: NovedadParticipeCarga }>();
-    this.prestamosAfectables().forEach((item) => {
-      if (!item.novedadOrigen) return;
-      item.cuotas.forEach((detalle) => cuotasDisponibles.set(detalle.codigo, { prestamo: item.prestamo, detalle, novedadOrigen: item.novedadOrigen! }));
-    });
+    const cuotasDisponibles = cuotasDisponiblesParaConflicto;
 
     const actuales = this.valoresAfectarEditados();
     // ⛔ Agrupado por (NOVEDAD, cuota), no por cuota sola — corregido 2026-09-03 a pedido del
@@ -1059,10 +1066,29 @@ export class AfectacionParticipeDialogComponent implements OnInit {
    * las novedades debería quedarse con el valor editado sin inventar una regla — así que se
    * detecta y se frena, en vez de consolidar-y-adivinar.
    */
-  private detectarConflictosDeNovedad(): string[] {
+  /**
+   * Dos preguntas distintas, las dos hacen falta (corrección del árbitro 2026-09-03: la primera
+   * versión solo hacía la primera, y el primer duplicado se seguía creando igual):
+   *
+   * 1. "¿Esto ya está roto?" — alguna cuota o tipo de aporte con filas YA GUARDADAS bajo más de
+   *    una novedad.
+   * 2. "¿Lo que estoy por escribir lo rompe?" — una cuota con valor > 0 en `valoresAfectarEditados`
+   *    cuyo `novedadOrigen` (de `elegirNovedadParaPrestamo`, un match fijo por producto) es
+   *    DISTINTO de la novedad bajo la que ya cuelga una fila existente para esa misma cuota.
+   *    Aunque hoy sea una sola fila y no haya conflicto entre existentes: escribir bajo
+   *    `novedadOrigen` sin verlo crearía una segunda fila fantasma.
+   *
+   *    Los APORTES no necesitan esta segunda pregunta: a diferencia de `novedadOrigen` (fijo por
+   *    producto), la novedad de un aporte YA SE PRESERVA desde la fila existente cuando hay una
+   *    (ver más abajo, `primera?.__novedadOrigen`) — nunca se recalcula para una fila que ya
+   *    existe, así que no hay forma de que el guardado de un aporte apunte a una novedad distinta
+   *    de la que ya tiene.
+   */
+  private detectarConflictosDeNovedad(cuotasDisponibles: Map<number, { prestamo: Prestamo; detalle: DetallePrestamo; novedadOrigen: NovedadParticipeCarga }>): string[] {
     const conflictos: string[] = [];
 
-    this.agruparPorClave(this.afectacionesRegistradas(), (item) => item.detallePrestamo?.codigo).forEach((filas, detalleCodigo) => {
+    const porCuota = this.agruparPorClave(this.afectacionesRegistradas(), (item) => item.detallePrestamo?.codigo);
+    porCuota.forEach((filas, detalleCodigo) => {
       const novedadesDistintas = new Set(filas.map((f) => f.__novedadOrigen.codigo));
       if (novedadesDistintas.size > 1) {
         const numeroCuota = filas[0].detallePrestamo?.numeroCuota;
@@ -1074,6 +1100,17 @@ export class AfectacionParticipeDialogComponent implements OnInit {
       const novedadesDistintas = new Set(filas.map((f) => f.__novedadOrigen.codigo));
       if (novedadesDistintas.size > 1) {
         conflictos.push(`el aporte ${filas[0].tipoAporte?.nombre ?? idTipoAporte} tiene afectaciones de ${novedadesDistintas.size} novedades distintas`);
+      }
+    });
+
+    Object.entries(this.valoresAfectarEditados()).forEach(([detalleCodigoTexto, valor]) => {
+      if (this.redondear(Number(valor) || 0) <= 0.004) return;
+      const detalleCodigo = Number(detalleCodigoTexto);
+      const destino = cuotasDisponibles.get(detalleCodigo);
+      if (!destino) return;
+      const filaDeOtraNovedad = (porCuota.get(detalleCodigo) ?? []).find((f) => f.__novedadOrigen.codigo !== destino.novedadOrigen.codigo);
+      if (filaDeOtraNovedad) {
+        conflictos.push(`la cuota ${destino.detalle.numeroCuota ?? detalleCodigo} ya tiene una afectación registrada bajo otra novedad de este partícipe`);
       }
     });
 

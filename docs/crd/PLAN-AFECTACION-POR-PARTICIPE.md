@@ -227,6 +227,17 @@ producción.
    código que un partícipe SIN conflicto no cambia ni un número en pantalla: el fetch nuevo no
    escribe en ningún signal que la plantilla lea, solo en variables locales del propio chequeo.
 
+   **Corrección sobre la primera versión de este arreglo (mismo día):** la guarda inicial solo
+   preguntaba *"¿esto ya está roto?"* (filas existentes bajo más de una novedad) — pero el primer
+   duplicado se seguía creando igual, porque nada comparaba lo que el operador estaba por escribir
+   contra lo que ya existía. Ahora también pregunta *"¿lo que voy a escribir lo rompe?"*: si una
+   cuota o un aporte con valor > 0 ya tiene una fila bajo una novedad distinta de la abierta, se
+   frena — aunque sea una sola fila y hoy no haya conflicto entre existentes. Y se sacó el
+   `catchError` que envolvía cada consulta de novedad dentro de la guarda: en una consulta de
+   display swallow-y-seguir está bien, pero en una guarda de seguridad hace que un fallo de red se
+   lea como "sin afectaciones" y el guardado pase igual — el error ahora sube y frena, en vez de
+   escribir en silencio.
+
 **Nada más de esa pantalla se tocó.** Cualquier otra mejora que aparezca ahí durante la comparación
 se sigue reportando, no aplicando — esta excepción es puntual a estos tres defectos, no una apertura
 general.
