@@ -48,9 +48,21 @@ El encabezado. Es lo primero que pinta la pantalla.
   "diferencia": 2906.52,
   "cuadra": false,
   "contabilidadConectada": true,
-  "asientos": [ { "idAsiento": 36, "tipo": "TRANSITORIO", "fecha": "2026-08-31", "estado": "ACTIVO" } ]
+  "asientos": [ { "idAsiento": 36, "tipo": "TRANSITORIO", "fecha": "2026-08-31", "estado": "ACTIVO" } ],
+  "bandas": [
+    { "idBanda": 3, "numero": 2, "etiqueta": "DE 31 A 90 DIAS", "diaInicio": 31, "diaFin": 90 }
+  ]
 }
 ```
+
+⛔ **`bandas` alimenta el filtro, y NO se puede hardcodear en el frontend.** Verificado contra el
+modelo el 2026-09-02: `CRD.BNDP` **no tiene columna de etiqueta** — el rango y su nombre los **deriva**
+`ClasificadorBandaService.derivarRangos` a partir de `numero` y `periodos`, y las bandas se configuran
+**por producto y por empresa** (`ConfiguracionBandaProducto`). O sea: **ni la cantidad ni los rótulos
+son fijos**, y dos productos pueden tener bandas distintas.
+
+Se devuelven **sólo las bandas que aparecen en la distribución de ese origen**, para que el filtro no
+ofrezca opciones que no van a dar ninguna fila.
 
 ⛔ `diferencia != 0` se muestra **en rojo y arriba**, nunca en un total al pie. Es el defecto que
 costó una jornada entera encontrar precisamente porque no estaba a la vista.
