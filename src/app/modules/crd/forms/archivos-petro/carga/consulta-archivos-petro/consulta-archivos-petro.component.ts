@@ -262,6 +262,17 @@ export class ConsultaArchivosPetroComponent implements OnInit {
   }
 
   /**
+   * Pantalla nueva, construida aparte de `verDetalle` (docs/crd/PLAN-AFECTACION-POR-PARTICIPE.md):
+   * agrupa las novedades por partícipe en vez de por novedad. Conviven a propósito para que el
+   * usuario compare con datos reales — no reemplaza a `verDetalle` todavía.
+   */
+  verDetallePorParticipe(carga: CargaArchivo): void {
+    if (carga.codigo) {
+      this.router.navigate(['/menucreditos/archivos-petro/carga/afectacion-por-participe', carga.codigo]);
+    }
+  }
+
+  /**
    * Procesa la carga petrocomercial llamando al backend
    */
   procesarCarga(carga: CargaArchivo): void {

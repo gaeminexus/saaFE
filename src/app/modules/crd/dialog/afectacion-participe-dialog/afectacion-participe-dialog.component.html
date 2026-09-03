@@ -1,0 +1,213 @@
+<div class="apd-dialog">
+
+  <div class="apd-header">
+    <div class="apd-header-info">
+      <h2>{{ data.nombreParticipe }}</h2>
+      <span class="apd-sub">
+        Rol Petro {{ data.codigoPetro }}
+        @if (entidad(); as e) { · CI {{ e.numeroIdentificacion }} }
+      </span>
+    </div>
+    <button mat-icon-button (click)="cerrar()" matTooltip="Cerrar">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <!-- ── Pozo del partícipe — un total, un estado (§4 del plan) ── -->
+  <div class="apd-pozo">
+    @if (topeAfectacionConsultaFallida()) {
+      <div class="apd-pozo-error">
+        <mat-icon>error_outline</mat-icon>
+        No se pudo consultar el tope disponible de este partícipe. Los controles de reparto quedan deshabilitados hasta poder confirmarlo.
+      </div>
+    } @else if (!topeAfectacionParticipe()) {
+      <div class="apd-pozo-loading"><mat-spinner diameter="20"></mat-spinner> Calculando pozo disponible...</div>
+    } @else {
+      <div class="apd-pozo-grid">
+        <div class="apd-pozo-tile">
+          <span class="l">Disponible</span>
+          <span class="v">{{ formatMoneda(montoDisponibleAfectacion) }}</span>
+        </div>
+        <div class="apd-pozo-tile">
+          <span class="l">Asignado ahora</span>
+          <span class="v">{{ formatMoneda(totalValorAfectarActual + totalValorAportarActual) }}</span>
+        </div>
+        <div class="apd-pozo-tile" [class.completo]="saldoPendienteAfectacion <= 0.004" [class.pendiente]="saldoPendienteAfectacion > 0.004">
+          <span class="l">Restante</span>
+          <span class="v">
+            @if (saldoPendienteAfectacion <= 0.004) { <mat-icon>check_circle</mat-icon> }
+            {{ formatMoneda(saldoPendienteAfectacion) }}
+          </span>
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- ── Motivos: por qué está en la lista (§4: "las novedades siguen existiendo, dejan de ser la unidad de trabajo") ── -->
+  <div class="apd-motivos">
+    <div class="apd-motivos-titulo">
+      <mat-icon>report_problem</mat-icon>
+      MOTIVOS ({{ data.novedades.length }} {{ data.novedades.length === 1 ? 'novedad' : 'novedades' }})
+    </div>
+    <ul>
+      @for (n of data.novedades; track n.codigo) {
+        <li>{{ n.descripcion }} @if (n.codigoPrestamo) {— préstamo {{ n.codigoPrestamo }}}</li>
+      }
+    </ul>
+  </div>
+
+  <div class="apd-contenido">
+    @if (cargando()) {
+      <div class="apd-loading"><mat-spinner diameter="32"></mat-spinner> Cargando préstamos y aportes afectables...</div>
+    } @else {
+
+      @if (erroresCargaPrestamos().length > 0) {
+        <div class="apd-avisos">
+          @for (e of erroresCargaPrestamos(); track e.prestamo.codigo) {
+            <div class="apd-aviso">
+              <mat-icon>warning</mat-icon>
+              Préstamo {{ e.prestamo.codigo }} ({{ getTipoPrestamoNombre(e.prestamo) }}): {{ e.motivo }}
+            </div>
+          }
+        </div>
+      }
+
+      <!-- ── Destinos: préstamos ── -->
+      <div class="apd-destinos-titulo">DESTINOS</div>
+
+      @if (prestamosAfectables().length === 0) {
+        <p class="apd-vacio">Este partícipe no tiene préstamos vigentes o en mora para afectar.</p>
+      }
+
+      @for (item of prestamosAfectables(); track item.prestamo.codigo) {
+        <div class="apd-prestamo" [class.sin-novedad]="!item.novedadOrigen">
+          <div class="apd-prestamo-header" (click)="togglePrestamo(item.prestamo.codigo)">
+            <mat-icon>{{ isPrestamoExpandido(item.prestamo.codigo) ? 'expand_less' : 'expand_more' }}</mat-icon>
+            <span class="apd-prestamo-nombre">Préstamo {{ item.prestamo.codigo }} · {{ getTipoPrestamoNombre(item.prestamo) }}</span>
+            @if (item.novedadOrigen) {
+              <span class="apd-prestamo-novedad">se registra en: {{ item.novedadOrigen.descripcion }}</span>
+            } @else {
+              <span class="apd-prestamo-sin-novedad">
+                <mat-icon>block</mat-icon> sin novedad que lo respalde — no se puede afectar desde acá
+              </span>
+            }
+          </div>
+
+          @if (isPrestamoExpandido(item.prestamo.codigo)) {
+            <div class="apd-prestamo-body">
+              <div class="apd-reparto-header">
+                <mat-checkbox
+                  [checked]="isAplicarTodoElSobranteActivo(item)"
+                  [disabled]="!item.novedadOrigen"
+                  (change)="onToggleAplicarTodoElSobrante(item, $event.checked)">
+                  Aplicar todo el sobrante a este préstamo
+                </mat-checkbox>
+                <mat-form-field appearance="outline" class="apd-reparto-input">
+                  <mat-label>Valor por préstamo</mat-label>
+                  <input matInput
+                         [disabled]="!item.novedadOrigen"
+                         [value]="getValorRepartoPrestamoTexto(item)"
+                         (input)="onValorRepartoPrestamoInput(item, $any($event.target).value)"
+                         (blur)="onValorRepartoPrestamoBlur(item)" />
+                </mat-form-field>
+              </div>
+
+              <table mat-table [dataSource]="item.cuotas" [trackBy]="trackByCuota" class="apd-tabla-cuotas">
+                <ng-container matColumnDef="numeroCuota">
+                  <th mat-header-cell *matHeaderCellDef>Cuota</th>
+                  <td mat-cell *matCellDef="let c">{{ c.numeroCuota }}</td>
+                </ng-container>
+                <ng-container matColumnDef="fechaVencimiento">
+                  <th mat-header-cell *matHeaderCellDef>Vencimiento</th>
+                  <td mat-cell *matCellDef="let c">{{ formatearFecha(c.fechaVencimiento) }}</td>
+                </ng-container>
+                <ng-container matColumnDef="estado">
+                  <th mat-header-cell *matHeaderCellDef>Estado</th>
+                  <td mat-cell *matCellDef="let c">{{ getEstadoCuotaTexto(c) }}</td>
+                </ng-container>
+                <ng-container matColumnDef="pendiente">
+                  <th mat-header-cell *matHeaderCellDef>Pendiente</th>
+                  <td mat-cell *matCellDef="let c">{{ formatMoneda(getValorMaximoAfectarCuota(c)) }}</td>
+                </ng-container>
+                <ng-container matColumnDef="valorAfectar">
+                  <th mat-header-cell *matHeaderCellDef>Valor a cruzar</th>
+                  <td mat-cell *matCellDef="let c">
+                    <div class="apd-valor-cuota">
+                      <input matInput
+                             [disabled]="!item.novedadOrigen"
+                             [value]="getValorAfectarEditado(c.codigo)"
+                             (focus)="onValorAfectarFocus(c)"
+                             (blur)="onValorAfectarBlur(c)"
+                             (change)="onValorAfectarChange(c, $any($event.target).value)" />
+                      <button mat-icon-button type="button" [disabled]="!item.novedadOrigen"
+                              (click)="onAutocompletarValorCuota(c)" matTooltip="Completar con el máximo disponible">
+                        <mat-icon>bolt</mat-icon>
+                      </button>
+                    </div>
+                  </td>
+                </ng-container>
+                <tr mat-header-row *matHeaderRowDef="['numeroCuota','fechaVencimiento','estado','pendiente','valorAfectar']"></tr>
+                <tr mat-row *matRowDef="let row; columns: ['numeroCuota','fechaVencimiento','estado','pendiente','valorAfectar']"></tr>
+              </table>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- ── Destinos: aportes ── -->
+      @if (isLoadingOpcionesAporte()) {
+        <div class="apd-loading-inline"><mat-spinner diameter="20"></mat-spinner> Cargando tipos de aporte disponibles...</div>
+      } @else if (mensajeOpcionesAporteVacio()) {
+        <p class="apd-vacio">{{ mensajeOpcionesAporteVacio() }}</p>
+      } @else if (opcionesAporteExcedente().length > 0) {
+        <div class="apd-aportes">
+          @for (op of opcionesAporteExcedente(); track op.idTipoAporte) {
+            <div class="apd-aporte-fila">
+              <span class="apd-aporte-nombre">{{ op.nombreTipoAporte }}</span>
+              <mat-form-field appearance="outline" class="apd-reparto-input">
+                <mat-label>Valor a aportar</mat-label>
+                <input matInput
+                       [value]="getValorAporteEditado(op.idTipoAporte)"
+                       (focus)="onValorAporteFocus(op.idTipoAporte)"
+                       (blur)="onValorAporteBlur(op.idTipoAporte)"
+                       (change)="onValorAporteChange(op.idTipoAporte, $any($event.target).value)" />
+              </mat-form-field>
+
+              @if (getValorAporteEditado(op.idTipoAporte) !== '0,00') {
+                @if (data.novedades.length > 1) {
+                  <mat-form-field appearance="outline" class="apd-aporte-novedad-select">
+                    <mat-label>Se registra en</mat-label>
+                    <mat-select [value]="novedadAsignadaAporte(op.idTipoAporte)?.codigo"
+                                (selectionChange)="onCambiarNovedadAporte(op.idTipoAporte, $event.value)">
+                      @for (n of data.novedades; track n.codigo) {
+                        <mat-option [value]="n.codigo">{{ n.descripcion }}</mat-option>
+                      }
+                    </mat-select>
+                  </mat-form-field>
+                } @else if (novedadAsignadaAporte(op.idTipoAporte); as n) {
+                  <span class="apd-aporte-novedad">se registra en: {{ n.descripcion }}</span>
+                } @else {
+                  <span class="apd-aporte-sin-pozo">
+                    <mat-icon>block</mat-icon> sin pozo disponible en ninguna novedad
+                  </span>
+                }
+              }
+            </div>
+          }
+        </div>
+      }
+    }
+  </div>
+
+  <div class="apd-footer">
+    <button mat-button (click)="cerrar()" [disabled]="guardando()">Cancelar</button>
+    <button mat-raised-button color="primary" (click)="guardarAfectaciones()" [disabled]="guardando() || cargando()">
+      @if (guardando()) {
+        <mat-spinner diameter="18" class="apd-spinner"></mat-spinner> Guardando...
+      } @else {
+        Guardar
+      }
+    </button>
+  </div>
+
+</div>

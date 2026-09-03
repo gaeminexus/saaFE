@@ -1056,6 +1056,12 @@ export const routes: Routes = [
         loadComponent: () => import('./modules/crd/forms/archivos-petro/carga/detalle-consulta-carga/detalle-consulta-carga.component').then((m) => m.DetalleConsultaCargaComponent),
       },
       {
+        // Pieza nueva, construida aparte, sin tocar la de arriba (docs/crd/PLAN-AFECTACION-POR-PARTICIPE.md).
+        // El usuario decide cuál usar comparando las dos con datos reales.
+        path: 'archivos-petro/carga/afectacion-por-participe/:id',
+        loadComponent: () => import('./modules/crd/forms/archivos-petro/carga/afectacion-por-participe/afectacion-por-participe.component').then((m) => m.AfectacionPorParticipeComponent),
+      },
+      {
         path: 'archivos-petro/generar/proceso',
         loadComponent: () => import('./modules/crd/forms/archivos-petro/generar/generar-archivo-petro/generar-archivo-petro.component').then((m) => m.GenerarArchivoPetroComponent),
       },

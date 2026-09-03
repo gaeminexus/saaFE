@@ -1,0 +1,80 @@
+<div class="apc-container">
+
+  <div class="apc-header">
+    <button mat-icon-button (click)="volver()" matTooltip="Volver a la consulta de cargas">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+    <div class="apc-header-title">
+      <h1>Afectación por partícipe</h1>
+      <p>
+        Pieza en prueba — agrupa las novedades y afectaciones por partícipe, no por novedad.
+        @if (cargaArchivo(); as c) {
+          <span class="apc-carga-nombre">{{ c.nombre }}</span>
+        }
+      </p>
+    </div>
+    <button mat-icon-button (click)="recargar()" [disabled]="cargando()" matTooltip="Actualizar">
+      <mat-icon>refresh</mat-icon>
+    </button>
+  </div>
+
+  @if (cargando()) {
+    <div class="apc-loading"><mat-spinner diameter="32"></mat-spinner> Cargando partícipes...</div>
+  } @else if (errorCarga()) {
+    <div class="apc-error">
+      <mat-icon>error_outline</mat-icon>
+      <span>{{ errorCarga() }}</span>
+      <button mat-raised-button color="warn" (click)="recargar()">Reintentar</button>
+    </div>
+  } @else {
+
+    <div class="apc-resumen">
+      <button type="button" class="apc-chip apc-chip--exceso" [class.activo]="filtroEstado() === 'EXCESO'"
+              (click)="filtroEstado.set(filtroEstado() === 'EXCESO' ? 'TODOS' : 'EXCESO')">
+        <mat-icon>arrow_downward</mat-icon> {{ totalConExceso() }} con exceso
+      </button>
+      <button type="button" class="apc-chip apc-chip--faltante" [class.activo]="filtroEstado() === 'FALTANTE'"
+              (click)="filtroEstado.set(filtroEstado() === 'FALTANTE' ? 'TODOS' : 'FALTANTE')">
+        <mat-icon>arrow_upward</mat-icon> {{ totalConFaltante() }} con faltante
+      </button>
+      <span class="apc-total">{{ totalParticipantes() }} partícipe(s) con novedades</span>
+    </div>
+
+    <mat-form-field appearance="outline" class="apc-buscar">
+      <mat-label>Buscar partícipe</mat-label>
+      <input matInput [(ngModel)]="filtroTexto" placeholder="Nombre o código Petro..." />
+      <mat-icon matSuffix>search</mat-icon>
+    </mat-form-field>
+
+    @if (participantesFiltrados().length === 0) {
+      <p class="apc-vacio">No hay partícipes que coincidan con el filtro.</p>
+    } @else {
+      <div class="apc-lista">
+        @for (p of participantesFiltrados(); track p.codigoPetro) {
+          <button type="button" class="apc-fila" [class.exceso]="p.estado === 'EXCESO'" [class.faltante]="p.estado === 'FALTANTE'"
+                  (click)="abrirParticipe(p)">
+            <div class="apc-fila-principal">
+              <span class="apc-nombre">{{ p.nombre }}</span>
+              <span class="apc-rol">Rol {{ p.codigoPetro }}</span>
+            </div>
+            <div class="apc-fila-motivos">
+              {{ p.novedades.length }} {{ p.novedades.length === 1 ? 'novedad' : 'novedades' }}:
+              {{ p.novedades[0].descripcion }}@if (p.novedades.length > 1) {<span> y {{ p.novedades.length - 1 }} más</span>}
+            </div>
+            <div class="apc-fila-estado">
+              @if (p.estado === 'EXCESO') {
+                <span class="apc-badge apc-badge--exceso"><mat-icon>arrow_downward</mat-icon> Exceso {{ formatMoneda(p.monto) }}</span>
+              } @else if (p.estado === 'FALTANTE') {
+                <span class="apc-badge apc-badge--faltante"><mat-icon>arrow_upward</mat-icon> Faltante {{ formatMoneda(p.monto) }}</span>
+              } @else {
+                <span class="apc-badge apc-badge--neutral">Disponible {{ formatMoneda(p.disponible) }} · ver detalle</span>
+              }
+            </div>
+            <mat-icon class="apc-fila-chevron">chevron_right</mat-icon>
+          </button>
+        }
+      </div>
+    }
+  }
+
+</div>

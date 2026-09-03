@@ -114,6 +114,11 @@
           <mat-icon>visibility</mat-icon>
             Ver Detalle
           </button>
+        <button mat-button color="primary" (click)="verDetallePorParticipe(carga)"
+                matTooltip="Pantalla nueva en prueba: agrupa las novedades por partícipe en vez de por novedad">
+          <mat-icon>groups</mat-icon>
+            Ver por Partícipe
+          </button>
         <button mat-button color="accent"
                 (click)="procesarCarga(carga)"
           [disabled]="procesandoCodigos().has(carga.codigo!) || esCargaProcesada(carga)">

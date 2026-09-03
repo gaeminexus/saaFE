@@ -1,0 +1,310 @@
+.apd-dialog {
+  display: flex;
+  flex-direction: column;
+  min-width: 760px;
+  max-height: 85vh;
+}
+
+.apd-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 1rem 1.25rem 0.5rem;
+
+  h2 {
+    margin: 0;
+    font-size: 1.25rem;
+  }
+
+  .apd-sub {
+    font-size: 0.8rem;
+    color: #718096;
+    font-family: 'Roboto Mono', monospace;
+  }
+}
+
+.apd-pozo {
+  padding: 0 1.25rem 0.75rem;
+}
+
+.apd-pozo-loading,
+.apd-pozo-error {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: #718096;
+  padding: 0.5rem 0;
+}
+
+.apd-pozo-error {
+  color: #c53030;
+}
+
+.apd-pozo-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+
+.apd-pozo-tile {
+  background: #f7fafc;
+  border-radius: 8px;
+  padding: 0.6rem 0.9rem;
+
+  .l {
+    display: block;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #718096;
+    font-weight: 700;
+  }
+
+  .v {
+    font-size: 1.1rem;
+    font-weight: 700;
+    font-family: 'Roboto Mono', monospace;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  &.pendiente .v {
+    color: #c2410c;
+  }
+
+  &.completo .v {
+    color: #2f855a;
+  }
+
+  &.completo mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.apd-motivos {
+  padding: 0 1.25rem 0.75rem;
+  border-bottom: 1px solid #edf2f7;
+
+  .apd-motivos-titulo {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #718096;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+
+    mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+      color: #ed8936;
+    }
+  }
+
+  ul {
+    margin: 0.4rem 0 0;
+    padding-left: 1.2rem;
+    font-size: 0.85rem;
+    color: #4a5568;
+
+    li {
+      margin-bottom: 2px;
+    }
+  }
+}
+
+.apd-contenido {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.75rem 1.25rem;
+}
+
+.apd-loading,
+.apd-loading-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #718096;
+  padding: 1rem 0;
+}
+
+.apd-avisos {
+  margin-bottom: 0.75rem;
+}
+
+.apd-aviso {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: #b7791f;
+  background: #fffbeb;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.4rem;
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.apd-destinos-titulo {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #718096;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 0.5rem;
+}
+
+.apd-vacio {
+  color: #a0aec0;
+  font-size: 0.85rem;
+  padding: 0.5rem 0;
+}
+
+.apd-prestamo {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  margin-bottom: 0.6rem;
+  overflow: hidden;
+
+  &.sin-novedad {
+    opacity: 0.85;
+    border-color: #fbd38d;
+  }
+}
+
+.apd-prestamo-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.8rem;
+  background: #f7fafc;
+  cursor: pointer;
+  font-size: 0.85rem;
+
+  .apd-prestamo-nombre {
+    font-weight: 600;
+  }
+
+  .apd-prestamo-novedad {
+    margin-left: auto;
+    font-size: 0.75rem;
+    color: #718096;
+  }
+
+  .apd-prestamo-sin-novedad {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.75rem;
+    color: #c05621;
+
+    mat-icon {
+      font-size: 15px;
+      width: 15px;
+      height: 15px;
+    }
+  }
+}
+
+.apd-prestamo-body {
+  padding: 0.75rem 0.8rem;
+}
+
+.apd-reparto-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.apd-reparto-input {
+  width: 160px;
+
+  ::ng-deep .mat-mdc-form-field-infix {
+    min-height: 40px;
+  }
+}
+
+.apd-tabla-cuotas {
+  width: 100%;
+}
+
+.apd-valor-cuota {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+
+  input {
+    width: 100px;
+    text-align: right;
+  }
+}
+
+.apd-aportes {
+  margin-top: 0.75rem;
+  border-top: 1px dashed #e2e8f0;
+  padding-top: 0.75rem;
+}
+
+.apd-aporte-fila {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+
+  .apd-aporte-nombre {
+    min-width: 200px;
+    font-size: 0.85rem;
+  }
+}
+
+.apd-aporte-novedad-select {
+  width: 220px;
+}
+
+.apd-aporte-novedad {
+  font-size: 0.78rem;
+  color: #718096;
+}
+
+.apd-aporte-sin-pozo {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  color: #c53030;
+  font-weight: 600;
+
+  mat-icon {
+    font-size: 15px;
+    width: 15px;
+    height: 15px;
+  }
+}
+
+.apd-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  padding: 0.75rem 1.25rem;
+  border-top: 1px solid #edf2f7;
+
+  .apd-spinner {
+    display: inline-block;
+    margin-right: 6px;
+  }
+}
