@@ -927,61 +927,65 @@ export class AfectacionParticipeDialogComponent implements OnInit {
     });
 
     const actuales = this.valoresAfectarEditados();
-    const existentesPrestamo = new Map<number, AfectacionEtiquetada>();
-    this.afectacionesRegistradas().forEach((item) => {
-      const detalleCodigo = item.detallePrestamo?.codigo;
-      if (detalleCodigo) existentesPrestamo.set(detalleCodigo, item);
-    });
+    // ⛔ Mapa a ARRAY, no a una sola fila (bug real 2026-09-03, SANCHEZ rol 7508: AVPC 145 y 149
+    // cuelgan de la MISMA cuota 512966). Con `Map<number, AfectacionEtiquetada>` la segunda fila
+    // pisaba la referencia a la primera en el mapa — el guardado actualizaba la que sobrevivió y
+    // la otra quedaba huérfana PARA SIEMPRE: nunca se actualizaba, nunca se borraba, pero seguía
+    // sumando en el `afectado` real del backend. Ver `consolidarUnaFilaPorClave` más abajo.
+    const existentesPrestamoPorCuota = this.agruparPorClave(this.afectacionesRegistradas(), (item) => item.detallePrestamo?.codigo);
 
     const operaciones: any[] = [];
+    const detallesConsolidados = new Set<number>();
 
     Object.entries(actuales).forEach(([detalleCodigoTexto, valor]) => {
       const detalleCodigo = Number(detalleCodigoTexto);
       const valorAfectar = this.redondear(Number(valor || 0));
       const cuotaSeleccionada = cuotasDisponibles.get(detalleCodigo);
-      const existente = existentesPrestamo.get(detalleCodigo);
       if (!cuotaSeleccionada) return;
+      detallesConsolidados.add(detalleCodigo);
 
-      if (valorAfectar > 0) {
-        const payload = this.construirPayloadAfectacion(cuotaSeleccionada.novedadOrigen, cuotaSeleccionada.prestamo, cuotaSeleccionada.detalle, valorAfectar, usuario, existente);
-        operaciones.push(existente?.codigo ? this.afectacionValoresParticipeCargaService.update(payload) : this.afectacionValoresParticipeCargaService.add(payload));
-      } else if (existente?.codigo) {
-        operaciones.push(this.afectacionValoresParticipeCargaService.delete(existente.codigo));
-      }
+      this.consolidarUnaFilaPorClave(
+        existentesPrestamoPorCuota.get(detalleCodigo) ?? [],
+        valorAfectar,
+        operaciones,
+        (existente) => this.construirPayloadAfectacion(cuotaSeleccionada.novedadOrigen, cuotaSeleccionada.prestamo, cuotaSeleccionada.detalle, valorAfectar, usuario, existente)
+      );
     });
 
-    this.afectacionesRegistradas().forEach((item) => {
-      const detalleCodigo = item.detallePrestamo?.codigo;
-      if (!detalleCodigo || detalleCodigo in actuales) return;
-      if (item.codigo) operaciones.push(this.afectacionValoresParticipeCargaService.delete(item.codigo));
+    // Cuotas que tenían afectación y desaparecieron del todo del mapa editado (p. ej. su préstamo
+    // ya no es afectable) — se borran TODAS las filas de esa cuota, no solo la que el mapa viejo recordaba.
+    existentesPrestamoPorCuota.forEach((filas, detalleCodigo) => {
+      if (detallesConsolidados.has(detalleCodigo)) return;
+      filas.forEach((item) => item.codigo && operaciones.push(this.afectacionValoresParticipeCargaService.delete(item.codigo)));
     });
 
-    const existentesAporte = new Map<number, AfectacionEtiquetada>();
-    this.afectacionesRegistradas().forEach((item) => {
-      const idTipoAporte = item.tipoAporte?.codigo;
-      if (idTipoAporte) existentesAporte.set(idTipoAporte, item);
-    });
-
+    const existentesAportePorTipo = this.agruparPorClave(this.afectacionesRegistradas(), (item) => item.tipoAporte?.codigo);
     const actualesAporte = this.valoresAporteEditados();
     const filasAporteParaBatch: AfectacionValoresParticipeCarga[] = [];
+    const tiposAporteConsolidados = new Set<number>();
 
     Object.entries(actualesAporte).forEach(([idTipoAporteTexto, valor]) => {
       const idTipoAporte = Number(idTipoAporteTexto);
       const valorAfectar = this.redondear(Number(valor || 0));
-      const existente = existentesAporte.get(idTipoAporte);
+      tiposAporteConsolidados.add(idTipoAporte);
+      const existentesDeEsteTipo = existentesAportePorTipo.get(idTipoAporte) ?? [];
 
       if (valorAfectar > 0) {
+        // El batch no soporta "actualizar la primera, borrar el resto" en una sola fila — si hay
+        // más de una fila existente para este tipo de aporte, las extra se borran acá y la
+        // primera se manda al batch como update (misma consolidación que arriba, mecanismos distintos).
+        const [primera, ...extras] = existentesDeEsteTipo;
+        extras.forEach((item) => item.codigo && operaciones.push(this.afectacionValoresParticipeCargaService.delete(item.codigo)));
         const novedadElegida = this.novedadAsignadaAporte(idTipoAporte)!; // validado arriba
-        filasAporteParaBatch.push(this.construirPayloadAfectacionAporte(novedadElegida, idTipoAporte, valorAfectar, usuario, existente));
-      } else if (existente?.codigo) {
-        operaciones.push(this.afectacionValoresParticipeCargaService.delete(existente.codigo));
+        filasAporteParaBatch.push(this.construirPayloadAfectacionAporte(novedadElegida, idTipoAporte, valorAfectar, usuario, primera));
+      } else {
+        existentesDeEsteTipo.forEach((item) => item.codigo && operaciones.push(this.afectacionValoresParticipeCargaService.delete(item.codigo)));
       }
     });
 
-    this.afectacionesRegistradas().forEach((item) => {
-      const idTipoAporte = item.tipoAporte?.codigo;
-      if (!idTipoAporte || idTipoAporte in actualesAporte) return;
-      if (item.codigo) operaciones.push(this.afectacionValoresParticipeCargaService.delete(item.codigo));
+    existentesAportePorTipo.forEach((filas, idTipoAporte) => {
+      if (tiposAporteConsolidados.has(idTipoAporte)) return;
+      filas.forEach((item) => item.codigo && operaciones.push(this.afectacionValoresParticipeCargaService.delete(item.codigo)));
     });
 
     if (operaciones.length === 0 && filasAporteParaBatch.length === 0) {
@@ -1024,6 +1028,45 @@ export class AfectacionParticipeDialogComponent implements OnInit {
    * el `afectado` real del backend. Una cuota puede tener más de un AVPC (una fila por cascada);
    * el input tiene que reflejar el TOTAL para poder corregirlo.
    */
+  /** Agrupa filas AVPC por una clave (cuota o tipo de aporte) — puede haber más de una fila por clave. */
+  private agruparPorClave(afectaciones: AfectacionEtiquetada[], clave: (item: AfectacionEtiquetada) => number | undefined): Map<number, AfectacionEtiquetada[]> {
+    const mapa = new Map<number, AfectacionEtiquetada[]>();
+    afectaciones.forEach((item) => {
+      const k = clave(item);
+      if (k == null) return;
+      const lista = mapa.get(k) ?? [];
+      lista.push(item);
+      mapa.set(k, lista);
+    });
+    return mapa;
+  }
+
+  /**
+   * Una cuota, UNA afectación — nunca más (bug real 2026-09-03, mismo caso SANCHEZ). Si hay más
+   * de una fila existente para la misma clave, la PRIMERA absorbe el valor nuevo (`update`) y el
+   * resto se BORRA — así dos guardados seguidos con el mismo valor dejan una sola fila, no dos.
+   * Si no hay ninguna fila existente y el valor es positivo, se crea una (`add`). Si el valor es
+   * cero o negativo, se borran TODAS las filas existentes de esa clave, no solo la primera.
+   */
+  private consolidarUnaFilaPorClave(
+    existentes: AfectacionEtiquetada[],
+    valorAfectar: number,
+    operaciones: any[],
+    construirPayload: (existente?: AfectacionEtiquetada) => AfectacionValoresParticipeCarga
+  ): void {
+    const [primera, ...extras] = existentes;
+
+    if (valorAfectar > 0) {
+      extras.forEach((item) => item.codigo && operaciones.push(this.afectacionValoresParticipeCargaService.delete(item.codigo)));
+      const payload = construirPayload(primera);
+      operaciones.push(
+        primera?.codigo ? this.afectacionValoresParticipeCargaService.update(payload) : this.afectacionValoresParticipeCargaService.add(payload)
+      );
+    } else {
+      existentes.forEach((item) => item.codigo && operaciones.push(this.afectacionValoresParticipeCargaService.delete(item.codigo)));
+    }
+  }
+
   private construirMapaValoresAfectados(afectaciones: AfectacionValoresParticipeCarga[]): Record<number, number> {
     return afectaciones.reduce((acc, item) => {
       const detalleCodigo = item.detallePrestamo?.codigo;
