@@ -174,3 +174,72 @@ es, y siempre fue, que el tope nunca fue del partícipe.
 **Path publicado (2026-09-02, commit `998fd91`):** `GET /rest/asgn/topeAfectacion?idCarga=&codigoPetro=`
 — en `AsoprepGenerales`, junto a `/valoresSinDestino`. La fórmula `excesoYRestante` quedó extraída y
 **compartida** con `validarTopeAfectacionManualPorParticipe`: una sola regla, dos consumidores.
+
+---
+
+## 9. El prevuelo: ver el descuadre ANTES de procesar
+
+> **Usuario, 2026-09-02:** *«la idea es poder encontrar también la diferencia al momento de aplicar
+> los ajustes, para revisar el error antes de que se genere»*.
+
+Tiene razón, y hoy hay un hueco de tiempo: **la auditoría de bandas dice qué pasó; la validación dice
+que no se puede procesar.** Ninguna de las dos ayuda mientras el operador está repartiendo, que es el
+único momento en que puede corregir barato.
+
+### Lo que lo hace fácil: el dato ya existe antes de aplicar nada
+
+| | |
+|---|---|
+| Descontado | `CRD.PXCA` — viene del archivo |
+| Afectado | `CRD.AVPC` — lo que el operador ya guardó |
+
+**No hace falta procesar para saber quién va a quedar descuadrado.** Es exactamente el cálculo de
+`validarTopeAfectacionManualPorParticipe`, que hoy sólo se ejecuta al procesar y sólo se ve cuando
+falla — después de que el operador esperó.
+
+### Qué se agrega
+
+Un endpoint de sólo lectura que corra **la misma** validación en seco, sobre toda la carga:
+
+```
+GET /rest/asgn/prevueloAfectacion?idCarga=449
+
+{ "idCarga": 449, "participesConExceso": 3, "excesoTotal": 141.40,
+  "detalle": [ { "codigoPetro": 7508, "cedula": "...", "participe": "...",
+                 "disponible": 406.73, "afectado": 439.59, "exceso": 32.86,
+                 "avpc": [145, 149, 151] } ] }
+```
+
+⛔ **Reusando el mismo método, no una copia.** Es la tercera vez que aparece esta necesidad —la
+validación, el tope por partícipe y ahora esto— y las tres tienen que dar el mismo número siempre. Si
+alguna vez difieren, nadie va a saber cuál creer.
+
+Y en la pantalla de Gestión de Novedades, un botón **«Verificar antes de procesar»** que lo llame y
+muestre la lista. Sin bloquear nada: el operador decide si corrige o procesa igual — la que impide
+aplicar sigue siendo la validación del proceso.
+
+### Qué NO cubre, y hay que decirlo
+
+Sólo ve el **exceso de afectaciones manuales**. La hipótesis abierta —que el flujo **automático**
+aplica encima del tope manual— **no la detecta**, porque lo automático todavía no ocurrió.
+
+Cerrar eso exige proyectar también lo que el automático va a aplicar, y eso **no se diseña hasta
+tener medido** si la hipótesis es cierta (ver el botón «¿dónde está la diferencia?» de la auditoría).
+**Un prevuelo que diga «todo bien» y después descuadre sería peor que no tenerlo**, así que el panel
+tiene que decir explícitamente qué alcance verifica.
+
+### Y esto no reemplaza al botón de la auditoría
+
+Son dos preguntas distintas, en dos momentos distintos:
+
+| | Cuándo | Qué contesta |
+|---|---|---|
+| **Prevuelo** (Gestión de Novedades) | antes de procesar | ¿lo que cargué va a descuadrar? |
+| **«¿Dónde está la diferencia?»** (Auditoría) | después de procesar | ¿por qué descuadró? |
+
+### Nota para el rediseño
+
+Cuando la afectación pase a organizarse por partícipe
+(`PLAN-AFECTACION-POR-PARTICIPE.md`), este panel es candidato natural a integrarse ahí, y **desde la
+carga debería poder saltarse a su auditoría** — el usuario buscó el botón de la diferencia en la
+pantalla de novedades, que es donde le resultaba natural encontrarlo.
