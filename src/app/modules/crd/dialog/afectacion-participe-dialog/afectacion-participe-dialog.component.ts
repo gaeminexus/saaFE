@@ -900,6 +900,22 @@ export class AfectacionParticipeDialogComponent implements OnInit {
       return;
     }
 
+    // §4 del plan: "si en algún destino no hay una novedad obvia, PARAR y avisar — no inventar
+    // una regla de asignación." Con un solo input por cuota/aporte, si sus filas YA guardadas
+    // cuelgan de MÁS DE UNA novedad, no hay forma segura de decidir cuál absorbe el valor editado
+    // sin reasignar plata entre novedades (cambia en qué paso del proceso se aplica cada una —
+    // `CargaArchivoPetroServiceImpl` lee las afectaciones POR novedad, cinco veces). Se frena todo
+    // el guardado en vez de adivinar.
+    const conflictos = this.detectarConflictosDeNovedad();
+    if (conflictos.length > 0) {
+      this.snackBar.open(
+        `No se guardó nada: ${conflictos.join(' · ')} — esta pantalla no puede decidir sola cuál novedad debe quedarse con el valor. Avise al equipo.`,
+        'Cerrar',
+        { duration: 12000 }
+      );
+      return;
+    }
+
     if (this.redondear(this.totalValorAfectarActual + this.totalValorAportarActual) > this.redondear(this.montoDisponibleAfectacion)) {
       this.snackBar.open('La suma de valores a cruzar supera el valor recibido desde Petro', 'Cerrar', { duration: 4000 });
       return;
@@ -927,25 +943,31 @@ export class AfectacionParticipeDialogComponent implements OnInit {
     });
 
     const actuales = this.valoresAfectarEditados();
-    // ⛔ Mapa a ARRAY, no a una sola fila (bug real 2026-09-03, SANCHEZ rol 7508: AVPC 145 y 149
-    // cuelgan de la MISMA cuota 512966). Con `Map<number, AfectacionEtiquetada>` la segunda fila
-    // pisaba la referencia a la primera en el mapa — el guardado actualizaba la que sobrevivió y
-    // la otra quedaba huérfana PARA SIEMPRE: nunca se actualizaba, nunca se borraba, pero seguía
-    // sumando en el `afectado` real del backend. Ver `consolidarUnaFilaPorClave` más abajo.
-    const existentesPrestamoPorCuota = this.agruparPorClave(this.afectacionesRegistradas(), (item) => item.detallePrestamo?.codigo);
+    // ⛔ Agrupado por (NOVEDAD, cuota), no por cuota sola — corregido 2026-09-03 a pedido del
+    // árbitro: `AfectacionValoresParticipeCargaDaoServiceImpl.selectByNovedadYCuota` asume una
+    // fila por (novedad, cuota), y `CargaArchivoPetroServiceImpl` lee las afectaciones POR
+    // NOVEDAD en cinco lugares del proceso — de qué novedad cuelga una fila decide en qué paso se
+    // aplica. Agrupar solo por cuota (como se hizo primero, ver `detectarConflictosDeNovedad` más
+    // arriba, que corre ANTES y frena el guardado si esto pasa) reasignaría plata entre novedades
+    // sin que nadie lo pidiera. Ya no puede haber más de una novedad por clave acá porque
+    // `detectarConflictosDeNovedad` ya lo verificó y frenó si no era así.
+    const existentesPrestamoPorNovedadYCuota = this.agruparPorClave(this.afectacionesRegistradas(), (item) =>
+      item.detallePrestamo?.codigo != null ? `${item.__novedadOrigen.codigo}:${item.detallePrestamo.codigo}` : undefined
+    );
 
     const operaciones: any[] = [];
-    const detallesConsolidados = new Set<number>();
+    const clavesConsolidadas = new Set<string>();
 
     Object.entries(actuales).forEach(([detalleCodigoTexto, valor]) => {
       const detalleCodigo = Number(detalleCodigoTexto);
       const valorAfectar = this.redondear(Number(valor || 0));
       const cuotaSeleccionada = cuotasDisponibles.get(detalleCodigo);
       if (!cuotaSeleccionada) return;
-      detallesConsolidados.add(detalleCodigo);
+      const clave = `${cuotaSeleccionada.novedadOrigen.codigo}:${detalleCodigo}`;
+      clavesConsolidadas.add(clave);
 
       this.consolidarUnaFilaPorClave(
-        existentesPrestamoPorCuota.get(detalleCodigo) ?? [],
+        existentesPrestamoPorNovedadYCuota.get(clave) ?? [],
         valorAfectar,
         operaciones,
         (existente) => this.construirPayloadAfectacion(cuotaSeleccionada.novedadOrigen, cuotaSeleccionada.prestamo, cuotaSeleccionada.detalle, valorAfectar, usuario, existente)
@@ -953,12 +975,20 @@ export class AfectacionParticipeDialogComponent implements OnInit {
     });
 
     // Cuotas que tenían afectación y desaparecieron del todo del mapa editado (p. ej. su préstamo
-    // ya no es afectable) — se borran TODAS las filas de esa cuota, no solo la que el mapa viejo recordaba.
-    existentesPrestamoPorCuota.forEach((filas, detalleCodigo) => {
-      if (detallesConsolidados.has(detalleCodigo)) return;
+    // ya no es afectable) — se borran TODAS las filas de esa clave, no solo la que el mapa viejo recordaba.
+    existentesPrestamoPorNovedadYCuota.forEach((filas, clave) => {
+      if (clavesConsolidadas.has(clave)) return;
       filas.forEach((item) => item.codigo && operaciones.push(this.afectacionValoresParticipeCargaService.delete(item.codigo)));
     });
 
+    // Aportes: agrupado por tipoAporte SOLO (no por novedad+tipo) — a propósito, distinto del
+    // caso préstamo. `detectarConflictosDeNovedad` ya garantiza que no hay más de una novedad
+    // entre las filas EXISTENTES de un mismo tipo de aporte, así que alcanza con encontrarlas. La
+    // novedad de una fila EXISTENTE se PRESERVA (no se recalcula) — solo una fila genuinamente
+    // NUEVA (sin ninguna existente) usa la asignación dinámica de `novedadAsignadaAporte` (§14):
+    // esa asignación es deliberadamente dinámica según el pozo disponible en el momento, así que
+    // recalcularla para una fila que YA existe la reasignaría de novedad sin que nadie lo pidiera
+    // — el mismo riesgo que el árbitro señaló para préstamos, aplicado acá.
     const existentesAportePorTipo = this.agruparPorClave(this.afectacionesRegistradas(), (item) => item.tipoAporte?.codigo);
     const actualesAporte = this.valoresAporteEditados();
     const filasAporteParaBatch: AfectacionValoresParticipeCarga[] = [];
@@ -976,7 +1006,8 @@ export class AfectacionParticipeDialogComponent implements OnInit {
         // primera se manda al batch como update (misma consolidación que arriba, mecanismos distintos).
         const [primera, ...extras] = existentesDeEsteTipo;
         extras.forEach((item) => item.codigo && operaciones.push(this.afectacionValoresParticipeCargaService.delete(item.codigo)));
-        const novedadElegida = this.novedadAsignadaAporte(idTipoAporte)!; // validado arriba
+        // Preserva la novedad de la fila existente; solo recalcula si es una fila nueva.
+        const novedadElegida = primera?.__novedadOrigen ?? this.novedadAsignadaAporte(idTipoAporte)!; // validado arriba
         filasAporteParaBatch.push(this.construirPayloadAfectacionAporte(novedadElegida, idTipoAporte, valorAfectar, usuario, primera));
       } else {
         existentesDeEsteTipo.forEach((item) => item.codigo && operaciones.push(this.afectacionValoresParticipeCargaService.delete(item.codigo)));
@@ -1020,6 +1051,36 @@ export class AfectacionParticipeDialogComponent implements OnInit {
   }
 
   /**
+   * ¿Hay alguna cuota o tipo de aporte cuyas filas YA GUARDADAS cuelgan de MÁS DE UNA novedad?
+   * (verificado 2026-09-03, a pedido del árbitro: `AfectacionValoresParticipeCargaDaoServiceImpl
+   * .selectByNovedadYCuota` asume una fila por (novedad, cuota) — no por cuota sola — y
+   * `CargaArchivoPetroServiceImpl` lee las afectaciones POR NOVEDAD en cinco lugares distintos del
+   * proceso). Con un solo input por cuota/aporte en esta pantalla, no hay forma de saber cuál de
+   * las novedades debería quedarse con el valor editado sin inventar una regla — así que se
+   * detecta y se frena, en vez de consolidar-y-adivinar.
+   */
+  private detectarConflictosDeNovedad(): string[] {
+    const conflictos: string[] = [];
+
+    this.agruparPorClave(this.afectacionesRegistradas(), (item) => item.detallePrestamo?.codigo).forEach((filas, detalleCodigo) => {
+      const novedadesDistintas = new Set(filas.map((f) => f.__novedadOrigen.codigo));
+      if (novedadesDistintas.size > 1) {
+        const numeroCuota = filas[0].detallePrestamo?.numeroCuota;
+        conflictos.push(`cuota ${numeroCuota ?? detalleCodigo} tiene afectaciones de ${novedadesDistintas.size} novedades distintas`);
+      }
+    });
+
+    this.agruparPorClave(this.afectacionesRegistradas(), (item) => item.tipoAporte?.codigo).forEach((filas, idTipoAporte) => {
+      const novedadesDistintas = new Set(filas.map((f) => f.__novedadOrigen.codigo));
+      if (novedadesDistintas.size > 1) {
+        conflictos.push(`el aporte ${filas[0].tipoAporte?.nombre ?? idTipoAporte} tiene afectaciones de ${novedadesDistintas.size} novedades distintas`);
+      }
+    });
+
+    return conflictos;
+  }
+
+  /**
    * ⛔ SUMA, no sobreescribe (bug real encontrado 2026-09-03, SANCHEZ rol 7508: AVPC 145 y 149
    * cuelgan de la MISMA cuota 512966 — 141,40 y 273,63). Con `acc[detalleCodigo] = valor`, la
    * segunda fila pisaba a la primera: el input mostraba solo una de las dos y "asignado ahora"
@@ -1029,8 +1090,8 @@ export class AfectacionParticipeDialogComponent implements OnInit {
    * el input tiene que reflejar el TOTAL para poder corregirlo.
    */
   /** Agrupa filas AVPC por una clave (cuota o tipo de aporte) — puede haber más de una fila por clave. */
-  private agruparPorClave(afectaciones: AfectacionEtiquetada[], clave: (item: AfectacionEtiquetada) => number | undefined): Map<number, AfectacionEtiquetada[]> {
-    const mapa = new Map<number, AfectacionEtiquetada[]>();
+  private agruparPorClave<K>(afectaciones: AfectacionEtiquetada[], clave: (item: AfectacionEtiquetada) => K | undefined): Map<K, AfectacionEtiquetada[]> {
+    const mapa = new Map<K, AfectacionEtiquetada[]>();
     afectaciones.forEach((item) => {
       const k = clave(item);
       if (k == null) return;
