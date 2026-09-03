@@ -285,3 +285,56 @@ mandando: mora e interés ordinario comparten cuenta contable y se fusionarían.
 
 ⚠️ Sin CNT conectado, `cuentaContable` y `nombreCuenta` vienen null y el segundo nivel agrupa sólo
 por banda. La vista sigue funcionando.
+
+---
+
+## 4. `GET /rest/dsbn/diferencia` — «¿dónde está la diferencia?»
+
+> **Pedido del usuario, 2026-09-02:** *«en la pantalla debería existir un botón que nos muestre
+> rápidamente dónde está la diferencia mal afectada»*.
+
+El cuadre ya dice **que** hay diferencia. Este endpoint dice **de quién**.
+
+Es la consulta que se viene escribiendo a mano en `sql/183` y `sql/184` cada vez que aparece un
+descuadre — convertida en función del sistema, que es donde debería haber estado desde el principio.
+Contabilidad no debería depender de que alguien escriba un SELECT para saber a qué partícipe mirar.
+
+**Query params:** `origen`, `idOrigen`.
+
+```json
+{
+  "origen": "CARGA_PETRO", "idOrigen": 449,
+  "diferenciaTotal": 79.44,
+  "participesConDiferencia": 6,
+  "recibieronDeMas": 2, "recibieronDeMenos": 4,
+  "detalle": [
+    { "codigoPetro": 7508, "cedula": "...", "participe": "...",
+      "descontado": 406.73,
+      "aplicadoPrestamos": 464.52, "aplicadoAportes": 0.00, "aplicadoTotal": 464.52,
+      "diferencia": 57.79,
+      "aplicadoManual": 406.73, "aplicadoAutomatico": 57.79 }
+  ]
+}
+```
+
+- `descontado`: `SUM(PXCA.PXCADSDO)` del partícipe en esa carga, **todos los productos**.
+- `aplicadoPrestamos` + `aplicadoAportes`: **todo** lo que el proceso hizo con su plata.
+- `diferencia`: `aplicadoTotal − descontado`. **Positiva = recibió de más.**
+- `aplicadoManual` / `aplicadoAutomatico`: el desglose por ruta, usando el prefijo estable de
+  `PGPROBSR` (commit `e7b76c8`). **Es la columna que dice por dónde entró el defecto**, y sin ella
+  hay que ir a la base para saberlo.
+
+Ordenado por `diferencia` descendente: los que recibieron de más van primero, que son los que
+importan.
+
+⚠️ **`diferenciaTotal` tiene que coincidir con la `diferencia` del cuadre.** Si no coinciden, hay
+casos que este endpoint no está viendo —partícipes sin fila `PXCA`, aportes que no emparejan por
+entidad— y eso **es un hallazgo, no un redondeo**. Que la pantalla lo muestre en vez de disimularlo.
+
+### En la pantalla
+
+Un botón en el panel de cuadre, **visible sólo cuando `cuadra === false`**, que abre esta lista. Los
+que recibieron de más arriba y en rojo; los de menos, después.
+
+⛔ **No es una pantalla nueva ni un filtro más:** es la respuesta a «¿y ahora a quién miro?», que hoy
+sólo se puede contestar escribiendo SQL.
