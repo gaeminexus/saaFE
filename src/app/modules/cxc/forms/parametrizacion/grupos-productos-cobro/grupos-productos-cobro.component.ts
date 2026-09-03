@@ -216,6 +216,10 @@ export class GruposProductosCobroComponent implements OnInit {
         if (grupos) {
           this.grupos.set([...grupos]);
           this.dataSource.data = grupos;
+        } else {
+          // `of(null)` por un 200 con parseo fallido: sin este aviso la lista se queda vieja
+          // en silencio y el usuario opera sobre grupos que ya pueden no existir en la base.
+          this.mostrarError('No se pudo actualizar la lista de grupos: lo que ve en pantalla puede estar desactualizado.');
         }
         this.cargando.set(false);
       },
@@ -326,11 +330,18 @@ export class GruposProductosCobroComponent implements OnInit {
       : this.grupoService.add(grupo);
 
     operacion$.subscribe({
-      next: () => {
+      // `handleError` de este servicio convierte un 200 con parseo fallido en `of(null)`: es una
+      // emisión `next` normal, no un error. Sin distinguir `resultado`, esta rama mostraba
+      // "guardado correctamente" también cuando no se guardó nada.
+      next: (resultado) => {
+        this.guardando.set(false);
+        if (!resultado) {
+          this.mostrarError('No se pudo confirmar el guardado del grupo: verifique si el cambio quedó registrado antes de continuar.');
+          return;
+        }
         this.mostrarExito('Grupo guardado correctamente');
         this.cargarGrupos();
         this.cancelar();
-        this.guardando.set(false);
       },
       error: (err) => {
         console.error('❌ Error al guardar:', err);
@@ -403,6 +414,10 @@ export class GruposProductosCobroComponent implements OnInit {
         if (productos) {
           this.productos.set(productos);
           this.dataSourceProductos.data = productos;
+        } else {
+          // Mismo motivo que en cargarGrupos(): un `null` silencioso deja la lista de productos
+          // vieja sin avisar.
+          this.mostrarError('No se pudo actualizar la lista de productos: lo que ve en pantalla puede estar desactualizado.');
         }
         this.cargando.set(false);
       },
@@ -510,11 +525,17 @@ export class GruposProductosCobroComponent implements OnInit {
       : this.productoService.add(producto);
 
     operacion$.subscribe({
-      next: () => {
+      // Mismo mecanismo que en guardarGrupo(): `of(null)` por un 200 con parseo fallido es un
+      // `next` normal, no un error.
+      next: (resultado) => {
+        this.guardando.set(false);
+        if (!resultado) {
+          this.mostrarError('No se pudo confirmar el guardado del producto: verifique si el cambio quedó registrado antes de continuar.');
+          return;
+        }
         this.mostrarExito('Producto guardado correctamente');
         this.cargarProductos();
         this.cancelarProducto();
-        this.guardando.set(false);
       },
       error: (err) => {
         console.error('❌ Error al guardar producto:', err);
