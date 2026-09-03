@@ -24,28 +24,40 @@ Genera los pagos del período para todos los jubilados `JUBILADO_COMPLEMENTARIO`
 
 **Query params:** `idEmpresa`, `anio`, `mes`, `usuario`.
 
-**Respuesta 200** — se agregan los campos marcados **NUEVO**:
+**Respuesta 200** — implementada el 2026-09-02 (`PLAN-PAGO-JUBILADOS.md` §3/§4). El sobre de la
+respuesta sigue el mismo convenio que el resto de este REST (`exito`, `mensaje`, y el cuerpo real
+anidado bajo `resultado` — **no al nivel superior**, a diferencia de como lo mostraba una versión
+anterior de este documento):
 
 ```json
 {
-  "anio": 2026, "mes": 8,
-  "generados": 42, "yaExistian": 3, "errores": 1,
-  "totalPagado": 12600.00,
-  "totalCruzadoAPrestamos": 3480.00,      // NUEVO
-  "totalOrdenesGeneradas": 9120.00,       // NUEVO
-  "detalle": [
-    {
-      "idEntidad": 1234, "nombre": "...", "idPago": 987,
-      "valorPension": 280.00, "valorSeguroSalud": 20.00,
-      "valorCruzadoAPrestamo": 300.00,    // NUEVO
-      "valorOrdenPago": 0.00,             // NUEVO
-      "generoOrdenPago": false,           // NUEVO
-      "idAsientoDevengo": 4471,           // NUEVO
-      "estado": "PENDIENTE", "mensaje": null
-    }
-  ]
+  "exito": true,
+  "mensaje": "Generación 8/2026 - 42 pagos generados, 3 ya existían, 1 con error, de 46 evaluados.",
+  "resultado": {
+    "anio": 2026, "mes": 8,
+    "evaluados": 46, "generados": 42, "yaGenerados": 3, "conError": 1,
+    "totalPagado": 12600.00,
+    "totalCruzadoAPrestamos": 3480.00,
+    "totalOrdenesGeneradas": 9120.00,
+    "errores": ["Entidad 555: SALDO_INSUFICIENTE: ..."],
+    "detalle": [
+      {
+        "idEntidad": 1234, "nombre": "...", "idPago": 987,
+        "valorPension": 280.00, "valorSeguroSalud": 20.00,
+        "valorCruzadoAPrestamo": 300.00,
+        "valorOrdenPago": 0.00,
+        "generoOrdenPago": false,
+        "idAsientoDevengo": 4471,
+        "estado": "GENERADO", "mensaje": null
+      }
+    ]
+  }
 }
 ```
+
+`detalle` trae UN renglón por cada jubilado evaluado, con `estado` en `"GENERADO"` (PGPC nuevo),
+`"YA_EXISTIA"` (idempotencia — no es error) o `"ERROR"` (con `mensaje`). Los renglones `YA_EXISTIA`
+no traen `nombre` ni los campos de cruce/orden (no se volvieron a calcular).
 
 ⛔ **`generoOrdenPago: false` con `valorCruzadoAPrestamo > 0` NO es un error** — es el caso en que
 la deuda se llevó toda la pensión del mes. El pago existe, se contabilizó, y no hubo salida de
