@@ -422,7 +422,9 @@ export class GastosCajaChicaComponent implements OnInit {
       && !this.motivoExcedeTope
       && !!this.formDescripcion.trim()
       && !!this.formObservacion.trim()
-      && this.formIdProducto != null
+      // Con documento elegido, la clasificación (y su cuenta contable) la da el documento, no el
+      // producto de pago — deja de ser obligatorio. Sin documento sigue igual que siempre.
+      && (this.formIdProducto != null || !!this.documentoSeleccionado())
       // Con documento elegido, el beneficiario pasa a ser obligatorio (API-GASTO-CAJA-CHICA.md).
       && (!this.documentoSeleccionado() || !!this.formBeneficiario())
       && !this.documentoExcedeSaldo
@@ -439,13 +441,14 @@ export class GastosCajaChicaComponent implements OnInit {
 
   registrarGasto(): void {
     const caja = this.cajaSeleccionada();
-    if (!this.puedeGuardar || !caja || this.formIdProducto == null) return;
+    const documento = this.documentoSeleccionado();
+    if (!this.puedeGuardar || !caja) return;
+    // Sin documento, el producto sigue siendo obligatorio — sale la cuenta contable del gasto suelto.
+    if (!documento && this.formIdProducto == null) return;
 
     this.guardando.set(true);
     this.error.set('');
     this.exito.set('');
-
-    const documento = this.documentoSeleccionado();
 
     this.movimientoS.gasto({
       idCaja: caja.codigo,
@@ -453,12 +456,14 @@ export class GastosCajaChicaComponent implements OnInit {
       valor: this.formValorNumerico,
       descripcion: this.formDescripcion.trim(),
       observacion: this.formObservacion.trim(),
-      idProducto: this.formIdProducto,
       idTitular: this.formBeneficiario()?.codigo ?? undefined,
       numeroDocumento: this.formNumeroDocumento.trim() || undefined,
       idUsuario: this.appState.getIdUsuario(),
-      // Las dos van juntas o ninguna — documento siempre trae tipo+id (API-GASTO-CAJA-CHICA.md).
-      ...(documento ? { tipoDocumento: documento.tipo, idDocumento: documento.id } : {}),
+      // Con documento, la clasificación (y su cuenta contable) sale de él: idProducto ya no
+      // decide nada en ese camino, así que no se manda. Sin documento, sigue igual que siempre.
+      ...(documento
+        ? { tipoDocumento: documento.tipo, idDocumento: documento.id }
+        : { idProducto: this.formIdProducto! }),
     }).subscribe({
       next: (movimiento) => {
         this.guardando.set(false);

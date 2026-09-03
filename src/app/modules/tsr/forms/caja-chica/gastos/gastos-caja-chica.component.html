@@ -101,7 +101,7 @@
       <mat-card-content>
         <h3>Registrar gasto</h3>
 
-        @if (cargandoCatalogos()) {
+        @if (cargandoCatalogos() && !documentoSeleccionado()) {
           <div class="estado-linea">
             <mat-spinner diameter="20"></mat-spinner>
             <span>Cargando productos...</span>
@@ -122,41 +122,48 @@
           </mat-form-field>
         </div>
 
-        <div class="fila-campos">
-          <mat-form-field appearance="outline">
-            <mat-label>Grupo de producto</mat-label>
-            <input matInput readonly [value]="etiquetaGrupo(formGrupo)"
-                   placeholder="Busque por número de cuenta o nombre" (click)="buscarGrupo()" />
-            <button mat-icon-button matSuffix type="button" matTooltip="Buscar grupo de producto"
-                    (click)="buscarGrupo()">
-              <mat-icon>search</mat-icon>
-            </button>
-          </mat-form-field>
+        @if (!documentoSeleccionado()) {
+          <div class="fila-campos">
+            <mat-form-field appearance="outline">
+              <mat-label>Grupo de producto</mat-label>
+              <input matInput readonly [value]="etiquetaGrupo(formGrupo)"
+                     placeholder="Busque por número de cuenta o nombre" (click)="buscarGrupo()" />
+              <button mat-icon-button matSuffix type="button" matTooltip="Buscar grupo de producto"
+                      (click)="buscarGrupo()">
+                <mat-icon>search</mat-icon>
+              </button>
+            </mat-form-field>
 
-          <mat-form-field appearance="outline">
-            <mat-label>Producto</mat-label>
-            <mat-select [(ngModel)]="formIdProducto" name="formIdProducto" [disabled]="!formIdGrupo"
-                        panelClass="select-con-buscador"
-                        (openedChange)="!$event && (filtroProducto = '')">
-              <mat-option class="select-search-option"
-                          (mousedown)="$event.preventDefault(); $event.stopPropagation()"
-                          (click)="$event.stopPropagation()">
-                <input class="select-search-input" placeholder="Buscar producto..."
-                       [value]="filtroProducto"
-                       (mousedown)="$event.stopPropagation()"
-                       (click)="$event.stopPropagation()"
-                       (keydown)="$event.stopPropagation()"
-                       (input)="filtroProducto = $any($event.target).value" />
-              </mat-option>
-              @for (p of productosFiltrados; track p.id) {
-                <mat-option [value]="p.id">{{ p.nombre }}</mat-option>
+            <mat-form-field appearance="outline">
+              <mat-label>Producto</mat-label>
+              <mat-select [(ngModel)]="formIdProducto" name="formIdProducto" [disabled]="!formIdGrupo"
+                          panelClass="select-con-buscador"
+                          (openedChange)="!$event && (filtroProducto = '')">
+                <mat-option class="select-search-option"
+                            (mousedown)="$event.preventDefault(); $event.stopPropagation()"
+                            (click)="$event.stopPropagation()">
+                  <input class="select-search-input" placeholder="Buscar producto..."
+                         [value]="filtroProducto"
+                         (mousedown)="$event.stopPropagation()"
+                         (click)="$event.stopPropagation()"
+                         (keydown)="$event.stopPropagation()"
+                         (input)="filtroProducto = $any($event.target).value" />
+                </mat-option>
+                @for (p of productosFiltrados; track p.id) {
+                  <mat-option [value]="p.id">{{ p.nombre }}</mat-option>
+                }
+              </mat-select>
+              @if (!formIdGrupo) {
+                <mat-hint>Elija primero el grupo</mat-hint>
               }
-            </mat-select>
-            @if (!formIdGrupo) {
-              <mat-hint>Elija primero el grupo</mat-hint>
-            }
-          </mat-form-field>
-        </div>
+            </mat-form-field>
+          </div>
+        } @else {
+          <div class="mensaje-info">
+            <mat-icon>info</mat-icon>
+            <span>Este gasto paga un documento: la clasificación contable la toma de él, no hace falta elegir grupo ni producto de pago.</span>
+          </div>
+        }
 
         <mat-form-field appearance="outline" class="campo-ancho">
           <mat-label>Concepto</mat-label>

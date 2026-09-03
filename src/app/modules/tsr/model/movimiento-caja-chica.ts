@@ -49,7 +49,12 @@ export interface GastoCajaChicaRequest {
   valor: number;
   descripcion: string;
   observacion: string;
-  idProducto: number;
+  /**
+   * Obligatorio sin documento (de ahí sale la cuenta contable del gasto suelto). Con documento no
+   * se manda: la clasificación contable sale del documento, el producto ya no decide nada en ese
+   * camino (decisión del usuario, ÍTEM 26).
+   */
+  idProducto?: number;
   idTitular?: number;
   numeroDocumento?: string;
   idUsuario: number;
