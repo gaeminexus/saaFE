@@ -8,12 +8,18 @@ import { GrupoProductoSelectorDialogComponent } from '../../../../../shared/comp
 import { MotivoDialogComponent, MotivoDialogData } from '../../../../../shared/components/motivo-dialog/motivo-dialog.component';
 import { TitularSelectorDialogComponent } from '../../../../../shared/components/titular-selector-dialog/titular-selector-dialog.component';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { SaldoFactura } from '../../../../../shared/model/pagos-cobros/catalogos-aplicacion-pago';
 import { AppStateService } from '../../../../../shared/services/app-state.service';
 import { FileService } from '../../../../../shared/services/file.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 
+import {
+  DocumentoCruceProveedor,
+  DocumentoCruceSelectorDialogComponent,
+} from '../../../../cxp/dialog/documento-cruce-selector-dialog/documento-cruce-selector-dialog.component';
 import { GrupoProductoPago } from '../../../../cxp/model/grupo_producto_pago';
 import { ProductoPago } from '../../../../cxp/model/producto_pago';
+import { AplicacionPagoCxpService } from '../../../../cxp/service/aplicacion-pago-cxp.service';
 import { GrupoProductoPagoService } from '../../../../cxp/service/grupo-producto-pago.service';
 import { ProductoPagoService } from '../../../../cxp/service/producto-pago.service';
 
@@ -63,6 +69,7 @@ export class GastosCajaChicaComponent implements OnInit {
   private pathS = inject(PathCajaChicaService);
   private grupoProductoS = inject(GrupoProductoPagoService);
   private productoS = inject(ProductoPagoService);
+  private aplicacionPagoS = inject(AplicacionPagoCxpService);
   private fileService = inject(FileService);
   private appState = inject(AppStateService);
   private funcionesDatos = inject(FuncionesDatosService);
@@ -80,9 +87,13 @@ export class GastosCajaChicaComponent implements OnInit {
 
   // ─── Cabecera: caja y saldo ─────────────────────────────
   cajas = signal<CajaChica[]>([]);
+  cargandoCajas = signal(false);
+  /** Vacío si no hay error. Distinto de `cajas().length === 0` sin error: eso es un vacío legítimo. */
+  errorCajas = signal('');
   cajaSeleccionada = signal<CajaChica | null>(null);
   saldo = signal<SaldoCajaChica | null>(null);
   cargandoSaldo = signal(false);
+  errorSaldo = signal('');
 
   // ─── Catálogos de producto ──────────────────────────────
   cargandoCatalogos = signal(false);
@@ -105,6 +116,11 @@ export class GastosCajaChicaComponent implements OnInit {
   error = signal('');
   exito = signal('');
 
+  // ─── Documento pagado por el gasto (opcional) ───────────
+  documentoSeleccionado = signal<DocumentoCruceProveedor | null>(null);
+  cargandoSaldoDocumento = signal(false);
+  saldoDocumento = signal<SaldoFactura | null>(null);
+
   // ─── Movimientos de la caja ─────────────────────────────
   movimientos = signal<MovimientoCajaChica[]>([]);
   cargandoMovimientos = signal(false);
@@ -114,7 +130,7 @@ export class GastosCajaChicaComponent implements OnInit {
   anulandoId = signal<number | null>(null);
 
   readonly columnasMovimientos = [
-    'fecha', 'tipo', 'descripcion', 'beneficiario', 'valor', 'estado', 'acciones',
+    'fecha', 'tipo', 'descripcion', 'beneficiario', 'documento', 'valor', 'estado', 'acciones',
   ];
 
   /** El producto se elige dentro del grupo: la lista completa es muy larga. */
@@ -146,16 +162,31 @@ export class GastosCajaChicaComponent implements OnInit {
   private cargarCajas(): void {
     const idEmpresa = this.appState.getEmpresa()?.codigo;
     if (!idEmpresa) {
+      this.cajas.set([]);
+      this.errorCajas.set('No se pudo determinar la empresa de la sesión.');
       this.snackBar.open('No se pudo determinar la empresa de la sesión', 'Cerrar', { duration: 5000 });
       return;
     }
+
+    this.cargandoCajas.set(true);
+    this.errorCajas.set('');
     this.cajaChicaS.activas(idEmpresa).subscribe({
-      next: (data) => this.cajas.set(Array.isArray(data) ? data : []),
-      error: () => {
+      next: (data) => {
+        this.cajas.set(Array.isArray(data) ? data : []);
+        this.cargandoCajas.set(false);
+      },
+      error: (err) => {
         this.cajas.set([]);
+        this.cargandoCajas.set(false);
+        this.errorCajas.set(CajaChicaService.mensajeError(err));
         this.snackBar.open('No se pudieron cargar las cajas chicas activas.', 'Cerrar', { duration: 5000 });
       },
     });
+  }
+
+  /** Botón "Reintentar" del estado de error de la lista de cajas. */
+  reintentarCajas(): void {
+    this.cargarCajas();
   }
 
   private cargarCatalogosProducto(): void {
@@ -188,16 +219,38 @@ export class GastosCajaChicaComponent implements OnInit {
 
   private cargarSaldo(idCaja: number): void {
     this.cargandoSaldo.set(true);
+    this.errorSaldo.set('');
     this.cajaChicaS.saldo(idCaja).subscribe({
       next: (s) => {
         this.saldo.set(s);
         this.cargandoSaldo.set(false);
       },
-      error: () => {
+      error: (err) => {
         this.saldo.set(null);
         this.cargandoSaldo.set(false);
+        this.errorSaldo.set(CajaChicaService.mensajeError(err));
       },
     });
+  }
+
+  /** Botón "Reintentar" del estado de error del saldo. */
+  reintentarSaldo(): void {
+    const caja = this.cajaSeleccionada();
+    if (caja) this.cargarSaldo(caja.codigo);
+  }
+
+  /** Saldo que quedaría en la caja si se registra el gasto tal como está tipeado ahora. */
+  get saldoCajaDespues(): number | null {
+    const s = this.saldo();
+    if (!s) return null;
+    return s.saldo - this.formValorNumerico;
+  }
+
+  /** % del fondo que quedaría disponible después de este gasto, para la barra. */
+  get porcentajeCajaDespues(): number | null {
+    const s = this.saldo();
+    if (!s || !s.fondo) return null;
+    return Math.max(0, Math.min(100, ((this.saldoCajaDespues ?? s.saldo) / s.fondo) * 100));
   }
 
   // ═══ FORMULARIO DE GASTO ═════════════════════════════════
@@ -222,7 +275,11 @@ export class GastosCajaChicaComponent implements OnInit {
       maxWidth: '98vw',
       data: { rolCodigo: RUBRO_ROL_PROVEEDOR, rolNombre: 'PROVEEDOR', titulo: 'Buscar beneficiario' },
     }).afterClosed().subscribe((titular: Titular | null) => {
-      if (titular) this.formBeneficiario.set(titular);
+      if (!titular) return;
+      this.formBeneficiario.set(titular);
+      // El documento elegido, si lo hay, era del beneficiario anterior: se limpia por comodidad
+      // (el servidor igual revalida que el documento sea de este titular — ver API-GASTO-CAJA-CHICA.md).
+      this.quitarDocumento();
     });
   }
 
@@ -234,6 +291,86 @@ export class GastosCajaChicaComponent implements OnInit {
 
   quitarBeneficiario(): void {
     this.formBeneficiario.set(null);
+    this.quitarDocumento();
+  }
+
+  // ═══ DOCUMENTO PAGADO POR EL GASTO (opcional) ═══════════
+
+  buscarDocumento(): void {
+    const beneficiario = this.formBeneficiario();
+    if (!beneficiario) return;
+
+    this.dialog.open(DocumentoCruceSelectorDialogComponent, {
+      width: '1100px',
+      maxWidth: '98vw',
+      data: {
+        codigoTitular: beneficiario.codigo,
+        nombreTitular: this.nombreBeneficiario(),
+        soloPendientes: true,
+      },
+    }).afterClosed().subscribe((doc: DocumentoCruceProveedor | null) => {
+      if (doc) this.seleccionarDocumento(doc);
+    });
+  }
+
+  private seleccionarDocumento(doc: DocumentoCruceProveedor): void {
+    this.documentoSeleccionado.set(doc);
+    this.saldoDocumento.set(null);
+    // Autopoblado del comprobante: es una etiqueta, el vínculo real es idDocumento (ver
+    // API-GASTO-CAJA-CHICA.md, sección "Trampas"). Solo si el usuario no había tipeado nada.
+    if (!this.formNumeroDocumento.trim()) {
+      this.formNumeroDocumento = doc.numero ?? '';
+    }
+
+    this.cargandoSaldoDocumento.set(true);
+    const saldo$ = doc.tipo === 'FACTURA'
+      ? this.aplicacionPagoS.getSaldo(doc.id)
+      : this.aplicacionPagoS.getSaldoLiquidacion(doc.id);
+
+    saldo$.subscribe({
+      next: (s) => {
+        this.saldoDocumento.set(s);
+        this.cargandoSaldoDocumento.set(false);
+      },
+      error: () => {
+        this.saldoDocumento.set(null);
+        this.cargandoSaldoDocumento.set(false);
+        this.snackBar.open('No se pudo consultar el saldo del documento.', 'Cerrar', { duration: 5000 });
+      },
+    });
+  }
+
+  quitarDocumento(): void {
+    this.documentoSeleccionado.set(null);
+    this.saldoDocumento.set(null);
+  }
+
+  etiquetaTipoDocumento(tipo: 'FACTURA' | 'LIQUIDACION_COMPRA'): string {
+    return tipo === 'FACTURA' ? 'Factura' : 'Liquidación';
+  }
+
+  /** Saldo pendiente del documento antes de este gasto, o null mientras no se conoce. */
+  get saldoAntesDocumento(): number | null {
+    return this.saldoDocumento()?.saldoPendiente ?? null;
+  }
+
+  /** Saldo que quedaría pendiente en el documento después de este gasto. */
+  get saldoDespuesDocumento(): number | null {
+    const antes = this.saldoAntesDocumento;
+    if (antes == null) return null;
+    return antes - this.formValorNumerico;
+  }
+
+  /** true cuando el documento quedaría saldado (dentro de tolerancia de redondeo). */
+  get documentoQuedaSaldado(): boolean {
+    const despues = this.saldoDespuesDocumento;
+    return despues != null && despues <= 0.01;
+  }
+
+  /** Validación espejo: el servidor es quien manda, esto solo evita un viaje al backend de más. */
+  get documentoExcedeSaldo(): boolean {
+    const antes = this.saldoAntesDocumento;
+    return antes != null && this.formValorNumerico > antes + 0.01;
   }
 
   onArchivoSeleccionado(event: Event): void {
@@ -286,6 +423,9 @@ export class GastosCajaChicaComponent implements OnInit {
       && !!this.formDescripcion.trim()
       && !!this.formObservacion.trim()
       && this.formIdProducto != null
+      // Con documento elegido, el beneficiario pasa a ser obligatorio (API-GASTO-CAJA-CHICA.md).
+      && (!this.documentoSeleccionado() || !!this.formBeneficiario())
+      && !this.documentoExcedeSaldo
       && !this.guardando();
   }
 
@@ -305,6 +445,8 @@ export class GastosCajaChicaComponent implements OnInit {
     this.error.set('');
     this.exito.set('');
 
+    const documento = this.documentoSeleccionado();
+
     this.movimientoS.gasto({
       idCaja: caja.codigo,
       fecha: this.fechaISO(this.formFecha),
@@ -315,6 +457,8 @@ export class GastosCajaChicaComponent implements OnInit {
       idTitular: this.formBeneficiario()?.codigo ?? undefined,
       numeroDocumento: this.formNumeroDocumento.trim() || undefined,
       idUsuario: this.appState.getIdUsuario(),
+      // Las dos van juntas o ninguna — documento siempre trae tipo+id (API-GASTO-CAJA-CHICA.md).
+      ...(documento ? { tipoDocumento: documento.tipo, idDocumento: documento.id } : {}),
     }).subscribe({
       next: (movimiento) => {
         this.guardando.set(false);
@@ -374,6 +518,8 @@ export class GastosCajaChicaComponent implements OnInit {
     this.formBeneficiario.set(null);
     this.formNumeroDocumento = '';
     this.archivoSeleccionado = null;
+    this.documentoSeleccionado.set(null);
+    this.saldoDocumento.set(null);
   }
 
   // ═══ MOVIMIENTOS ═════════════════════════════════════════
@@ -423,6 +569,13 @@ export class GastosCajaChicaComponent implements OnInit {
     const t = m.titular;
     if (!t) return '—';
     return t.razonSocial || t.nombre || t.identificacion || `Titular ${t.codigo}`;
+  }
+
+  /** Texto de la columna "Documento": null en la mayoría de las filas (gasto sin documento). */
+  documentoFila(m: MovimientoCajaChica): string {
+    if (!m.documentoTipo) return '—';
+    const tipo = m.documentoTipo === 'FACTURA' ? 'Factura' : 'Liquidación';
+    return m.documentoNumero ? `${tipo} ${m.documentoNumero}` : tipo;
   }
 
   /** Convención del proyecto: 1 = activo; cualquier otro valor se trata como anulado. Ver nota de la clase. */

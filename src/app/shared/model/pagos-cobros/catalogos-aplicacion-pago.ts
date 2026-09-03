@@ -10,6 +10,8 @@ export enum TipoDocPago {
   RETENCION = 3,
   ANTICIPO = 4,
   NOTA_DEBITO = 5,
+  /** Ver saaFE/docs/tsr/API-GASTO-CAJA-CHICA.md — un gasto de caja chica que pagó una factura/liquidación. */
+  CAJA_CHICA = 6,
 }
 
 export interface EtiquetaCatalogo {
@@ -25,6 +27,7 @@ export const TIPO_DOC_PAGO_LABELS: Record<number, EtiquetaCatalogo> = {
   [TipoDocPago.RETENCION]: { texto: 'Retención', icono: 'description', automatico: true },
   [TipoDocPago.ANTICIPO]: { texto: 'Anticipo', icono: 'savings', automatico: false },
   [TipoDocPago.NOTA_DEBITO]: { texto: 'Nota de Débito', icono: 'assignment_late', automatico: true },
+  [TipoDocPago.CAJA_CHICA]: { texto: 'Caja chica', icono: 'point_of_sale', automatico: false },
 };
 
 /**

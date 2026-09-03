@@ -28,6 +28,132 @@
     margin: 0.5rem 0 1rem;
   }
 
+  // ===== SALDO DE LA CAJA — protagonista, es la restricción del gasto =====
+  .hero-saldo {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 2rem;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1rem;
+    background: linear-gradient(135deg, #f0fdf4, #f8fafc);
+    border: 1px solid #bbf7d0;
+    border-radius: 14px;
+
+    &.alerta {
+      background: linear-gradient(135deg, #fef3c7, #f8fafc);
+      border-color: #fde68a;
+    }
+
+    .hero-saldo-principal {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+      min-width: 220px;
+    }
+
+    .hero-etiqueta {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #64748b;
+    }
+
+    .hero-valor {
+      font-size: 2.1rem;
+      font-weight: 700;
+      color: #15803d;
+      line-height: 1.1;
+
+      &.alerta {
+        color: #b45309;
+      }
+    }
+
+    .hero-barra {
+      height: 8px;
+      border-radius: 999px;
+      background: #e2e8f0;
+      overflow: hidden;
+      margin-top: 0.35rem;
+    }
+
+    .hero-barra-relleno {
+      height: 100%;
+      background: #22c55e;
+      border-radius: 999px;
+      transition: width 0.2s ease;
+
+      &.alerta {
+        background: #f59e0b;
+      }
+    }
+
+    .hero-porcentaje {
+      font-size: 0.82rem;
+      color: #64748b;
+    }
+
+    .hero-saldo-secundario {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.75rem;
+      align-items: flex-start;
+
+      .item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+      }
+
+      .etiqueta {
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #64748b;
+      }
+
+      .valor {
+        font-size: 1.05rem;
+        font-weight: 600;
+        color: #1e293b;
+
+        &.pendiente { color: #b91c1c; }
+      }
+    }
+  }
+
+  .fila-documento {
+    margin: 0.5rem 0 1rem;
+
+    .card-documento {
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 0.85rem 1rem;
+      background: #f8fafc;
+
+      .resumen-saldo {
+        margin-bottom: 0;
+      }
+    }
+
+    .card-documento-cabecera {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.6rem;
+
+      .titulo {
+        font-weight: 600;
+        color: #1e293b;
+      }
+
+      button {
+        margin-left: auto;
+      }
+    }
+  }
+
   .fila-adjunto {
     margin: 0.5rem 0 1rem;
 
@@ -39,6 +165,15 @@
       background: #f1f5f9;
       border-radius: 8px;
       width: fit-content;
+    }
+  }
+
+  .mensaje-error {
+    flex-wrap: wrap;
+    align-items: center;
+
+    button {
+      margin-left: auto;
     }
   }
 

@@ -32,6 +32,13 @@ export interface MovimientoCajaChica {
   idPago?: number | null;
   usuario?: { codigo: number; nombre?: string } | null;
   fechaRegistro?: any;
+  /**
+   * Documento pagado por este gasto (ver saaFE/docs/tsr/API-GASTO-CAJA-CHICA.md). `null` cuando
+   * el gasto no pagó ningún documento — la mayoría de las filas. Los tres vienen juntos o ninguno.
+   */
+  documentoTipo?: 'FACTURA' | 'LIQUIDACION_COMPRA' | null;
+  documentoId?: number | null;
+  documentoNumero?: string | null;
 }
 
 /** Body de POST /mvch/gasto. */
@@ -46,6 +53,13 @@ export interface GastoCajaChicaRequest {
   idTitular?: number;
   numeroDocumento?: string;
   idUsuario: number;
+  /**
+   * Documento que paga este gasto — las dos van juntas o ninguna, mandar una sola es error del
+   * cliente (400). `valor` ES el monto aplicado: no hay un campo de monto aplicado aparte (ver
+   * API-GASTO-CAJA-CHICA.md, decisión D2 del usuario).
+   */
+  tipoDocumento?: 'FACTURA' | 'LIQUIDACION_COMPRA';
+  idDocumento?: number;
 }
 
 /**

@@ -21,6 +21,27 @@
         </mat-form-field>
       </div>
 
+      @if (cargandoCajas()) {
+        <div class="estado-linea">
+          <mat-spinner diameter="18"></mat-spinner>
+          <span>Cargando cajas chicas...</span>
+        </div>
+      } @else if (errorCajas()) {
+        <div class="mensaje-error">
+          <mat-icon>error_outline</mat-icon>
+          <span>{{ errorCajas() }}</span>
+          <button mat-stroked-button type="button" (click)="reintentarCajas()">
+            <mat-icon>refresh</mat-icon>
+            Reintentar
+          </button>
+        </div>
+      } @else if (cajas().length === 0) {
+        <div class="mensaje-info">
+          <mat-icon>info</mat-icon>
+          <span>No hay cajas chicas activas configuradas para esta empresa.</span>
+        </div>
+      }
+
       @if (cajaSeleccionada()) {
         @if (cargandoSaldo()) {
           <div class="estado-linea">
@@ -28,18 +49,28 @@
             <span>Consultando saldo...</span>
           </div>
         } @else if (saldo(); as s) {
-          <div class="resumen-saldo">
-            <div class="item">
-              <span class="etiqueta">Fondo</span>
-              <span class="valor">{{ s.fondo | number: '1.2-2' }}</span>
+          <div class="hero-saldo" [class.alerta]="s.alerta">
+            <div class="hero-saldo-principal">
+              <span class="hero-etiqueta">Saldo disponible de la caja</span>
+              <span class="hero-valor" [class.alerta]="s.alerta">{{ s.saldo | number: '1.2-2' }}</span>
+              <div class="hero-barra">
+                <div class="hero-barra-relleno" [class.alerta]="s.alerta" [style.width.%]="s.porcentaje"></div>
+              </div>
+              <span class="hero-porcentaje">{{ s.porcentaje | number: '1.0-0' }}% del fondo disponible</span>
             </div>
-            <div class="item">
-              <span class="etiqueta">Saldo disponible</span>
-              <span class="valor" [class.pendiente]="s.alerta">{{ s.saldo | number: '1.2-2' }}</span>
-            </div>
-            <div class="item">
-              <span class="etiqueta">% disponible</span>
-              <span class="valor">{{ s.porcentaje | number: '1.0-0' }}%</span>
+            <div class="hero-saldo-secundario">
+              <div class="item">
+                <span class="etiqueta">Fondo de la caja</span>
+                <span class="valor">{{ s.fondo | number: '1.2-2' }}</span>
+              </div>
+              @if (formValorNumerico > 0) {
+                <div class="item">
+                  <span class="etiqueta">Quedaría en la caja tras este gasto</span>
+                  <span class="valor" [class.pendiente]="(saldoCajaDespues ?? 0) < 0">
+                    {{ (saldoCajaDespues ?? 0) | number: '1.2-2' }}
+                  </span>
+                </div>
+              }
             </div>
           </div>
           @if (s.alerta) {
@@ -51,6 +82,15 @@
               </span>
             </div>
           }
+        } @else {
+          <div class="mensaje-error">
+            <mat-icon>error_outline</mat-icon>
+            <span>{{ errorSaldo() || 'No se pudo consultar el saldo de la caja.' }}</span>
+            <button mat-stroked-button type="button" (click)="reintentarSaldo()">
+              <mat-icon>refresh</mat-icon>
+              Reintentar
+            </button>
+          </div>
         }
       }
     </mat-card-content>
@@ -150,6 +190,59 @@
             <mat-label>N° de comprobante</mat-label>
             <input matInput [(ngModel)]="formNumeroDocumento" name="formNumeroDocumento" maxlength="50" />
           </mat-form-field>
+        </div>
+
+        <div class="fila-documento">
+          @if (documentoSeleccionado(); as doc) {
+            <div class="card-documento">
+              <div class="card-documento-cabecera">
+                <mat-icon>description</mat-icon>
+                <span class="titulo">{{ etiquetaTipoDocumento(doc.tipo) }} {{ doc.numero }}</span>
+                <button mat-icon-button matTooltip="Quitar documento" (click)="quitarDocumento()">
+                  <mat-icon>close</mat-icon>
+                </button>
+              </div>
+
+              @if (cargandoSaldoDocumento()) {
+                <div class="estado-linea">
+                  <mat-spinner diameter="18"></mat-spinner>
+                  <span>Consultando saldo del documento...</span>
+                </div>
+              } @else if (saldoAntesDocumento != null) {
+                <div class="resumen-saldo">
+                  <div class="item">
+                    <span class="etiqueta">Saldo pendiente del documento (antes)</span>
+                    <span class="valor">{{ saldoAntesDocumento | number: '1.2-2' }}</span>
+                  </div>
+                  <div class="item">
+                    <span class="etiqueta">Monto de este gasto</span>
+                    <span class="valor">{{ formValorNumerico | number: '1.2-2' }}</span>
+                  </div>
+                  <div class="item">
+                    <span class="etiqueta">Saldo pendiente del documento (después)</span>
+                    <span class="valor" [class.pendiente]="!documentoQuedaSaldado" [class.aplicado]="documentoQuedaSaldado">
+                      {{ (saldoDespuesDocumento ?? 0) | number: '1.2-2' }}
+                    </span>
+                    <span class="badge" [ngClass]="documentoQuedaSaldado ? 'badge-pagada' : 'badge-parcial'">
+                      {{ documentoQuedaSaldado ? 'Queda saldada' : 'Queda pendiente' }}
+                    </span>
+                  </div>
+                </div>
+                @if (documentoExcedeSaldo) {
+                  <div class="mensaje-error">
+                    <mat-icon>error_outline</mat-icon>
+                    <span>El valor del gasto supera el saldo pendiente del documento. Ajuste el valor o elija otro documento.</span>
+                  </div>
+                }
+              }
+            </div>
+          } @else {
+            <button mat-stroked-button type="button" [disabled]="!formBeneficiario()" (click)="buscarDocumento()"
+                    [matTooltip]="formBeneficiario() ? 'Elegir factura o liquidación a pagar' : 'Elija primero un beneficiario'">
+              <mat-icon>receipt_long</mat-icon>
+              Elegir documento a pagar (opcional)
+            </button>
+          }
         </div>
 
         <div class="fila-adjunto">
@@ -283,6 +376,11 @@
               <ng-container matColumnDef="beneficiario">
                 <th mat-header-cell *matHeaderCellDef>Beneficiario</th>
                 <td mat-cell *matCellDef="let m">{{ nombreBeneficiarioFila(m) }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="documento">
+                <th mat-header-cell *matHeaderCellDef>Documento</th>
+                <td mat-cell *matCellDef="let m">{{ documentoFila(m) }}</td>
               </ng-container>
 
               <ng-container matColumnDef="valor">
