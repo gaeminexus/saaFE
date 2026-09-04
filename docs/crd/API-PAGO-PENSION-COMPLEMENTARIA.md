@@ -198,7 +198,45 @@ no hay orden que sincronizar. Es correcto y la pantalla no debe marcarlo como at
 | `SIN_VALOR_PENSION` | 422 | Sin `VPPC` activa, o más de una |
 | `SALDO_INSUFICIENTE` | 422 | El saldo del aporte tipo 23 no alcanza |
 | `SIN_CUENTA_BANCARIA` | 422 | No tiene exactamente una cuenta bancaria activa |
+| **`SIN_CERTIFICADO_BANCARIO`** | 422 | **Nuevo 2026-09-04.** La cuenta activa no tiene certificado bancario cargado |
+| **`TIPO_ADJUNTO_CERTIFICADO_NO_CONFIGURADO`** | 422 | **Nuevo 2026-09-04.** No se pudo *verificar* el certificado: el catálogo `CRD.TPDJ` está mal. **No es culpa del jubilado** |
 | `PAGO_NO_ENCONTRADO` | 404 | No existe el pago |
+
+### ⭐ Regla del certificado bancario — decisión del usuario, 2026-09-04
+
+> *«Una regla adicional para procesar el pago retroactivo es que tenga subido el certificado
+> bancario. Eso se debe incluir en la validación.»*
+
+**No se genera el pago de un jubilado cuya cuenta bancaria activa no tenga el certificado
+bancario cargado.** La validación va en el **backend**, dentro de `generarPagoIndividual`, justo
+después de resolver la cuenta única activa — no solo en el prevuelo de la pantalla. El prevuelo
+avisa; el backend es el que impide.
+
+#### ⛔ Las dos causas que NO se pueden confundir
+
+Esto es lo que decide si la regla ayuda o hace daño:
+
+| Situación | Código | Qué significa | De quién es el problema |
+|---|---|---|---|
+| La cuenta existe y **no tiene** certificado | `SIN_CERTIFICADO_BANCARIO` | falta el documento de ESE jubilado | de la oficina: hay que pedirlo y subirlo |
+| **No se pudo verificar** el certificado | `TIPO_ADJUNTO_CERTIFICADO_NO_CONFIGURADO` | el catálogo `CRD.TPDJ` no resuelve | **del sistema**, y afecta a TODOS por igual |
+
+`CuentaBancariaParticipeServiceImpl.obtenerCertificado()` **lanza excepción** si no encuentra el
+tipo `'CERTIFICADO BANCARIO'` en `CRD.TPDJ`. Ese caso **no debe salir como
+`SIN_CERTIFICADO_BANCARIO`**: si sale así, el operador va a leer 187 renglones diciendo «falta el
+certificado» y va a salir a pedirle el documento a 187 personas que quizá ya lo entregaron.
+
+#### ⛔⛔ ADVERTENCIA DE ORDEN — leer antes de activar esta regla
+
+**Al 2026-09-04 `CRD.TPDJ` tiene DOS filas activas llamadas `'CERTIFICADO BANCARIO'`** (ids 4 y 37,
+medido con `sql/192`), y `resolverTipoCertificadoBancario()` resuelve con `tipos.get(0)` sobre una
+consulta **sin `ORDER BY`**.
+
+**Mientras eso siga así, esta validación puede bloquear a jubilados que SÍ tienen su certificado**,
+porque el `get(0)` puede devolver el tipo que no es y los adjuntos del otro quedan invisibles.
+
+**El orden correcto es: primero `sql/193` (dejar una sola fila activa), después activar la regla.**
+Al revés, se convierte un defecto de pantalla en un bloqueo de pagos.
 
 ⛔ **Estos cinco casi nunca llegan como HTTP.** En `generarPagosDelMes` el fallo de **un** jubilado
 se captura por dentro y sale como un renglón del `detalle` con `estado: "ERROR"` y su `mensaje`,
