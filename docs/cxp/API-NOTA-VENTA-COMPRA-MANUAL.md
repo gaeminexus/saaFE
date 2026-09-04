@@ -128,7 +128,7 @@ antes de grabar.**
   "bloqueantes": [
     { "tipo": "PROVEEDOR_SIN_CUENTA",
       "detalle": "El proveedor 'FERRETERIA X' (RUC: 1791414004001) no tiene cuenta contable CxP asignada. Configúrela en Contabilidad → Cuentas por Titular." },
-    { "tipo": "PRODUCTO_SIN_CLASIFICAR",
+    { "tipo": "PRODUCTOS_SIN_CLASIFICAR",
       "detalle": "El producto 'Cemento' está en el grupo POR_CLASIFICAR." }
   ]
 }
@@ -153,9 +153,9 @@ HTTP.
 | `tipo` | Significado | Cómo lo resuelve el usuario |
 |---|---|---|
 | `PROVEEDOR_SIN_CUENTA` | El titular no tiene cuenta contable bajo rol Proveedor | Contabilidad → Cuentas por Titular |
-| `PRODUCTO_SIN_CLASIFICAR` | Un producto del detalle está en el grupo `POR_CLASIFICAR` | Clasificarlo en su grupo |
-| `GRUPO_SIN_CUENTA` | El grupo del producto no tiene cuenta contable | Parametrizar el grupo |
-| `TIPO_ASIENTO_FALTANTE` | No existe el tipo de asiento de factura de compra para la empresa | Parametrizar contabilidad |
+| `PRODUCTOS_SIN_CLASIFICAR` | Un producto del detalle está en el grupo `POR_CLASIFICAR` | Clasificarlo en su grupo |
+| `GRUPOS_SIN_CUENTA_CONTABLE` | El grupo del producto no tiene cuenta contable | Parametrizar el grupo |
+| `TIPO_ASIENTO_NO_CONFIGURADO` | No existe el tipo de asiento de factura de compra para la empresa | Parametrizar contabilidad |
 | `DOCUMENTO_DUPLICADO` | Ya existe una nota de venta con ese establecimiento-ptoEmisión-secuencial del mismo proveedor | Verificar el número |
 
 **El frontend debe mapear estos códigos a etiquetas**, igual que
@@ -216,3 +216,41 @@ va a aparecer —con su saldo correcto— bajo la etiqueta «Factura» / «Factu
 **Por qué es 🟡 y no 🔴:** el saldo del titular sale bien igual. Pero un usuario que lee
 «Factura 001-001-000000123» va a buscar un XML que no existe, y puede concluir que falta cargar
 algo.
+
+---
+
+## 5. ⚠️ CORRECCIÓN del 2026-09-04 — tres códigos de bloqueante se renombraron
+
+**Error del árbitro al escribir este contrato, corregido antes de que llegara a producción.**
+
+La primera versión del §2 inventaba nombres nuevos para condiciones **que ya tenían nombre** en la
+carga automática. Quedaban tres pares casi idénticos conviviendo:
+
+| Lo que decía este contrato | Lo que ya existía desde antes | Ahora |
+|---|---|---|
+| `PRODUCTO_SIN_CLASIFICAR` | `PRODUCTOS_SIN_CLASIFICAR` | **se usa el existente** |
+| `GRUPO_SIN_CUENTA` | `GRUPOS_SIN_CUENTA_CONTABLE` | **se usa el existente** |
+| `TIPO_ASIENTO_FALTANTE` | `TIPO_ASIENTO_NO_CONFIGURADO` | **se usa el existente** |
+| `PROVEEDOR_SIN_CUENTA` | `PROVEEDOR_SIN_CUENTA` | ya coincidía |
+| `DOCUMENTO_DUPLICADO` | — | **genuinamente nuevo** |
+
+**Consecuencia práctica y buena:** el frontend tiene que mapear **un solo código nuevo**
+(`DOCUMENTO_DUPLICADO`), no cinco. Los otros cuatro ya están mapeados para la carga automática.
+
+### Por qué importa más de lo que parece
+
+Dos códigos que difieren en una letra —`PRODUCTO_` y `PRODUCTOS_`— **no fallan: dejan de mostrar la
+etiqueta**. Y el primero que los vea juntos va a asumir que uno es un typo, lo va a "unificar", y va
+a romper en silencio el flujo que no estaba mirando. Es la misma familia que los dos `extraerCodigo`
+con criterios opuestos y que `rubroTipoMovimientoH` — **un nombre parecido que hace algo distinto es
+peor que un nombre distinto.**
+
+> **Lo que lo cazó no fue una revisión:** fue que el agente de backend, al implementar, **notara la
+> discrepancia y la reportara en vez de resolverla solo**. El contrato decía una cosa y el molde
+> otra; siguió el contrato —que era lo correcto— y **dijo que lo había hecho**. Sin esa línea en su
+> reporte, los tres pares entraban a producción y nadie los veía hasta la próxima "limpieza".
+>
+> **Un agente que marca una discrepancia en vez de elegir en silencio es lo que hace que el contrato
+> sea revisable.** La granularidad sí se conserva: el flujo manual reporta **una entrada por
+> producto** y la carga automática las agrega en una sola. El nombre describe la condición, no la
+> cardinalidad.
