@@ -248,7 +248,58 @@ esto con `fechaEfectiva.atStartOfDay()` cuando la fecha no es hoy. Se copia, no 
 - **El contra-movimiento de un rechazo** (`:854-882`): un pago de agosto rechazado en octubre genera
   su reverso **en octubre**. Fecharlo el 31 de agosto reabriría un mes ya cerrado.
 
-### ⛔ Conflicto abierto: la jubilación del partícipe, no el pago mensual
+### ⭐ Refinamiento del usuario, 2026-09-04 (segunda vuelta) — la regla definitiva
+
+> *«Si se procesa con fecha posterior al fin de mes que se procese con fecha de fin de mes lo de
+> cartera y el pago con fecha actual, y si se procesa dentro del mes, entonces que se procese con
+> fecha de proceso.»*
+
+**La fecha del hecho es `min(último día del mes del período, hoy)`.** Una sola expresión cubre los
+dos casos que plantea el usuario:
+
+| Caso | Período | Se corre | Fecha del hecho |
+|---|---|---|---|
+| Período cerrado | agosto | 4-sep | **2026-08-31** (fin de mes) |
+| Dentro del mes | septiembre | 20-sep | **2026-09-20** (hoy) |
+| Último día | septiembre | 30-sep | **2026-09-30** (hoy y fin de mes coinciden) |
+
+**Y el pago va siempre con la fecha actual**, separado de lo de cartera.
+
+#### ⭐ Por qué esta regla es la correcta y no solo una preferencia
+
+**`min(fin de mes, hoy)` no puede producir una fecha futura, nunca.** Eso hace que el circuito
+entero deje de chocar con los controles de fecha futura que tienen los tres pasos, **sin tocar
+ninguno**:
+
+| Paso | Control | Con esta regla |
+|---|---|---|
+| Cruce contra préstamos | `ProcesoPagoPrestamoServiceImpl:594` (`validarFechaNoFutura`) | nunca se dispara |
+| Aportes + asiento de jubilación | `AporteServiceImpl:459` | nunca se dispara |
+| Pago / devolución en efectivo | `DevolucionAporteServiceImpl:330` | va con fecha actual, nunca se dispara |
+
+⛔ **Esto reemplaza la idea de ampliar el control** que se había evaluado antes. Ampliarlo habría
+significado modificar `pagarConAportes`, que es **compartido con la carga Petro y con el pago
+mensual de pensión**, y habría exigido avisar a los otros equipos. La regla del usuario obtiene el
+mismo resultado con radio de impacto cero.
+
+#### La jubilación del partícipe: ya no hay conflicto
+
+Una jubilación **no tiene período**: es un hecho del mes en curso. Por lo tanto
+`min(fin de mes, hoy)` da **siempre hoy**, que es exactamente lo que
+`jubilar-participe.component.ts:689` ya manda. **No hay nada que cambiar en ese frente**, y el
+conflicto que se documentaba más abajo queda resuelto por esta regla, no por una excepción.
+
+#### ⚠️ La mina que esto desactiva, y que existía por unas horas
+
+La primera versión de la regla (fin de mes **incondicional**, commit `79204e4`) dejaba el pago
+mensual expuesto: correr un período **dentro** de su propio mes daba fecha futura, y
+`cruzarContraPrestamos` -> `pagarConAportes` habría lanzado `FECHA_INVALIDA` **para todo jubilado
+con préstamo vigente**, saliendo como renglones `ERROR` dentro de un 200. Agosto corrido en
+septiembre no la tocaba (fecha pasada), pero cualquier corrida en el mes sí.
+
+**Se detectó antes de cualquier corrida**, al verificar si el refinamiento liberaba los controles.
+
+### Conflicto RESUELTO: la jubilación del partícipe (histórico)
 
 `AporteServiceImpl.procesarJubilacion` **rechaza toda fecha futura**:
 
@@ -264,9 +315,12 @@ pasos (cruce, devolución en efectivo y `procesarJubilacion`).
 futuro y el proceso fallaría con 422.** El pago mensual no tiene este problema porque su período
 siempre está cerrado hacia atrás.
 
-**Pendiente de decisión del usuario.** Mientras tanto la jubilación **no se toca**: sigue con la
-fecha del día. La regla de fin de mes se aplica al **pago mensual**, que es lo que el pedido nombra
-(*«cada período se debe pagar a jubilados»*).
+**✅ RESUELTO por el refinamiento de arriba, sin tocar el control.** Como una jubilación no tiene
+período, `min(fin de mes, hoy)` da siempre **hoy**, y el control nunca se alcanza. La jubilación
+sigue con la fecha del día — que resulta ser lo correcto, no una excepción.
+
+Se conserva este bloque porque documenta **por qué** el control está donde está: si alguien más
+adelante quiere fechar una jubilación en el futuro, acá está la razón por la que no se puede.
 
 ---
 
