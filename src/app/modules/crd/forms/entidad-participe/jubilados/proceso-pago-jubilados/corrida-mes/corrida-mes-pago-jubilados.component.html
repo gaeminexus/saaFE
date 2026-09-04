@@ -1,0 +1,247 @@
+<div class="corrida-mes-container">
+  <div class="page-header">
+    <h1 class="page-title">
+      <mat-icon>payments</mat-icon>
+      Corrida del mes — pago a jubilados
+    </h1>
+    <p class="page-subtitle">
+      Genera los pagos de pensión complementaria del período. Revise el prevuelo antes de ejecutar.
+    </p>
+  </div>
+
+  <!-- Selección de período -->
+  <mat-card class="seleccion-card">
+    <mat-card-content>
+      <div class="seleccion-row">
+        <mat-form-field appearance="outline" class="anio-field">
+          <mat-label>Año</mat-label>
+          <input matInput type="number" min="2000" max="2100" [(ngModel)]="anio" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="mes-field">
+          <mat-label>Mes</mat-label>
+          <mat-select [(ngModel)]="mes">
+            @for (m of MESES; track m.valor) {
+              <mat-option [value]="m.valor">{{ m.nombre }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <div class="seleccion-acciones">
+          <button mat-stroked-button (click)="cargarPrevuelo()" [disabled]="ocupado() || idEmpresa == null">
+            @if (cargandoPrevuelo()) {
+              <mat-spinner diameter="18"></mat-spinner>
+            } @else {
+              <mat-icon>refresh</mat-icon>
+            }
+            Actualizar prevuelo
+          </button>
+          <button
+            mat-raised-button
+            color="primary"
+            (click)="ejecutar()"
+            [disabled]="ocupado() || idEmpresa == null || !prevuelo() || listos.length === 0"
+          >
+            @if (ejecutando()) {
+              <mat-spinner diameter="18"></mat-spinner>
+            } @else {
+              <mat-icon>play_circle</mat-icon>
+            }
+            Ejecutar corrida
+          </button>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  @if (errorPrevuelo()) {
+    <div class="error-banner">
+      <mat-icon>error_outline</mat-icon>
+      <span>{{ errorPrevuelo() }}</span>
+    </div>
+  }
+
+  @if (avisoCertificados()) {
+    <div class="aviso-banner">
+      <mat-icon>help_outline</mat-icon>
+      <span>{{ avisoCertificados() }}</span>
+    </div>
+  }
+
+  @if (cargandoPrevuelo()) {
+    <div class="proceso-largo">
+      <mat-spinner diameter="36"></mat-spinner>
+      <p>Calculando el prevuelo de {{ periodoTexto }}…</p>
+    </div>
+  }
+
+  <!-- Prevuelo -->
+  @if (prevuelo(); as items) {
+    <div class="kpis">
+      <div class="kpi">
+        <span class="kpi-label">Jubilados</span>
+        <span class="kpi-valor">{{ totalJubilados }}</span>
+      </div>
+      <div class="kpi">
+        <span class="kpi-label">Suma total</span>
+        <span class="kpi-valor">$ {{ money(totalSuma) }}</span>
+      </div>
+      <div class="kpi kpi-listos">
+        <span class="kpi-label">Listos</span>
+        <span class="kpi-valor">{{ listos.length }}</span>
+      </div>
+      <div class="kpi kpi-bloqueados">
+        <span class="kpi-label">Bloqueados</span>
+        <span class="kpi-valor">{{ bloqueados.length }}</span>
+      </div>
+    </div>
+
+    @if (items.length === 0) {
+      <div class="estado-vacio">
+        <mat-icon>info</mat-icon>
+        <span>No hay jubilados con valor de pago asignado (pestaña «Padrón»).</span>
+      </div>
+    } @else {
+      <mat-card class="prevuelo-card">
+        <mat-card-header>
+          <mat-card-title>Prevuelo — {{ periodoTexto }}</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="tabla-scroll">
+            <table class="prevuelo-table">
+              <thead>
+                <tr>
+                  <th>Jubilado</th>
+                  <th class="c-num">Valor mensual</th>
+                  <th>Estado</th>
+                  <th>Motivo</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of items; track trackEntidad($index, item)) {
+                  <tr [class.fila-bloqueada]="!item.listo">
+                    <td>
+                      {{ item.entidad.razonSocial }}
+                      <br /><small>{{ item.entidad.numeroIdentificacion }}</small>
+                    </td>
+                    <td class="c-num">$ {{ money(item.valorTotal) }}</td>
+                    <td>
+                      <span class="badge" [ngClass]="claseEstadoPrevuelo(item)">
+                        {{ item.listo ? 'Listo' : 'Bloqueado' }}
+                      </span>
+                    </td>
+                    <td>{{ item.motivos.join(' · ') || '—' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    }
+  }
+
+  <!-- Resultado de la ejecución -->
+  @if (errorEjecucion()) {
+    <div class="error-banner">
+      <mat-icon>error_outline</mat-icon>
+      <span>{{ errorEjecucion() }}</span>
+    </div>
+  }
+
+  @if (resultado(); as res) {
+    <mat-card class="resultado-card">
+      <mat-card-header>
+        <mat-card-title><mat-icon>fact_check</mat-icon> Resultado de la corrida</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        @if (mensajeResultado()) {
+          <p class="mensaje-resultado">{{ mensajeResultado() }}</p>
+        }
+
+        <div class="resumen-grid">
+          <div class="resumen-item">
+            <span class="l">Evaluados</span><span class="v">{{ res.evaluados }}</span>
+          </div>
+          <div class="resumen-item">
+            <span class="l">Generados</span><span class="v">{{ res.generados }}</span>
+          </div>
+          <div class="resumen-item">
+            <span class="l">Ya existían</span><span class="v">{{ res.yaGenerados }}</span>
+          </div>
+          <div class="resumen-item" [class.con-error]="res.conError > 0">
+            <span class="l">Con error</span><span class="v">{{ res.conError }}</span>
+          </div>
+          <div class="resumen-item">
+            <span class="l">Total pagado</span><span class="v">$ {{ money(res.totalPagado) }}</span>
+          </div>
+          <div class="resumen-item">
+            <span class="l">Cruzado a préstamos</span><span class="v">$ {{ money(res.totalCruzadoAPrestamos) }}</span>
+          </div>
+          <div class="resumen-item">
+            <span class="l">Órdenes generadas</span><span class="v">$ {{ money(res.totalOrdenesGeneradas) }}</span>
+          </div>
+        </div>
+
+        @if (res.errores?.length) {
+          <div class="errores-lista">
+            <div class="err-titulo"><mat-icon>error</mat-icon> Errores</div>
+            <ul>
+              @for (e of res.errores; track $index) {
+                <li>{{ e }}</li>
+              }
+            </ul>
+          </div>
+        }
+
+        <div class="tabla-scroll">
+          <table class="detalle-table">
+            <thead>
+              <tr>
+                <th>Entidad</th>
+                <th>Nombre</th>
+                <th class="c-num">Pensión</th>
+                <th class="c-num">Seguro</th>
+                <th class="c-num">Cruzado a préstamo</th>
+                <th class="c-num">Orden de pago</th>
+                <th>Estado</th>
+                <th>Mensaje</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (d of res.detalle; track trackDetalle($index, d)) {
+                <tr [class.fila-error]="esError(d)" [class.fila-desviacion]="esDesviacion(d)">
+                  <td>{{ d.idEntidad }}</td>
+                  <td>{{ d.nombre || '—' }}</td>
+                  <td class="c-num">{{ d.valorPension != null ? money(d.valorPension) : '—' }}</td>
+                  <td class="c-num">{{ d.valorSeguroSalud != null ? money(d.valorSeguroSalud) : '—' }}</td>
+                  <td class="c-num">{{ d.valorCruzadoAPrestamo != null ? money(d.valorCruzadoAPrestamo) : '—' }}</td>
+                  <td class="c-num">{{ d.valorOrdenPago != null ? money(d.valorOrdenPago) : '—' }}</td>
+                  <td>
+                    <span class="badge" [ngClass]="claseEstadoDetalle(d)">
+                      {{ esDesviacion(d) ? 'Desviación' : d.estado }}
+                    </span>
+                  </td>
+                  <td>{{ d.mensaje || (esDesviacion(d) ? 'Cruzado íntegro contra préstamo: no generó orden de pago.' : '—') }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <p class="nota-desviacion">
+          <mat-icon>info</mat-icon>
+          Las filas marcadas <strong>«Desviación»</strong> no son errores: la deuda del jubilado
+          consumió toda la pensión del mes. El pago existe y se contabilizó, pero no hubo salida
+          de dinero al banco.
+        </p>
+
+        <p class="nota-informe">
+          <mat-icon>history</mat-icon>
+          Si sale de esta pantalla, este detalle completo no se puede volver a generar corriendo
+          de nuevo la corrida. Consúltelo desde la pestaña «Seguimiento».
+        </p>
+      </mat-card-content>
+    </mat-card>
+  }
+</div>

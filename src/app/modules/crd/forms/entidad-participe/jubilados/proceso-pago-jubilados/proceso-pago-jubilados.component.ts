@@ -1,9 +1,10 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit, ViewChild, inject, signal } from '@angular/core';
+import { Component, OnInit, ViewChild, inject, signal } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
+import { MatTabsModule } from '@angular/material/tabs';
 import { Router } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
 
@@ -19,15 +20,26 @@ import { ValorPagoPensionComplementaria } from '../../../../model/valor-pago-pen
 import { AporteService } from '../../../../service/aporte.service';
 import { EntidadService } from '../../../../service/entidad.service';
 import { ValorPagoPensionComplementariaService } from '../../../../service/valor-pago-pension-complementaria.service';
+import { CorridaMesPagoJubiladosComponent } from './corrida-mes/corrida-mes-pago-jubilados.component';
+import { SeguimientoPagoJubiladosComponent } from './seguimiento/seguimiento-pago-jubilados.component';
 
 @Component({
   selector: 'app-proceso-pago-jubilados',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, MaterialFormModule, MatTableModule, MatPaginatorModule],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    MaterialFormModule,
+    MatTableModule,
+    MatPaginatorModule,
+    MatTabsModule,
+    CorridaMesPagoJubiladosComponent,
+    SeguimientoPagoJubiladosComponent,
+  ],
   templateUrl: './proceso-pago-jubilados.component.html',
   styleUrl: './proceso-pago-jubilados.component.scss',
 })
-export class ProcesoPagoJubiladosComponent implements OnInit, OnDestroy {
+export class ProcesoPagoJubiladosComponent implements OnInit {
   /** Expuesto al template para no repetir el código en el HTML. */
   protected readonly EstadoJubiladoComplementario = CodigoEstadoParticipe.JUBILADO_COMPLEMENTARIO;
 
@@ -55,11 +67,6 @@ export class ProcesoPagoJubiladosComponent implements OnInit, OnDestroy {
   busquedaRealizada = signal<boolean>(false);
   totalPagarMensual = signal<number>(0);
   saldosPensionMap = signal<Map<number, number>>(new Map<number, number>());
-  isProcesandoPago = signal<boolean>(false);
-  pagoProcesado = signal<boolean>(false);
-  segundosRestantes = signal<number>(5);
-
-  private timerProcesarPago: ReturnType<typeof setInterval> | null = null;
 
   displayedColumns: string[] = ['cedula', 'nombre', 'estado', 'saldoPension', 'acciones'];
   displayedColumnsAsignaciones: string[] = ['cedula', 'nombre', 'valorRegistrado', 'cuotas', 'valorMensual', 'tienePrestamo', 'valorSeguro', 'acciones'];
@@ -92,10 +99,6 @@ export class ProcesoPagoJubiladosComponent implements OnInit, OnDestroy {
     if (this.paginatorAsignaciones) {
       this.dataSourceAsignaciones.paginator = this.paginatorAsignaciones;
     }
-  }
-
-  ngOnDestroy(): void {
-    this.limpiarTimerProcesarPago();
   }
 
   buscar(): void {
@@ -389,39 +392,6 @@ export class ProcesoPagoJubiladosComponent implements OnInit, OnDestroy {
 
     const normalizado = nombreTipo.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     return normalizado.includes('pension complementaria');
-  }
-
-  procesarPagoMes(): void {
-    if (this.isProcesandoPago()) {
-      return;
-    }
-
-    this.pagoProcesado.set(false);
-    this.isProcesandoPago.set(true);
-    this.segundosRestantes.set(5);
-    this.limpiarTimerProcesarPago();
-
-    this.timerProcesarPago = setInterval(() => {
-      const restante = this.segundosRestantes();
-
-      if (restante <= 1) {
-        this.limpiarTimerProcesarPago();
-        this.isProcesandoPago.set(false);
-        this.segundosRestantes.set(0);
-        this.pagoProcesado.set(true);
-        this.snackBar.open('Pago procesado exitosamente', 'Cerrar', { duration: 3000 });
-        return;
-      }
-
-      this.segundosRestantes.set(restante - 1);
-    }, 1000);
-  }
-
-  private limpiarTimerProcesarPago(): void {
-    if (this.timerProcesarPago) {
-      clearInterval(this.timerProcesarPago);
-      this.timerProcesarPago = null;
-    }
   }
 
   verDash(entidad: Entidad): void {

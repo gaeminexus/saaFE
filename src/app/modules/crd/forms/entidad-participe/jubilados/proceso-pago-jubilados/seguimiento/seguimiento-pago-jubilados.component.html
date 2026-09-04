@@ -1,0 +1,122 @@
+<div class="seguimiento-container">
+  <div class="page-header">
+    <h1 class="page-title">
+      <mat-icon>fact_check</mat-icon>
+      Seguimiento de pagos a jubilados
+    </h1>
+    <p class="page-subtitle">
+      Lo que quedó grabado del período. Es la única forma de recuperar el informe si se cerró la
+      pestaña «Corrida del mes» después de generar los pagos.
+    </p>
+  </div>
+
+  <mat-card class="seleccion-card">
+    <mat-card-content>
+      <div class="seleccion-row">
+        <mat-form-field appearance="outline" class="anio-field">
+          <mat-label>Año</mat-label>
+          <input matInput type="number" min="2000" max="2100" [(ngModel)]="anio" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="mes-field">
+          <mat-label>Mes</mat-label>
+          <mat-select [(ngModel)]="mes">
+            @for (m of MESES; track m.valor) {
+              <mat-option [value]="m.valor">{{ m.nombre }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <div class="seleccion-acciones">
+          <button mat-raised-button color="primary" (click)="consultar()" [disabled]="ocupado()">
+            @if (cargando()) {
+              <mat-spinner diameter="18"></mat-spinner>
+            } @else {
+              <mat-icon>search</mat-icon>
+            }
+            Consultar
+          </button>
+          <button
+            mat-stroked-button
+            (click)="reconciliar()"
+            [disabled]="ocupado()"
+            matTooltip="Lee el estado real de la orden en CXP de cada pago pendiente y lo cierra como pagada o rechazada"
+          >
+            @if (reconciliando()) {
+              <mat-spinner diameter="18"></mat-spinner>
+            } @else {
+              <mat-icon>sync</mat-icon>
+            }
+            Reconciliar
+          </button>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  @if (error()) {
+    <div class="error-banner">
+      <mat-icon>error_outline</mat-icon>
+      <span>{{ error() }}</span>
+    </div>
+  }
+
+  @if (cargando()) {
+    <div class="proceso-largo">
+      <mat-spinner diameter="36"></mat-spinner>
+      <p>Consultando {{ periodoTexto }}…</p>
+    </div>
+  } @else if (pagos().length === 0) {
+    <div class="estado-vacio">
+      <mat-icon>info</mat-icon>
+      <span>No hay pagos registrados para {{ periodoTexto }}.</span>
+    </div>
+  } @else {
+    <mat-card class="pagos-card">
+      <mat-card-header>
+        <mat-card-title>{{ periodoTexto }} — {{ pagos().length }} pago(s)</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="tabla-scroll">
+          <table class="pagos-table">
+            <thead>
+              <tr>
+                <th>Jubilado</th>
+                <th class="c-num">Pensión</th>
+                <th class="c-num">Seguro</th>
+                <th class="c-num">Total</th>
+                <th>Fecha</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (p of pagos(); track trackPago($index, p)) {
+                <tr>
+                  <td>
+                    {{ p.entidad?.razonSocial || '—' }}
+                    <br /><small>{{ p.entidad?.numeroIdentificacion }}</small>
+                  </td>
+                  <td class="c-num">{{ money(p.valorPension) }}</td>
+                  <td class="c-num">{{ money(p.valorSeguro) }}</td>
+                  <td class="c-num">{{ money(p.valor) }}</td>
+                  <td>{{ formatoFecha(p.fecha) }}</td>
+                  <td>
+                    <span class="badge" [ngClass]="claseEstado(p.estado)">
+                      {{ nombreEstado(p.estado) }}
+                    </span>
+                    @if (quedaEnRegistradaPorCruce(p)) {
+                      <mat-icon
+                        class="info-cruce"
+                        matTooltip="Cruzado íntegro contra préstamo: no generó orden de pago, por eso queda Registrada. No es un atasco."
+                      >info</mat-icon>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  }
+</div>

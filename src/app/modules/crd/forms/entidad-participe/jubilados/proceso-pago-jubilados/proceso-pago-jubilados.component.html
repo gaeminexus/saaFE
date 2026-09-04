@@ -1,4 +1,7 @@
 <div class="jubilados-container">
+<mat-tab-group animationDuration="0ms" class="jubilados-tabs">
+<mat-tab label="Padrón">
+<ng-template matTabContent>
   <mat-card class="filtros-card section-card">
     <mat-card-header>
       <mat-card-title>1. Buscar jubilado</mat-card-title>
@@ -261,33 +264,19 @@
     </mat-card-content>
   </mat-card>
 
-  <mat-card class="section-card">
-    <mat-card-header>
-      <mat-card-title>4. Procesar pago del mes</mat-card-title>
-    </mat-card-header>
+</ng-template>
+</mat-tab>
 
-    <mat-card-content>
-      <div class="acciones">
-        <button
-          mat-raised-button
-          color="accent"
-          (click)="procesarPagoMes()"
-          [disabled]="isProcesandoPago()">
-          <mat-icon>payments</mat-icon>
-          @if (isProcesandoPago()) {
-            Procesando pago... ({{ segundosRestantes() }}s)
-          } @else {
-            Procesar pago del mes
-          }
-        </button>
-      </div>
+<mat-tab label="Corrida del mes">
+  <ng-template matTabContent>
+    <app-corrida-mes-pago-jubilados></app-corrida-mes-pago-jubilados>
+  </ng-template>
+</mat-tab>
 
-      @if (pagoProcesado()) {
-        <div class="estado-vacio">
-          <mat-icon color="primary">check_circle</mat-icon>
-          <span>Pago procesado exitosamente</span>
-        </div>
-      }
-    </mat-card-content>
-  </mat-card>
+<mat-tab label="Seguimiento">
+  <ng-template matTabContent>
+    <app-seguimiento-pago-jubilados></app-seguimiento-pago-jubilados>
+  </ng-template>
+</mat-tab>
+</mat-tab-group>
 </div>
