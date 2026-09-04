@@ -15,6 +15,10 @@
       <mat-icon>account_balance</mat-icon>
       <span><strong>{{ cantidadSinCuentaBancaria }}</strong> con pensión pero sin cuenta bancaria activa</span>
     </div>
+    <div class="rp-item rp-sin-seguro">
+      <mat-icon>health_and_safety</mat-icon>
+      <span><strong>{{ cantidadSinSeguro }}</strong> sin seguro asignado</span>
+    </div>
   </div>
 
   <mat-card class="filtros-card section-card">
@@ -175,6 +179,7 @@
             <mat-label>Valor de seguro (opcional)</mat-label>
             <mat-icon matPrefix>security</mat-icon>
             <input matInput type="number" min="0" step="0.01" formControlName="valorSeguro" placeholder="Ej: 15.50" />
+            <mat-hint>Incluido en el valor a pagar, no se suma.</mat-hint>
           </mat-form-field>
 
           <div class="checkbox-field">
@@ -188,6 +193,9 @@
             Si no hay cuotas, se paga ese mismo valor todos los meses. Si hay cuotas,
             se divide el valor para el número de cuotas.
           </small>
+          <span class="desglose-vivo">
+            Pensión: {{ pensionCalculadaFormulario | number:'1.2-2' }} · Seguro: {{ seguroCalculadoFormulario | number:'1.2-2' }}
+          </span>
         </div>
 
         <div class="acciones">
@@ -223,6 +231,10 @@
 
         <mat-checkbox [checked]="mostrarInactivos()" (change)="toggleMostrarInactivos()">
           Ver inactivos (sacados del padrón)
+        </mat-checkbox>
+
+        <mat-checkbox [checked]="soloSinSeguro()" (change)="toggleSoloSinSeguro()">
+          Ver solo sin seguro asignado
         </mat-checkbox>
       </div>
 

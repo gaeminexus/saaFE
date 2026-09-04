@@ -80,6 +80,8 @@ export class ProcesoPagoJubiladosComponent implements OnInit {
   asignaciones = signal<ValorPagoPensionComplementaria[]>([]);
   /** «Ver inactivos» — el padrón por defecto NO los muestra: si no, "sacar del padrón" no se vería en pantalla. */
   mostrarInactivos = signal<boolean>(false);
+  /** «Ver solo sin seguro asignado» — activa + `valorSeguro` nulo o en cero. */
+  soloSinSeguro = signal<boolean>(false);
   entidadSeleccionada = signal<Entidad | null>(null);
   isLoading = signal<boolean>(false);
   isLoadingSaldos = signal<boolean>(false);
@@ -116,22 +118,43 @@ export class ProcesoPagoJubiladosComponent implements OnInit {
       valorSeguro: [null],
     });
 
-    // Filtro de texto sobre "3. Resumen de pagos asignados" — mira cédula y nombre, y convive con
-    // el checkbox «Ver inactivos» porque filtra sobre `dataSourceAsignaciones.data`, que ya está
-    // recortado (o no) por `actualizarVistaAsignaciones()`. `todasAsignaciones` (la fuente de
-    // verdad para detectar duplicados, corregido en 347af9a) nunca se toca acá.
-    this.dataSourceAsignaciones.filterPredicate = (item, filtro) => {
+    // Filtro sobre "3. Resumen de pagos asignados": texto (cédula/nombre) + «solo sin seguro»,
+    // combinados en un JSON dentro de `.filter` porque `MatTableDataSource` solo admite un
+    // predicado con un string. Convive con «Ver inactivos» porque filtra sobre
+    // `dataSourceAsignaciones.data`, que ya está recortado (o no) por `actualizarVistaAsignaciones()`.
+    // `todasAsignaciones` (la fuente de verdad para detectar duplicados, corregido en 347af9a)
+    // nunca se toca acá.
+    this.dataSourceAsignaciones.filterPredicate = (item, filtroJson) => {
+      const filtro = JSON.parse(filtroJson) as { texto: string; soloSinSeguro: boolean };
       const cedula = (item.entidad?.numeroIdentificacion || '').toLowerCase();
       const nombre = (item.entidad?.razonSocial || '').toLowerCase();
-      return cedula.includes(filtro) || nombre.includes(filtro);
+      const coincideTexto = !filtro.texto || cedula.includes(filtro.texto) || nombre.includes(filtro.texto);
+      const coincideSeguro = !filtro.soloSinSeguro || this.esSinSeguro(item);
+      return coincideTexto && coincideSeguro;
     };
+    this.aplicarFiltroAsignaciones();
 
     this.cargarAsignaciones();
     this.cargarUniversoJubilados();
   }
 
+  private filtroTextoAsignaciones = '';
+
   filtrarAsignaciones(valor: string): void {
-    this.dataSourceAsignaciones.filter = valor.trim().toLowerCase();
+    this.filtroTextoAsignaciones = valor.trim().toLowerCase();
+    this.aplicarFiltroAsignaciones();
+  }
+
+  toggleSoloSinSeguro(): void {
+    this.soloSinSeguro.set(!this.soloSinSeguro());
+    this.aplicarFiltroAsignaciones();
+  }
+
+  private aplicarFiltroAsignaciones(): void {
+    this.dataSourceAsignaciones.filter = JSON.stringify({
+      texto: this.filtroTextoAsignaciones,
+      soloSinSeguro: this.soloSinSeguro(),
+    });
     if (this.dataSourceAsignaciones.paginator) {
       this.dataSourceAsignaciones.paginator.firstPage();
     }
@@ -195,6 +218,18 @@ export class ProcesoPagoJubiladosComponent implements OnInit {
   /** De los que sí tienen pensión activa, cuántos no tienen cuenta bancaria — junto al de arriba, mide el trabajo de oficina pendiente. */
   get cantidadSinCuentaBancaria(): number {
     return this.todasAsignaciones().filter((a) => this.esRegistroActivo(a) && !this.tieneCuentaActivaDe(a)).length;
+  }
+
+  /**
+   * Configuración activa con `valorSeguro` nulo o en cero. ⚠️ NO es necesariamente un error: un
+   * jubilado puede legítimamente no tener seguro de salud — la pantalla informa, no acusa.
+   */
+  private esSinSeguro(item: ValorPagoPensionComplementaria): boolean {
+    return this.esRegistroActivo(item) && (item.valorSeguro == null || Number(item.valorSeguro) === 0);
+  }
+
+  get cantidadSinSeguro(): number {
+    return this.todasAsignaciones().filter((a) => this.esSinSeguro(a)).length;
   }
 
   toggleSoloSinPension(): void {
@@ -600,6 +635,20 @@ export class ProcesoPagoJubiladosComponent implements OnInit {
     }
 
     return valor;
+  }
+
+  /**
+   * ⛔ `valorPagar` YA INCLUYE el seguro (contrato §4bis: `valorPensionMensual = valorPagar −
+   * valorSeguro`) — no se suman. Desglose en vivo para que quien carga el alta no cometa el error
+   * de dejar `valorPagar` sin el seguro adentro (eso bloquea al jubilado con `SIN_VALOR_PENSION`).
+   */
+  get seguroCalculadoFormulario(): number {
+    return Number(this.asignacionForm.get('valorSeguro')?.value || 0);
+  }
+
+  get pensionCalculadaFormulario(): number {
+    const valorPagar = Number(this.asignacionForm.get('valorPagar')?.value || 0);
+    return valorPagar - this.seguroCalculadoFormulario;
   }
 
   esAsignacionActiva(item: ValorPagoPensionComplementaria): boolean {

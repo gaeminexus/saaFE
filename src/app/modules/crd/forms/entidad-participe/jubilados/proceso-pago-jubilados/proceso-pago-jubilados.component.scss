@@ -39,6 +39,12 @@
   margin-top: 0.25rem;
 }
 
+.desglose-vivo {
+  font-size: 0.82rem;
+  color: #475569;
+  font-variant-numeric: tabular-nums;
+}
+
 .ver-inactivos-toggle {
   margin-bottom: 0.5rem;
   align-items: center;
@@ -95,6 +101,14 @@
     color: #78350f;
     mat-icon {
       color: #d97706;
+    }
+  }
+
+  .rp-sin-seguro {
+    background: #f1f5f9;
+    color: #334155;
+    mat-icon {
+      color: #64748b;
     }
   }
 }
