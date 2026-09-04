@@ -69,6 +69,11 @@ export class ProcesoPagoJubiladosComponent implements OnInit {
   filtrosForm!: FormGroup;
   asignacionForm!: FormGroup;
   entidades = signal<Entidad[]>([]);
+  /** Universo completo de JUBILADO_COMPLEMENTARIO (sin filtro de nombre/cédula) — para «sin pensión asignada». */
+  private universoJubilados = signal<Entidad[]>([]);
+  cargandoUniverso = signal<boolean>(false);
+  /** «Ver solo los que no tienen pensión asignada» — sección 1 deja de usar la búsqueda por texto. */
+  soloSinPension = signal<boolean>(false);
   /** Resultado crudo de `getAll()`, sin filtrar — activos e inactivos. Fuente de verdad para "existente". */
   private todasAsignaciones = signal<ValorPagoPensionComplementaria[]>([]);
   /** Lo que se ve en la tabla: activos siempre, inactivos solo si `mostrarInactivos()`. */
@@ -111,7 +116,25 @@ export class ProcesoPagoJubiladosComponent implements OnInit {
       valorSeguro: [null],
     });
 
+    // Filtro de texto sobre "3. Resumen de pagos asignados" — mira cédula y nombre, y convive con
+    // el checkbox «Ver inactivos» porque filtra sobre `dataSourceAsignaciones.data`, que ya está
+    // recortado (o no) por `actualizarVistaAsignaciones()`. `todasAsignaciones` (la fuente de
+    // verdad para detectar duplicados, corregido en 347af9a) nunca se toca acá.
+    this.dataSourceAsignaciones.filterPredicate = (item, filtro) => {
+      const cedula = (item.entidad?.numeroIdentificacion || '').toLowerCase();
+      const nombre = (item.entidad?.razonSocial || '').toLowerCase();
+      return cedula.includes(filtro) || nombre.includes(filtro);
+    };
+
     this.cargarAsignaciones();
+    this.cargarUniversoJubilados();
+  }
+
+  filtrarAsignaciones(valor: string): void {
+    this.dataSourceAsignaciones.filter = valor.trim().toLowerCase();
+    if (this.dataSourceAsignaciones.paginator) {
+      this.dataSourceAsignaciones.paginator.firstPage();
+    }
   }
 
   ngAfterViewInit(): void {
@@ -123,12 +146,7 @@ export class ProcesoPagoJubiladosComponent implements OnInit {
     }
   }
 
-  buscar(): void {
-    const nombre = (this.filtrosForm.get('nombre')?.value || '').trim();
-    const cedula = (this.filtrosForm.get('cedula')?.value || '').trim();
-
-    const criterios: DatosBusqueda[] = [];
-
+  private construirCriterioEstadoJubilado(): DatosBusqueda {
     const criterioEstado = new DatosBusqueda();
     criterioEstado.asignaUnCampoSinTrunc(
       TipoDatosBusqueda.LONG,
@@ -136,7 +154,83 @@ export class ProcesoPagoJubiladosComponent implements OnInit {
       ProcesoPagoJubiladosComponent.ESTADO_JUBILADO_COMPLEMENTARIO.toString(),
       TipoComandosBusqueda.IGUAL,
     );
-    criterios.push(criterioEstado);
+    return criterioEstado;
+  }
+
+  /**
+   * Universo completo de jubilados (sin nombre/cédula) para armar «sin pensión asignada» —
+   * son los que la corrida va a rechazar con `SIN_VALOR_PENSION`. ~187 entidades, una sola consulta.
+   */
+  private cargarUniversoJubilados(): void {
+    this.cargandoUniverso.set(true);
+    this.entidadService.selectByCriteria([this.construirCriterioEstadoJubilado()]).subscribe({
+      next: (rows) => {
+        this.universoJubilados.set(rows || []);
+        this.cargandoUniverso.set(false);
+        if (this.soloSinPension()) {
+          this.actualizarVistaSeccion1();
+        }
+      },
+      error: () => {
+        this.universoJubilados.set([]);
+        this.cargandoUniverso.set(false);
+      },
+    });
+  }
+
+  /**
+   * «Sin pensión asignada» = JUBILADO_COMPLEMENTARIO sin `VPPC` ACTIVA. ⛔ Una `VPPC` inactiva
+   * (sacada del padrón) SÍ entra acá: efectivamente no se le va a pagar, no es «ya tiene».
+   */
+  get sinPensionFijada(): Entidad[] {
+    const conPensionActiva = new Set(
+      this.todasAsignaciones()
+        .filter((a) => this.esRegistroActivo(a))
+        .map((a) => a.entidad?.codigo)
+        .filter((c): c is number => c != null),
+    );
+    return this.universoJubilados().filter((e) => !conPensionActiva.has(e.codigo));
+  }
+
+  /** De los que sí tienen pensión activa, cuántos no tienen cuenta bancaria — junto al de arriba, mide el trabajo de oficina pendiente. */
+  get cantidadSinCuentaBancaria(): number {
+    return this.todasAsignaciones().filter((a) => this.esRegistroActivo(a) && !this.tieneCuentaActivaDe(a)).length;
+  }
+
+  toggleSoloSinPension(): void {
+    this.soloSinPension.set(!this.soloSinPension());
+    this.actualizarVistaSeccion1();
+  }
+
+  /** Alterna qué alimenta la tabla de la sección 1: la búsqueda por texto, o «sin pensión asignada». */
+  private actualizarVistaSeccion1(): void {
+    if (this.soloSinPension()) {
+      const data = this.sinPensionFijada;
+      this.entidades.set(data);
+      this.dataSource.data = data;
+      this.cargarSaldosPensionComplementaria(data);
+      setTimeout(() => {
+        if (this.paginator) {
+          this.dataSource.paginator = this.paginator;
+        }
+      });
+      this.busquedaRealizada.set(true);
+    } else {
+      this.entidades.set([]);
+      this.dataSource.data = [];
+      this.saldosPensionMap.set(new Map<number, number>());
+      this.busquedaRealizada.set(false);
+    }
+  }
+
+  buscar(): void {
+    if (this.soloSinPension()) {
+      return;
+    }
+    const nombre = (this.filtrosForm.get('nombre')?.value || '').trim();
+    const cedula = (this.filtrosForm.get('cedula')?.value || '').trim();
+
+    const criterios: DatosBusqueda[] = [this.construirCriterioEstadoJubilado()];
 
     if (nombre) {
       const criterioNombre = new DatosBusqueda();
@@ -321,6 +415,11 @@ export class ProcesoPagoJubiladosComponent implements OnInit {
         // Los vistos de cuenta/certificado solo importan para quien va a cobrar: no se piden
         // certificados de gente que ya está fuera del padrón.
         this.cargarVerificacionCuentaCertificado(activas);
+        // Si la sección 1 está mostrando «sin pensión asignada», refrescarla: alguien pudo haber
+        // salido de esa lista (se le acaba de asignar un valor) o haber entrado (lo sacaron del padrón).
+        if (this.soloSinPension()) {
+          this.actualizarVistaSeccion1();
+        }
       },
       error: () => {
         this.todasAsignaciones.set([]);

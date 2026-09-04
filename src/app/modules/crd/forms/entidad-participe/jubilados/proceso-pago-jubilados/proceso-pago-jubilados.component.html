@@ -2,6 +2,21 @@
 <mat-tab-group animationDuration="0ms" class="jubilados-tabs">
 <mat-tab label="Padrón">
 <ng-template matTabContent>
+  <div class="resumen-pendiente">
+    <div class="rp-item rp-sin-pension">
+      <mat-icon>assignment_late</mat-icon>
+      @if (cargandoUniverso()) {
+        <span>Calculando…</span>
+      } @else {
+        <span><strong>{{ sinPensionFijada.length }}</strong> sin pensión asignada</span>
+      }
+    </div>
+    <div class="rp-item rp-sin-cuenta">
+      <mat-icon>account_balance</mat-icon>
+      <span><strong>{{ cantidadSinCuentaBancaria }}</strong> con pensión pero sin cuenta bancaria activa</span>
+    </div>
+  </div>
+
   <mat-card class="filtros-card section-card">
     <mat-card-header>
       <mat-card-title>1. Buscar jubilado</mat-card-title>
@@ -15,33 +30,39 @@
         <mat-form-field appearance="fill">
           <mat-label>Nombre</mat-label>
           <mat-icon matPrefix>person</mat-icon>
-          <input matInput formControlName="nombre" placeholder="Ingrese nombre" />
+          <input matInput formControlName="nombre" placeholder="Ingrese nombre" [disabled]="soloSinPension()" />
         </mat-form-field>
 
         <mat-form-field appearance="fill">
           <mat-label>Cédula</mat-label>
           <mat-icon matPrefix>badge</mat-icon>
-          <input matInput formControlName="cedula" placeholder="Ingrese cédula" />
+          <input matInput formControlName="cedula" placeholder="Ingrese cédula" [disabled]="soloSinPension()" />
         </mat-form-field>
       </form>
 
       <div class="acciones">
-        <button mat-raised-button color="primary" (click)="buscar()" [disabled]="isLoading()">
+        <button mat-raised-button color="primary" (click)="buscar()" [disabled]="isLoading() || soloSinPension()">
           <mat-icon>search</mat-icon>
           Buscar
         </button>
 
-        <button mat-raised-button (click)="limpiarFiltros()" [disabled]="isLoading()">
+        <button mat-raised-button (click)="limpiarFiltros()" [disabled]="isLoading() || soloSinPension()">
           <mat-icon>clear</mat-icon>
           Limpiar
         </button>
+
+        <mat-checkbox class="checkbox-sin-pension" [checked]="soloSinPension()" (change)="toggleSoloSinPension()">
+          Ver solo los que no tienen pensión asignada
+        </mat-checkbox>
       </div>
     </mat-card-content>
   </mat-card>
 
   <mat-card class="resultados-card">
     <mat-card-header>
-      <mat-card-title>Resultados ({{ entidades().length }})</mat-card-title>
+      <mat-card-title>
+        {{ soloSinPension() ? 'Sin pensión asignada' : 'Resultados' }} ({{ entidades().length }})
+      </mat-card-title>
     </mat-card-header>
 
     <mat-card-content>
@@ -108,8 +129,10 @@
         <mat-paginator [pageSizeOptions]="[10, 25, 50]" [pageSize]="10" showFirstLastButtons></mat-paginator>
       } @else if (busquedaRealizada()) {
         <div class="estado-vacio">
-          <mat-icon>search_off</mat-icon>
-          <span>No se encontraron jubilados con los filtros indicados.</span>
+          <mat-icon>{{ soloSinPension() ? 'check_circle' : 'search_off' }}</mat-icon>
+          <span>
+            {{ soloSinPension() ? 'Todos los jubilados tienen pensión asignada.' : 'No se encontraron jubilados con los filtros indicados.' }}
+          </span>
         </div>
       } @else {
         <div class="estado-vacio">
@@ -192,6 +215,12 @@
 
     <mat-card-content>
       <div class="acciones ver-inactivos-toggle">
+        <mat-form-field appearance="outline" class="buscador-resumen">
+          <mat-label>Buscar por cédula o nombre</mat-label>
+          <mat-icon matPrefix>search</mat-icon>
+          <input matInput #filtroResumen (input)="filtrarAsignaciones(filtroResumen.value)" placeholder="Ej: Pérez, 0102030405" />
+        </mat-form-field>
+
         <mat-checkbox [checked]="mostrarInactivos()" (change)="toggleMostrarInactivos()">
           Ver inactivos (sacados del padrón)
         </mat-checkbox>
@@ -328,6 +357,12 @@
             <tr mat-header-row *matHeaderRowDef="displayedColumnsAsignaciones"></tr>
             <tr mat-row *matRowDef="let row; columns: displayedColumnsAsignaciones"></tr>
           </table>
+          @if (dataSourceAsignaciones.filteredData.length === 0) {
+            <div class="estado-vacio">
+              <mat-icon>search_off</mat-icon>
+              <span>Ninguna coincide con la búsqueda.</span>
+            </div>
+          }
         </div>
 
         <mat-paginator #paginatorAsignaciones [pageSizeOptions]="[10, 25, 50]" [pageSize]="10" showFirstLastButtons></mat-paginator>

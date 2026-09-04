@@ -41,6 +41,62 @@
 
 .ver-inactivos-toggle {
   margin-bottom: 0.5rem;
+  align-items: center;
+}
+
+.buscador-resumen {
+  flex: 1 1 260px;
+  max-width: 340px;
+
+  mat-icon[matPrefix] {
+    margin-right: 4px;
+    color: #94a3b8;
+  }
+}
+
+.checkbox-sin-pension {
+  align-self: center;
+}
+
+.resumen-pendiente {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 4px;
+
+  .rp-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-size: 0.88rem;
+
+    mat-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+    strong {
+      font-size: 1.05rem;
+    }
+  }
+
+  .rp-sin-pension {
+    background: #fef2f2;
+    color: #7f1d1d;
+    mat-icon {
+      color: #dc2626;
+    }
+  }
+
+  .rp-sin-cuenta {
+    background: #fffbeb;
+    color: #78350f;
+    mat-icon {
+      color: #d97706;
+    }
+  }
 }
 
 .chip-inactivo {
