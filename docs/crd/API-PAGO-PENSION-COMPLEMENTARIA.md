@@ -247,6 +247,34 @@ Campos que se agregan a `DetallePrevisualizacionJubilado` **y** a `DetallePagoPe
 Y en el agregado de la respuesta: **`totalSeguroGeneral`**, la suma del seguro de todos los
 jubilados de la corrida.
 
+#### ⭐ Mes parcial: el reparto es PROPORCIONAL — decisión del árbitro, 2026-09-04
+
+Cuando el último mes retroactivo queda **topado** —por saldo agotado o porque el préstamo quedó al
+día— lo que se aplica es menos que la mensualidad completa. Ese parcial se reparte entre pensión y
+seguro **en proporción a la mensualidad**:
+
+```
+pensiónAplicada = parcial × (valorPensionMensual / valorPagar)
+seguroAplicado  = parcial − pensiónAplicada        ← por resta, para que sumen exacto
+```
+
+Con pensión 280 / seguro 20 y un parcial de $100: **$93,33 a pensión y $6,67 a seguro.**
+
+**Por qué proporcional y no «seguro primero» o «pensión primero»:** conserva la relación del mes
+completo y no privilegia una cuenta contable sobre la otra. Las otras dos opciones son defendibles
+pero implican una decisión de prelación que nadie tomó, y elegirlas en silencio sería inventar una
+regla contable.
+
+⚠️ **Esta la tomó el árbitro bajo la delegación del usuario del 2026-09-04** (*«coordina todo tú, y
+solo si hay alguna decisión que tomar avísame»*), por ser la opción neutra y para no frenar el
+frente. **Es reversible**: si contabilidad prefiere otra prelación, se cambia en un solo lugar.
+Queda registrada acá para que se pueda discutir con el dato a la vista, no para que pase inadvertida.
+
+⛔ **El seguro se calcula por RESTA, nunca con su propia multiplicación.** Dos redondeos
+independientes sobre el mismo parcial pueden no sumar el total, y ahí aparece un descuadre de
+centavos entre las dos cuentas contables — que es exactamente el tipo de diferencia que después
+cuesta días encontrar.
+
 ⛔ **`valorPagar` de `VPPC` ya INCLUYE el seguro** — no se suman. `valorPagar` es el total mensual y
 `valorSeguro` es la porción de ese total que corresponde al seguro. Sumar los dos duplica el seguro,
 y es el error más fácil de cometer acá. Verificado en `PagoPensionComplementariaServiceImpl`:
