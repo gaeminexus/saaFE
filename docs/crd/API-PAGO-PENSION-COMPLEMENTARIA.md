@@ -210,6 +210,66 @@ corrida en la que fallaron veinte jubilados. **Hay que leer `conError` y `errore
 
 ---
 
+## 6bis. ⭐ Regla de fechas del circuito de jubilados — decisión del usuario, 2026-09-04
+
+> *«La contabilización y los procesos de jubilados que se registren con fecha de fin de mes. Cada
+> período se debe pagar a jubilados y todo que se registre con fin de mes.»*
+
+**Toda fecha de negocio y de contabilidad del pago mensual es el ÚLTIMO DÍA DEL MES DEL PERÍODO.**
+No el día 1, y no el día en que se corre el proceso. Un agosto procesado el 4 de septiembre se
+registra **2026-08-31**.
+
+Es la misma regla que H21 fijó para la carga Petro, y por el mismo motivo: el hecho económico
+pertenece al período, no al día en que el operador alcanzó a procesarlo.
+
+### Qué cambia y qué no
+
+| Campo | Antes | Ahora | Por qué |
+|---|---|---|---|
+| `PGPC.fecha` | día **1** del mes | **último día** del mes | fecha del hecho |
+| `PGPC.fechaPago`, la orden a tesorería | día 1 | último día | derivan de `fecha` |
+| El asiento de devengo | día 1 | último día | usa `pago.getFecha()` |
+| `APRT.fechaTransaccion` | `now()` ⚠️ | último día | **fecha de negocio**, no de auditoría |
+| `PagoAporte.fechaContable` | `now()` ⚠️ | último día | **contable** |
+| `PGPC.fechaRegistro`, `APRT.fechaRegistro`, `PagoAporte.fechaRegistro` | `now()` | **`now()`, sin cambio** | son auditoría: *cuándo se registró*, y esa sí es la fecha real |
+
+**La distinción que hace que esto no se rompa de nuevo:** `fechaRegistro` es auditoría y vale
+`now()`; `fecha`/`fechaTransaccion`/`fechaContable` son del hecho económico y valen fin de mes.
+El defecto anterior fue reusar un mismo `fechaHora = now()` para las dos cosas.
+
+**El patrón ya existía en el módulo:** `AporteServiceImpl.procesarJubilacion` resuelve exactamente
+esto con `fechaEfectiva.atStartOfDay()` cuando la fecha no es hoy. Se copia, no se inventa.
+
+### Dos fechas que NO se tocan, y por qué
+
+- **`PGPC.fechaPago` cuando lo escribe `sincronizarPagos`** (`:714`, desde
+  `pagoProgramado.getFechaRespuesta()`): es **el día real en que el banco respondió**. Es un hecho
+  externo; sobreescribirlo con fin de mes sería registrar algo que no pasó.
+- **El contra-movimiento de un rechazo** (`:854-882`): un pago de agosto rechazado en octubre genera
+  su reverso **en octubre**. Fecharlo el 31 de agosto reabriría un mes ya cerrado.
+
+### ⛔ Conflicto abierto: la jubilación del partícipe, no el pago mensual
+
+`AporteServiceImpl.procesarJubilacion` **rechaza toda fecha futura**:
+
+```java
+if (fechaEfectiva.isAfter(LocalDate.now()))
+    throw new IncomeException(ERR_FECHA_INVALIDA + ": la fecha " + fechaEfectiva + " es futura");
+```
+
+Y `jubilar-participe.component.ts:689` hoy manda **la fecha de hoy**, que es la que alimenta los tres
+pasos (cruce, devolución en efectivo y `procesarJubilacion`).
+
+**Si se le aplicara «fin de mes» a la jubilación procesada a mitad de mes, la fecha caería en el
+futuro y el proceso fallaría con 422.** El pago mensual no tiene este problema porque su período
+siempre está cerrado hacia atrás.
+
+**Pendiente de decisión del usuario.** Mientras tanto la jubilación **no se toca**: sigue con la
+fecha del día. La regla de fin de mes se aplica al **pago mensual**, que es lo que el pedido nombra
+(*«cada período se debe pagar a jubilados»*).
+
+---
+
 ## 7. Fechas — las dos direcciones, que no son simétricas
 
 - **Lo que el frontend ENVÍA:** `LocalDate` como `yyyy-MM-dd`, `LocalDateTime` como ISO **local sin
