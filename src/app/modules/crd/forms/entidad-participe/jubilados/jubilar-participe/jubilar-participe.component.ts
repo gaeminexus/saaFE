@@ -908,6 +908,11 @@ export class JubilarParticipeComponent {
     const valorSeguro = valorSeguroTexto ? this.parseMoneda(valorSeguroTexto) : null;
 
     this.guardandoConfiguracionPension.set(true);
+    // ⛔ Sin `fechaIngreso`: es `LocalDateTime` en el backend y `formatearFechaParaBackend` por
+    // defecto usa "yyyy-MM-dd HH:mm:ss" (con espacio) — el backend responde 400
+    // ("Cannot deserialize value of type java.time.LocalDateTime...", LocalDateTime exige ISO con
+    // `T`). Mismo defecto que en proceso-pago-jubilados.component.ts, mismo criterio: es un campo
+    // de auditoría que el backend resuelve solo; lo que importa es `usuarioIngreso`.
     this.valorPagoPensionService
       .add({
         entidad: { codigo: entidad.codigo } as Entidad,
@@ -917,7 +922,6 @@ export class JubilarParticipeComponent {
         valorSeguro,
         estado: 1,
         usuarioIngreso: usuarioSesion(),
-        fechaIngreso: this.funcionesDatos.formatearFechaParaBackend(new Date()) ?? undefined,
       })
       .subscribe({
         next: (resultado) => {
