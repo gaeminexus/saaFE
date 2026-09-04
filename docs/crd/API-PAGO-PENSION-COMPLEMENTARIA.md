@@ -247,6 +247,22 @@ Campos que se agregan a `DetallePrevisualizacionJubilado` **y** a `DetallePagoPe
 Y en el agregado de la respuesta: **`totalSeguroGeneral`**, la suma del seguro de todos los
 jubilados de la corrida.
 
+#### ✅ De dónde sale el valor del seguro — decisión del usuario, 2026-09-04
+
+> *«El seguro se carga a mano.»*
+
+**No hay fórmula, ni porcentaje, ni valor fijo.** Lo captura la oficina por jubilado, en el campo
+«Valor de seguro» del padrón, y el sistema lo lee tal cual de `VPPC.VPPCVLSR`.
+
+**Consecuencia: un seguro en cero NO es un defecto**, es un jubilado al que nadie le cargó ese
+valor — o que no tiene seguro. Medido el 2026-09-04: de **190** configuraciones activas, **8** con
+seguro y **182** en cero.
+
+⛔ **La trampa de la carga, y ya mordió:** `valorPagar` **es el total e incluye el seguro**. Cargar
+el seguro y dejar `valorPagar` en 0 **bloquea al jubilado** con `SIN_VALOR_PENSION` — el sistema
+entiende que no hay nada que pagarle. Para una pensión de 300 con 20 de seguro se carga
+`valorPagar = 300` y `valorSeguro = 20`, **no** 280 y 20.
+
 #### ⭐ Mes parcial: el reparto es PROPORCIONAL — decisión del árbitro, 2026-09-04
 
 Cuando el último mes retroactivo queda **topado** —por saldo agotado o porque el préstamo quedó al
