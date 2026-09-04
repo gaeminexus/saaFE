@@ -175,3 +175,44 @@ en el mapa no se muestra**, y el usuario ve un bloqueo sin explicación.
    esos campos de una factura tiene que tolerar `null`. **Es un ítem de barrido obligatorio, no una
    observación:** un campo ausente no da error, da `undefined`, y el síntoma aparece lejos del
    cambio.
+
+---
+
+## 4. La nota de venta tiene que verse en todo `cxp` y `tsr` — requisito del usuario
+
+> *«Debe incluirse en el estado de cuenta de titular y poder realizar pagos normales y con caja
+> chica.»*
+
+### 4.1 ✅ Funcionar, funciona solo. No hay nada que agregar
+
+Verificado el 2026-09-04 leyendo los tres consumidores. **Ninguno filtra por `tipoComprobante`:**
+los tres preguntan *«qué documentos tiene este titular»*, y la nota de venta **es** uno de ellos en
+la misma tabla.
+
+| Camino | Cómo busca hoy |
+|---|---|
+| Estado de cuenta de titular | `tsr/service/estado-cuenta-titular.service.ts:131` — enumera **fuentes**: `{ etiqueta:'Facturas de compra', url: ServiciosCxp.RS_FCTC, campoTitular:'titular' }` |
+| Proposición de pago | `cxp/forms/procesos/proposicion-pago:201` — `facturaS.selectByCriteria(criterioTitular)` |
+| Selector de caja chica | `cxp/dialog/documento-cruce-selector-dialog:105-113` — criterio único `titular.codigo IGUAL` |
+
+**Pagarla, normal o con caja chica, tampoco necesita nada nuevo:** `AplicacionPagoCxp` la referencia
+como `facturaCompra`, porque es una fila de `PGS.FCTC`.
+
+### 4.2 🟡 Lo que SÍ hay que hacer: que no la llamen «Factura»
+
+Los tres rotulan por **el endpoint que trajo la fila**, no por el tipo de la fila. Una nota de venta
+va a aparecer —con su saldo correcto— bajo la etiqueta «Factura» / «Facturas de compra».
+
+| Dónde | Hoy | Debe decir |
+|---|---|---|
+| Estado de cuenta de titular | sección «Facturas de compra» | distinguir la nota de venta, o mostrar el tipo por fila |
+| Selector de caja chica | mapea todo lo de `facturaService` a `tipo: 'FACTURA'` | **«Nota de venta»** si `tipoComprobante === '02'` |
+| Proposición de pago | ídem | ídem |
+
+**Regla:** la etiqueta sale de `tipoComprobante` **de la fila**, nunca de qué servicio la trajo.
+**Un solo helper compartido y los tres lo usan** — no tres copias, que es como nacen los dos
+`extraerCodigo` con criterios opuestos que ya tenemos en este repositorio.
+
+**Por qué es 🟡 y no 🔴:** el saldo del titular sale bien igual. Pero un usuario que lee
+«Factura 001-001-000000123» va a buscar un XML que no existe, y puede concluir que falta cargar
+algo.
