@@ -17,6 +17,7 @@ import {
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
 import { ExportService } from '../../../../shared/services/export.service';
 import { FuncionesDatosService } from '../../../../shared/services/funciones-datos.service';
+import { etiquetaTipoComprobanteFactura } from '../../../../shared/utils/tipo-comprobante-cxp.util';
 import {
   AsientoRelacionado,
   DocumentoEstadoCuenta,
@@ -408,8 +409,18 @@ export class EstadoCuentaTitularComponent implements OnInit {
 
   // ═══ PRESENTACIÓN ═══════════════════════════════════════
 
-  etiquetaTipo(tipo: TipoDocumentoEstadoCuenta): string {
-    return TIPO_DOCUMENTO_LABELS[tipo]?.etiqueta ?? tipo;
+  /**
+   * "Facturas de compra" es una sola fuente (PGS.FCTC) que mezcla facturas cargadas por XML y
+   * notas de venta ingresadas a mano (tipoComprobante '01'/'02') — la etiqueta de la fila sale
+   * de ese campo, no del tipo de documento agrupado (§4.2 de
+   * docs/cxp/API-NOTA-VENTA-COMPRA-MANUAL.md). Liquidaciones de compra comparten el mismo
+   * `tipo: FACTURA` pero no tienen `tipoComprobante`, así que no las toca este caso.
+   */
+  etiquetaTipo(doc: DocumentoEstadoCuenta): string {
+    if (doc.tipo === TipoDocumentoEstadoCuenta.FACTURA && doc.original?.tipoComprobante) {
+      return etiquetaTipoComprobanteFactura(doc.original.tipoComprobante);
+    }
+    return TIPO_DOCUMENTO_LABELS[doc.tipo]?.etiqueta ?? doc.tipo;
   }
 
   iconoTipo(tipo: TipoDocumentoEstadoCuenta): string {
@@ -453,7 +464,7 @@ export class EstadoCuentaTitularComponent implements OnInit {
 
   private filasExportables(): Record<string, string>[] {
     return this.documentosFiltrados().map((d) => ({
-      tipo: this.etiquetaTipo(d.tipo),
+      tipo: this.etiquetaTipo(d),
       origen: d.origen === 'EMITIDO' ? 'Emitido' : 'Recibido',
       numero: d.numero,
       fecha: this.formatearFecha(d.fecha),

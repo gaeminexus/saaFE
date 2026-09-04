@@ -11,6 +11,7 @@ import { MaterialFormModule } from '../../../../../shared/modules/material-form.
 import { TitularSelectorDialogComponent } from '../../../../../shared/components/titular-selector-dialog/titular-selector-dialog.component';
 import { Titular } from '../../../../tsr/model/titular';
 import { ProductoPago } from '../../../model/producto_pago';
+import { BLOQUEANTE_TIPO_LABELS } from '../../../model/error-bloqueante';
 import {
   BloqueanteNotaVentaManual,
   DetalleNotaVentaManual,
@@ -20,15 +21,6 @@ import {
 } from '../../../model/nota-venta-compra-manual';
 import { ProductoPagoService } from '../../../service/producto-pago.service';
 import { FacturaCompraService } from '../../../service/factura-compra.service';
-
-/** §2 del contrato — los cinco códigos de bloqueante que puede devolver /fctc/manual. */
-const TIPO_LABELS: Record<string, { label: string; icon: string }> = {
-  PROVEEDOR_SIN_CUENTA:    { label: 'Proveedor sin cuenta contable CxP',          icon: 'account_balance' },
-  PRODUCTO_SIN_CLASIFICAR: { label: 'Producto sin grupo asignado',                icon: 'category' },
-  GRUPO_SIN_CUENTA:        { label: 'Grupo del producto sin cuenta contable',     icon: 'folder_open' },
-  TIPO_ASIENTO_FALTANTE:   { label: 'Tipo de asiento de factura no configurado',  icon: 'receipt_long' },
-  DOCUMENTO_DUPLICADO:     { label: 'Ya existe una nota de venta con ese número', icon: 'content_copy' },
-};
 
 /** Fila editable de la grilla de detalle. `_busqueda`/`_filtrados` son estado propio de esta fila del combo de producto. */
 interface FilaDetalle {
@@ -331,8 +323,8 @@ export class NotaVentaCompraManualComponent implements OnInit {
     });
   }
 
-  tipoLabel(tipo: string): string { return TIPO_LABELS[tipo]?.label ?? tipo; }
-  tipoIcon(tipo: string): string { return TIPO_LABELS[tipo]?.icon ?? 'error_outline'; }
+  tipoLabel(tipo: string): string { return BLOQUEANTE_TIPO_LABELS[tipo]?.label ?? tipo; }
+  tipoIcon(tipo: string): string { return BLOQUEANTE_TIPO_LABELS[tipo]?.icon ?? 'error_outline'; }
 
   private resetFormulario(): void {
     this.titular.set(null);

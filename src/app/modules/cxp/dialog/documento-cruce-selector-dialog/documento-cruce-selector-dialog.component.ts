@@ -15,6 +15,7 @@ import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-bus
 import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda as TipoDatos } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { ESTADO_PAGO_LABELS, EstadoPagoFactura } from '../../../../shared/model/pagos-cobros/catalogos-aplicacion-pago';
+import { etiquetaTipoComprobanteFactura } from '../../../../shared/utils/tipo-comprobante-cxp.util';
 import { FacturaCompra } from '../../model/factura-compra';
 import { LiquidacionCompraCompra } from '../../model/liquidacion-compra-compra';
 import { FacturaCompraService } from '../../service/factura-compra.service';
@@ -40,6 +41,8 @@ export interface DocumentoCruceProveedor {
   fecha: any;
   total: number;
   estadoPago: number | null;
+  /** Solo en `tipo: 'FACTURA'` — distingue factura ("01") de nota de venta manual ("02"). */
+  tipoComprobante?: string;
 }
 
 export interface DocumentoCruceSelectorDialogData {
@@ -128,6 +131,7 @@ export class DocumentoCruceSelectorDialogComponent implements OnInit {
         fecha: f.fecha,
         total: Number(f.total ?? 0),
         estadoPago: f.estadoPago ?? null,
+        tipoComprobante: f.tipoComprobante,
       }));
       const filasLiquidacion: DocumentoCruceProveedor[] = (liquidaciones || []).map((l: LiquidacionCompraCompra) => ({
         tipo: 'LIQUIDACION_COMPRA',
@@ -158,8 +162,8 @@ export class DocumentoCruceSelectorDialogComponent implements OnInit {
     );
   }
 
-  etiquetaTipo(tipo: TipoDocumentoCruceProveedor): string {
-    return tipo === 'FACTURA' ? 'Factura' : 'Liquidación';
+  etiquetaTipo(row: DocumentoCruceProveedor): string {
+    return row.tipo === 'FACTURA' ? etiquetaTipoComprobanteFactura(row.tipoComprobante) : 'Liquidación';
   }
 
   etiquetaEstadoPago(row: DocumentoCruceProveedor): { texto: string; clase: string } | null {

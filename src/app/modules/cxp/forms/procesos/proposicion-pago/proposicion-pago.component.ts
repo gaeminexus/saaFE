@@ -6,6 +6,7 @@ import { MatTableDataSource } from '@angular/material/table';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { etiquetaTipoComprobanteFactura } from '../../../../../shared/utils/tipo-comprobante-cxp.util';
 import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoDatosBusqueda as TipoDatos } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
@@ -218,7 +219,7 @@ export class ProposicionPagoComponent implements OnInit {
       next: ({ facturas, liquidaciones, notasCredito, notasDebito, retenciones }) => {
         const unified: DocumentoProposicion[] = [
           ...(facturas || []).map(f => this.mapDoc(
-            f.id, 'FACTURA_COMPRA', 'Factura Compra',
+            f.id, 'FACTURA_COMPRA', etiquetaTipoComprobanteFactura(f.tipoComprobante),
             f.titular?.identificacion || '', f.titular?.razonSocial || '',
             `${f.numEstablecimiento}-${f.numPtoEmision}-${f.secuencial}`,
             f.fecha, f.total, f.estado)),

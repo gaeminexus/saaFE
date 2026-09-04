@@ -22,7 +22,7 @@ import { PeriodoService } from '../../../../cnt/service/periodo.service';
 import { Titular } from '../../../../tsr/model/titular';
 import { CargaArchivoTxt } from '../../../model/carga-archivo-txt';
 import { DocumentoCxp } from '../../../model/documento-cxp';
-import { ErrorBloqueante } from '../../../model/error-bloqueante';
+import { BLOQUEANTE_TIPO_LABELS, ErrorBloqueante } from '../../../model/error-bloqueante';
 import { ProgresoLote } from '../../../model/progreso-lote';
 import { CargaArchivoTxtService } from '../../../service/carga-archivo-txt.service';
 import { CargaDocumentosService } from '../../../service/carga-documentos.service';
@@ -152,16 +152,8 @@ export class XmlValidacionErrorDialogComponent {
 // La forma de ErrorBloqueante vive en model/error-bloqueante.ts: la comparten el 422 de
 // registrarBD y el progresoLote del lote (§6.3).
 
-const TIPO_LABELS: Record<string, { label: string; icon: string }> = {
-  PROVEEDOR_SIN_CUENTA:         { label: 'Proveedor sin cuenta contable CxP',           icon: 'account_balance' },
-  CLIENTE_SIN_CUENTA:           { label: 'Cliente sin cuenta contable CxC',             icon: 'account_balance' },
-  PRODUCTOS_SIN_CLASIFICAR:     { label: 'Productos sin grupo asignado',                 icon: 'category' },
-  GRUPOS_SIN_CUENTA_CONTABLE:   { label: 'Grupos sin cuenta contable',                   icon: 'folder_open' },
-  TIPO_ASIENTO_NO_CONFIGURADO:  { label: 'Tipo de asiento no configurado',               icon: 'receipt_long' },
-  CODIGOS_RETENCION_SIN_CUENTA: { label: 'Códigos de retención sin cuenta contable',     icon: 'percent' },
-  FACTURA_VENTA_NO_ENCONTRADA:  { label: 'Factura de venta del sustento no encontrada',  icon: 'search_off' },
-  RETENCION_MULTIDOCUMENTO:     { label: 'Retención con varios documentos sustento',     icon: 'call_split' },
-};
+// BLOQUEANTE_TIPO_LABELS vive en model/error-bloqueante.ts — único mapa del repositorio,
+// compartido con nota-venta-compra-manual.component.ts. No redefinir una copia local acá.
 
 @Component({
   selector: 'app-registro-bloqueantes-dialog',
@@ -269,8 +261,8 @@ const TIPO_LABELS: Record<string, { label: string; icon: string }> = {
 })
 export class RegistroBloqueantesDialogComponent {
   data: { bloqueantes: ErrorBloqueante[] } = inject(MAT_DIALOG_DATA);
-  tipoLabel(tipo: string): string { return TIPO_LABELS[tipo]?.label ?? tipo; }
-  tipoIcon(tipo: string): string  { return TIPO_LABELS[tipo]?.icon  ?? 'error_outline'; }
+  tipoLabel(tipo: string): string { return BLOQUEANTE_TIPO_LABELS[tipo]?.label ?? tipo; }
+  tipoIcon(tipo: string): string  { return BLOQUEANTE_TIPO_LABELS[tipo]?.icon  ?? 'error_outline'; }
 }
 
 // ─── Dialog genérico de error al registrar ───────────────────────────────────
