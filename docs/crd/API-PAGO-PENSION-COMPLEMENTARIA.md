@@ -277,14 +277,61 @@ no hay orden que sincronizar. Es correcto y la pantalla no debe marcarlo como at
 > *«Una regla adicional para procesar el pago retroactivo es que tenga subido el certificado
 > bancario. Eso se debe incluir en la validación.»*
 
-**No se genera el pago de un jubilado cuya cuenta bancaria activa no tenga el certificado
-bancario cargado.** La validación va en el **backend**, dentro de `generarPagoIndividual`, justo
-después de resolver la cuenta única activa.
+### ⛔ CORREGIDO EL 2026-09-04 — este párrafo decía lo contrario y estaba desplegado
 
-**Y el prevuelo de la pantalla también BLOQUEA** (ampliación del usuario, 2026-09-04: *«la corrida
-del mes también debe tomar eso como bloqueante, si es que no tiene subido el certificado bancario
-no se le incluye en la corrida»*). Sin certificado, el jubilado **no entra en la corrida**: cuenta
-como bloqueado, no suma al total a pagar, y aparece con su motivo en la fila.
+**La versión anterior decía que sin certificado NO se genera ningún pago** (bloqueo total). Eso
+contradecía al `PLAN-PAGO-RETROACTIVO-JUBILADOS.md` §D2, escrito por el mismo árbitro horas después.
+**Lo detectó el agente de frontend leyendo los dos documentos, antes de escribir código contra la
+versión equivocada.** El usuario resolvió el 2026-09-04: vale D2.
+
+**LA REGLA VIGENTE: el certificado gobierna la SALIDA DE DINERO, no el cruce contra el préstamo.**
+
+| | Con certificado | Sin certificado |
+|---|---|---|
+| Cruce contra el préstamo | ✅ sí | ✅ **sí, igual** |
+| Remanente al banco | ✅ sí | ⛔ **no sale, y no se consume** |
+
+**Por qué:** el certificado valida **la cuenta de destino**. Si no hay salida al banco, no hay cuenta
+que validar. Bloquear el cruce le cobraría al jubilado mora sobre una deuda que su propia pensión
+podía estar cancelando.
+
+**Consecuencia:** un jubilado con préstamo y sin certificado **NO está bloqueado**. Participa
+parcialmente. Ni «listo» ni «bloqueado»: es un tercer estado.
+
+### El campo que lo dice, para no inferirlo
+
+Tanto el `detalle` de `generarPagosDelMes` como el de `previsualizarCorrida` llevan:
+
+```
+"participacion": "COMPLETA" | "SOLO_CRUCE" | "BLOQUEADO"
+```
+
+| Valor | Qué significa |
+|---|---|
+| `COMPLETA` | Cruce contra préstamo (si tiene) **y** salida al banco |
+| `SOLO_CRUCE` | Tiene préstamo y **no** tiene certificado: cancela deuda, no sale dinero |
+| `BLOQUEADO` | No participa. `motivoBloqueo` dice por qué |
+
+⛔ **El frontend NO debe deducir esto cruzando `tieneCertificado` / `montoADinero` / `montoACruzar`.**
+Tres campos combinados a mano se rompen la primera vez que cambie una regla; un campo explícito no.
+Lo pidió el agente de frontend y tiene razón.
+
+**Sin certificado y SIN préstamo → `BLOQUEADO`**: no hay cruce posible y no puede salir dinero, así
+que no hay nada que hacer con esa pensión este mes.
+
+La validación va en el **backend**, dentro de `generarPagoIndividual`, después de resolver la cuenta.
+
+**Y el prevuelo de la pantalla muestra lo mismo que hará el backend** — con los tres valores de
+`participacion`, no con un binario listo/bloqueado.
+
+- `BLOQUEADO` → no entra, no suma a ningún total, con su motivo en la fila.
+- `SOLO_CRUCE` → **sí entra**: suma a «Total a préstamos» y **no** a «Total a dinero».
+- `COMPLETA` → suma a los dos.
+
+> **Nota histórica.** Este párrafo decía *«sin certificado el jubilado no entra en la corrida»*,
+> citando al usuario el mismo 2026-09-04. Esa instrucción quedó **reemplazada** ese mismo día por la
+> decisión de arriba, cuando se hizo evidente que chocaba con D2 del plan retroactivo. Se conserva
+> la traza porque el frontend llegó a implementar el bloqueo total y hay que saber por qué cambia.
 
 ⛔ **Los dos lados tienen que coincidir.** Si el prevuelo lo mostrara como «listo» y el backend lo
 rechazara, el operador vería un total que no se va a pagar y N renglones `ERROR` que el prevuelo no
