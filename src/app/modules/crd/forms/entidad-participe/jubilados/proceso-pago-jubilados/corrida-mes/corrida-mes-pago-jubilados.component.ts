@@ -165,6 +165,17 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
     return this.filasCompletas.length + this.filasSoloCruce.length;
   }
 
+  /**
+   * Pensión acumulada = Total − Seguro. No se resta contra `valorPagar`: `totalGeneral` ya es la
+   * suma de `total` por jubilado, que el backend garantiza `=== totalPension + totalSeguro`
+   * exacto (§4bis). Es una resta de agregados ya calculados, no una segunda fuente de verdad.
+   */
+  get totalPensionGeneral(): number {
+    const res = this.prevuelo();
+    if (!res) return 0;
+    return res.totalGeneral - res.totalSeguroGeneral;
+  }
+
   // ===================== Previsualizar =====================
 
   previsualizar(): void {
@@ -335,14 +346,16 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
       montoACruzar: d.montoACruzar,
       montoADinero: d.montoADinero,
       total: d.total,
+      totalPension: d.totalPension,
+      totalSeguro: d.totalSeguro,
       participacion: this.textoParticipacion(d.participacion),
       motivoBloqueo: d.motivoBloqueo ?? '',
     }));
     this.exportService.exportToCSV(
       filas,
       `corrida-jubilados-prevuelo-${this.periodoArchivo()}`,
-      ['Entidad', 'Nombre', 'Meses adeudados', 'Monto a cruzar', 'Monto a dinero', 'Total', 'Participación', 'Motivo bloqueo'],
-      ['idEntidad', 'nombre', 'mesesAdeudados', 'montoACruzar', 'montoADinero', 'total', 'participacion', 'motivoBloqueo'],
+      ['Entidad', 'Nombre', 'Meses adeudados', 'Monto a cruzar', 'Monto a dinero', 'Total', 'Pensión', 'Seguro médico', 'Participación', 'Motivo bloqueo'],
+      ['idEntidad', 'nombre', 'mesesAdeudados', 'montoACruzar', 'montoADinero', 'total', 'totalPension', 'totalSeguro', 'participacion', 'motivoBloqueo'],
     );
   }
 
@@ -356,6 +369,8 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
       nombre: d.nombre ?? '',
       valorPension: d.valorPension ?? '',
       valorSeguroSalud: d.valorSeguroSalud ?? '',
+      totalPension: d.totalPension ?? '',
+      totalSeguro: d.totalSeguro ?? '',
       valorCruzadoAPrestamo: d.valorCruzadoAPrestamo ?? '',
       valorOrdenPago: d.valorOrdenPago ?? '',
       estado: this.esDesviacion(d) ? 'Desviación' : d.estado,
@@ -364,8 +379,8 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
     this.exportService.exportToCSV(
       filas,
       `corrida-jubilados-resultado-${this.periodoArchivo()}`,
-      ['Entidad', 'Nombre', 'Pensión', 'Seguro', 'Cruzado a préstamo', 'Orden de pago', 'Estado', 'Mensaje'],
-      ['idEntidad', 'nombre', 'valorPension', 'valorSeguroSalud', 'valorCruzadoAPrestamo', 'valorOrdenPago', 'estado', 'mensaje'],
+      ['Entidad', 'Nombre', 'Pensión', 'Seguro', 'Pensión acumulada', 'Seguro acumulado', 'Cruzado a préstamo', 'Orden de pago', 'Estado', 'Mensaje'],
+      ['idEntidad', 'nombre', 'valorPension', 'valorSeguroSalud', 'totalPension', 'totalSeguro', 'valorCruzadoAPrestamo', 'valorOrdenPago', 'estado', 'mensaje'],
     );
   }
 

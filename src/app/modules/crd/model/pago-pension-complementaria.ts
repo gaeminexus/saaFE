@@ -53,6 +53,18 @@ export interface DetallePagoPension {
   mensaje?: string | null;
   /** §6. Puede faltar en respuestas de un backend más viejo; no asumir que siempre viene. */
   participacion?: Participacion | null;
+  /**
+   * §4bis — el seguro médico se muestra APARTE de la pensión: son dos cuentas contables distintas
+   * (pensión → `2.3.01.10.03`, seguro → `2.3.90.90.06 SEGURO POR PAGAR JUBILADOS`). ⛔
+   * `VPPC.valorPagar` YA INCLUYE el seguro — `valorPensionMensual` es una porción de ese total, no
+   * un adicional; sumar pensión + seguro para "recalcular" el total lo duplica. Opcionales: pueden
+   * faltar en respuestas de un backend más viejo.
+   */
+  valorPensionMensual?: number;
+  valorSeguroMensual?: number;
+  /** Acumulado de todos los meses del retroactivo (pensión y seguro suman exacto: `total = totalPension + totalSeguro`). */
+  totalPension?: number;
+  totalSeguro?: number;
 }
 
 /** §1 — cuerpo de `resultado` de `POST /pgpc/generarPagosDelMes`. */
@@ -66,6 +78,8 @@ export interface ResultadoGeneracionPagos {
   totalPagado: number;
   totalCruzadoAPrestamos: number;
   totalOrdenesGeneradas: number;
+  /** §4bis. Suma del seguro médico de todos los jubilados de la corrida. Opcional: backend viejo. */
+  totalSeguroGeneral?: number;
   errores: string[];
   detalle: DetallePagoPension[];
 }
@@ -148,6 +162,21 @@ export interface DetallePrevisualizacionPago {
   /** §6. Es el campo autoritativo — no deducir bloqueo/participación de otros campos. */
   participacion: Participacion | null;
   motivoBloqueo: string | null;
+  /**
+   * §4bis — el seguro médico se muestra APARTE de la pensión: dos cuentas contables distintas
+   * (pensión → `2.3.01.10.03`, seguro → `2.3.90.90.06 SEGURO POR PAGAR JUBILADOS`). ⛔
+   * `VPPC.valorPagar` YA INCLUYE el seguro — sumar pensión + seguro para "recalcular" el total lo
+   * duplica; `valorPensionMensual` es una PORCIÓN de la mensualidad, no un adicional.
+   */
+  valorPensionMensual: number;
+  valorSeguroMensual: number;
+  /**
+   * Acumulado de todos los meses del retroactivo. Garantizado por el backend:
+   * `total === totalPension + totalSeguro` exacto, incluso con el último mes prorrateado (el
+   * seguro se calcula por resta, nunca con su propio redondeo independiente — §4bis).
+   */
+  totalPension: number;
+  totalSeguro: number;
 }
 
 /** §4bis — cuerpo de `resultado` de `POST /pgpc/previsualizarCorrida`. NO escribe nada. */
@@ -163,5 +192,7 @@ export interface ResultadoPrevisualizacionCorrida {
   totalADinero: number;
   /** La suma: lo que se descuenta de las cuentas de pensión complementaria. */
   totalGeneral: number;
+  /** Suma del seguro médico (cuenta `2.3.90.90.06`) de todos los jubilados evaluados. */
+  totalSeguroGeneral: number;
   detalle: DetallePrevisualizacionPago[];
 }

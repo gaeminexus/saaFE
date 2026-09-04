@@ -199,6 +199,67 @@
       color: #1e40af;
     }
   }
+
+  &.total-pension {
+    background: #f5f3ff;
+    border: 1px solid #ddd6fe;
+    mat-icon {
+      color: #6d28d9;
+    }
+    .total-label {
+      color: #5b21b6;
+    }
+    .total-valor {
+      color: #4c1d95;
+    }
+  }
+
+  &.total-seguro {
+    background: #ecfeff;
+    border: 1px solid #a5f3fc;
+    mat-icon {
+      color: #0e7490;
+    }
+    .total-label {
+      color: #155e75;
+    }
+    .total-valor {
+      color: #164e63;
+    }
+  }
+}
+
+/* ===== Desglose por concepto contable (pensión + seguro = total) ===== */
+.totales-concepto {
+  margin-bottom: 16px;
+
+  .concepto-titulo {
+    display: block;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #94a3b8;
+    margin-bottom: 6px;
+  }
+
+  .concepto-fila {
+    align-items: center;
+    margin-bottom: 0;
+
+    .total-box {
+      flex: 1 1 200px;
+    }
+    .total-box.concepto-igual {
+      opacity: 0.85;
+    }
+  }
+
+  .concepto-signo {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #94a3b8;
+    flex-shrink: 0;
+  }
 }
 
 /* ===== KPIs ===== */

@@ -110,6 +110,42 @@
     </div>
 
     <!--
+      Desglose por CONCEPTO contable (pensión vs. seguro médico) — eje distinto del de arriba
+      (destino: préstamo vs. banco). Pensión y Seguro COMPONEN el Total de arriba, no se suman a
+      él: la etiqueta lo dice explícito para que no se lean como dinero adicional (§4bis del
+      contrato — pensión → cuenta 2.3.01.10.03, seguro → 2.3.90.90.06 SEGURO POR PAGAR JUBILADOS,
+      dos cuentas contables distintas que si no se separan, alguien reconciliaría a mano).
+    -->
+    <div class="totales-concepto">
+      <span class="concepto-titulo">Por concepto contable — componen el Total de arriba</span>
+      <div class="totales-comparativa concepto-fila">
+        <div class="total-box total-pension" matTooltip="Va a la cuenta 2.3.01.10.03 PENSIONES COMPLEMENTARIAS POR PAGAR.">
+          <mat-icon>elderly</mat-icon>
+          <div class="total-info">
+            <span class="total-label">Pensión</span>
+            <span class="total-valor">$ {{ money(totalPensionGeneral) }}</span>
+          </div>
+        </div>
+        <span class="concepto-signo">+</span>
+        <div class="total-box total-seguro" matTooltip="Va a la cuenta 2.3.90.90.06 SEGURO POR PAGAR JUBILADOS — es una porción de la mensualidad, no un adicional.">
+          <mat-icon>medical_services</mat-icon>
+          <div class="total-info">
+            <span class="total-label">Seguro médico</span>
+            <span class="total-valor">$ {{ money(res.totalSeguroGeneral) }}</span>
+          </div>
+        </div>
+        <span class="concepto-signo">=</span>
+        <div class="total-box total-general concepto-igual">
+          <mat-icon>calculate</mat-icon>
+          <div class="total-info">
+            <span class="total-label">Total</span>
+            <span class="total-valor">$ {{ money(res.totalGeneral) }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!--
       El cruce es una ESTIMACIÓN (§4bis del contrato): topa en agregado, no por préstamo y mes a
       mes como la corrida real, y no simula mora/interés. Discreto a propósito -- ni escondido ni
       dramatizado -- y con el texto EXACTO que manda el backend, no uno inventado acá.
@@ -160,6 +196,8 @@
                   <th class="c-num">A préstamo</th>
                   <th class="c-num">A dinero</th>
                   <th class="c-num">Total</th>
+                  <th class="c-num" matTooltip="Cuenta 2.3.01.10.03">Pensión</th>
+                  <th class="c-num" matTooltip="Cuenta 2.3.90.90.06 — porción de la mensualidad, no un adicional">Seguro</th>
                   <th>Participación</th>
                   <th>Motivo</th>
                 </tr>
@@ -175,6 +213,8 @@
                     <td class="c-num">$ {{ money(d.montoACruzar) }}</td>
                     <td class="c-num">$ {{ money(d.montoADinero) }}</td>
                     <td class="c-num">$ {{ money(d.total) }}</td>
+                    <td class="c-num">$ {{ money(d.totalPension) }}</td>
+                    <td class="c-num">$ {{ money(d.totalSeguro) }}</td>
                     <td>
                       <span class="badge" [ngClass]="claseParticipacion(d.participacion)">
                         {{ textoParticipacion(d.participacion) }}
@@ -265,6 +305,8 @@
                 <th>Nombre</th>
                 <th class="c-num">Pensión</th>
                 <th class="c-num">Seguro</th>
+                <th class="c-num" matTooltip="Acumulado del retroactivo, cuenta 2.3.01.10.03">Pensión acum.</th>
+                <th class="c-num" matTooltip="Acumulado del retroactivo, cuenta 2.3.90.90.06">Seguro acum.</th>
                 <th class="c-num">Cruzado a préstamo</th>
                 <th class="c-num">Orden de pago</th>
                 <th>Estado</th>
@@ -278,6 +320,8 @@
                   <td>{{ d.nombre || '—' }}</td>
                   <td class="c-num">{{ d.valorPension != null ? money(d.valorPension) : '—' }}</td>
                   <td class="c-num">{{ d.valorSeguroSalud != null ? money(d.valorSeguroSalud) : '—' }}</td>
+                  <td class="c-num">{{ d.totalPension != null ? money(d.totalPension) : '—' }}</td>
+                  <td class="c-num">{{ d.totalSeguro != null ? money(d.totalSeguro) : '—' }}</td>
                   <td class="c-num">{{ d.valorCruzadoAPrestamo != null ? money(d.valorCruzadoAPrestamo) : '—' }}</td>
                   <td class="c-num">{{ d.valorOrdenPago != null ? money(d.valorOrdenPago) : '—' }}</td>
                   <td>
