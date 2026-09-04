@@ -14,7 +14,6 @@ import {
   ConfirmDialogData,
 } from '../../../../../../shared/basics/confirm-dialog/confirm-dialog.component';
 import { MaterialFormModule } from '../../../../../../shared/modules/material-form.module';
-import { FuncionesDatosService } from '../../../../../../shared/services/funciones-datos.service';
 import { usuarioSesion } from '../../../../../../shared/services/usuario-sesion';
 import { DatosBusqueda } from '../../../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
@@ -63,7 +62,6 @@ export class ProcesoPagoJubiladosComponent implements OnInit {
   private aporteService = inject(AporteService);
   private valorPagoService = inject(ValorPagoPensionComplementariaService);
   private verificacionService = inject(VerificacionCuentaCertificadoService);
-  private funcionesDatos = inject(FuncionesDatosService);
   private router = inject(Router);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
@@ -245,6 +243,14 @@ export class ProcesoPagoJubiladosComponent implements OnInit {
       return;
     }
 
+    // ⛔ `fechaModificacion`/`fechaIngreso` son `LocalDateTime` en el backend y NO viajan: el
+    // formato por defecto de `formatearFechaParaBackend` es "yyyy-MM-dd HH:mm:ss" (con espacio),
+    // y `LocalDateTime` exige ISO con `T` — el backend respondía 400
+    // ("Cannot deserialize value of type java.time.LocalDateTime from String ...") en cada
+    // guardado. `TipoFormatoFechaBackend.FECHA_HORA_ISO` no sirve de reemplazo: fija la hora en
+    // 00:00:00 (está pensado para un `LocalDate` representado como `LocalDateTime`), así que
+    // mandaría una fecha de auditoría falsa en vez de la real. Son campos de auditoría que el
+    // backend puede resolver solo; lo que importa de verdad es `usuarioModificacion`/`usuarioIngreso`.
     const payloadBase: Partial<ValorPagoPensionComplementaria> = {
       entidad: { codigo: entidad.codigo } as Entidad,
       valorPagar,
@@ -252,9 +258,7 @@ export class ProcesoPagoJubiladosComponent implements OnInit {
       tienePrestamo,
       valorSeguro,
       estado: ProcesoPagoJubiladosComponent.ESTADO_REGISTRO_ACTIVO,
-      usuarioModificacion: 'frontend',
-      // LocalDateTime en el backend; nunca `.toISOString()` (UTC, termina en "Z" — regla de CLAUDE.md).
-      fechaModificacion: this.funcionesDatos.formatearFechaParaBackend(new Date()) ?? undefined,
+      usuarioModificacion: usuarioSesion(),
     };
 
     // Busca en TODAS (no solo en las visibles): si el jubilado tenía un VPPC inactivo, guardar
@@ -287,8 +291,7 @@ export class ProcesoPagoJubiladosComponent implements OnInit {
     this.valorPagoService
       .add({
         ...payloadBase,
-        usuarioIngreso: 'frontend',
-        fechaIngreso: this.funcionesDatos.formatearFechaParaBackend(new Date()) ?? undefined,
+        usuarioIngreso: usuarioSesion(),
       })
       .subscribe({
         next: () => {
@@ -412,12 +415,13 @@ export class ProcesoPagoJubiladosComponent implements OnInit {
     mensajeError: string,
   ): void {
     this.isSaving.set(true);
+    // ⛔ Sin `fechaModificacion`: ver la nota en `guardarAsignacion()` — `LocalDateTime` en el
+    // backend, formato con espacio en vez de `T`, 400 en cada guardado.
     this.valorPagoService
       .update({
         ...item,
         estado,
         usuarioModificacion: usuarioSesion(),
-        fechaModificacion: this.funcionesDatos.formatearFechaParaBackend(new Date()) ?? undefined,
       })
       .subscribe({
         next: () => {
