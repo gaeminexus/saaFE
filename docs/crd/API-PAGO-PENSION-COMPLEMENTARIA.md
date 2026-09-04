@@ -254,9 +254,21 @@ jubilados de la corrida.
 **No hay fórmula, ni porcentaje, ni valor fijo.** Lo captura la oficina por jubilado, en el campo
 «Valor de seguro» del padrón, y el sistema lo lee tal cual de `VPPC.VPPCVLSR`.
 
-**Consecuencia: un seguro en cero NO es un defecto**, es un jubilado al que nadie le cargó ese
-valor — o que no tiene seguro. Medido el 2026-09-04: de **190** configuraciones activas, **8** con
-seguro y **182** en cero.
+**Consecuencia: un seguro en cero NO es un defecto.** Medido el 2026-09-04: de **190**
+configuraciones activas, **8** con seguro y **182** en cero.
+
+⛔ **Y eso es NORMAL, confirmado por el usuario el 2026-09-04.** Un jubilado sin seguro médico es un
+caso corriente, no un olvido de carga. Por eso:
+
+- El campo **sigue siendo opcional** y **no lleva ningún aviso** al guardar en cero. Se evaluó
+  agregar uno —*«¿seguro que este jubilado no tiene seguro médico?»*— y **se descartó**: molestaría
+  en el caso mayoritario.
+- El filtro «sin seguro asignado» del padrón existe para **consultar**, no para corregir. Va en gris
+  neutro a propósito: **no es una alarma**.
+
+**No volver a diagnosticar «faltan 182 seguros por cargar».** Ya se hizo una vez —el árbitro lo
+planteó como trabajo de oficina el 2026-09-04— y el usuario lo corrigió: *«NO es trabajo de
+oficina»*. La causa de lo que se estaba investigando era otra (ver `AL_DIA` en el §6).
 
 ⛔ **La trampa de la carga, y ya mordió:** `valorPagar` **es el total e incluye el seguro**. Cargar
 el seguro y dejar `valorPagar` en 0 **bloquea al jubilado** con `SIN_VALOR_PENSION` — el sistema
