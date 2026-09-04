@@ -241,6 +241,22 @@ presentarlo como si lo fuera.** Es para dimensionar y decidir, no para cuadrar c
 ⛔ **Si alguna vez este endpoint empieza a escribir algo "para simular mejor", está mal.** La única
 garantía que lo hace útil es que se puede apretar sin miedo.
 
+**Verificado el 2026-09-04**, no asumido: el bloque completo de `previsualizarCorrida` +
+`previsualizarJubilado` no contiene **ninguna** llamada a `.save(`, `pagarConAportes`,
+`crearMovimientoNegativo`, `registrarPagoDeOrigenExterno`, `generarAsientoDevengoPension` ni
+`calcularSaldosRealesCuota` — esta última **sí persiste**, y por eso el prevuelo usa la variante
+pura `calcularSaldosCuota`. Además el método es `@TransactionAttribute(NOT_SUPPORTED)`.
+
+#### ⚠️ Segunda razón por la que el número es estimado: el tope agregado vs. por préstamo
+
+El prevuelo aplica el `min(...)` **una vez, en agregado** (`meses × pensión` contra la deuda
+exigible total y el saldo). La corrida real lo aplica **mes a mes y con tope POR préstamo**, que es
+lo que evita pre-pagar cuotas futuras de un préstamo cuando hay **varios vigentes**.
+
+**Para un jubilado con un solo préstamo las dos formas coinciden.** Con dos o más, el prevuelo puede
+diferir del resultado. Es aceptable —el número está declarado como estimación— pero **no es solo la
+mora lo que puede moverlo**, y quien compare prevuelo contra resultado tiene que saberlo.
+
 ---
 
 ## 5. Estados de `PGPC` (`PGPCESTD`)
@@ -308,9 +324,23 @@ Tanto el `detalle` de `generarPagosDelMes` como el de `previsualizarCorrida` lle
 
 | Valor | Qué significa |
 |---|---|
-| `COMPLETA` | Cruce contra préstamo (si tiene) **y** salida al banco |
-| `SOLO_CRUCE` | Tiene préstamo y **no** tiene certificado: cancela deuda, no sale dinero |
+| `COMPLETA` | **Nada quedó retenido.** Todo lo que correspondía se aplicó: a préstamo, al banco, o a los dos |
+| `SOLO_CRUCE` | **Hubo remanente que NO pudo salir** por falta de certificado o de cuenta única. Canceló deuda; hay plata que el jubilado no cobró |
 | `BLOQUEADO` | No participa. `motivoBloqueo` dice por qué |
+| `null` | No fue un evento de participación de esta corrida (`YA_EXISTIA`, `AL_DIA`, retroactivo con 0 meses) |
+
+#### ⚠️ Precisión del 2026-09-04: `COMPLETA` es «nada retenido», no «hubo salida al banco»
+
+La primera redacción decía *«`SOLO_CRUCE`: tiene préstamo y no tiene certificado»*. **Tomada al pie
+de la letra es incorrecta**, y lo señaló el agente de backend al implementarla:
+
+> Un jubilado **100 % cruzado** —la deuda se llevó toda la pensión— **no tiene remanente**. Le falte
+> o no el certificado, **no había nada que sacar al banco**: el certificado nunca llegó a importar.
+
+Marcarlo `SOLO_CRUCE` diría «hay plata retenida», y no la hay. **La definición correcta es por
+retención, no por posesión del certificado**, y es la que sirve en pantalla: `SOLO_CRUCE` es
+**accionable** —conseguí el certificado y ese dinero sale—, mientras que un 100 % cruzado no
+requiere ninguna acción.
 
 ⛔ **El frontend NO debe deducir esto cruzando `tieneCertificado` / `montoADinero` / `montoACruzar`.**
 Tres campos combinados a mano se rompen la primera vez que cambie una regla; un campo explícito no.
