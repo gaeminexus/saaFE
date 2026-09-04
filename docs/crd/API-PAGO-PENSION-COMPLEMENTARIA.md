@@ -1,33 +1,53 @@
 # API — Pago mensual de pensión complementaria
 
-**Base:** `/SaaBE/rest/pgpc` · **Equipo:** CRD / Equipo B · **Fecha:** 2026-09-02
+**Base:** `/SaaBE/rest/pgpc` · **Equipo:** CRD / Equipo B (`eqB`, `omen-saa-1`)
+**Fecha:** 2026-09-02 · **Corregido y ampliado:** 2026-09-04
 
 > El path de JAX-RS es `/rest`, así que la URL real es `/SaaBE/rest/pgpc/...`. **No** `/api/...`,
 > que aparece en documentos viejos y ya no existe.
 
 Plan de fondo: `PLAN-PAGO-JUBILADOS.md`. Este documento es el contrato; ante una diferencia entre
-los dos, manda el plan y este archivo se corrige.
+los dos, manda el **código**, y los dos documentos se corrigen.
 
 ---
 
-## Lo que cambia respecto de lo que hay hoy
+## ⚠️ Corrección del 2026-09-04 — leer antes de implementar
 
-Los tres endpoints **ya existen y sus rutas no cambian**. Lo que cambia es **lo que devuelven**: al
-agregarse el cruce contra préstamos, un pago del mes deja de ser un solo número.
+Este contrato se verificó línea por línea contra `PagoPensionComplementariaRest.java`,
+`PagoPensionComplementariaServiceImpl.java`, `DetallePagoPension.java` y la entidad
+`PagoPensionComplementaria.java`. **Tres afirmaciones de la versión anterior eran falsas** y
+habrían costado una pantalla mal construida:
+
+| Qué decía | Qué pasa de verdad |
+|---|---|
+| §3 `porEntidad` devuelve «los mismos campos nuevos del detalle» (cruce y orden de pago) | **No.** Devuelve la entidad JPA cruda, que **no tiene** `valorCruzadoAPrestamo`, `valorOrdenPago` ni `generoOrdenPago`. Esos campos existen **sólo** en `DetallePagoPension`, el DTO de la corrida |
+| Las fechas viajan como `yyyy-MM-dd` | Eso vale para lo que el frontend **envía**. Lo que **llega** son **arreglos** de Jackson: `[2026,8,1]`. Mismo defecto que ya se corrigió en `API-AUDITORIA-BANDAS.md` el 2026-09-03 |
+| (no lo decía) | `estado` llega como número 1..5 sin ninguna leyenda. Ver §5 |
 
 ---
 
 ## 1. `POST /rest/pgpc/generarPagosDelMes`
 
 Genera los pagos del período para todos los jubilados `JUBILADO_COMPLEMENTARIO` con `VPPC` activa.
-**No aborta el lote**: cada jubilado va en su propia transacción y un fallo se cuenta como error.
+**No aborta el lote**: cada jubilado va en su propia transacción (`REQUIRES_NEW`) y un fallo se
+cuenta como error sin tumbar la corrida.
 
-**Query params:** `idEmpresa`, `anio`, `mes`, `usuario`.
+⛔ **Los parámetros van como QUERY PARAMS, no como cuerpo JSON.** Verificado en
+`PagoPensionComplementariaRest:56-60`. Un `POST` con body se rechaza con 400 «Debe indicar idEmpresa».
 
-**Respuesta 200** — implementada el 2026-09-02 (`PLAN-PAGO-JUBILADOS.md` §3/§4). El sobre de la
-respuesta sigue el mismo convenio que el resto de este REST (`exito`, `mensaje`, y el cuerpo real
-anidado bajo `resultado` — **no al nivel superior**, a diferencia de como lo mostraba una versión
-anterior de este documento):
+```
+POST /SaaBE/rest/pgpc/generarPagosDelMes?idEmpresa=1&anio=2026&mes=8&usuario=jperez
+```
+
+| Param | Tipo | Obligatorio | Si falta |
+|---|---|---|---|
+| `idEmpresa` | number | sí | 400 «Debe indicar idEmpresa» |
+| `anio` | number | sí | 400 «Debe indicar anio y mes» |
+| `mes` | number (1-12) | sí | 400 «Debe indicar anio y mes» |
+| `usuario` | string no vacío | sí | 400 «Debe indicar el usuario que dispara la generación» |
+
+**Respuesta 200.** El sobre sigue el convenio del resto de este REST: `exito`, `mensaje`, y el
+cuerpo real anidado bajo `resultado` — **no al nivel superior**.
 
 ```json
 {
@@ -55,20 +75,40 @@ anterior de este documento):
 }
 ```
 
-`detalle` trae UN renglón por cada jubilado evaluado, con `estado` en `"GENERADO"` (PGPC nuevo),
-`"YA_EXISTIA"` (idempotencia — no es error) o `"ERROR"` (con `mensaje`). Los renglones `YA_EXISTIA`
-no traen `nombre` ni los campos de cruce/orden (no se volvieron a calcular).
+`detalle` trae UN renglón por jubilado evaluado, con `estado` en `"GENERADO"` (PGPC nuevo),
+`"YA_EXISTIA"` (idempotencia — no es error) o `"ERROR"` (con `mensaje`).
 
 ⛔ **`generoOrdenPago: false` con `valorCruzadoAPrestamo > 0` NO es un error** — es el caso en que
 la deuda se llevó toda la pensión del mes. El pago existe, se contabilizó, y no hubo salida de
-dinero. **La pantalla no debe mostrarlo como fallo**; es el escenario 5 de la verificación del plan.
+dinero. **La pantalla no debe mostrarlo como fallo.**
+
+### ⛔ La corrida es idempotente, pero el INFORME no se puede repetir
+
+Verificado en `PagoPensionComplementariaServiceImpl:299-309`. Volver a correr el mismo mes **no
+duplica ningún pago** —eso está bien resuelto— pero la rama `YA_EXISTIA` construye su renglón con
+**sólo cinco campos**: `idEntidad`, `idPago`, `valorPension`, `valorSeguroSalud`, `estado`.
+
+**No trae `nombre`, ni `valorCruzadoAPrestamo`, ni `valorOrdenPago`, ni `idAsientoDevengo`**, porque
+no se vuelven a calcular. Y los totales del encabezado (`totalPagado`, `totalCruzadoAPrestamos`,
+`totalOrdenesGeneradas`) **sólo suman lo generado en esa corrida**, así que en una segunda pasada
+dan casi cero.
+
+**Consecuencia para la pantalla:** la respuesta de la **primera** corrida es la única vez que existe
+el informe completo del mes. Si el operador cierra la pantalla, **no lo recupera volviendo a
+generar**. Por eso existe el §4.
 
 ---
 
 ## 2. `POST /rest/pgpc/sincronizarPagos`
 
-Reconciliador: lee el estado real de la orden en CXP de cada `PGPC` pendiente y lo cierra como
-PAGADA o RECHAZADA. Sin cambios de forma.
+Sin parámetros ni cuerpo. Reconciliador: lee el estado real de la orden en CXP de cada `PGPC`
+pendiente y lo cierra como PAGADA o RECHAZADA.
+
+```json
+{ "exito": true,
+  "resultado": { "evaluadas": 42, "marcadasPagadas": 40, "marcadasRechazadas": 1,
+                 "huerfanas": 0, "conError": 1, "errores": ["..."] } }
+```
 
 ⚠️ **Un rechazo revierte sólo el tramo que salía al banco.** El cruce contra el préstamo **no se
 deshace**: ya consumió aporte y liquidó deuda, y son dos hechos distintos (§7 del plan). La pantalla
@@ -78,14 +118,79 @@ no debe sugerir que un rechazo devuelve las cuotas.
 
 ## 3. `GET /rest/pgpc/porEntidad/{idEntidad}`
 
-Historial del jubilado, del más reciente al más antiguo. Cada fila incorpora los mismos campos
-nuevos del detalle de arriba, para que el histórico muestre cuánto fue a deuda y cuánto al banco.
+Historial de un jubilado, del más reciente al más antiguo.
+
+**Respuesta 200: un arreglo pelado de la entidad `PagoPensionComplementaria`**, sin sobre
+`{exito,...}`. Verificado en `PagoPensionComplementariaRest:119-127`.
+
+⛔ **NO trae los campos de cruce ni de orden de pago.** La versión anterior de este contrato decía
+que sí y era falso. Los campos disponibles son exactamente las columnas de la entidad:
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| `codigo` | number | PK del `PGPC` |
+| `entidad` | objeto | `Entidad` anidada (el partícipe) |
+| `filial` | objeto | `Filial` anidada |
+| `anio`, `mes` | number | período |
+| `valorPension` | number | la pensión del mes |
+| `valorSeguro` | number | el seguro de salud |
+| `valor` | number | el total |
+| `fecha` | **arreglo** | `LocalDate` → `[2026,8,31]` |
+| `estado` | number | 1..5, ver §5 |
+| `idPagoProgramado` | number \| null | la orden en CXP (`PGS.PGTR`). **Null = no hubo salida al banco** |
+| `idAporte` | number \| null | el movimiento negativo en `APRT` |
+| `numeroAsiento` | number \| null | |
+| `numeroAsientoDevengo` | number \| null | el asiento de la plantilla alterno 35 |
+| `usuarioRegistro` | string | |
+| `fechaRegistro` | **arreglo** | `LocalDateTime` → `[2026,9,4,10,15,3,0]` |
+| `fechaPago` | **arreglo** \| null | `LocalDate` |
+| `usuarioAnulacion`, `fechaAnulacion`, `motivoAnulacion` | | hoy siempre nulos: **no existe anulación** |
+
+**Cuánto fue a deuda se deduce**, no llega. Para el mes en curso, el dato bueno es el `detalle`
+del §1.
 
 ---
 
-## Errores
+## 4. `GET /rest/pgpc/porPeriodo?anio={a}&mes={m}` — ⬜ POR IMPLEMENTAR (eqB, 2026-09-04)
 
-Códigos ya definidos en `PagoPensionComplementariaService`, sin cambios:
+**No existe todavía.** Se construye ahora, junto con la pantalla, porque sin él el informe del mes
+se pierde al cerrar la pantalla (§1).
+
+**Alcance REDUCIDO a propósito.** `API-PAGO-JUBILADOS-ANULACION-Y-PERIODO.md` (escrito por
+`lap-saa-1-arb` el 2026-09-03) especifica este mismo endpoint con tres campos extra —
+`totalCruzado`, `cruces[]` y `anulable`/`motivoNoAnulable`. **Esos tres NO se implementan ahora**:
+los dos primeros salen de `CRD.PGCE`, una tabla **reservada pero cuyo DDL no está autorizado ni
+escrito**, y el tercero depende de la anulación, que tampoco existe.
+
+⛔ **El frontend NO debe construir columnas para `totalCruzado`, `cruces` ni `anulable`: no van a
+llegar.** Cuando `CRD.PGCE` se autorice, este endpoint los agrega y el contrato se amplía.
+
+**Respuesta 200:** arreglo pelado de `PagoPensionComplementaria`, **exactamente la misma forma del
+§3**, ordenado por partícipe. Un período sin pagos devuelve `[]`, **no** 404.
+
+**Implementación:** un `selectByPeriodo(anio, mes)` en el DAO al lado de `selectByEntidadYPeriodo`,
+y el método REST calcado de `porEntidad`. No hace falta nada más.
+
+---
+
+## 5. Estados de `PGPC` (`PGPCESTD`)
+
+De `com.saa.rubros.EstadoPagoPensionComplementaria`. **Son constantes planas, no catálogo `Rubro`.**
+
+| Valor | Constante | Significa |
+|---|---|---|
+| 1 | `REGISTRADA` | Generado y contabilizado. Todavía sin confirmar en tesorería |
+| 2 | `EN_PAGO` | Orden creada en CXP, esperando el pago |
+| 3 | `PAGADA` | Confirmada por `sincronizarPagos` |
+| 4 | `RECHAZADA` | CXP rechazó o reversó. **El cruce contra el préstamo NO se deshizo** |
+| 5 | `ANULADA` | **Hoy inalcanzable**: no existe endpoint de anulación |
+
+Un pago que se llevó toda la pensión en cruce queda en **1**, no en 2, y **nunca pasa a 3** porque
+no hay orden que sincronizar. Es correcto y la pantalla no debe marcarlo como atascado.
+
+---
+
+## 6. Errores
 
 | Código | HTTP | Cuándo |
 |---|---|---|
@@ -95,14 +200,22 @@ Códigos ya definidos en `PagoPensionComplementariaService`, sin cambios:
 | `SIN_CUENTA_BANCARIA` | 422 | No tiene exactamente una cuenta bancaria activa |
 | `PAGO_NO_ENCONTRADO` | 404 | No existe el pago |
 
-⚠️ **Formato del error, verificado sobre el cable:** `MensajeErrorJsonFilter` es un `@Provider`
-global que envuelve toda respuesta ≥400 cuyo cuerpo sea texto, y la entrega como
-`{"mensaje": "..."}`. **No llega texto plano.** Documentos viejos dicen lo contrario.
+⛔ **Estos cinco casi nunca llegan como HTTP.** En `generarPagosDelMes` el fallo de **un** jubilado
+se captura por dentro y sale como un renglón del `detalle` con `estado: "ERROR"` y su `mensaje`,
+dentro de una respuesta **200**. La pantalla que sólo mire el código HTTP va a dar por buena una
+corrida en la que fallaron veinte jubilados. **Hay que leer `conError` y `errores`.**
+
+**Forma del cuerpo de error** (cuando sí es HTTP ≥400): `{"exito": false, "mensaje": "...",
+"error": "CODIGO"}`, de `respuestaFallo`.
 
 ---
 
-## Fechas
+## 7. Fechas — las dos direcciones, que no son simétricas
 
-`LocalDate` viaja como `yyyy-MM-dd` y `LocalDateTime` como ISO **local, sin zona**. Nunca un `Date`
-crudo de JavaScript ni nada terminado en `Z`: Jackson descarta el offset en vez de convertirlo, y un
-instante de las 08:30 de Ecuador se graba como 13:30 sin ningún error.
+- **Lo que el frontend ENVÍA:** `LocalDate` como `yyyy-MM-dd`, `LocalDateTime` como ISO **local sin
+  zona**. Nunca un `Date` crudo de JavaScript ni nada terminado en `Z` — Jackson descarta el offset
+  en vez de convertirlo y un instante de las 08:30 de Ecuador se graba como 13:30, sin ningún error.
+- **Lo que el frontend RECIBE:** ⛔ **arreglos.** `[2026,8,31]` para `LocalDate`,
+  `[2026,9,4,10,15,3,0]` para `LocalDateTime`. Formatearlos antes de mostrarlos **y antes de
+  exportarlos**: el 2026-09-03 se encontró un CSV de otro tablero que volcaba `2026,7,31` en una
+  celda por saltarse ese paso.
