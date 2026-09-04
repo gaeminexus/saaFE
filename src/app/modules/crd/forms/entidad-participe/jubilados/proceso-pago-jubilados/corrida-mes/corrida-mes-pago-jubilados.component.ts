@@ -43,6 +43,7 @@ const ESTADO_VPPC_ACTIVO = 1;
 type MotivoBloqueo =
   | 'Sin cuenta bancaria activa'
   | 'Sin certificado bancario'
+  | 'Certificado no verificable (problema del sistema)'
   | 'Saldo insuficiente'
   | 'Ya pagado este período';
 
@@ -50,7 +51,7 @@ interface PrevueloItem {
   entidad: Entidad;
   valorTotal: number;
   tieneCuenta: boolean;
-  /** `null` = no se pudo verificar (ver `avisoCertificados`); en ese caso NO bloquea. */
+  /** `null` = no se pudo verificar (catálogo del sistema). Desde el 2026-09-04 esto TAMBIÉN bloquea. */
   tieneCertificado: boolean | null;
   saldoAporte: number;
   saldoSuficiente: boolean;
@@ -60,8 +61,8 @@ interface PrevueloItem {
 }
 
 /**
- * Pestaña B — «Corrida del mes». Contrato: docs/crd/API-PAGO-PENSION-COMPLEMENTARIA.md. Diseño:
- * docs/crd/DISENO-PANTALLA-PAGO-JUBILADOS.md §3/§3bis. Patrón copiado de `cierre-cartera`.
+ * Pestaña B — «Corrida del mes». Contrato: docs/crd/API-PAGO-PENSION-COMPLEMENTARIA.md §6/§6bis.
+ * Diseño: docs/crd/DISENO-PANTALLA-PAGO-JUBILADOS.md §3/§3bis. Patrón copiado de `cierre-cartera`.
  *
  * El prevuelo es enteramente client-side (no hay endpoint de previsualización en el backend):
  * cruza VPPC activas + saldo del aporte tipo pensión complementaria + cuenta bancaria activa +
@@ -70,8 +71,21 @@ interface PrevueloItem {
  *
  * Verificación de cuenta y certificado: delegada en `VerificacionCuentaCertificadoService`,
  * compartida con el padrón (`proceso-pago-jubilados`, sección 3) para no duplicar llamadas ni
- * desincronizar las dos vistas — ver el doc de ese servicio para el detalle de la trampa del
- * catálogo `'CERTIFICADO BANCARIO'` faltante.
+ * desincronizar las dos vistas.
+ *
+ * ⛔ Regla del certificado bancario (decisión del usuario, 2026-09-04, §6 del contrato): sin
+ * certificado, el jubilado NO entra en la corrida — cuenta como bloqueado y no suma al total a
+ * pagar, igual que el backend (`SIN_CERTIFICADO_BANCARIO`, 422). En el padrón (pestaña A) el
+ * mismo dato sigue siendo solo informativo — ahí NO bloquea, es la única pestaña que muta algo.
+ *
+ * ⛔⛔ Las dos causas de "sin certificado" NO se pueden confundir (§6 del contrato):
+ * - `tieneCertificado === false` con cuenta activa: falta el documento de ESE jubilado.
+ *   Accionable por la oficina → motivo "Sin certificado bancario".
+ * - `tieneCertificado === null` con cuenta activa: NO se pudo verificar — problema del catálogo
+ *   `CRD.TPDJ` (hoy, 2026-09-04, tiene dos filas activas "CERTIFICADO BANCARIO" y el backend
+ *   resuelve con `get(0)` sin `ORDER BY`), afecta a TODOS por igual y no es culpa de nadie en
+ *   particular. Motivo distinto: "Certificado no verificable (problema del sistema)". Confundir
+ *   los dos manda a la oficina a pedirle el documento a gente que probablemente ya lo entregó.
  */
 @Component({
   selector: 'app-corrida-mes-pago-jubilados',
@@ -228,7 +242,17 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
           'No se pudo consultar las cuentas bancarias activas: el prevuelo no puede confirmar quién tiene cuenta.',
         );
       }
-      this.avisoCertificados.set(verificacion.avisoCertificados);
+      // ⛔ El texto genérico del servicio ("no se bloquea...") ya no vale acá: desde el
+      // 2026-09-04 el catálogo sin resolver SÍ bloquea la corrida entera (§6 del contrato). El
+      // padrón (que solo informa) sigue usando el texto del servicio tal cual.
+      this.avisoCertificados.set(
+        verificacion.avisoCertificados
+          ? 'No se pudo verificar el certificado bancario de NINGÚN jubilado con cuenta activa: ' +
+            'es un problema del catálogo del sistema (CRD.TPDJ), no un documento faltante de los ' +
+            'jubilados. Mientras no se corrija, la corrida los deja a TODOS fuera de la corrida — ' +
+            'no se los excluye por culpa suya, y no se les debe pedir el certificado.'
+          : null,
+      );
 
       const yaPagadoSet = new Set<number>(
         (yaPagados ?? []).map((p) => p.entidad?.codigo).filter((c): c is number => c != null),
@@ -256,8 +280,14 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
         const yaPagado = yaPagadoSet.has(codigo);
 
         const motivos: MotivoBloqueo[] = [];
-        if (!tieneCuenta) motivos.push('Sin cuenta bancaria activa');
-        if (tieneCertificado === false) motivos.push('Sin certificado bancario');
+        if (!tieneCuenta) {
+          motivos.push('Sin cuenta bancaria activa');
+        } else if (tieneCertificado === false) {
+          motivos.push('Sin certificado bancario');
+        } else if (tieneCertificado === null) {
+          // Solo llega acá con cuenta activa: el `null` es por catálogo, no por falta de cuenta.
+          motivos.push('Certificado no verificable (problema del sistema)');
+        }
         if (!saldoSuficiente) motivos.push('Saldo insuficiente');
         if (yaPagado) motivos.push('Ya pagado este período');
 
