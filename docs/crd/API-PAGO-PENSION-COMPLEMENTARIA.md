@@ -209,8 +209,16 @@ no hay orden que sincronizar. Es correcto y la pantalla no debe marcarlo como at
 
 **No se genera el pago de un jubilado cuya cuenta bancaria activa no tenga el certificado
 bancario cargado.** La validación va en el **backend**, dentro de `generarPagoIndividual`, justo
-después de resolver la cuenta única activa — no solo en el prevuelo de la pantalla. El prevuelo
-avisa; el backend es el que impide.
+después de resolver la cuenta única activa.
+
+**Y el prevuelo de la pantalla también BLOQUEA** (ampliación del usuario, 2026-09-04: *«la corrida
+del mes también debe tomar eso como bloqueante, si es que no tiene subido el certificado bancario
+no se le incluye en la corrida»*). Sin certificado, el jubilado **no entra en la corrida**: cuenta
+como bloqueado, no suma al total a pagar, y aparece con su motivo en la fila.
+
+⛔ **Los dos lados tienen que coincidir.** Si el prevuelo lo mostrara como «listo» y el backend lo
+rechazara, el operador vería un total que no se va a pagar y N renglones `ERROR` que el prevuelo no
+anticipó. El prevuelo no es un adorno: es la promesa de lo que va a pasar al ejecutar.
 
 #### ⛔ Las dos causas que NO se pueden confundir
 
