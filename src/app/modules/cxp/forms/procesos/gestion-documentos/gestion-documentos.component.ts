@@ -154,6 +154,7 @@ export class XmlValidacionErrorDialogComponent {
 
 const TIPO_LABELS: Record<string, { label: string; icon: string }> = {
   PROVEEDOR_SIN_CUENTA:         { label: 'Proveedor sin cuenta contable CxP',           icon: 'account_balance' },
+  CLIENTE_SIN_CUENTA:           { label: 'Cliente sin cuenta contable CxC',             icon: 'account_balance' },
   PRODUCTOS_SIN_CLASIFICAR:     { label: 'Productos sin grupo asignado',                 icon: 'category' },
   GRUPOS_SIN_CUENTA_CONTABLE:   { label: 'Grupos sin cuenta contable',                   icon: 'folder_open' },
   TIPO_ASIENTO_NO_CONFIGURADO:  { label: 'Tipo de asiento no configurado',               icon: 'receipt_long' },
