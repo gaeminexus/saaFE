@@ -562,7 +562,7 @@ export class GastosCajaChicaComponent implements OnInit {
   }
 
   tipoDeMovimiento(m: MovimientoCajaChica): number | null {
-    return m.rubroTipoMovimientoH ?? m.rubroTipoMovimientoP ?? null;
+    return m.tipo ?? null;
   }
 
   infoTipo(m: MovimientoCajaChica): { texto: string; icono: string } {

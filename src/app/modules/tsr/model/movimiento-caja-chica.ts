@@ -24,8 +24,7 @@ export interface MovimientoCajaChica {
   titular?: Titular | null;
   numeroDocumento?: string | null;
   /** Ver TipoMovimientoCajaChica (rubro 232). */
-  rubroTipoMovimientoP?: number;
-  rubroTipoMovimientoH?: number;
+  tipo?: number;
   /** Activo/anulado; ver el detalle del rubro correspondiente al tipo. */
   estado?: number;
   /** Id del pago en /pgtr, cuando el movimiento es una reposición/apertura pagada por transferencia o cheque. */

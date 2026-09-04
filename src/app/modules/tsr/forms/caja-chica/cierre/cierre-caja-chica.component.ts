@@ -365,7 +365,7 @@ export class CierreCajaChicaComponent implements OnInit {
   }
 
   etiquetaTipoMovimiento(mov: MovimientoCajaChica): string {
-    switch (mov.rubroTipoMovimientoH) {
+    switch (mov.tipo) {
       case TipoMovimientoCajaChica.APERTURA: return 'Apertura';
       case TipoMovimientoCajaChica.GASTO: return 'Gasto';
       case TipoMovimientoCajaChica.REPOSICION: return 'Reposición';
@@ -376,7 +376,7 @@ export class CierreCajaChicaComponent implements OnInit {
   }
 
   iconoTipoMovimiento(mov: MovimientoCajaChica): string {
-    switch (mov.rubroTipoMovimientoH) {
+    switch (mov.tipo) {
       case TipoMovimientoCajaChica.APERTURA: return 'lock_open';
       case TipoMovimientoCajaChica.GASTO: return 'shopping_cart';
       case TipoMovimientoCajaChica.REPOSICION: return 'account_balance_wallet';
