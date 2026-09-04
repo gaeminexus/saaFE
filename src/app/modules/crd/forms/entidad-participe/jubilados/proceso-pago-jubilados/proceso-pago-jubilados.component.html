@@ -191,6 +191,13 @@
     </mat-card-header>
 
     <mat-card-content>
+      @if (avisoCertificadosPadron()) {
+        <div class="aviso-certificados">
+          <mat-icon>help_outline</mat-icon>
+          <span>{{ avisoCertificadosPadron() }}</span>
+        </div>
+      }
+
       @if (isLoadingAsignaciones()) {
         <div class="estado-vacio">
           <mat-spinner diameter="36"></mat-spinner>
@@ -238,6 +245,40 @@
             <ng-container matColumnDef="valorSeguro">
               <th mat-header-cell *matHeaderCellDef>Valor seguro</th>
               <td mat-cell *matCellDef="let item">{{ item.valorSeguro != null ? (item.valorSeguro | number:'1.2-2') : '-' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="cuentaBancaria">
+              <th mat-header-cell *matHeaderCellDef>Cuenta bancaria</th>
+              <td mat-cell *matCellDef="let item">
+                @if (isLoadingVerificacion()) {
+                  <span>Cargando...</span>
+                } @else if (tieneCuentaActivaDe(item)) {
+                  <mat-icon color="primary" matTooltip="Tiene exactamente una cuenta bancaria activa">check_circle</mat-icon>
+                } @else {
+                  <mat-icon color="warn" matTooltip="Sin cuenta bancaria activa (ninguna o más de una)">cancel</mat-icon>
+                }
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="certificado">
+              <th mat-header-cell *matHeaderCellDef>Certificado</th>
+              <td mat-cell *matCellDef="let item">
+                @if (isLoadingVerificacion()) {
+                  <span>Cargando...</span>
+                } @else {
+                  @switch (tieneCertificadoDe(item)) {
+                    @case (true) {
+                      <mat-icon color="primary" matTooltip="Tiene certificado bancario">check_circle</mat-icon>
+                    }
+                    @case (false) {
+                      <mat-icon color="warn" matTooltip="Sin certificado bancario">cancel</mat-icon>
+                    }
+                    @default {
+                      <mat-icon matTooltip="No se pudo verificar (ver el aviso arriba de la tabla)">help_outline</mat-icon>
+                    }
+                  }
+                }
+              </td>
             </ng-container>
 
             <ng-container matColumnDef="acciones">

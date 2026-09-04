@@ -20,6 +20,10 @@ import { ValorPagoPensionComplementaria } from '../../../../model/valor-pago-pen
 import { AporteService } from '../../../../service/aporte.service';
 import { EntidadService } from '../../../../service/entidad.service';
 import { ValorPagoPensionComplementariaService } from '../../../../service/valor-pago-pension-complementaria.service';
+import {
+  VerificacionCuentaCertificado,
+  VerificacionCuentaCertificadoService,
+} from '../../../../service/verificacion-cuenta-certificado.service';
 import { CorridaMesPagoJubiladosComponent } from './corrida-mes/corrida-mes-pago-jubilados.component';
 import { SeguimientoPagoJubiladosComponent } from './seguimiento/seguimiento-pago-jubilados.component';
 
@@ -51,6 +55,7 @@ export class ProcesoPagoJubiladosComponent implements OnInit {
   private entidadService = inject(EntidadService);
   private aporteService = inject(AporteService);
   private valorPagoService = inject(ValorPagoPensionComplementariaService);
+  private verificacionService = inject(VerificacionCuentaCertificadoService);
   private funcionesDatos = inject(FuncionesDatosService);
   private router = inject(Router);
   private snackBar = inject(MatSnackBar);
@@ -68,8 +73,14 @@ export class ProcesoPagoJubiladosComponent implements OnInit {
   totalPagarMensual = signal<number>(0);
   saldosPensionMap = signal<Map<number, number>>(new Map<number, number>());
 
+  /** Cuenta bancaria activa + certificado por partícipe, para las columnas del resumen (sección 3). */
+  isLoadingVerificacion = signal<boolean>(false);
+  verificacionMap = signal<Map<number, VerificacionCuentaCertificado>>(new Map());
+  /** No nulo si NINGÚN jubilado con cuenta tiene certificado — probable catálogo sin cargar. NO degradar a un simple "Falta". */
+  avisoCertificadosPadron = signal<string | null>(null);
+
   displayedColumns: string[] = ['cedula', 'nombre', 'estado', 'saldoPension', 'acciones'];
-  displayedColumnsAsignaciones: string[] = ['cedula', 'nombre', 'valorRegistrado', 'cuotas', 'valorMensual', 'tienePrestamo', 'valorSeguro', 'acciones'];
+  displayedColumnsAsignaciones: string[] = ['cedula', 'nombre', 'valorRegistrado', 'cuotas', 'valorMensual', 'tienePrestamo', 'valorSeguro', 'cuentaBancaria', 'certificado', 'acciones'];
   dataSource = new MatTableDataSource<Entidad>([]);
   dataSourceAsignaciones = new MatTableDataSource<ValorPagoPensionComplementaria>([]);
 
@@ -291,14 +302,61 @@ export class ProcesoPagoJubiladosComponent implements OnInit {
         });
         this.actualizarTotalMensual(asignacionesRows);
         this.isLoadingAsignaciones.set(false);
+        this.cargarVerificacionCuentaCertificado(asignacionesRows);
       },
       error: () => {
         this.asignaciones.set([]);
         this.dataSourceAsignaciones.data = [];
         this.totalPagarMensual.set(0);
         this.isLoadingAsignaciones.set(false);
+        this.verificacionMap.set(new Map());
       },
     });
+  }
+
+  /**
+   * Los dos vistos ("✔ cuenta bancaria" / "✔ certificado") del resumen de asignados — misma
+   * lógica compartida que usa el prevuelo de "Corrida del mes", vía
+   * `VerificacionCuentaCertificadoService`. No duplicar: son 191 jubilados, y duplicarla harían
+   * el doble de llamadas de certificado y desincronizaría las dos vistas con el tiempo.
+   */
+  private cargarVerificacionCuentaCertificado(asignacionesRows: ValorPagoPensionComplementaria[]): void {
+    const codigos = asignacionesRows
+      .map((a) => a.entidad?.codigo)
+      .filter((c): c is number => c != null);
+
+    if (codigos.length === 0) {
+      this.verificacionMap.set(new Map());
+      this.avisoCertificadosPadron.set(null);
+      return;
+    }
+
+    this.isLoadingVerificacion.set(true);
+    this.verificacionService.verificar(codigos).subscribe({
+      next: (resultado) => {
+        this.verificacionMap.set(resultado.porEntidad);
+        this.avisoCertificadosPadron.set(resultado.avisoCertificados);
+        this.isLoadingVerificacion.set(false);
+      },
+      error: () => {
+        this.verificacionMap.set(new Map());
+        this.avisoCertificadosPadron.set(null);
+        this.isLoadingVerificacion.set(false);
+      },
+    });
+  }
+
+  /** `true`/`false`/`null` (no se pudo verificar) — ver `avisoCertificadosPadron`. */
+  tieneCertificadoDe(item: ValorPagoPensionComplementaria): boolean | null {
+    const codigo = item.entidad?.codigo;
+    if (codigo == null) return null;
+    return this.verificacionMap().get(codigo)?.tieneCertificado ?? null;
+  }
+
+  tieneCuentaActivaDe(item: ValorPagoPensionComplementaria): boolean {
+    const codigo = item.entidad?.codigo;
+    if (codigo == null) return false;
+    return this.verificacionMap().get(codigo)?.tieneCuenta ?? false;
   }
 
   obtenerValorMensualRegistro(item: ValorPagoPensionComplementaria): number {

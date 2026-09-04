@@ -15,21 +15,17 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 
-import { DatosBusqueda } from '../../../../../../../shared/model/datos-busqueda/datos-busqueda';
-import { TipoComandosBusqueda } from '../../../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
-import { TipoDatosBusqueda } from '../../../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { empresaSesionCodigo } from '../../../../../../../shared/services/empresa-sesion';
 import { usuarioSesion } from '../../../../../../../shared/services/usuario-sesion';
-import { CuentaBancariaParticipe } from '../../../../../model/cuenta-bancaria-participe';
 import { Entidad } from '../../../../../model/entidad';
 import { DetallePagoPension, ResultadoGeneracionPagos } from '../../../../../model/pago-pension-complementaria';
 import { SaldoAporte } from '../../../../../model/pagos/operaciones-pago';
 import { RespuestaPago } from '../../../../../model/pagos/respuesta-pago';
 import { ValorPagoPensionComplementaria } from '../../../../../model/valor-pago-pension-complementaria';
-import { CuentaBancariaParticipeService } from '../../../../../service/cuenta-bancaria-participe.service';
 import { OperacionesPagoPrestamoService } from '../../../../../service/operaciones-pago-prestamo.service';
 import { PagoPensionComplementariaService } from '../../../../../service/pago-pension-complementaria.service';
 import { ValorPagoPensionComplementariaService } from '../../../../../service/valor-pago-pension-complementaria.service';
+import { VerificacionCuentaCertificadoService } from '../../../../../service/verificacion-cuenta-certificado.service';
 import {
   ConfirmarGeneracionData,
   ConfirmarGeneracionDialogComponent,
@@ -43,7 +39,6 @@ const MESES = [
 ];
 
 const ESTADO_VPPC_ACTIVO = 1;
-const ESTADO_CNBP_ACTIVO = 1;
 
 type MotivoBloqueo =
   | 'Sin cuenta bancaria activa'
@@ -73,13 +68,10 @@ interface PrevueloItem {
  * certificado + `porPeriodo` (para "ya pagado"). El único endpoint que muta algo es
  * `generarPagosDelMes`, disparado solo desde "Ejecutar" con confirmación previa.
  *
- * Verificación de certificado: en vez de repetir el cruce crudo TPDJ→CNBP→ADJN del §4 del
- * diseño, se usa `CuentaBancariaParticipeService.obtenerCertificado()` (GET
- * /cnbp/{id}/certificado, ya existente y usado en `entidad-participe-info`). La trampa que el §4
- * advierte — si el catálogo `'CERTIFICADO BANCARIO'` no está cargado, todos los certificados se
- * verían "faltantes" — se cubre igual: si HAY jubilados con cuenta activa pero NINGUNO tiene
- * certificado, se trata como "no se pudo verificar" (aviso, no bloqueo) en vez de "a todos les
- * falta".
+ * Verificación de cuenta y certificado: delegada en `VerificacionCuentaCertificadoService`,
+ * compartida con el padrón (`proceso-pago-jubilados`, sección 3) para no duplicar llamadas ni
+ * desincronizar las dos vistas — ver el doc de ese servicio para el detalle de la trampa del
+ * catálogo `'CERTIFICADO BANCARIO'` faltante.
  */
 @Component({
   selector: 'app-corrida-mes-pago-jubilados',
@@ -106,7 +98,7 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
 
   private vppcService = inject(ValorPagoPensionComplementariaService);
   private operacionesPagoService = inject(OperacionesPagoPrestamoService);
-  private cuentaBancariaService = inject(CuentaBancariaParticipeService);
+  private verificacionService = inject(VerificacionCuentaCertificadoService);
   private pgpcService = inject(PagoPensionComplementariaService);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
@@ -167,12 +159,18 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
     return this.prevuelo()?.length ?? 0;
   }
 
+  /** Suma de TODOS los evaluados, estén o no bloqueados — el descuento total del período. */
   get totalSuma(): number {
     return (this.prevuelo() ?? []).reduce((acc, i) => acc + i.valorTotal, 0);
   }
 
   get listos(): PrevueloItem[] {
     return (this.prevuelo() ?? []).filter((i) => i.listo);
+  }
+
+  /** Suma solo de los LISTOS — lo que de verdad va a salir si se ejecuta la corrida ahora. */
+  get totalAPagarDesbloqueados(): number {
+    return this.listos.reduce((acc, i) => acc + i.valorTotal, 0);
   }
 
   get bloqueados(): PrevueloItem[] {
@@ -210,6 +208,8 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
   }
 
   private completarPrevuelo(asignaciones: ValorPagoPensionComplementaria[]): void {
+    const codigos = asignaciones.map((v) => v.entidad.codigo);
+
     const saldos$ = forkJoin(
       asignaciones.map((v) =>
         this.operacionesPagoService.saldosPorEntidad(v.entidad.codigo).pipe(
@@ -218,38 +218,17 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
       ),
     );
 
-    const criterioEstadoCnbp = new DatosBusqueda();
-    criterioEstadoCnbp.asignaUnCampoSinTrunc(
-      TipoDatosBusqueda.LONG,
-      'estado',
-      String(ESTADO_CNBP_ACTIVO),
-      TipoComandosBusqueda.IGUAL,
-    );
-    const cuentas$ = this.cuentaBancariaService
-      .selectByCriteria([criterioEstadoCnbp])
-      .pipe(catchError(() => of(null as CuentaBancariaParticipe[] | null)));
-
+    const verificacion$ = this.verificacionService.verificar(codigos);
     const porPeriodo$ = this.pgpcService.porPeriodo(this.anio, this.mes).pipe(catchError(() => of(null)));
 
-    forkJoin([saldos$, cuentas$, porPeriodo$]).subscribe(([saldosResp, cuentas, yaPagados]) => {
-      const cuentasPorEntidad = new Map<number, CuentaBancariaParticipe[]>();
-      for (const c of cuentas ?? []) {
-        if (Number(c.estado) !== ESTADO_CNBP_ACTIVO || c.entidad?.codigo == null) continue;
-        const lista = cuentasPorEntidad.get(c.entidad.codigo) ?? [];
-        lista.push(c);
-        cuentasPorEntidad.set(c.entidad.codigo, lista);
-      }
-      if (cuentas == null) {
+    forkJoin([saldos$, verificacion$, porPeriodo$]).subscribe(([saldosResp, verificacion, yaPagados]) => {
+      if (verificacion.errorCuentas) {
         this.errorPrevuelo.set(
           (this.errorPrevuelo() ? this.errorPrevuelo() + ' ' : '') +
           'No se pudo consultar las cuentas bancarias activas: el prevuelo no puede confirmar quién tiene cuenta.',
         );
       }
-
-      const entidadesConUnaCuenta: { codigo: number; cuenta: CuentaBancariaParticipe }[] = [];
-      cuentasPorEntidad.forEach((lista, codigo) => {
-        if (lista.length === 1) entidadesConUnaCuenta.push({ codigo, cuenta: lista[0] });
-      });
+      this.avisoCertificados.set(verificacion.avisoCertificados);
 
       const yaPagadoSet = new Set<number>(
         (yaPagados ?? []).map((p) => p.entidad?.codigo).filter((c): c is number => c != null),
@@ -262,67 +241,41 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
         );
       }
 
-      const certificados$ = entidadesConUnaCuenta.length
-        ? forkJoin(
-            entidadesConUnaCuenta.map((e) =>
-              this.cuentaBancariaService.obtenerCertificado(e.cuenta.codigo).pipe(catchError(() => of(null))),
-            ),
-          )
-        : of([] as (unknown | null)[]);
+      const items: PrevueloItem[] = asignaciones.map((v, i) => {
+        const codigo = v.entidad.codigo;
+        const valorTotal = this.valorMensual(v) + (v.valorSeguro ?? 0);
 
-      certificados$.subscribe((certificados) => {
-        const totalConCuenta = entidadesConUnaCuenta.length;
-        const totalConCertificado = certificados.filter((c) => c != null).length;
-        const noSePudoVerificarCertificados = totalConCuenta > 0 && totalConCertificado === 0;
-        if (noSePudoVerificarCertificados) {
-          this.avisoCertificados.set(
-            'No se encontró certificado bancario en NINGÚN jubilado con cuenta activa. Es más probable que ' +
-            'falte cargar el catálogo "CERTIFICADO BANCARIO" en este ambiente que no que a todos les falte el ' +
-            'documento. El prevuelo no bloquea por certificado hasta poder verificarlo — revise con el equipo técnico.',
-          );
-        }
+        const verif = verificacion.porEntidad.get(codigo);
+        const tieneCuenta = verif?.tieneCuenta ?? false;
+        const tieneCertificado = verif?.tieneCertificado ?? null;
 
-        const certificadoPorEntidad = new Map<number, boolean>();
-        entidadesConUnaCuenta.forEach((e, i) => certificadoPorEntidad.set(e.codigo, certificados[i] != null));
+        const saldos = saldosResp[i]?.resultado ?? [];
+        const saldoAporte = this.saldoPensionComplementaria(saldos);
+        const saldoSuficiente = saldoAporte + 0.005 >= valorTotal;
 
-        const items: PrevueloItem[] = asignaciones.map((v, i) => {
-          const codigo = v.entidad.codigo;
-          const valorTotal = this.valorMensual(v) + (v.valorSeguro ?? 0);
-          const tieneCuenta = (cuentasPorEntidad.get(codigo)?.length ?? 0) === 1;
+        const yaPagado = yaPagadoSet.has(codigo);
 
-          let tieneCertificado: boolean | null = null;
-          if (tieneCuenta) {
-            tieneCertificado = noSePudoVerificarCertificados ? null : (certificadoPorEntidad.get(codigo) ?? false);
-          }
+        const motivos: MotivoBloqueo[] = [];
+        if (!tieneCuenta) motivos.push('Sin cuenta bancaria activa');
+        if (tieneCertificado === false) motivos.push('Sin certificado bancario');
+        if (!saldoSuficiente) motivos.push('Saldo insuficiente');
+        if (yaPagado) motivos.push('Ya pagado este período');
 
-          const saldos = saldosResp[i]?.resultado ?? [];
-          const saldoAporte = this.saldoPensionComplementaria(saldos);
-          const saldoSuficiente = saldoAporte + 0.005 >= valorTotal;
-
-          const yaPagado = yaPagadoSet.has(codigo);
-
-          const motivos: MotivoBloqueo[] = [];
-          if (!tieneCuenta) motivos.push('Sin cuenta bancaria activa');
-          if (tieneCertificado === false) motivos.push('Sin certificado bancario');
-          if (!saldoSuficiente) motivos.push('Saldo insuficiente');
-          if (yaPagado) motivos.push('Ya pagado este período');
-
-          return {
-            entidad: v.entidad,
-            valorTotal,
-            tieneCuenta,
-            tieneCertificado,
-            saldoAporte,
-            saldoSuficiente,
-            yaPagado,
-            listo: motivos.length === 0,
-            motivos,
-          };
-        });
-
-        this.prevuelo.set(items);
-        this.cargandoPrevuelo.set(false);
+        return {
+          entidad: v.entidad,
+          valorTotal,
+          tieneCuenta,
+          tieneCertificado,
+          saldoAporte,
+          saldoSuficiente,
+          yaPagado,
+          listo: motivos.length === 0,
+          motivos,
+        };
       });
+
+      this.prevuelo.set(items);
+      this.cargandoPrevuelo.set(false);
     });
   }
 
@@ -359,7 +312,7 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
     const data: ConfirmarGeneracionData = {
       periodo: this.periodoTexto,
       cantidadListos: listos.length,
-      totalListos: listos.reduce((acc, i) => acc + i.valorTotal, 0),
+      totalListos: this.totalAPagarDesbloqueados,
       cantidadBloqueados: items.length - listos.length,
     };
 

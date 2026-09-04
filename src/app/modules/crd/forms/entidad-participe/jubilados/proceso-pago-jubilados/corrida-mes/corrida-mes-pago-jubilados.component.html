@@ -77,14 +77,44 @@
 
   <!-- Prevuelo -->
   @if (prevuelo(); as items) {
+    <div class="totales-comparativa">
+      <div
+        class="total-box total-descuentos"
+        matTooltip="Suma de TODOS los jubilados evaluados en el período, estén o no bloqueados: el descuento total que se aplicaría sobre los aportes."
+      >
+        <mat-icon>calculate</mat-icon>
+        <div class="total-info">
+          <span class="total-label">Total de descuentos</span>
+          <span class="total-valor">$ {{ money(totalSuma) }}</span>
+          <span class="total-sub">{{ totalJubilados }} jubilado(s)</span>
+        </div>
+      </div>
+
+      <div
+        class="total-delta"
+        matTooltip="Diferencia entre los dos totales: plata que NO va a salir este mes porque el jubilado está bloqueado."
+      >
+        <mat-icon>arrow_forward</mat-icon>
+        <span>− $ {{ money(totalSuma - totalAPagarDesbloqueados) }}</span>
+      </div>
+
+      <div
+        class="total-box total-a-pagar"
+        matTooltip="Suma solo de los jubilados LISTOS (sin ningún bloqueo): lo que realmente va a salir si ejecuta la corrida ahora."
+      >
+        <mat-icon>payments</mat-icon>
+        <div class="total-info">
+          <span class="total-label">Total a pagar (desbloqueados)</span>
+          <span class="total-valor">$ {{ money(totalAPagarDesbloqueados) }}</span>
+          <span class="total-sub">{{ listos.length }} desbloqueado(s)</span>
+        </div>
+      </div>
+    </div>
+
     <div class="kpis">
       <div class="kpi">
         <span class="kpi-label">Jubilados</span>
         <span class="kpi-valor">{{ totalJubilados }}</span>
-      </div>
-      <div class="kpi">
-        <span class="kpi-label">Suma total</span>
-        <span class="kpi-valor">$ {{ money(totalSuma) }}</span>
       </div>
       <div class="kpi kpi-listos">
         <span class="kpi-label">Listos</span>
