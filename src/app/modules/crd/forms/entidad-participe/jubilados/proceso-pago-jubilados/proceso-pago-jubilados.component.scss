@@ -39,6 +39,23 @@
   margin-top: 0.25rem;
 }
 
+.ver-inactivos-toggle {
+  margin-bottom: 0.5rem;
+}
+
+.chip-inactivo {
+  display: inline-block;
+  margin-left: 6px;
+  background: #f1f5f9;
+  color: #64748b;
+  border-radius: 10px;
+  padding: 1px 8px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
 .aviso-certificados {
   display: flex;
   align-items: center;

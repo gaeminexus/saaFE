@@ -191,6 +191,12 @@
     </mat-card-header>
 
     <mat-card-content>
+      <div class="acciones ver-inactivos-toggle">
+        <mat-checkbox [checked]="mostrarInactivos()" (change)="toggleMostrarInactivos()">
+          Ver inactivos (sacados del padrón)
+        </mat-checkbox>
+      </div>
+
       @if (avisoCertificadosPadron()) {
         <div class="aviso-certificados">
           <mat-icon>help_outline</mat-icon>
@@ -213,7 +219,12 @@
 
             <ng-container matColumnDef="nombre">
               <th mat-header-cell *matHeaderCellDef>Nombre</th>
-              <td mat-cell *matCellDef="let item">{{ item.entidad?.razonSocial || '-' }}</td>
+              <td mat-cell *matCellDef="let item">
+                {{ item.entidad?.razonSocial || '-' }}
+                @if (!esAsignacionActiva(item)) {
+                  <span class="chip-inactivo" matTooltip="Fuera del padrón: no recibe pagos">Inactivo</span>
+                }
+              </td>
             </ng-container>
 
             <ng-container matColumnDef="valorRegistrado">
@@ -250,7 +261,9 @@
             <ng-container matColumnDef="cuentaBancaria">
               <th mat-header-cell *matHeaderCellDef>Cuenta bancaria</th>
               <td mat-cell *matCellDef="let item">
-                @if (isLoadingVerificacion()) {
+                @if (!esAsignacionActiva(item)) {
+                  <span matTooltip="No se verifica: está fuera del padrón">—</span>
+                } @else if (isLoadingVerificacion()) {
                   <span>Cargando...</span>
                 } @else if (tieneCuentaActivaDe(item)) {
                   <mat-icon color="primary" matTooltip="Tiene exactamente una cuenta bancaria activa">check_circle</mat-icon>
@@ -263,7 +276,9 @@
             <ng-container matColumnDef="certificado">
               <th mat-header-cell *matHeaderCellDef>Certificado</th>
               <td mat-cell *matCellDef="let item">
-                @if (isLoadingVerificacion()) {
+                @if (!esAsignacionActiva(item)) {
+                  <span matTooltip="No se verifica: está fuera del padrón">—</span>
+                } @else if (isLoadingVerificacion()) {
                   <span>Cargando...</span>
                 } @else {
                   @switch (tieneCertificadoDe(item)) {
@@ -287,6 +302,26 @@
                 <button mat-stroked-button color="primary" (click)="editarAsignacion(item)">
                   Editar
                 </button>
+                @if (esAsignacionActiva(item)) {
+                  <button
+                    mat-stroked-button
+                    color="warn"
+                    (click)="desactivarAsignacion(item)"
+                    [disabled]="isSaving()"
+                    matTooltip="Deja de recibir pagos de pensión complementaria. No borra su historial."
+                  >
+                    Sacar del padrón
+                  </button>
+                } @else {
+                  <button
+                    mat-stroked-button
+                    color="primary"
+                    (click)="reactivarAsignacion(item)"
+                    [disabled]="isSaving()"
+                  >
+                    Reactivar
+                  </button>
+                }
               </td>
             </ng-container>
 

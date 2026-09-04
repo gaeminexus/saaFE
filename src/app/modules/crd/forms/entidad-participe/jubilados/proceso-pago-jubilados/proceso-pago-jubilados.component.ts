@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, ViewChild, inject, signal } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { MatDialog } from '@angular/material/dialog';
 import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
@@ -8,8 +9,13 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { Router } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
 
+import {
+  ConfirmDialogComponent,
+  ConfirmDialogData,
+} from '../../../../../../shared/basics/confirm-dialog/confirm-dialog.component';
 import { MaterialFormModule } from '../../../../../../shared/modules/material-form.module';
 import { FuncionesDatosService } from '../../../../../../shared/services/funciones-datos.service';
+import { usuarioSesion } from '../../../../../../shared/services/usuario-sesion';
 import { DatosBusqueda } from '../../../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda } from '../../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
@@ -50,6 +56,7 @@ export class ProcesoPagoJubiladosComponent implements OnInit {
   private static readonly ESTADO_JUBILADO_COMPLEMENTARIO =
     CodigoEstadoParticipe.JUBILADO_COMPLEMENTARIO;
   private static readonly ESTADO_REGISTRO_ACTIVO = 1;
+  private static readonly ESTADO_REGISTRO_INACTIVO = 0;
 
   private fb = inject(FormBuilder);
   private entidadService = inject(EntidadService);
@@ -59,11 +66,17 @@ export class ProcesoPagoJubiladosComponent implements OnInit {
   private funcionesDatos = inject(FuncionesDatosService);
   private router = inject(Router);
   private snackBar = inject(MatSnackBar);
+  private dialog = inject(MatDialog);
 
   filtrosForm!: FormGroup;
   asignacionForm!: FormGroup;
   entidades = signal<Entidad[]>([]);
+  /** Resultado crudo de `getAll()`, sin filtrar — activos e inactivos. Fuente de verdad para "existente". */
+  private todasAsignaciones = signal<ValorPagoPensionComplementaria[]>([]);
+  /** Lo que se ve en la tabla: activos siempre, inactivos solo si `mostrarInactivos()`. */
   asignaciones = signal<ValorPagoPensionComplementaria[]>([]);
+  /** «Ver inactivos» — el padrón por defecto NO los muestra: si no, "sacar del padrón" no se vería en pantalla. */
+  mostrarInactivos = signal<boolean>(false);
   entidadSeleccionada = signal<Entidad | null>(null);
   isLoading = signal<boolean>(false);
   isLoadingSaldos = signal<boolean>(false);
@@ -198,7 +211,7 @@ export class ProcesoPagoJubiladosComponent implements OnInit {
 
   seleccionarEntidad(entidad: Entidad): void {
     this.entidadSeleccionada.set(entidad);
-    const existente = this.asignaciones().find((item) => item.entidad?.codigo === entidad.codigo);
+    const existente = this.todasAsignaciones().find((item) => item.entidad?.codigo === entidad.codigo);
 
     this.asignacionForm.patchValue({
       valorPagar: existente?.valorPagar ?? null,
@@ -244,7 +257,10 @@ export class ProcesoPagoJubiladosComponent implements OnInit {
       fechaModificacion: this.funcionesDatos.formatearFechaParaBackend(new Date()) ?? undefined,
     };
 
-    const existente = this.asignaciones().find((item) => item.entidad?.codigo === entidad.codigo);
+    // Busca en TODAS (no solo en las visibles): si el jubilado tenía un VPPC inactivo, guardar
+    // acá lo actualiza y lo reactiva (siempre graba `estado: ACTIVO`, ver `payloadBase`), en vez
+    // de crear un segundo registro duplicado para la misma entidad.
+    const existente = this.todasAsignaciones().find((item) => item.entidad?.codigo === entidad.codigo);
 
     this.isSaving.set(true);
 
@@ -292,19 +308,19 @@ export class ProcesoPagoJubiladosComponent implements OnInit {
 
     this.valorPagoService.getAll().subscribe({
       next: (rows) => {
-        const asignacionesRows = rows || [];
-        this.asignaciones.set(asignacionesRows);
-        this.dataSourceAsignaciones.data = asignacionesRows;
-        setTimeout(() => {
-          if (this.paginatorAsignaciones) {
-            this.dataSourceAsignaciones.paginator = this.paginatorAsignaciones;
-          }
-        });
-        this.actualizarTotalMensual(asignacionesRows);
+        const todas = rows || [];
+        this.todasAsignaciones.set(todas);
+        this.actualizarVistaAsignaciones();
         this.isLoadingAsignaciones.set(false);
-        this.cargarVerificacionCuentaCertificado(asignacionesRows);
+
+        const activas = todas.filter((a) => this.esRegistroActivo(a));
+        this.actualizarTotalMensual(activas);
+        // Los vistos de cuenta/certificado solo importan para quien va a cobrar: no se piden
+        // certificados de gente que ya está fuera del padrón.
+        this.cargarVerificacionCuentaCertificado(activas);
       },
       error: () => {
+        this.todasAsignaciones.set([]);
         this.asignaciones.set([]);
         this.dataSourceAsignaciones.data = [];
         this.totalPagarMensual.set(0);
@@ -312,6 +328,108 @@ export class ProcesoPagoJubiladosComponent implements OnInit {
         this.verificacionMap.set(new Map());
       },
     });
+  }
+
+  private esRegistroActivo(item: ValorPagoPensionComplementaria): boolean {
+    return (item.estado ?? ProcesoPagoJubiladosComponent.ESTADO_REGISTRO_ACTIVO) ===
+      ProcesoPagoJubiladosComponent.ESTADO_REGISTRO_ACTIVO;
+  }
+
+  /** El padrón, por defecto, solo muestra activos: mostrar inactivos es una elección explícita. */
+  private actualizarVistaAsignaciones(): void {
+    const todas = this.todasAsignaciones();
+    const visibles = this.mostrarInactivos() ? todas : todas.filter((a) => this.esRegistroActivo(a));
+    this.asignaciones.set(visibles);
+    this.dataSourceAsignaciones.data = visibles;
+    setTimeout(() => {
+      if (this.paginatorAsignaciones) {
+        this.dataSourceAsignaciones.paginator = this.paginatorAsignaciones;
+      }
+    });
+  }
+
+  toggleMostrarInactivos(): void {
+    this.mostrarInactivos.set(!this.mostrarInactivos());
+    this.actualizarVistaAsignaciones();
+  }
+
+  // ===================== Sacar del padrón / reactivar =====================
+
+  /**
+   * "Sacar del padrón" = desactivar (`estado: 0`), NUNCA `delete()`: el `DELETE /vppc/{id}` del
+   * backend hace un remove físico, y si el jubilado ya tuvo pagos eso borra el registro de cuánto
+   * se le había asignado y por qué. Desactivar es reversible (`reactivarAsignacion`) y conserva
+   * el rastro.
+   */
+  desactivarAsignacion(item: ValorPagoPensionComplementaria): void {
+    if (!item.entidad || !item.codigo) {
+      return;
+    }
+    const nombre = item.entidad.razonSocial || 'Este jubilado';
+    const data: ConfirmDialogData = {
+      title: 'Sacar del padrón',
+      message: `${nombre} deja de recibir pagos de pensión complementaria. Su saldo y su historial no se tocan.`,
+      confirmText: 'Sacar del padrón',
+      cancelText: 'Cancelar',
+      type: 'warning',
+    };
+    this.dialog
+      .open(ConfirmDialogComponent, { data, width: '480px' })
+      .afterClosed()
+      .subscribe((confirmado) => {
+        if (confirmado) {
+          this.cambiarEstadoAsignacion(item, ProcesoPagoJubiladosComponent.ESTADO_REGISTRO_INACTIVO, `${nombre} fue sacado del padrón.`, 'No se pudo sacar del padrón.');
+        }
+      });
+  }
+
+  reactivarAsignacion(item: ValorPagoPensionComplementaria): void {
+    if (!item.entidad || !item.codigo) {
+      return;
+    }
+    const nombre = item.entidad.razonSocial || 'Este jubilado';
+    const data: ConfirmDialogData = {
+      title: 'Reactivar en el padrón',
+      message: `${nombre} vuelve a recibir pagos de pensión complementaria a partir de la próxima corrida.`,
+      confirmText: 'Reactivar',
+      cancelText: 'Cancelar',
+      type: 'info',
+    };
+    this.dialog
+      .open(ConfirmDialogComponent, { data, width: '480px' })
+      .afterClosed()
+      .subscribe((confirmado) => {
+        if (confirmado) {
+          this.cambiarEstadoAsignacion(item, ProcesoPagoJubiladosComponent.ESTADO_REGISTRO_ACTIVO, `${nombre} fue reactivado en el padrón.`, 'No se pudo reactivar.');
+        }
+      });
+  }
+
+  private cambiarEstadoAsignacion(
+    item: ValorPagoPensionComplementaria,
+    estado: number,
+    mensajeExito: string,
+    mensajeError: string,
+  ): void {
+    this.isSaving.set(true);
+    this.valorPagoService
+      .update({
+        ...item,
+        estado,
+        usuarioModificacion: usuarioSesion(),
+        fechaModificacion: this.funcionesDatos.formatearFechaParaBackend(new Date()) ?? undefined,
+      })
+      .subscribe({
+        next: () => {
+          this.isSaving.set(false);
+          this.snackBar.open(mensajeExito, 'Cerrar', { duration: 4000 });
+          this.cargarAsignaciones();
+        },
+        error: () => {
+          this.isSaving.set(false);
+          this.snackBar.open(mensajeError, 'Cerrar', { duration: 4000 });
+        },
+      });
   }
 
   /**
@@ -379,6 +497,10 @@ export class ProcesoPagoJubiladosComponent implements OnInit {
     }
 
     return valor;
+  }
+
+  esAsignacionActiva(item: ValorPagoPensionComplementaria): boolean {
+    return this.esRegistroActivo(item);
   }
 
   editarAsignacion(item: ValorPagoPensionComplementaria): void {
