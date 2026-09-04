@@ -16,6 +16,7 @@ import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 
 import { empresaSesionCodigo } from '../../../../../../../shared/services/empresa-sesion';
+import { ExportService } from '../../../../../../../shared/services/export.service';
 import { usuarioSesion } from '../../../../../../../shared/services/usuario-sesion';
 import { Entidad } from '../../../../../model/entidad';
 import { DetallePagoPension, ResultadoGeneracionPagos } from '../../../../../model/pago-pension-complementaria';
@@ -114,6 +115,7 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
   private operacionesPagoService = inject(OperacionesPagoPrestamoService);
   private verificacionService = inject(VerificacionCuentaCertificadoService);
   private pgpcService = inject(PagoPensionComplementariaService);
+  private exportService = inject(ExportService);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
 
@@ -418,6 +420,61 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
 
   nombreMes(mes: number): string {
     return MESES.find((m) => m.valor === mes)?.nombre ?? String(mes);
+  }
+
+  // ===================== Exportar CSV =====================
+  // Pedido del usuario: exportar el prevuelo (reparte el trabajo de destrabar bloqueos) y el
+  // resultado de la corrida ejecutada. Ninguno de los dos trae fechas-arreglo del backend
+  // (`DetallePagoPension` no tiene campo de fecha — solo `PagoPensionComplementaria`, que es lo
+  // que usa la pestaña «Seguimiento», no esta), así que no hace falta formatear ninguna fecha
+  // acá; los importes van con `ExportService.exportToCSV`, que ya usa punto decimal sin
+  // separador de miles (`toFixed(2)`) — mismo patrón que el resto del módulo.
+
+  private periodoArchivo(): string {
+    return `${this.anio}-${String(this.mes).padStart(2, '0')}`;
+  }
+
+  exportarPrevueloCSV(): void {
+    const items = this.prevuelo();
+    if (!items || items.length === 0) {
+      return;
+    }
+    const filas = items.map((item) => ({
+      cedula: item.entidad.numeroIdentificacion ?? '',
+      nombre: item.entidad.razonSocial ?? '',
+      valorMensual: item.valorTotal,
+      estado: item.listo ? 'Listo' : 'Bloqueado',
+      motivo: item.motivos.join(' · '),
+    }));
+    this.exportService.exportToCSV(
+      filas,
+      `corrida-jubilados-prevuelo-${this.periodoArchivo()}`,
+      ['Cédula', 'Nombre', 'Valor mensual', 'Estado', 'Motivo'],
+      ['cedula', 'nombre', 'valorMensual', 'estado', 'motivo'],
+    );
+  }
+
+  exportarResultadoCSV(): void {
+    const res = this.resultado();
+    if (!res || res.detalle.length === 0) {
+      return;
+    }
+    const filas = res.detalle.map((d) => ({
+      idEntidad: d.idEntidad,
+      nombre: d.nombre ?? '',
+      valorPension: d.valorPension ?? '',
+      valorSeguroSalud: d.valorSeguroSalud ?? '',
+      valorCruzadoAPrestamo: d.valorCruzadoAPrestamo ?? '',
+      valorOrdenPago: d.valorOrdenPago ?? '',
+      estado: this.esDesviacion(d) ? 'Desviación' : d.estado,
+      mensaje: d.mensaje || (this.esDesviacion(d) ? 'Cruzado íntegro contra préstamo: no generó orden de pago.' : ''),
+    }));
+    this.exportService.exportToCSV(
+      filas,
+      `corrida-jubilados-resultado-${this.periodoArchivo()}`,
+      ['Entidad', 'Nombre', 'Pensión', 'Seguro', 'Cruzado a préstamo', 'Orden de pago', 'Estado', 'Mensaje'],
+      ['idEntidad', 'nombre', 'valorPension', 'valorSeguroSalud', 'valorCruzadoAPrestamo', 'valorOrdenPago', 'estado', 'mensaje'],
+    );
   }
 
   money(n: number | null | undefined): string {

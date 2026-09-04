@@ -252,6 +252,17 @@
   margin-bottom: 16px;
 }
 
+.card-header-con-accion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+
+  ::ng-deep .mat-mdc-card-header-text {
+    flex: 1;
+  }
+}
+
 .tabla-scroll {
   overflow-x: auto;
   margin-top: 8px;

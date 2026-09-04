@@ -133,8 +133,12 @@
       </div>
     } @else {
       <mat-card class="prevuelo-card">
-        <mat-card-header>
+        <mat-card-header class="card-header-con-accion">
           <mat-card-title>Prevuelo — {{ periodoTexto }}</mat-card-title>
+          <button mat-stroked-button (click)="exportarPrevueloCSV()" matTooltip="Exporta el prevuelo tal como se ve: quién entra, quién queda bloqueado y por qué">
+            <mat-icon>download</mat-icon>
+            Exportar CSV
+          </button>
         </mat-card-header>
         <mat-card-content>
           <div class="tabla-scroll">
@@ -181,8 +185,12 @@
 
   @if (resultado(); as res) {
     <mat-card class="resultado-card">
-      <mat-card-header>
+      <mat-card-header class="card-header-con-accion">
         <mat-card-title><mat-icon>fact_check</mat-icon> Resultado de la corrida</mat-card-title>
+        <button mat-stroked-button (click)="exportarResultadoCSV()" matTooltip="Exporta el detalle de esta corrida">
+          <mat-icon>download</mat-icon>
+          Exportar CSV
+        </button>
       </mat-card-header>
       <mat-card-content>
         @if (mensajeResultado()) {
