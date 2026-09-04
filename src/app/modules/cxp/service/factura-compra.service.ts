@@ -8,6 +8,7 @@ import {
   AnularDocumentoCompraResponse,
   MovimientoRelacionadoCompra,
 } from '../model/anulacion-documento-compra';
+import { NotaVentaCompraManualRequest, NotaVentaCompraManualResponse } from '../model/nota-venta-compra-manual';
 import { ServiciosCxp } from './ws-cxp';
 
 @Injectable({ providedIn: 'root' })
@@ -55,6 +56,20 @@ export class FacturaCompraService {
    */
   anular(id: number, datos: AnularDocumentoCompraRequest): Observable<AnularDocumentoCompraResponse> {
     return this.http.post<AnularDocumentoCompraResponse>(`${ServiciosCxp.RS_FCTC}/anular/${id}`, datos, this.httpOptions).pipe(
+      catchError(this.handleErrorAnulacion),
+    );
+  }
+
+  /**
+   * `POST /fctc/manual` (docs/cxp/API-NOTA-VENTA-COMPRA-MANUAL.md) — registra una nota de venta
+   * ingresada a mano, completa en una sola llamada (cabecera + detalles + formas de pago +
+   * sustento + asiento). ⛔ NO es el `POST /fctc` genérico: ese es el CRUD pelado de
+   * `EntityDaoImpl` y no valida ni genera nada (§0.2 del contrato).
+   * `exito: false` con HTTP 200 significa que no se grabó nada — el llamador debe mirar ese
+   * campo, no el status HTTP.
+   */
+  registrarManual(datos: NotaVentaCompraManualRequest): Observable<NotaVentaCompraManualResponse> {
+    return this.http.post<NotaVentaCompraManualResponse>(`${ServiciosCxp.RS_FCTC}/manual`, datos, this.httpOptions).pipe(
       catchError(this.handleErrorAnulacion),
     );
   }

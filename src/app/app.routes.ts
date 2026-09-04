@@ -956,6 +956,12 @@ export const routes: Routes = [
         canActivate: [authGuard],
       },
       {
+        path: 'procesos/nota-venta-compra-manual',
+        loadComponent: () => import('./modules/cxp/forms/procesos/nota-venta-compra-manual/nota-venta-compra-manual.component').then((m) => m.NotaVentaCompraManualComponent),
+        canActivate: [authGuard],
+        data: { title: 'Nota de venta de compra (manual)' },
+      },
+      {
         path: 'procesos/sustento-tributario',
         loadComponent: () => import('./modules/cxp/forms/procesos/sustento-tributario/sustento-tributario.component').then((m) => m.SustentoTributarioComponent),
         canActivate: [authGuard],

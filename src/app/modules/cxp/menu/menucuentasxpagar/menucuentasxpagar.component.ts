@@ -60,6 +60,11 @@ export class MenucuentaxpagarComponent {
           route: '/menucuentaxpagar/procesos/consulta-documentos',
         },
         {
+          displayName: 'Nota de Venta (Manual)',
+          iconName: 'edit_note',
+          route: '/menucuentaxpagar/procesos/nota-venta-compra-manual',
+        },
+        {
           displayName: 'Proposición de Pago',
           iconName: 'payment',
           route: '/menucuentaxpagar/procesos/proposicion-pago',

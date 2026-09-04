@@ -1,0 +1,314 @@
+<div class="nvcm-page">
+  <div class="nvcm-header">
+    <h1><mat-icon>receipt_long</mat-icon> Nota de venta de compra (ingreso manual)</h1>
+    <p class="nvcm-subtitulo">
+      Para comprobantes que no llegan por XML del SRI — el sistema la trata igual que una
+      factura de compra (tipo "02") en pago, cruce y consultas.
+    </p>
+  </div>
+
+  @if (bloqueantes().length > 0) {
+    <div class="nvcm-bloqueantes">
+      <div class="nvcm-bloqueantes-titulo">
+        <mat-icon>block</mat-icon>
+        No se registró — {{ bloqueantes().length }} condición(es) bloqueante(s)
+      </div>
+      @for (b of bloqueantes(); track b.tipo) {
+        <div class="nvcm-bloqueante-item">
+          <mat-icon>{{ tipoIcon(b.tipo) }}</mat-icon>
+          <div>
+            <div class="nvcm-bloqueante-label">{{ tipoLabel(b.tipo) }}</div>
+            <div class="nvcm-bloqueante-detalle">{{ b.detalle }}</div>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  @if (ultimoRegistro(); as reg) {
+    <div class="nvcm-exito">
+      <mat-icon>check_circle</mat-icon>
+      <div>
+        Registrada como <strong>{{ reg.numero }}</strong>
+        @if (reg.asiento) { — asiento contable <strong>{{ reg.asiento }}</strong> }
+        @else { — sin asiento (generación contable apagada para esta empresa) }
+      </div>
+    </div>
+  }
+
+  <mat-card class="nvcm-card">
+    <h2 class="nvcm-seccion-titulo">Cabecera</h2>
+    <div class="nvcm-grid">
+      <div class="nvcm-campo nvcm-full">
+        <button mat-stroked-button type="button" (click)="abrirBusquedaTitular()">
+          <mat-icon>search</mat-icon> Buscar proveedor
+        </button>
+        @if (titular(); as t) {
+          <span class="nvcm-titular-elegido">
+            {{ t.nombre || t.razonSocial }} — {{ t.identificacion }}
+          </span>
+        } @else {
+          <span class="nvcm-titular-vacio">Ningún proveedor seleccionado</span>
+        }
+      </div>
+
+      <div class="nvcm-doc-numero">
+        <mat-form-field appearance="outline" class="doc-est">
+          <mat-label>Establec. *</mat-label>
+          <input matInput [(ngModel)]="form.numEstablecimiento" maxlength="3" placeholder="001" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="doc-pto">
+          <mat-label>Pto. emisión *</mat-label>
+          <input matInput [(ngModel)]="form.numPtoEmision" maxlength="3" placeholder="001" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="doc-sec">
+          <mat-label>Secuencial *</mat-label>
+          <input matInput [(ngModel)]="form.secuencial" maxlength="9" placeholder="000000123" />
+        </mat-form-field>
+      </div>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Fecha de emisión *</mat-label>
+        <input
+          #fechaInput matInput
+          [matDatepicker]="picker"
+          [formControl]="fechaControl"
+          placeholder="dd/mm/aaaa"
+          (input)="capturarFechaRaw($event)"
+          (dateChange)="onPickerChange($event.value)"
+          (blur)="syncFechaFromRaw($event)"
+        />
+        <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+        <mat-datepicker #picker></mat-datepicker>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Nro. autorización</mat-label>
+        <input matInput [(ngModel)]="form.autorizacion" maxlength="49" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="nvcm-full">
+        <mat-label>Observación</mat-label>
+        <textarea matInput [(ngModel)]="form.observacion" rows="2" maxlength="2000"></textarea>
+      </mat-form-field>
+    </div>
+  </mat-card>
+
+  <mat-card class="nvcm-card">
+    <div class="nvcm-seccion-header">
+      <h2 class="nvcm-seccion-titulo">Detalle</h2>
+      <button mat-button color="primary" type="button" (click)="agregarFila()">
+        <mat-icon>add</mat-icon> Agregar línea
+      </button>
+    </div>
+
+    <div class="nvcm-tabla-wrap">
+      <table class="nvcm-tabla-detalle">
+        <thead>
+          <tr>
+            <th class="col-producto">Producto *</th>
+            <th class="col-desc">Descripción *</th>
+            <th class="col-num">Cant. *</th>
+            <th class="col-num">Valor unit.</th>
+            <th class="col-num">Desc.</th>
+            <th class="col-num">Base imp.</th>
+            <th class="col-num">% IVA</th>
+            <th class="col-num">Valor IVA</th>
+            <th class="col-cod">Cód. IVA SRI</th>
+            <th class="col-num">Total línea</th>
+            <th class="col-acc"></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (fila of detalles; track $index; let i = $index) {
+            <tr>
+              <td class="col-producto">
+                <mat-form-field appearance="outline" class="celda-campo">
+                  <input
+                    matInput
+                    [(ngModel)]="fila._busqueda"
+                    (ngModelChange)="filtrarProductosFila(fila)"
+                    [matAutocomplete]="autoProd"
+                    placeholder="Nombre o código..."
+                  />
+                  <mat-autocomplete #autoProd="matAutocomplete">
+                    @for (p of fila._filtrados; track p.id) {
+                      <mat-option [value]="p.nombre + ' (' + p.codigo + ')'" (onSelectionChange)="$event.source.selected && seleccionarProducto(fila, p)">
+                        {{ p.nombre }} <span class="prod-cod">({{ p.codigo }})</span>
+                      </mat-option>
+                    }
+                  </mat-autocomplete>
+                </mat-form-field>
+              </td>
+              <td class="col-desc">
+                <mat-form-field appearance="outline" class="celda-campo">
+                  <input matInput [(ngModel)]="fila.descripcion" maxlength="500" />
+                </mat-form-field>
+              </td>
+              <td class="col-num">
+                <mat-form-field appearance="outline" class="celda-campo celda-num">
+                  <input matInput type="number" step="0.01" [(ngModel)]="fila.cantidad" (ngModelChange)="recalcularFila(fila)" />
+                </mat-form-field>
+              </td>
+              <td class="col-num">
+                <mat-form-field appearance="outline" class="celda-campo celda-num">
+                  <input matInput type="number" step="0.01" [(ngModel)]="fila.valor" (ngModelChange)="recalcularFila(fila)" />
+                </mat-form-field>
+              </td>
+              <td class="col-num">
+                <mat-form-field appearance="outline" class="celda-campo celda-num">
+                  <input matInput type="number" step="0.01" [(ngModel)]="fila.descuento" (ngModelChange)="recalcularFila(fila)" />
+                </mat-form-field>
+              </td>
+              <td class="col-num">
+                <mat-form-field appearance="outline" class="celda-campo celda-num">
+                  <input matInput type="number" step="0.01" [(ngModel)]="fila.baseImponible" />
+                </mat-form-field>
+              </td>
+              <td class="col-num">
+                <mat-form-field appearance="outline" class="celda-campo celda-num">
+                  <input matInput type="number" step="0.01" [(ngModel)]="fila.porcentajeIVA" (ngModelChange)="recalcularFila(fila)" />
+                </mat-form-field>
+              </td>
+              <td class="col-num">
+                <mat-form-field appearance="outline" class="celda-campo celda-num">
+                  <input matInput type="number" step="0.01" [(ngModel)]="fila.valorIVA" />
+                </mat-form-field>
+              </td>
+              <td class="col-cod">
+                <mat-form-field appearance="outline" class="celda-campo">
+                  <input matInput [(ngModel)]="fila.codigoIVASRI" maxlength="4" placeholder="4" />
+                </mat-form-field>
+              </td>
+              <td class="col-num">
+                <mat-form-field appearance="outline" class="celda-campo celda-num">
+                  <input matInput type="number" step="0.01" [(ngModel)]="fila.total" />
+                </mat-form-field>
+              </td>
+              <td class="col-acc">
+                <button mat-icon-button type="button" color="warn" [disabled]="detalles.length <= 1" (click)="quitarFila(i)" matTooltip="Quitar línea">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </mat-card>
+
+  <mat-card class="nvcm-card">
+    <h2 class="nvcm-seccion-titulo">Totales de la nota de venta</h2>
+    <p class="nvcm-nota-servidor">
+      El servidor graba estos valores tal cual — no los recalcula desde el detalle.
+    </p>
+    <div class="nvcm-grid nvcm-grid-totales">
+      <mat-form-field appearance="outline">
+        <mat-label>Subtotal (grav.)</mat-label>
+        <input matInput type="number" step="0.01" [(ngModel)]="form.subtotal" />
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Subtotal (0%)</mat-label>
+        <input matInput type="number" step="0.01" [(ngModel)]="form.subcero" />
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Descuento</mat-label>
+        <input matInput type="number" step="0.01" [(ngModel)]="form.descuento" />
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>% IVA</mat-label>
+        <input matInput type="number" step="0.01" [(ngModel)]="form.pIVA" />
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Valor IVA</mat-label>
+        <input matInput type="number" step="0.01" [(ngModel)]="form.vIVA" />
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Total *</mat-label>
+        <input matInput type="number" step="0.01" [(ngModel)]="form.total" />
+      </mat-form-field>
+    </div>
+
+    <div class="nvcm-cuadre" [class.nvcm-cuadre-ok]="totalCuadra" [class.nvcm-cuadre-mal]="!totalCuadra">
+      <mat-icon>{{ totalCuadra ? 'check_circle' : 'warning' }}</mat-icon>
+      <div class="nvcm-cuadre-texto">
+        <div>Suma del detalle: <strong>{{ sumaDetalleTotal | number:'1.2-2' }}</strong> — Total tipeado: <strong>{{ (form.total || 0) | number:'1.2-2' }}</strong></div>
+        @if (!totalCuadra) {
+          <div class="nvcm-cuadre-diff">Diferencia: {{ diferenciaTotal | number:'1.2-2' }} — revise antes de grabar.</div>
+        }
+      </div>
+      @if (!totalCuadra) {
+        <button mat-button type="button" (click)="igualarTotalesConDetalle()">Usar suma del detalle</button>
+      }
+    </div>
+  </mat-card>
+
+  <mat-card class="nvcm-card">
+    <div class="nvcm-seccion-header">
+      <h2 class="nvcm-seccion-titulo">Formas de pago <span class="nvcm-opcional">(opcional)</span></h2>
+      <button mat-button color="primary" type="button" (click)="agregarFormaPago()">
+        <mat-icon>add</mat-icon> Agregar forma de pago
+      </button>
+    </div>
+
+    @if (formasPago.length === 0) {
+      <p class="nvcm-nota-servidor">Sin formas de pago — no se creará ninguna.</p>
+    } @else {
+      <div class="nvcm-tabla-wrap">
+        <table class="nvcm-tabla-fpago">
+          <thead>
+            <tr>
+              <th>Forma de pago</th>
+              <th class="col-num">Valor</th>
+              <th class="col-num">Plazo</th>
+              <th>Unidad</th>
+              <th class="col-acc"></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (fp of formasPago; track $index; let i = $index) {
+              <tr>
+                <td>
+                  <mat-form-field appearance="outline" class="celda-campo">
+                    <mat-select [(ngModel)]="fp.formaPago">
+                      @for (t of tiposFormaPago; track t.codigo) {
+                        <mat-option [value]="t.codigo">{{ t.codigo }} — {{ t.descripcion }}</mat-option>
+                      }
+                    </mat-select>
+                  </mat-form-field>
+                </td>
+                <td class="col-num">
+                  <mat-form-field appearance="outline" class="celda-campo celda-num">
+                    <input matInput type="number" step="0.01" [(ngModel)]="fp.valor" />
+                  </mat-form-field>
+                </td>
+                <td class="col-num">
+                  <mat-form-field appearance="outline" class="celda-campo celda-num">
+                    <input matInput type="number" [(ngModel)]="fp.plazo" />
+                  </mat-form-field>
+                </td>
+                <td>
+                  <mat-form-field appearance="outline" class="celda-campo">
+                    <input matInput [(ngModel)]="fp.unidadTiempo" placeholder="dias" />
+                  </mat-form-field>
+                </td>
+                <td class="col-acc">
+                  <button mat-icon-button type="button" color="warn" (click)="quitarFormaPago(i)" matTooltip="Quitar">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <p class="nvcm-nota-servidor">Suma de formas de pago: {{ sumaFormasPago | number:'1.2-2' }}</p>
+    }
+  </mat-card>
+
+  <div class="nvcm-acciones">
+    <button mat-raised-button color="primary" type="button" [disabled]="guardando()" (click)="guardar()">
+      <mat-icon>save</mat-icon> {{ guardando() ? 'Guardando...' : 'Registrar nota de venta' }}
+    </button>
+  </div>
+</div>
