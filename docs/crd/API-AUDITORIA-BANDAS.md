@@ -126,8 +126,8 @@ AND entre sí:
       "concepto": "CAPITAL",
       "valor": 137.42,
       "idEntidad": 1234, "participe": "...", "cedula": "...", "codigoAsoprep": 45678,
-      "idPrestamo": 7973, "numeroCuota": 10, "fechaVencimiento": "2026-07-31",
-      "fechaAplicacion": "2026-08-31",
+      "idPrestamo": 7973, "numeroCuota": 10, "fechaVencimiento": [2026, 7, 31],
+      "fechaAplicacion": [2026, 8, 31],
       "idProducto": 12, "producto": "...", "idTipoPrestamo": 1,
       "idTipoAporte": null,
       "tipoCartera": 1, "dias": 45,
@@ -299,13 +299,21 @@ Si divergen, el usuario no puede comparar dos CSV del mismo tablero.
 (pedido del usuario 2026-09-03). El backend **ya la devuelve** como `fechaVencimiento` en cada fila
 —no hace falta tocarlo— pero no se estaba mostrando en ninguno de los dos lados.
 
-⛔ **Formato de fecha en el cable: verificarlo, no asumirlo.** Quien serializa es **Jackson**
-(`CLAUDE.md` § Serialización), que emite `LocalDate` como **arreglo** `[2026,7,31]`, no como
-`"2026-07-31"`. El ejemplo de este mismo documento muestra la forma string, y el modelo del FE
-declara `fechaVencimiento: string | null` — **al menos uno de los dos está desactualizado**. Si
-llega como arreglo y se vuelca crudo al CSV, la celda sale `2026,7,31` y además rompe el CSV por las
-comas. `fechaAplicacion` ya se exporta hoy y tiene exactamente el mismo riesgo: **las dos fechas se
-formatean con el mismo helper**, no una sí y otra no.
+⛔ **Las fechas llegan como ARREGLO, no como string — resuelto el 2026-09-03, no volver a suponerlo.**
+`FilaDistribucionBanda.java` declara `fechaVencimiento`/`fechaAplicacion` como `LocalDate`, y
+**Jackson serializa todo `LocalDate` como `[2026,7,31]`** (`CLAUDE.md` § Serialización, verificado
+sobre el cable el 2026-08-20). El ejemplo de respuesta de este documento mostraba la forma string y
+el modelo del FE declaraba `string | null`: **los dos estaban mal**, y los dos quedaron corregidos.
+
+**Consecuencia real, encontrada al arreglar esto:** `fechaAplicacion` ya se exportaba rota, en
+silencio. El CSV volcaba el valor crudo y `String([2026,7,31])` da `"2026,7,31"` — una celda
+ilegible. La tabla no tenía el defecto porque `formatFecha()` convierte el arreglo por dentro; el
+CSV se salteaba ese paso. **Las dos fechas pasan por el mismo formateador antes de ir al CSV**, y
+cualquier fecha que se agregue después también.
+
+⚠️ Y ojo con el delimitador: `ExportService` usa `;` en locale español, así que las comas del
+arreglo **no** partían columnas — por eso el archivo se veía estructuralmente bien y nadie lo notó
+durante meses. Con delimitador `,` sí habría roto la estructura.
 
 Costo: el `resumenJerarquico` y el `totalValorFiltrado` se calculan sobre el conjunto filtrado
 completo en **las dos** llamadas (`construirResumenJerarquico`, sin paginar), así que pedir
