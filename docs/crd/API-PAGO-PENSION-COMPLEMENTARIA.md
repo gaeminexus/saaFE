@@ -173,6 +173,76 @@ y el método REST calcado de `porEntidad`. No hace falta nada más.
 
 ---
 
+## 4bis. `POST /rest/pgpc/previsualizarCorrida` — ⬜ POR IMPLEMENTAR (2026-09-04)
+
+**Pedido del usuario, 2026-09-04:** *«Quiero que en la pantalla de corrida me dé un detalle de lo
+que se va a cruzar: cuánto en préstamos, cuánto en dinero, y el total.»*
+
+⛔ **NO ESCRIBE NADA.** Es una simulación: mismos parámetros que `generarPagosDelMes`, misma lógica
+de decisión, **cero** filas creadas, cero asientos, cero órdenes.
+
+```
+POST /SaaBE/rest/pgpc/previsualizarCorrida?idEmpresa=1&anio=2026&mes=8&usuario=jperez
+```
+
+### Por qué va en el backend y no en el frontend
+
+El monto a cruzar depende de las **cuotas exigibles** de cada préstamo a la fecha de corrida. Para
+calcularlo en el navegador habría que traer los préstamos y las cuotas de los 133 jubilados —cientos
+de consultas— y **reimplementar en TypeScript la regla del tope**, que ya vive en el backend. Dos
+copias de la misma regla se desincronizan; la primera vez que cambie una, el prevuelo va a mentir.
+
+**Reutiliza la misma función que calcula el tope en la corrida real.** Si no la reutiliza, no sirve.
+
+### Respuesta 200
+
+Mismo sobre `{exito, mensaje, resultado}` del §1.
+
+```json
+{
+  "exito": true,
+  "resultado": {
+    "anio": 2026, "mes": 8,
+    "evaluados": 187,
+    "aptos": 120, "bloqueados": 67,
+    "totalACruzarPrestamos": 18450.00,
+    "totalADinero": 9870.50,
+    "totalGeneral": 28320.50,
+    "detalle": [
+      {
+        "idEntidad": 1234, "nombre": "...",
+        "mesesAdeudados": 8,
+        "montoACruzar": 1200.00,
+        "montoADinero": 300.00,
+        "total": 1500.00,
+        "tienePrestamo": true,
+        "tieneCertificado": true,
+        "apto": true,
+        "motivoBloqueo": null
+      }
+    ]
+  }
+}
+```
+
+- **`totalACruzarPrestamos`**: lo que va a cancelar deuda. **No sale de la asociación.**
+- **`totalADinero`**: lo que va a salir al banco como orden de pago. **Esto sí es dinero saliendo.**
+- **`totalGeneral`**: la suma. Es lo que se descuenta de las cuentas de pensión complementaria.
+
+### ⚠️ El cruce es una ESTIMACIÓN, y hay que decirlo en la pantalla
+
+`montoACruzar` se calcula como
+`min(pensiones acumuladas, deuda exigible a la fecha de corrida, saldo del aporte 23)`.
+
+**El monto real puede diferir**: el motor calcula mora e interés al aplicar, y esa parte no se
+simula. La diferencia debería ser chica, pero **el número no es exacto y la pantalla no puede
+presentarlo como si lo fuera.** Es para dimensionar y decidir, no para cuadrar contra el resultado.
+
+⛔ **Si alguna vez este endpoint empieza a escribir algo "para simular mejor", está mal.** La única
+garantía que lo hace útil es que se puede apretar sin miedo.
+
+---
+
 ## 5. Estados de `PGPC` (`PGPCESTD`)
 
 De `com.saa.rubros.EstadoPagoPensionComplementaria`. **Son constantes planas, no catálogo `Rubro`.**
