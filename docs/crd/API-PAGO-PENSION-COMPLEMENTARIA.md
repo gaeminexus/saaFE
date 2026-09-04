@@ -225,6 +225,33 @@ Mismo sobre `{exito, mensaje, resultado}` del §1.
 }
 ```
 
+### ⭐ El seguro médico se muestra aparte — pedido del usuario, 2026-09-04
+
+> *«En el tab de corrida del mes debe mostrarse también el seguro médico, ese no se está mostrando
+> en pantalla.»*
+
+**No es un detalle de presentación: son dos cuentas contables distintas.** La plantilla alterno 35
+manda la pensión a `2.3.01.10.03 PENSIONES COMPLEMENTARIAS POR PAGAR` (aux1 2) y el seguro a
+`2.3.90.90.06 SEGURO POR PAGAR JUBILADOS` (aux1 4). Que la pantalla los sume en un solo número
+esconde una separación que la contabilidad sí hace.
+
+Campos que se agregan a `DetallePrevisualizacionJubilado` **y** a `DetallePagoPension`:
+
+| Campo | Qué |
+|---|---|
+| `valorPensionMensual` | La parte de pensión de UN mes (`VPPC.valorPagar − VPPC.valorSeguro`) |
+| `valorSeguroMensual` | El seguro médico de UN mes (`VPPC.valorSeguro`) |
+| `totalPension` | Pensión acumulada de todos los meses del retroactivo |
+| `totalSeguro` | **Seguro médico acumulado** de todos los meses |
+
+Y en el agregado de la respuesta: **`totalSeguroGeneral`**, la suma del seguro de todos los
+jubilados de la corrida.
+
+⛔ **`valorPagar` de `VPPC` ya INCLUYE el seguro** — no se suman. `valorPagar` es el total mensual y
+`valorSeguro` es la porción de ese total que corresponde al seguro. Sumar los dos duplica el seguro,
+y es el error más fácil de cometer acá. Verificado en `PagoPensionComplementariaServiceImpl`:
+`valorPension = valorTotal − valorSeguro`.
+
 - **`totalACruzarPrestamos`**: lo que va a cancelar deuda. **No sale de la asociación.**
 - **`totalADinero`**: lo que va a salir al banco como orden de pago. **Esto sí es dinero saliendo.**
 - **`totalGeneral`**: la suma. Es lo que se descuenta de las cuentas de pensión complementaria.
