@@ -12,21 +12,18 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { forkJoin, of } from 'rxjs';
-import { catchError } from 'rxjs/operators';
 
 import { empresaSesionCodigo } from '../../../../../../../shared/services/empresa-sesion';
 import { ExportService } from '../../../../../../../shared/services/export.service';
 import { usuarioSesion } from '../../../../../../../shared/services/usuario-sesion';
-import { Entidad } from '../../../../../model/entidad';
-import { DetallePagoPension, ResultadoGeneracionPagos } from '../../../../../model/pago-pension-complementaria';
-import { SaldoAporte } from '../../../../../model/pagos/operaciones-pago';
-import { RespuestaPago } from '../../../../../model/pagos/respuesta-pago';
-import { ValorPagoPensionComplementaria } from '../../../../../model/valor-pago-pension-complementaria';
-import { OperacionesPagoPrestamoService } from '../../../../../service/operaciones-pago-prestamo.service';
+import {
+  DetallePagoPension,
+  DetallePrevisualizacionPago,
+  Participacion,
+  ResultadoGeneracionPagos,
+  ResultadoPrevisualizacionCorrida,
+} from '../../../../../model/pago-pension-complementaria';
 import { PagoPensionComplementariaService } from '../../../../../service/pago-pension-complementaria.service';
-import { ValorPagoPensionComplementariaService } from '../../../../../service/valor-pago-pension-complementaria.service';
-import { VerificacionCuentaCertificadoService } from '../../../../../service/verificacion-cuenta-certificado.service';
 import {
   ConfirmarGeneracionData,
   ConfirmarGeneracionDialogComponent,
@@ -39,54 +36,28 @@ const MESES = [
   { valor: 10, nombre: 'Octubre' }, { valor: 11, nombre: 'Noviembre' }, { valor: 12, nombre: 'Diciembre' },
 ];
 
-const ESTADO_VPPC_ACTIVO = 1;
-
-type MotivoBloqueo =
-  | 'Sin cuenta bancaria activa'
-  | 'Sin certificado bancario'
-  | 'Certificado no verificable (problema del sistema)'
-  | 'Saldo insuficiente'
-  | 'Ya pagado este período';
-
-interface PrevueloItem {
-  entidad: Entidad;
-  valorTotal: number;
-  tieneCuenta: boolean;
-  /** `null` = no se pudo verificar (catálogo del sistema). Desde el 2026-09-04 esto TAMBIÉN bloquea. */
-  tieneCertificado: boolean | null;
-  saldoAporte: number;
-  saldoSuficiente: boolean;
-  yaPagado: boolean;
-  listo: boolean;
-  motivos: MotivoBloqueo[];
-}
-
 /**
- * Pestaña B — «Corrida del mes». Contrato: docs/crd/API-PAGO-PENSION-COMPLEMENTARIA.md §6/§6bis.
- * Diseño: docs/crd/DISENO-PANTALLA-PAGO-JUBILADOS.md §3/§3bis. Patrón copiado de `cierre-cartera`.
+ * Pestaña B — «Corrida del mes». Contrato: docs/crd/API-PAGO-PENSION-COMPLEMENTARIA.md §4bis/§6.
+ * Diseño: docs/crd/DISENO-PANTALLA-PAGO-JUBILADOS.md §3/§3bis. Patrón copiado de `cierre-cartera`
+ * (botón «Previsualizar» separado de «Ejecutar», sin auto-cargar al entrar a la pestaña).
  *
- * El prevuelo es enteramente client-side (no hay endpoint de previsualización en el backend):
- * cruza VPPC activas + saldo del aporte tipo pensión complementaria + cuenta bancaria activa +
- * certificado + `porPeriodo` (para "ya pagado"). El único endpoint que muta algo es
- * `generarPagosDelMes`, disparado solo desde "Ejecutar" con confirmación previa.
+ * El prevuelo YA NO se calcula en el cliente: viene de `POST /pgpc/previsualizarCorrida`, que
+ * simula `generarPagosDelMes` con la misma regla del tope (por préstamo, cuotas exigibles) que
+ * vive en el backend. Calcularlo acá habría significado cientos de consultas para ~187 jubilados
+ * y reimplementar esa regla en TypeScript — dos copias que se desincronizan, y un prevuelo que
+ * miente es peor que no tenerlo (§4bis del contrato).
  *
- * Verificación de cuenta y certificado: delegada en `VerificacionCuentaCertificadoService`,
- * compartida con el padrón (`proceso-pago-jubilados`, sección 3) para no duplicar llamadas ni
- * desincronizar las dos vistas.
- *
- * ⛔ Regla del certificado bancario (decisión del usuario, 2026-09-04, §6 del contrato): sin
- * certificado, el jubilado NO entra en la corrida — cuenta como bloqueado y no suma al total a
- * pagar, igual que el backend (`SIN_CERTIFICADO_BANCARIO`, 422). En el padrón (pestaña A) el
- * mismo dato sigue siendo solo informativo — ahí NO bloquea, es la única pestaña que muta algo.
- *
- * ⛔⛔ Las dos causas de "sin certificado" NO se pueden confundir (§6 del contrato):
- * - `tieneCertificado === false` con cuenta activa: falta el documento de ESE jubilado.
- *   Accionable por la oficina → motivo "Sin certificado bancario".
- * - `tieneCertificado === null` con cuenta activa: NO se pudo verificar — problema del catálogo
- *   `CRD.TPDJ` (hoy, 2026-09-04, tiene dos filas activas "CERTIFICADO BANCARIO" y el backend
- *   resuelve con `get(0)` sin `ORDER BY`), afecta a TODOS por igual y no es culpa de nadie en
- *   particular. Motivo distinto: "Certificado no verificable (problema del sistema)". Confundir
- *   los dos manda a la oficina a pedirle el documento a gente que probablemente ya lo entregó.
+ * ⛔ Estado de participación (§6, decisión del usuario 2026-09-04, reemplaza el bloqueo total de
+ * `b631193`): el certificado gobierna la SALIDA de dinero, no el cruce contra el préstamo. El
+ * backend manda el campo explícito `participacion` — no se deduce cruzando `tieneCertificado` /
+ * `montoADinero` / `montoACruzar`, porque eso se rompe la primera vez que cambie una regla:
+ * - `COMPLETA`: nada quedó retenido — entra y suma a los dos totales.
+ * - `SOLO_CRUCE`: hubo remanente que no pudo salir (sin certificado/cuenta): entra, cancela deuda,
+ *   NO suma a "Total a dinero". Es ACCIONABLE — mismo criterio visual que una "Desviación", nunca
+ *   un bloqueo.
+ * - `BLOQUEADO`: no participa, con su motivo.
+ * - `null`: no es un evento de participación de esta corrida (ya pagado, al día, retroactivo con
+ *   0 meses).
  */
 @Component({
   selector: 'app-corrida-mes-pago-jubilados',
@@ -111,9 +82,6 @@ interface PrevueloItem {
 export class CorridaMesPagoJubiladosComponent implements OnInit {
   readonly MESES = MESES;
 
-  private vppcService = inject(ValorPagoPensionComplementariaService);
-  private operacionesPagoService = inject(OperacionesPagoPrestamoService);
-  private verificacionService = inject(VerificacionCuentaCertificadoService);
   private pgpcService = inject(PagoPensionComplementariaService);
   private exportService = inject(ExportService);
   private dialog = inject(MatDialog);
@@ -128,13 +96,13 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
   anio: number;
   mes: number;
 
-  cargandoPrevuelo = signal(false);
+  previsualizando = signal(false);
   ejecutando = signal(false);
 
-  prevuelo = signal<PrevueloItem[] | null>(null);
+  prevuelo = signal<ResultadoPrevisualizacionCorrida | null>(null);
   errorPrevuelo = signal<string | null>(null);
-  /** Distingue "no se pudo verificar certificados" de "a todos les falta" (§4 del diseño). */
-  avisoCertificados = signal<string | null>(null);
+  /** El texto EXACTO que manda el backend sobre por qué el cruce es estimado — no se reescribe acá. */
+  mensajePrevuelo = signal<string | null>(null);
 
   resultado = signal<ResultadoGeneracionPagos | null>(null);
   mensajeResultado = signal<string | null>(null);
@@ -156,9 +124,9 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
     this.usuario = usuarioSesion();
     if (this.idEmpresa == null) {
       this.errorPrevuelo.set('No se pudo determinar la empresa de la sesión. Vuelva a iniciar sesión y reintente.');
-      return;
     }
-    this.cargarPrevuelo();
+    // Sin auto-cargar: igual que `cierre-cartera`, previsualizar es una acción explícita del
+    // operador (el cálculo real recorre ~187 jubilados en el servidor, no es gratis).
   }
 
   get periodoTexto(): string {
@@ -166,190 +134,82 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
   }
 
   ocupado(): boolean {
-    return this.cargandoPrevuelo() || this.ejecutando();
+    return this.previsualizando() || this.ejecutando();
   }
 
   // ===================== Derivados del prevuelo =====================
 
-  get totalJubilados(): number {
-    return this.prevuelo()?.length ?? 0;
+  get detalle(): DetallePrevisualizacionPago[] {
+    return this.prevuelo()?.detalle ?? [];
   }
 
-  /** Suma de TODOS los evaluados, estén o no bloqueados — el descuento total del período. */
-  get totalSuma(): number {
-    return (this.prevuelo() ?? []).reduce((acc, i) => acc + i.valorTotal, 0);
+  get filasCompletas(): DetallePrevisualizacionPago[] {
+    return this.detalle.filter((d) => d.participacion === 'COMPLETA');
   }
 
-  get listos(): PrevueloItem[] {
-    return (this.prevuelo() ?? []).filter((i) => i.listo);
+  get filasSoloCruce(): DetallePrevisualizacionPago[] {
+    return this.detalle.filter((d) => d.participacion === 'SOLO_CRUCE');
   }
 
-  /** Suma solo de los LISTOS — lo que de verdad va a salir si se ejecuta la corrida ahora. */
-  get totalAPagarDesbloqueados(): number {
-    return this.listos.reduce((acc, i) => acc + i.valorTotal, 0);
+  get filasBloqueadas(): DetallePrevisualizacionPago[] {
+    return this.detalle.filter((d) => d.participacion === 'BLOQUEADO');
   }
 
-  get bloqueados(): PrevueloItem[] {
-    return (this.prevuelo() ?? []).filter((i) => !i.listo);
+  /** Ya pagado este período, al día, o retroactivo sin meses adeudados: no es un bloqueo. */
+  get filasSinNovedad(): DetallePrevisualizacionPago[] {
+    return this.detalle.filter((d) => d.participacion == null);
   }
 
-  // ===================== Prevuelo =====================
+  /** Lo que de verdad va a hacer algo si se ejecuta ahora: COMPLETA + SOLO_CRUCE. */
+  get cantidadAccionable(): number {
+    return this.filasCompletas.length + this.filasSoloCruce.length;
+  }
 
-  cargarPrevuelo(): void {
+  // ===================== Previsualizar =====================
+
+  previsualizar(): void {
     if (this.ocupado() || this.idEmpresa == null) {
       return;
     }
     this.errorPrevuelo.set(null);
-    this.avisoCertificados.set(null);
-    this.cargandoPrevuelo.set(true);
+    this.previsualizando.set(true);
 
-    this.vppcService.getAll().subscribe({
-      next: (rows) => {
-        const asignaciones = (rows ?? []).filter(
-          (v) => (v.estado ?? ESTADO_VPPC_ACTIVO) === ESTADO_VPPC_ACTIVO && v.entidad?.codigo != null,
-        );
-        if (asignaciones.length === 0) {
-          this.prevuelo.set([]);
-          this.cargandoPrevuelo.set(false);
-          return;
-        }
-        this.completarPrevuelo(asignaciones);
-      },
-      error: () => {
-        this.cargandoPrevuelo.set(false);
+    this.pgpcService.previsualizarCorrida(this.idEmpresa, this.anio, this.mes, this.usuario).subscribe((resp) => {
+      this.previsualizando.set(false);
+      if (resp.exito && resp.resultado) {
+        this.prevuelo.set(resp.resultado);
+        this.mensajePrevuelo.set(resp.mensaje ?? null);
+      } else {
         this.prevuelo.set(null);
-        this.errorPrevuelo.set('No se pudo consultar el padrón de valores asignados (VPPC).');
-      },
-    });
-  }
-
-  private completarPrevuelo(asignaciones: ValorPagoPensionComplementaria[]): void {
-    const codigos = asignaciones.map((v) => v.entidad.codigo);
-
-    const saldos$ = forkJoin(
-      asignaciones.map((v) =>
-        this.operacionesPagoService.saldosPorEntidad(v.entidad.codigo).pipe(
-          catchError(() => of({ exito: false, resultado: [] as SaldoAporte[] } as RespuestaPago<SaldoAporte[]>)),
-        ),
-      ),
-    );
-
-    const verificacion$ = this.verificacionService.verificar(codigos);
-    const porPeriodo$ = this.pgpcService.porPeriodo(this.anio, this.mes).pipe(catchError(() => of(null)));
-
-    forkJoin([saldos$, verificacion$, porPeriodo$]).subscribe(([saldosResp, verificacion, yaPagados]) => {
-      if (verificacion.errorCuentas) {
-        this.errorPrevuelo.set(
-          (this.errorPrevuelo() ? this.errorPrevuelo() + ' ' : '') +
-          'No se pudo consultar las cuentas bancarias activas: el prevuelo no puede confirmar quién tiene cuenta.',
-        );
+        this.mensajePrevuelo.set(null);
+        this.errorPrevuelo.set(resp.mensaje ?? 'No se pudo previsualizar la corrida.');
       }
-      // ⛔ El texto genérico del servicio ("no se bloquea...") ya no vale acá: desde el
-      // 2026-09-04 el catálogo sin resolver SÍ bloquea la corrida entera (§6 del contrato). El
-      // padrón (que solo informa) sigue usando el texto del servicio tal cual.
-      this.avisoCertificados.set(
-        verificacion.avisoCertificados
-          ? 'No se pudo verificar el certificado bancario de NINGÚN jubilado con cuenta activa: ' +
-            'es un problema del catálogo del sistema (CRD.TPDJ), no un documento faltante de los ' +
-            'jubilados. Mientras no se corrija, la corrida los deja a TODOS fuera de la corrida — ' +
-            'no se los excluye por culpa suya, y no se les debe pedir el certificado.'
-          : null,
-      );
-
-      const yaPagadoSet = new Set<number>(
-        (yaPagados ?? []).map((p) => p.entidad?.codigo).filter((c): c is number => c != null),
-      );
-      if (yaPagados == null) {
-        this.errorPrevuelo.set(
-          (this.errorPrevuelo() ? this.errorPrevuelo() + ' ' : '') +
-          'No se pudo consultar qué jubilados ya fueron pagados este período (GET /pgpc/porPeriodo): ' +
-          'ese motivo de bloqueo no se evalúa hasta poder verificarlo.',
-        );
-      }
-
-      const items: PrevueloItem[] = asignaciones.map((v, i) => {
-        const codigo = v.entidad.codigo;
-        const valorTotal = this.valorMensual(v) + (v.valorSeguro ?? 0);
-
-        const verif = verificacion.porEntidad.get(codigo);
-        const tieneCuenta = verif?.tieneCuenta ?? false;
-        const tieneCertificado = verif?.tieneCertificado ?? null;
-
-        const saldos = saldosResp[i]?.resultado ?? [];
-        const saldoAporte = this.saldoPensionComplementaria(saldos);
-        const saldoSuficiente = saldoAporte + 0.005 >= valorTotal;
-
-        const yaPagado = yaPagadoSet.has(codigo);
-
-        const motivos: MotivoBloqueo[] = [];
-        if (!tieneCuenta) {
-          motivos.push('Sin cuenta bancaria activa');
-        } else if (tieneCertificado === false) {
-          motivos.push('Sin certificado bancario');
-        } else if (tieneCertificado === null) {
-          // Solo llega acá con cuenta activa: el `null` es por catálogo, no por falta de cuenta.
-          motivos.push('Certificado no verificable (problema del sistema)');
-        }
-        if (!saldoSuficiente) motivos.push('Saldo insuficiente');
-        if (yaPagado) motivos.push('Ya pagado este período');
-
-        return {
-          entidad: v.entidad,
-          valorTotal,
-          tieneCuenta,
-          tieneCertificado,
-          saldoAporte,
-          saldoSuficiente,
-          yaPagado,
-          listo: motivos.length === 0,
-          motivos,
-        };
-      });
-
-      this.prevuelo.set(items);
-      this.cargandoPrevuelo.set(false);
     });
-  }
-
-  private valorMensual(v: ValorPagoPensionComplementaria): number {
-    const valor = Number(v.valorPagar || 0);
-    const cuotas = Number(v.numeroCuotas || 0);
-    return cuotas > 0 ? valor / cuotas : valor;
-  }
-
-  private saldoPensionComplementaria(saldos: SaldoAporte[]): number {
-    const item = saldos.find((s) => this.esNombrePensionComplementaria(s.nombre));
-    return item?.saldo ?? 0;
-  }
-
-  private esNombrePensionComplementaria(nombre: string | null | undefined): boolean {
-    if (!nombre) return false;
-    const normalizado = nombre.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-    return normalizado.includes('pension complementaria');
   }
 
   // ===================== Ejecutar =====================
 
   ejecutar(): void {
-    const items = this.prevuelo();
-    if (!items || this.ocupado() || this.idEmpresa == null) {
+    const res = this.prevuelo();
+    if (!res || this.ocupado() || this.idEmpresa == null) {
       return;
     }
-    const listos = this.listos;
-    if (listos.length === 0) {
+    if (this.cantidadAccionable === 0) {
       this.notificar('No hay jubilados listos para pagar en este período.', false);
       return;
     }
 
     const data: ConfirmarGeneracionData = {
       periodo: this.periodoTexto,
-      cantidadListos: listos.length,
-      totalListos: this.totalAPagarDesbloqueados,
-      cantidadBloqueados: items.length - listos.length,
+      cantidadAptos: this.cantidadAccionable,
+      cantidadBloqueados: res.bloqueados,
+      totalACruzarPrestamos: res.totalACruzarPrestamos,
+      totalADinero: res.totalADinero,
+      totalGeneral: res.totalGeneral,
     };
 
     this.dialog
-      .open(ConfirmarGeneracionDialogComponent, { data, width: '520px' })
+      .open(ConfirmarGeneracionDialogComponent, { data, width: '540px' })
       .afterClosed()
       .subscribe((confirmado) => {
         if (confirmado) {
@@ -387,10 +247,17 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
     });
   }
 
-  // ===================== Derivados del resultado =====================
+  // ===================== Derivados del resultado ejecutado =====================
 
-  /** ⛔ `generoOrdenPago: false` con `valorCruzadoAPrestamo > 0` es una DESVIACIÓN, no un error. */
+  /**
+   * ⛔ Preferir el campo explícito `participacion` (§6) sobre la inferencia vieja
+   * (`generoOrdenPago === false && valorCruzadoAPrestamo > 0`): un backend que todavía no mande
+   * `participacion` sigue funcionando con la inferencia como respaldo.
+   */
   esDesviacion(d: DetallePagoPension): boolean {
+    if (d.participacion) {
+      return d.participacion === 'SOLO_CRUCE';
+    }
     return d.generoOrdenPago === false && (d.valorCruzadoAPrestamo ?? 0) > 0;
   }
 
@@ -405,8 +272,32 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
     return 'badge-generado';
   }
 
-  claseEstadoPrevuelo(item: PrevueloItem): string {
-    return item.listo ? 'badge-listo' : 'badge-bloqueado';
+  // ===================== Presentación de `participacion` (prevuelo) =====================
+
+  claseParticipacion(p: Participacion | null | undefined): string {
+    switch (p) {
+      case 'COMPLETA':
+        return 'badge-listo';
+      case 'SOLO_CRUCE':
+        return 'badge-desviacion';
+      case 'BLOQUEADO':
+        return 'badge-bloqueado';
+      default:
+        return 'badge-ya-existia';
+    }
+  }
+
+  textoParticipacion(p: Participacion | null | undefined): string {
+    switch (p) {
+      case 'COMPLETA':
+        return 'Completa';
+      case 'SOLO_CRUCE':
+        return 'Solo cruce';
+      case 'BLOQUEADO':
+        return 'Bloqueado';
+      default:
+        return 'Sin novedad';
+    }
   }
 
   private notificar(mensaje: string, exito: boolean): void {
@@ -423,34 +314,35 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
   }
 
   // ===================== Exportar CSV =====================
-  // Pedido del usuario: exportar el prevuelo (reparte el trabajo de destrabar bloqueos) y el
-  // resultado de la corrida ejecutada. Ninguno de los dos trae fechas-arreglo del backend
-  // (`DetallePagoPension` no tiene campo de fecha — solo `PagoPensionComplementaria`, que es lo
-  // que usa la pestaña «Seguimiento», no esta), así que no hace falta formatear ninguna fecha
-  // acá; los importes van con `ExportService.exportToCSV`, que ya usa punto decimal sin
-  // separador de miles (`toFixed(2)`) — mismo patrón que el resto del módulo.
+  // Ninguno de los dos exports trae fechas-arreglo del backend: ni `DetallePrevisualizacionPago`
+  // ni `DetallePagoPension` tienen campo de fecha — esas viven solo en `PagoPensionComplementaria`,
+  // que usa la pestaña «Seguimiento», no esta. Los importes van con `ExportService.exportToCSV`,
+  // que ya usa punto decimal sin separador de miles (`toFixed(2)`) — mismo patrón que el módulo.
 
   private periodoArchivo(): string {
     return `${this.anio}-${String(this.mes).padStart(2, '0')}`;
   }
 
   exportarPrevueloCSV(): void {
-    const items = this.prevuelo();
-    if (!items || items.length === 0) {
+    const detalle = this.detalle;
+    if (detalle.length === 0) {
       return;
     }
-    const filas = items.map((item) => ({
-      cedula: item.entidad.numeroIdentificacion ?? '',
-      nombre: item.entidad.razonSocial ?? '',
-      valorMensual: item.valorTotal,
-      estado: item.listo ? 'Listo' : 'Bloqueado',
-      motivo: item.motivos.join(' · '),
+    const filas = detalle.map((d) => ({
+      idEntidad: d.idEntidad,
+      nombre: d.nombre ?? '',
+      mesesAdeudados: d.mesesAdeudados,
+      montoACruzar: d.montoACruzar,
+      montoADinero: d.montoADinero,
+      total: d.total,
+      participacion: this.textoParticipacion(d.participacion),
+      motivoBloqueo: d.motivoBloqueo ?? '',
     }));
     this.exportService.exportToCSV(
       filas,
       `corrida-jubilados-prevuelo-${this.periodoArchivo()}`,
-      ['Cédula', 'Nombre', 'Valor mensual', 'Estado', 'Motivo'],
-      ['cedula', 'nombre', 'valorMensual', 'estado', 'motivo'],
+      ['Entidad', 'Nombre', 'Meses adeudados', 'Monto a cruzar', 'Monto a dinero', 'Total', 'Participación', 'Motivo bloqueo'],
+      ['idEntidad', 'nombre', 'mesesAdeudados', 'montoACruzar', 'montoADinero', 'total', 'participacion', 'motivoBloqueo'],
     );
   }
 
@@ -481,8 +373,8 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
     return (n ?? 0).toLocaleString('es-EC', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
-  trackEntidad(_: number, item: PrevueloItem): number {
-    return item.entidad.codigo;
+  trackEntidad(_: number, d: DetallePrevisualizacionPago): number {
+    return d.idEntidad;
   }
 
   trackDetalle(_: number, d: DetallePagoPension): number {

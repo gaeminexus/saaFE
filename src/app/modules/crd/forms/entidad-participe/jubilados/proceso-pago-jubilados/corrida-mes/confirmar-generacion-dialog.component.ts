@@ -6,14 +6,22 @@ import { MaterialFormModule } from '../../../../../../../shared/modules/material
 
 export interface ConfirmarGeneracionData {
   periodo: string;
-  cantidadListos: number;
-  totalListos: number;
+  /** COMPLETA + SOLO_CRUCE: los que de verdad van a hacer algo en esta corrida. */
+  cantidadAptos: number;
   cantidadBloqueados: number;
+  /** Cancela deuda. No sale de la asociación. */
+  totalACruzarPrestamos: number;
+  /** Sale al banco como orden de pago. Esto sí es dinero saliendo. */
+  totalADinero: number;
+  /** La suma: lo que se descuenta de las cuentas de pensión complementaria. */
+  totalGeneral: number;
 }
 
 /**
  * Confirmación previa a `generarPagosDelMes`. Nombra la consecuencia antes de disparar una
- * acción que genera asientos contables y órdenes en tesorería (§3-B2 del diseño). Precedente:
+ * acción que genera asientos contables y órdenes en tesorería (§3-B2 del diseño), con el mismo
+ * desglose préstamos/dinero/total que ya se ve en el prevuelo — ahora que `previsualizarCorrida`
+ * lo da de verdad, no hay que prometerlo sin poder cumplirlo. Precedente:
  * `devolucion-aportes/confirmar-devolucion-dialog.component.ts`.
  */
 @Component({
@@ -29,10 +37,27 @@ export interface ConfirmarGeneracionData {
     <mat-dialog-content>
       <p class="advertencia">
         <mat-icon>warning</mat-icon>
-        Se van a generar <strong>{{ data.cantidadListos }}</strong> pagos por un total de
-        <strong>{{ formatMoneda(data.totalListos) }}</strong>. Esta acción genera asientos
-        contables y órdenes en tesorería.
+        Se van a generar <strong>{{ data.cantidadAptos }}</strong> pagos. Esta acción genera
+        asientos contables y órdenes en tesorería.
       </p>
+
+      <div class="desglose">
+        <div class="d-item d-prestamos">
+          <span class="d-label">A préstamos</span>
+          <span class="d-valor">{{ formatMoneda(data.totalACruzarPrestamos) }}</span>
+          <span class="d-nota">cancela deuda — no sale de la asociación</span>
+        </div>
+        <div class="d-item d-dinero">
+          <span class="d-label">A dinero</span>
+          <span class="d-valor">{{ formatMoneda(data.totalADinero) }}</span>
+          <span class="d-nota">sale al banco</span>
+        </div>
+        <div class="d-item d-total">
+          <span class="d-label">Total</span>
+          <span class="d-valor">{{ formatMoneda(data.totalGeneral) }}</span>
+          <span class="d-nota">se descuenta de las cuentas de pensión</span>
+        </div>
+      </div>
 
       @if (data.cantidadBloqueados > 0) {
         <p class="bloqueados-aviso">
@@ -65,6 +90,27 @@ export interface ConfirmarGeneracionData {
       background: #fff6e0; color: #92600d; border-radius: 8px;
       padding: 0.65rem 0.85rem; font-size: 0.85rem; line-height: 1.5; margin: 0 0 1rem;
       mat-icon { font-size: 20px; width: 20px; height: 20px; flex-shrink: 0; }
+    }
+
+    .desglose {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.6rem; margin-bottom: 1rem;
+
+      .d-item {
+        display: flex; flex-direction: column; gap: 1px; border-radius: 8px; padding: 0.5rem 0.65rem;
+      }
+      .d-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.03em; font-weight: 700; }
+      .d-valor { font-size: 1.05rem; font-weight: 700; }
+      .d-nota { font-size: 0.66rem; line-height: 1.25; }
+
+      .d-prestamos {
+        background: #f1f5f9; .d-label, .d-nota { color: #475569; } .d-valor { color: #1e293b; }
+      }
+      .d-dinero {
+        background: #fef2f2; .d-label, .d-nota { color: #7f1d1d; } .d-valor { color: #991b1b; }
+      }
+      .d-total {
+        background: #eef4fb; .d-label, .d-nota { color: #1e40af; } .d-valor { color: #1e3a8a; }
+      }
     }
 
     .bloqueados-aviso {

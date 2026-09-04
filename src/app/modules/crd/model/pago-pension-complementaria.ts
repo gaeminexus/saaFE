@@ -15,6 +15,24 @@ export interface RespuestaPgpc<T> {
   resultado?: T;
 }
 
+/**
+ * §6 — cómo participó un jubilado en la corrida (real o previsualizada). Campo EXPLÍCITO: no
+ * deducirlo cruzando `tieneCertificado`/`montoADinero`/`montoACruzar` — eso se rompe la primera
+ * vez que cambie una regla.
+ *
+ * - `COMPLETA`: nada quedó retenido — se aplicó todo lo que correspondía (a préstamo, al banco, o
+ *   a los dos). Un jubilado 100% cruzado (sin remanente) es `COMPLETA`, tenga o no certificado:
+ *   sin remanente no hay nada que el certificado pudiera haber dejado retenido.
+ * - `SOLO_CRUCE`: hubo remanente que NO pudo salir al banco por falta de certificado o de cuenta
+ *   única. Canceló deuda; hay plata que el jubilado no cobró. Es ACCIONABLE (conseguir el
+ *   certificado libera ese dinero) — tratarlo con el mismo criterio visual que una "Desviación",
+ *   nunca como bloqueo: sí entra, sí suma a "Total a préstamos".
+ * - `BLOQUEADO`: no participa en absoluto. `motivoBloqueo` dice por qué.
+ * - `null`: no fue un evento de participación de esta corrida (`YA_EXISTIA`, `AL_DIA`, o
+ *   retroactivo con 0 meses adeudados).
+ */
+export type Participacion = 'COMPLETA' | 'SOLO_CRUCE' | 'BLOQUEADO';
+
 /** §1 — un renglón de `detalle` dentro de `ResultadoGeneracionPagos`. */
 export interface DetallePagoPension {
   idEntidad: number;
@@ -33,6 +51,8 @@ export interface DetallePagoPension {
   idAsientoDevengo?: number;
   estado: 'GENERADO' | 'YA_EXISTIA' | 'ERROR';
   mensaje?: string | null;
+  /** §6. Puede faltar en respuestas de un backend más viejo; no asumir que siempre viene. */
+  participacion?: Participacion | null;
 }
 
 /** §1 — cuerpo de `resultado` de `POST /pgpc/generarPagosDelMes`. */
@@ -107,3 +127,41 @@ export const NOMBRE_ESTADO_PGPC: Record<number, string> = {
   4: 'Rechazada',
   5: 'Anulada',
 };
+
+/**
+ * §4bis — un renglón de `detalle` dentro de `ResultadoPrevisualizacionCorrida`. NO escribe nada:
+ * es la simulación de lo que haría `generarPagosDelMes` con los mismos parámetros.
+ */
+export interface DetallePrevisualizacionPago {
+  idEntidad: number;
+  nombre: string;
+  /** Con el retroactivo, un jubilado puede tener varios meses pendientes en una sola corrida. */
+  mesesAdeudados: number;
+  /** Estimado: `min(pensiones acumuladas, deuda exigible agregada, saldo del aporte 23)` — el
+   *  motor real topa por préstamo y mes a mes, así que con 2+ préstamos puede diferir (§4bis). */
+  montoACruzar: number;
+  montoADinero: number;
+  /** `montoACruzar + montoADinero` — lo que se descontaría de la cuenta de pensión complementaria. */
+  total: number;
+  tienePrestamo: boolean;
+  tieneCertificado: boolean;
+  /** §6. Es el campo autoritativo — no deducir bloqueo/participación de otros campos. */
+  participacion: Participacion | null;
+  motivoBloqueo: string | null;
+}
+
+/** §4bis — cuerpo de `resultado` de `POST /pgpc/previsualizarCorrida`. NO escribe nada. */
+export interface ResultadoPrevisualizacionCorrida {
+  anio: number;
+  mes: number;
+  evaluados: number;
+  aptos: number;
+  bloqueados: number;
+  /** Va a cancelar deuda. No sale de la asociación. */
+  totalACruzarPrestamos: number;
+  /** Va a salir al banco como orden de pago. Esto sí es dinero saliendo. */
+  totalADinero: number;
+  /** La suma: lo que se descuenta de las cuentas de pensión complementaria. */
+  totalGeneral: number;
+  detalle: DetallePrevisualizacionPago[];
+}

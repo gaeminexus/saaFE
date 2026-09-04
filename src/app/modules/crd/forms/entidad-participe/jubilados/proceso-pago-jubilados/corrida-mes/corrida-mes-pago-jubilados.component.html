@@ -5,7 +5,7 @@
       Corrida del mes — pago a jubilados
     </h1>
     <p class="page-subtitle">
-      Genera los pagos de pensión complementaria del período. Revise el prevuelo antes de ejecutar.
+      Genera los pagos de pensión complementaria del período. Previsualice antes de ejecutar.
     </p>
   </div>
 
@@ -28,19 +28,29 @@
         </mat-form-field>
 
         <div class="seleccion-acciones">
-          <button mat-stroked-button (click)="cargarPrevuelo()" [disabled]="ocupado() || idEmpresa == null">
-            @if (cargandoPrevuelo()) {
+          <!--
+            "Previsualizar" NO escribe nada (§4bis del contrato): botón outline, gris, deliberadamente
+            distinto del de "Ejecutar corrida" (raised, primary) — son dos acciones de riesgo muy
+            distinto y no pueden parecerse.
+          -->
+          <button
+            mat-stroked-button
+            (click)="previsualizar()"
+            [disabled]="ocupado() || idEmpresa == null"
+            matTooltip="Simula el cálculo. No genera pagos, asientos ni órdenes."
+          >
+            @if (previsualizando()) {
               <mat-spinner diameter="18"></mat-spinner>
             } @else {
-              <mat-icon>refresh</mat-icon>
+              <mat-icon>visibility</mat-icon>
             }
-            Actualizar prevuelo
+            Previsualizar
           </button>
           <button
             mat-raised-button
             color="primary"
             (click)="ejecutar()"
-            [disabled]="ocupado() || idEmpresa == null || !prevuelo() || listos.length === 0"
+            [disabled]="ocupado() || idEmpresa == null || !prevuelo() || cantidadAccionable === 0"
           >
             @if (ejecutando()) {
               <mat-spinner diameter="18"></mat-spinner>
@@ -61,72 +71,72 @@
     </div>
   }
 
-  @if (avisoCertificados()) {
-    <div class="error-banner">
-      <mat-icon>report_problem</mat-icon>
-      <span>{{ avisoCertificados() }}</span>
-    </div>
-  }
-
-  @if (cargandoPrevuelo()) {
+  @if (previsualizando()) {
     <div class="proceso-largo">
       <mat-spinner diameter="36"></mat-spinner>
-      <p>Calculando el prevuelo de {{ periodoTexto }}…</p>
+      <p>Calculando el prevuelo de {{ periodoTexto }}… Puede tardar varios segundos.</p>
     </div>
   }
 
   <!-- Prevuelo -->
-  @if (prevuelo(); as items) {
+  @if (prevuelo(); as res) {
     <div class="totales-comparativa">
-      <div
-        class="total-box total-descuentos"
-        matTooltip="Suma de TODOS los jubilados evaluados en el período, estén o no bloqueados: el descuento total que se aplicaría sobre los aportes."
-      >
-        <mat-icon>calculate</mat-icon>
+      <div class="total-box total-prestamos" matTooltip="Va a cancelar deuda. No sale de la asociación.">
+        <mat-icon>account_balance</mat-icon>
         <div class="total-info">
-          <span class="total-label">Total de descuentos</span>
-          <span class="total-valor">$ {{ money(totalSuma) }}</span>
-          <span class="total-sub">{{ totalJubilados }} jubilado(s)</span>
+          <span class="total-label">A préstamos</span>
+          <span class="total-valor">$ {{ money(res.totalACruzarPrestamos) }}</span>
+          <span class="total-sub">cruce contra deuda</span>
         </div>
       </div>
 
-      <div
-        class="total-delta"
-        matTooltip="Diferencia entre los dos totales: plata que NO va a salir este mes porque el jubilado está bloqueado."
-      >
-        <mat-icon>arrow_forward</mat-icon>
-        <span>− $ {{ money(totalSuma - totalAPagarDesbloqueados) }}</span>
-      </div>
-
-      <div
-        class="total-box total-a-pagar"
-        matTooltip="Suma solo de los jubilados LISTOS (sin ningún bloqueo): lo que realmente va a salir si ejecuta la corrida ahora."
-      >
+      <div class="total-box total-dinero" matTooltip="Sale al banco como orden de pago. Esto sí es dinero saliendo.">
         <mat-icon>payments</mat-icon>
         <div class="total-info">
-          <span class="total-label">Total a pagar (desbloqueados)</span>
-          <span class="total-valor">$ {{ money(totalAPagarDesbloqueados) }}</span>
-          <span class="total-sub">{{ listos.length }} desbloqueado(s)</span>
+          <span class="total-label">A dinero</span>
+          <span class="total-valor">$ {{ money(res.totalADinero) }}</span>
+          <span class="total-sub">sale al banco</span>
+        </div>
+      </div>
+
+      <div class="total-box total-general" matTooltip="La suma: lo que se descuenta de las cuentas de pensión complementaria.">
+        <mat-icon>calculate</mat-icon>
+        <div class="total-info">
+          <span class="total-label">Total</span>
+          <span class="total-valor">$ {{ money(res.totalGeneral) }}</span>
+          <span class="total-sub">{{ res.evaluados }} evaluado(s)</span>
         </div>
       </div>
     </div>
+
+    <!--
+      El cruce es una ESTIMACIÓN (§4bis del contrato): topa en agregado, no por préstamo y mes a
+      mes como la corrida real, y no simula mora/interés. Discreto a propósito -- ni escondido ni
+      dramatizado -- y con el texto EXACTO que manda el backend, no uno inventado acá.
+    -->
+    @if (mensajePrevuelo()) {
+      <p class="nota-estimacion">
+        <mat-icon>info</mat-icon>
+        {{ mensajePrevuelo() }}
+      </p>
+    }
 
     <div class="kpis">
       <div class="kpi">
-        <span class="kpi-label">Jubilados</span>
-        <span class="kpi-valor">{{ totalJubilados }}</span>
+        <span class="kpi-label">Evaluados</span>
+        <span class="kpi-valor">{{ res.evaluados }}</span>
       </div>
       <div class="kpi kpi-listos">
-        <span class="kpi-label">Listos</span>
-        <span class="kpi-valor">{{ listos.length }}</span>
+        <span class="kpi-label">Aptos</span>
+        <span class="kpi-valor">{{ res.aptos }}</span>
       </div>
       <div class="kpi kpi-bloqueados">
         <span class="kpi-label">Bloqueados</span>
-        <span class="kpi-valor">{{ bloqueados.length }}</span>
+        <span class="kpi-valor">{{ res.bloqueados }}</span>
       </div>
     </div>
 
-    @if (items.length === 0) {
+    @if (detalle.length === 0) {
       <div class="estado-vacio">
         <mat-icon>info</mat-icon>
         <span>No hay jubilados con valor de pago asignado (pestaña «Padrón»).</span>
@@ -146,30 +156,45 @@
               <thead>
                 <tr>
                   <th>Jubilado</th>
-                  <th class="c-num">Valor mensual</th>
-                  <th>Estado</th>
+                  <th class="c-num">Meses adeud.</th>
+                  <th class="c-num">A préstamo</th>
+                  <th class="c-num">A dinero</th>
+                  <th class="c-num">Total</th>
+                  <th>Participación</th>
                   <th>Motivo</th>
                 </tr>
               </thead>
               <tbody>
-                @for (item of items; track trackEntidad($index, item)) {
-                  <tr [class.fila-bloqueada]="!item.listo">
+                @for (d of detalle; track trackEntidad($index, d)) {
+                  <tr [class.fila-bloqueada]="d.participacion === 'BLOQUEADO'" [class.fila-desviacion]="d.participacion === 'SOLO_CRUCE'">
                     <td>
-                      {{ item.entidad.razonSocial }}
-                      <br /><small>{{ item.entidad.numeroIdentificacion }}</small>
+                      {{ d.nombre }}
+                      <br /><small>Entidad {{ d.idEntidad }}</small>
                     </td>
-                    <td class="c-num">$ {{ money(item.valorTotal) }}</td>
+                    <td class="c-num">{{ d.mesesAdeudados }}</td>
+                    <td class="c-num">$ {{ money(d.montoACruzar) }}</td>
+                    <td class="c-num">$ {{ money(d.montoADinero) }}</td>
+                    <td class="c-num">$ {{ money(d.total) }}</td>
                     <td>
-                      <span class="badge" [ngClass]="claseEstadoPrevuelo(item)">
-                        {{ item.listo ? 'Listo' : 'Bloqueado' }}
+                      <span class="badge" [ngClass]="claseParticipacion(d.participacion)">
+                        {{ textoParticipacion(d.participacion) }}
                       </span>
                     </td>
-                    <td>{{ item.motivos.join(' · ') || '—' }}</td>
+                    <td>
+                      {{ d.motivoBloqueo || (d.participacion === 'SOLO_CRUCE' ? 'Sin certificado o sin cuenta única: el remanente queda retenido.' : '—') }}
+                    </td>
                   </tr>
                 }
               </tbody>
             </table>
           </div>
+
+          <p class="nota-solo-cruce">
+            <mat-icon>info</mat-icon>
+            <strong>«Solo cruce»</strong> no es un bloqueo: la deuda cancela igual, pero queda plata
+            del jubilado sin poder salir al banco por falta de certificado o de cuenta única. Es
+            accionable — conseguir el certificado libera ese dinero.
+          </p>
         </mat-card-content>
       </mat-card>
     }

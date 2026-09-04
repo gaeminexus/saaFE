@@ -5,6 +5,7 @@ import { Observable, catchError, of, throwError } from 'rxjs';
 import {
   PagoPensionComplementaria,
   ResultadoGeneracionPagos,
+  ResultadoPrevisualizacionCorrida,
   ResultadoSincronizacion,
   RespuestaPgpc,
 } from '../model/pago-pension-complementaria';
@@ -49,6 +50,31 @@ export class PagoPensionComplementariaService {
       .set('usuario', usuario);
     return this.http
       .post<RespuestaPgpc<ResultadoGeneracionPagos>>(`${this.base}/generarPagosDelMes`, null, { params })
+      .pipe(catchError((e: HttpErrorResponse) => of(this.normalizarError(e))));
+  }
+
+  /**
+   * POST /pgpc/previsualizarCorrida — simula `generarPagosDelMes` con los mismos parámetros.
+   * ⛔ NO ESCRIBE NADA: cero filas, cero asientos, cero órdenes (§4bis del contrato). Reutiliza la
+   * misma función que calcula el tope en la corrida real, así que el número no se desincroniza —
+   * pero es una ESTIMACIÓN: topa en agregado, no por préstamo y mes a mes como la corrida real, y
+   * no simula mora/interés. Con un solo préstamo por jubilado coincide con el resultado real; con
+   * dos o más puede diferir. Mostrar el `mensaje` del sobre tal cual — es el texto oficial de esa
+   * advertencia, no inventar uno propio.
+   */
+  previsualizarCorrida(
+    idEmpresa: number,
+    anio: number,
+    mes: number,
+    usuario: string,
+  ): Observable<RespuestaPgpc<ResultadoPrevisualizacionCorrida>> {
+    const params = new HttpParams()
+      .set('idEmpresa', idEmpresa)
+      .set('anio', anio)
+      .set('mes', mes)
+      .set('usuario', usuario);
+    return this.http
+      .post<RespuestaPgpc<ResultadoPrevisualizacionCorrida>>(`${this.base}/previsualizarCorrida`, null, { params })
       .pipe(catchError((e: HttpErrorResponse) => of(this.normalizarError(e))));
   }
 
