@@ -1,7 +1,7 @@
 # API — Pago mensual de pensión complementaria
 
 **Base:** `/SaaBE/rest/pgpc` · **Equipo:** CRD / Equipo B (`eqB`, `omen-saa-1`)
-**Fecha:** 2026-09-02 · **Corregido y ampliado:** 2026-09-04
+**Fecha:** 2026-09-02 · **Corregido y ampliado:** 2026-09-04 (última: regla del seguro médico, §4ter)
 
 > El path de JAX-RS es `/rest`, así que la URL real es `/SaaBE/rest/pgpc/...`. **No** `/api/...`,
 > que aparece en documentos viejos y ya no existe.
@@ -207,13 +207,16 @@ Mismo sobre `{exito, mensaje, resultado}` del §1.
     "aptos": 120, "bloqueados": 67,
     "totalACruzarPrestamos": 18450.00,
     "totalADinero": 9870.50,
-    "totalGeneral": 28320.50,
+    "totalSeguroInternoGeneral": 140.00,
+    "totalGeneral": 28460.50,
+    "totalSeguroGeneral": 1890.00,
     "detalle": [
       {
         "idEntidad": 1234, "nombre": "...",
         "mesesAdeudados": 8,
         "montoACruzar": 1200.00,
         "montoADinero": 300.00,
+        "montoSeguroInterno": 0.00,
         "total": 1500.00,
         "tienePrestamo": true,
         "tieneCertificado": true,
@@ -303,6 +306,24 @@ independientes sobre el mismo parcial pueden no sumar el total, y ahí aparece u
 centavos entre las dos cuentas contables — que es exactamente el tipo de diferencia que después
 cuesta días encontrar.
 
+**Precisión del 2026-09-04 (regla del seguro, §4ter):** el «parcial» que se reparte en proporción es
+`montoACruzar + montoADinero` — el tramo que lleva las dos cuentas mezcladas. `montoSeguroInterno`
+es **100 % seguro** y entra entero del lado del seguro, por la misma resta:
+
+```
+totalPension = (montoACruzar + montoADinero) × (valorPensionMensual / valorPagar)
+totalSeguro  = total − totalPension            ← incluye montoSeguroInterno completo
+```
+
+Cuando hay certificado `montoSeguroInterno` vale 0 y esto **degenera exactamente en la fórmula
+anterior**: el cambio no toca a ningún jubilado con certificado.
+
+⛔ **`totalPension` / `totalSeguro` cuentan lo PROCESADO, no lo adeudado ni lo devengado.** Hasta el
+2026-09-04 la **corrida real** acumulaba también el remanente **retenido** por falta de certificado
+—plata que nunca se movió— mientras el prevuelo sí lo excluía, y los dos daban números distintos
+para el mismo jubilado. Corregido: ahora las dos rutas cuentan lo mismo. El **devengo contable**
+sigue siendo aparte y por el nominal completo del mes (`PGPC.valorPension` / `PGPC.valorSeguro`).
+
 ⛔ **`valorPagar` de `VPPC` ya INCLUYE el seguro** — no se suman. `valorPagar` es el total mensual y
 `valorSeguro` es la porción de ese total que corresponde al seguro. Sumar los dos duplica el seguro,
 y es el error más fácil de cometer acá. Verificado en `PagoPensionComplementariaServiceImpl`:
@@ -310,7 +331,20 @@ y es el error más fácil de cometer acá. Verificado en `PagoPensionComplementa
 
 - **`totalACruzarPrestamos`**: lo que va a cancelar deuda. **No sale de la asociación.**
 - **`totalADinero`**: lo que va a salir al banco como orden de pago. **Esto sí es dinero saliendo.**
-- **`totalGeneral`**: la suma. Es lo que se descuenta de las cuentas de pensión complementaria.
+- **`totalSeguroInternoGeneral`**: la porción de seguro médico que se traspasa a `2.3.90.90.06` sin
+  salir al banco (§4ter). **No sale de la asociación**, y **no** está incluida en `totalADinero`.
+- **`totalGeneral`**: **los tres**. Es lo que se descuenta de las cuentas de pensión complementaria.
+
+⛔ **`totalGeneral` ya NO es `totalACruzarPrestamos + totalADinero`.** Desde la ampliación del
+2026-09-04 hay una tercera porción. La identidad vigente es:
+
+```
+totalGeneral = totalACruzarPrestamos + totalADinero + totalSeguroInternoGeneral
+```
+
+El backend lo acumula fila a fila (`Σ detalle[].total`), no con esa suma, para que siga valiendo
+**exacta** la identidad que la pantalla usa para su «Total pensión»:
+`totalGeneral − totalSeguroGeneral`.
 
 ### ⚠️ El cruce es una ESTIMACIÓN, y hay que decirlo en la pantalla
 
@@ -342,6 +376,93 @@ mora lo que puede moverlo**, y quien compare prevuelo contra resultado tiene que
 
 ---
 
+## 4ter. ⭐ El seguro médico también desbloquea — decisión del usuario, 2026-09-04
+
+> *«Si un jubilado no tiene préstamo ni certificado bancario ni cuenta bancaria, pero sí tiene
+> seguro médico, ese también se le debe pagar ese mes. Los que tienen solo seguro médico se
+> desbloquean de la misma forma que los que solo tienen préstamo.»*
+
+### Por qué es la misma regla, no una excepción
+
+El §6 ya tenía cerrado que **el certificado bancario gobierna la SALIDA DE DINERO AL BANCO, no el
+cruce contra el préstamo**. Por eso un jubilado sin certificado pero con préstamo igual participa:
+su plata cancela deuda, y eso **no pasa por el banco**.
+
+**El seguro médico es exactamente el mismo caso.** No sale al banco: va a
+`2.3.90.90.06 SEGURO POR PAGAR JUBILADOS` (plantilla alterno 35, aux1 3/4), mientras la pensión va a
+`2.3.01.10.03`. Es un **traspaso interno** entre cuentas de la asociación. Si no hay salida al
+banco, **no hay cuenta de destino que el certificado deba validar**.
+
+### La regla, completa
+
+| | Con certificado | Sin certificado |
+|---|---|---|
+| Cruce contra el préstamo | ✅ sí | ✅ **sí, igual** |
+| Porción **PENSIÓN** del remanente → banco | ✅ sí | ⛔ **no sale, y no se consume** |
+| Porción **SEGURO** del remanente → `2.3.90.90.06` | ✅ (va dentro de la orden de pago) | ✅ **sí, se traspasa igual** |
+
+**El certificado bloquea SÓLO la porción PENSIÓN del remanente.** Ni el cruce (ya era así) ni la
+porción seguro (esto es lo nuevo).
+
+**Sólo se bloquea al jubilado que no tiene NINGUNO de los tres:** sin préstamo vigente, sin
+certificado **y** sin seguro médico. Ahí no hay cruce posible, no puede salir dinero y no hay
+seguro que traspasar — no queda nada que hacer con esa pensión este mes.
+
+- Compuerta del prevuelo: `previsualizarJubilado`, `!hayPrestamoVigente && !tieneCertificado && !haySeguroMensual`.
+- Compuerta de la corrida real: `generarMesesRetroactivos`, `motivoCorte = "SIN_PRESTAMO_SIN_CERTIFICADO_SIN_SEGURO"`.
+
+### Cómo se parte el remanente
+
+Mismo criterio del §4bis, sin inventar uno nuevo: **proporcional a la mensualidad y el seguro por
+RESTA**, nunca con su propia multiplicación.
+
+```
+remanenteProcesable = min(remanente nominal del mes, saldo libre del aporte 23)
+remanentePension    = remanenteProcesable × (valorPensionMensual / valorPagar)
+remanenteSeguro     = remanenteProcesable − remanentePension       ← por resta
+
+con certificado : al banco = remanenteProcesable   · traspaso interno = 0
+sin certificado : al banco = 0                     · traspaso interno = remanenteSeguro
+```
+
+⛔ **El seguro traspasado TAMBIÉN consume saldo del aporte 23. No es gratis.** Se descuenta de
+`saldoRestante` mes a mes, igual que el cruce y que la salida al banco; si no se descontara, el mes
+siguiente sobregiraría el aporte.
+
+### ⛔⛔ La consecuencia, y NO es plata perdida
+
+Al procesar el seguro de un mes se registra el **movimiento negativo del aporte 23**. Ese movimiento
+es el **ancla del retroactivo** (`resolverAnclaRetroactivo` toma el último movimiento negativo), así
+que **el ancla avanza**: ese mes queda saldado y la porción de PENSIÓN retenida **no se vuelve a
+pagar retroactivamente después**.
+
+**Eso NO es plata perdida.** El remanente retenido **nunca se descuenta**: se queda en el saldo del
+aporte 23 del jubilado. Es exactamente la semántica que `SOLO_CRUCE` ya tenía —y que el usuario ya
+aprobó— para el jubilado con préstamo y sin certificado: el mes se procesa, el ancla avanza, y la
+plata que no salió sigue siendo suya, en su saldo.
+
+**No leer esto como una pérdida ni "arreglarlo" retrocediendo el ancla.** Retroceder el ancla
+duplicaría el devengo del mes y volvería a traspasar el seguro que ya se traspasó.
+
+### Campos nuevos (aditivos: un frontend viejo los ignora)
+
+| Campo | Dónde | Qué |
+|---|---|---|
+| `montoSeguroInterno` | fila del prevuelo | Seguro que se traspasaría sin salir al banco. **No** suma a `montoADinero`; **sí** a `total` |
+| `totalSeguroInternoGeneral` | agregado del prevuelo | Suma del anterior. Subconjunto de `totalSeguroGeneral` |
+| `valorSeguroInterno` | fila de la corrida real | Lo mismo, ya ejecutado. Subconjunto de `totalSeguro` |
+
+⛔ **`montoADinero` / `totalADinero` NO cambiaron de significado**: siguen siendo, exclusivamente,
+**el dinero que sale al banco**. Ese es el número con el que el operador decide, y meter ahí un
+traspaso interno lo habría inflado.
+
+**Pendiente de pantalla (frontend):** la corrida hoy muestra tres tarjetas —«a préstamos», «a
+dinero», «total general»— donde las dos primeras sumaban la tercera. Con esta regla ya no suman:
+falta una cuarta, **«Seguro a traspaso interno»** (`totalSeguroInternoGeneral`), o la pantalla queda
+con una diferencia sin explicar.
+
+---
+
 ## 5. Estados de `PGPC` (`PGPCESTD`)
 
 De `com.saa.rubros.EstadoPagoPensionComplementaria`. **Son constantes planas, no catálogo `Rubro`.**
@@ -354,8 +475,17 @@ De `com.saa.rubros.EstadoPagoPensionComplementaria`. **Son constantes planas, no
 | 4 | `RECHAZADA` | CXP rechazó o reversó. **El cruce contra el préstamo NO se deshizo** |
 | 5 | `ANULADA` | **Hoy inalcanzable**: no existe endpoint de anulación |
 
-Un pago que se llevó toda la pensión en cruce queda en **1**, no en 2, y **nunca pasa a 3** porque
-no hay orden que sincronizar. Es correcto y la pantalla no debe marcarlo como atascado.
+⛔ **Corregido el 2026-09-04 leyendo `registrarPgpcDelMes`** — este párrafo decía que un pago
+100 % cruzado queda en **1** y «nunca pasa a 3». **Es al revés.** Los tres finales posibles son:
+
+| Situación del mes | Estado |
+|---|---|
+| Salió orden de pago al banco | **2** `EN_PAGO` → `sincronizarPagos` lo lleva a 3 o 4 |
+| No quedó remanente **pendiente**: el cruce se llevó todo, o lo poco que quedaba era seguro y ya se traspasó (§4ter) | **3** `PAGADA`, con `fechaPago` = la del período |
+| Quedó remanente de **pensión** retenido (sin cuenta o sin certificado) | **1** `REGISTRADA` |
+
+Los estados **1** y **3** de esta tabla **no tienen orden que sincronizar** y `sincronizarPago` los
+salta. Es correcto y la pantalla no debe marcarlos como atascados.
 
 ---
 
@@ -388,14 +518,16 @@ versión equivocada.** El usuario resolvió el 2026-09-04: vale D2.
 | | Con certificado | Sin certificado |
 |---|---|---|
 | Cruce contra el préstamo | ✅ sí | ✅ **sí, igual** |
-| Remanente al banco | ✅ sí | ⛔ **no sale, y no se consume** |
+| Porción **PENSIÓN** del remanente al banco | ✅ sí | ⛔ **no sale, y no se consume** |
+| Porción **SEGURO** del remanente (`2.3.90.90.06`) | ✅ sí | ✅ **sí, igual** — ampliación 2026-09-04, §4ter |
 
 **Por qué:** el certificado valida **la cuenta de destino**. Si no hay salida al banco, no hay cuenta
 que validar. Bloquear el cruce le cobraría al jubilado mora sobre una deuda que su propia pensión
-podía estar cancelando.
+podía estar cancelando. **Y por el mismo motivo tampoco bloquea el seguro**, que es un traspaso
+interno entre cuentas de la asociación (§4ter).
 
-**Consecuencia:** un jubilado con préstamo y sin certificado **NO está bloqueado**. Participa
-parcialmente. Ni «listo» ni «bloqueado»: es un tercer estado.
+**Consecuencia:** un jubilado con préstamo **o con seguro** y sin certificado **NO está bloqueado**.
+Participa parcialmente. Ni «listo» ni «bloqueado»: es un tercer estado.
 
 ### El campo que lo dice, para no inferirlo
 
@@ -407,10 +539,35 @@ Tanto el `detalle` de `generarPagosDelMes` como el de `previsualizarCorrida` lle
 
 | Valor | Qué significa |
 |---|---|
-| `COMPLETA` | **Nada quedó retenido.** Todo lo que correspondía se aplicó: a préstamo, al banco, o a los dos |
-| `SOLO_CRUCE` | **Hubo remanente que NO pudo salir** por falta de certificado o de cuenta única. Canceló deuda; hay plata que el jubilado no cobró |
+| `COMPLETA` | **Nada quedó retenido.** Todo lo que correspondía se aplicó: a préstamo, al banco, al seguro, o a varios |
+| `SOLO_CRUCE` | **Léase PARCIAL.** Quedó remanente de **pensión** que NO pudo salir por falta de certificado o de cuenta única. Se aplicó lo que sí podía (cruce y/o seguro); hay plata que el jubilado no cobró |
 | `BLOQUEADO` | No participa. `motivoBloqueo` dice por qué |
-| `null` | No fue un evento de participación de esta corrida (`YA_EXISTIA`, `AL_DIA`, retroactivo con 0 meses) |
+| `AL_DIA` | Sin meses adeudados a este período. No es bloqueo |
+| `null` | No fue un evento de participación de esta corrida (`YA_EXISTIA`, retroactivo con 0 meses) |
+
+#### ⚠️ `SOLO_CRUCE` ya no es literal — el literal NO cambió, a propósito (2026-09-04)
+
+Con la regla del seguro (§4ter) un jubilado **sin préstamo**, **sin certificado** y **con seguro
+médico** procesa su seguro y retiene su pensión. Eso **no es «solo cruce»**: puede no haber habido
+ningún cruce (`valorCruzadoAPrestamo = 0`).
+
+**Aun así el backend sigue mandando `"SOLO_CRUCE"`, y es deliberado.** El valor se redefine, el
+literal no:
+
+> `SOLO_CRUCE` = **participación PARCIAL**: se procesó lo que se podía y quedó remanente de pensión
+> retenido por falta de certificado. Es **accionable** — conseguir el certificado libera ese dinero.
+
+**Por qué no un valor nuevo.** El frontend lee estos literales a mano
+(`corrida-mes-pago-jubilados.component.ts`: `filasCompletas` / `filasSoloCruce` / `filasBloqueadas`,
+`cantidadAccionable`, `claseParticipacion`, `textoParticipacion`, y el `type Participacion` de
+`pago-pension-complementaria.ts`). Un literal desconocido **no cae en ninguna de esas cuatro
+canastas** —ni siquiera en «Sin novedad», que filtra por `== null`— así que la fila desaparecería de
+todas las pestañas y no contaría como accionable. La definición por **retención** sigue siendo
+correcta para el caso nuevo; sólo la **etiqueta** quedó estrecha.
+
+**Lo único pendiente es cosmético y es del frontend:** cambiar el texto visible de «Solo cruce» a
+**«Parcial»** y el tooltip a *«Sin certificado: la pensión queda retenida; el cruce y el seguro sí se
+procesaron»*. Sin tocar el literal, sin cambio de contrato, y coordinado por el árbitro.
 
 #### ⚠️ Precisión del 2026-09-04: `COMPLETA` es «nada retenido», no «hubo salida al banco»
 
@@ -429,8 +586,9 @@ requiere ninguna acción.
 Tres campos combinados a mano se rompen la primera vez que cambie una regla; un campo explícito no.
 Lo pidió el agente de frontend y tiene razón.
 
-**Sin certificado y SIN préstamo → `BLOQUEADO`**: no hay cruce posible y no puede salir dinero, así
-que no hay nada que hacer con esa pensión este mes.
+**Sin certificado, sin préstamo Y SIN SEGURO → `BLOQUEADO`**: no hay cruce posible, no puede salir
+dinero y no hay seguro que traspasar, así que no hay nada que hacer con esa pensión este mes.
+**Con seguro médico sí participa** (§4ter): procesa el seguro y retiene la pensión → `SOLO_CRUCE`.
 
 La validación va en el **backend**, dentro de `generarPagoIndividual`, después de resolver la cuenta.
 
@@ -438,8 +596,9 @@ La validación va en el **backend**, dentro de `generarPagoIndividual`, después
 `participacion`, no con un binario listo/bloqueado.
 
 - `BLOQUEADO` → no entra, no suma a ningún total, con su motivo en la fila.
-- `SOLO_CRUCE` → **sí entra**: suma a «Total a préstamos» y **no** a «Total a dinero».
-- `COMPLETA` → suma a los dos.
+- `SOLO_CRUCE` → **sí entra**: suma a «Total a préstamos» y/o a «Seguro a traspaso interno», y
+  **nunca** a «Total a dinero».
+- `COMPLETA` → suma a «Total a préstamos» y a «Total a dinero».
 
 > **Nota histórica.** Este párrafo decía *«sin certificado el jubilado no entra en la corrida»*,
 > citando al usuario el mismo 2026-09-04. Esa instrucción quedó **reemplazada** ese mismo día por la
