@@ -335,10 +335,28 @@
   align-items: center;
   justify-content: space-between;
   width: 100%;
+  flex-wrap: wrap;
+  gap: 10px;
 
   ::ng-deep .mat-mdc-card-header-text {
     flex: 1;
   }
+}
+
+.acciones-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+
+  button mat-spinner {
+    display: inline-block;
+    margin-right: 6px;
+  }
+}
+
+.error-banner-reporte {
+  margin: 0 16px 12px;
 }
 
 .tabla-scroll {

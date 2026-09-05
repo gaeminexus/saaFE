@@ -13,8 +13,10 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
+import { guardarArchivo, mensajeReporteFallido } from '../../../../../../../shared/services/descarga-reporte';
 import { empresaSesionCodigo } from '../../../../../../../shared/services/empresa-sesion';
 import { ExportService } from '../../../../../../../shared/services/export.service';
+import { JasperReportesService } from '../../../../../../../shared/services/jasper-reportes.service';
 import { usuarioSesion } from '../../../../../../../shared/services/usuario-sesion';
 import {
   DetallePagoPension,
@@ -102,6 +104,7 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
 
   private pgpcService = inject(PagoPensionComplementariaService);
   private exportService = inject(ExportService);
+  private jasperReportes = inject(JasperReportesService);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
 
@@ -125,6 +128,12 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
   resultado = signal<ResultadoGeneracionPagos | null>(null);
   mensajeResultado = signal<string | null>(null);
   errorEjecucion = signal<string | null>(null);
+
+  // Reporte Jasper de la corrida (RPRT_PGPC_CRRD) — trae de la base la corrida COMPLETA del
+  // período, no lo que esté filtrado en pantalla. Independiente del prevuelo: no requiere haber
+  // previsualizado ni ejecutado en esta sesión, solo el período y el contexto de sesión.
+  generandoReporte = signal(false);
+  errorReporte = signal<string | null>(null);
 
   // ===================== Filtros del prevuelo =====================
   // Con ~180 jubilados la tabla no se puede leer entera. Dos filtros que se COMBINAN (se
@@ -465,6 +474,42 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
 
   nombreMes(mes: number): string {
     return MESES.find((m) => m.valor === mes)?.nombre ?? String(mes);
+  }
+
+  // ===================== Reporte Jasper de la corrida =====================
+  // Distinto del CSV a propósito: el CSV exporta lo que se ve en pantalla (con los filtros
+  // puestos, si hay); este reporte va a la base y trae la corrida COMPLETA del período — no
+  // depende de haber previsualizado ni ejecutado en esta sesión ni de ningún filtro activo.
+  //
+  // ⛔ Todavía no va a funcionar hasta que el usuario compile el .jasper en Jaspersoft Studio
+  // (el .jrxml ya está en saaBE, commit f313e2b) — por eso el manejo de error es explícito y
+  // legible (`mensajeReporteFallido`, que lee el `mensaje` real del cuerpo del error) en vez de
+  // un spinner colgado o un mensaje genérico: el operador tiene que entender que falta un paso
+  // de despliegue, no que la pantalla está rota.
+  generarReporte(): void {
+    if (this.idEmpresa == null || this.generandoReporte()) {
+      return;
+    }
+    this.errorReporte.set(null);
+    this.generandoReporte.set(true);
+
+    const parametros = {
+      P_ANIO: this.anio,
+      P_MES: this.mes,
+      P_IDEMPRESA: this.idEmpresa,
+      P_USUARIO: this.usuario,
+    };
+
+    this.jasperReportes.generar('crd', 'RPRT_PGPC_CRRD', parametros, 'PDF').subscribe({
+      next: (blob) => {
+        this.generandoReporte.set(false);
+        guardarArchivo(blob, `corrida-jubilados-${this.periodoArchivo()}.pdf`);
+      },
+      error: (err) => {
+        this.generandoReporte.set(false);
+        mensajeReporteFallido(err).then((mensaje) => this.errorReporte.set(mensaje));
+      },
+    });
   }
 
   // ===================== Exportar CSV =====================

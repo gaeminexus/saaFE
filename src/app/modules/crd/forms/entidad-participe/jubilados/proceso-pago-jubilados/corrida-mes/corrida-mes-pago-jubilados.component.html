@@ -242,11 +242,40 @@
       <mat-card class="prevuelo-card">
         <mat-card-header class="card-header-con-accion">
           <mat-card-title>Prevuelo — {{ periodoTexto }}</mat-card-title>
-          <button mat-stroked-button (click)="exportarPrevueloCSV()" matTooltip="Exporta el prevuelo tal como se ve: quién entra, quién queda bloqueado y por qué">
-            <mat-icon>download</mat-icon>
-            Exportar CSV
-          </button>
+          <div class="acciones-header">
+            <button mat-stroked-button (click)="exportarPrevueloCSV()" matTooltip="Exporta el prevuelo tal como se ve: quién entra, quién queda bloqueado y por qué">
+              <mat-icon>download</mat-icon>
+              Exportar CSV
+            </button>
+            <!--
+              Distinguible a propósito del CSV: no es lo mismo. El CSV exporta lo que se ve en
+              pantalla (con los filtros puestos, si hay); este reporte va a la base y trae la
+              corrida COMPLETA del período — filtra por la fecha en que se ejecutó, así que
+              incluye los meses retroactivos que esa corrida pagó (no solo el mes calendario del
+              selector de arriba).
+            -->
+            <button
+              mat-raised-button
+              color="accent"
+              (click)="generarReporte()"
+              [disabled]="generandoReporte() || idEmpresa == null"
+              matTooltip="Reporte oficial de la corrida ejecutada para este período (de la base de datos, no de esta pantalla). Incluye los meses retroactivos que esa corrida pagó."
+            >
+              @if (generandoReporte()) {
+                <mat-spinner diameter="18"></mat-spinner>
+              } @else {
+                <mat-icon>picture_as_pdf</mat-icon>
+              }
+              Generar reporte
+            </button>
+          </div>
         </mat-card-header>
+        @if (errorReporte()) {
+          <div class="error-banner error-banner-reporte">
+            <mat-icon>error_outline</mat-icon>
+            <span>{{ errorReporte() }}</span>
+          </div>
+        }
         <mat-card-content>
           <!--
             Dos filtros que se COMBINAN. Con ~180 filas la tabla no se lee entera, y la pregunta
