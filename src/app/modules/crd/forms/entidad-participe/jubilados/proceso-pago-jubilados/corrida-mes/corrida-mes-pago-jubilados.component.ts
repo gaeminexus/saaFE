@@ -37,11 +37,13 @@ const MESES = [
 ];
 
 /**
- * Cuál de las tarjetas de totales está filtrando la tabla. Son las seis tarjetas de la pestaña:
- * las tres del eje DESTINO (préstamos / dinero / total) y las tres del eje CONCEPTO CONTABLE
- * (pensión / seguro / total). Las dos «Total» filtran igual porque son el mismo número.
+ * Cuál de las tarjetas de totales está filtrando la tabla. Son las siete tarjetas de la pestaña:
+ * las cuatro del eje DESTINO (préstamos / dinero / seguro a traspaso interno / total) y las tres
+ * del eje CONCEPTO CONTABLE (pensión / seguro / total). Las dos «Total» filtran igual porque son
+ * el mismo número. `SEGURO_INTERNO` (§4ter) es distinto de `SEGURO`: `SEGURO` es TODO el seguro
+ * médico (banco + traspaso interno); `SEGURO_INTERNO` es solo la porción que NO pasó por el banco.
  */
-export type FiltroTotal = 'PRESTAMOS' | 'DINERO' | 'TOTAL' | 'PENSION' | 'SEGURO';
+export type FiltroTotal = 'PRESTAMOS' | 'DINERO' | 'SEGURO_INTERNO' | 'TOTAL' | 'PENSION' | 'SEGURO';
 
 /** Medio centavo: por debajo de esto, en pantalla el monto ya figura como $0,00. */
 const TOLERANCIA_MONTO = 0.005;
@@ -243,6 +245,8 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
         return 'A dinero';
       case 'TOTAL':
         return 'Total';
+      case 'SEGURO_INTERNO':
+        return 'Seguro a traspaso interno';
       case 'PENSION':
         return 'Pensión';
       case 'SEGURO':
@@ -268,6 +272,8 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
         return (d.montoACruzar ?? 0) > TOLERANCIA_MONTO;
       case 'DINERO':
         return (d.montoADinero ?? 0) > TOLERANCIA_MONTO;
+      case 'SEGURO_INTERNO':
+        return (d.montoSeguroInterno ?? 0) > TOLERANCIA_MONTO;
       case 'TOTAL':
         return (d.total ?? 0) > TOLERANCIA_MONTO;
       case 'PENSION':
@@ -322,6 +328,7 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
       cantidadBloqueados: res.bloqueados,
       totalACruzarPrestamos: res.totalACruzarPrestamos,
       totalADinero: res.totalADinero,
+      totalSeguroInternoGeneral: res.totalSeguroInternoGeneral,
       totalGeneral: res.totalGeneral,
     };
 
@@ -399,19 +406,29 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
         return 'badge-desviacion';
       case 'BLOQUEADO':
         return 'badge-bloqueado';
+      case 'AL_DIA':
+        return 'badge-ya-existia';
       default:
         return 'badge-ya-existia';
     }
   }
 
+  /**
+   * ⚠️ `SOLO_CRUCE` se muestra como «Parcial» (§6, 2026-09-05): el literal del contrato NO
+   * cambia, solo la etiqueta. Desde §4ter el valor ya no implica que hubo cruce contra préstamo
+   * necesariamente — puede ser un jubilado sin préstamo que solo traspasó su seguro y retuvo la
+   * pensión. «Parcial» describe ambos casos sin mentir; «Solo cruce» ya no.
+   */
   textoParticipacion(p: Participacion | null | undefined): string {
     switch (p) {
       case 'COMPLETA':
         return 'Completa';
       case 'SOLO_CRUCE':
-        return 'Solo cruce';
+        return 'Parcial';
       case 'BLOQUEADO':
         return 'Bloqueado';
+      case 'AL_DIA':
+        return 'Al día';
       default:
         return 'Sin novedad';
     }
@@ -455,6 +472,7 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
       mesesAdeudados: d.mesesAdeudados,
       montoACruzar: d.montoACruzar,
       montoADinero: d.montoADinero,
+      montoSeguroInterno: d.montoSeguroInterno,
       total: d.total,
       totalPension: d.totalPension,
       totalSeguro: d.totalSeguro,
@@ -464,8 +482,8 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
     this.exportService.exportToCSV(
       filas,
       `corrida-jubilados-prevuelo-${this.periodoArchivo()}${sufijo}`,
-      ['Entidad', 'Nombre', 'Meses adeudados', 'Monto a cruzar', 'Monto a dinero', 'Total', 'Pensión', 'Seguro médico', 'Participación', 'Motivo bloqueo'],
-      ['idEntidad', 'nombre', 'mesesAdeudados', 'montoACruzar', 'montoADinero', 'total', 'totalPension', 'totalSeguro', 'participacion', 'motivoBloqueo'],
+      ['Entidad', 'Nombre', 'Meses adeudados', 'Monto a cruzar', 'Monto a dinero', 'Seguro a traspaso interno', 'Total', 'Pensión', 'Seguro médico', 'Participación', 'Motivo bloqueo'],
+      ['idEntidad', 'nombre', 'mesesAdeudados', 'montoACruzar', 'montoADinero', 'montoSeguroInterno', 'total', 'totalPension', 'totalSeguro', 'participacion', 'motivoBloqueo'],
     );
   }
 
@@ -481,6 +499,7 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
       valorSeguroSalud: d.valorSeguroSalud ?? '',
       totalPension: d.totalPension ?? '',
       totalSeguro: d.totalSeguro ?? '',
+      valorSeguroInterno: d.valorSeguroInterno ?? '',
       valorCruzadoAPrestamo: d.valorCruzadoAPrestamo ?? '',
       valorOrdenPago: d.valorOrdenPago ?? '',
       estado: this.esDesviacion(d) ? 'Desviación' : d.estado,
@@ -489,8 +508,8 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
     this.exportService.exportToCSV(
       filas,
       `corrida-jubilados-resultado-${this.periodoArchivo()}`,
-      ['Entidad', 'Nombre', 'Pensión', 'Seguro', 'Pensión acumulada', 'Seguro acumulado', 'Cruzado a préstamo', 'Orden de pago', 'Estado', 'Mensaje'],
-      ['idEntidad', 'nombre', 'valorPension', 'valorSeguroSalud', 'totalPension', 'totalSeguro', 'valorCruzadoAPrestamo', 'valorOrdenPago', 'estado', 'mensaje'],
+      ['Entidad', 'Nombre', 'Pensión', 'Seguro', 'Pensión acumulada', 'Seguro acumulado', 'Seguro a traspaso interno', 'Cruzado a préstamo', 'Orden de pago', 'Estado', 'Mensaje'],
+      ['idEntidad', 'nombre', 'valorPension', 'valorSeguroSalud', 'totalPension', 'totalSeguro', 'valorSeguroInterno', 'valorCruzadoAPrestamo', 'valorOrdenPago', 'estado', 'mensaje'],
     );
   }
 

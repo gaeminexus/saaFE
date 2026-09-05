@@ -13,7 +13,9 @@ export interface ConfirmarGeneracionData {
   totalACruzarPrestamos: number;
   /** Sale al banco como orden de pago. Esto sí es dinero saliendo. */
   totalADinero: number;
-  /** La suma: lo que se descuenta de las cuentas de pensión complementaria. */
+  /** §4ter. Seguro médico traspasado a 2.3.90.90.06 sin pasar por el banco. No sale de la asociación. */
+  totalSeguroInternoGeneral: number;
+  /** La suma de los TRES (§4ter): lo que se descuenta de las cuentas de pensión complementaria. */
   totalGeneral: number;
 }
 
@@ -51,6 +53,11 @@ export interface ConfirmarGeneracionData {
           <span class="d-label">A dinero</span>
           <span class="d-valor">{{ formatMoneda(data.totalADinero) }}</span>
           <span class="d-nota">sale al banco</span>
+        </div>
+        <div class="d-item d-seguro-interno">
+          <span class="d-label">Seguro a traspaso interno</span>
+          <span class="d-valor">{{ formatMoneda(data.totalSeguroInternoGeneral) }}</span>
+          <span class="d-nota">a 2.3.90.90.06, no sale de la asociación</span>
         </div>
         <div class="d-item d-total">
           <span class="d-label">Total</span>
@@ -93,7 +100,7 @@ export interface ConfirmarGeneracionData {
     }
 
     .desglose {
-      display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.6rem; margin-bottom: 1rem;
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.6rem; margin-bottom: 1rem;
 
       .d-item {
         display: flex; flex-direction: column; gap: 1px; border-radius: 8px; padding: 0.5rem 0.65rem;
@@ -107,6 +114,9 @@ export interface ConfirmarGeneracionData {
       }
       .d-dinero {
         background: #fef2f2; .d-label, .d-nota { color: #7f1d1d; } .d-valor { color: #991b1b; }
+      }
+      .d-seguro-interno {
+        background: #ecfeff; .d-label, .d-nota { color: #155e75; } .d-valor { color: #164e63; }
       }
       .d-total {
         background: #eef4fb; .d-label, .d-nota { color: #1e40af; } .d-valor { color: #1e3a8a; }

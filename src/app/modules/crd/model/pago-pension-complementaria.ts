@@ -16,22 +16,26 @@ export interface RespuestaPgpc<T> {
 }
 
 /**
- * §6 — cómo participó un jubilado en la corrida (real o previsualizada). Campo EXPLÍCITO: no
+ * §6/§4ter — cómo participó un jubilado en la corrida (real o previsualizada). Campo EXPLÍCITO: no
  * deducirlo cruzando `tieneCertificado`/`montoADinero`/`montoACruzar` — eso se rompe la primera
  * vez que cambie una regla.
  *
- * - `COMPLETA`: nada quedó retenido — se aplicó todo lo que correspondía (a préstamo, al banco, o
- *   a los dos). Un jubilado 100% cruzado (sin remanente) es `COMPLETA`, tenga o no certificado:
- *   sin remanente no hay nada que el certificado pudiera haber dejado retenido.
- * - `SOLO_CRUCE`: hubo remanente que NO pudo salir al banco por falta de certificado o de cuenta
- *   única. Canceló deuda; hay plata que el jubilado no cobró. Es ACCIONABLE (conseguir el
- *   certificado libera ese dinero) — tratarlo con el mismo criterio visual que una "Desviación",
- *   nunca como bloqueo: sí entra, sí suma a "Total a préstamos".
- * - `BLOQUEADO`: no participa en absoluto. `motivoBloqueo` dice por qué.
- * - `null`: no fue un evento de participación de esta corrida (`YA_EXISTIA`, `AL_DIA`, o
- *   retroactivo con 0 meses adeudados).
+ * - `COMPLETA`: nada quedó retenido — se aplicó todo lo que correspondía (a préstamo, al banco, al
+ *   seguro, o a varios). Un jubilado 100% cruzado (sin remanente) es `COMPLETA`, tenga o no
+ *   certificado: sin remanente no hay nada que el certificado pudiera haber dejado retenido.
+ * - `SOLO_CRUCE`: ⚠️ **léase «Parcial»** (§6, 2026-09-05) — el literal NO cambió, pero desde §4ter
+ *   ya no implica que hubo cruce. Significa: quedó remanente de PENSIÓN retenido por falta de
+ *   certificado o de cuenta única; se procesó lo que sí se podía (cruce contra préstamo y/o
+ *   traspaso del seguro). Es ACCIONABLE (conseguir el certificado libera la pensión retenida) —
+ *   tratarlo con el mismo criterio visual que una "Desviación", nunca como bloqueo: sí entra, sí
+ *   suma a "Total a préstamos" y/o "Seguro a traspaso interno".
+ * - `BLOQUEADO`: no participa en absoluto — sin préstamo, sin certificado Y sin seguro médico
+ *   (§4ter). `motivoBloqueo` dice por qué.
+ * - `AL_DIA`: sin meses adeudados a este período (retroactivo). No es bloqueo ni error.
+ * - `null`: no fue un evento de participación de esta corrida (`YA_EXISTIA`, o casos donde el
+ *   backend no distingue `AL_DIA` de forma explícita).
  */
-export type Participacion = 'COMPLETA' | 'SOLO_CRUCE' | 'BLOQUEADO';
+export type Participacion = 'COMPLETA' | 'SOLO_CRUCE' | 'BLOQUEADO' | 'AL_DIA';
 
 /** §1 — un renglón de `detalle` dentro de `ResultadoGeneracionPagos`. */
 export interface DetallePagoPension {
@@ -65,6 +69,12 @@ export interface DetallePagoPension {
   /** Acumulado de todos los meses del retroactivo (pensión y seguro suman exacto: `total = totalPension + totalSeguro`). */
   totalPension?: number;
   totalSeguro?: number;
+  /**
+   * §4ter — subconjunto de `totalSeguro`: la porción de seguro médico que se traspasó a la cuenta
+   * `2.3.90.90.06 SEGURO POR PAGAR JUBILADOS` SIN salir al banco (jubilado sin certificado). Con
+   * certificado vale 0. Opcional: puede faltar en un backend más viejo (anterior a §4ter).
+   */
+  valorSeguroInterno?: number;
 }
 
 /** §1 — cuerpo de `resultado` de `POST /pgpc/generarPagosDelMes`. */
@@ -80,6 +90,8 @@ export interface ResultadoGeneracionPagos {
   totalOrdenesGeneradas: number;
   /** §4bis. Suma del seguro médico de todos los jubilados de la corrida. Opcional: backend viejo. */
   totalSeguroGeneral?: number;
+  /** §4ter. Subconjunto de `totalSeguroGeneral`: seguro traspasado sin pasar por el banco (sin certificado). */
+  totalSeguroInternoGeneral?: number;
   errores: string[];
   detalle: DetallePagoPension[];
 }
@@ -155,7 +167,14 @@ export interface DetallePrevisualizacionPago {
    *  motor real topa por préstamo y mes a mes, así que con 2+ préstamos puede diferir (§4bis). */
   montoACruzar: number;
   montoADinero: number;
-  /** `montoACruzar + montoADinero` — lo que se descontaría de la cuenta de pensión complementaria. */
+  /**
+   * §4ter — seguro médico que se traspasaría a `2.3.90.90.06 SEGURO POR PAGAR JUBILADOS` SIN
+   * salir al banco (jubilado sin certificado). ⛔ NO suma a `montoADinero` (que sigue siendo,
+   * exclusivamente, dinero que sale al banco); SÍ suma a `total`. Con certificado vale 0 y
+   * `total` degenera en `montoACruzar + montoADinero` como antes de §4ter.
+   */
+  montoSeguroInterno: number;
+  /** `montoACruzar + montoADinero + montoSeguroInterno` — lo que se descontaría de la cuenta de pensión complementaria. */
   total: number;
   tienePrestamo: boolean;
   tieneCertificado: boolean;
@@ -190,7 +209,16 @@ export interface ResultadoPrevisualizacionCorrida {
   totalACruzarPrestamos: number;
   /** Va a salir al banco como orden de pago. Esto sí es dinero saliendo. */
   totalADinero: number;
-  /** La suma: lo que se descuenta de las cuentas de pensión complementaria. */
+  /**
+   * §4ter — suma de `montoSeguroInterno`: seguro médico que se traspasa a `2.3.90.90.06` SIN
+   * pasar por el banco. Subconjunto de `totalSeguroGeneral`. No sale de la asociación, y NO está
+   * incluido en `totalADinero`.
+   */
+  totalSeguroInternoGeneral: number;
+  /**
+   * La suma de los TRES: `totalACruzarPrestamos + totalADinero + totalSeguroInternoGeneral`
+   * (§4ter — ya no son solo dos). Es lo que se descuenta de las cuentas de pensión complementaria.
+   */
   totalGeneral: number;
   /** Suma del seguro médico (cuenta `2.3.90.90.06`) de todos los jubilados evaluados. */
   totalSeguroGeneral: number;

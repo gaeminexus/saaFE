@@ -111,13 +111,34 @@
         </div>
       </div>
 
+      <!--
+        §4ter: el certificado gobierna la salida AL BANCO, no el traspaso del seguro médico. Sin
+        certificado, la porción de seguro se traspasa igual a 2.3.90.90.06 sin pasar por el banco.
+        Sin esta tarjeta, "A préstamos" + "A dinero" dejó de sumar "Total" y quedaba una diferencia
+        sin explicar en la misma pantalla con la que se autoriza la corrida.
+      -->
+      <div class="total-box total-seguro-interno total-box-filtrable"
+           [class.total-box-activo]="filtroTarjeta() === 'SEGURO_INTERNO'"
+           role="button" tabindex="0"
+           (click)="alternarTarjeta('SEGURO_INTERNO')"
+           (keydown.enter)="alternarTarjeta('SEGURO_INTERNO')"
+           (keydown.space)="alternarTarjeta('SEGURO_INTERNO'); $event.preventDefault()"
+           matTooltip="Porción de seguro médico que se traspasa a la cuenta 2.3.90.90.06 SIN pasar por el banco, porque el jubilado no tiene certificado. No sale de la asociación. Clic para ver quiénes componen este total.">
+        <mat-icon>swap_horiz</mat-icon>
+        <div class="total-info">
+          <span class="total-label">Seguro a traspaso interno</span>
+          <span class="total-valor">$ {{ money(res.totalSeguroInternoGeneral) }}</span>
+          <span class="total-sub">sin certificado, no sale al banco</span>
+        </div>
+      </div>
+
       <div class="total-box total-general total-box-filtrable"
            [class.total-box-activo]="filtroTarjeta() === 'TOTAL'"
            role="button" tabindex="0"
            (click)="alternarTarjeta('TOTAL')"
            (keydown.enter)="alternarTarjeta('TOTAL')"
            (keydown.space)="alternarTarjeta('TOTAL'); $event.preventDefault()"
-           matTooltip="La suma: lo que se descuenta de las cuentas de pensión complementaria. Clic para ver quiénes aportan al monto (no los evaluados, que incluyen bloqueados en $0).">
+           matTooltip="A préstamos + a dinero + seguro a traspaso interno: lo que se descuenta de las cuentas de pensión complementaria. Clic para ver quiénes aportan al monto (no los evaluados, que incluyen bloqueados en $0).">
         <mat-icon>calculate</mat-icon>
         <div class="total-info">
           <span class="total-label">Total</span>
@@ -268,6 +289,7 @@
                   <th class="c-num">Meses adeud.</th>
                   <th class="c-num">A préstamo</th>
                   <th class="c-num">A dinero</th>
+                  <th class="c-num" matTooltip="Cuenta 2.3.90.90.06 — sin certificado, no pasa por el banco">Seguro a traspaso interno</th>
                   <th class="c-num">Total</th>
                   <th class="c-num" matTooltip="Cuenta 2.3.01.10.03">Pensión</th>
                   <th class="c-num" matTooltip="Cuenta 2.3.90.90.06 — porción de la mensualidad, no un adicional">Seguro</th>
@@ -285,6 +307,7 @@
                     <td class="c-num">{{ d.mesesAdeudados }}</td>
                     <td class="c-num">$ {{ money(d.montoACruzar) }}</td>
                     <td class="c-num">$ {{ money(d.montoADinero) }}</td>
+                    <td class="c-num">$ {{ money(d.montoSeguroInterno) }}</td>
                     <td class="c-num">$ {{ money(d.total) }}</td>
                     <td class="c-num">$ {{ money(d.totalPension) }}</td>
                     <td class="c-num">$ {{ money(d.totalSeguro) }}</td>
@@ -294,7 +317,7 @@
                       </span>
                     </td>
                     <td>
-                      {{ d.motivoBloqueo || (d.participacion === 'SOLO_CRUCE' ? 'Sin certificado o sin cuenta única: el remanente queda retenido.' : '—') }}
+                      {{ d.motivoBloqueo || (d.participacion === 'SOLO_CRUCE' ? 'Sin certificado: la pensión queda retenida; el cruce y el seguro sí se procesaron.' : '—') }}
                     </td>
                   </tr>
                 }
@@ -319,9 +342,9 @@
 
           <p class="nota-solo-cruce">
             <mat-icon>info</mat-icon>
-            <strong>«Solo cruce»</strong> no es un bloqueo: la deuda cancela igual, pero queda plata
-            del jubilado sin poder salir al banco por falta de certificado o de cuenta única. Es
-            accionable — conseguir el certificado libera ese dinero.
+            <strong>«Parcial»</strong> no es un bloqueo: sin certificado, la pensión queda retenida,
+            pero el cruce contra el préstamo y el traspaso del seguro médico sí se procesan igual.
+            Es accionable — conseguir el certificado libera la pensión retenida.
           </p>
         </mat-card-content>
       </mat-card>
@@ -395,6 +418,7 @@
                 <th class="c-num">Seguro</th>
                 <th class="c-num" matTooltip="Acumulado del retroactivo, cuenta 2.3.01.10.03">Pensión acum.</th>
                 <th class="c-num" matTooltip="Acumulado del retroactivo, cuenta 2.3.90.90.06">Seguro acum.</th>
+                <th class="c-num" matTooltip="Subconjunto del seguro acumulado: la parte que no pasó por el banco (sin certificado)">Seguro a traspaso interno</th>
                 <th class="c-num">Cruzado a préstamo</th>
                 <th class="c-num">Orden de pago</th>
                 <th>Estado</th>
@@ -410,6 +434,7 @@
                   <td class="c-num">{{ d.valorSeguroSalud != null ? money(d.valorSeguroSalud) : '—' }}</td>
                   <td class="c-num">{{ d.totalPension != null ? money(d.totalPension) : '—' }}</td>
                   <td class="c-num">{{ d.totalSeguro != null ? money(d.totalSeguro) : '—' }}</td>
+                  <td class="c-num">{{ d.valorSeguroInterno != null ? money(d.valorSeguroInterno) : '—' }}</td>
                   <td class="c-num">{{ d.valorCruzadoAPrestamo != null ? money(d.valorCruzadoAPrestamo) : '—' }}</td>
                   <td class="c-num">{{ d.valorOrdenPago != null ? money(d.valorOrdenPago) : '—' }}</td>
                   <td>

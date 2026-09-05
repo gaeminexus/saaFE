@@ -156,10 +156,13 @@ export class SeguimientoPagoJubiladosComponent implements OnInit {
   }
 
   /**
-   * Un pago cruzado íntegro contra préstamo queda en REGISTRADA para siempre: nunca hay orden
-   * que sincronizar. NO es un atasco (§5 del contrato).
+   * ⚠️ Corregido (§5 del contrato, 2026-09-05): un pago 100% cruzado contra préstamo, o cuyo
+   * remanente era solo seguro médico (ya traspasado, §4ter), NO se queda en REGISTRADA — pasa a
+   * PAGADA porque no quedó nada PENDIENTE de pensión. REGISTRADA (sin orden que sincronizar) es
+   * ahora la señal de que quedó un remanente de PENSIÓN retenido por falta de certificado o de
+   * cuenta única (participación «Parcial»). NO es un atasco: es accionable.
    */
-  quedaEnRegistradaPorCruce(pago: PagoPensionComplementaria): boolean {
+  quedaEnRegistradaPorRetencion(pago: PagoPensionComplementaria): boolean {
     return pago.estado === ESTADO_PGPC.REGISTRADA && pago.idPagoProgramado == null;
   }
 

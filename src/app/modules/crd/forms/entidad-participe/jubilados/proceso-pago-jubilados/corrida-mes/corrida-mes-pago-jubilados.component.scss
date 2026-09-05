@@ -200,6 +200,23 @@
     }
   }
 
+  &.total-seguro-interno {
+    background: #ecfeff;
+    border: 1px solid #a5f3fc;
+    mat-icon {
+      color: #0e7490;
+    }
+    .total-label {
+      color: #155e75;
+    }
+    .total-valor {
+      color: #164e63;
+    }
+    .total-sub {
+      color: #155e75;
+    }
+  }
+
   &.total-pension {
     background: #f5f3ff;
     border: 1px solid #ddd6fe;

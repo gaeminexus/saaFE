@@ -104,10 +104,10 @@
                     <span class="badge" [ngClass]="claseEstado(p.estado)">
                       {{ nombreEstado(p.estado) }}
                     </span>
-                    @if (quedaEnRegistradaPorCruce(p)) {
+                    @if (quedaEnRegistradaPorRetencion(p)) {
                       <mat-icon
                         class="info-cruce"
-                        matTooltip="Cruzado íntegro contra préstamo: no generó orden de pago, por eso queda Registrada. No es un atasco."
+                        matTooltip="Sin certificado: quedó un remanente de pensión retenido, por eso queda Registrada sin orden de pago. No es un atasco — es accionable."
                       >info</mat-icon>
                     }
                   </td>
