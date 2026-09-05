@@ -37,6 +37,16 @@ const MESES = [
 ];
 
 /**
+ * Cuál de las tarjetas de totales está filtrando la tabla. Son las seis tarjetas de la pestaña:
+ * las tres del eje DESTINO (préstamos / dinero / total) y las tres del eje CONCEPTO CONTABLE
+ * (pensión / seguro / total). Las dos «Total» filtran igual porque son el mismo número.
+ */
+export type FiltroTotal = 'PRESTAMOS' | 'DINERO' | 'TOTAL' | 'PENSION' | 'SEGURO';
+
+/** Medio centavo: por debajo de esto, en pantalla el monto ya figura como $0,00. */
+const TOLERANCIA_MONTO = 0.005;
+
+/**
  * Pestaña B — «Corrida del mes». Contrato: docs/crd/API-PAGO-PENSION-COMPLEMENTARIA.md §4bis/§6.
  * Diseño: docs/crd/DISENO-PANTALLA-PAGO-JUBILADOS.md §3/§3bis. Patrón copiado de `cierre-cartera`
  * (botón «Previsualizar» separado de «Ejecutar», sin auto-cargar al entrar a la pestaña).
@@ -108,6 +118,20 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
   mensajeResultado = signal<string | null>(null);
   errorEjecucion = signal<string | null>(null);
 
+  // ===================== Filtros del prevuelo =====================
+  // Con ~180 jubilados la tabla no se puede leer entera. Dos filtros que se COMBINAN (se
+  // aplican uno sobre el otro, no se pisan): texto libre y tarjeta de total.
+
+  /** Texto libre: nombre o número de entidad. */
+  filtroTexto = signal('');
+
+  /**
+   * Tarjeta de total seleccionada, o `null` si no hay ninguna. Al hacer clic en una tarjeta la
+   * tabla se reduce a los jubilados que COMPONEN ese total — que es la pregunta real cuando un
+   * número no cuadra: «¿quiénes están metidos acá adentro?».
+   */
+  filtroTarjeta = signal<FiltroTotal | null>(null);
+
   constructor() {
     const hoy = new Date();
     if (hoy.getMonth() === 0) {
@@ -176,6 +200,85 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
     return res.totalGeneral - res.totalSeguroGeneral;
   }
 
+  // ===================== Filtrado del prevuelo =====================
+
+  /**
+   * Lo que se pinta en la tabla y lo que se exporta a CSV. Los dos filtros se combinan: primero
+   * la tarjeta (quién compone ese total), después el texto (cuál de ellos).
+   */
+  get detalleFiltrado(): DetallePrevisualizacionPago[] {
+    const tarjeta = this.filtroTarjeta();
+    const texto = this.filtroTexto().trim().toLowerCase();
+    let filas = this.detalle;
+    if (tarjeta) {
+      filas = filas.filter((d) => this.aportaA(d, tarjeta));
+    }
+    if (texto) {
+      filas = filas.filter(
+        (d) => (d.nombre ?? '').toLowerCase().includes(texto) || String(d.idEntidad).includes(texto),
+      );
+    }
+    return filas;
+  }
+
+  hayFiltro(): boolean {
+    return this.filtroTarjeta() !== null || this.filtroTexto().trim() !== '';
+  }
+
+  limpiarFiltros(): void {
+    this.filtroTarjeta.set(null);
+    this.filtroTexto.set('');
+  }
+
+  /** Segundo clic en la tarjeta ya activa = quitar el filtro. */
+  alternarTarjeta(filtro: FiltroTotal): void {
+    this.filtroTarjeta.set(this.filtroTarjeta() === filtro ? null : filtro);
+  }
+
+  etiquetaTarjeta(filtro: FiltroTotal | null): string {
+    switch (filtro) {
+      case 'PRESTAMOS':
+        return 'A préstamos';
+      case 'DINERO':
+        return 'A dinero';
+      case 'TOTAL':
+        return 'Total';
+      case 'PENSION':
+        return 'Pensión';
+      case 'SEGURO':
+        return 'Seguro médico';
+      default:
+        return '';
+    }
+  }
+
+  /**
+   * Si un jubilado aporta o no a un total. `> TOLERANCIA_MONTO` y no `> 0` a propósito: los
+   * montos son dobles que vienen de multiplicaciones y restas en el backend, y un residuo de
+   * 0,0000001 metería en la lista a alguien que en pantalla figura en $0,00 — el filtro tiene
+   * que coincidir con lo que el operador VE, redondeado a centavos.
+   *
+   * Ojo con «Total»: la tarjeta rotula «{{ evaluados }} evaluado(s)», que son todos, pero el
+   * monto suma solo a los aptos. Al filtrar se muestran los que APORTAN al monto, no los 180
+   * evaluados — si no, el filtro contradiría el número que lo acompaña.
+   */
+  private aportaA(d: DetallePrevisualizacionPago, filtro: FiltroTotal): boolean {
+    switch (filtro) {
+      case 'PRESTAMOS':
+        return (d.montoACruzar ?? 0) > TOLERANCIA_MONTO;
+      case 'DINERO':
+        return (d.montoADinero ?? 0) > TOLERANCIA_MONTO;
+      case 'TOTAL':
+        return (d.total ?? 0) > TOLERANCIA_MONTO;
+      case 'PENSION':
+        return (d.totalPension ?? 0) > TOLERANCIA_MONTO;
+      case 'SEGURO':
+        return (d.totalSeguro ?? 0) > TOLERANCIA_MONTO;
+      default:
+        return true;
+    }
+  }
+
   // ===================== Previsualizar =====================
 
   previsualizar(): void {
@@ -184,6 +287,9 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
     }
     this.errorPrevuelo.set(null);
     this.previsualizando.set(true);
+    // Un prevuelo nuevo llega con otra población: si quedara el filtro del anterior, la tabla
+    // podría aparecer vacía sin que se entienda por qué.
+    this.limpiarFiltros();
 
     this.pgpcService.previsualizarCorrida(this.idEmpresa, this.anio, this.mes, this.usuario).subscribe((resp) => {
       this.previsualizando.set(false);
@@ -335,10 +441,14 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
   }
 
   exportarPrevueloCSV(): void {
-    const detalle = this.detalle;
+    // Exporta lo que se ve, filtros incluidos — es lo que promete el tooltip del botón. Por eso
+    // el archivo lleva el sufijo «-filtrado» cuando hay algún filtro puesto: un CSV parcial con
+    // nombre de completo es el tipo de cosa con la que después alguien concilia mal.
+    const detalle = this.detalleFiltrado;
     if (detalle.length === 0) {
       return;
     }
+    const sufijo = this.hayFiltro() ? '-filtrado' : '';
     const filas = detalle.map((d) => ({
       idEntidad: d.idEntidad,
       nombre: d.nombre ?? '',
@@ -353,7 +463,7 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
     }));
     this.exportService.exportToCSV(
       filas,
-      `corrida-jubilados-prevuelo-${this.periodoArchivo()}`,
+      `corrida-jubilados-prevuelo-${this.periodoArchivo()}${sufijo}`,
       ['Entidad', 'Nombre', 'Meses adeudados', 'Monto a cruzar', 'Monto a dinero', 'Total', 'Pensión', 'Seguro médico', 'Participación', 'Motivo bloqueo'],
       ['idEntidad', 'nombre', 'mesesAdeudados', 'montoACruzar', 'montoADinero', 'total', 'totalPension', 'totalSeguro', 'participacion', 'motivoBloqueo'],
     );

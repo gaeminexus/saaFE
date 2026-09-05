@@ -81,7 +81,13 @@
   <!-- Prevuelo -->
   @if (prevuelo(); as res) {
     <div class="totales-comparativa">
-      <div class="total-box total-prestamos" matTooltip="Va a cancelar deuda. No sale de la asociación.">
+      <div class="total-box total-prestamos total-box-filtrable"
+           [class.total-box-activo]="filtroTarjeta() === 'PRESTAMOS'"
+           role="button" tabindex="0"
+           (click)="alternarTarjeta('PRESTAMOS')"
+           (keydown.enter)="alternarTarjeta('PRESTAMOS')"
+           (keydown.space)="alternarTarjeta('PRESTAMOS'); $event.preventDefault()"
+           matTooltip="Va a cancelar deuda. No sale de la asociación. Clic para ver quiénes componen este total.">
         <mat-icon>account_balance</mat-icon>
         <div class="total-info">
           <span class="total-label">A préstamos</span>
@@ -90,7 +96,13 @@
         </div>
       </div>
 
-      <div class="total-box total-dinero" matTooltip="Sale al banco como orden de pago. Esto sí es dinero saliendo.">
+      <div class="total-box total-dinero total-box-filtrable"
+           [class.total-box-activo]="filtroTarjeta() === 'DINERO'"
+           role="button" tabindex="0"
+           (click)="alternarTarjeta('DINERO')"
+           (keydown.enter)="alternarTarjeta('DINERO')"
+           (keydown.space)="alternarTarjeta('DINERO'); $event.preventDefault()"
+           matTooltip="Sale al banco como orden de pago. Esto sí es dinero saliendo. Clic para ver quiénes componen este total.">
         <mat-icon>payments</mat-icon>
         <div class="total-info">
           <span class="total-label">A dinero</span>
@@ -99,7 +111,13 @@
         </div>
       </div>
 
-      <div class="total-box total-general" matTooltip="La suma: lo que se descuenta de las cuentas de pensión complementaria.">
+      <div class="total-box total-general total-box-filtrable"
+           [class.total-box-activo]="filtroTarjeta() === 'TOTAL'"
+           role="button" tabindex="0"
+           (click)="alternarTarjeta('TOTAL')"
+           (keydown.enter)="alternarTarjeta('TOTAL')"
+           (keydown.space)="alternarTarjeta('TOTAL'); $event.preventDefault()"
+           matTooltip="La suma: lo que se descuenta de las cuentas de pensión complementaria. Clic para ver quiénes aportan al monto (no los evaluados, que incluyen bloqueados en $0).">
         <mat-icon>calculate</mat-icon>
         <div class="total-info">
           <span class="total-label">Total</span>
@@ -119,7 +137,13 @@
     <div class="totales-concepto">
       <span class="concepto-titulo">Por concepto contable — componen el Total de arriba</span>
       <div class="totales-comparativa concepto-fila">
-        <div class="total-box total-pension" matTooltip="Va a la cuenta 2.3.01.10.03 PENSIONES COMPLEMENTARIAS POR PAGAR.">
+        <div class="total-box total-pension total-box-filtrable"
+             [class.total-box-activo]="filtroTarjeta() === 'PENSION'"
+             role="button" tabindex="0"
+             (click)="alternarTarjeta('PENSION')"
+             (keydown.enter)="alternarTarjeta('PENSION')"
+             (keydown.space)="alternarTarjeta('PENSION'); $event.preventDefault()"
+             matTooltip="Va a la cuenta 2.3.01.10.03 PENSIONES COMPLEMENTARIAS POR PAGAR. Clic para ver quiénes componen este total.">
           <mat-icon>elderly</mat-icon>
           <div class="total-info">
             <span class="total-label">Pensión</span>
@@ -127,7 +151,13 @@
           </div>
         </div>
         <span class="concepto-signo">+</span>
-        <div class="total-box total-seguro" matTooltip="Va a la cuenta 2.3.90.90.06 SEGURO POR PAGAR JUBILADOS — es una porción de la mensualidad, no un adicional.">
+        <div class="total-box total-seguro total-box-filtrable"
+             [class.total-box-activo]="filtroTarjeta() === 'SEGURO'"
+             role="button" tabindex="0"
+             (click)="alternarTarjeta('SEGURO')"
+             (keydown.enter)="alternarTarjeta('SEGURO')"
+             (keydown.space)="alternarTarjeta('SEGURO'); $event.preventDefault()"
+             matTooltip="Va a la cuenta 2.3.90.90.06 SEGURO POR PAGAR JUBILADOS — es una porción de la mensualidad, no un adicional. Clic para ver a quiénes se les está cobrando seguro.">
           <mat-icon>medical_services</mat-icon>
           <div class="total-info">
             <span class="total-label">Seguro médico</span>
@@ -135,7 +165,13 @@
           </div>
         </div>
         <span class="concepto-signo">=</span>
-        <div class="total-box total-general concepto-igual">
+        <div class="total-box total-general concepto-igual total-box-filtrable"
+             [class.total-box-activo]="filtroTarjeta() === 'TOTAL'"
+             role="button" tabindex="0"
+             (click)="alternarTarjeta('TOTAL')"
+             (keydown.enter)="alternarTarjeta('TOTAL')"
+             (keydown.space)="alternarTarjeta('TOTAL'); $event.preventDefault()"
+             matTooltip="El mismo Total de arriba: clic para ver quiénes aportan al monto.">
           <mat-icon>calculate</mat-icon>
           <div class="total-info">
             <span class="total-label">Total</span>
@@ -187,6 +223,43 @@
           </button>
         </mat-card-header>
         <mat-card-content>
+          <!--
+            Dos filtros que se COMBINAN. Con ~180 filas la tabla no se lee entera, y la pregunta
+            que se hace el operador cuando un total no le cuadra no es «¿cuánto da?» sino
+            «¿quiénes están metidos ahí adentro?» — por eso las tarjetas de arriba son clicables.
+          -->
+          <div class="filtros-prevuelo">
+            <mat-form-field appearance="outline" class="buscador-prevuelo">
+              <mat-label>Buscar por nombre o entidad</mat-label>
+              <mat-icon matPrefix>search</mat-icon>
+              <input matInput
+                     [ngModel]="filtroTexto()"
+                     (ngModelChange)="filtroTexto.set($event)"
+                     placeholder="Ej: Verdesoto, 6488" />
+              @if (filtroTexto()) {
+                <button matSuffix mat-icon-button aria-label="Limpiar búsqueda" (click)="filtroTexto.set('')">
+                  <mat-icon>close</mat-icon>
+                </button>
+              }
+            </mat-form-field>
+
+            @if (hayFiltro()) {
+              <div class="filtro-activo">
+                <mat-icon>filter_alt</mat-icon>
+                <span>
+                  Mostrando <strong>{{ detalleFiltrado.length }}</strong> de {{ detalle.length }}
+                  @if (filtroTarjeta()) {
+                    — los que componen <strong>«{{ etiquetaTarjeta(filtroTarjeta()) }}»</strong>
+                  }
+                </span>
+                <button mat-stroked-button (click)="limpiarFiltros()">
+                  <mat-icon>close</mat-icon>
+                  Quitar filtros
+                </button>
+              </div>
+            }
+          </div>
+
           <div class="tabla-scroll">
             <table class="prevuelo-table">
               <thead>
@@ -203,7 +276,7 @@
                 </tr>
               </thead>
               <tbody>
-                @for (d of detalle; track trackEntidad($index, d)) {
+                @for (d of detalleFiltrado; track trackEntidad($index, d)) {
                   <tr [class.fila-bloqueada]="d.participacion === 'BLOQUEADO'" [class.fila-desviacion]="d.participacion === 'SOLO_CRUCE'">
                     <td>
                       {{ d.nombre }}
@@ -228,6 +301,21 @@
               </tbody>
             </table>
           </div>
+
+          @if (detalleFiltrado.length === 0) {
+            <div class="estado-vacio estado-vacio-filtro">
+              <mat-icon>search_off</mat-icon>
+              <span>
+                Ningún jubilado coincide con el filtro.
+                @if (filtroTarjeta()) {
+                  Nadie aporta a «{{ etiquetaTarjeta(filtroTarjeta()) }}»
+                  @if (filtroTexto().trim()) { con ese texto }
+                  — el total está en $0,00.
+                }
+              </span>
+              <button mat-stroked-button (click)="limpiarFiltros()">Quitar filtros</button>
+            </div>
+          }
 
           <p class="nota-solo-cruce">
             <mat-icon>info</mat-icon>

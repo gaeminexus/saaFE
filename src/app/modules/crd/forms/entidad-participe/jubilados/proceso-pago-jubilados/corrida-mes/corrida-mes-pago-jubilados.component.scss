@@ -532,3 +532,82 @@
   background: #fef9c3;
   color: #854d0e;
 }
+
+/* ===== Tarjetas de totales clicables (filtran la tabla del prevuelo) =====
+   Van al final del archivo a propósito: `.totales-concepto .concepto-fila .total-box` tiene
+   especificidad alta, así que `.total-box.total-box-filtrable` empata y gana por orden. */
+.total-box.total-box-filtrable {
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgb(15 23 42 / 12%);
+  }
+  &:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+  }
+}
+
+/* La activa se marca con anillo + sombra, nunca cambiándole el fondo: cada tarjeta tiene su
+   color de concepto y perderlo haría más difícil reconocerla, que es justo lo contrario. */
+.total-box.total-box-filtrable.total-box-activo {
+  outline: 2px solid #1d4ed8;
+  outline-offset: 1px;
+  box-shadow: 0 2px 10px rgb(29 78 216 / 25%);
+  opacity: 1;
+}
+
+/* ===== Filtros del prevuelo ===== */
+.filtros-prevuelo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.buscador-prevuelo {
+  flex: 1 1 320px;
+  max-width: 420px;
+
+  mat-icon[matPrefix] {
+    margin-right: 8px;
+    color: #64748b;
+  }
+}
+
+.filtro-activo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1 1 auto;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: #eef4fb;
+  border: 1px solid #bcd3ee;
+  color: #1e3a8a;
+  font-size: 0.88rem;
+
+  mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    color: #1e40af;
+    flex-shrink: 0;
+  }
+  span {
+    flex: 1 1 auto;
+  }
+  button {
+    flex-shrink: 0;
+  }
+}
+
+.estado-vacio-filtro {
+  flex-direction: column;
+  gap: 10px;
+  text-align: center;
+}
