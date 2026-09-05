@@ -53,7 +53,11 @@ export interface DetallePagoPension {
   valorOrdenPago?: number;
   generoOrdenPago?: boolean;
   idAsientoDevengo?: number;
-  estado: 'GENERADO' | 'YA_EXISTIA' | 'ERROR';
+  /**
+   * `SIN_ANCLA` y `AL_DIA` son finales NORMALES del retroactivo (con préstamo), nunca `ERROR` —
+   * el operador necesita distinguir "terminó bien" de "se rompió" (PLAN-PAGO-RETROACTIVO-JUBILADOS.md).
+   */
+  estado: 'GENERADO' | 'YA_EXISTIA' | 'ERROR' | 'SIN_ANCLA' | 'AL_DIA';
   mensaje?: string | null;
   /** §6. Puede faltar en respuestas de un backend más viejo; no asumir que siempre viene. */
   participacion?: Participacion | null;
@@ -70,9 +74,12 @@ export interface DetallePagoPension {
   totalPension?: number;
   totalSeguro?: number;
   /**
-   * §4ter — subconjunto de `totalSeguro`: la porción de seguro médico que se traspasó a la cuenta
-   * `2.3.90.90.06 SEGURO POR PAGAR JUBILADOS` SIN salir al banco (jubilado sin certificado). Con
-   * certificado vale 0. Opcional: puede faltar en un backend más viejo (anterior a §4ter).
+   * §4ter — subconjunto de `totalSeguro`: la porción de seguro médico que salió en la orden
+   * aparte al proveedor del seguro (nunca al jubilado). ⚠️ Decisión del usuario, 2026-09-05: el
+   * seguro médico NUNCA fue plata del jubilado — se descuenta y se traspasa siempre, tenga o no
+   * certificado bancario. NO asumir que depende de `tieneCertificado`. El nombre del campo sigue
+   * siendo `valorSeguroInterno` a propósito, pendiente del renombre que coordina el backend.
+   * Opcional: puede faltar en un backend más viejo (anterior a §4ter).
    */
   valorSeguroInterno?: number;
 }
@@ -90,7 +97,11 @@ export interface ResultadoGeneracionPagos {
   totalOrdenesGeneradas: number;
   /** §4bis. Suma del seguro médico de todos los jubilados de la corrida. Opcional: backend viejo. */
   totalSeguroGeneral?: number;
-  /** §4ter. Subconjunto de `totalSeguroGeneral`: seguro traspasado sin pasar por el banco (sin certificado). */
+  /**
+   * §4ter. Subconjunto de `totalSeguroGeneral`: el seguro que salió en la orden aparte al
+   * proveedor. No depende de `tieneCertificado` (decisión del usuario, 2026-09-05) — nombre
+   * pendiente de renombre coordinado con el backend.
+   */
   totalSeguroInternoGeneral?: number;
   errores: string[];
   detalle: DetallePagoPension[];
@@ -168,10 +179,11 @@ export interface DetallePrevisualizacionPago {
   montoACruzar: number;
   montoADinero: number;
   /**
-   * §4ter — seguro médico que se traspasaría a `2.3.90.90.06 SEGURO POR PAGAR JUBILADOS` SIN
-   * salir al banco (jubilado sin certificado). ⛔ NO suma a `montoADinero` (que sigue siendo,
-   * exclusivamente, dinero que sale al banco); SÍ suma a `total`. Con certificado vale 0 y
-   * `total` degenera en `montoACruzar + montoADinero` como antes de §4ter.
+   * §4ter — seguro médico que saldría en la orden aparte al proveedor del seguro (nunca al
+   * jubilado). ⚠️ Decisión del usuario, 2026-09-05: el seguro NUNCA fue plata del jubilado — se
+   * descuenta y se traspasa siempre, tenga o no certificado bancario. NO asumir que depende de
+   * `tieneCertificado`. ⛔ NO suma a `montoADinero` (que sigue siendo, exclusivamente, dinero que
+   * sale al banco DEL JUBILADO); SÍ suma a `total`. Nombre pendiente de renombre con el backend.
    */
   montoSeguroInterno: number;
   /** `montoACruzar + montoADinero + montoSeguroInterno` — lo que se descontaría de la cuenta de pensión complementaria. */
@@ -210,9 +222,10 @@ export interface ResultadoPrevisualizacionCorrida {
   /** Va a salir al banco como orden de pago. Esto sí es dinero saliendo. */
   totalADinero: number;
   /**
-   * §4ter — suma de `montoSeguroInterno`: seguro médico que se traspasa a `2.3.90.90.06` SIN
-   * pasar por el banco. Subconjunto de `totalSeguroGeneral`. No sale de la asociación, y NO está
-   * incluido en `totalADinero`.
+   * §4ter — suma de `montoSeguroInterno`: total de seguro médico que sale en la orden aparte al
+   * proveedor (nunca a los jubilados). Decisión del usuario, 2026-09-05: no depende del
+   * certificado bancario — se descuenta y traspasa siempre. Subconjunto de `totalSeguroGeneral`.
+   * NO está incluido en `totalADinero` (que es exclusivamente dinero al banco del jubilado).
    */
   totalSeguroInternoGeneral: number;
   /**

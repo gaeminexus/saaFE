@@ -38,10 +38,16 @@ const MESES = [
 
 /**
  * Cuál de las tarjetas de totales está filtrando la tabla. Son las siete tarjetas de la pestaña:
- * las cuatro del eje DESTINO (préstamos / dinero / seguro a traspaso interno / total) y las tres
+ * las cuatro del eje DESTINO (préstamos / dinero / seguro médico a proveedor / total) y las tres
  * del eje CONCEPTO CONTABLE (pensión / seguro / total). Las dos «Total» filtran igual porque son
- * el mismo número. `SEGURO_INTERNO` (§4ter) es distinto de `SEGURO`: `SEGURO` es TODO el seguro
- * médico (banco + traspaso interno); `SEGURO_INTERNO` es solo la porción que NO pasó por el banco.
+ * el mismo número.
+ *
+ * ⚠️ Decisión del usuario, 2026-09-05: el seguro médico NUNCA fue plata del jubilado. Siempre se
+ * descuenta del aporte y siempre sale en una orden aparte a un proveedor (nunca al banco del
+ * jubilado) — el certificado bancario no gobierna nada del seguro, solo si la PENSIÓN sale al
+ * banco del jubilado. `SEGURO_INTERNO` filtra por ese pago al proveedor. ⛔ Sigue usando el campo
+ * `montoSeguroInterno`/`totalSeguroInternoGeneral` sin renombrar: pendiente de que el backend
+ * proponga el nombre nuevo (avisa el árbitro antes de aplicarlo).
  */
 export type FiltroTotal = 'PRESTAMOS' | 'DINERO' | 'SEGURO_INTERNO' | 'TOTAL' | 'PENSION' | 'SEGURO';
 
@@ -246,7 +252,7 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
       case 'TOTAL':
         return 'Total';
       case 'SEGURO_INTERNO':
-        return 'Seguro a traspaso interno';
+        return 'Seguro médico (a proveedor)';
       case 'PENSION':
         return 'Pensión';
       case 'SEGURO':
@@ -392,8 +398,22 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
   claseEstadoDetalle(d: DetallePagoPension): string {
     if (this.esError(d)) return 'badge-error';
     if (this.esDesviacion(d)) return 'badge-desviacion';
-    if (d.estado === 'YA_EXISTIA') return 'badge-ya-existia';
+    // `SIN_ANCLA` y `AL_DIA` son finales normales del retroactivo, no errores: mismo badge neutro
+    // que `YA_EXISTIA`, para que el operador no los lea como "se rompió".
+    if (d.estado === 'YA_EXISTIA' || d.estado === 'SIN_ANCLA' || d.estado === 'AL_DIA') return 'badge-ya-existia';
     return 'badge-generado';
+  }
+
+  /** Texto legible del `estado` — `SIN_ANCLA`/`AL_DIA` sin traducir se leen como jerga técnica. */
+  textoEstadoDetalle(d: DetallePagoPension): string {
+    switch (d.estado) {
+      case 'SIN_ANCLA':
+        return 'Sin ancla';
+      case 'AL_DIA':
+        return 'Al día';
+      default:
+        return d.estado;
+    }
   }
 
   // ===================== Presentación de `participacion` (prevuelo) =====================
@@ -502,7 +522,7 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
       valorSeguroInterno: d.valorSeguroInterno ?? '',
       valorCruzadoAPrestamo: d.valorCruzadoAPrestamo ?? '',
       valorOrdenPago: d.valorOrdenPago ?? '',
-      estado: this.esDesviacion(d) ? 'Desviación' : d.estado,
+      estado: this.esDesviacion(d) ? 'Desviación' : this.textoEstadoDetalle(d),
       mensaje: d.mensaje || (this.esDesviacion(d) ? 'Cruzado íntegro contra préstamo: no generó orden de pago.' : ''),
     }));
     this.exportService.exportToCSV(

@@ -112,10 +112,14 @@
       </div>
 
       <!--
-        §4ter: el certificado gobierna la salida AL BANCO, no el traspaso del seguro médico. Sin
-        certificado, la porción de seguro se traspasa igual a 2.3.90.90.06 sin pasar por el banco.
-        Sin esta tarjeta, "A préstamos" + "A dinero" dejó de sumar "Total" y quedaba una diferencia
-        sin explicar en la misma pantalla con la que se autoriza la corrida.
+        Decisión del usuario (2026-09-05): el seguro médico NUNCA fue plata del jubilado. Siempre
+        se le descuenta del aporte, igual que el abono a préstamo, y siempre sale — en UNA orden de
+        pago aparte, a un proveedor específico (un tercero con RUC), no a los jubilados. El
+        certificado bancario del jubilado no interviene acá: solo gobierna si la PENSIÓN sale al
+        banco del jubilado. Por eso esta tarjeta ya no depende de tener o no certificado.
+        ⛔ Los campos `totalSeguroInternoGeneral`/`montoSeguroInterno`/`valorSeguroInterno` NO se
+        renombran todavía (pendiente de que el backend proponga el nombre nuevo) — solo cambia el
+        texto visible.
       -->
       <div class="total-box total-seguro-interno total-box-filtrable"
            [class.total-box-activo]="filtroTarjeta() === 'SEGURO_INTERNO'"
@@ -123,12 +127,12 @@
            (click)="alternarTarjeta('SEGURO_INTERNO')"
            (keydown.enter)="alternarTarjeta('SEGURO_INTERNO')"
            (keydown.space)="alternarTarjeta('SEGURO_INTERNO'); $event.preventDefault()"
-           matTooltip="Porción de seguro médico que se traspasa a la cuenta 2.3.90.90.06 SIN pasar por el banco, porque el jubilado no tiene certificado. No sale de la asociación. Clic para ver quiénes componen este total.">
-        <mat-icon>swap_horiz</mat-icon>
+           matTooltip="Total de seguro médico de todos los jubilados: se descuenta del aporte igual que el abono a préstamo, y sale en UNA orden de pago aparte a un proveedor — no a los jubilados. No sale de la asociación. Clic para ver quiénes componen este total.">
+        <mat-icon>medical_services</mat-icon>
         <div class="total-info">
-          <span class="total-label">Seguro a traspaso interno</span>
+          <span class="total-label">Seguro médico (a proveedor)</span>
           <span class="total-valor">$ {{ money(res.totalSeguroInternoGeneral) }}</span>
-          <span class="total-sub">sin certificado, no sale al banco</span>
+          <span class="total-sub">va al proveedor del seguro</span>
         </div>
       </div>
 
@@ -138,7 +142,7 @@
            (click)="alternarTarjeta('TOTAL')"
            (keydown.enter)="alternarTarjeta('TOTAL')"
            (keydown.space)="alternarTarjeta('TOTAL'); $event.preventDefault()"
-           matTooltip="A préstamos + a dinero + seguro a traspaso interno: lo que se descuenta de las cuentas de pensión complementaria. Clic para ver quiénes aportan al monto (no los evaluados, que incluyen bloqueados en $0).">
+           matTooltip="A préstamos + a dinero + seguro médico a proveedor: lo que se descuenta de las cuentas de pensión complementaria. Clic para ver quiénes aportan al monto (no los evaluados, que incluyen bloqueados en $0).">
         <mat-icon>calculate</mat-icon>
         <div class="total-info">
           <span class="total-label">Total</span>
@@ -289,7 +293,7 @@
                   <th class="c-num">Meses adeud.</th>
                   <th class="c-num">A préstamo</th>
                   <th class="c-num">A dinero</th>
-                  <th class="c-num" matTooltip="Cuenta 2.3.90.90.06 — sin certificado, no pasa por el banco">Seguro a traspaso interno</th>
+                  <th class="c-num" matTooltip="Se descuenta del aporte y sale en una orden aparte a un proveedor — no al banco del jubilado">Seguro médico (a proveedor)</th>
                   <th class="c-num">Total</th>
                   <th class="c-num" matTooltip="Cuenta 2.3.01.10.03">Pensión</th>
                   <th class="c-num" matTooltip="Cuenta 2.3.90.90.06 — porción de la mensualidad, no un adicional">Seguro</th>
@@ -418,7 +422,7 @@
                 <th class="c-num">Seguro</th>
                 <th class="c-num" matTooltip="Acumulado del retroactivo, cuenta 2.3.01.10.03">Pensión acum.</th>
                 <th class="c-num" matTooltip="Acumulado del retroactivo, cuenta 2.3.90.90.06">Seguro acum.</th>
-                <th class="c-num" matTooltip="Subconjunto del seguro acumulado: la parte que no pasó por el banco (sin certificado)">Seguro a traspaso interno</th>
+                <th class="c-num" matTooltip="Parte del seguro acumulado que sale en la orden aparte al proveedor del seguro">Seguro médico (a proveedor)</th>
                 <th class="c-num">Cruzado a préstamo</th>
                 <th class="c-num">Orden de pago</th>
                 <th>Estado</th>
@@ -439,7 +443,7 @@
                   <td class="c-num">{{ d.valorOrdenPago != null ? money(d.valorOrdenPago) : '—' }}</td>
                   <td>
                     <span class="badge" [ngClass]="claseEstadoDetalle(d)">
-                      {{ esDesviacion(d) ? 'Desviación' : d.estado }}
+                      {{ esDesviacion(d) ? 'Desviación' : textoEstadoDetalle(d) }}
                     </span>
                   </td>
                   <td>{{ d.mensaje || (esDesviacion(d) ? 'Cruzado íntegro contra préstamo: no generó orden de pago.' : '—') }}</td>

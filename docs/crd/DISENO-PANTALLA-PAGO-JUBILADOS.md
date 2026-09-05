@@ -72,6 +72,28 @@ bloques. Columnas: cédula, nombre, valor pensión, seguro, cuotas, tiene prést
    préstamos. Esta acción genera asientos contables y órdenes en tesorería.»*
 3. **Resultado** — resumen, lista de errores y tabla de detalle.
 
+#### ⛔ CORREGIDO — el certificado ya NO bloquea todo (frontend, 2026-09-05)
+
+Este punto 1 quedó desactualizado por dos decisiones del usuario posteriores a este diseño
+(§6/§4ter/§6-2026-09-05 del contrato):
+
+- **Sin certificado ya no es un bloqueo total.** El certificado gobierna únicamente si la
+  **pensión** sale al banco del jubilado. Sin él, el jubilado sigue participando parcialmente
+  («Parcial», antes «Solo cruce»): el cruce contra préstamo y el traspaso del seguro médico se
+  procesan igual, solo la porción de pensión queda retenida.
+- **El seguro médico nunca dependió del certificado**, y desde el 2026-09-05 el usuario lo dejó
+  explícito: el seguro nunca fue plata del jubilado — siempre se descuenta y siempre sale, en una
+  orden aparte a un proveedor, tenga o no certificado el jubilado.
+- **Solo se bloquea del todo** a quien no tiene préstamo, ni certificado, ni seguro médico: ahí no
+  queda nada que hacer con esa pensión ese mes.
+- El punto 2 (diálogo de confirmación) también quedó corto: hoy son **tres** montos, no dos —
+  «a préstamos», «a dinero» (al banco del jubilado) y «seguro médico (a proveedor)» — y el diálogo
+  y las tarjetas de la pantalla real ya muestran los tres.
+
+Implementado en `corrida-mes-pago-jubilados.component.ts`/`.html` — ver el campo `participacion`
+(`COMPLETA` | `SOLO_CRUCE` = «Parcial» | `BLOQUEADO` | `AL_DIA`) en
+`docs/crd/API-PAGO-PENSION-COMPLEMENTARIA.md` §6, que es la fuente de verdad vigente.
+
 ### Pestaña C — «Seguimiento» ⛔ bloqueada por backend
 
 Pagos del período con su estado (`REGISTRADA` · `EN_PAGO` · `PAGADA` · `RECHAZADA` · `ANULADA`), con

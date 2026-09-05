@@ -13,7 +13,12 @@ export interface ConfirmarGeneracionData {
   totalACruzarPrestamos: number;
   /** Sale al banco como orden de pago. Esto sí es dinero saliendo. */
   totalADinero: number;
-  /** §4ter. Seguro médico traspasado a 2.3.90.90.06 sin pasar por el banco. No sale de la asociación. */
+  /**
+   * Total de seguro médico de todos los jubilados (decisión del usuario, 2026-09-05: nunca fue
+   * plata del jubilado — se descuenta siempre y sale siempre en una orden aparte a un proveedor).
+   * No sale de la asociación hacia los jubilados. El nombre interno del campo sigue siendo
+   * `totalSeguroInternoGeneral` a propósito, pendiente de que el backend proponga el renombre.
+   */
   totalSeguroInternoGeneral: number;
   /** La suma de los TRES (§4ter): lo que se descuenta de las cuentas de pensión complementaria. */
   totalGeneral: number;
@@ -55,9 +60,9 @@ export interface ConfirmarGeneracionData {
           <span class="d-nota">sale al banco</span>
         </div>
         <div class="d-item d-seguro-interno">
-          <span class="d-label">Seguro a traspaso interno</span>
+          <span class="d-label">Seguro médico (a proveedor)</span>
           <span class="d-valor">{{ formatMoneda(data.totalSeguroInternoGeneral) }}</span>
-          <span class="d-nota">a 2.3.90.90.06, no sale de la asociación</span>
+          <span class="d-nota">orden aparte a un proveedor, no a los jubilados</span>
         </div>
         <div class="d-item d-total">
           <span class="d-label">Total</span>
