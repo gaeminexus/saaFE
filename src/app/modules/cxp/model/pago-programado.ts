@@ -211,7 +211,8 @@ export type OrigenPago =
   | 'TSR_CAJA_CHICA'
   | 'RHH_ANTICIPO_EMPLEADO'
   | 'CXC_DEVOLUCION_CLIENTE'
-  | 'CRD_PENSION_COMPLEMENTARIA';
+  | 'CRD_PENSION_COMPLEMENTARIA'
+  | 'CRD_SEGURO_JUBILADOS';
 
 export const ORIGEN_PAGO_LABELS: Record<OrigenPago, string> = {
   FACTURA_COMPRA: 'Factura de compra',
@@ -222,6 +223,7 @@ export const ORIGEN_PAGO_LABELS: Record<OrigenPago, string> = {
   RHH_ANTICIPO_EMPLEADO: 'Anticipo a trabajador',
   CXC_DEVOLUCION_CLIENTE: 'Devolución a cliente',
   CRD_PENSION_COMPLEMENTARIA: 'Pensión complementaria',
+  CRD_SEGURO_JUBILADOS: 'Seguro médico jubilados',
 };
 
 /** Fila de GET /pgtr/porAprobar — proyección `PagoPorAprobar`, no la entidad. */
