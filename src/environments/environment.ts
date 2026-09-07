@@ -29,12 +29,11 @@ export const environment = {
    */
   mockAuditoriaBandas: false,
   /**
-   * Escala de calificación de riesgo (parametrización nueva, P22 —
-   * `docs/logica-negocio/ESTADO-EQUIPO-OMEN-1.md`): todavía NO hay contrato REST acordado con el
-   * backend, ni siquiera una ruta congelada — a diferencia de los otros mocks de esta lista, que
-   * simulan CONTRA un contrato ya escrito. `EscalaCalificacionRiesgoService` simula en memoria
-   * solo para poder bocetar la pantalla. Cuando el árbitro entregue el contrato real, hay que
-   * actualizar el servicio (rutas y forma del body) y recién ahí tiene sentido apagar este flag.
+   * Escala de calificación de riesgo (parametrización nueva, P22): contrato cerrado y backend en
+   * `main` (`saaBE` `3e89bb6`, 2026-09-07) —
+   * `docs/logica-negocio/crd/API-CALIFICACION-RIESGO.md`. Conectado al servicio real, igual que
+   * `mockAuditoriaBandas`. El mock queda como respaldo por si hace falta desarrollar la pantalla
+   * sin WildFly levantado; poner en `true` lo reactiva sin tocar el componente.
    */
-  mockEscalaRiesgo: true,
+  mockEscalaRiesgo: false,
 };

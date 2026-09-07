@@ -1,15 +1,12 @@
 /**
  * Modelos de la pantalla de Parametrización de la escala de calificación de riesgo.
  *
- * ⚠️ BOCETO — 2026-09-07. Todavía NO hay contrato REST acordado con el backend (el árbitro se lo
- * pidió al equipo de BE). Las columnas de abajo SÍ están confirmadas por el árbitro contra el
- * esquema real (`CRD.ESCR` / `CRD.CFCR`); lo que no está confirmado son las rutas y la forma
- * exacta del JSON — eso vive únicamente en `escala-calificacion-riesgo.service.ts`, que las aísla
- * detrás de un flag de mock. Cuando el contrato real llegue, este archivo debería necesitar como
- * mucho renombrar campos, no rediseñarse.
+ * Contrato REST cerrado por el árbitro (BE `3e89bb6`, 2026-09-07):
+ * `docs/logica-negocio/crd/API-CALIFICACION-RIESGO.md` (en `saaBE`). Ya NO es especulativo.
  *
  * Backend: `CRD.CFCR` (configuración vigente, una por producto+empresa+vigencia) +
- * `CRD.ESCR` (una fila = una categoría de la escala, FK a `CFCR`).
+ * `CRD.ESCR` (una fila = una categoría de la escala, FK a `CFCR`). `/rest/escr` es SOLO LECTURA
+ * (§0bis del contrato) — toda escritura pasa por `/cfcr/guardarConfiguracion` o `/cfcr/cerrarVigencia`.
  *
  * Distinción con `bandas-cartera` — a propósito, NO es el mismo dominio:
  * - Bandas de cartera → clasificación CONTABLE: determina a qué CUENTA va el asiento.
@@ -19,6 +16,11 @@
  * Convención de fechas (igual que el resto del módulo):
  *  - SALIDA del servidor: LocalDate llega como arreglo [año, mes, día].
  *  - ENTRADA al servidor: LocalDate viaja como string ISO "yyyy-MM-dd".
+ *
+ * ⚠️ `porcentajeProvision` viaja SIEMPRE en tanto por uno (0.0099 = 0.99%), tanto en las
+ * respuestas como en lo que espera `guardarConfiguracion`/`cerrarVigencia` — así lo define el
+ * contrato (§5, §8). La conversión a puntos porcentuales (0-100) para que el usuario tipee "5" en
+ * vez de "0.05" es una decisión de UI y vive solo en el componente, no acá.
  */
 
 /** Estado — com.saa.rubros.Estado: 1 = activo, 0 = inactivo. */
@@ -30,34 +32,32 @@ export const ESTADO_INACTIVO = 0;
  * mayor riesgo. Enumeración FIJA — a diferencia de las bandas de cartera (lista de longitud
  * variable), acá NO se agregan ni se quitan filas.
  *
- * ⚠️ `ESCR` tiene una columna `orden` propia (no asumida = la posición en este array): el modelo
- * de datos no da por sentado un orden fijo. Esta constante es el orden de PRESENTACIÓN por
- * defecto; si el backend manda `orden` distinto, hay que respetarlo y no forzar este array.
+ * ⛔ Este orden ES el orden que se envía al backend en `escalas` (§8 del contrato: "el orden de la
+ * lista `escalas` ES el orden de evaluación", de ahí sale `ESCRORDN`) — no reordenar esta
+ * constante sin revisar el servicio y el componente.
  */
 export const CALIFICACIONES_RIESGO = ['A1', 'A2', 'A3', 'B1', 'B2', 'C1', 'C2', 'D', 'E'] as const;
 export type CalificacionRiesgo = (typeof CALIFICACIONES_RIESGO)[number];
 
 /**
- * Una fila de la escala (`CRD.ESCR`). El rango en días es INDEPENDIENTE por fila —a diferencia de
- * `BandaProductoDetalle`, acá `diaDesde`/`diaHasta` NO se derivan por acumulación en el backend—,
- * así que nada impide estructuralmente un hueco o un solape entre filas. La pantalla tiene que
- * validarlo de verdad (ver `calcularCoberturaEscala` en el componente), no asumir que viene bien.
+ * Una fila de la escala tal como la devuelve el backend (`CRD.ESCR`, vía `/cfcr/vigente` |
+ * `/listado` | `/historial`).
  *
- * ⚠️ `diaHasta === null` se interpreta como "sin límite superior" (mismo criterio que
- * `BandaProductoDetalle.diaFin`), a falta de confirmación del backend sobre si el último tramo
- * usa `null` o un número centinela grande. Si el backend confirma un centinela, ajustar acá.
+ * ⛔ `diaDesde` es SOLO LECTURA acá: el servidor lo deriva (`diaHasta` de la fila anterior + 1, la
+ * primera en 0 — §8 del contrato) y por eso un hueco o un solape entre filas ya no se puede ni
+ * expresar. `diaHasta === null` = sin límite superior, y solo puede darse en la ÚLTIMA fila
+ * (posición `CALIFICACIONES_RIESGO.length - 1`, calificación "E").
  */
 export interface EscalaRiesgoDetalle {
   idEscala: number;
-  idConfiguracion: number;
   calificacion: CalificacionRiesgo | string;
   diaDesde: number;
-  /** `null` = sin límite superior (tramo abierto). */
+  /** `null` = sin límite superior (solo posible en la última fila). */
   diaHasta: number | null;
+  /** Etiqueta de rango ya armada por el backend, p.ej. "1 - 15" o "mas de 270 (resto)". */
+  etiqueta: string;
+  /** Tanto por uno (0.0099 = 0.99%), NO puntos porcentuales. */
   porcentajeProvision: number;
-  /** Orden declarado por el backend — no asumir que coincide con `CALIFICACIONES_RIESGO`. */
-  orden: number;
-  estado: number;
 }
 
 /** La configuración vigente (o histórica) de un producto+empresa, con sus nueve categorías. */
@@ -65,10 +65,16 @@ export interface ConfiguracionEscalaRiesgo {
   idConfiguracion: number;
   idProducto: number;
   nombreProducto: string;
-  idEmpresa: number;
+  /**
+   * `null` = "cualquier empresa" (§1 del contrato) — a propósito, distinto de bandas de cartera,
+   * donde la empresa es obligatoria. Así la consume `GeneracionG48ServiceImpl` para el reporte
+   * regulatorio. No se puede tener vigente a la vez una configuración universal y una específica
+   * del mismo producto (el backend lo valida como conflicto, §1).
+   */
+  idEmpresa: number | null;
   nombre: string;
-  fechaInicio: number[] | null;
-  fechaFin: number[] | null;
+  fechaDesde: number[] | null;
+  fechaHasta: number[] | null;
   /** true solo si la vigencia todavía no empezó a la fecha consultada → editable en el lugar. */
   editable: boolean;
   estado: number;
@@ -79,67 +85,67 @@ export interface ConfiguracionEscalaRiesgo {
 export interface ProductoEscalaRiesgo {
   idProducto: number;
   nombreProducto: string;
-  codigoSBS: string;
-  nombreTipoPrestamo: string;
   estadoProducto: number;
   /** `null` cuando el producto no tiene escala de riesgo configurada todavía. */
-  vigente: ConfiguracionEscalaRiesgo | null;
+  configuracion: ConfiguracionEscalaRiesgo | null;
 }
 
-/** Una fila de escala tal como se envía al backend (solo lo que se graba). */
+/**
+ * Una fila de escala tal como se ENVÍA al backend (solo lo que se graba).
+ *
+ * ⛔ NO lleva `diaDesde` ni `orden` (§8 del contrato): `diaDesde` lo deriva el servidor a partir
+ * del `diaHasta` de la fila anterior, y el orden de evaluación es la posición de esta fila en el
+ * arreglo `escalas` de la solicitud (que el componente arma siempre en el orden de
+ * `CALIFICACIONES_RIESGO`).
+ */
 export interface EscalaRiesgoInput {
   calificacion: string;
-  diaDesde: number;
-  /** `null` = sin límite superior. */
+  /** `null` = sin límite superior — el backend exige que sea así SOLO en la última línea. */
   diaHasta: number | null;
+  /** Tanto por uno (0-1), no puntos porcentuales. */
   porcentajeProvision: number;
-  orden: number;
 }
 
-/** Body especulativo de guardar/crear una configuración de escala. */
+/** Body de guardar/crear una configuración de escala — `POST /rest/cfcr/guardarConfiguracion`. */
 export interface SolicitudConfiguracionEscalaRiesgo {
   /** `null` = alta; con valor = edición en el lugar (solo si la vigencia no empezó). */
   idConfiguracion: number | null;
   idProducto: number;
-  idEmpresa: number;
+  /** `null` = "cualquier empresa" — ver la nota de `ConfiguracionEscalaRiesgo.idEmpresa`. */
+  idEmpresa: number | null;
   nombre: string;
   /** "yyyy-MM-dd" */
-  fechaInicio: string;
+  fechaDesde: string;
   /** "yyyy-MM-dd" o null (vigencia abierta). */
-  fechaFin: string | null;
+  fechaHasta: string | null;
   usuario: string | null;
-  ip: string | null;
-  escalas: EscalaRiesgoInput[];
-}
-
-/** Body especulativo de cerrar la vigencia actual y abrir una nueva desde una fecha. */
-export interface SolicitudCierreVigenciaEscala {
-  idConfiguracionVigente: number;
-  /** "yyyy-MM-dd"; posterior al inicio de la que se cierra. */
-  fechaInicioNueva: string;
-  usuario: string | null;
-  ip: string | null;
   escalas: EscalaRiesgoInput[];
 }
 
 /**
- * Respuesta especulativa del "probador": dado un número de días de mora, qué calificación y qué
- * % de provisión le toca. Es el precedente de `ClasificacionBanda` en bandas, y además es la
- * forma más barata de que el usuario detecte un hueco en la escala: si prueba un valor que cae en
- * ninguna fila, el backend debería devolver un error explícito, no un silencio.
+ * Body de cerrar la vigencia actual y abrir una nueva — `POST /rest/cfcr/cerrarVigencia`.
+ * Producto, empresa y nombre se heredan de la configuración que se cierra: no se reenvían (§9).
+ */
+export interface SolicitudCierreVigenciaEscala {
+  idConfiguracionVigente: number;
+  /** "yyyy-MM-dd"; posterior al inicio de la vigencia que se cierra. */
+  fechaDesdeNueva: string;
+  usuario: string | null;
+  escalas: EscalaRiesgoInput[];
+}
+
+/**
+ * Respuesta del "probador" (`GET /rest/cfcr/probar`, §10): dado un número de días de mora, qué
+ * calificación y qué % de provisión le corresponden. Usa el MISMO camino que
+ * `GeneracionG48ServiceImpl` para el reporte regulatorio real (`CalificacionRiesgoService.calificar`),
+ * así que nunca puede decir algo distinto de lo que va a salir en el G48.
  */
 export interface CalificacionResultado {
   idConfiguracion: number;
-  idProducto: number;
-  idEmpresa: number;
-  diasMora: number;
-  escala: EscalaRiesgoDetalle;
-}
-
-/** Un hueco o un solape detectado entre dos filas consecutivas de la escala (orden por diaDesde). */
-export interface ProblemaCobertura {
-  tipo: 'hueco' | 'solape';
-  desde: number;
-  /** `null` en un hueco final (ninguna fila cubre "de X en adelante"). */
-  hasta: number | null;
+  idEscala: number;
+  calificacion: string;
+  /** Tanto por uno (0-1), no puntos porcentuales. */
+  porcentajeProvision: number;
+  diaDesde: number;
+  diaHasta: number | null;
 }

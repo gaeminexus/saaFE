@@ -14,15 +14,13 @@ import { ServiciosCrd } from './ws-crd';
 /**
  * Servicio HTTP de la parametrización de la escala de calificación de riesgo.
  *
- * ⚠️ BOCETO — 2026-09-07. NO hay contrato REST acordado con el backend todavía (se lo pidió el
- * árbitro al equipo de BE). Las rutas de abajo (`RS_CFCR/...`) son ESPECULATIVAS, calcadas del
- * patrón de `bandas-cartera.service.ts` (que sí tiene contrato: `docs/crd/API-BANDAS-PRODUCTO.md`)
- * solo para que el componente tenga algo contra qué compilar mientras se acuerda el contrato real.
+ * Contrato cerrado por el árbitro (BE `3e89bb6`, 2026-09-07):
+ * `docs/logica-negocio/crd/API-CALIFICACION-RIESGO.md` (en `saaBE`). Las rutas y formas de abajo
+ * ya NO son especulativas — son un espejo directo de ese documento.
  *
- * `environment.mockEscalaRiesgo` está en `true` a propósito: sin contrato, la llamada real no
- * puede funcionar. Cuando el árbitro entregue el contrato, este es el ÚNICO archivo que debería
- * necesitar cambios (rutas, forma del body/respuesta) — el componente consume los mismos métodos
- * con la misma firma.
+ * `environment.mockEscalaRiesgo` queda en `false`: el contrato existe y el backend ya está en
+ * `main`. El mock se conserva solo como respaldo de desarrollo (por si alguien necesita bocetar
+ * sin levantar WildFly), no como comportamiento por defecto.
  *
  * Distinción con `bandas-cartera.service.ts` — NO se reutiliza a propósito: bandas resuelve una
  * clasificación CONTABLE (cuenta del asiento), esta resuelve una calificación REGULATORIA
@@ -35,11 +33,14 @@ export class EscalaCalificacionRiesgoService {
   constructor(private http: HttpClient) {}
 
   /** Listado completo: una fila por producto de crédito, con su escala vigente (o sin ella). */
-  getListado(idEmpresa: number, fecha?: string): Observable<ProductoEscalaRiesgo[]> {
+  getListado(idEmpresa?: number, fecha?: string): Observable<ProductoEscalaRiesgo[]> {
     if (environment.mockEscalaRiesgo) {
       return this.mockListado().pipe(delay(250));
     }
-    let params = new HttpParams().set('idEmpresa', idEmpresa);
+    let params = new HttpParams();
+    if (idEmpresa != null) {
+      params = params.set('idEmpresa', idEmpresa);
+    }
     if (fecha) {
       params = params.set('fecha', fecha);
     }
@@ -49,17 +50,20 @@ export class EscalaCalificacionRiesgoService {
   }
 
   /** Todas las configuraciones (vigentes y cerradas) de un producto+empresa. */
-  getHistorial(idProducto: number, idEmpresa: number): Observable<ConfiguracionEscalaRiesgo[]> {
+  getHistorial(idProducto: number, idEmpresa?: number): Observable<ConfiguracionEscalaRiesgo[]> {
     if (environment.mockEscalaRiesgo) {
-      return this.mockHistorial(idProducto, idEmpresa).pipe(delay(250));
+      return this.mockHistorial(idProducto).pipe(delay(250));
     }
-    const params = new HttpParams().set('idProducto', idProducto).set('idEmpresa', idEmpresa);
+    let params = new HttpParams().set('idProducto', idProducto);
+    if (idEmpresa != null) {
+      params = params.set('idEmpresa', idEmpresa);
+    }
     return this.http
       .get<ConfiguracionEscalaRiesgo[]>(`${this.base}/historial`, { params })
       .pipe(catchError(this.handleError));
   }
 
-  /** Graba cabecera + las nueve filas de escala en una transacción (alta o edición en el lugar). */
+  /** Graba cabecera + escala en una transacción (alta o edición en el lugar). */
   guardarConfiguracion(
     solicitud: SolicitudConfiguracionEscalaRiesgo,
   ): Observable<ConfiguracionEscalaRiesgo> {
@@ -76,13 +80,12 @@ export class EscalaCalificacionRiesgoService {
     if (environment.mockEscalaRiesgo) {
       return this.mockGuardar({
         idConfiguracion: null,
-        idProducto: solicitud.idConfiguracionVigente,
-        idEmpresa: 1,
+        idProducto: 0,
+        idEmpresa: null,
         nombre: 'Nueva vigencia',
-        fechaInicio: solicitud.fechaInicioNueva,
-        fechaFin: null,
+        fechaDesde: solicitud.fechaDesdeNueva,
+        fechaHasta: null,
         usuario: solicitud.usuario,
-        ip: solicitud.ip,
         escalas: solicitud.escalas,
       }).pipe(delay(400));
     }
@@ -92,23 +95,23 @@ export class EscalaCalificacionRiesgoService {
   }
 
   /**
-   * "Probador": dado un número de días de mora, qué calificación y qué % de provisión le
-   * corresponden. Es también la forma más barata de detectar un hueco: si el backend no
-   * encuentra ninguna fila que cubra ese valor, debe responder un error explícito.
+   * "Probador" (§10 del contrato): dado un número de días de mora, qué calificación y qué % de
+   * provisión le corresponden. Usa el MISMO camino que `GeneracionG48ServiceImpl` — nunca puede
+   * decir algo distinto de lo que sale en el reporte regulatorio real.
    */
   probar(
     idProducto: number,
-    idEmpresa: number,
-    diasMora: number,
+    idEmpresa: number | undefined,
+    dias: number,
     fecha?: string,
   ): Observable<CalificacionResultado> {
     if (environment.mockEscalaRiesgo) {
-      return this.mockProbar(idProducto, idEmpresa, diasMora).pipe(delay(250));
+      return this.mockProbar(idProducto, dias).pipe(delay(250));
     }
-    let params = new HttpParams()
-      .set('idProducto', idProducto)
-      .set('idEmpresa', idEmpresa)
-      .set('diasMora', diasMora);
+    let params = new HttpParams().set('idProducto', idProducto).set('dias', dias);
+    if (idEmpresa != null) {
+      params = params.set('idEmpresa', idEmpresa);
+    }
     if (fecha) {
       params = params.set('fecha', fecha);
     }
@@ -117,115 +120,115 @@ export class EscalaCalificacionRiesgoService {
       .pipe(catchError(this.handleError));
   }
 
-  // ════════════════════════ Mock de desarrollo — SIN contrato acordado ════════════════════════
-  // Datos de ejemplo, no una respuesta congelada de ningún documento (a diferencia del mock de
-  // `auditoria-bandas.service.ts`, que sí espeja un contrato ya escrito). Sirven para bocetar la
-  // pantalla, no para validar comportamiento del backend real.
+  // ════════════════════════ Mock de desarrollo (respaldo, no es el camino por defecto) ═════════
 
   private mockListado(): Observable<ProductoEscalaRiesgo[]> {
     return of([
       {
         idProducto: 1,
         nombreProducto: 'Crédito Quirografario',
-        codigoSBS: '01',
-        nombreTipoPrestamo: 'Consumo',
         estadoProducto: 1,
-        vigente: this.mockConfiguracion(1, 1),
+        configuracion: this.mockConfiguracion(1),
       },
       {
         idProducto: 2,
         nombreProducto: 'Crédito Hipotecario',
-        codigoSBS: '02',
-        nombreTipoPrestamo: 'Vivienda',
         estadoProducto: 1,
-        vigente: null,
+        configuracion: null,
       },
     ]);
   }
 
-  private mockHistorial(idProducto: number, idEmpresa: number): Observable<ConfiguracionEscalaRiesgo[]> {
-    const vigente = this.mockConfiguracion(idProducto, idEmpresa);
+  private mockHistorial(idProducto: number): Observable<ConfiguracionEscalaRiesgo[]> {
+    const vigente = this.mockConfiguracion(idProducto);
     return of(vigente ? [vigente] : []);
   }
 
   private mockGuardar(solicitud: SolicitudConfiguracionEscalaRiesgo): Observable<ConfiguracionEscalaRiesgo> {
+    let cursor = 0;
     const config: ConfiguracionEscalaRiesgo = {
       idConfiguracion: solicitud.idConfiguracion ?? Math.floor(Math.random() * 100000),
       idProducto: solicitud.idProducto,
       nombreProducto: 'Crédito Quirografario',
       idEmpresa: solicitud.idEmpresa,
       nombre: solicitud.nombre,
-      fechaInicio: this.isoAArray(solicitud.fechaInicio),
-      fechaFin: solicitud.fechaFin ? this.isoAArray(solicitud.fechaFin) : null,
+      fechaDesde: this.isoAArray(solicitud.fechaDesde),
+      fechaHasta: solicitud.fechaHasta ? this.isoAArray(solicitud.fechaHasta) : null,
       editable: true,
       estado: 1,
-      escalas: solicitud.escalas.map((e, i) => ({
-        idEscala: 1000 + i,
-        idConfiguracion: solicitud.idConfiguracion ?? 0,
-        calificacion: e.calificacion,
-        diaDesde: e.diaDesde,
-        diaHasta: e.diaHasta,
-        porcentajeProvision: e.porcentajeProvision,
-        orden: e.orden,
-        estado: 1,
-      })),
+      escalas: solicitud.escalas.map((e, i) => {
+        const diaDesde = cursor;
+        cursor = e.diaHasta == null ? cursor : e.diaHasta + 1;
+        return {
+          idEscala: 1000 + i,
+          calificacion: e.calificacion,
+          diaDesde,
+          diaHasta: e.diaHasta,
+          etiqueta: e.diaHasta == null ? `mas de ${diaDesde - 1} (resto)` : `${diaDesde} - ${e.diaHasta}`,
+          porcentajeProvision: e.porcentajeProvision,
+        };
+      }),
     };
     return of(config);
   }
 
-  private mockProbar(idProducto: number, idEmpresa: number, diasMora: number): Observable<CalificacionResultado> {
-    const config = this.mockConfiguracion(idProducto, idEmpresa);
+  private mockProbar(idProducto: number, dias: number): Observable<CalificacionResultado> {
+    const config = this.mockConfiguracion(idProducto);
     const fila = config?.escalas.find(
-      (e) => diasMora >= e.diaDesde && (e.diaHasta == null || diasMora <= e.diaHasta),
+      (e) => dias >= e.diaDesde && (e.diaHasta == null || dias <= e.diaHasta),
     );
     if (!fila) {
-      return throwError(() => `No se encontró ninguna calificación para ${diasMora} días de mora (mock).`);
+      return throwError(() => `No se encontró ninguna calificación para ${dias} días de mora (mock).`);
     }
     return of({
       idConfiguracion: config!.idConfiguracion,
-      idProducto,
-      idEmpresa,
-      diasMora,
-      escala: fila,
+      idEscala: fila.idEscala,
+      calificacion: fila.calificacion,
+      porcentajeProvision: fila.porcentajeProvision,
+      diaDesde: fila.diaDesde,
+      diaHasta: fila.diaHasta,
     });
   }
 
-  /** Escala de ejemplo, deliberadamente BIEN formada (sin huecos ni solapes) para el mock feliz. */
-  private mockConfiguracion(idProducto: number, idEmpresa: number): ConfiguracionEscalaRiesgo | null {
+  /** Escala de ejemplo, con `diaDesde` ya derivado como lo haría el backend real. */
+  private mockConfiguracion(idProducto: number): ConfiguracionEscalaRiesgo | null {
     if (idProducto !== 1) {
       return null;
     }
-    const filas: [string, number, number | null, number][] = [
-      ['A1', 0, 8, 1],
-      ['A2', 9, 15, 5],
-      ['A3', 16, 30, 10],
-      ['B1', 31, 60, 20],
-      ['B2', 61, 90, 30],
-      ['C1', 91, 120, 50],
-      ['C2', 121, 150, 70],
-      ['D', 151, 180, 90],
-      ['E', 181, null, 100],
+    const filas: [string, number | null, number][] = [
+      ['A1', 8, 0.01],
+      ['A2', 15, 0.05],
+      ['A3', 30, 0.1],
+      ['B1', 60, 0.2],
+      ['B2', 90, 0.3],
+      ['C1', 120, 0.5],
+      ['C2', 150, 0.7],
+      ['D', 180, 0.9],
+      ['E', null, 1.0],
     ];
+    let cursor = 0;
     return {
       idConfiguracion: 500,
       idProducto,
       nombreProducto: 'Crédito Quirografario',
-      idEmpresa,
+      idEmpresa: null,
       nombre: 'Escala vigente 2026',
-      fechaInicio: [2026, 1, 1],
-      fechaFin: null,
+      fechaDesde: [2026, 1, 1],
+      fechaHasta: null,
       editable: false,
       estado: 1,
-      escalas: filas.map(([calificacion, diaDesde, diaHasta, porcentajeProvision], i) => ({
-        idEscala: 100 + i,
-        idConfiguracion: 500,
-        calificacion,
-        diaDesde,
-        diaHasta,
-        porcentajeProvision,
-        orden: i + 1,
-        estado: 1,
-      })),
+      escalas: filas.map(([calificacion, diaHasta, porcentajeProvision], i) => {
+        const diaDesde = cursor;
+        cursor = diaHasta == null ? cursor : diaHasta + 1;
+        return {
+          idEscala: 100 + i,
+          calificacion,
+          diaDesde,
+          diaHasta,
+          etiqueta: diaHasta == null ? `mas de ${diaDesde - 1} (resto)` : `${diaDesde} - ${diaHasta}`,
+          porcentajeProvision,
+        };
+      }),
     };
   }
 
@@ -240,7 +243,15 @@ export class EscalaCalificacionRiesgoService {
     return throwError(() => this.extraerMensajeError(error));
   };
 
+  /**
+   * Un 404/0 se lee como "el backend todavía no tiene este endpoint desplegado en este ambiente"
+   * (p.ej. el WAR de producción no actualizado todavía), nunca como un error genérico ni se deja
+   * la pantalla en blanco — pedido explícito del árbitro, 2026-09-07.
+   */
   private extraerMensajeError(error: HttpErrorResponse): string {
+    if (error?.status === 404 || error?.status === 0) {
+      return 'El servicio de escala de calificación de riesgo todavía no está disponible en este ambiente.';
+    }
     const cuerpo: unknown = error?.error;
     const desdeObjeto = this.leerCampoMensaje(cuerpo);
     if (desdeObjeto) {

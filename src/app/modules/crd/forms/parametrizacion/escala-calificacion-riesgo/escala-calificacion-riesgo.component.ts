@@ -19,21 +19,27 @@ import {
   CalificacionResultado,
   ConfiguracionEscalaRiesgo,
   EscalaRiesgoInput,
-  ProblemaCobertura,
   ProductoEscalaRiesgo,
 } from '../../../model/riesgo/escala-calificacion-riesgo.model';
 import { EscalaCalificacionRiesgoService } from '../../../service/escala-calificacion-riesgo.service';
 
-/** Una fila en modo edición. La `calificacion` es FIJA (no editable): son las 9 de la SBS. */
+/**
+ * Una fila en modo edición. La `calificacion` es FIJA (no editable): son las 9 de la SBS, siempre
+ * en el orden de `CALIFICACIONES_RIESGO` (que es también el orden que se envía al backend).
+ *
+ * ⛔ `diaDesde` es SOLO LECTURA acá — igual que en el modelo de respuesta: el servidor lo deriva
+ * (`diaHasta` de la fila anterior + 1, la primera en 0), así que esta pantalla lo recalcula en el
+ * cliente (`recalcularDiasDesde()`) nada más para mostrarlo, nunca lo envía. Confirmado por el
+ * árbitro, 2026-09-07, contra el contrato cerrado (`API-CALIFICACION-RIESGO.md` §8).
+ */
 interface EscalaEdit {
   idEscala?: number;
   calificacion: string;
-  diaDesde: number | null;
-  /** `null` = sin límite superior. */
+  diaDesde: number;
+  /** `null` = sin límite superior — estructuralmente solo posible en la ÚLTIMA fila (E). */
   diaHasta: number | null;
-  sinLimite: boolean;
+  /** En PUNTOS PORCENTUALES (0-100) para que el usuario tipee "5" en vez de "0.05" — ver `construirEscalasInput`. */
   porcentajeProvision: number | null;
-  orden: number;
 }
 
 type ModoEdicion = 'ver' | 'crear' | 'editar' | 'nueva-vigencia';
@@ -41,24 +47,24 @@ type ModoEdicion = 'ver' | 'crear' | 'editar' | 'nueva-vigencia';
 /**
  * Parametrización de la escala de calificación de riesgo (SBS) por producto.
  *
- * ⚠️ BOCETO — 2026-09-07. Molde copiado de `bandas-cartera` (mismo modelo de vigencia, misma
- * configuración por producto+empresa) pero NO es el mismo dominio y NO comparte servicio ni
- * modelo: bandas resuelve una clasificación CONTABLE (cuenta del asiento); esta pantalla resuelve
- * una calificación REGULATORIA (% de provisión). Diferencias deliberadas frente al molde,
- * confirmadas por el árbitro contra el esquema real (`CRD.CFCR`/`CRD.ESCR`):
+ * Molde copiado de `bandas-cartera` (mismo modelo de vigencia, misma configuración por
+ * producto+empresa) pero NO es el mismo dominio y NO comparte servicio ni modelo: bandas resuelve
+ * una clasificación CONTABLE (cuenta del asiento); esta pantalla resuelve una calificación
+ * REGULATORIA (% de provisión). Diferencias deliberadas frente al molde, contra el contrato
+ * cerrado (`docs/logica-negocio/crd/API-CALIFICACION-RIESGO.md` en `saaBE`):
  *
  * - **Sin pestañas**: bandas separa "por vencer"/"vencido"; la escala de riesgo se mide sobre
  *   días de mora nada más, una sola escala por producto+empresa+vigencia.
  * - **Nueve filas FIJAS** (A1 A2 A3 B1 B2 C1 C2 D E de la SBS), no una lista variable: sin
  *   agregar/quitar/reordenar como en bandas.
- * - **Rango independiente por fila**: a diferencia de bandas (donde el backend deriva el rango
- *   por acumulación de "períodos" y por construcción no puede haber huecos), acá `diaDesde`/
- *   `diaHasta` se cargan a mano por fila — nada impide un hueco o un solape. Por eso esta
- *   pantalla SÍ valida la cobertura de verdad (`calcularCobertura()`) y la muestra con una barra
- *   segmentada, cosa que bandas nunca necesitó.
- * - **% de provisión en vez de cuenta contable** por fila.
- *
- * Sin contrato REST acordado todavía — ver `escala-calificacion-riesgo.service.ts`.
+ * - **`diaDesde` derivado por el servidor** (§8 del contrato): solo se edita `diaHasta`, y por
+ *   construcción ya no puede haber huecos ni solapes entre filas — el único estado inválido que
+ *   sigue siendo posible es tipear un `diaHasta` menor al `diaDesde` ya calculado de esa fila
+ *   (que depende del `diaHasta` de la fila anterior). La barra de cobertura pintaba huecos/solapes
+ *   antes; ahora resalta ESE error puntual mientras se edita.
+ * - **`idEmpresa` opcional** (`null` = "cualquier empresa", §1) — a propósito, distinto de bandas.
+ * - **% de provisión en vez de cuenta contable** por fila (tanto por uno en el modelo/wire, puntos
+ *   porcentuales en esta pantalla para que el usuario tipee "5" en vez de "0.05").
  */
 @Component({
   selector: 'app-escala-calificacion-riesgo',
@@ -104,6 +110,11 @@ export class EscalaCalificacionRiesgoComponent implements OnInit {
   fechaInicioEdit: Date | null = null;
   fechaFinEdit: Date | null = null;
   fechaInicioNueva: Date | null = null;
+  /**
+   * `idEmpresa: null` = "cualquier empresa" (§1 del contrato), a propósito y distinto de bandas de
+   * cartera. Por defecto se guarda para la empresa de la sesión; este checkbox es la excepción.
+   */
+  aplicaTodasLasEmpresas = false;
   guardando = false;
   erroresValidacion: string[] = [];
 
@@ -119,6 +130,8 @@ export class EscalaCalificacionRiesgoComponent implements OnInit {
     diasMora: [0 as number | null, [Validators.required, Validators.min(0)]],
   });
   resultadoCalificacion: CalificacionResultado | null = null;
+  /** La respuesta de `/probar` no repite `dias` (§10 del contrato) — se guarda lo enviado para mostrarlo. */
+  ultimoDiasProbado: number | null = null;
   errorProbador: string | null = null;
   probando = false;
 
@@ -201,11 +214,16 @@ export class EscalaCalificacionRiesgoComponent implements OnInit {
   // ===================== Getters de vista =====================
 
   get configSel(): ConfiguracionEscalaRiesgo | null {
-    return this.productoSel?.vigente ?? null;
+    return this.productoSel?.configuracion ?? null;
   }
 
   get editando(): boolean {
     return this.modo !== 'ver';
+  }
+
+  /** La última fila (índice `length - 1`) es siempre "E": la única que puede quedar sin límite. */
+  esUltimaFila(i: number): boolean {
+    return i === this.escalasEdit.length - 1;
   }
 
   // ===================== Edición =====================
@@ -215,7 +233,9 @@ export class EscalaCalificacionRiesgoComponent implements OnInit {
     this.modo = 'crear';
     this.fechaInicioEdit = null;
     this.fechaFinEdit = null;
-    this.escalasEdit = CALIFICACIONES_RIESGO.map((calificacion, i) => this.nuevaEscalaEdit(calificacion, i + 1));
+    this.aplicaTodasLasEmpresas = false;
+    this.escalasEdit = CALIFICACIONES_RIESGO.map((calificacion) => this.nuevaEscalaEdit(calificacion));
+    this.recalcularDiasDesde();
     this.erroresValidacion = [];
   }
 
@@ -226,9 +246,11 @@ export class EscalaCalificacionRiesgoComponent implements OnInit {
       return;
     }
     this.modo = 'editar';
-    this.fechaInicioEdit = config.fechaInicio ? this.arrayAFecha(config.fechaInicio) : null;
-    this.fechaFinEdit = config.fechaFin ? this.arrayAFecha(config.fechaFin) : null;
+    this.fechaInicioEdit = config.fechaDesde ? this.arrayAFecha(config.fechaDesde) : null;
+    this.fechaFinEdit = config.fechaHasta ? this.arrayAFecha(config.fechaHasta) : null;
+    this.aplicaTodasLasEmpresas = config.idEmpresa == null;
     this.escalasEdit = this.mapearEscalasAEdit(config);
+    this.recalcularDiasDesde();
     this.erroresValidacion = [];
   }
 
@@ -240,7 +262,9 @@ export class EscalaCalificacionRiesgoComponent implements OnInit {
     }
     this.modo = 'nueva-vigencia';
     this.fechaInicioNueva = null;
+    this.aplicaTodasLasEmpresas = config.idEmpresa == null;
     this.escalasEdit = this.mapearEscalasAEdit(config);
+    this.recalcularDiasDesde();
     this.erroresValidacion = [];
   }
 
@@ -253,60 +277,72 @@ export class EscalaCalificacionRiesgoComponent implements OnInit {
     this.erroresValidacion = [];
   }
 
-  private nuevaEscalaEdit(calificacion: string, orden: number): EscalaEdit {
+  private nuevaEscalaEdit(calificacion: string): EscalaEdit {
     return {
       calificacion,
-      diaDesde: null,
+      diaDesde: 0,
       diaHasta: null,
-      sinLimite: false,
       porcentajeProvision: null,
-      orden,
     };
   }
 
   private mapearEscalasAEdit(config: ConfiguracionEscalaRiesgo): EscalaEdit[] {
-    // Las filas se muestran siempre en el orden fijo de la SBS (CALIFICACIONES_RIESGO), no en el
-    // `orden` crudo del backend, que se conserva pero no gobierna la presentación (ver nota del
-    // modelo sobre ESCRORDN).
-    return CALIFICACIONES_RIESGO.map((calificacion, i) => {
+    // Las filas se muestran siempre en el orden fijo de la SBS (CALIFICACIONES_RIESGO), que es
+    // también el orden de evaluación que espera el backend en `escalas` (§8 del contrato).
+    return CALIFICACIONES_RIESGO.map((calificacion) => {
       const existente = config.escalas.find((e) => e.calificacion === calificacion);
       if (!existente) {
-        return this.nuevaEscalaEdit(calificacion, i + 1);
+        return this.nuevaEscalaEdit(calificacion);
       }
       return {
         idEscala: existente.idEscala,
         calificacion,
         diaDesde: existente.diaDesde,
         diaHasta: existente.diaHasta,
-        sinLimite: existente.diaHasta == null,
-        porcentajeProvision: existente.porcentajeProvision,
-        orden: existente.orden,
+        // El backend viaja en tanto por uno (0.05); acá se edita en puntos porcentuales (5).
+        porcentajeProvision: existente.porcentajeProvision * 100,
       };
     });
   }
 
-  onSinLimiteChange(fila: EscalaEdit): void {
-    if (fila.sinLimite) {
-      fila.diaHasta = null;
-    }
+  /**
+   * Recalcula `diaDesde` de cada fila a partir del `diaHasta` de la anterior (la primera en 0) —
+   * el mismo criterio que aplica el backend (§8 del contrato) — y fuerza `diaHasta = null` en la
+   * última fila, que es la única que puede quedar sin límite superior. Se llama después de
+   * inicializar `escalasEdit` y cada vez que el usuario edita un `diaHasta`.
+   */
+  recalcularDiasDesde(): void {
+    let cursor = 0;
+    this.escalasEdit.forEach((f, i) => {
+      f.diaDesde = cursor;
+      if (this.esUltimaFila(i)) {
+        f.diaHasta = null;
+      }
+      cursor = f.diaHasta == null ? cursor : f.diaHasta + 1;
+    });
     this.validar();
   }
 
   // ===================== Validación =====================
 
+  /**
+   * ⛔ Con `diaDesde` derivado (§8 del contrato) ya no puede haber huecos ni solapes entre filas:
+   * son estructuralmente imposibles de expresar. El único estado inválido que sigue siendo
+   * posible es tipear, en una fila que no sea la última, un `diaHasta` menor al `diaDesde` ya
+   * calculado de esa fila (que depende de cuánto se haya tipeado en la anterior).
+   */
   validar(): string[] {
     const errores: string[] = [];
     const filas = this.escalasEdit;
 
-    filas.forEach((f) => {
-      if (f.diaDesde == null || f.diaDesde < 0) {
-        errores.push(`${f.calificacion}: el día desde es obligatorio y no puede ser negativo.`);
-      }
-      if (!f.sinLimite) {
+    filas.forEach((f, i) => {
+      if (!this.esUltimaFila(i)) {
         if (f.diaHasta == null) {
-          errores.push(`${f.calificacion}: el día hasta es obligatorio (o marque "sin límite").`);
-        } else if (f.diaDesde != null && f.diaHasta < f.diaDesde) {
-          errores.push(`${f.calificacion}: el día hasta no puede ser menor que el día desde.`);
+          errores.push(`${f.calificacion}: el día hasta es obligatorio.`);
+        } else if (f.diaHasta < f.diaDesde) {
+          errores.push(
+            `${f.calificacion}: el día hasta (${f.diaHasta}) no puede ser menor al día desde calculado (${f.diaDesde}). Revise el día hasta de la fila anterior.`,
+          );
         }
       }
       if (f.porcentajeProvision == null || f.porcentajeProvision < 0 || f.porcentajeProvision > 100) {
@@ -314,51 +350,8 @@ export class EscalaCalificacionRiesgoComponent implements OnInit {
       }
     });
 
-    if (errores.length === 0) {
-      // La cobertura solo se puede evaluar con datos ya válidos por fila.
-      for (const problema of this.calcularCobertura()) {
-        errores.push(this.textoProblemaCobertura(problema));
-      }
-    }
-
     this.erroresValidacion = errores;
     return errores;
-  }
-
-  /**
-   * ⛔ A diferencia de bandas (donde el rango se deriva por acumulación y nunca puede fallar),
-   * acá cada fila trae su propio `diaDesde`/`diaHasta` cargados a mano: nada impide
-   * estructuralmente un hueco o un solape. Se recorre la escala ordenada por `diaDesde` llevando
-   * un cursor con "hasta dónde ya está cubierto"; cualquier salto hacia adelante es un hueco,
-   * cualquier fila que empiece antes de que el cursor haya avanzado es un solape.
-   */
-  calcularCobertura(): ProblemaCobertura[] {
-    const filas = this.escalasEdit
-      .filter((f) => f.diaDesde != null)
-      .map((f) => ({ desde: f.diaDesde as number, hasta: f.sinLimite ? null : f.diaHasta }))
-      .sort((a, b) => a.desde - b.desde);
-
-    const problemas: ProblemaCobertura[] = [];
-    let cursor = 0;
-    for (const fila of filas) {
-      if (fila.desde > cursor) {
-        problemas.push({ tipo: 'hueco', desde: cursor, hasta: fila.desde - 1 });
-      } else if (fila.desde < cursor) {
-        problemas.push({ tipo: 'solape', desde: fila.desde, hasta: cursor - 1 });
-      }
-      cursor = fila.hasta == null ? Infinity : Math.max(cursor, fila.hasta + 1);
-    }
-    if (cursor !== Infinity) {
-      problemas.push({ tipo: 'hueco', desde: cursor, hasta: null });
-    }
-    return problemas;
-  }
-
-  textoProblemaCobertura(p: ProblemaCobertura): string {
-    const rango = p.hasta == null ? `desde el día ${p.desde} en adelante` : `entre los días ${p.desde} y ${p.hasta}`;
-    return p.tipo === 'hueco'
-      ? `Hueco en la escala: ningún tramo cubre ${rango}. Una mora ahí no calificaría.`
-      : `Solape en la escala: más de un tramo cubre ${rango}.`;
   }
 
   private validarFechaVigencia(): string[] {
@@ -399,12 +392,11 @@ export class EscalaCalificacionRiesgoComponent implements OnInit {
       .guardarConfiguracion({
         idConfiguracion: esEdicion ? this.configSel?.idConfiguracion ?? null : null,
         idProducto: this.productoSel.idProducto,
-        idEmpresa: this.idEmpresa,
+        idEmpresa: this.aplicaTodasLasEmpresas ? null : this.idEmpresa,
         nombre: `Escala ${this.productoSel.nombreProducto}`,
-        fechaInicio: this.aFechaIso(this.fechaInicioEdit!),
-        fechaFin: this.fechaFinEdit ? this.aFechaIso(this.fechaFinEdit) : null,
+        fechaDesde: this.aFechaIso(this.fechaInicioEdit!),
+        fechaHasta: this.fechaFinEdit ? this.aFechaIso(this.fechaFinEdit) : null,
         usuario: this.usuarioAuditoria,
-        ip: null,
         escalas: this.construirEscalasInput(),
       })
       .subscribe({
@@ -438,9 +430,8 @@ export class EscalaCalificacionRiesgoComponent implements OnInit {
     this.escalaService
       .cerrarVigencia({
         idConfiguracionVigente: config.idConfiguracion,
-        fechaInicioNueva: this.aFechaIso(this.fechaInicioNueva!),
+        fechaDesdeNueva: this.aFechaIso(this.fechaInicioNueva!),
         usuario: this.usuarioAuditoria,
-        ip: null,
         escalas: this.construirEscalasInput(),
       })
       .subscribe({
@@ -460,13 +451,13 @@ export class EscalaCalificacionRiesgoComponent implements OnInit {
       });
   }
 
+  /** ⛔ NO incluye `diaDesde` ni `orden` (§8 del contrato) — ver el modelo `EscalaRiesgoInput`. */
   private construirEscalasInput(): EscalaRiesgoInput[] {
-    return this.escalasEdit.map((f, i) => ({
+    return this.escalasEdit.map((f) => ({
       calificacion: f.calificacion,
-      diaDesde: f.diaDesde as number,
-      diaHasta: f.sinLimite ? null : f.diaHasta,
-      porcentajeProvision: f.porcentajeProvision as number,
-      orden: i + 1,
+      diaHasta: f.diaHasta,
+      // El backend espera tanto por uno (0.05), acá se edita en puntos porcentuales (5).
+      porcentajeProvision: (f.porcentajeProvision as number) / 100,
     }));
   }
 
@@ -475,7 +466,7 @@ export class EscalaCalificacionRiesgoComponent implements OnInit {
     if (!this.productoSel) {
       return;
     }
-    this.productoSel.vigente = config;
+    this.productoSel.configuracion = config;
     this.productos = this.productos.map((p) =>
       p.idProducto === this.productoSel!.idProducto ? this.productoSel! : p,
     );
@@ -517,11 +508,12 @@ export class EscalaCalificacionRiesgoComponent implements OnInit {
       this.probadorForm.markAllAsTouched();
       return;
     }
-    const diasMora = this.probadorForm.value.diasMora!;
+    const dias = this.probadorForm.value.diasMora!;
     const fecha = this.fechaEvaluacion ? this.aFechaIso(this.fechaEvaluacion) : undefined;
 
     this.probando = true;
-    this.escalaService.probar(this.productoSel.idProducto, this.idEmpresa, diasMora, fecha).subscribe({
+    this.ultimoDiasProbado = dias;
+    this.escalaService.probar(this.productoSel.idProducto, this.idEmpresa, dias, fecha).subscribe({
       next: (res) => {
         this.probando = false;
         this.resultadoCalificacion = res;
@@ -535,38 +527,28 @@ export class EscalaCalificacionRiesgoComponent implements OnInit {
 
   // ===================== Barra de cobertura (visual) =====================
 
-  /** Ancho representativo (en "días") para un tramo abierto o un hueco final, solo para dibujar. */
   private static readonly ANCHO_VISUAL_ABIERTO = 30;
 
-  /** Segmentos para pintar la barra: filas de la escala + huecos, todos ordenados por inicio. */
-  segmentosCobertura(): { tipo: 'fila' | 'hueco' | 'solape'; etiqueta: string; ancho: number; indiceCalificacion: number }[] {
-    const filas = this.escalasEdit
-      .filter((f) => f.diaDesde != null)
-      .map((f) => ({ calificacion: f.calificacion, desde: f.diaDesde as number, hasta: f.sinLimite ? null : f.diaHasta }))
-      .sort((a, b) => a.desde - b.desde);
-
-    const segmentos: { tipo: 'fila' | 'hueco' | 'solape'; etiqueta: string; ancho: number; indiceCalificacion: number }[] = [];
-    let cursor = 0;
-    for (const fila of filas) {
-      if (fila.desde > cursor) {
-        segmentos.push({ tipo: 'hueco', etiqueta: `${cursor}–${fila.desde - 1}`, ancho: fila.desde - cursor, indiceCalificacion: -1 });
-      }
-      const ancho = fila.hasta == null
-        ? EscalaCalificacionRiesgoComponent.ANCHO_VISUAL_ABIERTO
-        : Math.max(1, fila.hasta - Math.max(fila.desde, cursor) + 1);
-      const esSolape = fila.desde < cursor;
-      segmentos.push({
-        tipo: esSolape ? 'solape' : 'fila',
-        etiqueta: fila.calificacion,
+  /**
+   * Segmentos para pintar la barra: una por fila, en el orden fijo de la SBS. Ya no puede haber
+   * huecos ni solapes (§8 del contrato); el tipo `error` resalta el único estado inválido que
+   * sigue siendo posible — un `diaHasta` tipeado por debajo del `diaDesde` ya calculado de esa
+   * fila — mientras el usuario todavía está editando.
+   */
+  segmentosCobertura(): { tipo: 'fila' | 'error'; etiqueta: string; ancho: number; indiceCalificacion: number }[] {
+    return this.escalasEdit.map((f, i) => {
+      const esError = !this.esUltimaFila(i) && f.diaHasta != null && f.diaHasta < f.diaDesde;
+      const ancho =
+        f.diaHasta == null
+          ? EscalaCalificacionRiesgoComponent.ANCHO_VISUAL_ABIERTO
+          : Math.max(1, f.diaHasta - f.diaDesde + 1);
+      return {
+        tipo: esError ? 'error' : 'fila',
+        etiqueta: f.calificacion,
         ancho,
-        indiceCalificacion: CALIFICACIONES_RIESGO.indexOf(fila.calificacion as any),
-      });
-      cursor = fila.hasta == null ? Infinity : Math.max(cursor, fila.hasta + 1);
-    }
-    if (cursor !== Infinity) {
-      segmentos.push({ tipo: 'hueco', etiqueta: `${cursor}+`, ancho: EscalaCalificacionRiesgoComponent.ANCHO_VISUAL_ABIERTO, indiceCalificacion: -1 });
-    }
-    return segmentos;
+        indiceCalificacion: i,
+      };
+    });
   }
 
   // ===================== Utilidades =====================

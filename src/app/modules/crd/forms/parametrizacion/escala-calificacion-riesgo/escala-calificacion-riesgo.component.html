@@ -29,10 +29,9 @@
       <mat-icon>info</mat-icon>
       <span>
         Nueve calificaciones fijas de la SBS (A1 a E, de menor a mayor riesgo), medidas sobre días
-        de mora. Cada una define su propio rango de días y su % de provisión — a diferencia de las
-        bandas de cartera, acá el rango NO se deriva solo: hay que evitar huecos (una mora que no
-        calificaría en ninguna) y solapes (dos calificaciones para el mismo día). El cambio
-        normativo se hace con "Nueva vigencia", nunca editando una vigencia ya iniciada.
+        de mora. Solo se edita el "día hasta" de cada una y su % de provisión — el "día hasta" de
+        la fila anterior más uno, y solo E queda sin límite. El cambio normativo se hace con
+        "Nueva vigencia", nunca editando una vigencia ya iniciada.
       </span>
     </div>
   </div>
@@ -84,16 +83,12 @@
                   {{ p.nombreProducto }}
                   <span class="badge badge-inactivo" *ngIf="p.estadoProducto !== 1">Inactivo</span>
                 </div>
-                <div class="producto-meta">
-                  <span class="chip-sbs">{{ p.codigoSBS }}</span>
-                  <span class="tipo-prestamo">{{ p.nombreTipoPrestamo }}</span>
-                </div>
               </div>
               <span
                 class="dot"
-                [class.on]="p.vigente"
-                matTooltip="{{ p.vigente ? 'Escala configurada' : 'Sin escala configurada' }}"
-                >{{ p.vigente ? 'OK' : '—' }}</span
+                [class.on]="p.configuracion"
+                matTooltip="{{ p.configuracion ? 'Escala configurada' : 'Sin escala configurada' }}"
+                >{{ p.configuracion ? 'OK' : '—' }}</span
               >
             </div>
           </div>
@@ -109,9 +104,6 @@
             {{ productoSel.nombreProducto }}
             <span class="badge badge-inactivo" *ngIf="productoSel.estadoProducto !== 1">Inactivo</span>
           </mat-card-title>
-          <mat-card-subtitle>
-            {{ productoSel.codigoSBS }} · {{ productoSel.nombreTipoPrestamo }}
-          </mat-card-subtitle>
         </mat-card-header>
 
         <mat-card-content>
@@ -134,12 +126,19 @@
                 <div class="vigencia-info">
                   <span class="vigencia-label">Vigencia:</span>
                   <span class="vigencia-valor">
-                    desde {{ formatoFechaArray(config.fechaInicio) }}
-                    <ng-container *ngIf="config.fechaFin">hasta {{ formatoFechaArray(config.fechaFin) }}</ng-container>
-                    <span class="badge badge-abierta" *ngIf="!config.fechaFin">abierta</span>
+                    desde {{ formatoFechaArray(config.fechaDesde) }}
+                    <ng-container *ngIf="config.fechaHasta">hasta {{ formatoFechaArray(config.fechaHasta) }}</ng-container>
+                    <span class="badge badge-abierta" *ngIf="!config.fechaHasta">abierta</span>
                   </span>
                   <span class="badge badge-futura" *ngIf="config.editable" matTooltip="La vigencia todavía no empieza">
                     aún no vigente
+                  </span>
+                  <span
+                    class="badge badge-todas-empresas"
+                    *ngIf="config.idEmpresa == null"
+                    matTooltip="Esta configuración no está atada a una empresa específica: aplica igual para todas."
+                  >
+                    todas las empresas
                   </span>
                 </div>
                 <div class="vigencia-acciones">
@@ -168,23 +167,15 @@
                 <thead>
                   <tr>
                     <th class="col-calif">Calificación</th>
-                    <th class="col-dia">Desde (días)</th>
-                    <th class="col-dia">Hasta (días)</th>
+                    <th class="col-dia">Rango (días)</th>
                     <th class="col-prov">% Provisión</th>
-                    <th class="col-estado">Estado</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr *ngFor="let e of config.escalas">
                     <td class="col-calif"><span class="chip-calif">{{ e.calificacion }}</span></td>
-                    <td class="col-dia">{{ e.diaDesde }}</td>
-                    <td class="col-dia">{{ e.diaHasta == null ? 'Sin límite' : e.diaHasta }}</td>
-                    <td class="col-prov">{{ e.porcentajeProvision }}%</td>
-                    <td class="col-estado">
-                      <span class="badge" [ngClass]="e.estado === 1 ? 'est-activo' : 'est-inactivo'">
-                        {{ e.estado === 1 ? 'Activo' : 'Inactivo' }}
-                      </span>
-                    </td>
+                    <td class="col-dia">{{ e.etiqueta }}</td>
+                    <td class="col-prov">{{ e.porcentajeProvision * 100 }}%</td>
                   </tr>
                 </tbody>
               </table>
@@ -236,57 +227,65 @@
               </ng-container>
             </div>
 
-            <!-- Barra de cobertura -->
+            <!--
+              Confirmado por el árbitro (2026-09-07): a diferencia de bandas de cartera, acá la
+              empresa es OPCIONAL — idEmpresa=null significa "aplica a cualquier empresa", así lo
+              consume hoy el reporte regulatorio.
+            -->
+            <div class="empresa-toggle">
+              <mat-checkbox [(ngModel)]="aplicaTodasLasEmpresas">
+                Aplica a cualquier empresa (no atar esta configuración a una empresa específica)
+              </mat-checkbox>
+              <span class="empresa-hint" *ngIf="!aplicaTodasLasEmpresas">
+                Sin marcar, se guarda solo para la empresa de esta sesión (código {{ idEmpresa }}).
+              </span>
+            </div>
+
+            <!-- Barra de cobertura: ya no puede haber huecos ni solapes (diaDesde lo deriva el
+                 servidor); resalta en rojo la única fila con un error posible mientras se edita. -->
             <div class="cobertura-bar-wrap">
-              <span class="cobertura-titulo">Cobertura de la escala (0 → sin límite)</span>
+              <span class="cobertura-titulo">Distribución de la escala (0 → sin límite)</span>
               <div class="cobertura-bar">
                 <div
                   *ngFor="let s of segmentosCobertura()"
                   class="cobertura-seg"
-                  [class.seg-hueco]="s.tipo === 'hueco'"
-                  [class.seg-solape]="s.tipo === 'solape'"
+                  [class.seg-error]="s.tipo === 'error'"
                   [class.seg-fila]="s.tipo === 'fila'"
                   [style.flex-grow]="s.ancho"
-                  [attr.data-calif]="s.indiceCalificacion >= 0 ? s.indiceCalificacion : null"
-                  [matTooltip]="s.tipo === 'hueco' ? ('Hueco: días ' + s.etiqueta) : (s.tipo === 'solape' ? ('Solape: ' + s.etiqueta) : s.etiqueta)"
+                  [attr.data-calif]="s.tipo === 'fila' ? s.indiceCalificacion : null"
+                  [matTooltip]="s.tipo === 'error' ? ('Día hasta inválido en ' + s.etiqueta) : s.etiqueta"
                 >
                   {{ s.etiqueta }}
                 </div>
               </div>
               <div class="cobertura-leyenda">
-                <span class="leyenda-item"><span class="leyenda-dot seg-fila"></span> tramo cubierto</span>
-                <span class="leyenda-item"><span class="leyenda-dot seg-hueco"></span> hueco</span>
-                <span class="leyenda-item"><span class="leyenda-dot seg-solape"></span> solape</span>
+                <span class="leyenda-item"><span class="leyenda-dot seg-fila"></span> tramo</span>
+                <span class="leyenda-item"><span class="leyenda-dot seg-error"></span> día hasta inválido</span>
               </div>
             </div>
 
-            <!-- Tabla editable — 9 filas FIJAS, sin agregar/quitar -->
+            <!-- Tabla editable — 9 filas FIJAS, sin agregar/quitar. `diaDesde` es SOLO LECTURA
+                 (lo deriva el servidor); solo la última fila (E) queda sin límite superior. -->
             <table class="escalas-table editable">
               <thead>
                 <tr>
                   <th class="col-calif">Calificación</th>
-                  <th class="col-dia">Desde (días) *</th>
+                  <th class="col-dia" matTooltip="Calculado: dia hasta de la fila anterior + 1. La primera arranca en 0.">Desde (días)</th>
                   <th class="col-dia">Hasta (días)</th>
-                  <th class="col-limite">Sin límite</th>
                   <th class="col-prov">% Provisión *</th>
                 </tr>
               </thead>
               <tbody>
-                <tr *ngFor="let f of escalasEdit">
+                <tr *ngFor="let f of escalasEdit; let i = index">
                   <td class="col-calif"><span class="chip-calif">{{ f.calificacion }}</span></td>
                   <td class="col-dia">
-                    <mat-form-field appearance="outline" class="dia-field">
-                      <input matInput type="number" min="0" step="1" [(ngModel)]="f.diaDesde" (ngModelChange)="validar()" />
-                    </mat-form-field>
+                    <span class="dia-desde-calculado">{{ f.diaDesde }}</span>
                   </td>
                   <td class="col-dia">
-                    <mat-form-field appearance="outline" class="dia-field" *ngIf="!f.sinLimite">
-                      <input matInput type="number" min="0" step="1" [(ngModel)]="f.diaHasta" (ngModelChange)="validar()" />
+                    <mat-form-field appearance="outline" class="dia-field" *ngIf="!esUltimaFila(i)">
+                      <input matInput type="number" min="0" step="1" [(ngModel)]="f.diaHasta" (ngModelChange)="recalcularDiasDesde()" />
                     </mat-form-field>
-                    <span class="sin-limite-texto" *ngIf="f.sinLimite">Sin límite</span>
-                  </td>
-                  <td class="col-limite">
-                    <mat-checkbox [(ngModel)]="f.sinLimite" (change)="onSinLimiteChange(f)"></mat-checkbox>
+                    <span class="sin-limite-texto" *ngIf="esUltimaFila(i)" matTooltip="Solo la última calificación puede quedar sin límite superior">Sin límite</span>
                   </td>
                   <td class="col-prov">
                     <mat-form-field appearance="outline" class="prov-field">
@@ -335,30 +334,28 @@
                 <p>Este producto nunca tuvo escala de riesgo parametrizada.</p>
               </div>
 
-              <div class="historial-config" *ngFor="let h of historial" [class.es-vigente]="!h.fechaFin">
+              <div class="historial-config" *ngFor="let h of historial" [class.es-vigente]="!h.fechaHasta">
                 <div class="historial-config-header">
-                  <span class="badge" [ngClass]="!h.fechaFin ? 'badge-abierta' : 'badge-cerrada'">
-                    {{ !h.fechaFin ? 'Vigente' : 'Cerrada' }}
+                  <span class="badge" [ngClass]="!h.fechaHasta ? 'badge-abierta' : 'badge-cerrada'">
+                    {{ !h.fechaHasta ? 'Vigente' : 'Cerrada' }}
                   </span>
                   <span class="historial-vigencia">
-                    {{ formatoFechaArray(h.fechaInicio) }} → {{ h.fechaFin ? formatoFechaArray(h.fechaFin) : 'abierta' }}
+                    {{ formatoFechaArray(h.fechaDesde) }} → {{ h.fechaHasta ? formatoFechaArray(h.fechaHasta) : 'abierta' }}
                   </span>
                 </div>
                 <table class="escalas-table compacta">
                   <thead>
                     <tr>
                       <th>Calif.</th>
-                      <th>Desde</th>
-                      <th>Hasta</th>
+                      <th>Rango (días)</th>
                       <th>% Prov.</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr *ngFor="let e of h.escalas">
                       <td>{{ e.calificacion }}</td>
-                      <td>{{ e.diaDesde }}</td>
-                      <td>{{ e.diaHasta == null ? 'Sin límite' : e.diaHasta }}</td>
-                      <td>{{ e.porcentajeProvision }}%</td>
+                      <td>{{ e.etiqueta }}</td>
+                      <td>{{ e.porcentajeProvision * 100 }}%</td>
                     </tr>
                   </tbody>
                 </table>
@@ -395,9 +392,9 @@
             <div class="probador-resultado" *ngIf="resultadoCalificacion as r">
               <mat-icon class="ok-icon">check_circle</mat-icon>
               <span>
-                {{ r.diasMora }} días de mora → calificación
-                <strong>{{ r.escala.calificacion }}</strong> → provisión
-                <strong>{{ r.escala.porcentajeProvision }}%</strong>
+                {{ ultimoDiasProbado }} días de mora → calificación
+                <strong>{{ r.calificacion }}</strong> → provisión
+                <strong>{{ r.porcentajeProvision * 100 }}%</strong>
               </span>
             </div>
             <div class="probador-error" *ngIf="errorProbador">
