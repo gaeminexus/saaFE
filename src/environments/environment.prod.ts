@@ -6,4 +6,5 @@ export const environment = {
   mockCobroPetro: false,
   mockCertificadosParticipe: false,
   mockAuditoriaBandas: false,
+  mockEscalaRiesgo: false,
 };

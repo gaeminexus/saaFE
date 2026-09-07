@@ -1,0 +1,412 @@
+<div class="escala-container">
+  <!-- Header -->
+  <div class="page-header">
+    <div class="header-content">
+      <h1 class="page-title">
+        <mat-icon>rule</mat-icon>
+        Escala de calificación de riesgo por producto
+      </h1>
+      <div class="header-actions">
+        <mat-form-field appearance="outline" class="fecha-eval-field">
+          <mat-label>Vigencia evaluada al</mat-label>
+          <input
+            matInput
+            [matDatepicker]="pickerEval"
+            [(ngModel)]="fechaEvaluacion"
+            (dateChange)="onFechaEvaluacionChange()"
+            placeholder="Hoy"
+          />
+          <mat-datepicker-toggle matSuffix [for]="pickerEval"></mat-datepicker-toggle>
+          <mat-datepicker #pickerEval></mat-datepicker>
+        </mat-form-field>
+        <button mat-stroked-button (click)="cargarListado()" [disabled]="cargando" matTooltip="Recargar listado">
+          <mat-icon>refresh</mat-icon>
+          Recargar
+        </button>
+      </div>
+    </div>
+    <div class="info-banner">
+      <mat-icon>info</mat-icon>
+      <span>
+        Nueve calificaciones fijas de la SBS (A1 a E, de menor a mayor riesgo), medidas sobre días
+        de mora. Cada una define su propio rango de días y su % de provisión — a diferencia de las
+        bandas de cartera, acá el rango NO se deriva solo: hay que evitar huecos (una mora que no
+        calificaría en ninguna) y solapes (dos calificaciones para el mismo día). El cambio
+        normativo se hace con "Nueva vigencia", nunca editando una vigencia ya iniciada.
+      </span>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading-container" *ngIf="cargando">
+    <mat-spinner diameter="40"></mat-spinner>
+    <p>Cargando parametrización…</p>
+  </div>
+
+  <!-- Error de carga -->
+  <div class="error-state" *ngIf="!cargando && errorCarga">
+    <mat-icon class="error-icon">error_outline</mat-icon>
+    <h3>No se pudo cargar la parametrización</h3>
+    <p>{{ errorCarga }}</p>
+    <button mat-raised-button color="primary" (click)="cargarListado()">
+      <mat-icon>refresh</mat-icon>
+      Reintentar
+    </button>
+  </div>
+
+  <!-- Contenido -->
+  <div class="content-layout" *ngIf="!cargando && !errorCarga">
+    <!-- Panel maestro: productos -->
+    <div class="maestro-panel">
+      <mat-card class="productos-card">
+        <mat-card-header>
+          <mat-card-title>
+            <mat-icon>inventory_2</mat-icon>
+            Productos de crédito
+          </mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="empty-state" *ngIf="productos.length === 0">
+            <mat-icon class="empty-icon">inventory_2</mat-icon>
+            <p>No hay productos de crédito registrados.</p>
+          </div>
+
+          <div class="productos-lista">
+            <div
+              *ngFor="let p of productos; trackBy: trackProducto"
+              class="producto-item"
+              [class.selected]="productoSel?.idProducto === p.idProducto"
+              [class.inactivo]="p.estadoProducto !== 1"
+              (click)="seleccionarProducto(p)"
+            >
+              <div class="producto-info">
+                <div class="producto-nombre">
+                  {{ p.nombreProducto }}
+                  <span class="badge badge-inactivo" *ngIf="p.estadoProducto !== 1">Inactivo</span>
+                </div>
+                <div class="producto-meta">
+                  <span class="chip-sbs">{{ p.codigoSBS }}</span>
+                  <span class="tipo-prestamo">{{ p.nombreTipoPrestamo }}</span>
+                </div>
+              </div>
+              <span
+                class="dot"
+                [class.on]="p.vigente"
+                matTooltip="{{ p.vigente ? 'Escala configurada' : 'Sin escala configurada' }}"
+                >{{ p.vigente ? 'OK' : '—' }}</span
+              >
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    <!-- Panel detalle -->
+    <div class="detalle-panel" *ngIf="productoSel">
+      <mat-card class="detalle-card">
+        <mat-card-header>
+          <mat-card-title>
+            {{ productoSel.nombreProducto }}
+            <span class="badge badge-inactivo" *ngIf="productoSel.estadoProducto !== 1">Inactivo</span>
+          </mat-card-title>
+          <mat-card-subtitle>
+            {{ productoSel.codigoSBS }} · {{ productoSel.nombreTipoPrestamo }}
+          </mat-card-subtitle>
+        </mat-card-header>
+
+        <mat-card-content>
+          <!-- ============ MODO VER ============ -->
+          <ng-container *ngIf="!editando">
+            <!-- Sin configuración -->
+            <div class="empty-state config-vacia" *ngIf="!configSel">
+              <mat-icon class="empty-icon">rule_folder</mat-icon>
+              <h3>Sin escala de calificación de riesgo</h3>
+              <p>Este producto no tiene una escala configurada a la fecha evaluada.</p>
+              <button mat-raised-button color="primary" (click)="crearConfiguracion()">
+                <mat-icon>add</mat-icon>
+                Crear configuración
+              </button>
+            </div>
+
+            <!-- Con configuración -->
+            <ng-container *ngIf="configSel as config">
+              <div class="vigencia-bar">
+                <div class="vigencia-info">
+                  <span class="vigencia-label">Vigencia:</span>
+                  <span class="vigencia-valor">
+                    desde {{ formatoFechaArray(config.fechaInicio) }}
+                    <ng-container *ngIf="config.fechaFin">hasta {{ formatoFechaArray(config.fechaFin) }}</ng-container>
+                    <span class="badge badge-abierta" *ngIf="!config.fechaFin">abierta</span>
+                  </span>
+                  <span class="badge badge-futura" *ngIf="config.editable" matTooltip="La vigencia todavía no empieza">
+                    aún no vigente
+                  </span>
+                </div>
+                <div class="vigencia-acciones">
+                  <button
+                    mat-stroked-button
+                    color="primary"
+                    *ngIf="config.editable"
+                    (click)="editarConfiguracion()"
+                    matTooltip="Editar en el lugar (la vigencia todavía no empieza)"
+                  >
+                    <mat-icon>edit</mat-icon>
+                    Editar
+                  </button>
+                  <button
+                    mat-stroked-button
+                    (click)="iniciarNuevaVigencia()"
+                    matTooltip="Cierra esta vigencia y crea una nueva desde una fecha"
+                  >
+                    <mat-icon>event_repeat</mat-icon>
+                    Nueva vigencia
+                  </button>
+                </div>
+              </div>
+
+              <table class="escalas-table">
+                <thead>
+                  <tr>
+                    <th class="col-calif">Calificación</th>
+                    <th class="col-dia">Desde (días)</th>
+                    <th class="col-dia">Hasta (días)</th>
+                    <th class="col-prov">% Provisión</th>
+                    <th class="col-estado">Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let e of config.escalas">
+                    <td class="col-calif"><span class="chip-calif">{{ e.calificacion }}</span></td>
+                    <td class="col-dia">{{ e.diaDesde }}</td>
+                    <td class="col-dia">{{ e.diaHasta == null ? 'Sin límite' : e.diaHasta }}</td>
+                    <td class="col-prov">{{ e.porcentajeProvision }}%</td>
+                    <td class="col-estado">
+                      <span class="badge" [ngClass]="e.estado === 1 ? 'est-activo' : 'est-inactivo'">
+                        {{ e.estado === 1 ? 'Activo' : 'Inactivo' }}
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </ng-container>
+          </ng-container>
+
+          <!-- ============ MODO EDICIÓN ============ -->
+          <ng-container *ngIf="editando">
+            <div class="edicion-header">
+              <h3>
+                <mat-icon>{{ modo === 'nueva-vigencia' ? 'event_repeat' : (modo === 'crear' ? 'add_circle' : 'edit') }}</mat-icon>
+                <span [ngSwitch]="modo">
+                  <span *ngSwitchCase="'crear'">Nueva configuración</span>
+                  <span *ngSwitchCase="'editar'">Editar configuración</span>
+                  <span *ngSwitchCase="'nueva-vigencia'">Nueva vigencia</span>
+                </span>
+              </h3>
+            </div>
+
+            <!-- Fechas de vigencia -->
+            <div class="vigencia-form">
+              <ng-container *ngIf="modo !== 'nueva-vigencia'">
+                <mat-form-field appearance="outline">
+                  <mat-label>Fecha inicio *</mat-label>
+                  <input matInput [matDatepicker]="pickerInicio" [(ngModel)]="fechaInicioEdit" />
+                  <mat-datepicker-toggle matSuffix [for]="pickerInicio"></mat-datepicker-toggle>
+                  <mat-datepicker #pickerInicio></mat-datepicker>
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Fecha fin (opcional)</mat-label>
+                  <input matInput [matDatepicker]="pickerFin" [(ngModel)]="fechaFinEdit" />
+                  <mat-datepicker-toggle matSuffix [for]="pickerFin"></mat-datepicker-toggle>
+                  <mat-datepicker #pickerFin></mat-datepicker>
+                  <mat-hint>Vacío = vigencia abierta</mat-hint>
+                </mat-form-field>
+              </ng-container>
+              <ng-container *ngIf="modo === 'nueva-vigencia'">
+                <mat-form-field appearance="outline">
+                  <mat-label>Nueva vigencia desde *</mat-label>
+                  <input matInput [matDatepicker]="pickerNueva" [(ngModel)]="fechaInicioNueva" />
+                  <mat-datepicker-toggle matSuffix [for]="pickerNueva"></mat-datepicker-toggle>
+                  <mat-datepicker #pickerNueva></mat-datepicker>
+                  <mat-hint>Debe ser posterior al inicio de la vigencia actual</mat-hint>
+                </mat-form-field>
+                <div class="nota-cierre">
+                  <mat-icon>info</mat-icon>
+                  La vigencia actual se cerrará automáticamente el día anterior a esta fecha.
+                </div>
+              </ng-container>
+            </div>
+
+            <!-- Barra de cobertura -->
+            <div class="cobertura-bar-wrap">
+              <span class="cobertura-titulo">Cobertura de la escala (0 → sin límite)</span>
+              <div class="cobertura-bar">
+                <div
+                  *ngFor="let s of segmentosCobertura()"
+                  class="cobertura-seg"
+                  [class.seg-hueco]="s.tipo === 'hueco'"
+                  [class.seg-solape]="s.tipo === 'solape'"
+                  [class.seg-fila]="s.tipo === 'fila'"
+                  [style.flex-grow]="s.ancho"
+                  [attr.data-calif]="s.indiceCalificacion >= 0 ? s.indiceCalificacion : null"
+                  [matTooltip]="s.tipo === 'hueco' ? ('Hueco: días ' + s.etiqueta) : (s.tipo === 'solape' ? ('Solape: ' + s.etiqueta) : s.etiqueta)"
+                >
+                  {{ s.etiqueta }}
+                </div>
+              </div>
+              <div class="cobertura-leyenda">
+                <span class="leyenda-item"><span class="leyenda-dot seg-fila"></span> tramo cubierto</span>
+                <span class="leyenda-item"><span class="leyenda-dot seg-hueco"></span> hueco</span>
+                <span class="leyenda-item"><span class="leyenda-dot seg-solape"></span> solape</span>
+              </div>
+            </div>
+
+            <!-- Tabla editable — 9 filas FIJAS, sin agregar/quitar -->
+            <table class="escalas-table editable">
+              <thead>
+                <tr>
+                  <th class="col-calif">Calificación</th>
+                  <th class="col-dia">Desde (días) *</th>
+                  <th class="col-dia">Hasta (días)</th>
+                  <th class="col-limite">Sin límite</th>
+                  <th class="col-prov">% Provisión *</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let f of escalasEdit">
+                  <td class="col-calif"><span class="chip-calif">{{ f.calificacion }}</span></td>
+                  <td class="col-dia">
+                    <mat-form-field appearance="outline" class="dia-field">
+                      <input matInput type="number" min="0" step="1" [(ngModel)]="f.diaDesde" (ngModelChange)="validar()" />
+                    </mat-form-field>
+                  </td>
+                  <td class="col-dia">
+                    <mat-form-field appearance="outline" class="dia-field" *ngIf="!f.sinLimite">
+                      <input matInput type="number" min="0" step="1" [(ngModel)]="f.diaHasta" (ngModelChange)="validar()" />
+                    </mat-form-field>
+                    <span class="sin-limite-texto" *ngIf="f.sinLimite">Sin límite</span>
+                  </td>
+                  <td class="col-limite">
+                    <mat-checkbox [(ngModel)]="f.sinLimite" (change)="onSinLimiteChange(f)"></mat-checkbox>
+                  </td>
+                  <td class="col-prov">
+                    <mat-form-field appearance="outline" class="prov-field">
+                      <input matInput type="number" min="0" max="100" step="0.5" [(ngModel)]="f.porcentajeProvision" (ngModelChange)="validar()" />
+                      <span matSuffix>%</span>
+                    </mat-form-field>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            <!-- Errores de validación (incluye huecos y solapes) -->
+            <div class="validacion-errores" *ngIf="erroresValidacion.length > 0">
+              <mat-icon>warning</mat-icon>
+              <ul>
+                <li *ngFor="let e of erroresValidacion">{{ e }}</li>
+              </ul>
+            </div>
+
+            <!-- Acciones de edición -->
+            <div class="edicion-acciones">
+              <button mat-button (click)="cancelarEdicion()" [disabled]="guardando">Cancelar</button>
+              <button mat-raised-button color="primary" (click)="guardar()" [disabled]="!puedeGuardar">
+                <mat-icon *ngIf="!guardando">save</mat-icon>
+                <mat-spinner diameter="18" *ngIf="guardando"></mat-spinner>
+                {{ modo === 'nueva-vigencia' ? 'Crear nueva vigencia' : 'Guardar' }}
+              </button>
+            </div>
+          </ng-container>
+
+          <!-- ============ HISTORIAL ============ -->
+          <div class="historial-section" *ngIf="!editando">
+            <mat-divider></mat-divider>
+            <button mat-button color="primary" class="historial-toggle" (click)="toggleHistorial()">
+              <mat-icon>{{ mostrarHistorial ? 'expand_less' : 'history' }}</mat-icon>
+              {{ mostrarHistorial ? 'Ocultar historial' : 'Ver historial de configuraciones' }}
+            </button>
+
+            <div class="historial-contenido" *ngIf="mostrarHistorial">
+              <div class="loading-inline" *ngIf="cargandoHistorial">
+                <mat-spinner diameter="24"></mat-spinner>
+                <span>Cargando historial…</span>
+              </div>
+
+              <div class="empty-state pequeno" *ngIf="!cargandoHistorial && historial.length === 0">
+                <p>Este producto nunca tuvo escala de riesgo parametrizada.</p>
+              </div>
+
+              <div class="historial-config" *ngFor="let h of historial" [class.es-vigente]="!h.fechaFin">
+                <div class="historial-config-header">
+                  <span class="badge" [ngClass]="!h.fechaFin ? 'badge-abierta' : 'badge-cerrada'">
+                    {{ !h.fechaFin ? 'Vigente' : 'Cerrada' }}
+                  </span>
+                  <span class="historial-vigencia">
+                    {{ formatoFechaArray(h.fechaInicio) }} → {{ h.fechaFin ? formatoFechaArray(h.fechaFin) : 'abierta' }}
+                  </span>
+                </div>
+                <table class="escalas-table compacta">
+                  <thead>
+                    <tr>
+                      <th>Calif.</th>
+                      <th>Desde</th>
+                      <th>Hasta</th>
+                      <th>% Prov.</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let e of h.escalas">
+                      <td>{{ e.calificacion }}</td>
+                      <td>{{ e.diaDesde }}</td>
+                      <td>{{ e.diaHasta == null ? 'Sin límite' : e.diaHasta }}</td>
+                      <td>{{ e.porcentajeProvision }}%</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- ============ PROBADOR DE CALIFICACIÓN ============ -->
+          <div class="probador-section" *ngIf="!editando && configSel">
+            <mat-divider></mat-divider>
+            <h4 class="probador-titulo">
+              <mat-icon>science</mat-icon>
+              Probador de calificación
+            </h4>
+            <p class="probador-ayuda">
+              Verifica qué calificación y qué % de provisión corresponden a una cantidad de días de
+              mora según la escala vigente. También sirve para encontrar huecos: si un valor no
+              devuelve calificación, hay un tramo sin cubrir.
+            </p>
+            <form [formGroup]="probadorForm" class="probador-form" (ngSubmit)="probar()">
+              <mat-form-field appearance="outline" class="dias-field">
+                <mat-label>Días de mora</mat-label>
+                <input matInput type="number" min="0" formControlName="diasMora" />
+                <mat-error *ngIf="probadorForm.get('diasMora')?.hasError('required')">Los días son obligatorios</mat-error>
+                <mat-error *ngIf="probadorForm.get('diasMora')?.hasError('min')">Debe ser mayor o igual a 0</mat-error>
+              </mat-form-field>
+              <button mat-raised-button color="primary" type="submit" [disabled]="probando">
+                <mat-icon *ngIf="!probando">play_arrow</mat-icon>
+                <mat-spinner diameter="18" *ngIf="probando"></mat-spinner>
+                Calificar
+              </button>
+            </form>
+
+            <div class="probador-resultado" *ngIf="resultadoCalificacion as r">
+              <mat-icon class="ok-icon">check_circle</mat-icon>
+              <span>
+                {{ r.diasMora }} días de mora → calificación
+                <strong>{{ r.escala.calificacion }}</strong> → provisión
+                <strong>{{ r.escala.porcentajeProvision }}%</strong>
+              </span>
+            </div>
+            <div class="probador-error" *ngIf="errorProbador">
+              <mat-icon>error_outline</mat-icon>
+              <span>{{ errorProbador }}</span>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+</div>

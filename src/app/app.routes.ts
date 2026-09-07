@@ -1120,6 +1120,13 @@ export const routes: Routes = [
       {
         // TODO TEMPORAL: misma restricción a USUARIO 1 que bandas-cartera (usuarioUnoGuard),
         // hasta que exista el esquema de permisos definitivo.
+        path: 'escala-calificacion-riesgo',
+        loadComponent: () => import('./modules/crd/forms/parametrizacion/escala-calificacion-riesgo/escala-calificacion-riesgo.component').then((m) => m.EscalaCalificacionRiesgoComponent),
+        canActivate: [authGuard, usuarioUnoGuard],
+      },
+      {
+        // TODO TEMPORAL: misma restricción a USUARIO 1 que bandas-cartera (usuarioUnoGuard),
+        // hasta que exista el esquema de permisos definitivo.
         path: 'cierre-cartera',
         loadComponent: () => import('./modules/crd/forms/cierre-cartera/cierre-cartera.component').then((m) => m.CierreCarteraComponent),
         canActivate: [authGuard, usuarioUnoGuard],

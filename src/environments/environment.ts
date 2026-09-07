@@ -28,4 +28,13 @@ export const environment = {
    * `true` la reactiva sin tocar el componente.
    */
   mockAuditoriaBandas: false,
+  /**
+   * Escala de calificación de riesgo (parametrización nueva, P22 —
+   * `docs/logica-negocio/ESTADO-EQUIPO-OMEN-1.md`): todavía NO hay contrato REST acordado con el
+   * backend, ni siquiera una ruta congelada — a diferencia de los otros mocks de esta lista, que
+   * simulan CONTRA un contrato ya escrito. `EscalaCalificacionRiesgoService` simula en memoria
+   * solo para poder bocetar la pantalla. Cuando el árbitro entregue el contrato real, hay que
+   * actualizar el servicio (rutas y forma del body) y recién ahí tiene sentido apagar este flag.
+   */
+  mockEscalaRiesgo: true,
 };

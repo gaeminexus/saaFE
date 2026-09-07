@@ -299,6 +299,11 @@ export class MenucreditosComponent {
         route: '/menucreditos/bandas-cartera',
       });
       paramNode?.children?.push({
+        displayName: 'Escala de Calificación de Riesgo',
+        iconName: 'rule',
+        route: '/menucreditos/escala-calificacion-riesgo',
+      });
+      paramNode?.children?.push({
         displayName: 'Cierre de Cartera',
         iconName: 'event_available',
         route: '/menucreditos/cierre-cartera',
