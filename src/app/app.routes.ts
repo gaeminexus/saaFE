@@ -144,6 +144,12 @@ export const routes: Routes = [
         data: { title: 'Mayor Analítico' },
       },
       {
+        path: 'reportes/mayor-analitico-v2',
+        loadComponent: () => import('./modules/cnt/forms/mayor-analitico-v2/mayor-analitico-v2.component').then((m) => m.MayorAnaliticoV2Component),
+        canActivate: [authGuard],
+        data: { title: 'Mayor Analítico V2' },
+      },
+      {
         path: 'reportes/listado-asientos',
         loadComponent: () => import('./modules/cnt/forms/reporte-listado-asientos/reporte-listado-asientos.component').then((m) => m.ReporteListadoAsientosComponent),
         canActivate: [authGuard],

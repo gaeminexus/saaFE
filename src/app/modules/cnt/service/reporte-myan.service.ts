@@ -49,6 +49,18 @@ export class ReporteMyanService {
   }
 
   /**
+   * GET /SaaBE/api/cnt/myan/detalleReporte/{secuencialReporte}
+   * Obtiene TODOS los movimientos de TODAS las cuentas del reporte en una sola llamada.
+   * Responde 204 sin cuerpo si el reporte no tiene movimientos.
+   */
+  obtenerDetalleReporte(secuencialReporte: number): Observable<DetalleMayorAnalitico[] | null> {
+    const url = `${ServiciosCnt.RS_MYAN}/detalleReporte/${secuencialReporte}`;
+    return this.http.get<DetalleMayorAnalitico[]>(url).pipe(
+      catchError(this.handleErrorLista<DetalleMayorAnalitico>())
+    );
+  }
+
+  /**
    * DELETE /SaaBE/api/cnt/myan/{secuencial}
    * Elimina los registros temporales del reporte generado.
    */

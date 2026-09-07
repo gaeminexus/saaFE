@@ -18,6 +18,30 @@
 
 Clase: `com.saa.ws.rest.cnt.MayorAnaliticoRest` (`@Path("myan")`).
 
+### 1bis. ⚠️ Ojo: el frontend NO usa esa ruta tal cual, y las dos son correctas
+
+`ServiciosCnt.RS_MYAN` (`saaFE/src/app/modules/cnt/service/ws-cnt.ts`) vale:
+
+```
+/api/saa-backend/rest/myan
+```
+
+**Ese `/api/` es un prefijo de proxy, no el application path de JAX-RS.** El proxy reescribe
+`/api/saa-backend` al contexto del WAR, y `/rest/myan` es lo que efectivamente llega al servidor.
+O sea:
+
+| Capa | Ruta |
+|---|---|
+| Lo que llama el frontend | `/api/saa-backend/rest/myan/...` |
+| Lo que atiende el servidor | `/SaaBE/rest/myan/...` |
+
+⛔ **No confundir este `/api/` con el `/api/` de los docs viejos**, que es otra cosa: aquéllos
+escriben `/saaBE/api/myan/...` — sin `/rest` en ningún lado — y ésa sí es una ruta que no existe.
+
+⚠️ Varios javadoc de `reporte-myan.service.ts` arrastran esa forma vieja (`/SaaBE/api/cnt/myan/...`)
+en los comentarios. **Son comentarios equivocados; la URL real la arma `RS_MYAN`.** No se corrigieron
+en este frente para no tocar métodos existentes, pero quedan anotados acá.
+
 ---
 
 ## 2. Los cuatro endpoints que usa la pantalla, verificados

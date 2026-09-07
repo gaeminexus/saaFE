@@ -184,6 +184,12 @@ export class MenuContabilidadComponent {
           idPermiso: 830,
           route: '/menucontabilidad/reportes/mayor-analitico',
         },
+        {
+          displayName: 'Mayor Analítico V2',
+          iconName: 'view_column',
+          idPermiso: 830,
+          route: '/menucontabilidad/reportes/mayor-analitico-v2',
+        },
         /*{
           displayName: 'Balance de Prueba',
           iconName: 'fact_check',
