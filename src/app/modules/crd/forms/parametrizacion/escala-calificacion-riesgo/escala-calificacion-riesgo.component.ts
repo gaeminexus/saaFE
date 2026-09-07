@@ -226,6 +226,17 @@ export class EscalaCalificacionRiesgoComponent implements OnInit {
     return i === this.escalasEdit.length - 1;
   }
 
+  /**
+   * El backend valida "al menos 1 línea", así que en teoría podría existir una configuración
+   * grabada con menos de las 9 categorías SBS (hoy no pasa: la escala real es fija). Si pasara,
+   * NO hay que inventar las filas que faltan para completar la vista — mostrar exactamente lo que
+   * vino y avisar, porque inventar acá le mostraría al usuario una escala distinta de la que usa
+   * el reporte regulatorio real. Pedido explícito del árbitro, 2026-09-07.
+   */
+  get configIncompleta(): boolean {
+    return !!this.configSel && this.configSel.escalas.length < CALIFICACIONES_RIESGO.length;
+  }
+
   // ===================== Edición =====================
 
   /** Alta de una configuración para un producto que hoy no la tiene. Las 9 filas ya vienen creadas. */

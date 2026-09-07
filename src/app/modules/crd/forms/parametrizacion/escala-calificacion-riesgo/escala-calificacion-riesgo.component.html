@@ -163,6 +163,15 @@
                 </div>
               </div>
 
+              <div class="incompleta-banner" *ngIf="configIncompleta">
+                <mat-icon>warning</mat-icon>
+                <span>
+                  Esta configuración tiene {{ config.escalas.length }} de {{ CALIFICACIONES_RIESGO.length }}
+                  calificaciones — está incompleta. Se muestra exactamente lo que devolvió el
+                  servidor, sin completar las que faltan.
+                </span>
+              </div>
+
               <table class="escalas-table">
                 <thead>
                   <tr>
@@ -341,6 +350,13 @@
                   </span>
                   <span class="historial-vigencia">
                     {{ formatoFechaArray(h.fechaDesde) }} → {{ h.fechaHasta ? formatoFechaArray(h.fechaHasta) : 'abierta' }}
+                  </span>
+                  <span
+                    class="badge badge-todas-empresas"
+                    *ngIf="h.escalas.length < CALIFICACIONES_RIESGO.length"
+                    matTooltip="Se muestra exactamente lo que devolvió el servidor, sin completar las que faltan."
+                  >
+                    incompleta ({{ h.escalas.length }}/{{ CALIFICACIONES_RIESGO.length }})
                   </span>
                 </div>
                 <table class="escalas-table compacta">
