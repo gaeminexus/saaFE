@@ -293,14 +293,16 @@ export class ReporteListadoAsientosComponent implements OnInit {
       }
     }
 
-    // Criterio: Número de asiento
+    // Criterio: Número de asiento — busca por numeroAlterno (ASNTNMAL, el número con el que
+    // el contador identifica el asiento, ej. "DI-2026-03-0044"), no por el consecutivo interno,
+    // y con LIKE para permitir coincidencias parciales (mismo patrón que Descripción, abajo).
     if (this.numeroAsiento()) {
       const criterioNumero = new DatosBusqueda();
       criterioNumero.asignaUnCampoSinTrunc(
-        TipoDatosBusqueda.LONG,
-        'numero',
+        TipoDatosBusqueda.STRING,
+        'numeroAlterno',
         this.numeroAsiento(),
-        TipoComandosBusqueda.IGUAL
+        TipoComandosBusqueda.LIKE
       );
       criterios.push(criterioNumero);
     }

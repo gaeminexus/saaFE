@@ -68,10 +68,10 @@
             <mat-form-field appearance="outline" class="full-width">
               <input
                 matInput
-                type="number"
+                type="text"
                 [value]="numeroAsiento()"
                 (input)="numeroAsiento.set($any($event.target).value)"
-                placeholder="Número de asiento"
+                placeholder="Ej. DI-2026-03-0044"
               />
             </mat-form-field>
           </div>
