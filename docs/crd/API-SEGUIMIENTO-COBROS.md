@@ -80,7 +80,7 @@ GET /rest/cbcr/seguimiento?desde=2026-08-01&hasta=2026-08-31
   "participe": "PEREZ GOMEZ JUAN CARLOS",
   "identificacion": "1712345678",
 
-  "cuentaBancaria": "Pichincha - Ahorros 2100123456",
+  "cuentaBancaria": "Pichincha - 2100123456",
 
   "usuarioRegistro": "mlopez",     "fechaRegistro": "2026-08-21T09:14:02",
   "usuarioAprobacion": "acontab",  "fechaAprobacion": "2026-08-22T11:03:44",
