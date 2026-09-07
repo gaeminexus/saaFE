@@ -236,6 +236,12 @@ export class MenurecursoshumanosComponent implements OnInit {
           route: '/menurecursoshumanos/procesos/novedades-iess',
         },
         {
+          displayName: 'Planilla de control (IESS)',
+          iconName: 'fact_check',
+          idPermiso: PermisosRrh.PLANILLA_CONTROL_IESS,
+          route: '/menurecursoshumanos/procesos/planilla-control-iess',
+        },
+        {
           displayName: 'Horas extra',
           iconName: 'more_time',
           idPermiso: PermisosRrh.HORAS_EXTRA,

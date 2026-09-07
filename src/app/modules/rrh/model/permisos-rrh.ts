@@ -77,6 +77,9 @@ export class PermisosRrh {
   /** Pago de beneficios sociales (décimos acumulados, fondos de reserva) — docs/rrh/API-PAGO-BENEFICIOS-SOCIALES.md. */
   public static readonly PAGO_BENEFICIOS_SOCIALES = 897;
 
+  /** Planilla de control del IESS — docs/rrh/API-PLANILLA-IESS.md §7.a. */
+  public static readonly PLANILLA_CONTROL_IESS = 898;
+
   // Parametrización de la fase 6
   public static readonly FORMATOS_ARCHIVO_BANCARIO = 862;
 

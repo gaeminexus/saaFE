@@ -1,0 +1,103 @@
+@use '../../../../../../styles/abstracts/colors' as *;
+@use '../../../../../../styles/abstracts/variables' as *;
+@use '../../../styles/pantalla-rrh' as *;
+
+.rrh-page {
+  @include pantalla-rrh;
+
+  .selector-anio {
+    min-width: $breakpoint-sm * 0.25;
+  }
+
+  .selector-periodo {
+    min-width: $breakpoint-sm * 0.3;
+  }
+
+  .lista-avisos {
+    margin: $spacing-xs 0 0;
+    padding-left: $spacing-md;
+  }
+
+  .resumen-cabecera {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-md;
+    margin-bottom: $spacing-sm;
+    font-size: $font-size-sm;
+    color: $text-secondary;
+
+    span {
+      display: inline-flex;
+      align-items: center;
+      gap: $spacing-xs;
+    }
+
+    mat-icon {
+      font-size: $font-size-base;
+      width: $font-size-base;
+      height: $font-size-base;
+      color: $primary-color;
+    }
+  }
+
+  // El bloque que se compara contra el portal: tiene que notarse antes que la tabla, no después.
+  .panel-comprobante {
+    border-color: $primary-color;
+    box-shadow: 0 $spacing-xs $spacing-md rgba($primary-color, 0.12);
+  }
+
+  .grid-totales {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax($breakpoint-sm * 0.28, 1fr));
+    gap: $spacing-sm;
+  }
+
+  .total-item {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs * 0.5;
+    padding: $spacing-sm;
+    border-radius: $border-radius-sm;
+    background: $background-tertiary;
+
+    .etiqueta {
+      display: flex;
+      align-items: center;
+      gap: $spacing-xs * 0.5;
+      font-size: $font-size-xs;
+      color: $text-secondary;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+
+    .valor {
+      font-size: $font-size-lg;
+      font-weight: $font-weight-semibold;
+      color: $text-primary;
+    }
+
+    .ayuda {
+      font-size: $font-size-sm;
+      width: $font-size-sm;
+      height: $font-size-sm;
+      color: $text-muted;
+      cursor: help;
+    }
+  }
+
+  // El único número que de verdad hace falta leer con el portal al lado.
+  .total-comprobante {
+    background: rgba($primary-color, 0.1);
+    border: $border-width-md solid $primary-color;
+
+    .etiqueta {
+      color: $secondary-color;
+      font-weight: $font-weight-semibold;
+    }
+
+    .valor {
+      font-size: $font-size-2xl;
+      color: $secondary-color;
+    }
+  }
+}

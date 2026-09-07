@@ -1,0 +1,132 @@
+<div class="rrh-page">
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-icon">
+        <mat-icon>fact_check</mat-icon>
+      </div>
+      <div class="header-text">
+        <h1>Planilla de control del IESS</h1>
+        <p class="subtitle">
+          Lo que debería salir en el portal, calculado desde nuestras nóminas — para enfrentarla
+          contra la real antes de pagar.
+        </p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <mat-form-field appearance="outline" class="selector-anio">
+        <mat-label>Ejercicio</mat-label>
+        <mat-select [ngModel]="anio()" (ngModelChange)="onAnioChange($event)">
+          @for (a of anios; track a) {
+            <mat-option [value]="a">{{ a }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="selector-periodo">
+        <mat-label>Período</mat-label>
+        <mat-select [ngModel]="periodoSeleccionado()" (ngModelChange)="onPeriodoChange($event)">
+          @for (p of periodos(); track p.codigo) {
+            <mat-option [value]="p.codigo">{{ etiquetaPeriodo(p) }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
+  </div>
+
+  @if (periodos().length === 0) {
+    <div class="aviso">
+      <mat-icon>event_busy</mat-icon>
+      <span>No hay períodos de nómina creados para {{ anio() }}.</span>
+    </div>
+  } @else if (periodoSeleccionado() === null) {
+    <div class="aviso">
+      <mat-icon>event</mat-icon>
+      <span>Seleccione un período para generar su planilla de control.</span>
+    </div>
+  } @else if (cargando()) {
+    <div class="aviso">
+      <mat-icon>hourglass_empty</mat-icon>
+      <span>Calculando la planilla de control…</span>
+    </div>
+  } @else if (planilla(); as p) {
+    <!-- Avisos que el backend ya detectó: la diferencia contra el portal va a ser justo esto. -->
+    @if (p.avisos?.length) {
+      <div class="aviso aviso-error">
+        <mat-icon>report_problem</mat-icon>
+        <div>
+          <strong>Antes de dar esta planilla por buena:</strong>
+          <ul class="lista-avisos">
+            @for (a of p.avisos; track a) {
+              <li>{{ a }}</li>
+            }
+          </ul>
+        </div>
+      </div>
+    }
+
+    <!--
+      El bloque que importa: es contra esto que se compara el comprobante del portal, así que va
+      primero y grande, no al pie de la tabla.
+    -->
+    <div class="panel panel-comprobante">
+      <div class="panel-titulo-tabla">
+        Comprobante del período {{ etiquetaPeriodo(p) }}
+        <button mat-stroked-button type="button" (click)="exportarCsv()" matTooltip="Exportar el detalle a CSV">
+          <mat-icon>download</mat-icon>
+          Exportar
+        </button>
+      </div>
+
+      <div class="resumen-cabecera">
+        <span><mat-icon>groups</mat-icon> {{ p.numeroAfiliados }} afiliado(s)</span>
+        <span><mat-icon>payments</mat-icon> Masa salarial: {{ p.masaSalarial | number: '1.2-2' }}</span>
+      </div>
+
+      <div class="grid-totales">
+        <div class="total-item">
+          <span class="etiqueta">Aporte personal</span>
+          <span class="valor">{{ p.totalAportePersonal | number: '1.2-2' }}</span>
+        </div>
+        <div class="total-item">
+          <span class="etiqueta">Aporte patronal</span>
+          <span class="valor">{{ p.totalAportePatronal | number: '1.2-2' }}</span>
+        </div>
+        <div class="total-item">
+          <span class="etiqueta">Total aportes (20,60 %)</span>
+          <span class="valor">{{ p.totalAportes | number: '1.2-2' }}</span>
+        </div>
+        <div class="total-item">
+          <span class="etiqueta">
+            Contribución CCC (1 %)
+            <mat-icon
+              class="ayuda"
+              matTooltip="Se calcula sobre la suma de sueldos del período, no sobre cada afiliado: por eso no aparece en ninguna fila del detalle y sí en este total."
+            >help_outline</mat-icon>
+          </span>
+          <span class="valor">{{ p.contribucionCcc | number: '1.2-2' }}</span>
+        </div>
+        <div class="total-item">
+          <span class="etiqueta">Seguro de tiempo parcial</span>
+          <span class="valor">{{ p.totalSeguroTiempoParcial | number: '1.2-2' }}</span>
+        </div>
+        <div class="total-item total-comprobante">
+          <span class="etiqueta">TOTAL COMPROBANTE</span>
+          <span class="valor">{{ p.totalComprobante | number: '1.2-2' }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-titulo">Detalle por afiliado</div>
+      <app-tabla-rrh
+        [columnas]="columnas"
+        [filas]="filas()"
+        [cargando]="cargando()"
+        [permiteEditar]="false"
+        [permiteBorrar]="false"
+        mensajeVacio="Este período no tiene afiliados con nómina calculada."
+      >
+      </app-tabla-rrh>
+    </div>
+  }
+</div>
