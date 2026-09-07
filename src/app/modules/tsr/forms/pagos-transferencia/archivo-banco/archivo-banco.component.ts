@@ -7,7 +7,7 @@ import { FormaPagoAplicacion } from '../../../../../shared/model/pagos-cobros/ca
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { etiquetaOrigenPagoExterno } from '../../../../cxp/model/origen-pago-externo';
-import { LoteGeneradoResponse, PagoProgramado } from '../../../../cxp/model/pago-programado';
+import { LoteGeneradoResponse, LotePagoResumen, PagoProgramado } from '../../../../cxp/model/pago-programado';
 import { PagoProgramadoService } from '../../../../cxp/service/pago-programado.service';
 import { EstadoPagoProgramado } from '../../../../../shared/model/pagos-cobros/catalogos-aplicacion-pago';
 import { CuentaBancaria } from '../../../model/cuenta-bancaria';
@@ -52,9 +52,17 @@ export class ArchivoBancoComponent implements OnInit {
   loteManualId: number | null = null;
   descargandoLoteManual = signal(false);
 
+  /** Bandeja de lotes ya generados (GET /pgtr/lotes), más recientes primero. */
+  lotes = signal<LotePagoResumen[]>([]);
+  cargandoLotes = signal(false);
+  errorLotes = signal('');
+  descargandoLoteFila = signal<number | null>(null);
+  readonly columnasLotes = ['idLote', 'fechaGeneracion', 'nombreArchivo', 'numeroPagos', 'valorTotal', 'cuentaOrigen', 'bancoOrigen', 'acciones'];
+
   ngOnInit(): void {
     this.cargarCuentasBancarias();
     this.cargarPagosRegistrados();
+    this.cargarLotes();
   }
 
   private cargarCuentasBancarias(): void {
@@ -161,6 +169,7 @@ export class ArchivoBancoComponent implements OnInit {
         this.loteGenerado.set(resp);
         this.descargarArchivo(resp);
         this.cargarPagosRegistrados();
+        this.cargarLotes();
         this.snackBar.open(resp.mensaje ?? 'Archivo de pagos generado.', 'Cerrar', { duration: 5000 });
       },
       error: (err: Error) => {
@@ -228,6 +237,38 @@ export class ArchivoBancoComponent implements OnInit {
       },
       error: (err: Error) => {
         this.descargandoLoteManual.set(false);
+        this.snackBar.open(err.message, 'Cerrar', { duration: 6000 });
+      },
+    });
+  }
+
+  /** GET /pgtr/lotes — bandeja de lotes ya generados, más recientes primero. */
+  cargarLotes(): void {
+    this.cargandoLotes.set(true);
+    this.errorLotes.set('');
+    this.pagoS.listarLotes({ idEmpresa: this.idEmpresaSesion() }).subscribe({
+      next: (data) => {
+        this.lotes.set(Array.isArray(data) ? data : []);
+        this.cargandoLotes.set(false);
+      },
+      error: (err: Error) => {
+        this.lotes.set([]);
+        this.cargandoLotes.set(false);
+        this.errorLotes.set(err.message);
+      },
+    });
+  }
+
+  /** Descarga desde una fila de la bandeja de lotes — mismo camino que `redescargarLote`. */
+  descargarLoteDeFila(lote: LotePagoResumen): void {
+    this.descargandoLoteFila.set(lote.idLote);
+    this.pagoS.getArchivoLote(lote.idLote).subscribe({
+      next: (archivo) => {
+        this.descargandoLoteFila.set(null);
+        this.descargarArchivo(archivo);
+      },
+      error: (err: Error) => {
+        this.descargandoLoteFila.set(null);
         this.snackBar.open(err.message, 'Cerrar', { duration: 6000 });
       },
     });

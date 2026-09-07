@@ -10,9 +10,11 @@ import {
   ConfirmarManualResponse,
   DisponibilidadCuenta,
   FacturasComprometidasResponse,
+  FiltrosLotes,
   FiltrosPorAprobar,
   GenerarLoteRequest,
   LoteGeneradoResponse,
+  LotePagoResumen,
   PagoPorAprobar,
   PagoProgramado,
   RegistrarPagoRequest,
@@ -147,6 +149,21 @@ export class PagoProgramadoService {
    */
   facturasComprometidas(idTitular: number): Observable<FacturasComprometidasResponse> {
     return this.http.get<FacturasComprometidasResponse>(`${ServiciosCxp.RS_PGTR}/facturasComprometidas/${idTitular}`).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * Bandeja de lotes ya generados, más recientes primero. Todos los filtros son opcionales.
+   * El backend responde 204 sin cuerpo si no hay lotes — Angular lo entrega como `null`.
+   */
+  listarLotes(filtros: FiltrosLotes = {}): Observable<LotePagoResumen[] | null> {
+    let params = new HttpParams();
+    if (filtros.idEmpresa != null) params = params.append('idEmpresa', filtros.idEmpresa);
+    if (filtros.desde) params = params.append('desde', filtros.desde);
+    if (filtros.hasta) params = params.append('hasta', filtros.hasta);
+    if (filtros.limite != null) params = params.append('limite', filtros.limite);
+    return this.http.get<LotePagoResumen[]>(`${ServiciosCxp.RS_PGTR}/lotes`, { params }).pipe(
       catchError(this.handleError)
     );
   }

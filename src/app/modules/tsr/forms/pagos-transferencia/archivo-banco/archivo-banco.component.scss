@@ -73,6 +73,8 @@
   // El usuario tiene que saber a qué portal va cada archivo: dos formatos que
   // se confunden es un lote de pagos mal enviado (docs/pagos/API-PAGOS-TESORERIA.md §3).
   .formato-banco-chip {
+    display: inline-block;
+    margin-left: 0.4rem;
     padding: 2px 10px;
     border-radius: 12px;
     font-size: 0.78rem;
@@ -80,5 +82,19 @@
     letter-spacing: 0.02em;
     background: #e0e7ff;
     color: #3730a3;
+  }
+
+  .panel-lotes {
+    .titulo-lotes {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+
+      button {
+        margin-left: auto;
+      }
+    }
   }
 }

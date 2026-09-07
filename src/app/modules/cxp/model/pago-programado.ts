@@ -332,3 +332,29 @@ export interface FacturasComprometidasResponse {
   idTitular: number;
   idsFacturas: number[];
 }
+
+/** Query params de GET /pgtr/lotes. Todos opcionales; `limite` es 50 en el backend si se omite. */
+export interface FiltrosLotes {
+  idEmpresa?: number;
+  desde?: string;
+  hasta?: string;
+  limite?: number;
+}
+
+/**
+ * Fila de GET /pgtr/lotes — bandeja de lotes ya generados, más recientes primero, para volver a
+ * descargar el archivo de cualquiera con GET /pgtr/lote/{id}/archivo (que reformatea desde cero,
+ * no regenera nada). 204 si no hay lotes.
+ */
+export interface LotePagoResumen {
+  idLote: number;
+  fechaGeneracion: unknown;
+  nombreArchivo: string;
+  numeroPagos: number;
+  valorTotal: number;
+  estado: number;
+  cuentaOrigen: string | null;
+  bancoOrigen: string | null;
+  /** null si el banco de la cuenta de origen no tiene formateador implementado. */
+  formatoBanco: string | null;
+}

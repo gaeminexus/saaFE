@@ -183,4 +183,101 @@
     </mat-card-content>
   </mat-card>
 
+  <mat-card class="panel panel-lotes">
+    <mat-card-content>
+      <div class="titulo-lotes">
+        <mat-icon>folder_zip</mat-icon>
+        <span>Lotes generados</span>
+        <button mat-icon-button (click)="cargarLotes()" matTooltip="Actualizar" [disabled]="cargandoLotes()">
+          <mat-icon>refresh</mat-icon>
+        </button>
+      </div>
+
+      @if (errorLotes()) {
+        <div class="mensaje-error">
+          <mat-icon>error_outline</mat-icon>
+          <span>{{ errorLotes() }}</span>
+        </div>
+      }
+
+      @if (cargandoLotes()) {
+        <div class="estado-linea">
+          <mat-spinner diameter="24"></mat-spinner>
+          <span>Cargando lotes...</span>
+        </div>
+      } @else if (lotes().length === 0) {
+        <div class="sin-datos">
+          <mat-icon>inbox</mat-icon>
+          <span>Todavía no se generó ningún lote.</span>
+        </div>
+      } @else {
+        <div class="tabla-scroll">
+          <table mat-table [dataSource]="lotes()">
+
+            <ng-container matColumnDef="idLote">
+              <th mat-header-cell *matHeaderCellDef>N° Lote</th>
+              <td mat-cell *matCellDef="let l">{{ l.idLote }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="fechaGeneracion">
+              <th mat-header-cell *matHeaderCellDef>Fecha</th>
+              <td mat-cell *matCellDef="let l">{{ formatearFecha(l.fechaGeneracion) }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="nombreArchivo">
+              <th mat-header-cell *matHeaderCellDef>Archivo</th>
+              <td mat-cell *matCellDef="let l">
+                {{ l.nombreArchivo }}
+                @if (l.formatoBanco) {
+                  <span class="formato-banco-chip">{{ l.formatoBanco }}</span>
+                }
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="numeroPagos">
+              <th mat-header-cell *matHeaderCellDef class="col-monto">N° Pagos</th>
+              <td mat-cell *matCellDef="let l" class="col-monto">{{ l.numeroPagos }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="valorTotal">
+              <th mat-header-cell *matHeaderCellDef class="col-monto">Valor total</th>
+              <td mat-cell *matCellDef="let l" class="col-monto">{{ l.valorTotal | number: '1.2-2' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="cuentaOrigen">
+              <th mat-header-cell *matHeaderCellDef>Cuenta origen</th>
+              <td mat-cell *matCellDef="let l">{{ l.cuentaOrigen || '—' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="bancoOrigen">
+              <th mat-header-cell *matHeaderCellDef>Banco origen</th>
+              <td mat-cell *matCellDef="let l">{{ l.bancoOrigen || '—' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="acciones">
+              <th mat-header-cell *matHeaderCellDef>Acciones</th>
+              <td mat-cell *matCellDef="let l">
+                <button
+                  mat-icon-button
+                  (click)="descargarLoteDeFila(l)"
+                  [disabled]="descargandoLoteFila() === l.idLote"
+                  matTooltip="Descargar archivo"
+                >
+                  @if (descargandoLoteFila() === l.idLote) {
+                    <mat-spinner diameter="18"></mat-spinner>
+                  } @else {
+                    <mat-icon>download</mat-icon>
+                  }
+                </button>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="columnasLotes"></tr>
+            <tr mat-row *matRowDef="let row; columns: columnasLotes"></tr>
+          </table>
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+
 </div>
