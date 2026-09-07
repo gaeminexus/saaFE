@@ -84,7 +84,7 @@ export class SeguimientoCobrosComponent implements AfterViewInit, AfterViewCheck
   errorCarga = signal<string | null>(null);
   filas = signal<FilaSeguimientoCobro[]>([]);
 
-  filtroTexto = '';
+  filtroTexto = signal('');
   filtroTipo = signal<TipoOperacionCobro | null>(null);
   filtroEstado = signal<number | null>(null);
 
@@ -100,7 +100,7 @@ export class SeguimientoCobrosComponent implements AfterViewInit, AfterViewCheck
   filasFiltradas = computed(() => {
     const estado = this.filtroEstado();
     const tipo = this.filtroTipo();
-    const texto = this.filtroTexto.trim().toLowerCase();
+    const texto = this.filtroTexto().trim().toLowerCase();
     return this.filas().filter((f) => {
       if (estado != null && Number(f.estado) !== estado) return false;
       if (tipo != null && f.tipoOperacion !== tipo) return false;
@@ -220,7 +220,7 @@ export class SeguimientoCobrosComponent implements AfterViewInit, AfterViewCheck
   }
 
   limpiarFiltros(): void {
-    this.filtroTexto = '';
+    this.filtroTexto.set('');
     this.filtroTipo.set(null);
     this.filtroEstado.set(null);
   }

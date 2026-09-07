@@ -66,7 +66,7 @@
     <div class="filtros">
       <mat-form-field appearance="outline" class="filtro-texto">
         <mat-label>Buscar por partícipe, identificación o referencia</mat-label>
-        <input matInput [(ngModel)]="filtroTexto" placeholder="Ej.: Pérez, 1712345678, TRF-889210" />
+        <input matInput [ngModel]="filtroTexto()" (ngModelChange)="filtroTexto.set($event)" placeholder="Ej.: Pérez, 1712345678, TRF-889210" />
       </mat-form-field>
       <mat-form-field appearance="outline" class="filtro-tipo">
         <mat-label>Tipo de operación</mat-label>
@@ -82,7 +82,7 @@
           Estado: {{ nombreEstadoCobro(filtroEstado()) }} <mat-icon>close</mat-icon>
         </button>
       }
-      <button mat-button (click)="limpiarFiltros()" [disabled]="!filtroTexto && filtroTipo() == null && filtroEstado() == null">
+      <button mat-button (click)="limpiarFiltros()" [disabled]="!filtroTexto() && filtroTipo() == null && filtroEstado() == null">
         Limpiar filtros
       </button>
       <span class="spacer"></span>
