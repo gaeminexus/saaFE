@@ -2,9 +2,13 @@ import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatDialog } from '@angular/material/dialog';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
+import { MotivoDialogComponent, MotivoDialogData } from '../../../../../shared/components/motivo-dialog/motivo-dialog.component';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
+import { usuarioSesion } from '../../../../../shared/services/usuario-sesion';
 import { ComprobanteViewerComponent } from '../../../dialog/cobros/comprobante-viewer.component';
 import { EstadoCobro, nombreEstadoCobro, nombreTipoOperacionCobro } from '../../../model/cobros/catalogos-cobro';
 import { CobroCredito, RespuestaCobroCreditoDetalle } from '../../../model/cobros/cobro-credito';
@@ -30,9 +34,13 @@ import { CobroCreditoService } from '../../../service/cobro-credito.service';
  * (docs/crd/API-COBRO-PETRO-DOS-PASOS.md). `CrdTipoOperacionCobro` (saaBE) es un catálogo cerrado
  * de 7 valores y ninguno es "CARGA_PETRO" — estructuralmente no puede aparecer acá.
  *
- * ⚠️ Pantalla de SOLO CONSULTA a propósito: un cobro PROCESADO ya movió plata y uno ANULADO ya se
- * reversó. No hay ningún botón de acción — aprobar/rechazar/reversar/reprocesar no tienen sentido
- * sobre un estado terminal, y ofrecerlos invitaría a un doble movimiento.
+ * Admite UNA acción, y solo sobre PROCESADO: el reverso del proceso
+ * (docs/crd/API-REVERSO-COBRO-CREDITO.md). Por decisión del usuario del 2026-09-07, PROCESADO dejó
+ * de ser terminal — el depósito llegó y se aplicó mal, y hasta ahora no había forma de deshacerlo
+ * desde el cobro. El reverso devuelve el cobro a APROBADO (sale de esta pantalla y aparece de
+ * nuevo en `proceso-credito`) para reprocesarse; no anula el depósito ni es equivalente a
+ * `anular` (que es para "el depósito nunca llegó" y sí es terminal). Sobre un ANULADO no hay
+ * ninguna acción: ya se reversó, no hay nada más que deshacer.
  */
 @Component({
   selector: 'app-consulta-cobros',
@@ -44,6 +52,8 @@ import { CobroCreditoService } from '../../../service/cobro-credito.service';
 export class ConsultaCobrosComponent {
   private cobros = inject(CobroCreditoService);
   private funcionesDatos = inject(FuncionesDatosService);
+  private snackBar = inject(MatSnackBar);
+  private dialog = inject(MatDialog);
 
   readonly EstadoCobro = EstadoCobro;
   readonly nombreTipoOperacionCobro = nombreTipoOperacionCobro;
@@ -56,6 +66,8 @@ export class ConsultaCobrosComponent {
   cargandoDetalle = signal(false);
   detalle = signal<RespuestaCobroCreditoDetalle | null>(null);
   errorDetalle = signal<string | null>(null);
+
+  reversandoId = signal<number | null>(null);
 
   filtroTexto = '';
   /** null = ambos estados. */
@@ -118,6 +130,45 @@ export class ConsultaCobrosComponent {
       }
       this.detalle.set(resp);
     });
+  }
+
+  // ================= reversar (solo PROCESADO) =================
+
+  reversar(cobro: CobroCredito): void {
+    if (this.reversandoId() != null) return;
+
+    const data: MotivoDialogData = {
+      titulo: `Reversar proceso del cobro #${cobro.codigo}`,
+      advertencia:
+        'Se revierten los pagos aplicados, la distribución de bandas y los asientos contables. ' +
+        'El cobro vuelve a la bandeja en estado APROBADO para reprocesarse. El depósito NO se anula.',
+      textoConfirmar: 'Reversar',
+    };
+
+    this.dialog
+      .open(MotivoDialogComponent, { width: '480px', data })
+      .afterClosed()
+      .subscribe((motivo?: string | null) => {
+        if (!motivo) return;
+        this.reversandoId.set(cobro.codigo);
+        this.cobros.reversar(cobro.codigo, { usuario: usuarioSesion(), motivo }).subscribe((resp) => {
+          this.reversandoId.set(null);
+          if (!resp.exito) {
+            this.snackBar.open(resp.mensaje ?? 'No se pudo reversar el cobro.', 'Cerrar', { duration: 6000 });
+            return;
+          }
+          // El cobro reversado pasa a APROBADO y sale de esta pantalla (que solo trae
+          // PROCESADO/ANULADO) — sin este mensaje, parece que se perdió.
+          this.snackBar.open('Cobro reversado. Volvió a la bandeja de proceso, en estado APROBADO.', 'Cerrar', {
+            duration: 7000,
+          });
+          if (this.filaSeleccionada()?.codigo === cobro.codigo) {
+            this.filaSeleccionada.set(null);
+            this.detalle.set(null);
+          }
+          this.cargar();
+        });
+      });
   }
 
   /** Préstamo #idAsoprep, o el tipo de aporte, según a cuál corresponda la línea. */

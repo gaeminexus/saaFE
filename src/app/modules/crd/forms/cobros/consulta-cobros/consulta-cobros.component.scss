@@ -102,7 +102,28 @@
       &.anulado { color: #c62828; background: rgba(198, 40, 40, 0.1); }
     }
 
-    .fi-desc { grid-area: desc; font-weight: 600; font-size: 0.86rem; align-self: center; }
+    .fi-desc {
+      grid-area: desc;
+      font-weight: 600;
+      font-size: 0.86rem;
+      align-self: center;
+
+      .fi-reversado {
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+        margin-left: 0.4rem;
+        font-size: 0.68rem;
+        font-weight: 700;
+        color: #9a5b00;
+        background: rgba(154, 91, 0, 0.12);
+        border-radius: 999px;
+        padding: 0.05rem 0.4rem;
+        vertical-align: middle;
+
+        mat-icon { font-size: 13px; width: 13px; height: 13px; }
+      }
+    }
     .fi-valor { grid-area: valor; font-weight: 700; font-variant-numeric: tabular-nums; align-self: center; }
     .fi-meta { grid-area: meta; font-size: 0.72rem; color: #a0aec0; }
   }
@@ -126,6 +147,14 @@
   }
 
   .section-label { font-size: 0.85rem; font-weight: 600; color: #4a5568; margin: 0.8rem 0 0.4rem; }
+
+  .dc-acciones {
+    display: flex;
+    justify-content: flex-end;
+    margin: 0.4rem 0 0.8rem;
+
+    button mat-spinner { display: inline-block; }
+  }
 
   .tabla-detalle {
     width: 100%;

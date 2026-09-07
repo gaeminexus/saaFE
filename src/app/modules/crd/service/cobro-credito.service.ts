@@ -123,6 +123,19 @@ export class CobroCreditoService {
   }
 
   /**
+   * HTTP 200 con el `CobroCredito` completo. `motivo` obligatorio. Solo sobre un cobro `PROCESADO`
+   * (docs/crd/API-REVERSO-COBRO-CREDITO.md §4) — vuelve a `APROBADO`, no a `REGISTRADO`, y queda
+   * reprocesable desde `proceso-credito`. No confundir con `anular`: el depósito acá SÍ llegó.
+   */
+  reversar(id: number, solicitud: SolicitudAprobacionCobro): Observable<ResultadoOperacionCobro<CobroCredito>> {
+    const url = `${ServiciosCrd.RS_CBCR}/${id}/reversar`;
+    return this.http.post<CobroCredito>(url, solicitud, this.httpOptions).pipe(
+      map((resultado) => ({ exito: true, resultado })),
+      catchError((e: HttpErrorResponse) => of(this.normalizarError<CobroCredito>(e)))
+    );
+  }
+
+  /**
    * HTTP 200 SIEMPRE con `ResultadoProcesoCobro`, incluso cuando NO se procesó nada:
    * `procesado: false` con `estado: 4` es el rechazo automático por staleness. El HTTP 200 de acá
    * NO significa éxito de negocio — `exito` en el envoltorio solo indica "la llamada no fue un

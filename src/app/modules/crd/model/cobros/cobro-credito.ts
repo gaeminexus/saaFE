@@ -147,6 +147,16 @@ export interface CobroCredito {
   fechaProceso?: string | number[] | Date | null;
   usuarioAnulacion?: string | null;
   fechaAnulacion?: string | number[] | Date | null;
+
+  /**
+   * Huella del reverso (docs/crd/API-REVERSO-COBRO-CREDITO.md §3). Opcionales porque los cobros
+   * que nunca se reversaron no traen estas cuatro columnas. `fechaReverso` es `LocalDateTime` sin
+   * zona — nunca tratarla como si trajera offset.
+   */
+  usuarioReverso?: string | null;
+  fechaReverso?: string | number[] | Date | null;
+  motivoReverso?: string | null;
+  numeroReversos?: number | null;
 }
 
 /**
