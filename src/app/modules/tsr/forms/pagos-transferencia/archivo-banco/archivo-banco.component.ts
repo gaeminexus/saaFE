@@ -48,6 +48,10 @@ export class ArchivoBancoComponent implements OnInit {
   loteGenerado = signal<LoteGeneradoResponse | null>(null);
   readonly columnasSeleccion = ['check', 'proveedor', 'factura', 'valor', 'fechaProgramada', 'cuentaOrigen'];
 
+  /** Descarga manual por número de lote — sirve para lotes que no son de la sesión en curso. */
+  loteManualId: number | null = null;
+  descargandoLoteManual = signal(false);
+
   ngOnInit(): void {
     this.cargarCuentasBancarias();
     this.cargarPagosRegistrados();
@@ -202,6 +206,30 @@ export class ArchivoBancoComponent implements OnInit {
     this.pagoS.getArchivoLote(idLote).subscribe({
       next: (lote) => this.descargarArchivo(lote),
       error: (err: Error) => this.snackBar.open(err.message, 'Cerrar', { duration: 6000 }),
+    });
+  }
+
+  /**
+   * Descarga por número de lote tecleado a mano — para llegar a un lote que no
+   * es el de la sesión en curso (p. ej. uno de ayer). Reusa `getArchivoLote` +
+   * `descargarArchivo`, el mismo camino que `redescargarLote`: `GET
+   * /pgtr/lote/{id}/archivo` reformatea desde cero en cada llamada, así que
+   * con el WAR corregido el mismo lote ya sale bien sin regenerar nada.
+   */
+  descargarLotePorNumero(): void {
+    const idLote = this.loteManualId;
+    if (!idLote) return;
+
+    this.descargandoLoteManual.set(true);
+    this.pagoS.getArchivoLote(idLote).subscribe({
+      next: (lote) => {
+        this.descargandoLoteManual.set(false);
+        this.descargarArchivo(lote);
+      },
+      error: (err: Error) => {
+        this.descargandoLoteManual.set(false);
+        this.snackBar.open(err.message, 'Cerrar', { duration: 6000 });
+      },
     });
   }
 

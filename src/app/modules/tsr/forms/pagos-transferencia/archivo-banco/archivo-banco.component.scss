@@ -13,6 +13,19 @@
     width: 56px;
   }
 
+  .panel-descarga-manual {
+    .campo-lote-manual {
+      width: 160px;
+    }
+
+    .hint-lote-manual {
+      display: block;
+      margin-top: -0.5rem;
+      font-size: 0.78rem;
+      color: #64748b;
+    }
+  }
+
   .resumen-seleccion {
     display: flex;
     flex-wrap: wrap;

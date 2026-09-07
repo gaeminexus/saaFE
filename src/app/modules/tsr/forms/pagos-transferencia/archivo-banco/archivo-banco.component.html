@@ -7,6 +7,38 @@
     </div>
   </div>
 
+  <mat-card class="panel panel-descarga-manual">
+    <mat-card-content>
+      <div class="fila-campos">
+        <mat-form-field appearance="outline" class="campo-lote-manual">
+          <mat-label>N° de lote</mat-label>
+          <input
+            matInput
+            type="number"
+            placeholder="Ej. 77"
+            [(ngModel)]="loteManualId"
+            name="loteManualId"
+            (keyup.enter)="descargarLotePorNumero()"
+          />
+        </mat-form-field>
+
+        <button
+          mat-stroked-button
+          [disabled]="!loteManualId || descargandoLoteManual()"
+          (click)="descargarLotePorNumero()"
+        >
+          @if (descargandoLoteManual()) {
+            <mat-spinner diameter="18"></mat-spinner>
+          } @else {
+            <mat-icon>download</mat-icon>
+          }
+          Descargar archivo
+        </button>
+      </div>
+      <div class="hint-lote-manual">Descarga (o vuelve a bajar) el archivo de un lote ya generado, aunque no sea de esta sesión.</div>
+    </mat-card-content>
+  </mat-card>
+
   <mat-card class="panel">
     <mat-card-content>
 
