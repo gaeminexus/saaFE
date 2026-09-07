@@ -6,6 +6,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { AppStateService } from '../../../../../shared/services/app-state.service';
 import { FuncionesDatosService, TipoFormatoFechaBackend } from '../../../../../shared/services/funciones-datos.service';
+import { JasperReportesService } from '../../../../../shared/services/jasper-reportes.service';
 import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { TitularSelectorDialogComponent } from '../../../../../shared/components/titular-selector-dialog/titular-selector-dialog.component';
@@ -61,13 +62,14 @@ export class NotaVentaCompraManualComponent implements OnInit {
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
   private funcionesDatos = inject(FuncionesDatosService);
+  private jasperReportes = inject(JasperReportesService);
 
   readonly ROL_PROVEEDOR = 2;
   readonly tiposFormaPago = SRI_FORMA_PAGO;
 
   guardando = signal(false);
   bloqueantes = signal<BloqueanteNotaVentaManual[]>([]);
-  ultimoRegistro = signal<{ numero: string; asiento: string | null; sustento: string } | null>(null);
+  ultimoRegistro = signal<{ idFactura: number; numero: string; asiento: string | null; sustento: string } | null>(null);
 
   titular = signal<Titular | null>(null);
 
@@ -312,7 +314,7 @@ export class NotaVentaCompraManualComponent implements OnInit {
           );
           return;
         }
-        this.ultimoRegistro.set({ numero: resp.numero, asiento: resp.asiento, sustento: resp.sustento });
+        this.ultimoRegistro.set({ idFactura: resp.idFactura, numero: resp.numero, asiento: resp.asiento, sustento: resp.sustento });
         this.snackBar.open(resp.mensaje || `Nota de venta ${resp.numero} registrada.`, 'Cerrar', { duration: 7000 });
         this.resetFormulario();
       },
@@ -320,6 +322,30 @@ export class NotaVentaCompraManualComponent implements OnInit {
         this.guardando.set(false);
         this.snackBar.open('Error al registrar la nota de venta: ' + mensajeDeError(err), 'Cerrar', { duration: 7000, panelClass: ['snack-error'] });
       },
+    });
+  }
+
+  // ─── IMPRIMIR (RIDE) ──────────────────────────────────────
+  // docs/logica-negocio/cxp/PLAN-REPORTE-NOTA-VENTA-COMPRA.md en saaBE. Molde:
+  // cxc/forms/emitir/facturas-ingreso/facturas-ingreso.component.ts:793 (RPRT_RIDE_FACTURA).
+  // Solo tiene sentido con una nota de venta ya grabada: se habilita recién en la respuesta
+  // exitosa del guardado (ultimoRegistro), porque la pantalla es de alta y el formulario se
+  // limpia después de grabar.
+
+  imprimirNotaVenta(): void {
+    const reg = this.ultimoRegistro();
+    if (!reg?.idFactura) return;
+
+    this.jasperReportes.generar('cxp', 'RPRT_NOTA_VENTA_COMPRA', { P_ID_FACTURA: reg.idFactura }, 'PDF').subscribe({
+      next: (blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.target = '_blank';
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+      },
+      error: (err) => this.snackBar.open('No se pudo generar el reporte: ' + mensajeDeError(err, 'error desconocido'), 'Cerrar', { duration: 6000, panelClass: ['snack-error'] }),
     });
   }
 

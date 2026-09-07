@@ -101,7 +101,6 @@
   }
 
   .col-num { min-width: 90px; }
-  .col-cod { min-width: 80px; }
   .col-acc { width: 40px; }
   .col-producto { min-width: 220px; }
   .col-desc { min-width: 200px; }
@@ -200,6 +199,8 @@
   border-radius: 6px;
   background: #e8f5e9;
   color: #2e7d32;
+
+  .nvcm-exito-texto { flex: 1; }
 }
 
 .nvcm-acciones {
