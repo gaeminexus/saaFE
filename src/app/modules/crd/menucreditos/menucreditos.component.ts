@@ -258,6 +258,11 @@ export class MenucreditosComponent {
           route: '/menucreditos/consulta-cobros',
         },
         {
+          displayName: 'Seguimiento de Cobros',
+          iconName: 'timeline',
+          route: '/menucreditos/seguimiento-cobros',
+        },
+        {
           displayName: 'Condonación de Valores',
           iconName: 'handshake',
           route: '/menucreditos/acuerdo-condonacion',

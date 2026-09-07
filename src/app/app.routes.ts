@@ -1071,6 +1071,7 @@ export const routes: Routes = [
       { path: 'bandeja-contabilidad', loadComponent: () => import('./modules/crd/forms/cobros/bandeja-contabilidad/bandeja-contabilidad.component').then((m) => m.BandejaContabilidadComponent) },
       { path: 'proceso-credito', loadComponent: () => import('./modules/crd/forms/cobros/proceso-credito/proceso-credito.component').then((m) => m.ProcesoCreditoComponent) },
       { path: 'consulta-cobros', loadComponent: () => import('./modules/crd/forms/cobros/consulta-cobros/consulta-cobros.component').then((m) => m.ConsultaCobrosComponent) },
+      { path: 'seguimiento-cobros', loadComponent: () => import('./modules/crd/forms/cobros/seguimiento-cobros/seguimiento-cobros.component').then((m) => m.SeguimientoCobrosComponent) },
       { path: 'acuerdo-condonacion', loadComponent: () => import('./modules/crd/forms/acuerdos/acuerdo-condonacion/acuerdo-condonacion.component').then((m) => m.AcuerdoCondonacionComponent) },
       {
         path: 'entidad-edit',

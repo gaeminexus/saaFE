@@ -1,0 +1,250 @@
+<div class="seguimiento-container">
+
+  <div class="header">
+    <div class="header-title">
+      <mat-icon class="header-icon">timeline</mat-icon>
+      <h1>Seguimiento de Cobros</h1>
+    </div>
+
+    <div class="selector-mes">
+      <button mat-icon-button (click)="mesAnterior()" [disabled]="cargando()" matTooltip="Mes anterior">
+        <mat-icon>chevron_left</mat-icon>
+      </button>
+      <span class="nombre-mes">{{ nombreMes() }}</span>
+      <button mat-icon-button (click)="mesSiguiente()" [disabled]="cargando()" matTooltip="Mes siguiente">
+        <mat-icon>chevron_right</mat-icon>
+      </button>
+      <button mat-stroked-button (click)="irAMesActual()" [disabled]="cargando()">Mes actual</button>
+      <button mat-icon-button (click)="cargar()" [disabled]="cargando()" matTooltip="Actualizar">
+        <mat-icon>refresh</mat-icon>
+      </button>
+    </div>
+  </div>
+
+  @if (cargando()) {
+    <div class="loading-spinner-container"><mat-spinner diameter="40"></mat-spinner></div>
+  } @else if (errorCarga(); as error) {
+    <mat-card class="vacio-card error">
+      <mat-card-content class="vacio-body">
+        <mat-icon>error_outline</mat-icon>
+        <p>{{ error }}</p>
+        <button mat-stroked-button (click)="cargar()">Reintentar</button>
+      </mat-card-content>
+    </mat-card>
+  } @else {
+
+    <!-- Tarjetas de resumen -->
+    <div class="tarjetas-resumen">
+      <mat-card class="tarjeta tarjeta-total">
+        <mat-card-content>
+          <span class="t-valor">{{ resumen().total }}</span>
+          <span class="t-label">Cobros en el mes</span>
+        </mat-card-content>
+      </mat-card>
+      <mat-card class="tarjeta tarjeta-suma">
+        <mat-card-content>
+          <span class="t-valor">{{ formatMoneda(resumen().suma) }}</span>
+          <span class="t-label">Suma de valores</span>
+        </mat-card-content>
+      </mat-card>
+      @for (estado of estadosResumen; track estado) {
+        <mat-card class="tarjeta tarjeta-estado"
+                  [class]="claseEstadoCobro[estado]"
+                  [class.activa]="filtroEstado() === estado"
+                  (click)="alternarFiltroEstado(estado)"
+                  matTooltip="Filtrar por {{ nombreEstadoCobro(estado) }}">
+          <mat-card-content>
+            <mat-icon>{{ iconoEstadoCobro[estado] }}</mat-icon>
+            <span class="t-valor">{{ resumen().conteoPorEstado.get(estado) ?? 0 }}</span>
+            <span class="t-label">{{ nombreEstadoCobro(estado) }}</span>
+          </mat-card-content>
+        </mat-card>
+      }
+    </div>
+
+    <!-- Filtros -->
+    <div class="filtros">
+      <mat-form-field appearance="outline" class="filtro-texto">
+        <mat-label>Buscar por partícipe, identificación o referencia</mat-label>
+        <input matInput [(ngModel)]="filtroTexto" placeholder="Ej.: Pérez, 1712345678, TRF-889210" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="filtro-tipo">
+        <mat-label>Tipo de operación</mat-label>
+        <mat-select [value]="filtroTipo()" (selectionChange)="filtroTipo.set($event.value)">
+          <mat-option [value]="null">Todos</mat-option>
+          @for (tipo of tiposOperacion; track tipo) {
+            <mat-option [value]="tipo">{{ nombreTipoOperacionCobro(tipo) }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+      @if (filtroEstado() != null) {
+        <button mat-stroked-button class="chip-filtro-estado" (click)="filtroEstado.set(null)">
+          Estado: {{ nombreEstadoCobro(filtroEstado()) }} <mat-icon>close</mat-icon>
+        </button>
+      }
+      <button mat-button (click)="limpiarFiltros()" [disabled]="!filtroTexto && filtroTipo() == null && filtroEstado() == null">
+        Limpiar filtros
+      </button>
+      <span class="spacer"></span>
+      <button mat-raised-button color="primary" (click)="exportarCsv()" [disabled]="!filasFiltradas().length">
+        <mat-icon>file_download</mat-icon> Exportar CSV
+      </button>
+    </div>
+
+    @if (!resumen().total) {
+      <mat-card class="vacio-card">
+        <mat-card-content class="vacio-body">
+          <mat-icon>event_busy</mat-icon>
+          <p>No hubo cobros en {{ nombreMes() }}.</p>
+        </mat-card-content>
+      </mat-card>
+    } @else {
+
+      <div class="tabla-scroll">
+        <table mat-table [dataSource]="dataSource" matSort multiTemplateDataRows class="tabla-seguimiento">
+
+          <ng-container matColumnDef="estado">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Estado</th>
+            <td mat-cell *matCellDef="let fila">
+              <span class="badge-estado" [class]="claseEstadoCobro[fila.estado]">
+                <mat-icon>{{ iconoEstadoCobro[fila.estado] }}</mat-icon>
+                {{ fila.nombreEstado }}
+              </span>
+              @if ((fila.numeroReversos ?? 0) > 0) {
+                <span class="badge-reversos" matTooltip="Se reversó {{ fila.numeroReversos }} vez(ces)">
+                  <mat-icon>history</mat-icon>{{ fila.numeroReversos }}
+                </span>
+              }
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="participe">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Partícipe</th>
+            <td mat-cell *matCellDef="let fila">
+              <div class="celda-participe">
+                <span class="cp-nombre">{{ fila.participe }}</span>
+                <span class="cp-id">{{ fila.identificacion }}</span>
+              </div>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="tipoOperacion">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Tipo</th>
+            <td mat-cell *matCellDef="let fila">{{ nombreTipoOperacionCobro(fila.tipoOperacion) }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="valor">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header class="num">Valor</th>
+            <td mat-cell *matCellDef="let fila" class="num">{{ formatMoneda(fila.valor) }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="fechaCobro">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Fecha de cobro</th>
+            <td mat-cell *matCellDef="let fila">{{ formatFecha(fila.fechaCobro) }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="referencia">
+            <th mat-header-cell *matHeaderCellDef>Referencia</th>
+            <td mat-cell *matCellDef="let fila">{{ fila.referencia || '—' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="respaldo">
+            <th mat-header-cell *matHeaderCellDef>Respaldo</th>
+            <td mat-cell *matCellDef="let fila">
+              @if (fila.tieneRespaldo) {
+                <mat-icon class="icono-respaldo-si" matTooltip="Tiene comprobante digitalizado">attach_file</mat-icon>
+              } @else {
+                <mat-icon class="icono-respaldo-no" matTooltip="Sin comprobante">block</mat-icon>
+              }
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="expandido">
+            <td mat-cell *matCellDef="let fila" [attr.colspan]="displayedColumns.length" class="celda-expandida">
+              @if (fila.idCobro === filaExpandida()) {
+                <div class="detalle-expandido">
+
+                  <div class="section-label">Línea de tiempo</div>
+                  <div class="linea-tiempo">
+                    @for (etapa of etapas(fila); track etapa.nombre; let last = $last) {
+                      <div class="etapa" [class.pendiente]="!etapa.ocurrio">
+                        <div class="etapa-icono">
+                          <mat-icon>{{ etapa.ocurrio ? etapa.icono : 'radio_button_unchecked' }}</mat-icon>
+                        </div>
+                        <div class="etapa-cuerpo">
+                          <div class="etapa-nombre">{{ etapa.nombre }}</div>
+                          @if (etapa.ocurrio) {
+                            <div class="etapa-dato">{{ etapa.usuario || '—' }} · {{ formatFechaHora(etapa.fecha) }}</div>
+                            @if (etapa.duracionHoras != null) {
+                              <div class="etapa-duracion">Tardó {{ formatDuracion(etapa.duracionHoras) }}</div>
+                            }
+                          } @else {
+                            <div class="etapa-dato pendiente-texto">Todavía no ocurrió</div>
+                          }
+                        </div>
+                      </div>
+                      @if (!last) {
+                        <div class="etapa-conector" [class.pendiente]="!etapa.ocurrio"></div>
+                      }
+                    }
+                  </div>
+
+                  @if (fila.estado === EstadoCobro.RECHAZADO && fila.motivoRechazo) {
+                    <div class="aviso aviso-rechazo">
+                      <mat-icon>report</mat-icon>
+                      <div><strong>Rechazado</strong> por {{ fila.usuarioRechazo || '—' }} · {{ formatFechaHora(fila.fechaRechazo) }}<br>{{ fila.motivoRechazo }}</div>
+                    </div>
+                  }
+                  @if (fila.estado === EstadoCobro.ANULADO) {
+                    <div class="aviso aviso-anulado">
+                      <mat-icon>block</mat-icon>
+                      <div><strong>Anulado</strong> por {{ fila.usuarioAnulacion || '—' }} · {{ formatFechaHora(fila.fechaAnulacion) }}<br>{{ fila.motivoAnulacion || '—' }}</div>
+                    </div>
+                  }
+                  @if ((fila.numeroReversos ?? 0) > 0) {
+                    <div class="aviso aviso-reverso">
+                      <mat-icon>history</mat-icon>
+                      <div><strong>Último reverso ({{ fila.numeroReversos }})</strong> por {{ fila.usuarioReverso || '—' }} · {{ formatFechaHora(fila.fechaReverso) }}<br>{{ fila.motivoReverso || '—' }}</div>
+                    </div>
+                  }
+
+                  @if (fila.asientoTransitorio || fila.asientoReparto || fila.asientoDefinitivo) {
+                    <div class="section-label">Asientos</div>
+                    <div class="asientos">
+                      @if (fila.asientoTransitorio) { <span class="chip-asiento">Transitorio: {{ fila.asientoTransitorio }}</span> }
+                      @if (fila.asientoReparto) { <span class="chip-asiento">Reparto: {{ fila.asientoReparto }}</span> }
+                      @if (fila.asientoDefinitivo) { <span class="chip-asiento">Definitivo: {{ fila.asientoDefinitivo }}</span> }
+                    </div>
+                  }
+
+                  <div class="section-label">Comprobante</div>
+                  @if (fila.tieneRespaldo) {
+                    <app-comprobante-viewer [ruta]="fila.rutaRespaldo"></app-comprobante-viewer>
+                  } @else {
+                    <div class="sin-comprobante">
+                      <mat-icon>description</mat-icon>
+                      <span>Este cobro no tiene comprobante digitalizado adjunto.</span>
+                    </div>
+                  }
+
+                </div>
+              }
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let fila; columns: displayedColumns;"
+              class="fila-datos"
+              [class.fila-activa]="filaExpandida() === fila.idCobro"
+              (click)="alternarExpansion(fila)"></tr>
+          <tr mat-row *matRowDef="let fila; columns: ['expandido'];" class="fila-detalle"></tr>
+
+        </table>
+      </div>
+
+      <mat-paginator [pageSizeOptions]="[10, 25, 50, 100]" [pageSize]="25" showFirstLastButtons></mat-paginator>
+
+    }
+  }
+
+</div>

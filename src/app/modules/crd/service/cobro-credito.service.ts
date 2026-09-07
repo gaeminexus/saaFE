@@ -12,6 +12,7 @@ import {
   SolicitudEdicionCobro,
   SolicitudRegistroCobro,
 } from '../model/cobros/cobro-credito';
+import { FilaSeguimientoCobro } from '../model/cobros/seguimiento-cobro';
 import { ServiciosCrd } from './ws-crd';
 
 /**
@@ -73,6 +74,16 @@ export class CobroCreditoService {
   porEntidad(idEntidad: number): Observable<CobroCredito[]> {
     const url = `${ServiciosCrd.RS_CBCR}/porEntidad/${idEntidad}`;
     return this.http.get<CobroCredito[]>(url).pipe(catchError(() => of([])));
+  }
+
+  /**
+   * `desde`/`hasta` en `yyyy-MM-dd`, inclusive los dos (docs/crd/API-SEGUIMIENTO-COBROS.md §3).
+   * `null` distingue "la consulta falló" de `[]` ("no hubo cobros en el rango") — quien llama
+   * tiene que ramificar por eso en el punto de consumo, no tratar `null` como lista vacía.
+   */
+  seguimiento(desde: string, hasta: string): Observable<FilaSeguimientoCobro[] | null> {
+    const url = `${ServiciosCrd.RS_CBCR}/seguimiento?desde=${desde}&hasta=${hasta}`;
+    return this.http.get<FilaSeguimientoCobro[]>(url).pipe(catchError(() => of(null)));
   }
 
   // ===================== Escritura =====================
