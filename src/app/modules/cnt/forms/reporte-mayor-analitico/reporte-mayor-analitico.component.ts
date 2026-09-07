@@ -167,7 +167,11 @@ export class ReporteMayorAnaliticoComponent implements OnInit, OnDestroy {
     });
     ref.afterClosed().subscribe(cuenta => {
       if (!cuenta) return;
-      this.form.patchValue({ cuentaInicio: cuenta.cuentaContable });
+      // Siempre sobreescribe cuentaFin (aunque ya tenga un valor): la mayoría de
+      // las veces el mayor se saca de una sola cuenta, y "solo si está vacío"
+      // deja rangos inválidos (desde=B, hasta=A de una elección anterior) que
+      // salen vacíos sin avisar. Quien quiera un rango pone "hasta" después.
+      this.form.patchValue({ cuentaInicio: cuenta.cuentaContable, cuentaFin: cuenta.cuentaContable });
     });
   }
 
