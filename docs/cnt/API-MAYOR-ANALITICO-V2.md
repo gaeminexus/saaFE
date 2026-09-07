@@ -229,3 +229,28 @@ su `asiento` anidado. No se inventa un DTO nuevo: la V2 reusa el modelo que el F
    `.sql` antes del WAR.
 2. **El WAR va antes que el FE**, porque la V2 consume `/detalleReporte/{secuencial}`, que el WAR
    viejo no tiene. Al revés (WAR nuevo, FE viejo) es inofensivo: no se toca ningún endpoint existente.
+
+### 🔴 Y si se despliega al revés, el síntoma MIENTE
+
+`ReporteMyanService.handleErrorLista` (`reporte-myan.service.ts:83-87`) se traga **cualquier** error
+y devuelve lista vacía:
+
+```ts
+private handleErrorLista<T>() {
+  return (error: HttpErrorResponse): Observable<T[]> => {
+    return of([]);
+  };
+}
+```
+
+Así que con el WAR viejo, `/detalleReporte/{secuencial}` responde **404**, el servicio lo convierte
+en `[]`, y la vista «Todos los movimientos» muestra **«Sin movimientos»** — no un error.
+
+**El operador ve un reporte vacío y concluye que no hay datos, cuando lo que pasa es que falta
+desplegar el backend.** Es el §8.1 del registro de reservas —*un fallo de consulta se lee como «no
+hay datos»*— en su forma más directa, y acá tiene un disparador concreto y previsible: el orden de
+despliegue.
+
+⚠️ **Regla práctica:** si la vista B sale vacía y la vista A tiene datos, **no es el reporte, es el
+WAR.** Las dos leen del mismo reporte generado; que una traiga filas y la otra no es imposible salvo
+que el endpoint no exista.
