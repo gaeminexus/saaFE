@@ -195,3 +195,55 @@ apuntando a `POST /mvch/anular/{id}`, y es el mismo endpoint.
 - **`tsr` ya depende de `cxp`**: `MovimientoCajaChicaServiceImpl` inyecta `AplicacionPagoCxpService`.
   Inyectar además `PagoProgramadoService` no agrega una dirección de dependencia nueva. Lo que sigue
   prohibido es que `tsr`, `cnt` o `cxp` dependan de `crd`.
+
+---
+
+## 7. Dos hallazgos del 2026-09-07, encontrados usando el sistema
+
+Salieron de anular una reposición real (`TSR.MVCH` 5 / `PGS.PGTR` 156 de «Caja Chica oficinas»).
+Ninguno de los dos es teórico: los dos ya pasaron en producción.
+
+### 7.1 Un pago de caja chica `POR_APROBAR` queda atrapado
+
+**Ninguna pantalla puede anularlo.** La bandeja de `tsr/forms/procesos/aprobacion-pagos` solo
+aprueba — no tiene rechazar ni anular. Y `cxp/forms/pagos/pagos-transferencia` no lista los
+`POR_APROBAR` (su `estadosFiltro:165-171` arranca en «Registrado») y su `puedeAnular():963-965`
+exige `REGISTRADO` o `EN_ARCHIVO`. El endpoint `POST /pgtr/anular/{id}` sí lo acepta —
+`anularPago:1865-1885` solo rechaza ANULADO, con cheque y CONFIRMADO— pero nadie lo llama para ese
+estado.
+
+**El javadoc de `anularMovimientoCajaChicaSiAplica:2931-2941` dice que ese camino es «hoy
+inalcanzable en la práctica porque el pago de caja chica nace CONFIRMADO (sólo admite cheque o
+débito automático, nunca transferencia)». Eso dejó de ser cierto.** El cambio del 2026-08-30
+(`registrarPagoBanco:450-453`) hizo opcional la cuenta bancaria de origen: **sin cuenta, el pago
+nace `POR_APROBAR`**. El pago 156 es exactamente ese caso. El comentario quedó desactualizado y
+describe una garantía que ya no existe.
+
+**El endpoint del §4 lo resuelve** (estados 0/1/2 → `anularPago`). Mientras no exista, la única
+salida es llamar el endpoint a mano o SQL:
+`docs/logica-negocio/tsr/sql/lap1-07-anular-reposicion-mvch5-pgtr156.sql`.
+
+### 7.2 ⚠️ Sin decidir — la reposición suma al saldo antes de que el dinero llegue
+
+El movimiento de reposición **nace ACTIVO y entra al saldo en el instante en que se registra**
+(`registrarPagoBanco:502-512`), sin esperar a que el pago se confirme. Y `calcularSaldo` suma todos
+los movimientos activos sin mirar el estado del pago. Así que **el saldo de la caja incluye dinero
+que todavía no salió del banco.**
+
+No es un detalle contable: el control que impide gastar de más
+(`MovimientoCajaChicaServiceImpl:169`, `valor > saldoActual + TOLERANCIA`) compara contra ese saldo
+inflado. **Se pueden registrar gastos contra plata que no está en la caja.**
+
+Ya pasó, y con números: la caja 1 abrió con 249.58, tiene 361.70 en gastos activos y una reposición
+de 180.25 cuyo pago nunca se aprobó. Saldo en pantalla: 68.13. Saldo real disponible: **−112.12**.
+Los gastos de agosto se cargaron *después* de registrar la reposición de septiembre, y el sistema
+los aceptó uno por uno.
+
+**Decisión pendiente del usuario** — no implementar ninguna de estas sin que la elija:
+
+- que `calcularSaldo` cuente la reposición solo cuando su pago esté `CONFIRMADO`, o
+- que el movimiento nazca en un estado «en tránsito» que no suma, y pase a activo al confirmarse, o
+- dejarlo como está y controlarlo por procedimiento.
+
+La primera es la más chica de escribir, pero **cambia el saldo mostrado de toda caja con una
+reposición en curso**, así que no es un ajuste silencioso.
