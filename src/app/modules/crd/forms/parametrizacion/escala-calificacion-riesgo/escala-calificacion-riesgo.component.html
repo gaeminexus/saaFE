@@ -145,9 +145,13 @@
                   <button
                     mat-stroked-button
                     color="primary"
-                    *ngIf="config.editable"
+                    [disabled]="!config.editable"
                     (click)="editarConfiguracion()"
-                    matTooltip="Editar en el lugar (la vigencia todavía no empieza)"
+                    [matTooltip]="
+                      config.editable
+                        ? 'Editar en el lugar (la vigencia todavía no empieza)'
+                        : 'Esta vigencia ya empezó: no se puede editar en el lugar'
+                    "
                   >
                     <mat-icon>edit</mat-icon>
                     Editar
@@ -161,6 +165,22 @@
                     Nueva vigencia
                   </button>
                 </div>
+              </div>
+
+              <!--
+                No alcanza con el tooltip del botón deshabilitado: el motivo tiene que estar a la
+                vista. Mismo tratamiento que bandas-cartera, pedido del usuario vía árbitro,
+                2026-09-07 (la pantalla de bandas confundió a un usuario real; ésta se copió del
+                mismo molde antes de que nadie la usara).
+              -->
+              <div class="no-editable-aviso" *ngIf="!config.editable">
+                <mat-icon>info</mat-icon>
+                <span>
+                  Esta configuración ya está vigente desde el {{ formatoFechaArray(config.fechaDesde) }}:
+                  sus % de provisión ya se usaron para reportar el G48 y no se puede editar en el
+                  lugar (cambiar un rango hacia atrás cambiaría provisiones ya informadas). Use
+                  <strong>"Nueva vigencia"</strong> para crear una configuración a partir de una fecha.
+                </span>
               </div>
 
               <div class="incompleta-banner" *ngIf="configIncompleta">

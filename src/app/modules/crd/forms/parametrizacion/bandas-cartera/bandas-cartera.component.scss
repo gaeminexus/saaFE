@@ -59,6 +59,25 @@
   }
 }
 
+/* Por qué "Editar" está deshabilitado — visible, no solo en el tooltip del botón. */
+.no-editable-aviso {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 4px 0 12px;
+  padding: 10px 14px;
+  background: #fffbeb;
+  border-left: 4px solid #d97706;
+  border-radius: 4px;
+  font-size: 0.83rem;
+  color: #92400e;
+
+  mat-icon {
+    color: #d97706;
+    flex-shrink: 0;
+  }
+}
+
 /* ===== Estados de carga / error / vacío ===== */
 .loading-container,
 .error-state,

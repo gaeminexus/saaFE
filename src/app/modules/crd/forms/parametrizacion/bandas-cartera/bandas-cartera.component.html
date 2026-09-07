@@ -176,9 +176,13 @@
                   <button
                     mat-stroked-button
                     color="primary"
-                    *ngIf="config.editable"
+                    [disabled]="!config.editable"
                     (click)="editarConfiguracion()"
-                    matTooltip="Editar en el lugar (la vigencia todavía no empieza)"
+                    [matTooltip]="
+                      config.editable
+                        ? 'Editar en el lugar (la vigencia todavía no empieza)'
+                        : 'Esta vigencia ya empezó: no se puede editar en el lugar'
+                    "
                   >
                     <mat-icon>edit</mat-icon>
                     Editar
@@ -192,6 +196,21 @@
                     Nueva vigencia
                   </button>
                 </div>
+              </div>
+
+              <!--
+                No alcanza con el tooltip del botón deshabilitado (nadie pasa el mouse por un
+                botón que no piensa apretar): el motivo tiene que estar a la vista. Pedido del
+                usuario vía árbitro, 2026-09-07 — llegó tras un caso real donde el usuario no
+                entendió por qué "Editar" no estaba y creyó que la pantalla estaba rota.
+              -->
+              <div class="no-editable-aviso" *ngIf="!config.editable">
+                <mat-icon>info</mat-icon>
+                <span>
+                  Esta configuración ya está vigente desde el {{ formatoFechaArray(config.fechaDesde) }}:
+                  sus bandas ya clasificaron asientos y no se puede editar en el lugar. Use
+                  <strong>"Nueva vigencia"</strong> para crear una configuración a partir de una fecha.
+                </span>
               </div>
 
               <table class="bandas-table">
