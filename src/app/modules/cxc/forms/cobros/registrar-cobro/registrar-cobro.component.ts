@@ -159,7 +159,12 @@ export class RegistrarCobroComponent implements OnInit {
 
   get excedeSaldo(): boolean {
     const pendiente = this.saldo()?.saldoPendiente;
-    return pendiente != null && this.valorNumerico > pendiente;
+    if (pendiente == null) return false;
+    // En dinero se compara en centavos: el backend manda el saldo como resta de
+    // flotantes (297.75 - 38.84 = 258.90999999999997) y comparar directo hace que
+    // el saldo EXACTO se lea como excedido. Math.round, no toFixed ni truncado:
+    // truncar dejaría pasar 258.919 como si fuera 258.91.
+    return Math.round(this.valorNumerico * 100) > Math.round(pendiente * 100);
   }
 
   get puedeConfirmar(): boolean {
