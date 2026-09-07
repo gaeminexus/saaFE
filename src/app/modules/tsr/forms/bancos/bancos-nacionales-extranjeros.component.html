@@ -43,9 +43,16 @@
         />
       </mat-form-field>
 
-      <div class="checkbox-field">
-        <mat-checkbox [(ngModel)]="tarjetaCredito"> Tarjeta de Crédito </mat-checkbox>
-      </div>
+      <mat-form-field appearance="outline">
+        <mat-label>Código BCE</mat-label>
+        <input
+          matInput
+          type="number"
+          placeholder="Código de institución BCE"
+          [(ngModel)]="codigoBce"
+          (keyup.enter)="guardar()"
+        />
+      </mat-form-field>
 
       <mat-form-field appearance="outline">
         <mat-label>Estado</mat-label>
@@ -104,7 +111,7 @@
         </ng-container>
 
         <ng-container matColumnDef="tarjeta">
-          <th mat-header-cell *matHeaderCellDef>Tarjeta</th>
+          <th mat-header-cell *matHeaderCellDef>Código BCE</th>
           <td mat-cell *matCellDef="let row">{{ mostrarTarjeta(row) }}</td>
         </ng-container>
 

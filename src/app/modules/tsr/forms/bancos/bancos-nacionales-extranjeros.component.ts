@@ -2,7 +2,6 @@ import { CommonModule } from '@angular/common';
 import { Component, computed, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
-import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -33,7 +32,6 @@ import { BancoExternoService } from '../../service/banco-externo.service';
     MatInputModule,
     MatIconModule,
     MatButtonModule,
-    MatCheckboxModule,
     MatTooltipModule,
   ],
   templateUrl: './bancos-nacionales-extranjeros.component.html',
@@ -58,7 +56,8 @@ export class BancosNacionalesExtranjerosComponent implements OnInit {
 
   // Formulario
   entidadBancaria = '';
-  tarjetaCredito = false;
+  /** Código de institución financiera del BCE (`tarjeta` en el payload — ver banco-externo.model.ts). */
+  codigoBce: number | null = null;
   estado: 0 | 1 = 1;
   codigoEdicion: number | null = null; // null = crear, número = editar
 
@@ -176,7 +175,9 @@ export class BancosNacionalesExtranjerosComponent implements OnInit {
     const payload: any = {
       nombre: this.entidadBancaria?.trim(),
       estado: this.estado,
-      tarjeta: this.tarjetaCredito ? 1 : 0, // Backend espera Long (1 o 0)
+      // Código de institución del BCE, NUNCA 1/0: EntityDaoImpl.save() hace
+      // em.merge() desnudo, así que mandar 1 o 0 acá pisa el código real.
+      tarjeta: this.codigoBce,
     };
 
     this.loading.set(true);
@@ -197,12 +198,18 @@ export class BancosNacionalesExtranjerosComponent implements OnInit {
       // Actualizar existente - incluir código y preservar fechaIngreso
       payload.codigo = this.codigoEdicion;
 
-      // Buscar el registro original para preservar la fechaIngreso
+      // Buscar el registro original para preservar la fechaIngreso, y el
+      // código BCE si el usuario dejó el campo vacío por error: em.merge()
+      // grabaría NULL y borraría el código real, exactamente el defecto que
+      // se está corrigiendo acá.
       const registroOriginal = this.allData().find(
         (item) => (item as any).codigo === this.codigoEdicion,
       );
       if (registroOriginal && (registroOriginal as any).fechaIngreso) {
         payload.fechaIngreso = (registroOriginal as any).fechaIngreso;
+      }
+      if (payload.tarjeta === null && registroOriginal && (registroOriginal as any).tarjeta != null) {
+        payload.tarjeta = (registroOriginal as any).tarjeta;
       }
 
       this.bancoExternoService.update(payload).subscribe({
@@ -221,7 +228,8 @@ export class BancosNacionalesExtranjerosComponent implements OnInit {
   editar(row: BancoExterno): void {
     this.codigoEdicion = (row as any).codigo ?? null;
     this.entidadBancaria = (row as any).nombre ?? '';
-    this.tarjetaCredito = !!((row as any).tarjetaCredito ?? (row as any).tarjeta);
+    const codigoBce = (row as any).tarjetaCredito ?? (row as any).tarjeta;
+    this.codigoBce = codigoBce === null || codigoBce === undefined ? null : Number(codigoBce);
     this.estado = (row as any).estado ?? 1;
     this.errorMsg.set('');
 
@@ -256,7 +264,7 @@ export class BancosNacionalesExtranjerosComponent implements OnInit {
   limpiarFormulario(): void {
     this.codigoEdicion = null;
     this.entidadBancaria = '';
-    this.tarjetaCredito = false;
+    this.codigoBce = null;
     this.estado = 1;
     this.errorMsg.set('');
   }
@@ -313,7 +321,8 @@ export class BancosNacionalesExtranjerosComponent implements OnInit {
     // Intentar múltiples nombres de campo por compatibilidad
     const v = (row as any).tarjetaCredito ?? (row as any).tarjeta;
     if (v === null || v === undefined) return '—';
-    return !!v ? 'Sí' : 'No';
+    // Código de institución del BCE, no un booleano: mostrar el número tal cual.
+    return String(v);
   }
 
   mostrarFechaIngreso(row: BancoExterno): string {
@@ -324,7 +333,7 @@ export class BancosNacionalesExtranjerosComponent implements OnInit {
 
   // Export helpers
   exportToCSV(): void {
-    const headers = ['Código', 'Nombre', 'Tarjeta', 'Estado', 'Fecha Ingreso'];
+    const headers = ['Código', 'Nombre', 'Código BCE', 'Estado', 'Fecha Ingreso'];
     const dataKeys = ['codigo', 'nombre', 'tarjetaLabel', 'estadoLabel', 'fechaIngreso'];
     const exportData = (this.allData() || []).map((row: any) => ({
       codigo: row.codigo ?? '',
@@ -337,7 +346,7 @@ export class BancosNacionalesExtranjerosComponent implements OnInit {
   }
 
   exportToPDF(): void {
-    const headers = ['Código', 'Nombre', 'Tarjeta', 'Estado', 'Fecha Ingreso'];
+    const headers = ['Código', 'Nombre', 'Código BCE', 'Estado', 'Fecha Ingreso'];
     const dataKeys = ['codigo', 'nombre', 'tarjetaLabel', 'estadoLabel', 'fechaIngreso'];
     const exportData = (this.allData() || []).map((row: any) => ({
       codigo: row.codigo ?? '',
