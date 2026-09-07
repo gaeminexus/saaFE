@@ -197,88 +197,92 @@ export class MenutesoreriaComponent implements OnInit {
             },
           ],
         },
-        {
-          displayName: 'Cobros',
-          iconName: 'attach_money',
-          idPermiso: 830,
-          children: [
-            {
-              displayName: 'Cierre de Caja',
-              iconName: 'lock',
-              idPermiso: 830,
-              route: '/menutesoreria/procesos/cobros/cierre-caja',
-            },
-            {
-              displayName: 'Depósitos',
-              iconName: 'account_balance_wallet',
-              idPermiso: 830,
-              children: [
-                {
-                  displayName: 'Envío',
-                  iconName: 'outbox',
-                  idPermiso: 830,
-                  route: '/menutesoreria/procesos/cobros/depositos/envio',
-                },
-                {
-                  displayName: 'Ratificación',
-                  iconName: 'verified',
-                  idPermiso: 830,
-                  route: '/menutesoreria/procesos/cobros/depositos/ratificacion',
-                },
-              ],
-            },
-            {
-              displayName: 'Consultas',
-              iconName: 'search',
-              idPermiso: 830,
-              children: [
-                {
-                  displayName: 'Cobros',
-                  iconName: 'analytics',
-                  idPermiso: 830,
-                  route: '/menutesoreria/procesos/cobros/consultas/cobros',
-                },
-                {
-                  displayName: 'Cierres',
-                  iconName: 'fact_check',
-                  idPermiso: 830,
-                  route: '/menutesoreria/procesos/cobros/consultas/cierres',
-                },
-              ],
-            },
-            {
-              displayName: 'Procesos',
-              iconName: 'settings',
-              idPermiso: 830,
-              children: [
-                {
-                  displayName: 'Cobros',
-                  iconName: 'payments',
-                  idPermiso: 830,
-                  route: '/menutesoreria/procesos/cobros/procesos/cobros',
-                },
-                {
-                  displayName: 'Cierres',
-                  iconName: 'task_alt',
-                  idPermiso: 830,
-                  route: '/menutesoreria/procesos/cobros/procesos/cierres',
-                },
-                {
-                  displayName: 'Depósitos',
-                  iconName: 'account_balance_wallet',
-                  idPermiso: 830,
-                  route: '/menutesoreria/procesos/cobros/procesos/depositos',
-                },
-                {
-                  displayName: 'Ratificación Depósitos',
-                  iconName: 'rule',
-                  idPermiso: 830,
-                  route: '/menutesoreria/procesos/cobros/procesos/ratificacion-depositos',
-                },
-              ],
-            },
-          ],
-        },
+        // "Cobros" (Cierre de Caja, Depósitos, Consultas, Procesos — 10 pantallas) se retiró del
+        // menú el 2026-09-07 por decisión del usuario (docs/logica-negocio/tsr/PLAN-MENU-TESORERIA-Y-CHEQUES.md
+        // M1): las rutas y los componentes NO se tocan, siguen alcanzables por URL. Si hace falta
+        // devolverlo al menú, es descomentar este bloque.
+        // {
+        //   displayName: 'Cobros',
+        //   iconName: 'attach_money',
+        //   idPermiso: 830,
+        //   children: [
+        //     {
+        //       displayName: 'Cierre de Caja',
+        //       iconName: 'lock',
+        //       idPermiso: 830,
+        //       route: '/menutesoreria/procesos/cobros/cierre-caja',
+        //     },
+        //     {
+        //       displayName: 'Depósitos',
+        //       iconName: 'account_balance_wallet',
+        //       idPermiso: 830,
+        //       children: [
+        //         {
+        //           displayName: 'Envío',
+        //           iconName: 'outbox',
+        //           idPermiso: 830,
+        //           route: '/menutesoreria/procesos/cobros/depositos/envio',
+        //         },
+        //         {
+        //           displayName: 'Ratificación',
+        //           iconName: 'verified',
+        //           idPermiso: 830,
+        //           route: '/menutesoreria/procesos/cobros/depositos/ratificacion',
+        //         },
+        //       ],
+        //     },
+        //     {
+        //       displayName: 'Consultas',
+        //       iconName: 'search',
+        //       idPermiso: 830,
+        //       children: [
+        //         {
+        //           displayName: 'Cobros',
+        //           iconName: 'analytics',
+        //           idPermiso: 830,
+        //           route: '/menutesoreria/procesos/cobros/consultas/cobros',
+        //         },
+        //         {
+        //           displayName: 'Cierres',
+        //           iconName: 'fact_check',
+        //           idPermiso: 830,
+        //           route: '/menutesoreria/procesos/cobros/consultas/cierres',
+        //         },
+        //       ],
+        //     },
+        //     {
+        //       displayName: 'Procesos',
+        //       iconName: 'settings',
+        //       idPermiso: 830,
+        //       children: [
+        //         {
+        //           displayName: 'Cobros',
+        //           iconName: 'payments',
+        //           idPermiso: 830,
+        //           route: '/menutesoreria/procesos/cobros/procesos/cobros',
+        //         },
+        //         {
+        //           displayName: 'Cierres',
+        //           iconName: 'task_alt',
+        //           idPermiso: 830,
+        //           route: '/menutesoreria/procesos/cobros/procesos/cierres',
+        //         },
+        //         {
+        //           displayName: 'Depósitos',
+        //           iconName: 'account_balance_wallet',
+        //           idPermiso: 830,
+        //           route: '/menutesoreria/procesos/cobros/procesos/depositos',
+        //         },
+        //         {
+        //           displayName: 'Ratificación Depósitos',
+        //           iconName: 'rule',
+        //           idPermiso: 830,
+        //           route: '/menutesoreria/procesos/cobros/procesos/ratificacion-depositos',
+        //         },
+        //       ],
+        //     },
+        //   ],
+        // },
         {
           displayName: 'Caja Chica',
           iconName: 'savings',
@@ -339,53 +343,44 @@ export class MenutesoreriaComponent implements OnInit {
           ],
         },
         {
-          displayName: 'Pagos',
-          iconName: 'payments',
+          // Reemplaza al nodo "Pagos" el 2026-09-07 (docs/logica-negocio/tsr/PLAN-MENU-TESORERIA-Y-CHEQUES.md
+          // M2/M3). Se llama "Cheques", no "Pagos": ese nombre lo confundía con "Pagos por
+          // transferencia" (el circuito nuevo, arriba), que es otra cosa. Plano, sin los
+          // subniveles "Consulta"/"Procesos" de antes, y en el orden del ciclo real. Las rutas
+          // no cambiaron, solo el menú.
+          displayName: 'Cheques',
+          iconName: 'receipt_long',
           idPermiso: 830,
           children: [
             {
-              displayName: 'Consulta',
-              iconName: 'manage_search',
+              displayName: 'Solicitud de pago',
+              iconName: 'playlist_add',
               idPermiso: 830,
-              children: [
-                {
-                  displayName: 'Cheques',
-                  iconName: 'receipt_long',
-                  idPermiso: 830,
-                  route: '/menutesoreria/procesos/pagos/consulta/cheques',
-                },
-              ],
+              route: '/menutesoreria/procesos/pagos/procesos/solicitud-pagos',
             },
             {
-              displayName: 'Procesos',
-              iconName: 'settings',
+              displayName: 'Cheques generados',
+              iconName: 'done_all',
               idPermiso: 830,
-              children: [
-                {
-                  displayName: 'Solicitud Pagos',
-                  iconName: 'playlist_add',
-                  idPermiso: 830,
-                  route: '/menutesoreria/procesos/pagos/procesos/solicitud-pagos',
-                },
-                {
-                  displayName: 'Cheques Generados',
-                  iconName: 'done_all',
-                  idPermiso: 830,
-                  route: '/menutesoreria/procesos/pagos/procesos/cheques-generados',
-                },
-                {
-                  displayName: 'Cheques Impresos',
-                  iconName: 'print',
-                  idPermiso: 830,
-                  route: '/menutesoreria/procesos/pagos/procesos/cheques-impresos',
-                },
-                {
-                  displayName: 'Cheques Entregados',
-                  iconName: 'task_alt',
-                  idPermiso: 830,
-                  route: '/menutesoreria/procesos/pagos/procesos/cheques-entregados',
-                },
-              ],
+              route: '/menutesoreria/procesos/pagos/procesos/cheques-generados',
+            },
+            {
+              displayName: 'Cheques impresos',
+              iconName: 'print',
+              idPermiso: 830,
+              route: '/menutesoreria/procesos/pagos/procesos/cheques-impresos',
+            },
+            {
+              displayName: 'Cheques entregados',
+              iconName: 'task_alt',
+              idPermiso: 830,
+              route: '/menutesoreria/procesos/pagos/procesos/cheques-entregados',
+            },
+            {
+              displayName: 'Consulta de cheques',
+              iconName: 'manage_search',
+              idPermiso: 830,
+              route: '/menutesoreria/procesos/pagos/consulta/cheques',
             },
           ],
         },
