@@ -81,7 +81,8 @@ export class AprobacionPagosComponent implements OnInit {
   );
 
   // ── Filtros y bandeja ──────────────────────────────────────────────
-  filtroOrigen = signal<OrigenPago | null>(null);
+  /** Vacío = todos los orígenes (docs/pagos/API-BANDEJA-APROBACION-MULTIORIGEN.md §5.1). */
+  filtroOrigenes = signal<OrigenPago[]>([]);
   filtroDesde = signal<string>('');
   filtroHasta = signal<string>('');
 
@@ -189,7 +190,7 @@ export class AprobacionPagosComponent implements OnInit {
 
     this.pagoS.porAprobar({
       idEmpresa,
-      origen: this.filtroOrigen() ?? undefined,
+      origenes: this.filtroOrigenes(),
       desde: this.filtroDesde() || undefined,
       hasta: this.filtroHasta() || undefined,
     }).subscribe({
@@ -207,7 +208,7 @@ export class AprobacionPagosComponent implements OnInit {
   }
 
   limpiarFiltros(): void {
-    this.filtroOrigen.set(null);
+    this.filtroOrigenes.set([]);
     this.filtroDesde.set('');
     this.filtroHasta.set('');
     this.buscar();

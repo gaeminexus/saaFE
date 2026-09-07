@@ -251,10 +251,14 @@ export interface PagoPorAprobar {
   fechaSolicitada: unknown;
 }
 
-/** Query params de GET /pgtr/porAprobar. Solo `idEmpresa` es obligatorio. */
+/**
+ * Query params de GET /pgtr/porAprobar. Solo `idEmpresa` es obligatorio.
+ * `origenes` es repetible en el backend — cero, uno o varios; cero (u omitido) es "todos"
+ * (docs/pagos/API-BANDEJA-APROBACION-MULTIORIGEN.md §3).
+ */
 export interface FiltrosPorAprobar {
   idEmpresa: number;
-  origen?: OrigenPago;
+  origenes?: OrigenPago[];
   desde?: string;
   hasta?: string;
 }

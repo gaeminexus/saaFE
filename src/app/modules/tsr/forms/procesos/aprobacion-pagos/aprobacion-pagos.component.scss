@@ -9,6 +9,13 @@
     align-items: center;
     flex-wrap: wrap;
     margin-bottom: 12px;
+
+    // La etiqueta más larga de ORIGEN_PAGO_LABELS ("Seguro médico jubilados",
+    // 23 caracteres) no entraba en el ancho por defecto del mat-form-field.
+    .campo-origen {
+      min-width: 280px;
+      flex: 1 1 280px;
+    }
   }
 
   .table-wrapper {

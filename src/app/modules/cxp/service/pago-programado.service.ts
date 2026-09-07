@@ -102,10 +102,17 @@ export class PagoProgramadoService {
     ).pipe(catchError(this.handleError));
   }
 
-  /** Bandeja de pagos POR_APROBAR (§7.1 del plan de rediseño). Solo `idEmpresa` es obligatorio. */
+  /**
+   * Bandeja de pagos POR_APROBAR (§7.1 del plan de rediseño). Solo `idEmpresa` es obligatorio.
+   * `origen` es repetible en el backend (docs/pagos/API-BANDEJA-APROBACION-MULTIORIGEN.md §3):
+   * cero, uno o varios — cero es "todos". `append`, NUNCA `set`: `set` dentro de un bucle pisa el
+   * valor anterior y solo viaja el último origen, sin que el backend avise.
+   */
   porAprobar(filtros: FiltrosPorAprobar): Observable<PagoPorAprobar[]> {
     let params = new HttpParams().set('idEmpresa', filtros.idEmpresa);
-    if (filtros.origen) params = params.set('origen', filtros.origen);
+    for (const o of filtros.origenes ?? []) {
+      params = params.append('origen', o);
+    }
     if (filtros.desde) params = params.set('desde', filtros.desde);
     if (filtros.hasta) params = params.set('hasta', filtros.hasta);
     return this.http.get<PagoPorAprobar[]>(`${ServiciosCxp.RS_PGTR}/porAprobar`, { params }).pipe(

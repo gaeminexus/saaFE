@@ -3,10 +3,15 @@
     <mat-card-title>Aprobación de pagos</mat-card-title>
     <mat-card-content>
       <div class="filters">
-        <mat-form-field appearance="outline">
-          <mat-label>Origen</mat-label>
-          <mat-select [ngModel]="filtroOrigen()" (ngModelChange)="filtroOrigen.set($event); buscar()">
-            <mat-option [value]="null">Todos</mat-option>
+        <mat-form-field appearance="outline" class="campo-origen">
+          <mat-label>{{ filtroOrigenes().length === 0 ? 'Origen (todos)' : 'Origen' }}</mat-label>
+          <mat-select
+            multiple
+            panelWidth="auto"
+            [ngModel]="filtroOrigenes()"
+            (ngModelChange)="filtroOrigenes.set($event)"
+            (closed)="buscar()"
+          >
             @for (o of origenOptions; track o.codigo) {
               <mat-option [value]="o.codigo">{{ o.texto }}</mat-option>
             }
