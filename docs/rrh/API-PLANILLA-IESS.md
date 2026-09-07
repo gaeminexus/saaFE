@@ -120,6 +120,7 @@ conciliación: el total puede cuadrar y estar mal por dentro.
 | `DLISCDGO` | `NUMBER` identity | `Long codigo` |
 | `PLISCDGO` | `NUMBER` | `PlanillaIess planilla` (FK) |
 | `DLISCNCP` | `VARCHAR2(200)` | `String concepto` — texto del renglón tal como lo trae el portal |
+| `DLISCNCT` | `NUMBER` | `Long conceptoTipo` — **concepto normalizado**, rubro 331 (§3.4). `null` = sin clasificar |
 | `DLISVLIS` | `NUMBER(18,2)` | `Double valorIess` |
 | `DLISVLCT` | `NUMBER(18,2)` | `Double valorControl` |
 | `DLISDIFR` | `NUMBER(18,2)` | `Double diferencia` |
@@ -134,6 +135,24 @@ Del bloque reservado para este equipo (`PRBR` 330-349 / `PDTR` 1600-1699):
 
 **El `MAX` se revalida con el usuario justo antes de ejecutar**, y se anota en
 `REGISTRO-RESERVAS-EQUIPOS.md` en el mismo cambio.
+
+### 3.4 Rubro nuevo — concepto normalizado del renglón
+
+- `PRBR` **331** — `RHH_CONCEPTO_PLANILLA_IESS`, `PRBRALTR = 331`.
+- `PDTR` **1604-1608** — 1 Aporte personal · 2 Aporte patronal · 3 Contribución CCC 1 % ·
+  4 Seguro salud tiempo parcial · 5 Otro.
+
+**Por qué existe, y es la corrección de un diseño anterior que iba a fallar en silencio.** El
+comprobante del portal trae texto libre; la planilla de control expone cuatro totales con nombre.
+Emparejarlos **buscando palabras dentro del texto** («contiene PERSONAL» → aporte personal) parece
+razonable y rompe callado: dos renglones que contengan la misma palabra reciben **los dos** el mismo
+total de control, **la suma de las diferencias por renglón deja de cuadrar con la diferencia de
+cabecera**, y quien concilia no tiene cómo saber que la comparación está mal hecha — está mirando
+justamente esa pantalla para detectar un descuadre.
+
+**El concepto lo elige quien captura la planilla**, de una lista de cinco. Un dato explícito en vez
+de una adivinanza. El texto original del portal se conserva igual en `DLISCNCP`, porque es lo que el
+usuario ve en su comprobante y necesita reconocer.
 
 ---
 
@@ -182,7 +201,7 @@ Service, `catch (Throwable)` → 500 con `"Error ...: " + mensaje`, que llega al
   "numeroComprobante": "2026090012345",
   "fechaEmision": "2026-09-05", "fechaMaximaPago": "2026-09-15",
   "valorIess": 12345.67,
-  "renglones": [ { "concepto": "APORTE PERSONAL", "valorIess": 4000.00 } ],
+  "renglones": [ { "concepto": "APORTE PERSONAL", "conceptoTipo": 1, "valorIess": 4000.00 } ],
   "idUsuario": 12
 }
 ```
@@ -209,6 +228,10 @@ Responde con el detalle de la comparación, renglón por renglón:
   "mensaje": "Planilla conciliada con una diferencia de $208.22 a favor del IESS."
 }
 ```
+
+**La correspondencia renglón ↔ total de control se resuelve por `conceptoTipo` (§3.4), nunca por el
+texto del renglón.** Un renglón con `conceptoTipo` nulo o `5 Otro` queda con `valorControl` en
+`null`, no en cero: no tiene contraparte, que no es lo mismo que tener una contraparte de cero.
 
 ⚠️ **La planilla de control solo cubre hoy el tipo 1 (rol normal).** Para quirografarios,
 hipotecarios y fondos de reserva no hay contraparte calculada: en esos tipos la conciliación graba
