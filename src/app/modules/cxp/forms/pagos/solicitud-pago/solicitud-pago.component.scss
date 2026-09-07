@@ -1,0 +1,16 @@
+@use '../../../../../../styles/components/pagos-cobros' as pc;
+
+.pagina-pagos {
+  padding: 1.5rem 2rem;
+
+  @include pc.pagos-cobros-layout;
+
+  .panel {
+    margin-top: 1.25rem;
+  }
+
+  .hint-error {
+    color: #b91c1c;
+    font-weight: 500;
+  }
+}

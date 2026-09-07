@@ -1,0 +1,159 @@
+<div class="pagina-pagos">
+
+  <div class="titulo-barra">
+    <div class="titulo">
+      <mat-icon>account_balance</mat-icon>
+      <span>Solicitud de Pago a Proveedores</span>
+    </div>
+  </div>
+
+  <mat-card class="panel">
+    <mat-card-content>
+
+      <div class="fila-campos">
+        <mat-form-field appearance="outline">
+          <mat-label>Proveedor</mat-label>
+          <input matInput readonly [value]="nombreProveedorRegistro()" placeholder="Busque un proveedor" />
+          <button mat-icon-button matSuffix type="button" matTooltip="Buscar proveedor" (click)="buscarProveedor()">
+            <mat-icon>search</mat-icon>
+          </button>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Factura de compra a pagar</mat-label>
+          <input matInput readonly [value]="regFacturaElegida()?.numero || ''" placeholder="Seleccione una factura" />
+          <button
+            mat-icon-button
+            matSuffix
+            type="button"
+            matTooltip="Buscar factura pendiente"
+            [disabled]="!regProveedor()"
+            (click)="buscarFacturaRegistro()">
+            <mat-icon>receipt_long</mat-icon>
+          </button>
+          @if (!regProveedor()) {
+            <mat-hint>Elija primero el proveedor</mat-hint>
+          }
+        </mat-form-field>
+      </div>
+
+      <div class="fila-campos">
+        <mat-form-field appearance="outline">
+          <mat-label>Cuenta destino del proveedor</mat-label>
+          <mat-select [(ngModel)]="regIdCuentaDestino" name="regIdCuentaDestino"
+                      [disabled]="!regProveedor() || cargandoCuentasDestino() || proveedorSinCuentaDestino">
+            @for (c of cuentasDestino(); track c.codigo) {
+              <mat-option [value]="c.codigo">{{ etiquetaCuentaDestino(c) }}</mat-option>
+            }
+          </mat-select>
+          @if (!regProveedor()) {
+            <mat-hint>Elija primero el proveedor</mat-hint>
+          } @else if (cargandoCuentasDestino()) {
+            <mat-hint>Consultando las cuentas del proveedor…</mat-hint>
+          } @else if (proveedorSinCuentaDestino) {
+            <mat-hint class="hint-error">El proveedor no tiene cuenta bancaria registrada</mat-hint>
+          } @else {
+            <mat-hint>Opcional — necesaria si termina pagándose por transferencia</mat-hint>
+          }
+        </mat-form-field>
+      </div>
+
+      <div class="fila-campos">
+        <mat-form-field appearance="outline">
+          <mat-label>Valor a pagar</mat-label>
+          <input
+            matInput
+            type="number"
+            min="0"
+            step="0.01"
+            [max]="disponibleFactura"
+            [(ngModel)]="regValor"
+            name="regValor"
+            (blur)="ajustarValorAlSaldo()" />
+          @if (cargandoSaldo()) {
+            <mat-hint>Consultando el saldo de la factura...</mat-hint>
+          } @else if (regExcedeSaldo) {
+            <mat-hint class="hint-error">
+              No puede superar lo disponible de la factura
+              ({{ disponibleFactura | number: '1.2-2' }})
+            </mat-hint>
+          } @else if (regSaldo(); as s) {
+            <mat-hint>
+              Saldo pendiente: {{ s.saldoPendiente | number: '1.2-2' }}
+              de {{ s.total | number: '1.2-2' }}
+              @if (regComprometido() > 0) {
+                — disponible {{ disponibleFactura | number: '1.2-2' }}
+              }
+            </mat-hint>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Fecha solicitada</mat-label>
+          <input matInput [matDatepicker]="pickerReg" [(ngModel)]="regFecha" name="regFecha" />
+          <mat-datepicker-toggle matSuffix [for]="pickerReg"></mat-datepicker-toggle>
+          <mat-datepicker #pickerReg></mat-datepicker>
+        </mat-form-field>
+      </div>
+
+      <mat-form-field appearance="outline" class="campo-ancho">
+        <mat-label>Observación</mat-label>
+        <textarea matInput rows="2" [(ngModel)]="regObservacion" name="regObservacion"></textarea>
+      </mat-form-field>
+
+      <div class="mensaje-info">
+        <mat-icon>info</mat-icon>
+        <span>
+          La solicitud queda pendiente de aprobación: la cuenta bancaria de origen y la forma
+          de pago (transferencia, cheque o débito automático) se eligen en
+          Tesorería → Pagos por transferencia → Aprobación de pagos, donde tesorería aprueba en lote.
+        </span>
+      </div>
+
+      @if (regComprometido() > 0 && regSaldo(); as s) {
+        <div class="mensaje-advertencia">
+          <mat-icon>hourglass_top</mat-icon>
+          <span>
+            Esta factura ya tiene {{ pagosComprometidos().length }} pago(s) sin confirmar por
+            {{ regComprometido() | number: '1.2-2' }}, que siguen reservando saldo. Del saldo
+            pendiente de {{ s.saldoPendiente | number: '1.2-2' }} solo quedan
+            <strong>{{ disponibleFactura | number: '1.2-2' }}</strong> disponibles. Si alguno de
+            esos pagos ya no va, anúlelo desde Tesorería → Pagos por transferencia → Consulta y
+            gestión, y vuelva aquí.
+          </span>
+        </div>
+      }
+
+      @if (regError()) {
+        <div class="mensaje-error">
+          <mat-icon>error_outline</mat-icon>
+          <span>{{ regError() }}</span>
+        </div>
+      }
+
+      @if (regExito()) {
+        <div class="mensaje-exito">
+          <mat-icon>check_circle</mat-icon>
+          <span>{{ regExito() }}</span>
+        </div>
+      }
+
+      <div class="acciones">
+        <button mat-stroked-button (click)="nuevoPago()">
+          <mat-icon>add</mat-icon>
+          Registrar nuevo pago
+        </button>
+        <button mat-raised-button class="btn-confirmar" [disabled]="!puedeRegistrar" (click)="registrarPago()">
+          @if (registrando()) {
+            <mat-spinner diameter="20"></mat-spinner>
+          } @else {
+            <mat-icon>save</mat-icon>
+          }
+          Registrar pago
+        </button>
+      </div>
+
+    </mat-card-content>
+  </mat-card>
+
+</div>

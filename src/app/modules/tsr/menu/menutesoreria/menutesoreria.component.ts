@@ -198,12 +198,6 @@ export class MenutesoreriaComponent implements OnInit {
           ],
         },
         {
-          displayName: 'Aprobación de pagos',
-          iconName: 'checklist',
-          idPermiso: 830,
-          route: '/menutesoreria/procesos/aprobacion-pagos',
-        },
-        {
           displayName: 'Cobros',
           iconName: 'attach_money',
           idPermiso: 830,
@@ -307,6 +301,40 @@ export class MenutesoreriaComponent implements OnInit {
               iconName: 'fact_check',
               idPermiso: 830,
               route: '/menutesoreria/procesos/caja-chica/cierre',
+            },
+          ],
+        },
+        {
+          // Nuevo, hermano del nodo "Pagos" de cheques (docs/pagos/PLAN-REORGANIZACION-CIRCUITO-PAGOS.md
+          // §3.3). Se llama "Pagos por transferencia", NO "Pagos": ese nombre ya lo tiene el nodo
+          // de cheques (TSR.PAGO) que sigue quieto, sin tocar.
+          displayName: 'Pagos por transferencia',
+          iconName: 'account_balance',
+          idPermiso: 830,
+          children: [
+            {
+              displayName: 'Aprobación de pagos',
+              iconName: 'checklist',
+              idPermiso: 830,
+              route: '/menutesoreria/pagos/aprobacion',
+            },
+            {
+              displayName: 'Generación de archivo',
+              iconName: 'description',
+              idPermiso: 830,
+              route: '/menutesoreria/pagos/archivo-banco',
+            },
+            {
+              displayName: 'Recepción y confirmación',
+              iconName: 'task_alt',
+              idPermiso: 830,
+              route: '/menutesoreria/pagos/confirmacion',
+            },
+            {
+              displayName: 'Consulta y gestión',
+              iconName: 'list_alt',
+              idPermiso: 830,
+              route: '/menutesoreria/pagos/consulta',
             },
           ],
         },

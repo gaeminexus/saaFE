@@ -1,0 +1,147 @@
+<div class="pagina-pagos">
+
+  <div class="titulo-barra">
+    <div class="titulo">
+      <mat-icon>description</mat-icon>
+      <span>Generación de Archivo al Banco</span>
+    </div>
+  </div>
+
+  <mat-card class="panel">
+    <mat-card-content>
+
+      <div class="fila-campos">
+        <mat-form-field appearance="outline">
+          <mat-label>Cuenta bancaria de origen</mat-label>
+          <mat-select [(ngModel)]="selCuentaOrigen" name="selCuentaOrigen" (selectionChange)="onCambioCuentaOrigen()">
+            @for (c of cuentasBancarias(); track c.codigo) {
+              <mat-option [value]="c">{{ etiquetaCuenta(c) }}</mat-option>
+            }
+          </mat-select>
+          <mat-hint>Todos los pagos de un archivo deben salir de la misma cuenta</mat-hint>
+        </mat-form-field>
+
+        <button mat-stroked-button class="btn-consultar" (click)="cargarPagosRegistrados()">
+          <mat-icon>refresh</mat-icon>
+          Actualizar listado
+        </button>
+      </div>
+
+      @if (selError()) {
+        <div class="mensaje-error">
+          <mat-icon>error_outline</mat-icon>
+          <span>{{ selError() }}</span>
+        </div>
+      }
+
+      @if (cargandoSeleccion()) {
+        <div class="estado-linea">
+          <mat-spinner diameter="24"></mat-spinner>
+          <span>Cargando pagos registrados...</span>
+        </div>
+      } @else if (!selCuentaOrigen) {
+        <div class="sin-datos">
+          <mat-icon>account_balance</mat-icon>
+          <span>Elija una cuenta de origen para ver sus pagos pendientes de envío.</span>
+        </div>
+      } @else if (pagosFiltrados.length === 0) {
+        <div class="sin-datos">
+          <mat-icon>inbox</mat-icon>
+          <span>No hay pagos registrados para esta cuenta.</span>
+        </div>
+      } @else {
+        <div class="tabla-scroll">
+          <table mat-table [dataSource]="pagosFiltrados">
+
+            <ng-container matColumnDef="check">
+              <th mat-header-cell *matHeaderCellDef class="col-check">
+                <mat-checkbox [checked]="todosSeleccionados" (change)="alternarTodos()"></mat-checkbox>
+              </th>
+              <td mat-cell *matCellDef="let p" class="col-check">
+                <mat-checkbox [checked]="estaSeleccionado(p)" (change)="alternarSeleccion(p)"></mat-checkbox>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="proveedor">
+              <th mat-header-cell *matHeaderCellDef>Proveedor</th>
+              <td mat-cell *matCellDef="let p">{{ nombreBeneficiario(p) }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="factura">
+              <th mat-header-cell *matHeaderCellDef>Concepto</th>
+              <td mat-cell *matCellDef="let p">{{ conceptoPago(p) }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="valor">
+              <th mat-header-cell *matHeaderCellDef class="col-monto">Valor</th>
+              <td mat-cell *matCellDef="let p" class="col-monto">{{ p.valor | number: '1.2-2' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="fechaProgramada">
+              <th mat-header-cell *matHeaderCellDef>Fecha programada</th>
+              <td mat-cell *matCellDef="let p">{{ formatearFecha(p.fechaProgramada) }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="cuentaOrigen">
+              <th mat-header-cell *matHeaderCellDef>Cuenta origen</th>
+              <td mat-cell *matCellDef="let p">{{ p.cuentaBancaria?.numero || '—' }}</td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="columnasSeleccion"></tr>
+            <tr mat-row *matRowDef="let row; columns: columnasSeleccion"></tr>
+          </table>
+        </div>
+
+        <div class="resumen-seleccion">
+          <span>{{ seleccionados.size }} pago(s) seleccionado(s)</span>
+          <span class="total">Total: {{ totalSeleccionado | number: '1.2-2' }}</span>
+        </div>
+      }
+
+      @if (loteGenerado(); as lote) {
+        <div class="mensaje-exito">
+          <mat-icon>check_circle</mat-icon>
+          <div>
+            <div>{{ lote.mensaje }}</div>
+            <div class="detalle-exito">
+              <span>Lote N° {{ lote.idLote }}</span>
+              <span>{{ lote.numeroPagos }} transferencia(s)</span>
+              <span>Total: {{ lote.valorTotal | number: '1.2-2' }}</span>
+            </div>
+            <div class="acciones-lote">
+              <button mat-stroked-button (click)="redescargarLote(lote.idLote)">
+                <mat-icon>download</mat-icon>
+                Descargar de nuevo
+              </button>
+              <button mat-stroked-button (click)="irAConfirmacion(lote.idLote)">
+                <mat-icon>task_alt</mat-icon>
+                Ir a Recepción y confirmación
+              </button>
+              <button mat-stroked-button (click)="irAConsulta()">
+                <mat-icon>list_alt</mat-icon>
+                Ir a Consulta y gestión
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
+      <div class="acciones">
+        <button
+          mat-raised-button
+          class="btn-confirmar"
+          [disabled]="!selCuentaOrigen || seleccionados.size === 0 || generando()"
+          (click)="generarArchivo()">
+          @if (generando()) {
+            <mat-spinner diameter="20"></mat-spinner>
+          } @else {
+            <mat-icon>description</mat-icon>
+          }
+          Generar archivo
+        </button>
+      </div>
+
+    </mat-card-content>
+  </mat-card>
+
+</div>

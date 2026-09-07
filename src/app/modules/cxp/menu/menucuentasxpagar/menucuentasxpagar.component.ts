@@ -82,9 +82,12 @@ export class MenucuentaxpagarComponent {
       route: '/menucuentaxpagar/pagos',
       children: [
         {
-          displayName: 'Pagos por Transferencia',
+          // Renombrado y reapuntado: la pantalla ahora es solo la solicitud
+          // (docs/pagos/PLAN-REORGANIZACION-CIRCUITO-PAGOS.md §3.1) — el resto
+          // del circuito pasó a Tesorería → Pagos por transferencia.
+          displayName: 'Solicitud de pago',
           iconName: 'send_money',
-          route: '/menucuentaxpagar/pagos/transferencias',
+          route: '/menucuentaxpagar/pagos/solicitud',
         },
         {
           displayName: 'Cruce de Anticipo',

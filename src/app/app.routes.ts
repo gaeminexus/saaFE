@@ -274,11 +274,33 @@ export const routes: Routes = [
         canActivate: [authGuard],
         data: { title: 'Registrar - Egresos' },
       },
+      // Procesos - Pagos por transferencia
+      // (docs/pagos/PLAN-REORGANIZACION-CIRCUITO-PAGOS.md §3.2). El
+      // componente de aprobación no se mueve de carpeta ni se reescribe:
+      // solo cambia de ruta y de lugar en el menú (de Procesos a este nodo).
       {
-        path: 'procesos/aprobacion-pagos',
+        path: 'pagos/aprobacion',
         loadComponent: () => import('./modules/tsr/forms/procesos/aprobacion-pagos/aprobacion-pagos.component').then((m) => m.AprobacionPagosComponent),
         canActivate: [authGuard],
         data: { title: 'Aprobación de pagos' },
+      },
+      {
+        path: 'pagos/archivo-banco',
+        loadComponent: () => import('./modules/tsr/forms/pagos-transferencia/archivo-banco/archivo-banco.component').then((m) => m.ArchivoBancoComponent),
+        canActivate: [authGuard],
+        data: { title: 'Generación de archivo' },
+      },
+      {
+        path: 'pagos/confirmacion',
+        loadComponent: () => import('./modules/tsr/forms/pagos-transferencia/confirmacion/confirmacion.component').then((m) => m.ConfirmacionComponent),
+        canActivate: [authGuard],
+        data: { title: 'Recepción y confirmación' },
+      },
+      {
+        path: 'pagos/consulta',
+        loadComponent: () => import('./modules/tsr/forms/pagos-transferencia/consulta/consulta.component').then((m) => m.ConsultaComponent),
+        canActivate: [authGuard],
+        data: { title: 'Consulta y gestión' },
       },
 
       // Procesos - Cobros
@@ -973,9 +995,26 @@ export const routes: Routes = [
         canActivate: [authGuard],
       },
       {
+        path: 'pagos/solicitud',
+        loadComponent: () => import('./modules/cxp/forms/pagos/solicitud-pago/solicitud-pago.component').then((m) => m.SolicitudPagoComponent),
+        canActivate: [authGuard],
+      },
+      {
+        // Ruta vieja: redirige a la pantalla nueva para no romper enlaces
+        // guardados (docs/pagos/PLAN-REORGANIZACION-CIRCUITO-PAGOS.md §3.1).
         path: 'pagos/transferencias',
+        redirectTo: 'pagos/solicitud',
+        pathMatch: 'full',
+      },
+      {
+        // Componente viejo de 5 pestañas: NO se borra en esta entrega (riesgo
+        // #4 del plan) — queda alcanzable acá hasta que las 4 pantallas nuevas
+        // de Tesorería estén probadas. La ruta vieja de arriba ahora redirige
+        // a la solicitud nueva, así que este componente se mudó de path.
+        path: 'pagos/transferencias-legacy',
         loadComponent: () => import('./modules/cxp/forms/pagos/pagos-transferencia/pagos-transferencia.component').then((m) => m.PagosTransferenciaComponent),
         canActivate: [authGuard],
+        data: { title: 'Pagos por Transferencia (legado)' },
       },
       {
         path: 'negociaciones',

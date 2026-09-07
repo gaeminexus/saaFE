@@ -1,0 +1,226 @@
+import { CommonModule } from '@angular/common';
+import { Component, OnInit, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { Router } from '@angular/router';
+import { FormaPagoAplicacion } from '../../../../../shared/model/pagos-cobros/catalogos-aplicacion-pago';
+import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
+import { etiquetaOrigenPagoExterno } from '../../../../cxp/model/origen-pago-externo';
+import { LoteGeneradoResponse, PagoProgramado } from '../../../../cxp/model/pago-programado';
+import { PagoProgramadoService } from '../../../../cxp/service/pago-programado.service';
+import { EstadoPagoProgramado } from '../../../../../shared/model/pagos-cobros/catalogos-aplicacion-pago';
+import { CuentaBancaria } from '../../../model/cuenta-bancaria';
+import { CuentaBancariaService } from '../../../service/cuenta-bancaria.service';
+
+/**
+ * T2 del circuito de pagos por transferencia
+ * (docs/pagos/PLAN-REORGANIZACION-CIRCUITO-PAGOS.md §3.2): genera el archivo
+ * para el banco a partir de los pagos ya aprobados (`REGISTRADO`). Sale de la
+ * antigua pestaña "2. Generar Archivo" de PagosTransferenciaComponent (cxp).
+ *
+ * Generar el archivo ES la aprobación de envío: no hay paso previo. El
+ * archivo puede venir en texto (Internacional) o en `.xlsx` (Pacífico) —
+ * eso lo agrega el ÍTEM 4 de esta reorganización, pendiente del WAR nuevo.
+ */
+@Component({
+  selector: 'app-archivo-banco',
+  standalone: true,
+  imports: [CommonModule, FormsModule, MaterialFormModule],
+  templateUrl: './archivo-banco.component.html',
+  styleUrl: './archivo-banco.component.scss',
+})
+export class ArchivoBancoComponent implements OnInit {
+  private pagoS = inject(PagoProgramadoService);
+  private cuentaBancariaS = inject(CuentaBancariaService);
+  private funcionesDatos = inject(FuncionesDatosService);
+  private snackBar = inject(MatSnackBar);
+  private router = inject(Router);
+
+  cuentasBancarias = signal<CuentaBancaria[]>([]);
+
+  selCuentaOrigen: CuentaBancaria | null = null;
+  pagosRegistrados = signal<PagoProgramado[]>([]);
+  seleccionados = new Set<number>();
+  cargandoSeleccion = signal(false);
+  generando = signal(false);
+  selError = signal('');
+  loteGenerado = signal<LoteGeneradoResponse | null>(null);
+  readonly columnasSeleccion = ['check', 'proveedor', 'factura', 'valor', 'fechaProgramada', 'cuentaOrigen'];
+
+  ngOnInit(): void {
+    this.cargarCuentasBancarias();
+    this.cargarPagosRegistrados();
+  }
+
+  private cargarCuentasBancarias(): void {
+    const idEmpresa = this.idEmpresaSesion();
+    this.cuentaBancariaS.getAll().subscribe({
+      next: (data) => {
+        let lista = Array.isArray(data) ? data : [];
+        if (idEmpresa) {
+          lista = lista.filter(
+            (c: any) => c.banco?.empresa?.codigo === idEmpresa || c.empresa?.codigo === idEmpresa
+          );
+        }
+        this.cuentasBancarias.set(lista);
+      },
+      error: () => this.cuentasBancarias.set([]),
+    });
+  }
+
+  cargarPagosRegistrados(): void {
+    this.cargandoSeleccion.set(true);
+    this.selError.set('');
+    this.seleccionados.clear();
+
+    this.pagoS.listar(this.idEmpresaSesion(), EstadoPagoProgramado.REGISTRADO).subscribe({
+      next: (data) => {
+        this.pagosRegistrados.set(data ?? []);
+        this.cargandoSeleccion.set(false);
+      },
+      error: (err: Error) => {
+        this.pagosRegistrados.set([]);
+        this.cargandoSeleccion.set(false);
+        this.selError.set(err.message);
+      },
+    });
+  }
+
+  /**
+   * El backend exige que todos los pagos del lote compartan la cuenta de
+   * origen, así que la tabla solo muestra los de la cuenta elegida.
+   */
+  get pagosFiltrados(): PagoProgramado[] {
+    const cuenta = this.selCuentaOrigen;
+    if (!cuenta) return [];
+    // Un pago con cheque no va en un archivo bancario: el cheque ya se giró
+    // al registrarlo, igual que el débito automático nunca pasa por lote.
+    return this.pagosRegistrados().filter(
+      (p) => p.cuentaBancaria?.codigo === cuenta.codigo
+        && p.formaPago !== FormaPagoAplicacion.CHEQUE
+    );
+  }
+
+  onCambioCuentaOrigen(): void {
+    this.seleccionados.clear();
+    this.loteGenerado.set(null);
+  }
+
+  estaSeleccionado(pago: PagoProgramado): boolean {
+    return this.seleccionados.has(pago.id);
+  }
+
+  alternarSeleccion(pago: PagoProgramado): void {
+    if (this.seleccionados.has(pago.id)) {
+      this.seleccionados.delete(pago.id);
+    } else {
+      this.seleccionados.add(pago.id);
+    }
+  }
+
+  get todosSeleccionados(): boolean {
+    const filas = this.pagosFiltrados;
+    return filas.length > 0 && filas.every((p) => this.seleccionados.has(p.id));
+  }
+
+  alternarTodos(): void {
+    if (this.todosSeleccionados) {
+      this.seleccionados.clear();
+    } else {
+      this.pagosFiltrados.forEach((p) => this.seleccionados.add(p.id));
+    }
+  }
+
+  get totalSeleccionado(): number {
+    return this.pagosFiltrados
+      .filter((p) => this.seleccionados.has(p.id))
+      .reduce((suma, p) => suma + (Number(p.valor) || 0), 0);
+  }
+
+  /** Generar el archivo ES la aprobación de envío: no hay un paso previo. */
+  generarArchivo(): void {
+    if (!this.selCuentaOrigen || this.seleccionados.size === 0) return;
+
+    this.generando.set(true);
+    this.selError.set('');
+    this.loteGenerado.set(null);
+
+    this.pagoS.generarLote({
+      idsPagos: Array.from(this.seleccionados),
+      idCuentaOrigen: this.selCuentaOrigen.codigo,
+      idEmpresa: this.idEmpresaSesion(),
+      idUsuario: this.idUsuarioSesion(),
+    }).subscribe({
+      next: (resp) => {
+        this.generando.set(false);
+        this.loteGenerado.set(resp);
+        this.descargarArchivo(resp);
+        this.cargarPagosRegistrados();
+        this.snackBar.open(resp.mensaje ?? 'Archivo de pagos generado.', 'Cerrar', { duration: 5000 });
+      },
+      error: (err: Error) => {
+        this.generando.set(false);
+        this.selError.set(err.message);
+      },
+    });
+  }
+
+  /** Dispara la descarga en el navegador a partir del contenido del lote. */
+  descargarArchivo(lote: LoteGeneradoResponse): void {
+    if (!lote?.contenido) return;
+    const blob = new Blob([lote.contenido], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = lote.nombreArchivo || `PAGOS_${lote.idLote}.txt`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }
+
+  redescargarLote(idLote: number): void {
+    this.pagoS.getArchivoLote(idLote).subscribe({
+      next: (lote) => this.descargarArchivo(lote),
+      error: (err: Error) => this.snackBar.open(err.message, 'Cerrar', { duration: 6000 }),
+    });
+  }
+
+  /** T3 junta carga de respuesta y confirmación manual: un solo destino para ambas. */
+  irAConfirmacion(idLote: number): void {
+    this.router.navigate(['/menutesoreria/pagos/confirmacion'], { queryParams: { idLote } });
+  }
+
+  irAConsulta(): void {
+    this.router.navigate(['/menutesoreria/pagos/consulta']);
+  }
+
+  formatearFecha(fecha: any): string {
+    const d = this.funcionesDatos.convertirFechaDesdeBackend(fecha);
+    if (!d) return '—';
+    return d.toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
+
+  etiquetaCuenta(cuenta: CuentaBancaria): string {
+    return `${cuenta.banco?.nombre ?? 'Banco'} — ${cuenta.numeroCuenta}`;
+  }
+
+  conceptoPago(pago: PagoProgramado): string {
+    if (pago.origenExterno) {
+      const etiqueta = etiquetaOrigenPagoExterno(pago.origenExterno);
+      return pago.idOrigen != null ? `${etiqueta} #${pago.idOrigen}` : etiqueta;
+    }
+    return pago.facturaCompra?.numero || pago.egreso?.descripcion || '—';
+  }
+
+  nombreBeneficiario(pago: PagoProgramado): string {
+    return pago.titular?.nombre || pago.beneficiarioNombre || '—';
+  }
+
+  private idEmpresaSesion(): number {
+    return +(sessionStorage.getItem('idEmpresa') || localStorage.getItem('idEmpresa') || '0');
+  }
+
+  private idUsuarioSesion(): number {
+    return +(sessionStorage.getItem('idUsuario') || localStorage.getItem('idUsuario') || '0');
+  }
+}

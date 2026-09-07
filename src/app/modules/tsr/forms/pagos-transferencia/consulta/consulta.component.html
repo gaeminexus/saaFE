@@ -1,0 +1,218 @@
+<div class="pagina-pagos">
+
+  <div class="titulo-barra">
+    <div class="titulo">
+      <mat-icon>list_alt</mat-icon>
+      <span>Consulta y Gestión de Pagos</span>
+    </div>
+  </div>
+
+  <mat-card class="panel">
+    <mat-card-content>
+
+      <div class="panel-filtros">
+        <div class="fila-filtros">
+          <!-- Proveedor: mismo diálogo de búsqueda del registro -->
+          <mat-form-field appearance="outline" class="f-proveedor">
+            <mat-label>Proveedor</mat-label>
+            <input matInput readonly [value]="nombreProveedorFiltro()"
+                   placeholder="Todos los proveedores" (click)="buscarProveedorFiltro()" />
+            @if (segProveedorFiltro()) {
+              <button mat-icon-button matSuffix type="button" matTooltip="Quitar proveedor"
+                      (click)="quitarProveedorFiltro(); $event.stopPropagation()">
+                <mat-icon>close</mat-icon>
+              </button>
+            } @else {
+              <button mat-icon-button matSuffix type="button" matTooltip="Buscar proveedor"
+                      (click)="buscarProveedorFiltro()">
+                <mat-icon>search</mat-icon>
+              </button>
+            }
+          </mat-form-field>
+
+          <!-- Tipo de pago: multiselección -->
+          <mat-form-field appearance="outline" class="f-tipo">
+            <mat-label>Tipo de pago</mat-label>
+            <mat-select [ngModel]="segTiposPago()" (ngModelChange)="segTiposPago.set($event)"
+                        name="segTiposPago" multiple>
+              @for (t of tiposPagoFiltro; track t.valor) {
+                <mat-option [value]="t.valor">{{ t.texto }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <!-- Estado (recarga desde el servidor) -->
+          <mat-form-field appearance="outline" class="f-estado">
+            <mat-label>Estado</mat-label>
+            <mat-select [(ngModel)]="segEstado" name="segEstado" (selectionChange)="cargarSeguimiento()">
+              <mat-option [value]="null">Todos</mat-option>
+              @for (e of estadosFiltro; track e.valor) {
+                <mat-option [value]="e.valor">{{ e.texto }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        </div>
+
+        <div class="fila-filtros">
+          <!-- Rango de fechas programadas -->
+          <mat-form-field appearance="outline" class="f-fecha">
+            <mat-label>Fecha desde</mat-label>
+            <input matInput [matDatepicker]="pickerSegDesde"
+                   [ngModel]="segFechaDesde()" (ngModelChange)="segFechaDesde.set($event)"
+                   name="segFechaDesde" />
+            <mat-datepicker-toggle matSuffix [for]="pickerSegDesde"></mat-datepicker-toggle>
+            <mat-datepicker #pickerSegDesde></mat-datepicker>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="f-fecha">
+            <mat-label>Fecha hasta</mat-label>
+            <input matInput [matDatepicker]="pickerSegHasta"
+                   [ngModel]="segFechaHasta()" (ngModelChange)="segFechaHasta.set($event)"
+                   name="segFechaHasta" />
+            <mat-datepicker-toggle matSuffix [for]="pickerSegHasta"></mat-datepicker-toggle>
+            <mat-datepicker #pickerSegHasta></mat-datepicker>
+          </mat-form-field>
+
+          <!-- Concepto: búsqueda de texto libre -->
+          <mat-form-field appearance="outline" class="f-concepto">
+            <mat-label>Concepto</mat-label>
+            <input matInput [ngModel]="segConcepto()" (ngModelChange)="segConcepto.set($event)"
+                   name="segConcepto" placeholder="Buscar en el concepto…" />
+            @if (segConcepto()) {
+              <button mat-icon-button matSuffix type="button" matTooltip="Limpiar"
+                      (click)="segConcepto.set('')">
+                <mat-icon>close</mat-icon>
+              </button>
+            }
+          </mat-form-field>
+        </div>
+
+        <div class="acciones-filtros">
+          @if (hayFiltrosSeguimiento()) {
+            <button mat-stroked-button (click)="limpiarFiltrosSeguimiento()">
+              <mat-icon>filter_alt_off</mat-icon>
+              Limpiar filtros
+            </button>
+          }
+          <button mat-stroked-button class="btn-consultar" (click)="cargarSeguimiento()">
+            <mat-icon>refresh</mat-icon>
+            Actualizar
+          </button>
+        </div>
+      </div>
+
+      @if (segError()) {
+        <div class="mensaje-error">
+          <mat-icon>error_outline</mat-icon>
+          <span>{{ segError() }}</span>
+        </div>
+      }
+
+      @if (cargandoSeguimiento()) {
+        <div class="estado-linea">
+          <mat-spinner diameter="24"></mat-spinner>
+          <span>Cargando pagos...</span>
+        </div>
+      } @else if (pagosSeguimiento().length === 0) {
+        <div class="sin-datos">
+          <mat-icon>inbox</mat-icon>
+          <span>No hay pagos para el filtro seleccionado.</span>
+        </div>
+      } @else {
+        <div class="tabla-scroll">
+          <table mat-table [dataSource]="pagosSeguimientoFiltrados()">
+
+            <ng-container matColumnDef="proveedor">
+              <th mat-header-cell *matHeaderCellDef>Proveedor</th>
+              <td mat-cell *matCellDef="let p">{{ nombreBeneficiario(p) }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="factura">
+              <th mat-header-cell *matHeaderCellDef>Concepto</th>
+              <td mat-cell *matCellDef="let p">{{ conceptoPago(p) }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="tipo">
+              <th mat-header-cell *matHeaderCellDef>Tipo</th>
+              <td mat-cell *matCellDef="let p">
+                @if (esCheque(p)) {
+                  <span class="badge badge-cheque">
+                    {{ textoTipo(p) }}@if (p.cheque?.numero) { &nbsp;N° {{ p.cheque?.numero }} }
+                  </span>
+                } @else if (esDebitoAutomatico(p)) {
+                  <span class="badge badge-debito">{{ textoTipo(p) }}</span>
+                } @else {
+                  <span class="badge badge-neutro">{{ textoTipo(p) }}</span>
+                }
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="valor">
+              <th mat-header-cell *matHeaderCellDef class="col-monto">Valor</th>
+              <td mat-cell *matCellDef="let p" class="col-monto">{{ p.valor | number: '1.2-2' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="fechaProgramada">
+              <th mat-header-cell *matHeaderCellDef>Fecha programada</th>
+              <td mat-cell *matCellDef="let p">{{ formatearFecha(p.fechaProgramada) }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="estado">
+              <th mat-header-cell *matHeaderCellDef>Estado</th>
+              <td mat-cell *matCellDef="let p">
+                <span class="badge" [ngClass]="etiquetaEstado(p.estado).clase">
+                  {{ etiquetaEstado(p.estado).texto }}
+                </span>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="acciones">
+              <th mat-header-cell *matHeaderCellDef class="col-acciones">Acciones</th>
+              <td mat-cell *matCellDef="let p" class="col-acciones">
+                @if (asientoDePago(p); as asiento) {
+                  <button
+                    mat-icon-button
+                    [matTooltip]="'Imprimir asiento ' + etiquetaAsiento(asiento)"
+                    [disabled]="imprimiendoAsiento() !== null"
+                    (click)="imprimirAsiento(p)">
+                    @if (imprimiendoAsiento() === p.id) {
+                      <mat-spinner diameter="20"></mat-spinner>
+                    } @else {
+                      <mat-icon>picture_as_pdf</mat-icon>
+                    }
+                  </button>
+                }
+                @if (puedeAnular(p)) {
+                  <button mat-icon-button color="warn" matTooltip="Anular pago" (click)="confirmarAnulacion(p)">
+                    <mat-icon>block</mat-icon>
+                  </button>
+                }
+                @if (puedeRevertir(p)) {
+                  <button
+                    mat-icon-button
+                    color="warn"
+                    [matTooltip]="esDebitoAutomatico(p) ? 'Revertir débito automático' : 'Revertir pago confirmado'"
+                    (click)="confirmarReverso(p)">
+                    <mat-icon>undo</mat-icon>
+                  </button>
+                }
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="columnasSeguimiento"></tr>
+            <tr mat-row *matRowDef="let row; columns: columnasSeguimiento"></tr>
+          </table>
+        </div>
+
+        @if (pagosSeguimientoFiltrados().length === 0) {
+          <div class="sin-datos">
+            <mat-icon>search_off</mat-icon>
+            <span>Ningún pago coincide con los filtros aplicados.</span>
+          </div>
+        }
+      }
+
+    </mat-card-content>
+  </mat-card>
+
+</div>
