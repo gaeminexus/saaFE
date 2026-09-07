@@ -20,7 +20,7 @@ export interface CuentaBancariaTitular {
   codigo: number;
   titular: Titular | { codigo: number };
   banco: BancoExterno | { codigo: number };
-  tipoCuenta: number;       // rubro codigoAlterno 23: 1=Corriente, 2=Ahorros
+  tipoCuenta: number;       // rubro codigoAlterno 23: 1=Ahorros, 2=Corriente (verificado contra la base el 2026-09-07)
   numeroCuenta: string;
   observaciones?: string;
   estado: number;           // 1=Activo, 0=Inactivo

@@ -224,8 +224,9 @@ export class AnticiposProveedoresComponent {
 
   etiquetaCuentaDestino(cuenta: CuentaBancariaTitular): string {
     const banco = (cuenta.banco as any)?.nombre ?? 'Banco';
-    const tipo = Number(cuenta.tipoCuenta) === 1 ? 'Corriente'
-      : Number(cuenta.tipoCuenta) === 2 ? 'Ahorros' : '';
+    // Rubro 23 "TIPO DE CUENTAS BANCARIAS", verificado contra la base el 2026-09-07: 1=Ahorros, 2=Corriente.
+    const tipo = Number(cuenta.tipoCuenta) === 1 ? 'Ahorros'
+      : Number(cuenta.tipoCuenta) === 2 ? 'Corriente' : '';
     return `${banco} — ${cuenta.numeroCuenta}${tipo ? ` (${tipo})` : ''}`;
   }
 
