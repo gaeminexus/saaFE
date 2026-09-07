@@ -11,9 +11,19 @@
 
 ## 0. Antes de leer nada más
 
-**Estos endpoints todavía no existen.** Este documento es el contrato que el backend debe cumplir y
-contra el que el frontend puede construir en paralelo. Si al implementar algo no cierra, se corrige
-**este archivo primero** y después el código.
+⚠️ **CORREGIDO el 2026-09-07.** Hasta hoy este párrafo decía *«estos endpoints todavía no
+existen»*. **Era falso, y costó caro:** al abrir el frente del pago de décimos durante el mes se
+diseñó desde cero algo que ya estaba construido. Verificado contra el código:
+`OrdenBeneficioSocialServiceImpl` son **550 líneas implementadas**, con `generar`,
+`enviarATesoreria`, `confirmarPago` y `anular`, y el REST los expone todos.
+
+**Lo que sigue siendo cierto es que NADIE los consume:** cero apariciones de `odbs` o `lqbs` en todo
+`saaFE/src`. El ciclo está entero y **nunca se estrenó**, que es distinto de no existir — y es la
+razón por la que el documento pudo quedar mintiendo tanto tiempo sin que nadie lo notara.
+
+⛔ **Antes de construir pantalla sobre esto, probar el ciclo de punta a punta.**
+
+Si al implementar algo no cierra, se corrige **este archivo primero** y después el código.
 
 **Application path:** `/SaaBE/rest/...`. No `/api/...`, que aparece en docs viejos y ya no existe.
 
@@ -376,3 +386,109 @@ necesita un **`idUsuario` numérico**: `registrarPagoDeOrigenExterno` lo usa com
   haría fallar `generar()` de nómina entera según por dónde se haya inicializado la sesión.
 - **`idUsuario` ausente o nulo** debe dar un error explícito de integración, no un
   `NullPointerException` ni una resolución por nombre.
+
+---
+
+## 6. 🆕 `POST /rest/odbs/revertirPago/{id}` — deshacer una orden ya pagada
+
+**Agregado el 2026-09-07.** Cierra el callejón sin salida que tenía el ciclo.
+
+### 6.1 Por qué hace falta — el camino que el §1.6 promete y no existe
+
+El §1.6 dice que para anular una orden `PAGADA` *«primero hay que revertir el pago en tesorería
+(`POST /pgtr/revertirConfirmado/{id}`)»*. **Ese camino estaba cortado**, verificado el 2026-09-07:
+
+- `anular` rechaza toda orden `PAGADA`.
+- **Nada saca una orden de `PAGADA`.** Los únicos `setEstado` del servicio son `GENERADA`,
+  `ENVIADA_A_TESORERIA`, `PAGADA` y `ANULADA`.
+- Revertir en tesorería **no toca nada de RRHH**: el pago viaja sin desglose (decisión D1), así que
+  no tiene asiento propio y `revertirContabilidadOrigenExterno` sólo registra y vuelve.
+
+Resultado: se revertía el pago en tesorería y la orden quedaba `PAGADA` **para siempre**, con la
+provisión dada de baja contra un pago que ya no existe.
+
+**Y desde que `confirmarPago` crea la novedad del décimo, el costo subió:** el rol del mes queda
+informando un pago revertido, sin forma de deshacerlo.
+
+### 6.2 Contrato
+
+**Body**
+```json
+{ "motivo": "Transferencia rechazada por el banco", "usuario": "jperez" }
+```
+`motivo` es **obligatorio**.
+
+**Precondiciones — las dos dan 409**
+
+| Situación | Mensaje |
+|---|---|
+| La orden no está `PAGADA` | «La orden {id} no está PAGADA (estado actual: {x}). Sólo se revierte un pago confirmado.» |
+| El `PagoProgramado` **sigue** `CONFIRMADO` | «El pago {idPago} sigue CONFIRMADO en tesorería. Revierta primero con `POST /pgtr/revertirConfirmado/{idPago}`.» |
+
+⛔ **El orden importa y no se invierte:** primero tesorería, después RRHH. Al revés, RRHH daría por
+revertido un pago que en tesorería sigue vivo.
+
+**Efectos, en este orden**
+
+1. **Anula el asiento** de baja de provisión con `asientoService.anulaAsiento(orden.getAsiento())`
+   — el mecanismo que ya usa `revertirContabilidadEgreso`. **La provisión vuelve a estar viva**, que
+   es el punto contable de todo esto.
+2. Cada `LQBS` vuelve a pendiente: `valorPagado = 0`, `fechaPago = null`, `estado = 1`.
+3. **Elimina las novedades** creadas por `confirmarPago`, buscadas por la convención de descripción
+   del §7.C del plan.
+4. `ODBS.estado = REVERTIDA (5)`, `fechaPago = null`, `asiento = null`, y el motivo en la
+   observación.
+
+**200**
+```json
+{
+  "exito": true,
+  "idOrden": 12,
+  "liquidacionesRevertidas": 37,
+  "novedadesEliminadas": 37,
+  "asientoAnulado": 7788,
+  "mensaje": "Pago revertido. La provisión vuelve a estar viva y la orden puede anularse."
+}
+```
+
+### 6.3 🔴 El caso duro: el rol del período YA se procesó
+
+La novedad es informativa —no suma al neto— pero **el rol ya la consumió como renglón**. Borrar la
+novedad después **no borra el renglón del rol ya procesado**.
+
+**Decisión: se RECHAZA con 409.** No se revierte a medias.
+
+```json
+{ "exito": false,
+  "mensaje": "El rol del período 8/2026 ya fue procesado e incluye la novedad de esta orden. Reabra o reprocese el período antes de revertir el pago." }
+```
+
+**Por qué rechazar y no revertir igual:** revertir dejaría el rol procesado afirmando un pago que se
+deshizo, y **eso no da ningún error** — se ve como un rol correcto. Es exactamente la familia de
+defectos que este equipo viene persiguiendo: *el que no falla, el que devuelve otra cosa en
+silencio*. Entre bloquear una operación y corromper un rol cerrado, se bloquea.
+
+### 6.4 Estado nuevo: `REVERTIDA = 5`
+
+| Valor | Estado | Se puede |
+|---|---|---|
+| 1 | `GENERADA` | enviar a tesorería · anular |
+| 2 | `ENVIADA_A_TESORERIA` | confirmar pago · anular |
+| 3 | `PAGADA` | **revertir pago** |
+| 4 | `ANULADA` | nada |
+| **5** | **`REVERTIDA`** | **anular** |
+
+**Desde `REVERTIDA` sólo se anula.** Anular libera las `LQBS` (`LQBSODBS = null`) y con eso se puede
+volver a generar la orden desde cero.
+
+⛔ **No se permite re-enviar a tesorería una orden `REVERTIDA`.** Quedaría enlazada a un
+`PagoProgramado` revertido, y ese enredo es más caro que generar la orden de nuevo.
+
+⚠️ Requiere la fila del rubro `RHH_ESTADO_ORDEN_BENEFICIO` con alterno **5**: la crea el
+**`e2-19`**, que va **antes del WAR**. Una constante en Java cuyo detalle de rubro no existe en la
+base es lo que ya costó el `e2-08` y el `e2-13`.
+
+### 6.5 Y `anular` cambia una línea
+
+Hoy acepta `GENERADA` y `ENVIADA_A_TESORERIA`. **Tiene que aceptar también `REVERTIDA`**, o el
+reverso desemboca en otro callejón sin salida.
