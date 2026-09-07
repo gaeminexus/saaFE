@@ -1,6 +1,3 @@
-> **Espejo.** El original vive en `saaBE/docs/logica-negocio/pagos/API-PAGOS-TESORERIA.md` y es el que manda.
-> Los enlaces relativos de este archivo apuntan a documentos que solo existen en `saaBE`.
-
 # Contrato de API — circuito de pagos (solicitud en CxP, ejecución en Tesorería)
 
 **Equipo:** `omen-saa-2` · **Escrito:** 2026-09-07 · **Verificado contra el código**, no contra docs
@@ -124,7 +121,7 @@ cuenta **pasa la aprobación** y revienta después, al generar el archivo, con e
   "idLote": 77,
   "nombreArchivo": "PAGOS_LOTE_77_20260907.txt",
   "contenido": "PA\t1\tUSD\t45000\t...",
-  "contenidoBase64": null,
+  "contenidoBase64": "UEExCVVTRAk0NTAwMAk...",
   "mimeType": "text/plain",
   "formatoBanco": "INTERNACIONAL",
   "valorTotal": 1980.55,
@@ -142,12 +139,20 @@ un `.xlsx` no entra en un string.
 | Clave | Cuándo viene | Para qué |
 |---|---|---|
 | `contenido` | Solo formatos de texto (Internacional). `null` en binarios | Compatibilidad: el FE viejo sigue andando |
-| `contenidoBase64` | Solo formatos binarios (Pacífico). `null` en texto | El contenido del `.xlsx` en Base64 |
+| `contenidoBase64` | **SIEMPRE**, incluido el Internacional | El contenido crudo del archivo, en Base64 |
 | `mimeType` | Siempre | `text/plain` o `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` |
 | `formatoBanco` | Siempre | `INTERNACIONAL`, `PACIFICO`, … Se muestra en pantalla: el usuario tiene que saber qué archivo bajó |
 
 **Regla para el FE:** si viene `contenidoBase64`, se descarga eso decodificado con su `mimeType`; si
-no, se descarga `contenido` como texto. **Nunca los dos.**
+no, se descarga `contenido` como texto. **Nunca los dos.** Como `contenidoBase64` viene siempre, en
+la práctica el camino de Base64 es el que se usa en los dos formatos, y el de `contenido` queda como
+respaldo por si un formateador futuro no lo mandara.
+
+> ⚠️ **Corregido el 2026-09-07.** Hasta esta fecha la tabla de arriba decía que `contenidoBase64`
+> venía `null` en formatos de texto. **Era falso**: `PagoProgramadoServiceImpl:1595` y `:1621` lo
+> mandan siempre, y el comentario del propio método lo dice —*«contenidoBase64: siempre, para el
+> Internacional TAMBIEN»*—. La nota de abajo sobre el ANSI ya asumía lo correcto, así que el
+> documento se contradecía consigo mismo. Verificado contra el código.
 
 ⚠️ **El texto del Internacional es ANSI (`windows-1252`), no UTF-8.** Si el FE arma el Blob como
 UTF-8, cualquier tilde o `ñ` en un nombre sale mal y el banco rechaza la línea. **Para el
