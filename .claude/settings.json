@@ -1,0 +1,86 @@
+{
+  "$comentario": [
+    "Reglas de permiso compartidas del repositorio saaFE. Este archivo SI se versiona, asi que",
+    "aplica igual en la laptop y en la OMEN. settings.local.json es de cada maquina y se suma.",
+    "Creado el 2026-09-07, como equivalente del de saaBE.",
+    "",
+    "A QUIEN APLICA: solo a la sesion FRONTEND, que es la que arranca en este directorio. El",
+    "ARBITRO llega a saaFE por --add-dir, y --add-dir no carga la configuracion .claude/ del",
+    "directorio agregado: sus permisos salen del settings.json de saaBE, aunque commitee aqui.",
+    "",
+    "Semantica que conviene tener presente al editar:",
+    "  - Un * matchea cualquier texto, INCLUIDOS los espacios. Todo lo anterior al primer * se",
+    "    matchea literal, y un segundo tramo literal despues del * no acota nada.",
+    "  - deny gana siempre sobre allow y NO admite excepciones.",
+    "  - Quitar algo de allow no es denegarlo: vuelve a preguntar, que suele ser lo que se quiere."
+  ],
+
+  "permissions": {
+    "deny": [
+      "Bash(git checkout *)",
+      "Bash(git restore *)",
+      "Bash(git reset --hard*)",
+      "Bash(git clean *)",
+      "Bash(git push --force*)",
+      "Bash(git push -f *)",
+
+      "Bash(git add .)",
+      "Bash(git add . *)",
+      "Bash(git add -A*)",
+      "Bash(git add --all*)",
+      "Bash(git add -u*)",
+      "Bash(git add --update*)",
+      "Bash(git add :/*)",
+      "Bash(git commit -a*)",
+      "Bash(git commit --all*)"
+    ],
+
+    "$comentario_deny": [
+      "git checkout, restore, reset --hard y clean DESCARTAN trabajo sin commitear, en silencio y",
+      "sin vuelta atras. Con varios equipos sobre el mismo arbol es el unico error de esta lista que",
+      "no se puede deshacer. Para cambiar de rama esta git switch, que se niega a perder cambios.",
+      "",
+      "Las formas de add que barren el arbol quedan denegadas aqui igual que en saaBE, y el deny vale",
+      "tanto para el frontend como para el arbitro si algun dia esta configuracion si le llegara: un",
+      "'git add .' en un arbol compartido sube el trabajo a medio hacer de otro equipo."
+    ],
+
+    "allow": [
+      "Bash(git status*)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git show *)",
+      "Bash(git branch*)",
+      "Bash(git switch *)",
+      "Bash(git stash list*)",
+      "Bash(git fetch*)",
+      "Bash(git rev-parse *)",
+      "Bash(git rev-list *)",
+
+      "Bash(ng build*)",
+      "Bash(ng version)",
+      "Bash(tsc --noEmit*)",
+      "Bash(node --version)",
+      "Bash(npm --version)",
+      "Bash(npm ls*)",
+
+      "WebSearch"
+    ],
+
+    "$comentario_allow": [
+      "SIN COMMIT NI PUSH, A PROPOSITO. En el esquema de tres agentes el unico que commitea es el",
+      "arbitro: el frontend le entrega la lista exacta de archivos que toco y el los guarda. Aqui no",
+      "hay allow de add, commit, push ni pull, asi que si el frontend lo intenta va a preguntar en vez",
+      "de hacerlo. No estan en deny a proposito: preguntar es lo que se quiere, no cerrar la puerta",
+      "para siempre. El dia que se decida que el frontend commitea lo suyo, se agregan aqui las mismas",
+      "reglas que tiene saaBE.",
+      "",
+      "ng build es la verificacion que el prompt le exige antes de reportar. tsc --noEmit sirve para",
+      "chequeos rapidos, siempre con -p tsconfig.app.json: el tsconfig.json raiz es solution-style, no",
+      "compila nada y siempre da exit 0, asi que no sirve para validar.",
+      "",
+      "Fuera de allow a proposito: npx (descarga y corre paquetes), npm install y ng generate, que",
+      "modifican el arbol de dependencias o crean archivos sin que nadie lo haya pedido."
+    ]
+  }
+}
