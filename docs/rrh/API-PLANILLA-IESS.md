@@ -1,8 +1,9 @@
 # Planillas del IESS: captura, conciliación y pago
 
 **Equipo:** `lap-saa-1` · **2026-09-07** · Módulo `rhh` (+ `cnt` para el asiento)
-**Estado:** diseño y contrato de la Fase 1 congelados. Fase 2 (pago) con una decisión abierta, en §6.
-Verificado contra el código el 2026-09-07. `rhh` es **alcance compartido** con `omen-saa-2`.
+**Estado:** Fase 1 implementada y commiteada (`b5ddf6bf`). **Fase 2 (pago) decidida y especificada en
+§6: va por tesorería.** Verificado contra el código el 2026-09-07. `rhh` es **alcance compartido**
+con `omen-saa-2`, pero esta fase **no toca `cxp`** — ver §6.0.
 
 ---
 
@@ -240,31 +241,90 @@ Construir esos tres controles es trabajo aparte y depende de §2.1.
 
 ---
 
-## 6. El pago — Fase 2, con una decisión de arquitectura abierta
+## 6. El pago — Fase 2. DECIDIDO: por tesorería
 
-**No implementar sin resolver esto.** Hay dos caminos y el sistema tiene precedentes de los dos:
+> **Decisión del usuario, 2026-09-07:** *«Todo pago se gestiona por TSR, para luego poder realizar la
+> conciliación bancaria y demás.»* Es la opción A de las que se plantearon abajo. **No re-abrir.**
 
-**A. Por el circuito de pagos (`PagoProgramado`, origen externo).** Es lo que hacen la caja chica y
-el anticipo a empleado. Ventaja: el pago aparece en tesorería, genera movimiento bancario y se
-reversa con lo que ya existe. Costo: los orígenes cuyo DEBE no es un producto necesitan **su propio
-método de contabilización dentro de `PagoProgramadoServiceImpl`** (`contabilizarPagoCajaChica`,
-`contabilizarPagoAnticipoEmpleado`), y ese archivo es territorio compartido con `omen-saa-2` y
-`omen-saa-3`. **Tocarlo exige coordinar entre árbitros antes.**
+### 6.0 Cómo se implementa sin tocar el archivo compartido
 
-**B. Contabilizar desde `rhh` con su propia plantilla.** Es lo que hace el pago de la nómina
-(`ContabilizacionNominaServiceImpl`): DEBE la cuenta por pagar, HABER el banco, resolviendo las
-cuentas desde `CNT.PLNS`/`DTPL`. Ventaja: no toca `cxp` en absoluto y reusa la parametrización
-contable que RRHH ya tiene, donde las cuentas del IESS **ya están configuradas**. Costo: **no genera
-movimiento bancario** — verificado, el pago de nómina tampoco lo genera — así que el débito no
-aparecería en la conciliación bancaria.
+La opción A parecía obligar a escribir un `contabilizarPagoPlanillaIess` dentro de
+`PagoProgramadoServiceImpl` — el archivo que comparten `omen-saa-2` y `omen-saa-3` — porque es lo que
+hicieron la caja chica y el anticipo a empleado. **No hace falta, y se verificó:**
 
-**Recomendación: B**, con el movimiento bancario agregado explícitamente si la conciliación lo
-necesita. Razón: las cuentas ya están parametrizadas del lado de RRHH, el débito automático no
-necesita la bandeja de aprobación de tesorería, y evita tocar el archivo más disputado del
-repositorio. Pero **la decisión es del usuario** porque afecta si el pago del IESS se ve o no en
-tesorería.
+`contabilizarPagoOrigenExterno` tiene un **camino genérico por desglose**: si el pago trae filas de
+`PGS.DPGT` (`DetallePagoOrigenExterno`), arma una línea DEBE por cada una con la cuenta contable de
+su producto, cierra contra el banco, **y emite el movimiento bancario**
+(`creaMovimientoPorTransferencia`, verificado el 2026-09-07). Que es exactamente lo que hace falta
+para conciliar. Caja chica y anticipo tienen método propio porque su DEBE es una cuenta fija y no un
+desglose; el del IESS **sí es un desglose**: una línea por concepto del comprobante.
+
+**Consecuencia: `com.saa.ejb.cxp` no se toca.** Lo único que se agrega ahí es la constante
+`RHH_PLANILLA_IESS` en `com.saa.rubros.OrigenPagoExterno`, que es aditiva. **Y por lo tanto no hace
+falta coordinar con los otros árbitros para esta fase.**
+
+⚠️ La cuenta del DEBE sale de `producto.grupoProducto.planCuenta` — del **grupo**, no del producto
+(`cuentaDelProducto:3066-3080`). Así que la parametrización son grupos de producto, uno por cuenta
+por pagar del IESS, y sus productos. Va en `sql/lap1-09-productos-pago-iess.sql`, que **lee las
+cuentas de las plantillas contables de RRHH** (`CNT.DTPL`, líneas 10, 11, 12 y 16) en vez de
+teclearlas: si el pago debitara una cuenta distinta de la que la nómina provisionó, el pasivo no se
+saldaría nunca y nadie lo vería hasta un cierre.
+
+### 6.1 `POST /rest/plis/pagar/{id}`
+
+**Cuerpo**
+
+```json
+{ "idCuentaBancaria": 4, "fechaPago": "2026-09-12", "idUsuario": 12 }
+```
+
+La planilla debe estar en estado **2 Conciliada**. Registrar el pago desde estado 1 se rechaza: el
+sentido de todo esto es no pagar sin haber cuadrado.
+
+**Qué hace, en orden:**
+
+1. Valida estado, cuenta bancaria y que la planilla no tenga ya un pago vivo.
+2. Llama a `pagoProgramadoService.registrarPagoDeOrigenExterno` con origen `RHH_PLANILLA_IESS`,
+   `idOrigen` = el `PLISCDGO`, forma de pago **débito automático** y la cuenta bancaria recibida.
+   Con débito automático el pago **nace confirmado y contabiliza en el acto**, que es lo correcto:
+   el IESS ya debitó, no se está ordenando un pago sino registrando un hecho.
+3. Antes de que el circuito contabilice, graba el **desglose** (`PGS.DPGT`): una fila por renglón de
+   la planilla, con el producto que corresponde a su `conceptoTipo` y el valor del renglón. Un
+   renglón con `conceptoTipo` nulo o `5 Otro` **no tiene producto**: ver §6.2.
+4. Marca la planilla en estado **3 Pagada**, graba `PLISFCPG` y enlaza `PLISASNT` con el asiento que
+   devolvió el circuito.
+
+**Respuesta 200:** `{ idPlanilla, estado, idPago, idAsiento, numeroAsiento, mensaje }`.
+
+### 6.2 Qué hacer con un renglón sin producto
+
+**Rechazar el pago, con el mensaje que diga qué renglón falta.** No inventar una cuenta genérica y
+no omitir la línea: omitirla haría que el asiento no cuadre contra el valor del pago, y el circuito
+lo rechazaría con un error de cuadre que no dice nada del renglón que lo causó. Mejor fallar
+temprano y explicando.
+
+### 6.3 Reverso
+
+`POST /rest/plis/reversarPago/{id}` con `{motivo, idUsuario}`. Delega en
+`pagoProgramadoService.revertirPagoConfirmado`, que anula el asiento y el movimiento bancario, y
+después devuelve la planilla a estado **2 Conciliada** limpiando `PLISFCPG` y `PLISASNT`.
+
+⚠️ A diferencia de la caja chica, `revertirPagoConfirmado` **no sabe nada de `PLIS`**: no hay ningún
+`anularPlanillaIessSiAplica` del lado de `cxp`, y no hay que agregarlo. Es `rhh` quien actualiza su
+propia planilla después de que el reverso vuelva.
+
+### 6.4 Las dos opciones que se evaluaron, para no volver a discutirlas
+
+**A. Por el circuito de pagos** — la elegida. Aparece en tesorería, genera movimiento bancario, se
+reversa con lo que ya existe.
+
+**B. Contabilizar desde `rhh` con su propia plantilla**, como el pago de la nómina. Descartada:
+**no genera movimiento bancario** — verificado, el pago de nómina tampoco lo genera — así que el
+débito del IESS no aparecería en la conciliación bancaria. Que es justamente lo que el usuario
+necesita.
 
 ---
+
 
 ## 7. Frontend
 
