@@ -375,7 +375,7 @@ export class RegistroEgresoComponent implements OnInit {
 
   /** El pago del egreso se aprueba desde la pantalla de aprobación de pagos. */
   irAPagos(): void {
-    this.router.navigate(['/menutesoreria/procesos/aprobacion-pagos']);
+    this.router.navigate(['/menutesoreria/pagos/aprobacion']);
   }
 
   // ═══ b) CONSULTA ════════════════════════════════════════

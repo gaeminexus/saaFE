@@ -69,7 +69,7 @@ export interface GastoCajaChicaRequest {
 /**
  * Body de POST /mvch/reposicion y de POST /mvch/apertura. Desde 2026-08-30 la
  * cuenta origen y la forma de pago las asigna tesorería al aprobar en su
- * bandeja (/menutesoreria/procesos/aprobacion-pagos); esta pantalla ya no las
+ * bandeja (/menutesoreria/pagos/aprobacion); esta pantalla ya no las
  * envía. Quedan opcionales solo por compatibilidad de tipo con requests
  * previos.
  */

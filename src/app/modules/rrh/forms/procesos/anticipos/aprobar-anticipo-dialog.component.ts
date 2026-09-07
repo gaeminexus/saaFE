@@ -16,7 +16,7 @@ export interface AprobarAnticipoDialogData {
 /**
  * Aprobar un anticipo: desde 2026-08-30 esto solo autoriza el anticipo.
  * El pago lo arma tesorería al aprobarlo en su bandeja
- * (/menutesoreria/procesos/aprobacion-pagos) — este diálogo ya no captura
+ * (/menutesoreria/pagos/aprobacion) — este diálogo ya no captura
  * cuenta origen ni forma de pago.
  */
 @Component({

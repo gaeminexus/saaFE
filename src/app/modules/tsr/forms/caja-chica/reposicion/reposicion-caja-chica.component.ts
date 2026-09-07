@@ -16,7 +16,7 @@ import { MovimientoCajaChicaService } from '../../../service/movimiento-caja-chi
  * Reposición (o apertura, cuando la caja todavía no tiene saldo) de una caja
  * chica. Desde 2026-08-30 esta pantalla solo registra el pedido: la cuenta
  * bancaria de origen y la forma de pago las asigna tesorería al aprobar en
- * su bandeja (/menutesoreria/procesos/aprobacion-pagos).
+ * su bandeja (/menutesoreria/pagos/aprobacion).
  */
 @Component({
   selector: 'app-reposicion-caja-chica',

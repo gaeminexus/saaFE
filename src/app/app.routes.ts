@@ -285,6 +285,13 @@ export const routes: Routes = [
         data: { title: 'Aprobación de pagos' },
       },
       {
+        // Ruta vieja: esta pantalla la usa tesorería todos los días y va a
+        // tener el link guardado en el navegador.
+        path: 'procesos/aprobacion-pagos',
+        redirectTo: 'pagos/aprobacion',
+        pathMatch: 'full',
+      },
+      {
         path: 'pagos/archivo-banco',
         loadComponent: () => import('./modules/tsr/forms/pagos-transferencia/archivo-banco/archivo-banco.component').then((m) => m.ArchivoBancoComponent),
         canActivate: [authGuard],
